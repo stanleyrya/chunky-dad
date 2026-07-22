@@ -366,6 +366,10 @@ class AiWebParser {
                 // never skips or replaces an extraction step.
                 this.applyWixServerDataEnrichment(completeJsonLdEvents, htmlData, cityConfig);
                 await this.applyJsonLdGapFill(completeJsonLdEvents, htmlData, parserConfig, cityConfig, httpAdapter);
+                // Images the JSON-LD nodes carried are already stamped 'jsonld';
+                // an image the gap-fill pulled from page content gets its own
+                // og-image/page provenance here (no image → no stamp).
+                completeJsonLdEvents.forEach(event => this.stampImageProvenance(event, htmlData));
                 return {
                     events: completeJsonLdEvents,
                     additionalLinks: additionalLinks,
@@ -2789,6 +2793,13 @@ class AiWebParser {
             image: this.pickJsonLdImage(node.image),
             source: this.config.source
         };
+        // imageSource provenance (notes-serialized like pinSource): structured
+        // data the page itself published — its own value, distinct from
+        // 'og-image'/'page', but og-grade in shared-core's image provenance
+        // merge rung. Absent image → no stamp (fail open).
+        if (event.image) {
+            event.imageSource = 'jsonld';
+        }
         if (cover) {
             event.cover = cover;
             // Wix JSON-LD offers only publish fee-inclusive totals ("46.13" =
@@ -7776,6 +7787,11 @@ TEXT:
             });
         }
 
+        // Provenance stamp for the FINAL image value (after any parser-config
+        // metadata override): 'og-image' when it is the page's own artwork,
+        // 'page' otherwise; no image → no stamp.
+        this.stampImageProvenance(event, htmlData);
+
         return event;
     }
 
@@ -8674,6 +8690,65 @@ TEXT:
             htmlData.pageOgSiteName = siteName;
         }
         return siteName;
+    }
+
+    // Canonical identity form for comparing an extracted image value against the
+    // page's own og:image/twitter:image meta URLs: the existing URL
+    // normalization (normalizeHttpUrlValue) first, then trailing-slash and case
+    // differences collapsed. Identity comparison ONLY — never stored on events.
+    canonicalizeImageUrlForComparison(url) {
+        const normalized = this.normalizeHttpUrlValue(url);
+        if (!normalized) return '';
+        return normalized.replace(/\/+$/, '').toLowerCase();
+    }
+
+    // The page's own social-artwork meta URLs (og:image / twitter:image and
+    // their variants) in canonical comparison form. Each raw meta value is also
+    // added in its CDN-upgraded form because the final extracted image went
+    // through upgradeCdnThumbnailUrl. Cached per page like getPageOgTitle
+    // (segment/OCR copies spread htmlData and inherit the cache).
+    getPageMetaImageUrls(htmlData) {
+        if (!htmlData || typeof htmlData !== 'object') return [];
+        if (Array.isArray(htmlData.pageMetaImageUrls)) return htmlData.pageMetaImageUrls;
+        const html = typeof htmlData.html === 'string' ? htmlData.html : '';
+        const metaKeys = ['og:image', 'og:image:url', 'og:image:secure_url', 'twitter:image', 'twitter:image:src'];
+        const urls = new Set();
+        for (const metaKey of metaKeys) {
+            // extractOgMetaContent entity-decodes except &amp; — same explicit
+            // second decode as buildEventFromJsonLdNode's clean().
+            const content = this.extractOgMetaContent(html, metaKey).replace(/&amp;/gi, '&');
+            if (!content) continue;
+            const canonical = this.canonicalizeImageUrlForComparison(content);
+            if (canonical) urls.add(canonical);
+            const upgraded = this.canonicalizeImageUrlForComparison(this.upgradeCdnThumbnailUrl(content));
+            if (upgraded) urls.add(upgraded);
+        }
+        const list = Array.from(urls);
+        if (Object.isExtensible(htmlData)) {
+            htmlData.pageMetaImageUrls = list;
+        }
+        return list;
+    }
+
+    // imageSource provenance stamp (notes-serialized like pinSource, excluded
+    // from AI arbitration — see shared-core's image provenance rung):
+    //   - 'og-image' when the extracted image IS the source page's own
+    //     og:image/twitter:image artwork (compared by canonical URL, robust to
+    //     which extraction pass produced the value);
+    //   - 'page' for everything else the AI-web pipeline extracted from page
+    //     content/OCR/segments (the default for AI-web extracted images).
+    // An already-stamped or absent image is left untouched (fail open), so the
+    // JSON-LD path's 'jsonld' stamp and other parsers' unstamped images are
+    // never relabeled.
+    stampImageProvenance(event, htmlData) {
+        if (!event || typeof event !== 'object') return event;
+        if (event.imageSource) return event;
+        const image = typeof event.image === 'string' ? event.image.trim() : '';
+        if (!image) return event;
+        const canonical = this.canonicalizeImageUrlForComparison(image);
+        const metaImageUrls = this.getPageMetaImageUrls(htmlData);
+        event.imageSource = canonical && metaImageUrls.includes(canonical) ? 'og-image' : 'page';
+        return event;
     }
 
     // A bare city name is not an event name. True when the title — after

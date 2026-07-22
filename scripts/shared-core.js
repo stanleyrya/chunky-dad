@@ -415,10 +415,14 @@ class SharedCore {
         // value was decided, never content the AI may arbitrate; its merge is
         // resolved deterministically in createFinalEventObject so a manual
         // override can never be relabeled by a scraped verdict.
+        // imageSource is image provenance (og-image/jsonld/page — where the
+        // image value came from at extraction); like pinSource it must FOLLOW
+        // the finalized image deterministically (setProvenanceSource), never
+        // be arbitrated as content.
         return name !== 'key' && name !== 'notes' && name !== 'source'
             && name !== 'location' && name !== 'gmaps'
             && name !== 'pinSource' && name !== 'addressSource'
-            && name !== 'bearSource';
+            && name !== 'bearSource' && name !== 'imageSource';
     }
 
     // True when a bearSource value records the calendar owner's manual verdict
@@ -1108,6 +1112,39 @@ class SharedCore {
                 const logoB = hasLogoSegment(urlB);
                 if (logoA !== logoB) {
                     return { winner: logoA ? 'b' : 'a', reason: 'event artwork beats logo-path image' };
+                }
+                // Provenance rung: an image that IS the event page's own
+                // artwork — its og:image/twitter:image meta ('og-image') or
+                // its published structured data ('jsonld'), as stamped at
+                // extraction — beats a merely page-derived candidate (content/
+                // OCR/segment images, 'page' or unstamped). The arbitration
+                // model flip-flopped between runs on exactly this shape.
+                // Attribution is strict like the address evidence rung: a
+                // record's imageSource only vouches for the candidate when the
+                // record's own image field IS that candidate value. Both
+                // og-grade, neither, or unattributable → fall through to the
+                // resolution-margin rung / AI (fail open).
+                const contextRecords = context && context.records && typeof context.records === 'object'
+                    ? context.records : null;
+                if (contextRecords) {
+                    const getOgGradeImageProvenance = (record, value) => {
+                        if (!record || typeof record !== 'object') return '';
+                        const recordImage = typeof record.image === 'string' ? record.image.trim() : '';
+                        const candidate = typeof value === 'string' ? value.trim() : '';
+                        if (!recordImage || !candidate || recordImage !== candidate) return '';
+                        const imageSource = typeof record.imageSource === 'string' ? record.imageSource.trim() : '';
+                        return (imageSource === 'og-image' || imageSource === 'jsonld') ? imageSource : '';
+                    };
+                    const provenanceA = getOgGradeImageProvenance(contextRecords.a, valueA);
+                    const provenanceB = getOgGradeImageProvenance(contextRecords.b, valueB);
+                    if (Boolean(provenanceA) !== Boolean(provenanceB)) {
+                        const provenanceLabels = context.sideLabels && typeof context.sideLabels === 'object'
+                            ? context.sideLabels : { a: 'a', b: 'b' };
+                        return {
+                            winner: provenanceA ? 'a' : 'b',
+                            reason: `"${provenanceA ? provenanceLabels.a : provenanceLabels.b}" image is the event page's own artwork (${provenanceA || provenanceB})`
+                        };
+                    }
                 }
                 // Resolution rung: when one URL advertises a clearly larger
                 // image (same scoring the parser uses for OCR dedup —
@@ -3635,6 +3672,12 @@ class SharedCore {
         allFields.forEach(fieldName => {
             if (fieldName.startsWith('_')) return; // Skip metadata fields
 
+            // imageSource is image provenance that must FOLLOW the finalized
+            // image (recomputed after the loop + arbitration via
+            // setProvenanceSource) — merging it as its own field could pair the
+            // winning image with the LOSING side's provenance stamp.
+            if (fieldName === 'imageSource') return;
+
             const priorityConfig = fieldPriorities[fieldName];
             const existingValue = existingEvent[fieldName];
             const newValue = newEvent[fieldName];
@@ -3900,6 +3943,14 @@ class SharedCore {
             }
         }
 
+        // imageSource follows the finalized image (deterministic, never AI-
+        // arbitrated): the `{ ...newEvent }` base spread copied newEvent's
+        // stamp regardless of which side's image won, so recompute it from
+        // whichever record supplied the final value. A final image neither
+        // side stamped (or no image at all) carries no imageSource (fail open).
+        delete mergedEvent.imageSource;
+        this.setProvenanceSource(mergedEvent, 'image', 'imageSource', newEvent, existingEvent);
+
         // _timezoneUnresolved must describe the merged event's DATES, not the base
         // record: the `{ ...newEvent }` spread above copies newEvent's flag even
         // when existing's anchored dates won, and drops existing's flag even when
@@ -4083,11 +4134,12 @@ class SharedCore {
             // the final merged bar/address so it can never disagree with them.
             if (fieldName === 'gmaps') continue;
 
-            // pinSource/addressSource are provenance metadata that must FOLLOW
-            // the finalized location/address (set by setProvenanceSource after
-            // STEP 3c) — they never merge or arbitrate on their own, or the
-            // generic loop could clobber a kept-pin's source with a stale one.
-            if (fieldName === 'pinSource' || fieldName === 'addressSource') continue;
+            // pinSource/addressSource/imageSource are provenance metadata that
+            // must FOLLOW the finalized location/address/image (set by
+            // setProvenanceSource after STEP 3c) — they never merge or arbitrate
+            // on their own, or the generic loop could clobber a kept value's
+            // source with a stale one.
+            if (fieldName === 'pinSource' || fieldName === 'addressSource' || fieldName === 'imageSource') continue;
 
             const priorityConfig = fieldPriorities[fieldName];
             const mergeStrategy = priorityConfig?.merge || 'upsert';
@@ -4394,6 +4446,7 @@ class SharedCore {
         // address is never mislabeled with a source the scrape didn't produce.
         this.setProvenanceSource(mergedObject, 'location', 'pinSource', scraperObject, calendarObject);
         this.setProvenanceSource(mergedObject, 'address', 'addressSource', scraperObject, calendarObject);
+        this.setProvenanceSource(mergedObject, 'image', 'imageSource', scraperObject, calendarObject);
 
         // STEP 4: regenerate gmaps from the FINAL merged bar + address. gmaps
         // is a derived field — a pure function of bar + address — so merging or
