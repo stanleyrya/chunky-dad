@@ -3043,3 +3043,29 @@ test('deriveSegmentListingTitle skips marker, time-only, and date lines; long pr
   // A long prose first line is a description, not a title — derive nothing
   assert.equal(parser.deriveSegmentListingTitle({ lines: ['x'.repeat(200), 'BEAR NIGHT'] }), '');
 });
+
+// ---------------------------------------------------------------------------
+// Console-tee coverage: every log-producing module imported via importModule
+// must carry the __wireConsoleTee shim, or its output silently vanishes from
+// the saved Scriptable run log (each imported module has its own console).
+// ---------------------------------------------------------------------------
+test('every log-producing importModule module exports the __wireConsoleTee shim', () => {
+  const wiredModules = {
+    'shared-core': require('../shared-core'),
+    normalizers: require('../normalizers'),
+    'parsers/ai-web-parser': require('./ai-web-parser'),
+    'parsers/bearracuda-parser': require('./bearracuda-parser'),
+    'parsers/chunk-parser': require('./chunk-parser'),
+    'parsers/linktree-parser': require('./linktree-parser'),
+    'parsers/redeyetickets-parser': require('./redeyetickets-parser'),
+    'parsers/scriptable-url-parser': require('./scriptable-url-parser')
+  };
+  for (const [name, moduleExports] of Object.entries(wiredModules)) {
+    assert.equal(
+      typeof moduleExports.__wireConsoleTee,
+      'function',
+      `${name} must export __wireConsoleTee so its logs reach the run-log file`
+    );
+  }
+  // event-schema is intentionally absent: it never logs, so it needs no shim.
+});

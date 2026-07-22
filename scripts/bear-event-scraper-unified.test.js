@@ -273,3 +273,47 @@ test('require() exports the orchestrator without auto-executing', () => {
   assert.equal(fresh.isInitialized, false);
   assert.equal(fresh.isNode, true);
 });
+
+// ---------------------------------------------------------------------------
+// wireConsoleTees: the Scriptable-startup routine that routes each imported
+// module's per-module console into the adapter's run-log tee. Pure stubs only
+// — the real global console is never touched here.
+// ---------------------------------------------------------------------------
+const { wireConsoleTees } = require('./bear-event-scraper-unified');
+
+test('wireConsoleTees wires every module exposing __wireConsoleTee and skips the rest', () => {
+  const wired = [];
+  const tee = () => {};
+  const restoreA = () => {};
+  const modA = { __wireConsoleTee: (t) => { wired.push(['a', t]); return restoreA; } };
+  const modNoHelper = { SharedCore: class {} }; // e.g. event-schema (never logs)
+  const modNull = null;
+  const modDeclined = { __wireConsoleTee: (t) => { wired.push(['d', t]); return null; } };
+
+  const restores = wireConsoleTees(tee, [modA, modNoHelper, modNull, modDeclined]);
+
+  assert.deepEqual(wired.map((call) => call[0]), ['a', 'd']);
+  assert.ok(wired.every((call) => call[1] === tee), 'each helper receives the tee');
+  assert.deepEqual(restores, [restoreA], 'only real restore functions are collected');
+});
+
+test('wireConsoleTees is a no-op when no tee function is supplied', () => {
+  let helperCalls = 0;
+  const mod = { __wireConsoleTee: () => { helperCalls += 1; } };
+  assert.deepEqual(wireConsoleTees(null, [mod]), []);
+  assert.deepEqual(wireConsoleTees(undefined, [mod]), []);
+  assert.deepEqual(wireConsoleTees('not a function', [mod]), []);
+  assert.deepEqual(wireConsoleTees(() => {}, 'not an array'), []);
+  assert.equal(helperCalls, 0, 'module helpers never invoked without a tee');
+});
+
+test('wireConsoleTees survives a module whose helper throws', () => {
+  const wired = [];
+  const throwing = { __wireConsoleTee: () => { throw new Error('boom'); } };
+  const healthy = { __wireConsoleTee: () => { wired.push('ok'); return () => {}; } };
+
+  const restores = wireConsoleTees(() => {}, [throwing, healthy]);
+
+  assert.deepEqual(wired, ['ok'], 'later modules still get wired');
+  assert.equal(restores.length, 1);
+});

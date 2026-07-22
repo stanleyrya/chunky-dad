@@ -5095,3 +5095,145 @@ test('discovered-venue summary block renders only when siblings were dropped', (
   assert.ok(text.includes('To scrape this venue, add a parser entry to scraper-input.js:'));
   assert.ok(text.includes('{ name: "massive.club", enabled: false, urls: ["https://www.massive.club"], alwaysBear: false },'));
 });
+
+// ---------------------------------------------------------------------------
+// __wireConsoleTee: on Scriptable every imported module has its own console
+// binding, so the orchestrator wires the adapter's run-log tee into each
+// module through this helper. In Node the module console IS the shared global
+// console (which test-quiet-console also wraps), so every test here restores
+// in a finally block.
+// ---------------------------------------------------------------------------
+const sharedCoreModule = require('./shared-core');
+const normalizersModule = require('./normalizers');
+
+function snapshotConsole() {
+  return {
+    log: console.log,
+    warn: console.warn,
+    error: console.error,
+    debug: console.debug
+  };
+}
+
+function restoreConsole(saved) {
+  console.log = saved.log;
+  console.warn = saved.warn;
+  console.error = saved.error;
+  console.debug = saved.debug;
+  delete console.__consoleTeeRestore;
+}
+
+test('__wireConsoleTee tees info/warn/error with echo preserved and debug without echo', () => {
+  const saved = snapshotConsole();
+  const teed = [];
+  const echoed = [];
+  console.log = (...args) => echoed.push(['log', args]);
+  console.warn = (...args) => echoed.push(['warn', args]);
+  console.error = (...args) => echoed.push(['error', args]);
+  console.debug = (...args) => echoed.push(['debug', args]);
+  try {
+    const restore = sharedCoreModule.__wireConsoleTee((level, args) => teed.push([level, args]));
+    assert.equal(typeof restore, 'function');
+
+    console.log('🐻 line', 1);
+    console.warn('careful');
+    console.error('broken');
+    console.debug('full AI payload');
+
+    assert.deepEqual(teed, [
+      ['info', ['🐻 line', 1]],
+      ['warn', ['careful']],
+      ['error', ['broken']],
+      ['debug', ['full AI payload']]
+    ]);
+    // log/warn/error still reach the original console; debug is file-only
+    // (the documented debug channel: payloads go to the run log, not screen).
+    assert.deepEqual(echoed, [
+      ['log', ['🐻 line', 1]],
+      ['warn', ['careful']],
+      ['error', ['broken']]
+    ]);
+  } finally {
+    restoreConsole(saved);
+  }
+});
+
+test('__wireConsoleTee is idempotent: double-wire (even cross-module) does not double-tee', () => {
+  const saved = snapshotConsole();
+  const teed = [];
+  console.log = () => {};
+  try {
+    const tee = (level, args) => teed.push([level, args]);
+    const restore1 = sharedCoreModule.__wireConsoleTee(tee);
+    const restore2 = sharedCoreModule.__wireConsoleTee(tee);
+    // In Node all modules share the global console, so a second module's shim
+    // must also detect the existing wiring instead of stacking another tee.
+    const restore3 = normalizersModule.__wireConsoleTee(tee);
+    assert.equal(restore1, restore2);
+    assert.equal(restore1, restore3);
+
+    console.log('once');
+    assert.equal(teed.length, 1);
+  } finally {
+    restoreConsole(saved);
+  }
+});
+
+test('__wireConsoleTee restore() returns console to the exact original functions', () => {
+  const saved = snapshotConsole();
+  const spyLog = () => {};
+  const spyWarn = () => {};
+  const spyError = () => {};
+  const spyDebug = () => {};
+  console.log = spyLog;
+  console.warn = spyWarn;
+  console.error = spyError;
+  console.debug = spyDebug;
+  try {
+    const restore = sharedCoreModule.__wireConsoleTee(() => {});
+    assert.notEqual(console.log, spyLog, 'wiring replaced console.log');
+    assert.notEqual(console.debug, spyDebug, 'wiring replaced console.debug');
+
+    restore();
+    assert.equal(console.log, spyLog);
+    assert.equal(console.warn, spyWarn);
+    assert.equal(console.error, spyError);
+    assert.equal(console.debug, spyDebug);
+
+    // After restore the console is re-wireable (marker cleared).
+    const restoreAgain = sharedCoreModule.__wireConsoleTee(() => {});
+    assert.equal(typeof restoreAgain, 'function');
+    restoreAgain();
+    assert.equal(console.log, spyLog);
+  } finally {
+    restoreConsole(saved);
+  }
+});
+
+test('__wireConsoleTee no-ops (returns null) when tee is not a function', () => {
+  const saved = snapshotConsole();
+  try {
+    assert.equal(sharedCoreModule.__wireConsoleTee(null), null);
+    assert.equal(sharedCoreModule.__wireConsoleTee(undefined), null);
+    assert.equal(sharedCoreModule.__wireConsoleTee('not a tee'), null);
+    assert.equal(console.log, saved.log, 'console left untouched');
+    assert.equal(console.debug, saved.debug, 'console left untouched');
+  } finally {
+    restoreConsole(saved);
+  }
+});
+
+test('__wireConsoleTee keeps working when a tee throws (logging never breaks the app)', () => {
+  const saved = snapshotConsole();
+  const echoed = [];
+  console.log = (...args) => echoed.push(args);
+  try {
+    sharedCoreModule.__wireConsoleTee(() => {
+      throw new Error('sink failure');
+    });
+    assert.doesNotThrow(() => console.log('still logs'));
+    assert.deepEqual(echoed, [['still logs']], 'echo survives a throwing tee');
+  } finally {
+    restoreConsole(saved);
+  }
+});

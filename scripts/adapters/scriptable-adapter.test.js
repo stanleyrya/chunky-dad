@@ -29,7 +29,7 @@ global.FileManager = {
   local: () => fileManagerStub
 };
 
-const { ScriptableAdapter } = require('./scriptable-adapter');
+const { ScriptableAdapter, FileLogger, getConsoleTee } = require('./scriptable-adapter');
 
 const LOG_FIXTURE = [
   '2026-07-12T03:00:00.000Z [INFO] SYSTEM: Bearracuda → bearracuda (1 URL): https://bearracuda.com/',
@@ -1485,4 +1485,110 @@ test('presentRichResults records override taps and applies them after dismissal'
   assert.ok(String(rescued.bearSource).startsWith('manual-bear (overrode ai: drag show'), 'manual verdict records what it overrode');
   assert.equal(TestEventSchema.parseNotesIntoFields(rescued.notes).bearSource, rescued.bearSource);
   assert.equal(droppedEntry.manuallyMarkedBear, true);
+});
+
+// ---------------------------------------------------------------------------
+// getConsoleTee: the sink the orchestrator wires into other modules' consoles
+// (Scriptable gives each imported module its own console binding, so
+// captureConsole alone only ever saw this adapter module's output).
+// ---------------------------------------------------------------------------
+
+test('getConsoleTee routes (level, args) into the logger with captureConsole formatting', () => {
+  const fileLogger = new FileLogger();
+  const tee = fileLogger.getConsoleTee();
+  const err = new Error('tee boom');
+  const obj = { a: 1, nested: ['x'] };
+
+  tee('info', ['🐻 message', err, obj]);
+  tee('warn', ['warned']);
+  tee('error', [err]);
+  tee('debug', ['payload', obj]);
+
+  assert.equal(fileLogger.entries.length, 4);
+  assert.deepEqual(
+    fileLogger.entries.map((entry) => entry.level),
+    ['info', 'warn', 'error', 'debug']
+  );
+
+  // Identical formatting to captureConsole: both feed formatArgs(args) into
+  // append, so Error args keep their stack and objects JSON-stringify.
+  const expectedInfo = fileLogger.formatArgs(['🐻 message', err, obj]);
+  assert.ok(fileLogger.entries[0].line.endsWith(`[INFO] ${expectedInfo}`));
+  assert.ok(expectedInfo.includes('"a":1'), 'object arg is JSON-stringified');
+
+  const expectedError = fileLogger.formatArgs([err]);
+  assert.ok(fileLogger.entries[2].line.endsWith(`[ERROR] ${expectedError}`));
+  assert.ok(expectedError.includes('tee boom'), 'Error arg keeps its message/stack');
+
+  const expectedDebug = fileLogger.formatArgs(['payload', obj]);
+  assert.ok(fileLogger.entries[3].line.endsWith(`[DEBUG] ${expectedDebug}`));
+});
+
+test('getConsoleTee respects captureMode none/errors identically to append', () => {
+  const fileLogger = new FileLogger({ captureMode: 'none' });
+  const tee = fileLogger.getConsoleTee();
+
+  tee('error', ['dropped even at error level']);
+  tee('info', ['dropped']);
+  assert.equal(fileLogger.entries.length, 0, 'captureMode none drops everything');
+
+  fileLogger.configure({ captureMode: 'errors' });
+  tee('info', ['dropped info']);
+  tee('debug', ['dropped debug']);
+  tee('warn', ['kept warn']);
+  tee('error', ['kept error']);
+  assert.deepEqual(
+    fileLogger.entries.map((entry) => entry.level),
+    ['warn', 'error'],
+    'captureMode errors keeps only warn/error, like append'
+  );
+});
+
+test('module-level getConsoleTee export hands the orchestrator a tee function', () => {
+  assert.equal(typeof getConsoleTee, 'function');
+  assert.equal(typeof getConsoleTee(), 'function');
+});
+
+test('wired-then-restored console does not double-append into a capturing logger', () => {
+  // Node-only hazard check: here the module console IS the shared global
+  // console, so wiring a tee for the same logger that also captureConsole'd
+  // would double-append. On Scriptable module consoles are separate objects,
+  // so the tee and captureConsole never see the same call. This test proves
+  // the restore path leaves exactly one capture in place.
+  const savedConsole = {
+    log: console.log,
+    warn: console.warn,
+    error: console.error,
+    debug: console.debug
+  };
+  const { __wireConsoleTee } = require('../shared-core');
+  const fileLogger = new FileLogger();
+  try {
+    fileLogger.captureConsole();
+
+    // Wired on top of captureConsole (shared console): tee appends AND the
+    // echo reaches the captureConsole wrapper — the double-append Scriptable
+    // never hits because each module gets its own console object.
+    const restore = __wireConsoleTee(fileLogger.getConsoleTee());
+    assert.equal(typeof restore, 'function');
+    console.log('tee-marker-wired');
+    assert.equal(
+      fileLogger.entries.filter((entry) => entry.line.includes('tee-marker-wired')).length,
+      2
+    );
+
+    // Restored: only captureConsole remains — exactly one append per line.
+    restore();
+    console.log('tee-marker-restored');
+    assert.equal(
+      fileLogger.entries.filter((entry) => entry.line.includes('tee-marker-restored')).length,
+      1
+    );
+  } finally {
+    console.log = savedConsole.log;
+    console.warn = savedConsole.warn;
+    console.error = savedConsole.error;
+    console.debug = savedConsole.debug;
+    delete console.__consoleTeeRestore;
+  }
 });
