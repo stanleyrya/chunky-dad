@@ -778,12 +778,141 @@ class SharedCore {
             && normalizeBarName(bar.name) === normalized) || null;
     }
 
+    // City-center coordinates from the cities config as a "lat, lng" pair
+    // string (same source OpenStreetMapNormalizer.getCityCenterCoordinates
+    // reads — cityConfig.coordinates from js/city-config.js via
+    // tools/generate-scraper-cities.js). Null when the city is unknown or has
+    // no coordinates — pure config lookup, never a network call.
+    getCityCenterCoordinatePair(cityKey) {
+        const key = cityKey ? String(cityKey).trim() : '';
+        if (!key || !this.cities || typeof this.cities !== 'object') return null;
+        const cityConfig = this.cities[key] || this.cities[key.toLowerCase()];
+        const coords = cityConfig && cityConfig.coordinates;
+        if (!coords) return null;
+        const lat = Number(coords.lat);
+        const lng = Number(coords.lng);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+        return `${lat}, ${lng}`;
+    }
+
+    // The pin evidence one merge side contributes to the address evidence rung:
+    // { location: "lat, lng", verified } or null when the record carries no pin
+    // ATTRIBUTABLE to that address candidate. Attribution is strict — the pin
+    // must have been produced FROM this address by the pipeline:
+    //   - pinSource geocoded-exact / geocoded-approx: OpenStreetMapNormalizer
+    //     forward-geocoded record.address (BarDataNormalizer runs BEFORE
+    //     geocoding, so the geocoded address IS the record's final address);
+    //     exact = accepted exact-grade pin (verified), approx = street/census
+    //     grade or failed cross-check (usable for distance checks only).
+    //   - pinSource curated WITH addressSource curated: pin and address both
+    //     came from the same curated bar entry (verified). A curated pin next
+    //     to a non-curated address was not derived from that address.
+    // Everything else — page pins, absent provenance, or a record whose own
+    // address is not this candidate value — is uncertain attribution and
+    // counts as NO PIN (fail open). Calendar records satisfy the same shape:
+    // their stored pin/address/pinSource were finalized together by a previous
+    // run's merge (setProvenanceSource keeps them coherent).
+    getAddressPinEvidence(record, addressValue) {
+        if (!record || typeof record !== 'object') return null;
+        const location = typeof record.location === 'string' ? record.location.trim() : '';
+        if (!this.isCoordinatePair(location)) return null;
+        const recordAddress = typeof record.address === 'string' ? record.address.trim() : '';
+        const candidate = typeof addressValue === 'string' ? addressValue.trim() : '';
+        if (!recordAddress || !candidate || recordAddress !== candidate) return null;
+        const pinSource = typeof record.pinSource === 'string' ? record.pinSource.trim() : '';
+        if (pinSource === 'geocoded-exact') return { location, verified: true };
+        if (pinSource === 'geocoded-approx') return { location, verified: false };
+        if (pinSource === 'curated') {
+            const addressSource = typeof record.addressSource === 'string' ? record.addressSource.trim() : '';
+            return addressSource === 'curated' ? { location, verified: true } : null;
+        }
+        return null;
+    }
+
+    // Evidence rung for GENUINELY DIFFERENT address candidates (the cases the
+    // same-address and curated-address rungs could not settle). Uses ONLY
+    // evidence the pipeline already computed — verified pins on the two merge
+    // records, the city center from the cities config, curated bar
+    // coordinates — never a network call. Steps, in order:
+    //   1. exactly one candidate has a VERIFIED pin derived from its address
+    //      (the other side is unpinned: geocode refused / found nothing) → it
+    //      wins;
+    //   2. both pinned and the city center is known: exactly one pin within a
+    //      sane radius (≤ 30 km) while the other is absurd (> 50 km) → the
+    //      sane one wins (the 30–50 km band is ambiguous on purpose);
+    //   3. the event's bar matches a curated bar with coordinates and exactly
+    //      one candidate's pin is within 150 m of the curated pin → it wins.
+    // Any ambiguity — no attributable pins, no city center, both distances
+    // sane/absurd, both pins near the curated bar — FAILS OPEN (null → AI
+    // arbitration exactly as before).
+    resolveAddressMismatchByEvidence(valueA, valueB, context) {
+        if (!context || !context.records || typeof context.records !== 'object') return null;
+        const labels = context.sideLabels && typeof context.sideLabels === 'object'
+            ? context.sideLabels
+            : { a: 'a', b: 'b' };
+        const evidenceA = this.getAddressPinEvidence(context.records.a, valueA);
+        const evidenceB = this.getAddressPinEvidence(context.records.b, valueB);
+
+        // Step 1: exactly one side carries a pin at all, and it is verified.
+        if (evidenceA && !evidenceB && evidenceA.verified) {
+            return { winner: 'a', reason: `only "${labels.a}" has a verified pin` };
+        }
+        if (evidenceB && !evidenceA && evidenceB.verified) {
+            return { winner: 'b', reason: `only "${labels.b}" has a verified pin` };
+        }
+
+        // Step 2: both pinned + known city center — sane beats absurd.
+        if (evidenceA && evidenceB) {
+            const center = this.getCityCenterCoordinatePair(context.cityKey);
+            if (center) {
+                const distanceA = this.coordinatePairDistanceKm(evidenceA.location, center);
+                const distanceB = this.coordinatePairDistanceKm(evidenceB.location, center);
+                if (distanceA !== null && distanceB !== null) {
+                    const saneBeatsAbsurd = (sane, absurd) => sane <= 30 && absurd > 50;
+                    if (saneBeatsAbsurd(distanceA, distanceB)) {
+                        return { winner: 'a', reason: `only "${labels.a}" pin is near the city center (${Math.round(distanceA)} km vs ${Math.round(distanceB)} km)` };
+                    }
+                    if (saneBeatsAbsurd(distanceB, distanceA)) {
+                        return { winner: 'b', reason: `only "${labels.b}" pin is near the city center (${Math.round(distanceB)} km vs ${Math.round(distanceA)} km)` };
+                    }
+                }
+            }
+        }
+
+        // Step 3: curated bar proximity. Same bar selection as the
+        // curated-address rung (first barNames match wins), then the curated
+        // coordinates must exist and exactly one pin must sit within 150 m.
+        const cityBars = this.getCuratedCityBars(context.cityKey);
+        const barNames = Array.isArray(context.barNames) ? context.barNames : [];
+        let curatedBar = null;
+        if (cityBars) {
+            for (const barName of barNames) {
+                curatedBar = this.findCuratedBarByName(cityBars, barName);
+                if (curatedBar) break;
+            }
+        }
+        if (curatedBar && this.isCoordinatePair(curatedBar.coordinates)) {
+            const isNearCuratedPin = evidence => {
+                if (!evidence) return false;
+                const km = this.coordinatePairDistanceKm(evidence.location, curatedBar.coordinates);
+                return km !== null && km <= 0.15;
+            };
+            const nearA = isNearCuratedPin(evidenceA);
+            const nearB = isNearCuratedPin(evidenceB);
+            if (nearA !== nearB) {
+                return { winner: nearA ? 'a' : 'b', reason: `pin matches curated bar "${curatedBar.name}"` };
+            }
+        }
+        return null;
+    }
+
     // Deterministic conflict resolution consulted by BOTH merge paths
     // (createFinalEventObject and mergeParsedEvents) before a field is queued
     // for AI arbitration. Returns { winner: 'a'|'b', reason } or null (→
     // arbitrate as usual). Callers map a/b onto their own labels and thread
-    // event context (currently { cityKey, barNames }) for the city-aware
-    // title, curated-bar, and curated-address rules.
+    // event context (currently { cityKey, barNames, eventTitle, sideLabels,
+    // records }) for the city-aware title, curated-bar, curated-address, and
+    // address-evidence rules.
     resolveConflictDeterministically(fieldName, valueA, valueB, context = null) {
         const urlA = this.getUrlRuleParts(valueA);
         const urlB = this.getUrlRuleParts(valueB);
@@ -899,10 +1028,14 @@ class SharedCore {
         // other candidate is not itself a parseable street address: a
         // parseable candidate that failed the same-address check is a genuine
         // CONTRADICTION of curated data and is never silently resolved.
-        // Rung 3 (future): geocode-equality — two candidates geocoding to the
-        // same pin are the same address — needs adapter/network threading in
-        // the merge path, deliberately out of scope here. Everything not
-        // decided above FAILS OPEN to AI arbitration exactly as today.
+        // Rung 3: evidence — for candidates rungs 1–2 found genuinely
+        // different (or unparseable but both present), pins the pipeline
+        // ALREADY produced decide when they can (see
+        // resolveAddressMismatchByEvidence: one verified pin, city-center
+        // sanity, curated-bar proximity — no network calls). Everything not
+        // decided above FAILS OPEN to AI arbitration exactly as today, but a
+        // true street mismatch reaching the AI is warned about first so it is
+        // never silent.
         if (fieldName === 'address' && typeof valueA === 'string' && typeof valueB === 'string') {
             const parsedA = this.parseAddressForComparison(valueA);
             const parsedB = this.parseAddressForComparison(valueB);
@@ -942,6 +1075,22 @@ class SharedCore {
                             reason: `matches curated bar address (${curatedBar.name})`
                         };
                     }
+                }
+                // Rung 3 (evidence). Case-only twins are NOT a street
+                // mismatch — they fall through untouched so the case-only
+                // rule below keeps deciding them; empty candidates belong to
+                // the existing empty-field handling.
+                const collapseForTwinCheck = value => String(value).replace(/\s+/g, ' ').trim().toLowerCase();
+                const collapsedMismatchA = collapseForTwinCheck(valueA);
+                const collapsedMismatchB = collapseForTwinCheck(valueB);
+                if (collapsedMismatchA && collapsedMismatchB && collapsedMismatchA !== collapsedMismatchB) {
+                    const evidenceResolution = this.resolveAddressMismatchByEvidence(valueA, valueB, context);
+                    if (evidenceResolution) return evidenceResolution;
+                    // Nothing decidable from evidence: the AI arbitrates
+                    // exactly as before, but never silently — a genuine
+                    // street mismatch always leaves a manual-review trail.
+                    const mismatchEventTitle = context && context.eventTitle ? context.eventTitle : 'event';
+                    console.warn(`⚠️ MERGE: "${mismatchEventTitle}" field=address street mismatch arbitrated by AI ("${valueA}" vs "${valueB}") — verify manually`);
                 }
             }
         }
@@ -3247,9 +3396,15 @@ class SharedCore {
         // to a named title) — both records describe the same event, so either
         // side's resolved city works. barNames feeds the curated-address rung:
         // either record's bar matching a curated bar anchors the address.
+        // records/sideLabels feed the address evidence rung: each side's
+        // already-computed pin (+ pinSource provenance) is attributed to its
+        // own address candidate; eventTitle is for the mismatch warning only.
         const mergeContext = {
             cityKey: newEvent.city || existingEvent.city || '',
-            barNames: [existingEvent.bar, newEvent.bar]
+            barNames: [existingEvent.bar, newEvent.bar],
+            eventTitle: mergeEventTitle,
+            sideLabels: { a: 'existing', b: 'incoming' },
+            records: { a: existingEvent, b: newEvent }
         };
         const queueArbitrationConflict = (fieldName, existingValue, newValue, fallbackPick, fallbackReason) => {
             const resolved = this.resolveConflictDeterministically(fieldName, existingValue, newValue, mergeContext);
@@ -3666,10 +3821,17 @@ class SharedCore {
         // to a named title) — the scraper object carries the resolved city; the
         // calendar object may carry one parsed from its notes. barNames feeds
         // the curated-address rung: either record's bar matching a curated bar
-        // anchors the address.
+        // anchors the address. records/sideLabels feed the address evidence
+        // rung: the scraper object carries this run's geocode-verified pin
+        // (location + pinSource from the normalizers), the calendar object its
+        // stored pin (native location + notes-parsed pinSource); eventTitle is
+        // for the mismatch warning only.
         const mergeContext = {
             cityKey: scraperObject.city || calendarObject.city || '',
-            barNames: [calendarObject.bar, scraperObject.bar]
+            barNames: [calendarObject.bar, scraperObject.bar],
+            eventTitle: mergeTitle,
+            sideLabels: { a: 'calendar', b: 'scraped' },
+            records: { a: calendarObject, b: scraperObject }
         };
         const queueArbitrationConflict = (fieldName, calendarValue, scraperValue) => {
             const resolved = this.resolveConflictDeterministically(fieldName, calendarValue, scraperValue, mergeContext);
