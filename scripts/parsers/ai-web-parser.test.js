@@ -308,6 +308,57 @@ test('normalizeAiEvent flags wall-clock dates when no timezone can be resolved',
   assert.equal(event._timezoneUnresolved, true);
 });
 
+test('normalizeAiEvent stamps imageSource og-image for the page\'s own meta artwork, page otherwise', () => {
+  const parser = createParser();
+  const htmlData = {
+    url: 'https://bearracuda.com/events/sausage-party/',
+    html: `<html><head>
+      <meta property="og:image" content="https://Bearracuda.com/wp-content/Uploads/SausageWeb.jpg/" />
+      <meta name="twitter:image" content="https://bearracuda.com/img.jpg?a=1&amp;b=2" />
+    </head><body></body></html>`
+  };
+  const base = { title: 'SAUSAGE PARTY', startDate: '2026-08-01', startTime: '21:00' };
+
+  // og:image match is robust to case and trailing-slash differences
+  const ogEvent = parser.normalizeAiEvent(
+    { ...base, image: 'https://bearracuda.com/wp-content/uploads/sausageweb.jpg' }, {}, htmlData, null, null);
+  assert.equal(ogEvent.imageSource, 'og-image');
+
+  // twitter:image counts too; the meta value is entity-decoded before comparing
+  const twitterEvent = parser.normalizeAiEvent(
+    { ...base, image: 'https://bearracuda.com/img.jpg?a=1&b=2' }, {}, htmlData, null, null);
+  assert.equal(twitterEvent.imageSource, 'og-image');
+
+  // A content/OCR/segment image that is NOT the page's meta artwork → page
+  const pageEvent = parser.normalizeAiEvent(
+    { ...base, image: 'https://static.wixstatic.com/media/8ff085_massiveparty~mv2.webp' }, {}, htmlData, null, null);
+  assert.equal(pageEvent.imageSource, 'page');
+
+  // No image → no stamp at all (fail open)
+  const bareEvent = parser.normalizeAiEvent({ ...base }, {}, htmlData, null, null);
+  assert.equal('imageSource' in bareEvent, false);
+
+  // No htmlData (no meta to compare against) → the AI-web default, page
+  const noHtmlEvent = parser.normalizeAiEvent(
+    { ...base, image: 'https://x.example/poster.jpg' }, {}, null, null, null);
+  assert.equal(noHtmlEvent.imageSource, 'page');
+});
+
+test('JSON-LD structured-data images are stamped imageSource jsonld', () => {
+  const parser = createParser();
+  const events = parser.extractEventsFromJsonLd(SICKENING_JSONLD_HTML, 'https://sickening.events/e/x');
+  assert.equal(events.length, 1);
+  assert.equal(events[0].image, 'https://res.cloudinary.example/cover.webp');
+  assert.equal(events[0].imageSource, 'jsonld');
+
+  // A node without an image gets no stamp (fail open)
+  const bare = parser.buildEventFromJsonLdNode({
+    '@type': 'Event', name: 'BEAR NIGHT', startDate: '2026-08-01T21:00:00-05:00'
+  }, 'https://tickets.example/e/bear-night', null);
+  assert.ok(bare, 'event should build');
+  assert.equal('imageSource' in bare, false);
+});
+
 test('mergeAiEventFields canonicalizes lowercase response keys to schema keys', () => {
   const parser = createParser();
   const merged = parser.mergeAiEventFields({}, {

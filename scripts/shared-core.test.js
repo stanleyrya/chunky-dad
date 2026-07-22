@@ -1209,6 +1209,157 @@ test('guardrail: image URLs without a clear resolution margin still go to the AI
 });
 
 // ---------------------------------------------------------------------------
+// Image provenance rung: an image stamped as the event page's OWN artwork
+// (imageSource og-image / jsonld at extraction) beats a merely page-derived
+// candidate deterministically. Attribution is strict (the record's image must
+// BE the candidate), both-og-grade / neither falls through to the resolution
+// margin rung, and imageSource follows the winning value like pinSource.
+// ---------------------------------------------------------------------------
+
+test('guardrail: own-page artwork (og-image/jsonld) beats a page-sourced image; ambiguity falls through', () => {
+  const core = createCore();
+  const og = 'https://bearracuda.com/wp-content/uploads/2026/06/sausageweb.jpg';
+  const page = 'https://static.wixstatic.com/media/8ff085_massiveparty~mv2.webp';
+  const context = (recordA, recordB) => ({
+    sideLabels: { a: 'existing', b: 'incoming' },
+    records: { a: recordA, b: recordB }
+  });
+
+  // og-image beats page-sourced in both directions
+  assert.deepEqual(
+    core.resolveConflictDeterministically('image', og, page,
+      context({ image: og, imageSource: 'og-image' }, { image: page, imageSource: 'page' })),
+    { winner: 'a', reason: '"existing" image is the event page\'s own artwork (og-image)' });
+  assert.deepEqual(
+    core.resolveConflictDeterministically('image', page, og,
+      context({ image: page, imageSource: 'page' }, { image: og, imageSource: 'og-image' })),
+    { winner: 'b', reason: '"incoming" image is the event page\'s own artwork (og-image)' });
+
+  // jsonld is og-grade too, and an entirely unstamped other side also loses
+  assert.deepEqual(
+    core.resolveConflictDeterministically('image', og, page,
+      context({ image: og, imageSource: 'jsonld' }, { image: page })),
+    { winner: 'a', reason: '"existing" image is the event page\'s own artwork (jsonld)' });
+
+  // Both og-grade → no provenance edge; these URLs advertise no size → AI
+  assert.equal(
+    core.resolveConflictDeterministically('image', og, page,
+      context({ image: og, imageSource: 'og-image' }, { image: page, imageSource: 'jsonld' })),
+    null, 'both own-artwork candidates are a genuine question');
+
+  // Neither og-grade → the existing resolution-margin rung still decides
+  assert.deepEqual(
+    core.resolveConflictDeterministically('image',
+      'https://cdn.example.com/img.jpg?w=1920&h=1080', 'https://cdn.example.com/thumbs/img.jpg?w=150&h=150',
+      context(
+        { image: 'https://cdn.example.com/img.jpg?w=1920&h=1080', imageSource: 'page' },
+        { image: 'https://cdn.example.com/thumbs/img.jpg?w=150&h=150', imageSource: 'page' })),
+    { winner: 'a', reason: 'clearly higher-resolution image URL' });
+
+  // Attribution caution: a record whose OWN image is not the candidate never
+  // vouches for it — the stray og-image stamp decides nothing.
+  assert.equal(
+    core.resolveConflictDeterministically('image', og, page,
+      context({ image: 'https://bearracuda.com/other.jpg', imageSource: 'og-image' },
+        { image: page, imageSource: 'page' })),
+    null, 'provenance only counts when the record\'s image field IS the candidate');
+
+  // The logo rung stays ABOVE provenance: an og-stamped logo-path asset still loses
+  const logo = 'https://res.cloudinary.com/eventservice/image/upload/saas/logos/image_abc.webp';
+  assert.deepEqual(
+    core.resolveConflictDeterministically('image', logo, page,
+      context({ image: logo, imageSource: 'og-image' }, { image: page, imageSource: 'page' })),
+    { winner: 'b', reason: 'event artwork beats logo-path image' });
+
+  // No records context at all → fail open exactly as before
+  assert.equal(core.resolveConflictDeterministically('image', og, page), null);
+});
+
+test('imageSource is never arbitration-eligible and round-trips through notes like pinSource', () => {
+  const core = createCore();
+  assert.equal(core.isArbitrationEligibleField('imageSource'), false);
+  assert.equal(core.isArbitrationEligibleField('image'), true, 'the image VALUE itself still arbitrates');
+
+  const notes = core.formatEventNotes({
+    image: 'https://bearracuda.com/wp-content/uploads/2026/06/sausageweb.jpg',
+    imageSource: 'og-image'
+  });
+  assert.match(notes, /imageSource: og-image/);
+  const parsed = core.parseNotesIntoFields(notes);
+  assert.equal(parsed.image, 'https://bearracuda.com/wp-content/uploads/2026/06/sausageweb.jpg');
+  assert.equal(parsed.imageSource, 'og-image');
+});
+
+test('regression: bearracuda og-image artwork beats the massive.club page-sourced webp in BOTH merge flows', async () => {
+  const core = createCore();
+  const sausage = 'https://bearracuda.com/wp-content/uploads/2026/06/sausageweb.jpg';
+  const webp = 'https://static.wixstatic.com/media/8ff085_massiveparty~mv2.webp';
+
+  // Enrich direction (mergeParsedEvents), both orders — zero AI calls.
+  const priorities = { image: { priority: ['ai-web'], merge: 'ai' } };
+  const aiParserConfig = { ai: { provider: 'ollama', endpoint: 'http://ai.example', model: 'm' } };
+  const base = {
+    title: 'SAUSAGE PARTY', city: 'dallas', source: 'ai-web',
+    startDate: new Date('2026-08-01T02:00:00.000Z'), _fieldPriorities: priorities
+  };
+
+  const adapterA = buildArbitrationAdapter({});
+  const mergedA = await core.mergeParsedEvents(
+    { ...base, image: webp, imageSource: 'page' },
+    { ...base, image: sausage, imageSource: 'og-image', _parserConfig: aiParserConfig },
+    { httpAdapter: adapterA });
+  assert.equal(adapterA.calls.length, 0, 'own-page artwork resolves without AI');
+  assert.equal(mergedA.image, sausage);
+  assert.equal(mergedA.imageSource, 'og-image', 'imageSource follows the winning image');
+
+  const adapterB = buildArbitrationAdapter({});
+  const mergedB = await core.mergeParsedEvents(
+    { ...base, image: sausage, imageSource: 'og-image' },
+    { ...base, image: webp, imageSource: 'page', _parserConfig: aiParserConfig },
+    { httpAdapter: adapterB });
+  assert.equal(adapterB.calls.length, 0);
+  assert.equal(mergedB.image, sausage);
+  assert.equal(mergedB.imageSource, 'og-image',
+    'the incoming base-spread stamp (page) is replaced by the winning side\'s');
+
+  // A winning image with NO stamp leaves imageSource absent — the losing
+  // side's stamp is never inherited (fail open, no mislabeling).
+  const adapterE = buildArbitrationAdapter({});
+  const mergedE = await core.mergeParsedEvents(
+    { ...base, image: 'https://cdn.example.com/img.jpg?w=1920&h=1080' },
+    { ...base, image: 'https://cdn.example.com/thumbs/img.jpg?w=150&h=150', imageSource: 'page', _parserConfig: aiParserConfig },
+    { httpAdapter: adapterE });
+  assert.equal(adapterE.calls.length, 0);
+  assert.equal(mergedE.image, 'https://cdn.example.com/img.jpg?w=1920&h=1080');
+  assert.equal(mergedE.imageSource, undefined, 'a winner with no stamp never inherits the loser\'s');
+
+  // Calendar direction (createFinalEventObject), both sides — zero AI calls.
+  const fresh = buildAlignedArbitrationPair();
+  fresh.scraped.image = sausage;
+  fresh.scraped.imageSource = 'og-image';
+  fresh.existing.notes += `\nimage: ${webp}\nimageSource: page`;
+  const adapterC = buildArbitrationAdapter({});
+  const finalC = await core.createFinalEventObject(fresh.existing, fresh.scraped, { httpAdapter: adapterC });
+  assert.equal(adapterC.calls.length, 0);
+  assert.equal(finalC.image, sausage, 'the scraped own-artwork image wins');
+  assert.equal(finalC.imageSource, 'og-image');
+  assert.deepEqual(finalC._original.aiArbitration.deterministic, ['image']);
+  const parsedNotes = core.parseNotesIntoFields(finalC.notes);
+  assert.equal(parsedNotes.image, sausage);
+  assert.equal(parsedNotes.imageSource, 'og-image', 'the stamp persists to notes for the next run');
+
+  const stored = buildAlignedArbitrationPair();
+  stored.scraped.image = webp;
+  stored.scraped.imageSource = 'page';
+  stored.existing.notes += `\nimage: ${sausage}\nimageSource: og-image`;
+  const adapterD = buildArbitrationAdapter({});
+  const finalD = await core.createFinalEventObject(stored.existing, stored.scraped, { httpAdapter: adapterD });
+  assert.equal(adapterD.calls.length, 0);
+  assert.equal(finalD.image, sausage, 'the calendar-stored own-artwork image is kept');
+  assert.equal(finalD.imageSource, 'og-image', 'the notes-parsed calendar stamp participates and survives');
+});
+
+// ---------------------------------------------------------------------------
 // Deterministic cross-host ticketUrl rung: a known ticketing-platform URL
 // beats a bare non-ticketing domain root. Preference heuristic, not a gate —
 // everything else falls through to AI exactly as before.
