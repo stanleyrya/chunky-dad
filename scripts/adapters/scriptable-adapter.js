@@ -3832,6 +3832,10 @@ class ScriptableAdapter {
         console.log(`   • ${result.name}: ${result.bearEvents} bear events`);
       });
 
+      if (results.discoveredVenueSummary) {
+        console.log("\n" + results.discoveredVenueSummary);
+      }
+
       console.log("\n" + "=".repeat(60));
 
       const shouldSkipUi = this.shouldSkipResultsUi(results);
@@ -4541,8 +4545,29 @@ class ScriptableAdapter {
       // Generate HTML for rich display
       const html = await this.generateRichHTML(results);
 
-      // Present using WebView
-      await WebView.loadHTML(html, null, null, true);
+      // Present using an instance WebView so page buttons can signal native
+      // via shouldAllowRequest (assigned BEFORE present() — the reliable
+      // webview→native pattern, see presentReviewResults). Currently used by
+      // the discovered-venue "Copy parser entry" buttons (chunkyscrape://).
+      const venueEntrySnippets = this.collectVenueEntrySnippets(results);
+      const webView = new WebView();
+      await webView.loadHTML(html);
+      webView.shouldAllowRequest = (request) => {
+        const url = request && request.url ? String(request.url) : "";
+        if (url.indexOf("chunkyscrape://") !== 0) {
+          return true; // normal navigation (links, about:blank, …)
+        }
+        const params = this.parseReviewActionUrl(url);
+        if (params.a === "copy-venue") {
+          const snippet = venueEntrySnippets[params.id];
+          if (typeof snippet === "string" && snippet.length > 0) {
+            // Fire-and-forget: the handler must return a bool synchronously
+            this.copyVenueEntryAndReport(snippet, params.id, webView);
+          }
+        }
+        return false; // cancel the fake navigation; the page stays put
+      };
+      await webView.present(true);
 
       // After displaying results, prompt for calendar execution if we have analyzed events
       // Don't prompt when displaying saved runs (they should use isDryRun override instead)
@@ -6020,6 +6045,8 @@ class ScriptableAdapter {
         : ""
     }
 
+    ${this.generateDiscoveredVenueSection(results)}
+
     ${this.generateDiscoverySection(results)}
 
     ${insightSectionsHtml}
@@ -6027,6 +6054,27 @@ class ScriptableAdapter {
     ${logSectionHtml}
     
     <script>
+        // Discovered-venue copy buttons signal native via a custom-scheme
+        // navigation intercepted by shouldAllowRequest (set before present()) —
+        // the same battle-tested webview→native pattern as the review UI. The
+        // nonce makes each tap a distinct navigation so repeat taps still fire.
+        // The snippet text itself stays native-side, keyed by venue index.
+        window.__venueCopyNonce = 0;
+        function copyVenueEntry(btn) {
+            var venueIndex = btn ? (btn.getAttribute('data-venue-index') || '') : '';
+            window.location.href = 'chunkyscrape://act?a=copy-venue&id=' +
+                encodeURIComponent(venueIndex) + '&n=' + (window.__venueCopyNonce++);
+        }
+        function markVenueEntryCopied(venueIndex) {
+            try {
+                var btn = document.querySelector('.venue-copy-btn[data-venue-index="' + venueIndex + '"]');
+                if (btn) {
+                    btn.textContent = '✅ Copied!';
+                    setTimeout(function () { btn.textContent = '📋 Copy parser entry'; }, 2000);
+                }
+            } catch (ignore) {}
+        }
+
         function copyDiscoveryText(btn) {
             const encoded = btn.getAttribute('data-encoded') || '';
             let text = '';
@@ -7019,6 +7067,91 @@ class ScriptableAdapter {
     return { button, panel, totalSegments };
   }
 
+  // Discovered venue calendars (enrich-only ticket crawl): hosts whose sibling
+  // events were dropped, with a paste-ready parser entry and a copy button.
+  // The button signals native via the chunkyscrape:// scheme handled in
+  // presentRichResults (shouldAllowRequest → Pasteboard.copy).
+  generateDiscoveredVenueSection(results) {
+    const venues = Array.isArray(results && results.discoveredVenueCalendars)
+      ? results.discoveredVenueCalendars
+      : [];
+    if (venues.length === 0) return "";
+
+    const venueBlocks = venues
+      .map((venue, index) => {
+        const sampleTitles = Array.isArray(venue.sampleTitles)
+          ? venue.sampleTitles
+          : [];
+        const extraCount = venue.droppedCount - sampleTitles.length;
+        const titlesText =
+          sampleTitles.join(", ") +
+          (extraCount > 0 ? `, … (+${extraCount} more)` : "");
+        const viaText = venue.parentTitle
+          ? ` — reached via ticket link from "${venue.parentTitle}"`
+          : "";
+        return `
+        <div class="discovered-venue" style="margin-bottom:14px; padding:10px; background:var(--background-light); border-radius:8px;">
+            <div style="font-weight:600; margin-bottom:4px;">${this.escapeHtml(venue.host)} <span style="font-weight:400; opacity:0.7;">— ${venue.droppedCount} event(s) found but not ingested (enrich-only ticket crawl)${this.escapeHtml(viaText)}</span></div>
+            ${titlesText ? `<div style="font-size:12px; margin-bottom:6px; color:var(--text-secondary);">Titles: ${this.escapeHtml(titlesText)}</div>` : ""}
+            <div style="display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap; align-items:center;">
+                <button onclick="copyVenueEntry(this)" class="log-copy-btn venue-copy-btn" data-venue-index="${index}">📋 Copy parser entry</button>
+                <span style="font-size:12px; color:var(--text-secondary);">To scrape this venue, paste into parsers[] in scraper-input.js</span>
+            </div>
+            <pre class="discovery-output">${this.escapeHtml(venue.parserEntrySnippet || "")}</pre>
+        </div>`;
+      })
+      .join("");
+
+    return `
+    <div class="section">
+        <div class="section-header">
+            <span class="section-icon">📋</span>
+            <span class="section-title">Discovered Venue Calendars</span>
+            <span class="section-count">${venues.length}</span>
+        </div>
+        ${venueBlocks}
+    </div>
+    `;
+  }
+
+  // Native-side snippet map for the chunkyscrape://copy-venue bridge: venue
+  // index → paste-ready parser entry. Snippets never travel through the URL.
+  collectVenueEntrySnippets(results) {
+    const venues = Array.isArray(results && results.discoveredVenueCalendars)
+      ? results.discoveredVenueCalendars
+      : [];
+    const snippets = {};
+    venues.forEach((venue, index) => {
+      if (venue && typeof venue.parserEntrySnippet === "string") {
+        snippets[String(index)] = venue.parserEntrySnippet;
+      }
+    });
+    return snippets;
+  }
+
+  // Copy one venue's parser entry natively and (best-effort) flash the button.
+  // Called fire-and-forget from shouldAllowRequest, which must synchronously
+  // return a bool — so the await lives here, not in the handler.
+  async copyVenueEntryAndReport(snippet, venueIndex, webView) {
+    try {
+      Pasteboard.copy(snippet);
+      console.log(
+        `📱 Scriptable: Copied discovered-venue parser entry #${venueIndex} to clipboard`,
+      );
+    } catch (error) {
+      console.warn(
+        `📱 Scriptable: Failed to copy venue parser entry: ${error.message}`,
+      );
+      return;
+    }
+    const feedbackJs = `markVenueEntryCopied(${JSON.stringify(String(venueIndex))})`;
+    try {
+      await webView.evaluateJavaScript(feedbackJs, false);
+    } catch (error) {
+      /* button feedback is optional polish; the copy already happened */
+    }
+  }
+
   // Generate HTML for URL discovery section (discoveryOnly mode results)
   generateDiscoverySection(results) {
     const parserResults = Array.isArray(results && results.parserResults)
@@ -7880,6 +8013,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       results.parserResults.forEach((result) => {
         lines.push(`  • ${result.name}: ${result.bearEvents} bear events`);
       });
+    }
+
+    if (results.discoveredVenueSummary) {
+      lines.push("");
+      lines.push(results.discoveredVenueSummary);
     }
 
     const allEvents = this.getAllEventsFromResults(results);

@@ -2985,3 +2985,61 @@ test('getImageSizeFromUrl and OCR consolidation work without URLSearchParams (iO
     global.URLSearchParams = original;
   }
 });
+
+// ---------------------------------------------------------------------------
+// Segment listing-title hint: the page's own listing title anchors "title" so
+// stylized flyer OCR (taglines, DJ names) can't displace it.
+// ---------------------------------------------------------------------------
+
+test('segment extraction prompt carries SEGMENT_LISTING_TITLE and the title rule when derivable', () => {
+  const parser = createParser();
+  const segment = {
+    lines: ['PERVERT', 'Aug 7, 2026 10:00 PM', 'DJs Villa Senor and Dee Jay Energy'],
+    html: ''
+  };
+  const htmlData = parser.buildMultiEventSegmentHtmlData(
+    { html: '', url: 'https://venue.example/calendar' }, segment, 0, 3, []
+  );
+  assert.equal(htmlData.segmentListingTitle, 'PERVERT', 'first non-date page-text line is the listing title');
+
+  // Both the extraction prompt and the confidence-retry prompt (the alternate
+  // variant) must carry the hint and the rule.
+  for (const variant of ['default', 'alternate']) {
+    const prompt = parser.buildExtractionPrompt(htmlData, {}, null, {}, ['title'], 'SNIPPET', variant, { ocr: true, segment: true });
+    assert.ok(
+      prompt.includes('SEGMENT_LISTING_TITLE (the page\'s own listing title for this event): "PERVERT"'),
+      `${variant} prompt carries the listing title`
+    );
+    assert.ok(
+      prompt.includes('- For "title", prefer SEGMENT_LISTING_TITLE or a fuller variant of the same name from the flyer; flyer text that does not contain it (taglines, DJ names, stylized graphics text) is NOT the title.'),
+      `${variant} prompt carries the title rule`
+    );
+  }
+});
+
+test('segment extraction prompt is unchanged when no listing title can be derived', () => {
+  const parser = createParser();
+  const segment = {
+    lines: ['Aug 7, 2026 10:00 PM', 'https://venue.example/tickets'],
+    html: ''
+  };
+  const htmlData = parser.buildMultiEventSegmentHtmlData(
+    { html: '', url: 'https://venue.example/calendar' }, segment, 0, 3, []
+  );
+  assert.equal(htmlData.segmentListingTitle, '', 'date/URL-only segments derive no listing title');
+
+  const prompt = parser.buildExtractionPrompt(htmlData, {}, null, {}, ['title'], 'SNIPPET', 'default', { ocr: true, segment: true });
+  assert.ok(!prompt.includes('SEGMENT_LISTING_TITLE'), 'no hint line without a derived title');
+  assert.ok(!prompt.includes('is NOT the title'), 'no rule line without a derived title');
+});
+
+test('deriveSegmentListingTitle skips marker, time-only, and date lines; long prose derives nothing', () => {
+  const parser = createParser();
+  assert.equal(parser.deriveSegmentListingTitle({
+    lines: ['SEGMENT_IMAGE_URL: https://cdn.example/flyer.jpg', '10:00 PM', 'July 25, 2026', 'BEAR NIGHT']
+  }), 'BEAR NIGHT');
+  assert.equal(parser.deriveSegmentListingTitle({ lines: [] }), '');
+  assert.equal(parser.deriveSegmentListingTitle(null), '');
+  // A long prose first line is a description, not a title — derive nothing
+  assert.equal(parser.deriveSegmentListingTitle({ lines: ['x'.repeat(200), 'BEAR NIGHT'] }), '');
+});

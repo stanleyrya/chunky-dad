@@ -1234,3 +1234,97 @@ test('review page uses the chunkyreview scheme, error banner, and bar-data visib
   assert.ok(html.includes('1 event verified against curated bar data'), 'bar-data count in header');
   assert.ok(html.includes('matches curated bar data (Camp Out)'), 'ok entry shows the bar note');
 });
+
+// ---------------------------------------------------------------------------
+// Discovered venue calendars (enrich-only ticket crawl): results-UI section
+// with a native copy-parser-entry bridge (chunkyscrape:// + shouldAllowRequest)
+// ---------------------------------------------------------------------------
+
+function buildDiscoveredVenueFixture() {
+  return {
+    host: 'www.massive.club',
+    origin: 'https://www.massive.club',
+    suggestedName: 'massive.club',
+    parentTitle: 'BEARRACUDA: LA',
+    sourceEntryName: 'Bearracuda Events',
+    droppedCount: 9,
+    sampleTitles: ['Butt Blast (Jul 23)', 'Twink Bash: Birthday Suit (Aug 1)'],
+    parserEntrySnippet: '{ name: "massive.club", enabled: false, urls: ["https://www.massive.club"], alwaysBear: false },'
+  };
+}
+
+test('generateDiscoveredVenueSection renders host, counts, titles, snippet, and copy button only when venue data exists', () => {
+  const adapter = buildAdapter();
+
+  assert.equal(adapter.generateDiscoveredVenueSection({}), '', 'no section without venue data');
+  assert.equal(adapter.generateDiscoveredVenueSection({ discoveredVenueCalendars: [] }), '', 'no section for an empty list');
+
+  const html = adapter.generateDiscoveredVenueSection({ discoveredVenueCalendars: [buildDiscoveredVenueFixture()] });
+  assert.ok(html.includes('Discovered Venue Calendars'), 'section title present');
+  assert.ok(html.includes('www.massive.club'), 'host shown');
+  assert.ok(html.includes('9 event(s) found but not ingested (enrich-only ticket crawl)'), 'count line present');
+  assert.ok(html.includes('Butt Blast (Jul 23)'), 'sample titles shown');
+  assert.ok(html.includes('reached via ticket link from &quot;BEARRACUDA: LA&quot;'), 'parent event named (escaped)');
+  assert.ok(html.includes('data-venue-index="0"'), 'copy button carries the venue index, not the snippet');
+  assert.ok(html.includes('copyVenueEntry(this)'), 'copy button wired to the custom-scheme signal');
+  assert.ok(html.includes('&quot;https://www.massive.club&quot;'), 'paste-ready snippet rendered (escaped)');
+  assert.ok(!html.includes('chunkyscrape://act?a=copy-venue&id={'), 'snippet text never travels through the URL');
+});
+
+test('generateRichHTML embeds the discovered-venue section and the chunkyscrape page bridge', async () => {
+  const adapter = buildAdapter();
+  const results = { ...buildResultsStub(), discoveredVenueCalendars: [buildDiscoveredVenueFixture()] };
+  const html = await adapter.generateRichHTML(results);
+  assert.ok(html.includes('Discovered Venue Calendars'), 'section present when venue data exists');
+  assert.ok(html.includes("chunkyscrape://act?a=copy-venue"), 'buttons signal via the custom scheme');
+  assert.ok(html.includes('markVenueEntryCopied'), 'best-effort feedback handler defined');
+  assert.ok(html.includes('__venueCopyNonce'), 'per-tap nonce keeps repeat taps distinct navigations');
+
+  const withoutVenues = await adapter.generateRichHTML(buildResultsStub());
+  assert.ok(!withoutVenues.includes('Discovered Venue Calendars'), 'no section without venue data');
+});
+
+test('presentRichResults copies a venue parser entry natively via shouldAllowRequest', async () => {
+  const adapter = buildAdapter();
+  const venue = buildDiscoveredVenueFixture();
+  // calendarEvents already set → the execution prompt path is skipped
+  const results = { ...buildResultsStub(), calendarEvents: 1, discoveredVenueCalendars: [venue] };
+
+  const copies = [];
+  global.Pasteboard = { copy: (text) => { copies.push(text); } };
+  const wv = installFakeWebView();
+  try {
+    const done = adapter.presentRichResults(results);
+    // generateRichHTML awaits several stubs before the handler is assigned
+    for (let i = 0; i < 200 && !wv.getHandler(); i++) {
+      await new Promise((r) => setImmediate(r));
+    }
+    assert.ok(wv.getHandler(), 'shouldAllowRequest assigned before present()');
+
+    // Normal navigation passes through untouched.
+    assert.equal(wv.getHandler()({ url: 'https://mermaid.live/' }), true, 'non-scheme navigation allowed');
+
+    // A copy tap: navigation cancelled, snippet copied natively from the
+    // native-side map (never decoded out of the URL).
+    assert.equal(wv.tap('chunkyscrape://act?a=copy-venue&id=0&n=1'), false, 'fake navigation cancelled');
+    await new Promise((r) => setImmediate(r));
+    assert.deepEqual(copies, [venue.parserEntrySnippet], 'the paste-ready parser entry reached the pasteboard');
+    assert.ok(wv.evals.some((js) => js.includes('markVenueEntryCopied("0")')), 'button feedback pushed (best-effort)');
+
+    // A repeat tap (new nonce) copies again.
+    wv.tap('chunkyscrape://act?a=copy-venue&id=0&n=2');
+    await new Promise((r) => setImmediate(r));
+    assert.equal(copies.length, 2, 'repeat taps register (nonce makes each tap distinct)');
+
+    // An unknown venue id is ignored without crashing.
+    assert.equal(wv.tap('chunkyscrape://act?a=copy-venue&id=99&n=3'), false);
+    await new Promise((r) => setImmediate(r));
+    assert.equal(copies.length, 2);
+
+    wv.dismiss();
+    await done;
+  } finally {
+    delete global.WebView;
+    delete global.Pasteboard;
+  }
+});
