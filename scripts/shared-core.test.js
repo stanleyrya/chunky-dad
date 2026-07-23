@@ -6409,6 +6409,54 @@ test('guardrail: corroborated bar beats uncorroborated in both directions; ambig
   assert.equal(core.resolveConflictDeterministically('bar', 'MASSIVE', 'Shore Thing'), null);
 });
 
+test('guardrail: case-only bar twins resolve to the less-uppercased form regardless of barSource stamps', () => {
+  const core = createCore();
+  const context = (recordA, recordB, sideLabels = { a: 'existing', b: 'incoming' }) => ({
+    sideLabels,
+    records: { a: recordA, b: recordB }
+  });
+  const CASE_RULE_B = { winner: 'b', reason: 'case-only variants — kept less-uppercased form' };
+  const CASE_RULE_A = { winner: 'a', reason: 'case-only variants — kept less-uppercased form' };
+
+  // Matching stamps: both uncorroborated — the demotion rung falls through
+  // and the case-only rule decides (regression lock)
+  assert.deepEqual(
+    core.resolveConflictDeterministically('bar', 'AQUA EMPORIO', 'Aqua Emporio',
+      context({ bar: 'AQUA EMPORIO', barSource: 'uncorroborated' }, { bar: 'Aqua Emporio', barSource: 'uncorroborated' })),
+    CASE_RULE_B);
+  // Matching stamps: both page-adjacent (enrich flow)
+  assert.deepEqual(
+    core.resolveConflictDeterministically('bar', 'AQUA EMPORIO', 'Aqua Emporio',
+      context({ bar: 'AQUA EMPORIO', barSource: 'page-adjacent' }, { bar: 'Aqua Emporio', barSource: 'page-adjacent' })),
+    CASE_RULE_B);
+
+  // DIFFERING stamps on case twins must never crown the shoutier twin via
+  // the demotion rung — twins are the SAME venue, provenance decides nothing
+  assert.deepEqual(
+    core.resolveConflictDeterministically('bar', 'AQUA EMPORIO', 'Aqua Emporio',
+      context({ bar: 'AQUA EMPORIO', barSource: 'page-adjacent' }, { bar: 'Aqua Emporio', barSource: 'uncorroborated' })),
+    CASE_RULE_B, 'a corroborated caps twin must not beat the uncorroborated mixed-case twin');
+  assert.deepEqual(
+    core.resolveConflictDeterministically('bar', 'Aqua Emporio', 'AQUA EMPORIO',
+      context({ bar: 'Aqua Emporio', barSource: 'uncorroborated' }, { bar: 'AQUA EMPORIO', barSource: 'page-adjacent' })),
+    CASE_RULE_A, 'the less-uppercased side wins whichever side it sits on');
+
+  // Calendar flow: an unstamped caps calendar bar vs an uncorroborated
+  // mixed-case scrape is a case twin — the calendar-doctrine branch of the
+  // demotion rung must not re-cement the shouty calendar form
+  assert.deepEqual(
+    core.resolveConflictDeterministically('bar', 'AQUA EMPORIO', 'Aqua Emporio',
+      context({ bar: 'AQUA EMPORIO' }, { bar: 'Aqua Emporio', barSource: 'uncorroborated' },
+        { a: 'calendar', b: 'scraped' })),
+    CASE_RULE_B);
+
+  // Genuinely different bars keep the demotion rung untouched
+  assert.deepEqual(
+    core.resolveConflictDeterministically('bar', 'MASSIVE', 'Shore Thing',
+      context({ bar: 'MASSIVE', barSource: 'page-adjacent' }, { bar: 'Shore Thing', barSource: 'uncorroborated' })),
+    { winner: 'a', reason: 'corroborated bar beats uncorroborated' });
+});
+
 test('barSource is never arbitration-eligible and round-trips through notes like imageSource', () => {
   const core = createCore();
   assert.equal(core.isArbitrationEligibleField('barSource'), false);
