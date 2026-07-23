@@ -50,5 +50,12 @@
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJlYxnqhx-j4ARE6-6BQBetEI",
     "gayCities": "https://sanfrancisco.gaycities.com/bars/3-castro",
     "gayCitiesLastScrapedAt": "2026-06-14T05:42:29.719Z"
+  },
+  {
+    "name": "Public Works",
+    "city": "sf",
+    "address": "161 Erie St, San Francisco, CA 94103",
+    "coordinates": "37.7688931, -122.4192651",
+    "website": "https://publicsf.com"
   }
 ]
