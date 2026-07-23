@@ -351,6 +351,18 @@ const scraperCities = {
       "lng": -75.3188
     }
   },
+  "asbury-park": {
+    "calendar": "chunky-dad-asbury-park",
+    "timezone": "America/New_York",
+    "patterns": [
+      "asbury park",
+      "asbury"
+    ],
+    "coordinates": {
+      "lat": 40.2204,
+      "lng": -74.0121
+    }
+  },
   "torremolinos": {
     "calendar": "chunky-dad-torremolinos",
     "timezone": "Europe/Madrid",
