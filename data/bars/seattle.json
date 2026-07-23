@@ -41,10 +41,10 @@
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJOcPt38pqkFQRWmTOs3bUrgk",
     "wikipedia": "https://en.wikipedia.org/wiki/Seattle_Eagle",
     "gayCities": "https://seattle.gaycities.com/bars/506-seattle-eagle",
-    "gayCitiesLastScrapedAt": "2026-06-26T17:08:43.316Z",
-    "wikipediaLastScrapedAt": "2026-06-26T15:16:42.842Z",
     "faviconBg": "#20201f",
-    "faviconFg": "#8a836c"
+    "faviconFg": "#8a836c",
+    "gayCitiesLastScrapedAt": "2026-06-26T17:08:43.316Z",
+    "wikipediaLastScrapedAt": "2026-06-26T15:16:42.842Z"
   },
   {
     "name": "CC’s Seattle",
