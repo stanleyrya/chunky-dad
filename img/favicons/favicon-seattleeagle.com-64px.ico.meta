@@ -1,8 +1,10 @@
 {
   "originalUrl": "https://www.google.com/s2/favicons?domain=seattleeagle.com&sz=64",
-  "error": "HTTP 404: Not Found",
+  "source": "manual",
+  "manualSourceUrl": "http://www.seattleeagle.com/eagle_logo1_copy.png",
+  "note": "Manually curated: site is HTTP-only (HTTPS refused, Homestead hosting) so every https-based ladder rung fails. Badge logo composited onto dark #1a1a1a (cream-on-transparent original is illegible on light backgrounds).",
   "type": "favicon",
   "filename": "favicon-seattleeagle.com-64px.ico",
   "size": "64",
-  "failureCount": 26
+  "downloadedAt": "2026-07-23T18:55:15.266Z"
 }
