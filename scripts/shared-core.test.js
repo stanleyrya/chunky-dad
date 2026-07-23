@@ -7128,3 +7128,147 @@ test('new venue candidates carry a computed evidence panel from the same builder
   assert.ok(!('_geoPoiName' in candidate),
     'raw POI underscore fields never land on the candidate itself');
 });
+
+// ---------------------------------------------------------------------------
+// City-suffix append hole (run 20260723-140457: the calendar carried the
+// pre-#1525 mutation "LA NOGALERA, Torremolinos" plus an unstamped pin, and
+// AI arbitration re-cemented both every run)
+// ---------------------------------------------------------------------------
+
+function createCoreWithTorremolinos() {
+  return new SharedCore(
+    { torremolinos: { timezone: 'Europe/Madrid', patterns: ['torremolinos'] } },
+    { eventSchema: EventSchema }
+  );
+}
+
+test('address ladder: city-suffixed twins resolve deterministically to the unsuffixed address', () => {
+  const core = createCoreWithTorremolinos();
+  const context = { cityKey: 'torremolinos' };
+
+  const suffixedCalendar = core.resolveConflictDeterministically(
+    'address', 'LA NOGALERA, Torremolinos', 'LA NOGALERA', context);
+  assert.ok(suffixedCalendar, 'the twin must resolve without AI');
+  assert.equal(suffixedCalendar.winner, 'b', 'the unsuffixed side wins');
+  assert.match(suffixedCalendar.reason, /city-suffixed twin/);
+
+  const suffixedScraped = core.resolveConflictDeterministically(
+    'address', 'LA NOGALERA', 'LA NOGALERA, Torremolinos', context);
+  assert.ok(suffixedScraped);
+  assert.equal(suffixedScraped.winner, 'a', 'direction-symmetric');
+
+  // A tail naming some OTHER place is NOT the resolution fingerprint.
+  assert.equal(
+    core.resolveConflictDeterministically('address', 'LA NOGALERA, Marbella', 'LA NOGALERA', context),
+    null,
+    'a non-city tail falls through to evidence/AI exactly as before'
+  );
+  // No city context → fail open.
+  assert.equal(
+    core.resolveConflictDeterministically('address', 'LA NOGALERA, Torremolinos', 'LA NOGALERA', {}),
+    null
+  );
+});
+
+test('address ladder: house-numbered street twins keep the more complete (city-bearing) form as before', () => {
+  const core = createCore();
+  const resolved = core.resolveConflictDeterministically(
+    'address', '3911 Cedar Springs Rd, Dallas', '3911 Cedar Springs Rd', { cityKey: 'dallas' });
+  assert.ok(resolved, 'the same-address rung still settles street twins');
+  assert.equal(resolved.winner, 'a', 'the more complete street address still wins');
+  assert.match(resolved.reason, /more complete/);
+});
+
+test('merge regression (Mad.Bear): the appended calendar address loses, the kept append-path pin gets stamped approx', async () => {
+  const core = createCoreWithTorremolinos();
+  const adapter = buildArbitrationAdapter({});
+  const scraped = {
+    title: 'FURBALL MAD.BEAR',
+    startDate: new Date('2026-08-15T23:00:00.000Z'),
+    endDate: new Date('2026-08-15T23:00:00.000Z'),
+    bar: 'Aqua Emporio',
+    address: 'LA NOGALERA',
+    addressSource: 'page',
+    city: 'torremolinos',
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({})
+  };
+  const existing = {
+    title: 'FURBALL MAD.BEAR',
+    startDate: new Date('2026-08-15T23:00:00.000Z'),
+    endDate: new Date('2026-08-15T23:00:00.000Z'),
+    location: '36.6225097, -4.4987054',
+    url: '',
+    notes: ['bar: Aqua Emporio', 'address: LA NOGALERA, Torremolinos'].join('\n')
+  };
+
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+
+  assert.equal(finalEvent.address, 'LA NOGALERA', 'the unmutated address wins deterministically');
+  assert.ok(
+    adapter.calls.every(call => !String(call.prompt || '').includes('field: address')),
+    'the address conflict never reaches AI arbitration'
+  );
+  assert.equal(finalEvent.location, '36.6225097, -4.4987054', 'the calendar pin is kept (scrape found none)');
+  assert.equal(finalEvent.pinSource, 'geocoded-approx', 'append-path pins are stamped approx, never left stamp-less');
+  assert.equal(finalEvent.addressSource, 'page', 'addressSource follows the winning scraped address');
+  assert.match(core.parseNotesIntoFields(finalEvent.notes).pinSource || '', /geocoded-approx/);
+});
+
+test('merge: the approx stamp is scoped to the append fingerprint — a stored pinSource is never overwritten', async () => {
+  const core = createCoreWithTorremolinos();
+  const adapter = buildArbitrationAdapter({});
+  const scraped = {
+    title: 'FURBALL MAD.BEAR',
+    startDate: new Date('2026-08-15T23:00:00.000Z'),
+    endDate: new Date('2026-08-15T23:00:00.000Z'),
+    address: 'LA NOGALERA',
+    city: 'torremolinos',
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({})
+  };
+  const existing = {
+    title: 'FURBALL MAD.BEAR',
+    startDate: new Date('2026-08-15T23:00:00.000Z'),
+    endDate: new Date('2026-08-15T23:00:00.000Z'),
+    location: '36.6225097, -4.4987054',
+    url: '',
+    notes: ['address: LA NOGALERA, Torremolinos', 'pinSource: curated'].join('\n')
+  };
+
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+
+  assert.equal(finalEvent.address, 'LA NOGALERA');
+  assert.equal(finalEvent.pinSource, 'curated', 'a stored stamp always wins over the guard');
+});
+
+// ---------------------------------------------------------------------------
+// geo-poi addressSource tier + fusion evidence line
+// ---------------------------------------------------------------------------
+
+test('addressSource trust tiers: geo-poi slots equal to page, below curated', () => {
+  const tier = (value) => SharedCore.getProvenanceTrustTier('addressSource', value);
+  assert.equal(tier('geo-poi'), 2, 'geo-poi is tier 2');
+  assert.equal(tier('geo-poi'), tier('page'), 'equal to page');
+  assert.ok(tier('curated') > tier('geo-poi'), 'below curated');
+  assert.ok(tier('geo-poi') > tier('inferred'), 'above inferred');
+});
+
+test('evidence: a venue-name fusion flag renders its line and never serializes into notes', () => {
+  const core = createCore();
+  const event = {
+    title: 'FURBALL MAD.BEAR',
+    bar: 'Aqua Emporio',
+    city: 'dallas',
+    _geoPoiFusion: { poi: 'Aqua Club', prefix: 'Aqua' }
+  };
+  const lines = core.buildEventEvidenceLines(event);
+  assert.ok(
+    lines.includes('⚠️ bar "Aqua Emporio" may fuse venue names — map knows "Aqua Club" (matches "Aqua")'),
+    `fusion evidence line expected, got: ${JSON.stringify(lines)}`
+  );
+  assert.ok(!/(_geoPoiFusion|Aqua Club)/.test(core.formatEventNotes(event)), 'underscore fields never serialize into notes');
+
+  const barless = core.buildEventEvidenceLines({ title: 'X', _geoPoiFusion: { poi: 'Aqua Club', prefix: 'Aqua' } });
+  assert.ok(!barless.some(line => line.includes('may fuse')), 'no bar → no fusion line (fail open)');
+});

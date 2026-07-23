@@ -1289,6 +1289,117 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
         return poiStripped === barFull || poiFull === barStripped || poiStripped === barStripped;
     }
 
+    // Street address assembled from a Nominatim result's addressdetails
+    // components: house number + road, then locality (city/town/village/
+    // municipality), then state when present. Returns '' when the details name
+    // no road — a POI without a street line is not adoptable address material.
+    assembleNominatimPoiAddress(result) {
+        const details = result && typeof result.address === 'object' && result.address ? result.address : {};
+        const clean = value => (typeof value === 'string' || typeof value === 'number') ? String(value).trim() : '';
+        const road = clean(details.road);
+        if (!road) return '';
+        const houseNumber = clean(details.house_number);
+        const streetLine = houseNumber ? `${houseNumber} ${road}` : road;
+        const locality = clean(details.city) || clean(details.town) || clean(details.village) || clean(details.municipality);
+        return [streetLine, locality, clean(details.state)].filter(Boolean).join(', ');
+    }
+
+    // Photon flavor of the same assembly: street/housenumber/city properties.
+    assemblePhotonPoiAddress(props) {
+        const clean = value => (typeof value === 'string' || typeof value === 'number') ? String(value).trim() : '';
+        const street = clean(props && props.street);
+        if (!street) return '';
+        const houseNumber = clean(props && props.housenumber);
+        const streetLine = houseNumber ? `${houseNumber} ${street}` : street;
+        return [streetLine, clean(props && props.city)].filter(Boolean).join(', ');
+    }
+
+    // In-range venue-rescue candidates ordered nearest-first. Mirrors
+    // pickNearestGeocodeCandidate's distance rule when the city has known
+    // center coordinates; otherwise the textual city check applies and the
+    // response order is kept. Input entries are { result, grade } pairs that
+    // already passed the grade gate (coarse candidates never reach here).
+    rankVenueRescueCandidates(gradedEntries, cityCenter, eventCity) {
+        const ranked = [];
+        for (const entry of Array.isArray(gradedEntries) ? gradedEntries : []) {
+            if (!entry || !entry.result) continue;
+            const lat = Number(entry.result.lat);
+            const lon = Number(entry.result.lon);
+            if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+            if (cityCenter) {
+                const distanceKm = this.haversineDistanceKm(lat, lon, cityCenter.lat, cityCenter.lng);
+                if (distanceKm > CITY_CENTER_RADIUS_KM) continue;
+                ranked.push({ result: entry.result, grade: entry.grade, distanceKm });
+            } else {
+                if (eventCity && !this.geocodeResultMatchesCity(entry.result, eventCity)) continue;
+                ranked.push({ result: entry.result, grade: entry.grade, distanceKm: 0 });
+            }
+        }
+        ranked.sort((a, b) => a.distanceKm - b.distanceKm);
+        return ranked;
+    }
+
+    // Venue-POI adoption pick (Part of the venue+city rescue rung): the
+    // nearest in-range candidate whose map POI name MATCHES the bar
+    // (poiNameMatchesBar — full-name equality with symmetric generic-suffix
+    // stripping, never prefix/substring). Returns { candidate, result,
+    // poiName } or null. Generic/administrative hits can never reach here —
+    // the grade gate already refused them as coarse.
+    findVenuePoiAdoption(rankedEntries, barName) {
+        const bar = typeof barName === 'string' ? barName.trim() : '';
+        if (!bar) return null;
+        for (const entry of Array.isArray(rankedEntries) ? rankedEntries : []) {
+            const poiName = this.extractNominatimPoiName(entry.result);
+            if (poiName && this.poiNameMatchesBar(poiName, bar)) {
+                return {
+                    candidate: { lat: entry.result.lat, lon: entry.result.lon, grade: entry.grade },
+                    result: entry.result,
+                    poiName
+                };
+            }
+        }
+        return null;
+    }
+
+    // Venue-name fusion detection (flag-only, run 20260723-140457: the flyer
+    // listed the venues AQUA and EMPORIO on adjacent lines and extraction
+    // fused them into bar "Aqua Emporio" — a venue that does not exist, while
+    // the map knows "Aqua Club" ~40 m from the pin). When the FULL bar name
+    // fails POI matching but a token PREFIX of it (first 1..n-1 whitespace
+    // tokens, ≥3 chars, longest first) matches a returned POI name under the
+    // same poiNameMatchesBar semantics, flag it for manual review — NO
+    // auto-correction, and only candidates from queries ALREADY made are
+    // consulted (zero extra requests). Single-token bars never flag; a
+    // full-name match never flags. Fires at most once per event (flags) and
+    // records `_geoPoiFusion` for the results-UI evidence panel.
+    maybeFlagVenueNameFusion(event, poiNames, flags) {
+        if (!event || typeof event !== 'object') return;
+        if (flags && flags.fusionFlagged) return;
+        const bar = typeof event.bar === 'string' ? event.bar.trim() : '';
+        if (!bar) return;
+        const barTokens = bar.split(/\s+/).filter(Boolean);
+        if (barTokens.length < 2) return;
+        const names = [];
+        for (const name of Array.isArray(poiNames) ? poiNames : []) {
+            const cleanName = typeof name === 'string' ? name.trim() : '';
+            if (cleanName && !names.includes(cleanName)) names.push(cleanName);
+        }
+        if (names.length === 0) return;
+        if (names.some(name => this.poiNameMatchesBar(name, bar))) return;
+        for (let count = barTokens.length - 1; count >= 1; count -= 1) {
+            const prefix = barTokens.slice(0, count).join(' ');
+            if (prefix.replace(/[^A-Za-z0-9]/g, '').length < 3) continue;
+            const matchedName = names.find(name => this.poiNameMatchesBar(name, prefix));
+            if (matchedName) {
+                if (flags) flags.fusionFlagged = true;
+                event._geoPoiFusion = { poi: matchedName, prefix };
+                const title = event.title || 'unknown';
+                console.warn(`🗺️ GEOCODE VERIFY: "${title}" bar "${bar}" may fuse multiple venue names — map knows "${matchedName}" (matches "${prefix}"); verify manually`);
+                return;
+            }
+        }
+    }
+
     // After a pin is accepted, map POI names vouch for the event's bar:
     //   match → an unstamped or `uncorroborated` bar upgrades to
     //           barSource 'geo-poi'; the equal-or-higher-trust stamps
@@ -1491,13 +1602,18 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
             variants.push(trimmed);
         };
 
+        // Address-derived rungs only exist when there IS an address — a
+        // no-address event (venue-POI rescue) must not emit a junk ", <city>"
+        // query; its ladder is the venue+city rescue rung alone.
         const baseAddress = String(address || '').trim();
-        push(anchorToCity(baseAddress));
-        const unitStripped = this.stripUnitTokens(baseAddress);
-        if (unitStripped && unitStripped !== baseAddress) push(anchorToCity(unitStripped));
-        const postalStripped = this.stripPostalCodeAndCountry(baseAddress);
-        if (postalStripped) push(anchorToCity(postalStripped));
-        push(anchorToCity(this.stripTrailingDirectionals(baseAddress)));
+        if (baseAddress) {
+            push(anchorToCity(baseAddress));
+            const unitStripped = this.stripUnitTokens(baseAddress);
+            if (unitStripped && unitStripped !== baseAddress) push(anchorToCity(unitStripped));
+            const postalStripped = this.stripPostalCodeAndCountry(baseAddress);
+            if (postalStripped) push(anchorToCity(postalStripped));
+            push(anchorToCity(this.stripTrailingDirectionals(baseAddress)));
+        }
         const barName = typeof bar === 'string' ? bar.trim() : '';
         if (barName && city) {
             push(`${barName}, ${city}`);
@@ -1532,8 +1648,14 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
             isCacheableResponse: (responseData) => this.isCacheableGeocodeResponse(responseData)
         };
 
-        if (hasAddress && !hasLocation) {
-            const address = event.address.trim();
+        // Venue-POI rescue eligibility: an event with a bar but NO usable
+        // address (missing entirely, dropped by the extraction plausibility
+        // gate, or refused as generic by every rung below) can still earn a
+        // pin AND a street address from the venue+city lookup — but ONLY when
+        // the hit's map POI name matches the bar (see findVenuePoiAdoption).
+        const rescueBarName = typeof event.bar === 'string' ? event.bar.trim() : '';
+        if (!hasLocation && (hasAddress || rescueBarName)) {
+            const address = hasAddress ? event.address.trim() : '';
             // Bare street strings geocode anywhere on the planet: a flyer-OCR typo like
             // "922 E. BURNSIDE" (real address: 722 E Burnside, Portland) resolved to
             // Burnside, Michigan. When the event knows its city, anchor the query to it.
@@ -1547,6 +1669,14 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
             const title = event.title || 'unknown';
             const inputHasHouseNumber = GEOCODE_HOUSE_NUMBER_RE.test(address);
             const streetSpecific = this.isStreetSpecificAddress(address);
+            // The venue+city rescue query exactly as buildGeocodeQueryVariants
+            // builds it — used to recognize the venue-rescue rung inside the
+            // ladder and as the Photon query when the event has no address.
+            const cityAnchor = this.geocodeCityAnchorName(eventCity);
+            const venueRescueQuery = rescueBarName && cityAnchor ? `${rescueBarName}, ${cityAnchor}` : '';
+            // Address adoption is only allowed when the event has no usable
+            // street-specific address of its own (missing/gate-dropped/vague).
+            const addressAdoptable = !address || !this.isStreetSpecificAddress(address);
             // flags carries the once-per-event verification flag lines across
             // ladder rungs (the per-rung spreads copy this same object reference).
             const verifyContext = { title, address, inputHasHouseNumber, verifyMode, streetSpecific, flags: {} };
@@ -1611,9 +1741,37 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                         graded.push({ result, grade });
                     }
                     if (graded.length > 0) {
+                        // Venue-POI adoption scan (venue-rescue rung only): the
+                        // nearest in-range hit whose map POI name MATCHES the
+                        // bar vouches for pin AND address; a non-matching set
+                        // of candidates instead feeds fusion detection.
+                        const isVenueRescueRung = Boolean(venueRescueQuery) && queryText === venueRescueQuery;
+                        let venuePoiPick = null;
+                        if (isVenueRescueRung) {
+                            const rankedVenueCandidates = this.rankVenueRescueCandidates(graded, cityCenter, eventCity);
+                            venuePoiPick = this.findVenuePoiAdoption(rankedVenueCandidates, rescueBarName);
+                            if (!venuePoiPick) {
+                                this.maybeFlagVenueNameFusion(
+                                    event,
+                                    rankedVenueCandidates.map(entry => this.extractNominatimPoiName(entry.result)),
+                                    verifyContext.flags
+                                );
+                            }
+                        }
+                        const adoption = venuePoiPick && addressAdoptable
+                            ? { poiName: venuePoiPick.poiName, address: this.assembleNominatimPoiAddress(venuePoiPick.result) }
+                            : null;
                         let pickedCandidate = null;
                         let pickedResult = null;
-                        if (cityCenter) {
+                        if (adoption) {
+                            pickedCandidate = venuePoiPick.candidate;
+                            pickedResult = venuePoiPick.result;
+                        } else if (!hasAddress) {
+                            // Venue-only lookup (no usable address at all):
+                            // nothing vouches for a hit whose POI name is NOT
+                            // the bar — never pin from it (today's no-address
+                            // behavior, fail open).
+                        } else if (cityCenter) {
                             // Distance-ranked selection: nearest candidate within the radius wins
                             const picked = this.pickNearestGeocodeCandidate(graded.map(entry => entry.result), cityCenter, eventCity, queryText);
                             if (picked) {
@@ -1632,18 +1790,31 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                             }
                         }
                         if (pickedCandidate) {
-                            const confirmed = await this.confirmGeocodeCandidate(
-                                pickedCandidate,
-                                { ...verifyContext, source: 'nominatim', rung: i + 1 },
-                                httpAdapter
-                            );
+                            // Adoption context: the POI-name match IS the
+                            // positive verification for this candidate, and
+                            // the address the cross-check compares against is
+                            // the one assembled from the hit itself — the
+                            // vague-input rule must not refuse what the map
+                            // just positively named (streetSpecific: true).
+                            const confirmContext = adoption
+                                ? { ...verifyContext, address: adoption.address || address, streetSpecific: true, source: 'nominatim', rung: i + 1 }
+                                : { ...verifyContext, source: 'nominatim', rung: i + 1 };
+                            const confirmed = await this.confirmGeocodeCandidate(pickedCandidate, confirmContext, httpAdapter);
                             if (confirmed.location) {
                                 resolvedLocation = confirmed.location;
                                 resolvedVerdict = { grade: pickedCandidate.grade, crossCheck: confirmed.crossCheck, source: 'nominatim', rung: i + 1 };
                                 resolvedPoiNames = this.collectAcceptedPoiNames(
-                                    pickedCandidate.grade === 'exact' ? this.extractNominatimPoiName(pickedResult) : '',
+                                    adoption
+                                        ? venuePoiPick.poiName
+                                        : (pickedCandidate.grade === 'exact' ? this.extractNominatimPoiName(pickedResult) : ''),
                                     confirmed
                                 );
+                                if (adoption && adoption.address) {
+                                    event.address = adoption.address;
+                                    event.addressSource = 'geo-poi';
+                                    modified = true;
+                                    console.log(`🗺️ GEOCODE VERIFY: "${title}" adopted address "${adoption.address}" from map POI "${venuePoiPick.poiName}" (venue+city lookup)`);
+                                }
                             } else if (!rejectedVerdict) {
                                 // enforce-mode rejection: 'fail' for a failed
                                 // cross-check, 'skipped' for a vague input or
@@ -1719,12 +1890,15 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                     console.log(`🗺️ OpenStreetMapNormalizer: Found coordinates for address "${event.address}" -> ${event.location}`);
                 }
             }
-            if (!resolvedLocation) {
+            if (!resolvedLocation && (hasAddress || venueRescueQuery)) {
                 // Photon rescue rung: a second geocoder with a friendlier free-text
                 // parser, tried once after every Nominatim rung (and the Census
                 // rescue, when eligible) failed. Same rate limiter, same caches.
-                // GeoJSON coordinates are [lon, lat].
-                const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(address)}&limit=1`;
+                // GeoJSON coordinates are [lon, lat]. Events with NO usable
+                // address query the venue+city string instead — pin/address may
+                // then only be adopted from a hit whose POI name matches the bar.
+                const photonQuery = hasAddress ? address : venueRescueQuery;
+                const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(photonQuery)}&limit=1`;
                 attempts += 1;
                 try {
                     const data = await this.fetchDataWithCacheAndRateLimit(photonUrl, options, httpAdapter);
@@ -1739,29 +1913,59 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                         const grade = this.classifyGeocodeGrade(props.osm_key, props.osm_value, props.osm_value, !!props.housenumber);
                         const withinRadius = !cityCenter ||
                             this.haversineDistanceKm(lat, lon, cityCenter.lat, cityCenter.lng) <= CITY_CENTER_RADIUS_KM;
+                        const photonPoiName = this.extractNominatimPoiName({ name: props.name });
+                        const photonPoiMatchesBar = Boolean(photonPoiName && rescueBarName
+                            && this.poiNameMatchesBar(photonPoiName, rescueBarName));
+                        const adoption = photonPoiMatchesBar && addressAdoptable && withinRadius && grade !== 'coarse'
+                            ? { poiName: photonPoiName, address: this.assemblePhotonPoiAddress(props) }
+                            : null;
                         if (grade === 'coarse') {
                             console.warn(`🗺️ GEOCODE VERIFY: "${title}" refused generic pin (${props.osm_value || 'unknown'}) for address "${address}"`);
+                        } else if (!hasAddress && !adoption) {
+                            // Venue-only lookup: a hit whose POI name is NOT the
+                            // bar has nothing vouching for it — never pin
+                            // (today's no-address behavior, fail open).
                         } else if (grade === 'street' && inputHasHouseNumber && verifyMode === 'enforce') {
                             // enforce demands house-number quality; stay unpinned
                             if (!rejectedVerdict) {
                                 rejectedVerdict = { grade: 'street', crossCheck: 'skipped', source: 'photon', rung: attempts };
                             }
                         } else if (withinRadius) {
+                            // Adoption context mirrors the Nominatim venue rung:
+                            // the POI-name match is the positive verification.
+                            const confirmContext = adoption
+                                ? { ...verifyContext, address: adoption.address || address, streetSpecific: true, source: 'photon', rung: attempts }
+                                : { ...verifyContext, source: 'photon', rung: attempts };
                             const confirmed = await this.confirmGeocodeCandidate(
                                 { lat: coords[1], lon: coords[0], grade },
-                                { ...verifyContext, source: 'photon', rung: attempts },
+                                confirmContext,
                                 httpAdapter
                             );
                             if (confirmed.location) {
                                 resolvedLocation = confirmed.location;
                                 resolvedVerdict = { grade, crossCheck: confirmed.crossCheck, source: 'photon', rung: attempts };
                                 resolvedPoiNames = this.collectAcceptedPoiNames(
-                                    grade === 'exact' ? this.extractNominatimPoiName({ name: props.name }) : '',
+                                    adoption
+                                        ? adoption.poiName
+                                        : (grade === 'exact' ? this.extractNominatimPoiName({ name: props.name }) : ''),
                                     confirmed
                                 );
+                                if (adoption && adoption.address) {
+                                    event.address = adoption.address;
+                                    event.addressSource = 'geo-poi';
+                                    modified = true;
+                                    console.log(`🗺️ GEOCODE VERIFY: "${title}" adopted address "${adoption.address}" from map POI "${adoption.poiName}" (venue+city lookup)`);
+                                }
                             } else if (!rejectedVerdict) {
                                 rejectedVerdict = { grade, crossCheck: confirmed.crossCheck, source: 'photon', rung: attempts };
                             }
+                        }
+                        // Fusion detection (flag-only) on the candidate this
+                        // already-made query returned: a non-generic POI that
+                        // matches only a PREFIX of the bar name suggests the
+                        // bar fused multiple venue names.
+                        if (photonPoiName && !photonPoiMatchesBar && grade !== 'coarse') {
+                            this.maybeFlagVenueNameFusion(event, [photonPoiName], verifyContext.flags);
                         }
                     }
                 } catch (err) {
@@ -1811,8 +2015,11 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                 // accepted pin's own responses vouch for (or question) the bar.
                 this.corroborateBarWithGeoPoi(event, resolvedPoiNames);
             }
-            if (!resolvedLocation) {
-                // Exact shape counted by run-log-summary's geocodeNoResults guard.
+            if (!resolvedLocation && hasAddress) {
+                // Exact shape counted by run-log-summary's geocodeNoResults
+                // guard. Only address-bearing events emit it — the no-address
+                // venue-POI lookup never logged before and stays quiet when it
+                // finds nothing adoptable.
                 console.warn(`🗺️ OpenStreetMapNormalizer: No geocode results for "${address}" (${eventCity || 'no city'}) after ${attempts} ${attempts === 1 ? 'query' : 'queries'} — leaving location empty`);
                 if (inputHasHouseNumber) {
                     console.warn(`🗺️ GEOCODE VERIFY: "${title}" full address but no usable geocoordinate — left unpinned`);
