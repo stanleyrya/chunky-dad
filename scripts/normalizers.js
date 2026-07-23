@@ -1786,6 +1786,21 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                 event.pinSource = (resolvedVerdict && resolvedVerdict.grade === 'exact' && resolvedVerdict.crossCheck !== 'fail')
                     ? 'geocoded-exact'
                     : 'geocoded-approx';
+                // Retain the harvested map POI name for the results-UI evidence
+                // panel (underscore fields — display-only, systematically
+                // excluded from notes/merge serialization; only set when THIS
+                // run harvested a POI, so cached/skipped geocodes add nothing).
+                // The bar-match verdict is computed here, where the existing
+                // poiNameMatchesBar lives, preferring a bar-matching name over
+                // the first harvested one.
+                if (resolvedPoiNames.length > 0) {
+                    const poiBar = typeof event.bar === 'string' ? event.bar.trim() : '';
+                    const matchedPoiName = poiBar
+                        ? resolvedPoiNames.find(name => this.poiNameMatchesBar(name, poiBar))
+                        : undefined;
+                    event._geoPoiName = matchedPoiName || resolvedPoiNames[0];
+                    if (poiBar) event._geoPoiBarMatch = Boolean(matchedPoiName);
+                }
                 // Geo-POI bar corroboration: the map names harvested from the
                 // accepted pin's own responses vouch for (or question) the bar.
                 this.corroborateBarWithGeoPoi(event, resolvedPoiNames);

@@ -6386,17 +6386,25 @@ class ScriptableAdapter {
         // embeds require an API key.
         function toggleCandidateMap(btn) {
             try {
-                var frame = document.getElementById(btn.getAttribute('data-map-target') || '');
-                if (!frame) return;
-                if (frame.style.display === 'none') {
-                    if (!frame.getAttribute('src')) {
-                        frame.setAttribute('src', btn.getAttribute('data-map-embed') || '');
+                var target = document.getElementById(btn.getAttribute('data-map-target') || '');
+                if (!target) return;
+                if (target.style.display === 'none') {
+                    // Lazy: every iframe in the container (OSM + the legacy
+                    // Google embed) gets its src from its own data-map-embed
+                    // only on the first reveal — nothing loads until then.
+                    var frames = target.tagName === 'IFRAME'
+                        ? [target]
+                        : target.querySelectorAll('iframe');
+                    for (var i = 0; i < frames.length; i++) {
+                        if (!frames[i].getAttribute('src')) {
+                            frames[i].setAttribute('src', frames[i].getAttribute('data-map-embed') || '');
+                        }
                     }
-                    frame.style.display = 'block';
-                    btn.textContent = '🗺️ Hide map';
+                    target.style.display = 'block';
+                    btn.textContent = '🗺️ Hide maps';
                 } else {
-                    frame.style.display = 'none';
-                    btn.textContent = '🗺️ Show map';
+                    target.style.display = 'none';
+                    btn.textContent = '🗺️ Show maps';
                 }
             } catch (ignore) {}
         }
@@ -7528,33 +7536,74 @@ class ScriptableAdapter {
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(text)}`;
   }
 
-  // Bar link: what "<bar name>, <city>" resolves to on Google Maps.
-  buildBarMapsSearchUrl(barName, cityKey) {
+  // Bar query: "<bar name>, <city>" ("" without a bar). The single Bar link
+  // and the Route link both build from this exact string.
+  buildBarMapsQuery(barName, cityKey) {
     const name = typeof barName === "string" ? barName.trim() : "";
     if (!name) return "";
     const city = this.getCityDisplayNameForMaps(cityKey);
-    return this.buildMapsSearchUrl(city ? `${name}, ${city}` : name);
+    return city ? `${name}, ${city}` : name;
   }
 
-  // Address link: what the stored address resolves to. The city is appended
-  // ONLY when the address doesn't already contain the city name
-  // (case-insensitive) — bare street addresses are ambiguous across cities.
-  buildAddressMapsSearchUrl(address, cityKey) {
+  // Bar link: what "<bar name>, <city>" resolves to on Google Maps.
+  buildBarMapsSearchUrl(barName, cityKey) {
+    return this.buildMapsSearchUrl(this.buildBarMapsQuery(barName, cityKey));
+  }
+
+  // Address query: the stored address, with the city appended ONLY when the
+  // address doesn't already contain the city name (case-insensitive) — bare
+  // street addresses are ambiguous across cities. Shared by the single
+  // Address link and the Route link.
+  buildAddressMapsQuery(address, cityKey) {
     const text = typeof address === "string" ? address.trim() : "";
     if (!text) return "";
     const city = this.getCityDisplayNameForMaps(cityKey);
     const alreadyHasCity =
       city && text.toLowerCase().includes(city.toLowerCase());
-    return this.buildMapsSearchUrl(
-      city && !alreadyHasCity ? `${text}, ${city}` : text,
-    );
+    return city && !alreadyHasCity ? `${text}, ${city}` : text;
+  }
+
+  // Address link: what the stored address resolves to.
+  buildAddressMapsSearchUrl(address, cityKey) {
+    return this.buildMapsSearchUrl(this.buildAddressMapsQuery(address, cityKey));
+  }
+
+  // Pin query: "lat,lng" ("" without a coordinate pair). Shared by the
+  // single Pin link and the Route link.
+  buildPinMapsQuery(coordinates) {
+    const pair = this.parseCoordinatePairText(coordinates);
+    if (!pair) return "";
+    return `${pair.lat},${pair.lng}`;
   }
 
   // Pin link: where the stored coordinates actually land.
   buildPinMapsSearchUrl(coordinates) {
-    const pair = this.parseCoordinatePairText(coordinates);
-    if (!pair) return "";
-    return this.buildMapsSearchUrl(`${pair.lat},${pair.lng}`);
+    return this.buildMapsSearchUrl(this.buildPinMapsQuery(coordinates));
+  }
+
+  // Route link: one Google Maps Directions URL threading every stored
+  // location signal (bar+city query → address query → pin), using the SAME
+  // query strings as the single links above. Purpose: if all points resolve
+  // to the same venue, the rendered route is ~0 m — a one-glance identity
+  // check; a pin or address belonging to a different place shows up as a
+  // real route. Requires at least two of {bar+city, address, coordinates};
+  // with all three the address rides as a waypoint, with two the pair maps
+  // to origin → destination. "" when fewer than two points exist.
+  buildRouteMapsDirectionsUrl({ bar, city, address, coordinates } = {}) {
+    const barQuery = this.buildBarMapsQuery(bar, city);
+    const addressQuery = this.buildAddressMapsQuery(address, city);
+    const pinQuery = this.buildPinMapsQuery(coordinates);
+    const points = [barQuery, addressQuery, pinQuery].filter(Boolean);
+    if (points.length < 2) return "";
+    const origin = points[0];
+    const destination = points[points.length - 1];
+    const waypoints = points.length === 3 ? points[1] : "";
+    let url =
+      "https://www.google.com/maps/dir/?api=1" +
+      `&origin=${encodeURIComponent(origin)}` +
+      `&destination=${encodeURIComponent(destination)}`;
+    if (waypoints) url += `&waypoints=${encodeURIComponent(waypoints)}`;
+    return url;
   }
 
   // Keyless OpenStreetMap embed centered on the pin (~400m box, marker on
@@ -7568,6 +7617,18 @@ class ScriptableAdapter {
     const bbox = `${pair.lng - boxDegrees},${pair.lat - boxDegrees},${pair.lng + boxDegrees},${pair.lat + boxDegrees}`;
     const marker = `${pair.lat},${pair.lng}`;
     return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(bbox)}&layer=mapnik&marker=${encodeURIComponent(marker)}`;
+  }
+
+  // Keyless LEGACY Google Maps embed centered on the pin, shown alongside
+  // the OSM embed so the reviewer sees Google's venue-aware basemap (POI
+  // labels at the pin) next to OSM's. NOTE: maps.google.com/maps?...&output=
+  // embed is an unofficial keyless endpoint — the official Maps Embed API
+  // requires an API key — and it may break without notice; the OSM embed
+  // above remains the dependable inline map.
+  buildGoogleEmbedUrl(coordinates) {
+    const pair = this.parseCoordinatePairText(coordinates);
+    if (!pair) return "";
+    return `https://maps.google.com/maps?q=${encodeURIComponent(`${pair.lat},${pair.lng}`)}&z=16&output=embed`;
   }
 
   // Per-render native-side URL registry for the open-url bridge (same
@@ -7588,7 +7649,7 @@ class ScriptableAdapter {
     return id;
   }
 
-  // Compact "Verify:" row with up to three bridge links; "" when no data.
+  // Compact "Verify:" row with up to four bridge links; "" when no data.
   buildMapVerifyLinksHtml({ bar, city, address, coordinates } = {}) {
     const links = [];
     const barUrl = this.buildBarMapsSearchUrl(bar, city);
@@ -7597,6 +7658,14 @@ class ScriptableAdapter {
     if (addressUrl) links.push({ label: "Address", url: addressUrl });
     const pinUrl = this.buildPinMapsSearchUrl(coordinates);
     if (pinUrl) links.push({ label: "Pin", url: pinUrl });
+    // Route: only when ≥2 points exist (the builder returns "" otherwise).
+    const routeUrl = this.buildRouteMapsDirectionsUrl({
+      bar,
+      city,
+      address,
+      coordinates,
+    });
+    if (routeUrl) links.push({ label: "Route", url: routeUrl });
     if (links.length === 0) return "";
     const anchors = links
       .map(({ label, url }) => {
@@ -7605,6 +7674,21 @@ class ScriptableAdapter {
       })
       .join("");
     return `<div class="map-verify-row" style="display:flex; gap:10px; align-items:center; font-size:12px; margin:4px 0;"><span style="color:var(--text-secondary);">Verify:</span>${anchors}</div>`;
+  }
+
+  // Muted "Evidence" block from SharedCore.buildEventEvidenceLines output
+  // (computed consistency checks — distances, POI match, provenance). One
+  // line per string; "" when there are no lines (fail open — the panel is
+  // additive and its absence never blocks a card or candidate row).
+  buildEvidenceLinesHtml(lines) {
+    const list = Array.isArray(lines)
+      ? lines.filter((line) => typeof line === "string" && line.trim())
+      : [];
+    if (list.length === 0) return "";
+    const rows = list
+      .map((line) => `<div>${this.escapeHtml(line)}</div>`)
+      .join("");
+    return `<div class="evidence-block" style="font-size:11px; color:var(--text-secondary); margin:4px 0; line-height:1.6;"><div style="font-weight:600;">Evidence</div>${rows}</div>`;
   }
 
   // Open one registered verify link in Safari, on top of the results sheet.
@@ -7677,12 +7761,23 @@ class ScriptableAdapter {
           address: candidate.address,
           coordinates: candidate.coordinates,
         });
+        // Computed evidence panel (SharedCore.buildNewVenueCandidates attaches
+        // candidate.evidence); "" when nothing was computable.
+        const evidenceBlock = this.buildEvidenceLinesHtml(candidate.evidence);
         const osmEmbedUrl = this.buildOsmEmbedUrl(candidate.coordinates);
+        // Second, side-by-side inline map: the keyless legacy Google embed
+        // (see buildGoogleEmbedUrl — unofficial endpoint, may break without
+        // notice; OSM stays the dependable one). Both iframes stay lazy:
+        // each carries its URL in data-map-embed and gets a src only on the
+        // first "Show maps" tap (pure page JS, no bridge involvement).
+        const googleEmbedUrl = this.buildGoogleEmbedUrl(candidate.coordinates);
         const mapToggle = osmEmbedUrl
-          ? `<button onclick="toggleCandidateMap(this)" class="log-copy-btn nvq-map-btn" data-map-embed="${this.escapeHtml(osmEmbedUrl)}" data-map-target="nvq_map_${index}">🗺️ Show map</button>`
+          ? `<button onclick="toggleCandidateMap(this)" class="log-copy-btn nvq-map-btn" data-map-target="nvq_map_${index}">🗺️ Show maps</button>`
           : "";
+        const embedFrameStyle =
+          "width:100%; height:220px; border:0; border-radius:8px;";
         const mapFrame = osmEmbedUrl
-          ? `<iframe id="nvq_map_${index}" class="nvq-map-frame" style="display:none; width:100%; height:220px; border:0; border-radius:8px; margin-top:6px;"></iframe>`
+          ? `<div id="nvq_map_${index}" class="nvq-map-frames" style="display:none; margin-top:6px;"><iframe class="nvq-map-frame" data-map-embed="${this.escapeHtml(osmEmbedUrl)}" style="${embedFrameStyle}"></iframe>${googleEmbedUrl ? `<iframe class="nvq-map-frame" data-map-embed="${this.escapeHtml(googleEmbedUrl)}" style="${embedFrameStyle} margin-top:6px;"></iframe>` : ""}</div>`
           : "";
         return `
         <div class="new-venue-candidate" style="margin-bottom:14px; padding:10px; background:var(--background-light); border-radius:8px;">
@@ -7691,6 +7786,7 @@ class ScriptableAdapter {
             <div style="font-size:12px; margin-bottom:2px; color:var(--text-secondary);">Signals: ${this.escapeHtml(signalsText)}</div>
             ${eventsText ? `<div style="font-size:12px; margin-bottom:6px; color:var(--text-secondary);">Hosting: ${this.escapeHtml(eventsText)}</div>` : ""}
             ${verifyRow}
+            ${evidenceBlock}
             <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
                 ${control}
                 ${mapToggle}
@@ -8184,6 +8280,9 @@ class ScriptableAdapter {
       address: event.address,
       coordinates: event.location,
     });
+    // Computed evidence panel (SharedCore attaches _evidenceLines during
+    // calendar prep); "" when absent — e.g. saved-run display (fail open).
+    const evidenceBlock = this.buildEvidenceLinesHtml(event._evidenceLines);
 
     let html = `
         <div class="event-card">
@@ -8224,6 +8323,7 @@ class ScriptableAdapter {
                     : ""
                 }
                 ${mapVerifyRow}
+                ${evidenceBlock}
                 <div class="event-detail">
                     <span>📅</span>
                     <span>${dateStr} ${timeStr}${endTimeStr ? ` - ${endTimeStr}` : ""}</span>

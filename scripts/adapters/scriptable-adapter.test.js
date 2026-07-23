@@ -1952,6 +1952,7 @@ test('NOTHING in the scraping pipeline reads bar-additions.json (gathering-only)
 // ---------------------------------------------------------------------------
 
 const MAPS_SEARCH_PREFIX = 'https://www.google.com/maps/search/?api=1&query=';
+const MAPS_DIR_PREFIX = 'https://www.google.com/maps/dir/?api=1&';
 
 function buildMapsAdapter() {
   return new ScriptableAdapter({
@@ -2031,24 +2032,147 @@ test('verify row renders only links whose data exists, always via the bridge', (
   assert.ok(pinOnly.includes('Pin ↗'));
   assert.ok(!pinOnly.includes('Bar ↗') && !pinOnly.includes('Address ↗'),
     'absent fields render no links');
+  assert.ok(!pinOnly.includes('Route ↗'), 'a single point never gets a route');
 
   const full = adapter.buildMapVerifyLinksHtml({
     bar: 'Massive', city: 'seattle',
     address: '1400 12th Ave', coordinates: '47.6135, -122.3163'
   });
-  for (const label of ['Bar ↗', 'Address ↗', 'Pin ↗']) {
+  for (const label of ['Bar ↗', 'Address ↗', 'Pin ↗', 'Route ↗']) {
     assert.ok(full.includes(label), `${label} link present`);
   }
   assert.ok(full.includes('openMapVerify(this)'), 'links signal via the bridge');
   assert.ok(!full.includes('href="https'),
     'no plain https hrefs — those would navigate the results WebView away');
-  // Each embedded id resolves to a registered Google Maps URL natively.
+  // Each embedded id resolves to a registered Google Maps URL natively —
+  // three search links plus the directions Route link.
   const ids = [...full.matchAll(/data-map-url-id="(\d+)"/g)].map((m) => m[1]);
-  assert.equal(ids.length, 3);
-  for (const id of ids) {
+  assert.equal(ids.length, 4);
+  for (const id of ids.slice(0, 3)) {
     assert.ok(adapter._mapVerifyUrls[id].startsWith(MAPS_SEARCH_PREFIX),
       'URL retrievable from the native-side registry');
   }
+  assert.ok(adapter._mapVerifyUrls[ids[3]].startsWith(MAPS_DIR_PREFIX),
+    'the Route link registers the directions URL');
+});
+
+test('route link chains origin bar → waypoint address → destination pin, fully encoded', () => {
+  const adapter = buildMapsAdapter();
+  const all = adapter.buildRouteMapsDirectionsUrl({
+    bar: 'Bear & Bull', city: 'nyc',
+    address: '225 E Houston St', coordinates: '40.7223, -73.9874'
+  });
+  assert.equal(all,
+    'https://www.google.com/maps/dir/?api=1'
+    + '&origin=Bear%20%26%20Bull%2C%20new%20york'
+    + '&destination=40.7223%2C-73.9874'
+    + '&waypoints=225%20E%20Houston%20St%2C%20new%20york');
+  // The route legs are the EXACT query strings the single links search for,
+  // so a ~0 m rendered route proves all three resolve to one venue.
+  assert.ok(adapter.buildBarMapsSearchUrl('Bear & Bull', 'nyc')
+    .endsWith('Bear%20%26%20Bull%2C%20new%20york'));
+  assert.ok(adapter.buildAddressMapsSearchUrl('225 E Houston St', 'nyc')
+    .endsWith('225%20E%20Houston%20St%2C%20new%20york'));
+  assert.ok(adapter.buildPinMapsSearchUrl('40.7223, -73.9874')
+    .endsWith('40.7223%2C-73.9874'));
+});
+
+test('route link with two points maps them to origin → destination, no waypoints', () => {
+  const adapter = buildMapsAdapter();
+  // bar + pin
+  assert.equal(
+    adapter.buildRouteMapsDirectionsUrl({
+      bar: 'Massive', city: 'seattle', coordinates: '47.6135, -122.3163'
+    }),
+    'https://www.google.com/maps/dir/?api=1'
+    + '&origin=Massive%2C%20seattle&destination=47.6135%2C-122.3163');
+  // bar + address
+  assert.equal(
+    adapter.buildRouteMapsDirectionsUrl({
+      bar: 'Massive', city: 'seattle', address: '1400 12th Ave'
+    }),
+    'https://www.google.com/maps/dir/?api=1'
+    + '&origin=Massive%2C%20seattle&destination=1400%2012th%20Ave%2C%20seattle');
+  // address + pin
+  assert.equal(
+    adapter.buildRouteMapsDirectionsUrl({
+      city: 'seattle', address: '1400 12th Ave', coordinates: '47.6135, -122.3163'
+    }),
+    'https://www.google.com/maps/dir/?api=1'
+    + '&origin=1400%2012th%20Ave%2C%20seattle&destination=47.6135%2C-122.3163');
+});
+
+test('route link needs at least two resolvable points', () => {
+  const adapter = buildMapsAdapter();
+  assert.equal(adapter.buildRouteMapsDirectionsUrl({}), '');
+  assert.equal(adapter.buildRouteMapsDirectionsUrl(), '');
+  assert.equal(adapter.buildRouteMapsDirectionsUrl({ bar: 'Massive', city: 'seattle' }), '');
+  assert.equal(adapter.buildRouteMapsDirectionsUrl({ coordinates: '47.61, -122.33' }), '');
+  // A non-coordinate "pin" contributes nothing, leaving only one real point.
+  assert.equal(
+    adapter.buildRouteMapsDirectionsUrl({ bar: 'Massive', city: 'seattle', coordinates: 'The Cuff' }),
+    '');
+});
+
+test('evidence block renders one muted line per string and fails open when empty', () => {
+  const adapter = buildMapsAdapter();
+  assert.equal(adapter.buildEvidenceLinesHtml([]), '');
+  assert.equal(adapter.buildEvidenceLinesHtml(undefined), '');
+  assert.equal(adapter.buildEvidenceLinesHtml('not an array'), '');
+  assert.equal(adapter.buildEvidenceLinesHtml(['   ', null]), '', 'blank/non-string lines are dropped');
+
+  const html = adapter.buildEvidenceLinesHtml([
+    'pin is 42 m from curated "Massive" pin',
+    'provenance: bar=venue-site, pin=geocoded-exact'
+  ]);
+  assert.ok(html.includes('evidence-block'));
+  assert.ok(html.includes('Evidence'));
+  assert.ok(html.includes('pin is 42 m from curated &quot;Massive&quot; pin'), 'lines are HTML-escaped');
+  assert.ok(html.includes('provenance: bar=venue-site, pin=geocoded-exact'));
+});
+
+test('candidate rows render the evidence block only when the candidate carries lines', async () => {
+  const adapter = buildMapsAdapter();
+  adapter.fm = createDeadEndFmStub();
+
+  const withEvidence = await adapter.generateNewVenueCandidateSection({
+    newVenueCandidates: [buildVenueCandidate({
+      evidence: ['bar corroborated: venue-site', 'provenance: bar=venue-site, pin=geocoded-exact']
+    })]
+  });
+  assert.ok(withEvidence.includes('evidence-block'), 'evidence block present');
+  assert.ok(withEvidence.includes('bar corroborated: venue-site'));
+  assert.ok(withEvidence.includes('Route ↗'), 'route link present on candidate rows');
+
+  const withoutEvidence = await adapter.generateNewVenueCandidateSection({
+    newVenueCandidates: [buildVenueCandidate()]
+  });
+  assert.ok(!withoutEvidence.includes('evidence-block'), 'no block without lines');
+});
+
+test('event cards render the evidence block only when _evidenceLines exist', () => {
+  const adapter = buildMapsAdapter();
+  const baseEvent = {
+    title: 'Bear Night',
+    startDate: '2026-08-01T02:00:00.000Z',
+    city: 'seattle',
+    bar: 'Massive',
+    address: '1400 12th Ave',
+    location: '47.6135, -122.3163',
+    _action: 'new'
+  };
+  const html = adapter.generateEventCard({
+    ...baseEvent,
+    _evidenceLines: ['pin is 0.7 km from seattle center', 'bar corroborated: geo-poi']
+  });
+  assert.ok(html.includes('evidence-block'), 'evidence block on the card');
+  assert.ok(html.includes('pin is 0.7 km from seattle center'));
+  assert.ok(html.includes('Route ↗'), 'route link present on event cards');
+
+  const bare = adapter.generateEventCard(baseEvent);
+  assert.ok(!bare.includes('evidence-block'), 'no block without lines');
+  const empty = adapter.generateEventCard({ ...baseEvent, _evidenceLines: [] });
+  assert.ok(!empty.includes('evidence-block'), 'empty array → no block (fail open)');
 });
 
 test('OSM embed URL has the keyless bbox/marker shape with encoded commas', () => {
@@ -2067,7 +2191,18 @@ test('OSM embed URL has the keyless bbox/marker shape with encoded commas', () =
   assert.equal(adapter.buildOsmEmbedUrl('not coordinates'), '');
 });
 
-test('candidate rows carry the verify row and a lazy inline map toggle', async () => {
+test('legacy Google embed URL is keyless output=embed with encoded coordinates', () => {
+  const adapter = buildMapsAdapter();
+  assert.equal(
+    adapter.buildGoogleEmbedUrl('47.6135, -122.3163'),
+    'https://maps.google.com/maps?q=47.6135%2C-122.3163&z=16&output=embed');
+  assert.ok(!adapter.buildGoogleEmbedUrl('47.6135, -122.3163').includes('key='),
+    'unofficial keyless endpoint — no API key anywhere');
+  assert.equal(adapter.buildGoogleEmbedUrl('not coordinates'), '');
+  assert.equal(adapter.buildGoogleEmbedUrl(''), '');
+});
+
+test('candidate rows carry the verify row and a lazy inline dual-map toggle', async () => {
   const adapter = buildMapsAdapter();
   adapter.fm = createDeadEndFmStub();
 
@@ -2077,10 +2212,20 @@ test('candidate rows carry the verify row and a lazy inline map toggle', async (
   assert.ok(html.includes('Verify:'), 'verify row present');
   assert.ok(html.includes('Bar ↗') && html.includes('Address ↗') && html.includes('Pin ↗'));
   assert.ok(html.includes('toggleCandidateMap(this)'), 'map toggle wired');
-  assert.ok(html.includes('data-map-embed='), 'embed URL carried on the toggle');
-  assert.ok(html.includes('id="nvq_map_0"'), 'iframe target present');
+  assert.ok(html.includes('id="nvq_map_0"'), 'toggle target container present');
+  // Both inline maps ride the toggle: OSM (dependable) + legacy Google
+  // (keyless, unofficial), each with its URL parked in data-map-embed.
+  const embedUrls = [...html.matchAll(/data-map-embed="([^"]+)"/g)].map((m) => m[1]);
+  assert.equal(embedUrls.length, 2, 'exactly two lazy embeds per candidate');
+  assert.ok(embedUrls[0].startsWith('https://www.openstreetmap.org/export/embed.html?'),
+    'OSM embed first');
+  assert.ok(embedUrls[0].includes('marker=47.6135%2C-122.3163'),
+    'OSM marker carries the encoded coordinates');
+  assert.equal(embedUrls[1],
+    'https://maps.google.com/maps?q=47.6135%2C-122.3163&amp;z=16&amp;output=embed',
+    'legacy Google embed second (HTML-escaped in the attribute)');
   assert.ok(!/<iframe[^>]*\ssrc=/.test(html),
-    'lazy: no iframe src until the toggle is tapped');
+    'lazy: neither iframe has a src until the toggle is tapped');
 
   // Without coordinates there is no pin link and no map toggle at all.
   const noCoords = await adapter.generateNewVenueCandidateSection({

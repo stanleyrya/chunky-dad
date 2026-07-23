@@ -2173,6 +2173,7 @@ class SharedCore {
     buildNewVenueCandidates(events, options = {}) {
         const runId = options && options.runId ? String(options.runId) : null;
         const byKey = new Map();
+        const poiByKey = new Map();
         for (const event of Array.isArray(events) ? events : []) {
             if (!this.isNewVenueCandidateEvent(event)) continue;
             const bar = event.bar.trim();
@@ -2215,6 +2216,15 @@ class SharedCore {
                     runId
                 };
                 byKey.set(key, candidate);
+                // Geo-POI evidence rides with the coordinate-donor event (the
+                // candidate's coordinates come from this first event, so its
+                // harvested POI name is the one naming THAT pin). Kept in a
+                // side map — never on the candidate itself, which is written
+                // verbatim into results/venue-queue files.
+                poiByKey.set(key, {
+                    _geoPoiName: typeof event._geoPoiName === 'string' ? event._geoPoiName : '',
+                    _geoPoiBarMatch: event._geoPoiBarMatch
+                });
             }
             candidate.name = this.pickBetterCasedVenueName(candidate.name, bar);
             if (this.isMoreCompleteVenueAddress(address, candidate.address)) {
@@ -2232,6 +2242,24 @@ class SharedCore {
                         : (typeof event.url === 'string' ? event.url : '')
                 });
             }
+        }
+        // Computed evidence panel per candidate (results-UI display only):
+        // the candidate re-shaped as an event drives the same pure builder
+        // the event cards use. pinSource is 'geocoded-exact' by construction
+        // (isNewVenueCandidateEvent requires it) and the barSource shown is
+        // the first observed signal.
+        for (const candidate of byKey.values()) {
+            const poi = poiByKey.get(candidate.key) || {};
+            candidate.evidence = this.buildEventEvidenceLines({
+                bar: candidate.name,
+                city: candidate.city,
+                address: candidate.address,
+                location: candidate.coordinates,
+                barSource: candidate.signals[0] || '',
+                pinSource: 'geocoded-exact',
+                _geoPoiName: poi._geoPoiName,
+                _geoPoiBarMatch: poi._geoPoiBarMatch
+            }, { cityKey: candidate.city });
         }
         return Array.from(byKey.values());
     }
@@ -2277,6 +2305,109 @@ class SharedCore {
         const signals = Array.isArray(candidate.signals) ? candidate.signals.join(', ') : '';
         const address = candidate.address || 'no address observed';
         return `📋 NEW VENUE CANDIDATE: "${candidate.name}" (${candidate.city}) — signals: ${signals} — ${address}`;
+    }
+
+    // ------------------------------------------------------------------
+    // Computed evidence panel (results-UI only). Short human-readable
+    // consistency checks derived ONLY from data already on the event plus
+    // the threaded config context (cities / curated bars) — no lookups, no
+    // network. Every line is independent and every guard fails open: when
+    // an input is absent its line is simply omitted, and an event with
+    // nothing computable yields []. Rendered by the adapters as a muted
+    // "Evidence" block; never serialized into notes (the builder writes
+    // nothing onto the event).
+    // ------------------------------------------------------------------
+
+    // Distance label for evidence lines: <1 km → whole meters, else 1-decimal
+    // km ("42 m", "1.3 km").
+    formatEvidenceDistance(km) {
+        return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`;
+    }
+
+    // Evidence lines for one event (or an event-shaped venue candidate).
+    // context.cityKey overrides event.city for the config lookups (candidates
+    // carry their own city key). Returns an array of short strings; [] when
+    // nothing is computable.
+    buildEventEvidenceLines(event, context = {}) {
+        const lines = [];
+        if (!event || typeof event !== 'object') return lines;
+        const cityKey = typeof context.cityKey === 'string' && context.cityKey.trim()
+            ? context.cityKey.trim()
+            : (typeof event.city === 'string' ? event.city.trim() : '');
+        const bar = typeof event.bar === 'string' ? event.bar.trim() : '';
+        const pin = this.isCoordinatePair(event.location) ? String(event.location).trim() : '';
+
+        // Pin ↔ curated bar: the pinned coordinates against the curated city
+        // bar the event's bar name matches. Same venue → tens of meters; >150 m
+        // means the pin and the curated record disagree about where this bar is.
+        if (pin && bar) {
+            const cityBars = this.getCuratedCityBars(cityKey);
+            const curated = cityBars ? this.findCuratedBarByName(cityBars, bar) : null;
+            if (curated && this.isCoordinatePair(curated.coordinates)) {
+                const km = this.coordinatePairDistanceKm(pin, curated.coordinates);
+                if (km !== null) {
+                    const warn = km > 0.15 ? '⚠️ ' : '';
+                    lines.push(`${warn}pin is ${this.formatEvidenceDistance(km)} from curated "${curated.name}" pin`);
+                }
+            }
+        }
+
+        // Pin ↔ city center: a sanity radius, not an identity check — venues
+        // sit within a metro, so >50 km says the pin landed in the wrong place
+        // (same-named venue in another city, geocoder mishap).
+        if (pin) {
+            const center = this.getCityCenterCoordinatePair(cityKey);
+            const km = center ? this.coordinatePairDistanceKm(pin, center) : null;
+            if (km !== null) {
+                const warn = km > 50 ? '⚠️ ' : '';
+                lines.push(`${warn}pin is ${km.toFixed(1)} km from ${cityKey} center`);
+            }
+        }
+
+        // Map POI at the pin: the place name the geocoder reported AT the
+        // accepted coordinates, harvested this run by OpenStreetMapNormalizer
+        // (_geoPoiName / _geoPoiBarMatch — underscore fields, never serialized;
+        // the match verdict comes from the normalizer's poiNameMatchesBar at
+        // harvest time). Cached/skipped geocodes carry no POI → no line.
+        const poiName = typeof event._geoPoiName === 'string' ? event._geoPoiName.trim() : '';
+        if (poiName) {
+            if (bar && event._geoPoiBarMatch === true) {
+                lines.push(`map POI at pin: "${poiName}" — ✓ matches bar`);
+            } else if (bar && event._geoPoiBarMatch === false) {
+                lines.push(`map POI at pin: "${poiName}" — ⚠️ differs from bar "${bar}"`);
+            } else {
+                lines.push(`map POI at pin: "${poiName}"`);
+            }
+        }
+
+        // Bar corroboration verdict from barSource provenance.
+        const barSource = typeof event.barSource === 'string' ? event.barSource.trim() : '';
+        if (bar && barSource) {
+            if (['page-adjacent', 'venue-site', 'geo-poi', 'curated'].includes(barSource)) {
+                lines.push(`bar corroborated: ${barSource}`);
+            } else if (barSource === 'uncorroborated') {
+                lines.push('⚠️ bar uncorroborated (not found near address in source)');
+            }
+        }
+
+        // Compact provenance summary of whichever companion stamps exist.
+        const provenance = [
+            ['bar', 'barSource'],
+            ['pin', 'pinSource'],
+            ['address', 'addressSource'],
+            ['image', 'imageSource'],
+            ['bear', 'bearSource']
+        ]
+            .map(([label, field]) => {
+                const value = typeof event[field] === 'string' ? event[field].trim() : '';
+                return value ? `${label}=${value}` : '';
+            })
+            .filter(Boolean);
+        if (provenance.length > 0) {
+            lines.push(`provenance: ${provenance.join(', ')}`);
+        }
+
+        return lines;
     }
 
     // Baked-in platform confidence expectations: Eventbrite /e/ event pages ship
@@ -6147,6 +6278,12 @@ class SharedCore {
             if (!analyzedEvent.notes) {
                 analyzedEvent.notes = this.formatEventNotes(analyzedEvent);
             }
+
+            // Computed evidence panel for the results-UI event card (underscore
+            // field: display-only, systematically excluded from notes/merge
+            // serialization). Computed AFTER the final merged object exists so
+            // the lines describe exactly what will be written.
+            analyzedEvent._evidenceLines = this.buildEventEvidenceLines(analyzedEvent, { cityKey: analyzedEvent.city });
 
             return analyzedEvent;
         }

@@ -1787,3 +1787,43 @@ test('geo-POI corroboration: the Apple reverse placemark corroborates when the f
     `forward POI still flags; the stale placemark stays silent: ${staleLines.join(' | ')}`
   );
 });
+
+test('geo-POI harvest stashes _geoPoiName/_geoPoiBarMatch on the event for the evidence panel', async () => {
+  // Matching POI: the stashed name is the one that matched the bar and the
+  // verdict comes from the existing poiNameMatchesBar at harvest time.
+  const normalizer = createOsmNormalizer();
+  normalizer.delayForRateLimit = async () => {};
+  const httpAdapter = createRoutedStubAdapter([['nominatim', [MASSIVE_POI_RESULT]]]);
+  const event = { title: 'BEARRACUDA', address: '619 E Pine St', bar: 'MASSIVE', barSource: 'uncorroborated' };
+  await withCapturedConsole(() => normalizer.normalizeAsync(event, httpAdapter));
+  assert.equal(event._geoPoiName, 'Massive', 'harvested POI name stashed (underscore — never serialized)');
+  assert.equal(event._geoPoiBarMatch, true, 'match verdict stashed alongside');
+
+  // Differing POI: first harvested name stashed with a false verdict.
+  const mismatchNormalizer = createOsmNormalizer();
+  mismatchNormalizer.delayForRateLimit = async () => {};
+  const mismatchAdapter = createRoutedStubAdapter([['nominatim', [MASSIVE_POI_RESULT]]]);
+  const mismatchEvent = { title: 'BEARRACUDA', address: '619 E Pine St', bar: 'Neighbours', barSource: 'uncorroborated' };
+  await withCapturedConsole(() => mismatchNormalizer.normalizeAsync(mismatchEvent, mismatchAdapter));
+  assert.equal(mismatchEvent._geoPoiName, 'Massive');
+  assert.equal(mismatchEvent._geoPoiBarMatch, false);
+
+  // No bar on the event: the POI name still lands, but no verdict either way.
+  const noBarNormalizer = createOsmNormalizer();
+  noBarNormalizer.delayForRateLimit = async () => {};
+  const noBarAdapter = createRoutedStubAdapter([['nominatim', [MASSIVE_POI_RESULT]]]);
+  const noBarEvent = { title: 'BEARRACUDA', address: '619 E Pine St' };
+  await withCapturedConsole(() => noBarNormalizer.normalizeAsync(noBarEvent, noBarAdapter));
+  assert.equal(noBarEvent._geoPoiName, 'Massive');
+  assert.ok(!('_geoPoiBarMatch' in noBarEvent), 'no bar → no verdict field');
+
+  // No POI harvested (bare-address hit): neither field appears (fail open —
+  // cached/skipped geocodes without a POI render no evidence line).
+  const inertNormalizer = createOsmNormalizer();
+  inertNormalizer.delayForRateLimit = async () => {};
+  const inertAdapter = createRoutedStubAdapter([['nominatim', [PINE_STREET_ADDRESS_RESULT]]]);
+  const inertEvent = { title: 'BEARRACUDA', address: '619 E Pine St', bar: 'Massive', barSource: 'uncorroborated' };
+  await withCapturedConsole(() => inertNormalizer.normalizeAsync(inertEvent, inertAdapter));
+  assert.ok(!('_geoPoiName' in inertEvent), 'no harvest → no stash');
+  assert.ok(!('_geoPoiBarMatch' in inertEvent));
+});
