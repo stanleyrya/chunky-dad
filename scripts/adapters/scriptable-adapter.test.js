@@ -1718,3 +1718,230 @@ test('an equal-tier provenance change (venue-site → geo-poi, same corroborated
   assert.ok(!rows.includes('PRESERVE FAILED'));
   assert.ok(!rows.includes('⚠️'));
 });
+
+// ---------------------------------------------------------------------------
+// Venue discovery queue (bar-additions.json) — gathering-only evidence store
+// ---------------------------------------------------------------------------
+
+function buildVenueCandidate(overrides = {}) {
+  return {
+    key: 'seattle|massive',
+    name: 'Massive',
+    city: 'seattle',
+    address: '1400 12th Ave, Seattle, WA 98122',
+    coordinates: '47.6135, -122.3163',
+    signals: ['venue-site'],
+    website: 'https://massiveseattle.com',
+    sourceEvents: [
+      {
+        title: 'Bear Night',
+        date: '2026-08-01T02:00:00.000Z',
+        sourcePageUrl: 'https://massiveseattle.com/events/bear-night'
+      }
+    ],
+    runId: null,
+    ...overrides
+  };
+}
+
+test('venue queue round-trip: a tapped candidate becomes a bar-additions.json entry', async () => {
+  const adapter = buildAdapter();
+  adapter.fm = createDeadEndFmStub();
+
+  // Missing file → empty queue, never throws
+  assert.deepEqual(await adapter.loadBarAdditions(), {});
+
+  const queue = await adapter.loadBarAdditions();
+  const entry = adapter.mergeBarAdditionEntry(
+    queue, buildVenueCandidate(), '20260722-120000', '2026-07-22T12:00:00.000Z');
+  await adapter.saveBarAdditions(queue);
+
+  assert.ok(adapter.fm.files.has(adapter.getBarAdditionsFilePath()),
+    'queue written to bar-additions.json in the scraper dir');
+  assert.deepEqual(await adapter.loadBarAdditions(), {
+    'seattle|massive': {
+      name: 'Massive',
+      city: 'seattle',
+      address: '1400 12th Ave, Seattle, WA 98122',
+      coordinates: '47.6135, -122.3163',
+      signals: ['venue-site'],
+      sourceEvents: [
+        {
+          title: 'Bear Night',
+          date: '2026-08-01T02:00:00.000Z',
+          sourcePageUrl: 'https://massiveseattle.com/events/bear-night'
+        }
+      ],
+      firstSeen: '2026-07-22T12:00:00.000Z',
+      lastSeen: '2026-07-22T12:00:00.000Z',
+      timesSeen: 1,
+      runIds: ['20260722-120000'],
+      website: 'https://massiveseattle.com'
+    }
+  });
+  assert.equal(entry.timesSeen, 1);
+});
+
+test('venue queue merge on repeat: timesSeen/lastSeen bump, unions, caps, best address', async () => {
+  const adapter = buildAdapter();
+  adapter.fm = createDeadEndFmStub();
+
+  const queue = await adapter.loadBarAdditions();
+  adapter.mergeBarAdditionEntry(
+    queue, buildVenueCandidate({ address: 'Seattle, WA', website: '' }),
+    'run-1', '2026-07-01T00:00:00.000Z');
+  const merged = adapter.mergeBarAdditionEntry(
+    queue,
+    buildVenueCandidate({
+      signals: ['venue-site', 'geo-poi'],
+      sourceEvents: [
+        // duplicate of the first tap's event → deduped
+        { title: 'Bear Night', date: '2026-08-01T02:00:00.000Z', sourcePageUrl: 'https://massiveseattle.com/events/bear-night' },
+        { title: 'Underwear Party', date: '2026-08-08T02:00:00.000Z', sourcePageUrl: 'https://massiveseattle.com/events/underwear' }
+      ]
+    }),
+    'run-2', '2026-07-22T12:00:00.000Z');
+
+  assert.equal(merged.timesSeen, 2);
+  assert.equal(merged.firstSeen, '2026-07-01T00:00:00.000Z', 'firstSeen unchanged');
+  assert.equal(merged.lastSeen, '2026-07-22T12:00:00.000Z');
+  assert.deepEqual(merged.signals, ['venue-site', 'geo-poi'], 'signals unioned');
+  assert.deepEqual(merged.runIds, ['run-1', 'run-2'], 'runIds unioned');
+  assert.equal(merged.address, '1400 12th Ave, Seattle, WA 98122',
+    'more complete address replaces the sparse one');
+  assert.equal(merged.website, 'https://massiveseattle.com', 'website blank filled');
+  assert.deepEqual(merged.sourceEvents.map(e => e.title), ['Bear Night', 'Underwear Party'],
+    'sourceEvents unioned without duplicates');
+
+  // Caps: runIds keep the 10 most recent, sourceEvents never exceed 5
+  for (let i = 3; i <= 14; i++) {
+    adapter.mergeBarAdditionEntry(
+      queue,
+      buildVenueCandidate({
+        sourceEvents: [{ title: `Event ${i}`, date: '', sourcePageUrl: '' }]
+      }),
+      `run-${i}`, '2026-07-23T00:00:00.000Z');
+  }
+  assert.equal(merged.runIds.length, 10, 'runIds capped at 10');
+  assert.equal(merged.runIds[9], 'run-14', 'most recent runId kept');
+  assert.ok(!merged.runIds.includes('run-1'), 'oldest runId dropped by the cap');
+  assert.equal(merged.sourceEvents.length, 5, 'sourceEvents capped at 5');
+
+  // A LESS complete address never replaces a more complete one
+  adapter.mergeBarAdditionEntry(
+    queue, buildVenueCandidate({ address: 'Seattle' }),
+    'run-x', '2026-07-24T00:00:00.000Z');
+  assert.equal(merged.address, '1400 12th Ave, Seattle, WA 98122');
+});
+
+test('venue queue tolerates corrupt or wrong-shaped files with an empty queue', async () => {
+  const adapter = buildAdapter();
+  adapter.fm = createDeadEndFmStub();
+  const path = adapter.getBarAdditionsFilePath();
+
+  adapter.fm.files.set(path, '{"seattle|massive": {broken json');
+  assert.deepEqual(await adapter.loadBarAdditions(), {}, 'parse failure → empty queue');
+
+  adapter.fm.files.set(path, '["not", "an", "object"]');
+  assert.deepEqual(await adapter.loadBarAdditions(), {}, 'array payload → empty queue');
+
+  adapter.fm.files.set(path, 'null');
+  assert.deepEqual(await adapter.loadBarAdditions(), {}, 'null payload → empty queue');
+
+  // saveBarAdditions refuses non-object queues instead of clobbering the file
+  adapter.fm.files.delete(path);
+  await adapter.saveBarAdditions(null);
+  await adapter.saveBarAdditions(['nope']);
+  assert.ok(!adapter.fm.files.has(path));
+
+  // mergeBarAdditionEntry fails open on keyless candidates
+  assert.equal(adapter.mergeBarAdditionEntry({}, { name: 'No Key' }, null, 'now'), null);
+});
+
+test('queue-venue action URLs parse like the other chunkyscrape actions', () => {
+  const adapter = buildAdapter();
+  const params = adapter.parseReviewActionUrl('chunkyscrape://act?a=queue-venue&id=2&n=7');
+  assert.equal(params.a, 'queue-venue');
+  assert.equal(params.id, '2');
+  assert.equal(params.n, '7');
+});
+
+test('new-venue section renders only when candidates exist, never on saved runs', async () => {
+  const adapter = buildAdapter();
+  adapter.fm = createDeadEndFmStub();
+
+  assert.equal(await adapter.generateNewVenueCandidateSection({}), '');
+  assert.equal(await adapter.generateNewVenueCandidateSection({ newVenueCandidates: [] }), '');
+  assert.equal(
+    await adapter.generateNewVenueCandidateSection({
+      _isDisplayingSavedRun: true,
+      newVenueCandidates: [buildVenueCandidate()]
+    }),
+    '', 'saved-run display never renders the queue section');
+
+  const html = await adapter.generateNewVenueCandidateSection({
+    newVenueCandidates: [buildVenueCandidate()]
+  });
+  assert.ok(html.includes('New venue candidates'));
+  assert.ok(html.includes('Massive'));
+  assert.ok(html.includes('(seattle)'));
+  assert.ok(html.includes('1400 12th Ave, Seattle, WA 98122'));
+  assert.ok(html.includes('Signals: venue-site'));
+  assert.ok(html.includes('Bear Night'));
+  assert.ok(html.includes('data-nvq-index="0"'));
+  assert.ok(html.includes('Queue for bars data'));
+  assert.ok(!html.includes('Queued ✓'));
+});
+
+test('already-queued candidates render the Queued badge instead of the button', async () => {
+  const adapter = buildAdapter();
+  adapter.fm = createDeadEndFmStub();
+  adapter.fm.files.set(
+    adapter.getBarAdditionsFilePath(),
+    JSON.stringify({ 'seattle|massive': { name: 'Massive', timesSeen: 3 } }));
+
+  const html = await adapter.generateNewVenueCandidateSection({
+    newVenueCandidates: [
+      buildVenueCandidate(),
+      buildVenueCandidate({ key: 'seattle|neighbours', name: 'Neighbours' })
+    ]
+  });
+  assert.ok(html.includes('Queued ✓ (seen 3 times)'), 'queued candidate shows badge');
+  assert.ok(!html.includes('data-nvq-index="0"'), 'queued candidate has no button');
+  assert.ok(html.includes('data-nvq-index="1"'), 'unqueued candidate keeps its button');
+});
+
+test('NOTHING in the scraping pipeline reads bar-additions.json (gathering-only)', () => {
+  const fs = require('node:fs');
+  // The scraping pipeline — shared-core, orchestrator, parsers, normalizers,
+  // and the web adapter — must never reference the queue file or its
+  // accessors at all: the queue is write-and-display evidence only.
+  const pipelineFiles = [
+    '../shared-core.js',
+    '../bear-event-scraper-unified.js',
+    '../normalizers.js',
+    '../parsers/ai-web-parser.js',
+    './web-adapter.js'
+  ];
+  for (const rel of pipelineFiles) {
+    const source = fs.readFileSync(path.join(__dirname, rel), 'utf8');
+    assert.ok(!source.includes('bar-additions'), `${rel} must not reference bar-additions.json`);
+    assert.ok(!source.includes('BarAdditions'), `${rel} must not call the queue accessors`);
+  }
+  // In the Scriptable adapter the queue is read in exactly two places, both
+  // results-UI-side: the "Queued ✓" badge and the queue-tap handler. The
+  // bars-data load path (loadBarsConfiguration/fetchRemoteBarsJson) and the
+  // run pipeline never touch it.
+  const adapterSource = fs.readFileSync(path.join(__dirname, 'scriptable-adapter.js'), 'utf8');
+  const readCallSites = adapterSource
+    .split('\n')
+    .filter(line => line.includes('this.loadBarAdditions('));
+  assert.equal(readCallSites.length, 2,
+    `queue reads allowed only in the badge renderer and the tap handler, found: ${readCallSites.join(' | ')}`);
+  const barsLoaderSource = adapterSource.slice(
+    adapterSource.indexOf('async loadBarsConfiguration'),
+    adapterSource.indexOf('async fetchRemoteBarsJson'));
+  assert.ok(barsLoaderSource.length > 0, 'bars loader located');
+  assert.ok(!barsLoaderSource.includes('BarAdditions') && !barsLoaderSource.includes('bar-additions'),
+    'the bars-data load path never reads the queue');
+});
