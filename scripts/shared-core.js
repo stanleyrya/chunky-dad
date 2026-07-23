@@ -1445,7 +1445,18 @@ class SharedCore {
             // stamps missing → fall through to today's behavior (fail open).
             const barContextRecords = context && context.records && typeof context.records === 'object'
                 ? context.records : null;
-            if (barContextRecords) {
+            // Case-only twins are the SAME venue spelled louder — provenance
+            // stamps must never pick between them, or the demotion rung
+            // crowns the SHOUTIER twin (e.g. a corroborated "AQUA EMPORIO"
+            // over an uncorroborated "Aqua Emporio") before the case-only
+            // rule below can keep the less-uppercased form. Skipping the
+            // rung for twins applies in BOTH merge flows and regardless of
+            // which stamps the two sides carry.
+            const collapseBarForTwinCheck = value => typeof value === 'string'
+                ? value.replace(/\s+/g, ' ').trim() : '';
+            const caseOnlyBarTwins = collapseBarForTwinCheck(valueA) !== ''
+                && collapseBarForTwinCheck(valueA).toLowerCase() === collapseBarForTwinCheck(valueB).toLowerCase();
+            if (barContextRecords && !caseOnlyBarTwins) {
                 const getBarProvenance = (record, value) => {
                     if (!record || typeof record !== 'object') return '';
                     const recordBar = typeof record.bar === 'string' ? record.bar.trim() : '';

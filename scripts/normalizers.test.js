@@ -399,10 +399,14 @@ test('retry ladder: distance validation still applies to fallback variants', asy
   await normalizer.normalizeAsync(event, httpAdapter);
 
   assert.equal(event.location, undefined, 'a far-away candidate from a simplified query must not win');
-  assert.equal(httpAdapter.requests.length, 4, 'rejection counts as failure and the ladder continues through the Photon rescue');
+  assert.equal(httpAdapter.requests.length, 5, 'rejection counts as failure and the ladder continues through the Photon rescue + venue follow-up');
   assert.ok(
     httpAdapter.requests[3].includes('photon.komoot.io/api/?q='),
-    `the final rung must be the Photon rescue: ${httpAdapter.requests[3]}`
+    `the fourth rung must be the Photon rescue: ${httpAdapter.requests[3]}`
+  );
+  assert.ok(
+    httpAdapter.requests[4].includes('photon.komoot.io/api/?q=') && decodeQueryParam(httpAdapter.requests[4]) === 'The Heretic, atlanta',
+    `the final request is the Photon venue follow-up (empty Nominatim venue rescue): ${httpAdapter.requests[4]}`
   );
 });
 
@@ -535,9 +539,13 @@ test('a simplified-query admin-area match is rejected instead of poisoning coord
     warns.some(w => w.includes('Rejected admin-area result') && w.includes('type=borough')),
     `the rejection must be logged: ${warns.join(' | ')}`
   );
-  assert.equal(httpAdapter.requests.length, 5, 'the ladder continues past the rejected result through the Census and Photon rescues');
+  assert.equal(httpAdapter.requests.length, 6, 'the ladder continues past the rejected result through the Census and Photon rescues + venue follow-up');
   assert.ok(httpAdapter.requests[3].includes('geocoding.geo.census.gov'), 'the US-looking address gets a Census rescue before Photon');
-  assert.ok(httpAdapter.requests[4].includes('photon.komoot.io'), 'the final request is the Photon rescue');
+  assert.ok(httpAdapter.requests[4].includes('photon.komoot.io'), 'the next request is the Photon rescue');
+  assert.ok(
+    httpAdapter.requests[5].includes('photon.komoot.io') && decodeQueryParam(httpAdapter.requests[5]) === "C'mon Everybody, new york",
+    `the final request is the Photon venue follow-up (empty Nominatim venue rescue): ${httpAdapter.requests[5]}`
+  );
 });
 
 test('a venue-name simplified query still resolves through an amenity result', async () => {
@@ -2117,12 +2125,17 @@ test('Mad.Bear ladder regression: generic refusals stay refused and the vague ad
     captured.restore();
   }
 
-  assert.equal(httpAdapter.requests.length, 3, 'address rung, venue rescue rung, Photon rescue');
+  assert.equal(httpAdapter.requests.length, 4, 'address rung, venue rescue rung, Photon rescue, Photon venue follow-up');
   assert.equal(decodeQueryParam(httpAdapter.requests[0]), 'LA NOGALERA, torremolinos', 'city anchoring stays QUERY-only');
   assert.equal(decodeQueryParam(httpAdapter.requests[1]), 'Aqua Emporio, torremolinos');
+  assert.ok(
+    httpAdapter.requests[3].includes('photon.komoot.io') && decodeQueryParam(httpAdapter.requests[3]) === 'Aqua Emporio, torremolinos',
+    `the empty Nominatim venue rescue triggers the Photon venue follow-up: ${httpAdapter.requests[3]}`
+  );
   assert.equal(event.address, 'LA NOGALERA', 'the persisted address is never mutated with the resolved city');
   assert.equal(event.location, undefined, 'generic locality/hamlet pins stay refused — no unstamped pin');
   assert.equal(event.pinSource, undefined, 'no pin means no pinSource stamp');
+  assert.equal(event._geoPoiFusion, undefined, 'a coarse-only Photon follow-up never raises a fusion flag');
   assert.ok(
     captured.lines.some(line => line.includes('refused generic pin (locality) for address "LA NOGALERA"')),
     'the locality refusal stays visible'
@@ -2130,5 +2143,196 @@ test('Mad.Bear ladder regression: generic refusals stay refused and the vague ad
   assert.ok(
     captured.lines.some(line => line.includes('refused generic pin (hamlet) for address "LA NOGALERA"')),
     'the hamlet refusal stays visible'
+  );
+});
+
+// ---------------------------------------------------------------------------
+// POI-pin reverse cross-check tolerance (run 20260723-152928: "FURBALL
+// Boston" adopted "79 Warrenton Street" from the Legacy POI, Apple reversed
+// the same building as "75 Warrenton St", and the pin was vetoed by its own
+// cross-check — the event ended with neither address nor pin). POI-adopted
+// pins tolerate same-street house-number drift ≤ 20; different streets and
+// larger gaps still refuse, and non-POI pins keep today's strict comparison.
+// Vetoed adoptions keep the POI-vouched ADDRESS (unpinned, flagged).
+// ---------------------------------------------------------------------------
+
+// Apple reversing the same building Nominatim pinned: same street, house 75.
+const WARRENTON_75_PLACEMARK = {
+  subThoroughfare: '75',
+  thoroughfare: 'Warrenton St',
+  locality: 'Boston'
+};
+
+test('POI-pin tolerance: same-street house drift within 20 is accepted for an adopted pin (enforce)', async () => {
+  const normalizer = createOsmNormalizerFor(CITIES_WITH_BOSTON);
+  const httpAdapter = {
+    ...createSequencedStubAdapter([[LEGACY_NIGHTCLUB_RESULT]]),
+    reverseGeocodePlacemark: async () => WARRENTON_75_PLACEMARK,
+    supportsReverseGeocode: () => true
+  };
+  const event = { title: 'FURBALL Boston', bar: 'Legacy', city: 'boston' };
+
+  const captured = captureConsole(() => {});
+  try {
+    await normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'enforce' } });
+  } finally {
+    captured.restore();
+  }
+
+  assert.equal(event.location, '42.3499, -71.0648', 'the tolerance accepts the POI pin');
+  assert.equal(event.address, '79 Warrenton Street, Boston, Massachusetts', 'the adopted address survives with the pin');
+  assert.equal(event.addressSource, 'geo-poi', 'adopted address carries geo-poi provenance');
+  assert.equal(event.pinSource, 'geocoded-exact', 'a tolerated cross-check is a pass — exact grade stamps geocoded-exact');
+  assert.equal(event._geocodeCrossCheck, 'pass', 'the tolerated comparison records a pass verdict');
+  assert.ok(
+    captured.lines.some(line => line.includes('🗺️ GEOCODE VERIFY: "FURBALL Boston" POI pin reverse check: same street, house 75 vs 79 — accepted (provider interpolation tolerance)')),
+    `tolerance log expected, got:\n${captured.lines.join('\n')}`
+  );
+  assert.ok(
+    !captured.lines.some(line => line.includes('pin failed reverse cross-check')),
+    'a tolerated pin is not logged as a cross-check failure'
+  );
+});
+
+test('POI-pin tolerance: a different reverse street still refuses the pin, but the adopted address is kept unpinned', async () => {
+  const normalizer = createOsmNormalizerFor(CITIES_WITH_BOSTON);
+  const httpAdapter = {
+    ...createSequencedStubAdapter([[LEGACY_NIGHTCLUB_RESULT], {}]),
+    reverseGeocodePlacemark: async () => ({ subThoroughfare: '75', thoroughfare: 'Tremont St', locality: 'Boston' }),
+    supportsReverseGeocode: () => true
+  };
+  const event = { title: 'FURBALL Boston', bar: 'Legacy', city: 'boston' };
+
+  const captured = captureConsole(() => {});
+  try {
+    await normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'enforce' } });
+  } finally {
+    captured.restore();
+  }
+
+  assert.equal(event.location, undefined, 'a different-street reverse refuses the pin exactly as today');
+  assert.equal(event.pinSource, undefined, 'no pin means no pinSource stamp');
+  assert.equal(event.address, '79 Warrenton Street, Boston, Massachusetts', 'the POI-vouched address is NOT discarded with the pin');
+  assert.equal(event.addressSource, 'geo-poi', 'the kept address stays stamped geo-poi');
+  assert.equal(event._geocodeCrossCheck, 'fail', 'the rejection breadcrumb survives for the calendar reviewer');
+  assert.ok(
+    captured.lines.some(line => line.includes('pin failed reverse cross-check')),
+    `the refusal stays visible: ${captured.lines.join('\n')}`
+  );
+  assert.ok(
+    captured.lines.some(line => line.includes('🗺️ GEOCODE VERIFY: "FURBALL Boston" POI-adopted address "79 Warrenton Street, Boston, Massachusetts" kept without pin — reverse cross-check refused the pin (verify manually)')),
+    `the kept-without-pin flag must be logged: ${captured.lines.join('\n')}`
+  );
+  assert.ok(
+    !captured.lines.some(line => line.includes('provider interpolation tolerance')),
+    'no tolerance log on a different street'
+  );
+});
+
+test('POI-pin tolerance: a same-street gap over 20 still refuses the pin; the adopted address is kept unpinned', async () => {
+  const normalizer = createOsmNormalizerFor(CITIES_WITH_BOSTON);
+  const httpAdapter = {
+    ...createSequencedStubAdapter([[LEGACY_NIGHTCLUB_RESULT], {}]),
+    reverseGeocodePlacemark: async () => ({ subThoroughfare: '175', thoroughfare: 'Warrenton St', locality: 'Boston' }),
+    supportsReverseGeocode: () => true
+  };
+  const event = { title: 'FURBALL Boston', bar: 'Legacy', city: 'boston' };
+
+  const captured = captureConsole(() => {});
+  try {
+    await normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'enforce' } });
+  } finally {
+    captured.restore();
+  }
+
+  assert.equal(event.location, undefined, 'house 175 vs 79 is beyond interpolation drift — refused');
+  assert.equal(event.address, '79 Warrenton Street, Boston, Massachusetts', 'the POI-vouched address is still kept');
+  assert.equal(event.addressSource, 'geo-poi');
+  assert.ok(
+    !captured.lines.some(line => line.includes('provider interpolation tolerance')),
+    'no tolerance log beyond the 20-number gap'
+  );
+  assert.ok(
+    captured.lines.some(line => line.includes('pin failed reverse cross-check')),
+    'the refusal stays visible'
+  );
+});
+
+test('POI-pin tolerance never applies to regular address-geocoded pins (strict house comparison regression lock)', async () => {
+  const normalizer = createOsmNormalizer();
+  normalizer.delayForRateLimit = async () => {};
+  // Same street, house 1180 vs input 1192 — a gap WITHIN the POI tolerance,
+  // but this pin was geocoded from the event's own address, not adopted.
+  const httpAdapter = createRoutedStubAdapter(
+    [['nominatim', [POWERHOUSE_POI_RESULT]]],
+    {
+      reverseGeocodePlacemark: async () => ({ subThoroughfare: '1180', thoroughfare: 'Folsom Street', locality: 'San Francisco' }),
+      supportsReverseGeocode: () => true
+    }
+  );
+  const event = { title: 'CHUNK', address: '1192 Folsom St' };
+
+  const lines = await withCapturedConsole(() =>
+    normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'enforce' } })
+  );
+
+  assert.equal(event.location, undefined, 'a non-POI pin keeps today\'s strict exact-house cross-check');
+  assert.ok(
+    lines.some(l => l.includes('pin failed reverse cross-check')),
+    `the strict refusal must be logged: ${lines.join(' | ')}`
+  );
+  assert.ok(
+    !lines.some(l => l.includes('provider interpolation tolerance')),
+    'the tolerance is POI-adoption-only'
+  );
+});
+
+test('fusion via the Photon venue follow-up: empty Nominatim venue rescue + Photon Aqua Club flags the fused bar', async () => {
+  const normalizer = createOsmNormalizerFor(CITIES_WITH_TORREMOLINOS);
+  const nogaleraLocality = {
+    lat: '36.6225097',
+    lon: '-4.4987054',
+    class: 'place',
+    type: 'locality',
+    addresstype: 'locality',
+    name: 'La Nogalera',
+    display_name: 'La Nogalera, Torremolinos, Málaga, Spain',
+    address: { town: 'Torremolinos', state: 'Andalusia' }
+  };
+  const photonHamlet = {
+    features: [{
+      geometry: { coordinates: [-4.4987054, 36.6225097] },
+      properties: { name: 'La Nogalera', osm_key: 'place', osm_value: 'hamlet' }
+    }]
+  };
+  // Photon's fuzzy venue search DOES know the venue: photon.komoot.io/api/
+  // ?q=Aqua+Emporio+Torremolinos → "Aqua Club" (nightclub, Calle Casablanca).
+  const aquaClubPhoton = {
+    features: [{
+      geometry: { coordinates: [-4.4982728, 36.6218328] },
+      properties: { name: 'Aqua Club', osm_key: 'amenity', osm_value: 'nightclub', street: 'Calle Casablanca', city: 'Torremolinos' }
+    }]
+  };
+  const httpAdapter = createSequencedStubAdapter([[nogaleraLocality], [], photonHamlet, aquaClubPhoton]);
+  const event = { title: 'FURBALL MAD.BEAR', address: 'LA NOGALERA', city: 'torremolinos', bar: 'AQUA EMPORIO' };
+
+  const captured = captureConsole(() => {});
+  try {
+    await normalizer.normalizeAsync(event, httpAdapter);
+  } finally {
+    captured.restore();
+  }
+
+  assert.equal(httpAdapter.requests.length, 4, 'address rung, venue rescue, Photon address rescue, Photon venue follow-up');
+  assert.ok(
+    httpAdapter.requests[3].includes('photon.komoot.io') && decodeQueryParam(httpAdapter.requests[3]) === 'AQUA EMPORIO, torremolinos',
+    `the follow-up must be the venue+city query: ${httpAdapter.requests[3]}`
+  );
+  assert.equal(event.location, undefined, 'a non-bar-matching venue hit never pins');
+  assert.equal(event.address, 'LA NOGALERA', 'no address is adopted from a non-matching POI');
+  assert.deepEqual(event._geoPoiFusion, { poi: 'Aqua Club', prefix: 'AQUA' }, 'fusion evidence recorded for the results UI');
+  assert.ok(
+    captured.lines.some(line => line.includes('🗺️ GEOCODE VERIFY: "FURBALL MAD.BEAR" bar "AQUA EMPORIO" may fuse multiple venue names — map knows "Aqua Club" (matches "AQUA"); verify manually')),
+    `fusion flag log expected, got:\n${captured.lines.join('\n')}`
   );
 });
