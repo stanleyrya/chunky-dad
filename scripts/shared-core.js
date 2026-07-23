@@ -2180,10 +2180,27 @@ class SharedCore {
             const key = `${cityKey}|${this.normalizeBarNameKey(bar)}`;
             const barSource = event.barSource.trim();
             const address = typeof event.address === 'string' ? event.address.trim() : '';
-            const website = typeof event.website === 'string' && event.website.trim()
-                ? event.website.trim()
-                : (typeof event.url === 'string' ? event.url.trim() : '');
-            const instagram = typeof event.instagram === 'string' ? event.instagram.trim() : '';
+            // Organizer-link pollution guard: an event's website/instagram
+            // describe whatever entity the SOURCE PAGE is about — on
+            // promoter-scraped events that's the ORGANIZER (e.g.
+            // bearracuda.com / @bearracuda), not the venue hosting the party.
+            // The only stamp proving the page IS the venue's own site is
+            // barSource === 'venue-site' (siteRole=venue + page-name match at
+            // extraction time — see ai-web-parser's stampBarSourceProvenance),
+            // so the dossier carries website/instagram only from those events.
+            // Otherwise both fields are omitted entirely: in a curation
+            // dossier, missing data beats wrong data (and the adapter's
+            // fill-blanks-only queue merge means an omission here never
+            // re-adds organizer links to entries that lack them).
+            const linksAreVenueAttributable = barSource === 'venue-site';
+            const website = linksAreVenueAttributable
+                ? (typeof event.website === 'string' && event.website.trim()
+                    ? event.website.trim()
+                    : (typeof event.url === 'string' ? event.url.trim() : ''))
+                : '';
+            const instagram = linksAreVenueAttributable && typeof event.instagram === 'string'
+                ? event.instagram.trim()
+                : '';
 
             let candidate = byKey.get(key);
             if (!candidate) {

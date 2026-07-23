@@ -1928,20 +1928,291 @@ test('NOTHING in the scraping pipeline reads bar-additions.json (gathering-only)
     assert.ok(!source.includes('bar-additions'), `${rel} must not reference bar-additions.json`);
     assert.ok(!source.includes('BarAdditions'), `${rel} must not call the queue accessors`);
   }
-  // In the Scriptable adapter the queue is read in exactly two places, both
-  // results-UI-side: the "Queued ✓" badge and the queue-tap handler. The
-  // bars-data load path (loadBarsConfiguration/fetchRemoteBarsJson) and the
-  // run pipeline never touch it.
+  // In the Scriptable adapter the queue is read in exactly three places, all
+  // results-UI-side: the "Queued ✓" badge, the queue-tap handler, and the
+  // post-save run-id backfill for this session's taps. The bars-data load
+  // path (loadBarsConfiguration/fetchRemoteBarsJson) and the run pipeline
+  // never touch it.
   const adapterSource = fs.readFileSync(path.join(__dirname, 'scriptable-adapter.js'), 'utf8');
   const readCallSites = adapterSource
     .split('\n')
     .filter(line => line.includes('this.loadBarAdditions('));
-  assert.equal(readCallSites.length, 2,
-    `queue reads allowed only in the badge renderer and the tap handler, found: ${readCallSites.join(' | ')}`);
+  assert.equal(readCallSites.length, 3,
+    `queue reads allowed only in the badge renderer, the tap handler, and the run-id backfill, found: ${readCallSites.join(' | ')}`);
   const barsLoaderSource = adapterSource.slice(
     adapterSource.indexOf('async loadBarsConfiguration'),
     adapterSource.indexOf('async fetchRemoteBarsJson'));
   assert.ok(barsLoaderSource.length > 0, 'bars loader located');
   assert.ok(!barsLoaderSource.includes('BarAdditions') && !barsLoaderSource.includes('bar-additions'),
     'the bars-data load path never reads the queue');
+});
+
+// ---------------------------------------------------------------------------
+// Map verify links (Bar/Address/Pin Google Maps lookups) + inline OSM maps
+// ---------------------------------------------------------------------------
+
+const MAPS_SEARCH_PREFIX = 'https://www.google.com/maps/search/?api=1&query=';
+
+function buildMapsAdapter() {
+  return new ScriptableAdapter({
+    cities: {
+      nyc: { patterns: ['new york', 'nyc', 'manhattan'] },
+      seattle: { patterns: ['seattle'] }
+    }
+  });
+}
+
+test('open-url action URLs parse like the other chunkyscrape actions', () => {
+  const adapter = buildMapsAdapter();
+  const params = adapter.parseReviewActionUrl('chunkyscrape://act?a=open-url&id=4&n=9');
+  assert.equal(params.a, 'open-url');
+  assert.equal(params.id, '4');
+  assert.equal(params.n, '9');
+});
+
+test('bar verify link searches "<bar>, <city display name>" with full encoding', () => {
+  const adapter = buildMapsAdapter();
+  assert.equal(
+    adapter.buildBarMapsSearchUrl('Massive', 'seattle'),
+    `${MAPS_SEARCH_PREFIX}Massive%2C%20seattle`);
+  // The city display name is the first alias pattern ("nyc" → "new york"),
+  // and ampersands are percent-encoded (no new URL/URLSearchParams).
+  assert.equal(
+    adapter.buildBarMapsSearchUrl('Bear & Bull', 'nyc'),
+    `${MAPS_SEARCH_PREFIX}Bear%20%26%20Bull%2C%20new%20york`);
+  // Unicode venue names survive encodeURIComponent.
+  assert.equal(
+    adapter.buildBarMapsSearchUrl('Café Lambda', 'seattle'),
+    `${MAPS_SEARCH_PREFIX}Caf%C3%A9%20Lambda%2C%20seattle`);
+  // Unknown city keys fall back to the de-hyphenated key.
+  assert.equal(
+    adapter.buildBarMapsSearchUrl('Ramrod', 'fort-lauderdale'),
+    `${MAPS_SEARCH_PREFIX}Ramrod%2C%20fort%20lauderdale`);
+  // No city → bar alone; no bar → no link at all.
+  assert.equal(adapter.buildBarMapsSearchUrl('Massive', ''), `${MAPS_SEARCH_PREFIX}Massive`);
+  assert.equal(adapter.buildBarMapsSearchUrl('', 'seattle'), '');
+  assert.equal(adapter.buildBarMapsSearchUrl('   ', 'seattle'), '');
+});
+
+test('address verify link appends the city only when the address lacks it', () => {
+  const adapter = buildMapsAdapter();
+  // Address already contains the city name (case-insensitive) → no append.
+  assert.equal(
+    adapter.buildAddressMapsSearchUrl('1400 12th Ave, Seattle, WA 98122', 'seattle'),
+    `${MAPS_SEARCH_PREFIX}1400%2012th%20Ave%2C%20Seattle%2C%20WA%2098122`);
+  // Bare street address → city appended for disambiguation.
+  assert.equal(
+    adapter.buildAddressMapsSearchUrl('1400 12th Ave', 'seattle'),
+    `${MAPS_SEARCH_PREFIX}1400%2012th%20Ave%2C%20seattle`);
+  // City display name (not the key) is what gets matched and appended.
+  assert.equal(
+    adapter.buildAddressMapsSearchUrl('225 E Houston St, New York, NY', 'nyc'),
+    `${MAPS_SEARCH_PREFIX}225%20E%20Houston%20St%2C%20New%20York%2C%20NY`);
+  // No address → no link.
+  assert.equal(adapter.buildAddressMapsSearchUrl('', 'seattle'), '');
+});
+
+test('pin verify link searches the raw coordinates; non-coordinates yield no link', () => {
+  const adapter = buildMapsAdapter();
+  assert.equal(
+    adapter.buildPinMapsSearchUrl('47.6135, -122.3163'),
+    `${MAPS_SEARCH_PREFIX}47.6135%2C-122.3163`);
+  assert.equal(adapter.buildPinMapsSearchUrl('The Cuff, Seattle'), '');
+  assert.equal(adapter.buildPinMapsSearchUrl(''), '');
+  assert.equal(adapter.buildPinMapsSearchUrl(undefined), '');
+});
+
+test('verify row renders only links whose data exists, always via the bridge', () => {
+  const adapter = buildMapsAdapter();
+  assert.equal(adapter.buildMapVerifyLinksHtml({}), '', 'no data → no row');
+  assert.equal(adapter.buildMapVerifyLinksHtml(), '', 'no argument → no row');
+
+  const pinOnly = adapter.buildMapVerifyLinksHtml({ coordinates: '47.61, -122.33' });
+  assert.ok(pinOnly.includes('Pin ↗'));
+  assert.ok(!pinOnly.includes('Bar ↗') && !pinOnly.includes('Address ↗'),
+    'absent fields render no links');
+
+  const full = adapter.buildMapVerifyLinksHtml({
+    bar: 'Massive', city: 'seattle',
+    address: '1400 12th Ave', coordinates: '47.6135, -122.3163'
+  });
+  for (const label of ['Bar ↗', 'Address ↗', 'Pin ↗']) {
+    assert.ok(full.includes(label), `${label} link present`);
+  }
+  assert.ok(full.includes('openMapVerify(this)'), 'links signal via the bridge');
+  assert.ok(!full.includes('href="https'),
+    'no plain https hrefs — those would navigate the results WebView away');
+  // Each embedded id resolves to a registered Google Maps URL natively.
+  const ids = [...full.matchAll(/data-map-url-id="(\d+)"/g)].map((m) => m[1]);
+  assert.equal(ids.length, 3);
+  for (const id of ids) {
+    assert.ok(adapter._mapVerifyUrls[id].startsWith(MAPS_SEARCH_PREFIX),
+      'URL retrievable from the native-side registry');
+  }
+});
+
+test('OSM embed URL has the keyless bbox/marker shape with encoded commas', () => {
+  const adapter = buildMapsAdapter();
+  const lat = 47.6135;
+  const lng = -122.3163;
+  const d = 0.004;
+  const url = adapter.buildOsmEmbedUrl(`${lat}, ${lng}`);
+  assert.equal(
+    url,
+    'https://www.openstreetmap.org/export/embed.html'
+      + `?bbox=${encodeURIComponent(`${lng - d},${lat - d},${lng + d},${lat + d}`)}`
+      + `&layer=mapnik&marker=${encodeURIComponent(`${lat},${lng}`)}`);
+  assert.ok(url.includes('marker=47.6135%2C-122.3163'), 'marker is lat%2Clng');
+  assert.ok(!url.includes('key='), 'keyless embed (why OSM, not Google)');
+  assert.equal(adapter.buildOsmEmbedUrl('not coordinates'), '');
+});
+
+test('candidate rows carry the verify row and a lazy inline map toggle', async () => {
+  const adapter = buildMapsAdapter();
+  adapter.fm = createDeadEndFmStub();
+
+  const html = await adapter.generateNewVenueCandidateSection({
+    newVenueCandidates: [buildVenueCandidate()]
+  });
+  assert.ok(html.includes('Verify:'), 'verify row present');
+  assert.ok(html.includes('Bar ↗') && html.includes('Address ↗') && html.includes('Pin ↗'));
+  assert.ok(html.includes('toggleCandidateMap(this)'), 'map toggle wired');
+  assert.ok(html.includes('data-map-embed='), 'embed URL carried on the toggle');
+  assert.ok(html.includes('id="nvq_map_0"'), 'iframe target present');
+  assert.ok(!/<iframe[^>]*\ssrc=/.test(html),
+    'lazy: no iframe src until the toggle is tapped');
+
+  // Without coordinates there is no pin link and no map toggle at all.
+  const noCoords = await adapter.generateNewVenueCandidateSection({
+    newVenueCandidates: [buildVenueCandidate({ coordinates: '' })]
+  });
+  assert.ok(!noCoords.includes('toggleCandidateMap'), 'no toggle without coordinates');
+  assert.ok(!noCoords.includes('<iframe'), 'no iframe without coordinates');
+  assert.ok(!noCoords.includes('Pin ↗'), 'no pin link without coordinates');
+  assert.ok(noCoords.includes('Bar ↗'), 'other links unaffected');
+});
+
+test('event cards carry the compact verify row only when venue-ish data exists', () => {
+  const adapter = buildMapsAdapter();
+  const html = adapter.generateEventCard({
+    title: 'Bear Night',
+    startDate: '2026-08-01T02:00:00.000Z',
+    city: 'seattle',
+    bar: 'Massive',
+    address: '1400 12th Ave',
+    location: '47.6135, -122.3163',
+    _action: 'new'
+  });
+  assert.ok(html.includes('map-verify-row'), 'compact row on the card');
+  assert.ok(html.includes('Bar ↗') && html.includes('Address ↗') && html.includes('Pin ↗'));
+
+  const bare = adapter.generateEventCard({
+    title: 'No venue data',
+    startDate: '2026-08-01T02:00:00.000Z',
+    _action: 'new'
+  });
+  assert.ok(!bare.includes('map-verify-row'), 'no row without bar/address/location');
+});
+
+test('presentRichResults opens verify links in Safari via the open-url bridge', async () => {
+  const adapter = buildMapsAdapter();
+  adapter.fm = createDeadEndFmStub();
+  // calendarEvents already set → the execution prompt path is skipped
+  const results = {
+    ...buildResultsStub(),
+    calendarEvents: 1,
+    newVenueCandidates: [buildVenueCandidate()]
+  };
+
+  const opened = [];
+  global.Safari = { open: (url) => { opened.push(url); } };
+  const wv = installFakeWebView();
+  try {
+    const done = adapter.presentRichResults(results);
+    for (let i = 0; i < 200 && !wv.getHandler(); i++) {
+      await new Promise((r) => setImmediate(r));
+    }
+    assert.ok(wv.getHandler(), 'shouldAllowRequest assigned before present()');
+    const ids = Object.keys(adapter._mapVerifyUrls);
+    assert.ok(ids.length >= 3, 'candidate verify URLs registered natively during render');
+
+    // A verify tap: navigation cancelled, Safari opens the registered URL
+    // on top — the results WebView itself never navigates.
+    assert.equal(wv.tap(`chunkyscrape://act?a=open-url&id=${ids[0]}&n=1`), false,
+      'fake navigation cancelled');
+    await new Promise((r) => setImmediate(r));
+    assert.deepEqual(opened, [adapter._mapVerifyUrls[ids[0]]],
+      'Safari.open received the native-side URL');
+
+    // An unknown id is ignored without crashing.
+    assert.equal(wv.tap('chunkyscrape://act?a=open-url&id=999&n=2'), false);
+    await new Promise((r) => setImmediate(r));
+    assert.equal(opened.length, 1);
+
+    wv.dismiss();
+    await done;
+  } finally {
+    delete global.WebView;
+    delete global.Safari;
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Venue-queue run id backfill (taps precede the save that mints the run id)
+// ---------------------------------------------------------------------------
+
+test('venue-queue entries queued before the run id exists get it backfilled after save', async () => {
+  const adapter = buildMapsAdapter();
+  adapter.fm = createDeadEndFmStub();
+  const results = { newVenueCandidates: [buildVenueCandidate()] };
+  const wvStub = { evaluateJavaScript: async () => {} };
+
+  // Tap while the results sheet is up: the run has not been saved yet, so
+  // no run id exists and the entry lands with runIds: [] — the bug shape.
+  await adapter.queueVenueCandidateAndReport('0', results, {}, wvStub);
+  let queue = await adapter.loadBarAdditions();
+  assert.deepEqual(queue['seattle|massive'].runIds, [],
+    'tap-time write has no run id (display precedes save)');
+  assert.deepEqual(results._queuedVenueCandidateKeys, ['seattle|massive'],
+    'the session remembers which keys it queued');
+
+  // The save path mints the id afterwards; the backfill stamps it in.
+  results.savedRunId = '20260723-101010';
+  await adapter.backfillQueuedVenueRunIds(results);
+  queue = await adapter.loadBarAdditions();
+  assert.deepEqual(queue['seattle|massive'].runIds, ['20260723-101010'],
+    'queued entry ends up with the real run id');
+
+  // Idempotent — a repeat backfill never duplicates the id.
+  await adapter.backfillQueuedVenueRunIds(results);
+  queue = await adapter.loadBarAdditions();
+  assert.deepEqual(queue['seattle|massive'].runIds, ['20260723-101010']);
+});
+
+test('run id backfill preserves history, skips foreign entries, and fails open', async () => {
+  const adapter = buildMapsAdapter();
+  adapter.fm = createDeadEndFmStub();
+  adapter.fm.files.set(adapter.getBarAdditionsFilePath(), JSON.stringify({
+    'seattle|massive': { name: 'Massive', timesSeen: 2, runIds: ['20260701-090000'] },
+    'seattle|neighbours': { name: 'Neighbours', timesSeen: 1, runIds: [] }
+  }));
+
+  // Only this session's keys are stamped; prior run ids are kept.
+  const results = {
+    savedRunId: '20260723-101010',
+    _queuedVenueCandidateKeys: ['seattle|massive', 'seattle|gone-missing']
+  };
+  await adapter.backfillQueuedVenueRunIds(results);
+  const queue = await adapter.loadBarAdditions();
+  assert.deepEqual(queue['seattle|massive'].runIds,
+    ['20260701-090000', '20260723-101010'], 'new id appended after history');
+  assert.deepEqual(queue['seattle|neighbours'].runIds, [],
+    'entries not queued this session are untouched');
+
+  // No session keys or no run id → no write at all (fail open).
+  const before = adapter.fm.files.get(adapter.getBarAdditionsFilePath());
+  await adapter.backfillQueuedVenueRunIds({ savedRunId: '20260724-000000' });
+  await adapter.backfillQueuedVenueRunIds({ _queuedVenueCandidateKeys: ['seattle|massive'] });
+  assert.equal(adapter.fm.files.get(adapter.getBarAdditionsFilePath()), before,
+    'nothing rewritten without both a run id and session keys');
 });
