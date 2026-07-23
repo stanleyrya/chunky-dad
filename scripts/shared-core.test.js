@@ -6806,3 +6806,77 @@ test('new venue candidate log line has the documented shape', () => {
     '📋 NEW VENUE CANDIDATE: "Massive" (seattle) — signals: venue-site — no address observed'
   );
 });
+
+test('candidate dossier omits website/instagram unless the source page is the venue\'s own site', () => {
+  const core = createVenueDiscoveryCore();
+
+  // Organizer-page events (e.g. a promoter site like bearracuda.com): the
+  // event's website/instagram are the ORGANIZER's metadata, not the venue's —
+  // both fields must be omitted from the dossier entirely.
+  const [organizer] = core.buildNewVenueCandidates([
+    buildVenueCandidateEvent({
+      barSource: 'page-adjacent',
+      website: 'https://bearracuda.com/',
+      instagram: 'https://instagram.com/bearracuda',
+      url: 'https://bearracuda.com/events/seattle'
+    })
+  ]);
+  assert.ok(!('website' in organizer), 'organizer website omitted from the dossier');
+  assert.ok(!('instagram' in organizer), 'organizer instagram omitted from the dossier');
+
+  // geo-poi corroborates the bar name via map placemarks — still not the
+  // venue's own site, so links stay out.
+  const [geoPoi] = core.buildNewVenueCandidates([
+    buildVenueCandidateEvent({
+      barSource: 'geo-poi',
+      instagram: 'https://instagram.com/bearracuda'
+    })
+  ]);
+  assert.ok(!('website' in geoPoi) && !('instagram' in geoPoi),
+    'geo-poi events contribute no links');
+
+  // venue-site events keep both: barSource 'venue-site' is only stamped when
+  // the source page IS the venue's own site (siteRole venue + name match).
+  const [venueSite] = core.buildNewVenueCandidates([
+    buildVenueCandidateEvent({
+      barSource: 'venue-site',
+      website: 'https://massiveseattle.com',
+      instagram: 'https://instagram.com/massiveseattle'
+    })
+  ]);
+  assert.equal(venueSite.website, 'https://massiveseattle.com');
+  assert.equal(venueSite.instagram, 'https://instagram.com/massiveseattle');
+
+  // The event-page-url fallback for website also only applies to venue-site
+  // events (a page on the venue's own site is venue-attributable).
+  const [urlFallback] = core.buildNewVenueCandidates([
+    buildVenueCandidateEvent({
+      barSource: 'venue-site',
+      website: undefined,
+      url: 'https://massiveseattle.com/events/bear-night'
+    })
+  ]);
+  assert.equal(urlFallback.website, 'https://massiveseattle.com/events/bear-night');
+});
+
+test('mixed-provenance dedup takes links only from the venue-site observation', () => {
+  const core = createVenueDiscoveryCore();
+  const [candidate] = core.buildNewVenueCandidates([
+    buildVenueCandidateEvent({
+      barSource: 'page-adjacent',
+      website: 'https://bearracuda.com/',
+      instagram: 'https://instagram.com/bearracuda',
+      title: 'Bearracuda Seattle'
+    }),
+    buildVenueCandidateEvent({
+      barSource: 'venue-site',
+      website: 'https://massiveseattle.com',
+      instagram: undefined,
+      title: 'Bear Night'
+    })
+  ]);
+  assert.equal(candidate.website, 'https://massiveseattle.com',
+    'venue-site link lands; the organizer link never does');
+  assert.ok(!('instagram' in candidate),
+    'no venue-attributable instagram observed → field omitted');
+});
