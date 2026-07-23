@@ -8,6 +8,15 @@
 // - Can be imported in both Scriptable and web environments
 // - Keep this file environment-agnostic (no Scriptable or DOM APIs)
 const scraperBars = {
+  "atlanta": [
+    {
+      "name": "The Heretic",
+      "city": "atlanta",
+      "address": "2069 Cheshire Bridge Rd NE, Atlanta, GA 30324",
+      "coordinates": "33.8115012, -84.3552779",
+      "website": "https://hereticatlanta.com"
+    }
+  ],
   "bangkok": [
     {
       "name": "BEEF.BKK",
@@ -318,6 +327,15 @@ const scraperBars = {
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJEc7NGK4byUwR1QVPh5qsYCY",
       "gayCities": "https://montreal.gaycities.com/bars/710-aigle-noir",
       "gayCitiesLastScrapedAt": "2026-06-14T01:14:34.423Z"
+    }
+  ],
+  "nola": [
+    {
+      "name": "Joy Theater",
+      "city": "nola",
+      "address": "1200 Canal St, New Orleans, LA 70112",
+      "coordinates": "29.9559524, -90.0738975",
+      "website": "https://thejoytheater.com"
     }
   ],
   "nyc": [
@@ -659,7 +677,11 @@ const scraperBars = {
       "coordinates": "47.6150824, -122.3237201",
       "website": "https://www.massive.club",
       "instagram": "https://www.instagram.com/massive_club",
-      "gayCities": "https://seattle.gaycities.com/bars/511-massive-nightclub"
+      "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJsabypgNrkFQRWpvZ09NjiBQ",
+      "gayCities": "https://seattle.gaycities.com/bars/511-massive-nightclub",
+      "faviconBg": "#010102",
+      "faviconFg": "#535557",
+      "gayCitiesLastScrapedAt": "2026-07-22T18:31:06.867Z"
     }
   ],
   "sf": [
@@ -714,6 +736,13 @@ const scraperBars = {
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJlYxnqhx-j4ARE6-6BQBetEI",
       "gayCities": "https://sanfrancisco.gaycities.com/bars/3-castro",
       "gayCitiesLastScrapedAt": "2026-06-14T05:42:29.719Z"
+    },
+    {
+      "name": "Public Works",
+      "city": "sf",
+      "address": "161 Erie St, San Francisco, CA 94103",
+      "coordinates": "37.7688931, -122.4192651",
+      "website": "https://publicsf.com"
     }
   ],
   "tokyo": [
