@@ -1,9 +1,4 @@
 {
-  "bigfunco.myshopify.com": {
-    "misses": 1,
-    "firstMiss": "2026-07-23T18:06:00.983Z",
-    "lastTried": "2026-07-23T18:06:00.983Z"
-  },
   "noxsatvrn.carrd.co": {
     "misses": 1,
     "firstMiss": "2026-07-23T18:05:57.542Z",
@@ -13,10 +8,5 @@
     "misses": 1,
     "firstMiss": "2026-07-23T18:05:54.694Z",
     "lastTried": "2026-07-23T18:05:54.694Z"
-  },
-  "theoldbaby.com": {
-    "misses": 1,
-    "firstMiss": "2026-07-23T18:05:59.323Z",
-    "lastTried": "2026-07-23T18:05:59.323Z"
   }
 }

@@ -1,8 +1,10 @@
 {
   "originalUrl": "https://www.google.com/s2/favicons?domain=bigfunco.myshopify.com&sz=64",
-  "error": "HTTP 404: Not Found",
+  "source": "manual",
+  "manualSourceUrl": "https://bigfunco.myshopify.com/cdn/shop/files/Artboard_13_c8ae953b-d6da-40c4-b66f-87dc26f3463e.png?v=1756894236&width=300",
+  "note": "Manually curated from the site own logo/og:image (Google s2 has no icon for this domain)",
   "type": "favicon",
   "filename": "favicon-bigfunco.myshopify.com-64px.ico",
   "size": "64",
-  "failureCount": 26
+  "downloadedAt": "2026-07-23T18:25:35.092Z"
 }

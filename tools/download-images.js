@@ -884,6 +884,14 @@ function shouldDownloadImage(imageUrl, localPath, metadataPath, type = 'event') 
   }
 
   if (metadata) {
+    // Manually curated images (hand-picked from the site's own logo/og:image
+    // because no favicon service carries this domain) are never re-downloaded
+    // or overwritten — remove the file + .meta to hand the slot back to
+    // automation.
+    if (metadata.source === 'manual' && fs.existsSync(localPath)) {
+      return { shouldDownload: false, reason: 'Manually curated image' };
+    }
+
     if (metadata.originalUrl !== imageUrl) {
       return { shouldDownload: true, reason: 'URL has changed' };
     }
