@@ -21,7 +21,7 @@
     "chicago": {
       "name": "Chicago",
       "status": "success",
-      "dataLength": 19284,
+      "dataLength": 19349,
       "eventCount": 16
     },
     "dallas": {
@@ -45,7 +45,7 @@
     "la": {
       "name": "Los Angeles",
       "status": "success",
-      "dataLength": 10552,
+      "dataLength": 10589,
       "eventCount": 9
     },
     "london": {
@@ -81,7 +81,7 @@
     "phoenix": {
       "name": "Phoenix",
       "status": "success",
-      "dataLength": 4227,
+      "dataLength": 4272,
       "eventCount": 3
     },
     "portland": {
@@ -105,7 +105,7 @@
     "seattle": {
       "name": "Seattle",
       "status": "success",
-      "dataLength": 15707,
+      "dataLength": 15699,
       "eventCount": 12
     },
     "sf": {
