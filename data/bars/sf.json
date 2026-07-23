@@ -56,6 +56,8 @@
     "city": "sf",
     "address": "161 Erie St, San Francisco, CA 94103",
     "coordinates": "37.7688931, -122.4192651",
-    "website": "https://publicsf.com"
+    "website": "https://publicsf.com",
+    "faviconBg": "#f35425",
+    "faviconFg": "#fd5825"
   }
 ]

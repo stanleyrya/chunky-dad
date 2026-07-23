@@ -4,6 +4,8 @@
     "city": "nola",
     "address": "1200 Canal St, New Orleans, LA 70112",
     "coordinates": "29.9559524, -90.0738975",
-    "website": "https://thejoytheater.com"
+    "website": "https://thejoytheater.com",
+    "faviconBg": "#f22922",
+    "faviconFg": "#221e1f"
   }
 ]

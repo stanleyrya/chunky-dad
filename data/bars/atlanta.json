@@ -4,6 +4,8 @@
     "city": "atlanta",
     "address": "2069 Cheshire Bridge Rd NE, Atlanta, GA 30324",
     "coordinates": "33.8115012, -84.3552779",
-    "website": "https://hereticatlanta.com"
+    "website": "https://hereticatlanta.com",
+    "faviconBg": "#481818",
+    "faviconFg": "#a09f9f"
   }
 ]
