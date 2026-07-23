@@ -1097,6 +1097,146 @@ class ScriptableAdapter {
     }
   }
 
+  // ---------------------------------------------------------------------
+  // Venue discovery queue persistence: bar-additions.json alongside the
+  // other scraper storage, mirroring the dead-end store I/O (adapter owns
+  // the file; corrupt/missing file → start fresh, never throw).
+  //
+  // GATHERING-ONLY BY DESIGN: this queue is written by results-UI taps and
+  // read back ONLY to render the "Queued ✓" badge in the results UI.
+  // NOTHING in the scraping pipeline reads it — no bars-data merging, no
+  // provisional-curated entries, zero effect on any run behavior.
+  // Promotion to data/bars/<city>.json happens out-of-band after
+  // verification against independent references; this queue is
+  // evidence-gathering only.
+  //
+  // Shape: { "<cityKey>|<normalized name>": { name, city, address,
+  //   coordinates, signals: [...], website?, instagram?, sourceEvents: [...],
+  //   firstSeen, lastSeen, timesSeen, runIds: [...] } }
+  // ---------------------------------------------------------------------
+  getBarAdditionsFilePath() {
+    return this.fm.joinPath(this.baseDir, "bar-additions.json");
+  }
+
+  async loadBarAdditions() {
+    const path = this.getBarAdditionsFilePath();
+    try {
+      if (!this.fm.fileExists(path)) {
+        return {};
+      }
+      try {
+        await this.fm.downloadFileFromiCloud(path);
+      } catch (_) {}
+      const parsed = JSON.parse(this.fm.readString(path));
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        console.log(
+          "📱 Scriptable: Venue queue has unexpected shape — starting with empty queue",
+        );
+        return {};
+      }
+      return parsed;
+    } catch (error) {
+      // Corrupt or unreadable file must never break the UI — the queue is
+      // pure evidence and rebuilds itself over subsequent runs/taps.
+      console.log(
+        `📱 Scriptable: Venue queue read failed (${error.message}) — starting with empty queue`,
+      );
+      return {};
+    }
+  }
+
+  async saveBarAdditions(queue) {
+    if (!queue || typeof queue !== "object" || Array.isArray(queue)) {
+      return;
+    }
+    const path = this.getBarAdditionsFilePath();
+    try {
+      this.ensureDirectoryExists(this.baseDir);
+      this.fm.writeString(path, JSON.stringify(queue, null, 2));
+      console.log(
+        `📱 Scriptable: ✓ Saved venue queue (${Object.keys(queue).length} entries) to ${path}`,
+      );
+    } catch (error) {
+      console.log(`📱 Scriptable: Venue queue write failed: ${error.message}`);
+    }
+  }
+
+  // Fold one tapped candidate into the queue object (caller persists).
+  // Existing key → merge: bump lastSeen/timesSeen, union signals/runIds/
+  // sourceEvents (runIds keep the 10 most recent, sourceEvents cap at 5),
+  // keep the most complete address, fill website/instagram blanks only.
+  // Returns the entry, or null when the candidate has no key.
+  mergeBarAdditionEntry(queue, candidate, runId, nowIso) {
+    const key =
+      candidate && typeof candidate.key === "string" ? candidate.key : "";
+    if (!key || !queue || typeof queue !== "object") return null;
+    const signals = Array.isArray(candidate.signals) ? candidate.signals : [];
+    const sourceEvents = Array.isArray(candidate.sourceEvents)
+      ? candidate.sourceEvents
+      : [];
+    const runIdText = runId ? String(runId) : "";
+
+    const existing = queue[key];
+    if (!existing || typeof existing !== "object") {
+      const entry = {
+        name: candidate.name || "",
+        city: candidate.city || "",
+        address: candidate.address || "",
+        coordinates: candidate.coordinates || "",
+        signals: [...signals],
+        sourceEvents: sourceEvents.slice(0, 5),
+        firstSeen: nowIso,
+        lastSeen: nowIso,
+        timesSeen: 1,
+        runIds: runIdText ? [runIdText] : [],
+      };
+      if (candidate.website) entry.website = candidate.website;
+      if (candidate.instagram) entry.instagram = candidate.instagram;
+      queue[key] = entry;
+      return entry;
+    }
+
+    existing.lastSeen = nowIso;
+    existing.timesSeen = (Number(existing.timesSeen) || 0) + 1;
+    if (!Array.isArray(existing.signals)) existing.signals = [];
+    for (const signal of signals) {
+      if (!existing.signals.includes(signal)) existing.signals.push(signal);
+    }
+    if (!Array.isArray(existing.runIds)) existing.runIds = [];
+    if (runIdText && !existing.runIds.includes(runIdText)) {
+      existing.runIds.push(runIdText);
+    }
+    existing.runIds = existing.runIds.slice(-10);
+    if (!Array.isArray(existing.sourceEvents)) existing.sourceEvents = [];
+    const seenEventKeys = new Set(
+      existing.sourceEvents.map(
+        (event) => `${event && event.title}|${event && event.date}|${event && event.sourcePageUrl}`,
+      ),
+    );
+    for (const event of sourceEvents) {
+      if (existing.sourceEvents.length >= 5) break;
+      const eventKey = `${event && event.title}|${event && event.date}|${event && event.sourcePageUrl}`;
+      if (seenEventKeys.has(eventKey)) continue;
+      seenEventKeys.add(eventKey);
+      existing.sourceEvents.push(event);
+    }
+    if (
+      SharedCore.isMoreCompleteVenueAddressStatic(
+        candidate.address,
+        existing.address,
+      )
+    ) {
+      existing.address = candidate.address;
+    }
+    if (!existing.website && candidate.website) {
+      existing.website = candidate.website;
+    }
+    if (!existing.instagram && candidate.instagram) {
+      existing.instagram = candidate.instagram;
+    }
+    return existing;
+  }
+
   extractHttpStatusCodeFromError(error) {
     const message =
       error && typeof error.message === "string" ? error.message : "";
@@ -4566,6 +4706,9 @@ class ScriptableAdapter {
       // Manual bear/not-bear override taps recorded during the WebView session,
       // applied after dismissal. Keyed by row id so repeat taps stay idempotent.
       const bearOverridePending = { markedBear: {}, markedNotBear: {} };
+      // Venue-queue taps this session: candidate index → timesSeen after the
+      // write. Repeat taps re-flash feedback without re-writing the queue.
+      const venueQueueTaps = {};
       const webView = new WebView();
       await webView.loadHTML(html);
       webView.shouldAllowRequest = (request) => {
@@ -4588,6 +4731,16 @@ class ScriptableAdapter {
             params.id,
             results,
             bearOverridePending,
+            webView,
+          );
+        } else if (params.a === "queue-venue") {
+          // Fire-and-forget: appends the candidate to the gathering-only
+          // bar-additions queue; the page gets best-effort "Queued ✓"
+          // feedback via evaluateJavaScript.
+          this.queueVenueCandidateAndReport(
+            params.id,
+            results,
+            venueQueueTaps,
             webView,
           );
         }
@@ -4682,6 +4835,10 @@ class ScriptableAdapter {
     );
     const headerLogoData = await this.loadHeaderLogoData();
     const headerLogoSrc = headerLogoData || HEADER_LOGO_URL;
+    // Async section (reads the gathering-only venue queue for badge state),
+    // pre-rendered here because the template below is synchronous.
+    const newVenueSectionHtml =
+      await this.generateNewVenueCandidateSection(results);
 
     // Group events by intent actions (intent can differ from write action for overrides)
     const newEvents = [];
@@ -6086,6 +6243,8 @@ class ScriptableAdapter {
 
     ${this.generateDiscoveredVenueSection(results)}
 
+    ${newVenueSectionHtml}
+
     ${this.generateDiscoverySection(results)}
 
     ${insightSectionsHtml}
@@ -6130,6 +6289,25 @@ class ScriptableAdapter {
                 var btn = document.querySelector('.bear-override-btn[data-bear-idx="' + idx + '"][data-bear-act="' + act + '"]');
                 if (btn) {
                     btn.textContent = act === 'mark-bear' ? 'Marked bear ✓' : 'Marked not-bear ✓';
+                    btn.disabled = true;
+                }
+            } catch (ignore) {}
+        }
+
+        // "Queue for bars data" buttons use the same chunkyscrape://
+        // navigation bridge (shouldAllowRequest, set before present()); the
+        // per-tap nonce keeps repeat taps firing as distinct navigations.
+        window.__venueQueueNonce = 0;
+        function queueVenueCandidate(btn) {
+            var idx = btn ? (btn.getAttribute('data-nvq-index') || '') : '';
+            window.location.href = 'chunkyscrape://act?a=queue-venue&id=' +
+                encodeURIComponent(idx) + '&n=' + (window.__venueQueueNonce++);
+        }
+        function markVenueCandidateQueued(idx, timesSeen) {
+            try {
+                var btn = document.querySelector('.venue-queue-btn[data-nvq-index="' + idx + '"]');
+                if (btn) {
+                    btn.textContent = 'Queued ✓ (seen ' + timesSeen + ' times)';
                     btn.disabled = true;
                 }
             } catch (ignore) {}
@@ -7209,6 +7387,119 @@ class ScriptableAdapter {
       await webView.evaluateJavaScript(feedbackJs, false);
     } catch (error) {
       /* button feedback is optional polish; the copy already happened */
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // New venue candidates (results-UI ↔ chunkyscrape:// bridge, GATHERING-ONLY).
+  // Confirmed-new venues detected by SharedCore.buildNewVenueCandidates get a
+  // "Queue for bars data" button; a tap appends evidence to bar-additions.json.
+  // The queue is loaded here ONLY for the "Queued ✓" badge — the scraping
+  // pipeline never reads it, and promotion to data/bars/<city>.json happens
+  // out-of-band after verification against independent references.
+  // ---------------------------------------------------------------------------
+
+  // "New venue candidates (N)" section: live runs only (no queue writes on
+  // saved-run display), rendered only when the run produced candidates.
+  // Already-queued candidates show a "Queued ✓ (seen N times)" badge instead
+  // of the button.
+  async generateNewVenueCandidateSection(results) {
+    if (results && results._isDisplayingSavedRun === true) return "";
+    const candidates = Array.isArray(results && results.newVenueCandidates)
+      ? results.newVenueCandidates
+      : [];
+    if (candidates.length === 0) return "";
+    const queue = await this.loadBarAdditions();
+
+    const rows = candidates
+      .map((candidate, index) => {
+        if (!candidate) return "";
+        const signalsText = Array.isArray(candidate.signals)
+          ? candidate.signals.join(", ")
+          : "";
+        const sourceEvents = Array.isArray(candidate.sourceEvents)
+          ? candidate.sourceEvents
+          : [];
+        const eventsText = sourceEvents
+          .map((event) => {
+            const dateLabel = this.formatBearOverrideDate(event && event.date);
+            const title = (event && event.title) || "Unknown";
+            return dateLabel ? `${title} (${dateLabel})` : title;
+          })
+          .join(", ");
+        const queuedEntry =
+          candidate.key && queue[candidate.key] ? queue[candidate.key] : null;
+        const control = queuedEntry
+          ? `<span style="font-size:12px; color:var(--text-secondary);">Queued ✓ (seen ${Number(queuedEntry.timesSeen) || 1} times)</span>`
+          : `<button onclick="queueVenueCandidate(this)" class="log-copy-btn venue-queue-btn" data-nvq-index="${index}">➕ Queue for bars data</button>`;
+        return `
+        <div class="new-venue-candidate" style="margin-bottom:14px; padding:10px; background:var(--background-light); border-radius:8px;">
+            <div style="font-weight:600; margin-bottom:4px;">${this.escapeHtml(candidate.name || "Unknown")} <span style="font-weight:400; opacity:0.7;">(${this.escapeHtml(candidate.city || "unknown city")})</span></div>
+            ${candidate.address ? `<div style="font-size:12px; margin-bottom:2px; color:var(--text-secondary);">${this.escapeHtml(candidate.address)}</div>` : ""}
+            <div style="font-size:12px; margin-bottom:2px; color:var(--text-secondary);">Signals: ${this.escapeHtml(signalsText)}</div>
+            ${eventsText ? `<div style="font-size:12px; margin-bottom:6px; color:var(--text-secondary);">Hosting: ${this.escapeHtml(eventsText)}</div>` : ""}
+            ${control}
+        </div>`;
+      })
+      .join("");
+
+    return `
+    <div class="section">
+        <div class="section-header">
+            <span class="section-icon">🆕</span>
+            <span class="section-title">New venue candidates</span>
+            <span class="section-count">${candidates.length}</span>
+        </div>
+        <div style="font-size:12px; color:var(--text-secondary); margin-bottom:8px;">Corroborated venues not in curated bars data. Queueing gathers evidence only — it never changes scraping behavior; promotion to data/bars happens out-of-band after verification.</div>
+        ${rows}
+    </div>
+    `;
+  }
+
+  // Queue one tapped candidate natively and (best-effort) flash its button.
+  // Called fire-and-forget from shouldAllowRequest, which must synchronously
+  // return a bool — so the await lives here, not in the handler. Repeat taps
+  // (per-tap nonce keeps them firing) skip the write and just re-flash.
+  async queueVenueCandidateAndReport(id, results, tapped, webView) {
+    try {
+      const key = String(id || "");
+      const index = Number(key);
+      const candidates = Array.isArray(results && results.newVenueCandidates)
+        ? results.newVenueCandidates
+        : [];
+      if (!Number.isInteger(index) || index < 0 || index >= candidates.length) {
+        return;
+      }
+      const candidate = candidates[index];
+      if (!candidate) return;
+      let timesSeen = tapped[key];
+      if (timesSeen === undefined) {
+        const queue = await this.loadBarAdditions();
+        const runId = results.savedRunId || results.sourceRunId || null;
+        const entry = this.mergeBarAdditionEntry(
+          queue,
+          candidate,
+          runId,
+          new Date().toISOString(),
+        );
+        if (!entry) return;
+        await this.saveBarAdditions(queue);
+        timesSeen = Number(entry.timesSeen) || 1;
+        tapped[key] = timesSeen;
+        console.log(
+          `📱 Scriptable: Queued venue candidate "${candidate.name}" (${candidate.city}) — seen ${timesSeen} time(s)`,
+        );
+      }
+      const feedbackJs = `markVenueCandidateQueued(${JSON.stringify(key)}, ${JSON.stringify(String(timesSeen))})`;
+      try {
+        await webView.evaluateJavaScript(feedbackJs, false);
+      } catch (error) {
+        /* in-page feedback is optional polish; the queue write already happened */
+      }
+    } catch (error) {
+      console.warn(
+        `📱 Scriptable: Failed to queue venue candidate: ${error.message}`,
+      );
     }
   }
 

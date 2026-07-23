@@ -6647,3 +6647,162 @@ test('unknown provenance values and unknown fields rank null so callers fail ope
     'non-provenance fields have no tiers');
   assert.equal(SharedCore.getProvenanceTrustTier('', 'curated'), null);
 });
+
+// ---------------------------------------------------------------------------
+// New venue candidates (gathering-only growth loop): detection builder
+// ---------------------------------------------------------------------------
+
+const SEATTLE_CUFF_BAR = {
+  name: 'The Cuff Complex',
+  city: 'seattle',
+  address: '1533 13th Ave, Seattle, WA 98122',
+  coordinates: '47.6142041, -122.3168539'
+};
+
+function createVenueDiscoveryCore(withBars = true) {
+  return new SharedCore({
+    seattle: { timezone: 'America/Los_Angeles', calendar: 'chunky-dad-seattle', patterns: ['seattle'] }
+  }, {
+    eventSchema: EventSchema,
+    bars: withBars ? { seattle: [SEATTLE_CUFF_BAR] } : {}
+  });
+}
+
+function buildVenueCandidateEvent(overrides = {}) {
+  return {
+    title: 'Bear Night',
+    startDate: new Date('2026-08-01T02:00:00.000Z'),
+    city: 'seattle',
+    bar: 'Massive',
+    barSource: 'venue-site',
+    address: '1400 12th Ave, Seattle, WA 98122',
+    location: '47.6135, -122.3163',
+    pinSource: 'geocoded-exact',
+    website: 'https://massiveseattle.com/events/bear-night',
+    _sourcePageUrl: 'https://massiveseattle.com/events/bear-night',
+    ...overrides
+  };
+}
+
+test('corroborated bar + exact pin + uncurated name yields a new venue candidate', () => {
+  const core = createVenueDiscoveryCore();
+  const candidates = core.buildNewVenueCandidates([buildVenueCandidateEvent()]);
+
+  assert.equal(candidates.length, 1);
+  const candidate = candidates[0];
+  assert.equal(candidate.key, 'seattle|massive');
+  assert.equal(candidate.name, 'Massive');
+  assert.equal(candidate.city, 'seattle');
+  assert.equal(candidate.address, '1400 12th Ave, Seattle, WA 98122');
+  assert.equal(candidate.coordinates, '47.6135, -122.3163');
+  assert.deepEqual(candidate.signals, ['venue-site']);
+  assert.equal(candidate.website, 'https://massiveseattle.com/events/bear-night');
+  assert.equal(candidate.sourceEvents.length, 1);
+  assert.equal(candidate.sourceEvents[0].title, 'Bear Night');
+  assert.equal(candidate.sourceEvents[0].date, '2026-08-01T02:00:00.000Z');
+  assert.equal(candidate.sourceEvents[0].sourcePageUrl, 'https://massiveseattle.com/events/bear-night');
+});
+
+test('curated, uncorroborated, and unstamped barSource are all excluded', () => {
+  const core = createVenueDiscoveryCore();
+  assert.deepEqual(core.buildNewVenueCandidates([
+    buildVenueCandidateEvent({ barSource: 'curated' }),
+    buildVenueCandidateEvent({ barSource: 'uncorroborated' }),
+    buildVenueCandidateEvent({ barSource: undefined }),
+    buildVenueCandidateEvent({ barSource: '' })
+  ]), []);
+});
+
+test('non-exact pins and missing pins are excluded', () => {
+  const core = createVenueDiscoveryCore();
+  assert.deepEqual(core.buildNewVenueCandidates([
+    buildVenueCandidateEvent({ pinSource: 'geocoded-approx' }),
+    buildVenueCandidateEvent({ pinSource: 'curated' }),
+    buildVenueCandidateEvent({ pinSource: 'page' }),
+    buildVenueCandidateEvent({ pinSource: undefined }),
+    buildVenueCandidateEvent({ location: undefined }),
+    buildVenueCandidateEvent({ location: 'The Cuff, Seattle' })
+  ]), []);
+});
+
+test('missing bar or missing resolved city fails open to no candidate', () => {
+  const core = createVenueDiscoveryCore();
+  assert.deepEqual(core.buildNewVenueCandidates([
+    buildVenueCandidateEvent({ bar: undefined }),
+    buildVenueCandidateEvent({ bar: '   ' }),
+    buildVenueCandidateEvent({ city: undefined }),
+    buildVenueCandidateEvent({ city: '' })
+  ]), []);
+  assert.deepEqual(core.buildNewVenueCandidates(null), []);
+});
+
+test('a bar matching the city\'s curated bars is excluded (already known)', () => {
+  const core = createVenueDiscoveryCore();
+  // Same normalization as findCuratedBarByName: leading "the" and
+  // punctuation/case differences still match the curated entry.
+  assert.deepEqual(core.buildNewVenueCandidates([
+    buildVenueCandidateEvent({ bar: 'The Cuff Complex' }),
+    buildVenueCandidateEvent({ bar: 'CUFF COMPLEX!' })
+  ]), []);
+  // Without curated bars data for the city, the same name IS a candidate
+  // (nothing curated to match against).
+  const bareCore = createVenueDiscoveryCore(false);
+  assert.equal(bareCore.buildNewVenueCandidates([
+    buildVenueCandidateEvent({ bar: 'The Cuff Complex' })
+  ]).length, 1);
+});
+
+test('events of the same venue dedup into one candidate with unioned evidence', () => {
+  const core = createVenueDiscoveryCore();
+  const candidates = core.buildNewVenueCandidates([
+    buildVenueCandidateEvent({
+      bar: 'MASSIVE',
+      barSource: 'page-adjacent',
+      address: 'Seattle, WA',
+      title: 'Underwear Party'
+    }),
+    buildVenueCandidateEvent({
+      bar: 'Massive',
+      barSource: 'geo-poi',
+      address: '1400 12th Ave, Seattle, WA 98122',
+      title: 'Bear Night'
+    }),
+    buildVenueCandidateEvent({
+      bar: 'The Massive', // normalizes to the same venue key
+      barSource: 'geo-poi',
+      title: 'Furry Friday'
+    })
+  ]);
+
+  assert.equal(candidates.length, 1);
+  const candidate = candidates[0];
+  assert.equal(candidate.key, 'seattle|massive');
+  assert.equal(candidate.name, 'Massive', 'mixed-case observation beats ALL-CAPS');
+  assert.deepEqual(candidate.signals, ['page-adjacent', 'geo-poi'], 'signals unioned and deduped');
+  assert.equal(candidate.address, '1400 12th Ave, Seattle, WA 98122', 'most complete observed address kept');
+  assert.equal(candidate.sourceEvents.length, 3);
+});
+
+test('sourceEvents cap at 5 per candidate', () => {
+  const core = createVenueDiscoveryCore();
+  const events = Array.from({ length: 8 }, (_, i) =>
+    buildVenueCandidateEvent({ title: `Bear Night ${i + 1}` }));
+  const candidates = core.buildNewVenueCandidates(events);
+  assert.equal(candidates.length, 1);
+  assert.equal(candidates[0].sourceEvents.length, 5);
+});
+
+test('new venue candidate log line has the documented shape', () => {
+  const core = createVenueDiscoveryCore();
+  const [candidate] = core.buildNewVenueCandidates([
+    buildVenueCandidateEvent({ barSource: 'geo-poi' })
+  ]);
+  assert.equal(
+    core.formatNewVenueCandidateLogLine(candidate),
+    '📋 NEW VENUE CANDIDATE: "Massive" (seattle) — signals: geo-poi — 1400 12th Ave, Seattle, WA 98122'
+  );
+  assert.equal(
+    core.formatNewVenueCandidateLogLine({ name: 'Massive', city: 'seattle', signals: ['venue-site'], address: '' }),
+    '📋 NEW VENUE CANDIDATE: "Massive" (seattle) — signals: venue-site — no address observed'
+  );
+});

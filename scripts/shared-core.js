@@ -32,6 +32,12 @@ const ADAPTIVE_CRAWL_MAX_HOPS = 4;
 // and the calendar reviewer's pin-moved check.
 const PIN_MOVED_THRESHOLD_KM = 0.4;
 
+// New-venue-candidate detection (gathering-only growth loop): barSource
+// stamps that positively corroborate an extracted bar name without meaning
+// "already curated". Candidate evidence caps sourceEvents per venue.
+const NEW_VENUE_CANDIDATE_BAR_SOURCES = Object.freeze(['page-adjacent', 'venue-site', 'geo-poi']);
+const NEW_VENUE_CANDIDATE_SOURCE_EVENT_CAP = 5;
+
 // Merge-time address comparison: street-type abbreviations and directionals
 // expanded on BOTH sides so "619 E. Pine St" and "619 East Pine Street"
 // tokenize identically. Modeled on normalizers.js
@@ -962,14 +968,20 @@ class SharedCore {
     // vice versa). Full-name equality only — never substring — so "Eagle"
     // can't claim "Eagle Bar" vs "Dallas Eagle" ambiguously within a city.
     findCuratedBarByName(cityBars, value) {
-        const normalizeBarName = name => String(name || '')
+        const normalized = this.normalizeBarNameKey(value);
+        if (!normalized) return null;
+        return cityBars.find(bar => bar && typeof bar.name === 'string'
+            && this.normalizeBarNameKey(bar.name) === normalized) || null;
+    }
+
+    // The bar-name identity key shared by curated matching (above) and the
+    // new-venue-candidate dedup key: lowercase, drop a leading "the ", strip
+    // non-alphanumerics — so "The Eagle" / "EAGLE!" collapse to one venue.
+    normalizeBarNameKey(name) {
+        return String(name || '')
             .toLowerCase()
             .replace(/^\s*the\s+/, '')
             .replace(/[^a-z0-9]/g, '');
-        const normalized = normalizeBarName(value);
-        if (!normalized) return null;
-        return cityBars.find(bar => bar && typeof bar.name === 'string'
-            && normalizeBarName(bar.name) === normalized) || null;
     }
 
     // City-center coordinates from the cities config as a "lat, lng" pair
@@ -1832,6 +1844,18 @@ class SharedCore {
             await displayAdapter.logInfo(results.discoveredVenueSummary);
         }
 
+        // New venue candidates (GATHERING-ONLY): corroborated + exactly-pinned
+        // venues absent from curated bars data, aggregated once per run per
+        // venue. Evidence for out-of-band curation; the pipeline NEVER reads
+        // this list (or the adapter's venue queue file) back.
+        const newVenueCandidates = this.buildNewVenueCandidates(results.allProcessedEvents);
+        if (newVenueCandidates.length > 0) {
+            results.newVenueCandidates = newVenueCandidates;
+            for (const candidate of newVenueCandidates) {
+                await displayAdapter.logInfo(this.formatNewVenueCandidateLogLine(candidate));
+            }
+        }
+
         await this.finalizeDeadEndRun(displayAdapter, results);
 
         const duplicateSummary = results.duplicatesRemoved > 0
@@ -2105,6 +2129,137 @@ class SharedCore {
             ].join('\n');
         });
         return blocks.join('\n\n');
+    }
+
+    // ------------------------------------------------------------------
+    // New venue candidates (growth loop, GATHERING-ONLY): venues this run's
+    // own evidence corroborates (vouched-for bar name + exact geocoded pin)
+    // that curated bars data does not know yet. This is information
+    // collection, NOT authority: the candidate list is displayed and
+    // optionally queued by the adapter as evidence for out-of-band curation,
+    // and NOTHING in the scraping pipeline ever reads it back.
+    // ------------------------------------------------------------------
+
+    // An event vouches for a NEW venue only when every signal is positive
+    // (fail open — any missing field means "not a candidate"):
+    //   - bar present with corroborated non-curated provenance: page-adjacent
+    //     / venue-site (extraction-time corroboration) or geo-poi (map
+    //     placemark corroboration). curated = already known; uncorroborated
+    //     or unstamped = nothing vouched for the name.
+    //   - pin present with pinSource geocoded-exact (a curated pin also means
+    //     already-known; approx/page pins are not location proof).
+    //   - resolved city, and the bar name does NOT match that city's curated
+    //     bars (findCuratedBarByName's normalization).
+    isNewVenueCandidateEvent(event) {
+        if (!event || typeof event !== 'object') return false;
+        const bar = typeof event.bar === 'string' ? event.bar.trim() : '';
+        if (!bar) return false;
+        const barSource = typeof event.barSource === 'string' ? event.barSource.trim() : '';
+        if (!NEW_VENUE_CANDIDATE_BAR_SOURCES.includes(barSource)) return false;
+        const pinSource = typeof event.pinSource === 'string' ? event.pinSource.trim() : '';
+        if (pinSource !== 'geocoded-exact') return false;
+        const location = typeof event.location === 'string' ? event.location.trim() : '';
+        if (!this.isCoordinatePair(location)) return false;
+        const cityKey = typeof event.city === 'string' ? event.city.trim() : '';
+        if (!cityKey) return false;
+        const cityBars = this.getCuratedCityBars(cityKey);
+        if (cityBars && this.findCuratedBarByName(cityBars, bar)) return false;
+        return true;
+    }
+
+    // Aggregate qualifying events into one candidate per unique
+    // (cityKey, normalized bar name). Pure: reads only data already on the
+    // events; timestamps/file I/O belong to the adapter.
+    buildNewVenueCandidates(events, options = {}) {
+        const runId = options && options.runId ? String(options.runId) : null;
+        const byKey = new Map();
+        for (const event of Array.isArray(events) ? events : []) {
+            if (!this.isNewVenueCandidateEvent(event)) continue;
+            const bar = event.bar.trim();
+            const cityKey = event.city.trim().toLowerCase();
+            const key = `${cityKey}|${this.normalizeBarNameKey(bar)}`;
+            const barSource = event.barSource.trim();
+            const address = typeof event.address === 'string' ? event.address.trim() : '';
+            const website = typeof event.website === 'string' && event.website.trim()
+                ? event.website.trim()
+                : (typeof event.url === 'string' ? event.url.trim() : '');
+            const instagram = typeof event.instagram === 'string' ? event.instagram.trim() : '';
+
+            let candidate = byKey.get(key);
+            if (!candidate) {
+                candidate = {
+                    key,
+                    name: bar,
+                    city: cityKey,
+                    address: '',
+                    coordinates: event.location.trim(),
+                    signals: [],
+                    sourceEvents: [],
+                    runId
+                };
+                byKey.set(key, candidate);
+            }
+            candidate.name = this.pickBetterCasedVenueName(candidate.name, bar);
+            if (this.isMoreCompleteVenueAddress(address, candidate.address)) {
+                candidate.address = address;
+            }
+            if (!candidate.signals.includes(barSource)) candidate.signals.push(barSource);
+            if (website && !candidate.website) candidate.website = website;
+            if (instagram && !candidate.instagram) candidate.instagram = instagram;
+            if (candidate.sourceEvents.length < NEW_VENUE_CANDIDATE_SOURCE_EVENT_CAP) {
+                candidate.sourceEvents.push({
+                    title: typeof event.title === 'string' ? event.title : '',
+                    date: this.formatNewVenueCandidateDate(event.startDate),
+                    sourcePageUrl: typeof event._sourcePageUrl === 'string' && event._sourcePageUrl
+                        ? event._sourcePageUrl
+                        : (typeof event.url === 'string' ? event.url : '')
+                });
+            }
+        }
+        return Array.from(byKey.values());
+    }
+
+    // Prefer a mixed-case observation of the venue name over an ALL-CAPS or
+    // all-lowercase one ("Massive" beats "MASSIVE"); otherwise first wins.
+    pickBetterCasedVenueName(current, next) {
+        const isMixedCase = value => /[a-z]/.test(value) && /[A-Z]/.test(value);
+        return isMixedCase(next) && !isMixedCase(current) ? next : current;
+    }
+
+    // Candidate ISO date string ('' when absent/unparseable) — durable
+    // conversion of data already on the event, not a clock read.
+    formatNewVenueCandidateDate(startDate) {
+        const date = startDate instanceof Date ? startDate : this.parseDate(startDate);
+        if (!date || Number.isNaN(date.getTime())) return '';
+        return date.toISOString();
+    }
+
+    // "Most complete observed address" order: more comma segments + a ZIP
+    // outrank fewer; ties go to the longer string; first observation wins
+    // exact ties. Static so the adapter's queue merge reuses the same rule.
+    static scoreVenueCandidateAddress(value) {
+        const text = typeof value === 'string' ? value.trim() : '';
+        if (!text) return -1;
+        const segments = text.split(',').map(segment => segment.trim()).filter(Boolean);
+        return segments.length + (/\b\d{5}\b/.test(text) ? 1 : 0);
+    }
+
+    static isMoreCompleteVenueAddressStatic(next, current) {
+        const nextScore = SharedCore.scoreVenueCandidateAddress(next);
+        const currentScore = SharedCore.scoreVenueCandidateAddress(current);
+        if (nextScore !== currentScore) return nextScore > currentScore;
+        return String(next || '').trim().length > String(current || '').trim().length;
+    }
+
+    isMoreCompleteVenueAddress(next, current) {
+        return SharedCore.isMoreCompleteVenueAddressStatic(next, current);
+    }
+
+    // One additive log line per run per candidate venue.
+    formatNewVenueCandidateLogLine(candidate) {
+        const signals = Array.isArray(candidate.signals) ? candidate.signals.join(', ') : '';
+        const address = candidate.address || 'no address observed';
+        return `📋 NEW VENUE CANDIDATE: "${candidate.name}" (${candidate.city}) — signals: ${signals} — ${address}`;
     }
 
     // Baked-in platform confidence expectations: Eventbrite /e/ event pages ship

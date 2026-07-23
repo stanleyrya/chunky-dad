@@ -767,6 +767,18 @@ async saveFailureNote(url, error, metadata = {}) {
                 console.log('\n' + results.discoveredVenueSummary);
             }
 
+            // New venue candidates: read-only display on web. Queueing lives
+            // in the Scriptable adapter only, and that queue is gathering-only
+            // evidence — it never affects scraping behavior.
+            if (Array.isArray(results.newVenueCandidates) && results.newVenueCandidates.length > 0) {
+                console.log(`\n🆕 New venue candidates (${results.newVenueCandidates.length}) — read-only here (queueing is Scriptable-only):`);
+                results.newVenueCandidates.forEach(candidate => {
+                    const signals = Array.isArray(candidate.signals) ? candidate.signals.join(', ') : '';
+                    const addressSuffix = candidate.address ? ` — ${candidate.address}` : '';
+                    console.log(`   • "${candidate.name}" (${candidate.city}) — signals: ${signals}${addressSuffix}`);
+                });
+            }
+
             // Show summary and recommended actions
             await this.displaySummaryAndActions(results);
             
