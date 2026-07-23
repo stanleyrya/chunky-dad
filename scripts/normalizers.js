@@ -361,11 +361,17 @@ class LocationNormalizer extends BaseNormalizer {
 
         // Generate Google Maps URL
         if (!event.gmaps) {
-            // Try to enhance incomplete addresses with city information
+            // City context is QUERY-time decoration only: incomplete addresses
+            // get the city appended for the maps lookup below, but the
+            // PERSISTED event.address must never gain a city that came from
+            // city RESOLUTION rather than from source text (run
+            // 20260723-123149: extracted "LA NOGALERA" was stored as
+            // "LA NOGALERA, Manhattan" off a wrong city, cementing the error).
+            let queryAddress = event.address;
             if (event.address && event.city && !this.isFullAddress(event.address)) {
                 const enhancedAddress = this.enhanceAddressWithCity(event.address, event.city);
                 if (enhancedAddress !== event.address) {
-                    event.address = enhancedAddress;
+                    queryAddress = enhancedAddress;
                 }
             }
 
@@ -378,9 +384,9 @@ class LocationNormalizer extends BaseNormalizer {
                 }
             }
 
-            const hasFullAddress = event.address && this.isFullAddress(event.address);
+            const hasFullAddress = queryAddress && this.isFullAddress(queryAddress);
             const shouldPreferAddress = hasFullAddress && !event.placeId;
-            const addressForMaps = (hasFullAddress || !coordinates) ? event.address : null;
+            const addressForMaps = (hasFullAddress || !coordinates) ? queryAddress : null;
             const coordinatesForMaps = shouldPreferAddress ? null : coordinates;
             const venueNameForMaps = typeof event.bar === 'string' ? event.bar.trim() : null;
             const cityNameForMaps = this.getPrimaryCityName(event.city);

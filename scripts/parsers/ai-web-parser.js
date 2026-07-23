@@ -664,6 +664,18 @@ class AiWebParser {
         // pair against the same corpora the evidence gate uses (page text,
         // OCR text, segment text). Flag-don't-drop: values are never changed.
         this.stampBarSourceProvenance(event, evidenceContext, promptHtmlData);
+        // Deterministic page-location cross-check: an explicit "<Place>, <Place>"
+        // line next to the venue/address outranks weaker city evidence. A city
+        // the evidence gate dropped (context/branding-cited evidence) still
+        // anchors the comparison via the validation report.
+        const droppedCityEntry = validationResult.report && Array.isArray(validationResult.report.dropped)
+            ? validationResult.report.dropped.find(entry => entry && entry.field === 'city')
+            : null;
+        const memoDroppedCity = aiEvent.__droppedFieldValues && typeof aiEvent.__droppedFieldValues === 'object'
+            && typeof aiEvent.__droppedFieldValues.city === 'string'
+            ? aiEvent.__droppedFieldValues.city
+            : '';
+        this.crossCheckCityAgainstAdjacentLocation(event, evidenceContext, cityConfig, droppedCityEntry ? droppedCityEntry.value : memoDroppedCity);
         console.log(this.formatExtractionSummary(event, htmlData && htmlData.url ? htmlData.url : 'unknown URL'));
         const confidenceDiagnostics = aiEvent && aiEvent.__confidenceDiagnostics && typeof aiEvent.__confidenceDiagnostics === 'object'
             ? aiEvent.__confidenceDiagnostics
@@ -5428,6 +5440,16 @@ class AiWebParser {
                 };
                 return;
             }
+            // Dropped-value memos union across passes like the evidence strings
+            // above, except EARLIER passes win (the first drop is the one the
+            // page-location cross-check anchors on).
+            if (key === '__droppedFieldValues' && value && typeof value === 'object') {
+                merged.__droppedFieldValues = {
+                    ...value,
+                    ...(merged.__droppedFieldValues && typeof merged.__droppedFieldValues === 'object' ? merged.__droppedFieldValues : {})
+                };
+                return;
+            }
             if (!this.isUsableAiFieldValue(value)) return;
             const normalizedName = this.normalizePromptFieldName(key);
             if (this.hasResolvedFieldValue(merged, normalizedName)) return;
@@ -5600,10 +5622,27 @@ class AiWebParser {
             const partial = await this.extractEventWithTwoPassAi(htmlData, aiConfig, cityConfig, parserConfig, remainingFields, snippetText, passLabel, { ...options, dataFlags }, httpAdapter);
 
             // Validate extracted fields
-            let validatedPartial = this.validateAiEventEvidence(partial, htmlData, parserConfig, remainingFields, {
+            const partialValidation = this.validateAiEventEvidence(partial, htmlData, parserConfig, remainingFields, {
                 evidenceContext: snippetEvidenceContext,
                 validationContext: { imageEvidenceUrls: snippetImageEvidence, cityConfig: cityConfig }
-            }).event || {};
+            });
+            let validatedPartial = partialValidation.event || {};
+            // Dropped-value memo (internal, additive): per-snippet reports are
+            // otherwise discarded, but the page-location cross-check in
+            // extractSingleEvent still needs the city value the gate dropped
+            // (weaker evidence) to anchor its comparison. First drop wins.
+            const partialDropped = partialValidation.report && Array.isArray(partialValidation.report.dropped)
+                ? partialValidation.report.dropped
+                : [];
+            partialDropped.forEach(entry => {
+                if (!entry || !entry.field || entry.value === undefined) return;
+                if (!validatedPartial.__droppedFieldValues || typeof validatedPartial.__droppedFieldValues !== 'object') {
+                    validatedPartial.__droppedFieldValues = {};
+                }
+                if (!(entry.field in validatedPartial.__droppedFieldValues)) {
+                    validatedPartial.__droppedFieldValues[entry.field] = entry.value;
+                }
+            });
 
             // Reject organizer-brand / site-tagline values AT PASS-RESULT TIME:
             // an accepted value consumes the field slot (later passes only ask for
@@ -6169,6 +6208,13 @@ class AiWebParser {
         if (normalized === 'description') {
             description += ` Do not lead with the event's date/time (those are captured separately) — start from the actual description text.`;
         }
+        // Prompt-only steering (run 20260723-123149 findings): a promoter's
+        // home-city branding (WWW.FURBALL.NYC on a flyer) was extracted as the
+        // event city for an event in Torremolinos. Appended to the schema line
+        // so the schema text itself stays byte-identical.
+        if (normalized === 'city') {
+            description += ` The promoter's home city in branding, logos, or website domains (e.g. a .nyc domain) is NOT the event city — use explicit location statements (e.g. "Torremolinos, Spain") near the venue/address.`;
+        }
         return description;
     }
 
@@ -6245,7 +6291,7 @@ ${String(snippet || '')}`;
                 .filter(r => r && typeof r.eventSummary === 'string' && r.eventSummary.trim().length > 0)
                 .map(r => r.eventSummary.trim());
             if (summaries.length > 0) {
-                additionalContext += `ADDITIONAL CONTEXT (DO NOT EXTRACT FROM THIS — for disambiguation only, e.g. resolving festival vs. event name conflicts):\n`;
+                additionalContext += `ADDITIONAL CONTEXT (DO NOT EXTRACT FROM THIS — for disambiguation only, e.g. resolving festival vs. event name conflicts — never cite it as evidence):\n`;
                 summaries.forEach(s => {
                     additionalContext += `- ${s}\n`;
                 });
@@ -7400,10 +7446,95 @@ TEXT:
     }
 
     /**
+     * Evidence citing the ADDITIONAL CONTEXT block. That block is injected
+     * with an explicit DO-NOT-EXTRACT instruction, so evidence referencing it
+     * is a violation by definition — for ANY field. Observed in run
+     * 20260723-123149: city "new york" kept on evidence ending "additional
+     * context specifies NYC" after a hallucinated vision summary poisoned the
+     * context block.
+     */
+    evidenceCitesAdditionalContext(evidence) {
+        const text = String(evidence || '').toLowerCase();
+        if (!text) return false;
+        return text.includes('additional context')
+            || text.includes('context specifies')
+            || text.includes('per the context')
+            || text.includes('disambiguation context');
+    }
+
+    // Brand/domain token corpus for the city evidence gate: the page's derived
+    // organizer/brand names (the same data the KNOWN ORGANIZER steering line
+    // uses — see getPageBrandNames), their individual words, plus the source
+    // host and its labels ("furball.nyc" → "furball.nyc", "furball", "nyc").
+    // www and generic infrastructure TLD labels are excluded so evidence
+    // merely containing "com"/"org" never classifies as brand-citing; tokens
+    // under 3 chars are skipped. Cached per page on htmlData like
+    // getPageBrandNames.
+    getPageBrandDomainTokens(htmlData) {
+        if (!htmlData || typeof htmlData !== 'object') return [];
+        if (Array.isArray(htmlData.pageBrandDomainTokens)) return htmlData.pageBrandDomainTokens;
+        const tokens = new Set();
+        const add = value => {
+            const text = this.normalizeEvidenceText(value);
+            if (text && text.length >= 3) tokens.add(text);
+        };
+        this.getPageBrandNames(htmlData).forEach(name => {
+            add(name);
+            String(name || '').split(/\s+/).forEach(add);
+        });
+        const components = this.parseUrlComponents(typeof htmlData.url === 'string' ? htmlData.url : '');
+        const host = components && components.hostname
+            ? components.hostname.split(':')[0].replace(/^www\./, '')
+            : '';
+        if (host) {
+            add(host);
+            const genericLabels = new Set(['www', 'com', 'org', 'net', 'edu', 'gov', 'mil', 'info', 'biz', 'app', 'dev', 'web', 'site', 'online', 'html', 'htm']);
+            host.split('.').forEach(label => {
+                if (!genericLabels.has(label)) add(label);
+            });
+        }
+        const list = Array.from(tokens);
+        if (Object.isExtensible(htmlData)) {
+            htmlData.pageBrandDomainTokens = list;
+        }
+        return list;
+    }
+
+    /**
+     * Promoter branding is not a location: city evidence that cites the
+     * page's organizer/brand or its domain labels ("WWW.FURBALL.NYC", bare
+     * "NYC" on a .nyc host) and nothing else location-like fails
+     * corroboration. An explicit "<Place>, <Place>" form in the same evidence
+     * string ("Torremolinos, Spain", "Asbury Park, NJ") rescues it — the
+     * evidence is then citing a real location statement, not just branding.
+     * Unclassifiable evidence fails open (returns false → today's behavior).
+     */
+    cityEvidenceCitesBrandOnly(evidence, brandTokens) {
+        const evidenceText = String(evidence || '');
+        if (!evidenceText || !Array.isArray(brandTokens) || brandTokens.length === 0) return false;
+        const normalized = this.normalizeEvidenceText(evidenceText);
+        if (!normalized) return false;
+        const citesBrand = brandTokens.some(token => this.textContainsCityAlias(normalized, token));
+        if (!citesBrand) return false;
+        const locationForm = /[A-Z][A-Za-z'’.-]*(?:\s+[A-Z][A-Za-z'’.-]*)*,\s+[A-Z][A-Za-z]/.test(evidenceText);
+        return !locationForm;
+    }
+
+    /**
      * Validate a single field value against evidence.
      * Returns true if valid, false if should be dropped.
      */
-    validateFieldValueAgainstEvidence(key, value, rule, evidenceContext, validationContext, report, modelEvidence = '') {
+    validateFieldValueAgainstEvidence(key, value, rule, evidenceContext, validationContext, report, modelEvidence = '', brandTokens = null) {
+        // The ADDITIONAL CONTEXT block carries an explicit DO-NOT-EXTRACT
+        // instruction, so evidence citing it fails corroboration for ANY field
+        // (see evidenceCitesAdditionalContext).
+        const citesForbiddenContext = this.evidenceCitesAdditionalContext(modelEvidence);
+        // Promoter branding is not a location: city evidence citing only the
+        // page's organizer/brand or domain labels fails corroboration (see
+        // cityEvidenceCitesBrandOnly).
+        const brandOnlyCityEvidence = !citesForbiddenContext
+            && rule.field === 'city'
+            && this.cityEvidenceCitesBrandOnly(modelEvidence, brandTokens);
         // Times are never merge-arbitrated downstream (scraped clobbers), so an
         // invented time here flows straight into calendars. A time value whose
         // own evidence string admits inference fails corroboration outright —
@@ -7412,15 +7543,22 @@ TEXT:
         // interpreted as ~3am (common club close time)" passed the gate).
         const inventedTime = this.valueClaimsTimeOfDay(rule.mode, value)
             && this.evidenceAdmitsInference(modelEvidence);
-        const hasEvidence = !inventedTime
+        const hasEvidence = !citesForbiddenContext
+            && !brandOnlyCityEvidence
+            && !inventedTime
             && this.hasFieldEvidence(evidenceContext, value, rule.mode, validationContext);
         if (!hasEvidence) {
-            report.dropped.push({
+            const droppedEntry = {
                 field: rule.field,
                 key,
                 mode: rule.mode,
                 value: this.trimToMaxLength(String(value), this.extractionLimits.validationReportValueMaxLength)
-            });
+            };
+            // Additive diagnostics for the new evidence-quality drops only —
+            // pre-existing drop entries keep their exact shape.
+            if (citesForbiddenContext) droppedEntry.reason = 'context-cited-evidence';
+            else if (brandOnlyCityEvidence) droppedEntry.reason = 'brand-cited-evidence';
+            report.dropped.push(droppedEntry);
             return false;
         }
         report.kept.push({ field: rule.field, key, mode: rule.mode });
@@ -7483,6 +7621,11 @@ TEXT:
         const modelFieldEvidence = aiEvent.__fieldEvidence && typeof aiEvent.__fieldEvidence === 'object'
             ? aiEvent.__fieldEvidence
             : {};
+        // Brand/domain tokens of the source page — consulted for the city
+        // field so branding-citing evidence fails corroboration (run
+        // 20260723-123149: WWW.FURBALL.NYC flyer branding produced city
+        // "new york" for an event in Torremolinos).
+        const brandTokens = this.getPageBrandDomainTokens(htmlData);
         Object.keys(aiEvent).forEach(key => {
             const rule = this.getFieldValidationRule(key, validationConfig);
 
@@ -7499,7 +7642,7 @@ TEXT:
 
             // Validate field value against evidence
             const value = aiEvent[key];
-            const isValid = this.validateFieldValueAgainstEvidence(key, value, rule, evidenceContext, validationContext, report, modelFieldEvidence[key]);
+            const isValid = this.validateFieldValueAgainstEvidence(key, value, rule, evidenceContext, validationContext, report, modelFieldEvidence[key], brandTokens);
             if (!isValid) {
                 delete validated[key];
             }
@@ -9288,6 +9431,102 @@ TEXT:
         if (candidate) {
             console.log(`🤖 AI Web: Adjacent venue candidate: "${candidate}"`);
         }
+        return event;
+    }
+
+    // An explicit "<Place>, <Place>" location line ("Torremolinos, Spain",
+    // "Asbury Park, NJ"): 2–3 comma-separated segments, every word of every
+    // segment capitalized (title-case or ALL-CAPS proper-noun runs, never
+    // sentence text like "Doors open, free entry"), the last segment allowed a
+    // trailing postal code. The first segment must not be a street address (no
+    // leading digits, by construction of the place form) and must not be the
+    // venue/bar itself. Returns { line, place } or null.
+    extractAdjacentLocationPlacePair(rawLine, event) {
+        const line = String(rawLine || '').trim();
+        if (!line || line.length > 80) return null;
+        const parts = line.split(',').map(part => part.trim());
+        if (parts.length < 2 || parts.length > 3) return null;
+        const placeForm = /^[A-Z][A-Za-z'’.-]*(?:\s+[A-Z][A-Za-z'’.-]*)*$/;
+        const first = parts[0];
+        if (/^\d/.test(first) || !placeForm.test(first)) return null;
+        const rest = parts.slice(1);
+        const lastForm = /^[A-Z][A-Za-z'’.-]*(?:\s+[A-Z][A-Za-z'’.-]*)*(?:\s+\d{4,6})?$/;
+        if (!rest.every((part, index) => (index === rest.length - 1 ? lastForm : placeForm).test(part))) return null;
+        const firstNormalized = this.normalizeAdjacencyText(first);
+        if (!firstNormalized) return null;
+        const barNormalized = this.normalizeAdjacencyText(event && event.bar);
+        if (barNormalized
+            && (firstNormalized.includes(barNormalized) || barNormalized.includes(firstNormalized))) return null;
+        if (this.core && typeof this.core.looksLikeStreetAddress === 'function'
+            && this.core.looksLikeStreetAddress(first)) return null;
+        return { line, place: first };
+    }
+
+    // Deterministic location-line cross-check (run 20260723-123149: the page
+    // segment plainly said "@ MAD.BEAR Beach" / "Torremolinos, Spain" while
+    // flyer branding produced city "new york"). Looks for an explicit
+    // "<Place>, <Place>" line within ±2 lines of the venue/address occurrence
+    // in the evidence corpus:
+    //   - the first such line resolving to a configured city that DIFFERS from
+    //     the extracted city → override + _citySource 'page-adjacent';
+    //   - a line that does NOT resolve and shares no tokens with the extracted
+    //     city → clear the city (unknown routes to chunky-dad-unknown, the
+    //     safe path) — never guess;
+    //   - no adjacent location line, or the line matches the extracted city →
+    //     untouched (fail open, no stamp, no log).
+    // droppedCityValue lets a city the evidence gate already dropped (weaker
+    // evidence) still anchor the comparison, so the page's own location line
+    // can restore the correct city.
+    crossCheckCityAgainstAdjacentLocation(event, evidenceContext, cityConfig, droppedCityValue = '') {
+        if (!event || typeof event !== 'object') return event;
+        const liveCity = typeof event.city === 'string' ? event.city.trim() : '';
+        const extractedCity = liveCity || String(droppedCityValue || '').trim();
+        if (!extractedCity) return event;
+        const corpus = evidenceContext && typeof evidenceContext.raw === 'string' ? evidenceContext.raw : '';
+        if (!corpus) return event;
+        const anchors = [
+            event.bar,
+            this.getAddressStreetLine(event.address) || event.address
+        ]
+            .map(value => this.normalizeAdjacencyText(value))
+            .filter(anchor => anchor && anchor.length >= 3);
+        if (anchors.length === 0) return event;
+        const rawLines = corpus.split('\n');
+        const normalizedLines = rawLines.map(line => this.normalizeAdjacencyText(line));
+        const windowIndexes = new Set();
+        normalizedLines.forEach((line, index) => {
+            if (!line || !anchors.some(anchor => line.includes(anchor))) return;
+            for (let delta = -2; delta <= 2; delta += 1) {
+                const candidate = index + delta;
+                if (candidate >= 0 && candidate < rawLines.length) windowIndexes.add(candidate);
+            }
+        });
+        let pair = null;
+        for (const index of Array.from(windowIndexes).sort((a, b) => a - b)) {
+            pair = this.extractAdjacentLocationPlacePair(rawLines[index], event);
+            if (pair) break;
+        }
+        if (!pair) return event;
+        const extractedEntry = this.findCityConfigEntry(extractedCity, cityConfig);
+        const extractedKey = extractedEntry ? extractedEntry.key : extractedCity.toLowerCase();
+        const resolvedKey = this.findCityKeyInText(pair.place, cityConfig);
+        if (resolvedKey) {
+            if (resolvedKey === extractedKey) return event; // page agrees — nothing to do
+            event.city = resolvedKey;
+            event._citySource = 'page-adjacent';
+            console.log(`🤖 AI Web: City corrected to "${resolvedKey}" from location line "${pair.line}" (extracted "${extractedCity}" came from weaker evidence)`);
+            return event;
+        }
+        // Unresolvable place (not a configured city): if the line still names
+        // the extracted city (any alias), the page corroborates it — keep. If
+        // it names somewhere else entirely, never guess: clear the city.
+        const normalizedLine = this.normalizeEvidenceText(pair.line);
+        const lineMatchesExtracted = extractedEntry
+            ? extractedEntry.aliases.some(alias => alias.length >= 3 && this.textContainsCityAlias(normalizedLine, alias))
+            : this.textContainsCityAlias(normalizedLine, extractedCity);
+        if (lineMatchesExtracted) return event;
+        if (liveCity) delete event.city;
+        console.log(`🤖 AI Web: Extracted city "${extractedCity}" contradicts adjacent location line "${pair.line}" — city cleared, event will need manual review`);
         return event;
     }
 
