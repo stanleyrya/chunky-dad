@@ -1059,6 +1059,21 @@ test('embedded Google Maps URLs are uninteresting images', () => {
   assert.equal(parser.isLikelyUninterestingImageUrl('https://x.example/images/flyer.jpg'), false);
 });
 
+test("'404' flags standalone segments only, never hex asset IDs or pixel sizes", () => {
+  const parser = createParser();
+  // Regression (run 20260723-152928): the Boston flyer's Wix asset ID contains
+  // "c4047c55" — the old bare-substring '404' pattern flagged the flyer as a
+  // 404-error image, so it was never OCR'd and the event lost its start time.
+  assert.equal(
+    parser.isLikelyUninterestingImageUrl('https://static.wixstatic.com/media/238fae_c4047c55f4534a0990b2b7fdc19dab8f~mv2.png/v1/fill/w_577,h_1027,al_c,q_90,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_c4047c55f4534a0990b2b7fdc19dab8f~mv2.png'),
+    false
+  );
+  assert.equal(parser.isLikelyUninterestingImageUrl('https://x.example/img/w_1404,h_900/flyer.jpg'), false);
+  assert.equal(parser.isLikelyUninterestingImageUrl('https://x.example/404.png'), true);
+  assert.equal(parser.isLikelyUninterestingImageUrl('https://x.example/assets/error-404.jpg'), true);
+  assert.equal(parser.isLikelyUninterestingImageUrl('https://x.example/404/not-found.png'), true);
+});
+
 test('normalizeAiEvent rolls past-midnight end times to the next day', () => {
   const parser = createParser();
   const cityConfig = { nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'] } };

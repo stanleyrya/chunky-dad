@@ -3560,7 +3560,6 @@ class AiWebParser {
             'empty',          // Empty state images
             'null',           // Null state images
             'missing',        // Missing state images
-            '404',            // 404 images
             'coming-soon',    // Coming soon images
             'under-construction',
             'maintenance',    // Maintenance pages
@@ -3576,6 +3575,11 @@ class AiWebParser {
         for (const pattern of uninterestingPatterns) {
             if (lowerUrl.includes(pattern)) return true;
         }
+        // '404' only counts when it stands alone between non-alphanumerics
+        // ("/404.png", "error-404.jpg") — as a bare substring it matches
+        // random hex asset IDs (a Wix flyer named "238fae_c4047c55…" was
+        // flagged as a 404 image and never OCR'd) and pixel sizes ("w_1404").
+        if (/(^|[^0-9a-z])404(?![0-9a-z])/.test(lowerUrl)) return true;
         return false;
     }
 
@@ -3738,7 +3742,15 @@ class AiWebParser {
             if (hasCoverage) continue;
 
             const candidate = normalizedUrls.find(url => !this.isLikelyUninterestingImageUrl(url));
-            if (!candidate) continue;
+            if (!candidate) {
+                // A segment whose images ALL look uninteresting gets no OCR at
+                // all — say so instead of silently skipping (this hid the run
+                // where a flyer's hex asset ID tripped the old '404' pattern).
+                if (normalizedUrls.length > 0) {
+                    console.log(`🤖 AI Web: OCR top-up skipped a segment — all ${normalizedUrls.length} of its image(s) look uninteresting (first: ${normalizedUrls[0]})`);
+                }
+                continue;
+            }
             const strippedCandidate = this.stripSizeParams(candidate);
             if (targetStrippedUrls.has(strippedCandidate)) continue;
             targetStrippedUrls.add(strippedCandidate);
