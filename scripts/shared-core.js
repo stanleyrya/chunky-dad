@@ -1018,6 +1018,52 @@ class SharedCore {
         return Math.max(0, segments.length - 1) + (parsed.zips.length > 0 ? 1 : 0);
     }
 
+    // True when a comma-separated address tail names the event's resolved
+    // city: the raw key itself (dashes/underscores as spaces) or any
+    // configured name/pattern/alias via isCityOnlyTitle. Pure string logic;
+    // an unknown city fails open (false).
+    addressTailNamesCity(tail, cityKey) {
+        const text = String(tail || '').replace(/\s+/g, ' ').trim().toLowerCase();
+        const key = String(cityKey || '').trim().toLowerCase();
+        if (!text || !key) return false;
+        if (text === key || text === key.replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim()) return true;
+        return this.isCityOnlyTitle(tail, cityKey);
+    }
+
+    // City-suffix twin detection for the deterministic address ladder: when
+    // exactly one candidate equals the other plus a trailing ", <city>"
+    // segment naming the event's own city, the UNSUFFIXED candidate wins —
+    // a resolution-derived city appended to an address is query decoration,
+    // never data (see #1525; the persisted address must stay unmutated).
+    // Returns { winner, reason } or null (fail open: no city context, no
+    // suffix relationship, or both/neither side suffixed).
+    resolveCitySuffixedAddressTwin(valueA, valueB, context) {
+        const cityKey = context && context.cityKey ? String(context.cityKey) : '';
+        if (!cityKey) return null;
+        const collapse = value => String(value === null || value === undefined ? '' : value)
+            .replace(/\s+/g, ' ').trim().toLowerCase();
+        const stripCitySuffix = (value) => {
+            const parts = String(value === null || value === undefined ? '' : value)
+                .split(',').map(part => part.trim()).filter(Boolean);
+            if (parts.length < 2) return null;
+            if (!this.addressTailNamesCity(parts[parts.length - 1], cityKey)) return null;
+            return parts.slice(0, -1).join(', ');
+        };
+        const collapsedA = collapse(valueA);
+        const collapsedB = collapse(valueB);
+        if (!collapsedA || !collapsedB || collapsedA === collapsedB) return null;
+        const reason = 'city-suffixed twin — a resolution-appended city is query decoration, kept the unsuffixed address';
+        const strippedA = stripCitySuffix(valueA);
+        if (strippedA !== null && collapse(strippedA) === collapsedB) {
+            return { winner: 'b', reason };
+        }
+        const strippedB = stripCitySuffix(valueB);
+        if (strippedB !== null && collapse(strippedB) === collapsedA) {
+            return { winner: 'a', reason };
+        }
+        return null;
+    }
+
     // Curated bars for a merge-context city — shared by the curated-bar-name
     // rule and the curated-address rung in resolveConflictDeterministically.
     // Returns a non-empty array or null (missing city/bars data fails open).
@@ -1502,6 +1548,20 @@ class SharedCore {
                         };
                     }
                 }
+                // City-suffix twin rung: one candidate is EXACTLY the other
+                // plus a trailing ", <city>" naming the event's own resolved
+                // city ("LA NOGALERA, Torremolinos" vs "LA NOGALERA"). The
+                // suffixed form is the fingerprint of the pre-#1525 append bug
+                // (city RESOLUTION leaking into the persisted address) and the
+                // suffix adds nothing the city field doesn't already carry —
+                // city-qualified strings are QUERIES only. The unsuffixed form
+                // wins deterministically so AI arbitration can never re-cement
+                // the mutation ("more complete" reasoning did exactly that on
+                // run 20260723-140457). House-numbered street addresses never
+                // reach here — the same-address rung above already resolved
+                // them (keeping the more complete, city-bearing form).
+                const citySuffixTwin = this.resolveCitySuffixedAddressTwin(valueA, valueB, context);
+                if (citySuffixTwin) return citySuffixTwin;
                 // Rung 3 (evidence). Case-only twins are NOT a street
                 // mismatch — they fall through untouched so the case-only
                 // rule below keeps deciding them; empty candidates belong to
@@ -2475,6 +2535,17 @@ class SharedCore {
             } else {
                 lines.push(`map POI at pin: "${poiName}"`);
             }
+        }
+
+        // Venue-name fusion flag from the geocode venue lookup
+        // (_geoPoiFusion — underscore field, never serialized; set by
+        // OpenStreetMapNormalizer.maybeFlagVenueNameFusion when a map POI
+        // matched only a PREFIX of the bar name). Flag-only: verify manually.
+        const fusion = event._geoPoiFusion && typeof event._geoPoiFusion === 'object' ? event._geoPoiFusion : null;
+        const fusionPoi = fusion && typeof fusion.poi === 'string' ? fusion.poi.trim() : '';
+        if (bar && fusionPoi) {
+            const fusionPrefix = typeof fusion.prefix === 'string' ? fusion.prefix.trim() : '';
+            lines.push(`⚠️ bar "${bar}" may fuse venue names — map knows "${fusionPoi}"${fusionPrefix ? ` (matches "${fusionPrefix}")` : ''}`);
         }
 
         // Bar corroboration verdict from barSource provenance.
@@ -4957,6 +5028,26 @@ class SharedCore {
         this.setProvenanceSource(mergedObject, 'address', 'addressSource', scraperObject, calendarObject);
         this.setProvenanceSource(mergedObject, 'image', 'imageSource', scraperObject, calendarObject);
         this.setProvenanceSource(mergedObject, 'bar', 'barSource', scraperObject, calendarObject);
+
+        // Stamp guard for the city-append fingerprint: when the address was
+        // settled by the city-suffix twin rung, the calendar record was
+        // machine-written by the pre-#1525 append path — and that path also
+        // accepted its pin WITHOUT a pinSource stamp (run 20260723-140457
+        // persisted 36.6225097, -4.4987054 stamp-less). Such a pin's real
+        // provenance is a geocode of a vague place name, which grades approx
+        // — never exact — so stamp it geocoded-approx instead of letting it
+        // round-trip unstamped forever. Deliberately NARROW: an unstamped pin
+        // on a record without the append fingerprint may be a hand-fixed pin
+        // and stays absent → absent (see setProvenanceSource).
+        const citySuffixTwinResolvedAddress = aiDecisionRecords.some(record => record
+            && record.field === 'address' && typeof record.reason === 'string'
+            && record.reason.startsWith('city-suffixed twin'));
+        if (citySuffixTwinResolvedAddress
+            && this.isCoordinatePair(mergedObject.location)
+            && !(typeof mergedObject.pinSource === 'string' && mergedObject.pinSource.trim().length > 0)) {
+            mergedObject.pinSource = 'geocoded-approx';
+            console.log(`📍 MERGE: "${mergeTitle}" kept pin from a city-suffixed record had no pinSource stamp — stamped geocoded-approx (append-path pins are never exact)`);
+        }
 
         // STEP 4: regenerate gmaps from the FINAL merged bar + address. gmaps
         // is a derived field — a pure function of bar + address — so merging or
@@ -8125,7 +8216,10 @@ SharedCore.PROVENANCE_COMPANION_FIELDS = Object.freeze([
 // the REAL vocabularies stamped by the pipeline:
 //   - pinSource:     normalizers.js (page/geocoded-exact/geocoded-approx,
 //                    curated via bar-data), scriptable-adapter review-apply
-//   - addressSource: normalizers.js (page/curated/inferred),
+//   - addressSource: normalizers.js (page/curated/inferred, plus geo-poi
+//                    from the venue-POI adoption rung — a map POI whose name
+//                    matched the bar supplied the street address; tiered
+//                    with 'page', below 'curated'),
 //                    scriptable-adapter review-apply (curated/inferred)
 //   - barSource:     ai-web-parser.js (curated/venue-site/page-adjacent/
 //                    uncorroborated), normalizers.js (geo-poi); the three
@@ -8141,7 +8235,7 @@ SharedCore.PROVENANCE_COMPANION_FIELDS = Object.freeze([
 // Values absent from a family rank null (fail open); blank ranks 0 (unstamped).
 SharedCore.PROVENANCE_TRUST_TIERS = Object.freeze({
     pinSource: Object.freeze({ 'curated': 4, 'geocoded-exact': 3, 'geocoded-approx': 2, 'page': 1 }),
-    addressSource: Object.freeze({ 'curated': 3, 'page': 2, 'inferred': 1 }),
+    addressSource: Object.freeze({ 'curated': 3, 'geo-poi': 2, 'page': 2, 'inferred': 1 }),
     barSource: Object.freeze({ 'curated': 3, 'venue-site': 2, 'page-adjacent': 2, 'geo-poi': 2, 'uncorroborated': 1 }),
     imageSource: Object.freeze({ 'og-image': 2, 'jsonld': 2, 'page': 1 }),
     bearSource: Object.freeze({ 'manual-bear': 2, 'manual-not-bear': 2, 'keyword': 1, 'ai': 1, 'config': 1 })

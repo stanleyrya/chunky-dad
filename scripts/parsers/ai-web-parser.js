@@ -660,6 +660,11 @@ class AiWebParser {
             console.warn('🤖 AI Web: AI output missing required title/startDate after normalization');
             return null;
         }
+        // Address plausibility gate: a venue name is not an address (run
+        // 20260723-140457: extraction stored address "Legacy" — the bar's own
+        // name — and it sailed through to geocoding). Runs BEFORE the bar
+        // corroboration stamp so a dropped address never feeds adjacency.
+        this.applyAddressPlausibilityGate(event, promptHtmlData);
         // Bar corroboration stamp (barSource): checks the final bar+address
         // pair against the same corpora the evidence gate uses (page text,
         // OCR text, segment text). Flag-don't-drop: values are never changed.
@@ -9379,6 +9384,68 @@ TEXT:
             }
         }
         return candidates.size === 1 ? candidates.values().next().value : '';
+    }
+
+    // Address-shape plausibility for the post-extraction gate. A value counts
+    // as address-shaped when ANY of these hold (fail open — keep when unsure):
+    //   - it looks like a street address (shared-core's looksLikeStreetAddress:
+    //     leading house number + street-type word);
+    //   - it carries a standalone house-number token anywhere ("Calle X 12");
+    //   - it contains a street-type word on its own boundary ("Warrenton St");
+    //   - it is a comma-separated "Place, Place"/"Place, ST" form;
+    //   - it is a multi-word value with none of the above — a place name like
+    //     "LA NOGALERA" (vague but real; the geocode grade gate handles it).
+    // Only a single bare word with no address signal at all ("Legacy") fails —
+    // that shape is a name, never an address.
+    isPlausiblyAddressShaped(value) {
+        const text = String(value || '').trim();
+        if (!text) return false;
+        if (this.core && typeof this.core.looksLikeStreetAddress === 'function'
+            && this.core.looksLikeStreetAddress(text)) return true;
+        // Standalone (house) number token anywhere in the value.
+        if (/(^|[\s,])\d{1,6}[a-z]?(?:-\d{1,6})?(?=$|[\s,])/i.test(text)) return true;
+        // Street-type word on a word boundary.
+        if (/(?:^|[\s,])(?:St|Street|Ave|Avenue|Blvd|Boulevard|Rd|Road|Dr|Drive|Ln|Lane|Way|Pl|Place|Ct|Court|Pkwy|Parkway|Hwy|Highway)\.?(?:$|[\s,])/i.test(text)) return true;
+        // "Place, Place" / "Place, ST" comma form.
+        if (text.split(',').map(part => part.trim()).filter(Boolean).length >= 2) return true;
+        // Multi-word place name — vague but real, keep (fail open).
+        return text.split(/\s+/).filter(Boolean).length >= 2;
+    }
+
+    // Post-extraction address plausibility gate (flag-and-drop, additive log):
+    // the extracted address is removed when it is (a) normalized-equal to the
+    // bar name or the page's derived organizer/brand (a venue name is not an
+    // address), or (b) not address-shaped per isPlausiblyAddressShaped. The
+    // event is otherwise untouched; downstream the venue-POI adoption rung in
+    // the geocode flow can rebuild a real address from the bar name. Fails
+    // open: no address, no signals, or any uncertainty → left as-is.
+    applyAddressPlausibilityGate(event, htmlData) {
+        if (!event || typeof event !== 'object') return event;
+        const address = typeof event.address === 'string' ? event.address.trim() : '';
+        if (!address) return event;
+        const normalizedAddress = this.normalizeAdjacencyText(address);
+        if (!normalizedAddress) return event;
+        let reason = '';
+        const bar = typeof event.bar === 'string' ? event.bar.trim() : '';
+        if (bar && this.normalizeAdjacencyText(bar) === normalizedAddress) {
+            reason = 'matches venue name';
+        }
+        if (!reason) {
+            const organizer = typeof event._organizer === 'string' ? event._organizer.trim() : '';
+            const brandNames = this.getPageBrandNames(htmlData);
+            const knownNames = [organizer, ...(Array.isArray(brandNames) ? brandNames : [])]
+                .filter(name => typeof name === 'string' && name.trim());
+            if (knownNames.some(name => this.normalizeAdjacencyText(name) === normalizedAddress)) {
+                reason = 'matches organizer/brand name';
+            }
+        }
+        if (!reason && !this.isPlausiblyAddressShaped(address)) {
+            reason = 'not address-shaped';
+        }
+        if (!reason) return event;
+        console.log(`🤖 AI Web: Dropped implausible address "${address}" (${reason})`);
+        delete event.address;
+        return event;
     }
 
     // barSource provenance stamp (notes-serialized like imageSource, excluded

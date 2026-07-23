@@ -1863,3 +1863,272 @@ test('LocationNormalizer leaves complete addresses and their maps links untouche
   assert.equal(event.address, '125 Christopher St, New York, NY 10014');
   assert.ok(String(event.gmaps || '').includes(encodeURIComponent('125 Christopher St, New York, NY 10014')));
 });
+
+// ---------------------------------------------------------------------------
+// Venue-POI adoption + fusion detection (run 20260723-140457: "FURBALL Boston"
+// lost its address to the plausibility gate — bar "Legacy" resolves exactly on
+// the map; "FURBALL MAD.BEAR" fused AQUA + EMPORIO into a nonexistent venue)
+// ---------------------------------------------------------------------------
+
+const CITIES_WITH_BOSTON = {
+  boston: {
+    timezone: 'America/New_York',
+    patterns: ['boston'],
+    coordinates: { lat: 42.3601, lng: -71.0589 }
+  }
+};
+
+const CITIES_WITH_TORREMOLINOS = {
+  torremolinos: {
+    timezone: 'Europe/Madrid',
+    patterns: ['torremolinos'],
+    coordinates: { lat: 36.6203, lng: -4.4998 }
+  }
+};
+
+function createOsmNormalizerFor(cities) {
+  const core = new SharedCore(cities, { eventSchema: EventSchema });
+  const normalizer = new OpenStreetMapNormalizer(core);
+  normalizer.delayForRateLimit = async () => {};
+  return normalizer;
+}
+
+function captureConsole(fn) {
+  const lines = [];
+  const original = { log: console.log, warn: console.warn };
+  console.log = (...args) => { lines.push(args.join(' ')); };
+  console.warn = (...args) => { lines.push(args.join(' ')); };
+  const restore = () => { console.log = original.log; console.warn = original.warn; };
+  return { lines, restore };
+}
+
+// Nightclub "Legacy", 79 Warrenton Street, Boston — exact-grade venue hit.
+const LEGACY_NIGHTCLUB_RESULT = {
+  lat: '42.3499',
+  lon: '-71.0648',
+  class: 'amenity',
+  type: 'nightclub',
+  addresstype: 'amenity',
+  name: 'Legacy',
+  display_name: 'Legacy, 79, Warrenton Street, Boston, Suffolk County, Massachusetts, 02116, United States',
+  address: { house_number: '79', road: 'Warrenton Street', city: 'Boston', state: 'Massachusetts' }
+};
+
+test('venue-POI adoption: a bar with no address gains pin + street address from a bar-matching map POI', async () => {
+  const normalizer = createOsmNormalizerFor(CITIES_WITH_BOSTON);
+  const httpAdapter = createSequencedStubAdapter([[LEGACY_NIGHTCLUB_RESULT]]);
+  const event = { title: 'FURBALL Boston', bar: 'Legacy', city: 'boston' };
+
+  const captured = captureConsole(() => {});
+  try {
+    await normalizer.normalizeAsync(event, httpAdapter);
+  } finally {
+    captured.restore();
+  }
+
+  assert.equal(httpAdapter.requests.length, 1, 'exactly one venue+city Nominatim request');
+  assert.equal(decodeQueryParam(httpAdapter.requests[0]), 'Legacy, boston');
+  assert.ok(httpAdapter.requests[0].includes('&addressdetails=1'), 'the venue rescue request carries addressdetails');
+  assert.equal(event.location, '42.3499, -71.0648', 'the POI-matching hit pins the event');
+  assert.equal(event.pinSource, 'geocoded-exact', 'exact grade rules apply as today');
+  assert.equal(event.address, '79 Warrenton Street, Boston, Massachusetts', 'street address assembled from addressdetails');
+  assert.equal(event.addressSource, 'geo-poi', 'adopted address carries geo-poi provenance');
+  assert.equal(event.barSource, 'geo-poi', 'the matching POI also corroborates the bar');
+  assert.ok(
+    captured.lines.some(line => line.includes('🗺️ GEOCODE VERIFY: "FURBALL Boston" adopted address "79 Warrenton Street, Boston, Massachusetts" from map POI "Legacy" (venue+city lookup)')),
+    `adoption log expected, got:\n${captured.lines.join('\n')}`
+  );
+});
+
+test('venue-POI adoption: a POI that does not match the bar is never adopted (no pin, no address)', async () => {
+  const normalizer = createOsmNormalizerFor(CITIES_WITH_BOSTON);
+  const otherVenue = { ...LEGACY_NIGHTCLUB_RESULT, name: 'The Alley Bar', display_name: 'The Alley Bar, 79, Warrenton Street, Boston' };
+  const httpAdapter = createSequencedStubAdapter([[otherVenue]]);
+  const event = { title: 'FURBALL Boston', bar: 'Legacy', city: 'boston' };
+
+  const captured = captureConsole(() => {});
+  try {
+    await normalizer.normalizeAsync(event, httpAdapter);
+  } finally {
+    captured.restore();
+  }
+
+  assert.equal(event.location, undefined, 'a non-matching POI must not pin a no-address event');
+  assert.equal(event.address, undefined, 'no address is adopted from a non-matching POI');
+  assert.equal(event.addressSource, undefined);
+});
+
+test('venue-POI adoption: generic/administrative hits never adopt, even when the name matches', async () => {
+  const normalizer = createOsmNormalizerFor(CITIES_WITH_BOSTON);
+  const genericHit = {
+    lat: '42.3601',
+    lon: '-71.0589',
+    class: 'place',
+    type: 'locality',
+    addresstype: 'locality',
+    name: 'Legacy',
+    display_name: 'Legacy, Boston, Massachusetts',
+    address: { city: 'Boston', state: 'Massachusetts' }
+  };
+  const httpAdapter = createSequencedStubAdapter([[genericHit]]);
+  const event = { title: 'FURBALL Boston', bar: 'Legacy', city: 'boston' };
+
+  const captured = captureConsole(() => {});
+  try {
+    await normalizer.normalizeAsync(event, httpAdapter);
+  } finally {
+    captured.restore();
+  }
+
+  assert.equal(event.location, undefined, 'a place/locality hit never becomes a pin');
+  assert.equal(event.address, undefined, 'a generic hit never supplies an address');
+  assert.ok(
+    captured.lines.some(line => line.includes('refused generic pin (locality)')),
+    'the grade gate refusal stays visible'
+  );
+});
+
+test('venue-POI adoption via the Photon rescue when Nominatim finds nothing', async () => {
+  const normalizer = createOsmNormalizerFor(CITIES_WITH_BOSTON);
+  const photonResponse = {
+    features: [{
+      geometry: { coordinates: [-71.0648, 42.3499] },
+      properties: {
+        name: 'Legacy',
+        osm_key: 'amenity',
+        osm_value: 'nightclub',
+        housenumber: '79',
+        street: 'Warrenton Street',
+        city: 'Boston'
+      }
+    }]
+  };
+  const httpAdapter = createSequencedStubAdapter([[], photonResponse]);
+  const event = { title: 'FURBALL Boston', bar: 'Legacy', city: 'boston' };
+
+  const captured = captureConsole(() => {});
+  try {
+    await normalizer.normalizeAsync(event, httpAdapter);
+  } finally {
+    captured.restore();
+  }
+
+  assert.equal(httpAdapter.requests.length, 2, 'Nominatim venue rung then the Photon rescue');
+  assert.ok(httpAdapter.requests[1].includes('photon.komoot.io'), 'second request is Photon');
+  assert.equal(decodeQueryParam(httpAdapter.requests[1]), 'Legacy, boston', 'Photon queries the venue+city string when no address exists');
+  assert.equal(event.location, '42.3499, -71.0648');
+  assert.equal(event.pinSource, 'geocoded-exact');
+  assert.equal(event.address, '79 Warrenton Street, Boston', 'address assembled from Photon street/housenumber/city');
+  assert.equal(event.addressSource, 'geo-poi');
+});
+
+test('fusion detection: a POI matching only a bar-name prefix flags, never corrects', async () => {
+  const normalizer = createOsmNormalizerFor(CITIES_WITH_TORREMOLINOS);
+  // Aqua Club, ~200 m from Torremolinos center — exact-grade nightclub.
+  const aquaClub = {
+    lat: '36.6218328',
+    lon: '-4.4982728',
+    class: 'amenity',
+    type: 'nightclub',
+    addresstype: 'amenity',
+    name: 'Aqua Club',
+    display_name: 'Aqua Club, Calle Casablanca, Torremolinos, Málaga, Spain',
+    address: { road: 'Calle Casablanca', town: 'Torremolinos' }
+  };
+  const httpAdapter = createSequencedStubAdapter([[aquaClub], {}]);
+  const event = { title: 'FURBALL MAD.BEAR', bar: 'Aqua Emporio', city: 'torremolinos' };
+
+  const captured = captureConsole(() => {});
+  try {
+    await normalizer.normalizeAsync(event, httpAdapter);
+  } finally {
+    captured.restore();
+  }
+
+  assert.equal(event.location, undefined, 'no auto-correction: the prefix match never pins');
+  assert.equal(event.address, undefined, 'no address is adopted on a fusion flag');
+  assert.deepEqual(event._geoPoiFusion, { poi: 'Aqua Club', prefix: 'Aqua' }, 'fusion evidence recorded for the results UI');
+  assert.ok(
+    captured.lines.some(line => line.includes('🗺️ GEOCODE VERIFY: "FURBALL MAD.BEAR" bar "Aqua Emporio" may fuse multiple venue names — map knows "Aqua Club" (matches "Aqua"); verify manually')),
+    `fusion flag log expected, got:\n${captured.lines.join('\n')}`
+  );
+});
+
+test('fusion detection unit rules: single-token bars and full matches never flag; short prefixes skip', () => {
+  const normalizer = createOsmNormalizerFor(CITIES_WITH_TORREMOLINOS);
+
+  const singleToken = { title: 'X', bar: 'Legacy' };
+  normalizer.maybeFlagVenueNameFusion(singleToken, ['Legacy Creek Cafe'], {});
+  assert.equal(singleToken._geoPoiFusion, undefined, 'single-token bars never flag');
+
+  const fullMatch = { title: 'X', bar: 'Aqua Club' };
+  normalizer.maybeFlagVenueNameFusion(fullMatch, ['Aqua Club'], {});
+  assert.equal(fullMatch._geoPoiFusion, undefined, 'a full-name match never flags');
+
+  const strippedFullMatch = { title: 'X', bar: 'Aqua Emporio' };
+  normalizer.maybeFlagVenueNameFusion(strippedFullMatch, ['Aqua Emporio Nightclub'], {});
+  assert.equal(strippedFullMatch._geoPoiFusion, undefined, 'generic-suffix full matches never flag');
+
+  const shortPrefix = { title: 'X', bar: 'Le Grand Room' };
+  normalizer.maybeFlagVenueNameFusion(shortPrefix, ['Le'], {});
+  assert.equal(shortPrefix._geoPoiFusion, undefined, 'prefixes under 3 chars never flag');
+
+  const flags = {};
+  const flagged = { title: 'X', bar: 'Aqua Emporio' };
+  const captured = captureConsole(() => {});
+  try {
+    normalizer.maybeFlagVenueNameFusion(flagged, ['Aqua Club'], flags);
+    normalizer.maybeFlagVenueNameFusion(flagged, ['Aqua Club'], flags);
+  } finally {
+    captured.restore();
+  }
+  assert.deepEqual(flagged._geoPoiFusion, { poi: 'Aqua Club', prefix: 'Aqua' });
+  assert.equal(captured.lines.filter(line => line.includes('may fuse multiple venue names')).length, 1, 'flags at most once per event');
+});
+
+test('Mad.Bear ladder regression: generic refusals stay refused and the vague address is never mutated', async () => {
+  const normalizer = createOsmNormalizerFor(CITIES_WITH_TORREMOLINOS);
+  // Query 1 ("LA NOGALERA, torremolinos"): the locality centroid — refused.
+  const nogaleraLocality = {
+    lat: '36.6225097',
+    lon: '-4.4987054',
+    class: 'place',
+    type: 'locality',
+    addresstype: 'locality',
+    name: 'La Nogalera',
+    display_name: 'La Nogalera, Torremolinos, Málaga, Spain',
+    address: { town: 'Torremolinos', state: 'Andalusia' }
+  };
+  // Query 2 (venue rescue "Aqua Emporio, torremolinos"): nothing — the fused
+  // venue does not exist. Query 3 (Photon, address): a hamlet — refused.
+  const photonHamlet = {
+    features: [{
+      geometry: { coordinates: [-4.4987054, 36.6225097] },
+      properties: { name: 'La Nogalera', osm_key: 'place', osm_value: 'hamlet' }
+    }]
+  };
+  const httpAdapter = createSequencedStubAdapter([[nogaleraLocality], [], photonHamlet]);
+  const event = { title: 'FURBALL MAD.BEAR', address: 'LA NOGALERA', city: 'torremolinos', bar: 'Aqua Emporio' };
+
+  const captured = captureConsole(() => {});
+  try {
+    await normalizer.normalizeAsync(event, httpAdapter);
+  } finally {
+    captured.restore();
+  }
+
+  assert.equal(httpAdapter.requests.length, 3, 'address rung, venue rescue rung, Photon rescue');
+  assert.equal(decodeQueryParam(httpAdapter.requests[0]), 'LA NOGALERA, torremolinos', 'city anchoring stays QUERY-only');
+  assert.equal(decodeQueryParam(httpAdapter.requests[1]), 'Aqua Emporio, torremolinos');
+  assert.equal(event.address, 'LA NOGALERA', 'the persisted address is never mutated with the resolved city');
+  assert.equal(event.location, undefined, 'generic locality/hamlet pins stay refused — no unstamped pin');
+  assert.equal(event.pinSource, undefined, 'no pin means no pinSource stamp');
+  assert.ok(
+    captured.lines.some(line => line.includes('refused generic pin (locality) for address "LA NOGALERA"')),
+    'the locality refusal stays visible'
+  );
+  assert.ok(
+    captured.lines.some(line => line.includes('refused generic pin (hamlet) for address "LA NOGALERA"')),
+    'the hamlet refusal stays visible'
+  );
+});

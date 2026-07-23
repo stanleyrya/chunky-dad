@@ -3853,3 +3853,98 @@ test('prompt capture: city guidance and strengthened context header are present,
     `- city: ${schemaDescription} The promoter's home city in branding, logos, or website domains (e.g. a .nyc domain) is NOT the event city — use explicit location statements (e.g. "Torremolinos, Spain") near the venue/address.`
   );
 });
+
+// ---------------------------------------------------------------------------
+// Address plausibility gate (run 20260723-140457: extraction stored
+// address "Legacy" — the venue's own name — for FURBALL Boston)
+// ---------------------------------------------------------------------------
+
+function captureGateLogs() {
+  const lines = [];
+  const original = console.log;
+  console.log = (...args) => { lines.push(args.join(' ')); };
+  return { lines, restore: () => { console.log = original; } };
+}
+
+test('address gate: an address equal to the bar name is dropped with the additive log', () => {
+  const parser = createParser();
+  const event = { title: 'FURBALL Boston', bar: 'Legacy', address: 'Legacy', city: 'boston' };
+
+  const captured = captureGateLogs();
+  try {
+    parser.applyAddressPlausibilityGate(event, {});
+  } finally {
+    captured.restore();
+  }
+
+  assert.equal(event.address, undefined, 'a venue name is not an address');
+  assert.ok(
+    captured.lines.some(line => line.includes('🤖 AI Web: Dropped implausible address "Legacy" (matches venue name)')),
+    `drop log expected, got:\n${captured.lines.join('\n')}`
+  );
+  assert.equal(event.bar, 'Legacy', 'the bar itself is untouched');
+});
+
+test('address gate: an address equal to the derived organizer/brand is dropped', () => {
+  const parser = createParser();
+  const organizerEqual = { title: 'X', bar: 'The Eagle', address: 'Bearracuda', _organizer: 'Bearracuda' };
+  const captured = captureGateLogs();
+  try {
+    parser.applyAddressPlausibilityGate(organizerEqual, {});
+    const brandEqual = { title: 'Y', bar: 'The Eagle', address: 'FURBALL' };
+    parser.applyAddressPlausibilityGate(brandEqual, { pageBrandNames: ['Furball'] });
+    assert.equal(brandEqual.address, undefined, 'page brand names count as organizer names');
+  } finally {
+    captured.restore();
+  }
+  assert.equal(organizerEqual.address, undefined);
+  assert.ok(captured.lines.some(line => line.includes('Dropped implausible address "Bearracuda" (matches organizer/brand name)')));
+});
+
+test('address gate: vague-but-real place names and street addresses are kept; unsure fails open', () => {
+  const parser = createParser();
+  const captured = captureGateLogs();
+  try {
+    const placeName = { title: 'FURBALL MAD.BEAR', bar: 'Aqua Emporio', address: 'LA NOGALERA' };
+    parser.applyAddressPlausibilityGate(placeName, {});
+    assert.equal(placeName.address, 'LA NOGALERA', 'a multi-word place name is vague but real — kept');
+
+    const street = { title: 'FURBALL Boston', bar: 'Legacy', address: '79 Warrenton St' };
+    parser.applyAddressPlausibilityGate(street, {});
+    assert.equal(street.address, '79 Warrenton St', 'a street address never drops');
+
+    const commaForm = { title: 'FURBALL Boston', bar: 'Legacy', address: 'Legacy, Boston' };
+    parser.applyAddressPlausibilityGate(commaForm, {});
+    assert.equal(commaForm.address, 'Legacy, Boston', 'a "Place, Place" comma form is kept (fail open)');
+
+    const noBar = { title: 'X', address: 'Somewhere Nice' };
+    parser.applyAddressPlausibilityGate(noBar, {});
+    assert.equal(noBar.address, 'Somewhere Nice', 'nothing to compare against and multi-word → kept');
+  } finally {
+    captured.restore();
+  }
+});
+
+test('address gate: a bare single word with no address signal drops even when it is not the bar', () => {
+  const parser = createParser();
+  const captured = captureGateLogs();
+  try {
+    const event = { title: 'X', bar: 'The Eagle', address: 'Legacy' };
+    parser.applyAddressPlausibilityGate(event, {});
+    assert.equal(event.address, undefined, 'a lone name-shaped word is never an address');
+    assert.ok(captured.lines.some(line => line.includes('Dropped implausible address "Legacy" (not address-shaped)')));
+  } finally {
+    captured.restore();
+  }
+});
+
+test('address gate shape rules: isPlausiblyAddressShaped', () => {
+  const parser = createParser();
+  assert.equal(parser.isPlausiblyAddressShaped('Legacy'), false, 'single bare word fails all three signals');
+  assert.equal(parser.isPlausiblyAddressShaped('LA NOGALERA'), true, 'multi-word place name passes');
+  assert.equal(parser.isPlausiblyAddressShaped('79 Warrenton St'), true, 'house number + street word');
+  assert.equal(parser.isPlausiblyAddressShaped('Warrenton Street'), true, 'street-type word alone');
+  assert.equal(parser.isPlausiblyAddressShaped('Brooklyn, NY'), true, 'Place, ST comma form');
+  assert.equal(parser.isPlausiblyAddressShaped('Calle Casablanca 12'), true, 'standalone house-number token anywhere');
+  assert.equal(parser.isPlausiblyAddressShaped(''), false);
+});
