@@ -92,6 +92,211 @@ const CACHE_RANDOMIZATION = 7 * 24 * 60 * 60 * 1000;
 // Dry-run mode: log download decisions without downloading or writing any files
 const DRY_RUN = process.argv.includes('--dry-run');
 
+// ---------------------------------------------------------------------------
+// Favicon fallback ladder + negative cache
+//
+// Google's s2 favicon service 404s on larger sizes for small sites, and those
+// 404s repeated on every run forever. When a requested size fails we walk a
+// fallback ladder (smaller s2 sizes, the site's own /favicon.ico, DuckDuckGo's
+// icon service). Only when the ENTIRE ladder fails does the domain enter a
+// persistent negative cache (data/favicon-misses.json) that suppresses retries
+// for 7 days.
+// ---------------------------------------------------------------------------
+
+const FAVICON_MISS_CACHE_PATH = path.join(ROOT, 'data', 'favicon-misses.json');
+
+// Retry a known-miss domain once its lastTried is at least this old
+const FAVICON_MISS_RETRY_MS = 7 * 24 * 60 * 60 * 1000;
+
+// Sizes Google's s2 service supports, largest first
+const GOOGLE_S2_FALLBACK_SIZES = [256, 128, 64, 32, 16];
+
+// Extract the target domain from a Google s2 favicon URL, or null when the URL
+// is not a Google s2 favicon request.
+function getGoogleFaviconDomain(faviconUrl) {
+  try {
+    const parsed = new URL(faviconUrl);
+    if (parsed.hostname === 'www.google.com' && parsed.pathname === '/s2/favicons') {
+      return parsed.searchParams.get('domain') || null;
+    }
+  } catch (e) {
+    // Not a parseable URL — not a Google s2 request
+  }
+  return null;
+}
+
+// Build the ordered fallback ladder for a domain whose preferred s2 size failed:
+// progressively smaller Google s2 sizes (below the requested size), then the
+// site's own /favicon.ico, then DuckDuckGo's keyless icon service.
+function buildFaviconFallbackLadder(domain, requestedSize) {
+  const requested = parseInt(requestedSize, 10);
+  const rungs = [];
+  for (const sz of GOOGLE_S2_FALLBACK_SIZES) {
+    if (Number.isFinite(requested) && sz < requested) {
+      rungs.push({
+        rung: `google-s2-${sz}px`,
+        url: `https://www.google.com/s2/favicons?domain=${domain}&sz=${sz}`
+      });
+    }
+  }
+  rungs.push({ rung: 'site-favicon.ico', url: `https://${domain}/favicon.ico` });
+  rungs.push({ rung: 'duckduckgo', url: `https://icons.duckduckgo.com/ip3/${domain}.ico` });
+  return rungs;
+}
+
+// True when a negative-cache entry is fresh enough that the domain should be
+// skipped entirely (lastTried younger than the 7-day retry window).
+function shouldSkipKnownMiss(entry, nowMs) {
+  if (!entry || typeof entry !== 'object') return false;
+  const lastTried = Date.parse(entry.lastTried);
+  if (!Number.isFinite(lastTried)) return false;
+  return (nowMs - lastTried) < FAVICON_MISS_RETRY_MS;
+}
+
+// Record that a domain's entire fallback ladder failed. Mutates the cache.
+function recordFaviconMiss(cache, domain, nowIso) {
+  const existing = (cache[domain] && typeof cache[domain] === 'object') ? cache[domain] : null;
+  cache[domain] = {
+    misses: ((existing && Number.isFinite(existing.misses)) ? existing.misses : 0) + 1,
+    firstMiss: (existing && existing.firstMiss) || nowIso,
+    lastTried: nowIso
+  };
+  return cache[domain];
+}
+
+// Load the negative cache; corrupt or absent file starts fresh, never throws.
+function loadFaviconMissCache(filePath) {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed;
+    }
+  } catch (e) {
+    // Absent or corrupt — start fresh
+  }
+  return {};
+}
+
+// Persist the negative cache (sorted keys for stable diffs). Skips creating an
+// empty file when there is nothing to record and no file exists yet.
+function saveFaviconMissCache(filePath, cache) {
+  try {
+    const domains = Object.keys(cache);
+    if (domains.length === 0 && !fs.existsSync(filePath)) return;
+    const sorted = {};
+    for (const domain of domains.sort()) {
+      sorted[domain] = cache[domain];
+    }
+    writeMetadataIfChanged(filePath, sorted);
+  } catch (e) {
+    console.warn(`⚠️  Could not save favicon miss cache ${filePath}:`, e.message);
+  }
+}
+
+// Validate that a response is actually an image: image/* content-type, or known
+// magic bytes (PNG, JPEG, GIF, ICO, BMP, WEBP) in the first bytes of the body.
+function looksLikeImage(contentType, headerBytes) {
+  if (contentType && /^image\//i.test(String(contentType).trim())) return true;
+  if (!headerBytes || headerBytes.length < 4) return false;
+  const b = headerBytes;
+  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return true; // PNG
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return true; // JPEG
+  if (b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38) return true; // GIF
+  if (b[0] === 0x00 && b[1] === 0x00 && (b[2] === 0x01 || b[2] === 0x02) && b[3] === 0x00) return true; // ICO/CUR
+  if (b[0] === 0x42 && b[1] === 0x4d) return true; // BMP
+  if (b.length >= 12 &&
+      b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
+      b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return true; // WEBP
+  return false;
+}
+
+// Download one fallback rung into localPath and verify it is a real image.
+// Throws (after deleting the file) when the response is not an image.
+async function attemptFaviconRungDownload(rungUrl, localPath) {
+  const downloadResult = await downloadFile(rungUrl, localPath, 15000, 5, null, { quiet: true });
+  let size = 0;
+  let headerBytes = null;
+  try {
+    size = fs.statSync(localPath).size;
+    const fd = fs.openSync(localPath, 'r');
+    const buf = Buffer.alloc(12);
+    const bytesRead = fs.readSync(fd, buf, 0, 12, 0);
+    fs.closeSync(fd);
+    headerBytes = buf.subarray(0, bytesRead);
+  } catch (e) {
+    // Fall through to validation failure below
+  }
+  if (size === 0 || !looksLikeImage(downloadResult.contentType, headerBytes)) {
+    try { fs.unlinkSync(localPath); } catch (e) { /* already gone */ }
+    throw new Error(`Not an image (content-type: ${downloadResult.contentType || 'unknown'})`);
+  }
+  return downloadResult;
+}
+
+// Download a Google s2 favicon with the fallback ladder and negative cache.
+// Non-s2 URLs pass straight through to downloadImageWithSize.
+// The fallback result is stored under the REQUESTED size's filename slot
+// (favicon-<domain>-<size>px.ico): consumers derive paths purely from
+// domain + requested size (convertWebsiteUrlToFaviconPath), never from actual
+// pixel dimensions, so the slot name is the only place they will look.
+async function downloadFaviconWithFallback(imageUrl, size, missCache, stats) {
+  const domain = getGoogleFaviconDomain(imageUrl);
+  if (!domain) {
+    return downloadImageWithSize(imageUrl, 'favicon', size);
+  }
+
+  // Negative cache: skip domains whose entire ladder failed less than 7d ago
+  if (shouldSkipKnownMiss(missCache[domain], Date.now())) {
+    return { success: true, skipped: true, knownMiss: true, filename: null, reason: 'Known miss (negative cache, retry after 7d)' };
+  }
+
+  // Primary attempt at the requested size (quiet: the ladder logs one line per
+  // domain on final failure instead of one line per attempt)
+  const primary = await downloadImageWithSize(imageUrl, 'favicon', size, { quiet: true });
+  if (primary.success) {
+    if (!primary.dryRun && missCache[domain]) {
+      delete missCache[domain];
+    }
+    return primary;
+  }
+
+  // Primary failed — walk the fallback ladder, storing under the requested slot
+  const filename = generateFilename(imageUrl, 'favicon', size);
+  const localPath = path.join(FAVICONS_DIR, filename);
+  const metadataPath = localPath + '.meta';
+  ensureDir(FAVICONS_DIR);
+
+  const ladder = buildFaviconFallbackLadder(domain, size);
+  for (const rung of ladder) {
+    try {
+      const downloadResult = await attemptFaviconRungDownload(rung.url, localPath);
+      const metadata = {
+        originalUrl: imageUrl,
+        type: 'favicon',
+        filename: filename,
+        size: size,
+        contentType: downloadResult.contentType,
+        contentLength: downloadResult.contentLength,
+        fallbackRung: rung.rung,
+        fallbackUrl: rung.url
+      };
+      applyDownloadStamp(metadata, downloadResult);
+      writeMetadataIfChanged(metadataPath, metadata);
+      delete missCache[domain];
+      if (stats) stats.fromFallbacks++;
+      console.log(`✅ Downloaded favicon image via fallback (${rung.rung}): ${filename}`);
+      return { success: true, skipped: false, filename, localPath, fallbackRung: rung.rung };
+    } catch (e) {
+      // Try the next rung
+    }
+  }
+
+  // Entire ladder failed — record the miss; one log line per domain
+  recordFaviconMiss(missCache, domain, new Date().toISOString());
+  console.error(`❌ Favicon unavailable for ${domain}: ${size}px request and all ${ladder.length} fallbacks failed`);
+  return { success: false, error: 'Favicon fallback ladder exhausted', url: imageUrl, domain };
+}
+
 // Ensure directories exist
 // Helper to read existing failure count, increment it, and write metadata
 function saveFailureMetadata(metadataPathFallback, failureMetadata) {
@@ -459,7 +664,7 @@ async function processProfilePicture(inputPath, outputPath, targetSize = 96) {
 // Pass `validators` ({ etag, lastModified }) to send If-None-Match / If-Modified-Since;
 // when the server answers 304 Not Modified the promise resolves with { notModified: true }
 // and the existing file on disk is left untouched.
-function downloadFile(url, outputPath, timeout = 30000, maxRedirects = 5, validators = null) {
+function downloadFile(url, outputPath, timeout = 30000, maxRedirects = 5, validators = null, options = {}) {
   return new Promise((resolve, reject) => {
     const downloadWithRedirects = (currentUrl, redirectCount = 0) => {
       if (redirectCount > maxRedirects) {
@@ -493,7 +698,9 @@ function downloadFile(url, outputPath, timeout = 30000, maxRedirects = 5, valida
         // Handle redirects (301, 302, 303, 307, 308)
         if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
           const redirectUrl = new URL(response.headers.location, currentUrl).href;
-          console.log(`🔄 Following redirect ${redirectCount + 1}/${maxRedirects}: ${currentUrl} -> ${redirectUrl}`);
+          if (!options.quiet) {
+            console.log(`🔄 Following redirect ${redirectCount + 1}/${maxRedirects}: ${currentUrl} -> ${redirectUrl}`);
+          }
           downloadWithRedirects(redirectUrl, redirectCount + 1);
           return;
         }
@@ -765,8 +972,11 @@ function shouldDownloadImage(imageUrl, localPath, metadataPath, type = 'event') 
   return { shouldDownload: false, reason: 'File is up to date' };
 }
 
-// Download a single image with size specification
-async function downloadImageWithSize(imageUrl, type = 'event', size = null) {
+// Download a single image with size specification.
+// options.quiet suppresses the per-attempt failure log and failure metadata —
+// used by the favicon fallback ladder, which logs once per domain and records
+// misses in the negative cache instead.
+async function downloadImageWithSize(imageUrl, type = 'event', size = null, options = {}) {
   try {
     const filename = generateFilename(imageUrl, type, size);
     const dir = type === 'favicon' ? FAVICONS_DIR : EVENTS_DIR;
@@ -816,6 +1026,11 @@ async function downloadImageWithSize(imageUrl, type = 'event', size = null) {
     return { success: true, skipped: false, filename, localPath };
     
   } catch (error) {
+    if (options.quiet) {
+      // Caller (favicon fallback ladder) handles logging and failure tracking
+      return { success: false, error: error.message, url: imageUrl };
+    }
+
     console.error(`❌ Failed to download ${type} image from ${imageUrl}:`, error.message);
 
     try {
@@ -1170,7 +1385,11 @@ async function main() {
   let totalDownloaded = 0;
   let totalSkipped = 0;
   let totalFailed = 0;
-  
+
+  // Negative cache of domains whose entire favicon fallback ladder failed
+  const faviconMissCache = loadFaviconMissCache(FAVICON_MISS_CACHE_PATH);
+  const faviconStats = { fetched: 0, fromFallbacks: 0 };
+
   // Download event images with event information
   console.log('\n📸 Downloading event images...');
   for (const eventWithImage of imageUrls.eventsWithInfo) {
@@ -1194,33 +1413,35 @@ async function main() {
   // Download high-quality favicons (64px for map markers)
   console.log('\n🗺️  Downloading high-quality favicons (64px)...');
   for (const url of imageUrls.favicons64) {
-    const result = await downloadImageWithSize(url, 'favicon', '64');
+    const result = await downloadFaviconWithFallback(url, '64', faviconMissCache, faviconStats);
     if (result.success) {
       if (result.skipped) {
         totalSkipped++;
       } else {
         totalDownloaded++;
+        faviconStats.fetched++;
       }
     } else {
       totalFailed++;
     }
   }
-  
+
   // Download ultra-high-quality favicons (256px for cards/OG)
   console.log('\n🎨 Downloading ultra-high-quality favicons (256px)...');
   for (const url of imageUrls.favicons256) {
-    const result = await downloadImageWithSize(url, 'favicon', '256');
+    const result = await downloadFaviconWithFallback(url, '256', faviconMissCache, faviconStats);
     if (result.success) {
       if (result.skipped) {
         totalSkipped++;
       } else {
         totalDownloaded++;
+        faviconStats.fetched++;
       }
     } else {
       totalFailed++;
     }
   }
-  
+
   // Download direct image favicons
   if (imageUrls.faviconsDirect && imageUrls.faviconsDirect.size > 0) {
     console.log('\n🖼️  Downloading direct image favicons...');
@@ -1232,6 +1453,7 @@ async function main() {
           totalSkipped++;
         } else {
           totalDownloaded++;
+          faviconStats.fetched++;
         }
       } else {
         totalFailed++;
@@ -1317,12 +1539,24 @@ async function main() {
     }
   }
   
+  // Persist the favicon negative cache (skipped in dry-run: no writes)
+  if (!DRY_RUN) {
+    saveFaviconMissCache(FAVICON_MISS_CACHE_PATH, faviconMissCache);
+  }
+
   // Summary
   console.log('\n📊 Download Summary:');
   console.log(`✅ Downloaded: ${totalDownloaded}`);
   console.log(`⏭️  Skipped: ${totalSkipped}`);
   console.log(`❌ Failed: ${totalFailed}`);
   console.log(`📁 Total processed: ${totalDownloaded + totalSkipped + totalFailed}`);
+  console.log(`✓ favicons: ${faviconStats.fetched} fetched, ${faviconStats.fromFallbacks} from fallbacks`);
+  const missDomains = Object.keys(faviconMissCache);
+  if (missDomains.length > 0) {
+    const shown = missDomains.slice(0, 10).join(', ');
+    const suffix = missDomains.length > 10 ? ', …' : '';
+    console.log(`⚠️ ${missDomains.length} domains unavailable (known misses, retry after 7d): ${shown}${suffix}`);
+  }
   
   if (totalFailed > 0) {
     console.log('\n⚠️  Some images failed to download. Check the logs above for details.');
@@ -1341,4 +1575,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { downloadImage, downloadImageWithSize, downloadEventImage, extractImageUrls, extractLinktreeProfilePicture, isLinktreeUrl, extractWikipediaLogo, isWikipediaUrl, fetchPageContent, generateLinktreeFaviconFilename, generateWikipediaFaviconFilename, downloadImageWithCustomFilename, shouldDownloadImage };
+module.exports = { downloadImage, downloadImageWithSize, downloadEventImage, extractImageUrls, extractLinktreeProfilePicture, isLinktreeUrl, extractWikipediaLogo, isWikipediaUrl, fetchPageContent, generateLinktreeFaviconFilename, generateWikipediaFaviconFilename, downloadImageWithCustomFilename, shouldDownloadImage, getGoogleFaviconDomain, buildFaviconFallbackLadder, shouldSkipKnownMiss, recordFaviconMiss, loadFaviconMissCache, saveFaviconMissCache, looksLikeImage, attemptFaviconRungDownload, downloadFaviconWithFallback };

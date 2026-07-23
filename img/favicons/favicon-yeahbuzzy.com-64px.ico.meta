@@ -1,8 +1,11 @@
 {
   "originalUrl": "https://www.google.com/s2/favicons?domain=www.yeahbuzzy.com&sz=64",
-  "error": "HTTP 404: Not Found",
   "type": "favicon",
   "filename": "favicon-yeahbuzzy.com-64px.ico",
   "size": "64",
-  "failureCount": 26
+  "contentType": "text/plain;charset=US-ASCII",
+  "contentLength": "8",
+  "fallbackRung": "duckduckgo",
+  "fallbackUrl": "https://icons.duckduckgo.com/ip3/www.yeahbuzzy.com.ico",
+  "downloadedAt": "2026-07-23T18:05:56.439Z"
 }

@@ -292,6 +292,7 @@ jobs:
         run: |
           node tools/download-images.js
           git add -A img/favicons/ img/events/ 2>/dev/null || true
+          git add data/favicon-misses.json 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "No image changes to commit"
             echo "IMAGES_CHANGED=false" >> $GITHUB_ENV
