@@ -6806,3 +6806,267 @@ test('new venue candidate log line has the documented shape', () => {
     '📋 NEW VENUE CANDIDATE: "Massive" (seattle) — signals: venue-site — no address observed'
   );
 });
+
+test('candidate dossier omits website/instagram unless the source page is the venue\'s own site', () => {
+  const core = createVenueDiscoveryCore();
+
+  // Organizer-page events (e.g. a promoter site like bearracuda.com): the
+  // event's website/instagram are the ORGANIZER's metadata, not the venue's —
+  // both fields must be omitted from the dossier entirely.
+  const [organizer] = core.buildNewVenueCandidates([
+    buildVenueCandidateEvent({
+      barSource: 'page-adjacent',
+      website: 'https://bearracuda.com/',
+      instagram: 'https://instagram.com/bearracuda',
+      url: 'https://bearracuda.com/events/seattle'
+    })
+  ]);
+  assert.ok(!('website' in organizer), 'organizer website omitted from the dossier');
+  assert.ok(!('instagram' in organizer), 'organizer instagram omitted from the dossier');
+
+  // geo-poi corroborates the bar name via map placemarks — still not the
+  // venue's own site, so links stay out.
+  const [geoPoi] = core.buildNewVenueCandidates([
+    buildVenueCandidateEvent({
+      barSource: 'geo-poi',
+      instagram: 'https://instagram.com/bearracuda'
+    })
+  ]);
+  assert.ok(!('website' in geoPoi) && !('instagram' in geoPoi),
+    'geo-poi events contribute no links');
+
+  // venue-site events keep both: barSource 'venue-site' is only stamped when
+  // the source page IS the venue's own site (siteRole venue + name match).
+  const [venueSite] = core.buildNewVenueCandidates([
+    buildVenueCandidateEvent({
+      barSource: 'venue-site',
+      website: 'https://massiveseattle.com',
+      instagram: 'https://instagram.com/massiveseattle'
+    })
+  ]);
+  assert.equal(venueSite.website, 'https://massiveseattle.com');
+  assert.equal(venueSite.instagram, 'https://instagram.com/massiveseattle');
+
+  // The event-page-url fallback for website also only applies to venue-site
+  // events (a page on the venue's own site is venue-attributable).
+  const [urlFallback] = core.buildNewVenueCandidates([
+    buildVenueCandidateEvent({
+      barSource: 'venue-site',
+      website: undefined,
+      url: 'https://massiveseattle.com/events/bear-night'
+    })
+  ]);
+  assert.equal(urlFallback.website, 'https://massiveseattle.com/events/bear-night');
+});
+
+test('mixed-provenance dedup takes links only from the venue-site observation', () => {
+  const core = createVenueDiscoveryCore();
+  const [candidate] = core.buildNewVenueCandidates([
+    buildVenueCandidateEvent({
+      barSource: 'page-adjacent',
+      website: 'https://bearracuda.com/',
+      instagram: 'https://instagram.com/bearracuda',
+      title: 'Bearracuda Seattle'
+    }),
+    buildVenueCandidateEvent({
+      barSource: 'venue-site',
+      website: 'https://massiveseattle.com',
+      instagram: undefined,
+      title: 'Bear Night'
+    })
+  ]);
+  assert.equal(candidate.website, 'https://massiveseattle.com',
+    'venue-site link lands; the organizer link never does');
+  assert.ok(!('instagram' in candidate),
+    'no venue-attributable instagram observed → field omitted');
+});
+
+// ---------------------------------------------------------------------------
+// Computed evidence panel (results-UI): buildEventEvidenceLines
+// ---------------------------------------------------------------------------
+
+// Seattle with center coordinates plus one curated bar with a pin — the two
+// config sources the evidence distances are computed against.
+function createEvidencePanelCore() {
+  return new SharedCore({
+    seattle: {
+      timezone: 'America/Los_Angeles',
+      calendar: 'chunky-dad-seattle',
+      patterns: ['seattle'],
+      coordinates: { lat: 47.6062, lng: -122.3321 }
+    }
+  }, {
+    eventSchema: EventSchema,
+    bars: { seattle: [SEATTLE_CUFF_BAR] }
+  });
+}
+
+test('evidence: pin ↔ curated bar distance in meters, ⚠️ beyond 150 m', () => {
+  const core = createEvidencePanelCore();
+  // ~3.5 m from the curated Cuff pin → meters, no warning.
+  const near = core.buildEventEvidenceLines({
+    bar: 'The Cuff Complex',
+    city: 'seattle',
+    location: '47.6142, -122.3169'
+  });
+  assert.ok(near.includes('pin is 3 m from curated "The Cuff Complex" pin'),
+    `expected curated-distance line, got: ${JSON.stringify(near)}`);
+  // ~1.76 km away → 1-decimal km with the warning prefix.
+  const far = core.buildEventEvidenceLines({
+    bar: 'The Cuff Complex',
+    city: 'seattle',
+    location: '47.63, -122.3168539'
+  });
+  assert.ok(far.includes('⚠️ pin is 1.8 km from curated "The Cuff Complex" pin'),
+    `expected warned curated-distance line, got: ${JSON.stringify(far)}`);
+  // Between 150 m and 1 km: warned, still meters.
+  const mid = core.buildEventEvidenceLines({
+    bar: 'The Cuff Complex',
+    city: 'seattle',
+    location: '47.6142041, -122.32'
+  });
+  assert.ok(mid.includes('⚠️ pin is 236 m from curated "The Cuff Complex" pin'),
+    `expected warned meter line, got: ${JSON.stringify(mid)}`);
+  // A non-curated bar has no curated pin to compare against → no line.
+  const uncurated = core.buildEventEvidenceLines({
+    bar: 'Massive',
+    city: 'seattle',
+    location: '47.6142, -122.3169'
+  });
+  assert.ok(!uncurated.some(line => line.includes('curated')),
+    'no curated line for a bar absent from curated data');
+});
+
+test('evidence: pin ↔ city center distance in km, ⚠️ beyond 50 km', () => {
+  const core = createEvidencePanelCore();
+  const near = core.buildEventEvidenceLines({
+    bar: 'Massive',
+    city: 'seattle',
+    location: '47.6142, -122.3169'
+  });
+  assert.ok(near.includes('pin is 1.4 km from seattle center'),
+    `expected center-distance line, got: ${JSON.stringify(near)}`);
+  const far = core.buildEventEvidenceLines({
+    city: 'seattle',
+    location: '48.5, -122.33'
+  });
+  assert.ok(far.includes('⚠️ pin is 99.4 km from seattle center'),
+    `expected warned center-distance line, got: ${JSON.stringify(far)}`);
+  // City without center coordinates (the discovery fixture) → no line.
+  const noCenter = createVenueDiscoveryCore().buildEventEvidenceLines({
+    city: 'seattle',
+    location: '47.6142, -122.3169'
+  });
+  assert.ok(!noCenter.some(line => line.includes('center')),
+    'no center line without city coordinates');
+});
+
+test('evidence: map POI line renders match, mismatch, and bar-less variants', () => {
+  const core = createEvidencePanelCore();
+  const match = core.buildEventEvidenceLines({
+    bar: 'Massive',
+    city: 'seattle',
+    _geoPoiName: 'Massive Nightclub',
+    _geoPoiBarMatch: true
+  });
+  assert.ok(match.includes('map POI at pin: "Massive Nightclub" — ✓ matches bar'),
+    `expected POI match line, got: ${JSON.stringify(match)}`);
+  const differ = core.buildEventEvidenceLines({
+    bar: 'Massive',
+    city: 'seattle',
+    _geoPoiName: 'Corner Deli',
+    _geoPoiBarMatch: false
+  });
+  assert.ok(differ.includes('map POI at pin: "Corner Deli" — ⚠️ differs from bar "Massive"'),
+    `expected POI mismatch line, got: ${JSON.stringify(differ)}`);
+  const noBar = core.buildEventEvidenceLines({
+    city: 'seattle',
+    _geoPoiName: 'Corner Deli'
+  });
+  assert.ok(noBar.includes('map POI at pin: "Corner Deli"'),
+    `expected bare POI line, got: ${JSON.stringify(noBar)}`);
+  // No harvested POI this run (cached/skipped geocode) → no POI line at all.
+  const noPoi = core.buildEventEvidenceLines({ bar: 'Massive', city: 'seattle' });
+  assert.ok(!noPoi.some(line => line.includes('map POI')), 'no POI line without a harvest');
+});
+
+test('evidence: barSource renders a corroboration verdict and a provenance summary', () => {
+  const core = createEvidencePanelCore();
+  for (const source of ['page-adjacent', 'venue-site', 'geo-poi', 'curated']) {
+    const lines = core.buildEventEvidenceLines({ bar: 'Massive', city: 'seattle', barSource: source });
+    assert.ok(lines.includes(`bar corroborated: ${source}`),
+      `expected corroboration line for ${source}, got: ${JSON.stringify(lines)}`);
+  }
+  const flagged = core.buildEventEvidenceLines({
+    bar: 'Massive',
+    city: 'seattle',
+    barSource: 'uncorroborated'
+  });
+  assert.ok(flagged.includes('⚠️ bar uncorroborated (not found near address in source)'),
+    `expected uncorroborated warning, got: ${JSON.stringify(flagged)}`);
+
+  const provenance = core.buildEventEvidenceLines({
+    bar: 'Massive',
+    city: 'seattle',
+    barSource: 'page-adjacent',
+    pinSource: 'geocoded-exact',
+    addressSource: 'page',
+    imageSource: 'jsonld',
+    bearSource: 'ai'
+  });
+  assert.ok(provenance.includes(
+    'provenance: bar=page-adjacent, pin=geocoded-exact, address=page, image=jsonld, bear=ai'),
+    `expected full provenance line, got: ${JSON.stringify(provenance)}`);
+  // Only the stamps that exist appear.
+  const partial = core.buildEventEvidenceLines({ city: 'seattle', pinSource: 'geocoded-exact' });
+  assert.ok(partial.includes('provenance: pin=geocoded-exact'),
+    `expected partial provenance line, got: ${JSON.stringify(partial)}`);
+});
+
+test('evidence: nothing computable fails open to an empty array', () => {
+  const core = createEvidencePanelCore();
+  assert.deepEqual(core.buildEventEvidenceLines({}), []);
+  assert.deepEqual(core.buildEventEvidenceLines(null), []);
+  assert.deepEqual(core.buildEventEvidenceLines(undefined), []);
+  assert.deepEqual(core.buildEventEvidenceLines({ title: 'Bear Night', city: 'nowhere' }), []);
+  // A non-coordinate location contributes no distance lines.
+  assert.deepEqual(core.buildEventEvidenceLines({ city: 'seattle', location: 'The Cuff, Seattle' }), []);
+});
+
+test('evidence: _geoPoiName and _geoPoiBarMatch never serialize into notes', () => {
+  const core = createEvidencePanelCore();
+  const notes = core.formatEventNotes({
+    bar: 'Massive',
+    barSource: 'geo-poi',
+    _geoPoiName: 'Massive Nightclub',
+    _geoPoiBarMatch: true,
+    _evidenceLines: ['bar corroborated: geo-poi']
+  });
+  assert.ok(notes.includes('bar: Massive'), 'real fields serialize');
+  assert.ok(!notes.includes('_geoPoiName'), 'underscore key excluded');
+  assert.ok(!notes.includes('Massive Nightclub'), 'underscore value excluded');
+  assert.ok(!notes.includes('_geoPoiBarMatch') && !notes.includes('_evidenceLines'),
+    'companion underscore fields excluded too');
+});
+
+test('new venue candidates carry a computed evidence panel from the same builder', () => {
+  const core = createEvidencePanelCore();
+  const [candidate] = core.buildNewVenueCandidates([
+    buildVenueCandidateEvent({
+      location: '47.6142, -122.3169',
+      _geoPoiName: 'Massive Nightclub',
+      _geoPoiBarMatch: true
+    })
+  ]);
+  assert.ok(Array.isArray(candidate.evidence), 'evidence array attached');
+  assert.ok(candidate.evidence.includes('pin is 1.4 km from seattle center'),
+    `center line from candidate coordinates, got: ${JSON.stringify(candidate.evidence)}`);
+  assert.ok(candidate.evidence.includes('map POI at pin: "Massive Nightclub" — ✓ matches bar'),
+    'geo-POI evidence rides over from the coordinate-donor event');
+  assert.ok(candidate.evidence.includes('bar corroborated: venue-site'),
+    'first observed signal is the corroboration verdict');
+  assert.ok(candidate.evidence.includes('provenance: bar=venue-site, pin=geocoded-exact'),
+    'candidate provenance is signal + the exact pin its detection required');
+  assert.ok(!('_geoPoiName' in candidate),
+    'raw POI underscore fields never land on the candidate itself');
+});

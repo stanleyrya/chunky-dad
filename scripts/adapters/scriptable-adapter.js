@@ -1237,6 +1237,46 @@ class ScriptableAdapter {
     return existing;
   }
 
+  // Stamp the just-saved run id into venue-queue entries tapped this session.
+  // Queue taps happen while the results sheet is up, BEFORE the run is saved,
+  // so results.savedRunId is null at queue-write time and entries were landing
+  // with runIds: []. The run id is generated from the save timestamp
+  // (saveRun → getRunId), so assigning it earlier would change what a run id
+  // means; instead queueVenueCandidateAndReport records which candidate keys
+  // it wrote and this backfill — called right after saveRun assigns
+  // results.savedRunId — stamps the now-known id into exactly those entries.
+  // Fail open: any failure leaves entries as the tap wrote them.
+  async backfillQueuedVenueRunIds(results) {
+    try {
+      const runId =
+        results && results.savedRunId ? String(results.savedRunId) : "";
+      const keys = Array.isArray(results && results._queuedVenueCandidateKeys)
+        ? results._queuedVenueCandidateKeys
+        : [];
+      if (!runId || keys.length === 0) return;
+      const queue = await this.loadBarAdditions();
+      let stamped = 0;
+      for (const key of keys) {
+        const entry = queue[key];
+        if (!entry || typeof entry !== "object") continue;
+        if (!Array.isArray(entry.runIds)) entry.runIds = [];
+        if (entry.runIds.includes(runId)) continue;
+        entry.runIds.push(runId);
+        entry.runIds = entry.runIds.slice(-10); // same cap as the tap merge
+        stamped += 1;
+      }
+      if (stamped === 0) return;
+      await this.saveBarAdditions(queue);
+      console.log(
+        `📱 Scriptable: Backfilled run id ${runId} into ${stamped} queued venue entr${stamped === 1 ? "y" : "ies"}`,
+      );
+    } catch (error) {
+      console.warn(
+        `📱 Scriptable: Venue-queue run id backfill failed: ${error.message}`,
+      );
+    }
+  }
+
   extractHttpStatusCodeFromError(error) {
     const message =
       error && typeof error.message === "string" ? error.message : "";
@@ -4032,6 +4072,9 @@ class ScriptableAdapter {
         if (runId) {
           results.savedRunId = runId;
           results.savedRunPath = this.getRunFilePath(runId);
+          // Venue-queue taps happened before this id existed — stamp it into
+          // the entries queued during this session's results sheet.
+          await this.backfillQueuedVenueRunIds(results);
         }
         // Cleanup old JSON runs
         await this.cleanupOldFiles("chunky-dad-scraper/runs", {
@@ -4743,6 +4786,10 @@ class ScriptableAdapter {
             venueQueueTaps,
             webView,
           );
+        } else if (params.a === "open-url") {
+          // Fire-and-forget: opens the registered map verify link in Safari
+          // ON TOP of the results sheet (the WebView never navigates).
+          this.openMapVerifyUrl(params.id);
         }
         return false; // cancel the fake navigation; the page stays put
       };
@@ -4800,6 +4847,10 @@ class ScriptableAdapter {
 
   // Generate rich HTML for WebView display
   async generateRichHTML(results) {
+    // Fresh per-render registry for the open-url bridge: every map verify
+    // link rendered below registers its real URL natively and embeds only
+    // the returned id, so ids in this HTML always match the handler's map.
+    this.resetMapVerifyUrls();
     const allEvents = this.getAllEventsFromResults(results);
     const availableCalendars = await Calendar.forEvents();
 
@@ -6313,6 +6364,51 @@ class ScriptableAdapter {
             } catch (ignore) {}
         }
 
+        // Map verify links: a plain https href would navigate this WebView
+        // away (shouldAllowRequest returns true for normal URLs), so the
+        // links route through the same chunkyscrape:// bridge — native looks
+        // the real URL up by id and opens Safari ON TOP of the results
+        // sheet. Per-tap nonce keeps repeat taps firing as distinct
+        // navigations; returning false cancels the default '#' navigation.
+        window.__mapVerifyNonce = 0;
+        function openMapVerify(el) {
+            var id = el ? (el.getAttribute('data-map-url-id') || '') : '';
+            window.location.href = 'chunkyscrape://act?a=open-url&id=' +
+                encodeURIComponent(id) + '&n=' + (window.__mapVerifyNonce++);
+            return false;
+        }
+
+        // Inline OSM map toggle — pure page JS, no bridge. Lazy by design:
+        // the iframe src is only assigned on the FIRST tap (no map tiles
+        // load until asked), later taps just show/hide the already-loaded
+        // frame. OpenStreetMap embed because it is keyless and matches the
+        // Nominatim geocoding stack the scraper already uses; Google Maps
+        // embeds require an API key.
+        function toggleCandidateMap(btn) {
+            try {
+                var target = document.getElementById(btn.getAttribute('data-map-target') || '');
+                if (!target) return;
+                if (target.style.display === 'none') {
+                    // Lazy: every iframe in the container (OSM + the legacy
+                    // Google embed) gets its src from its own data-map-embed
+                    // only on the first reveal — nothing loads until then.
+                    var frames = target.tagName === 'IFRAME'
+                        ? [target]
+                        : target.querySelectorAll('iframe');
+                    for (var i = 0; i < frames.length; i++) {
+                        if (!frames[i].getAttribute('src')) {
+                            frames[i].setAttribute('src', frames[i].getAttribute('data-map-embed') || '');
+                        }
+                    }
+                    target.style.display = 'block';
+                    btn.textContent = '🗺️ Hide maps';
+                } else {
+                    target.style.display = 'none';
+                    btn.textContent = '🗺️ Show maps';
+                }
+            } catch (ignore) {}
+        }
+
         function copyDiscoveryText(btn) {
             const encoded = btn.getAttribute('data-encoded') || '';
             let text = '';
@@ -7391,6 +7487,230 @@ class ScriptableAdapter {
   }
 
   // ---------------------------------------------------------------------------
+  // Map verify links (results-UI ↔ chunkyscrape:// bridge, read-only).
+  // The owner verifies a venue by comparing three independent Google Maps
+  // lookups: what the bar name+city resolves to, what the address resolves
+  // to, and where the stored pin actually is. Each row gets up to three
+  // compact links (only for data that exists). A plain https href would
+  // navigate the results WebView away (shouldAllowRequest returns true for
+  // normal URLs), so links route through the chunkyscrape:// bridge: the
+  // page navigates to chunkyscrape://act?a=open-url&id=<n>, native looks the
+  // real URL up in a per-render registry and calls Safari.open — Safari
+  // opens ON TOP and the results sheet stays put. URLs are built with
+  // encodeURIComponent only (no `new URL`/URLSearchParams in this runtime).
+  // ---------------------------------------------------------------------------
+
+  // "lat, lng" text → { lat, lng } numbers, or null (shared by the pin link
+  // and the OSM embed; candidates/events store coordinates as one string).
+  parseCoordinatePairText(value) {
+    const parts = String(value || "").split(",");
+    if (parts.length !== 2) return null;
+    const lat = Number(parts[0].trim());
+    const lng = Number(parts[1].trim());
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    return { lat, lng };
+  }
+
+  // Human-searchable city name for Maps queries. The generated
+  // scraper-cities.js carries no display name, but each city's FIRST alias
+  // pattern is its full lowercase name ("nyc" → "new york", "la" →
+  // "los angeles"); unknown keys fall back to the de-hyphenated key
+  // ("fort-lauderdale" → "fort lauderdale"). Maps search is case-insensitive.
+  getCityDisplayNameForMaps(cityKey) {
+    const key = typeof cityKey === "string" ? cityKey.trim() : "";
+    if (!key) return "";
+    const cityConfig = this.cities ? this.cities[key] : null;
+    const firstPattern =
+      cityConfig && Array.isArray(cityConfig.patterns)
+        ? cityConfig.patterns[0]
+        : "";
+    if (typeof firstPattern === "string" && firstPattern.trim()) {
+      return firstPattern.trim();
+    }
+    return key.replace(/-/g, " ");
+  }
+
+  buildMapsSearchUrl(query) {
+    const text = typeof query === "string" ? query.trim() : "";
+    if (!text) return "";
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(text)}`;
+  }
+
+  // Bar query: "<bar name>, <city>" ("" without a bar). The single Bar link
+  // and the Route link both build from this exact string.
+  buildBarMapsQuery(barName, cityKey) {
+    const name = typeof barName === "string" ? barName.trim() : "";
+    if (!name) return "";
+    const city = this.getCityDisplayNameForMaps(cityKey);
+    return city ? `${name}, ${city}` : name;
+  }
+
+  // Bar link: what "<bar name>, <city>" resolves to on Google Maps.
+  buildBarMapsSearchUrl(barName, cityKey) {
+    return this.buildMapsSearchUrl(this.buildBarMapsQuery(barName, cityKey));
+  }
+
+  // Address query: the stored address, with the city appended ONLY when the
+  // address doesn't already contain the city name (case-insensitive) — bare
+  // street addresses are ambiguous across cities. Shared by the single
+  // Address link and the Route link.
+  buildAddressMapsQuery(address, cityKey) {
+    const text = typeof address === "string" ? address.trim() : "";
+    if (!text) return "";
+    const city = this.getCityDisplayNameForMaps(cityKey);
+    const alreadyHasCity =
+      city && text.toLowerCase().includes(city.toLowerCase());
+    return city && !alreadyHasCity ? `${text}, ${city}` : text;
+  }
+
+  // Address link: what the stored address resolves to.
+  buildAddressMapsSearchUrl(address, cityKey) {
+    return this.buildMapsSearchUrl(this.buildAddressMapsQuery(address, cityKey));
+  }
+
+  // Pin query: "lat,lng" ("" without a coordinate pair). Shared by the
+  // single Pin link and the Route link.
+  buildPinMapsQuery(coordinates) {
+    const pair = this.parseCoordinatePairText(coordinates);
+    if (!pair) return "";
+    return `${pair.lat},${pair.lng}`;
+  }
+
+  // Pin link: where the stored coordinates actually land.
+  buildPinMapsSearchUrl(coordinates) {
+    return this.buildMapsSearchUrl(this.buildPinMapsQuery(coordinates));
+  }
+
+  // Route link: one Google Maps Directions URL threading every stored
+  // location signal (bar+city query → address query → pin), using the SAME
+  // query strings as the single links above. Purpose: if all points resolve
+  // to the same venue, the rendered route is ~0 m — a one-glance identity
+  // check; a pin or address belonging to a different place shows up as a
+  // real route. Requires at least two of {bar+city, address, coordinates};
+  // with all three the address rides as a waypoint, with two the pair maps
+  // to origin → destination. "" when fewer than two points exist.
+  buildRouteMapsDirectionsUrl({ bar, city, address, coordinates } = {}) {
+    const barQuery = this.buildBarMapsQuery(bar, city);
+    const addressQuery = this.buildAddressMapsQuery(address, city);
+    const pinQuery = this.buildPinMapsQuery(coordinates);
+    const points = [barQuery, addressQuery, pinQuery].filter(Boolean);
+    if (points.length < 2) return "";
+    const origin = points[0];
+    const destination = points[points.length - 1];
+    const waypoints = points.length === 3 ? points[1] : "";
+    let url =
+      "https://www.google.com/maps/dir/?api=1" +
+      `&origin=${encodeURIComponent(origin)}` +
+      `&destination=${encodeURIComponent(destination)}`;
+    if (waypoints) url += `&waypoints=${encodeURIComponent(waypoints)}`;
+    return url;
+  }
+
+  // Keyless OpenStreetMap embed centered on the pin (~400m box, marker on
+  // the pin). OSM because it needs no API key and matches the Nominatim
+  // stack the scraper already geocodes with; Google Maps embeds require an
+  // API key. Same viewport as the review UI's buildReviewPinHtml.
+  buildOsmEmbedUrl(coordinates) {
+    const pair = this.parseCoordinatePairText(coordinates);
+    if (!pair) return "";
+    const boxDegrees = 0.004;
+    const bbox = `${pair.lng - boxDegrees},${pair.lat - boxDegrees},${pair.lng + boxDegrees},${pair.lat + boxDegrees}`;
+    const marker = `${pair.lat},${pair.lng}`;
+    return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(bbox)}&layer=mapnik&marker=${encodeURIComponent(marker)}`;
+  }
+
+  // Keyless LEGACY Google Maps embed centered on the pin, shown alongside
+  // the OSM embed so the reviewer sees Google's venue-aware basemap (POI
+  // labels at the pin) next to OSM's. NOTE: maps.google.com/maps?...&output=
+  // embed is an unofficial keyless endpoint — the official Maps Embed API
+  // requires an API key — and it may break without notice; the OSM embed
+  // above remains the dependable inline map.
+  buildGoogleEmbedUrl(coordinates) {
+    const pair = this.parseCoordinatePairText(coordinates);
+    if (!pair) return "";
+    return `https://maps.google.com/maps?q=${encodeURIComponent(`${pair.lat},${pair.lng}`)}&z=16&output=embed`;
+  }
+
+  // Per-render native-side URL registry for the open-url bridge (same
+  // pattern as collectVenueEntrySnippets: URLs never travel through the
+  // chunkyscrape:// URL, only their ids do). generateRichHTML resets it so
+  // ids embedded in the HTML always match what the handler reads.
+  resetMapVerifyUrls() {
+    this._mapVerifyUrls = {};
+    this._mapVerifyUrlNextId = 0;
+  }
+
+  registerMapVerifyUrl(url) {
+    if (!this._mapVerifyUrls || typeof this._mapVerifyUrlNextId !== "number") {
+      this.resetMapVerifyUrls();
+    }
+    const id = String(this._mapVerifyUrlNextId++);
+    this._mapVerifyUrls[id] = url;
+    return id;
+  }
+
+  // Compact "Verify:" row with up to four bridge links; "" when no data.
+  buildMapVerifyLinksHtml({ bar, city, address, coordinates } = {}) {
+    const links = [];
+    const barUrl = this.buildBarMapsSearchUrl(bar, city);
+    if (barUrl) links.push({ label: "Bar", url: barUrl });
+    const addressUrl = this.buildAddressMapsSearchUrl(address, city);
+    if (addressUrl) links.push({ label: "Address", url: addressUrl });
+    const pinUrl = this.buildPinMapsSearchUrl(coordinates);
+    if (pinUrl) links.push({ label: "Pin", url: pinUrl });
+    // Route: only when ≥2 points exist (the builder returns "" otherwise).
+    const routeUrl = this.buildRouteMapsDirectionsUrl({
+      bar,
+      city,
+      address,
+      coordinates,
+    });
+    if (routeUrl) links.push({ label: "Route", url: routeUrl });
+    if (links.length === 0) return "";
+    const anchors = links
+      .map(({ label, url }) => {
+        const id = this.registerMapVerifyUrl(url);
+        return `<a href="#" onclick="return openMapVerify(this)" data-map-url-id="${id}" class="map-verify-link" style="color:var(--primary-color); text-decoration:none;">${label} ↗</a>`;
+      })
+      .join("");
+    return `<div class="map-verify-row" style="display:flex; gap:10px; align-items:center; font-size:12px; margin:4px 0;"><span style="color:var(--text-secondary);">Verify:</span>${anchors}</div>`;
+  }
+
+  // Muted "Evidence" block from SharedCore.buildEventEvidenceLines output
+  // (computed consistency checks — distances, POI match, provenance). One
+  // line per string; "" when there are no lines (fail open — the panel is
+  // additive and its absence never blocks a card or candidate row).
+  buildEvidenceLinesHtml(lines) {
+    const list = Array.isArray(lines)
+      ? lines.filter((line) => typeof line === "string" && line.trim())
+      : [];
+    if (list.length === 0) return "";
+    const rows = list
+      .map((line) => `<div>${this.escapeHtml(line)}</div>`)
+      .join("");
+    return `<div class="evidence-block" style="font-size:11px; color:var(--text-secondary); margin:4px 0; line-height:1.6;"><div style="font-weight:600;">Evidence</div>${rows}</div>`;
+  }
+
+  // Open one registered verify link in Safari, on top of the results sheet.
+  // Called fire-and-forget from shouldAllowRequest (which must synchronously
+  // return false to cancel the fake navigation) — Safari opens over the
+  // sheet and the results WebView never navigates.
+  openMapVerifyUrl(id) {
+    try {
+      const url = this._mapVerifyUrls
+        ? this._mapVerifyUrls[String(id)]
+        : undefined;
+      if (typeof url !== "string" || url.indexOf("https://") !== 0) return;
+      Safari.open(url);
+      console.log(`📱 Scriptable: Opened map verify link #${id} in Safari`);
+    } catch (error) {
+      console.warn(
+        `📱 Scriptable: Failed to open map verify link: ${error.message}`,
+      );
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // New venue candidates (results-UI ↔ chunkyscrape:// bridge, GATHERING-ONLY).
   // Confirmed-new venues detected by SharedCore.buildNewVenueCandidates get a
   // "Queue for bars data" button; a tap appends evidence to bar-additions.json.
@@ -7432,13 +7752,46 @@ class ScriptableAdapter {
         const control = queuedEntry
           ? `<span style="font-size:12px; color:var(--text-secondary);">Queued ✓ (seen ${Number(queuedEntry.timesSeen) || 1} times)</span>`
           : `<button onclick="queueVenueCandidate(this)" class="log-copy-btn venue-queue-btn" data-nvq-index="${index}">➕ Queue for bars data</button>`;
+        // Primary verification surface: Bar/Address/Pin Google Maps links
+        // (bridge-routed so Safari opens over the sheet) plus a lazy inline
+        // OSM map — no iframe loads anything until its toggle is tapped.
+        const verifyRow = this.buildMapVerifyLinksHtml({
+          bar: candidate.name,
+          city: candidate.city,
+          address: candidate.address,
+          coordinates: candidate.coordinates,
+        });
+        // Computed evidence panel (SharedCore.buildNewVenueCandidates attaches
+        // candidate.evidence); "" when nothing was computable.
+        const evidenceBlock = this.buildEvidenceLinesHtml(candidate.evidence);
+        const osmEmbedUrl = this.buildOsmEmbedUrl(candidate.coordinates);
+        // Second, side-by-side inline map: the keyless legacy Google embed
+        // (see buildGoogleEmbedUrl — unofficial endpoint, may break without
+        // notice; OSM stays the dependable one). Both iframes stay lazy:
+        // each carries its URL in data-map-embed and gets a src only on the
+        // first "Show maps" tap (pure page JS, no bridge involvement).
+        const googleEmbedUrl = this.buildGoogleEmbedUrl(candidate.coordinates);
+        const mapToggle = osmEmbedUrl
+          ? `<button onclick="toggleCandidateMap(this)" class="log-copy-btn nvq-map-btn" data-map-target="nvq_map_${index}">🗺️ Show maps</button>`
+          : "";
+        const embedFrameStyle =
+          "width:100%; height:220px; border:0; border-radius:8px;";
+        const mapFrame = osmEmbedUrl
+          ? `<div id="nvq_map_${index}" class="nvq-map-frames" style="display:none; margin-top:6px;"><iframe class="nvq-map-frame" data-map-embed="${this.escapeHtml(osmEmbedUrl)}" style="${embedFrameStyle}"></iframe>${googleEmbedUrl ? `<iframe class="nvq-map-frame" data-map-embed="${this.escapeHtml(googleEmbedUrl)}" style="${embedFrameStyle} margin-top:6px;"></iframe>` : ""}</div>`
+          : "";
         return `
         <div class="new-venue-candidate" style="margin-bottom:14px; padding:10px; background:var(--background-light); border-radius:8px;">
             <div style="font-weight:600; margin-bottom:4px;">${this.escapeHtml(candidate.name || "Unknown")} <span style="font-weight:400; opacity:0.7;">(${this.escapeHtml(candidate.city || "unknown city")})</span></div>
             ${candidate.address ? `<div style="font-size:12px; margin-bottom:2px; color:var(--text-secondary);">${this.escapeHtml(candidate.address)}</div>` : ""}
             <div style="font-size:12px; margin-bottom:2px; color:var(--text-secondary);">Signals: ${this.escapeHtml(signalsText)}</div>
             ${eventsText ? `<div style="font-size:12px; margin-bottom:6px; color:var(--text-secondary);">Hosting: ${this.escapeHtml(eventsText)}</div>` : ""}
-            ${control}
+            ${verifyRow}
+            ${evidenceBlock}
+            <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                ${control}
+                ${mapToggle}
+            </div>
+            ${mapFrame}
         </div>`;
       })
       .join("");
@@ -7486,6 +7839,15 @@ class ScriptableAdapter {
         await this.saveBarAdditions(queue);
         timesSeen = Number(entry.timesSeen) || 1;
         tapped[key] = timesSeen;
+        // Remember which entries this session wrote: the run id does not
+        // exist yet (the run is saved after the sheet is dismissed), so
+        // backfillQueuedVenueRunIds stamps it into these keys post-save.
+        if (!Array.isArray(results._queuedVenueCandidateKeys)) {
+          results._queuedVenueCandidateKeys = [];
+        }
+        if (!results._queuedVenueCandidateKeys.includes(candidate.key)) {
+          results._queuedVenueCandidateKeys.push(candidate.key);
+        }
         console.log(
           `📱 Scriptable: Queued venue candidate "${candidate.name}" (${candidate.city}) — seen ${timesSeen} time(s)`,
         );
@@ -7909,6 +8271,19 @@ class ScriptableAdapter {
     const notes = event.notes || "";
     const calendarName = this.getCalendarNameForDisplay(event);
 
+    // Secondary verification surface (kept small): the same Bar/Address/Pin
+    // Google Maps links as the new-venue-candidates section, rendered only
+    // when the card has data for them (empty string otherwise).
+    const mapVerifyRow = this.buildMapVerifyLinksHtml({
+      bar: event.bar || event.venue,
+      city: event.city,
+      address: event.address,
+      coordinates: event.location,
+    });
+    // Computed evidence panel (SharedCore attaches _evidenceLines during
+    // calendar prep); "" when absent — e.g. saved-run display (fail open).
+    const evidenceBlock = this.buildEvidenceLinesHtml(event._evidenceLines);
+
     let html = `
         <div class="event-card">
             ${actionBadge}
@@ -7947,6 +8322,8 @@ class ScriptableAdapter {
                 `
                     : ""
                 }
+                ${mapVerifyRow}
+                ${evidenceBlock}
                 <div class="event-detail">
                     <span>📅</span>
                     <span>${dateStr} ${timeStr}${endTimeStr ? ` - ${endTimeStr}` : ""}</span>

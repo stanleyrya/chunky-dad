@@ -776,6 +776,11 @@ async saveFailureNote(url, error, metadata = {}) {
                     const signals = Array.isArray(candidate.signals) ? candidate.signals.join(', ') : '';
                     const addressSuffix = candidate.address ? ` — ${candidate.address}` : '';
                     console.log(`   • "${candidate.name}" (${candidate.city}) — signals: ${signals}${addressSuffix}`);
+                    // Computed evidence lines (SharedCore.buildNewVenueCandidates
+                    // attaches candidate.evidence); absent → nothing printed.
+                    if (Array.isArray(candidate.evidence)) {
+                        candidate.evidence.forEach(line => console.log(`     evidence: ${line}`));
+                    }
                 });
             }
 
