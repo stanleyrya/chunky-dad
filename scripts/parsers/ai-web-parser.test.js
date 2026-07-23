@@ -3637,3 +3637,219 @@ test('venue name derivation prefers declared names and falls back to the host ba
   // Host base as last resort ("massive" from www.massive.club)
   assert.equal(parser.getPageVenueName({ url: 'https://www.massive.club/events', html: '<html></html>' }), 'massive');
 });
+
+// === City evidence hardening (run 20260723-123149: FURBALL MAD.BEAR) ===
+
+const MADBEAR_CITY_CONFIG = {
+  nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc', 'manhattan', 'brooklyn'] },
+  torremolinos: { timezone: 'Europe/Madrid', patterns: ['torremolinos'] }
+};
+
+async function captureLogsAsync(fn) {
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (message) => { lines.push(String(message)); };
+  try {
+    await fn();
+  } finally {
+    console.log = originalLog;
+  }
+  return lines;
+}
+
+test('MAD.BEAR regression: context-cited city evidence is dropped and the adjacent location line restores the real city; address never gains a resolved city', async () => {
+  const parser = createParser();
+  const htmlData = {
+    url: 'https://furball.nyc/madbear',
+    html: [
+      'SEGMENT_LISTING_TITLE: FURBALL MAD.BEAR',
+      'FRIDAY AUGUST 7 2026',
+      '@ MAD.BEAR Beach',
+      'Torremolinos, Spain',
+      'LA NOGALERA',
+      'TICKETS ONLINE'
+    ].join('\n'),
+    ocrResults: [{
+      url: 'https://furball.nyc/flyer.jpg',
+      text: 'FURBALL MAD.BEAR\nWWW.FURBALL.NYC\nNYC',
+      // The poisoned vision context-prep summary (hallucinated venue+city)
+      eventSummary: 'Furball NYC event at Aqua Emporio with bears and DJs'
+    }]
+  };
+  parser.getAiEvent = async () => ({
+    title: 'FURBALL MAD.BEAR',
+    startDate: '2026-08-07',
+    bar: 'MAD.BEAR Beach',
+    address: 'LA NOGALERA',
+    city: 'new york',
+    __preValidatedFields: ['startDate'],
+    __fieldEvidence: {
+      // The exact observed evidence string from the incident run
+      city: 'OCR_IMAGE_TEXT: "NYC" and SEGMENT_LISTING_TITLE context + additional context specifies NYC'
+    }
+  });
+
+  let event = null;
+  const logs = await captureLogsAsync(async () => {
+    event = await parser.extractSingleEvent(
+      htmlData, {}, MADBEAR_CITY_CONFIG,
+      ['title', 'startDate', 'city', 'bar', 'address']
+    );
+  });
+
+  assert.ok(event, 'event should survive extraction');
+  assert.equal(event.city, 'torremolinos', 'the page location line wins over branding-derived nyc');
+  assert.equal(event._citySource, 'page-adjacent');
+  assert.equal(event.address, 'LA NOGALERA', 'address must never gain an appended resolved city');
+  assert.ok(logs.includes(
+    '🤖 AI Web: City corrected to "torremolinos" from location line "Torremolinos, Spain" (extracted "new york" came from weaker evidence)'
+  ), `correction log expected, got: ${JSON.stringify(logs)}`);
+  const droppedCity = event._aiValidation && event._aiValidation.dropped.find(entry => entry.field === 'city');
+  assert.ok(droppedCity, 'city must be dropped by the evidence gate');
+  assert.equal(droppedCity.reason, 'context-cited-evidence');
+});
+
+test('evidence gate: context-citing evidence fails corroboration for ANY field', () => {
+  const parser = createParser();
+  const evidenceContext = parser.buildAiEvidenceContextFromText('DJ NIGHT AT The Eagle 554 W 28TH ST');
+  const validationContext = { imageEvidenceUrls: new Set(), cityConfig: null };
+  const aiEvent = {
+    bar: 'The Eagle',
+    __fieldEvidence: { bar: 'per the context, the venue is The Eagle' }
+  };
+  const result = parser.validateAiEventEvidence(aiEvent, { html: 'x' }, {}, null, { evidenceContext, validationContext });
+  assert.equal(result.event.bar, undefined, 'value present in the corpus is still dropped when its evidence cites the context block');
+  const entry = result.report.dropped.find(e => e.field === 'bar');
+  assert.equal(entry && entry.reason, 'context-cited-evidence');
+
+  // Same value with honest evidence is kept
+  const clean = parser.validateAiEventEvidence(
+    { bar: 'The Eagle', __fieldEvidence: { bar: 'AT The Eagle' } },
+    { html: 'x' }, {}, null, { evidenceContext, validationContext }
+  );
+  assert.equal(clean.event.bar, 'The Eagle');
+});
+
+test('evidence gate: brand/domain-citing city evidence is dropped; a real location line in the same evidence rescues it', () => {
+  const parser = createParser();
+  const htmlData = { url: 'https://furball.nyc/events', html: '' };
+  const evidenceContext = parser.buildAiEvidenceContextFromText('FURBALL PRESENTS\nWWW.FURBALL.NYC\nBROOKLYN NY');
+  const validationContext = { imageEvidenceUrls: new Set(), cityConfig: MADBEAR_CITY_CONFIG };
+
+  // Evidence citing only the promoter's domain branding → dropped
+  const branded = parser.validateAiEventEvidence(
+    { city: 'new york', __fieldEvidence: { city: 'OCR_IMAGE_TEXT: "WWW.FURBALL.NYC"' } },
+    htmlData, {}, null, { evidenceContext, validationContext }
+  );
+  assert.equal(branded.event.city, undefined);
+  const entry = branded.report.dropped.find(e => e.field === 'city');
+  assert.equal(entry && entry.reason, 'brand-cited-evidence');
+
+  // Same brand tokens but with an explicit "<Place>, <Place>" statement → kept
+  const rescued = parser.validateAiEventEvidence(
+    { city: 'new york', __fieldEvidence: { city: 'WWW.FURBALL.NYC flyer plus explicit "Brooklyn, NY" address line' } },
+    htmlData, {}, null, { evidenceContext, validationContext }
+  );
+  assert.equal(rescued.event.city, 'new york');
+
+  // Evidence citing a real location and no brand tokens at all → kept (baseline)
+  const plain = parser.validateAiEventEvidence(
+    { city: 'new york', __fieldEvidence: { city: '"BROOKLYN NY" in the venue block' } },
+    htmlData, {}, null, { evidenceContext, validationContext }
+  );
+  assert.equal(plain.event.city, 'new york');
+});
+
+test('city cross-check: adjacent location line resolving to a known city overrides a wrong extracted city', () => {
+  const parser = createParser();
+  const cityConfig = {
+    nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'] },
+    'asbury-park': { timezone: 'America/New_York', patterns: ['asbury park'] }
+  };
+  const corpus = ['SUNDAY TEA DANCE', '@ Paradise Lounge', 'Asbury Park, NJ', 'Doors at 4pm'].join('\n');
+  const event = { title: 'TEA DANCE', city: 'new york', bar: 'Paradise Lounge' };
+  const logs = captureLogs(() => {
+    parser.crossCheckCityAgainstAdjacentLocation(event, parser.buildAiEvidenceContextFromText(corpus), cityConfig);
+  });
+  assert.equal(event.city, 'asbury-park');
+  assert.equal(event._citySource, 'page-adjacent');
+  assert.ok(logs.includes(
+    '🤖 AI Web: City corrected to "asbury-park" from location line "Asbury Park, NJ" (extracted "new york" came from weaker evidence)'
+  ), `override log expected, got: ${JSON.stringify(logs)}`);
+});
+
+test('city cross-check: unresolvable adjacent location clears a contradicting city; never guesses', () => {
+  const parser = createParser();
+  const cityConfig = { nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'] } };
+  const corpus = ['FURBALL SUMMER', '@ MAD.BEAR Beach', 'Benidorm, Spain', 'LA NOGALERA'].join('\n');
+  const event = { title: 'FURBALL SUMMER', city: 'new york', bar: 'MAD.BEAR Beach' };
+  const logs = captureLogs(() => {
+    parser.crossCheckCityAgainstAdjacentLocation(event, parser.buildAiEvidenceContextFromText(corpus), cityConfig);
+  });
+  assert.equal('city' in event, false, 'city cleared — unknown routes to chunky-dad-unknown, the safe path');
+  assert.equal(event._citySource, undefined, 'no provenance stamp on a clear');
+  assert.ok(logs.includes(
+    '🤖 AI Web: Extracted city "new york" contradicts adjacent location line "Benidorm, Spain" — city cleared, event will need manual review'
+  ), `clear log expected, got: ${JSON.stringify(logs)}`);
+});
+
+test('city cross-check: fail-open paths — no location line, agreeing location line, no city, no anchors', () => {
+  const parser = createParser();
+  const cityConfig = { nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'] } };
+
+  // No adjacent location line → untouched, no stamp, no log
+  const noLine = { title: 'X', city: 'new york', bar: 'Rockbar' };
+  const noLineLogs = captureLogs(() => {
+    parser.crossCheckCityAgainstAdjacentLocation(
+      noLine, parser.buildAiEvidenceContextFromText('PARTY\n@ Rockbar\nDoors at 10pm'), cityConfig);
+  });
+  assert.equal(noLine.city, 'new york');
+  assert.equal(noLine._citySource, undefined);
+  assert.equal(noLineLogs.length, 0);
+
+  // Location line that resolves to the SAME city → untouched, no log
+  const agrees = { title: 'X', city: 'new york', bar: 'Rockbar' };
+  const agreesLogs = captureLogs(() => {
+    parser.crossCheckCityAgainstAdjacentLocation(
+      agrees, parser.buildAiEvidenceContextFromText('PARTY\n@ Rockbar\nNew York, NY'), cityConfig);
+  });
+  assert.equal(agrees.city, 'new york');
+  assert.equal(agrees._citySource, undefined, 'no stamp when the page merely agrees');
+  assert.equal(agreesLogs.length, 0);
+
+  // No extracted city (live or dropped) → untouched
+  const noCity = { title: 'X', bar: 'Rockbar' };
+  parser.crossCheckCityAgainstAdjacentLocation(
+    noCity, parser.buildAiEvidenceContextFromText('@ Rockbar\nTorremolinos, Spain'), cityConfig);
+  assert.equal(noCity.city, undefined);
+
+  // No bar/address anchors → untouched
+  const noAnchor = { title: 'X', city: 'new york' };
+  parser.crossCheckCityAgainstAdjacentLocation(
+    noAnchor, parser.buildAiEvidenceContextFromText('Torremolinos, Spain'), cityConfig);
+  assert.equal(noAnchor.city, 'new york');
+});
+
+test('prompt capture: city guidance and strengthened context header are present, base texts byte-identical', () => {
+  const parser = createParser();
+  const htmlData = {
+    url: 'https://furball.nyc/madbear',
+    html: 'FURBALL MAD.BEAR',
+    ocrResults: [{ url: 'https://furball.nyc/flyer.jpg', text: 'NYC', eventSummary: 'Furball NYC event summary' }]
+  };
+  const prompt = parser.buildExtractionPrompt(htmlData, {}, null, {}, ['title', 'city'], 'SNIPPET', 'default', { ocr: true });
+
+  // The ADDITIONAL CONTEXT header keeps its original text with ONLY the new clause appended
+  const expectedHeader = 'ADDITIONAL CONTEXT (DO NOT EXTRACT FROM THIS — for disambiguation only, e.g. resolving festival vs. event name conflicts — never cite it as evidence):';
+  assert.ok(prompt.includes(expectedHeader), 'strengthened context header expected');
+  assert.equal(prompt.split('ADDITIONAL CONTEXT').length, 2, 'exactly one context header');
+
+  // The city line is the schema description byte-identical plus ONLY the appended guidance
+  const cityLine = prompt.split('\n').find(line => line.startsWith('- city: '));
+  const schemaDescription = parser.getEventSchemaPromptFieldDescription('city');
+  assert.ok(schemaDescription, 'schema city description resolves');
+  assert.equal(
+    cityLine,
+    `- city: ${schemaDescription} The promoter's home city in branding, logos, or website domains (e.g. a .nyc domain) is NOT the event city — use explicit location statements (e.g. "Torremolinos, Spain") near the venue/address.`
+  );
+});

@@ -1827,3 +1827,39 @@ test('geo-POI harvest stashes _geoPoiName/_geoPoiBarMatch on the event for the e
   assert.ok(!('_geoPoiName' in inertEvent), 'no harvest → no stash');
   assert.ok(!('_geoPoiBarMatch' in inertEvent));
 });
+
+// === run 20260723-123149: resolved cities must never contaminate the persisted address ===
+
+test('LocationNormalizer never persists a resolved city into the address; the maps QUERY still gets it', () => {
+  // Mirror production nyc patterns: "manhattan" is the longest pattern, which
+  // is exactly how "LA NOGALERA" was stored as "LA NOGALERA, Manhattan".
+  const core = new SharedCore(
+    { nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc', 'manhattan'] } },
+    { eventSchema: EventSchema }
+  );
+  const normalizer = new LocationNormalizer(core);
+  const event = { title: 'FURBALL MAD.BEAR', city: 'nyc', address: 'LA NOGALERA' };
+
+  normalizer.normalize(event);
+
+  assert.equal(event.address, 'LA NOGALERA', 'persisted address must stay exactly as extracted');
+  assert.ok(!String(event.address).includes('Manhattan'), 'regression: no ", Manhattan" appended');
+  // Query-time decoration is still allowed: the generated maps link may use the
+  // city-anchored variant of the incomplete address.
+  assert.ok(String(event.gmaps || '').includes(encodeURIComponent('LA NOGALERA, Manhattan')),
+    `maps query keeps city anchoring, got: ${event.gmaps}`);
+});
+
+test('LocationNormalizer leaves complete addresses and their maps links untouched', () => {
+  const core = new SharedCore(
+    { nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc', 'manhattan'] } },
+    { eventSchema: EventSchema }
+  );
+  const normalizer = new LocationNormalizer(core);
+  const event = { title: 'UNDERBEAR', city: 'nyc', address: '125 Christopher St, New York, NY 10014' };
+
+  normalizer.normalize(event);
+
+  assert.equal(event.address, '125 Christopher St, New York, NY 10014');
+  assert.ok(String(event.gmaps || '').includes(encodeURIComponent('125 Christopher St, New York, NY 10014')));
+});
