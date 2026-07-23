@@ -343,6 +343,18 @@ const CITY_CONFIG = {
         mapZoom: 10,
         visible: false
     },
+    'asbury-park': {
+        name: 'Asbury Park',
+        emoji: '🏖️',
+        tagline: 'Jersey Shore bear beach',
+        calendarId: '2da5ea7c34b3280c8b09f21f16f3c1e44a71838e9e8319009b55facee5ff9e43@group.calendar.google.com',
+        calendar: 'chunky-dad-asbury-park',
+        timezone: 'America/New_York',
+        patterns: ['asbury park', 'asbury'],
+        coordinates: { lat: 40.2204, lng: -74.0121 },
+        mapZoom: 13,
+        visible: false
+    },
     'torremolinos': {
         name: 'Torremolinos',
         emoji: '🌞',
