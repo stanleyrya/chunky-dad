@@ -843,6 +843,72 @@ class SharedCore {
         return candidates.has(normalizedTitle);
     }
 
+    // A leading or trailing DATE-ONLY title segment ("CHUNK DORE ALLEY -
+    // Saturday July 25th", "Sept. 19 | CHUNK Chicago", "CHUNK - 7/25"):
+    // separator ([-–—|:•] or comma) + optional weekday + month name (full or
+    // 3-letter, optional period) + day number with optional ordinal + optional
+    // year — or a pure numeric M/D(/YYYY) form attached by separator. On a
+    // calendar the printed date is pure redundancy (startDate carries it), and
+    // a dated variant could beat the clean one in title merges under the
+    // more-descriptive rule. Edition years attached to words ("DECADENCE
+    // 2026", "Pride 2027") are NOT date segments — a bare year without a
+    // month+day never matches. Returns { base, month, day, year } — base is
+    // the remainder with leftover separators/whitespace collapsed, guaranteed
+    // non-empty and ≥3 chars; year is null when the title prints none — or
+    // null when no such segment exists (fail open on any parse uncertainty).
+    // Static + pure string logic so the ai-web parser's extraction-time strip
+    // shares this ONE implementation via the module export (shared-core is
+    // upstream of the parsers).
+    static detectTitleDateSegment(title) {
+        if (typeof title !== 'string') return null;
+        const text = title.replace(/\s+/g, ' ').trim();
+        if (!text) return null;
+        const MONTH_NUMBERS = {
+            jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3,
+            apr: 4, april: 4, may: 5, jun: 6, june: 6, jul: 7, july: 7,
+            aug: 8, august: 8, sep: 9, sept: 9, september: 9,
+            oct: 10, october: 10, nov: 11, november: 11, dec: 12, december: 12
+        };
+        const weekdayPart = '(?:(?:mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:r(?:s(?:day)?)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)\\.?,?\\s+)?';
+        const monthPart = '(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\\.?';
+        const dayPart = '(\\d{1,2})(?:st|nd|rd|th)?';
+        const yearPart = '(?:,?\\s+(\\d{4}))?';
+        const wordySegment = `${weekdayPart}${monthPart}\\s+${dayPart}${yearPart}`;
+        const numericSegment = '(\\d{1,2})\\s*\\/\\s*(\\d{1,2})(?:\\s*\\/\\s*(\\d{4}))?';
+        const separatorPart = '\\s*(?:[-–—|:•]|,)\\s*';
+        const attempts = [
+            { regex: new RegExp(`^(.*?)${separatorPart}${wordySegment}$`, 'i'), wordy: true, base: 1, month: 2, day: 3, year: 4 },
+            { regex: new RegExp(`^(.*?)${separatorPart}${numericSegment}$`, 'i'), wordy: false, base: 1, month: 2, day: 3, year: 4 },
+            { regex: new RegExp(`^${wordySegment}${separatorPart}(.*)$`, 'i'), wordy: true, base: 4, month: 1, day: 2, year: 3 },
+            { regex: new RegExp(`^${numericSegment}${separatorPart}(.*)$`, 'i'), wordy: false, base: 4, month: 1, day: 2, year: 3 }
+        ];
+        for (const attempt of attempts) {
+            const match = text.match(attempt.regex);
+            if (!match) continue;
+            const month = attempt.wordy
+                ? (MONTH_NUMBERS[String(match[attempt.month] || '').toLowerCase()] || null)
+                : parseInt(match[attempt.month], 10);
+            const day = parseInt(match[attempt.day], 10);
+            const year = match[attempt.year] ? parseInt(match[attempt.year], 10) : null;
+            if (!month || month < 1 || month > 12) continue;
+            if (!day || day < 1 || day > 31) continue;
+            if (year !== null && (year < 1900 || year > 2100)) continue;
+            const base = String(match[attempt.base] || '')
+                .replace(/^[\s\-–—|:•,]+|[\s\-–—|:•,]+$/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+            if (!base || base.length < 3) continue;
+            return { base, month, day, year };
+        }
+        return null;
+    }
+
+    // Instance view of the static detector — merge rungs and downstream
+    // callers hold a SharedCore instance.
+    detectTitleDateSegment(title) {
+        return SharedCore.detectTitleDateSegment(title);
+    }
+
     // A value shaped like a street address is NEVER a venue name. Anchored on
     // a leading house number (incl. hyphenated Queens style "10-90") with a
     // street-type word appearing somewhere after it. The leading-number anchor
@@ -1234,6 +1300,36 @@ class SharedCore {
                     reason: 'emoji title variant beats its emoji-stripped twin'
                 };
             }
+            // A date-only segment welded onto the title ("CHUNK Chicago -
+            // September 19th" vs "CHUNK Chicago") is pure redundancy on a
+            // calendar — the date lives in startDate — and the arbitration
+            // model's more-descriptive preference could otherwise let the
+            // dated variant win. When the two candidates are IDENTICAL after
+            // removing such a segment (detectTitleDateSegment, the SAME
+            // detector the ai-web parser's extraction-time strip uses) and
+            // exactly one side carries it, the DATELESS side wins. The
+            // identical-after-removal requirement is the whole justification:
+            // both sides already agree on the base name, so no startDate
+            // validation is needed here (merge-side startDates are combined,
+            // possibly past-midnight-rolled UTC instants that cannot be
+            // compared to the printed local date reliably). Both dated, both
+            // dateless, or genuinely different base names fall through (AI
+            // arbitrates, with a prompt rule as backstop). MUST run before
+            // the bare-city rule below: a dated bare-city twin ("New Orleans
+            // - July 25" vs "New Orleans") should resolve dateless-first,
+            // not count as a "named" title.
+            const dateSegmentA = SharedCore.detectTitleDateSegment(valueA);
+            const dateSegmentB = SharedCore.detectTitleDateSegment(valueB);
+            if (Boolean(dateSegmentA) !== Boolean(dateSegmentB)) {
+                const datedSegment = dateSegmentA || dateSegmentB;
+                const datelessTitle = (dateSegmentA ? valueB : valueA).replace(/\s+/g, ' ').trim();
+                if (datedSegment.base === datelessTitle) {
+                    return {
+                        winner: dateSegmentA ? 'b' : 'a',
+                        reason: 'date-only suffix is redundant, kept the dateless title'
+                    };
+                }
+            }
             // A bare city is not an event name: when exactly one side's title is
             // just the event's city (per isCityOnlyTitle), the named side wins.
             // MUST run after the emoji-twin rule above — twins like "New Orleans"
@@ -1508,6 +1604,7 @@ class SharedCore {
             '- For "title", when both variants name the same event, prefer the MORE DESCRIPTIVE one — a subtitle, theme, edition, or anniversary (e.g. "Treasure Trail Seattle: Summer Sausage" over "Treasure Trail Seattle") is part of the event\'s identity, not noise.',
             '- For "title", extra text does NOT count as descriptive when it is only status text (e.g. sold-out notices) or site branding — never prefer a variant for those.',
             '- For "title", a bare city name is not an event name — prefer the variant that names the event or its organizer.',
+            '- For "title", the event\'s own date is NOT descriptive — never prefer a variant because it contains a date; prefer the dateless variant of an otherwise-equal name.',
             '- For "image", prefer event-specific promotional artwork over site or ticketing-service logos.',
             `- "pick" must be "${labelA}" or "${labelB}".`,
             'Return JSON only:',
@@ -8052,7 +8149,13 @@ SharedCore.PROVENANCE_TRUST_TIERS = Object.freeze({
 
 // Export for both environments
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { SharedCore, PROVENANCE_COMPANION_FIELDS: SharedCore.PROVENANCE_COMPANION_FIELDS };
+    module.exports = {
+        SharedCore,
+        PROVENANCE_COMPANION_FIELDS: SharedCore.PROVENANCE_COMPANION_FIELDS,
+        // Pure title date-segment detector, shared with the ai-web parser's
+        // extraction-time strip (one implementation, defined upstream here).
+        detectTitleDateSegment: SharedCore.detectTitleDateSegment
+    };
 } else if (typeof window !== 'undefined') {
     window.SharedCore = SharedCore;
 } else {

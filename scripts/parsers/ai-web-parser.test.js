@@ -1446,6 +1446,106 @@ test('normalizeAiEvent keeps a bare-city title when no organizer or no city is k
   assert.equal(unknownCity.title, 'Denver');
 });
 
+test('normalizeAiEvent strips a redundant title date matching startDate (real run 20260723 cases)', () => {
+  const parser = createParser();
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let doreAlley;
+  let chicago;
+  try {
+    doreAlley = parser.normalizeAiEvent(
+      { title: 'CHUNK DORE ALLEY - Saturday July 25th', startDate: '2026-07-25', startTime: '15:00', timezone: 'America/Los_Angeles' },
+      {}, null, null, null);
+    chicago = parser.normalizeAiEvent(
+      { title: 'CHUNK Chicago - September 19th', startDate: '2026-09-19', timezone: 'America/Chicago' },
+      {}, null, null, null);
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(doreAlley.title, 'CHUNK DORE ALLEY');
+  assert.equal(chicago.title, 'CHUNK Chicago');
+  assert.ok(logs.includes(
+    '🤖 AI Web: Stripped redundant date from title ("CHUNK DORE ALLEY - Saturday July 25th" → "CHUNK DORE ALLEY")'
+  ), `additive strip log line expected, got: ${JSON.stringify(logs)}`);
+});
+
+test('normalizeAiEvent strips leading date segments and every separator/month spelling variant', () => {
+  const parser = createParser();
+  const cases = [
+    ['Saturday July 25th - CHUNK DORE ALLEY', '2026-07-25', 'CHUNK DORE ALLEY'],
+    ['CHUNK PDX | Aug 22nd', '2026-08-22', 'CHUNK PDX'],
+    ['CHUNK PDX – Aug. 22', '2026-08-22', 'CHUNK PDX'],
+    ['CHUNK Chicago, September 19th, 2026', '2026-09-19', 'CHUNK Chicago'],
+    ['CHUNK - 7/25', '2026-07-25', 'CHUNK']
+  ];
+  for (const [title, startDate, expected] of cases) {
+    const event = parser.normalizeAiEvent(
+      { title, startDate, timezone: 'America/Los_Angeles' }, {}, null, null, null);
+    assert.equal(event.title, expected, `"${title}" should strip to "${expected}"`);
+  }
+});
+
+test('normalizeAiEvent KEEPS a title date that mismatches startDate and flags it for manual review', () => {
+  const parser = createParser();
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let event;
+  try {
+    event = parser.normalizeAiEvent(
+      { title: 'CHUNK Chicago - September 19th', startDate: '2026-09-26', timezone: 'America/Chicago' },
+      {}, null, null, null);
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(event.title, 'CHUNK Chicago - September 19th', 'mismatching printed date is never stripped');
+  assert.ok(logs.includes(
+    '🤖 AI Web: Title contains a date that does not match startDate ("CHUNK Chicago - September 19th" vs 2026-09-26) — kept, verify manually'
+  ), `verify-manually log line expected, got: ${JSON.stringify(logs)}`);
+});
+
+test('normalizeAiEvent never treats edition years or short remainders as date segments', () => {
+  const parser = createParser();
+
+  // Edition year attached to a word: a bare year without month+day never qualifies
+  const decadence = parser.normalizeAiEvent(
+    { title: 'DECADENCE 2026', startDate: '2026-08-30', timezone: 'America/Chicago' }, {}, null, null, null);
+  assert.equal(decadence.title, 'DECADENCE 2026');
+  const pride = parser.normalizeAiEvent(
+    { title: 'Pride 2027', startDate: '2027-06-26', timezone: 'America/New_York' }, {}, null, null, null);
+  assert.equal(pride.title, 'Pride 2027');
+
+  // Remainder after removal too short (<3 chars) → untouched
+  const shortBase = parser.normalizeAiEvent(
+    { title: 'GO - July 25th', startDate: '2026-07-25', timezone: 'America/New_York' }, {}, null, null, null);
+  assert.equal(shortBase.title, 'GO - July 25th');
+
+  // No startDate at all → the strip never runs; normalization still fails
+  // closed on the missing date exactly as before (pre-existing behavior).
+  assert.equal(parser.normalizeAiEvent({ title: 'CHUNK - July 25th' }, {}, null, null, null), null);
+});
+
+test('normalizeAiEvent title date-strip matches the PRINTED local date even when UTC rolls past midnight', () => {
+  const parser = createParser();
+  // 21:00 in LA is 04:00 UTC the NEXT day — the comparison must use the
+  // original extracted startDate string, not the rolled timestamp.
+  const event = parser.normalizeAiEvent(
+    { title: 'CHUNK DORE ALLEY - July 25th', startDate: '2026-07-25', startTime: '21:00', timezone: 'America/Los_Angeles' },
+    {}, null, null, null);
+  assert.equal(event.startDate.toISOString(), '2026-07-26T04:00:00.000Z', 'the stored instant really is past midnight UTC');
+  assert.equal(event.title, 'CHUNK DORE ALLEY', 'the printed date still matches its local calendar date');
+});
+
+test('extraction prompt description instruction tells the model not to lead with the date', () => {
+  global.EventSchema = EventSchema; // earlier tests leak a mocked schema — pin the real one
+  const parser = createParser();
+  const prompt = parser.buildExtractionPrompt(null, {}, null, {}, ['title', 'description'], 'SNIPPET', 'default', {});
+  assert.match(prompt,
+    /- description: Event description\/tagline from source text; do not invent details\. Do not lead with the event's date\/time \(those are captured separately\) — start from the actual description text\./,
+    'the schema line stays intact with the new sentence appended');
+});
+
 test('the JSON-LD fast path applies the bare-city organizer prefix too', async () => {
   const parser = createParser();
   const html = `

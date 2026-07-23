@@ -872,6 +872,50 @@ test('guardrail: emoji twin detection covers ⚜️, ⚓ and ⛓️ in both dire
   assert.equal(core.resolveConflictDeterministically('title', '🐻', '⚓'), null, 'pure-emoji titles are not twins');
 });
 
+test('guardrail: a dateless title beats its dated twin in both directions; both dated or different names fall through', () => {
+  const core = createCore();
+  assert.deepEqual(
+    core.resolveConflictDeterministically('title', 'CHUNK Chicago - September 19th', 'CHUNK Chicago'),
+    { winner: 'b', reason: 'date-only suffix is redundant, kept the dateless title' });
+  assert.deepEqual(
+    core.resolveConflictDeterministically('title', 'CHUNK DORE ALLEY', 'CHUNK DORE ALLEY - Saturday July 25th'),
+    { winner: 'a', reason: 'date-only suffix is redundant, kept the dateless title' });
+  // Both candidates dated → a genuine question, falls through to existing behavior
+  assert.equal(core.resolveConflictDeterministically('title', 'CHUNK - July 25th', 'CHUNK - Jul 25'), null,
+    'both dated → arbitrate');
+  // Genuinely different base names keep existing behavior
+  assert.equal(core.resolveConflictDeterministically('title', 'CHUNK Chicago - September 19th', 'CHUNK Portland'), null,
+    'different names → arbitrate');
+  // Edition years attached to words are not date segments
+  assert.equal(core.resolveConflictDeterministically('title', 'DECADENCE 2026', 'DECADENCE'), null,
+    'a bare year is part of the name, not a date segment');
+});
+
+test('guardrail: dated vs dateless same-name title resolves without AI, with the stable 🔒 line', async () => {
+  const core = createCore();
+  const { scraped, existing } = buildAlignedArbitrationPair();
+  existing.title = 'CHUNK Chicago - September 19th';
+  scraped.title = 'CHUNK Chicago';
+  const adapter = buildArbitrationAdapter({});
+
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (message) => { logLines.push(String(message)); };
+  let finalEvent;
+  try {
+    finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.equal(adapter.calls.length, 0, 'a redundant date suffix is not a conflict — zero AI requests');
+  assert.equal(finalEvent.title, 'CHUNK Chicago', 'the dateless title wins');
+  assert.deepEqual(finalEvent._original.aiArbitration.deterministic, ['title']);
+  assert.ok(logLines.includes(
+    '🔒 MERGE: "CHUNK Chicago" field=title resolved deterministically — date-only suffix is redundant, kept the dateless title'
+  ), `stable 🔒 log line expected, got: ${JSON.stringify(logLines)}`);
+});
+
 // ---------------------------------------------------------------------------
 // url/website canonicalization (ONE logical field: website is canonical and
 // round-trips via the "website:" notes line; url is an output view of it) and
@@ -4144,6 +4188,20 @@ test('arbitration prompt omits the organizer line when no event carries _organiz
 
   assert.equal(adapter.calls.length, 1);
   assert.ok(!/KNOWN ORGANIZER/.test(adapter.calls[0].prompt));
+});
+
+test('arbitration prompt carries the dates-are-not-descriptive title rule', async () => {
+  const core = createCore();
+  const { scraped, existing } = buildArbitrationPair(); // genuine title conflict reaches the AI
+  const adapter = buildArbitrationAdapter({});
+
+  await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+
+  assert.equal(adapter.calls.length, 1);
+  assert.match(
+    adapter.calls[0].prompt,
+    /- For "title", the event's own date is NOT descriptive — never prefer a variant because it contains a date; prefer the dateless variant of an otherwise-equal name\./,
+    'the backstop rule guards dated titles the deterministic rung cannot settle');
 });
 
 test('mergeParsedEvents passes the organizer to arbitration and carries _organizer across merges', async () => {

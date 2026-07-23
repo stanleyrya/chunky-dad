@@ -25,6 +25,31 @@ const ImportedEventSchema = (() => {
     return null;
 })();
 
+// SharedCore's title date-segment detector (ONE implementation, shared with
+// the deterministic merge rung — defined upstream in shared-core.js and
+// exported from there). The wired this.core reference is preferred at the
+// call site; this import is the fallback for isolated construction (tests).
+// Missing both → the title date-strip fails open (title kept).
+const ImportedDetectTitleDateSegment = (() => {
+    try {
+        if (typeof importModule === 'function') {
+            const sharedCoreModule = importModule('shared-core');
+            if (sharedCoreModule && typeof sharedCoreModule.detectTitleDateSegment === 'function') {
+                return sharedCoreModule.detectTitleDateSegment;
+            }
+        }
+    } catch (_) {}
+    try {
+        if (typeof require === 'function') {
+            const sharedCoreModule = require('../shared-core');
+            if (sharedCoreModule && typeof sharedCoreModule.detectTitleDateSegment === 'function') {
+                return sharedCoreModule.detectTitleDateSegment;
+            }
+        }
+    } catch (_) {}
+    return null;
+})();
+
 // Persistent cache entries (OCR, classification) are retained by LAST USE, not
 // write date: cache hits refresh a `lastUsedAt` payload field so recurring
 // flyers survive the adapter's end-of-run pruning. Refreshes are rate-limited
@@ -6136,6 +6161,14 @@ class AiWebParser {
         const normalized = this.normalizePromptFieldName(field);
         const schemaDescription = this.getEventSchemaPromptFieldDescription(normalized);
         let description = schemaDescription || 'Event field';
+        // Prompt-only steering (run 20260723 findings): source sites lead the
+        // description with the event's own date line ("CHUNK returns to PDX…
+        // Saturday AUGUST 22nd!"), which is redundant next to startDate/
+        // startTime. Appended to the schema line so the schema text itself
+        // stays byte-identical.
+        if (normalized === 'description') {
+            description += ` Do not lead with the event's date/time (those are captured separately) — start from the actual description text.`;
+        }
         return description;
     }
 
@@ -7788,6 +7821,50 @@ TEXT:
         if (!title || !startDate) {
             console.warn(`🤖 AI Web: Normalization failed — title=${title}, startDate=${startDate}`);
             return null;
+        }
+
+        // Deterministic title date-strip: source sites bake the date into the
+        // title ("CHUNK DORE ALLEY - Saturday July 25th") — on a calendar that
+        // date is pure redundancy (startDate carries it), and a dated variant
+        // could beat the clean one in title merges under the more-descriptive
+        // rule. Strip ONLY when the printed date provably matches the event's
+        // own startDate, compared against the ORIGINAL extracted date string
+        // (aiEvent.startDate / aiEvent.start — pre-normalization): the
+        // combined startDate above may have rolled past midnight in UTC (late
+        // local start times) or been year-adjusted, so its ISO date can
+        // legitimately differ from the printed local date. startDateRaw's ISO
+        // date part is the same local-date view the combination logic itself
+        // uses, so it is a safe fallback. The detector lives in SharedCore
+        // (detectTitleDateSegment — one implementation, shared with the merge
+        // rung); a mismatching printed date keeps the title and leaves a
+        // manual-review trail. Any parse uncertainty fails open (title kept).
+        const detectTitleDateSegment = this.core && typeof this.core.detectTitleDateSegment === 'function'
+            ? (value) => this.core.detectTitleDateSegment(value)
+            : ImportedDetectTitleDateSegment;
+        const titleDateSegment = typeof detectTitleDateSegment === 'function' ? detectTitleDateSegment(title) : null;
+        if (titleDateSegment) {
+            const extractLocalDateParts = (value) => {
+                if (typeof value !== 'string') return null;
+                const match = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s]|$)/);
+                if (!match) return null;
+                return { year: parseInt(match[1], 10), month: parseInt(match[2], 10), day: parseInt(match[3], 10) };
+            };
+            const expectedDate = extractLocalDateParts(aiEvent.startDate)
+                || extractLocalDateParts(aiEvent.start)
+                || (startDateRaw instanceof Date && !Number.isNaN(startDateRaw.getTime())
+                    ? extractLocalDateParts(startDateRaw.toISOString())
+                    : null);
+            if (expectedDate) {
+                const monthDayMatches = titleDateSegment.month === expectedDate.month && titleDateSegment.day === expectedDate.day;
+                const yearMatches = titleDateSegment.year === null || titleDateSegment.year === expectedDate.year;
+                if (monthDayMatches && yearMatches) {
+                    console.log(`🤖 AI Web: Stripped redundant date from title ("${title}" → "${titleDateSegment.base}")`);
+                    title = titleDateSegment.base;
+                } else {
+                    const expectedIso = `${expectedDate.year}-${String(expectedDate.month).padStart(2, '0')}-${String(expectedDate.day).padStart(2, '0')}`;
+                    console.log(`🤖 AI Web: Title contains a date that does not match startDate ("${title}" vs ${expectedIso}) — kept, verify manually`);
+                }
+            }
         }
 
         const event = {
