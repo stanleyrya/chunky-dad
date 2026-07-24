@@ -57,64 +57,6 @@
       "slug": "cubhouse-philly-pride-2026-kickoff-dance-party-242e4df9"
     },
     {
-      "name": "CUBHOUSE PHILLY HALLOWEEN DANCE PARTY",
-      "day": "Friday",
-      "time": "9PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 39.9470542,
-        "lng": -75.161054
-      },
-      "startDate": "2025-10-31T21:00:00",
-      "endDate": "2025-11-01T02:00:00",
-      "unprocessedDescription": "description: CUBHOUSE returns on October 31st for a HALLOWEEN D\rANCE PART!\nbar: 254\naddress: 254 South 12th Street, Philadelphia, PA 19107\ntimezone: America/New_York\nticketUrl: https://www.eventbrite.com/e/cubhouse-philly-halloween-dance-party-tickets-1633106779339\ncover: $18.09 - $29.14 (as of 10/11)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1107233553%2F2544065821071%2F1%2Foriginal.20250828-015122?crop=focalpoint&fit=crop&w=600&auto=format%2Ccompress&q=75&sharp=10&fp-x=4.75680933852e-05&fp-y=8.98832684825e-05&s=af53a251c09f02c722723a1a4c940b29\nshortName: CUB-HOUSE\ninstagram: https://www.instagram.com/cubhouse.philly\nurl: https://linktr.ee/cubhouse\ngmaps: https://www.google.com/maps/search/?api=1&query=39.9470542%2C-75.161054&query_place_id=101718083\nkey: cubhouse-philly-halloween-dance-party|2025-11-01|254|eventbrite",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "3D97C917-CD83-44B2-A03C-0F6095F987D2",
-      "uid": "3D97C917-CD83-44B2-A03C-0F6095F987D2",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "254",
-      "cover": "$18.09 - $29.14 (as of 10/11)",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1107233553%2F2544065821071%2F1%2Foriginal.20250828-015122?crop=focalpoint&fit=crop&w=600&auto=format%2Ccompress&q=75&sharp=10&fp-x=4.75680933852e-05&fp-y=8.98832684825e-05&s=af53a251c09f02c722723a1a4c940b29",
-      "tea": "CUBHOUSE returns on October 31st for a HALLOWEEN DANCE PART!",
-      "address": "254 South 12th Street, Philadelphia, PA 19107",
-      "website": "https://linktr.ee/cubhouse",
-      "instagram": "https://www.instagram.com/cubhouse.philly",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=39.9470542%2C-75.161054&query_place_id=101718083",
-      "ticketUrl": "https://www.eventbrite.com/e/cubhouse-philly-halloween-dance-party-tickets-1633106779339",
-      "shortName": "CUB-HOUSE",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://linktr.ee/cubhouse",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/cubhouse.philly",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=39.9470542%2C-75.161054&query_place_id=101718083",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/cubhouse-philly-halloween-dance-party-tickets-1633106779339",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "cubhouse-philly-halloween-dance-party-7f59fc8c"
-    },
-    {
       "name": "CUBHOUSE PHILLY SUMMER DANCE PARTY",
       "day": "Friday",
       "time": "9PM-2AM",
@@ -126,7 +68,7 @@
       },
       "startDate": "2026-08-28T21:00:00",
       "endDate": "2026-08-29T02:00:00",
-      "unprocessedDescription": "description: The Cubhouse Summer Dance Party is ready for you t\ro book your tickets..\nbar: 254\naddress: 254 South 12th Street, Philadelphia, PA 19107, Philadelphia, PA\nticketUrl: https://www.eventbrite.com/e/cubhouse-philly-summer-dance-party-tickets-1991236940291\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1186272311%2F2544065821071%2F1%2Foriginal.20260605-201701?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.161&fp-y=0.509&s=de10b048fb4b5f7f0a473c50d4902886\ncover: $12.55-$29.14\ntimezone: America/New_York\nshortName: CUB-HOUSE\ninstagram: https://www.instagram.com/cubhouse.philly\nwebsite: https://linktr.ee/cubhouse\ngmaps: https://www.google.com/maps/search/?api=1&query=254%20South%2012th%20Street%2C%20Philadelphia%2C%20PA%2019107%2C%20Philadelphia%2C%20PA",
+      "unprocessedDescription": "description: The Cubhouse Summer Dance Party is ready for you t\ro book your tickets..\nbar: 254\naddress: 254 South 12th Street, Philadelphia, PA 19107\nticketUrl: https://www.eventbrite.com/e/cubhouse-philly-summer-dance-party-tickets-1991236940291\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1186272311%2F2544065821071%2F1%2Foriginal.20260605-201701?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.161&fp-y=0.509&s=de10b048fb4b5f7f0a473c50d4902886\ncover: $12.55-$29.14\ntimezone: America/New_York\nshortName: CUB-HOUSE\ninstagram: https://www.instagram.com/cubhouse.philly\nwebsite: https://linktr.ee/cubhouse\nbearSource: keyword\nkey: cubhouse-philly-summer-dance-party|2026-08-29|254\npinSource: geocoded-exact\naddressSource: page\nimageSource: jsonld\ngmaps: https://www.google.com/maps/search/?api=1&query=254%20South%2012th%20Street%2C%20Philadelphia%2C%20PA%2019107",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
@@ -141,10 +83,10 @@
       "cover": "$12.55-$29.14",
       "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1186272311%2F2544065821071%2F1%2Foriginal.20260605-201701?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.161&fp-y=0.509&s=de10b048fb4b5f7f0a473c50d4902886",
       "tea": "The Cubhouse Summer Dance Party is ready for you to book your tickets..",
-      "address": "254 South 12th Street, Philadelphia, PA 19107, Philadelphia, PA",
+      "address": "254 South 12th Street, Philadelphia, PA 19107",
       "website": "https://linktr.ee/cubhouse",
       "instagram": "https://www.instagram.com/cubhouse.philly",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=254%20South%2012th%20Street%2C%20Philadelphia%2C%20PA%2019107%2C%20Philadelphia%2C%20PA",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=254%20South%2012th%20Street%2C%20Philadelphia%2C%20PA%2019107",
       "ticketUrl": "https://www.eventbrite.com/e/cubhouse-philly-summer-dance-party-tickets-1991236940291",
       "shortName": "CUB-HOUSE",
       "bearReview": null,
@@ -161,7 +103,7 @@
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=254%20South%2012th%20Street%2C%20Philadelphia%2C%20PA%2019107%2C%20Philadelphia%2C%20PA",
+          "url": "https://www.google.com/maps/search/?api=1&query=254%20South%2012th%20Street%2C%20Philadelphia%2C%20PA%2019107",
           "label": "🗺️ Google Maps"
         },
         {
@@ -228,6 +170,64 @@
         }
       ],
       "slug": "cubhouse-philly-valentines-dance-party-33f308ba"
+    },
+    {
+      "name": "CUBHOUSE PHILLY HALLOWEEN DANCE PARTY",
+      "day": "Friday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 39.9470542,
+        "lng": -75.161054
+      },
+      "startDate": "2025-10-31T21:00:00",
+      "endDate": "2025-11-01T02:00:00",
+      "unprocessedDescription": "description: CUBHOUSE returns on October 31st for a HALLOWEEN D\rANCE PART!\nbar: 254\naddress: 254 South 12th Street, Philadelphia, PA 19107\ntimezone: America/New_York\nticketUrl: https://www.eventbrite.com/e/cubhouse-philly-halloween-dance-party-tickets-1633106779339\ncover: $18.09 - $29.14 (as of 10/11)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1107233553%2F2544065821071%2F1%2Foriginal.20250828-015122?crop=focalpoint&fit=crop&w=600&auto=format%2Ccompress&q=75&sharp=10&fp-x=4.75680933852e-05&fp-y=8.98832684825e-05&s=af53a251c09f02c722723a1a4c940b29\nshortName: CUB-HOUSE\ninstagram: https://www.instagram.com/cubhouse.philly\nurl: https://linktr.ee/cubhouse\ngmaps: https://www.google.com/maps/search/?api=1&query=39.9470542%2C-75.161054&query_place_id=101718083\nkey: cubhouse-philly-halloween-dance-party|2025-11-01|254|eventbrite",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "3D97C917-CD83-44B2-A03C-0F6095F987D2",
+      "uid": "3D97C917-CD83-44B2-A03C-0F6095F987D2",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "254",
+      "cover": "$18.09 - $29.14 (as of 10/11)",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1107233553%2F2544065821071%2F1%2Foriginal.20250828-015122?crop=focalpoint&fit=crop&w=600&auto=format%2Ccompress&q=75&sharp=10&fp-x=4.75680933852e-05&fp-y=8.98832684825e-05&s=af53a251c09f02c722723a1a4c940b29",
+      "tea": "CUBHOUSE returns on October 31st for a HALLOWEEN DANCE PART!",
+      "address": "254 South 12th Street, Philadelphia, PA 19107",
+      "website": "https://linktr.ee/cubhouse",
+      "instagram": "https://www.instagram.com/cubhouse.philly",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=39.9470542%2C-75.161054&query_place_id=101718083",
+      "ticketUrl": "https://www.eventbrite.com/e/cubhouse-philly-halloween-dance-party-tickets-1633106779339",
+      "shortName": "CUB-HOUSE",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/cubhouse",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/cubhouse.philly",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=39.9470542%2C-75.161054&query_place_id=101718083",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/cubhouse-philly-halloween-dance-party-tickets-1633106779339",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "cubhouse-philly-halloween-dance-party-7f59fc8c"
     }
   ]
 }

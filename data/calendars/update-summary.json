@@ -15,7 +15,7 @@
     "boston": {
       "name": "Boston",
       "status": "success",
-      "dataLength": 1251,
+      "dataLength": 1355,
       "eventCount": 1
     },
     "chicago": {
@@ -75,7 +75,7 @@
     "philly": {
       "name": "Philadelphia",
       "status": "success",
-      "dataLength": 5981,
+      "dataLength": 6084,
       "eventCount": 4
     },
     "phoenix": {
@@ -111,7 +111,7 @@
     "sf": {
       "name": "San Francisco",
       "status": "success",
-      "dataLength": 18668,
+      "dataLength": 18788,
       "eventCount": 14
     },
     "sitges": {

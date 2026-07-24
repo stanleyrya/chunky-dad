@@ -16,7 +16,7 @@
       },
       "startDate": "2026-07-25T22:00:00",
       "endDate": "2026-07-26T03:00:00",
-      "unprocessedDescription": "description: Bear Week Return\nbar: Legacy\ntimezone: America/N\rew_York\nticketUrl: https://www.ticketweb.com/event/furball-boston-725-bear-week-legacy-tickets/14269444?REFERRAL_ID=tmfeed\ninstagram: https://instagram.com/furballnyc/\nimage: https://static.wixstatic.com/media/238fae_c4047c55f4534a0990b2b7fdc19dab8f~mv2.png\nshortName: FUR-BALL\nfavicon: https://linktr.ee/furballnyc\nimageSource: page\nbarSource: curated\nwebsite: https://www.furball.nyc\ngmaps: https://www.google.com/maps/search/?api=1&query=Legacy%2C%20boston\naddress: 79 Warrenton St, Boston, MA 02116\naddressSource: curated\npinSource: curated",
+      "unprocessedDescription": "description: Bear Week Return\nbar: Legacy\ntimezone: America/N\rew_York\nticketUrl: https://www.ticketweb.com/event/furball-boston-725-bear-week-legacy-tickets/14269444?REFERRAL_ID=tmfeed\ninstagram: https://instagram.com/furballnyc/\nimage: https://static.wixstatic.com/media/238fae_c4047c55f4534a0990b2b7fdc19dab8f~mv2.png\nshortName: FUR-BALL\nfavicon: https://linktr.ee/furballnyc\nwebsite: https://www.furball.nyc\naddress: 79 Warrenton St, Boston, MA 02116\nbearSource: keyword\nkey: furball-boston|2026-07-26|legacy\npinSource: curated\naddressSource: curated\nimageSource: page\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Legacy%2C%2079%20Warrenton%20St%2C%20Boston%2C%20MA%2002116",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
@@ -34,7 +34,7 @@
       "address": "79 Warrenton St, Boston, MA 02116",
       "website": "https://www.furball.nyc",
       "instagram": "https://instagram.com/furballnyc/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Legacy%2C%20boston",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Legacy%2C%2079%20Warrenton%20St%2C%20Boston%2C%20MA%2002116",
       "ticketUrl": "https://www.ticketweb.com/event/furball-boston-725-bear-week-legacy-tickets/14269444?REFERRAL_ID=tmfeed",
       "shortName": "FUR-BALL",
       "bearReview": null,
@@ -51,7 +51,7 @@
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Legacy%2C%20boston",
+          "url": "https://www.google.com/maps/search/?api=1&query=Legacy%2C%2079%20Warrenton%20St%2C%20Boston%2C%20MA%2002116",
           "label": "🗺️ Google Maps"
         },
         {

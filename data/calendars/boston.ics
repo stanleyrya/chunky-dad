@@ -8,7 +8,7 @@ X-WR-TIMEZONE:America/New_York
 BEGIN:VEVENT
 DTSTART:20260726T020000Z
 DTEND:20260726T070000Z
-DTSTAMP:20260724T182941Z
+DTSTAMP:20260724T202910Z
 UID:81BB9D62-D2CA-4E17-B6ED-72E4A2155C8E
 CREATED:20260724T182614Z
 DESCRIPTION:description: Bear Week Return\nbar: Legacy\ntimezone: America/N
@@ -16,11 +16,12 @@ DESCRIPTION:description: Bear Week Return\nbar: Legacy\ntimezone: America/N
  -week-legacy-tickets/14269444?REFERRAL_ID=tmfeed\ninstagram: https://instag
  ram.com/furballnyc/\nimage: https://static.wixstatic.com/media/238fae_c4047
  c55f4534a0990b2b7fdc19dab8f~mv2.png\nshortName: FUR-BALL\nfavicon: https://
- linktr.ee/furballnyc\nimageSource: page\nbarSource: curated\nwebsite: https
- ://www.furball.nyc\ngmaps: https://www.google.com/maps/search/?api=1&query=
- Legacy%2C%20boston\naddress: 79 Warrenton St\, Boston\, MA 02116\naddressSo
- urce: curated\npinSource: curated
-LAST-MODIFIED:20260724T182614Z
+ linktr.ee/furballnyc\nwebsite: https://www.furball.nyc\naddress: 79 Warrent
+ on St\, Boston\, MA 02116\nbearSource: keyword\nkey: furball-boston|2026-07
+ -26|legacy\npinSource: curated\naddressSource: curated\nimageSource: page\n
+ barSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=
+ Legacy%2C%2079%20Warrenton%20St%2C%20Boston%2C%20MA%2002116
+LAST-MODIFIED:20260724T194628Z
 LOCATION:42.3499063\, -71.0658453
 SEQUENCE:0
 STATUS:CONFIRMED

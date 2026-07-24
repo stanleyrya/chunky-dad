@@ -8,7 +8,7 @@ X-WR-TIMEZONE:America/New_York
 BEGIN:VEVENT
 DTSTART:20260606T010000Z
 DTEND:20260606T060000Z
-DTSTAMP:20260715T030146Z
+DTSTAMP:20260724T202910Z
 UID:CBB60667-F22B-4146-A728-88011305369F
 CREATED:20260507T004208Z
 DESCRIPTION:description: CUBHOUSE is back\, and bigger than ever for it's 2
@@ -37,51 +37,25 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20251101T010000Z
-DTEND:20251101T060000Z
-DTSTAMP:20260715T030146Z
-UID:3D97C917-CD83-44B2-A03C-0F6095F987D2
-CREATED:20250930T142205Z
-DESCRIPTION:description: CUBHOUSE returns on October 31st for a HALLOWEEN D
- ANCE PART!\nbar: 254\naddress: 254 South 12th Street\, Philadelphia\, PA 19
- 107\ntimezone: America/New_York\nticketUrl: https://www.eventbrite.com/e/cu
- bhouse-philly-halloween-dance-party-tickets-1633106779339\ncover: $18.09 - 
- $29.14 (as of 10/11)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.
- com%2Fimages%2F1107233553%2F2544065821071%2F1%2Foriginal.20250828-015122?cr
- op=focalpoint&fit=crop&w=600&auto=format%2Ccompress&q=75&sharp=10&fp-x=4.75
- 680933852e-05&fp-y=8.98832684825e-05&s=af53a251c09f02c722723a1a4c940b29\nsh
- ortName: CUB-HOUSE\ninstagram: https://www.instagram.com/cubhouse.philly\nu
- rl: https://linktr.ee/cubhouse\ngmaps: https://www.google.com/maps/search/?
- api=1&query=39.9470542%2C-75.161054&query_place_id=101718083\nkey: cubhouse
- -philly-halloween-dance-party|2025-11-01|254|eventbrite
-LAST-MODIFIED:20251011T213435Z
-LOCATION:39.9470542\, -75.161054
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:CUBHOUSE PHILLY HALLOWEEN DANCE PARTY
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20260829T010000Z
 DTEND:20260829T060000Z
-DTSTAMP:20260715T030146Z
+DTSTAMP:20260724T202910Z
 UID:C6225771-6ECE-409F-9006-7D2D01F8C843
 CREATED:20260715T015005Z
 DESCRIPTION:description: The Cubhouse Summer Dance Party is ready for you t
  o book your tickets..\nbar: 254\naddress: 254 South 12th Street\, Philadelp
- hia\, PA 19107\, Philadelphia\, PA\nticketUrl: https://www.eventbrite.com/e
- /cubhouse-philly-summer-dance-party-tickets-1991236940291\nimage: https://i
- mg.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1186272311%2F2544065821
- 071%2F1%2Foriginal.20260605-201701?crop=focalpoint&fit=crop&w=940&auto=form
- at%2Ccompress&q=75&sharp=10&fp-x=0.161&fp-y=0.509&s=de10b048fb4b5f7f0a473c5
- 0d4902886\ncover: $12.55-$29.14\ntimezone: America/New_York\nshortName: CUB
- -HOUSE\ninstagram: https://www.instagram.com/cubhouse.philly\nwebsite: http
- s://linktr.ee/cubhouse\ngmaps: https://www.google.com/maps/search/?api=1&qu
- ery=254%20South%2012th%20Street%2C%20Philadelphia%2C%20PA%2019107%2C%20Phil
- adelphia%2C%20PA
-LAST-MODIFIED:20260715T015005Z
+ hia\, PA 19107\nticketUrl: https://www.eventbrite.com/e/cubhouse-philly-sum
+ mer-dance-party-tickets-1991236940291\nimage: https://img.evbuc.com/https%3
+ A%2F%2Fcdn.evbuc.com%2Fimages%2F1186272311%2F2544065821071%2F1%2Foriginal.2
+ 0260605-201701?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&s
+ harp=10&fp-x=0.161&fp-y=0.509&s=de10b048fb4b5f7f0a473c50d4902886\ncover: $1
+ 2.55-$29.14\ntimezone: America/New_York\nshortName: CUB-HOUSE\ninstagram: h
+ ttps://www.instagram.com/cubhouse.philly\nwebsite: https://linktr.ee/cubhou
+ se\nbearSource: keyword\nkey: cubhouse-philly-summer-dance-party|2026-08-29
+ |254\npinSource: geocoded-exact\naddressSource: page\nimageSource: jsonld\n
+ gmaps: https://www.google.com/maps/search/?api=1&query=254%20South%2012th%2
+ 0Street%2C%20Philadelphia%2C%20PA%2019107
+LAST-MODIFIED:20260724T194738Z
 LOCATION:39.9470604\, -75.1612067
 SEQUENCE:0
 STATUS:CONFIRMED
@@ -93,7 +67,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260214T020000Z
 DTEND:20260214T070000Z
-DTSTAMP:20260715T030146Z
+DTSTAMP:20260724T202910Z
 UID:C9791D00-2BAB-4EB3-8347-4823E6C75F4A
 CREATED:20260117T204747Z
 DESCRIPTION:description: CUBHOUSE returns for dancing with your VALENTINE'S
@@ -115,6 +89,33 @@ LOCATION:39.9470542\, -75.161054
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:CUBHOUSE PHILLY VALENTINE'S DANCE PARTY
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20251101T010000Z
+DTEND:20251101T060000Z
+DTSTAMP:20260724T202910Z
+UID:3D97C917-CD83-44B2-A03C-0F6095F987D2
+CREATED:20250930T142205Z
+DESCRIPTION:description: CUBHOUSE returns on October 31st for a HALLOWEEN D
+ ANCE PART!\nbar: 254\naddress: 254 South 12th Street\, Philadelphia\, PA 19
+ 107\ntimezone: America/New_York\nticketUrl: https://www.eventbrite.com/e/cu
+ bhouse-philly-halloween-dance-party-tickets-1633106779339\ncover: $18.09 - 
+ $29.14 (as of 10/11)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.
+ com%2Fimages%2F1107233553%2F2544065821071%2F1%2Foriginal.20250828-015122?cr
+ op=focalpoint&fit=crop&w=600&auto=format%2Ccompress&q=75&sharp=10&fp-x=4.75
+ 680933852e-05&fp-y=8.98832684825e-05&s=af53a251c09f02c722723a1a4c940b29\nsh
+ ortName: CUB-HOUSE\ninstagram: https://www.instagram.com/cubhouse.philly\nu
+ rl: https://linktr.ee/cubhouse\ngmaps: https://www.google.com/maps/search/?
+ api=1&query=39.9470542%2C-75.161054&query_place_id=101718083\nkey: cubhouse
+ -philly-halloween-dance-party|2025-11-01|254|eventbrite
+LAST-MODIFIED:20251011T213435Z
+LOCATION:39.9470542\, -75.161054
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:CUBHOUSE PHILLY HALLOWEEN DANCE PARTY
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
