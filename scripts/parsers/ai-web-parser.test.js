@@ -3963,3 +3963,221 @@ test('address gate shape rules: isPlausiblyAddressShaped', () => {
   assert.equal(parser.isPlausiblyAddressShaped('Calle Casablanca 12'), true, 'standalone house-number token anywhere');
   assert.equal(parser.isPlausiblyAddressShaped(''), false);
 });
+
+// ---------------------------------------------------------------------------
+// Evidence-pointer rescue (LOG-ONLY observation phase): "trust the pointer,
+// not the copy". The extraction model is a good FINDER and a bad COPIER —
+// run 20260723-224434 (FURBALL Boston) dropped address "79 Warrenon" whose
+// evidence "79 WARRENTON TICKETS: GAYMAFIABOSTON.COM FURBALL.NYC" sits
+// VERBATIM in the OCR corpus. The rescue logs/stashes what the corpus says
+// there; it must NEVER change a gate decision or any event data.
+// ---------------------------------------------------------------------------
+
+const FURBALL_OCR_TEXT = 'FURBALL BOSTON\nBEAR WEEK RETURN\nSAT, JULY 25\n10pm-3am\n79 WARRENTON TICKETS: GAYMAFIABOSTON.COM FURBALL.NYC';
+const FURBALL_SEGMENT_TEXT = 'SEGMENT_LINK_URL: https://tickets.example/furball-boston\nFURBALL Boston\nJuly 25, 2026\nBoston, MA';
+
+// Gate run with the FURBALL-shaped corpora (OCR text prepended to segment
+// text — the same combined corpus the snippet gate builds).
+function runFurballGate(parser, aiEvent) {
+  const combined = `${FURBALL_OCR_TEXT}\n\n${FURBALL_SEGMENT_TEXT}`;
+  return parser.validateAiEventEvidence(
+    aiEvent,
+    { html: combined, ocrResults: [{ url: 'https://img.example/furball.png', text: FURBALL_OCR_TEXT }] },
+    {}, null,
+    {
+      evidenceContext: parser.buildAiEvidenceContextFromText(combined),
+      validationContext: { imageEvidenceUrls: new Set() }
+    }
+  );
+}
+
+test('evidence-pointer rescue: the canonical retry-pass shape logs the corpus candidate (79 WARRENTON)', () => {
+  const parser = createParser();
+  const captured = captureGateLogs();
+  let result;
+  try {
+    result = runFurballGate(parser, {
+      address: '79 Warrenon',
+      __fieldEvidence: { address: '79 WARRENTON TICKETS: GAYMAFIABOSTON.COM FURBALL.NYC' }
+    });
+  } finally {
+    captured.restore();
+  }
+
+  // The gate decision is untouched: the field is still dropped, in the
+  // pre-existing report shape (no new keys on the dropped entry).
+  assert.equal(result.event.address, undefined, 'rescue must never resurrect the dropped field');
+  assert.deepEqual(result.report.dropped, [{ field: 'address', key: 'address', mode: 'exact', value: '79 Warrenon' }]);
+
+  // The candidate carries the CORPUS's own casing, aligned to the value's
+  // tokens — "79 WARRENTON", not the whole ticket line.
+  assert.deepEqual(result.report.evidenceRescues, [
+    { field: 'address', candidate: '79 WARRENTON', modelValue: '79 Warrenon', corpus: 'ocr' }
+  ]);
+  assert.ok(
+    captured.lines.includes('🤖 AI Web: Evidence-pointer rescue (log-only) for address: corpus has "79 WARRENTON" where model wrote "79 Warrenon" (evidence located in ocr text)'),
+    `rescue log line expected, got: ${JSON.stringify(captured.lines)}`
+  );
+});
+
+test('evidence-pointer rescue: the first-pass rotten-evidence shape gets NO rescue', () => {
+  const parser = createParser();
+  // Real first-pass evidence from run 20260723-224434: inference language
+  // ("likely a typo") AND an ADDITIONAL CONTEXT citation. The pointer itself
+  // is untrustworthy — this class must stay untouched.
+  const result = runFurballGate(parser, {
+    address: '79 Warren',
+    __fieldEvidence: { address: 'OCR_IMAGE_TEXT: "79 WARRENTON"; Additional context clarifies as "79 Warrenon" — likely a typo for "Warren"' }
+  });
+  assert.equal(result.event.address, undefined, 'the field still drops');
+  assert.equal(result.report.evidenceRescues, undefined, 'nothing is stashed for evidence-quality rejections');
+
+  // Inference language ALONE (no context citation) also blocks the rescue.
+  const inferredOnly = runFurballGate(parser, {
+    address: '79 Warren',
+    __fieldEvidence: { address: 'OCR_IMAGE_TEXT: "79 WARRENTON" — likely a typo for "Warren"' }
+  });
+  assert.equal(inferredOnly.report.evidenceRescues, undefined, 'inference-language evidence is a rotten pointer');
+});
+
+test('evidence-pointer rescue: quoted OCR_IMAGE_TEXT envelope yields the corpus-cased candidate', () => {
+  const parser = createParser();
+  const result = runFurballGate(parser, {
+    address: '79 Warrenon',
+    __fieldEvidence: { address: 'OCR_IMAGE_TEXT: "79 WARRENTON"' }
+  });
+  assert.deepEqual(result.report.evidenceRescues, [
+    { field: 'address', candidate: '79 WARRENTON', modelValue: '79 Warrenon', corpus: 'ocr' }
+  ]);
+});
+
+test('evidence-pointer rescue: curly-quote envelopes and multi-fragment citations locate correctly', () => {
+  const parser = createParser();
+  // Curly quotes (bear websites and models are both sloppy).
+  const curly = runFurballGate(parser, {
+    address: '79 Warrenon',
+    __fieldEvidence: { address: 'OCR_IMAGE_TEXT: “79 WARRENTON”' }
+  });
+  assert.deepEqual(curly.report.evidenceRescues, [
+    { field: 'address', candidate: '79 WARRENTON', modelValue: '79 Warrenon', corpus: 'ocr' }
+  ]);
+
+  // Multi-fragment citation where only the SECOND fragment is in the corpus.
+  const multi = runFurballGate(parser, {
+    address: '79 Warrenon',
+    __fieldEvidence: { address: '"NOT ACTUALLY IN THE CORPUS ANYWHERE" and "79 WARRENTON TICKETS"' }
+  });
+  assert.deepEqual(multi.report.evidenceRescues, [
+    { field: 'address', candidate: '79 WARRENTON', modelValue: '79 Warrenon', corpus: 'ocr' }
+  ]);
+});
+
+test('evidence-pointer rescue: unlocatable evidence is a silent no-op (the common case, not an error)', () => {
+  const parser = createParser();
+  const captured = captureGateLogs();
+  let result;
+  try {
+    result = runFurballGate(parser, {
+      address: '123 Fake Street',
+      __fieldEvidence: { address: 'the flyer says 123 Fake Street near the bottom' }
+    });
+  } finally {
+    captured.restore();
+  }
+  assert.equal(result.event.address, undefined, 'the field still drops');
+  assert.equal(result.report.evidenceRescues, undefined, 'no candidate is stashed');
+  assert.ok(!captured.lines.some(line => line.includes('Evidence-pointer rescue')), 'no rescue line is logged');
+
+  // A field with no evidence string at all: also a silent no-op.
+  const noEvidence = runFurballGate(parser, { address: '123 Fake Street' });
+  assert.equal(noEvidence.report.evidenceRescues, undefined);
+});
+
+test('evidence-pointer rescue: a verbatim value passes the gate and the feature never runs', () => {
+  const parser = createParser();
+  const captured = captureGateLogs();
+  let result;
+  try {
+    result = runFurballGate(parser, {
+      address: '79 WARRENTON',
+      __fieldEvidence: { address: '79 WARRENTON TICKETS: GAYMAFIABOSTON.COM FURBALL.NYC' }
+    });
+  } finally {
+    captured.restore();
+  }
+  assert.equal(result.event.address, '79 WARRENTON', 'verbatim value is kept as before');
+  assert.equal(result.report.evidenceRescues, undefined, 'no rescue runs on kept fields');
+  assert.ok(!captured.lines.some(line => line.includes('Evidence-pointer rescue')));
+});
+
+test('evidence-pointer rescue: non-scoped fields (startTime) never rescue even with a verbatim pointer', () => {
+  const parser = createParser();
+  // 23:30 is nowhere in the corpus (flyer says 10pm-3am) → dropped; the
+  // evidence quote IS verbatim, but time fields are out of scope on purpose
+  // (format conversion is not transcription).
+  const result = runFurballGate(parser, {
+    startTime: '23:30',
+    __fieldEvidence: { startTime: 'OCR_IMAGE_TEXT: "10pm-3am"' }
+  });
+  assert.equal(result.event.startTime, undefined, 'the field still drops');
+  assert.equal(result.report.evidenceRescues, undefined, 'time fields are excluded from the rescue scope');
+});
+
+test('evidence-pointer rescue: token alignment takes the corpus span, not the whole located line', () => {
+  const parser = createParser();
+  // Long corpus line + mangled two-token value → aligned "79 WARRENTON":
+  // "79" anchors exactly, "Warrenon" ≈ "WARRENTON" within the edit budget.
+  assert.equal(
+    parser.alignValueTokensInSpan('79 Warrenon', '79 WARRENTON TICKETS: GAYMAFIABOSTON.COM FURBALL.NYC'),
+    '79 WARRENTON'
+  );
+  // No exact anchor anywhere → no alignment (the caller falls back to the
+  // whole fragment, which is acceptable for log-only).
+  assert.equal(parser.alignValueTokensInSpan('Totally Unrelated', '79 WARRENTON TICKETS'), '');
+  // A dissimilar token breaks the window even next to an exact anchor.
+  assert.equal(parser.alignValueTokensInSpan('79 Houston', '79 WARRENTON TICKETS'), '');
+});
+
+test('evidence-pointer rescue: extractSingleEvent stamps deduped _evidenceRescues onto the event', async () => {
+  global.EventSchema = EventSchema; // earlier tests leak a mocked schema — pin the real one
+  const parser = createParser();
+  const combined = `${FURBALL_OCR_TEXT}\n\n${FURBALL_SEGMENT_TEXT}`;
+  // Mocked merged AI result: a snippet-pass rescue memo rides __evidenceRescues
+  // and the final gate re-drops the same mangled address → the two must dedupe
+  // into ONE stashed entry.
+  parser.getAiEvent = async () => ({
+    title: 'FURBALL Boston',
+    startDate: '2026-07-25',
+    address: '79 Warrenon',
+    __fieldEvidence: { address: '79 WARRENTON TICKETS: GAYMAFIABOSTON.COM FURBALL.NYC' },
+    __evidenceRescues: [
+      { field: 'address', candidate: '79 WARRENTON', modelValue: '79 Warrenon', corpus: 'ocr' }
+    ]
+  });
+
+  const event = await parser.extractSingleEvent(
+    {
+      html: combined,
+      url: 'https://www.furball.nyc',
+      ocrResults: [{ url: 'https://img.example/furball.png', text: FURBALL_OCR_TEXT }]
+    },
+    {}, null, ['title', 'address', 'startDate']
+  );
+  assert.ok(event, 'extraction still yields an event');
+  assert.equal(event.address, '', 'the dropped address stays dropped (log-only)');
+  assert.deepEqual(event._evidenceRescues, [
+    { field: 'address', candidate: '79 WARRENTON', modelValue: '79 Warrenon', corpus: 'ocr' }
+  ], 'snippet memo + final-gate rescue dedupe to one entry');
+});
+
+test('evidence-pointer rescue: snippet-pass memos concatenate through mergeAiEventFields', () => {
+  const parser = createParser();
+  const merged = parser.mergeAiEventFields(
+    { __evidenceRescues: [{ field: 'address', candidate: 'A', modelValue: 'a', corpus: 'ocr' }] },
+    { __evidenceRescues: [{ field: 'bar', candidate: 'B', modelValue: 'b', corpus: 'page' }] }
+  );
+  assert.deepEqual(merged.__evidenceRescues, [
+    { field: 'address', candidate: 'A', modelValue: 'a', corpus: 'ocr' },
+    { field: 'bar', candidate: 'B', modelValue: 'b', corpus: 'page' }
+  ]);
+});

@@ -57,6 +57,20 @@ const ImportedDetectTitleDateSegment = (() => {
 // iCloud sync churn).
 const CACHE_TOUCH_INTERVAL_DAYS = 7;
 
+// Evidence-pointer rescue (LOG-ONLY observation phase): the extraction model
+// is a good FINDER and a bad COPIER. When the evidence gate drops a field
+// because the VALUE is not verbatim in the corpus, but the model's own
+// EVIDENCE string IS a verbatim corpus quote, the model located the right
+// text and fumbled the transcription — run 20260723-224434, FURBALL Boston:
+// value "79 Warrenon" cited evidence "79 WARRENTON TICKETS: ..." which sits
+// verbatim in the OCR corpus. "Trust the pointer, not the copy."
+// Scope: text-identity fields ONLY. Date/time fields are excluded on purpose
+// (format conversion is not transcription, and their gates encode inference-
+// safety), city is excluded (normalized key values, not transcriptions) and
+// URL fields are excluded (different validation entirely). Widen HERE once
+// the observation phase proves the heuristic.
+const EVIDENCE_RESCUE_FIELDS = new Set(['bar', 'address', 'cover']);
+
 // ============================================================================
 // NORMALIZATION HELPERS
 // ============================================================================
@@ -703,6 +717,27 @@ class AiWebParser {
                 };
             }
             event._aiValidation = report;
+        }
+        // Evidence-pointer rescue candidates (LOG-ONLY observation phase):
+        // stash on the event as an underscore field (never serialized into
+        // notes — same systematic exclusion as _geoPoi*) so the results-UI
+        // evidence panel can show what the rescue WOULD have adopted. Sources:
+        // snippet-pass memos (__evidenceRescues) plus the final gate's report.
+        const evidenceRescues = []
+            .concat(aiEvent && Array.isArray(aiEvent.__evidenceRescues) ? aiEvent.__evidenceRescues : [])
+            .concat(validationResult.report && Array.isArray(validationResult.report.evidenceRescues) ? validationResult.report.evidenceRescues : []);
+        if (evidenceRescues.length > 0) {
+            const seenRescues = new Set();
+            const dedupedRescues = evidenceRescues.filter(entry => {
+                if (!entry || typeof entry !== 'object') return false;
+                const dedupeKey = `${entry.field}|${entry.candidate}|${entry.modelValue}`;
+                if (seenRescues.has(dedupeKey)) return false;
+                seenRescues.add(dedupeKey);
+                return true;
+            });
+            if (dedupedRescues.length > 0) {
+                event._evidenceRescues = dedupedRescues;
+            }
         }
         return event;
     }
@@ -5457,6 +5492,13 @@ class AiWebParser {
                 };
                 return;
             }
+            // Evidence-pointer rescue memos (LOG-ONLY observation) concatenate
+            // across passes in order — every candidate is surfaced.
+            if (key === '__evidenceRescues' && Array.isArray(value)) {
+                merged.__evidenceRescues = (Array.isArray(merged.__evidenceRescues) ? merged.__evidenceRescues : [])
+                    .concat(value);
+                return;
+            }
             // Dropped-value memos union across passes like the evidence strings
             // above, except EARLIER passes win (the first drop is the one the
             // page-location cross-check anchors on).
@@ -5660,6 +5702,17 @@ class AiWebParser {
                     validatedPartial.__droppedFieldValues[entry.field] = entry.value;
                 }
             });
+            // Evidence-pointer rescue memo (internal, additive, LOG-ONLY):
+            // per-snippet reports are discarded, so rescue candidates ride an
+            // internal field through the merge; extractSingleEvent stamps them
+            // onto the final event as _evidenceRescues for the evidence panel.
+            const partialRescues = partialValidation.report && Array.isArray(partialValidation.report.evidenceRescues)
+                ? partialValidation.report.evidenceRescues
+                : [];
+            if (partialRescues.length > 0) {
+                validatedPartial.__evidenceRescues = (Array.isArray(validatedPartial.__evidenceRescues) ? validatedPartial.__evidenceRescues : [])
+                    .concat(partialRescues);
+            }
 
             // Reject organizer-brand / site-tagline values AT PASS-RESULT TIME:
             // an accepted value consumes the field slot (later passes only ask for
@@ -7541,7 +7594,7 @@ TEXT:
      * Validate a single field value against evidence.
      * Returns true if valid, false if should be dropped.
      */
-    validateFieldValueAgainstEvidence(key, value, rule, evidenceContext, validationContext, report, modelEvidence = '', brandTokens = null) {
+    validateFieldValueAgainstEvidence(key, value, rule, evidenceContext, validationContext, report, modelEvidence = '', brandTokens = null, rescueContext = null) {
         // The ADDITIONAL CONTEXT block carries an explicit DO-NOT-EXTRACT
         // instruction, so evidence citing it fails corroboration for ANY field
         // (see evidenceCitesAdditionalContext).
@@ -7576,10 +7629,248 @@ TEXT:
             if (citesForbiddenContext) droppedEntry.reason = 'context-cited-evidence';
             else if (brandOnlyCityEvidence) droppedEntry.reason = 'brand-cited-evidence';
             report.dropped.push(droppedEntry);
+            // Evidence-pointer rescue (LOG-ONLY observation, additive): runs
+            // AFTER the drop is recorded and never changes it. Eligible only
+            // when the drop's sole cause is "value not verbatim in corpus" —
+            // evidence-quality rejections (context-citing, brand-citing,
+            // invented-time) mean the pointer itself is rotten.
+            this.maybeCollectEvidencePointerRescue(value, rule, report, modelEvidence, evidenceContext, rescueContext, {
+                citesForbiddenContext,
+                brandOnlyCityEvidence,
+                inventedTime
+            });
             return false;
         }
         report.kept.push({ field: rule.field, key, mode: rule.mode });
         return true;
+    }
+
+    // === Evidence-Pointer Rescue (LOG-ONLY observation phase) ===
+    // "Trust the pointer, not the copy": when the gate drops a scoped field
+    // (EVIDENCE_RESCUE_FIELDS) because the VALUE is not verbatim in the
+    // corpus, but the model's EVIDENCE string IS a verbatim corpus quote, a
+    // candidate value is derived from the CORPUS'S OWN characters/casing and
+    // logged + stashed for the results-UI evidence panel. Nothing is adopted
+    // and no event data changes — the gate's accept/reject decisions are
+    // untouched. Bear-website reality shapes this code: broken markup,
+    // ALL-CAPS flyers, OCR noise, curly quotes and typos IN THE SOURCE are
+    // all normal, so matching is case-insensitive and whitespace-flexible,
+    // only raw text corpora are consulted (never structured data), and
+    // "cannot locate the evidence" is a silent no-op — the common case, not
+    // an error.
+
+    // Collect a rescue candidate for a just-dropped field. Additive only:
+    // appends to report.evidenceRescues (lazily created) and logs one line.
+    // Any internal failure is swallowed — observation must never affect the
+    // gate.
+    maybeCollectEvidencePointerRescue(value, rule, report, modelEvidence, evidenceContext, rescueContext, dropFlags = {}) {
+        try {
+            if (!EVIDENCE_RESCUE_FIELDS.has(rule.field)) return;
+            // ONLY the plain "value not verbatim" rejection class qualifies.
+            if (dropFlags && (dropFlags.citesForbiddenContext || dropFlags.brandOnlyCityEvidence || dropFlags.inventedTime)) return;
+            const evidence = String(modelEvidence || '').trim();
+            if (!evidence) return;
+            // Inference language or context citations anywhere in the
+            // evidence = untrustworthy pointer (the first-pass FURBALL shape:
+            // 'OCR_IMAGE_TEXT: "79 WARRENTON"; Additional context clarifies
+            // as "79 Warrenon" — likely a typo for "Warren"'). No rescue.
+            if (this.evidenceAdmitsInference(evidence)) return;
+            if (this.evidenceCitesAdditionalContext(evidence)) return;
+            const rescue = this.deriveEvidencePointerRescue(String(value), evidence, evidenceContext, rescueContext);
+            if (!rescue || !rescue.candidate) return;
+            const entry = {
+                field: rule.field,
+                candidate: this.trimToMaxLength(rescue.candidate, this.extractionLimits.validationReportValueMaxLength),
+                modelValue: this.trimToMaxLength(String(value), this.extractionLimits.validationReportValueMaxLength),
+                corpus: rescue.corpus
+            };
+            if (!Array.isArray(report.evidenceRescues)) report.evidenceRescues = [];
+            report.evidenceRescues.push(entry);
+            console.log(`🤖 AI Web: Evidence-pointer rescue (log-only) for ${entry.field}: corpus has "${entry.candidate}" where model wrote "${entry.modelValue}" (evidence located in ${entry.corpus} text)`);
+        } catch (err) {
+            this.logDebug(`🤖 AI Web: Evidence-pointer rescue observation failed silently: ${err && err.message ? err.message : err}`);
+        }
+    }
+
+    // Derive the candidate from the first evidence fragment that locates in a
+    // corpus: token-align the model's mangled value inside the located span
+    // (corpus casing wins), falling back to the whole located fragment when no
+    // alignment is found. Returns { candidate, corpus } or null.
+    deriveEvidencePointerRescue(modelValue, modelEvidence, evidenceContext, rescueContext) {
+        const fragments = this.extractEvidenceQuoteFragments(modelEvidence);
+        for (const fragment of fragments) {
+            const located = this.locateEvidenceRescueSpan(fragment, evidenceContext, rescueContext);
+            if (!located) continue;
+            const span = located.span.replace(/\s+/g, ' ').trim();
+            if (!span) continue;
+            const aligned = this.alignValueTokensInSpan(modelValue, span);
+            return { candidate: aligned || span, corpus: located.corpus };
+        }
+        return null;
+    }
+
+    // Unwrap citation envelopes: models wrap the real quote in prefixes like
+    // 'OCR_IMAGE_TEXT: "..."', straight AND curly quotes (bear websites and
+    // models are both sloppy), escaped \n, ellipses, and multi-fragment
+    // citations ('"X" and "Y"'). Quoted fragments win; with no quoting the
+    // whole (label-stripped) evidence string is the single fragment. Ellipses
+    // split a fragment into independently-locatable parts.
+    extractEvidenceQuoteFragments(evidence) {
+        const raw = String(evidence || '')
+            .replace(/\\n/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (!raw) return [];
+        const quoted = [];
+        const quotePattern = /"([^"]+)"|“([^”]+)”/g;
+        let match;
+        while ((match = quotePattern.exec(raw)) !== null) {
+            const fragment = String(match[1] || match[2] || '').trim();
+            if (fragment) quoted.push(fragment);
+        }
+        const source = quoted.length > 0 ? quoted : [this.stripEvidenceEnvelopeLabel(raw)];
+        const fragments = [];
+        source.forEach(fragment => {
+            String(fragment || '')
+                .split(/\.{3}|…/)
+                .map(part => part.trim())
+                .filter(Boolean)
+                .forEach(part => fragments.push(part));
+        });
+        return fragments;
+    }
+
+    // Strip a LEADING data-marker label ("OCR_IMAGE_TEXT: ", "SEGMENT_LINK_URL: ")
+    // from an unquoted evidence string. Deliberately anchored and uppercase-only
+    // so real content like "79 WARRENTON TICKETS: ..." is never eaten (the
+    // label must be the known marker vocabulary, not any capitalized word).
+    stripEvidenceEnvelopeLabel(text) {
+        return String(text || '').replace(/^(?:OCR|SEGMENT|PAGE|META|JSONLD|JSON_LD|HTML)[A-Z0-9_]*\s*:\s*/, '').trim();
+    }
+
+    // Locate one evidence fragment in the corpora the gate already checks,
+    // most-specific label first: the raw OCR texts (label 'ocr'), then the
+    // gate's own evidence corpus (label 'segment' when it is a multi-event
+    // segment corpus, else 'page'). Returns { span, corpus } or null.
+    locateEvidenceRescueSpan(fragment, evidenceContext, rescueContext) {
+        const ocrCorpus = this.getRescueOcrCorpus(rescueContext);
+        if (ocrCorpus) {
+            const span = this.locateEvidenceFragmentSpan(fragment, ocrCorpus);
+            if (span) return { span, corpus: 'ocr' };
+        }
+        const raw = evidenceContext && typeof evidenceContext.raw === 'string' ? evidenceContext.raw : '';
+        if (raw) {
+            const span = this.locateEvidenceFragmentSpan(fragment, raw);
+            if (span) return { span, corpus: /^SEGMENT_[A-Z_]+/m.test(raw) ? 'segment' : 'page' };
+        }
+        return null;
+    }
+
+    // Raw OCR text corpus for rescue labeling (cached on the rescueContext).
+    // Raw text ONLY — structured data is never consulted for rescues.
+    getRescueOcrCorpus(rescueContext) {
+        if (!rescueContext || typeof rescueContext !== 'object') return '';
+        if (typeof rescueContext.ocrCorpus === 'string') return rescueContext.ocrCorpus;
+        const htmlData = rescueContext.htmlData;
+        const ocrResults = htmlData && Array.isArray(htmlData.ocrResults) ? htmlData.ocrResults : [];
+        const corpus = ocrResults
+            .map(result => result && typeof result.text === 'string' ? result.text : '')
+            .filter(Boolean)
+            .join('\n\n');
+        rescueContext.ocrCorpus = corpus;
+        return corpus;
+    }
+
+    // Case-insensitive, whitespace-flexible verbatim location of a fragment in
+    // a raw corpus — the same matching class the gate's hasExactEvidence uses
+    // (normalizeEvidenceText containment), implemented as a regex so the
+    // CORPUS'S OWN characters/casing can be recovered. Apostrophe/quote
+    // variants are tolerated char-for-char (curly vs straight). Returns the
+    // corpus-cased span or null. HTML-entity-encoded corpus occurrences are a
+    // known acceptable miss (silent no-op) in this log-only phase.
+    locateEvidenceFragmentSpan(fragment, rawCorpus) {
+        const corpus = String(rawCorpus || '');
+        if (!corpus) return null;
+        const tokens = this.normalizeEvidenceText(fragment).split(' ').filter(Boolean);
+        if (tokens.length === 0 || tokens.length > 40) return null;
+        if (tokens.join(' ').length < 4) return null; // too short to be a meaningful pointer
+        let matcher;
+        try {
+            const pattern = tokens
+                .map(token => this.escapeRegex(token).replace(/['’‘]/g, "['’‘]").replace(/["“”]/g, '["“”]'))
+                .join('\\s+');
+            matcher = new RegExp(pattern, 'i');
+        } catch (_) {
+            return null;
+        }
+        const match = matcher.exec(corpus);
+        return match ? match[0] : null;
+    }
+
+    // Simple deterministic token alignment of the model's mangled value inside
+    // the located corpus span: slide a window of the value's token count over
+    // the span's tokens; every value token must match its counterpart (exact,
+    // or near for longer tokens — "Warrenon" ≈ "WARRENTON") and at least one
+    // token must match EXACTLY (the anchor, e.g. "79"). Leftmost full window
+    // wins. Returns the corpus-cased sub-span, or '' when nothing aligns (the
+    // caller then logs the whole fragment — acceptable for log-only).
+    alignValueTokensInSpan(modelValue, span) {
+        const valueTokens = String(modelValue || '').split(/\s+/).filter(Boolean);
+        const spanTokens = String(span || '').split(/\s+/).filter(Boolean);
+        if (valueTokens.length === 0 || spanTokens.length === 0) return '';
+        if (valueTokens.length > spanTokens.length) return '';
+        for (let start = 0; start + valueTokens.length <= spanTokens.length; start++) {
+            let exactAnchors = 0;
+            let allMatch = true;
+            for (let i = 0; i < valueTokens.length; i++) {
+                const kind = this.classifyRescueTokenMatch(valueTokens[i], spanTokens[start + i]);
+                if (kind === 'exact') exactAnchors++;
+                else if (kind !== 'near') { allMatch = false; break; }
+            }
+            if (allMatch && exactAnchors > 0) {
+                return spanTokens.slice(start, start + valueTokens.length).join(' ');
+            }
+        }
+        return '';
+    }
+
+    // Token comparison for alignment: 'exact' on normalized equality; 'near'
+    // when both tokens are 4+ chars and within a small bounded edit distance
+    // (≤ length/4, minimum 1 — covers OCR/transcription slips like
+    // "warrenon" vs "warrenton"); short tokens must anchor exactly.
+    classifyRescueTokenMatch(valueToken, corpusToken) {
+        const a = this.normalizeRescueToken(valueToken);
+        const b = this.normalizeRescueToken(corpusToken);
+        if (!a || !b) return 'none';
+        if (a === b) return 'exact';
+        if (a.length < 4 || b.length < 4) return 'none';
+        const maxDistance = Math.max(1, Math.floor(Math.max(a.length, b.length) / 4));
+        return this.boundedEditDistance(a, b, maxDistance) >= 0 ? 'near' : 'none';
+    }
+
+    normalizeRescueToken(token) {
+        return String(token || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    }
+
+    // Levenshtein distance capped at maxDistance: returns the distance when
+    // within the cap, -1 otherwise. Inputs are short normalized tokens, so the
+    // classic DP is plenty.
+    boundedEditDistance(a, b, maxDistance) {
+        if (Math.abs(a.length - b.length) > maxDistance) return -1;
+        let previous = Array.from({ length: b.length + 1 }, (_, i) => i);
+        for (let i = 1; i <= a.length; i++) {
+            const current = [i];
+            for (let j = 1; j <= b.length; j++) {
+                current[j] = Math.min(
+                    previous[j] + 1,
+                    current[j - 1] + 1,
+                    previous[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+                );
+            }
+            previous = current;
+        }
+        const distance = previous[b.length];
+        return distance <= maxDistance ? distance : -1;
     }
 
     // === Main Validation Entry Point ===
@@ -7643,6 +7934,10 @@ TEXT:
         // 20260723-123149: WWW.FURBALL.NYC flyer branding produced city
         // "new york" for an event in Torremolinos).
         const brandTokens = this.getPageBrandDomainTokens(htmlData);
+        // Evidence-pointer rescue context (LOG-ONLY observation): carries the
+        // htmlData so the rescue can consult the raw OCR texts for corpus
+        // labeling. Never influences accept/reject decisions.
+        const rescueContext = { htmlData };
         Object.keys(aiEvent).forEach(key => {
             const rule = this.getFieldValidationRule(key, validationConfig);
 
@@ -7659,7 +7954,7 @@ TEXT:
 
             // Validate field value against evidence
             const value = aiEvent[key];
-            const isValid = this.validateFieldValueAgainstEvidence(key, value, rule, evidenceContext, validationContext, report, modelFieldEvidence[key], brandTokens);
+            const isValid = this.validateFieldValueAgainstEvidence(key, value, rule, evidenceContext, validationContext, report, modelFieldEvidence[key], brandTokens, rescueContext);
             if (!isValid) {
                 delete validated[key];
             }
