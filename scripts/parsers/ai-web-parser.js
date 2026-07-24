@@ -679,6 +679,13 @@ class AiWebParser {
         // name — and it sailed through to geocoding). Runs BEFORE the bar
         // corroboration stamp so a dropped address never feeds adjacency.
         this.applyAddressPlausibilityGate(event, promptHtmlData);
+        // Deterministic venue-line bar rescue: only when extraction left NO
+        // bar (including a gate-dropped one). Scans the segment/page text —
+        // never the OCR prepend — for the venue line above a "City, ST" line
+        // and adopts it ONLY with independent corroboration (curated/OCR).
+        // Runs BEFORE the barSource stamp so an adopted bar carries its own
+        // provenance; a model-returned surviving bar makes this a no-op.
+        this.applyVenueLineBarRescue(event, htmlData, parserConfig, cityConfig);
         // Bar corroboration stamp (barSource): checks the final bar+address
         // pair against the same corpora the evidence gate uses (page text,
         // OCR text, segment text). Flag-don't-drop: values are never changed.
@@ -809,6 +816,10 @@ class AiWebParser {
         return {
             ...htmlData,
             html: contextLines.length > 0 ? `${contextLines.join('\n')}\n${segmentContent}` : segmentContent,
+            // The segment's own page text WITHOUT the resource/OCR context
+            // lines — the venue-line bar rescue scans this so OCR text stays
+            // an independent corroboration signal, never the scan source.
+            segmentText: segmentContent,
             aiEvent: null,
             aiExtraction: null,
             ocrResults: segmentOcrResults,
@@ -9753,6 +9764,148 @@ TEXT:
         console.log(`🤖 AI Web: Dropped implausible address "${address}" (${reason})`);
         delete event.address;
         return event;
+    }
+
+    // Deterministic venue-line bar rescue (run 20260723-224434: the FURBALL
+    // Boston segment plainly listed its venue "Legacy" on its own line
+    // directly above "Boston, MA", but the model returned the street address
+    // as the bar and the verbatim gate dropped it — leaving no bar, and
+    // therefore no venue-POI address or pin; earlier runs extracted "Legacy"
+    // from the very same text, i.e. pure model nondeterminism). When
+    // extraction produced NO bar, scan the segment's page text (for
+    // single-page events, the page text — never the OCR prepend, so OCR
+    // stays an independent corroboration signal) for a "City, ST" location
+    // line and take the nearest non-empty line ABOVE it as the venue
+    // candidate. Candidates that can never be a venue name are rejected
+    // deterministically (see getVenueLineCandidateRejection). Adoption
+    // REQUIRES independent corroboration — core doctrine: never a bar from a
+    // single signal:
+    //   - curated: candidate matches a curated bar for the event's city →
+    //     curated casing, barSource 'curated';
+    //   - ocr: candidate appears whole-word (case-insensitive) in the
+    //     event's OCR image text → barSource 'page-adjacent'.
+    // Neither signal → log-only (flag-don't-drop), nothing adopted. Never
+    // runs when a model-returned bar survived the gate (a surviving
+    // extraction is not second-guessed), and operates purely on the scraped
+    // event pre-merge — calendar-side bars are untouched.
+    applyVenueLineBarRescue(event, htmlData, parserConfig, cityConfig) {
+        if (!event || typeof event !== 'object') return event;
+        const existingBar = typeof event.bar === 'string' ? event.bar.trim() : '';
+        if (existingBar) return event;
+        const segmentText = htmlData && typeof htmlData.segmentText === 'string' ? htmlData.segmentText : '';
+        const scanText = segmentText.trim()
+            ? segmentText
+            : (this.buildAiEvidenceContext(htmlData, parserConfig).raw || '');
+        if (!scanText.trim()) return event;
+        const lines = scanText.split('\n').map(line => line.trim());
+        let candidate = '';
+        let locationLine = '';
+        let locationCityKey = '';
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i];
+            if (!line) continue;
+            // Location-form line: an explicit "<Place>, <Place>" pair that
+            // also resolves to a configured city ("Boston, MA" → boston).
+            if (!this.extractAdjacentLocationPlacePair(line, event)) continue;
+            const cityKey = this.findCityKeyInText(line, cityConfig);
+            if (!cityKey) continue;
+            for (let j = i - 1; j >= 0; j -= 1) {
+                if (lines[j]) {
+                    candidate = lines[j];
+                    break;
+                }
+            }
+            locationLine = line;
+            locationCityKey = cityKey;
+            break; // first location line only — a noisy segment proves nothing
+        }
+        if (!candidate || !locationLine) return event;
+        if (this.getVenueLineCandidateRejection(candidate, event, htmlData)) return event;
+
+        // Corroboration signals — each independent of the page line itself.
+        const signals = [];
+        let curatedBar = null;
+        const curatedCityKey = (typeof event.city === 'string' && event.city.trim())
+            ? event.city.trim()
+            : locationCityKey;
+        if (this.core && typeof this.core.getCuratedCityBars === 'function'
+            && typeof this.core.findCuratedBarByName === 'function') {
+            try {
+                const cityBars = this.core.getCuratedCityBars(curatedCityKey);
+                curatedBar = cityBars ? this.core.findCuratedBarByName(cityBars, candidate) : null;
+            } catch (_) {
+                curatedBar = null; // curated matching is best-effort — fail open to OCR
+            }
+        }
+        if (curatedBar) signals.push('curated');
+        const ocrResults = htmlData && Array.isArray(htmlData.ocrResults) ? htmlData.ocrResults : [];
+        const escapedCandidate = candidate
+            .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+            .replace(/\s+/g, '\\s+');
+        const wholeWordPattern = new RegExp(`(?:^|[^A-Za-z0-9])${escapedCandidate}(?=$|[^A-Za-z0-9])`, 'i');
+        if (ocrResults.some(ocr => ocr && typeof ocr.text === 'string' && wholeWordPattern.test(ocr.text))) {
+            signals.push('ocr');
+        }
+        if (signals.length === 0) {
+            console.log(`🤖 AI Web: Venue-line candidate "${candidate}" found above city line but uncorroborated — not adopted`);
+            return event;
+        }
+        event.bar = curatedBar ? curatedBar.name : candidate;
+        event.barSource = curatedBar ? 'curated' : 'page-adjacent';
+        // Underscore field — internal metadata, never serialized into notes;
+        // shared-core's buildEventEvidenceLines renders it in the evidence
+        // panel so a rescued bar is always visible in the results UI.
+        event._barRescue = {
+            candidate: candidate,
+            locationLine: locationLine,
+            signals: signals
+        };
+        console.log(`🤖 AI Web: Rescued bar "${event.bar}" from venue line above city line (corroborated: ${signals.join(', ')})`);
+        return event;
+    }
+
+    // '' when the venue-line candidate could plausibly be a venue name;
+    // otherwise the deterministic reason it can never be one. Rejection is
+    // silent — an unusable line above the city line is the common case, not a
+    // signal worth logging.
+    getVenueLineCandidateRejection(candidate, event, htmlData) {
+        const text = String(candidate || '').trim();
+        if (!text) return 'empty';
+        if (text.length > 40) return 'too long';
+        if (/(?:https?:\/\/|www\.)/i.test(text)) return 'url';
+        if (/[$€£]\s*\d/.test(text) || /\b\d+\s*(?:dollars|usd)\b/i.test(text)) return 'price';
+        if (/\b\d{1,2}:\d{2}\b/.test(text) || /\b\d{1,2}\s*(?:am|pm)\b/i.test(text)) return 'time';
+        if (/\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b[\s.,]*\d{1,2}/i.test(text)
+            || /\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/.test(text)
+            || /\b(?:mon|tues?|wednes|thurs?|fri|satur|sun)day\b/i.test(text)
+            || /\b20\d{2}\b/.test(text)) return 'date';
+        const normalized = this.normalizeAdjacencyText(text);
+        if (!normalized) return 'empty';
+        const stopwords = new Set([
+            'tickets', 'ticket', 'info', 'rsvp', 'free', 'doors', 'details',
+            'presents', 'vip', 'admission', 'cover', 'ages', 'buy', 'get',
+            'more', 'here', 'tba', 'tbd'
+        ]);
+        if (normalized.split(' ').every(token => stopwords.has(token) || /^\d+$/.test(token))) {
+            return 'generic';
+        }
+        const title = this.normalizeAdjacencyText(event && event.title);
+        if (title && normalized === title) return 'matches event title';
+        const organizer = event && typeof event._organizer === 'string' ? event._organizer.trim() : '';
+        const brandNames = this.getPageBrandNames(htmlData);
+        const knownNames = [organizer, ...(Array.isArray(brandNames) ? brandNames : [])]
+            .filter(name => typeof name === 'string' && name.trim());
+        if (knownNames.length > 0 && this.matchesPageBrandName(text, knownNames)) {
+            return 'matches organizer/brand';
+        }
+        if (this.core && typeof this.core.looksLikeStreetAddress === 'function'
+            && this.core.looksLikeStreetAddress(text)) return 'address-shaped';
+        if (/\d/.test(text)
+            && /(?:^|\s)(?:St|Street|Ave|Avenue|Blvd|Boulevard|Rd|Road|Dr|Drive|Ln|Lane|Way|Hwy|Pl|Place|Ct|Court)\.?(?:\s|$)/i.test(text)) {
+            return 'address-shaped';
+        }
+        if (this.extractAdjacentLocationPlacePair(text, event)) return 'location line';
+        return '';
     }
 
     // barSource provenance stamp (notes-serialized like imageSource, excluded

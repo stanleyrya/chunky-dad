@@ -2585,6 +2585,20 @@ class SharedCore {
             lines.push(`${rescueField} rescue candidate (log-only): "${rescueCandidate}"${rescueModelValue ? ` — model wrote "${rescueModelValue}"` : ''}`);
         });
 
+        // Deterministic venue-line rescue (_barRescue — underscore field,
+        // never serialized; stamped by ai-web-parser's applyVenueLineBarRescue
+        // when extraction produced no bar and the venue line above the
+        // segment's city line was independently corroborated). Rendered so a
+        // rescued bar is always visible in the results UI.
+        const barRescue = event._barRescue && typeof event._barRescue === 'object' ? event._barRescue : null;
+        if (bar && barRescue) {
+            const rescueSignals = Array.isArray(barRescue.signals)
+                ? barRescue.signals.filter(signal => typeof signal === 'string' && signal.trim())
+                : [];
+            const suffix = rescueSignals.length > 0 ? ` (corroborated: ${rescueSignals.join(', ')})` : '';
+            lines.push(`bar rescued from venue line above city line${suffix}`);
+        }
+
         // Compact provenance summary of whichever companion stamps exist.
         const provenance = [
             ['bar', 'barSource'],

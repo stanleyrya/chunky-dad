@@ -4181,3 +4181,184 @@ test('evidence-pointer rescue: snippet-pass memos concatenate through mergeAiEve
     { field: 'bar', candidate: 'B', modelValue: 'b', corpus: 'page' }
   ]);
 });
+
+// Deterministic venue-line bar rescue (run 20260723-224434: the FURBALL
+// Boston segment listed the venue "Legacy" on its own line directly above
+// "Boston, MA", but the model returned the street address as the bar and the
+// verbatim gate dropped it — no bar, so no venue-POI address/pin either).
+// The rescue is corroboration-gated: curated and/or OCR, never the page line
+// alone, and it never runs over a surviving model-returned bar.
+// ---------------------------------------------------------------------------
+
+const RESCUE_CITY_CONFIG = {
+  cities: {
+    boston: { name: 'Boston', patterns: ['boston'], timezone: 'America/New_York' }
+  }
+};
+
+// The real segment shape from furball.nyc.
+const FURBALL_BOSTON_SEGMENT = [
+  'FURBALL Boston',
+  'Bear Week Return',
+  'Legacy',
+  'Boston, MA',
+  'July 25, 2026'
+].join('\n');
+
+// The flyer OCR independently names the venue and its street.
+const FURBALL_BOSTON_OCR = 'FURBALL BOSTON\nBEAR WEEK RETURN\nLEGACY\n79 WARRENTON\nJULY 25 2026';
+
+const BOSTON_CURATED_BARS = {
+  boston: [{ name: 'Legacy', city: 'boston', address: '79 Warrenton St, Boston, MA 02116' }]
+};
+
+function createRescueParser(bars) {
+  const parser = createParser();
+  parser.core = new SharedCore({}, { eventSchema: EventSchema, bars: bars || {} });
+  return parser;
+}
+
+function rescueHtmlData(overrides = {}) {
+  return {
+    url: 'https://furball.nyc/events',
+    html: '<html><body>multi-event page</body></html>',
+    segmentText: FURBALL_BOSTON_SEGMENT,
+    ocrResults: [{ url: 'https://furball.nyc/flyer.jpg', text: FURBALL_BOSTON_OCR }],
+    pageBrandNames: ['FURBALL'],
+    ...overrides
+  };
+}
+
+test('venue-line rescue: the FURBALL Boston segment rescues "Legacy" (curated + ocr), barSource curated, downstream stamp untouched', () => {
+  const parser = createRescueParser(BOSTON_CURATED_BARS);
+  const event = { title: 'FURBALL Boston: Bear Week Return', city: 'boston' };
+  const logs = captureLogs(() => {
+    parser.applyVenueLineBarRescue(event, rescueHtmlData(), {}, RESCUE_CITY_CONFIG);
+  });
+  assert.equal(event.bar, 'Legacy');
+  assert.equal(event.barSource, 'curated');
+  assert.deepEqual(event._barRescue, {
+    candidate: 'Legacy',
+    locationLine: 'Boston, MA',
+    signals: ['curated', 'ocr']
+  });
+  assert.ok(logs.includes(
+    '🤖 AI Web: Rescued bar "Legacy" from venue line above city line (corroborated: curated, ocr)'
+  ), `rescue log expected, got: ${JSON.stringify(logs)}`);
+
+  // The existing barSource stamp is already-stamped-aware: no re-stamp.
+  parser.stampBarSourceProvenance(event, parser.buildAiEvidenceContextFromText(FURBALL_BOSTON_SEGMENT), null);
+  assert.equal(event.barSource, 'curated');
+
+  // Curated casing wins over the page line's casing.
+  const shouting = { title: 'FURBALL Boston: Bear Week Return', city: 'boston' };
+  parser.applyVenueLineBarRescue(
+    shouting,
+    rescueHtmlData({ segmentText: FURBALL_BOSTON_SEGMENT.replace('Legacy', 'LEGACY') }),
+    {},
+    RESCUE_CITY_CONFIG
+  );
+  assert.equal(shouting.bar, 'Legacy', 'curated casing adopted');
+  assert.equal(shouting.barSource, 'curated');
+});
+
+test('venue-line rescue: OCR-only corroboration (candidate not curated) adopts with barSource page-adjacent', () => {
+  const parser = createRescueParser({});
+  const event = { title: 'FURBALL Boston: Bear Week Return', city: 'boston' };
+  const logs = captureLogs(() => {
+    parser.applyVenueLineBarRescue(event, rescueHtmlData(), {}, RESCUE_CITY_CONFIG);
+  });
+  assert.equal(event.bar, 'Legacy', 'page-line casing kept without a curated record');
+  assert.equal(event.barSource, 'page-adjacent');
+  assert.deepEqual(event._barRescue.signals, ['ocr']);
+  assert.ok(logs.includes(
+    '🤖 AI Web: Rescued bar "Legacy" from venue line above city line (corroborated: ocr)'
+  ), `rescue log expected, got: ${JSON.stringify(logs)}`);
+});
+
+test('venue-line rescue: no corroboration → not adopted, log-only (flag-don\'t-drop)', () => {
+  const parser = createRescueParser({});
+  const event = { title: 'FURBALL Boston: Bear Week Return', city: 'boston' };
+  const logs = captureLogs(() => {
+    parser.applyVenueLineBarRescue(event, rescueHtmlData({ ocrResults: [] }), {}, RESCUE_CITY_CONFIG);
+  });
+  assert.equal('bar' in event, false, 'never adopted on the page line alone');
+  assert.equal('barSource' in event, false);
+  assert.equal('_barRescue' in event, false);
+  assert.ok(logs.includes(
+    '🤖 AI Web: Venue-line candidate "Legacy" found above city line but uncorroborated — not adopted'
+  ), `log-only line expected, got: ${JSON.stringify(logs)}`);
+});
+
+test('venue-line rescue: the organizer brand above the city line is never adopted, even fully corroborated', () => {
+  // Corroboration is deliberately available (curated + OCR both know
+  // "Furball") to prove the organizer guard fires BEFORE corroboration.
+  const parser = createRescueParser({ boston: [{ name: 'Furball', city: 'boston' }] });
+  const segment = [
+    'Bear Week Return',
+    'FURBALL',
+    'Boston, MA',
+    'July 25, 2026'
+  ].join('\n');
+  const event = { title: 'Bear Week Return', city: 'boston', _organizer: 'FURBALL' };
+  const logs = captureLogs(() => {
+    parser.applyVenueLineBarRescue(event, rescueHtmlData({ segmentText: segment }), {}, RESCUE_CITY_CONFIG);
+  });
+  assert.equal('bar' in event, false, 'the promoter is never rescued as the venue');
+  assert.equal('_barRescue' in event, false);
+  assert.ok(!logs.some(line => line.includes('Rescued bar')), `no adoption log, got: ${JSON.stringify(logs)}`);
+});
+
+test('venue-line rescue: address-shaped and date lines above the city line are never bar candidates', () => {
+  const parser = createRescueParser(BOSTON_CURATED_BARS);
+  const addressAbove = [
+    'FURBALL Boston',
+    'Legacy',
+    '79 Warrenton St',
+    'Boston, MA'
+  ].join('\n');
+  const event = { title: 'FURBALL Boston: Bear Week Return', city: 'boston' };
+  const logs = captureLogs(() => {
+    parser.applyVenueLineBarRescue(event, rescueHtmlData({ segmentText: addressAbove }), {}, RESCUE_CITY_CONFIG);
+  });
+  assert.equal('bar' in event, false, 'an address is not a venue name — and no hunting past it');
+  assert.ok(!logs.some(line => line.includes('Rescued bar')), `no adoption log, got: ${JSON.stringify(logs)}`);
+
+  const dateAbove = [
+    'FURBALL Boston',
+    'Legacy',
+    'July 25, 2026',
+    'Boston, MA'
+  ].join('\n');
+  const dated = { title: 'FURBALL Boston: Bear Week Return', city: 'boston' };
+  parser.applyVenueLineBarRescue(dated, rescueHtmlData({ segmentText: dateAbove }), {}, RESCUE_CITY_CONFIG);
+  assert.equal('bar' in dated, false, 'a date line is not a venue name');
+});
+
+test('venue-line rescue: a model-returned surviving bar makes the rescue a no-op', () => {
+  const parser = createRescueParser(BOSTON_CURATED_BARS);
+  const event = { title: 'FURBALL Boston: Bear Week Return', city: 'boston', bar: 'Club Cafe' };
+  const logs = captureLogs(() => {
+    parser.applyVenueLineBarRescue(event, rescueHtmlData(), {}, RESCUE_CITY_CONFIG);
+  });
+  assert.equal(event.bar, 'Club Cafe', 'a surviving extraction is never second-guessed');
+  assert.equal('barSource' in event, false, 'no stamp from the rescue');
+  assert.equal('_barRescue' in event, false);
+  assert.equal(logs.length, 0, `rescue must be silent, got: ${JSON.stringify(logs)}`);
+});
+
+test('venue-line rescue: single-page events fall back to the page text when no segmentText exists', () => {
+  const parser = createRescueParser(BOSTON_CURATED_BARS);
+  const html = '<html><head><title>FURBALL</title></head><body>'
+    + '<p>FURBALL Boston</p><p>Bear Week Return</p><p>Legacy</p><p>Boston, MA</p><p>July 25, 2026</p>'
+    + '</body></html>';
+  const event = { title: 'FURBALL Boston: Bear Week Return', city: 'boston' };
+  parser.applyVenueLineBarRescue(
+    event,
+    { url: 'https://furball.nyc/boston', html, ocrResults: [{ url: 'https://furball.nyc/flyer.jpg', text: FURBALL_BOSTON_OCR }] },
+    {},
+    RESCUE_CITY_CONFIG
+  );
+  assert.equal(event.bar, 'Legacy');
+  assert.equal(event.barSource, 'curated');
+});
