@@ -2569,6 +2569,22 @@ class SharedCore {
             }
         }
 
+        // Evidence-pointer rescue candidates from the AI evidence gate
+        // (_evidenceRescues — underscore field, never serialized; stamped by
+        // AiWebParser.extractSingleEvent). LOG-ONLY observation phase: the
+        // gate dropped these fields, so the event shows no value — each line
+        // surfaces what the rescue WOULD have adopted so real runs can prove
+        // or damn the heuristic before promotion.
+        const evidenceRescues = Array.isArray(event._evidenceRescues) ? event._evidenceRescues : [];
+        evidenceRescues.forEach(rescue => {
+            if (!rescue || typeof rescue !== 'object') return;
+            const rescueField = typeof rescue.field === 'string' ? rescue.field.trim() : '';
+            const rescueCandidate = typeof rescue.candidate === 'string' ? rescue.candidate.trim() : '';
+            if (!rescueField || !rescueCandidate) return;
+            const rescueModelValue = typeof rescue.modelValue === 'string' ? rescue.modelValue.trim() : '';
+            lines.push(`${rescueField} rescue candidate (log-only): "${rescueCandidate}"${rescueModelValue ? ` — model wrote "${rescueModelValue}"` : ''}`);
+        });
+
         // Compact provenance summary of whichever companion stamps exist.
         const provenance = [
             ['bar', 'barSource'],

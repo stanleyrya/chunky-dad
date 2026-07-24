@@ -7320,3 +7320,35 @@ test('evidence: a venue-name fusion flag renders its line and never serializes i
   const barless = core.buildEventEvidenceLines({ title: 'X', _geoPoiFusion: { poi: 'Aqua Club', prefix: 'Aqua' } });
   assert.ok(!barless.some(line => line.includes('may fuse')), 'no bar → no fusion line (fail open)');
 });
+
+test('evidence: pointer-rescue candidates render their panel line and never serialize into notes', () => {
+  const core = createCore();
+  // LOG-ONLY observation phase: the gate dropped the field (the event shows
+  // no value) — the line surfaces what the rescue WOULD have adopted so real
+  // runs can prove or damn the heuristic before promotion.
+  const event = {
+    title: 'FURBALL Boston',
+    city: 'dallas',
+    _evidenceRescues: [
+      { field: 'address', candidate: '79 WARRENTON', modelValue: '79 Warrenon', corpus: 'ocr' },
+      { field: 'bar', candidate: 'The Alley Cantina', modelValue: 'Alley Cantena', corpus: 'page' }
+    ]
+  };
+  const lines = core.buildEventEvidenceLines(event);
+  assert.ok(
+    lines.includes('address rescue candidate (log-only): "79 WARRENTON" — model wrote "79 Warrenon"'),
+    `address rescue line expected, got: ${JSON.stringify(lines)}`
+  );
+  assert.ok(
+    lines.includes('bar rescue candidate (log-only): "The Alley Cantina" — model wrote "Alley Cantena"'),
+    'one compact line per rescue entry'
+  );
+  assert.ok(!/(_evidenceRescues|WARRENTON)/.test(core.formatEventNotes(event)), '_evidenceRescues never serializes into notes');
+
+  // Malformed entries fail open: no line, no crash.
+  const junk = core.buildEventEvidenceLines({
+    title: 'X',
+    _evidenceRescues: [null, 42, {}, { field: 'bar' }, { candidate: 'orphan' }]
+  });
+  assert.ok(!junk.some(line => line.includes('rescue candidate')), 'malformed rescue entries render nothing');
+});
