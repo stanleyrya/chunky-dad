@@ -7352,3 +7352,59 @@ test('evidence: pointer-rescue candidates render their panel line and never seri
   });
   assert.ok(!junk.some(line => line.includes('rescue candidate')), 'malformed rescue entries render nothing');
 });
+
+// ---------------------------------------------------------------------------
+// Bar-convergence rescue: evidence panel rendering + curated Legacy (Boston)
+// data sync (run 20260723-224434).
+// ---------------------------------------------------------------------------
+
+test('evidence: a rescued bar renders the signal-convergence line; _barRescue never serializes into notes', () => {
+  const core = createEvidencePanelCore();
+  const event = {
+    bar: 'Legacy',
+    barSource: 'curated',
+    city: 'boston',
+    _barRescue: { candidate: 'Legacy', signals: ['curated', 'page', 'ocr'] }
+  };
+  const lines = core.buildEventEvidenceLines(event);
+  assert.ok(lines.includes('bar rescued by signal convergence (curated, page, ocr)'),
+    `rescue evidence line expected, got: ${JSON.stringify(lines)}`);
+  assert.ok(lines.includes('bar corroborated: curated'),
+    'the ordinary barSource verdict still renders alongside the rescue line');
+
+  const notes = core.formatEventNotes(event);
+  assert.ok(notes.includes('bar: Legacy'), 'real fields serialize');
+  assert.ok(!notes.includes('_barRescue') && !notes.includes('signal convergence'),
+    'underscore rescue metadata never serializes into notes');
+
+  // No bar (rescue metadata without an adopted bar) → no line (fail open).
+  const barless = core.buildEventEvidenceLines({
+    title: 'X',
+    _barRescue: { candidate: 'Legacy', signals: ['ocr'] }
+  });
+  assert.ok(!barless.some(line => line.includes('rescued')), 'no bar → no rescue line');
+});
+
+test('curated bars: boston.json carries Legacy and the generated scraper-bars twins are in sync', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const bostonBars = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'bars', 'boston.json'), 'utf8'));
+  const legacy = bostonBars.find(bar => bar && bar.name === 'Legacy');
+  assert.ok(legacy, 'Legacy curated in data/bars/boston.json');
+  assert.equal(legacy.city, 'boston');
+  assert.equal(legacy.address, '79 Warrenton St, Boston, MA 02116');
+  assert.equal(legacy.coordinates, '42.3499063, -71.0658453');
+
+  // Generated module twin (scripts/scraper-bars.js) is committed in sync.
+  const scraperBars = require('./scraper-bars');
+  assert.deepEqual(scraperBars.boston, bostonBars, 'scripts/scraper-bars.js regenerated after the boston.json edit');
+
+  // Pure-JSON twin served by the site.
+  const jsonTwin = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'scraper-bars.json'), 'utf8'));
+  assert.deepEqual(jsonTwin.boston, bostonBars, 'data/scraper-bars.json regenerated after the boston.json edit');
+
+  // The curated record is what findCuratedBarByName resolves for the rescue.
+  const core = new SharedCore({}, { eventSchema: EventSchema, bars: scraperBars });
+  const match = core.findCuratedBarByName(core.getCuratedCityBars('boston'), 'LEGACY');
+  assert.ok(match && match.name === 'Legacy', 'curated lookup resolves the rescue candidate');
+});

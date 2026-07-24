@@ -14,7 +14,9 @@ const scraperBars = {
       "city": "atlanta",
       "address": "2069 Cheshire Bridge Rd NE, Atlanta, GA 30324",
       "coordinates": "33.8115012, -84.3552779",
-      "website": "https://hereticatlanta.com"
+      "website": "https://hereticatlanta.com",
+      "faviconBg": "#481818",
+      "faviconFg": "#a09f9f"
     }
   ],
   "bangkok": [
@@ -55,6 +57,14 @@ const scraperBars = {
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM",
       "gayCities": "https://boston.gaycities.com/bars/127-the-alley-bar",
       "gayCitiesLastScrapedAt": "2026-06-13T20:34:56.886Z"
+    },
+    {
+      "name": "Legacy",
+      "city": "boston",
+      "address": "79 Warrenton St, Boston, MA 02116",
+      "coordinates": "42.3499063, -71.0658453",
+      "website": "https://legacybos.com",
+      "instagram": "https://www.instagram.com/legacybos"
     }
   ],
   "chicago": [
@@ -335,7 +345,9 @@ const scraperBars = {
       "city": "nola",
       "address": "1200 Canal St, New Orleans, LA 70112",
       "coordinates": "29.9559524, -90.0738975",
-      "website": "https://thejoytheater.com"
+      "website": "https://thejoytheater.com",
+      "faviconBg": "#f22922",
+      "faviconFg": "#221e1f"
     }
   ],
   "nyc": [
@@ -639,6 +651,8 @@ const scraperBars = {
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJOcPt38pqkFQRWmTOs3bUrgk",
       "wikipedia": "https://en.wikipedia.org/wiki/Seattle_Eagle",
       "gayCities": "https://seattle.gaycities.com/bars/506-seattle-eagle",
+      "faviconBg": "#20201f",
+      "faviconFg": "#8a836c",
       "gayCitiesLastScrapedAt": "2026-06-26T17:08:43.316Z",
       "wikipediaLastScrapedAt": "2026-06-26T15:16:42.842Z"
     },
@@ -742,7 +756,9 @@ const scraperBars = {
       "city": "sf",
       "address": "161 Erie St, San Francisco, CA 94103",
       "coordinates": "37.7688931, -122.4192651",
-      "website": "https://publicsf.com"
+      "website": "https://publicsf.com",
+      "faviconBg": "#f35425",
+      "faviconFg": "#fd5825"
     }
   ],
   "tokyo": [
