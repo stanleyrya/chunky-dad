@@ -955,8 +955,11 @@ test('refreshRemoteBars falls back per city when the combined file 404s, keeping
   const result = await adapter.refreshRemoteBars(['poconos', 'nyc', 'bogota'], localBars);
 
   assert.equal(adapter.fetches[0].url, COMBINED_BARS_URL, 'the combined file is tried first');
-  assert.deepEqual(result.bars.poconos.map((b) => b.name), ['Camp Out'],
-    'remote city replaces the local entry wholesale');
+  // Union semantics (was: wholesale replace — the replace was the bug that
+  // discarded locally curated bars, run 20260724-122902): remote entries
+  // lead, local entries with a bar-name key absent from remote survive.
+  assert.deepEqual(result.bars.poconos.map((b) => b.name), ['Camp Out', 'Stale Camp Out'],
+    'remote city leads; the local-only entry survives the refresh');
   assert.deepEqual(result.bars.nyc.map((b) => b.name), ['Eagle NYC'],
     'fetch failure keeps the local entry');
   assert.deepEqual(result.bars.seattle.map((b) => b.name), ['The Cuff'],
@@ -1012,8 +1015,12 @@ test('refreshRemoteBars serves requested cities from the combined file with a si
 
   assert.equal(adapter.fetches.length, 1, 'one combined fetch, no per-city fetches');
   assert.equal(adapter.fetches[0].url, COMBINED_BARS_URL);
-  assert.deepEqual(result.bars.poconos.map((b) => b.name), ['Camp Out'], 'a combined city replaces local wholesale');
-  assert.deepEqual(result.bars.nyc.map((b) => b.name), ['Eagle NYC'], 'the combined file wins over a stale local entry');
+  assert.deepEqual(result.bars.poconos.map((b) => b.name), ['Camp Out'], 'a combined-only city arrives as-is');
+  // Union semantics (was: wholesale replace — the bug that discarded
+  // locally curated bars): the combined file leads, but a local entry whose
+  // bar-name key is absent from it is appended, not discarded.
+  assert.deepEqual(result.bars.nyc.map((b) => b.name), ['Eagle NYC', 'Stale Eagle'],
+    'the combined file leads; the local-only entry survives');
   assert.deepEqual(result.bars.seattle.map((b) => b.name), ['The Cuff'],
     'a city absent from the combined file falls back to local');
   assert.equal(result.bars.bogota, undefined, 'neither combined nor local stays absent');
@@ -1034,7 +1041,10 @@ test('refreshRemoteBars with null cityKeys refreshes ALL cities from the combine
   const result = await adapter.refreshRemoteBars(null, localBars);
 
   assert.equal(adapter.fetches.length, 1, 'null cityKeys never triggers per-city fetches');
-  assert.deepEqual(result.bars.nyc.map((b) => b.name), ['Eagle NYC'], 'the combined object replaces local wholesale');
+  // Union semantics (was: wholesale replace — the bug that discarded
+  // locally curated bars): remote leads, local-only entries survive.
+  assert.deepEqual(result.bars.nyc.map((b) => b.name), ['Eagle NYC', 'Stale Eagle'],
+    'the combined object leads; the local-only entry survives');
   assert.deepEqual(result.bars.poconos.map((b) => b.name), ['Camp Out'], 'combined-only cities appear');
   assert.deepEqual(result.bars['local-only'].map((b) => b.name), ['Local Hold Out'],
     'local-only cities are kept as fallback entries');
@@ -1051,6 +1061,75 @@ test('refreshRemoteBars with null cityKeys and no combined file returns local ba
   assert.equal(adapter.fetches.length, 1, 'only the combined fetch is attempted');
   assert.deepEqual(result.bars, localBars);
   assert.deepEqual(result.counts, { remote: 0, local: 2, unavailable: 0 });
+});
+
+// The bars-wiring regression (run 20260724-122902): "Legacy" was curated in
+// the local scraper-bars.js, but the remote combined file — served through a
+// 1-day cache — didn't have it yet, and the wholesale replace threw the
+// local entry away ("Bars data — 23 cities from chunky.dad, 0 from local
+// file"). The refresh is now a per-city UNION: remote entries win for a
+// shared bar-name key (freshest enrichment), local-only entries survive.
+test('refreshRemoteBars union matrix: locally curated bars survive the remote refresh', async () => {
+  const localBars = {
+    // boston: remote lacks the locally curated Legacy → appended.
+    boston: [
+      { name: 'Legacy', city: 'boston', address: '79 Warrenton St, Boston, MA 02116' },
+      // Same bar-name key as remote "Eagle" ("The " strips) → remote wins.
+      { name: 'The Eagle', notes: 'stale local copy' },
+      // Nameless entries have no identity key and are skipped.
+      { address: 'no name at all' }
+    ],
+    // seattle: absent from remote → kept as the local fallback city.
+    seattle: [{ name: 'The Cuff' }]
+  };
+  const adapter = buildRemoteBarsAdapter({}, {
+    boston: [
+      { name: 'Eagle', notes: 'remote enrichment wins for the shared key' },
+      { name: 'Alley Cat' }
+    ],
+    // chicago: remote-only city → arrives untouched.
+    chicago: [{ name: 'Metro' }]
+  });
+
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (message) => { logLines.push(String(message)); };
+  let result;
+  try {
+    result = await adapter.refreshRemoteBars(null, localBars);
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.deepEqual(result.bars.boston.map((b) => b.name), ['Eagle', 'Alley Cat', 'Legacy'],
+    'remote order leads, the locally curated Legacy is appended, nameless entries are skipped');
+  assert.deepEqual(result.bars.boston[0], { name: 'Eagle', notes: 'remote enrichment wins for the shared key' },
+    'for a shared bar-name key the remote entry is kept as-is');
+  assert.deepEqual(result.bars.chicago.map((b) => b.name), ['Metro'], 'remote-only cities arrive untouched');
+  assert.deepEqual(result.bars.seattle.map((b) => b.name), ['The Cuff'], 'local-only cities are kept');
+  // The freshness line keeps its exact shape; the merge note is additive.
+  assert.ok(logLines.includes(
+    '📱 Scriptable: Bars data — 2 cities from chunky.dad, 1 from local file, 0 unavailable'
+  ), `freshness line shape unchanged, got: ${JSON.stringify(logLines)}`);
+  assert.ok(logLines.includes(
+    '📱 Scriptable: Bars data — merged 1 local-only bar(s)'
+  ), `additive merge line expected, got: ${JSON.stringify(logLines)}`);
+});
+
+test('refreshRemoteBars union: no local-only bars means no merge log line', async () => {
+  const adapter = buildRemoteBarsAdapter({}, { boston: [{ name: 'Legacy' }] });
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (message) => { logLines.push(String(message)); };
+  let result;
+  try {
+    result = await adapter.refreshRemoteBars(null, { boston: [{ name: 'Legacy', notes: 'stale' }] });
+  } finally {
+    console.log = originalLog;
+  }
+  assert.deepEqual(result.bars.boston, [{ name: 'Legacy' }], 'remote wins for the shared key');
+  assert.ok(!logLines.some((line) => line.includes('merged')),
+    `no merge line when nothing was appended, got: ${JSON.stringify(logLines)}`);
 });
 
 test('supportsReverseGeocode reflects Location API availability', () => {
