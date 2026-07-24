@@ -5,4 +5,28 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-boston
 X-WR-TIMEZONE:America/New_York
+BEGIN:VEVENT
+DTSTART:20260726T020000Z
+DTEND:20260726T070000Z
+DTSTAMP:20260724T182941Z
+UID:81BB9D62-D2CA-4E17-B6ED-72E4A2155C8E
+CREATED:20260724T182614Z
+DESCRIPTION:description: Bear Week Return\nbar: Legacy\ntimezone: America/N
+ ew_York\nticketUrl: https://www.ticketweb.com/event/furball-boston-725-bear
+ -week-legacy-tickets/14269444?REFERRAL_ID=tmfeed\ninstagram: https://instag
+ ram.com/furballnyc/\nimage: https://static.wixstatic.com/media/238fae_c4047
+ c55f4534a0990b2b7fdc19dab8f~mv2.png\nshortName: FUR-BALL\nfavicon: https://
+ linktr.ee/furballnyc\nimageSource: page\nbarSource: curated\nwebsite: https
+ ://www.furball.nyc\ngmaps: https://www.google.com/maps/search/?api=1&query=
+ Legacy%2C%20boston\naddress: 79 Warrenton St\, Boston\, MA 02116\naddressSo
+ urce: curated\npinSource: curated
+LAST-MODIFIED:20260724T182614Z
+LOCATION:42.3499063\, -71.0658453
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:FURBALL Boston
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR

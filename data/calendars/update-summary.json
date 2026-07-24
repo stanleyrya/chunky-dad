@@ -15,13 +15,13 @@
     "boston": {
       "name": "Boston",
       "status": "success",
-      "dataLength": 196,
-      "eventCount": 0
+      "dataLength": 1251,
+      "eventCount": 1
     },
     "chicago": {
       "name": "Chicago",
       "status": "success",
-      "dataLength": 19884,
+      "dataLength": 19970,
       "eventCount": 16
     },
     "dallas": {
