@@ -1479,8 +1479,179 @@ test('BarDataNormalizer does not stamp curated for a value it did not write', ()
 
   assert.equal(event.location, '41.0, -73.0', 'existing pin is kept');
   assert.equal(event.pinSource, 'page', 'pinSource is untouched when bar coordinates are not applied');
-  // Bar address is longer than none → address (and its source) do get written.
+  // Bar address fills a missing one → address (and its source) do get written.
   assert.equal(event.addressSource, 'curated');
+});
+
+// ---------------------------------------------------------------------------
+// District-to-curated address upgrade rung (Aqua Emporio / Torremolinos)
+// ---------------------------------------------------------------------------
+
+const TORREMOLINOS_CITIES = {
+  torremolinos: { timezone: 'Europe/Madrid', patterns: ['torremolinos'] }
+};
+
+const AQUA_EMPORIO_CURATED = {
+  name: 'Aqua Emporio',
+  city: 'torremolinos',
+  address: 'Calle Danza Invisible, La Nogalera 710, 29620 Torremolinos',
+  coordinates: '36.6218328, -4.4982728',
+  website: 'https://aquatorremolinos.com',
+  instagram: 'https://www.instagram.com/aquatorremolinos'
+};
+
+// A second curated bar in the SAME compact district — its address also
+// contains "La Nogalera", so these tests prove containment is only ever
+// checked against the ONE bar the event's bar name matches.
+const EDEN_CURATED = {
+  name: 'Eden',
+  city: 'torremolinos',
+  address: 'Plaza La Nogalera 12, 29620 Torremolinos'
+};
+
+function createTorremolinosBarNormalizer(bars = [AQUA_EMPORIO_CURATED]) {
+  const core = new SharedCore(TORREMOLINOS_CITIES, {
+    eventSchema: EventSchema,
+    bars: { torremolinos: bars }
+  });
+  return new BarDataNormalizer(core);
+}
+
+function captureConsoleLog(fn) {
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (message) => { lines.push(String(message)); };
+  try { fn(); } finally { console.log = originalLog; }
+  return lines;
+}
+
+test('district upgrade rung: the Mad.Bear shape upgrades "LA NOGALERA" to the curated street address', () => {
+  const normalizer = createTorremolinosBarNormalizer();
+  const event = {
+    title: 'FURBALL MAD.BEAR',
+    city: 'torremolinos',
+    bar: 'AQUA EMPORIO',
+    address: 'LA NOGALERA',
+    addressSource: 'page'
+  };
+
+  const lines = captureConsoleLog(() => normalizer.normalize(event));
+
+  assert.equal(event.address, 'Calle Danza Invisible, La Nogalera 710, 29620 Torremolinos',
+    'the district fragment is upgraded to the curated street address');
+  assert.equal(event.addressSource, 'curated', 'the upgrade stamps addressSource curated');
+  assert.ok(lines.includes(
+    '🗺️ GEOCODE VERIFY: "FURBALL MAD.BEAR" upgraded district address "LA NOGALERA" to curated bar address "Calle Danza Invisible, La Nogalera 710, 29620 Torremolinos" (bar: Aqua Emporio)'
+  ), `upgrade log line expected, got: ${JSON.stringify(lines)}`);
+});
+
+test('district upgrade rung: curated pin adoption still fires for the Mad.Bear shape (regression)', () => {
+  const normalizer = createTorremolinosBarNormalizer();
+  const event = { title: 'FURBALL MAD.BEAR', city: 'torremolinos', bar: 'AQUA EMPORIO', address: 'LA NOGALERA' };
+
+  captureConsoleLog(() => normalizer.normalize(event));
+
+  assert.equal(event.location, '36.6218328, -4.4982728', 'curated coordinates adopted for the pinless event');
+  assert.equal(event.pinSource, 'curated');
+  assert.equal(event.instagram, 'https://www.instagram.com/aquatorremolinos', 'curated instagram fills the blank');
+});
+
+test('bar casing: an already-set bar keeps its casing — curated casing adoption lives only in the convergence rescue', () => {
+  const normalizer = createTorremolinosBarNormalizer();
+  const event = { title: 'FURBALL MAD.BEAR', city: 'torremolinos', bar: 'AQUA EMPORIO', address: 'LA NOGALERA' };
+
+  captureConsoleLog(() => normalizer.normalize(event));
+
+  // Documented current behavior: BarDataNormalizer only writes the curated
+  // name into an EMPTY bar (or when title/description was the venue). An
+  // event that already carries "AQUA EMPORIO" keeps that casing here; the
+  // curated-casing adoption exists only in the ai-web parser's bar-convergence
+  // rescue, and the merge's case-only rung prefers the less-uppercased twin.
+  assert.equal(event.bar, 'AQUA EMPORIO');
+});
+
+test('district upgrade rung: an address already identical to curated is a no-op', () => {
+  const normalizer = createTorremolinosBarNormalizer();
+  const event = {
+    title: 'FURBALL MAD.BEAR',
+    city: 'torremolinos',
+    bar: 'AQUA EMPORIO',
+    address: 'Calle Danza Invisible, La Nogalera 710, 29620 Torremolinos',
+    addressSource: 'page'
+  };
+
+  const lines = captureConsoleLog(() => normalizer.normalize(event));
+
+  assert.equal(event.address, 'Calle Danza Invisible, La Nogalera 710, 29620 Torremolinos');
+  assert.equal(event.addressSource, 'page', 'no upgrade happened, so the stamp is untouched');
+  assert.ok(!lines.some(line => line.includes('upgraded district address')), 'identical address logs nothing');
+});
+
+test('district upgrade rung: a non-contained address is NEVER replaced (fail closed)', () => {
+  const normalizer = createTorremolinosBarNormalizer();
+  const event = {
+    title: 'FURBALL MAD.BEAR',
+    city: 'torremolinos',
+    bar: 'AQUA EMPORIO',
+    address: 'Calle Casablanca 5',
+    addressSource: 'page'
+  };
+
+  const lines = captureConsoleLog(() => normalizer.normalize(event));
+
+  assert.equal(event.address, 'Calle Casablanca 5',
+    'a shorter but non-contained address may contradict curated data — it survives to the merge');
+  assert.equal(event.addressSource, 'page');
+  assert.ok(!lines.some(line => line.includes('upgraded district address')));
+});
+
+test('district upgrade rung: no curated match for the bar → no upgrade', () => {
+  const normalizer = createTorremolinosBarNormalizer();
+  const event = {
+    title: 'FURBALL MAD.BEAR',
+    city: 'torremolinos',
+    bar: 'SOME RANDOM CLUB',
+    address: 'LA NOGALERA',
+    addressSource: 'page'
+  };
+
+  captureConsoleLog(() => normalizer.normalize(event));
+
+  assert.equal(event.address, 'LA NOGALERA');
+  assert.equal(event.addressSource, 'page');
+});
+
+test('district upgrade rung: missing or empty bar → no upgrade, even with multiple La Nogalera bars curated', () => {
+  const normalizer = createTorremolinosBarNormalizer([AQUA_EMPORIO_CURATED, EDEN_CURATED]);
+
+  const noBar = { title: 'FURBALL MAD.BEAR', city: 'torremolinos', address: 'LA NOGALERA', addressSource: 'page' };
+  captureConsoleLog(() => normalizer.normalize(noBar));
+  assert.equal(noBar.address, 'LA NOGALERA', 'no bar → the district address is never compared to curated bars');
+  assert.equal(noBar.addressSource, 'page');
+
+  const emptyBar = { title: 'FURBALL MAD.BEAR', city: 'torremolinos', bar: '   ', address: 'LA NOGALERA', addressSource: 'page' };
+  captureConsoleLog(() => normalizer.normalize(emptyBar));
+  assert.equal(emptyBar.address, 'LA NOGALERA');
+  assert.equal(emptyBar.addressSource, 'page');
+});
+
+test('district upgrade rung: containment is keyed on the matched bar — each bar upgrades to ITS OWN address', () => {
+  const normalizer = createTorremolinosBarNormalizer([AQUA_EMPORIO_CURATED, EDEN_CURATED]);
+
+  const aquaEvent = { title: 'FURBALL MAD.BEAR', city: 'torremolinos', bar: 'AQUA EMPORIO', address: 'LA NOGALERA' };
+  captureConsoleLog(() => normalizer.normalize(aquaEvent));
+  assert.equal(aquaEvent.address, 'Calle Danza Invisible, La Nogalera 710, 29620 Torremolinos',
+    'AQUA EMPORIO upgrades to Aqua Emporio\'s address, never Eden\'s');
+  assert.equal(aquaEvent.addressSource, 'curated');
+
+  const edenEvent = { title: 'GARDEN PARTY', city: 'torremolinos', bar: 'EDEN', address: 'LA NOGALERA' };
+  const edenLines = captureConsoleLog(() => normalizer.normalize(edenEvent));
+  assert.equal(edenEvent.address, 'Plaza La Nogalera 12, 29620 Torremolinos',
+    'EDEN upgrades to Eden\'s address, never Aqua Emporio\'s');
+  assert.equal(edenEvent.addressSource, 'curated');
+  assert.ok(edenLines.includes(
+    '🗺️ GEOCODE VERIFY: "GARDEN PARTY" upgraded district address "LA NOGALERA" to curated bar address "Plaza La Nogalera 12, 29620 Torremolinos" (bar: Eden)'
+  ), `Eden upgrade log expected, got: ${JSON.stringify(edenLines)}`);
 });
 
 // Nominatim result with a house number → grade 'exact'. Coordinates sit within

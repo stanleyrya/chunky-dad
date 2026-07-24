@@ -1558,6 +1558,30 @@ class SharedCore {
                             reason: `matches curated bar address (${curatedBar.name})`
                         };
                     }
+                } else if (curatedAddress) {
+                    // A curated address WITHOUT a leading house number (e.g.
+                    // Spanish "Calle Danza Invisible, La Nogalera 710, 29620
+                    // Torremolinos") never parses for the street rung above,
+                    // which left the curated street address losing to a stale
+                    // district-only calendar value via AI coin flips. Fall
+                    // back to normalized-token equality (the same
+                    // normalizeAddressTokens family): exactly one candidate
+                    // IS the curated bar's address token-for-token → it wins,
+                    // with the SAME fail-closed guard — the other candidate
+                    // must not itself be a parseable street address (a
+                    // parseable contradiction of curated data is never
+                    // silently resolved).
+                    const curatedTokenKey = this.normalizeAddressTokens(curatedAddress).join(' ');
+                    const equalsCurated = value => curatedTokenKey !== ''
+                        && this.normalizeAddressTokens(value).join(' ') === curatedTokenKey;
+                    const equalsCuratedA = equalsCurated(valueA);
+                    const equalsCuratedB = equalsCurated(valueB);
+                    if (equalsCuratedA !== equalsCuratedB && !(equalsCuratedA ? parsedB : parsedA)) {
+                        return {
+                            winner: equalsCuratedA ? 'a' : 'b',
+                            reason: `matches curated bar address (${curatedBar.name})`
+                        };
+                    }
                 }
                 // City-suffix twin rung: one candidate is EXACTLY the other
                 // plus a trailing ", <city>" naming the event's own resolved
@@ -8000,14 +8024,31 @@ class SharedCore {
                 };
                 barNormalizer.normalize(probe);
                 if (this.isCoordinatePair(probe.location)) {
-                    const curatedAddress = typeof probe.address === 'string' ? probe.address.trim() : '';
+                    const probeAddress = typeof probe.address === 'string' ? probe.address.trim() : '';
+                    // The scraper normalizer only fills a MISSING address or
+                    // upgrades a district FRAGMENT of the curated address (its
+                    // rung is deliberately fail-closed), but review findings
+                    // are human-approved proposals — here curated bar data
+                    // stays authoritative for vague stored addresses too
+                    // ("Poconos, PA" can never geocode to the venue): when the
+                    // event's bar resolves to a curated bar, propose the
+                    // curated address whenever the stored one is missing or
+                    // shorter (the review pass's own heuristic, unchanged
+                    // behavior for Apply).
+                    const cityBars = this.getCuratedCityBars(city);
+                    const curatedBar = cityBars && typeof probe.bar === 'string' && probe.bar.trim()
+                        ? this.findCuratedBarByName(cityBars, probe.bar) : null;
+                    const curatedBarAddress = curatedBar && typeof curatedBar.address === 'string'
+                        ? curatedBar.address.trim() : '';
+                    let proposedAddress = probeAddress && probeAddress !== eventAddress ? probeAddress : '';
+                    if (!proposedAddress && curatedBarAddress && curatedBarAddress !== eventAddress
+                        && eventAddress.length < curatedBarAddress.length) {
+                        proposedAddress = curatedBarAddress;
+                    }
                     barMatchByEvent.set(event, {
                         barName: typeof probe.bar === 'string' && probe.bar.trim() ? probe.bar.trim() : 'curated bar',
                         location: probe.location.trim(),
-                        // The normalizer already applied its own address heuristic
-                        // (missing or shorter event address loses to the curated
-                        // one), so any difference here IS a material upgrade.
-                        address: curatedAddress && curatedAddress !== eventAddress ? curatedAddress : ''
+                        address: proposedAddress
                     });
                 }
             }

@@ -7291,6 +7291,180 @@ test('merge: the approx stamp is scoped to the append fingerprint — a stored p
 });
 
 // ---------------------------------------------------------------------------
+// Curated Aqua Emporio (Torremolinos): non-parsing curated address anchors the
+// merge, and the curated-upgraded scrape beats the stale district calendar value
+// ---------------------------------------------------------------------------
+
+const AQUA_EMPORIO_ADDRESS = 'Calle Danza Invisible, La Nogalera 710, 29620 Torremolinos';
+
+function createCoreWithTorremolinosBars() {
+  return new SharedCore(
+    {
+      torremolinos: {
+        timezone: 'Europe/Madrid',
+        patterns: ['torremolinos'],
+        coordinates: { lat: 36.6213, lng: -4.4998 }
+      }
+    },
+    {
+      eventSchema: EventSchema,
+      bars: {
+        torremolinos: [{
+          name: 'Aqua Emporio',
+          city: 'torremolinos',
+          address: AQUA_EMPORIO_ADDRESS,
+          coordinates: '36.6218328, -4.4982728'
+        }]
+      }
+    }
+  );
+}
+
+test('address rung 2 fallback: a curated address without a leading house number anchors by token equality', () => {
+  const core = createCoreWithTorremolinosBars();
+  const context = { cityKey: 'torremolinos', barNames: ['AQUA EMPORIO'] };
+
+  // The Spanish-format curated address never parses for the street rung
+  // (number follows the street name) — token equality decides instead, in
+  // both directions.
+  assert.deepEqual(
+    core.resolveConflictDeterministically('address', 'LA NOGALERA, Torremolinos', AQUA_EMPORIO_ADDRESS, context),
+    { winner: 'b', reason: 'matches curated bar address (Aqua Emporio)' });
+  assert.deepEqual(
+    core.resolveConflictDeterministically('address', AQUA_EMPORIO_ADDRESS, 'LA NOGALERA, Torremolinos', context),
+    { winner: 'a', reason: 'matches curated bar address (Aqua Emporio)' });
+  // Format-tolerant: an abbreviation/case/punctuation twin of the curated
+  // address still counts as the curated address.
+  assert.deepEqual(
+    core.resolveConflictDeterministically('address', 'LA NOGALERA', 'calle danza invisible la nogalera 710 29620 torremolinos', context),
+    { winner: 'b', reason: 'matches curated bar address (Aqua Emporio)' });
+  // Fail closed: a PARSEABLE street address contradicting curated data is
+  // never silently resolved — the AI sees it.
+  assert.equal(
+    core.resolveConflictDeterministically('address', '5 Calle Casablanca, Torremolinos', AQUA_EMPORIO_ADDRESS, context),
+    null, 'a parseable contradiction of curated data still arbitrates');
+  // Neither candidate is the curated address → arbitrate as before.
+  assert.equal(
+    core.resolveConflictDeterministically('address', 'somewhere else entirely', 'LA NOGALERA', context),
+    null);
+  // No bar context → rung inert.
+  assert.equal(
+    core.resolveConflictDeterministically('address', 'LA NOGALERA, Torremolinos', AQUA_EMPORIO_ADDRESS,
+      { cityKey: 'torremolinos' }),
+    null);
+});
+
+test('merge survival (Mad.Bear): the curated-upgraded address beats the calendar\'s stale district address', async () => {
+  const core = createCoreWithTorremolinosBars();
+  const adapter = buildArbitrationAdapter({});
+  // The scraped record as the normalizers now produce it: district address
+  // upgraded to the curated street address, curated pin adopted.
+  const scraped = {
+    title: 'FURBALL MAD.BEAR',
+    startDate: new Date('2026-08-15T23:00:00.000Z'),
+    endDate: new Date('2026-08-16T05:00:00.000Z'),
+    bar: 'AQUA EMPORIO',
+    address: AQUA_EMPORIO_ADDRESS,
+    addressSource: 'curated',
+    location: '36.6218328, -4.4982728',
+    pinSource: 'curated',
+    city: 'torremolinos',
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({})
+  };
+  const existing = {
+    title: 'FURBALL MAD.BEAR',
+    startDate: new Date('2026-08-15T23:00:00.000Z'),
+    endDate: new Date('2026-08-16T05:00:00.000Z'),
+    location: '36.6225097, -4.4987054',
+    url: '',
+    notes: [
+      'bar: AQUA EMPORIO',
+      'address: LA NOGALERA, Torremolinos',
+      'addressSource: page',
+      'pinSource: geocoded-approx'
+    ].join('\n')
+  };
+
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (message) => { logLines.push(String(message)); };
+  let finalEvent;
+  try {
+    finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.equal(adapter.calls.length, 0, 'the curated address settles the only conflict — no AI request');
+  assert.equal(finalEvent.address, AQUA_EMPORIO_ADDRESS, 'the curated-upgraded address wins the merge');
+  assert.equal(finalEvent.addressSource, 'curated', 'addressSource follows the winning scraped address');
+  assert.deepEqual(finalEvent._original.aiArbitration.deterministic, ['address']);
+  assert.ok(logLines.includes(
+    '🔒 MERGE: "FURBALL MAD.BEAR" field=address resolved deterministically — matches curated bar address (Aqua Emporio)'
+  ), `stable 🔒 log line expected, got: ${JSON.stringify(logLines)}`);
+  // The address changed, so the fresh curated pin replaces the stale
+  // neighborhood-centroid pin, and pinSource follows it.
+  assert.equal(finalEvent.location, '36.6218328, -4.4982728');
+  assert.equal(finalEvent.pinSource, 'curated');
+});
+
+test('merge survival (enrich flow): the curated-upgraded address beats a same-priority district scrape without AI', async () => {
+  const core = createCoreWithTorremolinosBars();
+  const priorities = { address: { priority: ['ai-web'], merge: 'ai' } };
+  const aiParserConfig = { ai: { provider: 'ollama', endpoint: 'http://ai.example', model: 'm' } };
+  const existing = {
+    title: 'FURBALL MAD.BEAR',
+    bar: 'AQUA EMPORIO',
+    address: 'LA NOGALERA, Torremolinos',
+    city: 'torremolinos',
+    source: 'ai-web',
+    _fieldPriorities: priorities
+  };
+  const incoming = {
+    title: 'FURBALL MAD.BEAR',
+    bar: 'AQUA EMPORIO',
+    address: AQUA_EMPORIO_ADDRESS,
+    city: 'torremolinos',
+    source: 'ai-web',
+    _parserConfig: aiParserConfig,
+    _fieldPriorities: priorities
+  };
+  const adapter = buildArbitrationAdapter({});
+
+  const merged = await core.mergeParsedEvents(existing, incoming, { httpAdapter: adapter });
+
+  assert.equal(adapter.calls.length, 0, 'the curated rung decides the same-priority conflict — no AI request');
+  assert.equal(merged.address, AQUA_EMPORIO_ADDRESS, 'the curated address wins in the enrich flow too');
+});
+
+test('curated bars: torremolinos.json carries Aqua Emporio and the generated scraper-bars twins are in sync', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const torremolinosBars = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'bars', 'torremolinos.json'), 'utf8'));
+  const aqua = torremolinosBars.find(bar => bar && bar.name === 'Aqua Emporio');
+  assert.ok(aqua, 'Aqua Emporio curated in data/bars/torremolinos.json');
+  assert.equal(aqua.city, 'torremolinos');
+  assert.equal(aqua.address, AQUA_EMPORIO_ADDRESS);
+  assert.equal(aqua.coordinates, '36.6218328, -4.4982728');
+  assert.equal(aqua.website, 'https://aquatorremolinos.com');
+  assert.equal(aqua.instagram, 'https://www.instagram.com/aquatorremolinos');
+
+  // Generated module twin (scripts/scraper-bars.js) is committed in sync.
+  const scraperBars = require('./scraper-bars');
+  assert.deepEqual(scraperBars.torremolinos, torremolinosBars, 'scripts/scraper-bars.js regenerated after the torremolinos.json edit');
+
+  // Pure-JSON twin served by the site.
+  const jsonTwin = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'scraper-bars.json'), 'utf8'));
+  assert.deepEqual(jsonTwin.torremolinos, torremolinosBars, 'data/scraper-bars.json regenerated after the torremolinos.json edit');
+
+  // The event's ALL-CAPS bar resolves to the curated record (normalizeBarNameKey).
+  const core = new SharedCore({}, { eventSchema: EventSchema, bars: scraperBars });
+  const match = core.findCuratedBarByName(core.getCuratedCityBars('torremolinos'), 'AQUA EMPORIO');
+  assert.ok(match && match.name === 'Aqua Emporio', 'curated lookup resolves the ALL-CAPS event bar');
+});
+
+// ---------------------------------------------------------------------------
 // geo-poi addressSource tier + fusion evidence line
 // ---------------------------------------------------------------------------
 

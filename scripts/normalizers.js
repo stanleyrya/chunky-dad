@@ -281,13 +281,26 @@ class BarDataNormalizer extends BaseNormalizer {
                 modified = true;
             }
 
-            // Prefer the bar's full address if missing or short in event
-            if (matchedBar.address) {
-                if (!event.address || event.address.length < matchedBar.address.length) {
-                    event.address = matchedBar.address;
-                    event.addressSource = 'curated';
-                    modified = true;
-                }
+            // Prefer the bar's full address if missing in event. A PRESENT
+            // address is only ever replaced by the district-fragment upgrade
+            // rung below — never on length alone (fail closed: a shorter but
+            // non-contained address like "Calle Casablanca 5" may be a genuine
+            // contradiction of curated data and must survive to the merge).
+            if (matchedBar.address && !event.address) {
+                event.address = matchedBar.address;
+                event.addressSource = 'curated';
+                modified = true;
+            }
+
+            // District-to-curated address upgrade rung: the event's address is
+            // a bare district/neighborhood fragment of the curated bar's
+            // street address ("LA NOGALERA" ⊂ "Calle Danza Invisible, La
+            // Nogalera 710, 29620 Torremolinos") — upgrade it to the curated
+            // street address. Strictly gated on the event's BAR matching a
+            // curated bar (findCuratedBarByName full-name equality), so
+            // containment is only ever checked against that one bar's address.
+            if (this.upgradeDistrictAddressToCurated(event)) {
+                modified = true;
             }
 
             // Prefer the bar's coordinates if missing in event
@@ -315,6 +328,55 @@ class BarDataNormalizer extends BaseNormalizer {
         }
 
         return event;
+    }
+
+    // Deterministic district-to-curated address upgrade. Fires only when ALL
+    // of the following hold (anything else returns false — fail closed):
+    //   1. the event carries a non-empty bar that matches a curated bar for
+    //      its city via SharedCore.findCuratedBarByName (full-name equality —
+    //      the bar match is strictly the gate; a district address is NEVER
+    //      compared against curated bars the event's bar does not name);
+    //   2. the event's current address, normalized with the same token family
+    //      the merge address rungs use (SharedCore.normalizeAddressTokens —
+    //      case-insensitive, whitespace/punctuation/diacritic tolerant,
+    //      abbreviations expanded), is a PROPER contiguous fragment of that
+    //      one curated bar's normalized address. Identical addresses need no
+    //      upgrade; a non-contained address is a potential contradiction of
+    //      curated data and is never replaced.
+    // On upgrade: address becomes the curated street address, addressSource
+    // is stamped 'curated', and an additive 🗺️ GEOCODE VERIFY line records
+    // the replacement. Returns true when the event was modified.
+    upgradeDistrictAddressToCurated(event) {
+        if (!event || !this.core) return false;
+        if (typeof this.core.findCuratedBarByName !== 'function'
+            || typeof this.core.getCuratedCityBars !== 'function'
+            || typeof this.core.normalizeAddressTokens !== 'function') return false;
+        const bar = typeof event.bar === 'string' ? event.bar.trim() : '';
+        const address = typeof event.address === 'string' ? event.address.trim() : '';
+        if (!bar || !address) return false;
+        const cityBars = this.core.getCuratedCityBars(event.city);
+        if (!cityBars) return false;
+        const curatedBar = this.core.findCuratedBarByName(cityBars, bar);
+        if (!curatedBar || typeof curatedBar.address !== 'string' || curatedBar.address.trim() === '') return false;
+        const eventTokens = this.core.normalizeAddressTokens(address);
+        const curatedTokens = this.core.normalizeAddressTokens(curatedBar.address);
+        // Proper fragment only: an equal-or-longer token sequence is either
+        // already the curated address or something the rung must not touch.
+        if (eventTokens.length === 0 || eventTokens.length >= curatedTokens.length) return false;
+        let contained = false;
+        for (let start = 0; start + eventTokens.length <= curatedTokens.length && !contained; start++) {
+            let matches = true;
+            for (let offset = 0; offset < eventTokens.length; offset++) {
+                if (curatedTokens[start + offset] !== eventTokens[offset]) { matches = false; break; }
+            }
+            contained = matches;
+        }
+        if (!contained) return false;
+        const title = typeof event.title === 'string' && event.title.trim() ? event.title.trim() : 'event';
+        event.address = curatedBar.address;
+        event.addressSource = 'curated';
+        console.log(`🗺️ GEOCODE VERIFY: "${title}" upgraded district address "${address}" to curated bar address "${curatedBar.address}" (bar: ${curatedBar.name})`);
+        return true;
     }
 }
 
