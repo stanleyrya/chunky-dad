@@ -7354,27 +7354,27 @@ test('evidence: pointer-rescue candidates render their panel line and never seri
 });
 
 // ---------------------------------------------------------------------------
-// Venue-line bar rescue: evidence panel rendering + curated Legacy (Boston)
+// Bar-convergence rescue: evidence panel rendering + curated Legacy (Boston)
 // data sync (run 20260723-224434).
 // ---------------------------------------------------------------------------
 
-test('evidence: a rescued bar renders the venue-line rescue line; _barRescue never serializes into notes', () => {
+test('evidence: a rescued bar renders the signal-convergence line; _barRescue never serializes into notes', () => {
   const core = createEvidencePanelCore();
   const event = {
     bar: 'Legacy',
     barSource: 'curated',
     city: 'boston',
-    _barRescue: { candidate: 'Legacy', locationLine: 'Boston, MA', signals: ['curated', 'ocr'] }
+    _barRescue: { candidate: 'Legacy', signals: ['curated', 'page', 'ocr'] }
   };
   const lines = core.buildEventEvidenceLines(event);
-  assert.ok(lines.includes('bar rescued from venue line above city line (corroborated: curated, ocr)'),
+  assert.ok(lines.includes('bar rescued by signal convergence (curated, page, ocr)'),
     `rescue evidence line expected, got: ${JSON.stringify(lines)}`);
   assert.ok(lines.includes('bar corroborated: curated'),
     'the ordinary barSource verdict still renders alongside the rescue line');
 
   const notes = core.formatEventNotes(event);
   assert.ok(notes.includes('bar: Legacy'), 'real fields serialize');
-  assert.ok(!notes.includes('_barRescue') && !notes.includes('locationLine'),
+  assert.ok(!notes.includes('_barRescue') && !notes.includes('signal convergence'),
     'underscore rescue metadata never serializes into notes');
 
   // No bar (rescue metadata without an adopted bar) → no line (fail open).

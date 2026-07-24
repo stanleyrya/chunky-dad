@@ -3964,6 +3964,7 @@ test('address gate shape rules: isPlausiblyAddressShaped', () => {
   assert.equal(parser.isPlausiblyAddressShaped(''), false);
 });
 
+
 // ---------------------------------------------------------------------------
 // Evidence-pointer rescue (LOG-ONLY observation phase): "trust the pointer,
 // not the copy". The extraction model is a good FINDER and a bad COPIER —
@@ -4182,12 +4183,14 @@ test('evidence-pointer rescue: snippet-pass memos concatenate through mergeAiEve
   ]);
 });
 
-// Deterministic venue-line bar rescue (run 20260723-224434: the FURBALL
-// Boston segment listed the venue "Legacy" on its own line directly above
-// "Boston, MA", but the model returned the street address as the bar and the
-// verbatim gate dropped it — no bar, so no venue-POI address/pin either).
-// The rescue is corroboration-gated: curated and/or OCR, never the page line
-// alone, and it never runs over a surviving model-returned bar.
+// Bar-convergence rescue (run 20260723-224434: the FURBALL Boston segment
+// plainly named its venue "Legacy" — page text, flyer OCR, and curated bars
+// all agreed — but the model returned the street address as the bar and the
+// verbatim gate dropped it; no bar, so no venue-POI address/pin either).
+// Systematic rule: every plausible name line from PAGE / OCR / CURATED is a
+// candidate, adoption requires >= 2 independent signals, and position is only
+// a ranking tie-breaker — so layout (venue above, below, flyer-only, noise in
+// between) never decides whether the rescue works.
 // ---------------------------------------------------------------------------
 
 const RESCUE_CITY_CONFIG = {
@@ -4229,21 +4232,20 @@ function rescueHtmlData(overrides = {}) {
   };
 }
 
-test('venue-line rescue: the FURBALL Boston segment rescues "Legacy" (curated + ocr), barSource curated, downstream stamp untouched', () => {
+test('bar convergence: the real FURBALL Boston segment rescues "Legacy" on all three signals, barSource curated, downstream stamp untouched', () => {
   const parser = createRescueParser(BOSTON_CURATED_BARS);
   const event = { title: 'FURBALL Boston: Bear Week Return', city: 'boston' };
   const logs = captureLogs(() => {
-    parser.applyVenueLineBarRescue(event, rescueHtmlData(), {}, RESCUE_CITY_CONFIG);
+    parser.applyBarConvergenceRescue(event, rescueHtmlData(), {}, RESCUE_CITY_CONFIG);
   });
   assert.equal(event.bar, 'Legacy');
   assert.equal(event.barSource, 'curated');
   assert.deepEqual(event._barRescue, {
     candidate: 'Legacy',
-    locationLine: 'Boston, MA',
-    signals: ['curated', 'ocr']
+    signals: ['curated', 'page', 'ocr']
   });
   assert.ok(logs.includes(
-    '🤖 AI Web: Rescued bar "Legacy" from venue line above city line (corroborated: curated, ocr)'
+    '🤖 AI Web: Rescued bar "Legacy" via signal convergence (signals: curated, page, ocr)'
   ), `rescue log expected, got: ${JSON.stringify(logs)}`);
 
   // The existing barSource stamp is already-stamped-aware: no re-stamp.
@@ -4252,7 +4254,7 @@ test('venue-line rescue: the FURBALL Boston segment rescues "Legacy" (curated + 
 
   // Curated casing wins over the page line's casing.
   const shouting = { title: 'FURBALL Boston: Bear Week Return', city: 'boston' };
-  parser.applyVenueLineBarRescue(
+  parser.applyBarConvergenceRescue(
     shouting,
     rescueHtmlData({ segmentText: FURBALL_BOSTON_SEGMENT.replace('Legacy', 'LEGACY') }),
     {},
@@ -4262,84 +4264,233 @@ test('venue-line rescue: the FURBALL Boston segment rescues "Legacy" (curated + 
   assert.equal(shouting.barSource, 'curated');
 });
 
-test('venue-line rescue: OCR-only corroboration (candidate not curated) adopts with barSource page-adjacent', () => {
+test('bar convergence: layout independence — the venue line BELOW the city line still converges via page + ocr', () => {
   const parser = createRescueParser({});
+  const below = [
+    'FURBALL Boston',
+    'Boston, MA',
+    'Legacy',
+    'July 25, 2026'
+  ].join('\n');
   const event = { title: 'FURBALL Boston: Bear Week Return', city: 'boston' };
   const logs = captureLogs(() => {
-    parser.applyVenueLineBarRescue(event, rescueHtmlData(), {}, RESCUE_CITY_CONFIG);
+    parser.applyBarConvergenceRescue(
+      event,
+      rescueHtmlData({ segmentText: below, ocrResults: [{ url: 'https://furball.nyc/flyer.jpg', text: 'LEGACY\n79 WARRENTON' }] }),
+      {},
+      RESCUE_CITY_CONFIG
+    );
   });
-  assert.equal(event.bar, 'Legacy', 'page-line casing kept without a curated record');
+  assert.equal(event.bar, 'Legacy', 'position is not an anchor — below the city line works too');
   assert.equal(event.barSource, 'page-adjacent');
-  assert.deepEqual(event._barRescue.signals, ['ocr']);
+  assert.deepEqual(event._barRescue.signals, ['page', 'ocr']);
   assert.ok(logs.includes(
-    '🤖 AI Web: Rescued bar "Legacy" from venue line above city line (corroborated: ocr)'
+    '🤖 AI Web: Rescued bar "Legacy" via signal convergence (signals: page, ocr)'
   ), `rescue log expected, got: ${JSON.stringify(logs)}`);
 });
 
-test('venue-line rescue: no corroboration → not adopted, log-only (flag-don\'t-drop)', () => {
-  const parser = createRescueParser({});
+test('bar convergence: layout independence — noise between the venue and the city line no longer breaks the rescue', () => {
+  const parser = createRescueParser(BOSTON_CURATED_BARS);
+  const noisy = [
+    'FURBALL Boston',
+    'Legacy',
+    '79 Warrenton St',
+    '',
+    'Boston, MA'
+  ].join('\n');
   const event = { title: 'FURBALL Boston: Bear Week Return', city: 'boston' };
-  const logs = captureLogs(() => {
-    parser.applyVenueLineBarRescue(event, rescueHtmlData({ ocrResults: [] }), {}, RESCUE_CITY_CONFIG);
-  });
-  assert.equal('bar' in event, false, 'never adopted on the page line alone');
-  assert.equal('barSource' in event, false);
-  assert.equal('_barRescue' in event, false);
-  assert.ok(logs.includes(
-    '🤖 AI Web: Venue-line candidate "Legacy" found above city line but uncorroborated — not adopted'
-  ), `log-only line expected, got: ${JSON.stringify(logs)}`);
+  parser.applyBarConvergenceRescue(event, rescueHtmlData({ segmentText: noisy }), {}, RESCUE_CITY_CONFIG);
+  assert.equal(event.bar, 'Legacy', 'an address line between venue and city is just noise now');
+  assert.equal(event.barSource, 'curated');
 });
 
-test('venue-line rescue: the organizer brand above the city line is never adopted, even fully corroborated', () => {
-  // Corroboration is deliberately available (curated + OCR both know
-  // "Furball") to prove the organizer guard fires BEFORE corroboration.
+test('bar convergence: venue only in OCR but curated → adopted (curated + ocr) with curated casing', () => {
+  const parser = createRescueParser(BOSTON_CURATED_BARS);
+  const noVenueOnPage = [
+    'FURBALL Boston',
+    'Bear Week Return',
+    'Boston, MA',
+    'July 25, 2026'
+  ].join('\n');
+  const event = { title: 'FURBALL Boston: Bear Week Return', city: 'boston' };
+  const logs = captureLogs(() => {
+    parser.applyBarConvergenceRescue(
+      event,
+      rescueHtmlData({ segmentText: noVenueOnPage, ocrResults: [{ url: 'https://furball.nyc/flyer.jpg', text: 'LEGACY\n79 WARRENTON' }] }),
+      {},
+      RESCUE_CITY_CONFIG
+    );
+  });
+  assert.equal(event.bar, 'Legacy', 'flyer-only venues are reachable — curated casing adopted');
+  assert.equal(event.barSource, 'curated');
+  assert.deepEqual(event._barRescue.signals, ['curated', 'ocr']);
+  assert.ok(logs.includes(
+    '🤖 AI Web: Rescued bar "Legacy" via signal convergence (signals: curated, ocr)'
+  ), `rescue log expected, got: ${JSON.stringify(logs)}`);
+});
+
+test('bar convergence: casing variants normalize to ONE candidate with deduped signals', () => {
+  const parser = createRescueParser({});
+  // "The Legacy" (page) and "LEGACY" (page + OCR) share one bar-name key.
+  // If dedup failed, the OCR form alone would qualify and its casing would
+  // be adopted; merged, the page's first form wins.
+  const segment = [
+    'The Legacy',
+    'Boston, MA',
+    'LEGACY'
+  ].join('\n');
+  const event = { title: 'FURBALL Boston: Bear Week Return', city: 'boston' };
+  parser.applyBarConvergenceRescue(
+    event,
+    rescueHtmlData({ segmentText: segment, ocrResults: [{ url: 'https://furball.nyc/flyer.jpg', text: 'LEGACY' }] }),
+    {},
+    RESCUE_CITY_CONFIG
+  );
+  assert.equal(event.bar, 'The Legacy', 'merged candidate adopts the first page casing');
+  assert.deepEqual(event._barRescue.signals, ['page', 'ocr'], 'each signal counted once');
+});
+
+test('bar convergence: one signal alone never adopts — page-only, ocr-only, curated-only all log-only', () => {
+  // Page only.
+  const pageOnly = createRescueParser({});
+  const pageEvent = { title: 'FURBALL Boston: Bear Week Return', city: 'boston' };
+  const pageLogs = captureLogs(() => {
+    pageOnly.applyBarConvergenceRescue(
+      pageEvent,
+      rescueHtmlData({ segmentText: 'Legacy\nBoston, MA', ocrResults: [] }),
+      {},
+      RESCUE_CITY_CONFIG
+    );
+  });
+  assert.equal('bar' in pageEvent, false, 'never adopted from the page corpus alone');
+  assert.equal('_barRescue' in pageEvent, false);
+  assert.ok(pageLogs.includes(
+    '🤖 AI Web: Bar rescue candidate "Legacy" carries only one signal (page) — not adopted'
+  ), `log-only line expected, got: ${JSON.stringify(pageLogs)}`);
+
+  // OCR only.
+  const ocrOnly = createRescueParser({});
+  const ocrEvent = { title: 'FURBALL Boston: Bear Week Return', city: 'boston' };
+  const ocrLogs = captureLogs(() => {
+    ocrOnly.applyBarConvergenceRescue(
+      ocrEvent,
+      rescueHtmlData({ segmentText: 'Boston, MA\nJuly 25, 2026', ocrResults: [{ url: 'https://furball.nyc/flyer.jpg', text: 'LEGACY' }] }),
+      {},
+      RESCUE_CITY_CONFIG
+    );
+  });
+  assert.equal('bar' in ocrEvent, false, 'never adopted from the OCR corpus alone');
+  assert.ok(ocrLogs.includes(
+    '🤖 AI Web: Bar rescue candidate "LEGACY" carries only one signal (ocr) — not adopted'
+  ), `log-only line expected, got: ${JSON.stringify(ocrLogs)}`);
+
+  // Curated only — the name appears in NEITHER text corpus: never adopted,
+  // and never even named (the page gave no hint of it).
+  const curatedOnly = createRescueParser({ boston: [{ name: 'Alley Cat', city: 'boston' }] });
+  const curatedEvent = { title: 'FURBALL Boston: Bear Week Return', city: 'boston' };
+  const curatedLogs = captureLogs(() => {
+    curatedOnly.applyBarConvergenceRescue(
+      curatedEvent,
+      rescueHtmlData({ segmentText: 'FURBALL Boston\nBoston, MA', ocrResults: [] }),
+      {},
+      RESCUE_CITY_CONFIG
+    );
+  });
+  assert.equal('bar' in curatedEvent, false, 'a curated name absent from page and OCR is never adopted');
+  assert.ok(!curatedLogs.some(line => line.includes('Alley Cat')),
+    `an unobserved curated bar is never named, got: ${JSON.stringify(curatedLogs)}`);
+  assert.ok(!curatedLogs.some(line => line.includes('Rescued bar')), 'no adoption log');
+});
+
+test('bar convergence: two qualifying candidates — the curated one wins', () => {
+  const parser = createRescueParser(BOSTON_CURATED_BARS);
+  const segment = [
+    'Alley Cat',
+    'Legacy',
+    'Boston, MA'
+  ].join('\n');
+  const event = { title: 'FURBALL Boston: Bear Week Return', city: 'boston' };
+  parser.applyBarConvergenceRescue(
+    event,
+    rescueHtmlData({ segmentText: segment, ocrResults: [{ url: 'https://furball.nyc/flyer.jpg', text: 'ALLEY CAT\nLEGACY' }] }),
+    {},
+    RESCUE_CITY_CONFIG
+  );
+  assert.equal(event.bar, 'Legacy', 'curated signal outranks an equally-corroborated uncurated candidate');
+  assert.equal(event.barSource, 'curated');
+});
+
+test('bar convergence: two curated candidates — proximity to a location/address line breaks the tie; a true tie refuses', () => {
+  const twoCurated = {
+    boston: [
+      { name: 'Legacy', city: 'boston', address: '79 Warrenton St, Boston, MA 02116' },
+      { name: 'Alley Cat', city: 'boston', address: '1 Boylston Pl, Boston, MA 02116' }
+    ]
+  };
+  // Both curated + page (2 signals each): the one nearest the location line wins.
+  const parser = createRescueParser(twoCurated);
+  const segment = [
+    'Alley Cat',
+    'Bear Week Return',
+    'Legacy',
+    'Boston, MA'
+  ].join('\n');
+  const event = { title: 'FURBALL Boston: Bear Week Return', city: 'boston' };
+  parser.applyBarConvergenceRescue(
+    event,
+    rescueHtmlData({ segmentText: segment, ocrResults: [] }),
+    {},
+    RESCUE_CITY_CONFIG
+  );
+  assert.equal(event.bar, 'Legacy', 'fewest lines from the location line — position as tie-breaker only');
+
+  // True tie: both curated + ocr, neither in the page text at all — nothing
+  // distinguishes them, so nothing is adopted.
+  const tied = createRescueParser(twoCurated);
+  const tiedEvent = { title: 'FURBALL Boston: Bear Week Return', city: 'boston' };
+  const tiedLogs = captureLogs(() => {
+    tied.applyBarConvergenceRescue(
+      tiedEvent,
+      rescueHtmlData({ segmentText: 'Boston, MA', ocrResults: [{ url: 'https://furball.nyc/flyer.jpg', text: 'LEGACY\nALLEY CAT' }] }),
+      {},
+      RESCUE_CITY_CONFIG
+    );
+  });
+  assert.equal('bar' in tiedEvent, false, 'a genuine tie adopts nothing');
+  assert.equal('_barRescue' in tiedEvent, false);
+  assert.ok(tiedLogs.includes(
+    '🤖 AI Web: Bar rescue ambiguous between "Legacy" and "Alley Cat" — not adopted'
+  ), `ambiguous log expected, got: ${JSON.stringify(tiedLogs)}`);
+});
+
+test('bar convergence: the organizer brand is never rescued as the venue — the name filter runs before signals, curated included', () => {
+  // Corroboration is deliberately maximal (page + OCR + even a curated
+  // record) to prove the organizer guard fires BEFORE any signal counting.
   const parser = createRescueParser({ boston: [{ name: 'Furball', city: 'boston' }] });
   const segment = [
     'Bear Week Return',
     'FURBALL',
-    'Boston, MA',
-    'July 25, 2026'
+    'Boston, MA'
   ].join('\n');
-  const event = { title: 'Bear Week Return', city: 'boston', _organizer: 'FURBALL' };
+  const event = { title: 'Bear Week Return: A Party', city: 'boston', _organizer: 'FURBALL' };
   const logs = captureLogs(() => {
-    parser.applyVenueLineBarRescue(event, rescueHtmlData({ segmentText: segment }), {}, RESCUE_CITY_CONFIG);
+    parser.applyBarConvergenceRescue(
+      event,
+      rescueHtmlData({ segmentText: segment, ocrResults: [{ url: 'https://furball.nyc/flyer.jpg', text: 'FURBALL' }] }),
+      {},
+      RESCUE_CITY_CONFIG
+    );
   });
   assert.equal('bar' in event, false, 'the promoter is never rescued as the venue');
   assert.equal('_barRescue' in event, false);
   assert.ok(!logs.some(line => line.includes('Rescued bar')), `no adoption log, got: ${JSON.stringify(logs)}`);
 });
 
-test('venue-line rescue: address-shaped and date lines above the city line are never bar candidates', () => {
-  const parser = createRescueParser(BOSTON_CURATED_BARS);
-  const addressAbove = [
-    'FURBALL Boston',
-    'Legacy',
-    '79 Warrenton St',
-    'Boston, MA'
-  ].join('\n');
-  const event = { title: 'FURBALL Boston: Bear Week Return', city: 'boston' };
-  const logs = captureLogs(() => {
-    parser.applyVenueLineBarRescue(event, rescueHtmlData({ segmentText: addressAbove }), {}, RESCUE_CITY_CONFIG);
-  });
-  assert.equal('bar' in event, false, 'an address is not a venue name — and no hunting past it');
-  assert.ok(!logs.some(line => line.includes('Rescued bar')), `no adoption log, got: ${JSON.stringify(logs)}`);
-
-  const dateAbove = [
-    'FURBALL Boston',
-    'Legacy',
-    'July 25, 2026',
-    'Boston, MA'
-  ].join('\n');
-  const dated = { title: 'FURBALL Boston: Bear Week Return', city: 'boston' };
-  parser.applyVenueLineBarRescue(dated, rescueHtmlData({ segmentText: dateAbove }), {}, RESCUE_CITY_CONFIG);
-  assert.equal('bar' in dated, false, 'a date line is not a venue name');
-});
-
-test('venue-line rescue: a model-returned surviving bar makes the rescue a no-op', () => {
+test('bar convergence: a model-returned surviving bar makes the rescue a no-op', () => {
   const parser = createRescueParser(BOSTON_CURATED_BARS);
   const event = { title: 'FURBALL Boston: Bear Week Return', city: 'boston', bar: 'Club Cafe' };
   const logs = captureLogs(() => {
-    parser.applyVenueLineBarRescue(event, rescueHtmlData(), {}, RESCUE_CITY_CONFIG);
+    parser.applyBarConvergenceRescue(event, rescueHtmlData(), {}, RESCUE_CITY_CONFIG);
   });
   assert.equal(event.bar, 'Club Cafe', 'a surviving extraction is never second-guessed');
   assert.equal('barSource' in event, false, 'no stamp from the rescue');
@@ -4347,13 +4498,13 @@ test('venue-line rescue: a model-returned surviving bar makes the rescue a no-op
   assert.equal(logs.length, 0, `rescue must be silent, got: ${JSON.stringify(logs)}`);
 });
 
-test('venue-line rescue: single-page events fall back to the page text when no segmentText exists', () => {
+test('bar convergence: single-page events fall back to the page text when no segmentText exists', () => {
   const parser = createRescueParser(BOSTON_CURATED_BARS);
   const html = '<html><head><title>FURBALL</title></head><body>'
     + '<p>FURBALL Boston</p><p>Bear Week Return</p><p>Legacy</p><p>Boston, MA</p><p>July 25, 2026</p>'
     + '</body></html>';
   const event = { title: 'FURBALL Boston: Bear Week Return', city: 'boston' };
-  parser.applyVenueLineBarRescue(
+  parser.applyBarConvergenceRescue(
     event,
     { url: 'https://furball.nyc/boston', html, ocrResults: [{ url: 'https://furball.nyc/flyer.jpg', text: FURBALL_BOSTON_OCR }] },
     {},

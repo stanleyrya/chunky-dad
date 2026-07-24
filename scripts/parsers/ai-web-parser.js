@@ -679,13 +679,14 @@ class AiWebParser {
         // name — and it sailed through to geocoding). Runs BEFORE the bar
         // corroboration stamp so a dropped address never feeds adjacency.
         this.applyAddressPlausibilityGate(event, promptHtmlData);
-        // Deterministic venue-line bar rescue: only when extraction left NO
-        // bar (including a gate-dropped one). Scans the segment/page text —
-        // never the OCR prepend — for the venue line above a "City, ST" line
-        // and adopts it ONLY with independent corroboration (curated/OCR).
+        // Deterministic bar-convergence rescue: only when extraction left NO
+        // bar (including a gate-dropped one). Every plausible name line from
+        // the page text, the OCR text, and the curated bars corpus is a
+        // candidate; adoption requires >= 2 independent signals (curated,
+        // page, ocr) — position is only a tie-breaker, never an anchor.
         // Runs BEFORE the barSource stamp so an adopted bar carries its own
         // provenance; a model-returned surviving bar makes this a no-op.
-        this.applyVenueLineBarRescue(event, htmlData, parserConfig, cityConfig);
+        this.applyBarConvergenceRescue(event, htmlData, parserConfig, cityConfig);
         // Bar corroboration stamp (barSource): checks the final bar+address
         // pair against the same corpora the evidence gate uses (page text,
         // OCR text, segment text). Flag-don't-drop: values are never changed.
@@ -817,8 +818,8 @@ class AiWebParser {
             ...htmlData,
             html: contextLines.length > 0 ? `${contextLines.join('\n')}\n${segmentContent}` : segmentContent,
             // The segment's own page text WITHOUT the resource/OCR context
-            // lines — the venue-line bar rescue scans this so OCR text stays
-            // an independent corroboration signal, never the scan source.
+            // lines — the bar-convergence rescue's PAGE corpus, so OCR text
+            // stays an independent signal instead of leaking into the page.
             segmentText: segmentContent,
             aiEvent: null,
             aiExtraction: null,
@@ -9766,108 +9767,211 @@ TEXT:
         return event;
     }
 
-    // Deterministic venue-line bar rescue (run 20260723-224434: the FURBALL
-    // Boston segment plainly listed its venue "Legacy" on its own line
-    // directly above "Boston, MA", but the model returned the street address
-    // as the bar and the verbatim gate dropped it — leaving no bar, and
-    // therefore no venue-POI address or pin; earlier runs extracted "Legacy"
-    // from the very same text, i.e. pure model nondeterminism). When
-    // extraction produced NO bar, scan the segment's page text (for
-    // single-page events, the page text — never the OCR prepend, so OCR
-    // stays an independent corroboration signal) for a "City, ST" location
-    // line and take the nearest non-empty line ABOVE it as the venue
-    // candidate. Candidates that can never be a venue name are rejected
-    // deterministically (see getVenueLineCandidateRejection). Adoption
-    // REQUIRES independent corroboration — core doctrine: never a bar from a
-    // single signal:
-    //   - curated: candidate matches a curated bar for the event's city →
-    //     curated casing, barSource 'curated';
-    //   - ocr: candidate appears whole-word (case-insensitive) in the
-    //     event's OCR image text → barSource 'page-adjacent'.
-    // Neither signal → log-only (flag-don't-drop), nothing adopted. Never
-    // runs when a model-returned bar survived the gate (a surviving
-    // extraction is not second-guessed), and operates purely on the scraped
-    // event pre-merge — calendar-side bars are untouched.
-    applyVenueLineBarRescue(event, htmlData, parserConfig, cityConfig) {
+    // Deterministic bar-convergence rescue (run 20260723-224434: the FURBALL
+    // Boston segment plainly listed its venue "Legacy", the flyer OCR read
+    // "LEGACY", and Legacy is a curated Boston bar — but the model returned
+    // the street address as the bar and the verbatim gate dropped it,
+    // leaving no bar, no venue-POI address, no pin). When extraction
+    // produced NO bar, three independent corpora vote:
+    //   - PAGE:    every line of the segment's page text (single-page events
+    //              fall back to the page evidence text — never the OCR
+    //              prepend, so OCR stays an independent signal);
+    //   - OCR:     every line of the event's OCR image text;
+    //   - CURATED: every curated bar name for the event's city (event.city,
+    //              else any city key resolvable from the page text).
+    // PAGE/OCR lines become candidates only when the deterministic
+    // could-be-a-name filter passes (getVenueLineCandidateRejection);
+    // curated names are always candidates. Candidates that normalize to the
+    // same bar-name key (normalizeBarNameKey: "LEGACY"/"Legacy"/"The
+    // Legacy") are ONE candidate. Each candidate then carries up to three
+    // signals — curated match, whole-word presence in PAGE, whole-word
+    // presence in OCR — and is adopted only with >= 2 of the 3. Never one
+    // signal alone: core doctrine, a bar is never invented from a single
+    // corpus. No positional anchor anywhere; position appears only as a
+    // ranking tie-breaker (proximity to a location/address-shaped PAGE
+    // line), so layout changes — venue below the city line, venue only on
+    // the flyer, extra noise — cannot break the rescue. A still-tied top
+    // pair adopts nothing (ambiguity is logged, never guessed). Never runs
+    // when a model-returned bar survived the gate (a surviving extraction is
+    // not second-guessed), and operates purely on the scraped event
+    // pre-merge — calendar-side bars are untouched.
+    applyBarConvergenceRescue(event, htmlData, parserConfig, cityConfig) {
         if (!event || typeof event !== 'object') return event;
         const existingBar = typeof event.bar === 'string' ? event.bar.trim() : '';
         if (existingBar) return event;
+
+        // Corpus PAGE — the segment's own text, page evidence text fallback.
         const segmentText = htmlData && typeof htmlData.segmentText === 'string' ? htmlData.segmentText : '';
-        const scanText = segmentText.trim()
+        const pageText = segmentText.trim()
             ? segmentText
             : (this.buildAiEvidenceContext(htmlData, parserConfig).raw || '');
-        if (!scanText.trim()) return event;
-        const lines = scanText.split('\n').map(line => line.trim());
-        let candidate = '';
-        let locationLine = '';
-        let locationCityKey = '';
-        for (let i = 1; i < lines.length; i++) {
-            const line = lines[i];
-            if (!line) continue;
-            // Location-form line: an explicit "<Place>, <Place>" pair that
-            // also resolves to a configured city ("Boston, MA" → boston).
-            if (!this.extractAdjacentLocationPlacePair(line, event)) continue;
-            const cityKey = this.findCityKeyInText(line, cityConfig);
-            if (!cityKey) continue;
-            for (let j = i - 1; j >= 0; j -= 1) {
-                if (lines[j]) {
-                    candidate = lines[j];
-                    break;
-                }
-            }
-            locationLine = line;
-            locationCityKey = cityKey;
-            break; // first location line only — a noisy segment proves nothing
-        }
-        if (!candidate || !locationLine) return event;
-        if (this.getVenueLineCandidateRejection(candidate, event, htmlData)) return event;
+        // Corpus OCR — every OCR result's text for this event.
+        const ocrResults = htmlData && Array.isArray(htmlData.ocrResults) ? htmlData.ocrResults : [];
+        const ocrCorpus = ocrResults
+            .map(ocr => (ocr && typeof ocr.text === 'string' ? ocr.text : ''))
+            .filter(text => text.trim())
+            .join('\n');
+        if (!pageText.trim() && !ocrCorpus) return event;
+        const pageLines = pageText.split('\n').map(line => line.trim());
+        const ocrLines = ocrCorpus.split('\n').map(line => line.trim());
 
-        // Corroboration signals — each independent of the page line itself.
-        const signals = [];
-        let curatedBar = null;
+        // Corpus CURATED — the event's city first, else any city key the
+        // page text itself resolves to (best-effort: no city, no curated
+        // corpus, but PAGE+OCR convergence still works).
         const curatedCityKey = (typeof event.city === 'string' && event.city.trim())
             ? event.city.trim()
-            : locationCityKey;
+            : this.findCityKeyInText(pageText, cityConfig);
+        let cityBars = null;
         if (this.core && typeof this.core.getCuratedCityBars === 'function'
             && typeof this.core.findCuratedBarByName === 'function') {
             try {
-                const cityBars = this.core.getCuratedCityBars(curatedCityKey);
-                curatedBar = cityBars ? this.core.findCuratedBarByName(cityBars, candidate) : null;
+                cityBars = this.core.getCuratedCityBars(curatedCityKey);
             } catch (_) {
-                curatedBar = null; // curated matching is best-effort — fail open to OCR
+                cityBars = null; // curated corpus is best-effort — fail open
             }
         }
-        if (curatedBar) signals.push('curated');
-        const ocrResults = htmlData && Array.isArray(htmlData.ocrResults) ? htmlData.ocrResults : [];
-        const escapedCandidate = candidate
-            .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-            .replace(/\s+/g, '\\s+');
-        const wholeWordPattern = new RegExp(`(?:^|[^A-Za-z0-9])${escapedCandidate}(?=$|[^A-Za-z0-9])`, 'i');
-        if (ocrResults.some(ocr => ocr && typeof ocr.text === 'string' && wholeWordPattern.test(ocr.text))) {
-            signals.push('ocr');
+
+        // Candidate pool, deduped on the shared bar-name identity key so
+        // "LEGACY" (OCR) + "Legacy" (page) + curated "Legacy" are ONE
+        // candidate accumulating all three signals.
+        const normalizeKey = value => (this.core && typeof this.core.normalizeBarNameKey === 'function'
+            ? this.core.normalizeBarNameKey(value)
+            : String(value || '').toLowerCase().replace(/^\s*the\s+/, '').replace(/[^a-z0-9]/g, ''));
+        const candidates = new Map();
+        const addCandidate = (text, origin) => {
+            const form = String(text || '').trim();
+            const key = normalizeKey(form);
+            if (!key) return;
+            let entry = candidates.get(key);
+            if (!entry) {
+                entry = { forms: [], pageForm: '', ocrForm: '' };
+                candidates.set(key, entry);
+            }
+            if (!entry.forms.includes(form)) entry.forms.push(form);
+            if (origin === 'page' && !entry.pageForm) entry.pageForm = form;
+            if (origin === 'ocr' && !entry.ocrForm) entry.ocrForm = form;
+        };
+        // The could-be-a-name filter runs BEFORE signals: an organizer brand
+        // or address line never becomes a candidate no matter how many
+        // corpora repeat it. Curated names are trusted venue names, so the
+        // shape rejections don't apply to them — but the organizer/brand and
+        // event-title guards are absolute: the promoter is never rescued as
+        // the venue, curated or not.
+        pageLines.forEach(line => {
+            if (line && !this.getVenueLineCandidateRejection(line, event, htmlData)) addCandidate(line, 'page');
+        });
+        ocrLines.forEach(line => {
+            if (line && !this.getVenueLineCandidateRejection(line, event, htmlData)) addCandidate(line, 'ocr');
+        });
+        (Array.isArray(cityBars) ? cityBars : []).forEach(bar => {
+            if (!bar || typeof bar.name !== 'string') return;
+            const rejection = this.getVenueLineCandidateRejection(bar.name, event, htmlData);
+            if (rejection === 'matches organizer/brand' || rejection === 'matches event title') return;
+            addCandidate(bar.name, 'curated');
+        });
+        if (candidates.size === 0) return event;
+
+        // Whole-word, case-insensitive, flexible-whitespace presence test —
+        // every surface form of the candidate counts, so a curated "The
+        // Eagle" still finds the page's plain "Eagle" line.
+        const buildWholeWordPattern = form => {
+            const escaped = form
+                .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+                .replace(/\s+/g, '\\s+');
+            return new RegExp(`(?:^|[^A-Za-z0-9])${escaped}(?=$|[^A-Za-z0-9])`, 'i');
+        };
+
+        // Proximity anchors for the tie-break: location-form or
+        // address-shaped PAGE lines. Position's ONLY appearance.
+        const anchorIndexes = [];
+        pageLines.forEach((line, index) => {
+            if (line && this.isLocationAnchorLine(line, event)) anchorIndexes.push(index);
+        });
+
+        const scored = [];
+        for (const entry of candidates.values()) {
+            const patterns = entry.forms.map(buildWholeWordPattern);
+            const pageIndexes = [];
+            pageLines.forEach((line, index) => {
+                if (line && patterns.some(pattern => pattern.test(line))) pageIndexes.push(index);
+            });
+            const curatedBar = cityBars ? this.core.findCuratedBarByName(cityBars, entry.forms[0]) : null;
+            const signals = [];
+            if (curatedBar) signals.push('curated');
+            if (pageIndexes.length > 0) signals.push('page');
+            if (ocrCorpus && patterns.some(pattern => pattern.test(ocrCorpus))) signals.push('ocr');
+            scored.push({
+                curatedBar,
+                signals,
+                // Fewest lines from any anchor, over every PAGE occurrence;
+                // candidates absent from PAGE rank last here.
+                proximity: (pageIndexes.length > 0 && anchorIndexes.length > 0)
+                    ? Math.min(...pageIndexes.map(i => Math.min(...anchorIndexes.map(a => Math.abs(i - a)))))
+                    : Infinity,
+                firstPageIndex: pageIndexes.length > 0 ? pageIndexes[0] : Infinity,
+                // Adopted casing: curated wins, else the page's, else OCR's.
+                name: curatedBar ? curatedBar.name : (entry.pageForm || entry.ocrForm || entry.forms[0]),
+                // The raw observed text (page first) for provenance.
+                candidateForm: entry.pageForm || entry.ocrForm || entry.forms[0]
+            });
         }
-        if (signals.length === 0) {
-            console.log(`🤖 AI Web: Venue-line candidate "${candidate}" found above city line but uncorroborated — not adopted`);
+        // Ranking: curated signal, then signal count, then anchor proximity,
+        // then earliest PAGE appearance. 0 = genuinely indistinguishable.
+        const compareCandidates = (a, b) => {
+            if ((a.curatedBar ? 1 : 0) !== (b.curatedBar ? 1 : 0)) return (b.curatedBar ? 1 : 0) - (a.curatedBar ? 1 : 0);
+            if (a.signals.length !== b.signals.length) return b.signals.length - a.signals.length;
+            if (a.proximity !== b.proximity) return a.proximity - b.proximity;
+            if (a.firstPageIndex !== b.firstPageIndex) return a.firstPageIndex - b.firstPageIndex;
+            return 0;
+        };
+        scored.sort(compareCandidates);
+        const qualified = scored.filter(candidate => candidate.signals.length >= 2);
+        if (qualified.length === 0) {
+            // Log-only (flag-don't-drop): name the best candidate actually
+            // observed in a text corpus. A curated name absent from both
+            // texts is not worth naming — the page never hinted at it.
+            const observed = scored.find(candidate =>
+                candidate.signals.includes('page') || candidate.signals.includes('ocr'));
+            if (observed) {
+                console.log(`🤖 AI Web: Bar rescue candidate "${observed.name}" carries only one signal (${observed.signals.join(', ')}) — not adopted`);
+            }
             return event;
         }
-        event.bar = curatedBar ? curatedBar.name : candidate;
-        event.barSource = curatedBar ? 'curated' : 'page-adjacent';
+        const top = qualified[0];
+        if (qualified.length > 1 && compareCandidates(top, qualified[1]) === 0) {
+            console.log(`🤖 AI Web: Bar rescue ambiguous between "${top.name}" and "${qualified[1].name}" — not adopted`);
+            return event;
+        }
+        event.bar = top.name;
+        event.barSource = top.curatedBar ? 'curated' : 'page-adjacent';
         // Underscore field — internal metadata, never serialized into notes;
         // shared-core's buildEventEvidenceLines renders it in the evidence
         // panel so a rescued bar is always visible in the results UI.
         event._barRescue = {
-            candidate: candidate,
-            locationLine: locationLine,
-            signals: signals
+            candidate: top.candidateForm,
+            signals: top.signals
         };
-        console.log(`🤖 AI Web: Rescued bar "${event.bar}" from venue line above city line (corroborated: ${signals.join(', ')})`);
+        console.log(`🤖 AI Web: Rescued bar "${event.bar}" via signal convergence (signals: ${top.signals.join(', ')})`);
         return event;
     }
 
-    // '' when the venue-line candidate could plausibly be a venue name;
-    // otherwise the deterministic reason it can never be one. Rejection is
-    // silent — an unusable line above the city line is the common case, not a
-    // signal worth logging.
+    // A PAGE line that anchors the bar-rescue proximity tie-break: an
+    // explicit "<Place>, <Place>" location line or an address-shaped line
+    // (same shapes getVenueLineCandidateRejection rejects as candidates).
+    isLocationAnchorLine(line, event) {
+        const text = String(line || '').trim();
+        if (!text) return false;
+        if (this.extractAdjacentLocationPlacePair(text, event)) return true;
+        if (this.core && typeof this.core.looksLikeStreetAddress === 'function'
+            && this.core.looksLikeStreetAddress(text)) return true;
+        return /\d/.test(text)
+            && /(?:^|\s)(?:St|Street|Ave|Avenue|Blvd|Boulevard|Rd|Road|Dr|Drive|Ln|Lane|Way|Hwy|Pl|Place|Ct|Court)\.?(?:\s|$)/i.test(text);
+    }
+
+    // '' when a corpus line could plausibly be a venue name; otherwise the
+    // deterministic reason it can never be one. Rejection is silent — an
+    // unusable line is the common case in any corpus, not a signal worth
+    // logging.
     getVenueLineCandidateRejection(candidate, event, htmlData) {
         const text = String(candidate || '').trim();
         if (!text) return 'empty';
