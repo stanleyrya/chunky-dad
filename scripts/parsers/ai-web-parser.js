@@ -690,7 +690,7 @@ class AiWebParser {
         // bar (including a gate-dropped one). Every plausible name line from
         // the page text, the OCR text, and the curated bars corpus is a
         // candidate; adoption requires >= 2 independent signals (curated,
-        // page, ocr) — position is only a tie-breaker, never an anchor.
+        // page, ocr, url) — position is only a tie-breaker, never an anchor.
         // Runs BEFORE the barSource stamp so an adopted bar carries its own
         // provenance; a model-returned surviving bar makes this a no-op.
         this.applyBarConvergenceRescue(event, htmlData, parserConfig, cityConfig);
@@ -5528,6 +5528,15 @@ class AiWebParser {
                 };
                 return;
             }
+            // The parallel reason memo follows the same earlier-passes-win
+            // union so a field's reason always describes its recorded value.
+            if (key === '__droppedFieldReasons' && value && typeof value === 'object') {
+                merged.__droppedFieldReasons = {
+                    ...value,
+                    ...(merged.__droppedFieldReasons && typeof merged.__droppedFieldReasons === 'object' ? merged.__droppedFieldReasons : {})
+                };
+                return;
+            }
             if (!this.isUsableAiFieldValue(value)) return;
             const normalizedName = this.normalizePromptFieldName(key);
             if (this.hasResolvedFieldValue(merged, normalizedName)) return;
@@ -5720,6 +5729,17 @@ class AiWebParser {
                 if (!(entry.field in validatedPartial.__droppedFieldValues)) {
                     validatedPartial.__droppedFieldValues[entry.field] = entry.value;
                 }
+                // Parallel reason memo (same first-drop-wins rule): the
+                // confidence-retry feedback needs to tell plain
+                // not-verbatim drops (reason untagged → '') apart from
+                // evidence-quality drops (tagged reason) — only the former
+                // are worth echoing back to the retry prompt.
+                if (!validatedPartial.__droppedFieldReasons || typeof validatedPartial.__droppedFieldReasons !== 'object') {
+                    validatedPartial.__droppedFieldReasons = {};
+                }
+                if (!(entry.field in validatedPartial.__droppedFieldReasons)) {
+                    validatedPartial.__droppedFieldReasons[entry.field] = typeof entry.reason === 'string' ? entry.reason : '';
+                }
             });
             // Evidence-pointer rescue memo (internal, additive, LOG-ONLY):
             // per-snippet reports are discarded, so rescue candidates ride an
@@ -5762,6 +5782,35 @@ class AiWebParser {
 
         // === STEP 3: Return Merged Results ===
         return merged;
+    }
+
+    // Confidence-retry feedback map ({ field: droppedValue }) for the fields
+    // being retried, sourced from the dropped-value/reason memos the earlier
+    // passes accumulated. Only PLAIN not-verbatim drops qualify (reason
+    // untagged — the value pointed at real text but wasn't copied exactly);
+    // evidence-quality drops (context-cited/brand-cited) mean the value
+    // itself is rotten, so echoing it back would steer the retry wrong.
+    // null when no target field has a qualifying drop.
+    buildRetryDropFeedback(fields, merged) {
+        const values = merged && merged.__droppedFieldValues && typeof merged.__droppedFieldValues === 'object'
+            ? merged.__droppedFieldValues
+            : null;
+        if (!values) return null;
+        const reasons = merged.__droppedFieldReasons && typeof merged.__droppedFieldReasons === 'object'
+            ? merged.__droppedFieldReasons
+            : {};
+        const feedback = {};
+        (Array.isArray(fields) ? fields : []).forEach(field => {
+            const normalizedField = this.normalizePromptFieldName(field);
+            if (!normalizedField) return;
+            const matchKey = Object.keys(values).find(key => this.normalizePromptFieldName(key) === normalizedField);
+            if (matchKey === undefined) return;
+            if (reasons[matchKey]) return; // tagged reason = evidence-quality drop
+            const value = values[matchKey];
+            if (typeof value !== 'string' || !value.trim()) return;
+            feedback[normalizedField] = value;
+        });
+        return Object.keys(feedback).length > 0 ? feedback : null;
     }
 
     async extractEventWithAiStrategy(htmlData, aiConfig, cityConfig, parserConfig, fields, httpAdapter = null) {
@@ -5897,11 +5946,18 @@ class AiWebParser {
                     .map(field => this.normalizePromptFieldName(field));
                 const targetFields = entry.fields.filter(field => missingNow.includes(field));
                 if (targetFields.length === 0) continue;
+                // Feed the retry what the last roll got wrong: each target
+                // field's previously dropped not-verbatim value rides into
+                // the alternate prompt as an additive correction line
+                // instead of re-rolling blind (buildRetryDropFeedback).
+                const retryFeedback = this.buildRetryDropFeedback(targetFields, merged);
                 const partial = await runPartitionExtraction(
                     targetFields,
                     entry.partition,
                     `confidence retry ${cycle + 1} ${entry.partition}`,
-                    { promptVariant: 'alternate' }
+                    retryFeedback
+                        ? { promptVariant: 'alternate', retryFeedback }
+                        : { promptVariant: 'alternate' }
                 );
                 const beforeMissing = this.getRemainingPromptFields(promptFields, merged)
                     .map(field => this.normalizePromptFieldName(field));
@@ -6304,6 +6360,14 @@ class AiWebParser {
         if (normalized === 'city') {
             description += ` The promoter's home city in branding, logos, or website domains (e.g. a .nyc domain) is NOT the event city — use explicit location statements (e.g. "Torremolinos, Spain") near the venue/address.`;
         }
+        // Prompt-only steering (run 20260724-122902 findings): the model
+        // returned the flyer's street line ("79 WARRENTON") as the bar. The
+        // organizer/promoter/brand rule is already part of the schema
+        // description; the address-shape rule is the addition. Appended to
+        // the schema line so the schema text itself stays byte-identical.
+        if (normalized === 'bar') {
+            description += ` A street address is never a venue name.`;
+        }
         return description;
     }
 
@@ -6348,7 +6412,7 @@ TEXT:
 ${String(snippet || '')}`;
     }
 
-    buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet, variant = 'default', dataFlags = {}) {
+    buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, snippet, variant = 'default', dataFlags = {}, retryFeedback = null) {
         const promptFields = Array.isArray(fields) && fields.length > 0
             ? fields
             : this.getAiPromptFields(parserConfig, dataFlags, htmlData && htmlData.url ? htmlData.url : '');
@@ -6446,6 +6510,21 @@ ${String(snippet || '')}`;
             ? `\n- For "title", prefer SEGMENT_LISTING_TITLE or a fuller variant of the same name from the flyer; flyer text that does not contain it (taglines, DJ names, stylized graphics text) is NOT the title.`
             : '';
 
+        // Confidence-retry feedback (additive, alternate template only —
+        // retries always run the alternate variant): one correction line per
+        // retried field naming the previously rejected not-verbatim value,
+        // so the retry copies exact source text instead of re-rolling blind.
+        // Empty when no feedback rides in — existing prompts stay
+        // byte-identical.
+        let retryFeedbackContext = '';
+        if (retryFeedback && typeof retryFeedback === 'object') {
+            Object.entries(retryFeedback).forEach(([field, value]) => {
+                if (typeof value !== 'string' || !value.trim()) return;
+                retryFeedbackContext += `Your previous value "${value}" for ${field} was rejected — it is not verbatim in the source. Copy the exact text.\n`;
+            });
+            if (retryFeedbackContext) retryFeedbackContext += `\n`;
+        }
+
         const exampleOutput = `EXAMPLE OUTPUT FORMAT (structure only, not real data):\n{"city": {"value": "miami", "evidence": "Miami, FL", "confidence": 90}, "bar": {"value": "Eagle Bar", "evidence": "@ Eagle Bar", "confidence": 95}}`;
 
         const templates = {
@@ -6467,7 +6546,7 @@ ${exampleOutput}
 
 Format the output as a single JSON object where each requested key maps to an object containing "value", "evidence", and "confidence".
 
-${dataProvided}${sourceData}${additionalContext}${steeringContext}${segmentListingContext}Fields to find:
+${dataProvided}${sourceData}${additionalContext}${steeringContext}${segmentListingContext}${retryFeedbackContext}Fields to find:
 ${fieldContext}
 Rules:
 - Return a single JSON object only
@@ -6664,7 +6743,10 @@ TEXT:
 
         // PASS 1: Try standard extraction
         console.log(`🤖 AI Web: Starting extraction pass${passSuffix}`);
-        let extractPrompt = this.buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, processedSnippet, useAlternate ? 'alternate' : 'default', dataFlags);
+        const retryFeedback = options && options.retryFeedback && typeof options.retryFeedback === 'object'
+            ? options.retryFeedback
+            : null;
+        let extractPrompt = this.buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, processedSnippet, useAlternate ? 'alternate' : 'default', dataFlags, retryFeedback);
         let rawResponse = await this.core.callAiGenerate(aiConfig, extractPrompt, 'extraction', httpAdapter, this.recordAiPrompt.bind(this));
         if (!rawResponse) return null;
         let event = parseAndFilterConfidence(rawResponse);
@@ -6676,7 +6758,7 @@ TEXT:
         // PASS 2: Try alternate extraction if first pass failed and alternate is enabled
         if (useAlternate) {
             console.log(`🤖 AI Web: Standard pass${passSuffix} failed; trying alternate prompt`);
-            extractPrompt = this.buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, processedSnippet, 'alternate', dataFlags);
+            extractPrompt = this.buildExtractionPrompt(htmlData, aiConfig, cityConfig, parserConfig, fields, processedSnippet, 'alternate', dataFlags, retryFeedback);
             rawResponse = await this.core.callAiGenerate(aiConfig, extractPrompt, 'extraction', httpAdapter, this.recordAiPrompt.bind(this));
             if (!rawResponse) return null;
             event = parseAndFilterConfidence(rawResponse);
@@ -9902,6 +9984,30 @@ TEXT:
         return event;
     }
 
+    // Slug tokens from a URL's path — tiny local tokenizer (normalizers'
+    // tokenizePoiBarName is out of reach: platform purity only allows the
+    // normalizers→core direction, and no new URL() anywhere): strip
+    // query/hash, split every path segment on non-alphanumerics, lowercase,
+    // drop empties. Returns every single token plus every joined run of two
+    // adjacent tokens within a segment ("legacy"; "bearweek" from
+    // ".../furball-boston-725-bear-week-legacy-tickets/14269444") — the
+    // same identity space as normalizeBarNameKey output.
+    buildUrlSlugTokens(url) {
+        const text = String(url || '').split(/[?#]/)[0];
+        const schemeIndex = text.indexOf('://');
+        const pathStart = text.indexOf('/', schemeIndex >= 0 ? schemeIndex + 3 : 0);
+        if (pathStart < 0) return [];
+        const tokens = [];
+        for (const segment of text.slice(pathStart).split('/')) {
+            const segmentTokens = segment.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+            for (let i = 0; i < segmentTokens.length; i++) {
+                tokens.push(segmentTokens[i]);
+                if (i + 1 < segmentTokens.length) tokens.push(segmentTokens[i] + segmentTokens[i + 1]);
+            }
+        }
+        return tokens;
+    }
+
     // Deterministic bar-convergence rescue (run 20260723-224434: the FURBALL
     // Boston segment plainly listed its venue "Legacy", the flyer OCR read
     // "LEGACY", and Legacy is a curated Boston bar — but the model returned
@@ -9918,9 +10024,10 @@ TEXT:
     // could-be-a-name filter passes (getVenueLineCandidateRejection);
     // curated names are always candidates. Candidates that normalize to the
     // same bar-name key (normalizeBarNameKey: "LEGACY"/"Legacy"/"The
-    // Legacy") are ONE candidate. Each candidate then carries up to three
+    // Legacy") are ONE candidate. Each candidate then carries up to four
     // signals — curated match, whole-word presence in PAGE, whole-word
-    // presence in OCR — and is adopted only with >= 2 of the 3. Never one
+    // presence in OCR, bar-name key present in a ticket-link URL slug
+    // (URL) — and is adopted only with >= 2 of them. Never one
     // signal alone: core doctrine, a bar is never invented from a single
     // corpus. No positional anchor anywhere; position appears only as a
     // ranking tie-breaker (proximity to a location/address-shaped PAGE
@@ -9966,9 +10073,29 @@ TEXT:
             }
         }
 
+        // Corpus URL — deterministic slug signal (run 20260724-122902: the
+        // ticket link ".../furball-boston-725-bear-week-legacy-tickets"
+        // plainly named the venue but reached nothing): slug tokens come
+        // from the segment's SEGMENT_LINK_URL resource lines and the
+        // event's extracted ticketUrl; a candidate whose bar-name key
+        // equals a single slug token or a joined run of two adjacent
+        // tokens ("legacy"; "bearweek") carries the 'url' signal. Adoption
+        // still requires >= 2 signals — a slug alone never invents a bar.
+        const slugUrls = (htmlData && typeof htmlData.html === 'string' ? htmlData.html.split('\n') : [])
+            .map(line => {
+                const match = line.match(/^SEGMENT_LINK_URL:\s*(\S+)/);
+                return match ? match[1] : '';
+            })
+            .filter(Boolean);
+        if (event && typeof event.ticketUrl === 'string' && event.ticketUrl.trim()) {
+            slugUrls.push(event.ticketUrl.trim());
+        }
+        const slugTokenKeys = new Set();
+        slugUrls.forEach(url => this.buildUrlSlugTokens(url).forEach(token => slugTokenKeys.add(token)));
+
         // Candidate pool, deduped on the shared bar-name identity key so
         // "LEGACY" (OCR) + "Legacy" (page) + curated "Legacy" are ONE
-        // candidate accumulating all three signals.
+        // candidate accumulating all of its signals.
         const normalizeKey = value => (this.core && typeof this.core.normalizeBarNameKey === 'function'
             ? this.core.normalizeBarNameKey(value)
             : String(value || '').toLowerCase().replace(/^\s*the\s+/, '').replace(/[^a-z0-9]/g, ''));
@@ -9993,14 +10120,14 @@ TEXT:
         // event-title guards are absolute: the promoter is never rescued as
         // the venue, curated or not.
         pageLines.forEach(line => {
-            if (line && !this.getVenueLineCandidateRejection(line, event, htmlData)) addCandidate(line, 'page');
+            if (line && !this.getVenueLineCandidateRejection(line, event, htmlData, cityConfig, parserConfig)) addCandidate(line, 'page');
         });
         ocrLines.forEach(line => {
-            if (line && !this.getVenueLineCandidateRejection(line, event, htmlData)) addCandidate(line, 'ocr');
+            if (line && !this.getVenueLineCandidateRejection(line, event, htmlData, cityConfig, parserConfig)) addCandidate(line, 'ocr');
         });
         (Array.isArray(cityBars) ? cityBars : []).forEach(bar => {
             if (!bar || typeof bar.name !== 'string') return;
-            const rejection = this.getVenueLineCandidateRejection(bar.name, event, htmlData);
+            const rejection = this.getVenueLineCandidateRejection(bar.name, event, htmlData, cityConfig, parserConfig);
             if (rejection === 'matches organizer/brand' || rejection === 'matches event title') return;
             addCandidate(bar.name, 'curated');
         });
@@ -10024,7 +10151,7 @@ TEXT:
         });
 
         const scored = [];
-        for (const entry of candidates.values()) {
+        for (const [candidateKey, entry] of candidates.entries()) {
             const patterns = entry.forms.map(buildWholeWordPattern);
             const pageIndexes = [];
             pageLines.forEach((line, index) => {
@@ -10035,6 +10162,7 @@ TEXT:
             if (curatedBar) signals.push('curated');
             if (pageIndexes.length > 0) signals.push('page');
             if (ocrCorpus && patterns.some(pattern => pattern.test(ocrCorpus))) signals.push('ocr');
+            if (slugTokenKeys.has(candidateKey)) signals.push('url');
             scored.push({
                 curatedBar,
                 signals,
@@ -10103,11 +10231,41 @@ TEXT:
             && /(?:^|\s)(?:St|Street|Ave|Avenue|Blvd|Boulevard|Rd|Road|Dr|Drive|Ln|Lane|Way|Hwy|Pl|Place|Ct|Court)\.?(?:\s|$)/i.test(text);
     }
 
+    // Conservative brand-stem containment for the venue-candidate guard
+    // (matchesPageBrandName is whole-value equality, so the flyer's bare
+    // "FURBALL" slipped past the page brand "furballnyc" — run
+    // 20260724-122902): compact each brand variant (spaces stripped) and
+    // match when one is a prefix of the other with a remainder of <= 4
+    // chars ("furball" ⊂ "furballnyc", remainder "nyc"). A minimum 4-char
+    // stem keeps short fragments from ever matching.
+    matchesBrandNameStem(value, brandNames) {
+        const valueVariants = Array.from(this.getBrandNameVariants(value))
+            .map(variant => variant.replace(/\s+/g, ''))
+            .filter(Boolean);
+        if (valueVariants.length === 0) return false;
+        return (Array.isArray(brandNames) ? brandNames : []).some(brand => {
+            for (const brandVariant of this.getBrandNameVariants(brand)) {
+                const compactBrand = brandVariant.replace(/\s+/g, '');
+                if (!compactBrand) continue;
+                for (const compactValue of valueVariants) {
+                    const shorter = compactValue.length <= compactBrand.length ? compactValue : compactBrand;
+                    const longer = compactValue.length <= compactBrand.length ? compactBrand : compactValue;
+                    if (shorter.length >= 4
+                        && longer.startsWith(shorter)
+                        && longer.length - shorter.length <= 4) return true;
+                }
+            }
+            return false;
+        });
+    }
+
     // '' when a corpus line could plausibly be a venue name; otherwise the
     // deterministic reason it can never be one. Rejection is silent — an
     // unusable line is the common case in any corpus, not a signal worth
-    // logging.
-    getVenueLineCandidateRejection(candidate, event, htmlData) {
+    // logging. cityConfig/parserConfig are optional context (threaded from
+    // applyBarConvergenceRescue): configured city names and the parser's own
+    // configured name are never venue candidates.
+    getVenueLineCandidateRejection(candidate, event, htmlData, cityConfig = null, parserConfig = null) {
         const text = String(candidate || '').trim();
         if (!text) return 'empty';
         if (text.length > 40) return 'too long';
@@ -10120,21 +10278,50 @@ TEXT:
             || /\b20\d{2}\b/.test(text)) return 'date';
         const normalized = this.normalizeAdjacencyText(text);
         if (!normalized) return 'empty';
+        // Bare calendar words join the date rejection (run 20260724-122902:
+        // flyer lines "SAT" and "JULY" qualified as venue candidates): a
+        // candidate made ONLY of month names, weekday names/abbreviations
+        // (including plurals like "SATURDAYS"), and digits is a date line.
+        const calendarWord = /^(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|(?:mon|tues?|wednes|thurs?|fri|satur|sun)days?|mon|tues?|wed|thur?s?|fri|sat|sun)$/;
+        if (normalized.split(' ').every(token => calendarWord.test(token) || /^\d+$/.test(token))) {
+            return 'date';
+        }
         const stopwords = new Set([
             'tickets', 'ticket', 'info', 'rsvp', 'free', 'doors', 'details',
             'presents', 'vip', 'admission', 'cover', 'ages', 'buy', 'get',
-            'more', 'here', 'tba', 'tbd'
+            'more', 'here', 'tba', 'tbd',
+            // Hype/status words observed qualifying on real flyers — never
+            // venue names on their own.
+            'tonight', 'live', 'party', 'presale'
         ]);
         if (normalized.split(' ').every(token => stopwords.has(token) || /^\d+$/.test(token))) {
             return 'generic';
         }
+        // "sold out" as a phrase (the bare tokens stay off the stopword set
+        // so a venue actually named "Out" is never a casualty).
+        if (normalized === 'sold out') return 'generic';
         const title = this.normalizeAdjacencyText(event && event.title);
         if (title && normalized === title) return 'matches event title';
+        // A bare city is never a venue: reject a candidate whose WHOLE value
+        // resolves to a configured city (key/name/pattern/alias equality —
+        // containment would reject legitimate names like "SF Eagle") or to
+        // the event's own city (run 20260724-122902: flyer line "BOSTON"
+        // tied the rescue into refusing).
+        if (this.findCityConfigEntry(normalized, cityConfig)) return 'city name';
+        const barNameKey = value => (this.core && typeof this.core.normalizeBarNameKey === 'function'
+            ? this.core.normalizeBarNameKey(value)
+            : String(value || '').toLowerCase().replace(/^\s*the\s+/, '').replace(/[^a-z0-9]/g, ''));
+        const eventCity = event && typeof event.city === 'string' ? event.city.trim() : '';
+        if (eventCity && barNameKey(text) && barNameKey(text) === barNameKey(eventCity)) {
+            return 'city name';
+        }
         const organizer = event && typeof event._organizer === 'string' ? event._organizer.trim() : '';
         const brandNames = this.getPageBrandNames(htmlData);
-        const knownNames = [organizer, ...(Array.isArray(brandNames) ? brandNames : [])]
+        const parserName = parserConfig && typeof parserConfig.name === 'string' ? parserConfig.name.trim() : '';
+        const knownNames = [organizer, parserName, ...(Array.isArray(brandNames) ? brandNames : [])]
             .filter(name => typeof name === 'string' && name.trim());
-        if (knownNames.length > 0 && this.matchesPageBrandName(text, knownNames)) {
+        if (knownNames.length > 0
+            && (this.matchesPageBrandName(text, knownNames) || this.matchesBrandNameStem(text, knownNames))) {
             return 'matches organizer/brand';
         }
         if (this.core && typeof this.core.looksLikeStreetAddress === 'function'
@@ -10371,32 +10558,90 @@ TEXT:
         return `${organizerDisplay}: ${baseTitle}`;
     }
 
+    // Split a combined OCR+page stream into ordered corpus chunks so the
+    // dedup in extractBodyParts can scope itself per corpus. OCR snippets
+    // (buildOcrSnippet) are machine-embedded into the stream: prepended
+    // ahead of the page text (extractSingleEvent) and inside segment
+    // resource lines (extractMultiEventSegmentResourceLines). An OCR region
+    // starts at an OCR_IMAGE_URL:/OCR_IMAGE_TEXT marker line and ends at
+    // the next SEGMENT_* marker line or the first line that contains an
+    // HTML tag — both boundaries are machine-emitted, so detection is
+    // reliable. A plain-text page tail directly after an OCR block with no
+    // marker between them is indistinguishable and stays in the OCR region
+    // (same corpus-sharing behavior as before this split — never worse).
+    // Inputs without OCR markers return one page chunk, byte-identical to
+    // the un-split processing.
+    splitOcrAndPageChunks(text) {
+        const source = String(text);
+        if (!/^OCR_IMAGE_(?:URL:|TEXT)/m.test(source)) {
+            return [{ corpus: 'page', text: source }];
+        }
+        const chunks = [];
+        let currentCorpus = 'page';
+        let currentLines = [];
+        const push = () => {
+            if (currentLines.length > 0) {
+                chunks.push({ corpus: currentCorpus, text: currentLines.join('\n') });
+                currentLines = [];
+            }
+        };
+        for (const line of source.split('\n')) {
+            let corpus = currentCorpus;
+            if (/^OCR_IMAGE_(?:URL:|TEXT)/.test(line)) {
+                corpus = 'ocr';
+            } else if (currentCorpus === 'ocr') {
+                if (/^SEGMENT_[A-Z_]+/.test(line) || /<[a-zA-Z!/]/.test(line)) {
+                    corpus = 'page';
+                }
+            }
+            if (corpus !== currentCorpus) {
+                push();
+                currentCorpus = corpus;
+            }
+            currentLines.push(line);
+        }
+        push();
+        return chunks;
+    }
+
     extractBodyParts(html) {
-        let text = String(html);
-        text = text.replace(/<script\b[^>]*>[\s\S]*?<\/script[^>]*>/gi, ' ');
-        text = text.replace(/<style\b[^>]*>[\s\S]*?<\/style[^>]*>/gi, ' ');
-        text = text.replace(/<!--[\s\S]*?-->/g, ' ');
-        text = text.replace(/<(nav|header|footer|aside|noscript|form|button)\b[^>]*>[\s\S]*?<\/\1[^>]*>/gi, ' ');
-        text = text.replace(/<[a-z0-9]+\b[^>]*(?:class|id)=["'][^"']*(nav|menu|footer|header|share|social|recommend|carousel|cta|newsletter|breadcrumb)[^"']*["'][^>]*>[\s\S]{0,12000}?<\/[a-z0-9]+>/gi, ' ');
-        text = text.replace(/<(br|\/p|\/div|\/li|\/section|\/article|\/h[1-6]|\/tr|\/td)\b[^>]*>/gi, '\n');
-        text = text.replace(/<[^>]+>/g, ' ');
-
-        const lines = text
-            .split('\n')
-            .map(line => this.normalizeWhitespace(this.decodeBasicEntities(line)))
-            .filter(Boolean);
-
-        const seen = new Set();
+        // Dedup is scoped PER CORPUS (OCR vs page): flyer OCR text is
+        // prepended ahead of the page text, so a single shared seen-set let
+        // OCR lines evict the page's own lines — run 20260724-122902 lost
+        // the page lines "Legacy" / "Bear Week Return" to the flyer's
+        // "LEGACY" / "BEAR WEEK RETURN" and the model never saw the venue
+        // in page context. OCR lines dedup only against OCR lines, page
+        // lines only against page lines; intra-corpus duplicates (repeated
+        // boilerplate, the segment's embedded second OCR copy) still
+        // collapse, and the maxBodyParts cap stays global.
+        const seenByCorpus = { ocr: new Set(), page: new Set() };
         const results = [];
-        for (const line of lines) {
-            const lower = line.toLowerCase();
-            if (line.length < 3) continue;
-            if (this.noiseLineRegex.test(line)) continue;
-            if (this.looksLikeCssContent(line)) continue;
-            if (seen.has(lower)) continue;
-            seen.add(lower);
-            results.push(line);
-            if (results.length >= this.extractionLimits.maxBodyParts) break;
+        for (const chunk of this.splitOcrAndPageChunks(String(html))) {
+            const seen = seenByCorpus[chunk.corpus];
+            let text = chunk.text;
+            text = text.replace(/<script\b[^>]*>[\s\S]*?<\/script[^>]*>/gi, ' ');
+            text = text.replace(/<style\b[^>]*>[\s\S]*?<\/style[^>]*>/gi, ' ');
+            text = text.replace(/<!--[\s\S]*?-->/g, ' ');
+            text = text.replace(/<(nav|header|footer|aside|noscript|form|button)\b[^>]*>[\s\S]*?<\/\1[^>]*>/gi, ' ');
+            text = text.replace(/<[a-z0-9]+\b[^>]*(?:class|id)=["'][^"']*(nav|menu|footer|header|share|social|recommend|carousel|cta|newsletter|breadcrumb)[^"']*["'][^>]*>[\s\S]{0,12000}?<\/[a-z0-9]+>/gi, ' ');
+            text = text.replace(/<(br|\/p|\/div|\/li|\/section|\/article|\/h[1-6]|\/tr|\/td)\b[^>]*>/gi, '\n');
+            text = text.replace(/<[^>]+>/g, ' ');
+
+            const lines = text
+                .split('\n')
+                .map(line => this.normalizeWhitespace(this.decodeBasicEntities(line)))
+                .filter(Boolean);
+
+            for (const line of lines) {
+                const lower = line.toLowerCase();
+                if (line.length < 3) continue;
+                if (this.noiseLineRegex.test(line)) continue;
+                if (this.looksLikeCssContent(line)) continue;
+                if (seen.has(lower)) continue;
+                seen.add(lower);
+                results.push(line);
+                if (results.length >= this.extractionLimits.maxBodyParts) return results;
+            }
         }
         return results;
     }

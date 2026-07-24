@@ -4747,3 +4747,365 @@ test('bar plausibility gate runs BEFORE the convergence rescue: a verbatim addre
   assert.equal(event.bar, 'Legacy');
   assert.equal(event.barSource, 'curated');
 });
+
+// ---------------------------------------------------------------------------
+// Run 20260724-122902 root-cause fixes. The full causal chain of the FURBALL
+// Boston failure:
+//   1. extractBodyParts deduped OCR and page lines against ONE shared seen
+//      set, so the prepended flyer OCR ("LEGACY" / "BEAR WEEK RETURN")
+//      evicted the page's own "Legacy" / "Bear Week Return" lines — the
+//      model never saw the venue in page context.
+//   2. The candidate guard leaked FURBALL (brand-stem miss vs "furballnyc")
+//      and BOSTON (no city rule), tying the convergence rescue into
+//      "ambiguous — not adopted".
+//   3. The ticket URL slug (".../bear-week-legacy-tickets") named the venue
+//      but was never a signal.
+// The fixtures below are the literal corpus from the run log.
+// ---------------------------------------------------------------------------
+
+const RUN_122902_OCR = [
+  'JOE FIORE RAFAEL SANCHEZ & BOBBY KELLEY PRESENT',
+  'FURBALL',
+  'BOSTON',
+  '10pm-3am',
+  'SAT, JULY 25',
+  'BEAR WEEK RETURN',
+  'UNDER',
+  'WEAR & GEAR',
+  'PARTY',
+  'CLOTHES',
+  'CHECK',
+  'LEGACY',
+  'BEFFYBOY',
+  'GAY MAFIA',
+  'BEAR SKM',
+  'mistr',
+  '79 WARRENTON TICKETS: GAYMAFIABOSTON.COM FURBALL.NYC',
+  'JOSHUA',
+  'RUIZ'
+].join('\n');
+
+// The page's own segment lines (segment discovery log, 16:26:48.943).
+const RUN_122902_SEGMENT = [
+  'FURBALL Boston',
+  'Bear Week Return',
+  'July 25, 2026',
+  'Legacy',
+  'Boston, MA',
+  'Get Your Tickets Today!'
+].join('\n');
+
+const RUN_122902_TICKET_URL = 'https://www.ticketweb.com/event/furball-boston-725-bear-week-legacy-tickets/14269444?REFERRAL_ID=tmfeed';
+const RUN_122902_FLYER_URL = 'https://static.wixstatic.com/media/238fae_c4047c55f4534a0990b2b7fdc19dab8f~mv2.png';
+
+// The combined prompt stream exactly as extractSingleEvent builds it for the
+// segment: prepended OCR snippet, then the segment htmlData (SEGMENT_INDEX,
+// the resource lines' embedded second OCR copy, SEGMENT_LINK_URL, segment
+// content).
+function buildRun122902CombinedStream() {
+  return [
+    `OCR_IMAGE_URL: ${RUN_122902_FLYER_URL}`,
+    'OCR_IMAGE_TEXT',
+    RUN_122902_OCR,
+    '',
+    'SEGMENT_INDEX: 1/6',
+    `OCR_IMAGE_URL: ${RUN_122902_FLYER_URL}`,
+    'OCR_IMAGE_TEXT',
+    RUN_122902_OCR,
+    `SEGMENT_LINK_URL: ${RUN_122902_TICKET_URL}`,
+    RUN_122902_SEGMENT
+  ].join('\n');
+}
+
+test('extractBodyParts: OCR lines never evict page lines — the literal run-122902 stream keeps BOTH copies of the venue', () => {
+  const parser = createParser();
+  const parts = parser.extractBodyParts(buildRun122902CombinedStream());
+
+  // The regression: the flyer's LEGACY / BEAR WEEK RETURN used to consume
+  // the shared seen set and the page's own lines vanished from CONTENT.
+  assert.ok(parts.includes('LEGACY'), 'the OCR venue line is present');
+  assert.ok(parts.includes('Legacy'), 'the PAGE venue line is present too — OCR must not evict it');
+  assert.ok(parts.includes('BEAR WEEK RETURN'), 'the OCR tagline is present');
+  assert.ok(parts.includes('Bear Week Return'), 'the PAGE tagline is present too');
+
+  // Intra-corpus dedup still holds: the resource lines embed a second copy
+  // of the whole OCR snippet, and it collapses against the prepended one.
+  assert.equal(parts.filter(line => line === 'LEGACY').length, 1, 'the embedded second OCR copy dedups');
+  assert.equal(parts.filter(line => line === 'FURBALL').length, 1);
+  assert.equal(parts.filter(line => line.startsWith('OCR_IMAGE_URL:')).length, 1);
+});
+
+test('extractBodyParts: intra-page dedup and the maxBodyParts cap are unchanged', () => {
+  const parser = createParser();
+
+  // Intra-page duplicates still collapse (case-insensitively).
+  const withPageDupes = `${buildRun122902CombinedStream()}\nGet Your Tickets Today!\nGET YOUR TICKETS TODAY!`;
+  const parts = parser.extractBodyParts(withPageDupes);
+  assert.equal(
+    parts.filter(line => line.toLowerCase() === 'get your tickets today!').length,
+    1,
+    'repeated page boilerplate still dedups within the page corpus'
+  );
+
+  // The cap stays global across both corpora.
+  const manyLines = [];
+  for (let i = 0; i < parser.extractionLimits.maxBodyParts + 50; i++) {
+    manyLines.push(`Unique page line number ${i}`);
+  }
+  const capped = parser.extractBodyParts(
+    `OCR_IMAGE_URL: https://x.example/a.png\nOCR_IMAGE_TEXT\nFLYER LINE\n\n<html><body>${manyLines.map(l => `<p>${l}</p>`).join('')}</body></html>`
+  );
+  assert.equal(capped.length, parser.extractionLimits.maxBodyParts, 'the cap is enforced across OCR + page');
+  assert.equal(capped[0], 'OCR_IMAGE_URL: https://x.example/a.png', 'order is preserved — OCR first');
+});
+
+test('extractBodyParts: inputs without OCR markers behave exactly as before (single page corpus)', () => {
+  const parser = createParser();
+  const html = '<html><body><p>Legacy</p><p>legacy</p><p>Boston, MA</p></body></html>';
+  assert.deepEqual(parser.extractBodyParts(html), ['Legacy', 'Boston, MA'],
+    'page-vs-page dedup is untouched for plain pages');
+});
+
+test('guard matrix on the run-122902 corpus: brand stem, parser name, city, calendar words, and hype words all reject; real venue names pass', () => {
+  const parser = createRescueParser({});
+  const event = { title: 'FURBALL Boston', city: 'boston' };
+  const htmlData = { pageBrandNames: ['furballnyc'] };
+  const parserConfig = { name: 'Furball' };
+
+  // The two candidates that tied the real run into refusal.
+  assert.equal(
+    parser.getVenueLineCandidateRejection('FURBALL', event, htmlData, RESCUE_CITY_CONFIG, parserConfig),
+    'matches organizer/brand',
+    'brand stem: "furball" is a prefix of "furballnyc" with a <= 4 char remainder'
+  );
+  assert.equal(
+    parser.getVenueLineCandidateRejection('BOSTON', event, htmlData, RESCUE_CITY_CONFIG, parserConfig),
+    'city name',
+    'a bare configured city is never a venue candidate'
+  );
+  // The parser's own configured name alone also rejects (no page brands).
+  assert.equal(
+    parser.getVenueLineCandidateRejection('FURBALL', event, {}, RESCUE_CITY_CONFIG, parserConfig),
+    'matches organizer/brand',
+    'parserConfig.name joins the known names'
+  );
+  // event.city equality rejects even without a cityConfig entry.
+  assert.equal(
+    parser.getVenueLineCandidateRejection('Boston', event, {}, null, null),
+    'city name',
+    'the event\'s own city is never the venue'
+  );
+
+  // Calendar words join the date rejection.
+  for (const word of ['SAT', 'FRI', 'SATURDAYS', 'JULY', 'AUG']) {
+    assert.equal(
+      parser.getVenueLineCandidateRejection(word, event, htmlData, RESCUE_CITY_CONFIG, parserConfig),
+      'date',
+      `bare calendar word ${word} rejects`
+    );
+  }
+
+  // Stoplist additions.
+  for (const word of ['TONIGHT', 'LIVE', 'PARTY', 'SOLD OUT', 'PRESALE']) {
+    assert.equal(
+      parser.getVenueLineCandidateRejection(word, event, htmlData, RESCUE_CITY_CONFIG, parserConfig),
+      'generic',
+      `hype/status word ${word} rejects`
+    );
+  }
+
+  // Legitimate venue names still pass every guard.
+  for (const name of ['Legacy', 'The Eagle', 'SF Eagle', 'Alley Cat', 'Metro']) {
+    assert.equal(
+      parser.getVenueLineCandidateRejection(name, event, htmlData, RESCUE_CITY_CONFIG, parserConfig),
+      '',
+      `venue name ${name} must never be a casualty`
+    );
+  }
+});
+
+test('curated-name sweep: every bar name in data/bars/*.json survives the candidate guards (zero new false positives)', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const parser = createRescueParser({});
+  const realCityConfig = require('../scraper-cities');
+  const barsDir = path.join(__dirname, '..', '..', 'data', 'bars');
+  // Neutral context: no page brands, no event city/title — the sweep tests
+  // the shape rules (city names, calendar words, stoplist, address shapes)
+  // against every curated name with the REAL cities config.
+  const rejections = [];
+  let total = 0;
+  for (const file of fs.readdirSync(barsDir)) {
+    if (!file.endsWith('.json')) continue;
+    const bars = JSON.parse(fs.readFileSync(path.join(barsDir, file), 'utf8'));
+    for (const bar of Array.isArray(bars) ? bars : []) {
+      if (!bar || typeof bar.name !== 'string') continue;
+      total += 1;
+      const rejection = parser.getVenueLineCandidateRejection(bar.name, {}, {}, realCityConfig, {});
+      if (rejection) rejections.push(`${file}: ${JSON.stringify(bar.name)} -> ${rejection}`);
+    }
+  }
+  assert.ok(total >= 50, `the sweep saw a real corpus (${total} names)`);
+  // Pre-existing exception (predates this PR's rules): "9th Avenue Saloon"
+  // trips the address-shape rule. Nothing else may be rejected — if a new
+  // rule catches a curated name, narrow the rule, don't drop the name.
+  assert.deepEqual(rejections, ['nyc.json: "9th Avenue Saloon" -> address-shaped'],
+    `only the known pre-existing exception may reject, got: ${JSON.stringify(rejections)}`);
+});
+
+test('bar convergence on the run-122902 corpus with curated data: FURBALL/BOSTON rejected, "Legacy" adopted on curated+page+ocr+url', () => {
+  const parser = createRescueParser(BOSTON_CURATED_BARS);
+  const event = { title: 'FURBALL Boston', city: 'boston' };
+  const logs = captureLogs(() => {
+    parser.applyBarConvergenceRescue(
+      event,
+      {
+        url: 'https://www.furball.nyc',
+        html: buildRun122902CombinedStream(),
+        segmentText: RUN_122902_SEGMENT,
+        ocrResults: [{ url: RUN_122902_FLYER_URL, text: RUN_122902_OCR }],
+        pageBrandNames: ['furballnyc']
+      },
+      { name: 'Furball' },
+      RESCUE_CITY_CONFIG
+    );
+  });
+  assert.equal(event.bar, 'Legacy', 'the real corpus now rescues the venue');
+  assert.equal(event.barSource, 'curated');
+  assert.deepEqual(event._barRescue.signals, ['curated', 'page', 'ocr', 'url']);
+  assert.ok(!logs.some(line => line.includes('ambiguous')),
+    `no ambiguity refusal any more, got: ${JSON.stringify(logs)}`);
+});
+
+test('bar convergence url slug signal: with curated data absent and the venue missing from the page, ocr + url still adopt "Legacy"', () => {
+  // The stale-bars-wiring belt-and-braces case: curated corpus empty (the
+  // remote refresh served a stale list) AND the page text degraded to the
+  // deployed run's CONTENT (venue line evicted). The flyer OCR and the
+  // ticket-URL slug both name the venue: 2 independent signals.
+  const parser = createRescueParser({});
+  const degradedSegment = [
+    'FURBALL Boston',
+    'July 25, 2026',
+    'Boston, MA',
+    'Get Your Tickets Today!',
+    'UPCOMING EVENTS!'
+  ].join('\n');
+  const event = { title: 'FURBALL Boston', city: 'boston' };
+  const logs = captureLogs(() => {
+    parser.applyBarConvergenceRescue(
+      event,
+      {
+        url: 'https://www.furball.nyc',
+        html: `SEGMENT_INDEX: 1/6\nSEGMENT_LINK_URL: ${RUN_122902_TICKET_URL}\n${degradedSegment}`,
+        segmentText: degradedSegment,
+        ocrResults: [{ url: RUN_122902_FLYER_URL, text: RUN_122902_OCR }],
+        pageBrandNames: ['furballnyc']
+      },
+      { name: 'Furball' },
+      RESCUE_CITY_CONFIG
+    );
+  });
+  assert.equal(event.bar, 'LEGACY', 'adopted with the OCR casing — no curated or page form exists');
+  assert.equal(event.barSource, 'page-adjacent');
+  assert.deepEqual(event._barRescue.signals, ['ocr', 'url']);
+  assert.ok(logs.includes(
+    '🤖 AI Web: Rescued bar "LEGACY" via signal convergence (signals: ocr, url)'
+  ), `rescue log expected, got: ${JSON.stringify(logs)}`);
+});
+
+test('bar convergence url slug signal: adjacent slug tokens join ("bear week" -> "bearweek"); the event ticketUrl is a slug source too', () => {
+  const parser = createRescueParser({});
+  assert.ok(parser.buildUrlSlugTokens(RUN_122902_TICKET_URL).includes('legacy'), 'single token');
+  assert.ok(parser.buildUrlSlugTokens(RUN_122902_TICKET_URL).includes('bearweek'), 'joined adjacent pair');
+  assert.ok(!parser.buildUrlSlugTokens('https://x.example').length, 'no path, no tokens');
+
+  // ticketUrl (no SEGMENT_LINK_URL line) also feeds the slug signal.
+  const event = {
+    title: 'FURBALL Boston',
+    city: 'boston',
+    ticketUrl: RUN_122902_TICKET_URL
+  };
+  parser.applyBarConvergenceRescue(
+    event,
+    {
+      url: 'https://www.furball.nyc',
+      html: '<html><body>multi-event page</body></html>',
+      segmentText: 'FURBALL Boston\nJuly 25, 2026\nBoston, MA',
+      ocrResults: [{ url: RUN_122902_FLYER_URL, text: RUN_122902_OCR }],
+      pageBrandNames: ['furballnyc']
+    },
+    { name: 'Furball' },
+    RESCUE_CITY_CONFIG
+  );
+  assert.equal(event.bar, 'LEGACY');
+  assert.deepEqual(event._barRescue.signals, ['ocr', 'url']);
+});
+
+test('getFieldContext bar steering: the address-shape sentence is appended, existing schema text unchanged', () => {
+  const parser = createParser();
+  const context = parser.getFieldContext('bar', null);
+  assert.ok(context.endsWith(' A street address is never a venue name.'),
+    `the steering sentence is appended, got: ${JSON.stringify(context)}`);
+  const schemaText = parser.getEventSchemaPromptFieldDescription('bar');
+  assert.ok(context.startsWith(schemaText), 'the schema description itself stays byte-identical');
+});
+
+test('confidence-retry feedback: buildRetryDropFeedback returns plain not-verbatim drops only', () => {
+  const parser = createParser();
+  const merged = {
+    __droppedFieldValues: {
+      bar: '79 Warrenon',
+      city: 'new york',
+      endTime: '   '
+    },
+    __droppedFieldReasons: {
+      bar: '',                          // plain not-verbatim → feedback
+      city: 'brand-cited-evidence',     // evidence-quality → never echoed
+      endTime: ''                       // blank value → nothing to echo
+    }
+  };
+  assert.deepEqual(
+    parser.buildRetryDropFeedback(['bar', 'city', 'endTime'], merged),
+    { bar: '79 Warrenon' }
+  );
+  assert.equal(parser.buildRetryDropFeedback(['city'], merged), null, 'tagged-only fields yield no feedback');
+  assert.equal(parser.buildRetryDropFeedback(['bar'], {}), null, 'no memo, no feedback');
+  // Field-name matching is normalization-aware (retry passes use lowercased
+  // names like "starttime").
+  assert.deepEqual(
+    parser.buildRetryDropFeedback(['BAR'], merged),
+    { bar: '79 Warrenon' }
+  );
+});
+
+test('confidence-retry feedback: the correction line appears in the alternate prompt only when feedback rides in', () => {
+  const parser = createParser();
+  const feedback = { bar: '79 Warrenon' };
+  const expectedLine = 'Your previous value "79 Warrenon" for bar was rejected — it is not verbatim in the source. Copy the exact text.';
+
+  const withFeedback = parser.buildExtractionPrompt(null, {}, null, {}, ['bar'], 'SNIPPET', 'alternate', {}, feedback);
+  assert.ok(withFeedback.includes(expectedLine), 'the alternate retry prompt carries the correction line');
+
+  const withoutFeedback = parser.buildExtractionPrompt(null, {}, null, {}, ['bar'], 'SNIPPET', 'alternate', {});
+  assert.ok(!withoutFeedback.includes('was rejected'), 'no feedback, no line');
+  assert.equal(
+    withFeedback.replace(`${expectedLine}\n\n`, ''),
+    withoutFeedback,
+    'the correction block is purely additive — removing it restores the existing prompt byte-for-byte'
+  );
+
+  // The default template never carries it (feedback only flows on retries,
+  // which always use the alternate variant).
+  const defaultVariant = parser.buildExtractionPrompt(null, {}, null, {}, ['bar'], 'SNIPPET', 'default', {}, feedback);
+  assert.ok(!defaultVariant.includes('was rejected'), 'default template is untouched');
+});
+
+test('confidence-retry feedback: dropped-reason memos accumulate first-drop-wins and merge like the value memos', () => {
+  const parser = createParser();
+  const merged = parser.mergeAiEventFields(
+    { __droppedFieldValues: { bar: 'first' }, __droppedFieldReasons: { bar: '' } },
+    { __droppedFieldValues: { bar: 'second', city: 'x' }, __droppedFieldReasons: { bar: 'context-cited-evidence', city: '' } }
+  );
+  assert.deepEqual(merged.__droppedFieldValues, { bar: 'first', city: 'x' }, 'earlier value wins');
+  assert.deepEqual(merged.__droppedFieldReasons, { bar: '', city: '' }, 'the reason follows its value');
+});

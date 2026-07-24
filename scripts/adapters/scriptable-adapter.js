@@ -2325,18 +2325,56 @@ class ScriptableAdapter {
   // per-city fetching would mean ~45 requests with many 404s on a fresh
   // day) — and fall back to the per-city files (data/bars/<city>.json) when
   // the combined fetch fails. cityKeys is the array of cities to refresh, or
-  // null for "all cities": the whole combined object replaces local
-  // wholesale, with local-only cities kept as fallback entries (per-city
-  // fetching is impossible without a city list, so a combined failure
-  // returns the local bars unchanged). Any per-city failure quietly keeps
-  // the local entry. Returns { bars, counts } — counts feed the review UI's
+  // null for "all cities". Each remote-served city is a per-city UNION with
+  // the local list (mergeRemoteAndLocalCityBars: remote wins for a shared
+  // bar-name key, local-only bars are appended), local-only cities are kept
+  // as fallback entries (per-city fetching is impossible without a city
+  // list, so a combined failure returns the local bars unchanged). Any
+  // per-city failure quietly keeps the local entry. Returns
+  // { bars, counts } — counts feed the review UI's
   // freshness line (remote = cities served from website data, combined or
   // per-city; local = kept from the local file; unavailable = neither).
+  // The bar-name identity key — mirrors SharedCore.normalizeBarNameKey
+  // (shared-core is not importable from the adapter layer): lowercase, drop
+  // a leading "the ", strip non-alphanumerics.
+  normalizeRemoteBarNameKey(name) {
+    return String(name || "")
+      .toLowerCase()
+      .replace(/^\s*the\s+/, "")
+      .replace(/[^a-z0-9]/g, "");
+  }
+
+  // Per-city UNION of remote and local bar lists (mirrors tools/sync-bars.js
+  // mergeBars semantics; curated-data-beats-derived, fail closed): remote
+  // entries win for a shared bar-name key (freshest enrichment), local-only
+  // entries are appended — a bar curated in the local scraper-bars.js must
+  // survive until the site deploys it (run 20260724-122902: the wholesale
+  // replace discarded the locally curated "Legacy" through a 1-day cache).
+  // Nameless local entries have no identity key and are skipped.
+  mergeRemoteAndLocalCityBars(remoteList, localList) {
+    const merged = Array.isArray(remoteList) ? remoteList.slice() : [];
+    const seenKeys = new Set(
+      merged
+        .map((bar) => this.normalizeRemoteBarNameKey(bar && bar.name))
+        .filter(Boolean),
+    );
+    let appended = 0;
+    for (const bar of Array.isArray(localList) ? localList : []) {
+      const key = this.normalizeRemoteBarNameKey(bar && bar.name);
+      if (!key || seenKeys.has(key)) continue;
+      seenKeys.add(key);
+      merged.push(bar);
+      appended += 1;
+    }
+    return { merged, appended };
+  }
+
   async refreshRemoteBars(cityKeys, localBars) {
     const merged = {
       ...(localBars && typeof localBars === "object" ? localBars : {}),
     };
     const counts = { remote: 0, local: 0, unavailable: 0 };
+    let localOnlyMerged = 0;
     const barsCacheConfig = {
       enabled: this.getPageCacheConfig().enabled,
       ttlDays: 1,
@@ -2362,7 +2400,12 @@ class ScriptableAdapter {
             : [];
       for (const cityKey of keys) {
         if (Array.isArray(combinedBars[cityKey])) {
-          merged[cityKey] = combinedBars[cityKey];
+          const union = this.mergeRemoteAndLocalCityBars(
+            combinedBars[cityKey],
+            merged[cityKey],
+          );
+          merged[cityKey] = union.merged;
+          localOnlyMerged += union.appended;
           counts.remote += 1;
         } else if (merged[cityKey]) {
           counts.local += 1;
@@ -2380,7 +2423,12 @@ class ScriptableAdapter {
         const url = `https://chunky.dad/data/bars/${encodeURIComponent(cityKey)}.json`;
         const parsed = await this.fetchRemoteBarsJson(url, barsCacheConfig);
         if (Array.isArray(parsed)) {
-          merged[cityKey] = parsed;
+          const union = this.mergeRemoteAndLocalCityBars(
+            parsed,
+            merged[cityKey],
+          );
+          merged[cityKey] = union.merged;
+          localOnlyMerged += union.appended;
           counts.remote += 1;
         } else if (merged[cityKey]) {
           counts.local += 1;
@@ -2392,6 +2440,13 @@ class ScriptableAdapter {
     console.log(
       `📱 Scriptable: Bars data — ${counts.remote} cities from chunky.dad, ${counts.local} from local file, ${counts.unavailable} unavailable`,
     );
+    // Additive line (the freshness line above keeps its exact shape): how
+    // many locally curated bars were appended to remote-served cities.
+    if (localOnlyMerged > 0) {
+      console.log(
+        `📱 Scriptable: Bars data — merged ${localOnlyMerged} local-only bar(s)`,
+      );
+    }
     return { bars: merged, counts };
   }
 
