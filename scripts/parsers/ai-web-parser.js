@@ -679,6 +679,13 @@ class AiWebParser {
         // name — and it sailed through to geocoding). Runs BEFORE the bar
         // corroboration stamp so a dropped address never feeds adjacency.
         this.applyAddressPlausibilityGate(event, promptHtmlData);
+        // Bar plausibility gate: an address-shaped bar is never a valid
+        // extraction (run 20260724-115423: bar "79 Warren" — the flyer's
+        // street line — survived and blocked the convergence rescue). Runs
+        // AFTER the address gate (so a matching address twin still drops via
+        // "matches venue name") and BEFORE the convergence rescue (so a
+        // dropped bar frees the rescue to adopt the real venue).
+        this.applyBarPlausibilityGate(event);
         // Deterministic bar-convergence rescue: only when extraction left NO
         // bar (including a gate-dropped one). Every plausible name line from
         // the page text, the OCR text, and the curated bars corpus is a
@@ -6965,10 +6972,79 @@ TEXT:
     hasExactEvidence(evidenceContext, value) {
         const normalizedValue = this.normalizeEvidenceText(value);
         if (!normalizedValue) return false;
-        if (evidenceContext.normalized.includes(normalizedValue)) return true;
+        if (this.corpusIncludesOnWordBoundary(evidenceContext.normalized, normalizedValue)) return true;
         const compactValue = normalizedValue.replace(/[^a-z0-9]+/g, '');
-        return compactValue.length >= this.extractionLimits.evidenceCompactMinLength && evidenceContext.compact.includes(compactValue);
+        if (compactValue.length < this.extractionLimits.evidenceCompactMinLength) return false;
+        // Cheap pre-check against the precomputed compact corpus before the
+        // boundary-mapped scan.
+        if (!evidenceContext.compact.includes(compactValue)) return false;
+        return this.compactIncludesOnWordBoundary(evidenceContext.normalized, compactValue);
+    }
 
+    // Truncation is not verbatim (run 20260724-115423: model bar "79 Warren"
+    // passed the gate because it is a PREFIX of the corpus's "79 WARRENTON
+    // TICKETS: ..." — a copy that stops mid-word counted as verbatim). A
+    // containment hit only counts when the matched span sits on WORD
+    // BOUNDARIES in the corpus: no alphanumeric-to-alphanumeric junction at
+    // either edge of the span. A span edge that is itself non-alphanumeric
+    // (quotes, apostrophes) needs no boundary on that side. So "legacy" in
+    // "legacy's" passes (apostrophe bounds), "eagle" in "eagle bar" passes
+    // (space bounds), "79 warren" in "79 warrenton" fails (the span runs
+    // straight into "ton"). Case-insensitivity and whitespace flexibility are
+    // unchanged — both strings are already normalizeEvidenceText output.
+    corpusIncludesOnWordBoundary(corpus, needle) {
+        const haystack = String(corpus || '');
+        const target = String(needle || '');
+        if (!target) return false;
+        const wordChar = /[a-z0-9]/;
+        const needsLeftBoundary = wordChar.test(target[0]);
+        const needsRightBoundary = wordChar.test(target[target.length - 1]);
+        let from = 0;
+        let index;
+        while ((index = haystack.indexOf(target, from)) !== -1) {
+            const leftOk = !needsLeftBoundary || index === 0 || !wordChar.test(haystack[index - 1]);
+            const end = index + target.length;
+            const rightOk = !needsRightBoundary || end === haystack.length || !wordChar.test(haystack[end]);
+            if (leftOk && rightOk) return true;
+            from = index + 1;
+        }
+        return false;
+    }
+
+    // The compact fallback (all non-alphanumerics stripped) must not
+    // reintroduce the truncation hole: every compact hit is mapped back to
+    // its span in the NORMALIZED corpus — where separators still exist — and
+    // the same word-boundary rule is applied at the span's edges there.
+    // "79warren" inside "79warrenton..." maps to a normalized span followed
+    // by "t" and fails; "rockbar" matching the corpus's "rock bar" still
+    // passes (the mapped span is space-bounded).
+    compactIncludesOnWordBoundary(normalizedCorpus, compactValue) {
+        const corpus = String(normalizedCorpus || '');
+        const target = String(compactValue || '');
+        if (!target) return false;
+        const wordChar = /[a-z0-9]/;
+        // Map every compact character back to its index in the normalized
+        // corpus (compact is normalized with [^a-z0-9] stripped, by
+        // construction — see buildAiEvidenceContext).
+        const map = [];
+        let compact = '';
+        for (let i = 0; i < corpus.length; i++) {
+            if (wordChar.test(corpus[i])) {
+                compact += corpus[i];
+                map.push(i);
+            }
+        }
+        let from = 0;
+        let index;
+        while ((index = compact.indexOf(target, from)) !== -1) {
+            const start = map[index];
+            const end = map[index + target.length - 1];
+            const leftOk = start === 0 || !wordChar.test(corpus[start - 1]);
+            const rightOk = end === corpus.length - 1 || !wordChar.test(corpus[end + 1]);
+            if (leftOk && rightOk) return true;
+            from = index + 1;
+        }
+        return false;
     }
 
     hasFuzzyEvidence(evidenceContext, value) {
@@ -7690,6 +7766,11 @@ TEXT:
             if (this.evidenceCitesAdditionalContext(evidence)) return;
             const rescue = this.deriveEvidencePointerRescue(String(value), evidence, evidenceContext, rescueContext);
             if (!rescue || !rescue.candidate) return;
+            // An address-shaped candidate is useless FOR THE BAR FIELD (a
+            // bar rescue candidate "79 WARRENTON" could never be adopted —
+            // the bar plausibility gate would drop it): suppress silently.
+            // Address-field candidates are unaffected.
+            if (rule.field === 'bar' && this.isAddressShapedBarValue(rescue.candidate)) return;
             const entry = {
                 field: rule.field,
                 candidate: this.trimToMaxLength(rescue.candidate, this.extractionLimits.validationReportValueMaxLength),
@@ -7800,6 +7881,11 @@ TEXT:
     // variants are tolerated char-for-char (curly vs straight). Returns the
     // corpus-cased span or null. HTML-entity-encoded corpus occurrences are a
     // known acceptable miss (silent no-op) in this log-only phase.
+    // A fragment located mid-word is NOT located: the same word-boundary rule
+    // the gate applies (see corpusIncludesOnWordBoundary) guards both edges,
+    // so "79 WARREN" never locates inside "79 WARRENTON". Guards apply only
+    // where the fragment's own edge is alphanumeric — a fragment starting or
+    // ending in punctuation carries its own boundary.
     locateEvidenceFragmentSpan(fragment, rawCorpus) {
         const corpus = String(rawCorpus || '');
         if (!corpus) return null;
@@ -7811,12 +7897,14 @@ TEXT:
             const pattern = tokens
                 .map(token => this.escapeRegex(token).replace(/['’‘]/g, "['’‘]").replace(/["“”]/g, '["“”]'))
                 .join('\\s+');
-            matcher = new RegExp(pattern, 'i');
+            const leftGuard = /^[a-z0-9]/.test(tokens[0]) ? '(?:^|[^A-Za-z0-9])' : '';
+            const rightGuard = /[a-z0-9]$/.test(tokens[tokens.length - 1]) ? '(?=$|[^A-Za-z0-9])' : '';
+            matcher = new RegExp(`${leftGuard}(${pattern})${rightGuard}`, 'i');
         } catch (_) {
             return null;
         }
         const match = matcher.exec(corpus);
-        return match ? match[0] : null;
+        return match ? match[1] : null;
     }
 
     // Simple deterministic token alignment of the model's mangled value inside
@@ -9764,6 +9852,53 @@ TEXT:
         if (!reason) return event;
         console.log(`🤖 AI Web: Dropped implausible address "${address}" (${reason})`);
         delete event.address;
+        return event;
+    }
+
+    // Address-shape test for a BAR value (run 20260724-115423: extraction
+    // returned bar "79 Warren" off the flyer's street line and no gate
+    // guarded the bar the way applyAddressPlausibilityGate guards the
+    // address). Address-shaped means a street-address pattern, NEVER merely
+    // "contains a digit" — venue names legitimately carry numbers ("Bar 32",
+    // "Studio 54", "700 Club" all keep). True when ANY of:
+    //   - shared-core's looksLikeStreetAddress: leading house number +
+    //     street-type word ("79 Warrenton St");
+    //   - the digit + street-type-word shape the convergence rescue's
+    //     candidate filter rejects (getVenueLineCandidateRejection);
+    //   - a leading house number followed by a SINGLE bare word that is not
+    //     a venue-type word — the truncated street line off a flyer
+    //     ("79 WARRENTON"); a venue-type word stays a name ("700 Club").
+    isAddressShapedBarValue(value) {
+        const text = String(value || '').trim();
+        if (!text) return false;
+        if (this.core && typeof this.core.looksLikeStreetAddress === 'function'
+            && this.core.looksLikeStreetAddress(text)) return true;
+        if (/\d/.test(text)
+            && /(?:^|\s)(?:St|Street|Ave|Avenue|Blvd|Boulevard|Rd|Road|Dr|Drive|Ln|Lane|Way|Hwy|Pl|Place|Ct|Court)\.?(?:\s|$)/i.test(text)) return true;
+        const truncatedStreetLine = text.match(/^\d{1,6}(?:-\d{1,6})?\s+([A-Za-z][A-Za-z'’.-]*)$/);
+        if (truncatedStreetLine) {
+            const venueTypeWord = /^(?:club|bar|lounge|pub|tavern|saloon|cafe|café|grill|restaurant|studio|hall|house|room|theater|theatre|cabaret|hotel|inn|brewery|taproom|eatery|bistro|diner|kitchen)$/i;
+            return !venueTypeWord.test(truncatedStreetLine[1]);
+        }
+        return false;
+    }
+
+    // Post-extraction bar plausibility gate (mirror of
+    // applyAddressPlausibilityGate: flag-and-drop, additive log): an
+    // address-shaped bar VALUE is never a valid extraction. Run
+    // 20260724-115423 kept bar "79 Warren" (a truncated street line that
+    // slipped the verbatim gate) and the surviving garbage then — correctly,
+    // by design — blocked the bar-convergence rescue from adopting the real
+    // venue "Legacy". Runs BEFORE applyBarConvergenceRescue so a dropped bar
+    // frees the rescue to fire. Fails open: no bar, or not address-shaped →
+    // untouched.
+    applyBarPlausibilityGate(event) {
+        if (!event || typeof event !== 'object') return event;
+        const bar = typeof event.bar === 'string' ? event.bar.trim() : '';
+        if (!bar) return event;
+        if (!this.isAddressShapedBarValue(bar)) return event;
+        console.log(`🤖 AI Web: Dropped implausible bar "${bar}" (address-shaped)`);
+        delete event.bar;
         return event;
     }
 

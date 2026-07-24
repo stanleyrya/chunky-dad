@@ -4513,3 +4513,237 @@ test('bar convergence: single-page events fall back to the page text when no seg
   assert.equal(event.bar, 'Legacy');
   assert.equal(event.barSource, 'curated');
 });
+
+// ---------------------------------------------------------------------------
+// Word-boundary verbatim gate + address-shaped bar drop (run 20260724-115423:
+// FURBALL Boston — model bar "79 Warren" with evidence "79 WARRENTON" PASSED
+// the gate because "79 Warren" is a PREFIX of the corpus's "79 WARRENTON
+// TICKETS: ..."; the surviving garbage bar then correctly blocked the
+// convergence rescue from adopting the real venue "Legacy").
+// ---------------------------------------------------------------------------
+
+// The incident flyer OCR: the street line runs straight into the ticket text.
+const INCIDENT_20260724_OCR = 'FURBALL BOSTON\nBEAR WEEK RETURN\nLEGACY\n79 WARRENTON TICKETS: GAYMAFIABOSTON.COM FURBALL.NYC';
+
+test('verbatim gate word boundaries: a truncated mid-word span is not verbatim', () => {
+  const parser = createParser();
+  const ctx = text => parser.buildAiEvidenceContextFromText(text);
+  const incident = 'LEGACY\nBEFFYBOY\n79 WARRENTON TICKETS: GAYMAFIABOSTON.COM FURBALL.NYC';
+
+  // The incident shape: a copy that stops mid-word is not verbatim.
+  assert.equal(parser.hasExactEvidence(ctx(incident), '79 Warren'), false, '"79 Warren" is a prefix of "79 WARRENTON"');
+  // Truncation of the corpus word at either end fails.
+  assert.equal(parser.hasExactEvidence(ctx('THE WARRENTONS'), 'Warrenton'), false, 'span followed by "S"');
+  assert.equal(parser.hasExactEvidence(ctx('79 WARRENTON'), 'RENTON'), false, 'span preceded by "WAR"');
+  assert.equal(parser.hasExactEvidence(ctx('790 MAIN'), '79'), false, 'digit runs are words too');
+
+  // Legitimate boundaries keep passing: newline, space, apostrophe, dot,
+  // string edges — with the same case-insensitivity as before.
+  assert.equal(parser.hasExactEvidence(ctx(incident), 'Legacy'), true, 'newline-bounded ALL-CAPS corpus line');
+  assert.equal(parser.hasExactEvidence(ctx('THE WARRENTON'), 'Warrenton'), true, 'whole word matches');
+  assert.equal(parser.hasExactEvidence(ctx('Eagle Bar'), 'Eagle'), true, 'space boundary');
+  assert.equal(parser.hasExactEvidence(ctx("Legacy's"), 'Legacy'), true, 'apostrophe boundary');
+  assert.equal(parser.hasExactEvidence(ctx(incident), 'FURBALL'), true, 'dot boundary');
+  assert.equal(parser.hasExactEvidence(ctx('BEAR   WEEK\nRETURN'), 'Bear Week Return'), true, 'whitespace flexibility unchanged');
+
+  // The compact fallback (punctuation/whitespace variants) still passes on
+  // boundaries — and must not reopen the truncation hole.
+  assert.equal(parser.hasExactEvidence(ctx('ROCKBAR NYC'), 'Rock Bar'), true, 'compact join, bounded span');
+  assert.equal(parser.hasExactEvidence(ctx('ROCK BAR'), 'Rockbar'), true, 'compact split, bounded span');
+  assert.equal(parser.hasExactEvidence(ctx('79 WARRENTON'), '79-Warren'), false, 'compact path is boundary-checked too');
+
+  // A mid-word first occurrence does not mask a bounded later one.
+  assert.equal(parser.hasExactEvidence(ctx('WARRENTON AND WARREN ST'), 'Warren'), true, 'scan continues past mid-word hits');
+});
+
+test('verbatim gate: the incident bar "79 Warren" with evidence "79 WARRENTON" now drops', () => {
+  const parser = createParser();
+  // The real run's evidence string was exactly "79 WARRENTON" (log line
+  // ~320 of 20260724-115423).
+  const result = runFurballGate(parser, {
+    bar: '79 Warren',
+    __fieldEvidence: { bar: '79 WARRENTON' }
+  });
+  assert.equal(result.event.bar, undefined, 'the truncated copy is no longer verbatim');
+  assert.deepEqual(result.report.dropped, [{ field: 'bar', key: 'bar', mode: 'exact', value: '79 Warren' }]);
+  // The pointer locates, but the derived candidate "79 WARRENTON" is
+  // address-shaped and useless FOR THE BAR FIELD — suppressed silently.
+  assert.equal(result.report.evidenceRescues, undefined, 'no address-shaped bar candidate is stashed');
+});
+
+test('locateEvidenceFragmentSpan: a fragment located mid-word is not located', () => {
+  const parser = createParser();
+  const corpus = '79 WARRENTON TICKETS: GAYMAFIABOSTON.COM FURBALL.NYC';
+  assert.equal(parser.locateEvidenceFragmentSpan('79 WARREN', corpus), null, 'truncated fragment does not locate');
+  assert.equal(parser.locateEvidenceFragmentSpan('79 WARRENTON', corpus), '79 WARRENTON', 'whole-word fragment locates');
+  // The regex scans past a mid-word hit to a bounded later occurrence.
+  assert.equal(parser.locateEvidenceFragmentSpan('WARREN', 'WARRENTON AND WARREN ST'), 'WARREN');
+});
+
+test('evidence-pointer rescue: address-shaped BAR candidates are suppressed; address candidates still log', () => {
+  const parser = createParser();
+  const captured = captureGateLogs();
+  let result;
+  try {
+    result = runFurballGate(parser, {
+      bar: '79 Warrenon',
+      address: '79 Warrenon',
+      __fieldEvidence: {
+        bar: '79 WARRENTON TICKETS: GAYMAFIABOSTON.COM FURBALL.NYC',
+        address: '79 WARRENTON TICKETS: GAYMAFIABOSTON.COM FURBALL.NYC'
+      }
+    });
+  } finally {
+    captured.restore();
+  }
+  assert.equal(result.event.bar, undefined);
+  assert.equal(result.event.address, undefined);
+  assert.deepEqual(result.report.evidenceRescues, [
+    { field: 'address', candidate: '79 WARRENTON', modelValue: '79 Warrenon', corpus: 'ocr' }
+  ], 'only the address entry is stashed — the bar candidate is address-shaped');
+  assert.ok(
+    captured.lines.some(line => line.includes('Evidence-pointer rescue (log-only) for address')),
+    'the address candidate still logs'
+  );
+  assert.ok(
+    !captured.lines.some(line => line.includes('Evidence-pointer rescue (log-only) for bar')),
+    'the bar candidate is suppressed silently'
+  );
+});
+
+test('bar plausibility shapes: leading house number + street-ish continuation, never "contains a digit"', () => {
+  const parser = createParser();
+  // Address-shaped: dropped.
+  assert.equal(parser.isAddressShapedBarValue('79 Warrenton St'), true, 'house number + street-type word');
+  assert.equal(parser.isAddressShapedBarValue('79 WARRENTON'), true, 'truncated street line: house number + single bare word');
+  assert.equal(parser.isAddressShapedBarValue('10-90 Wyckoff Ave'), true, 'hyphenated Queens-style house number');
+  // Venue names that merely contain numbers: kept (owner doctrine — venue
+  // names CAN legitimately contain numbers).
+  assert.equal(parser.isAddressShapedBarValue('Bar 32'), false, 'trailing number is not a house number');
+  assert.equal(parser.isAddressShapedBarValue('Studio 54'), false);
+  assert.equal(parser.isAddressShapedBarValue('700 Club'), false, 'leading number + venue-type word stays a name');
+  assert.equal(parser.isAddressShapedBarValue('3 Dollar Bill'), false, 'leading number + multi-word name stays a name');
+  assert.equal(parser.isAddressShapedBarValue('Legacy'), false);
+  assert.equal(parser.isAddressShapedBarValue(''), false);
+});
+
+test('bar plausibility gate: an address-shaped bar is dropped with the additive log; numbered venue names keep', () => {
+  const parser = createParser();
+  const event = { title: 'FURBALL Boston', bar: '79 WARRENTON', city: 'boston' };
+  const logs = captureLogs(() => { parser.applyBarPlausibilityGate(event); });
+  assert.equal('bar' in event, false, 'the address-shaped bar is cleared');
+  assert.ok(
+    logs.includes('🤖 AI Web: Dropped implausible bar "79 WARRENTON" (address-shaped)'),
+    `expected the new drop line, got: ${JSON.stringify(logs)}`
+  );
+
+  const keep = { title: 'Underbear', bar: '700 Club' };
+  const keepLogs = captureLogs(() => { parser.applyBarPlausibilityGate(keep); });
+  assert.equal(keep.bar, '700 Club', 'numbered venue names are untouched');
+  assert.equal(keepLogs.length, 0, 'no log when nothing drops');
+});
+
+test('incident 20260724-115423 end-to-end: truncated bar+address drop, bar rescue candidate suppressed, convergence adopts curated "Legacy"', async () => {
+  global.EventSchema = EventSchema; // earlier tests leak a mocked schema — pin the real one
+  const parser = createRescueParser(BOSTON_CURATED_BARS);
+  // The real run shape: model returns bar/address "79 Warren" with evidence
+  // "79 WARRENTON"; corpus carries the flyer OCR (street line + LEGACY),
+  // the segment text (Legacy above Boston, MA), curated boston bars carry
+  // Legacy.
+  parser.getAiEvent = async () => ({
+    title: 'FURBALL Boston',
+    startDate: '2026-07-25',
+    city: 'boston',
+    bar: '79 Warren',
+    address: '79 Warren',
+    __fieldEvidence: { bar: '79 WARRENTON', address: '79 WARRENTON' }
+  });
+  const htmlData = {
+    url: 'https://www.furball.nyc',
+    html: `${INCIDENT_20260724_OCR}\n\n${FURBALL_BOSTON_SEGMENT}`,
+    segmentText: FURBALL_BOSTON_SEGMENT,
+    ocrResults: [{ url: 'https://furball.nyc/flyer.jpg', text: INCIDENT_20260724_OCR }],
+    pageBrandNames: ['FURBALL']
+  };
+  let event;
+  const warns = [];
+  const originalWarn = console.warn;
+  console.warn = (message) => { warns.push(String(message)); };
+  let logs;
+  try {
+    logs = await captureLogsAsync(async () => {
+      event = await parser.extractSingleEvent(htmlData, {}, RESCUE_CITY_CONFIG, ['title', 'bar', 'address', 'city', 'startDate']);
+    });
+  } finally {
+    console.warn = originalWarn;
+  }
+  assert.ok(event, 'extraction yields an event');
+
+  // Stage 1: the gate drops BOTH truncated copies (mid-word is not
+  // verbatim). The drop summary is a console.warn line.
+  assert.ok(
+    warns.some(line => line.includes('Dropped 2 field(s) lacking source evidence: bar, address')),
+    `gate drop line expected, got: ${JSON.stringify(warns)}`
+  );
+
+  // Stage 2: the pointer rescue logs the ADDRESS candidate but never an
+  // address-shaped BAR candidate.
+  assert.ok(
+    logs.some(line => line.includes('Evidence-pointer rescue (log-only) for address: corpus has "79 WARRENTON"')),
+    'address candidate is observed'
+  );
+  assert.ok(
+    !logs.some(line => line.includes('Evidence-pointer rescue (log-only) for bar')),
+    'bar candidate is suppressed'
+  );
+  assert.deepEqual(event._evidenceRescues, [
+    { field: 'address', candidate: '79 WARRENTON', modelValue: '79 Warren', corpus: 'ocr' }
+  ]);
+
+  // Stage 3: with no surviving garbage bar, the convergence rescue adopts
+  // the curated venue on all three signals.
+  assert.ok(
+    logs.some(line => line.includes('Rescued bar "Legacy" via signal convergence')),
+    `convergence rescue line expected, got: ${JSON.stringify(logs)}`
+  );
+  assert.equal(event.bar, 'Legacy');
+  assert.equal(event.barSource, 'curated');
+  assert.equal(event.address || '', '', 'the address twin stays dropped');
+});
+
+test('bar plausibility gate runs BEFORE the convergence rescue: a verbatim address-shaped bar drops and "Legacy" is rescued', async () => {
+  global.EventSchema = EventSchema;
+  const parser = createRescueParser(BOSTON_CURATED_BARS);
+  // Variant: the model copies the street line VERBATIM ("79 WARRENTON"), so
+  // the evidence gate keeps it — the deterministic bar plausibility gate is
+  // the only guard, and it must fire before the convergence rescue.
+  parser.getAiEvent = async () => ({
+    title: 'FURBALL Boston',
+    startDate: '2026-07-25',
+    city: 'boston',
+    bar: '79 WARRENTON',
+    __fieldEvidence: { bar: '79 WARRENTON' }
+  });
+  const htmlData = {
+    url: 'https://www.furball.nyc',
+    html: `${INCIDENT_20260724_OCR}\n\n${FURBALL_BOSTON_SEGMENT}`,
+    segmentText: FURBALL_BOSTON_SEGMENT,
+    ocrResults: [{ url: 'https://furball.nyc/flyer.jpg', text: INCIDENT_20260724_OCR }],
+    pageBrandNames: ['FURBALL']
+  };
+  let event;
+  const logs = await captureLogsAsync(async () => {
+    event = await parser.extractSingleEvent(htmlData, {}, RESCUE_CITY_CONFIG, ['title', 'bar', 'city', 'startDate']);
+  });
+  assert.ok(event, 'extraction yields an event');
+  assert.ok(
+    logs.includes('🤖 AI Web: Dropped implausible bar "79 WARRENTON" (address-shaped)'),
+    `plausibility drop line expected, got: ${JSON.stringify(logs)}`
+  );
+  assert.ok(
+    logs.some(line => line.includes('Rescued bar "Legacy" via signal convergence')),
+    'the freed rescue adopts the real venue'
+  );
+  assert.equal(event.bar, 'Legacy');
+  assert.equal(event.barSource, 'curated');
+});
