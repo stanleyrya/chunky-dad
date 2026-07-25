@@ -71,6 +71,22 @@ const CACHE_TOUCH_INTERVAL_DAYS = 7;
 // the observation phase proves the heuristic.
 const EVIDENCE_RESCUE_FIELDS = new Set(['bar', 'address', 'cover']);
 
+// End-marker misattribution (run 20260724-155934, Dallas Eagle):
+// thedallaseagle.com listings print "End at: August 1, 2026 - 2:00 am" and
+// the extraction model repeatedly assigned those END values to START fields
+// (events shipped starting at the 2:00 AM closing time, plus zero-duration
+// start==end pairs). The value is usually VERBATIM in the corpus, so plain
+// corroboration cannot catch it — this is its own rejection class. The gate
+// drops the start copy and reassignEndMarkerStartFields moves the value to
+// the corresponding EMPTY end field (reassign, don't discard — it is, after
+// all, evidence-cited end data). Keys: normalized start field → normalized
+// end field it reassigns to.
+const END_MARKER_CITED_REASON = 'end-marker-cited-evidence';
+const END_MARKER_START_FIELDS = new Map([
+    ['startdate', 'enddate'],
+    ['starttime', 'endtime']
+]);
+
 // ============================================================================
 // NORMALIZATION HELPERS
 // ============================================================================
@@ -5847,12 +5863,87 @@ class AiWebParser {
             if (!normalizedField) return;
             const matchKey = Object.keys(values).find(key => this.normalizePromptFieldName(key) === normalizedField);
             if (matchKey === undefined) return;
-            if (reasons[matchKey]) return; // tagged reason = evidence-quality drop
             const value = values[matchKey];
             if (typeof value !== 'string' || !value.trim()) return;
+            if (reasons[matchKey]) {
+                // End-marker drops are the one tagged class still worth
+                // echoing: the value itself is real (it is the event's END) —
+                // the retry just must not put it in a start field again.
+                // Rides as { value, reason } so the prompt renders the
+                // end-marker correction line instead of the not-verbatim one.
+                if (reasons[matchKey] === END_MARKER_CITED_REASON) {
+                    feedback[normalizedField] = { value, reason: END_MARKER_CITED_REASON };
+                }
+                return; // tagged reason = evidence-quality drop
+            }
             feedback[normalizedField] = value;
         });
         return Object.keys(feedback).length > 0 ? feedback : null;
+    }
+
+    // Deterministic startDate backstop for the end-marker rejection class
+    // (run 20260724-155934): fires only when (1) a start field was dropped as
+    // end-marker-cited (the __droppedFieldReasons memo carries the tag),
+    // (2) no pass or retry produced a startDate, and (3) a usable endDate
+    // exists (typically the reassigned one). An end at 02:59 or earlier
+    // belongs to the PREVIOUS evening — the inverse of normalizeAiEvent's
+    // past-midnight end rollover; a later or unknown end time keeps the end's
+    // own date. startTime is never derived. The derived field is marked
+    // pre-validated (it is arithmetic on evidence-cited data, never verbatim
+    // on the page). Fails closed: any non-YYYY-MM-DD endDate is left alone
+    // and normalizeAiEvent's existing start=end fallback still keeps the
+    // event alive.
+    applyEndMarkerStartDateRecovery(merged, validationState) {
+        if (!merged || typeof merged !== 'object') return merged;
+        const reasons = merged.__droppedFieldReasons && typeof merged.__droppedFieldReasons === 'object'
+            ? merged.__droppedFieldReasons
+            : {};
+        const endMarkerHit = Object.keys(reasons).some(field =>
+            reasons[field] === END_MARKER_CITED_REASON
+            && END_MARKER_START_FIELDS.has(this.normalizePromptFieldName(field)));
+        if (!endMarkerHit) return merged;
+        if (this.hasResolvedFieldValue(merged, 'startdate')) return merged;
+        const endDateKey = Object.keys(merged).find(key =>
+            !this.isInternalAiFieldKey(key)
+            && this.normalizePromptFieldName(key) === 'enddate'
+            && this.isUsableAiFieldValue(merged[key]));
+        if (endDateKey === undefined) return merged;
+        const endDateMatch = String(merged[endDateKey]).trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!endDateMatch) return merged;
+        const endTimeKey = Object.keys(merged).find(key =>
+            !this.isInternalAiFieldKey(key)
+            && this.normalizePromptFieldName(key) === 'endtime'
+            && this.isUsableAiFieldValue(merged[key]));
+        const endTimeValue = endTimeKey !== undefined ? String(merged[endTimeKey]).trim() : '';
+        const timeParts = endTimeValue ? this.extractDateEvidenceParts(endTimeValue) : null;
+        const endMinutes = timeParts && timeParts.hasTime
+            ? (Number(timeParts.hour) * 60) + Number(timeParts.minute)
+            : null;
+        const rollBack = endMinutes !== null && endMinutes <= (2 * 60) + 59;
+        let derived;
+        if (rollBack) {
+            const previousDayUtc = new Date(Date.UTC(
+                Number(endDateMatch[1]),
+                Number(endDateMatch[2]) - 1,
+                Number(endDateMatch[3])
+            ) - (24 * 60 * 60 * 1000));
+            const pad = value => String(value).length < 2 ? `0${value}` : String(value);
+            derived = `${previousDayUtc.getUTCFullYear()}-${pad(previousDayUtc.getUTCMonth() + 1)}-${pad(previousDayUtc.getUTCDate())}`;
+        } else {
+            derived = `${endDateMatch[1]}-${endDateMatch[2]}-${endDateMatch[3]}`;
+        }
+        const schema = this.getEventSchema();
+        let targetKey = 'startDate';
+        if (schema && typeof schema.canonicalizeEventKey === 'function') {
+            const canonical = schema.canonicalizeEventKey('startdate');
+            if (canonical) targetKey = canonical;
+        }
+        const updated = { ...merged, [targetKey]: derived };
+        if (validationState && validationState.validatedFields instanceof Set) {
+            validationState.validatedFields.add('startdate');
+        }
+        console.log(`🤖 AI Web: Derived startDate "${derived}" from end-marker-reassigned end (${endTimeValue ? `end ${endTimeValue} ${rollBack ? 'rolls back to the previous evening' : 'stays on the end date'}` : 'no end time, staying on the end date'}) — startTime left empty`);
+        return updated;
     }
 
     async extractEventWithAiStrategy(htmlData, aiConfig, cityConfig, parserConfig, fields, httpAdapter = null) {
@@ -6019,6 +6110,16 @@ class AiWebParser {
             }
             if (retryPasses >= confidenceRuntime.maxRetryPasses) break;
         }
+
+        // End-marker startDate recovery (deterministic backstop, runs LAST):
+        // when the gate reassigned an end-marker-cited start and the retries
+        // above still found no stated start, derive startDate from the
+        // reassigned end instead of letting normalizeAiEvent's missing-start
+        // fallback adopt the END date/time wholesale. Inverse of the
+        // past-midnight end rollover in normalizeAiEvent: an end at 02:59 or
+        // earlier belongs to the PREVIOUS evening. startTime is deliberately
+        // left empty — never guessed.
+        merged = this.applyEndMarkerStartDateRecovery(merged, validationState);
 
         const confidenceDiagnostics = this.buildConfidenceDiagnostics(
             sectionBundle,
@@ -6410,6 +6511,14 @@ class AiWebParser {
         if (normalized === 'bar') {
             description += ` A street address is never a venue name.`;
         }
+        // Prompt-only steering (run 20260724-155934 findings): thedallaseagle.com
+        // listings print "End at: August 1, 2026 - 2:00 am" and extraction kept
+        // assigning those END values to start fields (events shipped starting
+        // at the 2:00 AM closing time). Appended to the schema line so the
+        // schema text itself stays byte-identical.
+        if (normalized === 'startdate' || normalized === 'starttime') {
+            description += ` Text following "End at", "Ends", "Until", or "Doors close" is the event's END, never its start — if no start is stated, leave this field empty.`;
+        }
         return description;
     }
 
@@ -6561,6 +6670,15 @@ ${String(snippet || '')}`;
         let retryFeedbackContext = '';
         if (retryFeedback && typeof retryFeedback === 'object') {
             Object.entries(retryFeedback).forEach(([field, value]) => {
+                // End-marker corrections ride as { value, reason } objects
+                // (see buildRetryDropFeedback): the dropped value is real END
+                // data, so this line steers the retry away from the start
+                // field instead of asking for a verbatim copy.
+                if (value && typeof value === 'object' && value.reason === END_MARKER_CITED_REASON) {
+                    if (typeof value.value !== 'string' || !value.value.trim()) return;
+                    retryFeedbackContext += `Your previous value "${value.value}" for ${field} came from an "End at" line — that is the event's END, not its start. Find the START, or leave it blank.\n`;
+                    return;
+                }
                 if (typeof value !== 'string' || !value.trim()) return;
                 retryFeedbackContext += `Your previous value "${value}" for ${field} was rejected — it is not verbatim in the source. Copy the exact text.\n`;
             });
@@ -7728,6 +7846,31 @@ TEXT:
     }
 
     /**
+     * END-marker-cited evidence for a START field: the model quotes an
+     * "End at:" / "Ends" / "until" / "doors close" line as the source of a
+     * start value — that text states the event's END, so the start value is
+     * misattributed end data (run 20260724-155934: startTime "02:00" with
+     * evidence "End at: July 26, 2026 - 2:00 am" at confidence 90).
+     * Deliberately fails open when the evidence also carries a start-side
+     * signal: a time stated BEFORE the marker ("9PM TIL LATE", "Doors 8pm
+     * until 2am") or an explicit start/doors-open/from phrase means the cited
+     * value may genuinely be the start, so today's behavior is kept.
+     */
+    evidenceCitesEndMarker(evidence) {
+        const text = String(evidence || '').trim();
+        if (!text) return false;
+        const endMarker = text.match(/\bend(?:s|ed|ing)?\s*(?:at\b|:|by\b)|\bdoors?\s+clos(?:e|es|ed|ing)\b|\bclos(?:e|es|ed|ing)\s+at\b|\buntil\b|\btill?\b|'til+\b/i);
+        if (!endMarker) return false;
+        // A time of day stated BEFORE the end marker is the start portion of
+        // a range — the cited value may be that start. Fail open.
+        const beforeMarker = text.slice(0, endMarker.index);
+        if (/\d{1,2}:\d{2}|\b\d{1,2}\s*(?:am|pm|h)\b/i.test(beforeMarker)) return false;
+        // An explicit start-side phrase anywhere is likewise disqualifying.
+        const startMarker = /\bstart(?:s|ed|ing)?\s*(?:at\b|:|@)|\bbegin(?:s|ning)?\s*(?:at\b|:|@)|\bdoors?\s*(?:open\b|@|at\b)|\bfrom\s*\d/i;
+        return !startMarker.test(text);
+    }
+
+    /**
      * Evidence citing the ADDITIONAL CONTEXT block. That block is injected
      * with an explicit DO-NOT-EXTRACT instruction, so evidence referencing it
      * is a violation by definition — for ANY field. Observed in run
@@ -7825,9 +7968,18 @@ TEXT:
         // interpreted as ~3am (common club close time)" passed the gate).
         const inventedTime = this.valueClaimsTimeOfDay(rule.mode, value)
             && this.evidenceAdmitsInference(modelEvidence);
+        // START fields whose model-cited evidence is an END-marker line
+        // ("End at: August 1, 2026 - 2:00 am" — run 20260724-155934) carry
+        // misattributed END data: the value is often verbatim in the corpus
+        // (the 2:00 am IS on the page), so corroboration alone cannot catch
+        // it. Its own rejection class; the value is not kept as start.
+        const endMarkerStart = !citesForbiddenContext
+            && END_MARKER_START_FIELDS.has(rule.field)
+            && this.evidenceCitesEndMarker(modelEvidence);
         const hasEvidence = !citesForbiddenContext
             && !brandOnlyCityEvidence
             && !inventedTime
+            && !endMarkerStart
             && this.hasFieldEvidence(evidenceContext, value, rule.mode, validationContext);
         if (!hasEvidence) {
             const droppedEntry = {
@@ -7840,7 +7992,18 @@ TEXT:
             // pre-existing drop entries keep their exact shape.
             if (citesForbiddenContext) droppedEntry.reason = 'context-cited-evidence';
             else if (brandOnlyCityEvidence) droppedEntry.reason = 'brand-cited-evidence';
+            else if (endMarkerStart) droppedEntry.reason = END_MARKER_CITED_REASON;
             report.dropped.push(droppedEntry);
+            // Reassignment candidate (reassign, don't discard): the dropped
+            // start value is evidence-cited END data — but only when the
+            // value itself is corroborated by the corpus under the SAME mode
+            // (date/time modes are identical for start and end fields). An
+            // uncorroborated value stays dropped: reassigning it would smuggle
+            // an invented time past the gate into the end field.
+            if (endMarkerStart && this.hasFieldEvidence(evidenceContext, value, rule.mode, validationContext)) {
+                if (!Array.isArray(report.endMarkerReassignments)) report.endMarkerReassignments = [];
+                report.endMarkerReassignments.push({ field: rule.field, key, value: String(value) });
+            }
             // Evidence-pointer rescue (LOG-ONLY observation, additive): runs
             // AFTER the drop is recorded and never changes it. Eligible only
             // when the drop's sole cause is "value not verbatim in corpus" —
@@ -7849,7 +8012,8 @@ TEXT:
             this.maybeCollectEvidencePointerRescue(value, rule, report, modelEvidence, evidenceContext, rescueContext, {
                 citesForbiddenContext,
                 brandOnlyCityEvidence,
-                inventedTime
+                inventedTime,
+                endMarkerStart
             });
             return false;
         }
@@ -7879,7 +8043,7 @@ TEXT:
         try {
             if (!EVIDENCE_RESCUE_FIELDS.has(rule.field)) return;
             // ONLY the plain "value not verbatim" rejection class qualifies.
-            if (dropFlags && (dropFlags.citesForbiddenContext || dropFlags.brandOnlyCityEvidence || dropFlags.inventedTime)) return;
+            if (dropFlags && (dropFlags.citesForbiddenContext || dropFlags.brandOnlyCityEvidence || dropFlags.inventedTime || dropFlags.endMarkerStart)) return;
             const evidence = String(modelEvidence || '').trim();
             if (!evidence) return;
             // Inference language or context citations anywhere in the
@@ -8184,11 +8348,57 @@ TEXT:
             }
         });
 
+        // === STEP 3.5: End-marker reassignment ===
+        // START values the gate just dropped for citing an "End at" line are
+        // evidence-cited END data — move each to the corresponding EMPTY end
+        // field instead of losing it. An already-populated end field always
+        // wins (the start copy stays dropped).
+        this.reassignEndMarkerStartFields(validated, report, aiEvent);
+
         // === STEP 4: Return Result ===
         if (report.dropped.length > 0) {
             console.warn(`🤖 AI Web: Dropped ${report.dropped.length} field(s) lacking source evidence: ${report.dropped.map(entry => entry.key).join(', ')}`);
         }
         return { event: validated, report };
+    }
+
+    // Apply the end-marker reassignment candidates collected by
+    // validateFieldValueAgainstEvidence (reason 'end-marker-cited-evidence'):
+    // - end field empty → the value moves there (stored under the canonical
+    //   schema key so normalizeAiEvent's camelCase readers find it);
+    // - end field holds the SAME value → the start copy is simply dropped;
+    // - end field holds a DIFFERENT value → the end field wins, the
+    //   misattributed start stays dropped.
+    // Never throws and never removes anything from `validated` — the gate's
+    // own drop already happened; this step only ever ADDS the end value.
+    reassignEndMarkerStartFields(validated, report, aiEvent) {
+        const entries = report && Array.isArray(report.endMarkerReassignments) ? report.endMarkerReassignments : [];
+        if (entries.length === 0) return;
+        const schema = this.getEventSchema();
+        const title = aiEvent && typeof aiEvent.title === 'string' && aiEvent.title.trim()
+            ? aiEvent.title.trim()
+            : 'untitled event';
+        entries.forEach(entry => {
+            const endField = END_MARKER_START_FIELDS.get(entry.field);
+            if (!endField) return;
+            let targetKey = endField === 'enddate' ? 'endDate' : 'endTime';
+            if (schema && typeof schema.canonicalizeEventKey === 'function') {
+                const canonical = schema.canonicalizeEventKey(endField);
+                if (canonical) targetKey = canonical;
+            }
+            const existingKey = Object.keys(validated).find(key =>
+                !this.isInternalAiFieldKey(key)
+                && this.normalizePromptFieldName(key) === endField
+                && this.isUsableAiFieldValue(validated[key]));
+            if (existingKey === undefined) {
+                validated[targetKey] = entry.value;
+                console.log(`🤖 AI Web: Reassigned end-marker-cited ${entry.key} "${entry.value}" to ${targetKey} for "${title}"`);
+            } else if (String(validated[existingKey]).trim() === String(entry.value).trim()) {
+                console.log(`🤖 AI Web: Dropped end-marker-cited ${entry.key} "${entry.value}" — ${existingKey} already holds the same value for "${title}"`);
+            } else {
+                console.log(`🤖 AI Web: Dropped end-marker-cited ${entry.key} "${entry.value}" — ${existingKey} already has "${validated[existingKey]}" for "${title}"`);
+            }
+        });
     }
 
     normalizeRruleValue(value) {
