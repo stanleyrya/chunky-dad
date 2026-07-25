@@ -705,6 +705,17 @@ class AiWebParser {
             console.warn('🤖 AI Web: AI output missing required title/startDate after normalization');
             return null;
         }
+        // Venue-hours notice guard (runs 20260724-161423 / 20260725-170031:
+        // massive.club's "Hours … Tuesday Closed …" block became a segment,
+        // and extraction bound a startDate hallucinated from the adjacent
+        // listing — a calendar-bound "event" titled "Tuesday Closed"). A
+        // schedule notice is not an event; reject it here at the single
+        // normalization choke point so every extraction path (segments,
+        // single pages, detail crawls) is covered.
+        if (this.isVenueHoursNoticeTitle(event.title)) {
+            console.log(`🤖 AI Web: Skipped venue-hours notice "${event.title}" — not an event`);
+            return null;
+        }
         // Address plausibility gate: a venue name is not an address (run
         // 20260723-140457: extraction stored address "Legacy" — the bar's own
         // name — and it sailed through to geocoding). Runs BEFORE the bar
@@ -786,6 +797,40 @@ class AiWebParser {
             }
         }
         return event;
+    }
+
+    // Deterministic venue-hours notice detector: true when a title consists of
+    // NOTHING but weekday name(s)/abbreviation(s) (day ranges like "Mon-Tue"
+    // tokenize into two weekday tokens) plus a closed-notice word — "closed",
+    // "dark" (the theater term), or the phrase "no events". Any other
+    // significant token keeps the event (fail closed: "Closed Party" and
+    // "Dark Disco" are real event names), and a closed-word alone without a
+    // weekday is not a notice either. Token classes only — no per-venue rules,
+    // no position heuristics.
+    isVenueHoursNoticeTitle(title) {
+        const normalized = String(title || '')
+            .toLowerCase()
+            .replace(/&#?[0-9a-z]+;/gi, ' ')
+            .replace(/[^a-z0-9]+/g, ' ')
+            .replace(/\bno\s+events?\b/g, ' closed ')
+            .trim();
+        if (!normalized) return false;
+        const weekdayPattern = /^(?:mon|monday|mondays|tue|tues|tuesday|tuesdays|wed|weds|wednesday|wednesdays|thu|thur|thurs|thursday|thursdays|fri|friday|fridays|sat|saturday|saturdays|sun|sunday|sundays)$/;
+        const closedPattern = /^(?:closed|dark)$/;
+        let weekdayCount = 0;
+        let closedCount = 0;
+        for (const token of normalized.split(/\s+/)) {
+            if (weekdayPattern.test(token)) {
+                weekdayCount++;
+                continue;
+            }
+            if (closedPattern.test(token)) {
+                closedCount++;
+                continue;
+            }
+            return false;
+        }
+        return weekdayCount > 0 && closedCount > 0;
     }
 
     // One-line info summary of a finalized extraction: only fields that are set,

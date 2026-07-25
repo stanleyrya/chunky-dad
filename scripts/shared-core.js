@@ -1093,6 +1093,16 @@ class SharedCore {
     // Fail closed everywhere:
     //   { city, bar }              — exactly one city curates this bar name
     //   { ambiguousCities: [...] } — the name is curated in MORE than one city
+    //   { genericStem: true, containedIn: [...] } — the name is a generic
+    //     franchise stem (run 20260725-170926: the extracted bar "Eagle"
+    //     uniquely matched fort-lauderdale's curated "Eagle" and backfilled
+    //     that city onto Dallas Eagle events). Uniqueness is NOT identity when
+    //     the matched name key is a contained substring of ANOTHER curated
+    //     bar's name key anywhere in the data ("eagle" ⊂ "dallaseagle") — the
+    //     name is a family stem that exists in cities we merely don't curate
+    //     yet. Data-driven: no hardcoded word list, the curated corpus itself
+    //     decides. One-way only — a LONGER unique name ("Dallas Eagle") that
+    //     happens to contain someone else's stem still matches exactly.
     //   null                       — no match anywhere, or bars data missing
     findCuratedBarCityByName(barName) {
         const normalized = this.normalizeBarNameKey(barName);
@@ -1107,6 +1117,20 @@ class SharedCore {
         if (matches.length === 0) return null;
         const cities = [...new Set(matches.map(match => match.city))];
         if (cities.length > 1) return { ambiguousCities: cities };
+        const containedIn = [];
+        for (const cityKey of Object.keys(this.bars)) {
+            const cityBars = this.bars[cityKey];
+            if (!Array.isArray(cityBars)) continue;
+            for (const bar of cityBars) {
+                if (!bar || typeof bar.name !== 'string') continue;
+                const otherKey = this.normalizeBarNameKey(bar.name);
+                if (otherKey && otherKey !== normalized && otherKey.includes(normalized)
+                    && !containedIn.includes(bar.name)) {
+                    containedIn.push(bar.name);
+                }
+            }
+        }
+        if (containedIn.length > 0) return { genericStem: true, containedIn };
         return matches[0];
     }
 
@@ -4267,14 +4291,55 @@ class SharedCore {
             }
         }
 
-        // Log results for large batches
-        if (logProgress) {
-            const duplicatesFound = events.length - urlDeduplicated.length;
-            const duplicateSummary = duplicatesFound > 0 ? ` (removed ${duplicatesFound})` : '';
-            console.log(`🔄 SharedCore: Deduplicated ${events.length} → ${urlDeduplicated.length}${duplicateSummary}`);
+        // Third pass: cross-source duplicates WITHIN one parser run (runs
+        // 20260724-155934 / 20260725-170926: a parser crawling both a venue
+        // site and a ticketing/organizer page received the same event twice
+        // with variant titles — "Thighs out for the guys yall, it's Singlet
+        // Night…" vs "Singlet Night with DJ Drew G" — and the passes above
+        // missed them: keys diverge, name similarity is containment-based,
+        // and one record may carry its venue only as a _venueSitePageHost
+        // tag). Pair only on same venue identity + same event night +
+        // title-token subset (see getCrossSourceDuplicateSignal — every step
+        // fails closed), then MERGE (never drop) through the same
+        // mergeParsedEvents machinery as the passes above so per-field
+        // conflict rules and arbitration apply. Runs AFTER the wall-clock
+        // re-anchor so nights are computed on the best-known instants, and
+        // iterates until stable so chains (A⊂B, B⊂C) collapse to one event.
+        let crossSourceDeduplicated = urlDeduplicated;
+        let crossSourcePassMerged = true;
+        let crossSourcePassCount = 0;
+        while (crossSourcePassMerged && crossSourcePassCount <= events.length) {
+            crossSourcePassMerged = false;
+            crossSourcePassCount++;
+            const kept = [];
+            for (const event of crossSourceDeduplicated) {
+                const match = kept.find(existing => this.getCrossSourceDuplicateSignal(event, existing));
+                if (!match) {
+                    kept.push(event);
+                    continue;
+                }
+                const primary = this.pickCrossSourcePrimary(match, event);
+                const secondary = primary === match ? event : match;
+                console.log(`🔀 MERGE: cross-source duplicate "${secondary.title || 'event'}" merged into "${primary.title || 'event'}" (venue+night+title-subset)`);
+                const merged = await this.mergeParsedEvents(secondary, primary, { httpAdapter, globalConfig });
+                merged.key = primary.key;
+                if (merged._timezoneUnresolved) {
+                    this.resolveWallClockDates(merged);
+                }
+                kept[kept.indexOf(match)] = merged;
+                crossSourcePassMerged = true;
+            }
+            crossSourceDeduplicated = kept;
         }
 
-        return urlDeduplicated;
+        // Log results for large batches
+        if (logProgress) {
+            const duplicatesFound = events.length - crossSourceDeduplicated.length;
+            const duplicateSummary = duplicatesFound > 0 ? ` (removed ${duplicatesFound})` : '';
+            console.log(`🔄 SharedCore: Deduplicated ${events.length} → ${crossSourceDeduplicated.length}${duplicateSummary}`);
+        }
+
+        return crossSourceDeduplicated;
     }
 
     createEventKey(event, format = null) {
@@ -7597,6 +7662,218 @@ class SharedCore {
 
     areEventsSameIdentity(newEvent, existingEvent) {
         return Boolean(this.getSameEventIdentitySignal(newEvent, existingEvent));
+    }
+
+    // === Cross-source duplicate detection (within one parser run) ===
+    // A parser that crawls BOTH a venue site and a ticketing/organizer page
+    // receives the same real-world event twice with variant titles ("Pet Night
+    // with DJ Boost" vs "It's PET NIGHT at the Dallas Eagle! …" — runs
+    // 20260724-155934 / 20260725-170926). The identity signals above miss those
+    // pairs: name similarity is containment-based and one record may carry no
+    // bar/address at all (only a _venueSitePageHost tag). These helpers add a
+    // stricter-scoped signal — same venue identity AND same event night AND
+    // title-token subset — used ONLY by the cross-source pass inside
+    // deduplicateEvents, never for scraped-vs-calendar decisions.
+
+    // The local "night" an event belongs to, as YYYY-MM-DD, or '' when the
+    // start date is missing/unparseable (fail closed: nightless events never
+    // pair). Convention mirrors the #1540 end-marker rollover: a start in the
+    // wee hours (strictly after local midnight, before 04:00) belongs to the
+    // PREVIOUS night. A start at exactly local midnight is the missing-time
+    // default (extraction found only a date), so it stays on its stated date —
+    // the site said "July 31", meaning the night of July 31. Events flagged
+    // _timezoneUnresolved store wall-clock components labeled UTC, so their
+    // UTC components ARE the local reading; the same applies when no timezone
+    // is resolvable at all.
+    getEventNightKey(event) {
+        if (!event || typeof event !== 'object') return '';
+        const date = event.startDate instanceof Date ? event.startDate : this.parseDate(event.startDate);
+        if (!date || isNaN(date.getTime())) return '';
+        const timezone = event._timezoneUnresolved
+            ? null
+            : (event.timezone || (event.city && this.cities && this.cities[event.city]?.timezone) || null);
+        let year = date.getUTCFullYear();
+        let month = date.getUTCMonth() + 1;
+        let day = date.getUTCDate();
+        let hour = date.getUTCHours();
+        let minute = date.getUTCMinutes();
+        if (timezone && typeof Intl !== 'undefined' && typeof Intl.DateTimeFormat === 'function') {
+            try {
+                const formatter = new Intl.DateTimeFormat('en-CA', {
+                    timeZone: timezone,
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hourCycle: 'h23'
+                });
+                const parts = formatter.formatToParts(date);
+                const read = (type) => {
+                    const part = parts.find(entry => entry.type === type);
+                    return part ? parseInt(part.value, 10) : NaN;
+                };
+                const localYear = read('year');
+                const localMonth = read('month');
+                const localDay = read('day');
+                const localHour = read('hour');
+                const localMinute = read('minute');
+                if ([localYear, localMonth, localDay, localHour, localMinute].every(Number.isFinite)) {
+                    year = localYear;
+                    month = localMonth;
+                    day = localDay;
+                    hour = localHour % 24;
+                    minute = localMinute;
+                }
+            } catch (_) {
+                // Unresolvable timezone → fall through to the UTC components.
+            }
+        }
+        let nightUtc = Date.UTC(year, month - 1, day);
+        if ((hour > 0 || minute > 0) && hour < 4) {
+            nightUtc -= 24 * 60 * 60 * 1000;
+        }
+        const night = new Date(nightUtc);
+        const pad = (value) => String(value).padStart(2, '0');
+        return `${night.getUTCFullYear()}-${pad(night.getUTCMonth() + 1)}-${pad(night.getUTCDate())}`;
+    }
+
+    // Positive same-venue identity for the cross-source pass. Requires the SAME
+    // axis populated on BOTH sides — missing-vs-present is never a match (fail
+    // closed). Axes: equal bar-name keys, equal normalized address token
+    // strings, or the same venue-site page host tag (#1539's
+    // _venueSitePageHost — the run's "Eagle Karaoke" record carried no bar at
+    // all but was scraped from thedallaseagle.com just like its twin).
+    getCrossSourceVenueIdentity(eventA, eventB) {
+        if (!eventA || !eventB) return null;
+        const barA = this.normalizeBarNameKey(eventA.bar);
+        const barB = this.normalizeBarNameKey(eventB.bar);
+        if (barA && barB && barA === barB) return 'bar';
+        const addressA = this.normalizeAddressTokens(eventA.address).join(' ');
+        const addressB = this.normalizeAddressTokens(eventB.address).join(' ');
+        if (addressA && addressB && addressA === addressB) return 'address';
+        const hostA = String(eventA._venueSitePageHost || '').trim().toLowerCase();
+        const hostB = String(eventB._venueSitePageHost || '').trim().toLowerCase();
+        if (hostA && hostB && hostA === hostB) return 'venue-site';
+        return null;
+    }
+
+    // Significant title tokens for the cross-source subset test: HTML-entity
+    // leftovers and emoji stripped, lowercased, punctuation collapsed; a
+    // trailing performer clause ("with DJ Boost", "featuring Stevie Licks",
+    // "w/ Hyeonje") is cut at its lexical marker; stopwords, single-character
+    // debris, and the venue's own name tokens are dropped. venueKeys are
+    // normalizeBarNameKey-style strings ("dallaseagle", "thedallaseagle") —
+    // a token is a venue token when a key contains it.
+    getCrossSourceTitleTokens(title, venueKeys = []) {
+        const text = this.stripEmojiForTitleTwin(
+            String(title || '').replace(/&#?[0-9a-z]+;/gi, '')
+        ).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+        if (!text) return [];
+        const rawTokens = text.split(/\s+/);
+        const performerMarkers = new Set(['with', 'featuring', 'feat', 'ft', 'w']);
+        const markerIndex = rawTokens.findIndex(token => performerMarkers.has(token));
+        const scopedTokens = markerIndex > 0 ? rawTokens.slice(0, markerIndex) : rawTokens;
+        const stopwords = new Set([
+            'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'in',
+            'into', 'is', 'it', 'its', 'of', 'on', 'or', 'our', 'the', 'this',
+            'to', 'too', 'with', 'yall', 'you', 'your'
+        ]);
+        const keys = (Array.isArray(venueKeys) ? venueKeys : []).filter(Boolean);
+        const tokens = [];
+        for (const token of scopedTokens) {
+            if (token.length <= 1) continue;
+            if (stopwords.has(token)) continue;
+            if (token.length >= 3 && keys.some(key => key.includes(token))) continue;
+            if (!tokens.includes(token)) tokens.push(token);
+        }
+        return tokens;
+    }
+
+    // Returns 'venue+night+title-subset' when two records from ONE parser run
+    // describe the same event across sources, else null. Every step fails
+    // closed: no venue identity, no/mismatched night, or an empty/disjoint
+    // token set never pairs — same venue + same night with disjoint titles is
+    // two REAL events (an early show and a late party are common).
+    getCrossSourceDuplicateSignal(eventA, eventB) {
+        if (!eventA || typeof eventA !== 'object' || !eventB || typeof eventB !== 'object') return null;
+        if (!this.getCrossSourceVenueIdentity(eventA, eventB)) return null;
+        const nightA = this.getEventNightKey(eventA);
+        if (!nightA) return null;
+        const nightB = this.getEventNightKey(eventB);
+        if (!nightB || nightA !== nightB) return null;
+        const venueKeys = [
+            this.normalizeBarNameKey(eventA.bar),
+            this.normalizeBarNameKey(eventB.bar),
+            String(eventA._venueSitePageHost || '').toLowerCase().replace(/[^a-z0-9]/g, ''),
+            String(eventB._venueSitePageHost || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+        ].filter(Boolean);
+        const tokensA = this.getCrossSourceTitleTokens(eventA.title, venueKeys);
+        if (tokensA.length === 0) return null;
+        const tokensB = this.getCrossSourceTitleTokens(eventB.title, venueKeys);
+        if (tokensB.length === 0) return null;
+        const [shorter, longer] = tokensA.length <= tokensB.length ? [tokensA, tokensB] : [tokensB, tokensA];
+        const longerSet = new Set(longer);
+        if (!shorter.every(token => longerSet.has(token))) return null;
+        return 'venue+night+title-subset';
+    }
+
+    // Primary designation for a cross-source merge: the record with more
+    // populated (evidence-gate-surviving) fields wins; tie → the one whose
+    // start carries an explicit time of day (not the midnight missing-time
+    // default); further tie → the longer normalized title; final tie → the
+    // first argument (the already-kept record).
+    pickCrossSourcePrimary(eventA, eventB) {
+        const populatedFields = (event) => {
+            const fields = ['title', 'description', 'startDate', 'endDate', 'bar', 'address',
+                'location', 'city', 'url', 'ticketUrl', 'image', 'cover', 'instagram',
+                'facebook', 'website', 'gmaps', 'timezone'];
+            return fields.filter(field => {
+                const value = event[field];
+                if (value === null || value === undefined) return false;
+                const text = String(value).trim();
+                if (!text) return false;
+                if (field === 'city' && text.toLowerCase() === 'unknown') return false;
+                return true;
+            }).length;
+        };
+        const countA = populatedFields(eventA);
+        const countB = populatedFields(eventB);
+        if (countA !== countB) return countA > countB ? eventA : eventB;
+        const hasExplicitStartTime = (event) => {
+            const date = event.startDate instanceof Date ? event.startDate : this.parseDate(event.startDate);
+            if (!date || isNaN(date.getTime())) return false;
+            const timezone = event._timezoneUnresolved
+                ? null
+                : (event.timezone || (event.city && this.cities && this.cities[event.city]?.timezone) || null);
+            if (timezone && typeof Intl !== 'undefined' && typeof Intl.DateTimeFormat === 'function') {
+                try {
+                    const formatter = new Intl.DateTimeFormat('en-CA', {
+                        timeZone: timezone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+                    });
+                    const parts = formatter.formatToParts(date);
+                    const read = (type) => {
+                        const part = parts.find(entry => entry.type === type);
+                        return part ? parseInt(part.value, 10) : NaN;
+                    };
+                    const hour = read('hour');
+                    const minute = read('minute');
+                    if (Number.isFinite(hour) && Number.isFinite(minute)) {
+                        return (hour % 24) !== 0 || minute !== 0;
+                    }
+                } catch (_) { /* fall through to UTC components */ }
+            }
+            return date.getUTCHours() !== 0 || date.getUTCMinutes() !== 0;
+        };
+        const explicitA = hasExplicitStartTime(eventA);
+        const explicitB = hasExplicitStartTime(eventB);
+        if (explicitA !== explicitB) return explicitA ? eventA : eventB;
+        const titleLength = (event) => this.stripEmojiForTitleTwin(String(event.title || ''))
+            .replace(/\s+/g, ' ').trim().length;
+        if (titleLength(eventA) !== titleLength(eventB)) {
+            return titleLength(eventA) > titleLength(eventB) ? eventA : eventB;
+        }
+        return eventA;
     }
 
     // Process event with conflicts - extract and merge based on strategies

@@ -752,7 +752,10 @@ class LocationNormalizer extends BaseNormalizer {
     // curated bar by strict full-name equality (normalizeBarNameKey — the
     // findCuratedBarByName contract, so "Eagle" never claims "Dallas Eagle")
     // in exactly ONE city. A name curated in multiple cities is ambiguous and
-    // is never backfilled. A present city that differs is NEVER overwritten.
+    // is never backfilled; a name that is a generic franchise stem (contained
+    // inside another curated bar's name key, e.g. "Eagle" ⊂ "Dallas Eagle")
+    // is never backfilled either. A present city that differs is NEVER
+    // overwritten.
     // Provenance is stamped via the existing _citySource convention
     // (underscore fields stay out of serialized output).
     backfillCityFromCuratedBar(event) {
@@ -766,6 +769,14 @@ class LocationNormalizer extends BaseNormalizer {
         const title = event.title || 'unknown';
         if (result.ambiguousCities) {
             console.log(`🗺️ LocationNormalizer: City backfill skipped for "${title}" — bar "${barName}" is curated in multiple cities (${result.ambiguousCities.join(', ')})`);
+            return event;
+        }
+        // Generic-name-stem refusal (run 20260725-170926: truncated bar "Eagle"
+        // uniquely matched fort-lauderdale's curated "Eagle" and backfilled
+        // that city onto Dallas Eagle events). The curated corpus itself flags
+        // the stem — no word lists — so fail closed and leave city unknown.
+        if (result.genericStem) {
+            console.log(`🗺️ LocationNormalizer: City backfill skipped for "${title}" — bar "${barName}" is a generic name stem (contained in: ${result.containedIn.join(', ')})`);
             return event;
         }
         event.city = result.city;

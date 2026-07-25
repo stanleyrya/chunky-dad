@@ -2652,3 +2652,77 @@ test('curated-bar city backfill: an uncurated bar is a no-op', () => {
   assert.equal(event.startDate, '2026-07-25T22:00:00.000Z');
   assert.ok(!lines.some(line => line.includes('Backfilled city')), 'no backfill log for an uncurated bar');
 });
+
+test('curated-bar city backfill: generic-name-stem repro — "Eagle" must NOT backfill fort-lauderdale onto Dallas Eagle events', () => {
+  // Literal run 20260725-170926: the extracted bar was the truncation "Eagle";
+  // fort-lauderdale's curated bar is literally named "Eagle" — the ONLY
+  // "Eagle" in curated data — and the uniqueness rule backfilled
+  // "fort-lauderdale" onto "Thursday Karaoke"/"Karaoke". "eagle" is contained
+  // in "dallaseagle", so the corpus itself proves the name is a family stem.
+  const normalizer = createBackfillNormalizer({
+    'fort-lauderdale': [{ name: 'Eagle', city: 'fort-lauderdale' }],
+    dallas: [{ name: 'Dallas Eagle', city: 'dallas', address: '525 S Riverfront Blvd, Dallas, TX 75207' }]
+  });
+  const event = {
+    title: 'Thursday Karaoke',
+    bar: 'Eagle',
+    city: 'unknown',
+    startDate: '2026-07-24T19:00:00.000Z',
+    _timezoneUnresolved: true
+  };
+
+  const lines = captureConsoleLog(() => { normalizer.normalize(event); });
+
+  assert.equal(event.city, 'unknown', 'a generic stem never claims a city');
+  assert.equal(event._citySource, undefined);
+  assert.equal(event._timezoneUnresolved, true, 'dates stay wall-clock — nothing to anchor to');
+  assert.ok(
+    lines.includes('🗺️ LocationNormalizer: City backfill skipped for "Thursday Karaoke" — bar "Eagle" is a generic name stem (contained in: Dallas Eagle)'),
+    `stem skip log expected, got:\n${lines.join('\n')}`
+  );
+  assert.ok(!lines.some(line => line.includes('Backfilled city')), 'no backfill log');
+});
+
+test('curated-bar city backfill: "Massive" (contained in no other curated name) still backfills alongside the stem guard', () => {
+  const normalizer = createBackfillNormalizer({
+    seattle: [MASSIVE_SEATTLE_BAR],
+    'fort-lauderdale': [{ name: 'Eagle', city: 'fort-lauderdale' }],
+    dallas: [{ name: 'Dallas Eagle', city: 'dallas' }]
+  });
+  const event = {
+    title: 'PACK PARTY',
+    bar: 'Massive',
+    city: 'unknown',
+    startDate: '2026-07-25T22:00:00.000Z',
+    _timezoneUnresolved: true
+  };
+
+  captureConsoleLog(() => { normalizer.normalize(event); });
+
+  assert.equal(event.city, 'seattle', 'non-stem unique names keep backfilling');
+  assert.equal(event._citySource, 'curated-bar');
+  assert.equal(event.startDate, '2026-07-26T05:00:00.000Z', 're-anchoring still runs');
+});
+
+test('curated-bar city backfill: containment is one-way — the longer unique name "Dallas Eagle" still backfills', () => {
+  const normalizer = createBackfillNormalizer({
+    'fort-lauderdale': [{ name: 'Eagle', city: 'fort-lauderdale' }],
+    dallas: [{ name: 'Dallas Eagle', city: 'dallas' }]
+  });
+  const event = {
+    title: 'Underwear Night',
+    bar: 'Dallas Eagle',
+    city: 'unknown',
+    startDate: '2026-07-30T02:00:00.000Z',
+    _timezoneUnresolved: true
+  };
+
+  const lines = captureConsoleLog(() => { normalizer.normalize(event); });
+
+  assert.equal(event.city, 'dallas', 'a longer name containing someone else\'s stem matches exactly');
+  assert.equal(event._citySource, 'curated-bar');
+  assert.ok(
+    lines.includes('🗺️ LocationNormalizer: Backfilled city "dallas" from curated bar "Dallas Eagle" for "Underwear Night"'),
+    `backfill log expected, got:\n${lines.join('\n')}`
+  );
+});

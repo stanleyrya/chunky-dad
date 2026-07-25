@@ -5659,3 +5659,56 @@ test('end-marker steering: getFieldContext appends the END-line sentence to star
   }
   assert.ok(!parser.getFieldContext('endTime', null).includes('never its start'), 'end fields are not steered');
 });
+
+// ---------------------------------------------------------------------------
+// Venue-hours notice guard (runs 20260724-161423 / 20260725-170031:
+// massive.club's "Hours … Tuesday Closed …" block became a calendar-bound
+// bear event titled "Tuesday Closed" with a startDate hallucinated from the
+// adjacent "Bearracuda | Seattle Sep 12" listing). A title that is ONLY
+// weekday token(s) + a closed-notice word is a schedule notice, never an
+// event; anything else significant keeps the event (fail closed).
+// ---------------------------------------------------------------------------
+
+test('venue-hours notice: weekday+closed titles are notices, titles with any other significant token are not', () => {
+  const parser = createParser();
+  // Rejected notices — literal run title plus the stated variants
+  assert.equal(parser.isVenueHoursNoticeTitle('Tuesday Closed'), true);
+  assert.equal(parser.isVenueHoursNoticeTitle('Closed Mondays'), true);
+  assert.equal(parser.isVenueHoursNoticeTitle('Mon-Tue Closed'), true);
+  assert.equal(parser.isVenueHoursNoticeTitle('Tuesday: Dark'), true);
+  assert.equal(parser.isVenueHoursNoticeTitle('TUESDAYS: CLOSED'), true);
+  assert.equal(parser.isVenueHoursNoticeTitle('Monday no events'), true);
+  // Real events keep living: closed/dark + other significant tokens
+  assert.equal(parser.isVenueHoursNoticeTitle('Closed Party'), false);
+  assert.equal(parser.isVenueHoursNoticeTitle('Dark Disco'), false);
+  // A weekday alone or a closed-word alone is not a notice (fail closed)
+  assert.equal(parser.isVenueHoursNoticeTitle('Tuesday'), false);
+  assert.equal(parser.isVenueHoursNoticeTitle('Closed'), false);
+  assert.equal(parser.isVenueHoursNoticeTitle(''), false);
+  assert.equal(parser.isVenueHoursNoticeTitle(null), false);
+});
+
+test('venue-hours notice: extractSingleEvent skips the literal "Tuesday Closed" extraction with the skip log', async () => {
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  // Mirrors the run: the AI bound the hours notice to the adjacent listing's
+  // date, producing a fully-formed "event".
+  parser.getAiEvent = async () => ({
+    title: 'Tuesday Closed',
+    startDate: '2026-09-12',
+    city: 'seattle',
+    __preValidatedFields: ['startDate', 'city']
+  });
+  let event = 'unset';
+  const logs = await captureLogsAsync(async () => {
+    event = await parser.extractSingleEvent(
+      { html: 'Tuesday Closed\nBearracuda | Seattle Sep 12, 2026 9:00 PM', url: 'https://massive.club/calendar' },
+      {}, null, ['title', 'startDate', 'city']
+    );
+  });
+  assert.equal(event, null, 'a venue-hours notice never becomes an event');
+  assert.ok(
+    logs.includes('🤖 AI Web: Skipped venue-hours notice "Tuesday Closed" — not an event'),
+    `skip log expected, got: ${JSON.stringify(logs.filter(line => line.includes('AI Web')))}`
+  );
+});
