@@ -1086,6 +1086,30 @@ class SharedCore {
             && this.normalizeBarNameKey(bar.name) === normalized) || null;
     }
 
+    // Cross-city curated-bar lookup for city backfill: when an event's city is
+    // unknown we don't know WHICH city's bars to search, so scan every city's
+    // curated bars for a full-name match (normalizeBarNameKey equality — the
+    // exact same strictness as findCuratedBarByName above; never substring).
+    // Fail closed everywhere:
+    //   { city, bar }              — exactly one city curates this bar name
+    //   { ambiguousCities: [...] } — the name is curated in MORE than one city
+    //   null                       — no match anywhere, or bars data missing
+    findCuratedBarCityByName(barName) {
+        const normalized = this.normalizeBarNameKey(barName);
+        if (!normalized || !this.bars || typeof this.bars !== 'object') return null;
+        const matches = [];
+        for (const cityKey of Object.keys(this.bars)) {
+            const cityBars = this.bars[cityKey];
+            if (!Array.isArray(cityBars) || cityBars.length === 0) continue;
+            const curatedBar = this.findCuratedBarByName(cityBars, barName);
+            if (curatedBar) matches.push({ city: cityKey, bar: curatedBar });
+        }
+        if (matches.length === 0) return null;
+        const cities = [...new Set(matches.map(match => match.city))];
+        if (cities.length > 1) return { ambiguousCities: cities };
+        return matches[0];
+    }
+
     // The bar-name identity key shared by curated matching (above) and the
     // new-venue-candidate dedup key: lowercase, drop a leading "the ", strip
     // non-alphanumerics — so "The Eagle" / "EAGLE!" collapse to one venue.

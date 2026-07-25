@@ -1,5 +1,15 @@
 [
   {
+    "name": "Dallas Eagle",
+    "city": "dallas",
+    "address": "525 S Riverfront Blvd, Dallas, TX 75207",
+    "coordinates": "32.7693483, -96.8112576",
+    "website": "https://www.thedallaseagle.com",
+    "instagram": "https://www.instagram.com/thedallaseagle",
+    "facebook": "https://www.facebook.com/lonestareagle",
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I"
+  },
+  {
     "name": "Station 4",
     "city": "dallas",
     "address": "3911 Cedar Springs Rd, Dallas, TX 75219",

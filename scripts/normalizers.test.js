@@ -2507,3 +2507,148 @@ test('fusion via the Photon venue follow-up: empty Nominatim venue rescue + Phot
     `fusion flag log expected, got:\n${captured.lines.join('\n')}`
   );
 });
+
+// ---------------------------------------------------------------------------
+// Curated-bar → city backfill (run 20260724-161423: massive.club events came
+// out bar="Massive"/city="unknown" — the page never says "Seattle" — so
+// timezone resolution failed and dates stayed wall-clock UTC). When the bar
+// matches a curated bar by strict full-name equality in exactly ONE city, the
+// city is backfilled BEFORE resolveWallClockDates so re-anchoring runs.
+// ---------------------------------------------------------------------------
+
+const BACKFILL_CITIES = {
+  seattle: { timezone: 'America/Los_Angeles', patterns: ['seattle'] },
+  portland: { timezone: 'America/Los_Angeles', patterns: ['portland'] },
+  dallas: { timezone: 'America/Chicago', patterns: ['dallas'] }
+};
+
+const MASSIVE_SEATTLE_BAR = {
+  name: 'Massive',
+  city: 'seattle',
+  address: '1428 Broadway, Seattle, WA 98122',
+  website: 'https://www.massive.club'
+};
+
+function createBackfillNormalizer(bars) {
+  const core = new SharedCore(BACKFILL_CITIES, { eventSchema: EventSchema, bars });
+  return new LocationNormalizer(core);
+}
+
+test('curated-bar city backfill: literal massive.club repro — city resolves and wall-clock dates re-anchor', () => {
+  const normalizer = createBackfillNormalizer({ seattle: [MASSIVE_SEATTLE_BAR] });
+  const event = {
+    title: 'Massive Saturday: Bimbo Hypnosis b2b Poof',
+    bar: 'Massive',
+    city: 'unknown',
+    // Wall-clock 10pm local stored as 10pm UTC by the parser's timezone-less fallback
+    startDate: '2026-07-25T22:00:00.000Z',
+    endDate: '2026-07-26T02:00:00.000Z',
+    _timezoneUnresolved: true
+  };
+
+  const lines = captureConsoleLog(() => { normalizer.normalize(event); });
+
+  assert.equal(event.city, 'seattle');
+  assert.equal(event._citySource, 'curated-bar');
+  assert.equal(event.timezone, 'America/Los_Angeles');
+  // 10pm PDT (UTC-7) is 5am UTC the next day — the actual anchored instant
+  assert.equal(event.startDate, '2026-07-26T05:00:00.000Z');
+  assert.equal(event.endDate, '2026-07-26T09:00:00.000Z');
+  assert.equal(event._timezoneUnresolved, undefined, 'flag cleared once dates are anchored');
+  assert.ok(
+    lines.includes('🗺️ LocationNormalizer: Backfilled city "seattle" from curated bar "Massive" for "Massive Saturday: Bimbo Hypnosis b2b Poof"'),
+    `backfill log line expected, got:\n${lines.join('\n')}`
+  );
+});
+
+test('curated-bar city backfill: ALL-CAPS bar "MASSIVE" matches via normalizeBarNameKey and re-anchors too', () => {
+  const normalizer = createBackfillNormalizer({ seattle: [MASSIVE_SEATTLE_BAR] });
+  const event = {
+    title: 'PACK PARTY',
+    bar: 'MASSIVE',
+    city: 'unknown',
+    startDate: '2026-07-25T22:00:00.000Z',
+    _timezoneUnresolved: true
+  };
+
+  captureConsoleLog(() => { normalizer.normalize(event); });
+
+  assert.equal(event.city, 'seattle');
+  assert.equal(event.timezone, 'America/Los_Angeles');
+  assert.equal(event.startDate, '2026-07-26T05:00:00.000Z');
+  assert.equal(event._timezoneUnresolved, undefined);
+});
+
+test('curated-bar city backfill: a present differing city is NEVER overwritten (no backfill log)', () => {
+  const normalizer = createBackfillNormalizer({ seattle: [MASSIVE_SEATTLE_BAR] });
+  const event = {
+    title: 'Make Out Party w/ Hyeonje',
+    bar: 'Massive',
+    city: 'portland'
+  };
+
+  const lines = captureConsoleLog(() => { normalizer.normalize(event); });
+
+  assert.equal(event.city, 'portland', 'the present city must stay');
+  assert.equal(event._citySource, undefined, 'no provenance stamp when nothing was backfilled');
+  assert.ok(
+    !lines.some(line => line.includes('Backfilled city')),
+    `no backfill log expected, got:\n${lines.join('\n')}`
+  );
+});
+
+test('curated-bar city backfill: a bar name curated in TWO cities is ambiguous — no backfill, one skip log', () => {
+  const normalizer = createBackfillNormalizer({
+    seattle: [MASSIVE_SEATTLE_BAR],
+    portland: [{ name: 'Massive', city: 'portland' }]
+  });
+  const event = {
+    title: 'Butt Blast - Guys Underwear Social',
+    bar: 'Massive',
+    city: 'unknown',
+    startDate: '2026-07-25T22:00:00.000Z',
+    _timezoneUnresolved: true
+  };
+
+  const lines = captureConsoleLog(() => { normalizer.normalize(event); });
+
+  assert.equal(event.city, 'unknown', 'ambiguity fails closed — city stays unknown');
+  assert.equal(event._citySource, undefined);
+  assert.equal(event.startDate, '2026-07-25T22:00:00.000Z', 'dates stay wall-clock — nothing to anchor to');
+  assert.equal(event._timezoneUnresolved, true, 'flag remains so the gap stays visible');
+  assert.ok(
+    lines.includes('🗺️ LocationNormalizer: City backfill skipped for "Butt Blast - Guys Underwear Social" — bar "Massive" is curated in multiple cities (seattle, portland)'),
+    `ambiguity log line expected, got:\n${lines.join('\n')}`
+  );
+});
+
+test('curated-bar city backfill: "Eagle" must NOT match curated "Dallas Eagle" (full-name equality only)', () => {
+  const normalizer = createBackfillNormalizer({
+    dallas: [{ name: 'Dallas Eagle', city: 'dallas', address: '525 S Riverfront Blvd, Dallas, TX 75207' }]
+  });
+  const event = { title: 'Gear Night', bar: 'Eagle', city: 'unknown' };
+
+  const lines = captureConsoleLog(() => { normalizer.normalize(event); });
+
+  assert.equal(event.city, 'unknown', 'partial names never claim a curated bar');
+  assert.equal(event._citySource, undefined);
+  assert.ok(!lines.some(line => line.includes('Backfilled city')), 'no backfill log for a non-match');
+});
+
+test('curated-bar city backfill: an uncurated bar is a no-op', () => {
+  const normalizer = createBackfillNormalizer({ seattle: [MASSIVE_SEATTLE_BAR] });
+  const event = {
+    title: 'Hostile Noise',
+    bar: 'Some Warehouse',
+    city: 'unknown',
+    startDate: '2026-07-25T22:00:00.000Z',
+    _timezoneUnresolved: true
+  };
+
+  const lines = captureConsoleLog(() => { normalizer.normalize(event); });
+
+  assert.equal(event.city, 'unknown');
+  assert.equal(event._timezoneUnresolved, true);
+  assert.equal(event.startDate, '2026-07-25T22:00:00.000Z');
+  assert.ok(!lines.some(line => line.includes('Backfilled city')), 'no backfill log for an uncurated bar');
+});

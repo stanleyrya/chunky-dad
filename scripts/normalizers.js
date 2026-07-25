@@ -396,6 +396,13 @@ class LocationNormalizer extends BaseNormalizer {
             event.city = extractedCity;
         }
 
+        // Curated-bar → city backfill: an event whose page never names its
+        // city (run 20260724-161423: massive.club events came out
+        // city "unknown") can still resolve when its bar is a curated bar.
+        // Runs BEFORE resolveWallClockDates below so the recovered city lets
+        // timezone resolution re-anchor the wall-clock dates.
+        this.backfillCityFromCuratedBar(event);
+
         // Warn when the event references a city we have no config for
         if (!event.timezone && event.city && this.core.cities && !this.core.cities[event.city]) {
             const title = event.title || 'unknown';
@@ -738,6 +745,33 @@ class LocationNormalizer extends BaseNormalizer {
         // behavior (merges can resolve a city AFTER this normalizer already ran).
         if (!this.core || typeof this.core.resolveWallClockDates !== 'function') return event;
         return this.core.resolveWallClockDates(event);
+    }
+
+    // Curated-bar → city backfill (fail closed everywhere): fills event.city
+    // ONLY when it is missing/empty/"unknown" AND the event's bar matches a
+    // curated bar by strict full-name equality (normalizeBarNameKey — the
+    // findCuratedBarByName contract, so "Eagle" never claims "Dallas Eagle")
+    // in exactly ONE city. A name curated in multiple cities is ambiguous and
+    // is never backfilled. A present city that differs is NEVER overwritten.
+    // Provenance is stamped via the existing _citySource convention
+    // (underscore fields stay out of serialized output).
+    backfillCityFromCuratedBar(event) {
+        if (!event || !this.core || typeof this.core.findCuratedBarCityByName !== 'function') return event;
+        const currentCity = typeof event.city === 'string' ? event.city.trim().toLowerCase() : '';
+        if (currentCity && currentCity !== 'unknown') return event;
+        const barName = typeof event.bar === 'string' ? event.bar.trim() : '';
+        if (!barName) return event;
+        const result = this.core.findCuratedBarCityByName(barName);
+        if (!result) return event;
+        const title = event.title || 'unknown';
+        if (result.ambiguousCities) {
+            console.log(`🗺️ LocationNormalizer: City backfill skipped for "${title}" — bar "${barName}" is curated in multiple cities (${result.ambiguousCities.join(', ')})`);
+            return event;
+        }
+        event.city = result.city;
+        event._citySource = 'curated-bar';
+        console.log(`🗺️ LocationNormalizer: Backfilled city "${result.city}" from curated bar "${result.bar.name}" for "${title}"`);
+        return event;
     }
 
     extractCityFromEvent(event) {
