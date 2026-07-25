@@ -6847,6 +6847,13 @@ test('addressSource trust tiers: curated > page > inferred', () => {
   assert.ok(tier('inferred') > tier(undefined));
 });
 
+test('addressSource trust tier: venue-site ranks with page, below curated (curated machinery outranks the consensus fill)', () => {
+  const tier = (value) => SharedCore.getProvenanceTrustTier('addressSource', value);
+  assert.equal(tier('venue-site'), tier('page'));
+  assert.ok(tier('curated') > tier('venue-site'));
+  assert.ok(tier('venue-site') > tier('inferred'));
+});
+
 test('barSource trust tiers: curated > corroborated class (venue-site/page-adjacent/geo-poi) > uncorroborated > unstamped', () => {
   const tier = (value) => SharedCore.getProvenanceTrustTier('barSource', value);
   assert.ok(tier('curated') > tier('venue-site'));

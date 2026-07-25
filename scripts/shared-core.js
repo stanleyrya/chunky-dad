@@ -2176,6 +2176,18 @@ class SharedCore {
             enrichDropCollector
         });
 
+        // Venue-site address consensus (deterministic, parser-derived): the
+        // ai-web parser harvested map-directions addresses per registrable
+        // site during the crawl; with every page of the run now seen, fill
+        // blank address/city on the site's own events ('venue-site'
+        // provenance, enrich-only — the curated machinery still outranks
+        // downstream). Judged only here because a later page's conflicting
+        // address must be able to veto the whole site (fail closed).
+        const aiWebParser = parsers && parsers['ai-web'];
+        if (aiWebParser && typeof aiWebParser.applyVenueSiteAddressConsensus === 'function') {
+            aiWebParser.applyVenueSiteAddressConsensus(allEvents, mainConfig?.cities || null);
+        }
+
         // Metadata is applied dynamically by parsers using the {value, merge} format
 
         // Filter and process events. Enforce-mode bear-check drops are carried
@@ -8437,7 +8449,10 @@ SharedCore.PROVENANCE_COMPANION_FIELDS = Object.freeze([
 //                    from the venue-POI adoption rung — a map POI whose name
 //                    matched the bar supplied the street address; tiered
 //                    with 'page', below 'curated'),
-//                    scriptable-adapter review-apply (curated/inferred)
+//                    scriptable-adapter review-apply (curated/inferred),
+//                    ai-web-parser.js venue-site consensus fill (the site's
+//                    own map-directions address filled a blank — tiered with
+//                    'page', below 'curated')
 //   - barSource:     ai-web-parser.js (curated/venue-site/page-adjacent/
 //                    uncorroborated), normalizers.js (geo-poi); the three
 //                    corroborated stamps share a tier, matching
@@ -8452,7 +8467,7 @@ SharedCore.PROVENANCE_COMPANION_FIELDS = Object.freeze([
 // Values absent from a family rank null (fail open); blank ranks 0 (unstamped).
 SharedCore.PROVENANCE_TRUST_TIERS = Object.freeze({
     pinSource: Object.freeze({ 'curated': 4, 'geocoded-exact': 3, 'geocoded-approx': 2, 'page': 1 }),
-    addressSource: Object.freeze({ 'curated': 3, 'geo-poi': 2, 'page': 2, 'inferred': 1 }),
+    addressSource: Object.freeze({ 'curated': 3, 'geo-poi': 2, 'page': 2, 'venue-site': 2, 'inferred': 1 }),
     barSource: Object.freeze({ 'curated': 3, 'venue-site': 2, 'page-adjacent': 2, 'geo-poi': 2, 'uncorroborated': 1 }),
     imageSource: Object.freeze({ 'og-image': 2, 'jsonld': 2, 'page': 1 }),
     bearSource: Object.freeze({ 'manual-bear': 2, 'manual-not-bear': 2, 'keyword': 1, 'ai': 1, 'config': 1 })
