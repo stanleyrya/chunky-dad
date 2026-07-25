@@ -7582,3 +7582,38 @@ test('curated bars: boston.json carries Legacy and the generated scraper-bars tw
   const match = core.findCuratedBarByName(core.getCuratedCityBars('boston'), 'LEGACY');
   assert.ok(match && match.name === 'Legacy', 'curated lookup resolves the rescue candidate');
 });
+
+// ---------------------------------------------------------------------------
+// findCuratedBarCityByName — cross-city curated-bar lookup backing the
+// LocationNormalizer city backfill (run 20260724-161423). Fail closed: one
+// city → match, several cities → ambiguous, none/no-bars → null.
+// ---------------------------------------------------------------------------
+
+test('findCuratedBarCityByName: unique match, ambiguity, partial-name miss, and missing bars data', () => {
+  const bars = {
+    seattle: [{ name: 'Massive', city: 'seattle' }],
+    dallas: [{ name: 'Dallas Eagle', city: 'dallas' }],
+    nyc: [{ name: 'Eagle NYC', city: 'nyc' }]
+  };
+  const core = new SharedCore({}, { eventSchema: EventSchema, bars });
+
+  // Unique full-name match (case-insensitive via normalizeBarNameKey)
+  assert.deepEqual(core.findCuratedBarCityByName('MASSIVE'), { city: 'seattle', bar: bars.seattle[0] });
+
+  // Partial names never match: "Eagle" claims neither "Dallas Eagle" nor "Eagle NYC"
+  assert.equal(core.findCuratedBarCityByName('Eagle'), null);
+  // Different keys never match: "Massive Club" is not "Massive"
+  assert.equal(core.findCuratedBarCityByName('Massive Club'), null);
+
+  // Same normalized name curated in two cities → ambiguous, never a pick
+  const twoCities = new SharedCore({}, {
+    eventSchema: EventSchema,
+    bars: { seattle: [{ name: 'Massive' }], portland: [{ name: 'The Massive' }] }
+  });
+  assert.deepEqual(twoCities.findCuratedBarCityByName('Massive'), { ambiguousCities: ['seattle', 'portland'] });
+
+  // No bars data at all → null (fail closed)
+  const noBars = new SharedCore({}, { eventSchema: EventSchema });
+  assert.equal(noBars.findCuratedBarCityByName('Massive'), null);
+  assert.equal(core.findCuratedBarCityByName(''), null);
+});
