@@ -7768,3 +7768,204 @@ test('findCuratedBarCityByName: unique match, ambiguity, partial-name miss, and 
   assert.equal(noBars.findCuratedBarCityByName('Massive'), null);
   assert.equal(core.findCuratedBarCityByName(''), null);
 });
+
+// ---------------------------------------------------------------------------
+// findCuratedBarCityByName — generic-name-stem guard (run 20260725-170926:
+// the truncated bar "Eagle" uniquely matched fort-lauderdale's curated
+// "Eagle" and backfilled fort-lauderdale onto Dallas Eagle events).
+// Uniqueness is NOT identity when the name is a franchise stem: the curated
+// corpus itself flags it via containment, no word lists.
+// ---------------------------------------------------------------------------
+
+test('findCuratedBarCityByName: a unique match whose key is contained in another curated name is a generic stem', () => {
+  const bars = {
+    'fort-lauderdale': [{ name: 'Eagle', city: 'fort-lauderdale' }],
+    dallas: [{ name: 'Dallas Eagle', city: 'dallas' }],
+    seattle: [{ name: 'Massive', city: 'seattle' }]
+  };
+  const core = new SharedCore({}, { eventSchema: EventSchema, bars });
+
+  // The literal repro: "Eagle" IS uniquely curated (fort-lauderdale) but its
+  // key is contained in "dallaseagle" → refuse with the stem shape.
+  assert.deepEqual(core.findCuratedBarCityByName('Eagle'), {
+    genericStem: true,
+    containedIn: ['Dallas Eagle']
+  });
+
+  // "Massive" is contained in no other curated name → still backfills.
+  assert.deepEqual(core.findCuratedBarCityByName('Massive'), { city: 'seattle', bar: bars.seattle[0] });
+
+  // Containment is one-way: the LONGER unique name "Dallas Eagle" contains
+  // someone else's stem but is itself contained in nothing → exact match wins.
+  assert.deepEqual(core.findCuratedBarCityByName('Dallas Eagle'), { city: 'dallas', bar: bars.dallas[0] });
+});
+
+// ---------------------------------------------------------------------------
+// Cross-source duplicate detection (runs 20260724-155934 / 20260725-170926:
+// the Dallas Eagle parser crawls both an Eventbrite organizer page and
+// thedallaseagle.com/events, so the same event arrives twice with variant
+// titles). Signal = venue identity + same event night + title-token subset;
+// every step fails closed.
+// ---------------------------------------------------------------------------
+
+const DALLAS_CITIES = { dallas: { timezone: 'America/Chicago', patterns: ['dallas'] } };
+const EAGLE_HOST = 'thedallaseagle.com';
+
+function createDallasCore() {
+  return new SharedCore(DALLAS_CITIES, { eventSchema: EventSchema });
+}
+
+test('getEventNightKey: anchored evenings, wee-hour rollover, midnight date-only default, wall-clock and missing dates', () => {
+  const core = createDallasCore();
+  // 2026-08-01T02:00Z = Jul 31 21:00 in America/Chicago → the night of Jul 31
+  assert.equal(core.getEventNightKey({ startDate: new Date('2026-08-01T02:00:00.000Z'), timezone: 'America/Chicago' }), '2026-07-31');
+  // 2026-07-26T07:00Z = Jul 26 02:00 local — a wee-hour start belongs to the PREVIOUS night
+  assert.equal(core.getEventNightKey({ startDate: new Date('2026-07-26T07:00:00.000Z'), timezone: 'America/Chicago' }), '2026-07-25');
+  // 2026-07-31T05:00Z = Jul 31 00:00 local EXACTLY — the missing-time midnight
+  // default means "the event is ON July 31", so no rollover (literal "Thighs
+  // out…" shape from run 20260725-170926)
+  assert.equal(core.getEventNightKey({ startDate: new Date('2026-07-31T05:00:00.000Z'), timezone: 'America/Chicago' }), '2026-07-31');
+  // A timezone resolved from the city works like an explicit timezone field
+  assert.equal(core.getEventNightKey({ startDate: new Date('2026-08-01T02:00:00.000Z'), city: 'dallas' }), '2026-07-31');
+  // Wall-clock (_timezoneUnresolved) components are already the local reading
+  assert.equal(core.getEventNightKey({ startDate: new Date('2026-07-30T19:00:00.000Z'), _timezoneUnresolved: true, timezone: 'America/Chicago' }), '2026-07-30');
+  // No/invalid start date → no night, never pairs
+  assert.equal(core.getEventNightKey({}), '');
+  assert.equal(core.getEventNightKey({ startDate: 'not a date' }), '');
+});
+
+test('cross-source signal: literal Singlet pair (run 20260725-170926) pairs across the midnight-default gap', () => {
+  const core = createDallasCore();
+  const singlet = {
+    title: 'Singlet Night with DJ Drew G', bar: 'Dallas Eagle', city: 'dallas',
+    timezone: 'America/Chicago', startDate: new Date('2026-08-01T02:00:00.000Z'), _venueSitePageHost: EAGLE_HOST
+  };
+  const thighs = {
+    title: 'Thighs out for the guys yall, it’s Singlet Night at the Dallas Eagle 🤼‍♂️🦅',
+    bar: 'Dallas Eagle', city: 'dallas', timezone: 'America/Chicago',
+    startDate: new Date('2026-07-31T05:00:00.000Z'), _venueSitePageHost: EAGLE_HOST
+  };
+  assert.equal(core.getCrossSourceDuplicateSignal(singlet, thighs), 'venue+night+title-subset');
+});
+
+test('cross-source signal: venue identity via _venueSitePageHost when one record has no bar at all (literal Karaoke pair)', () => {
+  const core = createDallasCore();
+  const detail = {
+    title: 'Karaoke featuring Stevie Licks', bar: 'Dallas Eagle', city: 'dallas',
+    timezone: 'America/Chicago', startDate: new Date('2026-07-31T00:00:00.000Z'), _venueSitePageHost: EAGLE_HOST
+  };
+  const listing = {
+    title: 'Eagle Karaoke featuring Stevie Licks', city: 'unknown',
+    startDate: new Date('2026-07-30T19:00:00.000Z'), _timezoneUnresolved: true, _venueSitePageHost: EAGLE_HOST
+  };
+  assert.equal(core.getCrossSourceDuplicateSignal(detail, listing), 'venue+night+title-subset');
+  // Without the host tag the barless record has NO venue identity — never pairs
+  assert.equal(core.getCrossSourceDuplicateSignal(detail, { ...listing, _venueSitePageHost: undefined }), null);
+});
+
+test('cross-source signal: fails closed on disjoint titles, different nights, and empty titles', () => {
+  const core = createDallasCore();
+  const base = { bar: 'Dallas Eagle', city: 'dallas', timezone: 'America/Chicago', _venueSitePageHost: EAGLE_HOST };
+  // Literal same-night same-venue pair that is TWO REAL events (early happy
+  // hour + night party, run 20260725-170926) — disjoint significant tokens
+  const underwearNight = { ...base, title: 'Underwear Night and Contest with DJ Michael Jon', startDate: new Date('2026-07-30T02:00:00.000Z') };
+  const happyHour = { ...base, title: 'UNDERWEAR HAPPY HOUR', startDate: new Date('2026-07-30T00:00:00.000Z') };
+  assert.equal(core.getCrossSourceDuplicateSignal(underwearNight, happyHour), null);
+  // Literal 20260724-155934 Pet Night shapes: extraction put them on DIFFERENT
+  // nights (Jul 24 wall-clock vs Jul 25 local) — fail closed, keep both
+  const petListing = { ...base, title: 'It’s PET NIGHT at the Dallas Eagle! Get ready to unleash your inner pup…', startDate: new Date('2026-07-26T01:00:00.000Z') };
+  const petDetail = { title: 'Pet Night with DJ Boost', startDate: new Date('2026-07-24T21:00:00.000Z'), _timezoneUnresolved: true, _venueSitePageHost: EAGLE_HOST };
+  assert.equal(core.getCrossSourceDuplicateSignal(petListing, petDetail), null);
+  // Titles that normalize to nothing never pair
+  assert.equal(core.getCrossSourceDuplicateSignal({ ...base, title: '🔥🔥', startDate: new Date('2026-07-30T02:00:00.000Z') }, happyHour), null);
+  // Missing start date never pairs
+  assert.equal(core.getCrossSourceDuplicateSignal({ ...base, title: 'UNDERWEAR HAPPY HOUR' }, happyHour), null);
+});
+
+test('cross-source dedup: secondary ticketUrl/image enrich the primary through the existing merge machinery', async () => {
+  const core = createDallasCore();
+  const primary = {
+    title: 'Karaoke featuring Stevie Licks', bar: 'Dallas Eagle', city: 'dallas',
+    timezone: 'America/Chicago', source: 'ai-web',
+    startDate: new Date('2026-07-31T00:00:00.000Z'), endDate: new Date('2026-07-31T03:00:00.000Z'),
+    description: 'Join us for a very special Eagle Karaoke featuring Stevie Licks!',
+    _venueSitePageHost: EAGLE_HOST
+  };
+  // Barless listing record (the existing identity pass cannot see its place —
+  // only the host tag proves the venue), carrying fields the primary lacks.
+  const secondary = {
+    title: 'Eagle Karaoke featuring Stevie Licks', source: 'ai-web',
+    startDate: new Date('2026-07-30T19:00:00.000Z'), _timezoneUnresolved: true,
+    ticketUrl: 'https://www.thedallaseagle.com/events/karaoke-featuring-stevie-licks/',
+    image: 'https://img.example/karaoke.jpg',
+    _venueSitePageHost: EAGLE_HOST
+  };
+  let result = null;
+  const originalLog = console.log;
+  const lines = [];
+  console.log = (message) => { lines.push(String(message)); };
+  try {
+    result = await core.deduplicateEvents([primary, secondary], null);
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(result.length, 1, 'the pair collapses to one event');
+  assert.equal(result[0].title, 'Karaoke featuring Stevie Licks', 'the richer record is the primary');
+  assert.equal(result[0].ticketUrl, secondary.ticketUrl, 'secondary ticketUrl enriches the primary');
+  assert.equal(result[0].image, secondary.image, 'secondary image enriches the primary');
+  assert.ok(
+    lines.includes('🔀 MERGE: cross-source duplicate "Eagle Karaoke featuring Stevie Licks" merged into "Karaoke featuring Stevie Licks" (venue+night+title-subset)'),
+    `cross-source merge log expected, got:\n${lines.join('\n')}`
+  );
+});
+
+test('cross-source dedup: the literal Dallas Eagle clusters collapse through the real dedup path (5 clusters → 5 events, non-duplicates stay)', async () => {
+  const core = createDallasCore();
+  const anchored = { city: 'dallas', timezone: 'America/Chicago', source: 'ai-web', _venueSitePageHost: EAGLE_HOST };
+  const raw = [
+    // Pet Night cluster (2) — night of Jul 25
+    { ...anchored, title: 'It’s PET NIGHT at the Dallas Eagle! Get ready to unleash your inner pup and join us for a night of tail-wagging fun 🐶🦅', bar: 'Dallas Eagle', startDate: new Date('2026-07-26T01:00:00.000Z'), endDate: new Date('2026-07-26T07:00:00.000Z'), url: 'https://www.thedallaseagle.com' },
+    { title: 'Pet Night with DJ Boost', source: 'ai-web', startDate: new Date('2026-07-25T21:00:00.000Z'), _timezoneUnresolved: true, _venueSitePageHost: EAGLE_HOST, url: 'https://www.thedallaseagle.com/events/pet-night-with-dj-boost/', image: 'https://img.example/pet.jpg' },
+    // Gear Night cluster (3) — night of Jul 25; "GEAR NIGHT!" starts at
+    // Jul 26 02:00 local, exercising the wee-hour rollover
+    { ...anchored, title: 'Grab your gear, it’s time for GEAR NIGHT!', bar: 'Dallas Eagle', startDate: new Date('2026-07-26T02:00:00.000Z') },
+    { ...anchored, title: 'GEAR NIGHT!', bar: 'Dallas Eagle', startDate: new Date('2026-07-26T07:00:00.000Z') },
+    { title: 'Gear Night with DJ Drew G', source: 'ai-web', startDate: new Date('2026-07-25T21:00:00.000Z'), _timezoneUnresolved: true, _venueSitePageHost: EAGLE_HOST },
+    // Karaoke cluster (2, literal 20260725-170926 shapes) — night of Jul 30
+    { ...anchored, title: 'Karaoke featuring Stevie Licks', bar: 'Dallas Eagle', startDate: new Date('2026-07-31T00:00:00.000Z'), endDate: new Date('2026-07-31T03:00:00.000Z'), ticketUrl: 'https://www.thedallaseagle.com/events/karaoke-featuring-stevie-licks/', url: 'https://www.thedallaseagle.com/events/karaoke-featuring-stevie-licks/' },
+    { title: 'Eagle Karaoke featuring Stevie Licks', source: 'ai-web', city: 'unknown', startDate: new Date('2026-07-30T19:00:00.000Z'), endDate: new Date('2026-07-30T22:00:00.000Z'), _timezoneUnresolved: true, _venueSitePageHost: EAGLE_HOST, cover: 'No cover', url: 'https://www.thedallaseagle.com' },
+    // Literal "Karaoke" (run 20260724-155934): bar truncated to "Eagle", no
+    // host tag, wall-clock Jul 24 — a DIFFERENT night, so fail-closed keeps it
+    { title: 'Karaoke', source: 'ai-web', bar: 'Eagle', startDate: new Date('2026-07-24T21:00:00.000Z'), _timezoneUnresolved: true },
+    // FREQUENCY cluster (2, literal bars "Eagle" vs "Dallas Eagle") — night of Jul 30
+    { ...anchored, title: 'George Flores presents: FREQUENCY at the Dallas Eagle, every last Thursday of the month! 🔥', bar: 'Eagle', startDate: new Date('2026-07-31T03:00:00.000Z') },
+    { ...anchored, title: 'FREQUENCY', bar: 'Dallas Eagle', startDate: new Date('2026-07-31T03:00:00.000Z') },
+    // Singlet cluster (2, literal 20260725-170926 shapes) — night of Jul 31
+    { ...anchored, title: 'Singlet Night with DJ Drew G', bar: 'Dallas Eagle', startDate: new Date('2026-08-01T02:00:00.000Z'), endDate: new Date('2026-08-01T07:00:00.000Z'), cover: 'free', ticketUrl: 'https://www.thedallaseagle.com/events/singlet-night/' },
+    { ...anchored, title: 'Thighs out for the guys yall, it’s Singlet Night at the Dallas Eagle 🤼‍♂️🦅', bar: 'Dallas Eagle', startDate: new Date('2026-07-31T05:00:00.000Z'), endDate: new Date('2026-08-01T07:00:00.000Z') },
+    // Legit non-duplicates: same venue, same night (Jul 29), disjoint titles
+    { ...anchored, title: 'Underwear Night and Contest with DJ Michael Jon', bar: 'Dallas Eagle', startDate: new Date('2026-07-30T02:00:00.000Z') },
+    { ...anchored, title: 'UNDERWEAR HAPPY HOUR', bar: 'Dallas Eagle', startDate: new Date('2026-07-30T00:00:00.000Z') }
+  ];
+
+  const result = await core.deduplicateEvents(raw, null);
+
+  const titles = result.map(event => event.title).sort();
+  assert.equal(result.length, 8, `5 collapsed clusters + 3 kept singles, got: ${titles.join(' | ')}`);
+  // Every cluster collapsed to exactly one survivor
+  assert.equal(result.filter(event => /pet night/i.test(event.title)).length, 1, 'Pet Night cluster → 1');
+  assert.equal(result.filter(event => /gear night/i.test(event.title)).length, 1, 'Gear Night chain of 3 → 1');
+  assert.equal(result.filter(event => /stevie licks/i.test(event.title)).length, 1, 'Karaoke pair → 1');
+  assert.equal(result.filter(event => /frequency/i.test(event.title)).length, 1, 'FREQUENCY pair → 1');
+  assert.equal(result.filter(event => /singlet|thighs/i.test(event.title)).length, 1, 'Singlet pair → 1');
+  // Fail-closed keeps: the different-night "Karaoke" and the two real events
+  assert.ok(titles.includes('Karaoke'), 'the Jul 24 "Karaoke" is a different night — kept');
+  assert.ok(titles.includes('Underwear Night and Contest with DJ Michael Jon'), 'real event kept');
+  assert.ok(titles.includes('UNDERWEAR HAPPY HOUR'), 'real same-night event with disjoint title kept');
+  // Enrichment flowed through the existing merge machinery
+  const karaoke = result.find(event => /stevie licks/i.test(event.title));
+  assert.equal(karaoke.cover, 'No cover', 'secondary cover enriches the Karaoke primary');
+  assert.equal(karaoke.startDate.toISOString(), '2026-07-31T00:00:00.000Z', 'timezone-anchored start wins over wall-clock');
+  const pet = result.find(event => /pet night/i.test(event.title));
+  assert.equal(pet.image, 'https://img.example/pet.jpg', 'secondary image enriches the Pet Night primary');
+});
