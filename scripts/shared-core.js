@@ -2994,6 +2994,22 @@ class SharedCore {
 
             this.markProcessedUrl(processedUrls, url);
 
+            // Processing-time hygiene for DISCOVERED URLs (configured roots are
+            // left alone): both checks run against the normalized URL that is
+            // about to be fetched, because enqueue-time filtering sees the raw
+            // discovered string, which can differ (entity-mangled tails).
+            if (currentDepth > 0 && this.isStaticAssetUrl(url)) {
+                await displayAdapter.logInfo(`SYSTEM: Skipping static-asset URL in crawl queue: ${url}`);
+                continue;
+            }
+            if (currentDepth > 0) {
+                const deadEndEntry = this.getSkippableDeadEndEntry(url, discoveryOnly);
+                if (deadEndEntry) {
+                    await displayAdapter.logInfo(`SYSTEM: Skipping known dead-end URL (${Number(deadEndEntry.misses) || 0} prior misses): ${url}`);
+                    continue;
+                }
+            }
+
             try {
                 const shouldUseInlineInput = includeInlineInput &&
                     currentDepth === 0 &&
@@ -3208,6 +3224,15 @@ class SharedCore {
                 }
             } catch (error) {
                 const message = error?.message || 'Unknown error';
+                // Bot-wall responses (401/403) are permanent for this client:
+                // learn them as dead ends so later runs skip the fetch entirely.
+                // Generic status check — no host list. Cached-failure replays
+                // count too (the failure cache would otherwise mask the store
+                // from ever learning the URL).
+                const failureStatusCode = this.extractHttpStatusCodeFromError(error);
+                if (failureStatusCode === 403 || failureStatusCode === 401) {
+                    this.recordDeadEndFetchFailure({ url, currentDepth, statusCode: failureStatusCode });
+                }
                 try {
                     if (!(error && error.cachedFailure === true)) {
                         await this.saveNonRetryableFailureNote(
@@ -3292,7 +3317,9 @@ class SharedCore {
     // Learned dead-end store (pure logic — persistence lives in adapters).
     // A URL is a dead end only if it FETCHED successfully AND produced 0 raw
     // events (pre future/bear filtering), 0 segments, AND 0 valid discovered
-    // links. Fetch failures and configured root URLs are never dead-ended.
+    // links. Fetch failures are never dead-ended, with one exception: bot-wall
+    // statuses (401/403) are recorded via recordDeadEndFetchFailure below.
+    // Configured root URLs are never dead-ended.
     // ------------------------------------------------------------------
 
     createDeadEndRunContext(config) {
@@ -3353,6 +3380,62 @@ class SharedCore {
             allowed.push(url);
         }
         return allowed;
+    }
+
+    // Processing-time twin of filterKnownDeadEndUrls for a single URL: the
+    // enqueue-time filter keys the store by the QUEUED string, but the crawl
+    // loop fetches the string after another normalizeUrl pass — when the two
+    // differ (entity-mangled candidates), a recorded dead end sails through
+    // the enqueue filter. Re-checking here against the fetch-time URL closes
+    // that gap (run 20260724-161423: dead-ends.json held the exact .webp URLs
+    // with misses: 3 and they were still refetched every run).
+    getSkippableDeadEndEntry(url, discoveryOnly = false, nowMs = Date.now()) {
+        const context = this.deadEndRunContext;
+        if (!context || !context.enabled || discoveryOnly || !url) {
+            return null;
+        }
+        const entry = context.store[url];
+        const lastSeenMs = entry && entry.lastSeen ? Date.parse(entry.lastSeen) : NaN;
+        const retryMs = context.retryDays * 24 * 60 * 60 * 1000;
+        if (entry && Number.isFinite(lastSeenMs) && (nowMs - lastSeenMs) < retryMs) {
+            context.skippedCount += 1;
+            if (context.skippedSamples.length < 3 && !context.skippedSamples.includes(url)) {
+                context.skippedSamples.push(url);
+            }
+            return entry;
+        }
+        return null;
+    }
+
+    // Learned dead ends from FETCH FAILURES are limited to statuses that are
+    // effectively permanent for this client (bot walls: 401/403 — e.g. tixr.com
+    // 403'd every one of its event pages in run 20260724-161423 and always
+    // will). Other failures stay un-learned: they may be transient and the
+    // non-retryable failure cache already throttles them. Entries share the
+    // normal store retention (retryDays window, pruned at 2×), so a page that
+    // ever recovers self-heals out via recordDeadEndObservation. This only
+    // stops CRAWLING such URLs — ticketUrl fields on events are untouched.
+    recordDeadEndFetchFailure({ url, currentDepth, statusCode, nowMs = Date.now() }) {
+        const context = this.deadEndRunContext;
+        if (!context || !context.enabled || !url) {
+            return;
+        }
+        if (currentDepth === 0) {
+            // Configured root URLs are never dead-ended
+            return;
+        }
+        const nowIso = new Date(nowMs).toISOString();
+        const entry = context.store[url];
+        if (entry) {
+            entry.lastSeen = nowIso;
+            entry.misses = (Number(entry.misses) || 0) + 1;
+            entry.lastStatus = statusCode;
+            context.dirty = true;
+        } else {
+            context.store[url] = { firstSeen: nowIso, lastSeen: nowIso, misses: 1, lastStatus: statusCode };
+            context.dirty = true;
+            context.learned.push(url);
+        }
     }
 
     // Record the outcome of a successfully-fetched page. Productive pages are
@@ -3679,7 +3762,7 @@ class SharedCore {
         const normalized = this.normalizeUrl(url) || String(url);
         const parsed = this.parseUrl(normalized);
         if (!parsed) {
-            const trimmed = String(normalized).trim().replace(/#.*$/, '');
+            const trimmed = String(normalized).trim().replace(/#.*$/, '').replace(/^(https?:\/\/)www\./i, '$1');
             const queryIndex = trimmed.indexOf('?');
             const path = (queryIndex >= 0 ? trimmed.slice(0, queryIndex) : trimmed).replace(/\/$/, '');
             const search = queryIndex >= 0 ? this.stripTrackingSearch(trimmed.slice(queryIndex)) : '';
@@ -3687,7 +3770,12 @@ class SharedCore {
         }
 
         const protocol = String(parsed.protocol || '').toLowerCase();
-        const host = String(parsed.host || parsed.hostname || '').toLowerCase();
+        // www and bare-host variants of the same page are the same page —
+        // the crawl queue must not fetch https://www.X/p and https://X/p twice
+        // (run 20260724-161423 crawled both massive.club variants separately).
+        // Only the DEDUP KEY is normalized; callers keep the original URL
+        // string for fetching and cache keys.
+        const host = String(parsed.host || parsed.hostname || '').toLowerCase().replace(/^www\./, '');
         let pathname = String(parsed.pathname || '/');
         pathname = pathname.replace(/\/+$/, '');
         if (!pathname) pathname = '/';
@@ -5595,6 +5683,28 @@ class SharedCore {
         }
     }
     
+    // Crawl-queue guard: obvious static assets are never pages, so the crawl
+    // loop must never fetch them. URL discovery (ai-web-parser validateEventUrl)
+    // already rejects these, but a candidate whose entity-mangled tail hides the
+    // extension at validation time (e.g. "….webp&quot;" → validated as "….webp\"")
+    // only becomes a clean asset URL after the crawl loop's own normalizeUrl
+    // pass — so the check is re-applied here against the URL actually fetched
+    // (run 20260724-161423 fetched .avif/.webp/.jpg CDN images as crawl pages).
+    isStaticAssetUrl(url) {
+        const staticAssetExtensions = [
+            '.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.avif', '.heic', '.heif',
+            '.ico', '.bmp', '.tif', '.tiff',
+            '.css', '.js', '.mjs', '.map', '.json', '.xml', '.txt', '.pdf', '.zip', '.gz', '.tgz',
+            '.mp3', '.m4a', '.wav', '.mp4', '.webm', '.mov', '.avi', '.woff', '.woff2', '.ttf'
+        ];
+        const parsed = this.parseUrl(url);
+        const path = parsed
+            ? String(parsed.pathname || '')
+            : String(url || '').replace(/[?#].*$/, '');
+        const lowerPath = path.toLowerCase();
+        return staticAssetExtensions.some(ext => lowerPath.endsWith(ext));
+    }
+
     extractUrls(html, patterns, baseUrl) {
         const urls = new Set();
         

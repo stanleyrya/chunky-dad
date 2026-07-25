@@ -5109,3 +5109,112 @@ test('confidence-retry feedback: dropped-reason memos accumulate first-drop-wins
   assert.deepEqual(merged.__droppedFieldValues, { bar: 'first', city: 'x' }, 'earlier value wins');
   assert.deepEqual(merged.__droppedFieldReasons, { bar: '', city: '' }, 'the reason follows its value');
 });
+
+// ---------------------------------------------------------------------------
+// Crawl hygiene fixes from phone run 20260724-161423 (massive.club, ai-web)
+// ---------------------------------------------------------------------------
+
+test('extractUrlCandidatesFromRawHtml stops candidates at entity-encoded attribute boundaries', () => {
+  const parser = createParser();
+  // Literal shape from the run: the Get Directions anchor lives inside an
+  // entity-encoded attribute, so the raw scan used to bleed past &quot; into
+  // the following attribute and tag text.
+  const html = '<div data-widget="&lt;a href=&quot;https://www.google.com/maps/dir/?api=1&amp;destination=619+E+Pine+St%2C+Seattle%2C+WA+98122&quot; target=&quot;_blank&quot;&gt;Get Directions&lt;/a&gt;"></div>';
+  const candidates = parser.extractUrlCandidatesFromRawHtml(html);
+  assert.ok(candidates.length > 0, 'the URL is still discovered');
+  for (const candidate of candidates) {
+    const text = String(candidate.url || candidate);
+    assert.ok(!text.includes('"'), `candidate must stop at quotes: ${text}`);
+    assert.ok(!/target=/.test(text), `candidate must not bleed into the next attribute: ${text}`);
+    assert.ok(!/Get Directions/.test(text), `candidate must not swallow tag text: ${text}`);
+    assert.ok(!/&quot;|&gt;|&lt;/i.test(text), `candidate must stop at encoded delimiters: ${text}`);
+  }
+  assert.ok(
+    candidates.includes('https://www.google.com/maps/dir/?api=1&amp;destination=619+E+Pine+St%2C+Seattle%2C+WA+98122'),
+    `clean candidate expected (with &amp; still encoded — normalizeUrl decodes it exactly once), got: ${JSON.stringify(candidates)}`
+  );
+});
+
+test('entity-mangled image candidates can no longer hide their extension from the static-asset filter', () => {
+  // Production wiring: the parser normalizes through SharedCore.normalizeUrl
+  const core = new SharedCore({}, { eventSchema: EventSchema });
+  const parser = new AiWebParser({ normalizeUrl: core.normalizeUrl.bind(core) });
+  parser.core = core;
+  // Literal .webp/.avif URLs from the run, embedded behind &quot; boundaries
+  // the way Webflow's JSON blobs carry them. Before the fix the candidate kept
+  // a trailing quote ("….webp\"") so validateEventUrl's extension check missed.
+  const html = [
+    '<script>{"gallery":[',
+    '&quot;https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/675a7570f4832bc60bb6ddb2_image-0004.webp&quot;,',
+    '&quot;https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6765bd9509d17cbbf6cc31d5_massive-0016.avif&quot;',
+    ']}</script>'
+  ].join('');
+  const links = parser.extractAdditionalUrls(html, 'https://www.massive.club/news', {});
+  assert.deepEqual(links.slice(), [], `no CDN asset may survive discovery, got: ${JSON.stringify(links.slice())}`);
+});
+
+test('validateEventUrl rejects .avif assets (literal URL fetched as a crawl page in the run)', () => {
+  const parser = createParser();
+  const result = parser.validateEventUrl(
+    'https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6765bd9509d17cbbf6cc31d5_massive-0016.avif',
+    'https://www.massive.club/news'
+  );
+  assert.deepEqual(result, { valid: false, reason: 'static-asset-extension' });
+});
+
+test('getUrlDedupeKey fallback (no URL global, as on iOS JavaScriptCore) still merges www and bare-host variants', () => {
+  const parser = createParser();
+  const originalUrl = global.URL;
+  delete global.URL;
+  try {
+    assert.equal(
+      parser.getUrlDedupeKey('https://www.massive.club/monthly-events'),
+      parser.getUrlDedupeKey('https://massive.club/monthly-events')
+    );
+    assert.notEqual(
+      parser.getUrlDedupeKey('https://massive.club/monthly-events'),
+      parser.getUrlDedupeKey('https://massive.club/calendar')
+    );
+  } finally {
+    global.URL = originalUrl;
+  }
+});
+
+test('decodeBasicEntities decodes numeric and hex entities and common named typography, exactly once', () => {
+  const parser = createParser();
+  // Literal title that shipped with a raw entity in the run
+  assert.equal(
+    parser.decodeBasicEntities('It&#8217;s PET NIGHT at the Dallas Eagle!'),
+    'It’s PET NIGHT at the Dallas Eagle!'
+  );
+  assert.equal(parser.decodeBasicEntities('Womxn&#8217;s Night'), 'Womxn’s Night');
+  assert.equal(parser.decodeBasicEntities('It&#x2019;s time'), 'It’s time');
+  assert.equal(parser.decodeBasicEntities('Doors 9PM&#8211;2AM &mdash; free before 10'), 'Doors 9PM–2AM — free before 10');
+  assert.equal(parser.decodeBasicEntities('&ldquo;BRUT&rdquo; &hellip;'), '“BRUT” …');
+  // &amp; (and its numeric forms) stay encoded at this layer — URL-candidate
+  // scanning depends on it; normalizeUrl decodes it exactly once downstream.
+  assert.equal(parser.decodeBasicEntities('Rock &amp; Roll'), 'Rock &amp; Roll');
+  assert.equal(parser.decodeBasicEntities('Rock &#38; Roll'), 'Rock &#38; Roll');
+  // Invalid references are left untouched rather than corrupted
+  assert.equal(parser.decodeBasicEntities('bad &#xD800; ref'), 'bad &#xD800; ref');
+  assert.equal(parser.decodeBasicEntities('bad &#99999999; ref'), 'bad &#99999999; ref');
+});
+
+test('numeric entities are decoded in the corpus BEFORE the verbatim evidence gate, symmetrically with the prompt', () => {
+  const parser = createParser();
+  const html = '<html><head><title>Dallas Eagle Events</title></head><body><p>It&#8217;s PET NIGHT at the Dallas Eagle! Get ready to unleash your inner pup.</p></body></html>';
+
+  // The prompt payload (extractBodyParts → sections) carries the decoded line…
+  const bodyLines = parser.extractBodyParts(html);
+  assert.ok(
+    bodyLines.some(line => line.includes('It’s PET NIGHT at the Dallas Eagle!')),
+    `decoded line expected in body parts, got: ${JSON.stringify(bodyLines)}`
+  );
+  assert.ok(!bodyLines.some(line => line.includes('&#8217;')), 'no raw numeric entity survives into the prompt corpus');
+
+  // …and the evidence corpus is built from the SAME decoded sections, so a
+  // model value copied verbatim from the decoded prompt passes the gate.
+  const evidenceContext = parser.buildAiEvidenceContext({ html }, {});
+  assert.ok(evidenceContext.raw.includes('It’s PET NIGHT at the Dallas Eagle!'), 'evidence corpus sees the decoded text');
+  assert.equal(parser.hasExactEvidence(evidenceContext, 'It’s PET NIGHT at the Dallas Eagle!'), true, 'decoded title is verbatim in the corpus');
+});
