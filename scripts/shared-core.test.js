@@ -5397,6 +5397,150 @@ test('dead-end store: maxAdditionalUrls 0 cannot fake a dead end when the parser
   core.deadEndRunContext = null;
 });
 
+// ---------------------------------------------------------------------------
+// Crawl-queue hygiene (run 20260724-161423: raw CDN images fetched as pages,
+// recorded dead ends refetched, www/non-www double-crawled, tixr 403 walls)
+// ---------------------------------------------------------------------------
+
+test('crawl queue: static-asset URLs that slip past discovery are skipped at processing time, never fetched', async () => {
+  const core = deadEndCore();
+  const display = createDisplayAdapterStub();
+  // Literal asset URLs the phone run fetched as crawl pages
+  const assetUrls = [
+    'https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6765bd9509d17cbbf6cc31d5_massive-0016.avif',
+    'https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/675a769ae3ac8d25a81f9936_image-0001.webp',
+    'https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/659474124df37d0bd876efab_Massive-Seattle-Nightclub-Blog-Header-Introducing.jpg'
+  ];
+  const pages = {
+    'https://hub.example/': { additionalLinks: [...assetUrls, 'https://site.example/party'] },
+    'https://site.example/party': {}
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+
+  await core.processEvents(deadEndConfig({}), httpAdapter, display, parsers);
+
+  for (const assetUrl of assetUrls) {
+    assert.ok(!fetched.includes(assetUrl), `static asset must not be fetched: ${assetUrl}`);
+    assert.ok(
+      display.logs.includes(`SYSTEM: Skipping static-asset URL in crawl queue: ${assetUrl}`),
+      `skip log expected for ${assetUrl}`
+    );
+  }
+  assert.ok(fetched.includes('https://site.example/party'), 'real pages still crawled');
+});
+
+test('crawl queue: a recorded dead end is skipped even when the queued string differs from the fetch-time URL', async () => {
+  const core = deadEndCore();
+  const display = createDisplayAdapterStub();
+  const youngLastSeen = new Date(Date.now() - 1 * DAY_MS).toISOString();
+  // dead-ends.json holds the CLEAN URL (recorded after the crawl loop's own
+  // normalizeUrl pass)…
+  const store = {
+    'https://site.example/gallery': { firstSeen: youngLastSeen, lastSeen: youngLastSeen, misses: 3 }
+  };
+  const pages = {
+    // …but the queued candidate carries an entity-mangled tail, so the
+    // enqueue-time filter cannot see the match — only the processing-time
+    // check against the fetch-time URL can.
+    'https://hub.example/': { additionalLinks: ['https://site.example/gallery"'] },
+    'https://site.example/gallery': {}
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+
+  await core.processEvents(deadEndConfig({ store }), httpAdapter, display, parsers);
+
+  assert.ok(!fetched.includes('https://site.example/gallery'), 'known dead end is not refetched');
+  assert.ok(
+    display.logs.includes('SYSTEM: Skipping known dead-end URL (3 prior misses): https://site.example/gallery'),
+    `expected processing-time skip log, got: ${JSON.stringify(display.logs.filter(line => line.includes('dead-end')))}`
+  );
+});
+
+test('crawl queue: HTTP 403 crawl pages are learned as dead ends (tixr bot wall) and skipped on the next run', async () => {
+  const tixrUrl = 'https://tixr.com/e/199620';
+  const failure = `HTTP request failed for ${tixrUrl}: HTTP 403 error from ${tixrUrl}`;
+
+  // Run 1: the 403 is learned
+  const core = deadEndCore();
+  const display = createDisplayAdapterStub();
+  const pages = {
+    'https://hub.example/': { additionalLinks: [tixrUrl] },
+    [tixrUrl]: { fail: failure }
+  };
+  const { httpAdapter, parsers } = createCrawlHarness(pages);
+  const results = await core.processEvents(deadEndConfig({}), httpAdapter, display, parsers);
+
+  const entry = results.deadEndStore[tixrUrl];
+  assert.ok(entry, '403 page recorded in the dead-end store');
+  assert.equal(entry.misses, 1);
+  assert.equal(entry.lastStatus, 403);
+  assert.ok(display.logs.includes(`SYSTEM: Learned 1 new dead-end URL(s): ${tixrUrl}`));
+  assert.ok(display.logs.some(line => line.includes(`Failed to process crawl page ${tixrUrl}`)), 'run 1 still surfaces the fetch error');
+
+  // Run 2 with the persisted store: the URL is skipped, no fetch error
+  const core2 = deadEndCore();
+  const display2 = createDisplayAdapterStub();
+  const harness2 = createCrawlHarness(pages);
+  await core2.processEvents(deadEndConfig({ store: results.deadEndStore }), harness2.httpAdapter, display2, harness2.parsers);
+
+  assert.ok(!display2.logs.some(line => line.includes(`Failed to process crawl page ${tixrUrl}`)), 'run 2 does not retry the bot wall');
+  assert.ok(display2.logs.some(line => line.startsWith('SYSTEM: Skipped 1 known dead-end URL(s)')), 'run 2 reports the skip');
+});
+
+test('crawl queue: non-bot-wall fetch failures (503) are still never dead-ended', async () => {
+  const core = deadEndCore();
+  const display = createDisplayAdapterStub();
+  const pages = {
+    'https://hub.example/': { additionalLinks: ['https://site.example/flaky'] },
+    'https://site.example/flaky': { fail: 'HTTP request failed: HTTP 503 error' }
+  };
+  const { httpAdapter, parsers } = createCrawlHarness(pages);
+  const results = await core.processEvents(deadEndConfig({}), httpAdapter, display, parsers);
+  assert.ok(!('https://site.example/flaky' in results.deadEndStore), 'transient failure is not learned');
+});
+
+test('crawl queue: www and bare-host variants of the same path are one queue entry (first queued wins)', async () => {
+  const core = deadEndCore();
+  const display = createDisplayAdapterStub();
+  // Literal pair from the phone run — both were separately fetched and AI-classified
+  const pages = {
+    'https://hub.example/': {
+      additionalLinks: [
+        'https://www.massive.club/monthly-events',
+        'https://massive.club/monthly-events'
+      ]
+    },
+    'https://www.massive.club/monthly-events': {},
+    'https://massive.club/monthly-events': {}
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+
+  await core.processEvents(deadEndConfig({}), httpAdapter, display, parsers);
+
+  assert.ok(fetched.includes('https://www.massive.club/monthly-events'), 'first queued variant is fetched with its ORIGINAL URL string');
+  assert.ok(!fetched.includes('https://massive.club/monthly-events'), 'second variant is deduplicated');
+
+  // Unit level: only the dedup KEY is normalized
+  assert.equal(
+    core.getUrlDedupeKey('https://www.massive.club/monthly-events'),
+    core.getUrlDedupeKey('https://massive.club/monthly-events')
+  );
+  assert.notEqual(
+    core.getUrlDedupeKey('https://massive.club/monthly-events'),
+    core.getUrlDedupeKey('https://massive.club/calendar')
+  );
+});
+
+test('isStaticAssetUrl flags asset paths (including .avif) and leaves pages and bare hosts alone', () => {
+  const core = deadEndCore();
+  assert.equal(core.isStaticAssetUrl('https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6765bd9509d17cbbf6cc31d5_massive-0016.avif'), true);
+  assert.equal(core.isStaticAssetUrl('https://cdn.prod.website-files.com/659447a9dbb86fcea688b302/css/massive-club.shared.98617f967.min.css'), true);
+  assert.equal(core.isStaticAssetUrl('https://www.massive.club/monthly-events'), false);
+  assert.equal(core.isStaticAssetUrl('https://tixr.com/e/199620'), false);
+  // Bare CDN hosts are NOT asset paths — the learned 403 dead-end path handles those
+  assert.equal(core.isStaticAssetUrl('https://cdn.prod.website-files.com'), false);
+});
+
 test('prepareParsedEvents threads the geocodeVerification knob into the normalizer pipeline', async () => {
   const core = createCore();
   let capturedOptions = null;

@@ -2245,7 +2245,16 @@ class AiWebParser {
             }
             return parsed.toString().replace(/\/$/, '').toLowerCase();
         } catch (_) {
-            return String(url || '').replace(/#.*$/, '').replace(/\/$/, '').toLowerCase();
+            // iOS JavaScriptCore has no URL global, so this fallback is the
+            // ONLY path on-device — it must apply the same www-stripping the
+            // URL branch does or www/bare-host variants dedupe differently on
+            // the phone than in Node (run 20260724-161423 crawled both
+            // massive.club variants because of exactly that gap).
+            return String(url || '')
+                .replace(/#.*$/, '')
+                .replace(/^(https?:\/\/)www\./i, '$1')
+                .replace(/\/$/, '')
+                .toLowerCase();
         }
     }
 
@@ -4155,7 +4164,8 @@ class AiWebParser {
             return { valid: false, reason: 'fragment-only-root-url' };
         }
         const staticAssetExtensions = [
-            '.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.ico', '.bmp', '.tif', '.tiff',
+            '.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.avif', '.heic', '.heif',
+            '.ico', '.bmp', '.tif', '.tiff',
             '.css', '.js', '.mjs', '.map', '.json', '.xml', '.txt', '.pdf', '.zip', '.gz', '.tgz',
             '.mp3', '.m4a', '.wav', '.mp4', '.webm', '.mov', '.avi', '.woff', '.woff2', '.ttf'
         ];
@@ -4416,13 +4426,30 @@ class AiWebParser {
         for (const source of htmlSources) {
             for (const pattern of patterns) {
                 for (const match of source.matchAll(pattern)) {
-                    const candidate = match[1] || match[0];
+                    const candidate = this.truncateAtEncodedDelimiter(match[1] || match[0]);
                     if (candidate) candidates.add(candidate);
                 }
             }
         }
 
         return Array.from(candidates);
+    }
+
+    // In the RAW (undecoded) scan the quote that ends an attribute value is
+    // "&quot;" (or &#34;/&#39;/&lt;/…), which the bare-URL patterns treat as
+    // URL characters — the candidate then bleeds past the attribute boundary
+    // into the following markup (run 20260724-161423 captured
+    // "…&destination=…98122\" target=\"_blank\">Get Directions…" this way, and
+    // an image URL's "….webp&quot;" tail hid its extension from the
+    // static-asset filter). Cut candidates at the first entity-encoded
+    // delimiter so they stop at the same " / ' / whitespace / < boundaries the
+    // literal characters already enforce; &amp; is NOT a delimiter and is
+    // still decoded exactly once downstream (normalizeUrl).
+    truncateAtEncodedDelimiter(candidate) {
+        const text = String(candidate || '');
+        if (text.indexOf('&') === -1) return text;
+        const match = text.match(/&(?:quot|apos|lt|gt|#0*3[49]|#0*6[02]|#x0*2[27]|#x0*3[ce]);/i);
+        return match ? text.slice(0, match.index) : text;
     }
 
     extractUrlsFromJsonLd(html, diagnostics = null) {
@@ -10772,13 +10799,47 @@ TEXT:
         return false;
     }
 
+    // Single decoding layer for page text (prompt sections, segment lines, meta
+    // content) AND the evidence corpus — both derive from extractBodyParts /
+    // getPromptSectionBundle, so extending the decode here keeps the verbatim
+    // evidence gate symmetric: values the model copies from the decoded prompt
+    // match the identically-decoded corpus. Numeric references (&#8217;/&#x2019;)
+    // and the common named typographic entities are covered so titles like
+    // "It&#8217;s PET NIGHT at the Dallas Eagle!" (run 20260724-155934) no
+    // longer ship with raw entities. &amp; deliberately stays encoded here
+    // (URL-candidate scanning depends on it; normalizeUrl decodes it exactly
+    // once), so its numeric forms (&#38;/&#x26;) are skipped too.
     decodeBasicEntities(text) {
         return String(text || '')
             .replace(/&nbsp;/gi, ' ')
             .replace(/&quot;/gi, '"')
             .replace(/&#39;/gi, "'")
             .replace(/&lt;/gi, '<')
-            .replace(/&gt;/gi, '>');
+            .replace(/&gt;/gi, '>')
+            .replace(/&apos;/gi, "'")
+            .replace(/&lsquo;/gi, '‘')
+            .replace(/&rsquo;/gi, '’')
+            .replace(/&ldquo;/gi, '“')
+            .replace(/&rdquo;/gi, '”')
+            .replace(/&ndash;/gi, '–')
+            .replace(/&mdash;/gi, '—')
+            .replace(/&hellip;/gi, '…')
+            .replace(/&#(\d{1,7});/g, (entity, dec) => this.decodeNumericEntity(Number(dec), entity))
+            .replace(/&#x([0-9a-f]{1,6});/gi, (entity, hex) => this.decodeNumericEntity(parseInt(hex, 16), entity));
+    }
+
+    // Numeric character reference → character, decoded at most once. Invalid
+    // code points, surrogates, and the ampersand itself (38/0x26 — kept
+    // encoded, same as &amp;) fall back to the original entity text.
+    decodeNumericEntity(code, fallback) {
+        if (!Number.isFinite(code) || code <= 0 || code > 0x10ffff) return fallback;
+        if (code === 38) return fallback;
+        if (code >= 0xd800 && code <= 0xdfff) return fallback;
+        try {
+            return String.fromCodePoint(code);
+        } catch (_) {
+            return fallback;
+        }
     }
 
     stripTags(text) {
