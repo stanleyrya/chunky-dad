@@ -381,6 +381,14 @@ class AiWebParser {
             // KNOWN VENUE; undetermined changes nothing (fail open).
             this.resolvePageSiteRole(htmlData, parserConfig);
 
+            // Deterministic venue-site address harvest (no AI): map-directions
+            // links (Google/Apple) on ANY fetched page of a site feed a
+            // per-host consensus that can later fill blank address/city on the
+            // site's own events — applyVenueSiteAddressConsensus judges it
+            // after the whole crawl (fail closed: two distinct addresses, or
+            // siteRole 'organizer', derive nothing).
+            this.harvestVenueSiteAddresses(htmlData);
+
             // Deterministic extraction from schema.org Event JSON-LD. Ticketing pages
             // (sickening.events, tryst.events, Eventbrite) hand us complete structured
             // data — when it covers title + start + venue, OCR and AI extraction add
@@ -420,6 +428,9 @@ class AiWebParser {
                 // venue-site stamps only — there is no extraction evidence
                 // corpus here, so the adjacency check never runs (fail open).
                 completeJsonLdEvents.forEach(event => this.stampBarSourceProvenance(event, null, htmlData));
+                // Attribute the events to this page's site so the post-crawl
+                // venue-site address consensus can fill their blanks.
+                this.tagEventsWithVenueSitePage(completeJsonLdEvents, htmlData);
                 return {
                     events: completeJsonLdEvents,
                     additionalLinks: additionalLinks,
@@ -528,6 +539,10 @@ class AiWebParser {
             // Enrichment only: fills empty fields on the finished AI/OCR events
             // from the Wix warmup blob, never skips or replaces an extraction step.
             this.applyWixServerDataEnrichment(events, htmlData, cityConfig);
+
+            // Attribute the events to this page's site so the post-crawl
+            // venue-site address consensus can fill their blanks.
+            this.tagEventsWithVenueSitePage(events, htmlData);
 
             return {
                 events,
@@ -9629,6 +9644,199 @@ TEXT:
             ? ` (${htmlData.pageSiteRoleReason})`
             : '';
         console.log(`🤖 AI Web: siteRole for ${host}: ${role}${reason}`);
+    }
+
+    // ------------------------------------------------------------------------
+    // VENUE-SITE ADDRESS CONSENSUS (deterministic, no AI)
+    // ------------------------------------------------------------------------
+    // A venue's own website knows its address in machine-readable form: the
+    // site footer's map-directions links carry it on every page (run
+    // 20260724-161423: massive.club shipped events with city "unknown" while
+    // its footer linked google.com/maps/dir/?api=1&destination=619+E+Pine+
+    // St%2C+Seattle%2C+WA+98122 on every fetched page). Every page that flows
+    // through parseEvents contributes candidates keyed by registrable host
+    // (host without www); once the whole crawl has been seen, the site has a
+    // venue address ONLY if exactly one distinct normalized address was
+    // observed (fail closed: two or more distinct addresses — or a siteRole
+    // 'organizer' determination, config or page-derived — derive nothing).
+    // The consensus fills BLANKS only (address with addressSource
+    // 'venue-site', city via the configured city patterns) on events produced
+    // from that site's pages. An event already carrying a DIFFERENT address
+    // is a party at another venue announced on this site and is never
+    // relocated (multi-venue safety) — its city is left alone too.
+
+    // Registrable host key for a page URL: hostname, lowercased, port and
+    // leading www. stripped ('' when unparseable).
+    getVenueSiteHostKey(url) {
+        const components = this.parseUrlComponents(typeof url === 'string' ? url : '');
+        const hostname = components && components.hostname ? components.hostname : '';
+        return hostname.split(':')[0].replace(/^www\./, '').toLowerCase();
+    }
+
+    // Comparison key for consensus: shared-core's address-token normalizer
+    // (case/whitespace/punctuation-insensitive, "St"/"Street" and
+    // directionals expanded) when wired; a plain lowercase-alphanumeric
+    // token join otherwise. The fallback is stricter (no abbreviation
+    // expansion), so at worst two spellings of one address count as distinct
+    // and consensus fails closed.
+    normalizeVenueSiteAddressKey(address) {
+        if (this.core && typeof this.core.normalizeAddressTokens === 'function') {
+            return this.core.normalizeAddressTokens(address).join(' ');
+        }
+        return String(address || '')
+            .toLowerCase()
+            .replace(/[^a-z0-9\s]/g, ' ')
+            .split(/\s+/)
+            .filter(Boolean)
+            .join(' ');
+    }
+
+    // Street addresses from map-directions links in raw page HTML:
+    // google.com/maps destination=/daddr= and maps.apple.com address=/q=
+    // query params. String/regex parsing only (no URL global on iOS
+    // JavaScriptCore); &amp;-entity-encoded hrefs — the form raw HTML
+    // attributes actually carry — are decoded first. Only address-shaped
+    // values survive (isAddressShapedBarValue): a venue name or coordinate
+    // pair in q= is not an address (fail closed).
+    extractMapsDirectionsAddresses(html) {
+        const source = String(html || '');
+        const addresses = [];
+        const urlMatches = source.match(/https?:\/\/[^\s"'<>]+/gi) || [];
+        for (const rawUrl of urlMatches) {
+            const url = rawUrl.replace(/&amp;/gi, '&').replace(/&#0*38;/g, '&');
+            let paramKeys = null;
+            if (/^https?:\/\/(?:[a-z0-9-]+\.)*google\.[a-z.]{2,10}\/maps(?:[/?]|$)/i.test(url)
+                || /^https?:\/\/maps\.google\.[a-z.]{2,10}\//i.test(url)) {
+                paramKeys = ['destination', 'daddr'];
+            } else if (/^https?:\/\/maps\.apple\.com\//i.test(url)) {
+                paramKeys = ['address', 'q'];
+            }
+            if (!paramKeys) continue;
+            const queryIndex = url.indexOf('?');
+            if (queryIndex < 0) continue;
+            const search = url.slice(queryIndex).replace(/#[\s\S]*$/, '');
+            for (const key of paramKeys) {
+                const value = this.extractSearchParamValue(search, key).replace(/\s+/g, ' ').trim();
+                if (!value || !this.isAddressShapedBarValue(value)) continue;
+                addresses.push(value);
+                break;
+            }
+        }
+        return addresses;
+    }
+
+    // Per-run harvest state: host → { addresses: {normKey → {display,
+    // pages: Set}}, pages: Set, blocked }. Lazily created; consumed and reset
+    // by applyVenueSiteAddressConsensus at the end of each parser run.
+    getVenueSiteHarvestEntry(host) {
+        if (!this.venueSiteHarvest) this.venueSiteHarvest = Object.create(null);
+        if (!this.venueSiteHarvest[host]) {
+            this.venueSiteHarvest[host] = {
+                addresses: Object.create(null),
+                pages: new Set(),
+                blocked: false
+            };
+        }
+        return this.venueSiteHarvest[host];
+    }
+
+    // Collect this page's map-directions addresses into the per-host harvest
+    // (once per page URL). A page whose resolved siteRole is 'organizer'
+    // permanently blocks venue derivation for its host — the parser config
+    // override lands here via resolvePageSiteRole, which runs first in
+    // parseEvents.
+    harvestVenueSiteAddresses(htmlData) {
+        if (!htmlData || typeof htmlData !== 'object') return;
+        const pageUrl = typeof htmlData.url === 'string' ? htmlData.url : '';
+        const host = this.getVenueSiteHostKey(pageUrl);
+        if (!host) return;
+        const entry = this.getVenueSiteHarvestEntry(host);
+        if (this.getPageSiteRole(htmlData) === 'organizer') entry.blocked = true;
+        if (entry.pages.has(pageUrl)) return;
+        entry.pages.add(pageUrl);
+        const seenKeys = new Set();
+        const html = typeof htmlData.html === 'string' ? htmlData.html : '';
+        for (const address of this.extractMapsDirectionsAddresses(html)) {
+            const key = this.normalizeVenueSiteAddressKey(address);
+            if (!key || seenKeys.has(key)) continue;
+            seenKeys.add(key);
+            if (!entry.addresses[key]) entry.addresses[key] = { display: address, pages: new Set() };
+            entry.addresses[key].pages.add(pageUrl);
+        }
+    }
+
+    // Stamp each produced event with its page's registrable host (internal
+    // _venueSitePageHost — underscore fields are excluded from notes/merge
+    // field loops, matching _organizer) so the post-crawl consensus can find
+    // the site's events. Also re-checks the page's siteRole: segment-derived
+    // 'organizer' determinations land AFTER the page-entry harvest ran.
+    tagEventsWithVenueSitePage(events, htmlData) {
+        if (!Array.isArray(events) || events.length === 0) return;
+        const pageUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
+        const host = this.getVenueSiteHostKey(pageUrl);
+        if (!host) return;
+        if (this.getPageSiteRole(htmlData) === 'organizer') {
+            this.getVenueSiteHarvestEntry(host).blocked = true;
+        }
+        for (const event of events) {
+            if (event && typeof event === 'object' && !event._venueSitePageHost) {
+                event._venueSitePageHost = host;
+            }
+        }
+    }
+
+    // End-of-run consensus + enrich-only application (called by shared-core's
+    // processParser once every page of the run has been crawled — consensus
+    // cannot be judged mid-crawl without risking fills a later page's
+    // conflicting address would have vetoed). Per host: exactly one distinct
+    // normalized address → fill BLANK address (addressSource 'venue-site')
+    // and blank/"unknown" city on that host's events; two or more distinct →
+    // one log line, derive nothing (fail closed); siteRole 'organizer' →
+    // derive nothing. Fill-blanks-only keeps this subordinate to the curated
+    // machinery: BarDataNormalizer's curated fills/upgrades run later and
+    // outrank 'venue-site' (addressSource trust tier 2, below curated's 3).
+    // Harvest state resets afterwards (per-run scope).
+    applyVenueSiteAddressConsensus(events, cityConfig = null) {
+        const harvest = this.venueSiteHarvest;
+        this.venueSiteHarvest = null;
+        if (!harvest) return;
+        const eventList = Array.isArray(events) ? events : [];
+        for (const host of Object.keys(harvest)) {
+            const entry = harvest[host];
+            const keys = Object.keys(entry.addresses);
+            if (entry.blocked || keys.length === 0) continue;
+            if (keys.length > 1) {
+                console.log(`🤖 AI Web: No venue-site address consensus for ${host}: ${keys.length} distinct addresses observed`);
+                continue;
+            }
+            const consensusKey = keys[0];
+            const candidate = entry.addresses[consensusKey];
+            const consensusAddress = candidate.display;
+            console.log(`🤖 AI Web: Venue-site address consensus for ${host}: "${consensusAddress}" (${candidate.pages.size} page(s))`);
+            const cityKey = this.findCityKeyInText(consensusAddress, cityConfig);
+            for (const event of eventList) {
+                if (!event || typeof event !== 'object' || event._venueSitePageHost !== host) continue;
+                const title = typeof event.title === 'string' && event.title.trim() ? event.title.trim() : 'unknown';
+                const existingAddress = typeof event.address === 'string' ? event.address.trim() : '';
+                if (existingAddress
+                    && this.normalizeVenueSiteAddressKey(existingAddress) !== consensusKey) {
+                    // Multi-venue safety: a party at ANOTHER venue announced
+                    // on this site keeps its own address AND city untouched —
+                    // never relocated to the site's home address.
+                    continue;
+                }
+                if (!existingAddress) {
+                    event.address = consensusAddress;
+                    event.addressSource = 'venue-site';
+                    console.log(`🤖 AI Web: Filled address from venue-site consensus for "${title}"`);
+                }
+                const existingCity = typeof event.city === 'string' ? event.city.trim().toLowerCase() : '';
+                if (cityKey && (!existingCity || existingCity === 'unknown')) {
+                    event.city = cityKey;
+                    console.log(`🤖 AI Web: Filled city "${cityKey}" from venue-site consensus for "${title}"`);
+                }
+            }
+        }
     }
 
     // JSON-LD facts about the page's own identity. Same traversal rule as

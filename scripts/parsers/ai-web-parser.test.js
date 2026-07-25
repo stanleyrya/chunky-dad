@@ -5218,3 +5218,202 @@ test('numeric entities are decoded in the corpus BEFORE the verbatim evidence ga
   assert.ok(evidenceContext.raw.includes('It’s PET NIGHT at the Dallas Eagle!'), 'evidence corpus sees the decoded text');
   assert.equal(parser.hasExactEvidence(evidenceContext, 'It’s PET NIGHT at the Dallas Eagle!'), true, 'decoded title is verbatim in the corpus');
 });
+
+// ---------------------------------------------------------------------------
+// Venue-site address consensus (run 20260724-161423: massive.club shipped
+// city "unknown" events while its footer's Get-Directions link carried the
+// bar's address on every page)
+// ---------------------------------------------------------------------------
+
+const MASSIVE_DIRECTIONS_URL = 'https://www.google.com/maps/dir/?api=1&destination=619+E+Pine+St%2C+Seattle%2C+WA+98122';
+const MASSIVE_FOOTER_HTML = `<html><body><footer><a href="https://www.google.com/maps/dir/?api=1&amp;destination=619+E+Pine+St%2C+Seattle%2C+WA+98122">Get Directions</a></footer></body></html>`;
+const SEATTLE_CITY_CONFIG = { seattle: { timezone: 'America/Los_Angeles', patterns: ['seattle'] } };
+
+test('extractMapsDirectionsAddresses harvests the literal massive.club directions link (raw and entity-encoded)', () => {
+  const parser = createParser();
+
+  // Raw URL, exactly as the run log showed it.
+  assert.deepEqual(
+    parser.extractMapsDirectionsAddresses(`<a href="${MASSIVE_DIRECTIONS_URL}">Get Directions</a>`),
+    ['619 E Pine St, Seattle, WA 98122']
+  );
+
+  // The &amp;-entity-encoded form as it appears in raw HTML attributes.
+  assert.deepEqual(
+    parser.extractMapsDirectionsAddresses(MASSIVE_FOOTER_HTML),
+    ['619 E Pine St, Seattle, WA 98122']
+  );
+
+  // Google daddr= and Apple Maps address=/q= forms are harvested too.
+  assert.deepEqual(
+    parser.extractMapsDirectionsAddresses('<a href="https://maps.google.com/?daddr=619+E+Pine+St%2C+Seattle%2C+WA+98122">x</a>'),
+    ['619 E Pine St, Seattle, WA 98122']
+  );
+  assert.deepEqual(
+    parser.extractMapsDirectionsAddresses('<a href="https://maps.apple.com/?address=619+E+Pine+St%2C+Seattle%2C+WA+98122">x</a>'),
+    ['619 E Pine St, Seattle, WA 98122']
+  );
+
+  // Fail closed: a venue NAME in q= is not address-shaped and never harvested,
+  // and non-map links contribute nothing.
+  assert.deepEqual(parser.extractMapsDirectionsAddresses('<a href="https://maps.apple.com/?q=Massive+Seattle">x</a>'), []);
+  assert.deepEqual(parser.extractMapsDirectionsAddresses('<a href="https://massive.club/events?destination=619+E+Pine+St">x</a>'), []);
+});
+
+test('venue-site consensus: the same footer address on 3 pages establishes consensus and fills blanks only', () => {
+  const parser = createParser();
+  const pages = [
+    'https://massive.club/',
+    'https://massive.club/events',
+    'https://www.massive.club/events/underbear' // www variant is the SAME registrable site
+  ];
+  for (const url of pages) {
+    parser.harvestVenueSiteAddresses({ url, html: MASSIVE_FOOTER_HTML });
+  }
+
+  const blankEvent = { title: 'UNDERBEAR', _venueSitePageHost: 'massive.club' };
+  const otherVenueEvent = {
+    title: 'BEARRACUDA AT NEIGHBOURS',
+    address: '1509 Broadway, Seattle, WA 98122',
+    city: 'seattle',
+    _venueSitePageHost: 'massive.club'
+  };
+  const cityKeptEvent = { title: 'DODGEBALL', city: 'portland', _venueSitePageHost: 'massive.club' };
+  const otherSiteEvent = { title: 'FURBALL', _venueSitePageHost: 'furball.example' };
+  const events = [blankEvent, otherVenueEvent, cityKeptEvent, otherSiteEvent];
+
+  const logs = captureLogs(() => {
+    parser.applyVenueSiteAddressConsensus(events, SEATTLE_CITY_CONFIG);
+  });
+
+  assert.ok(logs.includes(
+    '🤖 AI Web: Venue-site address consensus for massive.club: "619 E Pine St, Seattle, WA 98122" (3 page(s))'
+  ), `consensus log expected, got: ${JSON.stringify(logs)}`);
+
+  // Blank address + city → both filled, provenance stamped 'venue-site'.
+  assert.equal(blankEvent.address, '619 E Pine St, Seattle, WA 98122');
+  assert.equal(blankEvent.addressSource, 'venue-site');
+  assert.equal(blankEvent.city, 'seattle');
+  assert.ok(logs.includes('🤖 AI Web: Filled address from venue-site consensus for "UNDERBEAR"'));
+  assert.ok(logs.includes('🤖 AI Web: Filled city "seattle" from venue-site consensus for "UNDERBEAR"'));
+
+  // Multi-venue safety: a DIFFERENT address is never relocated.
+  assert.equal(otherVenueEvent.address, '1509 Broadway, Seattle, WA 98122');
+  assert.equal(otherVenueEvent.addressSource, undefined);
+
+  // An existing city is never overwritten (fill blanks / "unknown" only).
+  assert.equal(cityKeptEvent.city, 'portland');
+
+  // Events from a different site are untouched.
+  assert.equal(otherSiteEvent.address, undefined);
+
+  // Per-run scope: the harvest was consumed; a second apply derives nothing.
+  const secondLogs = captureLogs(() => {
+    parser.applyVenueSiteAddressConsensus([{ title: 'X', _venueSitePageHost: 'massive.club' }], SEATTLE_CITY_CONFIG);
+  });
+  assert.deepEqual(secondLogs, []);
+});
+
+test('venue-site consensus: city "unknown" is treated as blank and re-derived', () => {
+  const parser = createParser();
+  parser.harvestVenueSiteAddresses({ url: 'https://massive.club/', html: MASSIVE_FOOTER_HTML });
+  const event = { title: 'UNDERBEAR', city: 'unknown', _venueSitePageHost: 'massive.club' };
+  captureLogs(() => parser.applyVenueSiteAddressConsensus([event], SEATTLE_CITY_CONFIG));
+  assert.equal(event.city, 'seattle');
+  assert.equal(event.address, '619 E Pine St, Seattle, WA 98122');
+});
+
+test('venue-site consensus: address text resolving to no configured city fills address but leaves city alone', () => {
+  const parser = createParser();
+  parser.harvestVenueSiteAddresses({ url: 'https://massive.club/', html: MASSIVE_FOOTER_HTML });
+  const event = { title: 'UNDERBEAR', _venueSitePageHost: 'massive.club' };
+  captureLogs(() => parser.applyVenueSiteAddressConsensus(
+    [event], { portland: { timezone: 'America/Los_Angeles', patterns: ['portland'] } }));
+  assert.equal(event.address, '619 E Pine St, Seattle, WA 98122');
+  assert.equal(event.city, undefined);
+});
+
+test('venue-site consensus: two DISTINCT addresses on one site → no consensus, one log line, nothing derived', () => {
+  const parser = createParser();
+  parser.harvestVenueSiteAddresses({ url: 'https://massive.club/', html: MASSIVE_FOOTER_HTML });
+  parser.harvestVenueSiteAddresses({
+    url: 'https://massive.club/other',
+    html: '<a href="https://www.google.com/maps/dir/?api=1&amp;destination=1122+E+Pike+St%2C+Seattle%2C+WA+98122">Directions</a>'
+  });
+  const event = { title: 'UNDERBEAR', _venueSitePageHost: 'massive.club' };
+  const logs = captureLogs(() => parser.applyVenueSiteAddressConsensus([event], SEATTLE_CITY_CONFIG));
+  assert.ok(logs.includes(
+    '🤖 AI Web: No venue-site address consensus for massive.club: 2 distinct addresses observed'
+  ), `no-consensus log expected, got: ${JSON.stringify(logs)}`);
+  assert.equal(event.address, undefined);
+  assert.equal(event.city, undefined);
+  assert.equal(event.addressSource, undefined);
+});
+
+test('venue-site consensus: abbreviation variants of ONE address still converge (St vs Street)', () => {
+  const parser = createParser();
+  parser.harvestVenueSiteAddresses({ url: 'https://massive.club/', html: MASSIVE_FOOTER_HTML });
+  parser.harvestVenueSiteAddresses({
+    url: 'https://massive.club/contact',
+    html: '<a href="https://www.google.com/maps/dir/?api=1&amp;destination=619+E+Pine+Street%2C+Seattle%2C+WA+98122">Directions</a>'
+  });
+  const event = { title: 'UNDERBEAR', _venueSitePageHost: 'massive.club' };
+  const logs = captureLogs(() => parser.applyVenueSiteAddressConsensus([event], SEATTLE_CITY_CONFIG));
+  assert.ok(logs.some(line => line.startsWith('🤖 AI Web: Venue-site address consensus for massive.club:')),
+    `consensus expected despite St/Street spelling, got: ${JSON.stringify(logs)}`);
+  assert.equal(event.addressSource, 'venue-site');
+});
+
+test('venue-site consensus: siteRole "organizer" parser config blocks the site — nothing derived', () => {
+  const parser = createParser();
+  const htmlData = { url: 'https://massive.club/', html: MASSIVE_FOOTER_HTML };
+  parser.resolvePageSiteRole(htmlData, { siteRole: 'organizer' });
+  parser.harvestVenueSiteAddresses(htmlData);
+  const event = { title: 'UNDERBEAR', _venueSitePageHost: 'massive.club' };
+  const logs = captureLogs(() => parser.applyVenueSiteAddressConsensus([event], SEATTLE_CITY_CONFIG));
+  assert.deepEqual(logs, [], 'organizer sites derive nothing, silently');
+  assert.equal(event.address, undefined);
+  assert.equal(event.city, undefined);
+});
+
+test('venue-site consensus: siteRole "venue" config alone is not enough — consensus still needs a harvested address', () => {
+  const parser = createParser();
+  const htmlData = { url: 'https://massive.club/', html: '<html><body>No directions link here</body></html>' };
+  parser.resolvePageSiteRole(htmlData, { siteRole: 'venue' });
+  parser.harvestVenueSiteAddresses(htmlData);
+  const event = { title: 'UNDERBEAR', _venueSitePageHost: 'massive.club' };
+  const logs = captureLogs(() => parser.applyVenueSiteAddressConsensus([event], SEATTLE_CITY_CONFIG));
+  assert.deepEqual(logs, []);
+  assert.equal(event.address, undefined);
+});
+
+test('parseEvents harvests the footer link and tags produced events with the page host', async () => {
+  const parser = createParser();
+  // JSON-LD path: deterministic, no AI calls needed.
+  const html = `
+    <html><body>
+      <script type="application/ld+json">
+      {"@context":"https://schema.org","@type":"Event","name":"UNDERBEAR",
+       "startDate":"2099-07-25T21:00:00-07:00",
+       "location":{"@type":"Place","name":"Massive"}}
+      </script>
+      <footer><a href="https://www.google.com/maps/dir/?api=1&amp;destination=619+E+Pine+St%2C+Seattle%2C+WA+98122">Get Directions</a></footer>
+    </body></html>`;
+  const result = await parser.parseEvents(
+    { url: 'https://massive.club/events/underbear', html },
+    {}, SEATTLE_CITY_CONFIG, 'single-event-page', null);
+  assert.equal(result.events.length, 1);
+  assert.equal(result.events[0]._venueSitePageHost, 'massive.club');
+  const harvest = parser.venueSiteHarvest['massive.club'];
+  assert.ok(harvest, 'harvest entry recorded for the registrable host');
+  const keys = Object.keys(harvest.addresses);
+  assert.equal(keys.length, 1);
+  assert.equal(harvest.addresses[keys[0]].display, '619 E Pine St, Seattle, WA 98122');
+
+  // The end-of-run apply then fills the blanks on that event.
+  const logs = captureLogs(() => parser.applyVenueSiteAddressConsensus(result.events, SEATTLE_CITY_CONFIG));
+  assert.equal(result.events[0].address, '619 E Pine St, Seattle, WA 98122');
+  assert.equal(result.events[0].addressSource, 'venue-site');
+  assert.equal(result.events[0].city, 'seattle');
+  assert.ok(logs.includes('🤖 AI Web: Venue-site address consensus for massive.club: "619 E Pine St, Seattle, WA 98122" (1 page(s))'));
+});
