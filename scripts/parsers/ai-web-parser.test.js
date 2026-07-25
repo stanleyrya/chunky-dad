@@ -5417,3 +5417,245 @@ test('parseEvents harvests the footer link and tags produced events with the pag
   assert.equal(result.events[0].city, 'seattle');
   assert.ok(logs.includes('🤖 AI Web: Venue-site address consensus for massive.club: "619 E Pine St, Seattle, WA 98122" (1 page(s))'));
 });
+
+// ---------------------------------------------------------------------------
+// End-marker misattribution (run 20260724-155934, Dallas Eagle):
+// thedallaseagle.com listings print "End at: August 1, 2026 - 2:00 am" and
+// the extraction model repeatedly assigned those END values to START fields
+// (events shipped starting at the 2:00 AM closing time, plus zero-duration
+// start==end pairs). The values below are the LITERAL model outputs from the
+// run log.
+// ---------------------------------------------------------------------------
+
+const DALLAS_EAGLE_SEGMENT = 'SEGMENT_INDEX: 1/4\nGEAR NIGHT\nJul 25 2026\nEnd at: August 1, 2026 - 2:00 am\nEnd at: July 26, 2026 - 2:00 am\nThe Dallas Eagle';
+
+test('end-marker gate: startdate+starttime citing an "End at" line are reassigned to the empty end fields', () => {
+  const parser = createParser();
+  const evidenceContext = parser.buildAiEvidenceContextFromText(DALLAS_EAGLE_SEGMENT);
+  const validationContext = { imageEvidenceUrls: new Set() };
+
+  const result = parser.validateAiEventEvidence(
+    {
+      title: 'GEAR NIGHT',
+      startdate: '2026-08-01',
+      starttime: '02:00',
+      __fieldEvidence: {
+        startdate: 'End at: August 1, 2026 - 2:00 am (interpreted as event end date; start date not explicitly given, but assumed same day per typical single-night events)',
+        starttime: 'End at: August 1, 2026 - 2:00 am (interpreted as end time; start time not explicitly given)'
+      }
+    },
+    { html: DALLAS_EAGLE_SEGMENT }, {}, null,
+    { evidenceContext, validationContext }
+  );
+
+  assert.equal(result.event.startdate, undefined, 'the misattributed start date must not stay a start');
+  assert.equal(result.event.starttime, undefined, 'the misattributed start time must not stay a start');
+  assert.equal(result.event.endDate, '2026-08-01', 'the value moves to the empty endDate (reassign, not discard)');
+  assert.equal(result.event.endTime, '02:00', 'the value moves to the empty endTime (reassign, not discard)');
+  assert.equal(result.event.title, 'GEAR NIGHT', 'the event itself survives');
+  const droppedReasons = result.report.dropped
+    .filter(entry => entry.field === 'startdate' || entry.field === 'starttime')
+    .map(entry => entry.reason);
+  assert.deepEqual(droppedReasons, ['end-marker-cited-evidence', 'end-marker-cited-evidence'],
+    'both drops carry the new rejection-class reason');
+});
+
+test('end-marker gate: startTime 02:00 with endTime 02:00 from the same End-at line no longer forms a zero-duration pair (GEAR NIGHT)', () => {
+  const parser = createParser();
+  const evidenceContext = parser.buildAiEvidenceContextFromText(DALLAS_EAGLE_SEGMENT);
+  const validationContext = { imageEvidenceUrls: new Set() };
+
+  const result = parser.validateAiEventEvidence(
+    {
+      title: 'GEAR NIGHT',
+      startTime: '02:00',
+      endTime: '02:00',
+      __fieldEvidence: {
+        startTime: 'End at: July 26, 2026 - 2:00 am',
+        endTime: 'End at: July 26, 2026 - 2:00 am'
+      }
+    },
+    { html: DALLAS_EAGLE_SEGMENT }, {}, null,
+    { evidenceContext, validationContext }
+  );
+
+  assert.equal(result.event.startTime, undefined, 'the end-marker-cited start copy is dropped');
+  assert.equal(result.event.endTime, '02:00', 'the legitimate endTime is untouched');
+  assert.ok(!Object.keys(result.event).some(key => /^start/i.test(key)),
+    'no start field remains, so the merge-time zero-duration pair (startTime === endTime) can never form');
+});
+
+test('end-marker gate: genuine start evidence ("8:00 PM") is untouched, range evidence with a leading time fails open', () => {
+  const parser = createParser();
+  const source = 'BEAR NIGHT Doors 8:00 PM until 2am MEGAWOOF 9PM TIL LATE';
+  const evidenceContext = parser.buildAiEvidenceContextFromText(source);
+  const validationContext = { imageEvidenceUrls: new Set() };
+
+  // Literal correct-behavior output from the same run: a real start exists.
+  const genuine = parser.validateAiEventEvidence(
+    { starttime: '20:00', __fieldEvidence: { starttime: '8:00 PM' } },
+    { html: source }, {}, null, { evidenceContext, validationContext }
+  );
+  assert.equal(genuine.event.starttime, '20:00', 'a genuinely evidenced start survives');
+
+  // A range whose evidence leads with the start time is not an end-marker citation.
+  const range = parser.validateAiEventEvidence(
+    { startTime: '21:00', __fieldEvidence: { startTime: '9PM TIL LATE' } },
+    { html: source }, {}, null, { evidenceContext, validationContext }
+  );
+  assert.equal(range.event.startTime, '21:00', 'a time stated before the marker fails open (the value may be the start)');
+});
+
+test('end-marker detection: "until 2am" and "doors close at 2" variants are detected, start-side signals are not', () => {
+  const parser = createParser();
+  // Literal run evidence strings.
+  assert.ok(parser.evidenceCitesEndMarker('End at: August 1, 2026 - 2:00 am (interpreted as event end date; start date not explicitly given, but assumed same day per typical single-night events)'));
+  assert.ok(parser.evidenceCitesEndMarker('End at: August 1, 2026 - 2:00 am (interpreted as end time; start time not explicitly given)'));
+  assert.ok(parser.evidenceCitesEndMarker('End at: July 26, 2026 - 2:00 am'));
+  // Required variants.
+  assert.ok(parser.evidenceCitesEndMarker('until 2am'));
+  assert.ok(parser.evidenceCitesEndMarker('doors close at 2'));
+  assert.ok(parser.evidenceCitesEndMarker('closes at 2am'));
+  assert.ok(parser.evidenceCitesEndMarker('Ends: 2am'));
+  assert.ok(parser.evidenceCitesEndMarker('ends by 2:00 am'));
+  // Start-side signals fail open.
+  assert.ok(!parser.evidenceCitesEndMarker('8:00 PM'));
+  assert.ok(!parser.evidenceCitesEndMarker('Doors 8pm until 2am'));
+  assert.ok(!parser.evidenceCitesEndMarker('9PM TIL LATE'));
+  assert.ok(!parser.evidenceCitesEndMarker('Starts at 10pm, ends at 2am'));
+  assert.ok(!parser.evidenceCitesEndMarker(''));
+});
+
+test('end-marker gate: an uncorroborated end-marker value stays dropped instead of being reassigned', () => {
+  const parser = createParser();
+  const source = 'GEAR NIGHT party until late';
+  const result = parser.validateAiEventEvidence(
+    { starttime: '02:00', __fieldEvidence: { starttime: 'until late' } },
+    { html: source }, {}, null,
+    { evidenceContext: parser.buildAiEvidenceContextFromText(source), validationContext: { imageEvidenceUrls: new Set() } }
+  );
+  assert.equal(result.event.starttime, undefined, 'the start copy is dropped');
+  assert.equal(result.event.endTime, undefined, 'a value the corpus never states must not sneak into the end field');
+});
+
+test('end-marker recovery: startDate is derived from the reassigned end (end 02:00 rolls back to the previous evening)', () => {
+  const parser = createParser();
+  const validationState = { validatedFields: new Set() };
+  const merged = parser.applyEndMarkerStartDateRecovery(
+    {
+      title: 'GEAR NIGHT',
+      endDate: '2026-08-01',
+      endTime: '02:00',
+      __droppedFieldReasons: { startdate: 'end-marker-cited-evidence', starttime: 'end-marker-cited-evidence' }
+    },
+    validationState
+  );
+  assert.equal(merged.startDate, '2026-07-31', 'end 2026-08-01 02:00 belongs to the evening of 2026-07-31');
+  assert.equal(merged.startTime, undefined, 'startTime is left empty, never guessed');
+  assert.ok(validationState.validatedFields.has('startdate'),
+    'the derived date is marked pre-validated so the final evidence gate does not drop it (it is never verbatim on the page)');
+
+  // An end later than 02:59 stays on its own date.
+  const sameDay = parser.applyEndMarkerStartDateRecovery(
+    { endDate: '2026-08-01', endTime: '23:00', __droppedFieldReasons: { starttime: 'end-marker-cited-evidence' } },
+    { validatedFields: new Set() }
+  );
+  assert.equal(sameDay.startDate, '2026-08-01', 'a 23:00 end is the same evening');
+
+  // No end time at all: keep the end date (fail closed, event survives).
+  const noTime = parser.applyEndMarkerStartDateRecovery(
+    { endDate: '2026-08-01', __droppedFieldReasons: { startdate: 'end-marker-cited-evidence' } },
+    { validatedFields: new Set() }
+  );
+  assert.equal(noTime.startDate, '2026-08-01', 'unknown end time keeps the end date');
+
+  // No end-marker memo, or a startDate already present: strict no-op.
+  const untouched = { startDate: '2026-07-25', endDate: '2026-08-01', __droppedFieldReasons: { startdate: 'end-marker-cited-evidence' } };
+  assert.deepEqual(parser.applyEndMarkerStartDateRecovery(untouched, { validatedFields: new Set() }), untouched,
+    'a recovered startDate (e.g. from a retry) wins over derivation');
+  const noMemo = { endDate: '2026-08-01' };
+  assert.deepEqual(parser.applyEndMarkerStartDateRecovery(noMemo, { validatedFields: new Set() }), noMemo,
+    'no end-marker drop, no derivation');
+});
+
+test('end-marker survival: the full GEAR NIGHT shape normalizes to a real event with the previous-evening date and positive duration', () => {
+  global.EventSchema = EventSchema; // earlier tests leak a mocked schema — pin the real one
+  const parser = createParser();
+  const evidenceContext = parser.buildAiEvidenceContextFromText(DALLAS_EAGLE_SEGMENT);
+  const validationContext = { imageEvidenceUrls: new Set() };
+
+  // Gate + reassignment (both start fields cite the End-at line, end fields empty).
+  const gated = parser.validateAiEventEvidence(
+    {
+      title: 'GEAR NIGHT',
+      startdate: '2026-08-01',
+      starttime: '02:00',
+      __fieldEvidence: {
+        startdate: 'End at: August 1, 2026 - 2:00 am (interpreted as event end date; start date not explicitly given, but assumed same day per typical single-night events)',
+        starttime: 'End at: August 1, 2026 - 2:00 am (interpreted as end time; start time not explicitly given)'
+      }
+    },
+    { html: DALLAS_EAGLE_SEGMENT }, {}, null,
+    { evidenceContext, validationContext }
+  );
+
+  // Memo ride-along exactly as extractFieldsAcrossSnippets records it, then recovery.
+  const memo = {};
+  gated.report.dropped.forEach(entry => { if (entry.reason) memo[entry.field] = entry.reason; });
+  const recovered = parser.applyEndMarkerStartDateRecovery(
+    { ...gated.event, __droppedFieldReasons: memo },
+    { validatedFields: new Set() }
+  );
+  assert.equal(recovered.startDate, '2026-07-31');
+
+  // The event survives normalization: title + startDate present (the
+  // "missing required title/startDate" drop can never trigger) and the
+  // start/end pair has positive duration — no zero-duration merge warning.
+  const event = parser.normalizeAiEvent(recovered, {}, { html: DALLAS_EAGLE_SEGMENT, url: 'https://thedallaseagle.com/events' }, null, null);
+  assert.ok(event, 'the event is never lost');
+  assert.equal(event.title, 'GEAR NIGHT');
+  assert.ok(event.startDate instanceof Date && !Number.isNaN(event.startDate.getTime()), 'startDate exists');
+  assert.ok(event.startDate.toISOString().startsWith('2026-07-31'), 'the event lands on the previous evening');
+  assert.ok(event.endDate.getTime() > event.startDate.getTime(), 'positive duration — endDate > startDate');
+});
+
+test('end-marker retry feedback: the class rides buildRetryDropFeedback with its own additive line, not-verbatim line unchanged', () => {
+  const parser = createParser();
+  const merged = {
+    __droppedFieldValues: { starttime: '02:00', bar: '79 Warrenon' },
+    __droppedFieldReasons: { starttime: 'end-marker-cited-evidence', bar: '' }
+  };
+  const feedback = parser.buildRetryDropFeedback(['starttime', 'bar'], merged);
+  assert.deepEqual(feedback, {
+    starttime: { value: '02:00', reason: 'end-marker-cited-evidence' },
+    bar: '79 Warrenon'
+  }, 'end-marker drops ride as tagged objects, plain not-verbatim drops keep their string shape');
+
+  const prompt = parser.buildExtractionPrompt(null, {}, null, {}, ['starttime', 'bar'], 'SNIPPET', 'alternate', {}, feedback);
+  const endMarkerLine = `Your previous value "02:00" for starttime came from an "End at" line — that is the event's END, not its start. Find the START, or leave it blank.`;
+  assert.ok(prompt.includes(endMarkerLine), 'the end-marker correction line appears for the class');
+  const existingLine = 'Your previous value "79 Warrenon" for bar was rejected — it is not verbatim in the source. Copy the exact text.';
+  assert.ok(prompt.includes(existingLine), 'the existing not-verbatim feedback line is unchanged');
+
+  // Other tagged classes still yield nothing.
+  assert.equal(
+    parser.buildRetryDropFeedback(['city'], {
+      __droppedFieldValues: { city: 'new york' },
+      __droppedFieldReasons: { city: 'brand-cited-evidence' }
+    }),
+    null,
+    'brand/context-cited drops are still never echoed'
+  );
+});
+
+test('end-marker steering: getFieldContext appends the END-line sentence to start fields only, schema text unchanged', () => {
+  const parser = createParser();
+  const steering = ` Text following "End at", "Ends", "Until", or "Doors close" is the event's END, never its start — if no start is stated, leave this field empty.`;
+  for (const field of ['startDate', 'startTime']) {
+    const context = parser.getFieldContext(field, null);
+    assert.ok(context.endsWith(steering), `steering appended for ${field}, got: ${JSON.stringify(context)}`);
+    const schemaText = parser.getEventSchemaPromptFieldDescription(parser.normalizePromptFieldName(field));
+    assert.ok(context.startsWith(schemaText), `the schema description itself stays byte-identical for ${field}`);
+  }
+  assert.ok(!parser.getFieldContext('endTime', null).includes('never its start'), 'end fields are not steered');
+});
