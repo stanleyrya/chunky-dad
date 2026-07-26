@@ -6,9 +6,34 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-new-orleans
 X-WR-TIMEZONE:America/Chicago
 BEGIN:VEVENT
+DTSTART:20260905T020000Z
+DTEND:20260905T070000Z
+DTSTAMP:20260726T182041Z
+UID:74648B34-07A1-4BD2-8E78-D67B991A920E
+CREATED:20260514T005857Z
+DESCRIPTION:bar: Joy Theater\naddress: 1200 Canal St\, New Orleans\, LA 701
+ 12\ntimezone: America/Chicago\nticketUrl: https://www.ticketmaster.com/even
+ t/1B006454A32CE162\ninstagram: https://www.instagram.com/bearracuda\nimage:
+  https://bearracuda.com/wp-content/uploads/2026/03/igdecad-2.jpg\nshortName
+ : Bear-rac-uda\nwebsite: https://bearracuda.com/events/decadence/\nbearSour
+ ce: keyword\nkey: bearracuda-new-orleans⚜️|2026-09-05|joy theater\ndescript
+ ion: Music & Entertainment\n• DJ MATEO SEGADE\n• KELLY (Shoes) LIVE!\npinSo
+ urce: curated\naddressSource: curated\nimageSource: og-image\nbarSource: pa
+ ge-adjacent\ngmaps: https://www.google.com/maps/search/?api=1&query=Joy%20T
+ heater%2C%201200%20Canal%20St%2C%20New%20Orleans%2C%20LA%2070112
+LAST-MODIFIED:20260726T173331Z
+LOCATION:29.9559524\, -90.0738975
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEARRACUDA: New Orleans⚜️
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20250830T020000Z
 DTEND:20250830T070000Z
-DTSTAMP:20260723T002910Z
+DTSTAMP:20260726T182041Z
 UID:96ED5A57-14F4-4189-81C5-1AA44B8E365F
 CREATED:20250830T003601Z
 DESCRIPTION:description: Music & Entertainment\n• Matt Stands &amp\; Freddy
@@ -27,31 +52,6 @@ LOCATION:29.9559524\, -90.0738975
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:NEW ORLEANS
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260905T020000Z
-DTEND:20260905T070000Z
-DTSTAMP:20260723T002910Z
-UID:74648B34-07A1-4BD2-8E78-D67B991A920E
-CREATED:20260514T005857Z
-DESCRIPTION:bar: Joy Theater\naddress: 1200 Canal Street\, New Orleans\, LA
- \ntimezone: America/Chicago\nticketUrl: https://www.ticketmaster.com/event/
- 1B006454A32CE162\ninstagram: https://www.instagram.com/bearracuda\nimage: h
- ttps://bearracuda.com/wp-content/uploads/2026/03/igdecad-2.jpg\nshortName: 
- Bear-rac-uda\nwebsite: https://bearracuda.com/events/decadence/\nbearSource
- : keyword\nkey: bearracuda-new-orleans⚜️|2026-09-05|joy theater\ndescriptio
- n: Music & Entertainment\n• DJ MATEO SEGADE\n• KELLY (Shoes) LIVE!\npinSour
- ce: geocoded-exact\nimageSource: og-image\ngmaps: https://www.google.com/ma
- ps/search/?api=1&query=Joy%20Theater%2C%201200%20Canal%20Street%2C%20New%20
- Orleans%2C%20LA
-LAST-MODIFIED:20260722T223455Z
-LOCATION:29.9559524\, -90.0738975
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:BEARRACUDA: New Orleans⚜️
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
