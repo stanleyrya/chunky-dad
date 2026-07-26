@@ -275,6 +275,28 @@ class BarDataNormalizer extends BaseNormalizer {
                 modified = true;
             }
 
+            // Canonicalize a PRESENT bar name to the curated display name when
+            // it matches a curated bar by strict full-name equality
+            // (findCuratedBarByName / normalizeBarNameKey — the #1536/#1537
+            // contract; "Massive Club" ≠ "Massive", never substring, so only
+            // spelling/casing/punctuation variants of the SAME name rewrite).
+            // Run 20260725-210227 shipped bar "MASSIVE" (BEARRACUDA: Seattle)
+            // next to "Massive" (Treasure Trail Seattle) for the same venue.
+            // Complements the rewrite above, which only fires when event.bar
+            // was empty or came from title/description. Uncurated bars never
+            // reach here (no strict match) and are left untouched.
+            if (typeof event.bar === 'string' && event.bar.trim() !== ''
+                && typeof this.core.findCuratedBarByName === 'function') {
+                const curatedBar = this.core.findCuratedBarByName(cityBars, event.bar);
+                if (curatedBar && typeof curatedBar.name === 'string'
+                    && curatedBar.name.trim() !== ''
+                    && event.bar !== curatedBar.name) {
+                    console.log(`🐻 BarDataNormalizer: Canonicalized bar name "${event.bar}" → "${curatedBar.name}" (curated)`);
+                    event.bar = curatedBar.name;
+                    modified = true;
+                }
+            }
+
             // Remove description if it was just the venue name
             if (descriptionWasVenue && event.description) {
                 delete event.description;

@@ -2440,3 +2440,101 @@ test('run id backfill preserves history, skips foreign entries, and fails open',
   assert.equal(adapter.fm.files.get(adapter.getBarAdditionsFilePath()), before,
     'nothing rewritten without both a run id and session keys');
 });
+
+// ---------------------------------------------------------------------------
+// Embedded-event JSON slimming (runs 20260725-205758/210227: the Bearracuda
+// results page hit 1.76 MB — dominated by per-event _aiPrompts/_aiValidation
+// blobs embedded 2-3x per card — and WebView.loadHTML white-screened
+// silently. buildEmbeddedEventJson is the ONE serializer for all three embed
+// sites: the two Copy JSON button attributes and the raw <pre> dump.)
+// ---------------------------------------------------------------------------
+
+function buildSyntheticAnalyzedEvent() {
+  // Shaped like a real analyzed event (~32 KB): the AI prompt/validation
+  // texts live under _original.scraper and are ~10 KB each.
+  const bigPrompt = 'PROMPT '.repeat(1500);      // ~10.5 KB
+  const bigValidation = 'VALIDATE '.repeat(1200); // ~10.8 KB
+  return {
+    title: 'BEARRACUDA: Seattle',
+    bar: 'Massive',
+    city: 'seattle',
+    startDate: '2026-08-01T02:00:00.000Z',
+    placeId: 'ChIJexample',
+    _action: 'merge',
+    _parserConfig: {
+      name: 'bearracuda',
+      parser: 'ai-web',
+      urls: ['https://bearracuda.com/'],
+      alwaysBear: true,
+      maxAdditionalUrls: 20
+    },
+    _existingEvent: {
+      title: 'BEARRACUDA: Seattle',
+      identifier: 'CAL-123',
+      notes: 'existing notes blob',
+      save: function () {}
+    },
+    _original: {
+      scraper: {
+        title: 'BEARRACUDA: Seattle',
+        _aiPrompts: { extraction: bigPrompt, arbitration: bigPrompt },
+        _aiValidation: { report: bigValidation }
+      },
+      calendar: { title: 'BEARRACUDA: Seattle' },
+      merged: { title: 'BEARRACUDA: Seattle', _aiValidation: { report: bigValidation } }
+    }
+  };
+}
+
+test('buildEmbeddedEventJson: button embeds drop _original and the AI blobs; pre embed keeps _original minus the AI blobs', () => {
+  const adapter = buildAdapter();
+  const event = buildSyntheticAnalyzedEvent();
+  const fullSize = JSON.stringify(event, (k, v) => typeof v === 'function' ? '[Function]' : v, 2).length;
+  assert.ok(fullSize > 30000, `synthetic event is real-run sized (~32 KB), got ${fullSize}`);
+
+  const buttonJson = adapter.buildEmbeddedEventJson(event, { includeOriginal: false });
+  const preJson = adapter.buildEmbeddedEventJson(event, { includeOriginal: true });
+
+  // The AI prompt/validation blobs are gone from EVERY embed, at any depth.
+  for (const [label, json] of [['button', buttonJson], ['pre', preJson]]) {
+    const parsed = JSON.parse(json);
+    const hasKeyDeep = (value, key) => {
+      if (!value || typeof value !== 'object') return false;
+      if (Object.prototype.hasOwnProperty.call(value, key)) return true;
+      return Object.values(value).some(child => hasKeyDeep(child, key));
+    };
+    assert.equal(hasKeyDeep(parsed, '_aiPrompts'), false, `${label}: no _aiPrompts at any depth`);
+    assert.equal(hasKeyDeep(parsed, '_aiValidation'), false, `${label}: no _aiValidation at any depth`);
+    assert.equal(hasKeyDeep(parsed, 'placeId'), false, `${label}: placeId stays hidden`);
+    // Existing _parserConfig/_existingEvent slimming is preserved.
+    assert.deepEqual(parsed._parserConfig, { name: 'bearracuda', parser: 'ai-web' },
+      `${label}: _parserConfig slimmed to name+parser`);
+    assert.deepEqual(parsed._existingEvent, { title: 'BEARRACUDA: Seattle', identifier: 'CAL-123' },
+      `${label}: _existingEvent slimmed to title+identifier`);
+  }
+
+  // _original is dropped from the button embeds but kept in the pre embed
+  // (that's where a human reads the merge provenance).
+  assert.equal('_original' in JSON.parse(buttonJson), false, 'button embed has no _original');
+  const preParsed = JSON.parse(preJson);
+  assert.ok(preParsed._original && preParsed._original.scraper && preParsed._original.calendar,
+    'pre embed keeps _original scraper/calendar provenance');
+
+  // The size win is what un-white-screens the page: the button embed sheds
+  // the whole _original subtree, the pre embed sheds the ~20 KB of AI blobs.
+  assert.ok(buttonJson.length < fullSize / 10,
+    `button embed well under 10% of full event (${buttonJson.length} vs ${fullSize})`);
+  assert.ok(preJson.length < fullSize / 3,
+    `pre embed sheds the AI blobs (${preJson.length} vs ${fullSize})`);
+});
+
+test('generateEventCard embeds are all built by the shared serializer (no AI blobs or button _original in the card HTML)', () => {
+  const adapter = buildAdapter();
+  const event = buildSyntheticAnalyzedEvent();
+  const html = adapter.generateEventCard(event, { runId: '20260725-210227' });
+  assert.ok(!html.includes('PROMPT PROMPT'), 'no AI prompt text anywhere in the card HTML');
+  assert.ok(!html.includes('VALIDATE VALIDATE'), 'no AI validation text anywhere in the card HTML');
+  assert.ok(html.includes('data-event-json'), 'copy buttons still carry event JSON');
+  assert.ok(html.includes('&quot;_original&quot;'), 'the raw <pre> dump still shows _original provenance');
+}
+);

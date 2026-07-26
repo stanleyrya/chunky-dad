@@ -5050,6 +5050,21 @@ test('getFieldContext bar steering: the address-shape sentence is appended, exis
   assert.ok(context.startsWith(schemaText), 'the schema description itself stays byte-identical');
 });
 
+test('getFieldContext title steering: the caption-vs-name sentences are appended, existing schema text unchanged, other fields unaffected', () => {
+  const parser = createParser();
+  const steering = ` The title is the event's NAME — short and reusable, exactly as it appears in the source. When the source text is an announcement sentence or caption that contains the event name, extract just the name portion (it must still appear verbatim within the source). Never include venue, city, date, or marketing phrases in the title.`;
+  const context = parser.getFieldContext('title', null);
+  assert.ok(context.endsWith(steering),
+    `the title steering is appended, got: ${JSON.stringify(context)}`);
+  const schemaText = parser.getEventSchemaPromptFieldDescription('title');
+  assert.ok(context.startsWith(schemaText), 'the schema description itself stays byte-identical');
+  // Other fields never pick up the title steering.
+  for (const field of ['bar', 'description', 'city', 'startDate', 'shortName']) {
+    assert.ok(!parser.getFieldContext(field, null).includes("The title is the event's NAME"),
+      `${field} context is unaffected by title steering`);
+  }
+});
+
 test('confidence-retry feedback: buildRetryDropFeedback returns plain not-verbatim drops only', () => {
   const parser = createParser();
   const merged = {
