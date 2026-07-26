@@ -3005,6 +3005,139 @@ test('classification cache hits refresh lastUsedAt through the same touch helper
 });
 
 // ---------------------------------------------------------------------------
+// Persistent AI-response cache: raw response text keyed by request signature
+// (provider+model+prompt+options), filed under the pass label
+// ---------------------------------------------------------------------------
+
+function buildAiResponseCacheConfig(overrides = {}) {
+  return {
+    cacheEnabled: true,
+    provider: 'openai',
+    endpoint: 'http://rybook.example:8000/v1/chat/completions',
+    model: 'test-model',
+    numCtx: 2048,
+    numPredict: 2000,
+    temperature: 0,
+    think: false,
+    keepAlive: '5m',
+    openai: { responseFormat: 'json_object' },
+    ...overrides
+  };
+}
+
+test('AI response cache round-trips raw text and misses when the request signature changes', async () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-response-cache-test-'));
+
+  const parser = new AiWebParser({ normalizeUrl, aiResponseCacheDir: cacheDir });
+  parser.core = new SharedCore({}, { eventSchema: EventSchema });
+
+  const aiConfig = buildAiResponseCacheConfig();
+  const prompt = 'Extract the event from this page text: BEAR NIGHT at The Eagle';
+  const responseText = '{"title": "BEAR NIGHT", "bar": "The Eagle"}';
+
+  const cachePath = await parser.writeCachedAiResponse(aiConfig, prompt, 'extraction', responseText);
+  assert.ok(cachePath, 'cache write should return the entry path');
+  assert.ok(cachePath.includes(`${path.sep}extraction${path.sep}`), 'entries are filed under the pass label');
+  assert.equal(parser.aiResponseCacheStats.writes, 1);
+
+  const payload = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+  assert.equal(payload.cacheKeyVersion, 1);
+  assert.equal(payload.passLabel, 'extraction');
+  assert.equal(payload.request.prompt, prompt);
+  assert.equal(payload.request.model, 'test-model');
+  assert.ok(payload.request.signatureHash, 'payload records the signature hash');
+  assert.equal(payload.response.text, responseText);
+
+  const hit = await parser.readCachedAiResponse(aiConfig, prompt, 'extraction');
+  assert.equal(hit, responseText);
+  assert.equal(parser.aiResponseCacheStats.hits, 1);
+
+  // Signature sensitivity: model, prompt, temperature, and numPredict each
+  // produce a different cache path, so a stale entry can never be returned
+  const variants = [
+    [buildAiResponseCacheConfig({ model: 'other-model' }), prompt],
+    [aiConfig, `${prompt} — different page`],
+    [buildAiResponseCacheConfig({ temperature: 0.5 }), prompt],
+    [buildAiResponseCacheConfig({ numPredict: 1000 }), prompt]
+  ];
+  for (const [variantConfig, variantPrompt] of variants) {
+    assert.equal(await parser.readCachedAiResponse(variantConfig, variantPrompt, 'extraction'), null);
+  }
+  assert.equal(parser.aiResponseCacheStats.misses, variants.length);
+
+  // Endpoint is deliberately NOT part of the signature — re-homing the model hits
+  const rehomed = buildAiResponseCacheConfig({ endpoint: 'http://desktop.example:8000/v1/chat/completions' });
+  assert.equal(await parser.readCachedAiResponse(rehomed, prompt, 'extraction'), responseText);
+
+  fs.rmSync(cacheDir, { recursive: true, force: true });
+});
+
+test('AI response cache is inert when resolved cacheEnabled is false', async () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-response-cache-off-test-'));
+
+  const parser = new AiWebParser({ normalizeUrl, aiResponseCacheDir: cacheDir });
+  parser.core = new SharedCore({}, { eventSchema: EventSchema });
+
+  // ai.cache: false resolves to cacheEnabled: false and disables both directions
+  const aiConfig = parser.core.resolveAiConfig({ cache: false });
+  assert.equal(aiConfig.cacheEnabled, false);
+
+  const written = await parser.writeCachedAiResponse(aiConfig, 'prompt', 'extraction', '{"title": "x"}');
+  assert.equal(written, null);
+  assert.equal(await parser.readCachedAiResponse(aiConfig, 'prompt', 'extraction'), null);
+  assert.deepEqual(fs.readdirSync(cacheDir), [], 'no files may be created while disabled');
+  assert.deepEqual(parser.aiResponseCacheStats, { hits: 0, misses: 0, writes: 0 });
+
+  fs.rmSync(cacheDir, { recursive: true, force: true });
+});
+
+test('AI response cache hits refresh lastUsedAt at most once per 7 days', async () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-response-touch-test-'));
+
+  const parser = new AiWebParser({ normalizeUrl, aiResponseCacheDir: cacheDir });
+  parser.core = new SharedCore({}, { eventSchema: EventSchema });
+
+  const aiConfig = buildAiResponseCacheConfig();
+  const prompt = 'Extract the recurring event';
+  const responseText = '{"title": "RECURRING BEAR NIGHT"}';
+  const today = new Date().toISOString().slice(0, 10);
+
+  const cachePath = await parser.writeCachedAiResponse(aiConfig, prompt, 'extraction', responseText);
+  assert.equal(JSON.parse(fs.readFileSync(cachePath, 'utf8')).lastUsedAt, today);
+
+  // A fresh (same-day) marker is rate-limited: NO rewrite on hit (sentinel survives)
+  const sameDay = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+  sameDay._sentinel = 'untouched';
+  fs.writeFileSync(cachePath, JSON.stringify(sameDay, null, 2), 'utf8');
+  assert.equal(await parser.readCachedAiResponse(aiConfig, prompt, 'extraction'), responseText);
+  assert.equal(
+    JSON.parse(fs.readFileSync(cachePath, 'utf8'))._sentinel,
+    'untouched',
+    'a same-day hit must not rewrite the entry'
+  );
+
+  // A marker older than the 7-day rate limit is refreshed on hit
+  const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  sameDay.lastUsedAt = eightDaysAgo;
+  fs.writeFileSync(cachePath, JSON.stringify(sameDay, null, 2), 'utf8');
+  assert.equal(await parser.readCachedAiResponse(aiConfig, prompt, 'extraction'), responseText);
+  const refreshed = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+  assert.equal(refreshed.lastUsedAt, today);
+  assert.equal(refreshed.response.text, responseText, 'touching must preserve the cached payload');
+
+  fs.rmSync(cacheDir, { recursive: true, force: true });
+});
+
+// ---------------------------------------------------------------------------
 // Built-in generic blocked patterns (segment-anchored, accuracy first)
 // ---------------------------------------------------------------------------
 

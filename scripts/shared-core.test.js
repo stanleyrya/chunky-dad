@@ -160,6 +160,133 @@ test('callAiGenerate flags zero-token finish_reason=length image requests as con
   assert.equal(textDiag.failureKind, undefined);
 });
 
+// Persistent AI-response cache: callAiGenerate consults the injected provider
+// before the transport and stores accepted responses after it. The provider
+// itself is filesystem-backed (see ai-web-parser tests); here it is faked.
+
+function buildAiTestConfig(overrides = {}) {
+  return {
+    provider: 'openai',
+    endpoint: 'http://rybook.example:8000/v1/chat/completions',
+    model: 'test-model',
+    temperature: 0,
+    numPredict: 2000,
+    timeoutSeconds: 120,
+    cacheEnabled: true,
+    openai: {},
+    ...overrides
+  };
+}
+
+function buildOpenAiResponsePayload(content) {
+  return JSON.stringify({
+    choices: [{ index: 0, message: { role: 'assistant', content }, finish_reason: 'stop' }]
+  });
+}
+
+test('callAiGenerate returns cached responses without touching the transport', async () => {
+  const core = createCore();
+  let writeCalls = 0;
+  core.aiResponseCache = {
+    read: async () => 'CACHED',
+    write: async () => { writeCalls++; },
+    stats: { hits: 0, misses: 0, writes: 0 }
+  };
+  const adapter = {
+    postJson: async () => {
+      throw new Error('transport must not be called on a cache hit');
+    }
+  };
+  const result = await core.callAiGenerate(buildAiTestConfig(), 'extract prompt', 'extraction', adapter);
+  assert.equal(result, 'CACHED');
+  assert.equal(writeCalls, 0, 'a cache hit must not be re-written');
+});
+
+test('callAiGenerate writes the exact accepted response to the cache on a miss', async () => {
+  const core = createCore();
+  const writeArgs = [];
+  core.aiResponseCache = {
+    read: async () => null,
+    write: async (...args) => { writeArgs.push(args); },
+    stats: { hits: 0, misses: 0, writes: 0 }
+  };
+  let transportCalls = 0;
+  const adapter = {
+    postJson: async () => {
+      transportCalls++;
+      return { ok: true, status: 200, text: buildOpenAiResponsePayload('{"title": "FURBALL"}') };
+    }
+  };
+  const result = await core.callAiGenerate(buildAiTestConfig(), 'extract prompt', 'extraction', adapter);
+  assert.equal(result, '{"title": "FURBALL"}');
+  assert.equal(transportCalls, 1);
+  assert.equal(writeArgs.length, 1);
+  assert.equal(writeArgs[0][1], 'extract prompt');
+  assert.equal(writeArgs[0][2], 'extraction');
+  assert.equal(writeArgs[0][3], '{"title": "FURBALL"}');
+});
+
+test('callAiGenerate never caches HTTP errors, empty responses, or transport failures', async () => {
+  const core = createCore();
+  let writeCalls = 0;
+  core.aiResponseCache = {
+    read: async () => null,
+    write: async () => { writeCalls++; },
+    stats: { hits: 0, misses: 0, writes: 0 }
+  };
+
+  const httpErrorAdapter = { postJson: async () => ({ ok: false, status: 500, text: 'boom' }) };
+  assert.equal(await core.callAiGenerate(buildAiTestConfig(), 'p', 'extraction', httpErrorAdapter), null);
+
+  const emptyAdapter = { postJson: async () => ({ ok: true, status: 200, text: buildOpenAiResponsePayload('') }) };
+  assert.equal(await core.callAiGenerate(buildAiTestConfig(), 'p', 'extraction', emptyAdapter), null);
+
+  const throwingAdapter = { postJson: async () => { throw new Error('connection refused'); } };
+  assert.equal(await core.callAiGenerate(buildAiTestConfig(), 'p', 'extraction', throwingAdapter), null);
+
+  assert.equal(writeCalls, 0, 'failure paths must never populate the cache');
+});
+
+test('callAiGenerate bypasses the response cache for image requests', async () => {
+  const core = createCore();
+  let readCalls = 0;
+  let writeCalls = 0;
+  core.aiResponseCache = {
+    read: async () => { readCalls++; return 'CACHED'; },
+    write: async () => { writeCalls++; },
+    stats: { hits: 0, misses: 0, writes: 0 }
+  };
+  const adapter = {
+    postJson: async () => ({ ok: true, status: 200, text: buildOpenAiResponsePayload('{"text": "OCR TEXT"}') })
+  };
+  const result = await core.callAiGenerate(buildAiTestConfig(), 'ocr prompt', 'ocr-all', adapter, null, 'base64image');
+  assert.equal(result, '{"text": "OCR TEXT"}');
+  assert.equal(readCalls, 0, 'image requests must not read the response cache');
+  assert.equal(writeCalls, 0, 'image requests must not write the response cache');
+});
+
+test('callAiGenerate without an injected cache calls the transport directly', async () => {
+  const core = createCore();
+  assert.equal(core.aiResponseCache, null, 'cache is opt-in via injection');
+  let transportCalls = 0;
+  const adapter = {
+    postJson: async () => {
+      transportCalls++;
+      return { ok: true, status: 200, text: buildOpenAiResponsePayload('{"title": "x"}') };
+    }
+  };
+  const result = await core.callAiGenerate(buildAiTestConfig(), 'p', 'extraction', adapter);
+  assert.equal(result, '{"title": "x"}');
+  assert.equal(transportCalls, 1);
+});
+
+test('resolveAiConfig defaults the response cache on and honors cache: false', () => {
+  const core = createCore();
+  assert.equal(core.resolveAiConfig({}).cacheEnabled, true, 'absent key defaults ON');
+  assert.equal(core.resolveAiConfig({ cache: true }).cacheEnabled, true);
+  assert.equal(core.resolveAiConfig({ cache: false }).cacheEnabled, false);
+});
+
 test('extractJsonLdEventNodes finds Event nodes in plain, @graph, and list containers', () => {
   const core = createCore();
 

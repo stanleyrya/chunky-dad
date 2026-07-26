@@ -4227,6 +4227,15 @@ class ScriptableAdapter {
               `📱 Scriptable: Pruned ${prunedClassification} classification cache entries unused for ${ocrRetentionDays}d`,
             );
           }
+          const prunedAiResponses = await this.cleanupOldFiles(
+            "chunky-dad-scraper/storage/ai-responses",
+            { maxAgeDays: unusedCutoffDays, recurse: true },
+          );
+          if (prunedAiResponses > 0) {
+            console.log(
+              `📱 Scriptable: Pruned ${prunedAiResponses} AI response cache entries unused for ${ocrRetentionDays}d`,
+            );
+          }
         } catch (pruneErr) {
           console.log(
             `📱 Scriptable: Cache prune failed: ${pruneErr.message}`,

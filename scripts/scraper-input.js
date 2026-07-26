@@ -40,6 +40,7 @@ const scraperConfig = {
       think: false,
       timeoutSeconds: 120,
       keepAlive: "5m",
+      cache: true, // AI response cache — key is model+prompt+options; set false to disable
       // AI merge arbitration (default: true). When two records of the same event
       // genuinely conflict on a field (both non-empty, different), the AI picks the
       // better value — accepted only when its answer is a VERBATIM copy of one of
@@ -296,6 +297,7 @@ const scraperConfig = {
       //   think: false,
       //   timeoutSeconds: 120,
       //   keepAlive: "5m",
+      //   cache: true, // AI response cache — key is model+prompt+options; set false to disable
       //   classifyPages: true, // AI second opinion when URL rules/JSON-LD can't classify a page (default: true)
       //   // OCR override lives INSIDE `ai` (canonical spot: ai.ocr). Default is
       //   // the rybook VISION server on :8001 — text models reject images.

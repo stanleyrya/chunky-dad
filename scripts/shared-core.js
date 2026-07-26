@@ -130,6 +130,10 @@ class SharedCore {
         // Per-run learned dead-end context (created by processEvents from the
         // store the orchestrator loaded; null outside a run = feature inert)
         this.deadEndRunContext = null;
+        // Persistent AI-response cache provider (read/write/stats), injected by
+        // the orchestrator from AiWebParser.getAiResponseCache() — persistence
+        // stays out of shared-core. Null = no caching.
+        this.aiResponseCache = null;
         this.trackingParamPattern = /^(aff|affix|affiliate|utm_source|utm_medium|utm_campaign|utm_content|utm_term|ref|referral|fbclid|gclid|msclkid|dclid|source|mc_cid|mc_eid)$/i;
         
         // URL-to-parser mapping for automatic parser detection
@@ -8075,6 +8079,7 @@ class SharedCore {
             think: Object.prototype.hasOwnProperty.call(aiConfig, 'think') ? Boolean(aiConfig.think) : false,
             timeoutSeconds: Number.isFinite(Number(aiConfig.timeoutSeconds)) ? Number(aiConfig.timeoutSeconds) : 120,
             keepAlive: Object.prototype.hasOwnProperty.call(aiConfig, 'keepAlive') ? String(aiConfig.keepAlive) : '5m',
+            cacheEnabled: aiConfig.cache !== false,
             arbitrateMerges: aiConfig.arbitrateMerges !== false,
             // Override-only: extra text appended verbatim to extraction prompt
             // context. Organizer context is normally derived from page metadata.
@@ -8252,6 +8257,16 @@ class SharedCore {
             promptHistoryRecorder(prompt, passLabel, aiConfig);
         }
 
+        // Image requests bypass the response cache — the prompt alone does not
+        // identify them (the image bytes do), and OCR has its own URL-keyed cache.
+        if (!base64Image && this.aiResponseCache) {
+            const cachedText = await this.aiResponseCache.read(aiConfig, prompt, passLabel);
+            if (typeof cachedText === 'string' && cachedText.length > 0) {
+                console.log(`🤖 AI Web: AI response cache hit${label} — response: ${cachedText.length} chars`);
+                return cachedText;
+            }
+        }
+
         console.log(`🤖 AI Web: Sending AI request${label} to ${aiConfig.endpoint} — model: ${aiConfig.model}, provider: ${aiConfig.provider}, prompt: ${promptChars} chars`);
         this.logAiPayloadDebug(`🤖 AI Web: Full prompt${label}`, prompt, aiConfig);
 
@@ -8290,6 +8305,9 @@ class SharedCore {
             if (responseContent && typeof responseContent === 'string' && responseContent.length > 0) {
                 console.log(`🤖 AI Web: AI request${label} succeeded in ${elapsed}ms — response: ${responseContent.length} chars`);
                 this.logAiPayloadDebug(`🤖 AI Web: Model response text${label}`, responseContent, aiConfig);
+                if (!base64Image && this.aiResponseCache) {
+                    await this.aiResponseCache.write(aiConfig, prompt, passLabel, responseContent);
+                }
                 return responseContent;
             }
 
