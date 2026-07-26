@@ -309,6 +309,7 @@ class BearEventScraperOrchestrator {
                             normalizeUrl: sharedCore.normalizeUrl.bind(sharedCore)
                         });
                         aiParser.core = sharedCore;
+                        sharedCore.aiResponseCache = aiParser.getAiResponseCache();
                         parsers[name] = aiParser;
                     } else {
                         parsers[name] = new ParserClass();
@@ -426,6 +427,13 @@ class BearEventScraperOrchestrator {
                 }
 
                 results.calendarEvents = calendarEvents;
+            }
+
+            // After calendar prep/dedup so merge-arbitration hits are counted too
+            const aiWebParser = parsers['ai-web'];
+            if (aiWebParser && aiWebParser.aiResponseCacheStats) {
+                const { hits, misses, writes } = aiWebParser.aiResponseCacheStats;
+                console.log(`🤖 AI Web: AI response cache summary — ${hits} hits, ${misses} misses, ${writes} writes`);
             }
 
             // Display results

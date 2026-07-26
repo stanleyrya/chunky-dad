@@ -315,6 +315,7 @@ class AiWebParser {
         // byte-identical context-prep prompt, so the HTTP round-trip can be reused.
         // In-memory only, scoped to this parser instance (one run).
         this.contextPrepResponseCache = new Map();
+        this.aiResponseCacheStats = { hits: 0, misses: 0, writes: 0 };
         this.defaultOcrModel = 'qwen3-vl:4b-instruct';
         this.defaultOcrPrompt = "You are performing OCR on an event flyer.\n\nSTEP 1: OCR\nExtract ALL visible text from the image.\n\nRules:\n- Copy text exactly as shown.\n- Preserve line breaks when possible.\n- Do not summarize.\n- Do not interpret.\n- Do not correct spelling.\n- Do not infer missing words.\n\nSTEP 2: Classification\n\nClassify the image into ONE category:\n\nad-banner: Advertisement or promotional banner (usually has \"buy\", \"get tickets\", \"sale\")\nevent-flyer: Single event poster/flyer - ONE primary event with ONE title, ONE venue, and ONE date or continuous date range. May contain schedules, activities, DJs, performers, or sub-events that are clearly part of the same event. Examples: Bear Week, Bear Weekend, Pride Festival, Camp Weekend, Resort Weekend Package.\nmulti-event-flyer: Two or more independent events with different titles, different dates/times, and separate ticketing. Often appears as a calendar, event listing, or monthly schedule.\nlogo: Brand or organization logo (minimal text, just brand name)\nthumbnail: Small preview image (low detail)\nhero-banner: Large header/banner image (prominent on page)\n\nDecision rule: If there is ONE overarching event name and the listed activities appear to belong to that event, classify as event-flyer. Only classify as multi-event-flyer when multiple independent events are advertised that require separate tickets.\n\nIMPORTANT CONTEXT: This is for a gay bear community travel guide. Events may be part of:\n- \"Bear Week\" or \"Bear Weekend\" themed events\n- Annual bear gatherings (e.g., \"Puerto Vallarta Bear Week\", \"Sitges Bear Week\")\n- Regular bear-themed parties or meetups\n- Events at bear-owned businesses or bear-friendly venues\n\nSTEP 3: Event Analysis\n\nDetermine:\n- eventName: The primary event title\n- venue: The venue or venue group name\n- startDate: Start date/time if visible\n- endDate: End date/time if visible\n\nUse only information visible in the image.\n\nSTEP 4: Summary\n\nCreate a concise summary describing:\n- event name\n- venue\n- date/time\n- why it may be relevant to the bear community\n\nReturn JSON only with these fields:\n{\n  \"text\": \"full extracted text\",\n  \"imageClassification\": \"ad-banner|event-flyer|multi-event-flyer|logo|thumbnail|hero-banner\",\n  \"eventSummary\": \"a concise 1-2 sentence summary of the event including: event name, venue, date/time, and any bear-week context if applicable. Focus on what makes this event notable for the bear community.\",\n  \"confidence\": 0-100,\n  \"reason\": \"brief explanation for classification\"\n}";
         // When an image overflows the vision model's context, retry once at this
@@ -2544,6 +2545,10 @@ class AiWebParser {
         return this.getCacheRuntime('classification', this.config.classificationCacheDir);
     }
 
+    getAiResponseCacheRuntime() {
+        return this.getCacheRuntime('ai-responses', this.config.aiResponseCacheDir);
+    }
+
     getCacheRuntime(subdir, overrideDir = null) {
         if (typeof FileManager !== 'undefined') {
             try {
@@ -2882,6 +2887,143 @@ class AiWebParser {
             return cachePath;
         } catch (error) {
             console.log(`🤖 AI Web: OCR cache write failed for ${imageUrl}: ${error.message}`);
+            return null;
+        }
+    }
+
+    // Persistent cache of raw AI response text keyed by request content (not URL —
+    // extraction prompts embed the page content, so the prompt IS the identity).
+    // SharedCore stays free of filesystem access, so callAiGenerate consumes this
+    // via the injected getAiResponseCache() provider, same as classification.
+    getAiResponseCache() {
+        return {
+            read: (aiConfig, prompt, passLabel) => this.readCachedAiResponse(aiConfig, prompt, passLabel),
+            write: (aiConfig, prompt, passLabel, text) => this.writeCachedAiResponse(aiConfig, prompt, passLabel, text),
+            stats: this.aiResponseCacheStats
+        };
+    }
+
+    getAiResponseCachePathParts(aiConfig, prompt, passLabel) {
+        const config = aiConfig && typeof aiConfig === 'object' ? aiConfig : {};
+        // Endpoint deliberately excluded from the signature (recorded in the
+        // payload only) so re-homing the same model still hits.
+        const responseFormat = config.provider === 'openai'
+            ? String((config.openai && config.openai.responseFormat) || 'json_object')
+            : 'json';
+        const options = {
+            numCtx: Number.isFinite(Number(config.numCtx)) ? Number(config.numCtx) : null,
+            numPredict: Number.isFinite(Number(config.numPredict)) ? Number(config.numPredict) : null,
+            temperature: Number.isFinite(Number(config.temperature)) ? Number(config.temperature) : null,
+            think: Boolean(config.think),
+            keepAlive: String(config.keepAlive || ''),
+            responseFormat
+        };
+        const requestSignature = JSON.stringify({
+            provider: String(config.provider || ''),
+            model: String(config.model || ''),
+            prompt: String(prompt),
+            options
+        });
+        const signatureHash = this.hashCacheValue(requestSignature);
+        return {
+            dirSegments: [passLabel ? this.sanitizeCacheSegment(passLabel) : 'general'],
+            fileName: `${signatureHash}.json`,
+            signatureHash,
+            options
+        };
+    }
+
+    async readCachedAiResponse(aiConfig, prompt, passLabel) {
+        if (!aiConfig || aiConfig.cacheEnabled === false) return null;
+        const runtime = this.getAiResponseCacheRuntime();
+        if (!runtime) return null;
+        const { dirSegments, fileName } = this.getAiResponseCachePathParts(aiConfig, prompt, passLabel);
+
+        try {
+            let cachePath;
+            let rawPayload = null;
+            if (runtime.type === 'scriptable') {
+                const passDirPath = runtime.fm.joinPath(runtime.baseDir, dirSegments[0]);
+                cachePath = runtime.fm.joinPath(passDirPath, fileName);
+                if (!runtime.fm.fileExists(cachePath)) {
+                    this.aiResponseCacheStats.misses += 1;
+                    return null;
+                }
+                try {
+                    await runtime.fm.downloadFileFromiCloud(cachePath);
+                } catch (_) {}
+                rawPayload = runtime.fm.readString(cachePath);
+            } else {
+                cachePath = runtime.path.join(runtime.baseDir, dirSegments[0], fileName);
+                rawPayload = await runtime.fs.promises.readFile(cachePath, 'utf8');
+            }
+            const cached = JSON.parse(rawPayload);
+            const responseText = cached && cached.response && typeof cached.response.text === 'string'
+                ? cached.response.text
+                : '';
+            // The filename is only a 32-bit hash — verify the stored prompt so a
+            // hash collision can never serve another request's response.
+            const promptMatches = cached && cached.request && cached.request.prompt === String(prompt);
+            if (!responseText || !promptMatches) {
+                this.aiResponseCacheStats.misses += 1;
+                return null;
+            }
+            await this.touchCacheEntryOnHit(runtime, cachePath, cached);
+            this.aiResponseCacheStats.hits += 1;
+            return responseText;
+        } catch (error) {
+            const missingFile = error && (error.code === 'ENOENT' || /does not exist/i.test(String(error.message || '')));
+            if (!missingFile) {
+                console.log(`🤖 AI Web: AI response cache read failed: ${error.message}`);
+            }
+            this.aiResponseCacheStats.misses += 1;
+            return null;
+        }
+    }
+
+    async writeCachedAiResponse(aiConfig, prompt, passLabel, responseText) {
+        if (!aiConfig || aiConfig.cacheEnabled === false) return null;
+        const text = typeof responseText === 'string' ? responseText : '';
+        if (!text) return null;
+        const runtime = this.getAiResponseCacheRuntime();
+        if (!runtime) return null;
+        const { dirSegments, fileName, signatureHash, options } = this.getAiResponseCachePathParts(aiConfig, prompt, passLabel);
+        const payload = {
+            cachedAt: new Date().toISOString(),
+            cacheKeyVersion: 1,
+            passLabel: String(passLabel || ''),
+            request: {
+                endpoint: String(aiConfig.endpoint || ''),
+                provider: String(aiConfig.provider || ''),
+                model: String(aiConfig.model || ''),
+                signatureHash,
+                prompt: String(prompt),
+                options
+            },
+            response: {
+                text
+            },
+            lastUsedAt: new Date().toISOString().slice(0, 10)
+        };
+
+        try {
+            let cachePath;
+            if (runtime.type === 'scriptable') {
+                const passDirPath = runtime.fm.joinPath(runtime.baseDir, dirSegments[0]);
+                if (!runtime.fm.fileExists(runtime.baseDir)) runtime.fm.createDirectory(runtime.baseDir, true);
+                if (!runtime.fm.fileExists(passDirPath)) runtime.fm.createDirectory(passDirPath, true);
+                cachePath = runtime.fm.joinPath(passDirPath, fileName);
+                runtime.fm.writeString(cachePath, JSON.stringify(payload, null, 2));
+            } else {
+                const passDirPath = runtime.path.join(runtime.baseDir, dirSegments[0]);
+                await runtime.fs.promises.mkdir(passDirPath, { recursive: true });
+                cachePath = runtime.path.join(passDirPath, fileName);
+                await runtime.fs.promises.writeFile(cachePath, JSON.stringify(payload, null, 2), 'utf8');
+            }
+            this.aiResponseCacheStats.writes += 1;
+            return cachePath;
+        } catch (error) {
+            console.log(`🤖 AI Web: AI response cache write failed: ${error.message}`);
             return null;
         }
     }
