@@ -18,6 +18,8 @@
     "website": "https://www.thedallaseagle.com",
     "instagram": "https://www.instagram.com/thedallaseagle",
     "facebook": "https://www.facebook.com/lonestareagle",
-    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I"
+    "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+    "faviconBg": "#ffffff",
+    "faviconFg": "#fefefe"
   }
 ]
