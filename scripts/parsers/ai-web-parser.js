@@ -6556,6 +6556,15 @@ class AiWebParser {
         if (normalized === 'bar') {
             description += ` A street address is never a venue name.`;
         }
+        // Prompt-only steering (run 20260725-205217 findings): sources whose
+        // listing "title" is a flyer/social caption got adopted wholesale
+        // ("D>U>R>O is back NEW OUTDOOR LOCATION _ NIGHT FOAM PARTY and
+        // SPECIAL GUEST"; "Thighs out for the guys yall, it's Singlet Night
+        // at the Dallas Eagle 🤼‍♂️🦅"). Appended to the schema line so the
+        // schema text itself stays byte-identical.
+        if (normalized === 'title') {
+            description += ` The title is the event's NAME — short and reusable, exactly as it appears in the source. When the source text is an announcement sentence or caption that contains the event name, extract just the name portion (it must still appear verbatim within the source). Never include venue, city, date, or marketing phrases in the title.`;
+        }
         // Prompt-only steering (run 20260724-155934 findings): thedallaseagle.com
         // listings print "End at: August 1, 2026 - 2:00 am" and extraction kept
         // assigning those END values to start fields (events shipped starting

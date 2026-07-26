@@ -4791,10 +4791,14 @@ class ScriptableAdapter {
   // Rich UI presentation using WebView with HTML
   async presentRichResults(results) {
     try {
-      console.log("📱 Scriptable: Presenting results UI...");
-
-      // Generate HTML for rich display
+      // Generate HTML for rich display (before the presenting log so the
+      // size line lands next to it — WebView.loadHTML fails SILENTLY with a
+      // white screen past ~1 MB, so the size must be in the log by itself)
       const html = await this.generateRichHTML(results);
+      console.log(
+        `📱 Scriptable: Results HTML size: ${Math.round(html.length / 1024)} KB`,
+      );
+      console.log("📱 Scriptable: Presenting results UI...");
 
       // Present using an instance WebView so page buttons can signal native
       // via shouldAllowRequest (assigned BEFORE present() — the reliable
@@ -8591,48 +8595,9 @@ class ScriptableAdapter {
                             <button onclick="copyEventJSON(this)" 
                                     style="padding: 4px 8px; font-size: 11px; background: var(--primary-color); color: var(--text-inverse); border: none; border-radius: 8px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 500; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);"
                                     data-event-json='${this.escapeHtml(
-                                      JSON.stringify(
-                                        event,
-                                        (key, value) => {
-                                          if (
-                                            key === "_parserConfig" &&
-                                            value
-                                          ) {
-                                            return {
-                                              name: value.name,
-                                              parser: value.parser,
-                                            };
-                                          }
-                                          if (
-                                            key === "_existingEvent" &&
-                                            value
-                                          ) {
-                                            return {
-                                              title: value.title,
-                                              identifier: value.identifier,
-                                            };
-                                          }
-                                          if (
-                                            key === "_conflicts" &&
-                                            value &&
-                                            Array.isArray(value)
-                                          ) {
-                                            return value.map((c) => ({
-                                              title: c.title,
-                                              startDate: c.startDate,
-                                              identifier: c.identifier,
-                                            }));
-                                          }
-                                          if (key === "placeId") {
-                                            return undefined; // Hide placeId from debug display
-                                          }
-                                          if (typeof value === "function") {
-                                            return "[Function]";
-                                          }
-                                          return value;
-                                        },
-                                        2,
-                                      ),
+                                      this.buildEmbeddedEventJson(event, {
+                                        includeOriginal: false,
+                                      }),
                                     )}'>
                                 📋 Copy JSON
                             </button>
@@ -8728,81 +8693,19 @@ class ScriptableAdapter {
             
             <div class="raw-display">
                 <pre style="font-size: 11px; background: #333; color: #fff; padding: 10px; border-radius: 5px; overflow-x: auto;">${this.escapeHtml(
-                  JSON.stringify(
-                    event,
-                    (key, value) => {
-                      // Keep full object for debugging, only filter out circular references and functions
-                      if (key === "_parserConfig" && value) {
-                        return { name: value.name, parser: value.parser };
-                      }
-                      if (key === "_existingEvent" && value) {
-                        return {
-                          title: value.title,
-                          identifier: value.identifier,
-                        };
-                      }
-                      if (
-                        key === "_conflicts" &&
-                        value &&
-                        Array.isArray(value)
-                      ) {
-                        return value.map((c) => ({
-                          title: c.title,
-                          startDate: c.startDate,
-                          identifier: c.identifier,
-                        }));
-                      }
-                      if (key === "placeId") {
-                        return undefined; // Hide placeId from debug display
-                      }
-                      if (typeof value === "function") {
-                        return "[Function]"; // Show functions exist but don't break JSON
-                      }
-                      return value;
-                    },
-                    2,
-                  ),
+                  // Keeps _original (merge provenance) but drops the AI
+                  // prompt/validation blobs — see buildEmbeddedEventJson
+                  this.buildEmbeddedEventJson(event, {
+                    includeOriginal: true,
+                  }),
                 )}</pre>
                 <div style="margin-top: 8px; text-align: right;">
                     <button onclick="copyEventJSON(this)" 
                             style="padding: 4px 8px; font-size: 11px; background: var(--primary-color); color: var(--text-inverse); border: none; border-radius: 8px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 500; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);"
                             data-event-json='${this.escapeHtml(
-                              JSON.stringify(
-                                event,
-                                (key, value) => {
-                                  if (key === "_parserConfig" && value) {
-                                    return {
-                                      name: value.name,
-                                      parser: value.parser,
-                                    };
-                                  }
-                                  if (key === "_existingEvent" && value) {
-                                    return {
-                                      title: value.title,
-                                      identifier: value.identifier,
-                                    };
-                                  }
-                                  if (
-                                    key === "_conflicts" &&
-                                    value &&
-                                    Array.isArray(value)
-                                  ) {
-                                    return value.map((c) => ({
-                                      title: c.title,
-                                      startDate: c.startDate,
-                                      identifier: c.identifier,
-                                    }));
-                                  }
-                                  if (key === "placeId") {
-                                    return undefined; // Hide placeId from debug display
-                                  }
-                                  if (typeof value === "function") {
-                                    return "[Function]";
-                                  }
-                                  return value;
-                                },
-                                2,
-                              ),
+                              this.buildEmbeddedEventJson(event, {
+                                includeOriginal: false,
+                              }),
                             )}'>
                         📋 Copy JSON
                     </button>
@@ -8812,6 +8715,58 @@ class ScriptableAdapter {
         `;
 
     return html;
+  }
+
+  // Shared serializer for every place a full event is embedded into the
+  // results HTML (the two "Copy JSON" button attributes and the raw <pre>
+  // debug dump). ONE replacer so the slimming rules live in one place:
+  //   - _aiPrompts/_aiValidation are dropped at ANY depth — the full AI
+  //     prompt texts are already surfaced via the dedicated "🤖 AI Prompts"
+  //     button, and duplicating ~20 KB of them per event 2-3x per card is
+  //     what pushed the Bearracuda run's page (1.76 MB) past
+  //     WebView.loadHTML's silent ~1 MB white-screen threshold
+  //     (runs 20260725-205758/210227).
+  //   - _original is dropped entirely from the BUTTON embeds
+  //     (includeOriginal: false); the raw <pre> keeps it (minus the AI
+  //     blobs) since that's where a human reads the merge provenance.
+  //   - _parserConfig/_existingEvent/_conflicts/placeId/function slimming
+  //     is unchanged from the previous inline replacers.
+  buildEmbeddedEventJson(event, { includeOriginal = true } = {}) {
+    return JSON.stringify(
+      event,
+      (key, value) => {
+        if (key === "_aiPrompts" || key === "_aiValidation") {
+          return undefined; // Already available via the AI Prompts button
+        }
+        if (!includeOriginal && key === "_original") {
+          return undefined;
+        }
+        if (key === "_parserConfig" && value) {
+          return { name: value.name, parser: value.parser };
+        }
+        if (key === "_existingEvent" && value) {
+          return {
+            title: value.title,
+            identifier: value.identifier,
+          };
+        }
+        if (key === "_conflicts" && value && Array.isArray(value)) {
+          return value.map((c) => ({
+            title: c.title,
+            startDate: c.startDate,
+            identifier: c.identifier,
+          }));
+        }
+        if (key === "placeId") {
+          return undefined; // Hide placeId from debug display
+        }
+        if (typeof value === "function") {
+          return "[Function]";
+        }
+        return value;
+      },
+      2,
+    );
   }
 
   // Helper to escape HTML

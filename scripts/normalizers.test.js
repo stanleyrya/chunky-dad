@@ -1556,18 +1556,71 @@ test('district upgrade rung: curated pin adoption still fires for the Mad.Bear s
   assert.equal(event.instagram, 'https://www.instagram.com/aquatorremolinos', 'curated instagram fills the blank');
 });
 
-test('bar casing: an already-set bar keeps its casing — curated casing adoption lives only in the convergence rescue', () => {
+test('bar casing: an already-set bar that strictly matches a curated bar is canonicalized to the curated display name', () => {
   const normalizer = createTorremolinosBarNormalizer();
   const event = { title: 'FURBALL MAD.BEAR', city: 'torremolinos', bar: 'AQUA EMPORIO', address: 'LA NOGALERA' };
 
-  captureConsoleLog(() => normalizer.normalize(event));
+  const lines = captureConsoleLog(() => normalizer.normalize(event));
 
-  // Documented current behavior: BarDataNormalizer only writes the curated
-  // name into an EMPTY bar (or when title/description was the venue). An
-  // event that already carries "AQUA EMPORIO" keeps that casing here; the
-  // curated-casing adoption exists only in the ai-web parser's bar-convergence
-  // rescue, and the merge's case-only rung prefers the less-uppercased twin.
-  assert.equal(event.bar, 'AQUA EMPORIO');
+  // Run 20260725-210227 shipped "MASSIVE" and "Massive" for the same venue.
+  // BarDataNormalizer now canonicalizes a PRESENT bar to the curated display
+  // name whenever it matches by strict normalizeBarNameKey equality, so every
+  // event at a curated venue shows the curated spelling/casing.
+  assert.equal(event.bar, 'Aqua Emporio');
+  assert.ok(lines.includes(
+    '🐻 BarDataNormalizer: Canonicalized bar name "AQUA EMPORIO" → "Aqua Emporio" (curated)'
+  ), `canonicalization log line expected, got: ${JSON.stringify(lines)}`);
+});
+
+// ---------------------------------------------------------------------------
+// Curated bar-name canonicalization (run 20260725-210227: "MASSIVE" from
+// BEARRACUDA: Seattle vs "Massive" from Treasure Trail Seattle — same venue,
+// two spellings on the site)
+// ---------------------------------------------------------------------------
+
+function createSeattleBarNormalizer() {
+  const core = new SharedCore(
+    { seattle: { timezone: 'America/Los_Angeles', patterns: ['seattle'] } },
+    {
+      eventSchema: EventSchema,
+      bars: { seattle: [{ name: 'Massive', address: '619 E Pine St, Seattle, WA 98122' }] }
+    }
+  );
+  return new BarDataNormalizer(core);
+}
+
+test('bar canonicalization: MASSIVE is rewritten to the curated display name Massive', () => {
+  const normalizer = createSeattleBarNormalizer();
+  const event = { title: 'BEARRACUDA: Seattle', city: 'seattle', bar: 'MASSIVE' };
+
+  const lines = captureConsoleLog(() => normalizer.normalize(event));
+
+  assert.equal(event.bar, 'Massive');
+  assert.ok(lines.includes(
+    '🐻 BarDataNormalizer: Canonicalized bar name "MASSIVE" → "Massive" (curated)'
+  ), `canonicalization log line expected, got: ${JSON.stringify(lines)}`);
+});
+
+test('bar canonicalization: "Massive Club" is NOT rewritten — strict full-name equality only, never substring', () => {
+  const normalizer = createSeattleBarNormalizer();
+  const event = { title: 'Some Party', city: 'seattle', bar: 'Massive Club' };
+
+  const lines = captureConsoleLog(() => normalizer.normalize(event));
+
+  assert.equal(event.bar, 'Massive Club', '"Massive Club" ≠ "Massive" under the #1536/#1537 contract');
+  assert.ok(!lines.some(line => line.includes('Canonicalized bar name')),
+    `no canonicalization log expected, got: ${JSON.stringify(lines)}`);
+});
+
+test('bar canonicalization: an uncurated bar is never touched', () => {
+  const normalizer = createSeattleBarNormalizer();
+  const event = { title: 'Warehouse Party', city: 'seattle', bar: 'KREMWERK' };
+
+  const lines = captureConsoleLog(() => normalizer.normalize(event));
+
+  assert.equal(event.bar, 'KREMWERK');
+  assert.ok(!lines.some(line => line.includes('Canonicalized bar name')),
+    `no canonicalization log expected, got: ${JSON.stringify(lines)}`);
 });
 
 test('district upgrade rung: an address already identical to curated is a no-op', () => {
