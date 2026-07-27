@@ -489,11 +489,12 @@ class AiWebParser {
                 // venue-site stamps only — there is no extraction evidence
                 // corpus here, so the adjacency check never runs (fail open).
                 structuredEvents.forEach(event => this.stampBarSourceProvenance(event, null, effectiveHtmlData));
+                const keptStructuredEvents = this.filterEventsByDiscoveryAllowlist(structuredEvents, sourceUrl, parserConfig);
                 // Attribute the events to this page's site so the post-crawl
                 // venue-site address consensus can fill their blanks.
-                this.tagEventsWithVenueSitePage(structuredEvents, effectiveHtmlData);
+                this.tagEventsWithVenueSitePage(keptStructuredEvents, effectiveHtmlData);
                 return {
-                    events: structuredEvents,
+                    events: keptStructuredEvents,
                     additionalLinks: additionalLinks,
                     discoveredSegments: null,
                     ocrResults: [],
@@ -619,12 +620,13 @@ class AiWebParser {
                 this.applyJsonApiStructuredEnrichment(events, jsonApiEvents, sourceUrl);
             }
 
+            const keptEvents = this.filterEventsByDiscoveryAllowlist(events, sourceUrl, parserConfig);
             // Attribute the events to this page's site so the post-crawl
             // venue-site address consensus can fill their blanks.
-            this.tagEventsWithVenueSitePage(events, effectiveHtmlData);
+            this.tagEventsWithVenueSitePage(keptEvents, effectiveHtmlData);
 
             return {
-                events,
+                events: keptEvents,
                 additionalLinks,
                 discoveredSegments,
                 ocrResults: ocrResults,
@@ -5138,17 +5140,8 @@ class AiWebParser {
         // Configured start URLs never pass through this function, so the
         // listing page itself is unaffected. Blocks still win over allows.
         const configAllowedPatterns = Array.isArray(parserConfig.discoveryAllowedPatterns) ? parserConfig.discoveryAllowedPatterns : [];
-        if (configAllowedPatterns.length > 0) {
-            const matchesAllowed = configAllowedPatterns.some(pattern => {
-                if (pattern instanceof RegExp) return pattern.test(lowerUrl);
-                if (typeof pattern !== 'string') return false;
-                const normalizedPattern = pattern.trim().toLowerCase();
-                if (!normalizedPattern) return false;
-                return lowerUrl.includes(normalizedPattern);
-            });
-            if (!matchesAllowed) {
-                return { valid: false, reason: 'not-in-allowed-patterns' };
-            }
+        if (configAllowedPatterns.length > 0 && !this.matchesDiscoveryAllowedPattern(lowerUrl, configAllowedPatterns)) {
+            return { valid: false, reason: 'not-in-allowed-patterns' };
         }
         const lowerSearch = String(parsedUrl.search || '').toLowerCase();
         if (/^\/(?:sharer(?:\.php)?|share(?:\/url)?|dialog\/send)$/i.test(lowerPath)) {
@@ -5167,6 +5160,49 @@ class AiWebParser {
         }
 
         return { valid: true, reason: 'valid' };
+    }
+
+    // Does a value match any discoveryAllowedPatterns entry (same dual
+    // string-substring / RegExp semantics as validateEventUrl's checks)?
+    matchesDiscoveryAllowedPattern(value, patterns) {
+        const lowerValue = String(value || '').toLowerCase();
+        if (!lowerValue) return false;
+        return patterns.some(pattern => {
+            if (pattern instanceof RegExp) return pattern.test(lowerValue);
+            if (typeof pattern !== 'string') return false;
+            const normalizedPattern = pattern.trim().toLowerCase();
+            if (!normalizedPattern) return false;
+            return lowerValue.includes(normalizedPattern);
+        });
+    }
+
+    // discoveryAllowedPatterns scopes EXTRACTION too, not just crawling: a
+    // promoter-search parser pointed at a shared platform listing (hundreds of
+    // unrelated events) must not adopt foreign events off the listing page —
+    // they'd inherit this parser's alwaysBear/metadata identity. Pages whose
+    // own URL matches the allowlist (the promoter's API search, followed event
+    // pages) extract freely; on non-matching pages each extracted event must
+    // itself match (title or any of its URLs). No patterns configured → no-op.
+    filterEventsByDiscoveryAllowlist(events, sourceUrl, parserConfig) {
+        const patterns = Array.isArray(parserConfig && parserConfig.discoveryAllowedPatterns)
+            ? parserConfig.discoveryAllowedPatterns
+            : [];
+        if (patterns.length === 0 || !Array.isArray(events) || events.length === 0) return events;
+        if (this.matchesDiscoveryAllowedPattern(sourceUrl, patterns)) return events;
+        const kept = [];
+        for (const event of events) {
+            if (!event || typeof event !== 'object') continue;
+            const haystacks = [event.title, event.url, event.ticketUrl, event.website];
+            if (haystacks.some(value => this.matchesDiscoveryAllowedPattern(value, patterns))) {
+                kept.push(event);
+            } else {
+                console.log(`🤖 AI Web: Dropped "${event.title || 'untitled'}" — listing page is not allowlist-matched and the event does not match discoveryAllowedPatterns`);
+            }
+        }
+        if (kept.length !== events.length) {
+            console.log(`🤖 AI Web: Discovery allowlist kept ${kept.length} of ${events.length} extracted event(s) from ${sourceUrl}`);
+        }
+        return kept;
     }
 
     recordRejectedCandidate(discoveryStats, reason, rawUrl, normalizedUrl = null) {
