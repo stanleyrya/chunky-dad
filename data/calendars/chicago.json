@@ -22,6 +22,276 @@
   },
   "events": [
     {
+      "name": "Treasure Trail Chicago",
+      "day": "Saturday",
+      "time": "9PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9493268,
+        "lng": -87.6498756
+      },
+      "startDate": "2026-07-25T21:00:00",
+      "endDate": "2026-07-26T03:00:00",
+      "unprocessedDescription": "description: Saturday, July 25th, 2026 Doors at 9pm, Party t\ril LATEClothes Check encouraged3702 N. HalstedSteamy Go-Go&rsquo;s, Heavy CruisingHard Sounds by KNOCKTOPUSS Hosted byJP Hardy➲➲https\\://www.jphardyofficial.comThe Pacific Northwest's TREASURE TRAIL makes it's Chicago Debut. Grab a wristband when you walk in\\: Red Wristband TOP Blue Wristband VERS Green Wristband BOTTOM White Wristband SIDE You are free to change your mind (or go without a wristband) when you arrive.\nbar: Cell Block\naddress: 3702 N Halsted St, Chicago, IL 60613\ntimezone: America/Chicago\ninstagram: https://www.instagram.com/bearracuda\nimage: https://bearracuda.com/wp-content/uploads/2026/05/45-3.png\nshortName: TREAS-URE TRAIL\nwebsite: https://bearracuda.com/\nbearSource: ai\nkey: treasure-trail-chicago|2026-07-26|cell block\nticketUrl: https://www.sickening.events/e/treasurechi/tickets\ncover: $15-$30\npinSource: curated\naddressSource: curated\nimageSource: og-image\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Cell%20Block%2C%203702%20N%20Halsted%20St%2C%20Chicago%2C%20IL%2060613",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "3F2449DC-4869-4062-AF4B-F646ED20E976",
+      "uid": "3F2449DC-4869-4062-AF4B-F646ED20E976",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Cell Block",
+      "cover": "$15-$30",
+      "image": "https://bearracuda.com/wp-content/uploads/2026/05/45-3.png",
+      "tea": "Saturday, July 25th, 2026 Doors at 9pm, Party til LATEClothes Check encouraged3702 N. HalstedSteamy Go-Go&rsquo;s, Heavy CruisingHard Sounds by KNOCKTOPUSS Hosted byJP Hardy➲➲https://www.jphardyofficial.comThe Pacific Northwest's TREASURE TRAIL makes it's Chicago Debut. Grab a wristband when you walk in: Red Wristband TOP Blue Wristband VERS Green Wristband BOTTOM White Wristband SIDE You are free to change your mind (or go without a wristband) when you arrive.",
+      "address": "3702 N Halsted St, Chicago, IL 60613",
+      "website": "https://bearracuda.com/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Cell%20Block%2C%203702%20N%20Halsted%20St%2C%20Chicago%2C%20IL%2060613",
+      "ticketUrl": "https://www.sickening.events/e/treasurechi/tickets",
+      "shortName": "TREAS-URE TRAIL",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Cell%20Block%2C%203702%20N%20Halsted%20St%2C%20Chicago%2C%20IL%2060613",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/treasurechi/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "treasure-trail-chicago-2519d1b9"
+    },
+    {
+      "name": "CHUNK CHICAGO presents SPRING THAW!",
+      "day": "Saturday",
+      "time": "9PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9493756,
+        "lng": -87.64979
+      },
+      "startDate": "2026-03-21T21:00:00",
+      "endDate": "2026-03-22T03:00:00",
+      "unprocessedDescription": "description: LET'S GO! - DJs DICAP B2B w/ THCKRTANKER and HOLE \rTEA HOT GOGO BEARS all night long! Cell Block 9-3\nbar: Cell Block Chicago\naddress: 3702 N Halsted St, Chicago, IL 60613, USA\ntimezone: America/Chicago\nurl: https://www.chunk-party.com/event-details/chunk-chicago-presents-spring-thaw\nticketUrl: https://www.chunk-party.com/event-details/chunk-chicago-presents-spring-thaw\ncover: $20.50 - $30.75\nimage: https://static.wixstatic.com/media/42b6cb_d962047a65cf4cc092599b13282ae872~mv2.jpg/v1/fill/w_843,h_1303,al_c,q_85/42b6cb_d962047a65cf4cc092599b13282ae872~mv2.jpg\nshortName: CHUNK\ninstagram: https://www.instagram.com/chunkparty\ngmaps: https://www.google.com/maps/search/?api=1&query=Cell%20Block%20Chicago%2C%203702%20N%20Halsted%20St%2C%20Chicago%2C%20IL%2060613%2C%20USA\nkey: chunk-chicago-presents-spring-thaw|2026-03-22|cell block chicago",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "9C1D2EFD-AB1A-4084-A6DF-108E782DD7C8",
+      "uid": "9C1D2EFD-AB1A-4084-A6DF-108E782DD7C8",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Cell Block Chicago",
+      "cover": "$20.50 - $30.75",
+      "image": "https://static.wixstatic.com/media/42b6cb_d962047a65cf4cc092599b13282ae872~mv2.jpg/v1/fill/w_843,h_1303,al_c,q_85/42b6cb_d962047a65cf4cc092599b13282ae872~mv2.jpg",
+      "tea": "LET'S GO! - DJs DICAP B2B w/ THCKRTANKER and HOLE TEA HOT GOGO BEARS all night long! Cell Block 9-3",
+      "address": "3702 N Halsted St, Chicago, IL 60613, USA",
+      "website": "https://www.chunk-party.com/event-details/chunk-chicago-presents-spring-thaw",
+      "instagram": "https://www.instagram.com/chunkparty",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Cell%20Block%20Chicago%2C%203702%20N%20Halsted%20St%2C%20Chicago%2C%20IL%2060613%2C%20USA",
+      "ticketUrl": "https://www.chunk-party.com/event-details/chunk-chicago-presents-spring-thaw",
+      "shortName": "CHUNK",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.chunk-party.com/event-details/chunk-chicago-presents-spring-thaw",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/chunkparty",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Cell%20Block%20Chicago%2C%203702%20N%20Halsted%20St%2C%20Chicago%2C%20IL%2060613%2C%20USA",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.chunk-party.com/event-details/chunk-chicago-presents-spring-thaw",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "chunk-chicago-presents-spring-thaw-572f1025"
+    },
+    {
+      "name": "CHUNK CHICAGO presents SAUSAGE PARTY!",
+      "day": "Saturday",
+      "time": "9PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9493756,
+        "lng": -87.64979
+      },
+      "startDate": "2025-10-11T21:00:00",
+      "endDate": "2025-10-12T03:00:00",
+      "unprocessedDescription": "description: BEEF, DADS, BBQ, SAUSAGES, WEINERS - WHATS NOT\r TO LOVE?!? NYC DJ LEGEND DICAP AND CHUNK RESIDENT MR PICKLES HOSTED BY COACH MIKEY HOT GOGO BEARS ALL NIGHT LONG CELL BLOCK // 3702 N HALSTED ST // HEART OF BOYSTOWN // CHICAGO // 9P\nbar: CELL BLOCK\naddress: 3702 N Halsted St, Chicago, IL 60613, USA\ntimezone: America/Chicago\nurl: https://www.chunk-party.com/event-details/chunk-chicago-presents-sausage-party\nticketUrl: https://www.chunk-party.com/event-details/chunk-chicago-presents-sausage-party\ncover: $20.50 - $25.63\nimage: https://static.wixstatic.com/media/42b6cb_356df9ed11594c12b5bb6c45d0661e05~mv2.jpg/v1/fill/w_1874,h_2342,al_c,q_90/42b6cb_356df9ed11594c12b5bb6c45d0661e05~mv2.jpg\nshortName: CHUNK\ninstagram: https://www.instagram.com/chunkparty\ngmaps: https://maps.google.com/?q=41.9493756,-87.64979\nkey: chunk-chicago-presents-sausage-party|2025-10-12|cell block|chunk",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "8E2BF651-F6BA-4564-B5F9-7C014070614B",
+      "uid": "8E2BF651-F6BA-4564-B5F9-7C014070614B",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 1,
+      "overrideIdentityType": null,
+      "bar": "CELL BLOCK",
+      "cover": "$20.50 - $25.63",
+      "image": "https://static.wixstatic.com/media/42b6cb_356df9ed11594c12b5bb6c45d0661e05~mv2.jpg/v1/fill/w_1874,h_2342,al_c,q_90/42b6cb_356df9ed11594c12b5bb6c45d0661e05~mv2.jpg",
+      "tea": "BEEF, DADS, BBQ, SAUSAGES, WEINERS - WHATS NOT TO LOVE?!? NYC DJ LEGEND DICAP AND CHUNK RESIDENT MR PICKLES HOSTED BY COACH MIKEY HOT GOGO BEARS ALL NIGHT LONG CELL BLOCK // 3702 N HALSTED ST // HEART OF BOYSTOWN // CHICAGO // 9P",
+      "address": "3702 N Halsted St, Chicago, IL 60613, USA",
+      "website": "https://www.chunk-party.com/event-details/chunk-chicago-presents-sausage-party",
+      "instagram": "https://www.instagram.com/chunkparty",
+      "gmaps": "https://maps.google.com/?q=41.9493756,-87.64979",
+      "ticketUrl": "https://www.chunk-party.com/event-details/chunk-chicago-presents-sausage-party",
+      "shortName": "CHUNK",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.chunk-party.com/event-details/chunk-chicago-presents-sausage-party",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/chunkparty",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://maps.google.com/?q=41.9493756,-87.64979",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.chunk-party.com/event-details/chunk-chicago-presents-sausage-party",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "chunk-chicago-presents-sausage-party-55be49fe"
+    },
+    {
+      "name": "Belly Up",
+      "day": "Saturday",
+      "time": "9PM-5AM",
+      "eventType": "monthly",
+      "recurring": true,
+      "recurrence": "FREQ=MONTHLY;BYDAY=1SA",
+      "coordinates": {
+        "lat": 41.9983961,
+        "lng": -87.6709779
+      },
+      "startDate": "2025-09-06T21:00:00",
+      "endDate": "2025-09-07T05:00:00",
+      "unprocessedDescription": "tea: 🎧 Live DJs and Dancers bringing the energy\ncover: Before\r 10pm\\: FREE, 10pm-2\\:30am\\: $10, 2\\:30am-Last call\\: $5\nbar: Jackhammer\naddress: 6406 N Clark St, Chicago, IL 60626\nuid: qo8nfeeu512fe74ng1o3jmoqt0@google.com\nwebsite: https://jackhammerchicago.com/belly-up\nfacebook: https://www.facebook.com/chijackhammer/events\ngmaps: https://maps.app.goo.gl/Groc2oBnZyjMU2cJA",
+      "startTimezone": "America/Chicago",
+      "endTimezone": "America/Chicago",
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": false,
+      "sourceUid": "qo8nfeeu512fe74ng1o3jmoqt0@google.com",
+      "uid": "qo8nfeeu512fe74ng1o3jmoqt0@google.com",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 2,
+      "overrideIdentityType": null,
+      "bar": "Jackhammer",
+      "cover": "Before 10pm: FREE, 10pm-2:30am: $10, 2:30am-Last call: $5",
+      "tea": "🎧 Live DJs and Dancers bringing the energy",
+      "address": "6406 N Clark St, Chicago, IL 60626",
+      "website": "https://jackhammerchicago.com/belly-up",
+      "facebook": "https://www.facebook.com/chijackhammer/events",
+      "gmaps": "https://maps.app.goo.gl/Groc2oBnZyjMU2cJA",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://jackhammerchicago.com/belly-up",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/chijackhammer/events",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://maps.app.goo.gl/Groc2oBnZyjMU2cJA",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "belly-up-3e6c6e9e"
+    },
+    {
+      "name": "Furball Market Days",
+      "day": "Friday",
+      "time": "10:30PM-4AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9498139,
+        "lng": -87.6588771
+      },
+      "startDate": "2025-08-08T22:30:00",
+      "endDate": "2025-08-09T04:00:00",
+      "unprocessedDescription": "Google Maps: https://maps.app.goo.gl/Gwxy5yMhZhZFEfsBA?g_st=ipc\r\nWebsite: https://www.furball.nyc/\nCover: ~$30\nBar: Metro\nShort: Furball\nShorter: FUR\naddress: 3728 N Clark St, Chicago, IL 60613\naddressSource: inferred",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "anpebtqveq4fqmniffj10p0j5o@google.com",
+      "uid": "anpebtqveq4fqmniffj10p0j5o@google.com",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Metro",
+      "cover": "~$30",
+      "address": "3728 N Clark St, Chicago, IL 60613",
+      "website": "https://www.furball.nyc/",
+      "gmaps": "https://maps.app.goo.gl/Gwxy5yMhZhZFEfsBA?g_st=ipc",
+      "shortName": "Furball",
+      "shorterName": "FUR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.furball.nyc/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://maps.app.goo.gl/Gwxy5yMhZhZFEfsBA?g_st=ipc",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "furball-market-days-78310803"
+    },
+    {
       "name": "Market Day 1",
       "day": "Friday",
       "time": "5PM-10PM",
@@ -64,127 +334,6 @@
         }
       ],
       "slug": "market-day-1-35c3f1a2"
-    },
-    {
-      "name": "FURBALL CHICAGO MARKET DAYS",
-      "day": "Friday",
-      "time": "10:30PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 41.9497837,
-        "lng": -87.6590034
-      },
-      "startDate": "2026-08-07T22:30:00",
-      "unprocessedDescription": "bar: Metro\naddress: 3730 N CLARK ST\ntimezone: America/Chicago\r\nticketUrl: https://www.etix.com/ticket/p/54403374/?partner_id=100&_gl=1*1bmryzt*_ga*MTI5NjI5MTA1OS4xNzgzNzA5NzI5*_ga_Z3MV4KFJMN*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGgxNzA5NTE2OTA5*_ga_DSG080VB8M*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGg3NjY5MDM0NTA.*_ga_68TT1Q537T*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGg5NTk4NTE2Njg.*_ga_MCR6RT8ZB7*czE3ODM3MDk3MzAkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGgw&_ga=2.96391708.1430242853.1783709730-1296291059.1783709729\ninstagram: https://instagram.com/furballnyc/\nshortName: FUR-BALL\nfavicon: https://linktr.ee/furballnyc\nwebsite: https://www.furball.nyc\nbearSource: keyword\nkey: furball-chicago|2026-08-08|metro\ndescription: MUSIC\nJESSE MERCADO\n(CHICAGO)\nTONY MORAN\nimage: https://static.wixstatic.com/media/238fae_166133fdfd194d6aa28343c55418296e~mv2.jpg/v1/fill/w_296,h_494,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_166133fdfd194d6aa28343c55418296e~mv2.jpg\npinSource: geocoded-exact\naddressSource: page\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/search/?api=1&query=Metro%2C%203730%20N%20CLARK%20ST",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Chicago",
-      "wasUTC": true,
-      "sourceUid": "33540850-F538-4592-BB59-A8A672F2F796",
-      "uid": "33540850-F538-4592-BB59-A8A672F2F796",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Metro",
-      "image": "https://static.wixstatic.com/media/238fae_166133fdfd194d6aa28343c55418296e~mv2.jpg/v1/fill/w_296,h_494,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_166133fdfd194d6aa28343c55418296e~mv2.jpg",
-      "favicon": "https://linktr.ee/furballnyc",
-      "tea": "MUSIC",
-      "address": "3730 N CLARK ST",
-      "website": "https://www.furball.nyc",
-      "instagram": "https://instagram.com/furballnyc/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Metro%2C%203730%20N%20CLARK%20ST",
-      "ticketUrl": "https://www.etix.com/ticket/p/54403374/?partner_id=100&_gl=1*1bmryzt*_ga*MTI5NjI5MTA1OS4xNzgzNzA5NzI5*_ga_Z3MV4KFJMN*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGgxNzA5NTE2OTA5*_ga_DSG080VB8M*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGg3NjY5MDM0NTA.*_ga_68TT1Q537T*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGg5NTk4NTE2Njg.*_ga_MCR6RT8ZB7*czE3ODM3MDk3MzAkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGgw&_ga=2.96391708.1430242853.1783709730-1296291059.1783709729",
-      "shortName": "FUR-BALL",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.furball.nyc",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://instagram.com/furballnyc/",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Metro%2C%203730%20N%20CLARK%20ST",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.etix.com/ticket/p/54403374/?partner_id=100&_gl=1*1bmryzt*_ga*MTI5NjI5MTA1OS4xNzgzNzA5NzI5*_ga_Z3MV4KFJMN*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGgxNzA5NTE2OTA5*_ga_DSG080VB8M*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGg3NjY5MDM0NTA.*_ga_68TT1Q537T*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGg5NTk4NTE2Njg.*_ga_MCR6RT8ZB7*czE3ODM3MDk3MzAkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGgw&_ga=2.96391708.1430242853.1783709730-1296291059.1783709729",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "furball-chicago-market-days-4ca14ebb"
-    },
-    {
-      "name": "Bearracuda Chicago Jockstrap Party: Tix at the DOOR",
-      "day": "Friday",
-      "time": "9PM-4AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 41.9984139,
-        "lng": -87.6710111
-      },
-      "startDate": "2025-08-29T21:00:00",
-      "endDate": "2025-08-30T04:00:00",
-      "unprocessedDescription": "description: Music & Entertainment\n• DJ Tim Arnold (Main Floor\r)\n• REDUX (The HOLE)\nbar: The Jackhammer Complex\naddress: 6406 N Clark St, Chicago, IL 60626\ntimezone: America/Chicago\nurl: https://bearracuda.com/events/chicagoaug/\ncover: $19.24 - $24.89 (as of 8/29)\nimage: https://bearracuda.com/wp-content/uploads/2025/04/chicagoaugustweb.jpg\nfacebook: https://www.facebook.com/events/1227123952423945/\nticketUrl: https://www.eventbrite.com/e/bearracuda-chicago-labor-day-jockstrap-party-tickets-1412963053529?aff=oddtdtcreator\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://maps.google.com/?q=41.99842,-87.67112\nkey: bearracuda-2025-08-30-chicago\npinSource: curated",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Chicago",
-      "wasUTC": true,
-      "sourceUid": "EA39ACFC-8AE4-4766-9C7C-C310633622D9",
-      "uid": "EA39ACFC-8AE4-4766-9C7C-C310633622D9",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "The Jackhammer Complex",
-      "cover": "$19.24 - $24.89 (as of 8/29)",
-      "image": "https://bearracuda.com/wp-content/uploads/2025/04/chicagoaugustweb.jpg",
-      "tea": "Music & Entertainment",
-      "address": "6406 N Clark St, Chicago, IL 60626",
-      "website": "https://bearracuda.com/events/chicagoaug/",
-      "instagram": "https://www.instagram.com/bearracuda",
-      "facebook": "https://www.facebook.com/events/1227123952423945/",
-      "gmaps": "https://maps.google.com/?q=41.99842,-87.67112",
-      "ticketUrl": "https://www.eventbrite.com/e/bearracuda-chicago-labor-day-jockstrap-party-tickets-1412963053529?aff=oddtdtcreator",
-      "shortName": "Bear-rac-uda",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://bearracuda.com/events/chicagoaug/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearracuda",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "facebook",
-          "url": "https://www.facebook.com/events/1227123952423945/",
-          "label": "📘 Facebook"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://maps.google.com/?q=41.99842,-87.67112",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/bearracuda-chicago-labor-day-jockstrap-party-tickets-1412963053529?aff=oddtdtcreator",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "bearracuda-chicago-jockstrap-party-tix-at-the-door-17cea9ba"
     },
     {
       "name": "CHUNK Chicago - September 19th",
@@ -245,51 +394,6 @@
       "slug": "chunk-chicago-september-19th-7764acee"
     },
     {
-      "name": "Furball Market Days",
-      "day": "Friday",
-      "time": "10:30PM-4AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 41.9498139,
-        "lng": -87.6588771
-      },
-      "startDate": "2025-08-08T22:30:00",
-      "endDate": "2025-08-09T04:00:00",
-      "unprocessedDescription": "Google Maps: https://maps.app.goo.gl/Gwxy5yMhZhZFEfsBA?g_st=ipc\r\nWebsite: https://www.furball.nyc/\nCover: ~$30\nBar: Metro\nShort: Furball\nShorter: FUR\naddress: 3728 N Clark St, Chicago, IL 60613\naddressSource: inferred",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Chicago",
-      "wasUTC": true,
-      "sourceUid": "anpebtqveq4fqmniffj10p0j5o@google.com",
-      "uid": "anpebtqveq4fqmniffj10p0j5o@google.com",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Metro",
-      "cover": "~$30",
-      "address": "3728 N Clark St, Chicago, IL 60613",
-      "website": "https://www.furball.nyc/",
-      "gmaps": "https://maps.app.goo.gl/Gwxy5yMhZhZFEfsBA?g_st=ipc",
-      "shortName": "Furball",
-      "shorterName": "FUR",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.furball.nyc/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://maps.app.goo.gl/Gwxy5yMhZhZFEfsBA?g_st=ipc",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "furball-market-days-78310803"
-    },
-    {
       "name": "Bear Happy Hour",
       "day": "Thursday",
       "time": "5PM-9PM",
@@ -329,6 +433,109 @@
         }
       ],
       "slug": "bear-happy-hour-50e80e42"
+    },
+    {
+      "name": "GOLDILOXX Chicago | NYC's Interactive Nightlife Experience at Jackh\rammer",
+      "day": "Saturday",
+      "time": "9PM-5AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9984139,
+        "lng": -87.6710111
+      },
+      "startDate": "2026-09-19T21:00:00",
+      "endDate": "2026-09-20T05:00:00",
+      "unprocessedDescription": "description: NYC's GOLDILOXX arrives in Chicago for a unique ni\rghtlife experience featuring two floors, color-coded social interaction, DJs from NYC and Chicago, go-go dancers, and nonstop energy until sunrise.\nbar: Jackhammer\naddress: 6406 North Clark Street, Chicago, IL, 60626\nticketUrl: https://www.sickening.events/e/goldiloxx-chicago/tickets\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782170656/saas/logos/image_1782170650341_uohz6tayi.webp\nimageSource: jsonld\ncover: $10-$25\ntimezone: America/Chicago\nbarSource: curated\nshortName: GOLDI-LOXX\nshorterName: GLX\ninstagram: https://www.instagram.com/goldiloxx__\naddressSource: page\nwebsite: https://sickening.events/e/goldiloxx-chicago\ngmaps: https://www.google.com/maps/search/?api=1&query=Jackhammer%2C%206406%20North%20Clark%20Street%2C%20Chicago%2C%20IL%2C%2060626\npinSource: curated",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "AB28FF11-DCBB-4A7E-BA13-2CA5074BEF3A",
+      "uid": "AB28FF11-DCBB-4A7E-BA13-2CA5074BEF3A",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Jackhammer",
+      "cover": "$10-$25",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782170656/saas/logos/image_1782170650341_uohz6tayi.webp",
+      "tea": "NYC's GOLDILOXX arrives in Chicago for a unique nightlife experience featuring two floors, color-coded social interaction, DJs from NYC and Chicago, go-go dancers, and nonstop energy until sunrise.",
+      "address": "6406 North Clark Street, Chicago, IL, 60626",
+      "website": "https://sickening.events/e/goldiloxx-chicago",
+      "instagram": "https://www.instagram.com/goldiloxx__",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Jackhammer%2C%206406%20North%20Clark%20Street%2C%20Chicago%2C%20IL%2C%2060626",
+      "ticketUrl": "https://www.sickening.events/e/goldiloxx-chicago/tickets",
+      "shortName": "GOLDI-LOXX",
+      "shorterName": "GLX",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://sickening.events/e/goldiloxx-chicago",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/goldiloxx__",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Jackhammer%2C%206406%20North%20Clark%20Street%2C%20Chicago%2C%20IL%2C%2060626",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/goldiloxx-chicago/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "goldiloxx-chicago-nycs-interactive-nightlife-experience-at-jackh-ammer-7c2b222b"
+    },
+    {
+      "name": "Market Day 3",
+      "day": "Sunday",
+      "time": "11AM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9436009,
+        "lng": -87.6494458
+      },
+      "startDate": "2025-08-10T11:00:00",
+      "endDate": "2025-08-10T22:00:00",
+      "unprocessedDescription": "Website: <a href=\"https://northalsted.com/main-events/northalst\red-market-days/\" target=\"_blank\">https://northalsted.com/main-events/northalsted-market-days/</a><br>Tea: Live music street festival with a queer focus. Sunday’s top artists are David Archuleta, Joe Dombrowski, and Sasha Colby. See the website for more artists and entry info.<br>Instagram: <a href=\"https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1\" target=\"_blank\">https://www.instagram.com/marketdayschicago</a><br>Cover: $20 suggested donation<br>Maps: <a href=\"https://maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st=ipc\" target=\"_blank\">https://maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st=ipc</a><br>Bar: Halsted St. from Belmont to Addison\naddress: 801–817 W Roscoe St, Chicago, IL 60657\naddressSource: inferred",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "1bs4hde34sb2o62dtr2sl85ild@google.com",
+      "uid": "1bs4hde34sb2o62dtr2sl85ild@google.com",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 1,
+      "overrideIdentityType": null,
+      "bar": "Halsted St. from Belmont to Addison",
+      "cover": "$20 suggested donation",
+      "tea": "Live music street festival with a queer focus. Sunday’s top artists are David Archuleta, Joe Dombrowski, and Sasha Colby. See the website for more artists and entry info.",
+      "address": "801–817 W Roscoe St, Chicago, IL 60657",
+      "website": "https://northalsted.com/main-events/northalsted-market-days/",
+      "instagram": "https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://northalsted.com/main-events/northalsted-market-days/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1",
+          "label": "📷 Instagram"
+        }
+      ],
+      "slug": "market-day-3-691a9a51"
     },
     {
       "name": "MEGAWOOF CHICAGO - JULY - BEARWATCH",
@@ -447,6 +654,50 @@
       "slug": "coach-after-dark-market-days-1945e994"
     },
     {
+      "name": "Market Day 2",
+      "day": "Saturday",
+      "time": "11AM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.9436009,
+        "lng": -87.6494458
+      },
+      "startDate": "2025-08-09T11:00:00",
+      "endDate": "2025-08-09T22:00:00",
+      "unprocessedDescription": "Website: <a href=\"https://northalsted.com/main-events/northalst\red-market-days/\" target=\"_blank\">https://northalsted.com/main-events/northalsted-market-days/</a><br>Tea: Live music street festival with a queer focus. Saturday’s top artists are Keke Palmer, Keisha, Same Star, and Brooke Eden. See the website for more artists and entry info.<br>Instagram: <a href=\"https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1\" target=\"_blank\">https://www.instagram.com/marketdayschicago</a><br>Cover: $20 suggested donation<br>Maps: <a href=\"https://maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st=ipc\" target=\"_blank\">https://maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st=ipc</a><br>Bar: Halsted St. from Belmont to Addison\naddress: 801–817 W Roscoe St, Chicago, IL 60657\naddressSource: inferred",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "0nfdrio58lobhrsarq4dgge2p7@google.com",
+      "uid": "0nfdrio58lobhrsarq4dgge2p7@google.com",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Halsted St. from Belmont to Addison",
+      "cover": "$20 suggested donation",
+      "tea": "Live music street festival with a queer focus. Saturday’s top artists are Keke Palmer, Keisha, Same Star, and Brooke Eden. See the website for more artists and entry info.",
+      "address": "801–817 W Roscoe St, Chicago, IL 60657",
+      "website": "https://northalsted.com/main-events/northalsted-market-days/",
+      "instagram": "https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://northalsted.com/main-events/northalsted-market-days/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1",
+          "label": "📷 Instagram"
+        }
+      ],
+      "slug": "market-day-2-115ee9f1"
+    },
+    {
       "name": "Coach After Dark: Chicago",
       "day": "Saturday",
       "time": "9PM-5AM",
@@ -499,43 +750,44 @@
       "slug": "coach-after-dark-chicago-78fe7aea"
     },
     {
-      "name": "Treasure Trail Chicago",
-      "day": "Saturday",
-      "time": "9PM-3AM",
+      "name": "Bearracuda Chicago Jockstrap Party: Tix at the DOOR",
+      "day": "Friday",
+      "time": "9PM-4AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
-        "lat": 41.9493268,
-        "lng": -87.6498756
+        "lat": 41.9984139,
+        "lng": -87.6710111
       },
-      "startDate": "2026-07-25T21:00:00",
-      "endDate": "2026-07-26T03:00:00",
-      "unprocessedDescription": "description: Saturday, July 25th, 2026 Doors at 9pm, Party t\ril LATEClothes Check encouraged3702 N. HalstedSteamy Go-Go&rsquo;s, Heavy CruisingHard Sounds by KNOCKTOPUSS Hosted byJP Hardy➲➲https\\://www.jphardyofficial.comThe Pacific Northwest's TREASURE TRAIL makes it's Chicago Debut. Grab a wristband when you walk in\\: Red Wristband TOP Blue Wristband VERS Green Wristband BOTTOM White Wristband SIDE You are free to change your mind (or go without a wristband) when you arrive.\nbar: Cell Block\naddress: 3702 N Halsted St, Chicago, IL 60613\ntimezone: America/Chicago\ninstagram: https://www.instagram.com/bearracuda\nimage: https://bearracuda.com/wp-content/uploads/2026/05/45-3.png\nshortName: TREAS-URE TRAIL\nwebsite: https://bearracuda.com/\nbearSource: ai\nkey: treasure-trail-chicago|2026-07-26|cell block\nticketUrl: https://www.sickening.events/e/treasurechi/tickets\ncover: $15-$30\npinSource: curated\naddressSource: curated\nimageSource: og-image\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Cell%20Block%2C%203702%20N%20Halsted%20St%2C%20Chicago%2C%20IL%2060613",
+      "startDate": "2025-08-29T21:00:00",
+      "endDate": "2025-08-30T04:00:00",
+      "unprocessedDescription": "description: Music & Entertainment\n• DJ Tim Arnold (Main Floor\r)\n• REDUX (The HOLE)\nbar: The Jackhammer Complex\naddress: 6406 N Clark St, Chicago, IL 60626\ntimezone: America/Chicago\nurl: https://bearracuda.com/events/chicagoaug/\ncover: $19.24 - $24.89 (as of 8/29)\nimage: https://bearracuda.com/wp-content/uploads/2025/04/chicagoaugustweb.jpg\nfacebook: https://www.facebook.com/events/1227123952423945/\nticketUrl: https://www.eventbrite.com/e/bearracuda-chicago-labor-day-jockstrap-party-tickets-1412963053529?aff=oddtdtcreator\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://maps.google.com/?q=41.99842,-87.67112\nkey: bearracuda-2025-08-30-chicago\npinSource: curated",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Chicago",
       "wasUTC": true,
-      "sourceUid": "3F2449DC-4869-4062-AF4B-F646ED20E976",
-      "uid": "3F2449DC-4869-4062-AF4B-F646ED20E976",
+      "sourceUid": "EA39ACFC-8AE4-4766-9C7C-C310633622D9",
+      "uid": "EA39ACFC-8AE4-4766-9C7C-C310633622D9",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "Cell Block",
-      "cover": "$15-$30",
-      "image": "https://bearracuda.com/wp-content/uploads/2026/05/45-3.png",
-      "tea": "Saturday, July 25th, 2026 Doors at 9pm, Party til LATEClothes Check encouraged3702 N. HalstedSteamy Go-Go&rsquo;s, Heavy CruisingHard Sounds by KNOCKTOPUSS Hosted byJP Hardy➲➲https://www.jphardyofficial.comThe Pacific Northwest's TREASURE TRAIL makes it's Chicago Debut. Grab a wristband when you walk in: Red Wristband TOP Blue Wristband VERS Green Wristband BOTTOM White Wristband SIDE You are free to change your mind (or go without a wristband) when you arrive.",
-      "address": "3702 N Halsted St, Chicago, IL 60613",
-      "website": "https://bearracuda.com/",
+      "bar": "The Jackhammer Complex",
+      "cover": "$19.24 - $24.89 (as of 8/29)",
+      "image": "https://bearracuda.com/wp-content/uploads/2025/04/chicagoaugustweb.jpg",
+      "tea": "Music & Entertainment",
+      "address": "6406 N Clark St, Chicago, IL 60626",
+      "website": "https://bearracuda.com/events/chicagoaug/",
       "instagram": "https://www.instagram.com/bearracuda",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Cell%20Block%2C%203702%20N%20Halsted%20St%2C%20Chicago%2C%20IL%2060613",
-      "ticketUrl": "https://www.sickening.events/e/treasurechi/tickets",
-      "shortName": "TREAS-URE TRAIL",
+      "facebook": "https://www.facebook.com/events/1227123952423945/",
+      "gmaps": "https://maps.google.com/?q=41.99842,-87.67112",
+      "ticketUrl": "https://www.eventbrite.com/e/bearracuda-chicago-labor-day-jockstrap-party-tickets-1412963053529?aff=oddtdtcreator",
+      "shortName": "Bear-rac-uda",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://bearracuda.com/",
+          "url": "https://bearracuda.com/events/chicagoaug/",
           "label": "🌐 Website"
         },
         {
@@ -544,156 +796,22 @@
           "label": "📷 Instagram"
         },
         {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Cell%20Block%2C%203702%20N%20Halsted%20St%2C%20Chicago%2C%20IL%2060613",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.sickening.events/e/treasurechi/tickets",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "treasure-trail-chicago-2519d1b9"
-    },
-    {
-      "name": "Market Day 3",
-      "day": "Sunday",
-      "time": "11AM-10PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 41.9436009,
-        "lng": -87.6494458
-      },
-      "startDate": "2025-08-10T11:00:00",
-      "endDate": "2025-08-10T22:00:00",
-      "unprocessedDescription": "Website: <a href=\"https://northalsted.com/main-events/northalst\red-market-days/\" target=\"_blank\">https://northalsted.com/main-events/northalsted-market-days/</a><br>Tea: Live music street festival with a queer focus. Sunday’s top artists are David Archuleta, Joe Dombrowski, and Sasha Colby. See the website for more artists and entry info.<br>Instagram: <a href=\"https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1\" target=\"_blank\">https://www.instagram.com/marketdayschicago</a><br>Cover: $20 suggested donation<br>Maps: <a href=\"https://maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st=ipc\" target=\"_blank\">https://maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st=ipc</a><br>Bar: Halsted St. from Belmont to Addison\naddress: 801–817 W Roscoe St, Chicago, IL 60657\naddressSource: inferred",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Chicago",
-      "wasUTC": true,
-      "sourceUid": "1bs4hde34sb2o62dtr2sl85ild@google.com",
-      "uid": "1bs4hde34sb2o62dtr2sl85ild@google.com",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 1,
-      "overrideIdentityType": null,
-      "bar": "Halsted St. from Belmont to Addison",
-      "cover": "$20 suggested donation",
-      "tea": "Live music street festival with a queer focus. Sunday’s top artists are David Archuleta, Joe Dombrowski, and Sasha Colby. See the website for more artists and entry info.",
-      "address": "801–817 W Roscoe St, Chicago, IL 60657",
-      "website": "https://northalsted.com/main-events/northalsted-market-days/",
-      "instagram": "https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://northalsted.com/main-events/northalsted-market-days/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1",
-          "label": "📷 Instagram"
-        }
-      ],
-      "slug": "market-day-3-691a9a51"
-    },
-    {
-      "name": "Belly Up",
-      "day": "Saturday",
-      "time": "9PM-5AM",
-      "eventType": "monthly",
-      "recurring": true,
-      "recurrence": "FREQ=MONTHLY;BYDAY=1SA",
-      "coordinates": {
-        "lat": 41.9983961,
-        "lng": -87.6709779
-      },
-      "startDate": "2025-09-06T21:00:00",
-      "endDate": "2025-09-07T05:00:00",
-      "unprocessedDescription": "tea: 🎧 Live DJs and Dancers bringing the energy\ncover: Before\r 10pm\\: FREE, 10pm-2\\:30am\\: $10, 2\\:30am-Last call\\: $5\nbar: Jackhammer\naddress: 6406 N Clark St, Chicago, IL 60626\nuid: qo8nfeeu512fe74ng1o3jmoqt0@google.com\nwebsite: https://jackhammerchicago.com/belly-up\nfacebook: https://www.facebook.com/chijackhammer/events\ngmaps: https://maps.app.goo.gl/Groc2oBnZyjMU2cJA",
-      "startTimezone": "America/Chicago",
-      "endTimezone": "America/Chicago",
-      "calendarTimezone": "America/Chicago",
-      "wasUTC": false,
-      "sourceUid": "qo8nfeeu512fe74ng1o3jmoqt0@google.com",
-      "uid": "qo8nfeeu512fe74ng1o3jmoqt0@google.com",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 2,
-      "overrideIdentityType": null,
-      "bar": "Jackhammer",
-      "cover": "Before 10pm: FREE, 10pm-2:30am: $10, 2:30am-Last call: $5",
-      "tea": "🎧 Live DJs and Dancers bringing the energy",
-      "address": "6406 N Clark St, Chicago, IL 60626",
-      "website": "https://jackhammerchicago.com/belly-up",
-      "facebook": "https://www.facebook.com/chijackhammer/events",
-      "gmaps": "https://maps.app.goo.gl/Groc2oBnZyjMU2cJA",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://jackhammerchicago.com/belly-up",
-          "label": "🌐 Website"
-        },
-        {
           "type": "facebook",
-          "url": "https://www.facebook.com/chijackhammer/events",
+          "url": "https://www.facebook.com/events/1227123952423945/",
           "label": "📘 Facebook"
         },
         {
           "type": "gmaps",
-          "url": "https://maps.app.goo.gl/Groc2oBnZyjMU2cJA",
+          "url": "https://maps.google.com/?q=41.99842,-87.67112",
           "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "belly-up-3e6c6e9e"
-    },
-    {
-      "name": "Market Day 2",
-      "day": "Saturday",
-      "time": "11AM-10PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 41.9436009,
-        "lng": -87.6494458
-      },
-      "startDate": "2025-08-09T11:00:00",
-      "endDate": "2025-08-09T22:00:00",
-      "unprocessedDescription": "Website: <a href=\"https://northalsted.com/main-events/northalst\red-market-days/\" target=\"_blank\">https://northalsted.com/main-events/northalsted-market-days/</a><br>Tea: Live music street festival with a queer focus. Saturday’s top artists are Keke Palmer, Keisha, Same Star, and Brooke Eden. See the website for more artists and entry info.<br>Instagram: <a href=\"https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1\" target=\"_blank\">https://www.instagram.com/marketdayschicago</a><br>Cover: $20 suggested donation<br>Maps: <a href=\"https://maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st=ipc\" target=\"_blank\">https://maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st=ipc</a><br>Bar: Halsted St. from Belmont to Addison\naddress: 801–817 W Roscoe St, Chicago, IL 60657\naddressSource: inferred",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Chicago",
-      "wasUTC": true,
-      "sourceUid": "0nfdrio58lobhrsarq4dgge2p7@google.com",
-      "uid": "0nfdrio58lobhrsarq4dgge2p7@google.com",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Halsted St. from Belmont to Addison",
-      "cover": "$20 suggested donation",
-      "tea": "Live music street festival with a queer focus. Saturday’s top artists are Keke Palmer, Keisha, Same Star, and Brooke Eden. See the website for more artists and entry info.",
-      "address": "801–817 W Roscoe St, Chicago, IL 60657",
-      "website": "https://northalsted.com/main-events/northalsted-market-days/",
-      "instagram": "https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://northalsted.com/main-events/northalsted-market-days/",
-          "label": "🌐 Website"
         },
         {
-          "type": "instagram",
-          "url": "https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1",
-          "label": "📷 Instagram"
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/bearracuda-chicago-labor-day-jockstrap-party-tickets-1412963053529?aff=oddtdtcreator",
+          "label": "🎫 Tickets"
         }
       ],
-      "slug": "market-day-2-115ee9f1"
+      "slug": "bearracuda-chicago-jockstrap-party-tix-at-the-door-17cea9ba"
     },
     {
       "name": "Coach After Dark: Chicago",
@@ -752,120 +870,61 @@
       "slug": "coach-after-dark-chicago-45a4a493"
     },
     {
-      "name": "CHUNK CHICAGO presents SAUSAGE PARTY!",
-      "day": "Saturday",
-      "time": "9PM-3AM",
+      "name": "FURBALL CHICAGO MARKET DAYS",
+      "day": "Friday",
+      "time": "10:30PM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
-        "lat": 41.9493756,
-        "lng": -87.64979
+        "lat": 41.9497837,
+        "lng": -87.6590034
       },
-      "startDate": "2025-10-11T21:00:00",
-      "endDate": "2025-10-12T03:00:00",
-      "unprocessedDescription": "description: BEEF, DADS, BBQ, SAUSAGES, WEINERS - WHATS NOT\r TO LOVE?!? NYC DJ LEGEND DICAP AND CHUNK RESIDENT MR PICKLES HOSTED BY COACH MIKEY HOT GOGO BEARS ALL NIGHT LONG CELL BLOCK // 3702 N HALSTED ST // HEART OF BOYSTOWN // CHICAGO // 9P\nbar: CELL BLOCK\naddress: 3702 N Halsted St, Chicago, IL 60613, USA\ntimezone: America/Chicago\nurl: https://www.chunk-party.com/event-details/chunk-chicago-presents-sausage-party\nticketUrl: https://www.chunk-party.com/event-details/chunk-chicago-presents-sausage-party\ncover: $20.50 - $25.63\nimage: https://static.wixstatic.com/media/42b6cb_356df9ed11594c12b5bb6c45d0661e05~mv2.jpg/v1/fill/w_1874,h_2342,al_c,q_90/42b6cb_356df9ed11594c12b5bb6c45d0661e05~mv2.jpg\nshortName: CHUNK\ninstagram: https://www.instagram.com/chunkparty\ngmaps: https://maps.google.com/?q=41.9493756,-87.64979\nkey: chunk-chicago-presents-sausage-party|2025-10-12|cell block|chunk",
+      "startDate": "2026-08-07T22:30:00",
+      "unprocessedDescription": "bar: Metro\naddress: 3730 N CLARK ST\ntimezone: America/Chicago\r\nticketUrl: https://www.etix.com/ticket/p/54403374/?partner_id=100&_gl=1*1bmryzt*_ga*MTI5NjI5MTA1OS4xNzgzNzA5NzI5*_ga_Z3MV4KFJMN*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGgxNzA5NTE2OTA5*_ga_DSG080VB8M*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGg3NjY5MDM0NTA.*_ga_68TT1Q537T*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGg5NTk4NTE2Njg.*_ga_MCR6RT8ZB7*czE3ODM3MDk3MzAkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGgw&_ga=2.96391708.1430242853.1783709730-1296291059.1783709729\ninstagram: https://instagram.com/furballnyc/\nshortName: FUR-BALL\nfavicon: https://linktr.ee/furballnyc\nwebsite: https://www.furball.nyc\nbearSource: keyword\nkey: furball-chicago|2026-08-08|metro\ndescription: MUSIC\nJESSE MERCADO\n(CHICAGO)\nTONY MORAN\nimage: https://static.wixstatic.com/media/238fae_166133fdfd194d6aa28343c55418296e~mv2.jpg/v1/fill/w_296,h_494,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_166133fdfd194d6aa28343c55418296e~mv2.jpg\npinSource: geocoded-exact\naddressSource: page\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/search/?api=1&query=Metro%2C%203730%20N%20CLARK%20ST",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Chicago",
       "wasUTC": true,
-      "sourceUid": "8E2BF651-F6BA-4564-B5F9-7C014070614B",
-      "uid": "8E2BF651-F6BA-4564-B5F9-7C014070614B",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 1,
-      "overrideIdentityType": null,
-      "bar": "CELL BLOCK",
-      "cover": "$20.50 - $25.63",
-      "image": "https://static.wixstatic.com/media/42b6cb_356df9ed11594c12b5bb6c45d0661e05~mv2.jpg/v1/fill/w_1874,h_2342,al_c,q_90/42b6cb_356df9ed11594c12b5bb6c45d0661e05~mv2.jpg",
-      "tea": "BEEF, DADS, BBQ, SAUSAGES, WEINERS - WHATS NOT TO LOVE?!? NYC DJ LEGEND DICAP AND CHUNK RESIDENT MR PICKLES HOSTED BY COACH MIKEY HOT GOGO BEARS ALL NIGHT LONG CELL BLOCK // 3702 N HALSTED ST // HEART OF BOYSTOWN // CHICAGO // 9P",
-      "address": "3702 N Halsted St, Chicago, IL 60613, USA",
-      "website": "https://www.chunk-party.com/event-details/chunk-chicago-presents-sausage-party",
-      "instagram": "https://www.instagram.com/chunkparty",
-      "gmaps": "https://maps.google.com/?q=41.9493756,-87.64979",
-      "ticketUrl": "https://www.chunk-party.com/event-details/chunk-chicago-presents-sausage-party",
-      "shortName": "CHUNK",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.chunk-party.com/event-details/chunk-chicago-presents-sausage-party",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/chunkparty",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://maps.google.com/?q=41.9493756,-87.64979",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.chunk-party.com/event-details/chunk-chicago-presents-sausage-party",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "chunk-chicago-presents-sausage-party-55be49fe"
-    },
-    {
-      "name": "CHUNK CHICAGO presents SPRING THAW!",
-      "day": "Saturday",
-      "time": "9PM-3AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 41.9493756,
-        "lng": -87.64979
-      },
-      "startDate": "2026-03-21T21:00:00",
-      "endDate": "2026-03-22T03:00:00",
-      "unprocessedDescription": "description: LET'S GO! - DJs DICAP B2B w/ THCKRTANKER and HOLE \rTEA HOT GOGO BEARS all night long! Cell Block 9-3\nbar: Cell Block Chicago\naddress: 3702 N Halsted St, Chicago, IL 60613, USA\ntimezone: America/Chicago\nurl: https://www.chunk-party.com/event-details/chunk-chicago-presents-spring-thaw\nticketUrl: https://www.chunk-party.com/event-details/chunk-chicago-presents-spring-thaw\ncover: $20.50 - $30.75\nimage: https://static.wixstatic.com/media/42b6cb_d962047a65cf4cc092599b13282ae872~mv2.jpg/v1/fill/w_843,h_1303,al_c,q_85/42b6cb_d962047a65cf4cc092599b13282ae872~mv2.jpg\nshortName: CHUNK\ninstagram: https://www.instagram.com/chunkparty\ngmaps: https://www.google.com/maps/search/?api=1&query=Cell%20Block%20Chicago%2C%203702%20N%20Halsted%20St%2C%20Chicago%2C%20IL%2060613%2C%20USA\nkey: chunk-chicago-presents-spring-thaw|2026-03-22|cell block chicago",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Chicago",
-      "wasUTC": true,
-      "sourceUid": "9C1D2EFD-AB1A-4084-A6DF-108E782DD7C8",
-      "uid": "9C1D2EFD-AB1A-4084-A6DF-108E782DD7C8",
+      "sourceUid": "33540850-F538-4592-BB59-A8A672F2F796",
+      "uid": "33540850-F538-4592-BB59-A8A672F2F796",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "Cell Block Chicago",
-      "cover": "$20.50 - $30.75",
-      "image": "https://static.wixstatic.com/media/42b6cb_d962047a65cf4cc092599b13282ae872~mv2.jpg/v1/fill/w_843,h_1303,al_c,q_85/42b6cb_d962047a65cf4cc092599b13282ae872~mv2.jpg",
-      "tea": "LET'S GO! - DJs DICAP B2B w/ THCKRTANKER and HOLE TEA HOT GOGO BEARS all night long! Cell Block 9-3",
-      "address": "3702 N Halsted St, Chicago, IL 60613, USA",
-      "website": "https://www.chunk-party.com/event-details/chunk-chicago-presents-spring-thaw",
-      "instagram": "https://www.instagram.com/chunkparty",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Cell%20Block%20Chicago%2C%203702%20N%20Halsted%20St%2C%20Chicago%2C%20IL%2060613%2C%20USA",
-      "ticketUrl": "https://www.chunk-party.com/event-details/chunk-chicago-presents-spring-thaw",
-      "shortName": "CHUNK",
+      "bar": "Metro",
+      "image": "https://static.wixstatic.com/media/238fae_166133fdfd194d6aa28343c55418296e~mv2.jpg/v1/fill/w_296,h_494,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_166133fdfd194d6aa28343c55418296e~mv2.jpg",
+      "favicon": "https://linktr.ee/furballnyc",
+      "tea": "MUSIC",
+      "address": "3730 N CLARK ST",
+      "website": "https://www.furball.nyc",
+      "instagram": "https://instagram.com/furballnyc/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Metro%2C%203730%20N%20CLARK%20ST",
+      "ticketUrl": "https://www.etix.com/ticket/p/54403374/?partner_id=100&_gl=1*1bmryzt*_ga*MTI5NjI5MTA1OS4xNzgzNzA5NzI5*_ga_Z3MV4KFJMN*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGgxNzA5NTE2OTA5*_ga_DSG080VB8M*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGg3NjY5MDM0NTA.*_ga_68TT1Q537T*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGg5NTk4NTE2Njg.*_ga_MCR6RT8ZB7*czE3ODM3MDk3MzAkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGgw&_ga=2.96391708.1430242853.1783709730-1296291059.1783709729",
+      "shortName": "FUR-BALL",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://www.chunk-party.com/event-details/chunk-chicago-presents-spring-thaw",
+          "url": "https://www.furball.nyc",
           "label": "🌐 Website"
         },
         {
           "type": "instagram",
-          "url": "https://www.instagram.com/chunkparty",
+          "url": "https://instagram.com/furballnyc/",
           "label": "📷 Instagram"
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Cell%20Block%20Chicago%2C%203702%20N%20Halsted%20St%2C%20Chicago%2C%20IL%2060613%2C%20USA",
+          "url": "https://www.google.com/maps/search/?api=1&query=Metro%2C%203730%20N%20CLARK%20ST",
           "label": "🗺️ Google Maps"
         },
         {
           "type": "tickets",
-          "url": "https://www.chunk-party.com/event-details/chunk-chicago-presents-spring-thaw",
+          "url": "https://www.etix.com/ticket/p/54403374/?partner_id=100&_gl=1*1bmryzt*_ga*MTI5NjI5MTA1OS4xNzgzNzA5NzI5*_ga_Z3MV4KFJMN*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGgxNzA5NTE2OTA5*_ga_DSG080VB8M*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGg3NjY5MDM0NTA.*_ga_68TT1Q537T*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGg5NTk4NTE2Njg.*_ga_MCR6RT8ZB7*czE3ODM3MDk3MzAkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGgw&_ga=2.96391708.1430242853.1783709730-1296291059.1783709729",
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "chunk-chicago-presents-spring-thaw-572f1025"
+      "slug": "furball-chicago-market-days-4ca14ebb"
     }
   ]
 }
