@@ -11,6 +11,7 @@ on:
       - '.github/workflows/update-calendar-data.yml'
       - 'tools/generate-event-pages.js'
       - 'tools/process-calendars.js'
+      - 'tools/process-festivals.js'
       - 'tools/generate-og-images.js'
       - 'tools/download-images.js'
       - 'tools/extract-favicon-colors.js'
@@ -165,7 +166,63 @@ jobs:
               );
             }
           }
-          
+
+          // Fetch the festivals calendar (not a city calendar; converted to
+          // data/festivals.json by tools/process-festivals.js). A failure here
+          // (e.g. calendar not public yet -> 404) must not fail the step.
+          const FESTIVALS_CALENDAR_ID = '8ffa89eaf28d762b93e9c18ff5cb7390ee24228acb07b78c0f3cf2abd2025742@group.calendar.google.com';
+          const festivalsConfig = { name: 'Festivals' };
+          console.log('Fetching festivals calendar');
+          const festivalsUrl = `https://calendar.google.com/calendar/ical/${FESTIVALS_CALENDAR_ID}/public/basic.ics`;
+          fetchPromises.push(
+            fetch(festivalsUrl)
+              .then(response => {
+                if (!response.ok) {
+                  throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.text();
+              })
+              .then(icalData => {
+                if (!icalData || !icalData.includes('BEGIN:VCALENDAR')) {
+                  throw new Error('Invalid iCal data received');
+                }
+
+                const normalizedNewData = normalizeICalData(icalData);
+                const newContentHash = getContentHash(normalizedNewData);
+
+                const existingFilePath = 'data/calendars/festivals.ics';
+                let hasChanged = true;
+
+                if (fs.existsSync(existingFilePath)) {
+                  const existingData = fs.readFileSync(existingFilePath, 'utf8');
+                  const existingContentHash = getContentHash(normalizeICalData(existingData));
+
+                  hasChanged = newContentHash !== existingContentHash;
+
+                  if (hasChanged) {
+                    console.log(`📝 Content changed for ${festivalsConfig.name}`);
+                    hasActualChanges = true;
+                  } else {
+                    console.log(`⏭️  No content changes for ${festivalsConfig.name}`);
+                  }
+                } else {
+                  console.log(`🆕 New calendar file for ${festivalsConfig.name}`);
+                  hasActualChanges = true;
+                }
+
+                if (hasChanged) {
+                  fs.writeFileSync(existingFilePath, icalData);
+                  console.log(`✓ Saved calendar data for ${festivalsConfig.name}: ${icalData.length} characters`);
+                }
+
+                return { cityKey: 'festivals', config: festivalsConfig, icalData, hasChanged };
+              })
+              .catch(error => {
+                console.log(`⚠️  Festivals calendar fetch failed (not public yet?): ${error.message}`);
+                return { cityKey: 'festivals', config: festivalsConfig, error: error.message, hasChanged: false };
+              })
+          );
+
           // Wait for all fetches to complete
           Promise.all(fetchPromises)
             .then(results => {
@@ -240,13 +297,19 @@ jobs:
         run: |
           node tools/process-calendars.js
 
+      - name: Process festivals into JSON
+        run: |
+          node tools/process-festivals.js
+
       - name: Commit updated calendar data
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "Calendar Update Bot"
-          
-          # Add all calendar data files
+
+          # Add all calendar data files (festivals.ics is under data/calendars/;
+          # data/festivals.json is produced by tools/process-festivals.js)
           git add data/calendars/
+          git add data/festivals.json
           
           # Check if there are changes to commit
           if git diff --staged --quiet; then
