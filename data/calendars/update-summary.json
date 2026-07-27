@@ -42,6 +42,12 @@
       "dataLength": 7111,
       "eventCount": 6
     },
+    "festivals": {
+      "name": "Festivals",
+      "status": "success",
+      "dataLength": 199,
+      "eventCount": 0
+    },
     "la": {
       "name": "Los Angeles",
       "status": "success",
