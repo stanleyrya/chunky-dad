@@ -1,0 +1,311 @@
+BEGIN:VCALENDAR
+PRODID:-//chunky.dad//festivals-seed//EN
+VERSION:2.0
+CALSCALE:GREGORIAN
+X-WR-CALNAME:chunky.dad festivals
+BEGIN:VEVENT
+UID:festival-lazy-bear-week@chunky.dad
+DTSTAMP:20260727T000000Z
+DTSTART;VALUE=DATE:20260727
+DTEND;VALUE=DATE:20260804
+SUMMARY:Lazy Bear Week
+LOCATION:Guerneville\, CA (Russian River)
+DESCRIPTION:key: lazy-bear-week\ncategory: bear-run\nwebsite: https://www.l
+ azybearfund.org/events\ninstagram: https://www.instagram.com/lazybear_offi
+ cial/\ntypicalTiming: late July into early August\nrecurring: annual
+END:VEVENT
+BEGIN:VEVENT
+UID:festival-southern-decadence@chunky.dad
+DTSTAMP:20260727T000000Z
+DTSTART;VALUE=DATE:20260903
+DTEND;VALUE=DATE:20260908
+SUMMARY:Southern Decadence
+LOCATION:New Orleans\, LA (French Quarter)
+DESCRIPTION:key: southern-decadence\ncategory: festival\ncityKey: nola\nweb
+ site: https://www.southerndecadence.com/\ntypicalTiming: Labor Day weekend
+  (Thursday through Monday\, early September)\nrecurring: annual
+END:VEVENT
+BEGIN:VEVENT
+UID:festival-bears-sitges-week@chunky.dad
+DTSTAMP:20260727T000000Z
+DTSTART;VALUE=DATE:20260904
+DTEND;VALUE=DATE:20260914
+SUMMARY:Bears Sitges Week
+LOCATION:Sitges\, Spain
+DESCRIPTION:key: bears-sitges-week\ncategory: bear-run\ncityKey: sitges\nwe
+ bsite: https://bearssitges.org/\ntypicalTiming: first two weekends of Sept
+ ember\nrecurring: annual
+END:VEVENT
+BEGIN:VEVENT
+UID:festival-folsom-europe@chunky.dad
+DTSTAMP:20260727T000000Z
+DTSTART;VALUE=DATE:20260910
+DTEND;VALUE=DATE:20260914
+SUMMARY:Folsom Europe
+LOCATION:Berlin\, Germany (Schoeneberg)
+DESCRIPTION:key: folsom-europe\ncategory: kink\ncityKey: berlin\nwebsite: h
+ ttps://folsomeurope.berlin/\ninstagram: https://www.instagram.com/folsomeu
+ rope/\ntypicalTiming: second weekend of September\nrecurring: annual
+END:VEVENT
+BEGIN:VEVENT
+UID:festival-urban-bear-nyc@chunky.dad
+DTSTAMP:20260727T000000Z
+DTSTART;VALUE=DATE:20260917
+DTEND;VALUE=DATE:20260921
+SUMMARY:Urban Bear NYC
+LOCATION:New York\, NY
+DESCRIPTION:key: urban-bear-nyc\ncategory: bear-run\ncityKey: nyc\nwebsite:
+  https://www.theurbanbear.com/urbanbearnyc\ninstagram: https://www.instagr
+ am.com/urbanbearnyc/\ntypicalTiming: mid-September\nrecurring: annual
+END:VEVENT
+BEGIN:VEVENT
+UID:festival-folsom-street-fair@chunky.dad
+DTSTAMP:20260727T000000Z
+DTSTART;VALUE=DATE:20260927
+DTEND;VALUE=DATE:20260928
+SUMMARY:Folsom Street Fair
+LOCATION:San Francisco\, CA (SoMa)
+DESCRIPTION:key: folsom-street-fair\ncategory: kink\ncityKey: sf\nwebsite: 
+ https://www.folsomstreet.org/\ninstagram: https://www.instagram.com/folsom
+ street/\ntypicalTiming: last Sunday of September\nrecurring: annual
+END:VEVENT
+BEGIN:VEVENT
+UID:festival-spooky-bear@chunky.dad
+DTSTAMP:20260727T000000Z
+DTSTART;VALUE=DATE:20261029
+DTEND;VALUE=DATE:20261102
+SUMMARY:Spooky Bear
+LOCATION:Provincetown\, MA
+DESCRIPTION:key: spooky-bear\ncategory: bear-run\ncityKey: ptown\nwebsite: 
+ https://www.ursamen.org/spookybear\ninstagram: https://www.instagram.com/n
+ e.ursamen\ntypicalTiming: late October (Halloween weekend)\nrecurring: ann
+ ual
+END:VEVENT
+BEGIN:VEVENT
+UID:festival-mad-bear-madrid@chunky.dad
+DTSTAMP:20260727T000000Z
+DTSTART;VALUE=DATE:20261203
+DTEND;VALUE=DATE:20261210
+SUMMARY:Mad.Bear Madrid
+LOCATION:Madrid\, Spain
+DESCRIPTION:key: mad-bear-madrid\ncategory: bear-run\ncityKey: madrid\nwebs
+ ite: https://madbear.org/en\ninstagram: https://www.instagram.com/madbear_
+ spain/\ntypicalTiming: early December (around Constitution Day holiday wee
+ k)\nrecurring: annual
+END:VEVENT
+BEGIN:VEVENT
+UID:festival-hibearnation@chunky.dad
+DTSTAMP:20260727T000000Z
+DTSTART;VALUE=DATE:20270121
+DTEND;VALUE=DATE:20270125
+SUMMARY:HiBearNation
+LOCATION:St. Louis\, MO
+DESCRIPTION:key: hibearnation\ncategory: bear-run\nwebsite: https://www.hib
+ earnation.org/\ninstagram: https://www.instagram.com/showmebears/\ntypical
+ Timing: varies (historically fall)\nrecurring: annual
+END:VEVENT
+BEGIN:VEVENT
+UID:festival-beefdip-bear-week@chunky.dad
+DTSTAMP:20260727T000000Z
+DTSTART;VALUE=DATE:20270123
+DTEND;VALUE=DATE:20270201
+SUMMARY:BeefDip Bear Week
+LOCATION:Puerto Vallarta\, Mexico
+DESCRIPTION:key: beefdip-bear-week\ncategory: bear-run\ncityKey: pv\nwebsit
+ e: https://beefdip.com/planned-events/\ntypicalTiming: late January / earl
+ y February\nrecurring: annual
+END:VEVENT
+BEGIN:VEVENT
+UID:festival-ibc@chunky.dad
+DTSTAMP:20260727T000000Z
+DTSTART;VALUE=DATE:20270218
+DTEND;VALUE=DATE:20270223
+SUMMARY:International Bear Convergence (IBC)
+LOCATION:Palm Springs\, CA
+DESCRIPTION:key: ibc\ncategory: bear-run\ncityKey: palm-springs\nwebsite: h
+ ttps://www.ibc-ps.com/\ninstagram: https://www.instagram.com/ibcpalmspring
+ s\ntypicalTiming: Presidents' Day weekend (mid-February)\nrecurring: annua
+ l
+END:VEVENT
+BEGIN:VEVENT
+UID:festival-tbru@chunky.dad
+DTSTAMP:20260727T000000Z
+DTSTART;VALUE=DATE:20270325
+DTEND;VALUE=DATE:20270329
+SUMMARY:Texas Bear Round-Up (TBRU)
+LOCATION:Dallas\, TX
+DESCRIPTION:key: tbru\ncategory: bear-run\ncityKey: dallas\nwebsite: https:
+ //www.tbru.org/\ninstagram: https://www.instagram.com/texas_bear_round_up/
+ \ntypicalTiming: mid-to-late March\nrecurring: annual
+END:VEVENT
+BEGIN:VEVENT
+UID:festival-sugar-bear-festival@chunky.dad
+DTSTAMP:20260727T000000Z
+DTSTART;VALUE=DATE:20270407
+DTEND;VALUE=DATE:20270412
+SUMMARY:Sugar Bear Festival
+LOCATION:Montreal\, QC (Gay Village)
+DESCRIPTION:key: sugar-bear-festival\ncategory: bear-run\ncityKey: montreal
+ \nwebsite: https://www.bearitmtl.com/\ntypicalTiming: early-to-mid April (
+ sugar shack season)\nrecurring: annual
+END:VEVENT
+BEGIN:VEVENT
+UID:festival-bear-carnival@chunky.dad
+DTSTAMP:20260727T000000Z
+DTSTART;VALUE=DATE:20270408
+DTEND;VALUE=DATE:20270419
+SUMMARY:Bear Carnival
+LOCATION:Maspalomas\, Gran Canaria\, Spain
+DESCRIPTION:key: bear-carnival\ncategory: bear-run\nwebsite: https://bearca
+ rnival.com/\ninstagram: https://www.instagram.com/maspalomasbearcarnival/
+ \ntypicalTiming: spring (second week after Easter)\nrecurring: annual
+END:VEVENT
+BEGIN:VEVENT
+UID:festival-bear-week-provincetown@chunky.dad
+DTSTAMP:20260727T000000Z
+DTSTART;VALUE=DATE:20270710
+DTEND;VALUE=DATE:20270718
+SUMMARY:Bear Week Provincetown
+LOCATION:Provincetown\, MA
+DESCRIPTION:key: bear-week-provincetown\ncategory: bear-run\ncityKey: ptown
+ \nwebsite: https://www.eventbrite.com/o/ptownbears-78481077703\ntypicalTim
+ ing: second week of July\nrecurring: annual
+END:VEVENT
+BEGIN:VEVENT
+UID:festival-amsterdam-bear-pride@chunky.dad
+DTSTAMP:20260727T000000Z
+DTSTART;VALUE=DATE:20270617
+DTEND;VALUE=DATE:20270621
+RRULE:FREQ=YEARLY
+SUMMARY:Amsterdam Bear Pride
+LOCATION:Amsterdam\, Netherlands
+DESCRIPTION:key: amsterdam-bear-pride\ncategory: pride\ncityKey: amsterdam
+ \nwebsite: https://amsterdambearpride.com/en/\ninstagram: https://www.inst
+ agram.com/amsterdambearpride/\ntypicalTiming: mid-June (Thursday-Sunday)\n
+ recurring: annual\nestimated: true
+END:VEVENT
+BEGIN:VEVENT
+UID:festival-bangkok-songkran-bear-week@chunky.dad
+DTSTAMP:20260727T000000Z
+DTSTART;VALUE=DATE:20270413
+DTEND;VALUE=DATE:20270416
+RRULE:FREQ=YEARLY
+SUMMARY:Bangkok Songkran Bear Week
+LOCATION:Bangkok\, Thailand
+DESCRIPTION:key: bangkok-songkran-bear-week\ncategory: bear-run\ncityKey: b
+ angkok\nwebsite: https://www.gaytravel4u.com/event/bangkok-songkran-bear-w
+ eek/\ntypicalTiming: mid-April (Songkran\, Thai New Year)\nrecurring: annu
+ al\nestimated: true
+END:VEVENT
+BEGIN:VEVENT
+UID:festival-bear-festival-milano@chunky.dad
+DTSTAMP:20260727T000000Z
+DTSTART;VALUE=DATE:20270429
+DTEND;VALUE=DATE:20270503
+RRULE:FREQ=YEARLY
+SUMMARY:Bear Festival Milano
+LOCATION:Milan\, Italy
+DESCRIPTION:key: bear-festival-milano\ncategory: bear-run\nwebsite: https:/
+ /www.bearfestivalmilano.it/en\ntypicalTiming: late April through early May
+ \nrecurring: annual\nestimated: true
+END:VEVENT
+BEGIN:VEVENT
+UID:festival-bear-jamboree@chunky.dad
+DTSTAMP:20260727T000000Z
+DTSTART;VALUE=DATE:20270603
+DTEND;VALUE=DATE:20270607
+RRULE:FREQ=YEARLY
+SUMMARY:Bear Jamboree
+LOCATION:Orlando\, FL
+DESCRIPTION:key: bear-jamboree\ncategory: bear-run\nwebsite: https://www.be
+ arjamboree.com/\ntypicalTiming: early June\nrecurring: annual\nestimated: 
+ true
+END:VEVENT
+BEGIN:VEVENT
+UID:festival-bear-pride-chicago@chunky.dad
+DTSTAMP:20260727T000000Z
+DTSTART;VALUE=DATE:20270528
+DTEND;VALUE=DATE:20270601
+RRULE:FREQ=YEARLY
+SUMMARY:Bear Pride Chicago
+LOCATION:Chicago\, IL (Northalsted)
+DESCRIPTION:key: bear-pride-chicago\ncategory: pride\ncityKey: chicago\nweb
+ site: https://www.instagram.com/bearpridechicago/\ninstagram: https://www.
+ instagram.com/bearpridechicago/\ntypicalTiming: Memorial Day weekend (late
+  May\, alongside IML)\nrecurring: annual\nestimated: true
+END:VEVENT
+BEGIN:VEVENT
+UID:festival-bear-pride-cologne@chunky.dad
+DTSTAMP:20260727T000000Z
+DTSTART;VALUE=DATE:20261119
+DTEND;VALUE=DATE:20261123
+RRULE:FREQ=YEARLY
+SUMMARY:Bear Pride Cologne
+LOCATION:Cologne\, Germany
+DESCRIPTION:key: bear-pride-cologne\ncategory: pride\nwebsite: https://bear
+ pride.cologne/\ninstagram: https://www.instagram.com/bear_pride_cologne/\n
+ typicalTiming: mid-to-late November\nrecurring: annual\nestimated: true
+END:VEVENT
+BEGIN:VEVENT
+UID:festival-brighton-bear-weekend@chunky.dad
+DTSTAMP:20260727T000000Z
+DTSTART;VALUE=DATE:20270708
+DTEND;VALUE=DATE:20270712
+RRULE:FREQ=YEARLY
+SUMMARY:Brighton Bear Weekend
+LOCATION:Brighton\, UK
+DESCRIPTION:key: brighton-bear-weekend\ncategory: bear-run\nwebsite: https:
+ //brightonbearweekend.com/\ninstagram: https://www.instagram.com/brightonb
+ earweekend/\ntypicalTiming: summer (June/July)\nrecurring: annual\nestimat
+ ed: true
+END:VEVENT
+BEGIN:VEVENT
+UID:festival-fire-island-bear-weekend@chunky.dad
+DTSTAMP:20260727T000000Z
+DTSTART;VALUE=DATE:20270617
+DTEND;VALUE=DATE:20270621
+RRULE:FREQ=YEARLY
+SUMMARY:Fire Island Bear Weekend
+LOCATION:Fire Island Pines / Cherry Grove\, NY
+DESCRIPTION:key: fire-island-bear-weekend\ncategory: bear-run\ncityKey: fir
+ e-island\nwebsite: https://www.theurbanbear.com/fibw\ntypicalTiming: mid-J
+ une\nrecurring: annual\nestimated: true
+END:VEVENT
+BEGIN:VEVENT
+UID:festival-iml@chunky.dad
+DTSTAMP:20260727T000000Z
+DTSTART;VALUE=DATE:20270527
+DTEND;VALUE=DATE:20270601
+RRULE:FREQ=YEARLY
+SUMMARY:International Mr. Leather (IML)
+LOCATION:Chicago\, IL
+DESCRIPTION:key: iml\ncategory: kink\ncityKey: chicago\nwebsite: https://ww
+ w.internationalmrleather.com/\ntypicalTiming: Memorial Day weekend (late M
+ ay)\nrecurring: annual\nestimated: true
+END:VEVENT
+BEGIN:VEVENT
+UID:festival-mal@chunky.dad
+DTSTAMP:20260727T000000Z
+DTSTART;VALUE=DATE:20270115
+DTEND;VALUE=DATE:20270119
+RRULE:FREQ=YEARLY
+SUMMARY:Mid-Atlantic Leather Weekend (MAL)
+LOCATION:Washington\, DC
+DESCRIPTION:key: mal\ncategory: kink\ncityKey: dc\nwebsite: https://www.lea
+ therweekend.org/\ninstagram: https://www.instagram.com/midatlanticleatherw
+ eekend\ntypicalTiming: Martin Luther King Jr. weekend (mid-January)\nrecur
+ ring: annual\nestimated: true
+END:VEVENT
+BEGIN:VEVENT
+UID:festival-rome-bears-week@chunky.dad
+DTSTAMP:20260727T000000Z
+DTSTART;VALUE=DATE:20270101
+DTEND;VALUE=DATE:20270107
+RRULE:FREQ=YEARLY
+SUMMARY:Rome Bears Week
+LOCATION:Rome\, Italy
+DESCRIPTION:key: rome-bears-week\ncategory: bear-run\nwebsite: https://www.
+ gaytravel4u.com/event/rome-bears-week/\ntypicalTiming: New Year through Ep
+ iphany (January 1-6)\nrecurring: annual\nestimated: true
+END:VEVENT
+END:VCALENDAR
