@@ -8,6 +8,16 @@
 // - Can be imported in both Scriptable and web environments
 // - Keep this file environment-agnostic (no Scriptable or DOM APIs)
 const scraperBars = {
+  "asbury-park": [
+    {
+      "name": "Paradise Night Club",
+      "city": "asbury-park",
+      "address": "101 Asbury Ave, Asbury Park, NJ 07712",
+      "coordinates": "40.2184550, -74.0015495",
+      "website": "https://paradisenj.com",
+      "instagram": "https://www.instagram.com/paradisenj"
+    }
+  ],
   "atlanta": [
     {
       "name": "The Heretic",
@@ -122,19 +132,18 @@ const scraperBars = {
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
       "gayCities": "https://chicago.gaycities.com/bars/145-cell-block",
       "gayCitiesLastScrapedAt": "2026-06-14T01:14:36.735Z"
+    },
+    {
+      "name": "Metro",
+      "city": "chicago",
+      "address": "3730 N Clark St, Chicago, IL 60613",
+      "coordinates": "41.9497837, -87.6590034",
+      "website": "https://metrochicago.com",
+      "instagram": "https://www.instagram.com/metrochicago",
+      "facebook": "https://www.facebook.com/MetroChicago"
     }
   ],
   "dallas": [
-    {
-      "name": "Dallas Eagle",
-      "city": "dallas",
-      "address": "525 S Riverfront Blvd, Dallas, TX 75207",
-      "coordinates": "32.7693483, -96.8112576",
-      "website": "https://www.thedallaseagle.com",
-      "instagram": "https://www.instagram.com/thedallaseagle",
-      "facebook": "https://www.facebook.com/lonestareagle",
-      "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I"
-    },
     {
       "name": "Station 4",
       "city": "dallas",
@@ -145,6 +154,18 @@ const scraperBars = {
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJd6m0dcmeToYR3R7XzdFC07U",
       "gayCities": "https://dallas.gaycities.com/bars/213-station",
       "gayCitiesLastScrapedAt": "2026-06-26T15:16:43.357Z"
+    },
+    {
+      "name": "Dallas Eagle",
+      "city": "dallas",
+      "address": "525 S Riverfront Blvd, Dallas, TX 75207",
+      "coordinates": "32.7693483, -96.8112576",
+      "website": "https://www.thedallaseagle.com",
+      "instagram": "https://www.instagram.com/thedallaseagle",
+      "facebook": "https://www.facebook.com/lonestareagle",
+      "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+      "faviconBg": "#ffffff",
+      "faviconFg": "#fefefe"
     }
   ],
   "fort-lauderdale": [
@@ -228,6 +249,17 @@ const scraperBars = {
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJK93OZIptAHwRwR-r34F8Zj4",
       "gayCities": "https://hawaii.gaycities.com/bars/277-in-between",
       "gayCitiesLastScrapedAt": "2026-06-14T07:46:32.659Z"
+    }
+  ],
+  "houston": [
+    {
+      "name": "Rich's Houston",
+      "city": "houston",
+      "address": "2401 San Jacinto St, Houston, TX 77002",
+      "coordinates": "29.7451002, -95.3715298",
+      "website": "https://richshtx.com",
+      "instagram": "https://www.instagram.com/richshtx",
+      "facebook": "https://www.facebook.com/richshtx"
     }
   ],
   "la": [

@@ -31,7 +31,7 @@
     "gayCitiesLastScrapedAt": "2026-06-13T18:37:40.195Z"
   },
   {
-    "name": "Touché",
+    "name": "Touch\u00e9",
     "city": "chicago",
     "address": "6412 N Clark St, Chicago, IL 60626",
     "coordinates": "41.9985708, -87.670974",
@@ -51,5 +51,14 @@
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
     "gayCities": "https://chicago.gaycities.com/bars/145-cell-block",
     "gayCitiesLastScrapedAt": "2026-06-14T01:14:36.735Z"
+  },
+  {
+    "name": "Metro",
+    "city": "chicago",
+    "address": "3730 N Clark St, Chicago, IL 60613",
+    "coordinates": "41.9497837, -87.6590034",
+    "website": "https://metrochicago.com",
+    "instagram": "https://www.instagram.com/metrochicago",
+    "facebook": "https://www.facebook.com/MetroChicago"
   }
 ]
