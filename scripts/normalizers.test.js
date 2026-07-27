@@ -2779,3 +2779,19 @@ test('curated-bar city backfill: containment is one-way — the longer unique na
     `backfill log expected, got:\n${lines.join('\n')}`
   );
 });
+
+test('corroborateBarWithGeoPoi never overwrites the venue-site-identity stamp', () => {
+  const normalizer = createOsmNormalizer();
+  // A matching POI corroborates but must not restamp an identity-corrected bar
+  const identityEvent = { title: 'PERVERT', bar: 'Massive', barSource: 'venue-site-identity' };
+  normalizer.corroborateBarWithGeoPoi(identityEvent, ['Massive']);
+  assert.equal(identityEvent.barSource, 'venue-site-identity');
+
+  // Empty and uncorroborated stamps still upgrade to geo-poi as before
+  const uncorroboratedEvent = { title: 'PERVERT', bar: 'Massive', barSource: 'uncorroborated' };
+  normalizer.corroborateBarWithGeoPoi(uncorroboratedEvent, ['Massive']);
+  assert.equal(uncorroboratedEvent.barSource, 'geo-poi');
+  const unstampedEvent = { title: 'PERVERT', bar: 'Massive' };
+  normalizer.corroborateBarWithGeoPoi(unstampedEvent, ['Massive']);
+  assert.equal(unstampedEvent.barSource, 'geo-poi');
+});

@@ -1301,6 +1301,47 @@ class SharedCore {
                     return { winner: 'a', reason: 'same-host deeper URL beats domain root' };
                 }
             }
+            // Cross-host website/url rungs. Rung 1: a bare homepage never
+            // beats an event-specific page even ACROSS hosts — the deeper URL
+            // is the one that describes THIS event. Rung 2: both pathed —
+            // prefer the candidate that is a page this run actually crawled:
+            // its host matches its own record's _sourcePageUrl (stamped at
+            // fetch time) AND that record's own website/url field IS the
+            // candidate value (strict attribution, like the image/bar
+            // provenance rungs). Both bare roots, both/neither crawled, or no
+            // records context → fall through to AI arbitration (fail open).
+            if ((fieldName === 'website' || fieldName === 'url') && urlA.host !== urlB.host) {
+                const bareRootA = urlA.segments.length === 0 && !urlA.hasQuery;
+                const bareRootB = urlB.segments.length === 0 && !urlB.hasQuery;
+                if (bareRootA && !bareRootB && urlB.segments.length > 0) {
+                    return { winner: 'b', reason: 'event-specific URL beats bare homepage' };
+                }
+                if (bareRootB && !bareRootA && urlA.segments.length > 0) {
+                    return { winner: 'a', reason: 'event-specific URL beats bare homepage' };
+                }
+                if (urlA.segments.length > 0 && urlB.segments.length > 0) {
+                    const urlContextRecords = context && context.records && typeof context.records === 'object'
+                        ? context.records : null;
+                    if (urlContextRecords) {
+                        const isOwnCrawledPage = (record, parts, value) => {
+                            if (!record || typeof record !== 'object') return false;
+                            const candidate = typeof value === 'string' ? value.trim() : '';
+                            if (!candidate) return false;
+                            const ownWebsite = typeof record.website === 'string' ? record.website.trim() : '';
+                            const ownUrl = typeof record.url === 'string' ? record.url.trim() : '';
+                            if (ownWebsite !== candidate && ownUrl !== candidate) return false;
+                            const sourceHost = this.getHostFromUrl(record._sourcePageUrl)
+                                .toLowerCase().replace(/^www\./, '');
+                            return Boolean(sourceHost) && parts.host === sourceHost;
+                        };
+                        const crawledA = isOwnCrawledPage(urlContextRecords.a, urlA, valueA);
+                        const crawledB = isOwnCrawledPage(urlContextRecords.b, urlB, valueB);
+                        if (crawledA !== crawledB) {
+                            return { winner: crawledA ? 'a' : 'b', reason: 'URL is a page this run actually crawled' };
+                        }
+                    }
+                }
+            }
             // Cross-host ticketUrl: a candidate on a known ticketing platform
             // (TICKETING_PLATFORM_HOSTS — a preference heuristic, not a gate)
             // beats a BARE domain root on a non-ticketing host: the root of an
@@ -1445,6 +1486,41 @@ class SharedCore {
                     };
                 }
             }
+            // Title doctrine rung: the venue's name belongs in the bar field,
+            // not the title (run 20260725-170926: "…Singlet Night at the
+            // Dallas Eagle" vs "Singlet Night with DJ Drew G" — the venue-free
+            // title is the event's name). When exactly one side's compact
+            // title contains a FULL venue-name key (normalizeBarNameKey of a
+            // context bar name, ≥ 4 chars — full-key containment only, never a
+            // stem, so "Eagle Karaoke" does not contain "dallaseagle") and the
+            // venue-free side still has at least one significant token, the
+            // venue-free side wins. Calendar merges are exempt — calendar
+            // titles are curated-by-usage and may deliberately carry the
+            // venue. Both/neither containing → fall through (AI arbitrates).
+            const titleSideLabels = context && context.sideLabels && typeof context.sideLabels === 'object'
+                ? context.sideLabels : null;
+            const titleVenueKeys = (context && Array.isArray(context.barNames) ? context.barNames : [])
+                .map(name => this.normalizeBarNameKey(name))
+                .filter(key => key.length >= 4);
+            if ((!titleSideLabels || titleSideLabels.a !== 'calendar') && titleVenueKeys.length > 0) {
+                const compactTitle = value => this.stripEmojiForTitleTwin(String(value || ''))
+                    .toLowerCase().replace(/[^a-z0-9]/g, '');
+                const containsVenueKey = value => {
+                    const compact = compactTitle(value);
+                    return Boolean(compact) && titleVenueKeys.some(key => compact.includes(key));
+                };
+                const venueInA = containsVenueKey(valueA);
+                const venueInB = containsVenueKey(valueB);
+                if (venueInA !== venueInB) {
+                    const venueFreeValue = venueInA ? valueB : valueA;
+                    if (this.getCrossSourceTitleTokens(venueFreeValue, titleVenueKeys).length > 0) {
+                        return {
+                            winner: venueInA ? 'b' : 'a',
+                            reason: 'title doctrine: venue name belongs in bar, not title'
+                        };
+                    }
+                }
+            }
         }
         // A street address is never a venue name: Eventbrite JSON-LD shipped
         // location.name as the street line ("10-90 Wyckoff Ave") and AI
@@ -1518,7 +1594,7 @@ class SharedCore {
                 };
                 const isCorroboratedStamp = stamp =>
                     stamp === 'page-adjacent' || stamp === 'venue-site' || stamp === 'curated'
-                    || stamp === 'geo-poi';
+                    || stamp === 'geo-poi' || stamp === 'venue-site-identity';
                 const matchesCuratedBar = value =>
                     Boolean(cityBars && this.findCuratedBarByName(cityBars, value));
                 const provenanceA = getBarProvenance(barContextRecords.a, valueA);
@@ -2215,6 +2291,15 @@ class SharedCore {
         if (aiWebParser && typeof aiWebParser.applyVenueSiteAddressConsensus === 'function') {
             aiWebParser.applyVenueSiteAddressConsensus(allEvents, mainConfig?.cities || null);
         }
+        // Venue-site identity corrections (deterministic, curated-anchored):
+        // when a crawled site's identity is established — venue role seen,
+        // unique curated-bar name match, address agreement — flyer-subtitle
+        // bars on that site's events are corrected to the curated venue name
+        // ('venue-site-identity' provenance). Consensus first, identity
+        // second: the pass consumes the consensus stash the call above left.
+        if (aiWebParser && typeof aiWebParser.applyVenueSiteIdentityCorrections === 'function') {
+            aiWebParser.applyVenueSiteIdentityCorrections(allEvents, mainConfig?.cities || null);
+        }
 
         // Metadata is applied dynamically by parsers using the {value, merge} format
 
@@ -2650,7 +2735,7 @@ class SharedCore {
         // Bar corroboration verdict from barSource provenance.
         const barSource = typeof event.barSource === 'string' ? event.barSource.trim() : '';
         if (bar && barSource) {
-            if (['page-adjacent', 'venue-site', 'geo-poi', 'curated'].includes(barSource)) {
+            if (['page-adjacent', 'venue-site', 'geo-poi', 'curated', 'venue-site-identity'].includes(barSource)) {
                 lines.push(`bar corroborated: ${barSource}`);
             } else if (barSource === 'uncorroborated') {
                 lines.push('⚠️ bar uncorroborated (not found near address in source)');
@@ -2686,6 +2771,23 @@ class SharedCore {
                 : [];
             const suffix = rescueSignals.length > 0 ? ` (${rescueSignals.join(', ')})` : '';
             lines.push(`bar rescued by signal convergence${suffix}`);
+        }
+
+        // Venue-site identity correction (_venueIdentityCorrection —
+        // underscore field, never serialized; stamped by ai-web-parser's
+        // applyVenueSiteIdentityCorrections when an established site identity
+        // replaced an extracted flyer-subtitle bar) — rendered so every
+        // correction stays visible in the results UI.
+        const identityCorrection = event._venueIdentityCorrection && typeof event._venueIdentityCorrection === 'object'
+            ? event._venueIdentityCorrection : null;
+        if (bar && identityCorrection) {
+            const correctedOriginal = typeof identityCorrection.original === 'string'
+                ? identityCorrection.original.trim() : '';
+            const correctedSource = typeof identityCorrection.originalSource === 'string' && identityCorrection.originalSource.trim()
+                ? identityCorrection.originalSource.trim() : 'unstamped';
+            if (correctedOriginal) {
+                lines.push(`bar corrected to venue-site identity — extracted "${correctedOriginal}" (${correctedSource})`);
+            }
         }
 
         // Compact provenance summary of whichever companion stamps exist.
@@ -8763,7 +8865,7 @@ SharedCore.PROVENANCE_COMPANION_FIELDS = Object.freeze([
 SharedCore.PROVENANCE_TRUST_TIERS = Object.freeze({
     pinSource: Object.freeze({ 'curated': 4, 'geocoded-exact': 3, 'geocoded-approx': 2, 'page': 1 }),
     addressSource: Object.freeze({ 'curated': 3, 'geo-poi': 2, 'page': 2, 'venue-site': 2, 'inferred': 1 }),
-    barSource: Object.freeze({ 'curated': 3, 'venue-site': 2, 'page-adjacent': 2, 'geo-poi': 2, 'uncorroborated': 1 }),
+    barSource: Object.freeze({ 'curated': 3, 'venue-site': 2, 'venue-site-identity': 2, 'page-adjacent': 2, 'geo-poi': 2, 'uncorroborated': 1 }),
     imageSource: Object.freeze({ 'og-image': 2, 'jsonld': 2, 'page': 1 }),
     bearSource: Object.freeze({ 'manual-bear': 2, 'manual-not-bear': 2, 'keyword': 1, 'ai': 1, 'config': 1 })
 });

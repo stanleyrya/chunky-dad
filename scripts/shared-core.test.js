@@ -931,20 +931,18 @@ test('guardrail: deterministic field is excluded from the AI batch; genuine conf
   assert.deepEqual(finalEvent._original.aiArbitration.arbitrated.sort(), ['bar', 'startDate', 'title']);
 });
 
-test('guardrail: cross-host root-vs-deep URLs still go to the AI', async () => {
+test('guardrail: cross-host root-vs-deep website resolves deterministically — event page beats bare homepage', async () => {
   const core = createCore();
   const { scraped, existing } = buildAlignedArbitrationPair();
   scraped.website = 'https://ticketmaster.com/';
   existing.notes += '\nwebsite: https://bearracuda.com/events/portland-pridefriday/';
-  const adapter = buildArbitrationAdapter({
-    website: { pick: 'calendar', value: 'https://bearracuda.com/events/portland-pridefriday/' }
-  });
+  const adapter = buildArbitrationAdapter({});
 
   const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
 
-  assert.equal(adapter.calls.length, 1, 'different hosts are a genuine question for the AI');
-  assert.match(adapter.calls[0].prompt, /field: website/);
+  assert.equal(adapter.calls.length, 0, 'a bare homepage never beats an event page, even cross-host');
   assert.equal(finalEvent.website, 'https://bearracuda.com/events/portland-pridefriday/');
+  assert.deepEqual(finalEvent._original.aiArbitration.deterministic, ['website']);
 });
 
 test('guardrail: same-host deep-vs-deep and root-vs-root URLs still go to the AI', () => {
@@ -1214,6 +1212,42 @@ test('guardrail: a named title beats a bare city title in both directions; ties 
     'two bare-city variants still arbitrate');
   // No city context → the rule never fires
   assert.equal(core.resolveConflictDeterministically('title', 'FURBALL', 'New Orleans'), null);
+});
+
+test('guardrail: title doctrine — the venue-bearing title loses to the venue-free named title (Singlet pair, run 20260725-170926)', () => {
+  const core = createCore();
+  const venueTitle = "Thighs out for the guys yall, it's Singlet Night at the Dallas Eagle";
+  const freeTitle = 'Singlet Night with DJ Drew G';
+  const context = { barNames: ['Dallas Eagle', 'Dallas Eagle'], sideLabels: { a: 'existing', b: 'incoming' } };
+  assert.deepEqual(
+    core.resolveConflictDeterministically('title', venueTitle, freeTitle, context),
+    { winner: 'b', reason: 'title doctrine: venue name belongs in bar, not title' });
+  assert.deepEqual(
+    core.resolveConflictDeterministically('title', freeTitle, venueTitle, context),
+    { winner: 'a', reason: 'title doctrine: venue name belongs in bar, not title' });
+  // Calendar merges are exempt: calendar titles are curated-by-usage
+  assert.equal(
+    core.resolveConflictDeterministically('title', venueTitle, freeTitle,
+      { barNames: ['Dallas Eagle', 'Dallas Eagle'], sideLabels: { a: 'calendar', b: 'scraped' } }),
+    null, 'calendar flow falls through to AI');
+  // Full-key containment only: "Eagle Karaoke" does NOT contain "dallaseagle"
+  assert.equal(
+    core.resolveConflictDeterministically('title', 'Eagle Karaoke', 'Karaoke with Dee Ranged', context),
+    null, 'a venue stem is never venue containment');
+  // Both titles carrying the venue → a genuine question
+  assert.equal(
+    core.resolveConflictDeterministically('title',
+      'Singlet Night at the Dallas Eagle', 'Dallas Eagle Singlet Night', context),
+    null, 'both venue-bearing → arbitrate');
+  // The venue-free side must still have a significant token of its own
+  assert.equal(
+    core.resolveConflictDeterministically('title', 'Karaoke at the Dallas Eagle', 'Eagle', context),
+    null, 'a venue-token-only title cannot win the rung');
+  // Short keys never fire: normalizeBarNameKey("TMC") is under 4 chars
+  assert.equal(
+    core.resolveConflictDeterministically('title', 'Bear Night at TMC', 'Bear Night with DJ Boost',
+      { barNames: ['TMC'], sideLabels: { a: 'existing', b: 'incoming' } }),
+    null, 'venue keys shorter than 4 chars are ignored');
 });
 
 test('guardrail: calendar bare-city title loses to the scraped named title without AI', async () => {
@@ -1581,11 +1615,70 @@ test('guardrail: conservative ticketUrl fall-throughs still go to the AI', () =>
     core.resolveConflictDeterministically('ticketUrl',
       'https://www.eventbrite.com/e/tickets-1234', 'https://dice.fm/event/abcdef'),
     null, 'both-ticketing still arbitrates');
-  // The rung is ticketUrl-only: website keeps today's cross-host AI behavior
-  assert.equal(
+  // The ticketing rung is ticketUrl-only: for website the same pair resolves
+  // through the cross-host root-vs-deep rung instead, not the ticketing one
+  assert.deepEqual(
     core.resolveConflictDeterministically('website',
       'https://www.eventbrite.com/e/tickets-1234', 'https://megawoof.com/'),
-    null, 'website is not a ticket field');
+    { winner: 'a', reason: 'event-specific URL beats bare homepage' },
+    'website is not a ticket field');
+});
+
+// ---------------------------------------------------------------------------
+// Deterministic cross-host website/url rungs: an event-specific page beats a
+// bare homepage across hosts; when both are pathed, the candidate whose host
+// this run actually crawled (its own record's _sourcePageUrl) wins. Both
+// bare roots, or unattributable pathed pairs, still arbitrate.
+// ---------------------------------------------------------------------------
+
+test('guardrail: cross-host website rungs — event page beats bare homepage, crawled host settles pathed pairs, roots arbitrate', () => {
+  const core = createCore();
+  // Rung 1: bare homepage vs event page, both directions, both aliases
+  assert.deepEqual(
+    core.resolveConflictDeterministically('website',
+      'https://thedallaseagle.com/', 'https://www.eventbrite.com/e/singlet-night-tickets-1234'),
+    { winner: 'b', reason: 'event-specific URL beats bare homepage' });
+  assert.deepEqual(
+    core.resolveConflictDeterministically('url',
+      'https://www.eventbrite.com/e/singlet-night-tickets-1234', 'https://thedallaseagle.com/'),
+    { winner: 'a', reason: 'event-specific URL beats bare homepage' });
+  // Rung 2: both pathed — the candidate that IS its own record's crawled page wins
+  const crawledContext = {
+    records: {
+      a: {
+        website: 'https://thedallaseagle.com/events/singlet-night/',
+        _sourcePageUrl: 'https://www.thedallaseagle.com/events'
+      },
+      b: { website: 'https://linktr.ee/dallaseagle/latest' }
+    }
+  };
+  assert.deepEqual(
+    core.resolveConflictDeterministically('website',
+      'https://thedallaseagle.com/events/singlet-night/', 'https://linktr.ee/dallaseagle/latest', crawledContext),
+    { winner: 'a', reason: 'URL is a page this run actually crawled' });
+  // Attribution is strict: the record's own website/url must BE the candidate
+  const unattributedContext = {
+    records: {
+      a: {
+        website: 'https://thedallaseagle.com/some-other-page/',
+        _sourcePageUrl: 'https://www.thedallaseagle.com/events'
+      },
+      b: { website: 'https://linktr.ee/dallaseagle/latest' }
+    }
+  };
+  assert.equal(
+    core.resolveConflictDeterministically('website',
+      'https://thedallaseagle.com/events/singlet-night/', 'https://linktr.ee/dallaseagle/latest', unattributedContext),
+    null, 'an unattributed candidate cannot claim its record\'s crawl');
+  // Both bare roots on different hosts → a genuine question
+  assert.equal(
+    core.resolveConflictDeterministically('website', 'https://thedallaseagle.com/', 'https://megawoof.com/'),
+    null, 'two bare homepages still arbitrate');
+  // Both pathed with no records context → arbitrate as today
+  assert.equal(
+    core.resolveConflictDeterministically('website',
+      'https://thedallaseagle.com/events/singlet-night/', 'https://linktr.ee/dallaseagle/latest'),
+    null, 'both pathed without crawl attribution → arbitrate');
 });
 
 // ---------------------------------------------------------------------------
@@ -8095,4 +8188,47 @@ test('cross-source dedup: the literal Dallas Eagle clusters collapse through the
   assert.equal(karaoke.startDate.toISOString(), '2026-07-31T00:00:00.000Z', 'timezone-anchored start wins over wall-clock');
   const pet = result.find(event => /pet night/i.test(event.title));
   assert.equal(pet.image, 'https://img.example/pet.jpg', 'secondary image enriches the Pet Night primary');
+});
+
+// ---------------------------------------------------------------------------
+// venue-site-identity barSource plumbing: the stamp is corroborated in the
+// merge demotion rung, and a correction renders its evidence line.
+// ---------------------------------------------------------------------------
+
+test('venue-site-identity: corroborated in the bar demotion rung and rendered in evidence lines', () => {
+  const core = createCore();
+  // Demotion rung: an identity-stamped bar beats an uncorroborated one
+  const context = {
+    records: {
+      a: { bar: 'Massive', barSource: 'venue-site-identity' },
+      b: { bar: 'Shore Thing', barSource: 'uncorroborated' }
+    }
+  };
+  assert.deepEqual(
+    core.resolveConflictDeterministically('bar', 'Massive', 'Shore Thing', context),
+    { winner: 'a', reason: 'corroborated bar beats uncorroborated' });
+
+  // Evidence panel: corroboration verdict + the correction line
+  const lines = core.buildEventEvidenceLines({
+    title: 'PERVERT',
+    bar: 'Massive',
+    barSource: 'venue-site-identity',
+    _venueIdentityCorrection: {
+      original: 'Villa Señor',
+      originalSource: 'uncorroborated',
+      signals: ['venue-role', 'curated-name', 'address-consensus']
+    }
+  }, { cityKey: 'seattle' });
+  assert.ok(lines.includes('bar corroborated: venue-site-identity'), `got: ${JSON.stringify(lines)}`);
+  assert.ok(lines.includes('bar corrected to venue-site identity — extracted "Villa Señor" (uncorroborated)'),
+    `got: ${JSON.stringify(lines)}`);
+  assert.ok(lines.includes('provenance: bar=venue-site-identity'));
+
+  // A missing original source renders as unstamped, never as an empty label
+  const unstampedLines = core.buildEventEvidenceLines({
+    title: 'PACK',
+    bar: 'Massive',
+    _venueIdentityCorrection: { original: 'Shore Thing', originalSource: '', signals: [] }
+  }, { cityKey: 'seattle' });
+  assert.ok(unstampedLines.includes('bar corrected to venue-site identity — extracted "Shore Thing" (unstamped)'));
 });

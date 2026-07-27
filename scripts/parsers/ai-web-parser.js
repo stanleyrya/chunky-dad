@@ -437,6 +437,12 @@ class AiWebParser {
                 // never skips or replaces an extraction step.
                 this.applyWixServerDataEnrichment(completeJsonLdEvents, htmlData, cityConfig);
                 await this.applyJsonLdGapFill(completeJsonLdEvents, htmlData, parserConfig, cityConfig, httpAdapter);
+                // A single JSON-LD event whose node carried no image adopts
+                // the page's own og:image artwork (multi-event pages never do:
+                // one shared meta image cannot be attributed to one event).
+                if (completeJsonLdEvents.length === 1) {
+                    this.fillImageFromPageMetaArtwork(completeJsonLdEvents[0], htmlData);
+                }
                 // Images the JSON-LD nodes carried are already stamped 'jsonld';
                 // an image the gap-fill pulled from page content gets its own
                 // og-image/page provenance here (no image → no stamp).
@@ -621,6 +627,11 @@ class AiWebParser {
 
         // OCR any segment images the capped page-level pass missed
         await this.ensureSegmentOcrCoverage(segments, ocrResults, parserConfig, sourceUrl, httpAdapter);
+
+        // Title↔OCR consistency gate: with OCR coverage complete, correct
+        // flyer↔segment pairings whose flyer text names a sibling listing —
+        // BEFORE any per-segment prompt content is built below.
+        this.applySegmentOcrConsistencyGate(segments, ocrResults, sourceUrl);
 
         // Segment-derived site-role facts (multiple distinct addresses →
         // organizer; one recurring address that also appears outside the
@@ -878,6 +889,15 @@ class AiWebParser {
         return '';
     }
 
+    // A segment whose listing title is a venue-hours notice ("Tuesday Closed")
+    // describes no event — it must never claim a page image, or a real
+    // sibling's flyer gets attached to the phantom row and the real event goes
+    // imageless. Gates BOTH image matchers; a segment with no derivable title
+    // stays eligible (fail open).
+    isSegmentEligibleForImagePairing(segment) {
+        return !this.isVenueHoursNoticeTitle(this.deriveSegmentListingTitle(segment));
+    }
+
     buildMultiEventSegmentHtmlData(htmlData, segment, index, totalSegments, ocrResults = []) {
         const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
         const segmentHtml = segment && typeof segment.html === 'string' ? segment.html : '';
@@ -891,7 +911,8 @@ class AiWebParser {
             segmentHtml,
             sourceUrl,
             segment && Array.isArray(segment.imageHintUrls) ? segment.imageHintUrls : [],
-            segmentOcrResults
+            segmentOcrResults,
+            segment && segment.ocrExcludedUrlKeys instanceof Set ? segment.ocrExcludedUrlKeys : null
         );
         const contextLines = [
             `SEGMENT_INDEX: ${index + 1}/${totalSegments}`,
@@ -1327,10 +1348,20 @@ class AiWebParser {
             return bounds;
         });
 
+        // Venue-hours notice segments ("Tuesday Closed") never take part in
+        // image pairing — a claimed flyer would be stolen from a real sibling.
+        const segmentEligibility = sourceSegments.map((segment, index) => {
+            const eligible = this.isSegmentEligibleForImagePairing(segment);
+            if (!eligible) {
+                console.log(`🤖 AI Web: Segment ${index + 1} ("${this.deriveSegmentListingTitle(segment)}") is a venue-hours notice — not eligible for image pairing`);
+            }
+            return eligible;
+        });
+
         // Use OCR results for better image-segment pairing if available
         const matchedImageUrls = ocrResults && ocrResults.length > 0
-            ? this.matchOrderedImagesToSegmentsWithOcr(sourceSegments, segmentBounds, pageImageRecords, ocrResults)
-            : this.matchOrderedImagesToSegments(segmentBounds, pageImageRecords);
+            ? this.matchOrderedImagesToSegmentsWithOcr(sourceSegments, segmentBounds, pageImageRecords, ocrResults, segmentEligibility)
+            : this.matchOrderedImagesToSegments(segmentBounds, pageImageRecords, segmentEligibility);
 
         // Deduplicate matchedImageUrls by stripped URL to prevent same image at different sizes
         // from being assigned to different segments. This is a safety net since pageImageRecords
@@ -1370,9 +1401,10 @@ class AiWebParser {
         });
     }
 
-    matchOrderedImagesToSegments(segmentBounds, imageRecords) {
+    matchOrderedImagesToSegments(segmentBounds, imageRecords, segmentEligibility = null) {
         const boundsList = Array.isArray(segmentBounds) ? segmentBounds : [];
         const records = Array.isArray(imageRecords) ? imageRecords : [];
+        const eligibility = Array.isArray(segmentEligibility) ? segmentEligibility : null;
         if (boundsList.length === 0 || records.length === 0) return [];
         if (!boundsList.some(bounds => bounds && Number.isFinite(bounds.rawStart) && Number.isFinite(bounds.rawEnd))) {
             return [];
@@ -1418,7 +1450,10 @@ class AiWebParser {
                     });
                 }
 
-                if (segmentIndex < boundsList.length && imageIndex < records.length) {
+                // An ineligible (venue-hours notice) segment may be skipped but
+                // never takes the 'match' action — it cannot claim an image.
+                if (segmentIndex < boundsList.length && imageIndex < records.length
+                    && (!eligibility || eligibility[segmentIndex] !== false)) {
                     const pairingCost = this.getSegmentImagePairingCost(boundsList[segmentIndex], records[imageIndex]);
                     if (Number.isFinite(pairingCost)) {
                         dp[segmentIndex + 1][imageIndex + 1] = betterState(dp[segmentIndex + 1][imageIndex + 1], {
@@ -1449,10 +1484,11 @@ class AiWebParser {
         return matchedUrls;
     }
 
-    matchOrderedImagesToSegmentsWithOcr(segments, segmentBounds, imageRecords, ocrResults) {
+    matchOrderedImagesToSegmentsWithOcr(segments, segmentBounds, imageRecords, ocrResults, segmentEligibility = null) {
         const sourceSegments = Array.isArray(segments) ? segments : [];
         const boundsList = Array.isArray(segmentBounds) ? segmentBounds : [];
         const records = Array.isArray(imageRecords) ? imageRecords : [];
+        const eligibility = Array.isArray(segmentEligibility) ? segmentEligibility : null;
         if (boundsList.length === 0 || records.length === 0) return [];
         if (!boundsList.some(bounds => bounds && Number.isFinite(bounds.rawStart) && Number.isFinite(bounds.rawEnd))) {
             return [];
@@ -1476,6 +1512,11 @@ class AiWebParser {
 
         const pairings = [];
         for (let i = 0; i < boundsList.length; i++) {
+            // Ineligible (venue-hours notice) segments never enter the pairing
+            // pool at all — the similarity override in
+            // getSegmentImagePairingCostWithOcr could otherwise hand a phantom
+            // row a real sibling's flyer.
+            if (eligibility && eligibility[i] === false) continue;
             for (let j = 0; j < records.length; j++) {
                 const imageRecord = records[j];
                 const normalizedUrl = this.normalizeHttpUrlValue(imageRecord.url);
@@ -1900,7 +1941,7 @@ class AiWebParser {
         return match ? match.index : -1;
     }
 
-    extractMultiEventSegmentResourceLines(html, sourceUrl = '', hintedImageUrls = [], ocrResults = []) {
+    extractMultiEventSegmentResourceLines(html, sourceUrl = '', hintedImageUrls = [], ocrResults = [], excludedUrlKeys = null) {
         const source = String(html || '');
         const lines = [];
         const seen = new Set();
@@ -1912,6 +1953,15 @@ class AiWebParser {
             if (!finalUrl) return;
             // Check for duplicates using stripped URL to handle same image at different sizes
             const strippedUrl = this.stripSizeParams(finalUrl);
+            // Consistency-gate exclusions: an image reassigned/detached from
+            // this segment never lands in its SEGMENT_IMAGE_* prompt lines
+            // (checked in both stripped and CDN-upgraded key forms, matching
+            // getSegmentImageUrlKeys).
+            if (excludedUrlKeys instanceof Set && excludedUrlKeys.size > 0) {
+                if (excludedUrlKeys.has(strippedUrl)) return;
+                const upgraded = this.upgradeCdnThumbnailUrl(finalUrl);
+                if (upgraded && upgraded !== finalUrl && excludedUrlKeys.has(this.stripSizeParams(upgraded))) return;
+            }
             if (seenStripped.has(strippedUrl)) return;
             seen.add(finalUrl);
             seenStripped.add(strippedUrl);
@@ -3143,6 +3193,12 @@ class AiWebParser {
             image: this.pickJsonLdImage(node.image),
             source: this.config.source
         };
+        // The page's own structured data named this venue and it survived the
+        // address-shaped-name gate above — the venue-site identity pass never
+        // overrides a structured-data bar (underscore field, internal only).
+        if (event.bar) {
+            event._barFromJsonLd = true;
+        }
         // imageSource provenance (notes-serialized like pinSource): structured
         // data the page itself published — its own value, distinct from
         // 'og-image'/'page', but og-grade in shared-core's image provenance
@@ -4051,9 +4107,14 @@ class AiWebParser {
         return ocrResults;
     }
 
-    filterOcrResultsForSegment(ocrResults, segment, sourceUrl = '') {
-        if (!Array.isArray(ocrResults) || ocrResults.length === 0) return [];
-        if (!segment || typeof segment !== 'object') return [];
+    // The URL keys a segment claims OCR results with — normalized exact URLs
+    // plus size-stripped (and CDN-upgraded) keys. Shared by
+    // filterOcrResultsForSegment and the OCR-consistency gate so both judge
+    // image ownership identically.
+    getSegmentImageUrlKeys(segment, sourceUrl = '') {
+        if (!segment || typeof segment !== 'object') {
+            return { normalized: new Set(), stripped: new Set() };
+        }
 
         // Extract segment's image URLs
         const segmentImageUrls = new Set([
@@ -4066,7 +4127,7 @@ class AiWebParser {
         ]);
 
         // Normalize segment image URLs for comparison
-        const normalizedSegmentImageSet = new Set(
+        const normalized = new Set(
             Array.from(segmentImageUrls)
                 .map(u => this.normalizeHttpUrlValue(u))
                 .filter(Boolean)
@@ -4076,16 +4137,27 @@ class AiWebParser {
         // upgradeCdnThumbnailUrl first: OCR results are keyed by the upgraded bare
         // asset URL, so segment thumbnail variants must collapse to the same key
         // even if a future transform shape slips past stripSizeParams.
-        const strippedSegmentImageSet = new Set();
-        for (const u of normalizedSegmentImageSet) {
-            const stripped = this.stripSizeParams(u);
-            if (stripped) strippedSegmentImageSet.add(stripped);
+        const stripped = new Set();
+        for (const u of normalized) {
+            const strippedUrl = this.stripSizeParams(u);
+            if (strippedUrl) stripped.add(strippedUrl);
             const upgraded = this.upgradeCdnThumbnailUrl(u);
             if (upgraded && upgraded !== u) {
                 const strippedUpgraded = this.stripSizeParams(upgraded);
-                if (strippedUpgraded) strippedSegmentImageSet.add(strippedUpgraded);
+                if (strippedUpgraded) stripped.add(strippedUpgraded);
             }
         }
+
+        return { normalized, stripped };
+    }
+
+    filterOcrResultsForSegment(ocrResults, segment, sourceUrl = '') {
+        if (!Array.isArray(ocrResults) || ocrResults.length === 0) return [];
+        if (!segment || typeof segment !== 'object') return [];
+
+        const { normalized: normalizedSegmentImageSet, stripped: strippedSegmentImageSet } =
+            this.getSegmentImageUrlKeys(segment, sourceUrl);
+        const excludedUrlKeys = segment.ocrExcludedUrlKeys instanceof Set ? segment.ocrExcludedUrlKeys : null;
 
         console.log(`🤖 AI Web: Filtering OCR results against ${normalizedSegmentImageSet.size} segment images (${strippedSegmentImageSet.size} stripped)`);
 
@@ -4093,6 +4165,10 @@ class AiWebParser {
         const matchedOcrResults = ocrResults.filter(ocr => {
             const ocrUrl = this.normalizeHttpUrlValue(ocr.url);
             const strippedOcrUrl = this.stripSizeParams(ocrUrl);
+
+            // Consistency-gate exclusions first: an image the gate reassigned
+            // or detached from this segment never matches, even via exact URL.
+            if (excludedUrlKeys && strippedOcrUrl && excludedUrlKeys.has(strippedOcrUrl)) return false;
 
             const exactMatch = normalizedSegmentImageSet.has(ocrUrl);
             const strippedMatch = strippedOcrUrl && strippedSegmentImageSet.has(strippedOcrUrl);
@@ -4114,6 +4190,85 @@ class AiWebParser {
         }
 
         return matchedOcrResults;
+    }
+
+    // Post-pairing title↔OCR consistency gate: once segment OCR coverage is
+    // complete, every OCR flyer's text is checked against its owner segment's
+    // listing title. A flyer sharing NO title token with its owner that
+    // clearly names exactly one ELIGIBLE sibling (≥ 2 matched title tokens, or
+    // full coverage of a 1-token title) is reassigned there; one matching
+    // several siblings equally is detached (assigned to nobody). A flyer that
+    // matches its owner at all — or matches nobody — is left alone, so correct
+    // exact-URL pairings can never thrash (fail open). Ownership is judged by
+    // getSegmentImageUrlKeys, the SAME keys filterOcrResultsForSegment uses.
+    applySegmentOcrConsistencyGate(segments, ocrResults, sourceUrl = '') {
+        const sourceSegments = Array.isArray(segments) ? segments : [];
+        const ocrList = Array.isArray(ocrResults) ? ocrResults : [];
+        if (sourceSegments.length < 2 || ocrList.length === 0) return sourceSegments;
+        if (!this.core || typeof this.core.getCrossSourceTitleTokens !== 'function') return sourceSegments;
+
+        const segmentInfos = sourceSegments.map(segment => {
+            const title = this.deriveSegmentListingTitle(segment);
+            return {
+                segment,
+                title,
+                titleTokens: this.core.getCrossSourceTitleTokens(title),
+                eligible: this.isSegmentEligibleForImagePairing(segment),
+                keys: this.getSegmentImageUrlKeys(segment, sourceUrl)
+            };
+        });
+
+        for (const ocr of ocrList) {
+            if (!ocr || typeof ocr.text !== 'string' || ocr.text.trim() === '') continue;
+            const ocrUrl = this.normalizeHttpUrlValue(ocr.url);
+            const strippedOcrUrl = this.stripSizeParams(ocrUrl);
+            if (!strippedOcrUrl) continue;
+            const ocrTokens = new Set(this.core.getCrossSourceTitleTokens(
+                `${String(ocr.text || '')} ${String(ocr.eventSummary || '')}`));
+            const matchedCount = info => info.titleTokens.filter(token => ocrTokens.has(token)).length;
+
+            for (let i = 0; i < segmentInfos.length; i++) {
+                const owner = segmentInfos[i];
+                const ownsImage = owner.keys.normalized.has(ocrUrl) || owner.keys.stripped.has(strippedOcrUrl);
+                if (!ownsImage) continue;
+                // Any title-token overlap corroborates the current pairing.
+                if (matchedCount(owner) > 0) continue;
+                const candidates = [];
+                for (let j = 0; j < segmentInfos.length; j++) {
+                    if (j === i) continue;
+                    const sibling = segmentInfos[j];
+                    if (!sibling.eligible) continue;
+                    const matched = matchedCount(sibling);
+                    const coversSingleTokenTitle = sibling.titleTokens.length === 1 && matched === 1;
+                    if (matched >= 2 || coversSingleTokenTitle) {
+                        candidates.push({ index: j, matched });
+                    }
+                }
+                if (candidates.length === 0) continue; // names nobody → leave alone
+                const maxMatched = Math.max(...candidates.map(candidate => candidate.matched));
+                const topCandidates = candidates.filter(candidate => candidate.matched === maxMatched);
+                if (!(owner.segment.ocrExcludedUrlKeys instanceof Set)) {
+                    owner.segment.ocrExcludedUrlKeys = new Set();
+                }
+                owner.segment.ocrExcludedUrlKeys.add(strippedOcrUrl);
+                if (topCandidates.length === 1) {
+                    const target = segmentInfos[topCandidates[0].index];
+                    if (!Array.isArray(target.segment.imageHintUrls)) {
+                        target.segment.imageHintUrls = [];
+                    }
+                    if (!target.segment.imageHintUrls.includes(ocr.url)) {
+                        target.segment.imageHintUrls.push(ocr.url);
+                    }
+                    // Refresh the target's ownership keys so later OCR results
+                    // judge the moved image against its NEW owner.
+                    target.keys = this.getSegmentImageUrlKeys(target.segment, sourceUrl);
+                    console.log(`🤖 AI Web: Reassigned OCR image ${ocr.url} from segment ${i + 1} ("${owner.title}") to segment ${topCandidates[0].index + 1} ("${target.title}") — flyer text matches sibling listing title`);
+                } else {
+                    console.log(`🤖 AI Web: Detached OCR image ${ocr.url} from segment ${i + 1} ("${owner.title}") — flyer text matches multiple sibling titles`);
+                }
+            }
+        }
+        return sourceSegments;
     }
 
     buildOcrSnippet(imageUrl, text, eventSummary = null) {
@@ -6830,6 +6985,16 @@ ${String(snippet || '')}`;
         const knownVenueName = siteRole === 'venue' ? this.getPageVenueName(htmlData) : '';
         if (knownVenueName) {
             steeringContext += `KNOWN VENUE (this is the venue's own site): "${knownVenueName}" — events on this page take place AT this venue unless the page states another location; DJ names, taglines, and edition subtitles are NOT the venue.\n`;
+            // Additive strengthening line, only when the venue name uniquely
+            // matches ONE curated bar (never for ambiguous cities or generic
+            // franchise stems) — guest-host brand names on flyers must not
+            // displace the site's own venue.
+            const curatedVenueMatch = this.core && typeof this.core.findCuratedBarCityByName === 'function'
+                ? this.core.findCuratedBarCityByName(knownVenueName)
+                : null;
+            if (curatedVenueMatch && curatedVenueMatch.city && curatedVenueMatch.bar) {
+                steeringContext += `KNOWN VENUE (curated match): "${knownVenueName}" is the venue for every event on this site. Other bar or brand names printed on a flyer are guest hosts or co-presenters, NOT the venue — never return them as "bar" unless the page states the event happens at a different street address.\n`;
+            }
         } else if (pageBrandNames.length > 0 && siteRole !== 'venue') {
             const aliasSuffix = pageBrandNames.length > 1
                 ? ` (also appears as ${pageBrandNames.slice(1).map(name => `"${name}"`).join(', ')})`
@@ -9001,6 +9166,13 @@ TEXT:
             });
         }
 
+        // A single-event page (never a multi-event segment — one shared meta
+        // image cannot be attributed to one segment) whose extraction found no
+        // image adopts the page's own og:image artwork.
+        if (!dataFlags.segment) {
+            this.fillImageFromPageMetaArtwork(event, htmlData);
+        }
+
         // Provenance stamp for the FINAL image value (after any parser-config
         // metadata override): 'og-image' when it is the page's own artwork,
         // 'page' otherwise; no image → no stamp.
@@ -9954,6 +10126,38 @@ TEXT:
     // An already-stamped or absent image is left untouched (fail open), so the
     // JSON-LD path's 'jsonld' stamp and other parsers' unstamped images are
     // never relabeled.
+    // og:image fill for imageless single-event pages: when a page produced
+    // EXACTLY ONE event and extraction found no image, the page's own
+    // og:image/twitter:image meta IS that event's artwork — adopt it. Uses the
+    // RAW meta value run through the standard storage pipeline
+    // (normalizeHttpUrlValue → unwrapImageProxyUrl → upgradeCdnThumbnailUrl),
+    // never the lowercased comparison form getPageMetaImageUrls builds.
+    // Obvious non-artwork URLs (logos/icons per isLikelyUninterestingImageUrl)
+    // are skipped; an event that already has an image is left untouched.
+    fillImageFromPageMetaArtwork(event, htmlData) {
+        if (!event || typeof event !== 'object') return event;
+        const existingImage = typeof event.image === 'string' ? event.image.trim() : '';
+        if (existingImage) return event;
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        if (!html) return event;
+        const metaKeys = ['og:image', 'og:image:url', 'og:image:secure_url', 'twitter:image', 'twitter:image:src'];
+        for (const metaKey of metaKeys) {
+            // Same explicit &amp; second decode as getPageMetaImageUrls.
+            const content = this.extractOgMetaContent(html, metaKey).replace(/&amp;/gi, '&');
+            if (!content) continue;
+            const normalized = this.normalizeHttpUrlValue(content);
+            if (!normalized) continue;
+            const unwrapped = this.unwrapImageProxyUrl(normalized) || normalized;
+            const upgraded = this.upgradeCdnThumbnailUrl(unwrapped);
+            if (!upgraded || this.isLikelyUninterestingImageUrl(upgraded)) continue;
+            event.image = upgraded;
+            event.imageSource = 'og-image';
+            console.log(`🤖 AI Web: Filled image from page og:image for "${event.title}"`);
+            return event;
+        }
+        return event;
+    }
+
     stampImageProvenance(event, htmlData) {
         if (!event || typeof event !== 'object') return event;
         if (event.imageSource) return event;
@@ -10140,10 +10344,22 @@ TEXT:
             this.venueSiteHarvest[host] = {
                 addresses: Object.create(null),
                 pages: new Set(),
-                blocked: false
+                blocked: false,
+                venueRoleSeen: false,
+                venueName: ''
             };
         }
         return this.venueSiteHarvest[host];
+    }
+
+    // Identity facts for the venue-site identity pass: remember that SOME page
+    // of this host resolved siteRole 'venue', and the venue name that page
+    // declared (first non-empty wins). Organizer pages still block via the
+    // existing veto — identity is only ever established on unblocked hosts.
+    recordVenueSiteRoleFacts(entry, htmlData) {
+        if (!entry || this.getPageSiteRole(htmlData) !== 'venue') return;
+        entry.venueRoleSeen = true;
+        if (!entry.venueName) entry.venueName = this.getPageVenueName(htmlData);
     }
 
     // Collect this page's map-directions addresses into the per-host harvest
@@ -10158,6 +10374,7 @@ TEXT:
         if (!host) return;
         const entry = this.getVenueSiteHarvestEntry(host);
         if (this.getPageSiteRole(htmlData) === 'organizer') entry.blocked = true;
+        this.recordVenueSiteRoleFacts(entry, htmlData);
         if (entry.pages.has(pageUrl)) return;
         entry.pages.add(pageUrl);
         const seenKeys = new Set();
@@ -10184,6 +10401,9 @@ TEXT:
         if (this.getPageSiteRole(htmlData) === 'organizer') {
             this.getVenueSiteHarvestEntry(host).blocked = true;
         }
+        if (this.getPageSiteRole(htmlData) === 'venue') {
+            this.recordVenueSiteRoleFacts(this.getVenueSiteHarvestEntry(host), htmlData);
+        }
         for (const event of events) {
             if (event && typeof event === 'object' && !event._venueSitePageHost) {
                 event._venueSitePageHost = host;
@@ -10206,6 +10426,22 @@ TEXT:
         const harvest = this.venueSiteHarvest;
         this.venueSiteHarvest = null;
         if (!harvest) return;
+        // Stash the per-host harvest outcomes for the identity pass that runs
+        // right after this one (applyVenueSiteIdentityCorrections consumes and
+        // clears it) — consensus first, identity second.
+        this.lastVenueSiteConsensus = Object.create(null);
+        for (const host of Object.keys(harvest)) {
+            const entry = harvest[host];
+            const hostKeys = Object.keys(entry.addresses);
+            const consensusKey = !entry.blocked && hostKeys.length === 1 ? hostKeys[0] : '';
+            this.lastVenueSiteConsensus[host] = {
+                consensusKey,
+                consensusAddress: consensusKey ? entry.addresses[consensusKey].display : '',
+                blocked: entry.blocked === true,
+                venueRoleSeen: entry.venueRoleSeen === true,
+                venueName: typeof entry.venueName === 'string' ? entry.venueName : ''
+            };
+        }
         const eventList = Array.isArray(events) ? events : [];
         for (const host of Object.keys(harvest)) {
             const entry = harvest[host];
@@ -10240,6 +10476,158 @@ TEXT:
                 if (cityKey && (!existingCity || existingCity === 'unknown')) {
                     event.city = cityKey;
                     console.log(`🤖 AI Web: Filled city "${cityKey}" from venue-site consensus for "${title}"`);
+                }
+            }
+        }
+    }
+
+    // Same-address test for identity establishment and its multi-venue skip:
+    // parsed street-line comparison first (parseAddressForComparison +
+    // isSameStreetAddress), with normalized-token join equality as the
+    // fallback when either side does not parse. Fails closed on blanks.
+    venueSiteIdentityAddressesAgree(addressA, addressB) {
+        const a = String(addressA || '').trim();
+        const b = String(addressB || '').trim();
+        if (!a || !b || !this.core) return false;
+        const parsedA = this.core.parseAddressForComparison(a);
+        const parsedB = this.core.parseAddressForComparison(b);
+        if (parsedA && parsedB) return this.core.isSameStreetAddress(parsedA, parsedB);
+        const tokensA = this.core.normalizeAddressTokens(a).join(' ');
+        const tokensB = this.core.normalizeAddressTokens(b).join(' ');
+        return Boolean(tokensA) && tokensA === tokensB;
+    }
+
+    // WHO a crawled site is — established only when independent hard facts
+    // converge, failing closed on ANY miss:
+    //   1. some page of the host resolved siteRole 'venue' AND no page ever
+    //      resolved 'organizer' (blocked — the same veto the address
+    //      consensus honors);
+    //   2. the harvested venue name uniquely matches ONE curated bar
+    //      (findCuratedBarCityByName — ambiguous cities and generic franchise
+    //      stems never establish identity);
+    //   3. address agreement, either level: the host's address consensus IS
+    //      the curated bar's address (whole-host identity, hostLevel: true),
+    //      or — when the host produced no consensus at all — identity applies
+    //      per-event only (hostLevel: false; the caller requires the event's
+    //      own _geoPoiName to equal the bar's name key). A consensus that
+    //      CONTRADICTS the curated address establishes nothing.
+    // Ticketing-platform org pages (eventbrite.com) can never establish
+    // identity: the registrable host is the platform's, so its venue name
+    // resolves to the platform brand ("Eventbrite") and matches no curated
+    // bar — the curated-name condition is the structural guard.
+    getEstablishedVenueSiteIdentity(entry, consensusKey = '') {
+        if (!entry || typeof entry !== 'object') return null;
+        if (entry.venueRoleSeen !== true || entry.blocked !== false) return null;
+        const venueName = typeof entry.venueName === 'string' ? entry.venueName.trim() : '';
+        if (!venueName) return null;
+        if (!this.core || typeof this.core.findCuratedBarCityByName !== 'function') return null;
+        const match = this.core.findCuratedBarCityByName(venueName);
+        if (!match || !match.city || !match.bar) return null;
+        const curatedBar = match.bar;
+        if (consensusKey) {
+            const consensusAddress = typeof entry.consensusAddress === 'string' ? entry.consensusAddress.trim() : '';
+            const curatedAddress = typeof curatedBar.address === 'string' ? curatedBar.address.trim() : '';
+            if (!curatedAddress || !this.venueSiteIdentityAddressesAgree(consensusAddress, curatedAddress)) {
+                return null;
+            }
+            return { name: curatedBar.name, city: match.city, curatedBar, hostLevel: true };
+        }
+        return { name: curatedBar.name, city: match.city, curatedBar, hostLevel: false };
+    }
+
+    // Deterministic KNOWN-VENUE replacement pass, run by shared-core's
+    // processParser immediately AFTER applyVenueSiteAddressConsensus (which
+    // stashes lastVenueSiteConsensus for it). On a host whose identity is
+    // established, an event's bar that is really a flyer subtitle or guest
+    // brand is corrected to the curated venue name — with per-event skips
+    // that keep multi-venue announcements (off-site street address), bars the
+    // curated data or the page's own structured data corroborates, and the
+    // venue's own name (casing normalized only) untouched.
+    applyVenueSiteIdentityCorrections(events, cityConfig = null) {
+        const consensusByHost = this.lastVenueSiteConsensus;
+        this.lastVenueSiteConsensus = null;
+        if (!consensusByHost || !this.core) return;
+        const eventList = Array.isArray(events) ? events : [];
+        for (const host of Object.keys(consensusByHost)) {
+            const entry = consensusByHost[host];
+            const identity = this.getEstablishedVenueSiteIdentity(entry, entry.consensusKey);
+            if (!identity) continue;
+            const curatedBar = identity.curatedBar;
+            const identityKey = this.core.normalizeBarNameKey(curatedBar.name);
+            const cityBars = typeof this.core.getCuratedCityBars === 'function'
+                ? this.core.getCuratedCityBars(identity.city)
+                : null;
+            const signals = identity.hostLevel
+                ? ['venue-role', 'curated-name', 'address-consensus']
+                : ['venue-role', 'curated-name', 'geo-poi'];
+            let identityLogged = false;
+            const logIdentityOnce = () => {
+                if (identityLogged) return;
+                identityLogged = true;
+                console.log(`🤖 AI Web: Venue-site identity for ${host} established: "${curatedBar.name}" (${identity.city}) — signals: ${signals.join(', ')}`);
+            };
+            if (identity.hostLevel) logIdentityOnce();
+            for (const event of eventList) {
+                if (!event || typeof event !== 'object' || event._venueSitePageHost !== host) continue;
+                if (!identity.hostLevel) {
+                    // POI promotion: without an address consensus, identity
+                    // applies only to events whose accepted pin's map POI IS
+                    // this venue.
+                    const poiName = typeof event._geoPoiName === 'string' ? event._geoPoiName.trim() : '';
+                    if (!poiName || this.core.normalizeBarNameKey(poiName) !== identityKey) continue;
+                }
+                // Multi-venue skip: a party at ANOTHER street address
+                // announced on this site keeps its own bar untouched.
+                const existingAddress = typeof event.address === 'string' ? event.address.trim() : '';
+                if (existingAddress
+                    && this.normalizeVenueSiteAddressKey(existingAddress) !== entry.consensusKey
+                    && !this.venueSiteIdentityAddressesAgree(existingAddress, curatedBar.address)) {
+                    continue;
+                }
+                logIdentityOnce();
+                const title = typeof event.title === 'string' && event.title.trim() ? event.title.trim() : 'unknown';
+                const bar = typeof event.bar === 'string' ? event.bar.trim() : '';
+                const barSource = typeof event.barSource === 'string' ? event.barSource.trim() : '';
+                // Already the venue: normalize casing to the curated name only.
+                if (bar && this.core.normalizeBarNameKey(bar) === identityKey) {
+                    if (bar !== curatedBar.name) event.bar = curatedBar.name;
+                    continue;
+                }
+                // Corroborated elsewhere: a DIFFERENT curated bar of this
+                // city, or a curated stamp, outranks identity — flag only.
+                const otherCurated = bar && cityBars ? this.core.findCuratedBarByName(cityBars, bar) : null;
+                if (bar && (otherCurated || barSource === 'curated')) {
+                    console.log(`🤖 AI Web: Kept bar "${bar}" for "${title}" — matches another curated ${identity.city} bar; venue-site identity not applied`);
+                    continue;
+                }
+                // The page's own structured data named this bar — never
+                // overridden here.
+                if (event._barFromJsonLd === true) continue;
+                if (!bar) {
+                    event.bar = curatedBar.name;
+                    event.barSource = 'venue-site-identity';
+                    console.log(`🤖 AI Web: Filled bar "${curatedBar.name}" from venue-site identity for "${title}"`);
+                } else {
+                    event._venueIdentityCorrection = {
+                        original: bar,
+                        originalSource: barSource,
+                        signals
+                    };
+                    // A convergence rescue that adopted the replaced value is
+                    // stale evidence for a bar that no longer exists.
+                    if (event._barRescue && typeof event._barRescue === 'object'
+                        && this.core.normalizeBarNameKey(event._barRescue.candidate) === this.core.normalizeBarNameKey(bar)) {
+                        delete event._barRescue;
+                    }
+                    event.bar = curatedBar.name;
+                    event.barSource = 'venue-site-identity';
+                    console.log(`🤖 AI Web: Replaced bar "${bar}" with venue-site identity "${curatedBar.name}" for "${title}" (was ${barSource || 'unstamped'})`);
+                }
+                // City knock-on: the dedup re-anchor pass then resolves any
+                // timezone-unresolved dates — no new timezone code here.
+                const existingCity = typeof event.city === 'string' ? event.city.trim().toLowerCase() : '';
+                if (!existingCity || existingCity === 'unknown') {
+                    event.city = identity.city;
                 }
             }
         }
