@@ -535,6 +535,7 @@ class DynamicCalendarLoader extends CalendarCore {
             const selectedCard = document.querySelector(`.event-card[data-event-slug="${CSS.escape(this.selectedEventSlug)}"]`);
             if (selectedCard) {
                 selectedCard.classList.add('selected');
+                this.ensureFlyerLoaded(selectedCard);
             }
 
             if (eventsList) {
@@ -586,6 +587,21 @@ class DynamicCalendarLoader extends CalendarCore {
             
             logger.debug('EVENT', 'Cleared all selections and ensured calendar events are unselected');
         }
+    }
+
+    // Lazily create the flyer <img> the first time a card is selected.
+    // Deselection re-hides it via CSS; a load failure removes the container entirely.
+    ensureFlyerLoaded(selectedCard) {
+        const flyer = selectedCard.querySelector('.event-flyer[data-flyer-url]');
+        if (!flyer || flyer.querySelector('img')) {
+            return;
+        }
+        const img = document.createElement('img');
+        img.alt = 'event flyer';
+        img.decoding = 'async';
+        img.onerror = () => flyer.remove();
+        img.src = flyer.getAttribute('data-flyer-url');
+        flyer.appendChild(img);
     }
 
     
@@ -1140,6 +1156,51 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
 
+    // Derive an event's favicon URL (local cached path or remote URL) from
+    // event.favicon || event.website, or null when neither is available.
+    // May throw on malformed URLs — callers handle errors.
+    getEventFaviconUrl(event) {
+        let faviconUrl = null;
+
+        if (event.favicon) {
+            let url = event.favicon;
+            // Ensure URL has protocol
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                url = 'https://' + url;
+            }
+            if (this.dataSource === 'cached' && !event.isTestEvent) {
+                faviconUrl = window.FilenameUtils.convertWebsiteUrlToFaviconPath(url, '/img/favicons');
+            } else {
+                faviconUrl = url;
+            }
+        }
+
+        if (!faviconUrl && event.website) {
+            let url = event.website;
+            // Ensure URL has protocol
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                url = 'https://' + url;
+            }
+            faviconUrl = window.FilenameUtils.convertWebsiteUrlToFaviconPath(url, '/img/favicons');
+        }
+
+        return faviconUrl || null;
+    }
+
+    // Small inline favicon chip for event rows; empty string when no favicon is available
+    generateFaviconChipHtml(event) {
+        let faviconUrl = null;
+        try {
+            faviconUrl = this.getEventFaviconUrl(event);
+        } catch (error) {
+            return '';
+        }
+        if (!faviconUrl) {
+            return '';
+        }
+        return `<img class="event-favicon-chip" src="${faviconUrl}" alt="" loading="lazy" onerror="this.style.display='none'">`;
+    }
+
     // Create marker icon with favicon or three letters
     createMarkerIcon(event) {
         if (event.favicon || event.website) {
@@ -1151,47 +1212,21 @@ class DynamicCalendarLoader extends CalendarCore {
                     dataSource: this.dataSource
                 });
                 
-                let faviconUrl;
-                
+                const faviconUrl = this.getEventFaviconUrl(event);
+
                 let fallbackFaviconUrl = '';
 
-                if (event.favicon) {
-                    let url = event.favicon;
-                    // Ensure URL has protocol
-                    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                        url = 'https://' + url;
-                    }
-                    if (this.dataSource === 'cached' && !event.isTestEvent) {
-                        faviconUrl = window.FilenameUtils.convertWebsiteUrlToFaviconPath(url, '/img/favicons');
-                    } else {
-                        faviconUrl = url;
-                    }
-                }
-
-                if (!faviconUrl && event.website) {
+                // We only do live google fallback on the test flow
+                if (event.isTestEvent && !event.favicon && event.website) {
                     let url = event.website;
                     // Ensure URL has protocol
                     if (!url.startsWith('http://') && !url.startsWith('https://')) {
                         url = 'https://' + url;
                     }
-
-                    // We only do live google fallback on the test flow
-                    if (event.isTestEvent) {
-                        faviconUrl = window.FilenameUtils.convertWebsiteUrlToFaviconPath(url, '/img/favicons');
-                        try {
-                            const hostname = new URL(url).hostname;
-                            fallbackFaviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
-                        } catch(e) {}
-                    } else {
-                        faviconUrl = window.FilenameUtils.convertWebsiteUrlToFaviconPath(url, '/img/favicons');
-                    }
-
-                    logger.debug('MAP', 'Using local favicon for cached data', {
-                        website: url,
-                        localPath: faviconUrl,
-                        fallbackFaviconUrl,
-                        dataSource: this.dataSource
-                    });
+                    try {
+                        const hostname = new URL(url).hostname;
+                        fallbackFaviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
+                    } catch(e) {}
                 }
                 
                 const textFallback = this.getMarkerText(event);
@@ -1879,13 +1914,26 @@ class DynamicCalendarLoader extends CalendarCore {
             `<span class="date-badge">${dateBadgeContent}</span>` : '';
         
         // Add distance badge if location features are enabled and distance is available
-        const distanceBadge = this.locationFeaturesEnabled && event.distanceFromUser !== undefined ? 
+        const distanceBadge = this.locationFeaturesEnabled && event.distanceFromUser !== undefined ?
             `<span class="distance-badge" title="Distance from your location"><i class="bi bi-geo-alt"></i> ${event.distanceFromUser} mi</span>` : '';
+
+        const faviconChip = this.generateFaviconChipHtml(event);
+        // Placeholder only — the <img> is created lazily on selection (ensureFlyerLoaded).
+        // Entity-escape for the attribute (NOT encodeURI — many image URLs are already
+        // percent-encoded and encodeURI would double-encode them); getAttribute decodes
+        // back to the exact original URL.
+        const flyerUrl = event.image ? String(event.image)
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;') : '';
+        const flyerHtml = flyerUrl ?
+            `<div class="event-flyer" data-flyer-url="${flyerUrl}"></div>` : '';
 
         return `
             <div class="event-card detailed" data-event-slug="${event.slug}" data-lat="${event.coordinates?.lat || ''}" data-lng="${event.coordinates?.lng || ''}">
                 <div class="event-header">
-                    <h3>${event.name}</h3>
+                    <h3>${faviconChip}${event.name}</h3>
                     <div class="event-meta">
                         <div class="event-day">${formatDayTime(event)}</div>
                         ${recurringBadge}
@@ -1894,6 +1942,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     </div>
                 </div>
                 <div class="event-details">
+                    ${flyerHtml}
                     ${locationHtml}
                     ${coverHtml}
                     ${teaHtml}
@@ -2513,7 +2562,7 @@ class DynamicCalendarLoader extends CalendarCore {
                         <div class="event-item${flowClass}" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'}${event.time ? ' - ' + event.time : ''}">
                             ${showTitle ? this.generateEventNameElements(event, hideEvents) : `<div style="visibility: hidden;">${this.generateEventNameElements(event, hideEvents)}</div>`}
                             ${mobileTime ? `<div class="event-time">${mobileTime}</div>` : ''}
-                            <div class="event-venue">${event.bar || ''}</div>
+                            <div class="event-venue">${this.generateFaviconChipHtml(event)}${event.bar || ''}</div>
                         </div>
                     `;
                 }).join('')
