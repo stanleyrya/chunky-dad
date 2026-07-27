@@ -21,7 +21,7 @@
     "chicago": {
       "name": "Chicago",
       "status": "success",
-      "dataLength": 19970,
+      "dataLength": 19990,
       "eventCount": 16
     },
     "dallas": {
@@ -87,7 +87,7 @@
     "portland": {
       "name": "Portland",
       "status": "success",
-      "dataLength": 24089,
+      "dataLength": 24152,
       "eventCount": 18
     },
     "ptown": {
