@@ -334,9 +334,17 @@ test('normalizeAiEvent stamps imageSource og-image for the page\'s own meta artw
     { ...base, image: 'https://static.wixstatic.com/media/8ff085_massiveparty~mv2.webp' }, {}, htmlData, null, null);
   assert.equal(pageEvent.imageSource, 'page');
 
-  // No image → no stamp at all (fail open)
+  // No extracted image → a single-event page adopts its own og:image artwork
   const bareEvent = parser.normalizeAiEvent({ ...base }, {}, htmlData, null, null);
-  assert.equal('imageSource' in bareEvent, false);
+  assert.equal(bareEvent.imageSource, 'og-image');
+  assert.equal(
+    parser.canonicalizeImageUrlForComparison(bareEvent.image),
+    parser.canonicalizeImageUrlForComparison('https://bearracuda.com/wp-content/uploads/sausageweb.jpg'));
+
+  // No image and no page meta artwork → no stamp at all (fail open)
+  const bareNoMetaEvent = parser.normalizeAiEvent(
+    { ...base }, {}, { url: htmlData.url, html: '<html><head></head><body></body></html>' }, null, null);
+  assert.equal('imageSource' in bareNoMetaEvent, false);
 
   // No htmlData (no meta to compare against) → the AI-web default, page
   const noHtmlEvent = parser.normalizeAiEvent(
@@ -5859,4 +5867,424 @@ test('venue-hours notice: extractSingleEvent skips the literal "Tuesday Closed" 
     logs.includes('🤖 AI Web: Skipped venue-hours notice "Tuesday Closed" — not an event'),
     `skip log expected, got: ${JSON.stringify(logs.filter(line => line.includes('AI Web')))}`
   );
+});
+
+// ---------------------------------------------------------------------------
+// Image-pairing eligibility: a venue-hours notice segment ("Tuesday Closed")
+// describes no event and must never claim a page image in EITHER matcher.
+// ---------------------------------------------------------------------------
+
+test('image pairing: a "Tuesday Closed" phantom segment never takes an image in the ordered matcher', () => {
+  const parser = createParser();
+  const bounds = [
+    { rawStart: 0, rawEnd: 100 },
+    { rawStart: 5000, rawEnd: 6000 }
+  ];
+  const records = [{ url: 'https://img.example/flyer.jpg', start: 40, end: 60 }];
+
+  // Without eligibility the image lands on the phantom (overlap, cost 0)
+  assert.deepEqual(
+    parser.matchOrderedImagesToSegments(bounds, records),
+    ['https://img.example/flyer.jpg']);
+
+  // With the phantom marked ineligible the real sibling gets it instead
+  const matched = parser.matchOrderedImagesToSegments(bounds, records, [false, true]);
+  assert.equal(matched[0], undefined, 'phantom claims nothing');
+  assert.equal(matched[1], 'https://img.example/flyer.jpg');
+});
+
+test('image pairing: a "Tuesday Closed" phantom segment never takes an image in the OCR matcher, even via similarity', () => {
+  const parser = createParser();
+  const segments = [
+    { lines: ['Tuesday Closed'] },
+    { lines: ['HOSTILE NOISE', 'July 10, 2026'] }
+  ];
+  const bounds = [
+    { rawStart: 0, rawEnd: 100, matchedRecords: [{ text: 'Tuesday Closed' }] },
+    { rawStart: 5000, rawEnd: 6000, matchedRecords: [{ text: 'HOSTILE NOISE July 10, 2026' }] }
+  ];
+  const records = [{ url: 'https://img.example/flyer.jpg', start: 40, end: 60 }];
+  // OCR text mirrors the phantom's row text — the similarity override would
+  // otherwise bind the flyer to the phantom
+  const ocrResults = [{
+    url: 'https://img.example/flyer.jpg',
+    text: 'Tuesday Closed',
+    imageClassification: 'event-flyer'
+  }];
+
+  const unguarded = parser.matchOrderedImagesToSegmentsWithOcr(segments, bounds, records, ocrResults);
+  assert.equal(unguarded[0], 'https://img.example/flyer.jpg', 'without eligibility the phantom wins');
+
+  const guarded = parser.matchOrderedImagesToSegmentsWithOcr(segments, bounds, records, ocrResults, [false, true]);
+  assert.equal(guarded[0], null, 'phantom claims nothing');
+  assert.equal(guarded[1], 'https://img.example/flyer.jpg', 'the real sibling gets the flyer');
+});
+
+test('image pairing: eligibility follows the venue-hours notice detector, failing open without a title', () => {
+  const parser = createParser();
+  assert.equal(parser.isSegmentEligibleForImagePairing({ lines: ['Tuesday Closed'] }), false);
+  assert.equal(parser.isSegmentEligibleForImagePairing({ lines: ['HOSTILE NOISE'] }), true);
+  assert.equal(parser.isSegmentEligibleForImagePairing({ lines: [] }), true, 'no derivable title stays eligible');
+});
+
+// ---------------------------------------------------------------------------
+// Post-pairing title↔OCR consistency gate (run 20260725: the Hostile Noise
+// flyer was paired to the Treasure Trail segment).
+// ---------------------------------------------------------------------------
+
+function buildOcrGateSegments() {
+  return [
+    {
+      lines: ['Treasure Trail', 'July 10, 2026'],
+      html: '',
+      imageHintUrls: ['https://img.example/hostile-noise.jpg']
+    },
+    { lines: ['Hostile Noise', 'July 11, 2026'], html: '', imageHintUrls: [] }
+  ];
+}
+
+test('OCR consistency gate: the Hostile Noise flyer is reassigned from the Treasure Trail segment to its own listing', () => {
+  const parser = createParser();
+  const segments = buildOcrGateSegments();
+  const ocrResults = [{
+    url: 'https://img.example/hostile-noise.jpg',
+    text: 'HOSTILE NOISE presents a night of mayhem',
+    eventSummary: ''
+  }];
+
+  const logs = captureLogs(() => {
+    parser.applySegmentOcrConsistencyGate(segments, ocrResults, 'https://venue.example/events');
+  });
+
+  assert.ok(segments[1].imageHintUrls.includes('https://img.example/hostile-noise.jpg'),
+    'target segment adopts the flyer');
+  assert.ok(segments[0].ocrExcludedUrlKeys instanceof Set && segments[0].ocrExcludedUrlKeys.size === 1,
+    'owner segment excludes the flyer');
+  assert.ok(logs.some(line => line.includes('Reassigned OCR image https://img.example/hostile-noise.jpg')
+    && line.includes('flyer text matches sibling listing title')), `reassign log expected, got: ${JSON.stringify(logs)}`);
+
+  // The filter judges ownership with the same keys: owner no longer matches,
+  // target now does
+  assert.deepEqual(parser.filterOcrResultsForSegment(ocrResults, segments[0], 'https://venue.example/events'), []);
+  assert.equal(parser.filterOcrResultsForSegment(ocrResults, segments[1], 'https://venue.example/events').length, 1);
+});
+
+test('OCR consistency gate: any title-token overlap with the owner keeps the pairing (thrash-proof)', () => {
+  const parser = createParser();
+  const segments = [
+    {
+      lines: ['Treasure Trail Party', 'July 10, 2026'],
+      html: '',
+      imageHintUrls: ['https://img.example/flyer.jpg']
+    },
+    { lines: ['Hostile Noise', 'July 11, 2026'], html: '', imageHintUrls: [] }
+  ];
+  // One owner token ("trail") appears in the flyer text → owner keeps it even
+  // though the sibling matches two tokens
+  const ocrResults = [{
+    url: 'https://img.example/flyer.jpg',
+    text: 'Trail mix at the HOSTILE NOISE afterparty',
+    eventSummary: ''
+  }];
+
+  parser.applySegmentOcrConsistencyGate(segments, ocrResults, 'https://venue.example/events');
+
+  assert.equal(segments[0].ocrExcludedUrlKeys, undefined, 'owner keeps its flyer');
+  assert.deepEqual(segments[1].imageHintUrls, [], 'sibling adopts nothing');
+});
+
+test('OCR consistency gate: a flyer naming multiple siblings equally is detached, owning nobody', () => {
+  const parser = createParser();
+  const segments = [
+    {
+      lines: ['Treasure Trail', 'July 10, 2026'],
+      html: '',
+      imageHintUrls: ['https://img.example/flyer.jpg']
+    },
+    { lines: ['Hostile Noise', 'July 11, 2026'], html: '', imageHintUrls: [] },
+    { lines: ['Noise Hostile', 'July 12, 2026'], html: '', imageHintUrls: [] }
+  ];
+  const ocrResults = [{
+    url: 'https://img.example/flyer.jpg',
+    text: 'HOSTILE NOISE weekend takeover',
+    eventSummary: ''
+  }];
+
+  const logs = captureLogs(() => {
+    parser.applySegmentOcrConsistencyGate(segments, ocrResults, 'https://venue.example/events');
+  });
+
+  assert.ok(segments[0].ocrExcludedUrlKeys instanceof Set && segments[0].ocrExcludedUrlKeys.size === 1,
+    'owner is detached from the flyer');
+  assert.deepEqual(segments[1].imageHintUrls, []);
+  assert.deepEqual(segments[2].imageHintUrls, []);
+  assert.ok(logs.some(line => line.includes('Detached OCR image https://img.example/flyer.jpg')
+    && line.includes('flyer text matches multiple sibling titles')), `detach log expected, got: ${JSON.stringify(logs)}`);
+  assert.deepEqual(parser.filterOcrResultsForSegment(ocrResults, segments[0], 'https://venue.example/events'), [],
+    'detached flyer no longer reaches the former owner');
+});
+
+test('OCR consistency gate: an excluded flyer\'s OCR text and image lines never reach the former owner\'s prompt content', () => {
+  const parser = createParser();
+  const segments = buildOcrGateSegments();
+  const ocrResults = [{
+    url: 'https://img.example/hostile-noise.jpg',
+    text: 'HOSTILE NOISE presents a night of mayhem',
+    eventSummary: ''
+  }];
+  const htmlData = { url: 'https://venue.example/events', html: '<html><body></body></html>' };
+
+  parser.applySegmentOcrConsistencyGate(segments, ocrResults, htmlData.url);
+
+  const ownerData = parser.buildMultiEventSegmentHtmlData(htmlData, segments[0], 0, 2, ocrResults);
+  assert.ok(!ownerData.html.includes('HOSTILE NOISE presents'), 'OCR text stays out of the owner prompt');
+  assert.ok(!ownerData.html.includes('https://img.example/hostile-noise.jpg'),
+    'no SEGMENT_IMAGE_HINT_URL/SEGMENT_IMAGE_URL line for the excluded image');
+  assert.deepEqual(ownerData.ocrResults, []);
+
+  const targetData = parser.buildMultiEventSegmentHtmlData(htmlData, segments[1], 1, 2, ocrResults);
+  assert.ok(targetData.html.includes('HOSTILE NOISE presents'), 'OCR text reaches the new owner');
+  assert.ok(targetData.html.includes('https://img.example/hostile-noise.jpg'));
+});
+
+// ---------------------------------------------------------------------------
+// og:image fill for imageless single-event pages (2c): a page that produced
+// exactly one event adopts its own og:image; multi-event segments never do.
+// ---------------------------------------------------------------------------
+
+test('og:image fill: an imageless single JSON-LD event adopts the page og:image; multi-event pages never do', () => {
+  const parser = createParser();
+  const htmlData = {
+    url: 'https://venue.example/events/big-night',
+    html: `<html><head>
+      <meta property="og:image" content="https://venue.example/artwork/big-night.jpg" />
+    </head><body></body></html>`
+  };
+
+  const event = { title: 'BIG NIGHT', image: '' };
+  const logs = captureLogs(() => {
+    parser.fillImageFromPageMetaArtwork(event, htmlData);
+  });
+  assert.equal(event.image, 'https://venue.example/artwork/big-night.jpg');
+  assert.equal(event.imageSource, 'og-image');
+  assert.ok(logs.includes('🤖 AI Web: Filled image from page og:image for "BIG NIGHT"'),
+    `fill log expected, got: ${JSON.stringify(logs)}`);
+
+  // An event that already has an image is never overwritten
+  const withImage = { title: 'BIG NIGHT', image: 'https://venue.example/other.jpg' };
+  parser.fillImageFromPageMetaArtwork(withImage, htmlData);
+  assert.equal(withImage.image, 'https://venue.example/other.jpg');
+  assert.equal(withImage.imageSource, undefined);
+
+  // Uninteresting meta URLs (logo shapes) are skipped
+  const logoData = {
+    url: htmlData.url,
+    html: '<html><head><meta property="og:image" content="https://venue.example/assets/logo.png" /></head><body></body></html>'
+  };
+  const logoEvent = { title: 'BIG NIGHT', image: '' };
+  parser.fillImageFromPageMetaArtwork(logoEvent, logoData);
+  assert.equal(logoEvent.image, '', 'a logo og:image is never adopted');
+
+  // Multi-event segments never adopt the page-level meta image
+  const segmentEvent = parser.normalizeAiEvent(
+    { title: 'SEGMENT EVENT', startDate: '2026-08-01', startTime: '21:00' },
+    {},
+    { ...htmlData, dataFlags: { ocr: true, segment: true } },
+    null, null);
+  assert.equal(segmentEvent.image, '', 'segment events never inherit og:image');
+});
+
+// ---------------------------------------------------------------------------
+// Venue-site identity (KNOWN VENUE guard): establishment fails closed on any
+// missing fact; the replacement pass corrects flyer-subtitle bars only.
+// ---------------------------------------------------------------------------
+
+function createIdentityParser() {
+  const parser = new AiWebParser({ normalizeUrl });
+  parser.core = new SharedCore(
+    { seattle: { timezone: 'America/Los_Angeles', patterns: ['seattle'] } },
+    {
+      eventSchema: EventSchema,
+      bars: {
+        seattle: [
+          { name: 'Massive', city: 'seattle', address: '1620 Broadway, Seattle, WA 98122' },
+          { name: 'The Cuff Complex', city: 'seattle', address: '1533 13th Ave, Seattle, WA 98122' },
+          { name: 'Rockbar', city: 'seattle', address: '1 Rock Ave, Seattle, WA' }
+        ],
+        dallas: [
+          { name: 'Dallas Eagle', city: 'dallas', address: '525 S Riverfront Blvd, Dallas, TX' },
+          { name: 'Rockbar', city: 'dallas', address: '2 Rock St, Dallas, TX' }
+        ],
+        'fort-lauderdale': [
+          { name: 'Eagle', city: 'fort-lauderdale', address: '1951 NW 9th Ave, Fort Lauderdale, FL' }
+        ]
+      }
+    }
+  );
+  return parser;
+}
+
+test('venue-site identity: established for the massive-shaped host, fails closed on blocks, ambiguity, stems, and platforms', () => {
+  const parser = createIdentityParser();
+  const entry = {
+    consensusKey: parser.normalizeVenueSiteAddressKey('1620 Broadway, Seattle, WA 98122'),
+    consensusAddress: '1620 Broadway, Seattle, WA 98122',
+    blocked: false,
+    venueRoleSeen: true,
+    venueName: 'Massive'
+  };
+  const identity = parser.getEstablishedVenueSiteIdentity(entry, entry.consensusKey);
+  assert.ok(identity, 'all facts converge → identity established');
+  assert.equal(identity.name, 'Massive');
+  assert.equal(identity.city, 'seattle');
+  assert.equal(identity.hostLevel, true);
+
+  // Any organizer-resolved page on the host blocks
+  assert.equal(parser.getEstablishedVenueSiteIdentity({ ...entry, blocked: true }, entry.consensusKey), null);
+  // No page ever resolved venue role
+  assert.equal(parser.getEstablishedVenueSiteIdentity({ ...entry, venueRoleSeen: false }, entry.consensusKey), null);
+  // A consensus address CONTRADICTING the curated address establishes nothing
+  assert.equal(parser.getEstablishedVenueSiteIdentity(
+    { ...entry, consensusAddress: '525 S Riverfront Blvd, Dallas, TX' }, entry.consensusKey), null);
+  // Ambiguous curated name (curated in two cities) never establishes
+  assert.equal(parser.getEstablishedVenueSiteIdentity({ ...entry, venueName: 'Rockbar' }, entry.consensusKey), null);
+  // Generic franchise stem ("Eagle" ⊂ "Dallas Eagle") never establishes
+  assert.equal(parser.getEstablishedVenueSiteIdentity({ ...entry, venueName: 'Eagle' }, entry.consensusKey), null);
+  // Ticketing-platform brand matches no curated bar — the structural guard
+  assert.equal(parser.getEstablishedVenueSiteIdentity({ ...entry, venueName: 'Eventbrite' }, entry.consensusKey), null);
+  // No consensus at all → identity applies per-event only (POI promotion)
+  const eventLevel = parser.getEstablishedVenueSiteIdentity(
+    { ...entry, consensusKey: '', consensusAddress: '' }, '');
+  assert.ok(eventLevel);
+  assert.equal(eventLevel.hostLevel, false);
+});
+
+test('venue-site identity: the replacement matrix — replace, fill, and every skip shape', () => {
+  const parser = createIdentityParser();
+  parser.lastVenueSiteConsensus = {
+    'massive.club': {
+      consensusKey: parser.normalizeVenueSiteAddressKey('1620 Broadway, Seattle, WA 98122'),
+      consensusAddress: '1620 Broadway, Seattle, WA 98122',
+      blocked: false,
+      venueRoleSeen: true,
+      venueName: 'Massive'
+    }
+  };
+  const events = [
+    // PERVERT/Villa Señor shape: uncorroborated flyer subtitle → replaced
+    {
+      title: 'PERVERT', bar: 'Villa Señor', barSource: 'uncorroborated', city: '',
+      _venueSitePageHost: 'massive.club',
+      _barRescue: { candidate: 'Villa Señor', signals: ['page', 'ocr'] }
+    },
+    // Empty bar → filled
+    { title: 'PACK', bar: '', city: 'seattle', _venueSitePageHost: 'massive.club' },
+    // Off-site street address → untouched (multi-venue announcement)
+    {
+      title: 'OFFSITE', bar: 'Somewhere Else', barSource: 'uncorroborated',
+      address: '4216 University Way NE, Seattle, WA', _venueSitePageHost: 'massive.club'
+    },
+    // A DIFFERENT curated bar of the city → untouched (flag-only log)
+    { title: 'CUFF TAKEOVER', bar: 'The Cuff Complex', _venueSitePageHost: 'massive.club' },
+    // Structured-data bar → untouched
+    { title: 'JSONLD NIGHT', bar: 'Some Hall', _barFromJsonLd: true, _venueSitePageHost: 'massive.club' },
+    // Venue's own name in another casing → casing normalized only
+    { title: 'HOUSE NIGHT', bar: 'MASSIVE', barSource: 'venue-site', _venueSitePageHost: 'massive.club' },
+    // Different host → untouched
+    { title: 'ELSEWHERE', bar: 'Shore Thing', _venueSitePageHost: 'other.example' }
+  ];
+
+  const logs = captureLogs(() => parser.applyVenueSiteIdentityCorrections(events, null));
+
+  assert.equal(events[0].bar, 'Massive');
+  assert.equal(events[0].barSource, 'venue-site-identity');
+  assert.deepEqual(events[0]._venueIdentityCorrection, {
+    original: 'Villa Señor',
+    originalSource: 'uncorroborated',
+    signals: ['venue-role', 'curated-name', 'address-consensus']
+  });
+  assert.equal('_barRescue' in events[0], false, 'a rescue of the replaced value is stale evidence');
+  assert.equal(events[0].city, 'seattle', 'blank city backfilled from the identity');
+  assert.equal(events[1].bar, 'Massive');
+  assert.equal(events[1].barSource, 'venue-site-identity');
+  assert.equal(events[2].bar, 'Somewhere Else', 'off-site address keeps its own bar');
+  assert.equal(events[3].bar, 'The Cuff Complex');
+  assert.equal(events[3].barSource, undefined, 'other curated bar untouched');
+  assert.equal(events[4].bar, 'Some Hall', 'structured-data bar untouched');
+  assert.equal(events[5].bar, 'Massive', 'casing normalized to the curated name');
+  assert.equal(events[5].barSource, 'venue-site', 'barSource untouched on a casing normalization');
+  assert.equal(events[6].bar, 'Shore Thing', 'other hosts untouched');
+
+  assert.ok(logs.some(line => line.includes(
+    '🤖 AI Web: Venue-site identity for massive.club established: "Massive" (seattle) — signals: venue-role, curated-name, address-consensus')),
+    `identity log expected, got: ${JSON.stringify(logs)}`);
+  assert.ok(logs.some(line => line.includes(
+    '🤖 AI Web: Replaced bar "Villa Señor" with venue-site identity "Massive" for "PERVERT" (was uncorroborated)')));
+  assert.ok(logs.some(line => line.includes(
+    '🤖 AI Web: Filled bar "Massive" from venue-site identity for "PACK"')));
+  assert.ok(logs.some(line => line.includes(
+    '🤖 AI Web: Kept bar "The Cuff Complex" for "CUFF TAKEOVER" — matches another curated seattle bar; venue-site identity not applied')));
+  assert.equal(parser.lastVenueSiteConsensus, null, 'the stash is consumed and cleared');
+});
+
+test('venue-site identity: POI promotion applies per-event when the host has no address consensus', () => {
+  const parser = createIdentityParser();
+  parser.lastVenueSiteConsensus = {
+    'massive.club': {
+      consensusKey: '', consensusAddress: '',
+      blocked: false, venueRoleSeen: true, venueName: 'Massive'
+    }
+  };
+  const events = [
+    {
+      title: 'SHORE THING', bar: 'Shore Thing', barSource: 'uncorroborated',
+      _geoPoiName: 'Massive', _venueSitePageHost: 'massive.club'
+    },
+    { title: 'NO POI', bar: 'Shore Thing', barSource: 'uncorroborated', _venueSitePageHost: 'massive.club' }
+  ];
+  parser.applyVenueSiteIdentityCorrections(events, null);
+  assert.equal(events[0].bar, 'Massive');
+  assert.equal(events[0].barSource, 'venue-site-identity');
+  assert.deepEqual(events[0]._venueIdentityCorrection.signals, ['venue-role', 'curated-name', 'geo-poi']);
+  assert.equal(events[1].bar, 'Shore Thing', 'without a matching map POI the identity never applies');
+});
+
+test('venue-site identity: harvest records venue-role facts and the consensus pass stashes them per host', () => {
+  const parser = createIdentityParser();
+  const venueData = { url: 'https://massive.club/events', html: VENUE_SITE_HTML };
+  parser.resolvePageSiteRole(venueData, {});
+  parser.harvestVenueSiteAddresses(venueData);
+  parser.tagEventsWithVenueSitePage([{ title: 'X' }], venueData);
+  const entry = parser.venueSiteHarvest['massive.club'];
+  assert.equal(entry.venueRoleSeen, true);
+  assert.equal(entry.venueName, 'MASSIVE');
+
+  parser.applyVenueSiteAddressConsensus([], null);
+  const stashed = parser.lastVenueSiteConsensus['massive.club'];
+  assert.equal(stashed.venueRoleSeen, true);
+  assert.equal(stashed.venueName, 'MASSIVE');
+  assert.equal(stashed.blocked, false);
+  assert.equal(stashed.consensusKey, '', 'no map-directions addresses → no consensus');
+  assert.equal(parser.venueSiteHarvest, null, 'harvest still resets per run');
+});
+
+test('KNOWN VENUE curated-match prompt line appears only with a unique curated match; the base line stays byte-identical', () => {
+  const curatedMatchLine = 'KNOWN VENUE (curated match): "MASSIVE" is the venue for every event on this site. Other bar or brand names printed on a flyer are guest hosts or co-presenters, NOT the venue — never return them as "bar" unless the page states the event happens at a different street address.';
+
+  const parser = createIdentityParser();
+  const venueData = { url: 'https://massive.club/events', html: VENUE_SITE_HTML };
+  parser.resolvePageSiteRole(venueData, {});
+  const prompt = parser.buildExtractionPrompt(venueData, {}, null, {}, ['title', 'bar'], 'SNIPPET', 'default', {});
+  assert.match(prompt,
+    /KNOWN VENUE \(this is the venue's own site\): "MASSIVE" — events on this page take place AT this venue unless the page states another location; DJ names, taglines, and edition subtitles are NOT the venue\./,
+    'the existing line is unchanged');
+  assert.ok(prompt.includes(curatedMatchLine), 'curated match → the strengthening line is appended');
+
+  // No curated bars data → no curated-match line, base line still present
+  const bareParser = createParser();
+  const bareData = { url: 'https://massive.club/events', html: VENUE_SITE_HTML };
+  bareParser.resolvePageSiteRole(bareData, {});
+  const barePrompt = bareParser.buildExtractionPrompt(bareData, {}, null, {}, ['title', 'bar'], 'SNIPPET', 'default', {});
+  assert.match(barePrompt, /KNOWN VENUE \(this is the venue's own site\): "MASSIVE"/);
+  assert.ok(!barePrompt.includes('KNOWN VENUE (curated match):'), 'no unique curated match → no extra line');
 });
