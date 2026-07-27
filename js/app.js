@@ -120,7 +120,6 @@ class ChunkyDadApp {
         this.cityRenderer = null;
         this.bearEventRenderer = null;
         this.dadJokesManager = null;
-        this.todayEventsAggregator = null;
         
         logger.componentInit('SYSTEM', 'chunky.dad App initializing', {
             isMainPage: this.isMainPage,
@@ -257,7 +256,6 @@ class ChunkyDadApp {
             this.initializeCityRenderer();
             this.initializeBearEventRenderer();
             this.initializeDadJokes();
-            this.initializeTodayEvents();
             this.initializeHomeMap();
         }
         
@@ -332,26 +330,13 @@ class ChunkyDadApp {
         }
     }
 
-    initializeTodayEvents() {
-        if (window.TodayEventsAggregator) {
-            this.todayEventsAggregator = new TodayEventsAggregator();
-            window.todayEventsAggregator = this.todayEventsAggregator; // Make globally accessible
-            this.todayEventsAggregator.init();
-            logger.componentInit('SYSTEM', 'Today events aggregator initialized in app');
-        } else {
-            logger.warn('SYSTEM', 'TodayEventsAggregator not available');
-        }
-    }
-
-
-
     async initializeCityPageModules() {
         const pageType = this.isTestPage ? 'test page' : this.isCityPage ? 'city page' : 'main page';
         logger.info('SYSTEM', `Initializing ${pageType} modules`);
         
         try {
             
-            // Calendar functionality needed on city pages and main page (for today events)
+            // Calendar functionality needed on city pages and main page
             if (window.DynamicCalendarLoader) {
                 this.calendarLoader = new DynamicCalendarLoader();
                 // Make it globally accessible for backward compatibility
@@ -428,10 +413,6 @@ class ChunkyDadApp {
 
     getBearEventRenderer() {
         return this.bearEventRenderer;
-    }
-
-    getTodayEventsAggregator() {
-        return this.todayEventsAggregator;
     }
 
     getPathUtils() {

@@ -1496,6 +1496,9 @@ class DynamicCalendarLoader extends CalendarCore {
 
                 this.allEvents = events || [];
 
+                // Merge multi-day festival events (from data/festivals.json) for this city
+                await this.mergeFestivalEvents(cityKey, this.allEvents, events);
+
                 // Set metadata to class properties so they are accessible
                 if (jsonData.metadata) {
                     this.calendarTimezone = jsonData.metadata.calendarTimezone;
@@ -1663,7 +1666,144 @@ class DynamicCalendarLoader extends CalendarCore {
             return `data/calendars/${cityKey}.ics`;
         }
     }
-    
+
+    // Resolve festivals.json URL depending on current page location
+    // (same path-prefix logic as buildLocalCalendarUrl so it works from /nyc/ subdirectories)
+    buildFestivalsUrl() {
+        try {
+            const pathname = window.location.pathname || '';
+
+            // Use PathUtils if available for consistent path resolution
+            if (window.pathUtils) {
+                return window.pathUtils.resolvePath('data/festivals.json');
+            }
+
+            // Fallback logic for path detection
+            const isTesting = pathname.includes('/testing/');
+            const pathSegments = pathname.split('/').filter(Boolean);
+            const isInCitySubdirectory = pathSegments.length > 0 &&
+                window.CITY_CONFIG &&
+                window.CITY_CONFIG[pathSegments[0].toLowerCase()];
+
+            const needsParentPath = isTesting || isInCitySubdirectory;
+            const prefix = needsParentPath ? '../' : '';
+
+            return `${prefix}data/festivals.json`;
+        } catch (e) {
+            // Safe fallback
+            return 'data/festivals.json';
+        }
+    }
+
+    // Fetch data/festivals.json once per page load (promise cached on the instance)
+    fetchFestivalsData() {
+        if (this.festivalsDataPromise) {
+            return this.festivalsDataPromise;
+        }
+        this.festivalsDataPromise = fetch(this.buildFestivalsUrl(), {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' },
+            cache: 'default'
+        }).then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        }).then(data => (data && Array.isArray(data.festivals)) ? data.festivals : []);
+        return this.festivalsDataPromise;
+    }
+
+    // Merge multi-day festival events for this city into the loaded event arrays.
+    // Fail open: on any fetch/parse error the page works exactly as before, with no festivals.
+    async mergeFestivalEvents(cityKey, ...targetArrays) {
+        let festivals;
+        try {
+            festivals = await this.fetchFestivalsData();
+        } catch (error) {
+            console.warn('Failed to load data/festivals.json for calendar merge — skipping festivals', error);
+            return;
+        }
+
+        try {
+            const normalizeName = (name) => String(name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            const now = new Date();
+            const pastCutoff = now.getTime() - (7 * 24 * 60 * 60 * 1000); // 1 week ago
+            const existingEvents = Array.isArray(this.allEvents) ? this.allEvents : [];
+            const mappedEvents = [];
+
+            for (const festival of festivals) {
+                if (!festival || festival.cityKey !== cityKey) continue;
+                // Undated festivals cannot be placed on a calendar
+                if (!festival.nextDates || !festival.nextDates.start || !festival.nextDates.end) continue;
+
+                // Local ISO (no Z) — matches how the backend JSON date reviver treats dates
+                const startDate = new Date(`${festival.nextDates.start}T00:00:00`);
+                const endDate = new Date(`${festival.nextDates.end}T00:00:00`);
+                if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) continue;
+
+                // Skip past festivals (ended more than 1 week ago)
+                if (endDate.getTime() < pastCutoff) continue;
+
+                // Name-collision guard: if a scraped event has the same normalized name
+                // and overlaps the festival span, skip injecting to avoid doubles
+                const festivalName = normalizeName(festival.name);
+                const collision = existingEvents.some(existing => {
+                    if (!existing || existing.festival) return false;
+                    if (normalizeName(existing.name) !== festivalName) return false;
+                    const existingStart = existing.startDate ? new Date(existing.startDate) : null;
+                    if (!existingStart || Number.isNaN(existingStart.getTime())) return false;
+                    let existingEnd = existing.endDate ? new Date(existing.endDate) : existingStart;
+                    if (Number.isNaN(existingEnd.getTime())) existingEnd = existingStart;
+                    return existingStart.getTime() <= endDate.getTime() &&
+                           existingEnd.getTime() >= startDate.getTime();
+                });
+                if (collision) {
+                    console.debug(`Festival "${festival.name}" overlaps an existing scraped event — skipping injection`);
+                    continue;
+                }
+
+                const slug = `festival-${festival.key}-${startDate.getFullYear()}`;
+                const links = [];
+                if (festival.website) links.push({ label: 'Website', url: festival.website });
+                if (festival.instagram) links.push({ label: 'Instagram', url: festival.instagram });
+
+                mappedEvents.push({
+                    name: festival.name,
+                    day: startDate.toLocaleDateString('en-US', { weekday: 'long' }),
+                    time: null,
+                    eventType: 'festival',
+                    recurring: false,
+                    startDate,
+                    endDate,
+                    bar: null,
+                    location: festival.location || null,
+                    website: festival.website || null,
+                    instagram: festival.instagram || null,
+                    links: links.length > 0 ? links : null,
+                    slug,
+                    uid: slug,
+                    festival: true,
+                    category: festival.category || null
+                });
+            }
+
+            if (mappedEvents.length === 0) return;
+
+            // Push into each distinct target array (this.allEvents and the caller's
+            // events array are usually the same reference — avoid double-pushing)
+            const distinctTargets = [...new Set(targetArrays.filter(arr => Array.isArray(arr)))];
+            for (const target of distinctTargets) {
+                target.push(...mappedEvents);
+            }
+
+            logger.info('CALENDAR', `Merged ${mappedEvents.length} festival event(s) for ${cityKey}`, {
+                festivals: mappedEvents.map(e => e.name)
+            });
+        } catch (error) {
+            console.warn('Failed to merge festival events — continuing without festivals', error);
+        }
+    }
+
     // Try multiple free CORS proxies to fetch Google Calendar ICS
     async loadCalendarDataViaProxy(cityKey, cityConfig) {
         this.updateLoadingMessage(1, 'proxy');

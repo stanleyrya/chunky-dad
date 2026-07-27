@@ -14,12 +14,15 @@ class CompactCardRenderer {
             return;
         }
 
-        this.renderCards();
+        // renderCards is async (bear events load from data/festivals.json)
+        Promise.resolve(this.renderCards()).catch(error => {
+            logger.componentError(this.type.toUpperCase(), `${this.type} card rendering failed`, error);
+        });
         logger.componentLoad(this.type.toUpperCase(), `${this.type} compact card renderer initialized`);
     }
 
-    renderCards() {
-        const items = this.getItems();
+    async renderCards() {
+        const items = await this.getItems();
         if (!items || items.length === 0) {
             logger.error(this.type.toUpperCase(), `No ${this.type} configuration available`);
             return;
@@ -59,6 +62,7 @@ class CompactCardRenderer {
         if (this.type === 'city') {
             return window.getAvailableCities ? getAvailableCities() : null;
         } else if (this.type === 'event') {
+            // Async: bear events are loaded from data/festivals.json
             return window.getAvailableBearEvents ? getAvailableBearEvents() : null;
         }
         return null;
@@ -69,8 +73,13 @@ class CompactCardRenderer {
         link.className = `${this.type}-compact-card`;
         if (this.type === 'city') {
             link.href = `${item.key}/`;
+        } else if (item.website) {
+            // Festival cards link to the festival's website
+            link.href = item.website;
+            link.target = '_blank';
+            link.rel = 'noopener';
         } else {
-            link.href = `${this.type}.html?${this.type}=${item.key}`;
+            link.href = '#';
         }
 
         // Create emoji box
@@ -100,7 +109,12 @@ class CompactCardRenderer {
 
             const dates = document.createElement('span');
             dates.className = 'event-dates';
-            dates.textContent = window.formatEventDates ? formatEventDates(item) : `${item.startDate} - ${item.endDate}`;
+            if (item.startDate && item.endDate) {
+                dates.textContent = window.formatEventDates ? formatEventDates(item) : `${item.startDate} - ${item.endDate}`;
+            } else {
+                // Undated (or past recurring) festival: show typical timing instead
+                dates.textContent = item.typicalTiming || item.tagline || '';
+            }
 
             const location = document.createElement('span');
             location.className = 'event-location';
