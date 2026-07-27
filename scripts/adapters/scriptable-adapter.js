@@ -2253,6 +2253,25 @@ class ScriptableAdapter {
         );
       }
 
+      if (
+        !parserNameOverride &&
+        !urlInput &&
+        this.shouldPresentParserPicker(config)
+      ) {
+        // Total captured before the selection replaces the array
+        const parserPickerTotal = config.parsers.length;
+        const picked = await this.presentParserPicker(config);
+        if (picked) {
+          config.parsers = this.applyParserPickerSelection(
+            config.parsers,
+            picked,
+          );
+          console.log(
+            `📱 Scriptable: Parser picker: running ${picked.size} of ${parserPickerTotal} parsers`,
+          );
+        }
+      }
+
       this.applyLogConfig(config);
 
       return config;
@@ -9114,6 +9133,241 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         `📱 Scriptable: ✗ Failed to present UITable: ${error.message}`,
       );
       throw error;
+    }
+  }
+
+  // ── Parser picker (run-start parser selection UI) ─────────────────────────
+  // Staleness helpers ported from scripts/stale-parsers.js (not imported —
+  // that script self-executes on load). Kept pure so they test headlessly.
+
+  parseMetricsNdjsonForPicker(text) {
+    const lines = String(text || "")
+      .split("\n")
+      .filter((line) => line.trim().length > 0);
+    if (lines.length === 0) return [];
+
+    const records = [];
+    lines.forEach((line) => {
+      try {
+        const record = JSON.parse(line);
+        if (record) records.push(record);
+      } catch (_) {
+        // skip malformed lines
+      }
+    });
+
+    records.sort((a, b) => {
+      const aTime = a?.finished_at ? new Date(a.finished_at).getTime() : 0;
+      const bTime = b?.finished_at ? new Date(b.finished_at).getTime() : 0;
+      return aTime - bTime;
+    });
+
+    return records;
+  }
+
+  getLastCalendarWriteAtForPicker(records, parserName) {
+    for (let i = records.length - 1; i >= 0; i -= 1) {
+      const record = records[i];
+      const parserRecords = Array.isArray(record?.parsers) ? record.parsers : [];
+      const match = parserRecords.find((pr) => pr?.parser_name === parserName);
+      if (!match) continue;
+      const ca = match.calendar_actions || {};
+      if ((ca.create || 0) > 0 || (ca.update || 0) > 0) {
+        return record.finished_at || null;
+      }
+    }
+    return null;
+  }
+
+  formatDaysSinceForPicker(daysSince) {
+    if (daysSince === null || daysSince === undefined) return "never";
+    const d = Math.floor(daysSince);
+    if (d <= 0) return "today";
+    if (d === 1) return "1d ago";
+    return `${d}d ago`;
+  }
+
+  async readMetricsRecordsForPicker() {
+    try {
+      const fm = this.fm || FileManager.iCloud();
+      const path = this.getMetricsFilePath();
+      if (!fm.fileExists(path)) return [];
+      try {
+        await fm.downloadFileFromiCloud(path);
+      } catch (_) {
+        // fall through to reading whatever local copy exists
+      }
+      return this.parseMetricsNdjsonForPicker(fm.readString(path) || "");
+    } catch (_) {
+      return [];
+    }
+  }
+
+  // Manual runs only: knob must be explicitly on, and no automation/widget/
+  // action-extension context (mirrors the runtime checks in shouldSkipResultsUi).
+  shouldPresentParserPicker(config) {
+    return (
+      config?.config?.pickParsers === true &&
+      !config?.runtime?.automationRun &&
+      !config?.runtime?.runsInWidget &&
+      !config?.runtime?.runsInActionExtension
+    );
+  }
+
+  // Spread copies only — never mutates the importModule'd parser objects.
+  // Unknown names in the set are ignored naturally (no parser matches them).
+  applyParserPickerSelection(parsers, pickedSet) {
+    return parsers.map((p) => ({ ...p, enabled: pickedSet.has(p.name) }));
+  }
+
+  // Stalest-first ordering (ports computeStaleStatus's sort semantics from
+  // stale-parsers.js): never-written → Infinity → top, then descending
+  // days-since-last-write, name as tiebreak.
+  buildParserPickerEntries(parsers, records, now = Date.now()) {
+    const entries = parsers.map((parser) => {
+      const lastWriteAt = this.getLastCalendarWriteAtForPicker(
+        records,
+        parser.name,
+      );
+      let daysSince = null;
+      if (lastWriteAt) {
+        const writeTime = new Date(lastWriteAt).getTime();
+        if (Number.isFinite(writeTime) && writeTime > 0) {
+          daysSince = (now - writeTime) / (24 * 60 * 60 * 1000);
+        }
+      }
+      return {
+        name: parser.name,
+        enabled: parser.enabled !== false,
+        daysSince,
+        lastWriteAt,
+      };
+    });
+
+    entries.sort((a, b) => {
+      const aDays =
+        a.daysSince === null ? Number.POSITIVE_INFINITY : a.daysSince;
+      const bDays =
+        b.daysSince === null ? Number.POSITIVE_INFINITY : b.daysSince;
+      if (bDays !== aDays) return bDays - aDays;
+      return String(a.name).localeCompare(String(b.name));
+    });
+
+    return entries;
+  }
+
+  // Presents a UITable listing all configured parsers (stalest-first) with
+  // checkmark toggles. Resolves with a Set of picked parser names, or null on
+  // swipe-down dismissal / any error (fail open — run proceeds unchanged).
+  async presentParserPicker(config) {
+    try {
+      const parsers = Array.isArray(config?.parsers) ? config.parsers : [];
+      if (parsers.length === 0) return null;
+
+      const records = await this.readMetricsRecordsForPicker();
+      const entries = this.buildParserPickerEntries(parsers, records);
+
+      // Default pre-selection: config-enabled parsers
+      const selected = new Set(
+        entries.filter((entry) => entry.enabled).map((entry) => entry.name),
+      );
+
+      let resolved = false;
+      let resolveSelection;
+      const selectionPromise = new Promise((resolve) => {
+        resolveSelection = resolve;
+      });
+      const finish = (value) => {
+        if (resolved) return;
+        resolved = true;
+        resolveSelection(value);
+      };
+
+      const table = new UITable();
+      table.showSeparators = true;
+
+      const rebuild = () => {
+        table.removeAllRows();
+
+        // Header row
+        const headerRow = new UITableRow();
+        headerRow.isHeader = true;
+        headerRow.height = 50;
+
+        const headerCell = headerRow.addText("🐻 Pick Parsers");
+        headerCell.titleFont = Font.boldSystemFont(18);
+        headerCell.titleColor = Color.white();
+        headerCell.backgroundColor = Color.brown();
+
+        table.addRow(headerRow);
+
+        // Action rows (default dismissOnSelect: tapping dismisses the table)
+        const runSelectedRow = new UITableRow();
+        runSelectedRow.height = 50;
+        const runSelectedCell = runSelectedRow.addText(
+          `▶ Run selected (${selected.size})`,
+        );
+        runSelectedCell.titleFont = Font.boldSystemFont(16);
+        runSelectedCell.titleColor = Color.blue();
+        runSelectedRow.onSelect = () => {
+          finish(new Set(selected));
+        };
+        table.addRow(runSelectedRow);
+
+        const runAllRow = new UITableRow();
+        runAllRow.height = 50;
+        const runAllCell = runAllRow.addText(`▶ Run all (${entries.length})`);
+        runAllCell.titleFont = Font.boldSystemFont(16);
+        runAllCell.titleColor = Color.blue();
+        runAllRow.onSelect = () => {
+          finish(new Set(entries.map((entry) => entry.name)));
+        };
+        table.addRow(runAllRow);
+
+        // One row per parser, stalest-first
+        entries.forEach((entry) => {
+          const row = new UITableRow();
+          row.height = 50;
+          row.dismissOnSelect = false;
+
+          const isPicked = selected.has(entry.name);
+          const cell = row.addText(
+            `${isPicked ? "☑" : "☐"} ${entry.name}`,
+          );
+          cell.titleFont = Font.systemFont(14);
+          cell.subtitleText = `${this.formatDaysSinceForPicker(entry.daysSince)} (last write) · ${entry.enabled ? "enabled" : "disabled"} in config`;
+          cell.subtitleColor = Color.gray();
+
+          row.onSelect = () => {
+            if (selected.has(entry.name)) {
+              selected.delete(entry.name);
+            } else {
+              selected.add(entry.name);
+            }
+            rebuild();
+            table.reload();
+          };
+
+          table.addRow(row);
+        });
+      };
+
+      rebuild();
+
+      // present() resolves when the table is dismissed — by an action row
+      // (finish already ran; this finish(null) is a no-op) or by swipe-down
+      // (no selection was made → resolve null).
+      table.present(false).then(
+        () => finish(null),
+        () => finish(null),
+      );
+
+      return await selectionPromise;
+    } catch (error) {
+      console.log(
+        `📱 Scriptable: ✗ Parser picker failed: ${error.message}`,
+      );
+      return null;
     }
   }
 
