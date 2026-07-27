@@ -1,0 +1,105 @@
+[
+  {
+    "name": "Megawoof America",
+    "shortName": "MEGA-WOOF",
+    "instagram": "https://www.instagram.com/megawoof_america",
+    "website": "https://linktr.ee/megawoof_america",
+    "bearAffinity": "always"
+  },
+  {
+    "name": "Coach After Dark",
+    "shortName": "COACH",
+    "instagram": "https://www.instagram.com/coachafterdark",
+    "bearAffinity": "always"
+  },
+  {
+    "name": "BEEFWITCH",
+    "parent": "Coach After Dark",
+    "keywords": ["beefwitch"],
+    "shortName": "BEEFWITCH",
+    "instagram": "https://www.instagram.com/thebeefwitch",
+    "bearAffinity": "always"
+  },
+  {
+    "name": "Bearracuda",
+    "aliases": ["Bearracuda Events"],
+    "shortName": "Bear-rac-uda",
+    "instagram": "https://www.instagram.com/bearracuda",
+    "website": "https://bearracuda.com/",
+    "urlPatterns": ["bearracuda.com", "eventbrite.com/o/bearracuda-21867032189"],
+    "bearAffinity": "usually"
+  },
+  {
+    "name": "HOT TAKE",
+    "parent": "Bearracuda",
+    "keywords": ["hot take"],
+    "shortName": "HOT TAKE"
+  },
+  {
+    "name": "TREASURE TRAIL",
+    "parent": "Bearracuda",
+    "keywords": ["treasure trail"],
+    "shortName": "TREAS-URE TRAIL"
+  },
+  {
+    "name": "CHUNK",
+    "shortName": "CHUNK",
+    "instagram": "https://www.instagram.com/chunkparty",
+    "website": "https://www.chunk-party.com",
+    "bearAffinity": "always"
+  },
+  {
+    "name": "Furball",
+    "shortName": "FUR-BALL",
+    "instagram": "https://instagram.com/furballnyc/",
+    "website": "https://www.furball.nyc",
+    "bearAffinity": "always"
+  },
+  {
+    "name": "Cubhouse",
+    "shortName": "CUB-HOUSE",
+    "instagram": "https://www.instagram.com/cubhouse.philly",
+    "website": "https://linktr.ee/cubhouse",
+    "bearAffinity": "always"
+  },
+  {
+    "name": "Goldiloxx",
+    "shortName": "GOLDI-LOXX",
+    "shorterName": "GLX",
+    "instagram": "https://www.instagram.com/goldiloxx__",
+    "matchKey": "goldiloxx*|${year}-${month}-*|*",
+    "urlPatterns": ["goldiloxx"],
+    "bearAffinity": "always"
+  },
+  {
+    "name": "Twisted Bear",
+    "shortName": "TWIST-ED BEAR",
+    "instagram": "https://www.instagram.com/twistedbearparty",
+    "facebook": "https://www.facebook.com/twistedglobal/",
+    "bearAffinity": "always"
+  },
+  {
+    "name": "CubScout LA",
+    "bearAffinity": "always"
+  },
+  {
+    "name": "BEEFMINCE",
+    "website": "https://beefmince.com",
+    "bearAffinity": "always"
+  },
+  {
+    "name": "BeefDip",
+    "website": "https://beefdip.com",
+    "bearAffinity": "always"
+  },
+  {
+    "name": "Bear it MTL",
+    "website": "https://www.bearitmtl.com",
+    "bearAffinity": "always"
+  },
+  {
+    "name": "Club Chub",
+    "instagram": "https://www.instagram.com/clubchubparty",
+    "bearAffinity": "always"
+  }
+]

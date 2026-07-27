@@ -2198,6 +2198,16 @@ class ScriptableAdapter {
 
       config.bars = bars || {};
 
+      const promoters = loadConfigFile(
+        "scraper-promoters.js",
+        "scraper-promoters",
+        "Promoters configuration file not found at iCloud Drive/Scriptable/scraper-promoters.js",
+        "Promoters configuration file is empty",
+        { optional: true },
+      );
+
+      config.promoters = promoters || [];
+
       if (parserNameOverride) {
         const { parserConfig } = this.buildParserNameOverrideConfig(
           parserNameOverride,
@@ -2467,6 +2477,63 @@ class ScriptableAdapter {
       );
     }
     return { bars: merged, counts };
+  }
+
+  // Union of the remote and local promoter registries (mirrors
+  // mergeRemoteAndLocalCityBars; curated-data-beats-derived, fail closed):
+  // remote entries win for a shared promoter-name key (freshest curation),
+  // local-only entries are appended so a locally curated promoter survives
+  // until the site deploys it. Nameless entries have no identity key and are
+  // skipped.
+  mergeRemoteAndLocalPromoters(remoteList, localList) {
+    const merged = Array.isArray(remoteList) ? remoteList.slice() : [];
+    const seenKeys = new Set(
+      merged
+        .map((promoter) => this.normalizeRemoteBarNameKey(promoter && promoter.name))
+        .filter(Boolean),
+    );
+    let appended = 0;
+    for (const promoter of Array.isArray(localList) ? localList : []) {
+      const key = this.normalizeRemoteBarNameKey(promoter && promoter.name);
+      if (!key || seenKeys.has(key)) continue;
+      seenKeys.add(key);
+      merged.push(promoter);
+      appended += 1;
+    }
+    return { merged, appended };
+  }
+
+  // Curated promoter registry merged on the website is the source of truth;
+  // the phone's local scraper-promoters.js copy goes stale the moment a
+  // registry edit lands. One fetch of data/promoters.json (same fetch helper
+  // and 1-day TTL cache as the bars refresh); any failure — offline, 404,
+  // unparseable, non-array — quietly keeps the local registry. Returns
+  // { promoters, counts } for the freshness log line.
+  async refreshRemotePromoters(localPromoters) {
+    const local = Array.isArray(localPromoters) ? localPromoters : [];
+    const promotersCacheConfig = {
+      enabled: this.getPageCacheConfig().enabled,
+      ttlDays: 1,
+    };
+    const remoteRaw = await this.fetchRemoteBarsJson(
+      "https://chunky.dad/data/promoters.json",
+      promotersCacheConfig,
+    );
+    const remote = Array.isArray(remoteRaw) ? remoteRaw : null;
+    if (!remote) {
+      console.log(
+        `📱 Scriptable: Promoters data — 0 from chunky.dad, ${local.length} local-only`,
+      );
+      return { promoters: local, counts: { remote: 0, localOnly: local.length } };
+    }
+    const union = this.mergeRemoteAndLocalPromoters(remote, local);
+    console.log(
+      `📱 Scriptable: Promoters data — ${remote.length} from chunky.dad, ${union.appended} local-only`,
+    );
+    return {
+      promoters: union.merged,
+      counts: { remote: remote.length, localOnly: union.appended },
+    };
   }
 
   // Get existing events for a specific event (called by shared-core)

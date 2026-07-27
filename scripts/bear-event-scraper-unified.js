@@ -220,6 +220,7 @@ class BearEventScraperOrchestrator {
             const config = await adapter.loadConfiguration();
 
             const bars = config.bars || {};
+            const promoters = config.promoters || [];
 
             // Create the normalizer pipeline first
             const normalizerPipeline = new this.modules.NormalizerPipeline();
@@ -230,7 +231,8 @@ class BearEventScraperOrchestrator {
                 normalizerPipeline: normalizerPipeline,
                 additionalExcludedFields: this.modules.adapter.NOTES_EXCLUDED_FIELDS,
                 pageClassificationRules: config.config?.pageClassificationRules || [],
-                bars
+                bars,
+                promoters
             });
             
             // Wire the core back into the pipeline
@@ -267,6 +269,22 @@ class BearEventScraperOrchestrator {
                     }
                 } catch (error) {
                     console.log(`🐻 Orchestrator: Bar data refresh failed (${error.message}) — continuing with local bars`);
+                }
+            }
+
+            // Curated promoter registry: same freshness story as bars — the
+            // website's copy of data/promoters.json is fresher than any local
+            // scraper-promoters.js the moment a registry edit lands. Fail-soft
+            // like the bars refresh: any error keeps the local registry, and
+            // adapters without the method are tolerated.
+            if (typeof finalAdapter.refreshRemotePromoters === 'function') {
+                try {
+                    const refreshed = await finalAdapter.refreshRemotePromoters(promoters);
+                    if (refreshed && Array.isArray(refreshed.promoters)) {
+                        sharedCore.promoters = refreshed.promoters;
+                    }
+                } catch (error) {
+                    console.log(`🐻 Orchestrator: Promoter data refresh failed (${error.message}) — continuing with local promoters`);
                 }
             }
 

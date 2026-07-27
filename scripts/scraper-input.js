@@ -18,6 +18,7 @@ const scraperConfig = {
     },
     // deadEndRetryDays: 30, // Learned dead-end URLs (fetched fine but yielded nothing) are skipped for this many days, then retried once; 0 disables the store (default: 30)
     geocodeVerification: { mode: "enforce" }, // verify geocoded pins: grade-gate + Apple reverse cross-check. "report" (default) flags suspects in logs, "enforce" refuses suspect pins, "off" skips extra checks. Generic city-level pins are always refused.
+    promoterRegistry: { mode: "report" }, // Curated promoter identity matching — see data/promoters.json; "enforce" stamps matched metadata + bearAffinity
     // NOTE: Eventbrite /e/ confidence defaults (JSON-LD cover/image/ticketUrl,
     // meta location) are built into shared-core now — an aiConfidenceDefaults
     // block here is only needed to extend or override them.
@@ -120,6 +121,12 @@ const scraperConfig = {
         classification: "event-page",
       },
       { pattern: /bearracuda\.com/i, classification: "link-aggregator" },
+      {
+        pattern: /thebearcalendar\.com\/events\/[^/?&#\s]+/i,
+        classification: "event-page",
+      },
+      // The listing host is a link hub, never a venue site.
+      { pattern: /thebearcalendar\.com/i, classification: "link-aggregator" },
     ],
   },
   parsers: [
@@ -344,6 +351,19 @@ const scraperConfig = {
       metadata: {
         instagram: { value: "https://www.instagram.com/clubchubparty" },
       },
+    },
+    {
+      name: "The Bear Calendar",
+      enabled: false,
+      automationEnabled: false,
+      // Aggregator (Astro, server-rendered; ~52 events). Per-event pages carry
+      // complete JSON-LD; offers.url IS the original ticketing/promoter URL.
+      // First-run verification: Megawoof/Twisted Bear dupes must dedup via
+      // ticket-url identity; websites must be original URLs, never this host.
+      urls: ["https://thebearcalendar.com/events/"],
+      alwaysBear: true,
+      urlDiscoveryDepth: 1,
+      maxAdditionalUrls: 60,
     },
     {
       // ── New Site Template ─────────────────────────────────────────────

@@ -119,6 +119,9 @@ class SharedCore {
         this.eventSchema = schema;
         this.normalizerPipeline = options.normalizerPipeline || null;
         this.bars = options.bars || {};
+        // Curated promoter registry (data/promoters.json via the adapters —
+        // injected like bars; shared-core never loads files itself).
+        this.promoters = options.promoters || [];
         this.notesExcludedFields = new Set([
             ...this.eventSchema.DEFAULT_NOTES_EXCLUDED_FIELDS,
             ...(options.additionalExcludedFields || [])
@@ -1236,6 +1239,304 @@ class SharedCore {
             .toLowerCase()
             .replace(/^\s*the\s+/, '')
             .replace(/[^a-z0-9]/g, '');
+    }
+
+    // ------------------------------------------------------------------
+    // Curated promoter registry (data/promoters.json, injected as
+    // this.promoters like bars): match events to curated promoter identities
+    // from the event's OWN fields only, fail closed on any ambiguity.
+    // Mode knob: config.promoterRegistry.mode (top-level, like
+    // geocodeVerification) — 'report' (default) logs would-stamp decisions,
+    // 'enforce' stamps _promoter + curated metadata, 'off' skips the pass.
+    // ------------------------------------------------------------------
+
+    // Promoter-name identity key — the exact normalization curated bar
+    // matching uses (lowercase, drop a leading "the ", strip
+    // non-alphanumerics) so promoter identity agrees with the rest of the
+    // curated machinery.
+    normalizePromoterNameKey(name) {
+        return this.normalizeBarNameKey(name);
+    }
+
+    // Mirrors getBearCheckMode: unset/invalid → 'report'. Reads the top-level
+    // global config block (config.promoterRegistry), accepting either the
+    // full scraper config ({ config: {...} }) or the inner block itself.
+    getPromoterRegistryMode(mainConfig) {
+        const globalConfig = mainConfig && mainConfig.config && typeof mainConfig.config === 'object'
+            ? mainConfig.config
+            : (mainConfig && typeof mainConfig === 'object' ? mainConfig : {});
+        const registry = globalConfig && globalConfig.promoterRegistry && typeof globalConfig.promoterRegistry === 'object'
+            ? globalConfig.promoterRegistry
+            : null;
+        const mode = registry ? String(registry.mode || '').trim().toLowerCase() : '';
+        return mode === 'enforce' || mode === 'off' ? mode : 'report';
+    }
+
+    // Padded-token title text for promoter matching — mirrors the ai-web
+    // parser's titleContainsPageBrandName normalization (word containment,
+    // never bare substring): "BEARRACUDA-Atlanta!" → " bearracuda atlanta ".
+    buildPaddedPromoterTitleText(title) {
+        const normalized = String(title || '')
+            .toLowerCase()
+            .replace(/[^a-z0-9&\s]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        return normalized ? ` ${normalized} ` : '';
+    }
+
+    // Word-token phrase of a promoter name/keyword for padded-token
+    // containment ("Coach After Dark" → "coach after dark").
+    buildPromoterTokenPhrase(value) {
+        return String(value || '')
+            .toLowerCase()
+            .replace(/[^a-z0-9&\s]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    // Brand-variant identity keys of a scraped organizer value: the plain
+    // compact key plus a copy without a trailing corporate suffix, so
+    // "Bearracuda, Inc." matches the curated "Bearracuda" (mirrors the ai-web
+    // parser's getBrandNameVariants).
+    getPromoterOrganizerKeys(organizer) {
+        const stripped = this.buildPromoterTokenPhrase(organizer);
+        if (!stripped) return [];
+        const keys = new Set();
+        keys.add(this.normalizePromoterNameKey(stripped));
+        const withoutSuffix = stripped.replace(/\s+(inc|incorporated|llc|ltd|co|corp|corporation|company)$/, '').trim();
+        if (withoutSuffix) keys.add(this.normalizePromoterNameKey(withoutSuffix));
+        return [...keys].filter(Boolean);
+    }
+
+    // URL-evidence token from an entry's own website/instagram value: scheme,
+    // leading "www." and trailing slashes stripped, host+path kept — so a
+    // linktree website contributes "linktr.ee/megawoof_america" (self-naming),
+    // never the bare platform host.
+    getPromoterWebsiteToken(website) {
+        const raw = String(website || '').trim().toLowerCase();
+        if (!raw) return '';
+        return raw
+            .replace(/^https?:\/\//, '')
+            .replace(/^www\./, '')
+            .replace(/\/+$/, '');
+    }
+
+    getPromoterInstagramToken(instagram) {
+        const token = this.getPromoterWebsiteToken(instagram);
+        return token.includes('instagram.com/') ? token : '';
+    }
+
+    // Registry entry lookup by curated name (identity-key equality).
+    getPromoterEntryByName(name) {
+        const key = this.normalizePromoterNameKey(name);
+        if (!key || !Array.isArray(this.promoters)) return null;
+        return this.promoters.find(entry => entry && this.normalizePromoterNameKey(entry.name) === key) || null;
+    }
+
+    // The registry entry an enforce-mode match stamped onto the event
+    // (event._promoter), or null. Report mode stamps nothing, so registry
+    // bearAffinity can only ever act in enforce mode.
+    getEventPromoterEntry(event) {
+        const name = event && typeof event._promoter === 'string' ? event._promoter.trim() : '';
+        return name ? this.getPromoterEntryByName(name) : null;
+    }
+
+    // Per-run match index over this.promoters (rebuilt when the registry
+    // array is replaced, e.g. by the remote refresh). Precomputes:
+    //   - nameKeys: identity keys of name + aliases (organizer equality)
+    //   - titlePhrases: padded-token phrases for title containment, minus any
+    //     key the data-driven generic-stem guard refuses (a name key contained
+    //     in ANOTHER entry's key is a family stem — title containment is
+    //     refused for it; organizer-equality/urlPattern evidence still works)
+    //   - keywordPhrases: sub-brand keywords (title containment only)
+    //   - urlTokens: urlPatterns + tokens derived from the entry's own
+    //     instagram handle and website host/path
+    getPromoterRegistryIndex() {
+        if (this._promoterRegistryIndex && this._promoterRegistryIndex.source === this.promoters) {
+            return this._promoterRegistryIndex;
+        }
+        const list = Array.isArray(this.promoters) ? this.promoters : [];
+        const keysByEntry = list.map(entry => {
+            const names = [entry && entry.name, ...(entry && Array.isArray(entry.aliases) ? entry.aliases : [])];
+            return names.map(name => this.normalizePromoterNameKey(name)).filter(Boolean);
+        });
+        const entries = [];
+        list.forEach((entry, index) => {
+            if (!entry || typeof entry.name !== 'string' || !entry.name.trim()) return;
+            const names = [entry.name, ...(Array.isArray(entry.aliases) ? entry.aliases : [])];
+            const titlePhrases = [];
+            for (const name of names) {
+                const phrase = this.buildPromoterTokenPhrase(name);
+                const key = this.normalizePromoterNameKey(name);
+                if (!phrase || key.length < 4) continue;
+                const isGenericStem = list.some((other, otherIndex) => otherIndex !== index
+                    && keysByEntry[otherIndex].some(otherKey => otherKey !== key && otherKey.includes(key)));
+                if (isGenericStem) continue;
+                titlePhrases.push(phrase);
+            }
+            const keywordPhrases = (Array.isArray(entry.keywords) ? entry.keywords : [])
+                .map(keyword => this.buildPromoterTokenPhrase(keyword))
+                .filter(Boolean);
+            const urlTokens = [];
+            for (const pattern of Array.isArray(entry.urlPatterns) ? entry.urlPatterns : []) {
+                const token = String(pattern || '').trim().toLowerCase();
+                if (token && !urlTokens.includes(token)) urlTokens.push(token);
+            }
+            const instagramToken = this.getPromoterInstagramToken(entry.instagram);
+            if (instagramToken && !urlTokens.includes(instagramToken)) urlTokens.push(instagramToken);
+            const websiteToken = this.getPromoterWebsiteToken(entry.website);
+            if (websiteToken && !urlTokens.includes(websiteToken)) urlTokens.push(websiteToken);
+            entries.push({ entry, nameKeys: keysByEntry[index], titlePhrases, keywordPhrases, urlTokens });
+        });
+        this._promoterRegistryIndex = { source: this.promoters, entries };
+        return this._promoterRegistryIndex;
+    }
+
+    // One entry's evidence against one event (event's OWN fields only —
+    // description is never evidence): organizer brand-variant equality, then
+    // padded-token title containment of a full name/alias (or sub-brand
+    // keyword), then URL substring evidence. Returns
+    // { evidence: 'organizer'|'title'|'url:<token>' } or null.
+    evaluatePromoterEntryMatch(event, indexed) {
+        const organizerKeys = this.getPromoterOrganizerKeys(event && event._organizer);
+        if (organizerKeys.some(key => indexed.nameKeys.includes(key))) {
+            return { evidence: 'organizer' };
+        }
+        const paddedTitle = this.buildPaddedPromoterTitleText(event && event.title);
+        if (paddedTitle) {
+            for (const phrase of indexed.titlePhrases) {
+                if (paddedTitle.includes(` ${phrase} `)) return { evidence: 'title' };
+            }
+            for (const phrase of indexed.keywordPhrases) {
+                if (paddedTitle.includes(` ${phrase} `)) return { evidence: 'title' };
+            }
+        }
+        const urlValues = [
+            event && event.url,
+            event && event.ticketUrl,
+            event && event.website,
+            event && event.instagram,
+            event && event.facebook,
+            event && event._sourcePageUrl
+        ];
+        for (const value of urlValues) {
+            const lowered = typeof value === 'string' ? value.toLowerCase() : '';
+            if (!lowered) continue;
+            for (const token of indexed.urlTokens) {
+                if (lowered.includes(token)) return { evidence: `url:${token}` };
+            }
+        }
+        return null;
+    }
+
+    // Match one event to at most one curated promoter. Fail closed:
+    //   { entry, evidence }        — exactly one promoter identity matched
+    //                                (parent+child both matching → child wins)
+    //   { ambiguous: [names] }     — two unrelated entries matched
+    //   null                       — no evidence anywhere
+    matchEventToPromoter(event) {
+        const index = this.getPromoterRegistryIndex();
+        if (!index.entries.length) return null;
+        const matches = [];
+        for (const indexed of index.entries) {
+            const hit = this.evaluatePromoterEntryMatch(event, indexed);
+            if (hit) matches.push({ entry: indexed.entry, evidence: hit.evidence });
+        }
+        if (matches.length === 0) return null;
+        if (matches.length === 1) return matches[0];
+        // Parent+child both matched → the more specific sub-brand wins.
+        const matchedNames = new Set(matches.map(match => match.entry.name));
+        const withoutMatchedParents = matches.filter(match =>
+            !matches.some(other => other.entry !== match.entry
+                && typeof other.entry.parent === 'string'
+                && other.entry.parent === match.entry.name
+                && matchedNames.has(other.entry.name)));
+        if (withoutMatchedParents.length === 1) return withoutMatchedParents[0];
+        return { ambiguous: withoutMatchedParents.map(match => match.entry.name) };
+    }
+
+    // Registry entry → static-metadata block in the exact {field: {value}}
+    // shape parser metadata uses, so curated facts flow through the SAME
+    // application machinery (applyStaticMetadataBlock). Sub-brands inherit
+    // unspecified fields from their parent entry; website maps to the
+    // canonical url field (url and website are ONE field).
+    promoterEntryToMetadataBlock(entry) {
+        if (!entry || typeof entry !== 'object') return {};
+        const parent = typeof entry.parent === 'string' && entry.parent
+            ? this.getPromoterEntryByName(entry.parent)
+            : null;
+        const pick = (field) => {
+            const own = typeof entry[field] === 'string' && entry[field].trim() ? entry[field] : '';
+            if (own) return own;
+            const inherited = parent && typeof parent[field] === 'string' && parent[field].trim() ? parent[field] : '';
+            return inherited;
+        };
+        const block = {};
+        for (const field of ['shortName', 'shorterName', 'instagram', 'facebook', 'matchKey']) {
+            const value = pick(field);
+            if (value) block[field] = { value };
+        }
+        const website = pick('website');
+        if (website) block.url = { value: website };
+        return block;
+    }
+
+    // Enforce-mode stamp: curated promoter facts through the same
+    // static-metadata machinery as parser metadata (registry runs after the
+    // parser-time application, so its static clobber wins on match; parser
+    // metadata remains the no-match fallback).
+    applyPromoterMetadata(event, metadataBlock) {
+        const fieldPriorities = this.getResolvedFieldPriorities({ metadata: metadataBlock });
+        if (!event._fieldPriorities) {
+            event._fieldPriorities = {};
+        }
+        Object.keys(metadataBlock).forEach(key => {
+            event._fieldPriorities[key] = fieldPriorities[key];
+        });
+        return this.applyStaticMetadataBlock(event, metadataBlock, fieldPriorities);
+    }
+
+    // One registry pass over a parser's events (processParser: after
+    // filterFutureEvents, before filterBearEvents). Report mode logs
+    // would-stamp decisions and changes NOTHING; enforce stamps _promoter,
+    // curated metadata, and (when the organizer was empty and the match came
+    // from title/url evidence) _organizer.
+    applyPromoterRegistryMatches(events, parserConfig, mainConfig) {
+        const mode = this.getPromoterRegistryMode(mainConfig);
+        if (mode === 'off') return;
+        if (!Array.isArray(this.promoters) || this.promoters.length === 0) return;
+        if (!Array.isArray(events) || events.length === 0) return;
+        const tag = mode === 'report' ? '[report]' : '';
+        const counts = { matched: 0, organizer: 0, title: 0, url: 0 };
+        for (const event of events) {
+            const match = this.matchEventToPromoter(event);
+            if (!match) continue;
+            const title = event.title || 'Unknown';
+            if (match.ambiguous) {
+                console.log(`🪪 PROMOTER REGISTRY${tag}: "${title}" -> no match (ambiguous: ${match.ambiguous.join(', ')})`);
+                continue;
+            }
+            counts.matched++;
+            if (match.evidence === 'organizer') counts.organizer++;
+            else if (match.evidence === 'title') counts.title++;
+            else counts.url++;
+            const metadataBlock = this.promoterEntryToMetadataBlock(match.entry);
+            const stampKeys = Object.keys(metadataBlock);
+            if (mode === 'enforce') {
+                event._promoter = match.entry.name;
+                if (!event._organizer && match.evidence !== 'organizer') {
+                    event._organizer = match.entry.name;
+                }
+                if (stampKeys.length > 0) {
+                    this.applyPromoterMetadata(event, metadataBlock);
+                }
+            }
+            const stampLabel = mode === 'enforce' ? 'stamped' : 'would-stamp';
+            console.log(`🪪 PROMOTER REGISTRY${tag}: "${title}" -> ${match.entry.name} (evidence: ${match.evidence}) ${stampLabel}: ${stampKeys.join(', ') || '(none)'}`);
+        }
+        if (counts.matched > 0 || mode === 'report') {
+            console.log(`🪪 PROMOTER REGISTRY${tag}: ${counts.matched} of ${events.length} event(s) matched (${counts.organizer} organizer, ${counts.title} title, ${counts.url} url)`);
+        }
     }
 
     // City-center coordinates from the cities config as a "lat, lng" pair
@@ -2397,6 +2698,11 @@ class SharedCore {
         // through to results (flag, don't drop) — never into the write plan.
         const bearDropCollector = [];
         const futureEvents = this.filterFutureEvents(allEvents, effectiveParserConfig.daysToLookAhead, effectiveParserConfig.allowPastEvents);
+        // Curated promoter registry pass (before the bear check so a matched
+        // promoter's bearAffinity can steer per-event trust): match each
+        // event's own evidence to data/promoters.json and — in enforce mode —
+        // stamp the curated identity + metadata.
+        this.applyPromoterRegistryMatches(futureEvents, effectiveParserConfig, mainConfig);
         const bearEvents = await this.filterBearEvents(futureEvents, effectiveParserConfig, httpAdapter, bearDropCollector);
         // Overlong-field trims run before dedup so trimmed values feed the
         // dedup keys/merges (report mode by default; see getTrimConfig).
@@ -4269,11 +4575,14 @@ class SharedCore {
         const mode = this.getBearCheckMode(parserConfig);
         if (mode === 'off') return legacyFilter();
 
-        const trusted = parserConfig.alwaysBear === true;
         const tag = mode === 'report' ? ' [report]' : '';
         const counts = { bear: 0, keyword: 0, ai: 0, flagged: 0, dropped: 0 };
         const kept = [];
         for (const event of events) {
+            // Trust is per-event: a registry-matched promoter's bearAffinity
+            // wins over parserConfig.alwaysBear in both directions; unmatched
+            // events resolve to parserConfig.alwaysBear exactly as before.
+            const trusted = this.getEventBearTrust(event, parserConfig).trusted;
             const decision = await this.computeBearCheckDecision(event, parserConfig, httpAdapter);
             const title = event.title || 'Unknown';
             if (decision.result === 'bear') {
@@ -4337,15 +4646,40 @@ class SharedCore {
         return mode === 'enforce' || mode === 'off' ? mode : 'report';
     }
 
+    // Per-event trusted-promoter resolution for the bear check. A promoter
+    // the registry matched (enforce-mode _promoter stamp) carries its own
+    // bearAffinity, which WINS over parserConfig.alwaysBear in both
+    // directions: "usually" on an alwaysBear parser → judged; "always" on an
+    // untrusted parser → trusted (never-drop). Events without a matched
+    // promoter (or a matched entry without bearAffinity) resolve exactly to
+    // parserConfig.alwaysBear — byte-identical to the pre-registry behavior.
+    getEventBearTrust(event, parserConfig) {
+        const entry = this.getEventPromoterEntry(event);
+        const affinity = entry && typeof entry.bearAffinity === 'string' ? entry.bearAffinity.trim().toLowerCase() : '';
+        if (entry && affinity === 'always') {
+            return { trusted: true, promoter: entry.name, affinity };
+        }
+        if (entry && affinity === 'usually') {
+            return { trusted: false, promoter: entry.name, affinity };
+        }
+        return { trusted: parserConfig && parserConfig.alwaysBear === true, promoter: entry ? entry.name : '', affinity: '' };
+    }
+
     // One cascade decision per event: { result: 'bear'|'not_bear'|'unsure',
     // provenance: 'keyword: ...' | 'allowlist: ...' | 'ai: ...' | 'config/fallback: ...' }.
     async computeBearCheckDecision(event, parserConfig, httpAdapter) {
         const searchText = `${event.title || ''} ${event.description || ''} ${event.bar || ''}`;
 
+        // Per-event trust: a registry-matched promoter's bearAffinity
+        // overrides parserConfig.alwaysBear (see getEventBearTrust);
+        // unmatched events keep the exact legacy alwaysBear semantics.
+        const trust = this.getEventBearTrust(event, parserConfig);
+        const trustBypassesAllowlist = trust.affinity ? trust.trusted : Boolean(parserConfig.alwaysBear);
+
         // Existing allowlist gate keeps its exact legacy semantics: for
         // non-alwaysBear sources with requireKeywords, an allowlist miss
         // rejects the event before any other tier.
-        if (!parserConfig.alwaysBear
+        if (!trustBypassesAllowlist
             && parserConfig.allowlist && parserConfig.allowlist.length > 0
             && parserConfig.requireKeywords) {
             const lowered = searchText.toLowerCase();
@@ -4367,7 +4701,10 @@ class SharedCore {
             return { result: aiVerdict.verdict, provenance: `ai: ${aiVerdict.reason || 'no reason given'}` };
         }
 
-        if (parserConfig.alwaysBear === true) {
+        if (trust.affinity === 'always') {
+            return { result: 'bear', provenance: `config: promoter ${trust.promoter} bearAffinity=always` };
+        }
+        if (parserConfig.alwaysBear === true && trust.affinity !== 'usually') {
             return { result: 'bear', provenance: 'config: alwaysBear (ai unavailable)' };
         }
         return { result: 'unsure', provenance: 'fallback: ai unavailable' };
@@ -4413,6 +4750,18 @@ class SharedCore {
     // that promoter context is what lets the model keep promoter events with
     // zero bear vocabulary (validated against real calendar data).
     buildBearCheckProvenance(event, parserConfig) {
+        // ADDITIVE matched-promoter sentence (enforce-mode registry match
+        // only): the event's own content named a curated promoter, so the
+        // model gets that promoter's trust context regardless of which source
+        // entry the event was found through. Every pre-existing sentence
+        // below stays byte-identical; this is appended after them.
+        const trust = this.getEventBearTrust(event, parserConfig);
+        const matchedPromoterSentence = trust.affinity === 'always'
+            ? ` This event's own content names the promoter ${trust.promoter}, whom the calendar owner has marked as a trusted bear-scene promoter.`
+            : trust.affinity === 'usually'
+                ? ` This event's own content names the promoter ${trust.promoter}, whom the calendar owner tracks as a usually-bear promoter — judge this event on its own content.`
+                : '';
+
         // Honest cross-host provenance: when the event was actually extracted
         // from a page on a DIFFERENT site than the parser's configured host(s)
         // (e.g. a venue calendar reached via a ticket link), say so — otherwise
@@ -4429,17 +4778,21 @@ class SharedCore {
             if (parserConfig.alwaysBear === true) {
                 crossProvenance += " The calendar owner has marked the source entry's promoter as a trusted bear-scene promoter, but that trust only covers that promoter's own events.";
             }
-            return crossProvenance;
+            return crossProvenance + matchedPromoterSentence;
         }
 
         const sourceUrl = String(event.url || event.website || (parserConfig.urls && parserConfig.urls[0]) || '');
         const hostMatch = sourceUrl.match(/^https?:\/\/([^/?#]+)/i);
         const origin = hostMatch ? hostMatch[1] : (sourceUrl || 'unknown source');
         let provenance = `Scraped from ${origin}, source entry "${parserConfig.name || 'unknown'}".`;
-        if (parserConfig.alwaysBear === true) {
+        // A matched "usually" promoter overrides the parser-level trust in the
+        // judged direction — asserting owner trust here would defeat the
+        // per-event judgment. Unmatched events keep the sentence exactly as
+        // before; the sentence's wording never changes.
+        if (parserConfig.alwaysBear === true && trust.affinity !== 'usually') {
             provenance += ' The calendar owner has marked this promoter as a trusted bear-scene promoter.';
         }
-        return provenance;
+        return provenance + matchedPromoterSentence;
     }
 
     // AI verdict tier of the bear-check cascade. Returns
@@ -4460,7 +4813,12 @@ class SharedCore {
         // The actual source host is part of the key: provenance wording differs
         // for cross-host events, so verdicts must not be shared across hosts.
         const memoHost = this.getHostFromUrl(typeof event._sourcePageUrl === 'string' ? event._sourcePageUrl : '');
-        const memoKey = `${title}|${description}|${bar}|${memoHost}`;
+        // Provenance wording also depends on a matched promoter's bearAffinity
+        // (the additive registry sentence), so matched events get their own
+        // memo basis; unmatched events keep the exact pre-registry key.
+        const memoTrust = this.getEventBearTrust(event, parserConfig);
+        const memoPromoterPart = memoTrust.affinity ? `|promoter:${memoTrust.promoter}:${memoTrust.affinity}` : '';
+        const memoKey = `${title}|${description}|${bar}|${memoHost}${memoPromoterPart}`;
         if (!this._bearVerdictMemo) {
             this._bearVerdictMemo = new Map();
         }
@@ -5003,6 +5361,10 @@ class SharedCore {
         // by the field loop below, so an existing-only _organizer would be lost.
         if (!mergedEvent._organizer && existingEvent && typeof existingEvent._organizer === 'string' && existingEvent._organizer) {
             mergedEvent._organizer = existingEvent._organizer;
+        }
+        // Same carry for the matched-promoter identity stamp (_promoter).
+        if (!mergedEvent._promoter && existingEvent && typeof existingEvent._promoter === 'string' && existingEvent._promoter) {
+            mergedEvent._promoter = existingEvent._promoter;
         }
         // Same carry for field-trim records: an existing-only _fieldTrims
         // would otherwise be lost before evidence lines render.
@@ -7064,9 +7426,21 @@ class SharedCore {
         }
         
         // Apply static metadata values based on priority system
-        if (parserConfig?.metadata) {
-            Object.keys(parserConfig.metadata).forEach(key => {
-                const metaValue = parserConfig.metadata[key];
+        this.applyStaticMetadataBlock(event, parserConfig?.metadata, fieldPriorities);
+
+
+        // Return the event with all fields intact
+        // The actual priority logic will be handled later during event merging
+        return event;
+    }
+
+    // The static-metadata application loop (factored from applyFieldPriorities
+    // so the promoter registry can stamp curated facts through the exact same
+    // machinery as parser metadata — parser behavior is byte-identical).
+    applyStaticMetadataBlock(event, metadataBlock, fieldPriorities) {
+        if (metadataBlock) {
+            Object.keys(metadataBlock).forEach(key => {
+                const metaValue = metadataBlock[key];
                 if (typeof metaValue === 'object' && metaValue !== null) {
                     const hasDirectValue = Object.prototype.hasOwnProperty.call(metaValue, 'value');
                     const hasDefaultValue = Object.prototype.hasOwnProperty.call(metaValue, 'defaultValue');
@@ -7080,7 +7454,7 @@ class SharedCore {
                         return;
                     }
                     const resolvedValue = this.applyMetadataTemplate(selectedValue, event);
-                    
+
                     // Check if "static" has priority for this field
                     if (priorityConfig && priorityConfig.priority && priorityConfig.priority.includes('static')) {
                         // Apply static value since it's in the priority list
@@ -7097,10 +7471,6 @@ class SharedCore {
                 }
             });
         }
-        
-        
-        // Return the event with all fields intact
-        // The actual priority logic will be handled later during event merging
         return event;
     }
     
