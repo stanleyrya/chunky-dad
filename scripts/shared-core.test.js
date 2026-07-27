@@ -375,6 +375,33 @@ test('classifyPageWithSignal reports which tier decided', () => {
   assert.deepEqual(ruledCore.classifyPageWithSignal('https://x.example/hub', jsonLdHtml), { classification: 'link-aggregator', signal: 'url-rule' });
 });
 
+test('classifyPageWithSignal classifies raw JSON API bodies deterministically by event-object count', () => {
+  const core = createCore();
+  const eventObject = { name: 'GOLDILOXX JULY', first_performance_start_at: '2026-07-26T01:00:00Z' };
+
+  assert.deepEqual(
+    core.classifyPageWithSignal('https://api.example/v2/events/search', JSON.stringify({ data: [eventObject], meta: {} })),
+    { classification: 'event-page', signal: 'json-api' }
+  );
+  assert.deepEqual(
+    core.classifyPageWithSignal('https://api.example/v2/events/search', JSON.stringify({
+      data: [eventObject, { title: 'BEAR NIGHT', startDate: '2026-08-08T02:00:00Z' }]
+    })),
+    { classification: 'multi-event-page', signal: 'json-api' }
+  );
+  // A bare array payload and a detail-shaped single object both count
+  assert.equal(core.countJsonApiEventObjects(JSON.stringify([eventObject, eventObject])), 2);
+  assert.equal(core.countJsonApiEventObjects(JSON.stringify({ data: eventObject })), 1);
+  // Unrecognizable JSON, empty payloads, and HTML never classify via json-api
+  assert.equal(core.countJsonApiEventObjects('{"foo":[{"bar":1}]}'), 0);
+  assert.equal(core.countJsonApiEventObjects('{"data":[],"meta":{}}'), 0);
+  assert.equal(core.countJsonApiEventObjects('<html><body>July 17</body></html>'), 0);
+  assert.deepEqual(
+    core.classifyPageWithSignal('https://api.example/misc', '{"foo":[{"bar":1}]}'),
+    { classification: 'unknown', signal: 'none' }
+  );
+});
+
 test('classifyPageWithAi accepts confident valid labels and rejects everything else', async () => {
   const core = createCore();
   const aiConfig = {

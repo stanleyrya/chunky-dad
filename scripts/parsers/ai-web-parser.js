@@ -378,15 +378,35 @@ class AiWebParser {
         var ocrResults = [];
         try {
             this.aiPromptHistory = [];
-            const html = htmlData && htmlData.html ? htmlData.html : '';
             const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
+
+            // JSON-API pathway: some parser targets are raw JSON endpoints
+            // (api.redeyetickets.com), not HTML pages. Detect that ONCE here —
+            // the parsed payload feeds the deterministic structured extraction
+            // below, and the linearized `keyPath: value` text replaces the page
+            // html for EVERY downstream consumer (additional-URL harvest, OCR
+            // image harvest, prompt sections, verbatim evidence gate) so the
+            // HTML-oriented machinery sees real lines instead of an opaque blob.
+            const jsonApiPayload = this.detectJsonApiPayload(htmlData && htmlData.html ? htmlData.html : '');
+            const jsonApiCandidates = jsonApiPayload !== null
+                ? this.collectJsonApiEventCandidates(jsonApiPayload)
+                : [];
+            if (jsonApiPayload !== null) {
+                console.log(`🤖 AI Web: JSON API response detected (${jsonApiCandidates.length} candidate event object(s))`);
+            }
+            // Same object reference when no payload was detected — page-level
+            // caches (pageSiteRole, brand names) are stamped onto this object.
+            const effectiveHtmlData = jsonApiPayload !== null
+                ? { ...htmlData, html: this.linearizeJsonForPrompt(jsonApiPayload) }
+                : htmlData;
+            const html = effectiveHtmlData && effectiveHtmlData.html ? effectiveHtmlData.html : '';
             const additionalLinks = this.extractAdditionalUrls(html, sourceUrl, parserConfig);
 
             // Derive the page's organizer/site brand ONCE per page (from JSON-LD
             // Organization/WebSite and og:site_name). Extraction prompts, the
             // post-extraction guard in normalizeAiEvent, and downstream merge
             // arbitration all reuse this cached result instead of re-parsing HTML.
-            const pageBrandNames = this.getPageBrandNames(htmlData);
+            const pageBrandNames = this.getPageBrandNames(effectiveHtmlData);
             if (pageBrandNames.length > 0) {
                 console.log(`🤖 AI Web: Page organizer/brand derived from metadata: ${pageBrandNames.map(name => `"${name}"`).join(', ')}`);
             }
@@ -396,7 +416,7 @@ class AiWebParser {
             // (segment-derived facts are layered in on multi-event pages).
             // 'venue' switches extraction steering from KNOWN ORGANIZER to
             // KNOWN VENUE; undetermined changes nothing (fail open).
-            this.resolvePageSiteRole(htmlData, parserConfig);
+            this.resolvePageSiteRole(effectiveHtmlData, parserConfig);
 
             // Deterministic venue-site address harvest (no AI): map-directions
             // links (Google/Apple) on ANY fetched page of a site feed a
@@ -404,7 +424,7 @@ class AiWebParser {
             // site's own events — applyVenueSiteAddressConsensus judges it
             // after the whole crawl (fail closed: two distinct addresses, or
             // siteRole 'organizer', derive nothing).
-            this.harvestVenueSiteAddresses(htmlData);
+            this.harvestVenueSiteAddresses(effectiveHtmlData);
 
             // Deterministic extraction from schema.org Event JSON-LD. Ticketing pages
             // (sickening.events, tryst.events, Eventbrite) hand us complete structured
@@ -412,21 +432,38 @@ class AiWebParser {
             // cost without adding trust, so use the structured data directly.
             const jsonLdEvents = this.extractEventsFromJsonLd(html, sourceUrl, cityConfig);
             const completeJsonLdEvents = jsonLdEvents.filter(event => event.bar || event.address);
-            const useJsonLdEvents = parserConfig.discoveryOnly !== true
+            // JSON-API structured events run through the SAME completeness gate
+            // and the SAME enrichment/stamping as JSON-LD (structured data
+            // enriches, never bypasses). JSON-LD wins when both exist — in
+            // practice they are mutually exclusive: a raw JSON body carries no
+            // <script> tags, so its JSON-LD set is always empty.
+            const jsonApiEvents = jsonApiPayload !== null
+                ? this.extractEventsFromJsonApiPayload(jsonApiPayload, sourceUrl, cityConfig)
+                : [];
+            const completeJsonApiEvents = jsonApiEvents.filter(event => event.bar || event.address);
+            const structuredSource = completeJsonLdEvents.length > 0
+                ? 'jsonld'
+                : (completeJsonApiEvents.length > 0 ? 'json-api' : null);
+            const structuredEvents = structuredSource === 'jsonld' ? completeJsonLdEvents : completeJsonApiEvents;
+            const useStructuredEvents = parserConfig.discoveryOnly !== true
                 && pageClassification !== 'link-aggregator'
-                && completeJsonLdEvents.length > 0
-                // A multi-event page with a single JSON-LD node likely marks up only its
+                && structuredEvents.length > 0
+                // A multi-event page with a single structured node likely marks up only its
                 // featured event — fall through to segment extraction for full coverage.
-                && (pageClassification !== 'multi-event-page' || completeJsonLdEvents.length >= 2);
-            if (useJsonLdEvents) {
-                console.log(`🤖 AI Web: Extracted ${completeJsonLdEvents.length} event(s) from JSON-LD structured data — skipping OCR and AI extraction`);
+                && (pageClassification !== 'multi-event-page' || structuredEvents.length >= 2);
+            if (useStructuredEvents) {
+                if (structuredSource === 'json-api') {
+                    console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from JSON API structured data — skipping OCR and AI extraction`);
+                } else {
+                    console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from JSON-LD structured data — skipping OCR and AI extraction`);
+                }
                 if (pageBrandNames.length > 0) {
-                    completeJsonLdEvents.forEach(event => {
+                    structuredEvents.forEach(event => {
                         event._organizer = pageBrandNames[0];
-                        // JSON-LD events skip normalizeAiEvent, so the bare-city
+                        // Structured-data events skip normalizeAiEvent, so the bare-city
                         // title rule (organizer prefix) is applied here too.
                         const prefixedTitle = this.buildOrganizerPrefixedTitle(
-                            event.title, event.city, pageBrandNames, htmlData, cityConfig);
+                            event.title, event.city, pageBrandNames, effectiveHtmlData, cityConfig);
                         if (prefixedTitle) {
                             console.log(`🤖 AI Web: Title "${event.title}" is just the event's city — prefixed known organizer → "${prefixedTitle}"`);
                             event.title = prefixedTitle;
@@ -435,33 +472,45 @@ class AiWebParser {
                 }
                 // Enrichment only: fills empty fields from the Wix warmup blob,
                 // never skips or replaces an extraction step.
-                this.applyWixServerDataEnrichment(completeJsonLdEvents, htmlData, cityConfig);
-                await this.applyJsonLdGapFill(completeJsonLdEvents, htmlData, parserConfig, cityConfig, httpAdapter);
-                // A single JSON-LD event whose node carried no image adopts
+                this.applyWixServerDataEnrichment(structuredEvents, effectiveHtmlData, cityConfig);
+                await this.applyJsonLdGapFill(structuredEvents, effectiveHtmlData, parserConfig, cityConfig, httpAdapter);
+                // A single structured event whose node carried no image adopts
                 // the page's own og:image artwork (multi-event pages never do:
                 // one shared meta image cannot be attributed to one event).
-                if (completeJsonLdEvents.length === 1) {
-                    this.fillImageFromPageMetaArtwork(completeJsonLdEvents[0], htmlData);
+                if (structuredEvents.length === 1) {
+                    this.fillImageFromPageMetaArtwork(structuredEvents[0], effectiveHtmlData);
                 }
-                // Images the JSON-LD nodes carried are already stamped 'jsonld';
-                // an image the gap-fill pulled from page content gets its own
-                // og-image/page provenance here (no image → no stamp).
-                completeJsonLdEvents.forEach(event => this.stampImageProvenance(event, htmlData));
+                // Images the structured nodes carried are already stamped
+                // 'jsonld'/'json-api'; an image the gap-fill pulled from page
+                // content gets its own og-image/page provenance here (no image
+                // → no stamp).
+                structuredEvents.forEach(event => this.stampImageProvenance(event, effectiveHtmlData));
                 // Bar provenance for the structured-data path: curated/
                 // venue-site stamps only — there is no extraction evidence
                 // corpus here, so the adjacency check never runs (fail open).
-                completeJsonLdEvents.forEach(event => this.stampBarSourceProvenance(event, null, htmlData));
+                structuredEvents.forEach(event => this.stampBarSourceProvenance(event, null, effectiveHtmlData));
                 // Attribute the events to this page's site so the post-crawl
                 // venue-site address consensus can fill their blanks.
-                this.tagEventsWithVenueSitePage(completeJsonLdEvents, htmlData);
+                this.tagEventsWithVenueSitePage(structuredEvents, effectiveHtmlData);
                 return {
-                    events: completeJsonLdEvents,
+                    events: structuredEvents,
                     additionalLinks: additionalLinks,
                     discoveredSegments: null,
                     ocrResults: [],
+                    extractionSummary: { source: structuredSource, aiPasses: this.aiPromptHistory.length, ocrImages: 0 },
                     source: this.config.source,
                     url: sourceUrl
                 };
+            }
+
+            // Falling through to OCR/AI with a detected JSON payload whose
+            // structured conversion came up short: announce the linearized
+            // substitution and WHY (the forensic gap — this failure mode used
+            // to be invisible in persisted logs).
+            if (jsonApiPayload !== null && completeJsonApiEvents.length === 0) {
+                const lineCount = html ? html.split('\n').length : 0;
+                const missingFields = jsonApiEvents.length === 0 ? 'title, startDate' : 'bar, address';
+                console.log(`🤖 AI Web: JSON API payload linearized to ${lineCount} line(s) for AI extraction (structured conversion incomplete: missing ${missingFields})`);
             }
 
             // Extract OCR from ALL images FIRST - we need it for consistent segment-to-image
@@ -478,7 +527,7 @@ class AiWebParser {
             // so respect the configured per-page image budget there.
             const ocrImageCap = pageClassification === 'multi-event-page' ? 10 : ocrConfig.maxImages;
             ocrResults = runOcr
-                ? await this.extractOcrFromAllImages(htmlData, ocrConfig, httpAdapter, ocrImageCap)
+                ? await this.extractOcrFromAllImages(effectiveHtmlData, ocrConfig, httpAdapter, ocrImageCap)
                 : [];
             if (ocrResults.length > 0) {
                 console.log(`🤖 AI Web: Extracted OCR from ${ocrResults.length} image(s)`);
@@ -556,24 +605,32 @@ class AiWebParser {
             const dataFlags = this.getDataFlagsForPartition(sectionBundle, payloadMode, '');
             const promptFields = this.getAiPromptFields(parserConfig, dataFlags, sourceUrl);
             const events = pageClassification === 'multi-event-page'
-                ? await this.extractEventsFromMultiEventPage(htmlData, parserConfig, cityConfig, promptFields, ocrResults, httpAdapter)
-                : await this.extractEventsFromSinglePage(htmlData, parserConfig, cityConfig, promptFields, ocrResults, httpAdapter);
+                ? await this.extractEventsFromMultiEventPage(effectiveHtmlData, parserConfig, cityConfig, promptFields, ocrResults, httpAdapter)
+                : await this.extractEventsFromSinglePage(effectiveHtmlData, parserConfig, cityConfig, promptFields, ocrResults, httpAdapter);
 
             // Enrichment only: fills empty fields on the finished AI/OCR events
             // from the Wix warmup blob, never skips or replaces an extraction step.
-            this.applyWixServerDataEnrichment(events, htmlData, cityConfig);
+            this.applyWixServerDataEnrichment(events, effectiveHtmlData, cityConfig);
+
+            // JSON-API structured events that could not clear the completeness
+            // gate above still enrich: fill blanks on the AI-extracted events
+            // (mirrors the Wix warmup enrichment — enrich, never bypass).
+            if (jsonApiEvents.length > 0) {
+                this.applyJsonApiStructuredEnrichment(events, jsonApiEvents, sourceUrl);
+            }
 
             // Attribute the events to this page's site so the post-crawl
             // venue-site address consensus can fill their blanks.
-            this.tagEventsWithVenueSitePage(events, htmlData);
+            this.tagEventsWithVenueSitePage(events, effectiveHtmlData);
 
             return {
                 events,
                 additionalLinks,
                 discoveredSegments,
                 ocrResults: ocrResults,
+                extractionSummary: { source: 'ai', aiPasses: this.aiPromptHistory.length, ocrImages: ocrResults.length },
                 source: this.config.source,
-                url: htmlData && htmlData.url ? htmlData.url : ''
+                url: sourceUrl
             };
         } catch (error) {
             console.warn(`🤖 AI Web: Failed to parse AI event: ${error}`);
@@ -3603,6 +3660,379 @@ class AiWebParser {
             : `${formatAmount(min)}-${formatAmount(max)} ${currency}`;
     }
 
+    // ============================================================================
+    // JSON-API DETERMINISTIC EVENT EXTRACTION
+    // ============================================================================
+    // Some parser targets are raw JSON API endpoints (api.redeyetickets.com),
+    // not HTML pages. The pathway is fully generic — key-shape recognition
+    // only, NO site-specific logic: a structured conversion mirrors the
+    // JSON-LD fast path (same completeness gate, same enrichment/stamping),
+    // and when it comes up short the payload is linearized to `keyPath: value`
+    // lines so the HTML-oriented AI machinery still sees real content
+    // (fail open, never fail silent).
+
+    // Trimmed body that IS a JSON document ({...} or [...]) → parsed value;
+    // anything else (HTML, scalars, malformed JSON) → null. Cheap and safe to
+    // run on every fetched page.
+    detectJsonApiPayload(html) {
+        const text = String(html || '').trim();
+        if (!text || (text[0] !== '{' && text[0] !== '[')) return null;
+        try {
+            const parsed = JSON.parse(text);
+            return parsed && typeof parsed === 'object' ? parsed : null;
+        } catch (_) {
+            return null;
+        }
+    }
+
+    // camelCase → snake_case, lowercased ('startDate' → 'start_date';
+    // 'venue_time_zone' unchanged). All JSON-API key matching happens on this
+    // normalized form so case/snake/camel spellings are interchangeable.
+    normalizeJsonApiKey(key) {
+        return String(key || '').replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
+    }
+
+    // ISO-8601-ish string check (date prefix is enough; parseJsonLdDateValue
+    // does the strict parse and timezone-resolution bookkeeping).
+    jsonApiValueIsIsoDateish(value) {
+        return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value.trim());
+    }
+
+    // "Event-like" = carries a name/title key AND some start/date-ish key
+    // holding an ISO-8601-ish string. Mirrored (in compact form) by
+    // SharedCore.countJsonApiEventObjects for deterministic page
+    // classification — keep the two in sync.
+    jsonApiObjectLooksEventLike(obj) {
+        if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
+        const keys = Object.keys(obj);
+        const hasTitle = keys.some(key => /^(name|title)$/.test(this.normalizeJsonApiKey(key))
+            && typeof obj[key] === 'string' && obj[key].trim() !== '');
+        if (!hasTitle) return false;
+        return keys.some(key => /(^|_)(start|date|datetime)/.test(this.normalizeJsonApiKey(key))
+            && this.jsonApiValueIsIsoDateish(obj[key]));
+    }
+
+    // Candidate event objects inside a parsed JSON payload, generically:
+    //   1. the payload itself when it is an array of objects;
+    //   2. else the first array-of-objects under a data/events/items/results
+    //      wrapper key (a single object there — detail endpoints — counts too);
+    //   3. else any top-level array whose objects look event-like.
+    collectJsonApiEventCandidates(parsed) {
+        const isPlainObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+        const isArrayOfObjects = (value) => Array.isArray(value) && value.length > 0 && value.every(isPlainObject);
+        if (isArrayOfObjects(parsed)) {
+            return parsed.filter(item => this.jsonApiObjectLooksEventLike(item));
+        }
+        if (!isPlainObject(parsed)) return [];
+        for (const key of Object.keys(parsed)) {
+            if (!/^(data|events|items|results)$/.test(this.normalizeJsonApiKey(key))) continue;
+            const value = parsed[key];
+            if (isArrayOfObjects(value)) return value.filter(item => this.jsonApiObjectLooksEventLike(item));
+            // Detail-shaped payload: ONE object (possibly carrying a
+            // performances-style array with the actual dates).
+            if (isPlainObject(value)
+                && (this.jsonApiObjectLooksEventLike(value) || this.findJsonApiPerformancesArray(value))) {
+                return [value];
+            }
+        }
+        for (const value of Object.values(parsed)) {
+            if (!isArrayOfObjects(value)) continue;
+            const eventLike = value.filter(item => this.jsonApiObjectLooksEventLike(item));
+            if (eventLike.length > 0) return eventLike;
+        }
+        return [];
+    }
+
+    // First array-of-objects value whose EVERY entry carries a start-ish
+    // ISO-dated key — the shape performance/occurrence lists take on detail
+    // endpoints. Null when the object has no such array.
+    findJsonApiPerformancesArray(obj) {
+        if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
+        for (const value of Object.values(obj)) {
+            if (!Array.isArray(value) || value.length === 0) continue;
+            const everyEntryHasStart = value.every(entry => entry && typeof entry === 'object' && !Array.isArray(entry)
+                && Object.keys(entry).some(key => /(^|_)start/.test(this.normalizeJsonApiKey(key))
+                    && this.jsonApiValueIsIsoDateish(entry[key])));
+            if (everyEntryHasStart) return value;
+        }
+        return null;
+    }
+
+    // A single object carrying a performances-like array yields one event per
+    // entry: outer scalar fields are shared, but outer date fields
+    // (first_performance_start_at …) describe the series, not the individual
+    // performance — each entry's own start/end wins.
+    expandJsonApiPerformances(candidate) {
+        const performances = this.findJsonApiPerformancesArray(candidate);
+        if (!performances) return [candidate];
+        const shared = {};
+        for (const [key, value] of Object.entries(candidate)) {
+            if (value === performances) continue;
+            if (/(^|_)(start|end)/.test(this.normalizeJsonApiKey(key)) && this.jsonApiValueIsIsoDateish(value)) continue;
+            shared[key] = value;
+        }
+        return performances.map(entry => ({ ...shared, ...entry }));
+    }
+
+    // Generic recognizer over a parsed JSON API payload — the JSON-API
+    // counterpart of extractEventsFromJsonLd (same dedupe key, same defensive
+    // posture: any failure returns [] and the AI pathway takes over).
+    extractEventsFromJsonApiPayload(parsed, sourceUrl, cityConfig = null) {
+        try {
+            const candidates = this.collectJsonApiEventCandidates(parsed);
+            const events = [];
+            const seen = new Set();
+            for (const candidate of candidates) {
+                for (const entry of this.expandJsonApiPerformances(candidate)) {
+                    const event = this.buildEventFromJsonApiObject(entry, sourceUrl, cityConfig);
+                    if (!event) continue;
+                    const key = `${event.title.toLowerCase()}|${event.startDate.toISOString()}`;
+                    if (seen.has(key)) continue;
+                    seen.add(key);
+                    events.push(event);
+                }
+            }
+            return events;
+        } catch (error) {
+            console.warn(`🤖 AI Web: JSON API structured extraction failed: ${error.message}`);
+            return [];
+        }
+    }
+
+    // Field mapping from one event-like JSON object, case/snake/camel-
+    // insensitive first match. Shares the JSON-LD path's cleaning
+    // (tag-strip + entity-decode), date parsing (trailing-Z instants are
+    // authoritative — no _timezoneUnresolved), street-address-shaped venue
+    // gate, and address→city resolution. NEVER fabricates a public URL from a
+    // slug: url is always the fetched sourceUrl.
+    buildEventFromJsonApiObject(obj, sourceUrl, cityConfig = null) {
+        if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
+        const clean = (value) => this.normalizeWhitespace(
+            this.decodeBasicEntities(this.stripTags(String(value || ''))).replace(/&amp;/gi, '&')
+        );
+        const keys = Object.keys(obj);
+        const isHttpString = (value) => typeof value === 'string' && /^https?:\/\//i.test(value.trim());
+        const isNonEmptyString = (value) => typeof value === 'string' && value.trim() !== '';
+        // First value whose normalized key matches keyPattern (and does not
+        // match excludePattern) and whose value passes the predicate.
+        const firstValue = (keyPattern, predicate, excludePattern = null) => {
+            for (const key of keys) {
+                const normalizedKey = this.normalizeJsonApiKey(key);
+                if (!keyPattern.test(normalizedKey)) continue;
+                if (excludePattern && excludePattern.test(normalizedKey)) continue;
+                if (predicate(obj[key])) return obj[key];
+            }
+            return '';
+        };
+        const firstDateValue = (keyPattern) => {
+            for (const key of keys) {
+                if (!keyPattern.test(this.normalizeJsonApiKey(key))) continue;
+                if (!this.jsonApiValueIsIsoDateish(obj[key])) continue;
+                const parsedDate = this.parseJsonLdDateValue(obj[key]);
+                if (parsedDate.date) return parsedDate;
+            }
+            return { date: null, timezoneUnresolved: false };
+        };
+
+        const title = clean(firstValue(/^(name|title)$/, isNonEmptyString));
+        // Explicit start-ish keys first (first_performance_start_at, start_at,
+        // startDate …), then bare date/datetime keys.
+        let start = firstDateValue(/(^|_)start/);
+        if (!start.date) start = firstDateValue(/(^|_)(date|datetime)(_|$)/);
+        if (!title || !start.date) return null;
+        const end = firstDateValue(/(^|_)end/);
+
+        // Address composed from street + locality + state + postal style keys,
+        // with the JSON-LD path's duplicate-part guard.
+        const addressParts = [
+            clean(firstValue(/(^|_)(address_line_?1|street_address|street|address)$/, isNonEmptyString)),
+            clean(firstValue(/(^|_)(city|locality)$/, isNonEmptyString)),
+            clean(firstValue(/(^|_)(state|region|province)$/, isNonEmptyString)),
+            clean(firstValue(/(^|_)(postal_code|postal|zip_code|zip)$/, isNonEmptyString))
+        ];
+        const accumulated = [];
+        for (const part of addressParts) {
+            if (part && !this.addressAlreadyContainsPart(accumulated.join(', '), part)) {
+                accumulated.push(part);
+            }
+        }
+        const address = accumulated.join(', ');
+
+        let bar = clean(firstValue(/^(venue|venue_name|location_name)$/, isNonEmptyString));
+        if (bar && this.venueNameLooksLikeStreetAddress(bar, address)) {
+            console.log(`🤖 AI Web: JSON API venue name "${bar}" looks like a street address — not using it as bar`);
+            bar = '';
+        }
+
+        const imageKeyPattern = /(^|_)(flyer|image|cover|photo|poster)/;
+        const rawImage = firstValue(imageKeyPattern, isHttpString);
+        const image = rawImage
+            ? (this.upgradeCdnThumbnailUrl(this.normalizeHttpUrlValue(rawImage) || '') || '')
+            : '';
+        // Ticket link: absolute http(s) only, image-ish keys excluded (a
+        // flyer_url must never become the ticketUrl). Slugs and other relative
+        // fragments never qualify — no public URL is ever fabricated.
+        const rawTicketUrl = firstValue(/(^|_)(ticket|url|link|website)/, isHttpString, imageKeyPattern);
+        const ticketUrl = rawTicketUrl ? (this.normalizeHttpUrlValue(rawTicketUrl) || '') : '';
+
+        const event = {
+            title,
+            description: clean(firstValue(/^(description|summary)$/, isNonEmptyString)),
+            startDate: start.date,
+            endDate: end.date || null,
+            bar,
+            address,
+            url: sourceUrl,
+            ticketUrl,
+            image,
+            source: this.config.source
+        };
+        // The payload's own structured data named this venue and it survived
+        // the address-shaped-name gate — same protection as JSON-LD bars: the
+        // venue-site identity pass never overrides it (internal field).
+        if (event.bar) {
+            event._barFromJsonLd = true;
+        }
+        // imageSource provenance (notes-serialized like pinSource): structured
+        // data the API itself published. Absent image → no stamp (fail open).
+        if (event.image) {
+            event.imageSource = 'json-api';
+        }
+        // Timezone: an IANA name in the payload is authoritative; otherwise the
+        // address→city resolution below may supply the city's timezone.
+        const timezoneValue = firstValue(/time_?zone/,
+            (value) => typeof value === 'string' && /^[A-Za-z]+\/[A-Za-z0-9_+\-/]+$/.test(value.trim()));
+        if (timezoneValue) {
+            event.timezone = timezoneValue.trim();
+        }
+        if (address && cityConfig) {
+            const cityKey = this.findCityKeyInText(address, cityConfig);
+            if (cityKey) {
+                event.city = cityKey;
+                if (!event.timezone) {
+                    const timezone = this.getTimezoneForCity(cityKey, cityConfig);
+                    if (timezone) event.timezone = timezone;
+                }
+            }
+        }
+        // Trailing-Z/offset instants are exact; offset-less values are
+        // wall-clock guesses flagged for normalizer re-anchoring (same
+        // semantics as the JSON-LD path).
+        if (start.timezoneUnresolved || (end.date && end.timezoneUnresolved)) {
+            event._timezoneUnresolved = true;
+        }
+        return event;
+    }
+
+    // Depth-first `keyPath: value` lines for scalar leaves (null/empty
+    // skipped; HTML tags stripped from strings). This becomes the page "html"
+    // whenever a JSON payload is detected, so extractBodyParts gets real
+    // lines, URL/image harvesting keeps working, and the verbatim-evidence
+    // gate stays symmetric with what the extraction prompt saw.
+    linearizeJsonForPrompt(parsed) {
+        const lines = [];
+        const visit = (value, path) => {
+            if (value === null || value === undefined) return;
+            if (Array.isArray(value)) {
+                value.forEach((item, index) => visit(item, path ? `${path}[${index}]` : `[${index}]`));
+                return;
+            }
+            if (typeof value === 'object') {
+                for (const [key, child] of Object.entries(value)) {
+                    visit(child, path ? `${path}.${key}` : key);
+                }
+                return;
+            }
+            const text = typeof value === 'string'
+                ? this.normalizeWhitespace(this.stripTags(value))
+                : String(value);
+            if (text.trim() === '') return;
+            lines.push(`${path}: ${text}`);
+        };
+        visit(parsed, '');
+        return lines.join('\n');
+    }
+
+    // ENRICHMENT ONLY — the JSON-API sibling of applyWixServerDataEnrichment:
+    // when the structured conversion could not clear the completeness gate,
+    // the payload's values still fill ONLY-empty fields on the AI-extracted
+    // events. Matching is conservative (normalized-title equality, or the
+    // unambiguous 1↔1 pairing); the sole overwrite is the established date
+    // exception — exact instants replace _timezoneUnresolved wall-clock
+    // guesses. Any failure leaves the events unchanged.
+    applyJsonApiStructuredEnrichment(events, jsonApiEvents, sourceUrl) {
+        try {
+            if (!Array.isArray(events) || events.length === 0) return events;
+            if (!Array.isArray(jsonApiEvents) || jsonApiEvents.length === 0) return events;
+            const filledFields = new Set();
+            let enrichedCount = 0;
+            for (const event of events) {
+                if (!event || typeof event !== 'object') continue;
+                const record = this.findJsonApiRecordForEvent(event, events.length, jsonApiEvents);
+                if (!record) continue;
+                const filled = this.fillEventFromJsonApiRecord(event, record);
+                if (filled.length > 0) {
+                    enrichedCount += 1;
+                    filled.forEach(field => filledFields.add(field));
+                }
+            }
+            if (filledFields.size > 0) {
+                console.log(`🤖 AI Web: JSON API structured data enriched ${enrichedCount} event(s) for ${sourceUrl}: filled=[${Array.from(filledFields).join(', ')}]`);
+            }
+        } catch (error) {
+            console.warn(`🤖 AI Web: JSON API enrichment failed — events unchanged: ${error.message}`);
+        }
+        return events;
+    }
+
+    // Conservative same-event check for enrichment: normalized-title match, or
+    // the unambiguous single-record/single-event pairing. Ambiguity → null.
+    findJsonApiRecordForEvent(event, eventCount, jsonApiEvents) {
+        const eventTitle = event && event.title ? this.normalizeEvidenceText(event.title) : '';
+        if (eventTitle) {
+            const titleMatch = jsonApiEvents.find(record => record && record.title
+                && this.normalizeEvidenceText(record.title) === eventTitle);
+            if (titleMatch) return titleMatch;
+        }
+        return eventCount === 1 && jsonApiEvents.length === 1 ? jsonApiEvents[0] : null;
+    }
+
+    fillEventFromJsonApiRecord(event, record) {
+        const filled = [];
+        const isEmpty = (value) => value === null || value === undefined || String(value).trim() === '';
+        const fill = (field, value) => {
+            if (value && isEmpty(event[field])) {
+                event[field] = value;
+                filled.push(field);
+            }
+        };
+        fill('description', record.description);
+        fill('bar', record.bar);
+        fill('address', record.address);
+        fill('city', record.city);
+        fill('timezone', record.timezone);
+        fill('ticketUrl', record.ticketUrl);
+        if (record.image && isEmpty(event.image)) {
+            event.image = record.image;
+            event.imageSource = 'json-api';
+            filled.push('image');
+        }
+        // Same precedent as the Wix warmup enrichment: exact instants replace
+        // wall-clock guesses, and the start/end pair is never split across
+        // anchoring schemes.
+        if (event._timezoneUnresolved && !record._timezoneUnresolved && record.startDate
+            && (record.endDate || isEmpty(event.endDate))) {
+            event.startDate = record.startDate;
+            filled.push('startDate');
+            if (record.endDate) {
+                event.endDate = record.endDate;
+                filled.push('endDate');
+            }
+            delete event._timezoneUnresolved;
+        }
+        return filled;
+    }
+
     // ENRICHMENT ONLY — runs on the parser's finished events just before they
     // are returned (both the JSON-LD fast path and the AI-extraction path) and
     // never influences which extraction steps run. Each field fills only when
@@ -4698,6 +5128,27 @@ class AiWebParser {
                 ? configBlockedPattern
                 : configBlockedPattern.source;
             return { valid: false, reason: `config-blocked-pattern:${configBlockedPatternReason}` };
+        }
+        // Per-config discovery ALLOW patterns — the allow-side twin of
+        // discoveryBlockedPatterns, for promoter-search-on-platform-listing
+        // configs (e.g. a ticketing site's all-events page where only links
+        // matching the promoter name should be followed). When the list is
+        // non-empty, a DISCOVERED url must match at least one entry (same
+        // dual string-substring / RegExp semantics as the blocked list).
+        // Configured start URLs never pass through this function, so the
+        // listing page itself is unaffected. Blocks still win over allows.
+        const configAllowedPatterns = Array.isArray(parserConfig.discoveryAllowedPatterns) ? parserConfig.discoveryAllowedPatterns : [];
+        if (configAllowedPatterns.length > 0) {
+            const matchesAllowed = configAllowedPatterns.some(pattern => {
+                if (pattern instanceof RegExp) return pattern.test(lowerUrl);
+                if (typeof pattern !== 'string') return false;
+                const normalizedPattern = pattern.trim().toLowerCase();
+                if (!normalizedPattern) return false;
+                return lowerUrl.includes(normalizedPattern);
+            });
+            if (!matchesAllowed) {
+                return { valid: false, reason: 'not-in-allowed-patterns' };
+            }
         }
         const lowerSearch = String(parsedUrl.search || '').toLowerCase();
         if (/^\/(?:sharer(?:\.php)?|share(?:\/url)?|dialog\/send)$/i.test(lowerPath)) {

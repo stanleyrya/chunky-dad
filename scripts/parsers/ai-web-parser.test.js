@@ -672,6 +672,30 @@ test('validateEventUrl applies global + parser discoveryBlockedPatterns unioned 
   assert.match(shop.reason, /^blocked-pattern:/);
 });
 
+test('validateEventUrl discoveryAllowedPatterns: only matching discovered links survive; blocks still win', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://sickening.events/events';
+  const config = { name: 'Goldiloxx', discoveryAllowedPatterns: ['goldiloxx'] };
+
+  // Matching links pass (case-insensitive substring)
+  assert.equal(parser.validateEventUrl('https://sickening.events/e/GOLDILOXX-chicago', sourceUrl, config).valid, true);
+  // Non-matching links from the same listing are rejected with the new reason
+  const other = parser.validateEventUrl('https://sickening.events/e/some-other-party', sourceUrl, config);
+  assert.equal(other.valid, false);
+  assert.equal(other.reason, 'not-in-allowed-patterns');
+  // RegExp entries work with the same dual semantics as the blocked list
+  const rx = { name: 'RX', discoveryAllowedPatterns: [/\/e\/goldiloxx(-|$)/] };
+  assert.equal(parser.validateEventUrl('https://sickening.events/e/goldiloxx-chicago-2', sourceUrl, rx).valid, true);
+  assert.equal(parser.validateEventUrl('https://sickening.events/e/notgoldiloxxish', sourceUrl, rx).valid, false);
+  // Blocks win over allows
+  const both = { name: 'Both', discoveryAllowedPatterns: ['goldiloxx'], discoveryBlockedPatterns: ['chicago'] };
+  const blocked = parser.validateEventUrl('https://sickening.events/e/goldiloxx-chicago', sourceUrl, both);
+  assert.equal(blocked.valid, false);
+  assert.match(blocked.reason, /^config-blocked-pattern:/);
+  // Empty/absent list changes nothing
+  assert.equal(parser.validateEventUrl('https://sickening.events/e/some-other-party', sourceUrl, { name: 'N', discoveryAllowedPatterns: [] }).valid, true);
+});
+
 test('parseOcrResponseWithClassification salvages OCR text from truncated/degenerate JSON', () => {
   const parser = createParser();
 
@@ -6319,4 +6343,213 @@ test('KNOWN VENUE curated-match prompt line appears only with a unique curated m
   const barePrompt = bareParser.buildExtractionPrompt(bareData, {}, null, {}, ['title', 'bar'], 'SNIPPET', 'default', {});
   assert.match(barePrompt, /KNOWN VENUE \(this is the venue's own site\): "MASSIVE"/);
   assert.ok(!barePrompt.includes('KNOWN VENUE (curated match):'), 'no unique curated match → no extra line');
+});
+
+// ============================================================================
+// JSON-API EXTRACTION PATHWAY
+// ============================================================================
+// Abridged REAL search payload shape from api.redeyetickets.com (the Goldiloxx
+// forensic run that extracted 0 events because no JSON pathway existed).
+const REDEYE_SEARCH_PAYLOAD = {
+  data: [{
+    id: '08125f3d-x',
+    slug: 'goldiloxx-july',
+    name: 'GOLDILOXX JULY ',
+    headline: '',
+    description: '<p>DJ JOE MICHAEL and DJ BOOMER BANKS</p>',
+    venue: 'Red Eye NY',
+    venue_city: 'New York',
+    venue_state: 'NY',
+    venue_country: 'US',
+    venue_time_zone: 'America/New_York',
+    first_performance_start_at: '2026-07-26T01:00:00Z',
+    first_performance_end_at: '2026-07-26T08:00:00Z',
+    flyer_url: 'https://redeye-event-flyers.s3.amazonaws.com/img_9849-optimized.jpg',
+    status: 'published'
+  }],
+  meta: { pagination: { per_page: 20 } }
+};
+const REDEYE_SOURCE_URL = 'https://api.redeyetickets.com/api/v2/events/search?venue=red-eye-ny';
+
+test('parseEvents extracts the Red Eye search payload via the JSON-API structured path with zero AI/OCR calls', async () => {
+  const parser = createParser();
+  let aiCalls = 0;
+  let ocrCalls = 0;
+  parser.core.callAiGenerate = async () => { aiCalls += 1; return null; };
+  parser.extractOcrFromAllImages = async () => { ocrCalls += 1; return []; };
+  const cityConfig = { nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'] } };
+
+  let result;
+  const logs = await captureLogsAsync(async () => {
+    result = await parser.parseEvents(
+      { url: REDEYE_SOURCE_URL, html: JSON.stringify(REDEYE_SEARCH_PAYLOAD) },
+      {},
+      cityConfig,
+      'event-page',
+      null
+    );
+  });
+
+  assert.equal(result.events.length, 1);
+  const event = result.events[0];
+  assert.equal(event.title, 'GOLDILOXX JULY', 'title is trimmed');
+  assert.equal(event.startDate.toISOString(), '2026-07-26T01:00:00.000Z');
+  assert.equal(event.endDate.toISOString(), '2026-07-26T08:00:00.000Z');
+  assert.equal(event._timezoneUnresolved, undefined, 'trailing-Z instants are authoritative');
+  assert.equal(event.bar, 'Red Eye NY');
+  assert.equal(event.timezone, 'America/New_York', 'IANA venue_time_zone wins');
+  assert.equal(event.address, 'New York, NY');
+  assert.equal(event.city, 'nyc', 'city resolved from the composed address');
+  assert.equal(event.image, 'https://redeye-event-flyers.s3.amazonaws.com/img_9849-optimized.jpg');
+  assert.equal(event.imageSource, 'json-api');
+  assert.equal(event.description, 'DJ JOE MICHAEL and DJ BOOMER BANKS', 'description is tag-stripped');
+  assert.equal(event.url, REDEYE_SOURCE_URL, 'no public URL is ever fabricated from the slug');
+  assert.equal(event.ticketUrl, '', 'slug never becomes a ticket URL');
+
+  assert.equal(aiCalls, 0, 'no extraction AI on the structured path');
+  assert.equal(ocrCalls, 0, 'no OCR on the structured path');
+  assert.deepEqual(result.extractionSummary, { source: 'json-api', aiPasses: 0, ocrImages: 0 });
+  assert.ok(logs.includes('🤖 AI Web: JSON API response detected (1 candidate event object(s))'));
+  assert.ok(logs.includes('🤖 AI Web: Extracted 1 event(s) from JSON API structured data — skipping OCR and AI extraction'));
+});
+
+test('extractEventsFromJsonApiPayload expands a detail-shaped payload into one event per performance', () => {
+  const parser = createParser();
+  const detailPayload = {
+    data: {
+      ...REDEYE_SEARCH_PAYLOAD.data[0],
+      performances: [
+        { start_at: '2026-07-26T01:00:00Z', end_at: '2026-07-26T08:00:00Z' },
+        { start_at: '2026-08-02T01:00:00Z' }
+      ]
+    }
+  };
+
+  const events = parser.extractEventsFromJsonApiPayload(detailPayload, REDEYE_SOURCE_URL, null);
+  assert.equal(events.length, 2);
+  assert.equal(events[0].title, 'GOLDILOXX JULY');
+  assert.equal(events[0].startDate.toISOString(), '2026-07-26T01:00:00.000Z');
+  assert.equal(events[0].endDate.toISOString(), '2026-07-26T08:00:00.000Z');
+  assert.equal(events[1].startDate.toISOString(), '2026-08-02T01:00:00.000Z');
+  assert.equal(events[1].endDate, null);
+  // Shared outer fields reach every performance
+  assert.equal(events[0].bar, 'Red Eye NY');
+  assert.equal(events[1].bar, 'Red Eye NY');
+  assert.equal(events[1].url, REDEYE_SOURCE_URL);
+});
+
+test('parseEvents handles an empty JSON API payload: detection logged, zero events, no throw', async () => {
+  const parser = createParser();
+  parser.extractOcrFromAllImages = async () => [];
+  let extractionAttempts = 0;
+  parser.extractEventsFromSinglePage = async () => { extractionAttempts += 1; return []; };
+
+  let result;
+  const logs = await captureLogsAsync(async () => {
+    result = await parser.parseEvents(
+      { url: 'https://api.redeyetickets.com/api/v2/events/search?venue=empty', html: '{"data":[],"meta":{}}' },
+      {},
+      null,
+      'event-page',
+      null
+    );
+  });
+
+  assert.equal(result.events.length, 0);
+  assert.ok(extractionAttempts >= 1, 'the AI pathway still runs on an empty payload (fail open)');
+  assert.ok(logs.includes('🤖 AI Web: JSON API response detected (0 candidate event object(s))'));
+});
+
+test('parseEvents fails open on unrecognizable JSON: linearized lines feed the AI pathway', async () => {
+  const parser = createParser();
+  parser.extractOcrFromAllImages = async () => [];
+  let extractionAttempts = 0;
+  let receivedHtml = null;
+  parser.extractEventsFromSinglePage = async (htmlData) => {
+    extractionAttempts += 1;
+    receivedHtml = htmlData && htmlData.html ? htmlData.html : '';
+    return [];
+  };
+
+  let result;
+  const logs = await captureLogsAsync(async () => {
+    result = await parser.parseEvents(
+      { url: 'https://api.example/v1/things', html: '{"foo":[{"bar":1,"baz":"qux"}],"note":"hello"}' },
+      {},
+      null,
+      'event-page',
+      null
+    );
+  });
+
+  assert.equal(result.events.length, 0);
+  assert.ok(extractionAttempts >= 1, 'AI extraction must still be attempted (fail open)');
+  const lines = String(receivedHtml).split('\n');
+  assert.ok(lines.length > 1, 'linearized content has more than one line');
+  assert.ok(lines.includes('foo[0].bar: 1'));
+  assert.ok(lines.includes('foo[0].baz: qux'));
+  assert.ok(lines.includes('note: hello'));
+  assert.ok(logs.includes('🤖 AI Web: JSON API response detected (0 candidate event object(s))'));
+  assert.ok(logs.includes('🤖 AI Web: JSON API payload linearized to 3 line(s) for AI extraction (structured conversion incomplete: missing title, startDate)'));
+});
+
+test('detectJsonApiPayload ignores HTML and malformed JSON; the JSON-LD fast path is unchanged', async () => {
+  const parser = createParser();
+  assert.equal(parser.detectJsonApiPayload(SICKENING_JSONLD_HTML), null);
+  assert.equal(parser.detectJsonApiPayload('  <html><body>{"not":"the start"}</body></html>'), null);
+  assert.equal(parser.detectJsonApiPayload('{"unterminated": '), null);
+  assert.equal(parser.detectJsonApiPayload('"just a string"'), null);
+  assert.equal(parser.detectJsonApiPayload(''), null);
+
+  // Regression: the existing HTML fixture still takes the JSON-LD structured
+  // path with the exact same outcome as before the JSON-API pathway existed.
+  parser.extractOcrFromAllImages = async () => {
+    throw new Error('OCR should not run when JSON-LD covers the event');
+  };
+  parser.core.callAiGenerate = async () => {
+    throw new Error('AI should not be called when JSON-LD covers the event');
+  };
+  const result = await parser.parseEvents(
+    { url: 'https://sickening.events/e/bearracuda-portland-pridefriday', html: SICKENING_JSONLD_HTML },
+    {},
+    null,
+    'event-page',
+    null
+  );
+  assert.equal(result.events.length, 1);
+  assert.equal(result.events[0].title, 'Bearracuda Portland:PRIDE FRIDAY');
+  assert.equal(result.events[0].bar, 'Nova PDX');
+  assert.equal(result.extractionSummary.source, 'jsonld');
+});
+
+test('buildEventFromJsonApiObject strips HTML from descriptions and never invents ticket URLs from slugs', () => {
+  const parser = createParser();
+  const event = parser.buildEventFromJsonApiObject({
+    name: 'BEAR NIGHT',
+    slug: 'bear-night-august',
+    description: '<div><strong>Go-go bears</strong> &amp; friends</div>',
+    start_at: '2026-08-08T02:00:00Z',
+    flyer_url: 'https://cdn.example/flyer.jpg'
+  }, 'https://api.example/v1/events/bear-night-august', null);
+
+  assert.equal(event.title, 'BEAR NIGHT');
+  assert.equal(event.description, 'Go-go bears & friends');
+  assert.ok(!/</.test(event.description), 'tags are stripped');
+  assert.equal(event.url, 'https://api.example/v1/events/bear-night-august');
+  assert.equal(event.ticketUrl, '', 'a slug is not an absolute URL — nothing is fabricated');
+  assert.equal(event.image, 'https://cdn.example/flyer.jpg');
+  assert.equal(event.imageSource, 'json-api');
+});
+
+test('linearizeJsonForPrompt emits keyPath lines for scalar leaves, skipping null/empty and stripping tags', () => {
+  const parser = createParser();
+  const linearized = parser.linearizeJsonForPrompt({
+    data: [{ name: 'GOLDILOXX', empty: '', missing: null, nested: { count: 2 } }],
+    note: '<b>bold</b> text'
+  });
+  assert.deepEqual(linearized.split('\n'), [
+    'data[0].name: GOLDILOXX',
+    'data[0].nested.count: 2',
+    'note: bold text'
+  ]);
 });

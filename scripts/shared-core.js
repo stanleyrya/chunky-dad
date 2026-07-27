@@ -263,6 +263,16 @@ class SharedCore {
             if (jsonLdEventCount >= 2) return { classification: 'multi-event-page', signal: 'json-ld' };
         }
 
+        // 2.5 Raw JSON API bodies (deterministic). A body that IS a JSON document
+        //     with recognizable event-shaped objects classifies by object count —
+        //     month-name heuristics and the AI second opinion are meaningless on a
+        //     payload that contains no prose.
+        if (html) {
+            const jsonApiEventCount = this.countJsonApiEventObjects(html);
+            if (jsonApiEventCount === 1) return { classification: 'event-page', signal: 'json-api' };
+            if (jsonApiEventCount >= 2) return { classification: 'multi-event-page', signal: 'json-api' };
+        }
+
         // 3. HTML heuristics for unknown URLs
         if (html) {
             // Reset lastIndex since the patterns are reused across calls (global flag)
@@ -284,6 +294,53 @@ class SharedCore {
         }
 
         return { classification: 'unknown', signal: 'none' };
+    }
+
+    // Count event-shaped objects in a raw JSON API response body (non-JSON or
+    // unrecognizable shapes → 0). Deterministic and platform-pure. Compact
+    // mirror of the ai-web parser's JSON-API recognizer (detectJsonApiPayload +
+    // collectJsonApiEventCandidates) — keep the two in sync: an object is
+    // event-like when it carries a name/title key plus a start/date-ish key
+    // holding an ISO-8601-ish string; candidates come from the payload itself
+    // (array), a data/events/items/results wrapper key, or any top-level array
+    // of event-like objects; a detail-shaped single object counts as one.
+    countJsonApiEventObjects(html) {
+        const text = String(html || '').trim();
+        if (!text || (text[0] !== '{' && text[0] !== '[')) return 0;
+        let parsed;
+        try {
+            parsed = JSON.parse(text);
+        } catch (_) {
+            return 0;
+        }
+        const normalizeKey = (key) => String(key || '').replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
+        const isPlainObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+        const isArrayOfObjects = (value) => Array.isArray(value) && value.length > 0 && value.every(isPlainObject);
+        const isIsoDateish = (value) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value.trim());
+        const looksEventLike = (obj) => {
+            if (!isPlainObject(obj)) return false;
+            const keys = Object.keys(obj);
+            const hasTitle = keys.some(key => /^(name|title)$/.test(normalizeKey(key))
+                && typeof obj[key] === 'string' && obj[key].trim() !== '');
+            if (!hasTitle) return false;
+            return keys.some(key => /(^|_)(start|date|datetime)/.test(normalizeKey(key)) && isIsoDateish(obj[key]));
+        };
+        if (isArrayOfObjects(parsed)) {
+            return parsed.filter(looksEventLike).length;
+        }
+        if (!isPlainObject(parsed)) return 0;
+        for (const key of Object.keys(parsed)) {
+            if (!/^(data|events|items|results)$/.test(normalizeKey(key))) continue;
+            const value = parsed[key];
+            if (isArrayOfObjects(value)) return value.filter(looksEventLike).length;
+            if (isPlainObject(value) && looksEventLike(value)) return 1;
+        }
+        for (const value of Object.values(parsed)) {
+            if (!isArrayOfObjects(value)) continue;
+            const eventLikeCount = value.filter(looksEventLike).length;
+            if (eventLikeCount > 0) return eventLikeCount;
+        }
+        return 0;
     }
 
     // Compact text summary of a page for the AI classification prompt: title, meta
@@ -3369,6 +3426,18 @@ class SharedCore {
                 const linkSuffix = linkCount > 0 ? `, ${linkCount} link${linkCount === 1 ? '' : 's'}` : '';
                 const segmentSuffix = segmentCount > 0 ? `, ${segmentCount} segment${segmentCount === 1 ? '' : 's'}` : '';
                 await displayAdapter.logInfo(`SYSTEM: Parsed ${url} → ${eventCount} event${eventCount === 1 ? '' : 's'}${linkSuffix}${segmentSuffix}`);
+
+                // Observability: which extraction pathway produced this page's
+                // events (structured json-api/jsonld fast path vs AI), with the
+                // AI-pass and OCR-image counts the parser reported. Additive —
+                // parsers that don't report a summary log nothing extra.
+                const extractionSummary = !discoveryOnly
+                    && parseResult && parseResult.extractionSummary && typeof parseResult.extractionSummary === 'object'
+                    ? parseResult.extractionSummary
+                    : null;
+                if (extractionSummary && extractionSummary.source) {
+                    await displayAdapter.logInfo(`SYSTEM: ${url} extraction summary: source=${extractionSummary.source}, aiPasses=${Number(extractionSummary.aiPasses) || 0}, ocrImages=${Number(extractionSummary.ocrImages) || 0} → ${eventCount} event${eventCount === 1 ? '' : 's'}`);
+                }
 
                 if (discoveryTreeCollector && segmentCount > 0) {
                     discoveryTreeCollector.segmentsByUrl[url] = parseResult.discoveredSegments;
