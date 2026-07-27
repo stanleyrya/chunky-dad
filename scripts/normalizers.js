@@ -79,6 +79,22 @@ class BaseNormalizer {
         this.core = core;
     }
 
+    // Diacritic-folded lowercase view of city-ish text ("Montréal" →
+    // "montreal") so accented extractions match the unaccented city config
+    // patterns (run 20260727-145617). Canonical implementation lives in
+    // SharedCore.foldDiacritics; the inline fallback keeps normalizers pure
+    // when constructed without a core (keep the transform in sync).
+    foldDiacritics(value) {
+        if (this.core && typeof this.core.foldDiacritics === 'function') {
+            return this.core.foldDiacritics(value);
+        }
+        return String(value || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .trim();
+    }
+
     normalize(event) {
         return event;
     }
@@ -426,7 +442,9 @@ class LocationNormalizer extends BaseNormalizer {
         this.backfillCityFromCuratedBar(event);
 
         // Warn when the event references a city we have no config for
-        if (!event.timezone && event.city && this.core.cities && !this.core.cities[event.city]) {
+        // (diacritic-folded lookup so "Montréal" counts as configured)
+        if (!event.timezone && event.city && this.core.cities
+            && !this.core.cities[event.city] && !this.core.cities[this.foldDiacritics(event.city)]) {
             const title = event.title || 'unknown';
             this.core.warnOnce(
                 `timezone:${event.city}`,
@@ -686,12 +704,15 @@ class LocationNormalizer extends BaseNormalizer {
     extractCityFromAddress(address) {
         if (!address || typeof address !== 'string' || !this.core || !this.core.cityMappings) return null;
 
-        const lowerAddress = address.toLowerCase();
+        // Diacritic-folded on BOTH sides so "Montréal, QC" matches the
+        // unaccented "montreal" pattern (run 20260727-145617)
+        const lowerAddress = this.foldDiacritics(address);
 
         for (const [patterns, city] of Object.entries(this.core.cityMappings)) {
             const patternList = patterns.split('|');
             for (const pattern of patternList) {
-                const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
+                const foldedPattern = this.foldDiacritics(pattern);
+                const regex = new RegExp(`\\b${foldedPattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
                 if (regex.test(lowerAddress)) {
                     return city;
                 }
@@ -701,15 +722,16 @@ class LocationNormalizer extends BaseNormalizer {
         const addressParts = address.split(',').map(part => part.trim());
 
         for (const part of addressParts) {
-            const cityName = part.toLowerCase();
+            const cityName = this.foldDiacritics(part);
 
             for (const [patterns, city] of Object.entries(this.core.cityMappings)) {
                 const patternList = patterns.split('|');
                 for (const pattern of patternList) {
-                    if (cityName === pattern) {
+                    const foldedPattern = this.foldDiacritics(pattern);
+                    if (cityName === foldedPattern) {
                         return city;
                     }
-                    const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
+                    const regex = new RegExp(`\\b${foldedPattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
                     if (regex.test(cityName)) {
                         return city;
                     }
@@ -741,12 +763,14 @@ class LocationNormalizer extends BaseNormalizer {
     extractCityFromText(text) {
         if (!text || typeof text !== 'string' || !this.core || !this.core.cityMappings) return null;
 
-        const lowerText = text.toLowerCase();
+        // Diacritic-folded on BOTH sides (see extractCityFromAddress)
+        const lowerText = this.foldDiacritics(text);
 
         for (const [patterns, city] of Object.entries(this.core.cityMappings)) {
             const patternList = patterns.split('|');
             for (const pattern of patternList) {
-                const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
+                const foldedPattern = this.foldDiacritics(pattern);
+                const regex = new RegExp(`\\b${foldedPattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
                 if (regex.test(lowerText)) {
                     return city;
                 }
@@ -815,22 +839,24 @@ class LocationNormalizer extends BaseNormalizer {
 
         if (!this.core || !this.core.cityMappings) return 'unknown';
 
-        const title = String(event.title || '').toLowerCase();
+        // Diacritic-folded on BOTH sides so "Montréal" in a title/venue
+        // matches the unaccented "montreal" pattern (run 20260727-145617)
+        const title = this.foldDiacritics(event.title);
 
         for (const [patterns, city] of Object.entries(this.core.cityMappings)) {
             const cityPatterns = patterns.split('|');
             for (const pattern of cityPatterns) {
-                if (title.includes(pattern)) {
+                if (title.includes(this.foldDiacritics(pattern))) {
                     return city;
                 }
             }
         }
 
-        const venue = String(event.bar || '').toLowerCase();
+        const venue = this.foldDiacritics(event.bar);
         for (const [patterns, city] of Object.entries(this.core.cityMappings)) {
             const cityPatterns = patterns.split('|');
             for (const pattern of cityPatterns) {
-                if (venue.includes(pattern)) {
+                if (venue.includes(this.foldDiacritics(pattern))) {
                     return city;
                 }
             }
@@ -865,15 +891,19 @@ class LocationNormalizer extends BaseNormalizer {
         if (!cityName || typeof cityName !== 'string' || !this.core || !this.core.cityMappings) return null;
 
         const normalized = cityName.toLowerCase().trim();
+        // Diacritic-folded on BOTH sides: "Montréal"/"MONTRÉAL" must resolve
+        // to the montreal key (run 20260727-145617); unaccented input folds
+        // to itself so ASCII matching is byte-identical.
+        const folded = this.foldDiacritics(cityName);
 
         for (const [patterns, city] of Object.entries(this.core.cityMappings)) {
             const patternList = patterns.split('|');
-            if (patternList.includes(normalized)) {
+            if (patternList.includes(normalized) || patternList.some(pattern => this.foldDiacritics(pattern) === folded)) {
                 return city;
             }
         }
 
-        if (normalized && this.core.cities && !this.core.cities[normalized]) {
+        if (normalized && this.core.cities && !this.core.cities[normalized] && !this.core.cities[folded]) {
             this.core.warnOnce(`city:${normalized}`, `⚠️ LocationNormalizer: Unknown city "${normalized}" (no mapping or timezone)`);
         }
         return normalized;
@@ -1169,7 +1199,7 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
     getCityCenterCoordinates(city) {
         const key = String(city || '').trim();
         if (!key || !this.core || !this.core.cities) return null;
-        const cityConfig = this.core.cities[key];
+        const cityConfig = this.core.cities[key] || this.core.cities[this.foldDiacritics(key)];
         const coords = cityConfig && cityConfig.coordinates;
         if (!coords) return null;
         const lat = Number(coords.lat);
@@ -1749,7 +1779,7 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
     geocodeCityAnchorName(cityKey) {
         const key = String(cityKey || '').trim();
         if (!key || !this.core || !this.core.cities) return key;
-        const cityConfig = this.core.cities[key];
+        const cityConfig = this.core.cities[key] || this.core.cities[this.foldDiacritics(key)];
         const patterns = cityConfig && Array.isArray(cityConfig.patterns) ? cityConfig.patterns : [];
         const displayName = typeof patterns[0] === 'string' ? patterns[0].trim() : '';
         return displayName || key;

@@ -8890,3 +8890,103 @@ test('_promoter carries across dedup merges like _organizer', async () => {
   assert.equal(merged._promoter, 'Bearracuda');
   assert.equal(merged._organizer, 'Bearracuda');
 });
+
+// ===========================================================================
+// run 20260727-145617 fixes: diacritic folding in city resolution (Fix 1) and
+// city-alias tokens in cross-source title dedup (Fix 3)
+// ===========================================================================
+
+const MONTREAL_CITIES = {
+  montreal: { name: 'Montreal', timezone: 'America/Toronto', patterns: ['montreal', 'mtl'] },
+  nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'] }
+};
+
+function createMontrealCore() {
+  return new SharedCore(MONTREAL_CITIES, { eventSchema: EventSchema });
+}
+
+test('foldDiacritics: accented city text folds to the config key; unaccented ASCII is byte-identical to lowercase+trim', () => {
+  const core = createMontrealCore();
+  assert.equal(core.foldDiacritics('montréal'), 'montreal');
+  assert.equal(core.foldDiacritics('Montréal'), 'montreal');
+  assert.equal(core.foldDiacritics('MONTRÉAL'), 'montreal');
+  assert.equal(core.foldDiacritics('  Montreal  '), 'montreal');
+  assert.equal(core.foldDiacritics('new york'), 'new york');
+  assert.equal(core.foldDiacritics(null), '');
+});
+
+test('getCityTimezone: accented "montréal" resolves montreal timezone (literal run city value); unaccented unchanged', () => {
+  const core = createMontrealCore();
+  // Literal run 20260727-145617 value that failed: city "montréal"
+  assert.equal(core.getCityTimezone('montréal'), 'America/Toronto');
+  assert.equal(core.getCityTimezone('Montréal'), 'America/Toronto');
+  assert.equal(core.getCityTimezone('MONTRÉAL'), 'America/Toronto');
+  // Unaccented key and pattern lookups stay byte-identical
+  assert.equal(core.getCityTimezone('montreal'), 'America/Toronto');
+  assert.equal(core.getCityTimezone('mtl'), 'America/Toronto');
+  assert.equal(core.getCityTimezone('nyc'), 'America/New_York');
+  assert.equal(core.getCityTimezone('new york'), 'America/New_York');
+  // Unknown cities still resolve nothing
+  assert.equal(core.getCityTimezone('atlantis'), null);
+  assert.equal(core.getCityTimezone(''), null);
+});
+
+test('resolveWallClockDates: city "montréal" re-anchors wall-clock dates via the folded timezone lookup', () => {
+  const core = createMontrealCore();
+  const event = {
+    title: 'Concours PUP MTL',
+    city: 'montréal',
+    startDate: new Date('2026-07-27T22:00:00.000Z'),
+    endDate: new Date('2026-07-27T22:00:00.000Z'),
+    _timezoneUnresolved: true
+  };
+  core.resolveWallClockDates(event);
+  // 10pm EDT (UTC-4) = 2am UTC next day — no longer stuck wall-clock UTC
+  assert.equal(event.startDate.toISOString(), '2026-07-28T02:00:00.000Z');
+  assert.equal(event._timezoneUnresolved, undefined);
+});
+
+test('cross-source tokens: city-alias tokens (folded "montréal", "mtl") are stripped; other tokens untouched', () => {
+  const core = createMontrealCore();
+  // Diacritics fold BEFORE tokenization: "Montréal" is ONE token, then stripped as a city alias
+  assert.deepEqual(core.getCrossSourceTitleTokens('Concours PUP Montréal'), ['concours', 'pup']);
+  assert.deepEqual(core.getCrossSourceTitleTokens('Concours PUP MTL'), ['concours', 'pup']);
+  // Multi-word city names are never token-stripped ("new" and "york" survive)
+  assert.deepEqual(core.getCrossSourceTitleTokens('New York Underwear Party'), ['new', 'york', 'underwear', 'party']);
+  // Unaffected titles are byte-identical to the pre-fix behavior
+  assert.deepEqual(core.getCrossSourceTitleTokens('Singlet Night with DJ Drew G'), ['singlet', 'night']);
+});
+
+test('cross-source tokens: city stripping never EMPTIES the significant-token set (fail closed)', () => {
+  const core = createMontrealCore();
+  // A title that is NOTHING but city names keeps its tokens
+  assert.deepEqual(core.getCrossSourceTitleTokens('Montréal'), ['montreal']);
+  assert.deepEqual(core.getCrossSourceTitleTokens('MTL'), ['mtl']);
+});
+
+test('cross-source signal: literal Concours PUP pair (run 20260727-145617) pairs across the Montréal/MTL title gap', () => {
+  const core = createMontrealCore();
+  // Faithful shapes: one record carries the venue as its bar, the twin names
+  // the venue INSIDE its address while its bar is a different extraction
+  const montrealRecord = {
+    title: 'Concours PUP Montréal', bar: 'Bain Mathieu', city: 'montreal',
+    timezone: 'America/Toronto', startDate: new Date('2026-07-28T02:00:00.000Z')
+  };
+  const mtlRecord = {
+    title: 'Concours PUP MTL', bar: 'Aigle Noir', city: 'montréal',
+    address: 'Bain Mathieu, 2915 Rue Ontario E, Montréal, QC H2K 1X7',
+    startDate: new Date('2026-07-28T02:00:00.000Z')
+  };
+  assert.equal(core.getCrossSourceVenueIdentity(montrealRecord, mtlRecord), 'bar-in-address');
+  assert.equal(core.getCrossSourceDuplicateSignal(montrealRecord, mtlRecord), 'venue+night+title-subset');
+});
+
+test('cross-source venue identity: single-word bar names never match inside addresses (fail closed)', () => {
+  const core = createMontrealCore();
+  const barRecord = { title: 'Eagle Party', bar: 'Eagle', startDate: new Date('2026-07-28T02:00:00.000Z') };
+  const addressRecord = {
+    title: 'Eagle Party', address: '500 Eagle Street, Montreal',
+    startDate: new Date('2026-07-28T02:00:00.000Z')
+  };
+  assert.equal(core.getCrossSourceVenueIdentity(barRecord, addressRecord), null);
+});
