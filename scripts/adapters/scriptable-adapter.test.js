@@ -2623,3 +2623,161 @@ test('generateRichHTML embeds the active-config section and the copy-config hand
   const withoutConfig = await adapter.generateRichHTML(buildResultsStub());
   assert.ok(!withoutConfig.includes('Active config'), 'no section without a config snapshot');
 });
+
+// ---------------------------------------------------------------------------
+// Parser picker: guard, selection application, staleness helpers, ordering.
+// The native UITable presentation itself is not headlessly testable — these
+// cover the pure parts presentParserPicker is built on.
+// ---------------------------------------------------------------------------
+
+test('shouldPresentParserPicker: knob off or non-manual runtime → false; on+manual → true', () => {
+  const adapter = buildAdapter();
+  const manual = { automationRun: false, runsInWidget: false, runsInActionExtension: false };
+
+  assert.equal(
+    adapter.shouldPresentParserPicker({ config: {}, runtime: manual }),
+    false,
+    'knob absent → false'
+  );
+  assert.equal(
+    adapter.shouldPresentParserPicker({ config: { pickParsers: 'yes' }, runtime: manual }),
+    false,
+    'non-boolean truthy knob → false (requires === true)'
+  );
+  assert.equal(
+    adapter.shouldPresentParserPicker({ config: { pickParsers: true }, runtime: manual }),
+    true,
+    'knob on + manual run → true'
+  );
+  assert.equal(
+    adapter.shouldPresentParserPicker({
+      config: { pickParsers: true },
+      runtime: { ...manual, automationRun: true }
+    }),
+    false,
+    'automation run → false'
+  );
+  assert.equal(
+    adapter.shouldPresentParserPicker({
+      config: { pickParsers: true },
+      runtime: { ...manual, runsInWidget: true }
+    }),
+    false,
+    'widget run → false'
+  );
+  assert.equal(
+    adapter.shouldPresentParserPicker({
+      config: { pickParsers: true },
+      runtime: { ...manual, runsInActionExtension: true }
+    }),
+    false,
+    'action-extension run → false'
+  );
+});
+
+test('applyParserPickerSelection flips enabled by membership without mutating originals', () => {
+  const adapter = buildAdapter();
+  const original = [
+    { name: 'Alpha', enabled: false, url: 'https://a.example' },
+    { name: 'Beta', enabled: true },
+    { name: 'Gamma' }
+  ];
+
+  const applied = adapter.applyParserPickerSelection(
+    original,
+    new Set(['Alpha', 'Ghost'])
+  );
+
+  assert.deepEqual(
+    applied.map((p) => p.enabled),
+    [true, false, false],
+    'selected → enabled true, unselected → false; unknown names ignored'
+  );
+  assert.equal(applied[0].url, 'https://a.example', 'other fields carried over');
+
+  // Originals unmutated (spread copies only)
+  assert.equal(original[0].enabled, false);
+  assert.equal(original[1].enabled, true);
+  assert.equal(original[2].enabled, undefined);
+  assert.notEqual(applied[0], original[0], 'copies, not the same objects');
+});
+
+const PICKER_METRICS_FIXTURE = [
+  '{"finished_at":"2026-07-20T03:00:00.000Z","parsers":[{"parser_name":"Alpha","calendar_actions":{"create":2,"update":0}}]}',
+  'not json at all {{{',
+  '{"finished_at":"2026-07-10T03:00:00.000Z","parsers":[{"parser_name":"Beta","calendar_actions":{"create":0,"update":1}}]}',
+  '{"finished_at":"2026-07-25T03:00:00.000Z","parsers":[{"parser_name":"Alpha","calendar_actions":{"create":0,"update":0}},{"parser_name":"Beta","calendar_actions":{"create":0,"update":0}}]}',
+  ''
+].join('\n');
+
+test('parseMetricsNdjsonForPicker skips malformed lines and sorts ascending by finished_at', () => {
+  const adapter = buildAdapter();
+  const records = adapter.parseMetricsNdjsonForPicker(PICKER_METRICS_FIXTURE);
+
+  assert.equal(records.length, 3, 'malformed and blank lines skipped');
+  assert.deepEqual(
+    records.map((r) => r.finished_at),
+    [
+      '2026-07-10T03:00:00.000Z',
+      '2026-07-20T03:00:00.000Z',
+      '2026-07-25T03:00:00.000Z'
+    ],
+    'ascending by finished_at'
+  );
+  assert.deepEqual(adapter.parseMetricsNdjsonForPicker(''), []);
+});
+
+test('getLastCalendarWriteAtForPicker counts only create/update > 0 and returns null for absent parsers', () => {
+  const adapter = buildAdapter();
+  const records = adapter.parseMetricsNdjsonForPicker(PICKER_METRICS_FIXTURE);
+
+  // Newest Alpha record (07-25) has 0/0 calendar actions — must NOT count;
+  // the older 07-20 record with create:2 is the last real write.
+  assert.equal(
+    adapter.getLastCalendarWriteAtForPicker(records, 'Alpha'),
+    '2026-07-20T03:00:00.000Z'
+  );
+  assert.equal(
+    adapter.getLastCalendarWriteAtForPicker(records, 'Beta'),
+    '2026-07-10T03:00:00.000Z',
+    'update > 0 counts as a write'
+  );
+  assert.equal(
+    adapter.getLastCalendarWriteAtForPicker(records, 'Nope'),
+    null,
+    'absent parser → null'
+  );
+});
+
+test('formatDaysSinceForPicker labels: never / today / 1d ago / Nd ago', () => {
+  const adapter = buildAdapter();
+  assert.equal(adapter.formatDaysSinceForPicker(null), 'never');
+  assert.equal(adapter.formatDaysSinceForPicker(undefined), 'never');
+  assert.equal(adapter.formatDaysSinceForPicker(0.4), 'today');
+  assert.equal(adapter.formatDaysSinceForPicker(1.7), '1d ago');
+  assert.equal(adapter.formatDaysSinceForPicker(12.2), '12d ago');
+});
+
+test('buildParserPickerEntries orders stalest-first: never-written, then stale, then fresh', () => {
+  const adapter = buildAdapter();
+  const now = new Date('2026-07-27T03:00:00.000Z').getTime();
+  const records = adapter.parseMetricsNdjsonForPicker(PICKER_METRICS_FIXTURE);
+  const parsers = [
+    { name: 'Alpha', enabled: true }, // last write 7d ago (fresh-ish)
+    { name: 'Beta', enabled: false }, // last write 17d ago (stale)
+    { name: 'Nope' } // never written, enabled defaults on
+  ];
+
+  const entries = adapter.buildParserPickerEntries(parsers, records, now);
+
+  assert.deepEqual(
+    entries.map((e) => e.name),
+    ['Nope', 'Beta', 'Alpha'],
+    'never-written ranks before stale ranks before fresh'
+  );
+  assert.equal(entries[0].daysSince, null);
+  assert.equal(entries[0].enabled, true, 'enabled !== false defaults to selected-eligible');
+  assert.equal(entries[1].enabled, false);
+  assert.equal(Math.floor(entries[1].daysSince), 17);
+  assert.equal(Math.floor(entries[2].daysSince), 7);
+});

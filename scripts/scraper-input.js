@@ -11,6 +11,7 @@ const scraperConfig = {
   config: {
     daysToLookAhead: null,
     // dryRun: true, // Preview mode: analyze + display without writing to the calendar (default: false)
+    pickParsers: true, // Parser picker at run start (manual runs only; automation/widget runs skip it; selection is session-scoped — never edits this file) (default: false)
     pageCache: {
       enabled: true,
       ttlDays: 3,
@@ -253,6 +254,71 @@ const scraperConfig = {
         facebook: { value: "https://www.facebook.com/lonestareagle" },
         instagram: { value: "https://www.instagram.com/thedallaseagle/" },
         mastodon: { value: "https://mastodon.social/@dallaseagle" },
+      },
+    },
+    // ── Onboarding batch 2026-07-27 (recon-verified) — each ships disabled;
+    // run one at a time via the parser picker, review, then enable. ──────
+    {
+      name: "The Lumberyard",
+      enabled: false,
+      urls: ["https://www.thelumberyardbar.com/events"],
+      // Seattle bear-friendly bar (9630 16th Ave SW) with general weekly
+      // programming — bear check filters, not alwaysBear.
+      alwaysBear: false,
+      metadata: {
+        website: { value: "https://www.thelumberyardbar.com" },
+      },
+    },
+    {
+      name: "CubScout LA",
+      enabled: false,
+      // Eagle LA's recurring bear party page (The Events Calendar, JSON-LD).
+      urls: ["https://eaglela.com/events/cub-scout-3/"],
+      alwaysBear: true,
+    },
+    {
+      name: "BEEFMINCE",
+      enabled: false,
+      // Multi-city UK (London/Brighton/Manchester/Birmingham + Sitges);
+      // per-event city comes from event text; tickets link out to dice.fm.
+      urls: ["https://beefmince.com/events"],
+      alwaysBear: true,
+      metadata: {
+        website: { value: "https://beefmince.com" },
+      },
+    },
+    {
+      name: "BeefDip",
+      enabled: false,
+      // Puerto Vallarta bear week; single schedule page, venues appear as
+      // Google Maps links (maps-link address harvesting applies).
+      urls: ["https://beefdip.com/planned-events/"],
+      alwaysBear: true,
+      metadata: {
+        website: { value: "https://beefdip.com" },
+      },
+    },
+    {
+      name: "Bear it MTL",
+      enabled: false,
+      // Montreal (Sugar Bear Weekend organizer); The Events Calendar with
+      // JSON-LD + Offers; also lists Toronto/Paris events — city per event.
+      urls: ["https://www.bearitmtl.com/events/"],
+      alwaysBear: true,
+      metadata: {
+        website: { value: "https://www.bearitmtl.com" },
+      },
+    },
+    {
+      name: "Club Chub",
+      enabled: false,
+      // Touring chub/chaser series; Eventbrite links sit in the site's own
+      // static HTML. Do NOT use the Eventbrite org page — it's CCBC Resort's
+      // venue account and would pull non-Club-Chub events.
+      urls: ["https://www.clubchubusa.com/event-list"],
+      alwaysBear: true,
+      metadata: {
+        instagram: { value: "https://www.instagram.com/clubchubparty" },
       },
     },
     {
