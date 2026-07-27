@@ -21,10 +21,6 @@ scripts/
 │   └── web-adapter.js                  # Browser/Web ONLY code
 └── parsers/                            # Pure parsing logic (NO environment code)
     ├── ai-web-parser.js                # AI-based parsing and URL discovery
-    ├── bearracuda-parser.js            # Bearracuda venue parsing
-    ├── chunk-parser.js                 # Chunk venue parsing
-    ├── linktree-parser.js              # Linktree ticket-link parsing
-    ├── redeyetickets-parser.js         # Red Eye Tickets API parsing
     └── scriptable-url-parser.js        # Scriptable URL-input parsing
 ```
 
@@ -114,16 +110,16 @@ Configuration → Orchestrator → Shared Core → Adapters & Parsers
 
 ## 📋 CURRENT FUNCTIONALITY
 
-### Supported Venues
-- **AI Web** (including Eventbrite pages) - Uses `ai-web-parser.js`
-- **Bearracuda** - Multi-city bear dance parties - Uses `bearracuda-parser.js`
-- **CHUNK** - Uses `chunk-parser.js`
-- **Linktree** - Uses `linktree-parser.js`
-- **RedEyeTickets** - Uses `redeyetickets-parser.js`
-- **Scriptable URL Input** - Uses `scriptable-url-parser.js`
+### Supported Sources
+- **AI Web** (all configured sites, including Eventbrite pages) - Uses `ai-web-parser.js`
+- **Scriptable URL Input** (share-sheet / x-callback-url) - Uses `scriptable-url-parser.js`
+
+(Former site-specific parsers — bearracuda, chunk, linktree, redeyetickets — were
+deleted; their sites are handled by the generic AI web parser. Their URL→source
+labels survive in shared-core's `urlSourceMappings` for dedup-key compatibility.)
 
 ### Features
-- Multi-site parsing with venue-specific logic
+- Generic AI-driven parsing across sites
 - Smart bear event detection using keywords and allowlists
 - Duplicate prevention and event merging
 - City detection and calendar routing
@@ -299,10 +295,6 @@ ocr: {
    - `adapters/scriptable-adapter.js`
    - `adapters/web-adapter.js` (needed for unified script)
    - `parsers/ai-web-parser.js`
-   - `parsers/bearracuda-parser.js`
-   - `parsers/chunk-parser.js`
-   - `parsers/linktree-parser.js`
-   - `parsers/redeyetickets-parser.js`
    - `parsers/scriptable-url-parser.js`
 3. Copy `scraper-input.js` to **iCloud Drive/Scriptable/** folder
 4. Run `bear-event-scraper-unified.js`, `display-saved-run.js`, or `page-cache-maintenance.js`

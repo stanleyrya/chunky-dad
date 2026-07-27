@@ -3599,15 +3599,31 @@ test('merge arbitration still resolves the global ai block through inherited par
   assert.equal(viaInheritance.model, 'global-arbiter');
 });
 
-test('detectParserFromUrl (the parser:"auto" resolver) maps legacy sites and falls back to ai-web', () => {
+test('detectParserFromUrl (the parser:"auto" resolver) maps scheme URLs and falls back to ai-web', () => {
   const core = createCore();
-  assert.equal(core.detectParserFromUrl('https://www.chunk-party.com'), 'chunk');
-  assert.equal(core.detectParserFromUrl('https://linktr.ee/cubhouse'), 'linktree');
+  assert.equal(core.detectParserFromUrl('scriptable-input://event'), 'scriptable-input');
+  assert.equal(core.detectParserFromUrl('ai-web://https://example.com'), 'ai-web');
+  // Former site-specific parser domains no longer dispatch anywhere special —
+  // those parsers are deleted; every http(s) URL resolves to the generic parser.
+  assert.equal(core.detectParserFromUrl('https://bearracuda.com'), 'ai-web');
+  assert.equal(core.detectParserFromUrl('https://www.chunk-party.com'), 'ai-web');
+  assert.equal(core.detectParserFromUrl('https://linktr.ee/cubhouse'), 'ai-web');
   assert.equal(core.detectParserFromUrl('https://www.eventbrite.com/o/some-org-123'), 'ai-web');
   assert.equal(core.detectParserFromUrl(''), 'ai-web');
 });
 
-test('processParser: absent parser pins ai-web; parser:"auto" opts into legacy detection + auto-switching', async () => {
+test('detectSourceFromUrl keeps legacy source labels for dedup keys (never dispatch)', () => {
+  const core = createCore();
+  assert.equal(core.detectSourceFromUrl('https://bearracuda.com/events/portland'), 'bearracuda');
+  assert.equal(core.detectSourceFromUrl('https://www.chunk-party.com'), 'chunk');
+  assert.equal(core.detectSourceFromUrl('https://linktr.ee/cubhouse'), 'linktree');
+  assert.equal(core.detectSourceFromUrl('https://redeyetickets.com/e/1'), 'redeyetickets');
+  assert.equal(core.detectSourceFromUrl('scriptable-input://event'), 'scriptable-input');
+  assert.equal(core.detectSourceFromUrl('https://www.eventbrite.com/o/some-org-123'), null);
+  assert.equal(core.detectSourceFromUrl(''), null);
+});
+
+test('processParser: absent parser pins ai-web; parser:"auto" resolves schemes only (deleted-site URLs → ai-web)', async () => {
   const core = createCore();
   const display = createDisplayAdapterStub();
   const httpAdapter = {
@@ -3620,7 +3636,11 @@ test('processParser: absent parser pins ai-web; parser:"auto" opts into legacy d
         return { events: [], additionalLinks: [] };
       }
     });
-    return { 'ai-web': stubParser('ai-web'), chunk: stubParser('chunk'), linktree: stubParser('linktree') };
+    return {
+      'ai-web': stubParser('ai-web'),
+      'scriptable-input': stubParser('scriptable-input'),
+      pinned: stubParser('pinned')
+    };
   };
   const entry = (extra) => ({
     name: 'Dispatch',
@@ -3629,24 +3649,34 @@ test('processParser: absent parser pins ai-web; parser:"auto" opts into legacy d
     ...extra
   });
 
-  // Absent parser → pinned ai-web for every URL, even ones matching legacy mappings
+  // Absent parser → pinned ai-web for every URL
   const absentCalls = [];
   const absent = await core.processParser(entry({}), {}, httpAdapter, display, makeParsers(absentCalls));
   assert.equal(absent.parserType, 'ai-web');
   assert.deepEqual(absentCalls, ['ai-web', 'ai-web'], 'no per-URL auto-switching without parser:"auto"');
 
-  // parser: "auto" → the old absence behavior: legacy detection from the first URL
-  // plus per-URL parser auto-switching for the rest of the crawl
+  // parser: "auto" + former site-specific domains → ai-web now (those parsers
+  // are deleted; their domains no longer resolve to anything special)
   const autoCalls = [];
   const auto = await core.processParser(entry({ parser: 'auto' }), {}, httpAdapter, display, makeParsers(autoCalls));
-  assert.equal(auto.parserType, 'chunk');
-  assert.deepEqual(autoCalls, ['chunk', 'linktree']);
+  assert.equal(auto.parserType, 'ai-web');
+  assert.deepEqual(autoCalls, ['ai-web', 'ai-web']);
+
+  // parser: "auto" + a scriptable-input:// URL (the share-sheet URL-input path)
+  // still resolves to the scriptable-input parser
+  const shareCalls = [];
+  const share = await core.processParser(
+    entry({ parser: 'auto', urls: ['scriptable-input://event'] }),
+    {}, httpAdapter, display, makeParsers(shareCalls)
+  );
+  assert.equal(share.parserType, 'scriptable-input');
+  assert.deepEqual(shareCalls, ['scriptable-input']);
 
   // Explicit parser names keep working unchanged (pinned, no switching)
   const explicitCalls = [];
-  const explicit = await core.processParser(entry({ parser: 'chunk' }), {}, httpAdapter, display, makeParsers(explicitCalls));
-  assert.equal(explicit.parserType, 'chunk');
-  assert.deepEqual(explicitCalls, ['chunk', 'chunk']);
+  const explicit = await core.processParser(entry({ parser: 'pinned' }), {}, httpAdapter, display, makeParsers(explicitCalls));
+  assert.equal(explicit.parserType, 'pinned');
+  assert.deepEqual(explicitCalls, ['pinned', 'pinned']);
 });
 
 // ---------------------------------------------------------------------------

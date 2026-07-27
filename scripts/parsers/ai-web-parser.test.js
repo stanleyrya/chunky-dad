@@ -3385,10 +3385,6 @@ test('every log-producing importModule module exports the __wireConsoleTee shim'
     'shared-core': require('../shared-core'),
     normalizers: require('../normalizers'),
     'parsers/ai-web-parser': require('./ai-web-parser'),
-    'parsers/bearracuda-parser': require('./bearracuda-parser'),
-    'parsers/chunk-parser': require('./chunk-parser'),
-    'parsers/linktree-parser': require('./linktree-parser'),
-    'parsers/redeyetickets-parser': require('./redeyetickets-parser'),
     'parsers/scriptable-url-parser': require('./scriptable-url-parser')
   };
   for (const [name, moduleExports] of Object.entries(wiredModules)) {

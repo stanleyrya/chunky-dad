@@ -75,10 +75,6 @@ class BearEventScraperOrchestrator {
             const scriptableAdapterModule = importModule('adapters/scriptable-adapter');
             
             // Load parsers
-            const bearracudaParserModule = importModule('parsers/bearracuda-parser');
-            const chunkParserModule = importModule('parsers/chunk-parser');
-            const linktreeParserModule = importModule('parsers/linktree-parser');
-            const redeyeticketsParserModule = importModule('parsers/redeyetickets-parser');
             const scriptableUrlParserModule = importModule('parsers/scriptable-url-parser');
             const aiWebParserModule = importModule('parsers/ai-web-parser');
 
@@ -93,10 +89,6 @@ class BearEventScraperOrchestrator {
                 sharedCoreModule,
                 eventSchemaModule,
                 normalizersModule,
-                bearracudaParserModule,
-                chunkParserModule,
-                linktreeParserModule,
-                redeyeticketsParserModule,
                 scriptableUrlParserModule,
                 aiWebParserModule,
                 { __wireConsoleTee } // this orchestrator script's own console
@@ -109,10 +101,6 @@ class BearEventScraperOrchestrator {
                 NormalizerPipeline: normalizersModule.NormalizerPipeline,
                 adapter: scriptableAdapterModule.ScriptableAdapter,
                 parsers: {
-                    bearracuda: bearracudaParserModule.BearraccudaParser,
-                    chunk: chunkParserModule.ChunkParser,
-                    linktree: linktreeParserModule.LinktreeParser,
-                    redeyetickets: redeyeticketsParserModule.RedEyeTicketsParser,
                     'scriptable-input': scriptableUrlParserModule.ScriptableUrlParser,
                     'ai-web': aiWebParserModule.AiWebParser
                 }
@@ -135,10 +123,6 @@ class BearEventScraperOrchestrator {
             const webAdapterModule = require('./adapters/web-adapter');
             
             // Load parsers
-            const bearracudaParserModule = require('./parsers/bearracuda-parser');
-            const chunkParserModule = require('./parsers/chunk-parser');
-            const linktreeParserModule = require('./parsers/linktree-parser');
-            const redeyeticketsParserModule = require('./parsers/redeyetickets-parser');
             const scriptableUrlParserModule = require('./parsers/scriptable-url-parser');
             const aiWebParserModule = require('./parsers/ai-web-parser');
             
@@ -149,10 +133,6 @@ class BearEventScraperOrchestrator {
                 NormalizerPipeline: normalizersModule.NormalizerPipeline,
                 adapter: webAdapterModule.WebAdapter,
                 parsers: {
-                    bearracuda: bearracudaParserModule.BearraccudaParser,
-                    chunk: chunkParserModule.ChunkParser,
-                    linktree: linktreeParserModule.LinktreeParser,
-                    redeyetickets: redeyeticketsParserModule.RedEyeTicketsParser,
                     'scriptable-input': scriptableUrlParserModule.ScriptableUrlParser,
                     'ai-web': aiWebParserModule.AiWebParser
                 }
@@ -170,23 +150,17 @@ class BearEventScraperOrchestrator {
             
             // Check if modules are available (should be loaded via script tags)
             const requiredModules = [
-                'EventSchema', 'SharedCore', 'NormalizerPipeline', 'WebAdapter',
-                'BearraccudaParser', 'ChunkParser', 'LinktreeParser', 'RedEyeTicketsParser'
+                'EventSchema', 'SharedCore', 'NormalizerPipeline', 'WebAdapter'
             ];
-            
+
             const missingModules = requiredModules.filter(module => !window[module]);
-            
+
             if (missingModules.length > 0) {
                 throw new Error(`Missing web modules: ${missingModules.join(', ')}. Ensure all files are loaded via script tags.`);
             }
-            
+
             // Store modules
-            const parsers = {
-                bearracuda: window.BearraccudaParser,
-                chunk: window.ChunkParser,
-                linktree: window.LinktreeParser,
-                redeyetickets: window.RedEyeTicketsParser
-            };
+            const parsers = {};
 
             if (window.ScriptableUrlParser) {
                 parsers['scriptable-input'] = window.ScriptableUrlParser;
