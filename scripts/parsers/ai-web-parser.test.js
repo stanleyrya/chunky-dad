@@ -696,6 +696,30 @@ test('validateEventUrl discoveryAllowedPatterns: only matching discovered links 
   assert.equal(parser.validateEventUrl('https://sickening.events/e/some-other-party', sourceUrl, { name: 'N', discoveryAllowedPatterns: [] }).valid, true);
 });
 
+test('discoveryAllowedPatterns scopes extraction: foreign events on a shared listing page are dropped, promoter-matched pages extract freely', () => {
+  const parser = createParser();
+  const config = { name: 'Goldiloxx', discoveryAllowedPatterns: ['goldiloxx'] };
+  const events = [
+    { title: 'GOLDILOXX CHICAGO', url: 'https://sickening.events/events' },
+    { title: 'Some Other Party', url: 'https://sickening.events/events', ticketUrl: 'https://sickening.events/e/other-party/tickets' },
+    { title: 'Untitled-ish', ticketUrl: 'https://sickening.events/e/goldiloxx-chicago-2/tickets' }
+  ];
+
+  // Shared listing page (URL does not match): only promoter-matched events survive
+  const kept = parser.filterEventsByDiscoveryAllowlist(events, 'https://sickening.events/events', config);
+  assert.deepEqual(kept.map(e => e.title), ['GOLDILOXX CHICAGO', 'Untitled-ish'],
+    'title match and ticketUrl match keep; foreign event dropped');
+
+  // A page whose own URL matches (the promoter's API search / a followed event page) extracts freely
+  const apiKept = parser.filterEventsByDiscoveryAllowlist(events,
+    'https://api.redeyetickets.com/api/v1/events/search?q=goldiloxx&per_page=25', config);
+  assert.equal(apiKept.length, 3, 'promoter-matched source page keeps everything');
+
+  // No patterns configured → no-op (other parsers unaffected)
+  const noop = parser.filterEventsByDiscoveryAllowlist(events, 'https://sickening.events/events', { name: 'Plain' });
+  assert.equal(noop.length, 3);
+});
+
 test('parseOcrResponseWithClassification salvages OCR text from truncated/degenerate JSON', () => {
   const parser = createParser();
 
