@@ -8232,3 +8232,308 @@ test('venue-site-identity: corroborated in the bar demotion rung and rendered in
   }, { cityKey: 'seattle' });
   assert.ok(unstampedLines.includes('bar corrected to venue-site identity — extracted "Shore Thing" (unstamped)'));
 });
+
+// ---------------------------------------------------------------------------
+// Overlong-field trim pipeline: detection is pure, trimming is one batched AI
+// call per event gated on VERBATIM contiguous substrings, and every outcome
+// (trimmed / would-trim / failed-gate) is stamped on _fieldTrims and rendered
+// in the evidence panel. Never a deterministic mid-word truncation.
+// ---------------------------------------------------------------------------
+
+// 74 characters, trims to the 7-char brand "D>U>R>O" (title p99=72, max=74).
+const OVERLONG_TITLE = 'D>U>R>O — Precinct DTLA Los Angeles — Saturday — SOLD OUT — merch inside!!';
+
+function buildTrimParserConfig(trimOverrides = {}) {
+  return {
+    name: 'Trim Test',
+    ai: {
+      enabled: true,
+      provider: 'openai',
+      endpoint: 'http://rybook.example:8000/v1/chat/completions',
+      model: 'test-model',
+      openai: {},
+      trim: { mode: 'enforce', ...trimOverrides }
+    }
+  };
+}
+
+function buildTrimAnswerAdapter(content, calls = []) {
+  return {
+    postJson: async (endpoint, payload) => {
+      calls.push({ endpoint, payload });
+      return { ok: true, status: 200, text: buildOpenAiResponsePayload(content) };
+    }
+  };
+}
+
+test('getTrimConfig defaults: unset/invalid mode → report with the documented limits', () => {
+  const core = createCore();
+  assert.deepEqual(core.getTrimConfig(null), {
+    mode: 'report',
+    limits: { title: 60, description: 600, shortName: 30 }
+  });
+  assert.equal(core.getTrimConfig({ ai: { trim: { mode: 'ENFORCE' } } }).mode, 'enforce');
+  assert.equal(core.getTrimConfig({ ai: { trim: { mode: 'bogus' } } }).mode, 'report');
+  assert.equal(core.getTrimConfig({ ai: { trim: { mode: 'off' } } }).mode, 'off');
+});
+
+test('findOverlongFields: under-limit events are empty, overlong titles are detected, per-parser limits override', () => {
+  const core = createCore();
+  assert.equal(OVERLONG_TITLE.length, 74, 'fixture must match the real-world max');
+
+  const defaults = core.getTrimConfig(buildTrimParserConfig());
+  assert.deepEqual(core.findOverlongFields({ title: 'FURBALL', description: 'short', shortName: 'FUR' }, defaults), []);
+
+  const overlong = core.findOverlongFields({ title: OVERLONG_TITLE }, defaults);
+  assert.deepEqual(overlong, [{ field: 'title', value: OVERLONG_TITLE, maxChars: 60 }]);
+
+  // A per-parser titleMaxChars above the value's length silences the finding
+  const relaxed = core.getTrimConfig(buildTrimParserConfig({ titleMaxChars: 100 }));
+  assert.deepEqual(core.findOverlongFields({ title: OVERLONG_TITLE }, relaxed), []);
+
+  // shortName is the canonical target (shorttitle is only a notes alias)
+  const shortNames = core.findOverlongFields({ shortName: 'AN ABSURDLY LONG SHORT NAME FOR A PARTY' }, defaults);
+  assert.equal(shortNames.length, 1);
+  assert.equal(shortNames[0].field, 'shortName');
+  assert.equal(shortNames[0].maxChars, 30);
+});
+
+test('isVerbatimTrimAnswer: case-sensitive contiguous substring, non-empty, within limit, strictly shorter', () => {
+  const core = createCore();
+  assert.equal(core.isVerbatimTrimAnswer(OVERLONG_TITLE, 'D>U>R>O', 60), true);
+  assert.equal(core.isVerbatimTrimAnswer(OVERLONG_TITLE, 'd>u>r>o', 60), false, 're-cased answers fail');
+  assert.equal(core.isVerbatimTrimAnswer(OVERLONG_TITLE, '', 60), false, 'empty answers fail');
+  assert.equal(core.isVerbatimTrimAnswer(OVERLONG_TITLE, OVERLONG_TITLE, 90), false, 'not-shorter answers fail');
+  assert.equal(core.isVerbatimTrimAnswer(OVERLONG_TITLE, 'D>U>R>O — Precinct DTLA', 10), false, 'over-limit answers fail');
+  assert.equal(core.isVerbatimTrimAnswer(OVERLONG_TITLE, 'DURO at Precinct', 60), false, 'paraphrases fail');
+});
+
+test('trimOverlongFieldsForEvent replaces a verbatim answer in enforce mode and stamps _fieldTrims', async () => {
+  const core = createCore();
+  const parserConfig = buildTrimParserConfig();
+  const trimConfig = core.getTrimConfig(parserConfig);
+  const calls = [];
+  const adapter = buildTrimAnswerAdapter('{"trims":{"title":{"value":"D>U>R>O","reason":"brand name"}}}', calls);
+
+  const event = { title: OVERLONG_TITLE, description: 'fine', city: 'dallas' };
+  const records = await core.trimOverlongFieldsForEvent(event, trimConfig, buildAiTestConfig(), adapter);
+
+  assert.equal(event.title, 'D>U>R>O', 'enforce mode replaces the value');
+  assert.equal(calls.length, 1, 'one batched request per event');
+  assert.ok(String(calls[0].payload.messages[0].content).includes('You are shortening overlong text fields for one event.'));
+  assert.deepEqual(records, event._fieldTrims);
+  assert.equal(records.length, 1);
+  assert.equal(records[0].field, 'title');
+  assert.equal(records[0].status, 'trimmed');
+  assert.equal(records[0].originalLength, 74);
+  assert.equal(records[0].trimmedLength, 7);
+  assert.equal(records[0].trimmedValue, 'D>U>R>O');
+});
+
+test('trimOverlongFieldsForEvent keeps the original on paraphrased, re-cased, or over-limit answers (failed-gate)', async () => {
+  const core = createCore();
+  const trimConfig = core.getTrimConfig(buildTrimParserConfig());
+  for (const badAnswer of ['DURO at Precinct DTLA', 'd>u>r>o', OVERLONG_TITLE]) {
+    const adapter = buildTrimAnswerAdapter(JSON.stringify({ trims: { title: { value: badAnswer } } }));
+    const event = { title: OVERLONG_TITLE };
+    const records = await core.trimOverlongFieldsForEvent(event, trimConfig, buildAiTestConfig(), adapter);
+    assert.equal(event.title, OVERLONG_TITLE, `original kept for answer ${JSON.stringify(badAnswer)}`);
+    assert.equal(records[0].status, 'failed-gate');
+    assert.equal(records[0].originalLength, 74);
+    assert.equal(records[0].maxChars, 60);
+  }
+
+  // No usable response at all → failed-gate, original kept, never truncated
+  const emptyAdapter = { postJson: async () => ({ ok: true, status: 200, text: buildOpenAiResponsePayload('') }) };
+  const event = { title: OVERLONG_TITLE };
+  const records = await core.trimOverlongFieldsForEvent(event, trimConfig, buildAiTestConfig(), emptyAdapter);
+  assert.equal(event.title, OVERLONG_TITLE);
+  assert.equal(records[0].status, 'failed-gate');
+});
+
+test('trimOverlongFieldsForEvent report mode records would-trim without changing the value', async () => {
+  const core = createCore();
+  const trimConfig = core.getTrimConfig(buildTrimParserConfig({ mode: 'report' }));
+  const adapter = buildTrimAnswerAdapter('{"trims":{"title":{"value":"D>U>R>O"}}}');
+  const event = { title: OVERLONG_TITLE };
+  const records = await core.trimOverlongFieldsForEvent(event, trimConfig, buildAiTestConfig(), adapter);
+  assert.equal(event.title, OVERLONG_TITLE, 'report mode never mutates');
+  assert.equal(records[0].status, 'would-trim');
+  assert.equal(records[0].trimmedValue, 'D>U>R>O');
+});
+
+test('applyOverlongFieldTrims: mode off and under-limit events make zero AI calls', async () => {
+  const core = createCore();
+  const calls = [];
+  const adapter = buildTrimAnswerAdapter('{"trims":{}}', calls);
+
+  const offEvents = [{ title: OVERLONG_TITLE }];
+  await core.applyOverlongFieldTrims(offEvents, buildTrimParserConfig({ mode: 'off' }), adapter);
+  assert.equal(calls.length, 0, 'mode off never calls the AI');
+  assert.equal(offEvents[0]._fieldTrims, undefined);
+  assert.equal(offEvents[0].title, OVERLONG_TITLE);
+
+  await core.applyOverlongFieldTrims([{ title: 'FURBALL' }], buildTrimParserConfig(), adapter);
+  assert.equal(calls.length, 0, 'nothing overlong never calls the AI');
+
+  // AI unavailable (no adapter) → no calls, no records
+  const noAdapterEvents = [{ title: OVERLONG_TITLE }];
+  await core.applyOverlongFieldTrims(noAdapterEvents, buildTrimParserConfig(), null);
+  assert.equal(noAdapterEvents[0]._fieldTrims, undefined);
+});
+
+test('applyOverlongFieldTrims shares the AI response cache: two identical runs, one transport call', async () => {
+  const core = createCore();
+  const store = new Map();
+  core.aiResponseCache = {
+    read: async (aiConfig, prompt) => store.get(prompt) || null,
+    write: async (aiConfig, prompt, passLabel, text) => { store.set(prompt, text); },
+    stats: { hits: 0, misses: 0, writes: 0 }
+  };
+  const calls = [];
+  const adapter = buildTrimAnswerAdapter('{"trims":{"title":{"value":"D>U>R>O"}}}', calls);
+  const parserConfig = buildTrimParserConfig();
+
+  const firstRun = [{ title: OVERLONG_TITLE }];
+  await core.applyOverlongFieldTrims(firstRun, parserConfig, adapter);
+  assert.equal(firstRun[0].title, 'D>U>R>O');
+
+  const secondRun = [{ title: OVERLONG_TITLE }];
+  await core.applyOverlongFieldTrims(secondRun, parserConfig, adapter);
+  assert.equal(secondRun[0].title, 'D>U>R>O');
+  assert.equal(calls.length, 1, 'the second run must be served from the cache');
+});
+
+test('buildEventEvidenceLines renders the trimmed, would-trim, and failed-gate shapes', () => {
+  const core = createCore();
+  const lines = core.buildEventEvidenceLines({
+    title: 'D>U>R>O',
+    _fieldTrims: [
+      { field: 'title', status: 'trimmed', originalLength: 74, trimmedLength: 7, trimmedValue: 'D>U>R>O', maxChars: 60 },
+      { field: 'description', status: 'would-trim', originalLength: 846, trimmedLength: 491, trimmedValue: 'Doors at 9.', maxChars: 600 },
+      { field: 'shortName', status: 'failed-gate', originalLength: 39, maxChars: 30 }
+    ]
+  }, { cityKey: 'dallas' });
+  assert.ok(lines.includes('title trimmed: 74 → 7 chars — "D>U>R>O"'), `got: ${JSON.stringify(lines)}`);
+  assert.ok(lines.includes('description would trim: 846 → 491 chars — "Doors at 9." (report mode)'), `got: ${JSON.stringify(lines)}`);
+  assert.ok(lines.includes('⚠️ shortName overlong (39 > 30 chars) — trim failed verbatim gate, original kept'), `got: ${JSON.stringify(lines)}`);
+});
+
+test('_fieldTrims survives createFinalEventObject like _organizer', async () => {
+  const core = createCore();
+  const fieldTrims = [{ field: 'title', status: 'would-trim', originalLength: 74, trimmedLength: 7, trimmedValue: 'D>U>R>O', maxChars: 60 }];
+  const scraped = buildScrapedEvent({ _fieldTrims: fieldTrims });
+  const finalEvent = await core.createFinalEventObject(buildCalendarEvent(), scraped, {});
+  assert.deepEqual(finalEvent._fieldTrims, fieldTrims);
+});
+
+// ---------------------------------------------------------------------------
+// Active-config summary: pure builders behind the results-UI "Active config"
+// section — effective global values, per-parser override diffs (only
+// explicitly-set values that differ), and a secret-redacted copy payload.
+// ---------------------------------------------------------------------------
+
+function buildActiveConfigFixture() {
+  return {
+    config: {
+      daysToLookAhead: 30,
+      dryRun: true,
+      pageCache: { enabled: true, ttlDays: 3 },
+      geocodeVerification: { mode: 'enforce' },
+      ai: {
+        enabled: true,
+        provider: 'openai',
+        endpoint: 'http://rybook.example:8000/v1/chat/completions',
+        model: 'global-model',
+        apiKey: 'super-secret-global',
+        bearCheck: { mode: 'enforce' },
+        trim: { mode: 'report', titleMaxChars: 60 }
+      },
+      ocr: {
+        enabled: true,
+        endpoint: 'http://rybook.example:8001/v1/chat/completions',
+        model: 'vision-model',
+        maxImages: 2,
+        cache: true,
+        cacheRetentionDays: 90
+      }
+    },
+    parsers: [
+      {
+        name: 'Megawoof America',
+        enabled: true,
+        parser: 'ai-web',
+        urls: ['https://www.eventbrite.com/o/megawoof-america'],
+        alwaysBear: true,
+        ai: {
+          model: 'parser-model',
+          endpoint: 'http://rybook.example:8000/v1/chat/completions',
+          apiKey: 'super-secret-parser'
+        }
+      },
+      { name: 'Furball', enabled: false, urls: ['https://furball.nyc'] }
+    ]
+  };
+}
+
+test('buildActiveConfigSummary surfaces effective global values and parser identity', () => {
+  const core = createCore();
+  const summary = core.buildActiveConfigSummary(buildActiveConfigFixture());
+
+  assert.equal(summary.global.daysToLookAhead, 30);
+  assert.equal(summary.global.dryRun, true);
+  assert.deepEqual(summary.global.pageCache, { enabled: true, ttlDays: 3 });
+  assert.equal(summary.global.geocodeVerification.mode, 'enforce');
+  assert.equal(summary.global.ai.model, 'global-model');
+  assert.equal(summary.global.ai.provider, 'openai');
+  assert.equal(summary.global.ai.bearCheck.mode, 'enforce');
+  assert.deepEqual(summary.global.ai.trim, {
+    mode: 'report',
+    limits: { title: 60, description: 600, shortName: 30 }
+  });
+  assert.equal(summary.global.ocr.model, 'vision-model');
+  assert.equal(summary.global.ocr.maxImages, 2);
+
+  assert.equal(summary.parsers.length, 2);
+  assert.equal(summary.parsers[0].name, 'Megawoof America');
+  assert.equal(summary.parsers[0].enabled, true);
+  assert.equal(summary.parsers[0].parser, 'ai-web');
+  assert.deepEqual(summary.parsers[0].urls, ['https://www.eventbrite.com/o/megawoof-america']);
+  assert.equal(summary.parsers[1].enabled, false);
+});
+
+test('buildActiveConfigSummary overrides contain ONLY explicitly-set values that differ from global', () => {
+  const core = createCore();
+  const summary = core.buildActiveConfigSummary(buildActiveConfigFixture());
+  const overrides = summary.parsers[0].overrides;
+
+  assert.deepEqual(overrides['ai.model'], { value: 'parser-model', globalValue: 'global-model' });
+  assert.deepEqual(overrides.alwaysBear, { value: true, globalValue: undefined });
+  assert.equal(overrides['ai.endpoint'], undefined, 'same-as-global values are not overrides');
+  assert.equal(overrides['ai.provider'], undefined, 'unset parser keys are not overrides');
+  assert.deepEqual(summary.parsers[1].overrides, {}, 'a parser with no explicit knobs has no overrides');
+});
+
+test('buildActiveConfigSummary redacts secrets from the rendered structures and the copy JSON', () => {
+  const core = createCore();
+  const summary = core.buildActiveConfigSummary(buildActiveConfigFixture());
+
+  assert.ok(!summary.json.includes('super-secret-global'), 'global secrets never reach the copy payload');
+  assert.ok(!summary.json.includes('super-secret-parser'), 'parser secrets never reach the copy payload');
+  assert.equal(summary.parsers[0].overrides['ai.apiKey'], '•••', 'credential-shaped override keys are masked');
+
+  // The recursive scrub itself: credential-shaped keys at any depth
+  assert.deepEqual(
+    core.redactConfigSecrets({ apiKey: 'x', nested: { authToken: 'y', list: [{ password: 'z' }] }, model: 'ok' }),
+    { apiKey: '•••', nested: { authToken: '•••', list: [{ password: '•••' }] }, model: 'ok' }
+  );
+});
+
+test('flattenConfigForDiff walks plain objects and stringifies arrays/regexes as leaves', () => {
+  const core = createCore();
+  assert.deepEqual(
+    core.flattenConfigForDiff({ ai: { model: 'm', openai: { responseFormat: 'json_object' } }, list: [1, 2], pattern: /furball/i }),
+    { 'ai.model': 'm', 'ai.openai.responseFormat': 'json_object', list: '1,2', pattern: '/furball/i' }
+  );
+  assert.deepEqual(core.flattenConfigForDiff(null), {});
+});

@@ -49,6 +49,18 @@ const scraperConfig = {
       // parsers; per-parser ai.arbitrateMerges overrides. Set false to disable.
       arbitrateMerges: true,
       bearCheck: { mode: "enforce" }, // Bear-check cascade: keywords → AI verdict with promoter context. "report" logs decisions without changing behavior; "enforce" flags/rescues/drops; "off" = legacy alwaysBear/keyword behavior. (Also accepted as a top-level config.bearCheck, like geocodeVerification; canonical location is here under ai.)
+      // Overlong-field trim pipeline: one AI call per event batches every
+      // overlong scraped field (title/description/shortName); answers are
+      // accepted only as VERBATIM contiguous substrings of the original.
+      // "report" (default) logs would-trim decisions without changing values;
+      // "enforce" replaces; "off" disables. Calendar-sourced values are never
+      // AI-trimmed — they are only flagged in the event evidence panel.
+      trim: {
+        mode: "report", // "report" (default) | "enforce" | "off"
+        titleMaxChars: 60, // data: title p95=48, p99=72, max=74
+        descriptionMaxChars: 600, // data: description p95=491, max=846
+        shortNameMaxChars: 30, // data: shortName max=20
+      },
       // extraContext (override-only): free-form text appended VERBATIM to the
       // context of every AI extraction prompt. Organizer/brand context is
       // normally derived automatically from each page's own metadata (JSON-LD

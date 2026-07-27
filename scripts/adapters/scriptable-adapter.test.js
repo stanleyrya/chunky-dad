@@ -2538,3 +2538,88 @@ test('generateEventCard embeds are all built by the shared serializer (no AI blo
   assert.ok(html.includes('&quot;_original&quot;'), 'the raw <pre> dump still shows _original provenance');
 }
 );
+
+// ---------------------------------------------------------------------------
+// Active config section: effective run settings + per-parser override diffs
+// rendered from results.config (SharedCore.buildActiveConfigSummary), with a
+// native copy-config bridge for the redacted JSON payload.
+// ---------------------------------------------------------------------------
+
+function buildActiveConfigResultsFixture() {
+  return {
+    config: {
+      config: {
+        daysToLookAhead: 30,
+        dryRun: true,
+        pageCache: { enabled: true, ttlDays: 3 },
+        geocodeVerification: { mode: 'enforce' },
+        ai: {
+          provider: 'openai',
+          endpoint: 'http://rybook.example:8000/v1/chat/completions',
+          model: 'global-model',
+          bearCheck: { mode: 'enforce' }
+        },
+        ocr: { enabled: true, endpoint: 'http://rybook.example:8001/v1/chat/completions', model: 'vision-model', maxImages: 2 }
+      },
+      parsers: [
+        {
+          name: 'Megawoof <b>America</b>',
+          enabled: true,
+          parser: 'ai-web',
+          urls: ['https://www.eventbrite.com/o/megawoof-america'],
+          alwaysBear: true,
+          ai: { model: 'parser-model' }
+        },
+        { name: 'Furball', enabled: false, urls: ['https://furball.nyc'] }
+      ]
+    }
+  };
+}
+
+test('generateActiveConfigSection renders run settings, override diffs, and the copy button only when config exists', () => {
+  const adapter = buildAdapter();
+
+  assert.equal(adapter.generateActiveConfigSection({}), '', 'no section without results.config');
+  assert.equal(adapter.generateActiveConfigSection(null), '', 'no section for null results');
+  assert.equal(adapter.generateActiveConfigSection({ config: null }), '', 'no section for a null config snapshot');
+
+  const html = adapter.generateActiveConfigSection(buildActiveConfigResultsFixture());
+  assert.ok(html.includes('Active config'), 'section title present');
+  assert.ok(html.includes('<span class="section-count">2</span>'), 'count is the parser count');
+
+  // Run settings live in a collapsed <details> with flattened global rows
+  assert.ok(html.includes('<summary>Run settings</summary>'), 'run-settings details present');
+  assert.ok(!html.includes('<details open'), 'details collapsed by default');
+  assert.ok(html.includes('ai.model'), 'flattened global keys rendered');
+  assert.ok(html.includes('global-model'), 'global values rendered');
+  assert.ok(html.includes('geocodeVerification.mode'), 'run-level knobs rendered');
+
+  // Per-parser rows: escaped name, enabled badge, urls, override diffs
+  assert.ok(html.includes('Megawoof &lt;b&gt;America&lt;/b&gt;'), 'parser names are escaped');
+  assert.ok(!html.includes('<b>America</b>'), 'raw markup never reaches the page');
+  assert.ok(html.includes('>enabled</span>'), 'enabled badge rendered');
+  assert.ok(html.includes('>disabled</span>'), 'disabled badge rendered');
+  assert.ok(html.includes('https://www.eventbrite.com/o/megawoof-america'), 'parser urls surfaced');
+  assert.ok(html.includes('Overrides (2)'), 'override count rendered');
+  assert.ok(html.includes('ai.model: parser-model (global: global-model)'), 'diff rendered value (global: value)');
+  assert.ok(html.includes('alwaysBear: true (global: unset)'), 'explicit knob with no global value says unset');
+  assert.ok(html.includes('no overrides'), 'parser without explicit knobs says no overrides');
+
+  // Copy button signals native (Pasteboard) — never navigator.clipboard
+  assert.ok(html.includes('copyActiveConfig(this)'), 'copy button wired to the custom-scheme signal');
+  assert.ok(html.includes('📋 Copy effective config JSON'), 'copy button label present');
+});
+
+test('generateRichHTML embeds the active-config section and the copy-config handler once', async () => {
+  const adapter = buildAdapter();
+  const results = { ...buildResultsStub(), ...buildActiveConfigResultsFixture() };
+  const html = await adapter.generateRichHTML(results);
+
+  assert.ok(html.includes('Active config'), 'section present when config exists');
+  assert.equal((html.match(/a=copy-config/g) || []).length, 1, 'copy-config bridge navigation defined exactly once');
+  assert.equal((html.match(/function copyActiveConfig\(/g) || []).length, 1, 'page handler defined exactly once');
+  assert.equal((html.match(/function markConfigCopied\(/g) || []).length, 1, 'feedback handler defined exactly once');
+
+  const withoutConfig = await adapter.generateRichHTML(buildResultsStub());
+  assert.ok(!withoutConfig.includes('Active config'), 'no section without a config snapshot');
+});
