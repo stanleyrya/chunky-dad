@@ -31,7 +31,7 @@
     "gayCitiesLastScrapedAt": "2026-06-13T18:37:40.195Z"
   },
   {
-    "name": "Touch\u00e9",
+    "name": "Touché",
     "city": "chicago",
     "address": "6412 N Clark St, Chicago, IL 60626",
     "coordinates": "41.9985708, -87.670974",
@@ -59,6 +59,8 @@
     "coordinates": "41.9497837, -87.6590034",
     "website": "https://metrochicago.com",
     "instagram": "https://www.instagram.com/metrochicago",
-    "facebook": "https://www.facebook.com/MetroChicago"
+    "facebook": "https://www.facebook.com/MetroChicago",
+    "faviconBg": "#e10c12",
+    "faviconFg": "#291716"
   }
 ]
