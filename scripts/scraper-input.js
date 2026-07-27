@@ -218,9 +218,18 @@ const scraperConfig = {
     {
       name: "Goldiloxx",
       enabled: false,
+      // Homeless promoter — events scatter across ticketing platforms (links
+      // rotate in their Instagram bio). Stable doors: the RedEye JSON API
+      // search (self-refreshing; JSON-API pathway extracts it structurally)
+      // and Sickening's all-platform listing filtered to goldiloxx links.
       urls: [
         "https://api.redeyetickets.com/api/v1/events/search?q=goldiloxx&per_page=25",
+        "https://sickening.events/events",
       ],
+      // Only follow discovered links naming the promoter — the listing has
+      // ~900 events. Note: sickening JSON-LD "organizer" is the VENUE, and
+      // the site soft-404s (every URL returns 200 with an empty shell).
+      discoveryAllowedPatterns: ["goldiloxx"],
       alwaysBear: true,
       calendarSearchRangeDays: 40, // Look +/- days for wildcard key matches
       metadata: {
@@ -228,6 +237,21 @@ const scraperConfig = {
         shorterName: { value: "GLX" },
         instagram: { value: "https://www.instagram.com/goldiloxx__" },
         matchKey: { value: "goldiloxx*|${year}-${month}-*|*" },
+      },
+    },
+    {
+      name: "3 Dollar Bill",
+      enabled: false,
+      // Brooklyn queer venue (260 Meserole St; second space The Yard @ 270
+      // Meserole Ave — per-event JSON-LD location is authoritative).
+      // Squarespace, server-rendered listing, JSON-LD Event on event pages.
+      // Heavy queer programming, bear events (Bear Tea) are a subset —
+      // bear check filters, not alwaysBear.
+      urls: ["https://www.3dollarbillbk.com/rsvp"],
+      alwaysBear: false,
+      metadata: {
+        website: { value: "https://www.3dollarbillbk.com" },
+        instagram: { value: "https://www.instagram.com/3dollarbillbk" },
       },
     },
     {
@@ -343,6 +367,7 @@ const scraperConfig = {
       // urlDiscoveryDepth: 2, // Omit → adaptive crawling (each page's type decides what gets followed); set a number to pin exact depth, 0 = never crawl (default: adaptive)
       // maxAdditionalUrls: 15, // Budget of discovered URLs followed per page (default: 15)
       // discoveryBlockedPatterns: ["example.com/members-only"], // Deliberate exclusions only — generic junk is blocked built-in and dead ends are learned + auto-retried (default: none)
+      // discoveryAllowedPatterns: ["promoter-name"], // When set, ONLY follow discovered links matching an entry (string substring or RegExp) — for promoter searches on big platform listings; start URLs unaffected; blocks win over allows (default: none)
       // discoveryBlockedHosts: ["example.com"], // Suppress ALL discovered links to these hostnames (default: none)
       //
       // Extraction steering:
