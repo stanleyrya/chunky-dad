@@ -62,57 +62,127 @@ const BEAR_EVENTS_CONFIG = {
     }
 };
 
+// Per-category default emoji for festivals (per-entry `emoji` overrides these)
+const FESTIVAL_CATEGORY_EMOJI = {
+    'bear-run': '🐻',
+    'pride': '🏳️‍🌈',
+    'kink': '⛓️',
+    'festival': '🎉'
+};
+
+// Convert a festivals.json entry to the BEAR_EVENTS_CONFIG entry shape
+function festivalToBearEvent(festival) {
+    return {
+        key: festival.key,
+        name: festival.name,
+        emoji: festival.emoji || FESTIVAL_CATEGORY_EMOJI[festival.category] || '🐻',
+        tagline: festival.typicalTiming || '',
+        typicalTiming: festival.typicalTiming || '',
+        startDate: (festival.nextDates && festival.nextDates.start) ? festival.nextDates.start : null,
+        endDate: (festival.nextDates && festival.nextDates.end) ? festival.nextDates.end : null,
+        location: festival.location || '',
+        website: festival.website || null,
+        instagram: festival.instagram || null,
+        cityKey: festival.cityKey || null,
+        category: festival.category || null,
+        visible: true
+    };
+}
+
+// Resolve the festivals.json path relative to the current page location
+function resolveFestivalsDataPath() {
+    if (typeof window !== 'undefined' && window.pathUtils) {
+        return window.pathUtils.resolvePath('data/festivals.json');
+    }
+    return 'data/festivals.json';
+}
+
+// Load festivals.json and convert entries to the bear-event shape.
+// The promise is cached so the file is fetched at most once per page load.
+// On fetch failure, falls back to the inline BEAR_EVENTS_CONFIG (resilience).
+let festivalsConfigPromise = null;
+function loadFestivalsConfig() {
+    if (festivalsConfigPromise) {
+        return festivalsConfigPromise;
+    }
+    festivalsConfigPromise = fetch(resolveFestivalsDataPath(), {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (!data || !Array.isArray(data.festivals) || data.festivals.length === 0) {
+                throw new Error('festivals.json has no festivals array');
+            }
+            return data.festivals.map(festivalToBearEvent);
+        })
+        .catch(error => {
+            console.warn('Failed to load data/festivals.json, falling back to inline BEAR_EVENTS_CONFIG', error);
+            return Object.keys(BEAR_EVENTS_CONFIG).map(key => ({
+                key,
+                ...BEAR_EVENTS_CONFIG[key]
+            }));
+        });
+    return festivalsConfigPromise;
+}
+
 // Helper function to get bear event config
 function getBearEventConfig(eventKey) {
     return BEAR_EVENTS_CONFIG[eventKey] || null;
 }
 
-// Check if event should be visible based on date and visibility settings
+// Check if event should be visible based on visibility settings.
+// Note: festivals are recurring, so entries whose dates have passed degrade to the
+// undated (typicalTiming) display in getAvailableBearEvents() instead of disappearing.
 function shouldShowEvent(event) {
-    // First check explicit visibility setting
-    if (event.visible === false) {
-        return false;
-    }
-    
-    // Check if event has passed the hide threshold (1 week after end)
-    if (event.endDate) {
-        const eventEnd = new Date(event.endDate);
-        const now = new Date();
-        const hideThreshold = 7 * 24 * 60 * 60 * 1000; // 1 week in milliseconds
-        
-        if (eventEnd.getTime() + hideThreshold < now.getTime()) {
-            return false;
-        }
-    }
-    
-    return true;
+    return event.visible !== false;
 }
 
-// Helper function to get all available bear events (filtered and sorted)
-function getAvailableBearEvents() {
-    const now = new Date();
-    
-    return Object.keys(BEAR_EVENTS_CONFIG)
-        .map(key => ({
-            key,
-            ...BEAR_EVENTS_CONFIG[key]
-        }))
+// Check if the event's configured dates are current (i.e. the event has not ended
+// more than 1 week ago). Events failing this degrade to the undated display.
+function hasCurrentEventDates(event) {
+    if (!event.startDate || !event.endDate) {
+        return false;
+    }
+    const eventEnd = new Date(event.endDate);
+    if (Number.isNaN(eventEnd.getTime())) {
+        return false;
+    }
+    const hideThreshold = 7 * 24 * 60 * 60 * 1000; // 1 week in milliseconds
+    return eventEnd.getTime() + hideThreshold >= Date.now();
+}
+
+// Helper function to get all available bear events (filtered and sorted).
+// Async: sourced from data/festivals.json (with inline fallback).
+// - Entries with current/future dates come first, sorted chronologically.
+// - Entries with past-or-no dates stay visible after the dated ones, sorted
+//   alphabetically, and display typicalTiming instead of a date range.
+async function getAvailableBearEvents() {
+    const allEvents = await loadFestivalsConfig();
+
+    const dated = [];
+    const undated = [];
+    allEvents
         .filter(event => shouldShowEvent(event))
-        .map(event => {
-            // Add upcoming dates for sorting
-            const upcomingDates = getUpcomingEventDates(event);
-            return {
-                ...event,
-                upcomingStartDate: upcomingDates.startDate,
-                upcomingEndDate: upcomingDates.endDate
-            };
-        })
-        .sort((a, b) => {
-            // Sort by upcoming start date
-            const dateA = new Date(a.upcomingStartDate);
-            const dateB = new Date(b.upcomingStartDate);
-            return dateA.getTime() - dateB.getTime();
+        .forEach(event => {
+            if (hasCurrentEventDates(event)) {
+                dated.push({ ...event });
+            } else {
+                // Recurring festival whose dates passed (or were never set):
+                // show it undated with typicalTiming as the date line.
+                undated.push({ ...event, startDate: null, endDate: null });
+            }
         });
+
+    dated.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+    undated.sort((a, b) => a.name.localeCompare(b.name));
+
+    return dated.concat(undated);
 }
 
 // Check if bear event has calendar configured
@@ -124,7 +194,13 @@ function hasBearEventCalendar(eventKey) {
 // Get upcoming event dates (shows next year if current year has passed)
 function getUpcomingEventDates(event) {
     if (!event.startDate || !event.endDate) return { startDate: event.startDate, endDate: event.endDate };
-    
+
+    // Date objects (e.g. revived calendar events) can't be year-rolled via string
+    // replacement — return them as-is
+    if (typeof event.startDate !== 'string' || typeof event.endDate !== 'string') {
+        return { startDate: event.startDate, endDate: event.endDate };
+    }
+
     const now = new Date();
     const currentYear = now.getFullYear();
     const eventEnd = new Date(event.endDate);
@@ -161,15 +237,20 @@ function formatEventDates(event) {
 }
 
 // Make functions globally available for browser use
-window.BEAR_EVENTS_CONFIG = BEAR_EVENTS_CONFIG;
-window.getBearEventConfig = getBearEventConfig;
-window.getAvailableBearEvents = getAvailableBearEvents;
-window.hasBearEventCalendar = hasBearEventCalendar;
-window.getUpcomingEventDates = getUpcomingEventDates;
-window.formatEventDates = formatEventDates;
-window.shouldShowEvent = shouldShowEvent;
+if (typeof window !== 'undefined') {
+    window.BEAR_EVENTS_CONFIG = BEAR_EVENTS_CONFIG;
+    window.getBearEventConfig = getBearEventConfig;
+    window.getAvailableBearEvents = getAvailableBearEvents;
+    window.hasBearEventCalendar = hasBearEventCalendar;
+    window.getUpcomingEventDates = getUpcomingEventDates;
+    window.formatEventDates = formatEventDates;
+    window.shouldShowEvent = shouldShowEvent;
+    window.hasCurrentEventDates = hasCurrentEventDates;
+    window.loadFestivalsConfig = loadFestivalsConfig;
+    window.festivalToBearEvent = festivalToBearEvent;
+}
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { BEAR_EVENTS_CONFIG, getBearEventConfig, getAvailableBearEvents, hasBearEventCalendar, getUpcomingEventDates, formatEventDates, shouldShowEvent };
+    module.exports = { BEAR_EVENTS_CONFIG, FESTIVAL_CATEGORY_EMOJI, festivalToBearEvent, loadFestivalsConfig, getBearEventConfig, getAvailableBearEvents, hasBearEventCalendar, hasCurrentEventDates, getUpcomingEventDates, formatEventDates, shouldShowEvent };
 }

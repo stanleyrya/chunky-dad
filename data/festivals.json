@@ -1,0 +1,286 @@
+{
+  "festivals": [
+    {
+      "key": "lazy-bear-week",
+      "name": "Lazy Bear Week",
+      "category": "bear-run",
+      "location": "Guerneville, CA (Russian River)",
+      "typicalTiming": "late July into early August",
+      "recurring": "annual",
+      "website": "https://www.lazybearfund.org/events",
+      "instagram": "https://www.instagram.com/lazybear_official/",
+      "nextDates": { "start": "2026-07-27", "end": "2026-08-03" }
+    },
+    {
+      "key": "southern-decadence",
+      "name": "Southern Decadence",
+      "category": "festival",
+      "cityKey": "nola",
+      "location": "New Orleans, LA (French Quarter)",
+      "typicalTiming": "Labor Day weekend (Thursday through Monday, early September)",
+      "recurring": "annual",
+      "website": "https://www.southerndecadence.com/",
+      "nextDates": { "start": "2026-09-03", "end": "2026-09-07" }
+    },
+    {
+      "key": "bears-sitges-week",
+      "name": "Bears Sitges Week",
+      "category": "bear-run",
+      "cityKey": "sitges",
+      "location": "Sitges, Spain",
+      "typicalTiming": "first two weekends of September",
+      "recurring": "annual",
+      "website": "https://bearssitges.org/",
+      "nextDates": { "start": "2026-09-04", "end": "2026-09-13" }
+    },
+    {
+      "key": "folsom-europe",
+      "name": "Folsom Europe",
+      "category": "kink",
+      "cityKey": "berlin",
+      "location": "Berlin, Germany (Schoeneberg)",
+      "typicalTiming": "second weekend of September",
+      "recurring": "annual",
+      "website": "https://folsomeurope.berlin/",
+      "instagram": "https://www.instagram.com/folsomeurope/",
+      "nextDates": { "start": "2026-09-10", "end": "2026-09-13" }
+    },
+    {
+      "key": "urban-bear-nyc",
+      "name": "Urban Bear NYC",
+      "category": "bear-run",
+      "cityKey": "nyc",
+      "location": "New York, NY",
+      "typicalTiming": "mid-September",
+      "recurring": "annual",
+      "website": "https://www.theurbanbear.com/urbanbearnyc",
+      "instagram": "https://www.instagram.com/urbanbearnyc/",
+      "nextDates": { "start": "2026-09-17", "end": "2026-09-20" }
+    },
+    {
+      "key": "folsom-street-fair",
+      "name": "Folsom Street Fair",
+      "category": "kink",
+      "cityKey": "sf",
+      "location": "San Francisco, CA (SoMa)",
+      "typicalTiming": "last Sunday of September",
+      "recurring": "annual",
+      "website": "https://www.folsomstreet.org/",
+      "instagram": "https://www.instagram.com/folsomstreet/",
+      "nextDates": { "start": "2026-09-27", "end": "2026-09-27" }
+    },
+    {
+      "key": "spooky-bear",
+      "name": "Spooky Bear",
+      "category": "bear-run",
+      "cityKey": "ptown",
+      "location": "Provincetown, MA",
+      "typicalTiming": "late October (Halloween weekend)",
+      "recurring": "annual",
+      "website": "https://www.ursamen.org/spookybear",
+      "instagram": "https://www.instagram.com/ne.ursamen",
+      "nextDates": { "start": "2026-10-29", "end": "2026-11-01" }
+    },
+    {
+      "key": "mad-bear-madrid",
+      "name": "Mad.Bear Madrid",
+      "category": "bear-run",
+      "cityKey": "madrid",
+      "location": "Madrid, Spain",
+      "typicalTiming": "early December (around Constitution Day holiday week)",
+      "recurring": "annual",
+      "website": "https://madbear.org/en",
+      "instagram": "https://www.instagram.com/madbear_spain/",
+      "nextDates": { "start": "2026-12-03", "end": "2026-12-09" }
+    },
+    {
+      "key": "hibearnation",
+      "name": "HiBearNation",
+      "category": "bear-run",
+      "location": "St. Louis, MO",
+      "typicalTiming": "varies (historically fall)",
+      "recurring": "annual",
+      "website": "https://www.hibearnation.org/",
+      "instagram": "https://www.instagram.com/showmebears/",
+      "nextDates": { "start": "2027-01-21", "end": "2027-01-24" }
+    },
+    {
+      "key": "beefdip-bear-week",
+      "name": "BeefDip Bear Week",
+      "category": "bear-run",
+      "cityKey": "pv",
+      "location": "Puerto Vallarta, Mexico",
+      "typicalTiming": "late January / early February",
+      "recurring": "annual",
+      "website": "https://beefdip.com/planned-events/",
+      "nextDates": { "start": "2027-01-23", "end": "2027-01-31" }
+    },
+    {
+      "key": "ibc",
+      "name": "International Bear Convergence (IBC)",
+      "category": "bear-run",
+      "cityKey": "palm-springs",
+      "location": "Palm Springs, CA",
+      "typicalTiming": "Presidents' Day weekend (mid-February)",
+      "recurring": "annual",
+      "website": "https://www.ibc-ps.com/",
+      "instagram": "https://www.instagram.com/ibcpalmsprings",
+      "nextDates": { "start": "2027-02-18", "end": "2027-02-22" }
+    },
+    {
+      "key": "tbru",
+      "name": "Texas Bear Round-Up (TBRU)",
+      "category": "bear-run",
+      "cityKey": "dallas",
+      "location": "Dallas, TX",
+      "typicalTiming": "mid-to-late March",
+      "recurring": "annual",
+      "website": "https://www.tbru.org/",
+      "instagram": "https://www.instagram.com/texas_bear_round_up/",
+      "nextDates": { "start": "2027-03-25", "end": "2027-03-28" }
+    },
+    {
+      "key": "sugar-bear-festival",
+      "name": "Sugar Bear Festival",
+      "category": "bear-run",
+      "cityKey": "montreal",
+      "location": "Montreal, QC (Gay Village)",
+      "typicalTiming": "early-to-mid April (sugar shack season)",
+      "recurring": "annual",
+      "website": "https://www.bearitmtl.com/",
+      "nextDates": { "start": "2027-04-07", "end": "2027-04-11" }
+    },
+    {
+      "key": "bear-carnival",
+      "name": "Bear Carnival",
+      "category": "bear-run",
+      "location": "Maspalomas, Gran Canaria, Spain",
+      "typicalTiming": "spring (second week after Easter)",
+      "recurring": "annual",
+      "website": "https://bearcarnival.com/",
+      "instagram": "https://www.instagram.com/maspalomasbearcarnival/",
+      "nextDates": { "start": "2027-04-08", "end": "2027-04-18" }
+    },
+    {
+      "key": "bear-week-provincetown",
+      "name": "Bear Week Provincetown",
+      "category": "bear-run",
+      "cityKey": "ptown",
+      "location": "Provincetown, MA",
+      "typicalTiming": "second week of July",
+      "recurring": "annual",
+      "website": "https://www.eventbrite.com/o/ptownbears-78481077703",
+      "nextDates": { "start": "2027-07-10", "end": "2027-07-17" }
+    },
+    {
+      "key": "amsterdam-bear-pride",
+      "name": "Amsterdam Bear Pride",
+      "category": "pride",
+      "cityKey": "amsterdam",
+      "location": "Amsterdam, Netherlands",
+      "typicalTiming": "mid-June (Thursday-Sunday)",
+      "recurring": "annual",
+      "website": "https://amsterdambearpride.com/en/",
+      "instagram": "https://www.instagram.com/amsterdambearpride/"
+    },
+    {
+      "key": "bangkok-songkran-bear-week",
+      "name": "Bangkok Songkran Bear Week",
+      "category": "bear-run",
+      "cityKey": "bangkok",
+      "location": "Bangkok, Thailand",
+      "typicalTiming": "mid-April (Songkran, Thai New Year)",
+      "recurring": "annual",
+      "website": "https://www.gaytravel4u.com/event/bangkok-songkran-bear-week/"
+    },
+    {
+      "key": "bear-festival-milano",
+      "name": "Bear Festival Milano",
+      "category": "bear-run",
+      "location": "Milan, Italy",
+      "typicalTiming": "late April through early May",
+      "recurring": "annual",
+      "website": "https://www.bearfestivalmilano.it/en"
+    },
+    {
+      "key": "bear-jamboree",
+      "name": "Bear Jamboree",
+      "category": "bear-run",
+      "location": "Orlando, FL",
+      "typicalTiming": "early June",
+      "recurring": "annual",
+      "website": "https://www.bearjamboree.com/"
+    },
+    {
+      "key": "bear-pride-chicago",
+      "name": "Bear Pride Chicago",
+      "category": "pride",
+      "cityKey": "chicago",
+      "location": "Chicago, IL (Northalsted)",
+      "typicalTiming": "Memorial Day weekend (late May, alongside IML)",
+      "recurring": "annual",
+      "website": "https://www.instagram.com/bearpridechicago/",
+      "instagram": "https://www.instagram.com/bearpridechicago/"
+    },
+    {
+      "key": "bear-pride-cologne",
+      "name": "Bear Pride Cologne",
+      "category": "pride",
+      "location": "Cologne, Germany",
+      "typicalTiming": "mid-to-late November",
+      "recurring": "annual",
+      "website": "https://bearpride.cologne/",
+      "instagram": "https://www.instagram.com/bear_pride_cologne/"
+    },
+    {
+      "key": "brighton-bear-weekend",
+      "name": "Brighton Bear Weekend",
+      "category": "bear-run",
+      "location": "Brighton, UK",
+      "typicalTiming": "summer (June/July)",
+      "recurring": "annual",
+      "website": "https://brightonbearweekend.com/",
+      "instagram": "https://www.instagram.com/brightonbearweekend/"
+    },
+    {
+      "key": "fire-island-bear-weekend",
+      "name": "Fire Island Bear Weekend",
+      "category": "bear-run",
+      "cityKey": "fire-island",
+      "location": "Fire Island Pines / Cherry Grove, NY",
+      "typicalTiming": "mid-June",
+      "recurring": "annual",
+      "website": "https://www.theurbanbear.com/fibw"
+    },
+    {
+      "key": "iml",
+      "name": "International Mr. Leather (IML)",
+      "category": "kink",
+      "cityKey": "chicago",
+      "location": "Chicago, IL",
+      "typicalTiming": "Memorial Day weekend (late May)",
+      "recurring": "annual",
+      "website": "https://www.internationalmrleather.com/"
+    },
+    {
+      "key": "mal",
+      "name": "Mid-Atlantic Leather Weekend (MAL)",
+      "category": "kink",
+      "cityKey": "dc",
+      "location": "Washington, DC",
+      "typicalTiming": "Martin Luther King Jr. weekend (mid-January)",
+      "recurring": "annual",
+      "website": "https://www.leatherweekend.org/",
+      "instagram": "https://www.instagram.com/midatlanticleatherweekend"
+    },
+    {
+      "key": "rome-bears-week",
+      "name": "Rome Bears Week",
+      "category": "bear-run",
+      "location": "Rome, Italy",
+      "typicalTiming": "New Year through Epiphany (January 1-6)",
+      "recurring": "annual",
+      "website": "https://www.gaytravel4u.com/event/rome-bears-week/"
+    }
+  ]
+}
