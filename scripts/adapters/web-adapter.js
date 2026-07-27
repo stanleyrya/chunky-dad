@@ -75,6 +75,17 @@ class WebAdapter {
         };
     }
 
+    // Same honest pass-through for the curated promoter registry: on Node the
+    // repo checkout IS the source chunky.dad deploys data/promoters.json
+    // from, so the local registry is already current.
+    async refreshRemotePromoters(localPromoters) {
+        const promoters = Array.isArray(localPromoters) ? localPromoters : [];
+        return {
+            promoters,
+            counts: { remote: 0, localOnly: promoters.length }
+        };
+    }
+
     getPageCacheConfig() {
         const pageCache = this.config.pageCache || {};
         const ttlDays = Number(pageCache.ttlDays);
@@ -486,6 +497,14 @@ async saveFailureNote(url, error, metadata = {}) {
                 } else {
                     config.bars = {};
                 }
+
+                const promotersPath = require('path').join(__dirname, '..', 'scraper-promoters.js');
+                if (require('fs').existsSync(promotersPath)) {
+                    delete require.cache[require.resolve(promotersPath)]; // Clear cache for fresh load
+                    config.promoters = require(promotersPath);
+                } else {
+                    config.promoters = [];
+                }
             } else {
                 // Browser environment - use pre-loaded globals if available (loaded via script tags),
                 // otherwise fall back to fetching (only works when page is served from scripts/ directory)
@@ -546,6 +565,27 @@ async saveFailureNote(url, error, metadata = {}) {
                         }
                     } catch (e) {
                         config.bars = {};
+                    }
+                }
+
+                if (typeof window.scraperPromoters !== 'undefined') {
+                    config.promoters = window.scraperPromoters;
+                } else {
+                    try {
+                        const promotersResponse = await fetch('./scraper-promoters.js');
+                        if (promotersResponse.ok) {
+                            const promotersText = await promotersResponse.text();
+                            if (promotersText && promotersText.trim().length > 0) {
+                                eval(promotersText);
+                                config.promoters = window.scraperPromoters || [];
+                            } else {
+                                config.promoters = [];
+                            }
+                        } else {
+                            config.promoters = [];
+                        }
+                    } catch (e) {
+                        config.promoters = [];
                     }
                 }
             }

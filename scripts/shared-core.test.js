@@ -8594,3 +8594,299 @@ test('flattenConfigForDiff walks plain objects and stringifies arrays/regexes as
   );
   assert.deepEqual(core.flattenConfigForDiff(null), {});
 });
+
+// ---------------------------------------------------------------------------
+// Curated promoter registry: SharedCore.matchEventToPromoter +
+// applyPromoterRegistryMatches (data/promoters.json injected like bars).
+// ---------------------------------------------------------------------------
+
+const REGISTRY_FIXTURE = [
+  {
+    name: 'Bearracuda',
+    aliases: ['Bearracuda Events'],
+    shortName: 'Bear-rac-uda',
+    instagram: 'https://www.instagram.com/bearracuda',
+    website: 'https://bearracuda.com/',
+    urlPatterns: ['bearracuda.com', 'eventbrite.com/o/bearracuda-21867032189'],
+    bearAffinity: 'usually'
+  },
+  {
+    name: 'Coach After Dark',
+    shortName: 'COACH',
+    instagram: 'https://www.instagram.com/coachafterdark',
+    bearAffinity: 'always'
+  },
+  {
+    name: 'BEEFWITCH',
+    parent: 'Coach After Dark',
+    keywords: ['beefwitch'],
+    shortName: 'BEEFWITCH',
+    instagram: 'https://www.instagram.com/thebeefwitch',
+    bearAffinity: 'always'
+  },
+  {
+    name: 'Goldiloxx',
+    shortName: 'GOLDI-LOXX',
+    shorterName: 'GLX',
+    instagram: 'https://www.instagram.com/goldiloxx__',
+    matchKey: 'goldiloxx*|${year}-${month}-*|*',
+    urlPatterns: ['goldiloxx'],
+    bearAffinity: 'always'
+  },
+  // Family-stem pair for the fail-closed guard: "Eagle Party" is contained in
+  // "Dallas Eagle Party"'s key, so title containment must refuse the stem.
+  { name: 'Eagle Party', bearAffinity: 'always' },
+  { name: 'Dallas Eagle Party', bearAffinity: 'always' }
+];
+
+function createRegistryCore(promoters = REGISTRY_FIXTURE) {
+  return new SharedCore(CITIES, { eventSchema: EventSchema, promoters });
+}
+
+const ENFORCE_REGISTRY_CONFIG = { config: { promoterRegistry: { mode: 'enforce' } } };
+const REPORT_REGISTRY_CONFIG = { config: { promoterRegistry: { mode: 'report' } } };
+
+test('promoter registry mode reader mirrors getBearCheckMode (unset/invalid → report)', () => {
+  const core = createRegistryCore();
+  assert.equal(core.getPromoterRegistryMode({}), 'report');
+  assert.equal(core.getPromoterRegistryMode(null), 'report');
+  assert.equal(core.getPromoterRegistryMode({ config: { promoterRegistry: { mode: 'ENFORCE' } } }), 'enforce');
+  assert.equal(core.getPromoterRegistryMode({ config: { promoterRegistry: { mode: 'off' } } }), 'off');
+  assert.equal(core.getPromoterRegistryMode({ config: { promoterRegistry: { mode: 'bogus' } } }), 'report');
+});
+
+test('matcher: padded-token title containment matches a full name, never a bare substring', () => {
+  const core = createRegistryCore();
+  const match = core.matchEventToPromoter({ title: 'Bearracuda Atlanta 17 Year Anniversary' });
+  assert.equal(match.entry.name, 'Bearracuda');
+  assert.equal(match.evidence, 'title');
+  // Smooshed brand text is NOT a padded token hit
+  assert.equal(core.matchEventToPromoter({ title: 'MEGABearracudathon' }), null);
+});
+
+test('matcher: alias equality on _organizer wins as organizer evidence (brand variants included)', () => {
+  const core = createRegistryCore();
+  const viaAlias = core.matchEventToPromoter({ title: 'PRIDE FRIDAY', _organizer: 'Bearracuda Events' });
+  assert.equal(viaAlias.entry.name, 'Bearracuda');
+  assert.equal(viaAlias.evidence, 'organizer');
+  const viaSuffix = core.matchEventToPromoter({ title: 'PRIDE FRIDAY', _organizer: 'Bearracuda, Inc.' });
+  assert.equal(viaSuffix.entry.name, 'Bearracuda');
+  assert.equal(viaSuffix.evidence, 'organizer');
+});
+
+test('matcher: a family-stem name key fails closed for title containment but organizer equality still works', () => {
+  const core = createRegistryCore();
+  // "eagleparty" ⊂ "dallaseagleparty" → title containment refused for the stem
+  assert.equal(core.matchEventToPromoter({ title: 'Eagle Party Karaoke Night' }), null);
+  // The longer, unique name still title-matches
+  const longMatch = core.matchEventToPromoter({ title: 'Dallas Eagle Party: Singlet Night' });
+  assert.equal(longMatch.entry.name, 'Dallas Eagle Party');
+  // Organizer equality is exempt from the stem guard
+  const organizerMatch = core.matchEventToPromoter({ title: 'Karaoke', _organizer: 'Eagle Party' });
+  assert.equal(organizerMatch.entry.name, 'Eagle Party');
+  assert.equal(organizerMatch.evidence, 'organizer');
+});
+
+test('matcher: two unrelated entries matching → ambiguous, and the pass stamps nothing', () => {
+  const core = createRegistryCore();
+  const event = {
+    title: 'Bearracuda x Goldiloxx Takeover',
+    startDate: new Date('2026-08-01T21:00:00.000Z')
+  };
+  const match = core.matchEventToPromoter(event);
+  assert.ok(match.ambiguous, 'unrelated double match must be ambiguous');
+  assert.deepEqual([...match.ambiguous].sort(), ['Bearracuda', 'Goldiloxx']);
+
+  const before = JSON.parse(JSON.stringify(event));
+  core.applyPromoterRegistryMatches([event], { name: 'p' }, ENFORCE_REGISTRY_CONFIG);
+  assert.deepEqual(JSON.parse(JSON.stringify(event)), before, 'ambiguity changes nothing');
+});
+
+test('matcher: BEEFWITCH keyword beats its matched parent (child wins)', () => {
+  const core = createRegistryCore();
+  const match = core.matchEventToPromoter({
+    title: 'BEEFWITCH: Hex The Patriarchy',
+    _organizer: 'Coach After Dark'
+  });
+  assert.equal(match.entry.name, 'BEEFWITCH');
+});
+
+test('matcher: URL evidence covers event URLs and _sourcePageUrl via urlPatterns and own-handle tokens', () => {
+  const core = createRegistryCore();
+  const viaPattern = core.matchEventToPromoter({
+    title: 'Some Party',
+    ticketUrl: 'https://www.eventbrite.com/o/bearracuda-21867032189'
+  });
+  assert.equal(viaPattern.entry.name, 'Bearracuda');
+  assert.equal(viaPattern.evidence, 'url:eventbrite.com/o/bearracuda-21867032189');
+  const viaInstagram = core.matchEventToPromoter({
+    title: 'Some Party',
+    instagram: 'https://www.instagram.com/coachafterdark'
+  });
+  assert.equal(viaInstagram.entry.name, 'Coach After Dark');
+  // Description is never evidence
+  assert.equal(core.matchEventToPromoter({ title: 'Some Party', description: 'by Bearracuda at bearracuda.com' }), null);
+});
+
+test('registry pass: no evidence leaves the event byte-untouched in enforce mode', () => {
+  const core = createRegistryCore();
+  const event = { title: 'Unrelated Concert', startDate: new Date('2026-08-01T21:00:00.000Z'), bar: 'Some Hall' };
+  const before = JSON.parse(JSON.stringify(event));
+  core.applyPromoterRegistryMatches([event], { name: 'p' }, ENFORCE_REGISTRY_CONFIG);
+  assert.deepEqual(JSON.parse(JSON.stringify(event)), before);
+});
+
+test('registry pass: report mode matches but stamps nothing', () => {
+  const core = createRegistryCore();
+  const event = { title: 'Bearracuda Portland: PRIDE FRIDAY', startDate: new Date('2026-08-01T21:00:00.000Z') };
+  const before = JSON.parse(JSON.stringify(event));
+  core.applyPromoterRegistryMatches([event], { name: 'p' }, REPORT_REGISTRY_CONFIG);
+  assert.deepEqual(JSON.parse(JSON.stringify(event)), before, 'report mode changes NOTHING');
+  assert.equal(event._promoter, undefined);
+});
+
+test('registry pass: enforce stamps _promoter, curated metadata, and a title/url-evidence organizer', () => {
+  const core = createRegistryCore();
+  const event = { title: 'Bearracuda Portland: PRIDE FRIDAY', startDate: new Date('2026-08-01T21:00:00.000Z') };
+  core.applyPromoterRegistryMatches([event], { name: 'p' }, ENFORCE_REGISTRY_CONFIG);
+  assert.equal(event._promoter, 'Bearracuda');
+  assert.equal(event._organizer, 'Bearracuda', 'empty organizer is backfilled on title/url evidence');
+  assert.equal(event.shortName, 'Bear-rac-uda');
+  assert.equal(event.instagram, 'https://www.instagram.com/bearracuda');
+  assert.equal(event.url, 'https://bearracuda.com/', 'website maps to the canonical url field');
+  assert.equal(event._staticFields.shortName, 'Bear-rac-uda');
+
+  // A non-empty organizer is never overwritten
+  const organizerEvent = { title: 'Bearracuda Portland', _organizer: 'Somebody Else', startDate: new Date('2026-08-01T21:00:00.000Z') };
+  core.applyPromoterRegistryMatches([organizerEvent], { name: 'p' }, ENFORCE_REGISTRY_CONFIG);
+  assert.equal(organizerEvent._organizer, 'Somebody Else');
+});
+
+test('registry application parity: registry stamp ≡ parser metadata through applyStaticMetadataBlock', () => {
+  const core = createRegistryCore();
+  const entry = REGISTRY_FIXTURE[0]; // Bearracuda
+  const block = core.promoterEntryToMetadataBlock(entry);
+
+  const baseEvent = () => ({ title: 'Portland PRIDE FRIDAY', startDate: new Date('2026-08-01T21:00:00.000Z') });
+
+  // Parser path: the same facts as parser-config metadata
+  const viaParser = core.applyFieldPriorities(baseEvent(), { name: 'p', metadata: block }, {});
+
+  // Registry path: bare parser first (no metadata), then the registry stamp
+  const viaRegistry = core.applyFieldPriorities(baseEvent(), { name: 'p' }, {});
+  core.applyPromoterMetadata(viaRegistry, block);
+
+  const publicFields = (event) => {
+    const copy = {};
+    Object.keys(event).filter((key) => !key.startsWith('_')).forEach((key) => { copy[key] = event[key]; });
+    return copy;
+  };
+  assert.deepEqual(publicFields(viaRegistry), publicFields(viaParser), 'event fields identical');
+  assert.deepEqual(viaRegistry._staticFields, viaParser._staticFields, '_staticFields identical');
+  assert.deepEqual(viaRegistry._fieldPriorities, viaParser._fieldPriorities, '_fieldPriorities identical');
+});
+
+test('registry sub-brand inherits unspecified metadata fields from its parent', () => {
+  const core = createRegistryCore();
+  const block = core.promoterEntryToMetadataBlock(core.getPromoterEntryByName('BEEFWITCH'));
+  assert.equal(block.shortName.value, 'BEEFWITCH', 'own field wins');
+  assert.equal(block.instagram.value, 'https://www.instagram.com/thebeefwitch', 'own field wins');
+});
+
+test('registry Goldiloxx matchKey template resolves through the standard metadata machinery', () => {
+  const core = createRegistryCore();
+  const event = {
+    title: 'GOLDILOXX: WOOF',
+    startDate: new Date('2026-08-15T21:00:00.000Z'),
+    city: 'dallas',
+    timezone: 'America/Chicago'
+  };
+  core.applyPromoterRegistryMatches([event], { name: 'p' }, ENFORCE_REGISTRY_CONFIG);
+  assert.equal(event._promoter, 'Goldiloxx');
+  assert.equal(event.matchKey, 'goldiloxx*|2026-08-*|*');
+  assert.equal(event.shorterName, 'GLX');
+});
+
+// Incident fixtures from real runs: platform-hosted events must resolve to the
+// promoter their own content names — never to whoever's parser found them.
+test('incident: a Goldiloxx-titled event from a redeyetickets URL matches Goldiloxx', () => {
+  const registry = require('../data/promoters.json');
+  const core = createRegistryCore(registry);
+  const match = core.matchEventToPromoter({
+    title: 'GOLDILOXX: WOOF',
+    url: 'https://redeyetickets.com/events/goldiloxx-woof-dallas'
+  });
+  assert.equal(match.entry.name, 'Goldiloxx');
+});
+
+test('incident: a Bearracuda event found on sickening.events matches Bearracuda, never Goldiloxx', () => {
+  const registry = require('../data/promoters.json');
+  const core = createRegistryCore(registry);
+  const match = core.matchEventToPromoter({
+    title: 'Bearracuda New Orleans Halloween',
+    _sourcePageUrl: 'https://sickening.events/events/bearracuda-new-orleans-halloween'
+  });
+  assert.equal(match.entry.name, 'Bearracuda');
+});
+
+test('bearAffinity precedence: "usually" overrides alwaysBear into per-event judgment', async () => {
+  const core = createRegistryCore();
+  const parserConfig = { name: 'p', alwaysBear: true, ai: { enabled: false, bearCheck: { mode: 'enforce' } } };
+  // No bear vocabulary, no AI → the cascade falls through to config trust
+  const matched = { title: 'HOT TAKE Anniversary', _promoter: 'Bearracuda' };
+  const decision = await core.computeBearCheckDecision(matched, parserConfig, null);
+  assert.equal(decision.result, 'unsure', 'a usually-promoter event is judged, never config-trusted');
+
+  const unmatched = { title: 'Some Unmarked Rave' };
+  const legacy = await core.computeBearCheckDecision(unmatched, parserConfig, null);
+  assert.equal(legacy.result, 'bear');
+  assert.equal(legacy.provenance, 'config: alwaysBear (ai unavailable)', 'unmatched events keep the exact legacy fallback');
+});
+
+test('bearAffinity precedence: "always" trusts a matched event on an untrusted parser (never-drop)', async () => {
+  const core = createRegistryCore();
+  const parserConfig = { name: 'p', alwaysBear: false, ai: { enabled: false, bearCheck: { mode: 'enforce' } } };
+  const matched = { title: 'Hex The Patriarchy', _promoter: 'BEEFWITCH', startDate: new Date('2026-08-01T21:00:00.000Z') };
+  const decision = await core.computeBearCheckDecision(matched, parserConfig, null);
+  assert.equal(decision.result, 'bear');
+  assert.equal(decision.provenance, 'config: promoter BEEFWITCH bearAffinity=always');
+
+  // filterBearEvents: trusted per-event → kept, and never in the drop path
+  const drops = [];
+  const kept = await core.filterBearEvents([matched], parserConfig, null, drops);
+  assert.equal(kept.length, 1);
+  assert.equal(kept[0].isBearEvent, true);
+  assert.equal(drops.length, 0);
+
+  const unmatchedLegacy = await core.computeBearCheckDecision({ title: 'Some Unmarked Rave' }, parserConfig, null);
+  assert.equal(unmatchedLegacy.result, 'unsure', 'unmatched events on an untrusted parser stay judged');
+});
+
+test('bear-check provenance: matched promoters gain the ADDITIVE sentence, unmatched stays byte-identical', () => {
+  const core = createRegistryCore();
+  const parserConfig = { name: 'Bearracuda Events', alwaysBear: true, urls: ['https://bearracuda.com/'] };
+
+  const unmatched = core.buildBearCheckProvenance({ title: 'x', url: 'https://bearracuda.com/events/pdx' }, parserConfig);
+  assert.equal(unmatched,
+    'Scraped from bearracuda.com, source entry "Bearracuda Events". The calendar owner has marked this promoter as a trusted bear-scene promoter.');
+
+  const matchedAlways = core.buildBearCheckProvenance(
+    { title: 'x', url: 'https://bearracuda.com/events/pdx', _promoter: 'BEEFWITCH' }, parserConfig);
+  assert.ok(matchedAlways.startsWith(unmatched), 'existing sentences stay byte-identical; the registry sentence is appended');
+  assert.ok(matchedAlways.endsWith(' This event\'s own content names the promoter BEEFWITCH, whom the calendar owner has marked as a trusted bear-scene promoter.'));
+
+  const matchedUsually = core.buildBearCheckProvenance(
+    { title: 'x', url: 'https://bearracuda.com/events/pdx', _promoter: 'Bearracuda' }, parserConfig);
+  assert.ok(matchedUsually.includes('whom the calendar owner tracks as a usually-bear promoter'));
+  assert.ok(!matchedUsually.includes('The calendar owner has marked this promoter as a trusted bear-scene promoter.'),
+    'a matched "usually" promoter suppresses the parser-level trust claim for THIS event');
+});
+
+test('_promoter carries across dedup merges like _organizer', async () => {
+  const core = createRegistryCore();
+  const existing = { title: 'Bearracuda PDX', startDate: new Date('2026-08-01T21:00:00.000Z'), _promoter: 'Bearracuda', _organizer: 'Bearracuda' };
+  const fresh = { title: 'Bearracuda PDX', startDate: new Date('2026-08-01T21:00:00.000Z') };
+  const merged = await core.mergeParsedEvents(existing, fresh);
+  assert.equal(merged._promoter, 'Bearracuda');
+  assert.equal(merged._organizer, 'Bearracuda');
+});

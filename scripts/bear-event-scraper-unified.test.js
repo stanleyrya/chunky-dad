@@ -29,8 +29,8 @@ function buildConfig(overrides = {}) {
 // so recorded calls live in a closure shared by all instances. refreshBars
 // (optional) becomes the adapter's refreshRemoteBars implementation — omit it
 // to model an adapter without the method (web-adapter-shaped tolerance).
-function createStubAdapter({ config, executeError = null, omitExecute = false, refreshBars = null } = {}) {
-  const calls = { executeCalendarActions: [], displayResults: [], showError: [], refreshRemoteBars: [] };
+function createStubAdapter({ config, executeError = null, omitExecute = false, refreshBars = null, refreshPromoters = null } = {}) {
+  const calls = { executeCalendarActions: [], displayResults: [], showError: [], refreshRemoteBars: [], refreshRemotePromoters: [] };
 
   class StubAdapter {
     constructor(options = {}) {
@@ -62,6 +62,13 @@ function createStubAdapter({ config, executeError = null, omitExecute = false, r
     };
   }
 
+  if (refreshPromoters) {
+    StubAdapter.prototype.refreshRemotePromoters = async function refreshRemotePromoters(localPromoters) {
+      calls.refreshRemotePromoters.push({ localPromoters });
+      return refreshPromoters(localPromoters);
+    };
+  }
+
   return { StubAdapter, calls };
 }
 
@@ -81,6 +88,7 @@ function createSharedCoreStub(events, coreOptionsLog = null) {
     async processEvents() {
       if (coreOptionsLog && coreOptionsLog.length > 0) {
         coreOptionsLog[coreOptionsLog.length - 1].barsAtProcessEvents = this.bars;
+        coreOptionsLog[coreOptionsLog.length - 1].promotersAtProcessEvents = this.promoters;
       }
       return {
         totalEvents: events.length,
@@ -241,6 +249,55 @@ test('run() tolerates an adapter without refreshRemoteBars and keeps the local b
   assert.deepEqual(coreOptionsLog[0].barsAtProcessEvents, localBars, 'local bars flow through unchanged');
   assert.equal(results.analyzedEvents.length, 2, 'the run completes normally');
   assert.equal(calls.displayResults.length, 1);
+});
+
+test('run() wires config.promoters into SharedCore and refreshes the registry through the adapter', async () => {
+  const localPromoters = [{ name: 'Bearracuda', shortName: 'STALE' }];
+  const remotePromoters = [{ name: 'Bearracuda', shortName: 'Bear-rac-uda' }, { name: 'Goldiloxx' }];
+  const config = buildConfig({ promoters: localPromoters });
+  const coreOptionsLog = [];
+  const { orch, calls } = createOrchestrator({
+    config,
+    events: buildEvents(),
+    coreOptionsLog,
+    adapterOptions: {
+      refreshPromoters: async () => ({ promoters: remotePromoters, counts: { remote: 2, localOnly: 0 } })
+    }
+  });
+
+  await orch.run();
+
+  assert.deepEqual(coreOptionsLog[0].promoters, localPromoters, 'config.promoters reaches the SharedCore constructor');
+  assert.equal(calls.refreshRemotePromoters.length, 1, 'exactly one registry refresh per run');
+  assert.deepEqual(calls.refreshRemotePromoters[0].localPromoters, localPromoters, 'the local registry is offered as the fallback');
+  assert.deepEqual(coreOptionsLog[0].promotersAtProcessEvents, remotePromoters,
+    'the core carries the refreshed registry by the time events are processed');
+});
+
+test('run() tolerates an adapter without refreshRemotePromoters and keeps the local registry, and a throwing refresh is fail-soft', async () => {
+  const localPromoters = [{ name: 'Bearracuda' }];
+  const config = buildConfig({ promoters: localPromoters });
+
+  // No refreshRemotePromoters on the adapter (web-adapter-shaped tolerance)
+  const withoutMethod = [];
+  const noMethod = createOrchestrator({ config, events: buildEvents(), coreOptionsLog: withoutMethod });
+  const noMethodResults = await noMethod.orch.run();
+  assert.deepEqual(withoutMethod[0].promotersAtProcessEvents, localPromoters, 'local registry flows through unchanged');
+  assert.equal(noMethodResults.analyzedEvents.length, 2, 'the run completes normally');
+
+  // Refresh throws → local registry kept, run continues, never fatal
+  const withThrow = [];
+  const throwing = createOrchestrator({
+    config: buildConfig({ promoters: localPromoters }),
+    events: buildEvents(),
+    coreOptionsLog: withThrow,
+    adapterOptions: { refreshPromoters: async () => { throw new Error('chunky.dad unreachable'); } }
+  });
+  const throwingResults = await throwing.orch.run();
+  assert.equal(throwing.calls.refreshRemotePromoters.length, 1, 'the refresh was attempted');
+  assert.deepEqual(withThrow[0].promotersAtProcessEvents, localPromoters, 'a refresh failure keeps the local registry');
+  assert.equal(throwingResults.analyzedEvents.length, 2, 'the run continues');
+  assert.equal(throwing.calls.showError.length, 0, 'a promoters refresh failure is never fatal');
 });
 
 test('run() keeps local bars and continues when the refresh throws', async () => {

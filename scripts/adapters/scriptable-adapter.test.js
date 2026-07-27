@@ -1063,6 +1063,94 @@ test('refreshRemoteBars with null cityKeys and no combined file returns local ba
   assert.deepEqual(result.counts, { remote: 0, local: 2, unavailable: 0 });
 });
 
+// ---------------------------------------------------------------------------
+// refreshRemotePromoters — one fetch of data/promoters.json (same helper and
+// 1-day TTL as bars), union by promoter name key: remote wins per key,
+// local-only entries survive. Any failure keeps the local registry.
+// ---------------------------------------------------------------------------
+
+const REMOTE_PROMOTERS_URL = 'https://chunky.dad/data/promoters.json';
+
+function buildRemotePromotersAdapter(remotePayload) {
+  const adapter = buildAdapter();
+  adapter.getPageCacheConfig = () => ({ enabled: true, ttlDays: 3 });
+  adapter.cacheReads = [];
+  adapter.cacheWrites = [];
+  adapter.fetches = [];
+  adapter.readCachedPage = async (url, config) => {
+    adapter.cacheReads.push({ url, config });
+    return null;
+  };
+  adapter.writeCachedPage = async (url, responseData, config) => {
+    adapter.cacheWrites.push({ url, config });
+  };
+  adapter.fetchData = async (url, options) => {
+    adapter.fetches.push({ url, options });
+    if (remotePayload === undefined) {
+      throw new Error(`HTTP 404 error from ${url}`);
+    }
+    return {
+      html: typeof remotePayload === 'string' ? remotePayload : JSON.stringify(remotePayload),
+      url,
+      statusCode: 200,
+      headers: {}
+    };
+  };
+  return adapter;
+}
+
+test('refreshRemotePromoters unions remote and local by promoter name key (remote wins per key)', async () => {
+  const localPromoters = [
+    { name: 'Bearracuda', shortName: 'STALE' },
+    { name: 'Local Only Party', shortName: 'LOCAL' }
+  ];
+  const adapter = buildRemotePromotersAdapter([
+    { name: 'Bearracuda', shortName: 'Bear-rac-uda' },
+    { name: 'Goldiloxx', shortName: 'GOLDI-LOXX' }
+  ]);
+
+  const result = await adapter.refreshRemotePromoters(localPromoters);
+
+  assert.equal(adapter.fetches.length, 1);
+  assert.equal(adapter.fetches[0].url, REMOTE_PROMOTERS_URL);
+  assert.deepEqual(result.promoters.map((p) => p.name), ['Bearracuda', 'Goldiloxx', 'Local Only Party'],
+    'remote entries lead; the local-only promoter survives the refresh');
+  assert.equal(result.promoters[0].shortName, 'Bear-rac-uda', 'remote wins for a shared name key');
+  assert.deepEqual(result.counts, { remote: 2, localOnly: 1 });
+});
+
+test('refreshRemotePromoters caches the registry URL with a 1-day TTL, separate from the global pageCache TTL', async () => {
+  const adapter = buildRemotePromotersAdapter([{ name: 'Bearracuda' }]);
+  await adapter.refreshRemotePromoters([]);
+
+  assert.equal(adapter.cacheReads.length, 1);
+  assert.equal(adapter.cacheReads[0].config.ttlDays, 1, 'promoters cache reads use the 1-day TTL');
+  assert.equal(adapter.cacheWrites.length, 1);
+  assert.equal(adapter.cacheWrites[0].config.ttlDays, 1, 'promoters cache writes use the 1-day TTL');
+  assert.equal(adapter.fetches[0].options.isCacheableResponse(), false,
+    'fetchData is told to keep its global-TTL cache out of the way');
+
+  // A fresh 1-day cache hit spends no fetch at all
+  adapter.readCachedPage = async () => ({ html: JSON.stringify([{ name: 'Cached Promoter' }]) });
+  const cachedRun = await adapter.refreshRemotePromoters([]);
+  assert.equal(adapter.fetches.length, 1, 'cache hit performs no network fetch');
+  assert.deepEqual(cachedRun.promoters.map((p) => p.name), ['Cached Promoter']);
+});
+
+test('refreshRemotePromoters keeps the local registry on fetch failure, invalid JSON, and non-array payloads', async () => {
+  const localPromoters = [{ name: 'Bearracuda', shortName: 'Bear-rac-uda' }];
+
+  const failed = await buildRemotePromotersAdapter(undefined).refreshRemotePromoters(localPromoters);
+  assert.deepEqual(failed.promoters, localPromoters, '404/offline keeps local');
+  assert.deepEqual(failed.counts, { remote: 0, localOnly: 1 });
+
+  const invalid = await buildRemotePromotersAdapter('not json at all').refreshRemotePromoters(localPromoters);
+  assert.deepEqual(invalid.promoters, localPromoters, 'invalid JSON keeps local');
+
+  const nonArray = await buildRemotePromotersAdapter({ object: 'not an array' }).refreshRemotePromoters(localPromoters);
+  assert.deepEqual(nonArray.promoters, localPromoters, 'a non-array payload never becomes registry data');
+});
+
 // The bars-wiring regression (run 20260724-122902): "Legacy" was curated in
 // the local scraper-bars.js, but the remote combined file — served through a
 // 1-day cache — didn't have it yet, and the wholesale replace threw the
