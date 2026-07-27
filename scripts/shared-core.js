@@ -136,7 +136,11 @@ class SharedCore {
         this.aiResponseCache = null;
         this.trackingParamPattern = /^(aff|affix|affiliate|utm_source|utm_medium|utm_campaign|utm_content|utm_term|ref|referral|fbclid|gclid|msclkid|dclid|source|mc_cid|mc_eid)$/i;
         
-        // URL-to-parser mapping for automatic parser detection
+        // URL-to-parser mapping for automatic parser detection (parser: "auto").
+        // Only scheme URLs resolve to a specific parser; every http(s) URL falls
+        // back to the generic ai-web parser. (The deleted site-specific parsers
+        // — bearracuda/chunk/linktree/redeyetickets — used to be detected here;
+        // their URL patterns live on in urlSourceMappings below for dedup only.)
         this.urlParserMappings = [
             {
                 pattern: /^scriptable-input:\/\//i,
@@ -145,24 +149,36 @@ class SharedCore {
             {
                 pattern: /^ai-web:\/\//i,
                 parser: 'ai-web'
+            }
+            // Generic parser will be used as fallback if no pattern matches
+        ];
+
+        // URL-to-source labels for dedup/key reconstruction ONLY — never parser
+        // dispatch. Existing calendar events created by the deleted site-specific
+        // parsers carry keys whose ${source} segment was derived from these URL
+        // patterns; keeping the labels lets computed keys for those events still
+        // match (see buildComputedKeyForExistingEvent / findEventByKey).
+        this.urlSourceMappings = [
+            {
+                pattern: /^scriptable-input:\/\//i,
+                source: 'scriptable-input'
             },
             {
                 pattern: /bearracuda\.com/i,
-                parser: 'bearracuda'
+                source: 'bearracuda'
             },
             {
                 pattern: /chunk-party\.com/i,
-                parser: 'chunk'
+                source: 'chunk'
             },
             {
                 pattern: /linktr\.ee/i,
-                parser: 'linktree'
+                source: 'linktree'
             },
             {
                 pattern: /redeyetickets\.com/i,
-                parser: 'redeyetickets'
+                source: 'redeyetickets'
             }
-            // Generic parser will be used as fallback if no pattern matches
         ];
 
         // URL pattern rules for page classification (checked in order, first match wins).
@@ -225,6 +241,23 @@ class SharedCore {
         
         // Default to ai-web parser if no pattern matches
         return 'ai-web';
+    }
+
+    // Detect a legacy source LABEL from a URL — dedup/key logic only, never
+    // parser dispatch (the site-specific parsers these labels once named are
+    // deleted). Returns null when no pattern matches.
+    detectSourceFromUrl(url) {
+        if (!url) {
+            return null;
+        }
+
+        for (const mapping of this.urlSourceMappings) {
+            if (mapping.pattern.test(url)) {
+                return mapping.source;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -2253,10 +2286,10 @@ class SharedCore {
 
         // Parser dispatch contract: an explicit parser name pins EVERY crawled URL
         // (including discovered ones) to that parser, and omitting `parser` defaults
-        // to 'ai-web', equally pinned. The legacy absence behavior is opt-in via
-        // parser: "auto" — detectParserFromUrl picks a site-specific parser
-        // (bearracuda/chunk/linktree/redeyetickets/scriptable-input) from the first
-        // URL, and discovered URLs may auto-SWITCH parser per URL during the crawl.
+        // to 'ai-web', equally pinned. parser: "auto" (used by the share-sheet
+        // URL-input path) resolves via detectParserFromUrl — today that only maps
+        // scriptable-input:// (and ai-web://) scheme URLs to their parsers; any
+        // other URL, discovered ones included, resolves to the generic 'ai-web'.
         const configuredParserName = this.normalizeParserName(effectiveParserConfig && effectiveParserConfig.parser);
         const autoDetectParser = configuredParserName === 'auto';
         const allowParserAutoSwitch = autoDetectParser;
@@ -7763,8 +7796,8 @@ class SharedCore {
         let source = fields.source || existingEvent.source || '';
         
         if (!source && urlCandidate) {
-            const detectedSource = this.detectParserFromUrl(urlCandidate);
-            if (detectedSource && detectedSource !== 'ai-web') {
+            const detectedSource = this.detectSourceFromUrl(urlCandidate);
+            if (detectedSource) {
                 source = detectedSource;
             }
         }
@@ -7820,8 +7853,8 @@ class SharedCore {
             targetIdentifier = targetEventOrKey.identifier || targetEventOrKey.id || null;
             
             if (!targetSource && targetEventOrKey.url) {
-                const detectedSource = this.detectParserFromUrl(targetEventOrKey.url);
-                if (detectedSource && detectedSource !== 'ai-web') {
+                const detectedSource = this.detectSourceFromUrl(targetEventOrKey.url);
+                if (detectedSource) {
                     targetSource = detectedSource;
                 }
             }
@@ -8671,7 +8704,8 @@ class SharedCore {
     }
 
     // AI config for merge arbitration: the event's own parser config wins, the global
-    // config.ai block covers events from non-AI parsers (bearracuda etc.).
+    // config.ai block covers events whose parser config carries no ai block
+    // (e.g. the scriptable-input URL parser).
     getMergeArbitrationConfig(event, globalConfig = null) {
         const rawAi = (event && event._parserConfig && event._parserConfig.ai && typeof event._parserConfig.ai === 'object' && event._parserConfig.ai)
             || (globalConfig && globalConfig.ai && typeof globalConfig.ai === 'object' && globalConfig.ai)
