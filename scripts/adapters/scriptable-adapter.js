@@ -4814,6 +4814,13 @@ class ScriptableAdapter {
       // webview→native pattern, see presentReviewResults). Currently used by
       // the discovered-venue "Copy parser entry" buttons (chunkyscrape://).
       const venueEntrySnippets = this.collectVenueEntrySnippets(results);
+      // Effective (redacted) config JSON for the Active-config copy button;
+      // "" when this run/saved run carries no config snapshot.
+      const activeConfigSummary = this.buildActiveConfigSummaryForResults(results);
+      const activeConfigJson =
+        activeConfigSummary && typeof activeConfigSummary.json === "string"
+          ? activeConfigSummary.json
+          : "";
       // Manual bear/not-bear override taps recorded during the WebView session,
       // applied after dismissal. Keyed by row id so repeat taps stay idempotent.
       const bearOverridePending = { markedBear: {}, markedNotBear: {} };
@@ -4833,6 +4840,11 @@ class ScriptableAdapter {
           if (typeof snippet === "string" && snippet.length > 0) {
             // Fire-and-forget: the handler must return a bool synchronously
             this.copyVenueEntryAndReport(snippet, params.id, webView);
+          }
+        } else if (params.a === "copy-config") {
+          if (activeConfigJson.length > 0) {
+            // Fire-and-forget: the handler must return a bool synchronously
+            this.copyActiveConfigAndReport(activeConfigJson, webView);
           }
         } else if (params.a === "mark-bear" || params.a === "mark-not-bear") {
           // Fire-and-forget: records the override natively; the page gets
@@ -6366,6 +6378,8 @@ class ScriptableAdapter {
 
     ${this.generateDiscoverySection(results)}
 
+    ${this.generateActiveConfigSection(results)}
+
     ${insightSectionsHtml}
 
     ${logSectionHtml}
@@ -6388,6 +6402,22 @@ class ScriptableAdapter {
                 if (btn) {
                     btn.textContent = '✅ Copied!';
                     setTimeout(function () { btn.textContent = '📋 Copy parser entry'; }, 2000);
+                }
+            } catch (ignore) {}
+        }
+
+        // Active-config copy button rides the same chunkyscrape:// navigation
+        // bridge (shouldAllowRequest, set before present()) and reuses the
+        // venue-copy nonce counter; the JSON payload stays native-side.
+        function copyActiveConfig(btn) {
+            window.location.href = 'chunkyscrape://act?a=copy-config&n=' + (++window.__venueCopyNonce);
+        }
+        function markConfigCopied() {
+            try {
+                var btn = document.querySelector('.config-copy-btn');
+                if (btn) {
+                    btn.textContent = 'Copied ✓';
+                    setTimeout(function () { btn.textContent = '📋 Copy effective config JSON'; }, 2000);
                 }
             } catch (ignore) {}
         }
@@ -7549,6 +7579,134 @@ class ScriptableAdapter {
     const feedbackJs = `markVenueEntryCopied(${JSON.stringify(String(venueIndex))})`;
     try {
       await webView.evaluateJavaScript(feedbackJs, false);
+    } catch (error) {
+      /* button feedback is optional polish; the copy already happened */
+    }
+  }
+
+  // Redacted active-config summary for the results UI, or null when this
+  // run carries no config snapshot (old saved runs may lack results.config)
+  // or the pure builder is unavailable. Null-guards every path so saved-run
+  // display never breaks.
+  buildActiveConfigSummaryForResults(results) {
+    if (!results || !results.config || typeof results.config !== "object") {
+      return null;
+    }
+    const core = this.getIdentityCore();
+    if (!core || typeof core.buildActiveConfigSummary !== "function") {
+      return null;
+    }
+    try {
+      return core.buildActiveConfigSummary(results.config);
+    } catch (error) {
+      console.warn(
+        `📱 Scriptable: Could not build active-config summary: ${error.message}`,
+      );
+      return null;
+    }
+  }
+
+  // Active config section: the effective run settings this run executed with
+  // (values-only, secret-redacted) plus each parser's explicit overrides
+  // diffed against the global effective values. The copy button signals
+  // native via the chunkyscrape:// scheme handled in presentRichResults
+  // (shouldAllowRequest → Pasteboard.copy) — WKWebView has no reliable
+  // navigator.clipboard.
+  generateActiveConfigSection(results) {
+    const summary = this.buildActiveConfigSummaryForResults(results);
+    if (!summary) return "";
+    const core = this.getIdentityCore();
+    if (!core || typeof core.flattenConfigForDiff !== "function") return "";
+
+    const globalFlat = core.flattenConfigForDiff(
+      summary.global && typeof summary.global === "object" ? summary.global : {},
+    );
+    const globalRows = Object.entries(globalFlat)
+      .map(
+        ([key, value]) =>
+          `<tr><td style="padding:2px 10px 2px 0; font-family:monospace; font-size:11px; color:var(--text-secondary); vertical-align:top; white-space:nowrap;">${this.escapeHtml(key)}</td><td style="padding:2px 0; font-family:monospace; font-size:11px; word-break:break-all;">${this.escapeHtml(String(value))}</td></tr>`,
+      )
+      .join("");
+
+    const parsers = Array.isArray(summary.parsers) ? summary.parsers : [];
+    const parserBlocks = parsers
+      .map((parser) => {
+        const entry = parser && typeof parser === "object" ? parser : {};
+        const overrideEntries = Object.entries(
+          entry.overrides && typeof entry.overrides === "object"
+            ? entry.overrides
+            : {},
+        );
+        const overridesHtml =
+          overrideEntries.length === 0
+            ? '<div style="font-size:12px; color:var(--text-secondary);">no overrides</div>'
+            : `<div style="font-size:12px;"><div style="font-weight:600; margin-bottom:2px;">Overrides (${overrideEntries.length})</div>${overrideEntries
+                .map(([key, diff]) => {
+                  const value =
+                    diff && diff.value !== undefined ? String(diff.value) : "unset";
+                  const globalValue =
+                    diff && diff.globalValue !== undefined
+                      ? String(diff.globalValue)
+                      : "unset";
+                  return `<div style="font-family:monospace; font-size:11px; word-break:break-all;">${this.escapeHtml(key)}: ${this.escapeHtml(value)} (global: ${this.escapeHtml(globalValue)})</div>`;
+                })
+                .join("")}</div>`;
+        const enabledBadge = entry.enabled
+          ? '<span style="font-size:11px; font-weight:600; color:#34c759;">enabled</span>'
+          : '<span style="font-size:11px; opacity:0.6;">disabled</span>';
+        const urls = Array.isArray(entry.urls) ? entry.urls : [];
+        const urlsHtml =
+          urls.length > 0
+            ? `<div style="font-size:11px; font-family:monospace; opacity:0.7; word-break:break-all; margin:2px 0 4px 0;">${urls.map((url) => this.escapeHtml(String(url))).join("<br>")}</div>`
+            : "";
+        const parserLabel = entry.parser
+          ? ` <span style="font-weight:400; opacity:0.7;">(${this.escapeHtml(entry.parser)} parser)</span>`
+          : "";
+        return `
+        <div style="margin-bottom:12px; padding:10px; background:var(--background-light); border-radius:8px;">
+            <div style="font-weight:600; margin-bottom:2px;">${this.escapeHtml(entry.name || "(unnamed)")}${parserLabel} ${enabledBadge}</div>
+            ${urlsHtml}
+            ${overridesHtml}
+        </div>`;
+      })
+      .join("");
+
+    return `
+    <div class="section">
+        <div class="section-header">
+            <span class="section-icon">⚙️</span>
+            <span class="section-title">Active config</span>
+            <span class="section-count">${parsers.length}</span>
+        </div>
+        <details style="margin-bottom:12px;">
+            <summary>Run settings</summary>
+            <div style="overflow-x:auto;"><table style="border-collapse:collapse;">${globalRows}</table></div>
+        </details>
+        ${parserBlocks}
+        <div style="display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap; align-items:center;">
+            <button onclick="copyActiveConfig(this)" class="log-copy-btn config-copy-btn">📋 Copy effective config JSON</button>
+            <span style="font-size:12px; color:var(--text-secondary);">Secrets are redacted in the copied JSON</span>
+        </div>
+    </div>
+    `;
+  }
+
+  // Copy the effective (redacted) config JSON natively and (best-effort)
+  // flash the button. Called fire-and-forget from shouldAllowRequest, which
+  // must synchronously return a bool — so the await lives here, not in the
+  // handler.
+  async copyActiveConfigAndReport(activeConfigJson, webView) {
+    try {
+      Pasteboard.copy(activeConfigJson);
+      console.log("📱 Scriptable: Copied active config JSON to clipboard");
+    } catch (error) {
+      console.warn(
+        `📱 Scriptable: Failed to copy active config JSON: ${error.message}`,
+      );
+      return;
+    }
+    try {
+      await webView.evaluateJavaScript("markConfigCopied()", false);
     } catch (error) {
       /* button feedback is optional polish; the copy already happened */
     }

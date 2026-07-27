@@ -2308,6 +2308,9 @@ class SharedCore {
         const bearDropCollector = [];
         const futureEvents = this.filterFutureEvents(allEvents, effectiveParserConfig.daysToLookAhead, effectiveParserConfig.allowPastEvents);
         const bearEvents = await this.filterBearEvents(futureEvents, effectiveParserConfig, httpAdapter, bearDropCollector);
+        // Overlong-field trims run before dedup so trimmed values feed the
+        // dedup keys/merges (report mode by default; see getTrimConfig).
+        await this.applyOverlongFieldTrims(bearEvents, effectiveParserConfig, httpAdapter);
         const deduplicatedEvents = await this.deduplicateEvents(bearEvents, httpAdapter, mainConfig?.config || mainConfig || null);
         
         // Calculate deduplication stats
@@ -2758,6 +2761,24 @@ class SharedCore {
             lines.push(`${rescueField} rescue candidate (log-only): "${rescueCandidate}"${rescueModelValue ? ` — model wrote "${rescueModelValue}"` : ''}`);
         });
 
+        // Overlong-field trim outcomes (_fieldTrims — underscore field, never
+        // serialized; stamped by trimOverlongFieldsForEvent). Rendered so
+        // every trim / would-trim / failed-gate outcome stays visible in the
+        // results UI next to the value it describes.
+        const fieldTrims = Array.isArray(event._fieldTrims) ? event._fieldTrims : [];
+        fieldTrims.forEach(trim => {
+            if (!trim || typeof trim !== 'object') return;
+            const trimField = typeof trim.field === 'string' ? trim.field.trim() : '';
+            if (!trimField) return;
+            if (trim.status === 'trimmed') {
+                lines.push(`${trimField} trimmed: ${trim.originalLength} → ${trim.trimmedLength} chars — "${trim.trimmedValue}"`);
+            } else if (trim.status === 'would-trim') {
+                lines.push(`${trimField} would trim: ${trim.originalLength} → ${trim.trimmedLength} chars — "${trim.trimmedValue}" (report mode)`);
+            } else if (trim.status === 'failed-gate') {
+                lines.push(`⚠️ ${trimField} overlong (${trim.originalLength} > ${trim.maxChars} chars) — trim failed verbatim gate, original kept`);
+            }
+        });
+
         // Deterministic bar-convergence rescue (_barRescue — underscore
         // field, never serialized; stamped by ai-web-parser's
         // applyBarConvergenceRescue when extraction produced no bar and a
@@ -3019,6 +3040,156 @@ class SharedCore {
             effective.discoveryBlockedPatterns = [...globalBlockedPatterns, ...parserPatterns];
         }
         return effective;
+    }
+
+    // ------------------------------------------------------------------
+    // Active-config summary for the results UI: pure builders that turn the
+    // loaded scraper config into (a) the effective global run settings, (b)
+    // per-parser override diffs against those settings, and (c) a redacted
+    // JSON payload for the copy button. No I/O, no platform APIs.
+    // ------------------------------------------------------------------
+
+    // Recursive secret scrub: any key that looks credential-shaped is masked.
+    // Applied before render AND before the copy payload is built.
+    redactConfigSecrets(obj) {
+        if (Array.isArray(obj)) {
+            return obj.map(item => this.redactConfigSecrets(item));
+        }
+        if (!obj || typeof obj !== 'object' || obj instanceof RegExp) {
+            return obj;
+        }
+        const redacted = {};
+        for (const [key, value] of Object.entries(obj)) {
+            redacted[key] = /key|secret|token|password|authorization/i.test(key)
+                ? '•••'
+                : this.redactConfigSecrets(value);
+        }
+        return redacted;
+    }
+
+    // Dotted-key flattener for override diffs: plain objects are walked,
+    // everything else (arrays, regexes) is stringified into a single leaf.
+    flattenConfigForDiff(obj, prefix = '') {
+        const flat = {};
+        if (!obj || typeof obj !== 'object' || Array.isArray(obj) || obj instanceof RegExp) {
+            return flat;
+        }
+        for (const [key, value] of Object.entries(obj)) {
+            const dottedKey = prefix ? `${prefix}.${key}` : key;
+            if (value && typeof value === 'object' && !Array.isArray(value) && !(value instanceof RegExp)) {
+                Object.assign(flat, this.flattenConfigForDiff(value, dottedKey));
+            } else if (Array.isArray(value) || value instanceof RegExp) {
+                flat[dottedKey] = String(value);
+            } else {
+                flat[dottedKey] = value;
+            }
+        }
+        return flat;
+    }
+
+    // { global, parsers, json }: global = values-only effective run settings,
+    // parsers = per-entry override diffs (ONLY explicitly-set values that
+    // differ from the global effective value), json = the redacted copy
+    // payload. Both returned structures are already redacted.
+    buildActiveConfigSummary(scraperConfig) {
+        const globalConfig = scraperConfig && scraperConfig.config && typeof scraperConfig.config === 'object'
+            ? scraperConfig.config
+            : {};
+        const rawGlobalAi = globalConfig.ai && typeof globalConfig.ai === 'object' ? globalConfig.ai : {};
+        const rawGlobalOcr = globalConfig.ocr && typeof globalConfig.ocr === 'object' ? globalConfig.ocr : {};
+        const resolvedAi = this.resolveAiConfig(rawGlobalAi);
+        const pageCache = globalConfig.pageCache && typeof globalConfig.pageCache === 'object' ? globalConfig.pageCache : {};
+        const pageCacheTtl = Number(pageCache.ttlDays);
+        const geocodeVerification = globalConfig.geocodeVerification && typeof globalConfig.geocodeVerification === 'object'
+            ? globalConfig.geocodeVerification
+            : {};
+        // Same top-level bearCheck alias fold resolveEffectiveParserConfig does
+        const bearCheckAi = rawGlobalAi.bearCheck || !globalConfig.bearCheck
+            ? rawGlobalAi
+            : { ...rawGlobalAi, bearCheck: globalConfig.bearCheck };
+
+        const global = {
+            daysToLookAhead: globalConfig.daysToLookAhead !== undefined ? globalConfig.daysToLookAhead : null,
+            dryRun: globalConfig.dryRun === true,
+            pageCache: {
+                enabled: pageCache.enabled === true,
+                ttlDays: Number.isFinite(pageCacheTtl) && pageCacheTtl > 0 ? pageCacheTtl : 3
+            },
+            geocodeVerification: {
+                mode: String(geocodeVerification.mode || 'report')
+            },
+            ai: {
+                enabled: resolvedAi.enabled,
+                endpoint: resolvedAi.endpoint,
+                model: resolvedAi.model,
+                provider: resolvedAi.provider,
+                payloadMode: resolvedAi.payloadMode,
+                numCtx: resolvedAi.numCtx,
+                numPredict: resolvedAi.numPredict,
+                temperature: resolvedAi.temperature,
+                timeoutSeconds: resolvedAi.timeoutSeconds,
+                cacheEnabled: resolvedAi.cacheEnabled,
+                arbitrateMerges: resolvedAi.arbitrateMerges,
+                bearCheck: { mode: this.getBearCheckMode({ ai: bearCheckAi }) },
+                trim: this.getTrimConfig({ ai: rawGlobalAi })
+            },
+            ocr: {
+                enabled: rawGlobalOcr.enabled === true,
+                endpoint: typeof rawGlobalOcr.endpoint === 'string' ? rawGlobalOcr.endpoint : '',
+                model: typeof rawGlobalOcr.model === 'string' ? rawGlobalOcr.model : '',
+                maxImages: Number.isFinite(Number(rawGlobalOcr.maxImages)) ? Number(rawGlobalOcr.maxImages) : null,
+                cache: rawGlobalOcr.cache !== false,
+                cacheRetentionDays: Number.isFinite(Number(rawGlobalOcr.cacheRetentionDays)) ? Number(rawGlobalOcr.cacheRetentionDays) : 90
+            }
+        };
+
+        // Comparison base for override diffs: raw global keys win (they share
+        // the parser blocks' key space exactly); the resolved effective values
+        // fill in for keys the raw global config never set.
+        const globalComparisonFlat = {
+            ...this.flattenConfigForDiff({ ai: global.ai, ocr: global.ocr }),
+            ...this.flattenConfigForDiff({ ai: rawGlobalAi, ocr: rawGlobalOcr })
+        };
+        const scalarKnobs = ['alwaysBear', 'siteRole', 'dryRun', 'daysToLookAhead', 'urlDiscoveryDepth',
+            'maxAdditionalUrls', 'discoveryOnly', 'calendarSearchRangeDays'];
+
+        const parsers = (Array.isArray(scraperConfig && scraperConfig.parsers) ? scraperConfig.parsers : [])
+            .filter(entry => entry && typeof entry === 'object')
+            .map(entry => {
+                const overrides = {};
+                for (const knob of scalarKnobs) {
+                    if (!Object.prototype.hasOwnProperty.call(entry, knob)) continue;
+                    const value = entry[knob];
+                    const globalValue = Object.prototype.hasOwnProperty.call(globalConfig, knob)
+                        ? globalConfig[knob]
+                        : undefined;
+                    if (value === globalValue) continue;
+                    overrides[knob] = { value, globalValue };
+                }
+                const parserBlockFlat = {
+                    ...this.flattenConfigForDiff(entry.ai && typeof entry.ai === 'object' ? entry.ai : {}, 'ai'),
+                    ...this.flattenConfigForDiff(entry.ocr && typeof entry.ocr === 'object' ? entry.ocr : {}, 'ocr')
+                };
+                for (const [key, value] of Object.entries(parserBlockFlat)) {
+                    const globalValue = globalComparisonFlat[key];
+                    if (value === globalValue) continue;
+                    overrides[key] = { value, globalValue };
+                }
+                return {
+                    name: typeof entry.name === 'string' ? entry.name : '',
+                    enabled: entry.enabled === true,
+                    urls: Array.isArray(entry.urls) ? entry.urls.map(url => String(url)) : [],
+                    parser: typeof entry.parser === 'string' ? entry.parser : '',
+                    overrides
+                };
+            });
+
+        const redacted = this.redactConfigSecrets({ global, parsers });
+        return {
+            global: redacted.global,
+            parsers: redacted.parsers,
+            json: JSON.stringify(redacted, null, 2)
+        };
     }
 
     extractHttpStatusCodeFromError(error) {
@@ -4238,6 +4409,200 @@ class SharedCore {
         return pending;
     }
 
+    // ------------------------------------------------------------------
+    // Overlong-field trim pipeline: scraped title/description/shortName
+    // values that exceed their display limits are shortened by ONE batched
+    // AI call per event — answers are accepted only when they are VERBATIM
+    // contiguous substrings of the original (never paraphrase, never a
+    // deterministic mid-word truncation). Mode knob (parserConfig.ai.trim.mode):
+    // 'report' (default) logs would-trim decisions without changing values;
+    // 'enforce' replaces the value; 'off' disables the pipeline entirely.
+    // Calendar-sourced values are never AI-trimmed (see
+    // buildAnalyzedCalendarEvent's detection-only evidence line).
+    // ------------------------------------------------------------------
+
+    // { mode, limits: { title, description, shortName } } from
+    // parserConfig.ai.trim. Mirrors getBearCheckMode: unset/invalid → 'report'.
+    getTrimConfig(parserConfig) {
+        const trim = parserConfig && parserConfig.ai && parserConfig.ai.trim && typeof parserConfig.ai.trim === 'object'
+            ? parserConfig.ai.trim
+            : null;
+        const mode = trim ? String(trim.mode || '').trim().toLowerCase() : '';
+        const limitOf = (raw, fallback) => {
+            const value = Number(raw);
+            return Number.isFinite(value) && value > 0 ? Math.floor(value) : fallback;
+        };
+        return {
+            mode: mode === 'enforce' || mode === 'off' ? mode : 'report',
+            limits: {
+                title: limitOf(trim && trim.titleMaxChars, 60),
+                description: limitOf(trim && trim.descriptionMaxChars, 600),
+                shortName: limitOf(trim && trim.shortNameMaxChars, 30)
+            }
+        };
+    }
+
+    // Pure detection: [{ field, value, maxChars }] for every trim-target field
+    // whose trimmed string value exceeds its limit. Targets are the canonical
+    // schema fields only — 'shorttitle' is a notes alias of shortName
+    // (event-schema.js), so shortName is the field that exists on events.
+    findOverlongFields(event, trimConfig) {
+        const overlong = [];
+        if (!event || typeof event !== 'object' || !trimConfig || !trimConfig.limits) return overlong;
+        for (const field of ['title', 'description', 'shortName']) {
+            const maxChars = trimConfig.limits[field];
+            if (!Number.isFinite(maxChars) || maxChars <= 0) continue;
+            const raw = event[field];
+            if (raw === null || raw === undefined) continue;
+            const value = String(raw).trim();
+            if (value.length > maxChars) {
+                overlong.push({ field, value, maxChars });
+            }
+        }
+        return overlong;
+    }
+
+    // Prompt for one event's batched trim request. EVENT carries the title
+    // only (no dates) so the AI-response cache key stays stable across runs.
+    buildFieldTrimPrompt({ eventTitle, entries }) {
+        const fieldLines = (Array.isArray(entries) ? entries : []).map(entry =>
+            `- field: ${entry.field}\n  max_chars: ${entry.maxChars}\n  value: ${JSON.stringify(entry.value)}`
+        );
+        return [
+            'You are shortening overlong text fields for one event.',
+            `EVENT: ${eventTitle}`,
+            'Each field below exceeds its maximum display length. Return a shorter version of each.',
+            'FIELDS:',
+            ...fieldLines,
+            'Rules:',
+            '- Each answer MUST be an EXACT contiguous substring of that field\'s original value — copy characters verbatim; never paraphrase, reorder, re-case, merge parts, or add words.',
+            '- Each answer must be at most max_chars characters long.',
+            '- For "title", keep the portion that names the event itself — drop venue, city, date, status text, and marketing phrases.',
+            '- For "description", keep the most informative complete sentences; start at a sentence start and end at a natural boundary.',
+            '- For "shortName", keep the shortest recognizable brand name.',
+            '- Never cut a word in the middle.',
+            'Return JSON only:',
+            '{"trims": {"<field>": {"value": "<exact contiguous substring>", "reason": "<one short sentence>"}}}'
+        ].join('\n');
+    }
+
+    // Deterministic anti-hallucination gate: an answer is usable only when it
+    // is non-empty, fits the limit, is strictly shorter than the original, and
+    // is a case-sensitive contiguous substring of the original value.
+    isVerbatimTrimAnswer(originalValue, answerText, maxChars) {
+        const answer = String(answerText === null || answerText === undefined ? '' : answerText).trim();
+        if (!answer) return false;
+        return answer.length <= maxChars
+            && answer.length < String(originalValue).trim().length
+            && String(originalValue).includes(answer);
+    }
+
+    // ONE AI call per event batching all overlong fields (passLabel
+    // 'field-trim', same callAiGenerate path arbitration uses — so the
+    // response cache applies). Gate pass + mode 'enforce' → value replaced;
+    // mode 'report' → value kept; gate fail / no answer → value kept. Every
+    // outcome is recorded on event._fieldTrims for evidence-line rendering.
+    // NEVER falls back to deterministic mid-word truncation.
+    async trimOverlongFieldsForEvent(event, trimConfig, aiConfig, httpAdapter) {
+        const overlong = this.findOverlongFields(event, trimConfig);
+        if (overlong.length === 0) return [];
+
+        const title = String(event.title || 'Unknown');
+        const prompt = this.buildFieldTrimPrompt({ eventTitle: title, entries: overlong });
+        const trimAiConfig = { ...aiConfig, numPredict: Math.min(Number(aiConfig.numPredict) || 800, 800) };
+        const rawResponse = await this.callAiGenerate(trimAiConfig, prompt, 'field-trim', httpAdapter);
+
+        let parsed = null;
+        if (rawResponse) {
+            try {
+                parsed = JSON.parse(this.extractFirstJsonObject(rawResponse) || rawResponse);
+            } catch (_) {
+                parsed = null;
+            }
+        }
+        const trims = parsed && typeof parsed === 'object'
+            ? (parsed.trims && typeof parsed.trims === 'object' ? parsed.trims : parsed)
+            : {};
+
+        const records = [];
+        for (const entry of overlong) {
+            const answerEntry = trims[entry.field];
+            const answerText = answerEntry && typeof answerEntry === 'object' ? answerEntry.value : answerEntry;
+            const answer = String(answerText === null || answerText === undefined ? '' : answerText).trim();
+            if (this.isVerbatimTrimAnswer(entry.value, answer, entry.maxChars)) {
+                if (trimConfig.mode === 'enforce') {
+                    event[entry.field] = answer;
+                    records.push({
+                        field: entry.field,
+                        status: 'trimmed',
+                        originalLength: entry.value.length,
+                        trimmedLength: answer.length,
+                        trimmedValue: answer,
+                        maxChars: entry.maxChars
+                    });
+                    console.log(`✂️ TRIM: "${title}" — ${entry.field} ${entry.value.length} → ${answer.length} chars (verbatim substring)`);
+                } else {
+                    records.push({
+                        field: entry.field,
+                        status: 'would-trim',
+                        originalLength: entry.value.length,
+                        trimmedLength: answer.length,
+                        trimmedValue: answer,
+                        maxChars: entry.maxChars
+                    });
+                    console.log(`✂️ TRIM [report]: "${title}" — ${entry.field} would trim ${entry.value.length} → ${answer.length} chars`);
+                }
+            } else {
+                records.push({
+                    field: entry.field,
+                    status: 'failed-gate',
+                    originalLength: entry.value.length,
+                    maxChars: entry.maxChars
+                });
+                console.log(`✂️ TRIM: "${title}" — ${entry.field} answer failed verbatim gate ("${answer.slice(0, 80)}") — original kept`);
+            }
+        }
+        event._fieldTrims = records;
+        return records;
+    }
+
+    // Trim pass over one parser's bear events (processParser: after the bear
+    // filter, before dedup — so trimmed values feed dedup keys and merges).
+    // Zero AI calls when mode is 'off', AI is unavailable, or nothing is
+    // overlong. NOTE: report mode still fires AI calls for overlong values —
+    // a future golden-fixture text exceeding a limit would fire AI calls
+    // against the fixture transport in report mode.
+    async applyOverlongFieldTrims(events, parserConfig, httpAdapter) {
+        const list = Array.isArray(events) ? events : [];
+        if (list.length === 0) return list;
+        const trimConfig = this.getTrimConfig(parserConfig);
+        if (trimConfig.mode === 'off') return list;
+        const rawAi = parserConfig && parserConfig.ai && typeof parserConfig.ai === 'object' ? parserConfig.ai : {};
+        if (rawAi.enabled === false) return list;
+        if (!httpAdapter || typeof httpAdapter.postJson !== 'function') return list;
+        const aiConfig = this.resolveAiConfig(rawAi);
+        if (!aiConfig.enabled || !aiConfig.endpoint) return list;
+
+        let overlongCount = 0;
+        let trimmedCount = 0;
+        let flaggedCount = 0;
+        for (const event of list) {
+            const records = await this.trimOverlongFieldsForEvent(event, trimConfig, aiConfig, httpAdapter);
+            for (const record of records) {
+                overlongCount++;
+                if (record.status === 'trimmed') {
+                    trimmedCount++;
+                } else {
+                    flaggedCount++;
+                }
+            }
+        }
+        if (overlongCount > 0) {
+            console.log(`✂️ TRIM: ${list.length} event(s) checked, ${overlongCount} overlong field(s), ${trimmedCount} trimmed, ${flaggedCount} flagged`);
+        }
+        return list;
+    }
+
     async deduplicateEvents(events, httpAdapter, globalConfig = null) {
         const seen = new Map();
         const deduplicated = [];
@@ -4536,6 +4901,11 @@ class SharedCore {
         // by the field loop below, so an existing-only _organizer would be lost.
         if (!mergedEvent._organizer && existingEvent && typeof existingEvent._organizer === 'string' && existingEvent._organizer) {
             mergedEvent._organizer = existingEvent._organizer;
+        }
+        // Same carry for field-trim records: an existing-only _fieldTrims
+        // would otherwise be lost before evidence lines render.
+        if (!mergedEvent._fieldTrims && existingEvent && Array.isArray(existingEvent._fieldTrims) && existingEvent._fieldTrims.length > 0) {
+            mergedEvent._fieldTrims = existingEvent._fieldTrims;
         }
 
         // Helper function to check if a value is empty/null/undefined
@@ -5494,6 +5864,14 @@ class SharedCore {
             _parserConfig: newEvent._parserConfig,
             _fieldPriorities: newEvent._fieldPriorities
         };
+
+        // Carry field-trim records across the calendar merge (like _organizer
+        // in mergeParsedEvents): underscore fields are skipped by the merge
+        // loop, so the scraped side's _fieldTrims would otherwise be lost
+        // before the evidence lines render.
+        if (Array.isArray(newEvent._fieldTrims) && newEvent._fieldTrims.length > 0) {
+            finalEvent._fieldTrims = newEvent._fieldTrims;
+        }
         
         // STEP 6: Pass all three objects to rich display for comparison
         
@@ -6855,6 +7233,26 @@ class SharedCore {
             // serialization). Computed AFTER the final merged object exists so
             // the lines describe exactly what will be written.
             analyzedEvent._evidenceLines = this.buildEventEvidenceLines(analyzedEvent, { cityKey: analyzedEvent.city });
+
+            // Detection-only overlong flag for calendar-sourced values: the
+            // trim pipeline only ever sees scraped values (and stamps them
+            // with _fieldTrims), so a final value that exceeds its limit on a
+            // field WITHOUT a trim record came through the calendar side —
+            // which is never AI-trimmed. No AI call here, just visibility.
+            const overlongTrimConfig = this.getTrimConfig(
+                analyzedEvent._parserConfig || (config && config.ai ? { ai: config.ai } : null)
+            );
+            if (overlongTrimConfig.mode !== 'off') {
+                const recordedTrimFields = new Set(
+                    (Array.isArray(analyzedEvent._fieldTrims) ? analyzedEvent._fieldTrims : [])
+                        .map(trim => trim && trim.field)
+                        .filter(Boolean)
+                );
+                for (const overlong of this.findOverlongFields(analyzedEvent, overlongTrimConfig)) {
+                    if (recordedTrimFields.has(overlong.field)) continue;
+                    analyzedEvent._evidenceLines.push(`⚠️ ${overlong.field} overlong (${overlong.value.length} > ${overlong.maxChars} chars) — calendar-sourced, not trimmed`);
+                }
+            }
 
             return analyzedEvent;
         }
