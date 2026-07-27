@@ -6138,11 +6138,21 @@ test('venue-site identity: established for the massive-shaped host, fails closed
   assert.equal(identity.name, 'Massive');
   assert.equal(identity.city, 'seattle');
   assert.equal(identity.hostLevel, true);
+  assert.deepEqual(identity.signals, ['venue-role', 'curated-name', 'address-consensus']);
 
   // Any organizer-resolved page on the host blocks
   assert.equal(parser.getEstablishedVenueSiteIdentity({ ...entry, blocked: true }, entry.consensusKey), null);
-  // No page ever resolved venue role
-  assert.equal(parser.getEstablishedVenueSiteIdentity({ ...entry, venueRoleSeen: false }, entry.consensusKey), null);
+  // Undetermined site role does NOT block host-level identity — curated name
+  // + matching address consensus are the load-bearing facts (run
+  // 20260727-123001: massive.club never resolved 'venue' yet both held)
+  const undeterminedIdentity = parser.getEstablishedVenueSiteIdentity(
+    { ...entry, venueRoleSeen: false }, entry.consensusKey);
+  assert.ok(undeterminedIdentity, 'undetermined role + curated name + address consensus → established');
+  assert.equal(undeterminedIdentity.hostLevel, true);
+  assert.deepEqual(undeterminedIdentity.signals, ['curated-name', 'address-consensus']);
+  // The weaker per-event POI path still REQUIRES an explicit venue-role page
+  assert.equal(parser.getEstablishedVenueSiteIdentity(
+    { ...entry, venueRoleSeen: false, consensusKey: '', consensusAddress: '' }, ''), null);
   // A consensus address CONTRADICTING the curated address establishes nothing
   assert.equal(parser.getEstablishedVenueSiteIdentity(
     { ...entry, consensusAddress: '525 S Riverfront Blvd, Dallas, TX' }, entry.consensusKey), null);
@@ -6266,6 +6276,28 @@ test('venue-site identity: harvest records venue-role facts and the consensus pa
   assert.equal(stashed.blocked, false);
   assert.equal(stashed.consensusKey, '', 'no map-directions addresses → no consensus');
   assert.equal(parser.venueSiteHarvest, null, 'harvest still resets per run');
+});
+
+test('venue-site harvest: an undetermined page records the venue name (not the role); an organizer page records neither', () => {
+  // Undetermined role (pageSiteRole never resolved — the massive.club shape,
+  // run 20260727-123001): the published name is still harvested so identity
+  // can be established from curated-name + address-consensus alone.
+  const parser = createIdentityParser();
+  const undeterminedData = { url: 'https://massive.club/events', html: VENUE_SITE_HTML, pageSiteRole: '' };
+  parser.harvestVenueSiteAddresses(undeterminedData);
+  const entry = parser.venueSiteHarvest['massive.club'];
+  assert.equal(entry.venueRoleSeen, false, 'undetermined never asserts the venue role');
+  assert.equal(entry.venueName, 'MASSIVE', 'the page name is harvested anyway');
+  assert.equal(entry.blocked, false);
+
+  // Organizer role: blocks the host and records no name
+  const organizerParser = createIdentityParser();
+  const organizerData = { url: 'https://massive.club/events', html: VENUE_SITE_HTML, pageSiteRole: 'organizer' };
+  organizerParser.harvestVenueSiteAddresses(organizerData);
+  const blockedEntry = organizerParser.venueSiteHarvest['massive.club'];
+  assert.equal(blockedEntry.blocked, true);
+  assert.equal(blockedEntry.venueRoleSeen, false);
+  assert.equal(blockedEntry.venueName, '', 'organizer pages contribute no identity facts');
 });
 
 test('KNOWN VENUE curated-match prompt line appears only with a unique curated match; the base line stays byte-identical', () => {

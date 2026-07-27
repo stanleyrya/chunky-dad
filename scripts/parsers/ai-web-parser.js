@@ -10353,12 +10353,18 @@ TEXT:
     }
 
     // Identity facts for the venue-site identity pass: remember that SOME page
-    // of this host resolved siteRole 'venue', and the venue name that page
-    // declared (first non-empty wins). Organizer pages still block via the
-    // existing veto — identity is only ever established on unblocked hosts.
+    // of this host resolved siteRole 'venue', and the venue name the host
+    // declares (first non-empty wins). The name is harvested from ANY
+    // non-organizer page — most venue sites never positively resolve 'venue'
+    // (run 20260727-123001: massive.club stayed "undetermined" on every page,
+    // which starved the identity guard of a name it had plainly published).
+    // Recording a name asserts nothing by itself; organizer pages record
+    // nothing and still block via the existing veto.
     recordVenueSiteRoleFacts(entry, htmlData) {
-        if (!entry || this.getPageSiteRole(htmlData) !== 'venue') return;
-        entry.venueRoleSeen = true;
+        if (!entry) return;
+        const role = this.getPageSiteRole(htmlData);
+        if (role === 'organizer') return;
+        if (role === 'venue') entry.venueRoleSeen = true;
         if (!entry.venueName) entry.venueName = this.getPageVenueName(htmlData);
     }
 
@@ -10401,9 +10407,7 @@ TEXT:
         if (this.getPageSiteRole(htmlData) === 'organizer') {
             this.getVenueSiteHarvestEntry(host).blocked = true;
         }
-        if (this.getPageSiteRole(htmlData) === 'venue') {
-            this.recordVenueSiteRoleFacts(this.getVenueSiteHarvestEntry(host), htmlData);
-        }
+        this.recordVenueSiteRoleFacts(this.getVenueSiteHarvestEntry(host), htmlData);
         for (const event of events) {
             if (event && typeof event === 'object' && !event._venueSitePageHost) {
                 event._venueSitePageHost = host;
@@ -10499,9 +10503,13 @@ TEXT:
 
     // WHO a crawled site is — established only when independent hard facts
     // converge, failing closed on ANY miss:
-    //   1. some page of the host resolved siteRole 'venue' AND no page ever
-    //      resolved 'organizer' (blocked — the same veto the address
-    //      consensus honors);
+    //   1. no page of the host ever resolved siteRole 'organizer' (blocked —
+    //      the same veto the address consensus honors). A positive 'venue'
+    //      resolution is NOT required for host-level identity: most venue
+    //      sites stay "undetermined" (run 20260727-123001 — massive.club
+    //      never resolved 'venue' while its curated name and 7-page address
+    //      consensus both held), and the two hard facts below are already
+    //      independent and specific.
     //   2. the harvested venue name uniquely matches ONE curated bar
     //      (findCuratedBarCityByName — ambiguous cities and generic franchise
     //      stems never establish identity);
@@ -10509,7 +10517,8 @@ TEXT:
     //      the curated bar's address (whole-host identity, hostLevel: true),
     //      or — when the host produced no consensus at all — identity applies
     //      per-event only (hostLevel: false; the caller requires the event's
-    //      own _geoPoiName to equal the bar's name key). A consensus that
+    //      own _geoPoiName to equal the bar's name key), and THIS weaker path
+    //      still requires an explicit venue-role page. A consensus that
     //      CONTRADICTS the curated address establishes nothing.
     // Ticketing-platform org pages (eventbrite.com) can never establish
     // identity: the registrable host is the platform's, so its venue name
@@ -10517,22 +10526,30 @@ TEXT:
     // bar — the curated-name condition is the structural guard.
     getEstablishedVenueSiteIdentity(entry, consensusKey = '') {
         if (!entry || typeof entry !== 'object') return null;
-        if (entry.venueRoleSeen !== true || entry.blocked !== false) return null;
+        if (entry.blocked !== false) return null;
         const venueName = typeof entry.venueName === 'string' ? entry.venueName.trim() : '';
         if (!venueName) return null;
         if (!this.core || typeof this.core.findCuratedBarCityByName !== 'function') return null;
         const match = this.core.findCuratedBarCityByName(venueName);
         if (!match || !match.city || !match.bar) return null;
         const curatedBar = match.bar;
+        const roleSignals = entry.venueRoleSeen === true ? ['venue-role'] : [];
         if (consensusKey) {
             const consensusAddress = typeof entry.consensusAddress === 'string' ? entry.consensusAddress.trim() : '';
             const curatedAddress = typeof curatedBar.address === 'string' ? curatedBar.address.trim() : '';
             if (!curatedAddress || !this.venueSiteIdentityAddressesAgree(consensusAddress, curatedAddress)) {
                 return null;
             }
-            return { name: curatedBar.name, city: match.city, curatedBar, hostLevel: true };
+            return {
+                name: curatedBar.name, city: match.city, curatedBar, hostLevel: true,
+                signals: [...roleSignals, 'curated-name', 'address-consensus']
+            };
         }
-        return { name: curatedBar.name, city: match.city, curatedBar, hostLevel: false };
+        if (entry.venueRoleSeen !== true) return null;
+        return {
+            name: curatedBar.name, city: match.city, curatedBar, hostLevel: false,
+            signals: ['venue-role', 'curated-name', 'geo-poi']
+        };
     }
 
     // Deterministic KNOWN-VENUE replacement pass, run by shared-core's
@@ -10557,9 +10574,7 @@ TEXT:
             const cityBars = typeof this.core.getCuratedCityBars === 'function'
                 ? this.core.getCuratedCityBars(identity.city)
                 : null;
-            const signals = identity.hostLevel
-                ? ['venue-role', 'curated-name', 'address-consensus']
-                : ['venue-role', 'curated-name', 'geo-poi'];
+            const signals = identity.signals;
             let identityLogged = false;
             const logIdentityOnce = () => {
                 if (identityLogged) return;
