@@ -49,6 +49,7 @@ const EVENT_KEY_ALIASES = {
 
     recurrence: 'recurrence',
     rrule: 'recurrence',
+    recurrencerule: 'recurrence',
     type: 'type',
     eventtype: 'type',
     recurrenceid: 'recurrenceId',
@@ -141,7 +142,7 @@ const DEFAULT_NOTES_EXCLUDED_FIELDS = new Set([
     'placeId',
     'matchKey',
     'links', 'durationMinutes',
-    'time', 'day', 'recurring', 'recurrence',
+    'time', 'day', 'recurring', 'recurrence', 'recurrenceRule',
     'isDeletingOverride'
 ]);
 
@@ -495,6 +496,169 @@ const AI_FIELD_SIGNAL_REGEXES = {
     ]
 };
 
+// ============================================================================
+// RECURRING-EVENT ICS EXPORT (pure helpers)
+// ============================================================================
+// The scraper NEVER writes or mutates recurring series in the calendar.
+// Detected series are surfaced in the results UI and exported as an .ics the
+// owner imports manually — these helpers build that ICS. Conventions mirror
+// testing/event-builder.html generateICS (UID shape, TZID local wall-clock
+// datetimes, PRODID), plus RFC 5545 75-octet line folding.
+
+function escapeIcsText(text) {
+    return String(text)
+        .replace(/\\/g, '\\\\')
+        .replace(/\r\n|\r|\n/g, '\\n')
+        .replace(/,/g, '\\,')
+        .replace(/;/g, '\\;');
+}
+
+// RFC 5545 §3.1: content lines SHOULD NOT exceed 75 octets (excluding CRLF);
+// longer lines fold onto continuation lines that begin with a single space.
+// Counts UTF-8 octets and never splits inside a code point.
+function foldIcsLine(line) {
+    const text = String(line);
+    const octetsOf = (codePoint) => {
+        if (codePoint <= 0x7f) return 1;
+        if (codePoint <= 0x7ff) return 2;
+        if (codePoint <= 0xffff) return 3;
+        return 4;
+    };
+    const folded = [];
+    let current = '';
+    let currentOctets = 0;
+    for (const char of text) {
+        const octets = octetsOf(char.codePointAt(0));
+        if (currentOctets + octets > 75) {
+            folded.push(current);
+            current = ' ';
+            currentOctets = 1;
+        }
+        current += char;
+        currentOctets += octets;
+    }
+    folded.push(current);
+    return folded.join('\r\n');
+}
+
+function formatIcsDateUtc(date) {
+    const parsed = date instanceof Date ? date : new Date(date);
+    if (isNaN(parsed.getTime())) return '';
+    return parsed.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+}
+
+// Local wall-clock YYYYMMDDTHHMMSS in an IANA timezone (no trailing Z) —
+// paired with ;TZID= on DTSTART/DTEND. Returns '' when the timezone cannot
+// be resolved so callers can fall back to UTC-Z values.
+function formatIcsDateInTimezone(date, timezone) {
+    const parsed = date instanceof Date ? date : new Date(date);
+    if (isNaN(parsed.getTime()) || !timezone) return '';
+    try {
+        const parts = new Intl.DateTimeFormat('en-US', {
+            timeZone: timezone,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        }).formatToParts(parsed);
+        const values = {};
+        parts.forEach(part => {
+            if (part.type !== 'literal') {
+                values[part.type] = part.value;
+            }
+        });
+        if (!values.year || !values.month || !values.day) return '';
+        const hour = values.hour === '24' ? '00' : (values.hour || '00');
+        const minute = values.minute || '00';
+        const second = values.second || '00';
+        return `${values.year}${values.month}${values.day}T${hour}${minute}${second}`;
+    } catch (error) {
+        return '';
+    }
+}
+
+// Same slug rules as the event-builder UID slug (testing/event-builder.html).
+function slugifyIcsText(value) {
+    return String(value || '')
+        .toLowerCase()
+        .trim()
+        .replace(/[\s_]+/g, '-')
+        .replace(/[^\w-]+/g, '')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 60);
+}
+
+// Build a complete VCALENDAR/VEVENT for one recurring event. DESCRIPTION is
+// the event's standard notes (EventSchema.formatEventNotes) PLUS an explicit
+// `recurrence: <rrule>` line — the notes key the merge machinery reads as a
+// series-detection signal once the owner has imported the ICS. (The default
+// notes-exclusion list applies to scraper CALENDAR writes; this ICS is the
+// deliberate, owner-driven channel, so the line is appended explicitly.)
+// options: { timezone, now } — now is injectable for deterministic tests.
+function buildRecurringEventIcs(event, options = {}) {
+    if (!event || typeof event !== 'object') return '';
+    const rrule = String(event.recurrenceRule || event.recurrence || '')
+        .replace(/^RRULE\s*:/i, '')
+        .trim();
+    const title = String(event.title || event.name || '').trim() || 'chunky-dad';
+    const timezone = String(options.timezone || event.timezone || '').trim();
+    const now = options.now instanceof Date ? options.now : new Date();
+
+    // UID matches the event-builder style: <slug>-<utcstamp>@chunky.dad
+    // (e.g. fuzzy-20260503T203532Z@chunky.dad).
+    const uid = `${slugifyIcsText(title) || 'chunky-dad'}-${formatIcsDateUtc(now)}@chunky.dad`;
+
+    const dateProperty = (name, date) => {
+        const local = timezone ? formatIcsDateInTimezone(date, timezone) : '';
+        if (local) return `${name};TZID=${timezone}:${local}`;
+        const utc = formatIcsDateUtc(date);
+        return utc ? `${name}:${utc}` : '';
+    };
+
+    const lines = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//chunky.dad//Event Builder//EN',
+        'CALSCALE:GREGORIAN',
+        'METHOD:PUBLISH',
+        'BEGIN:VEVENT',
+        `UID:${uid}`,
+        `DTSTAMP:${formatIcsDateUtc(now)}`
+    ];
+    const dtStart = dateProperty('DTSTART', event.startDate);
+    if (dtStart) lines.push(dtStart);
+    const dtEnd = event.endDate ? dateProperty('DTEND', event.endDate) : '';
+    if (dtEnd) lines.push(dtEnd);
+    lines.push(`SUMMARY:${escapeIcsText(title)}`);
+
+    const notes = formatEventNotes(event);
+    const descriptionText = rrule
+        ? `${notes ? `${notes}\n` : ''}recurrence: ${escapeText(rrule)}`
+        : notes;
+    if (descriptionText) {
+        lines.push(`DESCRIPTION:${escapeIcsText(descriptionText)}`);
+    }
+    const website = String(event.website || event.url || '').trim();
+    if (website) {
+        lines.push(`URL:${escapeIcsText(website)}`);
+    }
+    lines.push('STATUS:CONFIRMED');
+    lines.push('TRANSP:OPAQUE');
+    if (rrule) {
+        lines.push(`RRULE:${rrule}`);
+    }
+    const location = String(event.location || '').trim();
+    if (location) {
+        lines.push(`LOCATION:${escapeIcsText(location)}`);
+    }
+    lines.push('END:VEVENT', 'END:VCALENDAR');
+    return lines.map(foldIcsLine).join('\r\n');
+}
+
 const EventSchema = {
     EVENT_KEY_ALIASES,
     URL_LIKE_FIELDS,
@@ -512,7 +676,13 @@ const EventSchema = {
     isUrlLikeField,
     parseNotesIntoFields,
     formatEventNotes,
-    getEventBuilderStateKey
+    getEventBuilderStateKey,
+    escapeIcsText,
+    foldIcsLine,
+    formatIcsDateUtc,
+    formatIcsDateInTimezone,
+    slugifyIcsText,
+    buildRecurringEventIcs
 };
 
 if (typeof module !== 'undefined' && module.exports) {

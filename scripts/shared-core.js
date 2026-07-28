@@ -7168,6 +7168,14 @@ class SharedCore {
             return normalized.length > 0 ? normalized : null;
         };
         const eventIdentifierRaw = normalizeIdentifier(existingEvent.identifier || '');
+        // Adapter-confirmed series (published-ICS lookup or wide-window
+        // identifier probe): the identifier was positively established as a
+        // recurring series this run — hands off, create overrides instead.
+        if (eventIdentifierRaw &&
+            this._confirmedSeriesIdentifiers &&
+            this._confirmedSeriesIdentifiers.has(eventIdentifierRaw)) {
+            return true;
+        }
         const eventIdentifierInfo = this.parseScriptableIdentifier(eventIdentifierRaw);
         if (eventIdentifierInfo.recurrenceDate) {
             return true;
@@ -7225,6 +7233,49 @@ class SharedCore {
         return false;
     }
 
+    // Record an identifier positively confirmed as a recurring series this
+    // run (published-ICS lookup or wide-window probe). Consulted by
+    // shouldCreateOverrideFromRecurringMatch so series never masquerade as
+    // normal events when the narrow search window saw only one instance.
+    noteConfirmedRecurringSeries(identifier) {
+        const normalized = identifier === null || identifier === undefined
+            ? ''
+            : String(identifier).trim();
+        if (!normalized) return;
+        if (!this._confirmedSeriesIdentifiers) {
+            this._confirmedSeriesIdentifiers = new Set();
+        }
+        this._confirmedSeriesIdentifiers.add(normalized);
+    }
+
+    // Analyze one event, then — when it merge-matched an existing calendar
+    // event WITHOUT any series signal firing — ask the adapter for a targeted
+    // series probe (published calendar ICS first, wide-window identifier
+    // probe as fallback; both adapter-side). A confirmed series feeds back
+    // into the existing shouldCreateOverrideFromRecurringMatch hands-off path
+    // via noteConfirmedRecurringSeries + re-analysis. Fail open: probe
+    // absence or errors leave today's behavior untouched.
+    async resolveCalendarAnalysisWithSeriesProbe(event, existingEventsData, mergeMode, calendarAdapter) {
+        let analysis = this.analyzeEventAction(event, existingEventsData, mergeMode);
+        if (analysis.action !== 'merge' || !analysis.existingEvent) {
+            return analysis;
+        }
+        if (!calendarAdapter || typeof calendarAdapter.probeRecurringSeries !== 'function') {
+            return analysis;
+        }
+        try {
+            const isSeries = await calendarAdapter.probeRecurringSeries(analysis.existingEvent, event);
+            if (isSeries === true) {
+                const identifier = analysis.existingEvent.identifier || analysis.existingEvent.id || '';
+                this.noteConfirmedRecurringSeries(identifier);
+                analysis = this.analyzeEventAction(event, existingEventsData, mergeMode);
+            }
+        } catch (error) {
+            // Fail open — probe errors never change merge behavior.
+        }
+        return analysis;
+    }
+
     resolveRecurringMergeCandidate(existingEventsData, existingEvent) {
         if (!this.shouldCreateOverrideFromRecurringMatch(existingEvent, existingEventsData)) {
             return null;
@@ -7278,10 +7329,84 @@ class SharedCore {
     // -------------------------------------------------------------------------
 
     // Events from parsers marked dryRun must never reach calendar writes,
-    // regardless of which path (automation or interactive prompt) executes them
+    // regardless of which path (automation or interactive prompt) executes them.
+    // Recurring series events are equally withheld: they are display+export
+    // only (owner imports the ICS; the scraper never writes recurring series).
     static filterEventsForExecution(analyzedEvents) {
         if (!Array.isArray(analyzedEvents)) return [];
-        return analyzedEvents.filter(event => event?._parserConfig?.dryRun !== true);
+        return analyzedEvents.filter(event =>
+            event?._parserConfig?.dryRun !== true &&
+            !SharedCore.isRecurringSeriesEvent(event));
+    }
+
+    // An event that DEFINES a recurring series: stamped _recurring in
+    // normalization, or carrying a non-empty extracted RRULE.
+    static isRecurringSeriesEvent(event) {
+        if (!event || typeof event !== 'object') return false;
+        if (event._recurring === true) return true;
+        return typeof event.recurrenceRule === 'string' && event.recurrenceRule.trim() !== '';
+    }
+
+    // Scriptable identifiers look like `<calendarUUID>:<icsUid>` — the suffix
+    // after the FIRST colon is the ICS UID verbatim (device-verified for both
+    // `…:6thhos5ct3pllq5kmvsp7infd8@google.com` and
+    // `…:fuzzy-20260503T203532Z@chunky.dad`). Returns null when there is no
+    // colon-separated suffix to extract.
+    static extractIcsUidFromIdentifier(identifier) {
+        if (identifier === null || identifier === undefined) return null;
+        const text = String(identifier).trim();
+        const colonIndex = text.indexOf(':');
+        if (colonIndex < 0) return null;
+        const uid = text.slice(colonIndex + 1).trim();
+        return uid.length > 0 ? uid : null;
+    }
+
+    // Light regex-level scan of a published calendar ICS (no full parser):
+    // walks BEGIN:VEVENT blocks after unfolding continuation lines and maps
+    // each UID to whether that block carries an RRULE. Returns null for
+    // non-string/empty input (callers fail open).
+    static extractRecurringUidsFromIcs(icsText) {
+        if (typeof icsText !== 'string' || icsText.trim() === '') return null;
+        // Unfold RFC 5545 folded lines (CRLF/LF followed by space or tab).
+        const unfolded = icsText.replace(/\r?\n[ \t]/g, '');
+        const uids = new Map();
+        const blockRegex = /BEGIN:VEVENT([\s\S]*?)END:VEVENT/g;
+        let match;
+        while ((match = blockRegex.exec(unfolded)) !== null) {
+            const block = match[1];
+            const uidMatch = block.match(/^UID[^:]*:(.+)$/m);
+            if (!uidMatch) continue;
+            const uid = uidMatch[1].trim();
+            if (!uid) continue;
+            const hasRrule = /^RRULE[:;]/m.test(block);
+            // A series' own VEVENT wins over override instances that share
+            // the UID but carry no RRULE.
+            uids.set(uid, hasRrule || uids.get(uid) === true);
+        }
+        return uids;
+    }
+
+    // Pure decision for the wide-window identifier probe: ≥2 calendar
+    // instances sharing the matched identifier means the identifier belongs
+    // to a recurring series (occurrences of a series share one identifier).
+    static resolveSeriesProbeDecision(events, identifier) {
+        const normalized = identifier === null || identifier === undefined
+            ? ''
+            : String(identifier).trim();
+        if (!normalized || !Array.isArray(events)) {
+            return { instanceCount: 0, isSeries: false };
+        }
+        let instanceCount = 0;
+        for (const candidate of events) {
+            if (!candidate) continue;
+            const candidateIdentifier = candidate.identifier === null || candidate.identifier === undefined
+                ? ''
+                : String(candidate.identifier).trim();
+            if (candidateIdentifier === normalized) {
+                instanceCount += 1;
+            }
+        }
+        return { instanceCount, isSeries: instanceCount >= 2 };
     }
 
     static normalizeOverrideUid(value) {
@@ -7490,6 +7615,11 @@ class SharedCore {
             facebook: { priority: ["ai-web"], merge: "ai" },
             website: { priority: ["ai-web"], merge: "ai" },
             description: { priority: ["ai-web"], merge: "ai" },
+            // rrule → event.recurrenceRule: extraction is anti-hallucination
+            // gated in the schema prompt line (explicit repeat schedules only).
+            // Recurring events are display+export only — never auto-written to
+            // the calendar (see prepareEventsForCalendar RECURRING withhold).
+            rrule: { priority: ["ai-web"], merge: "ai" },
             bar: { priority: ["ai-web"], merge: "ai" },
             address: { priority: ["ai-web"], merge: "ai" },
             startDate: { priority: ["ai-web"], merge: "ai" },
@@ -7616,8 +7746,9 @@ class SharedCore {
             // Get existing events from the adapter
             const existingEvents = await calendarAdapter.getExistingEvents(event);
 
-            // Analyze what action to take
-            const analysis = this.analyzeEventAction(event, existingEvents, mergeMode);
+            // Analyze what action to take (with the adapter-side recurring
+            // series probe when a merge match carries no series signal yet)
+            const analysis = await this.resolveCalendarAnalysisWithSeriesProbe(event, existingEvents, mergeMode, calendarAdapter);
 
             // Manual override, demote direction: a kept event whose identity-
             // matched calendar record carries `bearSource: manual-not-bear…` is
@@ -7659,7 +7790,7 @@ class SharedCore {
                 const droppedEvent = dropped && dropped.event;
                 if (!droppedEvent || dropped.rescued) continue;
                 const existingEvents = await calendarAdapter.getExistingEvents(droppedEvent);
-                const analysis = this.analyzeEventAction(droppedEvent, existingEvents, mergeMode);
+                const analysis = await this.resolveCalendarAnalysisWithSeriesProbe(droppedEvent, existingEvents, mergeMode, calendarAdapter);
                 const matchedRecord = analysis.existingEvent || analysis.sourceEvent || null;
                 if (!matchedRecord || this.getManualBearVerdictFromRecord(matchedRecord) !== 'manual-bear') continue;
                 console.log(`🐻 BEAR CHECK: "${droppedEvent.title || 'Unknown'}" → bear (manual override on calendar record)`);
@@ -7829,6 +7960,19 @@ class SharedCore {
                     if (recordedTrimFields.has(overlong.field)) continue;
                     analyzedEvent._evidenceLines.push(`⚠️ ${overlong.field} overlong (${overlong.value.length} > ${overlong.maxChars} chars) — calendar-sourced, not trimmed`);
                 }
+            }
+
+            // Recurring series are display+export only: keep the card in the
+            // results UI (flag-don't-drop) but withhold it from calendar
+            // execution — the owner saves the series via the ICS export
+            // button instead (the scraper never writes recurring series).
+            if (SharedCore.isRecurringSeriesEvent(event)) {
+                analyzedEvent._recurring = true;
+                analyzedEvent._recurringExport = true;
+                if (!analyzedEvent.recurrenceRule && typeof event.recurrenceRule === 'string') {
+                    analyzedEvent.recurrenceRule = event.recurrenceRule;
+                }
+                console.log(`🔁 RECURRING: "${event.title || 'Unknown'}" withheld from calendar write — save via ICS export`);
             }
 
             return analyzedEvent;

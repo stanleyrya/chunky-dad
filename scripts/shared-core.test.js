@@ -9085,3 +9085,209 @@ test('greater palm springs aliases resolve the palm-springs timezone via the rea
   // Bare "coachella" is deliberately NOT an alias (festival-name collision)
   assert.equal(core.getCityTimezone('coachella'), null);
 });
+
+// Recurring events: display+export only, never auto-written (series wave)
+// ---------------------------------------------------------------------------
+
+test('getResolvedFieldPriorities: rrule is requested from AI extraction by default', () => {
+  const core = createCore();
+  const priorities = core.getResolvedFieldPriorities({});
+  assert.ok(priorities.rrule, 'rrule default priority entry exists');
+  assert.deepEqual(priorities.rrule.priority, ['ai-web'], 'rrule rides the ai-web extraction path');
+  assert.equal(priorities.rrule.merge, 'ai', 'merge strategy parallels description');
+  // Explicit parser config still overrides the default (hardcoded config is the override)
+  const overridden = core.getResolvedFieldPriorities({
+    fieldPriorities: { rrule: { priority: ['static'], merge: 'clobber' } }
+  });
+  assert.deepEqual(overridden.rrule.priority, ['static']);
+});
+
+test('isRecurringSeriesEvent: _recurring stamp or non-empty recurrenceRule', () => {
+  assert.equal(SharedCore.isRecurringSeriesEvent({ recurrenceRule: 'FREQ=WEEKLY;BYDAY=FR' }), true);
+  assert.equal(SharedCore.isRecurringSeriesEvent({ _recurring: true }), true);
+  assert.equal(SharedCore.isRecurringSeriesEvent({ recurrenceRule: '' }), false);
+  assert.equal(SharedCore.isRecurringSeriesEvent({ recurrenceRule: '   ' }), false);
+  assert.equal(SharedCore.isRecurringSeriesEvent({ title: 'plain' }), false);
+  assert.equal(SharedCore.isRecurringSeriesEvent(null), false);
+});
+
+test('recurring events are excluded from calendar-write execution but present in results', async () => {
+  const core = createCore();
+  const adapter = buildPrepCalendarAdapter([]);
+  const recurring = {
+    title: 'FUZZY',
+    startDate: new Date('2026-08-08T02:00:00.000Z'),
+    endDate: new Date('2026-08-08T07:00:00.000Z'),
+    bar: 'Dallas Eagle',
+    city: 'dallas',
+    recurrenceRule: 'FREQ=WEEKLY;BYDAY=FR'
+  };
+  const plain = {
+    title: 'ONE-OFF',
+    startDate: new Date('2026-08-09T02:00:00.000Z'),
+    city: 'dallas'
+  };
+
+  const analyzed = await core.prepareEventsForCalendar([recurring, plain], adapter, {});
+
+  assert.equal(analyzed.length, 2, "flag-don't-drop: the recurring event stays in the results");
+  const analyzedRecurring = analyzed.find(event => event.title === 'FUZZY');
+  assert.equal(analyzedRecurring._recurring, true);
+  assert.equal(analyzedRecurring._recurringExport, true, 'stamped display+export only');
+  assert.equal(analyzedRecurring.recurrenceRule, 'FREQ=WEEKLY;BYDAY=FR', 'rrule survives for the ICS export');
+
+  const executable = SharedCore.filterEventsForExecution(analyzed);
+  assert.deepEqual(executable.map(event => event.title), ['ONE-OFF'],
+    'recurring events never reach calendar writes');
+});
+
+test('wide-window probe decision: ≥2 instances sharing the identifier → series', () => {
+  const identifier = 'CAL-UUID:fuzzy-20260503T203532Z@chunky.dad';
+  const one = SharedCore.resolveSeriesProbeDecision([{ identifier }], identifier);
+  assert.deepEqual(one, { instanceCount: 1, isSeries: false }, 'a single instance is not a series');
+  const many = SharedCore.resolveSeriesProbeDecision([
+    { identifier },
+    { identifier: 'CAL-UUID:other@chunky.dad' },
+    { identifier },
+    null
+  ], identifier);
+  assert.deepEqual(many, { instanceCount: 2, isSeries: true });
+  assert.deepEqual(SharedCore.resolveSeriesProbeDecision(null, identifier), { instanceCount: 0, isSeries: false });
+  assert.deepEqual(SharedCore.resolveSeriesProbeDecision([{ identifier }], ''), { instanceCount: 0, isSeries: false });
+});
+
+test('extractIcsUidFromIdentifier: UID suffix from both device identifier shapes', () => {
+  assert.equal(
+    SharedCore.extractIcsUidFromIdentifier('1A2B3C4D-5E6F:6thhos5ct3pllq5kmvsp7infd8@google.com'),
+    '6thhos5ct3pllq5kmvsp7infd8@google.com'
+  );
+  assert.equal(
+    SharedCore.extractIcsUidFromIdentifier('1A2B3C4D-5E6F:fuzzy-20260503T203532Z@chunky.dad'),
+    'fuzzy-20260503T203532Z@chunky.dad'
+  );
+  assert.equal(SharedCore.extractIcsUidFromIdentifier('no-colon-identifier'), null);
+  assert.equal(SharedCore.extractIcsUidFromIdentifier(''), null);
+  assert.equal(SharedCore.extractIcsUidFromIdentifier(null), null);
+});
+
+test('extractRecurringUidsFromIcs: light scan maps UIDs to RRULE presence (folded lines included)', () => {
+  const ics = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'BEGIN:VEVENT',
+    'UID:weekly-1@chunky.dad',
+    'RRULE:FREQ=WEEKLY;BYD',
+    ' AY=FR',
+    'SUMMARY:Weekly thing',
+    'END:VEVENT',
+    'BEGIN:VEVENT',
+    'UID:oneoff-2@chunky.dad',
+    'SUMMARY:One off',
+    'END:VEVENT',
+    'BEGIN:VEVENT',
+    'UID:folded-3@chunky.',
+    ' dad',
+    'RRULE:FREQ=MONTHLY;BYDAY=2SA',
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n');
+  const uids = SharedCore.extractRecurringUidsFromIcs(ics);
+  assert.ok(uids instanceof Map);
+  assert.equal(uids.get('weekly-1@chunky.dad'), true, 'folded RRULE still detected');
+  assert.equal(uids.get('oneoff-2@chunky.dad'), false, 'UID present WITHOUT an RRULE');
+  assert.equal(uids.get('folded-3@chunky.dad'), true, 'folded UID reassembled');
+  assert.equal(SharedCore.extractRecurringUidsFromIcs(''), null, 'empty input fails open as null');
+  assert.equal(SharedCore.extractRecurringUidsFromIcs(null), null);
+});
+
+test('series probe integration: a confirmed series flips a plain merge into the recurring hands-off path', async () => {
+  const core = createCore();
+  const startDate = new Date('2026-08-08T02:00:00.000Z');
+  const calendarRecord = {
+    title: 'FUZZY',
+    startDate,
+    endDate: new Date('2026-08-08T07:00:00.000Z'),
+    location: '',
+    identifier: 'CAL-UUID:fuzzy-uid@chunky.dad',
+    notes: 'bar: Dallas Eagle'
+  };
+  const adapter = buildPrepCalendarAdapter([calendarRecord]);
+  const probeCalls = [];
+  adapter.probeRecurringSeries = async (existingEvent) => {
+    probeCalls.push(existingEvent.identifier);
+    return true;
+  };
+  const scraped = { title: 'FUZZY', startDate, bar: 'Dallas Eagle', city: 'dallas' };
+
+  const analyzed = await core.prepareEventsForCalendar([scraped], adapter, {});
+
+  assert.deepEqual(probeCalls, ['CAL-UUID:fuzzy-uid@chunky.dad'], 'the probe ran once for the merge match');
+  assert.equal(analyzed.length, 1);
+  assert.equal(analyzed[0]._action, 'new', 'series match creates an override instead of mutating the series');
+  assert.match(String(analyzed[0]._existingKey || ''), /^fuzzy-uid@chunky\.dad::/,
+    'the existing recurring hands-off path keyed an override for the confirmed series');
+});
+
+test('series probe integration: probe errors and negative probes fail open to a plain merge', async () => {
+  const startDate = new Date('2026-08-08T02:00:00.000Z');
+  const calendarRecord = {
+    title: 'FUZZY',
+    startDate,
+    endDate: new Date('2026-08-08T07:00:00.000Z'),
+    location: '',
+    identifier: 'CAL-UUID:fuzzy-uid@chunky.dad',
+    notes: 'bar: Dallas Eagle'
+  };
+  const scraped = { title: 'FUZZY', startDate, bar: 'Dallas Eagle', city: 'dallas' };
+
+  const throwingCore = createCore();
+  const throwingAdapter = buildPrepCalendarAdapter([{ ...calendarRecord }]);
+  throwingAdapter.probeRecurringSeries = async () => { throw new Error('calendar unavailable'); };
+  const throwingAnalyzed = await throwingCore.prepareEventsForCalendar([{ ...scraped }], throwingAdapter, {});
+  assert.equal(throwingAnalyzed[0]._action, 'merge', 'probe error → today\'s behavior');
+
+  const negativeCore = createCore();
+  const negativeAdapter = buildPrepCalendarAdapter([{ ...calendarRecord }]);
+  negativeAdapter.probeRecurringSeries = async () => false;
+  const negativeAnalyzed = await negativeCore.prepareEventsForCalendar([{ ...scraped }], negativeAdapter, {});
+  assert.equal(negativeAnalyzed[0]._action, 'merge', 'negative probe keeps the plain merge');
+});
+
+test('series decision ordering: an existing notes recurrence key fires before any adapter probe', async () => {
+  const core = createCore();
+  const startDate = new Date('2026-08-08T02:00:00.000Z');
+  const calendarRecord = {
+    title: 'FUZZY',
+    startDate,
+    endDate: new Date('2026-08-08T07:00:00.000Z'),
+    location: '',
+    identifier: 'CAL-UUID:fuzzy-uid@chunky.dad',
+    notes: 'bar: Dallas Eagle\nrecurrence: FREQ=WEEKLY;BYDAY=FR'
+  };
+  const adapter = buildPrepCalendarAdapter([calendarRecord]);
+  adapter.probeRecurringSeries = async () => {
+    throw new Error('probe must not run when the notes key already fired');
+  };
+  const scraped = { title: 'FUZZY', startDate, bar: 'Dallas Eagle', city: 'dallas' };
+
+  const analyzed = await core.prepareEventsForCalendar([scraped], adapter, {});
+
+  assert.equal(analyzed[0]._action, 'new', 'notes key alone routes to the recurring hands-off path');
+  assert.match(String(analyzed[0]._existingKey || ''), /^fuzzy-uid@chunky\.dad::/,
+    'override identity derived without ever consulting the probe');
+});
+
+test('noteConfirmedRecurringSeries feeds shouldCreateOverrideFromRecurringMatch', () => {
+  const core = createCore();
+  const existingEvent = {
+    title: 'FUZZY',
+    identifier: 'CAL-UUID:fuzzy-uid@chunky.dad',
+    startDate: new Date('2026-08-08T02:00:00.000Z'),
+    notes: 'bar: Dallas Eagle'
+  };
+  assert.equal(core.shouldCreateOverrideFromRecurringMatch(existingEvent, [existingEvent]), false,
+    'no series signal before confirmation');
+  core.noteConfirmedRecurringSeries('CAL-UUID:fuzzy-uid@chunky.dad');
+  assert.equal(core.shouldCreateOverrideFromRecurringMatch(existingEvent, [existingEvent]), true,
+    'confirmed identifier flips the hands-off path');
+});

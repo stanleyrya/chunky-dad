@@ -2869,3 +2869,182 @@ test('buildParserPickerEntries orders stalest-first: never-written, then stale, 
   assert.equal(Math.floor(entries[1].daysSince), 17);
   assert.equal(Math.floor(entries[2].daysSince), 7);
 });
+
+// ---------------------------------------------------------------------------
+// Recurring events: event-builder link, ICS export bridge, series probe
+// ---------------------------------------------------------------------------
+
+function buildRecurringCardEvent(overrides = {}) {
+  return {
+    title: 'FUZZY',
+    _action: 'new',
+    startDate: '2026-08-08T02:00:00.000Z',
+    endDate: '2026-08-08T07:00:00.000Z',
+    bar: 'Dallas Eagle',
+    city: 'dallas',
+    recurrenceRule: 'FREQ=WEEKLY;BYDAY=FR',
+    _recurring: true,
+    _recurringExport: true,
+    ...overrides
+  };
+}
+
+test('event card: every event gets an Event Builder prefill link', () => {
+  const adapter = buildAdapter();
+  adapter.resetMapVerifyUrls();
+  adapter.resetIcsExportEvents();
+  const html = adapter.generateEventCard({
+    title: 'One Off',
+    _action: 'new',
+    startDate: '2026-08-01T02:00:00.000Z',
+    city: 'dallas',
+    website: 'https://example.com/one-off'
+  });
+
+  assert.ok(html.includes('🛠 Event Builder'), 'builder link rendered on a plain card');
+  assert.ok(!html.includes('Save recurring'), 'no ICS export button on a plain card');
+  assert.ok(!html.includes('recurring — save via ICS'), 'no recurring badge on a plain card');
+
+  const registeredUrls = Object.values(adapter._mapVerifyUrls);
+  const builderUrl = registeredUrls.find((url) =>
+    url.startsWith('https://chunky.dad/testing/event-builder.html?'),
+  );
+  assert.ok(builderUrl, 'builder URL registered through the open-url bridge');
+  assert.ok(builderUrl.includes('name=One%20Off'), 'title prefilled');
+  assert.ok(builderUrl.includes('city=dallas'));
+  assert.ok(builderUrl.includes('website=https%3A%2F%2Fexample.com%2Fone-off'));
+  assert.ok(!builderUrl.includes('recurrence='), 'no recurrence param without an rrule');
+});
+
+test('event card: recurring events get the badge, the builder link, and the ICS export button', () => {
+  const adapter = buildAdapter();
+  adapter.resetMapVerifyUrls();
+  adapter.resetIcsExportEvents();
+  const html = adapter.generateEventCard(buildRecurringCardEvent());
+
+  assert.ok(html.includes('🔁 recurring — save via ICS'), 'recurring badge present');
+  assert.ok(html.includes('🛠 Event Builder'), 'builder link present');
+  assert.ok(html.includes('💾 Save recurring (.ics)'), 'ICS export button present');
+  assert.match(html, /data-ics-export-id="\d+"/, 'export button carries a registered id');
+
+  const registeredUrls = Object.values(adapter._mapVerifyUrls);
+  const builderUrl = registeredUrls.find((url) =>
+    url.startsWith('https://chunky.dad/testing/event-builder.html?'),
+  );
+  assert.ok(builderUrl.includes('recurrence=FREQ%3DWEEKLY%3BBYDAY%3DFR'), 'rrule prefills the builder');
+  assert.ok(!builderUrl.includes('new URL'), 'sanity');
+});
+
+test('export-ics bridge: the handler builds the ICS for the registered event and hands it off', async () => {
+  const adapter = buildAdapter();
+  adapter.resetIcsExportEvents();
+  const event = buildRecurringCardEvent();
+  const id = adapter.registerIcsExportEvent(event);
+
+  const exported = [];
+  global.DocumentPicker = {
+    exportString: async (content, name) => {
+      exported.push({ content, name });
+      return [name];
+    }
+  };
+  try {
+    await adapter.exportRecurringEventIcs(id);
+  } finally {
+    delete global.DocumentPicker;
+  }
+
+  assert.equal(exported.length, 1, 'DocumentPicker.exportString called once');
+  assert.equal(exported[0].name, 'fuzzy.ics', 'slugged filename');
+  const unfolded = exported[0].content.replace(/\r\n[ \t]/g, '');
+  assert.ok(unfolded.includes('BEGIN:VCALENDAR'));
+  assert.ok(unfolded.includes('RRULE:FREQ=WEEKLY;BYDAY=FR'), 'ICS built from the registered event');
+  assert.ok(unfolded.includes('SUMMARY:FUZZY'));
+  assert.ok(unfolded.includes('recurrence: FREQ=WEEKLY\\;BYDAY=FR'), 'detection line in DESCRIPTION');
+});
+
+test('export-ics bridge: shouldAllowRequest dispatches a=export-ics to the ICS handler', () => {
+  const fs = require('node:fs');
+  const source = fs.readFileSync(path.join(__dirname, 'scriptable-adapter.js'), 'utf8');
+  const branchMatch = source.match(/params\.a === "export-ics"[\s\S]{0,500}?exportRecurringEventIcs\(params\.id\)/);
+  assert.ok(branchMatch, 'export-ics action branch wired to exportRecurringEventIcs');
+  assert.ok(source.includes("'chunkyscrape://act?a=export-ics&id='"), 'page JS builds the export-ics bridge URL');
+});
+
+test('probeRecurringSeries: published-ICS confirmation short-circuits the wide-window probe', async () => {
+  const adapter = buildAdapter();
+  adapter.getPublishedRecurringUids = async () => new Map([['fuzzy-uid@chunky.dad', true]]);
+  let wideWindowCalls = 0;
+  adapter.probeSeriesByWideWindow = async () => {
+    wideWindowCalls += 1;
+    return false;
+  };
+  const result = await adapter.probeRecurringSeries(
+    { identifier: 'CAL-UUID:fuzzy-uid@chunky.dad', title: 'FUZZY' },
+    { city: 'dallas' }
+  );
+  assert.equal(result, true, 'published RRULE UID confirms the series');
+  assert.equal(wideWindowCalls, 0, 'wide-window probe skipped');
+});
+
+test('probeRecurringSeries: published UID WITHOUT an RRULE is confirmed not-a-series (probe skipped)', async () => {
+  const adapter = buildAdapter();
+  adapter.getPublishedRecurringUids = async () => new Map([['fuzzy-uid@chunky.dad', false]]);
+  let wideWindowCalls = 0;
+  adapter.probeSeriesByWideWindow = async () => {
+    wideWindowCalls += 1;
+    return true;
+  };
+  const result = await adapter.probeRecurringSeries(
+    { identifier: 'CAL-UUID:fuzzy-uid@chunky.dad', title: 'FUZZY' },
+    { city: 'dallas' }
+  );
+  assert.equal(result, false);
+  assert.equal(wideWindowCalls, 0, 'probe never runs when the published calendar settles it');
+});
+
+test('probeRecurringSeries: published fetch failure falls through to the wide-window probe', async () => {
+  const adapter = buildAdapter();
+  adapter.getPublishedRecurringUids = async () => null; // fetch failed / no published calendar
+  let wideWindowCalls = 0;
+  adapter.probeSeriesByWideWindow = async () => {
+    wideWindowCalls += 1;
+    return true;
+  };
+  const result = await adapter.probeRecurringSeries(
+    { identifier: 'CAL-UUID:fuzzy-uid@chunky.dad', title: 'FUZZY' },
+    { city: 'dallas' }
+  );
+  assert.equal(result, true, 'fallback probe decision used');
+  assert.equal(wideWindowCalls, 1);
+});
+
+test('probeRecurringSeries: decisions are cached per identifier per run', async () => {
+  const adapter = buildAdapter();
+  adapter.getPublishedRecurringUids = async () => null;
+  let wideWindowCalls = 0;
+  adapter.probeSeriesByWideWindow = async () => {
+    wideWindowCalls += 1;
+    return true;
+  };
+  const existingEvent = { identifier: 'CAL-UUID:fuzzy-uid@chunky.dad', title: 'FUZZY' };
+  await adapter.probeRecurringSeries(existingEvent, { city: 'dallas' });
+  await adapter.probeRecurringSeries(existingEvent, { city: 'dallas' });
+  assert.equal(wideWindowCalls, 1, 'second call served from the per-run cache');
+});
+
+test('probeRecurringSeries fails open on errors and without an identifier', async () => {
+  const adapter = buildAdapter();
+  adapter.getPublishedRecurringUids = async () => {
+    throw new Error('network down');
+  };
+  adapter.probeSeriesByWideWindow = async () => {
+    throw new Error('calendar unavailable');
+  };
+  assert.equal(
+    await adapter.probeRecurringSeries({ identifier: 'CAL-UUID:x@y', title: 'X' }, { city: 'dallas' }),
+    false,
+    'errors → false (today\'s behavior)'
+  );
+  assert.equal(await adapter.probeRecurringSeries({ title: 'no identifier' }, {}), false);
+});
