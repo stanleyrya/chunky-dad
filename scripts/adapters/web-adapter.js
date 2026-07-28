@@ -702,11 +702,198 @@ async saveFailureNote(url, error, metadata = {}) {
         return lines.filter(line => line).join('\r\n');
     }
 
-    // Get existing events for a specific event (called by shared-core for analysis)
-    // In web environment, we can't access real calendar data, so return empty array
-    async getExistingEvents(event) {
+    // SharedCore class reference: browser runs load it as a script-tag global;
+    // Node runs require it lazily (never at module load, so browser bundling
+    // of this file stays require-free on the hot path).
+    getSharedCoreRef() {
+        if (typeof SharedCore !== 'undefined') return SharedCore;
+        if (this.isNode && typeof require !== 'undefined') {
+            try {
+                return require('../shared-core').SharedCore;
+            } catch (error) {
+                console.log(`🖥️ WebAdapter: SharedCore unavailable: ${error.message}`);
+                return null;
+            }
+        }
+        return null;
+    }
 
-        return [];
+    // Fetch + parse the published calendar ICS for one city
+    // (https://chunky.dad/data/calendars/<cityKey>.ics, refreshed ~2-hourly).
+    // Mirrors ScriptableAdapter.getPublishedRecurringUids' fetch/cache shape:
+    // per-run memo + the Node page cache with a short TTL (0.25 days). Returns
+    // { records, fetchedAt } or null on any failure (callers degrade to NEW,
+    // with one warn per city per run).
+    async getPublishedCalendarEvents(cityKey) {
+        const key = String(cityKey || '').trim();
+        if (!key) return null;
+        if (!this._publishedCalendarByCity) this._publishedCalendarByCity = {};
+        if (Object.prototype.hasOwnProperty.call(this._publishedCalendarByCity, key)) {
+            return this._publishedCalendarByCity[key];
+        }
+        if (!this._publishedCalendarSnapshots) this._publishedCalendarSnapshots = {};
+        let entry = null;
+        try {
+            const core = this.getSharedCoreRef();
+            const url = `https://chunky.dad/data/calendars/${encodeURIComponent(key)}.ics`;
+            const icsCacheConfig = {
+                enabled: this.getPageCacheConfig().enabled,
+                ttlDays: 0.25
+            };
+            let body = null;
+            let fetchedAt = null;
+            const cached = await this.readCachedPage(url, icsCacheConfig);
+            if (cached && typeof cached.html === 'string') {
+                body = cached.html;
+                fetchedAt = cached.fetchedAt ||
+                    (Number.isFinite(cached.modifiedAtMs) ? new Date(cached.modifiedAtMs).toISOString() : null);
+            } else {
+                const responseData = await this.fetchData(url, {
+                    headers: { Accept: 'text/calendar' },
+                    isCacheableResponse: () => false
+                });
+                if (responseData && typeof responseData.html === 'string') {
+                    body = responseData.html;
+                    fetchedAt = new Date().toISOString();
+                    await this.writeCachedPage(url, responseData, icsCacheConfig);
+                }
+            }
+            const records = (body && core) ? core.parsePublishedCalendarIcs(body) : null;
+            if (Array.isArray(records)) {
+                entry = { records, fetchedAt };
+            }
+        } catch (error) {
+            entry = null;
+        }
+        if (entry) {
+            this._publishedCalendarSnapshots[key] = { status: 'ok', fetchedAt: entry.fetchedAt };
+        } else {
+            console.warn(`🖥️ WebAdapter: published calendar unavailable for ${key} — merge analysis degraded to NEW`);
+            this._publishedCalendarSnapshots[key] = { status: 'unavailable', fetchedAt: null };
+        }
+        this._publishedCalendarByCity[key] = entry;
+        return entry;
+    }
+
+    // Get existing events for a specific event (called by shared-core for
+    // analysis). Node/Mac runs have no EventKit, so the published per-city
+    // calendar ICS is the existing-events source: fetch + parse the event's
+    // city file, expand recurring series into the same search window the
+    // Scriptable adapter uses, and return plain event objects in the shape
+    // the merge machinery consumes. Read-only by design — this adapter never
+    // gains executeCalendarActions, so no write path exists.
+    async getExistingEvents(event) {
+        try {
+            const city = event.city || 'default';
+
+            const coerceDate = (value) => {
+                if (!value) return null;
+                if (value instanceof Date) {
+                    return isNaN(value.getTime()) ? null : value;
+                }
+                const parsed = new Date(value);
+                return isNaN(parsed.getTime()) ? null : parsed;
+            };
+
+            const identifierRaw = event && (event.identifier || event.id)
+                ? String(event.identifier || event.id).trim()
+                : '';
+            const hasIdentifier = Boolean(identifierRaw);
+
+            const startDate = coerceDate(event.startDate);
+            const endDate = coerceDate(event.endDate || event.startDate);
+            const searchStartDate = coerceDate(event.searchStartDate);
+            const searchEndDate = coerceDate(event.searchEndDate);
+            const dateCandidates = hasIdentifier
+                ? [searchStartDate, searchEndDate].filter(Boolean)
+                : [startDate, endDate].filter(Boolean);
+
+            if (dateCandidates.length === 0) {
+                return [];
+            }
+
+            // Same window math as ScriptableAdapter.getExistingEvents: one
+            // day-aligned window around the event dates (expanded only when
+            // the parser configures calendarSearchRangeDays) for scraper
+            // events; per-date windows of ±rangeDays for identifier edits.
+            const configuredRangeDays = Number(event._parserConfig?.calendarSearchRangeDays || 0);
+            const rangeDays = Number.isFinite(configuredRangeDays) && configuredRangeDays > 0
+                ? configuredRangeDays
+                : 2;
+            const buildWindow = (date, days) => {
+                const start = new Date(date);
+                start.setHours(0, 0, 0, 0);
+                start.setDate(start.getDate() - days);
+                const end = new Date(date);
+                end.setHours(23, 59, 59, 999);
+                end.setDate(end.getDate() + days);
+                return { start, end };
+            };
+
+            const windows = [];
+            if (!hasIdentifier) {
+                const earliestTime = Math.min(...dateCandidates.map((date) => date.getTime()));
+                const latestTime = Math.max(...dateCandidates.map((date) => date.getTime()));
+                const searchStart = new Date(earliestTime);
+                searchStart.setHours(0, 0, 0, 0);
+                const searchEnd = new Date(latestTime);
+                searchEnd.setHours(23, 59, 59, 999);
+                if (Number.isFinite(configuredRangeDays) && configuredRangeDays > 0) {
+                    searchStart.setDate(searchStart.getDate() - configuredRangeDays);
+                    searchEnd.setDate(searchEnd.getDate() + configuredRangeDays);
+                }
+                windows.push({ start: searchStart, end: searchEnd });
+            } else {
+                const windowKeys = new Set();
+                dateCandidates.forEach((date) => {
+                    const windowKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+                    if (windowKeys.has(windowKey)) return;
+                    windowKeys.add(windowKey);
+                    windows.push(buildWindow(date, rangeDays));
+                });
+            }
+            if (windows.length === 0) {
+                return [];
+            }
+
+            const published = await this.getPublishedCalendarEvents(city);
+            if (!published) {
+                return [];
+            }
+
+            const core = this.getSharedCoreRef();
+            if (!core) {
+                return [];
+            }
+
+            const overallStart = new Date(Math.min(...windows.map((w) => w.start.getTime())));
+            const overallEnd = new Date(Math.max(...windows.map((w) => w.end.getTime())));
+            const expansion = core.expandPublishedCalendarEventsInWindow(
+                published.records, overallStart, overallEnd
+            );
+
+            // Unsupported RRULE shapes degrade to non-recurring; log once per uid.
+            if (!this._unsupportedRruleLoggedUids) this._unsupportedRruleLoggedUids = new Set();
+            for (const unsupported of expansion.unsupportedRrules) {
+                if (this._unsupportedRruleLoggedUids.has(unsupported.uid)) continue;
+                this._unsupportedRruleLoggedUids.add(unsupported.uid);
+                console.log(`🖥️ WebAdapter: unsupported RRULE for uid ${unsupported.uid} — treated as non-recurring`);
+            }
+
+            const inAnyWindow = (existingEvent) => windows.some((w) => {
+                const eventStart = existingEvent.startDate;
+                const eventEnd = existingEvent.endDate || existingEvent.startDate;
+                return eventStart.getTime() <= w.end.getTime() && eventEnd.getTime() >= w.start.getTime();
+            });
+            const matched = expansion.events.filter(inAnyWindow);
+            console.log(
+                `🖥️ WebAdapter: Existing event search city=${city} window=${overallStart.toISOString()} → ${overallEnd.toISOString()} found=${matched.length} (published VEVENTs=${published.records.length})`
+            );
+            return matched;
+        } catch (error) {
+            console.log(`🖥️ WebAdapter: ✗ Failed to get existing events: ${error.message}`);
+            return [];
+        }
     }
 
     // Display/Logging Adapter Implementation
@@ -732,6 +919,12 @@ async saveFailureNote(url, error, metadata = {}) {
             // Store results for use in other methods
             this.lastResults = results;
             results.runContext = results.runContext || this.getRunContext();
+            // Published-calendar snapshot info (which city ICS files fed the
+            // merge analysis, and how fresh each fetch was) rides along in the
+            // results so the Mac server header can surface staleness.
+            if (this._publishedCalendarSnapshots && Object.keys(this._publishedCalendarSnapshots).length > 0) {
+                results.publishedCalendarSnapshots = { ...this._publishedCalendarSnapshots };
+            }
             console.log(`Run Type: ${results.runContext.type} (${results.runContext.trigger})`);
             
             // Show enhanced display features in console for debugging

@@ -253,6 +253,36 @@ function queueVenueCandidate() {}
 
 const HEADER_BAR_MARKER = 'chunky-server-header-bar';
 
+// "34m" / "1.5h" / "2.1d" age label for the calendar-snapshot header segment.
+function formatSnapshotAge(ageMs) {
+    if (!Number.isFinite(ageMs) || ageMs < 0) return null;
+    const minutes = ageMs / (60 * 1000);
+    if (minutes < 60) return `${Math.round(minutes)}m`;
+    const hours = minutes / 60;
+    if (hours < 24) return `${hours.toFixed(1)}h`;
+    return `${(hours / 24).toFixed(1)}d`;
+}
+
+// v2: published-calendar snapshot freshness per consulted city, e.g.
+// "calendar snapshot: seattle 34m old · nyc unavailable". Empty string when
+// the run consulted no published calendars (pre-v2 runs, or no events).
+function formatCalendarSnapshotLabel(snapshots, nowMs = Date.now()) {
+    if (!snapshots || typeof snapshots !== 'object') return '';
+    const segments = [];
+    for (const city of Object.keys(snapshots).sort()) {
+        const snapshot = snapshots[city];
+        if (!snapshot || typeof snapshot !== 'object') continue;
+        if (snapshot.status === 'ok' && snapshot.fetchedAt) {
+            const fetchedMs = Date.parse(snapshot.fetchedAt);
+            const age = Number.isFinite(fetchedMs) ? formatSnapshotAge(nowMs - fetchedMs) : null;
+            segments.push(`${city} ${age ? `${age} old` : 'fresh'}`);
+        } else {
+            segments.push(`${city} unavailable`);
+        }
+    }
+    return segments.length > 0 ? `calendar snapshot: ${segments.join(' · ')}` : '';
+}
+
 // Small server header bar injected right after <body>. Idempotent: a page
 // that already carries the marker is returned unchanged.
 function injectHeaderBar(html, info = {}) {
@@ -266,10 +296,14 @@ function injectHeaderBar(html, info = {}) {
     const parserLabel = info.parserFilter
         ? ` · parser: ${escapeHtmlText(info.parserFilter)}`
         : ' · all enabled parsers';
+    const snapshotLabel = formatCalendarSnapshotLabel(info.calendarSnapshots);
+    const snapshotSpan = snapshotLabel
+        ? `\n    <span style="opacity:0.85;">${escapeHtmlText(snapshotLabel)}</span>`
+        : '';
     const bar = `
 <div id="${HEADER_BAR_MARKER}" style="position:sticky; top:0; z-index:9999; display:flex; gap:14px; align-items:center; flex-wrap:wrap; padding:8px 14px; background:#1c1c1e; color:#f2f2f7; font:13px -apple-system, sans-serif; border-bottom:2px solid #ff6b35;">
     <span style="font-weight:700;">chunky.dad scraper server</span>
-    <span>${runLabel}${parserLabel}</span>
+    <span>${runLabel}${parserLabel}</span>${snapshotSpan}
     <a href="/run-form" style="color:#ffd60a; font-weight:600; text-decoration:none;">▶ Run scraper</a>
     <a href="/log" style="color:#ffd60a; text-decoration:none;">Log</a>
     <span style="opacity:0.7;">ICS links belong to this render — after a new run, reload before saving events.</span>
@@ -453,7 +487,8 @@ async function renderLatestResults(state, saved) {
     let out = rewriteBridgeHtml(html, registries);
     out = injectHeaderBar(out, {
         savedAt: saved.savedAt || '',
-        parserFilter: saved.parserFilter || ''
+        parserFilter: saved.parserFilter || '',
+        calendarSnapshots: (saved.results && saved.results.publishedCalendarSnapshots) || null
     });
     return out;
 }
@@ -660,6 +695,7 @@ module.exports = {
     jsonForInlineScript,
     rewriteBridgeHtml,
     injectHeaderBar,
+    formatCalendarSnapshotLabel,
     buildEventIcs,
     tailLines,
     renderRunFormPage,

@@ -9406,3 +9406,234 @@ test('noteConfirmedRecurringSeries feeds shouldCreateOverrideFromRecurringMatch'
   assert.equal(core.shouldCreateOverrideFromRecurringMatch(existingEvent, [existingEvent]), true,
     'confirmed identifier flips the hands-off path');
 });
+
+// ---------------------------------------------------------------------------
+// Published-calendar ICS parsing + RRULE expansion (Mac/Node merge fidelity)
+// ---------------------------------------------------------------------------
+
+// Fixture mirroring the real published-calendar shapes (Google Calendar
+// export): TZID timed event, VALUE=DATE all-day, WEEKLY;BYDAY series with one
+// EXDATE and one RECURRENCE-ID override, MONTHLY;BYDAY=1FR series, and one
+// unsupported YEARLY rule. The plain event's DESCRIPTION is 75-octet folded.
+const PUBLISHED_ICS_FIXTURE = [
+  'BEGIN:VCALENDAR',
+  'VERSION:2.0',
+  'PRODID:-//Test//Test//EN',
+  'BEGIN:VTIMEZONE',
+  'TZID:America/New_York',
+  'BEGIN:DAYLIGHT',
+  'DTSTART:19700308T020000',
+  'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU',
+  'END:DAYLIGHT',
+  'END:VTIMEZONE',
+  'BEGIN:VEVENT',
+  'UID:plain-timed@test',
+  'DTSTART;TZID=America/New_York:20260710T210000',
+  'DTEND;TZID=America/New_York:20260711T010000',
+  'SUMMARY:Plain Timed\\, Event',
+  'DESCRIPTION:bar: The Eagle\\nwebsite: https://example.com/events?id=1\\ndesc',
+  ' ription: Line one\; folded tail\\\\not-a-newline',
+  'LOCATION:40.7\\, -73.9',
+  'END:VEVENT',
+  'BEGIN:VEVENT',
+  'UID:allday@test',
+  'DTSTART;VALUE=DATE:20260620',
+  'DTEND;VALUE=DATE:20260621',
+  'SUMMARY:All Day Fair',
+  'END:VEVENT',
+  'BEGIN:VEVENT',
+  'UID:weekly@test',
+  'DTSTART;TZID=America/New_York:20260705T170000',
+  'DTEND;TZID=America/New_York:20260705T200000',
+  'RRULE:FREQ=WEEKLY;BYDAY=SU',
+  'EXDATE;TZID=America/New_York:20260719T170000',
+  'SUMMARY:Weekly Beer Blast',
+  'DESCRIPTION:bar: Rebar',
+  'END:VEVENT',
+  'BEGIN:VEVENT',
+  'UID:weekly@test',
+  'RECURRENCE-ID;TZID=America/New_York:20260726T170000',
+  'DTSTART;TZID=America/New_York:20260726T180000',
+  'DTEND;TZID=America/New_York:20260726T210000',
+  'SUMMARY:Beer Blast (Special)',
+  'DESCRIPTION:overrideUid: weekly@test\\noverrideRecurrenceId: 20260726T210000Z',
+  'END:VEVENT',
+  'BEGIN:VEVENT',
+  'UID:monthly@test',
+  'DTSTART;TZID=America/New_York:20250801T220000',
+  'DTEND;TZID=America/New_York:20250802T020000',
+  'RRULE:FREQ=MONTHLY;BYDAY=1FR',
+  'SUMMARY:First Friday',
+  'END:VEVENT',
+  'BEGIN:VEVENT',
+  'UID:unsupported@test',
+  'DTSTART;TZID=America/New_York:20260701T190000',
+  'DTEND;TZID=America/New_York:20260701T220000',
+  'RRULE:FREQ=YEARLY;BYMONTH=7;BYDAY=1WE',
+  'SUMMARY:Annual Gala',
+  'END:VEVENT',
+  'END:VCALENDAR'
+].join('\r\n');
+
+test('parsePublishedCalendarIcs: per-VEVENT fields, folding, unescaping, TZID and all-day dates', () => {
+  const records = SharedCore.parsePublishedCalendarIcs(PUBLISHED_ICS_FIXTURE);
+  assert.equal(records.length, 6, 'six VEVENTs (VTIMEZONE DST rules are not events)');
+
+  const plain = records.find(record => record.uid === 'plain-timed@test');
+  assert.equal(plain.summary, 'Plain Timed, Event', 'SUMMARY comma unescaped');
+  assert.equal(plain.location, '40.7, -73.9', 'LOCATION comma unescaped');
+  assert.equal(
+    plain.description,
+    'bar: The Eagle\nwebsite: https://example.com/events?id=1\ndescription: Line one; folded tail\\not-a-newline',
+    'DESCRIPTION unfolded across the 75-octet break, \\n/\;/\\\\ unescaped in one pass'
+  );
+  // 21:00 America/New_York (EDT, UTC-4) → 01:00Z next day.
+  assert.equal(plain.start.date.toISOString(), '2026-07-11T01:00:00.000Z', 'TZID wall clock → correct instant');
+  assert.equal(plain.end.date.toISOString(), '2026-07-11T05:00:00.000Z');
+  assert.equal(plain.isAllDay, false);
+  assert.equal(plain.rrule, '');
+
+  const allDay = records.find(record => record.uid === 'allday@test');
+  assert.equal(allDay.isAllDay, true, 'VALUE=DATE → all-day');
+  assert.equal(allDay.start.date.toISOString(), '2026-06-20T00:00:00.000Z');
+
+  const weekly = records.find(record => record.uid === 'weekly@test' && record.rrule);
+  assert.equal(weekly.rrule, 'FREQ=WEEKLY;BYDAY=SU');
+  assert.equal(weekly.exdates.length, 1);
+  assert.equal(weekly.exdates[0].date.toISOString(), '2026-07-19T21:00:00.000Z', 'EXDATE TZID-aware');
+
+  const override = records.find(record => record.uid === 'weekly@test' && record.recurrenceId);
+  assert.equal(override.recurrenceId.date.toISOString(), '2026-07-26T21:00:00.000Z');
+
+  assert.equal(SharedCore.parsePublishedCalendarIcs(''), null, 'empty input fails open as null');
+  assert.equal(SharedCore.parsePublishedCalendarIcs(null), null);
+});
+
+test('expandRruleOccurrencesInWindow: weekly, monthly-ordinal, daily, INTERVAL, COUNT/UNTIL, DST wall-clock', () => {
+  const records = SharedCore.parsePublishedCalendarIcs(PUBLISHED_ICS_FIXTURE);
+  const windowStart = new Date('2026-07-01T00:00:00.000Z');
+  const windowEnd = new Date('2026-07-31T23:59:59.999Z');
+
+  const weekly = records.find(record => record.uid === 'weekly@test' && record.rrule);
+  const weeklyStarts = SharedCore.expandRruleOccurrencesInWindow(weekly.rrule, weekly.start, windowStart, windowEnd);
+  assert.deepEqual(
+    weeklyStarts.map(date => date.toISOString()),
+    ['2026-07-05T21:00:00.000Z', '2026-07-12T21:00:00.000Z', '2026-07-19T21:00:00.000Z', '2026-07-26T21:00:00.000Z'],
+    'every July Sunday at 17:00 New York (raw expansion; EXDATE applies at the event layer)'
+  );
+
+  const monthly = records.find(record => record.uid === 'monthly@test');
+  const monthlyStarts = SharedCore.expandRruleOccurrencesInWindow(
+    monthly.rrule, monthly.start, new Date('2026-08-01T00:00:00.000Z'), new Date('2026-08-31T23:59:59.999Z')
+  );
+  assert.deepEqual(
+    monthlyStarts.map(date => date.toISOString()),
+    ['2026-08-08T02:00:00.000Z'],
+    'first Friday of August 2026 (Aug 7) at 22:00 New York'
+  );
+
+  // Weekly series crossing the March 2026 DST transition keeps its wall-clock
+  // start: 17:00 EST (22:00Z) before, 17:00 EDT (21:00Z) after March 8.
+  const dstStart = SharedCore.parseIcsDateValue(';TZID=America/New_York', '20260301T170000');
+  const dstStarts = SharedCore.expandRruleOccurrencesInWindow(
+    'FREQ=WEEKLY;BYDAY=SU', dstStart, new Date('2026-03-01T00:00:00.000Z'), new Date('2026-03-16T00:00:00.000Z')
+  );
+  assert.deepEqual(
+    dstStarts.map(date => date.toISOString()),
+    ['2026-03-01T22:00:00.000Z', '2026-03-08T21:00:00.000Z', '2026-03-15T21:00:00.000Z'],
+    'wall-clock time preserved across the DST jump'
+  );
+
+  // INTERVAL=2 weekly: every other week from the series start's week.
+  const biweeklyStarts = SharedCore.expandRruleOccurrencesInWindow(
+    'FREQ=WEEKLY;INTERVAL=2', weekly.start, windowStart, windowEnd
+  );
+  assert.deepEqual(
+    biweeklyStarts.map(date => date.toISOString()),
+    ['2026-07-05T21:00:00.000Z', '2026-07-19T21:00:00.000Z'],
+    'INTERVAL=2 skips alternate weeks (BYDAY defaults to the DTSTART weekday)'
+  );
+
+  const dailyStarts = SharedCore.expandRruleOccurrencesInWindow(
+    'FREQ=DAILY', weekly.start, new Date('2026-07-05T00:00:00.000Z'), new Date('2026-07-07T23:59:59.999Z')
+  );
+  assert.equal(dailyStarts.length, 3, 'daily expansion');
+
+  const countedStarts = SharedCore.expandRruleOccurrencesInWindow(
+    'FREQ=WEEKLY;BYDAY=SU;COUNT=2', weekly.start, windowStart, windowEnd
+  );
+  assert.equal(countedStarts.length, 2, 'COUNT bounds the whole series from DTSTART');
+
+  const untilStarts = SharedCore.expandRruleOccurrencesInWindow(
+    'FREQ=WEEKLY;BYDAY=SU;UNTIL=20260713T000000Z', weekly.start, windowStart, windowEnd
+  );
+  assert.deepEqual(
+    untilStarts.map(date => date.toISOString()),
+    ['2026-07-05T21:00:00.000Z', '2026-07-12T21:00:00.000Z'],
+    'UNTIL cuts the series'
+  );
+
+  // Unsupported shapes → null (callers treat the event as non-recurring).
+  assert.equal(SharedCore.expandRruleOccurrencesInWindow('FREQ=YEARLY;BYMONTH=7;BYDAY=1WE', weekly.start, windowStart, windowEnd), null);
+  assert.equal(SharedCore.expandRruleOccurrencesInWindow('FREQ=MONTHLY;BYDAY=1FR,3FR', weekly.start, windowStart, windowEnd), null);
+  assert.equal(SharedCore.expandRruleOccurrencesInWindow('FREQ=MONTHLY;BYSETPOS=1;BYDAY=FR', weekly.start, windowStart, windowEnd), null);
+  assert.equal(SharedCore.expandRruleOccurrencesInWindow('', weekly.start, windowStart, windowEnd), null);
+});
+
+test('expandPublishedCalendarEventsInWindow: EXDATE excluded, override replaces its occurrence, unsupported listed as non-recurring', () => {
+  const records = SharedCore.parsePublishedCalendarIcs(PUBLISHED_ICS_FIXTURE);
+  const windowStart = new Date('2026-07-01T00:00:00.000Z');
+  const windowEnd = new Date('2026-07-31T23:59:59.999Z');
+  const { events, unsupportedRrules } = SharedCore.expandPublishedCalendarEventsInWindow(records, windowStart, windowEnd);
+
+  assert.deepEqual(unsupportedRrules, [{ uid: 'unsupported@test', rrule: 'FREQ=YEARLY;BYMONTH=7;BYDAY=1WE' }],
+    'unsupported RRULE reported for the adapter to log');
+
+  const titles = events.map(event => `${event.title}@${event.startDate.toISOString()}`).sort();
+  assert.deepEqual(titles, [
+    'Annual Gala@2026-07-01T23:00:00.000Z',            // unsupported series → plain one-off on its DTSTART
+    'Beer Blast (Special)@2026-07-26T22:00:00.000Z',   // override replaces the Jul 26 occurrence, own start time
+    'First Friday@2026-07-04T02:00:00.000Z',           // monthly 1FR: Jul 3 22:00 New York
+    'Plain Timed, Event@2026-07-11T01:00:00.000Z',
+    'Weekly Beer Blast@2026-07-05T21:00:00.000Z',
+    'Weekly Beer Blast@2026-07-12T21:00:00.000Z'       // Jul 19 EXDATE excluded, Jul 26 replaced by the override
+  ]);
+
+  const occurrence = events.find(event => event.title === 'Weekly Beer Blast');
+  assert.equal(occurrence.identifier, 'weekly@test', 'series occurrences share the raw ICS UID');
+  assert.equal(occurrence.recurrence, 'FREQ=WEEKLY;BYDAY=SU', 'occurrences carry the series RRULE for the hands-off path');
+  assert.equal(occurrence.notes, 'bar: Rebar', 'DESCRIPTION rides in notes (calendar-as-database format)');
+  assert.equal(occurrence.endDate.toISOString(), '2026-07-06T00:00:00.000Z', 'series duration preserved per occurrence');
+
+  const override = events.find(event => event.title === 'Beer Blast (Special)');
+  assert.equal(override.identifier, 'weekly@test', 'override shares the series UID');
+  assert.equal(override.recurrence, undefined, 'override instances are standalone events');
+  assert.match(override.notes, /overrideUid: weekly@test/);
+
+  const allDayWindow = SharedCore.expandPublishedCalendarEventsInWindow(
+    records, new Date('2026-06-19T00:00:00.000Z'), new Date('2026-06-21T00:00:00.000Z')
+  );
+  const allDay = allDayWindow.events.find(event => event.identifier === 'allday@test');
+  assert.equal(allDay.isAllDay, true);
+  assert.equal(allDay.startDate.toISOString(), '2026-06-20T00:00:00.000Z');
+});
+
+test('expanded series occurrences drive the recurring hands-off path in analyzeEventAction', () => {
+  const core = createCore();
+  const records = SharedCore.parsePublishedCalendarIcs(PUBLISHED_ICS_FIXTURE);
+  const { events } = SharedCore.expandPublishedCalendarEventsInWindow(
+    records, new Date('2026-07-05T00:00:00.000Z'), new Date('2026-07-05T23:59:59.999Z')
+  );
+  const existing = events.filter(event => event.identifier === 'weekly@test');
+  assert.equal(existing.length, 1, 'narrow window sees a single series instance');
+
+  const scraped = {
+    title: 'Weekly Beer Blast',
+    startDate: new Date('2026-07-05T21:00:00.000Z'),
+    endDate: new Date('2026-07-06T00:00:00.000Z')
+  };
+  const analysis = core.analyzeEventAction(scraped, existing, 'upsert');
+  assert.equal(analysis.action, 'new', 'series match never merges into the series master');
+  assert.match(analysis.reason, /creating override/, 'routes to override creation');
+  assert.equal(analysis.overrideIdentity.overrideUid, 'weekly@test');
+});

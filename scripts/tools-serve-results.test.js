@@ -41,6 +41,7 @@ const {
   listParserNames,
   rewriteBridgeHtml,
   injectHeaderBar,
+  formatCalendarSnapshotLabel,
   buildEventIcs,
   tailLines,
   renderRunFormPage,
@@ -249,6 +250,29 @@ test('injectHeaderBar inserts once after <body> and is idempotent', () => {
   const twice = injectHeaderBar(injected, { savedAt: 'other' });
   assert.equal(twice, injected, 'second injection is a no-op');
   assert.equal((twice.match(new RegExp(HEADER_BAR_MARKER, 'g')) || []).length, 1);
+});
+
+test('header bar surfaces published-calendar snapshot ages per consulted city (v2)', () => {
+  const nowMs = Date.parse('2026-07-28T12:00:00Z');
+  const label = formatCalendarSnapshotLabel({
+    seattle: { status: 'ok', fetchedAt: '2026-07-28T11:26:00Z' },   // 34m old
+    nyc: { status: 'ok', fetchedAt: '2026-07-28T10:00:00Z' },       // 2h old
+    la: { status: 'unavailable', fetchedAt: null }
+  }, nowMs);
+  assert.equal(label, 'calendar snapshot: la unavailable · nyc 2.0h old · seattle 34m old');
+
+  assert.equal(formatCalendarSnapshotLabel(null), '', 'pre-v2 runs render no snapshot segment');
+  assert.equal(formatCalendarSnapshotLabel({}), '');
+
+  const html = '<html><head></head><body><p>results</p></body></html>';
+  const injected = injectHeaderBar(html, {
+    savedAt: '2026-07-28T00:00:00Z',
+    calendarSnapshots: { seattle: { status: 'ok', fetchedAt: new Date(Date.now() - 34 * 60 * 1000).toISOString() } }
+  });
+  assert.ok(injected.includes('calendar snapshot: seattle 34m old'), 'snapshot segment rides in the header bar');
+
+  const withoutSnapshots = injectHeaderBar(html, { savedAt: '2026-07-28T00:00:00Z' });
+  assert.ok(!withoutSnapshots.includes('calendar snapshot:'), 'no segment without snapshot data');
 });
 
 // ---------------------------------------------------------------------------
