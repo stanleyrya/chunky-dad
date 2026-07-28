@@ -137,7 +137,7 @@ class SharedCore {
         // the orchestrator from AiWebParser.getAiResponseCache() — persistence
         // stays out of shared-core. Null = no caching.
         this.aiResponseCache = null;
-        this.trackingParamPattern = /^(aff|affix|affiliate|utm_source|utm_medium|utm_campaign|utm_content|utm_term|ref|referral|fbclid|gclid|msclkid|dclid|source|mc_cid|mc_eid)$/i;
+        this.trackingParamPattern = /^(aff|affix|affiliate|utm[-_](?:source|medium|campaign|content|term)|ref|referral|fbclid|gclid|msclkid|dclid|source|mc_cid|mc_eid)$/i;
         
         // URL-to-parser mapping for automatic parser detection (parser: "auto").
         // Only scheme URLs resolve to a specific parser; every http(s) URL falls
@@ -5589,6 +5589,40 @@ class SharedCore {
                 }
             }
 
+            // A startDate at EXACT local midnight on a record without an
+            // explicit start time is the parser's "no time stated" placeholder
+            // (see isInventedMidnight in normalizeAiEvent) — it must never
+            // displace a sibling record's explicit non-midnight start time for
+            // the same local day, regardless of source priority (run finding:
+            // QUENCHD's placeholder-midnight record beat the 20:00Z record via
+            // PARSER MERGE priority). Records whose local wall clock cannot be
+            // resolved fall through unchanged (fail open).
+            if (fieldName === 'startDate' && !isEmpty(existingValue) && !isEmpty(newValue)
+                && String(existingValue) !== String(newValue)) {
+                const existingLocalStart = this.getMergeLocalStartParts(existingEvent);
+                const newLocalStart = this.getMergeLocalStartParts(newEvent);
+                if (existingLocalStart && newLocalStart
+                    && existingLocalStart.localDay === newLocalStart.localDay) {
+                    const existingIsMidnightPlaceholder = existingLocalStart.minutesOfDay === 0
+                        && !existingEvent.startTime && newLocalStart.minutesOfDay !== 0;
+                    const newIsMidnightPlaceholder = newLocalStart.minutesOfDay === 0
+                        && !newEvent.startTime && existingLocalStart.minutesOfDay !== 0;
+                    if (existingIsMidnightPlaceholder !== newIsMidnightPlaceholder) {
+                        const chosenValue = existingIsMidnightPlaceholder ? newValue : existingValue;
+                        mergedEvent[fieldName] = chosenValue;
+                        console.log(`⏰ MERGE: "${mergeEventTitle}" kept explicit start time over midnight-placeholder startDate`);
+                        mergeDecisions.push({
+                            field: fieldName,
+                            existingValue: existingValue,
+                            newValue: newValue,
+                            chosenValue: chosenValue,
+                            reason: 'explicit start time wins over local-midnight placeholder (no stated time)'
+                        });
+                        return;
+                    }
+                }
+            }
+
             // A record flagged _timezoneUnresolved stores wall-clock components
             // labeled UTC (a possibly wrong instant); an unflagged record's dates
             // are real timezone-anchored instants. When exactly one side is
@@ -6604,6 +6638,33 @@ class SharedCore {
         } catch (_) {
             return null;
         }
+    }
+
+    // Local wall-clock view of a record's startDate for the merge midnight-
+    // placeholder rung: { minutesOfDay, localDay } or null when the local
+    // clock cannot be resolved. A _timezoneUnresolved record's UTC components
+    // ARE its wall clock; otherwise the record's own timezone (or its city's)
+    // anchors the conversion.
+    getMergeLocalStartParts(event) {
+        const value = event && event.startDate;
+        if (!value) return null;
+        const date = value instanceof Date ? value : new Date(value);
+        if (Number.isNaN(date.getTime())) return null;
+        if (event._timezoneUnresolved) {
+            return {
+                minutesOfDay: (date.getUTCHours() * 60) + date.getUTCMinutes(),
+                localDay: date.toISOString().split('T')[0]
+            };
+        }
+        const timezone = event.timezone || this.getCityTimezone(event.city) || null;
+        if (!timezone) return null;
+        const offsetMinutes = this.getTimezoneOffsetMinutes(date, timezone);
+        if (!Number.isFinite(offsetMinutes)) return null;
+        const localView = new Date(date.getTime() + (offsetMinutes * 60 * 1000));
+        return {
+            minutesOfDay: (localView.getUTCHours() * 60) + localView.getUTCMinutes(),
+            localDay: localView.toISOString().split('T')[0]
+        };
     }
 
     // Reinterpret a date whose UTC components actually hold local wall-clock time in `timezone`

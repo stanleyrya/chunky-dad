@@ -8990,3 +8990,98 @@ test('cross-source venue identity: single-word bar names never match inside addr
   };
   assert.equal(core.getCrossSourceVenueIdentity(barRecord, addressRecord), null);
 });
+
+// ---------------------------------------------------------------------------
+// Hyphenated tracking params (Fix: Club Chub's Eventbrite links used
+// utm-campaign/utm-content, so ticket-url identity never fired and the same
+// eventbrite id 1975884326209 appeared twice unmerged)
+// ---------------------------------------------------------------------------
+
+test('normalizeTicketUrlForIdentity strips hyphenated utm params exactly like underscore forms', () => {
+  const core = createCore();
+  const hyphenated = core.normalizeTicketUrlForIdentity(
+    'https://www.eventbrite.com/e/club-chub-weekend-2026-tickets-1975884326209?utm-campaign=x&aff=y');
+  const underscore = core.normalizeTicketUrlForIdentity(
+    'https://www.eventbrite.com/e/club-chub-weekend-2026-tickets-1975884326209?utm_campaign=x');
+  assert.equal(hyphenated, 'eventbrite.com/e/club-chub-weekend-2026-tickets-1975884326209');
+  assert.equal(hyphenated, underscore, 'both separator styles must normalize identically');
+});
+
+test('identity: literal CCBC pair (same eventbrite id, hyphenated tracking params) fires ticket-url', () => {
+  const core = createCore();
+  // Two records of the SAME Eventbrite event id 1975884326209 from the run —
+  // different titles, one ticketUrl carrying hyphenated utm params + aff.
+  const ccbcResort = {
+    title: 'CCBC Resort',
+    startDate: new Date('2026-05-23T03:00:00.000Z'), // May 22, 8pm in LA
+    timezone: 'America/Los_Angeles',
+    ticketUrl: 'https://www.eventbrite.com/e/club-chub-weekend-2026-tickets-1975884326209?utm-campaign=website&utm-content=attendeeshare&utm-medium=discovery&utm-source=cp&aff=ebdsshcopyurl',
+    source: 'ai-web'
+  };
+  const clubChubWeekend = {
+    title: 'Club Chub Weekend 2026 — The Ultimate Celebration!',
+    startDate: new Date('2026-05-22T19:00:00.000Z'), // May 22, noon in LA
+    timezone: 'America/Los_Angeles',
+    ticketUrl: 'https://www.eventbrite.com/e/club-chub-weekend-2026-tickets-1975884326209',
+    source: 'ai-web'
+  };
+  assert.equal(core.getSameEventIdentitySignal(ccbcResort, clubChubWeekend), 'ticket-url');
+});
+
+// ---------------------------------------------------------------------------
+// Midnight-placeholder startDate guard (Fix: QUENCHD — a record whose start
+// defaulted to local midnight beat the sibling's explicit 20:00Z start via
+// PARSER MERGE priority)
+// ---------------------------------------------------------------------------
+
+test('mergeParsedEvents: explicit start time beats a midnight-placeholder startDate in both directions', async () => {
+  const core = createCore();
+  const explicitRecord = {
+    title: 'QUENCHD BEER BUST', source: 'ai-web', city: 'dallas', timezone: 'America/Chicago',
+    startDate: new Date('2026-07-05T18:00:00.000Z') // 13:00 local (CDT) — explicit time
+  };
+  const midnightRecord = {
+    title: 'QUENCHD BEER BUST', source: 'ai-web', city: 'dallas', timezone: 'America/Chicago',
+    startDate: new Date('2026-07-05T05:00:00.000Z') // 00:00 local — "no time stated" placeholder
+  };
+
+  const keptExisting = await core.mergeParsedEvents({ ...explicitRecord }, { ...midnightRecord }, {});
+  assert.equal(keptExisting.startDate.toISOString(), '2026-07-05T18:00:00.000Z',
+    'an incoming midnight placeholder must never clobber the explicit start');
+
+  const keptIncoming = await core.mergeParsedEvents({ ...midnightRecord }, { ...explicitRecord }, {});
+  assert.equal(keptIncoming.startDate.toISOString(), '2026-07-05T18:00:00.000Z',
+    'an existing midnight placeholder must never beat the incoming explicit start');
+});
+
+test('mergeParsedEvents: two explicit non-midnight starts fall through the placeholder guard unchanged', async () => {
+  const core = createCore();
+  const eightPm = {
+    title: 'QUENCHD BEER BUST', source: 'ai-web', city: 'dallas', timezone: 'America/Chicago',
+    startDate: new Date('2026-07-05T18:00:00.000Z')
+  };
+  const ninePm = {
+    title: 'QUENCHD BEER BUST', source: 'ai-web', city: 'dallas', timezone: 'America/Chicago',
+    startDate: new Date('2026-07-05T19:00:00.000Z')
+  };
+  // Neither side is a placeholder: the pre-existing resolution keeps the
+  // incoming/base value (no deterministic override fires).
+  const merged = await core.mergeParsedEvents({ ...eightPm }, { ...ninePm }, {});
+  assert.equal(merged.startDate.toISOString(), '2026-07-05T19:00:00.000Z');
+});
+
+// ---------------------------------------------------------------------------
+// Greater Palm Springs aliases (real generated cities config)
+// ---------------------------------------------------------------------------
+
+test('greater palm springs aliases resolve the palm-springs timezone via the real cities config', () => {
+  const realCities = require('./scraper-cities');
+  const core = new SharedCore(realCities, { eventSchema: EventSchema });
+  const aliases = ['cathedral city', 'palm desert', 'rancho mirage', 'indian wells',
+    'la quinta', 'desert hot springs', 'greater palm springs'];
+  for (const alias of aliases) {
+    assert.equal(core.getCityTimezone(alias), 'America/Los_Angeles', `"${alias}" must resolve palm-springs' timezone`);
+  }
+  // Bare "coachella" is deliberately NOT an alias (festival-name collision)
+  assert.equal(core.getCityTimezone('coachella'), null);
+});

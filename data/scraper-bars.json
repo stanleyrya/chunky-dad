@@ -131,7 +131,9 @@
       "coordinates": "41.9497837, -87.6590034",
       "website": "https://metrochicago.com",
       "instagram": "https://www.instagram.com/metrochicago",
-      "facebook": "https://www.facebook.com/MetroChicago"
+      "facebook": "https://www.facebook.com/MetroChicago",
+      "faviconBg": "#e10c12",
+      "faviconFg": "#291716"
     }
   ],
   "dallas": [
@@ -250,7 +252,9 @@
       "coordinates": "29.7451002, -95.3715298",
       "website": "https://richshtx.com",
       "instagram": "https://www.instagram.com/richshtx",
-      "facebook": "https://www.facebook.com/richshtx"
+      "facebook": "https://www.facebook.com/richshtx",
+      "faviconBg": "#b89c52",
+      "faviconFg": "#caae62"
     }
   ],
   "la": [
@@ -428,6 +432,7 @@
       "city": "nyc",
       "address": "260 Meserole St, Brooklyn, NY 11206",
       "coordinates": "40.7084144, -73.9380583",
+      "website": "https://www.3dollarbillbk.com",
       "instagram": "https://www.instagram.com/3dollarbillbk",
       "facebook": "https://www.facebook.com/3dollarbillbk",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ7zm6H3JbwokR3ui1wTNr6Xc",
@@ -508,6 +513,12 @@
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJte-0gz9ZwokR5wz0wDUVOpQ",
       "gayCities": "https://newyork.gaycities.com/bars/426-th-avenue-saloon",
       "gayCitiesLastScrapedAt": "2026-06-14T07:46:28.587Z"
+    },
+    {
+      "name": "The Yard at 9 Bob Note",
+      "city": "nyc",
+      "address": "270 Meserole Ave, Brooklyn, NY 11222",
+      "website": "https://www.3dollarbillbk.com"
     }
   ],
   "palm-springs": [
