@@ -6833,6 +6833,116 @@ test('rrule survives the evidence gate when its schedule evidence is verbatim an
   assert.deepEqual(result.report.dropped, [], 'nothing dropped');
 });
 
+test('merge-canonicalized recurrence reaches event.recurrenceRule under both response namings', () => {
+  // Battery run 20260728 (CubScout): the schedule-evidence gate KEPT the
+  // extracted rrule, but the pass merge stores it under the canonical
+  // 'recurrence' key and normalizeAiEvent only read recurrenceRule/rrule —
+  // so ZERO events battery-wide ever carried recurrence. Replay the literal
+  // CubScout response shape through validation → merge → assembly for both
+  // prompt namings ('rrule' and 'recurrence').
+  global.EventSchema = EventSchema;
+  for (const keyName of ['rrule', 'recurrence']) {
+    const parser = createParser();
+    parser.now = () => new Date(2026, 6, 22, 15, 0, 0); // Wed 2026-07-22 local
+    const partial = {
+      title: 'CUBSCOUT',
+      [keyName]: 'FREQ=MONTHLY;BYDAY=1FR',
+      __fieldEvidence: { [keyName]: '1ST FRIDAY OF THE MONTH' }
+    };
+    const validated = runRruleValidation(parser, partial);
+    assert.equal(validated.event[keyName], 'FREQ=MONTHLY;BYDAY=1FR',
+      `${keyName}: the schedule-evidence gate keeps the corroborated rule`);
+    const merged = parser.mergeAiEventFields({}, validated.event);
+    assert.equal(merged.recurrence, 'FREQ=MONTHLY;BYDAY=1FR',
+      `${keyName}: the pass merge stores the canonical recurrence key`);
+    const logs = [];
+    const originalLog = console.log;
+    console.log = (...args) => { logs.push(args.join(' ')); };
+    let event;
+    try {
+      event = parser.normalizeAiEvent(merged, {}, null, null, null);
+    } finally {
+      console.log = originalLog;
+    }
+    assert.ok(event, `${keyName}: the recurring event survives assembly`);
+    assert.equal(event.recurrenceRule, 'FREQ=MONTHLY;BYDAY=1FR',
+      `${keyName}: the canonical recurrence value lands on event.recurrenceRule`);
+    assert.ok(logs.some(line => line.startsWith('🔁 RECURRING: derived next occurrence')),
+      `${keyName}: the recurring derivation log fires`);
+  }
+});
+
+test('whole-page fallback rejects page-title echoes without same-pass time evidence', () => {
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  // Battery run 20260728 (The Lumberyard): the homepage og:title
+  // "White Center | United States | Lumber Yard Bar" (a neighborhood) became
+  // the surviving event's title via a meta pass that carried no date/time.
+  const html = '<html><head><meta property="og:title" content="White Center | United States | Lumber Yard Bar" />'
+    + '<title>White Center | United States | Lumber Yard Bar</title></head><body>events</body></html>';
+  const fallbackHtmlData = { html, url: 'https://www.thelumberyardbar.com/', _wholePageFallback: true };
+
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let guarded;
+  let withSchedule;
+  let notFallback;
+  try {
+    guarded = parser.rejectPageTitleEchoPassFields(
+      { title: 'White Center', url: 'https://www.thelumberyardbar.com/' },
+      fallbackHtmlData
+    );
+    // A pass carrying the title TOGETHER with its schedule always passes —
+    // the goldiloxx-chicago class (og:title IS the event name, full schedule).
+    withSchedule = parser.rejectPageTitleEchoPassFields(
+      { title: 'White Center', startDate: '2026-07-31', startTime: '21:00' },
+      fallbackHtmlData
+    );
+    // Ordinary (non-fallback) pages are untouched.
+    notFallback = parser.rejectPageTitleEchoPassFields(
+      { title: 'White Center' },
+      { html, url: 'https://www.thelumberyardbar.com/' }
+    );
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(guarded.title, undefined, 'the og:title echo is rejected on the fallback path');
+  assert.equal(guarded.url, 'https://www.thelumberyardbar.com/', 'other fields survive');
+  assert.ok(logs.includes('🤖 AI Web: Skipped page-title echo "White Center" — not an event'),
+    `the junk-gate log fires, got: ${JSON.stringify(logs)}`);
+  assert.equal(withSchedule.title, 'White Center', 'a title with same-pass time evidence is kept');
+  assert.equal(notFallback.title, 'White Center', 'non-fallback extraction is untouched');
+
+  // A real event name absent from the page's own titles is never rejected.
+  const realEvent = parser.rejectPageTitleEchoPassFields(
+    { title: 'GLOW: THE SEQUEL' },
+    fallbackHtmlData
+  );
+  assert.equal(realEvent.title, 'GLOW: THE SEQUEL');
+});
+
+test('the schedule-evidence gate drops mismatched rules under the recurrence naming too', () => {
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let mismatch;
+  try {
+    mismatch = runRruleValidation(parser, {
+      recurrence: 'FREQ=WEEKLY;BYDAY=FR',
+      __fieldEvidence: { recurrence: 'every Tuesday' }
+    });
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(mismatch.event.recurrence, undefined, 'weekday mismatch fails closed for the recurrence key');
+  assert.equal(mismatch.report.dropped[0].reason, 'rrule-schedule-evidence');
+  assert.ok(logs.includes('🤖 AI Web: Dropped rrule "FREQ=WEEKLY;BYDAY=FR" — schedule words in evidence do not corroborate the rule'),
+    `the corroboration drop log fires on the recurrence-named path, got: ${JSON.stringify(logs)}`);
+});
+
 test('rrule validation rejects non-RRULE values, unverbatim evidence, and schedule mismatches', () => {
   global.EventSchema = EventSchema;
   const parser = createParser();

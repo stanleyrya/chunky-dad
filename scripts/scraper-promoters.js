@@ -10,6 +10,9 @@
 const scraperPromoters = [
   {
     "name": "Megawoof America",
+    "aliases": [
+      "MEGAWOOF"
+    ],
     "shortName": "MEGA-WOOF",
     "instagram": "https://www.instagram.com/megawoof_america",
     "website": "https://linktr.ee/megawoof_america",
@@ -111,6 +114,20 @@ const scraperPromoters = [
     "name": "BEEFMINCE",
     "website": "https://beefmince.com",
     "bearAffinity": "always"
+  },
+  {
+    "name": "SPOOKMINCE",
+    "parent": "BEEFMINCE",
+    "keywords": [
+      "spookmince"
+    ]
+  },
+  {
+    "name": "BOATMINCE",
+    "parent": "BEEFMINCE",
+    "keywords": [
+      "boatmince"
+    ]
   },
   {
     "name": "BeefDip",
