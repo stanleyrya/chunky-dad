@@ -4,7 +4,7 @@
   "description": "A modern static website for chunky.dad",
   "main": "index.html",
   "scripts": {
-    "test": "node --test scripts/event-schema.test.js scripts/shared-core.test.js scripts/normalizers.test.js scripts/bear-event-scraper-unified.test.js scripts/parsers/ai-web-parser.test.js scripts/analyze-scraper-log.test.js scripts/run-log-summary.test.js scripts/metrics-sections.test.js scripts/event-provenance.test.js scripts/adapters/scriptable-adapter.test.js scripts/promoter-registry.test.js scripts/golden-pipeline.test.js scripts/calendar-contract.test.js scripts/replay-run.test.js scripts/tools-serve-results.test.js",
+    "test": "node --test scripts/event-schema.test.js scripts/shared-core.test.js scripts/normalizers.test.js scripts/bear-event-scraper-unified.test.js scripts/parsers/ai-web-parser.test.js scripts/analyze-scraper-log.test.js scripts/run-log-summary.test.js scripts/metrics-sections.test.js scripts/event-provenance.test.js scripts/adapters/scriptable-adapter.test.js scripts/adapters/web-adapter.test.js scripts/promoter-registry.test.js scripts/golden-pipeline.test.js scripts/calendar-contract.test.js scripts/replay-run.test.js scripts/tools-serve-results.test.js",
     "start": "python3 -m http.server 8000",
     "serve": "python3 -m http.server 8000",
     "scraper-server": "node tools/serve-results.js",

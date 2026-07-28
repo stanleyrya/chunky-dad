@@ -7386,6 +7386,432 @@ class SharedCore {
         return uids;
     }
 
+    // -------------------------------------------------------------------------
+    // Published-calendar ICS parsing + RRULE expansion (pure string/date work).
+    // The Mac/Node web adapter reads the published per-city calendar files
+    // (https://chunky.dad/data/calendars/<cityKey>.ics) as its "existing
+    // events" source so merge/enrich/conflict analysis works without EventKit.
+    // Everything here is dependency-free (Intl + Date only) and platform-pure.
+    // -------------------------------------------------------------------------
+
+    // RFC 5545 TEXT unescaping: \\ -> \, \n or \N -> newline, \, -> comma,
+    // \; -> semicolon. Single pass so "\\n" correctly yields "\n" (literal).
+    static unescapeIcsText(value) {
+        if (value === null || value === undefined) return '';
+        return String(value).replace(/\\([\\;,nN])/g, (match, escaped) =>
+            (escaped === 'n' || escaped === 'N') ? '\n' : escaped);
+    }
+
+    // Offset (minutes) of an IANA timezone from UTC at an instant. Static
+    // sibling of the instance getTimezoneOffsetMinutes (which stays untouched)
+    // for the pure ICS helpers below. Bare "GMT" (UTC's longOffset) → 0.
+    static getIcsTimezoneOffsetMinutes(date, timezone) {
+        try {
+            const formatter = new Intl.DateTimeFormat('en', {
+                timeZone: timezone,
+                timeZoneName: 'longOffset'
+            });
+            const parts = formatter.formatToParts(date);
+            const offsetPart = parts.find(part => part.type === 'timeZoneName');
+            const offsetText = offsetPart && typeof offsetPart.value === 'string' ? offsetPart.value : '';
+            if (/^(GMT|UTC)$/i.test(offsetText.trim())) return 0;
+            const offsetMatch = offsetText.match(/GMT([+-])(\d{1,2})(?::(\d{2}))?/);
+            if (!offsetMatch) return null;
+            const sign = offsetMatch[1] === '+' ? 1 : -1;
+            return sign * ((parseInt(offsetMatch[2], 10) * 60) + (offsetMatch[3] ? parseInt(offsetMatch[3], 10) : 0));
+        } catch (_) {
+            return null;
+        }
+    }
+
+    // Wall-clock components in an IANA timezone → the UTC instant they name.
+    // Iterates because the offset guess can be wrong near DST transitions
+    // (same algorithm as the instance convertWallClockDateToUtc).
+    static zonedWallClockToUtc(wall, timezone) {
+        if (!wall || typeof wall !== 'object') return null;
+        const base = Date.UTC(
+            wall.year, (wall.month || 1) - 1, wall.day || 1,
+            wall.hour || 0, wall.minute || 0, wall.second || 0
+        );
+        if (!Number.isFinite(base)) return null;
+        if (!timezone || /^(UTC|GMT|Z)$/i.test(String(timezone))) return new Date(base);
+        let utcMillis = base;
+        for (let i = 0; i < 4; i++) {
+            const offsetMinutes = SharedCore.getIcsTimezoneOffsetMinutes(new Date(utcMillis), timezone);
+            if (!Number.isFinite(offsetMinutes)) return null;
+            const nextUtcMillis = base - (offsetMinutes * 60 * 1000);
+            if (nextUtcMillis === utcMillis) break;
+            utcMillis = nextUtcMillis;
+        }
+        return new Date(utcMillis);
+    }
+
+    // One ICS date/date-time property value → { date, wall, tzid, isDateOnly }.
+    // `params` is the raw parameter run between the property name and ':'
+    // (e.g. ";TZID=America/Los_Angeles" or ";VALUE=DATE"); `value` the text
+    // after ':'. Handles the three published shapes: TZID wall clock, UTC "Z",
+    // and VALUE=DATE (all-day, midnight UTC). Floating times are read as UTC.
+    static parseIcsDateValue(params, value) {
+        const text = String(value === null || value === undefined ? '' : value).trim();
+        const paramText = String(params || '');
+        const tzidMatch = paramText.match(/TZID=([^;:]+)/i);
+        const tzid = tzidMatch ? tzidMatch[1].trim() : null;
+        if (/VALUE=DATE(?!-TIME)/i.test(paramText) || /^\d{8}$/.test(text)) {
+            const dateMatch = text.match(/^(\d{4})(\d{2})(\d{2})$/);
+            if (!dateMatch) return null;
+            const wall = {
+                year: parseInt(dateMatch[1], 10), month: parseInt(dateMatch[2], 10), day: parseInt(dateMatch[3], 10),
+                hour: 0, minute: 0, second: 0
+            };
+            const date = new Date(Date.UTC(wall.year, wall.month - 1, wall.day));
+            return isNaN(date.getTime()) ? null : { date, wall, tzid: null, isDateOnly: true };
+        }
+        const dateTimeMatch = text.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})?(Z)?$/);
+        if (!dateTimeMatch) return null;
+        const wall = {
+            year: parseInt(dateTimeMatch[1], 10), month: parseInt(dateTimeMatch[2], 10), day: parseInt(dateTimeMatch[3], 10),
+            hour: parseInt(dateTimeMatch[4], 10), minute: parseInt(dateTimeMatch[5], 10),
+            second: dateTimeMatch[6] ? parseInt(dateTimeMatch[6], 10) : 0
+        };
+        const isUtc = Boolean(dateTimeMatch[7]);
+        const date = (isUtc || !tzid)
+            ? new Date(Date.UTC(wall.year, wall.month - 1, wall.day, wall.hour, wall.minute, wall.second))
+            : SharedCore.zonedWallClockToUtc(wall, tzid);
+        if (!date || isNaN(date.getTime())) return null;
+        return { date, wall, tzid: isUtc ? 'UTC' : tzid, isDateOnly: false };
+    }
+
+    // Fuller (but still light) VEVENT scanner than extractRecurringUidsFromIcs:
+    // per VEVENT extracts UID, SUMMARY, DTSTART/DTEND (TZID= and VALUE=DATE
+    // variants), RRULE, DESCRIPTION (unfolded + unescaped), LOCATION, URL,
+    // EXDATE list and RECURRENCE-ID. Returns an array of plain records, or
+    // null for non-string/empty input (callers fail open). VTIMEZONE blocks
+    // (whose DST rules also say "RRULE:") are naturally skipped because only
+    // BEGIN:VEVENT…END:VEVENT blocks are walked.
+    static parsePublishedCalendarIcs(icsText) {
+        if (typeof icsText !== 'string' || icsText.trim() === '') return null;
+        // Unfold RFC 5545 folded lines (CRLF/LF followed by space or tab).
+        const unfolded = icsText.replace(/\r?\n[ \t]/g, '');
+        const records = [];
+        const blockRegex = /BEGIN:VEVENT([\s\S]*?)END:VEVENT/g;
+        let match;
+        while ((match = blockRegex.exec(unfolded)) !== null) {
+            // VALARM sub-blocks carry DESCRIPTION lines of their own — strip them.
+            const block = match[1].replace(/BEGIN:VALARM[\s\S]*?END:VALARM/g, '');
+            const record = {
+                uid: '', summary: '', description: '', location: '', url: '',
+                rrule: '', start: null, end: null, exdates: [], recurrenceId: null
+            };
+            for (const rawLine of block.split(/\r?\n/)) {
+                const line = rawLine.trim() === '' ? null : rawLine;
+                if (!line) continue;
+                const propMatch = line.match(/^([A-Za-z0-9-]+)((?:;[^:]*)?):(.*)$/);
+                if (!propMatch) continue;
+                const name = propMatch[1].toUpperCase();
+                const params = propMatch[2] || '';
+                const value = propMatch[3];
+                switch (name) {
+                    case 'UID': record.uid = value.trim(); break;
+                    case 'SUMMARY': record.summary = SharedCore.unescapeIcsText(value).trim(); break;
+                    case 'DESCRIPTION': record.description = SharedCore.unescapeIcsText(value); break;
+                    case 'LOCATION': record.location = SharedCore.unescapeIcsText(value).trim(); break;
+                    case 'URL': record.url = value.trim(); break;
+                    case 'RRULE': record.rrule = value.trim(); break;
+                    case 'DTSTART': record.start = SharedCore.parseIcsDateValue(params, value); break;
+                    case 'DTEND': record.end = SharedCore.parseIcsDateValue(params, value); break;
+                    case 'RECURRENCE-ID': record.recurrenceId = SharedCore.parseIcsDateValue(params, value); break;
+                    case 'EXDATE':
+                        for (const exValue of value.split(',')) {
+                            const parsed = SharedCore.parseIcsDateValue(params, exValue);
+                            if (parsed) record.exdates.push(parsed);
+                        }
+                        break;
+                    default: break;
+                }
+            }
+            if (!record.uid || !record.start) continue;
+            record.isAllDay = Boolean(record.start.isDateOnly);
+            records.push(record);
+        }
+        return records;
+    }
+
+    // RRULE text → uppercase part map ({ FREQ, BYDAY, … }), or null when empty.
+    static parseRruleParts(rrule) {
+        const text = String(rrule || '').replace(/^RRULE[:;]/i, '').trim();
+        if (!text) return null;
+        const parts = {};
+        for (const chunk of text.split(';')) {
+            const eqIndex = chunk.indexOf('=');
+            if (eqIndex <= 0) continue;
+            parts[chunk.slice(0, eqIndex).trim().toUpperCase()] = chunk.slice(eqIndex + 1).trim().toUpperCase();
+        }
+        return Object.keys(parts).length > 0 ? parts : null;
+    }
+
+    // Expand a recurring series' occurrence START instants into a window.
+    // Supports exactly the shapes the published calendars contain (verified
+    // inventory: FREQ=WEEKLY[;BYDAY=…], FREQ=MONTHLY;BYDAY=nXX) plus DAILY,
+    // plain MONTHLY (day-of-month), INTERVAL, COUNT and UNTIL. Anything else
+    // returns null and the caller treats the event as non-recurring.
+    //
+    // `seriesStart` is a parsed date record from parseIcsDateValue ({ date,
+    // wall, tzid, isDateOnly }) or a plain Date (read as UTC wall clock).
+    // Iteration happens in the series' own wall-clock domain and each
+    // occurrence converts wall clock + TZID → instant, so weekly series keep
+    // their local start time across DST transitions.
+    static expandRruleOccurrencesInWindow(rrule, seriesStart, windowStart, windowEnd) {
+        const startRecord = seriesStart instanceof Date
+            ? {
+                date: seriesStart,
+                wall: {
+                    year: seriesStart.getUTCFullYear(), month: seriesStart.getUTCMonth() + 1, day: seriesStart.getUTCDate(),
+                    hour: seriesStart.getUTCHours(), minute: seriesStart.getUTCMinutes(), second: seriesStart.getUTCSeconds()
+                },
+                tzid: 'UTC', isDateOnly: false
+            }
+            : seriesStart;
+        if (!startRecord || !(startRecord.date instanceof Date) || isNaN(startRecord.date.getTime()) || !startRecord.wall) {
+            return null;
+        }
+        const parts = SharedCore.parseRruleParts(rrule);
+        if (!parts || !parts.FREQ) return null;
+        const supportedKeys = new Set(['FREQ', 'INTERVAL', 'BYDAY', 'COUNT', 'UNTIL', 'WKST']);
+        for (const key of Object.keys(parts)) {
+            if (!supportedKeys.has(key)) return null;
+        }
+        const freq = parts.FREQ;
+        if (freq !== 'DAILY' && freq !== 'WEEKLY' && freq !== 'MONTHLY') return null;
+        const interval = parts.INTERVAL === undefined ? 1 : parseInt(parts.INTERVAL, 10);
+        if (!Number.isFinite(interval) || interval < 1) return null;
+        const count = parts.COUNT === undefined ? null : parseInt(parts.COUNT, 10);
+        if (count !== null && (!Number.isFinite(count) || count < 1)) return null;
+        let untilMs = null;
+        if (parts.UNTIL !== undefined) {
+            const untilRecord = SharedCore.parseIcsDateValue('', parts.UNTIL);
+            if (!untilRecord) return null;
+            // Date-only UNTIL bounds the whole final day.
+            untilMs = untilRecord.date.getTime() + (untilRecord.isDateOnly ? (24 * 60 * 60 * 1000) - 1 : 0);
+        }
+
+        const WEEKDAY_CODES = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+        const DAY_MS = 24 * 60 * 60 * 1000;
+        const wall = startRecord.wall;
+        const startDayMs = Date.UTC(wall.year, wall.month - 1, wall.day);
+        const startWeekday = new Date(startDayMs).getUTCDay();
+
+        // BYDAY handling per FREQ.
+        let weeklyWeekdays = null;   // sorted array of weekday numbers (0=SU)
+        let monthlyOrdinal = null;   // { ordinal, weekday } or null (day-of-month monthly)
+        if (parts.BYDAY !== undefined) {
+            const tokens = parts.BYDAY.split(',').map(token => token.trim()).filter(Boolean);
+            if (tokens.length === 0) return null;
+            if (freq === 'WEEKLY' || freq === 'DAILY') {
+                const weekdays = [];
+                for (const token of tokens) {
+                    const weekday = WEEKDAY_CODES.indexOf(token);
+                    if (weekday === -1) return null; // ordinal BYDAY is not a weekly shape
+                    weekdays.push(weekday);
+                }
+                if (freq === 'DAILY') {
+                    // BYDAY on DAILY is out of published scope — unsupported.
+                    return null;
+                }
+                weeklyWeekdays = Array.from(new Set(weekdays)).sort((a, b) => a - b);
+            } else {
+                if (tokens.length !== 1) return null;
+                const ordinalMatch = tokens[0].match(/^(-?\d)(SU|MO|TU|WE|TH|FR|SA)$/);
+                if (!ordinalMatch) return null;
+                const ordinal = parseInt(ordinalMatch[1], 10);
+                if (!Number.isFinite(ordinal) || ordinal === 0 || Math.abs(ordinal) > 5) return null;
+                monthlyOrdinal = { ordinal, weekday: WEEKDAY_CODES.indexOf(ordinalMatch[2]) };
+            }
+        }
+        if (freq === 'WEEKLY' && !weeklyWeekdays) {
+            weeklyWeekdays = [startWeekday];
+        }
+
+        const windowStartMs = (windowStart instanceof Date ? windowStart : new Date(windowStart)).getTime();
+        const windowEndMs = (windowEnd instanceof Date ? windowEnd : new Date(windowEnd)).getTime();
+        if (!Number.isFinite(windowStartMs) || !Number.isFinite(windowEndMs) || windowEndMs < windowStartMs) {
+            return [];
+        }
+
+        // Candidate wall-clock DAYS (ms at UTC midnight of the wall date), in
+        // order from the series start. Generation stops past the window end
+        // (with a 2-day margin for timezone skew) or at the iteration cap.
+        const marginMs = 2 * DAY_MS;
+        const maxCandidates = 5000;
+        const candidateDays = [];
+        if (freq === 'DAILY') {
+            for (let i = 0; ; i++) {
+                const dayMs = startDayMs + (i * interval * DAY_MS);
+                if (dayMs > windowEndMs + marginMs || candidateDays.length >= maxCandidates) break;
+                candidateDays.push(dayMs);
+            }
+        } else if (freq === 'WEEKLY') {
+            // Weeks count from the series start's week (WKST=MO, Google's default).
+            const weekStartMs = startDayMs - ((((startWeekday - 1) % 7) + 7) % 7) * DAY_MS;
+            outerWeekly:
+            for (let week = 0; ; week++) {
+                const thisWeekStartMs = weekStartMs + (week * interval * 7 * DAY_MS);
+                if (thisWeekStartMs > windowEndMs + marginMs) break;
+                for (const weekday of weeklyWeekdays) {
+                    // Offset of `weekday` within a MO-started week.
+                    const offsetDays = (((weekday - 1) % 7) + 7) % 7;
+                    const dayMs = thisWeekStartMs + (offsetDays * DAY_MS);
+                    if (dayMs < startDayMs) continue; // before DTSTART
+                    if (dayMs > windowEndMs + marginMs) continue;
+                    if (candidateDays.length >= maxCandidates) break outerWeekly;
+                    candidateDays.push(dayMs);
+                }
+            }
+        } else { // MONTHLY
+            const monthIndexOf = (year, month) => (year * 12) + (month - 1);
+            const startMonthIndex = monthIndexOf(wall.year, wall.month);
+            for (let step = 0; ; step++) {
+                const monthIndex = startMonthIndex + (step * interval);
+                const year = Math.floor(monthIndex / 12);
+                const month = (monthIndex % 12) + 1;
+                const monthStartMs = Date.UTC(year, month - 1, 1);
+                if (monthStartMs > windowEndMs + marginMs || candidateDays.length >= maxCandidates) break;
+                const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+                let day = null;
+                if (monthlyOrdinal) {
+                    const { ordinal, weekday } = monthlyOrdinal;
+                    if (ordinal > 0) {
+                        const firstWeekday = new Date(monthStartMs).getUTCDay();
+                        day = 1 + ((weekday - firstWeekday + 7) % 7) + ((ordinal - 1) * 7);
+                    } else {
+                        const lastWeekday = new Date(Date.UTC(year, month - 1, daysInMonth)).getUTCDay();
+                        day = daysInMonth - ((lastWeekday - weekday + 7) % 7) + ((ordinal + 1) * 7);
+                    }
+                    if (day < 1 || day > daysInMonth) continue; // no such ordinal this month
+                } else {
+                    day = wall.day;
+                    if (day > daysInMonth) continue; // RFC: skip months without the day
+                }
+                const dayMs = Date.UTC(year, month - 1, day);
+                if (dayMs < startDayMs) continue;
+                candidateDays.push(dayMs);
+            }
+        }
+
+        // Wall date → occurrence instant; apply COUNT/UNTIL from the series
+        // start (both bound the whole series, not just the window slice).
+        const occurrences = [];
+        let occurrenceIndex = 0;
+        for (const dayMs of candidateDays) {
+            const dayDate = new Date(dayMs);
+            const occurrenceWall = {
+                year: dayDate.getUTCFullYear(), month: dayDate.getUTCMonth() + 1, day: dayDate.getUTCDate(),
+                hour: wall.hour || 0, minute: wall.minute || 0, second: wall.second || 0
+            };
+            const instant = startRecord.isDateOnly
+                ? new Date(Date.UTC(occurrenceWall.year, occurrenceWall.month - 1, occurrenceWall.day))
+                : SharedCore.zonedWallClockToUtc(occurrenceWall, startRecord.tzid);
+            if (!instant || isNaN(instant.getTime())) continue;
+            occurrenceIndex += 1;
+            if (count !== null && occurrenceIndex > count) break;
+            if (untilMs !== null && instant.getTime() > untilMs) break;
+            const instantMs = instant.getTime();
+            if (instantMs >= windowStartMs && instantMs <= windowEndMs) {
+                occurrences.push(instant);
+            }
+        }
+        return occurrences;
+    }
+
+    // Parsed VEVENT records + a window → the flat existing-event objects the
+    // merge machinery consumes (same shape ScriptableAdapter.getExistingEvents
+    // returns from EventKit): identifier (raw ICS UID; series occurrences all
+    // share their series UID, matching how EventKit surfaces instances),
+    // title, startDate/endDate (Date instants), notes (DESCRIPTION — the
+    // calendar-as-database key:value format), location, isAllDay, url, plus
+    // `recurrence` on series occurrences so the hands-off recurring path fires
+    // even when the window holds a single instance. EXDATEs are excluded and
+    // RECURRENCE-ID override VEVENTs replace their matching occurrence.
+    // Series with an unsupported RRULE are listed in `unsupportedRrules` and
+    // included as plain one-off events (fail toward today's behavior).
+    static expandPublishedCalendarEventsInWindow(records, windowStart, windowEnd) {
+        const result = { events: [], unsupportedRrules: [] };
+        if (!Array.isArray(records)) return result;
+        const windowStartDate = windowStart instanceof Date ? windowStart : new Date(windowStart);
+        const windowEndDate = windowEnd instanceof Date ? windowEnd : new Date(windowEnd);
+        if (isNaN(windowStartDate.getTime()) || isNaN(windowEndDate.getTime())) return result;
+
+        const overlapsWindow = (start, end) => {
+            if (!(start instanceof Date) || isNaN(start.getTime())) return false;
+            const effectiveEnd = end instanceof Date && !isNaN(end.getTime()) ? end : start;
+            return start.getTime() <= windowEndDate.getTime() && effectiveEnd.getTime() >= windowStartDate.getTime();
+        };
+        const toEvent = (record, startDate, endDate, extra) => ({
+            identifier: record.uid,
+            title: record.summary || '',
+            startDate,
+            endDate,
+            location: record.location || '',
+            notes: record.description || '',
+            url: record.url || '',
+            isAllDay: Boolean(record.isAllDay),
+            ...(extra || {})
+        });
+        const recordEnd = (record) => (record.end && record.end.date) ? record.end.date : record.start.date;
+
+        // Override instants per series UID (RECURRENCE-ID VEVENTs replace the
+        // matching expanded occurrence).
+        const overrideInstantsByUid = new Map();
+        for (const record of records) {
+            if (!record || !record.uid || !record.recurrenceId || !record.recurrenceId.date) continue;
+            if (!overrideInstantsByUid.has(record.uid)) overrideInstantsByUid.set(record.uid, new Set());
+            overrideInstantsByUid.get(record.uid).add(record.recurrenceId.date.getTime());
+        }
+
+        for (const record of records) {
+            if (!record || !record.uid || !record.start || !(record.start.date instanceof Date)) continue;
+
+            if (record.recurrenceId) {
+                // Override instance: stands on its own dates (its expanded
+                // source occurrence is suppressed via overrideInstantsByUid).
+                if (overlapsWindow(record.start.date, recordEnd(record))) {
+                    result.events.push(toEvent(record, record.start.date, recordEnd(record)));
+                }
+                continue;
+            }
+
+            if (record.rrule) {
+                const occurrenceStarts = SharedCore.expandRruleOccurrencesInWindow(
+                    record.rrule, record.start, windowStartDate, windowEndDate
+                );
+                if (occurrenceStarts === null) {
+                    result.unsupportedRrules.push({ uid: record.uid, rrule: record.rrule });
+                    if (overlapsWindow(record.start.date, recordEnd(record))) {
+                        result.events.push(toEvent(record, record.start.date, recordEnd(record)));
+                    }
+                    continue;
+                }
+                const durationMs = Math.max(0, recordEnd(record).getTime() - record.start.date.getTime());
+                const excludedInstants = new Set((record.exdates || [])
+                    .filter(exdate => exdate && exdate.date)
+                    .map(exdate => exdate.date.getTime()));
+                const overrideInstants = overrideInstantsByUid.get(record.uid) || new Set();
+                for (const occurrenceStart of occurrenceStarts) {
+                    const startMs = occurrenceStart.getTime();
+                    if (excludedInstants.has(startMs) || overrideInstants.has(startMs)) continue;
+                    result.events.push(toEvent(
+                        record, occurrenceStart, new Date(startMs + durationMs), { recurrence: record.rrule }
+                    ));
+                }
+                continue;
+            }
+
+            if (overlapsWindow(record.start.date, recordEnd(record))) {
+                result.events.push(toEvent(record, record.start.date, recordEnd(record)));
+            }
+        }
+        return result;
+    }
+
     // Pure decision for the wide-window identifier probe: ≥2 calendar
     // instances sharing the matched identifier means the identifier belongs
     // to a recurring series (occurrences of a series share one identifier).
