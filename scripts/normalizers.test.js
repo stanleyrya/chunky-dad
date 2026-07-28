@@ -2873,3 +2873,15 @@ test('cathedral city (city value and address) resolves to palm-springs via the r
   // Word-boundary safety: a multi-word alias never matches inside other words
   assert.equal(normalizer.extractCityFromAddress('123 Main St, Cathedralton, TX'), null);
 });
+
+test('BasicDataNormalizer stamps _recurring for a non-empty recurrenceRule (series are display+export only)', () => {
+  const normalizer = new BasicDataNormalizer();
+  const recurring = normalizer.normalize({ title: 'FUZZY', recurrenceRule: 'FREQ=WEEKLY;BYDAY=FR' });
+  assert.equal(recurring._recurring, true);
+
+  const emptyRule = normalizer.normalize({ title: 'ONE-OFF', recurrenceRule: '' });
+  assert.equal(emptyRule._recurring, undefined, 'empty rrule never stamps');
+
+  const plain = normalizer.normalize({ title: 'PLAIN' });
+  assert.equal(plain._recurring, undefined);
+});

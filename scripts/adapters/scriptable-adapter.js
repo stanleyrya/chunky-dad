@@ -2347,6 +2347,163 @@ class ScriptableAdapter {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Recurring-series detection (merge safety). Scriptable exposes NO
+  // recurrence reads on CalendarEvent, so occurrences of a series are
+  // individually indistinguishable from normal events — a narrow search
+  // window can see exactly ONE instance of a MONTHLY series and let it
+  // masquerade as a normal event. Two adapter-side layers close the hole
+  // when SharedCore's own signals (notes `recurrence:` key, identifier RID
+  // patterns, multi-instance UID in the candidate set) have not fired:
+  //   1. Published calendar ICS: CI publishes each calendar to
+  //      https://chunky.dad/data/calendars/<cityKey>.ics with RRULEs intact,
+  //      and the identifier suffix after the first colon IS the ICS UID
+  //      verbatim — an authoritative series lookup.
+  //   2. Fallback: ONE targeted wide-window identifier probe
+  //      (CalendarEvent.between over now-35d..now+70d) — ≥2 instances
+  //      sharing the matched identifier means a series.
+  // Both layers fail open (any error → today's behavior) and cache per run.
+  // ---------------------------------------------------------------------------
+
+  // Fetch + light-scan the published calendar ICS for one city: Map of ICS
+  // UID → has-RRULE, or null on any failure (callers fall back to the
+  // wide-window probe). Uses the same page-cache machinery as the remote
+  // bars fetch; the published file refreshes ~2-hourly, so a ~6h TTL
+  // (0.25 days) keeps repeat runs cheap. Cached per run per city.
+  async getPublishedRecurringUids(cityKey) {
+    try {
+      const key = String(cityKey || "").trim();
+      if (!key) return null;
+      if (!this._publishedRecurringUidsByCity) {
+        this._publishedRecurringUidsByCity = {};
+      }
+      if (
+        Object.prototype.hasOwnProperty.call(
+          this._publishedRecurringUidsByCity,
+          key,
+        )
+      ) {
+        return this._publishedRecurringUidsByCity[key];
+      }
+      const url = `https://chunky.dad/data/calendars/${encodeURIComponent(key)}.ics`;
+      const icsCacheConfig = {
+        enabled: this.getPageCacheConfig().enabled,
+        ttlDays: 0.25,
+      };
+      let body = null;
+      const cached = await this.readCachedPage(url, icsCacheConfig);
+      if (cached && typeof cached.html === "string") {
+        body = cached.html;
+      } else {
+        const responseData = await this.fetchData(url, {
+          headers: { Accept: "text/calendar" },
+          isCacheableResponse: () => false,
+        });
+        if (responseData && typeof responseData.html === "string") {
+          body = responseData.html;
+          await this.writeCachedPage(url, responseData, icsCacheConfig);
+        }
+      }
+      const uids = body ? SharedCore.extractRecurringUidsFromIcs(body) : null;
+      this._publishedRecurringUidsByCity[key] = uids;
+      return uids;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  // Targeted wide-window identifier probe (fallback layer): count calendar
+  // instances sharing the matched identifier across now-35d..now+70d.
+  // Decision logic is pure (SharedCore.resolveSeriesProbeDecision).
+  async probeSeriesByWideWindow(identifier, cityKey, title) {
+    try {
+      const calendarName = this.getCalendarName(cityKey || "default");
+      const calendar = await this.getOrCreateCalendar(calendarName);
+      const now = new Date();
+      const windowStart = new Date(now.getTime() - 35 * 24 * 60 * 60 * 1000);
+      const windowEnd = new Date(now.getTime() + 70 * 24 * 60 * 60 * 1000);
+      const instances = await CalendarEvent.between(windowStart, windowEnd, [
+        calendar,
+      ]);
+      const decision = SharedCore.resolveSeriesProbeDecision(
+        instances,
+        identifier,
+      );
+      if (decision.isSeries) {
+        console.log(
+          `🔁 RECURRING: series detected via wide-window identifier probe for "${title}" (${decision.instanceCount} instances)`,
+        );
+      }
+      return decision.isSeries;
+    } catch (error) {
+      // Fail open — probe errors never change merge behavior.
+      return false;
+    }
+  }
+
+  // SharedCore calls this (when defined) after a scraped event merge-matched
+  // an existing calendar event WITHOUT any series signal firing. Decision
+  // ordering: published calendar ICS first (authoritative both ways — a UID
+  // present WITHOUT an RRULE is confirmed NOT a series and skips the probe),
+  // then the wide-window identifier probe. Cached per identifier per run;
+  // fails open.
+  async probeRecurringSeries(existingEvent, scrapedEvent = null) {
+    try {
+      const identifier =
+        existingEvent && existingEvent.identifier
+          ? String(existingEvent.identifier).trim()
+          : "";
+      if (!identifier) return false;
+      if (!this._seriesProbeCache) this._seriesProbeCache = {};
+      if (
+        Object.prototype.hasOwnProperty.call(this._seriesProbeCache, identifier)
+      ) {
+        return this._seriesProbeCache[identifier];
+      }
+      const title =
+        (existingEvent && existingEvent.title) ||
+        (scrapedEvent && scrapedEvent.title) ||
+        "Unknown";
+      const cityKey =
+        (scrapedEvent && scrapedEvent.city) ||
+        (existingEvent && existingEvent.city) ||
+        "";
+      let decision = null;
+
+      // Layer 1: published calendar ICS lookup.
+      const uid = SharedCore.extractIcsUidFromIdentifier(identifier);
+      if (uid) {
+        const publishedUids = await this.getPublishedRecurringUids(cityKey);
+        if (publishedUids instanceof Map && publishedUids.has(uid)) {
+          if (publishedUids.get(uid) === true) {
+            console.log(
+              `🔁 RECURRING: series confirmed via published calendar ICS for "${title}"`,
+            );
+            decision = true;
+          } else {
+            decision = false;
+          }
+        }
+      }
+
+      // Layer 2 (fallback): wide-window identifier probe.
+      if (decision === null) {
+        decision = await this.probeSeriesByWideWindow(
+          identifier,
+          cityKey,
+          title,
+        );
+      }
+      this._seriesProbeCache[identifier] = decision === true;
+      return this._seriesProbeCache[identifier];
+    } catch (error) {
+      console.warn(
+        `📱 Scriptable: Recurring series probe failed (fail open): ${error.message}`,
+      );
+      return false;
+    }
+  }
+
   // Bar data merged on the website is the source of truth; the phone's local
   // scraper-bars.js copy goes stale the moment a bar edit lands. Try the
   // combined file FIRST — one fetch of data/scraper-bars.json covers every
@@ -4956,6 +5113,11 @@ class ScriptableAdapter {
           // Fire-and-forget: opens the registered map verify link in Safari
           // ON TOP of the results sheet (the WebView never navigates).
           this.openMapVerifyUrl(params.id);
+        } else if (params.a === "export-ics") {
+          // Fire-and-forget: builds the recurring event's ICS natively and
+          // hands it to DocumentPicker/ShareSheet (the WebView never
+          // navigates; recurring series are export-only, never auto-written).
+          this.exportRecurringEventIcs(params.id);
         }
         return false; // cancel the fake navigation; the page stays put
       };
@@ -5017,6 +5179,9 @@ class ScriptableAdapter {
     // link rendered below registers its real URL natively and embeds only
     // the returned id, so ids in this HTML always match the handler's map.
     this.resetMapVerifyUrls();
+    // Same per-render pattern for the recurring-ICS export bridge: each
+    // recurring card registers its event natively and embeds only the id.
+    this.resetIcsExportEvents();
     const allEvents = this.getAllEventsFromResults(results);
     const availableCalendars = await Calendar.forEvents();
 
@@ -6562,6 +6727,17 @@ class ScriptableAdapter {
             return false;
         }
 
+        // "Save recurring (.ics)" buttons ride the same chunkyscrape://
+        // navigation bridge (shouldAllowRequest, set before present()); the
+        // ICS itself is built native-side from the registered event — only
+        // the integer id travels. Per-tap nonce keeps repeat taps firing.
+        window.__icsExportNonce = 0;
+        function exportRecurringIcs(btn) {
+            var id = btn ? (btn.getAttribute('data-ics-export-id') || '') : '';
+            window.location.href = 'chunkyscrape://act?a=export-ics&id=' +
+                encodeURIComponent(id) + '&n=' + (window.__icsExportNonce++);
+        }
+
         // Inline OSM map toggle — pure page JS, no bridge. Lazy by design:
         // the iframe src is only assigned on the FIRST tap (no map tiles
         // load until asked), later taps just show/hide the already-loaded
@@ -8003,6 +8179,139 @@ class ScriptableAdapter {
     return `<div class="evidence-block" style="font-size:11px; color:var(--text-secondary); margin:4px 0; line-height:1.6;"><div style="font-weight:600;">Evidence</div>${rows}</div>`;
   }
 
+  // ---------------------------------------------------------------------------
+  // Recurring-event ICS export (results-UI ↔ chunkyscrape:// bridge).
+  // Recurring series are display+export only: the scraper never writes them
+  // to the calendar. Each recurring card gets a "Save recurring (.ics)"
+  // button; a tap builds the ICS natively and hands it to DocumentPicker.
+  // Same per-render registry pattern as the map-verify links: events stay
+  // native-side, only integer ids travel through the bridge URL.
+  // ---------------------------------------------------------------------------
+  resetIcsExportEvents() {
+    this._icsExportEvents = {};
+    this._icsExportNextId = 0;
+  }
+
+  registerIcsExportEvent(event) {
+    if (!this._icsExportEvents || typeof this._icsExportNextId !== "number") {
+      this.resetIcsExportEvents();
+    }
+    const id = String(this._icsExportNextId++);
+    this._icsExportEvents[id] = event;
+    return id;
+  }
+
+  // Build the ICS for one registered recurring event and hand it off via
+  // DocumentPicker.exportString (fallback: temp file + ShareSheet). Called
+  // fire-and-forget from shouldAllowRequest (which must synchronously return
+  // false to cancel the fake navigation).
+  async exportRecurringEventIcs(id) {
+    try {
+      const event = this._icsExportEvents
+        ? this._icsExportEvents[String(id)]
+        : undefined;
+      if (!event || typeof event !== "object") return;
+      const timezone = this.getTimezoneForCityOrUtc(event.city);
+      const icsText = SharedEventSchema.buildRecurringEventIcs(event, {
+        timezone,
+      });
+      if (!icsText) return;
+      const slug =
+        SharedEventSchema.slugifyIcsText(event.title || event.name || "") ||
+        "chunky-dad-recurring";
+      const fileName = `${slug}.ics`;
+      if (
+        typeof DocumentPicker !== "undefined" &&
+        DocumentPicker &&
+        typeof DocumentPicker.exportString === "function"
+      ) {
+        await DocumentPicker.exportString(icsText, fileName);
+      } else {
+        const fm = FileManager.local();
+        const filePath = fm.joinPath(fm.temporaryDirectory(), fileName);
+        fm.writeString(filePath, icsText);
+        await ShareSheet.present([filePath]);
+      }
+      console.log(
+        `📱 Scriptable: Exported recurring event ICS "${fileName}" (#${id})`,
+      );
+    } catch (error) {
+      console.warn(
+        `📱 Scriptable: Failed to export recurring event ICS: ${error.message}`,
+      );
+    }
+  }
+
+  // Prefill link into the website's event-builder page for one event card.
+  // Params ride loadStateFromUrl's alias map (event-schema): name, startDate/
+  // endDate (local wall-clock YYYY-MM-DDTHH:MM — the builder rejects zoned
+  // datetimes), city, venue, address, description, cover, website,
+  // recurrence, socials. Built by string concat + encodeURIComponent — no
+  // new URL()/URLSearchParams in this runtime.
+  buildEventBuilderUrl(event) {
+    if (!event || typeof event !== "object") return "";
+    const timezone = this.getTimezoneForCityOrUtc(event.city);
+    const formatLocalDateTime = (value) => {
+      if (!value) return "";
+      const date = value instanceof Date ? value : new Date(value);
+      if (isNaN(date.getTime())) return "";
+      // Reuse the ICS wall-clock formatter (YYYYMMDDTHHMMSS) and reshape to
+      // the builder's datetime-local format.
+      const compact = SharedEventSchema.formatIcsDateInTimezone(
+        date,
+        timezone,
+      );
+      if (!compact) return "";
+      return `${compact.slice(0, 4)}-${compact.slice(4, 6)}-${compact.slice(6, 8)}T${compact.slice(9, 11)}:${compact.slice(11, 13)}`;
+    };
+    const params = [];
+    const addParam = (key, value) => {
+      const text =
+        value === null || value === undefined ? "" : String(value).trim();
+      if (!text) return;
+      params.push(`${key}=${encodeURIComponent(text)}`);
+    };
+    addParam("name", event.title || event.name);
+    addParam("startDate", formatLocalDateTime(event.startDate));
+    addParam("endDate", formatLocalDateTime(event.endDate));
+    addParam("city", event.city);
+    addParam("venue", event.bar || event.venue);
+    addParam("address", event.address);
+    addParam("description", event.description);
+    addParam("cover", event.cover);
+    addParam("website", event.website || event.url);
+    addParam("recurrence", event.recurrenceRule || event.recurrence);
+    addParam("instagram", event.instagram);
+    addParam("facebook", event.facebook);
+    addParam("gmaps", event.gmaps);
+    addParam("image", event.image);
+    addParam("shortName", event.shortName);
+    const query = params.length > 0 ? `?${params.join("&")}` : "";
+    return `https://chunky.dad/testing/event-builder.html${query}`;
+  }
+
+  // Per-card actions row: an Event Builder prefill link on EVERY card (rides
+  // the existing open-url bridge), plus the ICS export button on recurring
+  // cards. "" only when no builder URL could be built.
+  buildEventCardActionsHtml(event) {
+    const parts = [];
+    const builderUrl = this.buildEventBuilderUrl(event);
+    if (builderUrl) {
+      const id = this.registerMapVerifyUrl(builderUrl);
+      parts.push(
+        `<a href="#" onclick="return openMapVerify(this)" data-map-url-id="${id}" class="event-builder-link" style="color:var(--primary-color); text-decoration:none; font-size:12px;">🛠 Event Builder</a>`,
+      );
+    }
+    if (SharedCore.isRecurringSeriesEvent(event)) {
+      const exportId = this.registerIcsExportEvent(event);
+      parts.push(
+        `<button onclick="exportRecurringIcs(this)" class="log-copy-btn ics-export-btn" data-ics-export-id="${exportId}">💾 Save recurring (.ics)</button>`,
+      );
+    }
+    if (parts.length === 0) return "";
+    return `<div class="event-actions-row" style="display:flex; gap:12px; align-items:center; margin:6px 0;">${parts.join("")}</div>`;
+  }
+
   // Open one registered verify link in Safari, on top of the results sheet.
   // Called fire-and-forget from shouldAllowRequest (which must synchronously
   // return false to cancel the fake navigation) — Safari opens over the
@@ -8536,6 +8845,11 @@ class ScriptableAdapter {
           '<span class="action-badge badge-error">MISSING CALENDAR</span>',
       }[intentAction] ||
       '<span class="action-badge badge-warning">OTHER</span>';
+    // Recurring series are display+export only (never auto-written): badge
+    // the card and offer the ICS export instead of a calendar write.
+    const recurringBadge = SharedCore.isRecurringSeriesEvent(event)
+      ? '<span class="action-badge badge-warning recurring-badge">🔁 recurring — save via ICS</span>'
+      : "";
     const actionNote = `<div class="write-action-note">Intent: ${this.formatIntentActionLabel(intentAction)} • Write: ${this.formatWriteActionLabel(writeAction)}</div>`;
 
     const eventDate = new Date(event.startDate);
@@ -8595,10 +8909,12 @@ class ScriptableAdapter {
     // Computed evidence panel (SharedCore attaches _evidenceLines during
     // calendar prep); "" when absent — e.g. saved-run display (fail open).
     const evidenceBlock = this.buildEvidenceLinesHtml(event._evidenceLines);
+    // Event Builder prefill link (every card) + ICS export (recurring cards).
+    const eventActionsRow = this.buildEventCardActionsHtml(event);
 
     let html = `
         <div class="event-card">
-            ${actionBadge}
+            ${actionBadge}${recurringBadge}
             ${actionNote}
             <div class="event-title">${this.escapeHtml(event.title || event.name)}</div>
             
@@ -8635,6 +8951,7 @@ class ScriptableAdapter {
                     : ""
                 }
                 ${mapVerifyRow}
+                ${eventActionsRow}
                 ${evidenceBlock}
                 <div class="event-detail">
                     <span>📅</span>

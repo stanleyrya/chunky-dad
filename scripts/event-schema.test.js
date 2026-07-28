@@ -224,3 +224,109 @@ test('formatEventNotes honors a custom excludeFields set', () => {
   const notes = EventSchema.formatEventNotes(event, { excludeFields: new Set(['cover']) });
   assert.equal(notes, 'bar: STATION 4');
 });
+
+// ---------------------------------------------------------------------------
+// Recurring-event ICS export (buildRecurringEventIcs)
+// ---------------------------------------------------------------------------
+
+function buildRecurringFixtureEvent(overrides = {}) {
+  return {
+    title: 'FUZZY',
+    startDate: new Date('2026-08-08T02:00:00.000Z'), // Fri 2026-08-07 21:00 America/Chicago (CDT)
+    endDate: new Date('2026-08-08T07:00:00.000Z'),   // Sat 2026-08-08 02:00 America/Chicago
+    recurrenceRule: 'FREQ=WEEKLY;BYDAY=FR',
+    bar: 'Dallas Eagle',
+    cover: '$10',
+    website: 'https://example.com/fuzzy',
+    location: '32.7767,-96.797',
+    city: 'dallas',
+    ...overrides
+  };
+}
+
+const RECURRING_ICS_NOW = new Date('2026-05-03T20:35:32.000Z');
+
+test('buildRecurringEventIcs: RRULE line, UID shape, and TZID-correct DTSTART/DTEND', () => {
+  const ics = EventSchema.buildRecurringEventIcs(buildRecurringFixtureEvent(), {
+    timezone: 'America/Chicago',
+    now: RECURRING_ICS_NOW
+  });
+  const unfolded = ics.replace(/\r\n[ \t]/g, '');
+  assert.ok(unfolded.includes('BEGIN:VCALENDAR'), 'VCALENDAR wrapper present');
+  assert.ok(unfolded.includes('BEGIN:VEVENT'), 'VEVENT present');
+  assert.ok(unfolded.includes('RRULE:FREQ=WEEKLY;BYDAY=FR'), 'RRULE emitted verbatim');
+  // UID matches the event-builder style: <slug>-<utcstamp>@chunky.dad
+  assert.ok(unfolded.includes('UID:fuzzy-20260503T203532Z@chunky.dad'), `UID shape (got: ${unfolded.match(/UID:[^\r\n]*/)})`);
+  assert.match(unfolded, /UID:[a-z0-9-]+-\d{8}T\d{6}Z@chunky\.dad/);
+  // TZID correctness: 02:00Z / 07:00Z on Aug 8 are 21:00 / 02:00 wall-clock in Chicago (CDT, UTC-5)
+  assert.ok(unfolded.includes('DTSTART;TZID=America/Chicago:20260807T210000'), 'DTSTART local wall-clock with TZID');
+  assert.ok(unfolded.includes('DTEND;TZID=America/Chicago:20260808T020000'), 'DTEND local wall-clock with TZID');
+  assert.ok(unfolded.includes('SUMMARY:FUZZY'));
+  assert.ok(unfolded.includes('LOCATION:32.7767\\,-96.797'), 'LOCATION comma is ICS-escaped');
+});
+
+test('buildRecurringEventIcs: DESCRIPTION carries standard notes plus the recurrence detection line', () => {
+  const ics = EventSchema.buildRecurringEventIcs(buildRecurringFixtureEvent(), {
+    timezone: 'America/Chicago',
+    now: RECURRING_ICS_NOW
+  });
+  const unfolded = ics.replace(/\r\n[ \t]/g, '');
+  const descriptionMatch = unfolded.match(/DESCRIPTION:([^\r\n]*)/);
+  assert.ok(descriptionMatch, 'DESCRIPTION present');
+  const description = descriptionMatch[1];
+  // Standard notes lines (EventSchema.formatEventNotes) survive, newline-escaped
+  assert.ok(description.includes('bar: Dallas Eagle'), 'standard notes present');
+  assert.ok(description.includes('cover: $10'));
+  assert.ok(description.includes('website: https://example.com/fuzzy'));
+  // The detection channel: an explicit canonical recurrence line (the default
+  // notes-exclusion list applies to scraper calendar writes, not this ICS)
+  assert.ok(description.includes('recurrence: FREQ=WEEKLY\\;BYDAY=FR'), 'recurrence line present (ICS-escaped)');
+  // recurrenceRule itself never leaks as a raw notes key
+  assert.ok(!description.includes('recurrenceRule:'), 'no duplicate raw recurrenceRule key');
+});
+
+test('buildRecurringEventIcs: ICS escaping and 75-octet folding', () => {
+  const event = buildRecurringFixtureEvent({
+    title: 'FUZZY; the big, hairy\nparty',
+    description: 'A very long description that keeps going and going to force RFC 5545 line folding, with commas, semicolons; and more text well past seventy-five octets total.'
+  });
+  const ics = EventSchema.buildRecurringEventIcs(event, { timezone: 'America/Chicago', now: RECURRING_ICS_NOW });
+  const lines = ics.split('\r\n');
+  for (const line of lines) {
+    assert.ok(Buffer.byteLength(line, 'utf8') <= 75, `line exceeds 75 octets: ${line}`);
+  }
+  assert.ok(lines.some(line => line.startsWith(' ')), 'long content folded onto continuation lines');
+  const unfolded = ics.replace(/\r\n[ \t]/g, '');
+  assert.ok(unfolded.includes('SUMMARY:FUZZY\\; the big\\, hairy\\nparty'), 'SUMMARY escaped');
+});
+
+test('buildRecurringEventIcs: UTC fallback when no timezone is resolvable', () => {
+  const ics = EventSchema.buildRecurringEventIcs(buildRecurringFixtureEvent(), { now: RECURRING_ICS_NOW });
+  const unfolded = ics.replace(/\r\n[ \t]/g, '');
+  assert.ok(unfolded.includes('DTSTART:20260808T020000Z'), 'DTSTART falls back to UTC-Z');
+  assert.ok(!unfolded.includes('TZID='), 'no TZID without a timezone');
+});
+
+test('round-trip: js/calendar-core.js parseICalData parses the generated ICS and reports recurrence', () => {
+  const noop = () => {};
+  globalThis.logger = {
+    componentInit: noop, componentLoad: noop, componentError: noop,
+    apiCall: noop, debug: noop, info: noop, warn: noop, time: noop, timeEnd: noop
+  };
+  const CalendarCore = require('../js/calendar-core.js');
+  const ics = EventSchema.buildRecurringEventIcs(buildRecurringFixtureEvent(), {
+    timezone: 'America/Chicago',
+    now: RECURRING_ICS_NOW
+  });
+  const core = new CalendarCore();
+  const events = core.parseICalData(ics);
+  assert.equal(events.length, 1, 'one VEVENT parsed');
+  const parsed = events[0];
+  assert.equal(parsed.name, 'FUZZY');
+  assert.equal(parsed.recurring, true, 'parser reports the event as recurring');
+  assert.equal(parsed.recurrence, 'FREQ=WEEKLY;BYDAY=FR', 'RRULE round-trips verbatim');
+  assert.equal(parsed.eventType, 'weekly');
+  assert.equal(parsed.uid, 'fuzzy-20260503T203532Z@chunky.dad');
+  assert.equal(parsed.startTimezone, 'America/Chicago', 'TZID round-trips');
+  assert.equal(parsed.bar, 'Dallas Eagle', 'DESCRIPTION notes fields round-trip');
+});

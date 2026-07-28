@@ -112,6 +112,15 @@ class BasicDataNormalizer extends BaseNormalizer {
         // when the corresponding value is present.
         event = this.stampPageProvenanceDefaults(event);
 
+        // Recurring-series stamp: a non-empty recurrenceRule (AI-extracted
+        // RRULE) marks this event as a series definition. Series are
+        // display+export only — the calendar-write path withholds _recurring
+        // events (owner imports the ICS instead; the scraper never writes
+        // recurring series). Pure and idempotent.
+        if (typeof event.recurrenceRule === 'string' && event.recurrenceRule.trim() !== '') {
+            event._recurring = true;
+        }
+
         if (!this.core) return event;
         // Sync URL and website fields
         event = this.syncUrlAndWebsiteFields(event);

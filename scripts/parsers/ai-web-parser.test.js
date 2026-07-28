@@ -6792,3 +6792,14 @@ test('normalizeAiEvent rejects a city matching a registry promoter name, keeps r
     {}, null, null, null);
   assert.equal(noRegistry.city, 'biggercity');
 });
+
+test('getAiPromptFields: rrule is requested from the default field priorities', () => {
+  // Ensure the real schema is active (an earlier test swaps in a mock).
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  const fields = parser.getAiPromptFields({}, {});
+  const normalized = fields.map(f => parser.normalizePromptFieldName(f));
+  assert.ok(normalized.includes('recurrence'), 'rrule (canonical: recurrence) is requested by default');
+  assert.equal(parser.isPromptFieldRequested('rrule', {}), true,
+    'normalizeAiEvent will map the extracted rrule into event.recurrenceRule');
+});
