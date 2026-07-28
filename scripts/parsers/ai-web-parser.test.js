@@ -6803,3 +6803,165 @@ test('getAiPromptFields: rrule is requested from the default field priorities', 
   assert.equal(parser.isPromptFieldRequested('rrule', {}), true,
     'normalizeAiEvent will map the extracted rrule into event.recurrenceRule');
 });
+
+// ---------------------------------------------------------------------------
+// rrule validation ('schedule-evidence' mode): an RRULE is a derived
+// translation, never verbatim — the gate checks the model's EVIDENCE phrase
+// against the corpus instead (run 20260728-113040, CubScout / The Lumberyard)
+// ---------------------------------------------------------------------------
+
+const RRULE_TEST_CORPUS = 'CUBSCOUT — A NIGHT FOR CUBS, SCOUTS AND EVERYONE ELSE. 1ST FRIDAY OF THE MONTH AT THE EAGLE LA. EVERY 2ND FRIDAY karaoke night. every Tuesday trivia with the pack.';
+
+function runRruleValidation(parser, aiEvent) {
+  const evidenceContext = parser.buildAiEvidenceContextFromText(RRULE_TEST_CORPUS);
+  const validationContext = { imageEvidenceUrls: new Set() };
+  return parser.validateAiEventEvidence(aiEvent, { html: RRULE_TEST_CORPUS }, {}, null, {
+    evidenceContext,
+    validationContext
+  });
+}
+
+test('rrule survives the evidence gate when its schedule evidence is verbatim and corroborates the rule', () => {
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  // The literal CubScout case the exact-mode gate used to drop 100% of the time.
+  const result = runRruleValidation(parser, {
+    rrule: 'FREQ=MONTHLY;BYDAY=1FR',
+    __fieldEvidence: { rrule: '1ST FRIDAY OF THE MONTH' }
+  });
+  assert.equal(result.event.rrule, 'FREQ=MONTHLY;BYDAY=1FR', 'a correct derived RRULE is kept');
+  assert.deepEqual(result.report.dropped, [], 'nothing dropped');
+});
+
+test('rrule validation rejects non-RRULE values, unverbatim evidence, and schedule mismatches', () => {
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+
+  // Value without FREQ= (schedule prose echoed back) → rejected.
+  const prose = runRruleValidation(parser, {
+    rrule: '1ST FRIDAY OF THE MONTH',
+    __fieldEvidence: { rrule: '1ST FRIDAY OF THE MONTH' }
+  });
+  assert.equal(prose.event.rrule, undefined, 'prose is not an RRULE');
+  assert.equal(prose.report.dropped[0].reason, 'rrule-schedule-evidence');
+
+  // Evidence absent from the corpus → rejected.
+  const absent = runRruleValidation(parser, {
+    rrule: 'FREQ=MONTHLY;BYDAY=1FR',
+    __fieldEvidence: { rrule: 'FIRST SATURDAY MONTHLY MEETUP' }
+  });
+  assert.equal(absent.event.rrule, undefined, 'evidence must be a verbatim corpus quote');
+  assert.equal(absent.report.dropped[0].reason, 'rrule-schedule-evidence');
+
+  // Weekday mismatch (BYDAY=FR, evidence names Tuesday) → rejected with the
+  // distinct corroboration log line.
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let mismatch;
+  try {
+    mismatch = runRruleValidation(parser, {
+      rrule: 'FREQ=WEEKLY;BYDAY=FR',
+      __fieldEvidence: { rrule: 'every Tuesday' }
+    });
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(mismatch.event.rrule, undefined, 'weekday mismatch fails closed');
+  assert.ok(logs.includes('🤖 AI Web: Dropped rrule "FREQ=WEEKLY;BYDAY=FR" — schedule words in evidence do not corroborate the rule'),
+    `distinct mismatch log expected, got: ${JSON.stringify(logs)}`);
+
+  // FREQ=WEEKLY on ordinal-weekday prose ("EVERY 2ND FRIDAY" is a monthly
+  // pattern — the Lumberyard model error) → rejected, ambiguous source.
+  const ordinalWeekly = runRruleValidation(parser, {
+    rrule: 'FREQ=WEEKLY;BYDAY=FR',
+    __fieldEvidence: { rrule: 'EVERY 2ND FRIDAY' }
+  });
+  assert.equal(ordinalWeekly.event.rrule, undefined, 'ordinal prose contradicts FREQ=WEEKLY');
+
+  // Sanity: a genuinely weekly statement passes.
+  const weekly = runRruleValidation(parser, {
+    rrule: 'FREQ=WEEKLY;BYDAY=TU',
+    __fieldEvidence: { rrule: 'every Tuesday' }
+  });
+  assert.equal(weekly.event.rrule, 'FREQ=WEEKLY;BYDAY=TU');
+});
+
+test('rrule retry feedback uses the RRULE-specific correction line, never "copy the exact text"', () => {
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  const merged = {
+    __droppedFieldValues: { recurrence: 'FREQ=MONTHLY;BYDAY=1FR' },
+    __droppedFieldReasons: { recurrence: 'rrule-schedule-evidence' }
+  };
+  const feedback = parser.buildRetryDropFeedback(['rrule'], merged);
+  assert.deepEqual(feedback, {
+    recurrence: { value: 'FREQ=MONTHLY;BYDAY=1FR', reason: 'rrule-schedule-evidence' }
+  }, 'rrule drops ride the tagged { value, reason } shape');
+
+  const prompt = parser.buildExtractionPrompt(
+    { html: 'x', url: 'https://a.example/' },
+    parser.getAiConfig({}),
+    null, {}, ['rrule'], 'SNIPPET', 'alternate', {}, feedback
+  );
+  assert.ok(prompt.includes('Your previous value "FREQ=MONTHLY;BYDAY=1FR" for recurrence was rejected — return a valid iCal RRULE (FREQ=...) that matches the schedule stated in the source, and cite the schedule wording as evidence.'),
+    'the class-specific retry line is emitted');
+  assert.ok(!prompt.includes('Copy the exact text'),
+    'the not-verbatim line never fires for the rrule class');
+});
+
+// ---------------------------------------------------------------------------
+// Dateless recurring events: a valid RRULE derives the next occurrence as
+// startDate instead of dying on the required-field guard (The Lumberyard)
+// ---------------------------------------------------------------------------
+
+test('normalizeAiEvent derives the next occurrence for a dateless recurring event', () => {
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  parser.now = () => new Date(2026, 6, 22, 15, 0, 0); // Wed 2026-07-22 local
+
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let event;
+  try {
+    event = parser.normalizeAiEvent(
+      { title: 'DRINK AND DRAW', rrule: 'FREQ=WEEKLY;BYDAY=TU' },
+      {}, null, null, null
+    );
+  } finally {
+    console.log = originalLog;
+  }
+  assert.ok(event, 'the recurring event survives normalization');
+  assert.equal(event.recurrenceRule, 'FREQ=WEEKLY;BYDAY=TU');
+  assert.ok(event.startDate instanceof Date, 'derived startDate is a Date');
+  assert.equal(event.startDate.toISOString().slice(0, 10), '2026-07-28', 'next Tuesday from the injected now');
+  assert.equal(event._recurringNoStartTime, true, 'no stated start time → flagged for ICS gating');
+  assert.ok(logs.includes('🔁 RECURRING: derived next occurrence 2026-07-28 from rrule for "DRINK AND DRAW"'),
+    `derivation log expected, got: ${JSON.stringify(logs.filter(l => l.includes('RECURRING')))}`);
+});
+
+test('normalizeAiEvent combines an extracted startTime with the derived occurrence date', () => {
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  parser.now = () => new Date(2026, 6, 22, 15, 0, 0);
+  const cityConfig = { la: { timezone: 'America/Los_Angeles', patterns: ['los angeles'] } };
+  const event = parser.normalizeAiEvent(
+    { title: 'CUBSCOUT', rrule: 'FREQ=MONTHLY;BYDAY=1FR', startTime: '21:00', city: 'los angeles' },
+    {}, null, cityConfig, null
+  );
+  assert.ok(event, 'survives with a derived date');
+  // 1st Friday after Wed Jul 22 is Aug 7; 9pm PDT = Aug 8 04:00 UTC
+  assert.equal(event.startDate.toISOString(), '2026-08-08T04:00:00.000Z');
+  assert.equal(event._recurringNoStartTime, undefined, 'a stated start time keeps the ICS export');
+});
+
+test('normalizeAiEvent still discards dateless events with unsupported or missing rrules', () => {
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  parser.now = () => new Date(2026, 6, 22, 15, 0, 0);
+  assert.equal(parser.normalizeAiEvent({ title: 'X', rrule: 'FREQ=YEARLY' }, {}, null, null, null), null,
+    'unsupported rrule form → discarded exactly as before');
+  assert.equal(parser.normalizeAiEvent({ title: 'Y' }, {}, null, null, null), null,
+    'no rrule, no date → discarded exactly as before');
+});

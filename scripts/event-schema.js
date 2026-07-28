@@ -659,6 +659,75 @@ function buildRecurringEventIcs(event, options = {}) {
     return lines.map(foldIcsLine).join('\r\n');
 }
 
+// Deterministic next-occurrence date for the practical RRULE subset a
+// recurring-but-dateless event needs to survive normalization (run
+// 20260728-113040: The Lumberyard's events are recurring with no printed
+// date — without a derived startDate the required-field guard discarded
+// them all). Supported forms:
+//   - FREQ=DAILY (no BYDAY filter)
+//   - FREQ=WEEKLY with BYDAY of one or more plain weekday codes → nearest
+//   - FREQ=MONTHLY with a single ordinal BYDAY (1FR..5SU, -1 for last)
+// Anything else — unknown FREQ, INTERVAL>1 (no DTSTART anchor to phase it),
+// missing/ordinal-free BYDAY where required — returns null and the caller
+// keeps today's discard behavior. Pure local-calendar date math on the
+// injected `fromDate` (today counts as an occurrence); returns a local
+// YYYY-MM-DD string, never a time.
+function computeNextRruleOccurrence(rrule, fromDate) {
+    const text = String(rrule || '').replace(/^RRULE\s*:/i, '').trim().toUpperCase();
+    if (!text || !(fromDate instanceof Date) || Number.isNaN(fromDate.getTime())) return null;
+    const parts = {};
+    for (const segment of text.split(';')) {
+        const eq = segment.indexOf('=');
+        if (eq <= 0) continue;
+        parts[segment.slice(0, eq)] = segment.slice(eq + 1);
+    }
+    if (parts.INTERVAL !== undefined && Number(parts.INTERVAL) !== 1) return null;
+    const WEEKDAY_INDEX = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
+    const pad2 = (value) => String(value).padStart(2, '0');
+    const formatLocalDate = (date) => `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+    const today = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate());
+    if (parts.FREQ === 'DAILY') {
+        return parts.BYDAY === undefined ? formatLocalDate(today) : null;
+    }
+    if (parts.FREQ === 'WEEKLY') {
+        const codes = String(parts.BYDAY || '').split(',').map(code => code.trim()).filter(Boolean);
+        if (codes.length === 0) return null;
+        let best = null;
+        for (const code of codes) {
+            const weekday = WEEKDAY_INDEX[code];
+            if (weekday === undefined) return null;
+            const delta = (weekday - today.getDay() + 7) % 7;
+            if (best === null || delta < best) best = delta;
+        }
+        return formatLocalDate(new Date(today.getFullYear(), today.getMonth(), today.getDate() + best));
+    }
+    if (parts.FREQ === 'MONTHLY') {
+        const codes = String(parts.BYDAY || '').split(',').map(code => code.trim()).filter(Boolean);
+        if (codes.length !== 1) return null;
+        const match = codes[0].match(/^(-?\d)(SU|MO|TU|WE|TH|FR|SA)$/);
+        if (!match) return null;
+        const ordinal = Number(match[1]);
+        const weekday = WEEKDAY_INDEX[match[2]];
+        if (ordinal === 0 || ordinal > 5 || ordinal < -1) return null;
+        const ordinalWeekdayOfMonth = (year, month) => {
+            if (ordinal > 0) {
+                const first = new Date(year, month, 1);
+                const day = 1 + ((weekday - first.getDay() + 7) % 7) + (ordinal - 1) * 7;
+                const candidate = new Date(year, month, day);
+                return candidate.getMonth() === first.getMonth() ? candidate : null;
+            }
+            const last = new Date(year, month + 1, 0);
+            return new Date(year, month, last.getDate() - ((last.getDay() - weekday + 7) % 7));
+        };
+        for (let offset = 0; offset < 3; offset++) {
+            const candidate = ordinalWeekdayOfMonth(today.getFullYear(), today.getMonth() + offset);
+            if (candidate && candidate.getTime() >= today.getTime()) return formatLocalDate(candidate);
+        }
+        return null;
+    }
+    return null;
+}
+
 const EventSchema = {
     EVENT_KEY_ALIASES,
     URL_LIKE_FIELDS,
@@ -682,7 +751,8 @@ const EventSchema = {
     formatIcsDateUtc,
     formatIcsDateInTimezone,
     slugifyIcsText,
-    buildRecurringEventIcs
+    buildRecurringEventIcs,
+    computeNextRruleOccurrence
 };
 
 if (typeof module !== 'undefined' && module.exports) {

@@ -9141,6 +9141,31 @@ test('recurring events are excluded from calendar-write execution but present in
     'recurring events never reach calendar writes');
 });
 
+test('dateless recurring event with a derived occurrence stays in results, withheld from execution, and keeps its no-start-time flag', async () => {
+  const core = createCore();
+  const adapter = buildPrepCalendarAdapter([]);
+  // The shape normalizeAiEvent produces for a recurring+dateless page (The
+  // Lumberyard): startDate derived from the rrule's next occurrence, no
+  // stated start time (_recurringNoStartTime stamps the ICS gating).
+  const derived = {
+    title: 'DRINK AND DRAW',
+    startDate: new Date('2026-07-28T00:00:00.000Z'),
+    endDate: new Date('2026-07-28T00:00:00.000Z'),
+    city: 'dallas',
+    recurrenceRule: 'FREQ=WEEKLY;BYDAY=TU',
+    _recurringNoStartTime: true
+  };
+
+  const analyzed = await core.prepareEventsForCalendar([derived], adapter, {});
+  assert.equal(analyzed.length, 1, 'the derived-date recurring event survives to the results');
+  assert.equal(analyzed[0]._recurring, true);
+  assert.equal(analyzed[0]._recurringExport, true);
+  assert.equal(analyzed[0]._recurringNoStartTime, true,
+    'the no-start-time flag rides through to the analyzed event for card gating');
+  assert.deepEqual(SharedCore.filterEventsForExecution(analyzed), [],
+    'derived-date recurring events are still withheld from calendar writes');
+});
+
 test('wide-window probe decision: ≥2 instances sharing the identifier → series', () => {
   const identifier = 'CAL-UUID:fuzzy-20260503T203532Z@chunky.dad';
   const one = SharedCore.resolveSeriesProbeDecision([{ identifier }], identifier);

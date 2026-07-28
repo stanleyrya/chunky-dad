@@ -2935,6 +2935,30 @@ test('event card: recurring events get the badge, the builder link, and the ICS 
   assert.ok(!builderUrl.includes('new URL'), 'sanity');
 });
 
+test('event card: a recurring event with no start time gets the builder link but no ICS export button', () => {
+  const adapter = buildAdapter();
+  adapter.resetMapVerifyUrls();
+  adapter.resetIcsExportEvents();
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let html;
+  try {
+    html = adapter.generateEventCard(buildRecurringCardEvent({
+      title: 'DRINK AND DRAW',
+      recurrenceRule: 'FREQ=WEEKLY;BYDAY=TU',
+      _recurringNoStartTime: true
+    }));
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.ok(html.includes('🛠 Event Builder'), 'builder link still present');
+  assert.ok(!html.includes('💾 Save recurring (.ics)'), 'no ICS export button without a start time');
+  assert.ok(logs.includes('🔁 RECURRING: "DRINK AND DRAW" has no start time — ICS export disabled, use Event Builder'),
+    `gating log expected, got: ${JSON.stringify(logs.filter((l) => l.includes('RECURRING')))}`);
+});
+
 test('export-ics bridge: the handler builds the ICS for the registered event and hands it off', async () => {
   const adapter = buildAdapter();
   adapter.resetIcsExportEvents();

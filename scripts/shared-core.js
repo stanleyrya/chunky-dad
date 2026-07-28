@@ -7972,6 +7972,12 @@ class SharedCore {
                 if (!analyzedEvent.recurrenceRule && typeof event.recurrenceRule === 'string') {
                     analyzedEvent.recurrenceRule = event.recurrenceRule;
                 }
+                // No stated start time (derived-occurrence series): the ICS
+                // export needs a real time — the card gates the 💾 button off
+                // and leaves the Event Builder link (scriptable-adapter).
+                if (event._recurringNoStartTime === true) {
+                    analyzedEvent._recurringNoStartTime = true;
+                }
                 console.log(`🔁 RECURRING: "${event.title || 'Unknown'}" withheld from calendar write — save via ICS export`);
             }
 

@@ -87,6 +87,34 @@ const END_MARKER_START_FIELDS = new Map([
     ['starttime', 'endtime']
 ]);
 
+// rrule rejection class (run 20260728-113040, CubScout): an iCal RRULE is a
+// DERIVED TRANSLATION of schedule prose ("1ST FRIDAY OF THE MONTH" →
+// FREQ=MONTHLY;BYDAY=1FR) and is never verbatim on the page, so the default
+// 'exact' gate dropped 100% of correct rrules — and the "copy the exact
+// text" retry line then steered the model into returning prose that
+// normalizeRruleValue rejects. Its own validation mode ('schedule-evidence',
+// see validateRruleScheduleEvidence) checks the model's EVIDENCE phrase
+// against the corpus instead, and its own retry line asks for a valid RRULE
+// rather than a verbatim copy.
+const RRULE_SCHEDULE_REASON = 'rrule-schedule-evidence';
+
+// Weekday named in schedule evidence, per BYDAY code — abbreviations and
+// plurals included ("FRI", "Fridays"), linguistic-generic (no per-site
+// vocabulary).
+const RRULE_BYDAY_EVIDENCE_REGEXES = {
+    MO: /\bmon(?:day)?s?\b/i,
+    TU: /\btue(?:s(?:day)?)?s?\b/i,
+    WE: /\bwed(?:nesday)?s?\b/i,
+    TH: /\bthu(?:r(?:s(?:day)?)?)?s?\b/i,
+    FR: /\bfri(?:day)?s?\b/i,
+    SA: /\bsat(?:urday)?s?\b/i,
+    SU: /\bsun(?:day)?s?\b/i
+};
+
+// Ordinal-position words ("1ST FRIDAY", "last Tuesday") — a monthly-pattern
+// signal in schedule prose.
+const RRULE_ORDINAL_WORD_REGEX = /\b(?:1st|first|2nd|second|3rd|third|4th|fourth|5th|fifth|last)\b/i;
+
 // ============================================================================
 // NORMALIZATION HELPERS
 // ============================================================================
@@ -6769,6 +6797,12 @@ class AiWebParser {
                 if (reasons[matchKey] === END_MARKER_CITED_REASON) {
                     feedback[normalizedField] = { value, reason: END_MARKER_CITED_REASON };
                 }
+                // rrule drops are likewise worth echoing with their own
+                // correction line: the retry must return a valid RRULE that
+                // matches the stated schedule, never a verbatim copy.
+                if (reasons[matchKey] === RRULE_SCHEDULE_REASON) {
+                    feedback[normalizedField] = { value, reason: RRULE_SCHEDULE_REASON };
+                }
                 return; // tagged reason = evidence-quality drop
             }
             feedback[normalizedField] = value;
@@ -7593,6 +7627,16 @@ ${String(snippet || '')}`;
                     retryFeedbackContext += `Your previous value "${value.value}" for ${field} came from an "End at" line — that is the event's END, not its start. Find the START, or leave it blank.\n`;
                     return;
                 }
+                // rrule corrections ride the same { value, reason } shape:
+                // an RRULE is a derived translation and is NEVER verbatim in
+                // the source, so the "copy the exact text" line would steer
+                // the retry into returning schedule prose that the rrule
+                // normalizer rejects. Ask for a valid RRULE instead.
+                if (value && typeof value === 'object' && value.reason === RRULE_SCHEDULE_REASON) {
+                    if (typeof value.value !== 'string' || !value.value.trim()) return;
+                    retryFeedbackContext += `Your previous value "${value.value}" for ${field} was rejected — return a valid iCal RRULE (FREQ=...) that matches the schedule stated in the source, and cite the schedule wording as evidence.\n`;
+                    return;
+                }
                 if (typeof value !== 'string' || !value.trim()) return;
                 retryFeedbackContext += `Your previous value "${value}" for ${field} was rejected — it is not verbatim in the source. Copy the exact text.\n`;
             });
@@ -8079,6 +8123,7 @@ TEXT:
             else if (normalizedField === 'cover') mode = 'cover';
             else if (normalizedField === 'description') mode = validationConfig.fuzzyDescription ? 'fuzzy' : 'exact';
             else if (normalizedField === 'city') mode = 'city';
+            else if (normalizedField === 'recurrence') mode = 'schedule-evidence';
             else if (normalizedField === 'image') mode = 'image';
             else if (normalizedField === 'url' || normalizedField === 'website' || normalizedField === 'ticketurl' || normalizedField === 'instagram' || normalizedField === 'facebook' || normalizedField === 'gmaps') mode = 'url';
             else mode = 'exact';
@@ -8899,6 +8944,82 @@ TEXT:
     }
 
     /**
+     * Schedule vocabulary in an evidence phrase — the linguistic-generic
+     * signal that the model quoted an actual repeat-schedule statement:
+     * weekday names/abbreviations, frequency words (every/weekly/monthly/
+     * daily/biweekly), or an ordinal + of-the-month form. One conservative
+     * regex family, no site-specific rules.
+     */
+    evidenceContainsScheduleVocabulary(evidence) {
+        const text = String(evidence || '');
+        if (!text.trim()) return false;
+        if (Object.values(RRULE_BYDAY_EVIDENCE_REGEXES).some(regex => regex.test(text))) return true;
+        if (/\b(?:every|weekly|monthly|daily|biweekly|bi-weekly)\b/i.test(text)) return true;
+        return RRULE_ORDINAL_WORD_REGEX.test(text) && /\bof\s+the\s+month\b|\bmonth\b/i.test(text);
+    }
+
+    /**
+     * Deterministic evidence↔value consistency for an rrule, conservative
+     * and minimal (no full RRULE semantics):
+     *   - every BYDAY weekday code in the value (plain or ordinal form,
+     *     "FR"/"1FR"/"-1FR") must have its weekday named in the evidence;
+     *   - FREQ=MONTHLY needs an ordinal/monthly word in the evidence;
+     *   - FREQ=WEEKLY needs a weekly/every-ish signal AND must not sit on
+     *     ordinal-weekday prose ("EVERY 2ND FRIDAY" is a monthly pattern —
+     *     the Lumberyard model error shipped it as FREQ=WEEKLY; ambiguous
+     *     source, fail closed).
+     * Unparseable BYDAY tokens fail closed.
+     */
+    rruleMatchesScheduleEvidence(normalizedRrule, evidence) {
+        const text = String(evidence || '');
+        const parts = {};
+        String(normalizedRrule || '').split(';').forEach(segment => {
+            const eq = segment.indexOf('=');
+            if (eq > 0) parts[segment.slice(0, eq)] = segment.slice(eq + 1);
+        });
+        const bydayTokens = parts.BYDAY ? parts.BYDAY.split(',').map(token => token.trim()).filter(Boolean) : [];
+        for (const token of bydayTokens) {
+            const match = token.match(/^(?:[+-]?\d)?(MO|TU|WE|TH|FR|SA|SU)$/);
+            if (!match) return false;
+            if (!RRULE_BYDAY_EVIDENCE_REGEXES[match[1]].test(text)) return false;
+        }
+        const ordinalWeekdayProse = RRULE_ORDINAL_WORD_REGEX.test(text)
+            && Object.values(RRULE_BYDAY_EVIDENCE_REGEXES).some(regex => regex.test(text));
+        if (parts.FREQ === 'MONTHLY') {
+            return RRULE_ORDINAL_WORD_REGEX.test(text) || /\bmonth(?:ly)?\b/i.test(text);
+        }
+        if (parts.FREQ === 'WEEKLY') {
+            if (ordinalWeekdayProse) return false;
+            return /\b(?:every|weekly|each|all)\b/i.test(text)
+                || Object.values(RRULE_BYDAY_EVIDENCE_REGEXES).some(regex => {
+                    const match = text.match(regex);
+                    return match && /s$/i.test(match[0]); // plural weekday ("Tuesdays") implies weekly
+                });
+        }
+        return true;
+    }
+
+    /**
+     * The rrule/recurrence validation class ('schedule-evidence' mode): the
+     * VALUE is a derived translation, never verbatim, so the gate checks the
+     * model's EVIDENCE phrase instead — it must be a verbatim corpus quote
+     * (the same check other fields apply to values), contain schedule
+     * vocabulary, the value must parse as an RRULE, and the schedule words
+     * must corroborate the rule. Returns { valid, reason }.
+     */
+    validateRruleScheduleEvidence(value, modelEvidence, evidenceContext) {
+        const normalizedRrule = this.normalizeRruleValue(value);
+        if (!normalizedRrule) return { valid: false, reason: 'not-an-rrule' };
+        const evidence = String(modelEvidence || '').trim();
+        if (!evidence) return { valid: false, reason: 'no-evidence' };
+        if (this.evidenceAdmitsInference(evidence)) return { valid: false, reason: 'inference-evidence' };
+        if (!this.hasExactEvidence(evidenceContext, evidence)) return { valid: false, reason: 'evidence-not-verbatim' };
+        if (!this.evidenceContainsScheduleVocabulary(evidence)) return { valid: false, reason: 'no-schedule-vocabulary' };
+        if (!this.rruleMatchesScheduleEvidence(normalizedRrule, evidence)) return { valid: false, reason: 'schedule-mismatch' };
+        return { valid: true, reason: '' };
+    }
+
+    /**
      * Validate a single field value against evidence.
      * Returns true if valid, false if should be dropped.
      */
@@ -8929,11 +9050,19 @@ TEXT:
         const endMarkerStart = !citesForbiddenContext
             && END_MARKER_START_FIELDS.has(rule.field)
             && this.evidenceCitesEndMarker(modelEvidence);
+        // rrule/recurrence ('schedule-evidence' mode): the value is a derived
+        // translation, never verbatim — validated against the model's cited
+        // EVIDENCE phrase instead (see validateRruleScheduleEvidence).
+        const scheduleEvidence = rule.mode === 'schedule-evidence'
+            ? this.validateRruleScheduleEvidence(value, modelEvidence, evidenceContext)
+            : null;
         const hasEvidence = !citesForbiddenContext
             && !brandOnlyCityEvidence
             && !inventedTime
             && !endMarkerStart
-            && this.hasFieldEvidence(evidenceContext, value, rule.mode, validationContext);
+            && (scheduleEvidence
+                ? scheduleEvidence.valid
+                : this.hasFieldEvidence(evidenceContext, value, rule.mode, validationContext));
         if (!hasEvidence) {
             const droppedEntry = {
                 field: rule.field,
@@ -8946,6 +9075,15 @@ TEXT:
             if (citesForbiddenContext) droppedEntry.reason = 'context-cited-evidence';
             else if (brandOnlyCityEvidence) droppedEntry.reason = 'brand-cited-evidence';
             else if (endMarkerStart) droppedEntry.reason = END_MARKER_CITED_REASON;
+            else if (scheduleEvidence && !scheduleEvidence.valid) {
+                // Tagged so the retry prompt renders the rrule-specific
+                // correction line instead of "copy the exact text" (an RRULE
+                // is never verbatim — that instruction can only mislead).
+                droppedEntry.reason = RRULE_SCHEDULE_REASON;
+                if (scheduleEvidence.reason === 'schedule-mismatch') {
+                    console.log(`🤖 AI Web: Dropped rrule "${value}" — schedule words in evidence do not corroborate the rule`);
+                }
+            }
             report.dropped.push(droppedEntry);
             // Reassignment candidate (reassign, don't discard): the dropped
             // start value is evidence-cited END data — but only when the
@@ -9657,8 +9795,40 @@ TEXT:
             end: Boolean(weekdayPinnedYears.end) || (!endProvided && !endDateRaw && Boolean(weekdayPinnedYears.start))
         };
 
-        const { startDate, endDate } = this.normalizeEventDates(finalStartDate, finalEndDate, effectivePinnedYears);
+        let { startDate, endDate } = this.normalizeEventDates(finalStartDate, finalEndDate, effectivePinnedYears);
         console.log(`🤖 AI Web: Normalized dates — startDate=${startDate instanceof Date ? startDate.toISOString() : startDate}, endDate=${endDate instanceof Date ? endDate.toISOString() : endDate}`);
+
+        // Recurring events survive without a concrete date (run
+        // 20260728-113040: The Lumberyard's events are recurring+dateless —
+        // every one died on the required-startDate guard below). A VALID
+        // extracted RRULE deterministically yields the series' next
+        // occurrence (EventSchema.computeNextRruleOccurrence, practical
+        // subset only), which stands in as startDate: an extracted startTime
+        // combines as usual; with no startTime the date sits at the
+        // invented-midnight placeholder ("no time stated") and the event is
+        // flagged so the ICS export — which needs a real time — steps aside
+        // for the Event Builder link. _recurring semantics are unchanged:
+        // these events stay withheld from calendar writes (display + ICS/
+        // Builder export only). Unsupported rrule forms return null and the
+        // event is discarded exactly as before.
+        let recurringDerivedNoStartTime = false;
+        if (!startDate && title && recurrenceRule) {
+            const schema = this.getEventSchema();
+            const nextOccurrence = schema && typeof schema.computeNextRruleOccurrence === 'function'
+                ? schema.computeNextRruleOccurrence(recurrenceRule, this.now())
+                : null;
+            if (nextOccurrence) {
+                const derivedStart = this.convertLocalDateTimeToUtc(`${nextOccurrence} ${startTimeRaw || '00:00:00'}`, timezone)
+                    || combineDateAndTime(nextOccurrence, startTimeRaw || '00:00')
+                    || null;
+                if (derivedStart instanceof Date && !Number.isNaN(derivedStart.getTime())) {
+                    startDate = derivedStart;
+                    if (!endDate) endDate = new Date(derivedStart);
+                    recurringDerivedNoStartTime = !startTimeRaw;
+                    console.log(`🔁 RECURRING: derived next occurrence ${nextOccurrence} from rrule for "${title}"`);
+                }
+            }
+        }
 
         if (!title || !startDate) {
             console.warn(`🤖 AI Web: Normalization failed — title=${title}, startDate=${startDate}`);
@@ -9731,6 +9901,14 @@ TEXT:
             source: this.config.source,
             isBearEvent: false
         };
+
+        // Derived-occurrence recurring event with no stated start time: the
+        // ICS export needs a real time, so the results card must offer only
+        // the Event Builder link (see buildEventCardActionsHtml). Internal
+        // underscore field — display gating only, never serialized to notes.
+        if (recurringDerivedNoStartTime) {
+            event._recurringNoStartTime = true;
+        }
 
         // AI free-text hygiene: the model copies JSON-LD/HTML descriptions
         // verbatim, markup included (CubScout shipped a raw <img …> tag as its
