@@ -103,7 +103,14 @@ const scraperCities = {
     "calendar": "chunky-dad-palm-springs",
     "timezone": "America/Los_Angeles",
     "patterns": [
-      "palm springs"
+      "palm springs",
+      "cathedral city",
+      "palm desert",
+      "rancho mirage",
+      "indian wells",
+      "la quinta",
+      "desert hot springs",
+      "greater palm springs"
     ],
     "coordinates": {
       "lat": 33.8303,

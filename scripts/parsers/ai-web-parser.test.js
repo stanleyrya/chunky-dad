@@ -6668,3 +6668,127 @@ test('validateEventUrl rejects calendar-export URLs (literal run URLs) but keeps
   // "ical" inside a slug or query VALUE is not an export flag
   assert.equal(parser.validateEventUrl('https://bear-it.example/events/musical-bears?musical=1', sourceUrl, {}).valid, true);
 });
+
+// ---------------------------------------------------------------------------
+// Shared-meridiem time ranges (Fix: QUENCHD — "1-7PM" contains "7pm" but not
+// "1pm", so the evidence gate dropped the 13:00 start and it defaulted to
+// local midnight)
+// ---------------------------------------------------------------------------
+
+test('hasTimeEvidence: a shared-meridiem range corroborates the leading hour', () => {
+  const parser = createParser();
+  const range = parser.buildAiEvidenceContextFromText('SUNDAY BEER BUST 1-7PM at QUENCHD');
+  assert.equal(parser.hasTimeEvidence(range, '13:00'), true, '"1-7PM" states a 1pm start');
+  assert.equal(parser.hasTimeEvidence(range, '19:00'), true, '"1-7PM" still states the 7pm end');
+
+  const singleLetter = parser.buildAiEvidenceContextFromText('Patio party 11a-4p with DJ');
+  assert.equal(parser.hasTimeEvidence(singleLetter, '11:00'), true, '"11a-4p" states an 11am start');
+  assert.equal(parser.hasTimeEvidence(singleLetter, '16:00'), true, '"11a-4p" states a 4pm end');
+});
+
+test('hasTimeEvidence: a lone meridiem time is NOT expanded (no false pass)', () => {
+  const parser = createParser();
+  const plain = parser.buildAiEvidenceContextFromText('Doors 7PM sharp');
+  assert.equal(parser.hasTimeEvidence(plain, '13:00'), false, 'plain "7PM" must still reject 13:00');
+  assert.equal(parser.hasTimeEvidence(plain, '19:00'), true);
+});
+
+// ---------------------------------------------------------------------------
+// AI free-text markup strip (Fix: CubScout description was a raw <img> tag
+// copied verbatim from The Events Calendar's JSON-LD description)
+// ---------------------------------------------------------------------------
+
+test('normalizeAiEvent strips markup from AI descriptions; markup-only falls back to img alt text', () => {
+  const parser = createParser();
+  const base = { title: 'CubScout First Fridays', startDate: '2026-08-07', startTime: '21:00' };
+
+  const markupOnly = parser.normalizeAiEvent({
+    ...base,
+    description: '<img loading="lazy" class="size-full" src="https://cubscout.example/flyer.jpg" alt="CubScout First Fridays 9pm $7" width="1080" height="1350">'
+  }, {}, null, null, null);
+  assert.equal(markupOnly.description, 'CubScout First Fridays 9pm $7',
+    'markup-only description adopts the image alt text');
+
+  const inline = parser.normalizeAiEvent({
+    ...base,
+    description: 'Doors open at <b>9pm</b> — bring your <i>cub</i> card'
+  }, {}, null, null, null);
+  assert.equal(inline.description, 'Doors open at 9pm — bring your cub card',
+    'inline tags are stripped, text kept');
+
+  const plain = 'Plain-text description with  double spaces and\nnewlines stays byte-identical';
+  const untouched = parser.normalizeAiEvent({ ...base, description: plain }, {}, null, null, null);
+  assert.equal(untouched.description, plain, 'plain text must pass through byte-identical');
+});
+
+// ---------------------------------------------------------------------------
+// Whole-page fallback when segment discovery finds nothing (Fix: Lumberyard —
+// multi-event classification + zero valid segments returned no events despite
+// real page content and OCR'd flyers)
+// ---------------------------------------------------------------------------
+
+test('multi-event page with no valid segments falls back to whole-page extraction', async () => {
+  const parser = createParser();
+  const stubEvents = [{ title: 'LUMBERYARD TAKEOVER', startDate: new Date('2026-08-01T02:00:00.000Z') }];
+  let singlePageCalls = 0;
+  parser.extractEventsFromSinglePage = async () => { singlePageCalls += 1; return stubEvents; };
+  const html = `<html><body>
+    <p>The Lumberyard is the desert's favorite bear bar patio, with rotating parties, beer busts,
+    and special guests all season long. Check the flyers below for everything coming up this month.</p>
+  </body></html>`;
+  const events = await parser.extractEventsFromMultiEventPage(
+    { html, url: 'https://lumberyard.example/events' }, {}, null, ['title'], [], null);
+  assert.equal(singlePageCalls, 1, 'single-page extraction must be invoked as the fallback');
+  assert.deepEqual(events, stubEvents, 'the fallback events are returned');
+});
+
+test('whole-page fallback is guarded: no content, discoveryOnly, and link-aggregator all still return none', async () => {
+  const parser = createParser();
+  parser.extractEventsFromSinglePage = async () => { throw new Error('single-page extraction must not run'); };
+
+  const noContent = await parser.extractEventsFromMultiEventPage(
+    { html: '<html><body></body></html>', url: 'https://x.example/' }, {}, null, ['title'], [], null);
+  assert.deepEqual(noContent, [], 'a contentless page never falls back');
+
+  const discovery = await parser.extractEventsFromMultiEventPage(
+    { html: '<p>Plenty of body content here that would otherwise justify the whole-page fallback path.</p>', url: 'https://x.example/' },
+    { discoveryOnly: true }, null, ['title'], [], null);
+  assert.deepEqual(discovery, [], 'discoveryOnly never falls back');
+
+  const aggregator = await parser.parseEvents(
+    { html: '<html><body><a href="https://a.example/1">One</a></body></html>', url: 'https://x.example/' },
+    {}, null, 'link-aggregator', null);
+  assert.deepEqual(aggregator.events, [], 'link-aggregator pages still return no events');
+});
+
+// ---------------------------------------------------------------------------
+// Promoter names can never be a city (Fix: OCR "TALENT PRESENTED BY
+// biggercity" leaked city='biggercity' → unknown-city/no-timezone noise)
+// ---------------------------------------------------------------------------
+
+test('normalizeAiEvent rejects a city matching a registry promoter name, keeps real cities', () => {
+  const parser = new AiWebParser({ normalizeUrl });
+  parser.core = new SharedCore({}, {
+    eventSchema: EventSchema,
+    // Test-only stub entry — BiggerCity is deliberately NOT in data/promoters.json
+    promoters: [{ name: 'BiggerCity', instagram: 'https://www.instagram.com/biggercity' }]
+  });
+
+  const promoterCity = parser.normalizeAiEvent(
+    { title: 'CCBC WEEKEND', startDate: '2026-05-22', startTime: '20:00', city: 'biggercity' },
+    {}, null, null, null);
+  assert.equal(promoterCity.city, '', 'a promoter-named city is cleared');
+
+  const realCity = parser.normalizeAiEvent(
+    { title: 'PUP NIGHT', startDate: '2026-05-22', startTime: '20:00', city: 'montreal' },
+    {}, null, null, null);
+  assert.equal(realCity.city, 'montreal', 'real cities are untouched');
+
+  // Fail open: no registry on the core → the city is kept as-is
+  const bareParser = new AiWebParser({ normalizeUrl });
+  bareParser.core = new SharedCore({}, { eventSchema: EventSchema });
+  const noRegistry = bareParser.normalizeAiEvent(
+    { title: 'CCBC WEEKEND', startDate: '2026-05-22', startTime: '20:00', city: 'biggercity' },
+    {}, null, null, null);
+  assert.equal(noRegistry.city, 'biggercity');
+});

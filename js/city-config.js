@@ -94,7 +94,7 @@ const CITY_CONFIG = {
         calendarId: '80d296cd29b21c9b88e6b01123d2f9bd9c1776b702a51cc7a60767e44f177e7b@group.calendar.google.com',
         calendar: 'chunky-dad-palm-springs',
         timezone: 'America/Los_Angeles',
-        patterns: ['palm springs'],
+        patterns: ['palm springs', 'cathedral city', 'palm desert', 'rancho mirage', 'indian wells', 'la quinta', 'desert hot springs', 'greater palm springs'],
         coordinates: { lat: 33.8303, lng: -116.5453 },
         mapZoom: 10,
         visible: true

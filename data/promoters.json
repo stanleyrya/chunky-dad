@@ -101,5 +101,27 @@
     "name": "Club Chub",
     "instagram": "https://www.instagram.com/clubchubparty",
     "bearAffinity": "always"
+  },
+  {
+    "name": "Fat Dad",
+    "instagram": "https://www.instagram.com/fatdadnyc",
+    "website": "https://events.humanitix.com/fatdad",
+    "urlPatterns": ["fatdad"],
+    "bearAffinity": "always"
+  },
+  {
+    "name": "Horse Meat Disco",
+    "instagram": "https://www.instagram.com/horsemeatdisco",
+    "website": "https://horsemeatdisco.net",
+    "urlPatterns": ["horsemeatdisco"],
+    "bearAffinity": "usually"
+  },
+  {
+    "name": "South Seattle Bear Social",
+    "aliases": ["SSBS"],
+    "instagram": "https://www.instagram.com/southseattlebearsocial",
+    "website": "https://events.ticketleap.com/events/southseattlebearsocial",
+    "urlPatterns": ["southseattlebearsocial"],
+    "bearAffinity": "always"
   }
 ]

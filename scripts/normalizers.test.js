@@ -2856,3 +2856,20 @@ test('LocationNormalizer end-to-end: accented city resolves timezone — no Unkn
   // 10pm EDT (UTC-4) = 2am UTC next day — no longer wall-clock UTC
   assert.equal(normalized.startDate.toISOString(), '2026-07-28T02:00:00.000Z');
 });
+
+// ---------------------------------------------------------------------------
+// Greater Palm Springs aliases (real generated cities config)
+// ---------------------------------------------------------------------------
+
+test('cathedral city (city value and address) resolves to palm-springs via the real cities config', () => {
+  const realCities = require('./scraper-cities');
+  const core = new SharedCore(realCities, { eventSchema: EventSchema });
+  const normalizer = new LocationNormalizer(core);
+  assert.equal(normalizer.normalizeCityName('cathedral city'), 'palm-springs');
+  assert.equal(normalizer.normalizeCityName('Cathedral City'), 'palm-springs');
+  assert.equal(
+    normalizer.extractCityFromAddress('68718 E Palm Canyon Dr, Cathedral City, CA 92234'),
+    'palm-springs');
+  // Word-boundary safety: a multi-word alias never matches inside other words
+  assert.equal(normalizer.extractCityFromAddress('123 Main St, Cathedralton, TX'), null);
+});

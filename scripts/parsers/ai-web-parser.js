@@ -290,7 +290,7 @@ class AiWebParser {
             /^twitter:(label\d+|data\d+)$/i
         ];
         this.jsonLdDropKeyPattern = /^(speakable|breadcrumb|itemListElement|potentialAction)$/i;
-        this.trackingParamPattern = /^(aff|affix|affiliate|utm_source|utm_medium|utm_campaign|utm_content|utm_term|ref|referral|fbclid|gclid|msclkid|dclid|source|mc_cid|mc_eid)$/i;
+        this.trackingParamPattern = /^(aff|affix|affiliate|utm[-_](?:source|medium|campaign|content|term)|ref|referral|fbclid|gclid|msclkid|dclid|source|mc_cid|mc_eid)$/i;
         // Detects lines that are primarily CSS content (e.g. leaked from unclosed or inline <style> blocks).
         // Matches 3+ occurrences of a CSS property name immediately followed by ":" with no space before the colon.
         this.cssContentLineRegex = /\b(cursor|color|background-color|background-image|background-size|font-size|font-weight|font-family|font-style|border-radius|border-color|border-width|border-style|margin|margin-top|margin-bottom|margin-left|margin-right|padding|padding-top|padding-bottom|padding-left|padding-right|display|position|overflow|z-index|box-sizing|box-shadow|flex|flex-shrink|flex-grow|flex-basis|align-items|justify-content|line-height|text-decoration|text-align|text-transform|opacity|min-width|max-width|min-height|max-height|width|height|top|left|right|bottom|transform|transition|animation|white-space|word-break|word-wrap|outline|visibility|pointer-events|vertical-align|letter-spacing|gap):/gi;
@@ -680,6 +680,29 @@ class AiWebParser {
         const segments = this.buildMultiEventSegments(html, sourceUrl, ocrResults);
         if (segments.length === 0) {
             console.warn('🤖 AI Web: multi-event-page classification produced no valid segments; returning no events');
+            // Lumberyard-class pages: the multi-event classifier fired but no
+            // line window carried the date+title signals segmentation needs —
+            // yet the page has real extractable content (body text and/or
+            // OCR'd flyers). Falling back to the single-page extraction path
+            // beats silently returning nothing. Guarded: never in
+            // discoveryOnly/link-aggregator flows (those return before this
+            // function is reached; the discoveryOnly check is defense in
+            // depth), and never for pages with no extractable content.
+            if (parserConfig.discoveryOnly !== true) {
+                const hasOcrContent = Array.isArray(ocrResults) && ocrResults.length > 0;
+                let hasBodyContent = false;
+                if (!hasOcrContent) {
+                    const fallbackBundle = this.getPromptSectionBundle(html, this.getAiConfig(parserConfig));
+                    const bodyLines = fallbackBundle && fallbackBundle.content && Array.isArray(fallbackBundle.content.lines)
+                        ? fallbackBundle.content.lines
+                        : [];
+                    hasBodyContent = bodyLines.join(' ').length >= 80;
+                }
+                if (hasOcrContent || hasBodyContent) {
+                    console.log('🤖 AI Web: No valid segments on multi-event page — falling back to whole-page extraction');
+                    return this.extractEventsFromSinglePage(htmlData, parserConfig, cityConfig, promptFields, ocrResults, httpAdapter);
+                }
+            }
             return [];
         }
         console.log(`🤖 AI Web: multi-event-page split into ${segments.length} candidate segment${segments.length === 1 ? '' : 's'}`);
@@ -8388,6 +8411,33 @@ TEXT:
         return Array.from(variants).filter(Boolean);
     }
 
+    // Evidence-side expansion for shared-meridiem time ranges ("1-7PM",
+    // "11a-4p"): the trailing meridiem applies to BOTH hours, so each hour
+    // yields explicit "H(am|pm)" / "H:MM(am|pm)" tokens for variant matching.
+    // A leading hour carrying its own single-letter meridiem ("11a") keeps it.
+    // Tokens are lowercase and space-free; text without a range yields none —
+    // a lone "7PM" must never corroborate an invented 1pm (no false pass).
+    // MATCHING SIDE ONLY: the stored evidence text and prompts never change.
+    buildSharedMeridiemRangeTokens(text) {
+        const tokens = new Set();
+        const source = String(text || '').toLowerCase();
+        const rangePattern = /(?:^|[^0-9:])(\d{1,2})(?::(\d{2}))?\s*(?:([ap])\.?m?\.?)?\s*[-–—]\s*(\d{1,2})(?::(\d{2}))?\s*([ap])\.?m?\.?(?![a-z0-9])/gi;
+        let match;
+        while ((match = rangePattern.exec(source)) !== null) {
+            const trailingMeridiem = match[6] === 'a' ? 'am' : 'pm';
+            const leadingMeridiem = match[3] ? (match[3] === 'a' ? 'am' : 'pm') : trailingMeridiem;
+            const addHourTokens = (hourText, minuteText, meridiem) => {
+                const hour = parseInt(hourText, 10);
+                if (!Number.isFinite(hour) || hour < 1 || hour > 12) return;
+                tokens.add(`${hour}${meridiem}`);
+                tokens.add(`${hour}:${minuteText || '00'}${meridiem}`);
+            };
+            addHourTokens(match[1], match[2], leadingMeridiem);
+            addHourTokens(match[4], match[5], trailingMeridiem);
+        }
+        return tokens;
+    }
+
     hasDateEvidence(evidenceContext, value) {
         const dateParts = this.extractDateEvidenceParts(value);
         if (!dateParts) {
@@ -8431,6 +8481,18 @@ TEXT:
         // Check if any variant exists in the evidence context (case-insensitive)
         const lowerEvidence = normalizedEvidence.toLowerCase();
         if (variants.some(variant => lowerEvidence.includes(variant.toLowerCase()))) {
+            return true;
+        }
+
+        // Shared-meridiem time ranges: "1-7PM" states BOTH 1pm and 7pm even
+        // though only "7pm" appears as a substring — expand the evidence's
+        // range forms into explicit per-hour tokens and re-check the claimed
+        // variants against them (run finding: QUENCHD's 13:00 start was
+        // dropped because "1-7PM" lacks a literal "1pm").
+        const rawTextForRanges = String(evidenceContext && evidenceContext.raw ? evidenceContext.raw : '').toLowerCase();
+        const meridiemRangeTokens = this.buildSharedMeridiemRangeTokens(`${lowerEvidence}\n${rawTextForRanges}`);
+        if (meridiemRangeTokens.size > 0
+            && variants.some(variant => meridiemRangeTokens.has(variant.toLowerCase().replace(/\s+/g, '')))) {
             return true;
         }
 
@@ -9669,6 +9731,53 @@ TEXT:
             source: this.config.source,
             isBearEvent: false
         };
+
+        // AI free-text hygiene: the model copies JSON-LD/HTML descriptions
+        // verbatim, markup included (CubScout shipped a raw <img …> tag as its
+        // whole description). Apply the SAME stripTags + decodeBasicEntities +
+        // normalizeWhitespace cleaning the deterministic JSON-LD builder uses.
+        // Plain-text descriptions (no tags) pass through byte-identical; a
+        // markup-only description falls back to the image's alt text when the
+        // tag carries one, else clears.
+        if (typeof event.description === 'string' && event.description && /<[^>]+>/.test(event.description)) {
+            const strippedDescription = this.normalizeWhitespace(
+                this.decodeBasicEntities(this.stripTags(event.description)).replace(/&amp;/gi, '&')
+            );
+            if (strippedDescription) {
+                event.description = strippedDescription;
+            } else {
+                const altMatch = event.description.match(/<img\b[^>]*\balt\s*=\s*(?:"([^"]*)"|'([^']*)')/i);
+                const altText = this.normalizeWhitespace(
+                    this.decodeBasicEntities(altMatch ? (altMatch[1] || altMatch[2] || '') : '').replace(/&amp;/gi, '&')
+                );
+                if (altText) {
+                    console.log(`🤖 AI Web: Description was markup-only — using image alt text for "${event.title}"`);
+                    event.description = altText;
+                } else {
+                    event.description = '';
+                }
+            }
+        }
+
+        // Registry-known promoter names can never be a city: OCR flyer credits
+        // ("TALENT PRESENTED BY biggercity") leak promoter brands into the city
+        // field, producing unknown-city/no-timezone noise downstream. Equality
+        // on the promoter name key only; no registry on the core → fail open.
+        if (event.city && this.core
+            && Array.isArray(this.core.promoters) && this.core.promoters.length > 0
+            && typeof this.core.normalizePromoterNameKey === 'function'
+            && typeof this.core.getPromoterRegistryIndex === 'function') {
+            const cityNameKey = this.core.normalizePromoterNameKey(event.city);
+            const promoterIndex = this.core.getPromoterRegistryIndex();
+            const cityMatchesPromoter = Boolean(cityNameKey)
+                && promoterIndex && Array.isArray(promoterIndex.entries)
+                && promoterIndex.entries.some(indexed => Array.isArray(indexed.nameKeys) && indexed.nameKeys.includes(cityNameKey));
+            if (cityMatchesPromoter) {
+                console.log(`🤖 AI Web: Rejected city "${event.city}" — matches promoter name, not a place`);
+                event.city = '';
+            }
+        }
+
         if (usedWallClockFallback) {
             event._timezoneUnresolved = true;
         }
