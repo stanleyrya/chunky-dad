@@ -46,7 +46,9 @@
     "facebook": "https://www.facebook.com/3dollarbillbk",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ7zm6H3JbwokR3ui1wTNr6Xc",
     "gayCities": "https://newyork.gaycities.com/bars/309059-dollar-bill",
-    "gayCitiesLastScrapedAt": "2026-06-14T16:38:18.601Z"
+    "gayCitiesLastScrapedAt": "2026-06-14T16:38:18.601Z",
+    "faviconBg": "#190832",
+    "faviconFg": "#c5c5e9"
   },
   {
     "name": "Ty's",
@@ -127,6 +129,8 @@
     "name": "The Yard at 9 Bob Note",
     "city": "nyc",
     "address": "270 Meserole Ave, Brooklyn, NY 11222",
-    "website": "https://www.3dollarbillbk.com"
+    "website": "https://www.3dollarbillbk.com",
+    "faviconBg": "#190832",
+    "faviconFg": "#c5c5e9"
   }
 ]
