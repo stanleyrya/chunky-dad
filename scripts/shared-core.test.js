@@ -4708,31 +4708,121 @@ test('deduplicateEvents treats a URL shared by 3+ events as a listing page (no s
   assert.equal(result.length, 3, 'a URL shared by 3+ events must never trigger the same-URL merge');
 });
 
-test('deduplicateEvents does not merge same-URL records with incompatible titles', async () => {
+test('deduplicateEvents merges venue-titled listing stubs with their same-URL detail twins', async () => {
   const core = createCore();
-  // Two DIFFERENT parties whose records both point at a shared path'd listing URL
-  // (e.g. a weekend calendar) on close dates: titles disagree, so no merge.
-  const friday = {
-    title: 'BEAR NIGHT',
-    bar: 'Cell Block',
-    city: 'chicago',
-    timezone: 'America/Chicago',
-    startDate: new Date('2026-07-24T21:00:00.000Z'),
-    url: 'https://venue-site.com/weekend-lineup',
-    source: 'ai-web'
-  };
-  const saturday = {
-    title: 'UNDERWEAR PARTY',
-    bar: 'Cell Block',
-    city: 'chicago',
-    timezone: 'America/Chicago',
-    startDate: new Date('2026-07-25T21:00:00.000Z'),
-    url: 'https://venue-site.com/weekend-lineup',
-    source: 'ai-web'
-  };
+  // Battery run 20260728: three unmerged pairs where a listing stub (VENUE as
+  // title, midnight date, unknown city — so no key/identity signal can fire)
+  // shares the EXACT event-page URL with its detail twin. Pathed-URL equality
+  // alone is identity; the old title-compatibility veto kept all three pairs
+  // as duplicates.
+  const pairs = [
+    [
+      { title: 'Nova PDX', startDate: new Date('2026-08-22T00:00:00.000Z'),
+        url: 'https://www.chunk-party.com/event-details/chunk-portland-summer-blow-out', source: 'ai-web' },
+      { title: 'CHUNK Portland - SUMMER BLOW OUT!', bar: 'Nova PDX', city: 'portland',
+        address: '1035 SE Stark St, Portland, OR', timezone: 'America/Los_Angeles',
+        startDate: new Date('2026-08-23T04:00:00.000Z'),
+        url: 'https://www.chunk-party.com/event-details/chunk-portland-summer-blow-out', source: 'ai-web' }
+    ],
+    [
+      { title: 'The Godfrey Rooftop', startDate: new Date('2026-08-22T00:00:00.000Z'),
+        url: 'https://www.eventbrite.com/e/quenchd-tickets-1993587626256', source: 'ai-web' },
+      { title: 'QUENCHD', bar: 'The Godfrey Rooftop', city: 'chicago',
+        address: '127 W Huron St, Chicago, IL', timezone: 'America/Chicago',
+        startDate: new Date('2026-08-22T20:00:00.000Z'),
+        url: 'https://www.eventbrite.com/e/quenchd-tickets-1993587626256', source: 'ai-web' }
+    ],
+    [
+      { title: 'CCBC Resort', startDate: new Date('2026-09-11T00:00:00.000Z'),
+        url: 'https://www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209', source: 'ai-web' },
+      { title: 'Club Chub Weekend 2026 — The Ultimate Celebration!', bar: 'CCBC Resort', city: 'palm springs',
+        address: '68300 Gay Resort Dr, Cathedral City, CA', timezone: 'America/Los_Angeles',
+        startDate: new Date('2026-09-11T18:00:00.000Z'),
+        url: 'https://www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209', source: 'ai-web' }
+    ]
+  ];
+  for (const [stub, detail] of pairs) {
+    const result = await core.deduplicateEvents([stub, detail], null);
+    assert.equal(result.length, 1, `"${stub.title}" / "${detail.title}" must merge on their shared event-page URL`);
+    assert.equal(result[0].title, detail.title, 'the complete/dated detail record supplies the title');
+  }
+});
 
-  const result = await core.deduplicateEvents([friday, saturday], null);
-  assert.equal(result.length, 2, 'same URL with unrelated titles must stay separate events');
+test('applyAggregatorWebsitePointers prefers the cross-host ticketUrl over the aggregator page copy', () => {
+  const core = createCore();
+  // Battery run 20260728: all 42 The Bear Calendar events carried
+  // website=url=their thebearcalendar.com page while ticketUrl pointed at
+  // the ORIGINAL ticketing host. Trust the pointer, not the copy.
+  const urlClassifications = { 'https://thebearcalendar.com/events/': 'link-aggregator' };
+  const aggregatorEvent = {
+    title: 'D>U>R>O',
+    website: 'https://thebearcalendar.com/events/d-u-r-o-2026/',
+    ticketUrl: 'https://dice.fm/event/duro-la-2026',
+    _sourcePageUrl: 'https://thebearcalendar.com/events/d-u-r-o-2026/'
+  };
+  // Non-aggregator page: untouched even with a cross-host ticketUrl.
+  const venueEvent = {
+    title: 'CUBSCOUT',
+    website: 'https://eaglela.com/events/cub-scout-3/',
+    ticketUrl: 'https://dice.fm/event/cubscout',
+    _sourcePageUrl: 'https://eaglela.com/events/cub-scout-3/'
+  };
+  // Same-host ticketUrl on the aggregator: no better pointer exists — untouched.
+  const sameHostEvent = {
+    title: 'BEAR NIGHT',
+    website: 'https://thebearcalendar.com/events/bear-night-2026/',
+    ticketUrl: 'https://www.thebearcalendar.com/tickets/bear-night-2026',
+    _sourcePageUrl: 'https://thebearcalendar.com/events/bear-night-2026/'
+  };
+  // Website already points off the aggregator: never clobbered.
+  const alreadyOriginalEvent = {
+    title: 'MEGAWOOF',
+    website: 'https://megawoof.com/houston',
+    ticketUrl: 'https://dice.fm/event/megawoof-houston',
+    _sourcePageUrl: 'https://thebearcalendar.com/events/megawoof-houston-richs-2026/'
+  };
+  core.applyAggregatorWebsitePointers(
+    [aggregatorEvent, venueEvent, sameHostEvent, alreadyOriginalEvent],
+    urlClassifications
+  );
+  assert.equal(aggregatorEvent.website, 'https://dice.fm/event/duro-la-2026',
+    'aggregator-page website is replaced by the original ticketing URL');
+  assert.equal(venueEvent.website, 'https://eaglela.com/events/cub-scout-3/',
+    'non-aggregator pages are unchanged');
+  assert.equal(sameHostEvent.website, 'https://thebearcalendar.com/events/bear-night-2026/',
+    'a same-host ticketUrl never rewrites website');
+  assert.equal(alreadyOriginalEvent.website, 'https://megawoof.com/houston',
+    'a website already pointing at the original source is untouched');
+});
+
+test('deduplicateEvents never same-URL-merges root-URL events or distinct per-event paths', async () => {
+  const core = createCore();
+  // Furball: every event carries the site ROOT as its url — where they were
+  // found, not what they are. Zero path segments → no url identity key.
+  const furball = ['FURBALL Asbury Park Beach', 'FURBALL Chicago', 'FURBALL MAD.BEAR', 'FURBALL CAMP', 'FURBALL']
+    .map((title, index) => ({
+      title,
+      city: 'new york',
+      timezone: 'America/New_York',
+      startDate: new Date(`2026-08-${String(10 + index).padStart(2, '0')}T02:00:00.000Z`),
+      url: 'https://www.furball.nyc',
+      source: 'ai-web'
+    }));
+  const furballResult = await core.deduplicateEvents(furball, null);
+  assert.equal(furballResult.length, 5, 'shared homepage-root URLs must never merge events');
+
+  // Aggregator (The Bear Calendar): distinct per-event paths on one host must
+  // not cross-merge even on close dates.
+  const tbc = [
+    { title: 'BEEFMINCE x RVT', city: 'london', timezone: 'Europe/London',
+      startDate: new Date('2026-08-15T21:00:00.000Z'),
+      url: 'https://thebearcalendar.com/events/beefmince-x-rvt-2026-4/', source: 'ai-web' },
+    { title: 'MEGAWOOF HOUSTON @ RICHs', city: 'houston', timezone: 'America/Chicago',
+      startDate: new Date('2026-08-16T03:00:00.000Z'),
+      url: 'https://thebearcalendar.com/events/megawoof-houston-richs-2026/', source: 'ai-web' }
+  ];
+  const tbcResult = await core.deduplicateEvents(tbc, null);
+  assert.equal(tbcResult.length, 2, 'distinct per-event paths must stay separate events');
 });
 
 test('deduplicateEvents merges same-URL records whose titles are prefixed variants', async () => {

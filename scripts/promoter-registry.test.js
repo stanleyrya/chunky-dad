@@ -152,3 +152,50 @@ test('matcher: the title "CUBSCOUT" matches CubScout LA via the same-entry alias
   const fullName = core.matchEventToPromoter({ title: 'CubScout LA: Woof Edition' });
   assert.ok(fullName && fullName.entry && fullName.entry.name === 'CubScout LA');
 });
+
+test('matcher: MEGAWOOF alias and the new BEEFMINCE sub-brands match their titles', () => {
+  const { SharedCore } = require('./shared-core');
+  const { EventSchema } = require('./event-schema');
+  const core = new SharedCore({}, { eventSchema: EventSchema, promoters: loadRegistry() });
+  // Battery run 20260728 (The Bear Calendar): "MEGAWOOF HOUSTON @ RICHs"
+  // carried no registry evidence — only the full "Megawoof America" name was
+  // known. The same-entry substring alias closes the recall gap.
+  const megawoof = core.matchEventToPromoter({ title: 'MEGAWOOF HOUSTON @ RICHs' });
+  assert.ok(megawoof && megawoof.entry, `expected a match, got ${JSON.stringify(megawoof)}`);
+  assert.equal(megawoof.entry.name, 'Megawoof America');
+  assert.equal(megawoof.evidence, 'title');
+
+  const spook = core.matchEventToPromoter({ title: 'SPOOKMINCE' });
+  assert.ok(spook && spook.entry, `expected a match, got ${JSON.stringify(spook)}`);
+  assert.equal(spook.entry.name, 'SPOOKMINCE');
+  assert.equal(spook.entry.parent, 'BEEFMINCE');
+
+  const boat = core.matchEventToPromoter({ title: 'BOATMINCE — September 2026' });
+  assert.ok(boat && boat.entry, `expected a match, got ${JSON.stringify(boat)}`);
+  assert.equal(boat.entry.name, 'BOATMINCE');
+  assert.equal(boat.entry.parent, 'BEEFMINCE');
+});
+
+test('matcher: statically stamped url-ish fields are never registry evidence (de-circularization)', () => {
+  const { SharedCore } = require('./shared-core');
+  const { EventSchema } = require('./event-schema');
+  const core = new SharedCore({}, { eventSchema: EventSchema, promoters: loadRegistry() });
+  // Battery run 20260728 (Club Chub): the parser's own static metadata
+  // stamped instagram.com/clubchubparty onto every event it emitted, and
+  // DURO then "matched" Club Chub on the parser's own stamp — circular.
+  const stamped = core.matchEventToPromoter({
+    title: 'D>U>R>O is back NEW OUTDOOR LOCATION',
+    instagram: 'https://www.instagram.com/clubchubparty',
+    _staticFields: { instagram: 'https://www.instagram.com/clubchubparty' }
+  });
+  assert.equal(stamped, null, 'a parser-stamped instagram is not evidence');
+  // The SAME event with the instagram organically extracted (no
+  // _staticFields entry) still matches.
+  const organic = core.matchEventToPromoter({
+    title: 'D>U>R>O is back NEW OUTDOOR LOCATION',
+    instagram: 'https://www.instagram.com/clubchubparty'
+  });
+  assert.ok(organic && organic.entry, `expected an organic match, got ${JSON.stringify(organic)}`);
+  assert.equal(organic.entry.name, 'Club Chub');
+  assert.equal(organic.evidence, 'url:instagram.com/clubchubparty');
+});

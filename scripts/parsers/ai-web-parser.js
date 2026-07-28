@@ -728,7 +728,15 @@ class AiWebParser {
                 }
                 if (hasOcrContent || hasBodyContent) {
                     console.log('🤖 AI Web: No valid segments on multi-event page — falling back to whole-page extraction');
-                    return this.extractEventsFromSinglePage(htmlData, parserConfig, cityConfig, promptFields, ocrResults, httpAdapter);
+                    // The fallback marker scopes the page-title-echo junk gate
+                    // (rejectPageTitleEchoPassFields): only whole-page fallbacks
+                    // on multi-event-classified pages can stitch a sibling
+                    // event's schedule onto a title echoed from the page's own
+                    // og:title (battery run 20260728, The Lumberyard "White
+                    // Center"). Ordinary single-event pages never carry it.
+                    return this.extractEventsFromSinglePage(
+                        { ...htmlData, _wholePageFallback: true },
+                        parserConfig, cityConfig, promptFields, ocrResults, httpAdapter);
                 }
             }
             return [];
@@ -6583,6 +6591,68 @@ class AiWebParser {
         return guarded;
     }
 
+    // Whole-page-fallback junk gate (battery run 20260728, The Lumberyard):
+    // the homepage og:title "White Center | United States | Lumber Yard Bar"
+    // — a neighborhood, not an event — was echoed back as the title by a
+    // meta-content pass carrying no date/time at all, and later OCR passes
+    // stitched a SIBLING event's schedule onto it, producing the run's only
+    // surviving "event". Reject a pass-result title that (a) matches a
+    // segment of the page's own og:title/site-title via padded-token
+    // containment AND (b) arrives without any date/time evidence in the SAME
+    // pass — that combination is a page label, not an event name. The field
+    // stays open for content/OCR passes that name the real event, and a pass
+    // that carries the title TOGETHER with its schedule always passes (the
+    // no-time-evidence condition is the discriminator, protecting legitimate
+    // single-event pages whose og:title IS the event name). Scoped to the
+    // whole-page fallback (htmlData._wholePageFallback) — only multi-event-
+    // classified pages that failed segmentation can stitch sibling schedules
+    // onto a page-title echo.
+    rejectPageTitleEchoPassFields(partial, htmlData) {
+        if (!partial || typeof partial !== 'object') return partial;
+        if (!htmlData || htmlData._wholePageFallback !== true) return partial;
+        const titleKey = Object.keys(partial).find(key => !this.isInternalAiFieldKey(key)
+            && this.normalizePromptFieldName(key) === 'title'
+            && typeof partial[key] === 'string' && partial[key].trim());
+        if (titleKey === undefined) return partial;
+        const title = partial[titleKey].trim();
+        if (!this.titleEchoesPageTitleSegment(title, htmlData)) return partial;
+        const timeFieldNames = new Set(['startdate', 'starttime', 'enddate', 'endtime', 'start', 'end']);
+        const passHasTimeEvidence = Object.keys(partial).some(key => !this.isInternalAiFieldKey(key)
+            && timeFieldNames.has(this.normalizePromptFieldName(key))
+            && this.isUsableAiFieldValue(partial[key]));
+        if (passHasTimeEvidence) return partial;
+        console.log(`🤖 AI Web: Skipped page-title echo "${title}" — not an event`);
+        const guarded = { ...partial };
+        delete guarded[titleKey];
+        return guarded;
+    }
+
+    // Padded-token containment of a candidate title in any '|'-separated
+    // segment of the page's own og:title or <title> tag. Case-insensitive,
+    // punctuation-collapsed; empty inputs never match.
+    titleEchoesPageTitleSegment(title, htmlData) {
+        const normalize = (value) => String(value || '')
+            .toLowerCase()
+            .replace(/[^\p{L}\p{N}]+/gu, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        const normalizedTitle = normalize(title);
+        if (!normalizedTitle) return false;
+        const pageTitles = [
+            this.getPageOgTitle(htmlData),
+            this.extractTitlePart(htmlData && typeof htmlData.html === 'string' ? htmlData.html : '')
+        ];
+        for (const pageTitle of pageTitles) {
+            if (!pageTitle) continue;
+            for (const segment of String(pageTitle).split('|')) {
+                const normalizedSegment = normalize(segment);
+                if (!normalizedSegment) continue;
+                if (` ${normalizedSegment} `.includes(` ${normalizedTitle} `)) return true;
+            }
+        }
+        return false;
+    }
+
     // A jsonld extraction pass on a page whose JSON-LD carries no Event-typed node
     // (WebPage/ImageObject/BreadcrumbList/Organization boilerplate) is a wasted AI
     // request — the model has nothing to extract and returns {}. Detect Event-typed
@@ -6742,6 +6812,12 @@ class AiWebParser {
             // keeps the field open; normalizeAiEvent keeps the same guards as an
             // end-of-pipeline backstop.
             validatedPartial = this.rejectBrandLikePassFields(validatedPartial, htmlData, passLabel);
+
+            // Whole-page-fallback junk gate (see rejectPageTitleEchoPassFields):
+            // a pass-result title that merely echoes a segment of the page's
+            // own og:title/site-title with no date/time evidence in the SAME
+            // pass is a page label, not an event name.
+            validatedPartial = this.rejectPageTitleEchoPassFields(validatedPartial, htmlData);
 
             // Track field sources for traceability
             const validatedFields = validationState ? validationState.validatedFields : new Set();
@@ -9666,11 +9742,18 @@ TEXT:
         const aiPrompts = Array.isArray(aiEvent.__aiPrompts) ? aiEvent.__aiPrompts.filter(entry => entry && entry.prompt) : [];
         // Pass dataFlags from htmlData if available, otherwise default to empty object
         const dataFlags = htmlData && htmlData.dataFlags ? htmlData.dataFlags : {};
+        // The pass-merge stores AI-returned rrule/recurrence values under the
+        // CANONICAL schema key 'recurrence' (mergeAiEventFields canonicalizes
+        // every response key, and canonicalizeEventKey maps rrule →
+        // recurrence), so the pickup must read that name too — battery run
+        // 20260728: CubScout's validated FREQ=MONTHLY;BYDAY=1FR sat on
+        // aiEvent.recurrence and never reached event.recurrenceRule.
         const recurrenceRule = this.isPromptFieldRequested('rrule', parserConfig, promptFields, dataFlags)
             ? this.normalizeRruleValue(this.firstNonEmpty(
                 aiEvent.recurrenceRule,
+                aiEvent.recurrence,
                 aiEvent.rrule,
-                this.getResolvedParserMetadataFieldValue(parserConfig, ['recurrenceRule', 'rrule'], aiEvent),
+                this.getResolvedParserMetadataFieldValue(parserConfig, ['recurrenceRule', 'recurrence', 'rrule'], aiEvent),
                 ''
             ))
             : '';

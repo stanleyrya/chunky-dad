@@ -57,11 +57,13 @@ const scraperConfig = {
       // Overlong-field trim pipeline: one AI call per event batches every
       // overlong scraped field (title/description/shortName); answers are
       // accepted only as VERBATIM contiguous substrings of the original.
-      // "report" (default) logs would-trim decisions without changing values;
+      // "report" logs would-trim decisions without changing values;
       // "enforce" replaces; "off" disables. Calendar-sourced values are never
       // AI-trimmed — they are only flagged in the event evidence panel.
+      // Enforce since battery run 20260728: every proposal was clean and the
+      // verbatim gate correctly rejected non-substring description trims.
       trim: {
-        mode: "report", // "report" (default) | "enforce" | "off"
+        mode: "enforce", // "report" | "enforce" | "off"
         titleMaxChars: 60, // data: title p95=48, p99=72, max=74
         descriptionMaxChars: 600, // data: description p95=491, max=846
         shortNameMaxChars: 30, // data: shortName max=20

@@ -1455,12 +1455,25 @@ class SharedCore {
                 if (paddedTitle.includes(` ${phrase} `)) return { evidence: 'title' };
             }
         }
+        // De-circularization (battery run 20260728, Club Chub): parser static
+        // metadata stamps url-ish fields (instagram/website/url/facebook) onto
+        // EVERY event the parser emits — matching a registry entry on a value
+        // the pipeline itself stamped is circular, not evidence. Statically
+        // stamped fields (tracked in _staticFields by applyStaticMetadataBlock)
+        // are excluded; only organically-extracted URLs count. ticketUrl and
+        // _sourcePageUrl always come from the page, never from static
+        // metadata, so they remain valid evidence. url/website are ONE field
+        // (aliases), so a stamp under either key covers both.
+        const staticFields = event && event._staticFields && typeof event._staticFields === 'object'
+            ? event._staticFields
+            : {};
+        const isStaticStamped = (...keys) => keys.some(key => Object.prototype.hasOwnProperty.call(staticFields, key));
         const urlValues = [
-            event && event.url,
+            isStaticStamped('url', 'website') ? '' : (event && event.url),
             event && event.ticketUrl,
-            event && event.website,
-            event && event.instagram,
-            event && event.facebook,
+            isStaticStamped('website', 'url') ? '' : (event && event.website),
+            isStaticStamped('instagram') ? '' : (event && event.instagram),
+            isStaticStamped('facebook') ? '' : (event && event.facebook),
             event && event._sourcePageUrl
         ];
         for (const value of urlValues) {
@@ -2736,6 +2749,15 @@ class SharedCore {
             aiWebParser.applyVenueSiteIdentityCorrections(allEvents, mainConfig?.cities || null);
         }
 
+        // Aggregator website pointer (trust the pointer, not the copy —
+        // battery run 20260728: all 42 The Bear Calendar events carried
+        // website = the aggregator's own event page): when a configured root
+        // classified 'link-aggregator', an event whose website still points
+        // at its own source page on that aggregator's host but whose
+        // ticketUrl points at a DIFFERENT host gets website = ticketUrl (the
+        // original source). Generic signal only — no per-site rules.
+        this.applyAggregatorWebsitePointers(allEvents, urlClassifications);
+
         // Metadata is applied dynamically by parsers using the {value, merge} format
 
         // Filter and process events. Enforce-mode bear-check drops are carried
@@ -2801,6 +2823,39 @@ class SharedCore {
         }
 
         return result;
+    }
+
+    // Aggregator website pointer pass (see the processParser call site): for
+    // events extracted from a site whose configured root classified as
+    // 'link-aggregator', a website that merely points back at the event's own
+    // aggregator page is a copy, not the pointer — prefer the ticketUrl when
+    // it leads OFF the aggregator's host. Fails closed on any missing piece:
+    // no website, no ticketUrl, same-host ticketUrl, or a website that is not
+    // the event's own source page all leave the event untouched.
+    applyAggregatorWebsitePointers(events, urlClassifications) {
+        if (!Array.isArray(events) || events.length === 0) return;
+        const classifications = urlClassifications && typeof urlClassifications === 'object' ? urlClassifications : {};
+        const aggregatorHosts = new Set();
+        for (const url of Object.keys(classifications)) {
+            if (classifications[url] !== 'link-aggregator') continue;
+            const host = this.getHostFromUrl(url).toLowerCase().replace(/^www\./, '');
+            if (host) aggregatorHosts.add(host);
+        }
+        if (aggregatorHosts.size === 0) return;
+        for (const event of events) {
+            if (!event || typeof event !== 'object') continue;
+            const website = typeof event.website === 'string' ? event.website.trim() : '';
+            const ticketUrl = typeof event.ticketUrl === 'string' ? event.ticketUrl.trim() : '';
+            const sourcePageUrl = typeof event._sourcePageUrl === 'string' ? event._sourcePageUrl.trim() : '';
+            if (!website || !ticketUrl || !sourcePageUrl) continue;
+            const sourceHost = this.getHostFromUrl(sourcePageUrl).toLowerCase().replace(/^www\./, '');
+            if (!sourceHost || !aggregatorHosts.has(sourceHost)) continue;
+            if (this.getUrlDedupeKey(website) !== this.getUrlDedupeKey(sourcePageUrl)) continue;
+            const ticketHost = this.getHostFromUrl(ticketUrl);
+            if (!ticketHost || this.areUrlHostsSameSite(ticketHost, sourceHost)) continue;
+            event.website = ticketUrl;
+            console.log(`🤖 AI Web: website set to original source ${ticketHost} (aggregator page pointer)`);
+        }
     }
 
     // Paste-ready parser entry printed after discoveryOnly runs. Only
@@ -5211,6 +5266,14 @@ class SharedCore {
         // A URL shared by 3+ records in one run is a listing/hub page (an events
         // calendar, a linktree with a path), not an event page — never merge on it.
         // Event-detail URLs are one-per-event; only a listing produces that fan-in.
+        // Pathed-URL equality alone is the identity — no title compatibility
+        // check (battery run 20260728: listing stubs titled with the VENUE —
+        // "Nova PDX", "The Godfrey Rooftop", "CCBC Resort" — shared the exact
+        // event-page URL with their properly-titled detail twins and the old
+        // title veto kept all three pairs as duplicates). Homepage-root URLs
+        // never qualify (getEventUrlIdentityKey requires a path segment), so a
+        // parser whose events all carry the site root (e.g. furball.nyc) is
+        // untouched.
         const urlKeyCounts = new Map();
         for (const event of deduplicated) {
             const urlKey = this.getEventUrlIdentityKey(event && event.url);
@@ -5233,8 +5296,7 @@ class SharedCore {
                 continue;
             }
             const holder = eventsByUrl.get(urlKey);
-            if (holder && this.areStartDatesWithinDays(holder, event, 7)
-                && this.areTitlesCompatibleForUrlMerge(holder.title, event.title)) {
+            if (holder && this.areStartDatesWithinDays(holder, event, 7)) {
                 console.log(`🔄 SharedCore: Same event URL — merging "${holder.title || 'event'}" and "${event.title || 'event'}" despite city/venue mismatch`);
                 // Identity fields (key/city/timezone) must come from the richer
                 // record — corrupted identity fields are exactly why these records
@@ -8838,23 +8900,6 @@ class SharedCore {
         const path = String(parsed.pathname || '').replace(/\/+$/, '');
         if (!path) return null; // domain root — no meaningful path segment
         return `${parsed.protocol.toLowerCase()}//${parsed.host.toLowerCase()}${path}${parsed.search || ''}`;
-    }
-
-    // Same-URL merges additionally require compatible titles: two records of one
-    // event title it the same way or one is a prefixed/suffixed variant of the
-    // other ("SPRING THAW" vs "CHUNK CHICAGO presents SPRING THAW!"), while two
-    // DIFFERENT parties that happen to share a listing-page URL name themselves
-    // differently. Empty titles stay conservative (no merge).
-    areTitlesCompatibleForUrlMerge(titleA, titleB) {
-        const normalize = (value) => this.stripEmojiForTitleTwin(String(value || ''))
-            .toLowerCase()
-            .replace(/[^\p{L}\p{N}]+/gu, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-        const a = normalize(titleA);
-        const b = normalize(titleB);
-        if (!a || !b) return false;
-        return a === b || a.includes(b) || b.includes(a);
     }
 
     // Sanity window for same-URL dedup: recurring events reuse their event page,
