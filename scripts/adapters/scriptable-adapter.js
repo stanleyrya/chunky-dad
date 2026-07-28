@@ -8303,10 +8303,19 @@ class ScriptableAdapter {
       );
     }
     if (SharedCore.isRecurringSeriesEvent(event)) {
-      const exportId = this.registerIcsExportEvent(event);
-      parts.push(
-        `<button onclick="exportRecurringIcs(this)" class="log-copy-btn ics-export-btn" data-ics-export-id="${exportId}">💾 Save recurring (.ics)</button>`,
-      );
+      // A derived-occurrence series with no stated start time cannot build a
+      // meaningful ICS (the export needs a real time): the card offers only
+      // the Event Builder link, where the owner supplies the time.
+      if (event._recurringNoStartTime === true) {
+        console.log(
+          `🔁 RECURRING: "${event.title || event.name || "Unknown"}" has no start time — ICS export disabled, use Event Builder`,
+        );
+      } else {
+        const exportId = this.registerIcsExportEvent(event);
+        parts.push(
+          `<button onclick="exportRecurringIcs(this)" class="log-copy-btn ics-export-btn" data-ics-export-id="${exportId}">💾 Save recurring (.ics)</button>`,
+        );
+      }
     }
     if (parts.length === 0) return "";
     return `<div class="event-actions-row" style="display:flex; gap:12px; align-items:center; margin:6px 0;">${parts.join("")}</div>`;

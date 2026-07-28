@@ -120,3 +120,35 @@ test('the generated twin exports the same registry object', () => {
   const twin = require('./scraper-promoters');
   assert.deepEqual(twin, registry);
 });
+
+// Run 20260728-113040: the title "CUBSCOUT" failed to match because padded
+// title containment needs the full "cubscoutla" key. The same-entry alias
+// "CUBSCOUT" fixes it — and the matcher's generic-stem guard only refuses
+// keys contained in OTHER entries' keys, so an alias that is a substring of
+// its own entry's name key stays matchable.
+test('CubScout LA carries the CUBSCOUT alias and passes registry hygiene', () => {
+  const registry = loadRegistry();
+  const entry = registry.find((candidate) => candidate.name === 'CubScout LA');
+  assert.ok(entry, 'CubScout LA entry exists');
+  assert.ok(Array.isArray(entry.aliases) && entry.aliases.includes('CUBSCOUT'),
+    'the CUBSCOUT alias is present');
+  // The alias key must be claimed by no other entry (the uniqueness test
+  // covers the general rule; this pins the specific pair).
+  const claimants = registry.filter((candidate) =>
+    [candidate.name, ...(Array.isArray(candidate.aliases) ? candidate.aliases : [])]
+      .some((name) => nameKey(name) === 'cubscout'));
+  assert.deepEqual(claimants.map((candidate) => candidate.name), ['CubScout LA']);
+});
+
+test('matcher: the title "CUBSCOUT" matches CubScout LA via the same-entry alias', () => {
+  const { SharedCore } = require('./shared-core');
+  const { EventSchema } = require('./event-schema');
+  const core = new SharedCore({}, { eventSchema: EventSchema, promoters: loadRegistry() });
+  const match = core.matchEventToPromoter({ title: 'CUBSCOUT' });
+  assert.ok(match && match.entry, `expected a match, got ${JSON.stringify(match)}`);
+  assert.equal(match.entry.name, 'CubScout LA');
+  assert.equal(match.evidence, 'title');
+  // The full name still matches too.
+  const fullName = core.matchEventToPromoter({ title: 'CubScout LA: Woof Edition' });
+  assert.ok(fullName && fullName.entry && fullName.entry.name === 'CubScout LA');
+});

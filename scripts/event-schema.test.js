@@ -330,3 +330,45 @@ test('round-trip: js/calendar-core.js parseICalData parses the generated ICS and
   assert.equal(parsed.startTimezone, 'America/Chicago', 'TZID round-trips');
   assert.equal(parsed.bar, 'Dallas Eagle', 'DESCRIPTION notes fields round-trip');
 });
+
+// ---------------------------------------------------------------------------
+// computeNextRruleOccurrence — deterministic next-occurrence date math for
+// dateless recurring events (practical subset; unsupported forms → null)
+// ---------------------------------------------------------------------------
+
+test('computeNextRruleOccurrence: weekly, monthly-ordinal, and daily forms from an injected now', () => {
+  const f = EventSchema.computeNextRruleOccurrence;
+  const wedJul22 = new Date(2026, 6, 22, 15, 30, 0); // Wed 2026-07-22, local
+
+  // weekly, single BYDAY: nearest Friday
+  assert.equal(f('FREQ=WEEKLY;BYDAY=FR', wedJul22), '2026-07-24');
+  // today counts as an occurrence
+  assert.equal(f('FREQ=WEEKLY;BYDAY=WE', wedJul22), '2026-07-22');
+  // weekly, multiple BYDAY: nearest of the set (Fri Jul 24 beats Tue Jul 28)
+  assert.equal(f('FREQ=WEEKLY;BYDAY=TU,FR', wedJul22), '2026-07-24');
+  // monthly ordinal: July's 1st Friday (Jul 3) is past → Aug 7
+  assert.equal(f('FREQ=MONTHLY;BYDAY=1FR', wedJul22), '2026-08-07');
+  // monthly ordinal still ahead in the current month
+  assert.equal(f('FREQ=MONTHLY;BYDAY=2FR', new Date(2026, 6, 1)), '2026-07-10');
+  // last-weekday form (-1)
+  assert.equal(f('FREQ=MONTHLY;BYDAY=-1FR', wedJul22), '2026-07-31');
+  // daily: today
+  assert.equal(f('FREQ=DAILY', wedJul22), '2026-07-22');
+  // an RRULE: prefix is tolerated (normalizeRruleValue strips it upstream)
+  assert.equal(f('RRULE:FREQ=WEEKLY;BYDAY=FR', wedJul22), '2026-07-24');
+});
+
+test('computeNextRruleOccurrence: unsupported forms return null (event stays discarded)', () => {
+  const f = EventSchema.computeNextRruleOccurrence;
+  const now = new Date(2026, 6, 22);
+  assert.equal(f('FREQ=WEEKLY', now), null, 'weekly without BYDAY has no anchor');
+  assert.equal(f('FREQ=MONTHLY;BYDAY=FR', now), null, 'monthly needs an ordinal BYDAY');
+  assert.equal(f('FREQ=MONTHLY;BYDAY=1FR,3FR', now), null, 'multiple monthly ordinals are out of subset');
+  assert.equal(f('FREQ=WEEKLY;INTERVAL=2;BYDAY=FR', now), null, 'INTERVAL>1 has no DTSTART to phase it');
+  assert.equal(f('FREQ=YEARLY', now), null, 'unknown FREQ');
+  assert.equal(f('1ST FRIDAY OF THE MONTH', now), null, 'prose is not an RRULE');
+  assert.equal(f('', now), null);
+  assert.equal(f('FREQ=WEEKLY;BYDAY=FR', new Date('nonsense')), null, 'invalid fromDate');
+  assert.equal(f('FREQ=WEEKLY;BYDAY=XX', now), null, 'unknown weekday code');
+  assert.equal(f('FREQ=DAILY;BYDAY=FR', now), null, 'filtered daily rules are out of subset');
+});

@@ -102,6 +102,9 @@ const scraperPromoters = [
   },
   {
     "name": "CubScout LA",
+    "aliases": [
+      "CUBSCOUT"
+    ],
     "bearAffinity": "always"
   },
   {
