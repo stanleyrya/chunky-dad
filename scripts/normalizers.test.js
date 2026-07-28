@@ -2795,3 +2795,64 @@ test('corroborateBarWithGeoPoi never overwrites the venue-site-identity stamp', 
   normalizer.corroborateBarWithGeoPoi(unstampedEvent, ['Massive']);
   assert.equal(unstampedEvent.barSource, 'geo-poi');
 });
+
+// ===========================================================================
+// run 20260727-145617: diacritic folding in city resolution — "montréal" and
+// accented address text must resolve the montreal config key (Fix 1)
+// ===========================================================================
+
+const MONTREAL_CITIES = {
+  montreal: { name: 'Montreal', timezone: 'America/Toronto', patterns: ['montreal', 'mtl'] },
+  portland: { timezone: 'America/Los_Angeles', patterns: ['portland', 'pdx'] }
+};
+
+function createMontrealLocationNormalizer() {
+  const core = new SharedCore(MONTREAL_CITIES, { eventSchema: EventSchema });
+  return new LocationNormalizer(core);
+}
+
+test('normalizeCityName resolves accented "montréal"/"Montréal"/"MONTRÉAL" to the montreal key; unaccented byte-identical', () => {
+  const normalizer = createMontrealLocationNormalizer();
+  // Literal run 20260727-145617 value that logged: Unknown city "montréal"
+  assert.equal(normalizer.normalizeCityName('montréal'), 'montreal');
+  assert.equal(normalizer.normalizeCityName('Montréal'), 'montreal');
+  assert.equal(normalizer.normalizeCityName('MONTRÉAL'), 'montreal');
+  // Unaccented regression: identical to pre-fix behavior
+  assert.equal(normalizer.normalizeCityName('montreal'), 'montreal');
+  assert.equal(normalizer.normalizeCityName('Portland'), 'portland');
+  // Unmapped input still echoes back lowercased, exactly as before
+  assert.equal(normalizer.normalizeCityName('atlantis'), 'atlantis');
+});
+
+test('extractCityFromAddress resolves accented address text containing "Montréal" (literal run address shape)', () => {
+  const normalizer = createMontrealLocationNormalizer();
+  assert.equal(normalizer.extractCityFromAddress('2915 Rue Ontario E, Montréal, QC H2K 1X7'), 'montreal');
+  assert.equal(normalizer.extractCityFromAddress('2915 Rue Ontario E, Montreal, QC H2K 1X7'), 'montreal');
+  // A bare street line still yields NO city (the 2026-07-13 guard holds)
+  assert.equal(normalizer.extractCityFromAddress('2915 Rue Ontario E'), null);
+});
+
+test('extractCityFromEvent resolves an accented city field and accented title/venue text', () => {
+  const normalizer = createMontrealLocationNormalizer();
+  assert.equal(normalizer.extractCityFromEvent({ city: 'montréal' }), 'montreal');
+  assert.equal(normalizer.extractCityFromEvent({ title: 'Concours PUP Montréal' }), 'montreal');
+  assert.equal(normalizer.extractCityFromEvent({ title: 'Bear Night', bar: 'Bar Le Cocktail Montréal' }), 'montreal');
+  // Unaccented regression
+  assert.equal(normalizer.extractCityFromEvent({ title: 'Portland Bear Night' }), 'portland');
+});
+
+test('LocationNormalizer end-to-end: accented city resolves timezone — no Unknown-city warn, dates re-anchor', () => {
+  const normalizer = createMontrealLocationNormalizer();
+  const event = {
+    title: 'Concours PUP MTL',
+    city: 'montréal',
+    startDate: new Date('2026-07-27T22:00:00.000Z'),
+    endDate: new Date('2026-07-27T22:00:00.000Z'),
+    _timezoneUnresolved: true
+  };
+  const normalized = normalizer.normalize(event);
+  assert.equal(normalized.city, 'montreal');
+  assert.equal(normalized.timezone, 'America/Toronto');
+  // 10pm EDT (UTC-4) = 2am UTC next day — no longer wall-clock UTC
+  assert.equal(normalized.startDate.toISOString(), '2026-07-28T02:00:00.000Z');
+});

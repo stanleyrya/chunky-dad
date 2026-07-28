@@ -787,6 +787,16 @@ class AiWebParser {
             console.log(`🤖 AI Web: Skipped venue-hours notice "${event.title}" — not an event`);
             return null;
         }
+        // Postal-code title guard (run 20260727-145617: a Canadian postal
+        // code "H2K 1X7" scraped off an address block became a calendar-bound
+        // "event" — bar "Bear-IT", city "canada", zero duration — and sailed
+        // through to preview). Same linguistic-generic contract as the
+        // venue-hours gate above: shape classes only, no site rules, and only
+        // a title that is NOTHING but a postal code is rejected.
+        if (this.isPostalCodeOnlyTitle(event.title)) {
+            console.log(`🤖 AI Web: Skipped degenerate event "${event.title}" — title is a postal code, not an event`);
+            return null;
+        }
         // Address plausibility gate: a venue name is not an address (run
         // 20260723-140457: extraction stored address "Legacy" — the bar's own
         // name — and it sailed through to geocoding). Runs BEFORE the bar
@@ -902,6 +912,27 @@ class AiWebParser {
             return false;
         }
         return weekdayCount > 0 && closedCount > 0;
+    }
+
+    // Deterministic degenerate-title detector: true when the trimmed title is
+    // NOTHING but a postal-code shape — Canadian "A1A 1A1" (space/hyphen
+    // optional), US ZIP 5 or 5+4, or a FULL UK postcode (outward + inward).
+    // Linguistic-generic like the venue-hours detector above: shape classes
+    // only, no site rules. Fail closed: any other text keeps the event
+    // ("Party at H2K 1X7" is a real title), and outward-only UK forms ("SW4")
+    // are common area shorthands, never rejected.
+    isPostalCodeOnlyTitle(title) {
+        const text = String(title || '').trim();
+        if (!text) return false;
+        // Canadian: letter-digit-letter [space/hyphen] digit-letter-digit
+        if (/^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/.test(text)) return true;
+        // US ZIP: 5 digits, optional +4
+        if (/^\d{5}(?:-\d{4})?$/.test(text)) return true;
+        // Full UK postcode: outward (1-2 letters, digit, optional alnum) +
+        // inward (digit + 2 letters); the inward part is REQUIRED so short
+        // outward-only forms ("SW4") survive
+        if (/^[A-Za-z]{1,2}\d[A-Za-z\d]?[ -]?\d[A-Za-z]{2}$/.test(text)) return true;
+        return false;
     }
 
     // One-line info summary of a finalized extraction: only fields that are set,
@@ -5094,6 +5125,18 @@ class AiWebParser {
         const lowerUrl = url.toLowerCase();
         if (lowerPath === '/empty' || lowerUrl.endsWith('/empty')) {
             return { valid: false, reason: 'empty-placeholder-url' };
+        }
+        // Calendar-export URLs (run 20260727-145617: the crawler followed The
+        // Events Calendar's ?ical=1 / ?outlook-ical=1 export links and
+        // tribe-bar-date filter links off event pages — every fetch returned
+        // an empty non-HTML response with a stack trace). Generic patterns
+        // only: the ical/outlook-ical query flags, the tribe-bar-date query
+        // param, and a .ics path suffix. The [?&] anchor keeps slugs like
+        // "musical=1" or paths containing "ical" valid.
+        if (lowerPath.endsWith('.ics')
+            || /[?&](?:outlook-)?ical=1(?!\d)/.test(lowerUrl)
+            || /[?&]tribe-bar-date=/.test(lowerUrl)) {
+            return { valid: false, reason: 'calendar-export-url' };
         }
         const blockedPattern = invalidUrlPatterns.find(invalid => {
             if (invalid instanceof RegExp) return invalid.test(lowerUrl);
@@ -9757,6 +9800,21 @@ TEXT:
         return cityConfig;
     }
 
+    // Diacritic-folded lowercase view for city comparisons — identical to
+    // SharedCore.foldDiacritics (parsers are standalone and cannot import
+    // shared code, so the transform is deliberately duplicated; keep the two
+    // in sync). "Montréal"/"MONTRÉAL" → "montreal" so accented page/address
+    // text matches the unaccented city config patterns (run 20260727-145617:
+    // "Unknown city montréal" left events wall-clock UTC). Unaccented ASCII
+    // input is byte-identical to plain lowercase+trim.
+    foldDiacritics(value) {
+        return String(value || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .trim();
+    }
+
     getTimezoneForCity(city, cityConfig) {
         const map = this.getCityConfigMap(cityConfig);
         if (!map || typeof map !== 'object') return '';
@@ -9768,14 +9826,16 @@ TEXT:
             return direct.timezone.trim();
         }
 
-        const normalizedCity = cityText.toLowerCase();
+        // Diacritic-folded on BOTH sides so "Montréal" resolves montreal's
+        // timezone (run 20260727-145617)
+        const normalizedCity = this.foldDiacritics(cityText);
         const matchedKey = Object.keys(map).find(key => {
-            if (String(key).toLowerCase() === normalizedCity) return true;
+            if (this.foldDiacritics(key) === normalizedCity) return true;
             const cityData = map[key];
             if (!cityData || typeof cityData !== 'object') return false;
-            if (cityData.name && String(cityData.name).toLowerCase() === normalizedCity) return true;
-            if (Array.isArray(cityData.patterns) && cityData.patterns.some(p => String(p).toLowerCase() === normalizedCity)) return true;
-            if (Array.isArray(cityData.aliases) && cityData.aliases.some(a => String(a).toLowerCase() === normalizedCity)) return true;
+            if (cityData.name && this.foldDiacritics(cityData.name) === normalizedCity) return true;
+            if (Array.isArray(cityData.patterns) && cityData.patterns.some(p => this.foldDiacritics(p) === normalizedCity)) return true;
+            if (Array.isArray(cityData.aliases) && cityData.aliases.some(a => this.foldDiacritics(a) === normalizedCity)) return true;
             return false;
         });
         if (!matchedKey) return '';
@@ -9788,7 +9848,8 @@ TEXT:
     getCityAliasList(cityKey, cityData) {
         const aliases = new Set();
         const add = value => {
-            const text = String(value || '').trim().toLowerCase();
+            // Diacritic-folded so accented config names match folded text
+            const text = this.foldDiacritics(value);
             if (text) aliases.add(text);
         };
         add(cityKey);
@@ -9803,7 +9864,9 @@ TEXT:
     findCityConfigEntry(cityValue, cityConfig) {
         const map = this.getCityConfigMap(cityConfig);
         if (!map || typeof map !== 'object') return null;
-        const normalizedCity = String(cityValue || '').trim().toLowerCase();
+        // Diacritic-folded so "Montréal" finds the montreal entry (aliases
+        // from getCityAliasList are already folded)
+        const normalizedCity = this.foldDiacritics(cityValue);
         if (!normalizedCity) return null;
         for (const [key, cityData] of Object.entries(map)) {
             const aliases = this.getCityAliasList(key, cityData);
@@ -9815,11 +9878,13 @@ TEXT:
     }
 
     textContainsCityAlias(normalizedText, alias) {
-        const normalizedAlias = this.normalizeEvidenceText(alias);
+        // Diacritic-folded on BOTH sides: accented evidence ("Montréal, QC")
+        // must contain the unaccented config alias (run 20260727-145617)
+        const normalizedAlias = this.foldDiacritics(this.normalizeEvidenceText(alias));
         if (!normalizedAlias) return false;
         const escaped = normalizedAlias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const pattern = new RegExp(`(^|[^a-z0-9])${escaped}($|[^a-z0-9])`);
-        return pattern.test(normalizedText);
+        return pattern.test(this.foldDiacritics(normalizedText));
     }
 
     // The AI canonicalizes city names (e.g. "NYC" -> "new york"), so verbatim evidence

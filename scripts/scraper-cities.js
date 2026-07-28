@@ -391,7 +391,8 @@ const scraperCities = {
     "calendar": "chunky-dad-montreal",
     "timezone": "America/Toronto",
     "patterns": [
-      "montreal"
+      "montreal",
+      "mtl"
     ],
     "coordinates": {
       "lat": 45.5019,

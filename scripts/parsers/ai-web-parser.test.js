@@ -6573,3 +6573,98 @@ test('linearizeJsonForPrompt emits keyPath lines for scalar leaves, skipping nul
     'note: bold text'
   ]);
 });
+
+// ===========================================================================
+// run 20260727-145617 fixes: diacritic-folded city matching (Fix 1),
+// postal-code degenerate-event gate (Fix 2), calendar-export crawl block (Fix 4)
+// ===========================================================================
+
+test('city matching folds diacritics: "Montréal" text and city values resolve the montreal config entry', () => {
+  const parser = createParser();
+  const cityConfig = {
+    montreal: { name: 'Montreal', timezone: 'America/Toronto', patterns: ['montreal', 'mtl'] },
+    nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'] }
+  };
+  // Literal run 20260727-145617 address shape (accented city inside free text)
+  assert.equal(parser.findCityKeyInText('Bain Mathieu, 2915 Rue Ontario E, Montréal, QC H2K 1X7', cityConfig), 'montreal');
+  // Accented city value → timezone (the run left these wall-clock UTC)
+  assert.equal(parser.getTimezoneForCity('montréal', cityConfig), 'America/Toronto');
+  assert.equal(parser.getTimezoneForCity('Montréal', cityConfig), 'America/Toronto');
+  assert.equal(parser.getTimezoneForCity('MONTRÉAL', cityConfig), 'America/Toronto');
+  // findCityConfigEntry folds too
+  assert.equal(parser.findCityConfigEntry('Montréal', cityConfig).key, 'montreal');
+  // Unaccented regression: byte-identical to pre-fix behavior
+  assert.equal(parser.findCityKeyInText('123 Main St, Montreal, QC', cityConfig), 'montreal');
+  assert.equal(parser.getTimezoneForCity('montreal', cityConfig), 'America/Toronto');
+  assert.equal(parser.getTimezoneForCity('new york', cityConfig), 'America/New_York');
+  assert.equal(parser.getTimezoneForCity('atlantis', cityConfig), '');
+});
+
+test('postal-code titles: only a title that is NOTHING but a postal code is degenerate', () => {
+  const parser = createParser();
+  // Literal run title (Canadian postal code) plus the stated shapes
+  assert.equal(parser.isPostalCodeOnlyTitle('H2K 1X7'), true);
+  assert.equal(parser.isPostalCodeOnlyTitle('h2k 1x7'), true);
+  assert.equal(parser.isPostalCodeOnlyTitle('H2K-1X7'), true);
+  assert.equal(parser.isPostalCodeOnlyTitle('90210'), true);
+  assert.equal(parser.isPostalCodeOnlyTitle('90210-1234'), true);
+  assert.equal(parser.isPostalCodeOnlyTitle('SW1A 1AA'), true);
+  // Titles containing anything else survive (fail closed)
+  assert.equal(parser.isPostalCodeOnlyTitle('Party at H2K 1X7'), false);
+  assert.equal(parser.isPostalCodeOnlyTitle('SW4'), false, 'outward-only UK shorthand is not a full postcode');
+  assert.equal(parser.isPostalCodeOnlyTitle('Bear Night'), false);
+  assert.equal(parser.isPostalCodeOnlyTitle('Furball 2026'), false);
+  assert.equal(parser.isPostalCodeOnlyTitle(''), false);
+  assert.equal(parser.isPostalCodeOnlyTitle(null), false);
+});
+
+test('postal-code gate: extractSingleEvent skips the literal "H2K 1X7" extraction with the skip log', async () => {
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  // Mirrors the run: an address block's postal code became a fully-formed
+  // "event" (bar "Bear-IT", city "canada", zero duration) and reached preview.
+  parser.getAiEvent = async () => ({
+    title: 'H2K 1X7',
+    startDate: '2026-07-27',
+    __preValidatedFields: ['startDate']
+  });
+  let event = 'unset';
+  const logs = await captureLogsAsync(async () => {
+    event = await parser.extractSingleEvent(
+      { html: 'Bear-IT\n2915 Rue Ontario E, Montréal, QC H2K 1X7\nJuly 27 2026', url: 'https://bear-it.example/events' },
+      {}, null, ['title', 'startDate']
+    );
+  });
+  assert.equal(event, null, 'a postal-code title never becomes an event');
+  assert.ok(
+    logs.includes('🤖 AI Web: Skipped degenerate event "H2K 1X7" — title is a postal code, not an event'),
+    `skip log expected, got: ${JSON.stringify(logs.filter(line => line.includes('AI Web')))}`
+  );
+});
+
+test('validateEventUrl rejects calendar-export URLs (literal run URLs) but keeps date-in-path event URLs', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://bear-it.example/events/';
+  // The three literal shapes the crawler followed into empty responses
+  assert.equal(
+    parser.validateEventUrl('https://bear-it.example/events/2026-07-27/?ical=1/', sourceUrl, {}).reason,
+    'calendar-export-url');
+  assert.equal(
+    parser.validateEventUrl('https://bear-it.example/events/mois/?ical=1', sourceUrl, {}).reason,
+    'calendar-export-url');
+  assert.equal(
+    parser.validateEventUrl('https://bear-it.example/events/2026-07-27/?outlook-ical=1', sourceUrl, {}).reason,
+    'calendar-export-url');
+  // The Events Calendar date-filter links and .ics exports are also blocked
+  assert.equal(
+    parser.validateEventUrl('https://bear-it.example/events/?tribe-bar-date=2026-07-27', sourceUrl, {}).reason,
+    'calendar-export-url');
+  assert.equal(
+    parser.validateEventUrl('https://bear-it.example/events/export.ics', sourceUrl, {}).reason,
+    'calendar-export-url');
+  // Normal event URLs with dates in the path stay valid
+  assert.equal(parser.validateEventUrl('https://bear-it.example/events/2026-07-27/', sourceUrl, {}).valid, true);
+  assert.equal(parser.validateEventUrl('https://bear-it.example/events/bear-night-2026-07-27', sourceUrl, {}).valid, true);
+  // "ical" inside a slug or query VALUE is not an export flag
+  assert.equal(parser.validateEventUrl('https://bear-it.example/events/musical-bears?musical=1', sourceUrl, {}).valid, true);
+});

@@ -387,7 +387,7 @@ const CITY_CONFIG = {
         calendarId: '5078d3d007dd706a267fa06b5659d2dba9ba56b6760e99bdfaf704baa8e7cf6d@group.calendar.google.com',
         calendar: 'chunky-dad-montreal',
         timezone: 'America/Toronto',
-        patterns: ['montreal'],
+        patterns: ['montreal', 'mtl'],
         coordinates: { lat: 45.5019, lng: -73.5674 },
         mapZoom: 11,
         visible: false

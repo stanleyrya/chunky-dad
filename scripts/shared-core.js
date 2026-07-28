@@ -218,6 +218,49 @@ class SharedCore {
         return cityMappings;
     }
 
+    // Diacritic-folded lowercase view of city-ish text: NFD-decompose, strip
+    // combining marks (U+0300–U+036F), lowercase, trim — "Montréal"/"MONTRÉAL"
+    // → "montreal" so accented page/address text matches the unaccented city
+    // config patterns (run 20260727-145617: city "montréal" failed the
+    // montreal key lookup and timezone resolution). Unaccented ASCII input is
+    // byte-identical to plain lowercase+trim. String.prototype.normalize is
+    // ES6 and available on iOS JavaScriptCore. ai-web-parser.js duplicates
+    // this as foldDiacritics (parsers are standalone and cannot import shared
+    // code; keep the two in sync); normalizers.js reaches it via this.core.
+    foldDiacritics(value) {
+        return String(value || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .trim();
+    }
+
+    // Timezone for a city value that may be a config KEY, an accented/cased
+    // variant of one ("Montréal"), or any configured name/pattern/alias.
+    // Diacritic-folded comparison on BOTH sides. Null when unknown — callers
+    // keep their own fallbacks (this is the shared timezone-config-lookup-by-
+    // city rung behind every `event.city → timezone` resolution).
+    getCityTimezone(city) {
+        if (!city || !this.cities || typeof this.cities !== 'object') return null;
+        const direct = this.cities[city];
+        if (direct && typeof direct === 'object' && typeof direct.timezone === 'string' && direct.timezone.trim()) {
+            return direct.timezone.trim();
+        }
+        const folded = this.foldDiacritics(city);
+        if (!folded) return null;
+        for (const [key, cityData] of Object.entries(this.cities)) {
+            if (!cityData || typeof cityData !== 'object') continue;
+            const names = [key, cityData.name]
+                .concat(Array.isArray(cityData.patterns) ? cityData.patterns : [])
+                .concat(Array.isArray(cityData.aliases) ? cityData.aliases : []);
+            if (!names.some(name => this.foldDiacritics(name) === folded)) continue;
+            return typeof cityData.timezone === 'string' && cityData.timezone.trim()
+                ? cityData.timezone.trim()
+                : null;
+        }
+        return null;
+    }
+
     warnOnce(key, message) {
         if (!this.loggedWarnings) {
             this.loggedWarnings = new Set();
@@ -922,13 +965,14 @@ class SharedCore {
     isCityOnlyTitle(title, cityKey) {
         if (!title || !cityKey || !this.cities || typeof this.cities !== 'object') return false;
         const normalizedKey = String(cityKey).trim().toLowerCase();
-        const cityData = this.cities[cityKey] || this.cities[normalizedKey];
+        // Accented city values ("Montréal") fold to the config key (Fix: run 20260727-145617)
+        const cityData = this.cities[cityKey] || this.cities[normalizedKey] || this.cities[this.foldDiacritics(cityKey)];
         if (!cityData || typeof cityData !== 'object') return false;
-        const normalizedTitle = this.stripEmojiForTitleTwin(title).replace(/\s+/g, ' ').trim().toLowerCase();
+        const normalizedTitle = this.foldDiacritics(this.stripEmojiForTitleTwin(title).replace(/\s+/g, ' '));
         if (!normalizedTitle) return false;
         const candidates = new Set();
         const addCandidate = value => {
-            const text = String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+            const text = this.foldDiacritics(String(value || '').replace(/\s+/g, ' '));
             if (!text) return;
             candidates.add(text);
             candidates.add(text.replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim());
@@ -1547,7 +1591,7 @@ class SharedCore {
     getCityCenterCoordinatePair(cityKey) {
         const key = cityKey ? String(cityKey).trim() : '';
         if (!key || !this.cities || typeof this.cities !== 'object') return null;
-        const cityConfig = this.cities[key] || this.cities[key.toLowerCase()];
+        const cityConfig = this.cities[key] || this.cities[key.toLowerCase()] || this.cities[this.foldDiacritics(key)];
         const coords = cityConfig && cityConfig.coordinates;
         if (!coords) return null;
         const lat = Number(coords.lat);
@@ -5330,7 +5374,7 @@ class SharedCore {
         let key = format;
         
         const useLocalDate = options.useLocalDate === true;
-        const eventTimezone = event.timezone || (event.city && this.cities[event.city]?.timezone) || null;
+        const eventTimezone = event.timezone || this.getCityTimezone(event.city) || null;
         const dateValue = useLocalDate
             ? this.normalizeEventDateLocal(event.startDate, eventTimezone)
             : this.normalizeEventDate(event.startDate);
@@ -6594,7 +6638,7 @@ class SharedCore {
         if (!event || !event._timezoneUnresolved) return event;
 
         const timezone = event.timezone
-            || (event.city && this.cities && this.cities[event.city]?.timezone)
+            || this.getCityTimezone(event.city)
             || '';
         if (!timezone) {
             const title = event.title || 'unknown';
@@ -8090,7 +8134,7 @@ class SharedCore {
         }
         
         const fallbackDate = this.normalizeEventDate(event?.startDate);
-        const timezone = event?.timezone || (event?.city && this.cities[event.city]?.timezone) || null;
+        const timezone = event?.timezone || this.getCityTimezone(event ? event.city : null) || null;
         const localDate = this.normalizeEventDateLocal(event?.startDate, timezone);
         const date = localDate || fallbackDate;
         
@@ -8148,7 +8192,7 @@ class SharedCore {
             .replace(/[\s\-]+/g, '-')
             .replace(/^-+|-+$/g, '');
         
-        const eventTimezone = event.timezone || (event.city && this.cities[event.city]?.timezone) || null;
+        const eventTimezone = event.timezone || this.getCityTimezone(event.city) || null;
         const date = this.normalizeEventDateLocal(event.startDate, eventTimezone);
         const venue = String(event.bar || '').toLowerCase().trim();
         if (!normalizedTitle || !date) return null;
@@ -8476,7 +8520,7 @@ class SharedCore {
             timezone: event.timezone
                 || fields.timezone
                 || event.calendarTimezone
-                || (event.city && this.cities[event.city]?.timezone)
+                || this.getCityTimezone(event.city)
                 || null,
             ticketUrl: this.normalizeTicketUrlForIdentity(event.ticketUrl || fields.ticketUrl),
             names: [...new Set(names)],
@@ -8667,7 +8711,7 @@ class SharedCore {
         if (!date || isNaN(date.getTime())) return '';
         const timezone = event._timezoneUnresolved
             ? null
-            : (event.timezone || (event.city && this.cities && this.cities[event.city]?.timezone) || null);
+            : (event.timezone || this.getCityTimezone(event.city) || null);
         let year = date.getUTCFullYear();
         let month = date.getUTCMonth() + 1;
         let day = date.getUTCDate();
@@ -8720,14 +8764,33 @@ class SharedCore {
     // strings, or the same venue-site page host tag (#1539's
     // _venueSitePageHost — the run's "Eagle Karaoke" record carried no bar at
     // all but was scraped from thedallaseagle.com just like its twin).
+    // A fourth axis, bar-in-address, covers one side's MULTI-WORD bar name
+    // appearing verbatim as a contiguous token run inside the other side's
+    // address (run 20260727-145617: bar "Bain Mathieu" vs an address that
+    // literally named the venue — "Bain Mathieu, 2915 Rue Ontario E").
+    // Multi-token names only, fail closed: single-word bar names like
+    // "Eagle" collide with street names.
     getCrossSourceVenueIdentity(eventA, eventB) {
         if (!eventA || !eventB) return null;
         const barA = this.normalizeBarNameKey(eventA.bar);
         const barB = this.normalizeBarNameKey(eventB.bar);
         if (barA && barB && barA === barB) return 'bar';
-        const addressA = this.normalizeAddressTokens(eventA.address).join(' ');
-        const addressB = this.normalizeAddressTokens(eventB.address).join(' ');
+        const addressTokensA = this.normalizeAddressTokens(eventA.address);
+        const addressTokensB = this.normalizeAddressTokens(eventB.address);
+        const addressA = addressTokensA.join(' ');
+        const addressB = addressTokensB.join(' ');
         if (addressA && addressB && addressA === addressB) return 'address';
+        const containsTokenRun = (haystack, needle) => {
+            if (needle.length < 2 || haystack.length < needle.length) return false;
+            for (let start = 0; start + needle.length <= haystack.length; start++) {
+                if (needle.every((token, offset) => haystack[start + offset] === token)) return true;
+            }
+            return false;
+        };
+        if (containsTokenRun(addressTokensB, this.normalizeAddressTokens(eventA.bar))
+            || containsTokenRun(addressTokensA, this.normalizeAddressTokens(eventB.bar))) {
+            return 'bar-in-address';
+        }
         const hostA = String(eventA._venueSitePageHost || '').trim().toLowerCase();
         const hostB = String(eventB._venueSitePageHost || '').trim().toLowerCase();
         if (hostA && hostB && hostA === hostB) return 'venue-site';
@@ -8741,10 +8804,16 @@ class SharedCore {
     // debris, and the venue's own name tokens are dropped. venueKeys are
     // normalizeBarNameKey-style strings ("dallaseagle", "thedallaseagle") —
     // a token is a venue token when a key contains it.
+    // City-name tokens are ALSO dropped (run 20260727-145617: "Concours PUP
+    // Montréal" vs "Concours PUP MTL" failed the subset test on montréal ≠
+    // mtl — the city suffix is branding, not identity). Diacritics are folded
+    // BEFORE tokenization so "Montréal" is one token ("montreal"), and city
+    // stripping never empties the set (a title that is nothing but city names
+    // keeps its tokens — fail closed).
     getCrossSourceTitleTokens(title, venueKeys = []) {
-        const text = this.stripEmojiForTitleTwin(
+        const text = this.foldDiacritics(this.stripEmojiForTitleTwin(
             String(title || '').replace(/&#?[0-9a-z]+;/gi, '')
-        ).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+        )).replace(/[^a-z0-9]+/g, ' ').trim();
         if (!text) return [];
         const rawTokens = text.split(/\s+/);
         const performerMarkers = new Set(['with', 'featuring', 'feat', 'ft', 'w']);
@@ -8756,13 +8825,46 @@ class SharedCore {
             'to', 'too', 'with', 'yall', 'you', 'your'
         ]);
         const keys = (Array.isArray(venueKeys) ? venueKeys : []).filter(Boolean);
+        const cityTokens = this.getCityAliasTokenSet();
         const tokens = [];
+        const tokensWithCity = [];
         for (const token of scopedTokens) {
             if (token.length <= 1) continue;
             if (stopwords.has(token)) continue;
             if (token.length >= 3 && keys.some(key => key.includes(token))) continue;
+            if (!tokensWithCity.includes(token)) tokensWithCity.push(token);
+            if (token.length >= 3 && cityTokens.has(token)) continue;
             if (!tokens.includes(token)) tokens.push(token);
         }
+        return tokens.length > 0 ? tokens : tokensWithCity;
+    }
+
+    // Folded single-word city-name tokens from the configured cities: every
+    // key, display name, pattern, and alias that reduces to ONE token of >= 3
+    // chars after diacritic folding ("montreal", "mtl", "nyc"). Multi-word
+    // names ("new york", "fire-island") are skipped so generic words like
+    // "new" are never treated as city tokens, and 2-char forms ("la") are
+    // skipped so French/Spanish articles in titles survive. Cached per cities
+    // object (set once in the constructor).
+    getCityAliasTokenSet() {
+        const source = this.cities && typeof this.cities === 'object' ? this.cities : null;
+        if (!source) return new Set();
+        if (this._cityAliasTokenSet && this._cityAliasTokenSetSource === source) {
+            return this._cityAliasTokenSet;
+        }
+        const tokens = new Set();
+        for (const [key, cityData] of Object.entries(source)) {
+            const names = [key]
+                .concat(cityData && typeof cityData === 'object' ? [cityData.name] : [])
+                .concat(cityData && Array.isArray(cityData.patterns) ? cityData.patterns : [])
+                .concat(cityData && Array.isArray(cityData.aliases) ? cityData.aliases : []);
+            for (const name of names) {
+                const folded = this.foldDiacritics(name).replace(/[^a-z0-9]+/g, ' ').trim();
+                if (folded && folded.length >= 3 && !folded.includes(' ')) tokens.add(folded);
+            }
+        }
+        this._cityAliasTokenSet = tokens;
+        this._cityAliasTokenSetSource = source;
         return tokens;
     }
 
@@ -8821,7 +8923,7 @@ class SharedCore {
             if (!date || isNaN(date.getTime())) return false;
             const timezone = event._timezoneUnresolved
                 ? null
-                : (event.timezone || (event.city && this.cities && this.cities[event.city]?.timezone) || null);
+                : (event.timezone || this.getCityTimezone(event.city) || null);
             if (timezone && typeof Intl !== 'undefined' && typeof Intl.DateTimeFormat === 'function') {
                 try {
                     const formatter = new Intl.DateTimeFormat('en-CA', {
