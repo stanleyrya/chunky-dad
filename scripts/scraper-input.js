@@ -1,3 +1,6 @@
+// Variables used by Scriptable.
+// These must be at the very top of the file. Do not edit.
+// icon-color: purple; icon-glyph: magic;
 // Bear Event Scraper Configuration
 // This file contains the runtime configuration for the bear event scraper system.
 //
@@ -161,7 +164,7 @@ const scraperConfig = {
     },
     {
       name: "Bearracuda Events",
-      enabled: true,
+      enabled: false,
       urls: [
         "https://bearracuda.com/",
         "https://www.eventbrite.com/o/bearracuda-21867032189",
@@ -287,6 +290,7 @@ const scraperConfig = {
         mastodon: { value: "https://mastodon.social/@dallaseagle" },
       },
     },
+    { name: "massive.club", enabled: true, urls: ["https://www.massive.club"], alwaysBear: false },
     // ── Onboarding batch 2026-07-27 (recon-verified) — each ships disabled;
     // run one at a time via the parser picker, review, then enable. ──────
     {
