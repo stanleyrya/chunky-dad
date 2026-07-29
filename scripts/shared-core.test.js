@@ -9833,3 +9833,122 @@ test('expanded series occurrences drive the recurring hands-off path in analyzeE
   assert.match(analysis.reason, /creating override/, 'routes to override creation');
   assert.equal(analysis.overrideIdentity.overrideUid, 'weekly@test');
 });
+
+// ---------------------------------------------------------------------------
+// Cross-host crawl scoping (BEEFMINCE run 20260729-100804: dice.fm's promoter
+// page fanned out through platform chrome into the NYC browse catalog).
+// ---------------------------------------------------------------------------
+
+test('getRegistrableDomainFromUrl: registrable-domain approximation (www/port/subdomain/ccTLD)', () => {
+  const core = createCore();
+  assert.equal(core.getRegistrableDomainFromUrl('https://beefmince.com/events'), 'beefmince.com');
+  assert.equal(core.getRegistrableDomainFromUrl('https://www.dice.fm/browse'), 'dice.fm');
+  assert.equal(core.getRegistrableDomainFromUrl('https://link.dice.fm/T1d30c84b47d'), 'dice.fm');
+  assert.equal(core.getRegistrableDomainFromUrl('https://tickets.example.co.uk:8080/x'), 'example.co.uk');
+  assert.equal(core.getRegistrableDomainFromUrl('not a url'), '');
+});
+
+test('cross-host crawl scope: off-host pages follow only event-detail links and links back to the configured host', async () => {
+  const core = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    pageClassificationRules: [
+      { pattern: /promoter\.example\/events/i, classification: 'multi-event-page' },
+      { pattern: /platform\.example\/promoters\//i, classification: 'multi-event-page' }
+    ]
+  });
+  const display = createDisplayAdapterStub();
+  const promoterPage = 'https://platform.example/promoters/promo-1';
+  const pages = {
+    'https://promoter.example/events': { additionalLinks: [promoterPage] },
+    [promoterPage]: {
+      additionalLinks: [
+        'https://platform.example/event/party-one-tickets',   // event-detail shape → followed
+        'https://tickets.platform.example/event/party-two',   // same registrable domain + detail shape → followed
+        'https://promoter.example/gallery',                   // back to the configured host → followed
+        'https://platform.example/browse',                    // platform catalog chrome → rejected
+        'https://platform.example/help/refunds',              // help chrome → rejected
+        'https://elsewhere.example/whatever'                  // third host → rejected
+      ]
+    },
+    'https://platform.example/event/party-one-tickets': {},
+    'https://tickets.platform.example/event/party-two': {},
+    'https://promoter.example/gallery': {},
+    'https://platform.example/browse': {},
+    'https://platform.example/help/refunds': {},
+    'https://elsewhere.example/whatever': {}
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+
+  await core.processParser(
+    { name: 'Cross Host Scope', urls: ['https://promoter.example/events'], ai: CRAWL_AI },
+    {}, httpAdapter, display, parsers
+  );
+
+  assert.ok(fetched.includes(promoterPage), 'the configured host may discover the off-host promoter page');
+  assert.ok(fetched.includes('https://platform.example/event/party-one-tickets'), 'event-detail links on the off-host page are followed');
+  assert.ok(fetched.includes('https://tickets.platform.example/event/party-two'), 'same registrable domain subdomain event links are followed');
+  assert.ok(fetched.includes('https://promoter.example/gallery'), 'links back to the configured host are followed');
+  assert.ok(!fetched.includes('https://platform.example/browse'), 'platform browse chrome is not followed');
+  assert.ok(!fetched.includes('https://platform.example/help/refunds'), 'platform help chrome is not followed');
+  assert.ok(!fetched.includes('https://elsewhere.example/whatever'), 'a cross-host page may not lead to another new host');
+
+  assert.ok(display.logs.includes(
+    `SYSTEM: Cross-host scope: rejecting https://platform.example/browse from ${promoterPage} — not event-detail-shaped on an off-host page (cross-host-scope)`
+  ), `expected per-rejection cross-host-scope log, got: ${JSON.stringify(display.logs.filter(l => l.includes('Cross-host')))}`);
+  assert.ok(display.logs.includes(
+    `SYSTEM: Cross-host scope: rejecting https://elsewhere.example/whatever from ${promoterPage} — links to a third host (elsewhere.example) (cross-host-scope)`
+  ), 'third-host rejections name the host');
+  assert.ok(display.logs.includes(
+    `SYSTEM: Cross-host crawl scope at ${promoterPage} (host platform.example, configured promoter.example): kept 3 of 6 link(s), rejected 3 (cross-host-scope)`
+  ), 'summary line reports kept/rejected counts');
+});
+
+test('cross-host crawl scope: path-similar continuation on the off-host page is followed; configured-host pages are never scoped', () => {
+  const core = createCore();
+  // Off-host listing page whose detail pages share its first path segment
+  const scoped = core.applyCrossHostCrawlScope(
+    [
+      'https://platform.example/whats-on/city/venue/123',
+      'https://platform.example/venues/some-club'
+    ],
+    'https://platform.example/whats-on',
+    { urls: ['https://promoter.example/events'] }
+  );
+  assert.equal(scoped.pageIsCrossHost, true);
+  assert.deepEqual(scoped.allowed, ['https://platform.example/whats-on/city/venue/123']);
+  assert.equal(scoped.rejected.length, 1);
+  assert.equal(scoped.rejected[0].url, 'https://platform.example/venues/some-club');
+
+  // Configured-host page: everything passes through untouched
+  const unscoped = core.applyCrossHostCrawlScope(
+    ['https://anywhere.example/anything', 'https://platform.example/browse'],
+    'https://promoter.example/events',
+    { urls: ['https://promoter.example/events'] }
+  );
+  assert.equal(unscoped.pageIsCrossHost, false);
+  assert.equal(unscoped.allowed.length, 2);
+  assert.equal(unscoped.rejected.length, 0);
+});
+
+// ---------------------------------------------------------------------------
+// Bear keyword audit (Fix D, run 20260729-100804): "BASTID'S BBQ - NEW YORK
+// '26" was kept bear via `keyword: bear` — the match came from the
+// OCR-derived DESCRIPTION ("Good Music. Good Food. Good Bears."), not the
+// title, and 'bbq' is deliberately NOT a bear keyword in either tier. Lock
+// both directions.
+// ---------------------------------------------------------------------------
+
+test("bear keywords: 'bbq' alone is not a bear signal; explicit bear context is", () => {
+  const core = createCore();
+  // A bare BBQ party title matches NO keyword in either tier
+  assert.deepEqual(core.matchBearKeywords("BASTID'S BBQ - NEW YORK '26"), []);
+  assert.equal(core.isBearEvent({ title: "BASTID'S BBQ - NEW YORK '26" }, {}), false);
+  // A real bear BBQ (community event with bear context) still passes
+  assert.ok(core.matchBearKeywords('BEAR BBQ — a cookout for the bear community').includes('bear'));
+  assert.equal(core.isBearEvent({ title: 'BEAR BBQ', description: 'Bears, cubs and friends cookout' }, {}), true);
+  // The incident's actual trigger: 'bear' inside the OCR-derived description
+  assert.deepEqual(
+    core.matchBearKeywords("BASTID'S BBQ - NEW YORK '26 Good Music. Good Food. Good Bears."),
+    ['bear']
+  );
+});
