@@ -12097,11 +12097,51 @@ TEXT:
             : '';
     }
 
+    // Curated-bar match for a page's derived brand names (run 20260729-125247:
+    // eaglela.com carries no venue-ish JSON-LD @type, so siteRole stayed
+    // undetermined and rejectBrandLikePassFields threw away bar "Eagle LA"
+    // twice — but the page brand IS a curated bar, hard curated fact that the
+    // site is the venue's own). Matching is the curated machinery's own
+    // strictness (normalizeBarNameKey full-name equality via
+    // findCuratedBarByName — case-insensitive, "The " tolerant, never
+    // substring/fuzzy). City scope, fail closed:
+    //   - parser config carries a city → only THAT city's curated bars;
+    //   - no configured city → cross-city lookup (findCuratedBarCityByName),
+    //     which resolves only a UNIQUE name hit (ambiguous multi-city names
+    //     and generic franchise stems resolve nothing).
+    // Returns the curated bar entry or null.
+    findCuratedBarMatchingPageBrand(htmlData, parserConfig) {
+        if (!this.core) return null;
+        const brandNames = this.getPageBrandNames(htmlData);
+        if (!Array.isArray(brandNames) || brandNames.length === 0) return null;
+        const cityKey = parserConfig && typeof parserConfig.city === 'string'
+            ? parserConfig.city.trim().toLowerCase()
+            : '';
+        for (const brandName of brandNames) {
+            if (cityKey) {
+                const cityBars = typeof this.core.getCuratedCityBars === 'function'
+                    ? this.core.getCuratedCityBars(cityKey)
+                    : null;
+                const curatedBar = cityBars && typeof this.core.findCuratedBarByName === 'function'
+                    ? this.core.findCuratedBarByName(cityBars, brandName)
+                    : null;
+                if (curatedBar) return curatedBar;
+            } else if (typeof this.core.findCuratedBarCityByName === 'function') {
+                const match = this.core.findCuratedBarCityByName(brandName);
+                if (match && match.bar && match.city) return match.bar;
+            }
+        }
+        return null;
+    }
+
     // Resolve who this SITE is, hard facts in precedence order:
     //   1) parser config override `siteRole: "venue" | "organizer"`;
     //   2) the page's own JSON-LD @type being venue-ish (NightClub/BarOrPub/
     //      EventVenue/MusicVenue) → venue;
-    //   3) segment-derived facts when segments are provided (multi-event
+    //   3) a derived page brand name that IS a curated bar for the parser's
+    //      configured city (or a unique cross-city curated hit when no city
+    //      is configured) → venue;
+    //   4) segment-derived facts when segments are provided (multi-event
     //      pages): a JSON-LD Organization/PerformingGroup whose listings sit
     //      at MULTIPLE distinct street addresses → organizer; a single
     //      recurring street address that ALSO appears outside the listings
@@ -12125,6 +12165,18 @@ TEXT:
             if (Object.isExtensible(htmlData)) {
                 htmlData.pageSiteRole = role;
                 htmlData.pageSiteRoleReason = role ? `json-ld @type ${signals.venueType}` : '';
+            }
+        }
+        // Curated-bar rung: still undetermined, but a derived page brand name
+        // IS a curated bar (scope rules in findCuratedBarMatchingPageBrand) —
+        // the page is that venue's own site.
+        if (htmlData.pageSiteRole === '' && !htmlData.pageSiteRoleCuratedBarChecked
+            && Object.isExtensible(htmlData)) {
+            htmlData.pageSiteRoleCuratedBarChecked = true;
+            const curatedBar = this.findCuratedBarMatchingPageBrand(htmlData, parserConfig);
+            if (curatedBar && typeof curatedBar.name === 'string' && curatedBar.name.trim()) {
+                htmlData.pageSiteRole = 'venue';
+                htmlData.pageSiteRoleReason = `curated bar "${curatedBar.name}"`;
             }
         }
         if (htmlData.pageSiteRole === '' && Array.isArray(segments) && segments.length > 0

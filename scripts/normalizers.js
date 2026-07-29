@@ -2341,15 +2341,137 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
     }
 }
 
+// ----------------------------------------------------------------------------
+// DESCRIPTION FORMATTING SANITIZER (pure, standalone)
+// ----------------------------------------------------------------------------
+// Event descriptions arrive carrying raw formatting from the source platform
+// (run 20260729-125201: dice.fm shipped markdown "**BEEFMINCE | The UK's
+// Tastiest Bear Club** **\*Now on Saturdays\***"; a Wix site shipped raw HTML
+// with a LITERAL backslash-n "<p>Dress the part ... </p>\n"). This strips
+// HTML tags (block-level boundaries become newlines), decodes common HTML
+// entities, converts literal two-character "\n" sequences into real newlines,
+// removes markdown emphasis runs (** / *** / __), heading markers, link
+// syntax, and backslash-escaped punctuation, then collapses whitespace.
+// Single "*" characters are deliberately left alone — they appear
+// legitimately in event text as bullets/emphasis of unknown intent.
+//
+// Runs to a fixed point (bounded), so the function is idempotent:
+// sanitizeDescriptionFormatting(sanitizeDescriptionFormatting(x)) ===
+// sanitizeDescriptionFormatting(x). Plain text passes through byte-identical.
+
+// Block-level tags whose boundaries read as line breaks in plain text.
+const SANITIZE_BLOCK_TAG_PATTERN = /<\/?(?:p|div|li|ul|ol|br|hr|h[1-6]|tr|table|thead|tbody|section|article|header|footer|blockquote|pre)\b[^<>]*\/?>/gi;
+// Known inline/void HTML tags (stripped to nothing). A KNOWN-NAME whitelist,
+// not "anything tag-shaped": legitimate text like "<3", "a < b", or an
+// entity-decoded "<here>" must survive — critically, that also keeps the
+// sanitizer idempotent (a decoded "&lt;here&gt;" is never re-eaten as a tag
+// on the next pass).
+const SANITIZE_INLINE_TAG_PATTERN = /<\/?(?:a|abbr|b|bdi|bdo|big|button|center|cite|code|data|dfn|em|figcaption|figure|font|form|i|iframe|img|input|ins|del|kbd|label|main|mark|nav|aside|option|picture|q|rb|rp|rt|ruby|s|samp|select|small|source|span|strike|strong|style|sub|sup|textarea|time|u|var|video|audio|wbr|script|noscript|svg|path|html|head|body|meta|link|title)\b[^<>]*\/?>/gi;
+// Placeholders (private-use codepoints) protecting backslash-escaped emphasis
+// characters while emphasis RUNS are deleted, so "\*\*TBC\*\**" never has its
+// escaped asterisks miscounted as markdown runs.
+const SANITIZE_ESCAPED_ASTERISK_PLACEHOLDER = '\uE000';
+const SANITIZE_ESCAPED_UNDERSCORE_PLACEHOLDER = '\uE001';
+
+function sanitizeDescriptionFormattingOnce(text) {
+    let result = text;
+
+    // Literal escaped line breaks — the two characters backslash+n (run
+    // evidence: a Wix description ended in a literal "\n"), not real
+    // newlines. Runs before markdown unescaping so "\n" is never mistaken
+    // for an escape of "n".
+    result = result
+        .replace(/\\r\\n/g, '\n')
+        .replace(/\\n/g, '\n')
+        .replace(/\\r/g, '');
+
+    // HTML: comments vanish, block-tag boundaries become newlines, remaining
+    // inline tags vanish.
+    result = result.replace(/<!--[\s\S]*?-->/g, '');
+    result = result.replace(SANITIZE_BLOCK_TAG_PATTERN, '\n');
+    result = result.replace(SANITIZE_INLINE_TAG_PATTERN, '');
+
+    // Common HTML entities. &amp; decodes FIRST so double-encoded entities
+    // ("&amp;lt;") resolve within the fixed-point loop instead of leaking.
+    result = result
+        .replace(/&amp;/gi, '&')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&lt;/gi, '<')
+        .replace(/&gt;/gi, '>')
+        .replace(/&quot;/gi, '"')
+        .replace(/&(?:#39|#039|apos);/gi, "'")
+        .replace(/&#(\d+);/g, (match, code) => {
+            const codePoint = parseInt(code, 10);
+            return codePoint > 0 && codePoint < 0x110000 ? String.fromCodePoint(codePoint) : match;
+        })
+        .replace(/&#x([0-9a-f]+);/gi, (match, code) => {
+            const codePoint = parseInt(code, 16);
+            return codePoint > 0 && codePoint < 0x110000 ? String.fromCodePoint(codePoint) : match;
+        });
+
+    // Markdown links: [text](url) → text.
+    result = result.replace(/\[([^\[\]\n]*)\]\([^()\n]*\)/g, '$1');
+
+    // Markdown heading markers at line start ("# Heading"). The
+    // required trailing whitespace keeps hashtags ("#bear") intact.
+    result = result.replace(/^[ \t]*#{1,6}[ \t]+/gm, '');
+
+    // Markdown emphasis runs: protect backslash-escaped characters, delete
+    // runs of ** / *** / __ entirely, restore escapes as the bare character
+    // (which unescapes \* and \_ in the same motion). Single unescaped "*"
+    // characters are never touched.
+    result = result
+        .split('\\*').join(SANITIZE_ESCAPED_ASTERISK_PLACEHOLDER)
+        .split('\\_').join(SANITIZE_ESCAPED_UNDERSCORE_PLACEHOLDER)
+        .replace(/\*{2,}/g, '')
+        .replace(/_{2,}/g, '')
+        .split(SANITIZE_ESCAPED_ASTERISK_PLACEHOLDER).join('*')
+        .split(SANITIZE_ESCAPED_UNDERSCORE_PLACEHOLDER).join('_');
+
+    // Remaining backslash escapes of markdown punctuation → bare character.
+    result = result.replace(/\\([#\[\].])/g, '$1');
+
+    // Whitespace: real carriage returns normalize away, spaces collapse,
+    // line-edge spaces trim, 3+ newlines collapse to a paragraph break.
+    result = result
+        .replace(/\r\n?/g, '\n')
+        .replace(/[ \t]{2,}/g, ' ')
+        .replace(/[ \t]+\n/g, '\n')
+        .replace(/\n[ \t]+/g, '\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+
+    return result;
+}
+
+function sanitizeDescriptionFormatting(text) {
+    if (typeof text !== 'string' || text === '') return text;
+    let current = text;
+    for (let pass = 0; pass < 5; pass++) {
+        const next = sanitizeDescriptionFormattingOnce(current);
+        if (next === current) break;
+        current = next;
+    }
+    return current;
+}
+
+// Instance-reachable delegate: shared-core holds only the injected pipeline
+// instance (never this module), so the final analyzed-event build calls the
+// sanitizer through it.
+NormalizerPipeline.prototype.sanitizeDescriptionFormatting = function (text) {
+    return sanitizeDescriptionFormatting(text);
+};
+
 // Export for both environments
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { NormalizerPipeline, BasicDataNormalizer, LocationNormalizer, BarDataNormalizer, OpenStreetMapNormalizer };
+    module.exports = { NormalizerPipeline, BasicDataNormalizer, LocationNormalizer, BarDataNormalizer, OpenStreetMapNormalizer, sanitizeDescriptionFormatting };
 } else if (typeof window !== 'undefined') {
     window.NormalizerPipeline = NormalizerPipeline;
     window.BasicDataNormalizer = BasicDataNormalizer;
     window.LocationNormalizer = LocationNormalizer;
     window.BarDataNormalizer = BarDataNormalizer;
     window.OpenStreetMapNormalizer = OpenStreetMapNormalizer;
+    window.sanitizeDescriptionFormatting = sanitizeDescriptionFormatting;
 } else {
     // Scriptable environment
     this.NormalizerPipeline = NormalizerPipeline;
@@ -2357,6 +2479,7 @@ if (typeof module !== 'undefined' && module.exports) {
     this.LocationNormalizer = LocationNormalizer;
     this.BarDataNormalizer = BarDataNormalizer;
     this.OpenStreetMapNormalizer = OpenStreetMapNormalizer;
+    this.sanitizeDescriptionFormatting = sanitizeDescriptionFormatting;
 }
 
 // Scriptable gives every imported module its own console binding, so the

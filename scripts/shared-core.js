@@ -8649,7 +8649,79 @@ class SharedCore {
                 // Process conflicts to extract important information
                 analyzedEvent = this.processEventWithConflicts(analyzedEvent);
             }
-            
+
+            // Final-stage field cleanups. Both run at the FINAL analyzed-event
+            // build (so every parser, merge result, and cached AI response
+            // passes through them) and BEFORE the notes generation/rebuild
+            // below, so the cleaned values are what notes serialize.
+            let notesNeedRebuild = false;
+
+            // Description formatting sanitizer (run 20260729-125201: dice.fm
+            // shipped markdown "**BEEFMINCE ...**" and a Wix site shipped raw
+            // HTML + a literal "\n" — both reached notes verbatim). Pure
+            // function lives in normalizers.js; reached via the injected
+            // pipeline (shared-core never loads modules itself).
+            if (this.normalizerPipeline
+                && typeof this.normalizerPipeline.sanitizeDescriptionFormatting === 'function'
+                && typeof analyzedEvent.description === 'string' && analyzedEvent.description) {
+                const sanitizedDescription = this.normalizerPipeline.sanitizeDescriptionFormatting(analyzedEvent.description);
+                if (sanitizedDescription !== analyzedEvent.description) {
+                    analyzedEvent.description = sanitizedDescription;
+                    notesNeedRebuild = true;
+                    console.log(`🧼 DESCRIPTION: stripped formatting markup for "${analyzedEvent.title || 'event'}"`);
+                }
+            }
+
+            // gmaps rebuild from settled facts (run 20260729-125201: events
+            // finished with precise geocode-verified coords in `location`
+            // while gmaps still carried the EARLY text-search form built from
+            // vague venue text, e.g. query=Horizon%2C%20Brighton%20and%20Hove
+            // — Google renders a wide multi-result area for those). Curated
+            // data beats derived: a curated bar's googleMaps link wins, then
+            // final coordinates; with neither, the existing value stands.
+            // Parser-stamped static gmaps (tracked in _staticFields by
+            // applyStaticMetadataBlock) is curated config and never rebuilt;
+            // a link already anchored to a place_id is more precise than bare
+            // coords and is never downgraded (curated adoption still applies).
+            {
+                const staticFields = analyzedEvent._staticFields && typeof analyzedEvent._staticFields === 'object'
+                    ? analyzedEvent._staticFields
+                    : {};
+                const existingGmaps = typeof analyzedEvent.gmaps === 'string' ? analyzedEvent.gmaps.trim() : '';
+                if (!Object.prototype.hasOwnProperty.call(staticFields, 'gmaps')) {
+                    const cityBars = this.getCuratedCityBars(analyzedEvent.city);
+                    const curatedBar = cityBars && typeof analyzedEvent.bar === 'string' && analyzedEvent.bar.trim()
+                        ? this.findCuratedBarByName(cityBars, analyzedEvent.bar)
+                        : null;
+                    const curatedGmaps = curatedBar && typeof curatedBar.googleMaps === 'string'
+                        ? curatedBar.googleMaps.trim()
+                        : '';
+                    const finalCoordinates = this.parseCoordinatePair(analyzedEvent.location);
+                    if (curatedGmaps && curatedGmaps !== existingGmaps) {
+                        analyzedEvent.gmaps = curatedGmaps;
+                        notesNeedRebuild = true;
+                        console.log(`🗺️ GMAPS: adopted curated googleMaps link for "${analyzedEvent.title || 'event'}"`);
+                    } else if (!curatedGmaps && finalCoordinates && !existingGmaps.includes('place_id')) {
+                        const coordinateGmaps = SharedCore.generateGoogleMapsUrl({
+                            coordinates: finalCoordinates,
+                            placeId: null,
+                            address: null,
+                            venueName: null,
+                            cityName: null
+                        }) || '';
+                        if (coordinateGmaps && coordinateGmaps !== existingGmaps) {
+                            analyzedEvent.gmaps = coordinateGmaps;
+                            notesNeedRebuild = true;
+                            console.log(`🗺️ GMAPS: rebuilt link from verified coordinates for "${analyzedEvent.title || 'event'}"`);
+                        }
+                    }
+                }
+            }
+
+            if (notesNeedRebuild && analyzedEvent.notes) {
+                analyzedEvent.notes = this.formatEventNotes(analyzedEvent);
+            }
+
             // Generate notes for ALL events to ensure consistent preview display
             // This ensures new, merge, and conflict events all have notes for the preview
             if (!analyzedEvent.notes) {

@@ -2885,3 +2885,60 @@ test('BasicDataNormalizer stamps _recurring for a non-empty recurrenceRule (seri
   const plain = normalizer.normalize({ title: 'PLAIN' });
   assert.equal(plain._recurring, undefined);
 });
+
+// ---------------------------------------------------------------------------
+// sanitizeDescriptionFormatting (run 20260729-125201: dice.fm markdown and
+// Wix raw-HTML descriptions reached notes verbatim)
+// ---------------------------------------------------------------------------
+
+const { sanitizeDescriptionFormatting } = require('./normalizers');
+
+// Exact evidence string from the phone run (BEEFMINCE via dice.fm):
+// double-asterisk bold runs plus backslash-escaped asterisks.
+const DICE_MARKDOWN_DESCRIPTION = "**BEEFMINCE | The UK's Tastiest Bear Club** **\\*Now on Saturdays\\***";
+// Exact evidence string from the phone run (The Bear Cave via a Wix site):
+// raw HTML plus a LITERAL backslash-n (two characters), not a newline.
+const WIX_HTML_DESCRIPTION = '<p>Dress the part, flash your sticker and let the lights guide your night. </p>\\n';
+
+test('sanitizeDescriptionFormatting strips dice.fm markdown emphasis but keeps the words', () => {
+  const sanitized = sanitizeDescriptionFormatting(DICE_MARKDOWN_DESCRIPTION);
+
+  assert.ok(!sanitized.includes('**'), `no double-asterisk runs survive: ${JSON.stringify(sanitized)}`);
+  assert.ok(!sanitized.includes('\\*'), `no backslash-escaped asterisks survive: ${JSON.stringify(sanitized)}`);
+  assert.ok(sanitized.includes("BEEFMINCE | The UK's Tastiest Bear Club"), 'the words are kept');
+  assert.ok(sanitized.includes('Now on Saturdays'), 'the escaped-run words are kept');
+});
+
+test('sanitizeDescriptionFormatting turns Wix raw HTML + literal backslash-n into plain text', () => {
+  const sanitized = sanitizeDescriptionFormatting(WIX_HTML_DESCRIPTION);
+
+  assert.equal(sanitized, 'Dress the part, flash your sticker and let the lights guide your night.');
+  assert.ok(!sanitized.includes('<p>') && !sanitized.includes('</p>'), 'no HTML tags survive');
+  assert.ok(!sanitized.includes('\\n'), 'no literal backslash-n survives');
+});
+
+test('sanitizeDescriptionFormatting is idempotent on the evidence fixtures', () => {
+  for (const fixture of [DICE_MARKDOWN_DESCRIPTION, WIX_HTML_DESCRIPTION]) {
+    const once = sanitizeDescriptionFormatting(fixture);
+    assert.equal(sanitizeDescriptionFormatting(once), once, `sanitize(sanitize(x)) === sanitize(x) for ${JSON.stringify(fixture)}`);
+  }
+});
+
+test('sanitizeDescriptionFormatting passes a plain description through byte-identical', () => {
+  const plain = 'Bears, beers, and DJs from 9pm. $10 at the door.\n\nHosted by the CubScout crew * 21+ only.';
+  assert.equal(sanitizeDescriptionFormatting(plain), plain, 'plain text (including a single *) is untouched');
+});
+
+test('sanitizeDescriptionFormatting handles block tags, entities, links, headings, and escaped punctuation', () => {
+  const html = '<div>Doors &amp; drinks at 9pm<br>DJ set till late</div><p>Tickets &lt;here&gt;</p>';
+  assert.equal(
+    sanitizeDescriptionFormatting(html),
+    'Doors & drinks at 9pm\nDJ set till late\n\nTickets <here>');
+
+  assert.equal(
+    sanitizeDescriptionFormatting('# BIG NIGHT\n***Get*** [tickets](https://tix.example/ev) now\\. __Really__'),
+    'BIG NIGHT\nGet tickets now. Really');
+
+  // Escaped-asterisk runs collapse over the fixed point: \*\*TBC\*\** → TBC
+  assert.equal(sanitizeDescriptionFormatting('\\*\\*TBC\\*\\**'), 'TBC');
+});

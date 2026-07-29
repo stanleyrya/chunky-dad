@@ -57,6 +57,15 @@ const scraperBars = {
       "googleMaps": "https://maps.app.goo.gl/V96bZYM6qBm8tqQs5"
     }
   ],
+  "birmingham": [
+    {
+      "name": "Eden",
+      "city": "birmingham",
+      "address": "116 Sherlock Street, Birmingham B5 6NB",
+      "coordinates": "52.4714027, -1.8936278",
+      "facebook": "https://www.facebook.com/eden.bar.birmingham/"
+    }
+  ],
   "boston": [
     {
       "name": "The Alley Bar",
@@ -77,6 +86,21 @@ const scraperBars = {
       "instagram": "https://www.instagram.com/legacybos",
       "faviconBg": "#b47d04",
       "faviconFg": "#c38703"
+    }
+  ],
+  "brighton": [
+    {
+      "name": "Horizon",
+      "city": "brighton",
+      "address": "29-31 New Steine, Marine Parade, Brighton",
+      "coordinates": "50.8196107, -0.1315114",
+      "instagram": "horizon.brighton"
+    },
+    {
+      "name": "Concorde 2",
+      "city": "brighton",
+      "address": "Madeira Shelter Hall, Madeira Drive, Brighton BN2 1EN",
+      "coordinates": "50.8172912, -0.1225875"
     }
   ],
   "chicago": [
@@ -446,6 +470,8 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/3dollarbillbk",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ7zm6H3JbwokR3ui1wTNr6Xc",
       "gayCities": "https://newyork.gaycities.com/bars/309059-dollar-bill",
+      "faviconBg": "#190832",
+      "faviconFg": "#c5c5e9",
       "gayCitiesLastScrapedAt": "2026-06-14T16:38:18.601Z"
     },
     {
@@ -527,7 +553,9 @@ const scraperBars = {
       "name": "The Yard at 9 Bob Note",
       "city": "nyc",
       "address": "270 Meserole Ave, Brooklyn, NY 11222",
-      "website": "https://www.3dollarbillbk.com"
+      "website": "https://www.3dollarbillbk.com",
+      "faviconBg": "#190832",
+      "faviconFg": "#c5c5e9"
     }
   ],
   "palm-springs": [
@@ -814,6 +842,14 @@ const scraperBars = {
       "website": "https://publicsf.com",
       "faviconBg": "#f35425",
       "faviconFg": "#fd5825"
+    }
+  ],
+  "sitges": [
+    {
+      "name": "The Bear Cave",
+      "city": "sitges",
+      "address": "Carrer de Bonaire 12, 08870 Sitges",
+      "coordinates": "41.2360385, 1.8079068"
     }
   ],
   "tokyo": [
