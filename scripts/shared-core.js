@@ -3995,6 +3995,10 @@ class SharedCore {
 
                 const additionalLinks = parseResult?.additionalLinks || [];
                 let linksToConsider = additionalLinks;
+                // Tracks whether an adaptive-mode branch below already logged WHY
+                // links are not being followed (enrich-only / chain cap), so the
+                // following/stopping logs further down don't double-report.
+                let adaptiveFollowBlocked = false;
                 if (adaptiveCrawl) {
                     // The page's own classification decides which links (if any)
                     // are followed; a hard hop cap bounds runaway chains.
@@ -4006,10 +4010,37 @@ class SharedCore {
                             await displayAdapter.logInfo(`SYSTEM: Enrich-only crawl: not following ${linksToConsider.length} link(s) from ${url}`);
                         }
                         linksToConsider = [];
+                        adaptiveFollowBlocked = true;
                     } else if (linksToConsider.length > 0 && currentDepth >= ADAPTIVE_CRAWL_MAX_HOPS) {
                         await displayAdapter.logInfo(`SYSTEM: Adaptive crawl: chain cap (${ADAPTIVE_CRAWL_MAX_HOPS} hops) reached at ${url} — not following ${linksToConsider.length} link(s)`);
                         linksToConsider = [];
-                    } else if (linksToConsider.length > 0) {
+                        adaptiveFollowBlocked = true;
+                    }
+                }
+                const shouldFollowLinks = adaptiveCrawl || currentDepth < maxDepth;
+                // Cross-host crawl scoping (generic — BEEFMINCE run 20260729-100804:
+                // dice.fm's promoter page exposed platform chrome that the adaptive
+                // crawl followed to the geolocated NYC browse catalog): crossing to
+                // a registrable domain outside the parser's configured URLs consumes
+                // the crawl's trust — see applyCrossHostCrawlScope for the rule.
+                // Adaptive event-pages whose links go enrich-only are exempt: their
+                // selection is already narrowed to rule-classified event links plus
+                // their own ticketUrls, and enrich-only children can neither spawn
+                // events nor fan out.
+                const adaptiveEnrichOnlyEventPage = adaptiveCrawl && pageClassification === 'event-page'
+                    && (discoveryOnly || pageEventsForEnrich.length > 0);
+                if (linksToConsider.length > 0 && shouldFollowLinks && !adaptiveEnrichOnlyEventPage) {
+                    const scope = this.applyCrossHostCrawlScope(linksToConsider, url, parserConfig);
+                    if (scope.rejected.length > 0) {
+                        for (const rejection of scope.rejected) {
+                            await displayAdapter.logInfo(`SYSTEM: Cross-host scope: rejecting ${rejection.url} from ${url} — ${rejection.detail} (cross-host-scope)`);
+                        }
+                        await displayAdapter.logInfo(`SYSTEM: Cross-host crawl scope at ${url} (host ${scope.pageDomain}, configured ${scope.configuredDomains.join(', ')}): kept ${scope.allowed.length} of ${linksToConsider.length} link(s), rejected ${scope.rejected.length} (cross-host-scope)`);
+                        linksToConsider = scope.allowed;
+                    }
+                }
+                if (adaptiveCrawl && !adaptiveFollowBlocked) {
+                    if (linksToConsider.length > 0) {
                         await displayAdapter.logInfo(`SYSTEM: Adaptive crawl: following ${linksToConsider.length} links from ${url} (${pageClassification})`);
                     } else if (additionalLinks.length > 0) {
                         await displayAdapter.logInfo(`SYSTEM: Adaptive crawl: stopping at ${url} (${pageClassification})`);
@@ -4020,7 +4051,6 @@ class SharedCore {
                 }
 
                 const deduplicatedUrls = this.deduplicateUrls(linksToConsider, processedUrls);
-                const shouldFollowLinks = adaptiveCrawl || currentDepth < maxDepth;
 
                 if (shouldFollowLinks) {
                     if (discoveryTreeCollector) {
@@ -4170,6 +4200,121 @@ class SharedCore {
             }
         }
         return selected;
+    }
+
+    // ------------------------------------------------------------------
+    // Cross-host crawl scoping (generic — no per-site rules).
+    // Crossing to a registrable domain outside the parser's configured URLs
+    // consumes the crawl's trust: pages on a configured domain may discover
+    // anything (that hop IS discovery), but on a page whose registrable
+    // domain matches no configured URL only links that
+    //   (a) point BACK to a configured domain, or
+    //   (b) stay on the page's own domain AND are event-DETAIL-shaped —
+    //       URL-rule classified 'event-page', an event-detail path
+    //       (/event/<slug> and friends), or sharing the page's own first
+    //       path segment (path-similar continuation)
+    // may be followed. A cross-host page can never lead to ANOTHER new
+    // registrable domain. Evidence: BEEFMINCE run 20260729-100804, where
+    // dice.fm's promoter page (correct, 9 real events) fanned out through
+    // help/terms chrome into the geolocated NYC browse catalog (~14
+    // unrelated events in the CREATE plan).
+    // ------------------------------------------------------------------
+
+    // Registrable-domain approximation (platform-pure, no URL global):
+    // hostname lowercased, port and leading www. stripped; last two labels,
+    // or three when the second-level label is a common short registry suffix
+    // under a 2-letter ccTLD (co.uk, com.au, ...). Duplicated in
+    // ai-web-parser (parsers are standalone and cannot import shared code) —
+    // keep the two in sync.
+    getRegistrableDomainFromUrl(url) {
+        const host = String(this.getHostFromUrl(url) || '')
+            .toLowerCase()
+            .split(':')[0]
+            .replace(/^www\./, '')
+            .replace(/\.$/, '');
+        if (!host || !host.includes('.')) return host;
+        // IP literals have no registrable domain — compare them whole
+        if (/^[\d.]+$/.test(host) || host.includes('[')) return host;
+        const labels = host.split('.').filter(Boolean);
+        if (labels.length <= 2) return labels.join('.');
+        const tld = labels[labels.length - 1];
+        const sld = labels[labels.length - 2];
+        const compoundSuffix = tld.length === 2 && /^(?:co|com|net|org|gov|edu|ac|mil|sch)$/.test(sld);
+        return labels.slice(compoundSuffix ? -3 : -2).join('.');
+    }
+
+    // First path segment of an absolute http(s) URL, lowercased ('' when the
+    // URL has no path or is not absolute http(s)).
+    getFirstPathSegmentFromUrl(url) {
+        const match = String(url || '').match(/^https?:\/\/[^/?#]+\/([^/?#]+)/i);
+        return match ? match[1].toLowerCase() : '';
+    }
+
+    // Generic event-detail URL shape: an absolute http(s) URL whose path is
+    // an event noun segment followed by a concrete slug (/event/<slug>,
+    // /events/<slug>, /e/<id>, /show/<slug>, /tickets/<slug>). Platform-
+    // agnostic on purpose — no host names.
+    isEventDetailShapedUrl(url) {
+        const match = String(url || '').match(/^https?:\/\/[^/?#]+(\/[^?#]*)/i);
+        const path = match ? match[1] : '';
+        return /^\/(?:events?|e|shows?|tickets?)\/[^/?#]+/i.test(path);
+    }
+
+    // Apply the cross-host crawl scope to a page's follow candidates.
+    // Returns { pageIsCrossHost, pageDomain, configuredDomains, allowed,
+    // rejected: [{ url, detail }] }. Pages on a configured registrable domain
+    // (or runs with no configured URLs, e.g. inline input) pass everything
+    // through untouched.
+    applyCrossHostCrawlScope(links, pageUrl, parserConfig) {
+        const list = Array.isArray(links) ? links : [];
+        const configuredUrls = Array.isArray(parserConfig && parserConfig.urls) ? parserConfig.urls : [];
+        const configuredDomains = [];
+        for (const configuredUrl of configuredUrls) {
+            const domain = this.getRegistrableDomainFromUrl(configuredUrl);
+            if (domain && !configuredDomains.includes(domain)) {
+                configuredDomains.push(domain);
+            }
+        }
+        const pageDomain = this.getRegistrableDomainFromUrl(pageUrl);
+        const result = {
+            pageIsCrossHost: false,
+            pageDomain,
+            configuredDomains,
+            allowed: list,
+            rejected: []
+        };
+        if (!pageDomain || configuredDomains.length === 0 || configuredDomains.includes(pageDomain)) {
+            return result;
+        }
+        result.pageIsCrossHost = true;
+        const pageFirstSegment = this.getFirstPathSegmentFromUrl(this.normalizeUrl(pageUrl, pageUrl) || pageUrl);
+        const allowed = [];
+        const rejected = [];
+        for (const link of list) {
+            const normalized = this.normalizeUrl(link, pageUrl || link) || String(link || '');
+            const linkDomain = this.getRegistrableDomainFromUrl(normalized);
+            if (linkDomain && configuredDomains.includes(linkDomain)) {
+                // Pointing back to a configured host is always in scope
+                allowed.push(link);
+                continue;
+            }
+            if (linkDomain !== pageDomain) {
+                rejected.push({ url: link, detail: `links to a third host (${linkDomain || 'unknown host'})` });
+                continue;
+            }
+            const ruleClassification = this.classifyUrlByRules(normalized);
+            const eventDetailShaped = ruleClassification === 'event-page'
+                || this.isEventDetailShapedUrl(normalized)
+                || (Boolean(pageFirstSegment) && this.getFirstPathSegmentFromUrl(normalized) === pageFirstSegment);
+            if (eventDetailShaped) {
+                allowed.push(link);
+            } else {
+                rejected.push({ url: link, detail: 'not event-detail-shaped on an off-host page' });
+            }
+        }
+        result.allowed = allowed;
+        result.rejected = rejected;
+        return result;
     }
 
     // ------------------------------------------------------------------

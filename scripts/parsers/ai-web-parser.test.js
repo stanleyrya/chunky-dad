@@ -7611,3 +7611,102 @@ test('AI boundary segments cap at multiEventMaxSegments and the raised cap fits 
   const sitgesSegments = sitgesParser.buildMultiEventSegments(sitgesHtml, 'https://bearssitges.example/programa');
   assert.equal(sitgesSegments.length, 13);
 });
+
+// ---------------------------------------------------------------------------
+// Cross-host platform-chrome blocked segments (Fix B, run 20260729-100804:
+// dice.fm/hc/change_language/* produced 12 [ERROR] 404 fetches).
+// ---------------------------------------------------------------------------
+
+test('validateEventUrl blocks platform-chrome path segments on cross-host pages only', () => {
+  const parser = createParser();
+  const config = { urls: ['https://beefmince.example/events'] };
+  const crossHostSource = 'https://dice.example/ticket_purchase_terms.html';
+
+  const hc = parser.validateEventUrl(
+    'https://dice.example/hc/change_language/ca?return_to=%2Fhc%2Fca', crossHostSource, config);
+  assert.equal(hc.valid, false);
+  assert.equal(hc.reason, 'cross-host-chrome:hc');
+
+  const legal = parser.validateEventUrl('https://dice.example/legal/notices', crossHostSource, config);
+  assert.equal(legal.valid, false);
+  assert.equal(legal.reason, 'cross-host-chrome:legal');
+
+  const careers = parser.validateEventUrl('https://dice.example/careers', crossHostSource, config);
+  assert.equal(careers.valid, false);
+  assert.equal(careers.reason, 'cross-host-chrome:careers');
+
+  // Real event-detail pages on the cross-host platform still pass
+  assert.equal(parser.validateEventUrl(
+    'https://dice.example/event/8er825-beefmince-brighton-pride-tickets',
+    'https://dice.example/promoters/beefmince', config).valid, true);
+
+  // The same segments on the CONFIGURED host stay crawlable
+  const configuredSource = 'https://beefmince.example/events';
+  assert.equal(parser.validateEventUrl('https://beefmince.example/legal/notices', configuredSource, config).valid, true);
+  assert.equal(parser.validateEventUrl('https://beefmince.example/careers', configuredSource, config).valid, true);
+
+  // /about was already blocked GLOBALLY before this change — reason unchanged
+  const about = parser.validateEventUrl('https://beefmince.example/about', configuredSource, config);
+  assert.equal(about.valid, false);
+  assert.ok(about.reason.startsWith('blocked-pattern:'), `expected the pre-existing blocked-pattern reason, got ${about.reason}`);
+
+  // Slugs merely CONTAINING a chrome word survive (whole-segment matches only)
+  assert.equal(parser.validateEventUrl('https://dice.example/event/legal-tender-party', crossHostSource, config).valid, true);
+});
+
+// ---------------------------------------------------------------------------
+// URL-field sanity gate (Fix C, run 20260729-100804: SPA markup leaked
+// "http://www.w3.org/2000/svg" into url/ticketUrl x4 and OCR hallucinated
+// ticketUrl "BASTILLE'S POOL.COM").
+// ---------------------------------------------------------------------------
+
+test('isPlausibleEventUrlValue rejects namespace URLs and non-URL text, keeps real event URLs', () => {
+  const parser = createParser();
+  // Namespace URLs: host w3.org + namespace-shaped path
+  assert.equal(parser.isPlausibleEventUrlValue('http://www.w3.org/2000/svg'), false);
+  assert.equal(parser.isPlausibleEventUrlValue('http://www.w3.org/1999/xhtml'), false);
+  // Not parseable as an http(s) URL with a dotted host
+  assert.equal(parser.isPlausibleEventUrlValue("BASTILLE'S POOL.COM"), false);
+  assert.equal(parser.isPlausibleEventUrlValue('mailto:info@bears.example'), false);
+  assert.equal(parser.isPlausibleEventUrlValue('Free'), false);
+  assert.equal(parser.isPlausibleEventUrlValue(''), false);
+  // Real values pass
+  assert.equal(parser.isPlausibleEventUrlValue(
+    'https://dice.fm/event/8er825-beefmince-brighton-pride-1st-aug-horizon-brighton-tickets'), true);
+  assert.equal(parser.isPlausibleEventUrlValue('https://www.eventbrite.com/e/party-1?aff=x'), true);
+  // Scheme-less dotted hosts stay plausible (later normalization adds https)
+  assert.equal(parser.isPlausibleEventUrlValue('sitgesbearcave.com'), true);
+});
+
+test('normalizeAiEvent drops implausible url/ticketUrl values and logs the rejection', () => {
+  const parser = createParser();
+  const logged = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logged.push(args.join(' ')); };
+  let event;
+  try {
+    event = parser.normalizeAiEvent({
+      title: 'BASTID FIXTURE',
+      startDate: '2026-08-08',
+      url: 'http://www.w3.org/2000/svg',
+      ticketUrl: "BASTILLE'S POOL.COM"
+    }, {}, null, null, null);
+  } finally {
+    console.log = originalLog;
+  }
+  assert.ok(event, 'event should normalize');
+  assert.equal(event.url, '');
+  assert.equal(event.ticketUrl, '');
+  assert.ok(logged.includes('🤖 AI Web: Rejected url "http://www.w3.org/2000/svg" — not a plausible event URL'),
+    `expected url rejection log, got: ${JSON.stringify(logged.filter(l => l.includes('Rejected')))}`);
+  assert.ok(logged.includes(`🤖 AI Web: Rejected ticketUrl "BASTILLE'S POOL.COM" — not a plausible event URL`),
+    'expected ticketUrl rejection log');
+
+  // A real event URL survives normalization untouched
+  const clean = parser.normalizeAiEvent({
+    title: 'BEEFMINCE BRIGHTON PRIDE',
+    startDate: '2026-08-01',
+    url: 'https://dice.fm/event/8er825-beefmince-brighton-pride-1st-aug-horizon-brighton-tickets'
+  }, {}, null, null, null);
+  assert.equal(clean.url, 'https://dice.fm/event/8er825-beefmince-brighton-pride-1st-aug-horizon-brighton-tickets');
+});

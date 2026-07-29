@@ -5819,6 +5819,46 @@ class AiWebParser {
         return score;
     }
 
+    // Registrable-domain approximation (platform-pure, no URL global):
+    // hostname lowercased, port and leading www. stripped; last two labels,
+    // or three when the second-level label is a common short registry suffix
+    // under a 2-letter ccTLD (co.uk, com.au, ...). Duplicated from
+    // SharedCore.getRegistrableDomainFromUrl (parsers are standalone and
+    // cannot import shared code) — keep the two in sync.
+    getRegistrableDomainFromUrl(url) {
+        const hostMatch = String(url || '').match(/^https?:\/\/([^/?#]+)/i);
+        const host = String(hostMatch ? hostMatch[1] : '')
+            .toLowerCase()
+            .split(':')[0]
+            .replace(/^www\./, '')
+            .replace(/\.$/, '');
+        if (!host || !host.includes('.')) return host;
+        // IP literals have no registrable domain — compare them whole
+        if (/^[\d.]+$/.test(host) || host.includes('[')) return host;
+        const labels = host.split('.').filter(Boolean);
+        if (labels.length <= 2) return labels.join('.');
+        const tld = labels[labels.length - 1];
+        const sld = labels[labels.length - 2];
+        const compoundSuffix = tld.length === 2 && /^(?:co|com|net|org|gov|edu|ac|mil|sch)$/.test(sld);
+        return labels.slice(compoundSuffix ? -3 : -2).join('.');
+    }
+
+    // Is the page the discovery candidates came FROM on a different
+    // registrable domain than every configured parser URL? Configured-host
+    // pages (and configs without URLs, e.g. inline input) answer false —
+    // cross-host-only rules must never fire there.
+    isCrossHostSourcePage(sourceUrl, parserConfig = {}) {
+        const configuredUrls = Array.isArray(parserConfig && parserConfig.urls) ? parserConfig.urls : [];
+        if (configuredUrls.length === 0) return false;
+        const sourceDomain = this.getRegistrableDomainFromUrl(sourceUrl);
+        if (!sourceDomain) return false;
+        const configuredDomains = configuredUrls
+            .map(configuredUrl => this.getRegistrableDomainFromUrl(configuredUrl))
+            .filter(Boolean);
+        if (configuredDomains.length === 0) return false;
+        return !configuredDomains.includes(sourceDomain);
+    }
+
     validateEventUrl(url, sourceUrl, parserConfig = {}) {
         if (!url || typeof url !== 'string') return { valid: false, reason: 'missing-or-invalid-url' };
 
@@ -5980,6 +6020,23 @@ class AiWebParser {
                 ? blockedPattern
                 : blockedPattern.source;
             return { valid: false, reason: `blocked-pattern:${blockedPatternReason}` };
+        }
+        // Platform-chrome path segments blocked on CROSS-HOST pages only (the
+        // source page's registrable domain matches none of the parser's
+        // configured URLs): help centers (/hc/, Zendesk convention),
+        // change_language switchers, /legal/, /cookies, /careers. BEEFMINCE
+        // run 20260729-100804: dice.fm/hc/change_language/* links produced 12
+        // [ERROR] 404 fetches. Whole-segment matches only, so slugs merely
+        // containing these words survive. On a configured host these paths
+        // stay crawlable (a venue's own site is trusted); /about, /terms and
+        // /privacy are already blocked globally by the patterns above.
+        if (this.isCrossHostSourcePage(sourceUrl, parserConfig)) {
+            const crossHostChromeSegments = ['hc', 'change_language', 'legal', 'cookies', 'careers'];
+            const pathSegments = lowerPath.split('/').filter(Boolean);
+            const chromeSegment = pathSegments.find(segment => crossHostChromeSegments.includes(segment));
+            if (chromeSegment) {
+                return { valid: false, reason: `cross-host-chrome:${chromeSegment}` };
+            }
         }
         const hostname = String(parsedUrl.hostname || '').toLowerCase();
         if (this.isGoogleMapsUrl(parsedUrl)) return { valid: false, reason: 'google-maps-url' };
@@ -10455,6 +10512,58 @@ TEXT:
         return requestedSet.has(this.normalizePromptFieldName(fieldName));
     }
 
+    // URL-field sanity gate for AI-extracted url/ticketUrl/website values.
+    // A plausible event URL is an http(s) URL — or a scheme-less value —
+    // whose host is a dotted hostname of valid label characters. Rejects:
+    //   (1) XML/SVG namespace URLs (host w3.org + namespace-shaped path like
+    //       /2000/svg or /1999/xhtml) — SPA markup xmlns attributes leak
+    //       these into extraction verbatim, so the evidence gate passes them;
+    //   (2) values that cannot be an http(s) URL with a dotted host: inner
+    //       whitespace, invalid host characters ("BASTILLE'S POOL.COM"),
+    //       non-http schemes, hostless fragments.
+    // Platform-pure string/regex parsing only (no URL global on iOS
+    // JavaScriptCore).
+    isPlausibleEventUrlValue(value) {
+        const text = String(value || '').trim();
+        if (!text) return false;
+        if (/\s/.test(text)) return false;
+        let host = '';
+        let path = '';
+        const schemeMatch = text.match(/^([a-z][a-z0-9+.-]*):/i);
+        if (schemeMatch) {
+            if (!/^https?$/i.test(schemeMatch[1])) return false;
+            const withScheme = text.match(/^https?:\/\/([^/?#]*)([^?#]*)/i);
+            if (!withScheme) return false;
+            host = withScheme[1];
+            path = withScheme[2] || '';
+        } else {
+            const schemeless = text.match(/^([^/?#]*)([^?#]*)/);
+            host = schemeless ? schemeless[1] : '';
+            path = schemeless ? (schemeless[2] || '') : '';
+        }
+        host = String(host || '').toLowerCase().replace(/:\d+$/, '');
+        // Dotted hostname of valid label characters — apostrophes, spaces,
+        // userinfo@ and empty hosts all fail here
+        if (!/^[a-z0-9][a-z0-9-]*(?:\.[a-z0-9][a-z0-9-]*)+$/.test(host)) return false;
+        if (!/\.[a-z]{2,}$/.test(host)) return false;
+        const bareHost = host.replace(/^www\./, '');
+        if ((bareHost === 'w3.org' || bareHost.endsWith('.w3.org')) && /^\/(?:19|20)\d{2}(?:\/|$)/.test(path)) {
+            return false;
+        }
+        return true;
+    }
+
+    // Gate one AI-extracted URL-ish field value: pass it through when
+    // plausible, otherwise log and return '' so firstNonEmpty falls through
+    // to the next candidate (ultimately the configured metadata value).
+    sanitizeExtractedUrlField(field, value) {
+        const text = String(value === null || value === undefined ? '' : value).trim();
+        if (!text) return '';
+        if (this.isPlausibleEventUrlValue(text)) return text;
+        console.log(`🤖 AI Web: Rejected ${field} "${text}" — not a plausible event URL`);
+        return '';
+    }
+
     normalizeAiEvent(aiEvent, parserConfig, htmlData = null, cityConfig = null, promptFields = null) {
         const scrapedLinks = this.extractLinksFromPage(
             htmlData && typeof htmlData.html === 'string' ? htmlData.html : '',
@@ -10555,16 +10664,22 @@ TEXT:
             this.getTimezoneForCity(this.findCityKeyInText(address, cityConfig), cityConfig),
             ''
         );
+        // URL-field sanity gate (see isPlausibleEventUrlValue): only
+        // AI-extracted candidates are gated — a configured metadata URL is a
+        // deliberate override and survives untouched. BEEFMINCE run
+        // 20260729-100804: SPA markup fed SEGMENT_LINK_URL
+        // "http://www.w3.org/2000/svg" into url/ticketUrl ×4, and OCR
+        // hallucinated ticketUrl "BASTILLE'S POOL.COM".
         const url = this.firstNonEmpty(
-            aiEvent.url,
-            aiEvent.web,
-            aiEvent.website,
+            this.sanitizeExtractedUrlField('url', aiEvent.url),
+            this.sanitizeExtractedUrlField('url', aiEvent.web),
+            this.sanitizeExtractedUrlField('website', aiEvent.website),
             this.getResolvedParserMetadataFieldValue(parserConfig, ['url', 'web', 'website'], aiEvent),
             ''
         );
         const ticketUrl = this.firstNonEmpty(
-            aiEvent.ticketUrl,
-            aiEvent.tickets,
+            this.sanitizeExtractedUrlField('ticketUrl', aiEvent.ticketUrl),
+            this.sanitizeExtractedUrlField('ticketUrl', aiEvent.tickets),
             this.getResolvedParserMetadataFieldValue(parserConfig, ['ticketUrl', 'tickets'], aiEvent),
             ''
         );
