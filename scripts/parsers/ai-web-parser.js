@@ -419,13 +419,15 @@ class AiWebParser {
             fuzzyDescriptionTokenMatchRatio: 0.45,
             validationReportValueMaxLength: 140,
             multiEventScanLineLimit: 500,
-            // 14 (was 12): an 11-day festival programme is intro + 11 day
-            // sections + interleaved continuation segments — 12 cut the final
-            // day of Bears Sitges Week (run 20260728) once the day sections
-            // segmented correctly. Stale trailing noise past the cap (news
-            // bylines) costs at most the extra extractions; past-dated
-            // results are dropped by shared-core's filterFutureEvents.
-            multiEventMaxSegments: 14,
+            // 16 (was 12, then 14): an 11-day festival programme is intro +
+            // 11 day sections + interleaved continuation segments — 12 cut
+            // the final day of Bears Sitges Week (run 20260728); 16 adds
+            // buffer for one or two junk splits (e.g. the English `mar`
+            // false positive in Spanish text). Stale trailing noise past the
+            // cap costs at most the extra extractions; past-dated results
+            // are dropped by shared-core's filterFutureEvents. The AI
+            // boundary pass interpolates this cap as its upper bound.
+            multiEventMaxSegments: 16,
             multiEventMinSegmentLines: 2,
             multiEventMaxSegmentLines: 24,
             multiEventMinSegmentChars: 25,
@@ -837,7 +839,16 @@ class AiWebParser {
         const html = htmlData && htmlData.html ? htmlData.html : '';
         const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
 
-        const segments = this.buildMultiEventSegments(html, sourceUrl, ocrResults);
+        let segments = this.buildMultiEventSegments(html, sourceUrl, ocrResults);
+        if (segments.length < 2 && parserConfig.discoveryOnly !== true) {
+            // Tier 2: the page was CLASSIFIED multi-event but deterministic
+            // segmentation could not find two sections (vocabulary-blind
+            // language, unusual heading shapes). Ask the model to point at
+            // section-start lines; every proposal is verified verbatim
+            // against the scanned lines before it can influence slicing.
+            const aiSegments = await this.runAiBoundarySegmentation(html, sourceUrl, ocrResults, parserConfig, httpAdapter, segments.length);
+            if (aiSegments.length >= 2) segments = aiSegments;
+        }
         if (segments.length === 0) {
             console.warn('🤖 AI Web: multi-event-page classification produced no valid segments; returning no events');
             // Lumberyard-class pages: the multi-event classifier fired but no
@@ -1379,6 +1390,203 @@ class AiWebParser {
         return this.attachSequentialImageHintsToSegments(html, uniqueSegments, sourceUrl, ocrResults);
     }
 
+    // ── Tier-2 AI segment-boundary fallback ──────────────────────────────
+    // Fires only when the deterministic splitter (tier 1) found fewer than
+    // two segments on a classified multi-event page. The model never writes
+    // content: it may only CHOOSE existing lines, each proposal must
+    // reproduce a scanned line verbatim (case/diacritic/zero-width
+    // tolerant) or it is dropped, and slicing from the verified indices is
+    // fully deterministic.
+
+    // Schedule-time lines ("23:00", "9pm", "20.30 h") are the strongest
+    // cheap signal that a programme page really lists multiple timed
+    // sections worth an AI boundary pass.
+    countScheduleTimeLines(lines) {
+        const timePattern = /\b\d{1,2}(?:[:.h]\d{2})?\s*(?:h\b|am|pm)\b/i;
+        return (Array.isArray(lines) ? lines : []).filter(line => timePattern.test(String(line || ''))).length;
+    }
+
+    // Verification key for boundary echoes: "verbatim" means the line a
+    // human would read, so case, diacritics, whitespace runs, HTML entities
+    // and invisible marks must not break the match while every visible
+    // character still has to agree. The zero-width strip is load-bearing:
+    // real Sitges lines embed U+200E, which normalizeWhitespace does not
+    // remove.
+    getBoundaryVerificationKey(value) {
+        return this.foldDiacritics(this.normalizeEvidenceText(value)).replace(/[​-‏﻿]/g, '');
+    }
+
+    async runAiBoundarySegmentation(html, sourceUrl, ocrResults, parserConfig, httpAdapter, deterministicSegmentCount = 0) {
+        const aiConfig = this.getAiConfig(parserConfig);
+        if (aiConfig.enabled === false || !httpAdapter) return [];
+
+        // Mirror of the deterministic splitter's line corpus, so verified
+        // boundary indices address the exact lines tier 1 scanned.
+        const scannedLines = this.trimLeadingMultiEventNoise(
+            this.extractBodyParts(html).slice(0, this.extractionLimits.multiEventScanLineLimit)
+        );
+        const timeLines = this.countScheduleTimeLines(scannedLines);
+        const scannedChars = scannedLines.join('\n').length;
+        const hasSubstantialContent = timeLines >= 3
+            || scannedChars >= 1500
+            || (Array.isArray(ocrResults) && ocrResults.length >= 2);
+        if (!hasSubstantialContent) {
+            console.log('🤖 AI Web: Skipping AI boundary pass — page content too thin for multiple events');
+            return [];
+        }
+        console.log(`🤖 AI Web: Deterministic segmentation found ${deterministicSegmentCount} segment(s) on classified multi-event page (${timeLines} time-line(s), ${scannedChars} chars) — running AI boundary pass`);
+
+        // Listing shown to the model: each line capped at 160 chars, whole
+        // listing capped at 24,000 chars. Listed lines are a prefix of
+        // scannedLines (never filtered), so listed index i IS scanned
+        // index i; verification matches the listed strings, segments are
+        // built from the untruncated scanned lines.
+        const listingLineMaxChars = 160;
+        const listingMaxChars = 24000;
+        const listedLines = [];
+        let listedChars = 0;
+        for (const line of scannedLines) {
+            const listed = this.trimToMaxLength(line, listingLineMaxChars);
+            const separator = listedLines.length === 0 ? 0 : 1;
+            if (listedChars + separator + listed.length > listingMaxChars) break;
+            listedLines.push(listed);
+            listedChars += separator + listed.length;
+        }
+        if (listedLines.length < scannedLines.length) {
+            console.log(`🤖 AI Web: AI boundary pass listing truncated to ${listedLines.length} line(s) / ${listedChars} chars`);
+        }
+        if (listedLines.length < 2) {
+            console.log('🤖 AI Web: AI boundary pass yielded <2 verified boundaries — falling through to whole-page fallback');
+            return [];
+        }
+
+        const prompt = [
+            'You are segmenting a web page that lists MULTIPLE distinct events, or one festival programme with multiple day sections.',
+            '',
+            'PAGE LINES (one per line, exactly as extracted):',
+            listedLines.join('\n'),
+            '',
+            'TASK: Identify where each distinct event or day section STARTS. For each one, return the VERBATIM FIRST LINE of that section, copied EXACTLY as it appears in PAGE LINES above — same characters, same order, no translation, no paraphrase, no merging of lines, no added or removed words. A section-start line is typically a day/date heading or an event title, never a sentence from the middle of a description.',
+            '',
+            `Return between 2 and ${this.extractionLimits.multiEventMaxSegments} lines. If the page really describes only ONE event, return an empty list.`,
+            '',
+            'Return JSON only, no other text:',
+            '{"boundaries": ["<first line of section 1>", "<first line of section 2>", ...]}'
+        ].join('\n');
+
+        const configuredNumPredict = Number.isFinite(Number(aiConfig.numPredict)) && Number(aiConfig.numPredict) > 0
+            ? Number(aiConfig.numPredict)
+            : 1200;
+        const boundaryConfig = { ...aiConfig, temperature: 0, numPredict: Math.min(configuredNumPredict, 1200) };
+        const rawResponse = await this.core.callAiGenerate(boundaryConfig, prompt, 'segment-boundaries', httpAdapter, this.recordAiPrompt.bind(this));
+
+        let proposedBoundaries = null;
+        if (rawResponse) {
+            try {
+                const parsed = JSON.parse(this.core.extractFirstJsonObject(rawResponse) || rawResponse);
+                if (parsed && Array.isArray(parsed.boundaries)) proposedBoundaries = parsed.boundaries;
+            } catch (_) {
+                proposedBoundaries = null;
+            }
+        }
+        if (!proposedBoundaries) {
+            console.log('🤖 AI Web: AI boundary pass yielded <2 verified boundaries — falling through to whole-page fallback');
+            return [];
+        }
+
+        // Verbatim verification: every proposed boundary must reproduce a
+        // listed line (fold-tolerant). Exact matches claim the first
+        // unclaimed occurrence; long candidates (≥20 key chars) may salvage
+        // a listed line whose key merely STARTS with theirs (the model or
+        // the 160-char listing cap trimmed a long line's tail). Anything
+        // else is dropped — hallucinated headings never steer slicing.
+        const indicesByKey = new Map();
+        for (let i = 0; i < listedLines.length; i++) {
+            const key = this.getBoundaryVerificationKey(listedLines[i]);
+            if (!key) continue;
+            if (!indicesByKey.has(key)) indicesByKey.set(key, []);
+            indicesByKey.get(key).push(i);
+        }
+        const claimed = new Set();
+        const verifiedIndices = [];
+        let droppedCount = 0;
+        for (const rawBoundary of proposedBoundaries) {
+            const candidateKey = this.getBoundaryVerificationKey(rawBoundary);
+            let matchedIndex = -1;
+            if (candidateKey && indicesByKey.has(candidateKey)) {
+                for (const index of indicesByKey.get(candidateKey)) {
+                    if (claimed.has(index)) continue;
+                    matchedIndex = index;
+                    break;
+                }
+            }
+            if (matchedIndex < 0 && candidateKey.length >= 20) {
+                for (let i = 0; i < listedLines.length; i++) {
+                    if (claimed.has(i)) continue;
+                    if (this.getBoundaryVerificationKey(listedLines[i]).startsWith(candidateKey)) {
+                        matchedIndex = i;
+                        break;
+                    }
+                }
+            }
+            if (matchedIndex < 0) {
+                droppedCount++;
+                console.log(`🤖 AI Web: AI boundary pass dropped unverifiable line: "${String(rawBoundary == null ? '' : rawBoundary).slice(0, 120)}"`);
+                continue;
+            }
+            claimed.add(matchedIndex);
+            verifiedIndices.push(matchedIndex);
+        }
+        console.log(`🤖 AI Web: AI boundary pass proposed ${proposedBoundaries.length} line(s); ${verifiedIndices.length} verified verbatim, ${droppedCount} dropped`);
+
+        const uniqueIndices = Array.from(new Set(verifiedIndices)).sort((a, b) => a - b);
+        if (uniqueIndices.length < 2) {
+            console.log('🤖 AI Web: AI boundary pass yielded <2 verified boundaries — falling through to whole-page fallback');
+            return [];
+        }
+
+        const segments = this.buildSegmentsFromBoundaryIndices(scannedLines, uniqueIndices, html, sourceUrl, ocrResults);
+        console.log(`🤖 AI Web: AI boundary pass built ${segments.length} segment(s) from ${uniqueIndices.length} verified boundaries`);
+        return segments;
+    }
+
+    // Deterministic slicing from verified boundary indices — the interface a
+    // future structural proposer would target too. Reuses the deterministic
+    // splitter's construction tail (line cap, char trim, min-chars gate,
+    // lowercase dedupe, raw-HTML recovery, segment cap) but DELIBERATELY
+    // skips the segmentHasDateSignal/segmentHasTitleSignal gates: that
+    // vocabulary blindness is exactly what tier 2 exists to bypass.
+    buildSegmentsFromBoundaryIndices(scannedLines, indices, html, sourceUrl = '', ocrResults = []) {
+        const lines = Array.isArray(scannedLines) ? scannedLines : [];
+        const boundaryIndices = Array.from(new Set(
+            (Array.isArray(indices) ? indices : []).filter(index => Number.isInteger(index) && index >= 0 && index < lines.length)
+        )).sort((a, b) => a - b);
+
+        const maxSegmentLines = this.extractionLimits.multiEventMaxSegmentLines;
+        const uniqueSegments = [];
+        const seen = new Set();
+        for (let k = 0; k < boundaryIndices.length; k++) {
+            const start = boundaryIndices[k];
+            const end = k + 1 < boundaryIndices.length ? boundaryIndices[k + 1] : lines.length;
+            // Preamble before the first boundary is deliberately discarded.
+            const sliceLines = lines.slice(start, end)
+                .map(line => this.trimToMaxLength(this.normalizeWhitespace(line), this.extractionLimits.multiEventLineMaxChars))
+                .filter(Boolean)
+                .slice(0, maxSegmentLines);
+            const trimmedLines = this.trimSegmentLinesToChars(sliceLines, this.extractionLimits.multiEventMaxSegmentChars);
+            const segmentText = trimmedLines.join('\n');
+            if (segmentText.length < this.extractionLimits.multiEventMinSegmentChars) continue;
+            const dedupeKey = segmentText.toLowerCase();
+            if (seen.has(dedupeKey)) continue;
+            seen.add(dedupeKey);
+            uniqueSegments.push({
+                lines: trimmedLines,
+                html: this.extractRawHtmlForMultiEventSegment(html, trimmedLines)
+            });
+            if (uniqueSegments.length >= this.extractionLimits.multiEventMaxSegments) break;
+        }
+        return this.attachSequentialImageHintsToSegments(html, uniqueSegments, sourceUrl, ocrResults);
+    }
 
     buildStructuredMultiEventSegments(html) {
         const groups = this.extractRepeatedMultiEventStructureGroups(html);
