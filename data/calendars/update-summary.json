@@ -21,7 +21,7 @@
     "chicago": {
       "name": "Chicago",
       "status": "success",
-      "dataLength": 21393,
+      "dataLength": 21511,
       "eventCount": 17
     },
     "dallas": {
