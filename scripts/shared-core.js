@@ -1887,6 +1887,45 @@ class SharedCore {
                     reason: 'emoji title variant beats its emoji-stripped twin'
                 };
             }
+            // Trim persistence rung: when one side's title IS the AI-trimmed
+            // form of the other — strict attribution: that side's own
+            // _fieldTrims carries a status 'trimmed' title record whose
+            // trimmedValue is exactly this candidate, and the other side is a
+            // longer verbatim superset containing it — the trimmed side wins
+            // deterministically. Without this, arbitration's more-descriptive
+            // preference resurrects the untrimmed superset the field-trim
+            // pass already shortened (observed 2026-07-28: club-chub "DURO"
+            // merged back to 73 chars after a 73 → 55 enforce trim). MUST run
+            // after the emoji-twin rule (twins keep the emoji doctrine). No
+            // trim record, non-substring pairs, or both sides trimmed → fall
+            // through (AI arbitrates as before).
+            const trimContextRecords = context && context.records && typeof context.records === 'object'
+                ? context.records : null;
+            if (trimContextRecords) {
+                const hasOwnTitleTrimRecord = (record, value) => {
+                    if (!record || !Array.isArray(record._fieldTrims)) return false;
+                    const candidate = typeof value === 'string' ? value.trim() : '';
+                    if (!candidate) return false;
+                    return record._fieldTrims.some(trim => trim && trim.field === 'title'
+                        && trim.status === 'trimmed' && trim.trimmedValue === candidate);
+                };
+                const isUntrimmedSuperset = (supersetValue, trimmedValue) => {
+                    const superset = typeof supersetValue === 'string' ? supersetValue.trim() : '';
+                    const trimmed = typeof trimmedValue === 'string' ? trimmedValue.trim() : '';
+                    return Boolean(superset && trimmed) && superset.length > trimmed.length
+                        && superset.includes(trimmed);
+                };
+                const trimmedWinsA = hasOwnTitleTrimRecord(trimContextRecords.a, valueA)
+                    && isUntrimmedSuperset(valueB, valueA);
+                const trimmedWinsB = hasOwnTitleTrimRecord(trimContextRecords.b, valueB)
+                    && isUntrimmedSuperset(valueA, valueB);
+                if (trimmedWinsA !== trimmedWinsB) {
+                    return {
+                        winner: trimmedWinsA ? 'a' : 'b',
+                        reason: 'trimmed title beats its own untrimmed superset'
+                    };
+                }
+            }
             // A date-only segment welded onto the title ("CHUNK Chicago -
             // September 19th" vs "CHUNK Chicago") is pure redundancy on a
             // calendar — the date lives in startDate — and the arbitration
@@ -5162,6 +5201,44 @@ class SharedCore {
         return list;
     }
 
+    // Final trim pass over ONE analyzed event (post-merge/calendar analysis).
+    // The per-parser pass above runs BEFORE dedup/merge, so a merge that
+    // keeps the longer side (calendar value, or arbitration's more-
+    // descriptive pick) can resurrect an untrimmed value on the FINAL
+    // object. Same config, same AI path as the pre-merge pass —
+    // callAiGenerate responses are cached, so repeating an identical prompt
+    // is deterministic and free. Idempotent: when the pre-merge trim
+    // survived (nothing overlong on the final object),
+    // trimOverlongFieldsForEvent returns before touching _fieldTrims — no
+    // AI call, no duplicate records. When it does re-trim, this pass's
+    // record REPLACES the earlier record for the same field (the value that
+    // record described did not survive the merge) and every other field's
+    // record is kept, so evidence lines describe each final value exactly
+    // once. The batch summary line reuses the pre-merge shape — it can fire
+    // once per re-trimmed event in addition to the per-parser summary.
+    async applyFinalOverlongFieldTrims(event, parserConfig, httpAdapter) {
+        if (!event || typeof event !== 'object') return [];
+        const trimConfig = this.getTrimConfig(parserConfig);
+        if (trimConfig.mode === 'off') return [];
+        const rawAi = parserConfig && parserConfig.ai && typeof parserConfig.ai === 'object' ? parserConfig.ai : {};
+        if (rawAi.enabled === false) return [];
+        if (!httpAdapter || typeof httpAdapter.postJson !== 'function') return [];
+        const aiConfig = this.resolveAiConfig(rawAi);
+        if (!aiConfig.enabled || !aiConfig.endpoint) return [];
+
+        const priorRecords = Array.isArray(event._fieldTrims) ? event._fieldTrims : [];
+        const records = await this.trimOverlongFieldsForEvent(event, trimConfig, aiConfig, httpAdapter);
+        if (records.length === 0) return records;
+        const finalPassFields = new Set(records.map(record => record && record.field).filter(Boolean));
+        event._fieldTrims = [
+            ...priorRecords.filter(record => record && record.field && !finalPassFields.has(record.field)),
+            ...records
+        ];
+        const trimmedCount = records.filter(record => record.status === 'trimmed').length;
+        console.log(`✂️ TRIM: 1 event(s) checked, ${records.length} overlong field(s), ${trimmedCount} trimmed, ${records.length - trimmedCount} flagged`);
+        return records;
+    }
+
     async deduplicateEvents(events, httpAdapter, globalConfig = null) {
         const seen = new Map();
         const deduplicated = [];
@@ -6475,6 +6552,16 @@ class SharedCore {
         // before the evidence lines render.
         if (Array.isArray(newEvent._fieldTrims) && newEvent._fieldTrims.length > 0) {
             finalEvent._fieldTrims = newEvent._fieldTrims;
+        }
+        // Same carry for the registry identity stamp and derived organizer
+        // (mirrors mergeParsedEvents): the enforce-mode _promoter stamp must
+        // stay visible on the FINAL analyzed event for display/metrics, not
+        // just on the pre-merge scraped record.
+        if (typeof newEvent._promoter === 'string' && newEvent._promoter) {
+            finalEvent._promoter = newEvent._promoter;
+        }
+        if (typeof newEvent._organizer === 'string' && newEvent._organizer) {
+            finalEvent._organizer = newEvent._organizer;
         }
         
         // STEP 6: Pass all three objects to rich display for comparison
@@ -8424,6 +8511,32 @@ class SharedCore {
                 analyzedEvent.notes = this.formatEventNotes(analyzedEvent);
             }
 
+            // Final overlong-field trim pass: field-trim runs in processParser
+            // BEFORE dedup/merge, so the final object can carry an untrimmed
+            // value back (observed 2026-07-28: goldiloxx final title 72 chars
+            // despite a logged 72 → 58 enforce trim — the merge kept the
+            // longer side). Re-apply the trim to whatever the FINAL value is,
+            // but ONLY for actions with a scraped contribution ('merge' and
+            // 'new', both built by createFinalEventObject from the scraped
+            // record). Any other action is treated as a pure calendar-side
+            // preserve of the record's values (conservative: 'conflict'
+            // carries exactly the scraped values the pre-merge pass already
+            // handled) — those stay flag-only via the detection loop below,
+            // never AI-trimmed here. Runs BEFORE _evidenceLines so the
+            // updated _fieldTrims records render on the card.
+            const trimParserConfig = analyzedEvent._parserConfig || (config && config.ai ? { ai: config.ai } : null);
+            if (analyzedEvent._action === 'merge' || analyzedEvent._action === 'new') {
+                const finalTrimRecords = await this.applyFinalOverlongFieldTrims(analyzedEvent, trimParserConfig, calendarAdapter);
+                // title lives in a native calendar field, but description/
+                // shortName are serialized INTO notes — and notes were built
+                // from the pre-trim values above, so an enforce trim of a
+                // notes-carried field must rebuild them or the untrimmed
+                // value would still be written to the calendar.
+                if (finalTrimRecords.some(record => record && record.status === 'trimmed' && record.field !== 'title')) {
+                    analyzedEvent.notes = this.formatEventNotes(analyzedEvent);
+                }
+            }
+
             // Computed evidence panel for the results-UI event card (underscore
             // field: display-only, systematically excluded from notes/merge
             // serialization). Computed AFTER the final merged object exists so
@@ -8435,9 +8548,7 @@ class SharedCore {
             // with _fieldTrims), so a final value that exceeds its limit on a
             // field WITHOUT a trim record came through the calendar side —
             // which is never AI-trimmed. No AI call here, just visibility.
-            const overlongTrimConfig = this.getTrimConfig(
-                analyzedEvent._parserConfig || (config && config.ai ? { ai: config.ai } : null)
-            );
+            const overlongTrimConfig = this.getTrimConfig(trimParserConfig);
             if (overlongTrimConfig.mode !== 'off') {
                 const recordedTrimFields = new Set(
                     (Array.isArray(analyzedEvent._fieldTrims) ? analyzedEvent._fieldTrims : [])

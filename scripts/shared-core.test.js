@@ -8574,6 +8574,193 @@ test('_fieldTrims survives createFinalEventObject like _organizer', async () => 
   assert.deepEqual(finalEvent._fieldTrims, fieldTrims);
 });
 
+test('_promoter and _organizer survive createFinalEventObject like _fieldTrims', async () => {
+  const core = createCore();
+  const scraped = buildScrapedEvent({ _promoter: 'Goldiloxx', _organizer: 'Goldiloxx' });
+  const finalEvent = await core.createFinalEventObject(buildCalendarEvent(), scraped, {});
+  assert.equal(finalEvent._promoter, 'Goldiloxx', 'enforce-mode registry stamp stays on the final analyzed event');
+  assert.equal(finalEvent._organizer, 'Goldiloxx');
+});
+
+// ---------------------------------------------------------------------------
+// Final trim pass (applyFinalOverlongFieldTrims): the per-parser trim runs
+// BEFORE dedup/merge, so a merge that keeps the longer side resurrects the
+// untrimmed value on the FINAL analyzed object — the final pass re-trims it.
+// ---------------------------------------------------------------------------
+
+const TRIMMED_TITLE_RECORD = Object.freeze({
+  field: 'title', status: 'trimmed', originalLength: 74, trimmedLength: 7, trimmedValue: 'D>U>R>O', maxChars: 60
+});
+
+// Calendar adapter for final-trim tests: canned existing events plus a
+// postJson transport that answers the trim prompt (and counts calls).
+function buildFinalTrimAdapter(records, trimCalls = []) {
+  const adapter = buildPrepCalendarAdapter(records);
+  adapter.postJson = async (endpoint, payload) => {
+    trimCalls.push({ endpoint, payload });
+    return { ok: true, status: 200, text: buildOpenAiResponsePayload('{"trims":{"title":{"value":"D>U>R>O"}}}') };
+  };
+  return adapter;
+}
+
+function buildFinalTrimScrapedEvent(overrides = {}) {
+  return {
+    title: 'D>U>R>O',
+    startDate: new Date('2026-08-08T02:00:00.000Z'),
+    endDate: new Date('2026-08-08T07:00:00.000Z'),
+    bar: 'Precinct DTLA',
+    city: 'dallas',
+    ticketUrl: 'https://tickets.example/duro-la',
+    _parserConfig: buildTrimParserConfig(),
+    _fieldTrims: [{ ...TRIMMED_TITLE_RECORD }],
+    ...overrides
+  };
+}
+
+test('final trim pass: a merge that resurrects the untrimmed title is re-trimmed on the analyzed event', async () => {
+  const core = createCore();
+  const calendarRecord = {
+    title: OVERLONG_TITLE, // upsert keeps the calendar title → 74 chars come back post-merge
+    startDate: new Date('2026-08-08T02:00:00.000Z'),
+    endDate: new Date('2026-08-08T07:00:00.000Z'),
+    location: '',
+    notes: 'bar: Precinct DTLA\nticketUrl: https://tickets.example/duro-la'
+  };
+  const trimCalls = [];
+  const adapter = buildFinalTrimAdapter([calendarRecord], trimCalls);
+  const scraped = buildFinalTrimScrapedEvent();
+
+  const analyzed = await core.prepareEventsForCalendar([scraped], adapter, {});
+
+  assert.equal(analyzed.length, 1);
+  assert.equal(analyzed[0]._action, 'merge');
+  assert.equal(analyzed[0].title, 'D>U>R>O', 'the final analyzed title is the trimmed form, within the limit');
+  assert.equal(trimCalls.length, 1, 'one trim call for the resurrected overlong title');
+  assert.ok(String(trimCalls[0].payload.messages[0].content).includes('You are shortening overlong text fields for one event.'));
+
+  // The final-pass record REPLACES the pre-merge title record — never a duplicate
+  const titleRecords = analyzed[0]._fieldTrims.filter(record => record.field === 'title');
+  assert.equal(titleRecords.length, 1);
+  assert.equal(titleRecords[0].status, 'trimmed');
+  assert.equal(titleRecords[0].originalLength, 74);
+  assert.equal(titleRecords[0].trimmedValue, 'D>U>R>O');
+  assert.ok(analyzed[0]._evidenceLines.includes('title trimmed: 74 → 7 chars — "D>U>R>O"'),
+    `got: ${JSON.stringify(analyzed[0]._evidenceLines)}`);
+});
+
+test('final trim pass is idempotent: a pre-merge trim that survived the merge makes zero AI calls and keeps one record', async () => {
+  const core = createCore();
+  const calendarRecord = {
+    title: 'D>U>R>O', // calendar already carries the trimmed form — nothing overlong post-merge
+    startDate: new Date('2026-08-08T02:00:00.000Z'),
+    endDate: new Date('2026-08-08T07:00:00.000Z'),
+    location: '',
+    notes: 'bar: Precinct DTLA\nticketUrl: https://tickets.example/duro-la'
+  };
+  const trimCalls = [];
+  const adapter = buildFinalTrimAdapter([calendarRecord], trimCalls);
+  const scraped = buildFinalTrimScrapedEvent();
+
+  const analyzed = await core.prepareEventsForCalendar([scraped], adapter, {});
+
+  assert.equal(analyzed.length, 1);
+  assert.equal(analyzed[0]._action, 'merge');
+  assert.equal(analyzed[0].title, 'D>U>R>O');
+  assert.equal(trimCalls.length, 0, 'an under-limit final value never calls the AI');
+  assert.deepEqual(analyzed[0]._fieldTrims, [TRIMMED_TITLE_RECORD], 'the pre-merge record is kept, no duplicates');
+});
+
+test('final trim pass: NEW-path events keep their pre-merge trim untouched (no AI calls)', async () => {
+  const core = createCore();
+  const trimCalls = [];
+  const adapter = buildFinalTrimAdapter([], trimCalls); // no existing events → action new
+  const scraped = buildFinalTrimScrapedEvent();
+
+  const analyzed = await core.prepareEventsForCalendar([scraped], adapter, {});
+
+  assert.equal(analyzed.length, 1);
+  assert.equal(analyzed[0]._action, 'new');
+  assert.equal(analyzed[0].title, 'D>U>R>O');
+  assert.equal(trimCalls.length, 0);
+  assert.deepEqual(analyzed[0]._fieldTrims, [TRIMMED_TITLE_RECORD]);
+});
+
+test('final trim pass: an action without scraped contribution is flagged, never AI-trimmed', async () => {
+  const core = createCore();
+  const trimCalls = [];
+  const adapter = buildFinalTrimAdapter([], trimCalls);
+  // 'conflict' is the no-scraped-contribution shape at prep time (the pure
+  // calendar-side preserve of the record's values): the final pass must not
+  // fire — the detection-only evidence flag covers visibility.
+  const event = {
+    title: OVERLONG_TITLE,
+    startDate: new Date('2026-08-08T02:00:00.000Z'),
+    city: 'dallas',
+    _parserConfig: buildTrimParserConfig()
+  };
+  const analysis = { action: 'conflict', reason: 'Identifier match not found', sourceEvent: null, overrideIdentity: null };
+
+  const analyzedEvent = await core.buildAnalyzedCalendarEvent(event, analysis, adapter, {});
+
+  assert.equal(analyzedEvent._action, 'conflict');
+  assert.equal(analyzedEvent.title, OVERLONG_TITLE, 'value untouched');
+  assert.equal(trimCalls.length, 0, 'no AI call for a preserve-shaped action');
+  assert.ok(analyzedEvent._evidenceLines.includes('⚠️ title overlong (74 > 60 chars) — calendar-sourced, not trimmed'),
+    `got: ${JSON.stringify(analyzedEvent._evidenceLines)}`);
+});
+
+test('applyFinalOverlongFieldTrims merges records: a re-trim replaces the same field, other fields keep theirs', async () => {
+  const core = createCore();
+  const trimCalls = [];
+  const adapter = buildTrimAnswerAdapter('{"trims":{"title":{"value":"D>U>R>O"}}}', trimCalls);
+  const event = {
+    title: OVERLONG_TITLE,
+    _fieldTrims: [
+      { field: 'title', status: 'trimmed', originalLength: 74, trimmedLength: 7, trimmedValue: 'D>U>R>O', maxChars: 60 },
+      { field: 'shortName', status: 'trimmed', originalLength: 39, trimmedLength: 7, trimmedValue: 'D>U>R>O', maxChars: 30 }
+    ]
+  };
+
+  const records = await core.applyFinalOverlongFieldTrims(event, buildTrimParserConfig(), adapter);
+
+  assert.equal(event.title, 'D>U>R>O');
+  assert.equal(records.length, 1);
+  assert.equal(trimCalls.length, 1);
+  assert.equal(event._fieldTrims.length, 2, 'shortName record kept, title record replaced');
+  assert.equal(event._fieldTrims.filter(record => record.field === 'title').length, 1);
+  assert.ok(event._fieldTrims.some(record => record.field === 'shortName' && record.trimmedLength === 7));
+});
+
+test('deterministic rung: trimmed title beats its own untrimmed superset, both directions', () => {
+  const core = createCore();
+  const trimRecords = [{ ...TRIMMED_TITLE_RECORD }];
+
+  const scrapedSide = core.resolveConflictDeterministically('title', OVERLONG_TITLE, 'D>U>R>O',
+    { records: { a: {}, b: { _fieldTrims: trimRecords } } });
+  assert.deepEqual(scrapedSide, { winner: 'b', reason: 'trimmed title beats its own untrimmed superset' });
+
+  const mirrored = core.resolveConflictDeterministically('title', 'D>U>R>O', OVERLONG_TITLE,
+    { records: { a: { _fieldTrims: trimRecords }, b: {} } });
+  assert.deepEqual(mirrored, { winner: 'a', reason: 'trimmed title beats its own untrimmed superset' });
+});
+
+test('deterministic rung: non-substring pairs and unattributed supersets fall through to arbitration', () => {
+  const core = createCore();
+  const trimRecords = [{ ...TRIMMED_TITLE_RECORD }];
+
+  // The trimmed side's value is NOT a substring of the other title → no rung
+  assert.equal(core.resolveConflictDeterministically('title', 'Completely different night', 'D>U>R>O',
+    { records: { a: {}, b: { _fieldTrims: trimRecords } } }), null);
+
+  // A superset pair WITHOUT a trim record never triggers the rung (strict attribution)
+  assert.equal(core.resolveConflictDeterministically('title', OVERLONG_TITLE, 'D>U>R>O',
+    { records: { a: {}, b: {} } }), null);
+
+  // A trim record for a DIFFERENT value than the candidate does not vouch for it
+  assert.equal(core.resolveConflictDeterministically('title', OVERLONG_TITLE, 'D>U>R>O — Precinct DTLA',
+    { records: { a: {}, b: { _fieldTrims: trimRecords } } }), null);
+});
+
 // ---------------------------------------------------------------------------
 // Active-config summary: pure builders behind the results-UI "Active config"
 // section — effective global values, per-parser override diffs (only
@@ -8743,6 +8930,15 @@ test('promoter registry mode reader mirrors getBearCheckMode (unset/invalid → 
   assert.equal(core.getPromoterRegistryMode({ config: { promoterRegistry: { mode: 'ENFORCE' } } }), 'enforce');
   assert.equal(core.getPromoterRegistryMode({ config: { promoterRegistry: { mode: 'off' } } }), 'off');
   assert.equal(core.getPromoterRegistryMode({ config: { promoterRegistry: { mode: 'bogus' } } }), 'report');
+});
+
+test('the repo scraper-input config resolves the promoter registry to enforce mode', () => {
+  // Flipped 2026-07-28 after the verification battery (37 matches, 0 false
+  // positives): the shipped config must resolve to enforce, so a regression
+  // back to report (or a typo'd mode falling back to report) fails here.
+  const core = createCore();
+  const repoConfig = require('./scraper-input');
+  assert.equal(core.getPromoterRegistryMode(repoConfig), 'enforce');
 });
 
 test('matcher: padded-token title containment matches a full name, never a bare substring', () => {
