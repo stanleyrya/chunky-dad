@@ -106,6 +106,7 @@ const scraperPromoters = [
   },
   {
     "name": "CubScout LA",
+    "shortName": "CUB-SCOUT",
     "aliases": [
       "CUBSCOUT"
     ],

@@ -8672,6 +8672,24 @@ class SharedCore {
                 }
             }
 
+            // ticketUrl dedup (run 20260729-125247: CubScout's notes carried
+            // the same eaglela.com link three ways — url, website, ticketUrl).
+            // url/website are ONE canonical field by design; a ticketUrl that
+            // is byte-identical to it adds nothing and reads as clutter, so
+            // it is dropped. A ticketUrl pointing anywhere else is a real
+            // ticketing link and always survives.
+            {
+                const canonicalWebsite = typeof analyzedEvent.website === 'string' && analyzedEvent.website.trim()
+                    ? analyzedEvent.website.trim()
+                    : (typeof analyzedEvent.url === 'string' ? analyzedEvent.url.trim() : '');
+                const ticketUrl = typeof analyzedEvent.ticketUrl === 'string' ? analyzedEvent.ticketUrl.trim() : '';
+                if (ticketUrl && canonicalWebsite && ticketUrl === canonicalWebsite) {
+                    delete analyzedEvent.ticketUrl;
+                    notesNeedRebuild = true;
+                    console.log(`🔗 LINKS: dropped ticketUrl duplicating website for "${analyzedEvent.title || 'event'}"`);
+                }
+            }
+
             // gmaps rebuild from settled facts (run 20260729-125201: events
             // finished with precise geocode-verified coords in `location`
             // while gmaps still carried the EARLY text-search form built from

@@ -10137,3 +10137,52 @@ test('final build never rebuilds a parser-static gmaps value or a coord-less eve
   assert.equal(analyzedNoCoords.gmaps, 'https://www.google.com/maps/search/?api=1&query=Eden%20Birmingham', 'no coords → untouched');
   assert.equal(lines.some(line => line.startsWith('🗺️ GMAPS:')), false, 'no rebuild logs fired');
 });
+
+test('final build drops a ticketUrl byte-identical to the canonical website', async () => {
+  const core = createFinalBuildCore();
+  const link = 'https://eaglela.com/events/cub-scout-3/';
+  const event = {
+    title: 'CUBSCOUT',
+    startDate: new Date('2026-09-05T04:00:00.000Z'),
+    city: 'la',
+    website: link,
+    url: link,
+    ticketUrl: link
+  };
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(event, NEW_ACTION_ANALYSIS, {}, {});
+  } finally {
+    restore();
+  }
+
+  assert.equal(analyzed.ticketUrl, undefined, 'duplicate ticketUrl deleted');
+  assert.equal(analyzed.website, link, 'canonical website untouched');
+  assert.ok(!analyzed.notes.includes('ticketUrl:'), `notes drop the duplicate line: ${JSON.stringify(analyzed.notes)}`);
+  assert.ok(lines.includes('🔗 LINKS: dropped ticketUrl duplicating website for "CUBSCOUT"'),
+    `got: ${JSON.stringify(lines)}`);
+});
+
+test('final build keeps a ticketUrl that differs from the website', async () => {
+  const core = createFinalBuildCore();
+  const event = {
+    title: 'FURBALL',
+    startDate: new Date('2026-08-07T02:00:00.000Z'),
+    city: 'chicago',
+    website: 'https://www.furball.nyc/',
+    ticketUrl: 'https://www.eventbrite.com/e/furball-chicago-tickets-123'
+  };
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(event, NEW_ACTION_ANALYSIS, {}, {});
+  } finally {
+    restore();
+  }
+
+  assert.equal(analyzed.ticketUrl, 'https://www.eventbrite.com/e/furball-chicago-tickets-123', 'real ticket link survives');
+  assert.equal(lines.some(line => line.startsWith('🔗 LINKS:')), false, 'no dedup log');
+});

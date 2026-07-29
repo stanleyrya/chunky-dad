@@ -8216,20 +8216,48 @@ class ScriptableAdapter {
         SharedEventSchema.slugifyIcsText(event.title || event.name || "") ||
         "chunky-dad-recurring";
       const fileName = `${slug}.ics`;
-      if (
-        typeof DocumentPicker !== "undefined" &&
-        DocumentPicker &&
-        typeof DocumentPicker.exportString === "function"
-      ) {
-        await DocumentPicker.exportString(icsText, fileName);
-      } else {
-        const fm = FileManager.local();
-        const filePath = fm.joinPath(fm.temporaryDirectory(), fileName);
-        fm.writeString(filePath, icsText);
-        await ShareSheet.present([filePath]);
+      // QuickLook first: iOS previews an .ics as its calendar import sheet
+      // ("Add All" + per-event add), which is the point of the button —
+      // DocumentPicker.exportString only offered a save-to-Files dialog and
+      // the events never reached the calendar without a second trip through
+      // the Files app. QuickLook's own share button still reaches Files for
+      // anyone who wants the raw file. DocumentPicker stays as the fallback
+      // when QuickLook is unavailable or refuses the file.
+      let exportedVia = "";
+      if (typeof QuickLook !== "undefined" && QuickLook && typeof QuickLook.present === "function") {
+        try {
+          const fm = FileManager.local();
+          const filePath = fm.joinPath(fm.temporaryDirectory(), fileName);
+          fm.writeString(filePath, icsText);
+          await QuickLook.present(filePath, false);
+          exportedVia = "QuickLook";
+        } catch (quickLookError) {
+          console.warn(
+            `📱 Scriptable: QuickLook ICS preview failed (${quickLookError.message}) — falling back to DocumentPicker`,
+          );
+        }
+      }
+      if (!exportedVia) {
+        if (
+          typeof DocumentPicker !== "undefined" &&
+          DocumentPicker &&
+          typeof DocumentPicker.exportString === "function"
+        ) {
+          await DocumentPicker.exportString(icsText, fileName);
+          exportedVia = "DocumentPicker";
+        } else {
+          const fm = FileManager.local();
+          const filePath = fm.joinPath(fm.temporaryDirectory(), fileName);
+          fm.writeString(filePath, icsText);
+          await ShareSheet.present([filePath]);
+          exportedVia = "ShareSheet";
+        }
       }
       console.log(
         `📱 Scriptable: Exported recurring event ICS "${fileName}" (#${id})`,
+      );
+      console.log(
+        `📱 Scriptable: Recurring ICS handed off via ${exportedVia}`,
       );
     } catch (error) {
       console.warn(
