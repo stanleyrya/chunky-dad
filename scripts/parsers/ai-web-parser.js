@@ -195,6 +195,26 @@ function normalizeStartTimeValue(value) {
         }
     }
 
+    // Handle European "20h30" / "20 h 30" format (h as hour-minute separator)
+    const europeanSeparatorMatch = timeStr.match(/^(\d{1,2})\s*[hH]\s*(\d{2})$/);
+    if (europeanSeparatorMatch) {
+        const hour = parseInt(europeanSeparatorMatch[1], 10);
+        const minute = parseInt(europeanSeparatorMatch[2], 10);
+        if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+            return String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+        }
+    }
+
+    // Handle European "14:00h" / "14:00 h." format (HH:MM with trailing h)
+    const europeanSuffixMatch = timeStr.match(/^(\d{1,2}):(\d{2})\s*[hH]\.?$/);
+    if (europeanSuffixMatch) {
+        const hour = parseInt(europeanSuffixMatch[1], 10);
+        const minute = parseInt(europeanSuffixMatch[2], 10);
+        if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+            return String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+        }
+    }
+
     // Handle "10:30pm" format (lowercase ampm attached or separate)
     const lowercaseMatch = timeStr.match(/^(\d{1,2}):?(\d{2})?\s*(am|pm)$/i);
     if (lowercaseMatch) {
@@ -763,11 +783,21 @@ class AiWebParser {
         const segmentDataFlags = { ocr: true, segment: true };
         const segmentPromptFields = this.getAiPromptFields(parserConfig, segmentDataFlags, sourceUrl);
 
+        // Page-level month/year anchor for day-only schedule headings
+        // ("JUEVES- 03"): derived once per page, applied per segment below
+        // (only to segments that state no month of their own).
+        const pageDateContext = this.derivePageDateContext(html);
+        if (pageDateContext) {
+            const monthNamesEn = ['January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'];
+            console.log(`🤖 AI Web: Page-level date context: ${monthNamesEn[pageDateContext.month - 1]}${Number.isFinite(pageDateContext.year) ? ` ${pageDateContext.year}` : ''} (from "${pageDateContext.phrase}")`);
+        }
+
         const events = [];
         for (let i = 0; i < segments.length; i++) {
             try {
                 const segment = segments[i];
-                const segmentHtmlData = this.buildMultiEventSegmentHtmlData(htmlData, segment, i, segments.length, ocrResults);
+                const segmentHtmlData = this.buildMultiEventSegmentHtmlData(htmlData, segment, i, segments.length, ocrResults, pageDateContext);
                 const event = await this.extractSingleEvent(segmentHtmlData, parserConfig, cityConfig, segmentPromptFields, segmentDataFlags, httpAdapter);
                 if (!event) continue;
                 event._multiEventSegment = {
@@ -1030,6 +1060,11 @@ class AiWebParser {
             if (/^(SEGMENT_[A-Z_]+|OCR_IMAGE_TEXT)/i.test(line)) continue;
             if (this.hasMultiEventDateSignal(line)) continue;
             if (/^\d{1,2}(:\d{2})?\s*(am|pm)?(\s*[-–]\s*\d{1,2}(:\d{2})?\s*(am|pm)?)?$/i.test(line)) continue;
+            // European time-only lines: "14:00h", "21h a 03h", "de 21 a 03h",
+            // "16h a 20:30h" — never a listing title (additive skip; the
+            // am/pm skip above stays untouched).
+            if (/^(?:de\s+)?\d{1,2}(?:[:.h]\d{2})?\s*h?\.?\s*(?:a|à|-|–|—|to|bis)\s*\d{1,2}(?:[:.h]\d{2})?\s*h\b\.?$/i.test(line)) continue;
+            if (/^\d{1,2}(?:[:.h]\d{2})?\s*h\b\.?$/i.test(line)) continue;
             if (/^https?:\/\//i.test(line)) continue;
             // First candidate decides: a plausible title is short; a long first
             // line is prose/description, so no hint is derived at all.
@@ -1047,7 +1082,7 @@ class AiWebParser {
         return !this.isVenueHoursNoticeTitle(this.deriveSegmentListingTitle(segment));
     }
 
-    buildMultiEventSegmentHtmlData(htmlData, segment, index, totalSegments, ocrResults = []) {
+    buildMultiEventSegmentHtmlData(htmlData, segment, index, totalSegments, ocrResults = [], pageDateContext = null) {
         const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
         const segmentHtml = segment && typeof segment.html === 'string' ? segment.html : '';
 
@@ -1063,8 +1098,13 @@ class AiWebParser {
             segmentOcrResults,
             segment && segment.ocrExcludedUrlKeys instanceof Set ? segment.ocrExcludedUrlKeys : null
         );
+        // Month/year anchor for day-only headings — '' whenever the page has
+        // no unambiguous date context or the segment states its own month,
+        // so existing segments stay byte-identical (additive line only).
+        const segmentDateContextLine = this.buildSegmentDateContextLine(segment, pageDateContext);
         const contextLines = [
             `SEGMENT_INDEX: ${index + 1}/${totalSegments}`,
+            segmentDateContextLine,
             ...resourceLines
         ].filter(Boolean);
         const segmentContent = segmentHtml || (segment && Array.isArray(segment.lines) ? segment.lines.join('\n') : '');
@@ -1079,6 +1119,7 @@ class AiWebParser {
             aiExtraction: null,
             ocrResults: segmentOcrResults,
             segmentListingTitle: this.deriveSegmentListingTitle(segment),
+            segmentDateContext: segmentDateContextLine,
             dataFlags: { ocr: true, segment: true }  // Segments are unstructured data
         };
     }
@@ -2206,7 +2247,246 @@ class AiWebParser {
         const monthDatePattern = /\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:\s+\d{1,2})?(?:,?\s+\d{4})?\b/i;
         if (monthDatePattern.test(line)) return true;
         const numericDatePattern = /\b(?:0?[1-9]|1[0-2])[\/.-](?:0?[1-9]|[12]\d|3[01])(?:[\/.-](?:\d{2}|\d{4}))?\b/;
-        return numericDatePattern.test(line);
+        if (numericDatePattern.test(line)) return true;
+        return this.hasMultilingualDateSignal(line);
+    }
+
+    // ── Multilingual segment date-signal vocabulary (es/ca/fr/de/it/pt) ──
+    // Linguistic-generic weekday/month tables for the languages of the
+    // configured cities (sitges/madrid/pv/mexico-city → es/ca; paris → fr;
+    // berlin → de; milan → it; sao-paulo → pt). NO site-specific rules. All
+    // entries are diacritic-folded lowercase (foldDiacritics), so a single
+    // entry covers "SÁBADO"/"Sábado"/"sabado" alike. English keeps riding the
+    // original patterns in hasMultiEventDateSignal, untouched.
+    //
+    // Signal rules (deliberately conservative, so multilingual support is
+    // purely additive):
+    // - A FULL weekday name is a date signal only as a schedule heading: the
+    //   whole line is the weekday plus an optional day-of-month on either
+    //   side ("JUEVES- 03", "SÁBADO - 05", "sonntag"). Mid-sentence weekday
+    //   mentions ("cada sábado") never count.
+    // - Weekday ABBREVIATIONS (lun/mar/sam/dom/…) collide with ordinary words
+    //   ("mar" = sea, "ven" = come), so they additionally REQUIRE the
+    //   day-of-month number ("dom - 13").
+    // - A month name is a signal only with an adjacent day or year number
+    //   ("3 de septiembre", "13 settembre", "septembre 2026", "3. Oktober").
+    //   Bare month words never count — unlike English "may"/"mar", words like
+    //   "mai" (it: never) and "mars" (fr: Mars) are too common as prose.
+    getMultilingualDateVocabulary() {
+        if (this._multilingualDateVocabulary) return this._multilingualDateVocabulary;
+
+        // Folded month name → month number (1-12). Includes English so the
+        // page-level date-context anchor understands every supported page
+        // language; the English entries add nothing to signal detection
+        // because the original English pattern already matches bare months.
+        const monthsByName = {
+            january: 1, enero: 1, gener: 1, janvier: 1, januar: 1, gennaio: 1, janeiro: 1,
+            february: 2, febrero: 2, febrer: 2, fevrier: 2, februar: 2, febbraio: 2, fevereiro: 2,
+            march: 3, marzo: 3, marc: 3, mars: 3, marz: 3, marco: 3,
+            april: 4, abril: 4, avril: 4, aprile: 4,
+            may: 5, mayo: 5, maig: 5, mai: 5, maggio: 5, maio: 5,
+            june: 6, junio: 6, juny: 6, juin: 6, juni: 6, giugno: 6, junho: 6,
+            july: 7, julio: 7, juliol: 7, juillet: 7, juli: 7, luglio: 7, julho: 7,
+            august: 8, agosto: 8, agost: 8, aout: 8,
+            september: 9, septiembre: 9, setiembre: 9, setembre: 9, septembre: 9, settembre: 9, setembro: 9,
+            october: 10, octubre: 10, octobre: 10, oktober: 10, ottobre: 10, outubro: 10,
+            november: 11, noviembre: 11, novembre: 11, novembro: 11,
+            december: 12, diciembre: 12, desembre: 12, decembre: 12, dezember: 12, dicembre: 12, dezembro: 12,
+            // Common abbreviations (3+ chars). Collision-prone short forms are
+            // deliberately EXCLUDED: "set" (en verb), "out" (en "10 out of
+            // 10"), "des" (fr article).
+            ene: 1, gen: 1, janv: 1,
+            fev: 2, febr: 2, fevr: 2,
+            abr: 4, avr: 4,
+            mag: 5,
+            giu: 6,
+            lug: 7,
+            ago: 8,
+            sept: 9, sett: 9,
+            okt: 10, ott: 10,
+            dic: 12, dez: 12
+        };
+
+        // Full weekday names — allowed to head a line alone.
+        const weekdaysFull = [
+            'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo',                      // es
+            'dilluns', 'dimarts', 'dimecres', 'dijous', 'divendres', 'dissabte', 'diumenge',               // ca
+            'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche',                       // fr
+            'montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag', 'samstag', 'sonnabend', 'sonntag',  // de
+            'lunedi', 'martedi', 'mercoledi', 'giovedi', 'venerdi', 'sabato', 'domenica',                  // it
+            'segunda-feira', 'terca-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira'                  // pt
+        ];
+        // Abbreviations / bare short forms — require an adjacent day number.
+        // (2-letter German/Catalan forms are omitted as hopelessly ambiguous.)
+        const weekdaysAbbrev = [
+            'lun', 'mar', 'mie', 'jue', 'vie', 'sab', 'dom',            // es
+            'mer', 'jeu', 'ven', 'sam', 'dim',                          // fr
+            'gio',                                                      // it
+            'seg', 'ter', 'qua', 'qui', 'sex',                          // pt (also bare full forms below)
+            'segunda', 'terca', 'quarta', 'quinta', 'sexta'             // pt bare ("segunda" = second → need number)
+        ];
+
+        const alternation = (names) => names
+            .slice()
+            .sort((a, b) => b.length - a.length)
+            .join('|');
+        const monthAlternation = alternation(Object.keys(monthsByName));
+        const sep = '[-–—/.:,]';
+        // "3 de septiembre" / "13 settembre" / "3. Oktober" / "1er septembre"
+        // / "septiembre 2026" / "septembre 5" — month with an adjacent number.
+        const monthAdjacentPattern = new RegExp(
+            `\\b\\d{1,2}(?:er|re|e|o|º|ª|st|nd|rd|th)?\\.?\\s*(?:de\\s+|di\\s+|of\\s+|d['’]\\s*)?(${monthAlternation})\\b` +
+            `|\\b(${monthAlternation})\\.?\\s*(?:de\\s+)?,?\\s*(\\d{1,4})\\b`
+        );
+        // Whole-line schedule headings: optional day, weekday, optional day.
+        const weekdayHeaderPattern = new RegExp(
+            `^(?:(\\d{1,2})\\s*${sep}?\\s*)?(?:${alternation(weekdaysFull)})(?:\\s*${sep}?\\s*(\\d{1,2}))?\\s*$`
+        );
+        const weekdayAbbrevHeaderPattern = new RegExp(
+            `^(?:(\\d{1,2})\\s*${sep}?\\s*(?:${alternation(weekdaysAbbrev)})|(?:${alternation(weekdaysAbbrev)})\\.?\\s*${sep}?\\s*(\\d{1,2}))\\s*$`
+        );
+
+        this._multilingualDateVocabulary = {
+            monthsByName,
+            monthAlternation,
+            monthAdjacentPattern,
+            weekdayHeaderPattern,
+            weekdayAbbrevHeaderPattern,
+            monthNamePattern: new RegExp(`\\b(?:${monthAlternation})\\b`)
+        };
+        return this._multilingualDateVocabulary;
+    }
+
+    hasMultilingualDateSignal(value) {
+        const folded = this.foldDiacritics(this.normalizeWhitespace(value));
+        if (!folded) return false;
+        const vocab = this.getMultilingualDateVocabulary();
+        if (vocab.weekdayHeaderPattern.test(folded)) return true;
+        if (vocab.weekdayAbbrevHeaderPattern.test(folded)) return true;
+        return vocab.monthAdjacentPattern.test(folded);
+    }
+
+    // ── Page-level month/year anchoring for day-only schedule headings ──
+    // Festival programmes state the month/year ONCE at the top ("Del 3 al 13
+    // de SEPTIEMBRE") and head each day section with weekday + day-of-month
+    // only ("JUEVES- 03"). This derives that single page-level month (and
+    // year when stated) so day-only headings can be anchored to real
+    // calendar dates. Conservative by design: a date-RANGE phrase wins; with
+    // no range phrase, the majority of full month+day dates on the page must
+    // agree on one month; any ambiguity → null (segments stay unanchored and
+    // extraction's existing date handling copes/drops as today).
+    derivePageDateContext(html) {
+        const lines = this.extractBodyParts(String(html || ''))
+            .slice(0, this.extractionLimits.multiEventScanLineLimit)
+            .map(line => this.normalizeWhitespace(line))
+            .filter(Boolean);
+        if (lines.length === 0) return null;
+        const vocab = this.getMultilingualDateVocabulary();
+        const monthName = `(?:${vocab.monthAlternation})`;
+        // "del 3 al 13 de septiembre [de 2026]" / "du 3 au 13 septembre" /
+        // "vom 3. bis 13. September 2026" / "from 3 to 13 September"
+        const wordRangePattern = new RegExp(
+            `\\b(?:del?|dal|du|vom|von|from|do)\\s+\\d{1,2}(?:er|re|e|o|º|ª|st|nd|rd|th)?\\.?\\s*` +
+            `(?:al?|au|ao|bis|to|[-–—])\\s*(?:el\\s+|le\\s+)?\\d{1,2}(?:er|re|e|o|º|ª|st|nd|rd|th)?\\.?\\s*` +
+            `(?:de\\s+|di\\s+|of\\s+|d['’]\\s*)?(${monthName})\\b(?:\\s*(?:de\\s+|,)?\\s*(\\d{4}))?`, 'g'
+        );
+        // "3-13 septiembre 2026" / "3.–13. September" / "septiembre 3-13, 2026"
+        const dashRangePattern = new RegExp(
+            `\\b\\d{1,2}\\.?\\s*[-–—]\\s*\\d{1,2}\\.?\\s*(?:de\\s+|di\\s+|of\\s+)?(${monthName})\\b(?:\\s*(?:de\\s+|,)?\\s*(\\d{4}))?` +
+            `|\\b(${monthName})\\.?\\s*\\d{1,2}\\s*[-–—]\\s*\\d{1,2}\\b(?:\\s*,?\\s*(\\d{4}))?`, 'g'
+        );
+        // Fallback census: full month+day dates ("3 de septiembre",
+        // "septiembre 13, 2026").
+        const fullDatePattern = new RegExp(
+            `\\b\\d{1,2}(?:er|re|e|o|º|ª|st|nd|rd|th)?\\.?\\s*(?:de\\s+|di\\s+|of\\s+|d['’]\\s*)?(${monthName})\\b(?:\\s*(?:de\\s+|,)?\\s*(\\d{4}))?` +
+            `|\\b(${monthName})\\.?\\s*(\\d{1,2})\\b(?:\\s*,?\\s*(\\d{4}))?`, 'g'
+        );
+
+        const collect = (pattern, foldedLine, rawLine, sink) => {
+            pattern.lastIndex = 0;
+            let match;
+            while ((match = pattern.exec(foldedLine)) !== null) {
+                const nameGroups = match.slice(1).filter(g => g && !/^\d+$/.test(g));
+                const yearGroups = match.slice(1).filter(g => g && /^\d{4}$/.test(g));
+                const month = nameGroups.length > 0 ? vocab.monthsByName[nameGroups[0]] : null;
+                if (!month) continue;
+                sink.push({
+                    month,
+                    year: yearGroups.length > 0 ? parseInt(yearGroups[0], 10) : null,
+                    phrase: rawLine.length <= 80 ? rawLine : this.trimToMaxLength(rawLine, 80)
+                });
+            }
+        };
+
+        const rangeMatches = [];
+        const fullDateMatches = [];
+        for (const rawLine of lines) {
+            const foldedLine = this.foldDiacritics(rawLine);
+            collect(wordRangePattern, foldedLine, rawLine, rangeMatches);
+            collect(dashRangePattern, foldedLine, rawLine, rangeMatches);
+            if (rangeMatches.length === 0) {
+                collect(fullDatePattern, foldedLine, rawLine, fullDateMatches);
+            }
+        }
+
+        const resolve = (matches, requireMajority) => {
+            if (matches.length === 0) return null;
+            const counts = new Map();
+            matches.forEach(m => counts.set(m.month, (counts.get(m.month) || 0) + 1));
+            const [topMonth, topCount] = Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0];
+            if (requireMajority) {
+                // Majority census: at least 2 mentions and strictly more than
+                // half of all full dates must agree on the month.
+                if (topCount < 2 || topCount * 2 <= matches.length) return null;
+            } else if (counts.size > 1) {
+                // Multiple distinct months in explicit range phrases → ambiguous.
+                return null;
+            }
+            const winners = matches.filter(m => m.month === topMonth);
+            const years = Array.from(new Set(winners.map(m => m.year).filter(y => Number.isFinite(y))));
+            return {
+                month: topMonth,
+                year: years.length === 1 ? years[0] : null,
+                phrase: winners[0].phrase
+            };
+        };
+
+        return resolve(rangeMatches, false) || resolve(fullDateMatches, true);
+    }
+
+    // The SEGMENT_DATE_CONTEXT prompt/evidence line for one segment: its
+    // day-only weekday headings ("SÁBADO - 05") anchored to the page-level
+    // month/year. '' when not applicable — segments that already state a
+    // month (any language) keep their own dates, and pages without an
+    // unambiguous month context stay untouched, so existing behavior is
+    // byte-identical wherever the anchor cannot apply.
+    buildSegmentDateContextLine(segment, pageDateContext) {
+        if (!pageDateContext || !Number.isFinite(pageDateContext.month)) return '';
+        const lines = segment && Array.isArray(segment.lines) ? segment.lines : [];
+        if (lines.length === 0) return '';
+        const vocab = this.getMultilingualDateVocabulary();
+        const monthNamesEn = ['January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'];
+        const monthNameEn = monthNamesEn[pageDateContext.month - 1];
+        if (!monthNameEn) return '';
+
+        const anchoredDates = [];
+        for (const rawLine of lines) {
+            const folded = this.foldDiacritics(this.normalizeWhitespace(rawLine));
+            if (!folded) continue;
+            // A segment that states any month name itself needs no anchor.
+            if (vocab.monthNamePattern.test(folded)) return '';
+            const headerMatch = folded.match(vocab.weekdayHeaderPattern) || folded.match(vocab.weekdayAbbrevHeaderPattern);
+            if (!headerMatch) continue;
+            const dayText = headerMatch.slice(1).find(g => g && /^\d{1,2}$/.test(g));
+            const day = dayText ? parseInt(dayText, 10) : NaN;
+            if (!Number.isFinite(day) || day < 1 || day > 31) continue;
+            const anchored = `${monthNameEn} ${day}${Number.isFinite(pageDateContext.year) ? `, ${pageDateContext.year}` : ''}`;
+            if (!anchoredDates.includes(anchored)) anchoredDates.push(anchored);
+            if (anchoredDates.length >= 3) break;
+        }
+        if (anchoredDates.length === 0) return '';
+        return `SEGMENT_DATE_CONTEXT: ${anchoredDates.join('; ')} (day-of-month heading anchored to this page's date context "${pageDateContext.phrase}")`;
     }
 
     isLikelyEventTitleLine(value) {
@@ -7599,6 +7879,12 @@ ${String(snippet || '')}`;
             if (hasSegment) {
                 dataProvided += `- SEGMENT_IMAGE_URL: Image URLs associated with this segment
 - SEGMENT_LINK_URL: Link URLs from the page\n`;
+                // Additive: documented only when the segment actually carries
+                // a SEGMENT_DATE_CONTEXT line — every other prompt stays
+                // byte-identical.
+                if (htmlData && typeof htmlData.segmentDateContext === 'string' && htmlData.segmentDateContext) {
+                    dataProvided += `- SEGMENT_DATE_CONTEXT: The calendar date(s) for this segment's day-number heading(s), anchored to the page's stated date range — use it for startDate/endDate\n`;
+                }
             }
             dataProvided += `\n`;
         }
@@ -8559,6 +8845,32 @@ TEXT:
         return tokens;
     }
 
+    // Evidence-side expansion for European hour ranges ("21h a 03h",
+    // "de 21 a 03h", "16h a 20:30h", "21h bis 3h"): the trailing "h" marks
+    // BOTH endpoints as stated times even when the leading hour carries no
+    // marker of its own ("de 21 a 03h" states 21:00 AND 03:00). Tokens are
+    // 24-hour "HH:MM". Text without a trailing-h range yields none — a bare
+    // number pair ("3 a 5 personas") never corroborates an invented time.
+    // MATCHING SIDE ONLY: the stored evidence text and prompts never change.
+    buildEuropeanHourRangeTokens(text) {
+        const tokens = new Set();
+        const source = String(text || '').toLowerCase();
+        const rangePattern = /(?:^|[^0-9:])(\d{1,2})(?:[:.h](\d{2}))?\s*h?\.?\s*(?:a|à|-|–|—|to|bis)\s*(\d{1,2})(?:[:.h](\d{2}))?\s*h\b/gi;
+        let match;
+        while ((match = rangePattern.exec(source)) !== null) {
+            const addToken = (hourText, minuteText) => {
+                const hour = parseInt(hourText, 10);
+                const minute = minuteText ? parseInt(minuteText, 10) : 0;
+                if (!Number.isFinite(hour) || hour < 0 || hour > 23) return;
+                if (!Number.isFinite(minute) || minute < 0 || minute > 59) return;
+                tokens.add(`${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`);
+            };
+            addToken(match[1], match[2]);
+            addToken(match[3], match[4]);
+        }
+        return tokens;
+    }
+
     hasDateEvidence(evidenceContext, value) {
         const dateParts = this.extractDateEvidenceParts(value);
         if (!dateParts) {
@@ -8617,6 +8929,14 @@ TEXT:
             return true;
         }
 
+        // European hour ranges ("de 21 a 03h", "21h a 03h"): the trailing h
+        // marks both endpoints as stated times — expand into 24-hour tokens
+        // and check the claimed HH:MM directly (matching side only).
+        const europeanRangeTokens = this.buildEuropeanHourRangeTokens(`${lowerEvidence}\n${rawTextForRanges}`);
+        if (europeanRangeTokens.has(normalizedTime)) {
+            return true;
+        }
+
         // Midnight and noon are written as words, not digits
         if (normalizedTime === '00:00' && /\bmidnight\b/.test(lowerEvidence)) return true;
         if (normalizedTime === '12:00' && /\bnoon\b/.test(lowerEvidence)) return true;
@@ -8664,6 +8984,21 @@ TEXT:
             const ocrNormalized = normalizeStartTimeValue(ocrTime);
             if (ocrNormalized === normalizedTime) {
                 return true;
+            }
+        }
+
+        // Dotted meridiems ("9:00 p.m.", "3 a.m.") — fold the dots on the
+        // MATCHING SIDE only and re-run the standalone check, so European
+        // pages that spell out p.m. with periods still corroborate the time.
+        const dotFoldedRaw = lowerRaw.replace(/\b([ap])\.\s?m\.?/g, '$1m');
+        if (dotFoldedRaw !== lowerRaw) {
+            standaloneTimePattern.lastIndex = 0;
+            let foldedMatch;
+            while ((foldedMatch = standaloneTimePattern.exec(dotFoldedRaw)) !== null) {
+                const ocrNormalized = normalizeStartTimeValue(foldedMatch[1]);
+                if (ocrNormalized === normalizedTime) {
+                    return true;
+                }
             }
         }
 

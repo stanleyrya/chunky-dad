@@ -7075,3 +7075,130 @@ test('normalizeAiEvent still discards dateless events with unsupported or missin
   assert.equal(parser.normalizeAiEvent({ title: 'Y' }, {}, null, null, null), null,
     'no rrule, no date → discarded exactly as before');
 });
+
+// ── Multilingual segment date signals (es/ca/fr/de/it/pt) ──────────────────
+
+test('multilingual weekday headings and month+day dates register as date signals', () => {
+  const parser = createParser();
+  // Spanish schedule headings (Bears Sitges Week shape) — with and without accents
+  assert.equal(parser.hasMultiEventDateSignal('JUEVES- 03'), true, 'es weekday + day');
+  assert.equal(parser.hasMultiEventDateSignal('SÁBADO - 05'), true, 'accented es weekday');
+  assert.equal(parser.hasMultiEventDateSignal('sabado - 05'), true, 'folded-accent equivalence');
+  assert.equal(parser.hasMultiEventDateSignal('SABADO -12'), true, 'no space before day');
+  assert.equal(parser.hasMultiEventDateSignal('MIÉRCOLES - 09'), true, 'accented miercoles');
+  assert.equal(parser.hasMultiEventDateSignal('Domingo'), true, 'full weekday alone is a heading');
+  // French / German / Italian / Portuguese / Catalan smoke cases
+  assert.equal(parser.hasMultiEventDateSignal('SAMEDI - 05'), true, 'fr weekday heading');
+  assert.equal(parser.hasMultiEventDateSignal('FREITAG 12'), true, 'de weekday heading');
+  assert.equal(parser.hasMultiEventDateSignal('MERCOLEDÌ - 09'), true, 'it weekday heading');
+  assert.equal(parser.hasMultiEventDateSignal('SEXTA-FEIRA - 11'), true, 'pt weekday heading');
+  assert.equal(parser.hasMultiEventDateSignal('DISSABTE - 05'), true, 'ca weekday heading');
+  // Month names need an adjacent number
+  assert.equal(parser.hasMultiEventDateSignal('Del 3 al 13 de SEPTIEMBRE'), true, 'es date range');
+  assert.equal(parser.hasMultiEventDateSignal('3 settembre 2026'), true, 'it day month year');
+  assert.equal(parser.hasMultiEventDateSignal('am 3. Oktober'), true, 'de ordinal day + month');
+  assert.equal(parser.hasMultiEventDateSignal('setembro 2026'), true, 'pt month + year');
+});
+
+test('multilingual signals stay conservative: no mid-sentence weekdays, bare months, or English collisions', () => {
+  const parser = createParser();
+  // Mid-sentence weekday mentions are not schedule headings
+  assert.equal(parser.hasMultiEventDateSignal('Nos vemos cada sábado en el bar'), false, 'mid-sentence weekday');
+  assert.equal(parser.hasMultiEventDateSignal('la fête du samedi soir'), false, 'fr mid-sentence weekday');
+  // Bare non-English month words never count (it "mai" = never, fr "mars" = Mars)
+  assert.equal(parser.hasMultiEventDateSignal('non torno mai qui'), false, 'it mai = never');
+  assert.equal(parser.hasMultiEventDateSignal('life on mars tribute show'), false, 'bare mars');
+  // Collision-prone abbreviations are excluded outright
+  assert.equal(parser.hasMultiEventDateSignal('10 out of 10 rating'), false, 'pt "out" excluded');
+  assert.equal(parser.hasMultiEventDateSignal('set 3 reminders'), false, 'en "set" excluded');
+  // English behavior unchanged (existing patterns still first)
+  assert.equal(parser.hasMultiEventDateSignal('July 10, 2026'), true, 'en month date');
+  assert.equal(parser.hasMultiEventDateSignal('7/25 Pride Dance @ Eagle Bar'), true, 'en numeric date');
+  assert.equal(parser.hasMultiEventDateSignal('Doors open at 10pm'), false, 'en time-only line is not a date');
+});
+
+test('Sitges-shaped multi-event page splits into per-day segments with September anchoring', () => {
+  const parser = createParser();
+  const lines = [
+    'PROGRAMA oficial',
+    'BEARS SITGES WEEK 2026',
+    'Del 3 al 13 de SEPTIEMBRE',
+    'JUEVES- 03',
+    '19h. INAUGURACIÓN BEARS SITGES WEEK Brindaremos con Cava y Aperitivo. Hotel Calipolis. Entrada Libre',
+    '20 h: Ruta del OSO en «Bares Sponsors» — Bears Bar y Bears Dance Bar',
+    'VIERNES - 04',
+    '18h : Inauguración Exposición por Blanca de Nicolas Entrada Gratuita en Espai Joan Tarrida',
+    '21h. OPENING «EARLY-VILLAGE» con motivo del aniversario de Bears Sitges',
+    '01h a 06h Opening Party en «BEARS DISCO» by Scandal',
+    'SÁBADO - 05',
+    '14:00h: BBQ & Music – POP-Air en Restaurant LE PATIO. **Tickets a la venta',
+    '21h a 03h Especial NOCHE BLANCA con PRAGUE BEARS en Bear-Village con Dj PAW.L',
+    'DOMINGO - 06',
+    '10h a 21h BEARS SITGES MARKET en Hotel Calipolis con muchos vendors',
+    '01h a 06h JUNGLE NIGHT PARTY en «BEARS DISCO» by Scandal'
+  ];
+  const html = `<html><body>${lines.map(l => `<p>${l}</p>`).join('\n')}</body></html>`;
+  const segments = parser.buildMultiEventSegments(html, 'https://bearssitges.example/programa/');
+  assert.ok(segments.length >= 4, `expected >= 4 segments, got ${segments.length}`);
+  const headed = ['JUEVES- 03', 'VIERNES - 04', 'SÁBADO - 05', 'DOMINGO - 06']
+    .filter(header => segments.some(segment => segment.lines[0] === header));
+  assert.equal(headed.length, 4, `each day heading should start a segment, got ${JSON.stringify(segments.map(s => s.lines[0]))}`);
+
+  // Page-level anchor: single unambiguous month from the range phrase, no year stated
+  const ctx = parser.derivePageDateContext(html);
+  assert.ok(ctx, 'page date context derived');
+  assert.equal(ctx.month, 9);
+  assert.equal(ctx.year, null, 'no year stated in the range phrase');
+
+  // Day-only headings inherit the month; the segment carrying the range phrase itself does not anchor
+  const sabado = segments.find(segment => segment.lines[0] === 'SÁBADO - 05');
+  const contextLine = parser.buildSegmentDateContextLine(sabado, ctx);
+  assert.ok(contextLine.startsWith('SEGMENT_DATE_CONTEXT: September 5 '), `got: ${contextLine}`);
+  const segmentHtmlData = parser.buildMultiEventSegmentHtmlData({ html, url: 'https://bearssitges.example/programa/' }, sabado, 2, segments.length, [], ctx);
+  assert.ok(segmentHtmlData.html.includes('SEGMENT_DATE_CONTEXT: September 5 '), 'anchor line rides into the segment prompt html');
+  assert.equal(segmentHtmlData.segmentDateContext, contextLine);
+
+  const intro = segments.find(segment => segment.lines.some(l => l === 'Del 3 al 13 de SEPTIEMBRE'));
+  if (intro) {
+    assert.equal(parser.buildSegmentDateContextLine(intro, ctx), '', 'segments stating their own month are never anchored');
+  }
+});
+
+test('derivePageDateContext: year capture, ambiguity, and majority fallback', () => {
+  const parser = createParser();
+  const wrap = (bodyLines) => `<html><body>${bodyLines.map(l => `<p>${l}</p>`).join('')}</body></html>`;
+  // Range phrase with year
+  const withYear = parser.derivePageDateContext(wrap(['Festival del Orgullo', '3-13 septiembre 2026', 'VIERNES - 04']));
+  assert.deepEqual({ month: withYear.month, year: withYear.year }, { month: 9, year: 2026 });
+  // Two conflicting range phrases → ambiguous → null
+  const ambiguous = parser.derivePageDateContext(wrap(['del 3 al 13 de septiembre', 'du 3 au 13 octobre']));
+  assert.equal(ambiguous, null, 'conflicting range months stay unanchored');
+  // No range phrase: majority of full dates must agree
+  const majority = parser.derivePageDateContext(wrap(['5 de septiembre fiesta', '12 de septiembre concierto', 'gala del 25 aniversario']));
+  assert.equal(majority && majority.month, 9, 'majority of full dates anchors');
+  const split = parser.derivePageDateContext(wrap(['5 de septiembre fiesta', '12 de octubre concierto']));
+  assert.equal(split, null, 'no majority → unanchored');
+  // English pages: month+day census works identically, so anchoring is language-neutral
+  const english = parser.derivePageDateContext(wrap(['September 5 party', 'September 12 dance', 'gala night'])); 
+  assert.equal(english && english.month, 9);
+});
+
+test('deriveSegmentListingTitle skips European time-only lines', () => {
+  const parser = createParser();
+  const segment = { lines: ['SÁBADO - 05', '14:00h', '21h a 03h', 'de 21 a 03h', 'FIESTA BLANCA en Bear-Village'] };
+  assert.equal(parser.deriveSegmentListingTitle(segment), 'FIESTA BLANCA en Bear-Village');
+});
+
+test('hasTimeEvidence understands European time notations (matching side only)', () => {
+  const parser = createParser();
+  const evidence = (text) => parser.buildAiEvidenceContextFromText(text);
+  assert.equal(parser.hasTimeEvidence(evidence('14:00h: BBQ & Music en LE PATIO'), '14:00'), true, '14:00h');
+  assert.equal(parser.hasTimeEvidence(evidence('21h a 03h Especial NOCHE BLANCA'), '21:00'), true, '21h start');
+  assert.equal(parser.hasTimeEvidence(evidence('21h a 03h Especial NOCHE BLANCA'), '03:00'), true, '03h end');
+  assert.equal(parser.hasTimeEvidence(evidence('de 21 a 03h FIESTA'), '21:00'), true, 'unmarked leading hour in an h-range');
+  assert.equal(parser.hasTimeEvidence(evidence('16h a 20:30h BEAR TEA-DANCE'), '20:30'), true, 'minutes via h suffix');
+  assert.equal(parser.hasTimeEvidence(evidence('9:00 p.m. to 3:00 a.m. BEARS on CRUISE'), '21:00'), true, 'dotted meridiem');
+  // Bare number pairs never corroborate an invented time
+  assert.equal(parser.hasTimeEvidence(evidence('grupos de 3 a 5 personas'), '03:00'), false, 'bare range without h');
+  assert.equal(parser.hasTimeEvidence(evidence('MAY 3 tickets $5'), '03:00'), false, 'bare digits stay rejected');
+});
