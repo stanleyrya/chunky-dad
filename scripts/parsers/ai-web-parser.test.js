@@ -7183,6 +7183,54 @@ test('derivePageDateContext: year capture, ambiguity, and majority fallback', ()
   assert.equal(english && english.month, 9);
 });
 
+// The multilingual full-name vocabulary is DERIVED from Intl locale data, with
+// the static tables kept only as the no-Intl safety net (iOS JSC may lack
+// locale data). This drift guard pins the two representations to each other:
+// if Intl (CLDR) ever spells a name differently than the static table — or the
+// static table gains a word Intl doesn't produce — this fails and the entry
+// has to be reconciled (folded into both, or moved to CURATED_DATE_VOCABULARY
+// as an explicit judgment call like "sonnabend"/"setiembre").
+test('Intl-derived date vocabulary equals the static fallback for every locale (drift guard)', () => {
+  const parser = createParser();
+  const staticFallback = parser.getStaticDateVocabularyFallback();
+  const locales = Object.keys(staticFallback);
+  assert.deepEqual(locales.sort(), ['ca', 'de', 'en', 'es', 'fr', 'it', 'pt'], 'one static table per supported locale');
+  const derived = parser.deriveDateVocabularyFromIntl(locales);
+  for (const locale of locales) {
+    assert.equal(derived[locale].source, 'intl', `${locale}: Node's Intl carries full locale data, nothing may fall back here`);
+    assert.deepEqual(derived[locale].weekdays, staticFallback[locale].weekdays, `${locale} weekdays drifted between Intl and the static fallback`);
+    assert.deepEqual(derived[locale].months, staticFallback[locale].months, `${locale} months drifted between Intl and the static fallback`);
+  }
+});
+
+test('locale-data sanity check: Intl output identical to English falls back to the static table', () => {
+  // Simulate iOS JavaScriptCore without locale data: every locale silently
+  // formats with the default (en) names. The derivation must detect the
+  // en-identical output and use the static fallback for that locale.
+  const RealDateTimeFormat = Intl.DateTimeFormat;
+  try {
+    Intl.DateTimeFormat = function (locale, options) {
+      return new RealDateTimeFormat(locale === 'ca' || locale === 'xx' ? 'en' : locale, options);
+    };
+    const parser = createParser();
+    const derived = parser.deriveDateVocabularyFromIntl(['en', 'ca', 'es', 'xx']);
+    const staticFallback = parser.getStaticDateVocabularyFallback();
+    assert.equal(derived.ca.source, 'static-fallback', 'en-identical weekday names mean no real locale data');
+    assert.deepEqual(derived.ca.weekdays, staticFallback.ca.weekdays, 'the static Catalan weekdays take over');
+    assert.deepEqual(derived.ca.months, staticFallback.ca.months, 'the static Catalan months take over');
+    assert.equal(derived.es.source, 'intl', 'healthy locales still derive from Intl');
+    assert.equal(derived.en.source, 'intl', 'en itself is exempt from the differs-from-en check');
+    // A locale with no static table contributes nothing rather than English words.
+    assert.equal(derived.xx.source, 'static-fallback');
+    assert.deepEqual(derived.xx.weekdays, []);
+    // The composed vocabulary still understands Catalan via the safety net.
+    assert.equal(parser.hasMultiEventDateSignal('DISSABTE - 05'), true, 'ca weekday heading survives broken Intl');
+    assert.equal(parser.getMultilingualDateVocabulary().monthsByName.setembre, 9, 'ca month mapping survives broken Intl');
+  } finally {
+    Intl.DateTimeFormat = RealDateTimeFormat;
+  }
+});
+
 test('deriveSegmentListingTitle skips European time-only lines', () => {
   const parser = createParser();
   const segment = { lines: ['SÁBADO - 05', '14:00h', '21h a 03h', 'de 21 a 03h', 'FIESTA BLANCA en Bear-Village'] };

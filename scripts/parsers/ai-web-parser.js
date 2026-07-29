@@ -115,6 +115,112 @@ const RRULE_BYDAY_EVIDENCE_REGEXES = {
 // signal in schedule prose.
 const RRULE_ORDINAL_WORD_REGEX = /\b(?:1st|first|2nd|second|3rd|third|4th|fourth|5th|fifth|last)\b/i;
 
+// ── Multilingual date-vocabulary locales ─────────────────────────────────────
+// The languages of the configured cities (sitges/madrid/pv/mexico-city →
+// es/ca; paris → fr; berlin → de; milan → it; sao-paulo → pt), plus en for
+// the page-level date-context anchor. Adding a language = adding its locale
+// here (full names come from Intl) + curating its street abbreviations in
+// CURATED_DATE_VOCABULARY.
+const DATE_VOCABULARY_LOCALES = ['en', 'es', 'ca', 'fr', 'de', 'it', 'pt'];
+
+// ── Static date-vocabulary fallback (the no-Intl safety net) ─────────────────
+// The runtime vocabulary is PLATFORM-DERIVED from Intl.DateTimeFormat (see
+// deriveDateVocabularyFromIntl). These static per-locale tables exist only as
+// the safety net for platforms whose Intl is missing or lacks locale data —
+// iOS JavaScriptCore may silently format every locale with the default
+// locale's names, which the derivation detects (a non-en locale whose derived
+// weekdays EQUAL the en set has no real locale data) and answers by using
+// these words for that locale instead. The merged vocabulary is always
+// derived ∪ static, so a partially-broken Intl can only ADD spellings, never
+// lose known-good ones. A Node test asserts the Intl-derived sets EQUAL these
+// sets for every locale, so the two can never drift apart.
+//
+// All entries are diacritic-folded lowercase (foldDiacritics); months are
+// index-ordered arrays (index 0 = January) so the name→month-number mapping
+// falls out of the position, exactly like the Intl-derived path.
+const STATIC_DATE_VOCABULARY_FALLBACK = {
+    en: {
+        // en weekdays serve the sanity check + tests only — they are never
+        // added to the weekday-heading patterns (English keeps riding the
+        // original patterns in hasMultiEventDateSignal, untouched). en months
+        // DO join the vocabulary so the page-level date-context anchor
+        // understands every supported page language; they add nothing to
+        // signal detection because the original English pattern already
+        // matches bare months.
+        weekdays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+        months: ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december']
+    },
+    es: {
+        weekdays: ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'],
+        months: ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+    },
+    ca: {
+        weekdays: ['dilluns', 'dimarts', 'dimecres', 'dijous', 'divendres', 'dissabte', 'diumenge'],
+        months: ['gener', 'febrer', 'marc', 'abril', 'maig', 'juny', 'juliol', 'agost', 'setembre', 'octubre', 'novembre', 'desembre']
+    },
+    fr: {
+        weekdays: ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'],
+        months: ['janvier', 'fevrier', 'mars', 'avril', 'mai', 'juin', 'juillet', 'aout', 'septembre', 'octobre', 'novembre', 'decembre']
+    },
+    de: {
+        weekdays: ['montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag', 'samstag', 'sonntag'],
+        months: ['januar', 'februar', 'marz', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'dezember']
+    },
+    it: {
+        weekdays: ['lunedi', 'martedi', 'mercoledi', 'giovedi', 'venerdi', 'sabato', 'domenica'],
+        months: ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre']
+    },
+    pt: {
+        weekdays: ['segunda-feira', 'terca-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sabado', 'domingo'],
+        months: ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
+    }
+};
+
+// ── Hand-curated date vocabulary (judgment calls, NOT derivable) ─────────────
+// These stay hand-typed on purpose — each entry is an editorial decision, not
+// a fact Intl can produce:
+// - Weekday/month ABBREVIATIONS: Intl 'short' forms ("mié.", "sep.") don't
+//   match street usage on flyers and programmes ("MIÉ", "sett", "3 sept"),
+//   and choosing which short forms are SAFE is a collision call — "mar" (sea),
+//   "ven" (come) are only allowed with an adjacent day number, and "set" (en
+//   verb), "out" (en "10 out of 10"), "des" (fr article) are excluded outright.
+// - Regional/variant spellings CLDR does not emit for the base locale:
+//   de "sonnabend" (northern-German Saturday), es "setiembre" (accepted
+//   variant of septiembre).
+const CURATED_DATE_VOCABULARY = {
+    // Full-weekday synonyms Intl cannot derive — join weekdaysFull (allowed to
+    // head a line alone).
+    weekdayFullExtras: ['sonnabend'],
+    // Month-name variant spellings Intl cannot derive (name → month number).
+    monthFullExtras: { setiembre: 9 },
+    // Common month abbreviations (3+ chars, name → month number).
+    // Collision-prone short forms are deliberately EXCLUDED: "set" (en verb),
+    // "out" (en "10 out of 10"), "des" (fr article).
+    monthAbbreviations: {
+        ene: 1, gen: 1, janv: 1,
+        fev: 2, febr: 2, fevr: 2,
+        abr: 4, avr: 4,
+        mag: 5,
+        giu: 6,
+        lug: 7,
+        ago: 8,
+        sept: 9, sett: 9,
+        okt: 10, ott: 10,
+        dic: 12, dez: 12
+    },
+    // Weekday abbreviations / bare short forms — require an adjacent day
+    // number ("dom - 13"), because they collide with ordinary words ("mar" =
+    // sea, "ven" = come). (2-letter German/Catalan forms are omitted as
+    // hopelessly ambiguous.)
+    weekdayAbbreviations: [
+        'lun', 'mar', 'mie', 'jue', 'vie', 'sab', 'dom',            // es
+        'mer', 'jeu', 'ven', 'sam', 'dim',                          // fr
+        'gio',                                                      // it
+        'seg', 'ter', 'qua', 'qui', 'sex',                          // pt (also bare full forms below)
+        'segunda', 'terca', 'quarta', 'quinta', 'sexta'             // pt bare ("segunda" = second → need number)
+    ]
+};
+
 // ============================================================================
 // NORMALIZATION HELPERS
 // ============================================================================
@@ -2252,12 +2358,16 @@ class AiWebParser {
     }
 
     // ── Multilingual segment date-signal vocabulary (es/ca/fr/de/it/pt) ──
-    // Linguistic-generic weekday/month tables for the languages of the
-    // configured cities (sitges/madrid/pv/mexico-city → es/ca; paris → fr;
-    // berlin → de; milan → it; sao-paulo → pt). NO site-specific rules. All
-    // entries are diacritic-folded lowercase (foldDiacritics), so a single
-    // entry covers "SÁBADO"/"Sábado"/"sabado" alike. English keeps riding the
-    // original patterns in hasMultiEventDateSignal, untouched.
+    // Linguistic-generic weekday/month vocabulary for the languages of the
+    // configured cities (DATE_VOCABULARY_LOCALES). NO site-specific rules,
+    // and no hand-typed full names: full weekday/month names are DERIVED
+    // from the platform's Intl locale data (deriveDateVocabularyFromIntl),
+    // with STATIC_DATE_VOCABULARY_FALLBACK as the no-Intl safety net and
+    // CURATED_DATE_VOCABULARY carrying the judgment-call entries
+    // (abbreviations, variant spellings). All entries are diacritic-folded
+    // lowercase (foldDiacritics), so a single entry covers
+    // "SÁBADO"/"Sábado"/"sabado" alike. English keeps riding the original
+    // patterns in hasMultiEventDateSignal, untouched.
     //
     // Signal rules (deliberately conservative, so multilingual support is
     // purely additive):
@@ -2272,59 +2382,114 @@ class AiWebParser {
     //   ("3 de septiembre", "13 settembre", "septembre 2026", "3. Oktober").
     //   Bare month words never count — unlike English "may"/"mar", words like
     //   "mai" (it: never) and "mars" (fr: Mars) are too common as prose.
+
+    // Derive per-locale full weekday (7) and month (12) names from
+    // Intl.DateTimeFormat over a known week (2024-01-01 was a Monday) and the
+    // 15th of each month of 2024, folded through foldDiacritics.
+    //
+    // Locale-data sanity check: iOS JavaScriptCore's Intl may LACK locale
+    // data and silently format every locale with the default locale's names,
+    // so a non-en locale's derived set only counts if its weekdays DIFFER
+    // from the derived en set; a locale that fails (or any Intl error) falls
+    // back to STATIC_DATE_VOCABULARY_FALLBACK for that locale. Returns
+    // { [locale]: { weekdays: [7], months: [12, index 0 = January], source:
+    // 'intl' | 'static-fallback' } }.
+    // Accessor for the no-Intl safety net tables (see the const's doc block).
+    // The drift-guard test compares these against the Intl-derived sets.
+    getStaticDateVocabularyFallback() {
+        return STATIC_DATE_VOCABULARY_FALLBACK;
+    }
+
+    deriveDateVocabularyFromIntl(locales) {
+        const hasIntl = typeof Intl !== 'undefined' && typeof Intl.DateTimeFormat === 'function';
+        const deriveLocale = (locale) => {
+            const weekdayFormat = new Intl.DateTimeFormat(locale, { weekday: 'long', timeZone: 'UTC' });
+            const monthFormat = new Intl.DateTimeFormat(locale, { month: 'long', timeZone: 'UTC' });
+            const weekdays = [];
+            for (let day = 0; day < 7; day++) {
+                weekdays.push(this.foldDiacritics(weekdayFormat.format(new Date(Date.UTC(2024, 0, 1 + day)))));
+            }
+            const months = [];
+            for (let month = 0; month < 12; month++) {
+                months.push(this.foldDiacritics(monthFormat.format(new Date(Date.UTC(2024, month, 15)))));
+            }
+            return { weekdays, months };
+        };
+        const tryDerive = (locale) => {
+            if (!hasIntl) return null;
+            try {
+                return deriveLocale(locale);
+            } catch (_) {
+                return null;
+            }
+        };
+
+        // en is the sanity reference: a "derived" non-en locale whose
+        // weekdays equal the en names has no real locale data.
+        const enDerived = tryDerive('en');
+        const enFallback = STATIC_DATE_VOCABULARY_FALLBACK.en;
+        const enWeekdaySignature = (enDerived || enFallback).weekdays.join('|');
+
+        const result = {};
+        for (const locale of locales) {
+            const derived = locale === 'en' ? enDerived : tryDerive(locale);
+            const healthy = !!derived
+                && derived.weekdays.length === 7 && derived.weekdays.every(Boolean)
+                && derived.months.length === 12 && derived.months.every(Boolean)
+                && (locale === 'en' || derived.weekdays.join('|') !== enWeekdaySignature);
+            if (healthy) {
+                result[locale] = { weekdays: derived.weekdays, months: derived.months, source: 'intl' };
+            } else {
+                const fallback = STATIC_DATE_VOCABULARY_FALLBACK[locale] || { weekdays: [], months: [] };
+                result[locale] = { weekdays: fallback.weekdays.slice(), months: fallback.months.slice(), source: 'static-fallback' };
+            }
+        }
+        return result;
+    }
+
     getMultilingualDateVocabulary() {
         if (this._multilingualDateVocabulary) return this._multilingualDateVocabulary;
 
-        // Folded month name → month number (1-12). Includes English so the
-        // page-level date-context anchor understands every supported page
-        // language; the English entries add nothing to signal detection
-        // because the original English pattern already matches bare months.
-        const monthsByName = {
-            january: 1, enero: 1, gener: 1, janvier: 1, januar: 1, gennaio: 1, janeiro: 1,
-            february: 2, febrero: 2, febrer: 2, fevrier: 2, februar: 2, febbraio: 2, fevereiro: 2,
-            march: 3, marzo: 3, marc: 3, mars: 3, marz: 3, marco: 3,
-            april: 4, abril: 4, avril: 4, aprile: 4,
-            may: 5, mayo: 5, maig: 5, mai: 5, maggio: 5, maio: 5,
-            june: 6, junio: 6, juny: 6, juin: 6, juni: 6, giugno: 6, junho: 6,
-            july: 7, julio: 7, juliol: 7, juillet: 7, juli: 7, luglio: 7, julho: 7,
-            august: 8, agosto: 8, agost: 8, aout: 8,
-            september: 9, septiembre: 9, setiembre: 9, setembre: 9, septembre: 9, settembre: 9, setembro: 9,
-            october: 10, octubre: 10, octobre: 10, oktober: 10, ottobre: 10, outubro: 10,
-            november: 11, noviembre: 11, novembre: 11, novembro: 11,
-            december: 12, diciembre: 12, desembre: 12, decembre: 12, dezember: 12, dicembre: 12, dezembro: 12,
-            // Common abbreviations (3+ chars). Collision-prone short forms are
-            // deliberately EXCLUDED: "set" (en verb), "out" (en "10 out of
-            // 10"), "des" (fr article).
-            ene: 1, gen: 1, janv: 1,
-            fev: 2, febr: 2, fevr: 2,
-            abr: 4, avr: 4,
-            mag: 5,
-            giu: 6,
-            lug: 7,
-            ago: 8,
-            sept: 9, sett: 9,
-            okt: 10, ott: 10,
-            dic: 12, dez: 12
-        };
+        const derived = this.deriveDateVocabularyFromIntl(DATE_VOCABULARY_LOCALES);
 
-        // Full weekday names — allowed to head a line alone.
-        const weekdaysFull = [
-            'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo',                      // es
-            'dilluns', 'dimarts', 'dimecres', 'dijous', 'divendres', 'dissabte', 'diumenge',               // ca
-            'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche',                       // fr
-            'montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag', 'samstag', 'sonnabend', 'sonntag',  // de
-            'lunedi', 'martedi', 'mercoledi', 'giovedi', 'venerdi', 'sabato', 'domenica',                  // it
-            'segunda-feira', 'terca-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira'                  // pt
-        ];
-        // Abbreviations / bare short forms — require an adjacent day number.
-        // (2-letter German/Catalan forms are omitted as hopelessly ambiguous.)
-        const weekdaysAbbrev = [
-            'lun', 'mar', 'mie', 'jue', 'vie', 'sab', 'dom',            // es
-            'mer', 'jeu', 'ven', 'sam', 'dim',                          // fr
-            'gio',                                                      // it
-            'seg', 'ter', 'qua', 'qui', 'sex',                          // pt (also bare full forms below)
-            'segunda', 'terca', 'quarta', 'quinta', 'sexta'             // pt bare ("segunda" = second → need number)
-        ];
+        // Folded month name → month number (1-12): the month number is the
+        // array index the name was generated at (Intl-derived and static
+        // fallback arrays are both index-ordered), no hand-maintained map.
+        // Intl-derived and static-fallback names are ALWAYS merged, so a
+        // partially-broken Intl can only add spellings, never lose the
+        // known-good static ones. Includes English so the page-level
+        // date-context anchor understands every supported page language; the
+        // English entries add nothing to signal detection because the
+        // original English pattern already matches bare months.
+        const monthsByName = {};
+        const addMonths = (months) => months.forEach((name, index) => {
+            if (name && !(name in monthsByName)) monthsByName[name] = index + 1;
+        });
+        // Full weekday names — allowed to head a line alone. en is skipped on
+        // purpose: English weekday headings are not multilingual signals
+        // (English rides the original patterns in hasMultiEventDateSignal).
+        const weekdaysFull = [];
+        const addWeekdays = (weekdays) => weekdays.forEach((name) => {
+            if (name && !weekdaysFull.includes(name)) weekdaysFull.push(name);
+        });
+        for (const locale of DATE_VOCABULARY_LOCALES) {
+            addMonths(derived[locale].months);
+            addMonths((STATIC_DATE_VOCABULARY_FALLBACK[locale] || { months: [] }).months);
+            if (locale === 'en') continue;
+            addWeekdays(derived[locale].weekdays);
+            addWeekdays((STATIC_DATE_VOCABULARY_FALLBACK[locale] || { weekdays: [] }).weekdays);
+        }
+        // Hand-curated entries ride on top: variant spellings and street
+        // abbreviations are editorial judgment calls, not derivable facts
+        // (see CURATED_DATE_VOCABULARY).
+        addWeekdays(CURATED_DATE_VOCABULARY.weekdayFullExtras);
+        for (const [name, monthNumber] of Object.entries(CURATED_DATE_VOCABULARY.monthFullExtras)) {
+            if (!(name in monthsByName)) monthsByName[name] = monthNumber;
+        }
+        for (const [name, monthNumber] of Object.entries(CURATED_DATE_VOCABULARY.monthAbbreviations)) {
+            if (!(name in monthsByName)) monthsByName[name] = monthNumber;
+        }
+        const weekdaysAbbrev = CURATED_DATE_VOCABULARY.weekdayAbbreviations;
 
         const alternation = (names) => names
             .slice()
