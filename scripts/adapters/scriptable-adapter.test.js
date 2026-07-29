@@ -2788,6 +2788,162 @@ test('applyParserPickerSelection flips enabled by membership without mutating or
   assert.equal(original[1].enabled, true);
   assert.equal(original[2].enabled, undefined);
   assert.notEqual(applied[0], original[0], 'copies, not the same objects');
+
+  // Empty selection → every parser session-disabled (this is the dismissal
+  // outcome: with no static enabled flags in config, empty means run nothing)
+  const none = adapter.applyParserPickerSelection(original, new Set());
+  assert.deepEqual(
+    none.map((p) => p.enabled),
+    [false, false, false],
+    'empty Set disables every parser'
+  );
+});
+
+test('applyParserPickerOutcome: null (dismissal) cancels the run and logs it; a selection applies + logs the run line', () => {
+  const adapter = buildAdapter();
+  const parsers = [{ name: 'Alpha' }, { name: 'Beta' }, { name: 'Gamma' }];
+
+  const logged = [];
+  const originalLog = console.log;
+  console.log = (...args) => logged.push(args.join(' '));
+  try {
+    const cancelled = adapter.applyParserPickerOutcome(parsers, null, 3);
+    assert.deepEqual(
+      cancelled.map((p) => p.enabled),
+      [false, false, false],
+      'null → zero-parser session (all session-disabled)'
+    );
+    assert.ok(
+      logged.includes(
+        '📱 Scriptable: Parser picker dismissed — run cancelled (no parsers selected)'
+      ),
+      'dismissal log line emitted'
+    );
+
+    const picked = adapter.applyParserPickerOutcome(parsers, new Set(['Beta']), 3);
+    assert.deepEqual(
+      picked.map((p) => p.enabled),
+      [false, true, false],
+      'selection applied per-session'
+    );
+    assert.ok(
+      logged.includes('📱 Scriptable: Parser picker: running 1 of 3 parsers'),
+      'existing running-X-of-Y log shape preserved'
+    );
+  } finally {
+    console.log = originalLog;
+  }
+
+  // Originals never mutated
+  assert.equal(parsers[0].enabled, undefined);
+});
+
+// ---------------------------------------------------------------------------
+// Picker-state persistence: pre-selection = the last run's confirmed picks.
+// ---------------------------------------------------------------------------
+
+// Memory-backed FileManager stub for the picker-state round-trip.
+function installMemoryFm(adapter) {
+  const files = new Map();
+  adapter.fm = {
+    joinPath: (a, b) => `${a}/${b}`,
+    fileExists: (p) => files.has(p) || p === adapter.baseDir,
+    createDirectory: () => {},
+    readString: (p) => (files.has(p) ? files.get(p) : null),
+    writeString: (p, text) => {
+      files.set(p, text);
+    },
+    downloadFileFromiCloud: async () => {}
+  };
+  return files;
+}
+
+test('picker-state: save/load round-trip; unknown names filtered on load', async () => {
+  const adapter = buildAdapter();
+  const files = installMemoryFm(adapter);
+
+  assert.deepEqual(
+    await adapter.loadPickerState(['Alpha', 'Beta']),
+    [],
+    'no state file → empty pre-selection (first run)'
+  );
+
+  assert.equal(await adapter.savePickerState(['Alpha', 'Ghost']), true);
+  assert.ok(files.has(adapter.getPickerStatePath()), 'state file written');
+  const payload = JSON.parse(files.get(adapter.getPickerStatePath()));
+  assert.deepEqual(payload.selected, ['Alpha', 'Ghost'], 'selection persisted verbatim');
+
+  assert.deepEqual(
+    await adapter.loadPickerState(['Alpha', 'Beta']),
+    ['Alpha'],
+    'round-trip keeps known names, filters unknown (removed/renamed parsers)'
+  );
+});
+
+test('picker-state: corrupt or misshapen file → empty pre-selection', async () => {
+  const adapter = buildAdapter();
+  const files = installMemoryFm(adapter);
+  const statePath = adapter.getPickerStatePath();
+
+  files.set(statePath, 'not json {{{');
+  assert.deepEqual(await adapter.loadPickerState(['Alpha']), [], 'corrupt JSON → []');
+
+  files.set(statePath, JSON.stringify({ selected: 'Alpha' }));
+  assert.deepEqual(await adapter.loadPickerState(['Alpha']), [], 'non-array selected → []');
+
+  files.set(statePath, JSON.stringify({ selected: [42, null, 'Alpha'] }));
+  assert.deepEqual(
+    await adapter.loadPickerState(['Alpha']),
+    ['Alpha'],
+    'non-string entries dropped'
+  );
+
+  assert.deepEqual(adapter.parsePickerState(null, ['Alpha']), [], 'null text → []');
+  assert.deepEqual(adapter.parsePickerState('null', ['Alpha']), [], 'JSON null → []');
+});
+
+test('presentParserPicker: swipe-down dismissal resolves null and persists nothing (headless UITable)', async () => {
+  const adapter = buildAdapter();
+  const files = installMemoryFm(adapter);
+
+  // Minimal UITable stubs: present() resolves immediately without any action
+  // row being tapped — exactly the swipe-down dismissal path.
+  const originalUITable = global.UITable;
+  const originalUITableRow = global.UITableRow;
+  const originalFont = global.Font;
+  const originalColor = global.Color;
+  global.UITable = class {
+    addRow() {}
+    removeAllRows() {}
+    reload() {}
+    present() {
+      return Promise.resolve();
+    }
+  };
+  global.UITableRow = class {
+    addText() {
+      return {};
+    }
+  };
+  global.Font = { boldSystemFont: () => ({}), systemFont: () => ({}) };
+  global.Color = { white: () => ({}), brown: () => ({}), blue: () => ({}), gray: () => ({}) };
+
+  try {
+    const picked = await adapter.presentParserPicker({
+      parsers: [{ name: 'Alpha' }, { name: 'Beta' }]
+    });
+    assert.equal(picked, null, 'dismissal → null');
+    assert.equal(
+      files.has(adapter.getPickerStatePath()),
+      false,
+      'no picker-state written on dismissal'
+    );
+  } finally {
+    global.UITable = originalUITable;
+    global.UITableRow = originalUITableRow;
+    global.Font = originalFont;
+    global.Color = originalColor;
+  }
 });
 
 const PICKER_METRICS_FIXTURE = [
@@ -2851,9 +3007,9 @@ test('buildParserPickerEntries orders stalest-first: never-written, then stale, 
   const now = new Date('2026-07-27T03:00:00.000Z').getTime();
   const records = adapter.parseMetricsNdjsonForPicker(PICKER_METRICS_FIXTURE);
   const parsers = [
-    { name: 'Alpha', enabled: true }, // last write 7d ago (fresh-ish)
-    { name: 'Beta', enabled: false }, // last write 17d ago (stale)
-    { name: 'Nope' } // never written, enabled defaults on
+    { name: 'Alpha' }, // last write 7d ago (fresh-ish)
+    { name: 'Beta' }, // last write 17d ago (stale)
+    { name: 'Nope' } // never written
   ];
 
   const entries = adapter.buildParserPickerEntries(parsers, records, now);
@@ -2864,8 +3020,6 @@ test('buildParserPickerEntries orders stalest-first: never-written, then stale, 
     'never-written ranks before stale ranks before fresh'
   );
   assert.equal(entries[0].daysSince, null);
-  assert.equal(entries[0].enabled, true, 'enabled !== false defaults to selected-eligible');
-  assert.equal(entries[1].enabled, false);
   assert.equal(Math.floor(entries[1].daysSince), 17);
   assert.equal(Math.floor(entries[2].daysSince), 7);
 });

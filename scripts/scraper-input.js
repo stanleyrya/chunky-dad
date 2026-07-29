@@ -14,7 +14,15 @@ const scraperConfig = {
   config: {
     daysToLookAhead: null,
     // dryRun: true, // Preview mode: analyze + display without writing to the calendar (default: false)
-    pickParsers: true, // Parser picker at run start (manual runs only; automation/widget runs skip it; selection is session-scoped — never edits this file) (default: false)
+    // Parser picker at run start OWNS run selection (default: false).
+    // Manual Scriptable runs only; the selection is session-scoped and never
+    // edits this file. It pre-selects the previous run's confirmed picks
+    // (persisted in picker-state.json); dismissing the picker CANCELS the run.
+    // ⚠️ Parser entries carry NO static enabled flags anymore: with this set
+    // to false — or on manual runs outside Scriptable (web/server) — a manual
+    // run executes ALL parsers. Scheduled automation is unaffected (no picker;
+    // per-parser automationEnabled governs what automation runs).
+    pickParsers: true,
     pageCache: {
       enabled: true,
       ttlDays: 3,
@@ -137,7 +145,6 @@ const scraperConfig = {
   parsers: [
     {
       name: "Megawoof America",
-      enabled: false,
       urls: ["https://www.eventbrite.com/o/megawoof-america-18118978189"],
       alwaysBear: true,
       metadata: {
@@ -148,7 +155,6 @@ const scraperConfig = {
     },
     {
       name: "Coach After Dark",
-      enabled: false,
       urls: ["https://www.eventbrite.com/o/bear-happy-hour-87043830313"],
       alwaysBear: true,
       metadata: {
@@ -166,7 +172,6 @@ const scraperConfig = {
     },
     {
       name: "Bearracuda Events",
-      enabled: false,
       urls: [
         "https://bearracuda.com/",
         "https://www.eventbrite.com/o/bearracuda-21867032189",
@@ -188,7 +193,6 @@ const scraperConfig = {
     },
     {
       name: "CHUNK",
-      enabled: false,
       urls: ["https://www.chunk-party.com"],
       // Deliberate exclusions only — /shop, /contact, /_api/ are blocked built-in
       discoveryBlockedPatterns: [
@@ -204,7 +208,6 @@ const scraperConfig = {
     },
     {
       name: "Furball",
-      enabled: false,
       urls: ["https://www.furball.nyc"],
       alwaysBear: true,
       urlDiscoveryDepth: 0,
@@ -217,7 +220,6 @@ const scraperConfig = {
     },
     {
       name: "Cubhouse",
-      enabled: false,
       urls: ["https://linktr.ee/cubhouse"],
       discoveryBlockedPatterns: ["www.eventbrite.com/o/", "linktr.ee"],
       alwaysBear: true,
@@ -229,7 +231,6 @@ const scraperConfig = {
     },
     {
       name: "Goldiloxx",
-      enabled: false,
       // Homeless promoter — events scatter across ticketing platforms (links
       // rotate in their Instagram bio). Stable doors: the RedEye JSON API
       // search (self-refreshing; JSON-API pathway extracts it structurally)
@@ -253,7 +254,6 @@ const scraperConfig = {
     },
     {
       name: "3 Dollar Bill",
-      enabled: false,
       // Brooklyn queer venue (260 Meserole St; second space The Yard @ 270
       // Meserole Ave — per-event JSON-LD location is authoritative).
       // Squarespace, server-rendered listing, JSON-LD Event on event pages.
@@ -268,7 +268,6 @@ const scraperConfig = {
     },
     {
       name: "Twisted Bear",
-      enabled: false,
       // discoveryOnly: true,
       urls: [
         "https://www.eventbrite.com/o/nab-events-llc-51471535173",
@@ -283,7 +282,6 @@ const scraperConfig = {
     },
     {
       name: "Dallas Eagle",
-      enabled: false,
       urls: ["https://www.eventbrite.com/o/77139864473"],
       metadata: {
         website: { value: "https://www.thedallaseagle.com" },
@@ -292,11 +290,10 @@ const scraperConfig = {
         mastodon: { value: "https://mastodon.social/@dallaseagle" },
       },
     },
-    { name: "massive.club", enabled: true, urls: ["https://www.massive.club"], alwaysBear: false },
+    { name: "massive.club", urls: ["https://www.massive.club"], alwaysBear: false },
     // ── Festival-week schedules 2026-07-28 (recon-verified) ─────────────
     {
       name: "Bears Sitges Week",
-      enabled: false,
       automationEnabled: false,
       // Official Bears Sitges Club programme — one long WordPress page,
       // ~45 timed activities Sept 3-13 with venues inline. Spanish text;
@@ -316,7 +313,6 @@ const scraperConfig = {
     },
     {
       name: "Spooky Bear",
-      enabled: false,
       automationEnabled: false,
       // Northeast Ursamen's Provincetown Halloween weekend. 2026 schedule
       // publishes on THIS url ~Sept/Oct (2025 precedent: full text schedule,
@@ -333,11 +329,10 @@ const scraperConfig = {
         facebook: { value: "https://www.facebook.com/NEUrsamen" },
       },
     },
-    // ── Onboarding batch 2026-07-27 (recon-verified) — each ships disabled;
-    // run one at a time via the parser picker, review, then enable. ──────
+    // ── Onboarding batch 2026-07-27 (recon-verified) — run each one alone
+    // via the parser picker and review before including it in bigger runs. ──
     {
       name: "The Lumberyard",
-      enabled: false,
       urls: ["https://www.thelumberyardbar.com/events"],
       // Seattle bear-friendly bar (9630 16th Ave SW) with general weekly
       // programming — bear check filters, not alwaysBear.
@@ -348,14 +343,12 @@ const scraperConfig = {
     },
     {
       name: "CubScout LA",
-      enabled: false,
       // Eagle LA's recurring bear party page (The Events Calendar, JSON-LD).
       urls: ["https://eaglela.com/events/cub-scout-3/"],
       alwaysBear: true,
     },
     {
       name: "BEEFMINCE",
-      enabled: false,
       // Multi-city UK (London/Brighton/Manchester/Birmingham + Sitges);
       // per-event city comes from event text; tickets link out to dice.fm.
       urls: ["https://beefmince.com/events"],
@@ -366,7 +359,6 @@ const scraperConfig = {
     },
     {
       name: "BeefDip",
-      enabled: false,
       // Puerto Vallarta bear week; single schedule page, venues appear as
       // Google Maps links (maps-link address harvesting applies).
       urls: ["https://beefdip.com/planned-events/"],
@@ -377,7 +369,6 @@ const scraperConfig = {
     },
     {
       name: "Bear it MTL",
-      enabled: false,
       // Montreal (Sugar Bear Weekend organizer); The Events Calendar with
       // JSON-LD + Offers; also lists Toronto/Paris events — city per event.
       urls: ["https://www.bearitmtl.com/events/"],
@@ -388,7 +379,6 @@ const scraperConfig = {
     },
     {
       name: "Club Chub",
-      enabled: false,
       // Touring chub/chaser series; Eventbrite links sit in the site's own
       // static HTML. Do NOT use the Eventbrite org page — it's CCBC Resort's
       // venue account and would pull non-Club-Chub events.
@@ -400,7 +390,6 @@ const scraperConfig = {
     },
     {
       name: "The Bear Calendar",
-      enabled: false,
       automationEnabled: false,
       // Aggregator (Astro, server-rendered; ~52 events). Per-event pages carry
       // complete JSON-LD; offers.url IS the original ticketing/promoter URL.
@@ -419,7 +408,6 @@ const scraperConfig = {
       // 📋 SUGGESTED CONFIG block (with harvested instagram/facebook/website)
       // you can paste right back here.
       name: "New Site Template",
-      enabled: false, // flip on after a dry-run preview looks right
       urls: ["https://example.com/events"],
       alwaysBear: false, // set true for trusted bear promoters (AI trust context)
       metadata: {

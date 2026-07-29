@@ -2271,15 +2271,11 @@ class ScriptableAdapter {
         // Total captured before the selection replaces the array
         const parserPickerTotal = config.parsers.length;
         const picked = await this.presentParserPicker(config);
-        if (picked) {
-          config.parsers = this.applyParserPickerSelection(
-            config.parsers,
-            picked,
-          );
-          console.log(
-            `📱 Scriptable: Parser picker: running ${picked.size} of ${parserPickerTotal} parsers`,
-          );
-        }
+        config.parsers = this.applyParserPickerOutcome(
+          config.parsers,
+          picked,
+          parserPickerTotal,
+        );
       }
 
       this.applyLogConfig(config);
@@ -9609,8 +9605,90 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
 
   // Spread copies only — never mutates the importModule'd parser objects.
   // Unknown names in the set are ignored naturally (no parser matches them).
+  // The `enabled` flags written here are SESSION-SCOPED: parser entries in
+  // scraper-input.js carry no static enabled flags anymore — the picker owns
+  // manual run selection, and shared-core's manual enabled filter acts only
+  // on these per-session values.
   applyParserPickerSelection(parsers, pickedSet) {
     return parsers.map((p) => ({ ...p, enabled: pickedSet.has(p.name) }));
+  }
+
+  // The picker OWNS manual run selection. A confirmed selection runs exactly
+  // those parsers; null (swipe-down dismissal or a picker error) CANCELS the
+  // run by disabling every parser for the session — with no static enabled
+  // flags left in config, "run as configured" would mean run-ALL by accident.
+  applyParserPickerOutcome(parsers, picked, total = parsers.length) {
+    if (picked) {
+      console.log(
+        `📱 Scriptable: Parser picker: running ${picked.size} of ${total} parsers`,
+      );
+      return this.applyParserPickerSelection(parsers, picked);
+    }
+    console.log(
+      "📱 Scriptable: Parser picker dismissed — run cancelled (no parsers selected)",
+    );
+    return this.applyParserPickerSelection(parsers, new Set());
+  }
+
+  // ── Picker-state persistence (pre-selection = last run's selection) ───────
+
+  getPickerStatePath() {
+    return this.fm.joinPath(this.baseDir, "picker-state.json");
+  }
+
+  // Pure: parse a persisted picker-state payload ({ selected: [names] }) and
+  // return the selected names filtered to currently-known parser names.
+  // Missing/corrupt/misshapen input → [] (nothing pre-selected).
+  parsePickerState(text, knownNames) {
+    try {
+      const parsed = JSON.parse(String(text));
+      const selected = Array.isArray(parsed?.selected) ? parsed.selected : null;
+      if (!selected) return [];
+      const known = new Set(knownNames || []);
+      return selected.filter(
+        (name) => typeof name === "string" && known.has(name),
+      );
+    } catch (_) {
+      return [];
+    }
+  }
+
+  async loadPickerState(knownNames) {
+    try {
+      const fm = this.fm || FileManager.iCloud();
+      const path = this.getPickerStatePath();
+      if (!fm.fileExists(path)) return [];
+      try {
+        await fm.downloadFileFromiCloud(path);
+      } catch (_) {
+        // fall through to reading whatever local copy exists
+      }
+      return this.parsePickerState(fm.readString(path) || "", knownNames);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  // Persist a confirmed selection (Run selected / Run all). Best-effort:
+  // failure only costs the next run's pre-selection.
+  async savePickerState(names) {
+    try {
+      const fm = this.fm || FileManager.iCloud();
+      if (!fm.fileExists(this.baseDir)) {
+        fm.createDirectory(this.baseDir, true);
+      }
+      const payload = {
+        selected: Array.from(names || []),
+        savedAt: new Date().toISOString(),
+      };
+      fm.writeString(
+        this.getPickerStatePath(),
+        JSON.stringify(payload, null, 2),
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   // Stalest-first ordering (ports computeStaleStatus's sort semantics from
@@ -9631,7 +9709,6 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       }
       return {
         name: parser.name,
-        enabled: parser.enabled !== false,
         daysSince,
         lastWriteAt,
       };
@@ -9651,7 +9728,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
 
   // Presents a UITable listing all configured parsers (stalest-first) with
   // checkmark toggles. Resolves with a Set of picked parser names, or null on
-  // swipe-down dismissal / any error (fail open — run proceeds unchanged).
+  // swipe-down dismissal / any error — the caller treats null as CANCEL (no
+  // parsers run), never as run-as-configured.
   async presentParserPicker(config) {
     try {
       const parsers = Array.isArray(config?.parsers) ? config.parsers : [];
@@ -9660,9 +9738,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       const records = await this.readMetricsRecordsForPicker();
       const entries = this.buildParserPickerEntries(parsers, records);
 
-      // Default pre-selection: config-enabled parsers
+      // Pre-selection = the previous run's confirmed selection (persisted in
+      // picker-state.json; first run / missing / corrupt → none pre-selected)
       const selected = new Set(
-        entries.filter((entry) => entry.enabled).map((entry) => entry.name),
+        await this.loadPickerState(entries.map((entry) => entry.name)),
       );
 
       let resolved = false;
@@ -9728,7 +9807,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
             `${isPicked ? "☑" : "☐"} ${entry.name}`,
           );
           cell.titleFont = Font.systemFont(14);
-          cell.subtitleText = `${this.formatDaysSinceForPicker(entry.daysSince)} (last write) · ${entry.enabled ? "enabled" : "disabled"} in config`;
+          cell.subtitleText = `${this.formatDaysSinceForPicker(entry.daysSince)} (last write)`;
           cell.subtitleColor = Color.gray();
 
           row.onSelect = () => {
@@ -9755,7 +9834,13 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         () => finish(null),
       );
 
-      return await selectionPromise;
+      const picked = await selectionPromise;
+      // Persist confirmed selections only (Run selected / Run all) — the next
+      // run's picker pre-selects them. Dismissal keeps the previous state.
+      if (picked) {
+        await this.savePickerState(Array.from(picked));
+      }
+      return picked;
     } catch (error) {
       console.log(
         `📱 Scriptable: ✗ Parser picker failed: ${error.message}`,
