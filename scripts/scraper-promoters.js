@@ -76,6 +76,7 @@ const scraperPromoters = [
     "shortName": "FUR-BALL",
     "instagram": "https://instagram.com/furballnyc/",
     "website": "https://www.furball.nyc",
+    "favicon": "https://linktr.ee/furballnyc",
     "bearAffinity": "always"
   },
   {
@@ -120,14 +121,16 @@ const scraperPromoters = [
     "parent": "BEEFMINCE",
     "keywords": [
       "spookmince"
-    ]
+    ],
+    "bearAffinity": "always"
   },
   {
     "name": "BOATMINCE",
     "parent": "BEEFMINCE",
     "keywords": [
       "boatmince"
-    ]
+    ],
+    "bearAffinity": "always"
   },
   {
     "name": "BeefDip",
@@ -182,6 +185,7 @@ const scraperPromoters = [
       "Bears Week Sitges",
       "Bears Sitges Meeting"
     ],
+    "shortName": "BEARS SITGES",
     "instagram": "https://www.instagram.com/bearssitgesofficial",
     "facebook": "https://www.facebook.com/BearsSitges",
     "website": "https://bearssitges.org",
@@ -193,7 +197,6 @@ const scraperPromoters = [
   {
     "name": "Northeast Ursamen",
     "aliases": [
-      "Spooky Bear",
       "NE Ursamen",
       "Ursamen",
       "Out of Hibernation",
@@ -204,9 +207,22 @@ const scraperPromoters = [
     "website": "https://www.ursamen.org",
     "bearAffinity": "always",
     "urlPatterns": [
-      "ursamen",
-      "spookybear"
+      "ursamen"
     ]
+  },
+  {
+    "name": "Spooky Bear",
+    "parent": "Northeast Ursamen",
+    "keywords": [
+      "spooky bear",
+      "spookybear"
+    ],
+    "shortName": "SPOOKY BEAR",
+    "website": "https://www.ursamen.org/spookybear",
+    "urlPatterns": [
+      "spookybear"
+    ],
+    "bearAffinity": "always"
   }
 ];
 

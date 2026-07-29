@@ -466,6 +466,29 @@ const scraperCities = {
       "lng": -2.2426
     }
   },
+  "brighton": {
+    "calendar": "chunky-dad-brighton",
+    "timezone": "Europe/London",
+    "patterns": [
+      "brighton",
+      "brighton and hove"
+    ],
+    "coordinates": {
+      "lat": 50.8225,
+      "lng": -0.1372
+    }
+  },
+  "birmingham": {
+    "calendar": "chunky-dad-birmingham",
+    "timezone": "Europe/London",
+    "patterns": [
+      "birmingham"
+    ],
+    "coordinates": {
+      "lat": 52.4862,
+      "lng": -1.8904
+    }
+  },
   "dublin": {
     "calendar": "chunky-dad-dublin",
     "timezone": "Europe/Dublin",

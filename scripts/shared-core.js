@@ -1529,7 +1529,7 @@ class SharedCore {
             return inherited;
         };
         const block = {};
-        for (const field of ['shortName', 'shorterName', 'instagram', 'facebook', 'matchKey']) {
+        for (const field of ['shortName', 'shorterName', 'instagram', 'facebook', 'favicon', 'matchKey']) {
             const value = pick(field);
             if (value) block[field] = { value };
         }
