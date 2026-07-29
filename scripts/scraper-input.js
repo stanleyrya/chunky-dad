@@ -143,32 +143,18 @@ const scraperConfig = {
     ],
   },
   parsers: [
+    // NOTE: Promoter identity (shortName/socials/matchKey) and bear trust
+    // (bearAffinity) live in data/promoters.json now — the enforce-mode
+    // promoter registry stamps them on matched events. Parser entries here
+    // are pure SOURCES (name/urls/crawl knobs); only VENUE parsers still
+    // carry a metadata block (venue facts, not promoter identity).
     {
       name: "Megawoof America",
       urls: ["https://www.eventbrite.com/o/megawoof-america-18118978189"],
-      alwaysBear: true,
-      metadata: {
-        shortName: { value: "MEGA-WOOF" },
-        instagram: { value: "https://www.instagram.com/megawoof_america" },
-        url: { value: "https://linktr.ee/megawoof_america" },
-      },
     },
     {
       name: "Coach After Dark",
       urls: ["https://www.eventbrite.com/o/bear-happy-hour-87043830313"],
-      alwaysBear: true,
-      metadata: {
-        shortName: {
-          value: "COACH",
-          conditionalValues: [{ keywords: ["beefwitch"], value: "BEEFWITCH" }],
-        },
-        instagram: {
-          value: "https://www.instagram.com/coachafterdark",
-          conditionalValues: [
-            { keywords: ["beefwitch"], value: "https://www.instagram.com/thebeefwitch" },
-          ],
-        },
-      },
     },
     {
       name: "Bearracuda Events",
@@ -176,20 +162,6 @@ const scraperConfig = {
         "https://bearracuda.com/",
         "https://www.eventbrite.com/o/bearracuda-21867032189",
       ],
-      // NOT alwaysBear: Bearracuda also throws non-bear events (e.g. HOT TAKE) —
-      // enforce-mode bear check judges each event with promoter context instead.
-      alwaysBear: false,
-      metadata: {
-        shortName: {
-          value: "Bear-rac-uda",
-          conditionalValues: [
-            { keywords: ["hot take"], value: "HOT TAKE" },
-            { keywords: ["treasure trail"], value: "TREAS-URE TRAIL" },
-          ],
-        },
-        instagram: { value: "https://www.instagram.com/bearracuda" },
-        url: { value: "https://bearracuda.com/" },
-      },
     },
     {
       name: "CHUNK",
@@ -199,35 +171,16 @@ const scraperConfig = {
         "chunk-party.com/chunkbearandcubsocial",
         "chunk-party.com/chunk",
       ],
-      alwaysBear: true,
-      metadata: {
-        shortName: { value: "CHUNK" },
-        instagram: { value: "https://www.instagram.com/chunkparty" },
-        website: { value: "https://www.chunk-party.com" },
-      },
     },
     {
       name: "Furball",
       urls: ["https://www.furball.nyc"],
-      alwaysBear: true,
       urlDiscoveryDepth: 0,
-      metadata: {
-        shortName: { value: "FUR-BALL" },
-        instagram: { value: "https://instagram.com/furballnyc/" },
-        url: { value: "https://www.furball.nyc" },
-        favicon: { value: "https://linktr.ee/furballnyc" },
-      },
     },
     {
       name: "Cubhouse",
       urls: ["https://linktr.ee/cubhouse"],
       discoveryBlockedPatterns: ["www.eventbrite.com/o/", "linktr.ee"],
-      alwaysBear: true,
-      metadata: {
-        shortName: { value: "CUB-HOUSE" },
-        instagram: { value: "https://www.instagram.com/cubhouse.philly" },
-        url: { value: "https://linktr.ee/cubhouse" },
-      },
     },
     {
       name: "Goldiloxx",
@@ -243,14 +196,7 @@ const scraperConfig = {
       // ~900 events. Note: sickening JSON-LD "organizer" is the VENUE, and
       // the site soft-404s (every URL returns 200 with an empty shell).
       discoveryAllowedPatterns: ["goldiloxx"],
-      alwaysBear: true,
-      calendarSearchRangeDays: 40, // Look +/- days for wildcard key matches
-      metadata: {
-        shortName: { value: "GOLDI-LOXX" },
-        shorterName: { value: "GLX" },
-        instagram: { value: "https://www.instagram.com/goldiloxx__" },
-        matchKey: { value: "goldiloxx*|${year}-${month}-*|*" },
-      },
+      calendarSearchRangeDays: 40, // Look +/- days for wildcard key matches (pairs with the registry's wildcard matchKey)
     },
     {
       name: "3 Dollar Bill",
@@ -273,12 +219,6 @@ const scraperConfig = {
         "https://www.eventbrite.com/o/nab-events-llc-51471535173",
         "https://www.eventbrite.com/o/121474797695",
       ],
-      alwaysBear: true,
-      metadata: {
-        shortName: { value: "TWIST-ED BEAR" },
-        instagram: { value: "https://www.instagram.com/twistedbearparty" },
-        facebook: { value: "https://www.facebook.com/twistedglobal/" },
-      },
     },
     {
       name: "Dallas Eagle",
@@ -299,17 +239,10 @@ const scraperConfig = {
       // ~45 timed activities Sept 3-13 with venues inline. Spanish text;
       // day headers carry day-of-month only (month/year stated once).
       urls: ["https://bearssitges.org/bears-sitges-week/"],
-      alwaysBear: true,
       urlDiscoveryDepth: 0, // everything on one page; discovery wanders into store/news
       ai: { classifyPages: false }, // heuristic multi-event-page is CORRECT here; the AI
       // second opinion sees "one overarching event" (festival-programme trap) and
       // reroutes to single-event extraction, whose payload window misses the schedule
-      metadata: {
-        shortName: { value: "BEARS SITGES" },
-        website: { value: "https://bearssitges.org" },
-        instagram: { value: "https://www.instagram.com/bearssitgesofficial" },
-        facebook: { value: "https://www.facebook.com/BearsSitges" },
-      },
     },
     {
       name: "Spooky Bear",
@@ -319,15 +252,8 @@ const scraperConfig = {
       // venues inline, weekday-only headers — dates anchor to the announced
       // range). Idles harmlessly until then.
       urls: ["https://www.ursamen.org/spookybear"],
-      alwaysBear: true,
       urlDiscoveryDepth: 1, // follow Zeffy/ThunderTix ticket links
       discoveryBlockedPatterns: ["ursamen.org/about", "ursamen.org/contact", "ursamen.org/the-board", "ursamen.org/our-sponsors", "ursamen.org/general-events", "coming-soon", "zeffy.com/donation-form"],
-      metadata: {
-        shortName: { value: "SPOOKY BEAR" },
-        website: { value: "https://www.ursamen.org/spookybear" },
-        instagram: { value: "https://www.instagram.com/ne.ursamen" },
-        facebook: { value: "https://www.facebook.com/NEUrsamen" },
-      },
     },
     // ── Onboarding batch 2026-07-27 (recon-verified) — run each one alone
     // via the parser picker and review before including it in bigger runs. ──
@@ -345,37 +271,24 @@ const scraperConfig = {
       name: "CubScout LA",
       // Eagle LA's recurring bear party page (The Events Calendar, JSON-LD).
       urls: ["https://eaglela.com/events/cub-scout-3/"],
-      alwaysBear: true,
     },
     {
       name: "BEEFMINCE",
       // Multi-city UK (London/Brighton/Manchester/Birmingham + Sitges);
       // per-event city comes from event text; tickets link out to dice.fm.
       urls: ["https://beefmince.com/events"],
-      alwaysBear: true,
-      metadata: {
-        website: { value: "https://beefmince.com" },
-      },
     },
     {
       name: "BeefDip",
       // Puerto Vallarta bear week; single schedule page, venues appear as
       // Google Maps links (maps-link address harvesting applies).
       urls: ["https://beefdip.com/planned-events/"],
-      alwaysBear: true,
-      metadata: {
-        website: { value: "https://beefdip.com" },
-      },
     },
     {
       name: "Bear it MTL",
       // Montreal (Sugar Bear Weekend organizer); The Events Calendar with
       // JSON-LD + Offers; also lists Toronto/Paris events — city per event.
       urls: ["https://www.bearitmtl.com/events/"],
-      alwaysBear: true,
-      metadata: {
-        website: { value: "https://www.bearitmtl.com" },
-      },
     },
     {
       name: "Club Chub",
@@ -383,10 +296,6 @@ const scraperConfig = {
       // static HTML. Do NOT use the Eventbrite org page — it's CCBC Resort's
       // venue account and would pull non-Club-Chub events.
       urls: ["https://www.clubchubusa.com/event-list"],
-      alwaysBear: true,
-      metadata: {
-        instagram: { value: "https://www.instagram.com/clubchubparty" },
-      },
     },
     {
       name: "The Bear Calendar",

@@ -9217,6 +9217,29 @@ test('getCityTimezone: accented "montréal" resolves montreal timezone (literal 
   assert.equal(core.getCityTimezone(''), null);
 });
 
+// Brighton + Birmingham onboarding (BEEFMINCE runs monthly in both; runs
+// logged `No timezone config for city "brighton"/"birmingham"`). The cities
+// ship visible:false with an empty calendarId — off the website and out of CI
+// calendar fetches — but the GENERATED scraper config must already resolve
+// their keys, patterns, and timezone.
+test('generated cities config: brighton and birmingham resolve to their keys and Europe/London', () => {
+  const cities = require('./scraper-cities');
+  const core = new SharedCore(cities, { eventSchema: EventSchema });
+  for (const cityKey of ['brighton', 'birmingham']) {
+    assert.ok(cities[cityKey], `generated scraper-cities carries the ${cityKey} key`);
+    assert.equal(cities[cityKey].timezone, 'Europe/London');
+    assert.ok(cities[cityKey].coordinates, `${cityKey} carries city-center coordinates`);
+  }
+  assert.deepEqual(cities.brighton.patterns, ['brighton', 'brighton and hove']);
+  assert.deepEqual(cities.birmingham.patterns, ['birmingham']);
+  // Key, pattern, and cased/alias variants all resolve the timezone
+  assert.equal(core.getCityTimezone('brighton'), 'Europe/London');
+  assert.equal(core.getCityTimezone('Brighton'), 'Europe/London');
+  assert.equal(core.getCityTimezone('Brighton and Hove'), 'Europe/London');
+  assert.equal(core.getCityTimezone('birmingham'), 'Europe/London');
+  assert.equal(core.getCityTimezone('Birmingham'), 'Europe/London');
+});
+
 test('resolveWallClockDates: city "montréal" re-anchors wall-clock dates via the folded timezone lookup', () => {
   const core = createMontrealCore();
   const event = {

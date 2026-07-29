@@ -452,6 +452,32 @@ const CITY_CONFIG = {
         mapZoom: 11,
         visible: false
     },
+    'brighton': {
+        name: 'Brighton',
+        emoji: '🌈',
+        tagline: 'Seaside bears by the pier',
+        // pending calendar creation — flip visible + set ID when chunky-dad-brighton exists
+        calendarId: '',
+        calendar: 'chunky-dad-brighton',
+        timezone: 'Europe/London',
+        patterns: ['brighton', 'brighton and hove'],
+        coordinates: { lat: 50.8225, lng: -0.1372 },
+        mapZoom: 11,
+        visible: false
+    },
+    'birmingham': {
+        name: 'Birmingham',
+        emoji: '🐂',
+        tagline: 'Midlands bear scene',
+        // pending calendar creation — flip visible + set ID when chunky-dad-birmingham exists
+        calendarId: '',
+        calendar: 'chunky-dad-birmingham',
+        timezone: 'Europe/London',
+        patterns: ['birmingham'],
+        coordinates: { lat: 52.4862, lng: -1.8904 },
+        mapZoom: 11,
+        visible: false
+    },
     'dublin': {
         name: 'Dublin',
         emoji: '☘️',

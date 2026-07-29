@@ -176,6 +176,86 @@ test('matcher: MEGAWOOF alias and the new BEEFMINCE sub-brands match their title
   assert.equal(boat.entry.parent, 'BEEFMINCE');
 });
 
+// ── Promoters own identity (2026-07 migration) ─────────────────────────────
+// Identity metadata (shortName/socials/matchKey/favicon) and bear trust
+// (bearAffinity) moved OUT of parser configs into this registry. A parser
+// entry whose name (or a registry alias of it) IS a curated promoter identity
+// must be a pure source: no metadata block, no alwaysBear. Venue parsers
+// (Dallas Eagle, 3 Dollar Bill, The Lumberyard, massive.club) are not
+// registry identities and keep their venue-fact metadata untouched.
+test('repo scraper-input: registry-identity parsers carry no metadata or alwaysBear', () => {
+  const registry = loadRegistry();
+  const registryKeys = new Set();
+  for (const entry of registry) {
+    for (const name of [entry.name, ...(Array.isArray(entry.aliases) ? entry.aliases : [])]) {
+      registryKeys.add(nameKey(name));
+    }
+  }
+  const { parsers } = require('./scraper-input');
+  const promoterParsers = parsers.filter((parser) => registryKeys.has(nameKey(parser.name)));
+  assert.ok(promoterParsers.length >= 15,
+    `expected at least the 15 migrated promoter parsers, found ${promoterParsers.length}`);
+  for (const parser of promoterParsers) {
+    assert.ok(!('metadata' in parser),
+      `promoter parser "${parser.name}" must not carry metadata — promoter identity lives in data/promoters.json`);
+    assert.ok(!('alwaysBear' in parser),
+      `promoter parser "${parser.name}" must not carry alwaysBear — set bearAffinity in data/promoters.json`);
+  }
+});
+
+// Registry-application parity for a migrated field that previously lived only
+// in the parser config: Furball's favicon. On match the registry must stamp
+// the exact facts the old config metadata stamped, through the same static
+// machinery, and the removed parser-level alwaysBear must be replaced by the
+// entry's bearAffinity trust.
+test('migrated Furball identity (incl. favicon) stamps on match exactly like the old parser metadata', () => {
+  const { SharedCore } = require('./shared-core');
+  const { EventSchema } = require('./event-schema');
+  const core = new SharedCore({}, { eventSchema: EventSchema, promoters: loadRegistry() });
+  const enforceConfig = { config: { promoterRegistry: { mode: 'enforce' } } };
+  const event = { title: 'FURBALL Chicago', startDate: new Date('2026-08-01T21:00:00.000Z') };
+  core.applyPromoterRegistryMatches([event], { name: 'Furball' }, enforceConfig);
+  assert.equal(event._promoter, 'Furball');
+  // The exact values the removed parser-config metadata block used to stamp
+  assert.equal(event.shortName, 'FUR-BALL');
+  assert.equal(event.instagram, 'https://instagram.com/furballnyc/');
+  assert.equal(event.url, 'https://www.furball.nyc', 'website maps to the canonical url field');
+  assert.equal(event.favicon, 'https://linktr.ee/furballnyc', 'favicon migrated into the registry');
+  // Same static machinery: stamped fields are tracked for de-circularization
+  assert.equal(event._staticFields.favicon, 'https://linktr.ee/furballnyc');
+  assert.equal(event._staticFields.shortName, 'FUR-BALL');
+  // Bear trust now comes from the entry, with the parser carrying no alwaysBear
+  const trust = core.getEventBearTrust(event, { name: 'Furball' });
+  assert.equal(trust.trusted, true);
+  assert.equal(trust.affinity, 'always');
+});
+
+// The other config-only facts found by the migration inventory: Bears Sitges
+// Week's shortName moved onto Bears Sitges Club, and Spooky Bear became a
+// sub-brand of Northeast Ursamen carrying its old config identity (shortName,
+// spookybear website, explicit always-trust); socials inherit from the parent.
+test('migrated festival identities: Bears Sitges shortName and the Spooky Bear sub-brand', () => {
+  const { SharedCore } = require('./shared-core');
+  const { EventSchema } = require('./event-schema');
+  const core = new SharedCore({}, { eventSchema: EventSchema, promoters: loadRegistry() });
+  const sitges = core.matchEventToPromoter({ title: 'Bears Sitges Week — Opening Party' });
+  assert.ok(sitges && sitges.entry, `expected a Sitges match, got ${JSON.stringify(sitges)}`);
+  assert.equal(sitges.entry.name, 'Bears Sitges Club');
+  assert.equal(core.promoterEntryToMetadataBlock(sitges.entry).shortName.value, 'BEARS SITGES');
+
+  const spooky = core.matchEventToPromoter({ title: 'SPOOKY BEAR 2026 Kickoff' });
+  assert.ok(spooky && spooky.entry, `expected a Spooky Bear match, got ${JSON.stringify(spooky)}`);
+  assert.equal(spooky.entry.name, 'Spooky Bear');
+  assert.equal(spooky.entry.parent, 'Northeast Ursamen');
+  const block = core.promoterEntryToMetadataBlock(spooky.entry);
+  assert.equal(block.shortName.value, 'SPOOKY BEAR');
+  assert.equal(block.url.value, 'https://www.ursamen.org/spookybear');
+  assert.equal(block.instagram.value, 'https://www.instagram.com/ne.ursamen', 'inherited from Northeast Ursamen');
+  assert.equal(block.facebook.value, 'https://www.facebook.com/NEUrsamen', 'inherited from Northeast Ursamen');
+  assert.equal(spooky.entry.bearAffinity, 'always',
+    'sub-brand carries explicit always-trust now that the parser has no alwaysBear');
+});
+
 test('matcher: statically stamped url-ish fields are never registry evidence (de-circularization)', () => {
   const { SharedCore } = require('./shared-core');
   const { EventSchema } = require('./event-schema');
