@@ -313,7 +313,13 @@ class AiWebParser {
             fuzzyDescriptionTokenMatchRatio: 0.45,
             validationReportValueMaxLength: 140,
             multiEventScanLineLimit: 500,
-            multiEventMaxSegments: 12,
+            // 14 (was 12): an 11-day festival programme is intro + 11 day
+            // sections + interleaved continuation segments — 12 cut the final
+            // day of Bears Sitges Week (run 20260728) once the day sections
+            // segmented correctly. Stale trailing noise past the cap (news
+            // bylines) costs at most the extra extractions; past-dated
+            // results are dropped by shared-core's filterFutureEvents.
+            multiEventMaxSegments: 14,
             multiEventMinSegmentLines: 2,
             multiEventMaxSegmentLines: 24,
             multiEventMinSegmentChars: 25,
@@ -886,6 +892,14 @@ class AiWebParser {
             console.log(`🤖 AI Web: Skipped degenerate event "${event.title}" — title is a postal code, not an event`);
             return null;
         }
+        // Day-header echo backstop (same class as the pass-level
+        // rejectDayHeaderEchoPassFields gate): if every pass still left a
+        // weekday heading as the title, the segment named no real activity —
+        // a schedule heading is not an event.
+        if (this.isDayHeaderEchoTitle(event.title)) {
+            console.log(`🤖 AI Web: Skipped day-header echo "${event.title}" — weekday heading, not an event name`);
+            return null;
+        }
         // Address plausibility gate: a venue name is not an address (run
         // 20260723-140457: extraction stored address "Legacy" — the bar's own
         // name — and it sailed through to geocoding). Runs BEFORE the bar
@@ -1024,6 +1038,45 @@ class AiWebParser {
         return false;
     }
 
+    // Compiled patterns for the day-header echo gate below: the multilingual
+    // weekday header vocabulary (es/ca/fr/de/it/pt — abbreviations still
+    // REQUIRE the adjacent day number) plus an English weekday table under
+    // the SAME rules, gate-side only (English weekdays deliberately stay out
+    // of the date-signal vocabulary so segmentation behavior is untouched).
+    getDayHeaderTitlePatterns() {
+        if (this._dayHeaderTitlePatterns) return this._dayHeaderTitlePatterns;
+        const vocab = this.getMultilingualDateVocabulary();
+        const sep = '[-–—/.:,]';
+        const alternation = (names) => names.slice().sort((a, b) => b.length - a.length).join('|');
+        const englishFull = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+        const englishAbbrev = ['mon', 'tue', 'tues', 'wed', 'weds', 'thu', 'thur', 'thurs', 'fri', 'sat', 'sun'];
+        this._dayHeaderTitlePatterns = [
+            vocab.weekdayHeaderPattern,
+            vocab.weekdayAbbrevHeaderPattern,
+            new RegExp(`^(?:(\\d{1,2})\\s*${sep}?\\s*)?(?:${alternation(englishFull)})(?:\\s*${sep}?\\s*(\\d{1,2}))?\\s*$`),
+            new RegExp(`^(?:(\\d{1,2})\\s*${sep}?\\s*(?:${alternation(englishAbbrev)})|(?:${alternation(englishAbbrev)})\\.?\\s*${sep}?\\s*(\\d{1,2}))\\s*$`)
+        ];
+        return this._dayHeaderTitlePatterns;
+    }
+
+    // Deterministic day-header echo detector (bearssitges run 20260728:
+    // multi-activity day segments yielded events titled with the section's
+    // own weekday heading — "LUNES - 07", "Domingo - 06" — instead of an
+    // activity name). Same linguistic-generic contract as the venue-hours
+    // and postal-code gates above: a title that is NOTHING but a
+    // (diacritic-folded) weekday name with an optional adjacent day-of-month
+    // — or a bare full weekday — is a schedule heading, never an event name.
+    // Fail closed: any other token keeps the title ("Lunes de Carnaval
+    // Party" is a real name), and bare abbreviations without a day number
+    // ("MAR", "VEN") are ordinary words, never rejected.
+    isDayHeaderEchoTitle(title) {
+        const folded = this.foldDiacritics(
+            this.normalizeWhitespace(String(title || '').replace(/[\u200b\u200e\u200f\ufeff]/g, ' '))
+        );
+        if (!folded) return false;
+        return this.getDayHeaderTitlePatterns().some(pattern => pattern.test(folded));
+    }
+
     // One-line info summary of a finalized extraction: only fields that are set,
     // each value truncated so a page's outcome is readable at a glance.
     formatExtractionSummary(event, sourceUrl) {
@@ -1120,6 +1173,13 @@ class AiWebParser {
             ocrResults: segmentOcrResults,
             segmentListingTitle: this.deriveSegmentListingTitle(segment),
             segmentDateContext: segmentDateContextLine,
+            // Multi-activity day-programme flag: steers the extraction prompt
+            // (additive rule line) to name the day's most significant
+            // activity rather than echoing the weekday heading. false for
+            // every other segment — those prompts stay byte-identical.
+            segmentDayProgramme: this.segmentIsMultiActivityDayProgramme(
+                segment && Array.isArray(segment.lines) ? segment.lines : []
+            ),
             dataFlags: { ocr: true, segment: true }  // Segments are unstructured data
         };
     }
@@ -1158,7 +1218,14 @@ class AiWebParser {
             const startsNewByTitle = this.isStrongMultiEventTitleLine(line) &&
                 currentLines.length >= minSegmentLines &&
                 this.segmentHasDateSignal(currentLines) &&
-                !this.hasMultiEventDateSignal(currentLines[currentLines.length - 1]);
+                !this.hasMultiEventDateSignal(currentLines[currentLines.length - 1]) &&
+                // A date-HEADED segment is a schedule day-section (weekday
+                // heading + that day's activities): strong title lines inside
+                // it are activity names ("VER Palauet…"), never the next
+                // event's head — splitting there orphans the rest of the day
+                // into a dateless segment that then swallows the next day's
+                // header (bearssitges run 20260728, VIERNES - 11).
+                !this.hasMultiEventDateSignal(currentLines[0]);
             if (startsNewByDate) {
                 const trailingStartIndex = this.findTrailingMultiEventStartIndex(currentLines);
                 if (trailingStartIndex > 0) {
@@ -1190,7 +1257,7 @@ class AiWebParser {
             const effectiveMinLines = isCompactOnly ? 1 : minSegmentLines;
             if (normalizedLines.length < effectiveMinLines) continue;
             if (!this.segmentHasDateSignal(normalizedLines)) continue;
-            if (!this.segmentHasTitleSignal(normalizedLines)) continue;
+            if (!this.segmentHasTitleSignal(normalizedLines) && !this.segmentIsDateHeadedSchedule(normalizedLines)) continue;
             const trimmedLines = this.trimSegmentLinesToChars(normalizedLines, this.extractionLimits.multiEventMaxSegmentChars);
             const segmentText = trimmedLines.join('\n');
             if (segmentText.length < this.extractionLimits.multiEventMinSegmentChars) continue;
@@ -1293,7 +1360,7 @@ class AiWebParser {
             if (this.hasMultiEventScriptLikeText(normalizedLines)) continue;
             if (this.countMultiEventDateSignals(normalizedLines) > 2) continue;
             if (!this.segmentHasDateSignal(normalizedLines)) continue;
-            if (!this.segmentHasTitleSignal(normalizedLines)) continue;
+            if (!this.segmentHasTitleSignal(normalizedLines) && !this.segmentIsDateHeadedSchedule(normalizedLines)) continue;
 
             const splitSegments = this.buildTextMultiEventSegmentsFromLines(normalizedLines, entry.html);
             if (splitSegments.length > 1) {
@@ -1333,7 +1400,10 @@ class AiWebParser {
             const startsNewByTitle = this.isStrongMultiEventTitleLine(line) &&
                 currentLines.length >= minSegmentLines &&
                 this.segmentHasDateSignal(currentLines) &&
-                !this.hasMultiEventDateSignal(currentLines[currentLines.length - 1]);
+                !this.hasMultiEventDateSignal(currentLines[currentLines.length - 1]) &&
+                // Date-headed schedule sections own their strong-title lines
+                // (see buildMultiEventSegments above).
+                !this.hasMultiEventDateSignal(currentLines[0]);
             if (startsNewByDate) {
                 const trailingStartIndex = this.findTrailingMultiEventStartIndex(currentLines);
                 if (trailingStartIndex > 0) {
@@ -1355,7 +1425,7 @@ class AiWebParser {
             const normalizedLines = segmentLines.map(line => this.normalizeWhitespace(line)).filter(Boolean);
             if (normalizedLines.length < minSegmentLines) continue;
             if (!this.segmentHasDateSignal(normalizedLines)) continue;
-            if (!this.segmentHasTitleSignal(normalizedLines)) continue;
+            if (!this.segmentHasTitleSignal(normalizedLines) && !this.segmentIsDateHeadedSchedule(normalizedLines)) continue;
             const trimmedLines = this.trimSegmentLinesToChars(
                 this.trimLinesAfterTerminalCallToAction(normalizedLines),
                 this.extractionLimits.multiEventMaxSegmentChars
@@ -1944,6 +2014,14 @@ class AiWebParser {
         const normalizedLines = (Array.isArray(lines) ? lines : [])
             .map(line => this.normalizeWhitespace(line))
             .filter(Boolean);
+        // The peel serves title-precedes-date listings ([TitleA, DateA, …,
+        // TitleB] + DateB arriving → TitleB belongs to the NEXT segment). A
+        // date-HEADED segment is the opposite shape — a schedule day-section
+        // whose trailing strong-title lines are that day's own activity
+        // names — so peeling would drag the day's tail into the next day
+        // (bearssitges run 20260728: "VER Palauet…" pulled half of
+        // JUEVES - 10 into VIERNES - 11).
+        if (normalizedLines.length > 0 && this.hasMultiEventDateSignal(normalizedLines[0])) return -1;
         const lastDateIndex = this.lastMultiEventDateSignalIndex(normalizedLines);
         if (lastDateIndex < 0 || lastDateIndex >= normalizedLines.length - 1) return -1;
         for (let i = lastDateIndex + 1; i < normalizedLines.length; i++) {
@@ -2227,6 +2305,49 @@ class AiWebParser {
         return (Array.isArray(lines) ? lines : []).some(
             line => this.isLikelyEventTitleLine(line) || this.isCompactEventLine(line) || this.isStrongMultiEventTitleLine(line)
         );
+    }
+
+    // A time-prefixed activity line opens with a clock time — European
+    // h-notation ("14:00h: BBQ & Music", "21h a 03h Especial NOCHE BLANCA",
+    // "20 h: Ruta del OSO"), colon-minutes ("21:30 …"), or meridiem
+    // ("9:00 p.m. to 3:00 a.m. BEARS on CRUISE"). Schedule sections list one
+    // activity per such line. Invisible direction marks (U+200E/200F —
+    // festival pages pad lines with them) are stripped before matching.
+    isTimePrefixedActivityLine(value) {
+        const line = this.normalizeWhitespace(String(value || '').replace(/[\u200b\u200e\u200f\ufeff]/g, ' '));
+        if (!line) return false;
+        return /^\d{1,2}(?:[:.]\d{2})?\s*(?:h\b|a\.?\s?m\.?(?![\p{L}])|p\.?\s?m\.?(?![\p{L}]))/iu.test(line) ||
+            /^\d{1,2}:\d{2}\b/.test(line);
+    }
+
+    // A date-headed schedule segment is one DAY-section of a festival
+    // programme: its HEAD line is itself a date signal (a weekday heading
+    // like "JUEVES - 10") and at least one later line is a timed activity.
+    // Such a section's event names live inside prose/time lines that rarely
+    // pass the title-line heuristics, so the title-signal gate must not
+    // require an additional title-shaped line (bearssitges run 20260728:
+    // day sections died at the title gate and whole days were lost).
+    segmentIsDateHeadedSchedule(lines) {
+        const normalizedLines = (Array.isArray(lines) ? lines : [])
+            .map(line => this.normalizeWhitespace(line))
+            .filter(Boolean);
+        if (normalizedLines.length < 2) return false;
+        if (!this.hasMultiEventDateSignal(normalizedLines[0])) return false;
+        return normalizedLines.slice(1).some(line => this.isTimePrefixedActivityLine(line));
+    }
+
+    // A multi-activity day programme is a date-headed schedule section dense
+    // enough (>= 3 timed activity lines) that extraction needs steering: pick
+    // the day's most significant activity, never the weekday heading. Used to
+    // flag the segment's prompt (buildMultiEventSegmentHtmlData) — purely
+    // additive, every other segment's prompt stays byte-identical.
+    segmentIsMultiActivityDayProgramme(lines) {
+        const normalizedLines = (Array.isArray(lines) ? lines : [])
+            .map(line => this.normalizeWhitespace(line))
+            .filter(Boolean);
+        if (normalizedLines.length < 2) return false;
+        if (!this.hasMultiEventDateSignal(normalizedLines[0])) return false;
+        return normalizedLines.filter(line => this.isTimePrefixedActivityLine(line)).length >= 3;
     }
 
     // A compact event line combines date + event name (and often venue) in a single line,
@@ -6907,6 +7028,27 @@ class AiWebParser {
         return guarded;
     }
 
+    // Day-header echo gate at PASS-RESULT time (mirrors
+    // rejectPageTitleEchoPassFields): an accepted title consumes the field
+    // slot for every later pass, so a weekday-heading echo ("LUNES - 07")
+    // would permanently block the segment's real activity name. Rejecting
+    // here keeps the field open; extractSingleEvent keeps the end-of-pipeline
+    // backstop. Unconditional (all pages, all passes) — a title that is
+    // NOTHING but a weekday heading is never a valid event name.
+    rejectDayHeaderEchoPassFields(partial) {
+        if (!partial || typeof partial !== 'object') return partial;
+        const titleKey = Object.keys(partial).find(key => !this.isInternalAiFieldKey(key)
+            && this.normalizePromptFieldName(key) === 'title'
+            && typeof partial[key] === 'string' && partial[key].trim());
+        if (titleKey === undefined) return partial;
+        const title = partial[titleKey].trim();
+        if (!this.isDayHeaderEchoTitle(title)) return partial;
+        console.log(`🤖 AI Web: Rejected day-header title "${title}" — weekday heading, not an event name`);
+        const guarded = { ...partial };
+        delete guarded[titleKey];
+        return guarded;
+    }
+
     // Padded-token containment of a candidate title in any '|'-separated
     // segment of the page's own og:title or <title> tag. Case-insensitive,
     // punctuation-collapsed; empty inputs never match.
@@ -7098,6 +7240,14 @@ class AiWebParser {
             // own og:title/site-title with no date/time evidence in the SAME
             // pass is a page label, not an event name.
             validatedPartial = this.rejectPageTitleEchoPassFields(validatedPartial, htmlData);
+
+            // Day-header echo gate: a title that is ONLY a weekday heading
+            // ("LUNES - 07") is a schedule label, never an event name.
+            // Rejecting at pass level keeps the title slot open so
+            // retries/other passes can find the segment's real activity name
+            // (extractSingleEvent keeps a backstop for titles that arrive via
+            // other routes).
+            validatedPartial = this.rejectDayHeaderEchoPassFields(validatedPartial);
 
             // Track field sources for traceability
             const validatedFields = validationState ? validationState.validatedFields : new Set();
@@ -7971,6 +8121,15 @@ ${String(snippet || '')}`;
             ? `\n- For "title", prefer SEGMENT_LISTING_TITLE or a fuller variant of the same name from the flyer; flyer text that does not contain it (taglines, DJ names, stylized graphics text) is NOT the title.`
             : '';
 
+        // Multi-activity day-programme steering (additive; only when the
+        // segment is one DAY of a festival programme listing several timed
+        // activities — see segmentIsMultiActivityDayProgramme). Without it
+        // the model tends to echo the weekday heading as the title or grab
+        // the first minor activity of the day.
+        const dayProgrammeRule = htmlData && htmlData.segmentDayProgramme === true
+            ? `\n- This segment is ONE DAY of a longer programme listing several timed activities. Extract the single most significant activity of the day (typically the headline evening party, not a market, pack pickup, or bar route): its stated name is the "title"${segmentListingTitle ? ' (for this segment that outranks SEGMENT_LISTING_TITLE if they differ)' : ''} and its times are startTime/endTime. A weekday heading (e.g. "LUNES - 07") is never the title.`
+            : '';
+
         // Confidence-retry feedback (additive, alternate template only —
         // retries always run the alternate variant): one correction line per
         // retried field naming the previously rejected not-verbatim value,
@@ -8017,7 +8176,7 @@ ${fieldContext}
 Rules:
 - Return a single JSON object only
 - Return only keys from the Preferred keys list, formatted as objects with value, evidence, and confidence (0-100)
-- Omit unknown fields; do not invent details and do not estimate. ONLY use data from the source material.${segmentListingTitleRule}
+- Omit unknown fields; do not invent details and do not estimate. ONLY use data from the source material.${segmentListingTitleRule}${dayProgrammeRule}
 
 ${exampleOutput}
 
@@ -8032,7 +8191,7 @@ Rules:
 - Return a single JSON object only
 - Include only fields whose values are found verbatim in the text below, formatted as objects with value, evidence, and confidence (0-100)
 - Do not guess, invent, or infer missing values
-- Omit any field not explicitly present in the source${segmentListingTitleRule}
+- Omit any field not explicitly present in the source${segmentListingTitleRule}${dayProgrammeRule}
 
 ${exampleOutput}
 
