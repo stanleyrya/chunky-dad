@@ -114,11 +114,13 @@ const scraperPromoters = [
   },
   {
     "name": "BEEFMINCE",
+    "shortName": "BEEF-MINCE",
     "website": "https://beefmince.com",
     "bearAffinity": "always"
   },
   {
     "name": "SPOOKMINCE",
+    "shortName": "SPOOK-MINCE",
     "parent": "BEEFMINCE",
     "keywords": [
       "spookmince"
@@ -127,6 +129,7 @@ const scraperPromoters = [
   },
   {
     "name": "BOATMINCE",
+    "shortName": "BOAT-MINCE",
     "parent": "BEEFMINCE",
     "keywords": [
       "boatmince"
@@ -135,21 +138,25 @@ const scraperPromoters = [
   },
   {
     "name": "BeefDip",
+    "shortName": "BEEF-DIP",
     "website": "https://beefdip.com",
     "bearAffinity": "always"
   },
   {
     "name": "Bear it MTL",
+    "shortName": "BEAR IT",
     "website": "https://www.bearitmtl.com",
     "bearAffinity": "always"
   },
   {
     "name": "Club Chub",
+    "shortName": "CLUB CHUB",
     "instagram": "https://www.instagram.com/clubchubparty",
     "bearAffinity": "always"
   },
   {
     "name": "Fat Dad",
+    "shortName": "FAT DAD",
     "instagram": "https://www.instagram.com/fatdadnyc",
     "website": "https://events.humanitix.com/fatdad",
     "urlPatterns": [
@@ -159,6 +166,7 @@ const scraperPromoters = [
   },
   {
     "name": "Horse Meat Disco",
+    "shortName": "HORSE MEAT DISCO",
     "instagram": "https://www.instagram.com/horsemeatdisco",
     "website": "https://horsemeatdisco.net",
     "urlPatterns": [
@@ -168,6 +176,7 @@ const scraperPromoters = [
   },
   {
     "name": "South Seattle Bear Social",
+    "shortName": "BEAR SOCIAL",
     "aliases": [
       "SSBS"
     ],
@@ -197,6 +206,7 @@ const scraperPromoters = [
   },
   {
     "name": "Northeast Ursamen",
+    "shortName": "URSA-MEN",
     "aliases": [
       "NE Ursamen",
       "Ursamen",
