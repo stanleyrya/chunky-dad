@@ -7202,3 +7202,143 @@ test('hasTimeEvidence understands European time notations (matching side only)',
   assert.equal(parser.hasTimeEvidence(evidence('grupos de 3 a 5 personas'), '03:00'), false, 'bare range without h');
   assert.equal(parser.hasTimeEvidence(evidence('MAY 3 tickets $5'), '03:00'), false, 'bare digits stay rejected');
 });
+
+// ── Day-header echo title gate (Sitges extraction-quality polish) ──────────
+
+test('isDayHeaderEchoTitle rejects weekday-heading echoes across languages', () => {
+  const parser = createParser();
+  // Weekday + day-of-month headings (multilingual, diacritic-folded)
+  assert.equal(parser.isDayHeaderEchoTitle('LUNES - 07'), true, 'es weekday + day');
+  assert.equal(parser.isDayHeaderEchoTitle('Domingo-06'), true, 'no-space separator');
+  assert.equal(parser.isDayHeaderEchoTitle('SAMEDI 05'), true, 'fr weekday + day, no separator');
+  assert.equal(parser.isDayHeaderEchoTitle('JUEVES- 03'), true, 'es weekday, hyphen-space');
+  assert.equal(parser.isDayHeaderEchoTitle('MIÉRCOLES - 09'), true, 'accented weekday');
+  assert.equal(parser.isDayHeaderEchoTitle('SEXTA-FEIRA - 11'), true, 'pt weekday');
+  // Bare full weekday is a heading, never an event name
+  assert.equal(parser.isDayHeaderEchoTitle('MARTES'), true, 'bare es weekday');
+  assert.equal(parser.isDayHeaderEchoTitle('sonntag'), true, 'bare de weekday');
+  // English weekday table (gate-side only, same rules)
+  assert.equal(parser.isDayHeaderEchoTitle('MONDAY - 07'), true, 'en weekday + day');
+  assert.equal(parser.isDayHeaderEchoTitle('Monday'), true, 'bare en weekday');
+  assert.equal(parser.isDayHeaderEchoTitle('Sat 05'), true, 'en abbreviation + day');
+  // Abbreviations without a day number are ordinary words — never rejected
+  assert.equal(parser.isDayHeaderEchoTitle('MAR'), false, 'es abbrev without day (= sea)');
+  assert.equal(parser.isDayHeaderEchoTitle('Sat'), false, 'en abbrev without day');
+  // Real titles are untouched (any other token keeps the title)
+  assert.equal(parser.isDayHeaderEchoTitle('Lunes de Carnaval Party'), false, 'weekday inside a real name');
+  assert.equal(parser.isDayHeaderEchoTitle('Sunday Funday'), false, 'weekday + qualifier');
+  assert.equal(parser.isDayHeaderEchoTitle('TUESDAY TEA DANCE'), false, 'weekday-led event name');
+  assert.equal(parser.isDayHeaderEchoTitle('BEAR POOL PARTY'), false, 'plain event name');
+  assert.equal(parser.isDayHeaderEchoTitle('Mr. BEAR SITGES 2026'), false, 'name with year');
+  assert.equal(parser.isDayHeaderEchoTitle(''), false, 'empty stays false');
+});
+
+test('rejectDayHeaderEchoPassFields drops only the echoed title and keeps the field open', () => {
+  const parser = createParser();
+  const partial = {
+    title: 'LUNES - 07',
+    bar: 'Bear-Village',
+    startDate: '2026-09-07'
+  };
+  const guarded = parser.rejectDayHeaderEchoPassFields(partial);
+  assert.equal(guarded.title, undefined, 'day-header title rejected at pass level');
+  assert.equal(guarded.bar, 'Bear-Village', 'other fields survive');
+  assert.equal(guarded.startDate, '2026-09-07', 'date fields survive');
+  // Non-echo titles pass through untouched (same object semantics as input)
+  const real = parser.rejectDayHeaderEchoPassFields({ title: 'Noche Especial BIENVENIDA' });
+  assert.equal(real.title, 'Noche Especial BIENVENIDA');
+});
+
+// ── Date-headed schedule segments (lost-segment fixes) ─────────────────────
+
+test('time-prefixed activity lines and date-headed schedule detection', () => {
+  const parser = createParser();
+  assert.equal(parser.isTimePrefixedActivityLine('14:00h: BBQ & Music en LE PATIO'), true, 'h-notation with minutes');
+  assert.equal(parser.isTimePrefixedActivityLine('21h a 03h Especial NOCHE BLANCA'), true, 'h-range');
+  assert.equal(parser.isTimePrefixedActivityLine('20 h: Ruta del OSO'), true, 'space before h');
+  assert.equal(parser.isTimePrefixedActivityLine('9:00 p.m. to 3:00 a.m. BEARS on CRUISE'), true, 'meridiem');
+  assert.equal(parser.isTimePrefixedActivityLine('‎ 18h a 21h Entrega de PACKS'), true, 'invisible LRM prefix stripped');
+  assert.equal(parser.isTimePrefixedActivityLine('100€ crédito para compras'), false, 'money is not a time');
+  assert.equal(parser.isTimePrefixedActivityLine('BEAR POOL PARTY: En una villa'), false, 'prose line');
+
+  // Date-headed schedule: weekday heading + at least one timed activity —
+  // no additional title-shaped line required
+  assert.equal(parser.segmentIsDateHeadedSchedule([
+    'VIERNES - 11',
+    '‎ 20:00h. CENA OFICIAL 25º ANIVERSARIO BEARS SITGES en «Hotel Calipolis» 20:00h. Cóctel – 20:30h. Cena & Performance . INCLUIDA EN EL PACK BEARS SITGES MÁS UNAS PALABRAS EXTRA PARA SUPERAR EL LÍMITE'
+  ]), true, 'day heading + one long timed line');
+  assert.equal(parser.segmentIsDateHeadedSchedule(['VIERNES - 11', 'Osos en la Playa: Recomendamos']), false, 'no timed line');
+  assert.equal(parser.segmentIsDateHeadedSchedule(['FIESTA BLANCA', '21h a 03h en Bear-Village']), false, 'head is not a date signal');
+
+  // Multi-activity day programme needs >= 3 timed lines
+  assert.equal(parser.segmentIsMultiActivityDayProgramme([
+    'LUNES - 07', '16h a 21h Apertura MARKET', '18:00h a 21h Entrega de PACKS', '21:00h a 03h Noche Especial BIENVENIDA', '01h a 06h After Party'
+  ]), true, 'day heading + 4 timed activities');
+  assert.equal(parser.segmentIsMultiActivityDayProgramme([
+    'LUNES - 07', '21:00h a 03h Noche Especial BIENVENIDA', 'Osos en la Playa'
+  ]), false, 'only one timed activity');
+});
+
+test('day sections keep their strong-title activity lines and the next day still splits (Sitges JUEVES-10/VIERNES-11 shape)', () => {
+  const parser = createParser();
+  const lines = [
+    'PROGRAMA oficial',
+    'Del 3 al 13 de SEPTIEMBRE',
+    'MIÉRCOLES - 09',
+    '16h a 20:30h BEAR TEA-DANCE : En el RoofTop del Hotel MiM',
+    '01h a 06h «Beef Mince» Party en «BEARS DISCO» by Scandal',
+    'JUEVES - 10',
+    'BEAR POOL PARTY: En una lujosa villa y espacio para eventos en las colinas de Sitges, a sólo 5 minutos del centro Bear-Village. Se proporcionará transporte en autobús.',
+    'VER Palauet Modernista Clos La Plana',
+    '9:00 p.m. to 3:00 a.m. BEARS on CRUISE Special Night at Bear-Village con Entrada Libre.',
+    '01h a 06h SAILOR Party en «BEARS DISCO» by Scandal',
+    'VIERNES - 11',
+    '20:00h. CENA OFICIAL 25º ANIVERSARIO BEARS SITGES en «Hotel Calipolis» 20:00h. Cóctel – 20:30h. Cena & Performance . INCLUIDA EN EL PACK BEARS SITGES',
+    '21:30h a 03:30h Noche Especial anniBEARsary en Bear-Village con DJ PERFECTO y una descripción bastante larga para esta línea'
+  ];
+  const html = `<html><body>${lines.map(l => `<p>${l}</p>`).join('\n')}</body></html>`;
+  const segments = parser.buildMultiEventSegments(html, 'https://bearssitges.example/programa/');
+
+  const jueves = segments.find(segment => segment.lines[0] === 'JUEVES - 10');
+  assert.ok(jueves, `JUEVES - 10 heads its own segment, got heads ${JSON.stringify(segments.map(s => s.lines[0]))}`);
+  assert.ok(jueves.lines.some(l => l.startsWith('BEAR POOL PARTY')), 'pool party line survives in the day segment');
+  assert.ok(jueves.lines.includes('VER Palauet Modernista Clos La Plana'),
+    'a strong title line inside a date-headed day section no longer starts a new segment');
+  assert.ok(!jueves.lines.includes('VIERNES - 11'), 'next day heading is not swallowed');
+
+  const viernes = segments.find(segment => segment.lines[0] === 'VIERNES - 11');
+  assert.ok(viernes, 'VIERNES - 11 heads its own segment (title-signal gate relaxed for date-headed schedules)');
+  assert.ok(viernes.lines.some(l => l.startsWith('20:00h.')), 'the day keeps its timed activities');
+});
+
+test('day-programme prompt steering: flag rides the segment htmlData and adds the additive rule line', () => {
+  const parser = createParser();
+  const daySegment = {
+    lines: [
+      'LUNES - 07',
+      '16h a 21h Apertura BEARS SITGES MARKET en Hotel Calipolis',
+      '18:00h a 21h Entrega de BEARS SITGES PACKS en Hotel Calipolis',
+      '21:00h a 03h Noche Especial BIENVENIDA: En Bear-Village . Entrada Libre',
+      '01h a 06h «Opening Night Village» After Party en «BEARS DISCO» by Scandal'
+    ]
+  };
+  const htmlData = parser.buildMultiEventSegmentHtmlData(
+    { html: '<html><body></body></html>', url: 'https://bearssitges.example/programa/' },
+    daySegment, 0, 1, [], null
+  );
+  assert.equal(htmlData.segmentDayProgramme, true, 'multi-activity day segment is flagged');
+
+  const prompt = parser.buildExtractionPrompt(htmlData, {}, null, {}, ['title', 'startDate'], 'SNIPPET', 'default', { segment: true, ocr: true });
+  assert.ok(prompt.includes('ONE DAY of a longer programme'), 'day-programme rule line present');
+  assert.ok(prompt.includes('never the title'), 'weekday-heading warning present');
+
+  // Ordinary segments: no flag, byte-identical prompts (no rule line)
+  const plainSegment = { lines: ['FIESTA BLANCA', '3 de septiembre 2026', 'Bear-Village Sitges'] };
+  const plainHtmlData = parser.buildMultiEventSegmentHtmlData(
+    { html: '<html><body></body></html>', url: 'https://bearssitges.example/programa/' },
+    plainSegment, 0, 1, [], null
+  );
+  assert.equal(plainHtmlData.segmentDayProgramme, false, 'non-programme segment not flagged');
+  const plainPrompt = parser.buildExtractionPrompt(plainHtmlData, {}, null, {}, ['title', 'startDate'], 'SNIPPET', 'default', { segment: true, ocr: true });
+  assert.ok(!plainPrompt.includes('ONE DAY of a longer programme'), 'rule line absent for ordinary segments');
+});
