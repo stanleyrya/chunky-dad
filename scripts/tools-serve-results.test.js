@@ -123,6 +123,30 @@ test('listParserNames reads the real scraper-input config', () => {
   assert.ok(entries.some((entry) => entry.name === 'Bearracuda Events'), 'known parser present');
 });
 
+test('the repo scraper-input parsers carry no static enabled flags (picker owns run selection)', () => {
+  const { parsers } = require('./scraper-input');
+  assert.ok(Array.isArray(parsers) && parsers.length > 5, 'real config lists parsers');
+
+  const withEnabled = parsers.filter((parser) => parser && 'enabled' in parser);
+  assert.deepEqual(
+    withEnabled.map((parser) => parser.name),
+    [],
+    'no parser entry declares enabled — manual selection is the picker\'s job'
+  );
+
+  // automationEnabled is a different knob (scheduled runs have no picker) and
+  // must survive: these festival/aggregator entries opt out of automation.
+  const automationOptOuts = parsers
+    .filter((parser) => parser && parser.automationEnabled === false)
+    .map((parser) => parser.name)
+    .sort();
+  assert.deepEqual(
+    automationOptOuts,
+    ['Bears Sitges Week', 'Spooky Bear', 'The Bear Calendar'],
+    'automationEnabled: false preserved where it was'
+  );
+});
+
 // ---------------------------------------------------------------------------
 // Bridge rewrite — real adapter fragments
 // ---------------------------------------------------------------------------
@@ -335,7 +359,11 @@ test('renderRunFormPage lists parsers escaped and posts to /run', () => {
   assert.ok(html.includes('method="POST"'));
   assert.ok(html.includes('action="/run"'));
   assert.ok(html.includes('A &amp; B &lt;Bears&gt;'), 'names HTML-escaped');
-  assert.ok(html.includes('(disabled in config)'));
+  assert.ok(html.includes('>All parsers<'), 'everything option says All parsers');
+  assert.ok(
+    !html.includes('disabled in config') && !html.includes('All enabled parsers'),
+    'no enabled-in-config annotations — parser entries carry no enabled flags'
+  );
   assert.ok(html.includes('report-only'), 'dry-run promise stated');
 });
 

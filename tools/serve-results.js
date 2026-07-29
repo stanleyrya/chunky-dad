@@ -340,11 +340,10 @@ function tailLines(text, maxLines = LOG_TAIL_LINES) {
 // Minimal run-form page: parser dropdown + POST /run.
 function renderRunFormPage(parserEntries, options = {}) {
     const entries = Array.isArray(parserEntries) ? parserEntries : [];
-    const optionsHtml = ['<option value="">All enabled parsers</option>']
+    const optionsHtml = ['<option value="">All parsers</option>']
         .concat(entries.map((entry) => {
             const name = escapeHtmlText(entry.name);
-            const suffix = entry.enabled ? '' : ' (disabled in config)';
-            return `<option value="${name}">${name}${suffix}</option>`;
+            return `<option value="${name}">${name}</option>`;
         }))
         .join('\n');
     const notice = options.notice
