@@ -7390,3 +7390,224 @@ test('day-programme prompt steering: flag rides the segment htmlData and adds th
   const plainPrompt = parser.buildExtractionPrompt(plainHtmlData, {}, null, {}, ['title', 'startDate'], 'SNIPPET', 'default', { segment: true, ocr: true });
   assert.ok(!plainPrompt.includes('ONE DAY of a longer programme'), 'rule line absent for ordinary segments');
 });
+
+// ── Tier-2 AI segment-boundary fallback ─────────────────────────────────────
+// Fixtures are blind-by-language: Dutch is NOT in DATE_VOCABULARY_LOCALES, so
+// the deterministic splitter genuinely finds nothing — no monkeypatching of
+// vocabulary internals.
+
+const DUTCH_PROGRAMME_HTML = `
+  <html><body>
+    <article>
+      <h1>BEREN WEEKEND PROGRAMMA</h1>
+      <p>Het volledige programma van het grote berenweekend in de stad, met feesten en borrels voor alle beren en hun vrienden.</p>
+      <h2>DONDERDAG- 03</h2>
+      <p>WELKOMSTBORREL IN DE KROEG</p>
+      <p>20:00 h. Welkomstborrel met live muziek en gratis hapjes voor alle bezoekers van het festival.</p>
+      <h2>VRIJDAG- 04</h2>
+      <p>LEREN NACHT IN DE KELDER</p>
+      <p>23:00 h. Leren nacht met strikte kledingvoorschriften en twee dansvloeren vol stevige muziek.</p>
+      <h2>ZATERDAG- 05</h2>
+      <p>GROTE SLOTFEEST AVOND</p>
+      <p>22:00 h. Het grote slotfeest met internationale gasten en een spectaculaire show om middernacht.</p>
+    </article>
+  </body></html>
+`;
+
+test('AI boundary pass segments a vocabulary-blind Dutch programme from verbatim headers', async () => {
+  const parser = createParser();
+  const sourceUrl = 'https://berenfest.example/programma';
+
+  // Tier-1 blindness by construction: Dutch headings carry no supported
+  // date vocabulary, so deterministic segmentation finds <2 segments.
+  assert.ok(parser.buildMultiEventSegments(DUTCH_PROGRAMME_HTML, sourceUrl).length < 2);
+
+  const labels = [];
+  let promptSeen = '';
+  let configSeen = null;
+  parser.core.callAiGenerate = async (config, prompt, label) => {
+    labels.push(label);
+    promptSeen = prompt;
+    configSeen = config;
+    return JSON.stringify({ boundaries: ['DONDERDAG- 03', 'VRIJDAG- 04', 'ZATERDAG- 05'] });
+  };
+
+  const segments = await parser.runAiBoundarySegmentation(DUTCH_PROGRAMME_HTML, sourceUrl, [], {}, {}, 0);
+  assert.equal(segments.length, 3);
+  assert.deepEqual(labels, ['segment-boundaries'], 'boundary pass uses the segment-boundaries pass label');
+  assert.equal(configSeen.temperature, 0);
+  assert.ok(configSeen.numPredict <= 1200, 'numPredict is clamped to 1200');
+  assert.ok(promptSeen.includes('PAGE LINES (one per line, exactly as extracted):'));
+  assert.ok(promptSeen.includes(`Return between 2 and ${parser.extractionLimits.multiEventMaxSegments} lines.`));
+
+  // Each day section starts at its verbatim header and keeps its own timed line
+  assert.equal(segments[0].lines[0], 'DONDERDAG- 03');
+  assert.equal(segments[1].lines[0], 'VRIJDAG- 04');
+  assert.equal(segments[2].lines[0], 'ZATERDAG- 05');
+  assert.ok(segments[0].lines.some(line => line.includes('20:00')));
+  assert.ok(segments[1].lines.some(line => line.includes('23:00')));
+  assert.ok(segments[2].lines.some(line => line.includes('22:00')));
+  assert.ok(!segments[0].lines.some(line => line.includes('23:00')), 'time lines stay in their own segment');
+  // The preamble before the first boundary is discarded
+  assert.ok(!segments[0].lines.includes('BEREN WEEKEND PROGRAMMA'));
+
+  // Wiring: extractEventsFromMultiEventPage adopts the AI segments
+  const extractedSegments = [];
+  parser.extractSingleEvent = async (segmentHtmlData) => {
+    extractedSegments.push(segmentHtmlData);
+    return { title: `event ${extractedSegments.length}` };
+  };
+  const events = await parser.extractEventsFromMultiEventPage(
+    { html: DUTCH_PROGRAMME_HTML, url: sourceUrl }, {}, {}, [], [], {});
+  assert.equal(events.length, 3);
+  assert.deepEqual(events.map(event => event._multiEventSegment.total), [3, 3, 3]);
+});
+
+test('AI boundary pass drops hallucinated boundaries and falls through to whole-page fallback', async () => {
+  const parser = createParser();
+  const sourceUrl = 'https://berenfest.example/programma';
+
+  // All-fake proposals: nothing verifies, the pass yields nothing
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); originalLog(...args); };
+  try {
+    parser.core.callAiGenerate = async () => JSON.stringify({
+      boundaries: ['MEGA BEAR BLOWOUT NIGHT', 'AFTERPARTY AT THE DOCKS']
+    });
+    const segments = await parser.runAiBoundarySegmentation(DUTCH_PROGRAMME_HTML, sourceUrl, [], {}, {}, 0);
+    assert.deepEqual(segments, []);
+    assert.ok(logs.some(line => line.includes('dropped unverifiable line') && line.includes('MEGA BEAR BLOWOUT NIGHT')));
+    assert.ok(logs.some(line => line.includes('proposed 2 line(s); 0 verified verbatim, 2 dropped')));
+    assert.ok(logs.some(line => line.includes('yielded <2 verified boundaries')));
+  } finally {
+    console.log = originalLog;
+  }
+
+  // One real + one fake → 1 verified < 2 → the multi-event flow takes the
+  // existing whole-page fallback path
+  parser.core.callAiGenerate = async () => JSON.stringify({
+    boundaries: ['DONDERDAG- 03', 'MEGA BEAR BLOWOUT NIGHT']
+  });
+  let fallbackHtmlData = null;
+  parser.extractEventsFromSinglePage = async (htmlData) => {
+    fallbackHtmlData = htmlData;
+    return [];
+  };
+  const events = await parser.extractEventsFromMultiEventPage(
+    { html: DUTCH_PROGRAMME_HTML, url: sourceUrl }, {}, {}, [], [], {});
+  assert.deepEqual(events, []);
+  assert.ok(fallbackHtmlData, 'whole-page fallback ran');
+  assert.equal(fallbackHtmlData._wholePageFallback, true);
+});
+
+test('AI boundary verification tolerates case, diacritic and zero-width drift', async () => {
+  const parser = createParser();
+  const sourceUrl = 'https://berenfest.example/programma';
+  parser.core.callAiGenerate = async () => JSON.stringify({
+    boundaries: [
+      '‎donderdag- 03',        // lowercase + leading zero-width mark
+      'VRÍJDAG​- 04',          // added diacritic + embedded zero-width space
+      'Záterdag- 05'           // mixed case + added diacritic
+    ]
+  });
+  const segments = await parser.runAiBoundarySegmentation(DUTCH_PROGRAMME_HTML, sourceUrl, [], {}, {}, 0);
+  assert.equal(segments.length, 3);
+  assert.equal(segments[0].lines[0], 'DONDERDAG- 03');
+  assert.equal(segments[2].lines[0], 'ZATERDAG- 05');
+});
+
+const ENGLISH_HEALTHY_MULTI_HTML = `
+  <html><body>
+    <p>FURBALL BLACKOUT PARTY</p>
+    <p>July 10, 2026 at the Eagle</p>
+    <p>Doors open at nine with two floors of music and a late night patio.</p>
+    <p>FURBALL POOL SPLASH</p>
+    <p>July 24, 2026 at Elsewhere Rooftop</p>
+    <p>Swim and dance all afternoon with resident selectors on the deck.</p>
+  </body></html>
+`;
+
+test('AI boundary pass never runs when tier 1 already found segments or the page is thin', async () => {
+  const parser = createParser();
+  const sourceUrl = 'https://furball.example/events';
+
+  // Healthy page: deterministic segmentation succeeds, the throwing stub
+  // proves the boundary pass is never consulted.
+  assert.ok(parser.buildMultiEventSegments(ENGLISH_HEALTHY_MULTI_HTML, sourceUrl).length >= 2);
+  parser.core.callAiGenerate = async () => {
+    throw new Error('AI boundary pass must not run when tier 1 found segments');
+  };
+  parser.extractSingleEvent = async () => ({ title: 'x' });
+  const events = await parser.extractEventsFromMultiEventPage(
+    { html: ENGLISH_HEALTHY_MULTI_HTML, url: sourceUrl }, {}, {}, [], [], {});
+  assert.ok(events.length >= 2);
+
+  // Thin page: no time lines, <1500 chars, no OCR → skip log + whole-page fallback
+  const thinHtml = `
+    <html><body>
+      <p>BEER BUST ZONDAG</p>
+      <p>Kom langs voor bier en gezelligheid met alle beren van de stad, iedereen is welkom bij ons.</p>
+    </body></html>
+  `;
+  const thinParser = createParser();
+  thinParser.core.callAiGenerate = async () => {
+    throw new Error('AI boundary pass must not run on a thin page');
+  };
+  let fallbackHtmlData = null;
+  thinParser.extractEventsFromSinglePage = async (htmlData) => {
+    fallbackHtmlData = htmlData;
+    return [];
+  };
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); originalLog(...args); };
+  try {
+    const thinEvents = await thinParser.extractEventsFromMultiEventPage(
+      { html: thinHtml, url: sourceUrl }, {}, {}, [], [], {});
+    assert.deepEqual(thinEvents, []);
+  } finally {
+    console.log = originalLog;
+  }
+  assert.ok(logs.some(line => line.includes('Skipping AI boundary pass — page content too thin')));
+  assert.ok(fallbackHtmlData, 'thin page still takes the whole-page fallback');
+  assert.equal(fallbackHtmlData._wholePageFallback, true);
+});
+
+test('AI boundary segments cap at multiEventMaxSegments and the raised cap fits a 13-day programme', async () => {
+  const parser = createParser();
+  assert.equal(parser.extractionLimits.multiEventMaxSegments, 16);
+
+  // 20 verified boundaries → capped at 16 segments
+  const sectionCount = 20;
+  const headers = [];
+  const sections = [];
+  for (let i = 1; i <= sectionCount; i++) {
+    const header = `SECTIE ${String(i).padStart(2, '0')} BERENAVOND`;
+    headers.push(header);
+    sections.push(`<h2>${header}</h2><p>21:00 h. Speciale berenavond nummer ${i} met muziek en dans in de grote zaal.</p>`);
+  }
+  const bigHtml = `<html><body><h1>GROOT BEREN FESTIVAL WEEKEND</h1>${sections.join('')}</body></html>`;
+  parser.core.callAiGenerate = async () => JSON.stringify({ boundaries: headers });
+  const segments = await parser.runAiBoundarySegmentation(bigHtml, 'https://berenfest.example/alles', [], {}, {}, 0);
+  assert.equal(segments.length, 16);
+  assert.equal(segments[0].lines[0], 'SECTIE 01 BERENAVOND');
+  assert.equal(segments[15].lines[0], 'SECTIE 16 BERENAVOND');
+
+  // Deterministic tier 1: a Sitges-schedule-shaped 13-day programme now
+  // survives whole (it silently lost days under the old cap of 12).
+  const dayHeaders = [
+    'JUEVES- 03', 'VIERNES- 04', 'SABADO- 05', 'DOMINGO- 06', 'LUNES- 07',
+    'MARTES- 08', 'MIERCOLES- 09', 'JUEVES- 10', 'VIERNES- 11', 'SABADO- 12',
+    'DOMINGO- 13', 'LUNES- 14', 'MARTES- 15'
+  ];
+  const daySections = dayHeaders.map((header, index) => `
+    <h2>${header}</h2>
+    <p>FIESTA DE OSOS ${index + 1}</p>
+    <p>Gran fiesta numero ${index + 1} con musica y muchos osos en el bar principal.</p>
+  `);
+  const sitgesHtml = `<html><body><h1>BEARS SITGES WEEK 2026</h1>${daySections.join('')}</body></html>`;
+  const sitgesParser = createParser();
+  const sitgesSegments = sitgesParser.buildMultiEventSegments(sitgesHtml, 'https://bearssitges.example/programa');
+  assert.equal(sitgesSegments.length, 13);
+});
