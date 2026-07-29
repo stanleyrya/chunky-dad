@@ -7710,3 +7710,86 @@ test('normalizeAiEvent drops implausible url/ticketUrl values and logs the rejec
   }, {}, null, null, null);
   assert.equal(clean.url, 'https://dice.fm/event/8er825-beefmince-brighton-pride-1st-aug-horizon-brighton-tickets');
 });
+
+// ---------------------------------------------------------------------------
+// siteRole via curated bars (run 20260729-125247: eaglela.com has no venue-ish
+// JSON-LD, siteRole stayed undetermined, and rejectBrandLikePassFields threw
+// away bar "Eagle LA" twice)
+// ---------------------------------------------------------------------------
+
+const EAGLE_LA_CURATED_BAR = {
+  name: 'Eagle LA',
+  city: 'la',
+  coordinates: '34.0912127, -118.2840632',
+  address: '4219 Santa Monica Blvd, Los Angeles, CA 90029'
+};
+
+const EAGLE_LA_SITE_HTML = `<html><head>
+  <meta property="og:site_name" content="Eagle LA" />
+</head><body>CUB SCOUT — EVERY THIRD SATURDAY</body></html>`;
+
+function createEagleLaParser(bars) {
+  const parser = new AiWebParser({ normalizeUrl });
+  parser.core = new SharedCore({}, { eventSchema: EventSchema, bars });
+  return parser;
+}
+
+test('siteRole: a page brand matching a curated bar for the parser city resolves venue; the bar survives the brand guard', () => {
+  const parser = createEagleLaParser({ la: [EAGLE_LA_CURATED_BAR] });
+  const htmlData = { url: 'https://eaglela.com/events/cub-scout-3/', html: EAGLE_LA_SITE_HTML };
+
+  assert.equal(parser.resolvePageSiteRole(htmlData, { city: 'la' }), 'venue');
+  assert.equal(htmlData.pageSiteRoleReason, 'curated bar "Eagle LA"');
+
+  // The existing siteRole log line prints the curated reason — no new shape.
+  const logs = captureLogs(() => parser.logPageSiteRoleOnce(htmlData));
+  assert.deepEqual(logs, ['🤖 AI Web: siteRole for eaglela.com: venue (curated bar "Eagle LA")']);
+
+  // Downstream: the pass-level brand guard keeps the bar on a venue site.
+  const guarded = parser.rejectBrandLikePassFields({ bar: 'Eagle LA' }, htmlData, 'test');
+  assert.equal(guarded.bar, 'Eagle LA', 'venue site: the page brand IS the venue, never rejected');
+});
+
+test('siteRole: a page brand with no curated bar match stays undetermined', () => {
+  const parser = createEagleLaParser({ la: [EAGLE_LA_CURATED_BAR] });
+  const htmlData = {
+    url: 'https://bearracuda.example/events',
+    html: '<html><head><meta property="og:site_name" content="Bearracuda" /></head><body></body></html>'
+  };
+  assert.equal(parser.resolvePageSiteRole(htmlData, { city: 'la' }), '');
+  assert.equal(htmlData.pageSiteRoleReason, '');
+});
+
+test('siteRole: without a configured city an ambiguous multi-city curated name stays undetermined; a unique hit resolves venue', () => {
+  // "Eagle" is curated in two cities → fail closed.
+  const ambiguousParser = createEagleLaParser({
+    la: [{ name: 'Eagle', city: 'la' }],
+    sf: [{ name: 'Eagle', city: 'sf' }]
+  });
+  const ambiguousData = {
+    url: 'https://eagle.example/events',
+    html: '<html><head><meta property="og:site_name" content="Eagle" /></head><body></body></html>'
+  };
+  assert.equal(ambiguousParser.resolvePageSiteRole(ambiguousData, {}), '');
+
+  // The same lookup with a UNIQUE cross-city hit resolves venue.
+  const uniqueParser = createEagleLaParser({ la: [EAGLE_LA_CURATED_BAR] });
+  const uniqueData = { url: 'https://eaglela.com/events/', html: EAGLE_LA_SITE_HTML };
+  assert.equal(uniqueParser.resolvePageSiteRole(uniqueData, {}), 'venue');
+  assert.equal(uniqueData.pageSiteRoleReason, 'curated bar "Eagle LA"');
+});
+
+test('curated-bar venue chain: BarDataNormalizer canonicalizes the kept bar and adopts curated coordinates + address for an unpinned event', () => {
+  const { BarDataNormalizer } = require('../normalizers');
+  const core = new SharedCore({}, { eventSchema: EventSchema, bars: { la: [EAGLE_LA_CURATED_BAR] } });
+  const normalizer = new BarDataNormalizer(core);
+
+  const event = { title: 'CubScout LA', bar: 'EAGLE LA', city: 'la' };
+  normalizer.normalize(event);
+
+  assert.equal(event.bar, 'Eagle LA', 'canonicalized to the curated display name');
+  assert.equal(event.location, '34.0912127, -118.2840632', 'curated coordinates adopted for the unpinned event');
+  assert.equal(event.pinSource, 'curated');
+  assert.equal(event.address, '4219 Santa Monica Blvd, Los Angeles, CA 90029');
+  assert.equal(event.addressSource, 'curated');
+});

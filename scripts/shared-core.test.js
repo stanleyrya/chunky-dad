@@ -9975,3 +9975,165 @@ test("bear keywords: 'bbq' alone is not a bear signal; explicit bear context is"
     ['bear']
   );
 });
+
+// ---------------------------------------------------------------------------
+// Final-build field cleanups in buildAnalyzedCalendarEvent: description
+// formatting sanitizer (run 20260729-125201, dice.fm/Wix markup in notes) and
+// gmaps rebuild from settled facts (same run: text-search links next to
+// geocode-verified coords).
+// ---------------------------------------------------------------------------
+
+const { NormalizerPipeline } = require('./normalizers');
+
+function createFinalBuildCore(options = {}) {
+  return new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    normalizerPipeline: new NormalizerPipeline(),
+    ...options
+  });
+}
+
+function captureFinalBuildLogs(lines) {
+  const originalLog = console.log;
+  console.log = (message) => { lines.push(String(message)); };
+  return () => { console.log = originalLog; };
+}
+
+const NEW_ACTION_ANALYSIS = { action: 'new', reason: 'No existing event found', sourceEvent: null, overrideIdentity: null };
+
+test('final build sanitizes description formatting markup and logs once', async () => {
+  const core = createFinalBuildCore();
+  const event = {
+    title: 'BEEFMINCE',
+    startDate: new Date('2026-08-01T21:00:00.000Z'),
+    city: 'dallas',
+    description: "**BEEFMINCE | The UK's Tastiest Bear Club** **\\*Now on Saturdays\\***"
+  };
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(event, NEW_ACTION_ANALYSIS, {}, {});
+  } finally {
+    restore();
+  }
+
+  assert.ok(!analyzed.description.includes('**'), `markdown runs stripped: ${JSON.stringify(analyzed.description)}`);
+  assert.ok(!analyzed.description.includes('\\*'), 'escaped asterisks stripped');
+  assert.ok(analyzed.description.includes("BEEFMINCE | The UK's Tastiest Bear Club"), 'words kept');
+  assert.ok(analyzed.notes.includes(analyzed.description), 'notes serialize the sanitized description');
+  assert.deepEqual(
+    lines.filter(line => line.startsWith('🧼 DESCRIPTION:')),
+    ['🧼 DESCRIPTION: stripped formatting markup for "BEEFMINCE"']);
+});
+
+test('final build leaves a plain description byte-identical and stays silent', async () => {
+  const core = createFinalBuildCore();
+  const plain = 'Bears, beers, and DJs from 9pm. 21+ only.';
+  const event = {
+    title: 'CUB NIGHT',
+    startDate: new Date('2026-08-01T21:00:00.000Z'),
+    city: 'dallas',
+    description: plain
+  };
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(event, NEW_ACTION_ANALYSIS, {}, {});
+  } finally {
+    restore();
+  }
+
+  assert.equal(analyzed.description, plain, 'byte-identical passthrough');
+  assert.equal(lines.some(line => line.startsWith('🧼 DESCRIPTION:')), false, 'no sanitizer log for clean text');
+});
+
+test('final build rebuilds a vague text-query gmaps link from verified coordinates', async () => {
+  const core = createFinalBuildCore();
+  const event = {
+    title: 'HORIZON BEAR NIGHT',
+    startDate: new Date('2026-08-01T21:00:00.000Z'),
+    location: '50.8196107, -0.1315114',
+    gmaps: 'https://www.google.com/maps/search/?api=1&query=Horizon%2C%20Brighton%20and%20Hove'
+  };
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(event, NEW_ACTION_ANALYSIS, {}, {});
+  } finally {
+    restore();
+  }
+
+  assert.equal(analyzed.gmaps, 'https://www.google.com/maps/search/?api=1&query=50.8196107%2C-0.1315114');
+  assert.ok(lines.includes('🗺️ GMAPS: rebuilt link from verified coordinates for "HORIZON BEAR NIGHT"'),
+    `got: ${JSON.stringify(lines)}`);
+});
+
+test('final build prefers a curated bar googleMaps link over the coordinate rebuild', async () => {
+  const CURATED_EAGLE_GMAPS = 'https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4';
+  const core = createFinalBuildCore({
+    bars: {
+      la: [{
+        name: 'Eagle LA',
+        city: 'la',
+        coordinates: '34.0912127, -118.2840632',
+        googleMaps: CURATED_EAGLE_GMAPS
+      }]
+    }
+  });
+  const event = {
+    title: 'CUBSCOUT LA',
+    startDate: new Date('2026-08-01T21:00:00.000Z'),
+    bar: 'Eagle LA',
+    city: 'la',
+    location: '34.0912127, -118.2840632',
+    gmaps: 'https://www.google.com/maps/search/?api=1&query=Eagle%20LA'
+  };
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(event, NEW_ACTION_ANALYSIS, {}, {});
+  } finally {
+    restore();
+  }
+
+  assert.equal(analyzed.gmaps, CURATED_EAGLE_GMAPS, 'curated link wins verbatim');
+  assert.ok(lines.includes('🗺️ GMAPS: adopted curated googleMaps link for "CUBSCOUT LA"'));
+});
+
+test('final build never rebuilds a parser-static gmaps value or a coord-less event', async () => {
+  const core = createFinalBuildCore();
+
+  // Static-stamped gmaps is curated parser config — untouched even with coords.
+  const staticEvent = {
+    title: 'STATIC MAPS',
+    startDate: new Date('2026-08-01T21:00:00.000Z'),
+    location: '50.8196107, -0.1315114',
+    gmaps: 'https://maps.example/curated-by-config',
+    _staticFields: { gmaps: 'https://maps.example/curated-by-config' }
+  };
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzedStatic;
+  let analyzedNoCoords;
+  try {
+    analyzedStatic = await core.buildAnalyzedCalendarEvent(staticEvent, NEW_ACTION_ANALYSIS, {}, {});
+
+    // No usable final coordinates → existing link stands.
+    const noCoordsEvent = {
+      title: 'NO COORDS',
+      startDate: new Date('2026-08-01T21:00:00.000Z'),
+      gmaps: 'https://www.google.com/maps/search/?api=1&query=Eden%20Birmingham'
+    };
+    analyzedNoCoords = await core.buildAnalyzedCalendarEvent(noCoordsEvent, NEW_ACTION_ANALYSIS, {}, {});
+  } finally {
+    restore();
+  }
+
+  assert.equal(analyzedStatic.gmaps, 'https://maps.example/curated-by-config', 'static gmaps untouched');
+  assert.equal(analyzedNoCoords.gmaps, 'https://www.google.com/maps/search/?api=1&query=Eden%20Birmingham', 'no coords → untouched');
+  assert.equal(lines.some(line => line.startsWith('🗺️ GMAPS:')), false, 'no rebuild logs fired');
+});
