@@ -2998,6 +2998,17 @@
         populateCityOptions();
         const baseState = createDefaultState();
         const urlState = loadStateFromUrl(baseState);
+        if (urlState.sawEventParam) {
+          // A prefill link provided real event data — the demo sample values
+          // must not leak into fields the link didn't cover (a scraper
+          // prefill without shortName was showing "Bearracuda" as the short
+          // name). Blank the sample-only fields; dates/city defaults stay.
+          baseState.name = '';
+          baseState.shortName = '';
+          baseState.venue = '';
+          baseState.address = '';
+          baseState.description = '';
+        }
         state = { ...baseState, ...urlState.overrides };
         state.timezone = state.timezone || browserTimezone;
         normalizeStateLinks();
@@ -7371,11 +7382,12 @@ Example output:
         const schema = getRequiredEventSchema();
         const params = new URLSearchParams(window.location.search);
         const overrides = {};
-        const parseContext = { sawEditFlag: false };
+        const parseContext = { sawEditFlag: false, sawEventParam: false };
         params.forEach((value, key) => {
           if (value == null) return;
           const stateKey = schema.getEventBuilderStateKey(key);
           if (stateKey) {
+            parseContext.sawEventParam = true;
             if (stateKey === 'start' || stateKey === 'end') {
               const sanitized = sanitizeDateTimeInput(value);
               if (sanitized) overrides[stateKey] = sanitized;
@@ -7410,7 +7422,7 @@ Example output:
         if (!overrides.end) overrides.end = baseState.end;
         if (!overrides.city) overrides.city = baseState.city;
         if (!overrides.recurrenceMode) overrides.recurrenceMode = baseState.recurrenceMode;
-        return { overrides };
+        return { overrides, sawEventParam: parseContext.sawEventParam };
       }
 
       function applyStateToForm() {
