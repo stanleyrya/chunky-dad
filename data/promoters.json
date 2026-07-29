@@ -1,7 +1,9 @@
 [
   {
     "name": "Megawoof America",
-    "aliases": ["MEGAWOOF"],
+    "aliases": [
+      "MEGAWOOF"
+    ],
     "shortName": "MEGA-WOOF",
     "instagram": "https://www.instagram.com/megawoof_america",
     "website": "https://linktr.ee/megawoof_america",
@@ -16,30 +18,41 @@
   {
     "name": "BEEFWITCH",
     "parent": "Coach After Dark",
-    "keywords": ["beefwitch"],
+    "keywords": [
+      "beefwitch"
+    ],
     "shortName": "BEEFWITCH",
     "instagram": "https://www.instagram.com/thebeefwitch",
     "bearAffinity": "always"
   },
   {
     "name": "Bearracuda",
-    "aliases": ["Bearracuda Events"],
+    "aliases": [
+      "Bearracuda Events"
+    ],
     "shortName": "Bear-rac-uda",
     "instagram": "https://www.instagram.com/bearracuda",
     "website": "https://bearracuda.com/",
-    "urlPatterns": ["bearracuda.com", "eventbrite.com/o/bearracuda-21867032189"],
+    "urlPatterns": [
+      "bearracuda.com",
+      "eventbrite.com/o/bearracuda-21867032189"
+    ],
     "bearAffinity": "usually"
   },
   {
     "name": "HOT TAKE",
     "parent": "Bearracuda",
-    "keywords": ["hot take"],
+    "keywords": [
+      "hot take"
+    ],
     "shortName": "HOT TAKE"
   },
   {
     "name": "TREASURE TRAIL",
     "parent": "Bearracuda",
-    "keywords": ["treasure trail"],
+    "keywords": [
+      "treasure trail"
+    ],
     "shortName": "TREAS-URE TRAIL"
   },
   {
@@ -69,7 +82,9 @@
     "shorterName": "GLX",
     "instagram": "https://www.instagram.com/goldiloxx__",
     "matchKey": "goldiloxx*|${year}-${month}-*|*",
-    "urlPatterns": ["goldiloxx"],
+    "urlPatterns": [
+      "goldiloxx"
+    ],
     "bearAffinity": "always"
   },
   {
@@ -81,7 +96,9 @@
   },
   {
     "name": "CubScout LA",
-    "aliases": ["CUBSCOUT"],
+    "aliases": [
+      "CUBSCOUT"
+    ],
     "bearAffinity": "always"
   },
   {
@@ -92,12 +109,16 @@
   {
     "name": "SPOOKMINCE",
     "parent": "BEEFMINCE",
-    "keywords": ["spookmince"]
+    "keywords": [
+      "spookmince"
+    ]
   },
   {
     "name": "BOATMINCE",
     "parent": "BEEFMINCE",
-    "keywords": ["boatmince"]
+    "keywords": [
+      "boatmince"
+    ]
   },
   {
     "name": "BeefDip",
@@ -118,22 +139,64 @@
     "name": "Fat Dad",
     "instagram": "https://www.instagram.com/fatdadnyc",
     "website": "https://events.humanitix.com/fatdad",
-    "urlPatterns": ["fatdad"],
+    "urlPatterns": [
+      "fatdad"
+    ],
     "bearAffinity": "always"
   },
   {
     "name": "Horse Meat Disco",
     "instagram": "https://www.instagram.com/horsemeatdisco",
     "website": "https://horsemeatdisco.net",
-    "urlPatterns": ["horsemeatdisco"],
+    "urlPatterns": [
+      "horsemeatdisco"
+    ],
     "bearAffinity": "usually"
   },
   {
     "name": "South Seattle Bear Social",
-    "aliases": ["SSBS"],
+    "aliases": [
+      "SSBS"
+    ],
     "instagram": "https://www.instagram.com/southseattlebearsocial",
     "website": "https://events.ticketleap.com/events/southseattlebearsocial",
-    "urlPatterns": ["southseattlebearsocial"],
+    "urlPatterns": [
+      "southseattlebearsocial"
+    ],
     "bearAffinity": "always"
+  },
+  {
+    "name": "Bears Sitges Club",
+    "aliases": [
+      "Bears Sitges",
+      "Bears Sitges Week",
+      "Bears Week Sitges",
+      "Bears Sitges Meeting"
+    ],
+    "instagram": "https://www.instagram.com/bearssitgesofficial",
+    "facebook": "https://www.facebook.com/BearsSitges",
+    "website": "https://bearssitges.org",
+    "bearAffinity": "always",
+    "urlPatterns": [
+      "bearssitges"
+    ]
+  },
+  {
+    "name": "Northeast Ursamen",
+    "aliases": [
+      "Spooky Bear",
+      "NE Ursamen",
+      "Ursamen",
+      "Out of Hibernation",
+      "Connecticut Bear"
+    ],
+    "instagram": "https://www.instagram.com/ne.ursamen",
+    "facebook": "https://www.facebook.com/NEUrsamen",
+    "website": "https://www.ursamen.org",
+    "bearAffinity": "always",
+    "urlPatterns": [
+      "ursamen",
+      "spookybear"
+    ]
   }
 ]

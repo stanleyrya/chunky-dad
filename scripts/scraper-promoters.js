@@ -173,6 +173,40 @@ const scraperPromoters = [
       "southseattlebearsocial"
     ],
     "bearAffinity": "always"
+  },
+  {
+    "name": "Bears Sitges Club",
+    "aliases": [
+      "Bears Sitges",
+      "Bears Sitges Week",
+      "Bears Week Sitges",
+      "Bears Sitges Meeting"
+    ],
+    "instagram": "https://www.instagram.com/bearssitgesofficial",
+    "facebook": "https://www.facebook.com/BearsSitges",
+    "website": "https://bearssitges.org",
+    "bearAffinity": "always",
+    "urlPatterns": [
+      "bearssitges"
+    ]
+  },
+  {
+    "name": "Northeast Ursamen",
+    "aliases": [
+      "Spooky Bear",
+      "NE Ursamen",
+      "Ursamen",
+      "Out of Hibernation",
+      "Connecticut Bear"
+    ],
+    "instagram": "https://www.instagram.com/ne.ursamen",
+    "facebook": "https://www.facebook.com/NEUrsamen",
+    "website": "https://www.ursamen.org",
+    "bearAffinity": "always",
+    "urlPatterns": [
+      "ursamen",
+      "spookybear"
+    ]
   }
 ];
 

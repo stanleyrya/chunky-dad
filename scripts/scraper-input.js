@@ -21,7 +21,7 @@ const scraperConfig = {
     },
     // deadEndRetryDays: 30, // Learned dead-end URLs (fetched fine but yielded nothing) are skipped for this many days, then retried once; 0 disables the store (default: 30)
     geocodeVerification: { mode: "enforce" }, // verify geocoded pins: grade-gate + Apple reverse cross-check. "report" (default) flags suspects in logs, "enforce" refuses suspect pins, "off" skips extra checks. Generic city-level pins are always refused.
-    promoterRegistry: { mode: "report" }, // Curated promoter identity matching — see data/promoters.json; "enforce" stamps matched metadata + bearAffinity
+    promoterRegistry: { mode: "enforce" }, // Curated promoter identity matching — see data/promoters.json; enforce stamps matched metadata + bearAffinity (flipped 2026-07-28: verification battery — 37 matches, 0 false positives, 100% precision)
     // NOTE: Eventbrite /e/ confidence defaults (JSON-LD cover/image/ticketUrl,
     // meta location) are built into shared-core now — an aiConfidenceDefaults
     // block here is only needed to extend or override them.
@@ -293,6 +293,46 @@ const scraperConfig = {
       },
     },
     { name: "massive.club", enabled: true, urls: ["https://www.massive.club"], alwaysBear: false },
+    // ── Festival-week schedules 2026-07-28 (recon-verified) ─────────────
+    {
+      name: "Bears Sitges Week",
+      enabled: false,
+      automationEnabled: false,
+      // Official Bears Sitges Club programme — one long WordPress page,
+      // ~45 timed activities Sept 3-13 with venues inline. Spanish text;
+      // day headers carry day-of-month only (month/year stated once).
+      urls: ["https://bearssitges.org/bears-sitges-week/"],
+      alwaysBear: true,
+      urlDiscoveryDepth: 0, // everything on one page; discovery wanders into store/news
+      ai: { classifyPages: false }, // heuristic multi-event-page is CORRECT here; the AI
+      // second opinion sees "one overarching event" (festival-programme trap) and
+      // reroutes to single-event extraction, whose payload window misses the schedule
+      metadata: {
+        shortName: { value: "BEARS SITGES" },
+        website: { value: "https://bearssitges.org" },
+        instagram: { value: "https://www.instagram.com/bearssitgesofficial" },
+        facebook: { value: "https://www.facebook.com/BearsSitges" },
+      },
+    },
+    {
+      name: "Spooky Bear",
+      enabled: false,
+      automationEnabled: false,
+      // Northeast Ursamen's Provincetown Halloween weekend. 2026 schedule
+      // publishes on THIS url ~Sept/Oct (2025 precedent: full text schedule,
+      // venues inline, weekday-only headers — dates anchor to the announced
+      // range). Idles harmlessly until then.
+      urls: ["https://www.ursamen.org/spookybear"],
+      alwaysBear: true,
+      urlDiscoveryDepth: 1, // follow Zeffy/ThunderTix ticket links
+      discoveryBlockedPatterns: ["ursamen.org/about", "ursamen.org/contact", "ursamen.org/the-board", "ursamen.org/our-sponsors", "ursamen.org/general-events", "coming-soon", "zeffy.com/donation-form"],
+      metadata: {
+        shortName: { value: "SPOOKY BEAR" },
+        website: { value: "https://www.ursamen.org/spookybear" },
+        instagram: { value: "https://www.instagram.com/ne.ursamen" },
+        facebook: { value: "https://www.facebook.com/NEUrsamen" },
+      },
+    },
     // ── Onboarding batch 2026-07-27 (recon-verified) — each ships disabled;
     // run one at a time via the parser picker, review, then enable. ──────
     {
