@@ -8611,6 +8611,9 @@ function buildFinalTrimScrapedEvent(overrides = {}) {
     bar: 'Precinct DTLA',
     city: 'dallas',
     ticketUrl: 'https://tickets.example/duro-la',
+    // shortName present so the shortName derivation pass stays inert —
+    // these tests count TRIM AI calls only.
+    shortName: 'DURO',
     _parserConfig: buildTrimParserConfig(),
     _fieldTrims: [{ ...TRIMMED_TITLE_RECORD }],
     ...overrides
@@ -8696,6 +8699,9 @@ test('final trim pass: an action without scraped contribution is flagged, never 
     title: OVERLONG_TITLE,
     startDate: new Date('2026-08-08T02:00:00.000Z'),
     city: 'dallas',
+    // shortName present so the shortName derivation pass stays inert —
+    // this test counts TRIM AI calls only.
+    shortName: 'DURO',
     _parserConfig: buildTrimParserConfig()
   };
   const analysis = { action: 'conflict', reason: 'Identifier match not found', sourceEvent: null, overrideIdentity: null };
@@ -10185,4 +10191,253 @@ test('final build keeps a ticketUrl that differs from the website', async () => 
 
   assert.equal(analyzed.ticketUrl, 'https://www.eventbrite.com/e/furball-chicago-tickets-123', 'real ticket link survives');
   assert.equal(lines.some(line => line.startsWith('🔗 LINKS:')), false, 'no dedup log');
+});
+
+// ---------------------------------------------------------------------------
+// AI shortName derivation pass (final-build): events lacking a shortName make
+// ugly city-page calendar chips (the site falls back to the full title).
+// Derived from the title only, guarded by the deterministic verbatim gate in
+// evaluateDerivedShortName. Unescaped `-` in shortName = line-break hint.
+// ---------------------------------------------------------------------------
+
+function createShortNameAdapter(content) {
+  const adapter = { calls: [] };
+  adapter.postJson = async (endpoint, payload) => {
+    adapter.calls.push(payload);
+    return { ok: true, status: 200, text: buildOpenAiResponsePayload(content) };
+  };
+  return adapter;
+}
+
+test('shortName gate: hyphen insertion and case-lift accepted, invented text rejected', () => {
+  const core = createCore();
+
+  // Hyphen insertion as a line-break hint (whole title + added hyphen stores)
+  assert.deepEqual(core.evaluateDerivedShortName('CUBSCOUT', 'CUB-SCOUT', 16),
+    { ok: true, value: 'CUB-SCOUT' });
+
+  // Contiguous-substring rule: spaces count as characters — "BEEF MARKET"
+  // splices two words together and must be rejected.
+  assert.deepEqual(core.evaluateDerivedShortName('BEEFMINCE MEET MARKET', 'BEEF MARKET', 16),
+    { ok: false, reason: 'not a verbatim substring' });
+  assert.deepEqual(core.evaluateDerivedShortName('BEEFMINCE MEET MARKET', 'MEET MARKET', 16),
+    { ok: true, value: 'MEET MARKET' });
+  assert.deepEqual(core.evaluateDerivedShortName('BEEFMINCE MEET MARKET', 'BEEFMINCE', 16),
+    { ok: true, value: 'BEEFMINCE' });
+
+  // Too long: a verbatim substring over the cap is still rejected.
+  assert.deepEqual(core.evaluateDerivedShortName('BEEFMINCE MEET MARKET', 'BEEFMINCE MEET MA', 16),
+    { ok: false, reason: 'too long' });
+
+  // Whole title unchanged adds nothing — the site fallback already shows it.
+  assert.deepEqual(core.evaluateDerivedShortName('BEEFMINCE', 'BEEFMINCE', 16),
+    { ok: false, reason: 'equals title' });
+
+  // Case-lift IS a display change and is stored.
+  assert.deepEqual(core.evaluateDerivedShortName('Beefmince', 'BEEFMINCE', 16),
+    { ok: true, value: 'BEEFMINCE' });
+
+  // Diacritic fold: the answer may drop accents the title carries.
+  assert.deepEqual(core.evaluateDerivedShortName('OSOS Café Night', 'CAFE', 16),
+    { ok: true, value: 'CAFE' });
+
+  // Empty / non-string answers are unusable.
+  assert.deepEqual(core.evaluateDerivedShortName('BEEFMINCE', '   ', 16),
+    { ok: false, reason: 'unusable response' });
+});
+
+test('shortName prompt: identical across builds, title only — no volatile content', () => {
+  const core = createCore();
+  const first = core.buildShortNamePrompt({ eventTitle: 'BEEFMINCE MEET MARKET', maxChars: 16 });
+  const second = core.buildShortNamePrompt({ eventTitle: 'BEEFMINCE MEET MARKET', maxChars: 16 });
+  assert.equal(first, second, 'cache-key stability: byte-identical prompts');
+  assert.ok(first.includes('BEEFMINCE MEET MARKET'), 'title present');
+  assert.ok(!/\b20\d\d\b/.test(first), 'no year/date strings in the prompt');
+  assert.ok(first.includes('16 characters'), 'max chars stated');
+});
+
+test('final build derives a shortName via AI for an event lacking one', async () => {
+  const core = createFinalBuildCore();
+  const adapter = createShortNameAdapter('{"shortName": {"value": "BEEFMINCE", "reason": "recognizable brand"}}');
+  const event = {
+    title: 'BEEFMINCE MEET MARKET',
+    startDate: new Date('2026-08-01T21:00:00.000Z'),
+    city: 'dallas'
+  };
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(event, NEW_ACTION_ANALYSIS, adapter, { ai: {} });
+  } finally {
+    restore();
+  }
+
+  assert.equal(analyzed.shortName, 'BEEFMINCE');
+  const noteFields = core.parseNotesIntoFields(analyzed.notes || '');
+  assert.equal(noteFields.shortName, 'BEEFMINCE', 'notes serialize the derived shortName');
+  assert.ok(lines.includes('🏷️ SHORTNAME: derived "BEEFMINCE" for "BEEFMINCE MEET MARKET"'),
+    `got: ${JSON.stringify(lines.filter(line => line.includes('SHORTNAME')))}`);
+  assert.equal(adapter.calls.length, 1, 'exactly one AI call');
+  const prompt = adapter.calls[0].messages[0].content;
+  assert.ok(prompt.includes('BEEFMINCE MEET MARKET'), 'prompt carries the title');
+  assert.ok(!prompt.includes('2026'), 'prompt carries no dates');
+  assert.ok(!prompt.toLowerCase().includes('dallas'), 'prompt carries no city');
+});
+
+test('final build makes no shortName AI call when one exists, is static, or the pass is off', async () => {
+  const core = createFinalBuildCore();
+  const explodingAdapter = { postJson: async () => { throw new Error('AI must not be called'); } };
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let withShortName;
+  let staticShortName;
+  let passDisabled;
+  try {
+    withShortName = await core.buildAnalyzedCalendarEvent({
+      title: 'BEEFMINCE MEET MARKET',
+      shortName: 'BEEF-MINCE',
+      startDate: new Date('2026-08-01T21:00:00.000Z')
+    }, NEW_ACTION_ANALYSIS, explodingAdapter, { ai: {} });
+
+    staticShortName = await core.buildAnalyzedCalendarEvent({
+      title: 'STATIC SHORT NAME NIGHT',
+      startDate: new Date('2026-08-01T21:00:00.000Z'),
+      _staticFields: { shortName: 'CURATED' }
+    }, NEW_ACTION_ANALYSIS, explodingAdapter, { ai: {} });
+
+    passDisabled = await core.buildAnalyzedCalendarEvent({
+      title: 'NO DERIVE NIGHT',
+      startDate: new Date('2026-08-01T21:00:00.000Z')
+    }, NEW_ACTION_ANALYSIS, explodingAdapter, { ai: { shortNames: false } });
+  } finally {
+    restore();
+  }
+
+  assert.equal(withShortName.shortName, 'BEEF-MINCE', 'existing shortName untouched');
+  assert.equal(staticShortName.shortName, undefined, 'static-stamped field never derived over');
+  assert.equal(passDisabled.shortName, undefined, 'ai.shortNames: false disables the pass');
+  assert.equal(lines.some(line => line.startsWith('🏷️ SHORTNAME:')), false, 'no shortName logs fired');
+});
+
+test('final build survives shortName transport failure and gate rejection unchanged', async () => {
+  const core = createFinalBuildCore();
+
+  // Transport throws → callAiGenerate returns null → unusable response.
+  const throwingAdapter = { postJson: async () => { throw new Error('connection refused'); } };
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let transportFailed;
+  let gateRejected;
+  try {
+    transportFailed = await core.buildAnalyzedCalendarEvent({
+      title: 'BEEFMINCE MEET MARKET',
+      startDate: new Date('2026-08-01T21:00:00.000Z')
+    }, NEW_ACTION_ANALYSIS, throwingAdapter, { ai: {} });
+
+    // Gate rejection: spliced words are not a contiguous substring.
+    const splicedAdapter = createShortNameAdapter('{"shortName": {"value": "BEEF MARKET"}}');
+    gateRejected = await core.buildAnalyzedCalendarEvent({
+      title: 'BEEFMINCE MEET MARKET',
+      startDate: new Date('2026-08-01T21:00:00.000Z')
+    }, NEW_ACTION_ANALYSIS, splicedAdapter, { ai: {} });
+  } finally {
+    restore();
+  }
+
+  assert.equal(transportFailed.shortName, undefined, 'event ships without shortName');
+  assert.ok(lines.includes('🏷️ SHORTNAME: rejected AI answer for "BEEFMINCE MEET MARKET" — unusable response'),
+    `got: ${JSON.stringify(lines.filter(line => line.includes('SHORTNAME')))}`);
+  assert.equal(gateRejected.shortName, undefined, 'gated answer not stored');
+  assert.ok(lines.includes('🏷️ SHORTNAME: rejected AI answer for "BEEFMINCE MEET MARKET" — not a verbatim substring'));
+});
+
+test('shortName salvage: valid prefix of a rejected answer is kept', async () => {
+  const core = createFinalBuildCore();
+  const title = 'Club Chub Weekend 2026 — The Ultimate Celebration!';
+  const calls = [];
+  const baseAdapter = createShortNameAdapter('{"shortName": {"value": "CLUB CHUB 2026", "reason": "merged"}}');
+  const adapter = { postJson: async (...args) => { calls.push(1); return baseAdapter.postJson(...args); } };
+  const event = {
+    title,
+    startDate: new Date('2026-10-09T21:00:00.000Z'),
+    city: 'fort lauderdale'
+  };
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(event, NEW_ACTION_ANALYSIS, adapter, { ai: {} });
+  } finally {
+    restore();
+  }
+  assert.equal(analyzed.shortName, 'CLUB CHUB', 'trailing non-contiguous token dropped');
+  assert.equal(calls.length, 1, 'no extra AI call for salvage');
+  assert.ok(lines.includes(`🏷️ SHORTNAME: salvaged "CLUB CHUB" from rejected answer for "${title}"`),
+    `got: ${JSON.stringify(lines.filter(l => l.includes('SHORTNAME')))}`);
+});
+
+test('shortName salvage: fully invented answer still rejects', async () => {
+  const core = createFinalBuildCore();
+  const title = 'Bear Happy Hour';
+  const adapter = createShortNameAdapter('{"shortName": {"value": "BHH SOCIAL", "reason": "abbrev"}}');
+  const event = {
+    title,
+    startDate: new Date('2026-08-01T21:00:00.000Z'),
+    city: 'seattle'
+  };
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(event, NEW_ACTION_ANALYSIS, adapter, { ai: {} });
+  } finally {
+    restore();
+  }
+  assert.equal(analyzed.shortName, undefined, 'nothing stored');
+  assert.ok(lines.includes(`🏷️ SHORTNAME: rejected AI answer for "${title}" — not a verbatim substring`));
+});
+
+test('shortName salvage: hyphens-as-spaces answer is repaired to the spaced form', async () => {
+  const core = createFinalBuildCore();
+  const title = 'BEEFMINCE x RVT';
+  const adapter = createShortNameAdapter('{"shortName": {"value": "BEEFMINCE-X-RVT"}}');
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent({
+      title,
+      startDate: new Date('2026-09-19T21:00:00.000Z')
+    }, NEW_ACTION_ANALYSIS, adapter, { ai: {} });
+  } finally {
+    restore();
+  }
+  assert.equal(analyzed.shortName, 'BEEFMINCE X RVT', 'hyphens turned back into spaces (case-lift stored)');
+  assert.ok(lines.includes(`🏷️ SHORTNAME: salvaged "BEEFMINCE X RVT" from rejected answer for "${title}"`));
+});
+
+test('shortName salvage: overlong answer drops tokens past punctuation and stopwords', async () => {
+  const core = createFinalBuildCore();
+  const title = 'Saturday 12th September – BEEFMINCE: THE BIG BALL';
+  const adapter = createShortNameAdapter('{"shortName": {"value": "BEEFMINCE: THE BIG BALL"}}');
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent({
+      title,
+      startDate: new Date('2026-09-12T21:00:00.000Z')
+    }, NEW_ACTION_ANALYSIS, adapter, { ai: {} });
+  } finally {
+    restore();
+  }
+  assert.equal(analyzed.shortName, 'BEEFMINCE', 'never ends on ": THE" — falls through to the brand');
+  assert.ok(lines.includes(`🏷️ SHORTNAME: salvaged "BEEFMINCE" from rejected answer for "${title}"`));
+});
+
+test('shortName gate: mid-word cut is not a verbatim substring', () => {
+  const core = createFinalBuildCore();
+  assert.equal(core.evaluateDerivedShortName('BEEFMINCE MEET MARKET', 'BEEF', 16).ok, false, 'mid-word cut rejected');
+  assert.equal(core.evaluateDerivedShortName('BEEFMINCE MEET MARKET', 'BEEFMINCE', 16).ok, true, 'word-aligned accepted');
 });

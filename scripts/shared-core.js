@@ -5384,6 +5384,186 @@ class SharedCore {
         return records;
     }
 
+    // ------------------------------------------------------------------
+    // AI shortName DERIVATION pass: events without a shortName make ugly
+    // city-page calendar chips (dynamic-calendar-loader falls back to the
+    // full title). The promoter registry stamps curated shortNames for
+    // matched promoters; this pass covers everything else (venue one-offs,
+    // aggregator finds) at the FINAL analyzed-event build, guarded by a
+    // deterministic anti-hallucination gate. Convention: an unescaped `-`
+    // in shortName is a LINE-BREAK HINT (rendered as a soft hyphen), e.g.
+    // curated "BEEF-MINCE", "CUB-HOUSE", "MEGA-WOOF".
+    // ------------------------------------------------------------------
+
+    // Prompt for one event's shortName derivation. Carries the TITLE only —
+    // no dates/venue/city — so the AI-response cache key stays stable
+    // across runs (passLabel 'short-name').
+    buildShortNamePrompt({ eventTitle, maxChars }) {
+        return [
+            'You are naming a compact calendar chip for one event.',
+            `TITLE: ${eventTitle}`,
+            'Return the shortest recognizable display name for this event.',
+            'Rules:',
+            '- The answer MUST be taken verbatim from the title: one contiguous run of characters — never paraphrase, reorder, merge parts, or add words.',
+            `- At most ${maxChars} characters.`,
+            '- UPPERCASE preferred (you may uppercase the copied characters).',
+            '- You MAY insert hyphens inside a long word as line-break hints, e.g. "CUBSCOUT" → "CUB-SCOUT".',
+            'Return JSON only:',
+            '{"shortName": {"value": "<display name>", "reason": "<one short sentence>"}}'
+        ].join('\n');
+    }
+
+    // Deterministic anti-hallucination gate for a derived shortName. Pure.
+    // Usable only when ALL hold: non-empty after trim; length ≤ maxChars;
+    // after removing hyphens and case/diacritic-folding BOTH sides, the
+    // answer is a CONTIGUOUS substring of the title (spaces count as
+    // characters — "BEEFMINCE MEET MARKET" can yield "MEET MARKET" or
+    // "BEEFMINCE" but never "BEEF MARKET") — this permits hyphen insertion
+    // and case-lifting but forbids invented/reordered words; and the answer
+    // is not the title verbatim (an exact copy adds nothing — the site
+    // fallback already shows the title — but a case-lift or an added
+    // line-break hyphen IS a display change and is stored).
+    // Returns { ok: true, value } or { ok: false, reason } where reason is
+    // one of 'unusable response' | 'too long' | 'not a verbatim substring'
+    // | 'equals title'.
+    evaluateDerivedShortName(title, answerText, maxChars) {
+        const answer = typeof answerText === 'string' ? answerText.trim() : '';
+        if (!answer) return { ok: false, reason: 'unusable response' };
+        if (answer.length > maxChars) return { ok: false, reason: 'too long' };
+        const strippedFoldedAnswer = this.foldDiacritics(answer.replace(/-/g, ''));
+        const strippedFoldedTitle = this.foldDiacritics(String(title).replace(/-/g, ''));
+        // The occurrence must align on WORD BOUNDARIES in the title: "BEEF"
+        // inside "BEEFMINCE" is a contiguous substring but a mid-word cut
+        // that makes a wrong-looking chip ("Never cut a word in the middle",
+        // same rule as the trim pipeline). Any one aligned occurrence
+        // suffices.
+        const isWordChar = (ch) => /[a-z0-9]/.test(ch);
+        let aligned = false;
+        if (strippedFoldedAnswer) {
+            let from = 0;
+            for (;;) {
+                const at = strippedFoldedTitle.indexOf(strippedFoldedAnswer, from);
+                if (at === -1) break;
+                const beforeOk = at === 0 || !isWordChar(strippedFoldedTitle[at - 1]) || !isWordChar(strippedFoldedAnswer[0]);
+                const endIndex = at + strippedFoldedAnswer.length;
+                const afterOk = endIndex === strippedFoldedTitle.length
+                    || !isWordChar(strippedFoldedTitle[endIndex])
+                    || !isWordChar(strippedFoldedAnswer[strippedFoldedAnswer.length - 1]);
+                if (beforeOk && afterOk) { aligned = true; break; }
+                from = at + 1;
+            }
+        }
+        if (!aligned) {
+            return { ok: false, reason: 'not a verbatim substring' };
+        }
+        if (answer === String(title).trim()) {
+            return { ok: false, reason: 'equals title' };
+        }
+        return { ok: true, value: answer };
+    }
+
+    // Derive a shortName for one FINAL analyzed event that lacks one. All
+    // trigger guards live here: existing/static shortName, empty title, AI
+    // disabled (`ai: { shortNames: false }` or `enabled: false`), or no
+    // transport → no AI call, event untouched. Resilient by design: AI
+    // transport error / non-JSON / missing field → rejected log (reason
+    // 'unusable response') and the event ships without shortName exactly as
+    // today. No retry ladder — the pass is cheap and optional. Returns true
+    // only when a gated value was stored (caller rebuilds notes).
+    async deriveShortNameForEvent(event, parserConfig, httpAdapter) {
+        if (!event || typeof event !== 'object') return false;
+        const existing = event.shortName === null || event.shortName === undefined
+            ? ''
+            : String(event.shortName).trim();
+        if (existing) return false;
+        const staticFields = event._staticFields && typeof event._staticFields === 'object'
+            ? event._staticFields
+            : {};
+        if (Object.prototype.hasOwnProperty.call(staticFields, 'shortName')) return false;
+        const title = typeof event.title === 'string' ? event.title.trim() : '';
+        if (!title) return false;
+        const rawAi = parserConfig && parserConfig.ai && typeof parserConfig.ai === 'object' ? parserConfig.ai : {};
+        if (rawAi.enabled === false) return false;
+        if (!httpAdapter || typeof httpAdapter.postJson !== 'function') return false;
+        const aiConfig = this.resolveAiConfig(rawAi);
+        if (!aiConfig.enabled || !aiConfig.endpoint || !aiConfig.shortNamesEnabled) return false;
+
+        const maxChars = aiConfig.shortNameDeriveMaxChars;
+        const prompt = this.buildShortNamePrompt({ eventTitle: title, maxChars });
+        const shortNameAiConfig = { ...aiConfig, numPredict: Math.min(Number(aiConfig.numPredict) || 200, 200) };
+
+        let rawResponse = null;
+        try {
+            rawResponse = await this.callAiGenerate(shortNameAiConfig, prompt, 'short-name', httpAdapter);
+        } catch (_) {
+            rawResponse = null;
+        }
+
+        let parsed = null;
+        if (rawResponse) {
+            try {
+                parsed = JSON.parse(this.extractFirstJsonObject(rawResponse) || rawResponse);
+            } catch (_) {
+                parsed = null;
+            }
+        }
+        const answerEntry = parsed && typeof parsed === 'object' ? parsed.shortName : null;
+        const answerText = answerEntry && typeof answerEntry === 'object' ? answerEntry.value : answerEntry;
+        if (typeof answerText !== 'string') {
+            console.log(`🏷️ SHORTNAME: rejected AI answer for "${title}" — unusable response`);
+            return false;
+        }
+
+        const verdict = this.evaluateDerivedShortName(title, answerText, maxChars);
+        if (!verdict.ok) {
+            // Deterministic salvage before giving up — every real rejection
+            // class from the live batteries (2026-07-29) has a mechanical
+            // repair that stays inside the verbatim gate (no extra AI call,
+            // no new trust):
+            //   - hyphens used as SPACE replacements ("BEEFMINCE-X-RVT",
+            //     "BEEFMINCE-BRIGHTON") → try the answer with hyphens turned
+            //     back into spaces first;
+            //   - merged/invented tails ("CLUB CHUB 2026", "CLUB CHUB
+            //     FT-LA") and overlong answers ("BEEFMINCE: THE BIG BALL")
+            //     → drop trailing whitespace tokens until the remainder
+            //     passes, stripping trailing punctuation and never ending on
+            //     a stopword ("BEEFMINCE: THE" must fall through to
+            //     "BEEFMINCE").
+            if (verdict.reason === 'not a verbatim substring' || verdict.reason === 'too long') {
+                const trailingStopwords = new Set(['the', 'a', 'an', 'and', 'or', 'of', 'at', 'in', 'on', 'for', 'with', 'x', 'y', 'en', 'de', 'la', 'el', 'les', 'los']);
+                const candidates = [];
+                const spaced = answerText.trim().replace(/-/g, ' ').replace(/\s+/g, ' ');
+                if (spaced !== answerText.trim()) candidates.push(spaced);
+                for (const base of [spaced, answerText.trim()]) {
+                    const tokens = base.split(/\s+/);
+                    for (let keep = tokens.length - 1; keep >= 1; keep--) {
+                        candidates.push(tokens.slice(0, keep).join(' '));
+                    }
+                }
+                const seenCandidates = new Set();
+                for (const rawCandidate of candidates) {
+                    const candidate = rawCandidate.replace(/[\s:;,.!–—-]+$/, '');
+                    if (!candidate || seenCandidates.has(candidate)) continue;
+                    seenCandidates.add(candidate);
+                    const lastToken = candidate.split(/\s+/).pop().toLowerCase();
+                    if (trailingStopwords.has(lastToken)) continue;
+                    const salvage = this.evaluateDerivedShortName(title, candidate, maxChars);
+                    if (salvage.ok) {
+                        event.shortName = salvage.value;
+                        console.log(`🏷️ SHORTNAME: salvaged "${salvage.value}" from rejected answer for "${title}"`);
+                        return true;
+                    }
+                }
+            }
+            console.log(`🏷️ SHORTNAME: rejected AI answer for "${title}" — ${verdict.reason}`);
+            return false;
+        }
+
+        event.shortName = verdict.value;
+        console.log(`🏷️ SHORTNAME: derived "${verdict.value}" for "${title}"`);
+        return true;
+    }
+
     async deduplicateEvents(events, httpAdapter, globalConfig = null) {
         const seen = new Map();
         const deduplicated = [];
@@ -8736,6 +8916,22 @@ class SharedCore {
                 }
             }
 
+            // AI shortName derivation: an event that reaches the final build
+            // without a shortName renders its full title on the city-page
+            // calendar chip. Derive one from the title (passLabel
+            // 'short-name', cached — the prompt carries the title only, so
+            // repeat runs hit the cache), guarded by the deterministic
+            // verbatim gate in evaluateDerivedShortName. Parser-stamped
+            // static shortNames (_staticFields) are curated config and never
+            // derived over; every gate/transport failure leaves the event
+            // exactly as today.
+            {
+                const shortNameParserConfig = analyzedEvent._parserConfig || (config && config.ai ? { ai: config.ai } : null);
+                if (await this.deriveShortNameForEvent(analyzedEvent, shortNameParserConfig, calendarAdapter)) {
+                    notesNeedRebuild = true;
+                }
+            }
+
             if (notesNeedRebuild && analyzedEvent.notes) {
                 analyzedEvent.notes = this.formatEventNotes(analyzedEvent);
             }
@@ -10183,6 +10379,14 @@ class SharedCore {
             keepAlive: Object.prototype.hasOwnProperty.call(aiConfig, 'keepAlive') ? String(aiConfig.keepAlive) : '5m',
             cacheEnabled: aiConfig.cache !== false,
             arbitrateMerges: aiConfig.arbitrateMerges !== false,
+            // shortName derivation pass (default ON, like the response cache):
+            // `ai: { shortNames: false }` disables it. shortNameDeriveMaxChars
+            // caps DERIVED values (16) — separate from the trim pipeline's
+            // shortNameMaxChars (30), which governs trimming existing values.
+            shortNamesEnabled: aiConfig.shortNames !== false,
+            shortNameDeriveMaxChars: Number.isFinite(Number(aiConfig.shortNameDeriveMaxChars)) && Number(aiConfig.shortNameDeriveMaxChars) > 0
+                ? Math.floor(Number(aiConfig.shortNameDeriveMaxChars))
+                : 16,
             // Override-only: extra text appended verbatim to extraction prompt
             // context. Organizer context is normally derived from page metadata.
             extraContext: typeof aiConfig.extraContext === 'string' ? aiConfig.extraContext : '',
