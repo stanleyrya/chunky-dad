@@ -9915,9 +9915,32 @@ class SharedCore {
     }
     
     // Check if two dates are equal within a tolerance (pure logic)
+    // Tolerant date comparison. Accepts Dates, ISO strings and epoch numbers,
+    // and returns FALSE (not equal → no match, the conservative answer) when a
+    // side is missing or unparseable.
+    //
+    // It used to call .getTime() straight on both arguments, so one non-Date
+    // anywhere in the candidate set threw and killed the entire run
+    // ("TypeError: date2.getTime is not a function", 2026-07-30, surfaced once
+    // allowPastEvents opened up far more calendar candidates). A matching
+    // helper is the wrong place to end a run: the worst it should do is
+    // decline a match. The one-time warn names the offending value so the real
+    // source is findable in the next log instead of guessed at.
     areDatesEqual(date1, date2, toleranceMinutes) {
-        const diff = Math.abs(date1.getTime() - date2.getTime());
-        return diff <= (toleranceMinutes * 60 * 1000);
+        const ms1 = this.toEpochMillis(date1);
+        const ms2 = this.toEpochMillis(date2);
+        if (ms1 === null || ms2 === null) {
+            if (!this._warnedNonDateComparison) {
+                this._warnedNonDateComparison = true;
+                const describe = (value) => {
+                    if (value === null || value === undefined) return String(value);
+                    return `${typeof value}:${String(value).slice(0, 40)}`;
+                };
+                console.warn(`⚠️ SharedCore: areDatesEqual got a non-date — a=${describe(date1)} b=${describe(date2)} (treated as not equal)`);
+            }
+            return false;
+        }
+        return Math.abs(ms1 - ms2) <= (toleranceMinutes * 60 * 1000);
     }
     
     // Check if two date ranges overlap (pure logic)
