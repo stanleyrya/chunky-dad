@@ -7793,3 +7793,309 @@ test('curated-bar venue chain: BarDataNormalizer canonicalizes the kept bar and 
   assert.equal(event.address, '4219 Santa Monica Blvd, Los Angeles, CA 90029');
   assert.equal(event.addressSource, 'curated');
 });
+
+// ============================================================================
+// IMAGE ORIENTATION SLOTS (imageVertical / imageHorizontal)
+// ============================================================================
+// A page that publishes the SAME artwork as a portrait flyer AND a landscape
+// banner used to lose one of the two before anything could use it. These tests
+// pin the capture side: candidates survive the grouping passes, published
+// dimensions beat URL guesses, and an unknown orientation still fills NO slot.
+
+// Stand-in for the shared-core URL dimension readers the schema/merge side owns.
+// Reads Wix-style w_<n>,h_<n> transform segments; everything else is unknown.
+function stubUrlDimensionReaders(parser) {
+  parser.core.getImageDimensionsFromUrl = (url) => {
+    const match = String(url || '').match(/[/_]w_(\d+),h_(\d+)/);
+    return match ? { width: Number(match[1]), height: Number(match[2]) } : null;
+  };
+  parser.core.classifyImageOrientation = (url) => {
+    const dimensions = parser.core.getImageDimensionsFromUrl(url);
+    if (!dimensions) return 'unknown';
+    if (dimensions.width > dimensions.height) return 'landscape';
+    if (dimensions.width < dimensions.height) return 'portrait';
+    return 'square';
+  };
+  return parser;
+}
+
+const WIX_PORTRAIT_FLYER = 'https://static.wixstatic.com/media/aaa111~mv2.jpg/v1/fill/w_792,h_990,al_c,q_85/flyer.jpg';
+const WIX_LANDSCAPE_BANNER = 'https://static.wixstatic.com/media/bbb222~mv2.jpg/v1/fill/w_1600,h_900,al_c,q_85/banner.jpg';
+
+test('image slots: a portrait/landscape OCR twin survives consolidation and fills both slots', () => {
+  const parser = stubUrlDimensionReaders(createParser());
+  const ocrResults = [
+    { url: WIX_PORTRAIT_FLYER, text: 'FURBALL BLACKOUT\n3 Dollar Bill', imageClassification: 'event-flyer' },
+    { url: WIX_LANDSCAPE_BANNER, text: 'FURBALL BLACKOUT\n3 Dollar Bill', imageClassification: 'event-flyer' }
+  ];
+
+  const consolidated = parser.consolidateDuplicateOcrResults(ocrResults);
+
+  // The returned array keeps its exact shape — segment pairing and the
+  // extraction prompt see one entry per artwork, exactly as before.
+  assert.equal(consolidated.length, 1, 'consolidation still returns one result per artwork');
+  assert.equal(consolidated[0].url, WIX_LANDSCAPE_BANNER, 'largest still wins the OCR entry');
+  // ...but the twin is no longer deleted.
+  assert.deepEqual(consolidated[0].imageShapeVariants, [WIX_PORTRAIT_FLYER]);
+
+  const event = { title: 'Furball Blackout', image: WIX_LANDSCAPE_BANNER };
+  parser.applyImageSlots(event, { url: 'https://furball.example/events', html: '', ocrResults: consolidated });
+
+  assert.equal(event.imageVertical, WIX_PORTRAIT_FLYER);
+  assert.equal(event.imageHorizontal, WIX_LANDSCAPE_BANNER);
+  assert.equal(event.image, WIX_LANDSCAPE_BANNER, 'image keeps its existing meaning and value');
+});
+
+test('image slots: the size-variant dedup keeps a differently-shaped fill of the same asset', () => {
+  const parser = stubUrlDimensionReaders(createParser());
+  // One Wix asset served as a portrait fill AND a landscape fill — these strip
+  // to the SAME key, so the old dedup deleted one shape outright.
+  const portraitFill = 'https://static.wixstatic.com/media/ccc333~mv2.jpg/v1/fill/w_600,h_900,al_c/asset.jpg';
+  const landscapeFill = 'https://static.wixstatic.com/media/ccc333~mv2.jpg/v1/fill/w_1200,h_628,al_c/asset.jpg';
+
+  const deduped = parser.deduplicateOcrResultsByUrl([
+    { url: portraitFill, text: 'flyer text' },
+    { url: landscapeFill, text: 'flyer text' }
+  ]);
+
+  assert.equal(deduped.length, 1);
+  assert.deepEqual(deduped[0].imageShapeVariants, [portraitFill]);
+
+  const event = { title: 'Asset Party', image: landscapeFill };
+  parser.applyImageSlots(event, { html: '', ocrResults: deduped });
+  assert.equal(event.imageVertical, portraitFill);
+  assert.equal(event.imageHorizontal, landscapeFill);
+});
+
+test('image slots: a JSON-LD image ARRAY of three shapes fills both slots (schema.org 1x1/4x3/16x9)', () => {
+  const parser = stubUrlDimensionReaders(createParser());
+  const html = `
+    <html><head><script type="application/ld+json">${JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'Event',
+      name: 'Bearracuda Portland',
+      startDate: '2026-07-18T21:00:00-07:00',
+      location: { '@type': 'Place', name: 'Holocene', address: '1001 SE Morrison St, Portland, OR' },
+      image: [
+        'https://cdn.example/w_1000,h_1000/square.jpg',
+        'https://cdn.example/w_800,h_1200/portrait.jpg',
+        'https://cdn.example/w_1920,h_1080/landscape.jpg'
+      ]
+    })}</script></head><body></body></html>`;
+
+  const events = parser.extractEventsFromJsonLd(html, 'https://bearracuda.example/e/portland');
+  assert.equal(events.length, 1);
+  const event = events[0];
+  // image keeps its current meaning: the FIRST published shape.
+  assert.equal(event.image, 'https://cdn.example/w_1000,h_1000/square.jpg');
+
+  parser.applyImageSlots(event, { url: 'https://bearracuda.example/e/portland', html });
+  assert.equal(event.imageVertical, 'https://cdn.example/w_800,h_1200/portrait.jpg');
+  assert.equal(event.imageHorizontal, 'https://cdn.example/w_1920,h_1080/landscape.jpg');
+});
+
+test('image slots: ImageObject width/height outrank the shape the URL advertises', () => {
+  const parser = stubUrlDimensionReaders(createParser());
+  // The URL says portrait (w_800,h_1200); the publisher says landscape.
+  const candidates = parser.pickJsonLdImageCandidates([
+    { '@type': 'ImageObject', url: 'https://cdn.example/w_800,h_1200/lying-url.jpg', width: 1600, height: 900 }
+  ]);
+  assert.equal(candidates.length, 1);
+  assert.equal(candidates[0].width, 1600);
+  assert.equal(candidates[0].height, 900);
+  assert.equal(candidates[0].authoritative, true);
+  assert.equal(parser.resolveImageCandidateOrientation(candidates[0]), 'landscape');
+
+  const event = { title: 'Authoritative Dimensions' };
+  parser.rememberImageSlotCandidates(event, candidates);
+  parser.applyImageSlots(event, { html: '' });
+  assert.equal(event.imageHorizontal, 'https://cdn.example/w_800,h_1200/lying-url.jpg');
+  assert.equal(event.imageVertical, undefined, 'the URL guess never overrides published dimensions');
+});
+
+test('image slots: og:image:width / og:image:height are parsed and drive orientation', () => {
+  // No URL dimension readers at all — the published meta dimensions alone must
+  // be enough (they are also the path that works before shared-core lands).
+  const parser = createParser();
+  const html = `
+    <html><head>
+      <meta property="og:image" content="https://cdn.example/artwork-a1b2c3.jpg" />
+      <meta property="og:image:width" content="1080" />
+      <meta property="og:image:height" content="1920" />
+    </head><body></body></html>`;
+
+  const candidates = parser.collectPageMetaImageCandidates({ url: 'https://promoter.example/e/1', html });
+  assert.equal(candidates.length, 1);
+  assert.equal(candidates[0].width, 1080);
+  assert.equal(candidates[0].height, 1920);
+  assert.equal(candidates[0].authoritative, true);
+
+  const event = { title: 'Meta Dimensions' };
+  parser.applyImageSlots(event, { url: 'https://promoter.example/e/1', html });
+  assert.equal(event.imageVertical, 'https://cdn.example/artwork-a1b2c3.jpg');
+  assert.equal(event.imageHorizontal, undefined);
+});
+
+test('image slots: two og:image tags on one page are BOTH considered', () => {
+  const parser = createParser();
+  const html = `
+    <html><head>
+      <meta property="og:image" content="https://cdn.example/tall-a1b2c3.jpg" />
+      <meta property="og:image:width" content="1000" />
+      <meta property="og:image:height" content="1500" />
+      <meta property="og:image" content="https://cdn.example/wide-d4e5f6.jpg" />
+      <meta property="og:image:width" content="1500" />
+      <meta property="og:image:height" content="1000" />
+    </head><body></body></html>`;
+  const htmlData = { url: 'https://promoter.example/e/2', html };
+
+  // extractOgMetaContent (first tag only) is unchanged; the new all-tags reader
+  // agrees with it on entry 0 and keeps the rest.
+  assert.equal(parser.extractOgMetaContent(html, 'og:image'), 'https://cdn.example/tall-a1b2c3.jpg');
+  assert.deepEqual(parser.extractOgMetaContentAll(html, 'og:image'), [
+    'https://cdn.example/tall-a1b2c3.jpg',
+    'https://cdn.example/wide-d4e5f6.jpg'
+  ]);
+
+  // The og:image fill still adopts the first usable tag — unchanged behaviour.
+  const filled = parser.fillImageFromPageMetaArtwork({ title: 'Two Tags' }, htmlData);
+  assert.equal(filled.image, 'https://cdn.example/tall-a1b2c3.jpg');
+  assert.equal(filled.imageSource, 'og-image');
+
+  // ...and the SECOND tag, previously discarded, fills the other slot.
+  parser.applyImageSlots(filled, htmlData);
+  assert.equal(filled.imageVertical, 'https://cdn.example/tall-a1b2c3.jpg');
+  assert.equal(filled.imageHorizontal, 'https://cdn.example/wide-d4e5f6.jpg');
+});
+
+test('image slots: an event that already has an image still gets the page meta artwork considered for the OTHER slot', () => {
+  const parser = createParser();
+  const html = `
+    <html><head>
+      <meta property="og:image" content="https://cdn.example/wide-d4e5f6.jpg" />
+      <meta property="og:image:width" content="1600" />
+      <meta property="og:image:height" content="900" />
+    </head><body></body></html>`;
+  const htmlData = { url: 'https://promoter.example/e/3', html };
+
+  const event = { title: 'Already Has One', image: 'https://cdn.example/extracted-flyer.jpg' };
+  parser.fillImageFromPageMetaArtwork(event, htmlData);
+  assert.equal(event.image, 'https://cdn.example/extracted-flyer.jpg', 'an existing image is never replaced');
+
+  parser.applyImageSlots(event, htmlData);
+  assert.equal(event.imageHorizontal, 'https://cdn.example/wide-d4e5f6.jpg');
+  assert.equal(event.imageVertical, undefined, 'the extracted image advertises no shape — no guess');
+});
+
+test('image slots: unknown-orientation candidates fill NO slot and leave the event byte-identical', () => {
+  const parser = createParser();  // no shared-core dimension readers at all
+  const html = `
+    <html><head>
+      <meta property="og:image" content="https://cdn.example/mystery-a1b2c3.jpg" />
+    </head><body></body></html>`;
+  const event = {
+    title: 'Unknown Shape',
+    image: 'https://cdn.example/extracted-a1b2c3.jpg',
+    imageSource: 'page',
+    startDate: '2026-08-01T02:00:00.000Z'
+  };
+  const before = JSON.stringify(event);
+
+  const logs = captureLogs(() => parser.applyImageSlots(event, { url: 'https://promoter.example/e/4', html }));
+
+  assert.equal(JSON.stringify(event), before, 'no dimensions anywhere → the event is untouched');
+  assert.equal(Object.prototype.hasOwnProperty.call(event, 'imageVertical'), false);
+  assert.equal(Object.prototype.hasOwnProperty.call(event, 'imageHorizontal'), false);
+  assert.deepEqual(logs, [], 'no slots filled → no slot log line');
+});
+
+test('image slots: a logo-shaped URL never lands in a slot', () => {
+  const parser = createParser();
+  const html = `
+    <html><head>
+      <meta property="og:image" content="https://cdn.example/site-logo.png" />
+      <meta property="og:image:width" content="600" />
+      <meta property="og:image:height" content="900" />
+      <meta property="twitter:image" content="https://cdn.example/artwork-d4e5f6.jpg" />
+    </head><body></body></html>`;
+  const htmlData = { url: 'https://promoter.example/e/5', html };
+
+  const event = { title: 'Logo Guard' };
+  parser.rememberImageSlotCandidates(event, [
+    { url: 'https://cdn.example/sprite-sheet.png', width: 400, height: 1200, authoritative: true },
+    { url: 'https://cdn.example/real-flyer.jpg', width: 800, height: 1200, authoritative: true }
+  ]);
+  parser.applyImageSlots(event, htmlData);
+
+  assert.equal(event.imageVertical, 'https://cdn.example/real-flyer.jpg', 'the logo and sprite are skipped');
+  assert.equal(event.imageHorizontal, undefined);
+});
+
+test('image slots: the summary log line names both slots', () => {
+  const parser = createParser();
+  const event = { title: 'Slot Logging' };
+  parser.rememberImageSlotCandidates(event, [
+    { url: 'https://cdn.example/tall.jpg', width: 800, height: 1200, authoritative: true },
+    { url: 'https://cdn.example/wide.jpg', width: 1600, height: 900, authoritative: true }
+  ]);
+  const logs = captureLogs(() => parser.applyImageSlots(event, { html: '' }));
+  assert.deepEqual(logs, [
+    '🖼️ IMAGE SLOTS: vertical=https://cdn.example/tall.jpg horizontal=https://cdn.example/wide.jpg for "Slot Logging"'
+  ]);
+});
+
+test('image slots: near-square artwork belongs to neither slot', () => {
+  const parser = createParser();
+  assert.equal(parser.orientationFromImageDimensions(1000, 1000), 'square');
+  assert.equal(parser.orientationFromImageDimensions(1050, 1000), 'square', 'a 5% difference is not an orientation');
+  assert.equal(parser.orientationFromImageDimensions(1200, 1000), 'landscape');
+  assert.equal(parser.orientationFromImageDimensions(1000, 1200), 'portrait');
+  assert.equal(parser.orientationFromImageDimensions(0, 1200), 'unknown');
+  assert.equal(parser.orientationFromImageDimensions('1600 px', '900'), 'landscape');
+});
+
+test('image slots: the larger candidate wins inside one orientation', () => {
+  const parser = createParser();
+  const event = { title: 'Biggest Wins' };
+  parser.rememberImageSlotCandidates(event, [
+    { url: 'https://cdn.example/small-tall.jpg', width: 400, height: 600, authoritative: true },
+    { url: 'https://cdn.example/big-tall.jpg', width: 1200, height: 1800, authoritative: true }
+  ]);
+  parser.applyImageSlots(event, { html: '' });
+  assert.equal(event.imageVertical, 'https://cdn.example/big-tall.jpg');
+});
+
+test('image slots: a parser-config declared slot is never clobbered, only joined', () => {
+  const parser = createParser();
+  // parserConfig.metadata assigns unconditionally and runs BEFORE the slots
+  // pass, so a curated slot value must survive it.
+  const event = { title: 'Curated Slot', imageVertical: 'https://cdn.example/curated-tall.jpg' };
+  parser.rememberImageSlotCandidates(event, [
+    { url: 'https://cdn.example/derived-tall.jpg', width: 800, height: 1200, authoritative: true },
+    { url: 'https://cdn.example/derived-wide.jpg', width: 1600, height: 900, authoritative: true }
+  ]);
+  const logs = captureLogs(() => parser.applyImageSlots(event, { html: '' }));
+
+  assert.equal(event.imageVertical, 'https://cdn.example/curated-tall.jpg', 'the declared slot wins');
+  assert.equal(event.imageHorizontal, 'https://cdn.example/derived-wide.jpg', 'the empty slot is still filled');
+  assert.deepEqual(logs, [
+    '🖼️ IMAGE SLOTS: vertical=https://cdn.example/curated-tall.jpg horizontal=https://cdn.example/derived-wide.jpg for "Curated Slot"'
+  ]);
+});
+
+test('image slots: real bearracuda.com og:image dimensions resolve a portrait slot (live-run shape)', () => {
+  // Verbatim meta shape from https://bearracuda.com/events/treasure-trail-seattle/
+  // — the page publishes 620x958, which nothing in the repo used to read.
+  const parser = createParser();
+  const html = `
+    <html><head>
+      <meta property="og:image" content="https://bearracuda.com/wp-content/uploads/2026/07/sausageweb.jpg" />
+      <meta property="og:image:width" content="620" />
+      <meta property="og:image:height" content="958" />
+      <meta property="og:image:type" content="image/jpeg" />
+    </head><body></body></html>`;
+  const event = { title: 'Treasure Trail Seattle' };
+  parser.applyImageSlots(event, { url: 'https://bearracuda.com/events/treasure-trail-seattle/', html });
+  assert.equal(event.imageVertical, 'https://bearracuda.com/wp-content/uploads/2026/07/sausageweb.jpg');
+  assert.equal(event.imageHorizontal, undefined);
+});

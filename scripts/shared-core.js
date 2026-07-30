@@ -71,6 +71,36 @@ const TICKETING_PLATFORM_HOSTS = [
     'ticketleap.com', 'dice.fm', 'eventeny.com', 'showclix.com'
 ];
 
+// Multi-orientation image slots. `image` stays the primary (unchanged
+// semantics); imageVertical/imageHorizontal are the best PORTRAIT and
+// LANDSCAPE candidates so different surfaces can pick the right shape. The
+// slots are NOT exclusive of `image` — when the primary is portrait, an event
+// carries both `image: X` and `imageVertical: X`. An absent slot means "no
+// candidate is known to be that shape" (including "the primary's shape is
+// unknown"), never "there is no image".
+const IMAGE_ORIENTATION_SLOT_FIELDS = new Set(['imageVertical', 'imageHorizontal']);
+// Every field the deterministic image merge rung owns: the primary plus its
+// orientation slots. They are all bare image URLs, so the logo-path,
+// og-grade-provenance and resolution-margin rules apply to them identically.
+// Hosts whose URLs identify a PLATFORM, not the event's own presence:
+// ticketing/listing services and social networks. A link like
+// eventbrite.com/e/… tells you where to buy, never who is throwing the party,
+// so it must not displace a promoter's identity link (observed 2026-07-30:
+// Cubhouse's curated https://linktr.ee/cubhouse was clobbered by an Eventbrite
+// listing URL, which also broke the icon derived from that field).
+// Data only — shared-core stays platform-pure.
+const PLATFORM_IDENTITY_HOSTS = new Set([
+    'eventbrite.com', 'eventbrite.co.uk', 'eventbrite.ca', 'eventbrite.com.au',
+    'dice.fm', 'ra.co', 'residentadvisor.net', 'ticketweb.com', 'ticketweb.co.uk',
+    'seetickets.com', 'universe.com', 'posh.vip', 'withfriends.co',
+    'tickettailor.com', 'sickening.events', 'redeyetickets.com',
+    'ticketmaster.com', 'shotgun.live', 'fatsoma.com', 'meetup.com',
+    'partiful.com', 'luma.com', 'lu.ma', 'instagram.com', 'facebook.com',
+    'twitter.com', 'x.com', 'tiktok.com'
+]);
+
+const IMAGE_MERGE_FIELDS = new Set(['image', 'imageVertical', 'imageHorizontal']);
+
 class SharedCore {
     constructor(cities, options = {}) {
         if (!cities || typeof cities !== 'object') {
@@ -920,6 +950,86 @@ class SharedCore {
         return score;
     }
 
+    // Width/height advertised BY the URL itself — { width, height } or null.
+    // Companion to getImageSizeScoreFromUrl above and bound by the same rules:
+    // no network, and no `new URL` / URLSearchParams (neither exists in iOS
+    // JavaScriptCore) — parseUrl + extractSearchParamValue only.
+    //
+    // It answers SHAPE rather than size, so it is stricter than the scorer in
+    // three ways:
+    //   - both dimensions must be present (one alone says nothing about
+    //     orientation) and inside believable bounds;
+    //   - it reads Wix's comma-joined transform segment
+    //     (…/v1/fill/w_792,h_990,al_c,q_85,enc_avif/… and the …/v1/crop/
+    //     x_0,y_0,w_…,h_… twin), which the scorer cannot see at all — on real
+    //     chunky.dad data that is the dimension token that actually appears;
+    //   - it REJECTS img.evbuc.com's ?w=&h= (see below).
+    // Returns null far more often than not — only a minority of real event
+    // image URLs advertise anything — so callers must treat null as "unknown",
+    // never as "not an image".
+    getImageDimensionsFromUrl(url) {
+        if (!url || typeof url !== 'string') return null;
+        const parsed = this.parseUrl(url.trim());
+        if (!parsed) return null;
+        const host = String(parsed.hostname || parsed.host || '').toLowerCase().replace(/^www\./, '');
+        const path = String(parsed.pathname || '');
+        const toDimensions = (rawWidth, rawHeight) => {
+            const width = parseInt(rawWidth, 10);
+            const height = parseInt(rawHeight, 10);
+            if (!isFinite(width) || !isFinite(height)) return null;
+            // Loose bounds on purpose: only the RATIO is consumed, so a print
+            // aspect token ("…/11x17-4.jpg") is as useful as a pixel pair.
+            if (width < 10 || height < 10 || width > 20000 || height > 20000) return null;
+            return { width, height };
+        };
+
+        // Path forms first — they describe the rendition being served, so they
+        // are the trustworthy signal. Wix's comma form, then the generic
+        // NNNxNNN token (a /1920x1080/ path segment or a "-820x1024.jpg"
+        // filename suffix, both real shapes in data/calendars).
+        for (const segment of path.split('/').filter(Boolean)) {
+            const wixWidth = segment.match(/(?:^|,)w_(\d{1,5})(?=,|$)/i);
+            const wixHeight = segment.match(/(?:^|,)h_(\d{1,5})(?=,|$)/i);
+            if (wixWidth && wixHeight) {
+                const dimensions = toDimensions(wixWidth[1], wixHeight[1]);
+                if (dimensions) return dimensions;
+            }
+            const resolution = segment.match(/(?:^|[^\d])(\d{2,5})x(\d{2,5})(?![\dx])/i);
+            if (resolution) {
+                const dimensions = toDimensions(resolution[1], resolution[2]);
+                if (dimensions) return dimensions;
+            }
+        }
+
+        // Eventbrite's wrapper never gets to describe the artwork's shape:
+        // img.evbuc.com's "?crop=focalpoint&fit=crop&h=230&w=460" is its fixed
+        // 2:1 LISTING THUMBNAIL crop of an arbitrary flyer — tools/
+        // download-images.js (adjustEventbriteImageUrl) strips exactly these
+        // params to recover the original. Reading them would label every
+        // Eventbrite flyer landscape.
+        if (host === 'img.evbuc.com') return null;
+
+        const search = String(parsed.search || '');
+        const width = this.extractSearchParamValue(search, 'w') || this.extractSearchParamValue(search, 'width');
+        const height = this.extractSearchParamValue(search, 'h') || this.extractSearchParamValue(search, 'height');
+        if (width && height) return toDimensions(width, height);
+        return null;
+    }
+
+    // 'portrait' | 'landscape' | 'square' | 'unknown' for an image URL.
+    // 'unknown' is the COMMON answer (most image URLs advertise no dimensions),
+    // so every consumer must degrade to today's behavior when it comes back —
+    // orientation is a refinement, never a gate. The 5% dead band keeps
+    // near-squares (e.g. Wix w_1344,h_1345) out of both buckets.
+    classifyImageOrientation(url) {
+        const dimensions = this.getImageDimensionsFromUrl(url);
+        if (!dimensions) return 'unknown';
+        const ratio = dimensions.width / dimensions.height;
+        if (ratio >= 1.05) return 'landscape';
+        if (ratio <= 0.95) return 'portrait';
+        return 'square';
+    }
+
     // Normalized view of a description for the strict-superset merge rule:
     // lowercased, basic HTML entities decoded, whitespace collapsed. BOTH
     // candidates pass through this, so entity/whitespace differences never
@@ -1535,6 +1645,13 @@ class SharedCore {
         }
         const website = pick('website');
         if (website) block.url = { value: website };
+        // Guarantee a favicon for every matched event. The icon is resolved
+        // from `favicon` (or, failing that, `website`) — but `website` is the
+        // field an Eventbrite/DICE listing URL tends to occupy, and platform
+        // URLs are deliberately refused as identity, which would leave a
+        // registry-matched event with NO icon at all. A promoter without an
+        // explicit favicon therefore contributes its own identity link as one.
+        if (!block.favicon && website) block.favicon = { value: website };
         return block;
     }
 
@@ -1758,6 +1875,30 @@ class SharedCore {
             // candidate value (strict attribution, like the image/bar
             // provenance rungs). Both bare roots, both/neither crawled, or no
             // records context → fall through to AI arbitration (fail open).
+            // Rung 0: a TICKETING/social platform URL never displaces a
+            // non-platform one for the identity fields. Which platform sells
+            // the tickets is not who throws the party, and this field feeds
+            // the event's icon — so losing the promoter's own link visibly
+            // breaks the card and the map marker. The reverse (a real site
+            // replacing a platform link) is allowed, and platform-vs-platform
+            // falls through to the rungs below.
+            if (fieldName === 'website' || fieldName === 'url') {
+                const platformA = PLATFORM_IDENTITY_HOSTS.has(urlA.host.replace(/^www\./, ''));
+                const platformB = PLATFORM_IDENTITY_HOSTS.has(urlB.host.replace(/^www\./, ''));
+                // Deliberately narrow: the non-platform side must itself be a
+                // real page, not a bare homepage. A bare root still loses to a
+                // deep event page (the older cross-host rung below owns that
+                // case, and reversing it would send people to a front door
+                // instead of the event).
+                const nonPlatformIsPathed = platformB
+                    ? (urlA.segments.length > 0 || urlA.hasQuery)
+                    : (urlB.segments.length > 0 || urlB.hasQuery);
+                if (platformA !== platformB && nonPlatformIsPathed) {
+                    return platformB
+                        ? { winner: 'a', reason: 'identity link beats a ticketing/social platform URL' }
+                        : { winner: 'b', reason: 'identity link beats a ticketing/social platform URL' };
+                }
+            }
             if ((fieldName === 'website' || fieldName === 'url') && urlA.host !== urlB.host) {
                 const bareRootA = urlA.segments.length === 0 && !urlA.hasQuery;
                 const bareRootB = urlB.segments.length === 0 && !urlB.hasQuery;
@@ -1815,7 +1956,17 @@ class SharedCore {
             // model picked over the actual event poster. Matches path
             // components only (never hostname or query); both-or-neither
             // logo-ish still arbitrates (with a prompt rule as backstop).
-            if (fieldName === 'image') {
+            // Applies to the primary AND to the imageVertical/imageHorizontal
+            // orientation slots (IMAGE_MERGE_FIELDS): they hold the same kind
+            // of value — a bare image URL — so the logo-path, provenance and
+            // resolution rules below are correct for them unchanged. Note the
+            // provenance rung's strict attribution means a slot only picks up
+            // an og-grade stamp when it EQUALS the record's own image (the
+            // common "primary is portrait" case); a slot holding a different
+            // URL is unattributable and falls through, which is the intended
+            // conservative behavior — imageSource stays a companion of `image`
+            // alone, with no per-slot provenance.
+            if (IMAGE_MERGE_FIELDS.has(fieldName)) {
                 const hasLogoSegment = (parts) => parts.segments.some(segment => /logo/i.test(segment));
                 const logoA = hasLogoSegment(urlA);
                 const logoB = hasLogoSegment(urlB);
@@ -6468,6 +6619,22 @@ class SharedCore {
                 continue;
             }
 
+            // Orientation image slots are NEVER cleared by a run that found no
+            // candidate of that shape. URL-derived orientation is knowable for
+            // only a minority of image URLs, so an empty imageVertical/
+            // imageHorizontal means "nothing this run could prove is that
+            // shape" — never "delete the curated one". Stated explicitly at the
+            // slot level (the generic empty-scrape rule further down happens to
+            // cover it today, but that rule carries per-field exclusions and
+            // this invariant must not depend on staying off that list).
+            if (IMAGE_ORIENTATION_SLOT_FIELDS.has(fieldName)
+                && this.isEmptyArbitrationValue(scraperValue)
+                && !this.isEmptyArbitrationValue(calendarValue)) {
+                mergedObject[fieldName] = calendarValue;
+                calendarKeptFields.push(fieldName);
+                continue;
+            }
+
             if (fieldName === 'location') {
                 // location is ALWAYS coordinates (the calendar is the database; the
                 // normalization layer fills this field with coordinates). Resolve it
@@ -8528,6 +8695,16 @@ class SharedCore {
             location: { priority: ["ai-web"], merge: "ai" },
             gmaps: { priority: ["ai-web"], merge: "ai" },
             image: { priority: ["ai-web"], merge: "ai" },
+            // Orientation slots merge exactly like the primary image. Without
+            // an entry here they would inherit the "upsert" default
+            // (calendarValue || scraperValue) — write-once, stale forever: the
+            // first portrait ever stored could never be replaced by a better
+            // one. "ai" routes them through the deterministic image rung first
+            // (logo-path / og-grade provenance / resolution margin), and the
+            // never-clear guard in createFinalEventObject keeps a curated slot
+            // when a run finds no candidate of that shape.
+            imageVertical: { priority: ["ai-web"], merge: "ai" },
+            imageHorizontal: { priority: ["ai-web"], merge: "ai" },
             cover: { priority: ["ai-web"], merge: "ai" },
             ticketUrl: { priority: ["ai-web"], merge: "ai" }
         };

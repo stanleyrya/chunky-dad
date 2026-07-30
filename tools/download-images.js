@@ -1254,9 +1254,14 @@ async function extractImageUrls() {
     console.log(`   Found ${events.length} events`);
     
     for (const event of events) {
-      // Extract event images from parsed data with event information
-      if (event.image) {
-        const cleanUrl = cleanImageUrl(event.image);
+      // Extract event images from parsed data with event information. Every
+      // flyer slot is downloaded, not just the primary: the site rewrites all
+      // three to local paths for cached data, so a slot that was never
+      // downloaded would 404 on the card. Filenames are content-hash derived,
+      // so a URL that appears in two slots resolves to one file.
+      for (const imageField of ['image', 'imageVertical', 'imageHorizontal']) {
+        if (!event[imageField]) continue;
+        const cleanUrl = cleanImageUrl(event[imageField]);
         if (cleanUrl.startsWith('http') && cleanUrl.includes('.')) {
           // Adjust Eventbrite image URLs to get uncropped versions
           const adjustedUrl = adjustEventbriteImageUrl(cleanUrl);
@@ -1267,7 +1272,7 @@ async function extractImageUrls() {
             startDate: event.startDate,
             recurring: event.recurring || false
           });
-          console.log(`📸 Found event image: ${event.name} (${event.recurring ? 'recurring' : 'one-time'})`);
+          console.log(`📸 Found event image (${imageField}): ${event.name} (${event.recurring ? 'recurring' : 'one-time'})`);
           if (adjustedUrl !== cleanUrl) {
             console.log(`🎫 Eventbrite: Adjusted image URL for ${event.name}: ${cleanUrl} -> ${adjustedUrl}`);
           }

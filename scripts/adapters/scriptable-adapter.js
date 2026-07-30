@@ -5053,16 +5053,15 @@ class ScriptableAdapter {
       // webview→native pattern, see presentReviewResults). Currently used by
       // the discovered-venue "Copy parser entry" buttons (chunkyscrape://).
       const venueEntrySnippets = this.collectVenueEntrySnippets(results);
-      // Effective (redacted) config JSON for the Active-config copy button;
-      // "" when this run/saved run carries no config snapshot.
-      const activeConfigSummary = this.buildActiveConfigSummaryForResults(results);
-      const activeConfigJson =
-        activeConfigSummary && typeof activeConfigSummary.json === "string"
-          ? activeConfigSummary.json
-          : "";
       // Manual bear/not-bear override taps recorded during the WebView session,
-      // applied after dismissal. Keyed by row id so repeat taps stay idempotent.
-      const bearOverridePending = { markedBear: {}, markedNotBear: {} };
+      // applied after dismissal. Keyed by namespaced card id ("k<i>" kept /
+      // "d<i>" dropped) so repeat taps stay idempotent and the two directions
+      // on one card overwrite each other instead of stacking.
+      const bearOverridePending = {
+        markedBear: {},
+        markedNotBear: {},
+        keptMarkedBear: {},
+      };
       // Venue-queue taps this session: candidate index → timesSeen after the
       // write. Repeat taps re-flash feedback without re-writing the queue.
       const venueQueueTaps = {};
@@ -5079,11 +5078,6 @@ class ScriptableAdapter {
           if (typeof snippet === "string" && snippet.length > 0) {
             // Fire-and-forget: the handler must return a bool synchronously
             this.copyVenueEntryAndReport(snippet, params.id, webView);
-          }
-        } else if (params.a === "copy-config") {
-          if (activeConfigJson.length > 0) {
-            // Fire-and-forget: the handler must return a bool synchronously
-            this.copyActiveConfigAndReport(activeConfigJson, webView);
           }
         } else if (params.a === "mark-bear" || params.a === "mark-not-bear") {
           // Fire-and-forget: records the override natively; the page gets
@@ -5218,29 +5212,44 @@ class ScriptableAdapter {
     const newVenueSectionHtml =
       await this.generateNewVenueCandidateSection(results);
 
-    // Group events by intent actions (intent can differ from write action for overrides)
+    // Group events by intent actions (intent can differ from write action for overrides).
+    // Each entry keeps its index into allEvents — which IS the index into
+    // results.analyzedEvents (getAllEventsFromResults preserves order) — so a
+    // card's bear-verdict buttons address the right event over the bridge.
     const newEvents = [];
     const mergeEvents = [];
     const conflictEvents = [];
 
-    for (const event of allEvents) {
+    allEvents.forEach((event, index) => {
+      const entry = { event, index };
       switch (this.normalizeIntentAction(event)) {
         case "new":
-          newEvents.push(event);
+          newEvents.push(entry);
           break;
         case "merge":
-          mergeEvents.push(event);
+          mergeEvents.push(entry);
           break;
         case "conflict":
         case "missing_calendar":
-          conflictEvents.push(event);
+          conflictEvents.push(entry);
           break;
         default:
           // Fallback for events without analysis
-          newEvents.push(event);
+          newEvents.push(entry);
           break;
       }
-    }
+    });
+
+    // Kept events are, by definition, the cascade's "bear" verdicts: their
+    // cards show that verdict active with a one-tap "Mark as not bear" beside
+    // it. Saved-run display renders the verdict read-only (no execution).
+    const keptCardsInteractive = results?._isDisplayingSavedRun !== true;
+    const keptCard = (entry) =>
+      this.generateEventCard(entry.event, provenanceRunInfo, {
+        bearIdx: `k${entry.index}`,
+        bearVerdict: "bear",
+        interactive: keptCardsInteractive,
+      });
 
     const html = `
 <!DOCTYPE html>
@@ -5577,6 +5586,77 @@ class ScriptableAdapter {
             box-shadow: var(--card-hover-shadow);
             transform: translateY(-3px);
             border-color: var(--border-color);
+        }
+
+        /* Dropped-as-non-bear cards reuse the normal card so they read as real
+           events; the accent stripe is the only visual difference. */
+        .event-card.bear-dropped-card {
+            border-left: 4px solid var(--secondary-color);
+        }
+
+        /* Bear verdict row: both directions on every card, active one filled. */
+        .bear-verdict-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 0 0 12px 0;
+            padding: 8px 10px;
+            background: var(--background-light);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+        }
+
+        .bear-verdict-label {
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+        }
+
+        .bear-verdict-btn {
+            font-family: 'Poppins', sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 999px;
+            border: 1px solid var(--border-color);
+            background: var(--background-primary);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .bear-verdict-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            border-color: var(--primary-color);
+            color: var(--text-primary);
+        }
+
+        .bear-verdict-btn.is-active {
+            border-color: transparent;
+            color: var(--text-inverse);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+        }
+
+        .bear-verdict-btn[data-bear-act="mark-bear"].is-active {
+            background: #34c759;
+        }
+
+        .bear-verdict-btn[data-bear-act="mark-not-bear"].is-active {
+            background: var(--secondary-color);
+        }
+
+        .bear-verdict-btn:disabled {
+            cursor: default;
+            opacity: 0.75;
+        }
+
+        .bear-verdict-note {
+            font-size: 11px;
+            color: var(--text-secondary);
+            flex: 1 1 100%;
         }
         
         .event-title {
@@ -6544,7 +6624,7 @@ class ScriptableAdapter {
             <span class="section-title">New Events to Add</span>
             <span class="section-count">${newEvents.length}</span>
         </div>
-        ${newEvents.map((event) => this.generateEventCard(event, provenanceRunInfo)).join("")}
+        ${newEvents.map(keptCard).join("")}
     </div>
     `
         : ""
@@ -6559,7 +6639,7 @@ class ScriptableAdapter {
             <span class="section-title">Events to Merge (Adding Info)</span>
             <span class="section-count">${mergeEvents.length}</span>
         </div>
-        ${mergeEvents.map((event) => this.generateEventCard(event, provenanceRunInfo)).join("")}
+        ${mergeEvents.map(keptCard).join("")}
     </div>
     `
         : ""
@@ -6574,7 +6654,7 @@ class ScriptableAdapter {
                             <span class="section-title">Events Requiring Review</span>
             <span class="section-count">${conflictEvents.length}</span>
         </div>
-        ${conflictEvents.map((event) => this.generateEventCard(event, provenanceRunInfo)).join("")}
+        ${conflictEvents.map(keptCard).join("")}
     </div>
     `
         : ""
@@ -6617,15 +6697,11 @@ class ScriptableAdapter {
 
     ${this.generateBearDroppedSection(results)}
 
-    ${this.generateBearKeptOverrideSection(results)}
-
     ${this.generateDiscoveredVenueSection(results)}
 
     ${newVenueSectionHtml}
 
     ${this.generateDiscoverySection(results)}
-
-    ${this.generateActiveConfigSection(results)}
 
     ${insightSectionsHtml}
 
@@ -6653,22 +6729,6 @@ class ScriptableAdapter {
             } catch (ignore) {}
         }
 
-        // Active-config copy button rides the same chunkyscrape:// navigation
-        // bridge (shouldAllowRequest, set before present()) and reuses the
-        // venue-copy nonce counter; the JSON payload stays native-side.
-        function copyActiveConfig(btn) {
-            window.location.href = 'chunkyscrape://act?a=copy-config&n=' + (++window.__venueCopyNonce);
-        }
-        function markConfigCopied() {
-            try {
-                var btn = document.querySelector('.config-copy-btn');
-                if (btn) {
-                    btn.textContent = 'Copied ✓';
-                    setTimeout(function () { btn.textContent = '📋 Copy effective config JSON'; }, 2000);
-                }
-            } catch (ignore) {}
-        }
-
         // Manual bear/not-bear override buttons use the same chunkyscrape://
         // navigation bridge (shouldAllowRequest, set before present()); the
         // per-tap nonce keeps repeat taps firing as distinct navigations.
@@ -6680,12 +6740,29 @@ class ScriptableAdapter {
             window.location.href = 'chunkyscrape://act?a=' + encodeURIComponent(act) +
                 '&id=' + encodeURIComponent(idx) + '&n=' + (window.__bearOverrideNonce++);
         }
+        // Feedback flips which of the card's two verdict buttons reads as
+        // active, so the tile always shows the verdict that will be saved.
         function markBearOverrideDone(idx, act) {
             try {
-                var btn = document.querySelector('.bear-override-btn[data-bear-idx="' + idx + '"][data-bear-act="' + act + '"]');
-                if (btn) {
-                    btn.textContent = act === 'mark-bear' ? 'Marked bear ✓' : 'Marked not-bear ✓';
-                    btn.disabled = true;
+                var buttons = document.querySelectorAll('.bear-override-btn[data-bear-idx="' + idx + '"]');
+                for (var i = 0; i < buttons.length; i++) {
+                    var isTapped = buttons[i].getAttribute('data-bear-act') === act;
+                    if (isTapped) {
+                        buttons[i].classList.add('is-active');
+                    } else {
+                        buttons[i].classList.remove('is-active');
+                    }
+                }
+                var row = buttons.length > 0 ? buttons[0].closest('.bear-verdict-row') : null;
+                if (row) {
+                    row.setAttribute('data-bear-verdict', act === 'mark-bear' ? 'bear' : 'not-bear');
+                    var note = row.querySelector('.bear-verdict-note');
+                    if (!note) {
+                        note = document.createElement('span');
+                        note.className = 'bear-verdict-note';
+                        row.appendChild(note);
+                    }
+                    note.textContent = act === 'mark-bear' ? 'Marked as bear ✓ (applied when you close this view)' : 'Marked as not bear ✓ (applied when you close this view)';
                 }
             } catch (ignore) {}
         }
@@ -7842,134 +7919,6 @@ class ScriptableAdapter {
     }
   }
 
-  // Redacted active-config summary for the results UI, or null when this
-  // run carries no config snapshot (old saved runs may lack results.config)
-  // or the pure builder is unavailable. Null-guards every path so saved-run
-  // display never breaks.
-  buildActiveConfigSummaryForResults(results) {
-    if (!results || !results.config || typeof results.config !== "object") {
-      return null;
-    }
-    const core = this.getIdentityCore();
-    if (!core || typeof core.buildActiveConfigSummary !== "function") {
-      return null;
-    }
-    try {
-      return core.buildActiveConfigSummary(results.config);
-    } catch (error) {
-      console.warn(
-        `📱 Scriptable: Could not build active-config summary: ${error.message}`,
-      );
-      return null;
-    }
-  }
-
-  // Active config section: the effective run settings this run executed with
-  // (values-only, secret-redacted) plus each parser's explicit overrides
-  // diffed against the global effective values. The copy button signals
-  // native via the chunkyscrape:// scheme handled in presentRichResults
-  // (shouldAllowRequest → Pasteboard.copy) — WKWebView has no reliable
-  // navigator.clipboard.
-  generateActiveConfigSection(results) {
-    const summary = this.buildActiveConfigSummaryForResults(results);
-    if (!summary) return "";
-    const core = this.getIdentityCore();
-    if (!core || typeof core.flattenConfigForDiff !== "function") return "";
-
-    const globalFlat = core.flattenConfigForDiff(
-      summary.global && typeof summary.global === "object" ? summary.global : {},
-    );
-    const globalRows = Object.entries(globalFlat)
-      .map(
-        ([key, value]) =>
-          `<tr><td style="padding:2px 10px 2px 0; font-family:monospace; font-size:11px; color:var(--text-secondary); vertical-align:top; white-space:nowrap;">${this.escapeHtml(key)}</td><td style="padding:2px 0; font-family:monospace; font-size:11px; word-break:break-all;">${this.escapeHtml(String(value))}</td></tr>`,
-      )
-      .join("");
-
-    const parsers = Array.isArray(summary.parsers) ? summary.parsers : [];
-    const parserBlocks = parsers
-      .map((parser) => {
-        const entry = parser && typeof parser === "object" ? parser : {};
-        const overrideEntries = Object.entries(
-          entry.overrides && typeof entry.overrides === "object"
-            ? entry.overrides
-            : {},
-        );
-        const overridesHtml =
-          overrideEntries.length === 0
-            ? '<div style="font-size:12px; color:var(--text-secondary);">no overrides</div>'
-            : `<div style="font-size:12px;"><div style="font-weight:600; margin-bottom:2px;">Overrides (${overrideEntries.length})</div>${overrideEntries
-                .map(([key, diff]) => {
-                  const value =
-                    diff && diff.value !== undefined ? String(diff.value) : "unset";
-                  const globalValue =
-                    diff && diff.globalValue !== undefined
-                      ? String(diff.globalValue)
-                      : "unset";
-                  return `<div style="font-family:monospace; font-size:11px; word-break:break-all;">${this.escapeHtml(key)}: ${this.escapeHtml(value)} (global: ${this.escapeHtml(globalValue)})</div>`;
-                })
-                .join("")}</div>`;
-        const enabledBadge = entry.enabled
-          ? '<span style="font-size:11px; font-weight:600; color:#34c759;">enabled</span>'
-          : '<span style="font-size:11px; opacity:0.6;">disabled</span>';
-        const urls = Array.isArray(entry.urls) ? entry.urls : [];
-        const urlsHtml =
-          urls.length > 0
-            ? `<div style="font-size:11px; font-family:monospace; opacity:0.7; word-break:break-all; margin:2px 0 4px 0;">${urls.map((url) => this.escapeHtml(String(url))).join("<br>")}</div>`
-            : "";
-        const parserLabel = entry.parser
-          ? ` <span style="font-weight:400; opacity:0.7;">(${this.escapeHtml(entry.parser)} parser)</span>`
-          : "";
-        return `
-        <div style="margin-bottom:12px; padding:10px; background:var(--background-light); border-radius:8px;">
-            <div style="font-weight:600; margin-bottom:2px;">${this.escapeHtml(entry.name || "(unnamed)")}${parserLabel} ${enabledBadge}</div>
-            ${urlsHtml}
-            ${overridesHtml}
-        </div>`;
-      })
-      .join("");
-
-    return `
-    <div class="section">
-        <div class="section-header">
-            <span class="section-icon">⚙️</span>
-            <span class="section-title">Active config</span>
-            <span class="section-count">${parsers.length}</span>
-        </div>
-        <details style="margin-bottom:12px;">
-            <summary>Run settings</summary>
-            <div style="overflow-x:auto;"><table style="border-collapse:collapse;">${globalRows}</table></div>
-        </details>
-        ${parserBlocks}
-        <div style="display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap; align-items:center;">
-            <button onclick="copyActiveConfig(this)" class="log-copy-btn config-copy-btn">📋 Copy effective config JSON</button>
-            <span style="font-size:12px; color:var(--text-secondary);">Secrets are redacted in the copied JSON</span>
-        </div>
-    </div>
-    `;
-  }
-
-  // Copy the effective (redacted) config JSON natively and (best-effort)
-  // flash the button. Called fire-and-forget from shouldAllowRequest, which
-  // must synchronously return a bool — so the await lives here, not in the
-  // handler.
-  async copyActiveConfigAndReport(activeConfigJson, webView) {
-    try {
-      Pasteboard.copy(activeConfigJson);
-      console.log("📱 Scriptable: Copied active config JSON to clipboard");
-    } catch (error) {
-      console.warn(
-        `📱 Scriptable: Failed to copy active config JSON: ${error.message}`,
-      );
-      return;
-    }
-    try {
-      await webView.evaluateJavaScript("markConfigCopied()", false);
-    } catch (error) {
-      /* button feedback is optional polish; the copy already happened */
-    }
-  }
-
   // ---------------------------------------------------------------------------
   // Map verify links (results-UI ↔ chunkyscrape:// bridge, read-only).
   // The owner verifies a venue by comparing three independent Google Maps
@@ -8309,6 +8258,10 @@ class ScriptableAdapter {
     addParam("facebook", event.facebook);
     addParam("gmaps", event.gmaps);
     addParam("image", event.image);
+    // Orientation slots ride along so the builder can edit them; both are
+    // optional (orientation is only knowable for a minority of URLs).
+    addParam("imageVertical", event.imageVertical);
+    addParam("imageHorizontal", event.imageHorizontal);
     addParam("shortName", event.shortName);
     const query = params.length > 0 ? `?${params.join("&")}` : "";
     return `https://chunky.dad/testing/event-builder.html${query}`;
@@ -8534,40 +8487,78 @@ class ScriptableAdapter {
     return date.toDateString();
   }
 
-  // "Dropped as non-bear (N)" section: enforce-mode bear-check drops with the
-  // AI's one-line reason and a "Mark bear & save" button per row. Buttons are
-  // omitted for saved-run display (no post-dismissal execution there) and for
-  // rows already rescued by a calendar manual-bear record.
+  // Bear verdict controls stamped onto EVERY event card — kept and dropped
+  // alike — so the current verdict is visible and either direction is one tap
+  // away. `bearIdx` is namespaced because the two source lists share one
+  // bridge: "k<i>" = results.analyzedEvents[i], "d<i>" =
+  // results.bearDroppedEvents[i]. Returns "" without an index (a plain card).
+  buildBearVerdictActionsHtml(options) {
+    const opts = options && typeof options === "object" ? options : {};
+    const rawIdx = typeof opts.bearIdx === "string" ? opts.bearIdx : "";
+    if (!rawIdx) return "";
+    const idx = this.escapeHtml(rawIdx);
+    const isBear = opts.bearVerdict !== "not-bear";
+    // Saved-run display has no post-dismissal execution, and a drop already
+    // rescued by a calendar record must not be double-marked: both render the
+    // verdict read-only rather than hiding it.
+    const interactive = opts.interactive === true;
+    const disabledAttr = interactive ? "" : " disabled";
+    const button = (act, label) => {
+      const active = (act === "mark-bear") === isBear;
+      return `<button type="button" onclick="markBearOverride(this)" class="bear-verdict-btn bear-override-btn${active ? " is-active" : ""}" data-bear-idx="${idx}" data-bear-act="${act}"${disabledAttr}>${label}</button>`;
+    };
+    const note = opts.note
+      ? `<span class="bear-verdict-note">${this.escapeHtml(String(opts.note))}</span>`
+      : "";
+    return `
+            <div class="bear-verdict-row" data-bear-verdict="${isBear ? "bear" : "not-bear"}">
+                <span class="bear-verdict-label">Bear verdict</span>
+                ${button("mark-bear", "🐻 Mark as bear")}
+                ${button("mark-not-bear", "🚫 Mark as not bear")}
+                ${note}
+            </div>`;
+  }
+
+  // "Dropped as non-bear (N)" section: enforce-mode bear-check drops rendered
+  // with the SAME event-card markup the kept events use (they are real events
+  // the cascade rejected, not a debug list), each carrying both verdict
+  // buttons. Buttons go read-only for saved-run display (no post-dismissal
+  // execution there) and for rows already rescued by a calendar manual-bear
+  // record.
   generateBearDroppedSection(results) {
     const entries = Array.isArray(results && results.bearDroppedEvents)
       ? results.bearDroppedEvents
       : [];
     if (entries.length === 0) return "";
-    const interactive =
-      !results || results._isDisplayingSavedRun !== true;
+    const interactive = !results || results._isDisplayingSavedRun !== true;
+    const runInfo = {
+      runId: (results && (results.savedRunId || results.sourceRunId)) || null,
+    };
 
-    const rows = entries
+    const cards = entries
       .map((entry, index) => {
         if (!entry) return "";
-        const metaBits = [
-          this.formatBearOverrideDate(entry.startDate),
-          entry.venue || "",
-          entry.host ? `from ${entry.host}` : "",
-        ]
-          .filter(Boolean)
-          .join(" · ");
-        const control = entry.rescued
-          ? `<span style="font-size:12px; color:var(--text-secondary);">🐻 Rescued (manual override on calendar record)</span>`
-          : interactive
-            ? `<button onclick="markBearOverride(this)" class="log-copy-btn bear-override-btn" data-bear-idx="${index}" data-bear-act="mark-bear">🐻 Mark bear &amp; save</button>`
-            : "";
-        return `
-        <div class="bear-dropped-item" style="margin-bottom:12px; padding:10px; background:var(--background-light); border-radius:8px;">
-            <div style="font-weight:600;">${this.escapeHtml(entry.title || "Unknown")}</div>
-            ${metaBits ? `<div style="font-size:12px; color:var(--text-secondary);">${this.escapeHtml(metaBits)}</div>` : ""}
-            ${entry.reason ? `<div style="font-size:12px; margin:4px 0; color:var(--text-secondary);">${this.escapeHtml(entry.reason)}</div>` : ""}
-            ${control}
-        </div>`;
+        // The drop entry keeps the full event under `.event`; older/partial
+        // entries fall back to the flat summary fields so a card still renders.
+        const event =
+          entry.event && typeof entry.event === "object"
+            ? entry.event
+            : {
+                title: entry.title,
+                startDate: entry.startDate,
+                bar: entry.venue,
+              };
+        return this.generateEventCard(event, runInfo, {
+          dropped: true,
+          bearIdx: `d${index}`,
+          bearVerdict: entry.rescued ? "bear" : "not-bear",
+          interactive: interactive && entry.rescued !== true,
+          dropReason: entry.reason || "",
+          dropHost: entry.host || "",
+          note: entry.rescued
+            ? "Rescued (manual override on calendar record)"
+            : "",
+        });
       })
       .join("");
 
@@ -8578,81 +8569,66 @@ class ScriptableAdapter {
             <span class="section-title">Dropped as non-bear</span>
             <span class="section-count">${entries.length}</span>
         </div>
-        ${rows}
+        <div style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;">These events were filtered out by the bear check and will NOT be written. Tap "Mark as bear" to pull one back into this run's write plan — the verdict sticks on the calendar record for future scrapes.</div>
+        ${cards}
     </div>
     `;
   }
 
-  // Compact symmetric section for kept/analyzed events: each row gets a
-  // "Mark not-bear" button (per-card buttons would tangle the event-card HTML;
-  // a dedicated list keeps the bridge indexes 1:1 with results.analyzedEvents).
-  // Live runs only — saved-run display has no post-dismissal execution.
-  generateBearKeptOverrideSection(results) {
-    if (results && results._isDisplayingSavedRun === true) return "";
-    const events = Array.isArray(results && results.analyzedEvents)
-      ? results.analyzedEvents
-      : [];
-    if (events.length === 0) return "";
-
-    const rows = events
-      .map((event, index) => {
-        if (!event) return "";
-        const meta = [
-          this.formatBearOverrideDate(event.startDate),
-          event.bar || event.venue || "",
-        ]
-          .filter(Boolean)
-          .join(" · ");
-        return `
-        <div class="bear-kept-item" style="display:flex; align-items:center; gap:8px; justify-content:space-between; margin-bottom:6px; padding:6px 10px; background:var(--background-light); border-radius:8px;">
-            <div style="min-width:0;">
-                <span style="font-weight:600;">${this.escapeHtml(event.title || "Unknown")}</span>
-                ${meta ? `<span style="font-size:12px; color:var(--text-secondary);"> — ${this.escapeHtml(meta)}</span>` : ""}
-            </div>
-            <button onclick="markBearOverride(this)" class="log-copy-btn bear-override-btn" data-bear-idx="${index}" data-bear-act="mark-not-bear">🚫 Mark not-bear</button>
-        </div>`;
-      })
-      .join("");
-
-    return `
-    <div class="section">
-        <div class="section-header">
-            <span class="section-icon">🐻</span>
-            <span class="section-title">Kept as bear — mark mistakes not-bear</span>
-            <span class="section-count">${events.length}</span>
-        </div>
-        <div style="font-size:12px; color:var(--text-secondary); margin-bottom:8px;">Marked events are still saved to the calendar but hidden on the website, and the override sticks on future scrapes.</div>
-        ${rows}
-    </div>
-    `;
+  // Split a namespaced card id into its source list and array index:
+  //   "k7" → { list: "kept",    index: 7 }  (results.analyzedEvents[7])
+  //   "d2" → { list: "dropped", index: 2 }  (results.bearDroppedEvents[2])
+  // Both lists are addressable in both directions now that every card carries
+  // both buttons, so the id — not the action — says which list to read.
+  parseBearCardId(id) {
+    const key = String(id == null ? "" : id);
+    const match = /^([kd])(\d+)$/.exec(key);
+    if (!match) return null;
+    const index = Number(match[2]);
+    if (!Number.isInteger(index) || index < 0) return null;
+    return { list: match[1] === "k" ? "kept" : "dropped", index, key };
   }
 
-  // Record one override tap natively and (best-effort) flash the row's button.
-  // Called fire-and-forget from shouldAllowRequest, which must synchronously
-  // return a bool — so the await lives here, not in the handler. Repeat taps
-  // (per-tap nonce keeps them firing) overwrite the same pending slot.
+  // Record one override tap natively and (best-effort) flip the card's verdict
+  // buttons. Called fire-and-forget from shouldAllowRequest, which must
+  // synchronously return a bool — so the await lives here, not in the handler.
+  // Repeat taps (per-tap nonce keeps them firing) overwrite the same pending
+  // slot, and tapping the opposite direction clears the other slot, so the
+  // last tap on a card always wins.
   async recordBearOverrideAndReport(action, id, results, pending, webView) {
     try {
-      const key = String(id || "");
-      const index = Number(key);
-      if (!Number.isInteger(index) || index < 0) return;
+      const parsed = this.parseBearCardId(id);
+      if (!parsed) return;
+      const { key, index } = parsed;
       let title = "";
-      if (action === "mark-bear") {
+      if (parsed.list === "dropped") {
         const entries = Array.isArray(results && results.bearDroppedEvents)
           ? results.bearDroppedEvents
           : [];
         const entry = entries[index];
         if (!entry || !entry.event || entry.rescued) return;
-        pending.markedBear[key] = entry;
         title = entry.title || "";
+        if (action === "mark-bear") {
+          pending.markedBear[key] = entry;
+        } else {
+          // "Mark as not bear" on a drop just confirms the drop — undo any
+          // pending rescue and leave the event out of the write plan.
+          delete pending.markedBear[key];
+        }
       } else {
         const events = Array.isArray(results && results.analyzedEvents)
           ? results.analyzedEvents
           : [];
         const event = events[index];
         if (!event) return;
-        pending.markedNotBear[key] = event;
         title = event.title || "";
+        if (action === "mark-bear") {
+          pending.keptMarkedBear[key] = event;
+          delete pending.markedNotBear[key];
+        } else {
+          pending.markedNotBear[key] = event;
+          delete pending.keptMarkedBear[key];
+        }
       }
       console.log(
         `📱 Scriptable: Bear override tapped — ${action} #${key} "${title}"`,
@@ -8680,7 +8656,14 @@ class ScriptableAdapter {
     const markedNotBearIds = Object.keys(
       pending && pending.markedNotBear ? pending.markedNotBear : {},
     );
-    if (markedBearIds.length === 0 && markedNotBearIds.length === 0) {
+    const keptMarkedBearIds = Object.keys(
+      pending && pending.keptMarkedBear ? pending.keptMarkedBear : {},
+    );
+    if (
+      markedBearIds.length === 0 &&
+      markedNotBearIds.length === 0 &&
+      keptMarkedBearIds.length === 0
+    ) {
       return counts;
     }
     const core = this.getIdentityCore();
@@ -8717,6 +8700,34 @@ class ScriptableAdapter {
       );
     }
 
+    // Kept event confirmed bear: it is already in the write plan, so the only
+    // change is stamping the owner's verdict in place (same notes path as the
+    // not-bear branch) — that locks the event against a future AI flip.
+    for (const id of keptMarkedBearIds) {
+      const event = pending.keptMarkedBear[id];
+      if (!event) continue;
+      const overriddenReason =
+        typeof event.bearReview === "string" && event.bearReview
+          ? event.bearReview
+          : typeof event.bearSource === "string" && event.bearSource
+            ? `${event.bearSource} verdict`
+            : "";
+      event.isBearEvent = true;
+      event.bearSource = SharedCore.buildManualBearSource(
+        "bear",
+        overriddenReason,
+      );
+      // The website hides flagged events; an explicit owner "bear" clears it.
+      if (typeof event.bearReview === "string" && event.bearReview) {
+        delete event.bearReview;
+      }
+      event.notes = core.formatEventNotes(event);
+      counts.markedBear += 1;
+      console.log(
+        `📱 Scriptable: Manual override — "${event.title || "Unknown"}" confirmed bear (manual verdict stamped on the existing write)`,
+      );
+    }
+
     // Marked bear: stamp the manual verdict, then run the SAME calendar prep
     // (calendar assignment + merge analysis) the normal flow uses so these
     // late-added events join the write plan as fully analyzed events.
@@ -8744,7 +8755,7 @@ class ScriptableAdapter {
           results.analyzedEvents = [];
         }
         results.analyzedEvents.push(...prepped);
-        counts.markedBear = prepped.length;
+        counts.markedBear += prepped.length;
         prepped.forEach((event) =>
           console.log(
             `📱 Scriptable: Manual override — "${event.title || "Unknown"}" marked bear and prepped for calendar (${event._action || "new"})`,
@@ -8866,24 +8877,45 @@ class ScriptableAdapter {
   }
 
   // Generate HTML for individual event card
-  generateEventCard(event, runInfo = {}) {
+  generateEventCard(event, runInfo = {}, bearOptions = null) {
+    // bearOptions carries this card's bear verdict + bridge index (see
+    // buildBearVerdictActionsHtml). Absent → a plain card with no verdict row,
+    // which is what the standalone-card unit tests and any future caller get.
+    const bearOpts =
+      bearOptions && typeof bearOptions === "object" ? bearOptions : {};
+    const isDroppedCard = bearOpts.dropped === true;
+    const bearVerdictRow = this.buildBearVerdictActionsHtml(bearOpts);
     const intentAction = this.normalizeIntentAction(event) || "other";
     const writeAction = this.getWriteActionFromEvent(event);
-    const actionBadge =
-      {
-        new: '<span class="action-badge badge-new">NEW</span>',
-        merge: '<span class="action-badge badge-merge">MERGE</span>',
-        conflict: '<span class="action-badge badge-warning">CONFLICT</span>',
-        missing_calendar:
-          '<span class="action-badge badge-error">MISSING CALENDAR</span>',
-      }[intentAction] ||
-      '<span class="action-badge badge-warning">OTHER</span>';
+    // Dropped-as-non-bear cards never reached calendar analysis, so their
+    // intent/write labels would read "OTHER / OTHER" — the drop badge and the
+    // bear-check reason say something true instead.
+    const actionBadge = isDroppedCard
+      ? '<span class="action-badge badge-error">🚫 DROPPED — NOT BEAR</span>'
+      : {
+          new: '<span class="action-badge badge-new">NEW</span>',
+          merge: '<span class="action-badge badge-merge">MERGE</span>',
+          conflict: '<span class="action-badge badge-warning">CONFLICT</span>',
+          missing_calendar:
+            '<span class="action-badge badge-error">MISSING CALENDAR</span>',
+        }[intentAction] ||
+        '<span class="action-badge badge-warning">OTHER</span>';
     // Recurring series are display+export only (never auto-written): badge
     // the card and offer the ICS export instead of a calendar write.
     const recurringBadge = SharedCore.isRecurringSeriesEvent(event)
       ? '<span class="action-badge badge-warning recurring-badge">🔁 recurring — save via ICS</span>'
       : "";
-    const actionNote = `<div class="write-action-note">Intent: ${this.formatIntentActionLabel(intentAction)} • Write: ${this.formatWriteActionLabel(writeAction)}</div>`;
+    const dropDetail = [
+      bearOpts.dropReason ? String(bearOpts.dropReason) : "",
+      bearOpts.dropHost ? `from ${bearOpts.dropHost}` : "",
+    ]
+      .filter(Boolean)
+      .join(" • ");
+    const actionNote = isDroppedCard
+      ? dropDetail
+        ? `<div class="write-action-note">Bear check: ${this.escapeHtml(dropDetail)}</div>`
+        : ""
+      : `<div class="write-action-note">Intent: ${this.formatIntentActionLabel(intentAction)} • Write: ${this.formatWriteActionLabel(writeAction)}</div>`;
 
     const eventDate = new Date(event.startDate);
     const endDate = event.endDate ? new Date(event.endDate) : null;
@@ -8946,10 +8978,11 @@ class ScriptableAdapter {
     const eventActionsRow = this.buildEventCardActionsHtml(event);
 
     let html = `
-        <div class="event-card">
+        <div class="event-card${isDroppedCard ? " bear-dropped-card" : ""}">
             ${actionBadge}${recurringBadge}
             ${actionNote}
             <div class="event-title">${this.escapeHtml(event.title || event.name)}</div>
+            ${bearVerdictRow}
             
             <!-- Main Event Info -->
             <div class="event-details">
@@ -9658,7 +9691,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     return this.applyParserPickerSelection(parsers, new Set());
   }
 
-  // ── Picker-state persistence (pre-selection = last run's selection) ───────
+  // ── Picker-state persistence (feeds the "Rerun last" row, NOT a default) ──
 
   getPickerStatePath() {
     return this.fm.joinPath(this.baseDir, "picker-state.json");
@@ -9719,6 +9752,17 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     }
   }
 
+  // One-line preview of what "Rerun last" would run ("" when nothing is
+  // remembered). Long lists are truncated so the row subtitle stays readable.
+  formatRerunLastSubtitle(names) {
+    const list = Array.isArray(names) ? names.filter(Boolean) : [];
+    if (list.length === 0) return "";
+    const shown = list.slice(0, 3).join(", ");
+    return list.length > 3
+      ? `${shown} +${list.length - 3} more`
+      : shown;
+  }
+
   // Stalest-first ordering (ports computeStaleStatus's sort semantics from
   // stale-parsers.js): never-written → Infinity → top, then descending
   // days-since-last-write, name as tiebreak.
@@ -9755,7 +9799,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
   }
 
   // Presents a UITable listing all configured parsers (stalest-first) with
-  // checkmark toggles. Resolves with a Set of picked parser names, or null on
+  // checkmark toggles, ALL unchecked (the previous run's set is offered as an
+  // explicit "Rerun last" action row instead of being pre-ticked).
+  // Resolves with a Set of picked parser names, or null on
   // swipe-down dismissal / any error — the caller treats null as CANCEL (no
   // parsers run), never as run-as-configured.
   async presentParserPicker(config) {
@@ -9766,11 +9812,15 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       const records = await this.readMetricsRecordsForPicker();
       const entries = this.buildParserPickerEntries(parsers, records);
 
-      // Pre-selection = the previous run's confirmed selection (persisted in
-      // picker-state.json; first run / missing / corrupt → none pre-selected)
-      const selected = new Set(
-        await this.loadPickerState(entries.map((entry) => entry.name)),
+      // NOTHING is pre-selected: a fresh picker always starts empty, so the
+      // common "run one different parser" case is one tap on that parser plus
+      // one on Run selected — no un-checking of last run's leftovers first.
+      // The previous run's confirmed selection is still remembered (written by
+      // savePickerState below) and offered as an explicit "Rerun last" row.
+      const lastSelection = await this.loadPickerState(
+        entries.map((entry) => entry.name),
       );
+      const selected = new Set();
 
       let resolved = false;
       let resolveSelection;
@@ -9802,6 +9852,29 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         table.addRow(headerRow);
 
         // Action rows (default dismissOnSelect: tapping dismisses the table)
+
+        // "Rerun last" replaces the old sticky pre-selection: the remembered
+        // set is one tap away instead of being forced on every run. Hidden on
+        // the first run (nothing remembered yet).
+        if (lastSelection.length > 0) {
+          const rerunRow = new UITableRow();
+          rerunRow.height = 50;
+          const rerunCell = rerunRow.addText(
+            `↻ Rerun last (${lastSelection.length})`,
+          );
+          rerunCell.titleFont = Font.boldSystemFont(16);
+          rerunCell.titleColor = Color.blue();
+          rerunCell.subtitleText = this.formatRerunLastSubtitle(lastSelection);
+          rerunCell.subtitleColor = Color.gray();
+          rerunRow.onSelect = () => {
+            console.log(
+              `📱 Scriptable: Parser picker: rerun last selection (${lastSelection.length} parsers)`,
+            );
+            finish(new Set(lastSelection));
+          };
+          table.addRow(rerunRow);
+        }
+
         const runSelectedRow = new UITableRow();
         runSelectedRow.height = 50;
         const runSelectedCell = runSelectedRow.addText(
@@ -9863,8 +9936,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       );
 
       const picked = await selectionPromise;
-      // Persist confirmed selections only (Run selected / Run all) — the next
-      // run's picker pre-selects them. Dismissal keeps the previous state.
+      // Persist confirmed selections only (Rerun last / Run selected / Run
+      // all) — the next run's picker offers them behind "Rerun last", never
+      // as a pre-selection. Dismissal keeps the previous state.
       if (picked) {
         await this.savePickerState(Array.from(picked));
       }
@@ -10347,6 +10421,30 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         return this.escapeHtml(str);
       };
 
+      // Identity for DISPLAY only. Strict === was reporting startDate/endDate
+      // as CLOBBERED on every merge even when nothing changed: those values are
+      // Date objects (or a Date on one side and an ISO string on the other),
+      // and two Dates naming the same instant are never ===. Mirrors
+      // SharedCore.mergeValuesEqualForTracking, which already fixed the same
+      // bug for the merge LOG line but was never applied to this table.
+      const mergeValuesLookIdentical = (a, b) => {
+        if (a === b) return true;
+        const toMs = (value) => {
+          if (value instanceof Date) return value.getTime();
+          if (typeof value === "string") {
+            const parsed = Date.parse(value);
+            return Number.isNaN(parsed) ? null : parsed;
+          }
+          return null;
+        };
+        if (a instanceof Date || b instanceof Date) {
+          const aMs = toMs(a);
+          const bMs = toMs(b);
+          return aMs !== null && aMs === bMs;
+        }
+        return false;
+      };
+
       // Determine flow direction and result
       let flowIcon = "";
       let resultText = "";
@@ -10355,7 +10453,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         // New field being added
         flowIcon = "→";
         resultText = '<span style="color: #34c759;">ADDED</span>';
-      } else if (existingValue && newValue && existingValue === newValue) {
+      } else if (existingValue && newValue && mergeValuesLookIdentical(existingValue, newValue)) {
         // Both values are identical - no change needed
         flowIcon = "—";
         resultText = '<span style="color: #999;">SAME VALUE</span>';

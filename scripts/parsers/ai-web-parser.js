@@ -472,6 +472,14 @@ class AiWebParser {
         this.wixMediaTransformPattern = /^(https?:\/\/static\.wixstatic\.com\/media\/([^/?#]+))\/v1\/(?:fill|fit|crop)\/([^/?#]+)(?:[/?#]|$)/i;
         // URLs already logged by upgradeCdnThumbnailUrl — log each upgrade once per run.
         this.upgradedCdnThumbnailUrls = new Set();
+        // Extra image shapes an event's own structured data published (schema.org
+        // publishes `image` as an ARRAY of aspect ratios). Keyed by the event
+        // object so nothing is ever stamped onto the event itself — the slots
+        // filler reads this and the entry dies with the event.
+        this.imageSlotCandidatesByEvent = new WeakMap();
+        // Near-square artwork belongs in NEITHER orientation slot: a shape must
+        // beat this ratio (or its reciprocal) to count as landscape (portrait).
+        this.imageOrientationRatioThreshold = 1.1;
         this.aiPromptHistory = [];
         // Context-prep responses keyed by prompt hash: confidence retries rebuild a
         // byte-identical context-prep prompt, so the HTTP round-trip can be reused.
@@ -647,6 +655,12 @@ class AiWebParser {
                 // content gets its own og-image/page provenance here (no image
                 // → no stamp).
                 structuredEvents.forEach(event => this.stampImageProvenance(event, effectiveHtmlData));
+                // Orientation slots from every shape the structured data and the
+                // page's meta tags published (page-wide meta artwork only when a
+                // single event owns the page, same rule as the og:image fill).
+                structuredEvents.forEach(event => this.applyImageSlots(event, effectiveHtmlData, {
+                    allowPageMetaCandidates: structuredEvents.length === 1
+                }));
                 // Bar provenance for the structured-data path: curated/
                 // venue-site stamps only — there is no extraction evidence
                 // corpus here, so the adjacency check never runs (fail open).
@@ -4103,6 +4117,7 @@ class AiWebParser {
         const offerUrl = offer && typeof offer === 'object' ? this.normalizeHttpUrlValue(offer.url) : '';
         const ticketUrl = offerUrl || this.normalizeHttpUrlValue(node.url) || '';
         const cover = this.formatJsonLdOffersCover(node.offers);
+        const jsonLdImageCandidates = this.pickJsonLdImageCandidates(node.image);
 
         const event = {
             title,
@@ -4113,9 +4128,12 @@ class AiWebParser {
             address,
             url: sourceUrl,
             ticketUrl,
-            image: this.pickJsonLdImage(node.image),
+            image: jsonLdImageCandidates.length > 0 ? jsonLdImageCandidates[0].url : '',
             source: this.config.source
         };
+        // The other aspect ratios this node published stay reachable for the
+        // orientation slots (off-event WeakMap — the event object is untouched).
+        this.rememberImageSlotCandidates(event, jsonLdImageCandidates);
         // The page's own structured data named this venue and it survived the
         // address-shaped-name gate above — the venue-site identity pass never
         // overrides a structured-data bar (underscore field, internal only).
@@ -4266,19 +4284,41 @@ class AiWebParser {
         return normalizedName.length > 0 && normalizedName === normalizeStreetText(streetLine);
     }
 
-    pickJsonLdImage(image) {
-        const candidates = Array.isArray(image) ? image : [image];
-        for (const candidate of candidates) {
-            if (typeof candidate === 'string' && candidate.trim()) {
+    // EVERY image shape a schema.org node published, in document order.
+    // schema.org tells publishers to give `image` as an array of aspect ratios
+    // (1x1, 4x3, 16x9) — exactly the portrait/landscape pair the orientation
+    // slots want — so the array is read whole instead of collapsing to [0].
+    // ImageObject entries carry authoritative width/height; those beat anything
+    // guessed from the URL.
+    pickJsonLdImageCandidates(image) {
+        const raw = Array.isArray(image) ? image : [image];
+        const candidates = [];
+        const seen = new Set();
+        for (const entry of raw) {
+            let url = '';
+            let width = null;
+            let height = null;
+            if (typeof entry === 'string' && entry.trim()) {
                 // JSON-LD events skip normalizeAiEvent, so upgrade degraded CDN
                 // thumbnails here — the stored image must never be a blurred preview.
-                return this.upgradeCdnThumbnailUrl(this.normalizeHttpUrlValue(candidate) || '') || '';
+                url = this.upgradeCdnThumbnailUrl(this.normalizeHttpUrlValue(entry) || '') || '';
+            } else if (entry && typeof entry === 'object' && typeof entry.url === 'string') {
+                url = this.upgradeCdnThumbnailUrl(this.normalizeHttpUrlValue(entry.url) || '') || '';
+                width = this.parseImageDimensionValue(entry.width);
+                height = this.parseImageDimensionValue(entry.height);
             }
-            if (candidate && typeof candidate === 'object' && typeof candidate.url === 'string') {
-                return this.upgradeCdnThumbnailUrl(this.normalizeHttpUrlValue(candidate.url) || '') || '';
-            }
+            if (!url) continue;
+            const key = this.canonicalizeImageUrlForComparison(url);
+            if (!key || seen.has(key)) continue;
+            seen.add(key);
+            candidates.push({ url, width, height, authoritative: Boolean(width && height) });
         }
-        return '';
+        return candidates;
+    }
+
+    pickJsonLdImage(image) {
+        const candidates = this.pickJsonLdImageCandidates(image);
+        return candidates.length > 0 ? candidates[0].url : '';
     }
 
     // Cover (price) from schema.org offers: a single offer object, a plain offer
@@ -5640,6 +5680,11 @@ class AiWebParser {
             } else {
                 // Sort by size score (descending) and pick the largest
                 group.sort((a, b) => this.getImageSizeFromUrl(b.url) - this.getImageSizeFromUrl(a.url));
+                // A Wix asset served as a portrait `fill` AND a landscape `fill`
+                // strips to ONE key here, so the group can hold two different
+                // SHAPES, not just two sizes. Keep the losers reachable for the
+                // orientation slots (the returned winner is unchanged).
+                this.attachOcrImageShapeVariants(group[0], group);
                 deduped.push(group[0]);
                 console.log(`🤖 AI Web: Deduplicated ${group.length} size variant(s) to largest: ${group[0].url}`);
             }
@@ -5688,6 +5733,12 @@ class AiWebParser {
             } else {
                 // Sort by size score (descending) and pick the largest
                 group.sort((a, b) => this.getImageSizeFromUrl(b.url) - this.getImageSizeFromUrl(a.url));
+                // Identical OCR text means identical ARTWORK — which is exactly
+                // how a portrait flyer and its landscape banner twin look to
+                // this grouping. The twin survives on the winner instead of
+                // being deleted; the returned array is unchanged so segment
+                // pairing and the extraction prompt behave exactly as before.
+                this.attachOcrImageShapeVariants(group[0], group);
                 consolidated.push(group[0]);
                 console.log(`🤖 AI Web: Consolidated ${group.length} duplicate image(s) to largest: ${group[0].url}`);
             }
@@ -11060,6 +11111,11 @@ TEXT:
         // 'page' otherwise; no image → no stamp.
         this.stampImageProvenance(event, htmlData);
 
+        // Orientation slots last, so they see the final image value. Same
+        // segment rule as the og:image fill above: page-wide meta artwork is
+        // not attributable to one segment of a multi-event page.
+        this.applyImageSlots(event, htmlData, { allowPageMetaCandidates: !dataFlags.segment });
+
         return event;
     }
 
@@ -11960,6 +12016,28 @@ TEXT:
         return '';
     }
 
+    // EVERY og-style meta content for a key, in document order. Pages legitimately
+    // publish more than one <meta property="og:image"> (one per aspect ratio, each
+    // followed by its own og:image:width/og:image:height) — extractOgMetaContent
+    // above answers only the first, so the rest were invisible. Same decoding, so
+    // list[0] always equals extractOgMetaContent's answer.
+    extractOgMetaContentAll(html, keyName) {
+        const source = String(html || '').slice(0, 500000);
+        const metaRegex = /<meta\b[^>]*>/gi;
+        const values = [];
+        let match;
+        while ((match = metaRegex.exec(source)) !== null) {
+            const tag = match[0];
+            const nameMatch = tag.match(/\b(?:name|property)\s*=\s*["']([^"']+)["']/i);
+            if (!nameMatch || this.normalizeWhitespace(nameMatch[1]).toLowerCase() !== keyName) continue;
+            const contentMatch = tag.match(/\bcontent\s*=\s*["']([^"']+)["']/i);
+            if (!contentMatch) continue;
+            const value = this.normalizeWhitespace(this.decodeBasicEntities(contentMatch[1]));
+            if (value) values.push(value);
+        }
+        return values;
+    }
+
     // Cached per page like getPageBrandNames (segment/OCR copies spread
     // htmlData and inherit the cache).
     getPageOgTitle(htmlData) {
@@ -12038,21 +12116,57 @@ TEXT:
     // never the lowercased comparison form getPageMetaImageUrls builds.
     // Obvious non-artwork URLs (logos/icons per isLikelyUninterestingImageUrl)
     // are skipped; an event that already has an image is left untouched.
+    // Every social-artwork candidate the page's meta tags publish, in the same
+    // key order fillImageFromPageMetaArtwork has always used, run through the
+    // standard storage pipeline (normalizeHttpUrlValue → unwrapImageProxyUrl →
+    // upgradeCdnThumbnailUrl). Multiple tags per key are all collected, and the
+    // og:image family's published og:image:width/og:image:height are paired by
+    // document order — those are the page's OWN authoritative dimensions, worth
+    // more than anything the URL hints at. Cached per page like getPageOgTitle.
+    collectPageMetaImageCandidates(htmlData) {
+        if (!htmlData || typeof htmlData !== 'object') return [];
+        if (Array.isArray(htmlData.pageMetaImageCandidates)) return htmlData.pageMetaImageCandidates;
+        const html = typeof htmlData.html === 'string' ? htmlData.html : '';
+        const candidates = [];
+        if (html) {
+            const widths = this.extractOgMetaContentAll(html, 'og:image:width');
+            const heights = this.extractOgMetaContentAll(html, 'og:image:height');
+            const metaKeys = ['og:image', 'og:image:url', 'og:image:secure_url', 'twitter:image', 'twitter:image:src'];
+            const seen = new Set();
+            for (const metaKey of metaKeys) {
+                const contents = this.extractOgMetaContentAll(html, metaKey);
+                for (let i = 0; i < contents.length; i++) {
+                    // Same explicit &amp; second decode as getPageMetaImageUrls.
+                    const content = contents[i].replace(/&amp;/gi, '&');
+                    const normalized = this.normalizeHttpUrlValue(content);
+                    if (!normalized) continue;
+                    const unwrapped = this.unwrapImageProxyUrl(normalized) || normalized;
+                    const upgraded = this.upgradeCdnThumbnailUrl(unwrapped);
+                    if (!upgraded) continue;
+                    const key = this.canonicalizeImageUrlForComparison(upgraded);
+                    if (!key || seen.has(key)) continue;
+                    seen.add(key);
+                    // og:image:width/height belong to the og:image family only —
+                    // the Twitter card tags have no dimension siblings.
+                    const pairable = metaKey.indexOf('og:image') === 0;
+                    const width = pairable ? this.parseImageDimensionValue(widths[i]) : null;
+                    const height = pairable ? this.parseImageDimensionValue(heights[i]) : null;
+                    candidates.push({ url: upgraded, width, height, authoritative: Boolean(width && height) });
+                }
+            }
+        }
+        if (Object.isExtensible(htmlData)) {
+            htmlData.pageMetaImageCandidates = candidates;
+        }
+        return candidates;
+    }
+
     fillImageFromPageMetaArtwork(event, htmlData) {
         if (!event || typeof event !== 'object') return event;
         const existingImage = typeof event.image === 'string' ? event.image.trim() : '';
         if (existingImage) return event;
-        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
-        if (!html) return event;
-        const metaKeys = ['og:image', 'og:image:url', 'og:image:secure_url', 'twitter:image', 'twitter:image:src'];
-        for (const metaKey of metaKeys) {
-            // Same explicit &amp; second decode as getPageMetaImageUrls.
-            const content = this.extractOgMetaContent(html, metaKey).replace(/&amp;/gi, '&');
-            if (!content) continue;
-            const normalized = this.normalizeHttpUrlValue(content);
-            if (!normalized) continue;
-            const unwrapped = this.unwrapImageProxyUrl(normalized) || normalized;
-            const upgraded = this.upgradeCdnThumbnailUrl(unwrapped);
+        for (const candidate of this.collectPageMetaImageCandidates(htmlData)) {
+            const upgraded = candidate.url;
             if (!upgraded || this.isLikelyUninterestingImageUrl(upgraded)) continue;
             event.image = upgraded;
             event.imageSource = 'og-image';
@@ -12071,6 +12185,227 @@ TEXT:
         const metaImageUrls = this.getPageMetaImageUrls(htmlData);
         event.imageSource = canonical && metaImageUrls.includes(canonical) ? 'og-image' : 'page';
         return event;
+    }
+
+    // ========================================================================
+    // ORIENTATION SLOTS (imageVertical / imageHorizontal)
+    // ========================================================================
+    // Pages routinely publish the SAME artwork in two shapes — a portrait flyer
+    // for the feed and a landscape banner for the header. Extraction has always
+    // kept exactly one and deleted the rest, so a site that hands us both could
+    // still only ever be shown in one aspect. These helpers gather the shapes
+    // that were being thrown away (JSON-LD image arrays, extra og:image tags,
+    // OCR twins) and fill the two slots.
+    //
+    // Everything fails open and nothing here touches `image`: an orientation
+    // that cannot be established from PUBLISHED or URL-encoded dimensions fills
+    // NO slot, which is the common case (real URL-dimension coverage is low).
+    // Guessing an orientation would be worse than leaving the slot empty.
+
+    // A schema.org / og width or height value as a positive pixel count.
+    // Accepts numbers, numeric strings ("1200", "1200 px") and schema.org
+    // QuantitativeValue objects; anything else is null (no dimension known).
+    parseImageDimensionValue(value) {
+        if (value === null || value === undefined) return null;
+        if (typeof value === 'object') {
+            if (Array.isArray(value)) return this.parseImageDimensionValue(value[0]);
+            return this.parseImageDimensionValue(value.value !== undefined ? value.value : value['@value']);
+        }
+        const match = String(value).trim().match(/^(\d+(?:\.\d+)?)/);
+        if (!match) return null;
+        const pixels = Math.round(Number(match[1]));
+        return Number.isFinite(pixels) && pixels > 0 ? pixels : null;
+    }
+
+    // 'portrait' | 'landscape' | 'square' | 'unknown' from a pixel pair.
+    orientationFromImageDimensions(width, height) {
+        const w = this.parseImageDimensionValue(width);
+        const h = this.parseImageDimensionValue(height);
+        if (!w || !h) return 'unknown';
+        const ratio = w / h;
+        if (ratio >= this.imageOrientationRatioThreshold) return 'landscape';
+        if (ratio <= 1 / this.imageOrientationRatioThreshold) return 'portrait';
+        return 'square';
+    }
+
+    // Orientation of one candidate. Dimensions the page PUBLISHED (JSON-LD
+    // ImageObject width/height, og:image:width/height) are authoritative and
+    // answer first; only then do we ask shared-core to read dimensions out of
+    // the URL. Both shared-core readers are optional — this degrades to
+    // 'unknown' (no slot) when they are absent.
+    resolveImageCandidateOrientation(candidate) {
+        if (!candidate || !candidate.url) return 'unknown';
+        const published = this.orientationFromImageDimensions(candidate.width, candidate.height);
+        if (published !== 'unknown') return published;
+        if (this.core && typeof this.core.getImageDimensionsFromUrl === 'function') {
+            const dimensions = this.core.getImageDimensionsFromUrl(candidate.url);
+            if (dimensions) {
+                const derived = this.orientationFromImageDimensions(dimensions.width, dimensions.height);
+                if (derived !== 'unknown') {
+                    candidate.derivedWidth = this.parseImageDimensionValue(dimensions.width);
+                    candidate.derivedHeight = this.parseImageDimensionValue(dimensions.height);
+                    return derived;
+                }
+            }
+        }
+        if (this.core && typeof this.core.classifyImageOrientation === 'function') {
+            const classified = this.core.classifyImageOrientation(candidate.url);
+            if (classified === 'portrait' || classified === 'landscape' || classified === 'square') {
+                return classified;
+            }
+        }
+        return 'unknown';
+    }
+
+    // Pixel area when known (published beats URL-derived), else 0.
+    getImageCandidateArea(candidate) {
+        const width = this.parseImageDimensionValue(candidate && candidate.width) || (candidate && candidate.derivedWidth) || 0;
+        const height = this.parseImageDimensionValue(candidate && candidate.height) || (candidate && candidate.derivedHeight) || 0;
+        return width > 0 && height > 0 ? width * height : 0;
+    }
+
+    // Stash the extra shapes a structured node published for `event`, off-event
+    // (WeakMap) so no internal field ever rides along on the event object.
+    rememberImageSlotCandidates(event, candidates) {
+        if (!event || typeof event !== 'object') return;
+        if (!Array.isArray(candidates) || candidates.length === 0) return;
+        const existing = this.imageSlotCandidatesByEvent.get(event) || [];
+        this.imageSlotCandidatesByEvent.set(event, existing.concat(candidates));
+    }
+
+    // Keep the OCR results a grouping pass is about to drop reachable on the
+    // survivor. The returned OCR array keeps its exact shape — segment pairing,
+    // the extraction prompt and the evidence corpus all read the same fields
+    // they always did — but the discarded twin's URL is no longer lost.
+    attachOcrImageShapeVariants(winner, group) {
+        if (!winner || !Array.isArray(group) || group.length <= 1) return winner;
+        const variants = Array.isArray(winner.imageShapeVariants) ? winner.imageShapeVariants.slice() : [];
+        const seen = new Set([this.canonicalizeImageUrlForComparison(winner.url)]);
+        variants.forEach(url => seen.add(this.canonicalizeImageUrlForComparison(url)));
+        for (const member of group) {
+            if (!member) continue;
+            const memberUrls = [member.url].concat(Array.isArray(member.imageShapeVariants) ? member.imageShapeVariants : []);
+            for (const rawUrl of memberUrls) {
+                const normalized = this.normalizeHttpUrlValue(rawUrl);
+                if (!normalized) continue;
+                const key = this.canonicalizeImageUrlForComparison(normalized);
+                if (!key || seen.has(key)) continue;
+                seen.add(key);
+                variants.push(normalized);
+            }
+        }
+        if (variants.length > 0) {
+            winner.imageShapeVariants = variants;
+        }
+        return winner;
+    }
+
+    // The other shapes of THIS event's image that OCR grouping set aside. Only
+    // variants of the event's own image count — an unrelated flyer's twin is
+    // never attributable to this event.
+    collectOcrImageShapeCandidates(event, htmlData) {
+        const image = event && typeof event.image === 'string' ? event.image.trim() : '';
+        if (!image) return [];
+        const ocrResults = htmlData && Array.isArray(htmlData.ocrResults) ? htmlData.ocrResults : [];
+        if (ocrResults.length === 0) return [];
+        const imageStripped = this.stripSizeParams(image);
+        const imageCanonical = this.canonicalizeImageUrlForComparison(image);
+        const candidates = [];
+        for (const result of ocrResults) {
+            if (!result || !Array.isArray(result.imageShapeVariants) || result.imageShapeVariants.length === 0) continue;
+            const groupUrls = [result.url].concat(result.imageShapeVariants);
+            const ownsImage = groupUrls.some(url => {
+                const normalized = this.normalizeHttpUrlValue(url);
+                if (!normalized) return false;
+                return this.canonicalizeImageUrlForComparison(normalized) === imageCanonical
+                    || (Boolean(imageStripped) && this.stripSizeParams(normalized) === imageStripped);
+            });
+            if (!ownsImage) continue;
+            for (const url of result.imageShapeVariants) {
+                const normalized = this.normalizeHttpUrlValue(url);
+                if (normalized) candidates.push({ url: normalized, width: null, height: null, authoritative: false });
+            }
+        }
+        return candidates;
+    }
+
+    // Fill event.imageVertical / event.imageHorizontal from every image shape
+    // this page offered for the event. `event.image` is never read for
+    // selection beyond being a candidate itself and is never modified.
+    // options.allowPageMetaCandidates gates the page's shared og:image artwork
+    // the same way fillImageFromPageMetaArtwork does: one page-wide meta image
+    // cannot be attributed to one segment of a multi-event page.
+    applyImageSlots(event, htmlData, options = {}) {
+        if (!event || typeof event !== 'object') return event;
+
+        // A slot a parser config already declared (parserConfig.metadata assigns
+        // unconditionally) is a curated answer — never overwritten, only joined
+        // by the other orientation.
+        const declaredVertical = typeof event.imageVertical === 'string' ? event.imageVertical.trim() : '';
+        const declaredHorizontal = typeof event.imageHorizontal === 'string' ? event.imageHorizontal.trim() : '';
+
+        const collected = [];
+        const image = typeof event.image === 'string' ? event.image.trim() : '';
+        if (image) collected.push({ url: image, width: null, height: null, authoritative: false });
+        collected.push(...(this.imageSlotCandidatesByEvent.get(event) || []));
+        collected.push(...this.collectOcrImageShapeCandidates(event, htmlData));
+        if (options.allowPageMetaCandidates !== false) {
+            collected.push(...this.collectPageMetaImageCandidates(htmlData));
+        }
+        this.imageSlotCandidatesByEvent.delete(event);
+        if (collected.length === 0) return event;
+
+        // One URL can arrive from several sources — as the bare `image` value
+        // AND as a meta/JSON-LD entry carrying published dimensions. Merge them
+        // instead of letting the first, dimensionless sighting win.
+        const byUrl = new Map();
+        for (const candidate of collected) {
+            if (!candidate || !candidate.url) continue;
+            const key = this.canonicalizeImageUrlForComparison(candidate.url);
+            if (!key) continue;
+            const existing = byUrl.get(key);
+            if (!existing) {
+                byUrl.set(key, { url: candidate.url, width: candidate.width, height: candidate.height, authoritative: Boolean(candidate.authoritative) });
+                continue;
+            }
+            if (!existing.width) existing.width = candidate.width;
+            if (!existing.height) existing.height = candidate.height;
+            existing.authoritative = existing.authoritative || Boolean(existing.width && existing.height);
+        }
+
+        // A logo or sprite is never artwork — the same test the OCR pass and the
+        // og:image fill already use keeps it out of both slots.
+        const bySlot = { portrait: null, landscape: null };
+        for (const candidate of byUrl.values()) {
+            if (this.isLikelyUninterestingImageUrl(candidate.url)) continue;
+            const orientation = this.resolveImageCandidateOrientation(candidate);
+            if (orientation !== 'portrait' && orientation !== 'landscape') continue;
+            const incumbent = bySlot[orientation];
+            if (!incumbent || this.isBetterImageSlotCandidate(candidate, incumbent)) {
+                bySlot[orientation] = candidate;
+            }
+        }
+
+        if (declaredVertical) bySlot.portrait = null;
+        if (declaredHorizontal) bySlot.landscape = null;
+        if (!bySlot.portrait && !bySlot.landscape) return event;
+        if (bySlot.portrait) event.imageVertical = bySlot.portrait.url;
+        if (bySlot.landscape) event.imageHorizontal = bySlot.landscape.url;
+        console.log(`🖼️ IMAGE SLOTS: vertical=${event.imageVertical || 'none'} horizontal=${event.imageHorizontal || 'none'} for "${event.title || ''}"`);
+        return event;
+    }
+
+    // Ranking inside ONE orientation: published dimensions outrank guessed ones,
+    // then larger pixel area, then the shared URL size score (the same scale OCR
+    // dedup ranks on).
+    isBetterImageSlotCandidate(candidate, incumbent) {
+        if (Boolean(candidate.authoritative) !== Boolean(incumbent.authoritative)) {
+            return Boolean(candidate.authoritative);
+        }
+        const candidateArea = this.getImageCandidateArea(candidate);
+        const incumbentArea = this.getImageCandidateArea(incumbent);
+        if (candidateArea !== incumbentArea) return candidateArea > incumbentArea;
+        return this.getImageSizeFromUrl(candidate.url) > this.getImageSizeFromUrl(incumbent.url);
     }
 
     // ========================================================================

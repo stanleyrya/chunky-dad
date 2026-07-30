@@ -2438,6 +2438,21 @@ body.index-page main {
     box-shadow: 0 6px 20px rgba(6, 8, 20, 0.45);
 }
 
+/* When the flyer's orientation is KNOWN (the URL came out of an
+   imageVertical/imageHorizontal slot) the cap is set from the attribute, which
+   is on the container before the image loads — so the card reserves the right
+   amount of room instead of resizing once the bytes arrive. Portrait artwork
+   earns more height; landscape artwork is already wide and only needs enough
+   height to fill the card's width. Unknown orientation keeps the 300px cap
+   above, i.e. exactly today's behaviour. */
+.event-card.detailed.aurora .event-flyer[data-flyer-orientation="portrait"] img {
+    max-height: 380px;
+}
+
+.event-card.detailed.aurora .event-flyer[data-flyer-orientation="landscape"] img {
+    max-height: 240px;
+}
+
 .event-card.detailed.aurora .ec-panel {
     position: relative;
     margin: 0;
@@ -2640,6 +2655,14 @@ body.index-page main {
 @media (max-width: 520px) {
     .event-card.detailed.aurora .event-flyer img {
         max-height: 250px;
+    }
+
+    .event-card.detailed.aurora .event-flyer[data-flyer-orientation="portrait"] img {
+        max-height: 320px;
+    }
+
+    .event-card.detailed.aurora .event-flyer[data-flyer-orientation="landscape"] img {
+        max-height: 200px;
     }
 
     .event-card.detailed.aurora h3.ec-title {

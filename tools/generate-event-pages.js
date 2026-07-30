@@ -91,6 +91,14 @@ function buildEventHtml(cityKey, cityName, event) {
   if (event.bar) descriptionParts.push(`@ ${event.bar}`);
   const description = sanitize(descriptionParts.join(' · ')) || `${cityName} bear event`;
   const url = `${SITE_BASE}/${cityKey}/${encodeURIComponent(event.slug)}/`;
+  // The flyer the OG card should paint. The artboard is 1200×630, so the
+  // LANDSCAPE candidate wins when the event has one; otherwise the primary
+  // image (orientation unknown for most URLs) and finally nothing, which
+  // leaves the text-only card that has always been generated.
+  const flyerUrl = String(event.imageHorizontal || event.image || '').trim();
+  const flyerMeta = /^https?:\/\//i.test(flyerUrl)
+    ? `\n  <meta name="chunky:flyer" content="${sanitize(flyerUrl).replace(/"/g, '&quot;')}">`
+    : '';
   // Prefer generated per-event OG image and add a content-hash version for cache busting
   const generatedPng = `/img/og/${cityKey}/${encodeURIComponent(event.slug)}.png`;
   let version = '';
@@ -101,7 +109,11 @@ function buildEventHtml(cityKey, cityName, event) {
       time: event.time || '',
       bar: event.bar || '',
       cover: event.cover || '',
-      description: event.tea || event.unprocessedDescription || ''
+      description: event.tea || event.unprocessedDescription || '',
+      // The generated OG card paints the flyer when there is one, so a flyer
+      // change has to bust the cache too — before this, swapping an event's
+      // image left every share preview showing the old artwork.
+      flyer: flyerUrl
     });
     version = crypto.createHash('md5').update(seed).digest('hex').slice(0, 8);
   } catch (e) {
@@ -145,7 +157,7 @@ ${MARKER}
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${title}">
   <meta name="twitter:description" content="${description}">
-  <meta name="twitter:image" content="${ogImage}">
+  <meta name="twitter:image" content="${ogImage}">${flyerMeta}
   <meta http-equiv="refresh" content="0; url=${redirectTarget}">
 </head>
 <body>
