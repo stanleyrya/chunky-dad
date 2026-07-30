@@ -90,6 +90,7 @@ const scraperPromoters = [
     "name": "Goldiloxx",
     "shortName": "GOLDI-LOXX",
     "shorterName": "GLX",
+    "favicon": "https://linktr.ee/goldiloxx",
     "instagram": "https://www.instagram.com/goldiloxx__",
     "matchKey": "goldiloxx*|${year}-${month}-*|*",
     "urlPatterns": [

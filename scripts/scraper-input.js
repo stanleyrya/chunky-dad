@@ -11,137 +11,10 @@
 // - Keep this file environment-agnostic (no Scriptable or DOM APIs)
 
 const scraperConfig = {
-  config: {
-    daysToLookAhead: null,
-    // dryRun: true, // Preview mode: analyze + display without writing to the calendar (default: false)
-    // Parser picker at run start OWNS run selection (default: false).
-    // Manual Scriptable runs only; the selection is session-scoped and never
-    // edits this file. It pre-selects the previous run's confirmed picks
-    // (persisted in picker-state.json); dismissing the picker CANCELS the run.
-    // ⚠️ Parser entries carry NO static enabled flags anymore: with this set
-    // to false — or on manual runs outside Scriptable (web/server) — a manual
-    // run executes ALL parsers. Scheduled automation is unaffected (no picker;
-    // per-parser automationEnabled governs what automation runs).
-    pickParsers: true,
-    pageCache: {
-      enabled: true,
-      ttlDays: 3,
-    },
-    // deadEndRetryDays: 30, // Learned dead-end URLs (fetched fine but yielded nothing) are skipped for this many days, then retried once; 0 disables the store (default: 30)
-    geocodeVerification: { mode: "enforce" }, // verify geocoded pins: grade-gate + Apple reverse cross-check. "report" (default) flags suspects in logs, "enforce" refuses suspect pins, "off" skips extra checks. Generic city-level pins are always refused.
-    promoterRegistry: { mode: "enforce" }, // Curated promoter identity matching — see data/promoters.json; enforce stamps matched metadata + bearAffinity (flipped 2026-07-28: verification battery — 37 matches, 0 false positives, 100% precision)
-    // NOTE: Eventbrite /e/ confidence defaults (JSON-LD cover/image/ticketUrl,
-    // meta location) are built into shared-core now — an aiConfidenceDefaults
-    // block here is only needed to extend or override them.
-    // Global AI extraction defaults — inherited by EVERY parser (extraction +
-    // merge arbitration). The effective per-parser block is a deep merge of this
-    // block with the parser's own `ai`, so per-parser keys override key-wise.
-    // Keys mirror what SharedCore.resolveAiConfig reads.
-    ai: {
-      enabled: true,
-      endpoint: "http://rybook.taila7523c.ts.net:8000/v1/chat/completions",
-      provider: "openai",
-      openai: {
-        responseFormat: "json_object",
-      },
-      model: "lmstudio-community/Qwen3-Coder-Next-MLX-6bit",
-      payloadMode: "best",
-      maxHtmlChars: 6000,
-      numCtx: 2048,
-      numPredict: 2000,
-      temperature: 0,
-      think: false,
-      timeoutSeconds: 120,
-      keepAlive: "5m",
-      cache: true, // AI response cache — key is model+prompt+options; set false to disable
-      // AI merge arbitration (default: true). When two records of the same event
-      // genuinely conflict on a field (both non-empty, different), the AI picks the
-      // better value — accepted only when its answer is a VERBATIM copy of one of
-      // the candidates; anything else falls back to the deterministic strategy
-      // (scraped clobbers). This global block also serves events from non-AI
-      // parsers; per-parser ai.arbitrateMerges overrides. Set false to disable.
-      arbitrateMerges: true,
-      bearCheck: { mode: "enforce" }, // Bear-check cascade: keywords → AI verdict with promoter context. "report" logs decisions without changing behavior; "enforce" flags/rescues/drops; "off" = legacy alwaysBear/keyword behavior. (Also accepted as a top-level config.bearCheck, like geocodeVerification; canonical location is here under ai.)
-      // Overlong-field trim pipeline: one AI call per event batches every
-      // overlong scraped field (title/description/shortName); answers are
-      // accepted only as VERBATIM contiguous substrings of the original.
-      // "report" logs would-trim decisions without changing values;
-      // "enforce" replaces; "off" disables. Calendar-sourced values are never
-      // AI-trimmed — they are only flagged in the event evidence panel.
-      // Enforce since battery run 20260728: every proposal was clean and the
-      // verbatim gate correctly rejected non-substring description trims.
-      trim: {
-        mode: "enforce", // "report" | "enforce" | "off"
-        titleMaxChars: 60, // data: title p95=48, p99=72, max=74
-        descriptionMaxChars: 600, // data: description p95=491, max=846
-        shortNameMaxChars: 30, // data: shortName max=20
-      },
-      // extraContext (override-only): free-form text appended VERBATIM to the
-      // context of every AI extraction prompt. Organizer/brand context is
-      // normally derived automatically from each page's own metadata (JSON-LD
-      // Organization/WebSite nodes and og:site_name) — set this only when a
-      // page's markup declares nothing useful and the model needs a hint.
-      // Per-parser ai.extraContext overrides this global value ("" opts out).
-      // Default: "" (no extra context).
-      // extraContext: "",
-      // Full AI prompt/response payloads normally go to the debug channel only:
-      // captured into the run log file (logs/<runId>.log) but hidden from the
-      // visible console. Set true to also mirror them to the live console while
-      // actively debugging. Default: false.
-      verboseConsoleLogs: false,
-    },
-    // Global OCR defaults — inherited by EVERY parser the same way as `ai`
-    // (a parser's own `ai.ocr` — or top-level `ocr` — block overrides key-wise).
-    // rapid-mlx (OpenAI-compatible, Apple Silicon) serving a VISION model on its
-    // own port, alongside the text/extraction server on :8000.
-    ocr: {
-      enabled: true,
-      provider: "openai",
-      endpoint: "http://rybook.taila7523c.ts.net:8001/v1/chat/completions",
-      model: "mlx-community/Qwen3-VL-4B-Instruct-4bit", // OCR requires a VISION model
-      timeoutSeconds: 120,
-      numCtx: 8192,
-      numPredict: 2000,
-      temperature: 0,
-      think: false,
-      keepAlive: "5m",
-      maxImages: 2, // Per-page OCR budget on single-event pages (multi-event pages use 10 + segment top-up)
-      concurrency: 1, // Concurrent OCR requests; keep 1 for a single local GPU
-      maxTextChars: 4000,
-      cache: true, // OCR result cache (key is `cache`, not `cacheEnabled`)
-      // End-of-run auto-prune: cached OCR results unused for this many days
-      // are deleted (cache hits refresh an entry's last-use marker, so
-      // recurring flyers are kept indefinitely). Default: 90.
-      cacheRetentionDays: 90,
-      requireMissingFields: true,
-    },
-    // NOTE: Generic junk URLs (/shop, /cart, /contact, /_api/, ?p=<digits>
-    // shortlinks, /privacy, /terms, ...) are blocked built-in now, and pages
-    // that fetch fine but yield nothing are learned as dead ends and skipped
-    // automatically. A discoveryBlockedPatterns list (global here, or
-    // per-parser) is only for deliberate exclusions — "never fetch, not even
-    // once". String entries are case-insensitive URL substrings; RegExp
-    // entries test against the lowercased URL, which allows anchoring.
-    // URL pattern rules for page classification. Checked in order — first match wins.
-    // More specific patterns (e.g. /events/:slug) must come before broader ones (e.g. domain root).
-    // Built-in platform rules apply automatically BENEATH these (config wins):
-    // eventbrite.com/e/ → event-page, eventbrite.com/o/ → multi-event-page,
-    // linktr.ee → link-aggregator. Only site-specific rules belong here.
-    pageClassificationRules: [
-      { pattern: /furball\.nyc/i, classification: "multi-event-page" },
-      {
-        pattern: /bearracuda\.com\/events\/[^/?&#\s]+/i,
-        classification: "event-page",
-      },
-      { pattern: /bearracuda\.com/i, classification: "link-aggregator" },
-      {
-        pattern: /thebearcalendar\.com\/events\/[^/?&#\s]+/i,
-        classification: "event-page",
-      },
-      // The listing host is a link hub, never a venue site.
-      { pattern: /thebearcalendar\.com/i, classification: "link-aggregator" },
-    ],
-  },
+  // ───────────────────────────────────────────────────────────────────────
+  // PARSERS FIRST — the list you actually browse on the phone. Run settings
+  // (config) moved below the parser list; nothing else changed.
+  // ───────────────────────────────────────────────────────────────────────
   parsers: [
     // NOTE: Promoter identity (shortName/socials/matchKey) and bear trust
     // (bearAffinity) live in data/promoters.json now — the enforce-mode
@@ -196,7 +69,6 @@ const scraperConfig = {
       // ~900 events. Note: sickening JSON-LD "organizer" is the VENUE, and
       // the site soft-404s (every URL returns 200 with an empty shell).
       discoveryAllowedPatterns: ["goldiloxx"],
-      calendarSearchRangeDays: 40, // Look +/- days for wildcard key matches (pairs with the registry's wildcard matchKey)
     },
     {
       name: "3 Dollar Bill",
@@ -403,6 +275,141 @@ const scraperConfig = {
       // },
     },
   ],
+  config: {
+    daysToLookAhead: null,
+    // Keep events whose start date already passed instead of dropping them at
+    // scrape time — the website reads fuller with history on it. Applies to
+    // every parser; flip to false (or remove) to go back to future-only.
+    allowPastEvents: true,
+    // dryRun: true, // Preview mode: analyze + display without writing to the calendar (default: false)
+    // Parser picker at run start OWNS run selection (default: false).
+    // Manual Scriptable runs only; the selection is session-scoped and never
+    // edits this file. It pre-selects the previous run's confirmed picks
+    // (persisted in picker-state.json); dismissing the picker CANCELS the run.
+    // ⚠️ Parser entries carry NO static enabled flags anymore: with this set
+    // to false — or on manual runs outside Scriptable (web/server) — a manual
+    // run executes ALL parsers. Scheduled automation is unaffected (no picker;
+    // per-parser automationEnabled governs what automation runs).
+    pickParsers: true,
+    pageCache: {
+      enabled: true,
+      ttlDays: 3,
+    },
+    // deadEndRetryDays: 30, // Learned dead-end URLs (fetched fine but yielded nothing) are skipped for this many days, then retried once; 0 disables the store (default: 30)
+    geocodeVerification: { mode: "enforce" }, // verify geocoded pins: grade-gate + Apple reverse cross-check. "report" (default) flags suspects in logs, "enforce" refuses suspect pins, "off" skips extra checks. Generic city-level pins are always refused.
+    promoterRegistry: { mode: "enforce" }, // Curated promoter identity matching — see data/promoters.json; enforce stamps matched metadata + bearAffinity (flipped 2026-07-28: verification battery — 37 matches, 0 false positives, 100% precision)
+    // NOTE: Eventbrite /e/ confidence defaults (JSON-LD cover/image/ticketUrl,
+    // meta location) are built into shared-core now — an aiConfidenceDefaults
+    // block here is only needed to extend or override them.
+    // Global AI extraction defaults — inherited by EVERY parser (extraction +
+    // merge arbitration). The effective per-parser block is a deep merge of this
+    // block with the parser's own `ai`, so per-parser keys override key-wise.
+    // Keys mirror what SharedCore.resolveAiConfig reads.
+    ai: {
+      enabled: true,
+      endpoint: "http://rybook.taila7523c.ts.net:8000/v1/chat/completions",
+      provider: "openai",
+      openai: {
+        responseFormat: "json_object",
+      },
+      model: "lmstudio-community/Qwen3-Coder-Next-MLX-6bit",
+      payloadMode: "best",
+      maxHtmlChars: 6000,
+      numCtx: 2048,
+      numPredict: 2000,
+      temperature: 0,
+      think: false,
+      timeoutSeconds: 120,
+      keepAlive: "5m",
+      cache: true, // AI response cache — key is model+prompt+options; set false to disable
+      // AI merge arbitration (default: true). When two records of the same event
+      // genuinely conflict on a field (both non-empty, different), the AI picks the
+      // better value — accepted only when its answer is a VERBATIM copy of one of
+      // the candidates; anything else falls back to the deterministic strategy
+      // (scraped clobbers). This global block also serves events from non-AI
+      // parsers; per-parser ai.arbitrateMerges overrides. Set false to disable.
+      arbitrateMerges: true,
+      bearCheck: { mode: "enforce" }, // Bear-check cascade: keywords → AI verdict with promoter context. "report" logs decisions without changing behavior; "enforce" flags/rescues/drops; "off" = legacy alwaysBear/keyword behavior. (Also accepted as a top-level config.bearCheck, like geocodeVerification; canonical location is here under ai.)
+      // Overlong-field trim pipeline: one AI call per event batches every
+      // overlong scraped field (title/description/shortName); answers are
+      // accepted only as VERBATIM contiguous substrings of the original.
+      // "report" logs would-trim decisions without changing values;
+      // "enforce" replaces; "off" disables. Calendar-sourced values are never
+      // AI-trimmed — they are only flagged in the event evidence panel.
+      // Enforce since battery run 20260728: every proposal was clean and the
+      // verbatim gate correctly rejected non-substring description trims.
+      trim: {
+        mode: "enforce", // "report" | "enforce" | "off"
+        titleMaxChars: 60, // data: title p95=48, p99=72, max=74
+        descriptionMaxChars: 600, // data: description p95=491, max=846
+        shortNameMaxChars: 30, // data: shortName max=20
+      },
+      // extraContext (override-only): free-form text appended VERBATIM to the
+      // context of every AI extraction prompt. Organizer/brand context is
+      // normally derived automatically from each page's own metadata (JSON-LD
+      // Organization/WebSite nodes and og:site_name) — set this only when a
+      // page's markup declares nothing useful and the model needs a hint.
+      // Per-parser ai.extraContext overrides this global value ("" opts out).
+      // Default: "" (no extra context).
+      // extraContext: "",
+      // Full AI prompt/response payloads normally go to the debug channel only:
+      // captured into the run log file (logs/<runId>.log) but hidden from the
+      // visible console. Set true to also mirror them to the live console while
+      // actively debugging. Default: false.
+      verboseConsoleLogs: false,
+    },
+    // Global OCR defaults — inherited by EVERY parser the same way as `ai`
+    // (a parser's own `ai.ocr` — or top-level `ocr` — block overrides key-wise).
+    // rapid-mlx (OpenAI-compatible, Apple Silicon) serving a VISION model on its
+    // own port, alongside the text/extraction server on :8000.
+    ocr: {
+      enabled: true,
+      provider: "openai",
+      endpoint: "http://rybook.taila7523c.ts.net:8001/v1/chat/completions",
+      model: "mlx-community/Qwen3-VL-4B-Instruct-4bit", // OCR requires a VISION model
+      timeoutSeconds: 120,
+      numCtx: 8192,
+      numPredict: 2000,
+      temperature: 0,
+      think: false,
+      keepAlive: "5m",
+      maxImages: 2, // Per-page OCR budget on single-event pages (multi-event pages use 10 + segment top-up)
+      concurrency: 1, // Concurrent OCR requests; keep 1 for a single local GPU
+      maxTextChars: 4000,
+      cache: true, // OCR result cache (key is `cache`, not `cacheEnabled`)
+      // End-of-run auto-prune: cached OCR results unused for this many days
+      // are deleted (cache hits refresh an entry's last-use marker, so
+      // recurring flyers are kept indefinitely). Default: 90.
+      cacheRetentionDays: 90,
+      requireMissingFields: true,
+    },
+    // NOTE: Generic junk URLs (/shop, /cart, /contact, /_api/, ?p=<digits>
+    // shortlinks, /privacy, /terms, ...) are blocked built-in now, and pages
+    // that fetch fine but yield nothing are learned as dead ends and skipped
+    // automatically. A discoveryBlockedPatterns list (global here, or
+    // per-parser) is only for deliberate exclusions — "never fetch, not even
+    // once". String entries are case-insensitive URL substrings; RegExp
+    // entries test against the lowercased URL, which allows anchoring.
+    // URL pattern rules for page classification. Checked in order — first match wins.
+    // More specific patterns (e.g. /events/:slug) must come before broader ones (e.g. domain root).
+    // Built-in platform rules apply automatically BENEATH these (config wins):
+    // eventbrite.com/e/ → event-page, eventbrite.com/o/ → multi-event-page,
+    // linktr.ee → link-aggregator. Only site-specific rules belong here.
+    pageClassificationRules: [
+      { pattern: /furball\.nyc/i, classification: "multi-event-page" },
+      {
+        pattern: /bearracuda\.com\/events\/[^/?&#\s]+/i,
+        classification: "event-page",
+      },
+      { pattern: /bearracuda\.com/i, classification: "link-aggregator" },
+      {
+        pattern: /thebearcalendar\.com\/events\/[^/?&#\s]+/i,
+        classification: "event-page",
+      },
+      // The listing host is a link hub, never a venue site.
+      { pattern: /thebearcalendar\.com/i, classification: "link-aggregator" },
+    ],
+  },
 };
 
 // Export for different environments
