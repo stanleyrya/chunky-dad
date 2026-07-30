@@ -17,19 +17,34 @@ try {
   process.exit(1);
 }
 
-// Load CalendarCore for ICS parsing (Node-compatible after DOM guard)
+// Simple logger shim for Node environment to satisfy references. Installed
+// BEFORE the modules below, which reference it while loading.
+global.logger = {
+  debug() {}, info() {}, warn() {}, error() {}, componentInit() {}, componentLoad() {}, componentError() {}, time() {}, timeEnd() {}, apiCall() {}, performance() {}
+};
+
+// Load CalendarCore for ICS parsing (Node-compatible after DOM guard).
+//
+// EventSchema MUST be a global before calendar-core is required: its notes
+// parser reads globalThis.EventSchema, and without it every calendar silently
+// yields ZERO events. That is not a harmless no-op — this script treats "no
+// events" as "every stub is stale" and DELETES them, so running it plainly
+// removed all 83 committed event pages (reproduced 2026-07-30; the CI step in
+// .github/workflows/update-calendar-data.yml invokes it exactly this way).
+// Requiring event-schema.js sets the global as a side effect, mirroring
+// tools/extract-favicon-colors.js.
 let CalendarCore;
 try {
+  require(path.join(ROOT, 'js', 'event-schema.js'));
   CalendarCore = require(path.join(ROOT, 'js', 'calendar-core.js'));
 } catch (e) {
   console.error('Failed to load CalendarCore:', e.message);
   process.exit(1);
 }
-
-// Simple logger shim for Node environment to satisfy references
-global.logger = {
-  debug() {}, info() {}, warn() {}, error() {}, componentInit() {}, componentLoad() {}, componentError() {}, time() {}, timeEnd() {}, apiCall() {}, performance() {}
-};
+if (typeof globalThis.EventSchema === 'undefined') {
+  console.error('EventSchema global missing after loading js/event-schema.js — refusing to run, since parsing would yield zero events and delete every event page.');
+  process.exit(1);
+}
 
 // Config
 const OUTPUT_DAYS_WINDOW = parseInt(process.env.EVENT_STUB_DAYS || '180', 10); // Upcoming days to generate
@@ -189,6 +204,25 @@ ${MARKER}
 function pruneOldEventDirs(cityKey, validSlugs) {
   const cityDir = path.join(ROOT, cityKey);
   if (!fs.existsSync(cityDir)) return 0;
+  // Fail closed on a wholesale wipe. "This city parsed zero events" is far more
+  // often a loading/parsing failure than a genuinely empty calendar — that is
+  // exactly how a missing EventSchema global deleted all 83 committed event
+  // pages — and deleting a city's entire published history is not something a
+  // generator should ever do silently. A city that really has no events keeps
+  // its stale pages until someone removes them deliberately.
+  if (validSlugs.size === 0) {
+    const generatedCount = fs.readdirSync(cityDir, { withFileTypes: true })
+      .filter(ent => ent.isDirectory())
+      .filter(ent => {
+        const indexFile = path.join(cityDir, ent.name, 'index.html');
+        return fs.existsSync(indexFile)
+          && fs.readFileSync(indexFile, 'utf8').includes('generated: chunky.dad event page');
+      }).length;
+    if (generatedCount > 0) {
+      console.warn(`⚠️  ${cityKey}: parsed 0 events but ${generatedCount} generated page(s) exist — refusing to prune (looks like a parse failure, not an empty calendar)`);
+      return 0;
+    }
+  }
   let removed = 0;
   const entries = fs.readdirSync(cityDir, { withFileTypes: true });
   for (const ent of entries) {

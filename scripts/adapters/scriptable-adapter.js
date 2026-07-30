@@ -10921,6 +10921,14 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         runContext,
         config: results.config || null,
         analyzedEvents,
+        // Events the bear check dropped. Saved so a past run can be reviewed
+        // as it actually happened: the results UI renders these as real event
+        // cards, and without them that section is simply missing from every
+        // saved-run display — which is exactly where you go to audit a bear
+        // call after the fact.
+        bearDroppedEvents: Array.isArray(results.bearDroppedEvents)
+          ? results.bearDroppedEvents
+          : [],
         parserResults: results.parserResults || [],
         errors: results.errors || [],
       };

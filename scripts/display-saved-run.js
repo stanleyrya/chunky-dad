@@ -226,6 +226,13 @@ class SavedRunDisplay {
                 errors: saved?.errors || [],
                 parserResults: saved?.parserResults || [],
                 analyzedEvents: Array.isArray(saved?.analyzedEvents) ? saved.analyzedEvents : [],
+                // Dropped non-bear events are part of the run's result and the
+                // results UI renders them as real event cards. Omitting them
+                // here made that whole section invisible for saved runs — the
+                // one place you actually review a past run's bear calls.
+                // (Overrides stay inert: _isDisplayingSavedRun renders the
+                // section read-only.)
+                bearDroppedEvents: Array.isArray(saved?.bearDroppedEvents) ? saved.bearDroppedEvents : [],
                 config: config,
                 sourceRunId: saved?.summary?.runId || null,
                 runContext: {

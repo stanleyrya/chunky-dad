@@ -3401,3 +3401,9 @@ test('probeRecurringSeries fails open on errors and without an identifier', asyn
   );
   assert.equal(await adapter.probeRecurringSeries({ title: 'no identifier' }, {}), false);
 });
+
+// NOTE: saveRun's payload (which now carries bearDroppedEvents) is not covered
+// here. It writes through Scriptable's FileManager and pulls in enough of that
+// runtime that stubbing it in Node tests more of the stub than of the code.
+// The change is a single key added to a literal, verified by inspection and by
+// the run-file reproduction in the PR.
