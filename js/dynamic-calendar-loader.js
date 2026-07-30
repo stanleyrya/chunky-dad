@@ -1,3 +1,22 @@
+// Icon paths used by the aurora event cards (Bootstrap Icons geometry, inlined).
+// Inlined rather than fetched as a webfont/sprite so the information rows always
+// render, even when the Bootstrap-icons CDN is slow or blocked.
+const AURORA_CARD_ICONS = {
+    clock: [
+        'M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z',
+        'M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z'
+    ],
+    pin: [
+        'M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10zm0-7a3 3 0 1 1 0-6 3 3 0 0 1 0 6z'
+    ],
+    cash: [
+        'M4 10.781c.148 1.667 1.513 2.85 3.591 3.003V15h1.043v-1.216c2.27-.179 3.678-1.438 3.678-3.29 0-1.53-.9-2.377-2.849-2.838l-.829-.194V3.885c1.135.148 1.856.749 2.028 1.578h1.549c-.14-1.577-1.475-2.759-3.577-2.912V1H7.591v1.55c-1.9.192-3.328 1.396-3.328 3.156 0 1.462.943 2.472 2.653 2.873l.674.163v3.949c-1.156-.168-1.918-.789-2.09-1.91H4zm3.559-1.66c-1.086-.263-1.663-.766-1.663-1.545 0-.784.598-1.386 1.6-1.512v3.057h.063zm1.184 1.35c1.303.325 1.94.813 1.94 1.71 0 .952-.716 1.585-1.94 1.71v-3.42z'
+    ],
+    repeat: [
+        'M11 5.466V4H5a4 4 0 0 0-3.584 5.777.5.5 0 1 1-.896.446A5 5 0 0 1 5 3h6V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192zm3.584.757a.5.5 0 0 1 .658.257A5 5 0 0 1 11 13H5v1.466a.25.25 0 0 1-.41.192l-2.36-1.966a.25.25 0 0 1 0-.384l2.36-1.966a.25.25 0 0 1 .41.192V12h6a4 4 0 0 0 3.584-5.777.5.5 0 0 1 .257-.657z'
+    ]
+};
+
 // Dynamic Google Calendar Loader - Supports multiple cities and calendars
 class DynamicCalendarLoader extends CalendarCore {
     constructor() {
@@ -46,6 +65,11 @@ class DynamicCalendarLoader extends CalendarCore {
         this.userLocation = null;
         this.locationFeaturesEnabled = false;
         this.hasWarnedMissingFilenameUtils = false;
+
+        // Per-event favicon colors (data/event-colors/<city>.json), keyed by city
+        // then by event slug. Populated lazily; see loadEventColors().
+        this.eventColorsByCity = new Map();
+        this.eventColorsRequests = new Map();
         
         // Set up window resize listener to clear measurement cache
         this.setupResizeListener();
@@ -1181,7 +1205,17 @@ class DynamicCalendarLoader extends CalendarCore {
             if (!url.startsWith('http://') && !url.startsWith('https://')) {
                 url = 'https://' + url;
             }
-            faviconUrl = window.FilenameUtils.convertWebsiteUrlToFaviconPath(url, '/img/favicons');
+            // A website that is really a TICKETING page (Eventbrite, DICE, …)
+            // would contribute the platform's glyph as this event's identity —
+            // wrong on the card, wrong on the map. An explicitly curated
+            // event.favicon above is always honoured; only the website-derived
+            // fallback is filtered.
+            const isPlatform = window.FilenameUtils.isPlatformFaviconUrl
+                ? window.FilenameUtils.isPlatformFaviconUrl(url)
+                : false;
+            if (!isPlatform) {
+                faviconUrl = window.FilenameUtils.convertWebsiteUrlToFaviconPath(url, '/img/favicons');
+            }
         }
 
         return faviconUrl || null;
@@ -2012,6 +2046,257 @@ class DynamicCalendarLoader extends CalendarCore {
 
 
 
+    // ── Aurora card helpers ────────────────────────────────────────────────
+    // Entity-escape event-derived text/attribute values. Same entity set the
+    // flyer-URL attribute escape uses, plus the apostrophe (needed because the
+    // venue row quotes its showOnMap arguments with ').
+    escapeCardText(value) {
+        return String(value === null || value === undefined ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    // Escape a value for use inside a single-quoted JS string that itself lives
+    // in an HTML attribute: backslash-escape first (so the entity-decoded
+    // attribute still yields a closed string), then entity-escape.
+    escapeCardJsString(value) {
+        return this.escapeCardText(
+            String(value === null || value === undefined ? '' : value)
+                .replace(/\\/g, '\\\\')
+                .replace(/'/g, "\\'")
+        );
+    }
+
+    // Escaped href, or '' for schemes that would execute script.
+    safeCardUrl(url) {
+        const raw = String(url === null || url === undefined ? '' : url).trim();
+        if (!raw || /^(javascript|data|vbscript):/i.test(raw.replace(/[\s -]/g, ''))) {
+            return '';
+        }
+        return this.escapeCardText(raw);
+    }
+
+    // Inline SVG for one of the aurora card icons (see AURORA_CARD_ICONS).
+    cardIconSvg(name, className = 'ec-ico') {
+        const paths = AURORA_CARD_ICONS[name];
+        if (!paths) return '';
+        const body = paths.map(d => `<path fill="currentColor" d="${d}"/>`).join('');
+        return `<svg class="${className}" viewBox="0 0 16 16" aria-hidden="true" focusable="false">${body}</svg>`;
+    }
+
+    // Parse "#rgb"/"#rrggbb" into {r,g,b}; null for anything else. Doubles as the
+    // guard that keeps unvalidated strings out of the inline style attribute.
+    parseHexColor(hex) {
+        const match = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(hex || '').trim());
+        if (!match) return null;
+        let value = match[1];
+        if (value.length === 3) {
+            value = value.split('').map(char => char + char).join('');
+        }
+        return {
+            r: parseInt(value.slice(0, 2), 16),
+            g: parseInt(value.slice(2, 4), 16),
+            b: parseInt(value.slice(4, 6), 16)
+        };
+    }
+
+    rgbToHexColor(rgb) {
+        const channel = value => Math.max(0, Math.min(255, Math.round(value)))
+            .toString(16)
+            .padStart(2, '0');
+        return `#${channel(rgb.r)}${channel(rgb.g)}${channel(rgb.b)}`;
+    }
+
+    mixRgbColors(from, to, amount) {
+        return {
+            r: from.r + (to.r - from.r) * amount,
+            g: from.g + (to.g - from.g) * amount,
+            b: from.b + (to.b - from.b) * amount
+        };
+    }
+
+    // Perceived brightness, 0–1.
+    rgbBrightness(rgb) {
+        return (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+    }
+
+    // Push a color into a brightness band so every aurora stop reads as a glow
+    // behind white text — brand favicons range from near-white to near-black.
+    toneForAurora(rgb, minBrightness, maxBrightness) {
+        const brightness = this.rgbBrightness(rgb);
+        if (brightness > maxBrightness) {
+            const scale = maxBrightness / brightness;
+            return { r: rgb.r * scale, g: rgb.g * scale, b: rgb.b * scale };
+        }
+        if (brightness < minBrightness) {
+            const amount = (minBrightness - brightness) / (1 - brightness);
+            return this.mixRgbColors(rgb, { r: 255, g: 255, b: 255 }, amount);
+        }
+        return rgb;
+    }
+
+    // Colorfulness of an rgb triple, 0..1 (max channel spread). Greys, whites
+    // and blacks score ~0; a saturated brand colour scores high.
+    rgbColorfulness(rgb) {
+        const max = Math.max(rgb.r, rgb.g, rgb.b);
+        const min = Math.min(rgb.r, rgb.g, rgb.b);
+        return max <= 0 ? 0 : (max - min) / max;
+    }
+
+    // Three aurora stops from an event's favicon colors: the background color,
+    // the foreground color, and a darkened blend of both pulled toward the
+    // card's #171a33 base. Returns null when the input isn't a usable hex color
+    // — or when the brand colours carry no colour to build an aurora from, so
+    // the caller's vivid site palette is used instead. Real-data review found
+    // near-white favicons (Eagle NYC #f0f0f0, Bear Happy Hour) clamping into
+    // flat grey cards: brightness-banding a grey can only ever yield grey, and
+    // a grey aurora is no aurora at all.
+    deriveAuroraColors(background, foreground) {
+        const backgroundRgb = this.parseHexColor(background);
+        if (!backgroundRgb) return null;
+        const foregroundRgb = this.parseHexColor(foreground) || backgroundRgb;
+        const colorfulness = Math.max(
+            this.rgbColorfulness(backgroundRgb),
+            this.rgbColorfulness(foregroundRgb)
+        );
+        if (colorfulness < 0.18) return null;
+        const cardBaseRgb = { r: 23, g: 26, b: 51 }; // #171a33
+        const blended = this.mixRgbColors(backgroundRgb, foregroundRgb, 0.5);
+        return {
+            c1: this.rgbToHexColor(this.toneForAurora(backgroundRgb, 0.18, 0.5)),
+            c2: this.rgbToHexColor(this.toneForAurora(foregroundRgb, 0.18, 0.5)),
+            c3: this.rgbToHexColor(this.toneForAurora(this.mixRgbColors(blended, cardBaseRgb, 0.6), 0.05, 0.22))
+        };
+    }
+
+    // Per-event favicon colors live in data/event-colors/<city>.json as
+    // [{slug, url, faviconBg, faviconFg}]. Nothing loaded them in the browser
+    // before the aurora cards, so fetch once per city and cache the result.
+    loadEventColors(city) {
+        if (!city) return Promise.resolve(null);
+        if (this.eventColorsByCity.has(city)) {
+            return Promise.resolve(this.eventColorsByCity.get(city));
+        }
+        if (this.eventColorsRequests.has(city)) {
+            return this.eventColorsRequests.get(city);
+        }
+
+        const request = fetch(`/data/event-colors/${encodeURIComponent(city)}.json`)
+            .then(response => (response.ok ? response.json() : []))
+            .then(entries => {
+                const bySlug = new Map();
+                (Array.isArray(entries) ? entries : []).forEach(entry => {
+                    if (entry && entry.slug && entry.faviconBg) {
+                        bySlug.set(entry.slug, {
+                            bg: entry.faviconBg,
+                            fg: entry.faviconFg || entry.faviconBg
+                        });
+                    }
+                });
+                this.eventColorsByCity.set(city, bySlug);
+                logger.debug('CALENDAR', 'Loaded event colors', { city, count: bySlug.size });
+                return bySlug;
+            })
+            .catch(error => {
+                logger.debug('CALENDAR', 'No event colors available', { city, error: error.message });
+                this.eventColorsByCity.set(city, new Map());
+                return this.eventColorsByCity.get(city);
+            })
+            .finally(() => {
+                this.eventColorsRequests.delete(city);
+            });
+
+        this.eventColorsRequests.set(city, request);
+        return request;
+    }
+
+    // Aurora stops for one event, or null when colors aren't (yet) known. Card
+    // generation stays synchronous: the first call kicks off the fetch and the
+    // already-rendered cards get repainted when it resolves.
+    getAuroraColorsForEvent(event) {
+        const city = this.currentCity;
+        const bySlug = city ? this.eventColorsByCity.get(city) : null;
+        if (!bySlug) {
+            // Only the first card of a render kicks off the fetch and schedules the
+            // repaint; the rest of the batch piggybacks on the in-flight request.
+            if (!this.eventColorsRequests.has(city)) {
+                this.loadEventColors(city).then(loaded => {
+                    if (loaded && loaded.size > 0) {
+                        this.applyEventColorsToRenderedCards();
+                    }
+                });
+            }
+            return null;
+        }
+        const colors = bySlug.get(event.slug);
+        return colors ? this.deriveAuroraColors(colors.bg, colors.fg) : null;
+    }
+
+
+
+    // Repaint aurora cards that rendered before the color file arrived.
+    applyEventColorsToRenderedCards() {
+        const bySlug = this.eventColorsByCity.get(this.currentCity);
+        if (!bySlug || bySlug.size === 0) return;
+        document.querySelectorAll('.event-card.detailed.aurora[data-event-slug]').forEach(card => {
+            const colors = bySlug.get(card.getAttribute('data-event-slug'));
+            if (!colors) return;
+            const aurora = this.deriveAuroraColors(colors.bg, colors.fg);
+            if (!aurora) return;
+            card.style.setProperty('--c1', aurora.c1);
+            card.style.setProperty('--c2', aurora.c2);
+            card.style.setProperty('--c3', aurora.c3);
+        });
+    }
+
+    // Rounded-square favicon tile for the card title row. Rendered only when a
+    // favicon path exists; a load failure removes the tile so no empty frame is
+    // left behind.
+    generateAuroraFaviconHtml(event) {
+        let faviconUrl = null;
+        try {
+            faviconUrl = this.getEventFaviconUrl(event);
+        } catch (error) {
+            return '';
+        }
+        if (!faviconUrl) return '';
+        const src = this.safeCardUrl(faviconUrl);
+        if (!src) return '';
+        // The tile is a FIXED white plate with the artwork contained inside —
+        // identical to the map markers (see --favicon-plate-* in styles.css).
+        // Deriving the plate per brand failed: Animal's red-on-red favicon
+        // became a solid red block, and a transparent plate made round marks
+        // read as circles next to square ones.
+        return `<span class="ec-fav"><img src="${src}" alt="" loading="lazy" decoding="async" onerror="this.parentNode.remove()"></span>`;
+    }
+
+    // Venue row. Mirrors generateLocationHtml's data choices (coordinates →
+    // showOnMap link, otherwise the plain bar name) without the label/value markup.
+    generateAuroraVenueRow(event) {
+        const lat = Number(event.coordinates?.lat);
+        const lng = Number(event.coordinates?.lng);
+        const hasCoordinates = Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0;
+        const venue = event.bar || (hasCoordinates ? 'Location' : '');
+        if (!venue) return '';
+        const label = this.escapeCardText(venue);
+        const value = hasCoordinates
+            ? `<a href="#" class="map-link" onclick="showOnMap(${lat}, ${lng}, '${this.escapeCardJsString(event.name)}', '${this.escapeCardJsString(event.bar || '')}')">${label}</a>`
+            : label;
+        return `<div class="ec-row ec-venue">${this.cardIconSvg('pin')}<span class="ec-row-text">${value}</span></div>`;
+    }
+
+    // Cover row. Same "hide free events" filter generateCoverHtml applies.
+    generateAuroraCoverRow(event) {
+        const cover = event.cover;
+        if (!cover || !cover.trim()) return '';
+        const normalized = cover.toLowerCase();
+        if (normalized === 'free' || normalized === 'no cover') return '';
+        return `<div class="ec-row ec-cover">${this.cardIconSvg('cash')}<span class="ec-row-text">${this.escapeCardText(cover)}</span></div>`;
+    }
+
     // Generate event card
     generateEventCard(event) {
         const linksHtml = event.links ? event.links.map(link => {
@@ -2027,16 +2312,18 @@ class DynamicCalendarLoader extends CalendarCore {
             else if (labelLower.includes('map')) { iconClass = 'bi-geo-alt'; aria = 'Map'; }
             else if (labelLower.includes('more info') || labelLower.includes('info')) { iconClass = 'bi-info-circle'; aria = 'More info'; }
 
-            return `<a href="${link.url}" target="_blank" rel="noopener" class="event-link icon-only" aria-label="${aria}" title="${aria}"><i class="bi ${iconClass}"></i></a>`;
+            const href = this.safeCardUrl(link.url);
+            if (!href) return '';
+            return `<a href="${href}" target="_blank" rel="noopener" class="event-link icon-only" aria-label="${aria}" title="${aria}"><i class="bi ${iconClass}"></i></a>`;
         }).join(' ') : '';
 
-        const teaHtml = this.generateTeaHtml(event);
-        const locationHtml = this.generateLocationHtml(event);
-        const coverHtml = this.generateCoverHtml(event);
+        const teaHtml = event.tea ? `<div class="ec-tea">${this.escapeCardText(event.tea)}</div>` : '';
+        const venueRow = this.generateAuroraVenueRow(event);
+        const coverRow = this.generateAuroraCoverRow(event);
 
         // Get current calendar period bounds for contextual date display
         const periodBounds = this.getCurrentPeriodBounds();
-        
+
         // Event badges
         const formatDayTime = (event) => {
             if (this.isMultiDay(event) && window.formatEventDates) {
@@ -2044,57 +2331,101 @@ class DynamicCalendarLoader extends CalendarCore {
             }
             return this.getEnhancedDayTimeDisplay(event, this.currentView, periodBounds);
         };
-        
+
         const recurringBadgeContent = this.getRecurringBadgeContent(event);
-        const recurringBadge = recurringBadgeContent ? 
-            `<span class="recurring-badge">${recurringBadgeContent}</span>` : '';
-        
+        const recurringBadge = recurringBadgeContent ?
+            `<span class="recurring-badge">${this.cardIconSvg('repeat', 'ec-badge-ico')}${this.escapeCardText(recurringBadgeContent)}</span>` : '';
+
+        // The date READS FIRST as plain text rather than sitting in a pill:
+        // "7/18 · Fri 8PM-2AM" instead of "Fri 8PM-2AM [7/18]". The pill is
+        // kept for the class contract (updateSelectionVisualState and friends
+        // query .date-badge) but only when the date is already inside the
+        // day/time string, so it never renders twice.
         const dateBadgeContent = this.getDateBadgeContent(event, periodBounds);
-        const dateBadge = dateBadgeContent ? 
-            `<span class="date-badge">${dateBadgeContent}</span>` : '';
-        
+        const dayTimeText = formatDayTime(event);
+        const dateLeads = !!dateBadgeContent
+            && !String(dayTimeText).includes(String(dateBadgeContent));
+        const whenText = dateLeads
+            ? `${dateBadgeContent} · ${dayTimeText}`
+            : dayTimeText;
+        const dateBadge = dateBadgeContent && !dateLeads ?
+            `<span class="date-badge">${this.escapeCardText(dateBadgeContent)}</span>` : '';
+
         // Add distance badge if location features are enabled and distance is available
         const distanceBadge = this.locationFeaturesEnabled && event.distanceFromUser !== undefined ?
-            `<span class="distance-badge" title="Distance from your location"><i class="bi bi-geo-alt"></i> ${event.distanceFromUser} mi</span>` : '';
+            `<span class="distance-badge" title="Distance from your location">${this.cardIconSvg('pin', 'ec-badge-ico')}${this.escapeCardText(event.distanceFromUser)} mi</span>` : '';
 
-        const faviconChip = this.generateFaviconChipHtml(event);
-        // Placeholder only — the <img> is created lazily on selection (ensureFlyerLoaded).
+        const badges = recurringBadge || dateBadge || distanceBadge ?
+            `<span class="ec-badges">${recurringBadge}${dateBadge}${distanceBadge}</span>` : '';
+
+        const faviconHtml = this.generateAuroraFaviconHtml(event);
+
+        // The flyer is part of the card now (natural aspect ratio, never cropped).
         // Entity-escape for the attribute (NOT encodeURI — many image URLs are already
         // percent-encoded and encodeURI would double-encode them); getAttribute decodes
-        // back to the exact original URL.
-        const flyerUrl = event.image ? String(event.image)
-            .replace(/&/g, '&amp;')
-            .replace(/"/g, '&quot;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;') : '';
+        // back to the exact original URL. data-flyer-url is kept so ensureFlyerLoaded()
+        // still recognises the container.
+        const flyerUrl = event.image ? this.safeCardUrl(event.image) : '';
         const flyerHtml = flyerUrl ?
-            `<div class="event-flyer" data-flyer-url="${flyerUrl}"></div>` : '';
+            `<div class="event-flyer" data-flyer-url="${flyerUrl}"><img src="${flyerUrl}" alt="" loading="lazy" decoding="async" onerror="this.parentNode.remove()"></div>` : '';
+
+        const aurora = this.getAuroraColorsForEvent(event);
+        const auroraStyle = aurora ?
+            ` style="--c1:${aurora.c1};--c2:${aurora.c2};--c3:${aurora.c3}"` : '';
+
+        const slug = this.escapeCardText(event.slug);
+        const shareTime = `${event.day || ''}${event.time ? ' ' + event.time : ''}`;
 
         return `
-            <div class="event-card detailed" data-event-slug="${event.slug}" data-lat="${event.coordinates?.lat || ''}" data-lng="${event.coordinates?.lng || ''}">
-                <div class="event-header">
-                    <h3>${faviconChip}${event.name}</h3>
-                    <div class="event-meta">
-                        <div class="event-day">${formatDayTime(event)}</div>
-                        ${recurringBadge}
-                        ${dateBadge}
-                        ${distanceBadge}
+            <div class="event-card detailed aurora" data-event-slug="${slug}" data-lat="${this.escapeCardText(event.coordinates?.lat || '')}" data-lng="${this.escapeCardText(event.coordinates?.lng || '')}"${auroraStyle}>
+                ${flyerHtml}
+                <div class="ec-panel">
+                    <div class="ec-titlerow">
+                        ${faviconHtml}
+                        <h3 class="ec-title">${this.escapeCardText(event.name)}</h3>
                     </div>
-                </div>
-                <div class="event-details">
-                    ${flyerHtml}
-                    ${locationHtml}
-                    ${coverHtml}
+                    <div class="ec-rows">
+                        <div class="ec-row ec-when">
+                            ${this.cardIconSvg('clock')}
+                            <span class="event-day">${this.escapeCardText(whenText)}</span>
+                            ${badges}
+                        </div>
+                        ${venueRow}
+                        ${coverRow}
+                    </div>
                     ${teaHtml}
                     <div class="event-links">
                         ${linksHtml}
-                        <button class="share-event-btn icon-only" data-event-slug="${event.slug}" data-event-name="${event.name}" data-event-venue="${event.bar || ''}" data-event-time="${event.day}${event.time ? ' ' + event.time : ''}" title="Share this event" aria-label="Share this event">
+                        <button class="share-event-btn icon-only" data-event-slug="${slug}" data-event-name="${this.escapeCardText(event.name)}" data-event-venue="${this.escapeCardText(event.bar || '')}" data-event-time="${this.escapeCardText(shareTime)}" title="Share this event" aria-label="Share this event">
                             <span class="share-icon" aria-hidden="true"><i class="bi bi-box-arrow-up"></i></span>
                         </button>
                     </div>
                 </div>
             </div>
         `;
+    }
+
+    // Clipboard write that works WITHOUT a secure context (plain-http
+    // previews): a hidden textarea plus the deprecated execCommand path.
+    // Returns true when the copy actually succeeded.
+    copyTextLegacy(text) {
+        try {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.setAttribute('readonly', '');
+            textarea.style.position = 'fixed';
+            textarea.style.top = '-1000px';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            textarea.setSelectionRange(0, text.length);
+            const copied = document.execCommand && document.execCommand('copy');
+            document.body.removeChild(textarea);
+            return !!copied;
+        } catch (error) {
+            logger.warn('EVENT', `Legacy copy failed: ${error.message}`);
+            return false;
+        }
     }
 
     // Setup share button handlers for event cards
@@ -2156,10 +2487,18 @@ class DynamicCalendarLoader extends CalendarCore {
                         logger.error('EVENT', 'Copy failed', err);
                         this.showShareToast('Unable to copy link');
                     }
+                } else if (this.copyTextLegacy(`${shareText}\n${shareUrl}`)) {
+                    // navigator.share and navigator.clipboard both require a
+                    // SECURE CONTEXT — neither exists over plain http (e.g. a
+                    // LAN/tailnet preview), which previously produced a dead
+                    // end. The selection-based copy still works there.
+                    this.showShareToast('Link copied! 📋');
+                    logger.info('EVENT', 'Event URL copied via legacy selection copy');
                 } else {
-                    // No share capability available
-                    this.showShareToast('Sharing not supported on this browser');
-                    logger.warn('EVENT', 'No share method available');
+                    // Truly nothing available: show the link so it can still
+                    // be copied by hand rather than telling the user no.
+                    this.showShareToast(shareUrl);
+                    logger.warn('EVENT', 'No share method available; surfaced URL instead');
                 }
             });
         });
@@ -3626,41 +3965,6 @@ class DynamicCalendarLoader extends CalendarCore {
         } catch (error) {
             logger.warn('CALENDAR', 'Failed to attach calendar interactions', { error: error.message });
         }
-    }
-
-    // Reusable HTML generation methods for event details
-    generateTeaHtml(event) {
-        return event.tea ? `
-            <div class="detail-row">
-                <span class="label">Tea:</span>
-                <span class="value">${event.tea}</span>
-            </div>
-        ` : '';
-    }
-
-    generateLocationHtml(event) {
-        return event.coordinates && event.coordinates.lat && event.coordinates.lng ? 
-            `<div class="detail-row">
-                <span class="label">Location:</span>
-                <span class="value">
-                    <a href="#" onclick="showOnMap(${event.coordinates.lat}, ${event.coordinates.lng}, '${event.name}', '${event.bar || ''}')" class="map-link">
-                        📍 ${event.bar || 'Location'}
-                    </a>
-                </span>
-            </div>` :
-            (event.bar ? `<div class="detail-row">
-                <span class="label">Bar:</span>
-                <span class="value">${event.bar}</span>
-            </div>` : '');
-    }
-
-    generateCoverHtml(event) {
-        return event.cover && event.cover.trim() && event.cover.toLowerCase() !== 'free' && event.cover.toLowerCase() !== 'no cover' ? `
-            <div class="detail-row">
-                <span class="label">Cover:</span>
-                <span class="value">${event.cover}</span>
-            </div>
-        ` : '';
     }
 
     // DOM-based helper methods for creating event detail elements
