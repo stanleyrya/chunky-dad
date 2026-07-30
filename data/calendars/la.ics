@@ -24,6 +24,24 @@ RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU
 END:STANDARD
 END:VTIMEZONE
 BEGIN:VTIMEZONE
+TZID:America/New_York
+X-LIC-LOCATION:America/New_York
+BEGIN:DAYLIGHT
+TZOFFSETFROM:-0500
+TZOFFSETTO:-0400
+TZNAME:EDT
+DTSTART:19700308T020000
+RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU
+END:DAYLIGHT
+BEGIN:STANDARD
+TZOFFSETFROM:-0400
+TZOFFSETTO:-0500
+TZNAME:EST
+DTSTART:19701101T020000
+RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU
+END:STANDARD
+END:VTIMEZONE
+BEGIN:VTIMEZONE
 TZID:America/Vancouver
 X-LIC-LOCATION:America/Vancouver
 BEGIN:STANDARD
@@ -36,7 +54,7 @@ END:VTIMEZONE
 BEGIN:VEVENT
 DTSTART;TZID=America/Los_Angeles:20250720T150000
 DTEND;TZID=America/Los_Angeles:20250720T210000
-DTSTAMP:20260723T144430Z
+DTSTAMP:20260730T202546Z
 UID:44n2vcp54ehl3nlh4b3o61ndm0@google.com
 RECURRENCE-ID;TZID=America/Los_Angeles:20250720T150000
 CREATED:20250719T050204Z
@@ -58,10 +76,31 @@ TRIGGER;VALUE=DATE-TIME:19760401T005545Z
 END:VALARM
 END:VEVENT
 BEGIN:VEVENT
+DTSTART;TZID=America/New_York:20260904T210000
+DTEND;TZID=America/New_York:20260905T020000
+RRULE:FREQ=MONTHLY;BYDAY=1FR
+DTSTAMP:20260730T202546Z
+UID:cubscout-20260730T183109Z@chunky.dad
+URL:https://eaglela.com/events/cub-scout-3/
+CREATED:20260730T183122Z
+DESCRIPTION:shortName: CUB-SCOUT\ntea: CubScout First Fridays 9pm $7\ncover
+ : $7\nbar: Eagle LA\naddress: 4219 Santa Monica Blvd\, Los Angeles\, CA 900
+ 29\ntimezone: America/New_York\nimage: https://eaglela.com/wp-content/uploa
+ ds/CubScout-generic.jpg\nwebsite: https://eaglela.com/events/cub-scout-3/\n
+ instagram: https://www.instagram.com/dirtybird_la\ngmaps: https://www.googl
+ e.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4
+LAST-MODIFIED:20260730T183123Z
+LOCATION:34.0912127\, -118.2840632
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:CUBSCOUT
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
 DTSTART;TZID=America/Los_Angeles:20250720T150000
 DTEND;TZID=America/Los_Angeles:20250720T210000
 RRULE:FREQ=MONTHLY;BYDAY=3SU
-DTSTAMP:20260723T144430Z
+DTSTAMP:20260730T202546Z
 UID:44n2vcp54ehl3nlh4b3o61ndm0@google.com
 CREATED:20250719T050204Z
 DESCRIPTION:Bar: Precinct DTLA\nGoogle Maps: https://maps.app.goo.gl/pfwrr6
@@ -75,51 +114,9 @@ SUMMARY:Club Chub
 TRANSP:OPAQUE
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20250817T050000Z
-DTEND:20250817T100000Z
-DTSTAMP:20260723T144430Z
-UID:1o1kijpavt9mfq2f5bbtcj4jng@google.com
-CREATED:20250719T045039Z
-DESCRIPTION:description: Location TBA\, but likely in a dark DTLA warehouse
-  😈 Be sure to follow them on IG for location\, updates\, and more!\ninstag
- ram: https://www.instagram.com/megawoof_america\nkey: megawoof|2025-08-17|t
- ba|eventbrite\nbar: Sanctuary Studios\nurl: https://www.eventbrite.com/e/du
- ro-summer-night-foam-edition-tickets-1446957562019\nimage: https://img.evbu
- c.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1096137783%2F185013722403%2F1%
- 2Foriginal.20250814-194101?crop=focalpoint&fit=crop&h=230&w=460&auto=format
- %2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=f20000487492df90f51bb44fe
- 04473cb\nshortName: MEGA-WOOF\nwebsite: https://www.eventbrite.com/e/duro-s
- ummer-night-foam-edition-tickets-1446957562019\ncover: $11.58 - $36.83 (as 
- of 8/16)\ngmaps: https://www.google.com/maps/search/?api=1&query=33.9139036
- %2C-118.2805709&query_place_id=ChIJg2cOgOq2woAR8bONfuIJg_k\naddress: 13012 
- Athens Way\, Los Angeles\, CA 90061\naddressSource: inferred
-LAST-MODIFIED:20260717T211306Z
-LOCATION:33.9139036\, -118.2805709
-SEQUENCE:1
-STATUS:CONFIRMED
-SUMMARY:MEGAWOOF
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
-DTSTART;TZID=America/Vancouver:20250717T170000
-DTEND;TZID=America/Vancouver:20250717T210000
-RRULE:FREQ=WEEKLY
-DTSTAMP:20260723T144430Z
-UID:9vnvsm6kjpievu62279lco139k@google.com
-CREATED:20250715T045103Z
-DESCRIPTION:Bar: Check instagram for this week’s location.\nTea: Popular ha
- ppy hour that changes location every week.\nShorter: BHH\nInstagram: https:
- //www.instagram.com/bearhappyhourla\nWeb: https://linktr.ee/bearhappyhour
-LAST-MODIFIED:20251012T161157Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Bear Happy Hour
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20250831T040000Z
 DTEND:20250831T090000Z
-DTSTAMP:20260723T144430Z
+DTSTAMP:20260730T202546Z
 UID:848D15A3-27B4-4F56-AAD0-9D7D66DD12A1
 CREATED:20250823T205552Z
 DESCRIPTION:description: LONG BEACH — WE’RE BACK! \n The bears of MEGAWOOF 
@@ -148,7 +145,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260607T040000Z
 DTEND:20260607T090000Z
-DTSTAMP:20260723T144430Z
+DTSTAMP:20260730T202546Z
 UID:FC6AD30A-ABEE-4135-91A0-18E30D96674D
 CREATED:20260512T171311Z
 DESCRIPTION:description: MEGAWOOF PRIDE - FIRST 200 TICKETS FREE -\nbar: Th
@@ -174,9 +171,79 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
+DTSTART:20260517T040000Z
+DTEND:20260517T090000Z
+DTSTAMP:20260730T202546Z
+UID:F5435015-D350-4B57-8C02-6227EB96FDE1
+CREATED:20260512T171310Z
+DESCRIPTION:description: MEGAWOOF AMERICA - LONG BEACH PRIDE\nbar: Falcon N
+ orth\naddress: 2020 East Artesia Boulevard\, Long Beach\, CA 90805\nticketU
+ rl: https://www.eventbrite.com/e/megawoof-america-long-beach-pride-tickets-
+ 1986926425425\ninstagram: https://www.instagram.com/megawoof_america\nimage
+ : https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181624525%2
+ F185013722403%2F1%2Foriginal.20260407-190035?crop=focalpoint&fit=crop&w=940
+ &auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=251ea205299011add
+ 78dbf1d4b7fe8bd\ncover: $11.58-$22.09\nshortName: MEGA-WOOF\n_aiPrompts\\: 
+ [object Object]\,[object Object]\,[object Object]\n_aiValidation\\: [object
+  Object]\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.g
+ oogle.com/maps/search/?api=1&query=Falcon%20North%2C%202020%20East%20Artesi
+ a%20Boulevard%2C%20Long%20Beach%2C%20CA%2090805\nkey: megawoof-america-long
+ -beach-pride|2026-05-17|falcon north
+LAST-MODIFIED:20260514T005409Z
+LOCATION:33.874454\,-118.1680614
+SEQUENCE:1
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF AMERICA - LONG BEACH PRIDE
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20250817T050000Z
+DTEND:20250817T100000Z
+DTSTAMP:20260730T202546Z
+UID:1o1kijpavt9mfq2f5bbtcj4jng@google.com
+CREATED:20250719T045039Z
+DESCRIPTION:description: Location TBA\, but likely in a dark DTLA warehouse
+  😈 Be sure to follow them on IG for location\, updates\, and more!\ninstag
+ ram: https://www.instagram.com/megawoof_america\nkey: megawoof|2025-08-17|t
+ ba|eventbrite\nbar: Sanctuary Studios\nurl: https://www.eventbrite.com/e/du
+ ro-summer-night-foam-edition-tickets-1446957562019\nimage: https://img.evbu
+ c.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1096137783%2F185013722403%2F1%
+ 2Foriginal.20250814-194101?crop=focalpoint&fit=crop&h=230&w=460&auto=format
+ %2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=f20000487492df90f51bb44fe
+ 04473cb\nshortName: MEGA-WOOF\nwebsite: https://www.eventbrite.com/e/duro-s
+ ummer-night-foam-edition-tickets-1446957562019\ncover: $11.58 - $36.83 (as 
+ of 8/16)\ngmaps: https://www.google.com/maps/search/?api=1&query=33.9139036
+ %2C-118.2805709&query_place_id=ChIJg2cOgOq2woAR8bONfuIJg_k\naddress: 13012 
+ Athens Way\, Los Angeles\, CA 90061\naddressSource: inferred
+LAST-MODIFIED:20260717T211306Z
+LOCATION:33.9139036\, -118.2805709
+SEQUENCE:1
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/Vancouver:20250717T170000
+DTEND;TZID=America/Vancouver:20250717T210000
+RRULE:FREQ=WEEKLY
+DTSTAMP:20260730T202546Z
+UID:9vnvsm6kjpievu62279lco139k@google.com
+CREATED:20250715T045103Z
+DESCRIPTION:Bar: Check instagram for this week’s location.\nTea: Popular ha
+ ppy hour that changes location every week.\nShorter: BHH\nInstagram: https:
+ //www.instagram.com/bearhappyhourla\nWeb: https://linktr.ee/bearhappyhour
+LAST-MODIFIED:20251012T161157Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Happy Hour
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20260802T050000Z
 DTEND:20260802T113000Z
-DTSTAMP:20260723T144430Z
+DTSTAMP:20260730T202546Z
 UID:A3B037C4-449C-4785-82BF-811EB8890D67
 CREATED:20260712T004133Z
 DESCRIPTION:description: D>U>R>O is back NEW OUTDOOR LOCATION _ NIGHT FOAM 
@@ -202,7 +269,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20251026T050000Z
 DTEND:20251026T120000Z
-DTSTAMP:20260723T144430Z
+DTSTAMP:20260730T202546Z
 UID:342C3C24-21CD-4149-8634-E60F5CB0A57A
 CREATED:20250921T003523Z
 DESCRIPTION:description: D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY ED
@@ -218,34 +285,6 @@ LAST-MODIFIED:20251002T003852Z
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:MEGAWOOF
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260517T040000Z
-DTEND:20260517T090000Z
-DTSTAMP:20260723T144430Z
-UID:F5435015-D350-4B57-8C02-6227EB96FDE1
-CREATED:20260512T171310Z
-DESCRIPTION:description: MEGAWOOF AMERICA - LONG BEACH PRIDE\nbar: Falcon N
- orth\naddress: 2020 East Artesia Boulevard\, Long Beach\, CA 90805\nticketU
- rl: https://www.eventbrite.com/e/megawoof-america-long-beach-pride-tickets-
- 1986926425425\ninstagram: https://www.instagram.com/megawoof_america\nimage
- : https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181624525%2
- F185013722403%2F1%2Foriginal.20260407-190035?crop=focalpoint&fit=crop&w=940
- &auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=251ea205299011add
- 78dbf1d4b7fe8bd\ncover: $11.58-$22.09\nshortName: MEGA-WOOF\n_aiPrompts\\: 
- [object Object]\,[object Object]\,[object Object]\n_aiValidation\\: [object
-  Object]\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.g
- oogle.com/maps/search/?api=1&query=Falcon%20North%2C%202020%20East%20Artesi
- a%20Boulevard%2C%20Long%20Beach%2C%20CA%2090805\nkey: megawoof-america-long
- -beach-pride|2026-05-17|falcon north
-LAST-MODIFIED:20260514T005409Z
-LOCATION:33.874454\,-118.1680614
-SEQUENCE:1
-STATUS:CONFIRMED
-SUMMARY:MEGAWOOF AMERICA - LONG BEACH PRIDE
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
