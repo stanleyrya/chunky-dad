@@ -42,5 +42,11 @@
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-crt4uwEdkgRt13r0ih1Lgk",
     "gayCities": "https://london.gaycities.com/bars/1685-eagle-london",
     "gayCitiesLastScrapedAt": "2026-06-13T16:37:31.585Z"
+  },
+  {
+    "name": "Westminster Pier",
+    "city": "london",
+    "address": "Victoria Embankment, London SW1A 2JH",
+    "coordinates": "51.5022544, -0.1231736"
   }
 ]
