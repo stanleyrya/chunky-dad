@@ -3629,3 +3629,23 @@ test('event builder link carries coordinates so the pin is not lost', () => {
     `coordinates present in the prefill: ${url}`);
   assert.ok(url.includes('ticketUrl='), 'ticket link carried too');
 });
+
+test('promoter registry: a freshly pulled local entry outranks a stale cached remote one', () => {
+  const adapter = buildAdapter();
+  const remote = [{ name: 'Goldiloxx', shortName: 'GOLDI-LOXX' }];                       // stale site copy
+  const local = [{ name: 'Goldiloxx', shortName: 'GOLDI-LOXX', favicon: 'https://linktr.ee/goldiloxx' }];
+
+  // Normal direction: the site copy is the curated source of truth.
+  const remoteWins = adapter.mergeRemoteAndLocalPromoters(remote, local);
+  assert.equal(remoteWins.merged.length, 1, 'one entry per promoter name');
+  assert.equal(remoteWins.merged[0].favicon, undefined, 'remote wins by default');
+
+  // Swapped direction (used when the local module is newer than the cache):
+  // the pulled entry wins, and remote-only promoters are still preserved.
+  const localWins = adapter.mergeRemoteAndLocalPromoters(local, [
+    ...remote,
+    { name: 'Remote Only', shortName: 'REMOTE' }
+  ]);
+  assert.equal(localWins.merged[0].favicon, 'https://linktr.ee/goldiloxx', 'pulled entry wins');
+  assert.ok(localWins.merged.some(p => p.name === 'Remote Only'), 'remote-only promoters survive');
+});

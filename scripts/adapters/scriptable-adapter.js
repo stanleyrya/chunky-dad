@@ -2589,6 +2589,23 @@ class ScriptableAdapter {
       "https://chunky.dad/data/scraper-bars.json",
       barsCacheConfig,
     );
+    // Same staleness rule as the promoter registry: a scraper-bars.js pulled
+    // to the phone AFTER the cached site copy was fetched is the fresher
+    // curation for shared bar names, until the cache expires.
+    const barsCachedAt = this.getCachedPageFetchedAt(
+      "https://chunky.dad/data/scraper-bars.json",
+      barsCacheConfig,
+    );
+    const localBarsModifiedAt = this.getLocalModuleModifiedAt("scraper-bars.js");
+    const localBarsAreNewer = Boolean(
+      barsCachedAt && localBarsModifiedAt
+        && localBarsModifiedAt.getTime() > barsCachedAt.getTime(),
+    );
+    if (localBarsAreNewer) {
+      console.log(
+        `📱 Scriptable: Bars data — local scraper-bars.js is newer than the cached site copy; local entries win`,
+      );
+    }
     // The combined file is an object keyed by city — an array (or any other
     // shape) is not usable and falls back to the per-city path.
     const combinedBars =
@@ -2606,10 +2623,15 @@ class ScriptableAdapter {
             : [];
       for (const cityKey of keys) {
         if (Array.isArray(combinedBars[cityKey])) {
-          const union = this.mergeRemoteAndLocalCityBars(
-            combinedBars[cityKey],
-            merged[cityKey],
-          );
+          const union = localBarsAreNewer
+            ? this.mergeRemoteAndLocalCityBars(
+                merged[cityKey],
+                combinedBars[cityKey],
+              )
+            : this.mergeRemoteAndLocalCityBars(
+                combinedBars[cityKey],
+                merged[cityKey],
+              );
           merged[cityKey] = union.merged;
           localOnlyMerged += union.appended;
           counts.remote += 1;
@@ -2629,10 +2651,9 @@ class ScriptableAdapter {
         const url = `https://chunky.dad/data/bars/${encodeURIComponent(cityKey)}.json`;
         const parsed = await this.fetchRemoteBarsJson(url, barsCacheConfig);
         if (Array.isArray(parsed)) {
-          const union = this.mergeRemoteAndLocalCityBars(
-            parsed,
-            merged[cityKey],
-          );
+          const union = localBarsAreNewer
+            ? this.mergeRemoteAndLocalCityBars(merged[cityKey], parsed)
+            : this.mergeRemoteAndLocalCityBars(parsed, merged[cityKey]);
           merged[cityKey] = union.merged;
           localOnlyMerged += union.appended;
           counts.remote += 1;
@@ -2680,6 +2701,44 @@ class ScriptableAdapter {
     return { merged, appended };
   }
 
+
+  // Modification time of a file in the Scriptable Documents directory, or null.
+  // Used to decide whether a freshly PULLED local registry should outrank a
+  // remote copy that is being served from cache.
+  getLocalModuleModifiedAt(fileName) {
+    try {
+      const fm = FileManager.iCloud();
+      const filePath = fm.joinPath(fm.documentsDirectory(), fileName);
+      if (!fm.fileExists(filePath)) return null;
+      const modifiedAt = fm.modificationDate(filePath);
+      return modifiedAt instanceof Date && !Number.isNaN(modifiedAt.getTime())
+        ? modifiedAt
+        : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // When was the cached copy of `url` fetched? Null when there is no cache
+  // entry (i.e. the next read will hit the network and is authoritative).
+  getCachedPageFetchedAt(url, pageCacheConfig) {
+    try {
+      if (!pageCacheConfig || !pageCacheConfig.enabled) return null;
+      const { hostDir, fileName } = this.getPageCachePathParts(url);
+      const cachePath = this.fm.joinPath(
+        this.fm.joinPath(this.pageStorageDir, hostDir),
+        fileName,
+      );
+      if (!this.fm.fileExists(cachePath)) return null;
+      const modifiedAt = this.fm.modificationDate(cachePath);
+      return modifiedAt instanceof Date && !Number.isNaN(modifiedAt.getTime())
+        ? modifiedAt
+        : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   // Curated promoter registry merged on the website is the source of truth;
   // the phone's local scraper-promoters.js copy goes stale the moment a
   // registry edit lands. One fetch of data/promoters.json (same fetch helper
@@ -2703,13 +2762,39 @@ class ScriptableAdapter {
       );
       return { promoters: local, counts: { remote: 0, localOnly: local.length } };
     }
-    const union = this.mergeRemoteAndLocalPromoters(remote, local);
+    // A PULLED local registry outranks a remote copy served from a stale
+    // cache. The remote list is normally the freshest curation, but it is
+    // cached for a day — so after pulling a registry edit to the phone, the
+    // older website copy kept winning for up to 24h (Goldiloxx favicon,
+    // 2026-07-30: correct in the repo, live on the site, invisible on the
+    // phone). A fresh network fetch has no cache entry, so it still wins.
+    const cachedAt = this.getCachedPageFetchedAt(
+      "https://chunky.dad/data/promoters.json",
+      promotersCacheConfig,
+    );
+    const localModifiedAt = this.getLocalModuleModifiedAt("scraper-promoters.js");
+    const localIsNewer = Boolean(
+      cachedAt && localModifiedAt && localModifiedAt.getTime() > cachedAt.getTime(),
+    );
+    if (localIsNewer) {
+      console.log(
+        `📱 Scriptable: Promoters data — local scraper-promoters.js is newer than the cached site copy; local entries win`,
+      );
+    }
+    const union = localIsNewer
+      ? this.mergeRemoteAndLocalPromoters(local, remote)
+      : this.mergeRemoteAndLocalPromoters(remote, local);
+    // `appended` counts whichever list lost precedence, so report it as what
+    // it actually is rather than always calling it "local-only".
+    const localOnly = localIsNewer
+      ? Math.max(0, union.merged.length - remote.length)
+      : union.appended;
     console.log(
-      `📱 Scriptable: Promoters data — ${remote.length} from chunky.dad, ${union.appended} local-only`,
+      `📱 Scriptable: Promoters data — ${remote.length} from chunky.dad, ${localOnly} local-only`,
     );
     return {
       promoters: union.merged,
-      counts: { remote: remote.length, localOnly: union.appended },
+      counts: { remote: remote.length, localOnly },
     };
   }
 
