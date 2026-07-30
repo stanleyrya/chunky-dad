@@ -241,6 +241,45 @@ function isImageUrl(url) {
 }
 
 /**
+ * Hostnames whose favicon is the PLATFORM's logo, not the event's or venue's
+ * identity: social networks, map/search hosts, and — the reason this exists —
+ * ticketing and aggregator platforms. An event whose `website` happens to be
+ * its Eventbrite listing was picking up Eventbrite's orange glyph as its
+ * "brand", which then also seeded the card's colours (11 events in
+ * data/event-colors carried Eventbrite's #ff5e30).
+ *
+ * Note linktr.ee is deliberately NOT here: its favicon path resolves to the
+ * profile's own avatar, which IS the promoter's identity (see
+ * generateLinktreeFaviconFilename).
+ */
+const PLATFORM_FAVICON_HOSTNAMES = new Set([
+    'instagram.com', 'facebook.com', 'twitter.com', 'x.com', 'tiktok.com',
+    'youtube.com', 'm.youtube.com', 'maps.google.com', 'google.com', 'goo.gl',
+    // Ticketing / listing platforms
+    'eventbrite.com', 'eventbrite.co.uk', 'eventbrite.ca', 'eventbrite.com.au',
+    'dice.fm', 'ra.co', 'residentadvisor.net', 'ticketweb.com', 'ticketweb.co.uk',
+    'seetickets.com', 'universe.com', 'posh.vip', 'withfriends.co',
+    'tickettailor.com', 'sickening.events', 'redeyetickets.com',
+    'ticketmaster.com', 'wl.seetickets.us', 'shotgun.live', 'fatsoma.com',
+    'meetup.com', 'partiful.com', 'luma.com', 'lu.ma'
+]);
+
+/**
+ * Return true when a URL's favicon would be a platform glyph rather than the
+ * entity's own mark. Unparseable URLs count as platform (fail closed).
+ * @param {string} url
+ * @returns {boolean}
+ */
+function isPlatformFaviconUrl(url) {
+    try {
+        const hostname = new URL(url).hostname.toLowerCase().replace(/^www\./, '');
+        return PLATFORM_FAVICON_HOSTNAMES.has(hostname);
+    } catch {
+        return true;
+    }
+}
+
+/**
  * Return true if the URL is a Linktree page.
  * @param {string} url - The URL to check
  * @returns {boolean}
@@ -407,6 +446,7 @@ if (typeof module !== 'undefined' && module.exports) {
         convertWebsiteUrlToFaviconPath,
         isLinktreeUrl,
         isWikipediaUrl,
+        isPlatformFaviconUrl,
         generateLinktreeFaviconFilename,
         generateWikipediaFaviconFilename,
         detectFileExtension,
@@ -429,6 +469,7 @@ if (typeof window !== 'undefined') {
         convertWebsiteUrlToFaviconPath,
         isLinktreeUrl,
         isWikipediaUrl,
+        isPlatformFaviconUrl,
         generateLinktreeFaviconFilename,
         generateWikipediaFaviconFilename,
         detectFileExtension,

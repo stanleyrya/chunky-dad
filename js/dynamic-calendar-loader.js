@@ -1205,7 +1205,17 @@ class DynamicCalendarLoader extends CalendarCore {
             if (!url.startsWith('http://') && !url.startsWith('https://')) {
                 url = 'https://' + url;
             }
-            faviconUrl = window.FilenameUtils.convertWebsiteUrlToFaviconPath(url, '/img/favicons');
+            // A website that is really a TICKETING page (Eventbrite, DICE, …)
+            // would contribute the platform's glyph as this event's identity —
+            // wrong on the card, wrong on the map. An explicitly curated
+            // event.favicon above is always honoured; only the website-derived
+            // fallback is filtered.
+            const isPlatform = window.FilenameUtils.isPlatformFaviconUrl
+                ? window.FilenameUtils.isPlatformFaviconUrl(url)
+                : false;
+            if (!isPlatform) {
+                faviconUrl = window.FilenameUtils.convertWebsiteUrlToFaviconPath(url, '/img/favicons');
+            }
         }
 
         return faviconUrl || null;
@@ -2225,37 +2235,7 @@ class DynamicCalendarLoader extends CalendarCore {
         return colors ? this.deriveAuroraColors(colors.bg, colors.fg) : null;
     }
 
-    // The favicon's own plate colour (faviconBg — the dominant k-means cluster,
-    // i.e. the flat white/off-white a round logo mark usually sits on), or null
-    // when unknown. Independent of the aurora stops: a grey brand still gets
-    // its plate even though its gradient falls back to the site palette.
-    getFaviconPlateColorForEvent(event) {
-        const bySlug = this.currentCity ? this.eventColorsByCity.get(this.currentCity) : null;
-        const colors = bySlug ? bySlug.get(event.slug) : null;
-        return this.faviconPlateColor(colors);
-    }
 
-    // The plate is only worth painting when the favicon actually HAS a
-    // distinguishable mark on it. Animal's favicon is red-on-red (bg #ff1901,
-    // fg #ff5000): painting that plate turned the tile into a solid red square
-    // and swallowed the logo entirely. So require real separation between the
-    // two extracted colours; otherwise leave the tile transparent and let the
-    // artwork speak for itself.
-    faviconPlateColor(colors) {
-        if (!colors) return null;
-        const bg = this.parseHexColor(colors.bg);
-        if (!bg) return null;
-        const fg = this.parseHexColor(colors.fg);
-        if (fg) {
-            const distance = Math.sqrt(
-                Math.pow((bg.r - fg.r) / 255, 2)
-                + Math.pow((bg.g - fg.g) / 255, 2)
-                + Math.pow((bg.b - fg.b) / 255, 2)
-            );
-            if (distance < 0.35) return null;
-        }
-        return colors.bg;
-    }
 
     // Repaint aurora cards that rendered before the color file arrived.
     applyEventColorsToRenderedCards() {
@@ -2264,13 +2244,6 @@ class DynamicCalendarLoader extends CalendarCore {
         document.querySelectorAll('.event-card.detailed.aurora[data-event-slug]').forEach(card => {
             const colors = bySlug.get(card.getAttribute('data-event-slug'));
             if (!colors) return;
-            // The favicon plate is independent of the aurora stops: a grey
-            // brand still gets its plate even though its gradient falls back
-            // to the site palette.
-            const plate = this.faviconPlateColor(colors);
-            if (plate) {
-                card.style.setProperty('--fav-plate', plate);
-            }
             const aurora = this.deriveAuroraColors(colors.bg, colors.fg);
             if (!aurora) return;
             card.style.setProperty('--c1', aurora.c1);
@@ -2292,14 +2265,11 @@ class DynamicCalendarLoader extends CalendarCore {
         if (!faviconUrl) return '';
         const src = this.safeCardUrl(faviconUrl);
         if (!src) return '';
-        // Many favicons are a round mark on a flat white/off-white plate
-        // (Eagle NYC, CHUNK). With a transparent tile that mark reads as a
-        // CIRCLE instead of the rounded square everything else uses, so the
-        // tile paints the favicon's own plate colour behind it — that is
-        // exactly what faviconBg is (the larger k-means cluster in
-        // tools/extract-favicon-colors.js). It arrives with the colour file,
-        // so it rides the same --fav-plate custom property the gradient uses;
-        // unknown colour leaves the tile transparent, as before.
+        // The tile is a FIXED white plate with the artwork contained inside —
+        // identical to the map markers (see --favicon-plate-* in styles.css).
+        // Deriving the plate per brand failed: Animal's red-on-red favicon
+        // became a solid red block, and a transparent plate made round marks
+        // read as circles next to square ones.
         return `<span class="ec-fav"><img src="${src}" alt="" loading="lazy" decoding="async" onerror="this.parentNode.remove()"></span>`;
     }
 
@@ -2400,11 +2370,8 @@ class DynamicCalendarLoader extends CalendarCore {
             `<div class="event-flyer" data-flyer-url="${flyerUrl}"><img src="${flyerUrl}" alt="" loading="lazy" decoding="async" onerror="this.parentNode.remove()"></div>` : '';
 
         const aurora = this.getAuroraColorsForEvent(event);
-        const plateColor = this.getFaviconPlateColorForEvent(event);
-        const styleParts = [];
-        if (aurora) styleParts.push(`--c1:${aurora.c1}`, `--c2:${aurora.c2}`, `--c3:${aurora.c3}`);
-        if (plateColor) styleParts.push(`--fav-plate:${plateColor}`);
-        const auroraStyle = styleParts.length ? ` style="${styleParts.join(';')}"` : '';
+        const auroraStyle = aurora ?
+            ` style="--c1:${aurora.c1};--c2:${aurora.c2};--c3:${aurora.c3}"` : '';
 
         const slug = this.escapeCardText(event.slug);
         const shareTime = `${event.day || ''}${event.time ? ' ' + event.time : ''}`;

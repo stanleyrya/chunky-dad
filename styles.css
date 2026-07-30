@@ -2479,21 +2479,22 @@ body.index-page main {
     width: 42px;
     height: 42px;
     flex: 0 0 42px;
-    border-radius: 11px;
+    border-radius: var(--favicon-plate-radius);
     overflow: hidden;
     box-shadow: 0 2px 10px rgba(6, 8, 20, 0.35);
     border: 1.5px solid rgba(255, 255, 255, 0.45);
     /* Favicons are often a round mark on a flat plate; painting that plate
        colour keeps the tile reading as a rounded square instead of a circle.
        --fav-plate comes from the event's faviconBg (see the JS). */
-    background: var(--fav-plate, transparent);
+    background: var(--favicon-plate-bg);
 }
 
 .event-card.detailed.aurora .ec-fav img {
     display: block;
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    padding: var(--favicon-plate-pad);
 }
 
 .event-card.detailed.aurora h3.ec-title {
@@ -6369,4 +6370,34 @@ body.loaded {
         background: rgba(255, 255, 255, 0.26);
         border-color: rgba(255, 255, 255, 0.4);
     }
+}
+
+/* ---------------------------------------------------------------------------
+   FAVICON PLATE — one treatment, used by the event cards AND the map markers.
+   Favicon artwork is wildly inconsistent (round marks on white, wide
+   wordmarks, transparent PNGs, dark glyphs), so the plate is FIXED rather
+   than derived per brand: a variable plate turned Animal's red-on-red favicon
+   into a solid red block, and a transparent one made round marks read as
+   circles while everything else was a rounded square. Fixed white also means
+   dark and transparent logos are always legible.
+   `contain` (not cover) so a wordmark is never cropped.
+--------------------------------------------------------------------------- */
+:root {
+    --favicon-plate-bg: #ffffff;
+    --favicon-plate-radius: 9px;
+    --favicon-plate-pad: 3px;
+}
+/* Map markers adopt the same plate, radius and contain-fit as the cards. */
+.favicon-marker-container {
+    background: var(--favicon-plate-bg);
+    border-radius: var(--favicon-plate-radius);
+}
+.favicon-marker-icon {
+    object-fit: contain;
+    padding: var(--favicon-plate-pad);
+    border-radius: calc(var(--favicon-plate-radius) - 2px);
+}
+/* The text fallback keeps its filled look — no plate behind letters. */
+.favicon-marker-container.text-marker {
+    background: var(--primary-color);
 }

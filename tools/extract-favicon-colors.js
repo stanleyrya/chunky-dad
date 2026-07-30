@@ -47,6 +47,7 @@ const {
   isWikipediaUrl,
   generateLinktreeFaviconFilename,
   generateWikipediaFaviconFilename,
+  isPlatformFaviconUrl,
 } = require(path.join(ROOT, 'js', 'filename-utils.js'));
 
 // ---------------------------------------------------------------------------
@@ -83,6 +84,10 @@ const GENERIC_HOSTNAMES = new Set([
 ]);
 
 function isGenericPlatformUrl(url) {
+  // The shared test in js/filename-utils.js is authoritative (it also covers
+  // ticketing platforms, whose favicons were seeding event colours); the local
+  // set below stays as a belt-and-braces fallback for older checkouts.
+  if (typeof isPlatformFaviconUrl === 'function' && isPlatformFaviconUrl(url)) return true;
   try {
     return GENERIC_HOSTNAMES.has(new URL(url).hostname.toLowerCase());
   } catch {
