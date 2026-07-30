@@ -8370,7 +8370,19 @@ class AiWebParser {
         });
 
         const aiPromptFields = selected;
-        const manuallyScrapedFields = new Set(['instagram', 'facebook', 'gmaps']);
+        // Fields the model is never asked for. instagram/facebook/gmaps are
+        // scraped deterministically; imageVertical/imageHorizontal are DERIVED
+        // from the actual dimensions of images we already found (published
+        // og:image:width/height, JSON-LD ImageObject, or the URL's own
+        // dimension tokens) — asking a model to classify a picture's shape
+        // from page text is nonsense, and it also silently changed every
+        // extraction prompt, invalidating the AI response cache
+        // (observed 2026-07-30: 18 prompt fields instead of 16, 58 sends /
+        // 9 hits on a CHUNK run). They still merge as normal event fields;
+        // only extraction is off-limits.
+        const manuallyScrapedFields = new Set([
+            'instagram', 'facebook', 'gmaps', 'imagevertical', 'imagehorizontal'
+        ]);
         const filteredPromptFields = aiPromptFields.filter(field => !manuallyScrapedFields.has(this.normalizePromptFieldName(field)));
         const removedManualFields = aiPromptFields.filter(field => manuallyScrapedFields.has(this.normalizePromptFieldName(field)));
         this.logDebug(`🤖 AI Web: Field priority filter selected ${selected.length} field(s) from ${Object.keys(priorities).length}`);
