@@ -10744,3 +10744,32 @@ test('slot merge: one-sided og provenance does not clobber a curated slot (falls
   const slotProvenanceLines = lines.filter(l => l.includes('field=imageVertical') && l.includes(provenanceLog));
   assert.equal(slotProvenanceLines.length, 0, 'no one-sided provenance decision for the slot');
 });
+
+test('recurring withhold: override identity is never stamped on a series the scraper refuses to write', async () => {
+  const core = createFinalBuildCore();
+  // Mirrors the CubScout run: a recurring event that merge-matched an existing
+  // calendar record and picked up override identity on the way through.
+  const event = {
+    title: 'CUBSCOUT',
+    startDate: new Date('2026-09-05T04:00:00.000Z'),
+    endDate: new Date('2026-09-05T09:00:00.000Z'),
+    city: 'la',
+    recurrenceRule: 'FREQ=MONTHLY;BYDAY=1FR',
+    overrideUid: 'cubscout-20260730T183109Z@chunky.dad',
+    overrideRecurrenceId: '20260905T010000Z'
+  };
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(event, NEW_ACTION_ANALYSIS, {}, {});
+  } finally {
+    restore();
+  }
+
+  assert.equal(analyzed._recurringExport, true, 'still withheld for ICS export');
+  assert.equal(analyzed.overrideUid, undefined, 'override uid dropped');
+  assert.equal(analyzed.overrideRecurrenceId, undefined, 'override recurrence id dropped');
+  assert.ok(!String(analyzed.notes || '').includes('overrideUid'), 'and never serialized into notes');
+  assert.ok(lines.some(l => l.includes('dropped override identity')), `log explains why: ${JSON.stringify(lines)}`);
+});

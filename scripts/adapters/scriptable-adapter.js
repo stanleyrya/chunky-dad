@@ -8299,6 +8299,13 @@ class ScriptableAdapter {
     addParam("startDate", formatLocalDateTime(event.startDate));
     addParam("endDate", formatLocalDateTime(event.endDate));
     addParam("city", event.city);
+    // The event's OWN timezone. Without it the builder falls back to the
+    // DEVICE's zone: start/end are handed over as city-local wall clock, so a
+    // phone in Eastern saved an LA 9PM event as 9PM ET (= 01:00Z instead of
+    // 04:00Z). That 3-hour shift then made the next scrape fail merge
+    // eligibility against the very record it had just written, and poisoned
+    // the stored `timezone:` note (CubScout, 2026-07-30).
+    addParam("timezone", timezone);
     addParam("venue", event.bar || event.venue);
     addParam("address", event.address);
     addParam("description", event.description);
