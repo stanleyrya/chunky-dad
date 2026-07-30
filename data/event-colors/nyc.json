@@ -39,6 +39,10 @@
   },
   {
     "slug": "chunk-brooklyn-59-7ffcc74a",
+    "url": "https://www.chunk-party.com/event-details/chunk-brooklyn-5-9",
+    "faviconBg": "#f6f4f5",
+    "faviconFg": "#2e2933",
+    "faviconPlate": "#ffffff",
     "paletteSource": "flyer",
     "palette": "#442c43:17:5 #130c24:17:5 #8c534b:13:8 #c38363:10:9 #455384:9:8",
     "accent": "#c38363"
@@ -62,6 +66,16 @@
     "paletteSource": "flyer",
     "palette": "#ebe49c:24:9 #d3c593:15:7 #b2a489:14:4 #6b4492:11:13 #44356b:7:9",
     "accent": "#6b4492"
+  },
+  {
+    "slug": "cmon-everybody-501dd4d8",
+    "url": "https://www.chunk-party.com/event-details/chunk-brooklyn-5-9",
+    "faviconBg": "#f6f4f5",
+    "faviconFg": "#2e2933",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#442c42:17:5 #130c24:17:5 #8c534b:13:8 #ca815e:10:10 #445485:9:8",
+    "accent": "#ca815e"
   },
   {
     "slug": "fuzzy-0380f9f1",
