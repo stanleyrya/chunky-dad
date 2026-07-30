@@ -1473,6 +1473,57 @@ test('getImageDimensionsFromUrl reads the real Wix comma form and NNNxNNN tokens
   assert.deepEqual(dims('https://cdn.example.com/img.jpg?width=600&height=900'), { width: 600, height: 900 });
 });
 
+test('getImageDimensionsFromUrl: the generic NNNxNNN scan rejects opaque-token false positives (<100px)', () => {
+  const core = createCore();
+  const dims = (url) => core.getImageDimensionsFromUrl(url);
+
+  // Hex-ish asset hashes and version tokens are not renditions — no real
+  // flyer rendition is 12px, and even a 96px favicon must not drive
+  // orientation.
+  assert.equal(dims('https://cdn.example.com/assets/ab12x34cd.jpg'), null,
+    'digits inside an opaque token are not a dimension pair');
+  assert.equal(dims('https://cdn.example.com/os-windows-10x64-download.png'), null,
+    'a 10x64 architecture token is not a dimension pair');
+
+  // Boundary: both dimensions must reach 100 for the generic scan.
+  assert.equal(dims('https://cdn.example.com/uploads/thumb-99x300.jpg'), null);
+  assert.deepEqual(dims('https://cdn.example.com/uploads/thumb-100x300.jpg'), { width: 100, height: 300 });
+
+  // Real rendition shapes keep parsing.
+  assert.deepEqual(dims('https://bearracuda.com/wp-content/uploads/2026/05/hottake_may2026-igposter_v2-820x1024.jpg'),
+    { width: 820, height: 1024 });
+  assert.deepEqual(dims('https://cdn.example.com/media/296x494/flyer.jpg'), { width: 296, height: 494 });
+  assert.deepEqual(dims('https://cdn.example.com/uploads/banner-460x230.jpg'), { width: 460, height: 230 });
+
+  // The Wix and query-param paths are explicit dimension syntaxes and keep
+  // their looser bounds.
+  assert.deepEqual(dims('https://static.wixstatic.com/media/a~mv2.jpg/v1/fill/w_50,h_80/a~mv2.jpg'),
+    { width: 50, height: 80 });
+  assert.deepEqual(dims('https://cdn.example.com/img.jpg?w=50&h=80'), { width: 50, height: 80 });
+});
+
+test('getImageDimensionsFromUrl: chained Wix crop→fill serves the LAST transform, not the crop region', () => {
+  const core = createCore();
+  const dims = (url) => core.getImageDimensionsFromUrl(url);
+
+  // The crop region is 2000x1000 landscape, but the final fill renders
+  // 400x800 portrait — the fill is what is served.
+  assert.deepEqual(
+    dims('https://static.wixstatic.com/media/x~mv2.jpg/v1/crop/x_0,y_0,w_2000,h_1000/v1/fill/w_400,h_800/x~mv2.jpg'),
+    { width: 400, height: 800 });
+  assert.equal(
+    core.classifyImageOrientation('https://static.wixstatic.com/media/x~mv2.jpg/v1/crop/x_0,y_0,w_2000,h_1000/v1/fill/w_400,h_800/x~mv2.jpg'),
+    'portrait');
+
+  // Single-segment behaviour is unchanged: fill alone, crop alone.
+  assert.deepEqual(
+    dims('https://static.wixstatic.com/media/a~mv2.jpg/v1/fill/w_792,h_990/a~mv2.jpg'),
+    { width: 792, height: 990 });
+  assert.deepEqual(
+    dims('https://static.wixstatic.com/media/x~mv2.jpg/v1/crop/x_0,y_0,w_1000,h_500/x~mv2.jpg'),
+    { width: 1000, height: 500 });
+});
+
 test('getImageDimensionsFromUrl REJECTS the Eventbrite ?w=460&h=230 crop', () => {
   const core = createCore();
   // img.evbuc.com's crop params are its fixed 2:1 LISTING THUMBNAIL, not the
@@ -1511,6 +1562,14 @@ test('classifyImageOrientation buckets portrait/landscape/square with a dead ban
   assert.equal(classify('https://cdn.example.com/uploads/1920x1080/poster.jpg'), 'landscape');
   assert.equal(classify('https://static.wixstatic.com/media/b~mv2.jpg/v1/fill/w_1344,h_1345,al_c,q_85/b~mv2.jpg'),
     'square', 'a 1-pixel difference is not an orientation');
+  // The dead band is the 1.1 ratio ai-web-parser's
+  // imageOrientationRatioThreshold uses — the two must stay in sync.
+  assert.equal(classify('https://static.wixstatic.com/media/c~mv2.jpg/v1/fill/w_1080,h_1000/c~mv2.jpg'),
+    'square', 'an 8% difference sits inside the shared 1.1 dead band');
+  assert.equal(classify('https://static.wixstatic.com/media/c~mv2.jpg/v1/fill/w_1000,h_1080/c~mv2.jpg'),
+    'square', 'the dead band is symmetric');
+  assert.equal(classify('https://static.wixstatic.com/media/d~mv2.jpg/v1/fill/w_1100,h_1000/d~mv2.jpg'),
+    'landscape', 'ratio 1.1 exactly is landscape, matching the parser threshold');
   assert.equal(classify('https://bearracuda.com/wp-content/uploads/2025/04/cuda-atlanta-nov_2025-web.jpg'), 'unknown',
     'unknown is the common answer and must be handled by every caller');
 });
@@ -9220,9 +9279,44 @@ test('registry application parity: registry stamp ≡ parser metadata through ap
     Object.keys(event).filter((key) => !key.startsWith('_')).forEach((key) => { copy[key] = event[key]; });
     return copy;
   };
-  assert.deepEqual(publicFields(viaRegistry), publicFields(viaParser), 'event fields identical');
-  assert.deepEqual(viaRegistry._staticFields, viaParser._staticFields, '_staticFields identical');
-  assert.deepEqual(viaRegistry._fieldPriorities, viaParser._fieldPriorities, '_fieldPriorities identical');
+  // One DELIBERATE delta beyond parity (review fix 2026-07-30): the registry
+  // path also fills a blank favicon from the promoter's identity link so a
+  // matched event is never iconless — as a plain 'upsert' value (calendar and
+  // venue favicons always beat it), never as static clobber. Everything else
+  // must remain identical to the parser-metadata path.
+  const registryFields = publicFields(viaRegistry);
+  assert.equal(registryFields.favicon, entry.website, 'favicon fallback fills from the identity link');
+  delete registryFields.favicon;
+  assert.deepEqual(registryFields, publicFields(viaParser), 'event fields identical apart from the favicon fallback');
+  assert.deepEqual(viaRegistry._staticFields, viaParser._staticFields, '_staticFields identical — the fallback is NOT static');
+  assert.deepEqual(viaRegistry._fieldPriorities.favicon, { priority: ['ai-web'], merge: 'upsert' },
+    'fallback favicon merges as upsert: calendar wins');
+  const registryPriorities = { ...viaRegistry._fieldPriorities };
+  delete registryPriorities.favicon;
+  assert.deepEqual(registryPriorities, viaParser._fieldPriorities, '_fieldPriorities otherwise identical');
+});
+
+test('registry favicon fallback never overrides an existing favicon and loses the merge to a stored one', async () => {
+  const core = createRegistryCore();
+  const block = core.promoterEntryToMetadataBlock(REGISTRY_FIXTURE[0]);
+
+  // Scraped event already carries the VENUE's favicon: untouched.
+  const withVenueIcon = { title: 'Portland PRIDE FRIDAY', startDate: new Date('2026-08-01T21:00:00.000Z'), favicon: 'https://venue.example/icon.png' };
+  core.applyPromoterMetadata(withVenueIcon, block);
+  assert.equal(withVenueIcon.favicon, 'https://venue.example/icon.png', 'existing favicon is never replaced by the fallback');
+
+  // Blank favicon: filled — but a stored calendar favicon must win the merge
+  // (review 2026-07-30: the clobber version silently reverted hand-fixes).
+  const blank = { title: 'Portland PRIDE FRIDAY', startDate: new Date('2026-08-01T21:00:00.000Z') };
+  core.applyPromoterMetadata(blank, block);
+  assert.equal(blank.favicon, REGISTRY_FIXTURE[0].website, 'blank favicon filled from identity link');
+  const existingEvent = {
+    title: 'Portland PRIDE FRIDAY',
+    startDate: new Date('2026-08-01T21:00:00.000Z'),
+    notes: 'favicon: https://hand.fixed/icon.png'
+  };
+  const merged = await core.createFinalEventObject(existingEvent, blank, { httpAdapter: null });
+  assert.equal(merged.favicon, 'https://hand.fixed/icon.png', 'a hand-set calendar favicon survives every run');
 });
 
 test('registry sub-brand inherits unspecified metadata fields from its parent', () => {
@@ -10607,4 +10701,46 @@ test('website merge: a ticketing platform URL never displaces an identity link',
   // A real site replacing a platform link is still allowed.
   const realSite = core.resolveConflictDeterministically('website', eventbrite, 'https://cubhouse.party/events/july', ctx);
   assert.equal(realSite.winner, 'b', 'a genuine site beats a platform URL');
+});
+
+test('slot merge: one-sided og provenance does not clobber a curated slot (falls through)', async () => {
+  const core = createFinalBuildCore();
+  // Calendar carries a curated portrait slot DIFFERENT from its primary —
+  // structurally unattributable, since imageSource describes the primary only.
+  const existingEvent = {
+    title: 'SLOT TEST',
+    startDate: new Date('2026-08-01T21:00:00.000Z'),
+    notes: [
+      'image: https://cdn.example/landscape-primary-1920x1080.jpg',
+      'imageVertical: https://curated.example/portrait-800x1200.jpg'
+    ].join('\n')
+  };
+  // Scrape's slot equals its og-stamped primary: attributed, one-sided.
+  const scraped = {
+    title: 'SLOT TEST',
+    startDate: new Date('2026-08-01T21:00:00.000Z'),
+    image: 'https://cdn.example/og-flyer-900x1350.jpg',
+    imageSource: 'og-image',
+    imageVertical: 'https://cdn.example/og-flyer-900x1350.jpg',
+    _fieldPriorities: {
+      image: { priority: ['ai-web'], merge: 'ai' },
+      imageVertical: { priority: ['ai-web'], merge: 'ai' }
+    }
+  };
+  const merged = await core.createFinalEventObject(existingEvent, scraped, { httpAdapter: null });
+  // Without an AI adapter the conflict falls back deterministically — the point
+  // is that the PROVENANCE rung no longer decides it one-sidedly. The primary
+  // image keeps one-sided provenance decisions (og-stamped primary wins).
+  assert.equal(merged.image, 'https://cdn.example/og-flyer-900x1350.jpg', 'primary: og provenance still decides');
+  const provenanceLog = `"scraped" image is the event page's own artwork`;
+  // Re-run capturing logs to assert the rung stayed silent for the slot.
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  try {
+    await core.createFinalEventObject(existingEvent, scraped, { httpAdapter: null });
+  } finally {
+    restore();
+  }
+  const slotProvenanceLines = lines.filter(l => l.includes('field=imageVertical') && l.includes(provenanceLog));
+  assert.equal(slotProvenanceLines.length, 0, 'no one-sided provenance decision for the slot');
 });

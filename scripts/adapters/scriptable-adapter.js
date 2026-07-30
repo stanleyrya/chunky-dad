@@ -693,6 +693,30 @@ class ScriptableAdapter {
       .filter(Boolean);
   }
 
+  // The top-level bearDroppedEvents list in a saved run exists only for the
+  // saved-run audit display; the same entries are already persisted verbatim
+  // under parserResults[].bearDroppedEvents for any other consumer. So this
+  // copy is slimmed: `_`-prefixed working keys on the embedded event (notably
+  // the ~1-2KB `_parserConfig` every drop carries) are dropped. Shallow
+  // clones only — the live entries are still on screen and must not change.
+  sanitizeDroppedEntriesForRunSave(entries) {
+    if (!Array.isArray(entries)) return [];
+    return entries.map((entry) => {
+      if (!entry || typeof entry !== "object") return entry;
+      const copy = { ...entry };
+      delete copy._parserConfig;
+      if (copy.event && typeof copy.event === "object") {
+        const event = {};
+        for (const key of Object.keys(copy.event)) {
+          if (key.startsWith("_")) continue;
+          event[key] = copy.event[key];
+        }
+        copy.event = event;
+      }
+      return copy;
+    });
+  }
+
   // Detect all-day events at save-time based on DateTime patterns
   isAllDayEvent(event) {
     if (!event || !event.startDate || !event.endDate) return false;
@@ -8540,24 +8564,35 @@ class ScriptableAdapter {
         if (!entry) return "";
         // The drop entry keeps the full event under `.event`; older/partial
         // entries fall back to the flat summary fields so a card still renders.
-        const event =
-          entry.event && typeof entry.event === "object"
-            ? entry.event
-            : {
-                title: entry.title,
-                startDate: entry.startDate,
-                bar: entry.venue,
-              };
+        const hasFullEvent = !!(entry.event && typeof entry.event === "object");
+        const event = hasFullEvent
+          ? entry.event
+          : {
+              title: entry.title,
+              startDate: entry.startDate,
+              bar: entry.venue,
+            };
+        // Two rescue flags, one treatment: `rescued` (a calendar manual-bear
+        // record pre-empted the drop) and `manuallyMarkedBear` (the owner
+        // rescued it during the run via the verdict buttons — saved runs
+        // persist the flag on the same entry) both render read-only with the
+        // verdict shown as bear. Fallback cards without `.event` also go
+        // read-only: recordBearOverrideAndReport cannot act on them, so live
+        // buttons would be silently dead.
+        const isRescued =
+          entry.rescued === true || entry.manuallyMarkedBear === true;
         return this.generateEventCard(event, runInfo, {
           dropped: true,
           bearIdx: `d${index}`,
-          bearVerdict: entry.rescued ? "bear" : "not-bear",
-          interactive: interactive && entry.rescued !== true,
+          bearVerdict: isRescued ? "bear" : "not-bear",
+          interactive: interactive && !isRescued && hasFullEvent,
           dropReason: entry.reason || "",
           dropHost: entry.host || "",
           note: entry.rescued
             ? "Rescued (manual override on calendar record)"
-            : "",
+            : entry.manuallyMarkedBear === true
+              ? "Rescued (marked bear by calendar owner this run)"
+              : "",
         });
       })
       .join("");
@@ -9734,12 +9769,17 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
   // failure only costs the next run's pre-selection.
   async savePickerState(names) {
     try {
+      const list = Array.from(names || []);
+      // Never persist an empty selection: writing [] would erase the
+      // remembered set behind "Rerun last". Confirmed selections are always
+      // non-empty; anything else keeps the previous state on disk.
+      if (list.length === 0) return false;
       const fm = this.fm || FileManager.iCloud();
       if (!fm.fileExists(this.baseDir)) {
         fm.createDirectory(this.baseDir, true);
       }
       const payload = {
-        selected: Array.from(names || []),
+        selected: list,
         savedAt: new Date().toISOString(),
       };
       fm.writeString(
@@ -9877,12 +9917,20 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
 
         const runSelectedRow = new UITableRow();
         runSelectedRow.height = 50;
+        // With nothing checked, "Run selected (0)" is a disabled no-op: it
+        // must neither finish nor dismiss. An empty confirm would start a run
+        // with every parser disabled AND overwrite the remembered "Rerun
+        // last" selection with [] (hiding that row forever). Gray title
+        // signals disabled; blue means armed.
+        const hasSelection = selected.size > 0;
+        runSelectedRow.dismissOnSelect = hasSelection;
         const runSelectedCell = runSelectedRow.addText(
           `▶ Run selected (${selected.size})`,
         );
         runSelectedCell.titleFont = Font.boldSystemFont(16);
-        runSelectedCell.titleColor = Color.blue();
+        runSelectedCell.titleColor = hasSelection ? Color.blue() : Color.gray();
         runSelectedRow.onSelect = () => {
+          if (selected.size === 0) return;
           finish(new Set(selected));
         };
         table.addRow(runSelectedRow);
@@ -9938,8 +9986,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       const picked = await selectionPromise;
       // Persist confirmed selections only (Rerun last / Run selected / Run
       // all) — the next run's picker offers them behind "Rerun last", never
-      // as a pre-selection. Dismissal keeps the previous state.
-      if (picked) {
+      // as a pre-selection. Dismissal keeps the previous state, and an empty
+      // set must never reach savePickerState (it would wipe "Rerun last").
+      if (picked && picked.size > 0) {
         await this.savePickerState(Array.from(picked));
       }
       return picked;
@@ -10925,10 +10974,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         // as it actually happened: the results UI renders these as real event
         // cards, and without them that section is simply missing from every
         // saved-run display — which is exactly where you go to audit a bear
-        // call after the fact.
-        bearDroppedEvents: Array.isArray(results.bearDroppedEvents)
-          ? results.bearDroppedEvents
-          : [],
+        // call after the fact. Sanitized copies only: this list is for the
+        // display, and parserResults below already carries the raw entries.
+        bearDroppedEvents: this.sanitizeDroppedEntriesForRunSave(
+          results.bearDroppedEvents,
+        ),
         parserResults: results.parserResults || [],
         errors: results.errors || [],
       };

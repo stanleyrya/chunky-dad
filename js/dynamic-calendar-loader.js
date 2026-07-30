@@ -2161,7 +2161,7 @@ class DynamicCalendarLoader extends CalendarCore {
     // Escaped href, or '' for schemes that would execute script.
     safeCardUrl(url) {
         const raw = String(url === null || url === undefined ? '' : url).trim();
-        if (!raw || /^(javascript|data|vbscript):/i.test(raw.replace(/[\s -]/g, ''))) {
+        if (!raw || /^(javascript|data|vbscript):/i.test(raw.replace(/[\s\u0000-\u001f]/g, ''))) {
             return '';
         }
         return this.escapeCardText(raw);

@@ -1055,10 +1055,17 @@ class CalendarCore {
         }
         
         if (!recurring) {
-            // One-off event - show the date (same as calendar)
-            const startDateStr = startDate instanceof Date ? 
-                startDate.toISOString().split('T')[0] : startDate;
-            const parts = startDateStr.split('-');
+            // One-off event — show the date THE SAME WAY THE GRID PLACES IT.
+            // The grid buckets events by browser-local getDate()/getMonth();
+            // this badge used toISOString(), the UTC date, so any evening
+            // event west of UTC read one day later than the calendar cell it
+            // sat under ("7/18 · Fri 8PM-2AM" on a July 17 event — review
+            // 2026-07-30). Consistency with the grid is the contract here.
+            const startDateObj = startDate instanceof Date ? startDate : new Date(startDate);
+            if (!isNaN(startDateObj.getTime())) {
+                return `${startDateObj.getMonth() + 1}/${startDateObj.getDate()}`;
+            }
+            const parts = String(startDate).split('T')[0].split('-');
             const month = parseInt(parts[1]);
             const date = parseInt(parts[2]);
             return `${month}/${date}`;
