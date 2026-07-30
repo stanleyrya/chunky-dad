@@ -3011,7 +3011,12 @@ class SharedCore {
         // Filter and process events. Enforce-mode bear-check drops are carried
         // through to results (flag, don't drop) — never into the write plan.
         const bearDropCollector = [];
-        const futureEvents = this.filterFutureEvents(allEvents, effectiveParserConfig.daysToLookAhead, effectiveParserConfig.allowPastEvents);
+        // allowPastEvents can now be set once globally (config.allowPastEvents)
+        // as well as per parser — Stanley 2026-07-30: keep past events so the
+        // website reads as full, rather than dropping them at scrape time.
+        const keepPastEvents = effectiveParserConfig.allowPastEvents
+            || Boolean(mainConfig && mainConfig.config && mainConfig.config.allowPastEvents);
+        const futureEvents = this.filterFutureEvents(allEvents, effectiveParserConfig.daysToLookAhead, keepPastEvents);
         // Curated promoter registry pass (before the bear check so a matched
         // promoter's bearAffinity can steer per-event trust): match each
         // event's own evidence to data/promoters.json and — in enforce mode —
