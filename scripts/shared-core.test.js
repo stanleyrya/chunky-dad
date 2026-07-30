@@ -7956,6 +7956,22 @@ test('merge survival (enrich flow): the curated-upgraded address beats a same-pr
   assert.equal(merged.address, AQUA_EMPORIO_ADDRESS, 'the curated address wins in the enrich flow too');
 });
 
+// The generated bars twins are the curated source MINUS website-only
+// presentation fields: tools/generate-scraper-bars.js strips the extracted
+// colour palette (palette/accent/paletteSource) because the scraper never reads
+// it and scripts/scraper-bars.js is downloaded to the phone. Compare against
+// that contract rather than against the raw source.
+function barsWithoutPresentationFields(bars) {
+  return bars.map(bar => {
+    const trimmed = { ...bar };
+    delete trimmed.palette;
+    delete trimmed.accent;
+    delete trimmed.paletteSource;
+    delete trimmed.faviconPlate;
+    return trimmed;
+  });
+}
+
 test('curated bars: torremolinos.json carries Aqua Emporio and the generated scraper-bars twins are in sync', () => {
   const fs = require('fs');
   const path = require('path');
@@ -7970,11 +7986,11 @@ test('curated bars: torremolinos.json carries Aqua Emporio and the generated scr
 
   // Generated module twin (scripts/scraper-bars.js) is committed in sync.
   const scraperBars = require('./scraper-bars');
-  assert.deepEqual(scraperBars.torremolinos, torremolinosBars, 'scripts/scraper-bars.js regenerated after the torremolinos.json edit');
+  assert.deepEqual(scraperBars.torremolinos, barsWithoutPresentationFields(torremolinosBars), 'scripts/scraper-bars.js regenerated after the torremolinos.json edit');
 
   // Pure-JSON twin served by the site.
   const jsonTwin = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'scraper-bars.json'), 'utf8'));
-  assert.deepEqual(jsonTwin.torremolinos, torremolinosBars, 'data/scraper-bars.json regenerated after the torremolinos.json edit');
+  assert.deepEqual(jsonTwin.torremolinos, barsWithoutPresentationFields(torremolinosBars), 'data/scraper-bars.json regenerated after the torremolinos.json edit');
 
   // The event's ALL-CAPS bar resolves to the curated record (normalizeBarNameKey).
   const core = new SharedCore({}, { eventSchema: EventSchema, bars: scraperBars });
@@ -8089,11 +8105,11 @@ test('curated bars: boston.json carries Legacy and the generated scraper-bars tw
 
   // Generated module twin (scripts/scraper-bars.js) is committed in sync.
   const scraperBars = require('./scraper-bars');
-  assert.deepEqual(scraperBars.boston, bostonBars, 'scripts/scraper-bars.js regenerated after the boston.json edit');
+  assert.deepEqual(scraperBars.boston, barsWithoutPresentationFields(bostonBars), 'scripts/scraper-bars.js regenerated after the boston.json edit');
 
   // Pure-JSON twin served by the site.
   const jsonTwin = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'scraper-bars.json'), 'utf8'));
-  assert.deepEqual(jsonTwin.boston, bostonBars, 'data/scraper-bars.json regenerated after the boston.json edit');
+  assert.deepEqual(jsonTwin.boston, barsWithoutPresentationFields(bostonBars), 'data/scraper-bars.json regenerated after the boston.json edit');
 
   // The curated record is what findCuratedBarByName resolves for the rescue.
   const core = new SharedCore({}, { eventSchema: EventSchema, bars: scraperBars });

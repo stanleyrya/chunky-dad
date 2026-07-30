@@ -7,6 +7,9 @@
     "website": "https://aquatorremolinos.com",
     "instagram": "https://www.instagram.com/aquatorremolinos",
     "faviconBg": "#4f4d4c",
-    "faviconFg": "#e5e4e4"
+    "faviconFg": "#e5e4e4",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:45:0 #494645:39:0 #dddcdc:6:0",
+    "faviconPlate": "#ffffff"
   }
 ]

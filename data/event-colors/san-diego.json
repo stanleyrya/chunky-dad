@@ -9,13 +9,21 @@
     "slug": "megawoof-4faca4f4",
     "url": "https://linktr.ee/megawoof_america",
     "faviconBg": "#575d64",
-    "faviconFg": "#abb2ba"
+    "faviconFg": "#abb2ba",
+    "faviconPlate": "#acb4bc",
+    "paletteSource": "flyer",
+    "palette": "#0c2314:28:4 #d39076:18:9 #140b0b:15:2 #856a3b:10:7 #93c65f:2:14",
+    "accent": "#d39076"
   },
   {
     "slug": "megawoof-7025d33f",
     "url": "https://linktr.ee/megawoof_america",
     "faviconBg": "#575d64",
-    "faviconFg": "#abb2ba"
+    "faviconFg": "#abb2ba",
+    "faviconPlate": "#acb4bc",
+    "paletteSource": "flyer",
+    "palette": "#9b5134:17:11 #0b0403:16:2 #2b1514:16:4 #ce7555:14:12 #f2f401:1:20",
+    "accent": "#ce7555"
   },
   {
     "slug": "megawoof-america-san-diego-17095722",
@@ -27,6 +35,10 @@
     "slug": "megawoof-america-san-diego-7cd96d30",
     "url": "https://linktr.ee/megawoof_america",
     "faviconBg": "#575d64",
-    "faviconFg": "#abb2ba"
+    "faviconFg": "#abb2ba",
+    "faviconPlate": "#acb4bc",
+    "paletteSource": "flyer",
+    "palette": "#5a5b5d:20:0 #3f4143:19:0 #837e6b:16:3 #b9d239:2:17",
+    "accent": "#b9d239"
   }
 ]

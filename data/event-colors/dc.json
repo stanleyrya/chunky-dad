@@ -3,6 +3,10 @@
     "slug": "megawoof-5e604137",
     "url": "https://linktr.ee/megawoof_america",
     "faviconBg": "#575d64",
-    "faviconFg": "#abb2ba"
+    "faviconFg": "#abb2ba",
+    "faviconPlate": "#acb4bc",
+    "paletteSource": "flyer",
+    "palette": "#05091c:22:4 #4a1cb2:21:21 #23096c:14:15 #c143d3:12:23 #01f62d:7:28",
+    "accent": "#4a1cb2"
   }
 ]

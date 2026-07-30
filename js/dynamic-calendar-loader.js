@@ -17,6 +17,30 @@ const AURORA_CARD_ICONS = {
     ]
 };
 
+// ── Aurora gradient tuning ───────────────────────────────────────────────────
+// The card's base colour, the floor every stop is blended toward (#171a33).
+const AURORA_BASE_RGB = { r: 23, g: 26, b: 51 };
+// Palette entries carry `c` = OKLab chroma ×100 (see tools/extract-favicon-colors.js).
+// Below this a colour is a grey/near-grey and can't carry a gradient stop.
+const AURORA_MIN_CHROMA = 0.05;
+// A second stop has to cover a real part of the artwork; anything smaller is an
+// anti-aliasing fringe (the pale pinks around Animal's red "A") and makes a
+// washed-out blob rather than a second colour.
+// A second stop must be a real presence in the artwork, not a speck: Bear
+// Happy Hour's palette carries a 1%-coverage yellow (#f6e529) that was
+// defining half its card, and orange->yellow blends through olive.
+const AURORA_MIN_STOP_SHARE = 0.10;
+// Below this separation two stops read as one colour and the "gradient" is a
+// flat wash — the Bearracuda/Animal failure the palette was built to fix.
+const AURORA_MIN_SEPARATION = 0.2;
+// Hue rotation (degrees) and lightness factor used to invent a sibling stop when
+// the artwork genuinely has only one colour in it.
+// Single-colour artwork gets a DEEPER sibling of the same hue rather than a
+// rotated one: rotating a warm accent (Animal's red) lands in the yellow-olive
+// band and reads muddy, while darkening stays on-brand.
+const AURORA_SIBLING_LIGHTNESS = 0.55;
+const AURORA_SIBLING_CHROMA_BOOST = 1.12;
+
 // Dynamic Google Calendar Loader - Supports multiple cities and calendars
 class DynamicCalendarLoader extends CalendarCore {
     constructor() {
@@ -1276,6 +1300,15 @@ class DynamicCalendarLoader extends CalendarCore {
                 
                 const el = document.createElement('div');
                 el.className = 'favicon-marker';
+                // Markers use the same plate as the card tiles (Stanley:
+                // "Same for map btw!"), so one favicon looks like one object
+                // wherever it appears.
+                const markerPlate = this.getFaviconPlateForEvent(event);
+                if (markerPlate) el.style.setProperty('--fav-plate', markerPlate);
+                // Markers are often built BEFORE the colour file resolves, and
+                // unlike cards they aren't re-rendered — so tag them with the
+                // slug and let the colour load repaint them in place.
+                if (event.slug) el.setAttribute('data-event-slug', event.slug);
 
                 let onErrorStr = `this.parentElement.innerHTML='<span class=\\'marker-text\\'>${textFallback}</span>'; this.parentElement.classList.add('text-marker');`;
                 if (fallbackFaviconUrl) {
@@ -2146,35 +2179,141 @@ class DynamicCalendarLoader extends CalendarCore {
         return max <= 0 ? 0 : (max - min) / max;
     }
 
-    // Three aurora stops from an event's favicon colors: the background color,
-    // the foreground color, and a darkened blend of both pulled toward the
-    // card's #171a33 base. Returns null when the input isn't a usable hex color
-    // — or when the brand colours carry no colour to build an aurora from, so
-    // the caller's vivid site palette is used instead. Real-data review found
-    // near-white favicons (Eagle NYC #f0f0f0, Bear Happy Hour) clamping into
-    // flat grey cards: brightness-banding a grey can only ever yield grey, and
-    // a grey aurora is no aurora at all.
-    deriveAuroraColors(background, foreground) {
-        const backgroundRgb = this.parseHexColor(background);
+    // A cheap opponent-colour distance: how differently two colours read. The
+    // perceptual work already happened in the extractor (OKLab clustering), so
+    // all that's needed here is "are these two the same colour or not" —
+    // brightness difference plus the two chromatic axes, no colour-space
+    // conversion duplicated into the browser.
+    rgbSeparation(a, b) {
+        const lightness = this.rgbBrightness(a) - this.rgbBrightness(b);
+        const redGreen = ((a.r - a.g) - (b.r - b.g)) / 255;
+        const yellowBlue = (((a.r + a.g) / 2 - a.b) - ((b.r + b.g) / 2 - b.b)) / 255;
+        return Math.sqrt(lightness * lightness + redGreen * redGreen + yellowBlue * yellowBlue);
+    }
+
+    // A deeper, slightly richer version of a colour: same hue, lower lightness,
+    // a touch more saturation. Used as the second stop when artwork has only
+    // one usable colour, so the gradient travels within the brand instead of
+    // wandering into a hue that fights it.
+    deepenRgb(rgb, lightnessFactor, chromaBoost = 1) {
+        const mean = (rgb.r + rgb.g + rgb.b) / 3;
+        const push = (channel) => Math.max(0, Math.min(255,
+            (mean + (channel - mean) * chromaBoost) * lightnessFactor));
+        return { r: push(rgb.r), g: push(rgb.g), b: push(rgb.b) };
+    }
+
+    // Parse the packed `palette` string written by
+    // tools/extract-favicon-colors.js: space-separated `hex:share:chroma`
+    // tokens, ordered by how much of the artwork each colour covers, where
+    // share is a percent and chroma is OKLab chroma ×100. Malformed tokens are
+    // dropped rather than trusted — these colours end up in an inline style
+    // attribute, so parseHexColor stays the gate.
+    parsePaletteEntries(palette) {
+        if (typeof palette !== 'string') return [];
+        const entries = [];
+        palette.trim().split(/\s+/).forEach(token => {
+            const parts = token.split(':');
+            const rgb = this.parseHexColor(parts[0]);
+            if (!rgb) return;
+            entries.push({
+                rgb,
+                share: Math.max(0, Number(parts[1]) || 0) / 100,
+                chroma: Math.max(0, Number(parts[2]) || 0) / 100
+            });
+        });
+        return entries;
+    }
+
+    // Three stops from a rich palette. `accent` (the extractor's most usable
+    // saturated colour) anchors the card; the second stop is the palette entry
+    // that reads most differently from it; the third is a darkened blend pulled
+    // toward the card base. Returns null only when there is nothing usable —
+    // the old "is this pair grey?" sniffing is gone, because the extractor
+    // already answered that question by omitting `accent`.
+    deriveAuroraFromPalette(entries, accentRgb) {
+        if (!accentRgb) return this.deriveAchromaticAurora(entries);
+
+        const candidates = entries
+            .filter(entry => entry.chroma >= AURORA_MIN_CHROMA && entry.share >= AURORA_MIN_STOP_SHARE)
+            .map(entry => ({ rgb: entry.rgb, separation: this.rgbSeparation(entry.rgb, accentRgb) }))
+            .filter(candidate => candidate.separation >= AURORA_MIN_SEPARATION)
+            .sort((a, b) => b.separation - a.separation);
+
+        const second = candidates.length > 0
+            ? candidates[0].rgb
+            : this.deepenRgb(accentRgb, AURORA_SIBLING_LIGHTNESS, AURORA_SIBLING_CHROMA_BOOST);
+
+        return this.bandAuroraStops(accentRgb, second, 0.2, 0.52, 0.16, 0.48);
+    }
+
+    // Genuinely colourless artwork (Eagle NYC's black-and-white crest, The Urban
+    // Bear's white-on-black mark). A grey aurora is no aurora, so use the
+    // artwork's own lightness spread but tint it toward the card base: the card
+    // reads as deliberate slate/graphite rather than washed-out grey, and it
+    // still belongs to the brand instead of borrowing the site palette.
+    deriveAchromaticAurora(entries) {
+        if (entries.length === 0) return null;
+        const sorted = [...entries].sort((a, b) => this.rgbBrightness(b.rgb) - this.rgbBrightness(a.rgb));
+        const lightest = sorted[0].rgb;
+        const darkest = sorted[sorted.length - 1].rgb;
+        const tint = rgb => this.mixRgbColors(rgb, AURORA_BASE_RGB, 0.45);
+        // Wider bands than the coloured path uses: lightness is the only thing
+        // left to make the blobs visible at all.
+        return this.bandAuroraStops(tint(lightest), tint(darkest), 0.22, 0.4, 0.06, 0.14);
+    }
+
+    // Push two chosen stops into brightness bands that keep white text legible,
+    // then derive the third from their blend over the card base.
+    bandAuroraStops(first, second, firstMin, firstMax, secondMin, secondMax) {
+        const c1 = this.toneForAurora(first, firstMin, firstMax);
+        const c2 = this.toneForAurora(second, secondMin, secondMax);
+        const blended = this.mixRgbColors(c1, c2, 0.5);
+        return {
+            c1: this.rgbToHexColor(c1),
+            c2: this.rgbToHexColor(c2),
+            c3: this.rgbToHexColor(this.toneForAurora(this.mixRgbColors(blended, AURORA_BASE_RGB, 0.62), 0.05, 0.22))
+        };
+    }
+
+    // Three aurora stops for one colour record.
+    //
+    // Preferred path: the `palette`/`accent` written by
+    // tools/extract-favicon-colors.js, which sees the whole flyer (or the whole
+    // favicon composited over its white plate) instead of two k-means centroids.
+    //
+    // Fallback path (entries that only carry the older faviconBg/faviconFg
+    // pair): the original background/foreground stops, including the
+    // colourfulness veto that sent grey pairs to the site palette. Two grey
+    // centroids really do contain nothing to build an aurora from — the palette
+    // is what makes that veto unnecessary, so it only applies here.
+    deriveAuroraColors(record) {
+        if (!record) return null;
+
+        const entries = this.parsePaletteEntries(record.palette);
+        if (entries.length > 0) {
+            return this.deriveAuroraFromPalette(entries, this.parseHexColor(record.accent));
+        }
+
+        const backgroundRgb = this.parseHexColor(record.bg);
         if (!backgroundRgb) return null;
-        const foregroundRgb = this.parseHexColor(foreground) || backgroundRgb;
+        const foregroundRgb = this.parseHexColor(record.fg) || backgroundRgb;
         const colorfulness = Math.max(
             this.rgbColorfulness(backgroundRgb),
             this.rgbColorfulness(foregroundRgb)
         );
         if (colorfulness < 0.18) return null;
-        const cardBaseRgb = { r: 23, g: 26, b: 51 }; // #171a33
         const blended = this.mixRgbColors(backgroundRgb, foregroundRgb, 0.5);
         return {
             c1: this.rgbToHexColor(this.toneForAurora(backgroundRgb, 0.18, 0.5)),
             c2: this.rgbToHexColor(this.toneForAurora(foregroundRgb, 0.18, 0.5)),
-            c3: this.rgbToHexColor(this.toneForAurora(this.mixRgbColors(blended, cardBaseRgb, 0.6), 0.05, 0.22))
+            c3: this.rgbToHexColor(this.toneForAurora(this.mixRgbColors(blended, AURORA_BASE_RGB, 0.6), 0.05, 0.22))
         };
     }
 
-    // Per-event favicon colors live in data/event-colors/<city>.json as
-    // [{slug, url, faviconBg, faviconFg}]. Nothing loaded them in the browser
-    // before the aurora cards, so fetch once per city and cache the result.
+    // Per-event colors live in data/event-colors/<city>.json as
+    // [{slug, url, faviconBg, faviconFg, paletteSource, palette, accent}].
+    // Nothing loaded them in the browser before the aurora cards, so fetch once
+    // per city and cache the result.
     loadEventColors(city) {
         if (!city) return Promise.resolve(null);
         if (this.eventColorsByCity.has(city)) {
@@ -2189,12 +2328,22 @@ class DynamicCalendarLoader extends CalendarCore {
             .then(entries => {
                 const bySlug = new Map();
                 (Array.isArray(entries) ? entries : []).forEach(entry => {
-                    if (entry && entry.slug && entry.faviconBg) {
-                        bySlug.set(entry.slug, {
-                            bg: entry.faviconBg,
-                            fg: entry.faviconFg || entry.faviconBg
-                        });
-                    }
+                    if (!entry || !entry.slug) return;
+                    // A palette alone is enough: events whose only artwork is a
+                    // flyer (no usable favicon) now get colours too, and they
+                    // carry no faviconBg to gate on.
+                    if (!entry.faviconBg && typeof entry.palette !== 'string') return;
+                    bySlug.set(entry.slug, {
+                        bg: entry.faviconBg,
+                        fg: entry.faviconFg || entry.faviconBg,
+                        palette: entry.palette,
+                        accent: entry.accent,
+                        // The favicon's own background colour, painted behind
+                        // its tile. Dropping it here silently defeated the
+                        // whole plate feature: the data had it, the card asked
+                        // for it, and this normaliser threw it away.
+                        faviconPlate: entry.faviconPlate
+                    });
                 });
                 this.eventColorsByCity.set(city, bySlug);
                 logger.debug('CALENDAR', 'Loaded event colors', { city, count: bySlug.size });
@@ -2226,16 +2375,43 @@ class DynamicCalendarLoader extends CalendarCore {
                 this.loadEventColors(city).then(loaded => {
                     if (loaded && loaded.size > 0) {
                         this.applyEventColorsToRenderedCards();
+                        this.applyEventColorsToRenderedMarkers();
                     }
                 });
             }
             return null;
         }
-        const colors = bySlug.get(event.slug);
-        return colors ? this.deriveAuroraColors(colors.bg, colors.fg) : null;
+        return this.deriveAuroraColors(bySlug.get(event.slug));
     }
 
 
+
+    // The favicon's OWN background colour (faviconPlate — the highest-coverage
+    // colour of the favicon itself, recorded separately from `palette` because
+    // that may describe the flyer). Painting it behind and around the artwork
+    // is what lets the icon breathe without a white halo: a white-backed mark
+    // gets white, Urban Bear's white-on-black gets black, Bearracuda's "B"
+    // gets its own orange. Null when unknown — the tile then falls back to
+    // white in CSS.
+    getFaviconPlateForEvent(event) {
+        const bySlug = this.currentCity ? this.eventColorsByCity.get(this.currentCity) : null;
+        const colors = bySlug ? bySlug.get(event.slug) : null;
+        const plate = colors && colors.faviconPlate;
+        return plate && this.parseHexColor(plate) ? plate : null;
+    }
+
+    // Repaint map markers that were built before the colour file arrived.
+    applyEventColorsToRenderedMarkers() {
+        const bySlug = this.eventColorsByCity.get(this.currentCity);
+        if (!bySlug || bySlug.size === 0) return;
+        document.querySelectorAll('.favicon-marker[data-event-slug]').forEach(marker => {
+            const colors = bySlug.get(marker.getAttribute('data-event-slug'));
+            const plate = colors && colors.faviconPlate;
+            if (plate && this.parseHexColor(plate)) {
+                marker.style.setProperty('--fav-plate', plate);
+            }
+        });
+    }
 
     // Repaint aurora cards that rendered before the color file arrived.
     applyEventColorsToRenderedCards() {
@@ -2243,8 +2419,11 @@ class DynamicCalendarLoader extends CalendarCore {
         if (!bySlug || bySlug.size === 0) return;
         document.querySelectorAll('.event-card.detailed.aurora[data-event-slug]').forEach(card => {
             const colors = bySlug.get(card.getAttribute('data-event-slug'));
-            if (!colors) return;
-            const aurora = this.deriveAuroraColors(colors.bg, colors.fg);
+            const plate = colors && colors.faviconPlate;
+            if (plate && this.parseHexColor(plate)) {
+                card.style.setProperty('--fav-plate', plate);
+            }
+            const aurora = this.deriveAuroraColors(colors);
             if (!aurora) return;
             card.style.setProperty('--c1', aurora.c1);
             card.style.setProperty('--c2', aurora.c2);
@@ -2317,7 +2496,8 @@ class DynamicCalendarLoader extends CalendarCore {
             return `<a href="${href}" target="_blank" rel="noopener" class="event-link icon-only" aria-label="${aria}" title="${aria}"><i class="bi ${iconClass}"></i></a>`;
         }).join(' ') : '';
 
-        const teaHtml = event.tea ? `<div class="ec-tea">${this.escapeCardText(event.tea)}</div>` : '';
+        const teaText = this.sanitizeDisplayText(event.tea);
+        const teaHtml = teaText ? `<div class="ec-tea">${this.escapeCardText(teaText)}</div>` : '';
         const venueRow = this.generateAuroraVenueRow(event);
         const coverRow = this.generateAuroraCoverRow(event);
 
@@ -2370,8 +2550,11 @@ class DynamicCalendarLoader extends CalendarCore {
             `<div class="event-flyer" data-flyer-url="${flyerUrl}"><img src="${flyerUrl}" alt="" loading="lazy" decoding="async" onerror="this.parentNode.remove()"></div>` : '';
 
         const aurora = this.getAuroraColorsForEvent(event);
-        const auroraStyle = aurora ?
-            ` style="--c1:${aurora.c1};--c2:${aurora.c2};--c3:${aurora.c3}"` : '';
+        const plate = this.getFaviconPlateForEvent(event);
+        const styleParts = [];
+        if (aurora) styleParts.push(`--c1:${aurora.c1}`, `--c2:${aurora.c2}`, `--c3:${aurora.c3}`);
+        if (plate) styleParts.push(`--fav-plate:${plate}`);
+        const auroraStyle = styleParts.length ? ` style="${styleParts.join(';')}"` : '';
 
         const slug = this.escapeCardText(event.slug);
         const shareTime = `${event.day || ''}${event.time ? ' ' + event.time : ''}`;
@@ -2403,6 +2586,45 @@ class DynamicCalendarLoader extends CalendarCore {
                 </div>
             </div>
         `;
+    }
+
+    // Strip source-platform formatting from text that is about to be DISPLAYED.
+    // The scraper sanitizes descriptions when it writes them (#1575), but events
+    // already in the calendar keep whatever the source published — Sitges'
+    // Bear Cave events still carry literal "<p>…</p>\\n" from a Wix page, and
+    // dice.fm events carry markdown "**bold**". The site is the display layer,
+    // so it defends itself rather than waiting for every event to be re-scraped.
+    // Escaping happens afterwards via escapeCardText; this only REMOVES markup.
+    sanitizeDisplayText(text) {
+        if (typeof text !== 'string' || !text) return text;
+        let out = text;
+        // Literal two-character escapes ("\n" as backslash + n), then real tags.
+        out = out.replace(/\\r\\n|\\n/g, ' ').replace(/\\r/g, '');
+        out = out.replace(/<!--[\s\S]*?-->/g, '');
+        out = out.replace(/<\/?(?:p|div|br|li|ul|ol|h[1-6]|section|article|span|strong|b|em|i|u|a|img|figure|figcaption|blockquote|pre|code)\b[^<>]*\/?>/gi, ' ');
+        // Common entities, ampersand first so double-encoding resolves.
+        out = out.replace(/&amp;/gi, '&').replace(/&nbsp;/gi, ' ')
+                 .replace(/&lt;/gi, '<').replace(/&gt;/gi, '>')
+                 .replace(/&quot;/gi, '"').replace(/&(?:#39|#039|apos);/gi, "'");
+        // Markdown emphasis runs and backslash-escaped punctuation. Escaped
+        // characters are parked behind placeholders FIRST (same approach as the
+        // scraper's sanitizer): otherwise "\\*Now on Saturdays\\***" has its
+        // escaped asterisk counted as part of a run and leaves a stray
+        // backslash behind.
+        out = out.replace(/\[([^\[\]\n]*)\]\([^()\n]*\)/g, '$1');
+        out = out.split('\\*').join('\uE000').split('\\_').join('\uE001');
+        out = out.replace(/\*{2,}|_{2,}/g, '');
+        out = out.split('\uE000').join('*').split('\uE001').join('_');
+        out = out.replace(/\\([*_#\[\].])/g, '$1');
+        // Leftover ESCAPE RESIDUE. Stored descriptions can end in bare
+        // backslashes — Sitges' Bear Cave events carry "</p>\\\\" because a
+        // literal "\\n" from the source page went through ICS escaping and came
+        // back as backslashes with nothing to escape. Nothing in event copy
+        // legitimately ends on a backslash, so runs of them, and any backslash
+        // left dangling before whitespace or end-of-string, are dropped.
+        out = out.replace(/\\{2,}/g, '').replace(/\\+(?=\s|$)/g, '');
+        // Collapse the whitespace the removals leave behind.
+        return out.replace(/\s{2,}/g, ' ').trim();
     }
 
     // Clipboard write that works WITHOUT a secure context (plain-http

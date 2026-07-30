@@ -357,6 +357,13 @@ function cleanBarObject(bar) {
         'favicon',
         'faviconBg',
         'faviconFg',
+        // Richer palette from tools/extract-favicon-colors.js. Local-only, like
+        // faviconBg/faviconFg — the sheet never carries these, so they have to be
+        // in the keep-list or a sync silently drops them.
+        'paletteSource',
+        'palette',
+        'accent',
+        'faviconPlate',
         'wikipediaExtractionFailureAt',
         'wikipediaExtractionFailureMessage',
         'gayCitiesExtractionFailureAt',

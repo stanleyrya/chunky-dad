@@ -3,24 +3,40 @@
     "slug": "friday-11th-september-beefmince-sports-zone-6972e7c6",
     "url": "https://beefmince.com",
     "faviconBg": "#060606",
-    "faviconFg": "#131313"
+    "faviconFg": "#131313",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#010101:19:0 #998677:15:3 #130d0c:14:1 #dec467:8:12 #8d0b2c:8:16",
+    "accent": "#8d0b2c"
   },
   {
     "slug": "saturday-12th-september-beefmince-the-big-ball-13a48cc3",
     "url": "https://beefmince.com",
     "faviconBg": "#060606",
-    "faviconFg": "#131313"
+    "faviconFg": "#131313",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#000000:44:0 #958971:12:4 #1a1916:10:1 #ecc31d:5:16 #bb132c:2:20",
+    "accent": "#ecc31d"
   },
   {
     "slug": "thursday-10th-september-beefmince-disco-511f64f9",
     "url": "https://beefmince.com",
     "faviconBg": "#060606",
-    "faviconFg": "#131313"
+    "faviconFg": "#131313",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#000000:54:0 #fcf9f6:13:1 #2f2219:9:3 #a43e29:6:14 #eec420:5:16",
+    "accent": "#eec420"
   },
   {
     "slug": "wednesday-9th-september-beefmince-meet-market-795b165c",
     "url": "https://beefmince.com",
     "faviconBg": "#060606",
-    "faviconFg": "#131313"
+    "faviconFg": "#131313",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#0a2349:23:8 #eb6a43:18:17 #1701aa:14:23 #165a8b:10:10 #e7c41e:6:16",
+    "accent": "#1701aa"
   }
 ]

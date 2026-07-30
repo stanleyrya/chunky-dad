@@ -20,6 +20,9 @@
     "facebook": "https://www.facebook.com/lonestareagle",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
     "faviconBg": "#ffffff",
-    "faviconFg": "#fefefe"
+    "faviconFg": "#fefefe",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:100:0",
+    "faviconPlate": "#ffffff"
   }
 ]

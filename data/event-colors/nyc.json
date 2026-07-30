@@ -3,43 +3,75 @@
     "slug": "bear-happy-hour-66e240de",
     "url": "https://linktr.ee/bearhappyhour",
     "faviconBg": "#fbfbf9",
-    "faviconFg": "#6b6661"
+    "faviconFg": "#6a6661",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:78:0 #010101:5:0 #cdcecf:5:0 #f6e529:1:18 #f2592a:1:20",
+    "accent": "#f2592a"
   },
   {
     "slug": "bears-are-animals-4cf796ee",
     "url": "https://animal.nyc",
     "faviconBg": "#e51a1a",
-    "faviconFg": "#f31c1c"
+    "faviconFg": "#f31c1c",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:61:0 #e51a1a:36:23 #f8bdbd:2:7 #f39393:1:12 #ef7272:1:15",
+    "accent": "#e51a1a"
   },
   {
     "slug": "bears-night-out-3d00f897",
     "url": "https://www.theurbanbear.com/",
     "faviconBg": "#141414",
-    "faviconFg": "#dcdcdc"
+    "faviconFg": "#dcdcdc",
+    "faviconPlate": "#000000",
+    "paletteSource": "favicon",
+    "palette": "#000000:54:0 #ffffff:27:0 #d9d9d9:5:0"
   },
   {
     "slug": "beer-blast-15963ca2",
     "url": "https://eagle-ny.com",
     "faviconBg": "#f0f0f0",
-    "faviconFg": "#565656"
+    "faviconFg": "#565656",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:74:0 #656565:5:0 #8a8a8a:5:0"
+  },
+  {
+    "slug": "chunk-brooklyn-59-7ffcc74a",
+    "paletteSource": "flyer",
+    "palette": "#442c43:17:5 #130c24:17:5 #8c534b:13:8 #c38363:10:9 #455384:9:8",
+    "accent": "#c38363"
   },
   {
     "slug": "chunk-brooklyn-74-31b4fb03",
     "url": "https://www.chunk-party.com",
     "faviconBg": "#f6f4f5",
-    "faviconFg": "#2e2933"
+    "faviconFg": "#2e2933",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#c2a4e4:29:10 #a45ac3:20:17 #623baa:18:17 #2b147c:15:16 #89d242:3:19",
+    "accent": "#a45ac3"
   },
   {
     "slug": "chunk-brooklyn-the-return-5dd73bae",
     "url": "https://www.chunk-party.com/event-details/chunk-brooklyn-the-return",
     "faviconBg": "#f6f4f5",
-    "faviconFg": "#2e2933"
+    "faviconFg": "#2e2933",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ebe49c:24:9 #d3c593:15:7 #b2a489:14:4 #6b4492:11:13 #44356b:7:9",
+    "accent": "#6b4492"
   },
   {
     "slug": "fuzzy-0380f9f1",
     "url": "https://fuzzy.nyc/",
     "faviconBg": "#e69dc7",
-    "faviconFg": "#140b10"
+    "faviconFg": "#140b10",
+    "faviconPlate": "#eba1cc",
+    "paletteSource": "favicon",
+    "palette": "#ea9eca:70:11 #020202:18:0 #c38cab:3:8 #95687f:2:7 #633d54:2:6",
+    "accent": "#ea9eca"
   },
   {
     "slug": "fuzzy-2-1d2fb8ea",
@@ -48,15 +80,29 @@
     "faviconFg": "#140b10"
   },
   {
+    "slug": "goldiloxx-mdw-43e392ec",
+    "paletteSource": "flyer",
+    "palette": "#2b2324:21:1 #130f10:17:1 #c59066:15:9 #965a3c:14:9 #eecc0d:4:17",
+    "accent": "#eecc0d"
+  },
+  {
     "slug": "megawoof-bearmilk-present-megamilk-42f507f5",
     "url": "https://linktr.ee/megawoof_america",
     "faviconBg": "#575d64",
-    "faviconFg": "#abb2ba"
+    "faviconFg": "#abb2ba",
+    "faviconPlate": "#acb4bc",
+    "paletteSource": "flyer",
+    "palette": "#03030b:20:2 #1b1c34:17:4 #493449:14:5 #895f6b:14:6 #3f41a8:5:16",
+    "accent": "#3f41a8"
   },
   {
     "slug": "underbear-leather-kink-3fe96ee0",
     "url": "https://www.furball.nyc",
-    "faviconBg": "#302f35",
-    "faviconFg": "#f8f8f8"
+    "faviconBg": "#2d2c32",
+    "faviconFg": "#f7f7f7",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#000001:26:1 #2c0c11:17:5 #030a34:15:8 #6c2522:10:10 #0b1167:6:14",
+    "accent": "#0b1167"
   }
 ]

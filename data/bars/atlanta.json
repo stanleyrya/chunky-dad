@@ -6,6 +6,10 @@
     "coordinates": "33.8115012, -84.3552779",
     "website": "https://hereticatlanta.com",
     "faviconBg": "#481818",
-    "faviconFg": "#a09f9f"
+    "faviconFg": "#a09f9f",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:38:0 #bdbdbc:16:0 #020101:14:1 #710403:5:14 #c10303:4:21",
+    "accent": "#c10303",
+    "faviconPlate": "#ffffff"
   }
 ]

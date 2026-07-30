@@ -17,6 +17,10 @@
     "website": "https://legacybos.com",
     "instagram": "https://www.instagram.com/legacybos",
     "faviconBg": "#b47d04",
-    "faviconFg": "#c38703"
+    "faviconFg": "#c38703",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:81:0 #b57e02:9:13 #eaddc1:4:4 #cfae67:3:10 #c8a04b:2:11",
+    "accent": "#b57e02",
+    "faviconPlate": "#ffffff"
   }
 ]

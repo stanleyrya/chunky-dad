@@ -58,6 +58,10 @@
     "coordinates": "37.7688931, -122.4192651",
     "website": "https://publicsf.com",
     "faviconBg": "#f35425",
-    "faviconFg": "#fd5825"
+    "faviconFg": "#fd5825",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:74:0 #f15323:22:20 #f79a80:3:12 #f9b5a2:1:8",
+    "accent": "#f15323",
+    "faviconPlate": "#ffffff"
   }
 ]

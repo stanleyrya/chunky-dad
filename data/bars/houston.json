@@ -8,6 +8,10 @@
     "instagram": "https://www.instagram.com/richshtx",
     "facebook": "https://www.facebook.com/richshtx",
     "faviconBg": "#b89c52",
-    "faviconFg": "#caae62"
+    "faviconFg": "#caae62",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:78:0 #e5dabd:21:4 #ccb781:1:7",
+    "accent": "#ccb781",
+    "faviconPlate": "#ffffff"
   }
 ]

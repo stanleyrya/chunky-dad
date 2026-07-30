@@ -3,25 +3,41 @@
     "slug": "bearracuda-0f2c13d7",
     "url": "https://bearracuda.com/events/denverpride/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#1c122a:24:5 #39285c:21:9 #4840c7:12:20 #7c4363:11:9 #d352c8:7:21",
+    "accent": "#4840c7"
   },
   {
     "slug": "denver-39553322",
     "url": "https://bearracuda.com/events/denverjockstrap/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#2a1e20:22:2 #d43332:14:20 #b48b84:14:5 #832b25:10:12 #ddb99f:10:5",
+    "accent": "#d43332"
   },
   {
     "slug": "denver-42126767",
     "url": "https://bearracuda.com/events/denvermarch/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "favicon",
+    "palette": "#ff3c00:72:24 #fffefe:27:0 #ff9f81:1:12",
+    "accent": "#ff3c00"
   },
   {
     "slug": "denver-pride-2021bba4",
     "url": "https://bearracuda.com/events/denverpride26/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#6c5653:18:3 #0a0d0c:17:0 #3b3c44:17:1 #a36e60:15:7",
+    "accent": "#a36e60"
   },
   {
     "slug": "denverpride-2021bba4",
@@ -33,6 +49,15 @@
     "slug": "megawoof-37fcce1a",
     "url": "https://www.eventbrite.com/e/megawoof-america-denver-massive-2-parties-1-ticket-tickets-1381219547849",
     "faviconBg": "#ff5e30",
-    "faviconFg": "#ff6333"
+    "faviconFg": "#ff6333",
+    "paletteSource": "flyer",
+    "palette": "#120c0a:31:1 #2b1b1c:17:3 #4b2e20:15:5 #88301c:11:12 #e37335:8:16",
+    "accent": "#e37335"
+  },
+  {
+    "slug": "twisted-bear-denver-feat-djproducer-matt-consola-0fcf1526",
+    "paletteSource": "flyer",
+    "palette": "#0a0e11:55:1 #362a31:11:2 #ccb9b2:9:2 #ca332c:4:19",
+    "accent": "#ca332c"
   }
 ]

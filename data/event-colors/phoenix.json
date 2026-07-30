@@ -3,18 +3,30 @@
     "slug": "bearracuda-phoenix-relaunch-party-320faa75",
     "url": "https://bearracuda.com/events/phoenix/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#1c1412:40:1 #322521:19:2 #c38265:9:9 #8c6248:9:7 #75321f:7:10",
+    "accent": "#c38265"
   },
   {
     "slug": "megawoof-2f8a9cb8",
     "url": "https://linktr.ee/megawoof_america",
     "faviconBg": "#575d64",
-    "faviconFg": "#abb2ba"
+    "faviconFg": "#abb2ba",
+    "faviconPlate": "#acb4bc",
+    "paletteSource": "flyer",
+    "palette": "#13151c:38:1 #3a2a2a:20:2 #952a1a:12:15 #cb5730:11:16 #f4f53c:1:19",
+    "accent": "#cb5730"
   },
   {
     "slug": "megawoof-america-phoenix-summer-woofers-007d0b12",
     "url": "https://linktr.ee/megawoof_america",
     "faviconBg": "#575d64",
-    "faviconFg": "#abb2ba"
+    "faviconFg": "#abb2ba",
+    "faviconPlate": "#acb4bc",
+    "paletteSource": "flyer",
+    "palette": "#c85a5b:14:14 #3c292a:14:3 #ddb5b4:14:5 #7b2d23:12:11",
+    "accent": "#c85a5b"
   }
 ]
