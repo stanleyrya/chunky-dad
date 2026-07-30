@@ -3107,6 +3107,10 @@
           baseState.description = '';
         }
         state = { ...baseState, ...urlState.overrides };
+        // A prefilled timezone (from the scraper's Event Builder link) is the
+        // EVENT's zone and must win over the device's — a phone in Eastern was
+        // saving LA events three hours early, which then failed to match on the
+        // next scrape (CubScout, 2026-07-30). Bare opens still use the browser.
         state.timezone = state.timezone || browserTimezone;
         normalizeStateLinks();
         ensureDateOrder();

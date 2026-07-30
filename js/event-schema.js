@@ -169,6 +169,9 @@ const EVENT_BUILDER_STATE_KEY_BY_EVENT_KEY = Object.freeze({
     title: 'name',
     shortName: 'shortName',
     city: 'city',
+    // The event's zone, so a prefill is interpreted in the EVENT's timezone
+    // rather than the device's (see scriptable-adapter buildEventBuilderUrl).
+    timezone: 'timezone',
     venue: 'venue',
     bar: 'savedBar',
     address: 'address',

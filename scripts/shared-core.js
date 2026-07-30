@@ -9248,6 +9248,22 @@ class SharedCore {
                 if (event._recurringNoStartTime === true) {
                     analyzedEvent._recurringNoStartTime = true;
                 }
+                // Override identity is WRITE identity: it names a single
+                // occurrence to replace inside an existing series. A series we
+                // are withholding will never be written by the scraper, so
+                // stamping it is incoherent — and it leaked into the merge plan
+                // and the stored notes (CubScout 2026-07-30: overrideUid +
+                // overrideRecurrenceId appeared as ADDED fields on an event the
+                // same run refused to write). The series still round-trips
+                // through the ICS export, which mints its own UID.
+                if (analyzedEvent.overrideUid || analyzedEvent.overrideRecurrenceId) {
+                    delete analyzedEvent.overrideUid;
+                    delete analyzedEvent.overrideRecurrenceId;
+                    if (analyzedEvent.notes) {
+                        analyzedEvent.notes = this.formatEventNotes(analyzedEvent);
+                    }
+                    console.log(`🔁 RECURRING: "${event.title || 'Unknown'}" dropped override identity — the scraper never writes series occurrences`);
+                }
                 console.log(`🔁 RECURRING: "${event.title || 'Unknown'}" withheld from calendar write — save via ICS export`);
             }
 
