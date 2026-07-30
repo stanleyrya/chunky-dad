@@ -627,6 +627,20 @@ class AiWebParser {
                 } else {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from JSON-LD structured data — skipping OCR and AI extraction`);
                 }
+                // Structured-data events skip normalizeAiEvent, so the title
+                // cleanups that live there have to be applied here as well —
+                // the Bear Cave's Sitges listings arrive via JSON-LD carrying
+                // the whole date in the title ("Wednesday 9th September –
+                // BEEFMINCE MEET MARKET"), and a strip placed only in
+                // normalizeAiEvent never saw them.
+                structuredEvents.forEach(event => {
+                    if (!event || typeof event.title !== 'string' || !event.title.trim()) return;
+                    const strippedTitle = this.stripLeadingDatePhraseFromTitle(event.title);
+                    if (strippedTitle !== event.title) {
+                        console.log(`🤖 AI Web: Stripped leading date from title "${event.title}" → "${strippedTitle}"`);
+                        event.title = strippedTitle;
+                    }
+                });
                 if (pageBrandNames.length > 0) {
                     structuredEvents.forEach(event => {
                         event._organizer = pageBrandNames[0];
@@ -7530,6 +7544,55 @@ class AiWebParser {
         return guarded;
     }
 
+
+    // Leading date phrase on an event TITLE, e.g. the Bear Cave's
+    // "Wednesday 9th September – BEEFMINCE MEET MARKET". The day-header gate
+    // above correctly KEEPS these (there is a real name after the date), so
+    // what is needed is a strip, not a rejection. Vocabulary-driven like the
+    // rest of the date handling — no hardcoded per-site rules.
+    //
+    // Fail closed: the prefix must contain an actual date token (weekday,
+    // month name, or a day number) AND be followed by a separator, AND the
+    // remainder must still look like a name. "CHUNK Portland - 5/23" keeps its
+    // trailing date; "Lunes de Carnaval Party" is untouched (no separator).
+    stripLeadingDatePhraseFromTitle(title) {
+        const original = String(title || '');
+        const text = this.normalizeWhitespace(original);
+        if (!text) return original;
+        const separatorMatch = text.match(/^(.{3,40}?)\s*[\u2013\u2014\-:|]\s+(.+)$/);
+        if (!separatorMatch) return original;
+        const prefix = separatorMatch[1];
+        const remainder = separatorMatch[2].trim();
+        if (remainder.length < 3 || !/[a-z]/i.test(remainder)) return original;
+
+        const foldedPrefix = this.foldDiacritics(prefix.toLowerCase());
+        const vocab = this.getMultilingualDateVocabulary();
+        const monthNames = Object.keys(vocab.monthsByName || {});
+        // The vocabulary exposes months by name; weekday coverage comes from
+        // its header patterns plus the English list below (the titles this
+        // targets are English-language listings).
+        const weekdayNames = [];
+        const englishWeekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+        const englishMonths = ['january', 'february', 'march', 'april', 'may', 'june', 'july',
+            'august', 'september', 'october', 'november', 'december'];
+        const hasNameToken = [...monthNames, ...weekdayNames, ...englishWeekdays, ...englishMonths]
+            .some(name => name && name.length >= 3 && foldedPrefix.includes(name));
+        if (!hasNameToken) return original;
+
+        // Every remaining prefix token must be date-ish: a weekday/month name,
+        // a day number (optionally ordinal), or a comma. Anything else means
+        // the prefix carries meaning ("Bear Week Sitges – Opening").
+        const tokens = foldedPrefix.split(/[\s,]+/).filter(Boolean);
+        const isDateToken = (token) => {
+            if (/^\d{1,4}(?:st|nd|rd|th)?$/.test(token)) return true;
+            return [...monthNames, ...weekdayNames, ...englishWeekdays, ...englishMonths]
+                .some(name => name && name.length >= 3 && token === name);
+        };
+        if (!tokens.every(isDateToken)) return original;
+        return remainder;
+    }
+
+
     // Padded-token containment of a candidate title in any '|'-separated
     // segment of the page's own og:title or <title> tag. Case-insensitive,
     // punctuation-collapsed; empty inputs never match.
@@ -7729,6 +7792,10 @@ class AiWebParser {
             // (extractSingleEvent keeps a backstop for titles that arrive via
             // other routes).
             validatedPartial = this.rejectDayHeaderEchoPassFields(validatedPartial);
+            // Same treatment for a short, garbled description (a flyer OCR
+            // pass produced "CB JUR UO NO KKLYN" and it shipped as an event's
+            // description): drop it here so the field stays open for a later
+            // pass instead of carrying unreadable text through.
 
             // Track field sources for traceability
             const validatedFields = validationState ? validationState.validatedFields : new Set();
@@ -10638,6 +10705,19 @@ TEXT:
             aiEvent.summary,
             this.getResolvedParserMetadataFieldValue(parserConfig, ['title', 'name', 'summary'], aiEvent)
         );
+        // Strip a leading date phrase HERE rather than in the per-pass guard:
+        // titles also arrive from segment headings and config metadata, which
+        // never pass through that guard — a live BEEFMINCE run showed the
+        // Sitges titles ("Wednesday 9th September – BEEFMINCE MEET MARKET")
+        // reaching the event untouched. This is the one point every route
+        // converges on.
+        if (title) {
+            const strippedTitle = this.stripLeadingDatePhraseFromTitle(title);
+            if (strippedTitle !== title) {
+                console.log(`🤖 AI Web: Stripped leading date from title "${title}" → "${strippedTitle}"`);
+                title = strippedTitle;
+            }
+        }
         const aiDescription = this.firstNonEmpty(aiEvent.description, aiEvent.desc, '');
         const configDescription = this.firstNonEmpty(
             this.getResolvedParserMetadataFieldValue(parserConfig, ['description', 'desc'], aiEvent),

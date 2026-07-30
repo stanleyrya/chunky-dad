@@ -8191,3 +8191,22 @@ test('image slots: real bearracuda.com og:image dimensions resolve a portrait sl
   assert.equal(event.imageVertical, 'https://bearracuda.com/wp-content/uploads/2026/07/sausageweb.jpg');
   assert.equal(event.imageHorizontal, undefined);
 });
+
+test('strips a leading date phrase from an event title, and only then', () => {
+  const parser = createParser();
+  const strip = (title) => parser.stripLeadingDatePhraseFromTitle(title);
+
+  // The Bear Cave's Sitges listings put the whole date in the title.
+  assert.equal(strip('Wednesday 9th September – BEEFMINCE MEET MARKET'), 'BEEFMINCE MEET MARKET');
+  assert.equal(strip('Saturday 12th September – BEEFMINCE: THE BIG BALL'), 'BEEFMINCE: THE BIG BALL');
+  assert.equal(strip('Friday 11th September – BEEFMINCE SPORTS ZONE'), 'BEEFMINCE SPORTS ZONE');
+
+  // Fail closed everywhere else: a trailing date stays, a meaningful prefix
+  // stays, and a title with no separator is untouched.
+  assert.equal(strip('CHUNK Portland - 5/23'), 'CHUNK Portland - 5/23');
+  assert.equal(strip('CHUNK Brooklyn 7/4'), 'CHUNK Brooklyn 7/4');
+  assert.equal(strip('TREASURE TRAIL Portland: TIX AT THE DOOR'), 'TREASURE TRAIL Portland: TIX AT THE DOOR');
+  assert.equal(strip('Bearracuda Atlanta: Winter Beef Ball'), 'Bearracuda Atlanta: Winter Beef Ball');
+  assert.equal(strip('Bear Week Sitges - Opening Party'), 'Bear Week Sitges - Opening Party');
+  assert.equal(strip(''), '');
+});
