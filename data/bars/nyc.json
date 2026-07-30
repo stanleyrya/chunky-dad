@@ -143,5 +143,11 @@
     "palette": "#000021:69:8 #eef3fe:7:2 #1633fd:7:29 #eb1c25:5:23 #953f71:4:13",
     "accent": "#1633fd",
     "faviconPlate": "#000021"
+  },
+  {
+    "name": "C'mon Everybody",
+    "city": "nyc",
+    "address": "325 Franklin Avenue, New York, New York, 11216",
+    "coordinates": "40.6882793, -73.9569264"
   }
 ]
