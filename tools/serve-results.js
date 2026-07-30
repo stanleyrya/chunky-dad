@@ -130,7 +130,6 @@ const BRIDGE_SHIM_MARKER = 'chunky-server-bridge-shim';
 //   registries = {
 //     mapVerifyUrls:   { id → real https URL }   (open-url bridge)
 //     venueSnippets:   { index → parser entry }  (copy-venue bridge)
-//     activeConfigJson: string                   (copy-config bridge)
 //   }
 // ---------------------------------------------------------------------------
 function rewriteBridgeHtml(html, registries = {}) {
@@ -144,9 +143,6 @@ function rewriteBridgeHtml(html, registries = {}) {
     const venueSnippets = registries.venueSnippets && typeof registries.venueSnippets === 'object'
         ? registries.venueSnippets
         : {};
-    const activeConfigJson = typeof registries.activeConfigJson === 'string'
-        ? registries.activeConfigJson
-        : '';
 
     // 1) open-url → plain anchors: swap the bridge onclick for the real URL
     //    from the per-render registry, opening in a new tab.
@@ -173,8 +169,7 @@ function rewriteBridgeHtml(html, registries = {}) {
 <script>
 (function () {
     window.__serverBridgeData = {
-        venueSnippets: ${jsonForInlineScript(venueSnippets)},
-        activeConfigJson: ${jsonForInlineScript(activeConfigJson)}
+        venueSnippets: ${jsonForInlineScript(venueSnippets)}
     };
 })();
 // Clipboard with non-secure-context fallback: navigator.clipboard only exists
@@ -213,15 +208,6 @@ function copyVenueEntry(btn) {
     serverCopyText(snippet, function (ok) {
         if (ok && typeof markVenueEntryCopied === 'function') markVenueEntryCopied(idx);
         if (!ok) window.prompt('Copy manually (clipboard needs HTTPS — try tailscale serve):', snippet);
-    });
-}
-// copy-config: same story with the redacted effective-config JSON.
-function copyActiveConfig(btn) {
-    var json = window.__serverBridgeData.activeConfigJson;
-    if (typeof json !== 'string' || !json) return;
-    serverCopyText(json, function (ok) {
-        if (ok && typeof markConfigCopied === 'function') markConfigCopied();
-        if (!ok) window.prompt('Copy manually (clipboard needs HTTPS — try tailscale serve):', json);
     });
 }
 // export-ics: native built the ICS and opened DocumentPicker; the browser
@@ -473,13 +459,7 @@ async function renderLatestResults(state, saved) {
         mapVerifyUrls: adapter._mapVerifyUrls || {},
         venueSnippets: typeof adapter.collectVenueEntrySnippets === 'function'
             ? adapter.collectVenueEntrySnippets(results)
-            : {},
-        activeConfigJson: (() => {
-            const summary = typeof adapter.buildActiveConfigSummaryForResults === 'function'
-                ? adapter.buildActiveConfigSummaryForResults(results)
-                : null;
-            return summary && typeof summary.json === 'string' ? summary.json : '';
-        })()
+            : {}
     };
     state.icsRegistry = adapter._icsExportEvents || {};
     state.lastRenderResults = results;

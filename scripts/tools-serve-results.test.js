@@ -223,8 +223,7 @@ test('rewriteBridgeHtml on a full generateRichHTML render removes every chunkysc
 
   const registries = {
     mapVerifyUrls: adapter._mapVerifyUrls || {},
-    venueSnippets: adapter.collectVenueEntrySnippets(results),
-    activeConfigJson: (adapter.buildActiveConfigSummaryForResults(results) || {}).json || ''
+    venueSnippets: adapter.collectVenueEntrySnippets(results)
   };
   const rewritten = rewriteBridgeHtml(html, registries);
 
@@ -249,8 +248,7 @@ test('rewriteBridgeHtml on a full generateRichHTML render removes every chunkysc
 
 test('rewriteBridgeHtml escapes payloads that could break out of the inline script', () => {
   const rewritten = rewriteBridgeHtml('<html><body></body></html>', {
-    venueSnippets: { 0: 'evil </script><script>alert(1)</script>' },
-    activeConfigJson: '{"a":"</script>"}'
+    venueSnippets: { 0: 'evil </script><script>alert(1)</script>' }
   });
   assert.ok(!rewritten.includes('</script><script>alert(1)'), 'payload cannot terminate the shim script');
   assert.ok(rewritten.includes('\\u003c/script'), 'angle brackets JSON-escaped');

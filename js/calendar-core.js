@@ -402,6 +402,19 @@ class CalendarCore {
                     if (additionalData.image) {
                         eventData.image = additionalData.image;
                     }
+                    // Orientation slots. parseKeyValueDescription lower-cases
+                    // the notes key before canonicalizing, so an un-aliased
+                    // "imageVertical:" arrives here as "imagevertical" —
+                    // both spellings are read so this works whether or not the
+                    // schema has aliases for them yet.
+                    const imageVertical = additionalData.imageVertical || additionalData.imagevertical;
+                    if (imageVertical) {
+                        eventData.imageVertical = imageVertical;
+                    }
+                    const imageHorizontal = additionalData.imageHorizontal || additionalData.imagehorizontal;
+                    if (imageHorizontal) {
+                        eventData.imageHorizontal = imageHorizontal;
+                    }
                     if (additionalData.favicon) {
                         eventData.favicon = additionalData.favicon;
                     }
@@ -655,7 +668,11 @@ class CalendarCore {
                     
                     
                     // Additional validation for URLs
-                    if (['website', 'instagram', 'facebook', 'gmaps', 'image', 'favicon', 'ticketUrl'].includes(mappedKey)) {
+                    // Both casings of the orientation slots are listed: `key`
+                    // is already lower-cased above, so an un-aliased
+                    // "imageVertical" canonicalizes to "imagevertical".
+                    if (['website', 'instagram', 'facebook', 'gmaps', 'image', 'favicon', 'ticketUrl',
+                         'imageVertical', 'imagevertical', 'imageHorizontal', 'imagehorizontal'].includes(mappedKey)) {
                         // Ensure we have a valid URL
                         if (value.startsWith('http://') || value.startsWith('https://')) {
                             data[mappedKey] = value;

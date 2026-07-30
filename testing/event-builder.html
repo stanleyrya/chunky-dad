@@ -1155,6 +1155,76 @@
       display: block;
     }
 
+    /* Image candidate strip: one thumbnail per known flyer URL. `contain`, not
+       `cover` — the whole point is seeing which candidate is portrait and which
+       is landscape, and a cover crop hides exactly that. */
+    /* The strip spans the whole field grid so the thumbnails sit in a row. */
+    .image-candidates-group {
+      grid-column: 1 / -1;
+    }
+
+    .image-candidates-label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--muted, #9aa4b2);
+      margin-bottom: 0.35rem;
+    }
+
+    .image-candidates {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+    }
+
+    .image-candidates[data-empty="1"] {
+      display: none;
+    }
+
+    .image-candidate {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.35rem;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.04);
+      cursor: pointer;
+      font: inherit;
+      color: inherit;
+      max-width: 140px;
+    }
+
+    .image-candidate:hover,
+    .image-candidate:focus-visible {
+      border-color: var(--accent);
+    }
+
+    .image-candidate[data-primary="1"] {
+      border-color: var(--accent);
+      box-shadow: inset 0 0 0 1px var(--accent);
+      cursor: default;
+    }
+
+    .image-candidate img {
+      width: 120px;
+      height: 120px;
+      object-fit: contain;
+      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.3);
+      display: block;
+    }
+
+    .image-candidate-badge {
+      font-size: 0.7rem;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: var(--muted, #9aa4b2);
+      text-align: center;
+      line-height: 1.3;
+      overflow-wrap: anywhere;
+    }
+
     .diff-coords-link {
       display: inline-flex;
       align-items: center;
@@ -2343,6 +2413,33 @@
                   <small>Image uploads aren’t allowed at this time, but you can add a public image link here.</small>
                 </div>
                 <div class="field-group">
+                  <label for="event-image-vertical">Portrait Image URL</label>
+                  <div class="input-with-action">
+                    <input type="url" id="event-image-vertical" placeholder="https://chunky.dad/img/events/sample-portrait.jpg">
+                    <button type="button" class="field-action field-action-inline" data-paste-target="event-image-vertical" aria-label="Paste portrait image link">
+                      <i class="bi bi-clipboard-plus" aria-hidden="true"></i>
+                      <span>Paste</span>
+                    </button>
+                  </div>
+                  <small>Tall/portrait version of the flyer. Used by the event cards, which show artwork at its natural aspect ratio.</small>
+                </div>
+                <div class="field-group">
+                  <label for="event-image-horizontal">Landscape Image URL</label>
+                  <div class="input-with-action">
+                    <input type="url" id="event-image-horizontal" placeholder="https://chunky.dad/img/events/sample-landscape.jpg">
+                    <button type="button" class="field-action field-action-inline" data-paste-target="event-image-horizontal" aria-label="Paste landscape image link">
+                      <i class="bi bi-clipboard-plus" aria-hidden="true"></i>
+                      <span>Paste</span>
+                    </button>
+                  </div>
+                  <small>Wide/landscape version of the flyer. Used for share cards (1200×630) and anywhere a wide crop reads better.</small>
+                </div>
+                <div class="field-group image-candidates-group">
+                  <span class="image-candidates-label">Image candidates</span>
+                  <div class="image-candidates" id="image-candidates" data-empty="1"></div>
+                  <small>Loaded previews show their real pixel size. Click one to promote it to the Promo Image (the current promo image takes its place).</small>
+                </div>
+                <div class="field-group">
                   <label for="event-favicon">Custom Icon URL</label>
                   <div class="input-with-action">
                     <input type="url" id="event-favicon" placeholder="https://example.com/favicon.ico">
@@ -3102,6 +3199,9 @@
         dom.facebookInput = document.getElementById('event-facebook');
         dom.gmapsInput = document.getElementById('event-gmaps');
         dom.imageInput = document.getElementById('event-image');
+        dom.imageVerticalInput = document.getElementById('event-image-vertical');
+        dom.imageHorizontalInput = document.getElementById('event-image-horizontal');
+        dom.imageCandidates = document.getElementById('image-candidates');
         dom.faviconInput = document.getElementById('event-favicon');
         dom.resetButton = document.getElementById('reset-form');
         dom.addToCalendarButton = document.getElementById('add-to-calendar');
@@ -5742,6 +5842,8 @@
           useVenueInstagram: false,
           useVenueFacebook: false,
           image: normalizeText(eventData.image || ''),
+          imageVertical: normalizeText(eventData.imageVertical || ''),
+          imageHorizontal: normalizeText(eventData.imageHorizontal || ''),
           editingExistingOverrideType: '',
           editingExistingSourceUid: '',
           editingExistingOverrideRecurrenceId: '',
@@ -6395,6 +6497,8 @@
         facebook: 'Facebook',
         gmaps: 'Google Maps',
         image: 'Image',
+        imageVertical: 'Portrait image',
+        imageHorizontal: 'Landscape image',
         favicon: 'Icon URL'
       });
 
@@ -6659,7 +6763,7 @@ Example output:
 
       function richDiffHtml(field, rawValue) {
         if (!rawValue) return '';
-        if (field === 'image') {
+        if (field === 'image' || field === 'imageVertical' || field === 'imageHorizontal') {
           // Only render preview for https:// URLs to avoid security risks
           if (!rawValue.startsWith('https://')) return '';
           return `<div class="diff-rich-block"><img src="${escapeDiffHtml(rawValue)}" class="diff-img-preview" alt="Event image preview" loading="lazy" onerror="this.style.display='none'"></div>`;
@@ -7210,6 +7314,8 @@ Example output:
           useVenueInstagram: false,
           useVenueFacebook: false,
           image: '',
+          imageVertical: '',
+          imageHorizontal: '',
           favicon: '',
           isEditingExisting: false,
           editingExistingId: '',
@@ -7378,6 +7484,28 @@ Example output:
         return EventSchema;
       }
 
+      // The orientation slots resolved locally, so the builder round-trips them
+      // whether or not EventSchema's builder-state map knows them yet.
+      const IMAGE_SLOT_PARAM_TO_STATE_KEY = Object.freeze({
+        imagevertical: 'imageVertical',
+        imgvertical: 'imageVertical',
+        imgv: 'imageVertical',
+        verticalimage: 'imageVertical',
+        portraitimage: 'imageVertical',
+        imagehorizontal: 'imageHorizontal',
+        imghorizontal: 'imageHorizontal',
+        imgh: 'imageHorizontal',
+        horizontalimage: 'imageHorizontal',
+        landscapeimage: 'imageHorizontal'
+      });
+
+      function getImageSlotStateKey(paramKey) {
+        const normalized = String(paramKey || '').toLowerCase().replace(/[\s\-_]/g, '');
+        return Object.prototype.hasOwnProperty.call(IMAGE_SLOT_PARAM_TO_STATE_KEY, normalized)
+          ? IMAGE_SLOT_PARAM_TO_STATE_KEY[normalized]
+          : null;
+      }
+
       function loadStateFromUrl(baseState) {
         const schema = getRequiredEventSchema();
         const params = new URLSearchParams(window.location.search);
@@ -7385,7 +7513,7 @@ Example output:
         const parseContext = { sawEditFlag: false, sawEventParam: false };
         params.forEach((value, key) => {
           if (value == null) return;
-          const stateKey = schema.getEventBuilderStateKey(key);
+          const stateKey = schema.getEventBuilderStateKey(key) || getImageSlotStateKey(key);
           if (stateKey) {
             parseContext.sawEventParam = true;
             if (stateKey === 'start' || stateKey === 'end') {
@@ -7448,12 +7576,102 @@ Example output:
         if (dom.facebookInput) dom.facebookInput.value = state.facebook || '';
         if (dom.gmapsInput) dom.gmapsInput.value = state.gmaps || '';
         if (dom.imageInput) dom.imageInput.value = state.image || '';
-        if (dom.faviconInput) dom.faviconInput.value = state.favicon || '';
+        if (dom.imageVerticalInput) dom.imageVerticalInput.value = state.imageVertical || '';
+        if (dom.imageHorizontalInput) dom.imageHorizontalInput.value = state.imageHorizontal || '';
+        renderImageCandidates();
         updateTimeNotes();
         applyRecurrenceStateToForm();
         syncLinkFieldStates();
         updateCoordinatesFieldState();
         updateVenueLinkToggles({ applyValues: false, preserveState: true });
+      }
+
+      // Slots that can hold a flyer URL, in the order the strip shows them.
+      const IMAGE_CANDIDATE_SLOTS = Object.freeze([
+        { field: 'image', label: 'Promo' },
+        { field: 'imageVertical', label: 'Portrait' },
+        { field: 'imageHorizontal', label: 'Landscape' }
+      ]);
+
+      // One thumbnail per distinct flyer URL. The builder is the only place in
+      // the pipeline that gets ground-truth dimensions for free (the browser
+      // decodes the image anyway), so each loaded preview reports its real
+      // naturalWidth×naturalHeight — that is how you tell whether a URL parked
+      // in the "portrait" slot really is portrait.
+      function renderImageCandidates() {
+        if (!dom.imageCandidates) return;
+        dom.imageCandidates.textContent = '';
+        const byUrl = new Map();
+        IMAGE_CANDIDATE_SLOTS.forEach(slot => {
+          const url = String((state && state[slot.field]) || '').trim();
+          // http(s) only: keeps javascript:/data: URLs out of an <img src>.
+          if (!url || !/^https?:\/\//i.test(url)) return;
+          const existing = byUrl.get(url);
+          if (existing) {
+            existing.labels.push(slot.label);
+            return;
+          }
+          byUrl.set(url, { url, field: slot.field, labels: [slot.label] });
+        });
+        dom.imageCandidates.dataset.empty = byUrl.size ? '0' : '1';
+        byUrl.forEach(candidate => {
+          const isPrimary = candidate.field === 'image';
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'image-candidate';
+          button.dataset.candidateField = candidate.field;
+          if (isPrimary) button.dataset.primary = '1';
+          button.title = isPrimary
+            ? `${candidate.url}\n(already the promo image)`
+            : `${candidate.url}\nClick to make this the promo image`;
+
+          const img = document.createElement('img');
+          img.alt = `${candidate.labels.join(' / ')} image preview`;
+          img.loading = 'lazy';
+          img.decoding = 'async';
+
+          const badge = document.createElement('span');
+          badge.className = 'image-candidate-badge';
+          badge.textContent = candidate.labels.join(' · ');
+
+          img.onerror = () => {
+            img.style.display = 'none';
+            badge.textContent = `${candidate.labels.join(' · ')} · unavailable`;
+          };
+          img.onload = () => {
+            const width = img.naturalWidth;
+            const height = img.naturalHeight;
+            if (!width || !height) return;
+            const measured = width === height ? 'square' : (height > width ? 'portrait' : 'landscape');
+            badge.textContent = `${candidate.labels.join(' · ')} · ${width}×${height} ${measured}`;
+          };
+          img.src = candidate.url;
+
+          button.appendChild(img);
+          button.appendChild(badge);
+          dom.imageCandidates.appendChild(button);
+        });
+      }
+
+      // Promote an orientation slot's URL to the primary image. Swap semantics:
+      // the demoted primary takes the slot's place so no URL is lost. When
+      // there was no primary, the promoted URL stays in its slot as well — a
+      // portrait primary legitimately lives in both `image` and `imageVertical`.
+      function promoteImageCandidate(field) {
+        if (!field || field === 'image') return;
+        if (!state || !Object.prototype.hasOwnProperty.call(state, field)) return;
+        const promoted = String(state[field] || '').trim();
+        if (!promoted) return;
+        const demoted = String(state.image || '').trim();
+        state.image = promoted;
+        if (demoted && demoted !== promoted) {
+          state[field] = demoted;
+        }
+        if (dom.imageInput) dom.imageInput.value = state.image;
+        if (dom.imageVerticalInput) dom.imageVerticalInput.value = state.imageVertical || '';
+        if (dom.imageHorizontalInput) dom.imageHorizontalInput.value = state.imageHorizontal || '';
+        renderImageCandidates();
+        refreshUi();
       }
 
       function bindEvents() {
@@ -7674,7 +7892,29 @@ Example output:
         if (dom.imageInput) {
           dom.imageInput.addEventListener('input', event => {
             state.image = event.target.value;
+            renderImageCandidates();
             refreshUi();
+          });
+        }
+        if (dom.imageVerticalInput) {
+          dom.imageVerticalInput.addEventListener('input', event => {
+            state.imageVertical = event.target.value;
+            renderImageCandidates();
+            refreshUi();
+          });
+        }
+        if (dom.imageHorizontalInput) {
+          dom.imageHorizontalInput.addEventListener('input', event => {
+            state.imageHorizontal = event.target.value;
+            renderImageCandidates();
+            refreshUi();
+          });
+        }
+        if (dom.imageCandidates) {
+          dom.imageCandidates.addEventListener('click', event => {
+            const button = event.target.closest('.image-candidate');
+            if (!button || !dom.imageCandidates.contains(button)) return;
+            promoteImageCandidate(button.dataset.candidateField || '');
           });
         }
         if (dom.faviconInput) {
@@ -8455,6 +8695,8 @@ Example output:
           dom.shortNameInput,
           dom.coverInput,
           dom.imageInput,
+          dom.imageVerticalInput,
+          dom.imageHorizontalInput,
           dom.faviconInput,
           dom.descriptionInput,
           dom.citySelect,
@@ -9330,6 +9572,13 @@ Example output:
           setTextParam('searchEndDate', state.editingExistingSearchEndDate);
         }
         setTextParam('img', state.image);
+        // buildShareUrl re-emits the WHOLE address bar from a fresh
+        // URLSearchParams, and init() runs updateUrl() on DOMContentLoaded — a
+        // param missing from this list is stripped from the URL before the user
+        // types anything, so the orientation slots have to be emitted here or
+        // prefill dies on load.
+        setTextParam('imageVertical', state.imageVertical);
+        setTextParam('imageHorizontal', state.imageHorizontal);
         setTextParam('favicon', state.favicon);
         const coordsValue = (state.location || '').trim();
         setTextParam('coords', coordsValue);
@@ -9417,6 +9666,8 @@ Example output:
         setParam('facebook', state.facebook);
         setParam('gmaps', state.gmaps);
         setParam('image', state.image);
+        setParam('imageVertical', state.imageVertical);
+        setParam('imageHorizontal', state.imageHorizontal);
         setParam('favicon', state.favicon);
         const coordinates = parseCoordinates(state.location);
         setParam('lat', coordinates ? coordinates.lat : '');
@@ -9862,6 +10113,8 @@ Example output:
             : null,
           isDeletingOverride: deletingCustomOverride,
           image: (state.image || '').trim() || null,
+          imageVertical: (state.imageVertical || '').trim() || null,
+          imageHorizontal: (state.imageHorizontal || '').trim() || null,
           favicon: (state.favicon || '').trim() || null,
           website: (state.website || '').trim() || null,
           instagram: (state.instagram || '').trim() || null,

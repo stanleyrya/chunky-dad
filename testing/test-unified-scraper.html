@@ -658,6 +658,10 @@
             add('fb', event.facebook);
             add('gmaps', event.gmaps);
             add('img', event.image);
+            // Orientation slots use their full names — event-builder resolves
+            // them via its own IMAGE_SLOT_PARAM_TO_STATE_KEY map.
+            add('imageVertical', event.imageVertical);
+            add('imageHorizontal', event.imageHorizontal);
             add('cover', event.cover);
 
             const qs = params.toString();

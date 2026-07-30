@@ -1530,7 +1530,7 @@ test('parseReviewActionUrl decodes mark-bear/mark-not-bear actions with their no
   assert.equal(markNotBear.n, '12');
 });
 
-test('generateBearDroppedSection renders drops with reason and button only when drops exist', () => {
+test('generateBearDroppedSection renders drops as real event cards with both verdict buttons', () => {
   const adapter = buildAdapter();
 
   assert.equal(adapter.generateBearDroppedSection({}), '', 'no section without drops');
@@ -1538,46 +1538,84 @@ test('generateBearDroppedSection renders drops with reason and button only when 
 
   const html = adapter.generateBearDroppedSection({ bearDroppedEvents: [buildBearDroppedFixture()] });
   assert.ok(html.includes('Dropped as non-bear'), 'section title present');
-  assert.ok(html.includes('Twink Bash'), 'title shown');
+  // Same card markup the kept events use — not a debug list
+  assert.ok(html.includes('class="event-card bear-dropped-card"'), 'rendered through generateEventCard');
+  assert.ok(html.includes('class="event-title">Twink Bash<'), 'title in the card title slot');
   assert.ok(html.includes('Neon Room'), 'venue shown');
-  assert.ok(html.includes('ai: drag show, no bear context'), 'AI reason shown');
-  assert.ok(html.includes('from promoter.example'), 'source host shown');
-  assert.ok(html.includes('data-bear-idx="0"'), 'row index carried on the button');
-  assert.ok(html.includes('data-bear-act="mark-bear"'), 'mark-bear action wired');
-  assert.ok(html.includes('markBearOverride(this)'), 'button signals via the bridge');
+  assert.ok(html.includes('Bear check: ai: drag show, no bear context • from promoter.example'), 'drop reason + host shown');
+  assert.ok(html.includes('DROPPED — NOT BEAR'), 'drop badge replaces the intent/write badge');
 
-  // A rescued row shows its badge instead of a button
+  // BOTH actions on the tile, addressed by the dropped-list namespace
+  assert.ok(html.includes('data-bear-idx="d0"'), 'dropped-list index carried on the buttons');
+  assert.ok(html.includes('data-bear-act="mark-bear"'), 'mark-bear action wired');
+  assert.ok(html.includes('data-bear-act="mark-not-bear"'), 'mark-not-bear action wired');
+  assert.equal((html.match(/markBearOverride\(this\)/g) || []).length, 2, 'exactly two verdict buttons per card');
+  // The current (not-bear) verdict is the highlighted one
+  assert.ok(
+    html.includes('bear-verdict-btn bear-override-btn is-active" data-bear-idx="d0" data-bear-act="mark-not-bear"'),
+    'not-bear is the active verdict on a dropped card'
+  );
+  assert.ok(
+    html.includes('bear-verdict-btn bear-override-btn" data-bear-idx="d0" data-bear-act="mark-bear"'),
+    'mark-bear rendered inactive'
+  );
+  assert.ok(!html.includes('disabled>'), 'live-run buttons are tappable');
+
+  // A rescued row keeps its cards + note but goes read-only (already applied)
   const rescuedHtml = adapter.generateBearDroppedSection({
     bearDroppedEvents: [{ ...buildBearDroppedFixture(), rescued: true }]
   });
   assert.ok(rescuedHtml.includes('Rescued (manual override on calendar record)'));
-  assert.ok(!rescuedHtml.includes('data-bear-act="mark-bear"'), 'no button on rescued rows');
+  assert.ok(rescuedHtml.includes('data-bear-act="mark-bear" disabled'), 'rescued rows cannot be re-marked');
+  assert.ok(rescuedHtml.includes('data-bear-verdict="bear"'), 'a rescued drop reads as bear');
 
-  // Saved-run display lists the drops but offers no buttons
+  // Saved-run display lists the drops but the buttons are inert
   const savedHtml = adapter.generateBearDroppedSection({
     _isDisplayingSavedRun: true,
     bearDroppedEvents: [buildBearDroppedFixture()]
   });
   assert.ok(savedHtml.includes('Twink Bash'));
-  assert.ok(!savedHtml.includes('data-bear-act="mark-bear"'));
+  assert.ok(savedHtml.includes('data-bear-act="mark-bear" disabled'), 'saved-run display has no post-dismissal execution');
 });
 
-test('generateBearKeptOverrideSection lists kept events with mark-not-bear buttons on live runs only', () => {
+test('buildBearVerdictActionsHtml escapes the card id and marks the active verdict', () => {
   const adapter = buildAdapter();
-  const results = buildResultsStub();
+  assert.equal(adapter.buildBearVerdictActionsHtml(null), '', 'no row without options');
+  assert.equal(adapter.buildBearVerdictActionsHtml({ bearVerdict: 'bear' }), '', 'no row without a card id');
 
-  const html = adapter.generateBearKeptOverrideSection(results);
-  assert.ok(html.includes('mark mistakes not-bear'), 'section title present');
-  assert.ok(html.includes('data-bear-idx="0"'));
-  assert.ok(html.includes('data-bear-idx="1"'));
-  assert.ok(html.includes('data-bear-act="mark-not-bear"'));
+  const bear = adapter.buildBearVerdictActionsHtml({ bearIdx: 'k3', bearVerdict: 'bear', interactive: true });
+  assert.ok(bear.includes('🐻 Mark as bear'));
+  assert.ok(bear.includes('🚫 Mark as not bear'));
+  assert.ok(bear.includes('data-bear-act="mark-bear"') && bear.includes('is-active" data-bear-idx="k3" data-bear-act="mark-bear"'));
+  assert.ok(!bear.includes('is-active" data-bear-idx="k3" data-bear-act="mark-not-bear"'));
 
-  assert.equal(
-    adapter.generateBearKeptOverrideSection({ ...results, _isDisplayingSavedRun: true }),
-    '',
-    'saved-run display has no post-dismissal execution, so no buttons'
+  const escaped = adapter.buildBearVerdictActionsHtml({
+    bearIdx: 'k1"><script>x</script>',
+    bearVerdict: 'not-bear',
+    interactive: false,
+    note: '<b>note</b>'
+  });
+  assert.ok(!escaped.includes('<script>'), 'card id is escaped into the attribute');
+  assert.ok(escaped.includes('&lt;b&gt;note&lt;/b&gt;'), 'note is escaped');
+  assert.ok(escaped.includes(' disabled>'), 'non-interactive renders read-only buttons');
+});
+
+test('generateEventCard renders kept events with both verdict buttons and escaped content', () => {
+  const adapter = buildAdapter();
+  const card = adapter.generateEventCard(
+    { title: 'Bear <b>Night</b>', _action: 'new', startDate: '2026-08-01T02:00:00.000Z', bar: 'Ram & "Ranch"' },
+    {},
+    { bearIdx: 'k0', bearVerdict: 'bear', interactive: true }
   );
-  assert.equal(adapter.generateBearKeptOverrideSection({ analyzedEvents: [] }), '');
+  assert.ok(card.includes('data-bear-idx="k0"'), 'kept-list index on the tile');
+  assert.equal((card.match(/data-bear-idx="k0"/g) || []).length, 2, 'both directions present');
+  assert.ok(card.includes('data-bear-verdict="bear"'), 'current verdict exposed on the row');
+  assert.ok(card.includes('Bear &lt;b&gt;Night&lt;/b&gt;'), 'title escaped');
+  assert.ok(card.includes('Ram &amp; &quot;Ranch&quot;'), 'venue escaped');
+  assert.ok(!card.includes('<b>Night</b>'), 'no raw title markup');
+
+  const plain = adapter.generateEventCard({ title: 'Plain', _action: 'new', startDate: '2026-08-01T02:00:00.000Z' });
+  assert.ok(!plain.includes('bear-verdict-row'), 'no verdict row without bear options');
 });
 
 test('generateRichHTML embeds the dropped section only when bearDroppedEvents is non-empty', async () => {
@@ -1590,9 +1628,20 @@ test('generateRichHTML embeds the dropped section only when bearDroppedEvents is
   assert.ok(withDrops.includes('chunkyscrape://act?a='), 'override buttons signal via the custom scheme');
   assert.ok(withDrops.includes('__bearOverrideNonce'), 'per-tap nonce keeps repeat taps distinct navigations');
   assert.ok(withDrops.includes('markBearOverrideDone'), 'best-effort feedback handler defined');
+  assert.ok(withDrops.includes('class="event-card bear-dropped-card"'), 'drops reach the page as real event cards');
+  assert.ok(withDrops.includes('data-bear-idx="d0"'), 'dropped events are addressable over the bridge');
 
   const withoutDrops = await adapter.generateRichHTML(buildResultsStub());
   assert.ok(!withoutDrops.includes('Dropped as non-bear'), 'no dropped section without drops');
+  // Every kept card carries both verdict buttons, indexed into analyzedEvents
+  assert.ok(withoutDrops.includes('data-bear-idx="k0"'), 'first kept event addressable');
+  assert.ok(withoutDrops.includes('data-bear-idx="k1"'), 'second kept event addressable');
+  assert.equal(
+    (withoutDrops.match(/data-bear-idx="k\d+" data-bear-act="mark-not-bear"/g) || []).length,
+    2,
+    'one not-bear button per kept card (the separate kept-override list is gone)'
+  );
+  assert.ok(!withoutDrops.includes('mark mistakes not-bear'), 'the standalone kept-override list is gone');
 });
 
 test('presentRichResults records override taps and applies them after dismissal', async () => {
@@ -1615,17 +1664,25 @@ test('presentRichResults records override taps and applies them after dismissal'
     }
     assert.ok(wv.getHandler(), 'shouldAllowRequest assigned before present()');
 
-    // Taps: rescue the dropped event, bury a kept one. Navigation cancelled.
-    assert.equal(wv.tap('chunkyscrape://act?a=mark-bear&id=0&n=1'), false);
-    assert.equal(wv.tap('chunkyscrape://act?a=mark-not-bear&id=0&n=2'), false);
+    // Taps: rescue the dropped event (d0), bury a kept one (k0), and confirm
+    // the other kept one as bear (k1). Navigation always cancelled.
+    assert.equal(wv.tap('chunkyscrape://act?a=mark-bear&id=d0&n=1'), false);
+    assert.equal(wv.tap('chunkyscrape://act?a=mark-not-bear&id=k0&n=2'), false);
+    assert.equal(wv.tap('chunkyscrape://act?a=mark-bear&id=k1&n=3'), false);
     await new Promise((r) => setImmediate(r));
     assert.ok(
-      wv.evals.some((js) => js.includes('markBearOverrideDone("0", "mark-bear")')),
+      wv.evals.some((js) => js.includes('markBearOverrideDone("d0", "mark-bear")')),
       'in-page "Marked" feedback pushed (best-effort)'
     );
 
-    // Out-of-range ids are ignored without crashing.
-    assert.equal(wv.tap('chunkyscrape://act?a=mark-bear&id=99&n=3'), false);
+    // Last tap on a card wins: flipping k1 back to not-bear then to bear
+    // leaves exactly one pending verdict for it.
+    assert.equal(wv.tap('chunkyscrape://act?a=mark-not-bear&id=k1&n=4'), false);
+    assert.equal(wv.tap('chunkyscrape://act?a=mark-bear&id=k1&n=5'), false);
+
+    // Out-of-range and unnamespaced ids are ignored without crashing.
+    assert.equal(wv.tap('chunkyscrape://act?a=mark-bear&id=d99&n=6'), false);
+    assert.equal(wv.tap('chunkyscrape://act?a=mark-not-bear&id=0&n=7'), false);
 
     wv.dismiss();
     await done;
@@ -1644,6 +1701,13 @@ test('presentRichResults records override taps and applies them after dismissal'
 
   // Marked bear: prepped through the normal calendar flow and appended to the
   // plan (the stubbed environment yields action "new").
+  // A kept event confirmed bear is stamped in place (no duplicate write)
+  const confirmed = results.analyzedEvents[1];
+  assert.ok(String(confirmed.bearSource).startsWith('manual-bear'), 'kept event carries the owner verdict');
+  assert.equal(confirmed.isBearEvent, true);
+  assert.equal(confirmed.bearReview, undefined, 'an explicit owner bear clears the hide flag');
+  assert.equal(TestEventSchema.parseNotesIntoFields(confirmed.notes).bearSource, confirmed.bearSource);
+
   assert.equal(results.analyzedEvents.length, 3, 'rescued event joined the plan');
   const rescued = results.analyzedEvents[2];
   assert.equal(rescued.title, 'Twink Bash');
@@ -2627,89 +2691,20 @@ test('generateEventCard embeds are all built by the shared serializer (no AI blo
 }
 );
 
-// ---------------------------------------------------------------------------
-// Active config section: effective run settings + per-parser override diffs
-// rendered from results.config (SharedCore.buildActiveConfigSummary), with a
-// native copy-config bridge for the redacted JSON payload.
+// The "Active config" section was removed from the results UI (owner
+// feedback); a regression guard keeps it from creeping back.
 // ---------------------------------------------------------------------------
 
-function buildActiveConfigResultsFixture() {
-  return {
-    config: {
-      config: {
-        daysToLookAhead: 30,
-        dryRun: true,
-        pageCache: { enabled: true, ttlDays: 3 },
-        geocodeVerification: { mode: 'enforce' },
-        ai: {
-          provider: 'openai',
-          endpoint: 'http://rybook.example:8000/v1/chat/completions',
-          model: 'global-model',
-          bearCheck: { mode: 'enforce' }
-        },
-        ocr: { enabled: true, endpoint: 'http://rybook.example:8001/v1/chat/completions', model: 'vision-model', maxImages: 2 }
-      },
-      parsers: [
-        {
-          name: 'Megawoof <b>America</b>',
-          enabled: true,
-          parser: 'ai-web',
-          urls: ['https://www.eventbrite.com/o/megawoof-america'],
-          alwaysBear: true,
-          ai: { model: 'parser-model' }
-        },
-        { name: 'Furball', enabled: false, urls: ['https://furball.nyc'] }
-      ]
-    }
-  };
-}
-
-test('generateActiveConfigSection renders run settings, override diffs, and the copy button only when config exists', () => {
+test('generateRichHTML no longer renders an Active config section', async () => {
   const adapter = buildAdapter();
-
-  assert.equal(adapter.generateActiveConfigSection({}), '', 'no section without results.config');
-  assert.equal(adapter.generateActiveConfigSection(null), '', 'no section for null results');
-  assert.equal(adapter.generateActiveConfigSection({ config: null }), '', 'no section for a null config snapshot');
-
-  const html = adapter.generateActiveConfigSection(buildActiveConfigResultsFixture());
-  assert.ok(html.includes('Active config'), 'section title present');
-  assert.ok(html.includes('<span class="section-count">2</span>'), 'count is the parser count');
-
-  // Run settings live in a collapsed <details> with flattened global rows
-  assert.ok(html.includes('<summary>Run settings</summary>'), 'run-settings details present');
-  assert.ok(!html.includes('<details open'), 'details collapsed by default');
-  assert.ok(html.includes('ai.model'), 'flattened global keys rendered');
-  assert.ok(html.includes('global-model'), 'global values rendered');
-  assert.ok(html.includes('geocodeVerification.mode'), 'run-level knobs rendered');
-
-  // Per-parser rows: escaped name, enabled badge, urls, override diffs
-  assert.ok(html.includes('Megawoof &lt;b&gt;America&lt;/b&gt;'), 'parser names are escaped');
-  assert.ok(!html.includes('<b>America</b>'), 'raw markup never reaches the page');
-  assert.ok(html.includes('>enabled</span>'), 'enabled badge rendered');
-  assert.ok(html.includes('>disabled</span>'), 'disabled badge rendered');
-  assert.ok(html.includes('https://www.eventbrite.com/o/megawoof-america'), 'parser urls surfaced');
-  assert.ok(html.includes('Overrides (2)'), 'override count rendered');
-  assert.ok(html.includes('ai.model: parser-model (global: global-model)'), 'diff rendered value (global: value)');
-  assert.ok(html.includes('alwaysBear: true (global: unset)'), 'explicit knob with no global value says unset');
-  assert.ok(html.includes('no overrides'), 'parser without explicit knobs says no overrides');
-
-  // Copy button signals native (Pasteboard) — never navigator.clipboard
-  assert.ok(html.includes('copyActiveConfig(this)'), 'copy button wired to the custom-scheme signal');
-  assert.ok(html.includes('📋 Copy effective config JSON'), 'copy button label present');
-});
-
-test('generateRichHTML embeds the active-config section and the copy-config handler once', async () => {
-  const adapter = buildAdapter();
-  const results = { ...buildResultsStub(), ...buildActiveConfigResultsFixture() };
-  const html = await adapter.generateRichHTML(results);
-
-  assert.ok(html.includes('Active config'), 'section present when config exists');
-  assert.equal((html.match(/a=copy-config/g) || []).length, 1, 'copy-config bridge navigation defined exactly once');
-  assert.equal((html.match(/function copyActiveConfig\(/g) || []).length, 1, 'page handler defined exactly once');
-  assert.equal((html.match(/function markConfigCopied\(/g) || []).length, 1, 'feedback handler defined exactly once');
-
-  const withoutConfig = await adapter.generateRichHTML(buildResultsStub());
-  assert.ok(!withoutConfig.includes('Active config'), 'no section without a config snapshot');
+  const html = await adapter.generateRichHTML({
+    ...buildResultsStub(),
+    config: { config: { dryRun: true }, parsers: [{ name: 'Furball', enabled: true }] }
+  });
+  assert.ok(!html.includes('Active config'), 'section gone even when a config snapshot exists');
+  assert.ok(!html.includes('a=copy-config'), 'copy-config bridge navigation gone');
+  assert.ok(!html.includes('copyActiveConfig'), 'page handler gone');
+  assert.equal(typeof adapter.generateActiveConfigSection, 'undefined', 'builder deleted');
 });
 
 // ---------------------------------------------------------------------------
@@ -2902,6 +2897,146 @@ test('picker-state: corrupt or misshapen file → empty pre-selection', async ()
   assert.deepEqual(adapter.parsePickerState('null', ['Alpha']), [], 'JSON null → []');
 });
 
+// Headless UITable stub that records every row it is handed and taps the first
+// row whose label contains `tapLabel` (null = swipe-down dismissal).
+function installPickerUITableStub(tapLabel) {
+  const originals = {
+    UITable: global.UITable,
+    UITableRow: global.UITableRow,
+    Font: global.Font,
+    Color: global.Color
+  };
+  const captured = { rows: [] };
+  global.UITableRow = class {
+    constructor() {
+      this.cells = [];
+    }
+    addText(title) {
+      const cell = { title };
+      this.cells.push(cell);
+      return cell;
+    }
+  };
+  global.UITable = class {
+    constructor() {
+      this.rows = [];
+    }
+    addRow(row) {
+      this.rows.push(row);
+    }
+    removeAllRows() {
+      this.rows = [];
+    }
+    reload() {}
+    present() {
+      captured.rows = this.rows;
+      const rows = this.rows;
+      return new Promise((resolve) => {
+        setImmediate(() => {
+          if (tapLabel) {
+            const row = rows.find((r) =>
+              r.cells.some((c) => typeof c.title === 'string' && c.title.includes(tapLabel))
+            );
+            if (row && row.onSelect) row.onSelect();
+          }
+          resolve();
+        });
+      });
+    }
+  };
+  global.Font = { boldSystemFont: () => ({}), systemFont: () => ({}) };
+  global.Color = { white: () => ({}), brown: () => ({}), blue: () => ({}), gray: () => ({}) };
+  captured.restore = () => Object.assign(global, originals);
+  captured.labels = () =>
+    captured.rows.map((r) => (r.cells[0] && r.cells[0].title) || '');
+  return captured;
+}
+
+test('presentParserPicker pre-selects NOTHING even with a remembered selection', async () => {
+  const adapter = buildAdapter();
+  const files = installMemoryFm(adapter);
+  files.set(
+    adapter.getPickerStatePath(),
+    JSON.stringify({ selected: ['Alpha', 'Beta'] })
+  );
+
+  const table = installPickerUITableStub('▶ Run selected');
+  try {
+    const picked = await adapter.presentParserPicker({
+      parsers: [{ name: 'Alpha' }, { name: 'Beta' }, { name: 'Gamma' }]
+    });
+    assert.deepEqual(Array.from(picked), [], 'confirming immediately runs nothing');
+
+    const labels = table.labels();
+    assert.ok(
+      labels.includes('▶ Run selected (0)'),
+      `Run selected starts at zero (labels: ${labels.join(' | ')})`
+    );
+    assert.ok(
+      labels.every((label) => !label.startsWith('☑')),
+      'no parser row is pre-ticked'
+    );
+    assert.equal(
+      labels.filter((label) => label.startsWith('☐')).length,
+      3,
+      'every parser row renders unchecked'
+    );
+  } finally {
+    table.restore();
+  }
+});
+
+test('presentParserPicker offers "Rerun last" which runs the remembered selection', async () => {
+  const adapter = buildAdapter();
+  const files = installMemoryFm(adapter);
+  files.set(
+    adapter.getPickerStatePath(),
+    JSON.stringify({ selected: ['Alpha', 'Ghost', 'Beta'] })
+  );
+
+  const table = installPickerUITableStub('↻ Rerun last');
+  try {
+    const picked = await adapter.presentParserPicker({
+      parsers: [{ name: 'Alpha' }, { name: 'Beta' }, { name: 'Gamma' }]
+    });
+    // "Ghost" is no longer configured, so it is filtered out of the remembered set
+    assert.deepEqual(Array.from(picked).sort(), ['Alpha', 'Beta']);
+    assert.ok(table.labels().includes('↻ Rerun last (2)'), 'row counts the known remembered parsers');
+    // The confirmed selection is re-persisted so the row keeps working
+    assert.deepEqual(
+      JSON.parse(files.get(adapter.getPickerStatePath())).selected.sort(),
+      ['Alpha', 'Beta']
+    );
+  } finally {
+    table.restore();
+  }
+});
+
+test('presentParserPicker hides "Rerun last" on the first run (nothing remembered)', async () => {
+  const adapter = buildAdapter();
+  installMemoryFm(adapter);
+
+  const table = installPickerUITableStub('▶ Run all');
+  try {
+    const picked = await adapter.presentParserPicker({ parsers: [{ name: 'Alpha' }] });
+    assert.deepEqual(Array.from(picked), ['Alpha']);
+    assert.ok(
+      table.labels().every((label) => !label.includes('Rerun last')),
+      'no rerun row without a remembered selection'
+    );
+  } finally {
+    table.restore();
+  }
+});
+
+test('formatRerunLastSubtitle previews the remembered set and truncates long lists', () => {
+  const adapter = buildAdapter();
+  assert.equal(adapter.formatRerunLastSubtitle([]), '');
+  assert.equal(adapter.formatRerunLastSubtitle(null), '');
+  assert.equal(adapter.formatRerunLastSubtitle(['A', 'B']), 'A, B');
+  assert.equal(adapter.formatRerunLastSubtitle(['A', 'B', 'C', 'D', 'E']), 'A, B, C +2 more');
+});
+
 test('presentParserPicker: swipe-down dismissal resolves null and persists nothing (headless UITable)', async () => {
   const adapter = buildAdapter();
   const files = installMemoryFm(adapter);
@@ -3068,6 +3203,46 @@ test('event card: every event gets an Event Builder prefill link', () => {
   assert.ok(builderUrl.includes('city=dallas'));
   assert.ok(builderUrl.includes('website=https%3A%2F%2Fexample.com%2Fone-off'));
   assert.ok(!builderUrl.includes('recurrence='), 'no recurrence param without an rrule');
+});
+
+test('event card: builder prefill carries every flyer slot, and omits the ones the event lacks', () => {
+  const adapter = buildAdapter();
+  adapter.resetMapVerifyUrls();
+  adapter.resetIcsExportEvents();
+  adapter.generateEventCard({
+    title: 'Three Flyers',
+    _action: 'new',
+    startDate: '2026-08-01T02:00:00.000Z',
+    city: 'dallas',
+    image: 'https://cdn.example.com/primary.jpg?w=1',
+    imageVertical: 'https://cdn.example.com/tall.jpg',
+    imageHorizontal: 'https://cdn.example.com/wide.jpg'
+  });
+
+  const builderUrl = Object.values(adapter._mapVerifyUrls).find((url) =>
+    url.startsWith('https://chunky.dad/testing/event-builder.html?'),
+  );
+  assert.ok(builderUrl.includes('image=https%3A%2F%2Fcdn.example.com%2Fprimary.jpg%3Fw%3D1'),
+    'primary image prefilled and percent-encoded');
+  assert.ok(builderUrl.includes('imageVertical=https%3A%2F%2Fcdn.example.com%2Ftall.jpg'),
+    'portrait slot prefilled');
+  assert.ok(builderUrl.includes('imageHorizontal=https%3A%2F%2Fcdn.example.com%2Fwide.jpg'),
+    'landscape slot prefilled');
+
+  adapter.resetMapVerifyUrls();
+  adapter.generateEventCard({
+    title: 'One Flyer',
+    _action: 'new',
+    startDate: '2026-08-01T02:00:00.000Z',
+    city: 'dallas',
+    image: 'https://cdn.example.com/primary.jpg'
+  });
+  const plainUrl = Object.values(adapter._mapVerifyUrls).find((url) =>
+    url.startsWith('https://chunky.dad/testing/event-builder.html?'),
+  );
+  assert.ok(plainUrl.includes('image=https%3A%2F%2Fcdn.example.com%2Fprimary.jpg'), 'primary still prefilled');
+  assert.ok(!plainUrl.includes('imageVertical='), 'no empty portrait param');
+  assert.ok(!plainUrl.includes('imageHorizontal='), 'no empty landscape param');
 });
 
 test('event card: recurring events get the badge, the builder link, and the ICS export button', () => {

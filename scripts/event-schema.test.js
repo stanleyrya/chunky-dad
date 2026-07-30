@@ -62,6 +62,113 @@ test('notes round-trip: URL-like values keep their unescaped colons', () => {
   assert.equal(parsed.website, 'https://x.example/party');
 });
 
+// ---------------------------------------------------------------------------
+// Multi-orientation image slots (image / imageVertical / imageHorizontal)
+// ---------------------------------------------------------------------------
+
+test('notes round-trip: all three image slots survive byte-identically with unescaped colons', () => {
+  // Real values: a Wix portrait rendition and a bearracuda landscape flyer.
+  const event = {
+    image: 'https://bearracuda.com/wp-content/uploads/2026/05/hottake_may2026-igposter_v2-820x1024.jpg',
+    imageVertical: 'https://static.wixstatic.com/media/238fae_16613~mv2.jpg/v1/fill/w_792,h_990,al_c,q_85,enc_avif/238fae_16613~mv2.jpg',
+    imageHorizontal: 'https://cdn.example.com/uploads/1920x1080/poster.jpg'
+  };
+
+  const notes = EventSchema.formatEventNotes(event);
+  assert.equal(notes, [
+    `image: ${event.image}`,
+    `imageVertical: ${event.imageVertical}`,
+    `imageHorizontal: ${event.imageHorizontal}`
+  ].join('\n'), 'slots are written as bare, single-line camelCase key/URL pairs');
+  assert.ok(!/\\:/.test(notes), 'URL_LIKE_FIELDS keeps slot colons unescaped');
+
+  const parsed = EventSchema.parseNotesIntoFields(notes);
+  assert.deepEqual(parsed, event, 'round-trip is byte-identical');
+});
+
+test('regression guard: a hyphenated image slot key SILENTLY VANISHES from notes', () => {
+  // isValidMetadataKey allows letters/digits/spaces only. A hyphenated or
+  // underscored key is not rejected loudly — the line is simply not metadata,
+  // so the field disappears with no error. This is why the canonical notes
+  // keys must stay camelCase.
+  const url = 'https://static.wixstatic.com/media/a~mv2.jpg/v1/fill/w_792,h_990/a~mv2.jpg';
+  assert.deepEqual(EventSchema.parseNotesIntoFields(`image-vertical: ${url}`), {},
+    'a hyphenated key produces NO field at all');
+  assert.deepEqual(EventSchema.parseNotesIntoFields(`image_vertical: ${url}`), {},
+    'an underscored key produces NO field at all');
+  assert.equal(EventSchema.isValidMetadataKey('image-vertical'), false);
+  assert.equal(EventSchema.isValidMetadataKey('imageVertical'), true);
+  // The camelCase twin of the same value does survive.
+  assert.deepEqual(EventSchema.parseNotesIntoFields(`imageVertical: ${url}`), { imageVertical: url });
+});
+
+test('backward compat: an event with only image: round-trips exactly as before', () => {
+  const notes = 'image: https://bearracuda.com/wp-content/uploads/2025/04/cuda-atlanta-nov_2025-web.jpg';
+  const parsed = EventSchema.parseNotesIntoFields(notes);
+  assert.deepEqual(parsed, {
+    image: 'https://bearracuda.com/wp-content/uploads/2025/04/cuda-atlanta-nov_2025-web.jpg'
+  }, 'no empty slots are invented');
+  assert.equal(EventSchema.formatEventNotes(parsed), notes, 're-serializes unchanged');
+});
+
+test('image slot aliases resolve from every legal input spelling', () => {
+  ['imagevertical', 'imageVertical', 'Image Vertical', 'image-vertical', 'image_vertical',
+    'verticalImage', 'image portrait'].forEach(spelling => {
+    assert.equal(EventSchema.canonicalizeEventKey(spelling), 'imageVertical', spelling);
+  });
+  ['imagehorizontal', 'imageHorizontal', 'Image Horizontal', 'image-horizontal',
+    'horizontalImage', 'image landscape'].forEach(spelling => {
+    assert.equal(EventSchema.canonicalizeEventKey(spelling), 'imageHorizontal', spelling);
+  });
+  // Builder URL params: the separator-stripping alias pass makes the illegal
+  // notes spellings legal as QUERY PARAMS.
+  assert.equal(EventSchema.getEventBuilderStateKey('image-vertical'), 'imageVertical');
+  assert.equal(EventSchema.getEventBuilderStateKey('imageHorizontal'), 'imageHorizontal');
+  assert.equal(EventSchema.getEventBuilderStateKey('image'), 'image', 'the primary is unchanged');
+});
+
+test('pickImageForOrientation walks the fallback chain and never loses an image', () => {
+  const pick = EventSchema.pickImageForOrientation;
+  const all = { image: 'P.jpg', imageVertical: 'V.jpg', imageHorizontal: 'H.jpg' };
+
+  // 1. exact-orientation slot wins
+  assert.equal(pick(all, 'portrait'), 'V.jpg');
+  assert.equal(pick(all, 'vertical'), 'V.jpg', 'vertical is a synonym for portrait');
+  assert.equal(pick(all, 'landscape'), 'H.jpg');
+  assert.equal(pick(all, 'horizontal'), 'H.jpg');
+  // No/unknown preference → the primary
+  assert.equal(pick(all, ''), 'P.jpg');
+  assert.equal(pick(all, 'square'), 'P.jpg');
+
+  // 2. no slot + a primary that classifies as the wanted shape → the primary
+  const classify = (url) => (url === 'P-portrait.jpg' ? 'portrait' : 'landscape');
+  assert.equal(pick({ image: 'P-portrait.jpg' }, 'portrait', { classifyOrientation: classify }), 'P-portrait.jpg');
+
+  // 3. ALL-UNKNOWN (the common case: ~18% of real URLs advertise dimensions)
+  //    degrades to exactly today's behavior — the primary, for any request.
+  assert.equal(pick({ image: 'P.jpg' }, 'portrait'), 'P.jpg');
+  assert.equal(pick({ image: 'P.jpg' }, 'landscape'), 'P.jpg');
+  assert.equal(pick({ image: 'P.jpg', imageVertical: 'V.jpg' }, 'landscape'), 'P.jpg',
+    'an unknown primary beats the wrong-orientation slot');
+
+  // 4. primary classifies as the OTHER shape → the other slot
+  assert.equal(pick({ image: 'P-portrait.jpg', imageVertical: 'V.jpg' }, 'landscape',
+    { classifyOrientation: classify }), 'V.jpg');
+
+  // 5. last resort: the primary, even when nothing matched
+  assert.equal(pick({ image: 'P-portrait.jpg' }, 'landscape', { classifyOrientation: classify }), 'P-portrait.jpg');
+
+  // Slot-only events still answer; an image-less event answers ''
+  assert.equal(pick({ imageVertical: 'V.jpg' }, 'landscape'), 'V.jpg');
+  assert.equal(pick({ imageHorizontal: 'H.jpg' }, ''), 'H.jpg');
+  assert.equal(pick({}, 'portrait'), '');
+  assert.equal(pick(null, 'portrait'), '');
+  // A throwing classifier must never break selection
+  assert.equal(pick({ image: 'P.jpg' }, 'portrait', {
+    classifyOrientation: () => { throw new Error('boom'); }
+  }), 'P.jpg');
+});
+
 test('parseNotesIntoFields: a value line that looks like "key: value" stays part of the value', () => {
   // The multi-line description contains an escaped "Doors\: 9pm" line; it must not
   // be promoted to its own field.

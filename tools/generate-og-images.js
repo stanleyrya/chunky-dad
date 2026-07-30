@@ -101,12 +101,28 @@ function darken(hex, ratio = 0.6) {
   return `#${[dr, dg, db].map(v => v.toString(16).padStart(2, '0')).join('')}`;
 }
 
+// Undo the entity escaping generate-event-pages.js applies to meta content.
+function unescapeMeta(text) {
+  return String(text || '')
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
+}
+
 // Build a minimal HTML snippet (no external CSS/fonts) for deterministic render.
 // When faviconColors is provided the OG card uses the event's extracted favicon palette.
-function buildTemplate({ cityName, eventName, day, time, bar, faviconColors }) {
+// When flyerUrl is provided the event's own artwork is painted (dimmed and
+// blurred behind, whole and uncropped beside the text). Every flyer path is
+// opt-in and self-healing: if the image fails to load the page drops back to
+// the text-only card that has always been generated, via the body class.
+function buildTemplate({ cityName, eventName, day, time, bar, faviconColors, flyerUrl }) {
   const title = sanitize(eventName);
   const subtitle = [sanitize(cityName), sanitize(day), sanitize(time)].filter(Boolean).join(' • ');
   const venue = bar ? `@ ${sanitize(bar)}` : '';
+  const flyer = /^https?:\/\//i.test(String(flyerUrl || '').trim())
+    ? sanitize(String(flyerUrl).trim()).replace(/"/g, '&quot;')
+    : '';
 
   // Derive background and accent from favicon colors when available
   const bgGrad = faviconColors
@@ -138,15 +154,29 @@ function buildTemplate({ cityName, eventName, day, time, bar, faviconColors }) {
     .title { font-size: 64px; line-height: 1.05; font-weight: 800; margin: 0 0 18px; }
     .subtitle { font-size: 28px; color: #d0d7de; margin: 0 0 8px; }
     .venue { font-size: 28px; color: #e6edf3; margin: 0; }
+    /* Flyer layers: inert unless body.has-flyer, which the images themselves
+       clear when they fail to load. */
+    .flyer-bg, .flyer-art { display: none; }
+    body.has-flyer .flyer-bg { display: block; position: absolute; inset: 0; overflow: hidden; }
+    body.has-flyer .flyer-bg img { width: 100%; height: 100%; object-fit: cover; filter: blur(26px) brightness(0.42) saturate(1.1); transform: scale(1.1); }
+    body.has-flyer .stage { position: relative; display: flex; align-items: center; gap: 40px; }
+    body.has-flyer .card { width: 620px; height: 470px; }
+    body.has-flyer .title { font-size: 52px; }
+    body.has-flyer .flyer-art { display: flex; align-items: center; justify-content: center; width: 400px; height: 510px; }
+    body.has-flyer .flyer-art img { max-width: 400px; max-height: 510px; object-fit: contain; border-radius: 16px; box-shadow: 0 18px 50px rgba(0,0,0,0.55); }
   </style>
   <title>${title}</title>
   </head>
-  <body>
+  <body class="${flyer ? 'has-flyer' : ''}">
+    ${flyer ? `<div class="flyer-bg"><img src="${flyer}" onerror="document.body.className=''"></div>` : ''}
+    <div class="stage">
     <div class="card">
       <div class="brand">chunky.dad</div>
       <div class="title">${title}</div>
       <div class="subtitle">${subtitle}</div>
       ${venue ? `<div class="venue">${venue}</div>` : ''}
+    </div>
+    ${flyer ? `<div class="flyer-art"><img src="${flyer}" onerror="document.body.className=''"></div>` : ''}
     </div>
   </body>
 </html>`;
@@ -202,7 +232,12 @@ async function main() {
         || (bar ? barColors.get(bar.toLowerCase()) : null)
         || null;
 
-      targets.push({ cityKey: cityFromCanonical, slug: evDir.name, title, day, time, bar, faviconColors });
+      // The event's flyer, written into the stub by generate-event-pages.js
+      // (landscape candidate preferred — this artboard is 1200×630).
+      const flyerMatch = html.match(/<meta name="chunky:flyer" content="([^"]+)"/);
+      const flyerUrl = flyerMatch ? unescapeMeta(flyerMatch[1]) : '';
+
+      targets.push({ cityKey: cityFromCanonical, slug: evDir.name, title, day, time, bar, faviconColors, flyerUrl });
     }
   }
 
@@ -218,8 +253,15 @@ async function main() {
     for (const t of targets) {
       const page = await browser.newPage();
       await page.setViewport({ width: 1200, height: 630, deviceScaleFactor: 1 });
-      const html = buildTemplate({ cityName: t.cityKey, eventName: t.title, day: t.day, time: t.time, bar: t.bar, faviconColors: t.faviconColors });
-      await page.setContent(html, { waitUntil: 'networkidle0' });
+      const baseArgs = { cityName: t.cityKey, eventName: t.title, day: t.day, time: t.time, bar: t.bar, faviconColors: t.faviconColors };
+      try {
+        await page.setContent(buildTemplate({ ...baseArgs, flyerUrl: t.flyerUrl }), { waitUntil: 'networkidle0', timeout: 20000 });
+      } catch (err) {
+        // A slow or unreachable flyer host must never fail the build: fall back
+        // to the text-only card, which needs no network at all.
+        console.warn(`⚠️  Flyer render timed out for ${t.cityKey}/${t.slug}; using text-only card`);
+        await page.setContent(buildTemplate(baseArgs), { waitUntil: 'load' });
+      }
       const buffer = await page.screenshot({ type: 'png' });
       const outPath = path.join(OUTPUT_DIR, t.cityKey, `${t.slug}.png`);
       if (writeIfChanged(outPath, buffer)) {

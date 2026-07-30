@@ -1441,6 +1441,137 @@ test('guardrail: image URLs without a clear resolution margin still go to the AI
 });
 
 // ---------------------------------------------------------------------------
+// Multi-orientation image slots: URL-derived dimensions, and the merge
+// semantics that keep imageVertical/imageHorizontal alive and non-thrashing.
+// ---------------------------------------------------------------------------
+
+test('getImageDimensionsFromUrl reads the real Wix comma form and NNNxNNN tokens', () => {
+  const core = createCore();
+  const dims = (url) => core.getImageDimensionsFromUrl(url);
+
+  // The form that actually appears on real data: a Wix transform segment whose
+  // w_/h_ pairs are comma-joined. getImageSizeScoreFromUrl cannot see it.
+  assert.deepEqual(
+    dims('https://static.wixstatic.com/media/a~mv2.jpg/v1/fill/w_792,h_990/a~mv2.jpg'),
+    { width: 792, height: 990 });
+  assert.deepEqual(
+    dims('https://static.wixstatic.com/media/238fae_16613~mv2.jpg/v1/fill/w_296,h_494,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_16613~mv2.jpg'),
+    { width: 296, height: 494 }, 'trailing transform tokens do not confuse the pair');
+  assert.deepEqual(
+    dims('https://static.wixstatic.com/media/x~mv2.jpg/v1/crop/x_0,y_0,w_1000,h_500/x~mv2.jpg'),
+    { width: 1000, height: 500 }, 'the /v1/crop/ twin works too');
+
+  // NNNxNNN: a resolution path segment and a real filename suffix
+  assert.deepEqual(dims('https://cdn.example.com/uploads/1920x1080/poster.jpg'),
+    { width: 1920, height: 1080 });
+  assert.deepEqual(
+    dims('https://bearracuda.com/wp-content/uploads/2026/05/hottake_may2026-igposter_v2-820x1024.jpg'),
+    { width: 820, height: 1024 });
+
+  // Plain query params on a non-Eventbrite host
+  assert.deepEqual(dims('https://cdn.example.com/img.jpg?w=1920&h=1080'), { width: 1920, height: 1080 });
+  assert.deepEqual(dims('https://cdn.example.com/img.jpg?width=600&height=900'), { width: 600, height: 900 });
+});
+
+test('getImageDimensionsFromUrl REJECTS the Eventbrite ?w=460&h=230 crop', () => {
+  const core = createCore();
+  // img.evbuc.com's crop params are its fixed 2:1 LISTING THUMBNAIL, not the
+  // flyer's shape — tools/download-images.js strips exactly these to recover
+  // the original. Reading them would label every Eventbrite flyer landscape.
+  const eventbrite = 'https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1030030273%2F301420936599%2F1%2Foriginal.20250513-190933?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.014&fp-y=0.478&s=3ecb099c';
+  assert.equal(core.getImageDimensionsFromUrl(eventbrite), null);
+  assert.equal(core.classifyImageOrientation(eventbrite), 'unknown',
+    'an Eventbrite flyer stays unclassified rather than wrongly landscape');
+  // The cdn.evbuc.com original (what download-images resolves to) is unaffected
+  // by the host rule — it simply advertises nothing.
+  assert.equal(core.getImageDimensionsFromUrl(
+    'https://cdn.evbuc.com/images/1030030273/301420936599/1/original.20250513-190933'), null);
+});
+
+test('getImageDimensionsFromUrl returns null for the many URLs advertising nothing', () => {
+  const core = createCore();
+  const dims = (url) => core.getImageDimensionsFromUrl(url);
+  // Real calendar values with no dimension token at all — the common case.
+  assert.equal(dims('https://bearracuda.com/wp-content/uploads/2025/04/cuda-atlanta-nov_2025-web.jpg'), null);
+  assert.equal(dims('https://static.wixstatic.com/media/238fae_c4047c55~mv2.png'), null);
+  assert.equal(dims('https://dice-media.imgix.net/attachments/2026-07-27/52a9b2c1.jpg?rect=0%2C0%2C1080%2C1080'), null,
+    'an imgix rect= is not a w/h pair');
+  assert.equal(dims('https://cdn.example.com/img.jpg?w=600'), null, 'one dimension says nothing about shape');
+  assert.equal(dims('not a url'), null);
+  assert.equal(dims(''), null);
+  assert.equal(dims(null), null);
+  assert.equal(dims(undefined), null);
+  assert.equal(dims(42), null);
+});
+
+test('classifyImageOrientation buckets portrait/landscape/square with a dead band', () => {
+  const core = createCore();
+  const classify = (url) => core.classifyImageOrientation(url);
+  assert.equal(classify('https://static.wixstatic.com/media/a~mv2.jpg/v1/fill/w_792,h_990/a~mv2.jpg'), 'portrait');
+  assert.equal(classify('https://cdn.example.com/uploads/1920x1080/poster.jpg'), 'landscape');
+  assert.equal(classify('https://static.wixstatic.com/media/b~mv2.jpg/v1/fill/w_1344,h_1345,al_c,q_85/b~mv2.jpg'),
+    'square', 'a 1-pixel difference is not an orientation');
+  assert.equal(classify('https://bearracuda.com/wp-content/uploads/2025/04/cuda-atlanta-nov_2025-web.jpg'), 'unknown',
+    'unknown is the common answer and must be handled by every caller');
+});
+
+test('image orientation slots merge like the primary image and are never cleared by an empty scrape', async () => {
+  const core = createCore();
+  const logo = 'https://res.cloudinary.com/eventservice/image/upload/w_600/saas/logos/image_abc.webp';
+  const poster = 'https://bearracuda.com/wp-content/uploads/2026/05/45-3.png';
+
+  // The deterministic rung now covers the slots, unchanged
+  assert.deepEqual(
+    core.resolveConflictDeterministically('imageVertical', logo, poster),
+    { winner: 'b', reason: 'event artwork beats logo-path image' });
+  assert.deepEqual(
+    core.resolveConflictDeterministically('imageHorizontal', poster, logo),
+    { winner: 'a', reason: 'event artwork beats logo-path image' });
+
+  // Registered priorities, not the 'upsert' default (which would be write-once)
+  const resolved = core.getResolvedFieldPriorities({});
+  assert.equal(resolved.imageVertical.merge, 'ai');
+  assert.equal(resolved.imageHorizontal.merge, 'ai');
+
+  // Never-clear: a run that finds no portrait candidate keeps the curated one
+  const vertical = 'https://static.wixstatic.com/media/a~mv2.jpg/v1/fill/w_792,h_990/a~mv2.jpg';
+  const { scraped, existing } = buildAlignedArbitrationPair();
+  scraped.image = poster;
+  existing.notes += `\nimage: ${poster}\nimageVertical: ${vertical}`;
+  const adapter = buildArbitrationAdapter({});
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  assert.equal(adapter.calls.length, 0, 'an absent slot is never a conflict');
+  assert.equal(finalEvent.imageVertical, vertical, 'the curated portrait survives a scrape that found none');
+  assert.match(finalEvent.notes, new RegExp(`imageVertical: ${vertical.replace(/[.*+?^$()|[\]\\]/g, '\\$&')}`),
+    'the kept slot is written back as a bare single-line camelCase URL');
+});
+
+test('image slot merges do not thrash: two consecutive merges pick the same winner', async () => {
+  const core = createCore();
+  const logo = 'https://cdn.tickets.example/saas/logos/brand.png';
+  const poster = 'https://bearracuda.com/wp-content/uploads/2026/05/newfolsomweb.jpg';
+
+  // Round 1: the calendar holds a logo, the scrape a real poster → poster wins.
+  const first = buildAlignedArbitrationPair();
+  first.scraped.imageHorizontal = poster;
+  first.existing.notes += `\nimageHorizontal: ${logo}`;
+  const adapterA = buildArbitrationAdapter({});
+  const merged = await core.createFinalEventObject(first.existing, first.scraped, { httpAdapter: adapterA });
+  assert.equal(merged.imageHorizontal, poster);
+  assert.equal(adapterA.calls.length, 0, 'resolved deterministically, no AI');
+
+  // Round 2: re-run the SAME scrape against the merged calendar record. A
+  // thrashing rung would flip back; a stable one is a no-op with no conflict.
+  const second = buildAlignedArbitrationPair();
+  second.scraped.imageHorizontal = poster;
+  second.existing.notes += `\nimageHorizontal: ${merged.imageHorizontal}`;
+  const adapterB = buildArbitrationAdapter({});
+  const remerged = await core.createFinalEventObject(second.existing, second.scraped, { httpAdapter: adapterB });
+  assert.equal(remerged.imageHorizontal, poster, 'the same winner, run after run');
+  assert.equal(adapterB.calls.length, 0, 'an already-settled slot never reaches the AI');
+});
+
+// ---------------------------------------------------------------------------
 // Image provenance rung: an image stamped as the event page's OWN artwork
 // (imageSource og-image / jsonld at extraction) beats a merely page-derived
 // candidate deterministically. Attribution is strict (the record's image must
@@ -10456,4 +10587,24 @@ test('shortName gate: mid-word cut is not a verbatim substring', () => {
   const core = createFinalBuildCore();
   assert.equal(core.evaluateDerivedShortName('BEEFMINCE MEET MARKET', 'BEEF', 16).ok, false, 'mid-word cut rejected');
   assert.equal(core.evaluateDerivedShortName('BEEFMINCE MEET MARKET', 'BEEFMINCE', 16).ok, true, 'word-aligned accepted');
+});
+
+test('website merge: a ticketing platform URL never displaces an identity link', () => {
+  const core = createCore();
+  const ctx = { records: {}, sideLabels: { a: 'calendar', b: 'scraped' } };
+
+  // Cubhouse, observed 2026-07-30: the curated linktree lost to an Eventbrite
+  // listing, which also broke the favicon derived from this field.
+  const linktree = 'https://linktr.ee/cubhouse';
+  const eventbrite = 'https://www.eventbrite.com/e/cubhouse-tickets-123456789';
+  const keepsIdentity = core.resolveConflictDeterministically('website', linktree, eventbrite, ctx);
+  assert.ok(keepsIdentity, 'resolved deterministically rather than deferred to AI');
+  assert.equal(keepsIdentity.winner, 'a', 'the identity link wins');
+
+  const reversed = core.resolveConflictDeterministically('website', eventbrite, linktree, ctx);
+  assert.equal(reversed.winner, 'b', 'direction does not matter');
+
+  // A real site replacing a platform link is still allowed.
+  const realSite = core.resolveConflictDeterministically('website', eventbrite, 'https://cubhouse.party/events/july', ctx);
+  assert.equal(realSite.winner, 'b', 'a genuine site beats a platform URL');
 });

@@ -41,6 +41,53 @@ const AURORA_MIN_SEPARATION = 0.2;
 const AURORA_SIBLING_LIGHTNESS = 0.55;
 const AURORA_SIBLING_CHROMA_BOOST = 1.12;
 
+// Every event field that holds a flyer URL. `image` is the primary; the two
+// orientation slots are optional (orientation is only knowable for a minority
+// of URLs) and a portrait primary legitimately appears in both `image` and
+// `imageVertical`.
+const IMAGE_SLOT_FIELDS = ['image', 'imageVertical', 'imageHorizontal'];
+
+// Move a flyer <img> onto its next candidate after a load failure. Events can
+// carry up to three flyer URLs (image / imageVertical / imageHorizontal), so a
+// dead CDN link no longer makes the artwork vanish — the card walks the
+// remaining candidates (queued in data-flyer-fallbacks by the card renderer)
+// and only removes the container once every one of them has failed, which is
+// exactly the pre-existing behaviour for the single-URL case.
+function advanceFlyerImage(img) {
+    const flyer = img && img.parentNode;
+    if (!flyer || typeof flyer.getAttribute !== 'function') {
+        if (img && typeof img.remove === 'function') img.remove();
+        return;
+    }
+    let queue = [];
+    try {
+        const raw = flyer.getAttribute('data-flyer-fallbacks');
+        if (raw) queue = JSON.parse(raw);
+    } catch (error) {
+        queue = [];
+    }
+    const remaining = Array.isArray(queue)
+        ? queue.filter(candidate => candidate && typeof candidate.u === 'string' && candidate.u)
+        : [];
+    const next = remaining.shift();
+    if (!next) {
+        flyer.remove();
+        return;
+    }
+    if (remaining.length) {
+        flyer.setAttribute('data-flyer-fallbacks', JSON.stringify(remaining));
+    } else {
+        flyer.removeAttribute('data-flyer-fallbacks');
+    }
+    flyer.setAttribute('data-flyer-url', next.u);
+    if (next.o) {
+        flyer.setAttribute('data-flyer-orientation', next.o);
+    } else {
+        flyer.removeAttribute('data-flyer-orientation');
+    }
+    img.src = next.u;
+}
+
 // Dynamic Google Calendar Loader - Supports multiple cities and calendars
 class DynamicCalendarLoader extends CalendarCore {
     constructor() {
@@ -638,7 +685,8 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     // Lazily create the flyer <img> the first time a card is selected.
-    // Deselection re-hides it via CSS; a load failure removes the container entirely.
+    // Deselection re-hides it via CSS; a load failure walks the remaining
+    // candidates (see advanceFlyerImage) before the container is removed.
     ensureFlyerLoaded(selectedCard) {
         const flyer = selectedCard.querySelector('.event-flyer[data-flyer-url]');
         if (!flyer || flyer.querySelector('img')) {
@@ -647,7 +695,7 @@ class DynamicCalendarLoader extends CalendarCore {
         const img = document.createElement('img');
         img.alt = 'event flyer';
         img.decoding = 'async';
-        img.onerror = () => flyer.remove();
+        img.onerror = () => advanceFlyerImage(img);
         img.src = flyer.getAttribute('data-flyer-url');
         flyer.appendChild(img);
     }
@@ -785,24 +833,31 @@ class DynamicCalendarLoader extends CalendarCore {
                 eventData.shortName = eventData.name || eventData.bar || '';
             }
             
-            // Convert image URLs based on data source
-            if (eventData.image && this.dataSource === 'cached') {
-                const originalImageUrl = eventData.image;
-                eventData.image = this.convertImageUrlToLocal(originalImageUrl, eventData);
-                
-                logger.debug('CALENDAR', 'Converted image URL for cached data', {
-                    eventName: eventData.name,
-                    originalUrl: originalImageUrl,
-                    localPath: eventData.image,
-                    dataSource: this.dataSource
-                });
-            } else if (eventData.image && (this.dataSource === 'proxy' || this.dataSource === 'fallback')) {
-                logger.debug('CALENDAR', 'Using external image URL for external data', {
-                    eventName: eventData.name,
-                    imageUrl: eventData.image,
-                    dataSource: this.dataSource
-                });
-            }
+            // Convert image URLs based on data source. Every flyer slot is
+            // rewritten, not just the primary — filenames are content-hash
+            // derived, so two candidates for one event never collide.
+            IMAGE_SLOT_FIELDS.forEach(field => {
+                const originalImageUrl = eventData[field];
+                if (!originalImageUrl) return;
+                if (this.dataSource === 'cached') {
+                    eventData[field] = this.convertImageUrlToLocal(originalImageUrl, eventData);
+
+                    logger.debug('CALENDAR', 'Converted image URL for cached data', {
+                        eventName: eventData.name,
+                        field,
+                        originalUrl: originalImageUrl,
+                        localPath: eventData[field],
+                        dataSource: this.dataSource
+                    });
+                } else if (this.dataSource === 'proxy' || this.dataSource === 'fallback') {
+                    logger.debug('CALENDAR', 'Using external image URL for external data', {
+                        eventName: eventData.name,
+                        field,
+                        imageUrl: originalImageUrl,
+                        dataSource: this.dataSource
+                    });
+                }
+            });
         }
         return eventData;
     }
@@ -2112,6 +2167,58 @@ class DynamicCalendarLoader extends CalendarCore {
         return this.escapeCardText(raw);
     }
 
+    // Ordered flyer candidates for one event, best first, as
+    // { u: rawUrl, o: 'portrait' | 'landscape' | '' } entries. `want` is the
+    // orientation the layout prefers; `o` is only set when the orientation is
+    // KNOWN (i.e. the URL came out of an orientation slot), which is the
+    // minority case — orientation is unknowable for most URLs, so an empty `o`
+    // has to keep behaving exactly like today's single-image card.
+    //
+    // EventSchema.pickImageForOrientation owns the preference order when it is
+    // available; the local fallback (wanted slot → primary → other slot) keeps
+    // this working on its own.
+    getFlyerCandidates(event, want = 'portrait') {
+        if (!event) return [];
+        const readSlot = value => (typeof value === 'string' ? value.trim() : '');
+        const vertical = readSlot(event.imageVertical);
+        const horizontal = readSlot(event.imageHorizontal);
+        const primary = readSlot(event.image);
+        const wantedSlot = want === 'landscape' ? horizontal : vertical;
+        const otherSlot = want === 'landscape' ? vertical : horizontal;
+
+        let preferred = wantedSlot;
+        const schema = typeof EventSchema !== 'undefined' ? EventSchema : null;
+        if (schema && typeof schema.pickImageForOrientation === 'function') {
+            try {
+                const picked = schema.pickImageForOrientation(event, want);
+                if (typeof picked === 'string' && picked.trim()) {
+                    preferred = picked.trim();
+                }
+            } catch (error) {
+                logger.debug('CALENDAR', 'pickImageForOrientation failed; using local flyer order', {
+                    error: error && error.message
+                });
+            }
+        }
+
+        const orientationOf = url => {
+            if (url && url === vertical) return 'portrait';
+            if (url && url === horizontal) return 'landscape';
+            return '';
+        };
+
+        const candidates = [];
+        const seen = new Set();
+        [preferred, wantedSlot, primary, otherSlot].forEach(url => {
+            if (!url || seen.has(url)) return;
+            seen.add(url);
+            // safeCardUrl doubles as the scheme guard: '' means javascript:/data:.
+            if (!this.safeCardUrl(url)) return;
+            candidates.push({ u: url, o: orientationOf(url) });
+        });
+        return candidates;
+    }
+
     // Inline SVG for one of the aurora card icons (see AURORA_CARD_ICONS).
     cardIconSvg(name, className = 'ec-ico') {
         const paths = AURORA_CARD_ICONS[name];
@@ -2545,9 +2652,22 @@ class DynamicCalendarLoader extends CalendarCore {
         // percent-encoded and encodeURI would double-encode them); getAttribute decodes
         // back to the exact original URL. data-flyer-url is kept so ensureFlyerLoaded()
         // still recognises the container.
-        const flyerUrl = event.image ? this.safeCardUrl(event.image) : '';
+        //
+        // The card shows the flyer at its natural aspect ratio in a fairly wide
+        // box, so it asks for the PORTRAIT candidate; the rest of the chain is
+        // queued in data-flyer-fallbacks for advanceFlyerImage(). The known
+        // orientation rides along on the container so CSS can cap portrait and
+        // landscape differently BEFORE the image loads (no layout shift).
+        const flyerCandidates = this.getFlyerCandidates(event, 'portrait');
+        const flyerPick = flyerCandidates[0] || null;
+        const flyerUrl = flyerPick ? this.safeCardUrl(flyerPick.u) : '';
+        const flyerOrientationAttr = flyerPick && flyerPick.o
+            ? ` data-flyer-orientation="${this.escapeCardText(flyerPick.o)}"` : '';
+        const flyerFallbacks = flyerCandidates.slice(1);
+        const flyerFallbackAttr = flyerFallbacks.length
+            ? ` data-flyer-fallbacks="${this.escapeCardText(JSON.stringify(flyerFallbacks))}"` : '';
         const flyerHtml = flyerUrl ?
-            `<div class="event-flyer" data-flyer-url="${flyerUrl}"><img src="${flyerUrl}" alt="" loading="lazy" decoding="async" onerror="this.parentNode.remove()"></div>` : '';
+            `<div class="event-flyer" data-flyer-url="${flyerUrl}"${flyerOrientationAttr}${flyerFallbackAttr}><img src="${flyerUrl}" alt="" loading="lazy" decoding="async" onerror="window.chunkyAdvanceFlyer ? window.chunkyAdvanceFlyer(this) : this.parentNode.remove()"></div>` : '';
 
         const aurora = this.getAuroraColorsForEvent(event);
         const plate = this.getFaviconPlateForEvent(event);
@@ -5164,4 +5284,7 @@ async function updateLocationStatus() {
 // Export class for use in app.js - no auto-initialization
 if (typeof window !== 'undefined') {
     window.DynamicCalendarLoader = DynamicCalendarLoader;
+    // Referenced from the flyer <img>'s inline onerror, which fires for cards
+    // that were never selected (so it cannot rely on ensureFlyerLoaded).
+    window.chunkyAdvanceFlyer = advanceFlyerImage;
 }

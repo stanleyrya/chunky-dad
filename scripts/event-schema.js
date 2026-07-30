@@ -89,6 +89,23 @@ const EVENT_KEY_ALIASES = {
     favicon: 'favicon',
     img: 'image',
     photo: 'image',
+    // Multi-orientation image slots. normalizeAliasKey lowercases and strips
+    // spaces/hyphens/underscores, so the single 'imagevertical' entry also
+    // resolves 'imageVertical', 'Image Vertical', 'image-vertical' and
+    // 'image_vertical' as INPUT spellings (URL params, foreign notes). Only
+    // the camelCase canonical form is ever WRITTEN to notes: isValidMetadataKey
+    // permits letters/digits/spaces only, so a hyphenated or underscored key
+    // silently vanishes from the notes with no error.
+    imagevertical: 'imageVertical',
+    verticalimage: 'imageVertical',
+    imageportrait: 'imageVertical',
+    portraitimage: 'imageVertical',
+    imgvertical: 'imageVertical',
+    imagehorizontal: 'imageHorizontal',
+    horizontalimage: 'imageHorizontal',
+    imagelandscape: 'imageHorizontal',
+    landscapeimage: 'imageHorizontal',
+    imghorizontal: 'imageHorizontal',
     cover: 'cover',
     bearreview: 'bearReview',
 
@@ -127,6 +144,8 @@ const URL_LIKE_FIELDS = new Set([
     'instagram',
     'twitter',
     'image',
+    'imageVertical',
+    'imageHorizontal',
     'favicon'
 ]);
 
@@ -165,6 +184,8 @@ const EVENT_BUILDER_STATE_KEY_BY_EVENT_KEY = Object.freeze({
     facebook: 'facebook',
     gmaps: 'gmaps',
     image: 'image',
+    imageVertical: 'imageVertical',
+    imageHorizontal: 'imageHorizontal',
     favicon: 'favicon'
 });
 
@@ -336,6 +357,62 @@ function formatEventNotes(event, options = {}) {
     });
 
     return notes.join('\n');
+}
+
+// Trimmed string value of one image slot, or '' when absent/blank.
+function readImageSlotValue(event, fieldName) {
+    const value = event ? event[fieldName] : null;
+    return typeof value === 'string' ? value.trim() : '';
+}
+
+// Pick the best image for a wanted orientation from the three slots.
+//   want: 'portrait' | 'vertical' | 'landscape' | 'horizontal' (anything else
+//         means "no preference" and returns the primary).
+// Fallback chain, in order:
+//   1. the exact-orientation slot (imageVertical / imageHorizontal)
+//   2. the primary `image` when it classifies as the wanted orientation
+//   3. the primary `image` when its orientation is UNKNOWN — by far the common
+//      case, and the reason this degrades to today's single-image behavior
+//   4. the other slot
+//   5. the primary `image`
+// Never returns null/undefined when the event carries any image; returns ''
+// only when it carries none.
+//
+// Classification is INJECTED, not imported: this file is pure and standalone
+// (the website loads it without shared-core). Pass
+// options.classifyOrientation — on the scraper side that is
+// sharedCore.classifyImageOrientation bound to the core instance. Without it
+// every primary reads as 'unknown', which collapses steps 2/3 into "return the
+// primary" — a safe, slot-driven result, since the parsers populate the slots.
+function pickImageForOrientation(event, want, options = {}) {
+    if (!event || typeof event !== 'object') return '';
+    const primary = readImageSlotValue(event, 'image');
+    const vertical = readImageSlotValue(event, 'imageVertical');
+    const horizontal = readImageSlotValue(event, 'imageHorizontal');
+    const wanted = String(want || '').trim().toLowerCase();
+    const wantsPortrait = wanted === 'portrait' || wanted === 'vertical';
+    const wantsLandscape = wanted === 'landscape' || wanted === 'horizontal';
+    if (!wantsPortrait && !wantsLandscape) {
+        return primary || vertical || horizontal || '';
+    }
+
+    const exactSlot = wantsPortrait ? vertical : horizontal;
+    if (exactSlot) return exactSlot;
+
+    const otherSlot = wantsPortrait ? horizontal : vertical;
+    if (primary) {
+        let orientation = 'unknown';
+        if (typeof options.classifyOrientation === 'function') {
+            try {
+                orientation = String(options.classifyOrientation(primary) || 'unknown');
+            } catch (error) {
+                orientation = 'unknown';
+            }
+        }
+        if (orientation === 'unknown') return primary;
+        if (orientation === (wantsPortrait ? 'portrait' : 'landscape')) return primary;
+    }
+    return otherSlot || primary || '';
 }
 
 function getEventBuilderStateKey(paramKey) {
@@ -745,6 +822,7 @@ const EventSchema = {
     isUrlLikeField,
     parseNotesIntoFields,
     formatEventNotes,
+    pickImageForOrientation,
     getEventBuilderStateKey,
     escapeIcsText,
     foldIcsLine,
