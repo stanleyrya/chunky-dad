@@ -7968,6 +7968,98 @@ test('image slots: two og:image tags on one page are BOTH considered', () => {
   assert.equal(filled.imageHorizontal, 'https://cdn.example/wide-d4e5f6.jpg');
 });
 
+test('image slots: og:image:width/height pair by DOCUMENT ADJACENCY, not flat index', () => {
+  const parser = createParser();
+  // Per the OGP spec a width/height tag describes the og:image it FOLLOWS.
+  // Here the FIRST og:image publishes no dimensions and the SECOND carries
+  // 1080x1350 — flat-index pairing would stamp the first tag authoritative
+  // portrait and put the wrong URL in the slot.
+  const html = `
+    <html><head>
+      <meta property="og:image" content="https://cdn.example/banner-nodims.jpg" />
+      <meta property="og:image" content="https://cdn.example/feed-flyer.jpg" />
+      <meta property="og:image:width" content="1080" />
+      <meta property="og:image:height" content="1350" />
+    </head><body></body></html>`;
+
+  const candidates = parser.collectPageMetaImageCandidates({ url: 'https://promoter.example/e/adjacency', html });
+  assert.equal(candidates.length, 2);
+  assert.equal(candidates[0].url, 'https://cdn.example/banner-nodims.jpg');
+  assert.equal(candidates[0].width, null, 'the dimensionless first tag stays unknown');
+  assert.equal(candidates[0].height, null);
+  assert.equal(candidates[0].authoritative, false);
+  assert.equal(candidates[1].url, 'https://cdn.example/feed-flyer.jpg');
+  assert.equal(candidates[1].width, 1080, 'the dims attach to the tag they follow');
+  assert.equal(candidates[1].height, 1350);
+  assert.equal(candidates[1].authoritative, true);
+
+  const event = { title: 'Adjacent Dims' };
+  parser.applyImageSlots(event, { url: 'https://promoter.example/e/adjacency', html });
+  assert.equal(event.imageVertical, 'https://cdn.example/feed-flyer.jpg',
+    'the portrait slot gets the URL the dimensions actually describe');
+  assert.equal(event.imageHorizontal, undefined);
+});
+
+test('image slots: og:image:width/height before any og:image attach to nothing', () => {
+  const parser = createParser();
+  const html = `
+    <html><head>
+      <meta property="og:image:width" content="1080" />
+      <meta property="og:image:height" content="1350" />
+      <meta property="og:image" content="https://cdn.example/after-orphan-dims.jpg" />
+    </head><body></body></html>`;
+
+  const candidates = parser.collectPageMetaImageCandidates({ url: 'https://promoter.example/e/orphan', html });
+  assert.equal(candidates.length, 1);
+  assert.equal(candidates[0].url, 'https://cdn.example/after-orphan-dims.jpg');
+  assert.equal(candidates[0].width, null, 'orphan dims describe no tag and are dropped');
+  assert.equal(candidates[0].height, null);
+  assert.equal(candidates[0].authoritative, false);
+});
+
+test('image slots: two og:image tags each keep their OWN adjacent dimensions', () => {
+  const parser = createParser();
+  const html = `
+    <html><head>
+      <meta property="og:image" content="https://cdn.example/tall-a1b2c3.jpg" />
+      <meta property="og:image:width" content="1000" />
+      <meta property="og:image:height" content="1500" />
+      <meta property="og:image" content="https://cdn.example/wide-d4e5f6.jpg" />
+      <meta property="og:image:width" content="1500" />
+      <meta property="og:image:height" content="1000" />
+    </head><body></body></html>`;
+
+  const candidates = parser.collectPageMetaImageCandidates({ url: 'https://promoter.example/e/paired', html });
+  assert.equal(candidates.length, 2);
+  assert.deepEqual(
+    candidates.map(c => ({ url: c.url, width: c.width, height: c.height, authoritative: c.authoritative })),
+    [
+      { url: 'https://cdn.example/tall-a1b2c3.jpg', width: 1000, height: 1500, authoritative: true },
+      { url: 'https://cdn.example/wide-d4e5f6.jpg', width: 1500, height: 1000, authoritative: true }
+    ]);
+});
+
+test('image slots: og:image dims never attach to twitter:image', () => {
+  const parser = createParser();
+  // A realistic head: the og block first, then the Twitter card repeating a
+  // DIFFERENT rendition. The og dims must not leak onto the twitter URL.
+  const html = `
+    <html><head>
+      <meta property="og:image" content="https://cdn.example/og-flyer.jpg" />
+      <meta property="og:image:width" content="1080" />
+      <meta property="og:image:height" content="1350" />
+      <meta name="twitter:image" content="https://cdn.example/twitter-card.jpg" />
+    </head><body></body></html>`;
+
+  const candidates = parser.collectPageMetaImageCandidates({ url: 'https://promoter.example/e/twitter', html });
+  assert.equal(candidates.length, 2);
+  const twitter = candidates.find(c => c.url === 'https://cdn.example/twitter-card.jpg');
+  assert.ok(twitter);
+  assert.equal(twitter.width, null, 'twitter:image has no dimension siblings');
+  assert.equal(twitter.height, null);
+  assert.equal(twitter.authoritative, false);
+});
+
 test('image slots: an event that already has an image still gets the page meta artwork considered for the OTHER slot', () => {
   const parser = createParser();
   const html = `

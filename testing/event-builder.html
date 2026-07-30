@@ -7576,6 +7576,11 @@ Example output:
         if (dom.facebookInput) dom.facebookInput.value = state.facebook || '';
         if (dom.gmapsInput) dom.gmapsInput.value = state.gmaps || '';
         if (dom.imageInput) dom.imageInput.value = state.image || '';
+        // Restored: #1582's slot lines REPLACED this assignment instead of
+        // adding after it, so a prefilled ?favicon= populated hidden state but
+        // never the visible input — the value rode along invisibly into the
+        // saved event with no way to see or clear it.
+        if (dom.faviconInput) dom.faviconInput.value = state.favicon || '';
         if (dom.imageVerticalInput) dom.imageVerticalInput.value = state.imageVertical || '';
         if (dom.imageHorizontalInput) dom.imageHorizontalInput.value = state.imageHorizontal || '';
         renderImageCandidates();

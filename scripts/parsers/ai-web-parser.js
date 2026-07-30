@@ -12038,6 +12038,33 @@ TEXT:
         return values;
     }
 
+    // EVERY og-style meta (key, content) pair for a SET of keys, in document
+    // order. collectPageMetaImageCandidates needs relative ordering ACROSS
+    // keys — per the OGP spec an og:image:width/og:image:height structured
+    // property describes the og:image tag it FOLLOWS, which the per-key
+    // extractOgMetaContentAll above cannot express. Same decoding and the same
+    // skip-empty rule, so filtering the result to one key always equals
+    // extractOgMetaContentAll's answer for that key.
+    extractOgMetaEntriesAll(html, keyNames) {
+        const source = String(html || '').slice(0, 500000);
+        const wanted = new Set(keyNames);
+        const metaRegex = /<meta\b[^>]*>/gi;
+        const entries = [];
+        let match;
+        while ((match = metaRegex.exec(source)) !== null) {
+            const tag = match[0];
+            const nameMatch = tag.match(/\b(?:name|property)\s*=\s*["']([^"']+)["']/i);
+            if (!nameMatch) continue;
+            const key = this.normalizeWhitespace(nameMatch[1]).toLowerCase();
+            if (!wanted.has(key)) continue;
+            const contentMatch = tag.match(/\bcontent\s*=\s*["']([^"']+)["']/i);
+            if (!contentMatch) continue;
+            const value = this.normalizeWhitespace(this.decodeBasicEntities(contentMatch[1]));
+            if (value) entries.push({ key, value });
+        }
+        return entries;
+    }
+
     // Cached per page like getPageBrandNames (segment/OCR copies spread
     // htmlData and inherit the cache).
     getPageOgTitle(htmlData) {
@@ -12121,16 +12148,38 @@ TEXT:
     // standard storage pipeline (normalizeHttpUrlValue → unwrapImageProxyUrl →
     // upgradeCdnThumbnailUrl). Multiple tags per key are all collected, and the
     // og:image family's published og:image:width/og:image:height are paired by
-    // document order — those are the page's OWN authoritative dimensions, worth
-    // more than anything the URL hints at. Cached per page like getPageOgTitle.
+    // DOCUMENT ADJACENCY per the OGP spec: a width/height tag describes the
+    // og:image-family tag it follows, so a dimensionless og:image before a
+    // dimensioned one never inherits the later tag's shape. Those published
+    // dimensions are the page's OWN authoritative answer, worth more than
+    // anything the URL hints at. Cached per page like getPageOgTitle.
     collectPageMetaImageCandidates(htmlData) {
         if (!htmlData || typeof htmlData !== 'object') return [];
         if (Array.isArray(htmlData.pageMetaImageCandidates)) return htmlData.pageMetaImageCandidates;
         const html = typeof htmlData.html === 'string' ? htmlData.html : '';
         const candidates = [];
         if (html) {
-            const widths = this.extractOgMetaContentAll(html, 'og:image:width');
-            const heights = this.extractOgMetaContentAll(html, 'og:image:height');
+            // og:image:width/height belong to the og:image family only — the
+            // Twitter card tags have no dimension siblings. Walk the family in
+            // document order: every url-bearing tag starts a new candidate
+            // (og:image:url/secure_url are treated as new candidates, matching
+            // the historical per-key handling, not as refinements of the
+            // preceding og:image); width/height attach to the MOST RECENT one,
+            // and dimensions published before any url-bearing tag attach to
+            // nothing.
+            const ogUrlKeys = ['og:image', 'og:image:url', 'og:image:secure_url'];
+            const pairedDimensionsByKey = { 'og:image': [], 'og:image:url': [], 'og:image:secure_url': [] };
+            let currentOgDimensions = null;
+            for (const entry of this.extractOgMetaEntriesAll(html, ogUrlKeys.concat(['og:image:width', 'og:image:height']))) {
+                if (entry.key === 'og:image:width') {
+                    if (currentOgDimensions) currentOgDimensions.width = this.parseImageDimensionValue(entry.value);
+                } else if (entry.key === 'og:image:height') {
+                    if (currentOgDimensions) currentOgDimensions.height = this.parseImageDimensionValue(entry.value);
+                } else {
+                    currentOgDimensions = { width: null, height: null };
+                    pairedDimensionsByKey[entry.key].push(currentOgDimensions);
+                }
+            }
             const metaKeys = ['og:image', 'og:image:url', 'og:image:secure_url', 'twitter:image', 'twitter:image:src'];
             const seen = new Set();
             for (const metaKey of metaKeys) {
@@ -12146,11 +12195,9 @@ TEXT:
                     const key = this.canonicalizeImageUrlForComparison(upgraded);
                     if (!key || seen.has(key)) continue;
                     seen.add(key);
-                    // og:image:width/height belong to the og:image family only —
-                    // the Twitter card tags have no dimension siblings.
-                    const pairable = metaKey.indexOf('og:image') === 0;
-                    const width = pairable ? this.parseImageDimensionValue(widths[i]) : null;
-                    const height = pairable ? this.parseImageDimensionValue(heights[i]) : null;
+                    const paired = pairedDimensionsByKey[metaKey] ? pairedDimensionsByKey[metaKey][i] : null;
+                    const width = paired ? paired.width : null;
+                    const height = paired ? paired.height : null;
                     candidates.push({ url: upgraded, width, height, authoritative: Boolean(width && height) });
                 }
             }

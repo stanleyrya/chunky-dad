@@ -6429,19 +6429,29 @@ body.loaded {
     --favicon-plate-pad: 2px;
 }
 /* Map markers adopt the same plate, radius and contain-fit as the cards. */
-.favicon-marker-container {
+/* Scoped to the CITY-PAGE map only: the bar-directory and home-page maps
+   build the same marker classes and were losing their 2px border (and their
+   6px radius) to this block. Review 2026-07-30 also caught `border: none`
+   killing the SELECTION ring — .marker-selected forces border-color/width
+   with !important but not border-style, so style:none zeroed the ring.
+   A transparent solid 0-width border keeps the machinery: the selected
+   rule's width/color !important overrides restore the primary ring. */
+.city-page .favicon-marker-container,
+#events-map .favicon-marker-container {
     background: var(--fav-plate, var(--favicon-plate-bg));
     border-radius: var(--favicon-plate-radius);
-    border: none;
+    border: 0 solid transparent;
     overflow: hidden;
     box-shadow: 0 0 0 1px rgba(23, 26, 51, 0.25), 0 2px 6px rgba(6, 8, 20, 0.3);
 }
-.favicon-marker-icon {
+.city-page .favicon-marker-icon,
+#events-map .favicon-marker-icon {
     object-fit: contain;
     padding: var(--favicon-plate-pad);
     border-radius: calc(var(--favicon-plate-radius) - 2px);
 }
 /* The text fallback keeps its filled look — no plate behind letters. */
-.favicon-marker-container.text-marker {
+.city-page .favicon-marker-container.text-marker,
+#events-map .favicon-marker-container.text-marker {
     background: var(--primary-color);
 }

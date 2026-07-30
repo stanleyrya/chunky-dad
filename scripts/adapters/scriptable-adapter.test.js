@@ -1578,6 +1578,52 @@ test('generateBearDroppedSection renders drops as real event cards with both ver
   assert.ok(savedHtml.includes('data-bear-act="mark-bear" disabled'), 'saved-run display has no post-dismissal execution');
 });
 
+test('generateBearDroppedSection: manuallyMarkedBear renders the rescued treatment', () => {
+  const adapter = buildAdapter();
+  // A drop the owner rescued mid-run (applyPendingBearOverrides stamps
+  // manuallyMarkedBear on the entry, and saveRun persists it) must read as
+  // rescued in a saved run — not as a still-active "not bear" verdict.
+  const html = adapter.generateBearDroppedSection({
+    _isDisplayingSavedRun: true,
+    bearDroppedEvents: [{ ...buildBearDroppedFixture(), manuallyMarkedBear: true }]
+  });
+  assert.ok(html.includes('data-bear-verdict="bear"'), 'verdict shown as bear');
+  assert.ok(
+    !html.includes('is-active" data-bear-idx="d0" data-bear-act="mark-not-bear"'),
+    'not-bear is no longer the active verdict'
+  );
+  assert.ok(html.includes('data-bear-act="mark-bear" disabled'), 'rendered read-only');
+  assert.ok(html.includes('Rescued (marked bear by calendar owner this run)'), 'rescue note shown');
+
+  // Same treatment in a live run: an already-applied rescue is not re-markable.
+  const liveHtml = adapter.generateBearDroppedSection({
+    bearDroppedEvents: [{ ...buildBearDroppedFixture(), manuallyMarkedBear: true }]
+  });
+  assert.ok(liveHtml.includes('data-bear-act="mark-bear" disabled'), 'read-only in live runs too');
+  assert.ok(liveHtml.includes('data-bear-verdict="bear"'));
+
+  // The pre-existing rescue flag keeps working unchanged.
+  const rescuedHtml = adapter.generateBearDroppedSection({
+    bearDroppedEvents: [{ ...buildBearDroppedFixture(), rescued: true }]
+  });
+  assert.ok(rescuedHtml.includes('Rescued (manual override on calendar record)'));
+  assert.ok(rescuedHtml.includes('data-bear-verdict="bear"'));
+});
+
+test('generateBearDroppedSection: fallback entries without .event render disabled buttons', () => {
+  const adapter = buildAdapter();
+  // recordBearOverrideAndReport early-returns on entries lacking .event, so
+  // live buttons on the flat-fields fallback card would be silently dead —
+  // they must carry the same disabled treatment saved-run mode uses.
+  const { event, ...flatEntry } = buildBearDroppedFixture();
+  const html = adapter.generateBearDroppedSection({ bearDroppedEvents: [flatEntry] });
+  assert.ok(html.includes('Twink Bash'), 'fallback card still renders the drop');
+  assert.ok(html.includes('Neon Room'), 'venue survives via the flat fields');
+  assert.ok(html.includes('data-bear-act="mark-bear" disabled'), 'mark-bear disabled');
+  assert.ok(html.includes('data-bear-act="mark-not-bear" disabled'), 'mark-not-bear disabled');
+  assert.ok(!html.includes('data-bear-act="mark-bear">'), 'no live mark-bear button');
+});
+
 test('buildBearVerdictActionsHtml escapes the card id and marks the active verdict', () => {
   const adapter = buildAdapter();
   assert.equal(adapter.buildBearVerdictActionsHtml(null), '', 'no row without options');
@@ -2897,9 +2943,14 @@ test('picker-state: corrupt or misshapen file → empty pre-selection', async ()
   assert.deepEqual(adapter.parsePickerState('null', ['Alpha']), [], 'JSON null → []');
 });
 
-// Headless UITable stub that records every row it is handed and taps the first
-// row whose label contains `tapLabel` (null = swipe-down dismissal).
-function installPickerUITableStub(tapLabel) {
+// Headless UITable stub that records every row it is handed and taps, in
+// order, the first row whose label contains each entry of `tapLabels` (a
+// string, an array of strings, or null = swipe-down dismissal). Rows are
+// re-read between taps because toggling a parser rebuilds the table. Color
+// stubs return tag strings so titleColor is assertable.
+function installPickerUITableStub(tapLabels) {
+  const taps =
+    tapLabels == null ? [] : Array.isArray(tapLabels) ? tapLabels : [tapLabels];
   const originals = {
     UITable: global.UITable,
     UITableRow: global.UITableRow,
@@ -2930,47 +2981,72 @@ function installPickerUITableStub(tapLabel) {
     reload() {}
     present() {
       captured.rows = this.rows;
-      const rows = this.rows;
       return new Promise((resolve) => {
         setImmediate(() => {
-          if (tapLabel) {
-            const row = rows.find((r) =>
+          for (const tapLabel of taps) {
+            const row = this.rows.find((r) =>
               r.cells.some((c) => typeof c.title === 'string' && c.title.includes(tapLabel))
             );
             if (row && row.onSelect) row.onSelect();
           }
+          captured.rows = this.rows;
           resolve();
         });
       });
     }
   };
   global.Font = { boldSystemFont: () => ({}), systemFont: () => ({}) };
-  global.Color = { white: () => ({}), brown: () => ({}), blue: () => ({}), gray: () => ({}) };
+  global.Color = {
+    white: () => 'white',
+    brown: () => 'brown',
+    blue: () => 'blue',
+    gray: () => 'gray'
+  };
   captured.restore = () => Object.assign(global, originals);
   captured.labels = () =>
     captured.rows.map((r) => (r.cells[0] && r.cells[0].title) || '');
+  captured.findRow = (label) =>
+    captured.rows.find((r) =>
+      r.cells.some((c) => typeof c.title === 'string' && c.title.includes(label))
+    );
   return captured;
 }
 
 test('presentParserPicker pre-selects NOTHING even with a remembered selection', async () => {
   const adapter = buildAdapter();
   const files = installMemoryFm(adapter);
-  files.set(
-    adapter.getPickerStatePath(),
-    JSON.stringify({ selected: ['Alpha', 'Beta'] })
-  );
+  const rememberedState = JSON.stringify({ selected: ['Alpha', 'Beta'] });
+  files.set(adapter.getPickerStatePath(), rememberedState);
 
   const table = installPickerUITableStub('▶ Run selected');
   try {
     const picked = await adapter.presentParserPicker({
       parsers: [{ name: 'Alpha' }, { name: 'Beta' }, { name: 'Gamma' }]
     });
-    assert.deepEqual(Array.from(picked), [], 'confirming immediately runs nothing');
+    // "Run selected (0)" is a disabled no-op: the tap neither finishes nor
+    // dismisses, so the (stubbed) swipe-down that follows resolves null.
+    assert.equal(picked, null, 'tapping Run selected with zero checked runs nothing');
+    assert.equal(
+      files.get(adapter.getPickerStatePath()),
+      rememberedState,
+      'the remembered "Rerun last" state is NOT overwritten by an empty confirm'
+    );
 
     const labels = table.labels();
     assert.ok(
       labels.includes('▶ Run selected (0)'),
       `Run selected starts at zero (labels: ${labels.join(' | ')})`
+    );
+    const runSelectedRow = table.findRow('▶ Run selected');
+    assert.equal(
+      runSelectedRow.cells[0].titleColor,
+      'gray',
+      'zero-selection Run selected renders gray (disabled)'
+    );
+    assert.equal(
+      runSelectedRow.dismissOnSelect,
+      false,
+      'zero-selection Run selected does not dismiss the table'
     );
     assert.ok(
       labels.every((label) => !label.startsWith('☑')),
@@ -2980,6 +3056,48 @@ test('presentParserPicker pre-selects NOTHING even with a remembered selection',
       labels.filter((label) => label.startsWith('☐')).length,
       3,
       'every parser row renders unchecked'
+    );
+  } finally {
+    table.restore();
+  }
+});
+
+test('presentParserPicker: a non-empty "Run selected" still runs and persists the picks', async () => {
+  const adapter = buildAdapter();
+  const files = installMemoryFm(adapter);
+  files.set(
+    adapter.getPickerStatePath(),
+    JSON.stringify({ selected: ['Beta'] })
+  );
+
+  // Tap the Alpha parser row (rebuilds the table), then confirm.
+  const table = installPickerUITableStub(['☐ Alpha', '▶ Run selected']);
+  try {
+    const picked = await adapter.presentParserPicker({
+      parsers: [{ name: 'Alpha' }, { name: 'Beta' }, { name: 'Gamma' }]
+    });
+    assert.deepEqual(Array.from(picked), ['Alpha'], 'the checked parser runs');
+    assert.deepEqual(
+      JSON.parse(files.get(adapter.getPickerStatePath())).selected,
+      ['Alpha'],
+      'a non-empty confirm still overwrites the remembered state'
+    );
+
+    const labels = table.labels();
+    assert.ok(
+      labels.includes('▶ Run selected (1)'),
+      `count updates after the toggle (labels: ${labels.join(' | ')})`
+    );
+    const runSelectedRow = table.findRow('▶ Run selected');
+    assert.equal(
+      runSelectedRow.cells[0].titleColor,
+      'blue',
+      'armed Run selected renders blue'
+    );
+    assert.equal(
+      runSelectedRow.dismissOnSelect,
+      true,
+      'armed Run selected dismisses on confirm'
     );
   } finally {
     table.restore();
@@ -3402,8 +3520,56 @@ test('probeRecurringSeries fails open on errors and without an identifier', asyn
   assert.equal(await adapter.probeRecurringSeries({ title: 'no identifier' }, {}), false);
 });
 
-// NOTE: saveRun's payload (which now carries bearDroppedEvents) is not covered
-// here. It writes through Scriptable's FileManager and pulls in enough of that
-// runtime that stubbing it in Node tests more of the stub than of the code.
-// The change is a single key added to a literal, verified by inspection and by
-// the run-file reproduction in the PR.
+// ---------------------------------------------------------------------------
+// saveRun payload: the top-level bearDroppedEvents copy is display-only and
+// sanitized (no `_`-prefixed event keys); parserResults keeps the raw entries.
+// ---------------------------------------------------------------------------
+
+test('saveRun persists sanitized dropped entries; parserResults and live entries stay raw', async () => {
+  const adapter = buildAdapter();
+  const files = installMemoryFm(adapter);
+
+  const entry = buildBearDroppedFixture();
+  entry.event._parserConfig = { name: 'megaparser', urls: ['https://x.example'] };
+  entry.event._sourcePageUrl = 'https://x.example/page';
+  const results = {
+    analyzedEvents: [],
+    bearDroppedEvents: [entry],
+    parserResults: [{ name: 'megaparser', bearDroppedEvents: [entry] }],
+    errors: []
+  };
+
+  const runId = await adapter.saveRun(results);
+  assert.ok(runId, 'run saved');
+  const payload = JSON.parse(files.get(adapter.getRunFilePath(runId)));
+
+  const saved = payload.bearDroppedEvents[0];
+  assert.equal(saved.reason, 'ai: drag show, no bear context', 'drop reason survives');
+  assert.equal(saved.host, 'promoter.example', 'host survives');
+  assert.equal(saved.title, 'Twink Bash', 'flat title survives');
+  assert.equal(saved.startDate, '2026-08-02T21:00:00.000Z', 'flat startDate survives');
+  assert.equal(saved.event.title, 'Twink Bash', 'embedded event title survives');
+  assert.ok(
+    Object.keys(saved.event).every((key) => !key.startsWith('_')),
+    'no _-prefixed keys (including _parserConfig) on the saved embedded event'
+  );
+
+  // parserResults is persisted untouched — other consumers may rely on it.
+  assert.ok(
+    payload.parserResults[0].bearDroppedEvents[0].event._parserConfig,
+    'parserResults copy keeps the raw entry'
+  );
+  // The live entry is never mutated by the save.
+  assert.ok(entry.event._parserConfig, 'live entry keeps its working keys');
+  assert.equal(results.bearDroppedEvents[0], entry, 'live list untouched');
+});
+
+test('sanitizeDroppedEntriesForRunSave tolerates misshapen input', () => {
+  const adapter = buildAdapter();
+  assert.deepEqual(adapter.sanitizeDroppedEntriesForRunSave(null), []);
+  assert.deepEqual(adapter.sanitizeDroppedEntriesForRunSave('nope'), []);
+  assert.deepEqual(
+    adapter.sanitizeDroppedEntriesForRunSave([null, { title: 'no event field' }]),
+    [null, { title: 'no event field' }]
+  );
+});

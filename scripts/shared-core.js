@@ -89,15 +89,32 @@ const IMAGE_ORIENTATION_SLOT_FIELDS = new Set(['imageVertical', 'imageHorizontal
 // Cubhouse's curated https://linktr.ee/cubhouse was clobbered by an Eventbrite
 // listing URL, which also broke the icon derived from that field).
 // Data only — shared-core stays platform-pure.
-const PLATFORM_IDENTITY_HOSTS = new Set([
+const PLATFORM_IDENTITY_HOSTS = [
     'eventbrite.com', 'eventbrite.co.uk', 'eventbrite.ca', 'eventbrite.com.au',
     'dice.fm', 'ra.co', 'residentadvisor.net', 'ticketweb.com', 'ticketweb.co.uk',
-    'seetickets.com', 'universe.com', 'posh.vip', 'withfriends.co',
+    'seetickets.com', 'seetickets.us', 'universe.com', 'posh.vip', 'withfriends.co',
     'tickettailor.com', 'sickening.events', 'redeyetickets.com',
     'ticketmaster.com', 'shotgun.live', 'fatsoma.com', 'meetup.com',
     'partiful.com', 'luma.com', 'lu.ma', 'instagram.com', 'facebook.com',
-    'twitter.com', 'x.com', 'tiktok.com'
-]);
+    'twitter.com', 'x.com', 'tiktok.com',
+    // Review 2026-07-30: hosts present in TICKETING_PLATFORM_HOSTS or the
+    // site-side PLATFORM_FAVICON_HOSTNAMES but missing here, so the rung
+    // silently failed to protect identity links against them.
+    'ticketleap.com', 'eventeny.com', 'showclix.com'
+]
+
+
+// Exact host or subdomain of a platform whose URL identifies the PLATFORM,
+// not the event's own presence. Suffix matching mirrors
+// isKnownTicketingPlatformHost: review 2026-07-30 showed exact-match crowning
+// link.dice.fm and m.facebook.com as "identity links" (they differed from the
+// canonical entry) while business.facebook.com slipped past entirely.
+function isPlatformIdentityHost(host) {
+    const normalized = String(host || '').toLowerCase();
+    if (!normalized) return false;
+    return PLATFORM_IDENTITY_HOSTS.some(platform =>
+        normalized === platform || normalized.endsWith(`.${platform}`));
+}
 
 const IMAGE_MERGE_FIELDS = new Set(['image', 'imageVertical', 'imageHorizontal']);
 
@@ -973,13 +990,11 @@ class SharedCore {
         if (!parsed) return null;
         const host = String(parsed.hostname || parsed.host || '').toLowerCase().replace(/^www\./, '');
         const path = String(parsed.pathname || '');
-        const toDimensions = (rawWidth, rawHeight) => {
+        const toDimensions = (rawWidth, rawHeight, minimum = 10) => {
             const width = parseInt(rawWidth, 10);
             const height = parseInt(rawHeight, 10);
             if (!isFinite(width) || !isFinite(height)) return null;
-            // Loose bounds on purpose: only the RATIO is consumed, so a print
-            // aspect token ("…/11x17-4.jpg") is as useful as a pixel pair.
-            if (width < 10 || height < 10 || width > 20000 || height > 20000) return null;
+            if (width < minimum || height < minimum || width > 20000 || height > 20000) return null;
             return { width, height };
         };
 
@@ -987,19 +1002,35 @@ class SharedCore {
         // are the trustworthy signal. Wix's comma form, then the generic
         // NNNxNNN token (a /1920x1080/ path segment or a "-820x1024.jpg"
         // filename suffix, both real shapes in data/calendars).
+        //
+        // Wix chains transforms (…/v1/crop/x_0,y_0,w_2000,h_1000/v1/fill/
+        // w_400,h_800/…) and the LAST transform is the rendition actually
+        // served, so the last w_/h_ pair in the path wins — never the crop
+        // region's shape. A Wix pair, being an explicit dimension syntax,
+        // also outranks any generic NNNxNNN token elsewhere in the path.
+        //
+        // The generic token scan is pattern-matching inside opaque tokens, so
+        // it demands ≥100 on BOTH dimensions: "ab12x34cd.jpg" and
+        // "os-windows-10x64-download.png" are not renditions, and no real
+        // flyer (nor even a 96px favicon) should drive orientation below
+        // that. The Wix and query-param paths keep the loose ≥10 bound —
+        // they are explicit dimension syntaxes, not guesses.
+        let wixDimensions = null;
+        let genericDimensions = null;
         for (const segment of path.split('/').filter(Boolean)) {
             const wixWidth = segment.match(/(?:^|,)w_(\d{1,5})(?=,|$)/i);
             const wixHeight = segment.match(/(?:^|,)h_(\d{1,5})(?=,|$)/i);
             if (wixWidth && wixHeight) {
                 const dimensions = toDimensions(wixWidth[1], wixHeight[1]);
-                if (dimensions) return dimensions;
+                if (dimensions) wixDimensions = dimensions;
             }
             const resolution = segment.match(/(?:^|[^\d])(\d{2,5})x(\d{2,5})(?![\dx])/i);
-            if (resolution) {
-                const dimensions = toDimensions(resolution[1], resolution[2]);
-                if (dimensions) return dimensions;
+            if (resolution && !genericDimensions) {
+                genericDimensions = toDimensions(resolution[1], resolution[2], 100);
             }
         }
+        if (wixDimensions) return wixDimensions;
+        if (genericDimensions) return genericDimensions;
 
         // Eventbrite's wrapper never gets to describe the artwork's shape:
         // img.evbuc.com's "?crop=focalpoint&fit=crop&h=230&w=460" is its fixed
@@ -1019,14 +1050,16 @@ class SharedCore {
     // 'portrait' | 'landscape' | 'square' | 'unknown' for an image URL.
     // 'unknown' is the COMMON answer (most image URLs advertise no dimensions),
     // so every consumer must degrade to today's behavior when it comes back —
-    // orientation is a refinement, never a gate. The 5% dead band keeps
-    // near-squares (e.g. Wix w_1344,h_1345) out of both buckets.
+    // orientation is a refinement, never a gate. The 1.1 ratio dead band keeps
+    // near-squares (e.g. Wix w_1344,h_1345) out of both buckets and matches
+    // ai-web-parser's imageOrientationRatioThreshold (parsers are standalone
+    // and cannot import shared code — keep the two in sync).
     classifyImageOrientation(url) {
         const dimensions = this.getImageDimensionsFromUrl(url);
         if (!dimensions) return 'unknown';
         const ratio = dimensions.width / dimensions.height;
-        if (ratio >= 1.05) return 'landscape';
-        if (ratio <= 0.95) return 'portrait';
+        if (ratio >= 1.1) return 'landscape';
+        if (ratio <= 1 / 1.1) return 'portrait';
         return 'square';
     }
 
@@ -1645,13 +1678,6 @@ class SharedCore {
         }
         const website = pick('website');
         if (website) block.url = { value: website };
-        // Guarantee a favicon for every matched event. The icon is resolved
-        // from `favicon` (or, failing that, `website`) — but `website` is the
-        // field an Eventbrite/DICE listing URL tends to occupy, and platform
-        // URLs are deliberately refused as identity, which would leave a
-        // registry-matched event with NO icon at all. A promoter without an
-        // explicit favicon therefore contributes its own identity link as one.
-        if (!block.favicon && website) block.favicon = { value: website };
         return block;
     }
 
@@ -1667,7 +1693,24 @@ class SharedCore {
         Object.keys(metadataBlock).forEach(key => {
             event._fieldPriorities[key] = fieldPriorities[key];
         });
-        return this.applyStaticMetadataBlock(event, metadataBlock, fieldPriorities);
+        const stamped = this.applyStaticMetadataBlock(event, metadataBlock, fieldPriorities);
+        // Favicon GUARANTEE, deliberately outside the static machinery. An
+        // explicit registry `favicon:` above stamps with static clobber like
+        // any curated fact — but the fallback ("no explicit favicon, use the
+        // promoter's identity link so the event isn't iconless") must only
+        // ever FILL A BLANK. Review 2026-07-30 showed the clobber version
+        // replacing a venue's favicon on every registry-matched event and
+        // silently reverting hand-fixed calendar favicons on every run —
+        // curated beats derived, and a fallback is not curated. Stamped as a
+        // plain value with 'upsert' merge (calendar wins), so a stored or
+        // scraped favicon always survives it.
+        if (!metadataBlock.favicon
+            && this.isEmptyArbitrationValue(event.favicon)
+            && metadataBlock.url && metadataBlock.url.value) {
+            event.favicon = metadataBlock.url.value;
+            event._fieldPriorities.favicon = { priority: ['ai-web'], merge: 'upsert' };
+        }
+        return stamped;
     }
 
     // One registry pass over a parser's events (processParser: after
@@ -1883,8 +1926,8 @@ class SharedCore {
             // replacing a platform link) is allowed, and platform-vs-platform
             // falls through to the rungs below.
             if (fieldName === 'website' || fieldName === 'url') {
-                const platformA = PLATFORM_IDENTITY_HOSTS.has(urlA.host.replace(/^www\./, ''));
-                const platformB = PLATFORM_IDENTITY_HOSTS.has(urlB.host.replace(/^www\./, ''));
+                const platformA = isPlatformIdentityHost(urlA.host);
+                const platformB = isPlatformIdentityHost(urlB.host);
                 // Deliberately narrow: the non-platform side must itself be a
                 // real page, not a bare homepage. A bare root still loses to a
                 // deep event page (the older cross-host rung below owns that
@@ -1997,7 +2040,22 @@ class SharedCore {
                     };
                     const provenanceA = getOgGradeImageProvenance(contextRecords.a, valueA);
                     const provenanceB = getOgGradeImageProvenance(contextRecords.b, valueB);
-                    if (Boolean(provenanceA) !== Boolean(provenanceB)) {
+                    // For the ORIENTATION SLOTS, one-sided attribution must
+                    // not decide. imageSource describes the PRIMARY image
+                    // only, so a slot holding a URL different from its own
+                    // record's primary is STRUCTURALLY unattributable — a
+                    // curated calendar slot (portrait next to a landscape
+                    // primary) can never present provenance, and letting the
+                    // scraper's attributed side win by default clobbered
+                    // curated slots deterministically with the AI never
+                    // consulted (review 2026-07-30). The primary image keeps
+                    // one-sided decisions: for `image`, no attribution
+                    // genuinely means "not the page's own artwork".
+                    const slotContest = fieldName !== 'image';
+                    const bothSidesPresent = !this.isEmptyArbitrationValue(valueA) && !this.isEmptyArbitrationValue(valueB);
+                    const oneSidedOnSlot = slotContest && bothSidesPresent
+                        && (Boolean(provenanceA) !== Boolean(provenanceB));
+                    if (!oneSidedOnSlot && Boolean(provenanceA) !== Boolean(provenanceB)) {
                         const provenanceLabels = context.sideLabels && typeof context.sideLabels === 'object'
                             ? context.sideLabels : { a: 'a', b: 'b' };
                         return {
