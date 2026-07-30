@@ -251,26 +251,48 @@ async function main() {
   let changes = 0;
   try {
     for (const t of targets) {
-      const page = await browser.newPage();
+      let page = await browser.newPage();
       await page.setViewport({ width: 1200, height: 630, deviceScaleFactor: 1 });
       const baseArgs = { cityName: t.cityKey, eventName: t.title, day: t.day, time: t.time, bar: t.bar, faviconColors: t.faviconColors };
+      let rendered = false;
       try {
         await page.setContent(buildTemplate({ ...baseArgs, flyerUrl: t.flyerUrl }), { waitUntil: 'networkidle0', timeout: 20000 });
+        rendered = true;
       } catch (err) {
         // A slow or unreachable flyer host must never fail the build: fall back
         // to the text-only card, which needs no network at all.
         console.warn(`⚠️  Flyer render timed out for ${t.cityKey}/${t.slug}; using text-only card`);
-        await page.setContent(buildTemplate(baseArgs), { waitUntil: 'load' });
       }
-      const buffer = await page.screenshot({ type: 'png' });
-      const outPath = path.join(OUTPUT_DIR, t.cityKey, `${t.slug}.png`);
-      if (writeIfChanged(outPath, buffer)) {
-        changes++;
-        console.log(`✓ Generated ${path.relative(ROOT, outPath)}`);
-      } else {
-        console.log(`⏭️  No change for ${path.relative(ROOT, outPath)}`);
+      if (!rendered) {
+        // The fallback needs its OWN guard. It previously ran inside the catch
+        // above with no timeout override, so it inherited the 30s default and,
+        // when it also hung, its throw escaped the very catch meant to make it
+        // safe — aborting the whole job (observed in CI 2026-07-30, run
+        // 30563792651, after one slow CDN). It also renders in a page whose
+        // previous load was just aborted, so it gets a fresh one, waits only
+        // for domcontentloaded (no network is involved in a text-only card),
+        // and skips this event entirely rather than failing the run.
+        try {
+          await page.close().catch(() => {});
+          page = await browser.newPage();
+          await page.setViewport({ width: 1200, height: 630, deviceScaleFactor: 1 });
+          await page.setContent(buildTemplate(baseArgs), { waitUntil: 'domcontentloaded', timeout: 15000 });
+          rendered = true;
+        } catch (fallbackError) {
+          console.warn(`⚠️  Skipping OG image for ${t.cityKey}/${t.slug}: ${fallbackError.message}`);
+        }
       }
-      await page.close();
+      if (rendered) {
+        const buffer = await page.screenshot({ type: 'png' });
+        const outPath = path.join(OUTPUT_DIR, t.cityKey, `${t.slug}.png`);
+        if (writeIfChanged(outPath, buffer)) {
+          changes++;
+          console.log(`✓ Generated ${path.relative(ROOT, outPath)}`);
+        } else {
+          console.log(`⏭️  No change for ${path.relative(ROOT, outPath)}`);
+        }
+      }
+      await page.close().catch(() => {});
     }
   } finally {
     await browser.close();
