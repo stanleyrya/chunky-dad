@@ -63,5 +63,11 @@
     "palette": "#ffffff:74:0 #f15323:22:20 #f79a80:3:12 #f9b5a2:1:8",
     "accent": "#f15323",
     "faviconPlate": "#ffffff"
+  },
+  {
+    "name": "The Stud",
+    "city": "sf",
+    "address": "1123 Folsom Street, San Francisco, California, 94103",
+    "coordinates": "37.7761653, -122.4083643"
   }
 ]

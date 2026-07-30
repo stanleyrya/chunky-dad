@@ -49,5 +49,17 @@
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJXxXPUMi_woARE46Y7WO-Ww0",
     "gayCities": "https://losangeles.gaycities.com/bars/309258-gym-bar-weho",
     "gayCitiesLastScrapedAt": "2026-06-14T03:19:33.089Z"
+  },
+  {
+    "name": "Precinct DTLA",
+    "city": "la",
+    "address": "357 South Broadway, Los Angeles, California, 90013",
+    "coordinates": "34.0498331, -118.2493274"
+  },
+  {
+    "name": "Falcon North",
+    "city": "la",
+    "address": "2020 East Artesia Boulevard, Long Beach, California, 90805",
+    "coordinates": "33.8744394, -118.1680438"
   }
 ]

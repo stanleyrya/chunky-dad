@@ -185,6 +185,14 @@
       "faviconFg": "#fefefe"
     }
   ],
+  "denver": [
+    {
+      "name": "Ophelia's",
+      "city": "denver",
+      "address": "1215 20th Street, Denver, Colorado, 80202",
+      "coordinates": "39.7526699, -104.9919830"
+    }
+  ],
   "fort-lauderdale": [
     {
       "name": "Eagle",
@@ -332,6 +340,18 @@
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJXxXPUMi_woARE46Y7WO-Ww0",
       "gayCities": "https://losangeles.gaycities.com/bars/309258-gym-bar-weho",
       "gayCitiesLastScrapedAt": "2026-06-14T03:19:33.089Z"
+    },
+    {
+      "name": "Precinct DTLA",
+      "city": "la",
+      "address": "357 South Broadway, Los Angeles, California, 90013",
+      "coordinates": "34.0498331, -118.2493274"
+    },
+    {
+      "name": "Falcon North",
+      "city": "la",
+      "address": "2020 East Artesia Boulevard, Long Beach, California, 90805",
+      "coordinates": "33.8744394, -118.1680438"
     }
   ],
   "london": [
@@ -547,6 +567,12 @@
       "website": "https://www.3dollarbillbk.com",
       "faviconBg": "#190832",
       "faviconFg": "#c5c5e9"
+    },
+    {
+      "name": "C'mon Everybody",
+      "city": "nyc",
+      "address": "325 Franklin Avenue, New York, New York, 11216",
+      "coordinates": "40.6882793, -73.9569264"
     }
   ],
   "palm-springs": [
@@ -606,6 +632,12 @@
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJnfNLuwAKlVQRXZrfhfLp_i4",
       "gayCities": "https://portland.gaycities.com/bars/893-cc-slaughters-nightclub-and-lounge",
       "gayCitiesLastScrapedAt": "2026-06-13T22:29:01.943Z"
+    },
+    {
+      "name": "Nova PDX",
+      "city": "portland",
+      "address": "722 East Burnside Street, Portland, Oregon, 97214",
+      "coordinates": "45.5228076, -122.6581521"
     }
   ],
   "ptown": [
@@ -680,6 +712,14 @@
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJZa2WW0xFIYQRrzpGYnmf8Og",
       "gayCities": "https://vallarta.gaycities.com/bars/302724-cc-slaughters",
       "gayCitiesLastScrapedAt": "2026-06-13T22:28:59.439Z"
+    }
+  ],
+  "san-diego": [
+    {
+      "name": "The Rail",
+      "city": "san-diego",
+      "address": "3796 5th Avenue, San Diego, California, 92103",
+      "coordinates": "32.7468104, -117.1606487"
     }
   ],
   "seattle": [
@@ -833,6 +873,12 @@
       "website": "https://publicsf.com",
       "faviconBg": "#f35425",
       "faviconFg": "#fd5825"
+    },
+    {
+      "name": "The Stud",
+      "city": "sf",
+      "address": "1123 Folsom Street, San Francisco, California, 94103",
+      "coordinates": "37.7761653, -122.4083643"
     }
   ],
   "sitges": [
@@ -887,6 +933,12 @@
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJKfM4OVvEyIARKXe7Mp57Uv0",
       "gayCities": "https://lasvegas.gaycities.com/bars/1346-fun-hog-ranch",
       "gayCitiesLastScrapedAt": "2026-06-14T01:14:27.328Z"
+    },
+    {
+      "name": "Dust Las Vegas",
+      "city": "vegas",
+      "address": "855 East Twain Avenue, Winchester, Nevada, 89169",
+      "coordinates": "36.1213962, -115.1450910"
     }
   ]
 }
