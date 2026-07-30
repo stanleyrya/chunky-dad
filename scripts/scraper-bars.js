@@ -61,8 +61,7 @@ const scraperBars = {
     {
       "name": "Eden",
       "city": "birmingham",
-      "address": "116 Sherlock Street, Birmingham B5 6NB",
-      "coordinates": "52.4714027, -1.8936278",
+      "address": "138 Gooch Street, Birmingham B5 7HF",
       "facebook": "https://www.facebook.com/eden.bar.birmingham/"
     }
   ],
@@ -92,8 +91,7 @@ const scraperBars = {
     {
       "name": "Horizon",
       "city": "brighton",
-      "address": "29-31 New Steine, Marine Parade, Brighton",
-      "coordinates": "50.8196107, -0.1315114",
+      "address": "211-214 Kings Road Arches, Brighton BN1 1NB",
       "instagram": "horizon.brighton"
     },
     {
@@ -387,6 +385,12 @@ const scraperBars = {
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-crt4uwEdkgRt13r0ih1Lgk",
       "gayCities": "https://london.gaycities.com/bars/1685-eagle-london",
       "gayCitiesLastScrapedAt": "2026-06-13T16:37:31.585Z"
+    },
+    {
+      "name": "Westminster Pier",
+      "city": "london",
+      "address": "Victoria Embankment, London SW1A 2JH",
+      "coordinates": "51.5022544, -0.1231736"
     }
   ],
   "montreal": [
