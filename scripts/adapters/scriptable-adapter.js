@@ -8213,8 +8213,14 @@ class ScriptableAdapter {
       }
       if (filePath && typeof ShareSheet !== "undefined" && ShareSheet && typeof ShareSheet.present === "function") {
         try {
-          await ShareSheet.present([filePath]);
-          exportedVia = "ShareSheet";
+          // Scriptable's ShareSheet resolves on ANY dismissal, carrying
+          // {completed: bool} — user-cancel resolves too (review 2026-07-30).
+          // A cancel is a deliberate choice: mark it handled so the fallbacks
+          // don't double-present, but never log it as a successful handoff.
+          const shareResult = await ShareSheet.present([filePath]);
+          const cancelled = shareResult && typeof shareResult === "object"
+            && shareResult.completed === false;
+          exportedVia = cancelled ? "ShareSheet (cancelled by user)" : "ShareSheet";
         } catch (shareError) {
           console.warn(
             `📱 Scriptable: ShareSheet ICS handoff failed (${shareError.message}) — falling back to QuickLook`,
