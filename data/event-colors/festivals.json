@@ -3,31 +3,51 @@
     "slug": "amsterdam-bear-pride-21e45576",
     "url": "https://amsterdambearpride.com/en/",
     "faviconBg": "#121110",
-    "faviconFg": "#968f84"
+    "faviconFg": "#968f84",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:43:0 #0c0c0c:40:0 #acacac:5:0 #d76717:1:16",
+    "accent": "#d76717"
   },
   {
     "slug": "bangkok-songkran-bear-week-2313c0b7",
     "url": "https://www.gaytravel4u.com/event/bangkok-songkran-bear-week/",
     "faviconBg": "#4d5d76",
-    "faviconFg": "#f1831b"
+    "faviconFg": "#f1831b",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:67:0 #fed109:7:18 #ec3e3d:6:21 #204fa1:6:14 #79bf60:4:15",
+    "accent": "#ec3e3d"
   },
   {
     "slug": "bear-carnival-63ef39d1",
     "url": "https://bearcarnival.com/",
     "faviconBg": "#6a432a",
-    "faviconFg": "#e18f46"
+    "faviconFg": "#e18f46",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:56:0 #9a4e2d:10:11 #5b3324:9:6 #ff6131:7:20 #f6bb07:4:17",
+    "accent": "#ff6131"
   },
   {
     "slug": "bear-festival-milano-04aae1fe",
     "url": "https://www.bearfestivalmilano.it/en",
     "faviconBg": "#eac687",
-    "faviconFg": "#855724"
+    "faviconFg": "#855724",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:32:0 #f5d69f:23:8 #e4b863:14:12 #c08b3d:10:11 #985f21:9:11",
+    "accent": "#e4b863"
   },
   {
     "slug": "bear-jamboree-2d6fa172",
     "url": "https://www.bearjamboree.com/",
     "faviconBg": "#a44e04",
-    "faviconFg": "#522702"
+    "faviconFg": "#522702",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:43:0 #8f4201:27:12 #2f1a01:9:5 #b75d04:8:14 #fbe313:1:19",
+    "accent": "#8f4201"
   },
   {
     "slug": "bear-week-provincetown-5317e10e",
@@ -39,84 +59,133 @@
     "slug": "bears-sitges-week-1f250382",
     "url": "https://bearssitges.org/",
     "faviconBg": "#a47a38",
-    "faviconFg": "#395071"
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#faf8f6:34:0 #895927:15:9 #bb8446:14:10 #35589f:11:12 #e5da62:4:14",
+    "accent": "#35589f"
   },
   {
     "slug": "beefdip-bear-week-798cbdad",
     "url": "https://beefdip.com/planned-events/",
     "faviconBg": "#e30309",
-    "faviconFg": "#fde524"
+    "faviconFg": "#fde524",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:53:0 #df0209:23:23 #fde224:19:18 #fef4ba:1:7 #e94e4f:1:19",
+    "accent": "#df0209"
   },
   {
     "slug": "fire-island-bear-weekend-4919c361",
     "url": "https://www.theurbanbear.com/fibw",
     "faviconBg": "#141414",
-    "faviconFg": "#dcdcdc"
+    "faviconFg": "#dcdcdc",
+    "faviconPlate": "#000000",
+    "paletteSource": "favicon",
+    "palette": "#000000:54:0 #ffffff:27:0 #d9d9d9:5:0"
   },
   {
     "slug": "folsom-europe-150cffc7",
     "url": "https://folsomeurope.berlin/",
     "faviconBg": "#0b0303",
-    "faviconFg": "#46afe5"
+    "faviconFg": "#46afe5",
+    "faviconPlate": "#000000",
+    "paletteSource": "favicon",
+    "palette": "#000000:60:0 #0098e5:25:15 #ffffff:10:0 #ff0000:2:26",
+    "accent": "#0098e5"
   },
   {
     "slug": "folsom-street-fair-365e5841",
     "url": "https://www.folsomstreet.org/",
     "faviconBg": "#040404",
-    "faviconFg": "#e8e8e8"
+    "faviconFg": "#e8e8e8",
+    "faviconPlate": "#000000",
+    "paletteSource": "favicon",
+    "palette": "#000000:66:0 #ffffff:27:0 #a3a3a3:3:0"
   },
   {
     "slug": "international-bear-convergence-ibc-78757530",
     "url": "https://www.ibc-ps.com/",
     "faviconBg": "#474747",
-    "faviconFg": "#767676"
+    "faviconFg": "#767676",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#545454:33:0 #3a3a3a:30:0 #787878:17:0"
   },
   {
     "slug": "international-mr-leather-iml-0c6aa2b2",
     "url": "https://www.internationalmrleather.com/",
     "faviconBg": "#efefef",
-    "faviconFg": "#414141"
+    "faviconFg": "#414141",
+    "faviconPlate": "#fefefe",
+    "paletteSource": "favicon",
+    "palette": "#fefefe:60:0 #010101:8:0 #e3e3e3:7:0"
   },
   {
     "slug": "lazy-bear-week-129a529c",
     "url": "https://www.lazybearfund.org/events",
     "faviconBg": "#fc6024",
-    "faviconFg": "#fd6224"
+    "faviconFg": "#fd6224",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#fc6124:61:20 #ffffff:35:0 #fd9b74:3:13 #fec8b2:1:7",
+    "accent": "#fc6124"
   },
   {
     "slug": "madbear-madrid-79bce561",
     "url": "https://madbear.org/en",
     "faviconBg": "#d12a26",
-    "faviconFg": "#dc6a25"
+    "faviconFg": "#dc6a25",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:63:0 #cb2026:26:20 #eaaf6c:4:11 #db713d:2:15 #d45228:2:17",
+    "accent": "#cb2026"
   },
   {
     "slug": "mid-atlantic-leather-weekend-mal-65bd7b22",
     "url": "https://www.leatherweekend.org/",
     "faviconBg": "#474747",
-    "faviconFg": "#767676"
+    "faviconFg": "#767676",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#545454:33:0 #3a3a3a:30:0 #787878:17:0"
   },
   {
     "slug": "rome-bears-week-783b3a40",
     "url": "https://www.gaytravel4u.com/event/rome-bears-week/",
     "faviconBg": "#4d5d76",
-    "faviconFg": "#f1831b"
+    "faviconFg": "#f1831b",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:67:0 #fed109:7:18 #ec3e3d:6:21 #204fa1:6:14 #79bf60:4:15",
+    "accent": "#ec3e3d"
   },
   {
     "slug": "southern-decadence-2124d6b9",
     "url": "https://www.southerndecadence.com/",
     "faviconBg": "#253a89",
-    "faviconFg": "#db2332"
+    "faviconFg": "#db2332",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#2c4893:35:13 #ffffff:23:0 #e5222d:22:22 #8f3c71:7:13 #6176ae:4:9",
+    "accent": "#e5222d"
   },
   {
     "slug": "sugar-bear-festival-745a4e20",
     "url": "https://www.bearitmtl.com/",
     "faviconBg": "#1a1a1a",
-    "faviconFg": "#d1d1d1"
+    "faviconFg": "#d1d1d1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#000000:41:0 #ffffff:41:0 #aaaaaa:4:0"
   },
   {
     "slug": "urban-bear-nyc-68133b4a",
     "url": "https://www.theurbanbear.com/urbanbearnyc",
     "faviconBg": "#141414",
-    "faviconFg": "#dcdcdc"
+    "faviconFg": "#dcdcdc",
+    "faviconPlate": "#000000",
+    "paletteSource": "favicon",
+    "palette": "#000000:54:0 #ffffff:27:0 #d9d9d9:5:0"
   }
 ]

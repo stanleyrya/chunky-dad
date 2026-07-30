@@ -10,6 +10,10 @@
     "gayCities": "https://seattle.gaycities.com/bars/302690-diesel",
     "faviconBg": "#335a91",
     "faviconFg": "#c3cbd4",
+    "paletteSource": "favicon",
+    "palette": "#003a73:28:11 #3a63bd:24:15 #ffffff:19:0 #009999:3:11",
+    "accent": "#3a63bd",
+    "faviconPlate": "#3a63bd",
     "gayCitiesLastScrapedAt": "2026-06-26T17:08:40.863Z",
     "wikipediaLastScrapedAt": "2026-06-26T15:16:42.812Z"
   },
@@ -43,6 +47,10 @@
     "gayCities": "https://seattle.gaycities.com/bars/506-seattle-eagle",
     "faviconBg": "#20201f",
     "faviconFg": "#8a836c",
+    "paletteSource": "favicon",
+    "palette": "#1a1a1a:68:0 #ada283:8:4 #7f7864:7:3 #e2d7b0:5:5",
+    "accent": "#e2d7b0",
+    "faviconPlate": "#1a1a1a",
     "gayCitiesLastScrapedAt": "2026-06-26T17:08:43.316Z",
     "wikipediaLastScrapedAt": "2026-06-26T15:16:42.842Z"
   },
@@ -85,6 +93,9 @@
     "gayCities": "https://seattle.gaycities.com/bars/511-massive-nightclub",
     "faviconBg": "#010102",
     "faviconFg": "#535557",
+    "paletteSource": "favicon",
+    "palette": "#000000:91:0 #6f6564:2:1 #838682:1:1",
+    "faviconPlate": "#010101",
     "gayCitiesLastScrapedAt": "2026-07-22T18:31:06.867Z"
   }
 ]

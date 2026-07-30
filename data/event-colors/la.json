@@ -3,19 +3,31 @@
     "slug": "bear-happy-hour-67a26f5d",
     "url": "https://linktr.ee/bearhappyhour",
     "faviconBg": "#fbfbf9",
-    "faviconFg": "#6b6661"
+    "faviconFg": "#6a6661",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:78:0 #010101:5:0 #cdcecf:5:0 #f6e529:1:18 #f2592a:1:20",
+    "accent": "#f2592a"
   },
   {
     "slug": "duro-is-back-new-outdoor-location-night-foam-party-and-special-guest-5bba8406",
     "url": "https://linktr.ee/megawoof_america",
     "faviconBg": "#575d64",
-    "faviconFg": "#abb2ba"
+    "faviconFg": "#abb2ba",
+    "faviconPlate": "#acb4bc",
+    "paletteSource": "flyer",
+    "palette": "#010103:71:1 #42262a:7:4 #a52401:6:17 #e45312:6:19 #517e9a:2:7",
+    "accent": "#e45312"
   },
   {
     "slug": "megawoof-33341c08",
     "url": "https://linktr.ee/megawoof_america",
     "faviconBg": "#575d64",
-    "faviconFg": "#abb2ba"
+    "faviconFg": "#abb2ba",
+    "faviconPlate": "#acb4bc",
+    "paletteSource": "flyer",
+    "palette": "#0a041b:57:5 #251343:12:9 #234284:8:12 #5b2597:6:17 #7f77c0:5:11",
+    "accent": "#5b2597"
   },
   {
     "slug": "megawoof-38282c01",
@@ -33,24 +45,38 @@
     "slug": "megawoof-6062add7",
     "url": "https://www.eventbrite.com/e/megawoof-america-bear-watchers-long-beach-tickets-1520432868639",
     "faviconBg": "#ff5e30",
-    "faviconFg": "#ff6333"
+    "faviconFg": "#ff6333",
+    "paletteSource": "flyer",
+    "palette": "#ec8343:22:15 #8a4332:16:10 #ae6a45:15:10 #db461d:13:19 #f7e464:5:15",
+    "accent": "#db461d"
   },
   {
     "slug": "megawoof-69e037bc",
     "url": "https://www.eventbrite.com/e/duro-summer-night-foam-edition-tickets-1446957562019",
     "faviconBg": "#ff5e30",
-    "faviconFg": "#ff6333"
+    "faviconFg": "#ff6333",
+    "paletteSource": "flyer",
+    "palette": "#020a05:41:2 #43754c:15:8 #234a1c:14:9 #122a0b:11:6 #d8f3c6:7:7",
+    "accent": "#43754c"
   },
   {
     "slug": "megawoof-america-long-beach-pride-152ddd6b",
     "url": "https://linktr.ee/megawoof_america",
     "faviconBg": "#575d64",
-    "faviconFg": "#abb2ba"
+    "faviconFg": "#abb2ba",
+    "faviconPlate": "#acb4bc",
+    "paletteSource": "flyer",
+    "palette": "#0a060c:34:2 #2c1d29:19:3 #4d3a3c:18:3 #8a5b4c:13:7 #c58a75:9:8",
+    "accent": "#c58a75"
   },
   {
     "slug": "megawoof-pride-free-june-6th-free-tkts-the-globe-0bb27076",
     "url": "https://linktr.ee/megawoof_america",
     "faviconBg": "#575d64",
-    "faviconFg": "#abb2ba"
+    "faviconFg": "#abb2ba",
+    "faviconPlate": "#acb4bc",
+    "paletteSource": "flyer",
+    "palette": "#131b24:51:2 #3b3d3b:16:0 #62575b:12:2 #9d7657:9:7 #e34367:2:20",
+    "accent": "#e34367"
   }
 ]

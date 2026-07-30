@@ -33,6 +33,9 @@
     "gayCities": "https://newyork.gaycities.com/bars/400-eagle-nyc",
     "faviconBg": "#f0f0f0",
     "faviconFg": "#565656",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:74:0 #656565:5:0 #8a8a8a:5:0",
+    "faviconPlate": "#ffffff",
     "gayCitiesLastScrapedAt": "2026-06-26T17:08:38.515Z",
     "wikipediaLastScrapedAt": "2026-06-26T15:16:42.784Z"
   },
@@ -48,6 +51,10 @@
     "gayCities": "https://newyork.gaycities.com/bars/309059-dollar-bill",
     "faviconBg": "#190832",
     "faviconFg": "#c5c5e9",
+    "paletteSource": "favicon",
+    "palette": "#000021:69:8 #eef3fe:7:2 #1633fd:7:29 #eb1c25:5:23 #953f71:4:13",
+    "accent": "#1633fd",
+    "faviconPlate": "#000021",
     "gayCitiesLastScrapedAt": "2026-06-14T16:38:18.601Z"
   },
   {
@@ -131,6 +138,10 @@
     "address": "270 Meserole Ave, Brooklyn, NY 11222",
     "website": "https://www.3dollarbillbk.com",
     "faviconBg": "#190832",
-    "faviconFg": "#c5c5e9"
+    "faviconFg": "#c5c5e9",
+    "paletteSource": "favicon",
+    "palette": "#000021:69:8 #eef3fe:7:2 #1633fd:7:29 #eb1c25:5:23 #953f71:4:13",
+    "accent": "#1633fd",
+    "faviconPlate": "#000021"
   }
 ]

@@ -3,25 +3,40 @@
     "slug": "bearracuda-atlanta-16-year-anniversary-520590b4",
     "url": "https://www.eventbrite.com/e/bearracuda-atlanta-16-year-anniversary-tickets-1364601091599",
     "faviconBg": "#ff5e30",
-    "faviconFg": "#ff6333"
+    "faviconFg": "#ff6333",
+    "paletteSource": "flyer",
+    "palette": "#85634b:17:6 #5b4a3c:16:3 #c7b084:15:6 #ad8a6d:15:6",
+    "accent": "#c7b084"
   },
   {
     "slug": "bearracuda-atlanta-17-year-anniversary-6e646344",
     "url": "https://bearracuda.com/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#6abbda:22:9 #c3ccd4:19:1 #6a8eca:18:10 #be9383:12:6 #73e5cc:1:11",
+    "accent": "#6a8eca"
   },
   {
     "slug": "bearracuda-atlanta-bear-pride-2026-3ac2015f",
     "url": "https://bearracuda.com/events/atlantabearpride/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#faf9f6:27:0 #ff5b1e:14:21 #eda761:13:12 #ab7a66:12:7 #76513e:12:6",
+    "accent": "#ff5b1e"
   },
   {
     "slug": "bearracuda-atlanta-bulges-jocks-4b843b95",
     "url": "https://bearracuda.com/events/atlbulge/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#23242c:19:1 #66575a:17:2 #3c3c42:17:1 #a37265:14:7 #efb954:6:13",
+    "accent": "#efb954"
   },
   {
     "slug": "megawoof-1e891b28",
@@ -33,6 +48,10 @@
     "slug": "new-date-bearracuda-atlantawinter-beef-ball-jock-underwear-pa-rty-3d2076fd",
     "url": "https://bearracuda.com/events/atlbulge/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#3b2423:18:4 #5b3b3c:16:5 #7c5454:13:5 #a96f6a:13:7 #e5b4ac:10:6",
+    "accent": "#a96f6a"
   }
 ]

@@ -3,19 +3,31 @@
     "slug": "bearracuda-portland-16-year-anniversary-21be21f0",
     "url": "https://bearracuda.com/events/pdx16/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#eec424:22:16 #0a0503:20:1 #2b1c13:13:3 #8c6642:10:7 #c29513:9:14",
+    "accent": "#eec424"
   },
   {
     "slug": "bearracuda-portland-boner-garage-3e1b185e",
     "url": "https://bearracuda.com/events/portland-gear/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#4c2c23:18:5 #130503:17:3 #2b1b14:15:3 #8d644c:12:6 #e5be85:8:9",
+    "accent": "#e5be85"
   },
   {
     "slug": "bearracuda-portland-crotch-carnival-553c66fc",
     "url": "https://bearracuda.com/events/portlandfeb/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#84454c:16:9 #bd6557:15:12 #0c1522:15:3 #6ba8d7:8:9 #cc73e1:7:18",
+    "accent": "#cc73e1"
   },
   {
     "slug": "bearracuda-portland-pride-saturday-17cdfbd9",
@@ -27,13 +39,21 @@
     "slug": "bearracuda-portland-saturday-november-15th-1d72aa2a",
     "url": "https://bearracuda.com/events/portland-50/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#f958b6:25:22 #f4e1cc:21:4 #154d11:13:11 #65c669:8:16 #9d4c7d:6:12",
+    "accent": "#f958b6"
   },
   {
     "slug": "bearracuda-portland-the-great-blumpkin-341d5959",
     "url": "https://bearracuda.com/events/pdx16/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#433c34:22:2 #5c554b:18:2 #847663:15:3 #b19e7d:12:5 #b5db02:4:20",
+    "accent": "#b5db02"
   },
   {
     "slug": "bearracuda-portlandpride-friday-4b51bcfe",
@@ -45,55 +65,91 @@
     "slug": "chunk-portland-523-12aa4185",
     "url": "https://www.chunk-party.com",
     "faviconBg": "#f6f4f5",
-    "faviconFg": "#2e2933"
+    "faviconFg": "#2e2933",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#611d22:19:10 #89211b:18:14 #3c1b2b:14:5 #a2423b:13:13 #342d71:12:11",
+    "accent": "#89211b"
   },
   {
     "slug": "chunk-portland-friday-november-7th-34a929ef",
     "url": "https://www.chunk-party.com/event-details/chunk-portland-friday-november-7th",
     "faviconBg": "#f6f4f5",
-    "faviconFg": "#2e2933"
+    "faviconFg": "#2e2933",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#3dc6cb:19:11 #5c3334:18:6 #361d70:15:13 #4a5c82:15:7 #629cb4:9:7",
+    "accent": "#361d70"
   },
   {
     "slug": "chunk-portland-summer-blow-out-3a8423bf",
     "url": "https://www.chunk-party.com",
     "faviconBg": "#f6f4f5",
-    "faviconFg": "#2e2933"
+    "faviconFg": "#2e2933",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#3c3333:21:1 #654c43:17:4 #bca494:15:4 #345ab4:10:15 #6286db:8:14",
+    "accent": "#345ab4"
   },
   {
     "slug": "chunk-portland-the-return-saturday-march-14th-47dcb647",
     "url": "https://www.chunk-party.com/event-details/chunk-portland-the-return-saturday-march-14th",
     "faviconBg": "#f6f4f5",
-    "faviconFg": "#2e2933"
+    "faviconFg": "#2e2933",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#3b3386:23:13 #a98d78:15:5 #52544a:14:2 #4568a8:12:11 #aa546d:9:12",
+    "accent": "#3b3386"
   },
   {
     "slug": "hot-take-portland-46ec04ba",
     "url": "https://bearracuda.com/events/hottakepdx/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#f6caec:41:7 #ed1e22:13:23 #3e1519:11:6 #724446:8:6 #f37d92:7:15",
+    "accent": "#ed1e22"
   },
   {
     "slug": "hot-take-wnini-coco-162bffff",
     "url": "https://bearracuda.com/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#2cb3f4:38:14 #f4f543:15:19 #ddd9d5:11:1 #6dca4c:7:19 #f55bbd:7:21",
+    "accent": "#2cb3f4"
   },
   {
     "slug": "portland-nye-0de4cad8",
     "url": "https://bearracuda.com/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#000000:88:0 #ffffff:4:0 #fe0000:2:26 #8b0000:1:16",
+    "accent": "#fe0000"
   },
   {
     "slug": "portland-pride-friday-4b51bcfe",
     "url": "https://bearracuda.com/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#fd7c23:29:18 #f9eee2:15:2 #562016:13:8 #97634d:10:8 #744533:9:7",
+    "accent": "#fd7c23"
   },
   {
     "slug": "portland-pride-saturday-17cdfbd9",
     "url": "https://bearracuda.com/events/portland-pride-saturday/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#30302e:34:0 #e3e1de:21:0 #a3a3a3:11:0 #fd9554:8:15 #e830ac:7:24",
+    "accent": "#e830ac"
   },
   {
     "slug": "portland-pride-saturday-sold-out-17cdfbd9",
@@ -105,13 +161,21 @@
     "slug": "treasure-trail-portland-1043b353",
     "url": "https://bearracuda.com/events/treasure-trailpdx/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#080702:47:2 #1e210b:30:4 #3a3c14:9:6 #7c6343:4:6",
+    "accent": "#3a3c14"
   },
   {
     "slug": "treasure-trail-portland-backcountry-33f45281",
     "url": "https://bearracuda.com/events/treasure-trail-portland/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#6d624a:20:4 #0a0504:17:1 #ab9e82:14:4 #833618:6:11 #d18620:5:14",
+    "accent": "#d18620"
   },
   {
     "slug": "treasure-trail-portland-pride-0c12f2cc",
@@ -123,12 +187,20 @@
     "slug": "treasure-trail-portland-saturday-jan-24th-50c8389e",
     "url": "https://bearracuda.com/events/treasurepdx/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#412766:20:11 #7b5190:17:11 #492e95:17:16 #1b133d:16:8 #fa120d:6:25",
+    "accent": "#fa120d"
   },
   {
     "slug": "treasure-trail-portland-tix-at-the-door-0c12f2cc",
     "url": "https://bearracuda.com/events/portland-pridefriday/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#250509:35:5 #debd89:15:8 #54352a:14:5 #d888ad:7:11 #62b8ca:6:9",
+    "accent": "#d888ad"
   }
 ]

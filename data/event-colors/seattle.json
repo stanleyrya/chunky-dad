@@ -3,43 +3,83 @@
     "slug": "bearracuda-seattle-283ac3dd",
     "url": "https://bearracuda.com/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#130c14:20:2 #2b1924:17:3 #bc424c:14:16 #843b46:12:10 #d3747b:12:12",
+    "accent": "#bc424c"
   },
   {
     "slug": "bearracuda-seattle-glow-party-43d1597b",
     "url": "https://bearracuda.com/events/seattle-glow/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#43348c:17:14 #151c3d:16:6 #d3ecf5:15:3 #8732c3:10:21 #d753e4:9:23",
+    "accent": "#d753e4"
   },
   {
     "slug": "bearracuda-seattle-serious-wood-4a1720dd",
     "url": "https://bearracuda.com/events/seattlewood/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#211718:33:2 #442c29:18:4 #634333:16:5 #c26b46:11:12 #d29661:7:10",
+    "accent": "#c26b46"
   },
   {
     "slug": "bearracuda-seattle-winter-beef-ball-2026-5d3a67cd",
     "url": "https://bearracuda.com/events/seattlebeef/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#231b14:40:2 #432c1b:19:4 #634534:12:5 #9b442b:9:12 #d26c43:9:14",
+    "accent": "#d26c43"
   },
   {
     "slug": "leather-night-51e2ca8d",
     "url": "https://dieselseattle.com/DIESEL.html",
     "faviconBg": "#335a91",
-    "faviconFg": "#c3cbd4"
+    "faviconFg": "#c3cbd4",
+    "faviconPlate": "#3a63bd",
+    "paletteSource": "favicon",
+    "palette": "#003a73:28:11 #3a63bd:24:15 #ffffff:19:0 #009999:3:11",
+    "accent": "#3a63bd"
+  },
+  {
+    "slug": "seattle-glow-3b330fb1",
+    "paletteSource": "flyer",
+    "palette": "#443484:16:13 #cdecfd:15:4 #151b3c:15:6 #7644bd:13:18 #d14ae5:10:24",
+    "accent": "#d14ae5"
   },
   {
     "slug": "treasure-trail-seattle-2a543921",
     "url": "https://bearracuda.com/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#fa952a:29:16 #fcedc3:15:6 #d92409:11:22 #d37128:10:15 #fcc36c:10:12",
+    "accent": "#fa952a"
   },
   {
     "slug": "treasure-trail-seattle-4a6fa455",
     "url": "https://bearracuda.com/events/treasureseattle/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#2b3512:36:6 #4f582c:17:7 #818541:16:9 #f6e466:8:15 #adab85:5:5",
+    "accent": "#818541"
+  },
+  {
+    "slug": "treasure-trail-seattle-7e9ae5d5",
+    "paletteSource": "flyer",
+    "palette": "#2a0d05:32:5 #753518:20:10 #4d210c:17:7 #a18434:8:10 #deb160:8:11",
+    "accent": "#753518"
   },
   {
     "slug": "treasure-trail-seattle-summer-sausage-2a543921",
@@ -51,12 +91,20 @@
     "slug": "treasure-trail-seattle-wish-boned-422a1406",
     "url": "https://bearracuda.com/events/treasureseattle/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#faf5db:39:3 #09a9ec:12:15 #0c1b0b:10:4 #cac176:9:10 #c96609:6:15",
+    "accent": "#09a9ec"
   },
   {
     "slug": "treasure-trail-seattletrail-head-5f63386f",
     "url": "https://bearracuda.com/events/seattlett/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#f5f9f4:35:1 #011117:12:3 #2c3c2a:12:4 #55c4d5:7:10 #0d8344:6:14",
+    "accent": "#0d8344"
   }
 ]

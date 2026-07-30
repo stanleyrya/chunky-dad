@@ -18,7 +18,19 @@ if (fs.existsSync(barsDir)) {
       try {
         const content = fs.readFileSync(filePath, 'utf8');
         const bars = JSON.parse(content);
-        scraperBars[cityKey] = bars;
+        // Website-only presentation data never ships to the phone: the scraper
+        // reads bar identity, location and socials, never the extracted colour
+        // palettes (those drive the city-page card gradients). Keeping them out
+        // of this generated file avoids growing a runtime download for data the
+        // Scriptable side has no use for.
+        scraperBars[cityKey] = bars.map(bar => {
+          const trimmed = { ...bar };
+          delete trimmed.palette;
+          delete trimmed.accent;
+          delete trimmed.paletteSource;
+          delete trimmed.faviconPlate;
+          return trimmed;
+        });
       } catch (e) {
         console.error(`Failed to parse ${file}:`, e.message);
       }

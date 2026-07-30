@@ -9,6 +9,10 @@
     "facebook": "https://www.facebook.com/campout.poconos",
     "googleMaps": "https://maps.app.goo.gl/LYwCKGeMJAJTy8hx9?g_st=ic",
     "faviconBg": "#f4f3ef",
-    "faviconFg": "#60514d"
+    "faviconFg": "#60514d",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:68:0 #000000:8:0 #b5b5b5:7:0 #405fad:6:13 #e84224:3:21",
+    "accent": "#e84224",
+    "faviconPlate": "#ffffff"
   }
 ]

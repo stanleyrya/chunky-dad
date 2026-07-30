@@ -2391,14 +2391,16 @@ body.index-page main {
 
 /* ═══════════════ Aurora event cards (city page list view) ═══════════════
    Self-contained dark card: three radial-gradient blobs in the event's own
-   favicon colors (--c1/--c2/--c3, set inline per event by
+   brand colours — picked from the palette its flyer or favicon was reduced to
+   (--c1/--c2/--c3, set inline per event by
    generateEventCard()) over a deep base, the whole flyer laid on top at its
    natural aspect ratio, and one frosted glass panel carrying every piece of
    information. Everything is scoped under `.aurora` so the older flat card
    styling above still applies anywhere the class isn't added, and the card is
    dark regardless of the surrounding site theme. */
 .event-card.detailed.aurora {
-    /* Fallback stops when an event has no color data: the site palette. */
+    /* Fallback stops when an event has no color data at all (no palette and no
+       favicon pair, or artwork we couldn't read): the site palette. */
     --c1: var(--primary-color, #667eea);
     --c2: var(--secondary-color, #ff6b6b);
     --c3: #2a2c4d;
@@ -2481,21 +2483,23 @@ body.index-page main {
     flex: 0 0 42px;
     border-radius: var(--favicon-plate-radius);
     overflow: hidden;
-    box-shadow: 0 2px 10px rgba(6, 8, 20, 0.35);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.22),
+                0 2px 10px rgba(6, 8, 20, 0.35);
     /* No border: box-sizing is border-box, so a 1.5px translucent border
        left a light ring around full-bleed dark artwork. The plate and shadow
        already define the tile. */
     /* Favicons are often a round mark on a flat plate; painting that plate
        colour keeps the tile reading as a rounded square instead of a circle.
        --fav-plate comes from the event's faviconBg (see the JS). */
-    background: var(--favicon-plate-bg);
+    background: var(--fav-plate, var(--favicon-plate-bg));
 }
 
 .event-card.detailed.aurora .ec-fav img {
     display: block;
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    padding: var(--favicon-plate-pad);
 }
 
 .event-card.detailed.aurora h3.ec-title {
@@ -6388,17 +6392,30 @@ body.loaded {
    transparent, which is exactly when it's wanted.
 --------------------------------------------------------------------------- */
 :root {
+    /* Fallback only — the real plate is each favicon's OWN background colour,
+       set per event as --fav-plate from the extracted faviconPlate. */
     --favicon-plate-bg: #ffffff;
     --favicon-plate-radius: 9px;
+    /* The plate extends OUTSIDE the artwork as a ring. Full-bleed icons
+       (Animal's red field, Bearracuda's orange "B") otherwise run straight
+       into the card gradient with nothing between them, which reads as
+       jarring — especially when icon and card share a hue. Done with an
+       outset ring rather than padding, because padding puts the plate INSIDE
+       the art and leaves a halo around dark full-bleed logos. Icons that are
+       already artwork-on-white simply blend into their own ring. */
+    --favicon-plate-pad: 2px;
 }
 /* Map markers adopt the same plate, radius and contain-fit as the cards. */
 .favicon-marker-container {
-    background: var(--favicon-plate-bg);
+    background: var(--fav-plate, var(--favicon-plate-bg));
     border-radius: var(--favicon-plate-radius);
+    border: none;
+    overflow: hidden;
+    box-shadow: 0 0 0 1px rgba(23, 26, 51, 0.25), 0 2px 6px rgba(6, 8, 20, 0.3);
 }
 .favicon-marker-icon {
-    object-fit: cover;
-    padding: 0;
+    object-fit: contain;
+    padding: var(--favicon-plate-pad);
     border-radius: calc(var(--favicon-plate-radius) - 2px);
 }
 /* The text fallback keeps its filled look — no plate behind letters. */

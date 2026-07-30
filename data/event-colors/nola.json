@@ -3,7 +3,11 @@
     "slug": "bearracuda-new-orleans-578ac888",
     "url": "https://bearracuda.com/events/decadence/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#5c2b5f:37:10 #221424:14:4 #a8af25:12:15 #714753:10:6 #947b22:7:11",
+    "accent": "#5c2b5f"
   },
   {
     "slug": "new-orleans-578ac888",
@@ -15,6 +19,10 @@
     "slug": "new-orleans-605b589e",
     "url": "https://bearracuda.com/events/new-orleans/",
     "faviconBg": "#ff1901",
-    "faviconFg": "#ff5000"
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#623a2e:15:6 #1d1212:15:2 #3e221c:14:4 #8e5542:14:8 #bc826d:10:8",
+    "accent": "#8e5542"
   }
 ]

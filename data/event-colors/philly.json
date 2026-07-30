@@ -3,18 +3,36 @@
     "slug": "cubhouse-philly-halloween-dance-party-7f59fc8c",
     "url": "https://linktr.ee/cubhouse",
     "faviconBg": "#fbd21b",
-    "faviconFg": "#b46f7b"
+    "faviconFg": "#b46f7a",
+    "faviconPlate": "#fed317",
+    "paletteSource": "flyer",
+    "palette": "#b90528:37:20 #624c54:13:3 #432c33:12:4",
+    "accent": "#b90528"
+  },
+  {
+    "slug": "cubhouse-philly-pride-2026-kickoff-dance-party-242e4df9",
+    "paletteSource": "flyer",
+    "palette": "#e44ba2:41:21 #efb6e9:21:9 #ec8cd5:10:15 #c72e7e:7:20 #6d0823:5:13",
+    "accent": "#e44ba2"
   },
   {
     "slug": "cubhouse-philly-summer-dance-party-0a3049d0",
     "url": "https://linktr.ee/cubhouse",
     "faviconBg": "#fbd21b",
-    "faviconFg": "#b46f7a"
+    "faviconFg": "#b46f7a",
+    "faviconPlate": "#fed317",
+    "paletteSource": "flyer",
+    "palette": "#000000:63:0 #141414:10:0 #638a65:7:7 #d6b89b:5:5 #e0849f:5:12",
+    "accent": "#e0849f"
   },
   {
     "slug": "cubhouse-philly-valentines-dance-party-33f308ba",
     "url": "https://linktr.ee/cubhouse",
     "faviconBg": "#fbd21b",
-    "faviconFg": "#b46f7b"
+    "faviconFg": "#b46f7a",
+    "faviconPlate": "#fed317",
+    "paletteSource": "flyer",
+    "palette": "#f5324d:38:23 #f6e1d6:16:3 #ff7265:13:17 #ffa323:9:17 #732325:7:11",
+    "accent": "#f5324d"
   }
 ]

@@ -61,6 +61,10 @@
     "instagram": "https://www.instagram.com/metrochicago",
     "facebook": "https://www.facebook.com/MetroChicago",
     "faviconBg": "#e10c12",
-    "faviconFg": "#291716"
+    "faviconFg": "#291716",
+    "paletteSource": "favicon",
+    "palette": "#e50b11:57:23 #ffffff:22:0 #0c1514:15:1 #dd8889:2:11 #8f1214:2:16",
+    "accent": "#e50b11",
+    "faviconPlate": "#ffffff"
   }
 ]

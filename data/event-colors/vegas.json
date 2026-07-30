@@ -3,13 +3,20 @@
     "slug": "megawoof-00b39ef8",
     "url": "https://www.eventbrite.com/e/megawoof-america-las-vegas-labor-day-weekend-bears-at-work-tickets-1531257726079",
     "faviconBg": "#ff5e30",
-    "faviconFg": "#ff6333"
+    "faviconFg": "#ff6333",
+    "paletteSource": "flyer",
+    "palette": "#130c0a:45:1 #3b1c11:20:5 #643922:11:7 #d58957:10:11 #876853:9:5",
+    "accent": "#d58957"
   },
   {
     "slug": "megawoof-0bc51ff7",
     "url": "https://linktr.ee/megawoof_america",
     "faviconBg": "#575d64",
-    "faviconFg": "#abb2ba"
+    "faviconFg": "#abb2ba",
+    "faviconPlate": "#acb4bc",
+    "paletteSource": "flyer",
+    "palette": "#131d23:34:2 #424343:14:0 #7d645b:14:4 #c18257:12:10 #eef000:2:20",
+    "accent": "#c18257"
   },
   {
     "slug": "megawoof-296254c9",
@@ -21,6 +28,10 @@
     "slug": "megawoof-las-vegas-memorial-day-weekend--741892f2",
     "url": "https://linktr.ee/megawoof_america",
     "faviconBg": "#575d64",
-    "faviconFg": "#abb2ba"
+    "faviconFg": "#abb2ba",
+    "faviconPlate": "#acb4bc",
+    "paletteSource": "flyer",
+    "palette": "#0b0906:37:1 #301d19:19:3 #543324:14:5 #d1ac80:7:7 #eee3ad:6:7",
+    "accent": "#d1ac80"
   }
 ]

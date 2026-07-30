@@ -3,6 +3,10 @@
     "slug": "furball-boston-003b3ace",
     "url": "https://www.furball.nyc",
     "faviconBg": "#2d2c32",
-    "faviconFg": "#f7f7f7"
+    "faviconFg": "#f7f7f7",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#020101:27:1 #130401:20:3 #db8c64:13:11 #a35b3a:12:10 #f4cb5b:5:14",
+    "accent": "#db8c64"
   }
 ]
