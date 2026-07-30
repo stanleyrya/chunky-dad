@@ -3573,3 +3573,59 @@ test('sanitizeDroppedEntriesForRunSave tolerates misshapen input', () => {
     [null, { title: 'no event field' }]
   );
 });
+
+test('export-ics bridge: ShareSheet is preferred over QuickLook and DocumentPicker', async () => {
+  const adapter = buildAdapter();
+  adapter.resetIcsExportEvents();
+  const id = adapter.registerIcsExportEvent(buildRecurringCardEvent());
+
+  const shared = [];
+  const quickLooked = [];
+  const picked = [];
+  const staged = {};
+  // Save/restore rather than delete: the suite installs its own FileManager
+  // global that the adapter constructor needs, and deleting it here broke
+  // every later test that built an adapter.
+  const previousFileManager = global.FileManager;
+  global.FileManager = {
+    local: () => ({
+      joinPath: (dir, name) => `${dir}/${name}`,
+      temporaryDirectory: () => '/tmp',
+      writeString: (p, contents) => { staged[p] = contents; }
+    })
+  };
+  global.ShareSheet = { present: async (paths) => { shared.push(paths); } };
+  global.QuickLook = { present: async (p) => { quickLooked.push(p); } };
+  global.DocumentPicker = { exportString: async (c, n) => { picked.push(n); return [n]; } };
+  try {
+    await adapter.exportRecurringEventIcs(id);
+  } finally {
+    global.FileManager = previousFileManager;
+    delete global.ShareSheet;
+    delete global.QuickLook;
+    delete global.DocumentPicker;
+  }
+
+  // ShareSheet is the only iOS surface that routes a .ics onward to Calendar;
+  // QuickLook merely previews it, which is why the button felt broken.
+  assert.equal(shared.length, 1, 'handed to the share sheet');
+  assert.deepEqual(shared[0], ['/tmp/fuzzy.ics'], 'the staged .ics file is what gets shared');
+  assert.equal(quickLooked.length, 0, 'QuickLook not used when ShareSheet worked');
+  assert.equal(picked.length, 0, 'DocumentPicker not used when ShareSheet worked');
+  const unfolded = String(staged['/tmp/fuzzy.ics']).replace(/\r\n[ \t]/g, '');
+  assert.ok(unfolded.includes('RRULE:FREQ=WEEKLY;BYDAY=FR'), 'the staged file is the recurring ICS');
+});
+
+test('event builder link carries coordinates so the pin is not lost', () => {
+  const adapter = buildAdapter();
+  const url = adapter.buildEventBuilderUrl({
+    title: 'FUZZY',
+    city: 'nyc',
+    location: '40.7128, -74.0060',
+    ticketUrl: 'https://tickets.example/fuzzy',
+    startDate: new Date('2026-08-07T02:00:00.000Z')
+  });
+  assert.ok(url.includes(`location=${encodeURIComponent('40.7128, -74.0060')}`),
+    `coordinates present in the prefill: ${url}`);
+  assert.ok(url.includes('ticketUrl='), 'ticket link carried too');
+});
