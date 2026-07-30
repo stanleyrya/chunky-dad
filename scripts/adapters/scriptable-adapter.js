@@ -8189,19 +8189,40 @@ class ScriptableAdapter {
         SharedEventSchema.slugifyIcsText(event.title || event.name || "") ||
         "chunky-dad-recurring";
       const fileName = `${slug}.ics`;
-      // QuickLook first: iOS previews an .ics as its calendar import sheet
-      // ("Add All" + per-event add), which is the point of the button —
-      // DocumentPicker.exportString only offered a save-to-Files dialog and
-      // the events never reached the calendar without a second trip through
-      // the Files app. QuickLook's own share button still reaches Files for
-      // anyone who wants the raw file. DocumentPicker stays as the fallback
-      // when QuickLook is unavailable or refuses the file.
+      // HANDOFF ORDER, most-capable first. Each step is independently guarded
+      // so one unavailable API can never sink the others.
+      //
+      // ShareSheet leads because it is the iOS surface that actually routes a
+      // .ics onward (Calendar included). QuickLook, which this used to lead
+      // with, only PREVIEWS the file — on device it does not offer the import
+      // flow Safari gives you (reported 2026-07-30: "doesn't open up the same
+      // way it would on safari"), so the preview was a dead end.
+      // DocumentPicker remains last: it saves to Files, which still needs a
+      // second trip through the Files app to reach the calendar.
       let exportedVia = "";
-      if (typeof QuickLook !== "undefined" && QuickLook && typeof QuickLook.present === "function") {
+      let filePath = "";
+      try {
+        const fm = FileManager.local();
+        filePath = fm.joinPath(fm.temporaryDirectory(), fileName);
+        fm.writeString(filePath, icsText);
+      } catch (writeError) {
+        console.warn(
+          `📱 Scriptable: Could not stage the ICS file (${writeError.message}) — trying a direct export`,
+        );
+        filePath = "";
+      }
+      if (filePath && typeof ShareSheet !== "undefined" && ShareSheet && typeof ShareSheet.present === "function") {
         try {
-          const fm = FileManager.local();
-          const filePath = fm.joinPath(fm.temporaryDirectory(), fileName);
-          fm.writeString(filePath, icsText);
+          await ShareSheet.present([filePath]);
+          exportedVia = "ShareSheet";
+        } catch (shareError) {
+          console.warn(
+            `📱 Scriptable: ShareSheet ICS handoff failed (${shareError.message}) — falling back to QuickLook`,
+          );
+        }
+      }
+      if (!exportedVia && filePath && typeof QuickLook !== "undefined" && QuickLook && typeof QuickLook.present === "function") {
+        try {
           await QuickLook.present(filePath, false);
           exportedVia = "QuickLook";
         } catch (quickLookError) {
@@ -8280,6 +8301,11 @@ class ScriptableAdapter {
     addParam("recurrence", event.recurrenceRule || event.recurrence);
     addParam("instagram", event.instagram);
     addParam("facebook", event.facebook);
+    // Coordinates. Without these the builder has no pin and the human has to
+    // re-derive it by hand — the gap hit when the recurring-ICS button was used
+    // as a workaround. `location` is ALWAYS coordinates by doctrine.
+    addParam("location", event.location);
+    addParam("ticketUrl", event.ticketUrl);
     addParam("gmaps", event.gmaps);
     addParam("image", event.image);
     // Orientation slots ride along so the builder can edit them; both are
