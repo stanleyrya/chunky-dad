@@ -2225,6 +2225,38 @@ class DynamicCalendarLoader extends CalendarCore {
         return colors ? this.deriveAuroraColors(colors.bg, colors.fg) : null;
     }
 
+    // The favicon's own plate colour (faviconBg — the dominant k-means cluster,
+    // i.e. the flat white/off-white a round logo mark usually sits on), or null
+    // when unknown. Independent of the aurora stops: a grey brand still gets
+    // its plate even though its gradient falls back to the site palette.
+    getFaviconPlateColorForEvent(event) {
+        const bySlug = this.currentCity ? this.eventColorsByCity.get(this.currentCity) : null;
+        const colors = bySlug ? bySlug.get(event.slug) : null;
+        return this.faviconPlateColor(colors);
+    }
+
+    // The plate is only worth painting when the favicon actually HAS a
+    // distinguishable mark on it. Animal's favicon is red-on-red (bg #ff1901,
+    // fg #ff5000): painting that plate turned the tile into a solid red square
+    // and swallowed the logo entirely. So require real separation between the
+    // two extracted colours; otherwise leave the tile transparent and let the
+    // artwork speak for itself.
+    faviconPlateColor(colors) {
+        if (!colors) return null;
+        const bg = this.parseHexColor(colors.bg);
+        if (!bg) return null;
+        const fg = this.parseHexColor(colors.fg);
+        if (fg) {
+            const distance = Math.sqrt(
+                Math.pow((bg.r - fg.r) / 255, 2)
+                + Math.pow((bg.g - fg.g) / 255, 2)
+                + Math.pow((bg.b - fg.b) / 255, 2)
+            );
+            if (distance < 0.35) return null;
+        }
+        return colors.bg;
+    }
+
     // Repaint aurora cards that rendered before the color file arrived.
     applyEventColorsToRenderedCards() {
         const bySlug = this.eventColorsByCity.get(this.currentCity);
@@ -2232,6 +2264,13 @@ class DynamicCalendarLoader extends CalendarCore {
         document.querySelectorAll('.event-card.detailed.aurora[data-event-slug]').forEach(card => {
             const colors = bySlug.get(card.getAttribute('data-event-slug'));
             if (!colors) return;
+            // The favicon plate is independent of the aurora stops: a grey
+            // brand still gets its plate even though its gradient falls back
+            // to the site palette.
+            const plate = this.faviconPlateColor(colors);
+            if (plate) {
+                card.style.setProperty('--fav-plate', plate);
+            }
             const aurora = this.deriveAuroraColors(colors.bg, colors.fg);
             if (!aurora) return;
             card.style.setProperty('--c1', aurora.c1);
@@ -2253,6 +2292,14 @@ class DynamicCalendarLoader extends CalendarCore {
         if (!faviconUrl) return '';
         const src = this.safeCardUrl(faviconUrl);
         if (!src) return '';
+        // Many favicons are a round mark on a flat white/off-white plate
+        // (Eagle NYC, CHUNK). With a transparent tile that mark reads as a
+        // CIRCLE instead of the rounded square everything else uses, so the
+        // tile paints the favicon's own plate colour behind it — that is
+        // exactly what faviconBg is (the larger k-means cluster in
+        // tools/extract-favicon-colors.js). It arrives with the colour file,
+        // so it rides the same --fav-plate custom property the gradient uses;
+        // unknown colour leaves the tile transparent, as before.
         return `<span class="ec-fav"><img src="${src}" alt="" loading="lazy" decoding="async" onerror="this.parentNode.remove()"></span>`;
     }
 
@@ -2319,8 +2366,19 @@ class DynamicCalendarLoader extends CalendarCore {
         const recurringBadge = recurringBadgeContent ?
             `<span class="recurring-badge">${this.cardIconSvg('repeat', 'ec-badge-ico')}${this.escapeCardText(recurringBadgeContent)}</span>` : '';
 
+        // The date READS FIRST as plain text rather than sitting in a pill:
+        // "7/18 · Fri 8PM-2AM" instead of "Fri 8PM-2AM [7/18]". The pill is
+        // kept for the class contract (updateSelectionVisualState and friends
+        // query .date-badge) but only when the date is already inside the
+        // day/time string, so it never renders twice.
         const dateBadgeContent = this.getDateBadgeContent(event, periodBounds);
-        const dateBadge = dateBadgeContent ?
+        const dayTimeText = formatDayTime(event);
+        const dateLeads = !!dateBadgeContent
+            && !String(dayTimeText).includes(String(dateBadgeContent));
+        const whenText = dateLeads
+            ? `${dateBadgeContent} · ${dayTimeText}`
+            : dayTimeText;
+        const dateBadge = dateBadgeContent && !dateLeads ?
             `<span class="date-badge">${this.escapeCardText(dateBadgeContent)}</span>` : '';
 
         // Add distance badge if location features are enabled and distance is available
@@ -2342,8 +2400,11 @@ class DynamicCalendarLoader extends CalendarCore {
             `<div class="event-flyer" data-flyer-url="${flyerUrl}"><img src="${flyerUrl}" alt="" loading="lazy" decoding="async" onerror="this.parentNode.remove()"></div>` : '';
 
         const aurora = this.getAuroraColorsForEvent(event);
-        const auroraStyle = aurora ?
-            ` style="--c1:${aurora.c1};--c2:${aurora.c2};--c3:${aurora.c3}"` : '';
+        const plateColor = this.getFaviconPlateColorForEvent(event);
+        const styleParts = [];
+        if (aurora) styleParts.push(`--c1:${aurora.c1}`, `--c2:${aurora.c2}`, `--c3:${aurora.c3}`);
+        if (plateColor) styleParts.push(`--fav-plate:${plateColor}`);
+        const auroraStyle = styleParts.length ? ` style="${styleParts.join(';')}"` : '';
 
         const slug = this.escapeCardText(event.slug);
         const shareTime = `${event.day || ''}${event.time ? ' ' + event.time : ''}`;
@@ -2359,7 +2420,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     <div class="ec-rows">
                         <div class="ec-row ec-when">
                             ${this.cardIconSvg('clock')}
-                            <span class="event-day">${this.escapeCardText(formatDayTime(event))}</span>
+                            <span class="event-day">${this.escapeCardText(whenText)}</span>
                             ${badges}
                         </div>
                         ${venueRow}
@@ -2375,6 +2436,29 @@ class DynamicCalendarLoader extends CalendarCore {
                 </div>
             </div>
         `;
+    }
+
+    // Clipboard write that works WITHOUT a secure context (plain-http
+    // previews): a hidden textarea plus the deprecated execCommand path.
+    // Returns true when the copy actually succeeded.
+    copyTextLegacy(text) {
+        try {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.setAttribute('readonly', '');
+            textarea.style.position = 'fixed';
+            textarea.style.top = '-1000px';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            textarea.setSelectionRange(0, text.length);
+            const copied = document.execCommand && document.execCommand('copy');
+            document.body.removeChild(textarea);
+            return !!copied;
+        } catch (error) {
+            logger.warn('EVENT', `Legacy copy failed: ${error.message}`);
+            return false;
+        }
     }
 
     // Setup share button handlers for event cards
@@ -2436,10 +2520,18 @@ class DynamicCalendarLoader extends CalendarCore {
                         logger.error('EVENT', 'Copy failed', err);
                         this.showShareToast('Unable to copy link');
                     }
+                } else if (this.copyTextLegacy(`${shareText}\n${shareUrl}`)) {
+                    // navigator.share and navigator.clipboard both require a
+                    // SECURE CONTEXT — neither exists over plain http (e.g. a
+                    // LAN/tailnet preview), which previously produced a dead
+                    // end. The selection-based copy still works there.
+                    this.showShareToast('Link copied! 📋');
+                    logger.info('EVENT', 'Event URL copied via legacy selection copy');
                 } else {
-                    // No share capability available
-                    this.showShareToast('Sharing not supported on this browser');
-                    logger.warn('EVENT', 'No share method available');
+                    // Truly nothing available: show the link so it can still
+                    // be copied by hand rather than telling the user no.
+                    this.showShareToast(shareUrl);
+                    logger.warn('EVENT', 'No share method available; surfaced URL instead');
                 }
             });
         });
