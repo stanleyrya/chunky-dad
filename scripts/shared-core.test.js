@@ -10773,3 +10773,36 @@ test('recurring withhold: override identity is never stamped on a series the scr
   assert.ok(!String(analyzed.notes || '').includes('overrideUid'), 'and never serialized into notes');
   assert.ok(lines.some(l => l.includes('dropped override identity')), `log explains why: ${JSON.stringify(lines)}`);
 });
+
+test('areDatesEqual never throws on a non-date, and declines the match', () => {
+  const core = createCore();
+  const real = new Date('2026-02-14T05:00:00.000Z');
+
+  // The exact crash shape from the 2026-07-30 device run: one side is not a
+  // Date, and .getTime() was called on it unguarded, ending the whole run.
+  assert.equal(core.areDatesEqual(real, undefined, 1), false, 'undefined declines rather than throws');
+  assert.equal(core.areDatesEqual(undefined, real, 1), false);
+  assert.equal(core.areDatesEqual(real, null, 1), false);
+  assert.equal(core.areDatesEqual(real, 'not a date', 1), false);
+  assert.equal(core.areDatesEqual(real, {}, 1), false);
+
+  // Usable shapes still compare correctly, including ISO strings and epochs —
+  // a calendar record and a scraped record do not always carry the same type.
+  assert.equal(core.areDatesEqual(real, new Date(real.getTime()), 1), true);
+  assert.equal(core.areDatesEqual(real, real.toISOString(), 1), true, 'ISO string equals its Date');
+  assert.equal(core.areDatesEqual(real, real.getTime(), 1), true, 'epoch millis equal their Date');
+  assert.equal(core.areDatesEqual(real, new Date(real.getTime() + 30 * 60 * 1000), 60), true, 'within tolerance');
+  assert.equal(core.areDatesEqual(real, new Date(real.getTime() + 90 * 60 * 1000), 60), false, 'outside tolerance');
+});
+
+test('analyzeEventAction survives a calendar candidate with an unusable date', () => {
+  const core = createCore();
+  const event = { title: 'CHUNK CHICAGO presents SPRING THAW!', startDate: new Date('2026-03-15T04:00:00.000Z') };
+  const existing = [
+    { title: 'CHUNK CHICAGO presents SPRING THAW!', startDate: undefined },
+    { title: 'Unrelated', startDate: new Date('2026-03-15T04:00:00.000Z') }
+  ];
+  // Previously threw out of the .find() callback and aborted the run.
+  const analysis = core.analyzeEventAction(event, existing, 'smart');
+  assert.ok(analysis && typeof analysis.action === 'string', `got an analysis: ${JSON.stringify(analysis)}`);
+});
