@@ -62,7 +62,8 @@ const scraperBars = {
       "name": "Eden",
       "city": "birmingham",
       "address": "138 Gooch Street, Birmingham B5 7HF",
-      "facebook": "https://www.facebook.com/eden.bar.birmingham/"
+      "facebook": "https://www.facebook.com/eden.bar.birmingham/",
+      "coordinates": "52.46975, -1.89513"
     }
   ],
   "boston": [
@@ -92,12 +93,13 @@ const scraperBars = {
       "name": "Horizon",
       "city": "brighton",
       "address": "211-214 Kings Road Arches, Brighton BN1 1NB",
-      "instagram": "horizon.brighton"
+      "instagram": "horizon.brighton",
+      "coordinates": "50.819936, -0.140382"
     },
     {
       "name": "Concorde 2",
       "city": "brighton",
-      "address": "Madeira Drive, Brighton BN2 1EN",
+      "address": "286A Madeira Drive, Brighton BN2 1EN",
       "coordinates": "50.8172912, -0.1225875"
     }
   ],
