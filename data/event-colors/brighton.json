@@ -1,0 +1,15 @@
+[
+  {
+    "slug": "beefmince-brighton-pride-38dee7c4",
+    "url": "https://link.dice.fm/T1d30c84b47d",
+    "paletteSource": "flyer",
+    "palette": "#fce61c:23:19 #fffcfe:15:0 #3eaee5:15:13 #bb43f6:13:26 #4827ac:7:19",
+    "accent": "#bb43f6"
+  },
+  {
+    "slug": "beefmince-x-brighton-788abcce",
+    "paletteSource": "flyer",
+    "palette": "#2a2728:37:1 #730185:21:19 #240274:18:16 #bd09a8:10:24 #dcee31:1:19",
+    "accent": "#730185"
+  }
+]
