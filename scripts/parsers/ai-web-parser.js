@@ -689,6 +689,20 @@ class AiWebParser {
                 // filled event.location — because the extraction-time bar gate
                 // cannot see a pin that arrives later.
                 this.resolveBarFromCuratedCoordinates(keptStructuredEvents, cityConfig);
+                // Bar plausibility gate for the structured-data path. The AI
+                // path gates every event (see the call in
+                // extractSingleEventWithAi), but the JSON-LD/JSON-API fast
+                // path returns before ever reaching it — so a borough or
+                // district published as the venue name ("Brooklyn",
+                // "Portland": run 20260731-120505, whose CHUNK events take
+                // exactly this path) sailed through to the calendar.
+                // Deliberately runs AFTER the resolution above: resolution
+                // gets first refusal so a rescuable event gets its REAL venue,
+                // and only an unrescuable city-shaped value is dropped.
+                // Gating first would delete the bar before the resolution's
+                // text corroboration could use it — and drop events the
+                // curated pin could have answered.
+                keptStructuredEvents.forEach(event => this.applyBarPlausibilityGate(event, cityConfig));
                 // Report-only: what the page's Google Maps link pins, and
                 // whether the identity guard + curated precedence would let it
                 // fill a blank location. Writes nothing to event data.
@@ -12907,24 +12921,18 @@ TEXT:
 
     // Radius, in METRES, for curated-coordinate venue resolution below.
     // Derived from the curated corpus's own geometry — a sweep of every
-    // same-city curated coordinate pair in data/bars (2026-07-31) shows a
-    // clean gap:
-    //   DUPLICATE entries for ONE venue sit 0 m … 10.2 m apart
-    //     "Nova PDX"/"Bossanova Ballroom" 0 m (portland — old and new names of
-    //     722 E Burnside), "Public Works"/"The Public Works SF" 0 m,
-    //     "F8 Nightclub & Bar"/"F8 NIGHTCLUB" 0 m, "Precinct LA"/"Precinct
-    //     DTLA" 2 m, "SF Eagle"/"San Francisco Eagle Bar" 6 m,
-    //     "Joy Theater"/"Joy Theatre" 10 m;
-    //   genuinely DIFFERENT neighbouring venues start at 17.7 m
+    // same-city curated coordinate pair in data/bars (2026-07-31):
+    //   the closest genuinely DIFFERENT neighbouring venues are 17.7 m apart
     //     "Jackhammer"/"Touché" 18 m (chicago), "Gym Sports Bar"/"The Pub"
     //     20 m (fort-lauderdale), "Powerhouse"/"Hole in the Wall Saloon" 22 m
-    //     (sf), everything else 40 m+.
-    // 12 m sits inside that gap: wide enough for the observed real pins (run
-    // 20260731-120505 pinned 1.4 m and 2.9 m from the curated coordinate) and
-    // for the duplicate spread, narrow enough that only an essentially
-    // identical pin qualifies. Two DIFFERENT venues can still both fall
-    // inside it (a pin between Jackhammer and Touché) — that case refuses
-    // outright rather than guessing.
+    //     (sf), "FLEX"/"Atlas Social Club" 41 m, everything else further;
+    //   the real pins this resolution exists for sat 1.4 m and 2.9 m from
+    //     the curated coordinate (run 20260731-120505).
+    // 12 m sits between the two: wide enough for a page-published pin that
+    // disagrees with curated data by a few metres, comfortably below the
+    // distance at which two DIFFERENT venues could both qualify. Two venues
+    // can still both fall inside it (a pin midway between Jackhammer and
+    // Touché) — that case refuses outright rather than guessing.
     getCuratedCoordinateVenueRadiusMeters() {
         return 12;
     }
@@ -12950,12 +12958,15 @@ TEXT:
             .test(String(word || '').trim());
     }
 
-    // Are two curated bar names plausibly the SAME venue? The curated corpus
-    // carries duplicate rows for one venue (the owner's upstream sheet), so a
-    // blanket "more than one hit inside the radius = refuse" would refuse
-    // exactly the case this resolution exists for (722 E Burnside is curated
-    // twice, as "Nova PDX" and its former name "Bossanova Ballroom"). True on
-    // either:
+    // Are two curated bar names plausibly the SAME venue? DEFENSIVE DEPTH,
+    // not the primary path: as of the data cleanup in #1598 the curated
+    // corpus holds no same-venue duplicates at all, so a resolvable pin has
+    // exactly ONE curated bar in range and this test never runs. It exists
+    // because the corpus previously carried duplicate rows for one venue
+    // (722 E Burnside was curated as both "Nova PDX" and its former name
+    // "Bossanova Ballroom"), and the promote/venue-queue path that adds new
+    // bars can reintroduce one — a variant pair must not make the resolution
+    // give up. True on either:
     //   - bar-name-key containment ("publicworks" ⊂ "publicworkssf",
     //     "f8nightclub" ⊂ "f8nightclubbar"), minimum 4 chars so a short
     //     fragment never unifies two venues;
@@ -13027,8 +13038,14 @@ TEXT:
     // Eligibility is deliberately narrow: a blank bar (including one the gate
     // just dropped) or a bar the city gate rejects. A specific venue name is
     // NEVER second-guessed. The lookup is city-scoped exactly like every
-    // other curated lookup here, and adoption is refused whenever the hits
-    // inside the radius are not all the same venue.
+    // other curated lookup here.
+    //
+    // The primary path is ONE curated bar inside the radius — the only shape
+    // the cleaned corpus can produce (#1598 removed its same-venue duplicate
+    // rows, leaving no two curated bars in any city nearer than 17.7 m).
+    // More than one hit means genuinely different venues, so the answer is
+    // no answer. The one exception is defensive depth for a corpus that
+    // regains a duplicate row: see curatedBarNamesAreVariants.
     resolveBarFromCuratedCoordinates(events, cityConfig) {
         const eventList = Array.isArray(events) ? events : [];
         if (eventList.length === 0) return events;
@@ -13922,6 +13939,25 @@ TEXT:
             ? 'address-shaped'
             : this.getCityShapedBarRejection(bar, event, cityConfig);
         if (!reason) return event;
+        // Curated data outranks a derived shape heuristic. Both shape tests
+        // above read a NAME and guess what it is; the curated corpus KNOWS.
+        // A sweep of all 106 curated venue names (2026-07-31) found two the
+        // heuristics misread — "9th Avenue Saloon" (nyc) reads as a street
+        // address because it contains "Avenue", and "440 Castro" (sf) reads
+        // as a truncated street line — so a curated name for the event's own
+        // city is exempt. City-scoped on purpose: never the cross-city
+        // fallback, which could let some other city's curated venue excuse a
+        // value this event's city rejects. No curated bar is named after a
+        // city, so this cannot resurrect "Brooklyn"/"Portland".
+        const cityBars = typeof event.city === 'string' && event.city.trim()
+            && this.core && typeof this.core.getCuratedCityBars === 'function'
+            && typeof this.core.findCuratedBarByName === 'function'
+            ? this.core.getCuratedCityBars(event.city.trim())
+            : null;
+        if (cityBars && this.core.findCuratedBarByName(cityBars, bar)) {
+            console.log(`🤖 AI Web: Kept bar "${bar}" despite reading as ${reason} — curated venue for ${event.city}`);
+            return event;
+        }
         console.log(`🤖 AI Web: Dropped implausible bar "${bar}" (${reason})`);
         delete event.bar;
         return event;
