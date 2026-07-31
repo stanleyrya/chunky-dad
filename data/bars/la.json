@@ -13,7 +13,7 @@
   {
     "name": "Precinct LA",
     "city": "la",
-    "address": "357 S Broadway, Los Angeles, CA 90013",
+    "address": "357 South Broadway, Los Angeles, California, 90013",
     "coordinates": "34.0498149, -118.2493321",
     "instagram": "https://www.instagram.com/precinctdtla",
     "facebook": "https://www.facebook.com/precinctdtla",
@@ -49,12 +49,6 @@
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJXxXPUMi_woARE46Y7WO-Ww0",
     "gayCities": "https://losangeles.gaycities.com/bars/309258-gym-bar-weho",
     "gayCitiesLastScrapedAt": "2026-06-14T03:19:33.089Z"
-  },
-  {
-    "name": "Precinct DTLA",
-    "city": "la",
-    "address": "357 South Broadway, Los Angeles, California, 90013",
-    "coordinates": "34.0498331, -118.2493274"
   },
   {
     "name": "Falcon North",
