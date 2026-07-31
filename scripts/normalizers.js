@@ -2408,23 +2408,25 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
     //   1. curated coordinates from data/bars — BarDataNormalizer fills them
     //      earlier in this same pipeline, so they are already on the event
     //      when we get here, and they are never touched;
-    //   2. a STREET-GRADE forward geocode — the ladder above runs
-    //      "<venue>, <address>" then the address-only variants, so its result
-    //      is already on the event;
-    //   3. THIS pin — written when 1 and 2 left location blank, and preferred
-    //      over a geocoded pin whose QUERY carried no street line (see below).
+    //   2. a forward geocode — the ladder above runs "<venue>, <address>" then
+    //      the address-only variants then "<venue>, <city>", so its result is
+    //      already on the event;
+    //   3. THIS pin — written ONLY when 1 and 2 left location blank.
     //
-    // Why a geocoded pin can lose to this one: the ladder's last rungs query
-    // "<venue>, <city>" with no street line at all, and Nominatim answers those
-    // confidently and wrongly. Measured: with the address missing, "Horizon,
-    // brighton" resolved to a house called Horizon on Ainsworth Avenue — 5069 m
-    // from the venue — and came back EXACT grade with a POI name matching the
-    // bar, so no response-side signal caught it. The signal that does catch it
-    // is the query itself: no street line means the geocoder was guessing from
-    // a name, and an identity-guarded maps-link pin (the venue's own ticketing
-    // page, name-matched to the event's bar) is the better evidence. A query
-    // that DID carry a street line still wins — that is the case the
-    // name-led rung exists to make accurate.
+    // It fills a blank; it never replaces a pin. Filling a blank is a clear
+    // win (the alternative is no pin at all). Replacing one is a coin flip, and
+    // the coin was actually flipped: for a pin from the name-only
+    // "<venue>, <city>" rung — the weakest geocode we produce — the two
+    // measured cases point opposite ways. With the address missing, "Horizon,
+    // brighton" resolved to a house called Horizon on Ainsworth Avenue, 5069 m
+    // out, where the maps-link pin was right; "Westminster Pier, london"
+    // resolved EXACTLY right, where the maps-link pin is 936 m out at another
+    // pier. Nothing available at runtime separates them: both came back
+    // exact-grade, and the 5069 m hit even carried a POI name matching the bar.
+    // Swapping at even odds buys no accuracy and adds variance, so the
+    // disagreement is FLAGGED and the geocoded pin is kept (see
+    // isNameOnlyGeocodedPin). If the flagged cases accumulate and the maps link
+    // is usually the right one, that is the evidence for enabling a swap later.
     //
     // Returns true when it wrote a location (so the caller refreshes notes).
     applyMapsLinkCoordinateFallback(event) {
@@ -2457,19 +2459,19 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                 ? event.pinSource.trim()
                 : 'unknown source';
             if (this.isNameOnlyGeocodedPin(event)) {
-                console.warn(`🗺️ MAPS LINK CONFLICT: "${title}" geocoded pin ${existingLocation} came from the name-only query "${event._geocodeQuery || 'unknown'}" (no address in it) and is ${distanceMeters} m from the page's maps link ${candidateLocation} for "${venueName}" — using the maps link`);
-                event.location = candidateLocation;
-                event.pinSource = 'maps-link';
-                // An address adopted from that same map hit is now evidence
-                // from a source this rung just declined to pin with. It is
-                // FLAGGED, not deleted: the two observed cases point opposite
-                // ways (the Horizon hit's "56 Ainsworth Avenue" is wrong; the
-                // Westminster Pier hit's "Victoria Embankment" is right), so
-                // dropping it would be a guess of its own.
+                // FLAG ONLY — the pin is NOT replaced. See the note above
+                // isNameOnlyGeocodedPin for why swapping here is a coin flip.
+                console.warn(`🗺️ MAPS LINK DECLINED: "${title}" geocoded pin ${existingLocation} came from the name-only query "${event._geocodeQuery || 'unknown'}" (no address in it) and is ${distanceMeters} m from the page's maps link ${candidateLocation} for "${venueName}" — geocoded pin kept, maps-link pin NOT applied; verify which is the real venue`);
+                // An address adopted from that same map hit is evidence from a
+                // source this line has just questioned. It is FLAGGED, not
+                // deleted: the two observed cases point opposite ways (the
+                // Horizon hit's "56 Ainsworth Avenue" is wrong; the Westminster
+                // Pier hit's "Victoria Embankment" is right), so dropping it
+                // would be a guess of its own.
                 if (event.addressSource === 'geo-poi' && event.address) {
-                    console.warn(`🗺️ MAPS LINK CONFLICT: "${title}" kept address "${event.address}" — it was adopted from that same declined map hit; verify it`);
+                    console.warn(`🗺️ MAPS LINK DECLINED: "${title}" address "${event.address}" was adopted from that same questioned map hit; verify it`);
                 }
-                return true;
+                return false;
             }
             console.warn(`🗺️ MAPS LINK CONFLICT: "${title}" accepted pin ${existingLocation} (${acceptedSource}) is ${distanceMeters} m from the page's maps link ${candidateLocation} for "${venueName}" — accepted pin kept; verify which is the real venue`);
             return false;
@@ -2484,7 +2486,12 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
     // Is the event's accepted pin a GEOCODED pin that came from a NAME-ONLY
     // query — "<venue>, <city>" with no address text in it at all?
     //
-    // The rule is deliberately query-side, not response-side. Nominatim's
+    // This selects which WARNING to emit; it never changes a pin. A name-only
+    // pin is the weakest geocode the ladder produces, so its disagreement with
+    // an identity-guarded maps-link pin is reported as its own line (and its
+    // own run-summary counter) rather than folded in with ordinary conflicts.
+    //
+    // The test is deliberately query-side, not response-side. Nominatim's
     // response grade is the precision signal this file trusts everywhere else,
     // and it does not work here: the 5069 m "Horizon, brighton" hit came back
     // EXACT grade, with a POI name that matched the bar. Nothing in the
@@ -2492,17 +2499,15 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
     //
     // "Name-only" is the narrowest possible reading — the query carried no
     // address, i.e. it was the venue+city rescue rung or the no-address venue
-    // lookup. A query built from the event's address stays street-grade for
-    // this purpose even when the street line has no house number or
-    // street-type word ("Victoria Embankment, London, UK"); those pins keep
-    // winning, which is exactly the case the name-led rung exists to make
-    // accurate.
+    // lookup. A query built from the event's address does not count even when
+    // the street line has no house number or street-type word ("Victoria
+    // Embankment, London, UK").
     //
     // Conservative on every axis:
-    //   - only geocoded pins qualify (curated and page pins are never second-
-    //     guessed here, and a maps-link pin cannot re-judge itself);
+    //   - only geocoded pins qualify (curated and page pins are never
+    //     second-guessed here, and a maps-link pin cannot re-judge itself);
     //   - the flag must be explicitly false — a pin carrying no flag at all
-    //     (an older record, another writer) keeps its pin (fail closed).
+    //     (an older record, another writer) takes the ordinary conflict line.
     isNameOnlyGeocodedPin(event) {
         const pinSource = typeof event.pinSource === 'string' ? event.pinSource.trim() : '';
         if (!pinSource.startsWith('geocoded-')) return false;

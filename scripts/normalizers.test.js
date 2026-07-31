@@ -3141,13 +3141,16 @@ test('pin ladder: a maps-link pin agreeing with the accepted pin logs no conflic
   assert.equal(untouched.location, undefined);
 });
 
-test('pin ladder: a NAME-ONLY geocoded pin loses to the identity-guarded maps-link pin', async () => {
+test('pin ladder: a NAME-ONLY geocoded pin is FLAGGED against the maps-link pin, never replaced', async () => {
   const normalizer = createPinLadderNormalizer();
 
   // Run evidence: with the address missing, the venue+city rescue query
   // "Horizon, brighton" resolved to a HOUSE called Horizon on Ainsworth
   // Avenue, 5 km away — and came back exact-grade with a POI name matching
-  // the bar, so no response-side signal could catch it.
+  // the bar, so no response-side signal could catch it. The maps-link pin is
+  // the better one HERE — but the same rung resolves Westminster Pier
+  // perfectly while ITS maps link is 936 m wrong, and nothing at runtime
+  // separates the two. So this logs loudly and changes nothing.
   const event = {
     title: 'BEEFMINCE Brighton Pride',
     bar: 'Horizon',
@@ -3163,26 +3166,29 @@ test('pin ladder: a NAME-ONLY geocoded pin loses to the identity-guarded maps-li
 
   const capture = captureConsole(() => {});
   try {
-    assert.equal(normalizer.applyMapsLinkCoordinateFallback(event), true);
+    assert.equal(normalizer.applyMapsLinkCoordinateFallback(event), false);
   } finally {
     capture.restore();
   }
 
-  assert.equal(event.location, '50.819936,-0.140382');
-  assert.equal(event.pinSource, 'maps-link');
+  // The geocoded pin is KEPT — nothing about the event's location changes.
+  assert.equal(event.location, '50.8130039, -0.0690619');
+  assert.equal(event.pinSource, 'geocoded-exact');
   // The address adopted from that same hit is FLAGGED, never deleted — the
   // evidence on whether such an address is wrong points both ways.
   assert.equal(event.address, '56 Ainsworth Avenue, Brighton, England');
   assert.equal(event.addressSource, 'geo-poi');
-  assert.ok(capture.lines.some(line => line.includes('MAPS LINK CONFLICT')
-    && line.includes('name-only query "Horizon, brighton"') && line.includes('using the maps link')),
+  assert.ok(capture.lines.some(line => line.includes('MAPS LINK DECLINED')
+    && line.includes('name-only query "Horizon, brighton"')
+    && line.includes('5069 m')
+    && line.includes('maps-link pin NOT applied')),
     JSON.stringify(capture.lines));
-  assert.ok(capture.lines.some(line => line.includes('kept address "56 Ainsworth Avenue, Brighton, England"')
-    && line.includes('verify it')),
+  assert.ok(capture.lines.some(line => line.includes('MAPS LINK DECLINED')
+    && line.includes('address "56 Ainsworth Avenue, Brighton, England" was adopted from that same questioned map hit')),
     JSON.stringify(capture.lines));
 });
 
-test('pin ladder: an ADDRESS-derived geocoded pin keeps winning, however vague its street line', async () => {
+test('pin ladder: an address-derived geocoded pin takes the ordinary conflict line and is kept', async () => {
   const normalizer = createPinLadderNormalizer();
 
   // Westminster Pier, the case the name-led rung fixed: the query carried the
@@ -3214,8 +3220,8 @@ test('pin ladder: an ADDRESS-derived geocoded pin keeps winning, however vague i
   assert.equal(event.address, 'Victoria Embankment, London, UK');
   assert.ok(capture.lines.some(line => line.includes('accepted pin kept')), JSON.stringify(capture.lines));
 
-  // Fail closed on every other shape: curated pins, page pins, and geocoded
-  // pins with no query flag at all are never second-guessed.
+  // Every other shape keeps its pin too, whatever the flag says: curated
+  // pins, page pins, and geocoded pins with no query flag at all.
   for (const overrides of [
     { pinSource: 'curated' },
     { pinSource: 'page' },

@@ -54,7 +54,7 @@ const GUARD_LABELS = [
     { key: 'arbitrationDeterministic', label: 'Merge conflicts resolved deterministically' },
     { key: 'mapsLinkPin', label: "Pin taken from the page's maps link (no curated/geocoded pin)" },
     { key: 'mapsLinkConflict', label: "Maps-link pin disagrees with the accepted pin (verify venue)" },
-    { key: 'mapsLinkOverride', label: "Maps-link pin replaced a name-only geocoded pin" }
+    { key: 'mapsLinkDeclined', label: "Maps-link pin declined against a name-only geocoded pin (verify venue)" }
 ];
 
 const SIGNALS_PASS_ORDER = ['extraction', 'context-prep', 'repair', 'merge-arbitration', 'ocr'];

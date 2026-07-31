@@ -218,7 +218,7 @@ const SIGNALS_FIXTURE = [
   // Maps-link pin rung (verbatim shapes from the dice.fm evidence run)
   '2026-07-13T09:00:18.600Z [INFO] 🗺️ OpenStreetMapNormalizer: No curated or geocoded pin for "BEEFMINCE x BRIGHTON" — using the page\'s maps link for "Concorde 2" -> 50.8172448,-0.122510799999986',
   '2026-07-13T09:00:18.700Z [WARN] 🗺️ MAPS LINK CONFLICT: "BOATMINCE" accepted pin 51.5022544, -0.1231736 (curated) is 936 m from the page\'s maps link 51.5099822,-0.117819 for "Westminster Pier" — accepted pin kept; verify which is the real venue',
-  '2026-07-13T09:00:18.800Z [WARN] 🗺️ MAPS LINK CONFLICT: "BEEFMINCE Brighton Pride" geocoded pin 50.8130039, -0.0690619 came from the name-only query "Horizon, brighton" (no address in it) and is 5069 m from the page\'s maps link 50.819936,-0.140382 for "Horizon" — using the maps link',
+  '2026-07-13T09:00:18.800Z [WARN] 🗺️ MAPS LINK DECLINED: "BEEFMINCE Brighton Pride" geocoded pin 50.8130039, -0.0690619 came from the name-only query "Horizon, brighton" (no address in it) and is 5069 m from the page\'s maps link 50.819936,-0.140382 for "Horizon" — geocoded pin kept, maps-link pin NOT applied; verify which is the real venue',
   // Merge-time guards: degenerate end, coordinate/bar/location preservation
   '2026-07-13T09:00:19.000Z [WARN] ⚠️ MERGE: "BEARRACUDA: Portland" scraped endDate <= startDate (zero duration) — treating as missing, keeping calendar end',
   '2026-07-13T09:00:20.000Z [INFO] 📍 MERGE: "BEARRACUDA: Portland" location kept calendar coordinates over scraped text/empty value',
@@ -255,7 +255,7 @@ test('buildSummary counts each guard line type', () => {
     arbitrationDeterministic: 2, // 🔒 website root-vs-deep + 🔒 emoji-twin title
     mapsLinkPin: 1,           // pin taken from the page's maps link
     mapsLinkConflict: 1,      // maps-link pin vs a kept pin, ≥ 300 m apart
-    mapsLinkOverride: 1        // the name-only geocoded pin that LOST to the maps link
+    mapsLinkDeclined: 1        // maps-link pin flagged against a name-only geocoded pin, not applied
   });
 
   // 🔒 lines are merge decisions too: they must show up in the merges list
