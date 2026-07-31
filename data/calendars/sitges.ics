@@ -6,49 +6,25 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-sitges
 X-WR-TIMEZONE:Europe/Madrid
 BEGIN:VEVENT
-DTSTART:20260910T230000Z
-DTEND:20260911T160000Z
-DTSTAMP:20260729T173938Z
-UID:844ECBD9-3C3C-4607-94A7-9461CD804C46
-CREATED:20260729T165205Z
-DESCRIPTION:description: <p>BEEFMINCE is bringing the glitter for an unforg
- ettable disco-themed club night. </p>\\\\n\nbar: The Bear Cave\naddress: Ca
- lle Bonaire 12\, Sitges\, Barcelona\, 08870\nticketUrl: https://sitgesbearc
- ave.com/event/thursday-beefmince-disco/\nimage: https://sitgesbearcave.com/
- wp-content/uploads/2026/07/Disco-1030-x-541.jpg\nimageSource: jsonld\ncover
- : 20 EUR\ntimezone: Europe/Madrid\nwebsite: https://beefmince.com\naddressS
- ource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20B
- ear%20Cave%2C%20Calle%20Bonaire%2012%2C%20Sitges%2C%20Barcelona%2C%2008870\
- nbearSource: keyword\nkey: thursday-10th-september-–-beefmince-disco|2026-0
- 9-10|the bear cave
-LAST-MODIFIED:20260729T165206Z
+DTSTART:20260911T230000Z
+DTEND:20260912T040000Z
+DTSTAMP:20260731T144809Z
+UID:F8A0021D-A0AF-4990-BD6D-7E9BC69111C9
+CREATED:20260729T165206Z
+DESCRIPTION:description: A call out to all players to join our big beefy sp
+ orts themed night\nbar: The Bear Cave\naddress: Calle Bonaire 12\, Sitges\,
+  Barcelona\, 08870\nimage: https://sitgesbearcave.com/wp-content/uploads/20
+ 26/07/Sports-1030-x-541.jpg\ncover: 20 EUR\ntimezone: Europe/Madrid\nwebsit
+ e: https://sitgesbearcave.com/event/friday-beefmince-sports-zone/\nshortNam
+ e: BEEF-MINCE\nfavicon: https://beefmince.com\nbearSource: keyword\nkey: be
+ efmince-sports-zone|2026-09-11|the bear cave\npinSource: curated\naddressSo
+ urce: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.goo
+ gle.com/maps/search/?api=1&query=41.2360385%2C1.8079068
+LAST-MODIFIED:20260731T140752Z
+LOCATION:41.2360385\, 1.8079068
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Thursday 10th September – BEEFMINCE DISCO
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260909T230000Z
-DTEND:20260910T160000Z
-DTSTAMP:20260729T173938Z
-UID:2B3A4DE5-8B2E-4B5F-BC4F-9E2652114905
-CREATED:20260729T165204Z
-DESCRIPTION:description: <p>Dress the part\, flash your sticker and let the
-  lights guide your night. </p>\\\\n\nbar: The Bear Cave\naddress: Calle Bon
- aire 12\, Sitges\, Barcelona\, 08870\nticketUrl: https://sitgesbearcave.com
- /event/wednesday-beefmince-meet-market/\nimage: https://sitgesbearcave.com/
- wp-content/uploads/2026/07/Market-1030-x-541.jpg\nimageSource: jsonld\ncove
- r: 20 EUR\ntimezone: Europe/Madrid\nwebsite: https://beefmince.com\naddress
- Source: page\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20
- Bear%20Cave%2C%20Calle%20Bonaire%2012%2C%20Sitges%2C%20Barcelona%2C%2008870
- \nbearSource: keyword\nkey: wednesday-9th-september-–-beefmince-meet-market
- |2026-09-09|the bear cave
-LAST-MODIFIED:20260729T165205Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Wednesday 9th September – BEEFMINCE MEET MARKET
+SUMMARY:Friday 11th September – BEEFMINCE SPORTS ZONE
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
@@ -56,20 +32,21 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260912T230000Z
 DTEND:20260913T040000Z
-DTSTAMP:20260729T173938Z
+DTSTAMP:20260731T144809Z
 UID:CC773A5F-6921-4E9A-BAB0-DFE4D28CF264
 CREATED:20260729T165207Z
-DESCRIPTION:description: <p>The final BEEFMINCE party closes out the festiv
- ities with an explosive\, high-energy celebration. </p>\\\\n\nbar: The Bear
-  Cave\naddress: Calle Bonaire 12\, Sitges\, Barcelona\, 08870\nticketUrl: h
- ttps://sitgesbearcave.com/event/saturday-beefmince-the-big-ball/\nimage: ht
- tps://sitgesbearcave.com/wp-content/uploads/2026/07/Big-Ball-1030-x-541.jpg
- \nimageSource: jsonld\ncover: 25 EUR\ntimezone: Europe/Madrid\nwebsite: htt
- ps://beefmince.com\naddressSource: page\ngmaps: https://www.google.com/maps
- /search/?api=1&query=The%20Bear%20Cave%2C%20Calle%20Bonaire%2012%2C%20Sitge
- s%2C%20Barcelona%2C%2008870\nbearSource: keyword\nkey: saturday-12th-septem
- ber-–-beefmince-the-big-ball|2026-09-12|the bear cave
-LAST-MODIFIED:20260729T165207Z
+DESCRIPTION:description: The final BEEFMINCE party closes out the festiviti
+ es with an explosive\, high-energy celebration.\nbar: The Bear Cave\naddres
+ s: Calle Bonaire 12\, Sitges\, Barcelona\, 08870\nimage: https://sitgesbear
+ cave.com/wp-content/uploads/2026/07/Big-Ball-1030-x-541.jpg\ncover: 25 EUR\
+ ntimezone: Europe/Madrid\nwebsite: https://sitgesbearcave.com/event/saturda
+ y-beefmince-the-big-ball/\nshortName: BEEF-MINCE\nfavicon: https://beefminc
+ e.com\nbearSource: keyword\nkey: beefmince-the-big-ball|2026-09-12|the bear
+  cave\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSou
+ rce: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=41.236
+ 0385%2C1.8079068
+LAST-MODIFIED:20260731T140752Z
+LOCATION:41.2360385\, 1.8079068
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:Saturday 12th September – BEEFMINCE: THE BIG BALL
@@ -78,25 +55,49 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260911T230000Z
-DTEND:20260912T040000Z
-DTSTAMP:20260729T173938Z
-UID:F8A0021D-A0AF-4990-BD6D-7E9BC69111C9
-CREATED:20260729T165206Z
-DESCRIPTION:description: <p>A call out to all players to join our big beefy
-  sports themed night </p>\\\\n\nbar: The Bear Cave\naddress: Calle Bonaire 
- 12\, Sitges\, Barcelona\, 08870\nticketUrl: https://sitgesbearcave.com/even
- t/friday-beefmince-sports-zone/\nimage: https://sitgesbearcave.com/wp-conte
- nt/uploads/2026/07/Sports-1030-x-541.jpg\nimageSource: jsonld\ncover: 20 EU
- R\ntimezone: Europe/Madrid\nwebsite: https://beefmince.com\naddressSource: 
- page\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Bear%20C
- ave%2C%20Calle%20Bonaire%2012%2C%20Sitges%2C%20Barcelona%2C%2008870\nbearSo
- urce: keyword\nkey: friday-11th-september-–-beefmince-sports-zone|2026-09-1
- 1|the bear cave
-LAST-MODIFIED:20260729T165206Z
+DTSTART:20260909T230000Z
+DTEND:20260910T160000Z
+DTSTAMP:20260731T144809Z
+UID:2B3A4DE5-8B2E-4B5F-BC4F-9E2652114905
+CREATED:20260729T165204Z
+DESCRIPTION:description: Dress the part\, flash your sticker and let the li
+ ghts guide your night.\nbar: The Bear Cave\naddress: Calle Bonaire 12\, Sit
+ ges\, Barcelona\, 08870\nimage: https://sitgesbearcave.com/wp-content/uploa
+ ds/2026/07/Market-1030-x-541.jpg\ncover: 20 EUR\ntimezone: Europe/Madrid\nw
+ ebsite: https://sitgesbearcave.com/event/wednesday-beefmince-meet-market/\n
+ shortName: BEEF-MINCE\nfavicon: https://beefmince.com\nbearSource: keyword\
+ nkey: beefmince-meet-market|2026-09-09|the bear cave\npinSource: curated\na
+ ddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https:/
+ /www.google.com/maps/search/?api=1&query=41.2360385%2C1.8079068
+LAST-MODIFIED:20260731T140750Z
+LOCATION:41.2360385\, 1.8079068
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Friday 11th September – BEEFMINCE SPORTS ZONE
+SUMMARY:Wednesday 9th September – BEEFMINCE MEET MARKET
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260910T230000Z
+DTEND:20260911T160000Z
+DTSTAMP:20260731T144809Z
+UID:844ECBD9-3C3C-4607-94A7-9461CD804C46
+CREATED:20260729T165205Z
+DESCRIPTION:description: BEEFMINCE is bringing the glitter for an unforgett
+ able disco-themed club night.\nbar: The Bear Cave\naddress: Calle Bonaire 1
+ 2\, Sitges\, Barcelona\, 08870\nimage: https://sitgesbearcave.com/wp-conten
+ t/uploads/2026/07/Disco-1030-x-541.jpg\ncover: 20 EUR\ntimezone: Europe/Mad
+ rid\nwebsite: https://sitgesbearcave.com/event/thursday-beefmince-disco/\ns
+ hortName: BEEF-MINCE\nfavicon: https://beefmince.com\nbearSource: keyword\n
+ key: beefmince-disco|2026-09-10|the bear cave\npinSource: curated\naddressS
+ ource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.go
+ ogle.com/maps/search/?api=1&query=41.2360385%2C1.8079068
+LAST-MODIFIED:20260731T140751Z
+LOCATION:41.2360385\, 1.8079068
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Thursday 10th September – BEEFMINCE DISCO
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

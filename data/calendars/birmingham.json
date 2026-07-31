@@ -3,5 +3,50 @@
     "calendarTimezone": "Europe/London",
     "timezoneData": null
   },
-  "events": []
+  "events": [
+    {
+      "name": "BEEFMINCE x Bear Brum 2026",
+      "day": "Saturday",
+      "time": "10PM-4AM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-09-26T22:00:00",
+      "endDate": "2026-09-27T04:00:00",
+      "unprocessedDescription": "bar: Eden\naddress: 138 Gooch Street, Birmingham, B5 7HF, Un\rited Kingdom\nimage: https://dice-media.imgix.net/attachments/2026-03-29/7ec0f877-c521-402f-9647-d48e7e765d89.jpg?rect=0%2C0%2C1080%2C1080\ntimezone: Europe/London\ncover: £12\nimageHorizontal: https://dice-media.imgix.net/attachments/2026-03-29/7ec0f877-c521-402f-9647-d48e7e765d89.jpg?rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress\nwebsite: https://dice.fm/event/oepd2a-beefmince-x-bear-brum-2026-26th-sep-eden-birmingham-tickets\nshortName: BEEF-MINCE\nfavicon: https://beefmince.com\nbearSource: keyword\nkey: beefmince-x-bear-brum-2026|2026-09-26|eden\ndescription: 🐻🔥 BEEFMINCE x Bear Brum 2026 🔥🐻 Join BEEFMINCE this Saturday as the headline party for this years Bear Brum weekender! After an incredible 2025 debut, Bear Brum is back producing aanother unforgettable weekend across Birmingham, and this year we’re serving BEEFMINCE those Eden bears on Saturday night, following the brilliant Dandy on the Friday. DJs - Jon Byrne & Ryan Auld We’re here for Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers—and everyone in between. Come as you are, we'll love you for it 🐻🌈 More details about the weekend can be found at bearbrum.com\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Eden%2C%20138%20Gooch%20Street%2C%20Birmingham%2C%20B5%207HF%2C%20United%20Kingdom",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/London",
+      "wasUTC": true,
+      "sourceUid": "2F6B95B8-EB63-4396-AB18-A5F6F20D84F2",
+      "uid": "2F6B95B8-EB63-4396-AB18-A5F6F20D84F2",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eden",
+      "cover": "£12",
+      "image": "https://dice-media.imgix.net/attachments/2026-03-29/7ec0f877-c521-402f-9647-d48e7e765d89.jpg?rect=0%2C0%2C1080%2C1080",
+      "imageHorizontal": "https://dice-media.imgix.net/attachments/2026-03-29/7ec0f877-c521-402f-9647-d48e7e765d89.jpg?rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress",
+      "favicon": "https://beefmince.com",
+      "tea": "🐻🔥 BEEFMINCE x Bear Brum 2026 🔥🐻 Join BEEFMINCE this Saturday as the headline party for this years Bear Brum weekender! After an incredible 2025 debut, Bear Brum is back producing aanother unforgettable weekend across Birmingham, and this year we’re serving BEEFMINCE those Eden bears on Saturday night, following the brilliant Dandy on the Friday. DJs - Jon Byrne & Ryan Auld We’re here for Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers—and everyone in between. Come as you are, we'll love you for it 🐻🌈 More details about the weekend can be found at bearbrum.com",
+      "address": "138 Gooch Street, Birmingham, B5 7HF, United Kingdom",
+      "website": "https://dice.fm/event/oepd2a-beefmince-x-bear-brum-2026-26th-sep-eden-birmingham-tickets",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Eden%2C%20138%20Gooch%20Street%2C%20Birmingham%2C%20B5%207HF%2C%20United%20Kingdom",
+      "shortName": "BEEF-MINCE",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://dice.fm/event/oepd2a-beefmince-x-bear-brum-2026-26th-sep-eden-birmingham-tickets",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Eden%2C%20138%20Gooch%20Street%2C%20Birmingham%2C%20B5%207HF%2C%20United%20Kingdom",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "beefmince-x-bear-brum-2026-267f8da8"
+    }
+  ]
 }

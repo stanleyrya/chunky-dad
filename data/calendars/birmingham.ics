@@ -5,4 +5,38 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-birmingham
 X-WR-TIMEZONE:Europe/London
+BEGIN:VEVENT
+DTSTART:20260926T210000Z
+DTEND:20260927T030000Z
+DTSTAMP:20260731T144809Z
+UID:2F6B95B8-EB63-4396-AB18-A5F6F20D84F2
+CREATED:20260731T131550Z
+DESCRIPTION:bar: Eden\naddress: 138 Gooch Street\, Birmingham\, B5 7HF\, Un
+ ited Kingdom\nimage: https://dice-media.imgix.net/attachments/2026-03-29/7e
+ c0f877-c521-402f-9647-d48e7e765d89.jpg?rect=0%2C0%2C1080%2C1080\ntimezone: 
+ Europe/London\ncover: £12\nimageHorizontal: https://dice-media.imgix.net/at
+ tachments/2026-03-29/7ec0f877-c521-402f-9647-d48e7e765d89.jpg?rect=0%2C216%
+ 2C1080%2C648&w=1300&h=630&auto=compress\nwebsite: https://dice.fm/event/oep
+ d2a-beefmince-x-bear-brum-2026-26th-sep-eden-birmingham-tickets\nshortName:
+  BEEF-MINCE\nfavicon: https://beefmince.com\nbearSource: keyword\nkey: beef
+ mince-x-bear-brum-2026|2026-09-26|eden\ndescription: 🐻🔥 BEEFMINCE x Bear 
+ Brum 2026 🔥🐻 Join BEEFMINCE this Saturday as the headline party for this 
+ years Bear Brum weekender! After an incredible 2025 debut\, Bear Brum is ba
+ ck producing aanother unforgettable weekend across Birmingham\, and this ye
+ ar we’re serving BEEFMINCE those Eden bears on Saturday night\, following t
+ he brilliant Dandy on the Friday. DJs - Jon Byrne & Ryan Auld We’re here fo
+ r Bears\, Cubs\, Chubs\, Muscle Bears\, Trans Men\, Admirers—and everyone i
+ n between. Come as you are\, we'll love you for it 🐻🌈 More details about 
+ the weekend can be found at bearbrum.com\naddressSource: page\nimageSource:
+  jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api
+ =1&query=Eden%2C%20138%20Gooch%20Street%2C%20Birmingham%2C%20B5%207HF%2C%20
+ United%20Kingdom
+LAST-MODIFIED:20260731T140755Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEEFMINCE x Bear Brum 2026
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR

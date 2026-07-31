@@ -15,8 +15,8 @@
     "birmingham": {
       "name": "Birmingham",
       "status": "success",
-      "dataLength": 197,
-      "eventCount": 0
+      "dataLength": 2070,
+      "eventCount": 1
     },
     "boston": {
       "name": "Boston",
@@ -27,8 +27,8 @@
     "brighton": {
       "name": "Brighton",
       "status": "success",
-      "dataLength": 195,
-      "eventCount": 0
+      "dataLength": 4141,
+      "eventCount": 2
     },
     "chicago": {
       "name": "Chicago",
@@ -69,7 +69,7 @@
     "london": {
       "name": "London",
       "status": "success",
-      "dataLength": 11584,
+      "dataLength": 12698,
       "eventCount": 7
     },
     "nola": {
@@ -135,7 +135,7 @@
     "sitges": {
       "name": "Sitges",
       "status": "success",
-      "dataLength": 4690,
+      "dataLength": 4667,
       "eventCount": 4
     },
     "toronto": {
