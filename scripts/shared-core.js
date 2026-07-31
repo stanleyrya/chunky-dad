@@ -9077,6 +9077,24 @@ class SharedCore {
                 analyzedEvent = this.processEventWithConflicts(analyzedEvent);
             }
 
+            // Re-stamp the analysis. Both branches above REPLACE analyzedEvent
+            // wholesale (createFinalEventObject builds a fresh object and skips
+            // underscore fields; processEventWithConflicts likewise), so the
+            // `_analysis` set at the top of this method is lost on exactly the
+            // paths that need it most. The display layer reads
+            // `_analysis.sourceEvent`/`.reason` to tell an override-create
+            // apart from a genuinely new event; a withheld series has its
+            // override identity deleted below, so `_analysis` is the ONLY
+            // surviving signal. Without this, CubScout 2026-07-31 matched an
+            // existing calendar record, ran merge arbitration, and still
+            // reported "New: 1 / Intent: NEW | Write: CREATE".
+            analyzedEvent._analysis = {
+                action: analysis.action,
+                reason: analysis.reason,
+                sourceEvent: Boolean(analysis.sourceEvent),
+                hasOverrideIdentity: Boolean(analysis.overrideIdentity)
+            };
+
             // Final-stage field cleanups. Both run at the FINAL analyzed-event
             // build (so every parser, merge result, and cached AI response
             // passes through them) and BEFORE the notes generation/rebuild
@@ -9270,6 +9288,22 @@ class SharedCore {
                         analyzedEvent.notes = this.formatEventNotes(analyzedEvent);
                     }
                     console.log(`🔁 RECURRING: "${event.title || 'Unknown'}" dropped override identity — the scraper never writes series occurrences`);
+                }
+                // Say out loud that this was a MATCH, not a discovery. The
+                // withhold line below reads identically whether the series is
+                // already saved or has never been seen, which is exactly the
+                // ambiguity the owner hit on 2026-07-31 ("it isn't identifying
+                // that there is already one saved locally") — the run had in
+                // fact found it, merged it, and confirmed the series.
+                const matchedRecord = analysis.existingEvent || analysis.sourceEvent || null;
+                if (matchedRecord) {
+                    analyzedEvent._seriesMatch = {
+                        identifier: matchedRecord.identifier || matchedRecord.id || '',
+                        title: matchedRecord.title || '',
+                        startDate: matchedRecord.startDate || null,
+                        reason: analysis.reason || ''
+                    };
+                    console.log(`🔁 RECURRING: "${event.title || 'Unknown'}" matches a series already saved in the calendar — not a new event (${analysis.reason || 'existing match'})`);
                 }
                 console.log(`🔁 RECURRING: "${event.title || 'Unknown'}" withheld from calendar write — save via ICS export`);
             }

@@ -124,6 +124,24 @@ class ScriptableUrlParser {
             throw new Error('URL input override identity requires both overrideUid and overrideRecurrenceId');
         }
 
+        // The schema canonicalizes rrule/recurrenceRule to `recurrence`, but the
+        // series stamp (SharedCore.isRecurringSeriesEvent, normalizers) reads
+        // `recurrenceRule` — which only the AI parser ever writes. So a builder
+        // link carrying recurrence=FREQ=MONTHLY;BYDAY=1FR produced a plain
+        // one-off: no 🔁 badge, no ICS export button, no withhold, and the rule
+        // silently dropped on write (createCalendarEvent never calls
+        // addRecurrenceRule). Mirror the compatibility read ai-web-parser
+        // already does for its own path.
+        //
+        // NOT when this event is a single-occurrence override. `recurrence` is
+        // bidirectional — it is the canonical notes/ICS key, so the SERIES rule
+        // leaks off the source occurrence's notes and into the override during
+        // the merge. Stamping that as a series would withhold the one write the
+        // scraper is allowed to make into an existing series.
+        if (!hasOverrideUid && !this.hasNonEmptyValue(event.recurrenceRule) && this.hasNonEmptyValue(event.recurrence)) {
+            event.recurrenceRule = String(event.recurrence).trim();
+        }
+
         if (!event.bar && event.location && !this.isCoordinateString(event.location)) {
             event.bar = event.location;
             if (inputFields.has('location')) {

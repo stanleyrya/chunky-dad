@@ -8417,7 +8417,13 @@ class ScriptableAdapter {
     addParam("description", event.description);
     addParam("cover", event.cover);
     addParam("website", event.website || event.url);
-    addParam("recurrence", event.recurrenceRule || event.recurrence);
+    // recurrenceRule ONLY — never fall back to `recurrence`. On an override
+    // card that field holds the SERIES rule leaked off the source occurrence's
+    // notes during the merge, so the fallback prefilled the builder with a rule
+    // the event does not have; submitting that form would turn a
+    // single-occurrence override back into a whole series. Real series carry
+    // recurrenceRule (buildAnalyzedCalendarEvent copies it across).
+    addParam("recurrence", event.recurrenceRule);
     addParam("instagram", event.instagram);
     addParam("facebook", event.facebook);
     // Coordinates. Without these the builder has no pin and the human has to
@@ -9085,6 +9091,14 @@ class ScriptableAdapter {
     const recurringBadge = SharedCore.isRecurringSeriesEvent(event)
       ? '<span class="action-badge badge-warning recurring-badge">🔁 recurring — save via ICS</span>'
       : "";
+    // Additive second badge: "recurring — save via ICS" reads identically
+    // whether this series is already in the calendar or has never been seen.
+    // When the run matched a saved series, say so on the card — that ambiguity
+    // is what made a matched CubScout look like a brand-new event.
+    const seriesMatchBadge =
+      event && event._seriesMatch
+        ? '<span class="action-badge badge-merge series-match-badge">🔁 already saved — matches this series</span>'
+        : "";
     const dropDetail = [
       bearOpts.dropReason ? String(bearOpts.dropReason) : "",
       bearOpts.dropHost ? `from ${bearOpts.dropHost}` : "",
@@ -9159,7 +9173,7 @@ class ScriptableAdapter {
 
     let html = `
         <div class="event-card${isDroppedCard ? " bear-dropped-card" : ""}">
-            ${actionBadge}${recurringBadge}
+            ${actionBadge}${recurringBadge}${seriesMatchBadge}
             ${actionNote}
             <div class="event-title">${this.escapeHtml(event.title || event.name)}</div>
             ${bearVerdictRow}
@@ -11245,6 +11259,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
   getWriteActionFromEvent(event) {
     const action = this.normalizeWriteAction(event);
     if (!action) return null;
+    // A recurring series is withheld from execution by
+    // SharedCore.filterEventsForExecution, so "CREATE"/"UPDATE" on the card is
+    // a promise the run never keeps. Display-only: countMetricsCalendarActions
+    // buckets off normalizeWriteAction, not this, so the metrics schema is
+    // untouched.
+    if (SharedCore.isRecurringSeriesEvent(event)) return "withheld";
     if (action === "new") return "create";
     if (action === "merge") return "update";
     if (action === "conflict" || action === "missing_calendar") return "skip";
@@ -11265,6 +11285,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     if (normalized === "create") return "CREATE";
     if (normalized === "update") return "UPDATE";
     if (normalized === "skip") return "SKIP";
+    if (normalized === "withheld") return "WITHHELD";
     return "OTHER";
   }
 

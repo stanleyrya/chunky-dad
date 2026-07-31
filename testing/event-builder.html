@@ -3112,6 +3112,20 @@
         // saving LA events three hours early, which then failed to match on the
         // next scrape (CubScout, 2026-07-30). Bare opens still use the browser.
         state.timezone = state.timezone || browserTimezone;
+        // …and when the link carried a city but no timezone (a legacy link, or
+        // one whose timezone this page stripped before the fix above), derive
+        // the zone from the city rather than silently keeping the device's.
+        // createDefaultState() always seeds `timezone: browserTimezone`, so the
+        // `||` guard on the line above can never fire for a bare open — the
+        // override has to be explicit. Mirrors buildExistingState.
+        if (!urlState.overrides.timezone && state.city) {
+          const cityTimezone = (typeof CITY_CONFIG === 'object' && CITY_CONFIG && CITY_CONFIG[state.city])
+            ? CITY_CONFIG[state.city].timezone
+            : '';
+          if (cityTimezone) {
+            state.timezone = cityTimezone;
+          }
+        }
         normalizeStateLinks();
         ensureDateOrder();
         applyStateToForm();
@@ -9539,6 +9553,16 @@ Example output:
         setTextParam('name', state.name);
         setTextParam('short', state.shortName);
         setTextParam('city', state.city);
+        // The event's zone must round-trip through the address bar. Omitting it
+        // here made #1588's inbound fix (see the comment on state.timezone in
+        // init) dead on arrival: init() calls updateUrl() on load, which
+        // rewrites the URL from this list alone, so `timezone` was stripped
+        // milliseconds after being read. Any reload or re-entry of that
+        // stripped URL — including iOS Safari restoring the tab after the
+        // scriptable:// bounce — then fell back to the DEVICE zone while the
+        // wall-clock `start` stayed put, turning 21:00 Pacific into 21:00
+        // Eastern (CubScout, saved as TZID=America/New_York for Eagle LA).
+        setTextParam('timezone', state.timezone);
         const savedBarName = normalizeText(state.savedBar);
         setTextParam('bar', savedBarName);
         setTextParam('venue', state.venue);

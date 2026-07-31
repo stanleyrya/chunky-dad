@@ -3649,3 +3649,252 @@ test('promoter registry: a freshly pulled local entry outranks a stale cached re
   assert.equal(localWins.merged[0].favicon, 'https://linktr.ee/goldiloxx', 'pulled entry wins');
   assert.ok(localWins.merged.some(p => p.name === 'Remote Only'), 'remote-only promoters survive');
 });
+
+// ---------------------------------------------------------------------------
+// Intent/write labels for a recurring series. CubScout 2026-07-31: the run
+// found the saved series, merged it, and confirmed it with the wide-window
+// probe — then printed "New: 1 / Intent: NEW | Write: CREATE". Both override
+// signals had been erased by then (createFinalEventObject drops underscore
+// metadata; the withhold branch deletes the override identity), leaving the
+// display layer nothing to distinguish a match from a discovery.
+// ---------------------------------------------------------------------------
+
+test('labels: a withheld recurring series reports WITHHELD, never CREATE', () => {
+  const adapter = buildAdapter();
+  const series = {
+    title: 'CUBSCOUT',
+    _action: 'new',
+    _recurring: true,
+    _recurringExport: true,
+    recurrenceRule: 'FREQ=MONTHLY;BYDAY=1FR'
+  };
+  assert.equal(adapter.getWriteActionFromEvent(series), 'withheld');
+  assert.equal(adapter.formatWriteActionLabel(adapter.getWriteActionFromEvent(series)), 'WITHHELD');
+
+  // Controls: nothing else moves.
+  assert.equal(adapter.getWriteActionFromEvent({ _action: 'new' }), 'create');
+  assert.equal(adapter.getWriteActionFromEvent({ _action: 'merge' }), 'update');
+  assert.equal(adapter.getWriteActionFromEvent({ _action: 'time_conflict' }), 'skip');
+  assert.equal(adapter.getWriteActionFromEvent({}), null);
+});
+
+test('labels: a matched series reads as MERGE intent even after its override identity is dropped', () => {
+  const adapter = buildAdapter();
+  // Exactly the shape buildAnalyzedCalendarEvent produces for a withheld
+  // series that matched: action 'new', no override identity left, and
+  // `_analysis` as the only surviving evidence of the match.
+  const matchedSeries = {
+    title: 'CUBSCOUT',
+    _action: 'new',
+    _recurring: true,
+    recurrenceRule: 'FREQ=MONTHLY;BYDAY=1FR',
+    _analysis: {
+      action: 'new',
+      reason: 'Recurring source match found - creating override',
+      sourceEvent: true,
+      hasOverrideIdentity: true
+    }
+  };
+  assert.equal(adapter.normalizeIntentAction(matchedSeries), 'merge', 'not a new event');
+  assert.equal(adapter.formatIntentActionLabel(adapter.normalizeIntentAction(matchedSeries)), 'MERGE');
+
+  // A series that genuinely matched nothing still reads NEW — and is still
+  // withheld, because the scraper never writes a series either way.
+  const unmatchedSeries = {
+    title: 'CUBSCOUT',
+    _action: 'new',
+    _recurring: true,
+    recurrenceRule: 'FREQ=MONTHLY;BYDAY=1FR',
+    _analysis: { action: 'new', reason: 'No existing events found', sourceEvent: false, hasOverrideIdentity: false }
+  };
+  assert.equal(adapter.normalizeIntentAction(unmatchedSeries), 'new');
+  assert.equal(adapter.getWriteActionFromEvent(unmatchedSeries), 'withheld');
+});
+
+test('builder link: an override card never prefills the series rule it inherited', () => {
+  const adapter = buildAdapter();
+  // `recurrence` on an analyzed event is the SERIES rule leaked off the source
+  // occurrence's notes during the merge — not this event's own schedule.
+  // Prefilling it would let a Save turn a one-night override into a series.
+  const overrideCard = {
+    title: 'CUBSCOUT',
+    startDate: '2026-09-05T04:00:00.000Z',
+    endDate: '2026-09-05T09:00:00.000Z',
+    city: 'la',
+    recurrence: 'FREQ=MONTHLY;BYDAY=1FR',
+    overrideUid: 'cubscout-20260730T183109Z@chunky.dad',
+    overrideRecurrenceId: '20260905'
+  };
+  const overrideUrl = adapter.buildEventBuilderUrl(overrideCard);
+  assert.ok(overrideUrl, 'a builder link is still offered');
+  assert.ok(!overrideUrl.includes('recurrence='), 'but carries no rrule');
+
+  // A real series still prefills, because it carries recurrenceRule.
+  const seriesUrl = adapter.buildEventBuilderUrl({
+    ...overrideCard,
+    recurrenceRule: 'FREQ=MONTHLY;BYDAY=1FR'
+  });
+  assert.ok(seriesUrl.includes('recurrence=FREQ%3DMONTHLY%3BBYDAY%3D1FR'), 'series rrule prefills');
+});
+
+// ---------------------------------------------------------------------------
+// The override-shadowing flatten inside getExistingEvents: the code that makes
+// "override one occurrence" survive a re-run. It had no coverage at all, which
+// is why "did we break the override logic?" could not be answered from the
+// suite.
+// ---------------------------------------------------------------------------
+
+// `run` is async: the restore must wait for it, or the stubs are torn down
+// before getExistingEvents ever reads them and every search comes back empty.
+async function withStubbedCalendar(calendarTitle, events, run) {
+  const originalCalendar = global.Calendar;
+  const originalCalendarEvent = global.CalendarEvent;
+  const calendar = { title: calendarTitle, identifier: 'CAL-UUID' };
+  global.Calendar = { forEvents: async () => [calendar] };
+  global.CalendarEvent = { between: async () => events };
+  try {
+    return await run();
+  } finally {
+    global.Calendar = originalCalendar;
+    global.CalendarEvent = originalCalendarEvent;
+  }
+}
+
+test('existing-event search: a saved override shadows the series occurrence it replaces', async () => {
+  const adapter = new ScriptableAdapter({
+    cities: { la: { calendar: 'chunky-dad-la', timezone: 'America/Los_Angeles', patterns: ['los angeles'] } }
+  });
+  const seriesUid = 'cubscout-20260730T183109Z@chunky.dad';
+  const occurrenceStart = new Date('2026-09-05T04:00:00.000Z');
+  // The recurrence id is an ICS RECURRENCE-ID (YYYYMMDD), not the dashed
+  // date key normalizeEventDate produces for the shadow map.
+  const recurrenceId = '20260905';
+
+  // Both records come back from EventKit for the same day: the series
+  // occurrence, and the override the scraper wrote to replace it.
+  const seriesOccurrence = {
+    title: 'CUBSCOUT',
+    identifier: `CAL-UUID:${seriesUid}`,
+    startDate: occurrenceStart,
+    endDate: new Date('2026-09-05T09:00:00.000Z'),
+    notes: 'bar: Eagle LA\nrecurrence: FREQ=MONTHLY;BYDAY=1FR'
+  };
+  const override = {
+    title: 'CUBSCOUT',
+    identifier: 'CAL-UUID:override-1',
+    startDate: occurrenceStart,
+    endDate: new Date('2026-09-05T09:00:00.000Z'),
+    notes: `bar: Eagle LA\nuid: ${seriesUid}\noverrideUid: ${seriesUid}\noverrideRecurrenceId: ${recurrenceId}`
+  };
+
+  const found = await withStubbedCalendar('chunky-dad-la', [seriesOccurrence, override], () =>
+    adapter.getExistingEvents({
+      city: 'la',
+      startDate: occurrenceStart,
+      endDate: new Date('2026-09-05T09:00:00.000Z')
+    })
+  );
+
+  assert.equal(found.length, 1, 'the shadowed source occurrence is dropped');
+  assert.equal(found[0].identifier, 'CAL-UUID:override-1', 'the override is what matches');
+});
+
+test('existing-event search: an unrelated occurrence is never shadowed', async () => {
+  const adapter = new ScriptableAdapter({
+    cities: { la: { calendar: 'chunky-dad-la', timezone: 'America/Los_Angeles', patterns: ['los angeles'] } }
+  });
+  const seriesUid = 'cubscout-20260730T183109Z@chunky.dad';
+  const occurrenceStart = new Date('2026-09-05T04:00:00.000Z');
+
+  // An override exists, but for a DIFFERENT date — this occurrence stands.
+  const seriesOccurrence = {
+    title: 'CUBSCOUT',
+    identifier: `CAL-UUID:${seriesUid}`,
+    startDate: occurrenceStart,
+    endDate: new Date('2026-09-05T09:00:00.000Z'),
+    notes: 'bar: Eagle LA\nrecurrence: FREQ=MONTHLY;BYDAY=1FR'
+  };
+  const unrelatedOverride = {
+    title: 'CUBSCOUT',
+    identifier: 'CAL-UUID:override-oct',
+    startDate: new Date('2026-10-03T04:00:00.000Z'),
+    endDate: new Date('2026-10-03T09:00:00.000Z'),
+    notes: `bar: Eagle LA\nuid: ${seriesUid}\noverrideUid: ${seriesUid}\noverrideRecurrenceId: 20261003`
+  };
+
+  const found = await withStubbedCalendar('chunky-dad-la', [seriesOccurrence, unrelatedOverride], () =>
+    adapter.getExistingEvents({
+      city: 'la',
+      startDate: occurrenceStart,
+      endDate: new Date('2026-09-05T09:00:00.000Z')
+    })
+  );
+
+  assert.equal(found.length, 2, 'both records survive — different occurrences');
+});
+
+test('existing-event search: a calendar that does not exist yields no match, and says so', async () => {
+  const adapter = new ScriptableAdapter({
+    cities: { la: { calendar: 'chunky-dad-la', timezone: 'America/Los_Angeles', patterns: ['los angeles'] } }
+  });
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (...args) => lines.push(args.join(' '));
+  let found;
+  try {
+    found = await withStubbedCalendar('some-other-calendar', [], () =>
+      adapter.getExistingEvents({
+        city: 'la',
+        startDate: new Date('2026-09-05T04:00:00.000Z'),
+        endDate: new Date('2026-09-05T09:00:00.000Z')
+      })
+    );
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.deepEqual(found, [], 'no candidates');
+  assert.ok(
+    lines.some(l => l.includes('does not exist')),
+    `the run explains the empty result rather than implying the calendar was empty: ${JSON.stringify(lines)}`
+  );
+});
+
+// ---------------------------------------------------------------------------
+// The Event Builder page rebuilds the WHOLE address bar from its own param
+// list on load, so a param it forgets to emit is stripped before the user
+// touches anything. `timezone` was missing, which silently degraded the
+// event's zone to the device's and saved LA events in Eastern time.
+// ---------------------------------------------------------------------------
+
+test('event builder page re-emits the params the scraper link depends on', () => {
+  const fs = require('node:fs');
+  const builderPath = path.join(__dirname, '..', '..', 'testing', 'event-builder.html');
+  const source = fs.readFileSync(builderPath, 'utf8');
+  const shareUrlStart = source.indexOf('function buildShareUrl');
+  assert.ok(shareUrlStart > -1, 'buildShareUrl still exists');
+  const shareUrlBody = source.slice(shareUrlStart, shareUrlStart + 6000);
+
+  for (const param of ['city', 'timezone']) {
+    assert.ok(
+      shareUrlBody.includes(`setTextParam('${param}'`),
+      `buildShareUrl must re-emit '${param}' or the page strips it from the URL on load`
+    );
+  }
+});
+
+test('event card: a series already in the calendar says so, next to the ICS badge', () => {
+  const adapter = buildAdapter();
+  adapter.resetMapVerifyUrls();
+  adapter.resetIcsExportEvents();
+
+  const unmatched = adapter.generateEventCard(buildRecurringCardEvent());
+  assert.ok(unmatched.includes('🔁 recurring — save via ICS'), 'the export badge is unchanged');
+  assert.ok(!unmatched.includes('already saved'), 'nothing was matched, so nothing is claimed');
+
+  const matched = adapter.generateEventCard(buildRecurringCardEvent({
+    _seriesMatch: { identifier: 'CAL-UUID:fuzzy-uid@chunky.dad', title: 'FUZZY', reason: 'Recurring source match found - creating override' }
+  }));
+  assert.ok(matched.includes('🔁 recurring — save via ICS'), 'the export badge still renders');
+  assert.ok(matched.includes('already saved — matches this series'), 'and the match is surfaced');
+});
