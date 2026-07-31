@@ -97,7 +97,7 @@ const scraperBars = {
     {
       "name": "Concorde 2",
       "city": "brighton",
-      "address": "Madeira Shelter Hall, Madeira Drive, Brighton BN2 1EN",
+      "address": "Madeira Drive, Brighton BN2 1EN",
       "coordinates": "50.8172912, -0.1225875"
     }
   ],
