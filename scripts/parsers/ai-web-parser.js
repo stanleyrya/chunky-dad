@@ -7626,6 +7626,71 @@ class AiWebParser {
     }
 
 
+    // Event `name` values from the page's own JSON-LD, cached per page like
+    // getPageBrandNames (segment/OCR htmlData copies are spreads and inherit
+    // the cache). Fails open to [] without a core: every consumer treats an
+    // empty list as "no structured data", which changes nothing.
+    getPageJsonLdEventNames(htmlData) {
+        if (!htmlData || typeof htmlData !== 'object') return [];
+        if (Array.isArray(htmlData.pageJsonLdEventNames)) return htmlData.pageJsonLdEventNames;
+        let names = [];
+        if (this.core && typeof this.core.extractJsonLdEventNodes === 'function') {
+            try {
+                names = this.core.extractJsonLdEventNodes(typeof htmlData.html === 'string' ? htmlData.html : '')
+                    .map(node => (node && typeof node.name === 'string'
+                        ? this.normalizeWhitespace(this.decodeBasicEntities(this.stripTags(node.name)).replace(/&amp;/gi, '&'))
+                        : ''))
+                    .filter(Boolean);
+            } catch (error) {
+                console.warn(`🤖 AI Web: JSON-LD event name lookup failed: ${error.message}`);
+                names = [];
+            }
+        }
+        if (Object.isExtensible(htmlData)) {
+            htmlData.pageJsonLdEventNames = names;
+        }
+        return names;
+    }
+
+
+    // Truncation repair: extraction dropped part of a headline the page itself
+    // publishes. When the page's JSON-LD names an Event whose `name` CONTAINS
+    // the extracted title (normalized, on token boundaries), the structured
+    // name is the same title's fuller authoritative form — adopt it verbatim.
+    //
+    // Containment is the entire licence, and it fails closed: a structured
+    // name that does not contain the extracted title belongs to a different
+    // event and is never swapped in, and a title contained in two or more
+    // structured names cannot be attributed to either. Nothing is composed or
+    // invented — the returned value is always one node's `name` exactly as
+    // published, and the caller runs it through the same title cleanups every
+    // other title gets. Structured data enriches here; it never bypasses
+    // extraction, which still ran and still decided.
+    repairTruncatedTitleFromJsonLd(title, htmlData) {
+        const original = String(title || '');
+        const names = this.getPageJsonLdEventNames(htmlData);
+        if (!original || names.length === 0) return original;
+        const normalize = (value) => String(value || '')
+            .toLowerCase()
+            .replace(/[^\p{L}\p{N}]+/gu, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        const normalizedTitle = normalize(original);
+        if (!normalizedTitle) return original;
+        const matches = names.filter(name => {
+            const normalizedName = normalize(name);
+            if (!normalizedName || normalizedName === normalizedTitle) return false;
+            return ` ${normalizedName} `.includes(` ${normalizedTitle} `);
+        });
+        if (matches.length === 0) return original;
+        if (matches.length > 1) {
+            console.log(`🤖 AI Web: Title "${original}" is contained in ${matches.length} JSON-LD event names — ambiguous, keeping the extracted title`);
+            return original;
+        }
+        return matches[0];
+    }
+
+
     // Padded-token containment of a candidate title in any '|'-separated
     // segment of the page's own og:title or <title> tag. Case-insensitive,
     // punctuation-collapsed; empty inputs never match.
@@ -8691,7 +8756,7 @@ ${String(snippet || '')}`;
             const aliasSuffix = pageBrandNames.length > 1
                 ? ` (also appears as ${pageBrandNames.slice(1).map(name => `"${name}"`).join(', ')})`
                 : '';
-            steeringContext += `KNOWN ORGANIZER (derived from page metadata): "${pageBrandNames[0]}"${aliasSuffix} — this is the event promoter/site brand, NOT the venue. Never return it as "bar", and do not treat its name in page titles as part of the event name.\n`;
+            steeringContext += `KNOWN ORGANIZER (derived from page metadata): "${pageBrandNames[0]}"${aliasSuffix} — this is the event promoter/site brand, NOT the venue. Never return it as "bar".\n`;
         }
         const extraContext = aiConfig && typeof aiConfig.extraContext === 'string' ? aiConfig.extraContext.trim() : '';
         if (extraContext) {
@@ -10738,6 +10803,19 @@ TEXT:
             aiEvent.summary,
             this.getResolvedParserMetadataFieldValue(parserConfig, ['title', 'name', 'summary'], aiEvent)
         );
+        // Restore a title extraction truncated, proven by containment in the
+        // page's own JSON-LD Event name (see repairTruncatedTitleFromJsonLd).
+        // Deliberately FIRST of the title cleanups: the adopted value is the
+        // published name verbatim, so it still has to face the leading-date
+        // strip and the brand-suffix strip below — the same two cleanups the
+        // structured-data path applies to JSON-LD titles.
+        if (title) {
+            const repairedTitle = this.repairTruncatedTitleFromJsonLd(title, htmlData);
+            if (repairedTitle !== title) {
+                console.log(`🤖 AI Web: Restored truncated title "${title}" → "${repairedTitle}" (contained in the page's own JSON-LD event name)`);
+                title = repairedTitle;
+            }
+        }
         // Strip a leading date phrase HERE rather than in the per-pass guard:
         // titles also arrive from segment headings and config metadata, which
         // never pass through that guard — a live BEEFMINCE run showed the

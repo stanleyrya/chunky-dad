@@ -8316,6 +8316,93 @@ test('strips a leading date phrase from an event title, and only then', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Truncated-title repair from the page's own JSON-LD Event name (run
+// 20260731-124200: CHUNK's page publishes "CHUNK Portland - The RETURN!
+// Saturday March 14th" in JSON-LD, <title>, og:title and <h1>, and extraction
+// shipped "The RETURN")
+// ---------------------------------------------------------------------------
+
+const jsonLdEventPage = (...nodes) => `<html><head>${nodes
+  .map(node => `<script type="application/ld+json">${JSON.stringify(node)}</script>`)
+  .join('')}</head><body></body></html>`;
+const jsonLdEventNode = (name) => ({
+  '@context': 'https://schema.org',
+  '@type': 'Event',
+  name,
+  startDate: '2026-03-14T21:00:00-07:00'
+});
+
+test('restores a truncated title from the page JSON-LD event name that contains it', () => {
+  const parser = createParser();
+  const html = jsonLdEventPage(jsonLdEventNode('CHUNK Portland - The RETURN! Saturday March 14th'));
+  const htmlData = { html, url: 'https://www.chunk-party.com/event-details/chunk-portland-the-return-saturday-march-14th' };
+  assert.equal(
+    parser.repairTruncatedTitleFromJsonLd('The RETURN', htmlData),
+    'CHUNK Portland - The RETURN! Saturday March 14th');
+  // Case, punctuation and whitespace differences never block the repair.
+  assert.equal(
+    parser.repairTruncatedTitleFromJsonLd('the  return!', htmlData),
+    'CHUNK Portland - The RETURN! Saturday March 14th');
+});
+
+test('never swaps in a JSON-LD event name that does not contain the extracted title', () => {
+  const parser = createParser();
+  const htmlData = { html: jsonLdEventPage(jsonLdEventNode('CHUNK Portland - SUMMER BLOW OUT!')), url: 'https://www.chunk-party.com/x' };
+  assert.equal(parser.repairTruncatedTitleFromJsonLd('The RETURN', htmlData), 'The RETURN');
+  // Word fragments are not containment: "RETURN" must not match "RETURNS".
+  const fragmentData = { html: jsonLdEventPage(jsonLdEventNode('CHUNK RETURNS to Portland')), url: 'https://www.chunk-party.com/x' };
+  assert.equal(parser.repairTruncatedTitleFromJsonLd('RETURN', fragmentData), 'RETURN');
+  // An equal name is not a truncation, and there is nothing to repair.
+  const equalData = { html: jsonLdEventPage(jsonLdEventNode('The RETURN')), url: 'https://www.chunk-party.com/x' };
+  assert.equal(parser.repairTruncatedTitleFromJsonLd('The RETURN', equalData), 'The RETURN');
+  // Ambiguity fails closed: two structured names contain the same title.
+  const ambiguousData = {
+    html: jsonLdEventPage(
+      jsonLdEventNode('CHUNK Brooklyn - The Return!'),
+      jsonLdEventNode('CHUNK Portland - The Return! Saturday March 14th')),
+    url: 'https://www.chunk-party.com/x'
+  };
+  assert.equal(parser.repairTruncatedTitleFromJsonLd('The Return', ambiguousData), 'The Return');
+  // No structured data, no title, no htmlData → unchanged.
+  assert.equal(parser.repairTruncatedTitleFromJsonLd('The RETURN', { html: '<html></html>', url: 'https://x.example/' }), 'The RETURN');
+  assert.equal(parser.repairTruncatedTitleFromJsonLd('', { html: jsonLdEventPage(jsonLdEventNode('CHUNK Portland - The RETURN!')) }), '');
+  assert.equal(parser.repairTruncatedTitleFromJsonLd('The RETURN', null), 'The RETURN');
+});
+
+test('the JSON-LD title repair fails open without a core and composes with the other title cleanups', () => {
+  // Fail open: the gate needs SharedCore's JSON-LD reader.
+  const coreless = new AiWebParser({ normalizeUrl });
+  const html = jsonLdEventPage(jsonLdEventNode('CHUNK Portland - The RETURN! Saturday March 14th'));
+  assert.deepEqual(coreless.getPageJsonLdEventNames({ html }), []);
+  assert.equal(coreless.repairTruncatedTitleFromJsonLd('The RETURN', { html }), 'The RETURN');
+
+  // Through the real normalization path, the repaired title still faces the
+  // leading-date strip and the pipe brand-suffix strip.
+  const parser = createParser();
+  const repaired = parser.normalizeAiEvent(
+    { title: 'The RETURN', startDate: '2026-03-14T21:00:00-07:00' },
+    {}, { html, url: 'https://www.chunk-party.com/x' }, null, null);
+  assert.equal(repaired.title, 'CHUNK Portland - The RETURN! Saturday March 14th');
+
+  const datedParser = createParser();
+  const dated = datedParser.normalizeAiEvent(
+    { title: 'BEEFMINCE MEET MARKET', startDate: '2026-09-09T21:00:00Z' },
+    {}, { html: jsonLdEventPage(jsonLdEventNode('Wednesday 9th September - BEEFMINCE MEET MARKET NIGHT')), url: 'https://bear.example/x' },
+    null, null);
+  assert.equal(dated.title, 'BEEFMINCE MEET MARKET NIGHT');
+
+  const brandedParser = createParser();
+  const brandedHtml = `<html><head><meta property="og:site_name" content="CHUNK"/>`
+    + `<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': 'WebSite', name: 'CHUNK', url: 'https://www.chunk-party.com' })}</script>`
+    + `<script type="application/ld+json">${JSON.stringify(jsonLdEventNode('CHUNK Portland - The RETURN! Saturday March 14th | CHUNK'))}</script>`
+    + `</head><body></body></html>`;
+  const branded = brandedParser.normalizeAiEvent(
+    { title: 'The RETURN', startDate: '2026-03-14T21:00:00-07:00' },
+    {}, { html: brandedHtml, url: 'https://www.chunk-party.com/x' }, null, null);
+  assert.equal(branded.title, 'CHUNK Portland - The RETURN! Saturday March 14th');
+});
+
+// ---------------------------------------------------------------------------
 // Maps-link coordinate candidates (Dice.fm event pages publish the venue's
 // pin in the ll= param of their "Open in maps" link — high value, but Dice
 // geocoded Westminster Pier ~940 m off, onto a DIFFERENT pier, and pins
