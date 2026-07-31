@@ -132,6 +132,16 @@
     "accent": "#89211b"
   },
   {
+    "slug": "portland-17-749a33af",
+    "url": "https://bearracuda.com/events/portland-17/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#1c1412:29:1 #542e24:14:6 #9b533b:13:10 #25235d:13:10 #3f40aa:9:17",
+    "accent": "#3f40aa"
+  },
+  {
     "slug": "portland-nye-0de4cad8",
     "url": "https://bearracuda.com/",
     "faviconBg": "#ff1901",

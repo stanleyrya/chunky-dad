@@ -30,6 +30,12 @@
     "accent": "#e45312"
   },
   {
+    "slug": "latin-party-190605ad",
+    "paletteSource": "flyer",
+    "palette": "#040203:60:1 #faf9f6:7:0 #191516:7:1 #50292a:6:6 #b32325:4:18",
+    "accent": "#b32325"
+  },
+  {
     "slug": "megawoof-33341c08",
     "url": "https://linktr.ee/megawoof_america",
     "faviconBg": "#575d64",
@@ -88,5 +94,11 @@
     "paletteSource": "flyer",
     "palette": "#131b24:51:2 #3b3d3b:16:0 #62575b:12:2 #9d7657:9:7 #e34367:2:20",
     "accent": "#e34367"
+  },
+  {
+    "slug": "quenchd-21628c63",
+    "paletteSource": "flyer",
+    "palette": "#e3a59b:17:8 #cd8365:15:10 #222f33:14:2 #ab6141:12:11 #753127:9:10",
+    "accent": "#cd8365"
   }
 ]
