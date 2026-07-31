@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { LocationNormalizer, OpenStreetMapNormalizer, BasicDataNormalizer, BarDataNormalizer } = require('./normalizers');
+const { NormalizerPipeline, LocationNormalizer, OpenStreetMapNormalizer, BasicDataNormalizer, BarDataNormalizer } = require('./normalizers');
 const { SharedCore } = require('./shared-core');
 const { EventSchema } = require('./event-schema');
 
@@ -329,11 +329,13 @@ test('buildGeocodeQueryVariants orders, dedupes and caps the ladder', () => {
 
   const full = normalizer.buildGeocodeQueryVariants('2069 CHESHIRE BRIDGE RD NE', 'atlanta', 'The Heretic');
   assert.deepEqual(full, [
+    // Name-led rung first: the venue name disambiguates a vague street line.
+    'The Heretic, 2069 CHESHIRE BRIDGE RD NE, atlanta',
     '2069 CHESHIRE BRIDGE RD NE, atlanta',
     '2069 CHESHIRE BRIDGE RD, atlanta',
     'The Heretic, atlanta'
   ]);
-  assert.ok(full.length <= 3, 'hard cap: at most 3 queries per event');
+  assert.ok(full.length <= 6, 'hard cap: at most MAX_GEOCODE_QUERIES_PER_EVENT queries per event');
 
   // No strippable directional and no bar → the ladder collapses to one query
   assert.deepEqual(
@@ -349,8 +351,19 @@ test('buildGeocodeQueryVariants orders, dedupes and caps the ladder', () => {
   assert.deepEqual(
     normalizer.buildGeocodeQueryVariants('2069 Cheshire Bridge Road Northeast, Atlanta, GA, 30324', 'atlanta', 'The Heretic'),
     [
+      'The Heretic, 2069 Cheshire Bridge Road Northeast, Atlanta, GA, 30324',
       '2069 Cheshire Bridge Road Northeast, Atlanta, GA, 30324',
       '2069 Cheshire Bridge Road, Atlanta, GA, 30324',
+      'The Heretic, atlanta'
+    ]
+  );
+
+  // An address that ALREADY starts with the venue name is not doubled — a
+  // repeated name is a query nothing matches.
+  assert.deepEqual(
+    normalizer.buildGeocodeQueryVariants('The Heretic, 2069 Cheshire Bridge Road, Atlanta', 'atlanta', 'The Heretic'),
+    [
+      'The Heretic, 2069 Cheshire Bridge Road, Atlanta',
       'The Heretic, atlanta'
     ]
   );
@@ -360,53 +373,57 @@ test('retry ladder: 0 results retries with the directional stripped, rate-limite
   const normalizer = createOsmNormalizerWithAtlanta();
   let delays = 0;
   normalizer.delayForRateLimit = async () => { delays += 1; };
-  const httpAdapter = createSequencedStubAdapter([[], [HERETIC_RESULT]]);
-  const event = { title: 'ATL BEAR NIGHT', address: '2069 CHESHIRE BRIDGE RD NE', city: 'atlanta', bar: 'The Heretic' };
-
-  await normalizer.normalizeAsync(event, httpAdapter);
-
-  assert.equal(event.location, '33.8226, -84.3510');
-  assert.equal(httpAdapter.requests.length, 2, 'exactly one retry after the empty first response');
-  assert.equal(decodeQueryParam(httpAdapter.requests[0]), '2069 CHESHIRE BRIDGE RD NE, atlanta');
-  assert.equal(
-    decodeQueryParam(httpAdapter.requests[1]),
-    '2069 CHESHIRE BRIDGE RD, atlanta',
-    'the second query must have the trailing directional stripped'
-  );
-  assert.equal(delays, 2, 'every live request must pass through the rate limiter');
-});
-
-test('retry ladder: falls back to bar+city and stops at the hard cap of 3 requests', async () => {
-  const normalizer = createOsmNormalizerWithAtlanta();
-  normalizer.delayForRateLimit = async () => {};
   const httpAdapter = createSequencedStubAdapter([[], [], [HERETIC_RESULT]]);
   const event = { title: 'ATL BEAR NIGHT', address: '2069 CHESHIRE BRIDGE RD NE', city: 'atlanta', bar: 'The Heretic' };
 
   await normalizer.normalizeAsync(event, httpAdapter);
 
-  assert.equal(httpAdapter.requests.length, 3);
-  assert.equal(decodeQueryParam(httpAdapter.requests[2]), 'The Heretic, atlanta');
+  assert.equal(event.location, '33.8226, -84.3510');
+  assert.equal(httpAdapter.requests.length, 3, 'name-led rung, address rung, then the directional retry');
+  assert.equal(decodeQueryParam(httpAdapter.requests[0]), 'The Heretic, 2069 CHESHIRE BRIDGE RD NE, atlanta');
+  assert.equal(decodeQueryParam(httpAdapter.requests[1]), '2069 CHESHIRE BRIDGE RD NE, atlanta');
+  assert.equal(
+    decodeQueryParam(httpAdapter.requests[2]),
+    '2069 CHESHIRE BRIDGE RD, atlanta',
+    'the last query must have the trailing directional stripped'
+  );
+  assert.equal(delays, 3, 'every live request must pass through the rate limiter');
+});
+
+test('retry ladder: falls back to bar+city after every address rung', async () => {
+  const normalizer = createOsmNormalizerWithAtlanta();
+  normalizer.delayForRateLimit = async () => {};
+  const httpAdapter = createSequencedStubAdapter([[], [], [], [HERETIC_RESULT]]);
+  const event = { title: 'ATL BEAR NIGHT', address: '2069 CHESHIRE BRIDGE RD NE', city: 'atlanta', bar: 'The Heretic' };
+
+  await normalizer.normalizeAsync(event, httpAdapter);
+
+  assert.equal(httpAdapter.requests.length, 4);
+  assert.equal(decodeQueryParam(httpAdapter.requests[3]), 'The Heretic, atlanta');
   assert.equal(event.location, '33.8226, -84.3510', 'the venue-name lookup must rescue the event');
+  // The bar+city rung carries no address — the maps-link rung is allowed to
+  // outrank the pin it produces.
+  assert.equal(event._geocodeQueryHadAddress, false);
 });
 
 test('retry ladder: distance validation still applies to fallback variants', async () => {
   const normalizer = createOsmNormalizerWithAtlanta();
   normalizer.delayForRateLimit = async () => {};
   // Variant 2 returns a candidate ~1000 km from Atlanta — must be rejected, ladder continues
-  const httpAdapter = createSequencedStubAdapter([[], [PORTLAND_MICHIGAN_RESULT], []]);
+  const httpAdapter = createSequencedStubAdapter([[], [], [PORTLAND_MICHIGAN_RESULT], []]);
   const event = { title: 'ATL BEAR NIGHT', address: '2069 CHESHIRE BRIDGE RD NE', city: 'atlanta', bar: 'The Heretic' };
 
   await normalizer.normalizeAsync(event, httpAdapter);
 
   assert.equal(event.location, undefined, 'a far-away candidate from a simplified query must not win');
-  assert.equal(httpAdapter.requests.length, 5, 'rejection counts as failure and the ladder continues through the Photon rescue + venue follow-up');
+  assert.equal(httpAdapter.requests.length, 6, 'rejection counts as failure and the ladder continues through the Photon rescue + venue follow-up');
   assert.ok(
-    httpAdapter.requests[3].includes('photon.komoot.io/api/?q='),
-    `the fourth rung must be the Photon rescue: ${httpAdapter.requests[3]}`
+    httpAdapter.requests[4].includes('photon.komoot.io/api/?q='),
+    `the Photon rescue follows every Nominatim rung: ${httpAdapter.requests[4]}`
   );
   assert.ok(
-    httpAdapter.requests[4].includes('photon.komoot.io/api/?q=') && decodeQueryParam(httpAdapter.requests[4]) === 'The Heretic, atlanta',
-    `the final request is the Photon venue follow-up (empty Nominatim venue rescue): ${httpAdapter.requests[4]}`
+    httpAdapter.requests[5].includes('photon.komoot.io/api/?q=') && decodeQueryParam(httpAdapter.requests[5]) === 'The Heretic, atlanta',
+    `the final request is the Photon venue follow-up (empty Nominatim venue rescue): ${httpAdapter.requests[5]}`
   );
 });
 
@@ -500,17 +517,19 @@ test('buildGeocodeQueryVariants tries the postal/country-stripped core after the
   assert.deepEqual(
     normalizer.buildGeocodeQueryVariants('325 Franklin Ave, Brooklyn, NY 11238, USA', 'nyc', "C'mon Everybody"),
     [
+      "C'mon Everybody, 325 Franklin Ave, Brooklyn, NY 11238, USA, new york",
       '325 Franklin Ave, Brooklyn, NY 11238, USA, new york',
       '325 Franklin Ave, Brooklyn, new york',
       "C'mon Everybody, new york"
     ]
   );
-  // With a strippable directional too, the full 4-rung ladder fits the cap and
+  // With a strippable directional too, the full 5-rung ladder fits the cap and
   // the venue-name rescue is never evicted
   const atlanta = createOsmNormalizerWithAtlanta();
   assert.deepEqual(
     atlanta.buildGeocodeQueryVariants('2069 Cheshire Bridge Rd NE, Atlanta, GA 30324, USA', 'atlanta', 'The Heretic'),
     [
+      'The Heretic, 2069 Cheshire Bridge Rd NE, Atlanta, GA 30324, USA',
       '2069 Cheshire Bridge Rd NE, Atlanta, GA 30324, USA',
       '2069 Cheshire Bridge Rd NE, Atlanta',
       '2069 Cheshire Bridge Rd, Atlanta, GA 30324, USA',
@@ -522,8 +541,9 @@ test('buildGeocodeQueryVariants tries the postal/country-stripped core after the
 test('a simplified-query admin-area match is rejected instead of poisoning coordinates', async () => {
   const normalizer = createOsmNormalizerWithNyc();
   normalizer.delayForRateLimit = async () => {};
-  // Full address → 0 results; stripped variant → the borough itself; venue → 0
-  const httpAdapter = createSequencedStubAdapter([[], [BROOKLYN_BOROUGH_RESULT], []]);
+  // Name-led + full address → 0 results; stripped variant → the borough
+  // itself; venue → 0
+  const httpAdapter = createSequencedStubAdapter([[], [], [BROOKLYN_BOROUGH_RESULT], []]);
   const event = { title: 'BEAR NIGHT', address: '325 Franklin Ave, Brooklyn, NY 11238, USA', city: 'nyc', bar: "C'mon Everybody" };
   const warns = [];
   const realWarn = console.warn;
@@ -539,19 +559,19 @@ test('a simplified-query admin-area match is rejected instead of poisoning coord
     warns.some(w => w.includes('Rejected admin-area result') && w.includes('type=borough')),
     `the rejection must be logged: ${warns.join(' | ')}`
   );
-  assert.equal(httpAdapter.requests.length, 6, 'the ladder continues past the rejected result through the Census and Photon rescues + venue follow-up');
-  assert.ok(httpAdapter.requests[3].includes('geocoding.geo.census.gov'), 'the US-looking address gets a Census rescue before Photon');
-  assert.ok(httpAdapter.requests[4].includes('photon.komoot.io'), 'the next request is the Photon rescue');
+  assert.equal(httpAdapter.requests.length, 7, 'the ladder continues past the rejected result through the Census and Photon rescues + venue follow-up');
+  assert.ok(httpAdapter.requests[4].includes('geocoding.geo.census.gov'), 'the US-looking address gets a Census rescue before Photon');
+  assert.ok(httpAdapter.requests[5].includes('photon.komoot.io'), 'the next request is the Photon rescue');
   assert.ok(
-    httpAdapter.requests[5].includes('photon.komoot.io') && decodeQueryParam(httpAdapter.requests[5]) === "C'mon Everybody, new york",
-    `the final request is the Photon venue follow-up (empty Nominatim venue rescue): ${httpAdapter.requests[5]}`
+    httpAdapter.requests[6].includes('photon.komoot.io') && decodeQueryParam(httpAdapter.requests[6]) === "C'mon Everybody, new york",
+    `the final request is the Photon venue follow-up (empty Nominatim venue rescue): ${httpAdapter.requests[6]}`
   );
 });
 
 test('a venue-name simplified query still resolves through an amenity result', async () => {
   const normalizer = createOsmNormalizerWithNyc();
   normalizer.delayForRateLimit = async () => {};
-  const httpAdapter = createSequencedStubAdapter([[], [], [CMON_EVERYBODY_RESULT]]);
+  const httpAdapter = createSequencedStubAdapter([[], [], [], [CMON_EVERYBODY_RESULT]]);
   const event = { title: 'BEAR NIGHT', address: '325 Franklin Ave, Brooklyn, NY 11238, USA', city: 'nyc', bar: "C'mon Everybody" };
   const logs = [];
   const realLog = console.log;
@@ -904,7 +924,7 @@ test('geocode verification: cross-check mismatch rejects the pin in enforce mode
     `the rejected first pin must be flagged: ${lines.join(' | ')}`
   );
   assert.ok(
-    lines.some(l => l.includes('🗺️ GEOCODE VERIFY: "CHUNK" accepted exact pin from nominatim (rung 2)')),
+    lines.some(l => l.includes('🗺️ GEOCODE VERIFY: "CHUNK" accepted exact pin from nominatim (rung 3)')),
     `the verified accept must be logged: ${lines.join(' | ')}`
   );
 });
@@ -2339,7 +2359,9 @@ test('Mad.Bear ladder regression: generic refusals stay refused and the vague ad
       properties: { name: 'La Nogalera', osm_key: 'place', osm_value: 'hamlet' }
     }]
   };
-  const httpAdapter = createSequencedStubAdapter([[nogaleraLocality], [], photonHamlet]);
+  // Rung 1 is now the name-led query ("Aqua Emporio, LA NOGALERA,
+  // torremolinos") — the fused venue does not exist, so it returns nothing.
+  const httpAdapter = createSequencedStubAdapter([[], [nogaleraLocality], [], photonHamlet]);
   const event = { title: 'FURBALL MAD.BEAR', address: 'LA NOGALERA', city: 'torremolinos', bar: 'Aqua Emporio' };
 
   const captured = captureConsole(() => {});
@@ -2349,12 +2371,13 @@ test('Mad.Bear ladder regression: generic refusals stay refused and the vague ad
     captured.restore();
   }
 
-  assert.equal(httpAdapter.requests.length, 4, 'address rung, venue rescue rung, Photon rescue, Photon venue follow-up');
-  assert.equal(decodeQueryParam(httpAdapter.requests[0]), 'LA NOGALERA, torremolinos', 'city anchoring stays QUERY-only');
-  assert.equal(decodeQueryParam(httpAdapter.requests[1]), 'Aqua Emporio, torremolinos');
+  assert.equal(httpAdapter.requests.length, 5, 'name-led rung, address rung, venue rescue rung, Photon rescue, Photon venue follow-up');
+  assert.equal(decodeQueryParam(httpAdapter.requests[0]), 'Aqua Emporio, LA NOGALERA, torremolinos', 'the name-led rung leads');
+  assert.equal(decodeQueryParam(httpAdapter.requests[1]), 'LA NOGALERA, torremolinos', 'city anchoring stays QUERY-only');
+  assert.equal(decodeQueryParam(httpAdapter.requests[2]), 'Aqua Emporio, torremolinos');
   assert.ok(
-    httpAdapter.requests[3].includes('photon.komoot.io') && decodeQueryParam(httpAdapter.requests[3]) === 'Aqua Emporio, torremolinos',
-    `the empty Nominatim venue rescue triggers the Photon venue follow-up: ${httpAdapter.requests[3]}`
+    httpAdapter.requests[4].includes('photon.komoot.io') && decodeQueryParam(httpAdapter.requests[4]) === 'Aqua Emporio, torremolinos',
+    `the empty Nominatim venue rescue triggers the Photon venue follow-up: ${httpAdapter.requests[4]}`
   );
   assert.equal(event.address, 'LA NOGALERA', 'the persisted address is never mutated with the resolved city');
   assert.equal(event.location, undefined, 'generic locality/hamlet pins stay refused — no unstamped pin');
@@ -2537,7 +2560,7 @@ test('fusion via the Photon venue follow-up: empty Nominatim venue rescue + Phot
       properties: { name: 'Aqua Club', osm_key: 'amenity', osm_value: 'nightclub', street: 'Calle Casablanca', city: 'Torremolinos' }
     }]
   };
-  const httpAdapter = createSequencedStubAdapter([[nogaleraLocality], [], photonHamlet, aquaClubPhoton]);
+  const httpAdapter = createSequencedStubAdapter([[], [nogaleraLocality], [], photonHamlet, aquaClubPhoton]);
   const event = { title: 'FURBALL MAD.BEAR', address: 'LA NOGALERA', city: 'torremolinos', bar: 'AQUA EMPORIO' };
 
   const captured = captureConsole(() => {});
@@ -2547,10 +2570,10 @@ test('fusion via the Photon venue follow-up: empty Nominatim venue rescue + Phot
     captured.restore();
   }
 
-  assert.equal(httpAdapter.requests.length, 4, 'address rung, venue rescue, Photon address rescue, Photon venue follow-up');
+  assert.equal(httpAdapter.requests.length, 5, 'name-led rung, address rung, venue rescue, Photon address rescue, Photon venue follow-up');
   assert.ok(
-    httpAdapter.requests[3].includes('photon.komoot.io') && decodeQueryParam(httpAdapter.requests[3]) === 'AQUA EMPORIO, torremolinos',
-    `the follow-up must be the venue+city query: ${httpAdapter.requests[3]}`
+    httpAdapter.requests[4].includes('photon.komoot.io') && decodeQueryParam(httpAdapter.requests[4]) === 'AQUA EMPORIO, torremolinos',
+    `the follow-up must be the venue+city query: ${httpAdapter.requests[4]}`
   );
   assert.equal(event.location, undefined, 'a non-bar-matching venue hit never pins');
   assert.equal(event.address, 'LA NOGALERA', 'no address is adopted from a non-matching POI');
@@ -2941,4 +2964,301 @@ test('sanitizeDescriptionFormatting handles block tags, entities, links, heading
 
   // Escaped-asterisk runs collapse over the fixed point: \*\*TBC\*\** → TBC
   assert.equal(sanitizeDescriptionFormatting('\\*\\*TBC\\*\\**'), 'TBC');
+});
+
+// ---------------------------------------------------------------------------
+// PIN LADDER: curated coordinates > address geocode > the page's maps-link
+// pin (the ll= param a ticketing page publishes, harvested by the AI web
+// parser behind its venue-identity guard and stashed on _mapsLinkCoordinate).
+//
+// Measured against verified truth on 5 real Dice venues:
+//   venue              maps-link err   address-geocode err
+//   Concorde 2               7 m       NO RESULT
+//   Royal Vauxhall Tavern    6 m             0 m
+//   Westminster Pier       936 m             1 m   <- ll= is a DIFFERENT pier
+//   Horizon                181 m       NO RESULT
+//   Eden                     0 m       NO RESULT
+// The geocode is near-perfect when it resolves but failed outright on 3 of 5;
+// the maps-link pin always resolves and was right in exactly those 3. So the
+// geocode outranks it, and it fills only what the geocode left blank.
+// ---------------------------------------------------------------------------
+
+const PIN_LADDER_CITIES = {
+  london: { timezone: 'Europe/London', patterns: ['london'] },
+  brighton: { timezone: 'Europe/London', patterns: ['brighton'] }
+};
+
+// Curated London bars — Westminster Pier's curated pin is the CORRECT one.
+const PIN_LADDER_BARS = {
+  london: [
+    { name: 'Westminster Pier', city: 'london', address: 'Victoria Embankment, London SW1A 2JH', coordinates: '51.5022544, -0.1231736' }
+  ]
+};
+
+// Verbatim ll= values from the cached Dice event pages.
+const DICE_PIER_PIN = '51.5099822,-0.117819';
+const DICE_CONCORDE_PIN = '50.8172448,-0.122510799999986';
+const DICE_RVT_PIN = '51.4863391,-0.1217784';
+
+// What Nominatim returns for Westminster Pier's address — 1 m from truth.
+const WESTMINSTER_PIER_GEOCODE = {
+  lat: '51.5022544',
+  lon: '-0.1231736',
+  class: 'amenity',
+  type: 'ferry_terminal',
+  addresstype: 'amenity',
+  name: 'Westminster Pier',
+  display_name: 'Westminster Pier, Victoria Embankment, London, SW1A 2JH, United Kingdom',
+  address: { road: 'Victoria Embankment', city: 'London', postcode: 'SW1A 2JH' }
+};
+
+function createPinLadderNormalizer() {
+  const core = new SharedCore(PIN_LADDER_CITIES, { eventSchema: EventSchema, bars: PIN_LADDER_BARS });
+  const normalizer = new OpenStreetMapNormalizer(core);
+  normalizer.delayForRateLimit = async () => {};
+  return normalizer;
+}
+
+test('pin ladder: a successful address geocode outranks the page maps-link pin, and the disagreement is logged', async () => {
+  const normalizer = createPinLadderNormalizer();
+  const httpAdapter = createStubHttpAdapter([WESTMINSTER_PIER_GEOCODE]);
+  const event = {
+    title: 'BOATMINCE',
+    bar: 'Westminster Pier',
+    city: 'london',
+    address: 'Victoria Embankment, London SW1A 2JH',
+    _mapsLinkCoordinate: { location: DICE_PIER_PIN, venueName: 'Westminster Pier' }
+  };
+
+  const capture = captureConsole(() => {});
+  try {
+    await normalizer.normalizeAsync(event, httpAdapter);
+  } finally {
+    capture.restore();
+  }
+
+  // The geocode won; the maps-link pin (a different pier) never landed.
+  assert.equal(event.location, '51.5022544, -0.1231736');
+  assert.ok(String(event.pinSource).startsWith('geocoded-'), `geocode provenance expected, got ${event.pinSource}`);
+
+  // …and the ~940 m disagreement is reported so a human can check it.
+  const conflict = capture.lines.find(line => line.includes('MAPS LINK CONFLICT'));
+  assert.ok(conflict, `conflict line expected, got: ${JSON.stringify(capture.lines)}`);
+  assert.ok(conflict.includes('936 m'), conflict);
+  assert.ok(conflict.includes(DICE_PIER_PIN) && conflict.includes('51.5022544, -0.1231736'), conflict);
+  assert.ok(conflict.includes('accepted pin kept'), conflict);
+});
+
+test('pin ladder: the maps-link pin fills in when the address geocode finds nothing', async () => {
+  const normalizer = createPinLadderNormalizer();
+  const httpAdapter = createStubHttpAdapter([]); // Nominatim: no results, every rung
+  const event = {
+    title: 'BEEFMINCE x BRIGHTON',
+    bar: 'Concorde 2',
+    city: 'brighton',
+    address: 'Madeira Drive, Brighton BN2 1EN',
+    _mapsLinkCoordinate: { location: DICE_CONCORDE_PIN, venueName: 'Concorde 2' }
+  };
+
+  const capture = captureConsole(() => {});
+  try {
+    await normalizer.normalizeAsync(event, httpAdapter);
+  } finally {
+    capture.restore();
+  }
+
+  assert.equal(event.location, DICE_CONCORDE_PIN);
+  assert.equal(event.pinSource, 'maps-link');
+  assert.ok(capture.lines.some(line => line.includes('No curated or geocoded pin for "BEEFMINCE x BRIGHTON"')
+    && line.includes(DICE_CONCORDE_PIN)),
+    `fill line expected, got: ${JSON.stringify(capture.lines)}`);
+  // Nothing to disagree with — no conflict line.
+  assert.ok(!capture.lines.some(line => line.includes('MAPS LINK CONFLICT')), JSON.stringify(capture.lines));
+});
+
+test('pin ladder: curated coordinates win outright — the maps-link pin never displaces them', async () => {
+  const pipeline = new NormalizerPipeline();
+  pipeline.setCore(new SharedCore(PIN_LADDER_CITIES, { eventSchema: EventSchema, bars: PIN_LADDER_BARS }));
+  const osm = pipeline.normalizers[pipeline.normalizers.length - 1];
+  osm.delayForRateLimit = async () => {};
+  // A geocode result that would ALSO have been accepted, to prove the curated
+  // pin short-circuits the ladder rather than merely winning a tie.
+  const httpAdapter = createStubHttpAdapter([WESTMINSTER_PIER_GEOCODE]);
+
+  const capture = captureConsole(() => {});
+  let normalized;
+  try {
+    normalized = await pipeline.normalizeEventAsync({
+      title: 'BOATMINCE',
+      bar: 'Westminster Pier',
+      city: 'london',
+      startDate: new Date('2026-08-30T18:00:00.000Z'),
+      _mapsLinkCoordinate: { location: DICE_PIER_PIN, venueName: 'Westminster Pier' }
+    }, httpAdapter);
+  } finally {
+    capture.restore();
+  }
+
+  assert.equal(normalized.location, '51.5022544, -0.1231736', 'the curated pin is kept');
+  assert.equal(normalized.pinSource, 'curated');
+  assert.equal(httpAdapter.requests.length, 0, 'a curated pin means no geocode request at all');
+  const conflict = capture.lines.find(line => line.includes('MAPS LINK CONFLICT'));
+  assert.ok(conflict && conflict.includes('(curated)'), `curated-vs-maps-link conflict expected, got: ${JSON.stringify(capture.lines)}`);
+});
+
+test('pin ladder: a maps-link pin agreeing with the accepted pin logs no conflict, and junk is ignored', async () => {
+  const normalizer = createPinLadderNormalizer();
+
+  // RVT: the maps-link pin and the geocode are the same building (0 m).
+  const agreeing = {
+    title: 'BEEFMINCE x RVT',
+    location: DICE_RVT_PIN,
+    pinSource: 'geocoded-exact',
+    address: '372 Kennington Ln, London SE11 5HY',
+    _mapsLinkCoordinate: { location: '51.4863391,-0.1217784', venueName: 'The Royal Vauxhall Tavern' }
+  };
+  const agreeingCapture = captureConsole(() => {});
+  try {
+    await normalizer.normalizeAsync(agreeing, createStubHttpAdapter([]));
+  } finally {
+    agreeingCapture.restore();
+  }
+  assert.equal(agreeing.location, DICE_RVT_PIN);
+  assert.equal(agreeing.pinSource, 'geocoded-exact');
+  assert.ok(!agreeingCapture.lines.some(line => line.includes('MAPS LINK CONFLICT')), JSON.stringify(agreeingCapture.lines));
+
+  // An unusable stash is ignored (the parser never writes these, but the
+  // rung fails closed rather than trusting its input).
+  for (const stash of [null, {}, { location: '' }, { location: 'not,coords' }, { location: '0,0' }, { location: '91,0' }]) {
+    const event = { title: 'X', bar: 'Somewhere', city: 'london', _mapsLinkCoordinate: stash };
+    assert.equal(normalizer.applyMapsLinkCoordinateFallback(event), false, JSON.stringify(stash));
+    assert.equal(event.location, undefined, JSON.stringify(stash));
+  }
+
+  // No stash at all changes nothing.
+  const untouched = { title: 'X', bar: 'Somewhere', city: 'london' };
+  assert.equal(normalizer.applyMapsLinkCoordinateFallback(untouched), false);
+  assert.equal(untouched.location, undefined);
+});
+
+test('pin ladder: a NAME-ONLY geocoded pin is FLAGGED against the maps-link pin, never replaced', async () => {
+  const normalizer = createPinLadderNormalizer();
+
+  // Run evidence: with the address missing, the venue+city rescue query
+  // "Horizon, brighton" resolved to a HOUSE called Horizon on Ainsworth
+  // Avenue, 5 km away — and came back exact-grade with a POI name matching
+  // the bar, so no response-side signal could catch it. The maps-link pin is
+  // the better one HERE — but the same rung resolves Westminster Pier
+  // perfectly while ITS maps link is 936 m wrong, and nothing at runtime
+  // separates the two. So this logs loudly and changes nothing.
+  const event = {
+    title: 'BEEFMINCE Brighton Pride',
+    bar: 'Horizon',
+    city: 'brighton',
+    location: '50.8130039, -0.0690619',
+    pinSource: 'geocoded-exact',
+    address: '56 Ainsworth Avenue, Brighton, England',
+    addressSource: 'geo-poi',
+    _geocodeQuery: 'Horizon, brighton',
+    _geocodeQueryHadAddress: false,
+    _mapsLinkCoordinate: { location: '50.819936,-0.140382', venueName: 'Horizon' }
+  };
+
+  const capture = captureConsole(() => {});
+  try {
+    assert.equal(normalizer.applyMapsLinkCoordinateFallback(event), false);
+  } finally {
+    capture.restore();
+  }
+
+  // The geocoded pin is KEPT — nothing about the event's location changes.
+  assert.equal(event.location, '50.8130039, -0.0690619');
+  assert.equal(event.pinSource, 'geocoded-exact');
+  // The address adopted from that same hit is FLAGGED, never deleted — the
+  // evidence on whether such an address is wrong points both ways.
+  assert.equal(event.address, '56 Ainsworth Avenue, Brighton, England');
+  assert.equal(event.addressSource, 'geo-poi');
+  assert.ok(capture.lines.some(line => line.includes('MAPS LINK DECLINED')
+    && line.includes('name-only query "Horizon, brighton"')
+    && line.includes('5069 m')
+    && line.includes('maps-link pin NOT applied')),
+    JSON.stringify(capture.lines));
+  assert.ok(capture.lines.some(line => line.includes('MAPS LINK DECLINED')
+    && line.includes('address "56 Ainsworth Avenue, Brighton, England" was adopted from that same questioned map hit')),
+    JSON.stringify(capture.lines));
+});
+
+test('pin ladder: an address-derived geocoded pin takes the ordinary conflict line and is kept', async () => {
+  const normalizer = createPinLadderNormalizer();
+
+  // Westminster Pier, the case the name-led rung fixed: the query carried the
+  // event's address ("Victoria Embankment") — no house number and no
+  // street-type word, but an address all the same — and the pin it produced
+  // is the correct pier. The maps link (a different pier, 936 m away) must
+  // NOT displace it; it only gets a conflict line.
+  const event = {
+    title: 'BOATMINCE',
+    bar: 'Westminster Pier',
+    city: 'london',
+    location: '51.5022544, -0.1231736',
+    pinSource: 'geocoded-approx',
+    address: 'Victoria Embankment, London, UK',
+    _geocodeQuery: 'Westminster Pier, Victoria Embankment, London, UK',
+    _geocodeQueryHadAddress: true,
+    _mapsLinkCoordinate: { location: DICE_PIER_PIN, venueName: 'Westminster Pier' }
+  };
+
+  const capture = captureConsole(() => {});
+  try {
+    assert.equal(normalizer.applyMapsLinkCoordinateFallback(event), false);
+  } finally {
+    capture.restore();
+  }
+
+  assert.equal(event.location, '51.5022544, -0.1231736', 'the address-derived pin is kept');
+  assert.equal(event.pinSource, 'geocoded-approx');
+  assert.equal(event.address, 'Victoria Embankment, London, UK');
+  assert.ok(capture.lines.some(line => line.includes('accepted pin kept')), JSON.stringify(capture.lines));
+
+  // Every other shape keeps its pin too, whatever the flag says: curated
+  // pins, page pins, and geocoded pins with no query flag at all.
+  for (const overrides of [
+    { pinSource: 'curated' },
+    { pinSource: 'page' },
+    { pinSource: 'geocoded-exact', _geocodeQueryHadAddress: undefined },
+    { pinSource: undefined, _geocodeQueryHadAddress: false }
+  ]) {
+    const kept = {
+      title: 'X', bar: 'Westminster Pier', city: 'london',
+      location: '51.5022544, -0.1231736',
+      _geocodeQueryHadAddress: false,
+      ...overrides,
+      _mapsLinkCoordinate: { location: DICE_PIER_PIN, venueName: 'Westminster Pier' }
+    };
+    const keptCapture = captureConsole(() => {});
+    try {
+      assert.equal(normalizer.applyMapsLinkCoordinateFallback(kept), false, JSON.stringify(overrides));
+    } finally {
+      keptCapture.restore();
+    }
+    assert.equal(kept.location, '51.5022544, -0.1231736', JSON.stringify(overrides));
+  }
+
+  // Under the threshold, a name-only pin is left alone too.
+  const near = {
+    title: 'BEEFMINCE x BRIGHTON', bar: 'Concorde 2', city: 'brighton',
+    location: '50.8172912, -0.1225875',
+    pinSource: 'geocoded-exact',
+    _geocodeQuery: 'Concorde 2, brighton',
+    _geocodeQueryHadAddress: false,
+    _mapsLinkCoordinate: { location: DICE_CONCORDE_PIN, venueName: 'Concorde 2' }
+  };
+  const nearCapture = captureConsole(() => {});
+  try {
+    assert.equal(normalizer.applyMapsLinkCoordinateFallback(near), false);
+  } finally {
+    nearCapture.restore();
+  }
+  assert.equal(near.location, '50.8172912, -0.1225875');
+  assert.ok(!nearCapture.lines.some(line => line.includes('MAPS LINK CONFLICT')), JSON.stringify(nearCapture.lines));
 });

@@ -95,6 +95,20 @@ class BaseNormalizer {
             .trim();
     }
 
+    // Coordinate-pair check kept local so the normalizers stay platform-pure
+    // (mirrors SharedCore.isCoordinatePair: two finite floats, lat within ±90,
+    // lng within ±180). On the base class because both the page-provenance
+    // stamp and the maps-link pin rung need it.
+    isCoordinatePairString(value) {
+        if (typeof value !== 'string') return false;
+        const match = value.trim().match(/^(-?\d{1,3}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)$/);
+        if (!match) return false;
+        const lat = Number(match[1]);
+        const lng = Number(match[2]);
+        return Number.isFinite(lat) && Number.isFinite(lng)
+            && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+    }
+
     normalize(event) {
         return event;
     }
@@ -127,19 +141,6 @@ class BasicDataNormalizer extends BaseNormalizer {
 
         // Normalize basic text fields
         return this.core.normalizeEventTextFields(event);
-    }
-
-    // Coordinate-pair check kept local so this normalizer stays platform-pure
-    // (mirrors SharedCore.isCoordinatePair: two finite floats, lat within ±90,
-    // lng within ±180).
-    isCoordinatePairString(value) {
-        if (typeof value !== 'string') return false;
-        const match = value.trim().match(/^(-?\d{1,3}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)$/);
-        if (!match) return false;
-        const lat = Number(match[1]);
-        const lng = Number(match[2]);
-        return Number.isFinite(lat) && Number.isFinite(lng)
-            && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
     }
 
     stampPageProvenanceDefaults(event) {
@@ -925,14 +926,19 @@ class LocationNormalizer extends BaseNormalizer {
 const CITY_CENTER_RADIUS_KM = 50;
 
 // Hard cap on Nominatim requests per event for the forward-geocode retry
-// ladder. 5 covers the full ladder (canonical address, unit/suite strip,
-// postal/country strip, directional strip, venue-name rescue); every request
+// ladder. 6 covers the full ladder (name+address, canonical address,
+// unit/suite strip, postal/country strip, directional strip, venue-name
+// rescue). It was 5 before the name-led rung was added in front; raising it by
+// exactly one keeps every rung that existed then reachable — capping at 5
+// would have silently dropped the venue+city rescue for address-bearing
+// events. The added request only exists when an event has BOTH a bar and an
+// address, and only fires when the name-led query returns nothing; every request
 // stays 1.1s-throttled and later rungs only fire after earlier ones return
 // nothing usable. A single US Census rescue request (US-looking addresses
 // only) and a single Photon rescue request may follow when every Nominatim
 // rung fails; both share the same rate limiter. Never raise this without
 // revisiting the rate-limit budget.
-const MAX_GEOCODE_QUERIES_PER_EVENT = 5;
+const MAX_GEOCODE_QUERIES_PER_EVENT = 6;
 
 // POI-adopted pins only: how far apart the reverse-geocoded house number and
 // the adopted address's house number may sit (same street) before the reverse
@@ -943,6 +949,21 @@ const MAX_GEOCODE_QUERIES_PER_EVENT = 5;
 // drift without accepting a different block. Regular address-geocoded pins
 // keep the strict exact-house comparison.
 const POI_PIN_HOUSE_NUMBER_TOLERANCE = 20;
+
+// How far a page's maps-link pin (the ll= param a ticketing page publishes,
+// harvested by the AI web parser behind its venue-identity guard) may sit from
+// the pin the pipeline actually accepted before the disagreement is worth a
+// human's attention. The measured spread decides it:
+//   - Royal Vauxhall Tavern: ll= vs geocode  6 m — the same building;
+//   - Horizon:               ll= is 181 m from truth (the right venue, coarse
+//     platform geocode) — an imprecise pin, not a wrong one;
+//   - Westminster Pier:      ll= is 936 m from truth, on a DIFFERENT pier —
+//     the platform geocoded the street loosely and landed at Embankment Pier.
+// 300 m clears the worst observed BENIGN error (181 m) with room, and sits
+// well under the wrong-venue case (936 m), so the line fires for "these are
+// different places" and stays quiet for "same place, coarser pin". It only
+// governs a LOG: the accepted pin never changes because of it.
+const MAPS_LINK_CONFLICT_METERS = 300;
 
 // Street-type words a trailing directional can follow ("Cheshire Bridge Rd NE").
 const GEOCODE_STREET_TYPE_WORDS = 'Street|St|Road|Rd|Avenue|Ave|Boulevard|Blvd|Drive|Dr|Lane|Ln|Way|Place|Pl|Court|Ct|Parkway|Pkwy|Highway|Hwy';
@@ -1796,15 +1817,24 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
 
     // Forward-geocode retry ladder: deduped, ordered query strings, hard-capped
     // at MAX_GEOCODE_QUERIES_PER_EVENT. Order:
-    //   1. The query exactly as built today (anchored to the city display name
+    //   1. "<bar>, <address>" — the venue name IN FRONT of its own address.
+    //      Measured against verified truth: "Victoria Embankment, London, UK"
+    //      (the address dice.fm publishes for Westminster Pier) resolves to a
+    //      point 1075 m away — the wrong pier — while "Westminster Pier,
+    //      Victoria Embankment, London, UK" resolves to 1 m. The name is the
+    //      disambiguator for a vague street line. It is FIRST, not universal:
+    //      the extra token over-constrains some queries (Horizon, Eden both
+    //      return NOTHING with the name attached and resolve fine without it),
+    //      which is exactly why the address-only rungs below still run.
+    //   2. The query exactly as built before (anchored to the city display name
     //      when the address doesn't already contain it).
-    //   2. The address with unit/suite tokens stripped (same anchoring) —
+    //   3. The address with unit/suite tokens stripped (same anchoring) —
     //      "Suite 200" / "#4" decoration returns 0 results.
-    //   3. The address with postal-code/country decoration stripped (same
+    //   4. The address with postal-code/country decoration stripped (same
     //      anchoring) — Nominatim chokes on "…, CA 94103, USA" endings.
-    //   4. The address with trailing directionals stripped (same anchoring) —
+    //   5. The address with trailing directionals stripped (same anchoring) —
     //      Nominatim's free-text parser chokes on "Rd NE" / "Road Northeast".
-    //   5. "<bar>, <city>" — venue-name lookup rescues venues OSM knows by name.
+    //   6. "<bar>, <city>" — venue-name lookup rescues venues OSM knows by name.
     buildGeocodeQueryVariants(address, eventCity, bar) {
         const city = this.geocodeCityAnchorName(typeof eventCity === 'string' ? eventCity.trim() : '');
         const anchorToCity = (text) => {
@@ -1826,7 +1856,14 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
         // no-address event (venue-POI rescue) must not emit a junk ", <city>"
         // query; its ladder is the venue+city rescue rung alone.
         const baseAddress = String(address || '').trim();
+        const leadingBarName = typeof bar === 'string' ? bar.trim() : '';
         if (baseAddress) {
+            // Name-led rung first (only when the address doesn't already start
+            // with the venue name — ticketing pages sometimes publish it that
+            // way, and a doubled name is a query nothing matches).
+            if (leadingBarName && !baseAddress.toLowerCase().startsWith(leadingBarName.toLowerCase())) {
+                push(anchorToCity(`${leadingBarName}, ${baseAddress}`));
+            }
             push(anchorToCity(baseAddress));
             const unitStripped = this.stripUnitTokens(baseAddress);
             if (unitStripped && unitStripped !== baseAddress) push(anchorToCity(unitStripped));
@@ -2065,6 +2102,16 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                 }
                 if (resolvedLocation) {
                     event.location = resolvedLocation;
+                    // The query string that actually produced the pin.
+                    // Underscore = metadata only (excluded from notes/merge
+                    // loops). The maps-link rung reads it: a pin from a query
+                    // carrying no street line is a name/city guess, however
+                    // confident the response looked.
+                    event._geocodeQuery = queryText;
+                    // Did this query carry the event's ADDRESS, or was it the
+                    // bare "<venue>, <city>" rescue? The maps-link rung below
+                    // only outranks the latter.
+                    event._geocodeQueryHadAddress = hasAddress && queryText !== venueRescueQuery;
                     modified = true;
                     console.log(`🗺️ OpenStreetMapNormalizer: Found coordinates for address "${event.address}" -> ${event.location}`);
                     if (i > 0) {
@@ -2121,6 +2168,8 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                 }
                 if (resolvedLocation) {
                     event.location = resolvedLocation;
+                    event._geocodeQuery = address; // Census only ever queries the street address
+                    event._geocodeQueryHadAddress = true;
                     modified = true;
                     console.log(`🗺️ OpenStreetMapNormalizer: Found coordinates for address "${event.address}" -> ${event.location}`);
                 }
@@ -2237,6 +2286,8 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                     }
                     if (resolvedLocation) {
                         event.location = resolvedLocation;
+                        event._geocodeQuery = photonQuery;
+                        event._geocodeQueryHadAddress = hasAddress && photonQuery !== venueRescueQuery;
                         modified = true;
                         console.log(`🗺️ OpenStreetMapNormalizer: Found coordinates for address "${event.address}" -> ${event.location}`);
                     }
@@ -2333,11 +2384,145 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
             }
         }
 
+        // Last rung of the pin ladder: the page's own maps-link pin, used only
+        // when curated data and the geocoder above both came up empty. Also
+        // reports a disagreement when they didn't.
+        if (this.applyMapsLinkCoordinateFallback(event)) modified = true;
+
         if (modified && this.core && typeof this.core.formatEventNotes === 'function') {
             event.notes = this.core.formatEventNotes(event);
         }
 
         return event;
+    }
+
+    // MAPS-LINK PIN — the last rung of the location ladder.
+    //
+    // The AI web parser harvests the ll= coordinate a ticketing page publishes
+    // in its "Open in maps" link and stashes it on _mapsLinkCoordinate, but
+    // ONLY after its identity guard confirms the name the link leads with IS
+    // the event's venue (placeholders like "Venue TBA" never get stashed).
+    // This method is where that candidate meets the pipeline's own answers,
+    // and the precedence is:
+    //
+    //   1. curated coordinates from data/bars — BarDataNormalizer fills them
+    //      earlier in this same pipeline, so they are already on the event
+    //      when we get here, and they are never touched;
+    //   2. a forward geocode — the ladder above runs "<venue>, <address>" then
+    //      the address-only variants then "<venue>, <city>", so its result is
+    //      already on the event;
+    //   3. THIS pin — written ONLY when 1 and 2 left location blank.
+    //
+    // It fills a blank; it never replaces a pin. Filling a blank is a clear
+    // win (the alternative is no pin at all). Replacing one is a coin flip, and
+    // the coin was actually flipped: for a pin from the name-only
+    // "<venue>, <city>" rung — the weakest geocode we produce — the two
+    // measured cases point opposite ways. With the address missing, "Horizon,
+    // brighton" resolved to a house called Horizon on Ainsworth Avenue, 5069 m
+    // out, where the maps-link pin was right; "Westminster Pier, london"
+    // resolved EXACTLY right, where the maps-link pin is 936 m out at another
+    // pier. Nothing available at runtime separates them: both came back
+    // exact-grade, and the 5069 m hit even carried a POI name matching the bar.
+    // Swapping at even odds buys no accuracy and adds variance, so the
+    // disagreement is FLAGGED and the geocoded pin is kept (see
+    // isNameOnlyGeocodedPin). If the flagged cases accumulate and the maps link
+    // is usually the right one, that is the evidence for enabling a swap later.
+    //
+    // Returns true when it wrote a location (so the caller refreshes notes).
+    applyMapsLinkCoordinateFallback(event) {
+        const candidate = event && typeof event === 'object' ? event._mapsLinkCoordinate : null;
+        if (!candidate || typeof candidate !== 'object') return false;
+        const candidateLocation = typeof candidate.location === 'string' ? candidate.location.trim() : '';
+        const claimed = this.parseCoordinatePairString(candidateLocation);
+        // Fails closed on its own input rather than trusting the stash: shape,
+        // range, and Null Island (the shape a failed geocode takes) are
+        // re-checked here even though the parser already refused them.
+        if (!claimed || (claimed.lat === 0 && claimed.lon === 0)) return false;
+
+        const title = event.title || 'unknown';
+        const venueName = typeof candidate.venueName === 'string' && candidate.venueName.trim()
+            ? candidate.venueName.trim()
+            : (typeof event.bar === 'string' ? event.bar.trim() : 'unknown venue');
+        const existingLocation = typeof event.location === 'string' ? event.location.trim() : '';
+
+        if (existingLocation) {
+            // A better-sourced pin already won. Report the disagreement anyway:
+            // this is the line that surfaces the next Westminster Pier, where a
+            // ticketing platform's own map points at a different place than the
+            // venue's address does.
+            const accepted = this.parseCoordinatePairString(existingLocation);
+            if (!accepted) return false;
+            const distanceMeters = Math.round(this.haversineDistanceKm(
+                accepted.lat, accepted.lon, claimed.lat, claimed.lon) * 1000);
+            if (distanceMeters < MAPS_LINK_CONFLICT_METERS) return false;
+            const acceptedSource = typeof event.pinSource === 'string' && event.pinSource.trim()
+                ? event.pinSource.trim()
+                : 'unknown source';
+            if (this.isNameOnlyGeocodedPin(event)) {
+                // FLAG ONLY — the pin is NOT replaced. See the note above
+                // isNameOnlyGeocodedPin for why swapping here is a coin flip.
+                console.warn(`🗺️ MAPS LINK DECLINED: "${title}" geocoded pin ${existingLocation} came from the name-only query "${event._geocodeQuery || 'unknown'}" (no address in it) and is ${distanceMeters} m from the page's maps link ${candidateLocation} for "${venueName}" — geocoded pin kept, maps-link pin NOT applied; verify which is the real venue`);
+                // An address adopted from that same map hit is evidence from a
+                // source this line has just questioned. It is FLAGGED, not
+                // deleted: the two observed cases point opposite ways (the
+                // Horizon hit's "56 Ainsworth Avenue" is wrong; the Westminster
+                // Pier hit's "Victoria Embankment" is right), so dropping it
+                // would be a guess of its own.
+                if (event.addressSource === 'geo-poi' && event.address) {
+                    console.warn(`🗺️ MAPS LINK DECLINED: "${title}" address "${event.address}" was adopted from that same questioned map hit; verify it`);
+                }
+                return false;
+            }
+            console.warn(`🗺️ MAPS LINK CONFLICT: "${title}" accepted pin ${existingLocation} (${acceptedSource}) is ${distanceMeters} m from the page's maps link ${candidateLocation} for "${venueName}" — accepted pin kept; verify which is the real venue`);
+            return false;
+        }
+
+        event.location = candidateLocation;
+        event.pinSource = 'maps-link';
+        console.log(`🗺️ OpenStreetMapNormalizer: No curated or geocoded pin for "${title}" — using the page's maps link for "${venueName}" -> ${candidateLocation}`);
+        return true;
+    }
+
+    // Is the event's accepted pin a GEOCODED pin that came from a NAME-ONLY
+    // query — "<venue>, <city>" with no address text in it at all?
+    //
+    // This selects which WARNING to emit; it never changes a pin. A name-only
+    // pin is the weakest geocode the ladder produces, so its disagreement with
+    // an identity-guarded maps-link pin is reported as its own line (and its
+    // own run-summary counter) rather than folded in with ordinary conflicts.
+    //
+    // The test is deliberately query-side, not response-side. Nominatim's
+    // response grade is the precision signal this file trusts everywhere else,
+    // and it does not work here: the 5069 m "Horizon, brighton" hit came back
+    // EXACT grade, with a POI name that matched the bar. Nothing in the
+    // response said "this is a guess". The query did.
+    //
+    // "Name-only" is the narrowest possible reading — the query carried no
+    // address, i.e. it was the venue+city rescue rung or the no-address venue
+    // lookup. A query built from the event's address does not count even when
+    // the street line has no house number or street-type word ("Victoria
+    // Embankment, London, UK").
+    //
+    // Conservative on every axis:
+    //   - only geocoded pins qualify (curated and page pins are never
+    //     second-guessed here, and a maps-link pin cannot re-judge itself);
+    //   - the flag must be explicitly false — a pin carrying no flag at all
+    //     (an older record, another writer) takes the ordinary conflict line.
+    isNameOnlyGeocodedPin(event) {
+        const pinSource = typeof event.pinSource === 'string' ? event.pinSource.trim() : '';
+        if (!pinSource.startsWith('geocoded-')) return false;
+        return event._geocodeQueryHadAddress === false;
+    }
+
+    // "lat, lon" text → { lat, lon } numbers, or null. Local to the
+    // normalizers (this file stays platform-pure and dependency-free);
+    // isCoordinatePairString above already vets the shape.
+    parseCoordinatePairString(value) {
+        if (!this.isCoordinatePairString(value)) return null;
+        const parts = String(value).split(',');
+        const lat = Number(parts[0].trim());
+        const lon = Number(parts[1].trim());
+        return Number.isFinite(lat) && Number.isFinite(lon) ? { lat, lon } : null;
     }
 }
 

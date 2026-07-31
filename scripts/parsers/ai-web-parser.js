@@ -683,6 +683,10 @@ class AiWebParser {
                 // Attribute the events to this page's site so the post-crawl
                 // venue-site address consensus can fill their blanks.
                 this.tagEventsWithVenueSitePage(keptStructuredEvents, effectiveHtmlData);
+                // Report-only: what the page's Google Maps link pins, and
+                // whether the identity guard + curated precedence would let it
+                // fill a blank location. Writes nothing to event data.
+                this.logMapsLinkCoordinateCandidates(keptStructuredEvents, effectiveHtmlData);
                 return {
                     events: keptStructuredEvents,
                     additionalLinks: additionalLinks,
@@ -814,6 +818,10 @@ class AiWebParser {
             // Attribute the events to this page's site so the post-crawl
             // venue-site address consensus can fill their blanks.
             this.tagEventsWithVenueSitePage(keptEvents, effectiveHtmlData);
+            // Report-only: what the page's Google Maps link pins, and whether
+            // the identity guard + curated precedence would let it fill a
+            // blank location. Writes nothing to event data.
+            this.logMapsLinkCoordinateCandidates(keptEvents, effectiveHtmlData);
 
             return {
                 events: keptEvents,
@@ -12754,7 +12762,17 @@ TEXT:
             if (!paramKeys) continue;
             const queryIndex = url.indexOf('?');
             if (queryIndex < 0) continue;
-            const search = url.slice(queryIndex).replace(/#[\s\S]*$/, '');
+            // Entities are decoded BEFORE the fragment is stripped, for the
+            // same reason extractMapsLinkCoordinateCandidates below does it:
+            // a numeric character reference inside the query carries a '#'
+            // that a naive fragment strip mistakes for the URL fragment.
+            // Dice's Horizon link ("...214 King&#x27;s Road, Brighton, BN1
+            // 1NB") truncated to the harvested address "214 King" — a
+            // fragment that is still address-shaped, so the gate passed it
+            // and the venue-site consensus (#1545) could adopt it as a
+            // venue's address. decodeBasicEntities leaves '&' encoded, so
+            // the pair split is unaffected.
+            const search = this.decodeBasicEntities(url.slice(queryIndex)).replace(/#[\s\S]*$/, '');
             for (const key of paramKeys) {
                 const value = this.extractSearchParamValue(search, key).replace(/\s+/g, ' ').trim();
                 if (!value || !this.isAddressShapedBarValue(value)) continue;
@@ -12763,6 +12781,197 @@ TEXT:
             }
         }
         return addresses;
+    }
+
+    // "lat,lng" text (a maps link's ll= value) → canonical "lat,lng" string,
+    // or '' when it is not a usable pin. Same shape/range rules shared-core's
+    // isCoordinatePair applies (two finite numbers, |lat| <= 90,
+    // |lng| <= 180) plus a hard 0,0 reject — Null Island is the shape a
+    // failed geocode takes, never a venue.
+    parseMapsLinkCoordinateValue(value) {
+        const text = String(value || '').trim();
+        if (!text) return '';
+        const match = text.match(/^(-?\d{1,3}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)$/);
+        if (!match) return '';
+        const lat = Number(match[1]);
+        const lng = Number(match[2]);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return '';
+        if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return '';
+        if (lat === 0 && lng === 0) return '';
+        return `${lat},${lng}`;
+    }
+
+    // Placeholder venue names a ticketing platform geocodes to the CITY
+    // CENTRE: Dice's "Venue TBA, London, London, UK" pins
+    // 51.5073509,-0.1277583 (Trafalgar Square) on every unannounced London
+    // party. The name is not a venue, so the coordinate is not a venue pin —
+    // rejected before the identity guard ever runs.
+    isPlaceholderVenueName(name) {
+        const text = String(name || '').trim();
+        if (!text) return true;
+        if (/(?:^|[^a-z])(?:tba|tbc|tbd)(?:[^a-z]|$)/i.test(text)) return true;
+        if (/\bto\s+be\s+(?:announced|confirmed|advised)\b/i.test(text)) return true;
+        if (/^(?:venue|location|address|secret\s+(?:venue|location))$/i.test(text)) return true;
+        return false;
+    }
+
+    // Coordinate candidates from the Google Maps links a ticketing page embeds
+    // beside its venue block (Dice.fm publishes exactly one per event page:
+    // https://maps.google.com/?q=<venue name>, <address>&ll=<lat>,<lng>).
+    // Same string/regex parsing and same &amp;-entity decode as
+    // extractMapsDirectionsAddresses above (no URL global on iOS
+    // JavaScriptCore); the q= text is entity-decoded too because the venue
+    // name it leads with carries typographic entities in raw HTML
+    // ("Horizon, 214 King&#x27;s Road, ...").
+    //
+    // Only ll= is read. The /@lat,lng and !3d/!4d forms are deliberately NOT
+    // parsed: they arrive without a q= name, so the identity guard below has
+    // nothing to check them against, and an unguarded pin is exactly what the
+    // Westminster Pier case (Dice's ll= lands ~940 m away, on a DIFFERENT
+    // pier) says we must never trust.
+    //
+    // Returns [{ location, venueName, url }] — deduped by location+name.
+    // Judging is the caller's job: this reports what the page published.
+    extractMapsLinkCoordinateCandidates(html) {
+        const source = String(html || '');
+        const candidates = [];
+        const seenKeys = new Set();
+        const urlMatches = source.match(/https?:\/\/[^\s"'<>]+/gi) || [];
+        for (const rawUrl of urlMatches) {
+            const url = rawUrl.replace(/&amp;/gi, '&').replace(/&#0*38;/g, '&');
+            if (!/^https?:\/\/(?:[a-z0-9-]+\.)*google\.[a-z.]{2,10}\/maps(?:[/?]|$)/i.test(url)
+                && !/^https?:\/\/maps\.google\.[a-z.]{2,10}\//i.test(url)) continue;
+            const queryIndex = url.indexOf('?');
+            if (queryIndex < 0) continue;
+            // Entities are decoded BEFORE the fragment is stripped: a numeric
+            // character reference inside the query ("...214 King&#x27;s
+            // Road...", Dice's Horizon page) carries a '#' that a naive
+            // fragment strip mistakes for the URL fragment, truncating the
+            // link — and the ll= that follows is lost with it.
+            // decodeBasicEntities leaves '&' encoded, so the pair split below
+            // is unaffected.
+            const search = this.decodeBasicEntities(url.slice(queryIndex)).replace(/#[\s\S]*$/, '');
+            const location = this.parseMapsLinkCoordinateValue(this.extractSearchParamValue(search, 'll'));
+            if (!location) continue;
+            // The q= text is "<venue name>, <street>, <city>, <country>" —
+            // the identity the pin claims is the leading comma segment.
+            const query = this.extractSearchParamValue(search, 'q')
+                .replace(/\s+/g, ' ')
+                .trim();
+            const venueName = query.split(',')[0].trim();
+            const key = `${location}|${venueName.toLowerCase()}`;
+            if (seenKeys.has(key)) continue;
+            seenKeys.add(key);
+            candidates.push({ location, venueName, url });
+        }
+        return candidates;
+    }
+
+    // Curated bar for an event's bar name, using the curated machinery's own
+    // strictness (findCuratedBarByName — full-name equality, "The " tolerant,
+    // never substring). The event's city scopes the lookup; with no city the
+    // cross-city lookup resolves only a UNIQUE hit (ambiguous names and
+    // generic franchise stems resolve nothing). Null on any miss.
+    findCuratedBarForEvent(event) {
+        if (!this.core || !event || typeof event !== 'object') return null;
+        const barName = typeof event.bar === 'string' ? event.bar.trim() : '';
+        if (!barName) return null;
+        const cityKey = typeof event.city === 'string' ? event.city.trim().toLowerCase() : '';
+        try {
+            if (cityKey && cityKey !== 'unknown' && typeof this.core.getCuratedCityBars === 'function'
+                && typeof this.core.findCuratedBarByName === 'function') {
+                const cityBars = this.core.getCuratedCityBars(cityKey);
+                const curatedBar = cityBars ? this.core.findCuratedBarByName(cityBars, barName) : null;
+                if (curatedBar) return curatedBar;
+            }
+            if (typeof this.core.findCuratedBarCityByName === 'function') {
+                const match = this.core.findCuratedBarCityByName(barName);
+                if (match && match.bar) return match.bar;
+            }
+        } catch (_) {
+            return null; // curated corpus is best-effort — fail closed to "no curated bar"
+        }
+        return null;
+    }
+
+    // Maps-link coordinate pass (run per page, right where the events are
+    // attributed to their page). Judges the pin the page's maps link published
+    // and, when it survives, stashes it for the pin ladder:
+    //
+    //   1) placeholder names ("Venue TBA") are rejected outright — the pin is
+    //      a city centre, not a venue;
+    //   2) IDENTITY GUARD: the pin is only the EVENT's pin when the name the
+    //      link leads with IS the event's bar (normalizeBarNameKey equality —
+    //      the same full-name strictness curated matching uses). A page's
+    //      unrelated map widget can therefore never pin an event.
+    //
+    // A surviving candidate is stashed on the internal _mapsLinkCoordinate
+    // field (underscore — excluded from notes/merge/output field loops). This
+    // pass never writes location: the ladder's precedence is decided in
+    // OpenStreetMapNormalizer.applyMapsLinkCoordinateFallback, the one place
+    // that can see all three answers — curated coordinates (1st) and a
+    // successful address geocode (2nd) both outrank this pin, which fills only
+    // a blank. Dice put Westminster Pier ~940 m from the truth; its address
+    // geocodes to 1 m, so the geocode wins there.
+    //
+    // The curated coordinate is looked up here only to make this line say
+    // whether one already exists — the fill decision is not made here.
+    logMapsLinkCoordinateCandidates(events, htmlData) {
+        const eventList = Array.isArray(events) ? events : [];
+        if (eventList.length === 0) return;
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        if (!html) return;
+        const candidates = this.extractMapsLinkCoordinateCandidates(html);
+        if (candidates.length === 0) return;
+        const nameKey = value => (this.core && typeof this.core.normalizeBarNameKey === 'function'
+            ? this.core.normalizeBarNameKey(value)
+            : String(value || '').toLowerCase().replace(/^\s*the\s+/, '').replace(/[^a-z0-9]/g, ''));
+
+        for (const event of eventList) {
+            if (!event || typeof event !== 'object') continue;
+            const title = typeof event.title === 'string' && event.title.trim() ? event.title.trim() : 'unknown';
+            const bar = typeof event.bar === 'string' ? event.bar.trim() : '';
+            const barKey = nameKey(bar);
+            for (const candidate of candidates) {
+                const placeholder = this.isPlaceholderVenueName(candidate.venueName);
+                const candidateKey = placeholder ? '' : nameKey(candidate.venueName);
+                const identityMatched = Boolean(barKey) && barKey === candidateKey;
+                const curatedBar = identityMatched ? this.findCuratedBarForEvent(event) : null;
+                const curatedLocation = curatedBar && typeof curatedBar.coordinates === 'string'
+                    ? curatedBar.coordinates.trim()
+                    : '';
+                const existingLocation = typeof event.location === 'string' ? event.location.trim() : '';
+                const guard = placeholder
+                    ? `REJECTED (placeholder venue name "${candidate.venueName}")`
+                    : (identityMatched
+                        ? 'PASSED'
+                        : `REJECTED (link venue "${candidate.venueName || 'none'}" is not the event bar "${bar || 'none'}")`);
+                // Distance to the curated pin is reported (never acted on):
+                // it is the evidence for how far a ticketing platform's
+                // geocode strays, and curated data wins regardless.
+                const curatedDistanceKm = curatedLocation && this.core
+                    && typeof this.core.coordinatePairDistanceKm === 'function'
+                    ? this.core.coordinatePairDistanceKm(candidate.location, curatedLocation)
+                    : null;
+                const curatedNote = curatedLocation
+                    ? `curated coordinate ${curatedLocation} wins${Number.isFinite(curatedDistanceKm) ? ` (candidate is ${Math.round(curatedDistanceKm * 1000)} m away)` : ''}`
+                    : (curatedBar ? 'curated bar matched but carries no coordinate' : 'no curated coordinate');
+                const existingNote = existingLocation ? `event location already ${existingLocation}` : 'event location blank';
+                const outcome = identityMatched
+                    ? (existingLocation || curatedLocation
+                        ? 'held as evidence only'
+                        : 'held for the pin ladder — used only if the address geocode also finds nothing')
+                    : 'discarded';
+                console.log(`🤖 AI Web: Maps-link coordinate ${candidate.location} for "${title}" — identity guard ${guard}; ${curatedNote}; ${existingNote}; ${outcome}`);
+                if (!identityMatched) continue;
+                event._mapsLinkCoordinate = {
+                    location: candidate.location,
+                    venueName: candidate.venueName,
+                    curatedLocation
+                };
+                break;
+            }
+        }
     }
 
     // Per-run harvest state: host → { addresses: {normKey → {display,
