@@ -42,78 +42,88 @@ RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU
 END:STANDARD
 END:VTIMEZONE
 BEGIN:VEVENT
-DTSTART:20251011T050000Z
-DTEND:20251012T080000Z
-DTSTAMP:20260731T161740Z
-UID:8E2BF651-F6BA-4564-B5F9-7C014070614B
-CREATED:20250901T054019Z
-DESCRIPTION:bar: Cell Block\naddress: 3702 N Halsted St\, Chicago\, IL 6061
- 3\, USA\ntimezone: America/Chicago\nwebsite: https://www.chunk-party.com/ev
- ent-details/chunk-chicago-presents-sausage-party\ninstagram: https://www.in
- stagram.com/chunkparty\nshortName: CHUNK\nfavicon: https://www.chunk-party.
- com\nbearSource: keyword\nkey: sausage-party|2025-10-11|cell block\ncover: 
- $20.50 - $25.63\ndescription: BEEF\, DADS\, BBQ\, SAUSAGES\, WEINERS - WHAT
- S NOT TO LOVE?!? NYC DJ LEGEND DICAP AND CHUNK RESIDENT MR PICKLES HOSTED B
- Y COACH MIKEY HOT GOGO BEARS ALL NIGHT LONG CELL BLOCK // 3702 N HALSTED ST
-  // HEART OF BOYSTOWN // CHICAGO // 9P\nimage: https://static.wixstatic.com
- /media/42b6cb_356df9ed11594c12b5bb6c45d0661e05~mv2.jpg/v1/fill/w_1874\,h_23
- 42\,al_c\,q_90/42b6cb_356df9ed11594c12b5bb6c45d0661e05~mv2.jpg\nbarSource: 
- curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD
- 4gR1jLvMA_vZss
-LAST-MODIFIED:20260730T190431Z
-LOCATION:41.9493756\, -87.64979
-SEQUENCE:2
+DTSTART:20260809T020000Z
+DTEND:20260809T100000Z
+DTSTAMP:20260731T202813Z
+UID:12390A71-5BE8-463A-BB22-806B533B7C1F
+CREATED:20260712T022026Z
+DESCRIPTION:description: It's the BIGGEST Coach After Dark ever! 4 DJs\, 8 
+ sexy hot jock go-gos\, and 8 hours to gear up and sweat it out on the dance
+  floor!\nbar: Jackhammer\naddress: 6406 North Clark Street\, Chicago\, IL 6
+ 0626\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1
+ 186284656%2F2198683436473%2F1%2Foriginal.20260606-002206?crop=focalpoint&fi
+ t=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.151&fp-y=0.461&s=b
+ 79d377a24d50af51114d1726ef8548d\ncover: $32.78-$54.13\ntimezone: America/Ch
+ icago\nwebsite: https://www.eventbrite.com/e/coach-after-dark-market-days-t
+ ickets-1991246880021\ninstagram: https://www.instagram.com/coachafterdark\n
+ shortName: COACH\nbearSource: keyword\nkey: coach-after-dark-market-days|20
+ 26-08-09|jackhammer\naddressSource: page\nimageSource: jsonld\nbarSource: c
+ urated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJ44RAWrzRD4
+ gRDGoLchD_2SI
+LAST-MODIFIED:20260731T165216Z
+LOCATION:41.998402\,-87.6709808
+SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:CHUNK CHICAGO presents SAUSAGE PARTY!
+SUMMARY:Coach After Dark: Market Days
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20250809T160000Z
-DTEND:20250810T030000Z
-DTSTAMP:20260731T161740Z
-UID:0nfdrio58lobhrsarq4dgge2p7@google.com
-CREATED:20250727T005047Z
-DESCRIPTION:Website: <a href="https://northalsted.com/main-events/northalst
- ed-market-days/" target="_blank">https://northalsted.com/main-events/northa
- lsted-market-days/</a><br>Tea: Live music street festival with a queer focu
- s. Saturday’s top artists are Keke Palmer\, Keisha\, Same Star\, and Brooke
-  Eden. See the website for more artists and entry info.<br>Instagram: <a hr
- ef="https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1" targ
- et="_blank">https://www.instagram.com/marketdayschicago</a><br>Cover: $20 s
- uggested donation<br>Maps: <a href="https://maps.app.goo.gl/TmSKcmCvv6WZizM
- eA?g_st=ipc" target="_blank">https://maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st
- =ipc</a><br>Bar: Halsted St. from Belmont to Addison\naddress: 801–817 W Ro
- scoe St\, Chicago\, IL 60657\naddressSource: inferred
-LAST-MODIFIED:20260717T211308Z
-LOCATION:41.9436009\, -87.6494458
+DTSTART:20260101T030000Z
+DTEND:20260101T080000Z
+DTSTAMP:20260731T202813Z
+UID:9D8D0377-7B84-4FB9-BD9D-7A00FCBAB9B3
+CREATED:20260730T190429Z
+DESCRIPTION:bar: Cell Block\naddress: 3702 N Halsted St\, Chicago\, IL 6061
+ 3\, USA\nimage: https://static.wixstatic.com/media/42b6cb_73cd8b176ba44e4a8
+ 02aace626e4a830~mv2.jpg/v1/fill/w_4112\,h_3300\,al_c\,q_90/42b6cb_73cd8b176
+ ba44e4a802aace626e4a830~mv2.jpg\ntimezone: America/Chicago\nimageHorizontal
+ : https://static.wixstatic.com/media/42b6cb_73cd8b176ba44e4a802aace626e4a83
+ 0~mv2.jpg/v1/fill/w_4112\,h_3300\,al_c\,q_90/42b6cb_73cd8b176ba44e4a802aace
+ 626e4a830~mv2.jpg\nwebsite: https://www.chunk-party.com/event-details/chunk
+ -chicago-presents-new-years-eve-2026\ninstagram: https://www.instagram.com/
+ chunkparty\nshortName: CHUNK\nfavicon: https://www.chunk-party.com\nbearSou
+ rce: keyword\nkey: chunk-chicago-presents-new-years-eve-2026|2026-01-01|cel
+ l block\ndescription: PRESALE TICKETS ARE SOLD OUT We have reserved space a
+ t the door for walk-ups\, please arrive early DJS MR PICKLES& MARCEAUX MARC
+ EAUX & DJ ANDY HOT GOGO BEARS and hosted by COACH MIKEY FREE CHAMPAGNE TOAS
+ T AT MIDNIGHT CELL BLOCK - Saturday December 31st 9pm-2am\npinSource: page\
+ naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https
+ ://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss
+LAST-MODIFIED:20260731T183056Z
+LOCATION:41.9493268\, -87.6498756
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Market Day 2
+SUMMARY:CHUNK CHICAGO presents NEW YEARS EVE 2026
 TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20250809T033000Z
-DTEND:20250809T090000Z
-DTSTAMP:20260731T161740Z
-UID:anpebtqveq4fqmniffj10p0j5o@google.com
-CREATED:20250727T015902Z
-DESCRIPTION:Google Maps: https://maps.app.goo.gl/Gwxy5yMhZhZFEfsBA?g_st=ipc
- \nWebsite: https://www.furball.nyc/\nCover: ~$30\nBar: Metro\nShort: Furbal
- l\nShorter: FUR\naddress: 3728 N Clark St\, Chicago\, IL 60613\naddressSour
- ce: inferred
-LAST-MODIFIED:20260717T211307Z
-LOCATION:41.9498139\, -87.6588771
-SEQUENCE:0
+DTSTART;TZID=America/Chicago:20250906T210000
+DTEND;TZID=America/Chicago:20250907T050000
+RRULE:FREQ=MONTHLY;BYDAY=1SA
+DTSTAMP:20260731T202813Z
+UID:qo8nfeeu512fe74ng1o3jmoqt0@google.com
+CREATED:20250826T001223Z
+DESCRIPTION:tea: 🎧 Live DJs and Dancers bringing the energy\ncover: Before
+  10pm\\: FREE\, 10pm-2\\:30am\\: $10\, 2\\:30am-Last call\\: $5\nbar: Jackh
+ ammer\naddress: 6406 N Clark St\, Chicago\, IL 60626\nuid: qo8nfeeu512fe74n
+ g1o3jmoqt0@google.com\nwebsite: https://jackhammerchicago.com/belly-up\nfac
+ ebook: https://www.facebook.com/chijackhammer/events\ngmaps: https://maps.a
+ pp.goo.gl/Groc2oBnZyjMU2cJA
+LAST-MODIFIED:20260423T044227Z
+LOCATION:41.9983961\, -87.6709779
+SEQUENCE:2
 STATUS:CONFIRMED
-SUMMARY:Furball Market Days
+SUMMARY:Belly Up
 TRANSP:OPAQUE
 END:VEVENT
 BEGIN:VEVENT
 DTSTART:20250830T020000Z
 DTEND:20250830T090000Z
-DTSTAMP:20260731T161740Z
+DTSTAMP:20260731T202813Z
 UID:EA39ACFC-8AE4-4766-9C7C-C310633622D9
 CREATED:20250830T003603Z
 DESCRIPTION:description: Music & Entertainment\n• DJ Tim Arnold (Main Floor
@@ -136,9 +146,106 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
+DTSTART:20250809T033000Z
+DTEND:20250809T090000Z
+DTSTAMP:20260731T202813Z
+UID:anpebtqveq4fqmniffj10p0j5o@google.com
+CREATED:20250727T015902Z
+DESCRIPTION:Google Maps: https://maps.app.goo.gl/Gwxy5yMhZhZFEfsBA?g_st=ipc
+ \nWebsite: https://www.furball.nyc/\nCover: ~$30\nBar: Metro\nShort: Furbal
+ l\nShorter: FUR\naddress: 3728 N Clark St\, Chicago\, IL 60613\naddressSour
+ ce: inferred
+LAST-MODIFIED:20260717T211307Z
+LOCATION:41.9498139\, -87.6588771
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Furball Market Days
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260712T020000Z
+DTEND:20260712T100000Z
+DTSTAMP:20260731T202813Z
+UID:7536DF8E-6246-479E-8FF7-E711B6A04177
+CREATED:20260512T171312Z
+DESCRIPTION:description: CHICAGO MEGAWOOF CHICAGO - JULY - SPECIAL OFFER\nb
+ ar: Jackhammer\naddress: 6406 North Clark Street\, Chicago\, IL 60626\ntime
+ zone: America/Chicago\nticketUrl: https://www.eventbrite.com/e/megawoof-chi
+ cago-july-bearwatch-tickets-1987363318183\ninstagram: https://www.instagram
+ .com/megawoof_america\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc
+ .com%2Fimages%2F1184410354%2F185013722403%2F1%2Foriginal.20260512-160408?cr
+ op=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&
+ fp-y=0.5&s=79b82ef9b2961bb09d52102535747556\ncover: $11.58-$21.05\nshortNam
+ e: MEGA-WOOF\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://w
+ ww.google.com/maps/search/?api=1&query=Jackhammer%2C%206406%20North%20Clark
+ %20Street%2C%20Chicago%2C%20IL%2060626\nkey: megawoof-chicago-july-bearwatc
+ h|2026-07-12|jackhammer
+LAST-MODIFIED:20260712T004134Z
+LOCATION:41.998402\,-87.6709808
+SEQUENCE:1
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF CHICAGO - JULY - BEARWATCH
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20250809T160000Z
+DTEND:20250810T030000Z
+DTSTAMP:20260731T202813Z
+UID:0nfdrio58lobhrsarq4dgge2p7@google.com
+CREATED:20250727T005047Z
+DESCRIPTION:Website: <a href="https://northalsted.com/main-events/northalst
+ ed-market-days/" target="_blank">https://northalsted.com/main-events/northa
+ lsted-market-days/</a><br>Tea: Live music street festival with a queer focu
+ s. Saturday’s top artists are Keke Palmer\, Keisha\, Same Star\, and Brooke
+  Eden. See the website for more artists and entry info.<br>Instagram: <a hr
+ ef="https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1" targ
+ et="_blank">https://www.instagram.com/marketdayschicago</a><br>Cover: $20 s
+ uggested donation<br>Maps: <a href="https://maps.app.goo.gl/TmSKcmCvv6WZizM
+ eA?g_st=ipc" target="_blank">https://maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st
+ =ipc</a><br>Bar: Halsted St. from Belmont to Addison\naddress: 801–817 W Ro
+ scoe St\, Chicago\, IL 60657\naddressSource: inferred
+LAST-MODIFIED:20260717T211308Z
+LOCATION:41.9436009\, -87.6494458
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Market Day 2
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260920T020000Z
+DTEND:20260920T100000Z
+DTSTAMP:20260731T202813Z
+UID:AB28FF11-DCBB-4A7E-BA13-2CA5074BEF3A
+CREATED:20260727T183244Z
+DESCRIPTION:description: NYC's GOLDILOXX arrives in Chicago for a unique ni
+ ghtlife experience featuring two floors\, color-coded social interaction\, 
+ DJs from NYC and Chicago\, go-go dancers\, and nonstop energy until sunrise
+ .\nbar: Jackhammer\naddress: 6406 North Clark Street\, Chicago\, IL\, 60626
+ \nticketUrl: https://www.sickening.events/e/goldiloxx-chicago/tickets\ncove
+ r: $10-$25\ntimezone: America/Chicago\nwebsite: https://www.sickening.event
+ s/e/goldiloxx-chicago-2/tickets\ninstagram: https://www.instagram.com/goldi
+ loxx__\nshortName: GOLDI-LOXX\nshorterName: GLX\nfavicon: https://linktr.ee
+ /goldiloxx\nbearSource: ai\nkey: goldiloxx-chicago-nyc-s-interactive-nightl
+ ife-experience|2026-09-20|jackhammer\nimage: https://res.cloudinary.com/eve
+ ntservice/image/upload/q_auto\,f_auto/v1782172240/saas/logos/image_17821721
+ 79876_tide1jxnd.webp\npinSource: curated\naddressSource: page\nimageSource:
+  jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=pl
+ ace_id:ChIJ44RAWrzRD4gRDGoLchD_2SI
+LAST-MODIFIED:20260730T185526Z
+LOCATION:41.9984139\, -87.6710111
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:GOLDILOXX Chicago | NYC's Interactive Nightlife Experience
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20260920T020000Z
 DTEND:20260920T080000Z
-DTSTAMP:20260731T161740Z
+DTSTAMP:20260731T202813Z
 UID:8CA2C4F3-C5B3-42CE-9976-5F42AB90B742
 CREATED:20260714T143906Z
 DESCRIPTION:description: LET'S GO - CHUNK is BACK in CHICAGO for a BEEF-FES
@@ -166,156 +273,9 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260712T020000Z
-DTEND:20260712T100000Z
-DTSTAMP:20260731T161740Z
-UID:7536DF8E-6246-479E-8FF7-E711B6A04177
-CREATED:20260512T171312Z
-DESCRIPTION:description: CHICAGO MEGAWOOF CHICAGO - JULY - SPECIAL OFFER\nb
- ar: Jackhammer\naddress: 6406 North Clark Street\, Chicago\, IL 60626\ntime
- zone: America/Chicago\nticketUrl: https://www.eventbrite.com/e/megawoof-chi
- cago-july-bearwatch-tickets-1987363318183\ninstagram: https://www.instagram
- .com/megawoof_america\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc
- .com%2Fimages%2F1184410354%2F185013722403%2F1%2Foriginal.20260512-160408?cr
- op=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&
- fp-y=0.5&s=79b82ef9b2961bb09d52102535747556\ncover: $11.58-$21.05\nshortNam
- e: MEGA-WOOF\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://w
- ww.google.com/maps/search/?api=1&query=Jackhammer%2C%206406%20North%20Clark
- %20Street%2C%20Chicago%2C%20IL%2060626\nkey: megawoof-chicago-july-bearwatc
- h|2026-07-12|jackhammer
-LAST-MODIFIED:20260712T004134Z
-LOCATION:41.998402\,-87.6709808
-SEQUENCE:1
-STATUS:CONFIRMED
-SUMMARY:MEGAWOOF CHICAGO - JULY - BEARWATCH
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260808T033000Z
-DTSTAMP:20260731T161740Z
-UID:33540850-F538-4592-BB59-A8A672F2F796
-CREATED:20260712T000126Z
-DESCRIPTION:bar: Metro\naddress: 3730 N Clark St\, Chicago\, IL 60613\ntime
- zone: America/Chicago\nwebsite: https://www.etix.com/ticket/p/54403374/?par
- tner_id=100&_gl=1*1bmryzt*_ga*MTI5NjI5MTA1OS4xNzgzNzA5NzI5*_ga_Z3MV4KFJMN*c
- zE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGgxNzA5NTE2OTA5*_ga_DSG080V
- B8M*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGg3NjY5MDM0NTA.*_ga_68
- TT1Q537T*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGg5NTk4NTE2Njg.*_
- ga_MCR6RT8ZB7*czE3ODM3MDk3MzAkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGgw&_ga=2.96
- 391708.1430242853.1783709730-1296291059.1783709729\ninstagram: https://inst
- agram.com/furballnyc/\nshortName: FUR-BALL\nfavicon: https://linktr.ee/furb
- allnyc\nbearSource: keyword\nkey: furball-chicago|2026-08-08|metro\ndescrip
- tion: MUSIC\nJESSE MERCADO\n(CHICAGO)\nTONY MORAN\nimage: https://static.wi
- xstatic.com/media/238fae_166133fdfd194d6aa28343c55418296e~mv2.jpg/v1/fill/w
- _296\,h_494\,al_c\,q_80\,usm_0.66_1.00_0.01\,enc_avif\,quality_auto/238fae_
- 166133fdfd194d6aa28343c55418296e~mv2.jpg\npinSource: curated\naddressSource
- : curated\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?a
- pi=1&query=41.9497837%2C-87.6590034
-LAST-MODIFIED:20260731T153917Z
-LOCATION:41.9497837\, -87.6590034
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:FURBALL CHICAGO MARKET DAYS
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART;TZID=America/North_Dakota/New_Salem:20250710T170000
-DTEND;TZID=America/North_Dakota/New_Salem:20250710T210000
-RRULE:FREQ=WEEKLY
-DTSTAMP:20260731T161740Z
-UID:gntkupiisd0hb2k7uptg7j855g@google.com
-CREATED:20250727T020550Z
-DESCRIPTION:Bar: Check instagram for this week’s location.\nTea: Popular ha
- ppy hour that changes location every week.\nInstagram: https://www.instagra
- m.com/bearhappyhourchi\nShorter: BHH\nWeb: https://linktr.ee/bearhappyhour
-LAST-MODIFIED:20251012T161121Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Bear Happy Hour
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
-DTSTART;TZID=America/Chicago:20250906T210000
-DTEND;TZID=America/Chicago:20250907T050000
-RRULE:FREQ=MONTHLY;BYDAY=1SA
-DTSTAMP:20260731T161740Z
-UID:qo8nfeeu512fe74ng1o3jmoqt0@google.com
-CREATED:20250826T001223Z
-DESCRIPTION:tea: 🎧 Live DJs and Dancers bringing the energy\ncover: Before
-  10pm\\: FREE\, 10pm-2\\:30am\\: $10\, 2\\:30am-Last call\\: $5\nbar: Jackh
- ammer\naddress: 6406 N Clark St\, Chicago\, IL 60626\nuid: qo8nfeeu512fe74n
- g1o3jmoqt0@google.com\nwebsite: https://jackhammerchicago.com/belly-up\nfac
- ebook: https://www.facebook.com/chijackhammer/events\ngmaps: https://maps.a
- pp.goo.gl/Groc2oBnZyjMU2cJA
-LAST-MODIFIED:20260423T044227Z
-LOCATION:41.9983961\, -87.6709779
-SEQUENCE:2
-STATUS:CONFIRMED
-SUMMARY:Belly Up
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260510T020000Z
-DTEND:20260510T100000Z
-DTSTAMP:20260731T161740Z
-UID:FA8478FF-3F78-4E27-AAB4-B71F3FA40171
-CREATED:20260509T174231Z
-DESCRIPTION:description: The Sports Gear Disco returns to Jackhammer Saturd
- ay May 9th! Come gear up and sweat it out on the dance floor!\nbar: Jackham
- mer\naddress: 6406 North Clark Street\, Chicago\, IL 60626\ntimezone: Ameri
- ca/Chicago\nticketUrl: https://www.eventbrite.com/e/coach-after-dark-chicag
- o-tickets-1987165553664\ninstagram: https://www.instagram.com/coachafterdar
- k\ncover: $20.00-$30.65\nwebsite: https://www.eventbrite.com/e/coach-after-
- dark-chicago-tickets-1987165553664\ngmaps: https://www.google.com/maps/sear
- ch/?api=1&query=Jackhammer%2C%206406%20North%20Clark%20Street%2C%20Chicago%
- 2C%20IL%2060626\nkey: coach-after-dark-chicago|2026-05-10|jackhammer
-LAST-MODIFIED:20260509T210901Z
-LOCATION:41.998402\,-87.6709808
-SEQUENCE:1
-STATUS:CONFIRMED
-SUMMARY:Coach After Dark: Chicago
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260809T020000Z
-DTEND:20260809T100000Z
-DTSTAMP:20260731T161740Z
-UID:12390A71-5BE8-463A-BB22-806B533B7C1F
-CREATED:20260712T022026Z
-DESCRIPTION:description: It's the BIGGEST Coach After Dark ever! 4 DJs\, 8 
- sexy hot jock go-gos\, and 8 hours to gear up and sweat it out on the dance
-  floor!\nbar: Jackhammer\naddress: 6406 North Clark Street\, Chicago\, IL 6
- 0626\nticketUrl: https://www.eventbrite.com/e/coach-after-dark-market-days-
- tickets-1991246880021\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc
- .com%2Fimages%2F1186284656%2F2198683436473%2F1%2Foriginal.20260606-002206?c
- rop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.1
- 51&fp-y=0.461&s=b79d377a24d50af51114d1726ef8548d\ncover: $32.78-$54.13\ntim
- ezone: America/Chicago\nshortName: COACH\ninstagram: https://www.instagram.
- com/coachafterdark\nwebsite: https://www.eventbrite.com/e/coach-after-dark-
- market-days-tickets-1991246880021\nbearSource: keyword\nkey: coach-after-da
- rk-market-days|2026-08-09|jackhammer\naddressSource: page\nimageSource: jso
- nld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&q
- uery=Jackhammer%2C%206406%20North%20Clark%20Street%2C%20Chicago%2C%20IL%206
- 0626
-LAST-MODIFIED:20260723T142719Z
-LOCATION:41.998402\,-87.6709808
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Coach After Dark: Market Days
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20260726T020000Z
 DTEND:20260726T080000Z
-DTSTAMP:20260731T161740Z
+DTSTAMP:20260731T202813Z
 UID:3F2449DC-4869-4062-AF4B-F646ED20E976
 CREATED:20260713T165325Z
 DESCRIPTION:description: Saturday\, July 25th\, 2026 Doors at 9pm\, Party t
@@ -346,7 +306,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260322T020000Z
 DTEND:20260322T080000Z
-DTSTAMP:20260731T161740Z
+DTSTAMP:20260731T202813Z
 UID:9C1D2EFD-AB1A-4084-A6DF-108E782DD7C8
 CREATED:20260205T185753Z
 DESCRIPTION:description: LET'S GO! - DJs DICAP B2B w/ THCKRTANKER and HOLE 
@@ -373,9 +333,128 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
+DTSTART:20250810T160000Z
+DTEND:20250811T030000Z
+DTSTAMP:20260731T202813Z
+UID:1bs4hde34sb2o62dtr2sl85ild@google.com
+CREATED:20250727T005144Z
+DESCRIPTION:Website: <a href="https://northalsted.com/main-events/northalst
+ ed-market-days/" target="_blank">https://northalsted.com/main-events/northa
+ lsted-market-days/</a><br>Tea: Live music street festival with a queer focu
+ s. Sunday’s top artists are David Archuleta\, Joe Dombrowski\, and Sasha Co
+ lby. See the website for more artists and entry info.<br>Instagram: <a href
+ ="https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1" target
+ ="_blank">https://www.instagram.com/marketdayschicago</a><br>Cover: $20 sug
+ gested donation<br>Maps: <a href="https://maps.app.goo.gl/TmSKcmCvv6WZizMeA
+ ?g_st=ipc" target="_blank">https://maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st=i
+ pc</a><br>Bar: Halsted St. from Belmont to Addison\naddress: 801–817 W Rosc
+ oe St\, Chicago\, IL 60657\naddressSource: inferred
+LAST-MODIFIED:20260717T211308Z
+LOCATION:41.9436009\, -87.6494458
+SEQUENCE:1
+STATUS:CONFIRMED
+SUMMARY:Market Day 3
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260510T020000Z
+DTEND:20260510T100000Z
+DTSTAMP:20260731T202813Z
+UID:FA8478FF-3F78-4E27-AAB4-B71F3FA40171
+CREATED:20260509T174231Z
+DESCRIPTION:description: The Sports Gear Disco returns to Jackhammer Saturd
+ ay May 9th! Come gear up and sweat it out on the dance floor!\nbar: Jackham
+ mer\naddress: 6406 North Clark Street\, Chicago\, IL 60626\ntimezone: Ameri
+ ca/Chicago\nticketUrl: https://www.eventbrite.com/e/coach-after-dark-chicag
+ o-tickets-1987165553664\ninstagram: https://www.instagram.com/coachafterdar
+ k\ncover: $20.00-$30.65\nwebsite: https://www.eventbrite.com/e/coach-after-
+ dark-chicago-tickets-1987165553664\ngmaps: https://www.google.com/maps/sear
+ ch/?api=1&query=Jackhammer%2C%206406%20North%20Clark%20Street%2C%20Chicago%
+ 2C%20IL%2060626\nkey: coach-after-dark-chicago|2026-05-10|jackhammer
+LAST-MODIFIED:20260509T210901Z
+LOCATION:41.998402\,-87.6709808
+SEQUENCE:1
+STATUS:CONFIRMED
+SUMMARY:Coach After Dark: Chicago
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260808T033000Z
+DTSTAMP:20260731T202813Z
+UID:33540850-F538-4592-BB59-A8A672F2F796
+CREATED:20260712T000126Z
+DESCRIPTION:bar: Metro\naddress: 3730 N Clark St\, Chicago\, IL 60613\ntime
+ zone: America/Chicago\nticketUrl: https://www.etix.com/ticket/p/54403374/?p
+ artner_id=100...\nwebsite: https://www.etix.com/ticket/p/54403374/?partner_
+ id=100&_gl=1*1bmryzt*_ga*MTI5NjI5MTA1OS4xNzgzNzA5NzI5*_ga_Z3MV4KFJMN*czE3OD
+ M3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGgxNzA5NTE2OTA5*_ga_DSG080VB8M*c
+ zE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGg3NjY5MDM0NTA.*_ga_68TT1Q5
+ 37T*czE3ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGg5NTk4NTE2Njg.*_ga_MC
+ R6RT8ZB7*czE3ODM3MDk3MzAkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGgw&_ga=2.9639170
+ 8.1430242853.1783709730-1296291059.1783709729\ninstagram: https://instagram
+ .com/furballnyc/\nshortName: FUR-BALL\nfavicon: https://linktr.ee/furballny
+ c\nbearSource: keyword\nkey: furball-chicago|2026-08-08|metro\ndescription:
+  MUSIC\nJESSE MERCADO\n(CHICAGO)\nTONY MORAN\nimage: https://static.wixstat
+ ic.com/media/238fae_166133fdfd194d6aa28343c55418296e~mv2.jpg/v1/fill/w_296\
+ ,h_494\,al_c\,q_80\,usm_0.66_1.00_0.01\,enc_avif\,quality_auto/238fae_16613
+ 3fdfd194d6aa28343c55418296e~mv2.jpg\npinSource: curated\naddressSource: cur
+ ated\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&
+ query=41.9497837%2C-87.6590034
+LAST-MODIFIED:20260731T184748Z
+LOCATION:41.9497837\, -87.6590034
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:FURBALL CHICAGO MARKET DAYS
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/North_Dakota/New_Salem:20250710T170000
+DTEND;TZID=America/North_Dakota/New_Salem:20250710T210000
+RRULE:FREQ=WEEKLY
+DTSTAMP:20260731T202813Z
+UID:gntkupiisd0hb2k7uptg7j855g@google.com
+CREATED:20250727T020550Z
+DESCRIPTION:Bar: Check instagram for this week’s location.\nTea: Popular ha
+ ppy hour that changes location every week.\nInstagram: https://www.instagra
+ m.com/bearhappyhourchi\nShorter: BHH\nWeb: https://linktr.ee/bearhappyhour
+LAST-MODIFIED:20251012T161121Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Happy Hour
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20250808T220000Z
+DTEND:20250809T030000Z
+DTSTAMP:20260731T202813Z
+UID:50pmdk0ccoramq9nd5615m8ueh@google.com
+CREATED:20250727T004326Z
+DESCRIPTION:Website: <a href="https://northalsted.com/main-events/northalst
+ ed-market-days/" target="_blank">https://northalsted.com/main-events/northa
+ lsted-market-days/</a><br>Tea: Live music street festival with a queer focu
+ s. Friday’s top artists are Saucy Santana and Monét X Change. See the websi
+ te for more artists and entry info.<br>Instagram: <a href="https://www.inst
+ agram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1" target="_blank">https://
+ www.instagram.com/marketdayschicago</a><br>Cover: $20 suggested donation<br
+ >Maps: <a href="https://maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st=ipc">https:/
+ /maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st=ipc</a><br>Bar: Halsted St. from Be
+ lmont to Addison\naddress: 801–817 W Roscoe St\, Chicago\, IL 60657\naddres
+ sSource: inferred
+LAST-MODIFIED:20260717T211306Z
+LOCATION:41.9436009\, -87.6494458
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Market Day 1
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20260215T030000Z
 DTEND:20260215T110000Z
-DTSTAMP:20260731T161740Z
+DTSTAMP:20260731T202813Z
 UID:0AD1679F-26DC-4355-ABDC-8F79B5C3552A
 CREATED:20260125T145932Z
 DESCRIPTION:description: This Valentine's Day Coach After Dark\\: The Sport
@@ -399,112 +478,31 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260101T030000Z
-DTEND:20260101T080000Z
-DTSTAMP:20260731T161740Z
-UID:9D8D0377-7B84-4FB9-BD9D-7A00FCBAB9B3
-CREATED:20260730T190429Z
+DTSTART:20251011T050000Z
+DTEND:20251012T080000Z
+DTSTAMP:20260731T202813Z
+UID:8E2BF651-F6BA-4564-B5F9-7C014070614B
+CREATED:20250901T054019Z
 DESCRIPTION:bar: Cell Block\naddress: 3702 N Halsted St\, Chicago\, IL 6061
- 3\, USA\nimage: https://static.wixstatic.com/media/42b6cb_73cd8b176ba44e4a8
- 02aace626e4a830~mv2.jpg/v1/fill/w_4112\,h_3300\,al_c\,q_90/42b6cb_73cd8b176
- ba44e4a802aace626e4a830~mv2.jpg\ntimezone: America/Chicago\nimageHorizontal
- : https://static.wixstatic.com/media/42b6cb_73cd8b176ba44e4a802aace626e4a83
- 0~mv2.jpg/v1/fill/w_4112\,h_3300\,al_c\,q_90/42b6cb_73cd8b176ba44e4a802aace
- 626e4a830~mv2.jpg\nwebsite: https://www.chunk-party.com/event-details/chunk
- -chicago-presents-new-years-eve-2026\ninstagram: https://www.instagram.com/
- chunkparty\nshortName: CHUNK\nfavicon: https://www.chunk-party.com\nbearSou
- rce: keyword\nkey: new-years-eve|2026-01-01|cell block\nticketUrl: https://
- www.chunk-party.com\ndescription: PRESALE TICKETS ARE SOLD OUT We have rese
- rved space at the door for walk-ups\, please arrive early DJS MR PICKLES& M
- ARCEAUX MARCEAUX & DJ ANDY HOT GOGO BEARS and hosted by COACH MIKEY FREE CH
- AMPAGNE TOAST AT MIDNIGHT CELL BLOCK - Saturday December 31st 9pm-2am\npinS
- ource: page\naddressSource: page\nimageSource: jsonld\nbarSource: curated\n
- gmaps: https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA
- _vZss
-LAST-MODIFIED:20260730T195725Z
-LOCATION:41.9493268\, -87.6498756
-SEQUENCE:0
+ 3\, USA\ntimezone: America/Chicago\nwebsite: https://www.chunk-party.com/ev
+ ent-details/chunk-chicago-presents-sausage-party\ninstagram: https://www.in
+ stagram.com/chunkparty\nshortName: CHUNK\nfavicon: https://www.chunk-party.
+ com\nbearSource: keyword\nkey: chunk-sausage-party|2025-10-11|cell block\nc
+ over: $20.50 - $25.63\ndescription: BEEF\, DADS\, BBQ\, SAUSAGES\, WEINERS 
+ - WHATS NOT TO LOVE?!? NYC DJ LEGEND DICAP AND CHUNK RESIDENT MR PICKLES HO
+ STED BY COACH MIKEY HOT GOGO BEARS ALL NIGHT LONG CELL BLOCK // 3702 N HALS
+ TED ST // HEART OF BOYSTOWN // CHICAGO // 9P\nimage: https://static.wixstat
+ ic.com/media/42b6cb_356df9ed11594c12b5bb6c45d0661e05~mv2.jpg/v1/fill/w_1874
+ \,h_2342\,al_c\,q_90/42b6cb_356df9ed11594c12b5bb6c45d0661e05~mv2.jpg\nbarSo
+ urce: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJP1x
+ Bx7DTD4gR1jLvMA_vZss
+LAST-MODIFIED:20260731T183056Z
+LOCATION:41.9493756\, -87.64979
+SEQUENCE:2
 STATUS:CONFIRMED
-SUMMARY:NEW YEARS EVE
+SUMMARY:CHUNK CHICAGO presents SAUSAGE PARTY!
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20250810T160000Z
-DTEND:20250811T030000Z
-DTSTAMP:20260731T161740Z
-UID:1bs4hde34sb2o62dtr2sl85ild@google.com
-CREATED:20250727T005144Z
-DESCRIPTION:Website: <a href="https://northalsted.com/main-events/northalst
- ed-market-days/" target="_blank">https://northalsted.com/main-events/northa
- lsted-market-days/</a><br>Tea: Live music street festival with a queer focu
- s. Sunday’s top artists are David Archuleta\, Joe Dombrowski\, and Sasha Co
- lby. See the website for more artists and entry info.<br>Instagram: <a href
- ="https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1" target
- ="_blank">https://www.instagram.com/marketdayschicago</a><br>Cover: $20 sug
- gested donation<br>Maps: <a href="https://maps.app.goo.gl/TmSKcmCvv6WZizMeA
- ?g_st=ipc" target="_blank">https://maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st=i
- pc</a><br>Bar: Halsted St. from Belmont to Addison\naddress: 801–817 W Rosc
- oe St\, Chicago\, IL 60657\naddressSource: inferred
-LAST-MODIFIED:20260717T211308Z
-LOCATION:41.9436009\, -87.6494458
-SEQUENCE:1
-STATUS:CONFIRMED
-SUMMARY:Market Day 3
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260920T020000Z
-DTEND:20260920T100000Z
-DTSTAMP:20260731T161740Z
-UID:AB28FF11-DCBB-4A7E-BA13-2CA5074BEF3A
-CREATED:20260727T183244Z
-DESCRIPTION:description: NYC's GOLDILOXX arrives in Chicago for a unique ni
- ghtlife experience featuring two floors\, color-coded social interaction\, 
- DJs from NYC and Chicago\, go-go dancers\, and nonstop energy until sunrise
- .\nbar: Jackhammer\naddress: 6406 North Clark Street\, Chicago\, IL\, 60626
- \nticketUrl: https://www.sickening.events/e/goldiloxx-chicago/tickets\ncove
- r: $10-$25\ntimezone: America/Chicago\nwebsite: https://www.sickening.event
- s/e/goldiloxx-chicago-2/tickets\ninstagram: https://www.instagram.com/goldi
- loxx__\nshortName: GOLDI-LOXX\nshorterName: GLX\nfavicon: https://linktr.ee
- /goldiloxx\nbearSource: ai\nkey: goldiloxx-chicago-nyc-s-interactive-nightl
- ife-experience|2026-09-20|jackhammer\nimage: https://res.cloudinary.com/eve
- ntservice/image/upload/q_auto\,f_auto/v1782172240/saas/logos/image_17821721
- 79876_tide1jxnd.webp\npinSource: curated\naddressSource: page\nimageSource:
-  jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=pl
- ace_id:ChIJ44RAWrzRD4gRDGoLchD_2SI
-LAST-MODIFIED:20260730T185526Z
-LOCATION:41.9984139\, -87.6710111
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:GOLDILOXX Chicago | NYC's Interactive Nightlife Experience
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20250808T220000Z
-DTEND:20250809T030000Z
-DTSTAMP:20260731T161740Z
-UID:50pmdk0ccoramq9nd5615m8ueh@google.com
-CREATED:20250727T004326Z
-DESCRIPTION:Website: <a href="https://northalsted.com/main-events/northalst
- ed-market-days/" target="_blank">https://northalsted.com/main-events/northa
- lsted-market-days/</a><br>Tea: Live music street festival with a queer focu
- s. Friday’s top artists are Saucy Santana and Monét X Change. See the websi
- te for more artists and entry info.<br>Instagram: <a href="https://www.inst
- agram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1" target="_blank">https://
- www.instagram.com/marketdayschicago</a><br>Cover: $20 suggested donation<br
- >Maps: <a href="https://maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st=ipc">https:/
- /maps.app.goo.gl/TmSKcmCvv6WZizMeA?g_st=ipc</a><br>Bar: Halsted St. from Be
- lmont to Addison\naddress: 801–817 W Roscoe St\, Chicago\, IL 60657\naddres
- sSource: inferred
-LAST-MODIFIED:20260717T211306Z
-LOCATION:41.9436009\, -87.6494458
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Market Day 1
-TRANSP:OPAQUE
 END:VEVENT
 END:VCALENDAR
