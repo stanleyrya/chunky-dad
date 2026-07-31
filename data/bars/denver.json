@@ -4,5 +4,17 @@
     "city": "denver",
     "address": "1215 20th Street, Denver, Colorado, 80202",
     "coordinates": "39.7526699, -104.9919830"
+  },
+  {
+    "name": "Trade",
+    "city": "denver",
+    "address": "475 Santa Fe Drive, Denver, CO 80204",
+    "coordinates": "39.7239635, -104.9987601"
+  },
+  {
+    "name": "X BAR",
+    "city": "denver",
+    "address": "629 East Colfax Avenue, Denver, CO 80203",
+    "coordinates": "39.7402589, -104.9790106"
   }
 ]

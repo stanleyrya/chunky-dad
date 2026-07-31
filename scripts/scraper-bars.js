@@ -97,7 +97,7 @@ const scraperBars = {
     {
       "name": "Concorde 2",
       "city": "brighton",
-      "address": "Madeira Shelter Hall, Madeira Drive, Brighton BN2 1EN",
+      "address": "Madeira Drive, Brighton BN2 1EN",
       "coordinates": "50.8172912, -0.1225875"
     }
   ],
@@ -165,6 +165,12 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/MetroChicago",
       "faviconBg": "#e10c12",
       "faviconFg": "#291716"
+    },
+    {
+      "name": "The Jackhammer Complex",
+      "city": "chicago",
+      "address": "6406 N Clark St, Chicago, IL 60626",
+      "coordinates": "41.9993427, -87.6709201"
     }
   ],
   "dallas": [
@@ -192,12 +198,32 @@ const scraperBars = {
       "faviconFg": "#fefefe"
     }
   ],
+  "dc": [
+    {
+      "name": "Uproar Lounge & Restaurant",
+      "city": "dc",
+      "address": "639 Florida Avenue Northwest, Washington, DC 20001",
+      "coordinates": "38.9162425, -77.0212487"
+    }
+  ],
   "denver": [
     {
       "name": "Ophelia's",
       "city": "denver",
       "address": "1215 20th Street, Denver, Colorado, 80202",
       "coordinates": "39.7526699, -104.9919830"
+    },
+    {
+      "name": "Trade",
+      "city": "denver",
+      "address": "475 Santa Fe Drive, Denver, CO 80204",
+      "coordinates": "39.7239635, -104.9987601"
+    },
+    {
+      "name": "X BAR",
+      "city": "denver",
+      "address": "629 East Colfax Avenue, Denver, CO 80203",
+      "coordinates": "39.7402589, -104.9790106"
     }
   ],
   "fort-lauderdale": [
@@ -359,6 +385,18 @@ const scraperBars = {
       "city": "la",
       "address": "2020 East Artesia Boulevard, Long Beach, California, 90805",
       "coordinates": "33.8744394, -118.1680438"
+    },
+    {
+      "name": "The Globe",
+      "city": "la",
+      "address": "740 South Broadway, Los Angeles, CA 90014",
+      "coordinates": "33.8302479, -118.3875975"
+    },
+    {
+      "name": "Sanctuary Studios",
+      "city": "la",
+      "address": "13012 Athens Way, Los Angeles, CA 90061",
+      "coordinates": "33.9148268, -118.2817851"
     }
   ],
   "london": [
@@ -444,6 +482,12 @@ const scraperBars = {
       "website": "https://thejoytheater.com",
       "faviconBg": "#f22922",
       "faviconFg": "#221e1f"
+    },
+    {
+      "name": "Joy Theatre",
+      "city": "nola",
+      "address": "1200 Canal St, New Orleans, LA 70112",
+      "coordinates": "29.9560038, -90.0739853"
     }
   ],
   "nyc": [
@@ -586,6 +630,12 @@ const scraperBars = {
       "city": "nyc",
       "address": "325 Franklin Avenue, New York, New York, 11216",
       "coordinates": "40.6882793, -73.9569264"
+    },
+    {
+      "name": "Red Eye NY",
+      "city": "nyc",
+      "address": "355 West 41st Street, New York NY 10036",
+      "coordinates": "40.7577763, -73.9925418"
     }
   ],
   "palm-springs": [
@@ -622,6 +672,14 @@ const scraperBars = {
       "gayCitiesLastScrapedAt": "2026-06-13T16:37:24.689Z"
     }
   ],
+  "phoenix": [
+    {
+      "name": "Kobalt",
+      "city": "phoenix",
+      "address": "3110 N Central Ave",
+      "coordinates": "33.4834859, -112.0757318"
+    }
+  ],
   "poconos": [
     {
       "name": "Camp Out",
@@ -651,6 +709,18 @@ const scraperBars = {
       "city": "portland",
       "address": "722 East Burnside Street, Portland, Oregon, 97214",
       "coordinates": "45.5228076, -122.6581521"
+    },
+    {
+      "name": "Bossanova Ballroom",
+      "city": "portland",
+      "address": "722 E Burnside, Portland, OR 97213",
+      "coordinates": "45.5228076, -122.6581521"
+    },
+    {
+      "name": "Sanctuary Club",
+      "city": "portland",
+      "address": "33 Northwest 9th Avenue",
+      "coordinates": "45.5235278, -122.6802991"
     }
   ],
   "ptown": [
@@ -892,6 +962,30 @@ const scraperBars = {
       "city": "sf",
       "address": "1123 Folsom Street, San Francisco, California, 94103",
       "coordinates": "37.7761653, -122.4083643"
+    },
+    {
+      "name": "F8 Nightclub & Bar",
+      "city": "sf",
+      "address": "1192 FOLSOM ST",
+      "coordinates": "37.7752814, -122.4099546"
+    },
+    {
+      "name": "F8 NIGHTCLUB",
+      "city": "sf",
+      "address": "1192 Folsom St, San Francisco, CA 94103, USA",
+      "coordinates": "37.7752814, -122.4099546"
+    },
+    {
+      "name": "San Francisco Eagle Bar",
+      "city": "sf",
+      "address": "398 12th Street, San Francisco, CA 94103",
+      "coordinates": "37.7699933, -122.4133375"
+    },
+    {
+      "name": "The Public Works SF",
+      "city": "sf",
+      "address": "161 Erie Street, San Francisco, CA 94103",
+      "coordinates": "37.7688931, -122.4192651"
     }
   ],
   "sitges": [
