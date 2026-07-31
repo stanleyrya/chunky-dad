@@ -12894,26 +12894,28 @@ TEXT:
         return null;
     }
 
-    // REPORT-ONLY maps-link coordinate pass (run per page, right where the
-    // events are attributed to their page). Reports, for each event, the pin
-    // the page's maps link published and whether it would be usable:
+    // Maps-link coordinate pass (run per page, right where the events are
+    // attributed to their page). Judges the pin the page's maps link published
+    // and, when it survives, stashes it for the pin ladder:
     //
     //   1) placeholder names ("Venue TBA") are rejected outright — the pin is
     //      a city centre, not a venue;
     //   2) IDENTITY GUARD: the pin is only the EVENT's pin when the name the
     //      link leads with IS the event's bar (normalizeBarNameKey equality —
     //      the same full-name strictness curated matching uses). A page's
-    //      unrelated map widget can therefore never pin an event;
-    //   3) PRECEDENCE: curated bar coordinates always win. The candidate is
-    //      reported as fill-blank-eligible ONLY when the event has no location
-    //      AND no curated bar supplies one. It never clobbers and is never
-    //      used to "correct" a curated pin — Dice put Westminster Pier ~940 m
-    //      from the truth, and curated data is what is right in that fight.
+    //      unrelated map widget can therefore never pin an event.
     //
-    // Nothing is written to event data: an accepted candidate is stashed on
-    // the internal _mapsLinkCoordinate field (underscore — excluded from
-    // notes/merge/output field loops) so a later enforcing pass has the
-    // evidence without this pass changing any event today.
+    // A surviving candidate is stashed on the internal _mapsLinkCoordinate
+    // field (underscore — excluded from notes/merge/output field loops). This
+    // pass never writes location: the ladder's precedence is decided in
+    // OpenStreetMapNormalizer.applyMapsLinkCoordinateFallback, the one place
+    // that can see all three answers — curated coordinates (1st) and a
+    // successful address geocode (2nd) both outrank this pin, which fills only
+    // a blank. Dice put Westminster Pier ~940 m from the truth; its address
+    // geocodes to 1 m, so the geocode wins there.
+    //
+    // The curated coordinate is looked up here only to make this line say
+    // whether one already exists — the fill decision is not made here.
     logMapsLinkCoordinateCandidates(events, htmlData) {
         const eventList = Array.isArray(events) ? events : [];
         if (eventList.length === 0) return;
@@ -12946,7 +12948,7 @@ TEXT:
                         : `REJECTED (link venue "${candidate.venueName || 'none'}" is not the event bar "${bar || 'none'}")`);
                 // Distance to the curated pin is reported (never acted on):
                 // it is the evidence for how far a ticketing platform's
-                // geocode strays before anything is allowed to enforce.
+                // geocode strays, and curated data wins regardless.
                 const curatedDistanceKm = curatedLocation && this.core
                     && typeof this.core.coordinatePairDistanceKm === 'function'
                     ? this.core.coordinatePairDistanceKm(candidate.location, curatedLocation)
@@ -12955,14 +12957,17 @@ TEXT:
                     ? `curated coordinate ${curatedLocation} wins${Number.isFinite(curatedDistanceKm) ? ` (candidate is ${Math.round(curatedDistanceKm * 1000)} m away)` : ''}`
                     : (curatedBar ? 'curated bar matched but carries no coordinate' : 'no curated coordinate');
                 const existingNote = existingLocation ? `event location already ${existingLocation}` : 'event location blank';
-                const eligible = identityMatched && !existingLocation && !curatedLocation;
-                console.log(`🤖 AI Web: Maps-link coordinate ${candidate.location} for "${title}" — identity guard ${guard}; ${curatedNote}; ${existingNote}; ${eligible ? 'would fill blank' : 'no fill'} (report-only)`);
+                const outcome = identityMatched
+                    ? (existingLocation || curatedLocation
+                        ? 'held as evidence only'
+                        : 'held for the pin ladder — used only if the address geocode also finds nothing')
+                    : 'discarded';
+                console.log(`🤖 AI Web: Maps-link coordinate ${candidate.location} for "${title}" — identity guard ${guard}; ${curatedNote}; ${existingNote}; ${outcome}`);
                 if (!identityMatched) continue;
                 event._mapsLinkCoordinate = {
                     location: candidate.location,
                     venueName: candidate.venueName,
-                    curatedLocation,
-                    fillBlankEligible: eligible
+                    curatedLocation
                 };
                 break;
             }

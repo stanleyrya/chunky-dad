@@ -215,6 +215,9 @@ const SIGNALS_FIXTURE = [
   '2026-07-13T09:00:18.000Z [WARN] 🗺️ OpenStreetMapNormalizer: All 3 geocode candidates for "123 Main St" fall outside 15 km of atlanta center (nearest is 42.0 km away) — ignoring coordinates',
   // Geocode retry-ladder exhaustion (address unresolvable after all variants)
   '2026-07-13T09:00:18.500Z [WARN] 🗺️ OpenStreetMapNormalizer: No geocode results for "2069 CHESHIRE BRIDGE RD NE" (atlanta) after 3 queries — leaving location empty',
+  // Maps-link pin rung (verbatim shapes from the dice.fm evidence run)
+  '2026-07-13T09:00:18.600Z [INFO] 🗺️ OpenStreetMapNormalizer: No curated or geocoded pin for "BEEFMINCE x BRIGHTON" — using the page\'s maps link for "Concorde 2" -> 50.8172448,-0.122510799999986',
+  '2026-07-13T09:00:18.700Z [WARN] 🗺️ MAPS LINK CONFLICT: "BOATMINCE" accepted pin 51.5022544, -0.1231736 (curated) is 936 m from the page\'s maps link 51.5099822,-0.117819 for "Westminster Pier" — accepted pin kept; verify which is the real venue',
   // Merge-time guards: degenerate end, coordinate/bar/location preservation
   '2026-07-13T09:00:19.000Z [WARN] ⚠️ MERGE: "BEARRACUDA: Portland" scraped endDate <= startDate (zero duration) — treating as missing, keeping calendar end',
   '2026-07-13T09:00:20.000Z [INFO] 📍 MERGE: "BEARRACUDA: Portland" location kept calendar coordinates over scraped text/empty value',
@@ -248,7 +251,9 @@ test('buildSummary counts each guard line type', () => {
     coordsPreserved: 1,
     barPreserved: 1,
     locationPreserved: 2,     // "kept from calendar" + "kept from existing"
-    arbitrationDeterministic: 2 // 🔒 website root-vs-deep + 🔒 emoji-twin title
+    arbitrationDeterministic: 2, // 🔒 website root-vs-deep + 🔒 emoji-twin title
+    mapsLinkPin: 1,           // pin taken from the page's maps link
+    mapsLinkConflict: 1       // maps-link pin vs accepted pin, ≥ 300 m apart
   });
 
   // 🔒 lines are merge decisions too: they must show up in the merges list

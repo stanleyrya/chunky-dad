@@ -95,6 +95,20 @@ class BaseNormalizer {
             .trim();
     }
 
+    // Coordinate-pair check kept local so the normalizers stay platform-pure
+    // (mirrors SharedCore.isCoordinatePair: two finite floats, lat within ±90,
+    // lng within ±180). On the base class because both the page-provenance
+    // stamp and the maps-link pin rung need it.
+    isCoordinatePairString(value) {
+        if (typeof value !== 'string') return false;
+        const match = value.trim().match(/^(-?\d{1,3}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)$/);
+        if (!match) return false;
+        const lat = Number(match[1]);
+        const lng = Number(match[2]);
+        return Number.isFinite(lat) && Number.isFinite(lng)
+            && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+    }
+
     normalize(event) {
         return event;
     }
@@ -127,19 +141,6 @@ class BasicDataNormalizer extends BaseNormalizer {
 
         // Normalize basic text fields
         return this.core.normalizeEventTextFields(event);
-    }
-
-    // Coordinate-pair check kept local so this normalizer stays platform-pure
-    // (mirrors SharedCore.isCoordinatePair: two finite floats, lat within ±90,
-    // lng within ±180).
-    isCoordinatePairString(value) {
-        if (typeof value !== 'string') return false;
-        const match = value.trim().match(/^(-?\d{1,3}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)$/);
-        if (!match) return false;
-        const lat = Number(match[1]);
-        const lng = Number(match[2]);
-        return Number.isFinite(lat) && Number.isFinite(lng)
-            && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
     }
 
     stampPageProvenanceDefaults(event) {
@@ -943,6 +944,21 @@ const MAX_GEOCODE_QUERIES_PER_EVENT = 5;
 // drift without accepting a different block. Regular address-geocoded pins
 // keep the strict exact-house comparison.
 const POI_PIN_HOUSE_NUMBER_TOLERANCE = 20;
+
+// How far a page's maps-link pin (the ll= param a ticketing page publishes,
+// harvested by the AI web parser behind its venue-identity guard) may sit from
+// the pin the pipeline actually accepted before the disagreement is worth a
+// human's attention. The measured spread decides it:
+//   - Royal Vauxhall Tavern: ll= vs geocode  6 m — the same building;
+//   - Horizon:               ll= is 181 m from truth (the right venue, coarse
+//     platform geocode) — an imprecise pin, not a wrong one;
+//   - Westminster Pier:      ll= is 936 m from truth, on a DIFFERENT pier —
+//     the platform geocoded the street loosely and landed at Embankment Pier.
+// 300 m clears the worst observed BENIGN error (181 m) with room, and sits
+// well under the wrong-venue case (936 m), so the line fires for "these are
+// different places" and stays quiet for "same place, coarser pin". It only
+// governs a LOG: the accepted pin never changes because of it.
+const MAPS_LINK_CONFLICT_METERS = 300;
 
 // Street-type words a trailing directional can follow ("Cheshire Bridge Rd NE").
 const GEOCODE_STREET_TYPE_WORDS = 'Street|St|Road|Rd|Avenue|Ave|Boulevard|Blvd|Drive|Dr|Lane|Ln|Way|Place|Pl|Court|Ct|Parkway|Pkwy|Highway|Hwy';
@@ -2333,11 +2349,92 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
             }
         }
 
+        // Last rung of the pin ladder: the page's own maps-link pin, used only
+        // when curated data and the geocoder above both came up empty. Also
+        // reports a disagreement when they didn't.
+        if (this.applyMapsLinkCoordinateFallback(event)) modified = true;
+
         if (modified && this.core && typeof this.core.formatEventNotes === 'function') {
             event.notes = this.core.formatEventNotes(event);
         }
 
         return event;
+    }
+
+    // MAPS-LINK PIN — the last rung of the location ladder.
+    //
+    // The AI web parser harvests the ll= coordinate a ticketing page publishes
+    // in its "Open in maps" link and stashes it on _mapsLinkCoordinate, but
+    // ONLY after its identity guard confirms the name the link leads with IS
+    // the event's venue (placeholders like "Venue TBA" never get stashed).
+    // This method is where that candidate meets the pipeline's own answers,
+    // and the precedence is:
+    //
+    //   1. curated coordinates from data/bars — BarDataNormalizer fills them
+    //      earlier in this same pipeline, so they are already on the event
+    //      when we get here, and they are never touched;
+    //   2. a successful forward geocode of the address — it runs above in
+    //      this same method, so its result is likewise already on the event;
+    //   3. THIS pin — written only when 1 and 2 left location blank.
+    //
+    // The measured reason for that order (5 venues, scored against verified
+    // truth): the address geocode is near-perfect when it resolves (0–1 m) but
+    // returned NOTHING for 3 of 5 venues, and in exactly those 3 the maps-link
+    // pin was right (0–181 m). Where the maps-link pin was badly wrong
+    // (Westminster Pier, 936 m) the geocode succeeded and wins here. The two
+    // sources are complementary, and a blank pin is the only thing this fills.
+    //
+    // Returns true when it wrote a location (so the caller refreshes notes).
+    applyMapsLinkCoordinateFallback(event) {
+        const candidate = event && typeof event === 'object' ? event._mapsLinkCoordinate : null;
+        if (!candidate || typeof candidate !== 'object') return false;
+        const candidateLocation = typeof candidate.location === 'string' ? candidate.location.trim() : '';
+        const claimed = this.parseCoordinatePairString(candidateLocation);
+        // Fails closed on its own input rather than trusting the stash: shape,
+        // range, and Null Island (the shape a failed geocode takes) are
+        // re-checked here even though the parser already refused them.
+        if (!claimed || (claimed.lat === 0 && claimed.lon === 0)) return false;
+
+        const title = event.title || 'unknown';
+        const venueName = typeof candidate.venueName === 'string' && candidate.venueName.trim()
+            ? candidate.venueName.trim()
+            : (typeof event.bar === 'string' ? event.bar.trim() : 'unknown venue');
+        const existingLocation = typeof event.location === 'string' ? event.location.trim() : '';
+
+        if (existingLocation) {
+            // A better-sourced pin already won. Report the disagreement anyway:
+            // this is the line that surfaces the next Westminster Pier, where a
+            // ticketing platform's own map points at a different place than the
+            // venue's address does.
+            const accepted = this.parseCoordinatePairString(existingLocation);
+            if (accepted) {
+                const distanceMeters = Math.round(this.haversineDistanceKm(
+                    accepted.lat, accepted.lon, claimed.lat, claimed.lon) * 1000);
+                if (distanceMeters >= MAPS_LINK_CONFLICT_METERS) {
+                    const acceptedSource = typeof event.pinSource === 'string' && event.pinSource.trim()
+                        ? event.pinSource.trim()
+                        : 'unknown source';
+                    console.warn(`🗺️ MAPS LINK CONFLICT: "${title}" accepted pin ${existingLocation} (${acceptedSource}) is ${distanceMeters} m from the page's maps link ${candidateLocation} for "${venueName}" — accepted pin kept; verify which is the real venue`);
+                }
+            }
+            return false;
+        }
+
+        event.location = candidateLocation;
+        event.pinSource = 'maps-link';
+        console.log(`🗺️ OpenStreetMapNormalizer: No curated or geocoded pin for "${title}" — using the page's maps link for "${venueName}" -> ${candidateLocation}`);
+        return true;
+    }
+
+    // "lat, lon" text → { lat, lon } numbers, or null. Local to the
+    // normalizers (this file stays platform-pure and dependency-free);
+    // isCoordinatePairString above already vets the shape.
+    parseCoordinatePairString(value) {
+        if (!this.isCoordinatePairString(value)) return null;
+        const parts = String(value).split(',');
+        const lat = Number(parts[0].trim());
+        const lon = Number(parts[1].trim());
+        return Number.isFinite(lat) && Number.isFinite(lon) ? { lat, lon } : null;
     }
 }
 

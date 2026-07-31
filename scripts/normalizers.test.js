@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { LocationNormalizer, OpenStreetMapNormalizer, BasicDataNormalizer, BarDataNormalizer } = require('./normalizers');
+const { NormalizerPipeline, LocationNormalizer, OpenStreetMapNormalizer, BasicDataNormalizer, BarDataNormalizer } = require('./normalizers');
 const { SharedCore } = require('./shared-core');
 const { EventSchema } = require('./event-schema');
 
@@ -2941,4 +2941,179 @@ test('sanitizeDescriptionFormatting handles block tags, entities, links, heading
 
   // Escaped-asterisk runs collapse over the fixed point: \*\*TBC\*\** → TBC
   assert.equal(sanitizeDescriptionFormatting('\\*\\*TBC\\*\\**'), 'TBC');
+});
+
+// ---------------------------------------------------------------------------
+// PIN LADDER: curated coordinates > address geocode > the page's maps-link
+// pin (the ll= param a ticketing page publishes, harvested by the AI web
+// parser behind its venue-identity guard and stashed on _mapsLinkCoordinate).
+//
+// Measured against verified truth on 5 real Dice venues:
+//   venue              maps-link err   address-geocode err
+//   Concorde 2               7 m       NO RESULT
+//   Royal Vauxhall Tavern    6 m             0 m
+//   Westminster Pier       936 m             1 m   <- ll= is a DIFFERENT pier
+//   Horizon                181 m       NO RESULT
+//   Eden                     0 m       NO RESULT
+// The geocode is near-perfect when it resolves but failed outright on 3 of 5;
+// the maps-link pin always resolves and was right in exactly those 3. So the
+// geocode outranks it, and it fills only what the geocode left blank.
+// ---------------------------------------------------------------------------
+
+const PIN_LADDER_CITIES = {
+  london: { timezone: 'Europe/London', patterns: ['london'] },
+  brighton: { timezone: 'Europe/London', patterns: ['brighton'] }
+};
+
+// Curated London bars — Westminster Pier's curated pin is the CORRECT one.
+const PIN_LADDER_BARS = {
+  london: [
+    { name: 'Westminster Pier', city: 'london', address: 'Victoria Embankment, London SW1A 2JH', coordinates: '51.5022544, -0.1231736' }
+  ]
+};
+
+// Verbatim ll= values from the cached Dice event pages.
+const DICE_PIER_PIN = '51.5099822,-0.117819';
+const DICE_CONCORDE_PIN = '50.8172448,-0.122510799999986';
+const DICE_RVT_PIN = '51.4863391,-0.1217784';
+
+// What Nominatim returns for Westminster Pier's address — 1 m from truth.
+const WESTMINSTER_PIER_GEOCODE = {
+  lat: '51.5022544',
+  lon: '-0.1231736',
+  class: 'amenity',
+  type: 'ferry_terminal',
+  addresstype: 'amenity',
+  name: 'Westminster Pier',
+  display_name: 'Westminster Pier, Victoria Embankment, London, SW1A 2JH, United Kingdom',
+  address: { road: 'Victoria Embankment', city: 'London', postcode: 'SW1A 2JH' }
+};
+
+function createPinLadderNormalizer() {
+  const core = new SharedCore(PIN_LADDER_CITIES, { eventSchema: EventSchema, bars: PIN_LADDER_BARS });
+  const normalizer = new OpenStreetMapNormalizer(core);
+  normalizer.delayForRateLimit = async () => {};
+  return normalizer;
+}
+
+test('pin ladder: a successful address geocode outranks the page maps-link pin, and the disagreement is logged', async () => {
+  const normalizer = createPinLadderNormalizer();
+  const httpAdapter = createStubHttpAdapter([WESTMINSTER_PIER_GEOCODE]);
+  const event = {
+    title: 'BOATMINCE',
+    bar: 'Westminster Pier',
+    city: 'london',
+    address: 'Victoria Embankment, London SW1A 2JH',
+    _mapsLinkCoordinate: { location: DICE_PIER_PIN, venueName: 'Westminster Pier' }
+  };
+
+  const capture = captureConsole(() => {});
+  try {
+    await normalizer.normalizeAsync(event, httpAdapter);
+  } finally {
+    capture.restore();
+  }
+
+  // The geocode won; the maps-link pin (a different pier) never landed.
+  assert.equal(event.location, '51.5022544, -0.1231736');
+  assert.ok(String(event.pinSource).startsWith('geocoded-'), `geocode provenance expected, got ${event.pinSource}`);
+
+  // …and the ~940 m disagreement is reported so a human can check it.
+  const conflict = capture.lines.find(line => line.includes('MAPS LINK CONFLICT'));
+  assert.ok(conflict, `conflict line expected, got: ${JSON.stringify(capture.lines)}`);
+  assert.ok(conflict.includes('936 m'), conflict);
+  assert.ok(conflict.includes(DICE_PIER_PIN) && conflict.includes('51.5022544, -0.1231736'), conflict);
+  assert.ok(conflict.includes('accepted pin kept'), conflict);
+});
+
+test('pin ladder: the maps-link pin fills in when the address geocode finds nothing', async () => {
+  const normalizer = createPinLadderNormalizer();
+  const httpAdapter = createStubHttpAdapter([]); // Nominatim: no results, every rung
+  const event = {
+    title: 'BEEFMINCE x BRIGHTON',
+    bar: 'Concorde 2',
+    city: 'brighton',
+    address: 'Madeira Drive, Brighton BN2 1EN',
+    _mapsLinkCoordinate: { location: DICE_CONCORDE_PIN, venueName: 'Concorde 2' }
+  };
+
+  const capture = captureConsole(() => {});
+  try {
+    await normalizer.normalizeAsync(event, httpAdapter);
+  } finally {
+    capture.restore();
+  }
+
+  assert.equal(event.location, DICE_CONCORDE_PIN);
+  assert.equal(event.pinSource, 'maps-link');
+  assert.ok(capture.lines.some(line => line.includes('No curated or geocoded pin for "BEEFMINCE x BRIGHTON"')
+    && line.includes(DICE_CONCORDE_PIN)),
+    `fill line expected, got: ${JSON.stringify(capture.lines)}`);
+  // Nothing to disagree with — no conflict line.
+  assert.ok(!capture.lines.some(line => line.includes('MAPS LINK CONFLICT')), JSON.stringify(capture.lines));
+});
+
+test('pin ladder: curated coordinates win outright — the maps-link pin never displaces them', async () => {
+  const pipeline = new NormalizerPipeline();
+  pipeline.setCore(new SharedCore(PIN_LADDER_CITIES, { eventSchema: EventSchema, bars: PIN_LADDER_BARS }));
+  const osm = pipeline.normalizers[pipeline.normalizers.length - 1];
+  osm.delayForRateLimit = async () => {};
+  // A geocode result that would ALSO have been accepted, to prove the curated
+  // pin short-circuits the ladder rather than merely winning a tie.
+  const httpAdapter = createStubHttpAdapter([WESTMINSTER_PIER_GEOCODE]);
+
+  const capture = captureConsole(() => {});
+  let normalized;
+  try {
+    normalized = await pipeline.normalizeEventAsync({
+      title: 'BOATMINCE',
+      bar: 'Westminster Pier',
+      city: 'london',
+      startDate: new Date('2026-08-30T18:00:00.000Z'),
+      _mapsLinkCoordinate: { location: DICE_PIER_PIN, venueName: 'Westminster Pier' }
+    }, httpAdapter);
+  } finally {
+    capture.restore();
+  }
+
+  assert.equal(normalized.location, '51.5022544, -0.1231736', 'the curated pin is kept');
+  assert.equal(normalized.pinSource, 'curated');
+  assert.equal(httpAdapter.requests.length, 0, 'a curated pin means no geocode request at all');
+  const conflict = capture.lines.find(line => line.includes('MAPS LINK CONFLICT'));
+  assert.ok(conflict && conflict.includes('(curated)'), `curated-vs-maps-link conflict expected, got: ${JSON.stringify(capture.lines)}`);
+});
+
+test('pin ladder: a maps-link pin agreeing with the accepted pin logs no conflict, and junk is ignored', async () => {
+  const normalizer = createPinLadderNormalizer();
+
+  // RVT: the maps-link pin and the geocode are the same building (0 m).
+  const agreeing = {
+    title: 'BEEFMINCE x RVT',
+    location: DICE_RVT_PIN,
+    pinSource: 'geocoded-exact',
+    address: '372 Kennington Ln, London SE11 5HY',
+    _mapsLinkCoordinate: { location: '51.4863391,-0.1217784', venueName: 'The Royal Vauxhall Tavern' }
+  };
+  const agreeingCapture = captureConsole(() => {});
+  try {
+    await normalizer.normalizeAsync(agreeing, createStubHttpAdapter([]));
+  } finally {
+    agreeingCapture.restore();
+  }
+  assert.equal(agreeing.location, DICE_RVT_PIN);
+  assert.equal(agreeing.pinSource, 'geocoded-exact');
+  assert.ok(!agreeingCapture.lines.some(line => line.includes('MAPS LINK CONFLICT')), JSON.stringify(agreeingCapture.lines));
+
+  // An unusable stash is ignored (the parser never writes these, but the
+  // rung fails closed rather than trusting its input).
+  for (const stash of [null, {}, { location: '' }, { location: 'not,coords' }, { location: '0,0' }, { location: '91,0' }]) {
+    const event = { title: 'X', bar: 'Somewhere', city: 'london', _mapsLinkCoordinate: stash };
+    assert.equal(normalizer.applyMapsLinkCoordinateFallback(event), false, JSON.stringify(stash));
+    assert.equal(event.location, undefined, JSON.stringify(stash));
+  }
+
+  // No stash at all changes nothing.
+  const untouched = { title: 'X', bar: 'Somewhere', city: 'london' };
+  assert.equal(normalizer.applyMapsLinkCoordinateFallback(untouched), false);
+  assert.equal(untouched.location, undefined);
 });

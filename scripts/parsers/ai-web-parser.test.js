@@ -8327,37 +8327,35 @@ test('maps-link coordinates: identity guard accepts the event bar, rejects place
   assert.equal(parser.isPlaceholderVenueName('Tabard Theatre'), false);
 });
 
-test('maps-link coordinates: curated data always wins and nothing is written to event data (report-only)', () => {
+test('maps-link coordinates: the parser only stashes the candidate — it never writes location', () => {
   const parser = createMapsLinkParser();
 
   // Westminster Pier — Dice's pin is ~940 m off, onto a different pier. The
-  // curated coordinate wins and the event is left untouched.
+  // curated coordinate is reported as the winner and the event is untouched.
   const pier = { title: 'BOATMINCE', bar: 'Westminster Pier', city: 'london' };
   const pierLogs = captureLogs(() => parser.logMapsLinkCoordinateCandidates([pier], { html: diceHtml(DICE_PIER_HREF) }));
   assert.ok(pierLogs.some(line => line.includes('curated coordinate 51.5022544, -0.1231736 wins (candidate is 936 m away)')),
     JSON.stringify(pierLogs));
-  assert.ok(pierLogs.some(line => line.includes('no fill (report-only)')), JSON.stringify(pierLogs));
+  assert.ok(pierLogs.some(line => line.includes('held as evidence only')), JSON.stringify(pierLogs));
   assert.equal(pier.location, undefined);
-  assert.equal(pier._mapsLinkCoordinate.fillBlankEligible, false);
 
   // An event that already carries a location is never clobbered.
   const located = { title: 'BEEFMINCE x RVT', bar: 'Royal Vauxhall Tavern', city: 'london', location: '51.1,-0.1' };
   const locatedLogs = captureLogs(() => parser.logMapsLinkCoordinateCandidates([located], { html: diceHtml(DICE_RVT_HREF) }));
   assert.ok(locatedLogs.some(line => line.includes('event location already 51.1,-0.1')), JSON.stringify(locatedLogs));
   assert.equal(located.location, '51.1,-0.1');
-  assert.equal(located._mapsLinkCoordinate.fillBlankEligible, false);
 
-  // The one shape a pin could fill: curated bar with NO coordinate, blank
-  // event location. Reported as eligible — still nothing written today.
+  // Curated bar with NO coordinate, blank event location: the candidate is
+  // held for the pin ladder, where the address geocode still outranks it.
   const horizon = { title: 'BEEFMINCE Brighton Pride', bar: 'Horizon', city: 'brighton' };
   const horizonLogs = captureLogs(() => parser.logMapsLinkCoordinateCandidates([horizon], { html: diceHtml(DICE_HORIZON_HREF) }));
   assert.ok(horizonLogs.some(line => line.includes('curated bar matched but carries no coordinate')
-    && line.includes('would fill blank (report-only)')), JSON.stringify(horizonLogs));
+    && line.includes('held for the pin ladder')), JSON.stringify(horizonLogs));
   assert.equal(horizon.location, undefined);
-  assert.equal(horizon._mapsLinkCoordinate.fillBlankEligible, true);
+  assert.equal(horizon._mapsLinkCoordinate.location, '50.819936,-0.140382');
 
-  // Only the internal underscore stash is ever added — no event field is
-  // touched by this pass.
+  // Only the internal underscore stash is ever added by THIS pass — the pin
+  // decision belongs to OpenStreetMapNormalizer.
   assert.deepEqual(Object.keys(horizon).filter(key => !key.startsWith('_')).sort(),
     ['bar', 'city', 'title']);
 });

@@ -286,7 +286,9 @@ const GUARD_LINE_RES = {
     coordsPreserved: /📍 MERGE: ".*?" location kept calendar coordinates/,
     barPreserved: /📍 MERGE: ".*?" bar kept from calendar/,
     locationPreserved: /📍 MERGE: ".*?" location kept from (?:calendar|existing)/,
-    arbitrationDeterministic: /🔒 MERGE: ".*?" field=\S+ resolved deterministically/
+    arbitrationDeterministic: /🔒 MERGE: ".*?" field=\S+ resolved deterministically/,
+    mapsLinkPin: /🗺️ \w*Normalizer: No curated or geocoded pin for ".*?" — using the page's maps link/,
+    mapsLinkConflict: /🗺️ MAPS LINK CONFLICT: ".*?" accepted pin .*? is \d+ m from the page's maps link/
 };
 
 function createGuardCounts() {
