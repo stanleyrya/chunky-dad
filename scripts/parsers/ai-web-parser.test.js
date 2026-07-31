@@ -8210,3 +8210,143 @@ test('strips a leading date phrase from an event title, and only then', () => {
   assert.equal(strip('Bear Week Sitges - Opening Party'), 'Bear Week Sitges - Opening Party');
   assert.equal(strip(''), '');
 });
+
+// ---------------------------------------------------------------------------
+// Maps-link coordinate candidates (Dice.fm event pages publish the venue's
+// pin in the ll= param of their "Open in maps" link — high value, but Dice
+// geocoded Westminster Pier ~940 m off, onto a DIFFERENT pier, and pins
+// "Venue TBA" at the centre of London)
+// ---------------------------------------------------------------------------
+
+// Verbatim hrefs from the cached Dice pages (raw HTML form: &amp;-encoded,
+// and the Horizon link carries a numeric entity INSIDE the query).
+const DICE_CONCORDE_HREF = 'https://maps.google.com/?q=Concorde%202%2C%20Madeira%20Shelter%20Hall%2C%20Madeira%20Dr%2C%20Brighton%20BN2%201EN&amp;ll=50.8172448,-0.122510799999986';
+const DICE_RVT_HREF = 'https://maps.google.com/?q=The%20Royal%20Vauxhall%20Tavern%2C%20372%20Kennington%20Ln%2C%20London%20SE11%205HY%2C%20UK&amp;ll=51.4863391,-0.1217784';
+const DICE_HORIZON_HREF = 'https://maps.google.com/?q=Horizon%2C%20214%20King&#x27;s%20Road%2C%20Brighton%2C%20BN1%201NB%2C%20United%20Kingdom&amp;ll=50.819936,-0.140382';
+const DICE_TBA_HREF = 'https://maps.google.com/?q=Venue%20TBA%2C%20London%2C%20London%2C%20UK&amp;ll=51.5073509,-0.1277583';
+const DICE_PIER_HREF = 'https://maps.google.com/?q=Westminster%20Pier%2C%20Victoria%20Embankment%2C%20London%2C%20UK&amp;ll=51.5099822,-0.117819';
+const diceHtml = (href) => `<div class="Venue"><a href="${href}" target="_blank" rel="noreferrer">Open in maps</a></div>`;
+
+const MAPS_LINK_CURATED_BARS = {
+  london: [
+    { name: 'Royal Vauxhall Tavern', city: 'london', coordinates: '51.4863391, -0.1217784' },
+    { name: 'Westminster Pier', city: 'london', coordinates: '51.5022544, -0.1231736' }
+  ],
+  brighton: [
+    { name: 'Concorde 2', city: 'brighton', coordinates: '50.8172912, -0.1225875' },
+    // Curated but coordinate-less — the only shape a maps-link pin could fill.
+    { name: 'Horizon', city: 'brighton', address: '211-214 Kings Road Arches, Brighton BN1 1NB' }
+  ]
+};
+
+function createMapsLinkParser() {
+  const parser = createParser();
+  parser.core = new SharedCore({}, { eventSchema: EventSchema, bars: MAPS_LINK_CURATED_BARS });
+  return parser;
+}
+
+test('extractMapsLinkCoordinateCandidates reads ll= and the leading venue name from real Dice hrefs', () => {
+  const parser = createMapsLinkParser();
+
+  assert.deepEqual(parser.extractMapsLinkCoordinateCandidates(diceHtml(DICE_CONCORDE_HREF)).map(
+    candidate => [candidate.venueName, candidate.location]),
+    [['Concorde 2', '50.8172448,-0.122510799999986']]);
+
+  assert.deepEqual(parser.extractMapsLinkCoordinateCandidates(diceHtml(DICE_RVT_HREF)).map(
+    candidate => [candidate.venueName, candidate.location]),
+    [['The Royal Vauxhall Tavern', '51.4863391,-0.1217784']]);
+
+  // The '#' of a numeric entity inside the query is NOT a URL fragment —
+  // stripping it as one truncated the link before the ll= (Horizon page).
+  assert.deepEqual(parser.extractMapsLinkCoordinateCandidates(diceHtml(DICE_HORIZON_HREF)).map(
+    candidate => [candidate.venueName, candidate.location]),
+    [['Horizon', '50.819936,-0.140382']]);
+
+  // One candidate per distinct pin+name, however many times the page links it.
+  assert.equal(parser.extractMapsLinkCoordinateCandidates(
+    diceHtml(DICE_RVT_HREF) + diceHtml(DICE_RVT_HREF)).length, 1);
+
+  // Non-map links, map links without ll=, and unusable pins yield nothing.
+  assert.deepEqual(parser.extractMapsLinkCoordinateCandidates(
+    '<a href="https://dice.fm/event?ll=51.4863391,-0.1217784">x</a>'), []);
+  assert.deepEqual(parser.extractMapsLinkCoordinateCandidates(
+    '<a href="https://maps.google.com/?q=The+Eagle">x</a>'), []);
+  assert.deepEqual(parser.extractMapsLinkCoordinateCandidates(
+    '<a href="https://maps.google.com/?q=Nowhere&amp;ll=0,0">x</a>'), []);
+  assert.deepEqual(parser.extractMapsLinkCoordinateCandidates(
+    '<a href="https://maps.google.com/?q=Nowhere&amp;ll=91.5,-0.12">x</a>'), []);
+  assert.deepEqual(parser.extractMapsLinkCoordinateCandidates(
+    '<a href="https://maps.google.com/?q=Nowhere&amp;ll=not,coords">x</a>'), []);
+});
+
+test('maps-link coordinates: identity guard accepts the event bar, rejects placeholders and unrelated venues', () => {
+  const parser = createMapsLinkParser();
+  const html = diceHtml(DICE_RVT_HREF);
+
+  // Same venue, casing/"The " tolerant (curated matching's own strictness).
+  const matched = { title: 'BEEFMINCE x RVT', bar: 'Royal Vauxhall Tavern', city: 'london' };
+  const matchedLogs = captureLogs(() => parser.logMapsLinkCoordinateCandidates([matched], { html }));
+  assert.ok(matchedLogs.some(line => line.includes('identity guard PASSED')), JSON.stringify(matchedLogs));
+  assert.equal(matched._mapsLinkCoordinate.location, '51.4863391,-0.1217784');
+
+  // A page's unrelated map widget never pins an event.
+  const unrelated = { title: 'Some other party', bar: 'Eagle London', city: 'london' };
+  const unrelatedLogs = captureLogs(() => parser.logMapsLinkCoordinateCandidates([unrelated], { html }));
+  assert.ok(unrelatedLogs.some(line => line.includes('identity guard REJECTED')), JSON.stringify(unrelatedLogs));
+  assert.equal(unrelated._mapsLinkCoordinate, undefined);
+
+  // An event with no bar has no identity to check against.
+  const barless = { title: 'Some other party', city: 'london' };
+  captureLogs(() => parser.logMapsLinkCoordinateCandidates([barless], { html }));
+  assert.equal(barless._mapsLinkCoordinate, undefined);
+
+  // "Venue TBA" is a city-centre placeholder, not a venue — rejected outright
+  // even when the event's own bar says the same words.
+  const tba = { title: 'SPOOKMINCE', bar: 'Venue TBA', city: 'london' };
+  const tbaLogs = captureLogs(() => parser.logMapsLinkCoordinateCandidates([tba], { html: diceHtml(DICE_TBA_HREF) }));
+  assert.ok(tbaLogs.some(line => line.includes('REJECTED (placeholder venue name "Venue TBA")')), JSON.stringify(tbaLogs));
+  assert.equal(tba._mapsLinkCoordinate, undefined);
+
+  assert.equal(parser.isPlaceholderVenueName('TBA'), true);
+  assert.equal(parser.isPlaceholderVenueName('Venue TBC'), true);
+  assert.equal(parser.isPlaceholderVenueName('Venue to be announced'), true);
+  assert.equal(parser.isPlaceholderVenueName('Venue'), true);
+  assert.equal(parser.isPlaceholderVenueName(''), true);
+  assert.equal(parser.isPlaceholderVenueName('The Royal Vauxhall Tavern'), false);
+  assert.equal(parser.isPlaceholderVenueName('Tabard Theatre'), false);
+});
+
+test('maps-link coordinates: curated data always wins and nothing is written to event data (report-only)', () => {
+  const parser = createMapsLinkParser();
+
+  // Westminster Pier — Dice's pin is ~940 m off, onto a different pier. The
+  // curated coordinate wins and the event is left untouched.
+  const pier = { title: 'BOATMINCE', bar: 'Westminster Pier', city: 'london' };
+  const pierLogs = captureLogs(() => parser.logMapsLinkCoordinateCandidates([pier], { html: diceHtml(DICE_PIER_HREF) }));
+  assert.ok(pierLogs.some(line => line.includes('curated coordinate 51.5022544, -0.1231736 wins (candidate is 936 m away)')),
+    JSON.stringify(pierLogs));
+  assert.ok(pierLogs.some(line => line.includes('no fill (report-only)')), JSON.stringify(pierLogs));
+  assert.equal(pier.location, undefined);
+  assert.equal(pier._mapsLinkCoordinate.fillBlankEligible, false);
+
+  // An event that already carries a location is never clobbered.
+  const located = { title: 'BEEFMINCE x RVT', bar: 'Royal Vauxhall Tavern', city: 'london', location: '51.1,-0.1' };
+  const locatedLogs = captureLogs(() => parser.logMapsLinkCoordinateCandidates([located], { html: diceHtml(DICE_RVT_HREF) }));
+  assert.ok(locatedLogs.some(line => line.includes('event location already 51.1,-0.1')), JSON.stringify(locatedLogs));
+  assert.equal(located.location, '51.1,-0.1');
+  assert.equal(located._mapsLinkCoordinate.fillBlankEligible, false);
+
+  // The one shape a pin could fill: curated bar with NO coordinate, blank
+  // event location. Reported as eligible — still nothing written today.
+  const horizon = { title: 'BEEFMINCE Brighton Pride', bar: 'Horizon', city: 'brighton' };
+  const horizonLogs = captureLogs(() => parser.logMapsLinkCoordinateCandidates([horizon], { html: diceHtml(DICE_HORIZON_HREF) }));
+  assert.ok(horizonLogs.some(line => line.includes('curated bar matched but carries no coordinate')
+    && line.includes('would fill blank (report-only)')), JSON.stringify(horizonLogs));
+  assert.equal(horizon.location, undefined);
+  assert.equal(horizon._mapsLinkCoordinate.fillBlankEligible, true);
+
+  // Only the internal underscore stash is ever added — no event field is
+  // touched by this pass.
+  assert.deepEqual(Object.keys(horizon).filter(key => !key.startsWith('_')).sort(),
+    ['bar', 'city', 'title']);
+});
