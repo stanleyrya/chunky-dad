@@ -69,5 +69,29 @@
     "city": "sf",
     "address": "1123 Folsom Street, San Francisco, California, 94103",
     "coordinates": "37.7761653, -122.4083643"
+  },
+  {
+    "name": "F8 Nightclub & Bar",
+    "city": "sf",
+    "address": "1192 FOLSOM ST",
+    "coordinates": "37.7752814, -122.4099546"
+  },
+  {
+    "name": "F8 NIGHTCLUB",
+    "city": "sf",
+    "address": "1192 Folsom St, San Francisco, CA 94103, USA",
+    "coordinates": "37.7752814, -122.4099546"
+  },
+  {
+    "name": "San Francisco Eagle Bar",
+    "city": "sf",
+    "address": "398 12th Street, San Francisco, CA 94103",
+    "coordinates": "37.7699933, -122.4133375"
+  },
+  {
+    "name": "The Public Works SF",
+    "city": "sf",
+    "address": "161 Erie Street, San Francisco, CA 94103",
+    "coordinates": "37.7688931, -122.4192651"
   }
 ]

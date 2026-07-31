@@ -66,5 +66,11 @@
     "palette": "#e50b11:57:23 #ffffff:22:0 #0c1514:15:1 #dd8889:2:11 #8f1214:2:16",
     "accent": "#e50b11",
     "faviconPlate": "#ffffff"
+  },
+  {
+    "name": "The Jackhammer Complex",
+    "city": "chicago",
+    "address": "6406 N Clark St, Chicago, IL 60626",
+    "coordinates": "41.9993427, -87.6709201"
   }
 ]

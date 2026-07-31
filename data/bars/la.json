@@ -61,5 +61,17 @@
     "city": "la",
     "address": "2020 East Artesia Boulevard, Long Beach, California, 90805",
     "coordinates": "33.8744394, -118.1680438"
+  },
+  {
+    "name": "The Globe",
+    "city": "la",
+    "address": "740 South Broadway, Los Angeles, CA 90014",
+    "coordinates": "33.8302479, -118.3875975"
+  },
+  {
+    "name": "Sanctuary Studios",
+    "city": "la",
+    "address": "13012 Athens Way, Los Angeles, CA 90061",
+    "coordinates": "33.9148268, -118.2817851"
   }
 ]
