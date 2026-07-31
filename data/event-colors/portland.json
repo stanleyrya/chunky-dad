@@ -92,6 +92,16 @@
     "accent": "#345ab4"
   },
   {
+    "slug": "chunk-portland-the-return-47dcb647",
+    "url": "https://www.chunk-party.com/event-details/chunk-portland-the-return-saturday-march-14th",
+    "faviconBg": "#f6f4f5",
+    "faviconFg": "#2e2933",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#3b3386:23:13 #a98d78:15:5 #52544a:14:2 #4568a8:12:11 #aa546d:9:12",
+    "accent": "#3b3386"
+  },
+  {
     "slug": "chunk-portland-the-return-saturday-march-14th-47dcb647",
     "url": "https://www.chunk-party.com/event-details/chunk-portland-the-return-saturday-march-14th",
     "faviconBg": "#f6f4f5",
@@ -120,6 +130,16 @@
     "paletteSource": "flyer",
     "palette": "#2cb3f4:38:14 #f4f543:15:19 #ddd9d5:11:1 #6dca4c:7:19 #f55bbd:7:21",
     "accent": "#2cb3f4"
+  },
+  {
+    "slug": "nova-box-12aa4185",
+    "url": "https://www.chunk-party.com",
+    "faviconBg": "#f6f4f5",
+    "faviconFg": "#2e2933",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#611d22:19:10 #89211b:18:14 #3c1b2b:14:5 #a2423b:13:13 #342d71:12:11",
+    "accent": "#89211b"
   },
   {
     "slug": "nova-pdx-12aa4185",
