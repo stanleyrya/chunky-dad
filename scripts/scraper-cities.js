@@ -351,7 +351,8 @@ const scraperCities = {
     "timezone": "America/New_York",
     "patterns": [
       "poconos",
-      "pocono"
+      "pocono",
+      "east stroudsburg"
     ],
     "coordinates": {
       "lat": 41.0339,
@@ -387,7 +388,8 @@ const scraperCities = {
     "patterns": [
       "fort lauderdale",
       "fll",
-      "ft lauderdale"
+      "ft lauderdale",
+      "wilton manors"
     ],
     "coordinates": {
       "lat": 26.1224,

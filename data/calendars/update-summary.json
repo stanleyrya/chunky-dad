@@ -3,7 +3,7 @@
     "atlanta": {
       "name": "Atlanta",
       "status": "success",
-      "dataLength": 6477,
+      "dataLength": 6557,
       "eventCount": 5
     },
     "berlin": {
@@ -21,7 +21,7 @@
     "boston": {
       "name": "Boston",
       "status": "success",
-      "dataLength": 1355,
+      "dataLength": 1382,
       "eventCount": 1
     },
     "brighton": {
@@ -33,7 +33,7 @@
     "chicago": {
       "name": "Chicago",
       "status": "success",
-      "dataLength": 23374,
+      "dataLength": 23341,
       "eventCount": 18
     },
     "dallas": {
@@ -63,8 +63,8 @@
     "la": {
       "name": "Los Angeles",
       "status": "success",
-      "dataLength": 11832,
-      "eventCount": 10
+      "dataLength": 13577,
+      "eventCount": 11
     },
     "london": {
       "name": "London",
@@ -75,7 +75,7 @@
     "nola": {
       "name": "New Orleans",
       "status": "success",
-      "dataLength": 2564,
+      "dataLength": 2634,
       "eventCount": 2
     },
     "nyc": {
@@ -105,8 +105,8 @@
     "portland": {
       "name": "Portland",
       "status": "success",
-      "dataLength": 24383,
-      "eventCount": 18
+      "dataLength": 25642,
+      "eventCount": 19
     },
     "ptown": {
       "name": "Provincetown",
@@ -123,13 +123,13 @@
     "seattle": {
       "name": "Seattle",
       "status": "success",
-      "dataLength": 15667,
+      "dataLength": 15799,
       "eventCount": 12
     },
     "sf": {
       "name": "San Francisco",
       "status": "success",
-      "dataLength": 19970,
+      "dataLength": 19885,
       "eventCount": 15
     },
     "sitges": {

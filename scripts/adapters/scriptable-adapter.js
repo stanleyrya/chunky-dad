@@ -746,8 +746,29 @@ class ScriptableAdapter {
     if (city && this.cities[city] && this.cities[city].calendar) {
       return this.cities[city].calendar;
     }
-    // Return fallback name - system will handle missing calendar appropriately
-    return `chunky-dad-${city}`;
+    // Fail closed (run 2026-07-31, Club Chub): the old fallback interpolated
+    // the raw city string and produced "chunky-dad-wilton manors" — a target
+    // with a space in it, naming a calendar that cannot exist. Every
+    // unrecognized city now routes to the single unknown target instead, and
+    // says so once per distinct city so the run shows the drop.
+    const target = SharedCore.resolveCalendarTarget(this.cities, city);
+    this.logUnrecognizedCalendarCity(target);
+    return target.name;
+  }
+
+  // Additive, once per distinct unrecognized city (getCalendarName runs per
+  // event; the same city must not spam the log).
+  logUnrecognizedCalendarCity(target) {
+    if (!target || target.recognized) return;
+    if (!this._unrecognizedCalendarCities) {
+      this._unrecognizedCalendarCities = new Set();
+    }
+    const key = target.requested || "(empty)";
+    if (this._unrecognizedCalendarCities.has(key)) return;
+    this._unrecognizedCalendarCities.add(key);
+    console.log(
+      `📱 Scriptable: ⚠️ Unrecognized city "${key}" has no configured calendar — routed to "${target.name}" (no calendar name is ever invented from a city string)`,
+    );
   }
 
   // Get timezone for a city

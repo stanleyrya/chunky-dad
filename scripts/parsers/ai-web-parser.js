@@ -1064,7 +1064,7 @@ class AiWebParser {
         // AFTER the address gate (so a matching address twin still drops via
         // "matches venue name") and BEFORE the convergence rescue (so a
         // dropped bar frees the rescue to adopt the real venue).
-        this.applyBarPlausibilityGate(event);
+        this.applyBarPlausibilityGate(event, cityConfig);
         // Deterministic bar-convergence rescue: only when extraction left NO
         // bar (including a gate-dropped one). Every plausible name line from
         // the page text, the OCR text, and the curated bars corpus is a
@@ -13614,6 +13614,20 @@ TEXT:
         if (!reason && !this.isPlausiblyAddressShaped(address)) {
             reason = 'not address-shaped';
         }
+        // Doubled leading segment ("Downtown Los Angeles, Downtown Los
+        // Angeles, Los Angeles, CA, USA" — run 2026-07-31, Club Chub): a real
+        // address never repeats its own first component, so this shape is a
+        // geocoder that was handed a district instead of a street and echoed
+        // it back. Only fires when the event already carries a city, so the
+        // drop can never destroy the sole city signal (LocationNormalizer
+        // falls back to the address when event.city is empty). Verified
+        // against all 106 curated bar addresses: zero matches.
+        if (!reason && typeof event.city === 'string' && event.city.trim()) {
+            const segments = address.split(',').map(part => this.normalizeAdjacencyText(part)).filter(Boolean);
+            if (segments.length >= 2 && segments[0] === segments[1]) {
+                reason = 'duplicate leading segment (failed geocode)';
+            }
+        }
         if (!reason) return event;
         console.log(`🤖 AI Web: Dropped implausible address "${address}" (${reason})`);
         delete event.address;
@@ -13648,6 +13662,38 @@ TEXT:
         return false;
     }
 
+    // City/district-shape test for a BAR value (run 2026-07-31, Club Chub:
+    // "D>U>R>O is back NEW OUTDOOR LOCATION" published no venue — the title
+    // says so — and extraction stored bar "Downtown Los Angeles" with the
+    // failed-geocode address "Downtown Los Angeles, Downtown Los Angeles,
+    // Los Angeles, CA, USA"). A place is not a venue. Same contract as the
+    // convergence rescue's 'city name' rejection in
+    // getVenueLineCandidateRejection, reused here so the two agree, and
+    // driven ENTIRELY by the cities config — no new list of place names:
+    //   - whole-value equality against a configured city key, display name,
+    //     pattern, or alias (containment would kill "SF Eagle"), so
+    //     "Downtown Los Angeles" (an la pattern) and "Wilton Manors" (a
+    //     fort-lauderdale pattern) both qualify;
+    //   - bar-name-key equality with the event's OWN city value, which
+    //     catches a city the config spells differently.
+    // Fails open on anything else: no cities config, no match, empty → false.
+    // Returns the drop reason ('' when the value survives).
+    getCityShapedBarRejection(value, event, cityConfig) {
+        const text = String(value || '').trim();
+        if (!text) return '';
+        const normalized = this.normalizeAdjacencyText(text);
+        if (!normalized) return '';
+        const entry = this.findCityConfigEntry(normalized, cityConfig);
+        if (entry) return `city name — resolves to city "${entry.key}"`;
+        const barNameKey = candidate => (this.core && typeof this.core.normalizeBarNameKey === 'function'
+            ? this.core.normalizeBarNameKey(candidate)
+            : String(candidate || '').toLowerCase().replace(/^\s*the\s+/, '').replace(/[^a-z0-9]/g, ''));
+        const eventCity = event && typeof event.city === 'string' ? event.city.trim() : '';
+        const key = barNameKey(text);
+        if (eventCity && key && key === barNameKey(eventCity)) return "city name — equals the event's own city";
+        return '';
+    }
+
     // Post-extraction bar plausibility gate (mirror of
     // applyAddressPlausibilityGate: flag-and-drop, additive log): an
     // address-shaped bar VALUE is never a valid extraction. Run
@@ -13657,12 +13703,19 @@ TEXT:
     // venue "Legacy". Runs BEFORE applyBarConvergenceRescue so a dropped bar
     // frees the rescue to fire. Fails open: no bar, or not address-shaped →
     // untouched.
-    applyBarPlausibilityGate(event) {
+    // A bar that is a CITY/district rather than a venue drops the same way
+    // (see getCityShapedBarRejection) — an undisclosed venue must leave the
+    // bar EMPTY so the convergence rescue is free to fire and so nothing
+    // downstream treats a district centroid as a venue.
+    applyBarPlausibilityGate(event, cityConfig = null) {
         if (!event || typeof event !== 'object') return event;
         const bar = typeof event.bar === 'string' ? event.bar.trim() : '';
         if (!bar) return event;
-        if (!this.isAddressShapedBarValue(bar)) return event;
-        console.log(`🤖 AI Web: Dropped implausible bar "${bar}" (address-shaped)`);
+        const reason = this.isAddressShapedBarValue(bar)
+            ? 'address-shaped'
+            : this.getCityShapedBarRejection(bar, event, cityConfig);
+        if (!reason) return event;
+        console.log(`🤖 AI Web: Dropped implausible bar "${bar}" (${reason})`);
         delete event.bar;
         return event;
     }

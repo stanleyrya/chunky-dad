@@ -303,8 +303,28 @@ class WebAdapter {
         if (city && this.cities[city] && this.cities[city].calendar) {
             return this.cities[city].calendar;
         }
-        // Return fallback name - system will handle missing calendar appropriately
-        return `chunky-dad-${city}`;
+        // Fail closed — same contract as the Scriptable adapter: an
+        // unrecognized city never mints `chunky-dad-<raw string>` (run
+        // 2026-07-31 produced "chunky-dad-wilton manors", a target with a
+        // space in it). Routes to the one unknown target, logged once.
+        const core = this.getSharedCoreRef();
+        const target = core && typeof core.resolveCalendarTarget === 'function'
+            ? core.resolveCalendarTarget(this.cities, city)
+            : { name: 'chunky-dad-unknown', recognized: false, requested: String(city == null ? '' : city).trim() };
+        this.logUnrecognizedCalendarCity(target);
+        return target.name;
+    }
+
+    // Additive, once per distinct unrecognized city.
+    logUnrecognizedCalendarCity(target) {
+        if (!target || target.recognized) return;
+        if (!this._unrecognizedCalendarCities) {
+            this._unrecognizedCalendarCities = new Set();
+        }
+        const key = target.requested || '(empty)';
+        if (this._unrecognizedCalendarCities.has(key)) return;
+        this._unrecognizedCalendarCities.add(key);
+        console.log(`🖥️ WebAdapter: ⚠️ Unrecognized city "${key}" has no configured calendar — routed to "${target.name}" (no calendar name is ever invented from a city string)`);
     }
 
     // HTTP Adapter Implementation

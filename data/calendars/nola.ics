@@ -8,20 +8,21 @@ X-WR-TIMEZONE:America/Chicago
 BEGIN:VEVENT
 DTSTART:20260905T020000Z
 DTEND:20260905T070000Z
-DTSTAMP:20260726T182041Z
+DTSTAMP:20260731T161740Z
 UID:74648B34-07A1-4BD2-8E78-D67B991A920E
 CREATED:20260514T005857Z
 DESCRIPTION:bar: Joy Theater\naddress: 1200 Canal St\, New Orleans\, LA 701
  12\ntimezone: America/Chicago\nticketUrl: https://www.ticketmaster.com/even
- t/1B006454A32CE162\ninstagram: https://www.instagram.com/bearracuda\nimage:
-  https://bearracuda.com/wp-content/uploads/2026/03/igdecad-2.jpg\nshortName
- : Bear-rac-uda\nwebsite: https://bearracuda.com/events/decadence/\nbearSour
- ce: keyword\nkey: bearracuda-new-orleans⚜️|2026-09-05|joy theater\ndescript
- ion: Music & Entertainment\n• DJ MATEO SEGADE\n• KELLY (Shoes) LIVE!\npinSo
- urce: curated\naddressSource: curated\nimageSource: og-image\nbarSource: pa
- ge-adjacent\ngmaps: https://www.google.com/maps/search/?api=1&query=Joy%20T
- heater%2C%201200%20Canal%20St%2C%20New%20Orleans%2C%20LA%2070112
-LAST-MODIFIED:20260726T173331Z
+ t/1B006454A32CE162\nimage: https://bearracuda.com/wp-content/uploads/2026/0
+ 3/igdecad-2.jpg\nimageVertical: https://bearracuda.com/wp-content/uploads/2
+ 026/03/igdecad-2.jpg\nwebsite: https://bearracuda.com/events/decadence/\nsh
+ ortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\nfav
+ icon: https://bearracuda.com/\nbearSource: keyword\nkey: bearracuda-new-orl
+ eans⚜️|2026-09-05|joy theater\ndescription: Music & Entertainment\n• DJ MAT
+ EO SEGADE\n• KELLY (Shoes) LIVE!\npinSource: curated\naddressSource: curate
+ d\nimageSource: og-image\nbarSource: page-adjacent\ngmaps: https://www.goog
+ le.com/maps/search/?api=1&query=29.9559524%2C-90.0738975
+LAST-MODIFIED:20260731T155211Z
 LOCATION:29.9559524\, -90.0738975
 SEQUENCE:0
 STATUS:CONFIRMED
@@ -33,7 +34,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20250830T020000Z
 DTEND:20250830T070000Z
-DTSTAMP:20260726T182041Z
+DTSTAMP:20260731T161740Z
 UID:96ED5A57-14F4-4189-81C5-1AA44B8E365F
 CREATED:20250830T003601Z
 DESCRIPTION:description: Music & Entertainment\n• Matt Stands &amp\; Freddy

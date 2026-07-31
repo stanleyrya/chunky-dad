@@ -4898,6 +4898,130 @@ test('deduplicateEvents treats a URL shared by 3+ events as a listing page (no s
   assert.equal(result.length, 3, 'a URL shared by 3+ events must never trigger the same-URL merge');
 });
 
+// ---------------------------------------------------------------------------
+// Same-URL identity via the canonical `website` alias. Run 20260731-120505
+// (chunk-party.com) emitted "CHUNK BROOKLYN - The Return!" twice: the detail
+// record carried the event page as `url`, its junk twin carried the SITE ROOT
+// as url (a static metadata stamp) and the byte-identical event page as
+// `website`. url and website are ONE field in this project, so the pass now
+// falls back to website when — and only when — the url yields no key.
+// ---------------------------------------------------------------------------
+
+test('deduplicateEvents merges records whose identical event page arrives as `website` while url is the site root', async () => {
+  // Real nyc patterns: the bare-city-title merge rule needs the city configured,
+  // exactly as it is in production (js/city-config.js).
+  const core = new SharedCore(
+    { nyc: { calendar: 'chunky-dad-nyc', timezone: 'America/New_York', patterns: ['new york', 'nyc', 'manhattan', 'brooklyn', 'queens', 'bronx'] } },
+    { eventSchema: EventSchema }
+  );
+  const detail = {
+    title: 'CHUNK BROOKLYN - The Return!',
+    bar: "C'mon Everybody",
+    address: '325 Franklin Ave, Brooklyn, NY 11238, USA',
+    location: '40.68830519999999, -73.9569221',
+    city: 'nyc',
+    timezone: 'America/New_York',
+    startDate: new Date('2026-02-15T03:30:00.000Z'),
+    endDate: new Date('2026-02-15T09:00:00.000Z'),
+    url: 'https://www.chunk-party.com/event-details/chunk-brooklyn-the-return',
+    website: 'https://www.chunk-party.com/event-details/chunk-brooklyn-the-return',
+    source: 'ai-web'
+  };
+  const fragment = {
+    title: 'Brooklyn',
+    description: 'The Return!',
+    city: 'nyc',
+    timezone: 'America/New_York',
+    startDate: new Date('2026-02-14T05:00:00.000Z'),
+    endDate: new Date('2026-02-14T05:00:00.000Z'),
+    url: 'https://www.chunk-party.com',
+    website: 'https://www.chunk-party.com/event-details/chunk-brooklyn-the-return',
+    // The real run's stamp: `url` is static (the promoter root), `website` is not.
+    _staticFields: { shortName: 'CHUNK', url: 'https://www.chunk-party.com' },
+    source: 'ai-web'
+  };
+  assert.equal(core.getEventUrlIdentityKey(fragment.url), null, 'precondition: the fragment url is a bare root');
+  assert.equal(
+    core.getEventIdentityUrlKey(fragment),
+    core.getEventIdentityUrlKey(detail),
+    'the website alias supplies the identity key the root url could not'
+  );
+
+  const result = await core.deduplicateEvents([detail, fragment], null);
+  assert.equal(result.length, 1, 'the split record must collapse into one event');
+  assert.equal(result[0].title, 'CHUNK BROOKLYN - The Return!', 'the named title wins, never the bare city');
+  assert.equal(result[0].address, '325 Franklin Ave, Brooklyn, NY 11238, USA');
+  assert.equal(result[0].location, '40.68830519999999, -73.9569221');
+  assert.equal(result[0].key, detail.key, 'identity fields come from the richer (address-bearing) record');
+});
+
+test('deduplicateEvents keeps same-website events apart outside the 7-day window and on listing pages', async () => {
+  const makeEvent = (title, day, website) => ({
+    title,
+    bar: 'Cell Block',
+    city: 'dallas',
+    timezone: 'America/Chicago',
+    startDate: new Date(`2026-07-${day}T21:00:00.000Z`),
+    url: 'https://www.chunk-party.com', // root: forces the website fallback
+    website,
+    source: 'ai-web'
+  });
+
+  const farApart = await createCore().deduplicateEvents([
+    makeEvent('CHUNK MONTHLY JULY', '25', 'https://www.chunk-party.com/event-details/chunk-monthly'),
+    { ...makeEvent('CHUNK MONTHLY AUGUST', '25', 'https://www.chunk-party.com/event-details/chunk-monthly'),
+      startDate: new Date('2026-08-24T21:00:00.000Z') }
+  ], null);
+  assert.equal(farApart.length, 2, 'the 7-day window still applies to website-derived keys');
+
+  const listing = await createCore().deduplicateEvents([
+    makeEvent('BEAR NIGHT', '24', 'https://venue-site.com/events'),
+    makeEvent('UNDERWEAR PARTY', '25', 'https://venue-site.com/events'),
+    makeEvent('SUNDAY BEER BUST', '26', 'https://venue-site.com/events')
+  ], null);
+  assert.equal(listing.length, 3, 'a website shared by 3+ events is still a listing page');
+
+  const stamped = await createCore().deduplicateEvents([
+    { ...makeEvent('BEAR NIGHT', '24', 'https://brand.com/parties'),
+      _staticFields: { website: 'https://brand.com/parties' } },
+    { ...makeEvent('UNDERWEAR PARTY', '25', 'https://brand.com/parties'),
+      _staticFields: { website: 'https://brand.com/parties' } }
+  ], null);
+  assert.equal(stamped.length, 2, 'a statically stamped website is branding, never same-event evidence');
+
+  const roots = await createCore().deduplicateEvents([
+    makeEvent('NOVA BOX', '24', 'https://www.chunk-party.com'),
+    makeEvent('OTHER THING', '25', 'https://www.chunk-party.com')
+  ], null);
+  assert.equal(roots.length, 2, 'a bare-root website yields no key at all');
+});
+
+// ---------------------------------------------------------------------------
+// Calendar targets are never invented from a city string. Run 2026-07-31
+// resolved a Wilton Manors address to no configured city and the old
+// `chunky-dad-${city}` fallback minted "chunky-dad-wilton manors" — a target
+// with a SPACE in it, naming a calendar that does not and cannot exist.
+// ---------------------------------------------------------------------------
+
+test('resolveCalendarTarget: configured cities keep their calendar, everything else fails closed to one unknown target', () => {
+  const cities = {
+    la: { calendar: 'chunky-dad-la', timezone: 'America/Los_Angeles', patterns: ['los angeles'] },
+    'fort-lauderdale': { calendar: 'chunky-dad-fort-lauderdale', timezone: 'America/New_York', patterns: ['fort lauderdale', 'wilton manors'] },
+    broken: { timezone: 'America/New_York', patterns: ['broken'] }
+  };
+
+  assert.equal(SharedCore.resolveCalendarTarget(cities, 'la').name, 'chunky-dad-la');
+  assert.equal(SharedCore.resolveCalendarTarget(cities, 'la').recognized, true);
+  assert.equal(SharedCore.resolveCalendarTarget(cities, 'fort-lauderdale').name, 'chunky-dad-fort-lauderdale');
+
+  for (const bogus of ['wilton manors', 'unknown', 'default', '', null, undefined, 'broken']) {
+    const target = SharedCore.resolveCalendarTarget(cities, bogus);
+    assert.equal(target.name, 'chunky-dad-unknown', `"${bogus}" must fail closed to the single unknown target`);
+    assert.equal(target.recognized, false);
+    assert.ok(!/\s/.test(target.name), 'a calendar name can never contain whitespace');
+  }
+});
+
 test('deduplicateEvents merges venue-titled listing stubs with their same-URL detail twins', async () => {
   const core = createCore();
   // Battery run 20260728: three unmerged pairs where a listing stub (VENUE as
