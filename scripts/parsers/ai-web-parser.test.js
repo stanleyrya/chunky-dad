@@ -8452,3 +8452,176 @@ test('maps-link coordinates: the parser only stashes the candidate — it never 
   assert.deepEqual(Object.keys(horizon).filter(key => !key.startsWith('_')).sort(),
     ['bar', 'city', 'title']);
 });
+
+// ---------------------------------------------------------------------------
+// Curated-coordinate venue resolution. Run 20260731-120505 shipped bar
+// "Portland" for "The RETURN" and bar "Brooklyn" for "CHUNK BROOKLYN - The
+// Return!" — city-shaped values that are not venues — while both events
+// carried a page-published pin within 3 m of the curated bar that names the
+// real venue, and the SAME run got both venues right on sibling events at the
+// very same coordinates. Coordinates (verbatim from that run and from
+// data/bars) are the fixture.
+// ---------------------------------------------------------------------------
+const VENUE_COORD_CURATED_BARS = {
+  portland: [
+    { name: 'Nova PDX', city: 'portland', address: '722 E Burnside, Portland', coordinates: '45.5228076, -122.6581521' },
+    // The owner's upstream sheet curates 722 E Burnside TWICE — the venue's
+    // former name is still a row. Duplicates must not defeat resolution.
+    { name: 'Bossanova Ballroom', city: 'portland', address: '722 E Burnside St, Portland', coordinates: '45.5228076, -122.6581521' },
+    { name: 'Stag PDX', city: 'portland', coordinates: '45.5232000, -122.6752000' }
+  ],
+  nyc: [
+    { name: "C'mon Everybody", city: 'nyc', address: '325 Franklin Avenue, New York', coordinates: '40.6882793, -73.9569264' }
+  ],
+  chicago: [
+    // 17.7 m apart — the closest genuinely DIFFERENT pair in the corpus.
+    { name: 'Jackhammer', city: 'chicago', coordinates: '41.9984139, -87.6710111' },
+    { name: 'Touché', city: 'chicago', coordinates: '41.9985708, -87.670974' }
+  ],
+  sf: [
+    { name: 'Public Works', city: 'sf', coordinates: '37.7688931, -122.4192651' },
+    { name: 'The Public Works SF', city: 'sf', coordinates: '37.7688931, -122.4192651' }
+  ]
+};
+
+function createVenueCoordinateParser() {
+  const parser = createParser();
+  parser.core = new SharedCore({}, { eventSchema: EventSchema, bars: VENUE_COORD_CURATED_BARS });
+  return parser;
+}
+
+test('curated-coordinate venue resolution: a city-shaped bar is replaced by the venue the pin sits on', () => {
+  const parser = createVenueCoordinateParser();
+
+  // Verbatim from run 20260731-120505.
+  const portland = {
+    title: 'The RETURN',
+    bar: 'Portland',
+    city: 'portland',
+    address: '722 E Burnside St, Portland, OR 97214, USA',
+    location: '45.52281000000001, -122.6581342',
+    description: "CHUNK PDX Presents E. FELD ... Saturday March 14th // NOVA PDX // 722 E Burnside St // 9pm - close"
+  };
+  const brooklyn = {
+    title: 'CHUNK BROOKLYN - The Return!',
+    bar: 'Brooklyn',
+    city: 'nyc',
+    address: '325 Franklin Ave, Brooklyn, NY 11238, USA',
+    location: '40.68830519999999, -73.9569221'
+  };
+
+  const logs = captureLogs(() => {
+    parser.resolveBarFromCuratedCoordinates([portland, brooklyn], CITY_GATE_CONFIG);
+  });
+
+  assert.equal(portland.bar, 'Nova PDX', 'the pin sits on Nova PDX, not on a city called Portland');
+  assert.equal(portland.barSource, 'curated');
+  assert.equal(brooklyn.bar, "C'mon Everybody", 'the pin sits on C\'mon Everybody');
+  assert.equal(brooklyn.barSource, 'curated');
+
+  assert.ok(
+    logs.some(line => line.includes('🤖 AI Web: Resolved bar "Nova PDX" for "The RETURN" from curated coordinates')
+      && line.includes('1 m from the event pin')
+      && line.includes('replaces "Portland"')),
+    `expected the additive resolution line naming venue + distance, got: ${JSON.stringify(logs)}`
+  );
+  assert.ok(
+    logs.some(line => line.includes('🤖 AI Web: Resolved bar "C\'mon Everybody"') && line.includes('3 m from the event pin')),
+    JSON.stringify(logs)
+  );
+});
+
+test('curated-coordinate venue resolution: fills a bar the gate dropped, and duplicates of one venue still resolve', () => {
+  const parser = createVenueCoordinateParser();
+
+  // The gate already dropped the bar — the event arrives with none at all.
+  const dropped = { title: 'The RETURN', city: 'portland', location: '45.52281000000001, -122.6581342',
+    description: 'doors 9pm // NOVA PDX // 722 E Burnside St' };
+  parser.resolveBarFromCuratedCoordinates([dropped], CITY_GATE_CONFIG);
+  assert.equal(dropped.bar, 'Nova PDX', 'a blank bar is filled from the pin');
+
+  // No text corroboration and two curated rows for ONE venue whose names are
+  // recognizable variants: the nearest wins rather than the pass refusing.
+  const sf = { title: 'Some SF party', city: 'sf', location: '37.7688931, -122.4192651' };
+  const sfLogs = captureLogs(() => parser.resolveBarFromCuratedCoordinates([sf], CITY_GATE_CONFIG));
+  assert.equal(sf.bar, 'Public Works');
+  assert.ok(sfLogs.some(line => line.includes('curated name variants for the same venue')), JSON.stringify(sfLogs));
+});
+
+test('curated-coordinate venue resolution: two DIFFERENT curated venues in range resolve nothing', () => {
+  const parser = createVenueCoordinateParser();
+
+  // Midpoint of Jackhammer and Touché — 9 m from each, both inside 12 m.
+  const event = { title: 'Some Chicago Party', city: 'chicago', location: '41.99849235, -87.67099255' };
+  const logs = captureLogs(() => parser.resolveBarFromCuratedCoordinates([event], CITY_GATE_CONFIG));
+
+  assert.equal('bar' in event, false, 'ambiguous means no answer — never a guess');
+  assert.ok(
+    logs.some(line => line.includes('are ambiguous') && line.includes('Jackhammer') && line.includes('Touché')
+      && line.includes('no venue resolved')),
+    `expected the refusal line naming both venues, got: ${JSON.stringify(logs)}`
+  );
+});
+
+test('curated-coordinate venue resolution: a real venue name is never overridden, and the pass fails closed', () => {
+  const parser = createVenueCoordinateParser();
+
+  const cases = [
+    // Already the right venue at the very same pin.
+    { title: 'Nova Box', bar: 'Nova PDX', city: 'portland', location: '45.52281000000001, -122.6581342' },
+    // The OTHER curated row for the same address — a specific venue name, so
+    // it is left exactly as extracted (the duplicate is data, not this pass').
+    { title: 'Bossanova night', bar: 'Bossanova Ballroom', city: 'portland', location: '45.52281000000001, -122.6581342' },
+    // An uncurated venue sitting on a curated pin still keeps its own name.
+    { title: 'Pop-up', bar: 'Some New Venue', city: 'nyc', location: '40.6882793, -73.9569264' },
+    // No pin, no city, unknown city, pin nowhere near a curated bar.
+    { title: 'No pin', bar: '', city: 'portland' },
+    { title: 'No city', bar: '', location: '45.5228076, -122.6581521' },
+    { title: 'Unknown city', bar: '', city: 'unknown', location: '45.5228076, -122.6581521' },
+    { title: 'Far away', bar: '', city: 'portland', location: '45.5300000, -122.6581521' }
+  ];
+  const before = cases.map(event => event.bar);
+  const logs = captureLogs(() => parser.resolveBarFromCuratedCoordinates(cases, CITY_GATE_CONFIG));
+
+  cases.forEach((event, index) => {
+    assert.equal(event.bar === undefined ? '' : event.bar, before[index] === undefined ? '' : before[index],
+      `"${event.title}" must be untouched`);
+    assert.equal(event.barSource, undefined, `"${event.title}" gains no provenance stamp`);
+  });
+  assert.equal(logs.length, 0, `nothing resolved → nothing logged, got: ${JSON.stringify(logs)}`);
+
+  // No curated corpus at all → the pass cannot judge and must not act.
+  const bare = createParser();
+  const orphan = { title: 'The RETURN', bar: 'Portland', city: 'portland', location: '45.52281000000001, -122.6581342' };
+  bare.resolveBarFromCuratedCoordinates([orphan], CITY_GATE_CONFIG);
+  assert.equal(orphan.bar, 'Portland', 'no bars data → fail closed, change nothing');
+});
+
+test('curated bar name variants: duplicate rows for one venue unify, different neighbours never do', () => {
+  const parser = createVenueCoordinateParser();
+  const same = [
+    ['Public Works', 'The Public Works SF'],
+    ['F8 Nightclub & Bar', 'F8 NIGHTCLUB'],
+    ['Precinct LA', 'Precinct DTLA'],
+    ['SF Eagle', 'San Francisco Eagle Bar'],
+    ['Joy Theater', 'Joy Theatre'],
+    ['EAGLE TOKYO', 'EAGLE TOKYO BLUE']
+  ];
+  for (const [a, b] of same) {
+    assert.equal(parser.curatedBarNamesAreVariants(a, b), true, `"${a}" / "${b}" are one venue`);
+  }
+  const different = [
+    ['Jackhammer', 'Touché'],
+    ['Gym Sports Bar', 'The Pub'],
+    ['Powerhouse', 'Hole in the Wall Saloon'],
+    ['FLEX', 'Atlas Social Club'],
+    ['Diesel', 'Madison Pub'],
+    // Generic venue-type words are never the shared word that unifies two names.
+    ['Atlas Social Club', 'Berlin Club'],
+    ['The Pub', 'The Tavern']
+  ];
+  for (const [a, b] of different) {
+    assert.equal(parser.curatedBarNamesAreVariants(a, b), false, `"${a}" / "${b}" are different places`);
+  }
+  assert.equal(parser.curatedBarNamesAreVariants('', 'Nova PDX'), false);
+});

@@ -683,6 +683,12 @@ class AiWebParser {
                 // Attribute the events to this page's site so the post-crawl
                 // venue-site address consensus can fill their blanks.
                 this.tagEventsWithVenueSitePage(keptStructuredEvents, effectiveHtmlData);
+                // Curated-coordinate venue resolution: an event whose bar is
+                // blank or city-shaped adopts the curated venue its own pin
+                // sits on. Runs here — after the Wix/JSON-LD enrichment above
+                // filled event.location — because the extraction-time bar gate
+                // cannot see a pin that arrives later.
+                this.resolveBarFromCuratedCoordinates(keptStructuredEvents, cityConfig);
                 // Report-only: what the page's Google Maps link pins, and
                 // whether the identity guard + curated precedence would let it
                 // fill a blank location. Writes nothing to event data.
@@ -818,6 +824,11 @@ class AiWebParser {
             // Attribute the events to this page's site so the post-crawl
             // venue-site address consensus can fill their blanks.
             this.tagEventsWithVenueSitePage(keptEvents, effectiveHtmlData);
+            // Curated-coordinate venue resolution: a bar the plausibility gate
+            // dropped (or extraction never found) is recovered from the
+            // curated bar the event's own pin sits on. Runs after the Wix /
+            // JSON-API enrichment above, which is where event.location arrives.
+            this.resolveBarFromCuratedCoordinates(keptEvents, cityConfig);
             // Report-only: what the page's Google Maps link pins, and whether
             // the identity guard + curated precedence would let it fill a
             // blank location. Writes nothing to event data.
@@ -12894,6 +12905,203 @@ TEXT:
         return null;
     }
 
+    // Radius, in METRES, for curated-coordinate venue resolution below.
+    // Derived from the curated corpus's own geometry — a sweep of every
+    // same-city curated coordinate pair in data/bars (2026-07-31) shows a
+    // clean gap:
+    //   DUPLICATE entries for ONE venue sit 0 m … 10.2 m apart
+    //     "Nova PDX"/"Bossanova Ballroom" 0 m (portland — old and new names of
+    //     722 E Burnside), "Public Works"/"The Public Works SF" 0 m,
+    //     "F8 Nightclub & Bar"/"F8 NIGHTCLUB" 0 m, "Precinct LA"/"Precinct
+    //     DTLA" 2 m, "SF Eagle"/"San Francisco Eagle Bar" 6 m,
+    //     "Joy Theater"/"Joy Theatre" 10 m;
+    //   genuinely DIFFERENT neighbouring venues start at 17.7 m
+    //     "Jackhammer"/"Touché" 18 m (chicago), "Gym Sports Bar"/"The Pub"
+    //     20 m (fort-lauderdale), "Powerhouse"/"Hole in the Wall Saloon" 22 m
+    //     (sf), everything else 40 m+.
+    // 12 m sits inside that gap: wide enough for the observed real pins (run
+    // 20260731-120505 pinned 1.4 m and 2.9 m from the curated coordinate) and
+    // for the duplicate spread, narrow enough that only an essentially
+    // identical pin qualifies. Two DIFFERENT venues can still both fall
+    // inside it (a pin between Jackhammer and Touché) — that case refuses
+    // outright rather than guessing.
+    getCuratedCoordinateVenueRadiusMeters() {
+        return 12;
+    }
+
+    // Whole-word, case-insensitive, flexible-whitespace presence pattern for a
+    // venue name — shared by the bar-convergence rescue's corpus votes and the
+    // curated-coordinate resolution's text corroboration so both agree on what
+    // "the page names this venue" means.
+    buildVenueNameWholeWordPattern(form) {
+        const escaped = String(form || '')
+            .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+            .replace(/\s+/g, '\\s+');
+        return new RegExp(`(?:^|[^A-Za-z0-9])${escaped}(?=$|[^A-Za-z0-9])`, 'i');
+    }
+
+    // Generic venue-type word ("club", "bar", "theatre" …) — a word that
+    // describes what a place IS rather than which place it is. Shared by
+    // isAddressShapedBarValue (a leading house number + venue-type word is a
+    // name, not a truncated street line) and the curated name-variant test
+    // (two venues sharing only "club" share nothing).
+    isGenericVenueTypeWord(word) {
+        return /^(?:club|bar|lounge|pub|tavern|saloon|cafe|café|grill|restaurant|studio|hall|house|room|theater|theatre|cabaret|hotel|inn|brewery|taproom|eatery|bistro|diner|kitchen)$/i
+            .test(String(word || '').trim());
+    }
+
+    // Are two curated bar names plausibly the SAME venue? The curated corpus
+    // carries duplicate rows for one venue (the owner's upstream sheet), so a
+    // blanket "more than one hit inside the radius = refuse" would refuse
+    // exactly the case this resolution exists for (722 E Burnside is curated
+    // twice, as "Nova PDX" and its former name "Bossanova Ballroom"). True on
+    // either:
+    //   - bar-name-key containment ("publicworks" ⊂ "publicworkssf",
+    //     "f8nightclub" ⊂ "f8nightclubbar"), minimum 4 chars so a short
+    //     fragment never unifies two venues;
+    //   - a shared significant word — 3+ chars, leading "the" dropped (the
+    //     same tolerance normalizeBarNameKey applies), generic venue-type
+    //     words excluded ("Joy Theater"/"Joy Theatre" share "joy";
+    //     "Precinct LA"/"Precinct DTLA" share "precinct"; "SF Eagle"/"San
+    //     Francisco Eagle Bar" share "eagle").
+    // False for every genuinely different neighbour in the corpus
+    // ("Jackhammer"/"Touché", "Gym Sports Bar"/"The Pub",
+    // "Powerhouse"/"Hole in the Wall Saloon").
+    curatedBarNamesAreVariants(nameA, nameB) {
+        const nameKey = value => (this.core && typeof this.core.normalizeBarNameKey === 'function'
+            ? this.core.normalizeBarNameKey(value)
+            : String(value || '').toLowerCase().replace(/^\s*the\s+/, '').replace(/[^a-z0-9]/g, ''));
+        const keyA = nameKey(nameA);
+        const keyB = nameKey(nameB);
+        if (!keyA || !keyB) return false;
+        if (keyA === keyB) return true;
+        if (keyA.length >= 4 && keyB.includes(keyA)) return true;
+        if (keyB.length >= 4 && keyA.includes(keyB)) return true;
+        const significantWords = value => new Set(
+            String(value || '')
+                .toLowerCase()
+                .replace(/^\s*the\s+/, '')
+                .split(/[^a-z0-9]+/)
+                .filter(word => word.length >= 3 && !this.isGenericVenueTypeWord(word))
+        );
+        const wordsA = significantWords(nameA);
+        for (const word of significantWords(nameB)) {
+            if (wordsA.has(word)) return true;
+        }
+        return false;
+    }
+
+    // Does the event's OWN text name this curated venue? Whole-word match
+    // against the title and description the page published — the same
+    // presence test the bar-convergence rescue votes with. Used only to
+    // choose BETWEEN curated bars the coordinate already selected; it never
+    // introduces a candidate of its own.
+    eventTextNamesCuratedBar(event, name) {
+        const form = String(name || '').trim();
+        if (!form || !event || typeof event !== 'object') return false;
+        const corpus = [event.title, event.description]
+            .filter(value => typeof value === 'string' && value.trim())
+            .join('\n');
+        if (!corpus) return false;
+        try {
+            return this.buildVenueNameWholeWordPattern(form).test(corpus);
+        } catch (_) {
+            return false; // an unbuildable pattern is no corroboration
+        }
+    }
+
+    // Curated-coordinate venue resolution (run 20260731-120505: "The RETURN"
+    // shipped bar "Portland" and "CHUNK BROOKLYN - The Return!" shipped bar
+    // "Brooklyn" — city-shaped values that are not venues at all — while both
+    // events carried a page-published pin within 3 m of a curated bar that
+    // names the real venue: Nova PDX at 722 E Burnside, C'mon Everybody at
+    // 325 Franklin Ave. The same run got both venues RIGHT on sibling events
+    // at the very same coordinates). Dropping a city-shaped bar
+    // (applyBarPlausibilityGate) is correct but leaves the event with no
+    // venue when the curated corpus plainly knows it.
+    //
+    // Runs per page on the finished events, AFTER structured-data enrichment
+    // has filled event.location — the extraction-time gate cannot see a pin
+    // that arrives later.
+    //
+    // Eligibility is deliberately narrow: a blank bar (including one the gate
+    // just dropped) or a bar the city gate rejects. A specific venue name is
+    // NEVER second-guessed. The lookup is city-scoped exactly like every
+    // other curated lookup here, and adoption is refused whenever the hits
+    // inside the radius are not all the same venue.
+    resolveBarFromCuratedCoordinates(events, cityConfig) {
+        const eventList = Array.isArray(events) ? events : [];
+        if (eventList.length === 0) return events;
+        if (!this.core || typeof this.core.getCuratedCityBars !== 'function'
+            || typeof this.core.coordinatePairDistanceKm !== 'function') return events;
+        const radiusMeters = this.getCuratedCoordinateVenueRadiusMeters();
+        const nameKey = value => (typeof this.core.normalizeBarNameKey === 'function'
+            ? this.core.normalizeBarNameKey(value)
+            : String(value || '').toLowerCase().replace(/^\s*the\s+/, '').replace(/[^a-z0-9]/g, ''));
+
+        for (const event of eventList) {
+            if (!event || typeof event !== 'object') continue;
+            const location = typeof event.location === 'string' ? event.location.trim() : '';
+            if (!location) continue;
+            const bar = typeof event.bar === 'string' ? event.bar.trim() : '';
+            const rejection = bar ? this.getCityShapedBarRejection(bar, event, cityConfig) : '';
+            if (bar && !rejection) continue;
+            const cityKey = typeof event.city === 'string' ? event.city.trim() : '';
+            if (!cityKey || cityKey.toLowerCase() === 'unknown') continue;
+            let cityBars = null;
+            try {
+                cityBars = this.core.getCuratedCityBars(cityKey);
+            } catch (_) {
+                cityBars = null; // curated corpus is best-effort — fail closed
+            }
+            if (!Array.isArray(cityBars) || cityBars.length === 0) continue;
+
+            const hits = [];
+            for (const curatedBar of cityBars) {
+                if (!curatedBar || typeof curatedBar.name !== 'string' || !curatedBar.name.trim()) continue;
+                const km = this.core.coordinatePairDistanceKm(location, curatedBar.coordinates);
+                if (!Number.isFinite(km)) continue;
+                const meters = km * 1000;
+                if (meters <= radiusMeters) hits.push({ name: curatedBar.name.trim(), meters });
+            }
+            if (hits.length === 0) continue;
+            // Deterministic order: nearest, then the shorter identity key,
+            // then alphabetical — so the winner never depends on data order.
+            hits.sort((a, b) => (a.meters - b.meters)
+                || (nameKey(a.name).length - nameKey(b.name).length)
+                || (a.name < b.name ? -1 : (a.name > b.name ? 1 : 0)));
+
+            const title = typeof event.title === 'string' && event.title.trim() ? event.title.trim() : 'unknown';
+            let winner = hits[0];
+            let tieBreak = '';
+            if (hits.length > 1) {
+                // 1) The event's own page text names exactly one of them —
+                //    the coordinate narrowed the field, the page picks.
+                const named = hits.filter(hit => this.eventTextNamesCuratedBar(event, hit.name));
+                if (named.length === 1) {
+                    winner = named[0];
+                    tieBreak = `, the only one of ${hits.length} curated bars in range the event text names`;
+                } else if (hits.every(hit => this.curatedBarNamesAreVariants(hits[0].name, hit.name))) {
+                    // 2) Duplicate rows for ONE venue — adopt the nearest.
+                    winner = hits[0];
+                    tieBreak = `, nearest of ${hits.length} curated name variants for the same venue (${hits.map(hit => `"${hit.name}"`).join(', ')})`;
+                } else {
+                    // 3) Different places. Ambiguous means no answer.
+                    console.log(`🤖 AI Web: Curated coordinates for "${title}" are ambiguous — ${hits.map(hit => `"${hit.name}" (${Math.round(hit.meters)} m)`).join(', ')} within ${radiusMeters} m — no venue resolved`);
+                    continue;
+                }
+            }
+            if (bar && nameKey(bar) === nameKey(winner.name)) continue;
+            const replaced = bar
+                ? ` — replaces "${bar}" (${rejection})`
+                : '';
+            event.bar = winner.name;
+            event.barSource = 'curated';
+            console.log(`🤖 AI Web: Resolved bar "${winner.name}" for "${title}" from curated coordinates (${Math.round(winner.meters)} m from the event pin ${location}${tieBreak})${replaced}`);
+        }
+        return events;
+    }
+
     // Maps-link coordinate pass (run per page, right where the events are
     // attributed to their page). Judges the pin the page's maps link published
     // and, when it survives, stashes it for the pin ladder:
@@ -13656,8 +13864,7 @@ TEXT:
             && /(?:^|\s)(?:St|Street|Ave|Avenue|Blvd|Boulevard|Rd|Road|Dr|Drive|Ln|Lane|Way|Hwy|Pl|Place|Ct|Court)\.?(?:\s|$)/i.test(text)) return true;
         const truncatedStreetLine = text.match(/^\d{1,6}(?:-\d{1,6})?\s+([A-Za-z][A-Za-z'’.-]*)$/);
         if (truncatedStreetLine) {
-            const venueTypeWord = /^(?:club|bar|lounge|pub|tavern|saloon|cafe|café|grill|restaurant|studio|hall|house|room|theater|theatre|cabaret|hotel|inn|brewery|taproom|eatery|bistro|diner|kitchen)$/i;
-            return !venueTypeWord.test(truncatedStreetLine[1]);
+            return !this.isGenericVenueTypeWord(truncatedStreetLine[1]);
         }
         return false;
     }
@@ -13872,12 +14079,7 @@ TEXT:
         // Whole-word, case-insensitive, flexible-whitespace presence test —
         // every surface form of the candidate counts, so a curated "The
         // Eagle" still finds the page's plain "Eagle" line.
-        const buildWholeWordPattern = form => {
-            const escaped = form
-                .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-                .replace(/\s+/g, '\\s+');
-            return new RegExp(`(?:^|[^A-Za-z0-9])${escaped}(?=$|[^A-Za-z0-9])`, 'i');
-        };
+        const buildWholeWordPattern = form => this.buildVenueNameWholeWordPattern(form);
 
         // Proximity anchors for the tie-break: location-form or
         // address-shaped PAGE lines. Position's ONLY appearance.
