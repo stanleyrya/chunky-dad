@@ -62,7 +62,8 @@ const scraperBars = {
       "name": "Eden",
       "city": "birmingham",
       "address": "138 Gooch Street, Birmingham B5 7HF",
-      "facebook": "https://www.facebook.com/eden.bar.birmingham/"
+      "facebook": "https://www.facebook.com/eden.bar.birmingham/",
+      "coordinates": "52.46975, -1.89513"
     }
   ],
   "boston": [
@@ -92,12 +93,13 @@ const scraperBars = {
       "name": "Horizon",
       "city": "brighton",
       "address": "211-214 Kings Road Arches, Brighton BN1 1NB",
-      "instagram": "horizon.brighton"
+      "instagram": "horizon.brighton",
+      "coordinates": "50.819936, -0.140382"
     },
     {
       "name": "Concorde 2",
       "city": "brighton",
-      "address": "Madeira Drive, Brighton BN2 1EN",
+      "address": "286A Madeira Drive, Brighton BN2 1EN",
       "coordinates": "50.8172912, -0.1225875"
     }
   ],
@@ -337,7 +339,7 @@ const scraperBars = {
     {
       "name": "Precinct LA",
       "city": "la",
-      "address": "357 S Broadway, Los Angeles, CA 90013",
+      "address": "357 South Broadway, Los Angeles, California, 90013",
       "coordinates": "34.0498149, -118.2493321",
       "instagram": "https://www.instagram.com/precinctdtla",
       "facebook": "https://www.facebook.com/precinctdtla",
@@ -373,12 +375,6 @@ const scraperBars = {
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJXxXPUMi_woARE46Y7WO-Ww0",
       "gayCities": "https://losangeles.gaycities.com/bars/309258-gym-bar-weho",
       "gayCitiesLastScrapedAt": "2026-06-14T03:19:33.089Z"
-    },
-    {
-      "name": "Precinct DTLA",
-      "city": "la",
-      "address": "357 South Broadway, Los Angeles, California, 90013",
-      "coordinates": "34.0498331, -118.2493274"
     },
     {
       "name": "Falcon North",
@@ -482,12 +478,6 @@ const scraperBars = {
       "website": "https://thejoytheater.com",
       "faviconBg": "#f22922",
       "faviconFg": "#221e1f"
-    },
-    {
-      "name": "Joy Theatre",
-      "city": "nola",
-      "address": "1200 Canal St, New Orleans, LA 70112",
-      "coordinates": "29.9560038, -90.0739853"
     }
   ],
   "nyc": [
@@ -711,12 +701,6 @@ const scraperBars = {
       "coordinates": "45.5228076, -122.6581521"
     },
     {
-      "name": "Bossanova Ballroom",
-      "city": "portland",
-      "address": "722 E Burnside, Portland, OR 97213",
-      "coordinates": "45.5228076, -122.6581521"
-    },
-    {
       "name": "Sanctuary Club",
       "city": "portland",
       "address": "33 Northwest 9th Avenue",
@@ -899,7 +883,7 @@ const scraperBars = {
     {
       "name": "SF Eagle",
       "city": "sf",
-      "address": "398 12th St, San Francisco, CA 94103",
+      "address": "398 12th Street, San Francisco, CA 94103",
       "coordinates": "37.7699927, -122.4134077",
       "instagram": "https://www.instagram.com/sfeaglebar",
       "facebook": "https://www.facebook.com/SFEagleBar",
@@ -951,7 +935,7 @@ const scraperBars = {
     {
       "name": "Public Works",
       "city": "sf",
-      "address": "161 Erie St, San Francisco, CA 94103",
+      "address": "161 Erie Street, San Francisco, CA 94103",
       "coordinates": "37.7688931, -122.4192651",
       "website": "https://publicsf.com",
       "faviconBg": "#f35425",
@@ -966,26 +950,8 @@ const scraperBars = {
     {
       "name": "F8 Nightclub & Bar",
       "city": "sf",
-      "address": "1192 FOLSOM ST",
-      "coordinates": "37.7752814, -122.4099546"
-    },
-    {
-      "name": "F8 NIGHTCLUB",
-      "city": "sf",
       "address": "1192 Folsom St, San Francisco, CA 94103, USA",
       "coordinates": "37.7752814, -122.4099546"
-    },
-    {
-      "name": "San Francisco Eagle Bar",
-      "city": "sf",
-      "address": "398 12th Street, San Francisco, CA 94103",
-      "coordinates": "37.7699933, -122.4133375"
-    },
-    {
-      "name": "The Public Works SF",
-      "city": "sf",
-      "address": "161 Erie Street, San Francisco, CA 94103",
-      "coordinates": "37.7688931, -122.4192651"
     }
   ],
   "sitges": [

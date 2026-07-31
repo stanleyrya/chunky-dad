@@ -2,7 +2,7 @@
   {
     "name": "SF Eagle",
     "city": "sf",
-    "address": "398 12th St, San Francisco, CA 94103",
+    "address": "398 12th Street, San Francisco, CA 94103",
     "coordinates": "37.7699927, -122.4134077",
     "instagram": "https://www.instagram.com/sfeaglebar",
     "facebook": "https://www.facebook.com/SFEagleBar",
@@ -54,7 +54,7 @@
   {
     "name": "Public Works",
     "city": "sf",
-    "address": "161 Erie St, San Francisco, CA 94103",
+    "address": "161 Erie Street, San Francisco, CA 94103",
     "coordinates": "37.7688931, -122.4192651",
     "website": "https://publicsf.com",
     "faviconBg": "#f35425",
@@ -73,25 +73,7 @@
   {
     "name": "F8 Nightclub & Bar",
     "city": "sf",
-    "address": "1192 FOLSOM ST",
-    "coordinates": "37.7752814, -122.4099546"
-  },
-  {
-    "name": "F8 NIGHTCLUB",
-    "city": "sf",
     "address": "1192 Folsom St, San Francisco, CA 94103, USA",
     "coordinates": "37.7752814, -122.4099546"
-  },
-  {
-    "name": "San Francisco Eagle Bar",
-    "city": "sf",
-    "address": "398 12th Street, San Francisco, CA 94103",
-    "coordinates": "37.7699933, -122.4133375"
-  },
-  {
-    "name": "The Public Works SF",
-    "city": "sf",
-    "address": "161 Erie Street, San Francisco, CA 94103",
-    "coordinates": "37.7688931, -122.4192651"
   }
 ]
