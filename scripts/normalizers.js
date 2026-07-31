@@ -926,14 +926,19 @@ class LocationNormalizer extends BaseNormalizer {
 const CITY_CENTER_RADIUS_KM = 50;
 
 // Hard cap on Nominatim requests per event for the forward-geocode retry
-// ladder. 5 covers the full ladder (canonical address, unit/suite strip,
-// postal/country strip, directional strip, venue-name rescue); every request
+// ladder. 6 covers the full ladder (name+address, canonical address,
+// unit/suite strip, postal/country strip, directional strip, venue-name
+// rescue). It was 5 before the name-led rung was added in front; raising it by
+// exactly one keeps every rung that existed then reachable — capping at 5
+// would have silently dropped the venue+city rescue for address-bearing
+// events. The added request only exists when an event has BOTH a bar and an
+// address, and only fires when the name-led query returns nothing; every request
 // stays 1.1s-throttled and later rungs only fire after earlier ones return
 // nothing usable. A single US Census rescue request (US-looking addresses
 // only) and a single Photon rescue request may follow when every Nominatim
 // rung fails; both share the same rate limiter. Never raise this without
 // revisiting the rate-limit budget.
-const MAX_GEOCODE_QUERIES_PER_EVENT = 5;
+const MAX_GEOCODE_QUERIES_PER_EVENT = 6;
 
 // POI-adopted pins only: how far apart the reverse-geocoded house number and
 // the adopted address's house number may sit (same street) before the reverse
@@ -1812,15 +1817,24 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
 
     // Forward-geocode retry ladder: deduped, ordered query strings, hard-capped
     // at MAX_GEOCODE_QUERIES_PER_EVENT. Order:
-    //   1. The query exactly as built today (anchored to the city display name
+    //   1. "<bar>, <address>" — the venue name IN FRONT of its own address.
+    //      Measured against verified truth: "Victoria Embankment, London, UK"
+    //      (the address dice.fm publishes for Westminster Pier) resolves to a
+    //      point 1075 m away — the wrong pier — while "Westminster Pier,
+    //      Victoria Embankment, London, UK" resolves to 1 m. The name is the
+    //      disambiguator for a vague street line. It is FIRST, not universal:
+    //      the extra token over-constrains some queries (Horizon, Eden both
+    //      return NOTHING with the name attached and resolve fine without it),
+    //      which is exactly why the address-only rungs below still run.
+    //   2. The query exactly as built before (anchored to the city display name
     //      when the address doesn't already contain it).
-    //   2. The address with unit/suite tokens stripped (same anchoring) —
+    //   3. The address with unit/suite tokens stripped (same anchoring) —
     //      "Suite 200" / "#4" decoration returns 0 results.
-    //   3. The address with postal-code/country decoration stripped (same
+    //   4. The address with postal-code/country decoration stripped (same
     //      anchoring) — Nominatim chokes on "…, CA 94103, USA" endings.
-    //   4. The address with trailing directionals stripped (same anchoring) —
+    //   5. The address with trailing directionals stripped (same anchoring) —
     //      Nominatim's free-text parser chokes on "Rd NE" / "Road Northeast".
-    //   5. "<bar>, <city>" — venue-name lookup rescues venues OSM knows by name.
+    //   6. "<bar>, <city>" — venue-name lookup rescues venues OSM knows by name.
     buildGeocodeQueryVariants(address, eventCity, bar) {
         const city = this.geocodeCityAnchorName(typeof eventCity === 'string' ? eventCity.trim() : '');
         const anchorToCity = (text) => {
@@ -1842,7 +1856,14 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
         // no-address event (venue-POI rescue) must not emit a junk ", <city>"
         // query; its ladder is the venue+city rescue rung alone.
         const baseAddress = String(address || '').trim();
+        const leadingBarName = typeof bar === 'string' ? bar.trim() : '';
         if (baseAddress) {
+            // Name-led rung first (only when the address doesn't already start
+            // with the venue name — ticketing pages sometimes publish it that
+            // way, and a doubled name is a query nothing matches).
+            if (leadingBarName && !baseAddress.toLowerCase().startsWith(leadingBarName.toLowerCase())) {
+                push(anchorToCity(`${leadingBarName}, ${baseAddress}`));
+            }
             push(anchorToCity(baseAddress));
             const unitStripped = this.stripUnitTokens(baseAddress);
             if (unitStripped && unitStripped !== baseAddress) push(anchorToCity(unitStripped));
@@ -2081,6 +2102,16 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                 }
                 if (resolvedLocation) {
                     event.location = resolvedLocation;
+                    // The query string that actually produced the pin.
+                    // Underscore = metadata only (excluded from notes/merge
+                    // loops). The maps-link rung reads it: a pin from a query
+                    // carrying no street line is a name/city guess, however
+                    // confident the response looked.
+                    event._geocodeQuery = queryText;
+                    // Did this query carry the event's ADDRESS, or was it the
+                    // bare "<venue>, <city>" rescue? The maps-link rung below
+                    // only outranks the latter.
+                    event._geocodeQueryHadAddress = hasAddress && queryText !== venueRescueQuery;
                     modified = true;
                     console.log(`🗺️ OpenStreetMapNormalizer: Found coordinates for address "${event.address}" -> ${event.location}`);
                     if (i > 0) {
@@ -2137,6 +2168,8 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                 }
                 if (resolvedLocation) {
                     event.location = resolvedLocation;
+                    event._geocodeQuery = address; // Census only ever queries the street address
+                    event._geocodeQueryHadAddress = true;
                     modified = true;
                     console.log(`🗺️ OpenStreetMapNormalizer: Found coordinates for address "${event.address}" -> ${event.location}`);
                 }
@@ -2253,6 +2286,8 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                     }
                     if (resolvedLocation) {
                         event.location = resolvedLocation;
+                        event._geocodeQuery = photonQuery;
+                        event._geocodeQueryHadAddress = hasAddress && photonQuery !== venueRescueQuery;
                         modified = true;
                         console.log(`🗺️ OpenStreetMapNormalizer: Found coordinates for address "${event.address}" -> ${event.location}`);
                     }
@@ -2373,16 +2408,23 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
     //   1. curated coordinates from data/bars — BarDataNormalizer fills them
     //      earlier in this same pipeline, so they are already on the event
     //      when we get here, and they are never touched;
-    //   2. a successful forward geocode of the address — it runs above in
-    //      this same method, so its result is likewise already on the event;
-    //   3. THIS pin — written only when 1 and 2 left location blank.
+    //   2. a STREET-GRADE forward geocode — the ladder above runs
+    //      "<venue>, <address>" then the address-only variants, so its result
+    //      is already on the event;
+    //   3. THIS pin — written when 1 and 2 left location blank, and preferred
+    //      over a geocoded pin whose QUERY carried no street line (see below).
     //
-    // The measured reason for that order (5 venues, scored against verified
-    // truth): the address geocode is near-perfect when it resolves (0–1 m) but
-    // returned NOTHING for 3 of 5 venues, and in exactly those 3 the maps-link
-    // pin was right (0–181 m). Where the maps-link pin was badly wrong
-    // (Westminster Pier, 936 m) the geocode succeeded and wins here. The two
-    // sources are complementary, and a blank pin is the only thing this fills.
+    // Why a geocoded pin can lose to this one: the ladder's last rungs query
+    // "<venue>, <city>" with no street line at all, and Nominatim answers those
+    // confidently and wrongly. Measured: with the address missing, "Horizon,
+    // brighton" resolved to a house called Horizon on Ainsworth Avenue — 5069 m
+    // from the venue — and came back EXACT grade with a POI name matching the
+    // bar, so no response-side signal caught it. The signal that does catch it
+    // is the query itself: no street line means the geocoder was guessing from
+    // a name, and an identity-guarded maps-link pin (the venue's own ticketing
+    // page, name-matched to the event's bar) is the better evidence. A query
+    // that DID carry a street line still wins — that is the case the
+    // name-led rung exists to make accurate.
     //
     // Returns true when it wrote a location (so the caller refreshes notes).
     applyMapsLinkCoordinateFallback(event) {
@@ -2407,16 +2449,29 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
             // ticketing platform's own map points at a different place than the
             // venue's address does.
             const accepted = this.parseCoordinatePairString(existingLocation);
-            if (accepted) {
-                const distanceMeters = Math.round(this.haversineDistanceKm(
-                    accepted.lat, accepted.lon, claimed.lat, claimed.lon) * 1000);
-                if (distanceMeters >= MAPS_LINK_CONFLICT_METERS) {
-                    const acceptedSource = typeof event.pinSource === 'string' && event.pinSource.trim()
-                        ? event.pinSource.trim()
-                        : 'unknown source';
-                    console.warn(`🗺️ MAPS LINK CONFLICT: "${title}" accepted pin ${existingLocation} (${acceptedSource}) is ${distanceMeters} m from the page's maps link ${candidateLocation} for "${venueName}" — accepted pin kept; verify which is the real venue`);
+            if (!accepted) return false;
+            const distanceMeters = Math.round(this.haversineDistanceKm(
+                accepted.lat, accepted.lon, claimed.lat, claimed.lon) * 1000);
+            if (distanceMeters < MAPS_LINK_CONFLICT_METERS) return false;
+            const acceptedSource = typeof event.pinSource === 'string' && event.pinSource.trim()
+                ? event.pinSource.trim()
+                : 'unknown source';
+            if (this.isNameOnlyGeocodedPin(event)) {
+                console.warn(`🗺️ MAPS LINK CONFLICT: "${title}" geocoded pin ${existingLocation} came from the name-only query "${event._geocodeQuery || 'unknown'}" (no address in it) and is ${distanceMeters} m from the page's maps link ${candidateLocation} for "${venueName}" — using the maps link`);
+                event.location = candidateLocation;
+                event.pinSource = 'maps-link';
+                // An address adopted from that same map hit is now evidence
+                // from a source this rung just declined to pin with. It is
+                // FLAGGED, not deleted: the two observed cases point opposite
+                // ways (the Horizon hit's "56 Ainsworth Avenue" is wrong; the
+                // Westminster Pier hit's "Victoria Embankment" is right), so
+                // dropping it would be a guess of its own.
+                if (event.addressSource === 'geo-poi' && event.address) {
+                    console.warn(`🗺️ MAPS LINK CONFLICT: "${title}" kept address "${event.address}" — it was adopted from that same declined map hit; verify it`);
                 }
+                return true;
             }
+            console.warn(`🗺️ MAPS LINK CONFLICT: "${title}" accepted pin ${existingLocation} (${acceptedSource}) is ${distanceMeters} m from the page's maps link ${candidateLocation} for "${venueName}" — accepted pin kept; verify which is the real venue`);
             return false;
         }
 
@@ -2424,6 +2479,34 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
         event.pinSource = 'maps-link';
         console.log(`🗺️ OpenStreetMapNormalizer: No curated or geocoded pin for "${title}" — using the page's maps link for "${venueName}" -> ${candidateLocation}`);
         return true;
+    }
+
+    // Is the event's accepted pin a GEOCODED pin that came from a NAME-ONLY
+    // query — "<venue>, <city>" with no address text in it at all?
+    //
+    // The rule is deliberately query-side, not response-side. Nominatim's
+    // response grade is the precision signal this file trusts everywhere else,
+    // and it does not work here: the 5069 m "Horizon, brighton" hit came back
+    // EXACT grade, with a POI name that matched the bar. Nothing in the
+    // response said "this is a guess". The query did.
+    //
+    // "Name-only" is the narrowest possible reading — the query carried no
+    // address, i.e. it was the venue+city rescue rung or the no-address venue
+    // lookup. A query built from the event's address stays street-grade for
+    // this purpose even when the street line has no house number or
+    // street-type word ("Victoria Embankment, London, UK"); those pins keep
+    // winning, which is exactly the case the name-led rung exists to make
+    // accurate.
+    //
+    // Conservative on every axis:
+    //   - only geocoded pins qualify (curated and page pins are never second-
+    //     guessed here, and a maps-link pin cannot re-judge itself);
+    //   - the flag must be explicitly false — a pin carrying no flag at all
+    //     (an older record, another writer) keeps its pin (fail closed).
+    isNameOnlyGeocodedPin(event) {
+        const pinSource = typeof event.pinSource === 'string' ? event.pinSource.trim() : '';
+        if (!pinSource.startsWith('geocoded-')) return false;
+        return event._geocodeQueryHadAddress === false;
     }
 
     // "lat, lon" text → { lat, lon } numbers, or null. Local to the

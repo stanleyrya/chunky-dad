@@ -288,7 +288,8 @@ const GUARD_LINE_RES = {
     locationPreserved: /📍 MERGE: ".*?" location kept from (?:calendar|existing)/,
     arbitrationDeterministic: /🔒 MERGE: ".*?" field=\S+ resolved deterministically/,
     mapsLinkPin: /🗺️ \w*Normalizer: No curated or geocoded pin for ".*?" — using the page's maps link/,
-    mapsLinkConflict: /🗺️ MAPS LINK CONFLICT: ".*?" accepted pin .*? is \d+ m from the page's maps link/
+    mapsLinkConflict: /🗺️ MAPS LINK CONFLICT: ".*?" accepted pin .*? is \d+ m from the page's maps link/,
+    mapsLinkOverride: /🗺️ MAPS LINK CONFLICT: ".*?" geocoded pin .*? came from the name-only query/
 };
 
 function createGuardCounts() {
