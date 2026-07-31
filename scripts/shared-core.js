@@ -118,6 +118,11 @@ function isPlatformIdentityHost(host) {
 
 const IMAGE_MERGE_FIELDS = new Set(['image', 'imageVertical', 'imageHorizontal']);
 
+// The ONE calendar target an unrecognized city may produce. See
+// SharedCore.resolveCalendarTarget — the fallback must never be derived from
+// the city string itself, or a page's free text becomes a calendar name.
+const UNKNOWN_CALENDAR_NAME = 'chunky-dad-unknown';
+
 class SharedCore {
     constructor(cities, options = {}) {
         if (!cities || typeof cities !== 'object') {
@@ -5890,15 +5895,17 @@ class SharedCore {
         // never qualify (getEventUrlIdentityKey requires a path segment), so a
         // parser whose events all carry the site root (e.g. furball.nyc) is
         // untouched.
+        // The key comes from getEventIdentityUrlKey: `url`, falling back to the
+        // canonical `website` alias only when the url yields no key at all.
         const urlKeyCounts = new Map();
         for (const event of deduplicated) {
-            const urlKey = this.getEventUrlIdentityKey(event && event.url);
+            const urlKey = this.getEventIdentityUrlKey(event);
             if (urlKey) urlKeyCounts.set(urlKey, (urlKeyCounts.get(urlKey) || 0) + 1);
         }
         const eventsByUrl = new Map();
         const urlDeduplicated = [];
         for (const event of deduplicated) {
-            const urlKey = this.getEventUrlIdentityKey(event && event.url);
+            const urlKey = this.getEventIdentityUrlKey(event);
             if (!urlKey) {
                 urlDeduplicated.push(event);
                 continue;
@@ -10149,6 +10156,35 @@ class SharedCore {
         return `${parsed.protocol.toLowerCase()}//${parsed.host.toLowerCase()}${path}${parsed.search || ''}`;
     }
 
+    // Same-event URL identity for the second dedup pass. `url` first — byte
+    // for byte what this pass has always used — and ONLY when the url yields
+    // no key at all (empty, non-http, or a bare domain root) does the
+    // canonical `website` field get a turn. url and website are ONE field in
+    // this project (aliases; canonical `website:` in notes), so the event
+    // page can arrive under either key: run 20260731-120505 split "CHUNK
+    // BROOKLYN - The Return!" into two calendar events because the detail
+    // record carried the event page as `url` while its junk twin carried the
+    // SITE ROOT as url and the byte-identical event page as `website`.
+    // Because the website is consulted only where the url produced nothing,
+    // this can add merges but can never redirect or remove an existing one.
+    // One exclusion: a statically stamped `website` is curated parser/promoter
+    // metadata pasted onto EVERY event this parser emits, so a shared value
+    // there is branding, not same-event evidence. The stamp on `url` is NOT an
+    // exclusion — the opposite, in fact: in run 20260731-120505 the junk twin's
+    // _staticFields carried url = the chunk-party.com ROOT while `website`
+    // still held the organically extracted event page, which is precisely the
+    // value this fallback needs. The caller's listing-page (>= 3 events per
+    // key) and 7-day-window guards apply to the resulting key unchanged.
+    getEventIdentityUrlKey(event) {
+        const urlKey = this.getEventUrlIdentityKey(event && event.url);
+        if (urlKey) return urlKey;
+        const staticFields = event && event._staticFields && typeof event._staticFields === 'object'
+            ? event._staticFields
+            : {};
+        if (Object.prototype.hasOwnProperty.call(staticFields, 'website')) return null;
+        return this.getEventUrlIdentityKey(event && event.website);
+    }
+
     // Sanity window for same-URL dedup: recurring events reuse their event page,
     // so records far apart in time are different nights, not duplicates. Returns
     // false when either start date is missing or unparseable (stay conservative).
@@ -10971,6 +11007,27 @@ class SharedCore {
         }
         const match = /^chunky-dad-(.+)$/.exec(title);
         return match ? match[1] : '';
+    }
+
+    // Calendar target for a city — the single decision both adapters'
+    // getCalendarName delegates to. A configured city returns its configured
+    // calendar. EVERYTHING else routes to the one UNKNOWN_CALENDAR_NAME
+    // target: run 2026-07-31 (Club Chub) resolved a Wilton Manors address to
+    // no configured city, and the old `chunky-dad-${city}` fallback minted the
+    // target "chunky-dad-wilton manors" — a calendar name with a SPACE in it
+    // that names no calendar that exists or ever could. Fail closed the way
+    // the AI parser's city cross-check already documents ("unknown routes to
+    // chunky-dad-unknown, the safe path"): one known-bad target a human owns,
+    // never a per-string name invented from whatever the page said. Pure
+    // (cities injected, no I/O); the caller does the logging so each adapter
+    // keeps its own log prefix.
+    // Returns { name, recognized, requested }.
+    static resolveCalendarTarget(cities, city) {
+        const requested = String(city == null ? '' : city).trim();
+        const map = cities && typeof cities === 'object' ? cities : {};
+        const configured = requested && map[requested] && map[requested].calendar;
+        if (configured) return { name: configured, recognized: true, requested };
+        return { name: UNKNOWN_CALENDAR_NAME, recognized: false, requested };
     }
 
     static summarizeReviewFindings(findings) {

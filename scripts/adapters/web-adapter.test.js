@@ -251,3 +251,36 @@ test('displayResults attaches the published-calendar snapshot info for the serve
     assert.ok(results.publishedCalendarSnapshots.la.fetchedAt, 'fetch age source for "calendar snapshot: la …"');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Calendar targets are never invented from a city string. Run 2026-07-31
+// (Club Chub) resolved a Wilton Manors address to no configured city and the
+// old `chunky-dad-${city}` fallback produced the target
+// "chunky-dad-wilton manors" — a name with a space in it, for a calendar that
+// does not exist. Unrecognized cities now fail closed to one unknown target.
+// ---------------------------------------------------------------------------
+
+test('getCalendarName fails closed for an unrecognized city and logs it once', () => {
+  const adapter = makeAdapter();
+  assert.equal(adapter.getCalendarName('la'), 'chunky-dad-la', 'configured cities are untouched');
+
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (...args) => { lines.push(args.join(' ')); };
+  let names;
+  try {
+    names = ['wilton manors', 'wilton manors', '', undefined, 'default']
+      .map(city => adapter.getCalendarName(city));
+  } finally {
+    console.log = originalLog;
+  }
+
+  for (const name of names) {
+    assert.equal(name, 'chunky-dad-unknown', 'every unrecognized city routes to the one unknown target');
+    assert.ok(!/\s/.test(name), 'a calendar name can never contain whitespace');
+  }
+
+  const wiltonLines = lines.filter(line => line.includes('wilton manors'));
+  assert.equal(wiltonLines.length, 1, 'logged once per distinct unrecognized city, not once per event');
+  assert.ok(wiltonLines[0].includes('Unrecognized city'), `expected the visible drop line, got: ${wiltonLines[0]}`);
+});

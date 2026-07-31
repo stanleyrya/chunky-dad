@@ -4828,6 +4828,99 @@ test('bar plausibility gate: an address-shaped bar is dropped with the additive 
   assert.equal(keepLogs.length, 0, 'no log when nothing drops');
 });
 
+// ---------------------------------------------------------------------------
+// A city/district is not a venue. Run 2026-07-31 (Club Chub) stored bar
+// "Downtown Los Angeles" for an event whose own title says "NEW OUTDOOR
+// LOCATION" — the venue was genuinely undisclosed — and the same run's CHUNK
+// parser stored bar "Brooklyn" and bar "Portland" for events whose real venues
+// (C'mon Everybody, Nova PDX) it named correctly elsewhere. Everything is
+// driven by the cities config; no new list of place names exists.
+// ---------------------------------------------------------------------------
+const CITY_GATE_CONFIG = {
+  la: { name: 'Los Angeles', calendar: 'chunky-dad-la', patterns: ['los angeles', 'hollywood', 'downtown los angeles', 'dtla'] },
+  nyc: { name: 'New York', calendar: 'chunky-dad-nyc', aliases: ['new-york'], patterns: ['new york', 'nyc', 'manhattan', 'brooklyn'] },
+  portland: { name: 'Portland', calendar: 'chunky-dad-portland', patterns: ['portland', 'pdx'] },
+  'fort-lauderdale': { name: 'Fort Lauderdale', calendar: 'chunky-dad-fort-lauderdale', patterns: ['fort lauderdale', 'wilton manors'] }
+};
+
+test('bar plausibility gate: a city/district value is dropped like an address-shaped one', () => {
+  const parser = createParser();
+
+  const duro = {
+    title: 'D>U>R>O is back NEW OUTDOOR LOCATION _ NIGHT FOAM PARTY',
+    bar: 'Downtown Los Angeles',
+    address: 'Downtown Los Angeles, Downtown Los Angeles, Los Angeles, CA, USA',
+    city: 'la'
+  };
+  const duroLogs = captureLogs(() => { parser.applyBarPlausibilityGate(duro, CITY_GATE_CONFIG); });
+  assert.equal('bar' in duro, false, 'a district that is a configured city pattern is not a venue');
+  assert.ok(
+    duroLogs.some(line => line.includes('🤖 AI Web: Dropped implausible bar "Downtown Los Angeles" (city name')),
+    `expected the city-name drop line, got: ${JSON.stringify(duroLogs)}`
+  );
+
+  const brooklyn = { title: 'CHUNK BROOKLYN - The Return!', bar: 'Brooklyn', city: 'nyc' };
+  parser.applyBarPlausibilityGate(brooklyn, CITY_GATE_CONFIG);
+  assert.equal('bar' in brooklyn, false, 'a borough that is a configured nyc pattern is not a venue');
+
+  const portland = { title: 'The RETURN', bar: 'Portland', city: 'portland' };
+  parser.applyBarPlausibilityGate(portland, CITY_GATE_CONFIG);
+  assert.equal('bar' in portland, false, "a bar equal to the event's own city is not a venue");
+
+  const wilton = { title: 'Bear Happy Hour', bar: 'Wilton Manors', city: 'fort-lauderdale' };
+  parser.applyBarPlausibilityGate(wilton, CITY_GATE_CONFIG);
+  assert.equal('bar' in wilton, false, 'a neighborhood pattern is not a venue either');
+});
+
+test('bar plausibility gate: place-named real venues survive the city gate (fails open)', () => {
+  const parser = createParser();
+  // Whole-value equality only — containment would kill every one of these.
+  const survivors = [
+    ["C'mon Everybody", 'nyc'],
+    ['SF Eagle', 'sf'],
+    ['Nova PDX', 'portland'],
+    ['Brooklyn Bowl', 'nyc'],
+    ['New York Bar', 'nyc'],
+    ['Downtown Los Angeles Standard', 'la'],
+    ['Precinct DTLA', 'la']
+  ];
+  for (const [bar, city] of survivors) {
+    const event = { title: 'x', bar, city };
+    parser.applyBarPlausibilityGate(event, CITY_GATE_CONFIG);
+    assert.equal(event.bar, bar, `"${bar}" is a venue name and must survive`);
+  }
+  // No cities config at all → the gate cannot judge, so it must not drop.
+  const noConfig = { title: 'x', bar: 'Brooklyn', city: 'nyc' };
+  parser.applyBarPlausibilityGate(noConfig, null);
+  assert.equal(noConfig.bar, 'Brooklyn', 'no cities config → fail open, never drop');
+});
+
+test('address plausibility gate: a doubled leading segment is a failed geocode, not an address', () => {
+  const parser = createParser();
+  const event = {
+    title: 'D>U>R>O is back NEW OUTDOOR LOCATION _ NIGHT FOAM PARTY',
+    address: 'Downtown Los Angeles, Downtown Los Angeles, Los Angeles, CA, USA',
+    city: 'la'
+  };
+  const logs = captureLogs(() => { parser.applyAddressPlausibilityGate(event, {}); });
+  assert.equal('address' in event, false, 'the echoed district address is dropped');
+  assert.ok(
+    logs.some(line => line.includes('duplicate leading segment (failed geocode)')),
+    `expected the duplicate-segment drop line, got: ${JSON.stringify(logs)}`
+  );
+
+  // Fails open with no city: the address is then the only city signal left.
+  const noCity = { title: 'x', address: 'Downtown Los Angeles, Downtown Los Angeles, Los Angeles, CA, USA' };
+  parser.applyAddressPlausibilityGate(noCity, {});
+  assert.equal(noCity.address, 'Downtown Los Angeles, Downtown Los Angeles, Los Angeles, CA, USA',
+    'no city on the event → keep the address, it is the only place signal');
+
+  // A real address is untouched.
+  const real = { title: 'x', address: '325 Franklin Ave, Brooklyn, NY 11238, USA', city: 'nyc' };
+  parser.applyAddressPlausibilityGate(real, {});
+  assert.equal(real.address, '325 Franklin Ave, Brooklyn, NY 11238, USA', 'a real address never trips the rule');
+});
+
 test('incident 20260724-115423 end-to-end: truncated bar+address drop, bar rescue candidate suppressed, convergence adopts curated "Legacy"', async () => {
   global.EventSchema = EventSchema; // earlier tests leak a mocked schema — pin the real one
   const parser = createRescueParser(BOSTON_CURATED_BARS);

@@ -338,7 +338,10 @@ const CITY_CONFIG = {
         calendarId: '6eac785e44cb3f8b0738e80662fdb28058dd93c1297b53920d424ab8e3c26571@group.calendar.google.com',
         calendar: 'chunky-dad-poconos',
         timezone: 'America/New_York',
-        patterns: ['poconos', 'pocono'],
+        // 'east stroudsburg' is the Monroe County borough the curated Camp Out
+        // sits in (446 Mt Nebo Rd) — inside the Pocono region this calendar
+        // covers, and the address never names the region itself.
+        patterns: ['poconos', 'pocono', 'east stroudsburg'],
         coordinates: { lat: 41.0339, lng: -75.3188 },
         mapZoom: 10,
         visible: false
@@ -375,7 +378,11 @@ const CITY_CONFIG = {
         calendarId: '372c80ec7eec31aa8929db16cd095625881e03e1625560198f6c93e736b77e9b@group.calendar.google.com',
         calendar: 'chunky-dad-fort-lauderdale',
         timezone: 'America/New_York',
-        patterns: ['fort lauderdale', 'fll', 'ft lauderdale'],
+        // 'wilton manors' is the gay neighborhood/municipality of the Fort
+        // Lauderdale metro — EVERY curated fort-lauderdale bar sits there
+        // (2209/2283/2287 Wilton Dr, 3073 NE 6th Ave). Without the pattern a
+        // Wilton Manors address matched no city at all.
+        patterns: ['fort lauderdale', 'fll', 'ft lauderdale', 'wilton manors'],
         coordinates: { lat: 26.1224, lng: -80.1373 },
         mapZoom: 11,
         visible: false
