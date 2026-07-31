@@ -12762,7 +12762,17 @@ TEXT:
             if (!paramKeys) continue;
             const queryIndex = url.indexOf('?');
             if (queryIndex < 0) continue;
-            const search = url.slice(queryIndex).replace(/#[\s\S]*$/, '');
+            // Entities are decoded BEFORE the fragment is stripped, for the
+            // same reason extractMapsLinkCoordinateCandidates below does it:
+            // a numeric character reference inside the query carries a '#'
+            // that a naive fragment strip mistakes for the URL fragment.
+            // Dice's Horizon link ("...214 King&#x27;s Road, Brighton, BN1
+            // 1NB") truncated to the harvested address "214 King" — a
+            // fragment that is still address-shaped, so the gate passed it
+            // and the venue-site consensus (#1545) could adopt it as a
+            // venue's address. decodeBasicEntities leaves '&' encoded, so
+            // the pair split is unaffected.
+            const search = this.decodeBasicEntities(url.slice(queryIndex)).replace(/#[\s\S]*$/, '');
             for (const key of paramKeys) {
                 const value = this.extractSearchParamValue(search, key).replace(/\s+/g, ' ').trim();
                 if (!value || !this.isAddressShapedBarValue(value)) continue;

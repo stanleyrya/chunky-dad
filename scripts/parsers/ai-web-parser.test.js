@@ -5458,6 +5458,17 @@ test('extractMapsDirectionsAddresses harvests the literal massive.club direction
   // and non-map links contribute nothing.
   assert.deepEqual(parser.extractMapsDirectionsAddresses('<a href="https://maps.apple.com/?q=Massive+Seattle">x</a>'), []);
   assert.deepEqual(parser.extractMapsDirectionsAddresses('<a href="https://massive.club/events?destination=619+E+Pine+St">x</a>'), []);
+
+  // A numeric character reference in the query carries a '#' that must not be
+  // read as the URL fragment. Dice's real Horizon link truncated to the
+  // address "214 King" — still address-shaped, so the gate passed the
+  // fragment through to the venue-site consensus.
+  assert.deepEqual(
+    parser.extractMapsDirectionsAddresses(
+      '<a href="https://maps.google.com/?daddr=214%20King&#x27;s%20Road%2C%20Brighton%2C%20BN1%201NB">x</a>'
+    ),
+    ["214 King's Road, Brighton, BN1 1NB"]
+  );
 });
 
 test('venue-site consensus: the same footer address on 3 pages establishes consensus and fills blanks only', () => {
