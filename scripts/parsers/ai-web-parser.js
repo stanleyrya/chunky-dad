@@ -652,6 +652,13 @@ class AiWebParser {
                             console.log(`🤖 AI Web: Title "${event.title}" is just the event's city — prefixed known organizer → "${prefixedTitle}"`);
                             event.title = prefixedTitle;
                         }
+                        // …and the title-doctrine brand prefix, for the same
+                        // reason: structured-data events skip normalizeAiEvent.
+                        const brandTitle = this.buildBrandPrefixedTitle(event.title, pageBrandNames, effectiveHtmlData, parserConfig);
+                        if (brandTitle) {
+                            console.log(`🤖 AI Web: Title "${event.title}" does not name the page's organizer — prefixed brand → "${brandTitle}"`);
+                            event.title = brandTitle;
+                        }
                     });
                 }
                 // Enrichment only: fills empty fields from the Wix warmup blob,
@@ -7626,6 +7633,71 @@ class AiWebParser {
     }
 
 
+    // Event `name` values from the page's own JSON-LD, cached per page like
+    // getPageBrandNames (segment/OCR htmlData copies are spreads and inherit
+    // the cache). Fails open to [] without a core: every consumer treats an
+    // empty list as "no structured data", which changes nothing.
+    getPageJsonLdEventNames(htmlData) {
+        if (!htmlData || typeof htmlData !== 'object') return [];
+        if (Array.isArray(htmlData.pageJsonLdEventNames)) return htmlData.pageJsonLdEventNames;
+        let names = [];
+        if (this.core && typeof this.core.extractJsonLdEventNodes === 'function') {
+            try {
+                names = this.core.extractJsonLdEventNodes(typeof htmlData.html === 'string' ? htmlData.html : '')
+                    .map(node => (node && typeof node.name === 'string'
+                        ? this.normalizeWhitespace(this.decodeBasicEntities(this.stripTags(node.name)).replace(/&amp;/gi, '&'))
+                        : ''))
+                    .filter(Boolean);
+            } catch (error) {
+                console.warn(`🤖 AI Web: JSON-LD event name lookup failed: ${error.message}`);
+                names = [];
+            }
+        }
+        if (Object.isExtensible(htmlData)) {
+            htmlData.pageJsonLdEventNames = names;
+        }
+        return names;
+    }
+
+
+    // Truncation repair: extraction dropped part of a headline the page itself
+    // publishes. When the page's JSON-LD names an Event whose `name` CONTAINS
+    // the extracted title (normalized, on token boundaries), the structured
+    // name is the same title's fuller authoritative form — adopt it verbatim.
+    //
+    // Containment is the entire licence, and it fails closed: a structured
+    // name that does not contain the extracted title belongs to a different
+    // event and is never swapped in, and a title contained in two or more
+    // structured names cannot be attributed to either. Nothing is composed or
+    // invented — the returned value is always one node's `name` exactly as
+    // published, and the caller runs it through the same title cleanups every
+    // other title gets. Structured data enriches here; it never bypasses
+    // extraction, which still ran and still decided.
+    repairTruncatedTitleFromJsonLd(title, htmlData) {
+        const original = String(title || '');
+        const names = this.getPageJsonLdEventNames(htmlData);
+        if (!original || names.length === 0) return original;
+        const normalize = (value) => String(value || '')
+            .toLowerCase()
+            .replace(/[^\p{L}\p{N}]+/gu, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        const normalizedTitle = normalize(original);
+        if (!normalizedTitle) return original;
+        const matches = names.filter(name => {
+            const normalizedName = normalize(name);
+            if (!normalizedName || normalizedName === normalizedTitle) return false;
+            return ` ${normalizedName} `.includes(` ${normalizedTitle} `);
+        });
+        if (matches.length === 0) return original;
+        if (matches.length > 1) {
+            console.log(`🤖 AI Web: Title "${original}" is contained in ${matches.length} JSON-LD event names — ambiguous, keeping the extracted title`);
+            return original;
+        }
+        return matches[0];
+    }
+
+
     // Padded-token containment of a candidate title in any '|'-separated
     // segment of the page's own og:title or <title> tag. Case-insensitive,
     // punctuation-collapsed; empty inputs never match.
@@ -8546,7 +8618,7 @@ class AiWebParser {
         // at the Dallas Eagle 🤼‍♂️🦅"). Appended to the schema line so the
         // schema text itself stays byte-identical.
         if (normalized === 'title') {
-            description += ` The title is the event's NAME — short and reusable, exactly as it appears in the source. When the source text is an announcement sentence or caption that contains the event name, extract just the name portion (it must still appear verbatim within the source). Never include venue, city, date, or marketing phrases in the title.`;
+            description += ` The title is the event's NAME — short and reusable, exactly as it appears in the source. When the source text is an announcement sentence or caption that contains the event name, extract just the name portion (it must still appear verbatim within the source). Never include venue, city, date, or marketing phrases in the title — but the organizer/promoter brand IS part of the name: when the source headline leads with it, keep it.`;
         }
         // Prompt-only steering (run 20260724-155934 findings): thedallaseagle.com
         // listings print "End at: August 1, 2026 - 2:00 am" and extraction kept
@@ -8691,7 +8763,7 @@ ${String(snippet || '')}`;
             const aliasSuffix = pageBrandNames.length > 1
                 ? ` (also appears as ${pageBrandNames.slice(1).map(name => `"${name}"`).join(', ')})`
                 : '';
-            steeringContext += `KNOWN ORGANIZER (derived from page metadata): "${pageBrandNames[0]}"${aliasSuffix} — this is the event promoter/site brand, NOT the venue. Never return it as "bar", and do not treat its name in page titles as part of the event name.\n`;
+            steeringContext += `KNOWN ORGANIZER (derived from page metadata): "${pageBrandNames[0]}"${aliasSuffix} — this is the event promoter/site brand, NOT the venue. Never return it as "bar".\n`;
         }
         const extraContext = aiConfig && typeof aiConfig.extraContext === 'string' ? aiConfig.extraContext.trim() : '';
         if (extraContext) {
@@ -10056,6 +10128,15 @@ TEXT:
     // merely containing "com"/"org" never classifies as brand-citing; tokens
     // under 3 chars are skipped. Cached per page on htmlData like
     // getPageBrandNames.
+    // Labels that only ever mean "this is web infrastructure", never a place
+    // or a name. Shared by the brand/domain token corpus below and the
+    // domain-shaped bar rejection — deliberately NOT every TLD: ".club",
+    // ".bar" and ".bkk" are how real venues spell themselves ("massive.club",
+    // "BARBER.BAR", "BEEF.BKK" are all curated venue names).
+    getGenericInfrastructureDomainLabels() {
+        return new Set(['www', 'com', 'org', 'net', 'edu', 'gov', 'mil', 'info', 'biz', 'app', 'dev', 'web', 'site', 'online', 'html', 'htm']);
+    }
+
     getPageBrandDomainTokens(htmlData) {
         if (!htmlData || typeof htmlData !== 'object') return [];
         if (Array.isArray(htmlData.pageBrandDomainTokens)) return htmlData.pageBrandDomainTokens;
@@ -10074,7 +10155,7 @@ TEXT:
             : '';
         if (host) {
             add(host);
-            const genericLabels = new Set(['www', 'com', 'org', 'net', 'edu', 'gov', 'mil', 'info', 'biz', 'app', 'dev', 'web', 'site', 'online', 'html', 'htm']);
+            const genericLabels = this.getGenericInfrastructureDomainLabels();
             host.split('.').forEach(label => {
                 if (!genericLabels.has(label)) add(label);
             });
@@ -10738,6 +10819,19 @@ TEXT:
             aiEvent.summary,
             this.getResolvedParserMetadataFieldValue(parserConfig, ['title', 'name', 'summary'], aiEvent)
         );
+        // Restore a title extraction truncated, proven by containment in the
+        // page's own JSON-LD Event name (see repairTruncatedTitleFromJsonLd).
+        // Deliberately FIRST of the title cleanups: the adopted value is the
+        // published name verbatim, so it still has to face the leading-date
+        // strip and the brand-suffix strip below — the same two cleanups the
+        // structured-data path applies to JSON-LD titles.
+        if (title) {
+            const repairedTitle = this.repairTruncatedTitleFromJsonLd(title, htmlData);
+            if (repairedTitle !== title) {
+                console.log(`🤖 AI Web: Restored truncated title "${title}" → "${repairedTitle}" (contained in the page's own JSON-LD event name)`);
+                title = repairedTitle;
+            }
+        }
         // Strip a leading date phrase HERE rather than in the per-pass guard:
         // titles also arrive from segment headings and config metadata, which
         // never pass through that guard — a live BEEFMINCE run showed the
@@ -10828,6 +10922,16 @@ TEXT:
             if (prefixedTitle) {
                 console.log(`🤖 AI Web: Title "${title}" is just the event's city — prefixed known organizer → "${prefixedTitle}"`);
                 title = prefixedTitle;
+            }
+        }
+        // Title doctrine, promoter half: the brand belongs in the event's name.
+        // Runs AFTER the bare-city prefixer above, whose output already names
+        // the organizer — so this is a no-op there, never a second prefix.
+        if (pageBrandNames.length > 0) {
+            const brandTitle = this.buildBrandPrefixedTitle(title, pageBrandNames, htmlData, parserConfig);
+            if (brandTitle) {
+                console.log(`🤖 AI Web: Title "${title}" does not name the page's organizer — prefixed brand → "${brandTitle}"`);
+                title = brandTitle;
             }
         }
         const timezone = this.firstNonEmpty(
@@ -13918,6 +14022,25 @@ TEXT:
         return '';
     }
 
+    // A website is never a venue: run 20260731 shipped bar "CHUNK-PARTY.COM"
+    // (the promoter's own domain, swapped into the bar field while the real
+    // venue "C'mon Everybody" went to the title). Domain SHAPE, not mere
+    // punctuation — dots are legitimate in venue names, and the curated
+    // corpus proves it ("massive.club", "BARBER.BAR", "BEEF.BKK"):
+    //   - an explicit URL/host form ("https://…", "www.…") is always a domain;
+    //   - otherwise a bare single-token host qualifies ONLY when its last
+    //     label is a generic infrastructure label (.com/.net/.org/…), which no
+    //     venue uses as its name.
+    // Fails open on anything with whitespace — a real name, not a hostname.
+    isDomainShapedBarValue(value) {
+        const text = String(value || '').trim();
+        if (!text || /\s/.test(text)) return false;
+        if (/^(?:https?:\/\/|www\.)/i.test(text)) return true;
+        const hostMatch = text.match(/^[a-z0-9][a-z0-9-]*(?:\.[a-z0-9][a-z0-9-]*)*\.([a-z]{2,})$/i);
+        if (!hostMatch) return false;
+        return this.getGenericInfrastructureDomainLabels().has(hostMatch[1].toLowerCase());
+    }
+
     // Post-extraction bar plausibility gate (mirror of
     // applyAddressPlausibilityGate: flag-and-drop, additive log): an
     // address-shaped bar VALUE is never a valid extraction. Run
@@ -13935,9 +14058,16 @@ TEXT:
         if (!event || typeof event !== 'object') return event;
         const bar = typeof event.bar === 'string' ? event.bar.trim() : '';
         if (!bar) return event;
-        const reason = this.isAddressShapedBarValue(bar)
-            ? 'address-shaped'
-            : this.getCityShapedBarRejection(bar, event, cityConfig);
+        // Same flag-and-drop shape for every reason, so the curated exemption
+        // below applies uniformly. Placeholder reuses isPlaceholderVenueName,
+        // which the maps-link candidate path already trusts — it was simply
+        // never wired in here, so run 20260731 shipped SPOOKMINCE with bar
+        // "Venue TBA" as if an unannounced venue were a real one.
+        let reason = '';
+        if (this.isAddressShapedBarValue(bar)) reason = 'address-shaped';
+        else if (this.isPlaceholderVenueName(bar)) reason = 'placeholder — venue not announced';
+        else if (this.isDomainShapedBarValue(bar)) reason = 'website domain — not a venue name';
+        else reason = this.getCityShapedBarRejection(bar, event, cityConfig);
         if (!reason) return event;
         // Curated data outranks a derived shape heuristic. Both shape tests
         // above read a NAME and guess what it is; the curated corpus KNOWS.
@@ -14515,10 +14645,7 @@ TEXT:
         if (!Array.isArray(pageBrandNames) || pageBrandNames.length === 0) return '';
         if (!this.isCityOnlyTitle(title, cityValue, cityConfig)) return '';
         if (this.titleContainsPageBrandName(title, pageBrandNames)) return '';
-        const ogSiteName = this.getPageOgSiteName(htmlData);
-        const organizerDisplay = ogSiteName && this.matchesPageBrandName(ogSiteName, pageBrandNames)
-            ? ogSiteName
-            : pageBrandNames[0];
+        const organizerDisplay = this.getOrganizerDisplayName(pageBrandNames, htmlData);
         let baseTitle = title;
         const ogTitle = this.getPageOgTitle(htmlData);
         if (ogTitle) {
@@ -14530,6 +14657,92 @@ TEXT:
             }
         }
         return `${organizerDisplay}: ${baseTitle}`;
+    }
+
+    // How the page displays its own brand: og:site_name when it agrees with a
+    // derived brand name ("BEARRACUDA"), else the primary extracted name (the
+    // same value the _organizer stamp uses). Shared with the city-only
+    // prefixer above so both spell the organizer the same way.
+    getOrganizerDisplayName(pageBrandNames, htmlData) {
+        if (!Array.isArray(pageBrandNames) || pageBrandNames.length === 0) return '';
+        const ogSiteName = this.getPageOgSiteName(htmlData);
+        return ogSiteName && this.matchesPageBrandName(ogSiteName, pageBrandNames)
+            ? ogSiteName
+            : pageBrandNames[0];
+    }
+
+    // The page's derived brand is corroborated as THIS parser's promoter when
+    // the parser's own configured name says so ("CHUNK" ≡ brand "CHUNK";
+    // "Bearracuda Events" contains brand "Bearracuda"). Curated config beats a
+    // derived signal, and it is what keeps a crawled PLATFORM's brand out of
+    // event names: Cubhouse's linktr.ee pages derive "Linktree" and Goldiloxx's
+    // ticketing pages derive "DICE", neither of which any parser is named
+    // after. Whole-token matching only — no substrings.
+    pageBrandMatchesParserName(pageBrandNames, parserConfig) {
+        const configured = parserConfig && typeof parserConfig.name === 'string' ? parserConfig.name.trim() : '';
+        if (!configured) return false;
+        if (!Array.isArray(pageBrandNames) || pageBrandNames.length === 0) return false;
+        return this.matchesPageBrandName(configured, pageBrandNames)
+            || this.titleContainsPageBrandName(configured, pageBrandNames);
+    }
+
+    // …and the curated promoter registry (data/promoters.json) independently
+    // knows the brand as a promoter. Second curated signal, deliberately AND-ed
+    // with the parser-name check above: an AGGREGATOR is named after itself and
+    // passes the parser-name check on its own pages ("The Bear Calendar"), but
+    // it is not a promoter and its listings belong to Megawoof, Twisted Bear
+    // and friends — the registry is what knows the difference. Fails closed
+    // when the registry is unavailable (no core, empty list).
+    pageBrandIsCuratedPromoter(pageBrandNames) {
+        if (!this.core || typeof this.core.getPromoterEntryByName !== 'function') return false;
+        return (Array.isArray(pageBrandNames) ? pageBrandNames : [])
+            .some(name => Boolean(this.core.getPromoterEntryByName(name)));
+    }
+
+    // Title doctrine, promoter half: the event's NAME carries the organizer
+    // brand (venue, city and date have their own fields and stay out of it).
+    // The extraction prompt asks for the brand, but a prompt is a request —
+    // this is the deterministic backstop that makes the outcome the same
+    // whatever the model returned: "The RETURN" → "CHUNK: The RETURN".
+    //
+    // PREFIX ONLY. Nothing is ever removed from a title here: many promoters
+    // name events "<BRAND> <city> <date>" and nothing else, so stripping city
+    // and date would collapse "CHUNK Chicago - September 19th", "CHUNK
+    // Brooklyn 7/4" and "CHUNK Brooklyn - 5/9" to the identical string
+    // "CHUNK", destroying event identity and dedup.
+    //
+    // Fails closed in every direction:
+    // - no derived brand for the page → '' (a brand is never invented)
+    // - the brand is not corroborated by BOTH curated signals — the parser's
+    //   configured name and the promoter registry → '' (derived data alone
+    //   never licenses rewriting a title)
+    // - a page classified as the VENUE's own site → '' (there the brand IS the
+    //   venue, and the venue belongs in bar, not the title)
+    // - the title already names the brand in ANY casing or position → ''
+    //   (idempotent: "CHUNK Brooklyn 7/4" and "CHUNK CHICAGO presents SPRING
+    //   THAW!" are left exactly as they are, and a re-run never doubles up)
+    // - the title is nothing BUT the brand, so prefixing could only produce
+    //   "CHUNK: CHUNK" → '' (collapse guard)
+    // - an implausible brand — no alphanumerics, or long enough to swamp the
+    //   name it prefixes — → '' rather than an absurd title.
+    buildBrandPrefixedTitle(title, pageBrandNames, htmlData, parserConfig = null) {
+        const text = this.normalizeWhitespace(String(title || ''));
+        if (!text) return '';
+        if (!Array.isArray(pageBrandNames) || pageBrandNames.length === 0) return '';
+        if (!this.pageBrandMatchesParserName(pageBrandNames, parserConfig)) return '';
+        if (!this.pageBrandIsCuratedPromoter(pageBrandNames)) return '';
+        if (this.getPageSiteRole(htmlData) === 'venue') return '';
+        if (this.titleContainsPageBrandName(text, pageBrandNames)) return '';
+        // Collapse guard: a title that is ONLY brand tokens has no event name
+        // to carry, so there is nothing to prefix — leave the original alone.
+        const withoutBrandTokens = text.split(/\s+/)
+            .filter(token => token && !this.titleContainsPageBrandName(token, pageBrandNames))
+            .join(' ');
+        if (!/[a-z0-9]/i.test(withoutBrandTokens)) return '';
+        const organizerDisplay = this.normalizeWhitespace(this.getOrganizerDisplayName(pageBrandNames, htmlData));
+        if (!/[a-z0-9]/i.test(organizerDisplay)) return '';
+        if (organizerDisplay.length > 24 || organizerDisplay.split(/\s+/).length > 3) return '';
+        return `${organizerDisplay}: ${text}`;
     }
 
     // Split a combined OCR+page stream into ordered corpus chunks so the

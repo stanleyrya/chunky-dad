@@ -5330,7 +5330,7 @@ test('getFieldContext bar steering: the address-shape sentence is appended, exis
 
 test('getFieldContext title steering: the caption-vs-name sentences are appended, existing schema text unchanged, other fields unaffected', () => {
   const parser = createParser();
-  const steering = ` The title is the event's NAME — short and reusable, exactly as it appears in the source. When the source text is an announcement sentence or caption that contains the event name, extract just the name portion (it must still appear verbatim within the source). Never include venue, city, date, or marketing phrases in the title.`;
+  const steering = ` The title is the event's NAME — short and reusable, exactly as it appears in the source. When the source text is an announcement sentence or caption that contains the event name, extract just the name portion (it must still appear verbatim within the source). Never include venue, city, date, or marketing phrases in the title — but the organizer/promoter brand IS part of the name: when the source headline leads with it, keep it.`;
   const context = parser.getFieldContext('title', null);
   assert.ok(context.endsWith(steering),
     `the title steering is appended, got: ${JSON.stringify(context)}`);
@@ -8313,6 +8313,210 @@ test('strips a leading date phrase from an event title, and only then', () => {
   assert.equal(strip('Bearracuda Atlanta: Winter Beef Ball'), 'Bearracuda Atlanta: Winter Beef Ball');
   assert.equal(strip('Bear Week Sitges - Opening Party'), 'Bear Week Sitges - Opening Party');
   assert.equal(strip(''), '');
+});
+
+// ---------------------------------------------------------------------------
+// Title doctrine, promoter half: the organizer brand belongs in the event's
+// NAME (run 20260731-124200 shipped "The RETURN"). PREFIX ONLY — never strip.
+// ---------------------------------------------------------------------------
+
+const CHUNK_BRAND_HTML = '<html><head><meta property="og:site_name" content="CHUNK"/>'
+  + '<script type="application/ld+json">{"@context":"https://schema.org/","@type":"WebSite","name":"CHUNK","url":"https://www.chunk-party.com"}</script>'
+  + '</head><body></body></html>';
+function createChunkParser() {
+  const parser = createParser();
+  parser.core.promoters = [{ name: 'CHUNK' }];
+  return parser;
+}
+const CHUNK_PAGE = () => ({ html: CHUNK_BRAND_HTML, url: 'https://www.chunk-party.com/event-details/x' });
+const CHUNK_CONFIG = { name: 'CHUNK' };
+
+test('prefixes the organizer brand onto a title that lacks it, idempotently', () => {
+  const parser = createChunkParser();
+  const brands = parser.getPageBrandNames(CHUNK_PAGE());
+  const prefix = (title) => parser.buildBrandPrefixedTitle(title, brands, CHUNK_PAGE(), CHUNK_CONFIG);
+
+  assert.equal(prefix('The RETURN'), 'CHUNK: The RETURN');
+  assert.equal(prefix('NEW YEARS EVE'), 'CHUNK: NEW YEARS EVE');
+
+  // Idempotent in ANY casing or position — a re-run never doubles up. Every
+  // brand-bearing title from run 20260731-120505 is left exactly as it is.
+  for (const title of [
+    'CHUNK Portland - SUMMER BLOW OUT!',
+    'CHUNK Chicago - September 19th',
+    'CHUNK DORE ALLEY - Saturday July 25th',
+    'CHUNK Brooklyn 7/4',
+    'CHUNK Brooklyn - 5/9',
+    'CHUNK CHICAGO presents SPRING THAW!',
+    'CHUNK CHICAGO presents SAUSAGE PARTY!',
+    'CHUNK BROOKLYN - The Return!',
+    'chunk portland - the return!',
+    'Summer Blow Out — CHUNK'
+  ]) {
+    assert.equal(prefix(title), '', `already names the brand: ${title}`);
+  }
+  // And prefixing an already-prefixed title is a no-op.
+  assert.equal(prefix(prefix('The RETURN')), '');
+});
+
+test('the brand prefix never collapses a title to the bare brand', () => {
+  const parser = createChunkParser();
+  const brands = parser.getPageBrandNames(CHUNK_PAGE());
+  const prefix = (title) => parser.buildBrandPrefixedTitle(title, brands, CHUNK_PAGE(), CHUNK_CONFIG);
+  // "<BRAND> <city> <date>" is how this promoter names events: stripping the
+  // city and date would collapse four distinct events to the single string
+  // "CHUNK". Nothing is ever removed here — the title comes back untouched.
+  assert.equal(prefix('CHUNK Brooklyn 7/4'), '');
+  // A title that is nothing BUT brand tokens has no name to carry.
+  assert.equal(prefix('CHUNK'), '');
+  assert.equal(prefix('chunk'), '');
+  assert.equal(prefix(''), '');
+});
+
+test('the brand prefix demands BOTH curated signals and skips venue sites', () => {
+  const brands = createChunkParser().getPageBrandNames(CHUNK_PAGE());
+
+  // Registry knows CHUNK but the parser is named after something else — the
+  // aggregator/platform case (linktr.ee → "Linktree", dice.fm → "DICE").
+  const wrongParser = createChunkParser();
+  assert.equal(wrongParser.buildBrandPrefixedTitle('The RETURN', brands, CHUNK_PAGE(), { name: 'Cubhouse' }), '');
+  assert.equal(wrongParser.buildBrandPrefixedTitle('The RETURN', brands, CHUNK_PAGE(), null), '');
+
+  // Parser name matches but the promoter registry does not know the brand —
+  // an aggregator named after itself ("The Bear Calendar") lands here.
+  const noRegistry = createParser();
+  noRegistry.core.promoters = [];
+  assert.equal(noRegistry.buildBrandPrefixedTitle('The RETURN', brands, CHUNK_PAGE(), CHUNK_CONFIG), '');
+  const corelessParser = new AiWebParser({ normalizeUrl });
+  assert.equal(corelessParser.buildBrandPrefixedTitle('The RETURN', brands, CHUNK_PAGE(), CHUNK_CONFIG), '');
+
+  // A page that is the VENUE's own site: there the brand IS the venue.
+  const venueParser = createChunkParser();
+  const venuePage = { html: CHUNK_BRAND_HTML, url: 'https://www.chunk-party.com/x', pageSiteRole: 'venue' };
+  assert.equal(venueParser.buildBrandPrefixedTitle('The RETURN', brands, venuePage, CHUNK_CONFIG), '');
+
+  // No derived brand → nothing is invented.
+  assert.equal(createChunkParser().buildBrandPrefixedTitle('The RETURN', [], CHUNK_PAGE(), CHUNK_CONFIG), '');
+});
+
+// ---------------------------------------------------------------------------
+// Bar plausibility gate: placeholder and website-domain rejections
+// ---------------------------------------------------------------------------
+
+test('drops a placeholder or website-domain bar, and keeps dotted venue names', () => {
+  const parser = createParser();
+  const gate = (bar, city = 'nyc') => {
+    const event = { bar, city };
+    parser.applyBarPlausibilityGate(event, {});
+    return event.bar;
+  };
+  // Placeholder (run 20260731 shipped SPOOKMINCE with bar "Venue TBA").
+  assert.equal(gate('Venue TBA'), undefined);
+  assert.equal(gate('TBA'), undefined);
+  assert.equal(gate('Venue TBC'), undefined);
+  assert.equal(gate('To Be Announced'), undefined);
+  // Website domain (run 20260731 shipped bar "CHUNK-PARTY.COM").
+  assert.equal(gate('CHUNK-PARTY.COM'), undefined);
+  assert.equal(gate('www.chunk-party.com'), undefined);
+  assert.equal(gate('https://bearracuda.com'), undefined);
+  // Dotted venue names are NOT domains — all three are curated venues.
+  assert.equal(gate('massive.club', 'berlin'), 'massive.club');
+  assert.equal(gate('MASSIVE.CLUB', 'berlin'), 'MASSIVE.CLUB');
+  assert.equal(gate('BEEF.BKK', 'bangkok'), 'BEEF.BKK');
+  assert.equal(gate('BARBER.BAR', 'bangkok'), 'BARBER.BAR');
+  // Ordinary venue names are untouched.
+  assert.equal(gate("C'mon Everybody"), "C'mon Everybody");
+  assert.equal(gate('F8 Nightclub & Bar', 'sf'), 'F8 Nightclub & Bar');
+  assert.equal(gate('Nova PDX', 'portland'), 'Nova PDX');
+  // A name containing a domain-ish word is not a bare host.
+  assert.equal(gate('The Web Bar'), 'The Web Bar');
+});
+
+// ---------------------------------------------------------------------------
+// Truncated-title repair from the page's own JSON-LD Event name (run
+// 20260731-124200: CHUNK's page publishes "CHUNK Portland - The RETURN!
+// Saturday March 14th" in JSON-LD, <title>, og:title and <h1>, and extraction
+// shipped "The RETURN")
+// ---------------------------------------------------------------------------
+
+const jsonLdEventPage = (...nodes) => `<html><head>${nodes
+  .map(node => `<script type="application/ld+json">${JSON.stringify(node)}</script>`)
+  .join('')}</head><body></body></html>`;
+const jsonLdEventNode = (name) => ({
+  '@context': 'https://schema.org',
+  '@type': 'Event',
+  name,
+  startDate: '2026-03-14T21:00:00-07:00'
+});
+
+test('restores a truncated title from the page JSON-LD event name that contains it', () => {
+  const parser = createParser();
+  const html = jsonLdEventPage(jsonLdEventNode('CHUNK Portland - The RETURN! Saturday March 14th'));
+  const htmlData = { html, url: 'https://www.chunk-party.com/event-details/chunk-portland-the-return-saturday-march-14th' };
+  assert.equal(
+    parser.repairTruncatedTitleFromJsonLd('The RETURN', htmlData),
+    'CHUNK Portland - The RETURN! Saturday March 14th');
+  // Case, punctuation and whitespace differences never block the repair.
+  assert.equal(
+    parser.repairTruncatedTitleFromJsonLd('the  return!', htmlData),
+    'CHUNK Portland - The RETURN! Saturday March 14th');
+});
+
+test('never swaps in a JSON-LD event name that does not contain the extracted title', () => {
+  const parser = createParser();
+  const htmlData = { html: jsonLdEventPage(jsonLdEventNode('CHUNK Portland - SUMMER BLOW OUT!')), url: 'https://www.chunk-party.com/x' };
+  assert.equal(parser.repairTruncatedTitleFromJsonLd('The RETURN', htmlData), 'The RETURN');
+  // Word fragments are not containment: "RETURN" must not match "RETURNS".
+  const fragmentData = { html: jsonLdEventPage(jsonLdEventNode('CHUNK RETURNS to Portland')), url: 'https://www.chunk-party.com/x' };
+  assert.equal(parser.repairTruncatedTitleFromJsonLd('RETURN', fragmentData), 'RETURN');
+  // An equal name is not a truncation, and there is nothing to repair.
+  const equalData = { html: jsonLdEventPage(jsonLdEventNode('The RETURN')), url: 'https://www.chunk-party.com/x' };
+  assert.equal(parser.repairTruncatedTitleFromJsonLd('The RETURN', equalData), 'The RETURN');
+  // Ambiguity fails closed: two structured names contain the same title.
+  const ambiguousData = {
+    html: jsonLdEventPage(
+      jsonLdEventNode('CHUNK Brooklyn - The Return!'),
+      jsonLdEventNode('CHUNK Portland - The Return! Saturday March 14th')),
+    url: 'https://www.chunk-party.com/x'
+  };
+  assert.equal(parser.repairTruncatedTitleFromJsonLd('The Return', ambiguousData), 'The Return');
+  // No structured data, no title, no htmlData → unchanged.
+  assert.equal(parser.repairTruncatedTitleFromJsonLd('The RETURN', { html: '<html></html>', url: 'https://x.example/' }), 'The RETURN');
+  assert.equal(parser.repairTruncatedTitleFromJsonLd('', { html: jsonLdEventPage(jsonLdEventNode('CHUNK Portland - The RETURN!')) }), '');
+  assert.equal(parser.repairTruncatedTitleFromJsonLd('The RETURN', null), 'The RETURN');
+});
+
+test('the JSON-LD title repair fails open without a core and composes with the other title cleanups', () => {
+  // Fail open: the gate needs SharedCore's JSON-LD reader.
+  const coreless = new AiWebParser({ normalizeUrl });
+  const html = jsonLdEventPage(jsonLdEventNode('CHUNK Portland - The RETURN! Saturday March 14th'));
+  assert.deepEqual(coreless.getPageJsonLdEventNames({ html }), []);
+  assert.equal(coreless.repairTruncatedTitleFromJsonLd('The RETURN', { html }), 'The RETURN');
+
+  // Through the real normalization path, the repaired title still faces the
+  // leading-date strip and the pipe brand-suffix strip.
+  const parser = createParser();
+  const repaired = parser.normalizeAiEvent(
+    { title: 'The RETURN', startDate: '2026-03-14T21:00:00-07:00' },
+    {}, { html, url: 'https://www.chunk-party.com/x' }, null, null);
+  assert.equal(repaired.title, 'CHUNK Portland - The RETURN! Saturday March 14th');
+
+  const datedParser = createParser();
+  const dated = datedParser.normalizeAiEvent(
+    { title: 'BEEFMINCE MEET MARKET', startDate: '2026-09-09T21:00:00Z' },
+    {}, { html: jsonLdEventPage(jsonLdEventNode('Wednesday 9th September - BEEFMINCE MEET MARKET NIGHT')), url: 'https://bear.example/x' },
+    null, null);
+  assert.equal(dated.title, 'BEEFMINCE MEET MARKET NIGHT');
+
+  const brandedParser = createParser();
+  const brandedHtml = `<html><head><meta property="og:site_name" content="CHUNK"/>`
+    + `<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': 'WebSite', name: 'CHUNK', url: 'https://www.chunk-party.com' })}</script>`
+    + `<script type="application/ld+json">${JSON.stringify(jsonLdEventNode('CHUNK Portland - The RETURN! Saturday March 14th | CHUNK'))}</script>`
+    + `</head><body></body></html>`;
+  const branded = brandedParser.normalizeAiEvent(
+    { title: 'The RETURN', startDate: '2026-03-14T21:00:00-07:00' },
+    {}, { html: brandedHtml, url: 'https://www.chunk-party.com/x' }, null, null);
+  assert.equal(branded.title, 'CHUNK Portland - The RETURN! Saturday March 14th');
 });
 
 // ---------------------------------------------------------------------------
