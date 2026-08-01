@@ -11198,3 +11198,55 @@ test('series edit: an occurrence override is still an override, not a series upd
     'and is still written'
   );
 });
+
+// ---------------------------------------------------------------------------
+// detectTitleDateSegment: day-first dates and whitespace-attached trailing
+// dates. Both were invisible, so the merge rung that drops a redundant dated
+// title never fired for the Sitges ("Wednesday 9th September – …") or CHUNK
+// ("CHUNK Brooklyn 7/4") titles, and the AI arbiter decided them case by case
+// — keeping the date in one event and dropping it in the next, same run.
+// ---------------------------------------------------------------------------
+test('detectTitleDateSegment reads day-first and whitespace-attached dates', () => {
+  const cases = [
+    ['Wednesday 9th September – BEEFMINCE MEET MARKET', 'BEEFMINCE MEET MARKET', 9, 9],
+    ['Saturday 12th September – BEEFMINCE: THE BIG BALL', 'BEEFMINCE: THE BIG BALL', 9, 12],
+    ['9 September - BEEFMINCE DISCO', 'BEEFMINCE DISCO', 9, 9],
+    ['CHUNK Brooklyn 7/4', 'CHUNK Brooklyn', 7, 4],
+    ['CHUNK Portland - The RETURN! Saturday March 14th', 'CHUNK Portland - The RETURN!', 3, 14]
+  ];
+  for (const [title, base, month, day] of cases) {
+    const segment = SharedCore.detectTitleDateSegment(title);
+    assert.ok(segment, `${title} must be detected`);
+    assert.equal(segment.base, base);
+    assert.equal(segment.month, month);
+    assert.equal(segment.day, day);
+  }
+});
+
+test('detectTitleDateSegment does not eat a name that merely starts with a date word', () => {
+  // A LEADING segment still needs a real separator, or "July 4th Party" would
+  // reduce to "Party". Edition years and weekday-only names stay untouched.
+  for (const title of ['July 4th Party', 'March 4 MADNESS', '4th of July Party',
+    'DECADENCE 2026', 'Pride 2027', 'Sunday Funday', 'May Day Party', 'BEEFMINCE x Bear Brum 2026']) {
+    assert.equal(SharedCore.detectTitleDateSegment(title), null, `${title} is not a dated title`);
+  }
+});
+
+test('a calendar title that only adds a date loses to the dateless one deterministically', () => {
+  const core = new SharedCore({}, { eventSchema: EventSchema });
+  const context = { sideLabels: { a: 'scraped', b: 'calendar' } };
+  // The already-saved BEEFMINCE titles: no AI arbitration, no coin flip.
+  for (const [clean, dated] of [
+    ['BEEFMINCE MEET MARKET', 'Wednesday 9th September – BEEFMINCE MEET MARKET'],
+    ['BEEFMINCE: THE BIG BALL', 'Saturday 12th September – BEEFMINCE: THE BIG BALL'],
+    ['CHUNK Brooklyn', 'CHUNK Brooklyn 7/4']
+  ]) {
+    const resolution = core.resolveConflictDeterministically('title', clean, dated, context);
+    assert.ok(resolution, `${dated} must resolve without the AI`);
+    assert.equal(resolution.winner, 'a', `the dateless title wins for ${dated}`);
+  }
+  // A calendar title that adds real information still arbitrates.
+  assert.equal(
+    core.resolveConflictDeterministically('title', 'FURBALL Chicago', 'FURBALL CHICAGO MARKET DAYS', context),
+    null);
+});
