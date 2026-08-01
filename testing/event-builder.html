@@ -3112,6 +3112,20 @@
         // saving LA events three hours early, which then failed to match on the
         // next scrape (CubScout, 2026-07-30). Bare opens still use the browser.
         state.timezone = state.timezone || browserTimezone;
+        // …and when the link carried a city but no timezone (a legacy link, or
+        // one whose timezone this page stripped before the fix above), derive
+        // the zone from the city rather than silently keeping the device's.
+        // createDefaultState() always seeds `timezone: browserTimezone`, so the
+        // `||` guard on the line above can never fire for a bare open — the
+        // override has to be explicit. Mirrors buildExistingState.
+        if (!urlState.overrides.timezone && state.city) {
+          const cityTimezone = (typeof CITY_CONFIG === 'object' && CITY_CONFIG && CITY_CONFIG[state.city])
+            ? CITY_CONFIG[state.city].timezone
+            : '';
+          if (cityTimezone) {
+            state.timezone = cityTimezone;
+          }
+        }
         normalizeStateLinks();
         ensureDateOrder();
         applyStateToForm();
@@ -9539,6 +9553,16 @@ Example output:
         setTextParam('name', state.name);
         setTextParam('short', state.shortName);
         setTextParam('city', state.city);
+        // The event's zone must round-trip through the address bar. Omitting it
+        // here made #1588's inbound fix (see the comment on state.timezone in
+        // init) dead on arrival: init() calls updateUrl() on load, which
+        // rewrites the URL from this list alone, so `timezone` was stripped
+        // milliseconds after being read. Any reload or re-entry of that
+        // stripped URL — including iOS Safari restoring the tab after the
+        // scriptable:// bounce — then fell back to the DEVICE zone while the
+        // wall-clock `start` stayed put, turning 21:00 Pacific into 21:00
+        // Eastern (CubScout, saved as TZID=America/New_York for Eagle LA).
+        setTextParam('timezone', state.timezone);
         const savedBarName = normalizeText(state.savedBar);
         setTextParam('bar', savedBarName);
         setTextParam('venue', state.venue);
@@ -10547,6 +10571,18 @@ Example output:
         const existingSequence = shouldIncrementSequence
           ? parseIntegerValue(state && state.editingExistingSequence)
           : null;
+        // Never guess a revision. SEQUENCE is a counter, not a timestamp, and
+        // an update whose SEQUENCE does not beat the stored one is silently
+        // ignored — the import appears to succeed and changes nothing. The
+        // value is only known once the record has been loaded through "Edit
+        // event", which reads it from the published calendar; a link that only
+        // names the record (edit=1&euid=…) arrives without it. Every published
+        // event carries a SEQUENCE, so a missing one means "not loaded yet",
+        // never "genuinely zero".
+        if (shouldIncrementSequence && existingSequence === null) {
+          updateCalendarStatus('Load this event with "Edit event" first — its revision number is needed or the calendar will ignore the update', 'warn');
+          return;
+        }
         const nextSequence = shouldIncrementSequence
           ? Math.max(1, (existingSequence !== null ? existingSequence + 1 : 1))
           : null;

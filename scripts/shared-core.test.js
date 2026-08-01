@@ -10898,6 +10898,160 @@ test('recurring withhold: override identity is never stamped on a series the scr
   assert.ok(lines.some(l => l.includes('dropped override identity')), `log explains why: ${JSON.stringify(lines)}`);
 });
 
+// The complementary invariant to the test above: dropping the identity is only
+// correct for a SERIES. A single-occurrence override is the one thing the
+// scraper is allowed to write into an existing series, and it must keep the
+// identity that names which occurrence it replaces.
+test('recurring override: a single-occurrence override keeps the identity that names its occurrence', async () => {
+  const core = createFinalBuildCore();
+  const sourceEvent = {
+    title: 'CUBSCOUT',
+    identifier: 'CAL-UUID:cubscout-20260730T183109Z@chunky.dad',
+    startDate: new Date('2026-09-05T01:00:00.000Z'),
+    endDate: new Date('2026-09-05T05:00:00.000Z'),
+    notes: 'bar: Eagle LA\nrecurrence: FREQ=MONTHLY;BYDAY=1FR'
+  };
+  // No recurrenceRule on the scraped side: this run describes ONE night, not
+  // the series definition.
+  const event = {
+    title: 'CUBSCOUT',
+    startDate: new Date('2026-09-05T04:00:00.000Z'),
+    endDate: new Date('2026-09-05T09:00:00.000Z'),
+    city: 'la'
+  };
+  const analysis = {
+    action: 'new',
+    reason: 'Recurring source match found - creating override',
+    sourceEvent,
+    overrideIdentity: {
+      overrideUid: 'cubscout-20260730T183109Z@chunky.dad',
+      overrideRecurrenceId: '20260905'
+    }
+  };
+  const analyzed = await core.buildAnalyzedCalendarEvent(event, analysis, null, {});
+
+  assert.equal(analyzed.overrideUid, 'cubscout-20260730T183109Z@chunky.dad', 'override uid survives');
+  assert.equal(analyzed.overrideRecurrenceId, '20260905', 'override recurrence id survives');
+  assert.notEqual(analyzed._recurring, true, 'a one-night override is not a series');
+
+  // The load-bearing assertion. `recurrence` is the canonical notes/ICS key, so
+  // the SERIES rule rides off the source occurrence's notes onto this override
+  // during the merge. Any change that treats a bare `recurrence` as a series
+  // stamp silently withholds the one write the scraper IS allowed to make into
+  // an existing series — and every other test in this suite still passes.
+  assert.equal(analyzed.recurrence, 'FREQ=MONTHLY;BYDAY=1FR', 'the series rule does leak in via the merge');
+  assert.equal(SharedCore.isRecurringSeriesEvent(analyzed), false, 'but it must not make this a series');
+  assert.deepEqual(
+    SharedCore.filterEventsForExecution([analyzed]).map(e => e.title),
+    ['CUBSCOUT'],
+    'so the override is still written'
+  );
+});
+
+// CubScout 2026-07-31: the run found the saved series, merged it, and confirmed
+// it with the wide-window probe — then reported "New: 1 / Intent: NEW". Both
+// override signals had been erased by then: createFinalEventObject drops
+// underscore metadata, and the withhold branch deletes the override identity.
+test('recurring withhold: analysis metadata survives the final-object rebuild, so a matched series is not reported as new', async () => {
+  const core = createFinalBuildCore();
+  const sourceEvent = {
+    title: 'CUBSCOUT',
+    identifier: 'CAL-UUID:cubscout-20260730T183109Z@chunky.dad',
+    startDate: new Date('2026-09-05T01:00:00.000Z'),
+    endDate: new Date('2026-09-05T05:00:00.000Z'),
+    notes: 'bar: Eagle LA\nrecurrence: FREQ=MONTHLY;BYDAY=1FR'
+  };
+  const event = {
+    title: 'CUBSCOUT',
+    startDate: new Date('2026-09-05T04:00:00.000Z'),
+    endDate: new Date('2026-09-05T09:00:00.000Z'),
+    city: 'la',
+    recurrenceRule: 'FREQ=MONTHLY;BYDAY=1FR'
+  };
+  const analysis = {
+    action: 'new',
+    reason: 'Recurring source match found - creating override',
+    sourceEvent,
+    overrideIdentity: {
+      overrideUid: 'cubscout-20260730T183109Z@chunky.dad',
+      overrideRecurrenceId: '20260905'
+    }
+  };
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(event, analysis, null, {});
+  } finally {
+    restore();
+  }
+
+  assert.equal(analyzed.overrideUid, undefined, 'still no override identity on a withheld series');
+  assert.ok(analyzed._analysis, 'analysis metadata is re-stamped after the rebuild');
+  assert.equal(analyzed._analysis.sourceEvent, true, 'and remembers that a calendar record was matched');
+  assert.ok(String(analyzed._analysis.reason || '').includes('override'), 'and why');
+  assert.ok(analyzed._seriesMatch, 'the match is recorded on the event');
+  assert.equal(analyzed._seriesMatch.identifier, sourceEvent.identifier);
+  assert.ok(
+    lines.some(l => l.includes('matches a series already saved in the calendar')),
+    `the run says so out loud: ${JSON.stringify(lines)}`
+  );
+});
+
+test('recurring withhold: a series with nothing saved to match carries no series-match stamp', async () => {
+  const core = createFinalBuildCore();
+  const event = {
+    title: 'CUBSCOUT',
+    startDate: new Date('2026-09-05T04:00:00.000Z'),
+    endDate: new Date('2026-09-05T09:00:00.000Z'),
+    city: 'la',
+    recurrenceRule: 'FREQ=MONTHLY;BYDAY=1FR'
+  };
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(event, NEW_ACTION_ANALYSIS, null, {});
+  } finally {
+    restore();
+  }
+
+  assert.equal(analyzed._seriesMatch, undefined, 'nothing was matched, so nothing is claimed');
+  assert.equal(analyzed._recurringExport, true, 'still withheld for ICS export');
+  assert.ok(
+    !lines.some(l => l.includes('matches a series already saved')),
+    `and the run does not claim a match: ${JSON.stringify(lines)}`
+  );
+});
+
+test('deriveOverrideIdentityFromSourceEvent round-trips through findEventByOverrideKey', () => {
+  const core = createCore();
+  const sourceEvent = {
+    title: 'CUBSCOUT',
+    identifier: 'CAL-UUID:cubscout-20260730T183109Z@chunky.dad',
+    startDate: new Date('2026-09-05T01:00:00.000Z'),
+    notes: 'bar: Eagle LA\nrecurrence: FREQ=MONTHLY;BYDAY=1FR'
+  };
+  const identity = core.deriveOverrideIdentityFromSourceEvent(sourceEvent);
+  assert.ok(identity, 'an override identity is derivable from a series occurrence');
+  assert.ok(identity.overrideUid, 'names the series');
+  assert.ok(identity.overrideRecurrenceId, 'and the occurrence');
+
+  // A previously written override, as it comes back off the calendar.
+  const storedOverride = {
+    title: 'CUBSCOUT',
+    identifier: 'CAL-UUID:override-1',
+    startDate: new Date('2026-09-05T04:00:00.000Z'),
+    notes: `bar: Eagle LA\noverrideUid: ${identity.overrideUid}\noverrideRecurrenceId: ${identity.overrideRecurrenceId}`
+  };
+  const found = core.findEventByOverrideKey([storedOverride], identity.overrideUid, identity.overrideRecurrenceId);
+  assert.ok(found && found.event, 'the stored override is found again by its identity');
+  assert.equal(found.event.identifier, 'CAL-UUID:override-1');
+
+  const missed = core.findEventByOverrideKey([storedOverride], identity.overrideUid, '19990101');
+  assert.equal(missed, null, 'a different occurrence date does not match');
+});
+
 test('areDatesEqual never throws on a non-date, and declines the match', () => {
   const core = createCore();
   const real = new Date('2026-02-14T05:00:00.000Z');
@@ -10929,4 +11083,118 @@ test('analyzeEventAction survives a calendar candidate with an unusable date', (
   // Previously threw out of the .find() callback and aborted the run.
   const analysis = core.analyzeEventAction(event, existing, 'smart');
   assert.ok(analysis && typeof analysis.action === 'string', `got an analysis: ${JSON.stringify(analysis)}`);
+});
+
+// ---------------------------------------------------------------------------
+// Editing the SERIES itself from the Event Builder. Distinct from both the
+// occurrence override (overrideUid + overrideRecurrenceId) and from Scriptable's
+// own per-occurrence editing: the owner picks the series record, changes its
+// fields, and saves. The identifier names exactly which record to update.
+// ---------------------------------------------------------------------------
+
+const SERIES_UID = 'cubscout-20260730T183109Z@chunky.dad';
+
+function buildSeriesRecord(overrides = {}) {
+  return {
+    title: 'CUBSCOUT',
+    identifier: `CAL-UUID:${SERIES_UID}`,
+    startDate: new Date('2026-09-05T04:00:00.000Z'),
+    endDate: new Date('2026-09-05T09:00:00.000Z'),
+    notes: 'bar: Eagle LA\nrecurrence: FREQ=MONTHLY;BYDAY=1FR',
+    ...overrides
+  };
+}
+
+// What the Event Builder sends for a "series"-mode save: the regular calendar
+// identifier plus the search window, and NO override identity.
+function buildSeriesEdit(overrides = {}) {
+  return {
+    title: 'CUBSCOUT RENAMED',
+    city: 'la',
+    startDate: new Date('2026-09-05T04:00:00.000Z'),
+    endDate: new Date('2026-09-05T09:00:00.000Z'),
+    recurrenceRule: 'FREQ=MONTHLY;BYDAY=1FR',
+    identifier: `CAL-UUID:${SERIES_UID}`,
+    searchStartDate: new Date('2026-09-05T04:00:00.000Z'),
+    searchEndDate: new Date('2026-09-05T09:00:00.000Z'),
+    // ScriptableUrlParser.applyFieldPriorities stamps every field the link
+    // supplied as clobber — an explicit edit outranks the stored value, or the
+    // owner's rename would lose to the calendar copy.
+    _fieldPriorities: { title: { merge: 'clobber' } },
+    ...overrides
+  };
+}
+
+test('series edit: an identifier with no override identity updates the series, never mints an override', () => {
+  const core = createCore();
+  const analysis = core.analyzeEventAction(buildSeriesEdit(), [buildSeriesRecord()], 'upsert');
+
+  assert.equal(analysis.action, 'merge', 'the named record is updated in place');
+  assert.equal(analysis.reason, 'Identifier match found');
+  assert.equal(analysis.overrideIdentity, undefined, 'no occurrence override is created');
+  assert.ok(analysis.existingEvent, 'and it targets the record the owner selected');
+  assert.equal(analysis.existingEvent.identifier, `CAL-UUID:${SERIES_UID}`);
+});
+
+// A series edit is still WITHHELD, and the reason is measured. Saving through
+// the object CalendarEvent.between() returned is EKSpanThisEvent: it detaches
+// that one night. seattle.ics carries the proof — UID
+// 6irujvg3effpkdu42krgr91osj@google.com appears as the master
+// "South Seattle Bear Social" (RRULE:FREQ=WEEKLY;BYDAY=SU, untouched) AND as a
+// RECURRENCE-ID:20260614T140000 exception titled "Seattle GLOW" stamped
+// X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable. Editing the series is the
+// ICS channel's job (same UID, SEQUENCE+1).
+test('series edit: still withheld — a write would detach one occurrence, not update the series', async () => {
+  const core = createFinalBuildCore();
+  const edit = buildSeriesEdit();
+  const analysis = core.analyzeEventAction(edit, [buildSeriesRecord()], 'upsert');
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(edit, analysis, null, {});
+  } finally {
+    restore();
+  }
+
+  assert.equal(analyzed._recurringExport, true, 'routed to the ICS export');
+  assert.deepEqual(SharedCore.filterEventsForExecution([analyzed]), [], 'and never written');
+  assert.ok(
+    lines.some(l => l.includes('would detach one occurrence')),
+    `the run explains why rather than failing silently: ${JSON.stringify(lines)}`
+  );
+});
+
+test('series edit: builder plumbing never reaches the calendar notes', async () => {
+  const core = createFinalBuildCore();
+  // identifier/searchStartDate/searchEndDate describe the EDIT, not the event.
+  const analysis = core.analyzeEventAction(buildSeriesEdit(), [buildSeriesRecord()], 'upsert');
+  const analyzed = await core.buildAnalyzedCalendarEvent(buildSeriesEdit(), analysis, null, {});
+  const notes = String(analyzed.notes || '');
+
+  assert.ok(!/(^|\n)identifier:/.test(notes), `no identifier in notes: ${notes}`);
+  assert.ok(!notes.includes('searchStartDate'), `no searchStartDate in notes: ${notes}`);
+  assert.ok(!notes.includes('searchEndDate'), `no searchEndDate in notes: ${notes}`);
+});
+
+test('series edit: an occurrence override is still an override, not a series update', async () => {
+  const core = createFinalBuildCore();
+  const override = {
+    title: 'CUBSCOUT one night',
+    city: 'la',
+    startDate: new Date('2026-09-05T04:00:00.000Z'),
+    endDate: new Date('2026-09-05T09:00:00.000Z'),
+    overrideUid: SERIES_UID,
+    overrideRecurrenceId: '20260905'
+  };
+  const analysis = core.analyzeEventAction(override, [buildSeriesRecord()], 'upsert');
+  const analyzed = await core.buildAnalyzedCalendarEvent(override, analysis, null, {});
+
+  assert.equal(analyzed._seriesUpdate, undefined, 'not a series update');
+  assert.equal(analyzed.overrideUid, SERIES_UID, 'it keeps its override identity');
+  assert.equal(
+    SharedCore.filterEventsForExecution([analyzed]).length,
+    1,
+    'and is still written'
+  );
 });

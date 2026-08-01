@@ -8043,6 +8043,10 @@ class SharedCore {
     // regardless of which path (automation or interactive prompt) executes them.
     // Recurring series events are equally withheld: they are display+export
     // only (owner imports the ICS; the scraper never writes recurring series).
+    // There is NO exception for an owner-directed series edit: saving through
+    // an occurrence object detaches that occurrence instead of editing the
+    // series (see the EKSpanThisEvent evidence in buildAnalyzedCalendarEvent).
+    // Series edits go through the ICS channel, which owns UID + SEQUENCE.
     static filterEventsForExecution(analyzedEvents) {
         if (!Array.isArray(analyzedEvents)) return [];
         return analyzedEvents.filter(event =>
@@ -9077,6 +9081,24 @@ class SharedCore {
                 analyzedEvent = this.processEventWithConflicts(analyzedEvent);
             }
 
+            // Re-stamp the analysis. Both branches above REPLACE analyzedEvent
+            // wholesale (createFinalEventObject builds a fresh object and skips
+            // underscore fields; processEventWithConflicts likewise), so the
+            // `_analysis` set at the top of this method is lost on exactly the
+            // paths that need it most. The display layer reads
+            // `_analysis.sourceEvent`/`.reason` to tell an override-create
+            // apart from a genuinely new event; a withheld series has its
+            // override identity deleted below, so `_analysis` is the ONLY
+            // surviving signal. Without this, CubScout 2026-07-31 matched an
+            // existing calendar record, ran merge arbitration, and still
+            // reported "New: 1 / Intent: NEW | Write: CREATE".
+            analyzedEvent._analysis = {
+                action: analysis.action,
+                reason: analysis.reason,
+                sourceEvent: Boolean(analysis.sourceEvent),
+                hasOverrideIdentity: Boolean(analysis.overrideIdentity)
+            };
+
             // Final-stage field cleanups. Both run at the FINAL analyzed-event
             // build (so every parser, merge result, and cached AI response
             // passes through them) and BEFORE the notes generation/rebuild
@@ -9243,7 +9265,38 @@ class SharedCore {
             // results UI (flag-don't-drop) but withhold it from calendar
             // execution — the owner saves the series via the ICS export
             // button instead (the scraper never writes recurring series).
+            // An owner-directed series UPDATE: the Event Builder named an
+            // existing calendar record by identifier and we merged into it.
+            //
+            // It is still withheld, and the reason is measured, not assumed.
+            // CalendarEvent.between() hands back one object PER OCCURRENCE, all
+            // sharing the series identifier (that is exactly what
+            // resolveSeriesProbeDecision counts). Saving through one of them is
+            // EKSpanThisEvent: EventKit detaches that single night and leaves
+            // the master alone. The proof is in the published calendars —
+            // seattle.ics carries UID 6irujvg3effpkdu42krgr91osj@google.com
+            // twice: the master "South Seattle Bear Social" with
+            // RRULE:FREQ=WEEKLY;BYDAY=SU untouched, and a
+            // RECURRENCE-ID:20260614T140000 exception titled "Seattle GLOW"
+            // stamped X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable. That
+            // exception is a five-field merge write, and it changed one night.
+            //
+            // So a write here would not update the series. It would silently
+            // detach an occurrence, strip the `recurrence:` marker out of the
+            // notes (it is in DEFAULT_NOTES_EXCLUDED_FIELDS), and leave the
+            // real series exactly as wrong as it was. Editing the series
+            // itself is the ICS channel's job — the builder emits METHOD:REQUEST
+            // with the same UID and SEQUENCE+1, which is the only path that can
+            // carry an RRULE at all.
+            const ownerNamedExistingRecord =
+                analysis.action === 'merge' &&
+                Boolean(event && (event.identifier || event.id)) &&
+                !(event && (event.overrideUid || event.overrideRecurrenceId));
+
             if (SharedCore.isRecurringSeriesEvent(event)) {
+                if (ownerNamedExistingRecord) {
+                    console.log(`🔁 RECURRING: "${event.title || 'Unknown'}" is a series edit — a calendar write would detach one occurrence, not update the series; use the ICS export`);
+                }
                 analyzedEvent._recurring = true;
                 analyzedEvent._recurringExport = true;
                 if (!analyzedEvent.recurrenceRule && typeof event.recurrenceRule === 'string') {
@@ -9270,6 +9323,27 @@ class SharedCore {
                         analyzedEvent.notes = this.formatEventNotes(analyzedEvent);
                     }
                     console.log(`🔁 RECURRING: "${event.title || 'Unknown'}" dropped override identity — the scraper never writes series occurrences`);
+                }
+                // Say out loud that this was a MATCH, not a discovery. The
+                // withhold line below reads identically whether the series is
+                // already saved or has never been seen, which is exactly the
+                // ambiguity the owner hit on 2026-07-31 ("it isn't identifying
+                // that there is already one saved locally") — the run had in
+                // fact found it, merged it, and confirmed the series.
+                const matchedRecord = analysis.existingEvent || analysis.sourceEvent || null;
+                if (matchedRecord) {
+                    analyzedEvent._seriesMatch = {
+                        identifier: matchedRecord.identifier || matchedRecord.id || '',
+                        title: matchedRecord.title || '',
+                        // The matched record's OWN times, not the scraped ones:
+                        // the Event Builder link uses them as the search window,
+                        // and the identifier match compares searchStartDate to
+                        // this record's start.
+                        startDate: matchedRecord.startDate || null,
+                        endDate: matchedRecord.endDate || matchedRecord.startDate || null,
+                        reason: analysis.reason || ''
+                    };
+                    console.log(`🔁 RECURRING: "${event.title || 'Unknown'}" matches a series already saved in the calendar — not a new event (${analysis.reason || 'existing match'})`);
                 }
                 console.log(`🔁 RECURRING: "${event.title || 'Unknown'}" withheld from calendar write — save via ICS export`);
             }
@@ -9401,10 +9475,20 @@ class SharedCore {
             if (keyMatch && keyMatch.matchType === 'identifier') {
                 const existingEvent = keyMatch.event;
                 const matchedKey = keyMatch.matchedKey || null;
-                const recurringMergeDecision = this.resolveRecurringMergeCandidate(existingEventsData, existingEvent);
-                if (recurringMergeDecision) {
-                    return finalize(recurringMergeDecision);
-                }
+                // A plain identifier with NO override identity names ONE
+                // calendar record and asks for THAT record to be updated — the
+                // series itself, when the record is a series. Only the Event
+                // Builder ever sends an identifier (no scraper parser assigns
+                // one), and it sends this shape exclusively for a
+                // "series"-mode edit or a non-recurring edit; occurrence edits
+                // arrive with overrideUid + overrideRecurrenceId and are
+                // handled by the override branch above.
+                //
+                // This used to run resolveRecurringMergeCandidate first, which
+                // answered a question nobody asked: it left the series
+                // untouched and minted a one-night override instead. Overrides
+                // are for replacing ONE occurrence, never for editing the
+                // series that defines them.
                 return finalize({
                     action: 'merge',
                     reason: 'Identifier match found',

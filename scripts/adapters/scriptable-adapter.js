@@ -8417,7 +8417,13 @@ class ScriptableAdapter {
     addParam("description", event.description);
     addParam("cover", event.cover);
     addParam("website", event.website || event.url);
-    addParam("recurrence", event.recurrenceRule || event.recurrence);
+    // recurrenceRule ONLY — never fall back to `recurrence`. On an override
+    // card that field holds the SERIES rule leaked off the source occurrence's
+    // notes during the merge, so the fallback prefilled the builder with a rule
+    // the event does not have; submitting that form would turn a
+    // single-occurrence override back into a whole series. Real series carry
+    // recurrenceRule (buildAnalyzedCalendarEvent copies it across).
+    addParam("recurrence", event.recurrenceRule);
     addParam("instagram", event.instagram);
     addParam("facebook", event.facebook);
     // Coordinates. Without these the builder has no pin and the human has to
@@ -8432,8 +8438,71 @@ class ScriptableAdapter {
     addParam("imageVertical", event.imageVertical);
     addParam("imageHorizontal", event.imageHorizontal);
     addParam("shortName", event.shortName);
+    this.addEventBuilderEditingParams(addParam, event);
     const query = params.length > 0 ? `?${params.join("&")}` : "";
     return `https://chunky.dad/testing/event-builder.html${query}`;
+  }
+
+  // Editing context. Without it the builder opens in "brand new event" mode
+  // even when the run that produced the link just matched, merged and
+  // confirmed the event — which is why a saved series kept being re-created
+  // instead of updated. Emits nothing when nothing was matched, so a genuine
+  // discovery still opens as new.
+  //
+  // Two shapes carry a matched record: `_existingEvent` (a merge) and
+  // `_seriesMatch` (a series we matched but withhold from writing).
+  // Occurrence-override prefill is deliberately NOT emitted — it needs a
+  // recurrence-id in the page's local datetime format plus its timezone, and
+  // getting that wrong is exactly how an LA series ended up saved in Eastern.
+  addEventBuilderEditingParams(addParam, event) {
+    const seriesMatch = event && event._seriesMatch ? event._seriesMatch : null;
+    const matched = seriesMatch || (event ? event._existingEvent : null);
+    if (!matched) return;
+
+    // The builder matches against the published city ICS, which keys on bare
+    // ICS UIDs; a Scriptable identifier is `<calendarUUID>:<icsUid>`.
+    const rawIdentifier = String(matched.identifier || matched.id || "").trim();
+    if (!rawIdentifier) return;
+    const uid =
+      SharedCore.extractIcsUidFromIdentifier(rawIdentifier) || rawIdentifier;
+    if (!uid) return;
+
+    const toIso = (value) => {
+      if (!value) return "";
+      const date = value instanceof Date ? value : new Date(value);
+      return isNaN(date.getTime()) ? "" : date.toISOString();
+    };
+    // The identifier match compares searchStartDate against THIS record's
+    // start, so the matched record's own times are the only correct window.
+    const searchStart = toIso(matched.startDate);
+    if (!searchStart) return;
+
+    addParam("edit", "1");
+    addParam("euid", uid);
+    // 'series' disables the builder's Scriptable handoff and routes the save
+    // to the ICS export, which reuses this UID with SEQUENCE+1 — the only
+    // channel that can update a saved series. 'occurrence' with no occurrence
+    // id is a plain existing-event edit and keeps the Scriptable handoff.
+    addParam("emode", seriesMatch ? "series" : "occurrence");
+    if (seriesMatch) {
+      // Pre-select the record in the "Edit or Copy Existing Event" picker so
+      // the owner is one click from loading it. We cannot build the picker's
+      // exact result id — its date key is formatted in the BROWSER's timezone
+      // from the series anchor date, neither of which the phone knows — but
+      // renderExistingResults falls back to matching on the uid alone when the
+      // full id misses, and that fallback only reads the uid segment. The
+      // `series` type keeps isOccurrenceResultId false, so this does not flip
+      // the page into occurrence-override mode.
+      //
+      // The click matters: it is the only path that reads the record's real
+      // SEQUENCE out of the published calendar, and an ICS update carrying the
+      // wrong revision is silently ignored by the calendar. Every published
+      // event has one (162 of 162), so the page refuses to export rather than
+      // guess.
+      addParam("occid", `${uid}::series::`);
+    }
+    addParam("searchStartDate", searchStart);
+    addParam("searchEndDate", toIso(matched.endDate) || searchStart);
   }
 
   // Per-card actions row: an Event Builder prefill link on EVERY card (rides
@@ -9085,6 +9154,14 @@ class ScriptableAdapter {
     const recurringBadge = SharedCore.isRecurringSeriesEvent(event)
       ? '<span class="action-badge badge-warning recurring-badge">🔁 recurring — save via ICS</span>'
       : "";
+    // Additive second badge: "recurring — save via ICS" reads identically
+    // whether this series is already in the calendar or has never been seen.
+    // When the run matched a saved series, say so on the card — that ambiguity
+    // is what made a matched CubScout look like a brand-new event.
+    const seriesMatchBadge =
+      event && event._seriesMatch
+        ? '<span class="action-badge badge-merge series-match-badge">🔁 already saved — matches this series</span>'
+        : "";
     const dropDetail = [
       bearOpts.dropReason ? String(bearOpts.dropReason) : "",
       bearOpts.dropHost ? `from ${bearOpts.dropHost}` : "",
@@ -9159,7 +9236,7 @@ class ScriptableAdapter {
 
     let html = `
         <div class="event-card${isDroppedCard ? " bear-dropped-card" : ""}">
-            ${actionBadge}${recurringBadge}
+            ${actionBadge}${recurringBadge}${seriesMatchBadge}
             ${actionNote}
             <div class="event-title">${this.escapeHtml(event.title || event.name)}</div>
             ${bearVerdictRow}
@@ -11245,6 +11322,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
   getWriteActionFromEvent(event) {
     const action = this.normalizeWriteAction(event);
     if (!action) return null;
+    // A recurring series is withheld from execution by
+    // SharedCore.filterEventsForExecution, so "CREATE"/"UPDATE" on the card is
+    // a promise the run never keeps. Display-only: countMetricsCalendarActions
+    // buckets off normalizeWriteAction, not this, so the metrics schema is
+    // untouched.
+    if (SharedCore.isRecurringSeriesEvent(event)) return "withheld";
     if (action === "new") return "create";
     if (action === "merge") return "update";
     if (action === "conflict" || action === "missing_calendar") return "skip";
@@ -11265,6 +11348,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     if (normalized === "create") return "CREATE";
     if (normalized === "update") return "UPDATE";
     if (normalized === "skip") return "SKIP";
+    if (normalized === "withheld") return "WITHHELD";
     return "OTHER";
   }
 
