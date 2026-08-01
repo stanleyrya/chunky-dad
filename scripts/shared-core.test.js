@@ -11136,39 +11136,17 @@ test('series edit: an identifier with no override identity updates the series, n
   assert.equal(analysis.existingEvent.identifier, `CAL-UUID:${SERIES_UID}`);
 });
 
-test('series edit: the owner-directed update is written, unlike a scraper-discovered series', async () => {
+// A series edit is still WITHHELD, and the reason is measured. Saving through
+// the object CalendarEvent.between() returned is EKSpanThisEvent: it detaches
+// that one night. seattle.ics carries the proof — UID
+// 6irujvg3effpkdu42krgr91osj@google.com appears as the master
+// "South Seattle Bear Social" (RRULE:FREQ=WEEKLY;BYDAY=SU, untouched) AND as a
+// RECURRENCE-ID:20260614T140000 exception titled "Seattle GLOW" stamped
+// X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable. Editing the series is the
+// ICS channel's job (same UID, SEQUENCE+1).
+test('series edit: still withheld — a write would detach one occurrence, not update the series', async () => {
   const core = createFinalBuildCore();
   const edit = buildSeriesEdit();
-  const analysis = core.analyzeEventAction(edit, [buildSeriesRecord()], 'upsert');
-  const analyzed = await core.buildAnalyzedCalendarEvent(edit, analysis, null, {});
-
-  assert.equal(analyzed._seriesUpdate, true, 'flagged as an owner-directed update');
-  assert.equal(analyzed._recurringExport, undefined, 'not routed to the ICS export instead');
-  assert.deepEqual(
-    SharedCore.filterEventsForExecution([analyzed]).map(e => e.title),
-    ['CUBSCOUT RENAMED'],
-    'and it reaches the calendar'
-  );
-
-  // The same series WITHOUT an identifier is a scraper discovery — still withheld.
-  const discovered = {
-    title: 'CUBSCOUT',
-    city: 'la',
-    startDate: new Date('2026-09-05T04:00:00.000Z'),
-    endDate: new Date('2026-09-05T09:00:00.000Z'),
-    recurrenceRule: 'FREQ=MONTHLY;BYDAY=1FR'
-  };
-  const discoveredAnalysis = core.analyzeEventAction(discovered, [buildSeriesRecord()], 'upsert');
-  const discoveredAnalyzed = await core.buildAnalyzedCalendarEvent(discovered, discoveredAnalysis, null, {});
-  assert.equal(discoveredAnalyzed._seriesUpdate, undefined);
-  assert.deepEqual(SharedCore.filterEventsForExecution([discoveredAnalyzed]), [], 'the doctrine still holds');
-});
-
-test('series edit: a changed schedule is reported as NOT applied', async () => {
-  const core = createFinalBuildCore();
-  // The write path sets title/dates/location/notes on the existing
-  // CalendarEvent; it never calls addRecurrenceRule, so the rule cannot change.
-  const edit = buildSeriesEdit({ recurrenceRule: 'FREQ=WEEKLY;BYDAY=FR' });
   const analysis = core.analyzeEventAction(edit, [buildSeriesRecord()], 'upsert');
   const lines = [];
   const restore = captureFinalBuildLogs(lines);
@@ -11179,11 +11157,24 @@ test('series edit: a changed schedule is reported as NOT applied', async () => {
     restore();
   }
 
-  assert.equal(analyzed._seriesUpdate, true, 'the field edits still apply');
+  assert.equal(analyzed._recurringExport, true, 'routed to the ICS export');
+  assert.deepEqual(SharedCore.filterEventsForExecution([analyzed]), [], 'and never written');
   assert.ok(
-    lines.some(l => l.includes('schedule change NOT applied')),
-    `but the schedule is not silently claimed: ${JSON.stringify(lines)}`
+    lines.some(l => l.includes('would detach one occurrence')),
+    `the run explains why rather than failing silently: ${JSON.stringify(lines)}`
   );
+});
+
+test('series edit: builder plumbing never reaches the calendar notes', async () => {
+  const core = createFinalBuildCore();
+  // identifier/searchStartDate/searchEndDate describe the EDIT, not the event.
+  const analysis = core.analyzeEventAction(buildSeriesEdit(), [buildSeriesRecord()], 'upsert');
+  const analyzed = await core.buildAnalyzedCalendarEvent(buildSeriesEdit(), analysis, null, {});
+  const notes = String(analyzed.notes || '');
+
+  assert.ok(!/(^|\n)identifier:/.test(notes), `no identifier in notes: ${notes}`);
+  assert.ok(!notes.includes('searchStartDate'), `no searchStartDate in notes: ${notes}`);
+  assert.ok(!notes.includes('searchEndDate'), `no searchEndDate in notes: ${notes}`);
 });
 
 test('series edit: an occurrence override is still an override, not a series update', async () => {

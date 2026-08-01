@@ -162,7 +162,14 @@ const DEFAULT_NOTES_EXCLUDED_FIELDS = new Set([
     'matchKey',
     'links', 'durationMinutes',
     'time', 'day', 'recurring', 'recurrence', 'recurrenceRule',
-    'isDeletingOverride'
+    'isDeletingOverride',
+    // Event Builder plumbing. These say WHICH calendar record to edit and in
+    // WHAT window to look for it — they describe the edit, not the event, and
+    // must never be serialized into the record itself. Left in, a builder edit
+    // of a non-recurring event wrote `identifier: …`, `searchStartDate: …` and
+    // `searchEndDate: …` into the calendar notes (verified end-to-end; not yet
+    // present in any published calendar, so nothing needs cleaning up).
+    'identifier', 'searchStartDate', 'searchEndDate'
 ]);
 
 const EVENT_BUILDER_STATE_KEY_BY_EVENT_KEY = Object.freeze({

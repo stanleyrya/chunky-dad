@@ -8043,14 +8043,15 @@ class SharedCore {
     // regardless of which path (automation or interactive prompt) executes them.
     // Recurring series events are equally withheld: they are display+export
     // only (owner imports the ICS; the scraper never writes recurring series).
-    // The one exception is an owner-directed series UPDATE (_seriesUpdate): the
-    // Event Builder named an existing calendar record by identifier and asked
-    // for it to be edited. That is the owner writing, not the scraper.
+    // There is NO exception for an owner-directed series edit: saving through
+    // an occurrence object detaches that occurrence instead of editing the
+    // series (see the EKSpanThisEvent evidence in buildAnalyzedCalendarEvent).
+    // Series edits go through the ICS channel, which owns UID + SEQUENCE.
     static filterEventsForExecution(analyzedEvents) {
         if (!Array.isArray(analyzedEvents)) return [];
         return analyzedEvents.filter(event =>
             event?._parserConfig?.dryRun !== true &&
-            (!SharedCore.isRecurringSeriesEvent(event) || event?._seriesUpdate === true));
+            !SharedCore.isRecurringSeriesEvent(event));
     }
 
     // An event that DEFINES a recurring series: stamped _recurring in
@@ -9266,28 +9267,36 @@ class SharedCore {
             // button instead (the scraper never writes recurring series).
             // An owner-directed series UPDATE: the Event Builder named an
             // existing calendar record by identifier and we merged into it.
-            // The "scraper never writes recurring series" rule is about events
-            // the scraper discovered on a website — not about the owner
-            // editing a record they explicitly selected. Withholding here left
-            // the series permanently unfixable: no run would ever touch it.
+            //
+            // It is still withheld, and the reason is measured, not assumed.
+            // CalendarEvent.between() hands back one object PER OCCURRENCE, all
+            // sharing the series identifier (that is exactly what
+            // resolveSeriesProbeDecision counts). Saving through one of them is
+            // EKSpanThisEvent: EventKit detaches that single night and leaves
+            // the master alone. The proof is in the published calendars —
+            // seattle.ics carries UID 6irujvg3effpkdu42krgr91osj@google.com
+            // twice: the master "South Seattle Bear Social" with
+            // RRULE:FREQ=WEEKLY;BYDAY=SU untouched, and a
+            // RECURRENCE-ID:20260614T140000 exception titled "Seattle GLOW"
+            // stamped X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable. That
+            // exception is a five-field merge write, and it changed one night.
+            //
+            // So a write here would not update the series. It would silently
+            // detach an occurrence, strip the `recurrence:` marker out of the
+            // notes (it is in DEFAULT_NOTES_EXCLUDED_FIELDS), and leave the
+            // real series exactly as wrong as it was. Editing the series
+            // itself is the ICS channel's job — the builder emits METHOD:REQUEST
+            // with the same UID and SEQUENCE+1, which is the only path that can
+            // carry an RRULE at all.
             const ownerNamedExistingRecord =
                 analysis.action === 'merge' &&
                 Boolean(event && (event.identifier || event.id)) &&
                 !(event && (event.overrideUid || event.overrideRecurrenceId));
 
-            if (SharedCore.isRecurringSeriesEvent(event) && ownerNamedExistingRecord) {
-                analyzedEvent._seriesUpdate = true;
-                // The write path applies title/dates/location/notes to the
-                // existing CalendarEvent; it never calls addRecurrenceRule, so
-                // a CHANGED schedule cannot be applied here. Say so rather than
-                // let it look applied.
-                const storedRule = this.parseNotesIntoFields((analysis.existingEvent && analysis.existingEvent.notes) || '').recurrence || '';
-                const incomingRule = String(event.recurrenceRule || event.recurrence || '').trim();
-                if (storedRule && incomingRule && storedRule.trim() !== incomingRule) {
-                    console.log(`🔁 RECURRING: "${event.title || 'Unknown'}" schedule change NOT applied — "${storedRule.trim()}" stays; re-import the ICS to change the rule itself`);
+            if (SharedCore.isRecurringSeriesEvent(event)) {
+                if (ownerNamedExistingRecord) {
+                    console.log(`🔁 RECURRING: "${event.title || 'Unknown'}" is a series edit — a calendar write would detach one occurrence, not update the series; use the ICS export`);
                 }
-                console.log(`🔁 RECURRING: "${event.title || 'Unknown'}" updating the saved series in place — owner selected this record in the Event Builder`);
-            } else if (SharedCore.isRecurringSeriesEvent(event)) {
                 analyzedEvent._recurring = true;
                 analyzedEvent._recurringExport = true;
                 if (!analyzedEvent.recurrenceRule && typeof event.recurrenceRule === 'string') {
