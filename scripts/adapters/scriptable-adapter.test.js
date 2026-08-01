@@ -3898,3 +3898,83 @@ test('event card: a series already in the calendar says so, next to the ICS badg
   assert.ok(matched.includes('🔁 recurring — save via ICS'), 'the export badge still renders');
   assert.ok(matched.includes('already saved — matches this series'), 'and the match is surfaced');
 });
+
+// ---------------------------------------------------------------------------
+// Event Builder links carry editing context when the run matched a record.
+// Without it the builder opened in "brand new event" mode even though the run
+// had just matched and merged the event — so a saved series kept being
+// re-created instead of updated.
+// ---------------------------------------------------------------------------
+
+function builderParams(url) {
+  return new Set((url.split('?')[1] || '').split('&').map(p => p.split('=')[0]));
+}
+
+test('builder link: a genuine discovery carries no editing context', () => {
+  const adapter = buildAdapter();
+  const url = adapter.buildEventBuilderUrl({
+    title: 'CUBSCOUT', city: 'la',
+    startDate: '2026-09-05T04:00:00.000Z', endDate: '2026-09-05T09:00:00.000Z'
+  });
+  const params = builderParams(url);
+  for (const key of ['edit', 'euid', 'emode', 'searchStartDate', 'searchEndDate']) {
+    assert.ok(!params.has(key), `${key} must be absent — nothing was matched`);
+  }
+});
+
+test('builder link: a matched series opens in series mode, pointed at the saved record', () => {
+  const adapter = buildAdapter();
+  const url = adapter.buildEventBuilderUrl({
+    title: 'CUBSCOUT', city: 'la',
+    startDate: '2026-09-05T04:00:00.000Z', endDate: '2026-09-05T09:00:00.000Z',
+    _recurring: true,
+    recurrenceRule: 'FREQ=MONTHLY;BYDAY=1FR',
+    _seriesMatch: {
+      identifier: 'CAL-UUID:cubscout-20260730T183109Z@chunky.dad',
+      startDate: new Date('2026-09-05T04:00:00.000Z'),
+      endDate: new Date('2026-09-05T09:00:00.000Z')
+    }
+  });
+
+  assert.ok(url.includes('edit=1'), 'the page is told this is an edit');
+  // Bare ICS UID: the builder matches against the published city ICS, which
+  // never sees Scriptable's `<calendarUUID>:` prefix.
+  assert.ok(url.includes('euid=cubscout-20260730T183109Z%40chunky.dad'), 'names the saved record');
+  assert.ok(!url.includes('CAL-UUID'), 'the calendar uuid prefix is stripped');
+  assert.ok(url.includes('emode=series'), 'series mode routes the save to the ICS export');
+  // The identifier match compares searchStartDate to the matched record's own
+  // start, so it must be the record's time, not the scraped one.
+  assert.ok(url.includes('searchStartDate=2026-09-05T04%3A00%3A00.000Z'), 'search window is the record’s');
+  assert.ok(url.includes('searchEndDate=2026-09-05T09%3A00%3A00.000Z'));
+});
+
+test('builder link: a merged existing event opens in occurrence mode, keeping the Scriptable handoff', () => {
+  const adapter = buildAdapter();
+  const url = adapter.buildEventBuilderUrl({
+    title: 'ONE OFF', city: 'la',
+    startDate: '2026-09-05T04:00:00.000Z', endDate: '2026-09-05T09:00:00.000Z',
+    _action: 'merge',
+    _existingEvent: {
+      identifier: 'CAL-UUID:plain@chunky.dad',
+      startDate: new Date('2026-09-05T04:00:00.000Z'),
+      endDate: new Date('2026-09-05T09:00:00.000Z')
+    }
+  });
+
+  assert.ok(url.includes('edit=1'));
+  assert.ok(url.includes('euid=plain%40chunky.dad'));
+  // 'occurrence' with no occurrence id is a plain existing-event edit — the
+  // builder keeps the Scriptable button live, which is the one-tap update.
+  assert.ok(url.includes('emode=occurrence'));
+  assert.ok(url.includes('searchStartDate='));
+});
+
+test('builder link: a matched record with no identifier adds nothing', () => {
+  const adapter = buildAdapter();
+  const url = adapter.buildEventBuilderUrl({
+    title: 'CUBSCOUT', city: 'la',
+    startDate: '2026-09-05T04:00:00.000Z',
+    _seriesMatch: { identifier: '', startDate: new Date('2026-09-05T04:00:00.000Z') }
+  });
+  assert.ok(!builderParams(url).has('edit'), 'no identity, no claim');
+});

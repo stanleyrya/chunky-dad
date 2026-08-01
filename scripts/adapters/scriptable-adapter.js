@@ -8438,8 +8438,54 @@ class ScriptableAdapter {
     addParam("imageVertical", event.imageVertical);
     addParam("imageHorizontal", event.imageHorizontal);
     addParam("shortName", event.shortName);
+    this.addEventBuilderEditingParams(addParam, event);
     const query = params.length > 0 ? `?${params.join("&")}` : "";
     return `https://chunky.dad/testing/event-builder.html${query}`;
+  }
+
+  // Editing context. Without it the builder opens in "brand new event" mode
+  // even when the run that produced the link just matched, merged and
+  // confirmed the event — which is why a saved series kept being re-created
+  // instead of updated. Emits nothing when nothing was matched, so a genuine
+  // discovery still opens as new.
+  //
+  // Two shapes carry a matched record: `_existingEvent` (a merge) and
+  // `_seriesMatch` (a series we matched but withhold from writing).
+  // Occurrence-override prefill is deliberately NOT emitted — it needs a
+  // recurrence-id in the page's local datetime format plus its timezone, and
+  // getting that wrong is exactly how an LA series ended up saved in Eastern.
+  addEventBuilderEditingParams(addParam, event) {
+    const seriesMatch = event && event._seriesMatch ? event._seriesMatch : null;
+    const matched = seriesMatch || (event ? event._existingEvent : null);
+    if (!matched) return;
+
+    // The builder matches against the published city ICS, which keys on bare
+    // ICS UIDs; a Scriptable identifier is `<calendarUUID>:<icsUid>`.
+    const rawIdentifier = String(matched.identifier || matched.id || "").trim();
+    if (!rawIdentifier) return;
+    const uid =
+      SharedCore.extractIcsUidFromIdentifier(rawIdentifier) || rawIdentifier;
+    if (!uid) return;
+
+    const toIso = (value) => {
+      if (!value) return "";
+      const date = value instanceof Date ? value : new Date(value);
+      return isNaN(date.getTime()) ? "" : date.toISOString();
+    };
+    // The identifier match compares searchStartDate against THIS record's
+    // start, so the matched record's own times are the only correct window.
+    const searchStart = toIso(matched.startDate);
+    if (!searchStart) return;
+
+    addParam("edit", "1");
+    addParam("euid", uid);
+    // 'series' disables the builder's Scriptable handoff and routes the save
+    // to the ICS export, which reuses this UID with SEQUENCE+1 — the only
+    // channel that can update a saved series. 'occurrence' with no occurrence
+    // id is a plain existing-event edit and keeps the Scriptable handoff.
+    addParam("emode", seriesMatch ? "series" : "occurrence");
+    addParam("searchStartDate", searchStart);
+    addParam("searchEndDate", toIso(matched.endDate) || searchStart);
   }
 
   // Per-card actions row: an Event Builder prefill link on EVERY card (rides

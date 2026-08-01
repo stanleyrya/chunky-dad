@@ -9335,7 +9335,12 @@ class SharedCore {
                     analyzedEvent._seriesMatch = {
                         identifier: matchedRecord.identifier || matchedRecord.id || '',
                         title: matchedRecord.title || '',
+                        // The matched record's OWN times, not the scraped ones:
+                        // the Event Builder link uses them as the search window,
+                        // and the identifier match compares searchStartDate to
+                        // this record's start.
                         startDate: matchedRecord.startDate || null,
+                        endDate: matchedRecord.endDate || matchedRecord.startDate || null,
                         reason: analysis.reason || ''
                     };
                     console.log(`🔁 RECURRING: "${event.title || 'Unknown'}" matches a series already saved in the calendar — not a new event (${analysis.reason || 'existing match'})`);
