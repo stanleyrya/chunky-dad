@@ -63,14 +63,14 @@
     "la": {
       "name": "Los Angeles",
       "status": "success",
-      "dataLength": 14506,
+      "dataLength": 14415,
       "eventCount": 12
     },
     "london": {
       "name": "London",
       "status": "success",
-      "dataLength": 12835,
-      "eventCount": 7
+      "dataLength": 15743,
+      "eventCount": 9
     },
     "nola": {
       "name": "New Orleans",

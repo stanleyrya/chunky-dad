@@ -8,7 +8,7 @@ X-WR-TIMEZONE:America/New_York
 BEGIN:VEVENT
 DTSTART:20260726T020000Z
 DTEND:20260726T070000Z
-DTSTAMP:20260731T202813Z
+DTSTAMP:20260801T221821Z
 UID:81BB9D62-D2CA-4E17-B6ED-72E4A2155C8E
 CREATED:20260724T182614Z
 DESCRIPTION:description: Bear Week Return\nUNDERWEAR & GEAR PARTY\nCLOTHES 
@@ -16,13 +16,13 @@ DESCRIPTION:description: Bear Week Return\nUNDERWEAR & GEAR PARTY\nCLOTHES
   America/New_York\nticketUrl: https://www.ticketweb.com/event/furball-bosto
  n-725-bear-week-legacy-tickets/14269444?REFERRAL_ID=tmfeed\nimage: https://
  static.wixstatic.com/media/238fae_c4047c55f4534a0990b2b7fdc19dab8f~mv2.png\
- ncover: GAYMAFIABOSTON.COM FURBALL.NYC\ninstagram: https://instagram.com/fu
- rballnyc/\nshortName: FUR-BALL\nfavicon: https://linktr.ee/furballnyc\nbear
- Source: keyword\nkey: furball-boston|2026-07-26|legacy\nwebsite: https://fu
- rball.nyc\npinSource: curated\naddressSource: curated\nimageSource: page\nb
+ ncover: GAYMAFIABOSTON.COM FURBALL.NYC\nwebsite: https://furball.nyc\ninsta
+ gram: https://instagram.com/furballnyc/\nshortName: FUR-BALL\nfavicon: http
+ s://linktr.ee/furballnyc\nbearSource: keyword\nkey: furball-boston|2026-07-
+ 26|legacy\npinSource: curated\naddressSource: curated\nimageSource: page\nb
  arSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=4
  2.3499063%2C-71.0658453
-LAST-MODIFIED:20260731T184749Z
+LAST-MODIFIED:20260801T210103Z
 LOCATION:42.3499063\, -71.0658453
 SEQUENCE:0
 STATUS:CONFIRMED

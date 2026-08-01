@@ -8,14 +8,14 @@ X-WR-TIMEZONE:Europe/London
 BEGIN:VEVENT
 DTSTART:20260801T210000Z
 DTEND:20260802T040000Z
-DTSTAMP:20260731T202813Z
+DTSTAMP:20260801T221821Z
 UID:22724512-536F-464D-9592-A7104E2BC7E3
 CREATED:20260731T131551Z
 DESCRIPTION:bar: Horizon\naddress: 214 King's Road\, Brighton\, BN1 1NB\, U
  nited Kingdom\nticketUrl: https://dice.fm/event/8er825-beefmince-brighton-p
  ride-1st-aug-horizon-brighton-tickets\nimage: https://dice-media.imgix.net/
  attachments/2026-02-07/92683f1d-efd9-49af-9b55-e93c17060038.jpg?rect=1%2C0%
- 2C768%2C768\ntimezone: Europe/London\ncover: £21\nimageHorizontal: https://
+ 2C768%2C768\ntimezone: Europe/London\ncover: £25\nimageHorizontal: https://
  dice-media.imgix.net/attachments/2026-02-07/92683f1d-efd9-49af-9b55-e93c170
  60038.jpg?rect=0%2C154%2C769%2C461&w=1300&h=630&auto=compress\nwebsite: htt
  ps://link.dice.fm/T1d30c84b47d\ninstagram: horizon.brighton\nshortName: BEE
@@ -34,7 +34,7 @@ DESCRIPTION:bar: Horizon\naddress: 214 King's Road\, Brighton\, BN1 1NB\, U
  EL GARY SCOTT ALEX BAKER \\\\-- 18+. ID REQUIRED\npinSource: curated\naddre
  ssSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www
  .google.com/maps/search/?api=1&query=50.819936%2C-0.140382
-LAST-MODIFIED:20260731T182557Z
+LAST-MODIFIED:20260801T211704Z
 LOCATION:50.819936\, -0.140382
 SEQUENCE:0
 STATUS:CONFIRMED
@@ -46,7 +46,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20261205T230000Z
 DTEND:20261206T040000Z
-DTSTAMP:20260731T202813Z
+DTSTAMP:20260801T221821Z
 UID:AC82B5F3-1E3E-4098-99F8-51208AFC7C58
 CREATED:20260731T131552Z
 DESCRIPTION:bar: Concorde 2\naddress: Madeira Shelter Hall\, Madeira Dr\, B
