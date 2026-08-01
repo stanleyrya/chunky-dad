@@ -41,7 +41,6 @@ jobs:
           echo "No cache changes to commit"
         else
           git commit -m "🖼️ Sync Microlink directory previews"
-          # Workaround to not trigger sandbox block for literal p u s h
-          eval "git p" "ush"
+          git push
           echo "✓ Directory preview cache committed."
         fi
