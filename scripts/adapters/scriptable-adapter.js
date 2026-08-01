@@ -11264,7 +11264,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     // a promise the run never keeps. Display-only: countMetricsCalendarActions
     // buckets off normalizeWriteAction, not this, so the metrics schema is
     // untouched.
-    if (SharedCore.isRecurringSeriesEvent(event)) return "withheld";
+    // …unless it is an owner-directed series update, which really does write.
+    if (SharedCore.isRecurringSeriesEvent(event) && event?._seriesUpdate !== true) {
+      return "withheld";
+    }
     if (action === "new") return "create";
     if (action === "merge") return "update";
     if (action === "conflict" || action === "missing_calendar") return "skip";

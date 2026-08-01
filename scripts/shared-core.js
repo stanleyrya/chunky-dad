@@ -8043,11 +8043,14 @@ class SharedCore {
     // regardless of which path (automation or interactive prompt) executes them.
     // Recurring series events are equally withheld: they are display+export
     // only (owner imports the ICS; the scraper never writes recurring series).
+    // The one exception is an owner-directed series UPDATE (_seriesUpdate): the
+    // Event Builder named an existing calendar record by identifier and asked
+    // for it to be edited. That is the owner writing, not the scraper.
     static filterEventsForExecution(analyzedEvents) {
         if (!Array.isArray(analyzedEvents)) return [];
         return analyzedEvents.filter(event =>
             event?._parserConfig?.dryRun !== true &&
-            !SharedCore.isRecurringSeriesEvent(event));
+            (!SharedCore.isRecurringSeriesEvent(event) || event?._seriesUpdate === true));
     }
 
     // An event that DEFINES a recurring series: stamped _recurring in
@@ -9261,7 +9264,30 @@ class SharedCore {
             // results UI (flag-don't-drop) but withhold it from calendar
             // execution — the owner saves the series via the ICS export
             // button instead (the scraper never writes recurring series).
-            if (SharedCore.isRecurringSeriesEvent(event)) {
+            // An owner-directed series UPDATE: the Event Builder named an
+            // existing calendar record by identifier and we merged into it.
+            // The "scraper never writes recurring series" rule is about events
+            // the scraper discovered on a website — not about the owner
+            // editing a record they explicitly selected. Withholding here left
+            // the series permanently unfixable: no run would ever touch it.
+            const ownerNamedExistingRecord =
+                analysis.action === 'merge' &&
+                Boolean(event && (event.identifier || event.id)) &&
+                !(event && (event.overrideUid || event.overrideRecurrenceId));
+
+            if (SharedCore.isRecurringSeriesEvent(event) && ownerNamedExistingRecord) {
+                analyzedEvent._seriesUpdate = true;
+                // The write path applies title/dates/location/notes to the
+                // existing CalendarEvent; it never calls addRecurrenceRule, so
+                // a CHANGED schedule cannot be applied here. Say so rather than
+                // let it look applied.
+                const storedRule = this.parseNotesIntoFields((analysis.existingEvent && analysis.existingEvent.notes) || '').recurrence || '';
+                const incomingRule = String(event.recurrenceRule || event.recurrence || '').trim();
+                if (storedRule && incomingRule && storedRule.trim() !== incomingRule) {
+                    console.log(`🔁 RECURRING: "${event.title || 'Unknown'}" schedule change NOT applied — "${storedRule.trim()}" stays; re-import the ICS to change the rule itself`);
+                }
+                console.log(`🔁 RECURRING: "${event.title || 'Unknown'}" updating the saved series in place — owner selected this record in the Event Builder`);
+            } else if (SharedCore.isRecurringSeriesEvent(event)) {
                 analyzedEvent._recurring = true;
                 analyzedEvent._recurringExport = true;
                 if (!analyzedEvent.recurrenceRule && typeof event.recurrenceRule === 'string') {
@@ -9435,10 +9461,20 @@ class SharedCore {
             if (keyMatch && keyMatch.matchType === 'identifier') {
                 const existingEvent = keyMatch.event;
                 const matchedKey = keyMatch.matchedKey || null;
-                const recurringMergeDecision = this.resolveRecurringMergeCandidate(existingEventsData, existingEvent);
-                if (recurringMergeDecision) {
-                    return finalize(recurringMergeDecision);
-                }
+                // A plain identifier with NO override identity names ONE
+                // calendar record and asks for THAT record to be updated — the
+                // series itself, when the record is a series. Only the Event
+                // Builder ever sends an identifier (no scraper parser assigns
+                // one), and it sends this shape exclusively for a
+                // "series"-mode edit or a non-recurring edit; occurrence edits
+                // arrive with overrideUid + overrideRecurrenceId and are
+                // handled by the override branch above.
+                //
+                // This used to run resolveRecurringMergeCandidate first, which
+                // answered a question nobody asked: it left the series
+                // untouched and minted a one-night override instead. Overrides
+                // are for replacing ONE occurrence, never for editing the
+                // series that defines them.
                 return finalize({
                     action: 'merge',
                     reason: 'Identifier match found',
