@@ -10571,6 +10571,18 @@ Example output:
         const existingSequence = shouldIncrementSequence
           ? parseIntegerValue(state && state.editingExistingSequence)
           : null;
+        // Never guess a revision. SEQUENCE is a counter, not a timestamp, and
+        // an update whose SEQUENCE does not beat the stored one is silently
+        // ignored — the import appears to succeed and changes nothing. The
+        // value is only known once the record has been loaded through "Edit
+        // event", which reads it from the published calendar; a link that only
+        // names the record (edit=1&euid=…) arrives without it. Every published
+        // event carries a SEQUENCE, so a missing one means "not loaded yet",
+        // never "genuinely zero".
+        if (shouldIncrementSequence && existingSequence === null) {
+          updateCalendarStatus('Load this event with "Edit event" first — its revision number is needed or the calendar will ignore the update', 'warn');
+          return;
+        }
         const nextSequence = shouldIncrementSequence
           ? Math.max(1, (existingSequence !== null ? existingSequence + 1 : 1))
           : null;

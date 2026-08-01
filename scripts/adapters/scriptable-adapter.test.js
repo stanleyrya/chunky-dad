@@ -3978,3 +3978,37 @@ test('builder link: a matched record with no identifier adds nothing', () => {
   });
   assert.ok(!builderParams(url).has('edit'), 'no identity, no claim');
 });
+
+test('builder link: a matched series pre-selects the record without flipping into override mode', () => {
+  const adapter = buildAdapter();
+  const url = adapter.buildEventBuilderUrl({
+    title: 'CUBSCOUT', city: 'la',
+    startDate: '2026-09-05T04:00:00.000Z', endDate: '2026-09-05T09:00:00.000Z',
+    _recurring: true,
+    recurrenceRule: 'FREQ=MONTHLY;BYDAY=1FR',
+    _seriesMatch: {
+      identifier: 'CAL-UUID:cubscout-20260730T183109Z@chunky.dad',
+      startDate: new Date('2026-09-05T04:00:00.000Z'),
+      endDate: new Date('2026-09-05T09:00:00.000Z')
+    }
+  });
+
+  // The picker's own id carries a browser-formatted date key off the series
+  // anchor, which the phone cannot know — but renderExistingResults falls back
+  // to matching the uid segment alone.
+  const occid = decodeURIComponent((url.split('occid=')[1] || '').split('&')[0]);
+  assert.equal(occid, 'cubscout-20260730T183109Z@chunky.dad::series::');
+  // 'series' (not 'occurrence'/'override') keeps isOccurrenceResultId false, so
+  // the page does not read this as an occurrence-override edit.
+  assert.equal(occid.split('::')[1], 'series');
+
+  // A plain existing-event edit needs no picker — the Scriptable handoff is
+  // the one-tap update there.
+  const plain = adapter.buildEventBuilderUrl({
+    title: 'ONE OFF', city: 'la',
+    startDate: '2026-09-05T04:00:00.000Z',
+    _action: 'merge',
+    _existingEvent: { identifier: 'CAL-UUID:plain@chunky.dad', startDate: new Date('2026-09-05T04:00:00.000Z') }
+  });
+  assert.ok(!plain.includes('occid='), 'no picker pre-selection for a standalone edit');
+});

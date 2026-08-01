@@ -8484,6 +8484,23 @@ class ScriptableAdapter {
     // channel that can update a saved series. 'occurrence' with no occurrence
     // id is a plain existing-event edit and keeps the Scriptable handoff.
     addParam("emode", seriesMatch ? "series" : "occurrence");
+    if (seriesMatch) {
+      // Pre-select the record in the "Edit or Copy Existing Event" picker so
+      // the owner is one click from loading it. We cannot build the picker's
+      // exact result id — its date key is formatted in the BROWSER's timezone
+      // from the series anchor date, neither of which the phone knows — but
+      // renderExistingResults falls back to matching on the uid alone when the
+      // full id misses, and that fallback only reads the uid segment. The
+      // `series` type keeps isOccurrenceResultId false, so this does not flip
+      // the page into occurrence-override mode.
+      //
+      // The click matters: it is the only path that reads the record's real
+      // SEQUENCE out of the published calendar, and an ICS update carrying the
+      // wrong revision is silently ignored by the calendar. Every published
+      // event has one (162 of 162), so the page refuses to export rather than
+      // guess.
+      addParam("occid", `${uid}::series::`);
+    }
     addParam("searchStartDate", searchStart);
     addParam("searchEndDate", toIso(matched.endDate) || searchStart);
   }
