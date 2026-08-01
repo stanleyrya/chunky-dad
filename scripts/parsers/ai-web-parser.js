@@ -1296,7 +1296,16 @@ class AiWebParser {
             const line = this.normalizeWhitespace(rawLine);
             if (!line) continue;
             if (/^(SEGMENT_[A-Z_]+|OCR_IMAGE_TEXT)/i.test(line)) continue;
-            if (this.hasMultiEventDateSignal(line)) continue;
+            if (this.hasMultiEventDateSignal(line)) {
+                // Listing widgets that print the name and the date on ONE line
+                // ("CHUNK Portland - 5/23 Sat, May 23") used to lose the title
+                // here, promoting the NEXT line — the venue — to the page's
+                // "own" listing title. Recover the name span instead; a line
+                // with no name span still falls through to the skip.
+                const span = this.deriveListingTitleSpanFromDatedLine(line);
+                if (!span) continue;
+                return span.length <= this.extractionLimits.multiEventTitleMaxChars ? span : '';
+            }
             if (/^\d{1,2}(:\d{2})?\s*(am|pm)?(\s*[-–]\s*\d{1,2}(:\d{2})?\s*(am|pm)?)?$/i.test(line)) continue;
             // European time-only lines: "14:00h", "21h a 03h", "de 21 a 03h",
             // "16h a 20:30h" — never a listing title (additive skip; the
@@ -1308,6 +1317,62 @@ class AiWebParser {
             // line is prose/description, so no hint is derived at all.
             return line.length <= this.extractionLimits.multiEventTitleMaxChars ? line : '';
         }
+        return '';
+    }
+
+    // The name span of a listing line that carries BOTH the event name and its
+    // date ("CHUNK Portland - 5/23 Sat, May 23" → "CHUNK Portland"). Returns a
+    // CONTIGUOUS substring of the line, never a re-glued reconstruction: the
+    // extraction gate drops any field whose value is not verbatim in the
+    // source, so a stitched-together hint would trade a wrong title for no
+    // title at all.
+    //
+    // Prefix wins over suffix — multi-event listings put the name first and the
+    // venue after the date ("BOATMINCE Sun, Aug 30 Westminster Pier London"),
+    // so the text AFTER the date is usually the venue, not the name.
+    //
+    // Stricter than hasMultiEventDateSignal on purpose: this drives a rewrite,
+    // not a detection, so a month name only counts as strippable with an
+    // adjacent day/year number. A bare-month line ("Pride March") matches
+    // nothing here and falls through to the caller's existing skip.
+    deriveListingTitleSpanFromDatedLine(value) {
+        const line = this.normalizeWhitespace(value);
+        if (!line) return '';
+
+        const dateTokenPattern = new RegExp([
+            // Weekday name or abbreviation, with optional trailing "." / ","
+            '\\b(?:mon|tues?|wed(?:nes)?|thur?s?|fri|sat(?:ur)?|sun)(?:day)?\\b\\.?,?',
+            // Month name REQUIRING an adjacent day and/or year number
+            '\\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?'
+                + '|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)'
+                + '\\.?\\s+\\d{1,2}(?:st|nd|rd|th)?(?:,?\\s+\\d{4})?\\b',
+            // Numeric date: 5/23, 07.04, 12-25-2026
+            '\\b(?:0?[1-9]|1[0-2])[\\/.-](?:0?[1-9]|[12]\\d|3[01])(?:[\\/.-](?:\\d{2}|\\d{4}))?\\b'
+        ].join('|'), 'gi');
+
+        const matches = [...line.matchAll(dateTokenPattern)];
+        if (matches.length === 0) return '';
+
+        const first = matches[0];
+        const last = matches[matches.length - 1];
+        const trimSpan = (span) => String(span || '').replace(/^[\s\-–—:|,.]+/, '')
+            .replace(/[\s\-–—:|,.]+$/, '').trim();
+
+        // A usable name span has real words in it — not a leftover time
+        // fragment ("10:00 PM") and not a stray separator.
+        const isUsable = (span) => {
+            if (!span || span.length < 3) return false;
+            if (!/[a-z]{3}/i.test(span)) return false;
+            if (/^\d{1,2}(:\d{2})?\s*(am|pm)?(\s*[-–]\s*\d{1,2}(:\d{2})?\s*(am|pm)?)?$/i.test(span)) return false;
+            return true;
+        };
+
+        const prefix = trimSpan(line.slice(0, first.index));
+        if (isUsable(prefix)) return prefix;
+
+        const suffix = trimSpan(line.slice(last.index + last[0].length));
+        if (isUsable(suffix)) return suffix;
+
         return '';
     }
 

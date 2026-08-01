@@ -288,14 +288,19 @@ class BarDataNormalizer extends BaseNormalizer {
 
             // Set bar name if not already set (since we matched by address/location/description/title)
             if (matchedBar.name && (!event.bar || event.bar.trim() === '' || descriptionWasVenue || titleWasVenue)) {
-                if (titleWasVenue && event.bar && event.bar.trim() !== '') {
+                if (titleWasVenue && event.bar && event.bar.trim() !== ''
+                    && this.isPromotableTitleFromBarField(event.bar, matchedBar.name)) {
                     // Title was a venue, so swap bar name into title
+                    const previousTitle = event.title;
                     event.title = event.bar;
+                    console.log(`🏷️ BarDataNormalizer: title "${previousTitle}" was the venue → promoted bar "${event.bar}" into title (bar := "${matchedBar.name}")`);
 
                     // Since description is usually also the bar when this bug happens, let's clear it
                     if (event.description && event.bar && event.description.trim() === event.bar.trim()) {
                         delete event.description;
                     }
+                } else if (titleWasVenue && event.bar && event.bar.trim() !== '') {
+                    console.log(`🏷️ BarDataNormalizer: title "${event.title}" was the venue but bar "${event.bar}" is a variant of "${matchedBar.name}" — kept title, corrected bar only`);
                 }
                 event.bar = matchedBar.name;
                 modified = true;
@@ -425,6 +430,37 @@ class BarDataNormalizer extends BaseNormalizer {
         event.addressSource = 'curated';
         console.log(`🗺️ GEOCODE VERIFY: "${title}" upgraded district address "${address}" to curated bar address "${curatedBar.address}" (bar: ${curatedBar.name})`);
         return true;
+    }
+
+    // Guards the title<-bar promotion above. That rewrite assumes the two
+    // fields are transposed — the venue landed in `title`, so `bar` must be
+    // holding the real event name. When `bar` is instead ANOTHER SPELLING of
+    // the same venue, the assumption is false and the promotion destroys the
+    // title: run 20260801-170254 turned "CHUNK: Nova PDX" into "Nova Box"
+    // (flyer OCR of "NOVA PDX") because nothing checked what was being
+    // promoted.
+    //
+    // Positive verification required for the destructive path: promote only
+    // when `bar` does NOT read as a variant of the venue it matched. A variant
+    // shares a significant word with the curated name AND is no wordier than
+    // it ("Nova Box" vs "Nova PDX"). A real title smuggled into `bar` carries
+    // words the venue name does not ("Eagle Bear Night" vs "Eagle") and still
+    // promotes exactly as before.
+    isPromotableTitleFromBarField(barValue, curatedName) {
+        const significantTokens = (value) => String(value || '')
+            .toLowerCase()
+            .split(/[^a-z0-9]+/)
+            .filter(token => token.length >= 3);
+
+        const barTokens = significantTokens(barValue);
+        const curatedTokens = significantTokens(curatedName);
+        if (barTokens.length === 0 || curatedTokens.length === 0) return true;
+
+        const curatedSet = new Set(curatedTokens);
+        const sharesToken = barTokens.some(token => curatedSet.has(token));
+        if (!sharesToken) return true;
+
+        return barTokens.length > curatedTokens.length;
     }
 }
 

@@ -3400,6 +3400,62 @@ test('deriveSegmentListingTitle skips marker, time-only, and date lines; long pr
 });
 
 // ---------------------------------------------------------------------------
+// Name+date on ONE listing line. Run 20260801-170254: chunk-party.com prints
+// "CHUNK Portland - 5/23 Sat, May 23" as a single line, so the whole line was
+// skipped as a date line and the NEXT line — the venue "Nova PDX" — became the
+// page's "own" listing title. The prompt hands that to the AI as the title to
+// prefer, which is how a Portland event ended up named after a bar.
+// ---------------------------------------------------------------------------
+test('deriveSegmentListingTitle recovers the name span from a name+date listing line', () => {
+  const parser = createParser();
+
+  // The regression: the venue on the following line must NOT win.
+  assert.equal(parser.deriveSegmentListingTitle({
+    lines: ['CHUNK Portland - 5/23 Sat, May 23', 'Nova PDX', 'Details']
+  }), 'CHUNK Portland', 'name span before the date, not the venue line below');
+
+  assert.equal(parser.deriveSegmentListingTitle({
+    lines: ['CHUNK Portland - SUMMER BLOW OUT! Sat, Aug 22', 'Nova PDX']
+  }), 'CHUNK Portland - SUMMER BLOW OUT!');
+
+  // Name first, venue AFTER the date — the prefix is the name, never the suffix.
+  assert.equal(parser.deriveSegmentListingTitle({
+    lines: ['BOATMINCE Sun, Aug 30 Westminster Pier London']
+  }), 'BOATMINCE', 'text after the date is the venue, not the name');
+
+  assert.equal(parser.deriveSegmentListingTitle({
+    lines: ['BEEFMINCE x Bear Brum 2026 Sat, Sep 26 Eden Birmingham']
+  }), 'BEEFMINCE x Bear Brum 2026');
+});
+
+test('a derived listing title is always a contiguous span of its source line', () => {
+  const parser = createParser();
+  // The extraction gate drops any field not verbatim in the source, so a
+  // re-glued hint ("CHUNK Portland Bear Night") would cost the title entirely.
+  const lines = [
+    'CHUNK Portland - 5/23 Sat, May 23',
+    'BOATMINCE Sun, Aug 30 Westminster Pier London',
+    'BEEFMINCE x Bear Brum 2026 Sat, Sep 26 Eden Birmingham',
+    'SPOOKMINCE Sat, Oct 31 Venue TBA, London London'
+  ];
+  for (const line of lines) {
+    const derived = parser.deriveSegmentListingTitle({ lines: [line] });
+    assert.ok(derived, `derives a title for ${JSON.stringify(line)}`);
+    assert.ok(line.includes(derived), `${JSON.stringify(derived)} must appear verbatim in its source line`);
+  }
+});
+
+test('a dated line with no name span derives nothing rather than a time fragment', () => {
+  const parser = createParser();
+  // Date-only first line: falls through to the next line exactly as before.
+  assert.equal(parser.deriveSegmentListingTitle({
+    lines: ['Aug 7, 2026 10:00 PM', 'PERVERT', 'DJs Villa Senor']
+  }), 'PERVERT', 'a bare date line still yields to the real title below it');
+  assert.equal(parser.deriveSegmentListingTitle({ lines: ['Aug 7, 2026 10:00 PM'] }), '');
+  assert.equal(parser.deriveSegmentListingTitle({ lines: ['July 25, 2026'] }), '');
+});
+
+// ---------------------------------------------------------------------------
 // Console-tee coverage: every log-producing module imported via importModule
 // must carry the __wireConsoleTee shim, or its output silently vanishes from
 // the saved Scriptable run log (each imported module has its own console).

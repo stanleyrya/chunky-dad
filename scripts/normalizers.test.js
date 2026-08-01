@@ -3262,3 +3262,67 @@ test('pin ladder: an address-derived geocoded pin takes the ordinary conflict li
   assert.equal(near.location, '50.8172912, -0.1225875');
   assert.ok(!nearCapture.lines.some(line => line.includes('MAPS LINK CONFLICT')), JSON.stringify(nearCapture.lines));
 });
+
+// ---------------------------------------------------------------------------
+// title <- bar promotion guard. Run 20260801-170254 shipped a Portland event
+// named "Nova Box" — flyer OCR of the venue "NOVA PDX". BarDataNormalizer saw
+// the venue in the title, assumed the fields were transposed, and promoted the
+// OCR garbage in `bar` into `title` with no verification and no log line.
+// ---------------------------------------------------------------------------
+function createNovaNormalizer() {
+  const core = new SharedCore(
+    { portland: { timezone: 'America/Los_Angeles', patterns: ['portland'] } },
+    {
+      eventSchema: EventSchema,
+      bars: {
+        portland: [{
+          name: 'Nova PDX',
+          address: '722 East Burnside Street, Portland, Oregon, 97214',
+          coordinates: '45.52281000000001, -122.6581342'
+        }]
+      }
+    }
+  );
+  return new BarDataNormalizer(core);
+}
+
+test('a bar value that is a variant of the matched venue never becomes the title', () => {
+  const normalizer = createNovaNormalizer();
+  const event = { title: 'CHUNK: Nova PDX', bar: 'Nova Box', city: 'portland' };
+
+  const lines = captureConsoleLog(() => normalizer.normalize(event));
+
+  assert.equal(event.title, 'CHUNK: Nova PDX', 'the OCR venue variant must not overwrite the title');
+  assert.equal(event.bar, 'Nova PDX', 'the bar is still corrected to the curated name');
+  assert.ok(
+    lines.some(line => line.includes('is a variant of "Nova PDX" — kept title, corrected bar only')),
+    `the withheld promotion is logged: ${JSON.stringify(lines)}`
+  );
+});
+
+test('a genuine title-in-bar transposition still promotes, and says so', () => {
+  const core = new SharedCore(
+    { nyc: { timezone: 'America/New_York', patterns: ['nyc'] } },
+    { eventSchema: EventSchema, bars: { nyc: [{ name: 'Eagle', address: '554 W 28th St', coordinates: '40.7506, -74.0035' }] } }
+  );
+  const normalizer = new BarDataNormalizer(core);
+  const event = { title: 'Eagle', bar: 'Bear Night Party', city: 'nyc' };
+
+  const lines = captureConsoleLog(() => normalizer.normalize(event));
+
+  assert.equal(event.title, 'Bear Night Party', 'an unrelated name in `bar` is the real title');
+  assert.equal(event.bar, 'Eagle');
+  assert.ok(
+    lines.some(line => line.includes('was the venue → promoted bar "Bear Night Party" into title')),
+    `the promotion is logged: ${JSON.stringify(lines)}`
+  );
+});
+
+test('isPromotableTitleFromBarField: shared-word variants blocked, distinct names allowed', () => {
+  const normalizer = createNovaNormalizer();
+  assert.equal(normalizer.isPromotableTitleFromBarField('Nova Box', 'Nova PDX'), false);
+  assert.equal(normalizer.isPromotableTitleFromBarField('NOVA-PDX', 'Nova PDX'), false);
+  assert.equal(normalizer.isPromotableTitleFromBarField('Eagle Bear Night', 'Eagle'), true,
+    'a name that adds words to the venue is a real title');
+  assert.equal(normalizer.isPromotableTitleFromBarField('UNDERBEAR', 'Eagle'), true);
+});
