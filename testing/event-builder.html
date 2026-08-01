@@ -3834,6 +3834,21 @@
                 });
               }
             }
+            // Adopt the record's revision number. Resolving the result here is
+            // deliberately NOT a full load — applyExistingSelection would
+            // overwrite the fields the arriving link just prefilled — but the
+            // SEQUENCE is not a field the user edits, and without it the ICS
+            // export refuses to run (it will not guess a revision, because a
+            // wrong one is silently ignored by the calendar). Only fills a
+            // blank, so a real "Edit event" load always wins.
+            if (!normalizeText(state.editingExistingSequence)) {
+              const sequenceSource = selectedExistingResult.baseEvent || selectedExistingResult.event;
+              const resolvedSequence = parseIntegerValue(sequenceSource && sequenceSource.sequence);
+              if (resolvedSequence !== null) {
+                state.editingExistingSequence = String(resolvedSequence);
+                scheduleUrlUpdate();
+              }
+            }
           } else if (pendingExistingSelectionId || pendingExistingOccurrenceId) {
             const requestedMode = selectedExistingMode === 'series' ? 'series' : 'occurrence';
             if (requestedMode === 'series' && !selectedExistingResult.canEditSeries) {
@@ -10580,7 +10595,12 @@ Example output:
         // event carries a SEQUENCE, so a missing one means "not loaded yet",
         // never "genuinely zero".
         if (shouldIncrementSequence && existingSequence === null) {
-          updateCalendarStatus('Load this event with "Edit event" first — its revision number is needed or the calendar will ignore the update', 'warn');
+          const revisionMessage = 'Load this event with "Edit event" first — its revision number is needed or the calendar will ignore the update';
+          updateCalendarStatus(revisionMessage, 'warn');
+          // The status badge sits away from the button, so a refusal there
+          // reads as "the button does nothing". Toast it too, the way the
+          // Scriptable handoff already announces its own refusals.
+          showToast(revisionMessage, 'warn');
           return;
         }
         const nextSequence = shouldIncrementSequence
