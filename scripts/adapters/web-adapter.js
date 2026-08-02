@@ -672,6 +672,11 @@ async saveFailureNote(url, error, metadata = {}) {
                 console.log(`   Date: ${event.startDate}`);
                 console.log(`   Venue: ${event.venue || 'N/A'}`);
                 console.log(`   URL: ${event.url || 'N/A'}`);
+                // Additive line: report-only sanity flags stamped by
+                // SharedCore.getEventSanityFlags (absent → nothing printed).
+                if (Array.isArray(event._sanityFlags) && event._sanityFlags.length > 0) {
+                    console.log(`   ⚠️ Sanity: ${event._sanityFlags.map(flag => flag.code).join(', ')}`);
+                }
                 console.log('   ---');
             });
         }

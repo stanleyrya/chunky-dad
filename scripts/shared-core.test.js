@@ -12670,3 +12670,211 @@ test('classifyPageWithAi records cache hits and invalidation clears them via the
   // No provider invalidate → false, never throws.
   assert.equal(await core.invalidateAiClassificationCacheEntry(url, html, aiConfig, { read: async () => null }), false);
 });
+
+// ---------------------------------------------------------------------------
+// REPORT-ONLY sanity flags (getEventSanityFlags): deterministic shape rules
+// for obviously-broken events that reached the 2026-08-02 write plans in
+// preview mode — legal boilerplate as a title (beefdip run 20260802-142231),
+// a bare date/time as a title, a curated bar name as a title, a 5-years-past
+// CREATE (ONBEAR FEST at 2021-01-31), a 19-month "event". Flags never change
+// _action, withhold, or reorder — see the no-enforcement twin test below.
+// ---------------------------------------------------------------------------
+
+const SANITY_NOW_MS = Date.parse('2026-08-02T12:00:00Z');
+const SANITY_CITIES = { portland: { timezone: 'America/Los_Angeles', patterns: ['portland'] } };
+const SANITY_BARS = { portland: [{ name: 'CC Slaughters' }] };
+
+function createSanityCore(bars = SANITY_BARS) {
+  return new SharedCore(SANITY_CITIES, { eventSchema: EventSchema, ...(bars ? { bars } : {}) });
+}
+
+function sanityCodes(core, event) {
+  return core.getEventSanityFlags(event, { nowMs: SANITY_NOW_MS }).map(flag => flag.code);
+}
+
+test('sanity: a title that is entirely a date/time expression flags title-is-date-phrase', () => {
+  const core = createSanityCore();
+  // Real write-plan titles: the whole title is a date+time range; an event
+  // literally titled "6:30 PM" (earlier run).
+  assert.deepEqual(sanityCodes(core, { title: 'Saturday Jan 23 12 PM – 5 PM' }), ['title-is-date-phrase']);
+  assert.deepEqual(sanityCodes(core, { title: '6:30 PM' }), ['title-is-date-phrase']);
+});
+
+test('sanity: titles with real words beyond the date phrase never flag as date phrases', () => {
+  const core = createSanityCore();
+  assert.deepEqual(sanityCodes(core, { title: 'NYE 2027 Party' }), []);
+  assert.deepEqual(sanityCodes(core, { title: 'Friday Night Bears' }), []);
+  // Time-range PREFIX with a real name after it — the name survives the
+  // strip, so the title flag stays off (its 9-day span is a separate rule,
+  // and sits under the festival bound — see the duration test).
+  assert.deepEqual(sanityCodes(core, { title: '01h a 06h WHITE PARTY en «BEARS DISCO» by Scandal' }), []);
+});
+
+test('sanity: a curated bar name as the whole title flags; containment never does', () => {
+  const core = createSanityCore();
+  // Real case: "CC Slaughters" (a curated bar) as the title of a party.
+  assert.deepEqual(sanityCodes(core, { title: 'CC Slaughters', city: 'portland' }), ['title-is-curated-bar']);
+  // Identity-key equality only — an event AT the bar keeps its name.
+  assert.deepEqual(sanityCodes(core, { title: 'Bearracuda at CC Slaughters', city: 'portland' }), []);
+  // Key normalization: "The CC-Slaughters!" collapses to the same key.
+  assert.deepEqual(sanityCodes(core, { title: 'The CC-Slaughters!', city: 'portland' }), ['title-is-curated-bar']);
+});
+
+test('sanity: with no resolved city, any city\'s curated bars can claim the title', () => {
+  const core = createSanityCore();
+  assert.deepEqual(sanityCodes(core, { title: 'CC Slaughters' }), ['title-is-curated-bar']);
+  // No bars data at all → fail open, no flag.
+  assert.deepEqual(sanityCodes(createSanityCore(null), { title: 'CC Slaughters' }), []);
+});
+
+test('sanity: legalese markers and letterless titles flag title-looks-like-boilerplate', () => {
+  const core = createSanityCore();
+  // Real case: a liability waiver proposed as a CREATE (beefdip,
+  // run 20260802-142231).
+  assert.deepEqual(
+    sanityCodes(core, { title: 'DOG TAGS ARE NON REFUNDABLE · TAGS ARE NON TRANSFERABLE' }),
+    ['title-looks-like-boilerplate']);
+  // Diacritic-folded + punctuation-collapsed matching.
+  assert.deepEqual(sanityCodes(core, { title: 'Entradas NON-REFUNDÁBLE' }), ['title-looks-like-boilerplate']);
+  // No letters at all.
+  assert.deepEqual(sanityCodes(core, { title: '*** !!! ***' }), ['title-looks-like-boilerplate']);
+});
+
+test('sanity: sentence fragments and filler announcements are DELIBERATELY not flagged', () => {
+  const core = createSanityCore();
+  // Real junk that stays unflagged on purpose: detecting truncated sentences
+  // ("The weekend kicks off on") or filler ("En breve anunciaremos mas
+  // vendors") deterministically means grammar heuristics that false-positive
+  // on legitimate names ("Where the Bears Are"). Out of scope this wave —
+  // the AI junk-title idea is a separate, later decision.
+  assert.deepEqual(sanityCodes(core, { title: 'The weekend kicks off on' }), []);
+  assert.deepEqual(sanityCodes(core, { title: 'En breve anunciaremos mas vendors' }), []);
+});
+
+test('sanity: a CREATE more than 370 days past flags start-long-past; updates and recent creates never do', () => {
+  const core = createSanityCore();
+  // Real case: ONBEAR FEST proposed as NEW at 2021-01-31 — five years past.
+  assert.deepEqual(
+    sanityCodes(core, { title: 'ONBEAR FEST', _action: 'new', startDate: '2021-01-31T20:00:00Z' }),
+    ['start-long-past']);
+  // A normal past-event UPDATE is routine calendar maintenance.
+  assert.deepEqual(
+    sanityCodes(core, { title: 'ONBEAR FEST', _action: 'merge', startDate: '2021-01-31T20:00:00Z' }),
+    []);
+  // Real case under the bound: ursamen's "Out of Hibernation" carried a date
+  // ~5 months past — inside 370 days, so this rule stays silent (the bound
+  // exists to keep just-passed annual events out of the flag).
+  assert.deepEqual(
+    sanityCodes(core, { title: 'Out of Hibernation', _action: 'new', startDate: '2026-03-01T20:00:00Z' }),
+    []);
+  // _analysis.action counts as CREATE-shaped too.
+  assert.deepEqual(
+    sanityCodes(core, { title: 'ONBEAR FEST', _analysis: { action: 'new' }, startDate: '2021-01-31T20:00:00Z' }),
+    ['start-long-past']);
+});
+
+test('sanity: spans longer than any curated festival flag duration-implausible; festival-length spans never do', () => {
+  const core = createSanityCore();
+  // Real case: "Queer Art Market" spanning 2025-03-22 → 2026-10-18 (19
+  // months), proposed for writing.
+  const market = { title: 'Queer Art Market', _action: 'new', startDate: '2025-03-22T10:00:00Z', endDate: '2026-10-18T20:00:00Z' };
+  assert.ok(sanityCodes(core, market).includes('duration-implausible'));
+  // Bound verified against data/festivals.json: the longest curated festival
+  // is Bear Carnival at 10 days; Bears Sitges Week is 9. Both must stay
+  // clean, so >10 days is the smallest safe bound — which also means the
+  // 9-day WHITE PARTY club night sits UNDER it (indistinguishable from
+  // Bears Sitges Week by span alone; its flags must come from other rules).
+  assert.deepEqual(
+    sanityCodes(core, { title: 'Bear Week Provincetown', startDate: '2027-07-10T00:00:00Z', endDate: '2027-07-17T00:00:00Z' }),
+    [], 'a 7-day festival is clean');
+  assert.deepEqual(
+    sanityCodes(core, { title: 'Bears Sitges Week', startDate: '2026-09-04T00:00:00Z', endDate: '2026-09-13T00:00:00Z' }),
+    [], 'the 9-day curated festival is clean');
+  assert.deepEqual(
+    sanityCodes(core, { title: 'Bear Carnival', startDate: '2027-04-08T00:00:00Z', endDate: '2027-04-18T00:00:00Z' }),
+    [], 'the 10-day longest curated festival is clean');
+  assert.deepEqual(
+    sanityCodes(core, { title: 'Some Party', startDate: '2026-08-01T00:00:00Z', endDate: '2026-08-12T06:00:00Z' }),
+    ['duration-implausible'], 'past the longest curated festival → flagged');
+});
+
+test('sanity: getEventSanityFlags never mutates the event and stacks multiple flags', () => {
+  const core = createSanityCore();
+  const event = {
+    title: 'Queer Art Market',
+    _action: 'new',
+    startDate: '2025-03-22T10:00:00Z',
+    endDate: '2026-10-18T20:00:00Z'
+  };
+  const snapshot = JSON.parse(JSON.stringify(event));
+  const flags = core.getEventSanityFlags(event, { nowMs: SANITY_NOW_MS });
+  assert.deepEqual(flags.map(flag => flag.code), ['start-long-past', 'duration-implausible']);
+  assert.ok(flags.every(flag => typeof flag.detail === 'string' && flag.detail.length > 0));
+  assert.deepEqual(JSON.parse(JSON.stringify(event)), snapshot, 'classifier is read-only');
+});
+
+test('sanity flags are stamped on the analyzed event with the ⚠️ SANITY log line', async () => {
+  const core = createCore();
+  const adapter = buildPrepCalendarAdapter([]); // no existing events → CREATE
+  const scraped = {
+    title: 'DOG TAGS ARE NON REFUNDABLE · TAGS ARE NON TRANSFERABLE',
+    startDate: new Date('2026-08-08T02:00:00.000Z'),
+    endDate: new Date('2026-08-08T07:00:00.000Z'),
+    bar: 'STATION 4',
+    city: 'dallas',
+    shortName: 'TAGS' // keeps the shortName derivation pass inert
+  };
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logLines.push(args.join(' ')); };
+  let analyzed;
+  try {
+    analyzed = await core.prepareEventsForCalendar([scraped], adapter, {});
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(analyzed.length, 1);
+  assert.deepEqual(analyzed[0]._sanityFlags.map(flag => flag.code), ['title-looks-like-boilerplate']);
+  const sanityLines = logLines.filter(line => line.startsWith('⚠️ SANITY: '));
+  assert.equal(sanityLines.length, 1);
+  assert.equal(
+    sanityLines[0],
+    '⚠️ SANITY: "DOG TAGS ARE NON REFUNDABLE · TAGS ARE NON TRANSFERABLE" flagged title-looks-like-boilerplate — title carries legalese ("non refundable")');
+});
+
+test('no enforcement: a flagged event\'s action and write fields are byte-identical to an unflagged twin\'s', async () => {
+  const core = createCore();
+  const buildTwin = (title) => ({
+    title,
+    startDate: new Date('2026-08-08T02:00:00.000Z'),
+    endDate: new Date('2026-08-08T07:00:00.000Z'),
+    bar: 'STATION 4',
+    city: 'dallas',
+    shortName: 'TAGS'
+  });
+  const flagged = await core.prepareEventsForCalendar(
+    [buildTwin('DOG TAGS ARE NON REFUNDABLE · TAGS ARE NON TRANSFERABLE')],
+    buildPrepCalendarAdapter([]), {});
+  const twin = await core.prepareEventsForCalendar(
+    [buildTwin('DOG TAGS BEAR PARTY')],
+    buildPrepCalendarAdapter([]), {});
+
+  assert.equal(flagged.length, 1, 'the flagged event is never withheld');
+  assert.equal(twin.length, 1);
+  assert.ok(flagged[0]._sanityFlags.length > 0, 'the boilerplate twin is flagged');
+  assert.deepEqual(twin[0]._sanityFlags, [], 'the clean twin is not');
+
+  // Every action/write field the calendar write path reads is byte-identical
+  // (title differs by construction; _sanityFlags is display-only).
+  const writeShape = (event) => JSON.stringify({
+    action: event._action,
+    analysisAction: event._analysis.action,
+    startDate: event.startDate,
+    endDate: event.endDate,
+    bar: event.bar,
+    city: event.city,
+    shortName: event.shortName,
+    notes: event.notes
+  });
+  assert.equal(writeShape(flagged[0]), writeShape(twin[0]));
+});

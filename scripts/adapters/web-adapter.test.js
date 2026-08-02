@@ -284,3 +284,30 @@ test('getCalendarName fails closed for an unrecognized city and logs it once', (
   assert.equal(wiltonLines.length, 1, 'logged once per distinct unrecognized city, not once per event');
   assert.ok(wiltonLines[0].includes('Unrecognized city'), `expected the visible drop line, got: ${wiltonLines[0]}`);
 });
+
+// ---------------------------------------------------------------------------
+// REPORT-ONLY sanity flags: the small-batch event detail block prints an
+// additive line for flagged events (stamped upstream by
+// SharedCore.getEventSanityFlags) and stays silent otherwise.
+// ---------------------------------------------------------------------------
+
+test('displayCalendarEvents prints the sanity line only for flagged events', () => {
+  const adapter = makeAdapter();
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (...args) => { lines.push(args.join(' ')); };
+  try {
+    adapter.displayCalendarEvents([
+      {
+        title: '6:30 PM',
+        startDate: '2026-08-01T02:00:00.000Z',
+        _sanityFlags: [{ code: 'title-is-date-phrase', detail: 'title is entirely a date/time expression' }]
+      },
+      { title: 'Plain', startDate: '2026-08-01T02:00:00.000Z' }
+    ], { name: 'test-parser' });
+  } finally {
+    console.log = originalLog;
+  }
+  const sanityLines = lines.filter(line => line.includes('⚠️ Sanity:'));
+  assert.deepEqual(sanityLines, ['   ⚠️ Sanity: title-is-date-phrase']);
+});

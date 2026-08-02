@@ -7395,9 +7395,13 @@ test('rrule validation rejects non-RRULE values, unverbatim evidence, and schedu
   assert.equal(prose.event.rrule, undefined, 'prose is not an RRULE');
   assert.equal(prose.report.dropped[0].reason, 'rrule-schedule-evidence');
 
-  // Evidence absent from the corpus → rejected.
+  // Evidence absent from the corpus AND no corpus day-word support for the
+  // rule → rejected. (BYDAY=1SA: the corpus names no Saturday, so the
+  // day-word fallback cannot rescue it — a 1FR rule with a fabricated
+  // pointer IS rescued now because "1ST FRIDAY OF THE MONTH" is literally
+  // in the corpus; see the corpus day-word fallback tests.)
   const absent = runRruleValidation(parser, {
-    rrule: 'FREQ=MONTHLY;BYDAY=1FR',
+    rrule: 'FREQ=MONTHLY;BYDAY=1SA',
     __fieldEvidence: { rrule: 'FIRST SATURDAY MONTHLY MEETUP' }
   });
   assert.equal(absent.event.rrule, undefined, 'evidence must be a verbatim corpus quote');
@@ -7514,6 +7518,260 @@ test('normalizeAiEvent still discards dateless events with unsupported or missin
     'unsupported rrule form → discarded exactly as before');
   assert.equal(parser.normalizeAiEvent({ title: 'Y' }, {}, null, null, null), null,
     'no rrule, no date → discarded exactly as before');
+});
+
+// ---------------------------------------------------------------------------
+// Dateless-weekly day-phrase synthesis (run 20260802-140413, The Lumberyard):
+// pages that state a weekday pattern but never a date — deterministic regex
+// turns the phrase into an rrule + next occurrence so the event reaches the
+// existing recurring-withhold machinery instead of dying on the
+// required-startDate guard
+// ---------------------------------------------------------------------------
+
+const LUMBERYARD_CITY_CONFIG = { seattle: { timezone: 'America/Los_Angeles', patterns: ['seattle'] } };
+const LUMBERYARD_QUEERAOKE_TEXT = 'QUEERAOKE Wednesday nights @ 8:30pm Come Join Bumper and Sing your heart out.';
+const LUMBERYARD_DRINK_DRAW_TEXT = 'Hosted by Nathan (except the last Tuesday - Drink and Draw)';
+
+function normalizeDayPhraseEvent(parser, aiEvent, sourceText, cityConfig = LUMBERYARD_CITY_CONFIG) {
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let event;
+  try {
+    event = parser.normalizeAiEvent(aiEvent, {}, { html: sourceText, url: 'https://www.thelumberyardbar.com/' }, cityConfig, null);
+  } finally {
+    console.log = originalLog;
+  }
+  return { event, logs };
+}
+
+test('day-phrase synthesis: the real QUEERAOKE string becomes a weekly Wednesday 8:30pm series', () => {
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  parser.now = () => new Date(2026, 7, 3, 12, 0, 0); // Mon 2026-08-03 local
+
+  const { event, logs } = normalizeDayPhraseEvent(parser,
+    { title: 'QUEERAOKE', city: 'seattle' }, LUMBERYARD_QUEERAOKE_TEXT);
+  assert.ok(event, 'the dateless event survives normalization');
+  assert.equal(event.recurrenceRule, 'FREQ=WEEKLY;BYDAY=WE');
+  // Next Wednesday from Mon Aug 3 is Aug 5; 8:30pm PDT = Aug 6 03:30 UTC.
+  assert.equal(event.startDate.toISOString(), '2026-08-06T03:30:00.000Z');
+  assert.ok(event.startDate.getTime() > parser.now().getTime(), 'next occurrence is in the future');
+  assert.equal(event._recurringNoStartTime, undefined, 'captured @ 8:30pm keeps the ICS export');
+  assert.equal(event._recurrenceFromDayPhrase, 'wednesday nights', 'provenance stamps the matched phrase');
+  assert.equal(event._timezoneUnresolved, undefined, 'resolved timezone → real instant');
+  assert.ok(logs.includes('🔁 RECURRING: "QUEERAOKE" synthesized from day phrase "wednesday nights" → FREQ=WEEKLY;BYDAY=WE, next 2026-08-05 — will be withheld from calendar write (ICS only)'),
+    `synthesis log expected, got: ${JSON.stringify(logs.filter(line => line.includes('RECURRING')))}`);
+});
+
+test('day-phrase synthesis: the real Drink & Draw string becomes a last-Tuesday monthly series (no stated time → existing no-start-time convention)', () => {
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  parser.now = () => new Date(2026, 7, 3, 12, 0, 0);
+
+  const { event, logs } = normalizeDayPhraseEvent(parser,
+    { title: 'Drink & Draw', city: 'seattle' }, LUMBERYARD_DRINK_DRAW_TEXT);
+  assert.ok(event, 'the dateless event survives normalization');
+  assert.equal(event.recurrenceRule, 'FREQ=MONTHLY;BYDAY=-1TU');
+  // Last Tuesday of Aug 2026 is Aug 25; no stated time → the existing
+  // derived-occurrence convention (local-midnight placeholder +
+  // _recurringNoStartTime, so the card offers the Event Builder link).
+  assert.equal(event.startDate.toISOString(), '2026-08-25T07:00:00.000Z');
+  assert.ok(event.startDate.getTime() > parser.now().getTime(), 'next occurrence is in the future');
+  assert.equal(event._recurringNoStartTime, true, 'no stated time rides the existing no-start-time flag');
+  assert.equal(event._recurrenceFromDayPhrase, 'last tuesday');
+  assert.ok(logs.includes('🔁 RECURRING: "Drink & Draw" synthesized from day phrase "last tuesday" → FREQ=MONTHLY;BYDAY=-1TU, next 2026-08-25 — will be withheld from calendar write (ICS only)'),
+    `synthesis log expected, got: ${JSON.stringify(logs.filter(line => line.includes('RECURRING')))}`);
+});
+
+test('day-phrase synthesis: "every Friday" and "2nd Saturday" variants, including a time range', () => {
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  parser.now = () => new Date(2026, 7, 3, 12, 0, 0);
+
+  const friday = normalizeDayPhraseEvent(parser,
+    { title: 'BEAR NIGHT', city: 'seattle' }, 'BEAR NIGHT every Friday at 9pm with DJ Cub').event;
+  assert.ok(friday);
+  assert.equal(friday.recurrenceRule, 'FREQ=WEEKLY;BYDAY=FR');
+  assert.equal(friday.startDate.toISOString(), '2026-08-08T04:00:00.000Z', 'next Friday Aug 7, 9pm PDT');
+  assert.equal(friday._recurrenceFromDayPhrase, 'every friday');
+
+  const saturday = normalizeDayPhraseEvent(parser,
+    { title: 'UNDERWEAR PARTY', city: 'seattle' }, 'UNDERWEAR PARTY 2nd Saturday @ 10pm').event;
+  assert.ok(saturday);
+  assert.equal(saturday.recurrenceRule, 'FREQ=MONTHLY;BYDAY=2SA');
+  assert.equal(saturday.startDate.toISOString(), '2026-08-09T05:00:00.000Z', '2nd Saturday Aug 8, 10pm PDT');
+
+  // Range with an explicit end time: end anchors to the same occurrence.
+  const range = normalizeDayPhraseEvent(parser,
+    { title: 'BEER BUST', city: 'seattle' }, 'BEER BUST Sundays 4pm-9pm all are welcome').event;
+  assert.ok(range);
+  assert.equal(range.recurrenceRule, 'FREQ=WEEKLY;BYDAY=SU');
+  assert.equal(range.startDate.toISOString(), '2026-08-09T23:00:00.000Z', 'next Sunday Aug 9, 4pm PDT');
+  assert.equal(range.endDate.toISOString(), '2026-08-10T04:00:00.000Z', '9pm PDT end from the range tail');
+
+  // "-close" has no clock value: start captured, end left to defaulting.
+  const close = normalizeDayPhraseEvent(parser,
+    { title: 'EXPOSED', city: 'seattle' }, 'EXPOSED UNDERWEAR OR LESS Fridays 8pm-close').event;
+  assert.ok(close);
+  assert.equal(close.recurrenceRule, 'FREQ=WEEKLY;BYDAY=FR');
+  assert.equal(close.startDate.toISOString(), '2026-08-08T03:00:00.000Z', 'next Friday Aug 7, 8pm PDT');
+  assert.equal(close.endDate.toISOString(), close.startDate.toISOString(), 'no end claim → existing defaulting');
+});
+
+test('day-phrase synthesis fails closed on multiple distinct day patterns in one segment', () => {
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  parser.now = () => new Date(2026, 7, 3, 12, 0, 0);
+
+  // A multi-pattern segment where the event's OWN day is stated right next
+  // to its title resolves by title adjacency: "Trivia Tuesday nights @ 7"
+  // is Trivia's schedule; the "last Tuesday" carve-out 40+ chars away
+  // belongs to the neighbouring Drink and Draw listing. (The rrule cannot
+  // express the "except" — the series is offered ICS-only and withheld from
+  // calendar writes, so the operator sees it before importing.)
+  const trivia = normalizeDayPhraseEvent(parser,
+    { title: 'Trivia', city: 'seattle' },
+    'Trivia Tuesday nights @ 7 Hosted by Nathan (except the last Tuesday - Drink and Draw)');
+  assert.ok(trivia.event, 'title-adjacent day phrase resolves the multi-pattern segment');
+  assert.equal(trivia.event.recurrenceRule, 'FREQ=WEEKLY;BYDAY=TU');
+  assert.equal(trivia.event._recurrenceFromDayPhrase, 'tuesday nights');
+  assert.equal(trivia.event.startDate.toISOString(), '2026-08-05T02:00:00.000Z', 'next Tuesday Aug 4, 7pm PDT from "@ 7"');
+
+  // The REAL Lumberyard trivia wording states no day for Trivia itself —
+  // "last Tuesday" (gap 30) belongs to Drink and Draw, outside the
+  // adjacency bound — so it still fails closed and dies as today.
+  const realTrivia = normalizeDayPhraseEvent(parser,
+    { title: 'Trivia Taco night', city: 'seattle' },
+    'Trivia Taco night Hosted by Nathan (except the last Tuesday - Drink and Draw) QUEERAOKE Wednesday nights @ 8:30pm');
+  assert.equal(realTrivia.event, null, 'no title-adjacent phrase → no synthesis, event dies as before');
+  assert.ok(realTrivia.logs.some(line => line.startsWith('🔁 RECURRING: skipped day-phrase synthesis for "Trivia Taco night" — multiple distinct day patterns in source (')),
+    `fail-closed log expected, got: ${JSON.stringify(realTrivia.logs.filter(line => line.includes('RECURRING')))}`);
+
+  // Directly conjoined day phrases are ONE multi-day listing — nearest-wins
+  // would silently drop half the schedule, so adjacency refuses.
+  const conjoined = normalizeDayPhraseEvent(parser,
+    { title: 'HAPPY HOUR', city: 'seattle' }, 'HAPPY HOUR Mondays and Thursdays 4pm');
+  assert.equal(conjoined.event, null, 'conjoined days stay ambiguous even when title-adjacent');
+
+  // Two different weekdays → same fail-closed path.
+  const twoDays = normalizeDayPhraseEvent(parser,
+    { title: 'HAPPY HOUR', city: 'seattle' }, 'HAPPY HOUR Mondays and Thursdays 4pm');
+  assert.equal(twoDays.event, null);
+
+  // A bare singular weekday is how one-off dates are written — never a pattern.
+  const bare = normalizeDayPhraseEvent(parser,
+    { title: 'ONE OFF', city: 'seattle' }, 'Join us Friday for a special show');
+  assert.equal(bare.event, null, 'bare singular weekday → no synthesis');
+});
+
+test('day-phrase synthesis without a resolved timezone follows the _timezoneUnresolved wall-clock convention', () => {
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  parser.now = () => new Date(2026, 7, 3, 12, 0, 0);
+
+  const { event } = normalizeDayPhraseEvent(parser, { title: 'QUEERAOKE' }, LUMBERYARD_QUEERAOKE_TEXT, null);
+  assert.ok(event);
+  assert.equal(event.recurrenceRule, 'FREQ=WEEKLY;BYDAY=WE');
+  assert.equal(event.startDate.toISOString(), '2026-08-05T20:30:00.000Z', 'wall-clock components labeled UTC');
+  assert.equal(event._timezoneUnresolved, true, 'flagged for downstream re-anchoring');
+});
+
+test('day-phrase synthesis never fires when a real date is present (regression pin)', () => {
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  parser.now = () => new Date(2026, 7, 3, 12, 0, 0);
+
+  const { event, logs } = normalizeDayPhraseEvent(parser,
+    { title: 'ONE-OFF PARTY', startDate: '2026-08-15', startTime: '21:00', city: 'seattle' },
+    'ONE-OFF PARTY Saturday August 15 — and come by every Friday for happy hour');
+  assert.ok(event);
+  assert.equal(event.startDate.toISOString(), '2026-08-16T04:00:00.000Z', 'the extracted real date stands');
+  assert.equal(event.recurrenceRule, '', 'no rrule synthesized over a dated event');
+  assert.equal(event._recurrenceFromDayPhrase, undefined);
+  assert.ok(!logs.some(line => line.includes('synthesized from day phrase')), 'no synthesis log');
+});
+
+test('model rrule with day-word corpus evidence passes the schedule-evidence gate without a verbatim pointer', () => {
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  const runWithCorpus = (aiEvent, corpus) => parser.validateAiEventEvidence(aiEvent, { html: corpus }, {}, null, {
+    evidenceContext: parser.buildAiEvidenceContextFromText(corpus),
+    validationContext: { imageEvidenceUrls: new Set() }
+  });
+
+  // No cited evidence at all → the corpus day-words carry the rule.
+  const noEvidence = runWithCorpus({ rrule: 'FREQ=WEEKLY;BYDAY=WE' }, LUMBERYARD_QUEERAOKE_TEXT);
+  assert.equal(noEvidence.event.rrule, 'FREQ=WEEKLY;BYDAY=WE', 'day-word corpus evidence accepted');
+  assert.deepEqual(noEvidence.report.dropped, []);
+
+  // Paraphrased (non-verbatim) pointer → rescued by corpus day-words.
+  const paraphrased = runWithCorpus({
+    rrule: 'FREQ=WEEKLY;BYDAY=WE',
+    __fieldEvidence: { rrule: 'happens weekly on Wednesday evenings' }
+  }, LUMBERYARD_QUEERAOKE_TEXT);
+  assert.equal(paraphrased.event.rrule, 'FREQ=WEEKLY;BYDAY=WE');
+
+  // Monthly ordinal: fabricated pointer, but the corpus states the ordinal
+  // day phrase verbatim ("1ST FRIDAY OF THE MONTH" in RRULE_TEST_CORPUS).
+  const monthly = runRruleValidation(parser, {
+    rrule: 'FREQ=MONTHLY;BYDAY=1FR',
+    __fieldEvidence: { rrule: 'FIRST FRIDAY MONTHLY MEETUP' }
+  });
+  assert.equal(monthly.event.rrule, 'FREQ=MONTHLY;BYDAY=1FR');
+
+  // A day the corpus never names → still dropped.
+  const wrongDay = runWithCorpus({ rrule: 'FREQ=WEEKLY;BYDAY=FR' }, LUMBERYARD_QUEERAOKE_TEXT);
+  assert.equal(wrongDay.event.rrule, undefined, 'no day-word support → gated as before');
+
+  // Bare singular weekday prose is a one-off date, not weekly evidence.
+  const bareSingular = runWithCorpus({ rrule: 'FREQ=WEEKLY;BYDAY=FR' }, 'Doors at 8, Friday, August 7');
+  assert.equal(bareSingular.event.rrule, undefined);
+});
+
+test('non-BYDAY-only rrules never use the corpus day-word fallback', () => {
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  const runWithCorpus = (aiEvent) => parser.validateAiEventEvidence(aiEvent, { html: LUMBERYARD_QUEERAOKE_TEXT }, {}, null, {
+    evidenceContext: parser.buildAiEvidenceContextFromText(LUMBERYARD_QUEERAOKE_TEXT),
+    validationContext: { imageEvidenceUrls: new Set() }
+  });
+
+  const interval = runWithCorpus({ rrule: 'FREQ=WEEKLY;BYDAY=WE;INTERVAL=2' });
+  assert.equal(interval.event.rrule, undefined, 'INTERVAL stays gated exactly as today');
+  const daily = runWithCorpus({ rrule: 'FREQ=DAILY' });
+  assert.equal(daily.event.rrule, undefined, 'no BYDAY → no fallback');
+});
+
+test('e2e: a day-phrase synthesized event is withheld from calendar writes (ICS export path)', async () => {
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  parser.now = () => new Date(2026, 7, 3, 12, 0, 0);
+  const { event } = normalizeDayPhraseEvent(parser,
+    { title: 'QUEERAOKE', city: 'seattle' }, LUMBERYARD_QUEERAOKE_TEXT);
+  assert.ok(event);
+  assert.equal(SharedCore.isRecurringSeriesEvent(event), true,
+    'the synthesized rrule lands on recurrenceRule — the key the series detection reads');
+
+  const core = new SharedCore({}, { eventSchema: EventSchema });
+  const adapter = { getExistingEvents: async () => [] };
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let analyzed;
+  try {
+    analyzed = await core.prepareEventsForCalendar([event], adapter, {});
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(analyzed.length, 1, "flag-don't-drop: the synthesized series stays in the results");
+  assert.equal(analyzed[0]._recurring, true);
+  assert.equal(analyzed[0]._recurringExport, true, 'stamped for the results-UI ICS export');
+  assert.equal(analyzed[0].recurrenceRule, 'FREQ=WEEKLY;BYDAY=WE', 'rrule survives for the ICS export');
+  assert.ok(logs.some(line => line.includes('🔁 RECURRING: "QUEERAOKE" withheld from calendar write — save via ICS export')),
+    `withhold log expected, got: ${JSON.stringify(logs.filter(line => line.includes('RECURRING')))}`);
+  assert.deepEqual(SharedCore.filterEventsForExecution(analyzed), [],
+    'NO calendar write action results from the synthesized series');
 });
 
 // ── Multilingual segment date signals (es/ca/fr/de/it/pt) ──────────────────

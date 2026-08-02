@@ -115,6 +115,53 @@ const RRULE_BYDAY_EVIDENCE_REGEXES = {
 // signal in schedule prose.
 const RRULE_ORDINAL_WORD_REGEX = /\b(?:1st|first|2nd|second|3rd|third|4th|fourth|5th|fifth|last)\b/i;
 
+// ── Dateless-weekly day-phrase synthesis (run 20260802-140413) ──────────────
+// thelumberyardbar.com states every event as a weekday pattern and never a
+// date ("QUEERAOKE Wednesday nights @ 8:30pm"), so every extraction died on
+// the required-startDate guard. The deterministic day-phrase extractor
+// (extractRecurrenceFromDayPhrases) turns exactly one unambiguous weekday
+// pattern in the event's OWN source text into an RRULE, which then rides the
+// existing derived-next-occurrence path — and the existing recurring-withhold
+// machinery (the scraper never writes series; ICS export only).
+// These tables are generic English vocabulary — data, not per-venue rules.
+// Full day names only: abbreviated forms ("Tues", "Sat") stay the
+// model-rrule evidence path's job (RRULE_BYDAY_EVIDENCE_REGEXES); a
+// whole-corpus deterministic scan over abbreviations would false-positive on
+// ordinary words ("we sat down"), so synthesis fails closed on them.
+const DAY_PHRASE_WEEKDAY_WORDS = [
+    { code: 'MO', word: 'monday' },
+    { code: 'TU', word: 'tuesday' },
+    { code: 'WE', word: 'wednesday' },
+    { code: 'TH', word: 'thursday' },
+    { code: 'FR', word: 'friday' },
+    { code: 'SA', word: 'saturday' },
+    { code: 'SU', word: 'sunday' }
+];
+
+// Ordinal-position vocabulary → BYDAY ordinal ("last Tuesday" → -1TU,
+// "2nd Saturday" → 2SA).
+const DAY_PHRASE_ORDINAL_WORDS = [
+    { value: 1, words: ['first', '1st'] },
+    { value: 2, words: ['second', '2nd'] },
+    { value: 3, words: ['third', '3rd'] },
+    { value: 4, words: ['fourth', '4th'] },
+    { value: 5, words: ['fifth', '5th'] },
+    { value: -1, words: ['last'] }
+];
+
+const DAY_PHRASE_DAY_ALTERNATION = DAY_PHRASE_WEEKDAY_WORDS.map(entry => entry.word).join('|');
+const DAY_PHRASE_ORDINAL_ALTERNATION = DAY_PHRASE_ORDINAL_WORDS
+    .map(entry => entry.words.join('|'))
+    .join('|');
+
+// Max folded-character gap between an event's title span and a day-phrase
+// span for the phrase to count as THAT event's schedule when a page names
+// several patterns. Derived from the real Lumberyard events page (run
+// 20260802-140413): correct title→phrase pairs measured at gaps 1, 3 and 6;
+// the closest WRONG pair (a neighbouring listing's phrase) at 30. 25 splits
+// them with margin on both sides.
+const DAY_PHRASE_TITLE_GAP_MAX = 25;
+
 // ── Multilingual date-vocabulary locales ─────────────────────────────────────
 // The languages of the configured cities (sitges/madrid/pv/mexico-city →
 // es/ca; paris → fr; berlin → de; milan → it; sao-paulo → pt), plus en for
@@ -10664,23 +10711,310 @@ TEXT:
     }
 
     /**
+     * NFKC-fold (compatibility/fullwidth forms), then the same diacritic
+     * fold the evidence layer already uses (lowercase, accents stripped),
+     * then whitespace collapse — the one normalization every day-phrase and
+     * corpus day-word match runs on.
+     */
+    foldDayPhraseText(value) {
+        return this.foldDiacritics(String(value || '').normalize('NFKC')).replace(/\s+/g, ' ');
+    }
+
+    /**
+     * Deterministic day-phrase recurrence extraction for dateless events
+     * (run 20260802-140413, The Lumberyard): scan the event's OWN source
+     * text for weekday-pattern phrases and translate exactly ONE unambiguous
+     * pattern into an RRULE. Regex over generic English vocabulary only —
+     * no AI calls, no per-venue rules.
+     *   - weekly shapes: "every Wednesday", "Wednesdays", "Wednesday
+     *     night(s)" → FREQ=WEEKLY;BYDAY=WE
+     *   - monthly ordinal shapes: "last Tuesday", "first Friday",
+     *     "2nd Saturday" → FREQ=MONTHLY;BYDAY=-1TU / 1FR / 2SA
+     * Bare singular weekdays ("Friday, August 7") are NOT a pattern — they
+     * are how one-off dates are written.
+     * Returns:
+     *   { rrule, phrase, startTime, endTime } — exactly one distinct rule
+     *   { conflict: [rrules...] } — multiple distinct rules with no clear
+     *     association; the caller fails closed
+     *   null — no pattern found
+     */
+    extractRecurrenceFromDayPhrases(sourceText, eventTitle = '') {
+        const corpus = this.foldDayPhraseText(this.stripTags(String(sourceText || '')));
+        if (!corpus) return null;
+        const matches = [];
+        // Monthly ordinal phrases first — their spans mask the weekly scan so
+        // "every 2nd Friday" / "2nd Fridays" never double-read as weekly.
+        const ordinalRegex = new RegExp(
+            `\\b(${DAY_PHRASE_ORDINAL_ALTERNATION})\\s+(${DAY_PHRASE_DAY_ALTERNATION})s?\\b`, 'g');
+        let match;
+        while ((match = ordinalRegex.exec(corpus)) !== null) {
+            const ordinal = DAY_PHRASE_ORDINAL_WORDS.find(entry => entry.words.includes(match[1]));
+            const day = DAY_PHRASE_WEEKDAY_WORDS.find(entry => entry.word === match[2]);
+            if (!ordinal || !day) continue;
+            matches.push({
+                rrule: `FREQ=MONTHLY;BYDAY=${ordinal.value}${day.code}`,
+                phrase: match[0],
+                start: match.index,
+                end: match.index + match[0].length
+            });
+        }
+        const ordinalSpans = matches.map(entry => ({ start: entry.start, end: entry.end }));
+        const weeklyRegex = new RegExp(
+            `\\bevery\\s+(${DAY_PHRASE_DAY_ALTERNATION})s?\\b`
+            + `|\\b(${DAY_PHRASE_DAY_ALTERNATION})s\\b`
+            + `|\\b(${DAY_PHRASE_DAY_ALTERNATION})\\s+nights?\\b`, 'g');
+        while ((match = weeklyRegex.exec(corpus)) !== null) {
+            const day = DAY_PHRASE_WEEKDAY_WORDS.find(entry => entry.word === (match[1] || match[2] || match[3]));
+            if (!day) continue;
+            const start = match.index;
+            const end = match.index + match[0].length;
+            if (ordinalSpans.some(span => start < span.end && end > span.start)) continue;
+            matches.push({ rrule: `FREQ=WEEKLY;BYDAY=${day.code}`, phrase: match[0], start, end });
+        }
+        if (matches.length === 0) return null;
+        const distinctRules = Array.from(new Set(matches.map(entry => entry.rrule)));
+        if (distinctRules.length > 1) {
+            // Title-adjacency disambiguation. A venue's weekly-lineup page
+            // legitimately names several day patterns ("Trivia … (except the
+            // last Tuesday - Drink and Draw) QUEERAOKE Wednesday nights @
+            // 8:30pm … Dolly and the DJ Most Saturday Nights" — the real
+            // Lumberyard events page, where segmentation finds no valid
+            // segments and the corpus is the whole page). The phrase that
+            // belongs to THIS event is the one adjacent to its own title:
+            // nearest phrase by span gap, within DAY_PHRASE_TITLE_GAP_MAX
+            // folded characters. Measured on the real page: correct pairs
+            // sit at gaps 1 (QUEERAOKE→Wednesday), 3 (Drink and Draw→last
+            // Tuesday) and 6 (Dolly→Saturday Nights), while the closest
+            // WRONG pair (Trivia→last Tuesday, which belongs to Drink and
+            // Draw) is at 30 — the 25 bound splits them with margin. Title
+            // absent from the corpus, or no phrase within the bound → fail
+            // closed exactly as before.
+            const adjacent = this.pickTitleAdjacentDayPhrase(corpus, matches, eventTitle);
+            if (!adjacent) return { conflict: distinctRules };
+            const adjacentTime = this.captureDayPhraseAdjacentTime(corpus, adjacent);
+            return {
+                rrule: adjacent.rrule,
+                phrase: adjacent.phrase,
+                startTime: adjacentTime.startTime,
+                endTime: adjacentTime.endTime,
+                titleAdjacent: true
+            };
+        }
+        const first = matches.slice().sort((a, b) => a.start - b.start)[0];
+        const time = this.captureDayPhraseAdjacentTime(corpus, first);
+        return { rrule: first.rrule, phrase: first.phrase, startTime: time.startTime, endTime: time.endTime };
+    }
+
+    // Nearest day-phrase to the event's own title, by span gap in the folded
+    // corpus, within DAY_PHRASE_TITLE_GAP_MAX. Ampersands fold to "and" for
+    // the title lookup ("Drink & Draw" ↔ page text "Drink and Draw"). Every
+    // occurrence of the title counts; the phrase minimizing the gap over all
+    // occurrences wins. Returns the winning match or null.
+    pickTitleAdjacentDayPhrase(corpus, matches, eventTitle) {
+        const foldedTitle = this.foldDayPhraseText(String(eventTitle || '').replace(/\s*&\s*/g, ' and '))
+            .trim();
+        if (!foldedTitle || foldedTitle.length < 3) return null;
+        const titleSpans = [];
+        let index = -1;
+        while ((index = corpus.indexOf(foldedTitle, index + 1)) >= 0) {
+            titleSpans.push({ start: index, end: index + foldedTitle.length });
+        }
+        if (titleSpans.length === 0) return null;
+        const gapToTitle = (candidate) => Math.min(...titleSpans.map(span =>
+            candidate.start >= span.end
+                ? candidate.start - span.end
+                : (candidate.end <= span.start ? span.start - candidate.end : 0)));
+        const inWindow = matches
+            .map(candidate => ({ candidate, gap: gapToTitle(candidate) }))
+            .filter(entry => entry.gap <= DAY_PHRASE_TITLE_GAP_MAX)
+            .sort((a, b) => a.gap - b.gap);
+        if (inWindow.length === 0) return null;
+        // Two in-window phrases DIRECTLY conjoined ("Mondays and Thursdays",
+        // "Tuesday & Friday nights") are one multi-day listing, not a nearest-
+        // wins situation — a single-BYDAY rrule would silently drop half the
+        // schedule, so that stays ambiguous. A second-nearest phrase with real
+        // words between (a NEIGHBOURING listing's day, the QUEERAOKE page
+        // shape) does not block the adjacent one.
+        const best = inWindow[0].candidate;
+        for (const { candidate } of inWindow.slice(1)) {
+            if (candidate.rrule === best.rrule) continue;
+            const betweenStart = Math.min(best.end, candidate.end);
+            const betweenEnd = Math.max(best.start, candidate.start);
+            const between = corpus.slice(betweenStart, betweenEnd);
+            if (between.length <= 7 && /^\s*(?:and|&|,|or|\+)?\s*$/.test(between)) return null;
+        }
+        return best;
+    }
+
+    /**
+     * Adjacent-time capture for a matched day phrase: a time token in a
+     * short window after the phrase ("Wednesday nights @ 8:30pm",
+     * "Tuesdays at 7"), else a short window before it ("Karaoke 9pm every
+     * Friday"). No token → empty strings; the caller then follows the
+     * existing no-stated-time convention (_recurringNoStartTime).
+     */
+    captureDayPhraseAdjacentTime(corpus, phraseMatch) {
+        // Windows stop at the nearest OTHER weekday word: a day word starts
+        // the next listing, and reading past it steals a neighbour's time
+        // ("… Wednesday nights @ 8:30pm" bled into the previous listing's
+        // window; "Saturday Nights Sunday afternoons … 2-6pm" handed the
+        // Sunday hang's hours to the Saturday event on the real Lumberyard
+        // page).
+        const dayWordRegex = new RegExp(`\\b(?:${DAY_PHRASE_DAY_ALTERNATION})s?\\b`, 'g');
+        let after = corpus.slice(phraseMatch.end, phraseMatch.end + 60);
+        const nextDay = dayWordRegex.exec(after);
+        if (nextDay) after = after.slice(0, nextDay.index);
+        let before = corpus.slice(Math.max(0, phraseMatch.start - 40), phraseMatch.start);
+        let lastDayEnd = -1;
+        dayWordRegex.lastIndex = 0;
+        let dayHit;
+        while ((dayHit = dayWordRegex.exec(before)) !== null) {
+            lastDayEnd = dayHit.index + dayHit[0].length;
+        }
+        if (lastDayEnd >= 0) before = before.slice(lastDayEnd);
+        return this.parseDayPhraseTimeWindow(after)
+            || this.parseDayPhraseTimeWindow(before)
+            || { startTime: '', endTime: '' };
+    }
+
+    /**
+     * Parse the first time token in a day-phrase window. Recognized:
+     *   - meridiem tokens: "8:30pm", "9 pm", "9:00 p.m."
+     *   - bare @/at hours: "@ 8", "at 7", "at 7:30" — read as EVENING
+     *     (hour 1–11 → +12): bar-event convention, and only ever reachable
+     *     behind an explicit @/at marker; ambiguous bare 12 is skipped
+     * An end time is captured only from an explicit range tail with its own
+     * meridiem token ("8pm-12am", "8pm to 1am"); "-close"/"til late" carry
+     * no clock value and leave the end to existing defaulting.
+     * Returns { startTime: 'HH:MM', endTime: 'HH:MM'|'' } or null.
+     */
+    parseDayPhraseTimeWindow(windowText) {
+        const text = String(windowText || '');
+        const meridiemRegex = /\b(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)/;
+        const bareRegex = /(?:@|\bat)\s*(\d{1,2})(?::(\d{2}))?\b/;
+        const toMeridiemTime = (token) => this.normalizeTimeString(
+            `${token[1]}:${token[2] || '00'}${token[3].replace(/\./g, '')}`
+        );
+        const meridiem = meridiemRegex.exec(text);
+        const bare = bareRegex.exec(text);
+        // "@ 8:30pm" produces overlapping bare ("@ 8") and meridiem
+        // ("8:30pm") hits — the meridiem token is the whole truth there. The
+        // bare token only wins when it is genuinely earlier and disjoint
+        // ("@ 8 til 2am").
+        const bareWins = bare && (!meridiem || (bare.index < meridiem.index
+            && meridiem.index >= bare.index + bare[0].length));
+        let startTime = '';
+        let matchEnd = -1;
+        if (bareWins) {
+            const hour = parseInt(bare[1], 10);
+            const minute = bare[2] ? parseInt(bare[2], 10) : 0;
+            if (hour >= 13 && hour <= 23 && minute >= 0 && minute <= 59) {
+                startTime = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+            } else if (hour >= 1 && hour <= 11 && minute >= 0 && minute <= 59) {
+                startTime = `${String(hour + 12).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+            }
+            matchEnd = bare.index + bare[0].length;
+        } else if (meridiem) {
+            startTime = toMeridiemTime(meridiem);
+            matchEnd = meridiem.index + meridiem[0].length;
+        }
+        if (!startTime) return null;
+        let endTime = '';
+        const tail = text.slice(matchEnd);
+        const rangeMatch = /^\s*(?:-|–|—|to|til|till|until|'til)\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)/.exec(tail);
+        if (rangeMatch) {
+            endTime = toMeridiemTime(rangeMatch);
+        }
+        return { startTime, endTime };
+    }
+
+    // Shared HH:MM normalization for day-phrase time tokens (delegates to
+    // the module-level start-time normalizer used everywhere else).
+    normalizeTimeString(value) {
+        return normalizeStartTimeValue(String(value || ''));
+    }
+
+    /**
+     * Corpus day-word evidence for a MODEL-provided rrule (the
+     * 'schedule-evidence' fallback): a WEEKLY/MONTHLY+BYDAY-only rule counts
+     * as evidenced when each BYDAY day has a weekly-shaped day phrase (and,
+     * for MONTHLY, its ordinal word adjacent to the day word) in the event's
+     * own corpus — the literal "FREQ=WEEKLY;BYDAY=WE" string is never on the
+     * page, and on dateless pages the model often cites paraphrased evidence
+     * that fails the verbatim check. Same fold rules as the deterministic
+     * extractor; bare singular weekday names do NOT count (they are how
+     * one-off dates are written); ordinal-adjacent prose contradicts WEEKLY
+     * ("EVERY 2ND FRIDAY" is monthly — the Lumberyard model error) and fails
+     * closed. Any rrule part beyond FREQ/BYDAY stays gated exactly as today.
+     */
+    rruleDayWordsEvidencedByCorpus(normalizedRrule, evidenceContext) {
+        const corpus = this.foldDayPhraseText(
+            evidenceContext && typeof evidenceContext.normalized === 'string' ? evidenceContext.normalized : ''
+        );
+        if (!corpus) return false;
+        const parts = {};
+        String(normalizedRrule || '').split(';').forEach(segment => {
+            const eq = segment.indexOf('=');
+            if (eq > 0) parts[segment.slice(0, eq)] = segment.slice(eq + 1);
+        });
+        if (Object.keys(parts).some(key => key !== 'FREQ' && key !== 'BYDAY')) return false;
+        const bydayTokens = parts.BYDAY ? parts.BYDAY.split(',').map(token => token.trim()).filter(Boolean) : [];
+        if (bydayTokens.length === 0) return false;
+        if (parts.FREQ === 'WEEKLY') {
+            return bydayTokens.every(token => {
+                const match = token.match(/^(MO|TU|WE|TH|FR|SA|SU)$/);
+                if (!match) return false;
+                const day = DAY_PHRASE_WEEKDAY_WORDS.find(entry => entry.code === match[1]);
+                const weeklyShaped = new RegExp(
+                    `\\bevery\\s+${day.word}s?\\b|\\b${day.word}s\\b|\\b${day.word}\\s+nights?\\b`);
+                const ordinalShaped = new RegExp(
+                    `\\b(?:${DAY_PHRASE_ORDINAL_ALTERNATION})\\s+${day.word}s?\\b`);
+                return weeklyShaped.test(corpus) && !ordinalShaped.test(corpus);
+            });
+        }
+        if (parts.FREQ === 'MONTHLY') {
+            if (bydayTokens.length !== 1) return false;
+            const match = bydayTokens[0].match(/^([+-]?\d)(MO|TU|WE|TH|FR|SA|SU)$/);
+            if (!match) return false;
+            const ordinal = DAY_PHRASE_ORDINAL_WORDS.find(entry => entry.value === Number(match[1]));
+            const day = DAY_PHRASE_WEEKDAY_WORDS.find(entry => entry.code === match[2]);
+            if (!ordinal || !day) return false;
+            return new RegExp(`\\b(?:${ordinal.words.join('|')})\\s+${day.word}s?\\b`).test(corpus);
+        }
+        return false;
+    }
+
+    /**
      * The rrule/recurrence validation class ('schedule-evidence' mode): the
      * VALUE is a derived translation, never verbatim, so the gate checks the
      * model's EVIDENCE phrase instead — it must be a verbatim corpus quote
      * (the same check other fields apply to values), contain schedule
      * vocabulary, the value must parse as an RRULE, and the schedule words
-     * must corroborate the rule. Returns { valid, reason }.
+     * must corroborate the rule. When the cited phrase is missing, not
+     * verbatim, or vocabulary-free, a WEEKLY/MONTHLY+BYDAY rule gets one
+     * deterministic second chance against the event's own corpus
+     * (rruleDayWordsEvidencedByCorpus) — a verbatim phrase that CONTRADICTS
+     * the rule ('schedule-mismatch') never does. Returns { valid, reason }.
      */
     validateRruleScheduleEvidence(value, modelEvidence, evidenceContext) {
         const normalizedRrule = this.normalizeRruleValue(value);
         if (!normalizedRrule) return { valid: false, reason: 'not-an-rrule' };
         const evidence = String(modelEvidence || '').trim();
+        if (evidence) {
+            if (this.evidenceAdmitsInference(evidence)) return { valid: false, reason: 'inference-evidence' };
+            if (this.hasExactEvidence(evidenceContext, evidence)
+                && this.evidenceContainsScheduleVocabulary(evidence)) {
+                return this.rruleMatchesScheduleEvidence(normalizedRrule, evidence)
+                    ? { valid: true, reason: '' }
+                    : { valid: false, reason: 'schedule-mismatch' };
+            }
+        }
+        if (this.rruleDayWordsEvidencedByCorpus(normalizedRrule, evidenceContext)) {
+            return { valid: true, reason: '' };
+        }
         if (!evidence) return { valid: false, reason: 'no-evidence' };
-        if (this.evidenceAdmitsInference(evidence)) return { valid: false, reason: 'inference-evidence' };
         if (!this.hasExactEvidence(evidenceContext, evidence)) return { valid: false, reason: 'evidence-not-verbatim' };
-        if (!this.evidenceContainsScheduleVocabulary(evidence)) return { valid: false, reason: 'no-schedule-vocabulary' };
-        if (!this.rruleMatchesScheduleEvidence(normalizedRrule, evidence)) return { valid: false, reason: 'schedule-mismatch' };
-        return { valid: true, reason: '' };
+        return { valid: false, reason: 'no-schedule-vocabulary' };
     }
 
     /**
@@ -11500,7 +11834,7 @@ TEXT:
         // recurrence), so the pickup must read that name too — battery run
         // 20260728: CubScout's validated FREQ=MONTHLY;BYDAY=1FR sat on
         // aiEvent.recurrence and never reached event.recurrenceRule.
-        const recurrenceRule = this.isPromptFieldRequested('rrule', parserConfig, promptFields, dataFlags)
+        let recurrenceRule = this.isPromptFieldRequested('rrule', parserConfig, promptFields, dataFlags)
             ? this.normalizeRruleValue(this.firstNonEmpty(
                 aiEvent.recurrenceRule,
                 aiEvent.recurrence,
@@ -11646,21 +11980,70 @@ TEXT:
         // these events stay withheld from calendar writes (display + ICS/
         // Builder export only). Unsupported rrule forms return null and the
         // event is discarded exactly as before.
+        // Dateless day-phrase synthesis (run 20260802-140413, The
+        // Lumberyard): a titled event with NO usable startDate and NO
+        // model rrule gets one deterministic scan of its OWN source text
+        // (the segment's text for multi-event segments, the prompt corpus
+        // otherwise) for an unambiguous weekday pattern. Exactly one
+        // distinct pattern → the derived RRULE joins the existing
+        // next-occurrence path below and the event flows into the existing
+        // recurring-withhold machinery (never a calendar write; ICS export
+        // only). Multiple distinct patterns with no clear association →
+        // fail closed, event dies on the required-startDate guard as today.
+        let dayPhraseSynthesis = null;
+        if (!startDate && title && !recurrenceRule) {
+            const dayPhraseSource = htmlData && typeof htmlData.segmentText === 'string' && htmlData.segmentText.trim()
+                ? htmlData.segmentText
+                : (htmlData && typeof htmlData.html === 'string' ? htmlData.html : '');
+            const derivedRecurrence = this.extractRecurrenceFromDayPhrases(dayPhraseSource, title);
+            if (derivedRecurrence && Array.isArray(derivedRecurrence.conflict)) {
+                console.log(`🔁 RECURRING: skipped day-phrase synthesis for "${title}" — multiple distinct day patterns in source (${derivedRecurrence.conflict.join(', ')}) with no clear association`);
+            } else if (derivedRecurrence) {
+                dayPhraseSynthesis = derivedRecurrence;
+                recurrenceRule = derivedRecurrence.rrule;
+            }
+        }
+
         let recurringDerivedNoStartTime = false;
+        let recurringDerivedWallClock = false;
         if (!startDate && title && recurrenceRule) {
             const schema = this.getEventSchema();
             const nextOccurrence = schema && typeof schema.computeNextRruleOccurrence === 'function'
                 ? schema.computeNextRruleOccurrence(recurrenceRule, this.now())
                 : null;
             if (nextOccurrence) {
-                const derivedStart = this.convertLocalDateTimeToUtc(`${nextOccurrence} ${startTimeRaw || '00:00:00'}`, timezone)
-                    || combineDateAndTime(nextOccurrence, startTimeRaw || '00:00')
+                const derivedStartTime = startTimeRaw || (dayPhraseSynthesis && dayPhraseSynthesis.startTime) || '';
+                const derivedStart = this.convertLocalDateTimeToUtc(`${nextOccurrence} ${derivedStartTime || '00:00:00'}`, timezone)
+                    || combineDateAndTime(nextOccurrence, derivedStartTime || '00:00')
                     || null;
                 if (derivedStart instanceof Date && !Number.isNaN(derivedStart.getTime())) {
                     startDate = derivedStart;
+                    // A day-phrase range ("8pm-12am") carries its own end
+                    // time; anchor it to the same occurrence date, rolling
+                    // past-midnight ends to the next day like the main
+                    // combination path does.
+                    const derivedEndTime = endTimeRaw || (dayPhraseSynthesis && dayPhraseSynthesis.endTime) || '';
+                    if (!endDate && derivedEndTime) {
+                        let derivedEnd = this.convertLocalDateTimeToUtc(`${nextOccurrence} ${derivedEndTime}`, timezone)
+                            || combineDateAndTime(nextOccurrence, derivedEndTime)
+                            || null;
+                        if (derivedEnd instanceof Date && !Number.isNaN(derivedEnd.getTime())) {
+                            if (derivedEnd.getTime() < derivedStart.getTime()) {
+                                derivedEnd = new Date(derivedEnd.getTime() + 24 * 60 * 60 * 1000);
+                            }
+                            endDate = derivedEnd;
+                        }
+                    }
                     if (!endDate) endDate = new Date(derivedStart);
-                    recurringDerivedNoStartTime = !startTimeRaw;
+                    recurringDerivedNoStartTime = !derivedStartTime;
+                    // No resolved timezone → the derived instant is wall-clock
+                    // components labeled UTC (the existing _timezoneUnresolved
+                    // convention); flag it for downstream re-anchoring.
+                    recurringDerivedWallClock = !timezone;
                     console.log(`🔁 RECURRING: derived next occurrence ${nextOccurrence} from rrule for "${title}"`);
+                    if (dayPhraseSynthesis) {
+                        console.log(`🔁 RECURRING: "${title}" synthesized from day phrase "${dayPhraseSynthesis.phrase}" → ${recurrenceRule}, next ${nextOccurrence} — will be withheld from calendar write (ICS only)`);
+                    }
                 }
             }
         }
@@ -11718,6 +12101,13 @@ TEXT:
             event._recurringNoStartTime = true;
         }
 
+        // Provenance for a deterministically synthesized recurrence: the
+        // matched day phrase that produced the rrule. Internal underscore
+        // field — excluded from calendar notes and merge field loops.
+        if (dayPhraseSynthesis) {
+            event._recurrenceFromDayPhrase = dayPhraseSynthesis.phrase;
+        }
+
         // AI free-text hygiene: the model copies JSON-LD/HTML descriptions
         // verbatim, markup included (CubScout shipped a raw <img …> tag as its
         // whole description). Apply the SAME stripTags + decodeBasicEntities +
@@ -11764,7 +12154,7 @@ TEXT:
             }
         }
 
-        if (usedWallClockFallback) {
+        if (usedWallClockFallback || recurringDerivedWallClock) {
             event._timezoneUnresolved = true;
         }
 
