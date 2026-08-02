@@ -27,13 +27,13 @@
     "brighton": {
       "name": "Brighton",
       "status": "success",
-      "dataLength": 4128,
+      "dataLength": 4113,
       "eventCount": 2
     },
     "chicago": {
       "name": "Chicago",
       "status": "success",
-      "dataLength": 23286,
+      "dataLength": 23322,
       "eventCount": 18
     },
     "dallas": {
@@ -69,7 +69,7 @@
     "london": {
       "name": "London",
       "status": "success",
-      "dataLength": 15743,
+      "dataLength": 15770,
       "eventCount": 9
     },
     "nola": {
@@ -81,7 +81,7 @@
     "nyc": {
       "name": "New York",
       "status": "success",
-      "dataLength": 15127,
+      "dataLength": 15157,
       "eventCount": 15
     },
     "palm-springs": {
@@ -105,7 +105,7 @@
     "portland": {
       "name": "Portland",
       "status": "success",
-      "dataLength": 25721,
+      "dataLength": 25733,
       "eventCount": 19
     },
     "ptown": {
@@ -129,7 +129,7 @@
     "sf": {
       "name": "San Francisco",
       "status": "success",
-      "dataLength": 19987,
+      "dataLength": 19908,
       "eventCount": 15
     },
     "sitges": {

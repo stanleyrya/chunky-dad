@@ -8,7 +8,7 @@ X-WR-TIMEZONE:Europe/London
 BEGIN:VEVENT
 DTSTART:20260801T210000Z
 DTEND:20260802T040000Z
-DTSTAMP:20260801T221821Z
+DTSTAMP:20260802T003204Z
 UID:22724512-536F-464D-9592-A7104E2BC7E3
 CREATED:20260731T131551Z
 DESCRIPTION:bar: Horizon\naddress: 214 King's Road\, Brighton\, BN1 1NB\, U
@@ -46,28 +46,28 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20261205T230000Z
 DTEND:20261206T040000Z
-DTSTAMP:20260801T221821Z
+DTSTAMP:20260802T003204Z
 UID:AC82B5F3-1E3E-4098-99F8-51208AFC7C58
 CREATED:20260731T131552Z
-DESCRIPTION:bar: Concorde 2\naddress: Madeira Shelter Hall\, Madeira Dr\, B
- righton BN2 1EN\nimage: https://dice-media.imgix.net/attachments/2025-01-13
- /bf6a78f1-f924-41ef-aba7-8e35d4211d38.jpg?rect=0%2C0%2C768%2C768\ntimezone:
-  Europe/London\ncover: £12\nimageHorizontal: https://dice-media.imgix.net/a
- ttachments/2025-01-13/bf6a78f1-f924-41ef-aba7-8e35d4211d38.jpg?rect=0%2C154
- %2C768%2C461&w=1300&h=630&auto=compress\nwebsite: https://dice.fm/event/53m
- oed-beefmince-x-brighton-5th-dec-concorde-2-brighton-tickets\nshortName: BE
- EF-MINCE\nfavicon: https://beefmince.com\nbearSource: keyword\nkey: beefmin
- ce-x-brighton|2026-12-05|concorde 2\ndescription: BEEFMINCE\; the UK’s tast
- iest bear club is famous for our fun\, social\, bear full- attitude free pa
- rties with the best DJs playing the tastiest party anthems ranging from dis
- co\, house and electro and we're back to bring our recipe to the city of Br
- ighton at the legendary Concorde2 for 2026! DJ Line Up TBC We’re here for t
- he Bears\, Cubs\, Chubs\, Muscle Bears\, Trans Men\, Admirers & everyone in
-  between. Come as you are\, we’ll love you for it. *More info and FAQs at b
- eefmince.com*\npinSource: curated\naddressSource: page\nimageSource: jsonld
- \nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&quer
- y=50.8172912%2C-0.1225875
-LAST-MODIFIED:20260731T140754Z
+DESCRIPTION:bar: Concorde 2\naddress: 286A Madeira Drive\, Brighton BN2 1EN
+ \nimage: https://dice-media.imgix.net/attachments/2025-01-13/bf6a78f1-f924-
+ 41ef-aba7-8e35d4211d38.jpg?rect=0%2C0%2C768%2C768\ntimezone: Europe/London\
+ ncover: £12\nimageHorizontal: https://dice-media.imgix.net/attachments/2025
+ -01-13/bf6a78f1-f924-41ef-aba7-8e35d4211d38.jpg?rect=0%2C154%2C768%2C461&w=
+ 1300&h=630&auto=compress\nwebsite: https://dice.fm/event/53moed-beefmince-x
+ -brighton-5th-dec-concorde-2-brighton-tickets\nshortName: BEEF-MINCE\nfavic
+ on: https://beefmince.com\nbearSource: keyword\nkey: beefmince-x-brighton|2
+ 026-12-05|concorde 2\ndescription: BEEFMINCE\; the UK’s tastiest bear club 
+ is famous for our fun\, social\, bear full- attitude free parties with the 
+ best DJs playing the tastiest party anthems ranging from disco\, house and 
+ electro and we're back to bring our recipe to the city of Brighton at the l
+ egendary Concorde2 for 2026! DJ Line Up TBC We’re here for the Bears\, Cubs
+ \, Chubs\, Muscle Bears\, Trans Men\, Admirers & everyone in between. Come 
+ as you are\, we’ll love you for it. *More info and FAQs at beefmince.com*\n
+ pinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: cu
+ rated\ngmaps: https://www.google.com/maps/search/?api=1&query=50.8172912%2C
+ -0.1225875
+LAST-MODIFIED:20260801T232822Z
 LOCATION:50.8172912\, -0.1225875
 SEQUENCE:0
 STATUS:CONFIRMED

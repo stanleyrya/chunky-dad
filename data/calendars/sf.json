@@ -22,7 +22,218 @@
   },
   "events": [
     {
-      "name": "Bearracuda SF: BEEFCAKE Pride",
+      "name": "BEEFWITCH",
+      "day": "Saturday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 37.7761825,
+        "lng": -122.4083567
+      },
+      "startDate": "2025-10-18T21:00:00",
+      "endDate": "2025-10-19T02:00:00",
+      "unprocessedDescription": "description: The Occult Underwear Party returns to SF for Bearr\rison Weekend!  Featuring a LIVE floor show and witchy girl pop by DJ NaughtyBoyy.\nbar: The Stud\naddress: 1123 Folsom Street, San Francisco, CA 94103\ntimezone: America/Los_Angeles\nticketUrl: https://www.eventbrite.com/e/beefwitch-tickets-1728182092159\ncover: $12.51 - $17.85 (as of 10/1)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1131139693%2F2198683436473%2F1%2Foriginal.20250922-081325?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=64b5e194843ee640607400ec97184904\ninstagram: https://www.instagram.com/coachafterdark\ngmaps: https://www.google.com/maps/search/?api=1&query=37.7761825%2C-122.4083567&query_place_id=ChIJBWia_yh-j4ARczXTRg2RGCs\nkey: beefwitch|2025-10-19|the stud|eventbrite\nshortName: Coach After Dark",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "3F9230E0-3F04-4F12-98C1-311ACA95E3D8",
+      "uid": "3F9230E0-3F04-4F12-98C1-311ACA95E3D8",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The Stud",
+      "cover": "$12.51 - $17.85 (as of 10/1)",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1131139693%2F2198683436473%2F1%2Foriginal.20250922-081325?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=64b5e194843ee640607400ec97184904",
+      "tea": "The Occult Underwear Party returns to SF for Bearrison Weekend!  Featuring a LIVE floor show and witchy girl pop by DJ NaughtyBoyy.",
+      "address": "1123 Folsom Street, San Francisco, CA 94103",
+      "website": null,
+      "instagram": "https://www.instagram.com/coachafterdark",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=37.7761825%2C-122.4083567&query_place_id=ChIJBWia_yh-j4ARczXTRg2RGCs",
+      "ticketUrl": "https://www.eventbrite.com/e/beefwitch-tickets-1728182092159",
+      "shortName": "Coach After Dark",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/coachafterdark",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=37.7761825%2C-122.4083567&query_place_id=ChIJBWia_yh-j4ARczXTRg2RGCs",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/beefwitch-tickets-1728182092159",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "beefwitch-06eb5e73"
+    },
+    {
+      "name": "Bearracuda SF presents: HORSE MEAT DISCO",
+      "day": "Friday",
+      "time": "9PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 37.7689137,
+        "lng": -122.4192514
+      },
+      "startDate": "2025-09-26T21:00:00",
+      "endDate": "2025-09-27T03:00:00",
+      "unprocessedDescription": "description: Music & Entertainment\n• Main Floor - Horse Meat D\risco\n• Upstairs - Mateo Segade (LA)\n• Decor and photos by Dusti Cunningham\nbar: The Public Works SF\naddress: 161 Erie Street, San Francisco, CA 94103\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/flsm-friday/\ncover: $57.79 - $99.99 (as of 9/20)\nimage: https://bearracuda.com/wp-content/uploads/2025/05/hmd2025.jpg\nfacebook: https://www.facebook.com/events/564754916670823/\nticketUrl: https://www.eventbrite.com/e/bearracuda-sf-flsm-friday-tickets-1370410668199\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/search/?api=1&query=37.7689137%2C-122.4192514&query_place_id=85922583\nkey: bearracuda-2025-09-27-sf",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "5E26BD3A-6828-47B9-9E16-D6D7D4970A79",
+      "uid": "5E26BD3A-6828-47B9-9E16-D6D7D4970A79",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 2,
+      "overrideIdentityType": null,
+      "bar": "The Public Works SF",
+      "cover": "$57.79 - $99.99 (as of 9/20)",
+      "image": "https://bearracuda.com/wp-content/uploads/2025/05/hmd2025.jpg",
+      "tea": "Music & Entertainment",
+      "address": "161 Erie Street, San Francisco, CA 94103",
+      "website": "https://bearracuda.com/events/flsm-friday/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "facebook": "https://www.facebook.com/events/564754916670823/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=37.7689137%2C-122.4192514&query_place_id=85922583",
+      "ticketUrl": "https://www.eventbrite.com/e/bearracuda-sf-flsm-friday-tickets-1370410668199",
+      "shortName": "Bear-rac-uda",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/events/flsm-friday/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/events/564754916670823/",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=37.7689137%2C-122.4192514&query_place_id=85922583",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/bearracuda-sf-flsm-friday-tickets-1370410668199",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bearracuda-sf-presents-horse-meat-disco-151154b5"
+    },
+    {
+      "name": "CHUNK SF presents FATHER FIGURE",
+      "day": "Saturday",
+      "time": "10PM-3:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 37.77526599999999,
+        "lng": -122.4100374
+      },
+      "startDate": "2026-05-02T22:00:00",
+      "endDate": "2026-05-03T03:30:00",
+      "unprocessedDescription": "description: New Orleans DADDY Father Figure joins us for CHUNK\r'S OFFICIAL SPRING THAW. Support from the BAPTIST and CHUNK residents MISS PIGGY & BEN FONIK. GOGO BEARS ALL NIGHT LONG\nbar: F8 Nightclub & Bar\naddress: 1192 Folsom St, San Francisco, CA 94103, USA\nticketUrl: https://www.chunk-party.com/event-details/chunk-sf-presents-father-figure\ncover: $20.50 - $35.88\nimage: https://static.wixstatic.com/media/42b6cb_c906b540fe2743aab81be9b8019fb0a4~mv2.jpg/v1/fill/w_792,h_1224,al_c,q_85/42b6cb_c906b540fe2743aab81be9b8019fb0a4~mv2.jpg\nshortName: CHUNK\ninstagram: https://www.instagram.com/chunkparty\ngmaps: https://www.google.com/maps/search/?api=1&query=F8%20Nightclub%20%26%20Bar%2C%201192%20Folsom%20St%2C%20San%20Francisco%2C%20CA%2094103%2C%20USA\nkey: chunk-sf-presents-father-figure|2026-05-03|f8 nightclub & bar",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "56CFF5FC-B1E1-4512-8FBC-EDBD2064A2E6",
+      "uid": "56CFF5FC-B1E1-4512-8FBC-EDBD2064A2E6",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "F8 Nightclub & Bar",
+      "cover": "$20.50 - $35.88",
+      "image": "https://static.wixstatic.com/media/42b6cb_c906b540fe2743aab81be9b8019fb0a4~mv2.jpg/v1/fill/w_792,h_1224,al_c,q_85/42b6cb_c906b540fe2743aab81be9b8019fb0a4~mv2.jpg",
+      "tea": "New Orleans DADDY Father Figure joins us for CHUNK'S OFFICIAL SPRING THAW. Support from the BAPTIST and CHUNK residents MISS PIGGY & BEN FONIK. GOGO BEARS ALL NIGHT LONG",
+      "address": "1192 Folsom St, San Francisco, CA 94103, USA",
+      "website": null,
+      "instagram": "https://www.instagram.com/chunkparty",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=F8%20Nightclub%20%26%20Bar%2C%201192%20Folsom%20St%2C%20San%20Francisco%2C%20CA%2094103%2C%20USA",
+      "ticketUrl": "https://www.chunk-party.com/event-details/chunk-sf-presents-father-figure",
+      "shortName": "CHUNK",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/chunkparty",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=F8%20Nightclub%20%26%20Bar%2C%201192%20Folsom%20St%2C%20San%20Francisco%2C%20CA%2094103%2C%20USA",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.chunk-party.com/event-details/chunk-sf-presents-father-figure",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "chunk-sf-presents-father-figure-305593c7"
+    },
+    {
+      "name": "Bear Happy Hour",
+      "day": "Thursday",
+      "time": "5PM-9PM",
+      "eventType": "weekly",
+      "recurring": true,
+      "recurrence": "FREQ=WEEKLY",
+      "startDate": "2025-10-02T17:00:00",
+      "endDate": "2025-10-02T21:00:00",
+      "unprocessedDescription": "Bar: Check instagram for this week’s location.\nTea: Popular ha\rppy hour that changes location every week.\nInstagram: https://www.instagram.com/bearhappyhoursf\nShorter: BHH\nWeb: https://linktr.ee/bearhappyhour",
+      "startTimezone": "America/Los_Angeles",
+      "endTimezone": "America/Los_Angeles",
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": false,
+      "sourceUid": "dkep613fqcsi8tlh6bfsp12h50@google.com",
+      "uid": "dkep613fqcsi8tlh6bfsp12h50@google.com",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Check instagram for this week’s location.",
+      "tea": "Popular happy hour that changes location every week.",
+      "address": null,
+      "website": "https://linktr.ee/bearhappyhour",
+      "instagram": "https://www.instagram.com/bearhappyhoursf",
+      "shorterName": "BHH",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/bearhappyhour",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearhappyhoursf",
+          "label": "📷 Instagram"
+        }
+      ],
+      "slug": "bear-happy-hour-67a521bf"
+    },
+    {
+      "name": "SF⛓️ FLSM",
       "day": "Friday",
       "time": "9PM-3AM",
       "eventType": "routine",
@@ -31,34 +242,36 @@
         "lat": 37.7688931,
         "lng": -122.4192651
       },
-      "startDate": "2026-06-26T21:00:00",
-      "endDate": "2026-06-27T03:00:00",
-      "unprocessedDescription": "description: Bearracuda SF Pride! Friday, June 26th, 2026 wit\rh TONY MORANBEEFCAKE\nbar: Public Works\naddress: 161 Erie Street\nticketUrl: https://www.sickening.events/e/bearracuda-sf-pride-2026-beefcakes/tickets\ninstagram: https://www.instagram.com/bearracuda\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776730474/saas/logos/image_1776730463946_w2htw6xrh.webp\ncover: General Admission $40.00-$50.00\nshortName: Bear-rac-uda\nwebsite: https://bearracuda.com/events/sf-pride/\ngmaps: https://www.google.com/maps/search/?api=1&query=Public%20Works%2C%20161%20Erie%20Street\nkey: bearracuda-2026-06-27-sf\ntimezone: America/Los_Angeles\npinSource: geocoded-exact",
+      "startDate": "2026-09-25T21:00:00",
+      "endDate": "2026-09-26T03:00:00",
+      "unprocessedDescription": "description: Bearracuda SF PresentsFLSM FRIDAYwith HORSE MEAT D\rISCOFriday, September 25th, 2026PUBLIC WORKS - 161 Erie, San Francisco Main Floor\\: Horse Meat DiscoUpstairs\\: Mateo Segade (LA)Decor and photos by Dusti Cunningham We look forward to welcoming back Horse Meat Disco for our Folsom Street Friday party! It's our most IN DEMAND party of all time with 1000+ furry faces at Public Works in San Francisco! Bearracuda is back and we've got THE party to kick off the Weekend. 2 floors of music, hot go-gos, stunning decor & visuals and hot, furry guys all around!\nbar: Public Works\naddress: 161 Erie Street, San Francisco, CA, 94103\ntimezone: America/Los_Angeles\nticketUrl: https://www.sickening.events/e/bearracuda-san-francisco-hmd/tickets\nimage: https://bearracuda.com/wp-content/uploads/2026/05/newfolsomweb.jpg\nimageVertical: https://bearracuda.com/wp-content/uploads/2026/05/newfolsomweb.jpg\nwebsite: https://bearracuda.com/events/flsm/\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\nfavicon: https://bearracuda.com/\nbearSource: ai\nkey: sf⛓️-flsm|2026-09-26|public works\ncover: ADV. FIX AT BEARRACUDA.COM\npinSource: curated\naddressSource: page\nimageSource: og-image\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/search/?api=1&query=37.7688931%2C-122.4192651",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Los_Angeles",
       "wasUTC": true,
-      "sourceUid": "77CEB24A-C15A-4D66-82A3-E51D9C5804D4",
-      "uid": "77CEB24A-C15A-4D66-82A3-E51D9C5804D4",
+      "sourceUid": "13648C55-8022-4AF4-AFD2-105A2F347CB8",
+      "uid": "13648C55-8022-4AF4-AFD2-105A2F347CB8",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "Public Works",
-      "cover": "General Admission $40.00-$50.00",
-      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776730474/saas/logos/image_1776730463946_w2htw6xrh.webp",
-      "tea": "Bearracuda SF Pride! Friday, June 26th, 2026 with TONY MORANBEEFCAKE",
-      "address": "161 Erie Street",
-      "website": "https://bearracuda.com/events/sf-pride/",
+      "cover": "ADV. FIX AT BEARRACUDA.COM",
+      "image": "https://bearracuda.com/wp-content/uploads/2026/05/newfolsomweb.jpg",
+      "imageVertical": "https://bearracuda.com/wp-content/uploads/2026/05/newfolsomweb.jpg",
+      "favicon": "https://bearracuda.com/",
+      "tea": "Bearracuda SF PresentsFLSM FRIDAYwith HORSE MEAT DISCOFriday, September 25th, 2026PUBLIC WORKS - 161 Erie, San Francisco Main Floor: Horse Meat DiscoUpstairs: Mateo Segade (LA)Decor and photos by Dusti Cunningham We look forward to welcoming back Horse Meat Disco for our Folsom Street Friday party! It's our most IN DEMAND party of all time with 1000+ furry faces at Public Works in San Francisco! Bearracuda is back and we've got THE party to kick off the Weekend. 2 floors of music, hot go-gos, stunning decor & visuals and hot, furry guys all around!",
+      "address": "161 Erie Street, San Francisco, CA, 94103",
+      "website": "https://bearracuda.com/events/flsm/",
       "instagram": "https://www.instagram.com/bearracuda",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Public%20Works%2C%20161%20Erie%20Street",
-      "ticketUrl": "https://www.sickening.events/e/bearracuda-sf-pride-2026-beefcakes/tickets",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=37.7688931%2C-122.4192651",
+      "ticketUrl": "https://www.sickening.events/e/bearracuda-san-francisco-hmd/tickets",
       "shortName": "Bear-rac-uda",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://bearracuda.com/events/sf-pride/",
+          "url": "https://bearracuda.com/events/flsm/",
           "label": "🌐 Website"
         },
         {
@@ -68,74 +281,123 @@
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Public%20Works%2C%20161%20Erie%20Street",
+          "url": "https://www.google.com/maps/search/?api=1&query=37.7688931%2C-122.4192651",
           "label": "🗺️ Google Maps"
         },
         {
           "type": "tickets",
-          "url": "https://www.sickening.events/e/bearracuda-sf-pride-2026-beefcakes/tickets",
+          "url": "https://www.sickening.events/e/bearracuda-san-francisco-hmd/tickets",
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "bearracuda-sf-beefcake-pride-2d1a3a4d"
+      "slug": "sf-flsm-6bcb20fd"
     },
     {
-      "name": "TWISTED BEAR San Francisco Debut",
-      "day": "Saturday",
-      "time": "9PM-2AM",
+      "name": "BEEFWITCH",
+      "day": "Friday",
+      "time": "10PM-2AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
-        "lat": 37.7699933,
-        "lng": -122.4133375
+        "lat": 37.7761825,
+        "lng": -122.4083567
       },
-      "startDate": "2026-08-22T21:00:00",
-      "endDate": "2026-08-23T02:00:00",
-      "unprocessedDescription": "description: Come join us to celebrate TWISTED BEAR's 11th Year\r Anniversary Summer Tour at SF Eagle!!\nbar: San Francisco Eagle Bar\naddress: 398 12th Street, San Francisco, CA 94103\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1188666830%2F1088207912863%2F1%2Foriginal.20260711-152332?w=940&auto=format%2Ccompress&q=75&sharp=10&s=1a309cd152b77c8d73875bd0821c61b7\ncover: $12.51-$23.18\ntimezone: America/Los_Angeles\nwebsite: https://www.eventbrite.com/e/twisted-bear-san-francisco-debut-tickets-1993746658927\nshortName: TWIST-ED BEAR\ninstagram: https://www.instagram.com/twistedbearparty\nfacebook: https://www.facebook.com/twistedglobal/\nbearSource: keyword\nkey: twisted-bear-san-francisco-debut|2026-08-23|san francisco eagle bar\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=37.7699933%2C-122.4133375",
+      "startDate": "2026-05-15T22:00:00",
+      "endDate": "2026-05-16T02:00:00",
+      "unprocessedDescription": "description: The Occult Leather Party Returns to The Stud Frida\ry May 15. Are you ready to live deliciously?\nbar: The Stud\naddress: 1123 Folsom Street, San Francisco, CA 94103\nticketUrl: https://www.eventbrite.com/e/beefwitch-tickets-1988340517011\ninstagram: https://www.instagram.com/thebeefwitch\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1183146702%2F2198683436473%2F1%2Foriginal.20260427-173849?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=d4ebc964c2b00b6625c9a810da2199de\ncover: $10.38-$17.85\nshortName: BEEFWITCH\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Stud%2C%201123%20Folsom%20Street%2C%20San%20Francisco%2C%20CA%2094103\nkey: beefwitch|2026-05-16|the stud",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Los_Angeles",
       "wasUTC": true,
-      "sourceUid": "2A6466B5-A80A-4D32-AD0F-43AEA25FA6F3",
-      "uid": "2A6466B5-A80A-4D32-AD0F-43AEA25FA6F3",
+      "sourceUid": "BBE7F872-30A1-40EC-AB3C-BCDAF9342658",
+      "uid": "BBE7F872-30A1-40EC-AB3C-BCDAF9342658",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "San Francisco Eagle Bar",
-      "cover": "$12.51-$23.18",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1188666830%2F1088207912863%2F1%2Foriginal.20260711-152332?w=940&auto=format%2Ccompress&q=75&sharp=10&s=1a309cd152b77c8d73875bd0821c61b7",
-      "tea": "Come join us to celebrate TWISTED BEAR's 11th Year Anniversary Summer Tour at SF Eagle!!",
-      "address": "398 12th Street, San Francisco, CA 94103",
-      "website": "https://www.eventbrite.com/e/twisted-bear-san-francisco-debut-tickets-1993746658927",
-      "instagram": "https://www.instagram.com/twistedbearparty",
-      "facebook": "https://www.facebook.com/twistedglobal/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=37.7699933%2C-122.4133375",
-      "shortName": "TWIST-ED BEAR",
+      "bar": "The Stud",
+      "cover": "$10.38-$17.85",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1183146702%2F2198683436473%2F1%2Foriginal.20260427-173849?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=d4ebc964c2b00b6625c9a810da2199de",
+      "tea": "The Occult Leather Party Returns to The Stud Friday May 15. Are you ready to live deliciously?",
+      "address": "1123 Folsom Street, San Francisco, CA 94103",
+      "website": null,
+      "instagram": "https://www.instagram.com/thebeefwitch",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=The%20Stud%2C%201123%20Folsom%20Street%2C%20San%20Francisco%2C%20CA%2094103",
+      "ticketUrl": "https://www.eventbrite.com/e/beefwitch-tickets-1988340517011",
+      "shortName": "BEEFWITCH",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thebeefwitch",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=The%20Stud%2C%201123%20Folsom%20Street%2C%20San%20Francisco%2C%20CA%2094103",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/beefwitch-tickets-1988340517011",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "beefwitch-0e685674"
+    },
+    {
+      "name": "CHUNK DORE ALLEY",
+      "day": "Saturday",
+      "time": "10PM-4AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 37.77526599999999,
+        "lng": -122.4100374
+      },
+      "startDate": "2026-07-25T22:00:00",
+      "endDate": "2026-07-26T04:00:00",
+      "unprocessedDescription": "description: THE PREMIER BEAR/CUB SATURDAY MAIN EVENT! CHUNK SF\r Presents BEARS IN SPACE With DICAP & NICK MOSS & THCKRTANKER & OMNIBOT GOGO FETISH BEARS // Hosted By ROSS & BIG CLAUDE & More f8 NIGHTCLUB // 1192 FOLSOM ST // 10pm - 4am\nbar: F8 Nightclub & Bar\naddress: 1192 Folsom St, San Francisco, CA 94103, USA\nimage: https://static.wixstatic.com/media/42b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg/v1/fill/w_3300,h_4125,al_c,q_90/42b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg\ntimezone: America/Los_Angeles\ncover: $60\nimageVertical: https://static.wixstatic.com/media/42b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg/v1/fill/w_3300,h_4125,al_c,q_90/42b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg\nwebsite: https://www.chunk-party.com/event-details/chunk-dore-alley-saturday-july-25th\nshortName: CHUNK\ninstagram: https://www.instagram.com/chunkparty\nfavicon: https://www.chunk-party.com\nbearSource: keyword\nkey: chunk-dore-alley|2026-07-26|f8 nightclub & bar\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=37.77526599999999%2C-122.4100374",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "CEC90038-7CD1-4FA5-9BA7-1353A769AEB8",
+      "uid": "CEC90038-7CD1-4FA5-9BA7-1353A769AEB8",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "F8 Nightclub & Bar",
+      "cover": "$60",
+      "image": "https://static.wixstatic.com/media/42b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg/v1/fill/w_3300,h_4125,al_c,q_90/42b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg",
+      "imageVertical": "https://static.wixstatic.com/media/42b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg/v1/fill/w_3300,h_4125,al_c,q_90/42b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg",
+      "favicon": "https://www.chunk-party.com",
+      "tea": "THE PREMIER BEAR/CUB SATURDAY MAIN EVENT! CHUNK SF Presents BEARS IN SPACE With DICAP & NICK MOSS & THCKRTANKER & OMNIBOT GOGO FETISH BEARS // Hosted By ROSS & BIG CLAUDE & More f8 NIGHTCLUB // 1192 FOLSOM ST // 10pm - 4am",
+      "address": "1192 Folsom St, San Francisco, CA 94103, USA",
+      "website": "https://www.chunk-party.com/event-details/chunk-dore-alley-saturday-july-25th",
+      "instagram": "https://www.instagram.com/chunkparty",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=37.77526599999999%2C-122.4100374",
+      "shortName": "CHUNK",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://www.eventbrite.com/e/twisted-bear-san-francisco-debut-tickets-1993746658927",
+          "url": "https://www.chunk-party.com/event-details/chunk-dore-alley-saturday-july-25th",
           "label": "🌐 Website"
         },
         {
           "type": "instagram",
-          "url": "https://www.instagram.com/twistedbearparty",
+          "url": "https://www.instagram.com/chunkparty",
           "label": "📷 Instagram"
         },
         {
-          "type": "facebook",
-          "url": "https://www.facebook.com/twistedglobal/",
-          "label": "📘 Facebook"
-        },
-        {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=37.7699933%2C-122.4133375",
+          "url": "https://www.google.com/maps/search/?api=1&query=37.77526599999999%2C-122.4100374",
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "twisted-bear-san-francisco-debut-003787d5"
+      "slug": "chunk-dore-alley-3bf852a2"
     },
     {
       "name": "CHUNK presents FOLSOM '25",
@@ -254,6 +516,227 @@
       "slug": "megawoof-america-san-francisco-25d83ad3"
     },
     {
+      "name": "Treasure Trail: San Francisco",
+      "day": "Saturday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-06-13T21:00:00",
+      "endDate": "2026-06-14T02:00:00",
+      "unprocessedDescription": "description: Saturday, June 13th, 2025 Doors at 9pm, Party t\ril 2amClothes Check encouraged1123 FOLSOMSteamy Go-Go&rsquo;s, Heavy CruisingHard Sounds by Paul Goodyear Hosted byJP Hardy➲➲https\\://www.jphardyofficial.comSPRING has sprung and we are ready to strip down! Grab a wristband when you walk in\\: Red Wristband TOP Blue Wristband VERS Green Wristband BOTTOM White Wristband SIDE You can choose one when you purchase tix and are free to change your mind (or go without a wristband) when you arrive.\nbar: The Stud\naddress: 1123 Folsom Street\nticketUrl: https://www.sickening.events/e/treasuresf/tickets\ninstagram: https://www.instagram.com/bearracuda\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1777842694/saas/logos/image_1777842674799_zsjr6b8zx.webp\ncover: 15.00\nshortName: Bear-rac-uda\nwebsite: https://bearracuda.com/events/treasure-trail-sf/\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Stud%2C%201123%20Folsom%20Street\nkey: bearracuda-2026-06-14-sf\ntimezone: America/Los_Angeles",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "C0CE53B6-54E8-4E7E-AD3D-95DF514E0382",
+      "uid": "C0CE53B6-54E8-4E7E-AD3D-95DF514E0382",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The Stud",
+      "cover": "15.00",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1777842694/saas/logos/image_1777842674799_zsjr6b8zx.webp",
+      "tea": "Saturday, June 13th, 2025 Doors at 9pm, Party til 2amClothes Check encouraged1123 FOLSOMSteamy Go-Go&rsquo;s, Heavy CruisingHard Sounds by Paul Goodyear Hosted byJP Hardy➲➲https://www.jphardyofficial.comSPRING has sprung and we are ready to strip down! Grab a wristband when you walk in: Red Wristband TOP Blue Wristband VERS Green Wristband BOTTOM White Wristband SIDE You can choose one when you purchase tix and are free to change your mind (or go without a wristband) when you arrive.",
+      "address": "1123 Folsom Street",
+      "website": "https://bearracuda.com/events/treasure-trail-sf/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=The%20Stud%2C%201123%20Folsom%20Street",
+      "ticketUrl": "https://www.sickening.events/e/treasuresf/tickets",
+      "shortName": "Bear-rac-uda",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/events/treasure-trail-sf/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=The%20Stud%2C%201123%20Folsom%20Street",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/treasuresf/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "treasure-trail-san-francisco-1a2ef0fe"
+    },
+    {
+      "name": "CHUNK SF presents FATHER FIGURE",
+      "day": "Saturday",
+      "time": "12AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 37.7752814,
+        "lng": -122.4099546
+      },
+      "startDate": "2026-05-02T00:00:00",
+      "unprocessedDescription": "bar: F8 Nightclub & Bar\naddress: 1192 Folsom St, San Francisc\ro, CA 94103, USA\ntimezone: America/Los_Angeles\nimage: https://static.wixstatic.com/media/42b6cb_c906b540fe2743aab81be9b8019fb0a4~mv2.jpg\nwebsite: https://www.chunk-party.com/event-details/chunk-sf-presents-father-figure\nshortName: CHUNK\ninstagram: https://www.instagram.com/chunkparty\nfavicon: https://www.chunk-party.com\nbearSource: keyword\nkey: chunk-sf-presents-father-figure|2026-05-02|f8 nightclub\ndescription: F8 Nightclub & Bar\npinSource: curated\naddressSource: curated\nimageSource: page\nbarSource: uncorroborated\ngmaps: https://www.google.com/maps/search/?api=1&query=37.7752814%2C-122.4099546",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "10D2C8FA-A1A6-4E5E-94A4-583E7745DD5D",
+      "uid": "10D2C8FA-A1A6-4E5E-94A4-583E7745DD5D",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "F8 Nightclub & Bar",
+      "image": "https://static.wixstatic.com/media/42b6cb_c906b540fe2743aab81be9b8019fb0a4~mv2.jpg",
+      "favicon": "https://www.chunk-party.com",
+      "tea": "F8 Nightclub & Bar",
+      "address": "1192 Folsom St, San Francisco, CA 94103, USA",
+      "website": "https://www.chunk-party.com/event-details/chunk-sf-presents-father-figure",
+      "instagram": "https://www.instagram.com/chunkparty",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=37.7752814%2C-122.4099546",
+      "shortName": "CHUNK",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.chunk-party.com/event-details/chunk-sf-presents-father-figure",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/chunkparty",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=37.7752814%2C-122.4099546",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "chunk-sf-presents-father-figure-22ce3590"
+    },
+    {
+      "name": "Bearracuda SF: BEEFCAKE Pride",
+      "day": "Friday",
+      "time": "9PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 37.7688931,
+        "lng": -122.4192651
+      },
+      "startDate": "2026-06-26T21:00:00",
+      "endDate": "2026-06-27T03:00:00",
+      "unprocessedDescription": "description: Bearracuda SF Pride! Friday, June 26th, 2026 wit\rh TONY MORANBEEFCAKE\nbar: Public Works\naddress: 161 Erie Street\nticketUrl: https://www.sickening.events/e/bearracuda-sf-pride-2026-beefcakes/tickets\ninstagram: https://www.instagram.com/bearracuda\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776730474/saas/logos/image_1776730463946_w2htw6xrh.webp\ncover: General Admission $40.00-$50.00\nshortName: Bear-rac-uda\nwebsite: https://bearracuda.com/events/sf-pride/\ngmaps: https://www.google.com/maps/search/?api=1&query=Public%20Works%2C%20161%20Erie%20Street\nkey: bearracuda-2026-06-27-sf\ntimezone: America/Los_Angeles\npinSource: geocoded-exact",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "77CEB24A-C15A-4D66-82A3-E51D9C5804D4",
+      "uid": "77CEB24A-C15A-4D66-82A3-E51D9C5804D4",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Public Works",
+      "cover": "General Admission $40.00-$50.00",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776730474/saas/logos/image_1776730463946_w2htw6xrh.webp",
+      "tea": "Bearracuda SF Pride! Friday, June 26th, 2026 with TONY MORANBEEFCAKE",
+      "address": "161 Erie Street",
+      "website": "https://bearracuda.com/events/sf-pride/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Public%20Works%2C%20161%20Erie%20Street",
+      "ticketUrl": "https://www.sickening.events/e/bearracuda-sf-pride-2026-beefcakes/tickets",
+      "shortName": "Bear-rac-uda",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/events/sf-pride/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Public%20Works%2C%20161%20Erie%20Street",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/bearracuda-sf-pride-2026-beefcakes/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bearracuda-sf-beefcake-pride-2d1a3a4d"
+    },
+    {
+      "name": "TWISTED BEAR San Francisco Debut",
+      "day": "Saturday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 37.7699933,
+        "lng": -122.4133375
+      },
+      "startDate": "2026-08-22T21:00:00",
+      "endDate": "2026-08-23T02:00:00",
+      "unprocessedDescription": "description: Come join us to celebrate TWISTED BEAR's 11th Year\r Anniversary Summer Tour at SF Eagle!!\nbar: San Francisco Eagle Bar\naddress: 398 12th Street, San Francisco, CA 94103\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1188666830%2F1088207912863%2F1%2Foriginal.20260711-152332?w=940&auto=format%2Ccompress&q=75&sharp=10&s=1a309cd152b77c8d73875bd0821c61b7\ncover: $12.51-$23.18\ntimezone: America/Los_Angeles\nwebsite: https://www.eventbrite.com/e/twisted-bear-san-francisco-debut-tickets-1993746658927\nshortName: TWIST-ED BEAR\ninstagram: https://www.instagram.com/twistedbearparty\nfacebook: https://www.facebook.com/twistedglobal/\nbearSource: keyword\nkey: twisted-bear-san-francisco-debut|2026-08-23|san francisco eagle bar\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=37.7699933%2C-122.4133375",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "2A6466B5-A80A-4D32-AD0F-43AEA25FA6F3",
+      "uid": "2A6466B5-A80A-4D32-AD0F-43AEA25FA6F3",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "San Francisco Eagle Bar",
+      "cover": "$12.51-$23.18",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1188666830%2F1088207912863%2F1%2Foriginal.20260711-152332?w=940&auto=format%2Ccompress&q=75&sharp=10&s=1a309cd152b77c8d73875bd0821c61b7",
+      "tea": "Come join us to celebrate TWISTED BEAR's 11th Year Anniversary Summer Tour at SF Eagle!!",
+      "address": "398 12th Street, San Francisco, CA 94103",
+      "website": "https://www.eventbrite.com/e/twisted-bear-san-francisco-debut-tickets-1993746658927",
+      "instagram": "https://www.instagram.com/twistedbearparty",
+      "facebook": "https://www.facebook.com/twistedglobal/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=37.7699933%2C-122.4133375",
+      "shortName": "TWIST-ED BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.eventbrite.com/e/twisted-bear-san-francisco-debut-tickets-1993746658927",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/twistedbearparty",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/twistedglobal/",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=37.7699933%2C-122.4133375",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "twisted-bear-san-francisco-debut-003787d5"
+    },
+    {
       "name": "CHUNK San Francisco",
       "day": "Saturday",
       "time": "10PM-4AM",
@@ -265,7 +748,7 @@
       },
       "startDate": "2026-01-17T22:00:00",
       "endDate": "2026-01-18T04:00:00",
-      "unprocessedDescription": "bar: F8 NIGHTCLUB\naddress: 1192 Folsom St, San Francisco, CA\r 94103, USA\ntimezone: America/Los_Angeles\nticketUrl: https://www.chunk-party.com\nwebsite: https://www.chunk-party.com/event-details/chunk-san-francisco-saturday-january-17th\nshortName: CHUNK\ninstagram: https://www.instagram.com/chunkparty\nfavicon: https://www.chunk-party.com\nbearSource: keyword\nkey: chunk-san-francisco|2026-01-18|f8 nightclub\ncover: TICKETS @ CHUNK-PARTY.COM\ndescription: CHUNK SF celebrates MLK JR Weekend - Atlanta LEGEND Vicki Powell from DEEP SOUTH DJ Collective. Resident DJs MR PICKLES & DR TIME & BEN FONIK. Cavalcade of HOT GOGO BEARS - 2 rooms f8 NIGHTCLUB 10-4am\nimage: https://static.wixstatic.com/media/42b6cb_846622553967483cb81ea3b1a938bc04~mv2.jpg/v1/fill/w_809,h_1012,al_c,q_85/42b6cb_846622553967483cb81ea3b1a938bc04~mv2.jpg\naddressSource: curated\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/search/?api=1&query=37.77526599999999%2C-122.4100374",
+      "unprocessedDescription": "description: CHUNK SF celebrates MLK JR Weekend - Atlanta LEGEN\rD Vicki Powell from DEEP SOUTH DJ Collective. Resident DJs MR PICKLES & DR TIME & BEN FONIK. Cavalcade of HOT GOGO BEARS - 2 rooms f8 NIGHTCLUB 10-4am\nbar: F8 NIGHTCLUB\naddress: 1192 Folsom St, San Francisco, CA 94103, USA\ntimezone: America/Los_Angeles\nwebsite: https://www.chunk-party.com/event-details/chunk-san-francisco-saturday-january-17th\nshortName: CHUNK\ninstagram: https://www.instagram.com/chunkparty\nfavicon: https://www.chunk-party.com\nbearSource: keyword\nkey: chunk-san-francisco|2026-01-18|f8 nightclub\ncover: TICKETS @ CHUNK-PARTY.COM\nimage: https://static.wixstatic.com/media/42b6cb_846622553967483cb81ea3b1a938bc04~mv2.jpg/v1/fill/w_809,h_1012,al_c,q_85/42b6cb_846622553967483cb81ea3b1a938bc04~mv2.jpg\naddressSource: curated\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/search/?api=1&query=37.77526599999999%2C-122.4100374",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Los_Angeles",
@@ -285,7 +768,6 @@
       "website": "https://www.chunk-party.com/event-details/chunk-san-francisco-saturday-january-17th",
       "instagram": "https://www.instagram.com/chunkparty",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=37.77526599999999%2C-122.4100374",
-      "ticketUrl": "https://www.chunk-party.com",
       "shortName": "CHUNK",
       "bearReview": null,
       "links": [
@@ -303,55 +785,9 @@
           "type": "gmaps",
           "url": "https://www.google.com/maps/search/?api=1&query=37.77526599999999%2C-122.4100374",
           "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.chunk-party.com",
-          "label": "🎫 Tickets"
         }
       ],
       "slug": "chunk-san-francisco-227d733c"
-    },
-    {
-      "name": "Bear Happy Hour",
-      "day": "Thursday",
-      "time": "5PM-9PM",
-      "eventType": "weekly",
-      "recurring": true,
-      "recurrence": "FREQ=WEEKLY",
-      "startDate": "2025-10-02T17:00:00",
-      "endDate": "2025-10-02T21:00:00",
-      "unprocessedDescription": "Bar: Check instagram for this week’s location.\nTea: Popular ha\rppy hour that changes location every week.\nInstagram: https://www.instagram.com/bearhappyhoursf\nShorter: BHH\nWeb: https://linktr.ee/bearhappyhour",
-      "startTimezone": "America/Los_Angeles",
-      "endTimezone": "America/Los_Angeles",
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": false,
-      "sourceUid": "dkep613fqcsi8tlh6bfsp12h50@google.com",
-      "uid": "dkep613fqcsi8tlh6bfsp12h50@google.com",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Check instagram for this week’s location.",
-      "tea": "Popular happy hour that changes location every week.",
-      "address": null,
-      "website": "https://linktr.ee/bearhappyhour",
-      "instagram": "https://www.instagram.com/bearhappyhoursf",
-      "shorterName": "BHH",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://linktr.ee/bearhappyhour",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearhappyhoursf",
-          "label": "📷 Instagram"
-        }
-      ],
-      "slug": "bear-happy-hour-67a521bf"
     },
     {
       "name": "Bearracuda SF:  20 YEAR ANNIVERSARY!",
@@ -415,448 +851,6 @@
         }
       ],
       "slug": "bearracuda-sf-20-year-anniversary-4ae69009"
-    },
-    {
-      "name": "CHUNK SF presents FATHER FIGURE",
-      "day": "Saturday",
-      "time": "10PM-3:30AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 37.77526599999999,
-        "lng": -122.4100374
-      },
-      "startDate": "2026-05-02T22:00:00",
-      "endDate": "2026-05-03T03:30:00",
-      "unprocessedDescription": "description: New Orleans DADDY Father Figure joins us for CHUNK\r'S OFFICIAL SPRING THAW. Support from the BAPTIST and CHUNK residents MISS PIGGY & BEN FONIK. GOGO BEARS ALL NIGHT LONG\nbar: F8 Nightclub & Bar\naddress: 1192 Folsom St, San Francisco, CA 94103, USA\nticketUrl: https://www.chunk-party.com/event-details/chunk-sf-presents-father-figure\ncover: $20.50 - $35.88\nimage: https://static.wixstatic.com/media/42b6cb_c906b540fe2743aab81be9b8019fb0a4~mv2.jpg/v1/fill/w_792,h_1224,al_c,q_85/42b6cb_c906b540fe2743aab81be9b8019fb0a4~mv2.jpg\nshortName: CHUNK\ninstagram: https://www.instagram.com/chunkparty\ngmaps: https://www.google.com/maps/search/?api=1&query=F8%20Nightclub%20%26%20Bar%2C%201192%20Folsom%20St%2C%20San%20Francisco%2C%20CA%2094103%2C%20USA\nkey: chunk-sf-presents-father-figure|2026-05-03|f8 nightclub & bar",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "56CFF5FC-B1E1-4512-8FBC-EDBD2064A2E6",
-      "uid": "56CFF5FC-B1E1-4512-8FBC-EDBD2064A2E6",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "F8 Nightclub & Bar",
-      "cover": "$20.50 - $35.88",
-      "image": "https://static.wixstatic.com/media/42b6cb_c906b540fe2743aab81be9b8019fb0a4~mv2.jpg/v1/fill/w_792,h_1224,al_c,q_85/42b6cb_c906b540fe2743aab81be9b8019fb0a4~mv2.jpg",
-      "tea": "New Orleans DADDY Father Figure joins us for CHUNK'S OFFICIAL SPRING THAW. Support from the BAPTIST and CHUNK residents MISS PIGGY & BEN FONIK. GOGO BEARS ALL NIGHT LONG",
-      "address": "1192 Folsom St, San Francisco, CA 94103, USA",
-      "website": null,
-      "instagram": "https://www.instagram.com/chunkparty",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=F8%20Nightclub%20%26%20Bar%2C%201192%20Folsom%20St%2C%20San%20Francisco%2C%20CA%2094103%2C%20USA",
-      "ticketUrl": "https://www.chunk-party.com/event-details/chunk-sf-presents-father-figure",
-      "shortName": "CHUNK",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/chunkparty",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=F8%20Nightclub%20%26%20Bar%2C%201192%20Folsom%20St%2C%20San%20Francisco%2C%20CA%2094103%2C%20USA",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.chunk-party.com/event-details/chunk-sf-presents-father-figure",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "chunk-sf-presents-father-figure-305593c7"
-    },
-    {
-      "name": "Bearracuda SF presents: HORSE MEAT DISCO",
-      "day": "Friday",
-      "time": "9PM-3AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 37.7689137,
-        "lng": -122.4192514
-      },
-      "startDate": "2025-09-26T21:00:00",
-      "endDate": "2025-09-27T03:00:00",
-      "unprocessedDescription": "description: Music & Entertainment\n• Main Floor - Horse Meat D\risco\n• Upstairs - Mateo Segade (LA)\n• Decor and photos by Dusti Cunningham\nbar: The Public Works SF\naddress: 161 Erie Street, San Francisco, CA 94103\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/flsm-friday/\ncover: $57.79 - $99.99 (as of 9/20)\nimage: https://bearracuda.com/wp-content/uploads/2025/05/hmd2025.jpg\nfacebook: https://www.facebook.com/events/564754916670823/\nticketUrl: https://www.eventbrite.com/e/bearracuda-sf-flsm-friday-tickets-1370410668199\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/search/?api=1&query=37.7689137%2C-122.4192514&query_place_id=85922583\nkey: bearracuda-2025-09-27-sf",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "5E26BD3A-6828-47B9-9E16-D6D7D4970A79",
-      "uid": "5E26BD3A-6828-47B9-9E16-D6D7D4970A79",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 2,
-      "overrideIdentityType": null,
-      "bar": "The Public Works SF",
-      "cover": "$57.79 - $99.99 (as of 9/20)",
-      "image": "https://bearracuda.com/wp-content/uploads/2025/05/hmd2025.jpg",
-      "tea": "Music & Entertainment",
-      "address": "161 Erie Street, San Francisco, CA 94103",
-      "website": "https://bearracuda.com/events/flsm-friday/",
-      "instagram": "https://www.instagram.com/bearracuda",
-      "facebook": "https://www.facebook.com/events/564754916670823/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=37.7689137%2C-122.4192514&query_place_id=85922583",
-      "ticketUrl": "https://www.eventbrite.com/e/bearracuda-sf-flsm-friday-tickets-1370410668199",
-      "shortName": "Bear-rac-uda",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://bearracuda.com/events/flsm-friday/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearracuda",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "facebook",
-          "url": "https://www.facebook.com/events/564754916670823/",
-          "label": "📘 Facebook"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=37.7689137%2C-122.4192514&query_place_id=85922583",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/bearracuda-sf-flsm-friday-tickets-1370410668199",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "bearracuda-sf-presents-horse-meat-disco-151154b5"
-    },
-    {
-      "name": "SF⛓️ FLSM",
-      "day": "Friday",
-      "time": "9PM-3AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 37.7688931,
-        "lng": -122.4192651
-      },
-      "startDate": "2026-09-25T21:00:00",
-      "endDate": "2026-09-26T03:00:00",
-      "unprocessedDescription": "description: Bearracuda SF PresentsFLSM FRIDAYwith HORSE MEAT D\rISCOFriday, September 25th, 2026PUBLIC WORKS - 161 Erie, San Francisco Main Floor\\: Horse Meat DiscoUpstairs\\: Mateo Segade (LA)Decor and photos by Dusti Cunningham We look forward to welcoming back Horse Meat Disco for our Folsom Street Friday party! It's our most IN DEMAND party of all time with 1000+ furry faces at Public Works in San Francisco! Bearracuda is back and we've got THE party to kick off the Weekend. 2 floors of music, hot go-gos, stunning decor & visuals and hot, furry guys all around!\nbar: Public Works\naddress: 161 Erie Street, San Francisco, CA, 94103\ntimezone: America/Los_Angeles\nticketUrl: https://www.sickening.events/e/bearracuda-san-francisco-hmd/tickets\nimage: https://bearracuda.com/wp-content/uploads/2026/05/newfolsomweb.jpg\nimageVertical: https://bearracuda.com/wp-content/uploads/2026/05/newfolsomweb.jpg\nwebsite: https://bearracuda.com/events/flsm/\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\nfavicon: https://bearracuda.com/\nbearSource: ai\nkey: sf⛓️-flsm|2026-09-26|public works\ncover: ADV. FIX AT BEARRACUDA.COM\npinSource: curated\naddressSource: page\nimageSource: og-image\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/search/?api=1&query=37.7688931%2C-122.4192651",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "13648C55-8022-4AF4-AFD2-105A2F347CB8",
-      "uid": "13648C55-8022-4AF4-AFD2-105A2F347CB8",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Public Works",
-      "cover": "ADV. FIX AT BEARRACUDA.COM",
-      "image": "https://bearracuda.com/wp-content/uploads/2026/05/newfolsomweb.jpg",
-      "imageVertical": "https://bearracuda.com/wp-content/uploads/2026/05/newfolsomweb.jpg",
-      "favicon": "https://bearracuda.com/",
-      "tea": "Bearracuda SF PresentsFLSM FRIDAYwith HORSE MEAT DISCOFriday, September 25th, 2026PUBLIC WORKS - 161 Erie, San Francisco Main Floor: Horse Meat DiscoUpstairs: Mateo Segade (LA)Decor and photos by Dusti Cunningham We look forward to welcoming back Horse Meat Disco for our Folsom Street Friday party! It's our most IN DEMAND party of all time with 1000+ furry faces at Public Works in San Francisco! Bearracuda is back and we've got THE party to kick off the Weekend. 2 floors of music, hot go-gos, stunning decor & visuals and hot, furry guys all around!",
-      "address": "161 Erie Street, San Francisco, CA, 94103",
-      "website": "https://bearracuda.com/events/flsm/",
-      "instagram": "https://www.instagram.com/bearracuda",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=37.7688931%2C-122.4192651",
-      "ticketUrl": "https://www.sickening.events/e/bearracuda-san-francisco-hmd/tickets",
-      "shortName": "Bear-rac-uda",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://bearracuda.com/events/flsm/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearracuda",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=37.7688931%2C-122.4192651",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.sickening.events/e/bearracuda-san-francisco-hmd/tickets",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "sf-flsm-6bcb20fd"
-    },
-    {
-      "name": "CHUNK: FATHER FIGURE",
-      "day": "Saturday",
-      "time": "12AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 37.7752814,
-        "lng": -122.4099546
-      },
-      "startDate": "2026-05-02T00:00:00",
-      "unprocessedDescription": "description: CHUNK SF presents FATHER FIGURE\nbar: F8 Nightclub\r & Bar\naddress: 1192 Folsom St, San Francisco, CA 94103, USA\ntimezone: America/Los_Angeles\nimage: https://static.wixstatic.com/media/42b6cb_c906b540fe2743aab81be9b8019fb0a4~mv2.jpg\nwebsite: https://www.chunk-party.com/event-details/chunk-sf-presents-father-figure\nshortName: CHUNK\ninstagram: https://www.instagram.com/chunkparty\nfavicon: https://www.chunk-party.com\nbearSource: keyword\nkey: chunk-father-figure|2026-05-02|f8 nightclub & bar\npinSource: curated\naddressSource: curated\nimageSource: page\nbarSource: uncorroborated\ngmaps: https://www.google.com/maps/search/?api=1&query=37.7752814%2C-122.4099546",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "10D2C8FA-A1A6-4E5E-94A4-583E7745DD5D",
-      "uid": "10D2C8FA-A1A6-4E5E-94A4-583E7745DD5D",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "F8 Nightclub & Bar",
-      "image": "https://static.wixstatic.com/media/42b6cb_c906b540fe2743aab81be9b8019fb0a4~mv2.jpg",
-      "favicon": "https://www.chunk-party.com",
-      "tea": "CHUNK SF presents FATHER FIGURE",
-      "address": "1192 Folsom St, San Francisco, CA 94103, USA",
-      "website": "https://www.chunk-party.com/event-details/chunk-sf-presents-father-figure",
-      "instagram": "https://www.instagram.com/chunkparty",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=37.7752814%2C-122.4099546",
-      "shortName": "CHUNK",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.chunk-party.com/event-details/chunk-sf-presents-father-figure",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/chunkparty",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=37.7752814%2C-122.4099546",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "chunk-father-figure-22ce3590"
-    },
-    {
-      "name": "BEEFWITCH",
-      "day": "Friday",
-      "time": "10PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 37.7761825,
-        "lng": -122.4083567
-      },
-      "startDate": "2026-05-15T22:00:00",
-      "endDate": "2026-05-16T02:00:00",
-      "unprocessedDescription": "description: The Occult Leather Party Returns to The Stud Frida\ry May 15. Are you ready to live deliciously?\nbar: The Stud\naddress: 1123 Folsom Street, San Francisco, CA 94103\nticketUrl: https://www.eventbrite.com/e/beefwitch-tickets-1988340517011\ninstagram: https://www.instagram.com/thebeefwitch\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1183146702%2F2198683436473%2F1%2Foriginal.20260427-173849?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=d4ebc964c2b00b6625c9a810da2199de\ncover: $10.38-$17.85\nshortName: BEEFWITCH\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Stud%2C%201123%20Folsom%20Street%2C%20San%20Francisco%2C%20CA%2094103\nkey: beefwitch|2026-05-16|the stud",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "BBE7F872-30A1-40EC-AB3C-BCDAF9342658",
-      "uid": "BBE7F872-30A1-40EC-AB3C-BCDAF9342658",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "The Stud",
-      "cover": "$10.38-$17.85",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1183146702%2F2198683436473%2F1%2Foriginal.20260427-173849?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=d4ebc964c2b00b6625c9a810da2199de",
-      "tea": "The Occult Leather Party Returns to The Stud Friday May 15. Are you ready to live deliciously?",
-      "address": "1123 Folsom Street, San Francisco, CA 94103",
-      "website": null,
-      "instagram": "https://www.instagram.com/thebeefwitch",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=The%20Stud%2C%201123%20Folsom%20Street%2C%20San%20Francisco%2C%20CA%2094103",
-      "ticketUrl": "https://www.eventbrite.com/e/beefwitch-tickets-1988340517011",
-      "shortName": "BEEFWITCH",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/thebeefwitch",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=The%20Stud%2C%201123%20Folsom%20Street%2C%20San%20Francisco%2C%20CA%2094103",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/beefwitch-tickets-1988340517011",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "beefwitch-0e685674"
-    },
-    {
-      "name": "CHUNK DORE ALLEY - Saturday July 25th",
-      "day": "Saturday",
-      "time": "10PM-4AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 37.77526599999999,
-        "lng": -122.4100374
-      },
-      "startDate": "2026-07-25T22:00:00",
-      "endDate": "2026-07-26T04:00:00",
-      "unprocessedDescription": "description: THE PREMIER BEAR/CUB SATURDAY MAIN EVENT! CHUNK SF\r Presents BEARS IN SPACE With DICAP & NICK MOSS & THCKRTANKER & OMNIBOT GOGO FETISH BEARS // Hosted By ROSS & BIG CLAUDE & More f8 NIGHTCLUB // 1192 FOLSOM ST // 10pm - 4am\nbar: F8 Nightclub & Bar\naddress: 1192 Folsom St, San Francisco, CA 94103, USA\nimage: https://static.wixstatic.com/media/42b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg/v1/fill/w_3300,h_4125,al_c,q_90/42b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg\ntimezone: America/Los_Angeles\ncover: $60\nimageVertical: https://static.wixstatic.com/media/42b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg/v1/fill/w_3300,h_4125,al_c,q_90/42b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg\nwebsite: https://www.chunk-party.com/event-details/chunk-dore-alley-saturday-july-25th\nshortName: CHUNK\ninstagram: https://www.instagram.com/chunkparty\nfavicon: https://www.chunk-party.com\nbearSource: keyword\nkey: chunk-dore-alley-saturday-july-25th|2026-07-26|f8 nightclub & bar\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=37.77526599999999%2C-122.4100374",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "CEC90038-7CD1-4FA5-9BA7-1353A769AEB8",
-      "uid": "CEC90038-7CD1-4FA5-9BA7-1353A769AEB8",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "F8 Nightclub & Bar",
-      "cover": "$60",
-      "image": "https://static.wixstatic.com/media/42b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg/v1/fill/w_3300,h_4125,al_c,q_90/42b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg",
-      "imageVertical": "https://static.wixstatic.com/media/42b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg/v1/fill/w_3300,h_4125,al_c,q_90/42b6cb_272cdd18dcc74ec5a3eb10e288658278~mv2.jpg",
-      "favicon": "https://www.chunk-party.com",
-      "tea": "THE PREMIER BEAR/CUB SATURDAY MAIN EVENT! CHUNK SF Presents BEARS IN SPACE With DICAP & NICK MOSS & THCKRTANKER & OMNIBOT GOGO FETISH BEARS // Hosted By ROSS & BIG CLAUDE & More f8 NIGHTCLUB // 1192 FOLSOM ST // 10pm - 4am",
-      "address": "1192 Folsom St, San Francisco, CA 94103, USA",
-      "website": "https://www.chunk-party.com/event-details/chunk-dore-alley-saturday-july-25th",
-      "instagram": "https://www.instagram.com/chunkparty",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=37.77526599999999%2C-122.4100374",
-      "shortName": "CHUNK",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.chunk-party.com/event-details/chunk-dore-alley-saturday-july-25th",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/chunkparty",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=37.77526599999999%2C-122.4100374",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "chunk-dore-alley-saturday-july-25th-3bf852a2"
-    },
-    {
-      "name": "BEEFWITCH",
-      "day": "Saturday",
-      "time": "9PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 37.7761825,
-        "lng": -122.4083567
-      },
-      "startDate": "2025-10-18T21:00:00",
-      "endDate": "2025-10-19T02:00:00",
-      "unprocessedDescription": "description: The Occult Underwear Party returns to SF for Bearr\rison Weekend!  Featuring a LIVE floor show and witchy girl pop by DJ NaughtyBoyy.\nbar: The Stud\naddress: 1123 Folsom Street, San Francisco, CA 94103\ntimezone: America/Los_Angeles\nticketUrl: https://www.eventbrite.com/e/beefwitch-tickets-1728182092159\ncover: $12.51 - $17.85 (as of 10/1)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1131139693%2F2198683436473%2F1%2Foriginal.20250922-081325?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=64b5e194843ee640607400ec97184904\ninstagram: https://www.instagram.com/coachafterdark\ngmaps: https://www.google.com/maps/search/?api=1&query=37.7761825%2C-122.4083567&query_place_id=ChIJBWia_yh-j4ARczXTRg2RGCs\nkey: beefwitch|2025-10-19|the stud|eventbrite\nshortName: Coach After Dark",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "3F9230E0-3F04-4F12-98C1-311ACA95E3D8",
-      "uid": "3F9230E0-3F04-4F12-98C1-311ACA95E3D8",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "The Stud",
-      "cover": "$12.51 - $17.85 (as of 10/1)",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1131139693%2F2198683436473%2F1%2Foriginal.20250922-081325?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=64b5e194843ee640607400ec97184904",
-      "tea": "The Occult Underwear Party returns to SF for Bearrison Weekend!  Featuring a LIVE floor show and witchy girl pop by DJ NaughtyBoyy.",
-      "address": "1123 Folsom Street, San Francisco, CA 94103",
-      "website": null,
-      "instagram": "https://www.instagram.com/coachafterdark",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=37.7761825%2C-122.4083567&query_place_id=ChIJBWia_yh-j4ARczXTRg2RGCs",
-      "ticketUrl": "https://www.eventbrite.com/e/beefwitch-tickets-1728182092159",
-      "shortName": "Coach After Dark",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/coachafterdark",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=37.7761825%2C-122.4083567&query_place_id=ChIJBWia_yh-j4ARczXTRg2RGCs",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/beefwitch-tickets-1728182092159",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "beefwitch-06eb5e73"
-    },
-    {
-      "name": "Treasure Trail: San Francisco",
-      "day": "Saturday",
-      "time": "9PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "startDate": "2026-06-13T21:00:00",
-      "endDate": "2026-06-14T02:00:00",
-      "unprocessedDescription": "description: Saturday, June 13th, 2025 Doors at 9pm, Party t\ril 2amClothes Check encouraged1123 FOLSOMSteamy Go-Go&rsquo;s, Heavy CruisingHard Sounds by Paul Goodyear Hosted byJP Hardy➲➲https\\://www.jphardyofficial.comSPRING has sprung and we are ready to strip down! Grab a wristband when you walk in\\: Red Wristband TOP Blue Wristband VERS Green Wristband BOTTOM White Wristband SIDE You can choose one when you purchase tix and are free to change your mind (or go without a wristband) when you arrive.\nbar: The Stud\naddress: 1123 Folsom Street\nticketUrl: https://www.sickening.events/e/treasuresf/tickets\ninstagram: https://www.instagram.com/bearracuda\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1777842694/saas/logos/image_1777842674799_zsjr6b8zx.webp\ncover: 15.00\nshortName: Bear-rac-uda\nwebsite: https://bearracuda.com/events/treasure-trail-sf/\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Stud%2C%201123%20Folsom%20Street\nkey: bearracuda-2026-06-14-sf\ntimezone: America/Los_Angeles",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "C0CE53B6-54E8-4E7E-AD3D-95DF514E0382",
-      "uid": "C0CE53B6-54E8-4E7E-AD3D-95DF514E0382",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "The Stud",
-      "cover": "15.00",
-      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1777842694/saas/logos/image_1777842674799_zsjr6b8zx.webp",
-      "tea": "Saturday, June 13th, 2025 Doors at 9pm, Party til 2amClothes Check encouraged1123 FOLSOMSteamy Go-Go&rsquo;s, Heavy CruisingHard Sounds by Paul Goodyear Hosted byJP Hardy➲➲https://www.jphardyofficial.comSPRING has sprung and we are ready to strip down! Grab a wristband when you walk in: Red Wristband TOP Blue Wristband VERS Green Wristband BOTTOM White Wristband SIDE You can choose one when you purchase tix and are free to change your mind (or go without a wristband) when you arrive.",
-      "address": "1123 Folsom Street",
-      "website": "https://bearracuda.com/events/treasure-trail-sf/",
-      "instagram": "https://www.instagram.com/bearracuda",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=The%20Stud%2C%201123%20Folsom%20Street",
-      "ticketUrl": "https://www.sickening.events/e/treasuresf/tickets",
-      "shortName": "Bear-rac-uda",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://bearracuda.com/events/treasure-trail-sf/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearracuda",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=The%20Stud%2C%201123%20Folsom%20Street",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.sickening.events/e/treasuresf/tickets",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "treasure-trail-san-francisco-1a2ef0fe"
     }
   ]
 }

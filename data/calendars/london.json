@@ -5,155 +5,68 @@
   },
   "events": [
     {
-      "name": "BEEFMINCE New Year's Eve",
-      "day": "Thursday",
-      "time": "10PM-5AM",
-      "eventType": "routine",
-      "recurring": false,
-      "startDate": "2026-12-31T22:00:00",
-      "endDate": "2027-01-01T05:00:00",
-      "unprocessedDescription": "description: BEEFMINCE New Year's Eve - more info soon.\naddres\rs: Venue TBA, London\nimage: https://dice-media.imgix.net/attachments/2026-07-27/ed641899-823f-4fae-b44e-aa9da6c2b795.jpg?rect=0%2C0%2C1080%2C1080\ntimezone: Europe/London\ncover: £17\nimageHorizontal: https://dice-media.imgix.net/attachments/2026-07-27/ed641899-823f-4fae-b44e-aa9da6c2b795.jpg?rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress\naddressSource: page\nwebsite: https://dice.fm/event/bb9e2m-beefmince-new-years-eve-31st-dec-venue-tba-london-london-tickets\ngmaps: https://www.google.com/maps/search/?api=1&query=Venue%20TBA%2C%20London\nshortName: BEEF-MINCE\nfavicon: https://beefmince.com\nbearSource: keyword\nkey: beefmince-new-year-s-eve|2026-12-31|\nimageSource: jsonld",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "Europe/London",
-      "wasUTC": true,
-      "sourceUid": "CF73C0A5-B8BB-4602-A640-C75193FDE578",
-      "uid": "CF73C0A5-B8BB-4602-A640-C75193FDE578",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "cover": "£17",
-      "image": "https://dice-media.imgix.net/attachments/2026-07-27/ed641899-823f-4fae-b44e-aa9da6c2b795.jpg?rect=0%2C0%2C1080%2C1080",
-      "imageHorizontal": "https://dice-media.imgix.net/attachments/2026-07-27/ed641899-823f-4fae-b44e-aa9da6c2b795.jpg?rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress",
-      "favicon": "https://beefmince.com",
-      "tea": "BEEFMINCE New Year's Eve - more info soon.",
-      "address": "Venue TBA, London",
-      "website": "https://dice.fm/event/bb9e2m-beefmince-new-years-eve-31st-dec-venue-tba-london-london-tickets",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Venue%20TBA%2C%20London",
-      "shortName": "BEEF-MINCE",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://dice.fm/event/bb9e2m-beefmince-new-years-eve-31st-dec-venue-tba-london-london-tickets",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Venue%20TBA%2C%20London",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "beefmince-new-years-eve-790f90b6"
-    },
-    {
-      "name": "BEEFMINCE x RVT",
-      "day": "Saturday",
+      "name": "TWISTED BEAR LONDON - THE RETURN",
+      "day": "Friday",
       "time": "10PM-4AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
-        "lat": 51.4863391,
-        "lng": -0.1217784
+        "lat": 51.5284734,
+        "lng": -0.0925783
       },
-      "startDate": "2026-10-17T22:00:00",
-      "endDate": "2026-10-18T04:00:00",
-      "unprocessedDescription": "bar: Royal Vauxhall Tavern\naddress: 372 Kennington Ln, London\r, United Kingdom SE11 5HY\nimage: https://dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C0%2C768%2C768\ntimezone: Europe/London\ncover: £10\nimageHorizontal: https://dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress\nwebsite: https://dice.fm/event/xednya-beefmince-x-rvt-17th-oct-the-royal-vauxhall-tavern-london-tickets\ninstagram: https://www.instagram.com/rvtofficial\nshortName: BEEF-MINCE\nfavicon: https://beefmince.com\nbearSource: keyword\nkey: beefmince-x-rvt|2026-10-17|royal vauxhall tavern\ndescription: BEEFMINCE | The UK's Tastiest Bear Club *Now on Saturdays* BEEFMINCE is the Royal Vauxhall Tavern's biggest, longest running and most loved club night at this iconic LGBTQ+ venue. We're famous for our fun, social, bear full- attitude free parties with the best DJs playing the tastiest party athems ranging from disco, house and electro. For Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers & everyone in between! *More information & FAQs at beefmince.com*\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJuYgA--wEdkgRD-0ylWTyMkw",
+      "startDate": "2026-07-17T22:00:00",
+      "endDate": "2026-07-18T04:00:00",
+      "unprocessedDescription": "description: Super excited to be relaunching in London on July \r17th!!\nbar: MA1\\: The Bunker\naddress: 217-221 City Road, London, EC1V 1JN, London, England\nticketUrl: https://www.eventbrite.com/e/twisted-bear-london-the-return-tickets-1992217564364\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1187184524%2F3005716834511%2F1%2Foriginal.20260618-104023?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=31345804aecd88cf944c1ea5ab67c175\ncover: 11.55-22.38 GBP\ntimezone: Europe/London\nshortName: TWIST-ED BEAR\ninstagram: https://www.instagram.com/twistedbearparty\nfacebook: https://www.facebook.com/twistedglobal/\nwebsite: https://www.eventbrite.com/e/twisted-bear-london-the-return-tickets-1992217564364\ngmaps: https://www.google.com/maps/search/?api=1&query=MA1%3A%20The%20Bunker%2C%20217-221%20City%20Road%2C%20London%2C%20EC1V%201JN%2C%20London%2C%20England",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "Europe/London",
       "wasUTC": true,
-      "sourceUid": "6044CC3C-18AF-4FC8-83F3-26FA56293E04",
-      "uid": "6044CC3C-18AF-4FC8-83F3-26FA56293E04",
+      "sourceUid": "0EF35488-A88B-49E8-8D79-A864F11A8113",
+      "uid": "0EF35488-A88B-49E8-8D79-A864F11A8113",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "Royal Vauxhall Tavern",
-      "cover": "£10",
-      "image": "https://dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C0%2C768%2C768",
-      "imageHorizontal": "https://dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress",
-      "favicon": "https://beefmince.com",
-      "tea": "BEEFMINCE | The UK's Tastiest Bear Club *Now on Saturdays* BEEFMINCE is the Royal Vauxhall Tavern's biggest, longest running and most loved club night at this iconic LGBTQ+ venue. We're famous for our fun, social, bear full- attitude free parties with the best DJs playing the tastiest party athems ranging from disco, house and electro. For Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers & everyone in between! *More information & FAQs at beefmince.com*",
-      "address": "372 Kennington Ln, London, United Kingdom SE11 5HY",
-      "website": "https://dice.fm/event/xednya-beefmince-x-rvt-17th-oct-the-royal-vauxhall-tavern-london-tickets",
-      "instagram": "https://www.instagram.com/rvtofficial",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJuYgA--wEdkgRD-0ylWTyMkw",
-      "shortName": "BEEF-MINCE",
+      "bar": "MA1: The Bunker",
+      "cover": "11.55-22.38 GBP",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1187184524%2F3005716834511%2F1%2Foriginal.20260618-104023?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=31345804aecd88cf944c1ea5ab67c175",
+      "tea": "Super excited to be relaunching in London on July 17th!!",
+      "address": "217-221 City Road, London, EC1V 1JN, London, England",
+      "website": "https://www.eventbrite.com/e/twisted-bear-london-the-return-tickets-1992217564364",
+      "instagram": "https://www.instagram.com/twistedbearparty",
+      "facebook": "https://www.facebook.com/twistedglobal/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=MA1%3A%20The%20Bunker%2C%20217-221%20City%20Road%2C%20London%2C%20EC1V%201JN%2C%20London%2C%20England",
+      "ticketUrl": "https://www.eventbrite.com/e/twisted-bear-london-the-return-tickets-1992217564364",
+      "shortName": "TWIST-ED BEAR",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://dice.fm/event/xednya-beefmince-x-rvt-17th-oct-the-royal-vauxhall-tavern-london-tickets",
+          "url": "https://www.eventbrite.com/e/twisted-bear-london-the-return-tickets-1992217564364",
           "label": "🌐 Website"
         },
         {
           "type": "instagram",
-          "url": "https://www.instagram.com/rvtofficial",
+          "url": "https://www.instagram.com/twistedbearparty",
           "label": "📷 Instagram"
         },
         {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJuYgA--wEdkgRD-0ylWTyMkw",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "beefmince-x-rvt-70234e1a"
-    },
-    {
-      "name": "BEEFMINCE x RVT",
-      "day": "Saturday",
-      "time": "10PM-4AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 51.4863391,
-        "lng": -0.1217784
-      },
-      "startDate": "2026-11-21T22:00:00",
-      "endDate": "2026-11-22T04:00:00",
-      "unprocessedDescription": "bar: Royal Vauxhall Tavern\naddress: 372 Kennington Ln, London\r, United Kingdom SE11 5HY\nimage: https://dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C0%2C768%2C768\ntimezone: Europe/London\ncover: £10\nimageHorizontal: https://dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress\nwebsite: https://dice.fm/event/927gr7-beefmince-x-rvt-21st-nov-the-royal-vauxhall-tavern-london-tickets\ninstagram: https://www.instagram.com/rvtofficial\nshortName: BEEF-MINCE\nfavicon: https://beefmince.com\nbearSource: keyword\nkey: beefmince-x-rvt|2026-11-21|royal vauxhall tavern\ndescription: BEEFMINCE | The UK's Tastiest Bear Club *Now on Saturdays* BEEFMINCE is the Royal Vauxhall Tavern's biggest, longest running and most loved club night at this iconic LGBTQ+ venue. We're famous for our fun, social, bear full- attitude free parties with the best DJs playing the tastiest party athems ranging from disco, house and electro. For Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers & everyone in between! *More information & FAQs at beefmince.com* This is an 18+ event (valid physical photo ID, passport or driver’s license, is required for entry, no digital copies accepted.)\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJuYgA--wEdkgRD-0ylWTyMkw",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "Europe/London",
-      "wasUTC": true,
-      "sourceUid": "8DB25B07-9E96-4DB2-84F9-D779A742997D",
-      "uid": "8DB25B07-9E96-4DB2-84F9-D779A742997D",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Royal Vauxhall Tavern",
-      "cover": "£10",
-      "image": "https://dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C0%2C768%2C768",
-      "imageHorizontal": "https://dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress",
-      "favicon": "https://beefmince.com",
-      "tea": "BEEFMINCE | The UK's Tastiest Bear Club *Now on Saturdays* BEEFMINCE is the Royal Vauxhall Tavern's biggest, longest running and most loved club night at this iconic LGBTQ+ venue. We're famous for our fun, social, bear full- attitude free parties with the best DJs playing the tastiest party athems ranging from disco, house and electro. For Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers & everyone in between! *More information & FAQs at beefmince.com* This is an 18+ event (valid physical photo ID, passport or driver’s license, is required for entry, no digital copies accepted.)",
-      "address": "372 Kennington Ln, London, United Kingdom SE11 5HY",
-      "website": "https://dice.fm/event/927gr7-beefmince-x-rvt-21st-nov-the-royal-vauxhall-tavern-london-tickets",
-      "instagram": "https://www.instagram.com/rvtofficial",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJuYgA--wEdkgRD-0ylWTyMkw",
-      "shortName": "BEEF-MINCE",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://dice.fm/event/927gr7-beefmince-x-rvt-21st-nov-the-royal-vauxhall-tavern-london-tickets",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/rvtofficial",
-          "label": "📷 Instagram"
+          "type": "facebook",
+          "url": "https://www.facebook.com/twistedglobal/",
+          "label": "📘 Facebook"
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJuYgA--wEdkgRD-0ylWTyMkw",
+          "url": "https://www.google.com/maps/search/?api=1&query=MA1%3A%20The%20Bunker%2C%20217-221%20City%20Road%2C%20London%2C%20EC1V%201JN%2C%20London%2C%20England",
           "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/twisted-bear-london-the-return-tickets-1992217564364",
+          "label": "🎫 Tickets"
         }
       ],
-      "slug": "beefmince-x-rvt-1d5ae452"
+      "slug": "twisted-bear-london-the-return-5fafb1d5"
     },
     {
       "name": "BEEFMINCE Trunk Den",
@@ -219,9 +132,106 @@
         "lat": 51.4863391,
         "lng": -0.1217784
       },
+      "startDate": "2026-10-17T22:00:00",
+      "endDate": "2026-10-18T04:00:00",
+      "unprocessedDescription": "bar: Royal Vauxhall Tavern\naddress: 372 Kennington Ln, London\r, United Kingdom SE11 5HY\nimage: https://dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C0%2C768%2C768\ntimezone: Europe/London\ncover: From £10\nimageHorizontal: https://dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress\nwebsite: https://dice.fm/event/xednya-beefmince-x-rvt-17th-oct-the-royal-vauxhall-tavern-london-tickets\ninstagram: https://www.instagram.com/rvtofficial\nshortName: BEEF-MINCE\nfavicon: https://beefmince.com\nbearSource: keyword\nkey: beefmince-x-rvt|2026-10-17|royal vauxhall tavern\ndescription: BEEFMINCE | The UK's Tastiest Bear Club *Now on Saturdays* BEEFMINCE is the Royal Vauxhall Tavern's biggest, longest running and most loved club night at this iconic LGBTQ+ venue. We're famous for our fun, social, bear full- attitude free parties with the best DJs playing the tastiest party athems ranging from disco, house and electro. For Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers & everyone in between! *More information & FAQs at beefmince.com*\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJuYgA--wEdkgRD-0ylWTyMkw",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/London",
+      "wasUTC": true,
+      "sourceUid": "6044CC3C-18AF-4FC8-83F3-26FA56293E04",
+      "uid": "6044CC3C-18AF-4FC8-83F3-26FA56293E04",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Royal Vauxhall Tavern",
+      "cover": "From £10",
+      "image": "https://dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C0%2C768%2C768",
+      "imageHorizontal": "https://dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress",
+      "favicon": "https://beefmince.com",
+      "tea": "BEEFMINCE | The UK's Tastiest Bear Club *Now on Saturdays* BEEFMINCE is the Royal Vauxhall Tavern's biggest, longest running and most loved club night at this iconic LGBTQ+ venue. We're famous for our fun, social, bear full- attitude free parties with the best DJs playing the tastiest party athems ranging from disco, house and electro. For Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers & everyone in between! *More information & FAQs at beefmince.com*",
+      "address": "372 Kennington Ln, London, United Kingdom SE11 5HY",
+      "website": "https://dice.fm/event/xednya-beefmince-x-rvt-17th-oct-the-royal-vauxhall-tavern-london-tickets",
+      "instagram": "https://www.instagram.com/rvtofficial",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJuYgA--wEdkgRD-0ylWTyMkw",
+      "shortName": "BEEF-MINCE",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://dice.fm/event/xednya-beefmince-x-rvt-17th-oct-the-royal-vauxhall-tavern-london-tickets",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/rvtofficial",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJuYgA--wEdkgRD-0ylWTyMkw",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "beefmince-x-rvt-70234e1a"
+    },
+    {
+      "name": "BEEFMINCE New Year's Eve",
+      "day": "Thursday",
+      "time": "10PM-5AM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-12-31T22:00:00",
+      "endDate": "2027-01-01T05:00:00",
+      "unprocessedDescription": "description: BEEFMINCE New Year's Eve - more info soon.\nimage:\r https://dice-media.imgix.net/attachments/2026-07-27/ed641899-823f-4fae-b44e-aa9da6c2b795.jpg?rect=0%2C0%2C1080%2C1080\ntimezone: Europe/London\ncover: £17\nimageHorizontal: https://dice-media.imgix.net/attachments/2026-07-27/ed641899-823f-4fae-b44e-aa9da6c2b795.jpg?rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress\nwebsite: https://dice.fm/event/bb9e2m-beefmince-new-years-eve-31st-dec-venue-tba-london-london-tickets\nshortName: BEEF-MINCE\nfavicon: https://beefmince.com\nbearSource: keyword\nkey: beefmince-new-year-s-eve|2026-12-31|\naddress: Venue TBA, London\naddressSource: page\nimageSource: jsonld\ngmaps: https://www.google.com/maps/search/?api=1&query=Venue%20TBA%2C%20London",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/London",
+      "wasUTC": true,
+      "sourceUid": "CF73C0A5-B8BB-4602-A640-C75193FDE578",
+      "uid": "CF73C0A5-B8BB-4602-A640-C75193FDE578",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "cover": "£17",
+      "image": "https://dice-media.imgix.net/attachments/2026-07-27/ed641899-823f-4fae-b44e-aa9da6c2b795.jpg?rect=0%2C0%2C1080%2C1080",
+      "imageHorizontal": "https://dice-media.imgix.net/attachments/2026-07-27/ed641899-823f-4fae-b44e-aa9da6c2b795.jpg?rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress",
+      "favicon": "https://beefmince.com",
+      "tea": "BEEFMINCE New Year's Eve - more info soon.",
+      "address": "Venue TBA, London",
+      "website": "https://dice.fm/event/bb9e2m-beefmince-new-years-eve-31st-dec-venue-tba-london-london-tickets",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Venue%20TBA%2C%20London",
+      "shortName": "BEEF-MINCE",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://dice.fm/event/bb9e2m-beefmince-new-years-eve-31st-dec-venue-tba-london-london-tickets",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Venue%20TBA%2C%20London",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "beefmince-new-years-eve-790f90b6"
+    },
+    {
+      "name": "BEEFMINCE x RVT",
+      "day": "Saturday",
+      "time": "10PM-4AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 51.4863391,
+        "lng": -0.1217784
+      },
       "startDate": "2026-09-19T22:00:00",
       "endDate": "2026-09-20T04:00:00",
-      "unprocessedDescription": "bar: Royal Vauxhall Tavern\naddress: 372 Kennington Ln, London\r, United Kingdom SE11 5HY\nimage: https://dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C0%2C768%2C768\ntimezone: Europe/London\ncover: £10\nimageHorizontal: https://dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress\nwebsite: https://dice.fm/event/yoepxa-beefmince-x-rvt-19th-sep-the-royal-vauxhall-tavern-london-tickets\ninstagram: https://www.instagram.com/rvtofficial\nshortName: BEEF-MINCE\nfavicon: https://beefmince.com\nbearSource: keyword\nkey: beefmince-x-rvt|2026-09-19|royal vauxhall tavern\ndescription: BEEFMINCE | The UK's Tastiest Bear Club *Now on Saturdays* BEEFMINCE is the Royal Vauxhall Tavern's biggest, longest running and most loved club night at this iconic LGBTQ+ venue. We're famous for our fun, social, bear full- attitude free parties with the best DJs playing the tastiest party athems ranging from disco, house and electro. For Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers & everyone in between! *More information & FAQs at beefmince.com*\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJuYgA--wEdkgRD-0ylWTyMkw",
+      "unprocessedDescription": "bar: Royal Vauxhall Tavern\naddress: 372 Kennington Ln, London\r, United Kingdom SE11 5HY\nimage: https://dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C0%2C768%2C768\ntimezone: Europe/London\ncover: From £10\nimageHorizontal: https://dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress\nwebsite: https://dice.fm/event/yoepxa-beefmince-x-rvt-19th-sep-the-royal-vauxhall-tavern-london-tickets\ninstagram: https://www.instagram.com/rvtofficial\nshortName: BEEF-MINCE\nfavicon: https://beefmince.com\nbearSource: keyword\nkey: beefmince-x-rvt|2026-09-19|royal vauxhall tavern\ndescription: BEEFMINCE | The UK's Tastiest Bear Club *Now on Saturdays* BEEFMINCE is the Royal Vauxhall Tavern's biggest, longest running and most loved club night at this iconic LGBTQ+ venue. We're famous for our fun, social, bear full- attitude free parties with the best DJs playing the tastiest party athems ranging from disco, house and electro. For Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers & everyone in between! *More information & FAQs at beefmince.com*\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJuYgA--wEdkgRD-0ylWTyMkw",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "Europe/London",
@@ -233,7 +243,7 @@
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "Royal Vauxhall Tavern",
-      "cover": "£10",
+      "cover": "From £10",
       "image": "https://dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C0%2C768%2C768",
       "imageHorizontal": "https://dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress",
       "favicon": "https://beefmince.com",
@@ -262,70 +272,6 @@
         }
       ],
       "slug": "beefmince-x-rvt-174c5642"
-    },
-    {
-      "name": "TWISTED BEAR LONDON - THE RETURN",
-      "day": "Friday",
-      "time": "10PM-4AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 51.5284734,
-        "lng": -0.0925783
-      },
-      "startDate": "2026-07-17T22:00:00",
-      "endDate": "2026-07-18T04:00:00",
-      "unprocessedDescription": "description: Super excited to be relaunching in London on July \r17th!!\nbar: MA1\\: The Bunker\naddress: 217-221 City Road, London, EC1V 1JN, London, England\nticketUrl: https://www.eventbrite.com/e/twisted-bear-london-the-return-tickets-1992217564364\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1187184524%2F3005716834511%2F1%2Foriginal.20260618-104023?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=31345804aecd88cf944c1ea5ab67c175\ncover: 11.55-22.38 GBP\ntimezone: Europe/London\nshortName: TWIST-ED BEAR\ninstagram: https://www.instagram.com/twistedbearparty\nfacebook: https://www.facebook.com/twistedglobal/\nwebsite: https://www.eventbrite.com/e/twisted-bear-london-the-return-tickets-1992217564364\ngmaps: https://www.google.com/maps/search/?api=1&query=MA1%3A%20The%20Bunker%2C%20217-221%20City%20Road%2C%20London%2C%20EC1V%201JN%2C%20London%2C%20England",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "Europe/London",
-      "wasUTC": true,
-      "sourceUid": "0EF35488-A88B-49E8-8D79-A864F11A8113",
-      "uid": "0EF35488-A88B-49E8-8D79-A864F11A8113",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "MA1: The Bunker",
-      "cover": "11.55-22.38 GBP",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1187184524%2F3005716834511%2F1%2Foriginal.20260618-104023?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=31345804aecd88cf944c1ea5ab67c175",
-      "tea": "Super excited to be relaunching in London on July 17th!!",
-      "address": "217-221 City Road, London, EC1V 1JN, London, England",
-      "website": "https://www.eventbrite.com/e/twisted-bear-london-the-return-tickets-1992217564364",
-      "instagram": "https://www.instagram.com/twistedbearparty",
-      "facebook": "https://www.facebook.com/twistedglobal/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=MA1%3A%20The%20Bunker%2C%20217-221%20City%20Road%2C%20London%2C%20EC1V%201JN%2C%20London%2C%20England",
-      "ticketUrl": "https://www.eventbrite.com/e/twisted-bear-london-the-return-tickets-1992217564364",
-      "shortName": "TWIST-ED BEAR",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.eventbrite.com/e/twisted-bear-london-the-return-tickets-1992217564364",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/twistedbearparty",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "facebook",
-          "url": "https://www.facebook.com/twistedglobal/",
-          "label": "📘 Facebook"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=MA1%3A%20The%20Bunker%2C%20217-221%20City%20Road%2C%20London%2C%20EC1V%201JN%2C%20London%2C%20England",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/twisted-bear-london-the-return-tickets-1992217564364",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "twisted-bear-london-the-return-5fafb1d5"
     },
     {
       "name": "BOATMINCE",
@@ -374,6 +320,60 @@
         }
       ],
       "slug": "boatmince-61f25b7e"
+    },
+    {
+      "name": "BEEFMINCE x RVT",
+      "day": "Saturday",
+      "time": "10PM-4AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 51.4863391,
+        "lng": -0.1217784
+      },
+      "startDate": "2026-11-21T22:00:00",
+      "endDate": "2026-11-22T04:00:00",
+      "unprocessedDescription": "bar: Royal Vauxhall Tavern\naddress: 372 Kennington Ln, London\r, United Kingdom SE11 5HY\nimage: https://dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C0%2C768%2C768\ntimezone: Europe/London\ncover: From £10\nimageHorizontal: https://dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress\nwebsite: https://dice.fm/event/927gr7-beefmince-x-rvt-21st-nov-the-royal-vauxhall-tavern-london-tickets\ninstagram: https://www.instagram.com/rvtofficial\nshortName: BEEF-MINCE\nfavicon: https://beefmince.com\nbearSource: keyword\nkey: beefmince-x-rvt|2026-11-21|royal vauxhall tavern\ndescription: BEEFMINCE | The UK's Tastiest Bear Club *Now on Saturdays* BEEFMINCE is the Royal Vauxhall Tavern's biggest, longest running and most loved club night at this iconic LGBTQ+ venue. We're famous for our fun, social, bear full- attitude free parties with the best DJs playing the tastiest party athems ranging from disco, house and electro. For Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers & everyone in between! *More information & FAQs at beefmince.com* This is an 18+ event (valid physical photo ID, passport or driver’s license, is required for entry, no digital copies accepted.)\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJuYgA--wEdkgRD-0ylWTyMkw",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/London",
+      "wasUTC": true,
+      "sourceUid": "8DB25B07-9E96-4DB2-84F9-D779A742997D",
+      "uid": "8DB25B07-9E96-4DB2-84F9-D779A742997D",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Royal Vauxhall Tavern",
+      "cover": "From £10",
+      "image": "https://dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C0%2C768%2C768",
+      "imageHorizontal": "https://dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress",
+      "favicon": "https://beefmince.com",
+      "tea": "BEEFMINCE | The UK's Tastiest Bear Club *Now on Saturdays* BEEFMINCE is the Royal Vauxhall Tavern's biggest, longest running and most loved club night at this iconic LGBTQ+ venue. We're famous for our fun, social, bear full- attitude free parties with the best DJs playing the tastiest party athems ranging from disco, house and electro. For Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers & everyone in between! *More information & FAQs at beefmince.com* This is an 18+ event (valid physical photo ID, passport or driver’s license, is required for entry, no digital copies accepted.)",
+      "address": "372 Kennington Ln, London, United Kingdom SE11 5HY",
+      "website": "https://dice.fm/event/927gr7-beefmince-x-rvt-21st-nov-the-royal-vauxhall-tavern-london-tickets",
+      "instagram": "https://www.instagram.com/rvtofficial",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJuYgA--wEdkgRD-0ylWTyMkw",
+      "shortName": "BEEF-MINCE",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://dice.fm/event/927gr7-beefmince-x-rvt-21st-nov-the-royal-vauxhall-tavern-london-tickets",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/rvtofficial",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJuYgA--wEdkgRD-0ylWTyMkw",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "beefmince-x-rvt-1d5ae452"
     }
   ]
 }
