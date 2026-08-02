@@ -635,6 +635,24 @@ function buildArbitrationPair() {
   return { scraped, existing };
 }
 
+// Which neutral slot ("version-one"/"version-two") holds `value` for `field`
+// in the outgoing arbitration prompt? The prompt's slot assignment is canonical
+// (content-derived), not caller-ordered, so fixtures cannot hardcode it.
+function arbitrationSlotHolding(prompt, field, value) {
+  const match = String(prompt).match(
+    new RegExp(`- field: ${field}\\n  version-one: (.*)\\n  version-two: (.*)`)
+  );
+  if (!match) return '';
+  const target = String(value === null || value === undefined ? '' : value);
+  try {
+    if (JSON.parse(match[1]) === target) return 'version-one';
+    if (JSON.parse(match[2]) === target) return 'version-two';
+  } catch (_) {
+    return '';
+  }
+  return '';
+}
+
 function buildArbitrationAdapter(choices, options = {}) {
   const calls = [];
   return {
@@ -642,10 +660,29 @@ function buildArbitrationAdapter(choices, options = {}) {
     postJson: async (endpoint, payload) => {
       calls.push(payload);
       if (options.fail) throw new Error('AI endpoint down');
+      // The simulated model sees canonical neutral slot labels, so fixtures
+      // express their answer by VALUE: each choice's pick is translated to the
+      // neutral label of whichever slot holds that value in the actual outgoing
+      // prompt — exactly how a verbatim-copying model answers. Values matching
+      // neither slot (hallucination fixtures) keep their original pick and are
+      // rejected by the gate as before. keepPicks: true skips translation to
+      // exercise the wrong-label recovery path.
+      const prompt = String(payload.prompt || (Array.isArray(payload.messages)
+        ? payload.messages.map(m => m.content).join('\n')
+        : ''));
+      const translated = {};
+      for (const [field, choice] of Object.entries(choices || {})) {
+        const entry = { ...choice };
+        if (!options.keepPicks) {
+          const slot = arbitrationSlotHolding(prompt, field, entry.value);
+          if (slot) entry.pick = slot;
+        }
+        translated[field] = entry;
+      }
       return {
         ok: true,
         status: 200,
-        text: JSON.stringify({ response: JSON.stringify({ choices }) })
+        text: JSON.stringify({ response: JSON.stringify({ choices: translated }) })
       };
     }
   };
@@ -707,12 +744,13 @@ test('hallucinated or missing AI answers fall back to the scraped value (clobber
 test('a verbatim value with a wrong pick label is trusted via the value', async () => {
   const core = createCore();
   const { scraped, existing } = buildArbitrationPair();
-  // pick says scraped but the value verbatim-equals the CALENDAR candidate
+  // keepPicks sends labels the gate can't validate ("scraped" is not a neutral
+  // slot label) — the verbatim value alone must identify the winner
   const adapter = buildArbitrationAdapter({
     title: { pick: 'scraped', value: 'FURBALL DALLAS' },
     bar: { pick: 'scraped', value: 'STATION 4' },
     startDate: { pick: 'scraped', value: '2026-07-05T22:00:00.000Z' }
-  });
+  }, { keepPicks: true });
 
   const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
   assert.equal(finalEvent.bar, 'STATION 4', 'the verbatim-matched candidate wins despite the mislabeled pick');
@@ -762,6 +800,278 @@ test('non-conflicts never reach the AI and keep clobber semantics', async () => 
 
   assert.equal(adapter.calls.length, 0, 'no conflicts → no AI request');
   assert.equal(finalEvent.cover, '$10', 'one-sided fields are added via clobber semantics');
+});
+
+// ---------------------------------------------------------------------------
+// Order-independent arbitration: the prompt is a pure function of the
+// UNORDERED pair of records (canonical slot orientation + neutral labels),
+// and the neutral pick maps back to the caller's labels at the boundary.
+// ---------------------------------------------------------------------------
+
+const ARBITRATION_TEST_AI_CONFIG = { ai: { provider: 'ollama', endpoint: 'http://ai.example/api/generate', model: 'test-model' } };
+
+// Simulated model that always answers the given neutral slot, copying that
+// slot's value verbatim out of the actual outgoing prompt.
+function buildSlotPickingAdapter(slot, fields) {
+  const calls = [];
+  return {
+    calls,
+    postJson: async (endpoint, payload) => {
+      calls.push(payload);
+      const prompt = String(payload.prompt || '');
+      const choices = {};
+      for (const field of fields) {
+        const match = prompt.match(new RegExp(`- field: ${field}\\n  version-one: (.*)\\n  version-two: (.*)`));
+        assert.ok(match, `the ${field} conflict must reach the prompt`);
+        choices[field] = {
+          pick: slot,
+          value: JSON.parse(slot === 'version-one' ? match[1] : match[2]),
+          reason: 'slot picker'
+        };
+      }
+      return { ok: true, status: 200, text: JSON.stringify({ response: JSON.stringify({ choices }) }) };
+    }
+  };
+}
+
+function buildEnrichSide(fields) {
+  const core = createCore();
+  return {
+    source: 'ai-web',
+    startDate: new Date('2026-08-02T05:00:00.000Z'),
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: ARBITRATION_TEST_AI_CONFIG,
+    ...fields
+  };
+}
+
+test('enrich-path arbitration prompt is byte-identical for swapped inputs', async () => {
+  const core = createCore();
+  const sideA = () => buildEnrichSide({ title: 'CLUB CHUB: DURO', bar: 'DURO' });
+  const sideB = () => buildEnrichSide({ title: 'D>U>R>O is back NEW OUTDOOR LOCATION _ NIGHT FOAM PARTY', bar: 'DOWNTOWN LA' });
+
+  const adapterAB = buildArbitrationAdapter({});
+  await core.mergeParsedEvents(sideA(), sideB(), { httpAdapter: adapterAB });
+  const adapterBA = buildArbitrationAdapter({});
+  await core.mergeParsedEvents(sideB(), sideA(), { httpAdapter: adapterBA });
+
+  assert.equal(adapterAB.calls.length, 1);
+  assert.equal(adapterBA.calls.length, 1);
+  assert.equal(adapterAB.calls[0].prompt, adapterBA.calls[0].prompt,
+    'crawl order must not change a single byte of the arbitration prompt');
+  assert.match(adapterAB.calls[0].prompt, /version-one/, 'slots use neutral labels');
+  assert.ok(!/"existing"|"incoming"/.test(adapterAB.calls[0].prompt),
+    'caller labels never reach the model');
+});
+
+test('calendar-path arbitration prompt is byte-identical when the sides swap contents', async () => {
+  const buildCalendarPair = (swapped) => {
+    const core = createCore();
+    const titles = ['FURBALL', 'FURBALL DALLAS'];
+    const bars = ['STATION 4', 'S4'];
+    const [calTitle, scrTitle] = swapped ? [...titles].reverse() : titles;
+    const [calBar, scrBar] = swapped ? [...bars].reverse() : bars;
+    const scraped = {
+      title: scrTitle,
+      bar: scrBar,
+      startDate: new Date('2026-07-05T22:00:00.000Z'),
+      source: 'ai-web',
+      city: 'dallas',
+      _fieldPriorities: core.getResolvedFieldPriorities({}),
+      _parserConfig: ARBITRATION_TEST_AI_CONFIG
+    };
+    const existing = {
+      title: calTitle,
+      startDate: new Date('2026-07-05T22:00:00.000Z'),
+      notes: `bar: ${calBar}`
+    };
+    return { core, existing, scraped };
+  };
+
+  const straight = buildCalendarPair(false);
+  const adapterStraight = buildArbitrationAdapter({});
+  await straight.core.createFinalEventObject(straight.existing, straight.scraped, { httpAdapter: adapterStraight });
+
+  const swapped = buildCalendarPair(true);
+  const adapterSwapped = buildArbitrationAdapter({});
+  await swapped.core.createFinalEventObject(swapped.existing, swapped.scraped, { httpAdapter: adapterSwapped });
+
+  assert.equal(adapterStraight.calls.length, 1);
+  assert.equal(adapterSwapped.calls.length, 1);
+  assert.equal(adapterStraight.calls[0].prompt, adapterSwapped.calls[0].prompt,
+    'which side holds which value must not change a single byte of the prompt');
+});
+
+test('neutral-slot picks map back to the correct side under BOTH input orders (flip catcher)', async () => {
+  // Single bar conflict with sentinels whose canonical orientation is known a
+  // priori: "AAA SENTINEL ONE" sorts before "ZZZ SENTINEL TWO", so it is
+  // ALWAYS version-one no matter which input side carries it. A swapped
+  // boundary mapping would write the other side's value in all four runs.
+  const sentinelOne = 'AAA SENTINEL ONE';
+  const sentinelTwo = 'ZZZ SENTINEL TWO';
+  const sideOne = () => buildEnrichSide({ title: 'FURBALL', bar: sentinelOne });
+  const sideTwo = () => buildEnrichSide({ title: 'FURBALL', bar: sentinelTwo });
+
+  for (const [slot, expected] of [['version-one', sentinelOne], ['version-two', sentinelTwo]]) {
+    for (const [first, second] of [[sideOne, sideTwo], [sideTwo, sideOne]]) {
+      const core = createCore();
+      const adapter = buildSlotPickingAdapter(slot, ['bar']);
+      const merged = await core.mergeParsedEvents(first(), second(), { httpAdapter: adapter });
+      assert.equal(adapter.calls.length, 1, 'the bar conflict must be AI-arbitrated');
+      assert.equal(merged.bar, expected,
+        `picking ${slot} must land the ${expected} value regardless of input order`);
+    }
+  }
+});
+
+test('calendar-path neutral-slot picks map back correctly under both content orientations', async () => {
+  const sentinelOne = 'AAA SENTINEL ONE';
+  const sentinelTwo = 'ZZZ SENTINEL TWO';
+  const buildPair = (calendarHoldsOne) => {
+    const core = createCore();
+    const scraped = {
+      title: 'FURBALL',
+      bar: calendarHoldsOne ? sentinelTwo : sentinelOne,
+      startDate: new Date('2026-07-05T22:00:00.000Z'),
+      source: 'ai-web',
+      _fieldPriorities: core.getResolvedFieldPriorities({}),
+      _parserConfig: ARBITRATION_TEST_AI_CONFIG
+    };
+    const existing = {
+      title: 'FURBALL',
+      startDate: new Date('2026-07-05T22:00:00.000Z'),
+      notes: `bar: ${calendarHoldsOne ? sentinelOne : sentinelTwo}`
+    };
+    return { core, existing, scraped };
+  };
+
+  for (const [slot, expected] of [['version-one', sentinelOne], ['version-two', sentinelTwo]]) {
+    for (const calendarHoldsOne of [true, false]) {
+      const { core, existing, scraped } = buildPair(calendarHoldsOne);
+      const adapter = buildSlotPickingAdapter(slot, ['bar']);
+      const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+      assert.equal(adapter.calls.length, 1, 'the bar conflict must be AI-arbitrated');
+      assert.equal(finalEvent.bar, expected,
+        `picking ${slot} must land the ${expected} value whichever side holds it`);
+    }
+  }
+});
+
+test('getKnownOrganizer is symmetric: agreement returns the name, disagreement fails closed', () => {
+  const core = createCore();
+  // Agreement (both arg orders)
+  assert.equal(core.getKnownOrganizer({ _organizer: 'Bearracuda' }, { _organizer: 'Bearracuda' }), 'Bearracuda');
+  assert.equal(core.getKnownOrganizer({ _organizer: 'Bearracuda' }, {}), 'Bearracuda');
+  assert.equal(core.getKnownOrganizer({}, { _organizer: 'Bearracuda' }), 'Bearracuda');
+  // Agreement under the promoter identity key keeps first-encountered casing
+  assert.equal(core.getKnownOrganizer({ _organizer: 'BEARRACUDA' }, { _organizer: 'Bearracuda' }), 'BEARRACUDA');
+  // Disagreement → '' in BOTH orders (the DURO co-promoter case: asserting
+  // either "Eventbrite" or "CLUB CHUB" steered the bar verdict differently)
+  assert.equal(core.getKnownOrganizer({ _organizer: 'Eventbrite' }, { _organizer: 'CLUB CHUB' }), '');
+  assert.equal(core.getKnownOrganizer({ _organizer: 'CLUB CHUB' }, { _organizer: 'Eventbrite' }), '');
+  // All-empty → ''
+  assert.equal(core.getKnownOrganizer({}, { _organizer: '   ' }), '');
+  assert.equal(core.getKnownOrganizer(), '');
+});
+
+test('swapped-orientation re-arbitration is served from the AI response cache', async () => {
+  const store = new Map();
+  const attachCache = (core) => {
+    core.aiResponseCache = {
+      read: async (aiConfig, prompt) => store.get(prompt) || null,
+      write: async (aiConfig, prompt, passLabel, text) => { store.set(prompt, text); }
+    };
+  };
+  const sideA = () => buildEnrichSide({ title: 'CLUB CHUB: DURO' });
+  const sideB = () => buildEnrichSide({ title: 'D>U>R>O is back NEW OUTDOOR LOCATION _ NIGHT FOAM PARTY' });
+
+  const coreFirst = createCore();
+  attachCache(coreFirst);
+  const adapterFirst = buildSlotPickingAdapter('version-one', ['title']);
+  const mergedFirst = await coreFirst.mergeParsedEvents(sideA(), sideB(), { httpAdapter: adapterFirst });
+
+  const coreSecond = createCore();
+  attachCache(coreSecond);
+  const adapterSecond = buildSlotPickingAdapter('version-one', ['title']);
+  const mergedSecond = await coreSecond.mergeParsedEvents(sideB(), sideA(), { httpAdapter: adapterSecond });
+
+  assert.equal(adapterFirst.calls.length, 1, 'first orientation hits the transport');
+  assert.equal(adapterSecond.calls.length, 0, 'the swapped orientation must be a cache hit — no second AI call');
+  assert.equal(mergedFirst.title, mergedSecond.title, 'both orientations resolve to the same winning value');
+});
+
+test('DURO regression: the log 20260801-172321 pair arbitrates identically in both orientations', async () => {
+  // Reconstructed from logs/20260801-172321.log — the second arbitration
+  // (:2197-2226) carried these exact conflicts, and the first (:2096-2123) had
+  // already seen the same title pair in the OPPOSITE orientation 11s earlier;
+  // the model picked `incoming` both times. The two records also disagreed on
+  // the derived organizer ("Eventbrite" vs "CLUB CHUB" — :2102 vs :2218).
+  const duroSide = {
+    title: 'D>U>R>O is back NEW OUTDOOR LOCATION _ NIGHT FOAM PARTY',
+    address: 'DTLA, Los Angeles, CA 90013',
+    bar: 'DURO',
+    startDate: '2026-08-02T05:00:00.000Z',
+    source: 'ai-web',
+    _organizer: 'Eventbrite'
+  };
+  const chubSide = {
+    title: 'CLUB CHUB: DURO',
+    address: 'Downtown Los Angeles',
+    bar: 'DOWNTOWN LA',
+    startDate: '2026-08-02T05:00:00.000Z',
+    source: 'ai-web',
+    _organizer: 'CLUB CHUB'
+  };
+  // The real model's winning VALUES from :2218-2226
+  const modelAnswers = {
+    title: { value: 'CLUB CHUB: DURO', reason: 'canonical event name' },
+    address: { value: 'DTLA, Los Angeles, CA 90013', reason: 'more specific' },
+    bar: { value: 'DURO', reason: 'physical venue' }
+  };
+
+  const runOrientation = async (existingSide, incomingSide) => {
+    const core = createCore();
+    const adapter = buildArbitrationAdapter(modelAnswers);
+    const conflicts = ['title', 'address', 'bar'].map(field => ({
+      field,
+      values: { existing: existingSide[field], incoming: incomingSide[field] }
+    }));
+    const result = await core.arbitrateMergeConflicts({
+      conflicts,
+      labels: ['existing', 'incoming'],
+      aiConfig: { enabled: true, provider: 'ollama', endpoint: 'http://ai.example/api/generate', model: 'test-model' },
+      httpAdapter: adapter,
+      context: {
+        existing: { title: existingSide.title, startDate: existingSide.startDate, source: existingSide.source },
+        incoming: { title: incomingSide.title, startDate: incomingSide.startDate, source: incomingSide.source }
+      },
+      organizer: core.getKnownOrganizer(incomingSide, existingSide)
+    });
+    const winners = {};
+    for (const conflict of conflicts) {
+      winners[conflict.field] = result[conflict.field] ? conflict.values[result[conflict.field].pick] : null;
+    }
+    return { prompt: adapter.calls[0].prompt, winners };
+  };
+
+  const straight = await runOrientation(duroSide, chubSide); // as logged at :2197
+  const mirrored = await runOrientation(chubSide, duroSide); // as the pair sat at :2096
+
+  assert.equal(straight.prompt, mirrored.prompt, 'both orientations must render the SAME prompt');
+  assert.ok(!/KNOWN ORGANIZER/.test(straight.prompt),
+    'disagreeing organizers (Eventbrite vs CLUB CHUB) must fail closed — no organizer assertion');
+  const addressAt = straight.prompt.indexOf('- field: address');
+  const barAt = straight.prompt.indexOf('- field: bar');
+  const titleAt = straight.prompt.indexOf('- field: title');
+  assert.ok(addressAt !== -1 && addressAt < barAt && barAt < titleAt,
+    'conflict lines are sorted by field name');
+  assert.deepEqual(straight.winners, {
+    title: 'CLUB CHUB: DURO',
+    address: 'DTLA, Los Angeles, CA 90013',
+    bar: 'DURO'
+  });
+  assert.deepEqual(mirrored.winners, straight.winners,
+    'the same records must produce the same winning values from either orientation');
 });
 
 // ---------------------------------------------------------------------------
@@ -6815,8 +7125,11 @@ test('merge arbitration prompt: descriptive subtitles/editions win for title; st
       capturedPrompt = Array.isArray(payload.messages)
         ? payload.messages.map(m => m.content).join('\n')
         : String(payload.prompt || '');
+      // Canonical slots: "Treasure Trail Seattle" (scraped) sorts before
+      // "Treasure Trail Seattle: Summer Sausage" (calendar), so the calendar
+      // value sits in version-two — the model answers in neutral labels.
       const content = JSON.stringify({
-        choices: { title: { pick: 'calendar', value: 'Treasure Trail Seattle: Summer Sausage', reason: 'richer name' } }
+        choices: { title: { pick: 'version-two', value: 'Treasure Trail Seattle: Summer Sausage', reason: 'richer name' } }
       });
       return { ok: true, text: JSON.stringify({ choices: [{ message: { content } }] }) };
     }
@@ -6826,7 +7139,10 @@ test('merge arbitration prompt: descriptive subtitles/editions win for title; st
     labels: ['calendar', 'scraped'],
     aiConfig: { enabled: true, provider: 'openai', endpoint: 'http://test.local/v1/chat/completions', model: 'test-model' },
     httpAdapter,
-    eventContext: '"Treasure Trail Seattle" starting 2026-08-16T04:00:00.000Z'
+    context: {
+      calendar: { title: 'Treasure Trail Seattle: Summer Sausage', startDate: '2026-08-16T04:00:00.000Z' },
+      scraped: { title: 'Treasure Trail Seattle', startDate: '2026-08-16T04:00:00.000Z' }
+    }
   });
   // The rule set must say richer variants win (2026-07-21 run stripped
   // ": Summer Sausage" and "Horse Meat Disco" from calendar titles)...

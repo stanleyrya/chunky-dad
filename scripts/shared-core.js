@@ -2506,26 +2506,79 @@ class SharedCore {
     // raw, <labelB>: raw } }]. Returns { [field]: { pick, reason } } containing only
     // fields whose answer survived the verbatim gate, or null when no usable response
     // was obtained at all (caller falls back for everything).
-    async arbitrateMergeConflicts({ conflicts, labels, aiConfig, httpAdapter, eventContext = '', organizer = '' }) {
+    //
+    // Order independence (2026-08-02, sanctioned prompt change): the prompt is a
+    // pure function of the UNORDERED pair of records. Run 20260801-172321 proved
+    // the model picks by slot, not content — the enrich path picked "incoming"
+    // 72% of the time, the calendar path picked "calendar" 66%, and the identical
+    // DURO title pair was arbitrated twice 11s apart in OPPOSITE orientations and
+    // picked "incoming" both times. So the two sides are re-oriented canonically
+    // (conflicts sorted by field name; each side keyed by its "field
+    // serializedValue" concatenation; the lexicographically smaller side becomes
+    // slot one; ties keep the caller's first label in slot one) and presented
+    // under NEUTRAL labels ("version-one"/"version-two") that carry no
+    // recency/savedness connotation. The model's neutral pick is mapped back to
+    // the caller's labels at the boundary, so callers, their logs, and
+    // decision.pick semantics are unchanged. Canonical prompts also let the AI
+    // response cache hit when the same pair recurs in the opposite orientation.
+    //
+    // `context` carries per-caller-label { title, startDate, source? } so the
+    // EVENT line is derived from slot order — identical for swapped inputs —
+    // instead of a caller-baked (order-dependent) string. The provenance
+    // segment renders only when a side declares `source`.
+    async arbitrateMergeConflicts({ conflicts, labels, aiConfig, httpAdapter, context = null, organizer = '' }) {
         const list = Array.isArray(conflicts) ? conflicts.filter(Boolean) : [];
         if (list.length === 0) return null;
         if (!aiConfig || aiConfig.enabled === false || aiConfig.arbitrateMerges === false) return null;
         if (!httpAdapter || typeof httpAdapter.postJson !== 'function') return null;
         const [labelA, labelB] = labels;
 
+        // Sort the batch by field name so the conflict list itself is order-stable.
+        const sortedConflicts = [...list].sort((a, b) => (a.field < b.field ? -1 : a.field > b.field ? 1 : 0));
         const serializedByField = {};
-        const conflictLines = [];
-        for (const conflict of list) {
-            const serializedA = this.serializeArbitrationValue(conflict.field, conflict.values[labelA]);
-            const serializedB = this.serializeArbitrationValue(conflict.field, conflict.values[labelB]);
-            serializedByField[conflict.field] = { [labelA]: serializedA, [labelB]: serializedB };
-            conflictLines.push(`- field: ${conflict.field}\n  ${labelA}: ${JSON.stringify(serializedA)}\n  ${labelB}: ${JSON.stringify(serializedB)}`);
+        for (const conflict of sortedConflicts) {
+            serializedByField[conflict.field] = {
+                [labelA]: this.serializeArbitrationValue(conflict.field, conflict.values[labelA]),
+                [labelB]: this.serializeArbitrationValue(conflict.field, conflict.values[labelB])
+            };
+        }
+
+        // Canonical orientation: the side whose sorted "field serializedValue"
+        // concatenation is lexicographically smaller takes slot one; on a tie
+        // (identical concatenations) the caller's first label stays slot one.
+        const orientationKey = (label) => sortedConflicts
+            .map(conflict => `${conflict.field} ${serializedByField[conflict.field][label]}`)
+            .join('\n');
+        const SLOT_ONE = 'version-one';
+        const SLOT_TWO = 'version-two';
+        const slotOneLabel = orientationKey(labelB) < orientationKey(labelA) ? labelB : labelA;
+        const slotTwoLabel = slotOneLabel === labelA ? labelB : labelA;
+        const callerLabelForSlot = { [SLOT_ONE]: slotOneLabel, [SLOT_TWO]: slotTwoLabel };
+
+        const conflictLines = sortedConflicts.map(conflict => {
+            const serialized = serializedByField[conflict.field];
+            return `- field: ${conflict.field}\n  ${SLOT_ONE}: ${JSON.stringify(serialized[slotOneLabel])}\n  ${SLOT_TWO}: ${JSON.stringify(serialized[slotTwoLabel])}`;
+        });
+
+        // EVENT line built from slot order so swapped inputs render identically:
+        // title/startDate come from slot one when both sides carry one (falling
+        // back to slot two), provenance lists the slots in slot order.
+        let eventContext = '';
+        if (context && typeof context === 'object') {
+            const slotOneInfo = context[slotOneLabel] && typeof context[slotOneLabel] === 'object' ? context[slotOneLabel] : {};
+            const slotTwoInfo = context[slotTwoLabel] && typeof context[slotTwoLabel] === 'object' ? context[slotTwoLabel] : {};
+            const title = String(slotOneInfo.title || '').trim() || String(slotTwoInfo.title || '').trim() || 'event';
+            const startDate = this.serializeArbitrationValue('startDate', slotOneInfo.startDate || slotTwoInfo.startDate) || 'unknown';
+            const provenance = ('source' in slotOneInfo) || ('source' in slotTwoInfo)
+                ? ` (${SLOT_ONE} from ${slotOneInfo.source || 'unknown'}, ${SLOT_TWO} from ${slotTwoInfo.source || 'unknown'})`
+                : '';
+            eventContext = `"${title}" starting ${startDate}${provenance}`;
         }
 
         const prompt = [
             'You are resolving merge conflicts between two records of the SAME event.',
             eventContext ? `EVENT: ${eventContext}` : '',
-            `Record "${labelA}" and record "${labelB}" each provide a value for the fields below.`,
+            `Record "${SLOT_ONE}" and record "${SLOT_TWO}" each provide a value for the fields below.`,
             '',
             'For each field, pick the value that is more correct, complete, and canonical',
             '(official names, full addresses, complete URLs, correctly formatted values).',
@@ -2544,9 +2597,9 @@ class SharedCore {
             '- For "title", a bare city name is not an event name — prefer the variant that names the event or its organizer.',
             '- For "title", the event\'s own date is NOT descriptive — never prefer a variant because it contains a date; prefer the dateless variant of an otherwise-equal name.',
             '- For "image", prefer event-specific promotional artwork over site or ticketing-service logos.',
-            `- "pick" must be "${labelA}" or "${labelB}".`,
+            `- "pick" must be "${SLOT_ONE}" or "${SLOT_TWO}".`,
             'Return JSON only:',
-            `{"choices": {"<field>": {"pick": "${labelA}" or "${labelB}", "value": "<exact copy of the chosen value>", "reason": "<one short sentence>"}}}`
+            `{"choices": {"<field>": {"pick": "${SLOT_ONE}" or "${SLOT_TWO}", "value": "<exact copy of the chosen value>", "reason": "<one short sentence>"}}}`
         ].filter(line => line !== '').join('\n');
 
         const arbitrationConfig = { ...aiConfig, numPredict: Math.min(Number(aiConfig.numPredict) || 800, 800) };
@@ -2563,7 +2616,7 @@ class SharedCore {
         const choices = parsed.choices && typeof parsed.choices === 'object' ? parsed.choices : parsed;
 
         const results = {};
-        for (const conflict of list) {
+        for (const conflict of sortedConflicts) {
             const field = conflict.field;
             const entry = choices[field];
             const serialized = serializedByField[field];
@@ -2577,8 +2630,12 @@ class SharedCore {
             const matchesA = this.arbitrationValuesEqual(field, answer, serialized[labelA]);
             const matchesB = this.arbitrationValuesEqual(field, answer, serialized[labelB]);
 
-            if (labels.includes(pick) && this.arbitrationValuesEqual(field, answer, serialized[pick])) {
-                results[field] = { pick, reason };
+            // The model answers in neutral slot labels; map the pick back to the
+            // caller's labels HERE, before results/logs ever see it — everything
+            // downstream keeps caller-label semantics byte-for-byte.
+            const pickedCallerLabel = callerLabelForSlot[pick] || '';
+            if (pickedCallerLabel && this.arbitrationValuesEqual(field, answer, serialized[pickedCallerLabel])) {
+                results[field] = { pick: pickedCallerLabel, reason };
             } else if (matchesA !== matchesB) {
                 // Wrong/missing pick label but the value is provably one of the options
                 const recoveredPick = matchesA ? labelA : labelB;
@@ -6465,7 +6522,13 @@ class SharedCore {
                     labels: ['existing', 'incoming'],
                     aiConfig,
                     httpAdapter: options.httpAdapter,
-                    eventContext: `"${eventTitle}" starting ${this.serializeArbitrationValue('startDate', newEvent.startDate || existingEvent.startDate) || 'unknown'} (record "existing" from ${existingEvent.source || 'unknown'}, record "incoming" from ${newEvent.source || 'unknown'})`,
+                    // Structured per-side provenance: arbitrateMergeConflicts
+                    // derives the EVENT line from canonical slot order so the
+                    // prompt is identical for swapped inputs.
+                    context: {
+                        existing: { title: existingEvent.title, startDate: existingEvent.startDate, source: existingEvent.source || 'unknown' },
+                        incoming: { title: newEvent.title, startDate: newEvent.startDate, source: newEvent.source || 'unknown' }
+                    },
                     organizer: this.getKnownOrganizer(newEvent, existingEvent)
                 });
             } catch (error) {
@@ -6916,7 +6979,6 @@ class SharedCore {
         if (pendingAiConflicts.length > 0) {
             const eventTitle = scraperObject.title || calendarObject.title || 'event';
             const aiConfig = this.getMergeArbitrationConfig(newEvent, options.globalConfig);
-            const eventContext = `"${eventTitle}" starting ${this.serializeArbitrationValue('startDate', scraperObject.startDate || calendarObject.startDate) || 'unknown'}`;
             let arbitration = null;
             try {
                 arbitration = await this.arbitrateMergeConflicts({
@@ -6924,7 +6986,13 @@ class SharedCore {
                     labels: ['calendar', 'scraped'],
                     aiConfig,
                     httpAdapter: options.httpAdapter,
-                    eventContext,
+                    // Structured per-side context (no `source` here — this path
+                    // never carried provenance): the EVENT line is derived from
+                    // canonical slot order, identical for swapped inputs.
+                    context: {
+                        calendar: { title: calendarObject.title, startDate: calendarObject.startDate },
+                        scraped: { title: scraperObject.title, startDate: scraperObject.startDate }
+                    },
                     organizer: this.getKnownOrganizer(scraperObject, calendarObject)
                 });
             } catch (error) {
@@ -10866,13 +10934,34 @@ class SharedCore {
 
     // The organizer brand a parser derived from page metadata and stamped as
     // internal metadata (_organizer, excluded from notes/merge field loops).
-    // First non-empty value across the given event records wins.
+    //
+    // BEHAVIOR CHANGE (2026-08-02): symmetric by design. The old "first
+    // non-empty value wins" rule made the arbitration prompt depend on argument
+    // order — the DURO run asserted KNOWN ORGANIZER "Eventbrite" in one
+    // orientation and "CLUB CHUB" in the other for the SAME event pair, steering
+    // the bar verdict differently each way. Now organizer candidates are
+    // collected from ALL passed events and compared under the promoter-name
+    // identity key: if every non-empty candidate agrees, the first-encountered
+    // original casing of that agreed name is returned; if they DISAGREE, return
+    // '' (fail closed — asserting either co-promoter in the prompt was exactly
+    // wrong in the DURO case); all-empty also returns ''.
     getKnownOrganizer(...events) {
+        let firstOriginal = '';
+        let agreedKey = '';
         for (const event of events) {
             const organizer = event && typeof event._organizer === 'string' ? event._organizer.trim() : '';
-            if (organizer) return organizer;
+            if (!organizer) continue;
+            const key = typeof this.normalizePromoterNameKey === 'function'
+                ? this.normalizePromoterNameKey(organizer)
+                : organizer.toLowerCase();
+            if (!firstOriginal) {
+                firstOriginal = organizer;
+                agreedKey = key;
+            } else if (key !== agreedKey) {
+                return '';
+            }
         }
-        return '';
+        return firstOriginal;
     }
 
     // === Calendar stickiness (REPORT-ONLY by default) ===
