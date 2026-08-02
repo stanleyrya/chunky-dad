@@ -11683,3 +11683,54 @@ test('calendar stickiness enforcement is OFF by default and is a one-flag change
   // Never truthy-coerced: only an explicit true enforces.
   assert.equal(core.resolveAiConfig({ calendarStickinessEnforced: 'yes' }).calendarStickinessEnforced, false);
 });
+
+// ---------------------------------------------------------------------------
+// Phantom description conflicts. The formatting sanitizer runs at the FINAL
+// analyzed-event build — after merge arbitration — so a scraped description
+// still carrying markdown was arbitrated raw against an already-sanitized
+// calendar value. Run 20260802 did this for every BEEFMINCE event, every run:
+// an AI call, a "clobber", the model picking the markdown ("preserves the
+// original bold formatting"), and the sanitizer then stripping it back to the
+// exact value already on the calendar. Zero data change, real cost.
+// ---------------------------------------------------------------------------
+
+test('a description differing only in formatting markup never reaches the AI', () => {
+  // Wired exactly like production (real NormalizerPipeline injected) — an
+  // unwired core would make this rung silently unreachable and the test green
+  // for the wrong reason.
+  const core = createFinalBuildCore();
+  // Verbatim from logs/20260802-*.log (dice.fm vs the saved calendar value).
+  const scraped = "**BEEFMINCE | The UK's Tastiest Bear Club** **\\*Now on Saturdays\\***";
+  const calendar = "BEEFMINCE | The UK's Tastiest Bear Club *Now on Saturdays*";
+
+  // Calendar-side orientation: the already-clean value wins.
+  const calendarFirst = core.resolveConflictDeterministically('description', calendar, scraped, {});
+  assert.ok(calendarFirst, 'must resolve without the AI');
+  assert.equal(calendarFirst.winner, 'a');
+  assert.match(calendarFirst.reason, /formatting markup is stripped/);
+
+  // Swapped orientation: still the clean side, not the slot.
+  const scrapedFirst = core.resolveConflictDeterministically('description', scraped, calendar, {});
+  assert.ok(scrapedFirst, 'must resolve without the AI in both orientations');
+  assert.equal(scrapedFirst.winner, 'b', 'the sanitized value wins regardless of position');
+
+  // A genuinely different description still arbitrates.
+  assert.equal(
+    core.resolveConflictDeterministically('description', calendar, 'A totally different night at the RVT.', {}),
+    null);
+  // Identical values still resolve (via the pre-existing case-only rung, which
+  // keeps valueA) — but they must not be attributed to THIS rung, whose claim
+  // is specifically "the two differ only in markup".
+  const identical = core.resolveConflictDeterministically('description', calendar, calendar, {});
+  assert.ok(identical && identical.winner === 'a');
+  assert.doesNotMatch(identical.reason, /formatting markup is stripped/);
+});
+
+test('the formatting rung fails open when no normalizer pipeline is injected', () => {
+  // shared-core stays platform-pure: it never loads normalizers itself. With
+  // no pipeline the rung must simply not fire rather than throw.
+  const core = createCore();
+  const scraped = "**BEEFMINCE**";
+  const calendar = 'BEEFMINCE';
+  assert.doesNotThrow(() => core.resolveConflictDeterministically('description', calendar, scraped, {}));
+});
