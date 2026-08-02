@@ -304,7 +304,7 @@ const scraperCities = {
     }
   },
   "pv": {
-    "calendar": "chunky-dad-puerto-vallarta",
+    "calendar": "chunky-dad-pv",
     "timezone": "America/Mexico_City",
     "patterns": [
       "puerto vallarta",
@@ -577,7 +577,7 @@ const scraperCities = {
     }
   },
   "hong-kong": {
-    "calendar": "chunky-dad-hongkong",
+    "calendar": "chunky-dad-hong-kong",
     "timezone": "Asia/Hong_Kong",
     "patterns": [
       "hong kong",

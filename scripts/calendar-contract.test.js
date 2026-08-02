@@ -320,10 +320,9 @@ test('contract: every city calendar name is derivable from that city identity', 
   // Calendar names that intentionally differ from every derivable form. Each
   // entry is a live calendar we have NOT verified we can safely rename, so it
   // is pinned rather than "fixed" — remove an entry once its calendar is
-  // confirmed renamed on the device.
-  const DELIBERATE_EXCEPTIONS = new Map([
-    ['hong-kong', 'chunky-dad-hongkong']
-  ]);
+  // confirmed renamed on the device. (hong-kong was pinned here until the
+  // device calendar was confirmed as chunky-dad-hong-kong, 2026-08-02.)
+  const DELIBERATE_EXCEPTIONS = new Map([]);
 
   const slugify = (value) => String(value || '')
     .toLowerCase()
