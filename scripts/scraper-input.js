@@ -94,7 +94,14 @@ const scraperConfig = {
     },
     {
       name: "Dallas Eagle",
-      urls: ["https://www.eventbrite.com/o/77139864473"],
+      // Venue-site repoint (2026-08-02, same shape as the Eagle LA fix in
+      // #1609): the Eventbrite org page /o/77139864473 is structurally dry —
+      // it lists nothing while the real events (dated "Start from:/End at:"
+      // listings plus "Every Wednesday" weeklies) live on the venue's own
+      // /events/ page, whose links the org-page crawl rejected as cross-host.
+      // The "End at:" start-time trap is covered by #1540's end-marker gate;
+      // dateless weeklies flow into the #1616 ICS-only recurrence path.
+      urls: ["https://www.thedallaseagle.com/events/"],
       metadata: {
         website: { value: "https://www.thedallaseagle.com" },
         facebook: { value: "https://www.facebook.com/lonestareagle" },
