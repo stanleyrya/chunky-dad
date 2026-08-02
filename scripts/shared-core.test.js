@@ -5692,6 +5692,330 @@ test('a genuinely differing scraped cover wins deterministically — freshness, 
     'the decision is recorded as deterministic for display/metrics');
 });
 
+// ---------------------------------------------------------------------------
+// Cover shape stability (2026-08-02). `cover` held four incompatible value
+// kinds and the SAME event flipped between them run after run ("BEARRACUDA:
+// Seattle" went $20-$30 → $20 → ADV. TIX AT BEARRACUDA.COM → $20). Every
+// value below is from a real run.
+// ---------------------------------------------------------------------------
+
+test('classifyCoverShape: every observed cover value classifies by shape', () => {
+  const core = createCore();
+  const expectations = {
+    price: [
+      '$20', '$15-$30', 'From £10', '20 EUR', '11.55-22.38 GBP',
+      '$14.92', '$9.27', '$20.24', '$22.10-$39.98',
+      '$10, NO COVER' // contains a currency-marked amount — price, not free
+    ],
+    prose: [
+      'ADV. TICKETS', 'ADV. TIX AT BEARRACUDA.COM', 'TIX AT THE DOOR',
+      'EARLY BEAR', 'SOLD OUT', 'TICKETS @ CHUNK-PARTY.COM',
+      'Included with Tag', 'white & silver', 'GAYMAFIABOSTON.COM FURBALL.NYC',
+      '3dollarbillbk.com',
+      // Mathematical-bold Unicode (U+1D400 block) from a real run — NFKC
+      // folding keeps it from dodging classification.
+      '𝐑𝐞𝐝 𝐰𝐫𝐢𝐬𝐭𝐛𝐚𝐧𝐝 𝐫𝐞𝐪𝐮𝐢𝐫𝐞𝐝 𝐟𝐨𝐫 𝐞𝐧𝐭𝐫𝐲'
+    ],
+    free: [
+      'Free admission', 'Free entry', 'free', 'No cover', 'NO COVER!',
+      'No cover.', 'Entrada Libre', 'Entrada Gratuita', 'gratis', 'kostenlos'
+    ],
+    empty: ['', '   ', null, undefined]
+  };
+  for (const [shape, values] of Object.entries(expectations)) {
+    for (const value of values) {
+      assert.equal(core.classifyCoverShape(value), shape,
+        `${JSON.stringify(value)} must classify as ${shape}`);
+    }
+  }
+});
+
+test('cover rung: price-shaped cover beats marketing prose in both directions', () => {
+  const core = createCore();
+  const proseVsPrice = core.resolveConflictDeterministically('cover', 'ADV. TIX AT BEARRACUDA.COM', '$20');
+  assert.deepEqual(proseVsPrice, { winner: 'b', reason: 'price-shaped cover beats marketing text' });
+  const priceVsProse = core.resolveConflictDeterministically('cover', '$20', 'ADV. TIX AT BEARRACUDA.COM');
+  assert.deepEqual(priceVsProse, { winner: 'a', reason: 'price-shaped cover beats marketing text' });
+});
+
+test('cover rung: price/free, price/price, free/prose and prose/prose all fall through to AI', () => {
+  const core = createCore();
+  // Two Sitges parsers genuinely claim "20 EUR" vs "Entrada Libre" — a real
+  // factual disagreement, never decidable by shape alone.
+  assert.equal(core.resolveConflictDeterministically('cover', '20 EUR', 'Entrada Libre'), null);
+  assert.equal(core.resolveConflictDeterministically('cover', '$15-$30', '$14.92'), null);
+  assert.equal(core.resolveConflictDeterministically('cover', 'No cover', 'SOLD OUT'), null);
+  assert.equal(core.resolveConflictDeterministically('cover', 'ADV. TICKETS', 'SOLD OUT'), null);
+});
+
+test('mergeParsedEvents: a price-shaped cover beats prose deterministically — no AI call', async () => {
+  const core = createCore();
+  const existing = {
+    title: 'BEARRACUDA: Seattle',
+    startDate: new Date('2026-08-15T21:00:00.000Z'),
+    cover: 'ADV. TIX AT BEARRACUDA.COM',
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({})
+  };
+  const incoming = {
+    title: 'BEARRACUDA: Seattle',
+    startDate: new Date('2026-08-15T21:00:00.000Z'),
+    cover: '$20',
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: TEST_AI_PARSER_CONFIG
+  };
+  const adapter = buildArbitrationAdapter({
+    cover: { pick: 'existing', value: 'ADV. TIX AT BEARRACUDA.COM', reason: 'should never be asked' }
+  });
+
+  const merged = await core.mergeParsedEvents(existing, incoming, { httpAdapter: adapter });
+
+  assert.equal(adapter.calls.length, 0, 'price-vs-prose covers must never reach arbitration');
+  assert.equal(merged.cover, '$20', 'the price-shaped side wins');
+});
+
+test('mergeParsedEvents: _coverFromJsonLdOffers follows the winning cover, never the base spread', async () => {
+  const core = createCore();
+  // Stamped incoming cover WINS (existing side empty) → the stamp survives.
+  const emptyExisting = {
+    title: 'Treasure Trail Seattle',
+    startDate: new Date('2026-08-15T21:00:00.000Z'),
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({})
+  };
+  const stampedIncoming = {
+    title: 'Treasure Trail Seattle',
+    startDate: new Date('2026-08-15T21:00:00.000Z'),
+    cover: '$14.92',
+    source: 'ai-web',
+    _coverFromJsonLdOffers: true,
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: TEST_AI_PARSER_CONFIG
+  };
+  const keptStamp = await core.mergeParsedEvents(emptyExisting, stampedIncoming, {
+    httpAdapter: buildArbitrationAdapter({})
+  });
+  assert.equal(keptStamp.cover, '$14.92');
+  assert.equal(keptStamp._coverFromJsonLdOffers, true,
+    'the stamp survives when the stamped record supplied the final cover');
+
+  // Stamped incoming cover LOSES (arbitration keeps the existing price) → the
+  // base { ...newEvent } spread must not leave a stamp describing a cover the
+  // offers record never produced.
+  const pricedExisting = {
+    title: 'Treasure Trail Seattle',
+    startDate: new Date('2026-08-15T21:00:00.000Z'),
+    cover: '$15-$30',
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({})
+  };
+  const adapter = buildArbitrationAdapter({
+    cover: { pick: 'existing', value: '$15-$30', reason: 'door price range' }
+  });
+  const droppedStamp = await core.mergeParsedEvents(pricedExisting, stampedIncoming, { httpAdapter: adapter });
+  assert.equal(adapter.calls.length, 1, 'price-vs-price covers still arbitrate');
+  assert.equal(droppedStamp.cover, '$15-$30');
+  assert.equal(droppedStamp._coverFromJsonLdOffers, undefined,
+    'a stamp for the losing cover must not shadow the winning one');
+});
+
+test('calendar merge: a non-price scrape never clobbers a price-shaped calendar cover', async () => {
+  const core = createCore();
+  const scraped = {
+    title: 'BEARRACUDA: Seattle',
+    startDate: new Date('2026-08-15T21:00:00.000Z'),
+    cover: 'ADV. TIX AT BEARRACUDA.COM',
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: TEST_AI_PARSER_CONFIG
+  };
+  const existing = {
+    title: 'BEARRACUDA: Seattle',
+    startDate: new Date('2026-08-15T21:00:00.000Z'),
+    notes: 'cover: $20'
+  };
+  const adapter = buildArbitrationAdapter({});
+
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (message) => { logLines.push(String(message)); };
+  let finalEvent;
+  try {
+    finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.equal(adapter.calls.length, 0, 'the shape decision is deterministic — no AI');
+  assert.equal(finalEvent.cover, '$20', 'the stored price survives the prose scrape');
+  assert.equal(core.parseNotesIntoFields(finalEvent.notes).cover, '$20');
+  assert.ok(logLines.some(line => line === '🔒 MERGE: "BEARRACUDA: Seattle" field=cover kept calendar value — scraped "ADV. TIX AT BEARRACUDA.COM" is not price-shaped'),
+    `expected the kept-calendar log line, got: ${JSON.stringify(logLines)}`);
+  assert.ok(finalEvent._original.aiArbitration.deterministic.includes('cover'),
+    'the kept-calendar decision is recorded as deterministic');
+});
+
+test('calendar merge: an offers-stamped live tier price never clobbers the stored door price', async () => {
+  // "Treasure Trail Seattle": stored $15-$30 was clobbered by the live tixr
+  // tier price $14.92 — fee-inclusive and built from IN-STOCK tiers only, so
+  // it moves whenever a tier sells out.
+  const core = createCore();
+  const buildScrapedTixr = () => ({
+    title: 'Treasure Trail Seattle',
+    startDate: new Date('2026-08-15T21:00:00.000Z'),
+    cover: '$14.92',
+    source: 'ai-web',
+    _coverFromJsonLdOffers: true,
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: TEST_AI_PARSER_CONFIG
+  });
+  const existing = {
+    title: 'Treasure Trail Seattle',
+    startDate: new Date('2026-08-15T21:00:00.000Z'),
+    notes: 'cover: $15-$30'
+  };
+  const adapter = buildArbitrationAdapter({});
+
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (message) => { logLines.push(String(message)); };
+  let runOne;
+  let runTwo;
+  try {
+    runOne = await core.createFinalEventObject(existing, buildScrapedTixr(), { httpAdapter: adapter });
+    // Convergence: the calendar record is unchanged, the next run scrapes the
+    // same live tier price — the stored range must survive EVERY run.
+    runTwo = await core.createFinalEventObject(
+      { ...existing, notes: runOne.notes },
+      buildScrapedTixr(),
+      { httpAdapter: adapter }
+    );
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.equal(adapter.calls.length, 0, 'the stamp decision is deterministic — no AI');
+  assert.equal(runOne.cover, '$15-$30', 'the stored door price stays');
+  assert.equal(runTwo.cover, '$15-$30', 'the stored door price stays on every subsequent run');
+  assert.ok(logLines.some(line => line === '🔒 MERGE: "Treasure Trail Seattle" field=cover kept calendar value — scraped "$14.92" is a live ticket-tier price (fee-inclusive, in-stock tiers only)'),
+    `expected the kept-calendar log line, got: ${JSON.stringify(logLines)}`);
+  assert.ok(runOne._original.aiArbitration.deterministic.includes('cover'),
+    'the kept-calendar decision is recorded as deterministic');
+});
+
+test('calendar merge: an unstamped price update and a non-price-vs-non-price change still take freshness', async () => {
+  const core = createCore();
+  const buildScraped = (cover) => ({
+    title: 'BEARRACUDA: Seattle',
+    startDate: new Date('2026-08-15T21:00:00.000Z'),
+    cover,
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: TEST_AI_PARSER_CONFIG
+  });
+  const adapter = buildArbitrationAdapter({});
+
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (message) => { logLines.push(String(message)); };
+  let priceUpdate;
+  let proseUpdate;
+  let freeToPrice;
+  try {
+    // Both price, no offers stamp: a venue really updating its door price
+    // must still propagate.
+    priceUpdate = await core.createFinalEventObject(
+      { title: 'BEARRACUDA: Seattle', startDate: new Date('2026-08-15T21:00:00.000Z'), notes: 'cover: $20-$30' },
+      buildScraped('$20'),
+      { httpAdapter: adapter }
+    );
+    // Both non-price: prose replacing prose is harmless — freshness is the
+    // best signal available (today's behavior, unchanged).
+    proseUpdate = await core.createFinalEventObject(
+      { title: 'BEARRACUDA: Seattle', startDate: new Date('2026-08-15T21:00:00.000Z'), notes: 'cover: TIX AT THE DOOR' },
+      buildScraped('SOLD OUT'),
+      { httpAdapter: adapter }
+    );
+    // Scraped price vs non-price calendar value: the price wins.
+    freeToPrice = await core.createFinalEventObject(
+      { title: 'BEARRACUDA: Seattle', startDate: new Date('2026-08-15T21:00:00.000Z'), notes: 'cover: Free admission' },
+      buildScraped('20 EUR'),
+      { httpAdapter: adapter }
+    );
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.equal(adapter.calls.length, 0, 'every branch is deterministic — no AI');
+  assert.equal(priceUpdate.cover, '$20');
+  assert.equal(proseUpdate.cover, 'SOLD OUT');
+  assert.equal(freeToPrice.cover, '20 EUR');
+  const freshnessLines = logLines.filter(line => line.startsWith('🔒 MERGE:')
+    && line.includes('field=cover')
+    && line.includes('cover reflects the live ticket page — freshness wins'));
+  assert.equal(freshnessLines.length, 3,
+    `each branch must log the unchanged freshness line, got: ${JSON.stringify(logLines)}`);
+});
+
+test('calendar merge convergence: the BEARRACUDA prose/price ping-pong settles on the price', async () => {
+  // Real observed churn: two parsers write the same event — one extracts the
+  // flyer's "ADV. TIX AT BEARRACUDA.COM", the other the ticket page's "$20" —
+  // and the calendar flipped between them every run. Now: the price lands
+  // once and prose can never clobber it again.
+  const core = createCore();
+  const buildScraped = (cover) => ({
+    title: 'BEARRACUDA: Seattle',
+    startDate: new Date('2026-08-15T21:00:00.000Z'),
+    cover,
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: TEST_AI_PARSER_CONFIG
+  });
+  const calendarRecord = (notes) => ({
+    title: 'BEARRACUDA: Seattle',
+    startDate: new Date('2026-08-15T21:00:00.000Z'),
+    notes
+  });
+  const adapter = buildArbitrationAdapter({});
+
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (message) => { logLines.push(String(message)); };
+  let runB;
+  let runA;
+  try {
+    // Run 1 — parser B scrapes the price against parser A's stored prose:
+    // the price replaces prose (freshness clobber, unchanged log line).
+    runB = await core.createFinalEventObject(
+      calendarRecord('cover: ADV. TIX AT BEARRACUDA.COM'),
+      buildScraped('$20'),
+      { httpAdapter: adapter }
+    );
+    // Run 2 — parser A re-runs its prose against the now-stored price:
+    // prose no longer clobbers, the calendar keeps $20. Converged.
+    runA = await core.createFinalEventObject(
+      calendarRecord(runB.notes),
+      buildScraped('ADV. TIX AT BEARRACUDA.COM'),
+      { httpAdapter: adapter }
+    );
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.equal(adapter.calls.length, 0, 'neither run consults the AI');
+  assert.equal(runB.cover, '$20', 'run 1: the scraped price replaces the stored prose');
+  assert.equal(core.parseNotesIntoFields(runB.notes).cover, '$20');
+  assert.equal(runA.cover, '$20', 'run 2: the prose re-scrape keeps the stored price — no ping-pong');
+  assert.equal(core.parseNotesIntoFields(runA.notes).cover, '$20');
+  assert.ok(logLines.some(line => line.startsWith('🔒 MERGE:')
+    && line.includes('field=cover')
+    && line.includes('cover reflects the live ticket page — freshness wins')),
+    'run 1 uses the unchanged freshness clobber line');
+  assert.ok(logLines.some(line => line === '🔒 MERGE: "BEARRACUDA: Seattle" field=cover kept calendar value — scraped "ADV. TIX AT BEARRACUDA.COM" is not price-shaped'),
+    `run 2 logs the kept-calendar line, got: ${JSON.stringify(logLines)}`);
+});
+
 test('PARSER MERGE summary lists only fields the merge actually changed on the outgoing record', async () => {
   const core = createCore();
   // bar: existing wins over the empty incoming side → the outgoing record changed.
@@ -7493,6 +7817,69 @@ test('resolveForeignCrawlPageOwner: parser configs claim too, and every ambiguit
   // Junk in → null out
   assert.equal(owner('not-a-url'), null);
   assert.equal(core.resolveForeignCrawlPageOwner('https://other.example/x', running, null), null);
+});
+
+test('resolveForeignCrawlPageOwner: a parser and its own promoter entry claiming the SAME site are one owner, not ambiguity', () => {
+  // The live shape that silently disabled the guard: parser "Bearracuda
+  // Events" and registry entry "Bearracuda" both claim bearracuda.com under
+  // different names, and the two-owner count read as ambiguous evidence.
+  const core = createCrossOrgCore([
+    { name: 'Cuda', website: 'https://cuda.example/' }
+  ]);
+  const mainConfig = { parsers: [
+    { name: 'Cuda Events', urls: ['https://cuda.example/'] },
+    { name: 'Venue Site', urls: ['https://venue.example'] }
+  ] };
+  const running = mainConfig.parsers[1];
+
+  const owner = core.resolveForeignCrawlPageOwner('https://cuda.example/events/x', running, mainConfig);
+  assert.ok(owner, 'two labels on one site must still resolve to a single owner');
+  assert.equal(owner.ownerName, 'Cuda Events', 'the parser-kind label is preferred for reporting');
+
+  // The owning parser itself is still self on its own site
+  assert.equal(core.resolveForeignCrawlPageOwner('https://cuda.example/events/x', mainConfig.parsers[0], mainConfig), null);
+
+  // Genuine ambiguity — two DIFFERENT sites tied at the same specificity —
+  // still fails closed
+  const ambiguousCore = createCrossOrgCore([
+    { name: 'Org A', website: 'https://shared.example/a' },
+    { name: 'Org B', website: 'https://shared.example/a' }
+  ]);
+  assert.equal(
+    ambiguousCore.resolveForeignCrawlPageOwner('https://shared.example/a/page', running, mainConfig),
+    null,
+    'two different owners on one path is ambiguous evidence — no-op');
+});
+
+test('resolveForeignCrawlPageOwner: own-domain shield yields only to a SUB-PATH foreign claim', () => {
+  const core = createCrossOrgCore([
+    // Family owner claims the whole domain; the running parser is a sub-brand
+    // configured at its own sub-path with NO alias link to the family entry
+    // (the live ursamen shape: Spooky Bear at ursamen.org/spookybear vs
+    // "Northeast Ursamen" claiming ursamen.org).
+    { name: 'Family Owner', website: 'https://family.example' },
+    // On a shared platform, each profile is a sub-path claim.
+    { name: 'Other Profile', website: 'https://profiles.example/other' }
+  ]);
+  const subBrand = { name: 'Sub Brand Night', urls: ['https://family.example/subbrand'] };
+  const profileParser = { name: 'My Profile', urls: ['https://profiles.example/mine'] };
+  const mainConfig = { parsers: [subBrand, profileParser] };
+
+  // Domain-level foreign claim does NOT pierce the sub-brand's own-domain
+  // footing — the family site stays fully crawlable.
+  assert.equal(core.resolveForeignCrawlPageOwner('https://family.example/about', subBrand, mainConfig), null);
+  assert.equal(core.resolveForeignCrawlPageOwner('https://family.example/subbrand/deeper', subBrand, mainConfig), null);
+
+  // A sub-path claim naming a different owner DOES pierce it: being
+  // configured somewhere on a shared platform is not a licence to ingest a
+  // sibling profile (the Cubhouse → linktr.ee/megawoof_america gap).
+  const pierced = core.resolveForeignCrawlPageOwner('https://profiles.example/other', profileParser, mainConfig);
+  assert.ok(pierced, 'a foreign sub-path claim on a shared platform must block');
+  assert.equal(pierced.ownerName, 'Other Profile');
+
+  // The parser's own profile and unclaimed profiles stay crawlable.
+  assert.equal(core.resolveForeignCrawlPageOwner('https://profiles.example/mine/links', profileParser, mainConfig), null);
+  assert.equal(core.resolveForeignCrawlPageOwner('https://profiles.example/unclaimed', profileParser, mainConfig), null);
 });
 
 // ---------------------------------------------------------------------------
