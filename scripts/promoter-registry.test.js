@@ -193,8 +193,18 @@ test('repo scraper-input: registry-identity parsers carry no metadata or alwaysB
   }
   const { parsers } = require('./scraper-input');
   const promoterParsers = parsers.filter((parser) => registryKeys.has(nameKey(parser.name)));
-  assert.ok(promoterParsers.length >= 15,
-    `expected at least the 15 migrated promoter parsers, found ${promoterParsers.length}`);
+  // Floor guards against the filter silently matching nothing. It dropped from
+  // 15 to 14 when the "CubScout LA" PARSER became the "Eagle LA" venue parser
+  // (eaglela.com is a venue site hosting many parties, not one promoter's
+  // page). The CubScout LA promoter ENTRY is untouched and still claims the
+  // CUBSCOUT alias — see the alias tests above.
+  assert.ok(promoterParsers.length >= 14,
+    `expected at least the 14 migrated promoter parsers, found ${promoterParsers.length}`);
+  // A venue parser must never be treated as a promoter parser: "Eagle LA" is a
+  // curated BAR (data/bars/la.json), so it must not appear in this set — that
+  // is what makes the count 14 rather than a silently weakened floor.
+  assert.ok(!promoterParsers.some((parser) => nameKey(parser.name) === nameKey('Eagle LA')),
+    'the Eagle LA venue parser must not be classified as a promoter parser');
   for (const parser of promoterParsers) {
     assert.ok(!('metadata' in parser),
       `promoter parser "${parser.name}" must not carry metadata — promoter identity lives in data/promoters.json`);
