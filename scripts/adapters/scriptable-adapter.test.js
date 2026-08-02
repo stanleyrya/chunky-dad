@@ -4012,3 +4012,92 @@ test('builder link: a matched series pre-selects the record without flipping int
   });
   assert.ok(!plain.includes('occid='), 'no picker pre-selection for a standalone edit');
 });
+
+// ---------------------------------------------------------------------------
+// REPORT-ONLY sanity flags in the results UI: compact badge on the event
+// card, adjacent line in the enriched-events sample, and an Event Actions
+// Summary count line that appears ONLY when something is flagged. Flags are
+// stamped upstream (SharedCore.getEventSanityFlags) — the adapter only
+// renders them, never alters an action.
+// ---------------------------------------------------------------------------
+
+test('generateEventCard shows the sanity badge only on flagged events', () => {
+  const adapter = buildAdapter();
+  const flagged = adapter.generateEventCard({
+    title: '6:30 PM',
+    _action: 'new',
+    startDate: '2026-08-01T02:00:00.000Z',
+    _sanityFlags: [
+      { code: 'title-is-date-phrase', detail: 'title is entirely a date/time expression' },
+      { code: 'duration-implausible', detail: 'spans 575.4 days (longest curated festival is 10)' }
+    ]
+  });
+  assert.ok(flagged.includes('sanity-flag-badge'));
+  assert.ok(flagged.includes('⚠️ sanity: title-is-date-phrase, duration-implausible'));
+
+  const plain = adapter.generateEventCard({
+    title: 'Plain',
+    _action: 'new',
+    startDate: '2026-08-01T02:00:00.000Z',
+    _sanityFlags: []
+  });
+  assert.ok(!plain.includes('sanity-flag-badge'));
+  // Absent field (saved runs from before the stamp) renders like empty.
+  const legacy = adapter.generateEventCard({
+    title: 'Legacy',
+    _action: 'new',
+    startDate: '2026-08-01T02:00:00.000Z'
+  });
+  assert.ok(!legacy.includes('sanity-flag-badge'));
+});
+
+test('Event Actions Summary carries the sanity count line only when events are flagged', async () => {
+  const adapter = buildAdapter();
+  const capture = async (results) => {
+    const lines = [];
+    const originalLog = console.log;
+    console.log = (...args) => { lines.push(args.join(' ')); };
+    try {
+      await adapter.displayEnrichedEvents(results);
+    } finally {
+      console.log = originalLog;
+    }
+    return lines;
+  };
+
+  const flaggedLines = await capture({
+    analyzedEvents: [
+      {
+        title: '6:30 PM',
+        _action: 'new',
+        startDate: '2026-08-01T02:00:00.000Z',
+        _sanityFlags: [{ code: 'title-is-date-phrase', detail: 'title is entirely a date/time expression' }]
+      },
+      {
+        title: 'Plain',
+        _action: 'new',
+        startDate: '2026-08-01T02:00:00.000Z',
+        _sanityFlags: []
+      }
+    ]
+  });
+  assert.ok(
+    flaggedLines.includes('   ⚠️ Sanity flags: 1 event(s)'),
+    `expected the count line, got: ${JSON.stringify(flaggedLines.filter(line => line.includes('Sanity')))}`);
+  // The sample event block gets the adjacent per-event line too.
+  assert.ok(flaggedLines.includes('  ⚠️ Sanity: title-is-date-phrase'));
+
+  const cleanLines = await capture({
+    analyzedEvents: [
+      {
+        title: 'Plain',
+        _action: 'new',
+        startDate: '2026-08-01T02:00:00.000Z',
+        _sanityFlags: []
+      }
+    ]
+  });
+  assert.ok(
+    !cleanLines.some(line => line.includes('Sanity')),
+    `no sanity lines when nothing is flagged, got: ${JSON.stringify(cleanLines.filter(line => line.includes('Sanity')))}`);
+});

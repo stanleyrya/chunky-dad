@@ -4933,6 +4933,15 @@ class ScriptableAdapter {
     if (eventsByAction.other.length > 0) {
       console.log(`   ❓ Other: ${eventsByAction.other.length} events`);
     }
+    // REPORT-ONLY sanity flags (SharedCore.getEventSanityFlags): count line
+    // only when something is flagged — flags never change any action above.
+    const sanityFlaggedCount = allEvents.filter(
+      (event) =>
+        Array.isArray(event?._sanityFlags) && event._sanityFlags.length > 0,
+    ).length;
+    if (sanityFlaggedCount > 0) {
+      console.log(`   ⚠️ Sanity flags: ${sanityFlaggedCount} event(s)`);
+    }
 
     const detailedActions = ["merge", "conflict"];
     const actionsToShow = detailedActions.filter(
@@ -4976,6 +4985,13 @@ class ScriptableAdapter {
         );
       } else if (action === "conflict" && event._analysis?.reason) {
         console.log(`  ⚠️  Reason: ${event._analysis.reason}`);
+      }
+      // Additive adjacent line — report-only sanity flags never alter the
+      // Intent/Write line above.
+      if (Array.isArray(event._sanityFlags) && event._sanityFlags.length > 0) {
+        console.log(
+          `  ⚠️ Sanity: ${event._sanityFlags.map((flag) => flag.code).join(", ")}`,
+        );
       }
     });
 
@@ -9166,6 +9182,19 @@ class ScriptableAdapter {
       event && event._seriesMatch
         ? '<span class="action-badge badge-merge series-match-badge">🔁 already saved — matches this series</span>'
         : "";
+    // Additive third badge, same pattern as seriesMatchBadge: report-only
+    // sanity flags (SharedCore.getEventSanityFlags) — compact codes only,
+    // details live in the run log's ⚠️ SANITY line. Never changes the
+    // action badge or the write plan.
+    const sanityFlags = Array.isArray(event && event._sanityFlags)
+      ? event._sanityFlags
+      : [];
+    const sanityBadge =
+      sanityFlags.length > 0
+        ? `<span class="action-badge badge-warning sanity-flag-badge">⚠️ sanity: ${this.escapeHtml(
+            sanityFlags.map((flag) => flag.code).join(", "),
+          )}</span>`
+        : "";
     const dropDetail = [
       bearOpts.dropReason ? String(bearOpts.dropReason) : "",
       bearOpts.dropHost ? `from ${bearOpts.dropHost}` : "",
@@ -9240,7 +9269,7 @@ class ScriptableAdapter {
 
     let html = `
         <div class="event-card${isDroppedCard ? " bear-dropped-card" : ""}">
-            ${actionBadge}${recurringBadge}${seriesMatchBadge}
+            ${actionBadge}${recurringBadge}${seriesMatchBadge}${sanityBadge}
             ${actionNote}
             <div class="event-title">${this.escapeHtml(event.title || event.name)}</div>
             ${bearVerdictRow}

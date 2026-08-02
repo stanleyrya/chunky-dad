@@ -171,6 +171,53 @@ const COVER_FREE_PHRASES = new Set([
 // the city string itself, or a page's free text becomes a calendar name.
 const UNKNOWN_CALENDAR_NAME = 'chunky-dad-unknown';
 
+// ---------------------------------------------------------------------------
+// Title date/time vocabulary — ONE set of pattern fragments shared by
+// detectTitleDateSegment (the #1605 dates-stay-in-titles strip) and the
+// sanity classifier's date-phrase residue check (getEventSanityFlags), so a
+// date shape the strip learns the sanity check learns for free. These are the
+// EXACT fragments detectTitleDateSegment always used, hoisted unchanged.
+// ---------------------------------------------------------------------------
+const TITLE_DATE_MONTH_NUMBERS = {
+    jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3,
+    apr: 4, april: 4, may: 5, jun: 6, june: 6, jul: 7, july: 7,
+    aug: 8, august: 8, sep: 9, sept: 9, september: 9,
+    oct: 10, october: 10, nov: 11, november: 11, dec: 12, december: 12
+};
+const TITLE_DATE_WEEKDAY_NAMES = '(?:mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:r(?:s(?:day)?)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)';
+const TITLE_DATE_WEEKDAY_PART = `(?:${TITLE_DATE_WEEKDAY_NAMES}\\.?,?\\s+)?`;
+const TITLE_DATE_MONTH_PART = '(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\\.?';
+const TITLE_DATE_DAY_PART = '(\\d{1,2})(?:st|nd|rd|th)?';
+const TITLE_DATE_YEAR_PART = '(?:,?\\s+(\\d{4}))?';
+
+// Legalese phrase shapes for the title-looks-like-boilerplate sanity flag.
+// A generic legalese phrase table is DATA (like ADDRESS_STREET_TYPE_TOKENS
+// above), not per-page hardcoding: these are ticketing-terms markers that no
+// real event NAME contains. Matched case-insensitively on diacritic-folded,
+// punctuation-collapsed text ("NON-REFUNDABLE" ≡ "non refundable"). Observed
+// live: run 20260802-142231 (beefdip) proposed "DOG TAGS ARE NON REFUNDABLE ·
+// TAGS ARE NON TRANSFERABLE" — a liability waiver — as a CREATE.
+const TITLE_LEGALESE_PHRASES = Object.freeze([
+    'non refundable',
+    'non transferable',
+    'terms and conditions',
+    'all sales final'
+]);
+
+// start-long-past: a CREATE-shaped write whose start is further back than
+// this is almost certainly a stale page artifact (ONBEAR FEST proposed as
+// NEW at 2021-01-31, five years past). 370 keeps annual events that just
+// passed (365 + slack) out of the flag.
+const SANITY_START_LONG_PAST_DAYS = 370;
+// duration-implausible: longest span a single real event reaches. Verified
+// against data/festivals.json nextDates: the longest curated festival is
+// Bear Carnival at 10 days (2027-04-08 → 2027-04-18; Bears Sitges Week is 9,
+// BeefDip Bear Week 8), so 10 is the smallest bound that clears every
+// curated festival. The 19-month "Queer Art Market" (2025-03-22 →
+// 2026-10-18) flags; note the 9-day WHITE PARTY club night sits UNDER this
+// bound — a deterministic span rule cannot tell it from Bears Sitges Week.
+const SANITY_MAX_EVENT_DURATION_DAYS = 10;
+
 class SharedCore {
     constructor(cities, options = {}) {
         if (!cities || typeof cities !== 'object') {
@@ -1278,16 +1325,13 @@ class SharedCore {
         if (typeof title !== 'string') return null;
         const text = title.replace(/\s+/g, ' ').trim();
         if (!text) return null;
-        const MONTH_NUMBERS = {
-            jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3,
-            apr: 4, april: 4, may: 5, jun: 6, june: 6, jul: 7, july: 7,
-            aug: 8, august: 8, sep: 9, sept: 9, september: 9,
-            oct: 10, october: 10, nov: 11, november: 11, dec: 12, december: 12
-        };
-        const weekdayPart = '(?:(?:mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:r(?:s(?:day)?)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)\\.?,?\\s+)?';
-        const monthPart = '(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\\.?';
-        const dayPart = '(\\d{1,2})(?:st|nd|rd|th)?';
-        const yearPart = '(?:,?\\s+(\\d{4}))?';
+        // Vocabulary hoisted to module scope (TITLE_DATE_*) so the sanity
+        // classifier's residue check shares these exact fragments.
+        const MONTH_NUMBERS = TITLE_DATE_MONTH_NUMBERS;
+        const weekdayPart = TITLE_DATE_WEEKDAY_PART;
+        const monthPart = TITLE_DATE_MONTH_PART;
+        const dayPart = TITLE_DATE_DAY_PART;
+        const yearPart = TITLE_DATE_YEAR_PART;
         const wordySegment = `${weekdayPart}${monthPart}\\s+${dayPart}${yearPart}`;
         // Day-first ordering — the British/European form the Bear Cave's
         // Sitges listings use ("Wednesday 9th September – BEEFMINCE MEET
@@ -1336,6 +1380,181 @@ class SharedCore {
     // callers hold a SharedCore instance.
     detectTitleDateSegment(title) {
         return SharedCore.detectTitleDateSegment(title);
+    }
+
+    // Residue of a title once date/time phrases are removed — the sanity
+    // classifier's view of "what is left that could be a NAME". Built from
+    // the SAME TITLE_DATE_* vocabulary as detectTitleDateSegment (which
+    // cannot serve here directly: it fails open when no base name remains,
+    // and a title that IS entirely a date is exactly the broken case).
+    // Removes, in order: clock times ("6:30 PM", "18.30"), hour+meridiem
+    // ("12 PM"), European hour marks ("01h", "06h30"), wordy month+day
+    // phrases with optional weekday/year ("Saturday Jan 23"), day-first
+    // phrases ("9th September"), numeric M/D(/Y) ("7/25/2026"), standalone
+    // weekday names, and standalone years. Bare month names are deliberately
+    // NOT removed ("May" is a word before it is a month). Returns the
+    // collapsed residue string, or null when nothing date/time-shaped was
+    // found (so a short but dateless title can never read as a date phrase).
+    static stripTitleDateTimePhrases(title) {
+        if (typeof title !== 'string') return null;
+        const text = title.replace(/\s+/g, ' ').trim();
+        if (!text) return null;
+        const patterns = [
+            /\b\d{1,2}[:.]\d{2}\s*(?:a\.?m\.?|p\.?m\.?|h)?(?![a-z0-9])/gi,
+            /\b\d{1,2}\s*(?:a\.?m\.?|p\.?m\.?)(?![a-z0-9])/gi,
+            /\b\d{1,2}\s*h(?:\d{2})?\b/gi,
+            new RegExp(`\\b${TITLE_DATE_WEEKDAY_PART}${TITLE_DATE_MONTH_PART}\\s+${TITLE_DATE_DAY_PART}${TITLE_DATE_YEAR_PART}\\b`, 'gi'),
+            new RegExp(`\\b${TITLE_DATE_WEEKDAY_PART}${TITLE_DATE_DAY_PART}\\s+${TITLE_DATE_MONTH_PART}${TITLE_DATE_YEAR_PART}\\b`, 'gi'),
+            /\b\d{1,2}\s*\/\s*\d{1,2}(?:\s*\/\s*\d{2,4})?\b/g,
+            new RegExp(`\\b${TITLE_DATE_WEEKDAY_NAMES}\\b\\.?`, 'gi'),
+            /\b(?:19|20)\d{2}\b/g
+        ];
+        let residue = text;
+        for (const pattern of patterns) {
+            residue = residue.replace(pattern, ' ');
+        }
+        residue = residue.replace(/\s+/g, ' ').trim();
+        return residue === text ? null : residue;
+    }
+
+    // ------------------------------------------------------------------
+    // REPORT-ONLY event sanity classifier (flag, don't drop). Deterministic
+    // shape rules + curated data only — no AI, no per-page/per-venue/
+    // per-language cases. Returns [{ code, detail }, ...]; empty = sane.
+    // Callers stamp the result on the underscore channel (_sanityFlags) for
+    // the results UI; NOTHING here changes _action, withholds a write, or
+    // reorders events. Real events that motivated each code are cited
+    // inline (all reached the 2026-08-02 write plans in preview mode).
+    // context.nowMs injects "now" (test determinism), defaulting to
+    // Date.now() — the same convention as the dead-end store's nowMs params.
+    // ------------------------------------------------------------------
+    getEventSanityFlags(event, context = {}) {
+        const flags = [];
+        if (!event || typeof event !== 'object') return flags;
+        const nowMs = context && Number.isFinite(context.nowMs) ? context.nowMs : Date.now();
+        const title = typeof event.title === 'string' ? event.title.replace(/\s+/g, ' ').trim() : '';
+        const toMs = (value) => {
+            if (value instanceof Date) return value.getTime();
+            if (typeof value === 'string' && value.trim()) return new Date(value).getTime();
+            return NaN;
+        };
+
+        // 1. title-is-date-phrase — the whole title is a date/time expression
+        //    ("Saturday Jan 23 12 PM – 5 PM", an event literally titled
+        //    "6:30 PM"), or near-nothing remains once date/time phrases are
+        //    stripped. Titles with real words beyond the date phrase ("NYE
+        //    2027 Party", "Friday Night Bears") keep ≥3 word characters of
+        //    residue and never flag.
+        if (title) {
+            const residue = SharedCore.stripTitleDateTimePhrases(title);
+            if (residue !== null) {
+                const residueWordChars = this.foldDiacritics(residue).replace(/[^a-z0-9]/g, '');
+                if (residueWordChars.length < 3) {
+                    flags.push({
+                        code: 'title-is-date-phrase',
+                        detail: `title is entirely a date/time expression`
+                    });
+                }
+            }
+        }
+
+        // 2. title-is-curated-bar — the title IS a curated bar name ("CC
+        //    Slaughters" as the title of a party). Identity-key EQUALITY only
+        //    (normalizeBarNameKey, the same strictness as curated matching
+        //    everywhere): "Bearracuda at CC Slaughters" contains the key but
+        //    does not equal it, so it never flags. The event's own city's
+        //    bars are checked when curated; with no curated city, ANY city's
+        //    bars can claim the title (a venue name is not an event name in
+        //    any city).
+        if (title && this.normalizeBarNameKey(title)) {
+            let curatedMatch = null;
+            const cityBars = this.getCuratedCityBars(event.city);
+            if (cityBars) {
+                const bar = this.findCuratedBarByName(cityBars, title);
+                if (bar) curatedMatch = { bar, city: String(event.city) };
+            } else if (this.bars && typeof this.bars === 'object') {
+                for (const cityKey of Object.keys(this.bars)) {
+                    const bars = this.bars[cityKey];
+                    if (!Array.isArray(bars)) continue;
+                    const bar = this.findCuratedBarByName(bars, title);
+                    if (bar) {
+                        curatedMatch = { bar, city: cityKey };
+                        break;
+                    }
+                }
+            }
+            if (curatedMatch) {
+                flags.push({
+                    code: 'title-is-curated-bar',
+                    detail: `title is the curated bar "${curatedMatch.bar.name}" (${curatedMatch.city})`
+                });
+            }
+        }
+
+        // 3. title-looks-like-boilerplate — conservative on purpose:
+        //    (a) no letters at all (Unicode-aware, so non-Latin event names
+        //        are safe), or
+        //    (b) a legalese marker from TITLE_LEGALESE_PHRASES ("DOG TAGS
+        //        ARE NON REFUNDABLE · TAGS ARE NON TRANSFERABLE" — a
+        //        liability waiver proposed as a CREATE).
+        //    Sentence fragments ("The weekend kicks off on") and filler
+        //    announcements ("En breve anunciaremos mas vendors") are
+        //    deliberately NOT detected here: telling a truncated sentence
+        //    from a legitimate name-length phrase deterministically means
+        //    grammar heuristics, and those false-positive on real event
+        //    names ("The Party Never Ends", "Where the Bears Are") — too
+        //    risky for a rule that must stay report-only credible. The AI
+        //    junk-title idea is deliberately out of scope this wave.
+        if (title) {
+            if (!/\p{L}/u.test(title)) {
+                flags.push({
+                    code: 'title-looks-like-boilerplate',
+                    detail: 'title contains no letters'
+                });
+            } else {
+                const paddedTitle = ` ${this.foldDiacritics(title).replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim()} `;
+                const legalese = TITLE_LEGALESE_PHRASES.find(phrase => paddedTitle.includes(` ${phrase} `));
+                if (legalese) {
+                    flags.push({
+                        code: 'title-looks-like-boilerplate',
+                        detail: `title carries legalese ("${legalese}")`
+                    });
+                }
+            }
+        }
+
+        // 4. start-long-past — a CREATE-shaped write more than
+        //    SANITY_START_LONG_PAST_DAYS in the past (ONBEAR FEST proposed
+        //    as NEW at 2021-01-31, five years past). CREATE-shaped only: a
+        //    normal UPDATE of a past calendar record is routine maintenance.
+        const action = typeof event._action === 'string' && event._action
+            ? event._action
+            : (event._analysis && typeof event._analysis.action === 'string' ? event._analysis.action : '');
+        const startMs = toMs(event.startDate);
+        if (action === 'new' && Number.isFinite(startMs)
+            && (nowMs - startMs) > SANITY_START_LONG_PAST_DAYS * 24 * 60 * 60 * 1000) {
+            const daysPast = Math.round((nowMs - startMs) / (24 * 60 * 60 * 1000));
+            flags.push({
+                code: 'start-long-past',
+                detail: `CREATE with startDate ${daysPast} days in the past (limit ${SANITY_START_LONG_PAST_DAYS})`
+            });
+        }
+
+        // 5. duration-implausible — endDate − startDate longer than any
+        //    curated festival (SANITY_MAX_EVENT_DURATION_DAYS; see the
+        //    constant for the festivals.json verification). Catches the
+        //    19-month "Queer Art Market" (2025-03-22 → 2026-10-18).
+        const endMs = toMs(event.endDate);
+        if (Number.isFinite(startMs) && Number.isFinite(endMs)
+            && (endMs - startMs) > SANITY_MAX_EVENT_DURATION_DAYS * 24 * 60 * 60 * 1000) {
+            const spanDays = Math.round(((endMs - startMs) / (24 * 60 * 60 * 1000)) * 10) / 10;
+            flags.push({
+                code: 'duration-implausible',
+                detail: `spans ${spanDays} days (longest curated festival is ${SANITY_MAX_EVENT_DURATION_DAYS})`
+            });
+        }
+
+        return flags;
     }
 
     // A value shaped like a street address is NEVER a venue name. Anchored on
@@ -10122,6 +10341,21 @@ class SharedCore {
                     if (recordedTrimFields.has(overlong.field)) continue;
                     analyzedEvent._evidenceLines.push(`⚠️ ${overlong.field} overlong (${overlong.value.length} > ${overlong.maxChars} chars) — calendar-sourced, not trimmed`);
                 }
+            }
+
+            // REPORT-ONLY sanity flags (flag, don't drop): deterministic
+            // shape checks for obviously-broken events that have reached
+            // write plans before — legal boilerplate as a title, a bare
+            // date/time as a title, a curated bar name as a title, a
+            // years-past CREATE, a multi-month "event". Stamped on the
+            // underscore channel (display-only, excluded from notes/merge
+            // serialization like _evidenceLines) and surfaced by the
+            // adapters. Flags NEVER change _action, withhold a write, or
+            // reorder anything — enforcement, if ever, is a separately
+            // approved change.
+            analyzedEvent._sanityFlags = this.getEventSanityFlags(analyzedEvent);
+            if (analyzedEvent._sanityFlags.length > 0) {
+                console.log(`⚠️ SANITY: "${analyzedEvent.title || 'Unknown'}" flagged ${analyzedEvent._sanityFlags.map(flag => flag.code).join(', ')} — ${analyzedEvent._sanityFlags[0].detail}`);
             }
 
             // Recurring series are display+export only: keep the card in the
