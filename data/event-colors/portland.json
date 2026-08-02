@@ -62,6 +62,16 @@
     "faviconFg": "#ff5000"
   },
   {
+    "slug": "chunk-portland-12aa4185",
+    "url": "https://www.chunk-party.com",
+    "faviconBg": "#f6f4f5",
+    "faviconFg": "#2e2933",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#611d22:19:10 #89211b:18:14 #3c1b2b:14:5 #a2423b:13:13 #342d71:12:11",
+    "accent": "#89211b"
+  },
+  {
     "slug": "chunk-portland-523-12aa4185",
     "url": "https://www.chunk-party.com",
     "faviconBg": "#f6f4f5",

@@ -73,6 +73,16 @@
     "accent": "#ff2319"
   },
   {
+    "slug": "chunk-dore-alley-3bf852a2",
+    "url": "https://www.chunk-party.com/event-details/chunk-dore-alley-saturday-july-25th",
+    "faviconBg": "#f6f4f5",
+    "faviconFg": "#2e2933",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ececec:31:0 #434343:19:0 #949494:12:0 #4f5b81:8:6",
+    "accent": "#4f5b81"
+  },
+  {
     "slug": "chunk-dore-alley-saturday-july-25th-3bf852a2",
     "url": "https://www.chunk-party.com",
     "faviconBg": "#f6f4f5",
@@ -121,6 +131,16 @@
     "paletteSource": "flyer",
     "palette": "#a74044:16:14 #51392d:16:4 #ea6d4c:13:16 #e3c98e:11:8 #463a76:8:10",
     "accent": "#ea6d4c"
+  },
+  {
+    "slug": "chunk-sf-presents-father-figure-22ce3590",
+    "url": "https://www.chunk-party.com/event-details/chunk-sf-presents-father-figure",
+    "faviconBg": "#f6f4f5",
+    "faviconFg": "#2e2933",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#8b639c:20:10 #beb385:20:6 #6c4274:16:9 #ed6966:12:16 #e9dc13:6:18",
+    "accent": "#ed6966"
   },
   {
     "slug": "chunk-sf-presents-father-figure-305593c7",

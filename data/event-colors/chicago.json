@@ -29,6 +29,16 @@
     "palette": "#000000:47:0 #ffffff:46:0 #d4d4d4:2:0"
   },
   {
+    "slug": "chunk-chicago-7764acee",
+    "url": "https://www.chunk-party.com/event-details/chunk-chicago-september-19th",
+    "faviconBg": "#f6f4f5",
+    "faviconFg": "#2e2933",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#6c615f:20:1 #1c1b1b:14:0 #dbada2:14:6 #b48275:14:7 #ddef21:4:20",
+    "accent": "#b48275"
+  },
+  {
     "slug": "chunk-chicago-presents-new-years-eve-2026-3afe095d",
     "url": "https://www.chunk-party.com/event-details/chunk-chicago-presents-new-years-eve-2026",
     "faviconBg": "#f6f4f5",

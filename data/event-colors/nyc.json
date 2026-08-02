@@ -58,6 +58,16 @@
     "accent": "#a45ac3"
   },
   {
+    "slug": "chunk-brooklyn-7ffcc74a",
+    "url": "https://www.chunk-party.com/event-details/chunk-brooklyn-5-9",
+    "faviconBg": "#f6f4f5",
+    "faviconFg": "#2e2933",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#442c43:17:5 #130c24:17:5 #8c534b:13:8 #c38363:10:9 #455384:9:8",
+    "accent": "#c38363"
+  },
+  {
     "slug": "chunk-brooklyn-the-return-5dd73bae",
     "url": "https://www.chunk-party.com/event-details/chunk-brooklyn-the-return",
     "faviconBg": "#f6f4f5",
