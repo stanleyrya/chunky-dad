@@ -10959,6 +10959,12 @@ class SharedCore {
                 agreedKey = key;
             } else if (key !== agreedKey) {
                 return '';
+            } else if (organizer < firstOriginal) {
+                // Same organizer, different casing across records ("CLUB CHUB"
+                // vs "Club Chub"): "first-encountered" would depend on argument
+                // order and leak orientation back into the prompt — keep the
+                // lexicographically smaller casing instead.
+                firstOriginal = organizer;
             }
         }
         return firstOriginal;
