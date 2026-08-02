@@ -645,8 +645,12 @@ class AiWebParser {
                     // JSON-LD titles that print the date as a SUFFIX ("CHUNK
                     // DORE ALLEY - Saturday July 25th") reached the calendar
                     // dated on every run. Same verification as the AI route:
-                    // the printed date must match the event's own start.
-                    event.title = this.stripRedundantTitleDate(event.title, [event.startDate, event.start]);
+                    // the printed date must match the event's own start. The
+                    // node's RAW startDate string leads the candidates — it
+                    // carries the event's LOCAL date, where the Date can only
+                    // offer the UTC view (run 20260802-093810: every US-evening
+                    // event compared one day off and the strip refused).
+                    event.title = this.stripRedundantTitleDate(event.title, [event._startDateRawText, event.startDate, event.start]);
                 });
                 if (pageBrandNames.length > 0) {
                     structuredEvents.forEach(event => {
@@ -837,9 +841,33 @@ class AiWebParser {
             const payloadMode = this.normalizePayloadMode(aiConfig.payloadMode);
             const dataFlags = this.getDataFlagsForPartition(sectionBundle, payloadMode, '');
             const promptFields = this.getAiPromptFields(parserConfig, dataFlags, sourceUrl);
-            const events = pageClassification === 'multi-event-page'
+            let events = pageClassification === 'multi-event-page'
                 ? await this.extractEventsFromMultiEventPage(effectiveHtmlData, parserConfig, cityConfig, promptFields, ocrResults, httpAdapter)
                 : await this.extractEventsFromSinglePage(effectiveHtmlData, parserConfig, cityConfig, promptFields, ocrResults, httpAdapter);
+
+            // Cached-misclassification self-heal: a CACHED multi-event-page
+            // verdict that produced zero segments AND zero events would repeat
+            // the same starvation on every run (chunk-party detail pages,
+            // beefmince.com/events — runs 20260802-093810 / 20260802-093526).
+            // Invalidate that cache entry and re-classify fresh ONCE this run;
+            // a differing fresh verdict is acted on, an identical one is
+            // simply re-cached (no loop — the fresh call rewrites the entry).
+            if (pageClassification === 'multi-event-page'
+                && events.length === 0
+                && effectiveHtmlData && effectiveHtmlData._multiEventZeroSegments === true) {
+                const freshClassification = await this.reclassifyZeroYieldMultiEventPage(
+                    sourceUrl,
+                    htmlData && typeof htmlData.html === 'string' ? htmlData.html : '',
+                    parserConfig,
+                    httpAdapter
+                );
+                if (freshClassification && freshClassification !== 'multi-event-page') {
+                    console.log(`🤖 AI Web: Fresh classification for ${sourceUrl} is '${freshClassification}' (was cached 'multi-event-page') — proceeding with it`);
+                    if (freshClassification === 'event-page') {
+                        events = await this.extractEventsFromSinglePage(effectiveHtmlData, parserConfig, cityConfig, promptFields, ocrResults, httpAdapter);
+                    }
+                }
+            }
 
             // Enrichment only: fills empty fields on the finished AI/OCR events
             // from the Wix warmup blob, never skips or replaces an extraction step.
@@ -891,6 +919,33 @@ class AiWebParser {
         }
     }
 
+    // Cached-misclassification self-heal, parser half: only fires when the
+    // page's classification CAME from the cache (SharedCore tracked the hit),
+    // asks SharedCore to invalidate the entry (persistence stays behind the
+    // injected provider — platform purity), then re-classifies fresh once.
+    // Returns the fresh classification string, or null when this page's
+    // verdict was not cached / re-classification produced nothing usable.
+    async reclassifyZeroYieldMultiEventPage(sourceUrl, html, parserConfig, httpAdapter) {
+        if (!sourceUrl || !html || !this.core || !httpAdapter) return null;
+        if (typeof this.core.wasAiClassificationCacheHit !== 'function'
+            || typeof this.core.invalidateAiClassificationCacheEntry !== 'function'
+            || typeof this.core.classifyPageWithAi !== 'function') return null;
+        if (!this.core.wasAiClassificationCacheHit(sourceUrl)) return null;
+        const aiConfig = this.getAiConfig(parserConfig);
+        const cache = this.getAiClassificationCache();
+        console.log(`🤖 AI Web: Cached multi-event-page classification for ${sourceUrl} yielded zero segments and zero events — invalidating and re-classifying once`);
+        try {
+            await this.core.invalidateAiClassificationCacheEntry(sourceUrl, html, aiConfig, cache);
+            const fresh = await this.core.classifyPageWithAi(sourceUrl, html, aiConfig, httpAdapter, cache);
+            return fresh && typeof fresh.classification === 'string' && fresh.classification
+                ? fresh.classification
+                : null;
+        } catch (error) {
+            console.warn(`🤖 AI Web: Zero-yield re-classification failed for ${sourceUrl}: ${error.message}`);
+            return null;
+        }
+    }
+
     async extractEventsFromSinglePage(htmlData, parserConfig, cityConfig, promptFields, ocrResults = [], httpAdapter = null) {
         // Site role (venue/organizer/undetermined) was resolved page-level in
         // parseEvents; announce it once before extraction prompts are built.
@@ -930,6 +985,12 @@ class AiWebParser {
         }
         if (segments.length === 0) {
             console.warn('🤖 AI Web: multi-event-page classification produced no valid segments; returning no events');
+            // Marker for parseEvents' cached-misclassification self-heal: a
+            // CACHED multi-event verdict that produced zero segments (and,
+            // downstream, zero events) is invalidated and re-classified once.
+            if (htmlData && typeof htmlData === 'object' && Object.isExtensible(htmlData)) {
+                htmlData._multiEventZeroSegments = true;
+            }
             // Lumberyard-class pages: the multi-event classifier fired but no
             // line window carried the date+title signals segmentation needs —
             // yet the page has real extractable content (body text and/or
@@ -1104,8 +1165,10 @@ class AiWebParser {
         // Bar plausibility gate: an address-shaped bar is never a valid
         // extraction (run 20260724-115423: bar "79 Warren" — the flyer's
         // street line — survived and blocked the convergence rescue). Runs
-        // AFTER the address gate (so a matching address twin still drops via
-        // "matches venue name") and BEFORE the convergence rescue (so a
+        // AFTER the address gate (so a matching name-shaped address twin
+        // still drops via "matches venue name", while an ADDRESS-SHAPED twin
+        // keeps the address and drops only the bar — the bar held the copy)
+        // and BEFORE the convergence rescue (so a
         // dropped bar frees the rescue to adopt the real venue).
         this.applyBarPlausibilityGate(event, cityConfig);
         // Deterministic bar-convergence rescue: only when extraction left NO
@@ -1295,6 +1358,34 @@ class AiWebParser {
         return `🤖 AI Web: Extracted ${sourceUrl} → ${parts.join(', ')}`;
     }
 
+    // A line that is NOTHING but time-of-day tokens — times in 12h/24h/European
+    // "h" forms, am/pm markers, and range separators. Listing widgets print the
+    // same time twice ("6:30 PM 18:30", "7:00 PM 19:00" — 3 Dollar Bill run
+    // 20260802-102127), which slipped past the single-time/range regexes and
+    // shipped a TIME as the event's SEGMENT_LISTING_TITLE (and ultimately its
+    // calendar title). Requires at least one explicit time marker (colon,
+    // am/pm, or "h") so a bare number ("24") is never classified as a time —
+    // fail closed toward keeping titles.
+    isTimeOnlyLineText(value) {
+        const text = this.normalizeWhitespace(String(value || ''));
+        if (!text) return false;
+        const tokens = text.split(/[\s–—-]+/).filter(Boolean);
+        if (tokens.length === 0) return false;
+        let hasTimeMarker = false;
+        for (const rawToken of tokens) {
+            const token = rawToken.replace(/[.,;]+$/, '');
+            if (!token) continue;
+            if (/^(?:am|pm|h|hrs?)$/i.test(token)) {
+                hasTimeMarker = true;
+                continue;
+            }
+            if (/^(?:a|à|to|til{1,2}|until|bis|de)$/i.test(token)) continue;
+            if (!/^\d{1,2}(?:[:.h]\d{2})?(?:am|pm|h)?$/i.test(token)) return false;
+            if (/[:h]|am|pm/i.test(token)) hasTimeMarker = true;
+        }
+        return hasTimeMarker;
+    }
+
     // The page's own listing title for a segment: the first non-empty page-text
     // line that is not a date/time line, not a SEGMENT_*/OCR marker line, and
     // not a URL. Multi-event listings put the event name first (segment
@@ -1323,6 +1414,10 @@ class AiWebParser {
             // am/pm skip above stays untouched).
             if (/^(?:de\s+)?\d{1,2}(?:[:.h]\d{2})?\s*h?\.?\s*(?:a|à|-|–|—|to|bis)\s*\d{1,2}(?:[:.h]\d{2})?\s*h\b\.?$/i.test(line)) continue;
             if (/^\d{1,2}(?:[:.h]\d{2})?\s*h\b\.?$/i.test(line)) continue;
+            // Dual-format time lines ("6:30 PM 18:30") slip past the
+            // single-time/range skips above — same standard as the dated-line
+            // span path's isUsable: a time node is never a listing title.
+            if (this.isTimeOnlyLineText(line)) continue;
             if (/^https?:\/\//i.test(line)) continue;
             // First candidate decides: a plausible title is short; a long first
             // line is prose/description, so no hint is derived at all.
@@ -1375,6 +1470,8 @@ class AiWebParser {
             if (!span || span.length < 3) return false;
             if (!/[a-z]{3}/i.test(span)) return false;
             if (/^\d{1,2}(:\d{2})?\s*(am|pm)?(\s*[-–]\s*\d{1,2}(:\d{2})?\s*(am|pm)?)?$/i.test(span)) return false;
+            // Dual-format time leftovers ("6:30 PM 18:30") are still times.
+            if (this.isTimeOnlyLineText(span)) return false;
             return true;
         };
 
@@ -3804,8 +3901,35 @@ class AiWebParser {
     getAiClassificationCache() {
         return {
             read: (url, signature) => this.readCachedAiClassification(url, signature),
-            write: (url, signature, outcome) => this.writeCachedAiClassification(url, signature, outcome)
+            write: (url, signature, outcome) => this.writeCachedAiClassification(url, signature, outcome),
+            invalidate: (url, signature) => this.deleteCachedAiClassification(url, signature)
         };
+    }
+
+    // Deletes one classification cache entry (the zero-yield self-heal —
+    // see SharedCore.invalidateAiClassificationCacheEntry). Returns true when
+    // a file was actually removed.
+    async deleteCachedAiClassification(url, signature) {
+        const runtime = this.getAiClassificationCacheRuntime();
+        if (!runtime) return false;
+        const { hostDir, fileName } = this.getAiClassificationCachePathParts(url, signature);
+        try {
+            if (runtime.type === 'scriptable') {
+                const cachePath = runtime.fm.joinPath(runtime.fm.joinPath(runtime.baseDir, hostDir), fileName);
+                if (!runtime.fm.fileExists(cachePath)) return false;
+                runtime.fm.remove(cachePath);
+                return true;
+            }
+            const cachePath = runtime.path.join(runtime.baseDir, hostDir, fileName);
+            await runtime.fs.promises.unlink(cachePath);
+            return true;
+        } catch (error) {
+            const missingFile = error && (error.code === 'ENOENT' || /does not exist/i.test(String(error.message || '')));
+            if (!missingFile) {
+                console.log(`🤖 AI Web: classification cache delete failed for ${url}: ${error.message}`);
+            }
+            return false;
+        }
     }
 
     getAiClassificationCachePathParts(url, signature) {
@@ -4225,6 +4349,12 @@ class AiWebParser {
             this.decodeBasicEntities(this.stripTags(String(value || ''))).replace(/&amp;/gi, '&')
         );
         const title = clean(node.name);
+        // The node's raw startDate STRING is kept alongside the Date it becomes:
+        // it still carries the event's LOCAL date ("2026-07-25T22:00:00-07:00"),
+        // which the Date loses to UTC the moment it is re-serialized — the
+        // title date-strip needs the local view (underscore field, internal
+        // only, never notes/merge).
+        const startDateRawText = typeof node.startDate === 'string' ? node.startDate.trim() : '';
         const start = this.parseJsonLdDateValue(node.startDate);
         if (!title || !start.date) return null;
         const end = this.parseJsonLdDateValue(node.endDate);
@@ -4261,6 +4391,9 @@ class AiWebParser {
             image: jsonLdImageCandidates.length > 0 ? jsonLdImageCandidates[0].url : '',
             source: this.config.source
         };
+        if (startDateRawText) {
+            event._startDateRawText = startDateRawText;
+        }
         // The other aspect ratios this node published stay reachable for the
         // orientation slots (off-event WeakMap — the event object is untouched).
         this.rememberImageSlotCandidates(event, jsonLdImageCandidates);
@@ -6090,6 +6223,11 @@ class AiWebParser {
             /\/(?:shop|store|merch|cart|checkout|contact|about|faq|account|signin|signup)(?:\/|[?#]|$)/i,
             // Wix internal API endpoints (e.g. chunk-party.com/_api/...)
             '/_api/',
+            // Eventbrite's Next.js image proxy (/e/_next/image?url=…) — an image
+            // endpoint that the /e/ event-path shape otherwise makes look like an
+            // event page (run 20260802-094341: "Cannot parse response to a
+            // string" fetch errors on two of these per run).
+            '/e/_next/',
             // WordPress ?p=<digits> shortlinks (e.g. bearracuda.com/?p=8724)
             /[?&]p=\d+(?:[&#]|$)/,
             'googletagmanager.com', 'google-analytics.com', 'doubleclick.net',
@@ -6163,6 +6301,30 @@ class AiWebParser {
             // clients, so crawling them only produces failure-cache entries
             'ticketmaster.com',
             'livenation.com',
+            // tixr.com sits behind DataDome (verified 2026-08-02: HTTP 403 with a
+            // JS-challenge body for every user agent, on tixr.com and www.tixr.com,
+            // /api probe included) — every crawl fetch is a guaranteed 403 plus a
+            // permanent failure-cache entry (4+ per massive.club run,
+            // 20260802-100813). The events themselves are unaffected: they survive
+            // from the listing page's own JSON-LD.
+            'tixr.com',
+            // Web/CDN infrastructure hosts that leaked into the crawl from
+            // beefmince.com/venues (run 20260802-093526: full AI extraction ran on
+            // https://www.google.com and https://maps.googleapis.com; fetch errors
+            // on content-autofill/ktms1.googleapis.com and maps.gstatic.com and
+            // scontent-*.cdninstagram.com; github.com/wix issue links followed;
+            // www.example.com got TWO AI passes in run 20260802-094341).
+            // google.com is blocked as a HOST only — Google Maps links are
+            // consumed from page HTML (extractMapsDirectionsAddresses /
+            // extractLinksFromPage), never via crawl discovery, and the
+            // isGoogleMapsUrl check above still answers first for maps URLs, so
+            // maps-link address harvesting is untouched.
+            'googleapis.com',
+            'gstatic.com',
+            'google.com',
+            'cdninstagram.com',
+            'github.com',
+            'example.com',
             // External promotional / artist sites that are not event listing pages
             'jphardyofficial.com',
             'heymistr.com',
@@ -6475,7 +6637,12 @@ class AiWebParser {
         });
     }
 
-    extractUrlsFromScriptData(html, sourceUrl, diagnostics, pattern, patternName) {
+    // `locateJsonString` (optional): given the pattern's match, return the raw
+    // JSON payload string (or null). Default behavior — brace-scanning from
+    // the end of the match — fits the window.__X__ = {…} assignment patterns;
+    // the __NEXT_DATA__ script-tag pattern supplies its own locator because
+    // its JSON is bounded by the closing </script>, not by an expression.
+    extractUrlsFromScriptData(html, sourceUrl, diagnostics, pattern, patternName, locateJsonString = null) {
         if (!html || !pattern) return [];
         const urls = [];
         const localDiagnostics = diagnostics && typeof diagnostics === 'object'
@@ -6502,7 +6669,9 @@ class AiWebParser {
         }
         try {
             const startIndex = startMatch.index + startMatch[0].length;
-            const jsonString = this.extractJsonObject(html, startIndex);
+            const jsonString = typeof locateJsonString === 'function'
+                ? locateJsonString(startMatch)
+                : this.extractJsonObject(html, startIndex);
             if (!jsonString) {
                 if (localDiagnostics && localDiagnostics.urlSamples !== undefined) {
                     localDiagnostics.urlSamples = [];
@@ -6564,9 +6733,24 @@ class AiWebParser {
 
     extractUrlsFromNextData(html, sourceUrl, diagnostics = null) {
         if (!html) return [];
-        const pattern = /<script\b[^>]*id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i;
+        // Opening tag ONLY. The old pattern matched the WHOLE element
+        // (<script …>…</script>) while extractUrlsFromScriptData starts its
+        // JSON scan AFTER the end of the match — i.e. past the closing tag —
+        // so it always tried to parse the FOLLOWING markup and dice.fm's
+        // embedded JSON was never harvested (16 identical "SyntaxError:
+        // Unrecognized token '<'" WARNs per BEEFMINCE run, 20260802-093526).
+        // The body is taken by scanning forward to the matching </script>,
+        // never by a greedy/lazy regex across tags.
+        const pattern = /<script\b[^>]*id=["']__NEXT_DATA__["'][^>]*>/i;
         const patternName = '__NEXT_DATA__';
-        return this.extractUrlsFromScriptData(html, sourceUrl, diagnostics, pattern, patternName);
+        return this.extractUrlsFromScriptData(html, sourceUrl, diagnostics, pattern, patternName, (startMatch) => {
+            const bodyStart = startMatch.index + startMatch[0].length;
+            const closeMatch = html.slice(bodyStart).match(/<\/script\b/i);
+            const body = closeMatch
+                ? html.slice(bodyStart, bodyStart + closeMatch.index)
+                : html.slice(bodyStart);
+            return body.trim() || null;
+        });
     }
 
     collectEventUrlsFromDataObject(node, sourceUrl, urls, visited, depth) {
@@ -7690,16 +7874,55 @@ class AiWebParser {
             return { year: parseInt(match[1], 10), month: parseInt(match[2], 10), day: parseInt(match[3], 10) };
         };
 
+        // RAW STRING candidates decide first, in caller order: a raw
+        // "2026-07-25T22:00:00-07:00" still carries the event's LOCAL date,
+        // while a Date can only re-serialize via toISOString() — UTC — where a
+        // US evening start has already rolled to the NEXT day. Run
+        // 20260802-093810: all five "does not match startDate" lines were
+        // exactly +1 day (Jul 25 title vs 2026-07-26 UTC), zero true
+        // mismatches — the strip never fired for US-evening JSON-LD events.
+        // Date instances stay as the last-resort fallback.
+        const candidateList = Array.isArray(dateCandidates) ? dateCandidates : [dateCandidates];
         let expectedDate = null;
-        for (const candidate of (Array.isArray(dateCandidates) ? dateCandidates : [dateCandidates])) {
+        let expectedFromUtcInstant = false;
+        for (const candidate of candidateList) {
+            if (candidate instanceof Date) continue;
             expectedDate = extractLocalDateParts(candidate);
             if (expectedDate) break;
+        }
+        if (!expectedDate) {
+            for (const candidate of candidateList) {
+                if (!(candidate instanceof Date)) continue;
+                expectedDate = extractLocalDateParts(candidate);
+                if (expectedDate) {
+                    expectedFromUtcInstant = true;
+                    break;
+                }
+            }
         }
         if (!expectedDate) return title;
 
         const monthDayMatches = titleDateSegment.month === expectedDate.month && titleDateSegment.day === expectedDate.day;
         const yearMatches = titleDateSegment.year === null || titleDateSegment.year === expectedDate.year;
-        if (monthDayMatches && yearMatches) {
+        let printedDateMatches = monthDayMatches && yearMatches;
+        // Only a Date was available, and the title prints the day exactly ONE
+        // day BEFORE the UTC date: that is the western-hemisphere evening
+        // rollover (a Jul 25 10PM PDT start is Jul 26 in UTC — the printed
+        // date is the event's LOCAL date). Accept that single specific offset,
+        // and only when the title states no year or the year agrees with the
+        // rolled-back date; anything else is still a genuine mismatch.
+        if (!printedDateMatches && expectedFromUtcInstant) {
+            const dayBefore = new Date(Date.UTC(expectedDate.year, expectedDate.month - 1, expectedDate.day - 1));
+            const dayBeforeParts = {
+                year: dayBefore.getUTCFullYear(),
+                month: dayBefore.getUTCMonth() + 1,
+                day: dayBefore.getUTCDate()
+            };
+            printedDateMatches = titleDateSegment.month === dayBeforeParts.month
+                && titleDateSegment.day === dayBeforeParts.day
+                && (titleDateSegment.year === null || titleDateSegment.year === dayBeforeParts.year);
+        }
+        if (printedDateMatches) {
             console.log(`🤖 AI Web: Stripped redundant date from title ("${title}" → "${titleDateSegment.base}")`);
             return titleDateSegment.base;
         }
@@ -10202,6 +10425,47 @@ TEXT:
     }
 
     /**
+     * Concrete date signal in a model evidence string: an ISO/numeric date, a
+     * month name, or a day-of-month number. Weekday-only/schedule-only
+     * evidence ("Every Thursday", "WEDNESDAYS 8:30-MIDNIGHT") has NONE of
+     * these — it describes a recurrence, not a date, so it can never
+     * corroborate a specific Y-M-D value (run 20260802-100813: BLOWPOP's
+     * startDate "2026-01-01" with evidence "Every Thursday" passed the gate,
+     * was forward-rolled to 2027-01-01, and became a phantom NYE event).
+     * Time tokens are stripped first so "8:30"/"18:30" never read as day
+     * numbers. Fails open: any date-ish token counts as a signal, so today's
+     * corpus corroboration keeps deciding those cases.
+     */
+    evidenceHasConcreteDateSignal(evidence) {
+        let text = this.foldDiacritics(String(evidence || '').toLowerCase());
+        if (!text) return false;
+        // ISO dates ("2026-01-01", "2026-1-1")
+        if (/\d{4}-\d{1,2}-\d{1,2}/.test(text)) return true;
+        // Strip time-of-day tokens so their digits cannot pose as day numbers
+        text = text
+            .replace(/\b\d{1,2}:\d{2}(?::\d{2})?\s*(?:am|pm)?/gi, ' ')
+            .replace(/\b\d{1,2}\s*(?:am|pm)\b/gi, ' ');
+        // Numeric dates ("5/23", "07.04.2026", "12-25")
+        if (/\b(?:0?[1-9]|1[0-2])[\/.](?:0?[1-9]|[12]\d|3[01])(?:[\/.](?:\d{2}|\d{4}))?\b/.test(text)) return true;
+        if (/\b(?:0?[1-9]|[12]\d|3[01])[\/.](?:0?[1-9]|1[0-2])(?:[\/.](?:\d{2}|\d{4}))?\b/.test(text)) return true;
+        // Month names: the multilingual vocabulary plus English full/abbreviated
+        const vocab = this.getMultilingualDateVocabulary();
+        const englishMonths = ['january', 'february', 'march', 'april', 'may', 'june', 'july',
+            'august', 'september', 'october', 'november', 'december',
+            'jan', 'feb', 'mar', 'apr', 'jun', 'jul', 'aug', 'sept', 'sep', 'oct', 'nov', 'dec'];
+        const monthNames = [...Object.keys((vocab && vocab.monthsByName) || {}), ...englishMonths];
+        const hasMonthName = monthNames.some(name => {
+            if (!name || name.length < 3) return false;
+            const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            return new RegExp(`(^|[^a-z])${escaped}($|[^a-z])`).test(text);
+        });
+        if (hasMonthName) return true;
+        // Ordinal or standalone day-of-month numbers ("25th", "the 25")
+        if (/\b\d{1,2}(?:st|nd|rd|th)\b/.test(text)) return true;
+        return /\b(?:[1-9]|[12]\d|3[01])\b/.test(text);
+    }
+
+    /**
      * END-marker-cited evidence for a START field: the model quotes an
      * "End at:" / "Ends" / "until" / "doors close" line as the source of a
      * start value — that text states the event's END, so the start value is
@@ -10409,6 +10673,28 @@ TEXT:
         // interpreted as ~3am (common club close time)" passed the gate).
         const inventedTime = this.valueClaimsTimeOfDay(rule.mode, value)
             && this.evidenceAdmitsInference(modelEvidence);
+        // A specific Y-M-D needs date-shaped evidence: when the model DID cite
+        // evidence for a date field but that evidence carries no concrete date
+        // signal (no month name, no day-of-month, no ISO/numeric date), the
+        // value is fabricated — weekday/schedule-only evidence ("Every
+        // Thursday") is a recurrence, not a date. Run 20260802-100813:
+        // BLOWPOP's placeholder startDate "2026-01-01" (evidence "Every
+        // Thursday") passed and became a phantom 2027 NYE event, while the
+        // identical QUEERAOKE shape ("2024-01-01" / "WEDNESDAYS
+        // 8:30-MIDNIGHT") only fell to the corpus check by luck. Weekday-
+        // pinned values are exempt: that repair corrects the YEAR of a date
+        // whose evidence/source stated a real month+day (deterministically
+        // vetted at flatten time — see resolveWeekdayPinnedYear).
+        const pinBucket = this.getDateFieldPinBucket(key);
+        const weekdayPinnedValue = Boolean(pinBucket
+            && validationContext
+            && validationContext.weekdayPinnedYears
+            && validationContext.weekdayPinnedYears[pinBucket] === true);
+        const datelessDateEvidence = !citesForbiddenContext
+            && rule.mode === 'date'
+            && !weekdayPinnedValue
+            && String(modelEvidence || '').trim() !== ''
+            && !this.evidenceHasConcreteDateSignal(modelEvidence);
         // START fields whose model-cited evidence is an END-marker line
         // ("End at: August 1, 2026 - 2:00 am" — run 20260724-155934) carry
         // misattributed END data: the value is often verbatim in the corpus
@@ -10427,6 +10713,7 @@ TEXT:
             && !brandOnlyCityEvidence
             && !inventedTime
             && !endMarkerStart
+            && !datelessDateEvidence
             && (scheduleEvidence
                 ? scheduleEvidence.valid
                 : this.hasFieldEvidence(evidenceContext, value, rule.mode, validationContext));
@@ -10442,6 +10729,10 @@ TEXT:
             if (citesForbiddenContext) droppedEntry.reason = 'context-cited-evidence';
             else if (brandOnlyCityEvidence) droppedEntry.reason = 'brand-cited-evidence';
             else if (endMarkerStart) droppedEntry.reason = END_MARKER_CITED_REASON;
+            else if (datelessDateEvidence) {
+                droppedEntry.reason = 'dateless-cited-evidence';
+                console.log(`🤖 AI Web: Dropped ${rule.field} "${this.trimToMaxLength(String(value), 40)}" — cited evidence "${this.trimToMaxLength(String(modelEvidence), 60)}" carries no concrete date (weekday/schedule words cannot corroborate a specific date)`);
+            }
             else if (scheduleEvidence && !scheduleEvidence.valid) {
                 // Tagged so the retry prompt renders the rrule-specific
                 // correction line instead of "copy the exact text" (an RRULE
@@ -10471,7 +10762,8 @@ TEXT:
                 citesForbiddenContext,
                 brandOnlyCityEvidence,
                 inventedTime,
-                endMarkerStart
+                endMarkerStart,
+                datelessDateEvidence
             });
             return false;
         }
@@ -10501,7 +10793,7 @@ TEXT:
         try {
             if (!EVIDENCE_RESCUE_FIELDS.has(rule.field)) return;
             // ONLY the plain "value not verbatim" rejection class qualifies.
-            if (dropFlags && (dropFlags.citesForbiddenContext || dropFlags.brandOnlyCityEvidence || dropFlags.inventedTime || dropFlags.endMarkerStart)) return;
+            if (dropFlags && (dropFlags.citesForbiddenContext || dropFlags.brandOnlyCityEvidence || dropFlags.inventedTime || dropFlags.endMarkerStart || dropFlags.datelessDateEvidence)) return;
             const evidence = String(modelEvidence || '').trim();
             if (!evidence) return;
             // Inference language or context citations anywhere in the
@@ -10775,6 +11067,13 @@ TEXT:
         const modelFieldEvidence = aiEvent.__fieldEvidence && typeof aiEvent.__fieldEvidence === 'object'
             ? aiEvent.__fieldEvidence
             : {};
+        // Weekday-pinned date values were deterministically vetted at flatten
+        // time (resolveWeekdayPinnedYear corrected the YEAR of a stated
+        // month+day) — the dateless-evidence quality check must not re-drop
+        // them. Additive key on the per-call context object.
+        validationContext.weekdayPinnedYears = aiEvent.__weekdayPinnedYears && typeof aiEvent.__weekdayPinnedYears === 'object'
+            ? aiEvent.__weekdayPinnedYears
+            : null;
         // Brand/domain tokens of the source page — consulted for the city
         // field so branding-citing evidence fails corroboration (run
         // 20260723-123149: WWW.FURBALL.NYC flyer branding produced city
@@ -10942,6 +11241,22 @@ TEXT:
             aiEvent.summary,
             this.getResolvedParserMetadataFieldValue(parserConfig, ['title', 'name', 'summary'], aiEvent)
         );
+        // A title that is nothing but a time of day is a harvested time node,
+        // never an event name (run 20260802-102127: the final event was titled
+        // "6:30 PM" while the real name — "SUGAR, WE'RE HOEIN DOWN" — sat in
+        // the description). Treat it as missing: prefer the next non-time
+        // candidate, else fail the TITLE and let the existing missing-title
+        // repair/retry paths run.
+        if (title && this.isTimeOnlyLineText(title)) {
+            console.log(`🤖 AI Web: Title "${title}" is only a time of day — treating the title as missing`);
+            const nonTimeCandidates = [
+                aiEvent.title,
+                aiEvent.name,
+                aiEvent.summary,
+                this.getResolvedParserMetadataFieldValue(parserConfig, ['title', 'name', 'summary'], aiEvent)
+            ].filter(candidate => !(typeof candidate === 'string' && this.isTimeOnlyLineText(candidate)));
+            title = this.firstNonEmpty(...nonTimeCandidates, '');
+        }
         // Restore a title extraction truncated, proven by containment in the
         // page's own JSON-LD Event name (see repairTruncatedTitleFromJsonLd).
         // Deliberately FIRST of the title cleanups: the adopted value is the
@@ -13524,7 +13839,11 @@ TEXT:
                 consensusAddress: consensusKey ? entry.addresses[consensusKey].display : '',
                 blocked: entry.blocked === true,
                 venueRoleSeen: entry.venueRoleSeen === true,
-                venueName: typeof entry.venueName === 'string' ? entry.venueName : ''
+                venueName: typeof entry.venueName === 'string' ? entry.venueName : '',
+                // EVERY harvested address (consensus or not) — the
+                // curated-website identity rung picks its primary claimant by
+                // which curated address the site itself publishes.
+                harvestedAddresses: hostKeys.map(key => entry.addresses[key].display)
             };
         }
         const eventList = Array.isArray(events) ? events : [];
@@ -13576,10 +13895,46 @@ TEXT:
         if (!a || !b || !this.core) return false;
         const parsedA = this.core.parseAddressForComparison(a);
         const parsedB = this.core.parseAddressForComparison(b);
-        if (parsedA && parsedB) return this.core.isSameStreetAddress(parsedA, parsedB);
+        if (parsedA && parsedB) {
+            if (this.core.isSameStreetAddress(parsedA, parsedB)) return true;
+            // Locality-suffix tolerance (run 20260802-102127: a flyer's
+            // comma-less street line "270 Meserole St. BK" never agreed with
+            // the curated "270 Meserole St, Brooklyn, NY 11206" — the borough
+            // scribble lands INSIDE the street line, defeating both the
+            // full-token prefix rule and the street-line rule). The street
+            // address proper ENDS at its street-type designator; tokens after
+            // it are locality decoration, so truncate there and retry. The
+            // street number must still match and the zip guard still applies
+            // to the untruncated side, keeping different addresses different.
+            const truncateAtStreetType = parsed => {
+                const index = parsed.tokens.findIndex(token => this.isStreetTypeAddressToken(token));
+                if (index < 0 || index === parsed.tokens.length - 1) return null;
+                const truncated = parsed.tokens.slice(0, index + 1);
+                return {
+                    streetNumber: parsed.streetNumber,
+                    tokens: truncated,
+                    streetLineTokens: truncated,
+                    zips: []
+                };
+            };
+            const truncatedA = truncateAtStreetType(parsedA);
+            const truncatedB = truncateAtStreetType(parsedB);
+            if (truncatedA && this.core.isSameStreetAddress(truncatedA, parsedB)) return true;
+            if (truncatedB && this.core.isSameStreetAddress(parsedA, truncatedB)) return true;
+            return false;
+        }
         const tokensA = this.core.normalizeAddressTokens(a).join(' ');
         const tokensB = this.core.normalizeAddressTokens(b).join(' ');
         return Boolean(tokensA) && tokensA === tokensB;
+    }
+
+    // Fully-expanded street-type designator (normalizeAddressTokens output
+    // form: "st" is already "street"). The same word list shared-core's
+    // street-line tolerance recognizes, needed here because that module-level
+    // constant is not exported.
+    isStreetTypeAddressToken(token) {
+        return /^(?:street|avenue|road|boulevard|drive|lane|place|court|highway|parkway|way)$/
+            .test(String(token || ''));
     }
 
     // WHO a crawled site is — established only when independent hard facts
@@ -13633,6 +13988,188 @@ TEXT:
         };
     }
 
+    // ------------------------------------------------------------------------
+    // CURATED-WEBSITE identity rung (run 20260802-102127): 7 of 10 events
+    // from a venue's own site shipped city "unknown" — never timezone-anchored
+    // — because the evidence gate had (correctly) stripped the prompt-injected
+    // bar/city and the identity guard above could not establish: the crawl
+    // produced no address consensus at all. But the curated corpus itself
+    // already declares WHO such a host is: a curated bar whose own `website`
+    // field carries the same registrable host. That is positive verification
+    // from curated data (curated beats derived), so it establishes HOST-LEVEL
+    // identity on its own — signal 'curated-website'. Structurally, ticketing
+    // platforms can never qualify: no curated bar lists eventbrite.com or
+    // dice.fm as its website. Purely data-driven — the mechanism knows no
+    // host names; any venue whose curated entry carries its website benefits,
+    // and nothing else does.
+    //
+    // Weaker signal, weaker hand than the guard above: application is FILL
+    // ONLY (blank bar, blank/"unknown" city). It never replaces a bar — the
+    // flyer-brand replacement machinery stays the exclusive overwriter, and
+    // only under its stronger signals.
+    // ------------------------------------------------------------------------
+
+    // Every curated bar (across all cities) whose own `website` registrable
+    // host IS this host. More than one hit is a real shape — sister venues
+    // sharing one site (a main stage and its yard) — handled by the
+    // sub-venue resolution below, never treated as ambiguity by itself.
+    getCuratedBarsClaimingHost(host) {
+        const hostKey = typeof host === 'string' ? host.trim().toLowerCase() : '';
+        const claimants = [];
+        if (!hostKey || !this.core || !this.core.bars || typeof this.core.bars !== 'object') {
+            return claimants;
+        }
+        for (const cityKey of Object.keys(this.core.bars)) {
+            const cityBars = this.core.bars[cityKey];
+            if (!Array.isArray(cityBars)) continue;
+            for (const bar of cityBars) {
+                if (!bar || typeof bar.name !== 'string' || !bar.name.trim()) continue;
+                const website = typeof bar.website === 'string' ? bar.website.trim() : '';
+                if (!website) continue;
+                if (this.getVenueSiteHostKey(website) === hostKey) {
+                    claimants.push({ city: cityKey, bar });
+                }
+            }
+        }
+        return claimants;
+    }
+
+    // HOST-LEVEL identity from the curated corpus's own website pointers.
+    // Establishes only when the host is not organizer-blocked (the same veto
+    // everything above honors), at least one curated bar claims the host via
+    // its `website` field, and every claimant is curated in ONE city (a
+    // cross-city claim set is ambiguity — fail closed).
+    //
+    // The PRIMARY claimant — the answer when an event's own evidence cannot
+    // pick a sub-venue — is, in order:
+    //   1. the single claimant whose curated address the site itself
+    //      publishes (agreement with a harvested map-directions address);
+    //   2. else the first claimant carrying curated coordinates (the
+    //      geocoded, longest-standing entry);
+    //   3. else the first claimant.
+    getCuratedWebsiteVenueSiteIdentity(host, entry) {
+        if (!entry || typeof entry !== 'object' || entry.blocked !== false) return null;
+        const claimants = this.getCuratedBarsClaimingHost(host);
+        if (claimants.length === 0) return null;
+        const cities = [...new Set(claimants.map(claimant => claimant.city))];
+        if (cities.length > 1) {
+            console.log(`🤖 AI Web: Curated-website identity for ${host} is ambiguous — curated bars in ${cities.join(', ')} all claim it; nothing derived`);
+            return null;
+        }
+        const harvestedAddresses = Array.isArray(entry.harvestedAddresses) ? entry.harvestedAddresses : [];
+        const sitePublished = claimants.filter(claimant => harvestedAddresses.some(
+            address => this.venueSiteIdentityAddressesAgree(address, claimant.bar.address)));
+        let primary;
+        let primaryReason;
+        if (sitePublished.length === 1) {
+            primary = sitePublished[0];
+            primaryReason = 'the site publishes its curated address';
+        } else {
+            const withCoordinates = claimants.find(claimant =>
+                typeof claimant.bar.coordinates === 'string' && claimant.bar.coordinates.trim());
+            primary = withCoordinates || claimants[0];
+            primaryReason = withCoordinates ? 'first claimant with curated coordinates' : 'first claimant';
+        }
+        return { city: cities[0], claimants, primary, primaryReason, signals: ['curated-website'] };
+    }
+
+    // Which claimant is THIS event at? Decided from the event's OWN evidence,
+    // strongest first; a tier resolves only when it matches exactly ONE
+    // claimant (two matching is ambiguity — the caller falls back to the
+    // primary; zero falls through to the next tier):
+    //   1. the extracted bar names a claimant (normalizeBarNameKey equality —
+    //      curated matching's own full-name strictness);
+    //   2. the extracted address IS a claimant's curated address
+    //      (venueSiteIdentityAddressesAgree — the consensus path's own test);
+    //   3. the event's own title/description names a claimant whole-word
+    //      (eventTextNamesCuratedBar).
+    // Null when nothing resolves — the caller answers with the primary.
+    resolveCuratedWebsiteSubVenue(event, claimants) {
+        if (!event || typeof event !== 'object' || !Array.isArray(claimants)) return null;
+        const nameKey = value => (this.core && typeof this.core.normalizeBarNameKey === 'function'
+            ? this.core.normalizeBarNameKey(value)
+            : String(value || '').toLowerCase().replace(/^\s*the\s+/, '').replace(/[^a-z0-9]/g, ''));
+        const barKey = nameKey(typeof event.bar === 'string' ? event.bar : '');
+        const address = typeof event.address === 'string' ? event.address.trim() : '';
+        const tiers = [
+            {
+                reason: 'the event bar names it',
+                matches: barKey
+                    ? claimants.filter(claimant => nameKey(claimant.bar.name) === barKey)
+                    : []
+            },
+            {
+                reason: 'the event address is its curated address',
+                matches: address
+                    ? claimants.filter(claimant => this.venueSiteIdentityAddressesAgree(address, claimant.bar.address))
+                    : []
+            },
+            {
+                reason: 'the event text names it',
+                matches: claimants.filter(claimant => this.eventTextNamesCuratedBar(event, claimant.bar.name))
+            }
+        ];
+        for (const tier of tiers) {
+            if (tier.matches.length === 1) return { claimant: tier.matches[0], reason: tier.reason };
+            if (tier.matches.length > 1) return null;
+        }
+        return null;
+    }
+
+    // Fill-only application for the curated-website rung, run from
+    // applyVenueSiteIdentityCorrections when the stronger identity above did
+    // NOT establish. Blank bar and blank/"unknown" city are filled — a
+    // non-empty bar or city is NEVER touched. The city fill is what re-anchors
+    // never-timezone-anchored dates downstream: the dedup re-anchor pass
+    // resolves them from event.city, no timezone code here.
+    applyCuratedWebsiteIdentityFills(host, entry, eventList, cityConfig = null) {
+        const identity = this.getCuratedWebsiteVenueSiteIdentity(host, entry);
+        if (!identity) return;
+        const claimants = identity.claimants;
+        console.log(`🤖 AI Web: Venue-site identity for ${host} established from curated website match: ${claimants.map(claimant => `"${claimant.bar.name}"`).join(', ')} (${identity.city}) — signals: ${identity.signals.join(', ')}; primary "${identity.primary.bar.name}" (${identity.primaryReason})`);
+        const consensusKey = typeof entry.consensusKey === 'string' ? entry.consensusKey : '';
+        for (const event of eventList) {
+            if (!event || typeof event !== 'object' || event._venueSitePageHost !== host) continue;
+            // Multi-venue safety (the consensus pass's own rule): an event
+            // carrying a street address that is neither the site's consensus
+            // address nor ANY claimant's curated address is a party at
+            // another venue announced on this site — left untouched.
+            const existingAddress = typeof event.address === 'string' ? event.address.trim() : '';
+            if (existingAddress
+                && this.normalizeVenueSiteAddressKey(existingAddress) !== consensusKey
+                && !claimants.some(claimant => this.venueSiteIdentityAddressesAgree(existingAddress, claimant.bar.address))) {
+                continue;
+            }
+            // Road-show guard: an extracted city that does not resolve to the
+            // claimants' city is positive evidence the announcement is for a
+            // party elsewhere — the whole event is left alone, exactly like a
+            // differing street address. An alias of the same city ("new york"
+            // for nyc) resolves through the cities config and still passes.
+            const eventCity = typeof event.city === 'string' ? event.city.trim() : '';
+            const eventCityLower = eventCity.toLowerCase();
+            if (eventCity && eventCityLower !== 'unknown' && eventCityLower !== identity.city) {
+                const configEntry = this.findCityConfigEntry(eventCityLower, cityConfig);
+                if (!configEntry || configEntry.key !== identity.city) continue;
+            }
+            const title = typeof event.title === 'string' && event.title.trim() ? event.title.trim() : 'unknown';
+            const resolved = claimants.length === 1
+                ? { claimant: claimants[0], reason: 'sole curated claimant of the host' }
+                : (this.resolveCuratedWebsiteSubVenue(event, claimants)
+                    || { claimant: identity.primary, reason: `primary claimant — ${identity.primaryReason}` });
+            const bar = typeof event.bar === 'string' ? event.bar.trim() : '';
+            if (!bar) {
+                event.bar = resolved.claimant.bar.name;
+                event.barSource = 'venue-site-identity';
+                console.log(`🤖 AI Web: Filled bar "${resolved.claimant.bar.name}" from curated-website identity for "${title}" (${resolved.reason})`);
+            }
+            const existingCity = typeof event.city === 'string' ? event.city.trim().toLowerCase() : '';
+            if (!existingCity || existingCity === 'unknown') {
+                event.city = identity.city;
+                console.log(`🤖 AI Web: Filled city "${identity.city}" from curated-website identity for "${title}"`);
+            }
+        }
+    }
+
     // Deterministic KNOWN-VENUE replacement pass, run by shared-core's
     // processParser immediately AFTER applyVenueSiteAddressConsensus (which
     // stashes lastVenueSiteConsensus for it). On a host whose identity is
@@ -13649,7 +14186,12 @@ TEXT:
         for (const host of Object.keys(consensusByHost)) {
             const entry = consensusByHost[host];
             const identity = this.getEstablishedVenueSiteIdentity(entry, entry.consensusKey);
-            if (!identity) continue;
+            if (!identity) {
+                // Weaker rung: the curated corpus's own website pointer can
+                // still say WHO the host is — fill-only, never a replacement.
+                this.applyCuratedWebsiteIdentityFills(host, entry, eventList, cityConfig);
+                continue;
+            }
             const curatedBar = identity.curatedBar;
             const identityKey = this.core.normalizeBarNameKey(curatedBar.name);
             const cityBars = typeof this.core.getCuratedCityBars === 'function'
@@ -14042,7 +14584,18 @@ TEXT:
         let reason = '';
         const bar = typeof event.bar === 'string' ? event.bar.trim() : '';
         if (bar && this.normalizeAdjacencyText(bar) === normalizedAddress) {
-            reason = 'matches venue name';
+            // An ADDRESS-SHAPED twin means the BAR field holds the copy, not
+            // the address (run 20260802-102127: extraction stored the flyer's
+            // street line "270 Meserole St. BK" in BOTH fields; dropping the
+            // address here destroyed the one datum locating the event while
+            // the bar gate correctly dropped the bar, shipping the event with
+            // neither). Street-number + street-word shape only
+            // (isAddressShapedBarValue) — a name-shaped twin still drops.
+            if (this.isAddressShapedBarValue(address)) {
+                console.log(`🤖 AI Web: Kept address-shaped address "${address}" despite equal bar value — the bar holds the copy, not the address`);
+            } else {
+                reason = 'matches venue name';
+            }
         }
         if (!reason) {
             const organizer = typeof event._organizer === 'string' ? event._organizer.trim() : '';

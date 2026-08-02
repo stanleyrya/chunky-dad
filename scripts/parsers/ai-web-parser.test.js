@@ -6504,6 +6504,255 @@ test('venue-site harvest: an undetermined page records the venue name (not the r
   assert.equal(blockedEntry.venueName, '', 'organizer pages contribute no identity facts');
 });
 
+// ---------------------------------------------------------------------------
+// Curated-website identity rung: a curated bar's own `website` field claims a
+// registrable host, establishing host-level identity with NO address
+// consensus. Fill-only application; multi-claimant hosts resolve the
+// sub-venue from the event's own evidence, falling back to the primary.
+// Fixture mirrors the 20260802-102127 run: two nyc bars share one site.
+// ---------------------------------------------------------------------------
+
+function createCuratedWebsiteParser() {
+  const parser = new AiWebParser({ normalizeUrl });
+  parser.core = new SharedCore(
+    {
+      nyc: { timezone: 'America/New_York', patterns: ['nyc', 'new york'] },
+      seattle: { timezone: 'America/Los_Angeles', patterns: ['seattle'] }
+    },
+    {
+      eventSchema: EventSchema,
+      bars: {
+        nyc: [
+          {
+            name: '3 Dollar Bill', city: 'nyc',
+            address: '260 Meserole St, Brooklyn, NY 11206',
+            coordinates: '40.7084144, -73.9380583',
+            website: 'https://www.3dollarbillbk.com'
+          },
+          {
+            name: 'The Yard at 9 Bob Note', city: 'nyc',
+            address: '270 Meserole St, Brooklyn, NY 11206',
+            coordinates: null,
+            website: 'https://www.3dollarbillbk.com'
+          },
+          {
+            name: 'Rockbar', city: 'nyc',
+            address: '185 Christopher St, New York, NY',
+            website: 'https://www.rockbarnyc.com'
+          }
+        ],
+        seattle: [
+          {
+            name: 'Massive', city: 'seattle',
+            address: '1620 Broadway, Seattle, WA 98122',
+            coordinates: '47.6142900, -122.3211000',
+            website: 'https://massive.club'
+          }
+        ]
+      }
+    }
+  );
+  return parser;
+}
+
+function curatedWebsiteEntry(overrides = {}) {
+  return {
+    consensusKey: '', consensusAddress: '', blocked: false,
+    venueRoleSeen: false, venueName: '', harvestedAddresses: [],
+    ...overrides
+  };
+}
+
+test('curated-website identity: a single-claimant host establishes from the website field alone and fills blanks only', () => {
+  const parser = createCuratedWebsiteParser();
+  parser.lastVenueSiteConsensus = { 'massive.club': curatedWebsiteEntry() };
+  const events = [
+    { title: 'UNDERBEAR', bar: '', city: 'unknown', _venueSitePageHost: 'massive.club' },
+    // Non-empty bar is NEVER overwritten (fill-only) — city still fills
+    { title: 'GUEST NIGHT', bar: 'Guest Brand', barSource: 'uncorroborated', city: '', _venueSitePageHost: 'massive.club' },
+    // A DIFFERENT extracted city → road-show guard, whole event untouched
+    { title: 'ROAD SHOW', bar: '', city: 'portland', _venueSitePageHost: 'massive.club' },
+    // An ALIAS of the claimants' city resolves through the config and passes
+    { title: 'HOMETOWN ALIAS', bar: '', city: 'emerald city', _venueSitePageHost: 'massive.club' },
+    { title: 'ELSEWHERE', bar: '', city: 'unknown', _venueSitePageHost: 'other.example' }
+  ];
+  const cityConfig = {
+    seattle: { timezone: 'America/Los_Angeles', patterns: ['seattle', 'emerald city'] },
+    portland: { timezone: 'America/Los_Angeles', patterns: ['portland'] }
+  };
+  const logs = captureLogs(() => parser.applyVenueSiteIdentityCorrections(events, cityConfig));
+
+  assert.equal(events[0].bar, 'Massive');
+  assert.equal(events[0].barSource, 'venue-site-identity');
+  assert.equal(events[0].city, 'seattle', 'the city fill drives downstream timezone re-anchoring');
+  assert.equal(events[1].bar, 'Guest Brand', 'a non-empty bar is never overwritten by the fill-only rung');
+  assert.equal(events[1].barSource, 'uncorroborated');
+  assert.equal(events[1].city, 'seattle');
+  assert.equal(events[2].bar, '', 'a differing extracted city means a party elsewhere — untouched');
+  assert.equal(events[2].city, 'portland', 'a non-empty city is never overwritten');
+  assert.equal(events[3].bar, 'Massive', 'a config alias of the claimants\' city still passes the guard');
+  assert.equal(events[3].city, 'emerald city', 'the alias city itself is non-empty — never overwritten');
+  assert.equal(events[4].bar, '', 'other hosts untouched');
+  assert.equal(events[4].city, 'unknown');
+
+  assert.ok(logs.some(line => line.includes(
+    '🤖 AI Web: Venue-site identity for massive.club established from curated website match: "Massive" (seattle) — signals: curated-website')),
+    `identity log expected, got: ${JSON.stringify(logs)}`);
+  assert.ok(logs.some(line => line.includes(
+    '🤖 AI Web: Filled bar "Massive" from curated-website identity for "UNDERBEAR" (sole curated claimant of the host)')));
+  assert.ok(logs.some(line => line.includes(
+    '🤖 AI Web: Filled city "seattle" from curated-website identity for "UNDERBEAR"')));
+});
+
+test('curated-website identity: a multi-claimant host resolves the sub-venue from the event\'s own evidence', () => {
+  const parser = createCuratedWebsiteParser();
+  parser.lastVenueSiteConsensus = { '3dollarbillbk.com': curatedWebsiteEntry() };
+  const events = [
+    // The run's CONFESSIONS DEUX shape: the surviving flyer street line is
+    // 9 Bob Note's curated address (locality-suffix tolerant comparison)
+    {
+      title: 'CONFESSIONS DEUX', bar: '', city: 'unknown',
+      address: '270 Meserole St. BK', _venueSitePageHost: '3dollarbillbk.com'
+    },
+    // No evidence at all → the primary (first claimant with coordinates)
+    { title: 'Big Gay Foam Party', bar: '', city: 'unknown', _venueSitePageHost: '3dollarbillbk.com' },
+    // The event's own text names one claimant whole-word
+    {
+      title: 'Live from The Yard at 9 Bob Note', bar: '', city: 'unknown',
+      _venueSitePageHost: '3dollarbillbk.com'
+    },
+    // Text naming BOTH claimants is ambiguous → the primary answers
+    {
+      title: 'Takeover: 3 Dollar Bill x The Yard at 9 Bob Note', bar: '', city: 'unknown',
+      _venueSitePageHost: '3dollarbillbk.com'
+    },
+    // Off-site street address (matches no claimant) → untouched entirely
+    {
+      title: 'OFFSITE', bar: '', city: 'unknown',
+      address: '500 Somewhere Else Ave, Queens, NY', _venueSitePageHost: '3dollarbillbk.com'
+    }
+  ];
+  const logs = captureLogs(() => parser.applyVenueSiteIdentityCorrections(events, null));
+
+  assert.equal(events[0].bar, 'The Yard at 9 Bob Note', 'the address evidence picks the sub-venue');
+  assert.equal(events[0].city, 'nyc');
+  assert.equal(events[1].bar, '3 Dollar Bill', 'no evidence → primary claimant (first with coordinates)');
+  assert.equal(events[1].city, 'nyc');
+  assert.equal(events[2].bar, 'The Yard at 9 Bob Note', 'the event text picks the sub-venue');
+  assert.equal(events[3].bar, '3 Dollar Bill', 'ambiguous evidence falls back to the primary');
+  assert.equal(events[4].bar, '', 'an off-site party is never claimed');
+  assert.equal(events[4].city, 'unknown');
+
+  assert.ok(logs.some(line => line.includes(
+    'Venue-site identity for 3dollarbillbk.com established from curated website match: "3 Dollar Bill", "The Yard at 9 Bob Note" (nyc) — signals: curated-website; primary "3 Dollar Bill" (first claimant with curated coordinates)')),
+    `identity log expected, got: ${JSON.stringify(logs)}`);
+  assert.ok(logs.some(line => line.includes(
+    'Filled bar "The Yard at 9 Bob Note" from curated-website identity for "CONFESSIONS DEUX" (the event address is its curated address)')));
+  assert.ok(logs.some(line => line.includes(
+    'Filled bar "3 Dollar Bill" from curated-website identity for "Big Gay Foam Party" (primary claimant — first claimant with curated coordinates)')));
+});
+
+test('curated-website identity: a site-published address picks the primary; blocked, cross-city, and platform hosts never establish', () => {
+  const parser = createCuratedWebsiteParser();
+  // The site itself publishes one claimant's curated address → that claimant
+  // is the primary even without coordinates.
+  const published = parser.getCuratedWebsiteVenueSiteIdentity('3dollarbillbk.com',
+    curatedWebsiteEntry({ harvestedAddresses: ['270 Meserole St, Brooklyn, NY 11206'] }));
+  assert.ok(published);
+  assert.equal(published.primary.bar.name, 'The Yard at 9 Bob Note');
+  assert.equal(published.primaryReason, 'the site publishes its curated address');
+  assert.equal(published.city, 'nyc');
+  assert.deepEqual(published.signals, ['curated-website']);
+
+  // Organizer-blocked host: the same veto as every other identity path
+  assert.equal(parser.getCuratedWebsiteVenueSiteIdentity('3dollarbillbk.com',
+    curatedWebsiteEntry({ blocked: true })), null);
+
+  // Platform host: no curated bar lists it as a website → structurally null
+  assert.equal(parser.getCuratedWebsiteVenueSiteIdentity('eventbrite.com', curatedWebsiteEntry()), null);
+  assert.deepEqual(parser.getCuratedBarsClaimingHost('eventbrite.com'), []);
+
+  // Claimants curated in DIFFERENT cities → ambiguity, fail closed
+  parser.core.bars.seattle.push({
+    name: 'Massive East', city: 'seattle', address: '1 Elsewhere St, Seattle, WA',
+    website: 'https://www.3dollarbillbk.com'
+  });
+  const crossCityLogs = captureLogs(() => {
+    assert.equal(parser.getCuratedWebsiteVenueSiteIdentity('3dollarbillbk.com', curatedWebsiteEntry()), null);
+  });
+  assert.ok(crossCityLogs.some(line => line.includes(
+    'Curated-website identity for 3dollarbillbk.com is ambiguous — curated bars in nyc, seattle all claim it; nothing derived')));
+});
+
+test('curated-website identity: the stronger established identity keeps precedence over the fill-only rung', () => {
+  const parser = createCuratedWebsiteParser();
+  // Massive-shaped host where the STRONG guard establishes (curated name +
+  // matching address consensus): the replacement machinery runs, not fills.
+  parser.lastVenueSiteConsensus = {
+    'massive.club': curatedWebsiteEntry({
+      consensusKey: parser.normalizeVenueSiteAddressKey('1620 Broadway, Seattle, WA 98122'),
+      consensusAddress: '1620 Broadway, Seattle, WA 98122',
+      venueRoleSeen: true,
+      venueName: 'Massive',
+      harvestedAddresses: ['1620 Broadway, Seattle, WA 98122']
+    })
+  };
+  const events = [
+    { title: 'PERVERT', bar: 'Villa Señor', barSource: 'uncorroborated', city: '', _venueSitePageHost: 'massive.club' }
+  ];
+  const logs = captureLogs(() => parser.applyVenueSiteIdentityCorrections(events, null));
+  assert.equal(events[0].bar, 'Massive', 'the strong identity still replaces flyer brands');
+  assert.ok(logs.some(line => line.includes('signals: venue-role, curated-name, address-consensus')));
+  assert.ok(!logs.some(line => line.includes('from curated website match')),
+    'the fill-only rung stays out of the way when the strong identity establishes');
+});
+
+test('venue-site identity addresses: locality-suffix tolerance matches a comma-less borough scribble, never a different address', () => {
+  const parser = createCuratedWebsiteParser();
+  assert.equal(parser.venueSiteIdentityAddressesAgree(
+    '270 Meserole St. BK', '270 Meserole St, Brooklyn, NY 11206'), true,
+    'the flyer street line agrees with its curated form');
+  assert.equal(parser.venueSiteIdentityAddressesAgree(
+    '270 Meserole St. BK', '260 Meserole St, Brooklyn, NY 11206'), false,
+    'a different street number never agrees');
+  assert.equal(parser.venueSiteIdentityAddressesAgree(
+    '270 Meserole St. BK', '270 Thames St, Brooklyn, NY'), false,
+    'a different street never agrees');
+  assert.equal(parser.venueSiteIdentityAddressesAgree(
+    '619 E Pine St, Seattle, WA 98122', '619 E Pine St, Seattle, WA 98122'), true,
+    'the existing exact path is untouched');
+});
+
+test('address gate: an ADDRESS-SHAPED address equal to the bar value is kept — the bar holds the copy', () => {
+  const parser = createParser();
+  const event = { title: 'CONFESSIONS DEUX', bar: '270 Meserole St. BK', address: '270 Meserole St. BK' };
+  const captured = captureGateLogs();
+  try {
+    parser.applyAddressPlausibilityGate(event, {});
+    parser.applyBarPlausibilityGate(event, null);
+  } finally {
+    captured.restore();
+  }
+  assert.equal(event.address, '270 Meserole St. BK', 'the address survives — it locates the sub-venue');
+  assert.equal(event.bar, undefined, 'the address-shaped bar still drops (it was the copy)');
+  assert.ok(captured.lines.some(line => line.includes(
+    '🤖 AI Web: Kept address-shaped address "270 Meserole St. BK" despite equal bar value — the bar holds the copy, not the address')),
+    `kept log expected, got:\n${captured.lines.join('\n')}`);
+  assert.ok(captured.lines.some(line => line.includes(
+    'Dropped implausible bar "270 Meserole St. BK" (address-shaped)')));
+
+  // A name-shaped twin still drops via "matches venue name"
+  const nameTwin = { title: 'FURBALL Boston', bar: 'Legacy', address: 'Legacy', city: 'boston' };
+  const captured2 = captureGateLogs();
+  try {
+    parser.applyAddressPlausibilityGate(nameTwin, {});
+  } finally {
+    captured2.restore();
+  }
+  assert.equal(nameTwin.address, undefined, 'a venue name is still not an address');
+  assert.ok(captured2.lines.some(line => line.includes('Dropped implausible address "Legacy" (matches venue name)')));
+});
+
 test('KNOWN VENUE curated-match prompt line appears only with a unique curated match; the base line stays byte-identical', () => {
   const curatedMatchLine = 'KNOWN VENUE (curated match): "MASSIVE" is the venue for every event on this site. Other bar or brand names printed on a flyer are guest hosts or co-presenters, NOT the venue — never return them as "bar" unless the page states the event happens at a different street address.';
 
@@ -9201,4 +9450,307 @@ test('brand prefixer: suppressed when the page evidence names ANOTHER curated pr
     'CHUNK: The RETURN');
   // …and with no evidence at all the prefixer behaves exactly as before.
   assert.equal(parser.buildBrandPrefixedTitle('The RETURN', brands, CHUNK_PAGE(), CHUNK_CONFIG), 'CHUNK: The RETURN');
+});
+
+// ---------------------------------------------------------------------------
+// 2026-08-02 run-review wave: eight mechanical defects from the day's runs.
+// ---------------------------------------------------------------------------
+
+// Fix 1 — title date-strip compared against UTC and never fired for
+// US-evening events (run 20260802-093810: all five "does not match
+// startDate" lines were exactly +1 day).
+test('stripRedundantTitleDate prefers raw string candidates over Date objects', () => {
+  const parser = createParser();
+  // The real DORE ALLEY case: a Jul 25 10PM PDT start is Jul 26 in UTC. The
+  // raw JSON-LD string carries the local date and must win even when a Date
+  // candidate comes first.
+  const utcInstant = new Date('2026-07-26T05:00:00.000Z');
+  assert.equal(
+    parser.stripRedundantTitleDate('CHUNK DORE ALLEY - Saturday July 25th',
+      [utcInstant, '2026-07-25T22:00:00-07:00']),
+    'CHUNK DORE ALLEY');
+});
+
+test('stripRedundantTitleDate accepts the one-day UTC rollover when only a Date is available', () => {
+  const parser = createParser();
+  const utcInstant = new Date('2026-07-26T05:00:00.000Z'); // Jul 25, 10PM PDT
+  // Title prints the LOCAL date — exactly one day before the UTC date.
+  assert.equal(
+    parser.stripRedundantTitleDate('CHUNK DORE ALLEY - Saturday July 25th', [utcInstant]),
+    'CHUNK DORE ALLEY');
+  // Two days off is a genuine mismatch — kept for review.
+  assert.equal(
+    parser.stripRedundantTitleDate('CHUNK DORE ALLEY - Saturday July 24th', [utcInstant]),
+    'CHUNK DORE ALLEY - Saturday July 24th');
+  // A day AFTER the UTC date is not a rollover shape either.
+  assert.equal(
+    parser.stripRedundantTitleDate('CHUNK DORE ALLEY - Saturday July 27th', [utcInstant]),
+    'CHUNK DORE ALLEY - Saturday July 27th');
+  // Year-end rollover: Jan 1 UTC instant, title prints Dec 31 of the PRIOR year.
+  assert.equal(
+    parser.stripRedundantTitleDate('NYE BLOWOUT - December 31st 2026', [new Date('2027-01-01T06:00:00.000Z')]),
+    'NYE BLOWOUT');
+  // A conflicting explicit year blocks the rollover acceptance.
+  assert.equal(
+    parser.stripRedundantTitleDate('CHUNK DORE ALLEY - July 25th 2025', [utcInstant]),
+    'CHUNK DORE ALLEY - July 25th 2025');
+  // Raw strings never get the rollover allowance — they already carry the
+  // local date, so one-day-off IS a mismatch there.
+  assert.equal(
+    parser.stripRedundantTitleDate('CHUNK DORE ALLEY - Saturday July 25th', ['2026-07-26T05:00:00Z']),
+    'CHUNK DORE ALLEY - Saturday July 25th');
+});
+
+test('buildEventFromJsonLdNode keeps the raw startDate string for the title strip', () => {
+  const parser = createParser();
+  const event = parser.buildEventFromJsonLdNode({
+    '@type': 'Event',
+    name: 'CHUNK DORE ALLEY - Saturday July 25th',
+    startDate: '2026-07-25T22:00:00-07:00',
+    location: { '@type': 'Place', name: 'Powerhouse', address: '1347 Folsom St, San Francisco, CA' }
+  }, 'https://www.chunk-party.com/event-details/chunk-dore-alley');
+  assert.ok(event, 'node builds an event');
+  assert.equal(event._startDateRawText, '2026-07-25T22:00:00-07:00');
+  // …and with the raw string leading the candidates the strip fires.
+  assert.equal(
+    parser.stripRedundantTitleDate(event.title, [event._startDateRawText, event.startDate, event.start]),
+    'CHUNK DORE ALLEY');
+});
+
+// Fix 2 — evidence gate accepted a fabricated placeholder date whose evidence
+// was a schedule, not a date (run 20260802-100813: BLOWPOP startDate
+// "2026-01-01", evidence "Every Thursday" → phantom 2027 NYE event).
+test('evidenceHasConcreteDateSignal separates schedule words from real dates', () => {
+  const parser = createParser();
+  assert.equal(parser.evidenceHasConcreteDateSignal('Every Thursday'), false);
+  assert.equal(parser.evidenceHasConcreteDateSignal('WEDNESDAYS 8:30-MIDNIGHT'), false);
+  assert.equal(parser.evidenceHasConcreteDateSignal('Saturdays 10PM'), false);
+  assert.equal(parser.evidenceHasConcreteDateSignal('Thursday, August 6, 2026'), true);
+  assert.equal(parser.evidenceHasConcreteDateSignal('Saturday July 25th'), true);
+  assert.equal(parser.evidenceHasConcreteDateSignal('5/23'), true);
+  assert.equal(parser.evidenceHasConcreteDateSignal('2026-01-01'), true);
+  assert.equal(parser.evidenceHasConcreteDateSignal(''), false);
+});
+
+test('a date value with schedule-only evidence is dropped even when the value appears in the corpus', () => {
+  const parser = createParser();
+  const source = 'BLOWPOP Every Thursday at Massive free party 2026-01-01';
+  const evidenceContext = parser.buildAiEvidenceContextFromText(source);
+  const validationContext = { imageEvidenceUrls: new Set() };
+
+  const result = parser.validateAiEventEvidence(
+    {
+      startDate: '2026-01-01',
+      __fieldEvidence: { startDate: 'Every Thursday' }
+    },
+    { html: source }, {}, null,
+    { evidenceContext, validationContext }
+  );
+  assert.equal(result.event.startDate, undefined, 'weekday-only evidence cannot corroborate a Y-M-D');
+  assert.ok(result.report.dropped.some(entry => entry.key === 'startDate' && entry.reason === 'dateless-cited-evidence'),
+    `dateless-cited-evidence drop expected, got: ${JSON.stringify(result.report.dropped)}`);
+
+  // Date-shaped evidence keeps working exactly as before.
+  const legit = parser.validateAiEventEvidence(
+    {
+      startDate: '2026-08-06',
+      __fieldEvidence: { startDate: 'Thursday, August 6, 2026' }
+    },
+    { html: 'DRAG BINGO Thursday, August 6, 2026 doors 7pm' }, {}, null,
+    {
+      evidenceContext: parser.buildAiEvidenceContextFromText('DRAG BINGO Thursday, August 6, 2026 doors 7pm'),
+      validationContext: { imageEvidenceUrls: new Set() }
+    }
+  );
+  assert.equal(legit.event.startDate, '2026-08-06', 'a real cited date still passes');
+});
+
+test('weekday-pinned dates are exempt from the dateless-evidence drop', () => {
+  const parser = createParser();
+  const source = 'MEGAWOOF 2026-08-22 SATURDAY';
+  const build = (weekdayPinnedYears) => parser.validateAiEventEvidence(
+    {
+      startDate: '2026-08-22',
+      __fieldEvidence: { startDate: 'Saturday' },
+      ...(weekdayPinnedYears ? { __weekdayPinnedYears: weekdayPinnedYears } : {})
+    },
+    { html: source }, {}, null,
+    {
+      evidenceContext: parser.buildAiEvidenceContextFromText(source),
+      validationContext: { imageEvidenceUrls: new Set() }
+    }
+  );
+  // Pinned: the deterministic repair vetted the date — kept.
+  assert.equal(build({ start: true }).event.startDate, '2026-08-22');
+  // Not pinned: weekday-only evidence is dropped.
+  assert.equal(build(null).event.startDate, undefined);
+});
+
+// Fix 3 — time strings shipped as event titles (run 20260802-102127: final
+// event titled "6:30 PM"; SEGMENT_LISTING_TITLE emitted "6:30 PM 18:30").
+test('isTimeOnlyLineText recognizes dual-format time lines and nothing else', () => {
+  const parser = createParser();
+  assert.equal(parser.isTimeOnlyLineText('6:30 PM 18:30'), true);
+  assert.equal(parser.isTimeOnlyLineText('7:00 PM 19:00'), true);
+  assert.equal(parser.isTimeOnlyLineText('6:30 PM'), true);
+  assert.equal(parser.isTimeOnlyLineText('10PM - 2AM'), true);
+  assert.equal(parser.isTimeOnlyLineText('21h a 03h'), true);
+  assert.equal(parser.isTimeOnlyLineText("SUGAR, WE'RE HOEIN DOWN"), false);
+  assert.equal(parser.isTimeOnlyLineText('Party at 10'), false);
+  assert.equal(parser.isTimeOnlyLineText('24'), false, 'a bare number is not a time');
+  assert.equal(parser.isTimeOnlyLineText(''), false);
+});
+
+test('deriveSegmentListingTitle never emits a dual-format time node as the listing title', () => {
+  const parser = createParser();
+  // The real 3dollarbillbk.com/rsvp segment shape: the time node precedes the name.
+  assert.equal(
+    parser.deriveSegmentListingTitle({ lines: ['6:30 PM 18:30', "SUGAR, WE'RE HOEIN DOWN"] }),
+    "SUGAR, WE'RE HOEIN DOWN");
+  assert.equal(
+    parser.deriveSegmentListingTitle({ lines: ['7:00 PM 19:00'] }),
+    '');
+});
+
+test('normalizeAiEvent treats a time-only title as missing', () => {
+  const parser = createParser();
+  // The real extraction shape from run 20260802-102127: title "6:30 PM",
+  // real name buried in the description. No usable title → the event fails
+  // normalization (and the missing-title retry paths take over) instead of a
+  // time reaching the calendar as a name.
+  const timeOnly = parser.normalizeAiEvent({
+    title: '6:30 PM',
+    description: "SUGAR, WE'RE HOEIN DOWN",
+    startDate: '2026-08-11',
+    startTime: '18:30'
+  }, {}, null, null, null);
+  assert.equal(timeOnly, null, 'a time is not a title; the title must fail');
+
+  // A non-time sibling candidate is promoted instead.
+  const promoted = parser.normalizeAiEvent({
+    title: '6:30 PM',
+    name: 'HOEDOWN',
+    startDate: '2026-08-11',
+    startTime: '18:30'
+  }, {}, null, null, null);
+  assert.ok(promoted, 'event should normalize via the next candidate');
+  assert.equal(promoted.title, 'HOEDOWN');
+});
+
+// Fix 4 — "DOWNTOWN LA" evaded the city-shaped-bar check (run
+// 20260802-094341: "Downtown Los Angeles" dropped at :112, sibling
+// bar="DOWNTOWN LA" survived at :984).
+test('city-shaped bar check catches DOWNTOWN LA via the generated cities config', () => {
+  const parser = createParser();
+  const cities = require('../scraper-cities');
+  assert.match(
+    parser.getCityShapedBarRejection('DOWNTOWN LA', {}, cities),
+    /resolves to city "la"/);
+  assert.match(
+    parser.getCityShapedBarRejection('Downtown Los Angeles', {}, cities),
+    /resolves to city "la"/);
+  // A real venue with a number stays a venue.
+  assert.equal(parser.getCityShapedBarRejection('Studio 54', {}, cities), '');
+});
+
+// Fix 5 — crawl blocklist: bot-walled tixr, infrastructure hosts, and
+// eventbrite's /e/_next/ image proxy.
+test('discovery blocks bot-walled and infrastructure hosts without touching maps handling', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://beefmince.com/venues';
+  const blocked = [
+    'https://tixr.com/e/201239',
+    'https://www.tixr.com/groups/queernationtx/events/x-201262',
+    'https://www.google.com',
+    'https://maps.googleapis.com',
+    'https://content-autofill.googleapis.com',
+    'https://maps.gstatic.com/x',
+    'https://scontent-lga3-1.cdninstagram.com/v/photo.jpg?x=1',
+    'https://github.com/wix/yoshi/issues/2689',
+    'https://www.example.com',
+    'https://www.eventbrite.com/e/_next/image?url=https%3A%2F%2Fimg.evbuc.com%2Fx&w=940&q=75'
+  ];
+  for (const url of blocked) {
+    const verdict = parser.validateEventUrl(url, sourceUrl, {});
+    assert.equal(verdict.valid, false, `${url} must be blocked (got ${JSON.stringify(verdict)})`);
+  }
+  // Google MAPS urls keep their dedicated rejection reason — the signal the
+  // address-harvest machinery relies on is untouched.
+  assert.equal(parser.validateEventUrl('https://maps.google.com/?q=525+S+Riverfront', sourceUrl, {}).reason, 'google-maps-url');
+  assert.equal(parser.validateEventUrl('https://www.google.com/maps/place/somewhere', sourceUrl, {}).reason, 'google-maps-url');
+  // Real event pages still crawl.
+  assert.equal(parser.validateEventUrl('https://dice.fm/event/abc123-beefmince', sourceUrl, {}).valid, true);
+  assert.equal(parser.validateEventUrl('https://www.eventbrite.com/e/bear-night-tickets-123', sourceUrl, {}).valid, true);
+});
+
+// Fix 7 (parser half) — cached misclassification self-heal.
+test('reclassifyZeroYieldMultiEventPage invalidates and re-classifies only cache-hit pages', async () => {
+  const parser = createParser();
+  const calls = { invalidated: [], classified: [] };
+  parser.core = {
+    getResolvedFieldPriorities: () => ({}),
+    resolveAiConfig: (rawAi) => rawAi || {},
+    wasAiClassificationCacheHit: (url) => url === 'https://cached.example/events',
+    invalidateAiClassificationCacheEntry: async (url) => { calls.invalidated.push(url); return true; },
+    classifyPageWithAi: async (url) => {
+      calls.classified.push(url);
+      return { classification: 'event-page', confidence: 90, reason: 'single event' };
+    }
+  };
+
+  // Not a cache hit → no invalidation, no re-classify.
+  assert.equal(
+    await parser.reclassifyZeroYieldMultiEventPage('https://fresh.example/events', '<html>x</html>', {}, {}),
+    null);
+  assert.deepEqual(calls.invalidated, []);
+
+  // Cache hit → invalidate, re-classify, return the fresh verdict.
+  assert.equal(
+    await parser.reclassifyZeroYieldMultiEventPage('https://cached.example/events', '<html>x</html>', {}, {}),
+    'event-page');
+  assert.deepEqual(calls.invalidated, ['https://cached.example/events']);
+  assert.deepEqual(calls.classified, ['https://cached.example/events']);
+});
+
+test('zero-segment multi-event pages stamp the self-heal marker on htmlData', async () => {
+  const parser = createParser();
+  const htmlData = { html: '<html><body>nothing datelike here</body></html>', url: 'https://cached.example/events' };
+  const events = await parser.extractEventsFromMultiEventPage(htmlData, { discoveryOnly: true }, null, [], [], null);
+  assert.deepEqual(events, []);
+  assert.equal(htmlData._multiEventZeroSegments, true);
+});
+
+// Fix 8 — dice.fm __NEXT_DATA__ never parsed: the old whole-element pattern
+// made the JSON scan start AFTER </script> (16 identical SyntaxError WARNs
+// per BEEFMINCE run, 20260802-093526).
+test('extractUrlsFromNextData harvests the JSON body even with following script tags', () => {
+  const parser = createParser();
+  const nextData = {
+    props: {
+      pageProps: {
+        events: [
+          { name: 'BEEFMINCE XL', start_date: '2026-08-08T21:00:00Z', url: 'https://dice.fm/event/abc123-beefmince-xl' },
+          { name: 'BEEFMINCE MEET MARKET', start_date: '2026-09-09T21:00:00Z', url: 'https://dice.fm/event/def456-meet-market' }
+        ]
+      }
+    }
+  };
+  // The classic lazy-regex trap: the __NEXT_DATA__ tag is followed by MORE
+  // script tags (analytics etc.), exactly like dice.fm pages.
+  const html = [
+    '<html><head>',
+    `<script id="__NEXT_DATA__" type="application/json">${JSON.stringify(nextData)}</script>`,
+    '<script>window.dataLayer=[];</script>',
+    '<script src="/analytics.js"></script>',
+    '</head><body></body></html>'
+  ].join('\n');
+
+  const diagnostics = { containersFound: [], containersParsed: [], parseErrors: [], urlSamples: undefined };
+  const urls = parser.extractUrlsFromNextData(html, 'https://dice.fm/partner/beefmince', diagnostics);
+  assert.ok(urls.includes('https://dice.fm/event/abc123-beefmince-xl'), `urls: ${JSON.stringify(urls)}`);
+  assert.ok(urls.includes('https://dice.fm/event/def456-meet-market'), `urls: ${JSON.stringify(urls)}`);
+  assert.deepEqual(diagnostics.containersParsed, ['__NEXT_DATA__'], 'payload parsed, no SyntaxError path');
+
+  // No __NEXT_DATA__ tag → clean empty result.
+  assert.deepEqual(parser.extractUrlsFromNextData('<html><script>1</script></html>', 'https://dice.fm/x'), []);
 });

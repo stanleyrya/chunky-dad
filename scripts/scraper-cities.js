@@ -45,6 +45,8 @@ const scraperCities = {
       "weho",
       "dtla",
       "downtown los angeles",
+      "downtown la",
+      "downtown l.a.",
       "long beach",
       "santa monica",
       "d>u>r>o"
