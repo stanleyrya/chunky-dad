@@ -5,54 +5,7 @@
   },
   "events": [
     {
-      "name": "Friday 11th September – BEEFMINCE SPORTS ZONE",
-      "day": "Saturday",
-      "time": "1AM-6AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 41.2360385,
-        "lng": 1.8079068
-      },
-      "startDate": "2026-09-12T01:00:00",
-      "endDate": "2026-09-12T06:00:00",
-      "unprocessedDescription": "description: A call out to all players to join our big beefy sp\rorts themed night\nbar: The Bear Cave\naddress: Calle Bonaire 12, Sitges, Barcelona, 08870\nimage: https://sitgesbearcave.com/wp-content/uploads/2026/07/Sports-1030-x-541.jpg\ncover: 20 EUR\ntimezone: Europe/Madrid\nwebsite: https://sitgesbearcave.com/event/friday-beefmince-sports-zone/\nshortName: BEEF-MINCE\nfavicon: https://beefmince.com\nbearSource: keyword\nkey: beefmince-sports-zone|2026-09-11|the bear cave\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=41.2360385%2C1.8079068",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "Europe/Madrid",
-      "wasUTC": true,
-      "sourceUid": "F8A0021D-A0AF-4990-BD6D-7E9BC69111C9",
-      "uid": "F8A0021D-A0AF-4990-BD6D-7E9BC69111C9",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "The Bear Cave",
-      "cover": "20 EUR",
-      "image": "https://sitgesbearcave.com/wp-content/uploads/2026/07/Sports-1030-x-541.jpg",
-      "favicon": "https://beefmince.com",
-      "tea": "A call out to all players to join our big beefy sports themed night",
-      "address": "Calle Bonaire 12, Sitges, Barcelona, 08870",
-      "website": "https://sitgesbearcave.com/event/friday-beefmince-sports-zone/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=41.2360385%2C1.8079068",
-      "shortName": "BEEF-MINCE",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://sitgesbearcave.com/event/friday-beefmince-sports-zone/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=41.2360385%2C1.8079068",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "friday-11th-september-beefmince-sports-zone-6972e7c6"
-    },
-    {
-      "name": "Saturday 12th September – BEEFMINCE: THE BIG BALL",
+      "name": "BEEFMINCE: THE BIG BALL",
       "day": "Sunday",
       "time": "1AM-6AM",
       "eventType": "routine",
@@ -96,10 +49,10 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "saturday-12th-september-beefmince-the-big-ball-13a48cc3"
+      "slug": "beefmince-the-big-ball-13a48cc3"
     },
     {
-      "name": "Wednesday 9th September – BEEFMINCE MEET MARKET",
+      "name": "BEEFMINCE MEET MARKET",
       "day": "Thursday",
       "time": "1AM-6PM",
       "eventType": "routine",
@@ -143,10 +96,10 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "wednesday-9th-september-beefmince-meet-market-795b165c"
+      "slug": "beefmince-meet-market-795b165c"
     },
     {
-      "name": "Thursday 10th September – BEEFMINCE DISCO",
+      "name": "BEEFMINCE DISCO",
       "day": "Friday",
       "time": "1AM-6PM",
       "eventType": "routine",
@@ -190,7 +143,54 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "thursday-10th-september-beefmince-disco-511f64f9"
+      "slug": "beefmince-disco-511f64f9"
+    },
+    {
+      "name": "BEEFMINCE SPORTS ZONE",
+      "day": "Saturday",
+      "time": "1AM-6AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2360385,
+        "lng": 1.8079068
+      },
+      "startDate": "2026-09-12T01:00:00",
+      "endDate": "2026-09-12T06:00:00",
+      "unprocessedDescription": "description: A call out to all players to join our big beefy sp\rorts themed night\nbar: The Bear Cave\naddress: Calle Bonaire 12, Sitges, Barcelona, 08870\nimage: https://sitgesbearcave.com/wp-content/uploads/2026/07/Sports-1030-x-541.jpg\ncover: 20 EUR\ntimezone: Europe/Madrid\nwebsite: https://sitgesbearcave.com/event/friday-beefmince-sports-zone/\nshortName: BEEF-MINCE\nfavicon: https://beefmince.com\nbearSource: keyword\nkey: beefmince-sports-zone|2026-09-11|the bear cave\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=41.2360385%2C1.8079068",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "F8A0021D-A0AF-4990-BD6D-7E9BC69111C9",
+      "uid": "F8A0021D-A0AF-4990-BD6D-7E9BC69111C9",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The Bear Cave",
+      "cover": "20 EUR",
+      "image": "https://sitgesbearcave.com/wp-content/uploads/2026/07/Sports-1030-x-541.jpg",
+      "favicon": "https://beefmince.com",
+      "tea": "A call out to all players to join our big beefy sports themed night",
+      "address": "Calle Bonaire 12, Sitges, Barcelona, 08870",
+      "website": "https://sitgesbearcave.com/event/friday-beefmince-sports-zone/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=41.2360385%2C1.8079068",
+      "shortName": "BEEF-MINCE",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://sitgesbearcave.com/event/friday-beefmince-sports-zone/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=41.2360385%2C1.8079068",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "beefmince-sports-zone-6972e7c6"
     }
   ]
 }

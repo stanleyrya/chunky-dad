@@ -63,13 +63,13 @@
     "la": {
       "name": "Los Angeles",
       "status": "success",
-      "dataLength": 14415,
+      "dataLength": 14552,
       "eventCount": 12
     },
     "london": {
       "name": "London",
       "status": "success",
-      "dataLength": 15770,
+      "dataLength": 15765,
       "eventCount": 9
     },
     "nola": {
@@ -81,14 +81,14 @@
     "nyc": {
       "name": "New York",
       "status": "success",
-      "dataLength": 15157,
+      "dataLength": 15149,
       "eventCount": 15
     },
     "palm-springs": {
       "name": "Palm Springs",
       "status": "success",
-      "dataLength": 1487,
-      "eventCount": 1
+      "dataLength": 2966,
+      "eventCount": 2
     },
     "philly": {
       "name": "Philadelphia",
@@ -105,7 +105,7 @@
     "portland": {
       "name": "Portland",
       "status": "success",
-      "dataLength": 25733,
+      "dataLength": 25754,
       "eventCount": 19
     },
     "ptown": {
@@ -135,7 +135,7 @@
     "sitges": {
       "name": "Sitges",
       "status": "success",
-      "dataLength": 4667,
+      "dataLength": 4565,
       "eventCount": 4
     },
     "toronto": {
