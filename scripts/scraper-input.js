@@ -329,6 +329,17 @@ const scraperConfig = {
       // (scraped clobbers). This global block also serves events from non-AI
       // parsers; per-parser ai.arbitrateMerges overrides. Set false to disable.
       arbitrateMerges: true,
+      // Calendar stickiness (default: false = REPORT-ONLY). The merge arbiter is
+      // position-biased — in run 20260801-172321 the enrich path picked `incoming`
+      // 72% of the time while the calendar path picked `calendar` 66% of the time,
+      // and the identical value pair was arbitrated twice 11 seconds apart with
+      // opposite verdicts. The result is the same events being rewritten every run
+      // ("BEEFMINCE x RVT" clobbered 21×). With this false, every field where an
+      // AI-ONLY decision would overwrite a non-empty saved calendar value is logged
+      // (`🧊 STICKY:`) and the change is still applied. Set true to actually keep
+      // the saved value. Date/time fields and empty/TBA calendar values are always
+      // exempt — a rescheduled event must still move.
+      calendarStickinessEnforced: false,
       bearCheck: { mode: "enforce" }, // Bear-check cascade: keywords → AI verdict with promoter context. "report" logs decisions without changing behavior; "enforce" flags/rescues/drops; "off" = legacy alwaysBear/keyword behavior. (Also accepted as a top-level config.bearCheck, like geocodeVerification; canonical location is here under ai.)
       // Overlong-field trim pipeline: one AI call per event batches every
       // overlong scraped field (title/description/shortName); answers are
