@@ -62,8 +62,8 @@ const scraperBars = {
       "name": "Eden",
       "city": "birmingham",
       "address": "138 Gooch Street, Birmingham B5 7HF",
-      "facebook": "https://www.facebook.com/eden.bar.birmingham/",
-      "coordinates": "52.46975, -1.89513"
+      "coordinates": "52.46975, -1.89513",
+      "facebook": "https://www.facebook.com/eden.bar.birmingham/"
     }
   ],
   "boston": [
@@ -93,8 +93,8 @@ const scraperBars = {
       "name": "Horizon",
       "city": "brighton",
       "address": "211-214 Kings Road Arches, Brighton BN1 1NB",
-      "instagram": "horizon.brighton",
-      "coordinates": "50.819936, -0.140382"
+      "coordinates": "50.819936, -0.140382",
+      "instagram": "horizon.brighton"
     },
     {
       "name": "Concorde 2",
@@ -610,7 +610,7 @@ const scraperBars = {
     {
       "name": "The Yard at 9 Bob Note",
       "city": "nyc",
-      "address": "270 Meserole Ave, Brooklyn, NY 11222",
+      "address": "270 Meserole St, Brooklyn, NY 11206",
       "website": "https://www.3dollarbillbk.com",
       "faviconBg": "#190832",
       "faviconFg": "#c5c5e9"

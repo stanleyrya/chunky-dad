@@ -1165,8 +1165,10 @@ class AiWebParser {
         // Bar plausibility gate: an address-shaped bar is never a valid
         // extraction (run 20260724-115423: bar "79 Warren" — the flyer's
         // street line — survived and blocked the convergence rescue). Runs
-        // AFTER the address gate (so a matching address twin still drops via
-        // "matches venue name") and BEFORE the convergence rescue (so a
+        // AFTER the address gate (so a matching name-shaped address twin
+        // still drops via "matches venue name", while an ADDRESS-SHAPED twin
+        // keeps the address and drops only the bar — the bar held the copy)
+        // and BEFORE the convergence rescue (so a
         // dropped bar frees the rescue to adopt the real venue).
         this.applyBarPlausibilityGate(event, cityConfig);
         // Deterministic bar-convergence rescue: only when extraction left NO
@@ -13837,7 +13839,11 @@ TEXT:
                 consensusAddress: consensusKey ? entry.addresses[consensusKey].display : '',
                 blocked: entry.blocked === true,
                 venueRoleSeen: entry.venueRoleSeen === true,
-                venueName: typeof entry.venueName === 'string' ? entry.venueName : ''
+                venueName: typeof entry.venueName === 'string' ? entry.venueName : '',
+                // EVERY harvested address (consensus or not) — the
+                // curated-website identity rung picks its primary claimant by
+                // which curated address the site itself publishes.
+                harvestedAddresses: hostKeys.map(key => entry.addresses[key].display)
             };
         }
         const eventList = Array.isArray(events) ? events : [];
@@ -13889,10 +13895,46 @@ TEXT:
         if (!a || !b || !this.core) return false;
         const parsedA = this.core.parseAddressForComparison(a);
         const parsedB = this.core.parseAddressForComparison(b);
-        if (parsedA && parsedB) return this.core.isSameStreetAddress(parsedA, parsedB);
+        if (parsedA && parsedB) {
+            if (this.core.isSameStreetAddress(parsedA, parsedB)) return true;
+            // Locality-suffix tolerance (run 20260802-102127: a flyer's
+            // comma-less street line "270 Meserole St. BK" never agreed with
+            // the curated "270 Meserole St, Brooklyn, NY 11206" — the borough
+            // scribble lands INSIDE the street line, defeating both the
+            // full-token prefix rule and the street-line rule). The street
+            // address proper ENDS at its street-type designator; tokens after
+            // it are locality decoration, so truncate there and retry. The
+            // street number must still match and the zip guard still applies
+            // to the untruncated side, keeping different addresses different.
+            const truncateAtStreetType = parsed => {
+                const index = parsed.tokens.findIndex(token => this.isStreetTypeAddressToken(token));
+                if (index < 0 || index === parsed.tokens.length - 1) return null;
+                const truncated = parsed.tokens.slice(0, index + 1);
+                return {
+                    streetNumber: parsed.streetNumber,
+                    tokens: truncated,
+                    streetLineTokens: truncated,
+                    zips: []
+                };
+            };
+            const truncatedA = truncateAtStreetType(parsedA);
+            const truncatedB = truncateAtStreetType(parsedB);
+            if (truncatedA && this.core.isSameStreetAddress(truncatedA, parsedB)) return true;
+            if (truncatedB && this.core.isSameStreetAddress(parsedA, truncatedB)) return true;
+            return false;
+        }
         const tokensA = this.core.normalizeAddressTokens(a).join(' ');
         const tokensB = this.core.normalizeAddressTokens(b).join(' ');
         return Boolean(tokensA) && tokensA === tokensB;
+    }
+
+    // Fully-expanded street-type designator (normalizeAddressTokens output
+    // form: "st" is already "street"). The same word list shared-core's
+    // street-line tolerance recognizes, needed here because that module-level
+    // constant is not exported.
+    isStreetTypeAddressToken(token) {
+        return /^(?:street|avenue|road|boulevard|drive|lane|place|court|highway|parkway|way)$/
+            .test(String(token || ''));
     }
 
     // WHO a crawled site is — established only when independent hard facts
@@ -13946,6 +13988,188 @@ TEXT:
         };
     }
 
+    // ------------------------------------------------------------------------
+    // CURATED-WEBSITE identity rung (run 20260802-102127): 7 of 10 events
+    // from a venue's own site shipped city "unknown" — never timezone-anchored
+    // — because the evidence gate had (correctly) stripped the prompt-injected
+    // bar/city and the identity guard above could not establish: the crawl
+    // produced no address consensus at all. But the curated corpus itself
+    // already declares WHO such a host is: a curated bar whose own `website`
+    // field carries the same registrable host. That is positive verification
+    // from curated data (curated beats derived), so it establishes HOST-LEVEL
+    // identity on its own — signal 'curated-website'. Structurally, ticketing
+    // platforms can never qualify: no curated bar lists eventbrite.com or
+    // dice.fm as its website. Purely data-driven — the mechanism knows no
+    // host names; any venue whose curated entry carries its website benefits,
+    // and nothing else does.
+    //
+    // Weaker signal, weaker hand than the guard above: application is FILL
+    // ONLY (blank bar, blank/"unknown" city). It never replaces a bar — the
+    // flyer-brand replacement machinery stays the exclusive overwriter, and
+    // only under its stronger signals.
+    // ------------------------------------------------------------------------
+
+    // Every curated bar (across all cities) whose own `website` registrable
+    // host IS this host. More than one hit is a real shape — sister venues
+    // sharing one site (a main stage and its yard) — handled by the
+    // sub-venue resolution below, never treated as ambiguity by itself.
+    getCuratedBarsClaimingHost(host) {
+        const hostKey = typeof host === 'string' ? host.trim().toLowerCase() : '';
+        const claimants = [];
+        if (!hostKey || !this.core || !this.core.bars || typeof this.core.bars !== 'object') {
+            return claimants;
+        }
+        for (const cityKey of Object.keys(this.core.bars)) {
+            const cityBars = this.core.bars[cityKey];
+            if (!Array.isArray(cityBars)) continue;
+            for (const bar of cityBars) {
+                if (!bar || typeof bar.name !== 'string' || !bar.name.trim()) continue;
+                const website = typeof bar.website === 'string' ? bar.website.trim() : '';
+                if (!website) continue;
+                if (this.getVenueSiteHostKey(website) === hostKey) {
+                    claimants.push({ city: cityKey, bar });
+                }
+            }
+        }
+        return claimants;
+    }
+
+    // HOST-LEVEL identity from the curated corpus's own website pointers.
+    // Establishes only when the host is not organizer-blocked (the same veto
+    // everything above honors), at least one curated bar claims the host via
+    // its `website` field, and every claimant is curated in ONE city (a
+    // cross-city claim set is ambiguity — fail closed).
+    //
+    // The PRIMARY claimant — the answer when an event's own evidence cannot
+    // pick a sub-venue — is, in order:
+    //   1. the single claimant whose curated address the site itself
+    //      publishes (agreement with a harvested map-directions address);
+    //   2. else the first claimant carrying curated coordinates (the
+    //      geocoded, longest-standing entry);
+    //   3. else the first claimant.
+    getCuratedWebsiteVenueSiteIdentity(host, entry) {
+        if (!entry || typeof entry !== 'object' || entry.blocked !== false) return null;
+        const claimants = this.getCuratedBarsClaimingHost(host);
+        if (claimants.length === 0) return null;
+        const cities = [...new Set(claimants.map(claimant => claimant.city))];
+        if (cities.length > 1) {
+            console.log(`🤖 AI Web: Curated-website identity for ${host} is ambiguous — curated bars in ${cities.join(', ')} all claim it; nothing derived`);
+            return null;
+        }
+        const harvestedAddresses = Array.isArray(entry.harvestedAddresses) ? entry.harvestedAddresses : [];
+        const sitePublished = claimants.filter(claimant => harvestedAddresses.some(
+            address => this.venueSiteIdentityAddressesAgree(address, claimant.bar.address)));
+        let primary;
+        let primaryReason;
+        if (sitePublished.length === 1) {
+            primary = sitePublished[0];
+            primaryReason = 'the site publishes its curated address';
+        } else {
+            const withCoordinates = claimants.find(claimant =>
+                typeof claimant.bar.coordinates === 'string' && claimant.bar.coordinates.trim());
+            primary = withCoordinates || claimants[0];
+            primaryReason = withCoordinates ? 'first claimant with curated coordinates' : 'first claimant';
+        }
+        return { city: cities[0], claimants, primary, primaryReason, signals: ['curated-website'] };
+    }
+
+    // Which claimant is THIS event at? Decided from the event's OWN evidence,
+    // strongest first; a tier resolves only when it matches exactly ONE
+    // claimant (two matching is ambiguity — the caller falls back to the
+    // primary; zero falls through to the next tier):
+    //   1. the extracted bar names a claimant (normalizeBarNameKey equality —
+    //      curated matching's own full-name strictness);
+    //   2. the extracted address IS a claimant's curated address
+    //      (venueSiteIdentityAddressesAgree — the consensus path's own test);
+    //   3. the event's own title/description names a claimant whole-word
+    //      (eventTextNamesCuratedBar).
+    // Null when nothing resolves — the caller answers with the primary.
+    resolveCuratedWebsiteSubVenue(event, claimants) {
+        if (!event || typeof event !== 'object' || !Array.isArray(claimants)) return null;
+        const nameKey = value => (this.core && typeof this.core.normalizeBarNameKey === 'function'
+            ? this.core.normalizeBarNameKey(value)
+            : String(value || '').toLowerCase().replace(/^\s*the\s+/, '').replace(/[^a-z0-9]/g, ''));
+        const barKey = nameKey(typeof event.bar === 'string' ? event.bar : '');
+        const address = typeof event.address === 'string' ? event.address.trim() : '';
+        const tiers = [
+            {
+                reason: 'the event bar names it',
+                matches: barKey
+                    ? claimants.filter(claimant => nameKey(claimant.bar.name) === barKey)
+                    : []
+            },
+            {
+                reason: 'the event address is its curated address',
+                matches: address
+                    ? claimants.filter(claimant => this.venueSiteIdentityAddressesAgree(address, claimant.bar.address))
+                    : []
+            },
+            {
+                reason: 'the event text names it',
+                matches: claimants.filter(claimant => this.eventTextNamesCuratedBar(event, claimant.bar.name))
+            }
+        ];
+        for (const tier of tiers) {
+            if (tier.matches.length === 1) return { claimant: tier.matches[0], reason: tier.reason };
+            if (tier.matches.length > 1) return null;
+        }
+        return null;
+    }
+
+    // Fill-only application for the curated-website rung, run from
+    // applyVenueSiteIdentityCorrections when the stronger identity above did
+    // NOT establish. Blank bar and blank/"unknown" city are filled — a
+    // non-empty bar or city is NEVER touched. The city fill is what re-anchors
+    // never-timezone-anchored dates downstream: the dedup re-anchor pass
+    // resolves them from event.city, no timezone code here.
+    applyCuratedWebsiteIdentityFills(host, entry, eventList, cityConfig = null) {
+        const identity = this.getCuratedWebsiteVenueSiteIdentity(host, entry);
+        if (!identity) return;
+        const claimants = identity.claimants;
+        console.log(`🤖 AI Web: Venue-site identity for ${host} established from curated website match: ${claimants.map(claimant => `"${claimant.bar.name}"`).join(', ')} (${identity.city}) — signals: ${identity.signals.join(', ')}; primary "${identity.primary.bar.name}" (${identity.primaryReason})`);
+        const consensusKey = typeof entry.consensusKey === 'string' ? entry.consensusKey : '';
+        for (const event of eventList) {
+            if (!event || typeof event !== 'object' || event._venueSitePageHost !== host) continue;
+            // Multi-venue safety (the consensus pass's own rule): an event
+            // carrying a street address that is neither the site's consensus
+            // address nor ANY claimant's curated address is a party at
+            // another venue announced on this site — left untouched.
+            const existingAddress = typeof event.address === 'string' ? event.address.trim() : '';
+            if (existingAddress
+                && this.normalizeVenueSiteAddressKey(existingAddress) !== consensusKey
+                && !claimants.some(claimant => this.venueSiteIdentityAddressesAgree(existingAddress, claimant.bar.address))) {
+                continue;
+            }
+            // Road-show guard: an extracted city that does not resolve to the
+            // claimants' city is positive evidence the announcement is for a
+            // party elsewhere — the whole event is left alone, exactly like a
+            // differing street address. An alias of the same city ("new york"
+            // for nyc) resolves through the cities config and still passes.
+            const eventCity = typeof event.city === 'string' ? event.city.trim() : '';
+            const eventCityLower = eventCity.toLowerCase();
+            if (eventCity && eventCityLower !== 'unknown' && eventCityLower !== identity.city) {
+                const configEntry = this.findCityConfigEntry(eventCityLower, cityConfig);
+                if (!configEntry || configEntry.key !== identity.city) continue;
+            }
+            const title = typeof event.title === 'string' && event.title.trim() ? event.title.trim() : 'unknown';
+            const resolved = claimants.length === 1
+                ? { claimant: claimants[0], reason: 'sole curated claimant of the host' }
+                : (this.resolveCuratedWebsiteSubVenue(event, claimants)
+                    || { claimant: identity.primary, reason: `primary claimant — ${identity.primaryReason}` });
+            const bar = typeof event.bar === 'string' ? event.bar.trim() : '';
+            if (!bar) {
+                event.bar = resolved.claimant.bar.name;
+                event.barSource = 'venue-site-identity';
+                console.log(`🤖 AI Web: Filled bar "${resolved.claimant.bar.name}" from curated-website identity for "${title}" (${resolved.reason})`);
+            }
+            const existingCity = typeof event.city === 'string' ? event.city.trim().toLowerCase() : '';
+            if (!existingCity || existingCity === 'unknown') {
+                event.city = identity.city;
+                console.log(`🤖 AI Web: Filled city "${identity.city}" from curated-website identity for "${title}"`);
+            }
+        }
+    }
+
     // Deterministic KNOWN-VENUE replacement pass, run by shared-core's
     // processParser immediately AFTER applyVenueSiteAddressConsensus (which
     // stashes lastVenueSiteConsensus for it). On a host whose identity is
@@ -13962,7 +14186,12 @@ TEXT:
         for (const host of Object.keys(consensusByHost)) {
             const entry = consensusByHost[host];
             const identity = this.getEstablishedVenueSiteIdentity(entry, entry.consensusKey);
-            if (!identity) continue;
+            if (!identity) {
+                // Weaker rung: the curated corpus's own website pointer can
+                // still say WHO the host is — fill-only, never a replacement.
+                this.applyCuratedWebsiteIdentityFills(host, entry, eventList, cityConfig);
+                continue;
+            }
             const curatedBar = identity.curatedBar;
             const identityKey = this.core.normalizeBarNameKey(curatedBar.name);
             const cityBars = typeof this.core.getCuratedCityBars === 'function'
@@ -14355,7 +14584,18 @@ TEXT:
         let reason = '';
         const bar = typeof event.bar === 'string' ? event.bar.trim() : '';
         if (bar && this.normalizeAdjacencyText(bar) === normalizedAddress) {
-            reason = 'matches venue name';
+            // An ADDRESS-SHAPED twin means the BAR field holds the copy, not
+            // the address (run 20260802-102127: extraction stored the flyer's
+            // street line "270 Meserole St. BK" in BOTH fields; dropping the
+            // address here destroyed the one datum locating the event while
+            // the bar gate correctly dropped the bar, shipping the event with
+            // neither). Street-number + street-word shape only
+            // (isAddressShapedBarValue) — a name-shaped twin still drops.
+            if (this.isAddressShapedBarValue(address)) {
+                console.log(`🤖 AI Web: Kept address-shaped address "${address}" despite equal bar value — the bar holds the copy, not the address`);
+            } else {
+                reason = 'matches venue name';
+            }
         }
         if (!reason) {
             const organizer = typeof event._organizer === 'string' ? event._organizer.trim() : '';

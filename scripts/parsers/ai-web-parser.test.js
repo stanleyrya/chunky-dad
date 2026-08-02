@@ -6504,6 +6504,255 @@ test('venue-site harvest: an undetermined page records the venue name (not the r
   assert.equal(blockedEntry.venueName, '', 'organizer pages contribute no identity facts');
 });
 
+// ---------------------------------------------------------------------------
+// Curated-website identity rung: a curated bar's own `website` field claims a
+// registrable host, establishing host-level identity with NO address
+// consensus. Fill-only application; multi-claimant hosts resolve the
+// sub-venue from the event's own evidence, falling back to the primary.
+// Fixture mirrors the 20260802-102127 run: two nyc bars share one site.
+// ---------------------------------------------------------------------------
+
+function createCuratedWebsiteParser() {
+  const parser = new AiWebParser({ normalizeUrl });
+  parser.core = new SharedCore(
+    {
+      nyc: { timezone: 'America/New_York', patterns: ['nyc', 'new york'] },
+      seattle: { timezone: 'America/Los_Angeles', patterns: ['seattle'] }
+    },
+    {
+      eventSchema: EventSchema,
+      bars: {
+        nyc: [
+          {
+            name: '3 Dollar Bill', city: 'nyc',
+            address: '260 Meserole St, Brooklyn, NY 11206',
+            coordinates: '40.7084144, -73.9380583',
+            website: 'https://www.3dollarbillbk.com'
+          },
+          {
+            name: 'The Yard at 9 Bob Note', city: 'nyc',
+            address: '270 Meserole St, Brooklyn, NY 11206',
+            coordinates: null,
+            website: 'https://www.3dollarbillbk.com'
+          },
+          {
+            name: 'Rockbar', city: 'nyc',
+            address: '185 Christopher St, New York, NY',
+            website: 'https://www.rockbarnyc.com'
+          }
+        ],
+        seattle: [
+          {
+            name: 'Massive', city: 'seattle',
+            address: '1620 Broadway, Seattle, WA 98122',
+            coordinates: '47.6142900, -122.3211000',
+            website: 'https://massive.club'
+          }
+        ]
+      }
+    }
+  );
+  return parser;
+}
+
+function curatedWebsiteEntry(overrides = {}) {
+  return {
+    consensusKey: '', consensusAddress: '', blocked: false,
+    venueRoleSeen: false, venueName: '', harvestedAddresses: [],
+    ...overrides
+  };
+}
+
+test('curated-website identity: a single-claimant host establishes from the website field alone and fills blanks only', () => {
+  const parser = createCuratedWebsiteParser();
+  parser.lastVenueSiteConsensus = { 'massive.club': curatedWebsiteEntry() };
+  const events = [
+    { title: 'UNDERBEAR', bar: '', city: 'unknown', _venueSitePageHost: 'massive.club' },
+    // Non-empty bar is NEVER overwritten (fill-only) — city still fills
+    { title: 'GUEST NIGHT', bar: 'Guest Brand', barSource: 'uncorroborated', city: '', _venueSitePageHost: 'massive.club' },
+    // A DIFFERENT extracted city → road-show guard, whole event untouched
+    { title: 'ROAD SHOW', bar: '', city: 'portland', _venueSitePageHost: 'massive.club' },
+    // An ALIAS of the claimants' city resolves through the config and passes
+    { title: 'HOMETOWN ALIAS', bar: '', city: 'emerald city', _venueSitePageHost: 'massive.club' },
+    { title: 'ELSEWHERE', bar: '', city: 'unknown', _venueSitePageHost: 'other.example' }
+  ];
+  const cityConfig = {
+    seattle: { timezone: 'America/Los_Angeles', patterns: ['seattle', 'emerald city'] },
+    portland: { timezone: 'America/Los_Angeles', patterns: ['portland'] }
+  };
+  const logs = captureLogs(() => parser.applyVenueSiteIdentityCorrections(events, cityConfig));
+
+  assert.equal(events[0].bar, 'Massive');
+  assert.equal(events[0].barSource, 'venue-site-identity');
+  assert.equal(events[0].city, 'seattle', 'the city fill drives downstream timezone re-anchoring');
+  assert.equal(events[1].bar, 'Guest Brand', 'a non-empty bar is never overwritten by the fill-only rung');
+  assert.equal(events[1].barSource, 'uncorroborated');
+  assert.equal(events[1].city, 'seattle');
+  assert.equal(events[2].bar, '', 'a differing extracted city means a party elsewhere — untouched');
+  assert.equal(events[2].city, 'portland', 'a non-empty city is never overwritten');
+  assert.equal(events[3].bar, 'Massive', 'a config alias of the claimants\' city still passes the guard');
+  assert.equal(events[3].city, 'emerald city', 'the alias city itself is non-empty — never overwritten');
+  assert.equal(events[4].bar, '', 'other hosts untouched');
+  assert.equal(events[4].city, 'unknown');
+
+  assert.ok(logs.some(line => line.includes(
+    '🤖 AI Web: Venue-site identity for massive.club established from curated website match: "Massive" (seattle) — signals: curated-website')),
+    `identity log expected, got: ${JSON.stringify(logs)}`);
+  assert.ok(logs.some(line => line.includes(
+    '🤖 AI Web: Filled bar "Massive" from curated-website identity for "UNDERBEAR" (sole curated claimant of the host)')));
+  assert.ok(logs.some(line => line.includes(
+    '🤖 AI Web: Filled city "seattle" from curated-website identity for "UNDERBEAR"')));
+});
+
+test('curated-website identity: a multi-claimant host resolves the sub-venue from the event\'s own evidence', () => {
+  const parser = createCuratedWebsiteParser();
+  parser.lastVenueSiteConsensus = { '3dollarbillbk.com': curatedWebsiteEntry() };
+  const events = [
+    // The run's CONFESSIONS DEUX shape: the surviving flyer street line is
+    // 9 Bob Note's curated address (locality-suffix tolerant comparison)
+    {
+      title: 'CONFESSIONS DEUX', bar: '', city: 'unknown',
+      address: '270 Meserole St. BK', _venueSitePageHost: '3dollarbillbk.com'
+    },
+    // No evidence at all → the primary (first claimant with coordinates)
+    { title: 'Big Gay Foam Party', bar: '', city: 'unknown', _venueSitePageHost: '3dollarbillbk.com' },
+    // The event's own text names one claimant whole-word
+    {
+      title: 'Live from The Yard at 9 Bob Note', bar: '', city: 'unknown',
+      _venueSitePageHost: '3dollarbillbk.com'
+    },
+    // Text naming BOTH claimants is ambiguous → the primary answers
+    {
+      title: 'Takeover: 3 Dollar Bill x The Yard at 9 Bob Note', bar: '', city: 'unknown',
+      _venueSitePageHost: '3dollarbillbk.com'
+    },
+    // Off-site street address (matches no claimant) → untouched entirely
+    {
+      title: 'OFFSITE', bar: '', city: 'unknown',
+      address: '500 Somewhere Else Ave, Queens, NY', _venueSitePageHost: '3dollarbillbk.com'
+    }
+  ];
+  const logs = captureLogs(() => parser.applyVenueSiteIdentityCorrections(events, null));
+
+  assert.equal(events[0].bar, 'The Yard at 9 Bob Note', 'the address evidence picks the sub-venue');
+  assert.equal(events[0].city, 'nyc');
+  assert.equal(events[1].bar, '3 Dollar Bill', 'no evidence → primary claimant (first with coordinates)');
+  assert.equal(events[1].city, 'nyc');
+  assert.equal(events[2].bar, 'The Yard at 9 Bob Note', 'the event text picks the sub-venue');
+  assert.equal(events[3].bar, '3 Dollar Bill', 'ambiguous evidence falls back to the primary');
+  assert.equal(events[4].bar, '', 'an off-site party is never claimed');
+  assert.equal(events[4].city, 'unknown');
+
+  assert.ok(logs.some(line => line.includes(
+    'Venue-site identity for 3dollarbillbk.com established from curated website match: "3 Dollar Bill", "The Yard at 9 Bob Note" (nyc) — signals: curated-website; primary "3 Dollar Bill" (first claimant with curated coordinates)')),
+    `identity log expected, got: ${JSON.stringify(logs)}`);
+  assert.ok(logs.some(line => line.includes(
+    'Filled bar "The Yard at 9 Bob Note" from curated-website identity for "CONFESSIONS DEUX" (the event address is its curated address)')));
+  assert.ok(logs.some(line => line.includes(
+    'Filled bar "3 Dollar Bill" from curated-website identity for "Big Gay Foam Party" (primary claimant — first claimant with curated coordinates)')));
+});
+
+test('curated-website identity: a site-published address picks the primary; blocked, cross-city, and platform hosts never establish', () => {
+  const parser = createCuratedWebsiteParser();
+  // The site itself publishes one claimant's curated address → that claimant
+  // is the primary even without coordinates.
+  const published = parser.getCuratedWebsiteVenueSiteIdentity('3dollarbillbk.com',
+    curatedWebsiteEntry({ harvestedAddresses: ['270 Meserole St, Brooklyn, NY 11206'] }));
+  assert.ok(published);
+  assert.equal(published.primary.bar.name, 'The Yard at 9 Bob Note');
+  assert.equal(published.primaryReason, 'the site publishes its curated address');
+  assert.equal(published.city, 'nyc');
+  assert.deepEqual(published.signals, ['curated-website']);
+
+  // Organizer-blocked host: the same veto as every other identity path
+  assert.equal(parser.getCuratedWebsiteVenueSiteIdentity('3dollarbillbk.com',
+    curatedWebsiteEntry({ blocked: true })), null);
+
+  // Platform host: no curated bar lists it as a website → structurally null
+  assert.equal(parser.getCuratedWebsiteVenueSiteIdentity('eventbrite.com', curatedWebsiteEntry()), null);
+  assert.deepEqual(parser.getCuratedBarsClaimingHost('eventbrite.com'), []);
+
+  // Claimants curated in DIFFERENT cities → ambiguity, fail closed
+  parser.core.bars.seattle.push({
+    name: 'Massive East', city: 'seattle', address: '1 Elsewhere St, Seattle, WA',
+    website: 'https://www.3dollarbillbk.com'
+  });
+  const crossCityLogs = captureLogs(() => {
+    assert.equal(parser.getCuratedWebsiteVenueSiteIdentity('3dollarbillbk.com', curatedWebsiteEntry()), null);
+  });
+  assert.ok(crossCityLogs.some(line => line.includes(
+    'Curated-website identity for 3dollarbillbk.com is ambiguous — curated bars in nyc, seattle all claim it; nothing derived')));
+});
+
+test('curated-website identity: the stronger established identity keeps precedence over the fill-only rung', () => {
+  const parser = createCuratedWebsiteParser();
+  // Massive-shaped host where the STRONG guard establishes (curated name +
+  // matching address consensus): the replacement machinery runs, not fills.
+  parser.lastVenueSiteConsensus = {
+    'massive.club': curatedWebsiteEntry({
+      consensusKey: parser.normalizeVenueSiteAddressKey('1620 Broadway, Seattle, WA 98122'),
+      consensusAddress: '1620 Broadway, Seattle, WA 98122',
+      venueRoleSeen: true,
+      venueName: 'Massive',
+      harvestedAddresses: ['1620 Broadway, Seattle, WA 98122']
+    })
+  };
+  const events = [
+    { title: 'PERVERT', bar: 'Villa Señor', barSource: 'uncorroborated', city: '', _venueSitePageHost: 'massive.club' }
+  ];
+  const logs = captureLogs(() => parser.applyVenueSiteIdentityCorrections(events, null));
+  assert.equal(events[0].bar, 'Massive', 'the strong identity still replaces flyer brands');
+  assert.ok(logs.some(line => line.includes('signals: venue-role, curated-name, address-consensus')));
+  assert.ok(!logs.some(line => line.includes('from curated website match')),
+    'the fill-only rung stays out of the way when the strong identity establishes');
+});
+
+test('venue-site identity addresses: locality-suffix tolerance matches a comma-less borough scribble, never a different address', () => {
+  const parser = createCuratedWebsiteParser();
+  assert.equal(parser.venueSiteIdentityAddressesAgree(
+    '270 Meserole St. BK', '270 Meserole St, Brooklyn, NY 11206'), true,
+    'the flyer street line agrees with its curated form');
+  assert.equal(parser.venueSiteIdentityAddressesAgree(
+    '270 Meserole St. BK', '260 Meserole St, Brooklyn, NY 11206'), false,
+    'a different street number never agrees');
+  assert.equal(parser.venueSiteIdentityAddressesAgree(
+    '270 Meserole St. BK', '270 Thames St, Brooklyn, NY'), false,
+    'a different street never agrees');
+  assert.equal(parser.venueSiteIdentityAddressesAgree(
+    '619 E Pine St, Seattle, WA 98122', '619 E Pine St, Seattle, WA 98122'), true,
+    'the existing exact path is untouched');
+});
+
+test('address gate: an ADDRESS-SHAPED address equal to the bar value is kept — the bar holds the copy', () => {
+  const parser = createParser();
+  const event = { title: 'CONFESSIONS DEUX', bar: '270 Meserole St. BK', address: '270 Meserole St. BK' };
+  const captured = captureGateLogs();
+  try {
+    parser.applyAddressPlausibilityGate(event, {});
+    parser.applyBarPlausibilityGate(event, null);
+  } finally {
+    captured.restore();
+  }
+  assert.equal(event.address, '270 Meserole St. BK', 'the address survives — it locates the sub-venue');
+  assert.equal(event.bar, undefined, 'the address-shaped bar still drops (it was the copy)');
+  assert.ok(captured.lines.some(line => line.includes(
+    '🤖 AI Web: Kept address-shaped address "270 Meserole St. BK" despite equal bar value — the bar holds the copy, not the address')),
+    `kept log expected, got:\n${captured.lines.join('\n')}`);
+  assert.ok(captured.lines.some(line => line.includes(
+    'Dropped implausible bar "270 Meserole St. BK" (address-shaped)')));
+
+  // A name-shaped twin still drops via "matches venue name"
+  const nameTwin = { title: 'FURBALL Boston', bar: 'Legacy', address: 'Legacy', city: 'boston' };
+  const captured2 = captureGateLogs();
+  try {
+    parser.applyAddressPlausibilityGate(nameTwin, {});
+  } finally {
+    captured2.restore();
+  }
+  assert.equal(nameTwin.address, undefined, 'a venue name is still not an address');
+  assert.ok(captured2.lines.some(line => line.includes('Dropped implausible address "Legacy" (matches venue name)')));
+});
+
 test('KNOWN VENUE curated-match prompt line appears only with a unique curated match; the base line stays byte-identical', () => {
   const curatedMatchLine = 'KNOWN VENUE (curated match): "MASSIVE" is the venue for every event on this site. Other bar or brand names printed on a flyer are guest hosts or co-presenters, NOT the venue — never return them as "bar" unless the page states the event happens at a different street address.';
 
