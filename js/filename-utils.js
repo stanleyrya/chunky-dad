@@ -261,7 +261,13 @@ const PLATFORM_FAVICON_HOSTNAMES = new Set([
     'seetickets.com', 'universe.com', 'posh.vip', 'withfriends.co',
     'tickettailor.com', 'sickening.events', 'redeyetickets.com',
     'ticketmaster.com', 'wl.seetickets.us', 'shotgun.live', 'fatsoma.com',
-    'meetup.com', 'partiful.com', 'luma.com', 'lu.ma'
+    'meetup.com', 'partiful.com', 'luma.com', 'lu.ma',
+    // 2026-08-02 run review: hosts observed live as event `website` values —
+    // dice/etix glyphs were already rendering as event identity on BEEFMINCE
+    // and FURBALL cards (their .ico files are in img/favicons). Mirrors the
+    // scraper-side PLATFORM_IDENTITY_HOSTS additions from the same review.
+    'tixr.com', 'etix.com', 'eventim.us', 'ticketleap.com', 'ticketleap.events',
+    'camplife.com', 'eventeny.com', 'showclix.com'
 ]);
 
 /**
@@ -273,7 +279,15 @@ const PLATFORM_FAVICON_HOSTNAMES = new Set([
 function isPlatformFaviconUrl(url) {
     try {
         const hostname = new URL(url).hostname.toLowerCase().replace(/^www\./, '');
-        return PLATFORM_FAVICON_HOSTNAMES.has(hostname);
+        if (PLATFORM_FAVICON_HOSTNAMES.has(hostname)) return true;
+        // Subdomains carry the same platform glyph as their parent —
+        // link.dice.fm, wl.eventim.us, events.ticketleap.com. Exact matching
+        // used to let these through (wl.seetickets.us was hand-added to the
+        // list for exactly that reason; the entry is now redundant but kept).
+        for (const platformHost of PLATFORM_FAVICON_HOSTNAMES) {
+            if (hostname.endsWith(`.${platformHost}`)) return true;
+        }
+        return false;
     } catch {
         return true;
     }
