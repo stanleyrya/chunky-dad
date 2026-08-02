@@ -6980,17 +6980,36 @@ class SharedCore {
                         source: stickyKept ? 'sticky' : 'ai'
                     });
                 } else {
+                    // No usable AI answer for this field. The historical
+                    // fallback clobbers the saved value with the scraped one —
+                    // an overwrite with even LESS justification than a
+                    // position-biased AI pick, so stickiness must cover this
+                    // path too or an unreachable AI server keeps the churn
+                    // going invisibly. Same report/enforce split as above.
+                    let stickyKept = false;
                     mergedObject[conflict.field] = conflict.values.scraped;
                     if (!this.mergeValuesEqualForTracking(conflict.values.scraped, conflict.values.calendar)) {
                         clobberedFields.push(conflict.field);
+                    }
+                    if (this.shouldReportCalendarStickiness(conflict.field, conflict.values.calendar, conflict.values.scraped, 'scraped')) {
+                        console.log(`🧊 STICKY: "${eventTitle}" field=${conflict.field} would keep calendar "${preview(conflict.values.calendar)}" over scraped "${preview(conflict.values.scraped)}" (no AI answer — clobber fallback, no deterministic reason)`);
+                        this.recordCalendarStickinessObservation(eventTitle);
+                        if (aiConfig && aiConfig.calendarStickinessEnforced === true) {
+                            stickyKept = true;
+                            mergedObject[conflict.field] = conflict.values.calendar;
+                            const clobberIndex = clobberedFields.lastIndexOf(conflict.field);
+                            if (clobberIndex !== -1) clobberedFields.splice(clobberIndex, 1);
+                        }
                     }
                     aiDecisionRecords.push({
                         field: conflict.field,
                         existingValue: conflict.values.calendar,
                         newValue: conflict.values.scraped,
-                        chosenValue: conflict.values.scraped,
-                        reason: 'ai unavailable/rejected — clobber fallback',
-                        source: 'fallback'
+                        chosenValue: stickyKept ? conflict.values.calendar : conflict.values.scraped,
+                        reason: stickyKept
+                            ? 'calendar stickiness — no AI answer, saved value kept'
+                            : 'ai unavailable/rejected — clobber fallback',
+                        source: stickyKept ? 'sticky' : 'fallback'
                     });
                 }
             }

@@ -11306,6 +11306,56 @@ test('calendar stickiness: per-run tally and summary line', () => {
   assert.deepEqual(silent, ['🧊 STICKY: 3 field(s) across 2 event(s) would have been kept']);
 });
 
+test('calendar stickiness covers the arbitration-failure fallback too', async () => {
+  // When the AI endpoint is down the historical fallback clobbers every
+  // conflicted field with the scraped value — an overwrite with even less
+  // justification than a position-biased pick. Stickiness must see that path:
+  // report-only logs it and still clobbers; enforced keeps the saved value.
+  const buildPair = (aiExtra) => ({
+    scraped: {
+      title: 'CLUB CHUB: DURO',
+      startDate: new Date('2026-08-02T05:00:00.000Z'),
+      endDate: new Date('2026-08-02T11:30:00.000Z'),
+      source: 'ai-web',
+      _fieldPriorities: createCore().getResolvedFieldPriorities({}),
+      _parserConfig: { ai: { ...TEST_AI_PARSER_CONFIG.ai, ...aiExtra } }
+    },
+    existing: {
+      title: 'D>U>R>O is back NEW OUTDOOR LOCATION _ NIGHT FOAM PARTY',
+      startDate: new Date('2026-08-02T05:00:00.000Z'),
+      endDate: new Date('2026-08-02T11:30:00.000Z'),
+      notes: ''
+    }
+  });
+
+  // Report-only (default): fallback still clobbers, but the STICKY line fires.
+  const reportCore = createCore();
+  const reportPair = buildPair({});
+  const stickyLines = [];
+  const originalLog = console.log;
+  console.log = (message) => { stickyLines.push(String(message)); };
+  let reportResult;
+  try {
+    reportResult = await reportCore.createFinalEventObject(
+      reportPair.existing, reportPair.scraped,
+      { httpAdapter: buildArbitrationAdapter({}, { fail: true }) });
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(reportResult.title, 'CLUB CHUB: DURO', 'report-only keeps the clobber fallback');
+  assert.ok(stickyLines.some(line => line.startsWith('🧊 STICKY:') && line.includes('no AI answer')),
+    'the fallback overwrite is reported');
+
+  // Enforced: the saved calendar title survives an AI outage.
+  const enforcedCore = createCore();
+  const enforcedPair = buildPair({ calendarStickinessEnforced: true });
+  const enforcedResult = await enforcedCore.createFinalEventObject(
+    enforcedPair.existing, enforcedPair.scraped,
+    { httpAdapter: buildArbitrationAdapter({}, { fail: true }) });
+  assert.equal(enforcedResult.title, 'D>U>R>O is back NEW OUTDOOR LOCATION _ NIGHT FOAM PARTY',
+    'enforced stickiness keeps the saved value when the AI has no answer');
+});
+
 test('calendar stickiness enforcement is OFF by default and is a one-flag change', () => {
   const core = createCore();
   assert.equal(core.resolveAiConfig({}).calendarStickinessEnforced, false);
