@@ -140,6 +140,32 @@ function urlPartsEndInAssetExtension(parts) {
 
 const IMAGE_MERGE_FIELDS = new Set(['image', 'imageVertical', 'imageHorizontal']);
 
+// classifyCoverShape data (2026-08-02, all shapes drawn from real run values).
+// A currency-marked amount: a symbol adjacent to digits ("$20", "$15-$30",
+// "From £10", "20$") — NFKC folding upstream already collapsed full-width and
+// mathematical-alphanumeric forms into these.
+const COVER_CURRENCY_SYMBOL_AMOUNT_PATTERN = /[$€£¥]\s?\d|\d\s?[$€£¥]/;
+// Amount + ISO 4217 code in either order ("20 EUR", "11.55-22.38 GBP",
+// "EUR 20"). A generic currency table is data, not per-venue hardcoding.
+const COVER_ISO_CURRENCY_CODES = 'USD|EUR|GBP|CAD|AUD|NZD|MXN|BRL|ARS|CLP|COP|JPY|CNY|KRW|CHF|SEK|NOK|DKK|PLN|CZK|HUF|ZAR|ILS|THB';
+const COVER_ISO_AMOUNT_PATTERN = new RegExp(
+    `\\d\\s?(?:${COVER_ISO_CURRENCY_CODES})(?![A-Za-z])|(?:^|[^A-Za-z])(?:${COVER_ISO_CURRENCY_CODES})\\s?\\d`,
+    'i'
+);
+// Whole-value free-admission phrases (2026-08-02, observed in real runs:
+// EN/ES/DE). Compared after trimming, case-folding, whitespace-collapsing and
+// stripping trailing !/. — so "NO COVER!" and "No cover." both match.
+const COVER_FREE_PHRASES = new Set([
+    'free',
+    'free admission',
+    'free entry',
+    'no cover',
+    'entrada libre',
+    'entrada gratuita',
+    'gratis',
+    'kostenlos'
+]);
+
 // The ONE calendar target an unrecognized city may produce. See
 // SharedCore.resolveCalendarTarget — the fallback must never be derived from
 // the city string itself, or a page's free text becomes a calendar name.
@@ -883,6 +909,32 @@ class SharedCore {
         const stripWhitespace = (value) => String(value === null || value === undefined ? '' : value).replace(/\s+/g, '');
         const strippedA = stripWhitespace(valueA);
         return strippedA !== '' && strippedA === stripWhitespace(valueB);
+    }
+
+    // Deterministic cover SHAPE classifier (2026-08-02): `cover` accumulates
+    // four incompatible value KINDS from different parsers — real prices
+    // ("$20", "20 EUR", "From £10"), free-admission claims ("No cover",
+    // "Entrada Libre"), and marketing prose ("ADV. TIX AT BEARRACUDA.COM",
+    // "SOLD OUT", a dress code) — and the merge layer needs to know WHICH kind
+    // each side is before it can decide anything. Returns 'empty' | 'price' |
+    // 'free' | 'prose'. Dumb and regex-based on purpose: a value containing
+    // any currency-marked amount is price ("$10, NO COVER" → price); a value
+    // that IS a free phrase in whole is free; everything else non-empty is
+    // prose. Input is NFKC-folded first so mathematical-bold Unicode
+    // (𝐑𝐞𝐝 𝐰𝐫𝐢𝐬𝐭𝐛𝐚𝐧𝐝… — U+1D400 block, observed in a real run) cannot dodge
+    // classification (String.prototype.normalize is available in iOS
+    // JavaScriptCore). Platform-pure — no URL parsing, no network, no config.
+    classifyCoverShape(value) {
+        const text = String(value === null || value === undefined ? '' : value)
+            .normalize('NFKC')
+            .trim();
+        if (text === '') return 'empty';
+        if (COVER_CURRENCY_SYMBOL_AMOUNT_PATTERN.test(text) || COVER_ISO_AMOUNT_PATTERN.test(text)) {
+            return 'price';
+        }
+        const folded = text.toLowerCase().replace(/\s+/g, ' ').replace(/[!.]+$/, '').trim();
+        if (COVER_FREE_PHRASES.has(folded)) return 'free';
+        return 'prose';
     }
 
     // A genuine conflict: both sides non-empty primitives whose serialized forms
@@ -2657,6 +2709,28 @@ class SharedCore {
                 if (containB.includes(containA)) {
                     return { winner: 'b', reason: 'description contains the other candidate\'s full text' };
                 }
+            }
+        }
+        // Cover shape rung (2026-08-02): different parsers write incompatible
+        // KINDS of cover for the same event — a currency-marked price ("$20",
+        // "20 EUR") vs marketing prose ("ADV. TIX AT BEARRACUDA.COM") — and AI
+        // arbitration flip-flopped between them run after run (observed:
+        // "BEARRACUDA: Seattle" went $20-$30 → $20 → ADV. TIX AT
+        // BEARRACUDA.COM → $20 across runs). A price is strictly more
+        // information than prose, so exactly that pair is decidable without
+        // AI: the price-shaped side wins. EVERY other combination falls
+        // through unchanged (fail open): price/price is a genuine price
+        // disagreement, free-vs-price is a genuine factual disagreement (two
+        // Sitges parsers really do claim "20 EUR" vs "Entrada Libre"), and
+        // free/prose + prose/prose carry no shape signal either way.
+        if (fieldName === 'cover') {
+            const shapeA = this.classifyCoverShape(valueA);
+            const shapeB = this.classifyCoverShape(valueB);
+            if ((shapeA === 'price' && shapeB === 'prose') || (shapeA === 'prose' && shapeB === 'price')) {
+                return {
+                    winner: shapeA === 'price' ? 'a' : 'b',
+                    reason: 'price-shaped cover beats marketing text'
+                };
             }
         }
         // Case-only variants are not a real conflict: production runs burned
@@ -5040,22 +5114,32 @@ class SharedCore {
 
     // The curated owner of a crawled page when that owner is demonstrably NOT
     // the parser currently running: { ownerName, ownerKind, host }. Returns
-    // null (→ caller no-ops, today's behavior) whenever the page is on one of
-    // the running parser's own configured domains, no claim covers it, the
-    // covering claims name more than one owner, or the single owner is this
-    // parser's own identity.
+    // null (→ caller no-ops, today's behavior) whenever no claim covers the
+    // page, the covering claims name more than one owner, the single owner is
+    // this parser's own identity, or the page sits on one of the running
+    // parser's own configured domains and the winning claim is domain-level.
     resolveForeignCrawlPageOwner(url, parserConfig, mainConfig) {
         const hostPathKey = this.getUrlHostPathKey(url);
         const pageDomain = this.getRegistrableDomainFromUrl(url);
         if (!hostPathKey || !pageDomain) return null;
 
-        // Same-site is never foreign: a parser's own configured domains stay
-        // fully crawlable (a promoter config pointed at a partner/host site
-        // still owns everything it configured).
+        // A parser's own configured domains stay crawlable — but on SHARED
+        // platforms (linktr.ee, eventbrite.com/o/…) "same domain" is not
+        // "same org", so the shield is scoped: it yields to a SUB-PATH claim
+        // naming a different owner, and holds against domain-level claims.
+        // Domain-level foreign claims must never pierce it: the ursamen
+        // family is the live counterexample — the Spooky Bear parser is
+        // configured at ursamen.org/spookybear while "Northeast Ursamen"
+        // (a separate registry entry, no alias link) claims ursamen.org
+        // whole-domain, and a domain-level pierce would lock the sub-brand
+        // out of its own family's site. Verified 2026-08-02 against the full
+        // registry: this scoping blocks Cubhouse → linktr.ee/megawoof_america
+        // and cross-parser eventbrite /o/ pages while leaving all 144
+        // own-domain parser×path probes untouched.
         const configuredUrls = Array.isArray(parserConfig && parserConfig.urls) ? parserConfig.urls : [];
-        for (const configuredUrl of configuredUrls) {
-            if (this.getRegistrableDomainFromUrl(configuredUrl) === pageDomain) return null;
-        }
+        const onOwnConfiguredDomain = configuredUrls.some(
+            configuredUrl => this.getRegistrableDomainFromUrl(configuredUrl) === pageDomain
+        );
 
         const matches = this.buildCrawlOwnershipClaims(mainConfig).filter(claim => {
             if (claim.domain !== pageDomain) return false;
@@ -5068,12 +5152,34 @@ class SharedCore {
         // whole-domain claim). Two DIFFERENT owners tied at that specificity is
         // ambiguous evidence — no-op.
         const maxSpecificity = Math.max(...matches.map(claim => claim.specificity));
-        const winners = matches.filter(claim => claim.specificity === maxSpecificity);
-        const ownerNames = [...new Set(winners.map(claim => claim.ownerName))];
-        if (ownerNames.length !== 1) return null;
+        let winners = matches.filter(claim => claim.specificity === maxSpecificity);
 
         const currentKey = this.normalizePromoterNameKey(parserConfig && parserConfig.name);
         if (currentKey && winners.some(claim => claim.selfKeys.includes(currentKey))) return null;
+
+        // A parser claim and a promoter claim on the IDENTICAL site URL are
+        // one owner wearing two labels, not two owners: the parser
+        // "Bearracuda Events" and the registry entry "Bearracuda" both claim
+        // bearracuda.com, and counting them as ambiguity silently disabled
+        // the guard for every parser whose name differs from its own promoter
+        // entry (found 2026-08-02 — the massive.club → bearracuda.com block
+        // never fired in production). Collapse across KINDS only, preferring
+        // the parser-kind label; two different owners of the SAME kind — or
+        // different site URLs tied at one specificity — remain genuine
+        // ambiguity and fail closed.
+        const distinctSites = new Set(winners.map(claim => claim.hostPathKey));
+        const parserOwners = new Set(winners.filter(c => c.ownerKind === 'parser').map(c => c.ownerName));
+        const promoterOwners = new Set(winners.filter(c => c.ownerKind !== 'parser').map(c => c.ownerName));
+        if (distinctSites.size === 1 && parserOwners.size <= 1 && promoterOwners.size <= 1
+            && parserOwners.size + promoterOwners.size === 2) {
+            const preferred = winners.find(claim => claim.ownerKind === 'parser') || winners[0];
+            winners = [preferred];
+        }
+        const ownerNames = [...new Set(winners.map(claim => claim.ownerName))];
+        if (ownerNames.length !== 1) return null;
+
+        // Own-domain shield: only a sub-path-scoped foreign claim pierces it.
+        if (onOwnConfiguredDomain && maxSpecificity === 0) return null;
 
         return {
             ownerName: winners[0].ownerName,
@@ -7053,6 +7159,26 @@ class SharedCore {
         delete mergedEvent.barSource;
         this.setProvenanceSource(mergedEvent, 'bar', 'barSource', newEvent, existingEvent);
 
+        // _coverFromJsonLdOffers must describe the merged event's COVER, not
+        // the base record: the `{ ...newEvent }` spread copies newEvent's
+        // stamp even when existing's cover won (underscore fields skip the
+        // field loop), and drops existing's stamp even when its offers-priced
+        // cover won. Recompute it from whichever record supplied the final
+        // value, with strict attribution like imageSource/barSource: a record
+        // only vouches for the stamp when its own cover IS the final value. A
+        // final cover no stamped side supplied carries no stamp (fail open —
+        // the calendar merge then treats it as an ordinary fresh price).
+        {
+            delete mergedEvent._coverFromJsonLdOffers;
+            const finalCover = this.serializeArbitrationValue('cover', mergedEvent.cover);
+            const suppliedOffersCover = (record) => Boolean(record && record._coverFromJsonLdOffers)
+                && finalCover !== ''
+                && this.serializeArbitrationValue('cover', record.cover) === finalCover;
+            if (suppliedOffersCover(newEvent) || suppliedOffersCover(existingEvent)) {
+                mergedEvent._coverFromJsonLdOffers = true;
+            }
+        }
+
         // _timezoneUnresolved must describe the merged event's DATES, not the base
         // record: the `{ ...newEvent }` spread above copies newEvent's flag even
         // when existing's anchored dates won, and drops existing's flag even when
@@ -7379,16 +7505,31 @@ class SharedCore {
                 continue;
             }
 
-            // Cover is priced by the LIVE ticket page: the calendar copy is just
-            // last run's snapshot, so AI arbitration (which has no freshness
-            // signal) is the wrong tool. Under the default "ai" strategy
-            // (explicit parser-config strategies still win):
+            // Cover is resolved deterministically under the default "ai"
+            // strategy (explicit parser-config strategies still win) — AI
+            // arbitration has no freshness signal and flip-flopped run after
+            // run. But "the calendar copy is just last run's snapshot" is only
+            // half true: a DIFFERENT parser may have written the calendar
+            // copy, and unconditional freshness-wins was the ping-pong engine
+            // (observed: "BEARRACUDA: Seattle" cycled $20-$30 → $20 → ADV. TIX
+            // AT BEARRACUDA.COM → $20 as two parsers alternated). Shape-aware
+            // rules (classifyCoverShape, 2026-08-02):
             // - formatting twins (whitespace-only difference, e.g.
             //   "$22.10 - $39.98" vs "$22.10-$39.98") are the SAME price — the
             //   calendar value is kept: no conflict, no AI call, no clobber entry;
-            // - genuinely different prices take the scraped (fresh) value
-            //   deterministically. An empty scraped cover never reaches here —
-            //   the empty-scrape rule above already kept the calendar value.
+            // - a price-shaped calendar value is never clobbered by a
+            //   non-price scrape (marketing prose / free-claim text): once a
+            //   real price lands on the calendar, prose can't undo it;
+            // - both price-shaped but the scraped cover is stamped
+            //   _coverFromJsonLdOffers (live ticket-vendor tier prices:
+            //   fee-inclusive, built from IN-STOCK tiers only, so they move
+            //   when a tier sells out) → the stored door price is kept;
+            // - everything else (scraped price vs non-price calendar, both
+            //   price unstamped, both non-price) takes the scraped (fresh)
+            //   value deterministically — a venue really updating its door
+            //   price must still propagate. An empty scraped cover never
+            //   reaches here — the empty-scrape rule above already kept the
+            //   calendar value.
             if (fieldName === 'cover' && mergeStrategy === 'ai'
                 && !this.isEmptyArbitrationValue(scraperValue)
                 && !this.isEmptyArbitrationValue(calendarValue)) {
@@ -7399,18 +7540,38 @@ class SharedCore {
                     continue;
                 }
                 if (serializedScraped !== serializedCalendar) {
+                    const recordCoverDecision = (chosenValue, reason) => {
+                        aiDecisionRecords.push({
+                            field: fieldName,
+                            existingValue: calendarValue,
+                            newValue: scraperValue,
+                            chosenValue: chosenValue,
+                            reason: reason,
+                            source: 'deterministic'
+                        });
+                    };
+                    const scrapedShape = this.classifyCoverShape(serializedScraped);
+                    const calendarShape = this.classifyCoverShape(serializedCalendar);
+                    if (calendarShape === 'price' && scrapedShape !== 'price') {
+                        const keptReason = `scraped "${serializedScraped}" is not price-shaped`;
+                        mergedObject[fieldName] = calendarValue;
+                        console.log(`🔒 MERGE: "${mergeTitle}" field=${fieldName} kept calendar value — ${keptReason}`);
+                        recordCoverDecision(calendarValue, keptReason);
+                        continue;
+                    }
+                    if (calendarShape === 'price' && scrapedShape === 'price'
+                        && Boolean(scraperObject._coverFromJsonLdOffers)) {
+                        const keptReason = `scraped "${serializedScraped}" is a live ticket-tier price (fee-inclusive, in-stock tiers only)`;
+                        mergedObject[fieldName] = calendarValue;
+                        console.log(`🔒 MERGE: "${mergeTitle}" field=${fieldName} kept calendar value — ${keptReason}`);
+                        recordCoverDecision(calendarValue, keptReason);
+                        continue;
+                    }
                     const freshnessReason = 'cover reflects the live ticket page — freshness wins';
                     mergedObject[fieldName] = scraperValue;
                     clobberedFields.push(fieldName);
                     console.log(`🔒 MERGE: "${mergeTitle}" field=${fieldName} resolved deterministically — ${freshnessReason}`);
-                    aiDecisionRecords.push({
-                        field: fieldName,
-                        existingValue: calendarValue,
-                        newValue: scraperValue,
-                        chosenValue: scraperValue,
-                        reason: freshnessReason,
-                        source: 'deterministic'
-                    });
+                    recordCoverDecision(scraperValue, freshnessReason);
                     continue;
                 }
                 // Identical values fall through to the configured strategy (no-op).
