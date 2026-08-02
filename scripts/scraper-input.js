@@ -140,9 +140,24 @@ const scraperConfig = {
       },
     },
     {
-      name: "CubScout LA",
-      // Eagle LA's recurring bear party page (The Events Calendar, JSON-LD).
-      urls: ["https://eaglela.com/events/cub-scout-3/"],
+      name: "Eagle LA",
+      // Venue parser, not a promoter one: eaglela.com is Eagle LA's own site
+      // (The Events Calendar, JSON-LD) and it hosts many bear parties, not
+      // just CubScout. This used to point at the single event page
+      // /events/cub-scout-3/, which meant (a) every other Eagle LA night was
+      // invisible — the archive lists BEAR HAPPY HOUR, SUNDAY BEER BUST, MEAT
+      // RACK, ONYX, CUBSCOUT and more in August 2026 alone — and (b) the slug
+      // was a hardcoded guess: a renamed series (cub-scout-4) would 404 and
+      // the parser would go quiet without failing. The listing archive is the
+      // stable entry point; the crawler reaches each occurrence from there.
+      //
+      // "Eagle LA" is a curated bar (data/bars/la.json), so the venue-site
+      // identity path resolves the site to the venue and events keep their own
+      // party names (CUBSCOUT, ONYX, …) with bar="Eagle LA" — the brand
+      // prefixer is a no-op on venue-role sites. The CubScout LA PROMOTER
+      // entry in scraper-promoters.js is unchanged and still claims the
+      // CUBSCOUT title alias.
+      urls: ["https://eaglela.com/events/"],
     },
     {
       name: "BEEFMINCE",
