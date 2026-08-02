@@ -11734,3 +11734,113 @@ test('the formatting rung fails open when no normalizer pipeline is injected', (
   const calendar = 'BEEFMINCE';
   assert.doesNotThrow(() => core.resolveConflictDeterministically('description', calendar, scraped, {}));
 });
+
+// 2026-08-02 run-review wave (shared-core half).
+// ---------------------------------------------------------------------------
+
+// Fix 5c — past events' ticket pages are torn down (eventim serves 410 Gone;
+// 3 Dollar Bill run 20260802-102127 burned 7 fetches on them).
+test('adaptive crawl does not follow ticket links for events already in the past', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const pages = {
+    'https://www.eventbrite.com/e/party-mixed': {
+      events: [
+        { title: 'Long Gone Ball', startDate: new Date(Date.now() - 10 * DAY_MS), ticketUrl: 'https://eventim.us/event/long-gone/1' },
+        { title: 'Upcoming Bash', startDate: new Date(Date.now() + 10 * DAY_MS), ticketUrl: 'https://tickets.example/upcoming' }
+      ],
+      additionalLinks: []
+    },
+    'https://eventim.us/event/long-gone/1': {},
+    'https://tickets.example/upcoming': {}
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+
+  await core.processParser(
+    { name: 'Past Tickets', urls: ['https://www.eventbrite.com/e/party-mixed'], ai: CRAWL_AI },
+    {}, httpAdapter, display, parsers
+  );
+
+  assert.ok(fetched.includes('https://tickets.example/upcoming'), 'future ticket links still crawl');
+  assert.ok(!fetched.includes('https://eventim.us/event/long-gone/1'), 'past-event ticket links are skipped');
+});
+
+test('selectAdaptiveFollowLinks skips past ticketUrls at the unit level (string startDates too)', () => {
+  const core = createCore();
+  const past = new Date(Date.now() - 3 * DAY_MS);
+  const future = new Date(Date.now() + 3 * DAY_MS);
+  const links = core.selectAdaptiveFollowLinks('event-page', [], {
+    events: [
+      { title: 'Old', startDate: past, ticketUrl: 'https://eventim.us/event/old/1' },
+      { title: 'Old String', startDate: past.toISOString(), ticketUrl: 'https://eventim.us/event/old-string/2' },
+      { title: 'New', startDate: future, ticketUrl: 'https://tickets.example/new' },
+      // No startDate → fail open, keep today's behavior.
+      { title: 'Undated', ticketUrl: 'https://tickets.example/undated' }
+    ]
+  }, 'https://venue.example/party');
+  assert.ok(!links.includes('https://eventim.us/event/old/1'));
+  assert.ok(!links.includes('https://eventim.us/event/old-string/2'));
+  assert.ok(links.includes('https://tickets.example/new'));
+  assert.ok(links.includes('https://tickets.example/undated'));
+});
+
+// Fix 6 — crawl-page failures were [ERROR]-logged but never counted: the run
+// header said "errors":0 while the BEEFMINCE log carried 10 [ERROR] lines
+// (run 20260802-093526).
+test('crawl-page failures land in results.errors so the run header counts them', async () => {
+  // deadEndCore classifies hub.example as multi-event-page so its links crawl.
+  const core = deadEndCore();
+  const display = createDisplayAdapterStub();
+  const failingUrl = 'https://tixr.com/e/201239';
+  const failure = `HTTP request failed for ${failingUrl}: HTTP 403 error from ${failingUrl}`;
+  const pages = {
+    'https://hub.example/': { additionalLinks: [failingUrl, 'https://site.example/party'] },
+    [failingUrl]: { fail: failure },
+    'https://site.example/party': {}
+  };
+  const { httpAdapter, parsers } = createCrawlHarness(pages);
+
+  const results = await core.processEvents(
+    deadEndConfig({ name: 'Crawl Errors' }),
+    httpAdapter, display, parsers
+  );
+
+  assert.equal(results.errors.length, 1, `crawl failure counted once, got: ${JSON.stringify(results.errors)}`);
+  assert.equal(results.errors[0], `SYSTEM: Failed to process crawl page ${failingUrl}: ${failure}`);
+  // The original [ERROR] log line is unchanged alongside the count.
+  assert.ok(display.logs.includes(`SYSTEM: Failed to process crawl page ${failingUrl}: ${failure}`));
+});
+
+// Fix 7 (core half) — cached-misclassification self-heal plumbing.
+test('classifyPageWithAi records cache hits and invalidation clears them via the provider', async () => {
+  const core = createCore();
+  const aiConfig = { provider: 'openai', endpoint: 'http://x.example/v1', model: 'test-model', openai: {} };
+  const html = '<html><head><title>Events</title></head><body>Listing of things</body></html>';
+  const url = 'https://cached.example/events';
+  const invalidations = [];
+  const cache = {
+    read: async () => ({ classification: 'multi-event-page', confidence: 90, reason: 'cached' }),
+    write: async () => null,
+    invalidate: async (invalidatedUrl, signature) => {
+      invalidations.push({ invalidatedUrl, signature });
+      return true;
+    }
+  };
+
+  const outcome = await core.classifyPageWithAi(url, html, aiConfig, {}, cache);
+  assert.equal(outcome.classification, 'multi-event-page');
+  assert.equal(core.wasAiClassificationCacheHit(url), true, 'cache hit is remembered for the run');
+  assert.equal(core.wasAiClassificationCacheHit('https://other.example/'), false);
+
+  const removed = await core.invalidateAiClassificationCacheEntry(url, html, aiConfig, cache);
+  assert.equal(removed, true);
+  assert.equal(invalidations.length, 1);
+  assert.equal(invalidations[0].invalidatedUrl, url);
+  // The invalidation signature must be EXACTLY the one classifyPageWithAi
+  // caches under — built by the shared builder.
+  assert.deepEqual(invalidations[0].signature, core.buildAiClassificationCacheSignature(aiConfig, html));
+  assert.equal(core.wasAiClassificationCacheHit(url), false, 'hit marker cleared so the fresh classify is not mistaken for a hit');
+
+  // No provider invalidate → false, never throws.
+  assert.equal(await core.invalidateAiClassificationCacheEntry(url, html, aiConfig, { read: async () => null }), false);
+});

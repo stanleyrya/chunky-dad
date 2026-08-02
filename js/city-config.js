@@ -34,7 +34,7 @@ const CITY_CONFIG = {
         calendarId: '4b97d66d56b8bc0cf6a667f5b11879fbfe4a17e671055772e9849a68e905923f@group.calendar.google.com',
         calendar: 'chunky-dad-la',
         timezone: 'America/Los_Angeles',
-        patterns: ['los angeles', 'hollywood', 'west hollywood', 'weho', 'dtla', 'downtown los angeles', 'long beach', 'santa monica', 'd>u>r>o'],
+        patterns: ['los angeles', 'hollywood', 'west hollywood', 'weho', 'dtla', 'downtown los angeles', 'downtown la', 'downtown l.a.', 'long beach', 'santa monica', 'd>u>r>o'],
         coordinates: { lat: 34.0522, lng: -118.2437 },
         mapZoom: 10,
         visible: true

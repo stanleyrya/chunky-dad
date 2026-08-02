@@ -509,17 +509,16 @@ class SharedCore {
         const summary = this.summarizePageForClassification(html);
         if (!summary.bodyText && !summary.title) return null;
 
-        const cacheSignature = {
-            model: String(aiConfig.model || ''),
-            title: summary.title,
-            metaDescription: summary.metaDescription,
-            bodyText: summary.bodyText
-        };
+        const cacheSignature = this.buildAiClassificationCacheSignature(aiConfig, summary);
         if (cache && typeof cache.read === 'function') {
             try {
                 const cachedOutcome = await cache.read(url, cacheSignature);
                 if (cachedOutcome && typeof cachedOutcome === 'object') {
                     console.log(`🗂️ SharedCore: AI classification cache hit for ${url} → ${cachedOutcome.rejected ? 'rejected' : cachedOutcome.classification}`);
+                    // Remember the hit for this run: the zero-yield self-heal
+                    // (invalidateAiClassificationCacheEntry) only re-classifies
+                    // pages whose classification CAME from cache.
+                    this.noteAiClassificationCacheHit(url);
                     return cachedOutcome.rejected ? null : cachedOutcome;
                 }
             } catch (error) {
@@ -583,6 +582,59 @@ class SharedCore {
             }
         }
         return outcome.rejected ? null : outcome;
+    }
+
+    // The classification cache key's signature half — one builder so the
+    // invalidation path below can never drift from classifyPageWithAi's own
+    // cache reads/writes. Accepts a page summary or raw html.
+    buildAiClassificationCacheSignature(aiConfig, summaryOrHtml) {
+        const summary = summaryOrHtml && typeof summaryOrHtml === 'object'
+            ? summaryOrHtml
+            : this.summarizePageForClassification(summaryOrHtml);
+        return {
+            model: String((aiConfig && aiConfig.model) || ''),
+            title: summary.title,
+            metaDescription: summary.metaDescription,
+            bodyText: summary.bodyText
+        };
+    }
+
+    // In-run record of classification cache hits (memory only, platform-pure).
+    noteAiClassificationCacheHit(url) {
+        if (!this.aiClassificationCacheHitUrls) this.aiClassificationCacheHitUrls = new Set();
+        this.aiClassificationCacheHitUrls.add(String(url || ''));
+    }
+
+    wasAiClassificationCacheHit(url) {
+        return Boolean(this.aiClassificationCacheHitUrls
+            && this.aiClassificationCacheHitUrls.has(String(url || '')));
+    }
+
+    // Cached-misclassification self-heal, invalidation half: a cached
+    // multi-event-page verdict that yields zero segments AND zero events
+    // starves the page on EVERY run (chunk-party detail pages and
+    // beefmince.com/events, runs 20260802-093810 / 20260802-093526). The
+    // parser detects the zero-yield outcome and calls this; persistence stays
+    // behind the injected cache provider (this file never touches the
+    // filesystem). Returns true when an entry was deleted.
+    async invalidateAiClassificationCacheEntry(url, html, aiConfig, cache) {
+        if (!cache || typeof cache.invalidate !== 'function') return false;
+        const cacheSignature = this.buildAiClassificationCacheSignature(aiConfig, html);
+        // Forget the in-run hit marker so the follow-up fresh classification
+        // is never mistaken for another cache hit.
+        if (this.aiClassificationCacheHitUrls) {
+            this.aiClassificationCacheHitUrls.delete(String(url || ''));
+        }
+        try {
+            const removed = await cache.invalidate(url, cacheSignature);
+            if (removed) {
+                console.log(`🗂️ SharedCore: Invalidated AI classification cache entry for ${url} (cached verdict yielded zero segments and zero events)`);
+            }
+            return Boolean(removed);
+        } catch (error) {
+            console.log(`🗂️ SharedCore: AI classification cache invalidation failed for ${url}: ${error.message}`);
+            return false;
+        }
     }
 
     // ============================================================================
@@ -2924,8 +2976,15 @@ class SharedCore {
                     results.bearDroppedEvents.push(...parserResult.bearDroppedEvents);
                 }
 
+                // Crawl-page failures count as run errors (they were already
+                // [ERROR]-logged during the crawl; this puts them in the run
+                // header's totals and the results-UI errors section).
+                if (Array.isArray(parserResult.crawlErrors) && parserResult.crawlErrors.length > 0) {
+                    results.errors.push(...parserResult.crawlErrors);
+                }
+
                 await displayAdapter.logSuccess(`SYSTEM: ${parserConfig.name}: ${parserResult.bearEvents} bear events`);
-                
+
             } catch (error) {
                 const errorMsg = `SYSTEM: Failed to process ${parserConfig.name}: ${error.message || 'Unknown error'}`;
                 results.errors.push(errorMsg);
@@ -3057,6 +3116,9 @@ class SharedCore {
         // Sibling events dropped by the enrich-only ticket crawl (flag, don't
         // drop silently): surfaced as a discovered-venue suggestion block.
         const enrichDropCollector = [];
+        // Crawl-page failures, returned on the parser result so processEvents
+        // can fold them into results.errors (the run header's error count).
+        const crawlErrorCollector = [];
 
         await this.crawlUrlsForEvents({
             urls: effectiveParserConfig.urls || [],
@@ -3076,7 +3138,8 @@ class SharedCore {
             discoveryOnly,
             discoveryTreeCollector,
             enrichOnlyByUrl: null,
-            enrichDropCollector
+            enrichDropCollector,
+            crawlErrorCollector
         });
 
         // Venue-site address consensus (deterministic, parser-derived): the
@@ -3152,6 +3215,10 @@ class SharedCore {
 
         if (enrichDropCollector.length > 0) {
             result.enrichOnlyDrops = enrichDropCollector;
+        }
+
+        if (crawlErrorCollector.length > 0) {
+            result.crawlErrors = crawlErrorCollector;
         }
 
         if (bearDropCollector.length > 0) {
@@ -4120,7 +4187,11 @@ class SharedCore {
         // ENRICH the originating event, never spawn new events. Keyed by URL
         // dedupe key → { parentEvents, parentTitle, parentUrl }.
         enrichOnlyByUrl = null,
-        enrichDropCollector = null
+        enrichDropCollector = null,
+        // Crawl-page processing failures, collected so the run header's
+        // "errors" total can count them (run 20260802-093526: 10 [ERROR]
+        // lines, header said "errors":0 — crawl failures were log-only).
+        crawlErrorCollector = null
     }) {
         const adaptiveCrawl = maxDepth === ADAPTIVE_CRAWL_DEPTH;
         const urlsToProcess = currentDepth > 0
@@ -4423,7 +4494,8 @@ class SharedCore {
                             discoveryOnly,
                             discoveryTreeCollector,
                             enrichOnlyByUrl: childEnrichOnlyByUrl,
-                            enrichDropCollector
+                            enrichDropCollector,
+                            crawlErrorCollector
                         });
                     }
                 } else {
@@ -4451,6 +4523,14 @@ class SharedCore {
                     }
                 } catch (noteError) {
                     await displayAdapter.logWarn(`SYSTEM: Failed to save cache entry for non-retryable error at ${url}: ${noteError.message}`);
+                }
+                // Count the failure in the run totals (the header's "errors"
+                // comes from results.errors) — the log lines below are
+                // unchanged; this only records the same message.
+                if (Array.isArray(crawlErrorCollector)) {
+                    crawlErrorCollector.push(currentDepth === 0
+                        ? `SYSTEM: Failed to process URL ${url}: ${message}`
+                        : `SYSTEM: Failed to process crawl page ${url}: ${message}`);
                 }
                 if (currentDepth === 0) {
                     await displayAdapter.logError(`SYSTEM: Failed to process URL ${url}: ${message}`);
@@ -4513,9 +4593,21 @@ class SharedCore {
         const events = Array.isArray(parseResult?.events) ? parseResult.events : [];
         for (const event of events) {
             const ticketUrl = event && typeof event.ticketUrl === 'string' ? event.ticketUrl.trim() : '';
-            if (ticketUrl) {
-                push(ticketUrl);
+            if (!ticketUrl) continue;
+            // A past event's ticket page is torn down, not archived — eventim
+            // serves HTTP 410 Gone for expired listings (3 Dollar Bill run
+            // 20260802-102127 burned 7 fetches on guaranteed 410s). Skip the
+            // ticket link when the event started more than a day ago; the
+            // event itself is untouched (allowPastEvents still governs whether
+            // it is kept).
+            const startMs = event && event.startDate instanceof Date
+                ? event.startDate.getTime()
+                : Date.parse(String((event && event.startDate) || ''));
+            if (Number.isFinite(startMs) && (Date.now() - startMs) > 24 * 60 * 60 * 1000) {
+                console.log(`🗂️ SharedCore: Skipping ticket link for past event "${event.title || 'unknown'}" (started ${new Date(startMs).toISOString().slice(0, 10)}): ${ticketUrl}`);
+                continue;
             }
+            push(ticketUrl);
         }
         return selected;
     }

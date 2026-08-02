@@ -9202,3 +9202,306 @@ test('brand prefixer: suppressed when the page evidence names ANOTHER curated pr
   // …and with no evidence at all the prefixer behaves exactly as before.
   assert.equal(parser.buildBrandPrefixedTitle('The RETURN', brands, CHUNK_PAGE(), CHUNK_CONFIG), 'CHUNK: The RETURN');
 });
+
+// ---------------------------------------------------------------------------
+// 2026-08-02 run-review wave: eight mechanical defects from the day's runs.
+// ---------------------------------------------------------------------------
+
+// Fix 1 — title date-strip compared against UTC and never fired for
+// US-evening events (run 20260802-093810: all five "does not match
+// startDate" lines were exactly +1 day).
+test('stripRedundantTitleDate prefers raw string candidates over Date objects', () => {
+  const parser = createParser();
+  // The real DORE ALLEY case: a Jul 25 10PM PDT start is Jul 26 in UTC. The
+  // raw JSON-LD string carries the local date and must win even when a Date
+  // candidate comes first.
+  const utcInstant = new Date('2026-07-26T05:00:00.000Z');
+  assert.equal(
+    parser.stripRedundantTitleDate('CHUNK DORE ALLEY - Saturday July 25th',
+      [utcInstant, '2026-07-25T22:00:00-07:00']),
+    'CHUNK DORE ALLEY');
+});
+
+test('stripRedundantTitleDate accepts the one-day UTC rollover when only a Date is available', () => {
+  const parser = createParser();
+  const utcInstant = new Date('2026-07-26T05:00:00.000Z'); // Jul 25, 10PM PDT
+  // Title prints the LOCAL date — exactly one day before the UTC date.
+  assert.equal(
+    parser.stripRedundantTitleDate('CHUNK DORE ALLEY - Saturday July 25th', [utcInstant]),
+    'CHUNK DORE ALLEY');
+  // Two days off is a genuine mismatch — kept for review.
+  assert.equal(
+    parser.stripRedundantTitleDate('CHUNK DORE ALLEY - Saturday July 24th', [utcInstant]),
+    'CHUNK DORE ALLEY - Saturday July 24th');
+  // A day AFTER the UTC date is not a rollover shape either.
+  assert.equal(
+    parser.stripRedundantTitleDate('CHUNK DORE ALLEY - Saturday July 27th', [utcInstant]),
+    'CHUNK DORE ALLEY - Saturday July 27th');
+  // Year-end rollover: Jan 1 UTC instant, title prints Dec 31 of the PRIOR year.
+  assert.equal(
+    parser.stripRedundantTitleDate('NYE BLOWOUT - December 31st 2026', [new Date('2027-01-01T06:00:00.000Z')]),
+    'NYE BLOWOUT');
+  // A conflicting explicit year blocks the rollover acceptance.
+  assert.equal(
+    parser.stripRedundantTitleDate('CHUNK DORE ALLEY - July 25th 2025', [utcInstant]),
+    'CHUNK DORE ALLEY - July 25th 2025');
+  // Raw strings never get the rollover allowance — they already carry the
+  // local date, so one-day-off IS a mismatch there.
+  assert.equal(
+    parser.stripRedundantTitleDate('CHUNK DORE ALLEY - Saturday July 25th', ['2026-07-26T05:00:00Z']),
+    'CHUNK DORE ALLEY - Saturday July 25th');
+});
+
+test('buildEventFromJsonLdNode keeps the raw startDate string for the title strip', () => {
+  const parser = createParser();
+  const event = parser.buildEventFromJsonLdNode({
+    '@type': 'Event',
+    name: 'CHUNK DORE ALLEY - Saturday July 25th',
+    startDate: '2026-07-25T22:00:00-07:00',
+    location: { '@type': 'Place', name: 'Powerhouse', address: '1347 Folsom St, San Francisco, CA' }
+  }, 'https://www.chunk-party.com/event-details/chunk-dore-alley');
+  assert.ok(event, 'node builds an event');
+  assert.equal(event._startDateRawText, '2026-07-25T22:00:00-07:00');
+  // …and with the raw string leading the candidates the strip fires.
+  assert.equal(
+    parser.stripRedundantTitleDate(event.title, [event._startDateRawText, event.startDate, event.start]),
+    'CHUNK DORE ALLEY');
+});
+
+// Fix 2 — evidence gate accepted a fabricated placeholder date whose evidence
+// was a schedule, not a date (run 20260802-100813: BLOWPOP startDate
+// "2026-01-01", evidence "Every Thursday" → phantom 2027 NYE event).
+test('evidenceHasConcreteDateSignal separates schedule words from real dates', () => {
+  const parser = createParser();
+  assert.equal(parser.evidenceHasConcreteDateSignal('Every Thursday'), false);
+  assert.equal(parser.evidenceHasConcreteDateSignal('WEDNESDAYS 8:30-MIDNIGHT'), false);
+  assert.equal(parser.evidenceHasConcreteDateSignal('Saturdays 10PM'), false);
+  assert.equal(parser.evidenceHasConcreteDateSignal('Thursday, August 6, 2026'), true);
+  assert.equal(parser.evidenceHasConcreteDateSignal('Saturday July 25th'), true);
+  assert.equal(parser.evidenceHasConcreteDateSignal('5/23'), true);
+  assert.equal(parser.evidenceHasConcreteDateSignal('2026-01-01'), true);
+  assert.equal(parser.evidenceHasConcreteDateSignal(''), false);
+});
+
+test('a date value with schedule-only evidence is dropped even when the value appears in the corpus', () => {
+  const parser = createParser();
+  const source = 'BLOWPOP Every Thursday at Massive free party 2026-01-01';
+  const evidenceContext = parser.buildAiEvidenceContextFromText(source);
+  const validationContext = { imageEvidenceUrls: new Set() };
+
+  const result = parser.validateAiEventEvidence(
+    {
+      startDate: '2026-01-01',
+      __fieldEvidence: { startDate: 'Every Thursday' }
+    },
+    { html: source }, {}, null,
+    { evidenceContext, validationContext }
+  );
+  assert.equal(result.event.startDate, undefined, 'weekday-only evidence cannot corroborate a Y-M-D');
+  assert.ok(result.report.dropped.some(entry => entry.key === 'startDate' && entry.reason === 'dateless-cited-evidence'),
+    `dateless-cited-evidence drop expected, got: ${JSON.stringify(result.report.dropped)}`);
+
+  // Date-shaped evidence keeps working exactly as before.
+  const legit = parser.validateAiEventEvidence(
+    {
+      startDate: '2026-08-06',
+      __fieldEvidence: { startDate: 'Thursday, August 6, 2026' }
+    },
+    { html: 'DRAG BINGO Thursday, August 6, 2026 doors 7pm' }, {}, null,
+    {
+      evidenceContext: parser.buildAiEvidenceContextFromText('DRAG BINGO Thursday, August 6, 2026 doors 7pm'),
+      validationContext: { imageEvidenceUrls: new Set() }
+    }
+  );
+  assert.equal(legit.event.startDate, '2026-08-06', 'a real cited date still passes');
+});
+
+test('weekday-pinned dates are exempt from the dateless-evidence drop', () => {
+  const parser = createParser();
+  const source = 'MEGAWOOF 2026-08-22 SATURDAY';
+  const build = (weekdayPinnedYears) => parser.validateAiEventEvidence(
+    {
+      startDate: '2026-08-22',
+      __fieldEvidence: { startDate: 'Saturday' },
+      ...(weekdayPinnedYears ? { __weekdayPinnedYears: weekdayPinnedYears } : {})
+    },
+    { html: source }, {}, null,
+    {
+      evidenceContext: parser.buildAiEvidenceContextFromText(source),
+      validationContext: { imageEvidenceUrls: new Set() }
+    }
+  );
+  // Pinned: the deterministic repair vetted the date — kept.
+  assert.equal(build({ start: true }).event.startDate, '2026-08-22');
+  // Not pinned: weekday-only evidence is dropped.
+  assert.equal(build(null).event.startDate, undefined);
+});
+
+// Fix 3 — time strings shipped as event titles (run 20260802-102127: final
+// event titled "6:30 PM"; SEGMENT_LISTING_TITLE emitted "6:30 PM 18:30").
+test('isTimeOnlyLineText recognizes dual-format time lines and nothing else', () => {
+  const parser = createParser();
+  assert.equal(parser.isTimeOnlyLineText('6:30 PM 18:30'), true);
+  assert.equal(parser.isTimeOnlyLineText('7:00 PM 19:00'), true);
+  assert.equal(parser.isTimeOnlyLineText('6:30 PM'), true);
+  assert.equal(parser.isTimeOnlyLineText('10PM - 2AM'), true);
+  assert.equal(parser.isTimeOnlyLineText('21h a 03h'), true);
+  assert.equal(parser.isTimeOnlyLineText("SUGAR, WE'RE HOEIN DOWN"), false);
+  assert.equal(parser.isTimeOnlyLineText('Party at 10'), false);
+  assert.equal(parser.isTimeOnlyLineText('24'), false, 'a bare number is not a time');
+  assert.equal(parser.isTimeOnlyLineText(''), false);
+});
+
+test('deriveSegmentListingTitle never emits a dual-format time node as the listing title', () => {
+  const parser = createParser();
+  // The real 3dollarbillbk.com/rsvp segment shape: the time node precedes the name.
+  assert.equal(
+    parser.deriveSegmentListingTitle({ lines: ['6:30 PM 18:30', "SUGAR, WE'RE HOEIN DOWN"] }),
+    "SUGAR, WE'RE HOEIN DOWN");
+  assert.equal(
+    parser.deriveSegmentListingTitle({ lines: ['7:00 PM 19:00'] }),
+    '');
+});
+
+test('normalizeAiEvent treats a time-only title as missing', () => {
+  const parser = createParser();
+  // The real extraction shape from run 20260802-102127: title "6:30 PM",
+  // real name buried in the description. No usable title → the event fails
+  // normalization (and the missing-title retry paths take over) instead of a
+  // time reaching the calendar as a name.
+  const timeOnly = parser.normalizeAiEvent({
+    title: '6:30 PM',
+    description: "SUGAR, WE'RE HOEIN DOWN",
+    startDate: '2026-08-11',
+    startTime: '18:30'
+  }, {}, null, null, null);
+  assert.equal(timeOnly, null, 'a time is not a title; the title must fail');
+
+  // A non-time sibling candidate is promoted instead.
+  const promoted = parser.normalizeAiEvent({
+    title: '6:30 PM',
+    name: 'HOEDOWN',
+    startDate: '2026-08-11',
+    startTime: '18:30'
+  }, {}, null, null, null);
+  assert.ok(promoted, 'event should normalize via the next candidate');
+  assert.equal(promoted.title, 'HOEDOWN');
+});
+
+// Fix 4 — "DOWNTOWN LA" evaded the city-shaped-bar check (run
+// 20260802-094341: "Downtown Los Angeles" dropped at :112, sibling
+// bar="DOWNTOWN LA" survived at :984).
+test('city-shaped bar check catches DOWNTOWN LA via the generated cities config', () => {
+  const parser = createParser();
+  const cities = require('../scraper-cities');
+  assert.match(
+    parser.getCityShapedBarRejection('DOWNTOWN LA', {}, cities),
+    /resolves to city "la"/);
+  assert.match(
+    parser.getCityShapedBarRejection('Downtown Los Angeles', {}, cities),
+    /resolves to city "la"/);
+  // A real venue with a number stays a venue.
+  assert.equal(parser.getCityShapedBarRejection('Studio 54', {}, cities), '');
+});
+
+// Fix 5 — crawl blocklist: bot-walled tixr, infrastructure hosts, and
+// eventbrite's /e/_next/ image proxy.
+test('discovery blocks bot-walled and infrastructure hosts without touching maps handling', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://beefmince.com/venues';
+  const blocked = [
+    'https://tixr.com/e/201239',
+    'https://www.tixr.com/groups/queernationtx/events/x-201262',
+    'https://www.google.com',
+    'https://maps.googleapis.com',
+    'https://content-autofill.googleapis.com',
+    'https://maps.gstatic.com/x',
+    'https://scontent-lga3-1.cdninstagram.com/v/photo.jpg?x=1',
+    'https://github.com/wix/yoshi/issues/2689',
+    'https://www.example.com',
+    'https://www.eventbrite.com/e/_next/image?url=https%3A%2F%2Fimg.evbuc.com%2Fx&w=940&q=75'
+  ];
+  for (const url of blocked) {
+    const verdict = parser.validateEventUrl(url, sourceUrl, {});
+    assert.equal(verdict.valid, false, `${url} must be blocked (got ${JSON.stringify(verdict)})`);
+  }
+  // Google MAPS urls keep their dedicated rejection reason — the signal the
+  // address-harvest machinery relies on is untouched.
+  assert.equal(parser.validateEventUrl('https://maps.google.com/?q=525+S+Riverfront', sourceUrl, {}).reason, 'google-maps-url');
+  assert.equal(parser.validateEventUrl('https://www.google.com/maps/place/somewhere', sourceUrl, {}).reason, 'google-maps-url');
+  // Real event pages still crawl.
+  assert.equal(parser.validateEventUrl('https://dice.fm/event/abc123-beefmince', sourceUrl, {}).valid, true);
+  assert.equal(parser.validateEventUrl('https://www.eventbrite.com/e/bear-night-tickets-123', sourceUrl, {}).valid, true);
+});
+
+// Fix 7 (parser half) — cached misclassification self-heal.
+test('reclassifyZeroYieldMultiEventPage invalidates and re-classifies only cache-hit pages', async () => {
+  const parser = createParser();
+  const calls = { invalidated: [], classified: [] };
+  parser.core = {
+    getResolvedFieldPriorities: () => ({}),
+    resolveAiConfig: (rawAi) => rawAi || {},
+    wasAiClassificationCacheHit: (url) => url === 'https://cached.example/events',
+    invalidateAiClassificationCacheEntry: async (url) => { calls.invalidated.push(url); return true; },
+    classifyPageWithAi: async (url) => {
+      calls.classified.push(url);
+      return { classification: 'event-page', confidence: 90, reason: 'single event' };
+    }
+  };
+
+  // Not a cache hit → no invalidation, no re-classify.
+  assert.equal(
+    await parser.reclassifyZeroYieldMultiEventPage('https://fresh.example/events', '<html>x</html>', {}, {}),
+    null);
+  assert.deepEqual(calls.invalidated, []);
+
+  // Cache hit → invalidate, re-classify, return the fresh verdict.
+  assert.equal(
+    await parser.reclassifyZeroYieldMultiEventPage('https://cached.example/events', '<html>x</html>', {}, {}),
+    'event-page');
+  assert.deepEqual(calls.invalidated, ['https://cached.example/events']);
+  assert.deepEqual(calls.classified, ['https://cached.example/events']);
+});
+
+test('zero-segment multi-event pages stamp the self-heal marker on htmlData', async () => {
+  const parser = createParser();
+  const htmlData = { html: '<html><body>nothing datelike here</body></html>', url: 'https://cached.example/events' };
+  const events = await parser.extractEventsFromMultiEventPage(htmlData, { discoveryOnly: true }, null, [], [], null);
+  assert.deepEqual(events, []);
+  assert.equal(htmlData._multiEventZeroSegments, true);
+});
+
+// Fix 8 — dice.fm __NEXT_DATA__ never parsed: the old whole-element pattern
+// made the JSON scan start AFTER </script> (16 identical SyntaxError WARNs
+// per BEEFMINCE run, 20260802-093526).
+test('extractUrlsFromNextData harvests the JSON body even with following script tags', () => {
+  const parser = createParser();
+  const nextData = {
+    props: {
+      pageProps: {
+        events: [
+          { name: 'BEEFMINCE XL', start_date: '2026-08-08T21:00:00Z', url: 'https://dice.fm/event/abc123-beefmince-xl' },
+          { name: 'BEEFMINCE MEET MARKET', start_date: '2026-09-09T21:00:00Z', url: 'https://dice.fm/event/def456-meet-market' }
+        ]
+      }
+    }
+  };
+  // The classic lazy-regex trap: the __NEXT_DATA__ tag is followed by MORE
+  // script tags (analytics etc.), exactly like dice.fm pages.
+  const html = [
+    '<html><head>',
+    `<script id="__NEXT_DATA__" type="application/json">${JSON.stringify(nextData)}</script>`,
+    '<script>window.dataLayer=[];</script>',
+    '<script src="/analytics.js"></script>',
+    '</head><body></body></html>'
+  ].join('\n');
+
+  const diagnostics = { containersFound: [], containersParsed: [], parseErrors: [], urlSamples: undefined };
+  const urls = parser.extractUrlsFromNextData(html, 'https://dice.fm/partner/beefmince', diagnostics);
+  assert.ok(urls.includes('https://dice.fm/event/abc123-beefmince-xl'), `urls: ${JSON.stringify(urls)}`);
+  assert.ok(urls.includes('https://dice.fm/event/def456-meet-market'), `urls: ${JSON.stringify(urls)}`);
+  assert.deepEqual(diagnostics.containersParsed, ['__NEXT_DATA__'], 'payload parsed, no SyntaxError path');
+
+  // No __NEXT_DATA__ tag → clean empty result.
+  assert.deepEqual(parser.extractUrlsFromNextData('<html><script>1</script></html>', 'https://dice.fm/x'), []);
+});
