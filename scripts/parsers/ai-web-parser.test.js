@@ -672,6 +672,37 @@ test('validateEventUrl applies global + parser discoveryBlockedPatterns unioned 
   assert.match(shop.reason, /^blocked-pattern:/);
 });
 
+test('validateEventUrl rejects extensionless script-bundle/SDK endpoints without naming any vendor', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://promoter.example/events';
+
+  // Run 20260802-142231: "/sdk/js?client-id=…" ends in "/js", not ".js", so the
+  // static-asset EXTENSION rule never saw it and a full AI extraction ran on a
+  // JavaScript bundle.
+  const sdk = parser.validateEventUrl('https://vendor.example/sdk/js?client-id=abc&currency=CAD', sourceUrl, {});
+  assert.equal(sdk.valid, false);
+  assert.equal(sdk.reason, 'script-bundle-url');
+
+  for (const url of [
+    'https://vendor.example/sdk/js',
+    'https://vendor.example/v2/js',
+    'https://vendor.example/build/css',
+    'https://vendor.example/dist/main',
+    'https://vendor.example/cdn-cgi/challenge'
+  ]) {
+    assert.equal(parser.validateEventUrl(url, sourceUrl, {}).reason, 'script-bundle-url', url);
+  }
+
+  // Shape rules only — real event paths that merely contain the letters survive
+  for (const url of [
+    'https://promoter.example/events/js-fest-2026',
+    'https://promoter.example/events/sdk-release-party',
+    'https://promoter.example/e/discotheque'
+  ]) {
+    assert.equal(parser.validateEventUrl(url, sourceUrl, {}).valid, true, url);
+  }
+});
+
 test('validateEventUrl discoveryAllowedPatterns: only matching discovered links survive; blocks still win', () => {
   const parser = createParser();
   const sourceUrl = 'https://sickening.events/events';

@@ -38,25 +38,28 @@ class NormalizerPipeline {
         }
     }
 
-    normalizeEvent(event) {
+    // `options` is the per-run context bag (geocodeVerification, parserCity …);
+    // every normalizer receives it, and the ones that do not need it ignore
+    // the extra argument.
+    normalizeEvent(event, options = {}) {
         if (!event) return event;
         let normalized = { ...event };
         for (const normalizer of this.normalizers) {
-            normalized = normalizer.normalize(normalized);
+            normalized = normalizer.normalize(normalized, options);
         }
         return normalized;
     }
 
-    normalizeEvents(events) {
+    normalizeEvents(events, options = {}) {
         if (!Array.isArray(events)) return [];
-        return events.map(event => this.normalizeEvent(event));
+        return events.map(event => this.normalizeEvent(event, options));
     }
 
     async normalizeEventAsync(event, httpAdapter, options = {}) {
         if (!event) return event;
         let normalized = { ...event };
         for (const normalizer of this.normalizers) {
-            normalized = normalizer.normalize(normalized);
+            normalized = normalizer.normalize(normalized, options);
             if (typeof normalizer.normalizeAsync === 'function') {
                 normalized = await normalizer.normalizeAsync(normalized, httpAdapter, options);
             }
@@ -465,7 +468,7 @@ class BarDataNormalizer extends BaseNormalizer {
 }
 
 class LocationNormalizer extends BaseNormalizer {
-    normalize(event) {
+    normalize(event, options = {}) {
         if (!event || !this.core) return event;
 
         // (Removed duplicate call to syncUrlAndWebsiteFields)
@@ -486,6 +489,11 @@ class LocationNormalizer extends BaseNormalizer {
         // Runs BEFORE resolveWallClockDates below so the recovered city lets
         // timezone resolution re-anchor the wall-clock dates.
         this.backfillCityFromCuratedBar(event);
+
+        // Still unresolved? The site the event came from can say where it is
+        // (see backfillCityFromIdentitySignals) — same placement, BEFORE
+        // resolveWallClockDates, for the same re-anchoring reason.
+        this.backfillCityFromIdentitySignals(event, options);
 
         // Warn when the event references a city we have no config for
         // (diacritic-folded lookup so "Montréal" counts as configured)
@@ -874,6 +882,66 @@ class LocationNormalizer extends BaseNormalizer {
         event.city = result.city;
         event._citySource = 'curated-bar';
         console.log(`🗺️ LocationNormalizer: Backfilled city "${result.city}" from curated bar "${result.bar.name}" for "${title}"`);
+        return event;
+    }
+
+    // Identity-signal city backfill — the rungs BELOW the curated-bar rung
+    // above, for events whose page never named a venue at all (run
+    // 20260802-135030: seven 3dollarbillbk.com events shipped city "unknown"
+    // and routed to a "chunky-dad-unknown" calendar that does not exist. The
+    // multi-event segment carried no venue line, so the evidence gate dropped
+    // `bar` and the curated-bar rung had nothing to match — while the very
+    // same events carried website/url pointing at a host the curated corpus
+    // already attributes to a bar).
+    //
+    // Runs ONLY while the city is missing/empty/"unknown", and stops at the
+    // first signal that yields exactly ONE city:
+    //   2. site identity — the host of the event's own website/url (or the
+    //      page it was extracted from) is claimed by curated bars via their
+    //      `website` field. Sister venues sharing one site are NOT ambiguity
+    //      (they agree on the city); claimants in different cities ARE — fail
+    //      closed and leave the city unresolved, exactly as before.
+    //   3. parser config — the running parser declares its own city.
+    // Nothing is venue-, host- or city-specific: the curated bars data and
+    // the parser config are the only inputs. A resolved city is never
+    // overwritten, and provenance is stamped via the existing _citySource
+    // convention.
+    backfillCityFromIdentitySignals(event, options = {}) {
+        if (!event || !this.core) return event;
+        const currentCity = typeof event.city === 'string' ? event.city.trim().toLowerCase() : '';
+        if (currentCity && currentCity !== 'unknown') return event;
+        const title = event.title || 'unknown';
+
+        if (typeof this.core.findCuratedCityByWebsiteHost === 'function'
+            && typeof this.core.getWebsiteHostKey === 'function') {
+            const seenHosts = [];
+            for (const candidate of [event.website, event.url, event._sourcePageUrl]) {
+                const hostKey = this.core.getWebsiteHostKey(candidate);
+                if (!hostKey || seenHosts.includes(hostKey)) continue;
+                seenHosts.push(hostKey);
+                const match = this.core.findCuratedCityByWebsiteHost(hostKey);
+                if (!match) continue;
+                if (match.ambiguousCities) {
+                    console.log(`🗺️ LocationNormalizer: City backfill skipped for "${title}" — site ${hostKey} is claimed by curated bars in multiple cities (${match.ambiguousCities.join(', ')})`);
+                    break;
+                }
+                const claimedBy = match.bars.map(bar => `"${bar.name}"`).join(', ');
+                event.city = match.city;
+                event._citySource = 'curated-website';
+                console.log(`🗺️ LocationNormalizer: Backfilled city "${match.city}" for "${title}" from site identity ${hostKey} (curated: ${claimedBy})`);
+                return event;
+            }
+        }
+
+        const configuredCity = options && typeof options.parserCity === 'string'
+            ? options.parserCity.trim()
+            : '';
+        if (configuredCity) {
+            const normalizedCity = this.normalizeCityName(configuredCity) || configuredCity.toLowerCase();
+            event.city = normalizedCity;
+            event._citySource = 'parser-config';
+            console.log(`🗺️ LocationNormalizer: Backfilled city "${normalizedCity}" for "${title}" from the parser config's declared city`);
+        }
         return event;
     }
 

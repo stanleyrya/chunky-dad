@@ -1020,6 +1020,10 @@ async saveFailureNote(url, error, metadata = {}) {
                 console.log('\n' + results.discoveredVenueSummary);
             }
 
+            if (results.foreignOrgCrawlSummary) {
+                console.log('\n' + results.foreignOrgCrawlSummary);
+            }
+
             // New venue candidates: read-only display on web. Queueing lives
             // in the Scriptable adapter only, and that queue is gathering-only
             // evidence — it never affects scraping behavior.

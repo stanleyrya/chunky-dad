@@ -2803,6 +2803,189 @@ test('curated-bar city backfill: containment is one-way — the longer unique na
   );
 });
 
+// ---------------------------------------------------------------------------
+// Site-identity → city backfill (run 20260802-135030: seven 3dollarbillbk.com
+// events shipped city "unknown" and routed to the nonexistent calendar
+// "chunky-dad-unknown". The multi-event segment named no venue, so the
+// evidence gate dropped `bar` and the curated-bar rung above had nothing to
+// match — while the same events carried website/url pointing at a host the
+// curated corpus already attributes to a bar). Rung 2 = curated `website`
+// host, rung 3 = the parser config's declared city.
+// ---------------------------------------------------------------------------
+
+const SITE_IDENTITY_CITIES = {
+  nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'] },
+  seattle: { timezone: 'America/Los_Angeles', patterns: ['seattle'] },
+  portland: { timezone: 'America/Los_Angeles', patterns: ['portland'] }
+};
+
+// Both curated NYC entries carry the same `website` — the real data shape for
+// a venue with two rooms on one site.
+const THREE_DOLLAR_BILL_BARS = {
+  nyc: [
+    { name: '3 Dollar Bill', city: 'nyc', website: 'https://www.3dollarbillbk.com' },
+    { name: '3 Dollar Bill Yard', city: 'nyc', website: 'https://www.3dollarbillbk.com' }
+  ]
+};
+
+function createSiteIdentityNormalizer(bars) {
+  const core = new SharedCore(SITE_IDENTITY_CITIES, { eventSchema: EventSchema, bars });
+  return new LocationNormalizer(core);
+}
+
+test('site-identity city backfill: two curated bars sharing one site AGREE on the city — literal 3dollarbillbk repro', () => {
+  const normalizer = createSiteIdentityNormalizer(THREE_DOLLAR_BILL_BARS);
+  const event = {
+    title: 'The Have Not Room: A Big Brother Watch Party',
+    city: 'unknown',
+    website: 'https://www.3dollarbillbk.com',
+    url: 'https://www.3dollarbillbk.com/rsvp',
+    // Wall-clock 7pm local stored as 7pm UTC by the parser's timezone-less fallback
+    startDate: '2026-08-06T19:00:00.000Z',
+    _timezoneUnresolved: true
+  };
+
+  const lines = captureConsoleLog(() => { normalizer.normalize(event); });
+
+  assert.equal(event.city, 'nyc', 'claimants agreeing on one city is not ambiguity');
+  assert.equal(event._citySource, 'curated-website');
+  assert.equal(event.timezone, 'America/New_York');
+  // 7pm EDT (UTC-4) is 11pm UTC — the actual anchored instant
+  assert.equal(event.startDate, '2026-08-06T23:00:00.000Z');
+  assert.equal(event._timezoneUnresolved, undefined, 'flag cleared once dates are anchored');
+  assert.ok(
+    lines.includes('🗺️ LocationNormalizer: Backfilled city "nyc" for "The Have Not Room: A Big Brother Watch Party" from site identity 3dollarbillbk.com (curated: "3 Dollar Bill", "3 Dollar Bill Yard")'),
+    `site-identity backfill log expected, got:\n${lines.join('\n')}`
+  );
+});
+
+test('site-identity city backfill: a single curated bar uniquely claiming the host backfills', () => {
+  const normalizer = createSiteIdentityNormalizer({
+    seattle: [{ name: 'Massive', city: 'seattle', website: 'https://www.massive.club' }],
+    nyc: [{ name: '3 Dollar Bill', city: 'nyc', website: 'https://www.3dollarbillbk.com' }]
+  });
+  const event = {
+    title: 'PACK PARTY',
+    city: '',
+    website: 'https://massive.club/events/pack-party',
+    startDate: '2026-07-25T22:00:00.000Z',
+    _timezoneUnresolved: true
+  };
+
+  const lines = captureConsoleLog(() => { normalizer.normalize(event); });
+
+  assert.equal(event.city, 'seattle', 'the www./path difference must not defeat the host match');
+  assert.equal(event._citySource, 'curated-website');
+  assert.equal(event.startDate, '2026-07-26T05:00:00.000Z', 're-anchoring runs off the recovered city');
+  assert.ok(
+    lines.includes('🗺️ LocationNormalizer: Backfilled city "seattle" for "PACK PARTY" from site identity massive.club (curated: "Massive")'),
+    `site-identity backfill log expected, got:\n${lines.join('\n')}`
+  );
+});
+
+test('site-identity city backfill: curated bars in DIFFERENT cities claiming one host fail closed', () => {
+  const normalizer = createSiteIdentityNormalizer({
+    seattle: [{ name: 'Massive', city: 'seattle', website: 'https://www.sharedsite.example' }],
+    portland: [{ name: 'Vast', city: 'portland', website: 'https://www.sharedsite.example' }]
+  });
+  const event = {
+    title: 'Butt Blast',
+    city: 'unknown',
+    website: 'https://www.sharedsite.example/events',
+    startDate: '2026-07-25T22:00:00.000Z',
+    _timezoneUnresolved: true
+  };
+
+  const lines = captureConsoleLog(() => { normalizer.normalize(event); });
+
+  assert.equal(event.city, 'unknown', 'a cross-city claim set is ambiguity — city stays unresolved');
+  assert.equal(event._citySource, undefined);
+  assert.equal(event.startDate, '2026-07-25T22:00:00.000Z', 'dates stay wall-clock — nothing to anchor to');
+  assert.equal(event._timezoneUnresolved, true, 'flag remains so the gap stays visible');
+  assert.ok(
+    lines.includes('🗺️ LocationNormalizer: City backfill skipped for "Butt Blast" — site sharedsite.example is claimed by curated bars in multiple cities (seattle, portland)'),
+    `ambiguity log line expected, got:\n${lines.join('\n')}`
+  );
+  assert.ok(!lines.some(line => line.includes('Backfilled city')), 'no backfill log');
+});
+
+test('site-identity city backfill: an unknown city with NO signal at all stays unresolved', () => {
+  const normalizer = createSiteIdentityNormalizer(THREE_DOLLAR_BILL_BARS);
+  const event = {
+    title: 'Hostile Noise',
+    city: 'unknown',
+    website: 'https://www.some-promoter.example/party',
+    startDate: '2026-08-06T19:00:00.000Z',
+    _timezoneUnresolved: true
+  };
+
+  const lines = captureConsoleLog(() => { normalizer.normalize(event); });
+
+  assert.equal(event.city, 'unknown');
+  assert.equal(event._citySource, undefined);
+  assert.equal(event._timezoneUnresolved, true);
+  assert.equal(event.startDate, '2026-08-06T19:00:00.000Z');
+  assert.ok(!lines.some(line => line.includes('Backfilled city')), 'no backfill log without a signal');
+});
+
+test('site-identity city backfill: an already-resolved city is NEVER overwritten by site identity or parser config', () => {
+  const normalizer = createSiteIdentityNormalizer(THREE_DOLLAR_BILL_BARS);
+  const event = {
+    title: 'Road Show',
+    city: 'seattle',
+    website: 'https://www.3dollarbillbk.com/rsvp'
+  };
+
+  const lines = captureConsoleLog(() => { normalizer.normalize(event, { parserCity: 'portland' }); });
+
+  assert.equal(event.city, 'seattle', 'the resolved city must stay');
+  assert.equal(event._citySource, undefined, 'no provenance stamp when nothing was backfilled');
+  assert.ok(!lines.some(line => line.includes('Backfilled city')), 'no backfill log');
+});
+
+test('parser-config city backfill: the declared city is the last rung when no site identity resolves', () => {
+  const normalizer = createSiteIdentityNormalizer(THREE_DOLLAR_BILL_BARS);
+  const event = {
+    title: 'Bear Happy Hour',
+    city: 'unknown',
+    website: 'https://www.some-promoter.example/party',
+    startDate: '2026-08-06T19:00:00.000Z',
+    _timezoneUnresolved: true
+  };
+
+  const lines = captureConsoleLog(() => { normalizer.normalize(event, { parserCity: 'New York' }); });
+
+  assert.equal(event.city, 'nyc', 'the configured city resolves through the city mappings');
+  assert.equal(event._citySource, 'parser-config');
+  assert.equal(event.startDate, '2026-08-06T23:00:00.000Z', 're-anchoring runs off the configured city');
+  assert.ok(
+    lines.includes('🗺️ LocationNormalizer: Backfilled city "nyc" for "Bear Happy Hour" from the parser config\'s declared city'),
+    `parser-config backfill log expected, got:\n${lines.join('\n')}`
+  );
+});
+
+test('site-identity city backfill: the curated-bar rung still wins — site identity never runs once it resolved', () => {
+  const normalizer = createSiteIdentityNormalizer({
+    nyc: [{ name: '3 Dollar Bill', city: 'nyc', website: 'https://www.3dollarbillbk.com' }],
+    seattle: [{ name: 'Massive', city: 'seattle', website: 'https://www.massive.club' }]
+  });
+  const event = {
+    title: 'Guest Takeover',
+    bar: 'Massive',
+    city: 'unknown',
+    website: 'https://www.3dollarbillbk.com/rsvp'
+  };
+
+  const lines = captureConsoleLog(() => { normalizer.normalize(event); });
+
+  assert.equal(event.city, 'seattle', 'the named curated bar outranks the site the listing lives on');
+  assert.equal(event._citySource, 'curated-bar');
+  assert.ok(
+    !lines.some(line => line.includes('from site identity')),
+    `site-identity rung must not run after a resolved city, got:\n${lines.join('\n')}`
+  );
+});
+
 test('corroborateBarWithGeoPoi never overwrites the venue-site-identity stamp', () => {
   const normalizer = createOsmNormalizer();
   // A matching POI corroborates but must not restamp an identity-corrected bar

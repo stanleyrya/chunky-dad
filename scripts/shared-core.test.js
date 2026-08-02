@@ -6548,11 +6548,18 @@ test('prepareParsedEvents threads the geocodeVerification knob into the normaliz
 
   await core.prepareParsedEvents([{ title: 'CHUNK' }], {}, mainConfig, null, pipeline, {});
 
-  assert.deepEqual(capturedOptions, { geocodeVerification: { mode: 'enforce' } });
+  assert.deepEqual(capturedOptions, { geocodeVerification: { mode: 'enforce' }, parserCity: '' });
 
   // No knob configured → the option is passed through as undefined (normalizers default to "report")
   await core.prepareParsedEvents([{ title: 'CHUNK' }], {}, {}, null, pipeline, {});
-  assert.deepEqual(capturedOptions, { geocodeVerification: undefined });
+  assert.deepEqual(capturedOptions, { geocodeVerification: undefined, parserCity: '' });
+
+  // A parser that declares its city threads it through as the last rung of
+  // the normalizer's city backfill; anything non-string stays ''.
+  await core.prepareParsedEvents([{ title: 'CHUNK' }], { city: 'nyc' }, {}, null, pipeline, {});
+  assert.deepEqual(capturedOptions, { geocodeVerification: undefined, parserCity: 'nyc' });
+  await core.prepareParsedEvents([{ title: 'CHUNK' }], { city: 42 }, {}, null, pipeline, {});
+  assert.deepEqual(capturedOptions, { geocodeVerification: undefined, parserCity: '' });
 });
 
 // ---------------------------------------------------------------------------
@@ -7332,6 +7339,226 @@ test('discovered-venue summary block renders only when siblings were dropped', (
   assert.ok(text.includes('Titles: Butt Blast (Jul 23), Twink Bash: Birthday Suit (Aug 1)'));
   assert.ok(text.includes('To scrape this venue, add a parser entry to scraper-input.js:'));
   assert.ok(text.includes('{ name: "massive.club", enabled: false, urls: ["https://www.massive.club"], alwaysBear: false },'));
+});
+
+// ---------------------------------------------------------------------------
+// Cross-org crawl guard: a crawl that wanders onto a site curated data
+// attributes to ANOTHER promoter/parser must not ingest that org's events
+// under the running parser's name — but must SURFACE them (flag, don't drop).
+// Run 20260802-142231: a beefdip.com crawl ingested six of another org's
+// events, which matched calendar entries in six cities and were proposed as
+// UPDATEs while that org's own parser was disabled.
+// ---------------------------------------------------------------------------
+
+const CROSS_ORG_RULES = [
+  { pattern: /home\.example/i, classification: 'multi-event-page' },
+  { pattern: /other\.example/i, classification: 'multi-event-page' }
+];
+
+function createCrossOrgCore(promoters = []) {
+  return new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    pageClassificationRules: CROSS_ORG_RULES,
+    promoters
+  });
+}
+
+function crossOrgPages() {
+  const soon = new Date(Date.now() + 7 * 86400000);
+  return {
+    'https://home.example/events': {
+      events: [{ title: 'Home Party', startDate: soon }],
+      additionalLinks: ['https://other.example/calendar']
+    },
+    'https://other.example/calendar': {
+      events: [
+        { title: 'OTHER ORG Boston', startDate: soon },
+        { title: 'OTHER ORG Chicago', startDate: new Date(soon.getTime() + 86400000) }
+      ],
+      additionalLinks: ['https://other.example/calendar/deeper']
+    },
+    'https://other.example/calendar/deeper': { events: [{ title: 'OTHER ORG Austin', startDate: soon }] }
+  };
+}
+
+test('cross-org crawl: events on another promoter\'s own site are not ingested but ARE reported', async () => {
+  // Ownership comes from the curated promoter registry only — no host in code.
+  const core = createCrossOrgCore([{ name: 'Other Org', website: 'https://other.example' }]);
+  const display = createDisplayAdapterStub();
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(crossOrgPages());
+  const entry = { name: 'Home Promoter', urls: ['https://home.example/events'], alwaysBear: true, ai: CRAWL_AI };
+
+  const result = await core.processParser(entry, { parsers: [entry] }, httpAdapter, display, parsers);
+
+  // The page is still fetched (this is a scoping rule, not a fetch block)...
+  assert.ok(fetched.includes('https://other.example/calendar'));
+  // ...but none of the other org's events enter this parser's output.
+  assert.deepEqual(result.events.map(e => e.title), ['Home Party']);
+  assert.equal(result.totalEvents, 1);
+  assert.ok(
+    display.logs.includes("SYSTEM: Cross-org crawl: not ingesting 2 event(s) from other.example — that site belongs to Other Org (promoter), not Home Promoter (cross-org-scope)"),
+    `expected cross-org drop log, got: ${JSON.stringify(display.logs.filter(l => l.includes('Cross-org')))}`
+  );
+
+  // No fan-out either: deeper pages of that org are never crawled.
+  assert.ok(!fetched.includes('https://other.example/calendar/deeper'));
+  assert.ok(display.logs.some(l => l.startsWith('SYSTEM: Cross-org crawl: not following 1 link(s)')));
+
+  // Flag, don't drop: the skipped events are reported with host + titles.
+  assert.equal(result.foreignOrgDrops.length, 1);
+  assert.equal(result.foreignOrgDrops[0].host, 'other.example');
+  assert.equal(result.foreignOrgDrops[0].ownerName, 'Other Org');
+  assert.deepEqual(result.foreignOrgDrops[0].droppedEvents.map(e => e.title), ['OTHER ORG Boston', 'OTHER ORG Chicago']);
+
+  const drops = core.buildForeignOrgCrawlDrops([result]);
+  const text = core.buildForeignOrgCrawlSummaryText(drops);
+  assert.ok(text.includes("🚧 OTHER ORG'S EVENTS SKIPPED: other.example"));
+  assert.ok(text.includes('2 event(s) found but not ingested (site belongs to Other Org (promoter), crawled by Home Promoter)'));
+  assert.ok(text.includes('Titles: OTHER ORG Boston'));
+  assert.equal(core.buildForeignOrgCrawlSummaryText(core.buildForeignOrgCrawlDrops([])), '');
+});
+
+test('cross-org crawl: a host owned by the RUNNING parser is unaffected', async () => {
+  // Same registry, but the parser running IS that owner (name/alias/parent
+  // identity), so the guard no-ops and every event is ingested as before.
+  const core = createCrossOrgCore([{ name: 'Other Org', aliases: ['Other Org Events'], website: 'https://other.example' }]);
+  const display = createDisplayAdapterStub();
+  const { httpAdapter, parsers } = createCrawlHarness(crossOrgPages());
+  const entry = { name: 'Other Org Events', urls: ['https://home.example/events'], alwaysBear: true, ai: CRAWL_AI };
+
+  const result = await core.processParser(entry, { parsers: [entry] }, httpAdapter, display, parsers);
+
+  assert.deepEqual(result.events.map(e => e.title).sort(), ['Home Party', 'OTHER ORG Boston', 'OTHER ORG Chicago', 'OTHER ORG Austin'].sort());
+  assert.equal(result.foreignOrgDrops, undefined);
+  assert.ok(!display.logs.some(l => l.includes('Cross-org crawl')));
+});
+
+test('cross-org crawl: an unclaimed host is a no-op (fail closed)', async () => {
+  // Empty registry + no other parser entry → nothing attributes other.example
+  // to anyone, so behavior is byte-for-byte today's.
+  const core = createCrossOrgCore([]);
+  const display = createDisplayAdapterStub();
+  const { httpAdapter, parsers } = createCrawlHarness(crossOrgPages());
+  const entry = { name: 'Home Promoter', urls: ['https://home.example/events'], alwaysBear: true, ai: CRAWL_AI };
+
+  const result = await core.processParser(entry, { parsers: [entry] }, httpAdapter, display, parsers);
+
+  assert.deepEqual(result.events.map(e => e.title).sort(), ['Home Party', 'OTHER ORG Boston', 'OTHER ORG Chicago', 'OTHER ORG Austin'].sort());
+  assert.equal(result.foreignOrgDrops, undefined);
+  assert.ok(!display.logs.some(l => l.includes('Cross-org crawl')));
+});
+
+test('resolveForeignCrawlPageOwner: parser configs claim too, and every ambiguity fails closed', () => {
+  const core = createCrossOrgCore([
+    { name: 'Family Org', website: 'https://family.example' },
+    { name: 'Sub Brand', parent: 'Family Org', website: 'https://family.example/sub' },
+    { name: 'Platform One', website: 'https://links.example/one' },
+    { name: 'Platform Two', website: 'https://links.example/two' }
+  ]);
+  const running = { name: 'Home Promoter', urls: ['https://home.example/events'] };
+  const mainConfig = { parsers: [running, { name: 'Other Parser', urls: ['https://other.example'] }] };
+  const owner = (url, cfg = running) => core.resolveForeignCrawlPageOwner(url, cfg, mainConfig);
+
+  // A different parser entry's own site is claimed by that parser
+  assert.equal(owner('https://other.example/e/party').ownerName, 'Other Parser');
+  assert.equal(owner('https://other.example/e/party').ownerKind, 'parser');
+
+  // The running parser's own configured domain is never foreign (same-site
+  // crawling, incl. a parser deliberately pointed at a partner's domain)
+  assert.equal(owner('https://home.example/anything'), null);
+  assert.equal(owner('https://other.example/e/party', { name: 'X', urls: ['https://other.example'] }), null);
+
+  // Unknown hosts, venue sites and ticketing platforms stay untouched
+  assert.equal(owner('https://venue.example/calendar'), null);
+  assert.equal(owner('https://tickets.example/e/12345'), null);
+
+  // A promoter whose "website" is a platform profile claims only its own
+  // sub-path — never the whole platform, and never a sibling's profile
+  assert.equal(owner('https://links.example/one').ownerName, 'Platform One');
+  assert.equal(owner('https://links.example/two/x').ownerName, 'Platform Two');
+  assert.equal(owner('https://links.example/three'), null);
+  assert.equal(owner('https://links.example/'), null);
+
+  // Most specific claim wins; the family name still counts as self on its
+  // own sub-brand's path
+  assert.equal(owner('https://family.example/sub/tour').ownerName, 'Sub Brand');
+  assert.equal(owner('https://family.example/other').ownerName, 'Family Org');
+  assert.equal(owner('https://family.example/sub/tour', { name: 'Family Org', urls: ['https://home.example/events'] }), null);
+
+  // Junk in → null out
+  assert.equal(owner('not-a-url'), null);
+  assert.equal(core.resolveForeignCrawlPageOwner('https://other.example/x', running, null), null);
+});
+
+// ---------------------------------------------------------------------------
+// Non-content guard: script bundles / SDK endpoints are not pages and must
+// never reach classification or AI extraction (run 20260802-142231 classified
+// a payment vendor's "/sdk/js?client-id=…" bundle as an event-page and spent a
+// 16-field extraction pass on it).
+// ---------------------------------------------------------------------------
+
+test('script-bundle URLs never reach classification or extraction', async () => {
+  const core = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    pageClassificationRules: [{ pattern: /promoter\.example\/events$/i, classification: 'multi-event-page' }]
+  });
+  const display = createDisplayAdapterStub();
+  const soon = new Date(Date.now() + 7 * 86400000);
+  const pages = {
+    'https://promoter.example/events': {
+      events: [{ title: 'Real Party', startDate: soon }],
+      additionalLinks: ['https://vendor.example/sdk/js?client-id=abc', 'https://promoter.example/events/two']
+    },
+    'https://vendor.example/sdk/js?client-id=abc': { events: [{ title: 'Should never be parsed', startDate: soon }] },
+    'https://promoter.example/events/two': {}
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+  const entry = { name: 'Promoter', urls: ['https://promoter.example/events'], alwaysBear: true, ai: CRAWL_AI };
+
+  const result = await core.processParser(entry, { parsers: [entry] }, httpAdapter, display, parsers);
+
+  assert.ok(!fetched.some(url => url.includes('/sdk/js')), 'the bundle is never fetched');
+  assert.deepEqual(result.events.map(e => e.title), ['Real Party']);
+  assert.ok(display.logs.some(l => l.startsWith('SYSTEM: Skipping script-bundle URL in crawl queue:')));
+
+  // Shape rules only: a real event page whose slug merely contains the words survives
+  assert.ok(fetched.includes('https://promoter.example/events/two'));
+});
+
+test('parsePageForCrawl refuses non-page responses and ad pages before any parser runs', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  let parseCalls = 0;
+  const parsers = { 'ai-web': { parseEvents: () => { parseCalls += 1; return { events: [], additionalLinks: [] }; } } };
+  const call = (url, html) => core.parsePageForCrawl({
+    url, htmlData: { html, url }, parsers, parserConfig: { name: 'P', ai: CRAWL_AI }, displayAdapter: display, httpAdapter: {}
+  });
+
+  // Bundle body served from a page-shaped path (URL shape can't catch it)
+  const bundleBody = '!function(e,t){"use strict";var n=function(a){return a+1};window.vendor=n;module.exports=n}(this,0);';
+  const bundle = await call('https://vendor.example/checkout-widget', bundleBody);
+  assert.equal(bundle.pageClassification, 'non-content');
+  assert.equal(parseCalls, 0);
+  assert.ok(display.logs.some(l => l.startsWith('SYSTEM: Skipping non-page response (script bundle):')));
+
+  // Fails OPEN: real HTML, HTML fragments and raw JSON API bodies stay content
+  await call('https://promoter.example/e/party', '<!doctype html><html><body><p>Bear party on Friday</p></body></html>');
+  await call('https://promoter.example/e/two', '<div class="ev"><h2>Bear Night</h2><p>Friday</p></div>');
+  await call('https://api.example/events', JSON.stringify({ events: [{ name: 'Bear Night', startDate: '2026-09-01' }] }));
+  assert.equal(parseCalls, 3, 'HTML, fragments and JSON payloads all still reach the parser');
+
+  // Pages the classifier calls 'ad' never reach a parser either
+  const adCore = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    pageClassificationRules: [{ pattern: /spam\.example/i, classification: 'ad' }]
+  });
+  const adResult = await adCore.parsePageForCrawl({
+    url: 'https://spam.example/', htmlData: { html: '<html><body>buy watches</body></html>', url: 'https://spam.example/' },
+    parsers, parserConfig: { name: 'P', ai: CRAWL_AI }, displayAdapter: display, httpAdapter: {}
+  });
+  assert.equal(adResult.pageClassification, 'ad');
+  assert.deepEqual(adResult.parseResult.events, []);
+  assert.equal(parseCalls, 3, 'ad pages get no extraction pass');
 });
 
 // ---------------------------------------------------------------------------
@@ -8814,6 +9041,60 @@ test('findCuratedBarCityByName: a unique match whose key is contained in another
   // Containment is one-way: the LONGER unique name "Dallas Eagle" contains
   // someone else's stem but is itself contained in nothing → exact match wins.
   assert.deepEqual(core.findCuratedBarCityByName('Dallas Eagle'), { city: 'dallas', bar: bars.dallas[0] });
+});
+
+// ---------------------------------------------------------------------------
+// findCuratedCityByWebsiteHost — the curated corpus's own `website` pointers
+// as a city signal (run 20260802-135030: 3dollarbillbk.com events shipped
+// city "unknown" while two curated NYC bars both name that exact site).
+// ---------------------------------------------------------------------------
+
+test('getWebsiteHostKey: strips scheme/www/port/path and refuses anything that is not a dotted host', () => {
+  const core = new SharedCore({}, { eventSchema: EventSchema });
+
+  assert.equal(core.getWebsiteHostKey('https://www.3dollarbillbk.com'), '3dollarbillbk.com');
+  assert.equal(core.getWebsiteHostKey('http://3dollarbillbk.com:8080/rsvp?x=1#y'), '3dollarbillbk.com');
+  assert.equal(core.getWebsiteHostKey('MASSIVE.CLUB/events'), 'massive.club');
+  assert.equal(core.getWebsiteHostKey('3 Dollar Bill'), '', 'a bar name is not a host');
+  assert.equal(core.getWebsiteHostKey(''), '');
+  assert.equal(core.getWebsiteHostKey(null), '');
+});
+
+test('findCuratedCityByWebsiteHost: agreeing sister venues resolve, disagreeing claimants fail closed', () => {
+  const bars = {
+    nyc: [
+      { name: '3 Dollar Bill', city: 'nyc', website: 'https://www.3dollarbillbk.com' },
+      { name: '3 Dollar Bill Yard', city: 'nyc', website: 'https://www.3dollarbillbk.com' },
+      { name: 'Eagle NYC', city: 'nyc', website: 'http://eagle-ny.com' }
+    ],
+    seattle: [{ name: 'Massive', city: 'seattle' }]
+  };
+  const core = new SharedCore({}, { eventSchema: EventSchema, bars });
+
+  // Two curated entries, one site, one city → unambiguous.
+  const shared = core.findCuratedCityByWebsiteHost('https://www.3dollarbillbk.com/rsvp');
+  assert.equal(shared.city, 'nyc');
+  assert.deepEqual(shared.bars.map(bar => bar.name), ['3 Dollar Bill', '3 Dollar Bill Yard']);
+
+  // Single claimant, and a bare host works as input too.
+  assert.deepEqual(core.findCuratedCityByWebsiteHost('eagle-ny.com'), { city: 'nyc', bars: [bars.nyc[2]] });
+
+  // Nobody claims it / a curated bar with no website is never a claimant.
+  assert.equal(core.findCuratedCityByWebsiteHost('https://www.some-promoter.example'), null);
+  assert.equal(core.findCuratedCityByWebsiteHost(''), null);
+  assert.equal(new SharedCore({}, { eventSchema: EventSchema }).findCuratedCityByWebsiteHost('eagle-ny.com'), null);
+
+  // Cross-city claim set → ambiguity, never a guess.
+  const conflicted = new SharedCore({}, {
+    eventSchema: EventSchema,
+    bars: {
+      seattle: [{ name: 'Massive', city: 'seattle', website: 'https://shared.example' }],
+      portland: [{ name: 'Vast', city: 'portland', website: 'https://www.shared.example/x' }]
+    }
+  });
+  assert.deepEqual(conflicted.findCuratedCityByWebsiteHost('shared.example'), {
+    ambiguousCities: ['seattle', 'portland']
+  });
 });
 
 // ---------------------------------------------------------------------------
