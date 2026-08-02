@@ -305,3 +305,53 @@ test('contract: merged events never end before they start', async () => {
     );
   }
 });
+
+// A city's device-calendar name is the only string that has to match something
+// the operator typed into Calendar.app by hand — nothing derives it, nothing
+// validates it, and a mismatch fails at write time with an INFO line rather
+// than an error. Run 20260802-142231 lost 9 Puerto Vallarta events to exactly
+// that: `calendar: 'chunky-dad-puerto-vallerta'` against a city whose name,
+// aliases and patterns all read "vallarta". Pin every calendar name to the
+// city's own identity so the next typo fails here instead of in a run.
+test('contract: every city calendar name is derivable from that city identity', () => {
+  const cityModule = require('../js/city-config.js');
+  const config = cityModule.CITY_CONFIG || cityModule.default || cityModule;
+
+  // Calendar names that intentionally differ from every derivable form. Each
+  // entry is a live calendar we have NOT verified we can safely rename, so it
+  // is pinned rather than "fixed" — remove an entry once its calendar is
+  // confirmed renamed on the device.
+  const DELIBERATE_EXCEPTIONS = new Map([
+    ['hong-kong', 'chunky-dad-hongkong']
+  ]);
+
+  const slugify = (value) => String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  let checked = 0;
+  for (const [key, city] of Object.entries(config)) {
+    if (!city || typeof city !== 'object' || !city.calendar) continue;
+    checked += 1;
+
+    if (DELIBERATE_EXCEPTIONS.has(key)) {
+      assert.equal(city.calendar, DELIBERATE_EXCEPTIONS.get(key),
+        `${key}: pinned exception drifted — re-verify the device calendar before changing it`);
+      continue;
+    }
+
+    const derivable = new Set(
+      [key, slugify(city.name), ...(city.aliases || []).map(slugify)]
+        .filter(Boolean)
+        .map((form) => `chunky-dad-${form}`)
+    );
+    assert.ok(derivable.has(city.calendar),
+      `${key}: calendar "${city.calendar}" matches none of its own identity forms `
+      + `(${[...derivable].join(', ')}) — a typo here silently routes events to a calendar that does not exist`);
+  }
+
+  assert.ok(checked >= 40, `expected the full city table, only saw ${checked} cities with calendars`);
+});

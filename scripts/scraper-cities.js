@@ -304,7 +304,7 @@ const scraperCities = {
     }
   },
   "pv": {
-    "calendar": "chunky-dad-puerto-vallerta",
+    "calendar": "chunky-dad-puerto-vallarta",
     "timezone": "America/Mexico_City",
     "patterns": [
       "puerto vallarta",

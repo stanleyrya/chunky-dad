@@ -1489,6 +1489,57 @@ class SharedCore {
         return matches[0];
     }
 
+    // Registrable-host key for curated-website matching: the host of an
+    // http(s) URL, lowercased, port and a leading "www." dropped. Regex only
+    // (getHostFromUrl) — never `new URL`, which iOS JavaScriptCore lacks.
+    // Accepts a bare host too ("example.com", "example.com/path"). A value
+    // with no dotted host (a bar name, free text) yields '' so it can never
+    // match anything.
+    getWebsiteHostKey(url) {
+        const raw = String(url === null || url === undefined ? '' : url).trim();
+        if (!raw) return '';
+        const host = (this.getHostFromUrl(raw) || raw.replace(/^\/\//, '').split(/[/?#]/)[0])
+            .toLowerCase()
+            .split(':')[0]
+            .replace(/^www\./, '');
+        return /^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}$/.test(host) ? host : '';
+    }
+
+    // Every curated bar (across all cities) whose own `website` field points
+    // at this host. The curated corpus itself declares which site belongs to
+    // which venue — no host, venue or city is ever named in code. More than
+    // one hit is a real shape, not ambiguity by itself: sister venues share
+    // one site (3dollarbillbk.com carries two curated NYC entries).
+    getCuratedBarsClaimingWebsiteHost(host) {
+        const hostKey = this.getWebsiteHostKey(host);
+        const claimants = [];
+        if (!hostKey || !this.bars || typeof this.bars !== 'object') return claimants;
+        for (const cityKey of Object.keys(this.bars)) {
+            const cityBars = this.bars[cityKey];
+            if (!Array.isArray(cityBars)) continue;
+            for (const bar of cityBars) {
+                if (!bar || typeof bar.name !== 'string' || !bar.name.trim()) continue;
+                if (typeof bar.website !== 'string' || !bar.website.trim()) continue;
+                if (this.getWebsiteHostKey(bar.website) === hostKey) claimants.push({ city: cityKey, bar });
+            }
+        }
+        return claimants;
+    }
+
+    // City for a site host, from curated website pointers alone. Fail closed:
+    //   { city, bars }             — one or more curated bars claim the host
+    //                                and ALL agree on the city (sister venues
+    //                                on one site are unambiguous)
+    //   { ambiguousCities: [...] } — claimants disagree on the city
+    //   null                       — nobody claims the host, or no bars data
+    findCuratedCityByWebsiteHost(url) {
+        const claimants = this.getCuratedBarsClaimingWebsiteHost(url);
+        if (claimants.length === 0) return null;
+        const cities = [...new Set(claimants.map(claimant => claimant.city))];
+        if (cities.length > 1) return { ambiguousCities: cities };
+        return { city: cities[0], bars: claimants.map(claimant => claimant.bar) };
+    }
+
     // The bar-name identity key shared by curated matching (above) and the
     // new-venue-candidate dedup key: lowercase, drop a leading "the ", strip
     // non-alphanumerics — so "The Eagle" / "EAGLE!" collapse to one venue.
@@ -3022,6 +3073,15 @@ class SharedCore {
             await displayAdapter.logInfo(results.discoveredVenueSummary);
         }
 
+        // Cross-org crawl drops: events found on another promoter's/parser's
+        // own site during this parser's crawl. Flagged, never silently dropped.
+        const foreignOrgCrawlDrops = this.buildForeignOrgCrawlDrops(results.parserResults);
+        if (foreignOrgCrawlDrops.length > 0) {
+            results.foreignOrgCrawlDrops = foreignOrgCrawlDrops;
+            results.foreignOrgCrawlSummary = this.buildForeignOrgCrawlSummaryText(foreignOrgCrawlDrops);
+            await displayAdapter.logInfo(results.foreignOrgCrawlSummary);
+        }
+
         // New venue candidates (GATHERING-ONLY): corroborated + exactly-pinned
         // venues absent from curated bars data, aggregated once per run per
         // venue. Evidence for out-of-band curation; the pipeline NEVER reads
@@ -3119,6 +3179,9 @@ class SharedCore {
         // Crawl-page failures, returned on the parser result so processEvents
         // can fold them into results.errors (the run header's error count).
         const crawlErrorCollector = [];
+        // Events found on another org's site and NOT ingested (cross-org crawl
+        // guard) — flagged, never silently dropped.
+        const foreignOrgDropCollector = [];
 
         await this.crawlUrlsForEvents({
             urls: effectiveParserConfig.urls || [],
@@ -3139,7 +3202,8 @@ class SharedCore {
             discoveryTreeCollector,
             enrichOnlyByUrl: null,
             enrichDropCollector,
-            crawlErrorCollector
+            crawlErrorCollector,
+            foreignOrgDropCollector
         });
 
         // Venue-site address consensus (deterministic, parser-derived): the
@@ -3219,6 +3283,10 @@ class SharedCore {
 
         if (crawlErrorCollector.length > 0) {
             result.crawlErrors = crawlErrorCollector;
+        }
+
+        if (foreignOrgDropCollector.length > 0) {
+            result.foreignOrgDrops = foreignOrgDropCollector;
         }
 
         if (bearDropCollector.length > 0) {
@@ -3388,6 +3456,68 @@ class SharedCore {
                 `   Titles: ${titlesLine}`,
                 '   To scrape this venue, add a parser entry to scraper-input.js:',
                 `   ${venue.parserEntrySnippet}`
+            ].join('\n');
+        });
+        return blocks.join('\n\n');
+    }
+
+    // ------------------------------------------------------------------
+    // Cross-org crawl drops (flag, don't drop): events found on a site the
+    // curated data attributes to ANOTHER promoter/parser. Same reporting shape
+    // as the discovered-venue block above — the owner sees exactly what was
+    // found, on whose site, and under which parser's crawl.
+    // ------------------------------------------------------------------
+
+    // Aggregate per-parser foreignOrgDrops into one entry per host.
+    buildForeignOrgCrawlDrops(parserResults) {
+        const byHost = new Map();
+        for (const parserResult of Array.isArray(parserResults) ? parserResults : []) {
+            const drops = parserResult && Array.isArray(parserResult.foreignOrgDrops) ? parserResult.foreignOrgDrops : [];
+            for (const drop of drops) {
+                if (!drop || !drop.host) continue;
+                const hostKey = String(drop.host).toLowerCase();
+                if (!byHost.has(hostKey)) {
+                    byHost.set(hostKey, {
+                        host: drop.host,
+                        ownerName: drop.ownerName || '',
+                        ownerKind: drop.ownerKind || '',
+                        sourceEntryName: parserResult && parserResult.name ? parserResult.name : '',
+                        droppedCount: 0,
+                        droppedEvents: []
+                    });
+                }
+                const entry = byHost.get(hostKey);
+                const dropped = Array.isArray(drop.droppedEvents) ? drop.droppedEvents : [];
+                entry.droppedCount += dropped.length;
+                entry.droppedEvents.push(...dropped);
+            }
+        }
+        const owners = [];
+        for (const entry of byHost.values()) {
+            if (entry.droppedCount === 0) continue;
+            entry.sampleTitles = entry.droppedEvents.slice(0, 8).map(event => {
+                const dateLabel = this.formatDiscoveredVenueDateLabel(event.startDate);
+                return dateLabel ? `${event.title} (${dateLabel})` : event.title;
+            });
+            delete entry.droppedEvents;
+            owners.push(entry);
+        }
+        return owners;
+    }
+
+    // Text block for the results summary ('' when nothing was dropped).
+    buildForeignOrgCrawlSummaryText(drops) {
+        const list = Array.isArray(drops) ? drops : [];
+        if (list.length === 0) return '';
+        const blocks = list.map(drop => {
+            const extraCount = drop.droppedCount - drop.sampleTitles.length;
+            const titlesLine = drop.sampleTitles.join(', ') + (extraCount > 0 ? `, … (+${extraCount} more)` : '');
+            const ownerLabel = drop.ownerKind ? `${drop.ownerName} (${drop.ownerKind})` : drop.ownerName;
+            return [
+                `🚧 OTHER ORG'S EVENTS SKIPPED: ${drop.host}`,
+                `   ${drop.droppedCount} event(s) found but not ingested (site belongs to ${ownerLabel}, crawled by ${drop.sourceEntryName || 'another parser'})`,
+                `   Titles: ${titlesLine}`,
+                `   These belong to ${drop.ownerName}'s own entry — enable/add it in scraper-input.js to scrape them.`
             ].join('\n');
         });
         return blocks.join('\n\n');
@@ -4191,7 +4321,10 @@ class SharedCore {
         // Crawl-page processing failures, collected so the run header's
         // "errors" total can count them (run 20260802-093526: 10 [ERROR]
         // lines, header said "errors":0 — crawl failures were log-only).
-        crawlErrorCollector = null
+        crawlErrorCollector = null,
+        // Events dropped by the cross-org crawl guard (flag, don't drop):
+        // collected per host with the owning org so the run surfaces them.
+        foreignOrgDropCollector = null
     }) {
         const adaptiveCrawl = maxDepth === ADAPTIVE_CRAWL_DEPTH;
         const urlsToProcess = currentDepth > 0
@@ -4236,6 +4369,10 @@ class SharedCore {
             // discovered string, which can differ (entity-mangled tails).
             if (currentDepth > 0 && this.isStaticAssetUrl(url)) {
                 await displayAdapter.logInfo(`SYSTEM: Skipping static-asset URL in crawl queue: ${url}`);
+                continue;
+            }
+            if (currentDepth > 0 && this.isScriptBundleUrl(url)) {
+                await displayAdapter.logInfo(`SYSTEM: Skipping script-bundle URL in crawl queue: ${url}`);
                 continue;
             }
             if (currentDepth > 0) {
@@ -4335,6 +4472,7 @@ class SharedCore {
                     : null;
 
                 let pageEventsForEnrich = [];
+                let foreignOrgPage = false;
                 if (!discoveryOnly) {
                     let parsedEvents = await this.prepareParsedEvents(parseResult?.events, parserConfig, mainConfig, pageClassification, this.normalizerPipeline, httpAdapter);
                     // Each event remembers the page it was actually extracted from
@@ -4345,6 +4483,33 @@ class SharedCore {
                             event._sourcePageUrl = url;
                         }
                     });
+                    // Cross-org crawl guard: a DISCOVERED page whose site curated
+                    // data attributes to another promoter/parser contributes no
+                    // events to this parser — that org has its own entry. Only
+                    // discovered pages (configured roots are this parser's by
+                    // definition) and never enrich-only pages, whose own filter
+                    // already keeps nothing but this parser's originating event.
+                    const foreignOwner = currentDepth > 0 && !enrichContext && parsedEvents.length > 0
+                        ? this.resolveForeignCrawlPageOwner(url, parserConfig, mainConfig)
+                        : null;
+                    if (foreignOwner) {
+                        foreignOrgPage = true;
+                        const runningName = (parserConfig && parserConfig.name) || 'this parser';
+                        await displayAdapter.logInfo(`SYSTEM: Cross-org crawl: not ingesting ${parsedEvents.length} event(s) from ${foreignOwner.host} — that site belongs to ${foreignOwner.ownerName} (${foreignOwner.ownerKind}), not ${runningName} (cross-org-scope)`);
+                        if (foreignOrgDropCollector) {
+                            foreignOrgDropCollector.push({
+                                host: foreignOwner.host,
+                                url,
+                                ownerName: foreignOwner.ownerName,
+                                ownerKind: foreignOwner.ownerKind,
+                                droppedEvents: parsedEvents.map(event => ({
+                                    title: event.title || 'Untitled event',
+                                    startDate: event.startDate
+                                }))
+                            });
+                        }
+                        parsedEvents = [];
+                    }
                     if (enrichContext && parsedEvents.length > 0) {
                         // Enrich-only page: keep ONLY events that are the same event
                         // as the originating (parent) event — same identity predicate
@@ -4405,6 +4570,13 @@ class SharedCore {
                         linksToConsider = [];
                         adaptiveFollowBlocked = true;
                     }
+                }
+                // No fan-out from another org's site either: every page deeper
+                // in it is that org's too, so crawling on is pure waste.
+                if (foreignOrgPage && linksToConsider.length > 0) {
+                    await displayAdapter.logInfo(`SYSTEM: Cross-org crawl: not following ${linksToConsider.length} link(s) from ${url} (cross-org-scope)`);
+                    linksToConsider = [];
+                    adaptiveFollowBlocked = true;
                 }
                 const shouldFollowLinks = adaptiveCrawl || currentDepth < maxDepth;
                 // Cross-host crawl scoping (generic — BEEFMINCE run 20260729-100804:
@@ -4495,7 +4667,8 @@ class SharedCore {
                             discoveryTreeCollector,
                             enrichOnlyByUrl: childEnrichOnlyByUrl,
                             enrichDropCollector,
-                            crawlErrorCollector
+                            crawlErrorCollector,
+                            foreignOrgDropCollector
                         });
                     }
                 } else {
@@ -4725,6 +4898,136 @@ class SharedCore {
         result.allowed = allowed;
         result.rejected = rejected;
         return result;
+    }
+
+    // ------------------------------------------------------------------
+    // Cross-org crawl guard (flag, don't drop). A crawl that wanders onto a
+    // site the curated data already attributes to ANOTHER promoter/parser must
+    // not ingest that org's events under the running parser's name — that org
+    // has (or deserves) its own entry, and its events reach the calendar
+    // through it. Run 20260802-142231: a beefdip.com crawl reached another
+    // promoter's site, ingested six of its events, and every one of them
+    // matched an existing calendar entry in a different city and was proposed
+    // as an UPDATE — including while that org's own parser was disabled.
+    //
+    // Ownership is DATA-DRIVEN only: parser configs' own `urls` and the curated
+    // promoter registry's `website` values. No host is named in code. The guard
+    // fails closed: an unclaimed host, an ambiguously-claimed host, and the
+    // running parser's own hosts all behave exactly as they did before.
+    // ------------------------------------------------------------------
+
+    // "host/path" key of an absolute http(s) URL: lowercased, port and leading
+    // "www." stripped, trailing slashes dropped, query/fragment removed
+    // ('' when the input is not an absolute http(s) URL).
+    getUrlHostPathKey(url) {
+        const match = String(url || '').match(/^https?:\/\/([^/?#]+)([^?#]*)/i);
+        if (!match) return '';
+        const host = String(match[1] || '')
+            .toLowerCase()
+            .split(':')[0]
+            .replace(/^www\./, '')
+            .replace(/\.$/, '');
+        if (!host) return '';
+        const path = String(match[2] || '').toLowerCase().replace(/\/+$/, '');
+        return `${host}${path}`;
+    }
+
+    // Every site URL curated data attributes to a named owner, as claims:
+    //   { ownerName, ownerKind, selfKeys, domain, hostPathKey, specificity }
+    // specificity = number of pinned path segments (0 claims the whole
+    // registrable domain, so a promoter whose "website" is a platform profile
+    // — linktr.ee/<handle>, events.humanitix.com/<slug> — only ever claims its
+    // own sub-path, never the platform). Memoized on the source arrays.
+    buildCrawlOwnershipClaims(mainConfig) {
+        const parserConfigs = Array.isArray(mainConfig && mainConfig.parsers) ? mainConfig.parsers : [];
+        const promoters = Array.isArray(this.promoters) ? this.promoters : [];
+        if (this._crawlOwnershipClaims
+            && this._crawlOwnershipClaims.parserSource === parserConfigs
+            && this._crawlOwnershipClaims.promoterSource === promoters) {
+            return this._crawlOwnershipClaims.claims;
+        }
+        const claims = [];
+        const addClaim = (ownerName, ownerKind, siteUrl, selfKeys) => {
+            const hostPathKey = this.getUrlHostPathKey(siteUrl);
+            const domain = this.getRegistrableDomainFromUrl(siteUrl);
+            const keys = selfKeys.filter(Boolean);
+            if (!hostPathKey || !domain || keys.length === 0) return;
+            claims.push({
+                ownerName,
+                ownerKind,
+                selfKeys: keys,
+                domain,
+                hostPathKey,
+                specificity: hostPathKey.split('/').length - 1
+            });
+        };
+        for (const parserConfig of parserConfigs) {
+            const name = parserConfig && typeof parserConfig.name === 'string' ? parserConfig.name.trim() : '';
+            if (!name) continue;
+            const selfKeys = [this.normalizePromoterNameKey(name)];
+            for (const siteUrl of Array.isArray(parserConfig.urls) ? parserConfig.urls : []) {
+                addClaim(name, 'parser', siteUrl, selfKeys);
+            }
+        }
+        for (const entry of promoters) {
+            const name = entry && typeof entry.name === 'string' ? entry.name.trim() : '';
+            if (!name || typeof entry.website !== 'string') continue;
+            // A sub-brand's parent (and any alias) counts as the same owner, so
+            // a parser running under the family name is never called foreign on
+            // its own sub-brand's page.
+            const selfKeys = [
+                this.normalizePromoterNameKey(name),
+                this.normalizePromoterNameKey(entry.parent),
+                ...(Array.isArray(entry.aliases) ? entry.aliases : []).map(alias => this.normalizePromoterNameKey(alias))
+            ];
+            addClaim(name, 'promoter', entry.website, selfKeys);
+        }
+        this._crawlOwnershipClaims = { parserSource: parserConfigs, promoterSource: promoters, claims };
+        return claims;
+    }
+
+    // The curated owner of a crawled page when that owner is demonstrably NOT
+    // the parser currently running: { ownerName, ownerKind, host }. Returns
+    // null (→ caller no-ops, today's behavior) whenever the page is on one of
+    // the running parser's own configured domains, no claim covers it, the
+    // covering claims name more than one owner, or the single owner is this
+    // parser's own identity.
+    resolveForeignCrawlPageOwner(url, parserConfig, mainConfig) {
+        const hostPathKey = this.getUrlHostPathKey(url);
+        const pageDomain = this.getRegistrableDomainFromUrl(url);
+        if (!hostPathKey || !pageDomain) return null;
+
+        // Same-site is never foreign: a parser's own configured domains stay
+        // fully crawlable (a promoter config pointed at a partner/host site
+        // still owns everything it configured).
+        const configuredUrls = Array.isArray(parserConfig && parserConfig.urls) ? parserConfig.urls : [];
+        for (const configuredUrl of configuredUrls) {
+            if (this.getRegistrableDomainFromUrl(configuredUrl) === pageDomain) return null;
+        }
+
+        const matches = this.buildCrawlOwnershipClaims(mainConfig).filter(claim => {
+            if (claim.domain !== pageDomain) return false;
+            if (claim.specificity === 0) return true;
+            return hostPathKey === claim.hostPathKey || hostPathKey.startsWith(`${claim.hostPathKey}/`);
+        });
+        if (matches.length === 0) return null;
+
+        // Most specific claim wins (a sub-brand's own path beats the family's
+        // whole-domain claim). Two DIFFERENT owners tied at that specificity is
+        // ambiguous evidence — no-op.
+        const maxSpecificity = Math.max(...matches.map(claim => claim.specificity));
+        const winners = matches.filter(claim => claim.specificity === maxSpecificity);
+        const ownerNames = [...new Set(winners.map(claim => claim.ownerName))];
+        if (ownerNames.length !== 1) return null;
+
+        const currentKey = this.normalizePromoterNameKey(parserConfig && parserConfig.name);
+        if (currentKey && winners.some(claim => claim.selfKeys.includes(currentKey))) return null;
+
+        return {
+            ownerName: winners[0].ownerName,
+            ownerKind: winners[0].ownerKind,
+            host: this.getHostFromUrl(url) || pageDomain
+        };
     }
 
     // ------------------------------------------------------------------
@@ -4966,8 +5269,12 @@ class SharedCore {
         const pipelineToUse = normalizerPipeline || this.normalizerPipeline;
 
         const globalConfig = mainConfig && mainConfig.config && typeof mainConfig.config === 'object' ? mainConfig.config : {};
+        // parserCity: the running parser's declared city, the LAST rung of the
+        // normalizer's city backfill (an event whose page named neither a
+        // venue nor a city still belongs to the city its parser declares).
+        const parserCity = parserConfig && typeof parserConfig.city === 'string' ? parserConfig.city : '';
         const enrichedEvents = pipelineToUse
-            ? await pipelineToUse.normalizeEventsAsync(filteredEvents, httpAdapter, { geocodeVerification: globalConfig.geocodeVerification })
+            ? await pipelineToUse.normalizeEventsAsync(filteredEvents, httpAdapter, { geocodeVerification: globalConfig.geocodeVerification, parserCity })
             : filteredEvents.map(event => this.normalizeEventTextFields(event));
 
         enrichedEvents.forEach((event, index) => {
@@ -4993,6 +5300,15 @@ class SharedCore {
         logParserSwitch = true,
         httpAdapter
     }) {
+        // Non-content responses never reach classification or extraction: a
+        // script bundle is not a page, and every downstream pass (AI classify,
+        // AI extraction, OCR) run on one is pure waste whose only output is the
+        // bundle's own string literals.
+        if (this.isScriptBundleUrl(url) || this.isNonPageResponseBody(htmlData && htmlData.html)) {
+            await displayAdapter.logInfo(`SYSTEM: Skipping non-page response (script bundle): ${url}`);
+            return { pageClassification: 'non-content', parseResult: { events: [], additionalLinks: [] }, urlParserName: null };
+        }
+
         let { classification: pageClassification, signal: classificationSignal } = this.classifyPageWithSignal(url, htmlData.html);
 
         // AI second opinion (default on; disable with parserConfig.ai.classifyPages: false)
@@ -7790,6 +8106,48 @@ class SharedCore {
             : String(url || '').replace(/[?#].*$/, '');
         const lowerPath = path.toLowerCase();
         return staticAssetExtensions.some(ext => lowerPath.endsWith(ext));
+    }
+
+    // Extensionless script-bundle / SDK endpoints, which the extension list
+    // above cannot see: run 20260802-142231 fetched a payment vendor's
+    // "/sdk/js?client-id=…" bundle, classified it as an event-page and spent a
+    // full 16-field AI extraction pass on JavaScript source (whose spam string
+    // literals then surfaced as an extracted field at confidence 100).
+    // Path-SHAPE only — no vendor or host is named. Kept in sync with
+    // ai-web-parser's copy in validateEventUrl (parsers are standalone).
+    isScriptBundleUrl(url) {
+        const match = String(url || '').match(/^https?:\/\/[^/?#]+([^?#]*)/i);
+        const path = String(match ? match[1] : '').toLowerCase().replace(/\/+$/, '');
+        if (!path) return false;
+        const segments = path.split('/').filter(Boolean);
+        if (segments.length === 0) return false;
+        // ".../js", ".../sdk/js", ".../css": the asset type IS the last segment
+        if (/^(?:js|mjs|cjs|css|wasm|map|sdk|umd|esm|iife)$/.test(segments[segments.length - 1])) return true;
+        // Bundle/SDK delivery directories anywhere in the path
+        return segments.some(segment => /^(?:sdk|dist|node_modules|cdn-cgi)$/.test(segment));
+    }
+
+    // A fetched body that is not a page at all: no HTML markup, not a JSON
+    // document (raw JSON APIs ARE content — ticketing platforms serve them and
+    // classifyPageWithSignal reads them), but recognizable JavaScript source.
+    // Last net behind the URL-shape rules, for bundles served from page-shaped
+    // paths. Fails OPEN — anything ambiguous is treated as content.
+    isNonPageResponseBody(html) {
+        const body = typeof html === 'string' ? html.trim() : '';
+        if (body.length < 40) return false;
+        const head = body.slice(0, 2048).toLowerCase();
+        if (head.includes('<!doctype') || head.includes('<html')) return false;
+        if (body[0] === '{' || body[0] === '[') return false;
+        const closingTags = body.match(/<\/[a-z][a-z0-9]*>/gi);
+        if (closingTags && closingTags.length >= 2) return false;
+        const scriptMarkers = [
+            /^\s*(?:\/\*|\/\/|!function|\(function|["']use strict["'])/,
+            /\b(?:function|var|const|let)\s*[\w$]*\s*[({=]/,
+            /=>\s*[{(\w$]/,
+            /\b(?:module\.exports|exports\.[\w$]+|define\.amd|window\.[\w$]+\s*=)/,
+            /\b(?:typeof|prototype|return)\b/
+        ];
+        return scriptMarkers.filter(marker => marker.test(body)).length >= 2;
     }
 
     extractUrls(html, patterns, baseUrl) {

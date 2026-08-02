@@ -6193,6 +6193,18 @@ class AiWebParser {
             '.mp3', '.m4a', '.wav', '.mp4', '.webm', '.mov', '.avi', '.woff', '.woff2', '.ttf'
         ];
         if (staticAssetExtensions.some(ext => lowerPath.endsWith(ext))) return { valid: false, reason: 'static-asset-extension' };
+        // Extensionless script-bundle / SDK endpoints the extension list can't
+        // see: run 20260802-142231 discovered a payment vendor's
+        // "/sdk/js?client-id=…" bundle from injected page text, classified it
+        // event-page and burned a 16-field AI extraction on JavaScript source.
+        // Path-SHAPE only — no vendor or host is named. Kept in sync with
+        // SharedCore.isScriptBundleUrl (parsers are standalone).
+        const scriptBundleSegments = lowerPath.replace(/\/+$/, '').split('/').filter(Boolean);
+        if (scriptBundleSegments.length > 0
+            && (/^(?:js|mjs|cjs|css|wasm|map|sdk|umd|esm|iife)$/.test(scriptBundleSegments[scriptBundleSegments.length - 1])
+                || scriptBundleSegments.some(segment => /^(?:sdk|dist|node_modules|cdn-cgi)$/.test(segment)))) {
+            return { valid: false, reason: 'script-bundle-url' };
+        }
         const staticAssetPathHints = ['/touch_icons/', '/images/', '/image/', '/img/', '/assets/', '/static/'];
         if (staticAssetPathHints.some(segment => lowerPath.includes(segment))) return { valid: false, reason: 'static-asset-path' };
 
@@ -14013,7 +14025,14 @@ TEXT:
     // host IS this host. More than one hit is a real shape — sister venues
     // sharing one site (a main stage and its yard) — handled by the
     // sub-venue resolution below, never treated as ambiguity by itself.
+    // The lookup itself lives in shared-core (getCuratedBarsClaimingWebsiteHost)
+    // so the normalizer's city backfill and this identity rung read the curated
+    // website pointers through ONE implementation; the loop below is the
+    // unwired-core fallback only.
     getCuratedBarsClaimingHost(host) {
+        if (this.core && typeof this.core.getCuratedBarsClaimingWebsiteHost === 'function') {
+            return this.core.getCuratedBarsClaimingWebsiteHost(host);
+        }
         const hostKey = typeof host === 'string' ? host.trim().toLowerCase() : '';
         const claimants = [];
         if (!hostKey || !this.core || !this.core.bars || typeof this.core.bars !== 'object') {

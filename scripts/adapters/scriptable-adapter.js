@@ -4453,6 +4453,10 @@ class ScriptableAdapter {
         console.log("\n" + results.discoveredVenueSummary);
       }
 
+      if (results.foreignOrgCrawlSummary) {
+        console.log("\n" + results.foreignOrgCrawlSummary);
+      }
+
       console.log("\n" + "=".repeat(60));
 
       const shouldSkipUi = this.shouldSkipResultsUi(results);
@@ -10268,6 +10272,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     if (results.discoveredVenueSummary) {
       lines.push("");
       lines.push(results.discoveredVenueSummary);
+    }
+
+    if (results.foreignOrgCrawlSummary) {
+      lines.push("");
+      lines.push(results.foreignOrgCrawlSummary);
     }
 
     const allEvents = this.getAllEventsFromResults(results);

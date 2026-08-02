@@ -288,7 +288,7 @@ const CITY_CONFIG = {
         tagline: 'Pacific coast bear getaway',
         aliases: ['puerto-vallarta'],
         calendarId: 'b6b1cf804e795b1cce41e9a58faeb80564d3ae60dbb7c7324123c34cf3db15bc@group.calendar.google.com',
-        calendar: 'chunky-dad-puerto-vallerta',
+        calendar: 'chunky-dad-puerto-vallarta',
         timezone: 'America/Mexico_City',
         patterns: ['puerto vallarta', 'vallarta'],
         coordinates: { lat: 20.6534, lng: -105.2253 },
