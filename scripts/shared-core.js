@@ -2465,6 +2465,33 @@ class SharedCore {
         // information — keep it without burning an AI arbitration. Partial
         // overlap is a genuine conflict and still arbitrates; equal-after-
         // normalization pairs fall through to the case-only rule below.
+        // Formatting-only description difference — a PHANTOM conflict. The
+        // description sanitizer (normalizers.sanitizeDescriptionFormatting)
+        // runs at the final analyzed-event build, i.e. AFTER this arbitration,
+        // so a scraped description still carrying markdown was compared raw
+        // against an already-sanitized calendar value. Run 20260802 did this
+        // for every BEEFMINCE event, every run: dice.fm ships
+        // "**BEEFMINCE …** **\*Now on Saturdays\***", the calendar holds the
+        // sanitized "BEEFMINCE … *Now on Saturdays*", an AI call was spent, the
+        // model picked the markdown ("preserves the original bold formatting …
+        // more canonical"), and the sanitizer then stripped it straight back to
+        // the value already on the calendar. Net data change: zero — but it
+        // counted as a clobber and cost an arbitration every single run.
+        //
+        // Sanitizing is pure and idempotent, so equality after sanitizing PROVES
+        // the two carry the same text. Keep whichever side is already in
+        // sanitized form (that is what gets written anyway); if both or neither
+        // are, keep valueA for stability, matching the case-only rung below.
+        if (fieldName === 'description' && typeof valueA === 'string' && typeof valueB === 'string'
+            && this.normalizerPipeline
+            && typeof this.normalizerPipeline.sanitizeDescriptionFormatting === 'function') {
+            const cleanA = this.normalizerPipeline.sanitizeDescriptionFormatting(valueA);
+            const cleanB = this.normalizerPipeline.sanitizeDescriptionFormatting(valueB);
+            if (cleanA && cleanA === cleanB && valueA !== valueB) {
+                const winner = (valueB === cleanB && valueA !== cleanA) ? 'b' : 'a';
+                return { winner, reason: 'descriptions are identical once formatting markup is stripped' };
+            }
+        }
         if (fieldName === 'description' && typeof valueA === 'string' && typeof valueB === 'string') {
             const containA = this.normalizeDescriptionForContainment(valueA);
             const containB = this.normalizeDescriptionForContainment(valueB);
