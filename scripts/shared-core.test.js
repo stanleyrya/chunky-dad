@@ -963,8 +963,11 @@ test('getKnownOrganizer is symmetric: agreement returns the name, disagreement f
   assert.equal(core.getKnownOrganizer({ _organizer: 'Bearracuda' }, { _organizer: 'Bearracuda' }), 'Bearracuda');
   assert.equal(core.getKnownOrganizer({ _organizer: 'Bearracuda' }, {}), 'Bearracuda');
   assert.equal(core.getKnownOrganizer({}, { _organizer: 'Bearracuda' }), 'Bearracuda');
-  // Agreement under the promoter identity key keeps first-encountered casing
+  // Agreement under the promoter identity key with differing casings must be
+  // symmetric too — "first-encountered" would leak argument order back into
+  // the prompt. The lexicographically smaller casing wins in BOTH orders.
   assert.equal(core.getKnownOrganizer({ _organizer: 'BEARRACUDA' }, { _organizer: 'Bearracuda' }), 'BEARRACUDA');
+  assert.equal(core.getKnownOrganizer({ _organizer: 'Bearracuda' }, { _organizer: 'BEARRACUDA' }), 'BEARRACUDA');
   // Disagreement → '' in BOTH orders (the DURO co-promoter case: asserting
   // either "Eventbrite" or "CLUB CHUB" steered the bar verdict differently)
   assert.equal(core.getKnownOrganizer({ _organizer: 'Eventbrite' }, { _organizer: 'CLUB CHUB' }), '');
