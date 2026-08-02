@@ -1292,7 +1292,15 @@ class DynamicCalendarLoader extends CalendarCore {
             const isPlatform = window.FilenameUtils.isPlatformFaviconUrl
                 ? window.FilenameUtils.isPlatformFaviconUrl(url)
                 : false;
-            if (!isPlatform) {
+            // A website that is really an IMAGE URL (a scraped flyer/CDN asset
+            // that slipped into the field) is junk as an identity source —
+            // convertWebsiteUrlToFaviconPath would adopt the image itself as
+            // the "favicon". That treatment is right for an explicitly curated
+            // event.favicon above, wrong for the website-derived fallback.
+            const isImage = window.FilenameUtils.isImageUrl
+                ? window.FilenameUtils.isImageUrl(url)
+                : false;
+            if (!isPlatform && !isImage) {
                 faviconUrl = window.FilenameUtils.convertWebsiteUrlToFaviconPath(url, '/img/favicons');
             }
         }

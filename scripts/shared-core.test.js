@@ -2145,12 +2145,14 @@ test('guardrail: conservative ticketUrl fall-throughs still go to the AI', () =>
     core.resolveConflictDeterministically('ticketUrl',
       'https://www.eventbrite.com/e/tickets-1234', 'https://dice.fm/event/abcdef'),
     null, 'both-ticketing still arbitrates');
-  // The ticketing rung is ticketUrl-only: for website the same pair resolves
-  // through the cross-host root-vs-deep rung instead, not the ticketing one
+  // The ticketing rung is ticketUrl-only: for website the same pair hits the
+  // platform-identity rung, which points the OTHER way — website/url is the
+  // event's identity/favicon link, so the promoter root wins even when bare
+  // (2026-08-02; the ticket link's home is ticketUrl).
   assert.deepEqual(
     core.resolveConflictDeterministically('website',
       'https://www.eventbrite.com/e/tickets-1234', 'https://megawoof.com/'),
-    { winner: 'a', reason: 'event-specific URL beats bare homepage' },
+    { winner: 'b', reason: 'identity link beats a ticketing/social platform URL' },
     'website is not a ticket field');
 });
 
@@ -2163,14 +2165,17 @@ test('guardrail: conservative ticketUrl fall-throughs still go to the AI', () =>
 
 test('guardrail: cross-host website rungs — event page beats bare homepage, crawled host settles pathed pairs, roots arbitrate', () => {
   const core = createCore();
-  // Rung 1: bare homepage vs event page, both directions, both aliases
+  // Rung 1: bare homepage vs event page, both directions, both aliases.
+  // Non-platform deep hosts on purpose: a platform deep link (eventbrite/
+  // dice/…) is now settled the other way by the identity rung above this one
+  // (2026-08-02 — website/url is the favicon field, tickets live in ticketUrl).
   assert.deepEqual(
     core.resolveConflictDeterministically('website',
-      'https://thedallaseagle.com/', 'https://www.eventbrite.com/e/singlet-night-tickets-1234'),
+      'https://thedallaseagle.com/', 'https://tickets.example/e/singlet-night-tickets-1234'),
     { winner: 'b', reason: 'event-specific URL beats bare homepage' });
   assert.deepEqual(
     core.resolveConflictDeterministically('url',
-      'https://www.eventbrite.com/e/singlet-night-tickets-1234', 'https://thedallaseagle.com/'),
+      'https://tickets.example/e/singlet-night-tickets-1234', 'https://thedallaseagle.com/'),
     { winner: 'a', reason: 'event-specific URL beats bare homepage' });
   // Rung 2: both pathed — the candidate that IS its own record's crawled page wins
   const crawledContext = {
@@ -11425,6 +11430,159 @@ test('website merge: a ticketing platform URL never displaces an identity link',
   // A real site replacing a platform link is still allowed.
   const realSite = core.resolveConflictDeterministically('website', eventbrite, 'https://cubhouse.party/events/july', ctx);
   assert.equal(realSite.winner, 'b', 'a genuine site beats a platform URL');
+});
+
+// ---------------------------------------------------------------------------
+// website/url identity fixes (audit 2026-08-02: 23 of 105 published events
+// carried a ticket vendor as `website`, breaking the card favicon): a bare
+// promoter root beats a platform deep link, asset URLs never win a URL field,
+// and the final build falls back to the curated promoter identity.
+// ---------------------------------------------------------------------------
+
+test('website merge: a BARE promoter root beats a platform deep link (audit pairs verbatim)', () => {
+  const core = createCore();
+  // The three pairs reproduced against the published calendars — before the
+  // fix the platform deep link won each one via "event-specific URL beats
+  // bare homepage" because the identity side had no path.
+  const pairs = [
+    ['https://beefmince.com', 'https://dice.fm/event/mxdpgl-...'],
+    ['https://www.furball.nyc', 'https://www.etix.com/ticket/p/54403374'],
+    ['https://www.massive.club/', 'https://tixr.com/e/199913']
+  ];
+  for (const [identity, vendor] of pairs) {
+    assert.deepEqual(
+      core.resolveConflictDeterministically('website', identity, vendor),
+      { winner: 'a', reason: 'identity link beats a ticketing/social platform URL' },
+      `${identity} must beat ${vendor}`);
+    assert.deepEqual(
+      core.resolveConflictDeterministically('website', vendor, identity),
+      { winner: 'b', reason: 'identity link beats a ticketing/social platform URL' },
+      'direction does not matter');
+  }
+  // Platform vs platform stays a genuine question — still arbitrates.
+  assert.equal(
+    core.resolveConflictDeterministically('website',
+      'https://dice.fm/event/abcdef', 'https://www.eventbrite.com/e/tickets-1234'),
+    null, 'platform-vs-platform falls through');
+});
+
+test('URL merge: a static asset URL never beats a real page for website/url/ticketUrl', () => {
+  const core = createCore();
+  // Reproduced pair: the webflow CDN JPEG beat https://www.massive.club/
+  // through the event-specific-URL rung before the asset rung existed.
+  const jpeg = 'https://cdn.prod.website-files.com/64ef/image-asset%20(4).jpeg';
+  assert.deepEqual(
+    core.resolveConflictDeterministically('website', 'https://www.massive.club/', jpeg),
+    { winner: 'a', reason: 'event URL beats static asset URL' });
+  assert.deepEqual(
+    core.resolveConflictDeterministically('website', jpeg, 'https://www.massive.club/'),
+    { winner: 'b', reason: 'event URL beats static asset URL' });
+  // ticketUrl too (published Portland NYE carried a wp-content upload JPEG).
+  assert.deepEqual(
+    core.resolveConflictDeterministically('ticketUrl',
+      'https://venue.example/wp-content/uploads/2025/12/nye-flyer-768x960.jpg',
+      'https://www.eventbrite.com/e/nye-tickets-1234'),
+    { winner: 'b', reason: 'event URL beats static asset URL' });
+  // Both assets (cross-host, both pathed, no crawl context) → arbitrate.
+  assert.equal(
+    core.resolveConflictDeterministically('website',
+      'https://cdn-a.example/x/a.jpg', 'https://cdn-b.example/y/b.png'),
+    null, 'both-assets falls through unchanged');
+});
+
+test('final build: platform website falls back to the curated promoter identity (vendor moves to ticketUrl)', async () => {
+  const core = createFinalBuildCore({ promoters: require('../data/promoters.json') });
+  const event = {
+    title: 'BEEFMINCE MEET MARKET',
+    startDate: new Date('2026-08-08T21:00:00.000Z'),
+    city: 'dallas',
+    website: 'https://dice.fm/event/xyz',
+    _promoter: 'BEEFMINCE'
+  };
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(event, NEW_ACTION_ANALYSIS, {}, {});
+  } finally {
+    restore();
+  }
+  assert.equal(analyzed.website, 'https://beefmince.com', 'curated identity replaces the vendor link');
+  assert.equal(analyzed.ticketUrl, 'https://dice.fm/event/xyz', 'the vendor link moves into the empty ticketUrl');
+  assert.ok(analyzed.notes.includes('website: https://beefmince.com'), 'notes serialize the curated link');
+  assert.ok(analyzed.notes.includes('ticketUrl: https://dice.fm/event/xyz'), 'notes serialize the moved ticket link');
+  assert.deepEqual(
+    lines.filter(line => line.startsWith('🔗 LINKS: replaced platform website')),
+    ['🔗 LINKS: replaced platform website https://dice.fm/event/xyz with https://beefmince.com (platform link moved to ticketUrl) — curated identity of "BEEFMINCE" for "BEEFMINCE MEET MARKET"']);
+});
+
+test('final build: an existing ticketUrl survives — the platform website is simply replaced', async () => {
+  const core = createFinalBuildCore({ promoters: require('../data/promoters.json') });
+  const event = {
+    title: 'FURBALL NYC',
+    startDate: new Date('2026-08-08T22:00:00.000Z'),
+    city: 'dallas',
+    website: 'https://www.etix.com/ticket/p/54403374',
+    ticketUrl: 'https://www.etix.com/ticket/p/54403374',
+    // _organizer route: brand-variant equality against the registry
+    _organizer: 'Furball, LLC'
+  };
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(event, NEW_ACTION_ANALYSIS, {}, {});
+  } finally {
+    restore();
+  }
+  assert.equal(analyzed.website, 'https://www.furball.nyc', 'curated identity replaces the vendor link');
+  assert.equal(analyzed.ticketUrl, 'https://www.etix.com/ticket/p/54403374', 'the real ticketUrl is never overwritten');
+  assert.deepEqual(
+    lines.filter(line => line.startsWith('🔗 LINKS: replaced platform website')),
+    ['🔗 LINKS: replaced platform website https://www.etix.com/ticket/p/54403374 with https://www.furball.nyc — curated identity of "Furball" for "FURBALL NYC"']);
+});
+
+test('final build: platform website with NO curated identity only logs; non-platform websites stay silent', async () => {
+  const core = createFinalBuildCore({ promoters: require('../data/promoters.json') });
+  const event = {
+    title: 'MYSTERY TEA DANCE',
+    startDate: new Date('2026-08-08T20:00:00.000Z'),
+    city: 'dallas',
+    website: 'https://www.eventbrite.com/e/mystery-tickets-1'
+  };
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(event, NEW_ACTION_ANALYSIS, {}, {});
+  } finally {
+    restore();
+  }
+  assert.equal(analyzed.website, 'https://www.eventbrite.com/e/mystery-tickets-1', 'left as-is');
+  assert.equal(analyzed.ticketUrl, undefined, 'nothing moved');
+  assert.deepEqual(
+    lines.filter(line => line.startsWith('🔗 LINKS:')),
+    ['🔗 LINKS: website https://www.eventbrite.com/e/mystery-tickets-1 is on a platform host but no curated identity to fall back to — left as-is for "MYSTERY TEA DANCE"']);
+
+  // A website whose host is NOT a platform host is never touched, even with
+  // a matched promoter (Megawoof's curated linktree stays a linktree).
+  const linktreeEvent = {
+    title: 'MEGAWOOF',
+    startDate: new Date('2026-08-08T20:00:00.000Z'),
+    city: 'dallas',
+    website: 'https://linktr.ee/megawoof_america',
+    _promoter: 'Megawoof America'
+  };
+  const quiet = [];
+  const restoreQuiet = captureFinalBuildLogs(quiet);
+  let untouched;
+  try {
+    untouched = await core.buildAnalyzedCalendarEvent(linktreeEvent, NEW_ACTION_ANALYSIS, {}, {});
+  } finally {
+    restoreQuiet();
+  }
+  assert.equal(untouched.website, 'https://linktr.ee/megawoof_america');
+  assert.equal(quiet.filter(line => line.startsWith('🔗 LINKS:')).length, 0, 'no LINKS line for a non-platform website');
 });
 
 test('slot merge: one-sided og provenance does not clobber a curated slot (falls through)', async () => {

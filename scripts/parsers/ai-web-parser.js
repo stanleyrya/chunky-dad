@@ -463,6 +463,12 @@ class AiWebParser {
         this.maxRejectedSamplesPerReason = 3;
         this.maxRejectedSampleLength = 120;
         this.supportedImageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.tif', '.tiff'];
+        // Non-image static-asset extensions (fonts/stylesheets/scripts + image
+        // formats not in supportedImageExtensions). Together with that list
+        // these mark a URL as a FILE, never an event page — see
+        // hasStaticAssetFilenameAtEnd (2026-08-02: a webflow CDN JPEG was
+        // extracted as `website` and a wp-content upload JPEG as `ticketUrl`).
+        this.nonImageAssetExtensions = ['.svg', '.ico', '.woff', '.woff2', '.ttf', '.otf', '.eot', '.css', '.js', '.mjs'];
         this.likelyImagePathRegex = /(^|\/)(image|images|img|photo|photos|poster)(\/|$)/i;
         // Common CDN/image-transform query keys (w=width, h=height, q=quality, fit/crop/auto/fm/format, s=signature).
         this.likelyImageQueryRegex = /(?:^|[?&])(w|h|q|fit|crop|auto|fm|format|s)=/;
@@ -10252,6 +10258,21 @@ TEXT:
         return this.supportedImageExtensions.some(ext => pathname.endsWith(ext));
     }
 
+    // Path ends in a static-asset filename: an image (the shared
+    // supportedImageExtensions list) or a font/stylesheet/script file
+    // (nonImageAssetExtensions). Such a URL is a FILE, never a page — it can
+    // never be an event's website/url/ticketUrl. Path-end only, on purpose:
+    // query strings and image-ish path FOLDERS (hasLikelyImageUrl) are too
+    // aggressive for URL identity fields — /images/june-party/ can be a page.
+    hasStaticAssetFilenameAtEnd(url) {
+        if (this.hasSupportedImageFilenameAtEnd(url)) return true;
+        const parsed = this.parseUrlComponents(url);
+        if (!parsed) return false;
+        const pathname = String(parsed.pathname || '').toLowerCase();
+        if (!pathname || pathname.endsWith('/')) return false;
+        return this.nonImageAssetExtensions.some(ext => pathname.endsWith(ext));
+    }
+
     buildImageEvidenceContext(htmlData) {
         const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
         const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
@@ -11234,12 +11255,22 @@ TEXT:
     // Gate one AI-extracted URL-ish field value: pass it through when
     // plausible, otherwise log and return '' so firstNonEmpty falls through
     // to the next candidate (ultimately the configured metadata value).
+    // Static-asset URLs (image/font/css/js filename at path end) are rejected
+    // the same way — a file is never an event page (2026-08-02: a webflow CDN
+    // "image-asset%20(4).jpeg" shipped as website, a wp-content upload JPEG
+    // as ticketUrl).
     sanitizeExtractedUrlField(field, value) {
         const text = String(value === null || value === undefined ? '' : value).trim();
         if (!text) return '';
-        if (this.isPlausibleEventUrlValue(text)) return text;
-        console.log(`🤖 AI Web: Rejected ${field} "${text}" — not a plausible event URL`);
-        return '';
+        if (!this.isPlausibleEventUrlValue(text)) {
+            console.log(`🤖 AI Web: Rejected ${field} "${text}" — not a plausible event URL`);
+            return '';
+        }
+        if (this.hasStaticAssetFilenameAtEnd(text)) {
+            console.log(`🤖 AI Web: Rejected ${field} "${text}" — static asset URL, not an event page`);
+            return '';
+        }
+        return text;
     }
 
     normalizeAiEvent(aiEvent, parserConfig, htmlData = null, cityConfig = null, promptFields = null) {

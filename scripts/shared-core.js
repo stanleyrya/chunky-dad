@@ -100,7 +100,11 @@ const PLATFORM_IDENTITY_HOSTS = [
     // Review 2026-07-30: hosts present in TICKETING_PLATFORM_HOSTS or the
     // site-side PLATFORM_FAVICON_HOSTNAMES but missing here, so the rung
     // silently failed to protect identity links against them.
-    'ticketleap.com', 'eventeny.com', 'showclix.com'
+    'ticketleap.com', 'eventeny.com', 'showclix.com',
+    // Audit 2026-08-02: 23 of 105 published events carried a ticket vendor as
+    // `website` (the favicon field). These vendors appeared in that audit but
+    // were missing here, so the identity rung never protected against them.
+    'tixr.com', 'etix.com', 'camplife.com', 'eventim.us', 'ticketleap.events'
 ]
 
 
@@ -114,6 +118,24 @@ function isPlatformIdentityHost(host) {
     if (!normalized) return false;
     return PLATFORM_IDENTITY_HOSTS.some(platform =>
         normalized === platform || normalized.endsWith(`.${platform}`));
+}
+
+// Path extensions that mark a URL as a static ASSET (image/font/stylesheet/
+// script) — a file, never a page a person visits (observed 2026-08-02: a
+// webflow CDN ".../image-asset%20(4).jpeg" beat https://www.massive.club/ for
+// `website`, and a wp-content upload JPEG shipped as a published ticketUrl).
+// Data only — shared-core stays platform-pure.
+const ASSET_URL_PATH_EXTENSIONS = [
+    '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.tif', '.tiff',
+    '.svg', '.ico', '.woff', '.woff2', '.ttf', '.otf', '.eot', '.css', '.js', '.mjs'
+]
+
+// True when the URL's LAST path segment ends in an asset extension (parts as
+// returned by getUrlRuleParts). Query strings never count — only the path.
+function urlPartsEndInAssetExtension(parts) {
+    if (!parts || !Array.isArray(parts.segments) || parts.segments.length === 0) return false;
+    const lastSegment = String(parts.segments[parts.segments.length - 1]).toLowerCase();
+    return ASSET_URL_PATH_EXTENSIONS.some(ext => lastSegment.endsWith(ext));
 }
 
 const IMAGE_MERGE_FIELDS = new Set(['image', 'imageVertical', 'imageHorizontal']);
@@ -1650,6 +1672,21 @@ class SharedCore {
         return name ? this.getPromoterEntryByName(name) : null;
     }
 
+    // Curated promoter identity for the write-time website fallback: the
+    // enforce-mode _promoter stamp first, else an _organizer whose
+    // brand-variant keys match exactly ONE registry entry (fail closed on
+    // ambiguity, like every curated matcher — a name matching two entries is
+    // no identity at all).
+    getCuratedPromoterIdentityEntry(event) {
+        const stamped = this.getEventPromoterEntry(event);
+        if (stamped) return stamped;
+        const organizerKeys = this.getPromoterOrganizerKeys(event && event._organizer);
+        if (organizerKeys.length === 0) return null;
+        const matches = this.getPromoterRegistryIndex().entries
+            .filter(indexed => organizerKeys.some(key => indexed.nameKeys.includes(key)));
+        return matches.length === 1 ? matches[0].entry : null;
+    }
+
     // Per-run match index over this.promoters (rebuilt when the registry
     // array is replaced, e.g. by the remote refresh). Precomputes:
     //   - nameKeys: identity keys of name + aliases (organizer equality)
@@ -2017,6 +2054,20 @@ class SharedCore {
         const urlA = this.getUrlRuleParts(valueA);
         const urlB = this.getUrlRuleParts(valueB);
         if (urlA && urlB) {
+            // Asset rung (2026-08-02), ABOVE every other URL rung: a URL whose
+            // path ends in an image/font/css/js asset extension is a FILE, not
+            // a page — it can never be the event's website/url/ticketUrl, so
+            // the non-asset side wins outright (observed: a webflow CDN JPEG
+            // beat https://www.massive.club/ via the event-specific-URL rung
+            // below, and a wp-content upload JPEG shipped as a published
+            // ticketUrl). Both-assets or neither falls through unchanged.
+            if (fieldName === 'website' || fieldName === 'url' || fieldName === 'ticketUrl') {
+                const assetA = urlPartsEndInAssetExtension(urlA);
+                const assetB = urlPartsEndInAssetExtension(urlB);
+                if (assetA !== assetB) {
+                    return { winner: assetA ? 'b' : 'a', reason: 'event URL beats static asset URL' };
+                }
+            }
             // Same-host root URL never beats a deeper path: the deeper URL is
             // the event-specific one (observed: the model picked
             // "https://bearracuda.com/" over ".../events/portland-pridefriday/").
@@ -2050,15 +2101,16 @@ class SharedCore {
             if (fieldName === 'website' || fieldName === 'url') {
                 const platformA = isPlatformIdentityHost(urlA.host);
                 const platformB = isPlatformIdentityHost(urlB.host);
-                // Deliberately narrow: the non-platform side must itself be a
-                // real page, not a bare homepage. A bare root still loses to a
-                // deep event page (the older cross-host rung below owns that
-                // case, and reversing it would send people to a front door
-                // instead of the event).
-                const nonPlatformIsPathed = platformB
-                    ? (urlA.segments.length > 0 || urlA.hasQuery)
-                    : (urlB.segments.length > 0 || urlB.hasQuery);
-                if (platformA !== platformB && nonPlatformIsPathed) {
+                // The non-platform side wins even as a BARE root (2026-08-02;
+                // this rung previously required it to be pathed, arguing a
+                // root would send people to a front door instead of the
+                // event). The counter-argument won: website/url is the
+                // event's IDENTITY — it drives the card's favicon — while the
+                // ticket link lives in ticketUrl, so a platform deep link
+                // stored as "website" visibly breaks the icon (audit: 23 of
+                // 105 published events carried a ticket vendor here, e.g.
+                // https://beefmince.com lost to a dice.fm event deep link).
+                if (platformA !== platformB) {
                     return platformB
                         ? { winner: 'a', reason: 'identity link beats a ticketing/social platform URL' }
                         : { winner: 'b', reason: 'identity link beats a ticketing/social platform URL' };
@@ -9727,6 +9779,47 @@ class SharedCore {
                     analyzedEvent.description = sanitizedDescription;
                     notesNeedRebuild = true;
                     console.log(`🧼 DESCRIPTION: stripped formatting markup for "${analyzedEvent.title || 'event'}"`);
+                }
+            }
+
+            // Curated-identity website fallback (audit 2026-08-02: 23 of 105
+            // published events carried a ticket vendor — dice.fm/eventbrite/
+            // tixr/etix — as `website`, so the card showed the vendor's
+            // favicon or none). website/url are the event's IDENTITY link and
+            // drive the favicon; the vendor link belongs in ticketUrl. When
+            // the final website sits on a platform-identity host AND the
+            // event's matched curated promoter carries a website, curated
+            // data outranks the derived value: the platform URL moves into an
+            // EMPTY ticketUrl (a real ticketUrl is never overwritten — the
+            // platform value is simply replaced) and website/url adopt the
+            // curated link. A curated linktree (Megawoof, Cubhouse) is fine
+            // and intended — the site handles linktree favicons specially.
+            // Platform host but NO curated identity → flag-only log, nothing
+            // changes; a website on a non-platform host is never touched.
+            {
+                const platformWebsite = typeof analyzedEvent.website === 'string' ? analyzedEvent.website.trim() : '';
+                const websiteHost = platformWebsite
+                    ? this.getHostFromUrl(platformWebsite).toLowerCase().replace(/^www\./, '')
+                    : '';
+                if (websiteHost && isPlatformIdentityHost(websiteHost)) {
+                    const promoterEntry = this.getCuratedPromoterIdentityEntry(analyzedEvent);
+                    const curatedWebsite = promoterEntry && typeof promoterEntry.website === 'string'
+                        ? promoterEntry.website.trim()
+                        : '';
+                    if (curatedWebsite && curatedWebsite !== platformWebsite) {
+                        const existingTicketUrl = typeof analyzedEvent.ticketUrl === 'string' ? analyzedEvent.ticketUrl.trim() : '';
+                        if (!existingTicketUrl) {
+                            analyzedEvent.ticketUrl = platformWebsite;
+                        }
+                        analyzedEvent.website = curatedWebsite;
+                        if (typeof analyzedEvent.url === 'string' && analyzedEvent.url.trim()) {
+                            analyzedEvent.url = curatedWebsite;
+                        }
+                        notesNeedRebuild = true;
+                        console.log(`🔗 LINKS: replaced platform website ${platformWebsite} with ${curatedWebsite}${existingTicketUrl ? '' : ' (platform link moved to ticketUrl)'} — curated identity of "${promoterEntry.name}" for "${analyzedEvent.title || 'event'}"`);
+                    } else if (!curatedWebsite) {
+                        console.log(`🔗 LINKS: website ${platformWebsite} is on a platform host but no curated identity to fall back to — left as-is for "${analyzedEvent.title || 'event'}"`);
+                    }
                 }
             }
 

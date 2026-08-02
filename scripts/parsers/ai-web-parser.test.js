@@ -8151,6 +8151,55 @@ test('normalizeAiEvent drops implausible url/ticketUrl values and logs the rejec
   assert.equal(clean.url, 'https://dice.fm/event/8er825-beefmince-brighton-pride-1st-aug-horizon-brighton-tickets');
 });
 
+test('sanitizeExtractedUrlField rejects static asset URLs the same way as implausible values', () => {
+  const parser = createParser();
+  const logged = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logged.push(args.join(' ')); };
+  try {
+    // Both published escapes: the webflow CDN JPEG stored as website
+    // (MASSIVE) and the wp-content upload JPEG stored as ticketUrl
+    // (Portland NYE).
+    assert.equal(parser.sanitizeExtractedUrlField('website',
+      'https://cdn.prod.website-files.com/64ef/image-asset%20(4).jpeg'), '');
+    assert.equal(parser.sanitizeExtractedUrlField('ticketUrl',
+      'https://venue.example/wp-content/uploads/2025/12/nye-flyer-768x960.jpg'), '');
+    assert.equal(parser.sanitizeExtractedUrlField('url', 'https://fonts.example/brand.woff2'), '');
+    // Real pages keep passing — image-ish FOLDERS and transform query params
+    // are not asset filenames.
+    assert.equal(parser.sanitizeExtractedUrlField('website', 'https://www.massive.club/'),
+      'https://www.massive.club/');
+    assert.equal(parser.sanitizeExtractedUrlField('website', 'https://beefmince.com/images/june-party/'),
+      'https://beefmince.com/images/june-party/');
+    assert.equal(parser.sanitizeExtractedUrlField('ticketUrl', 'https://dice.fm/event/abc?format=web'),
+      'https://dice.fm/event/abc?format=web');
+  } finally {
+    console.log = originalLog;
+  }
+  assert.ok(logged.includes('🤖 AI Web: Rejected website "https://cdn.prod.website-files.com/64ef/image-asset%20(4).jpeg" — static asset URL, not an event page'),
+    `expected asset rejection log, got: ${JSON.stringify(logged)}`);
+  assert.ok(logged.includes('🤖 AI Web: Rejected ticketUrl "https://venue.example/wp-content/uploads/2025/12/nye-flyer-768x960.jpg" — static asset URL, not an event page'));
+});
+
+test('normalizeAiEvent skips an asset-URL candidate and falls through to the next one', () => {
+  const parser = createParser();
+  const originalLog = console.log;
+  console.log = () => {};
+  let event;
+  try {
+    event = parser.normalizeAiEvent({
+      title: 'MASSIVE',
+      startDate: '2026-08-08',
+      url: 'https://cdn.prod.website-files.com/64ef/image-asset%20(4).jpeg',
+      website: 'https://www.massive.club/'
+    }, {}, null, null, null);
+  } finally {
+    console.log = originalLog;
+  }
+  assert.ok(event, 'event should normalize');
+  assert.equal(event.url, 'https://www.massive.club/', 'the asset candidate is skipped, not fatal');
+});
+
 // ---------------------------------------------------------------------------
 // siteRole via curated bars (run 20260729-125247: eaglela.com has no venue-ish
 // JSON-LD, siteRole stayed undetermined, and rejectBrandLikePassFields threw

@@ -7,7 +7,7 @@ const http = require('http');
 const { URL } = require('url');
 
 // Import shared filename utilities
-const { generateFilenameFromUrl, generateFaviconFilename, generateEventFilename, cleanImageUrl, getEventDirectoryPath, convertImageUrlToLocalPath, detectFileExtension, isLinktreeUrl, isWikipediaUrl, generateLinktreeFaviconFilename, generateWikipediaFaviconFilename, isImageUrl } = require('../js/filename-utils.js');
+const { generateFilenameFromUrl, generateFaviconFilename, generateEventFilename, cleanImageUrl, getEventDirectoryPath, convertImageUrlToLocalPath, detectFileExtension, isLinktreeUrl, isWikipediaUrl, generateLinktreeFaviconFilename, generateWikipediaFaviconFilename, isImageUrl, isPlatformFaviconUrl } = require('../js/filename-utils.js');
 
 /**
  * Adjust Eventbrite image URLs to get uncropped versions
@@ -1284,8 +1284,15 @@ async function extractImageUrls() {
         addProcessedUrl(imageUrls, result);
       }
       if (event.website) {
-        const result = processWebsiteUrl(event.website, ` for ${event.name}`);
-        addProcessedUrl(imageUrls, result);
+        // The loader never derives an event's identity icon from a platform
+        // host (isPlatformFaviconUrl in dynamic-calendar-loader), so
+        // downloading a vendor's glyph here is pure waste — the dice.fm/etix
+        // .ico files in img/favicons came from exactly this path. Curated
+        // event.favicon overrides above are NOT filtered.
+        if (!isPlatformFaviconUrl(event.website)) {
+          const result = processWebsiteUrl(event.website, ` for ${event.name}`);
+          addProcessedUrl(imageUrls, result);
+        }
       }
     }
   }
