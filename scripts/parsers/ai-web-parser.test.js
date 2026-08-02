@@ -8550,12 +8550,17 @@ test('the JSON-LD title repair fails open without a core and composes with the o
   assert.equal(coreless.repairTruncatedTitleFromJsonLd('The RETURN', { html }), 'The RETURN');
 
   // Through the real normalization path, the repaired title still faces the
-  // leading-date strip and the pipe brand-suffix strip.
+  // leading-date strip, the pipe brand-suffix strip, and the redundant-date
+  // strip. The trailing "Saturday March 14th" is attached by whitespace
+  // rather than a separator; it used to survive because detectTitleDateSegment
+  // required a separator, and the live AI arbiter then had to talk itself out
+  // of it case by case ("adds the event date, which is not part of the event's
+  // identity"). It matches startDate, so it is now removed deterministically.
   const parser = createParser();
   const repaired = parser.normalizeAiEvent(
     { title: 'The RETURN', startDate: '2026-03-14T21:00:00-07:00' },
     {}, { html, url: 'https://www.chunk-party.com/x' }, null, null);
-  assert.equal(repaired.title, 'CHUNK Portland - The RETURN! Saturday March 14th');
+  assert.equal(repaired.title, 'CHUNK Portland - The RETURN!');
 
   const datedParser = createParser();
   const dated = datedParser.normalizeAiEvent(
@@ -8572,7 +8577,9 @@ test('the JSON-LD title repair fails open without a core and composes with the o
   const branded = brandedParser.normalizeAiEvent(
     { title: 'The RETURN', startDate: '2026-03-14T21:00:00-07:00' },
     {}, { html: brandedHtml, url: 'https://www.chunk-party.com/x' }, null, null);
-  assert.equal(branded.title, 'CHUNK Portland - The RETURN! Saturday March 14th');
+  // Brand suffix stripped, then the redundant trailing date — both cleanups
+  // compose on the repaired title.
+  assert.equal(branded.title, 'CHUNK Portland - The RETURN!');
 });
 
 // ---------------------------------------------------------------------------
@@ -8988,4 +8995,56 @@ test('bar plausibility gate: a curated venue name for the event city outranks th
   const borough = { title: 'x', bar: 'Brooklyn', city: 'nyc' };
   parser.applyBarPlausibilityGate(borough, CITY_GATE_CONFIG);
   assert.equal('bar' in borough, false, 'no curated bar is named after a city — the gate still fires');
+});
+
+// ---------------------------------------------------------------------------
+// Redundant title dates. "Stripped redundant date from title" appears ZERO
+// times in every run log on record, because JSON-LD events skip
+// normalizeAiEvent and only the LEADING-phrase strip was copied to that route
+// — so chunk-party.com shipped "CHUNK DORE ALLEY - Saturday July 25th" to the
+// calendar on every run. Day-first dates ("Wednesday 9th September – …", the
+// Sitges listings) were invisible to the detector in BOTH routes.
+// ---------------------------------------------------------------------------
+test('stripRedundantTitleDate removes a printed date that matches the event start', () => {
+  const parser = createParser();
+  assert.equal(
+    parser.stripRedundantTitleDate('CHUNK DORE ALLEY - Saturday July 25th', ['2026-07-25T22:00:00-07:00']),
+    'CHUNK DORE ALLEY');
+  assert.equal(
+    parser.stripRedundantTitleDate('CHUNK Chicago - September 19th', ['2026-09-19T21:00:00-05:00']),
+    'CHUNK Chicago');
+  // Whitespace-attached trailing date — no separator at all.
+  assert.equal(
+    parser.stripRedundantTitleDate('CHUNK Brooklyn 7/4', ['2026-07-04T22:00:00-04:00']),
+    'CHUNK Brooklyn');
+  // Day-first, the Sitges shape.
+  assert.equal(
+    parser.stripRedundantTitleDate('Wednesday 9th September – BEEFMINCE MEET MARKET', ['2026-09-09T21:00:00Z']),
+    'BEEFMINCE MEET MARKET');
+});
+
+test('stripRedundantTitleDate keeps the title when the date is unverified or disagrees', () => {
+  const parser = createParser();
+  // Printed date contradicts startDate — a signal, not noise. Kept for review.
+  assert.equal(
+    parser.stripRedundantTitleDate('CHUNK DORE ALLEY - Saturday July 25th', ['2026-08-01T22:00:00-07:00']),
+    'CHUNK DORE ALLEY - Saturday July 25th');
+  // No usable date to verify against — never strip on a guess.
+  assert.equal(
+    parser.stripRedundantTitleDate('CHUNK DORE ALLEY - Saturday July 25th', [undefined, null, '']),
+    'CHUNK DORE ALLEY - Saturday July 25th');
+  assert.equal(parser.stripRedundantTitleDate('', ['2026-07-25T22:00:00-07:00']), '');
+});
+
+test('structured-data events get the redundant-date strip, not just the leading one', () => {
+  const parser = createParser();
+  // The JSON-LD route is the one that ships CHUNK's dated titles; before this
+  // it only ever ran stripLeadingDatePhraseFromTitle.
+  const html = jsonLdEventPage(jsonLdEventNode('CHUNK DORE ALLEY - Saturday July 25th'));
+  const events = parser.parseEvents({ html, url: 'https://www.chunk-party.com/event-details/chunk-dore-alley' }, {});
+  const titles = (Array.isArray(events) ? events : []).map(event => event && event.title);
+  assert.ok(
+    titles.includes('CHUNK DORE ALLEY') || titles.every(title => !/July 25th/.test(String(title))),
+    `no JSON-LD title should reach the calendar dated: ${JSON.stringify(titles)}`
+  );
 });

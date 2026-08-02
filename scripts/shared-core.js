@@ -1163,13 +1163,27 @@ class SharedCore {
         const dayPart = '(\\d{1,2})(?:st|nd|rd|th)?';
         const yearPart = '(?:,?\\s+(\\d{4}))?';
         const wordySegment = `${weekdayPart}${monthPart}\\s+${dayPart}${yearPart}`;
+        // Day-first ordering — the British/European form the Bear Cave's
+        // Sitges listings use ("Wednesday 9th September – BEEFMINCE MEET
+        // MARKET"). Month-first only meant every one of those titles read as
+        // dateless, so both the parser strip and the merge rung passed them
+        // straight through. Captures day, month, year in that order.
+        const dayFirstSegment = `${weekdayPart}${dayPart}\\s+${monthPart}${yearPart}`;
         const numericSegment = '(\\d{1,2})\\s*\\/\\s*(\\d{1,2})(?:\\s*\\/\\s*(\\d{4}))?';
         const separatorPart = '\\s*(?:[-–—|:•]|,)\\s*';
+        // TRAILING segments may also be attached by whitespace alone ("CHUNK
+        // Brooklyn 7/4", "CHUNK Portland - The RETURN! Saturday March 14th").
+        // Leading segments keep the strict separator on purpose: a bare space
+        // there would read "July 4th Party" as the date "July 4th" plus the
+        // name "Party", eating a real title.
+        const trailingSeparatorPart = `(?:${separatorPart}|\\s+)`;
         const attempts = [
-            { regex: new RegExp(`^(.*?)${separatorPart}${wordySegment}$`, 'i'), wordy: true, base: 1, month: 2, day: 3, year: 4 },
-            { regex: new RegExp(`^(.*?)${separatorPart}${numericSegment}$`, 'i'), wordy: false, base: 1, month: 2, day: 3, year: 4 },
+            { regex: new RegExp(`^(.*?)${trailingSeparatorPart}${wordySegment}$`, 'i'), wordy: true, base: 1, month: 2, day: 3, year: 4 },
+            { regex: new RegExp(`^(.*?)${trailingSeparatorPart}${numericSegment}$`, 'i'), wordy: false, base: 1, month: 2, day: 3, year: 4 },
             { regex: new RegExp(`^${wordySegment}${separatorPart}(.*)$`, 'i'), wordy: true, base: 4, month: 1, day: 2, year: 3 },
-            { regex: new RegExp(`^${numericSegment}${separatorPart}(.*)$`, 'i'), wordy: false, base: 4, month: 1, day: 2, year: 3 }
+            { regex: new RegExp(`^${numericSegment}${separatorPart}(.*)$`, 'i'), wordy: false, base: 4, month: 1, day: 2, year: 3 },
+            { regex: new RegExp(`^(.*?)${trailingSeparatorPart}${dayFirstSegment}$`, 'i'), wordy: true, base: 1, day: 2, month: 3, year: 4 },
+            { regex: new RegExp(`^${dayFirstSegment}${separatorPart}(.*)$`, 'i'), wordy: true, day: 1, month: 2, year: 3, base: 4 }
         ];
         for (const attempt of attempts) {
             const match = text.match(attempt.regex);

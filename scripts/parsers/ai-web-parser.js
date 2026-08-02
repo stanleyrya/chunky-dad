@@ -640,6 +640,13 @@ class AiWebParser {
                         console.log(`🤖 AI Web: Stripped leading date from title "${event.title}" → "${strippedTitle}"`);
                         event.title = strippedTitle;
                     }
+                    // …and the redundant-date strip, for the same reason. Only
+                    // the leading-phrase strip was copied here originally, so
+                    // JSON-LD titles that print the date as a SUFFIX ("CHUNK
+                    // DORE ALLEY - Saturday July 25th") reached the calendar
+                    // dated on every run. Same verification as the AI route:
+                    // the printed date must match the event's own start.
+                    event.title = this.stripRedundantTitleDate(event.title, [event.startDate, event.start]);
                 });
                 if (pageBrandNames.length > 0) {
                     structuredEvents.forEach(event => {
@@ -7650,6 +7657,53 @@ class AiWebParser {
     }
 
 
+    // The redundant-date strip itself, factored out of normalizeAiEvent so the
+    // structured-data route can run it too. It could not before: JSON-LD
+    // events skip normalizeAiEvent entirely, and only the LEADING-phrase strip
+    // was ever copied across — so "Stripped redundant date from title" appears
+    // ZERO times in every run log on record, while chunk-party.com ships
+    // "CHUNK DORE ALLEY - Saturday July 25th" through JSON-LD on every run.
+    //
+    // dateCandidates are tried in order and may be ISO strings or Dates; the
+    // first that yields a local Y-M-D decides. Strips only when the printed
+    // date provably matches — a mismatch keeps the title and logs a review
+    // trail, and no usable date at all keeps the title untouched.
+    stripRedundantTitleDate(title, dateCandidates = []) {
+        if (typeof title !== 'string' || !title.trim()) return title;
+        const detectTitleDateSegment = this.core && typeof this.core.detectTitleDateSegment === 'function'
+            ? (value) => this.core.detectTitleDateSegment(value)
+            : ImportedDetectTitleDateSegment;
+        const titleDateSegment = typeof detectTitleDateSegment === 'function' ? detectTitleDateSegment(title) : null;
+        if (!titleDateSegment) return title;
+
+        const extractLocalDateParts = (value) => {
+            const text = value instanceof Date
+                ? (Number.isNaN(value.getTime()) ? null : value.toISOString())
+                : value;
+            if (typeof text !== 'string') return null;
+            const match = text.trim().match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s]|$)/);
+            if (!match) return null;
+            return { year: parseInt(match[1], 10), month: parseInt(match[2], 10), day: parseInt(match[3], 10) };
+        };
+
+        let expectedDate = null;
+        for (const candidate of (Array.isArray(dateCandidates) ? dateCandidates : [dateCandidates])) {
+            expectedDate = extractLocalDateParts(candidate);
+            if (expectedDate) break;
+        }
+        if (!expectedDate) return title;
+
+        const monthDayMatches = titleDateSegment.month === expectedDate.month && titleDateSegment.day === expectedDate.day;
+        const yearMatches = titleDateSegment.year === null || titleDateSegment.year === expectedDate.year;
+        if (monthDayMatches && yearMatches) {
+            console.log(`🤖 AI Web: Stripped redundant date from title ("${title}" → "${titleDateSegment.base}")`);
+            return titleDateSegment.base;
+        }
+        const expectedIso = `${expectedDate.year}-${String(expectedDate.month).padStart(2, '0')}-${String(expectedDate.day).padStart(2, '0')}`;
+        console.log(`🤖 AI Web: Title contains a date that does not match startDate ("${title}" vs ${expectedIso}) — kept, verify manually`);
+        return title;
+    }
+
     // Leading date phrase on an event TITLE, e.g. the Bear Cave's
     // "Wednesday 9th September – BEEFMINCE MEET MARKET". The day-header gate
     // above correctly KEEPS these (there is a real name after the date), so
@@ -11260,34 +11314,7 @@ TEXT:
         // (detectTitleDateSegment — one implementation, shared with the merge
         // rung); a mismatching printed date keeps the title and leaves a
         // manual-review trail. Any parse uncertainty fails open (title kept).
-        const detectTitleDateSegment = this.core && typeof this.core.detectTitleDateSegment === 'function'
-            ? (value) => this.core.detectTitleDateSegment(value)
-            : ImportedDetectTitleDateSegment;
-        const titleDateSegment = typeof detectTitleDateSegment === 'function' ? detectTitleDateSegment(title) : null;
-        if (titleDateSegment) {
-            const extractLocalDateParts = (value) => {
-                if (typeof value !== 'string') return null;
-                const match = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s]|$)/);
-                if (!match) return null;
-                return { year: parseInt(match[1], 10), month: parseInt(match[2], 10), day: parseInt(match[3], 10) };
-            };
-            const expectedDate = extractLocalDateParts(aiEvent.startDate)
-                || extractLocalDateParts(aiEvent.start)
-                || (startDateRaw instanceof Date && !Number.isNaN(startDateRaw.getTime())
-                    ? extractLocalDateParts(startDateRaw.toISOString())
-                    : null);
-            if (expectedDate) {
-                const monthDayMatches = titleDateSegment.month === expectedDate.month && titleDateSegment.day === expectedDate.day;
-                const yearMatches = titleDateSegment.year === null || titleDateSegment.year === expectedDate.year;
-                if (monthDayMatches && yearMatches) {
-                    console.log(`🤖 AI Web: Stripped redundant date from title ("${title}" → "${titleDateSegment.base}")`);
-                    title = titleDateSegment.base;
-                } else {
-                    const expectedIso = `${expectedDate.year}-${String(expectedDate.month).padStart(2, '0')}-${String(expectedDate.day).padStart(2, '0')}`;
-                    console.log(`🤖 AI Web: Title contains a date that does not match startDate ("${title}" vs ${expectedIso}) — kept, verify manually`);
-                }
-            }
-        }
+        title = this.stripRedundantTitleDate(title, [aiEvent.startDate, aiEvent.start, startDateRaw]);
 
         const event = {
             title,
