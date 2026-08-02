@@ -9048,3 +9048,157 @@ test('structured-data events get the redundant-date strip, not just the leading 
     `no JSON-LD title should reach the calendar dated: ${JSON.stringify(titles)}`
   );
 });
+
+// ---------------------------------------------------------------------------
+// Merge-churn / bad-bar-rescue fix (run 20260801-172321: Club Chub shipped
+// bar="DURO" — the party's own name — on signals page+ocr+url, all three the
+// same fact reprinted three times). Three enforced guards:
+//   1. domain shape and minimum identity length reject a candidate outright;
+//   2. the "matches event title" guard survives the parser's OWN brand-prefix
+//      rewrite via _titleBeforeBrandPrefix;
+//   3. the brand prefixer refuses to stamp the site brand over a DIFFERENT
+//      curated promoter's party.
+// ---------------------------------------------------------------------------
+
+const DURO_CITY_CONFIG = {
+  cities: {
+    'los angeles': { name: 'Los Angeles', patterns: ['los angeles', 'dtla', 'downtown la'], timezone: 'America/Los_Angeles' }
+  }
+};
+
+// The real clubchubusa.com segment shape (page text + flyer OCR).
+const DURO_SEGMENT = [
+  'DURO',
+  'Aug 01, 2026, 10:00 PM',
+  'Downtown Los Angeles',
+  'Tickets'
+].join('\n');
+const DURO_OCR = 'MEGAWOOF AMERICA\nPRESENTS\nDURO\nNO LIMITS.\nDOWNTOWN LA';
+
+function duroHtmlData(overrides = {}) {
+  return {
+    url: 'https://www.clubchubusa.com/event-list',
+    html: 'SEGMENT_LINK_URL: https://www.eventbrite.com/e/duro-is-back-new-outdoor-location-night-foam-party-tickets-1991255145744',
+    segmentText: DURO_SEGMENT,
+    ocrResults: [{ url: 'https://static.wixstatic.com/media/flyer.jpg', text: DURO_OCR }],
+    ...overrides
+  };
+}
+
+test('bar rescue: the party name equal to the PRE-PREFIX title is rejected (the real DURO case)', () => {
+  const parser = createRescueParser({});
+  // Exactly what run 20260801 produced: the brand prefixer rewrote the title
+  // 16ms before the rescue ran, so plain event.title equality no longer
+  // matched "DURO" and the party name was adopted as the venue.
+  const event = {
+    title: 'CLUB CHUB: DURO',
+    _titleBeforeBrandPrefix: 'DURO',
+    city: 'los angeles'
+  };
+  parser.applyBarConvergenceRescue(event, duroHtmlData(), { name: 'Club Chub' }, DURO_CITY_CONFIG);
+  assert.ok(!event.bar, `party name must not become the bar, got ${JSON.stringify(event.bar)}`);
+
+  // And the guard is the pre-prefix title specifically: without the stamp the
+  // old (broken) behavior is reproduced, which is what makes the fix load-bearing.
+  assert.equal(
+    parser.getVenueLineCandidateRejection('DURO', event, duroHtmlData(), DURO_CITY_CONFIG, null),
+    'matches event title'
+  );
+  assert.equal(
+    parser.getVenueLineCandidateRejection('DURO', { title: 'CLUB CHUB: DURO', city: 'los angeles' }, duroHtmlData(), DURO_CITY_CONFIG, null),
+    '', 'without the pre-prefix stamp the guard cannot fire — this is the bug'
+  );
+});
+
+test('bar rescue candidate guards: length and domain shape reject the known garbage, curated names survive', () => {
+  const parser = createRescueParser({});
+  const event = { title: 'Some Party', city: 'boston' };
+  const reject = (candidate) => parser.getVenueLineCandidateRejection(candidate, event, rescueHtmlData(), RESCUE_CITY_CONFIG, null);
+
+  // Rescued garbage from the logs.
+  assert.equal(reject('Y'), 'too short');
+  assert.equal(reject('X'), 'too short');
+  assert.equal(reject('CHUNK-PARTY.COM'), 'domain');
+  assert.equal(reject('chunk-party.com'), 'domain');
+  assert.equal(reject('www.example.org'), 'url');
+
+  // Real short venue names survive — the length test is on the bar-name KEY,
+  // not the raw string, so punctuation and spaces never cost a name its life.
+  assert.equal(reject('X BAR'), '');
+  assert.equal(reject("Ty's"), '');
+  assert.equal(reject('The Pub'), '');
+  // The curated dotted names the plausibility gate deliberately whitelists.
+  assert.equal(reject('massive.club'), '');
+  assert.equal(reject('BARBER.BAR'), '');
+  assert.equal(reject('BEEF.BKK'), '');
+});
+
+test('bar rescue: the FURBALL/Legacy rescues still fire, and a curated-less adoption is flagged (report-only)', () => {
+  // Curated + page + ocr — unchanged.
+  const curated = createRescueParser(BOSTON_CURATED_BARS);
+  const curatedEvent = { title: 'FURBALL Boston: Bear Week Return', city: 'boston' };
+  const curatedLogs = captureLogs(() => {
+    curated.applyBarConvergenceRescue(curatedEvent, rescueHtmlData(), {}, RESCUE_CITY_CONFIG);
+  });
+  assert.equal(curatedEvent.bar, 'Legacy');
+  assert.ok(!curatedLogs.some(line => line.includes('no curated corroboration')),
+    'a curated-corroborated rescue is never flagged');
+
+  // page + ocr with no curated corpus — STILL ADOPTED (report-only), plus a flag.
+  const uncurated = createRescueParser({});
+  const uncuratedEvent = { title: 'FURBALL Boston: Bear Week Return', city: 'boston' };
+  const uncuratedLogs = captureLogs(() => {
+    uncurated.applyBarConvergenceRescue(uncuratedEvent, rescueHtmlData(), {}, RESCUE_CITY_CONFIG);
+  });
+  assert.equal(uncuratedEvent.bar, 'Legacy', 'behavior unchanged — report-only');
+  assert.ok(uncuratedLogs.includes(
+    '🤖 AI Web: Bar rescue "Legacy" has no curated corroboration (signals: page, ocr) — adopted, verify manually'
+  ), `corroboration flag expected, got: ${JSON.stringify(uncuratedLogs)}`);
+  assert.ok(uncuratedLogs.includes(
+    '🤖 AI Web: Rescued bar "Legacy" via signal convergence (signals: page, ocr)'
+  ), 'the existing adoption log line is byte-identical');
+
+  // "Massive" — the ONE correct value this mechanism ever rescued across all
+  // logs, and the only one that carried a curated signal. It still fires.
+  const massive = createRescueParser({ seattle: [{ name: 'Massive', city: 'seattle', address: '1605 Boylston Ave, Seattle, WA' }] });
+  const massiveEvent = { title: 'BEARRACUDA: Seattle', city: 'seattle' };
+  massive.applyBarConvergenceRescue(
+    massiveEvent,
+    rescueHtmlData({ segmentText: 'BEARRACUDA Seattle\nMassive\n1605 Boylston Ave', ocrResults: [{ url: 'https://x/f.jpg', text: 'MASSIVE' }] }),
+    {},
+    { cities: { seattle: { name: 'Seattle', patterns: ['seattle'], timezone: 'America/Los_Angeles' } } }
+  );
+  assert.equal(massiveEvent.bar, 'Massive', 'the one good rescue in the whole log corpus still works');
+  assert.equal(massiveEvent.barSource, 'curated');
+});
+
+test('brand prefixer: suppressed when the page evidence names ANOTHER curated promoter', () => {
+  const parser = createChunkParser();
+  parser.core.promoters = [{ name: 'CHUNK' }, { name: 'Megawoof America', aliases: ['MEGAWOOF'] }];
+  const brands = parser.getPageBrandNames(CHUNK_PAGE());
+
+  // The real DURO evidence string, verbatim from the log.
+  const logs = captureLogs(() => {
+    assert.equal(
+      parser.buildBrandPrefixedTitle('DURO', brands, CHUNK_PAGE(), CHUNK_CONFIG, 'MEGAWOOF AMERICA\nPRESENTS\nDURO'),
+      '', 'another promoter owns this party — the site brand is not stamped on it'
+    );
+  });
+  assert.ok(logs.some(line => line.includes('page evidence names another curated promoter')),
+    `suppression log expected, got: ${JSON.stringify(logs)}`);
+
+  // OCR is the second corpus, same outcome.
+  const ocrPage = { ...CHUNK_PAGE(), ocrResults: [{ url: 'https://x/flyer.jpg', text: 'MEGAWOOF AMERICA\nPRESENTS\nDURO' }] };
+  assert.equal(parser.buildBrandPrefixedTitle('DURO', brands, ocrPage, CHUNK_CONFIG), '');
+
+  // Positive verification only: an unrecognized string never suppresses, and
+  // evidence naming the PAGE's own brand never suppresses either.
+  assert.equal(
+    parser.buildBrandPrefixedTitle('The RETURN', brands, CHUNK_PAGE(), CHUNK_CONFIG, 'SOME RANDOM HYPE LINE\nPRESENTS\nThe RETURN'),
+    'CHUNK: The RETURN');
+  assert.equal(
+    parser.buildBrandPrefixedTitle('The RETURN', brands, CHUNK_PAGE(), CHUNK_CONFIG, 'CHUNK\nPRESENTS\nThe RETURN'),
+    'CHUNK: The RETURN');
+  // …and with no evidence at all the prefixer behaves exactly as before.
+  assert.equal(parser.buildBrandPrefixedTitle('The RETURN', brands, CHUNK_PAGE(), CHUNK_CONFIG), 'CHUNK: The RETURN');
+});

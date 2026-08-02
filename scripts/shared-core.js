@@ -3897,6 +3897,7 @@ class SharedCore {
                 timeoutSeconds: resolvedAi.timeoutSeconds,
                 cacheEnabled: resolvedAi.cacheEnabled,
                 arbitrateMerges: resolvedAi.arbitrateMerges,
+                calendarStickinessEnforced: resolvedAi.calendarStickinessEnforced,
                 bearCheck: { mode: this.getBearCheckMode({ ai: bearCheckAi }) },
                 trim: this.getTrimConfig({ ai: rawGlobalAi })
             },
@@ -6940,31 +6941,75 @@ class SharedCore {
                 const decision = arbitration ? arbitration[conflict.field] : null;
                 if (decision) {
                     const otherPick = decision.pick === 'calendar' ? 'scraped' : 'calendar';
+                    let stickyKept = false;
                     mergedObject[conflict.field] = conflict.values[decision.pick];
                     if (decision.pick === 'scraped' && !this.mergeValuesEqualForTracking(conflict.values.scraped, conflict.values.calendar)) {
                         clobberedFields.push(conflict.field);
                     }
                     console.log(`🤝 AI MERGE: "${eventTitle}" field=${conflict.field} chose ${decision.pick} ("${preview(conflict.values[decision.pick])}") over ${otherPick} ("${preview(conflict.values[otherPick])}")${decision.reason ? ` — ${decision.reason}` : ''}`);
-                    aiDecisionRecords.push({
-                        field: conflict.field,
-                        existingValue: conflict.values.calendar,
-                        newValue: conflict.values.scraped,
-                        chosenValue: conflict.values[decision.pick],
-                        reason: decision.reason || `ai chose ${decision.pick}`,
-                        source: 'ai'
-                    });
-                } else {
-                    mergedObject[conflict.field] = conflict.values.scraped;
-                    if (!this.mergeValuesEqualForTracking(conflict.values.scraped, conflict.values.calendar)) {
-                        clobberedFields.push(conflict.field);
+                    // REPORT-ONLY calendar stickiness (behavior unchanged):
+                    // record every field where an AI opinion ALONE is about to
+                    // overwrite already-saved calendar data. This is the churn
+                    // engine — run 20260801 rewrote "BEEFMINCE x RVT" 21×,
+                    // "Treasure Trail Seattle" 16×, "BEARRACUDA: Seattle💦" 15×
+                    // and three FURBALLs 14× each, and the arbiter is provably
+                    // position-biased (the identical "CLUB CHUB: DURO" vs
+                    // "D>U>R>O is back…" pair was arbitrated twice 11 seconds
+                    // apart and picked `incoming` BOTH times, from opposite
+                    // sides). Enforcement is gated behind
+                    // ai.calendarStickinessEnforced (default OFF) so flipping
+                    // it on is a one-line change once the data agrees.
+                    if (this.shouldReportCalendarStickiness(conflict.field, conflict.values.calendar, conflict.values.scraped, decision.pick)) {
+                        console.log(`🧊 STICKY: "${eventTitle}" field=${conflict.field} would keep calendar "${preview(conflict.values.calendar)}" over scraped "${preview(conflict.values.scraped)}" (AI-only decision, no deterministic reason)`);
+                        this.recordCalendarStickinessObservation(eventTitle);
+                        if (aiConfig && aiConfig.calendarStickinessEnforced === true) {
+                            stickyKept = true;
+                            mergedObject[conflict.field] = conflict.values.calendar;
+                            const clobberIndex = clobberedFields.lastIndexOf(conflict.field);
+                            if (clobberIndex !== -1) clobberedFields.splice(clobberIndex, 1);
+                        }
                     }
                     aiDecisionRecords.push({
                         field: conflict.field,
                         existingValue: conflict.values.calendar,
                         newValue: conflict.values.scraped,
-                        chosenValue: conflict.values.scraped,
-                        reason: 'ai unavailable/rejected — clobber fallback',
-                        source: 'fallback'
+                        chosenValue: stickyKept ? conflict.values.calendar : conflict.values[decision.pick],
+                        reason: stickyKept
+                            ? 'calendar stickiness — AI-only decision, saved value kept'
+                            : (decision.reason || `ai chose ${decision.pick}`),
+                        source: stickyKept ? 'sticky' : 'ai'
+                    });
+                } else {
+                    // No usable AI answer for this field. The historical
+                    // fallback clobbers the saved value with the scraped one —
+                    // an overwrite with even LESS justification than a
+                    // position-biased AI pick, so stickiness must cover this
+                    // path too or an unreachable AI server keeps the churn
+                    // going invisibly. Same report/enforce split as above.
+                    let stickyKept = false;
+                    mergedObject[conflict.field] = conflict.values.scraped;
+                    if (!this.mergeValuesEqualForTracking(conflict.values.scraped, conflict.values.calendar)) {
+                        clobberedFields.push(conflict.field);
+                    }
+                    if (this.shouldReportCalendarStickiness(conflict.field, conflict.values.calendar, conflict.values.scraped, 'scraped')) {
+                        console.log(`🧊 STICKY: "${eventTitle}" field=${conflict.field} would keep calendar "${preview(conflict.values.calendar)}" over scraped "${preview(conflict.values.scraped)}" (no AI answer — clobber fallback, no deterministic reason)`);
+                        this.recordCalendarStickinessObservation(eventTitle);
+                        if (aiConfig && aiConfig.calendarStickinessEnforced === true) {
+                            stickyKept = true;
+                            mergedObject[conflict.field] = conflict.values.calendar;
+                            const clobberIndex = clobberedFields.lastIndexOf(conflict.field);
+                            if (clobberIndex !== -1) clobberedFields.splice(clobberIndex, 1);
+                        }
+                    }
+                    aiDecisionRecords.push({
+                        field: conflict.field,
+                        existingValue: conflict.values.calendar,
+                        newValue: conflict.values.scraped,
+                        chosenValue: stickyKept ? conflict.values.calendar : conflict.values.scraped,
+                        reason: stickyKept
+                            ? 'calendar stickiness — no AI answer, saved value kept'
+                            : 'ai unavailable/rejected — clobber fallback',
+                        source: stickyKept ? 'sticky' : 'fallback'
                     });
                 }
             }
@@ -8904,6 +8949,9 @@ class SharedCore {
         // Use default merge mode since parser-level mergeMode is handled by field priorities
         const mergeMode = config.mergeMode || 'upsert';
 
+        // Per-run calendar-stickiness tally (report-only observation phase).
+        this.resetCalendarStickinessStats();
+
         // Analyze each event against existing calendar events
         const analyzedEvents = [];
 
@@ -8967,6 +9015,8 @@ class SharedCore {
                 }
             }
         }
+
+        this.logCalendarStickinessSummary();
 
         return analyzedEvents;
     }
@@ -10792,6 +10842,11 @@ class SharedCore {
             keepAlive: Object.prototype.hasOwnProperty.call(aiConfig, 'keepAlive') ? String(aiConfig.keepAlive) : '5m',
             cacheEnabled: aiConfig.cache !== false,
             arbitrateMerges: aiConfig.arbitrateMerges !== false,
+            // Calendar stickiness — OFF by default (report-only). When true, an
+            // AI-ONLY decision to overwrite a non-empty saved calendar value is
+            // refused and the saved value is kept. See
+            // shouldReportCalendarStickiness for the exemptions.
+            calendarStickinessEnforced: aiConfig.calendarStickinessEnforced === true,
             // shortName derivation pass (default ON, like the response cache):
             // `ai: { shortNames: false }` disables it. shortNameDeriveMaxChars
             // caps DERIVED values (16) — separate from the trim pipeline's
@@ -10818,6 +10873,62 @@ class SharedCore {
             if (organizer) return organizer;
         }
         return '';
+    }
+
+    // === Calendar stickiness (REPORT-ONLY by default) ===
+    //
+    // The merge churn diagnosis: `arbitrateMergeConflicts` is position-biased.
+    // Across run 20260801-172321 the enrich path picked `incoming` 72% of the
+    // time and the calendar path picked `calendar` 66% of the time — opposite
+    // leans from the same model on the same prompt. The proof is a single value
+    // pair: "CLUB CHUB: DURO" vs "D>U>R>O is back NEW OUTDOOR LOCATION _ NIGHT
+    // FOAM PARTY" was arbitrated twice 11 seconds apart (log lines :2125 and
+    // :2228) with opposite verdicts, both landing on `incoming`. The result is
+    // the same events being rewritten every single run.
+    //
+    // Stickiness says: when the ONLY reason to overwrite an already-saved
+    // calendar value is an AI opinion (no deterministic rung fired — those
+    // never reach the AI path at all), the saved value should win. Reported for
+    // now, enforced when ai.calendarStickinessEnforced is true.
+    //
+    // Never reported (and so never enforceable) when:
+    //   - the calendar value is empty/whitespace or a TBA placeholder — there
+    //     is nothing saved worth keeping;
+    //   - the AI picked the calendar side already, or the two values are
+    //     equal for tracking purposes (no change to suppress);
+    //   - the field is a date/time field — a rescheduled event MUST move.
+    shouldReportCalendarStickiness(field, calendarValue, scrapedValue, pick) {
+        if (pick !== 'scraped') return false;
+        if (this.isCalendarStickinessExemptField(field)) return false;
+        const existing = this.serializeArbitrationValue(field, calendarValue);
+        if (!existing || !existing.trim()) return false;
+        if (/^(?:tba|tbd|to be announced|to be determined)$/i.test(existing.trim())) return false;
+        return !this.mergeValuesEqualForTracking(scrapedValue, calendarValue);
+    }
+
+    // Date/time fields are exempt: a moved or rescheduled event must be allowed
+    // to move, and those conflicts are exactly the ones the scraper is for.
+    isCalendarStickinessExemptField(field) {
+        return /^(?:start|end)(?:Date|Time)$|^(?:start|end)$|^date$|^time$|^timezone$|^recurrence/i.test(String(field || ''));
+    }
+
+    // Per-run tally for the summary line (reset by prepareEventsForCalendar).
+    recordCalendarStickinessObservation(eventTitle) {
+        if (!this._calendarStickinessStats || typeof this._calendarStickinessStats !== 'object') {
+            this._calendarStickinessStats = { fields: 0, events: new Set() };
+        }
+        this._calendarStickinessStats.fields += 1;
+        this._calendarStickinessStats.events.add(String(eventTitle || 'event'));
+    }
+
+    resetCalendarStickinessStats() {
+        this._calendarStickinessStats = { fields: 0, events: new Set() };
+    }
+
+    logCalendarStickinessSummary() {
+        const stats = this._calendarStickinessStats;
+        if (!stats || !stats.fields) return;
+        console.log(`🧊 STICKY: ${stats.fields} field(s) across ${stats.events.size} event(s) would have been kept`);
     }
 
     // AI config for merge arbitration: the event's own parser config wins, the global

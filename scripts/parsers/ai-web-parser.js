@@ -664,6 +664,10 @@ class AiWebParser {
                         const brandTitle = this.buildBrandPrefixedTitle(event.title, pageBrandNames, effectiveHtmlData, parserConfig);
                         if (brandTitle) {
                             console.log(`🤖 AI Web: Title "${event.title}" does not name the page's organizer — prefixed brand → "${brandTitle}"`);
+                            // Pre-prefix title, same stamp as the AI route (see
+                            // getVenueLineCandidateRejection): the rescue's exact
+                            // title guard must survive this rewrite here too.
+                            event._titleBeforeBrandPrefix = event.title;
                             event.title = brandTitle;
                         }
                     });
@@ -11046,10 +11050,19 @@ TEXT:
         // Title doctrine, promoter half: the brand belongs in the event's name.
         // Runs AFTER the bare-city prefixer above, whose output already names
         // the organizer — so this is a no-op there, never a second prefix.
+        // The title as it stood before this prefixer touched it — stamped onto
+        // the event below so the bar rescue's "matches event title" guard is
+        // still exact after the rewrite (see getVenueLineCandidateRejection).
+        let titleBeforeBrandPrefix = '';
         if (pageBrandNames.length > 0) {
-            const brandTitle = this.buildBrandPrefixedTitle(title, pageBrandNames, htmlData, parserConfig);
+            const titleEvidence = aiEvent && aiEvent.__fieldEvidence && typeof aiEvent.__fieldEvidence === 'object'
+                && typeof aiEvent.__fieldEvidence.title === 'string'
+                ? aiEvent.__fieldEvidence.title
+                : '';
+            const brandTitle = this.buildBrandPrefixedTitle(title, pageBrandNames, htmlData, parserConfig, titleEvidence);
             if (brandTitle) {
                 console.log(`🤖 AI Web: Title "${title}" does not name the page's organizer — prefixed brand → "${brandTitle}"`);
+                titleBeforeBrandPrefix = title;
                 title = brandTitle;
             }
         }
@@ -11404,6 +11417,14 @@ TEXT:
         // organizer stamp would make arbitration veto the correct bar.
         if (pageBrandNames.length > 0 && !pageIsVenueSite) {
             event._organizer = pageBrandNames[0];
+        }
+
+        // Pre-prefix title (underscore field: internal metadata, excluded from
+        // notes and merge field loops like _organizer). The bar rescue reads it
+        // so the parser's own title rewrite can never disarm the exact
+        // "candidate == event title" guard.
+        if (titleBeforeBrandPrefix) {
+            event._titleBeforeBrandPrefix = titleBeforeBrandPrefix;
         }
 
         if (aiPrompts.length > 0) {
@@ -14401,6 +14422,15 @@ TEXT:
             console.log(`🤖 AI Web: Bar rescue ambiguous between "${top.name}" and "${qualified[1].name}" — not adopted`);
             return event;
         }
+        // REPORT-ONLY corroboration flag (behavior unchanged): across every
+        // log to date this mechanism adopted PACK, Y, CHUNK-PARTY.COM and DURO
+        // — all garbage, none curated — and exactly one correct value
+        // ("Massive"), which was the only one carrying a curated signal. The
+        // shape guards above kill the known garbage; this line measures what
+        // is left so the curated requirement can be argued from data.
+        if (!top.signals.includes('curated')) {
+            console.log(`🤖 AI Web: Bar rescue "${top.name}" has no curated corroboration (signals: ${top.signals.join(', ')}) — adopted, verify manually`);
+        }
         event.bar = top.name;
         event.barSource = top.curatedBar ? 'curated' : 'page-adjacent';
         // Underscore field — internal metadata, never serialized into notes;
@@ -14465,7 +14495,25 @@ TEXT:
         const text = String(candidate || '').trim();
         if (!text) return 'empty';
         if (text.length > 40) return 'too long';
+        // Minimum identity length, measured on the bar-name KEY rather than the
+        // raw string (run 20260801 rescued bar "Y" — a single flyer letter — on
+        // page+ocr). Key-normalizing is what keeps real short names alive:
+        // "X BAR" → "xbar" and "Ty's" → "tys" both survive, and a sweep of all
+        // 97 curated names in data/bars/* + data/scraper-bars.json puts the
+        // shortest legitimate key at 3 ("Ty's", "The Pub"). Raw .length would
+        // have kept "Y" and killed nothing useful.
+        const identityKey = this.core && typeof this.core.normalizeBarNameKey === 'function'
+            ? this.core.normalizeBarNameKey(text)
+            : String(text).toLowerCase().replace(/^\s*the\s+/, '').replace(/[^a-z0-9]/g, '');
+        if (identityKey.length < 3) return 'too short';
         if (/(?:https?:\/\/|www\.)/i.test(text)) return 'url';
+        // Parity with applyBarPlausibilityGate: a value the bar gate would
+        // DELETE as a website domain must never be adoptable by the rescue
+        // (run 20260731 rescued "CHUNK-PARTY.COM"). isDomainShapedBarValue is
+        // the same shape test the gate trusts, and it deliberately whitelists
+        // .club/.bar/.bkk via getGenericInfrastructureDomainLabels so curated
+        // "massive.club", "BARBER.BAR" and "BEEF.BKK" stay candidates.
+        if (this.isDomainShapedBarValue(text)) return 'domain';
         if (/[$€£]\s*\d/.test(text) || /\b\d+\s*(?:dollars|usd)\b/i.test(text)) return 'price';
         if (/\b\d{1,2}:\d{2}\b/.test(text) || /\b\d{1,2}\s*(?:am|pm)\b/i.test(text)) return 'time';
         if (/\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b[\s.,]*\d{1,2}/i.test(text)
@@ -14498,6 +14546,16 @@ TEXT:
         if (normalized === 'sold out') return 'generic';
         const title = this.normalizeAdjacencyText(event && event.title);
         if (title && normalized === title) return 'matches event title';
+        // …and against the title as it stood BEFORE this parser's own brand
+        // prefixer rewrote it. The guard above is exact equality, so any
+        // rewrite of event.title silently disarms it: run 20260801 prefixed
+        // "DURO" → "CLUB CHUB: DURO" 16ms before the rescue ran, the equality
+        // failed, and the party's own name was adopted as the venue (the same
+        // mechanism that let "CHUNK: C'mon Everybody" stop protecting venue
+        // "C'mon Everybody"). _titleBeforeBrandPrefix is stamped at the
+        // prefixer call sites — still exact equality, never a heuristic.
+        const preBrandTitle = this.normalizeAdjacencyText(event && event._titleBeforeBrandPrefix);
+        if (preBrandTitle && normalized === preBrandTitle) return 'matches event title';
         // A bare city is never a venue: reject a candidate whose WHOLE value
         // resolves to a configured city (key/name/pattern/alias equality —
         // containment would reject legitimate names like "SF Eagle") or to
@@ -14817,7 +14875,11 @@ TEXT:
     //   "CHUNK: CHUNK" → '' (collapse guard)
     // - an implausible brand — no alphanumerics, or long enough to swamp the
     //   name it prefixes — → '' rather than an absurd title.
-    buildBrandPrefixedTitle(title, pageBrandNames, htmlData, parserConfig = null) {
+    // - the page's own extracted content names a DIFFERENT curated promoter
+    //   (see findOtherCuratedPromoterInPageEvidence) → '' — a listing page
+    //   carries other promoters' parties, and stamping the site brand over
+    //   one of them invents an event that never existed.
+    buildBrandPrefixedTitle(title, pageBrandNames, htmlData, parserConfig = null, titleEvidence = '') {
         const text = this.normalizeWhitespace(String(title || ''));
         if (!text) return '';
         if (!Array.isArray(pageBrandNames) || pageBrandNames.length === 0) return '';
@@ -14834,7 +14896,55 @@ TEXT:
         const organizerDisplay = this.normalizeWhitespace(this.getOrganizerDisplayName(pageBrandNames, htmlData));
         if (!/[a-z0-9]/i.test(organizerDisplay)) return '';
         if (organizerDisplay.length > 24 || organizerDisplay.split(/\s+/).length > 3) return '';
+        // Last gate, checked only once a prefix would actually be applied (so
+        // the log below is never noise): the page's own extracted content
+        // names another curated promoter. Run 20260801, clubchubusa.com:
+        // the model's title evidence was literally "MEGAWOOF AMERICA\n
+        // PRESENTS\nDURO" and the title still became "CLUB CHUB: DURO".
+        const otherPromoter = this.findOtherCuratedPromoterInPageEvidence(titleEvidence, htmlData, pageBrandNames);
+        if (otherPromoter) {
+            console.log(`🤖 AI Web: Title "${text}" not brand-prefixed with "${organizerDisplay}" — page evidence names another curated promoter "${otherPromoter}"`);
+            return '';
+        }
         return `${organizerDisplay}: ${text}`;
+    }
+
+    // The curated promoter named by the page's OWN extracted content when it
+    // is not the page brand, else ''. Positive verification only: a line has
+    // to resolve to a real entry in the promoter registry
+    // (core.getPromoterEntryByName — the same lookup pageBrandIsCuratedPromoter
+    // uses), so an unrecognized string never suppresses anything. Corpora are
+    // the model's per-field title evidence (aiEvent.__fieldEvidence.title) and
+    // the event's OCR text — both are the event's own content, not sitewide
+    // chrome, so a listing page's header brand cannot trip this.
+    findOtherCuratedPromoterInPageEvidence(titleEvidence, htmlData, pageBrandNames) {
+        if (!this.core || typeof this.core.getPromoterEntryByName !== 'function'
+            || typeof this.core.normalizePromoterNameKey !== 'function') return '';
+        const brandKeys = new Set();
+        (Array.isArray(pageBrandNames) ? pageBrandNames : []).forEach(name => {
+            const key = this.core.normalizePromoterNameKey(name);
+            if (key) brandKeys.add(key);
+            const entry = this.core.getPromoterEntryByName(name);
+            if (entry && entry.name) {
+                const entryKey = this.core.normalizePromoterNameKey(entry.name);
+                if (entryKey) brandKeys.add(entryKey);
+            }
+        });
+        const ocrText = (htmlData && Array.isArray(htmlData.ocrResults) ? htmlData.ocrResults : [])
+            .map(ocr => (ocr && typeof ocr.text === 'string' ? ocr.text : ''))
+            .filter(text => text.trim())
+            .join('\n');
+        const lines = `${String(titleEvidence || '')}\n${ocrText}`.split('\n');
+        for (const rawLine of lines) {
+            const line = rawLine.trim();
+            if (!line) continue;
+            const entry = this.core.getPromoterEntryByName(line);
+            if (!entry || !entry.name) continue;
+            const entryKey = this.core.normalizePromoterNameKey(entry.name);
+            if (!entryKey || brandKeys.has(entryKey)) continue;
+            return line;
+        }
+        return '';
     }
 
     // Split a combined OCR+page stream into ordered corpus chunks so the

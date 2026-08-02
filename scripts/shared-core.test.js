@@ -11250,3 +11250,117 @@ test('a calendar title that only adds a date loses to the dateless one determini
     core.resolveConflictDeterministically('title', 'FURBALL Chicago', 'FURBALL CHICAGO MARKET DAYS', context),
     null);
 });
+
+// ---------------------------------------------------------------------------
+// Calendar stickiness (REPORT-ONLY observation phase). The merge arbiter is
+// position-biased — run 20260801-172321 arbitrated the identical value pair
+// "CLUB CHUB: DURO" vs "D>U>R>O is back NEW OUTDOOR LOCATION _ NIGHT FOAM
+// PARTY" twice 11 seconds apart (:2125, :2228) and picked `incoming` both
+// times, from opposite sides — which is why the same events are rewritten
+// every run ("BEEFMINCE x RVT" clobbered 21×).
+// ---------------------------------------------------------------------------
+
+test('calendar stickiness: reports only AI-only overwrites of real saved values', () => {
+  const core = createCore();
+
+  // The real churn case: a saved calendar title overwritten on an AI opinion.
+  assert.equal(core.shouldReportCalendarStickiness(
+    'title',
+    'D>U>R>O is back NEW OUTDOOR LOCATION _ NIGHT FOAM PARTY',
+    'CLUB CHUB: DURO',
+    'scraped'), true);
+  assert.equal(core.shouldReportCalendarStickiness('bar', 'Downtown Los Angeles', 'DURO', 'scraped'), true);
+
+  // The AI kept the calendar value — nothing to suppress.
+  assert.equal(core.shouldReportCalendarStickiness('title', 'Saved', 'Scraped', 'calendar'), false);
+  // Nothing saved worth keeping.
+  assert.equal(core.shouldReportCalendarStickiness('bar', '', 'Legacy', 'scraped'), false);
+  assert.equal(core.shouldReportCalendarStickiness('bar', '   ', 'Legacy', 'scraped'), false);
+  assert.equal(core.shouldReportCalendarStickiness('bar', 'TBA', 'Legacy', 'scraped'), false);
+  assert.equal(core.shouldReportCalendarStickiness('bar', 'tbd', 'Legacy', 'scraped'), false);
+  // Equal values are not an overwrite.
+  assert.equal(core.shouldReportCalendarStickiness('bar', 'Legacy', 'Legacy', 'scraped'), false);
+
+  // Date/time fields are never sticky — a rescheduled event must move.
+  for (const field of ['startDate', 'endDate', 'startTime', 'endTime', 'timezone', 'recurrenceRule']) {
+    assert.equal(core.shouldReportCalendarStickiness(field, 'saved', 'scraped', 'scraped'), false, field);
+  }
+});
+
+test('calendar stickiness: per-run tally and summary line', () => {
+  const core = createCore();
+  core.resetCalendarStickinessStats();
+  const silent = [];
+  const originalLog = console.log;
+  console.log = (message) => { silent.push(String(message)); };
+  try {
+    core.logCalendarStickinessSummary();
+    assert.deepEqual(silent, [], 'no observations, no summary line');
+    core.recordCalendarStickinessObservation('BEEFMINCE x RVT');
+    core.recordCalendarStickinessObservation('BEEFMINCE x RVT');
+    core.recordCalendarStickinessObservation('Treasure Trail Seattle');
+    core.logCalendarStickinessSummary();
+  } finally {
+    console.log = originalLog;
+  }
+  assert.deepEqual(silent, ['🧊 STICKY: 3 field(s) across 2 event(s) would have been kept']);
+});
+
+test('calendar stickiness covers the arbitration-failure fallback too', async () => {
+  // When the AI endpoint is down the historical fallback clobbers every
+  // conflicted field with the scraped value — an overwrite with even less
+  // justification than a position-biased pick. Stickiness must see that path:
+  // report-only logs it and still clobbers; enforced keeps the saved value.
+  const buildPair = (aiExtra) => ({
+    scraped: {
+      title: 'CLUB CHUB: DURO',
+      startDate: new Date('2026-08-02T05:00:00.000Z'),
+      endDate: new Date('2026-08-02T11:30:00.000Z'),
+      source: 'ai-web',
+      _fieldPriorities: createCore().getResolvedFieldPriorities({}),
+      _parserConfig: { ai: { ...TEST_AI_PARSER_CONFIG.ai, ...aiExtra } }
+    },
+    existing: {
+      title: 'D>U>R>O is back NEW OUTDOOR LOCATION _ NIGHT FOAM PARTY',
+      startDate: new Date('2026-08-02T05:00:00.000Z'),
+      endDate: new Date('2026-08-02T11:30:00.000Z'),
+      notes: ''
+    }
+  });
+
+  // Report-only (default): fallback still clobbers, but the STICKY line fires.
+  const reportCore = createCore();
+  const reportPair = buildPair({});
+  const stickyLines = [];
+  const originalLog = console.log;
+  console.log = (message) => { stickyLines.push(String(message)); };
+  let reportResult;
+  try {
+    reportResult = await reportCore.createFinalEventObject(
+      reportPair.existing, reportPair.scraped,
+      { httpAdapter: buildArbitrationAdapter({}, { fail: true }) });
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(reportResult.title, 'CLUB CHUB: DURO', 'report-only keeps the clobber fallback');
+  assert.ok(stickyLines.some(line => line.startsWith('🧊 STICKY:') && line.includes('no AI answer')),
+    'the fallback overwrite is reported');
+
+  // Enforced: the saved calendar title survives an AI outage.
+  const enforcedCore = createCore();
+  const enforcedPair = buildPair({ calendarStickinessEnforced: true });
+  const enforcedResult = await enforcedCore.createFinalEventObject(
+    enforcedPair.existing, enforcedPair.scraped,
+    { httpAdapter: buildArbitrationAdapter({}, { fail: true }) });
+  assert.equal(enforcedResult.title, 'D>U>R>O is back NEW OUTDOOR LOCATION _ NIGHT FOAM PARTY',
+    'enforced stickiness keeps the saved value when the AI has no answer');
+});
+
+test('calendar stickiness enforcement is OFF by default and is a one-flag change', () => {
+  const core = createCore();
+  assert.equal(core.resolveAiConfig({}).calendarStickinessEnforced, false);
+  assert.equal(core.resolveAiConfig({ calendarStickinessEnforced: false }).calendarStickinessEnforced, false);
+  assert.equal(core.resolveAiConfig({ calendarStickinessEnforced: true }).calendarStickinessEnforced, true);
+  // Never truthy-coerced: only an explicit true enforces.
+  assert.equal(core.resolveAiConfig({ calendarStickinessEnforced: 'yes' }).calendarStickinessEnforced, false);
+});
