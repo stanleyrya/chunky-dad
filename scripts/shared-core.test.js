@@ -3864,6 +3864,330 @@ test('deduplicateEvents merges a vetoed event into a suffixed holder via the ide
   assert.equal(result.length, 2, 'shared ticketUrl on the same local day must merge the vetoed event');
 });
 
+// === Run 20260802-135030: 3dollarbillbk.com + its eventim ticketing pages ===
+// Six verbatim records were three real events and duplicatesRemoved was 1.
+// URL identity (same event page modulo query/fragment; same trailing platform
+// id) and HTML-entity folding close the gaps. All field values below are
+// verbatim from the run JSON.
+
+function buildLoraxEventim() {
+  return {
+    title: 'LORAX XCX',
+    startDate: new Date('2026-08-08T02:00:00.000Z'),
+    endDate: new Date('2026-08-08T07:00:00.000Z'),
+    bar: '3 Dollar Bill',
+    address: '260 Meserole St, Brooklyn, NY, 11206',
+    url: 'https://wl.eventim.us/event/LORAX-XCX/700051?afflky=3DollarBill',
+    ticketUrl: 'https://wl.eventim.us/event/LORAX-XCX/700051',
+    website: 'https://www.3dollarbillbk.com',
+    city: 'nyc',
+    timezone: 'America/New_York',
+    source: 'ai-web'
+  };
+}
+
+function buildLoraxDegraded() {
+  return {
+    title: 'LORAX XCX',
+    startDate: new Date('2026-08-08T02:00:00.000Z'),
+    endDate: new Date('2026-08-08T02:00:00.000Z'), // zero duration
+    bar: '3 Dollar Bill',
+    address: '260 Meserole Dr, Brooklyn, NY', // Dr vs St, no zip
+    url: 'https://wl.eventim.us/event/LORAX-XCX/700051',
+    ticketUrl: 'https://3dollarbillbk.com',
+    city: 'nyc',
+    timezone: 'America/New_York',
+    source: 'ai-web'
+  };
+}
+
+function buildRainEventim(urlSlug) {
+  return {
+    title: 'RAIN ON ME - An Ariana X Gaga DANCE PARTY',
+    startDate: new Date('2026-08-02T20:00:00.000Z'),
+    endDate: new Date('2026-08-03T03:45:00.000Z'),
+    bar: '9 Bob Note',
+    address: '270 Meserole St, Brooklyn, NY, 11206',
+    url: `https://www.eventim.us/event/${urlSlug}/696752`,
+    ticketUrl: 'https://www.eventim.us/event/RAIN-ON-ME-An-Ariana-X-Gaga-DANCE-PARTY/696752',
+    website: 'https://www.3dollarbillbk.com',
+    city: 'nyc',
+    timezone: 'America/New_York',
+    source: 'ai-web'
+  };
+}
+
+// The venue-site copy whose scraped start is ~42h off the eventim pair —
+// bad data on a DIFFERENT calendar day, so it must never be swallowed.
+function buildRainVenueSiteCopy() {
+  return {
+    title: 'RAIN ON ME - An Ariana X Gaga DANCE PARTY',
+    startDate: new Date('2026-08-01T02:00:00.000Z'),
+    endDate: new Date('2026-08-02T20:00:00.000Z'),
+    bar: '9 Bob Note',
+    address: '270 Meserole St, Brooklyn, NY 11206',
+    url: '3DOLLARBILLBK.COM',
+    ticketUrl: 'https://3DOLLARBILLBK.COM',
+    website: 'https://www.3dollarbillbk.com',
+    city: 'nyc',
+    timezone: 'America/New_York',
+    source: 'ai-web'
+  };
+}
+
+function buildAquaticaDetail() {
+  return {
+    title: "Aquatica Erotica: Bushwick's Wettest Cabaret",
+    startDate: new Date('2026-08-07T23:00:00.000Z'),
+    endDate: new Date('2026-08-08T01:00:00.000Z'),
+    bar: '3 Dollar Bill',
+    address: '260 Meserole St, Brooklyn, NY, 11206',
+    url: 'https://wl.eventim.us/event/Aquatica-Erotica-Bushwicks-Wettest-Cabaret/699269?afflky=3DollarBill',
+    ticketUrl: 'https://wl.eventim.us/event/Aquatica-Erotica-Bushwicks-Wettest-Cabaret/699269',
+    website: 'https://www.3dollarbillbk.com',
+    city: 'nyc',
+    timezone: 'America/New_York',
+    source: 'ai-web'
+  };
+}
+
+function buildAquaticaTruncated() {
+  return {
+    title: 'Aquatica Erotica: Bushwick', // truncated
+    startDate: new Date('2026-08-07T23:30:00.000Z'),
+    endDate: new Date('2026-08-07T23:30:00.000Z'),
+    bar: '3 Dollar Bill',
+    address: '260 Meserole St, Brooklyn, NY 11206',
+    url: 'https://wl.eventim.us/event/Aquatica-Erotica-Bushwicks-Wettest-Cabaret/699269',
+    city: 'nyc',
+    timezone: 'America/New_York',
+    source: 'ai-web'
+  };
+}
+
+test('deduplicateEvents merges the LORAX XCX pair — event-page URL differs only by affiliate query', async () => {
+  const core = createCore();
+  const eventim = buildLoraxEventim();
+  const degraded = buildLoraxDegraded();
+  // The degraded copy's ticketUrl is a bare promoter root, so the ticket-url
+  // signal cannot fire — the query-stripped event-page URL is the identity.
+  assert.equal(
+    core.getSameEventIdentitySignal(eventim, degraded, { requireCloseStartTimes: false }),
+    'event-page-url'
+  );
+  const result = await core.deduplicateEvents([eventim, degraded], null);
+  assert.equal(result.length, 1, 'query-only URL difference is the same event page');
+});
+
+test('deduplicateEvents merges the Aquatica Erotica pair and logs the URL-identity signal', async () => {
+  const core = createCore();
+  const detail = buildAquaticaDetail();
+  const truncated = buildAquaticaTruncated();
+  assert.notEqual(core.createEventKey(detail), core.createEventKey(truncated), 'precondition: truncated title diverges the keys');
+  assert.equal(
+    core.getSameEventIdentitySignal(detail, truncated, { requireCloseStartTimes: false }),
+    'event-page-url'
+  );
+  const logged = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logged.push(args.join(' ')); originalLog(...args); };
+  let result;
+  try {
+    result = await core.deduplicateEvents([detail, truncated], null);
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(result.length, 1, 'same event page (with vs without ?afflky) must merge');
+  assert.ok(
+    logged.some(line => line.includes('🔗 DEDUP:') && line.includes('event-page URL identity')),
+    'the URL-identity merge must announce its signal in the log'
+  );
+});
+
+test('deduplicateEvents merges the RAIN ON ME eventim pair — slugs differ, trailing id identical', async () => {
+  const core = createCore();
+  const poolSlug = buildRainEventim('RAIN-ON-ME-An-Ariana-X-Gaga-POOL-PARTY');
+  const danceSlug = buildRainEventim('RAIN-ON-ME-An-Ariana-X-Gaga-DANCE-PARTY');
+  const result = await core.deduplicateEvents([poolSlug, danceSlug], null);
+  assert.equal(result.length, 1, 'same platform event id 696752 is the same event');
+});
+
+test('same trailing event-id signal fires on slug-rewritten URLs without a shared ticketUrl', () => {
+  const core = createCore();
+  const poolSlug = buildRainEventim('RAIN-ON-ME-An-Ariana-X-Gaga-POOL-PARTY');
+  const danceSlug = buildRainEventim('RAIN-ON-ME-An-Ariana-X-Gaga-DANCE-PARTY');
+  delete poolSlug.ticketUrl;
+  delete danceSlug.ticketUrl;
+  // Bars intact would let place-day-name catch this too — strip the place so
+  // the trailing-id signal is what fires.
+  delete poolSlug.bar;
+  delete poolSlug.address;
+  assert.equal(
+    core.getSameEventIdentitySignal(poolSlug, danceSlug, { requireCloseStartTimes: false }),
+    'event-url-id'
+  );
+});
+
+test('the 42h-off venue-site RAIN copy is never swallowed by the eventim pair', async () => {
+  const core = createCore();
+  const poolSlug = buildRainEventim('RAIN-ON-ME-An-Ariana-X-Gaga-POOL-PARTY');
+  const danceSlug = buildRainEventim('RAIN-ON-ME-An-Ariana-X-Gaga-DANCE-PARTY');
+  const venueCopy = buildRainVenueSiteCopy();
+  assert.equal(
+    core.getSameEventIdentitySignal(venueCopy, poolSlug, { requireCloseStartTimes: false }),
+    null,
+    'different local calendar days must yield no identity signal'
+  );
+  const result = await core.deduplicateEvents([poolSlug, danceSlug, venueCopy], null);
+  assert.equal(result.length, 2, 'the eventim pair merges; the 42h copy stays separate');
+});
+
+test('bare-host URLs never participate in URL identity', async () => {
+  const core = createCore();
+  const first = {
+    title: 'Latex Night',
+    startDate: new Date('2026-08-08T01:00:00.000Z'),
+    url: 'https://www.3dollarbillbk.com',
+    city: 'nyc',
+    timezone: 'America/New_York',
+    source: 'ai-web'
+  };
+  const second = {
+    title: 'Disco Inferno',
+    startDate: new Date('2026-08-08T02:00:00.000Z'),
+    url: '3DOLLARBILLBK.COM',
+    city: 'nyc',
+    timezone: 'America/New_York',
+    source: 'ai-web'
+  };
+  assert.equal(core.getEventPageUrlIdentity(first), null, 'a homepage root is not an event page');
+  assert.equal(core.getEventPageUrlIdentity(second), null, 'a protocol-less bare host is not an event page');
+  assert.equal(core.getSameEventIdentitySignal(first, second, { requireCloseStartTimes: false }), null);
+  const result = await core.deduplicateEvents([first, second], null);
+  assert.equal(result.length, 2, 'two different events found on the same homepage stay separate');
+});
+
+test('short numeric path segments never trigger trailing-id identity', () => {
+  const core = createCore();
+  const base = {
+    startDate: new Date('2026-08-08T01:00:00.000Z'),
+    city: 'nyc',
+    timezone: 'America/New_York',
+    source: 'ai-web'
+  };
+  const pageTwoEvents = { ...base, title: 'Neon Nights', url: 'https://venue.example/events/page/2' };
+  const pageTwoParties = { ...base, title: 'Garage Rave', url: 'https://venue.example/parties/page/2' };
+  assert.equal(
+    core.getSameEventIdentitySignal(pageTwoEvents, pageTwoParties, { requireCloseStartTimes: false }),
+    null,
+    'pagination numbers are not event ids'
+  );
+  // Four digits is a calendar year, a real path segment shape in this corpus
+  // (wp-content/uploads/2026/...) — still below the id threshold.
+  const galleryYear = { ...base, title: 'Neon Nights', url: 'https://venue.example/gallery/2026' };
+  const archiveYear = { ...base, title: 'Garage Rave', url: 'https://venue.example/archive/2026' };
+  assert.equal(
+    core.getSameEventIdentitySignal(galleryYear, archiveYear, { requireCloseStartTimes: false }),
+    null,
+    'a 4-digit year segment is not an event id'
+  );
+});
+
+test('the same trailing id on different hosts never merges', async () => {
+  const core = createCore();
+  const base = {
+    startDate: new Date('2026-08-08T01:00:00.000Z'),
+    city: 'nyc',
+    timezone: 'America/New_York',
+    source: 'ai-web'
+  };
+  const hostA = { ...base, title: 'Neon Nights', url: 'https://tickets-a.example/event/Neon-Nights/696752' };
+  const hostB = { ...base, title: 'Garage Rave', url: 'https://tickets-b.example/event/Garage-Rave/696752' };
+  assert.equal(core.getSameEventIdentitySignal(hostA, hostB, { requireCloseStartTimes: false }), null);
+  const result = await core.deduplicateEvents([hostA, hostB], null);
+  assert.equal(result.length, 2, 'a coincidental id collision across hosts is not identity');
+});
+
+test('entity-encoded and decoded titles collide in event keys (Club Nyc verbatim)', () => {
+  const core = createCore();
+  const encoded = {
+    title: 'Club Nyc presents : R &amp; B Night Showcase',
+    bar: '3 Dollar Bill',
+    startDate: new Date('2026-08-06T23:00:00.000Z'),
+    city: 'nyc',
+    timezone: 'America/New_York'
+  };
+  const decoded = { ...encoded, title: 'Club Nyc presents : R & B Night Showcase' };
+  assert.equal(core.createEventKey(encoded), core.createEventKey(decoded), 'HTML entities must not defeat title keys');
+  assert.ok(core.areTitlesSimilar(encoded.title, decoded.title), 'HTML entities must not defeat title similarity');
+});
+
+test('an event-page URL shared by 3+ records in a batch is a listing page, not identity', async () => {
+  const core = createCore();
+  const base = {
+    startDate: new Date('2026-08-08T01:00:00.000Z'),
+    url: 'https://venue.example/events',
+    city: 'nyc',
+    timezone: 'America/New_York',
+    source: 'ai-web'
+  };
+  const stubs = [
+    { ...base, title: 'Neon Nights' },
+    { ...base, title: 'Garage Rave' },
+    { ...base, title: 'Latex Social' }
+  ];
+  const result = await core.deduplicateEvents(stubs, null);
+  assert.equal(result.length, 3, 'listing-page fan-in must suppress URL identity');
+});
+
+test('a genuine non-duplicate — two different parties at 3 Dollar Bill one night — stays separate', async () => {
+  const core = createCore();
+  const beef = {
+    title: 'BEEF: XL Bear Party',
+    startDate: new Date('2026-08-08T01:00:00.000Z'),
+    endDate: new Date('2026-08-08T05:00:00.000Z'),
+    bar: '3 Dollar Bill',
+    address: '260 Meserole St, Brooklyn, NY, 11206',
+    url: 'https://wl.eventim.us/event/BEEF-XL-Bear-Party/711111',
+    city: 'nyc',
+    timezone: 'America/New_York',
+    source: 'ai-web'
+  };
+  const twunk = {
+    title: 'TWUNK NATION',
+    startDate: new Date('2026-08-08T03:00:00.000Z'),
+    endDate: new Date('2026-08-08T07:00:00.000Z'),
+    bar: '3 Dollar Bill',
+    address: '260 Meserole St, Brooklyn, NY, 11206',
+    url: 'https://wl.eventim.us/event/TWUNK-NATION/722222',
+    city: 'nyc',
+    timezone: 'America/New_York',
+    source: 'ai-web'
+  };
+  assert.equal(core.getSameEventIdentitySignal(beef, twunk, { requireCloseStartTimes: false }), null);
+  const result = await core.deduplicateEvents([beef, twunk], null);
+  assert.equal(result.length, 2, 'same venue + same night + different titles/urls is two events');
+});
+
+test('e2e probe: the six verbatim run records collapse to three events, 42h copy stays separate', async () => {
+  const core = createCore();
+  const records = [
+    buildLoraxEventim(),
+    buildLoraxDegraded(),
+    buildRainEventim('RAIN-ON-ME-An-Ariana-X-Gaga-POOL-PARTY'),
+    buildRainEventim('RAIN-ON-ME-An-Ariana-X-Gaga-DANCE-PARTY'),
+    buildAquaticaDetail(),
+    buildAquaticaTruncated(),
+    buildRainVenueSiteCopy()
+  ];
+  const result = await core.deduplicateEvents(records, null);
+  assert.equal(result.length, 4, 'three real events plus the separate 42h-off copy');
+  const rainRecords = result.filter(event => /RAIN ON ME/.test(event.title));
+  assert.equal(rainRecords.length, 2, 'the merged eventim RAIN plus the unmerged 42h copy');
+  assert.equal(result.filter(event => /LORAX/.test(event.title)).length, 1);
+  assert.equal(result.filter(event => /Aquatica/.test(event.title)).length, 1);
+});
+
 test('deduplicateEvents still merges plain key-collision duplicates', async () => {
   const core = createCore();
   const first = {

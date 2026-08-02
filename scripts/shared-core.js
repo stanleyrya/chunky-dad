@@ -1241,18 +1241,30 @@ class SharedCore {
         return 'square';
     }
 
-    // Normalized view of a description for the strict-superset merge rule:
-    // lowercased, basic HTML entities decoded, whitespace collapsed. BOTH
-    // candidates pass through this, so entity/whitespace differences never
-    // block a genuine containment.
-    normalizeDescriptionForContainment(value) {
+    // Basic HTML entity decoding shared by description containment, dedup
+    // title keys, and title similarity: the standard named/numeric entities
+    // that survive scraping (&amp;, quote/apostrophe forms, &nbsp;, dashes,
+    // ellipsis). Entities only — case folding, whitespace collapsing, and
+    // unicode-twin folding stay with the callers. Run 20260802-135030: the
+    // venue-site copy of "Club Nyc presents : R &amp; B Night Showcase"
+    // could never key-collide with its decoded eventim twin because the raw
+    // entity's letters ("amp") survived into the normalized title.
+    decodeBasicHtmlEntities(value) {
         return String(value || '')
             .replace(/&amp;/gi, '&')
             .replace(/&(?:rsquo|lsquo|apos|#8217|#8216|#39);/gi, "'")
             .replace(/&(?:rdquo|ldquo|quot|#8221|#8220|#34);/gi, '"')
             .replace(/&(?:nbsp|#160);/gi, ' ')
             .replace(/&(?:ndash|mdash|#8211|#8212);/gi, '-')
-            .replace(/&(?:hellip|#8230);/gi, '...')
+            .replace(/&(?:hellip|#8230);/gi, '...');
+    }
+
+    // Normalized view of a description for the strict-superset merge rule:
+    // lowercased, basic HTML entities decoded, whitespace collapsed. BOTH
+    // candidates pass through this, so entity/whitespace differences never
+    // block a genuine containment.
+    normalizeDescriptionForContainment(value) {
+        return this.decodeBasicHtmlEntities(value)
             // Fold the literal unicode twins of those entities too, so an
             // entity-encoded copy contains its decoded (curly-quote) twin.
             .replace(/[\u2018\u2019]/g, "'")
@@ -6667,12 +6679,37 @@ class SharedCore {
         return true;
     }
 
+    // Additive log for the URL-identity dedup signals: when a merge was
+    // decided by the event-page URL (not by key/place/name), name the shared
+    // page so run logs show WHY two differently-shaped records merged.
+    logUrlIdentityDedupSignal(signal, event, match) {
+        if (signal !== 'event-page-url' && signal !== 'event-url-id') return;
+        const page = this.getEventPageUrlIdentity(event) || this.getEventPageUrlIdentity(match);
+        const where = page ? page.hostPath : 'unknown-url';
+        console.log(`🔗 DEDUP: "${event.title || 'event'}" matched "${match.title || 'event'}" by event-page URL identity (${where})`);
+    }
+
     async deduplicateEvents(events, httpAdapter, globalConfig = null) {
         const seen = new Map();
         const deduplicated = [];
-        
+
         // Log progress for large batches
         const logProgress = events.length > 10;
+
+        // Fan-in guard for the URL-identity signals (the first-pass twin of
+        // the second pass's listing-page rule below): an event-page identity
+        // shared by 3+ records in one batch is a listing/hub page, not an
+        // event page, so it must never make two records "the same".
+        const pageIdentityCounts = new Map();
+        for (const event of events) {
+            const page = this.getEventPageUrlIdentity(event);
+            if (page) pageIdentityCounts.set(page.hostPath, (pageIdentityCounts.get(page.hostPath) || 0) + 1);
+        }
+        const excludedUrlIdentityHostPaths = new Set();
+        for (const [hostPath, count] of pageIdentityCounts) {
+            if (count >= 3) excludedUrlIdentityHostPaths.add(hostPath);
+        }
+        const identityScanOptions = { requireCloseStartTimes: false, excludedUrlIdentityHostPaths };
 
         for (const event of events) {
             const key = this.createEventKey(event);
@@ -6723,11 +6760,15 @@ class SharedCore {
                     // an existing event by ticketUrl/identity, so run the identity scan
                     // before pushing it as new. The vetoed base-key holder is excluded —
                     // its place mismatch already proved it is a different event.
-                    const identityMatch = deduplicated.find(existing =>
-                        existing !== keyMatch &&
-                        this.getSameEventIdentitySignal(event, existing, { requireCloseStartTimes: false }));
+                    let vetoScanSignal = null;
+                    const identityMatch = deduplicated.find(existing => {
+                        if (existing === keyMatch) return false;
+                        vetoScanSignal = this.getSameEventIdentitySignal(event, existing, identityScanOptions);
+                        return Boolean(vetoScanSignal);
+                    });
                     if (identityMatch) {
                         console.log(`🔄 SharedCore: Key collision variant match — merging "${event.title || 'event'}" into "${identityMatch.title || 'event'}" via identity scan`);
+                        this.logUrlIdentityDedupSignal(vetoScanSignal, event, identityMatch);
                         await mergeIntoExisting(identityMatch);
                         continue;
                     }
@@ -6748,10 +6789,14 @@ class SharedCore {
             // No key match — degraded fields (e.g. a missing start time defaulting to
             // midnight) make keys brittle, so scan for a same-event identity match
             // before accepting the event as new.
-            const identityMatch = deduplicated.find(existing =>
-                this.getSameEventIdentitySignal(event, existing, { requireCloseStartTimes: false }));
+            let identityScanSignal = null;
+            const identityMatch = deduplicated.find(existing => {
+                identityScanSignal = this.getSameEventIdentitySignal(event, existing, identityScanOptions);
+                return Boolean(identityScanSignal);
+            });
             if (identityMatch) {
                 console.log(`🔄 SharedCore: Identity match without key match — merging "${event.title || 'event'}" into "${identityMatch.title || 'event'}"`);
+                this.logUrlIdentityDedupSignal(identityScanSignal, event, identityMatch);
                 await mergeIntoExisting(identityMatch);
                 continue;
             }
@@ -6923,6 +6968,13 @@ class SharedCore {
         
         // Apply the original title normalization for ${normalizedTitle}
         if (format.includes('${normalizedTitle}')) {
+            // HTML entities fold BEFORE the special-char collapse: "R &amp; B"
+            // and "R & B" name the same event, but the raw entity's letters
+            // ("amp") would otherwise survive into the key as a real word
+            // (run 20260802-135030: "Club Nyc presents : R &amp; B Night
+            // Showcase" keyed as ...r-amp-b... while its decoded eventim twin
+            // keyed as ...r-b...).
+            normalizedTitle = this.decodeBasicHtmlEntities(normalizedTitle);
             // Generic text normalization for better deduplication
             normalizedTitle = normalizedTitle
                 // Replace sequences of special chars between letters with a single hyphen
@@ -11140,9 +11192,11 @@ class SharedCore {
     areTitlesSimilar(title1, title2) {
         if (!title1 || !title2) return false;
         
-        // Normalize titles for comparison
+        // Normalize titles for comparison. Entities decode first so "R &amp; B"
+        // and "R & B" compare equal — the raw entity's letters ("amp") would
+        // otherwise survive the special-char strip as if they were a word.
         const normalize = (str) => {
-            return str
+            return this.decodeBasicHtmlEntities(str)
                 .toLowerCase()
                 .replace(/[^a-z0-9]/g, '') // Remove special chars
                 .replace(/\s+/g, ''); // Remove spaces
@@ -11310,6 +11364,36 @@ class SharedCore {
             return 'ticket-url';
         }
 
+        // Two records pointing at the same event PAGE are the same event:
+        // same www-folded host and identical path with the query/fragment
+        // stripped (an ?afflky affiliate tag decorates the page, it doesn't
+        // distinguish events). Weaker sibling: same host and the same
+        // id-shaped trailing path segment — the platform's event id — which
+        // catches slug-only rewrites of one event page ("…POOL-PARTY/696752"
+        // vs "…DANCE-PARTY/696752", run 20260802-135030). Both signals
+        // inherit the same-local-day guard above, so a reused event page for
+        // a different night (or a record whose start drifted by days) never
+        // merges; bare-root urls never reach here (getEventPageUrlIdentity
+        // returns null for them). options.excludedUrlIdentityHostPaths lets
+        // deduplicateEvents suppress paths shared by 3+ records in one batch
+        // — that fan-in is a listing/hub page, not an event page (same rule
+        // as the second-pass same-URL merge).
+        const incomingPage = this.getEventPageUrlIdentity(newEvent);
+        const existingPage = this.getEventPageUrlIdentity(existingEvent);
+        const excludedHostPaths = options.excludedUrlIdentityHostPaths || null;
+        const pageExcluded = Boolean(excludedHostPaths &&
+            (excludedHostPaths.has(incomingPage && incomingPage.hostPath) ||
+             excludedHostPaths.has(existingPage && existingPage.hostPath)));
+        if (incomingPage && existingPage && !pageExcluded) {
+            if (incomingPage.hostPath === existingPage.hostPath) {
+                return 'event-page-url';
+            }
+            if (incomingPage.host === existingPage.host &&
+                incomingPage.trailingId && incomingPage.trailingId === existingPage.trailingId) {
+                return 'event-url-id';
+            }
+        }
+
         // Same place, roughly the same start time (tolerant of legacy wall-clock offsets),
         // and any pair of name-ish fields (title/name/shortName) similar.
         if ((!requireCloseStartTimes || this.areDatesEqual(incoming.startDate, existing.startDate, 120)) &&
@@ -11364,6 +11448,40 @@ class SharedCore {
             : {};
         if (Object.prototype.hasOwnProperty.call(staticFields, 'website')) return null;
         return this.getEventUrlIdentityKey(event && event.website);
+    }
+
+    // Event-page URL identity for getSameEventIdentitySignal. Built on
+    // getEventIdentityUrlKey, so everything that helper already excludes —
+    // missing/non-http urls, bare domain roots (a homepage is where events
+    // were FOUND, not what they ARE), and statically stamped websites — never
+    // yields an identity here. The query/fragment is stripped on top of that:
+    // affiliate tags (?afflky=3DollarBill, run 20260802-135030 LORAX XCX)
+    // decorate the SAME event page, they don't distinguish events. The host
+    // is www-folded (the existing host-comparison convention, e.g.
+    // applyAggregatorWebsitePointers); the path stays case-sensitive.
+    // trailingId is the final path segment when it is id-shaped: ALL digits,
+    // length >= 5. Ticketing platforms key the event by that trailing id
+    // while the slug before it is editorial and drifts ("…POOL-PARTY/696752"
+    // vs "…DANCE-PARTY/696752"). Five digits, not four: calendar years are
+    // real path segments in this corpus (wp-content/uploads/2026/…) and
+    // pagination numbers (/page/2) are shorter still, while every observed
+    // platform event id has at least five (tixr /e/199620, etix 54403374,
+    // ticketweb 14269444, eventim 696752/700051/699269).
+    getEventPageUrlIdentity(event) {
+        const key = this.getEventIdentityUrlKey(event);
+        if (!key) return null;
+        const withoutQuery = key.split('?')[0];
+        const match = withoutQuery.match(/^https?:\/\/([^/]+)(\/.+)$/);
+        if (!match) return null;
+        const host = match[1].replace(/^www\./, '');
+        const path = match[2];
+        const segments = path.split('/').filter(Boolean);
+        const lastSegment = segments.length > 0 ? segments[segments.length - 1] : '';
+        return {
+            host,
+            hostPath: `${host}${path}`,
+            trailingId: /^\d{5,}$/.test(lastSegment) ? lastSegment : null
+        };
     }
 
     // Sanity window for same-URL dedup: recurring events reuse their event page,
