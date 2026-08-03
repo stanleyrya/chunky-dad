@@ -13243,7 +13243,13 @@ SharedCore.PROVENANCE_COMPANION_FIELDS = Object.freeze([
 //                    — manual always outranks automatic)
 // Values absent from a family rank null (fail open); blank ranks 0 (unstamped).
 SharedCore.PROVENANCE_TRUST_TIERS = Object.freeze({
-    pinSource: Object.freeze({ 'curated': 4, 'geocoded-exact': 3, 'geocoded-approx': 2, 'page': 1 }),
+    // 'curated-geocoded' is a pin geocoded from a CURATED address (used when a
+    // curated bar carries an address but no coordinates). Ranked level with
+    // 'geocoded-exact' rather than above it: the input address is more
+    // trustworthy, but neither is a surveyed coordinate, and a deliberate tie
+    // means this axis simply declines to pick a winner instead of inventing a
+    // ranking. Without an entry it ranked `null` and failed open in merges.
+    pinSource: Object.freeze({ 'curated': 4, 'curated-geocoded': 3, 'geocoded-exact': 3, 'geocoded-approx': 2, 'page': 1 }),
     addressSource: Object.freeze({ 'curated': 3, 'geo-poi': 2, 'page': 2, 'venue-site': 2, 'inferred': 1 }),
     barSource: Object.freeze({ 'curated': 3, 'venue-site': 2, 'venue-site-identity': 2, 'page-adjacent': 2, 'geo-poi': 2, 'uncorroborated': 1 }),
     imageSource: Object.freeze({ 'og-image': 2, 'jsonld': 2, 'page': 1 }),

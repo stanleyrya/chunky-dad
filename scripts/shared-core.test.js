@@ -13915,3 +13915,18 @@ test('dead-end store: one unproductive fetch is not enough — a second confirms
     assert.ok(fetched.includes(url), 'deadEndRetryDays: 0 still disables the store entirely');
   }
 });
+
+// A curated bar with an address but no coordinates now has its CURATED address
+// geocoded once (see normalizers' curated-pin rung), producing pinSource
+// 'curated-geocoded'. Without a tier entry that value ranked null and failed
+// open in merge verification, which is how a new provenance value silently
+// becomes untrusted.
+test('provenance tiers: curated-geocoded ranks above a page pin and level with geocoded-exact', () => {
+  const tier = (value) => SharedCore.getProvenanceTrustTier('pinSource', value);
+  assert.equal(tier('curated-geocoded'), 3);
+  assert.equal(tier('curated-geocoded'), tier('geocoded-exact'), 'a deliberate tie — neither is surveyed');
+  assert.ok(tier('curated') > tier('curated-geocoded'), 'a surveyed curated pin still wins');
+  assert.ok(tier('curated-geocoded') > tier('geocoded-approx'));
+  assert.ok(tier('curated-geocoded') > tier('page'));
+  assert.equal(tier('not-a-real-source'), null, 'unknown values still fail open');
+});
