@@ -13202,3 +13202,112 @@ test('no enforcement: a flagged event\'s action and write fields are byte-identi
   });
   assert.equal(writeShape(flagged[0]), writeShape(twin[0]));
 });
+
+// ---------------------------------------------------------------------------
+// Cross-realm Date handling (2026-08-03 run review).
+//
+// Scriptable loads every file through its own importModule, so shared-core and
+// the parsers/normalizers hold DIFFERENT Date constructors. A genuine Date
+// built in ai-web-parser is `typeof 'object'` inside shared-core and fails
+// `instanceof Date` — no throw, just the wrong branch. Proven in production
+// 2026-08-02 by resolveWallClockDates' own log formatter, which printed
+// Date.prototype.toString() output (the `instanceof` false branch) for 85 real
+// Date objects.
+//
+// Every test below MUST build its fixture with vm.runInNewContext. A plain
+// `new Date()` is same-realm and passes against the buggy code too.
+// ---------------------------------------------------------------------------
+
+const nodeVm = require('node:vm');
+
+function crossRealmDate(iso) {
+  const made = nodeVm.runInNewContext('new Date(iso)', { iso });
+  assert.equal(made instanceof Date, false, 'guard: fixture must be cross-realm');
+  assert.equal(Object.prototype.toString.call(made), '[object Date]', 'guard: still a real Date');
+  return made;
+}
+
+test('cross-realm: isDateLike identifies a foreign Date that instanceof rejects', () => {
+  const core = createCore();
+  const foreign = crossRealmDate('2026-08-03T02:09:18.000Z');
+  assert.equal(core.isDateLike(foreign), true);
+  assert.equal(core.isDateLike(new Date()), true, 'native Dates still qualify');
+  assert.equal(core.isDateLike('2026-08-03T02:09:18.000Z'), false, 'a string is not a Date');
+  assert.equal(core.isDateLike(null), false);
+  assert.equal(core.isDateLike({}), false);
+  assert.equal(core.isDateLike(1754186958000), false, 'a number is not a Date');
+});
+
+test('cross-realm: same-instant foreign Dates stay OUT of the merge clobber log', () => {
+  const core = createCore();
+  const iso = '2026-08-16T04:00:00.000Z';
+  // Production 2026-08-02: 44 of 44 distinct `🔄 MERGE: … clobbered N fields`
+  // lines listed startDate, including pairs naming the identical instant.
+  assert.equal(core.mergeValuesEqualForTracking(crossRealmDate(iso), crossRealmDate(iso)), true);
+  assert.equal(core.mergeValuesEqualForTracking(crossRealmDate(iso), iso), true, 'foreign Date vs ISO string');
+  assert.equal(core.mergeValuesEqualForTracking(crossRealmDate(iso), new Date(iso)), true, 'foreign vs native');
+  assert.equal(
+    core.mergeValuesEqualForTracking(crossRealmDate(iso), crossRealmDate('2026-08-16T05:00:00.000Z')),
+    false,
+    'a genuinely different instant is still a change'
+  );
+  assert.equal(core.mergeValuesEqualForTracking('S4', 'Rockbar'), false, 'non-dates still compare strictly');
+});
+
+test('cross-realm: a real date disagreement is still a genuine field conflict', () => {
+  const core = createCore();
+  assert.equal(
+    core.isGenuineFieldConflict('startDate', crossRealmDate('2026-08-06T17:00:00.000Z'), crossRealmDate('2026-08-07T04:00:00.000Z')),
+    true,
+    'the real BEAR HAPPY HOUR 5pm-vs-9pm divergence must be arbitrable'
+  );
+  assert.equal(
+    core.isGenuineFieldConflict('startDate', crossRealmDate('2026-08-06T17:00:00.000Z'), '2026-08-06T17:00:00.000Z'),
+    false,
+    'same instant across realms is not a conflict'
+  );
+  assert.equal(
+    core.isGenuineFieldConflict('coordinates', { lat: 1 }, { lat: 2 }),
+    false,
+    'genuine non-primitives stay ineligible'
+  );
+});
+
+test('cross-realm: sanity flags fire on foreign Dates (start-long-past, duration-implausible)', () => {
+  const core = createCore();
+  const nowMs = Date.parse('2026-08-03T02:09:18.000Z');
+
+  // The real massive.club record: a CREATE dated 784 days in the past that
+  // stamped `_sanityFlags: []` in run 20260802-220918.
+  const nark = {
+    title: 'Nark is Massive - Mix 001',
+    _action: 'new',
+    startDate: crossRealmDate('2024-06-10T02:00:00.000Z'),
+    endDate: crossRealmDate('2024-06-10T09:00:00.000Z')
+  };
+  assert.deepEqual(
+    core.getEventSanityFlags(nark, { nowMs }).map(flag => flag.code),
+    ['start-long-past']
+  );
+
+  // The real Lumberyard record: 2025-03-22 → 2026-10-17 from JSON-LD.
+  const queerArtMarket = {
+    title: 'Queer Art Market',
+    _action: 'new',
+    startDate: crossRealmDate('2025-03-22T21:00:00.000Z'),
+    endDate: crossRealmDate('2026-10-17T01:00:00.000Z')
+  };
+  assert.deepEqual(
+    core.getEventSanityFlags(queerArtMarket, { nowMs }).map(flag => flag.code).sort(),
+    ['duration-implausible', 'start-long-past']
+  );
+
+  // A healthy near-term event stays clean whichever realm built its dates.
+  const healthy = {
+    title: 'PACK PARTY',
+    _action: 'new',
+    startDate: crossRealmDate('2026-08-14T05:00:00.000Z'),
+    endDate: crossRealmDate('2026-08-14T09:00:00.000Z')
+  };
+  assert.deepEqual(core.getEventSanityFlags(healthy, { nowMs }), []);
+});

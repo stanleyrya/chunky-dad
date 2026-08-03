@@ -10092,3 +10092,68 @@ test('extractUrlsFromNextData harvests the JSON body even with following script 
   // No __NEXT_DATA__ tag → clean empty result.
   assert.deepEqual(parser.extractUrlsFromNextData('<html><script>1</script></html>', 'https://dice.fm/x'), []);
 });
+
+// ---------------------------------------------------------------------------
+// Meta `content` attributes must not truncate at an apostrophe
+// (2026-08-03 run review).
+//
+// The previous `["']([^"']+)["']` shape used ONE character class for BOTH
+// delimiters, so a double-quoted value stopped at its first apostrophe. On
+// 3dollarbillbk.com that turned og:title "…Aquatica Erotica: Bushwick's Wettest
+// Cabaret…" into "…Aquatica Erotica: Bushwick" — and because the truncated
+// string then BECAME the page corpus, the verbatim-evidence gate could not
+// catch it. Any event title or description with an apostrophe was affected.
+// ---------------------------------------------------------------------------
+
+test('meta content: an apostrophe inside a double-quoted value is not a delimiter', () => {
+  const parser = createParser();
+  const realTag = `<meta property="og:title" content="Buy Tickets to Aquatica Erotica: Bushwick's Wettest Cabaret in Brooklyn on Aug 07, 2026" />`;
+  assert.equal(
+    parser.readMetaContentAttribute(realTag),
+    `Buy Tickets to Aquatica Erotica: Bushwick's Wettest Cabaret in Brooklyn on Aug 07, 2026`
+  );
+});
+
+test('meta content: single-quoted values, embedded double quotes, and absent/empty attributes', () => {
+  const parser = createParser();
+  assert.equal(
+    parser.readMetaContentAttribute(`<meta name="description" content='Bear Happy Hour — it is "first Thursdays"' />`),
+    'Bear Happy Hour — it is "first Thursdays"',
+    'single-quoted value keeps embedded double quotes'
+  );
+  assert.equal(parser.readMetaContentAttribute(`<meta name="viewport" />`), '', 'absent attribute');
+  assert.equal(parser.readMetaContentAttribute(`<meta name="x" content="" />`), '', 'empty attribute stays falsy');
+  assert.equal(parser.readMetaContentAttribute(`<meta name="x" CONTENT="Cased">`), 'Cased', 'attribute name is case-insensitive');
+  assert.equal(parser.readMetaContentAttribute(null), '', 'null tag');
+  assert.equal(
+    parser.readMetaContentAttribute(`<meta property="og:title" content="LORAX XCX in Brooklyn on Aug 07, 2026" />`),
+    'LORAX XCX in Brooklyn on Aug 07, 2026',
+    'the apostrophe-free sibling is unchanged'
+  );
+});
+
+test('meta content: og extraction end-to-end keeps the apostrophe title intact', () => {
+  const parser = createParser();
+  const html = `<html><head>
+    <meta property="og:site_name" content="3 Dollar Bill" />
+    <meta property="og:title" content="Buy Tickets to Aquatica Erotica: Bushwick's Wettest Cabaret in Brooklyn on Aug 07, 2026" />
+    <meta name="description" content="Bushwick's wettest cabaret returns" />
+  </head><body></body></html>`;
+
+  assert.equal(
+    parser.extractOgMetaContent(html, 'og:title'),
+    `Buy Tickets to Aquatica Erotica: Bushwick's Wettest Cabaret in Brooklyn on Aug 07, 2026`
+  );
+  assert.deepEqual(
+    parser.extractOgMetaContentAll(html, 'og:title'),
+    [`Buy Tickets to Aquatica Erotica: Bushwick's Wettest Cabaret in Brooklyn on Aug 07, 2026`]
+  );
+  const entries = parser.extractOgMetaEntriesAll(html, ['og:title', 'og:site_name']);
+  assert.equal(entries.length, 2);
+  assert.equal(entries.find(entry => entry.key === 'og:site_name').value, '3 Dollar Bill');
+
+  const metaParts = parser.extractMetaParts(html);
+  const description = metaParts.find(part => String(part).includes('wettest cabaret'));
+  assert.ok(description, 'the description meta survives');
+  assert.ok(String(description).includes(`Bushwick's`), 'and keeps its apostrophe');
+});

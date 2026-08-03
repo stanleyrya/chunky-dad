@@ -754,7 +754,24 @@ function buildRecurringEventIcs(event, options = {}) {
 // YYYY-MM-DD string, never a time.
 function computeNextRruleOccurrence(rrule, fromDate) {
     const text = String(rrule || '').replace(/^RRULE\s*:/i, '').trim().toUpperCase();
-    if (!text || !(fromDate instanceof Date) || Number.isNaN(fromDate.getTime())) return null;
+    if (!text) return null;
+    // Cross-realm coercion, NOT defensive padding. Scriptable loads every file
+    // through its own importModule, so `event-schema` and the parsers hold
+    // different Date constructors: a Date built in ai-web-parser fails
+    // `instanceof Date` here even though it is a perfectly good Date. This was
+    // the ONLY date-taking function in this file lacking the coercion its
+    // siblings already do (formatIcsDate:632, parseIcsDate:641,
+    // buildRecurringEventIcs:696) — so it returned null for every real caller,
+    // silently disabling BOTH the dateless-weekly synthesis (#1616) and the
+    // older derived-occurrence path (#1563). Measured 2026-08-03: the success
+    // log line `🔁 RECURRING: derived next occurrence` appears ZERO times
+    // across every run ever recorded on device.
+    // Reject the absent cases BEFORE coercing: `new Date(null)` is epoch 0, a
+    // perfectly valid Date, which would turn "no anchor supplied" into a 1969
+    // occurrence. Same order of checks as SharedCore.toEpochMillis.
+    if (fromDate === null || fromDate === undefined || fromDate === '') return null;
+    const from = fromDate instanceof Date ? fromDate : new Date(fromDate);
+    if (Number.isNaN(from.getTime())) return null;
     const parts = {};
     for (const segment of text.split(';')) {
         const eq = segment.indexOf('=');
@@ -765,7 +782,7 @@ function computeNextRruleOccurrence(rrule, fromDate) {
     const WEEKDAY_INDEX = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
     const pad2 = (value) => String(value).padStart(2, '0');
     const formatLocalDate = (date) => `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
-    const today = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate());
+    const today = new Date(from.getFullYear(), from.getMonth(), from.getDate());
     if (parts.FREQ === 'DAILY') {
         return parts.BYDAY === undefined ? formatLocalDate(today) : null;
     }

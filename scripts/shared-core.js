@@ -902,6 +902,22 @@ class SharedCore {
         return 2 * earthRadiusKm * Math.asin(Math.min(1, Math.sqrt(h)));
     }
 
+    // Realm-independent "is this a Date". Scriptable loads every file through
+    // its own importModule, so shared-core and the parsers/normalizers hold
+    // DIFFERENT Date constructors: a Date built in ai-web-parser is
+    // `typeof 'object'` here and fails `instanceof Date`, silently taking the
+    // wrong branch with no throw. Proven in production 2026-08-02 by
+    // resolveWallClockDates' own log formatter, which printed
+    // `Date.prototype.toString()` output (the `instanceof` false branch) for
+    // 85 genuine Date objects. `Object.prototype.toString` reads the internal
+    // [[Class]] slot, which is realm-agnostic, so it is the correct test
+    // wherever a value CROSSES a module boundary. Prefer coercion
+    // (toEpochMillis) when you want the number; prefer this when you need to
+    // know the type without turning unrelated strings into dates.
+    isDateLike(value) {
+        return Object.prototype.toString.call(value) === '[object Date]';
+    }
+
     // Date-or-ISO-string → epoch milliseconds, or null when absent/unparseable.
     toEpochMillis(value) {
         if (value === null || value === undefined || value === '') return null;
@@ -918,7 +934,7 @@ class SharedCore {
     // fresh Date objects that fail the `!==` identity check.
     mergeValuesEqualForTracking(a, b) {
         if (a === b) return true;
-        if (a instanceof Date || b instanceof Date) {
+        if (this.isDateLike(a) || this.isDateLike(b)) {
             const aMs = this.toEpochMillis(a);
             const bMs = this.toEpochMillis(b);
             return aMs !== null && aMs === bMs;
@@ -940,7 +956,7 @@ class SharedCore {
     }
 
     serializeArbitrationValue(fieldName, value) {
-        if (value instanceof Date) return value.toISOString();
+        if (this.isDateLike(value)) return value.toISOString();
         if ((fieldName === 'startDate' || fieldName === 'endDate') && value) {
             const date = new Date(value);
             if (!Number.isNaN(date.getTime())) return date.toISOString();
@@ -989,7 +1005,7 @@ class SharedCore {
     // whitespace-only cover formatting twins.
     isGenuineFieldConflict(fieldName, valueA, valueB) {
         if (this.isEmptyArbitrationValue(valueA) || this.isEmptyArbitrationValue(valueB)) return false;
-        const isPrimitive = (v) => v instanceof Date || typeof v !== 'object';
+        const isPrimitive = (v) => this.isDateLike(v) || typeof v !== 'object';
         if (!isPrimitive(valueA) || !isPrimitive(valueB)) return false;
         const serializedA = this.serializeArbitrationValue(fieldName, valueA);
         const serializedB = this.serializeArbitrationValue(fieldName, valueB);
@@ -1445,10 +1461,14 @@ class SharedCore {
         if (!event || typeof event !== 'object') return flags;
         const nowMs = context && Number.isFinite(context.nowMs) ? context.nowMs : Date.now();
         const title = typeof event.title === 'string' ? event.title.replace(/\s+/g, ' ').trim() : '';
+        // Was a private re-implementation gated on `instanceof Date` with no
+        // coercion fallback — so on device (cross-realm Dates, see isDateLike)
+        // it returned NaN for every real event and rules 4/5 below could NEVER
+        // fire. Measured 2026-08-02: zero `⚠️ SANITY` lines across 178 runs.
+        // toEpochMillis is the shared helper every other date site here uses.
         const toMs = (value) => {
-            if (value instanceof Date) return value.getTime();
-            if (typeof value === 'string' && value.trim()) return new Date(value).getTime();
-            return NaN;
+            const ms = this.toEpochMillis(value);
+            return ms === null ? NaN : ms;
         };
 
         // 1. title-is-date-phrase — the whole title is a date/time expression
