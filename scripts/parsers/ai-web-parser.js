@@ -570,6 +570,24 @@ class AiWebParser {
         // Near-square artwork belongs in NEITHER orientation slot: a shape must
         // beat this ratio (or its reciprocal) to count as landscape (portrait).
         this.imageOrientationRatioThreshold = 1.1;
+        // Real pixel dimensions read out of an image's own header bytes, keyed
+        // by canonical image URL. Populated by the OCR download path (the bytes
+        // are already in hand) and by OCR cache hits that carry a stored
+        // measurement. In-memory only, scoped to this parser instance (one run).
+        this.measuredImageDimensionsByUrl = new Map();
+        // How far into an image the header scan reads. PNG/GIF/WebP answer in
+        // the first 30 bytes; a JPEG's frame header sits after its EXIF/ICC
+        // blocks, which on real camera-sourced flyers routinely run past 32KB.
+        this.imageHeaderPrefixBytes = 65536;
+        // Second-stage cap for a JPEG whose frame header was still out of reach.
+        // Real corpus: static.wixstatic.com/media/f91121_…~mv2.jpg carries a
+        // ~550KB ICC profile chunked across nine 64KB APP2 segments and puts
+        // SOF0 at byte 591,621. Anything past 1MB of pure metadata is not a
+        // flyer we need to measure.
+        this.imageHeaderDeepScanBytes = 1048576;
+        // Below this on either side an image is a spacer, favicon or tracking
+        // pixel, not artwork — measured or not, it fills no orientation slot.
+        this.minimumMeasuredImageDimension = 16;
         this.aiPromptHistory = [];
         // Context-prep responses keyed by prompt hash: confidence retries rebuild a
         // byte-identical context-prep prompt, so the HTTP round-trip can be reused.
@@ -4224,6 +4242,15 @@ class AiWebParser {
                 rawPayload = await runtime.fs.promises.readFile(cachePath, 'utf8');
             }
             const cached = JSON.parse(rawPayload);
+            // A stored header measurement is the only way an OCR cache hit can
+            // still answer orientation — a hit never re-downloads the bytes.
+            // Absent on entries written before this field; absent just means
+            // "not measured", never a guess.
+            if (cached && cached.imagePixels) {
+                for (const url of [imageUrl, cached.url, normalizedUrl]) {
+                    this.recordMeasuredImageDimensions(url, cached.imagePixels);
+                }
+            }
             const responseText = cached && cached.response && typeof cached.response.text === 'string'
                 ? cached.response.text
                 : (typeof cached.text === 'string' ? cached.text : '');
@@ -4262,17 +4289,25 @@ class AiWebParser {
         }
     }
 
-    async writeCachedOcrResult(imageUrl, ocrConfig = {}, text = '') {
+    async writeCachedOcrResult(imageUrl, ocrConfig = {}, text = '', imagePixels = null) {
         if (!ocrConfig.cacheEnabled) return null;
         const resultText = String(text || '').trim();
         if (resultText === undefined || resultText === null) return null;
         const runtime = this.getOcrCacheRuntime();
         if (!runtime) return null;
         const { normalizedUrl, hostDir, fileName, signatureHash } = this.getOcrCachePathParts(imageUrl, ocrConfig);
+        // The measured header dimensions ride along with the OCR record so a
+        // cache hit — the steady state, and how 404 of 404 stored records are
+        // read today — can still answer orientation without re-downloading the
+        // image. Additive: entries written before this field simply carry none.
+        const measuredPixels = imagePixels
+            ? this.sanitizeMeasuredDimensions(imagePixels.width, imagePixels.height)
+            : null;
         const payload = {
             url: normalizedUrl,
             cachedAt: new Date().toISOString(),
             cacheKeyVersion: 1,
+            ...(measuredPixels ? { imagePixels: measuredPixels } : {}),
             request: {
                 endpoint: String(ocrConfig.endpoint || ''),
                 model: String(ocrConfig.model || ''),
@@ -6272,6 +6307,17 @@ class AiWebParser {
             throw error;
         }
         console.log(`🤖 AI Web: OCR image attached via base64 payload (${base64Image.length} chars) for ${normalizedUrl} (downloaded in ${Date.now() - downloadStart}ms)`);
+        // The bytes are already here — read the real shape out of the header
+        // before they go to the vision model. No second fetch, and orientation
+        // then works for every image OCR touched, not just the rare few whose
+        // URL or meta tags happen to advertise dimensions.
+        const measuredPixels = this.measureImageDimensionsFromBase64(imageUrl, base64Image);
+        if (measuredPixels) {
+            // The event's image value can be either the URL as found on the
+            // page or its proxy-unwrapped form — point both at the measurement.
+            this.recordMeasuredImageDimensions(normalizedUrl, measuredPixels);
+            console.log(`🤖 AI Web: Measured image ${measuredPixels.width}x${measuredPixels.height} (${this.orientationFromImageDimensions(measuredPixels.width, measuredPixels.height)}) from header bytes for ${normalizedUrl}`);
+        }
         const diagnostics = {};
         let rawResponse = await this.core.callAiGenerate(ocrConfig, ocrConfig.prompt, passLabel, httpAdapter, this.recordAiPrompt.bind(this), base64Image, diagnostics);
         if (!rawResponse && diagnostics.failureKind === 'context-overflow') {
@@ -6316,7 +6362,7 @@ class AiWebParser {
             console.log(`🤖 AI Web: OCR response for ${imageUrl} has no text (imageClassification: ${parsed.imageClassification})`);
         }
         const normalized = this.normalizeOcrResult(parsed);
-        const cachePath = await this.writeCachedOcrResult(imageUrl, ocrConfig, JSON.stringify(parsed));
+        const cachePath = await this.writeCachedOcrResult(imageUrl, ocrConfig, JSON.stringify(parsed), measuredPixels);
         return {
             imageUrl,
             text: normalized.text,
@@ -13681,6 +13727,279 @@ TEXT:
         return 'square';
     }
 
+    // ------------------------------------------------------------------
+    // MEASURED DIMENSIONS (read out of the image's own header bytes)
+    // ------------------------------------------------------------------
+    // Published (og:image:width, JSON-LD ImageObject) and URL-encoded
+    // dimensions cover only a minority of real image URLs, which is why both
+    // orientation slots were effectively never filled. The file itself always
+    // knows its shape: every raster format states width and height in a fixed
+    // header a few bytes in. The OCR pass already downloads each candidate
+    // flyer as base64, so these helpers read THOSE SAME bytes — no second
+    // fetch, no image library, no browser/Scriptable-only API, identical
+    // arithmetic on device and in tests.
+    //
+    // Everything here fails open and quietly: a truncated header, an SVG, an
+    // unknown format or a data: URI produce null, never a throw and never a
+    // guessed orientation.
+    //
+    // Measurement answers SHAPE ONLY, never size. The Scriptable adapter
+    // re-encodes to JPEG and caps the longest side at 1024px before handing
+    // the base64 over, so measured pixels can be a downscaled rendition of the
+    // real asset. A longest-side downscale preserves aspect ratio (to well
+    // under a rounding pixel), so orientation survives it — but pixel AREA
+    // does not, which is why getImageCandidateArea keeps reading published/
+    // URL-derived dimensions and never these.
+
+    // Base64 → bytes, hand-rolled so it runs identically under Node and
+    // JavaScriptCore (Scriptable has neither Buffer nor atob). Only the first
+    // `maxBytes` are decoded: headers live at the front of the file and
+    // decoding a whole 5MB flyer to read 10 bytes would be silly.
+    decodeBase64Prefix(base64, maxBytes = 65536) {
+        const clean = String(base64 || '').replace(/[^A-Za-z0-9+/]/g, '');
+        if (clean.length < 4) return null;
+        const limit = Math.max(1, Math.floor(maxBytes));
+        const outLength = Math.min(limit, Math.floor((clean.length * 3) / 4));
+        if (outLength < 1) return null;
+        const lookup = this.getBase64DecodeLookup();
+        const bytes = new Uint8Array(outLength);
+        let out = 0;
+        for (let i = 0; i + 1 < clean.length && out < outLength; i += 4) {
+            const c0 = lookup[clean.charCodeAt(i)];
+            const c1 = lookup[clean.charCodeAt(i + 1)];
+            if (!(c0 >= 0) || !(c1 >= 0)) break;
+            bytes[out++] = ((c0 << 2) | (c1 >> 4)) & 0xFF;
+            if (out >= outLength || i + 2 >= clean.length) break;
+            const c2 = lookup[clean.charCodeAt(i + 2)];
+            if (!(c2 >= 0)) break;
+            bytes[out++] = ((c1 << 4) | (c2 >> 2)) & 0xFF;
+            if (out >= outLength || i + 3 >= clean.length) break;
+            const c3 = lookup[clean.charCodeAt(i + 3)];
+            if (!(c3 >= 0)) break;
+            bytes[out++] = ((c2 << 6) | c3) & 0xFF;
+        }
+        if (out === 0) return null;
+        return out === outLength ? bytes : bytes.subarray(0, out);
+    }
+
+    // char code → 6-bit value, built once per parser instance.
+    getBase64DecodeLookup() {
+        if (this.base64DecodeLookup) return this.base64DecodeLookup;
+        const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+        const lookup = new Int8Array(128).fill(-1);
+        for (let i = 0; i < alphabet.length; i++) {
+            lookup[alphabet.charCodeAt(i)] = i;
+        }
+        this.base64DecodeLookup = lookup;
+        return lookup;
+    }
+
+    readUint16BE(bytes, offset) {
+        return ((bytes[offset] << 8) | bytes[offset + 1]) >>> 0;
+    }
+
+    readUint32BE(bytes, offset) {
+        return (((bytes[offset] << 24) >>> 0) + (bytes[offset + 1] << 16) + (bytes[offset + 2] << 8) + bytes[offset + 3]);
+    }
+
+    // A measured pair only counts when both sides are plausible artwork.
+    // The lower bound is the spacer guard: lazy-loading pages ship 1x1
+    // transparent GIF placeholders (data:image/gif;base64,R0lGODlhAQABAAAA…)
+    // and tracking pixels, and a 1x8 spacer is not a "portrait flyer".
+    // Nothing below 16px on a side is artwork anyone would display.
+    sanitizeMeasuredDimensions(width, height) {
+        const w = Math.round(Number(width));
+        const h = Math.round(Number(height));
+        if (!Number.isFinite(w) || !Number.isFinite(h)) return null;
+        if (w < this.minimumMeasuredImageDimension || h < this.minimumMeasuredImageDimension) return null;
+        if (w > 100000 || h > 100000) return null;
+        return { width: w, height: h };
+    }
+
+    // {width, height} from the header bytes of a PNG, JPEG, WebP or GIF —
+    // null for anything else (SVG, AVIF, HTML error pages, truncated reads).
+    readImageDimensionsFromBytes(bytes) {
+        if (!bytes || typeof bytes.length !== 'number' || bytes.length < 10) return null;
+        try {
+            return this.readPngDimensions(bytes)
+                || this.readGifDimensions(bytes)
+                || this.readWebpDimensions(bytes)
+                || this.readJpegDimensions(bytes)
+                || null;
+        } catch (_) {
+            // Malformed/truncated header: no orientation beats a wrong one.
+            return null;
+        }
+    }
+
+    // PNG: 8-byte signature, then IHDR — required by the spec to be the FIRST
+    // chunk — as length(4) + "IHDR"(4) + width(4) + height(4), big-endian.
+    readPngDimensions(bytes) {
+        if (bytes.length < 24) return null;
+        const signature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+        for (let i = 0; i < signature.length; i++) {
+            if (bytes[i] !== signature[i]) return null;
+        }
+        if (!(bytes[12] === 0x49 && bytes[13] === 0x48 && bytes[14] === 0x44 && bytes[15] === 0x52)) return null;
+        return this.sanitizeMeasuredDimensions(this.readUint32BE(bytes, 16), this.readUint32BE(bytes, 20));
+    }
+
+    // GIF: "GIF87a"/"GIF89a", then the Logical Screen Descriptor's
+    // little-endian uint16 width at 6 and height at 8.
+    readGifDimensions(bytes) {
+        if (bytes.length < 10) return null;
+        if (!(bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38)) return null;
+        return this.sanitizeMeasuredDimensions(
+            bytes[6] | (bytes[7] << 8),
+            bytes[8] | (bytes[9] << 8)
+        );
+    }
+
+    // WebP: "RIFF" + size(4) + "WEBP", then one of three payload headers.
+    // Webflow (cdn.prod.website-files.com) serves flyers as WebP, so this is
+    // the format that matters most on the real corpus.
+    readWebpDimensions(bytes) {
+        if (bytes.length < 30) return null;
+        if (!(bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46)) return null;
+        if (!(bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50)) return null;
+        const fourCC = String.fromCharCode(bytes[12], bytes[13], bytes[14], bytes[15]);
+        if (fourCC === 'VP8 ') {
+            // Lossy: 3-byte frame tag, the 9D 01 2A start code, then 14-bit
+            // little-endian width and height (top 2 bits are the scale field).
+            if (!(bytes[23] === 0x9D && bytes[24] === 0x01 && bytes[25] === 0x2A)) return null;
+            return this.sanitizeMeasuredDimensions(
+                (bytes[26] | (bytes[27] << 8)) & 0x3FFF,
+                (bytes[28] | (bytes[29] << 8)) & 0x3FFF
+            );
+        }
+        if (fourCC === 'VP8L') {
+            // Lossless: 0x2F signature, then 14 bits of (width-1) followed by
+            // 14 bits of (height-1), packed little-endian across 4 bytes.
+            if (bytes[20] !== 0x2F) return null;
+            const b0 = bytes[21];
+            const b1 = bytes[22];
+            const b2 = bytes[23];
+            const b3 = bytes[24];
+            return this.sanitizeMeasuredDimensions(
+                ((b0 | ((b1 & 0x3F) << 8)) & 0x3FFF) + 1,
+                ((((b1 >> 6) | (b2 << 2) | ((b3 & 0x0F) << 10))) & 0x3FFF) + 1
+            );
+        }
+        if (fourCC === 'VP8X') {
+            // Extended (animation/alpha/ICC): 4 flag+reserved bytes, then the
+            // canvas (width-1) and (height-1) as 24-bit little-endian.
+            return this.sanitizeMeasuredDimensions(
+                1 + (bytes[24] | (bytes[25] << 8) | (bytes[26] << 16)),
+                1 + (bytes[27] | (bytes[28] << 8) | (bytes[29] << 16))
+            );
+        }
+        return null;
+    }
+
+    // JPEG: walk the marker segments from SOI until a Start Of Frame, whose
+    // payload is precision(1) + height(2) + width(2), big-endian. The frame
+    // header can sit past a large EXIF/ICC block, which is why the byte prefix
+    // read is generous rather than 32 bytes.
+    readJpegDimensions(bytes) {
+        if (bytes.length < 4) return null;
+        if (!(bytes[0] === 0xFF && bytes[1] === 0xD8)) return null;
+        let offset = 2;
+        while (offset + 3 < bytes.length) {
+            if (bytes[offset] !== 0xFF) {
+                // Not on a marker boundary (padding/garbage) — resync.
+                offset++;
+                continue;
+            }
+            const marker = bytes[offset + 1];
+            // 0xFF fill bytes may repeat before the real marker byte.
+            if (marker === 0xFF) {
+                offset++;
+                continue;
+            }
+            // Standalone markers carry no length payload.
+            if (marker === 0xD8 || marker === 0x01 || (marker >= 0xD0 && marker <= 0xD7)) {
+                offset += 2;
+                continue;
+            }
+            // End of image, or entropy-coded scan data begins: no frame header
+            // is coming, so there is nothing left to measure.
+            if (marker === 0xD9 || marker === 0xDA) return null;
+            const length = this.readUint16BE(bytes, offset + 2);
+            if (length < 2) return null;
+            // SOF0..SOF15 minus DHT (C4), JPG (C8) and DAC (CC).
+            const isStartOfFrame = marker >= 0xC0 && marker <= 0xCF
+                && marker !== 0xC4 && marker !== 0xC8 && marker !== 0xCC;
+            if (isStartOfFrame) {
+                if (offset + 9 > bytes.length) return null;
+                return this.sanitizeMeasuredDimensions(
+                    this.readUint16BE(bytes, offset + 7),
+                    this.readUint16BE(bytes, offset + 5)
+                );
+            }
+            offset += 2 + length;
+        }
+        return null;
+    }
+
+    // Read an image's real shape out of the base64 payload the OCR pass just
+    // downloaded, and remember it for the orientation slots. Returns the
+    // measured {width, height} or null; never throws.
+    measureImageDimensionsFromBase64(imageUrl, base64Image) {
+        try {
+            const dimensions = this.readImageDimensionsFromBase64(base64Image);
+            if (!dimensions) return null;
+            return this.recordMeasuredImageDimensions(imageUrl, dimensions);
+        } catch (_) {
+            return null;
+        }
+    }
+
+    // Two-stage decode: the cheap 64KB prefix answers PNG, GIF, WebP and the
+    // overwhelming majority of JPEGs. A JPEG states its frame header AFTER its
+    // metadata, so when the prefix ran out mid-metadata, decode once more with
+    // a larger bound rather than reporting "no orientation" for a flyer that
+    // simply has a fat ICC profile.
+    readImageDimensionsFromBase64(base64Image) {
+        const prefix = this.decodeBase64Prefix(base64Image, this.imageHeaderPrefixBytes);
+        const dimensions = this.readImageDimensionsFromBytes(prefix);
+        if (dimensions) return dimensions;
+        const prefixExhausted = prefix && prefix.length >= this.imageHeaderPrefixBytes;
+        const looksJpeg = prefix && prefix.length > 1 && prefix[0] === 0xFF && prefix[1] === 0xD8;
+        if (!prefixExhausted || !looksJpeg) return null;
+        return this.readImageDimensionsFromBytes(
+            this.decodeBase64Prefix(base64Image, this.imageHeaderDeepScanBytes)
+        );
+    }
+
+    // Remember measured pixels under an image's canonical URL (exact URL
+    // identity — size params are NOT stripped, because a -300x300 derivative
+    // and its original are genuinely different shapes). Run-scoped: the map
+    // lives on the parser instance, exactly like the OCR-shape candidates.
+    recordMeasuredImageDimensions(imageUrl, dimensions) {
+        const sanitized = dimensions
+            ? this.sanitizeMeasuredDimensions(dimensions.width, dimensions.height)
+            : null;
+        if (!sanitized) return null;
+        let recorded = false;
+        for (const url of [imageUrl, this.normalizeHttpUrlValue(imageUrl)]) {
+            const key = this.canonicalizeImageUrlForComparison(url);
+            if (!key) continue;
+            this.measuredImageDimensionsByUrl.set(key, sanitized);
+            recorded = true;
+        }
+        return recorded ? sanitized : null;
+    }
+
+    // Measured pixels for an image URL, or null when nothing measured it.
+    // data: URIs and other non-http values canonicalize to '' and so can never
+    // match a measurement — a 1x1 base64 GIF placeholder gets no orientation.
+    getMeasuredImageDimensions(imageUrl) {
+        if (!this.measuredImageDimensionsByUrl || this.measuredImageDimensionsByUrl.size === 0) return null;
+        const key = this.canonicalizeImageUrlForComparison(imageUrl);
+        if (!key) return null;
+        return this.measuredImageDimensionsByUrl.get(key) || null;
+    }
+
     // Orientation of one candidate. Dimensions the page PUBLISHED (JSON-LD
     // ImageObject width/height, og:image:width/height) are authoritative and
     // answer first; only then do we ask shared-core to read dimensions out of
@@ -13688,6 +14007,21 @@ TEXT:
     // 'unknown' (no slot) when they are absent.
     resolveImageCandidateOrientation(candidate) {
         if (!candidate || !candidate.url) return 'unknown';
+        // Measured pixels answer first: the file's own header is the ground
+        // truth about its shape, while published metadata is a CLAIM about it
+        // and routinely describes a different rendition than the URL serves.
+        // Recorded on the candidate for reporting only — getImageCandidateArea
+        // deliberately ignores it (see the measurement notes above: shape
+        // survives the OCR downscale, size does not).
+        const measured = this.getMeasuredImageDimensions(candidate.url);
+        if (measured) {
+            const measuredOrientation = this.orientationFromImageDimensions(measured.width, measured.height);
+            if (measuredOrientation !== 'unknown') {
+                candidate.measuredWidth = measured.width;
+                candidate.measuredHeight = measured.height;
+                return measuredOrientation;
+            }
+        }
         const published = this.orientationFromImageDimensions(candidate.width, candidate.height);
         if (published !== 'unknown') return published;
         if (this.core && typeof this.core.getImageDimensionsFromUrl === 'function') {
@@ -13844,6 +14178,14 @@ TEXT:
         if (!bySlot.portrait && !bySlot.landscape) return event;
         if (bySlot.portrait) event.imageVertical = bySlot.portrait.url;
         if (bySlot.landscape) event.imageHorizontal = bySlot.landscape.url;
+        // Additive: name the slots that were decided by real measured pixels
+        // rather than by a published or URL-encoded claim. Silent when nothing
+        // was measured, which is every path that existed before.
+        for (const [slot, field] of [['portrait', 'imageVertical'], ['landscape', 'imageHorizontal']]) {
+            const winner = bySlot[slot];
+            if (!winner || !winner.measuredWidth || !winner.measuredHeight) continue;
+            console.log(`🤖 AI Web: ${field} measured ${winner.measuredWidth}x${winner.measuredHeight} from image header for "${event.title || ''}"`);
+        }
         console.log(`🖼️ IMAGE SLOTS: vertical=${event.imageVertical || 'none'} horizontal=${event.imageHorizontal || 'none'} for "${event.title || ''}"`);
         return event;
     }
