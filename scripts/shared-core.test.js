@@ -4764,6 +4764,129 @@ test('matchBearKeywords: boundary tier hits whole words, never substrings', () =
   assert.deepEqual(core.matchBearKeywords('fatal furniture update puppet'), []);
 });
 
+// ---------------------------------------------------------------------------
+// Keyword-tier split (owner ruling 2026-08-03: "Pet Night" and "Gear Night"
+// are NOT bear events). Every fixture is verbatim from the 20260803 runs.
+// WIRING: the split is registry-backed, so `promoters` MUST be injected — a
+// core without it can never find a brand and would fake a passing result.
+// ---------------------------------------------------------------------------
+const REAL_PROMOTERS = require('../data/promoters.json');
+function createBearTierCore() {
+  return new SharedCore(CITIES, { eventSchema: EventSchema, promoters: REAL_PROMOTERS });
+}
+
+test('bear keyword tier: title and venue-name hits still short-circuit; description-only generic vocabulary does not', () => {
+  const core = createBearTierCore();
+  const classify = (event) => core.classifyBearKeywordMatch(
+    event,
+    core.matchBearKeywords(`${event.title || ''} ${event.description || ''} ${event.bar || ''}`)
+  );
+
+  // Title — unchanged.
+  assert.deepEqual(classify({ title: 'CLUB CHUB: QUENCHD' }),
+    { shortCircuit: true, source: 'title', brand: '' });
+
+  // Venue name — a NAME, not prose. These are the corpus's correct
+  // bar-name-only keyword bears.
+  for (const bar of ['BEARS DISCO', 'Bear-Village', 'CHUNK-PARTY.COM']) {
+    assert.deepEqual(classify({ title: 'Osos en la Playa', bar }).shortCircuit, true, bar);
+  }
+
+  // Description-only GENERIC vocabulary — the two the owner ruled on.
+  assert.deepEqual(
+    classify({
+      title: 'Pet Night',
+      bar: 'Dallas Eagle',
+      description: 'It’s PET NIGHT at the Dallas Eagle! Get ready to unleash your inner pup and join us for a night of tail-wagging fun 🐶🦅 Spread the woof!'
+    }),
+    { shortCircuit: false, source: 'description-generic', brand: '' });
+  assert.deepEqual(
+    classify({
+      title: 'Wig Out Wig Night',
+      bar: 'Dallas Eagle',
+      description: 'From buzzcut to bombshell, it’s time to Wig Out! 🦅 It’s the Eagle, you can always wear your regular leather or gear and never feel out of place.'
+    }),
+    { shortCircuit: false, source: 'description-generic', brand: '' });
+  assert.deepEqual(
+    classify({
+      title: 'Gear Night',
+      bar: 'Dallas Eagle',
+      description: 'Grab your gear, it’s time for GEAR NIGHT! Leather, Harnesses, Rubber, Sports, any kind of gear is always welcome at the Dallas Eagle!'
+    }),
+    { shortCircuit: false, source: 'description-generic', brand: '' });
+});
+
+test('bear keyword tier: a description-only hit that NAMES a registry brand keeps its short-circuit', () => {
+  const core = createBearTierCore();
+  const classify = (event) => core.classifyBearKeywordMatch(
+    event,
+    core.matchBearKeywords(`${event.title || ''} ${event.description || ''} ${event.bar || ''}`)
+  );
+
+  // The Bearracuda family: the BRAND is in the description, never the title.
+  for (const title of ['Portland NYE', 'SF⛓️ FLSM', 'TREASURE TRAIL Portland PRIDE']) {
+    assert.deepEqual(
+      classify({ title, bar: 'Nova PDX', description: 'Bearracuda is the biggest, longest-running bear dance party in the world.' }),
+      { shortCircuit: true, source: 'description-brand', brand: 'bearracuda' },
+      title);
+  }
+  // The curated shortName's display hyphens ("MEGA-WOOF", "BEAR-RAC-UDA") must
+  // still match a description that writes the brand smooshed.
+  assert.equal(classify({ title: 'Saturday', description: 'MEGAWOOF presents an all-night takeover' }).source,
+    'description-brand');
+
+  // A registry brand whose own name carries NO bear vocabulary (SPOOKMINCE,
+  // Goldiloxx) is not a bear-brand phrase — it cannot rescue generic prose.
+  assert.equal(core.textNamesBearBrand('Goldiloxx is back in Chicago'), '');
+  // The brand set is DERIVED, never hardcoded: an empty registry finds none.
+  const bare = new SharedCore(CITIES, { eventSchema: EventSchema, promoters: [] });
+  assert.equal(bare.textNamesBearBrand('Bearracuda is the biggest bear dance party'), '');
+});
+
+test('bear keyword tier: a deferred description-only hit is judged by the AI, and never dropped when the AI is unavailable', async () => {
+  const petNight = {
+    title: 'Pet Night',
+    bar: 'Dallas Eagle',
+    city: 'dallas',
+    description: 'Get ready to unleash your inner pup and join us for a night of tail-wagging fun 🐶🦅 Spread the woof!'
+  };
+
+  // The AI tier now gets to see it — and its verdict is what ships.
+  const notBear = buildBearVerdictAdapter({
+    verdict: 'not_bear',
+    reason: 'a pup/gear night, not a bear event',
+    eventEvidence: ['unleash your inner pup']
+  });
+  const drops = [];
+  const kept = await createBearTierCore().filterBearEvents([petNight], bearCheckConfig('enforce'), notBear, drops);
+  assert.equal(notBear.calls.length, 1, 'the AI tier was consulted — the keyword tier no longer short-circuits it');
+  assert.equal(kept.length, 0, 'Pet Night is not a bear event');
+  assert.equal(drops.length, 1);
+  assert.match(drops[0].reason, /^ai: /);
+
+  // Fail closed: with no AI available the legacy keyword verdict stands, so
+  // the split can never silently lose a bear event.
+  const noAi = await createBearTierCore().filterBearEvents([petNight], bearCheckConfig('enforce'), null, []);
+  assert.equal(noAi.length, 1, 'kept when the AI tier cannot judge');
+  assert.equal(noAi[0].bearSource, 'keyword', 'still provenanced as a keyword verdict');
+
+  // A TITLE hit is unchanged: still short-circuits ahead of any AI request.
+  const titleAdapter = buildBearVerdictAdapter({ verdict: 'not_bear', reason: 'nope' });
+  const titleKept = await createBearTierCore().filterBearEvents(
+    [{ title: 'CLUB CHUB: QUENCHD', bar: 'The Godfrey Hotel Hollywood', city: 'dallas' }],
+    bearCheckConfig('enforce'), titleAdapter, []);
+  assert.equal(titleAdapter.calls.length, 0, 'no AI request for a title keyword hit');
+  assert.equal(titleKept[0].bearSource, 'keyword');
+
+  // Bearracuda's description-only BRAND hit likewise short-circuits.
+  const brandAdapter = buildBearVerdictAdapter({ verdict: 'not_bear', reason: 'nope' });
+  const brandKept = await createBearTierCore().filterBearEvents(
+    [{ title: 'Portland NYE', bar: 'Nova PDX', city: 'dallas', description: 'Bearracuda is the biggest bear dance party in the world.' }],
+    bearCheckConfig('enforce'), brandAdapter, []);
+  assert.equal(brandAdapter.calls.length, 0, 'no AI request when the description names the brand');
+  assert.equal(brandKept[0].bearSource, 'keyword');
+});
+
 test('bear check report mode returns exactly what legacy returns', async () => {
   const events = [
     { title: 'Bear Night' },
@@ -12463,7 +12586,7 @@ test('final build: an existing ticketUrl survives — the platform website is si
     ['🔗 LINKS: replaced platform website https://www.etix.com/ticket/p/54403374 with https://www.furball.nyc — curated identity of "Furball" for "FURBALL NYC"']);
 });
 
-test('final build: platform website with NO curated identity only logs; non-platform websites stay silent', async () => {
+test('final build: platform website with NO curated identity is CLEARED into ticketUrl; non-platform websites stay silent', async () => {
   const core = createFinalBuildCore({ promoters: require('../data/promoters.json') });
   const event = {
     title: 'MYSTERY TEA DANCE',
@@ -12479,11 +12602,16 @@ test('final build: platform website with NO curated identity only logs; non-plat
   } finally {
     restore();
   }
-  assert.equal(analyzed.website, 'https://www.eventbrite.com/e/mystery-tickets-1', 'left as-is');
-  assert.equal(analyzed.ticketUrl, undefined, 'nothing moved');
+  // Owner ruling 2026-08-03: an empty website beats a vendor's — the site
+  // falls back to the promoter's curated favicon.
+  assert.equal(analyzed.website, undefined, 'the vendor link never occupies website');
+  assert.equal(analyzed.url, undefined, 'url is an alias of website and goes with it');
+  assert.equal(analyzed.ticketUrl, 'https://www.eventbrite.com/e/mystery-tickets-1', 'the link is parked in ticketUrl, not lost');
+  assert.ok(!analyzed.notes.includes('website:'), 'notes carry no website line');
+  assert.ok(analyzed.notes.includes('ticketUrl: https://www.eventbrite.com/e/mystery-tickets-1'));
   assert.deepEqual(
     lines.filter(line => line.startsWith('🔗 LINKS:')),
-    ['🔗 LINKS: website https://www.eventbrite.com/e/mystery-tickets-1 is on a platform host but no curated identity to fall back to — left as-is for "MYSTERY TEA DANCE"']);
+    ['🔗 LINKS: cleared platform website https://www.eventbrite.com/e/mystery-tickets-1 — a ticketing/social link is never the identity link (moved to ticketUrl, website/url left empty) for "MYSTERY TEA DANCE"']);
 
   // A website whose host is NOT a platform host is never touched, even with
   // a matched promoter (Megawoof's curated linktree stays a linktree).
@@ -12504,6 +12632,185 @@ test('final build: platform website with NO curated identity only logs; non-plat
   }
   assert.equal(untouched.website, 'https://linktr.ee/megawoof_america');
   assert.equal(quiet.filter(line => line.startsWith('🔗 LINKS:')).length, 0, 'no LINKS line for a non-platform website');
+});
+
+// ---------------------------------------------------------------------------
+// Fix (owner, run 20260803): "Overall ticket URLs shouldn't be website/url
+// fields, they should always go in the ticketUrl … filling it with the ticket
+// link again isn't helpful. It would be better to have that field empty."
+// Every fixture below is a real event from the 20260803 runs.
+// ---------------------------------------------------------------------------
+
+test('final build: a facebook EVENT link never occupies website/url (real Club Chub DTLA)', async () => {
+  const core = createFinalBuildCore({ promoters: require('../data/promoters.json') });
+  const event = {
+    title: 'Club Chub DTLA - Latin Night',
+    startDate: new Date('2026-08-16T22:00:00.000Z'),
+    city: 'la',
+    website: 'https://www.facebook.com/events/1376781057883088/',
+    url: 'https://www.facebook.com/events/1376781057883088/',
+    instagram: 'https://www.instagram.com/clubchubparty',
+    _promoter: 'Club Chub'
+  };
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(event, NEW_ACTION_ANALYSIS, {}, {});
+  } finally {
+    restore();
+  }
+  // Club Chub is in the registry but carries NO website — so there is nothing
+  // to adopt, and empty is the right answer (the site falls back to the
+  // promoter's curated favicon).
+  assert.equal(analyzed.website, undefined, 'facebook.com/events/… is social, not identity');
+  assert.equal(analyzed.url, undefined, 'url is the same canonical field');
+  assert.equal(analyzed.ticketUrl, 'https://www.facebook.com/events/1376781057883088/', 'the link lands in ticketUrl');
+  assert.ok(!analyzed.notes.includes('website: https://www.facebook.com'), 'notes never serialize it as website');
+  assert.equal(analyzed.instagram, 'https://www.instagram.com/clubchubparty', 'the curated instagram is untouched');
+  assert.equal(lines.filter(line => line.startsWith('🔗 LINKS: cleared platform website')).length, 1);
+});
+
+test('final build: an eventbrite listing with tracking params never occupies website (real Club Chub Weekend 2026)', async () => {
+  const core = createFinalBuildCore({ promoters: require('../data/promoters.json') });
+  const listing = 'https://www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209?utm-campaign=social&aff=ebdsshcopyurl';
+  const event = {
+    title: 'Club Chub Weekend 2026 — The Ultimate Celebration!',
+    startDate: new Date('2026-11-06T23:00:00.000Z'),
+    city: 'dallas',
+    website: listing,
+    url: listing,
+    _promoter: 'Club Chub'
+  };
+  const restore = captureFinalBuildLogs([]);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(event, NEW_ACTION_ANALYSIS, {}, {});
+  } finally {
+    restore();
+  }
+  assert.equal(analyzed.website, undefined);
+  assert.equal(analyzed.url, undefined);
+  assert.equal(analyzed.ticketUrl, listing, 'query string and all — the value is moved verbatim, never rewritten');
+});
+
+test('final build: a duplicated ticket link is cleared out of website even when ticketUrl already holds one (real GOLDILOXX Chicago)', async () => {
+  const core = createFinalBuildCore({ promoters: require('../data/promoters.json') });
+  const event = {
+    title: 'GOLDILOXX Chicago | NYC\'s Interactive Nightlife Experience',
+    startDate: new Date('2026-09-05T02:00:00.000Z'),
+    city: 'chicago',
+    // The ticket link duplicated into website under a slightly different path.
+    website: 'https://www.sickening.events/e/goldiloxx-chicago-2/tickets',
+    ticketUrl: 'https://www.sickening.events/e/goldiloxx-chicago/tickets',
+    _promoter: 'Goldiloxx'
+  };
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(event, NEW_ACTION_ANALYSIS, {}, {});
+  } finally {
+    restore();
+  }
+  // Goldiloxx deliberately ships `favicon: https://linktr.ee/goldiloxx` and NO
+  // website — an empty website is exactly the owner's pattern here. The
+  // entry's bare "goldiloxx" urlPattern occurs inside the ticket URL and must
+  // NOT be read as the promoter's own presence on sickening.events.
+  assert.equal(core.isCuratedPlatformSelfIdentityUrl(event, event.website), false,
+    'a bare brand token inside a vendor path is not a self-identity link');
+  assert.equal(analyzed.website, undefined);
+  assert.equal(analyzed.ticketUrl, 'https://www.sickening.events/e/goldiloxx-chicago/tickets',
+    'the real ticketUrl is never overwritten by the website duplicate');
+  assert.deepEqual(
+    lines.filter(line => line.startsWith('🔗 LINKS: cleared platform website')),
+    ['🔗 LINKS: cleared platform website https://www.sickening.events/e/goldiloxx-chicago-2/tickets — a ticketing/social link is never the identity link (existing ticketUrl https://www.sickening.events/e/goldiloxx-chicago/tickets kept, website/url left empty) for "GOLDILOXX Chicago | NYC\'s Interactive Nightlife Experience"']);
+});
+
+test('final build: the CORRECT shape is untouched — a promoter homepage keeps website, vendor keeps ticketUrl (real CLUB CHUB: The Wig Out Party)', async () => {
+  const core = createFinalBuildCore({ promoters: require('../data/promoters.json') });
+  const event = {
+    title: 'CLUB CHUB: The Wig Out Party',
+    startDate: new Date('2026-11-01T20:00:00.000Z'),
+    city: 'dallas',
+    website: 'https://www.clubchubusa.com/',
+    url: 'https://www.clubchubusa.com/',
+    ticketUrl: 'https://www.eventbrite.com/e/wig-out-tickets-1',
+    _promoter: 'Club Chub'
+  };
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(event, NEW_ACTION_ANALYSIS, {}, {});
+  } finally {
+    restore();
+  }
+  assert.equal(analyzed.website, 'https://www.clubchubusa.com/', 'a legitimate promoter homepage is never stripped');
+  assert.equal(analyzed.ticketUrl, 'https://www.eventbrite.com/e/wig-out-tickets-1');
+  assert.equal(lines.filter(line => line.startsWith('🔗 LINKS:')).length, 0, 'nothing to say — this shape is already right');
+});
+
+test('final build: the promoter OWN presence on a platform host is an identity link and survives', async () => {
+  const core = createFinalBuildCore({
+    promoters: [
+      // Registry-shaped: a host-anchored urlPattern (the organizer page) and a
+      // curated instagram handle, and NO website to fall back to.
+      { name: 'Bearracuda', instagram: 'https://www.instagram.com/bearracuda',
+        urlPatterns: ['eventbrite.com/o/bearracuda-21867032189'], bearAffinity: 'usually' }
+    ]
+  });
+  const organizerPage = {
+    title: 'BEARRACUDA ATLANTA',
+    startDate: new Date('2026-09-12T23:00:00.000Z'),
+    city: 'dallas',
+    website: 'https://www.eventbrite.com/o/bearracuda-21867032189',
+    _promoter: 'Bearracuda'
+  };
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(organizerPage, NEW_ACTION_ANALYSIS, {}, {});
+  } finally {
+    restore();
+  }
+  assert.equal(analyzed.website, 'https://www.eventbrite.com/o/bearracuda-21867032189', 'the organizer page IS the identity link');
+  assert.equal(analyzed.ticketUrl, undefined, 'nothing moved');
+  assert.deepEqual(
+    lines.filter(line => line.startsWith('🔗 LINKS:')),
+    ['🔗 LINKS: website https://www.eventbrite.com/o/bearracuda-21867032189 is on a platform host but no curated identity to fall back to — left as-is for "BEARRACUDA ATLANTA"']);
+
+  // The instagram PROFILE is likewise self-identity; a facebook EVENT listing
+  // for the same promoter is not.
+  assert.equal(core.isCuratedPlatformSelfIdentityUrl(organizerPage, 'https://www.instagram.com/bearracuda'), true);
+  assert.equal(core.isCuratedPlatformSelfIdentityUrl(organizerPage, 'https://www.facebook.com/events/1376781057883088/'), false);
+});
+
+test('final build: url goes with website — a differing aggregator url is NOT promoted into it', async () => {
+  const core = createFinalBuildCore({ promoters: require('../data/promoters.json') });
+  // Real shape (Lazy Bear Week 2026, run 20260803): applyAggregatorWebsitePointers
+  // already moved website off the aggregator, leaving url on the aggregator's own
+  // copy of the event page. Trust the pointer, not the copy — that copy must not
+  // be promoted back into website when the vendor link is cleared.
+  const event = {
+    title: 'Lazy Bear Week 2026',
+    startDate: new Date('2026-08-20T23:00:00.000Z'),
+    city: 'dallas',
+    website: 'https://lazybearweek.eventbrite.com/',
+    url: 'https://thebearcalendar.com/events/lazy-bear-week-2026-2026/'
+  };
+  const restore = captureFinalBuildLogs([]);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(event, NEW_ACTION_ANALYSIS, {}, {});
+  } finally {
+    restore();
+  }
+  assert.equal(analyzed.website, undefined, 'website/url are ONE field and clear together');
+  assert.equal(analyzed.url, undefined);
+  assert.equal(analyzed.ticketUrl, 'https://lazybearweek.eventbrite.com/',
+    'an organizer-branded eventbrite subdomain is still a ticketing link');
 });
 
 test('slot merge: one-sided og provenance does not clobber a curated slot (falls through)', async () => {
