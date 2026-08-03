@@ -31,7 +31,7 @@ const scraperPromoters = [
     ],
     "shortName": "BHH",
     "shorterName": "BHH",
-    "website": "https://linktr.ee/bearhappyhour",
+    "favicon": "https://linktr.ee/bearhappyhour",
     "urlPatterns": [
       "linktr.ee/bearhappyhour",
       "eventbrite.com/o/bear-happy-hour-87043830313",
