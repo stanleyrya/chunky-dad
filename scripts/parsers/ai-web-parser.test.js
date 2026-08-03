@@ -6645,7 +6645,10 @@ test('curated-website identity: a multi-claimant host resolves the sub-venue fro
       title: 'CONFESSIONS DEUX', bar: '', city: 'unknown',
       address: '270 Meserole St. BK', _venueSitePageHost: '3dollarbillbk.com'
     },
-    // No evidence at all → the primary (first claimant with coordinates)
+    // No evidence at all → FAIL CLOSED. The primary is a ranking, not
+    // evidence: run 20260802-194055 had four unresolved 3dollarbillbk.com
+    // events that were really at the sibling "The Yard at 9 Bob Note", so
+    // filling the coordinate-carrying primary ships confidently wrong venues.
     { title: 'Big Gay Foam Party', bar: '', city: 'unknown', _venueSitePageHost: '3dollarbillbk.com' },
     // The event's own text names one claimant whole-word
     {
@@ -6667,10 +6670,10 @@ test('curated-website identity: a multi-claimant host resolves the sub-venue fro
 
   assert.equal(events[0].bar, 'The Yard at 9 Bob Note', 'the address evidence picks the sub-venue');
   assert.equal(events[0].city, 'nyc');
-  assert.equal(events[1].bar, '3 Dollar Bill', 'no evidence → primary claimant (first with coordinates)');
-  assert.equal(events[1].city, 'nyc');
+  assert.equal(events[1].bar, '', 'no evidence → bar stays blank; guessing the primary ships the wrong sibling');
+  assert.equal(events[1].city, 'nyc', 'the city is unambiguous (single claimant city) and still fills');
   assert.equal(events[2].bar, 'The Yard at 9 Bob Note', 'the event text picks the sub-venue');
-  assert.equal(events[3].bar, '3 Dollar Bill', 'ambiguous evidence falls back to the primary');
+  assert.equal(events[3].bar, '', 'ambiguous evidence fails closed too');
   assert.equal(events[4].bar, '', 'an off-site party is never claimed');
   assert.equal(events[4].city, 'unknown');
 
@@ -6680,7 +6683,10 @@ test('curated-website identity: a multi-claimant host resolves the sub-venue fro
   assert.ok(logs.some(line => line.includes(
     'Filled bar "The Yard at 9 Bob Note" from curated-website identity for "CONFESSIONS DEUX" (the event address is its curated address)')));
   assert.ok(logs.some(line => line.includes(
-    'Filled bar "3 Dollar Bill" from curated-website identity for "Big Gay Foam Party" (primary claimant — first claimant with curated coordinates)')));
+    'Left bar blank for "Big Gay Foam Party" — 2 curated bars share 3dollarbillbk.com ("3 Dollar Bill", "The Yard at 9 Bob Note") and this event\'s own evidence names none; the primary "3 Dollar Bill" is a ranking, not evidence')),
+    `fail-closed log expected, got: ${JSON.stringify(logs)}`);
+  assert.ok(!logs.some(line => line.includes('Filled bar "3 Dollar Bill"')),
+    'the primary is never filled without per-event evidence');
 });
 
 test('curated-website identity: a site-published address picks the primary; blocked, cross-city, and platform hosts never establish', () => {
@@ -7426,12 +7432,17 @@ test('rrule validation rejects non-RRULE values, unverbatim evidence, and schedu
     `distinct mismatch log expected, got: ${JSON.stringify(logs)}`);
 
   // FREQ=WEEKLY on ordinal-weekday prose ("EVERY 2ND FRIDAY" is a monthly
-  // pattern — the Lumberyard model error) → rejected, ambiguous source.
+  // pattern — the Lumberyard model error) → the gate still drops it, and the
+  // schedule-mismatch recovery then reads the CORRECT rule out of that same
+  // quote (see the dedicated recovery test below).
   const ordinalWeekly = runRruleValidation(parser, {
     rrule: 'FREQ=WEEKLY;BYDAY=FR',
     __fieldEvidence: { rrule: 'EVERY 2ND FRIDAY' }
   });
-  assert.equal(ordinalWeekly.event.rrule, undefined, 'ordinal prose contradicts FREQ=WEEKLY');
+  assert.equal(ordinalWeekly.report.dropped[0].reason, 'rrule-schedule-evidence',
+    'the gate still drops the mistranslated rule');
+  assert.equal(ordinalWeekly.event.rrule, 'FREQ=MONTHLY;BYDAY=2FR',
+    'the ordinal the model mistranslated is recovered from its own evidence');
 
   // Sanity: a genuinely weekly statement passes.
   const weekly = runRruleValidation(parser, {
@@ -10156,4 +10167,182 @@ test('meta content: og extraction end-to-end keeps the apostrophe title intact',
   const description = metaParts.find(part => String(part).includes('wettest cabaret'));
   assert.ok(description, 'the description meta survives');
   assert.ok(String(description).includes(`Bushwick's`), 'and keeps its apostrophe');
+});
+
+// ---------------------------------------------------------------------------
+// Run 20260802-222252 (thedallaseagle.com): the listing widget prints each
+// event's schedule as its own labelled lines ("Start from: …", "End at: …").
+// Every one of those lines carries a date signal, so each opened a NEW segment
+// boundary — 16 segments for the page, every window straddling two listings —
+// and the dated-line title path handed the bare LABEL back as the page's own
+// listing title, shipping five ghost calendar events ("Start from" x3,
+// "End at" x2).
+// ---------------------------------------------------------------------------
+
+const SCHEDULE_LABEL_LISTING_HTML = `
+  <html><body>
+    <div><p>SHOCK Therapy with DJ Dan Slater</p>
+      <p>Start from: August 1, 2026 - 10:00 pm</p>
+      <p>End at: August 2, 2026 - 2:00 am</p>
+      <p>Plug in and lose yourself at SHOCK Therapy, our monthly dance floor takeover.</p></div>
+    <div><p>Bear and Twink Night</p>
+      <p>Start from: August 14, 2026 - 9:00 pm</p>
+      <p>End at: August 15, 2026 - 2:00 am</p>
+      <p>Opposites attract at this event, so come out and enjoy the variety.</p></div>
+  </body></html>`;
+
+test('schedule-label lines never open a segment boundary and never become a listing title', () => {
+  const parser = createParser();
+
+  // Shape detection: a bare schedule label + separator + date/time-only value.
+  assert.equal(parser.isScheduleLabelDateLine('Start from: August 1, 2026 - 10:00 pm'), true);
+  assert.equal(parser.isScheduleLabelDateLine('End at: August 2, 2026 - 2:00 am'), true);
+  assert.equal(parser.isScheduleLabelDateLine('DOORS OPEN — 8:00 PM'), true,
+    'the label set is case-insensitive and generalises beyond one venue');
+  assert.equal(parser.isScheduleLabelDateLine('Until: 2:00 am'), true);
+  // Fails closed: a real listing head that merely starts with a schedule word
+  assert.equal(parser.isScheduleLabelDateLine('Start: Bear Happy Hour August 9'), false,
+    'a remainder carrying a name is never treated as a bare schedule value');
+  assert.equal(parser.isScheduleLabelDateLine('CHUNK Portland - 5/23 Sat, May 23'), false,
+    'a name+date listing line keeps its existing dated-line title behaviour');
+
+  const segments = parser.buildMultiEventSegments(SCHEDULE_LABEL_LISTING_HTML, 'https://eagle.example/events/');
+  const titles = segments.map(segment => parser.deriveSegmentListingTitle(segment));
+  assert.deepEqual(titles, ['SHOCK Therapy with DJ Dan Slater', 'Bear and Twink Night'],
+    `the label lines fold into the event above them, got: ${JSON.stringify(titles)}`);
+  assert.ok(!titles.some(title => /^(Start from|End at)$/i.test(title)),
+    'the bare label is never the page\'s own listing title');
+
+  // Flag, don't drop: every schedule line still rides along in its own segment
+  assert.ok(segments[0].lines.includes('Start from: August 1, 2026 - 10:00 pm'));
+  assert.ok(segments[0].lines.includes('End at: August 2, 2026 - 2:00 am'));
+  assert.ok(segments[1].lines.includes('Start from: August 14, 2026 - 9:00 pm'));
+  assert.ok(segments[1].lines.includes('End at: August 15, 2026 - 2:00 am'));
+});
+
+test('curated-website fills run when the POI-gated identity establishes but applies to no event', () => {
+  const parser = createCuratedWebsiteParser();
+  // The 20260802-194055 shape: siteRole 'venue' + a curated venue name and NO
+  // address consensus → getEstablishedVenueSiteIdentity returns the weaker
+  // hostLevel:false rung, which then requires a matching _geoPoiName per event.
+  const entry = curatedWebsiteEntry({ venueRoleSeen: true, venueName: '3 Dollar Bill' });
+  const identity = parser.getEstablishedVenueSiteIdentity(entry, entry.consensusKey);
+  assert.ok(identity, 'the POI-gated rung does establish');
+  assert.equal(identity.hostLevel, false);
+
+  parser.lastVenueSiteConsensus = { '3dollarbillbk.com': entry };
+  const events = [
+    // No _geoPoiName anywhere — the listing page never produced one
+    { title: 'Galaxy Brain Ball', bar: '', city: 'unknown', _venueSitePageHost: '3dollarbillbk.com' },
+    {
+      title: 'CONFESSIONS DEUX', bar: '', city: 'unknown',
+      address: '270 Meserole St. BK', _venueSitePageHost: '3dollarbillbk.com'
+    }
+  ];
+  const logs = captureLogs(() => parser.applyVenueSiteIdentityCorrections(events, null));
+
+  assert.ok(logs.some(line => line.includes(
+    'Venue-site identity for 3dollarbillbk.com established but applied to no event — falling back to the curated-website fills')),
+    `the fallback must fire on "did not apply", not only on "identity is null", got: ${JSON.stringify(logs)}`);
+  assert.ok(logs.some(line => line.includes('established from curated website match')),
+    'the weaker curated-website rung gets its turn');
+
+  // Fail closed on the sibling ambiguity: no per-event evidence → no bar.
+  assert.equal(events[0].bar, '', 'the coordinate-carrying primary is a ranking, not evidence');
+  assert.equal(events[0].city, 'nyc', 'the unambiguous city still fills — that is what re-anchors the timezone');
+  // Real evidence still resolves the sub-venue.
+  assert.equal(events[1].bar, 'The Yard at 9 Bob Note');
+  assert.equal(events[1].city, 'nyc');
+});
+
+test('a schedule-mismatched rrule is recovered from its own cited evidence, failing closed on exceptions', () => {
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  const corpus = 'DIRTY POP takes over second Sundays at the Dallas Eagle. '
+    + 'Trivia Taco night (except the last Tuesday - Drink and Draw).';
+  const runOn = (aiEvent) => {
+    const evidenceContext = parser.buildAiEvidenceContextFromText(corpus);
+    return parser.validateAiEventEvidence(aiEvent, { html: corpus }, {}, null, {
+      evidenceContext, validationContext: { imageEvidenceUrls: new Set() }
+    });
+  };
+
+  // The real 20260802 record: the gate correctly rejects FREQ=WEEKLY;BYDAY=SU
+  // for "second Sundays" — and the event then shipped with NO recurrence.
+  let recovered;
+  const recoveryLogs = captureLogs(() => {
+    recovered = runOn({
+      rrule: 'FREQ=WEEKLY;BYDAY=SU',
+      __fieldEvidence: { rrule: 'second Sundays at the Dallas Eagle' }
+    });
+  });
+  assert.equal(recovered.report.dropped[0].reason, 'rrule-schedule-evidence', 'the gate still drops');
+  assert.equal(recovered.event.rrule, 'FREQ=MONTHLY;BYDAY=2SU',
+    'the ordinal stated in the cited evidence is recovered');
+  assert.ok(recoveryLogs.some(line => line.includes(
+    'Recovered rrule "FREQ=MONTHLY;BYDAY=2SU"')), `recovery log expected, got: ${JSON.stringify(recoveryLogs)}`);
+
+  // The known false positive: the ordinal names what the schedule EXCLUDES.
+  let excepted;
+  const exceptionLogs = captureLogs(() => {
+    excepted = runOn({
+      rrule: 'FREQ=WEEKLY;BYDAY=TU',
+      __fieldEvidence: { rrule: 'Trivia Taco night (except the last Tuesday - Drink and Draw)' }
+    });
+  });
+  assert.equal(excepted.event.rrule, undefined,
+    'an exception clause never promotes its day phrase to the schedule');
+  assert.ok(exceptionLogs.some(line => line.includes('states an exception, not the schedule')),
+    `fail-closed log expected, got: ${JSON.stringify(exceptionLogs)}`);
+});
+
+test('a scheme-less dotted host is normalized to https instead of shipping as a relative href', () => {
+  const parser = createParser();
+  const logs = captureLogs(() => {
+    // The run 20260802-194055 value, verbatim from "TICKETS AT 3DOLLARBILLBK.COM"
+    assert.equal(parser.sanitizeExtractedUrlField('ticketUrl', '3DOLLARBILLBK.COM'),
+      'https://3dollarbillbk.com');
+    assert.equal(parser.sanitizeExtractedUrlField('url', 'WWW.EAGLELA.COM/events'),
+      'https://www.eaglela.com/events');
+  });
+  assert.ok(logs.some(line => line.includes(
+    'Normalized scheme-less ticketUrl "3DOLLARBILLBK.COM" → "https://3dollarbillbk.com"')),
+    `normalization log expected, got: ${JSON.stringify(logs)}`);
+
+  // Already-schemed URLs are untouched, and the existing rejections still win.
+  assert.equal(parser.sanitizeExtractedUrlField('url', 'https://eagle.example/events'),
+    'https://eagle.example/events');
+  assert.equal(parser.sanitizeExtractedUrlField('url', "BASTILLE'S POOL.COM"), '');
+
+  // Fail open: an unwired core leaves the value exactly as it was before.
+  const unwired = new AiWebParser({ normalizeUrl });
+  unwired.core = null;
+  assert.equal(unwired.sanitizeExtractedUrlField('ticketUrl', '3DOLLARBILLBK.COM'), '3DOLLARBILLBK.COM');
+});
+
+test('OCR prefers a full-size original over its own resized derivative, and never drops a lone thumbnail', () => {
+  const parser = createParser();
+  const original = 'https://eaglela.com/wp-content/uploads/ig_wed-hump-night-2024-web-1-1.jpg';
+  const thumbnail = 'https://eaglela.com/wp-content/uploads/ig_wed-hump-night-2024-web-1-1-300x300.jpg';
+
+  assert.equal(parser.getResizedImageOriginalUrl(thumbnail), original);
+  assert.equal(parser.getResizedImageOriginalUrl(original), '', 'the original names no smaller source');
+
+  const logs = captureLogs(() => {
+    assert.deepEqual(
+      parser.dropResizedImageUrlsWithOriginal([thumbnail, original, 'https://eaglela.com/flyer.png']),
+      [original, 'https://eaglela.com/flyer.png'],
+      'the degraded derivative is skipped when its original is on the same page');
+  });
+  assert.ok(logs.some(line => line.includes(`OCR skipped resized image ${thumbnail}`)),
+    `skip log expected, got: ${JSON.stringify(logs)}`);
+
+  // Flag, don't drop: a thumbnail whose original is ABSENT is still OCR'd.
+  assert.deepEqual(
+    parser.dropResizedImageUrlsWithOriginal([thumbnail, 'https://eaglela.com/other.png']),
+    [thumbnail, 'https://eaglela.com/other.png']);
+  // A differently-named sibling is never mistaken for the same asset.
+  assert.deepEqual(
+    parser.dropResizedImageUrlsWithOriginal([thumbnail, 'https://eaglela.com/wp-content/uploads/other-1-1.jpg']),
+    [thumbnail, 'https://eaglela.com/wp-content/uploads/other-1-1.jpg']);
 });
