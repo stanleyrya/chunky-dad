@@ -12090,7 +12090,7 @@ test('shortName salvage: fully invented answer still rejects', async () => {
 // hyphenated a space. Same mechanism, same run family: "IT GIRL" → "IT-GIRL"
 // (which previously degraded all the way to "IT"). The salvage loop still
 // exists for genuinely broken answers — see the tests below it.
-test('shortName gate: hyphens standing in for spaces are accepted and kept', async () => {
+test('shortName gate: hyphens standing in for spaces are accepted, then stored as spaces', async () => {
   const core = createFinalBuildCore();
   const title = 'BEEFMINCE x RVT';
   const adapter = createShortNameAdapter('{"shortName": {"value": "BEEFMINCE-X-RVT"}}');
@@ -12105,8 +12105,12 @@ test('shortName gate: hyphens standing in for spaces are accepted and kept', asy
   } finally {
     restore();
   }
-  assert.equal(analyzed.shortName, 'BEEFMINCE-X-RVT', 'line-break hyphens survive derivation');
-  assert.ok(lines.includes(`🏷️ SHORTNAME: derived "BEEFMINCE-X-RVT" for "${title}"`));
+  // The answer is ACCEPTED (before, the gate rejected it and salvage shipped a
+  // truncated first token) but STORED spaced: the title spells these as three
+  // words, so the hyphens replace spaces rather than hinting a break inside a
+  // word, and keeping them would invent punctuation the source never had.
+  assert.equal(analyzed.shortName, 'BEEFMINCE X RVT', 'space-substitute hyphens are stored as spaces');
+  assert.ok(lines.includes(`🏷️ SHORTNAME: derived "BEEFMINCE X RVT" for "${title}"`));
 });
 
 test('shortName salvage: overlong answer drops tokens past punctuation and stopwords', async () => {
@@ -13550,10 +13554,14 @@ test('shortName gate: a hyphen standing in for a space is a verbatim answer', ()
   // rejected it and the salvage loop shipped the first token — the single
   // letter "B". Reading the hyphen as the space it replaced accepts the answer
   // and keeps the line-break hint the prompt asked for.
+  // "B-BAR" normalizes back to "B BAR", which IS the title — so the honest
+  // outcome is NO shortName (the display falls back to the title), not a
+  // hyphenated twin of it and not the single letter "B".
   assert.deepEqual(core.evaluateDerivedShortName('B BAR', 'B-BAR', 16),
-    { ok: true, value: 'B-BAR' });
-  assert.deepEqual(core.evaluateDerivedShortName('IT GIRL', 'IT-GIRL', 16),
-    { ok: true, value: 'IT-GIRL' });
+    { ok: false, reason: 'equals title' });
+  // A genuinely shorter answer is kept, spaced.
+  assert.deepEqual(core.evaluateDerivedShortName('It Girl: For the Stars Among Us', 'IT-GIRL', 16),
+    { ok: true, value: 'IT GIRL' });
   // The mid-word reading the prompt actually documents still works…
   assert.deepEqual(core.evaluateDerivedShortName('CUBSCOUT', 'CUB-SCOUT', 16),
     { ok: true, value: 'CUB-SCOUT' });

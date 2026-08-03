@@ -6769,7 +6769,9 @@ class SharedCore {
         // suffices.
         const isWordChar = (ch) => /[a-z0-9]/.test(ch);
         let aligned = false;
-        for (const reading of answerReadings) {
+        let alignedReadingIndex = -1;
+        for (let readingIndex = 0; readingIndex < answerReadings.length; readingIndex++) {
+            const reading = answerReadings[readingIndex];
             const strippedFoldedAnswer = this.foldDiacritics(reading);
             if (!strippedFoldedAnswer) continue;
             let from = 0;
@@ -6781,7 +6783,7 @@ class SharedCore {
                 const afterOk = endIndex === strippedFoldedTitle.length
                     || !isWordChar(strippedFoldedTitle[endIndex])
                     || !isWordChar(strippedFoldedAnswer[strippedFoldedAnswer.length - 1]);
-                if (beforeOk && afterOk) { aligned = true; break; }
+                if (beforeOk && afterOk) { aligned = true; alignedReadingIndex = readingIndex; break; }
                 from = at + 1;
             }
             if (aligned) break;
@@ -6789,10 +6791,21 @@ class SharedCore {
         if (!aligned) {
             return { ok: false, reason: 'not a verbatim substring' };
         }
-        if (answer === String(title).trim()) {
+        // WHICH reading matched decides what we STORE. Reading 0 (hyphen →
+        // nothing) means the hyphen sits inside a word the title spells solid
+        // — the documented line-break hint, keep it ("CUBSCOUT" → "CUB-SCOUT").
+        // Reading 1 means the hyphen stands where the title has a SPACE, so it
+        // is not a hint at all and storing it invents punctuation the source
+        // never had ("BEEFMINCE x RVT" → "BEEFMINCE-X-RVT"). Store the spaced
+        // form there, which also lets the equals-title check below do its job:
+        // a title short enough that its "short name" IS the title should ship
+        // NO shortName (the display falls back to the title) rather than a
+        // hyphenated twin of it.
+        const storedValue = alignedReadingIndex > 0 ? answer.replace(/-/g, ' ') : answer;
+        if (storedValue === String(title).trim()) {
             return { ok: false, reason: 'equals title' };
         }
-        return { ok: true, value: answer };
+        return { ok: true, value: storedValue };
     }
 
     // Derive a shortName for one FINAL analyzed event that lacks one. All
