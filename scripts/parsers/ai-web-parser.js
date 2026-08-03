@@ -12044,7 +12044,17 @@ TEXT:
                     if (dayPhraseSynthesis) {
                         console.log(`🔁 RECURRING: "${title}" synthesized from day phrase "${dayPhraseSynthesis.phrase}" → ${recurrenceRule}, next ${nextOccurrence} — will be withheld from calendar write (ICS only)`);
                     }
+                } else {
+                    // Additive diagnostics. Both guards on this path used to
+                    // fall through with NO logging, so a dead recurrence path
+                    // was invisible in every run log — the schema-side
+                    // cross-realm null (fixed in computeNextRruleOccurrence)
+                    // cost a multi-day investigation purely because nothing
+                    // said which guard bit. Never changes behavior.
+                    console.log(`🔁 RECURRING: rrule "${recurrenceRule}" for "${title}" produced an invalid derived start from occurrence ${nextOccurrence} — event will fail the required-startDate guard`);
                 }
+            } else {
+                console.log(`🔁 RECURRING: rrule "${recurrenceRule}" for "${title}" yielded no next occurrence — event will fail the required-startDate guard`);
             }
         }
 
@@ -12842,6 +12852,24 @@ TEXT:
         return this.normalizeWhitespace(this.stripTags(match[1]));
     }
 
+    // A double-quoted HTML attribute may legitimately contain apostrophes
+    // ("Bushwick's Wettest Cabaret"), and a single-quoted one may contain
+    // double quotes. The previous `["']([^"']+)["']` shape used ONE character
+    // class for BOTH delimiters, so it stopped at whichever quote came first
+    // and silently truncated the value. Measured 2026-08-02 on
+    // 3dollarbillbk.com: og:title "Buy Tickets to Aquatica Erotica: Bushwick's
+    // Wettest Cabaret in Brooklyn on Aug 07, 2026" reached the model as "Buy
+    // Tickets to Aquatica Erotica: Bushwick". That truncated string then BECAME
+    // the page corpus, so the verbatim-evidence gate structurally could not
+    // catch it — it was validating against already-broken input. Matching the
+    // closing delimiter to the opening one with a backreference is the fix.
+    // Returns '' when the attribute is absent or empty, so callers keep their
+    // existing falsy skip.
+    readMetaContentAttribute(tag) {
+        const match = String(tag || '').match(/\bcontent\s*=\s*(["'])([\s\S]*?)\1/i);
+        return match ? match[2] : '';
+    }
+
     extractMetaParts(html) {
         const results = [];
         const seen = new Set();
@@ -12850,8 +12878,8 @@ TEXT:
         while ((match = regex.exec(html)) !== null) {
             const tag = match[0];
             const nameMatch = tag.match(/\b(?:name|property)\s*=\s*["']([^"']+)["']/i);
-            const contentMatch = tag.match(/\bcontent\s*=\s*["']([^"']+)["']/i);
-            if (!nameMatch || !contentMatch) continue;
+            const contentValue = this.readMetaContentAttribute(tag);
+            if (!nameMatch || !contentValue) continue;
             const key = this.normalizeWhitespace(nameMatch[1]).toLowerCase();
             if (this.excludedMetaKeyRegexes.some(regexPattern => regexPattern.test(key))) continue;
             const allowedMetaKeys = new Set([
@@ -12865,7 +12893,7 @@ TEXT:
             ]);
             const hasAllowedPrefix = key.startsWith('og:') || key.startsWith('twitter:') || key.startsWith('event:');
             if (!hasAllowedPrefix && !allowedMetaKeys.has(key)) continue;
-            const value = this.sanitizeMetaContent(key, contentMatch[1]);
+            const value = this.sanitizeMetaContent(key, contentValue);
             if (!value) continue;
             const line = `${key}: ${value}`;
             const dedupeKey = line.toLowerCase();
@@ -12962,8 +12990,8 @@ TEXT:
             const tag = match[0];
             const nameMatch = tag.match(/\b(?:name|property)\s*=\s*["']([^"']+)["']/i);
             if (!nameMatch || this.normalizeWhitespace(nameMatch[1]).toLowerCase() !== 'og:site_name') continue;
-            const contentMatch = tag.match(/\bcontent\s*=\s*["']([^"']+)["']/i);
-            if (contentMatch) addName(this.sanitizeMetaContent('og:site_name', contentMatch[1]));
+            const contentValue = this.readMetaContentAttribute(tag);
+            if (contentValue) addName(this.sanitizeMetaContent('og:site_name', contentValue));
         }
         return Array.from(names);
     }
@@ -13098,9 +13126,9 @@ TEXT:
             const tag = match[0];
             const nameMatch = tag.match(/\b(?:name|property)\s*=\s*["']([^"']+)["']/i);
             if (!nameMatch || this.normalizeWhitespace(nameMatch[1]).toLowerCase() !== keyName) continue;
-            const contentMatch = tag.match(/\bcontent\s*=\s*["']([^"']+)["']/i);
-            if (!contentMatch) continue;
-            const value = this.normalizeWhitespace(this.decodeBasicEntities(contentMatch[1]));
+            const contentValue = this.readMetaContentAttribute(tag);
+            if (!contentValue) continue;
+            const value = this.normalizeWhitespace(this.decodeBasicEntities(contentValue));
             if (value) return value;
         }
         return '';
@@ -13120,9 +13148,9 @@ TEXT:
             const tag = match[0];
             const nameMatch = tag.match(/\b(?:name|property)\s*=\s*["']([^"']+)["']/i);
             if (!nameMatch || this.normalizeWhitespace(nameMatch[1]).toLowerCase() !== keyName) continue;
-            const contentMatch = tag.match(/\bcontent\s*=\s*["']([^"']+)["']/i);
-            if (!contentMatch) continue;
-            const value = this.normalizeWhitespace(this.decodeBasicEntities(contentMatch[1]));
+            const contentValue = this.readMetaContentAttribute(tag);
+            if (!contentValue) continue;
+            const value = this.normalizeWhitespace(this.decodeBasicEntities(contentValue));
             if (value) values.push(value);
         }
         return values;
@@ -13147,9 +13175,9 @@ TEXT:
             if (!nameMatch) continue;
             const key = this.normalizeWhitespace(nameMatch[1]).toLowerCase();
             if (!wanted.has(key)) continue;
-            const contentMatch = tag.match(/\bcontent\s*=\s*["']([^"']+)["']/i);
-            if (!contentMatch) continue;
-            const value = this.normalizeWhitespace(this.decodeBasicEntities(contentMatch[1]));
+            const contentValue = this.readMetaContentAttribute(tag);
+            if (!contentValue) continue;
+            const value = this.normalizeWhitespace(this.decodeBasicEntities(contentValue));
             if (value) entries.push({ key, value });
         }
         return entries;

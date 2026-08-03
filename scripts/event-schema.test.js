@@ -479,3 +479,50 @@ test('computeNextRruleOccurrence: unsupported forms return null (event stays dis
   assert.equal(f('FREQ=WEEKLY;BYDAY=XX', now), null, 'unknown weekday code');
   assert.equal(f('FREQ=DAILY;BYDAY=FR', now), null, 'filtered daily rules are out of subset');
 });
+
+// ---------------------------------------------------------------------------
+// Cross-realm Date coercion (2026-08-03 run review).
+//
+// Scriptable loads every file through its own importModule, so `event-schema`
+// and the parsers hold DIFFERENT Date constructors. A perfectly good Date built
+// in ai-web-parser is `typeof 'object'` here and fails `instanceof Date`.
+// computeNextRruleOccurrence was the ONLY date-taking function in this file
+// without the coercion its siblings do, so it returned null for every real
+// caller — silently disabling both the dateless-weekly synthesis (#1616) and
+// the derived-occurrence path (#1563). Evidence: the success log line
+// `🔁 RECURRING: derived next occurrence` appears ZERO times across every run
+// ever recorded on device.
+//
+// `vm.runInNewContext` reproduces the realm split exactly; a plain `new Date()`
+// here CANNOT catch this regression.
+// ---------------------------------------------------------------------------
+
+const vm = require('node:vm');
+
+function foreignDate(iso) {
+  const made = vm.runInNewContext('new Date(iso)', { iso });
+  assert.equal(made instanceof Date, false, 'guard: the fixture must be cross-realm');
+  assert.equal(Object.prototype.toString.call(made), '[object Date]', 'guard: still a real Date');
+  return made;
+}
+
+test('computeNextRruleOccurrence: a cross-realm Date resolves like a native one', () => {
+  const f = EventSchema.computeNextRruleOccurrence;
+  // 2026-08-03 is a Monday.
+  const native = new Date(2026, 7, 3, 12, 0, 0);
+  const foreign = foreignDate('2026-08-03T12:00:00');
+
+  assert.equal(f('FREQ=WEEKLY;BYDAY=WE', foreign), f('FREQ=WEEKLY;BYDAY=WE', native));
+  assert.equal(f('FREQ=WEEKLY;BYDAY=WE', foreign), '2026-08-05', 'the real Lumberyard QUEERAOKE case');
+  assert.equal(f('FREQ=MONTHLY;BYDAY=2SU', foreign), f('FREQ=MONTHLY;BYDAY=2SU', native));
+  assert.equal(f('FREQ=DAILY', foreign), '2026-08-03');
+});
+
+test('computeNextRruleOccurrence: coercion accepts an ISO string but still rejects junk', () => {
+  const f = EventSchema.computeNextRruleOccurrence;
+  assert.equal(f('FREQ=WEEKLY;BYDAY=WE', '2026-08-03T12:00:00'), '2026-08-05');
+  assert.equal(f('FREQ=WEEKLY;BYDAY=WE', 'not a date'), null);
+  assert.equal(f('FREQ=WEEKLY;BYDAY=WE', null), null);
+  assert.equal(f('FREQ=WEEKLY;BYDAY=WE', undefined), null);
+  assert.equal(f('FREQ=WEEKLY;BYDAY=WE', {}), null);
+});
