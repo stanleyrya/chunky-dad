@@ -13930,3 +13930,343 @@ test('provenance tiers: curated-geocoded ranks above a page pin and level with g
   assert.ok(tier('curated-geocoded') > tier('page'));
   assert.equal(tier('not-a-real-source'), null, 'unknown values still fail open');
 });
+
+// ---------------------------------------------------------------------------
+// SERIES AUTHORITY — may this source redefine the SERIES, or only its own SLOT?
+//
+// Every fixture below is lifted from run 20260803-091158 (parser "Eagle LA",
+// siteRole for eaglela.com: venue) and the owner's published calendars
+// (data/calendars/la.ics). "Bear Happy Hour" is a travelling brand: a weekly
+// 5pm series in four calendars, each a venue-less placeholder whose bar reads
+// "Check instagram for this week's location." Eagle LA hosts one of its nights
+// and says "Every 1st Thursday" — a claim about its own slot, never about the
+// brand. MOVIE MONDAYS and CUBSCOUT are Eagle LA's own nights on the same
+// crawl of the same site, and must resolve the opposite way.
+// ---------------------------------------------------------------------------
+
+const AUTHORITY_CITIES = {
+  la: { timezone: 'America/Los_Angeles', patterns: ['los angeles', 'la'] },
+  dallas: { timezone: 'America/Chicago', patterns: ['dallas'] }
+};
+
+// Curated bar facts as data/bars/la.json + data/bars/dallas.json carry them —
+// the deterministic merge rung that resolves `bar` ("matches curated bar data")
+// needs them, exactly as the real run had them.
+const AUTHORITY_BARS = {
+  la: [{
+    name: 'Eagle LA',
+    city: 'la',
+    address: '4219 Santa Monica Blvd, Los Angeles, CA 90029',
+    coordinates: '34.0912127, -118.2840632'
+  }],
+  dallas: [{ name: 'Dallas Eagle', city: 'dallas' }]
+};
+
+function createAuthorityCore() {
+  return new SharedCore(AUTHORITY_CITIES, {
+    eventSchema: EventSchema,
+    bars: AUTHORITY_BARS,
+    promoters: require('../data/promoters.json')
+  });
+}
+
+const EAGLE_LA_PARSER = { name: 'Eagle LA', urls: ['https://eaglela.com/events/'] };
+
+// The BHH weekly master exactly as data/calendars/la.ics carries it (RRULE
+// FREQ=WEEKLY, bar = the "check instagram" placeholder).
+function buildBhhSeriesRecord(overrides = {}) {
+  return {
+    identifier: '2DDBF0E6-6877-4FBF-BB94-EC2708DFD113:9vnvsm6kjpievu62279lco139k@google.com',
+    title: 'Bear Happy Hour',
+    startDate: new Date('2026-08-07T00:00:00.000Z'),
+    endDate: new Date('2026-08-07T04:00:00.000Z'),
+    location: null,
+    recurrence: 'FREQ=WEEKLY',
+    notes: [
+      'bar: Check instagram for this week’s location.',
+      'description: Popular happy hour that changes location every week.',
+      'shorterName: BHH',
+      'website: https://linktr.ee/bearhappyhour'
+    ].join('\n'),
+    ...overrides
+  };
+}
+
+// The scraped record as run 20260803-091158 saved it (parserResults[0].events).
+function buildBhhScrapedEvent(overrides = {}) {
+  return {
+    title: 'BEAR HAPPY HOUR',
+    description: 'Bear Happy Hour First Thursdays 5pm',
+    startDate: new Date('2026-08-07T00:00:00.000Z'),
+    endDate: new Date('2026-08-07T04:00:00.000Z'),
+    bar: 'Eagle LA',
+    barSource: 'venue-site',
+    address: '4219 Santa Monica Blvd, Los Angeles, CA 90029',
+    location: '34.0912127, -118.2840632',
+    city: 'la',
+    url: 'https://eaglela.com/events/bear-happy-hour-2/',
+    recurrenceRule: 'FREQ=MONTHLY;BYDAY=1TH',
+    source: 'ai-web',
+    _venueSitePageHost: 'eaglela.com',
+    _parserConfig: EAGLE_LA_PARSER,
+    ...overrides
+  };
+}
+
+test('series authority: a venue hosting a brand it does not own is a slot-host', () => {
+  const core = createAuthorityCore();
+  const resolved = core.resolveSeriesAuthority(buildBhhScrapedEvent(), {
+    action: 'new',
+    reason: 'Recurring source match found - creating override',
+    sourceEvent: buildBhhSeriesRecord()
+  });
+  assert.equal(resolved.authority, 'slot-host');
+  assert.equal(resolved.brand.name, 'Bear Happy Hour');
+  assert.match(resolved.reason, /curated at linktr\.ee\/bearhappyhour/);
+});
+
+test('series authority: the calendar series naming this venue makes the venue the series owner', () => {
+  const core = createAuthorityCore();
+  // CUBSCOUT's own series record carries "bar: Eagle LA" — curated data beats
+  // derived, so a separate CubScout LA registry entry does not make Eagle LA a
+  // guest on its own night.
+  const resolved = core.resolveSeriesAuthority({
+    title: 'CUBSCOUT',
+    bar: 'Eagle LA',
+    barSource: 'venue-site',
+    city: 'la',
+    url: 'https://eaglela.com/events/cubscout-51/',
+    recurrenceRule: 'FREQ=MONTHLY;BYDAY=1FR',
+    _parserConfig: EAGLE_LA_PARSER
+  }, {
+    action: 'new',
+    sourceEvent: {
+      title: 'CUBSCOUT',
+      notes: 'bar: Eagle LA\nwebsite: https://eaglela.com/events/cub-scout-3/',
+      recurrence: 'FREQ=MONTHLY;BYDAY=1FR'
+    }
+  });
+  assert.equal(resolved.authority, 'series-owner');
+  assert.match(resolved.reason, /calendar series names "Eagle LA"/);
+});
+
+test('series authority: a venue site nobody else claims owns its own night', () => {
+  const core = createAuthorityCore();
+  for (const event of [
+    { title: 'MOVIE MONDAYS', bar: 'Eagle LA', barSource: 'venue-site', city: 'la', url: 'https://eaglela.com/events/movie-mondays/', recurrenceRule: 'FREQ=WEEKLY;BYDAY=MO', _parserConfig: EAGLE_LA_PARSER },
+    // Dallas Eagle: "siteRole for www.thedallaseagle.com: venue" in production.
+    { title: 'Karaoke', bar: 'Dallas Eagle', barSource: 'venue-site', city: 'dallas', url: 'https://www.thedallaseagle.com/events/karaoke', recurrenceRule: 'FREQ=WEEKLY;BYDAY=TU', _parserConfig: { name: 'Dallas Eagle', urls: ['https://www.thedallaseagle.com/events/'] } }
+  ]) {
+    const resolved = core.resolveSeriesAuthority(event, { action: 'new', sourceEvent: null });
+    assert.equal(resolved.authority, 'series-owner', `${event.title} is the venue's own night`);
+  }
+});
+
+test('series authority: a brand speaking on its OWN site is the series owner', () => {
+  const core = createAuthorityCore();
+  const resolved = core.resolveSeriesAuthority(buildBhhScrapedEvent({
+    bar: '',
+    barSource: '',
+    url: 'https://www.eventbrite.com/o/bear-happy-hour-87043830313',
+    _parserConfig: { name: 'Bear Happy Hour', urls: ['https://www.eventbrite.com/o/bear-happy-hour-87043830313'] }
+  }), { action: 'new', sourceEvent: buildBhhSeriesRecord() });
+  assert.equal(resolved.authority, 'series-owner');
+  assert.match(resolved.reason, /own site/);
+});
+
+test('series authority: an aggregator listing a brand it does not own writes at neither level', () => {
+  const core = createAuthorityCore();
+  const resolved = core.resolveSeriesAuthority(buildBhhScrapedEvent({
+    bar: '',
+    barSource: '',
+    url: 'https://www.eventbrite.com/e/bear-happy-hour-tickets-99999',
+    _parserConfig: { name: 'The Bear Calendar', urls: ['https://thebearcalendar.example/'] }
+  }), { action: 'new', sourceEvent: buildBhhSeriesRecord() });
+  assert.equal(resolved.authority, 'unknown');
+  assert.match(resolved.reason, /corroboration only/);
+});
+
+test('series authority: a venue narrating a sub-pattern of a series it is not the venue of is a slot-host', () => {
+  const core = createAuthorityCore();
+  // No registry entry at all for this brand — the sub-pattern comparison is
+  // the only thing that can decide it (filter #1, measured).
+  const resolved = core.resolveSeriesAuthority({
+    title: 'ROTATING BEAR NIGHT',
+    bar: 'Eagle LA',
+    barSource: 'venue-site',
+    city: 'la',
+    url: 'https://eaglela.com/events/rotating-bear-night/',
+    recurrenceRule: 'FREQ=MONTHLY;BYDAY=1TH',
+    _parserConfig: EAGLE_LA_PARSER
+  }, {
+    action: 'new',
+    sourceEvent: { title: 'Rotating Bear Night', notes: 'bar: Check instagram for this week’s location.', recurrence: 'FREQ=WEEKLY' }
+  });
+  assert.equal(resolved.authority, 'slot-host');
+  assert.match(resolved.reason, /sub-pattern/);
+});
+
+test('isNarrowerCadence: only a strict sub-pattern counts, everything uncomparable fails closed', () => {
+  // The live case: "every 1st Thursday" inside a WEEKLY brand.
+  assert.equal(SharedCore.isNarrowerCadence('FREQ=MONTHLY;BYDAY=1TH', 'FREQ=WEEKLY'), true);
+  assert.equal(SharedCore.isNarrowerCadence('FREQ=WEEKLY;BYDAY=TH', 'FREQ=WEEKLY;BYDAY=TU,TH'), true);
+  assert.equal(SharedCore.isNarrowerCadence('FREQ=WEEKLY;INTERVAL=2;BYDAY=TH', 'FREQ=WEEKLY;BYDAY=TH'), true);
+  // Identical, wider, or disjoint rules are NOT sub-patterns.
+  assert.equal(SharedCore.isNarrowerCadence('FREQ=WEEKLY', 'FREQ=WEEKLY'), false);
+  assert.equal(SharedCore.isNarrowerCadence('FREQ=WEEKLY', 'FREQ=MONTHLY;BYDAY=1TH'), false);
+  assert.equal(SharedCore.isNarrowerCadence('FREQ=WEEKLY;BYDAY=MO', 'FREQ=WEEKLY;BYDAY=TU'), false);
+  assert.equal(SharedCore.isNarrowerCadence('', 'FREQ=WEEKLY'), false);
+  assert.equal(SharedCore.isNarrowerCadence('FREQ=MONTHLY;BYDAY=1TH', ''), false);
+});
+
+test('extractCadenceEvidence quotes the page verbatim and never manufactures a phrase', () => {
+  assert.equal(SharedCore.extractCadenceEvidence({ description: 'Bear Happy Hour First Thursdays 5pm' }), 'First Thursdays');
+  assert.equal(SharedCore.extractCadenceEvidence({ description: 'Every Thursday 10 Draft Special' }), 'Every Thursday');
+  // The model's own per-field evidence wins when it survived onto the event.
+  assert.equal(SharedCore.extractCadenceEvidence({
+    description: 'Every Thursday',
+    __fieldEvidence: { recurrence: 'Every 1st Thursday of the month' }
+  }), 'Every 1st Thursday of the month');
+  // No quotable phrase → an honest blank, never an invented one.
+  assert.equal(SharedCore.extractCadenceEvidence({ description: 'Movie Mondays 7pm no cover' }), '');
+});
+
+test('series authority end-to-end: BHH at Eagle LA keeps its override and writes the occurrence', async () => {
+  const core = createAuthorityCore();
+  // Field priorities exactly as processParser stamps them for this parser —
+  // without them every field falls back to "preserve" and the calendar's
+  // "check instagram" placeholder would survive for reasons unrelated to
+  // series authority.
+  const event = buildBhhScrapedEvent({ _fieldPriorities: core.getResolvedFieldPriorities(EAGLE_LA_PARSER) });
+  const seriesRecord = buildBhhSeriesRecord();
+  const analysis = core.analyzeEventAction(event, [seriesRecord]);
+  assert.equal(analysis.reason, 'Recurring source match found - creating override');
+
+  const analyzed = await core.buildAnalyzedCalendarEvent(event, analysis, {}, {});
+
+  assert.equal(analyzed._seriesAuthority, 'slot-host');
+  // The cadence is a HINT about a brand Eagle LA does not own — recorded,
+  // surfaced, and never written as a series.
+  assert.deepEqual(analyzed._cadenceHint, {
+    rrule: 'FREQ=MONTHLY;BYDAY=1TH',
+    evidence: 'First Thursdays',
+    sourceUrl: 'https://eaglela.com/events/bear-happy-hour-2/'
+  });
+  assert.equal(analyzed.recurrenceRule, undefined, 'the scraped recurrence is demoted, not carried');
+  assert.notEqual(analyzed._recurring, true);
+  assert.equal(analyzed._seriesChangeProposal, undefined, 'a slot host never proposes a series change');
+
+  // The override identity survives (#1588 dropped it here) and the per-night
+  // facts the calendar was missing are exactly what gets written.
+  assert.equal(analyzed.overrideUid, '9vnvsm6kjpievu62279lco139k@google.com');
+  assert.equal(analyzed.overrideRecurrenceId, '20260807T000000Z');
+  assert.equal(analyzed.bar, 'Eagle LA');
+  assert.equal(analyzed.address, '4219 Santa Monica Blvd, Los Angeles, CA 90029');
+  assert.equal(analyzed.location, '34.0912127, -118.2840632');
+  // Identity is structurally series-level: the slot host never renames it.
+  assert.equal(analyzed.title, 'Bear Happy Hour');
+  assert.equal(SharedCore.filterEventsForExecution([analyzed]).length, 1, 'the occurrence is written');
+});
+
+test('series authority end-to-end: a series owner raises a PROPOSAL and is still never written', async () => {
+  const core = createAuthorityCore();
+  // Eagle LA's own CUBSCOUT, now advertised as 2nd Fridays while the calendar
+  // series still says 1st Fridays.
+  const seriesRecord = {
+    identifier: '2DDBF0E6-6877-4FBF-BB94-EC2708DFD113:cubscout-20260731T193113Z@chunky.dad',
+    title: 'CUBSCOUT',
+    startDate: new Date('2026-08-08T04:00:00.000Z'),
+    endDate: new Date('2026-08-08T09:00:00.000Z'),
+    location: '34.0912127, -118.2840632',
+    recurrence: 'FREQ=MONTHLY;BYDAY=1FR',
+    notes: 'bar: Eagle LA\naddress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\nwebsite: https://eaglela.com/events/cub-scout-3/'
+  };
+  const event = {
+    title: 'CUBSCOUT',
+    startDate: new Date('2026-08-08T04:00:00.000Z'),
+    endDate: new Date('2026-08-08T09:00:00.000Z'),
+    bar: 'Eagle LA',
+    barSource: 'venue-site',
+    city: 'la',
+    description: 'CubScout Second Fridays 9pm $7',
+    url: 'https://eaglela.com/events/cubscout-51/',
+    recurrenceRule: 'FREQ=MONTHLY;BYDAY=2FR',
+    source: 'ai-web',
+    _parserConfig: EAGLE_LA_PARSER
+  };
+  const analysis = core.analyzeEventAction(event, [seriesRecord]);
+  const analyzed = await core.buildAnalyzedCalendarEvent(event, analysis, {}, {});
+
+  assert.equal(analyzed._seriesAuthority, 'series-owner');
+  assert.deepEqual(analyzed._seriesChangeProposal, {
+    field: 'recurrence',
+    current: 'FREQ=MONTHLY;BYDAY=1FR',
+    proposed: 'FREQ=MONTHLY;BYDAY=2FR',
+    evidence: 'Second Fridays',
+    sourceUrl: 'https://eaglela.com/events/cubscout-51/',
+    calendarName: 'la'
+  });
+  assert.equal(analyzed._cadenceHint, undefined, 'a series owner states a schedule, not a hint');
+  // #1588 stays exactly as it was for series owners: withheld, override
+  // identity dropped, ICS export is the only channel that can carry an RRULE.
+  assert.equal(analyzed._recurring, true);
+  assert.equal(analyzed._recurringExport, true);
+  assert.equal(analyzed.overrideUid, undefined);
+  assert.equal(analyzed.overrideRecurrenceId, undefined);
+  assert.equal(SharedCore.filterEventsForExecution([analyzed]).length, 0, 'a series change is NEVER auto-written');
+});
+
+test('series authority end-to-end: an unresolved owner keeps today\'s withhold exactly', async () => {
+  const core = createAuthorityCore();
+  // Same brand, but found on a ticketing platform: corroboration only.
+  const event = buildBhhScrapedEvent({
+    bar: '',
+    barSource: '',
+    address: '',
+    location: '',
+    url: 'https://www.eventbrite.com/e/bear-happy-hour-tickets-99999',
+    _venueSitePageHost: '',
+    _parserConfig: { name: 'The Bear Calendar', urls: ['https://thebearcalendar.example/'] }
+  });
+  const analysis = core.analyzeEventAction(event, [buildBhhSeriesRecord()]);
+  const analyzed = await core.buildAnalyzedCalendarEvent(event, analysis, {}, {});
+
+  assert.equal(analyzed._seriesAuthority, 'unknown');
+  assert.equal(analyzed._cadenceHint, undefined);
+  assert.equal(analyzed._seriesChangeProposal, undefined);
+  assert.equal(analyzed.overrideUid, undefined, 'no write at either level');
+  assert.equal(SharedCore.filterEventsForExecution([analyzed]).length, 0);
+});
+
+test('registry: the Bear Happy Hour entry matches the real scraped title and keeps its own title phrase', () => {
+  const core = createAuthorityCore();
+  // Regression guard for the data-driven generic-stem rule: any registry entry
+  // whose key CONTAINS "bearhappyhour" (e.g. a "Bear Happy Hour LA" sub-brand)
+  // silently suppresses this phrase and the whole authority test falls back to
+  // 'unknown'.
+  const indexed = core.getPromoterRegistryIndex().entries
+    .find(entry => entry.entry.name === 'Bear Happy Hour');
+  assert.ok(indexed, 'Bear Happy Hour is in the registry');
+  assert.deepEqual(indexed.titlePhrases, ['bear happy hour']);
+  const match = core.matchEventToPromoter(buildBhhScrapedEvent());
+  assert.equal(match.entry.name, 'Bear Happy Hour');
+  assert.equal(match.evidence, 'title');
+  // Its curated home is nowhere near eaglela.com — that is what makes Eagle LA
+  // a slot host rather than the owner.
+  assert.deepEqual(core.getPromoterSelfUrlTokens(match.entry), [
+    'linktr.ee/bearhappyhour',
+    'eventbrite.com/o/bear-happy-hour-87043830313',
+    'instagram.com/bearhappyhourla',
+    'instagram.com/bearhappyhourchi',
+    'instagram.com/bearhappyhournyc'
+  ]);
+});
+
+test('getPromoterSelfUrlTokens: a sub-brand inherits its family home so authority agrees either way', () => {
+  const core = createAuthorityCore();
+  const child = core.getPromoterEntryByName('Spooky Bear');
+  assert.ok(child && child.parent === 'Northeast Ursamen');
+  const tokens = core.getPromoterSelfUrlTokens(child);
+  assert.ok(tokens.includes('spookybear'), 'its own pattern');
+  assert.ok(tokens.includes('ursamen'), 'and its parent family home');
+});

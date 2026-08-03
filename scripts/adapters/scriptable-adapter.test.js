@@ -4156,3 +4156,261 @@ test('calendar write: a zero-duration end and a real end both pass through untou
     undefined
   );
 });
+
+// ---------------------------------------------------------------------------
+// Series authority in the results UI. SharedCore stamps three fields; the
+// adapter only renders them.
+//   _seriesAuthority = 'slot-host'    → this run writes a single-occurrence
+//                                       override of someone else's series
+//   _cadenceHint                      → a cadence the page implies, reported
+//                                       and never turned into an RRULE
+//   _seriesChangeProposal             → a series owner asserts a different
+//                                       schedule; the run REFUSES to write it
+// Every surface below is additive: with all three absent the render and the
+// console output are exactly what they were before.
+// ---------------------------------------------------------------------------
+
+// A real city config so the occurrence date is resolved in the calendar's
+// timezone rather than falling back to UTC.
+function buildAuthorityAdapter() {
+  return new ScriptableAdapter({
+    cities: { la: { calendar: 'chunky-dad-la', timezone: 'America/Los_Angeles', patterns: ['los angeles', 'la'] } }
+  });
+}
+
+// The two real Eagle LA cases from the 2026-08-03 run.
+function buildSlotHostOverrideEvent(overrides = {}) {
+  return {
+    title: 'Bear Happy Hour',
+    _action: 'new',
+    startDate: '2026-08-07T00:00:00.000Z',
+    bar: 'Eagle LA',
+    city: 'la',
+    _seriesAuthority: 'slot-host',
+    overrideUid: 'bear-happy-hour@chunky.dad',
+    overrideRecurrenceId: '20260807T000000Z',
+    ...overrides
+  };
+}
+
+function buildSeriesOwnerProposalEvent(overrides = {}) {
+  return {
+    title: 'MOVIE MONDAYS',
+    _action: 'new',
+    startDate: '2026-08-04T02:00:00.000Z',
+    bar: 'Eagle LA',
+    city: 'la',
+    _recurring: true,
+    _seriesAuthority: 'series-owner',
+    _seriesChangeProposal: {
+      field: 'recurrence',
+      current: 'FREQ=WEEKLY;BYDAY=MO',
+      proposed: 'FREQ=WEEKLY;BYDAY=TU',
+      evidence: 'Movie Mondays moves to Tuesdays starting in August',
+      sourceUrl: 'https://eaglela.com/events/movie-mondays/',
+      calendarName: 'chunky-dad-la'
+    },
+    ...overrides
+  };
+}
+
+test('override card: slot-host events are badged as a single-occurrence override and name the night', () => {
+  const adapter = buildAuthorityAdapter();
+  const card = adapter.generateEventCard(buildSlotHostOverrideEvent());
+
+  assert.ok(card.includes('series-override-badge'), 'override badge present');
+  assert.ok(card.includes('🗓️ override — this date only'), 'card states the override state in words');
+  // Which occurrence: the RECURRENCE-ID rendered in the calendar's timezone —
+  // 2026-08-07T00:00Z is Thursday Aug 6 in Los Angeles, not Friday Aug 7.
+  assert.ok(card.includes('Thu, Aug 6, 2026'), `expected the LA-local occurrence date, got: ${card.slice(0, 900)}`);
+  // Distinct from NEW/CREATE in the write plan line, not only in the badge.
+  assert.ok(card.includes('Write: OVERRIDE'), 'write plan line says OVERRIDE');
+  assert.ok(!card.includes('Write: CREATE'), 'an override is never reported as a plain create');
+
+  const plain = adapter.generateEventCard({ title: 'Plain', _action: 'new', startDate: '2026-08-07T00:00:00.000Z' });
+  assert.ok(!plain.includes('series-override-badge'), 'no badge without the stamp');
+  assert.ok(plain.includes('Write: CREATE'), 'unstamped events keep their old write label');
+});
+
+test('override label falls back to the event start, and a floating RECURRENCE-ID is read as a wall clock', () => {
+  const adapter = buildAuthorityAdapter();
+  // No override identity stamped yet: the event's own start names the night.
+  const noIdentity = adapter.generateEventCard(
+    buildSlotHostOverrideEvent({ overrideUid: '', overrideRecurrenceId: '' })
+  );
+  assert.ok(noIdentity.includes('🗓️ override — this date only: Thu, Aug 6, 2026'), 'falls back to the start date');
+
+  // TZID form: the digits ARE the local date, so no timezone shifting.
+  const zoned = adapter.generateEventCard(
+    buildSlotHostOverrideEvent({ overrideRecurrenceId: 'TZID=America/Los_Angeles:20260813T170000' })
+  );
+  assert.ok(zoned.includes('Thu, Aug 13, 2026'), `expected the wall-clock date, got: ${zoned.slice(0, 900)}`);
+});
+
+test('a recurring series stamped slot-host stays WITHHELD — the label never promises a write the run skips', () => {
+  const adapter = buildAuthorityAdapter();
+  const event = buildSlotHostOverrideEvent({ _recurring: true });
+  assert.equal(adapter.getWriteActionFromEvent(event), 'withheld');
+  const card = adapter.generateEventCard(event);
+  assert.ok(card.includes('Write: WITHHELD'), 'filterEventsForExecution is the real gate');
+  assert.ok(card.includes('series-override-badge'), 'the override state is still surfaced (flag, do not drop)');
+});
+
+test('cadence hints are reported on the card and never become a series write', () => {
+  const adapter = buildAuthorityAdapter();
+  const card = adapter.generateEventCard(buildSlotHostOverrideEvent({
+    _cadenceHint: {
+      rrule: 'FREQ=WEEKLY;BYDAY=TH',
+      evidence: 'Bear Happy Hour every Thursday <script>alert(1)</script>',
+      sourceUrl: 'https://eaglela.com/events/bear-happy-hour-2/'
+    }
+  }));
+  assert.ok(card.includes('Cadence hint (not written): FREQ=WEEKLY;BYDAY=TH'), 'hint surfaced');
+  assert.ok(!card.includes('<script>alert(1)</script>'), 'page-derived evidence is escaped');
+  assert.ok(card.includes('&lt;script&gt;'), 'escaped rather than dropped');
+  assert.ok(card.includes('Write: OVERRIDE'), 'a cadence hint does not upgrade the write to a series');
+});
+
+test('series-change proposals render current vs proposed with evidence, source and calendar', () => {
+  const adapter = buildAuthorityAdapter();
+  const html = adapter.generateSeriesChangeProposalSection({
+    analyzedEvents: [buildSeriesOwnerProposalEvent(), { title: 'Plain', _action: 'new' }]
+  });
+
+  assert.ok(html.includes('Series-change proposals'), 'section header');
+  assert.ok(html.includes('MOVIE MONDAYS'), 'names the series');
+  assert.ok(html.includes('Calendar says today'), 'current side labelled');
+  assert.ok(html.includes('FREQ=WEEKLY;BYDAY=MO'), 'current value');
+  assert.ok(html.includes('Source proposes'), 'proposed side labelled');
+  assert.ok(html.includes('FREQ=WEEKLY;BYDAY=TU'), 'proposed value');
+  assert.ok(html.includes('Movie Mondays moves to Tuesdays starting in August'), 'verbatim evidence');
+  assert.ok(html.includes('href="https://eaglela.com/events/movie-mondays/"'), 'source link');
+  assert.ok(html.includes('chunky-dad-la'), 'calendar name');
+  assert.ok(html.includes('Field: recurrence'), 'which field is proposed');
+  assert.ok(html.includes('not written'), 'says plainly that nothing was written');
+
+  assert.equal(
+    adapter.generateSeriesChangeProposalSection({ analyzedEvents: [{ title: 'Plain', _action: 'new' }] }),
+    '',
+    'no section without proposals');
+  assert.equal(adapter.generateSeriesChangeProposalSection({}), '', 'missing analyzedEvents is not an error');
+});
+
+test('proposals collapse per series and escape everything page-derived', () => {
+  const adapter = buildAuthorityAdapter();
+  // Two occurrences of the same series carry the same proposal: one decision.
+  const duplicated = adapter.collectSeriesChangeProposals({
+    analyzedEvents: [
+      buildSeriesOwnerProposalEvent(),
+      buildSeriesOwnerProposalEvent({ startDate: '2026-08-11T02:00:00.000Z' })
+    ]
+  });
+  assert.equal(duplicated.length, 1, 'one proposal per series, not per date');
+
+  const hostile = adapter.generateSeriesChangeProposalSection({
+    analyzedEvents: [buildSeriesOwnerProposalEvent({
+      title: 'MOVIE <b>MONDAYS</b>',
+      _seriesChangeProposal: {
+        field: 'recurrence',
+        current: 'FREQ=WEEKLY;BYDAY=MO',
+        proposed: '"><img src=x onerror=alert(1)>',
+        evidence: 'moves to <script>alert(1)</script> Tuesdays',
+        sourceUrl: 'javascript:alert(1)',
+        calendarName: 'chunky-dad-la'
+      }
+    })]
+  });
+  assert.ok(!hostile.includes('<b>MONDAYS</b>'), 'title escaped');
+  assert.ok(!hostile.includes('<script>alert(1)</script>'), 'evidence escaped');
+  assert.ok(!hostile.includes('<img src=x'), 'proposed value escaped');
+  assert.ok(!hostile.includes('href="javascript:'), 'a non-http source is never linkified');
+  assert.ok(hostile.includes('javascript:alert(1)'.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))), 'but is still shown as text (flag, do not drop)');
+});
+
+test('SAFETY: a series-change proposal never changes the write plan', () => {
+  const adapter = buildAuthorityAdapter();
+  const withProposal = buildSeriesOwnerProposalEvent();
+  const { _seriesChangeProposal, _seriesAuthority, ...withoutProposal } = withProposal;
+
+  assert.equal(
+    adapter.getWriteActionFromEvent(withProposal),
+    adapter.getWriteActionFromEvent(withoutProposal),
+    'write action identical with and without the proposal');
+  assert.equal(
+    adapter.normalizeIntentAction(withProposal),
+    adapter.normalizeIntentAction(withoutProposal),
+    'intent action identical');
+  assert.deepEqual(
+    adapter.countMetricsCalendarActions([withProposal]),
+    adapter.countMetricsCalendarActions([withoutProposal]),
+    'write-plan counts identical');
+  assert.deepEqual(
+    adapter.countMetricsActions([withProposal]),
+    adapter.countMetricsActions([withoutProposal]),
+    'intent counts identical');
+
+  // And the event stays out of execution for the reason it always did
+  // (recurring series are ICS-only) — the proposal neither adds nor removes it.
+  const { SharedCore: Core } = require('../shared-core');
+  assert.equal(Core.filterEventsForExecution([withProposal]).length, 0);
+  assert.equal(
+    Core.filterEventsForExecution([withProposal]).length,
+    Core.filterEventsForExecution([withoutProposal]).length,
+    'execution set identical');
+
+  // Nothing is hidden either: the event still renders its own card.
+  assert.ok(adapter.generateEventCard(withProposal).includes('MOVIE MONDAYS'));
+  assert.ok(adapter.generateEventCard(withProposal).includes('series-proposal-badge'), 'and is badged');
+});
+
+test('generateRichHTML embeds the proposals section only when a proposal exists', async () => {
+  const adapter = buildAuthorityAdapter();
+  const withProposal = await adapter.generateRichHTML({
+    analyzedEvents: [buildSeriesOwnerProposalEvent(), buildSlotHostOverrideEvent()]
+  });
+  assert.ok(withProposal.includes('Series-change proposals'), 'section rendered');
+  assert.ok(withProposal.includes('series-override-badge'), 'override card rendered in the same page');
+
+  const withoutProposal = await adapter.generateRichHTML(buildResultsStub());
+  assert.ok(!withoutProposal.includes('Series-change proposals'), 'no section without proposals');
+  assert.ok(!withoutProposal.includes('series-override-badge'), 'no override badge without the stamp');
+});
+
+test('run summary counts overrides and proposals, and stays silent when there are none', async () => {
+  const adapter = buildAuthorityAdapter();
+  const capture = async (results) => {
+    const lines = [];
+    const originalLog = console.log;
+    console.log = (...args) => { lines.push(args.join(' ')); };
+    try {
+      await adapter.displayEnrichedEvents(results);
+    } finally {
+      console.log = originalLog;
+    }
+    return lines;
+  };
+
+  const lines = await capture({
+    analyzedEvents: [buildSlotHostOverrideEvent(), buildSeriesOwnerProposalEvent()]
+  });
+  assert.ok(
+    lines.includes('   🗓️ Single-occurrence overrides: 1 event(s)'),
+    `expected the override count line, got: ${JSON.stringify(lines.filter(l => l.includes('verride')))}`);
+  assert.ok(
+    lines.includes('   📐 Series-change proposals: 1 (not written — owner decides)'),
+    `expected the proposal count line, got: ${JSON.stringify(lines.filter(l => l.includes('roposal')))}`);
+  // The sampled event block carries the detail lines too.
+  assert.ok(
+    lines.some(l => l.startsWith('  🗓️ Override: single occurrence — Thu, Aug 6, 2026')),
+    `expected the per-event override line, got: ${JSON.stringify(lines.filter(l => l.includes('Override')))}`);
+
+  const proposalSample = await capture({ analyzedEvents: [buildSeriesOwnerProposalEvent()] });
+  assert.ok(
+    proposalSample.some(l => l === '  📐 Series-change proposal (not written): recurrence FREQ=WEEKLY;BYDAY=MO → FREQ=WEEKLY;BYDAY=TU'),
+    `expected the per-event proposal line, got: ${JSON.stringify(proposalSample.filter(l => l.includes('📐')))}`);
+
+  const quiet = await capture(buildResultsStub());
+  assert.ok(
+    !quiet.some(l => l.includes('verride') || l.includes('roposal')),
+    `no authority lines when nothing is stamped, got: ${JSON.stringify(quiet)}`);
+});

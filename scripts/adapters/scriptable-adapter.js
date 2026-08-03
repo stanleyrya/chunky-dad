@@ -4988,6 +4988,26 @@ class ScriptableAdapter {
     if (sanityFlaggedCount > 0) {
       console.log(`   ⚠️ Sanity flags: ${sanityFlaggedCount} event(s)`);
     }
+    // Same shape, same rule (line only when non-zero) for the two series
+    // authority states — a headless run must not be the only place these are
+    // invisible. Overrides ARE written (as one dated occurrence); proposals
+    // are never written and belong to the owner.
+    const overrideCount = allEvents.filter((event) =>
+      this.isSingleOccurrenceOverride(event),
+    ).length;
+    if (overrideCount > 0) {
+      console.log(
+        `   🗓️ Single-occurrence overrides: ${overrideCount} event(s)`,
+      );
+    }
+    const proposalCount = this.collectSeriesChangeProposals({
+      analyzedEvents: allEvents,
+    }).length;
+    if (proposalCount > 0) {
+      console.log(
+        `   📐 Series-change proposals: ${proposalCount} (not written — owner decides)`,
+      );
+    }
 
     const detailedActions = ["merge", "conflict"];
     const actionsToShow = detailedActions.filter(
@@ -5037,6 +5057,20 @@ class ScriptableAdapter {
       if (Array.isArray(event._sanityFlags) && event._sanityFlags.length > 0) {
         console.log(
           `  ⚠️ Sanity: ${event._sanityFlags.map((flag) => flag.code).join(", ")}`,
+        );
+      }
+      // Additive adjacent lines, same rule: which night an override replaces,
+      // and the schedule change this run refused to write.
+      if (this.isSingleOccurrenceOverride(event)) {
+        const occurrenceLabel = this.getOverrideOccurrenceLabel(event);
+        console.log(
+          `  🗓️ Override: single occurrence${occurrenceLabel ? ` — ${occurrenceLabel}` : ""} (series not modified)`,
+        );
+      }
+      const sampleProposal = this.getSeriesChangeProposal(event);
+      if (sampleProposal) {
+        console.log(
+          `  📐 Series-change proposal (not written): ${sampleProposal.field || "recurrence"} ${sampleProposal.current || "—"} → ${sampleProposal.proposed || "—"}`,
         );
       }
     });
@@ -6891,7 +6925,7 @@ class ScriptableAdapter {
         : ""
     }
 
-    ${this.generateBearDroppedSection(results)}
+    ${this.generateSeriesChangeProposalSection(results)}${this.generateBearDroppedSection(results)}
 
     ${this.generateDiscoveredVenueSection(results)}
 
@@ -8890,6 +8924,90 @@ class ScriptableAdapter {
     `;
   }
 
+  // Every distinct series-change proposal this run refused to write. Several
+  // occurrences of one series carry the same proposal, so identical entries
+  // collapse — the owner decides once per series, not once per date.
+  collectSeriesChangeProposals(results) {
+    const events = Array.isArray(results && results.analyzedEvents)
+      ? results.analyzedEvents
+      : [];
+    const seen = new Set();
+    const proposals = [];
+    events.forEach((event) => {
+      const proposal = this.getSeriesChangeProposal(event);
+      if (!proposal) return;
+      const calendarName =
+        proposal.calendarName || this.getCalendarNameForDisplay(event) || "";
+      const entry = { ...proposal, calendarName };
+      const key = [
+        entry.calendarName,
+        entry.eventTitle,
+        entry.field,
+        entry.current,
+        entry.proposed,
+      ].join("||");
+      if (seen.has(key)) return;
+      seen.add(key);
+      proposals.push(entry);
+    });
+    return proposals;
+  }
+
+  // The human-facing half of the refusal: the owner should be able to accept
+  // or reject a schedule change from this section alone, without opening the
+  // source page. Display-only — no button here writes anything, by design.
+  generateSeriesChangeProposalSection(results) {
+    const proposals = this.collectSeriesChangeProposals(results);
+    if (proposals.length === 0) return "";
+
+    const cards = proposals
+      .map((proposal) => {
+        const sourceLink = proposal.sourceUrl
+          ? this.isSafeExternalUrl(proposal.sourceUrl)
+            ? `<a href="${this.escapeHtml(proposal.sourceUrl)}" target="_blank" rel="noopener" style="font-size:12px; color:var(--primary-color); word-break:break-all;">${this.escapeHtml(proposal.sourceUrl)}</a>`
+            : `<span style="font-size:12px; color:var(--text-secondary); word-break:break-all;">${this.escapeHtml(proposal.sourceUrl)}</span>`
+          : "";
+        const columnStyle =
+          "flex:1 1 200px; border:1px solid var(--border-color); border-radius:8px; padding:8px;";
+        const labelStyle =
+          "font-size:11px; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-secondary); margin-bottom:4px;";
+        const valueStyle =
+          "font-size:13px; font-family:monospace; word-break:break-word; color:var(--text-primary);";
+        return `
+        <div class="event-card series-proposal-card">
+            <span class="action-badge badge-warning series-proposal-badge">📐 proposal — not written</span>
+            <div class="write-action-note">Field: ${this.escapeHtml(proposal.field || "recurrence")}${proposal.calendarName ? ` • Calendar: ${this.escapeHtml(proposal.calendarName)}` : ""}</div>
+            <div class="event-title">${this.escapeHtml(proposal.eventTitle || "Untitled series")}</div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin:10px 0;">
+                <div style="${columnStyle}">
+                    <div style="${labelStyle}">Calendar says today</div>
+                    <div style="${valueStyle}">${this.escapeHtml(proposal.current || "—")}</div>
+                </div>
+                <div style="${columnStyle}">
+                    <div style="${labelStyle}">Source proposes</div>
+                    <div style="${valueStyle}">${this.escapeHtml(proposal.proposed || "—")}</div>
+                </div>
+            </div>
+            ${proposal.evidence ? `<div style="font-size:12px; color:var(--text-secondary); margin-bottom:6px;">Evidence: “${this.escapeHtml(proposal.evidence)}”</div>` : ""}
+            ${sourceLink}
+        </div>
+        `;
+      })
+      .join("");
+
+    return `
+    <div class="section">
+        <div class="section-header">
+            <span class="section-icon">📐</span>
+            <span class="section-title">Series-change proposals</span>
+            <span class="section-count">${proposals.length}</span>
+        </div>
+        <div style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;">A source that owns these series says their schedule changed. The scraper does NOT write series changes: a wrong override costs one night and is reversible, a wrong series change repeats into the future. Nothing here is in this run's write plan — accept one by editing the series yourself (ICS import).</div>
+        ${cards}
+    </div>
+    `;
+  }
+
   // Split a namespaced card id into its source list and array index:
   //   "k7" → { list: "kept",    index: 7 }  (results.analyzedEvents[7])
   //   "d2" → { list: "dropped", index: 2 }  (results.bearDroppedEvents[2])
@@ -9241,6 +9359,38 @@ class ScriptableAdapter {
             sanityFlags.map((flag) => flag.code).join(", "),
           )}</span>`
         : "";
+    // Additive fourth badge, same pattern again: a slot-host source writes a
+    // single-occurrence override of a series it does not own. Neither NEW nor
+    // a series change — say which night it replaces so the action badge above
+    // ("MERGE"/"CREATE") is not the only thing the card claims.
+    const overrideOccurrenceLabel = this.isSingleOccurrenceOverride(event)
+      ? this.getOverrideOccurrenceLabel(event)
+      : "";
+    const overrideBadge = this.isSingleOccurrenceOverride(event)
+      ? `<span class="action-badge badge-merge series-override-badge">🗓️ override — this date only${
+          overrideOccurrenceLabel
+            ? `: ${this.escapeHtml(overrideOccurrenceLabel)}`
+            : ""
+        }</span>`
+      : "";
+    // Fifth badge: the refusal case. This event's source owns the series and
+    // asserts a different schedule — the card says so, the proposals section
+    // carries the detail, and nothing about the write plan changes.
+    const seriesProposalBadge = this.getSeriesChangeProposal(event)
+      ? '<span class="action-badge badge-warning series-proposal-badge">📐 series change proposed — not written</span>'
+      : "";
+    // Cadence a slot-host page implies. Reported, never turned into an RRULE.
+    const cadenceHint = this.getCadenceHint(event);
+    const cadenceHintNote = cadenceHint
+      ? `<div class="write-action-note">Cadence hint (not written): ${this.escapeHtml(
+          [
+            cadenceHint.rrule,
+            cadenceHint.evidence ? `“${cadenceHint.evidence}”` : "",
+          ]
+            .filter(Boolean)
+            .join(" — "),
+        )}</div>`
+      : "";
     const dropDetail = [
       bearOpts.dropReason ? String(bearOpts.dropReason) : "",
       bearOpts.dropHost ? `from ${bearOpts.dropHost}` : "",
@@ -9315,8 +9465,8 @@ class ScriptableAdapter {
 
     let html = `
         <div class="event-card${isDroppedCard ? " bear-dropped-card" : ""}">
-            ${actionBadge}${recurringBadge}${seriesMatchBadge}${sanityBadge}
-            ${actionNote}
+            ${actionBadge}${recurringBadge}${seriesMatchBadge}${sanityBadge}${overrideBadge}${seriesProposalBadge}
+            ${actionNote}${cadenceHintNote}
             <div class="event-title">${this.escapeHtml(event.title || event.name)}</div>
             ${bearVerdictRow}
             
@@ -11412,10 +11562,161 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     // buckets off normalizeWriteAction, not this, so the metrics schema is
     // untouched.
     if (SharedCore.isRecurringSeriesEvent(event)) return "withheld";
+    // Same display-only treatment for the other direction: a slot-host source
+    // fills in ONE dated occurrence of somebody else's series, so the write is
+    // neither a new event nor a change to the series. Checked after the
+    // recurring guard on purpose — filterEventsForExecution is the real gate,
+    // and a withheld event must never be labelled as a write that happens.
+    if (this.isSingleOccurrenceOverride(event)) return "override";
     if (action === "new") return "create";
     if (action === "merge") return "update";
     if (action === "conflict" || action === "missing_calendar") return "skip";
     return "other";
+  }
+
+  // --- Series authority (stamped upstream, consumed read-only here) --------
+  // SharedCore stamps _seriesAuthority on events whose source's relationship
+  // to a series is known. Absent (every run before the stamp, every saved run)
+  // → "" and every surface below renders exactly as it did before.
+  getSeriesAuthority(event) {
+    const raw =
+      typeof event?._seriesAuthority === "string"
+        ? event._seriesAuthority.trim().toLowerCase()
+        : "";
+    return raw === "series-owner" || raw === "slot-host" || raw === "unknown"
+      ? raw
+      : "";
+  }
+
+  // A slot-host source (e.g. a venue announcing it hosts this week's leg of a
+  // traveling brand) yields a single-occurrence override of a series it does
+  // not own — never a series write.
+  isSingleOccurrenceOverride(event) {
+    return this.getSeriesAuthority(event) === "slot-host";
+  }
+
+  // Which occurrence the override replaces. RECURRENCE-ID wins because it
+  // names the series slot; the event's own start is the fallback for a
+  // slot-host event whose override identity is not stamped yet. Date only —
+  // the point is which night, and the card already shows the times.
+  getOverrideOccurrenceLabel(event) {
+    const dateOptions = {
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    };
+    const format = (date, timeZone) => {
+      try {
+        return date.toLocaleDateString("en-US", { ...dateOptions, timeZone });
+      } catch (error) {
+        return date.toLocaleDateString("en-US", {
+          ...dateOptions,
+          timeZone: "UTC",
+        });
+      }
+    };
+    const recurrenceId = this.normalizeOverrideRecurrenceId(
+      event?.overrideRecurrenceId || "",
+    );
+    if (recurrenceId) {
+      const zoned = /^TZID=([^:]+):(.+)$/i.exec(recurrenceId);
+      const value = zoned ? zoned[2] : recurrenceId;
+      const parts = /^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?(Z)?)?$/.exec(
+        value,
+      );
+      if (parts) {
+        if (parts[7] === "Z") {
+          // A UTC instant: render it in the calendar's own timezone, or the
+          // occurrence lands on the wrong night for late-evening events.
+          const instant = new Date(
+            Date.UTC(
+              Number(parts[1]),
+              Number(parts[2]) - 1,
+              Number(parts[3]),
+              Number(parts[4] || 0),
+              Number(parts[5] || 0),
+              Number(parts[6] || 0),
+            ),
+          );
+          return format(
+            instant,
+            zoned ? zoned[1] : this.getTimezoneForCityOrUtc(event?.city),
+          );
+        }
+        // Floating or TZID-local: the digits already ARE the calendar date.
+        const wallClock = new Date(
+          Date.UTC(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3])),
+        );
+        return format(wallClock, "UTC");
+      }
+    }
+    const start = event?.startDate ? new Date(event.startDate) : null;
+    if (start && !Number.isNaN(start.getTime())) {
+      return format(start, this.getTimezoneForCityOrUtc(event?.city));
+    }
+    return "";
+  }
+
+  // A cadence a slot-host source implies (e.g. "every Thursday") is evidence
+  // about someone else's series, never an RRULE this run writes. Surfaced so
+  // the reading is not silently discarded (flag, don't drop).
+  getCadenceHint(event) {
+    const raw =
+      event && typeof event._cadenceHint === "object" && event._cadenceHint
+        ? event._cadenceHint
+        : null;
+    if (!raw) return null;
+    const rrule = this.stringifyAuthorityValue(raw.rrule);
+    const evidence = this.stringifyAuthorityValue(raw.evidence);
+    const sourceUrl = this.stringifyAuthorityValue(raw.sourceUrl);
+    if (!rrule && !evidence) return null;
+    return { rrule, evidence, sourceUrl };
+  }
+
+  // The refusal case: a source that OWNS a series asserts a different
+  // schedule. Never auto-written — a wrong override costs one night and is
+  // reversible, a wrong series change is wrong repeatedly into the future.
+  getSeriesChangeProposal(event) {
+    const raw =
+      event &&
+      typeof event._seriesChangeProposal === "object" &&
+      event._seriesChangeProposal
+        ? event._seriesChangeProposal
+        : null;
+    if (!raw) return null;
+    const proposal = {
+      field: this.stringifyAuthorityValue(raw.field),
+      current: this.stringifyAuthorityValue(raw.current),
+      proposed: this.stringifyAuthorityValue(raw.proposed),
+      evidence: this.stringifyAuthorityValue(raw.evidence),
+      sourceUrl: this.stringifyAuthorityValue(raw.sourceUrl),
+      calendarName: this.stringifyAuthorityValue(raw.calendarName),
+      eventTitle: this.stringifyAuthorityValue(event.title || event.name),
+    };
+    // A proposal with nothing to compare is not a decision the owner can make.
+    if (!proposal.current && !proposal.proposed) return null;
+    return proposal;
+  }
+
+  // Authority payloads come from scraped pages: coerce anything (object RRULE,
+  // number, null) to a plain trimmed string before it reaches escapeHtml.
+  stringifyAuthorityValue(value) {
+    if (value === null || value === undefined) return "";
+    if (typeof value === "object") {
+      try {
+        return JSON.stringify(value);
+      } catch (error) {
+        return "";
+      }
+    }
+    return String(value).trim();
+  }
+
+  // Scraped URLs are untrusted: only http(s) becomes a link, anything else
+  // (javascript:, data:) is shown as escaped text so it can still be read.
+  isSafeExternalUrl(url) {
+    return /^https?:\/\/\S+$/i.test(String(url || "").trim());
   }
 
   formatIntentActionLabel(action) {
@@ -11433,6 +11734,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     if (normalized === "update") return "UPDATE";
     if (normalized === "skip") return "SKIP";
     if (normalized === "withheld") return "WITHHELD";
+    if (normalized === "override") return "OVERRIDE";
     return "OTHER";
   }
 

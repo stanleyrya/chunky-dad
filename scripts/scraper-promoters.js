@@ -25,6 +25,23 @@ const scraperPromoters = [
     "bearAffinity": "always"
   },
   {
+    "name": "Bear Happy Hour",
+    "aliases": [
+      "BHH"
+    ],
+    "shortName": "BHH",
+    "shorterName": "BHH",
+    "favicon": "https://linktr.ee/bearhappyhour",
+    "urlPatterns": [
+      "linktr.ee/bearhappyhour",
+      "eventbrite.com/o/bear-happy-hour-87043830313",
+      "instagram.com/bearhappyhourla",
+      "instagram.com/bearhappyhourchi",
+      "instagram.com/bearhappyhournyc"
+    ],
+    "bearAffinity": "always"
+  },
+  {
     "name": "BEEFWITCH",
     "parent": "Coach After Dark",
     "keywords": [

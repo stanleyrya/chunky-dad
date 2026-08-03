@@ -9535,6 +9535,303 @@ class SharedCore {
         };
     }
 
+    // -------------------------------------------------------------------------
+    // SERIES AUTHORITY
+    //
+    // The question this answers: when a page tells us something about an event
+    // that belongs to a RECURRING SERIES, may that page redefine the SERIES, or
+    // only its own SLOT inside it?
+    //
+    // The live case (run 20260803-091158). "Bear Happy Hour" is a travelling
+    // brand: a weekly 5pm series in four of the owner's calendars, each a
+    // venue-less placeholder whose DESCRIPTION literally reads "Bar: Check
+    // instagram for this week's location." - the venue rotates every week.
+    // Eagle LA's own site says it hosts BHH "Every 1st Thursday", so extraction
+    // returns recurrenceRule FREQ=MONTHLY;BYDAY=1TH. Read as a series claim
+    // that makes the scraped event look like a series of its own, so it is
+    // withheld and its venue/address/coordinates are thrown away - leaving the
+    // calendar saying "check instagram" on the one date where we know the
+    // answer. But Eagle LA does not own that brand and must never redefine it.
+    // The SAME site, on the SAME crawl, absolutely SHOULD be able to redefine
+    // MOVIE MONDAYS - its own night. Same source, opposite correct answers.
+    //
+    // The discriminator is ownership, not confidence:
+    //
+    //   'series-owner'  the source IS the series' owner (a venue changing its
+    //                   own night, or a brand speaking on its own site) ->
+    //                   the change is real but is NEVER auto-written: it is
+    //                   surfaced as a _seriesChangeProposal. Behaviour is
+    //                   byte-identical to today's withhold plus the proposal.
+    //   'slot-host'     the source hosts ONE SLOT in someone else's series ->
+    //                   its per-night facts (bar/address/location/cover/
+    //                   ticketUrl/image) are an OVERRIDE of the occurrences it
+    //                   named, and its stated cadence is demoted to a
+    //                   _cadenceHint that is never written as a series.
+    //   'unknown'       ownership is not demonstrable (aggregators, ticketing
+    //                   platforms, undetermined site roles) -> corroboration
+    //                   only, exactly today's behaviour: withhold, write
+    //                   nothing at either level.
+    //
+    // Two filters ride on top:
+    //   1. Shape of the assertion. A named date is instance-level; a stated
+    //      schedule is series-level; a VENUE stating a schedule for a brand it
+    //      does not own is a sub-pattern of that brand's series, so it stays
+    //      instance-level (isNarrowerCadence measures exactly this).
+    //   2. Field class. recurrence and identity (title/brand) are structurally
+    //      series-level and can never be changed by a slot-host. Per-night
+    //      facts are instance-capable.
+    //
+    // The absolute safety rule: a SERIES change is NEVER written automatically.
+    // An override that is wrong costs one night and is reversible; a wrong
+    // series change is wrong repeatedly into the future. And no AI decides
+    // this - every rung below is curated data or a deterministic comparison.
+    // (This project has direct evidence that AI merge arbitration picks by SLOT
+    // rather than by content: enrich leans "incoming" 72%, calendar leans
+    // "calendar" 66%, and events get rewritten every run.)
+    // -------------------------------------------------------------------------
+
+    // The URL this event was scraped FROM. _sourcePageUrl is the exact crawled
+    // page when it survived the merges; url/website are the same page in
+    // canonical form (url and website are ONE field, aliases of each other).
+    getSeriesAuthoritySourceUrl(event) {
+        if (!event || typeof event !== 'object') return '';
+        for (const value of [event._sourcePageUrl, event.url, event.website]) {
+            if (typeof value === 'string' && value.trim()) return value.trim();
+        }
+        return '';
+    }
+
+    // Is the page this event came from the VENUE'S OWN SITE? Every rung is a
+    // durable restatement of the ai-web parser's page-level
+    // getPageSiteRole(htmlData) === 'venue' determination (live in production:
+    // "siteRole for eaglela.com: venue", "www.thedallaseagle.com: venue",
+    // "www.3dollarbillbk.com: venue"), reachable from shared-core without the
+    // htmlData the parser holds:
+    //   1) _pageSiteRole - the determination stamped straight onto the event;
+    //   2) parser config `siteRole` - resolvePageSiteRole's own precedence #1;
+    //   3) barSource 'venue-site'/'venue-site-identity' - stamped ONLY when
+    //      getPageSiteRole said 'venue' AND the page's own declared venue name
+    //      matched this event's bar (stampBarSourceProvenance / the #1545
+    //      venue-site identity pass). This is getPageSiteRole's output,
+    //      serialized into notes, so it survives every merge;
+    //   4) curated config identity - the parser is NAMED for this event's bar
+    //      and the page sits on one of that parser's own configured domains
+    //      ("Eagle LA" parser, urls eaglela.com, bar "Eagle LA"). Pure curated
+    //      config, immune to the stamp-loss the rungs above can suffer when a
+    //      record passes through createFinalEventObject.
+    // Explicit 'organizer' at rungs 1-2 is a hard NO - an organizer site never
+    // qualifies as a venue's own site.
+    isVenueOwnSiteSource(event) {
+        if (!event || typeof event !== 'object') return false;
+        const stampedRole = String(event._pageSiteRole || '').trim().toLowerCase();
+        if (stampedRole === 'venue') return true;
+        if (stampedRole === 'organizer') return false;
+        const parserConfig = event._parserConfig && typeof event._parserConfig === 'object' ? event._parserConfig : null;
+        const configRole = String((parserConfig && parserConfig.siteRole) || '').trim().toLowerCase();
+        if (configRole === 'venue') return true;
+        if (configRole === 'organizer') return false;
+        const barSource = String(event.barSource || '').trim();
+        if (barSource === 'venue-site' || barSource === 'venue-site-identity') return true;
+        const barKey = this.normalizePromoterNameKey(event.bar);
+        if (!barKey || barKey !== this.normalizePromoterNameKey(parserConfig && parserConfig.name)) return false;
+        const sourceDomain = this.getRegistrableDomainFromUrl(this.getSeriesAuthoritySourceUrl(event));
+        if (!sourceDomain) return false;
+        const configuredUrls = Array.isArray(parserConfig && parserConfig.urls) ? parserConfig.urls : [];
+        return configuredUrls.some(url => this.getRegistrableDomainFromUrl(url) === sourceDomain);
+    }
+
+    // The URLs a registry entry uses to name ITSELF: its curated website as a
+    // host+path token (so a platform profile - linktr.ee/<handle>,
+    // eventbrite.com/o/<slug> - only ever claims its own sub-path, never the
+    // platform) plus its urlPatterns. instagram is deliberately excluded: a
+    // handle is an identity, not a site a series is ever scraped off.
+    //
+    // A sub-brand's home INCLUDES its family's home (the same parent
+    // inheritance promoterEntryToMetadataBlock uses): "Spooky Bear" is
+    // Northeast Ursamen, so ursamen.org is its own site too. Without this a
+    // sub-brand match would answer the ownership question differently from a
+    // parent match on the identical page.
+    getPromoterSelfUrlTokens(entry) {
+        const tokens = [];
+        const addFrom = (source) => {
+            const websiteToken = this.getPromoterWebsiteToken(source && source.website);
+            if (websiteToken && !tokens.includes(websiteToken)) tokens.push(websiteToken);
+            for (const pattern of Array.isArray(source && source.urlPatterns) ? source.urlPatterns : []) {
+                const token = String(pattern || '').trim().toLowerCase();
+                if (token && !tokens.includes(token)) tokens.push(token);
+            }
+        };
+        addFrom(entry);
+        const parentName = entry && typeof entry.parent === 'string' ? entry.parent.trim() : '';
+        if (parentName) addFrom(this.getPromoterEntryByName(parentName));
+        return tokens;
+    }
+
+    // The venue the CALENDAR's own series record names - its bar field, or the
+    // `bar:` line of its notes. This is the owner's curated data and it
+    // outranks anything derived: if the series says it happens at this venue,
+    // this venue owns the night. BHH's four series records deliberately carry
+    // the placeholder "Check instagram for this week's location." there, which
+    // matches no venue and is exactly the right answer.
+    getSeriesRecordBar(record) {
+        if (!record || typeof record !== 'object') return '';
+        if (typeof record.bar === 'string' && record.bar.trim()) return record.bar.trim();
+        const fields = this.parseNotesIntoFields(record.notes || '');
+        return typeof fields.bar === 'string' ? fields.bar.trim() : '';
+    }
+
+    // The RRULE the calendar's series record carries, when it carries one at
+    // all (many series are only ever identified by the wide-window identifier
+    // probe and expose no rule - callers must treat '' as "unknown", never as
+    // "no recurrence").
+    getSeriesRecordRecurrence(record) {
+        if (!record || typeof record !== 'object') return '';
+        for (const value of [record.recurrenceRule, record.recurrence]) {
+            if (typeof value === 'string' && value.trim()) return value.trim();
+        }
+        const fields = this.parseNotesIntoFields(record.notes || '');
+        return typeof fields.recurrence === 'string' ? fields.recurrence.trim() : '';
+    }
+
+    // FREQ/INTERVAL/BYDAY of an RRULE value, or null when there is no FREQ to
+    // read. String parsing only - shared-core stays platform-pure.
+    static parseCadenceParts(rrule) {
+        const text = String(rrule || '').trim().toUpperCase();
+        if (!text) return null;
+        const read = (name) => {
+            const match = text.match(new RegExp(`(?:^|;)${name}=([^;]*)`));
+            return match ? match[1].trim() : '';
+        };
+        const freq = read('FREQ');
+        if (!freq) return null;
+        const interval = Number(read('INTERVAL'));
+        return {
+            freq,
+            interval: Number.isFinite(interval) && interval > 0 ? interval : 1,
+            byDay: read('BYDAY').split(',').map(part => part.trim()).filter(Boolean)
+        };
+    }
+
+    // Is `scrapedRule` a strictly NARROWER cadence than `seriesRule` - i.e. a
+    // SUB-PATTERN of it, hitting only some of the series' occurrences? This is
+    // filter #1 made measurable: a venue saying "every 1st Thursday" about a
+    // WEEKLY brand is claiming one night a month out of that brand's series,
+    // which is an instance-level assertion however schedule-shaped it looks.
+    // Fails closed (false) on anything it cannot compare.
+    static isNarrowerCadence(scrapedRule, seriesRule) {
+        const scraped = SharedCore.parseCadenceParts(scrapedRule);
+        const series = SharedCore.parseCadenceParts(seriesRule);
+        if (!scraped || !series) return false;
+        const ranks = { DAILY: 1, WEEKLY: 2, MONTHLY: 3, YEARLY: 4 };
+        const scrapedRank = ranks[scraped.freq] || 0;
+        const seriesRank = ranks[series.freq] || 0;
+        if (!scrapedRank || !seriesRank) return false;
+        if (scrapedRank !== seriesRank) return scrapedRank > seriesRank;
+        if (scraped.interval !== series.interval) return scraped.interval > series.interval;
+        if (scraped.byDay.length === 0 || series.byDay.length === 0) return false;
+        const bareDay = (value) => value.replace(/^[+-]?\d+/, '');
+        const seriesDays = new Set(series.byDay.map(bareDay));
+        if (!scraped.byDay.every(day => seriesDays.has(bareDay(day)))) return false;
+        // Same weekdays qualified by an ordinal ("1TH" inside "TH") is narrower;
+        // so is a strict subset of the weekday list. Identical rules are not.
+        return scraped.byDay.some(day => /^[+-]?\d/.test(day))
+            || new Set(scraped.byDay.map(bareDay)).size < seriesDays.size;
+    }
+
+    // Verbatim schedule wording from the event's OWN text - never AI, never
+    // paraphrased, never invented. The model's per-field recurrence evidence
+    // when it survived onto the event, else the first schedule phrase that
+    // appears LITERALLY in the description or title ("First Thursdays" out of
+    // "Bear Happy Hour First Thursdays 5pm"). '' when the page stated no
+    // phrase we can quote - an honest blank beats a manufactured quote.
+    static extractCadenceEvidence(event) {
+        const fieldEvidence = event && typeof event === 'object'
+            ? (event.__fieldEvidence || event._fieldEvidence)
+            : null;
+        if (fieldEvidence && typeof fieldEvidence === 'object'
+            && typeof fieldEvidence.recurrence === 'string' && fieldEvidence.recurrence.trim()) {
+            return fieldEvidence.recurrence.trim();
+        }
+        const schedulePhrase = /\b(?:every|each|first|second|third|fourth|last|1st|2nd|3rd|4th)\s+[a-z0-9 ]{0,24}?(?:mon|tues?|wed(?:nes)?|thur?s?|fri|sat(?:ur)?|sun)(?:day)?s?\b|\b(?:weekly|bi-?weekly|monthly|nightly)\b/i;
+        for (const value of [event && event.description, event && event.title]) {
+            if (typeof value !== 'string' || !value.trim()) continue;
+            const match = value.match(schedulePhrase);
+            if (match) return match[0].trim();
+        }
+        return '';
+    }
+
+    // Resolve WHO may redefine the series this scraped event belongs to.
+    // Returns { authority, reason, sourceUrl, seriesRecord, seriesBar, brand }.
+    // Every rung is curated data or a deterministic comparison - see the
+    // SERIES AUTHORITY block comment above for why no AI touches this.
+    resolveSeriesAuthority(event, analysis = null) {
+        const sourceUrl = this.getSeriesAuthoritySourceUrl(event);
+        const seriesRecord = (analysis && (analysis.sourceEvent || analysis.existingEvent)) || null;
+        const result = {
+            authority: 'unknown',
+            reason: 'source site role undetermined',
+            sourceUrl,
+            seriesRecord,
+            seriesBar: this.getSeriesRecordBar(seriesRecord),
+            brand: null
+        };
+        if (!event || typeof event !== 'object') return result;
+        if (!sourceUrl) return { ...result, reason: 'no source url to attribute' };
+
+        const sourceIsVenue = this.isVenueOwnSiteSource(event);
+        const match = this.matchEventToPromoter(event);
+        const brand = match && match.entry ? match.entry : null;
+        const brandTokens = brand ? this.getPromoterSelfUrlTokens(brand) : [];
+        const loweredSource = sourceUrl.toLowerCase();
+        const withBrand = { ...result, brand };
+
+        // 1. The registry names this very source as the brand's own home - the
+        //    brand is speaking for itself.
+        const selfToken = brandTokens.find(token => loweredSource.includes(token));
+        if (selfToken) {
+            return { ...withBrand, authority: 'series-owner', reason: `source is "${brand.name}"'s own site (${selfToken})` };
+        }
+
+        // 2. Venue-of-record: the owner's OWN calendar series names this venue
+        //    as where it happens (CUBSCOUT's series carries "bar: Eagle LA").
+        //    Curated data beats derived - that settles ownership immediately,
+        //    even for a brand the registry lists as a separate promoter.
+        if (sourceIsVenue && result.seriesBar
+            && this.normalizeBarNameKey(event.bar)
+            && this.normalizeBarNameKey(result.seriesBar) === this.normalizeBarNameKey(event.bar)) {
+            return { ...withBrand, authority: 'series-owner', reason: `calendar series names "${result.seriesBar}" as its venue` };
+        }
+
+        // 3. The registry names a DIFFERENT home for the brand: different
+        //    entities. A VENUE in that position hosts a slot; anything else
+        //    (aggregator, ticketing platform, undetermined site) is
+        //    corroboration only and writes at neither level.
+        if (brandTokens.length > 0) {
+            if (sourceIsVenue) {
+                return { ...withBrand, authority: 'slot-host', reason: `"${brand.name}" is curated at ${brandTokens[0]}, not on this venue's site` };
+            }
+            return { ...withBrand, reason: `neither this source nor "${brand.name}"'s own site - corroboration only` };
+        }
+
+        // 4. Nothing else claims the brand and the source is the venue's own
+        //    site, with no calendar series to be a slot inside: the venue's own
+        //    night (MOVIE MONDAYS, Dallas Eagle's Karaoke).
+        if (sourceIsVenue && !seriesRecord) {
+            return { ...withBrand, authority: 'series-owner', reason: 'venue site and no other claim on this brand' };
+        }
+
+        // 5. Filter #1, measured: a venue narrating a SUB-PATTERN of a series
+        //    whose venue-of-record is not this venue is still instance-level.
+        if (sourceIsVenue && seriesRecord
+            && SharedCore.isNarrowerCadence(event.recurrenceRule, this.getSeriesRecordRecurrence(seriesRecord))) {
+            return { ...withBrand, authority: 'slot-host', reason: 'stated cadence is a sub-pattern of the calendar series' };
+        }
+
+        // Everything else stays 'unknown' - today's behaviour exactly.
+        return withBrand;
+    }
+
     normalizeOverrideUid(value) {
         return SharedCore.normalizeOverrideUid(value);
     }
@@ -10864,7 +11161,79 @@ class SharedCore {
                 Boolean(event && (event.identifier || event.id)) &&
                 !(event && (event.overrideUid || event.overrideRecurrenceId));
 
-            if (SharedCore.isRecurringSeriesEvent(event)) {
+            // SERIES AUTHORITY (see the block comment on resolveSeriesAuthority).
+            // Resolved from the SCRAPED event, which still carries the parser's
+            // own stamps - createFinalEventObject builds a fresh object above
+            // and several of them do not survive it.
+            const seriesAuthority = SharedCore.isRecurringSeriesEvent(event)
+                ? this.resolveSeriesAuthority(event, analysis)
+                : null;
+            if (seriesAuthority) {
+                analyzedEvent._seriesAuthority = seriesAuthority.authority;
+            }
+
+            // A source that only hosts one SLOT in someone else's series never
+            // made a series claim at all. Its schedule wording is a CADENCE
+            // HINT about a brand it does not own - recorded, surfaced, and
+            // never written as a series - while its per-night facts (bar,
+            // address, location, cover, ticketUrl, image) are exactly what an
+            // override is for. Demoting the recurrence here is what turns this
+            // event back into the dated occurrence it always was: it stops
+            // being isRecurringSeriesEvent, so the withhold below does not run,
+            // the override identity survives, and the occurrence gets written.
+            // Field class (filter #2): recurrence and identity are structurally
+            // series-level, so the scraped title never replaces the series'.
+            if (seriesAuthority && seriesAuthority.authority === 'slot-host') {
+                const scrapedRule = typeof event.recurrenceRule === 'string' ? event.recurrenceRule.trim() : '';
+                analyzedEvent._cadenceHint = {
+                    rrule: scrapedRule,
+                    evidence: SharedCore.extractCadenceEvidence(event),
+                    sourceUrl: seriesAuthority.sourceUrl
+                };
+                delete analyzedEvent.recurrenceRule;
+                delete analyzedEvent.recurrence;
+                delete analyzedEvent._recurring;
+                delete analyzedEvent._recurringExport;
+                const seriesTitle = seriesAuthority.seriesRecord
+                    && typeof seriesAuthority.seriesRecord.title === 'string'
+                    ? seriesAuthority.seriesRecord.title.trim()
+                    : '';
+                if (seriesTitle && analyzedEvent.title && analyzedEvent.title !== seriesTitle) {
+                    console.log(`🎫 SERIES AUTHORITY: "${analyzedEvent.title}" kept the series title "${seriesTitle}" — a slot host never renames a series it does not own`);
+                    analyzedEvent.title = seriesTitle;
+                }
+                console.log(`🎫 SERIES AUTHORITY: "${analyzedEvent.title || 'Unknown'}" → slot-host (${seriesAuthority.reason}); cadence "${scrapedRule}" demoted to a hint and the occurrence written as an override`);
+            }
+
+            // A source that DOES own the series may be telling us the series
+            // itself changed - and that is precisely what is never written
+            // automatically. An override that is wrong costs one night and is
+            // reversible; a wrong series change is wrong repeatedly into the
+            // future. So it is surfaced as a proposal and the withhold below
+            // still runs, unchanged.
+            //
+            // A proposal needs a `current` to change: a series the calendar has
+            // never seen is not a series CHANGE, it is a new series, and the
+            // ICS export already owns that path (MOVIE MONDAYS in run
+            // 20260803-091158 - Eagle LA's own night, but the LA calendar holds
+            // no record of it yet).
+            if (seriesAuthority && seriesAuthority.authority === 'series-owner' && seriesAuthority.seriesRecord) {
+                const proposed = typeof event.recurrenceRule === 'string' ? event.recurrenceRule.trim() : '';
+                const current = this.getSeriesRecordRecurrence(seriesAuthority.seriesRecord);
+                if (proposed && proposed !== current) {
+                    analyzedEvent._seriesChangeProposal = {
+                        field: 'recurrence',
+                        current,
+                        proposed,
+                        evidence: SharedCore.extractCadenceEvidence(event),
+                        sourceUrl: seriesAuthority.sourceUrl,
+                        calendarName: analyzedEvent.city || event.city || ''
+                    };
+                    console.log(`🎫 SERIES AUTHORITY: "${analyzedEvent.title || 'Unknown'}" → series-owner (${seriesAuthority.reason}); recurrence "${current || '(none stated on the series record)'}" → "${proposed}" raised as a PROPOSAL — never auto-written`);
+                }
+            }
+
+            if (SharedCore.isRecurringSeriesEvent(event) && (!seriesAuthority || seriesAuthority.authority !== 'slot-host')) {
                 if (ownerNamedExistingRecord) {
                     console.log(`🔁 RECURRING: "${event.title || 'Unknown'}" is a series edit — a calendar write would detach one occurrence, not update the series; use the ICS export`);
                 }
