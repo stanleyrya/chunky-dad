@@ -4798,7 +4798,9 @@ test('bear check enforce: trusted promoter keeps AI-not_bear events with an unli
 
 test('bear check enforce: untrusted sources rescue on bear, flag on unsure, drop on not_bear', async () => {
   const cases = [
-    { verdict: { verdict: 'bear', reason: 'bear promoter event' }, kept: true, bearReview: undefined, isBearEvent: true },
+    // An AI 'bear' verdict on an UNCURATED source must carry event-level
+    // evidence to survive the evidence gate (see the gate tests below).
+    { verdict: { verdict: 'bear', reason: 'bear promoter event', eventEvidence: ['Treasure Trail'] }, kept: true, bearReview: undefined, isBearEvent: true },
     { verdict: { verdict: 'unsure', reason: 'cannot tell' }, kept: true, bearReview: 'unsure — ai: cannot tell', isBearEvent: undefined },
     { verdict: { verdict: 'not_bear', reason: 'lesbian night' }, kept: false }
   ];
@@ -4866,6 +4868,199 @@ test('bear check: identical events share one memoized AI call per run', async ()
   );
   assert.equal(result.length, 2);
   assert.equal(adapter.calls.length, 1, 'second identical event must reuse the memoized verdict');
+});
+
+// ---------------------------------------------------------------------------
+// Bear evidence gate: the venue is CONTEXT, not EVIDENCE.
+//
+// Run 20260803-091731 (Dallas Eagle, an uncurated venue site) marked 15 of 16
+// events bear; every AI reason asserted "Dallas Eagle is a well-known
+// bear-scene venue" and then rationalised whatever the event was. The gate
+// keys on STRUCTURE — did the model quote anything from the event's OWN text
+// that survives verbatim verification — never on the English of the reason.
+// ---------------------------------------------------------------------------
+
+// The real events from that run, with the real AI reasons they drew.
+const DALLAS_EAGLE_RUN = [
+  { title: 'SHOCK Therapy', description: 'Plug in and lose yourself at SHOCK Therapy with DJ Dan Slater, our new monthly Saturday night dance floor takeover. Expect high-voltage beats, heavy bodies, and the kind of late-night attraction you can only find at the Dallas Eagle 😈🦅' },
+  { title: 'Trash Disco with DJ Blaine', description: 'We’re celebrating the first Sunday of the month with TRASH DISCO featuring DJ Blaine!!! ✨ Join in on this fabulous Dallas tradition! Grab your gear and shake it on the dance floor! 🦅' },
+  { title: 'UNDERWEAR HAPPY HOUR', description: 'Strip down to your undies and indulge in discounted premium cocktails, ice cold draft beer, and delicious fresh food from our Grill!' },
+  { title: 'Free pool and free Switch all night', description: 'Hit the stage, hit a note, hit on someone! Thursday Karaoke is a whole new way to have fun at the Eagle 🎵🎤🦅' },
+  { title: 'Lost Souls Bingham Cup Send Off Party', description: 'Come celebrate with the Lost Souls and wish them luck on their way to the Bingham Cup in Australia! 🏉💚🦅' },
+  { title: 'Dirty Pop with DJ Drew G', description: 'Harder. Longer. Dirtier. Drew G’s world-famous Dirty Pop party is taking over second Sundays at the Dallas Eagle 🦅' },
+  { title: 'Underwear Night and Contest with DJ Philip Webb', description: 'Underwear Night and Contest with DJ Philip Webb' },
+  { title: '80s Retro with DJ Blaine', description: 'It’s 80s RETRO featuring DJ BLAINE! Let’s venture back in time together! This party is gonna be totally rad!' },
+  { title: 'Drink Draw and Dine', description: 'Feed your creativity and your appetite at Drink Draw and Dine! 🍸🎨🍔 Our models will be striking poses on our brightly lit stage.' },
+  { title: 'Underwear Night and Contest', description: 'Every Wednesday night is UNDERWEAR NIGHT at the Dallas Eagle! 🦅' },
+  { title: 'TRASH DISCO', description: "We're celebrating the first Sunday of the month with TRASH DISCO featuring DJ Blaine!!! ✨" },
+  { title: 'UNDERWEAR NIGHT', description: 'Every Wednesday night is UNDERWEAR NIGHT at the Dallas Eagle! 🦅' }
+].map(event => ({ ...event, bar: 'Dallas Eagle', city: 'dallas' }));
+
+test('bear evidence gate: the whole Dallas Eagle run demotes to FLAG when the reason is venue reputation only', async () => {
+  const core = createCore();
+  const drops = [];
+  // The verbatim shape of the run's verdicts: bear, venue-reputation reason,
+  // nothing quoted from the event itself.
+  const adapter = buildBearVerdictAdapter({
+    verdict: 'bear',
+    reason: 'Dallas Eagle is a well-known bear-scene venue and promoter, and the event aligns with typical bear events.',
+    eventEvidence: []
+  });
+  const kept = await core.filterBearEvents(DALLAS_EAGLE_RUN, bearCheckConfig('enforce'), adapter, drops);
+
+  assert.equal(kept.length, DALLAS_EAGLE_RUN.length, 'flag, do not drop: every event survives');
+  assert.equal(drops.length, 0, 'a demoted verdict is never a drop');
+  for (const event of kept) {
+    assert.equal(event.isBearEvent, undefined, `"${event.title}" must not be marked bear on venue reputation`);
+    assert.match(event.bearReview, /^unsure — ai: .*\[evidence gate: no event-level evidence quoted\]$/);
+  }
+});
+
+test('bear evidence gate: verbatim event-level quotes keep the bear verdict, hallucinated ones do not', async () => {
+  const event = DALLAS_EAGLE_RUN[0];
+
+  // Real span of the description → the verdict stands.
+  const quotedCore = createCore();
+  const quoted = await quotedCore.filterBearEvents(
+    [{ ...event }],
+    bearCheckConfig('enforce'),
+    buildBearVerdictAdapter({ verdict: 'bear', reason: 'bear-crowd language', eventEvidence: ['heavy bodies'] })
+  );
+  assert.equal(quoted[0].isBearEvent, true);
+  assert.equal(quoted[0].bearSource, 'ai');
+  assert.equal(quoted[0].bearReview, undefined);
+
+  // A quote that is not in the event text at all → demoted, and the gate says
+  // how many spans it rejected.
+  const fakeCore = createCore();
+  const faked = await fakeCore.filterBearEvents(
+    [{ ...event }],
+    bearCheckConfig('enforce'),
+    buildBearVerdictAdapter({ verdict: 'bear', reason: 'bear crowd', eventEvidence: ['a bear crowd every Saturday', 'cubs and otters welcome'] })
+  );
+  assert.equal(faked[0].isBearEvent, undefined);
+  assert.match(faked[0].bearReview, /\[evidence gate: 2 quoted span\(s\) not found in the event text\]$/);
+});
+
+test('bear evidence gate: the venue name can never satisfy the gate', async () => {
+  const core = createCore();
+  const kept = await core.filterBearEvents(
+    [{ title: 'Tuesday Trivia', description: 'Free to play, prizes at 9pm.', bar: 'Dallas Eagle' }],
+    bearCheckConfig('enforce'),
+    buildBearVerdictAdapter({ verdict: 'bear', reason: 'bear venue', eventEvidence: ['Dallas Eagle'] })
+  );
+  assert.equal(kept[0].isBearEvent, undefined, 'quoting the venue is quoting context, not evidence');
+  assert.match(kept[0].bearReview, /\[evidence gate: 1 quoted span\(s\) not found in the event text\]$/);
+});
+
+test('verifyBearEvidenceQuotes: verbatim only, punctuation/emoji/case tolerant, venue and stubs rejected', () => {
+  const core = createCore();
+  const event = {
+    title: 'Trash Disco with DJ Blaine',
+    description: 'Grab your gear and shake it on the dance floor! 🦅  “Big or small” — all welcome.',
+    bar: 'Dallas Eagle'
+  };
+  // Case, curly quotes, emoji, collapsed whitespace and punctuation all fold away
+  assert.deepEqual(core.verifyBearEvidenceQuotes(['GRAB YOUR GEAR'], event), ['GRAB YOUR GEAR']);
+  assert.deepEqual(core.verifyBearEvidenceQuotes(['"Big or small"'], event), ['"Big or small"']);
+  assert.deepEqual(core.verifyBearEvidenceQuotes(['dance floor!  🦅'], event), ['dance floor!  🦅']);
+  // Paraphrase, venue name, too-short stubs and non-strings never survive
+  assert.deepEqual(core.verifyBearEvidenceQuotes(['a bear crowd'], event), []);
+  assert.deepEqual(core.verifyBearEvidenceQuotes(['Dallas Eagle'], event), []);
+  assert.deepEqual(core.verifyBearEvidenceQuotes(['🦅', 'a', ''], event), []);
+  assert.deepEqual(core.verifyBearEvidenceQuotes([{ quote: 'gear' }, 42, null], event), []);
+  assert.deepEqual(core.verifyBearEvidenceQuotes('gear', event), [], 'a non-array claim is no claim');
+  // Empty event text can never be quoted
+  assert.deepEqual(core.verifyBearEvidenceQuotes(['anything'], { title: '', description: '' }), []);
+});
+
+test('bear evidence gate: owner-curated promoters are exempt, but still judged', async () => {
+  // alwaysBear + bear verdict with no quotes → kept as bear (curation is the
+  // evidence). This is the pre-fix behavior and must not change.
+  const curatedCore = createCore();
+  const curated = await curatedCore.filterBearEvents(
+    [{ title: 'FOAM POOL PARTY' }],
+    bearCheckConfig('enforce', { alwaysBear: true }),
+    buildBearVerdictAdapter({ verdict: 'bear', reason: 'curated promoter event', eventEvidence: [] })
+  );
+  assert.equal(curated[0].isBearEvent, true);
+  assert.equal(curated[0].bearReview, undefined, 'curated + bear is not flagged');
+
+  // The contrast that makes the exemption meaningful: the identical event and
+  // the identical verdict on an UNCURATED source is demoted by the gate.
+  const uncuratedCore = createCore();
+  const uncurated = await uncuratedCore.filterBearEvents(
+    [{ title: 'FOAM POOL PARTY' }],
+    bearCheckConfig('enforce'),
+    buildBearVerdictAdapter({ verdict: 'bear', reason: 'curated promoter event', eventEvidence: [] })
+  );
+  assert.equal(uncurated[0].isBearEvent, undefined, 'only OWNER curation exempts a source from the gate');
+  assert.match(uncurated[0].bearReview, /\[evidence gate: no event-level evidence quoted\]$/);
+
+  // Trust is context, NOT a bypass of judgment: a curated promoter's
+  // drag-headliner show still comes back not_bear (kept, flagged).
+  const judgedCore = createCore();
+  const judged = await judgedCore.filterBearEvents(
+    [{ title: 'HOT TAKE' }],
+    bearCheckConfig('enforce', { alwaysBear: true }),
+    buildBearVerdictAdapter({ verdict: 'not_bear', reason: 'drag-headliner show', eventEvidence: [] })
+  );
+  assert.equal(judged[0].bearReview, 'unlikely — ai: drag-headliner show');
+});
+
+test('bear evidence gate: curation follows the registry cross-host, parser alwaysBear does not', async () => {
+  const parserConfig = {
+    name: 'Bearracuda Events',
+    urls: ['https://bearracuda.com/'],
+    alwaysBear: true,
+    ai: { provider: 'ollama', endpoint: 'http://ai.example/api/generate', model: 'test-model', bearCheck: { mode: 'enforce' } }
+  };
+  const noEvidenceBear = () => buildBearVerdictAdapter({ verdict: 'bear', reason: 'promoter reputation', eventEvidence: [] });
+
+  // A page found on ANOTHER host while crawling the trusted parser: the
+  // owner's trust covers that promoter's own events, so the gate applies.
+  const crossCore = createRegistryCore();
+  const cross = await crossCore.filterBearEvents(
+    [{ title: 'Hostile Noise', _sourcePageUrl: 'https://www.massive.club/calendar' }],
+    parserConfig,
+    noEvidenceBear()
+  );
+  assert.equal(cross[0].isBearEvent, undefined, 'cross-host alwaysBear is not curation of THIS event');
+  assert.match(cross[0].bearReview, /\[evidence gate: no event-level evidence quoted\]$/);
+
+  // Same page, but the event's own content matched a bearAffinity=always
+  // registry entry → curated wherever the page lived, gate exempt.
+  const matchedCore = createRegistryCore();
+  const matched = await matchedCore.filterBearEvents(
+    [{ title: 'Hostile Noise', _promoter: 'BEEFWITCH', _sourcePageUrl: 'https://www.massive.club/calendar' }],
+    parserConfig,
+    noEvidenceBear()
+  );
+  assert.equal(matched[0].isBearEvent, true);
+  assert.equal(matched[0].bearReview, undefined);
+});
+
+test('bear-check prompt: uncurated sources get evidence-vs-context framing; curated sources keep promoter trust', async () => {
+  const uncuratedAdapter = buildBearVerdictAdapter({ verdict: 'not_bear', reason: 'trivia', eventEvidence: [] });
+  await createCore().filterBearEvents([{ title: 'Tuesday Trivia', bar: 'Dallas Eagle' }], bearCheckConfig('enforce'), uncuratedAdapter);
+  const uncurated = uncuratedAdapter.calls[0].prompt;
+  assert.match(uncurated, /Context can never make an event a bear event on its own\./);
+  assert.match(uncurated, /"This is a well-known bear venue" is NEVER a reason to answer "bear"\./);
+  assert.ok(!uncurated.includes("the promoter's crowd follows the promoter"),
+    'the venue-prior rule that produced the Dallas Eagle run is gone for uncurated sources');
+
+  const curatedAdapter = buildBearVerdictAdapter({ verdict: 'bear', reason: 'curated', eventEvidence: [] });
+  await createCore().filterBearEvents([{ title: 'FOAM POOL PARTY' }], bearCheckConfig('enforce', { alwaysBear: true }), curatedAdapter);
+  const curated = curatedAdapter.calls[0].prompt;
+  assert.match(curated, /the promoter's crowd follows the promoter/);
+  assert.ok(!curated.includes('is NEVER a reason to answer'), 'curated sources keep the trusting framing');
+
+  // One output contract for both variants so the gate always has a field to read
+  for (const prompt of [uncurated, curated]) {
+    assert.match(prompt, /"eventEvidence": \["<words copied exactly from the Title or Description>"\]/);
+    assert.match(prompt, /Every string must be copied WORD FOR WORD from the Title or the Description\./);
+    assert.match(prompt, /The venue name is not evidence\./);
+  }
 });
 
 test('bearReview round-trips notes and an existing calendar value survives merges', async () => {
@@ -4958,7 +5153,7 @@ test('bearSource: stamped keyword/ai on enforce keeps and round-trips through no
   const aiKept = await aiCore.filterBearEvents(
     [{ title: 'Treasure Trail Seattle' }],
     bearCheckConfig('enforce'),
-    buildBearVerdictAdapter({ verdict: 'bear', reason: 'bear promoter event' })
+    buildBearVerdictAdapter({ verdict: 'bear', reason: 'bear promoter event', eventEvidence: ['Treasure Trail'] })
   );
   assert.equal(aiKept[0].bearSource, 'ai');
 
