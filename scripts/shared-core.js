@@ -2089,6 +2089,36 @@ class SharedCore {
     // sickening.events/e/goldiloxx-chicago/tickets, which is exactly the
     // vendor link this must NOT protect. Fails closed — no matched entry, no
     // host-anchored token, no protection.
+    // A BRANDED SUBDOMAIN on a ticketing host with a bare path is that
+    // organizer's home page, not a ticket link — the same thing
+    // `eventbrite.com/o/<organizer-id>` already is, in a different shape.
+    // Measured on the corpus (2026-08-03), the two shapes never overlap:
+    //   organizer home  bbromp2026.eventbrite.com/          Big Bear ROMP 2026
+    //                   westernxposurefall2026.eventbrite.com/
+    //                   xxl2026.eventbrite.com/             Western Xposure XXL
+    //                   lazybearweek.eventbrite.com/        Lazy Bear Week 2026
+    //                   newduro.eventbrite.com              D>U>R>O
+    //   ticket link     eventbrite.com/e/quenchd-tickets-1993587626256
+    //                   eventbrite.com/e/club-chub-weekend-2026-…
+    // So this is decided by URL SHAPE and needs no curated data — which is why
+    // it is preferred over four hand-written registry entries. A path of any
+    // substance ('/e/…', '/o/…' handled elsewhere) is never an organizer home.
+    isPlatformOrganizerHomeUrl(url) {
+        const raw = String(url || '').trim();
+        if (!raw) return false;
+        const host = this.getHostFromUrl(raw).toLowerCase().replace(/^www\./, '');
+        if (!host || !isPlatformIdentityHost(host)) return false;
+        // The host must carry a brand label ABOVE the platform domain.
+        const platform = PLATFORM_IDENTITY_HOSTS.find(candidate =>
+            host === candidate || host.endsWith(`.${candidate}`));
+        if (!platform || host === platform) return false;
+        // No `new URL(` in scripts/ — take the path with the same regex shape
+        // used elsewhere in this file.
+        const pathMatch = raw.match(/^https?:\/\/[^\/?#]+([^?#]*)/i);
+        const path = pathMatch ? pathMatch[1] : '';
+        return path === '' || path === '/';
+    }
+
     isCuratedPlatformSelfIdentityUrl(event, url) {
         const lowered = String(url || '').toLowerCase();
         if (!lowered) return false;
@@ -11092,6 +11122,12 @@ class SharedCore {
                         }
                         notesNeedRebuild = true;
                         console.log(`🔗 LINKS: replaced platform website ${platformWebsite} with ${curatedWebsite}${existingTicketUrl ? '' : ' (platform link moved to ticketUrl)'} — curated identity of "${promoterEntry.name}" for "${analyzedEvent.title || 'event'}"`);
+                    } else if (!curatedWebsite && this.isPlatformOrganizerHomeUrl(platformWebsite)) {
+                        // A branded subdomain with a bare path is the
+                        // organizer's HOME on that platform, not a ticket
+                        // link — see isPlatformOrganizerHomeUrl. Decided by
+                        // URL shape, so it needs no registry entry.
+                        console.log(`🔗 LINKS: website ${platformWebsite} is a platform organizer home page, not a ticket link — left as-is for "${analyzedEvent.title || 'event'}"`);
                     } else if (!curatedWebsite && this.isCuratedPlatformSelfIdentityUrl(analyzedEvent, platformWebsite)) {
                         // The promoter's OWN presence on the platform (their
                         // instagram profile, their eventbrite organizer page).

@@ -12660,15 +12660,16 @@ test('final build: a facebook EVENT link never occupies website/url (real Club C
   } finally {
     restore();
   }
-  // Club Chub is in the registry but carries NO website — so there is nothing
-  // to adopt, and empty is the right answer (the site falls back to the
-  // promoter's curated favicon).
-  assert.equal(analyzed.website, undefined, 'facebook.com/events/… is social, not identity');
-  assert.equal(analyzed.url, undefined, 'url is the same canonical field');
+  // Club Chub now carries a curated website (owner-approved 2026-08-03), so
+  // the facebook EVENT link is REPLACED by the real site rather than merely
+  // cleared — strictly better: the card gets a real favicon instead of none.
+  assert.equal(analyzed.website, 'https://www.clubchubusa.com', 'the curated identity wins over the social link');
+  assert.equal(analyzed.url, 'https://www.clubchubusa.com', 'url is the same canonical field');
   assert.equal(analyzed.ticketUrl, 'https://www.facebook.com/events/1376781057883088/', 'the link lands in ticketUrl');
   assert.ok(!analyzed.notes.includes('website: https://www.facebook.com'), 'notes never serialize it as website');
   assert.equal(analyzed.instagram, 'https://www.instagram.com/clubchubparty', 'the curated instagram is untouched');
-  assert.equal(lines.filter(line => line.startsWith('🔗 LINKS: cleared platform website')).length, 1);
+  assert.equal(lines.filter(line => line.startsWith('🔗 LINKS: replaced platform website')).length, 1,
+    'the curated-identity branch fires, not the clear-to-empty one');
 });
 
 test('final build: an eventbrite listing with tracking params never occupies website (real Club Chub Weekend 2026)', async () => {
@@ -12689,8 +12690,8 @@ test('final build: an eventbrite listing with tracking params never occupies web
   } finally {
     restore();
   }
-  assert.equal(analyzed.website, undefined);
-  assert.equal(analyzed.url, undefined);
+  assert.equal(analyzed.website, 'https://www.clubchubusa.com', 'curated identity replaces the ticketing listing');
+  assert.equal(analyzed.url, 'https://www.clubchubusa.com');
   assert.equal(analyzed.ticketUrl, listing, 'query string and all — the value is moved verbatim, never rewritten');
 });
 
@@ -12807,10 +12808,12 @@ test('final build: url goes with website — a differing aggregator url is NOT p
   } finally {
     restore();
   }
-  assert.equal(analyzed.website, undefined, 'website/url are ONE field and clear together');
-  assert.equal(analyzed.url, undefined);
-  assert.equal(analyzed.ticketUrl, 'https://lazybearweek.eventbrite.com/',
-    'an organizer-branded eventbrite subdomain is still a ticketing link');
+  // An organizer-branded subdomain with a BARE path is that organizer's home
+  // page, not a ticket link (isPlatformOrganizerHomeUrl) — so it is kept, and
+  // the aggregator's own copy is still never promoted into website.
+  assert.equal(analyzed.website, 'https://lazybearweek.eventbrite.com/', 'the organizer home page survives');
+  assert.notEqual(analyzed.website, 'https://thebearcalendar.com/events/lazy-bear-week-2026-2026/',
+    'trust the pointer, not the aggregator copy');
 });
 
 test('slot merge: one-sided og provenance does not clobber a curated slot (falls through)', async () => {
@@ -14576,4 +14579,32 @@ test('getPromoterSelfUrlTokens: a sub-brand inherits its family home so authorit
   const tokens = core.getPromoterSelfUrlTokens(child);
   assert.ok(tokens.includes('spookybear'), 'its own pattern');
   assert.ok(tokens.includes('ursamen'), 'and its parent family home');
+});
+
+// A branded subdomain on a ticketing host with a BARE path is that organizer's
+// home page, not a ticket link — the same thing eventbrite.com/o/<id> already
+// is, in a different shape. Decided by URL shape, so it needs no registry
+// entry. Fixtures are the real corpus values from 2026-08-03.
+test('platform organizer home: branded subdomains keep website, event listings do not', () => {
+  const core = createCore();
+  for (const url of [
+    'https://lazybearweek.eventbrite.com/',
+    'https://bbromp2026.eventbrite.com/',
+    'https://xxl2026.eventbrite.com/',
+    'https://westernxposurefall2026.eventbrite.com/',
+    'https://newduro.eventbrite.com'
+  ]) {
+    assert.equal(core.isPlatformOrganizerHomeUrl(url), true, `organizer home: ${url}`);
+  }
+  for (const url of [
+    'https://www.eventbrite.com/e/quenchd-tickets-1993587626256',
+    'https://www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209?utm-campaign=social',
+    'https://www.eventbrite.com/',
+    'https://www.facebook.com/events/1376781057883088/',
+    'https://www.sickening.events/e/goldiloxx-chicago-2/tickets',
+    'https://eaglela.com/events/hump-night/',
+    ''
+  ]) {
+    assert.equal(core.isPlatformOrganizerHomeUrl(url), false, `not an organizer home: ${url}`);
+  }
 });
