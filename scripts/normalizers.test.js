@@ -3871,3 +3871,258 @@ test('extractCityFromAddress probes an address without reporting it as an Unknow
     `an internal probe must not manufacture an Unknown-city warning: ${lines.join(' | ')}`
   );
 });
+
+// ---------------------------------------------------------------------------
+// CURATED-ADDRESS PIN RUNG (run 20260803-091019: 8 of 9 3 Dollar Bill events
+// shipped with no `location` at all. The corpus's ONE curated bar carrying an
+// `address` with no `coordinates` — "The Yard at 9 Bob Note", 270 Meserole St
+// — could never contribute a pin, so an event matched to it stayed unpinned
+// even though the owner's own data says exactly where it is.)
+//
+// The rung geocodes the CURATED address (place-anchored, trustworthy) and
+// never a scraped one, keeps the #1619 place-context guard, reuses the
+// existing request cache, and stamps honest provenance: 'curated-geocoded'.
+// ---------------------------------------------------------------------------
+
+const CURATED_PIN_CITIES = {
+  nyc: {
+    timezone: 'America/New_York',
+    patterns: ['new york', 'nyc', 'brooklyn'],
+    coordinates: { lat: 40.7128, lng: -74.006 }
+  }
+};
+
+// The real shape: an address, a website, and NO coordinates.
+const YARD_CURATED_NO_PIN = {
+  name: 'The Yard at 9 Bob Note',
+  city: 'nyc',
+  address: '270 Meserole St, Brooklyn, NY 11206',
+  website: 'https://www.3dollarbillbk.com'
+};
+
+const MESEROLE_270_RESULT = {
+  lat: '40.7085073',
+  lon: '-73.9377167',
+  display_name: '270, Meserole Street, Brooklyn, Kings County, New York, 11206, United States',
+  class: 'building',
+  type: 'yes',
+  address: { house_number: '270', road: 'Meserole Street', city: 'New York', county: 'Kings County', state: 'New York' }
+};
+
+const SCOTT_99_RESULT = {
+  lat: '40.7100000',
+  lon: '-73.9250000',
+  display_name: '99, Scott Avenue, Brooklyn, Kings County, New York, 11237, United States',
+  class: 'building',
+  type: 'yes',
+  address: { house_number: '99', road: 'Scott Avenue', city: 'New York', county: 'Kings County', state: 'New York' }
+};
+
+function createCuratedPinCore(bars) {
+  return new SharedCore(CURATED_PIN_CITIES, { eventSchema: EventSchema, bars: { nyc: bars } });
+}
+
+function createCuratedPinPipeline(bars = [YARD_CURATED_NO_PIN]) {
+  const pipeline = new NormalizerPipeline();
+  pipeline.setCore(createCuratedPinCore(bars));
+  const osm = pipeline.normalizers[pipeline.normalizers.length - 1];
+  osm.delayForRateLimit = async () => {};
+  return pipeline;
+}
+
+test('curated-address handoff: a curated bar with an address but no coordinates hands its OWN address to the geocode rung', () => {
+  const normalizer = new BarDataNormalizer(createCuratedPinCore([YARD_CURATED_NO_PIN]));
+  // The event carries its own, scruffier address — the handoff must ignore it.
+  const event = { title: 'party...or something', city: 'nyc', bar: '9 Bob Note', address: '270 Meserole St. BK' };
+
+  const lines = captureConsoleLog(() => normalizer.normalize(event));
+
+  assert.equal(event._curatedPinAddress, '270 Meserole St, Brooklyn, NY 11206',
+    'the CURATED address is what gets handed over');
+  assert.equal(event._curatedPinBar, 'The Yard at 9 Bob Note');
+  assert.equal(event.address, '270 Meserole St. BK', 'the event keeps its own address');
+  assert.ok(
+    lines.some(l => l.includes('🗺️ CURATED PIN: curated bar "The Yard at 9 Bob Note" has an address but no coordinates')),
+    `the handoff must be visible: ${lines.join(' | ')}`
+  );
+});
+
+test('curated-address handoff: never fires for a curated bar that HAS coordinates, or for an already-pinned event', () => {
+  // Positive control first: the same normalizer DOES hand over for the
+  // no-coordinates bar, so the two refusals below are refusals and not a
+  // mechanism that never runs.
+  const control = new BarDataNormalizer(createCuratedPinCore([YARD_CURATED_NO_PIN]));
+  const controlEvent = { title: 'party', city: 'nyc', bar: '9 Bob Note' };
+  captureConsoleLog(() => control.normalize(controlEvent));
+  assert.equal(controlEvent._curatedPinAddress, '270 Meserole St, Brooklyn, NY 11206');
+
+  const withPin = { ...YARD_CURATED_NO_PIN, coordinates: '40.7085073, -73.9377167' };
+  const pinned = new BarDataNormalizer(createCuratedPinCore([withPin]));
+  const pinnedEvent = { title: 'party', city: 'nyc', bar: '9 Bob Note' };
+  captureConsoleLog(() => pinned.normalize(pinnedEvent));
+  assert.equal(pinnedEvent._curatedPinAddress, undefined, 'curated coordinates are used directly — nothing to geocode');
+  assert.equal(pinnedEvent.pinSource, 'curated');
+
+  const normalizer = new BarDataNormalizer(createCuratedPinCore([YARD_CURATED_NO_PIN]));
+  const alreadyPinned = { title: 'party', city: 'nyc', bar: '9 Bob Note', location: '40.5, -73.5', pinSource: 'page' };
+  captureConsoleLog(() => normalizer.normalize(alreadyPinned));
+  assert.equal(alreadyPinned._curatedPinAddress, undefined, 'a pinned event never asks for another pin');
+  assert.equal(alreadyPinned.pinSource, 'page');
+});
+
+test('curated-address handoff: the site-identity venue fill hands over too when the curated record has no pin', () => {
+  const normalizer = new LocationNormalizer(createCuratedPinCore([YARD_CURATED_NO_PIN]));
+  const event = { title: 'Big Gay Foam Party', city: 'unknown', website: 'https://www.3dollarbillbk.com' };
+
+  captureConsoleLog(() => normalizer.backfillCityFromIdentitySignals(event));
+
+  assert.equal(event.bar, 'The Yard at 9 Bob Note', 'the sole claimant names the venue');
+  assert.equal(event._curatedPinAddress, '270 Meserole St, Brooklyn, NY 11206');
+  assert.equal(event.location, undefined, 'the sync rung cannot pin — it hands the address on');
+});
+
+test('curated-address pin rung: an unpinned curated venue is pinned from its CURATED address, stamped curated-geocoded', async () => {
+  const pipeline = createCuratedPinPipeline();
+  const httpAdapter = createRoutedStubAdapter([
+    [encodeURIComponent('270 Meserole St, Brooklyn, NY 11206'), [MESEROLE_270_RESULT]]
+  ]);
+
+  let normalized;
+  const lines = await withCapturedConsole(async () => {
+    normalized = await pipeline.normalizeEventAsync({
+      title: 'party...or something: the lucky me tour afterparty',
+      bar: '9 Bob Note',
+      city: 'nyc',
+      address: '270 Meserole St. BK',
+      startDate: new Date('2026-08-14T02:00:00.000Z')
+    }, httpAdapter);
+  });
+
+  assert.equal(normalized.location, '40.7085073, -73.9377167', 'the curated address produced the pin');
+  assert.equal(normalized.pinSource, 'curated-geocoded',
+    'honest provenance: curated address, geocoded coordinates — neither "curated" nor "geocoded-exact"');
+  assert.equal(httpAdapter.requests.length, 1, 'one query, and the ladder short-circuits after it');
+  assert.equal(decodeQueryParam(httpAdapter.requests[0]), '270 Meserole St, Brooklyn, NY 11206, new york',
+    'the CURATED address is what was asked — never the event\'s "270 Meserole St. BK"');
+  assert.ok(
+    lines.some(l => l.includes('🗺️ CURATED PIN:') && l.includes('-> 40.7085073, -73.9377167')),
+    `the accept must be visible: ${lines.join(' | ')}`
+  );
+});
+
+test('curated-address pin rung: the curated address is geocoded ONCE for every event at that venue', async () => {
+  const pipeline = createCuratedPinPipeline();
+  const httpAdapter = createRoutedStubAdapter([
+    [encodeURIComponent('270 Meserole St, Brooklyn, NY 11206'), [MESEROLE_270_RESULT]]
+  ]);
+
+  let normalized;
+  await withCapturedConsole(async () => {
+    normalized = await pipeline.normalizeEventsAsync([
+      { title: 'Foam Party', bar: '9 Bob Note', city: 'nyc', startDate: new Date('2026-08-14T02:00:00.000Z') },
+      { title: 'Afro Carnival', bar: '9 Bob Note', city: 'nyc', startDate: new Date('2026-08-15T02:00:00.000Z') },
+      { title: 'Galaxy Brain Ball', bar: '9 Bob Note', city: 'nyc', startDate: new Date('2026-08-16T02:00:00.000Z') }
+    ], httpAdapter);
+  });
+
+  assert.equal(normalized.length, 3);
+  for (const event of normalized) {
+    assert.equal(event.location, '40.7085073, -73.9377167', `${event.title} must be pinned`);
+    assert.equal(event.pinSource, 'curated-geocoded');
+  }
+  assert.equal(httpAdapter.requests.length, 1,
+    `the existing request cache must serve the repeats: ${JSON.stringify(httpAdapter.requests)}`);
+});
+
+test('curated-address pin rung: keeps the #1619 guard — a curated address naming no place is never geocoded globally', async () => {
+  const core = createCuratedPinCore([YARD_CURATED_NO_PIN]);
+  const normalizer = new OpenStreetMapNormalizer(core);
+  normalizer.delayForRateLimit = async () => {};
+  const httpAdapter = createStubHttpAdapter([MESEROLE_270_RESULT]);
+  // A curated address with no city, no region and no postal code, on an event
+  // whose city never resolved: exactly the shape that pinned a Seattle event
+  // in southern Indiana. The rung must ask nobody.
+  const event = { title: 'MYSTERY EVENT', _curatedPinAddress: '270 Meserole St', _curatedPinBar: 'The Yard at 9 Bob Note' };
+
+  const lines = await withCapturedConsole(() => normalizer.normalizeAsync(event, httpAdapter));
+
+  assert.equal(event.location, undefined, 'an unanchored address is never geocoded, curated or not');
+  assert.equal(httpAdapter.requests.length, 0, 'the planet is never asked');
+  assert.ok(
+    lines.some(l => l.includes('Address "270 Meserole St" names no city or region and the event has none')),
+    `the refusal must be visible: ${lines.join(' | ')}`
+  );
+});
+
+test('curated-address pin rung: when the curated address resolves to nothing the event\'s own address rungs run unchanged', async () => {
+  const pipeline = createCuratedPinPipeline();
+  const httpAdapter = createRoutedStubAdapter([
+    [encodeURIComponent('270 Meserole St, Brooklyn, NY 11206'), []],
+    [encodeURIComponent('99 Scott Ave, Brooklyn, NY 11237'), [SCOTT_99_RESULT]]
+  ]);
+
+  let normalized;
+  const lines = await withCapturedConsole(async () => {
+    normalized = await pipeline.normalizeEventAsync({
+      title: 'Yard Takeover',
+      bar: '9 Bob Note',
+      city: 'nyc',
+      address: '99 Scott Ave, Brooklyn, NY 11237',
+      startDate: new Date('2026-08-14T02:00:00.000Z')
+    }, httpAdapter);
+  });
+
+  assert.equal(normalized.location, '40.7100000, -73.9250000', 'the event\'s own address still pins it');
+  assert.equal(normalized.pinSource, 'geocoded-exact', 'a pin from the event address keeps its own provenance');
+  assert.ok(
+    lines.some(l => l.includes('🗺️ CURATED PIN: curated address "270 Meserole St, Brooklyn, NY 11206"')
+      && l.includes('falling back to the event\'s own address rungs')),
+    `the fallback must be visible: ${lines.join(' | ')}`
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Curated data: "The Yard at 9 Bob Note" carries coordinates (geocoder-derived
+// — see the commit message), so the corpus itself pins the run-20260803-091019
+// events without any geocode call at all.
+// ---------------------------------------------------------------------------
+
+test('curated corpus: every curated bar with an address also carries coordinates', () => {
+  const scraperBars = require('./scraper-bars');
+  const missing = [];
+  for (const [cityKey, cityBars] of Object.entries(scraperBars)) {
+    if (!Array.isArray(cityBars)) continue;
+    for (const bar of cityBars) {
+      const address = typeof bar.address === 'string' ? bar.address.trim() : '';
+      const coordinates = typeof bar.coordinates === 'string' ? bar.coordinates.trim() : '';
+      if (address && !coordinates) missing.push(`${cityKey}/${bar.name}`);
+    }
+  }
+  assert.deepEqual(missing, [], 'a curated address with no pin cannot place its events');
+});
+
+test('curated corpus: the 3 Dollar Bill sibling venue pins its events straight from curated data', async () => {
+  const scraperBars = require('./scraper-bars');
+  const pipeline = new NormalizerPipeline();
+  pipeline.setCore(new SharedCore(CURATED_PIN_CITIES, { eventSchema: EventSchema, bars: { nyc: scraperBars.nyc } }));
+  const osm = pipeline.normalizers[pipeline.normalizers.length - 1];
+  osm.delayForRateLimit = async () => {};
+  const httpAdapter = createStubHttpAdapter([]);
+
+  let normalized;
+  await withCapturedConsole(async () => {
+    // Verbatim shape of run 20260803-091019's only unpinned event that named
+    // a venue at all.
+    normalized = await pipeline.normalizeEventAsync({
+      title: 'party...or something: the lucky me tour afterparty',
+      bar: '9 Bob Note',
+      city: 'nyc',
+      address: '270 Meserole St, Brooklyn, NY, 11206',
+      startDate: new Date('2026-08-14T02:00:00.000Z')
+    }, httpAdapter);
+  });
+
+  assert.equal(normalized.location, '40.7085073, -73.9377167', 'the curated pin places the event');
+  assert.equal(normalized.pinSource, 'curated');
+  assert.equal(httpAdapter.requests.length, 0, 'curated data means no geocode request at all');
+});
