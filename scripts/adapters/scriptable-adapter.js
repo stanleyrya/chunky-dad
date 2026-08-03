@@ -7621,6 +7621,14 @@ class ScriptableAdapter {
                 } catch (decodeError) {
                     text = button.getAttribute('data-payload') || '';
                 }
+                // The attribute carries COMPACT json (percent-encoding charges
+                // 3 bytes per indent space). Re-indent for the textarea so what
+                // the owner copies is the same readable payload as before.
+                try {
+                    text = JSON.stringify(JSON.parse(text), null, 2);
+                } catch (reindentError) {
+                    // Not parseable (older payload, or the error stub) - show as-is.
+                }
 
                 area.style.display = 'block';
                 textarea.value = text;
