@@ -4101,3 +4101,58 @@ test('Event Actions Summary carries the sanity count line only when events are f
     !cleanLines.some(line => line.includes('Sanity')),
     `no sanity lines when nothing is flagged, got: ${JSON.stringify(cleanLines.filter(line => line.includes('Sanity')))}`);
 });
+
+// ---------------------------------------------------------------------------
+// Calendar write-time end-date guard (resolveCalendarWriteEndDate). The two
+// merge paths in shared-core have consulted hasDegenerateEnd since those rules
+// were written; the CREATE path assigned `calendarEvent.endDate = event.endDate`
+// with no check at all, and the UPDATE path did the same to the live record.
+// ---------------------------------------------------------------------------
+
+test('calendar write: an inverted end span is refused, never handed to EventKit', () => {
+  const adapter = buildAdapter();
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (message) => { logs.push(String(message)); };
+  let written;
+  try {
+    written = adapter.resolveCalendarWriteEndDate({
+      title: 'PERVERT',
+      startDate: new Date('2026-08-02T22:00:00.000Z'),
+      endDate: new Date('2026-08-02T20:00:00.000Z')
+    });
+  } finally {
+    console.log = originalLog;
+  }
+  // EventKit refuses an inverted span; the throw lands in the caller's catch as
+  // a "failed" event, i.e. a silent drop of a real night.
+  assert.equal(written.toISOString(), '2026-08-02T22:00:00.000Z', 'the start is written instead');
+  assert.ok(
+    logs.some((line) => line.includes('endDate is before startDate')),
+    `expected a refusal log, got: ${JSON.stringify(logs)}`
+  );
+});
+
+test('calendar write: a zero-duration end and a real end both pass through untouched', () => {
+  const adapter = buildAdapter();
+  // EKEvent has no way to say "no end stated" — an end date is mandatory — so
+  // `end === start` IS that statement on this platform. 48 of the 134 events
+  // analyzed on 2026-08-02 are exactly that (Eagle LA flyers: "BAR OPENS 2PM",
+  // "9PM EVERY SUNDAY"). Inventing a duration would fabricate data; the shape
+  // is reported instead via SharedCore's `end-not-after-start` sanity flag.
+  const zeroStart = new Date('2026-08-02T21:00:00.000Z');
+  assert.equal(
+    adapter.resolveCalendarWriteEndDate({ title: 'SUNDAY BEER BUST', startDate: zeroStart, endDate: zeroStart }),
+    zeroStart
+  );
+  const realEnd = new Date('2026-08-03T02:00:00.000Z');
+  assert.equal(
+    adapter.resolveCalendarWriteEndDate({ title: 'PACK PARTY', startDate: zeroStart, endDate: realEnd }),
+    realEnd
+  );
+  // Missing/unparseable ends are left exactly as they are (fail open).
+  assert.equal(
+    adapter.resolveCalendarWriteEndDate({ title: 'PACK PARTY', startDate: zeroStart, endDate: undefined }),
+    undefined
+  );
+});
