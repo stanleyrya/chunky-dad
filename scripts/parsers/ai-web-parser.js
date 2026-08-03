@@ -1727,7 +1727,16 @@ class AiWebParser {
                 lines: trimmedLines,
                 html: this.extractRawHtmlForMultiEventSegment(html, trimmedLines)
             });
-            if (uniqueSegments.length >= this.extractionLimits.multiEventMaxSegments) break;
+            if (uniqueSegments.length >= this.extractionLimits.multiEventMaxSegments) {
+                // No silent caps. This break truncates the page: on
+                // thedallaseagle.com/events/ (a full month, ~27 listings) it
+                // stopped at Aug 15 and everything after was never segmented,
+                // extracted, or reported — the run simply looked like a
+                // 15-event month. Logging only; raising the cap is a cost
+                // decision for the owner, not a silent default change.
+                console.log(`🤖 AI Web: Segment cap reached (${this.extractionLimits.multiEventMaxSegments}) — later content on this page was not segmented and will not produce events`);
+                break;
+            }
         }
         return this.attachSequentialImageHintsToSegments(html, uniqueSegments, sourceUrl, ocrResults);
     }
@@ -1925,7 +1934,16 @@ class AiWebParser {
                 lines: trimmedLines,
                 html: this.extractRawHtmlForMultiEventSegment(html, trimmedLines)
             });
-            if (uniqueSegments.length >= this.extractionLimits.multiEventMaxSegments) break;
+            if (uniqueSegments.length >= this.extractionLimits.multiEventMaxSegments) {
+                // No silent caps. This break truncates the page: on
+                // thedallaseagle.com/events/ (a full month, ~27 listings) it
+                // stopped at Aug 15 and everything after was never segmented,
+                // extracted, or reported — the run simply looked like a
+                // 15-event month. Logging only; raising the cap is a cost
+                // decision for the owner, not a silent default change.
+                console.log(`🤖 AI Web: Segment cap reached (${this.extractionLimits.multiEventMaxSegments}) — later content on this page was not segmented and will not produce events`);
+                break;
+            }
         }
         return this.attachSequentialImageHintsToSegments(html, uniqueSegments, sourceUrl, ocrResults);
     }
@@ -2029,7 +2047,16 @@ class AiWebParser {
                 );
                 addSegment({ lines: trimmedLines, html: entry.html });
             }
-            if (uniqueSegments.length >= this.extractionLimits.multiEventMaxSegments) break;
+            if (uniqueSegments.length >= this.extractionLimits.multiEventMaxSegments) {
+                // No silent caps. This break truncates the page: on
+                // thedallaseagle.com/events/ (a full month, ~27 listings) it
+                // stopped at Aug 15 and everything after was never segmented,
+                // extracted, or reported — the run simply looked like a
+                // 15-event month. Logging only; raising the cap is a cost
+                // decision for the owner, not a silent default change.
+                console.log(`🤖 AI Web: Segment cap reached (${this.extractionLimits.multiEventMaxSegments}) — later content on this page was not segmented and will not produce events`);
+                break;
+            }
         }
         return uniqueSegments;
     }
