@@ -10,6 +10,16 @@
     "accent": "#eec424"
   },
   {
+    "slug": "bearracuda-portland-17-749a33af",
+    "url": "https://bearracuda.com/events/portland-17/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#1c1412:29:1 #542e24:14:6 #9b533b:13:10 #25235d:13:10 #3f40aa:9:17",
+    "accent": "#3f40aa"
+  },
+  {
     "slug": "bearracuda-portland-boner-garage-3e1b185e",
     "url": "https://bearracuda.com/events/portland-gear/",
     "faviconBg": "#ff1901",
@@ -28,6 +38,16 @@
     "paletteSource": "flyer",
     "palette": "#84454c:16:9 #bd6557:15:12 #0c1522:15:3 #6ba8d7:8:9 #cc73e1:7:18",
     "accent": "#cc73e1"
+  },
+  {
+    "slug": "bearracuda-portland-nye-0de4cad8",
+    "url": "https://bearracuda.com/events/portlandnye/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#000000:88:0 #ffffff:4:0 #fe0000:2:26 #8b0000:1:16",
+    "accent": "#fe0000"
   },
   {
     "slug": "bearracuda-portland-pride-saturday-17cdfbd9",

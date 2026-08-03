@@ -1,6 +1,10 @@
 [
   {
     "slug": "beefmince-new-years-eve-790f90b6",
+    "url": "https://beefmince.com",
+    "faviconBg": "#060606",
+    "faviconFg": "#131313",
+    "faviconPlate": "#ffffff",
     "paletteSource": "flyer",
     "palette": "#000000:81:0 #f706b5:14:28 #19010c:3:5 #830a65:1:17 #440a34:1:10",
     "accent": "#f706b5"

@@ -36,6 +36,16 @@
     "accent": "#3d45d8"
   },
   {
+    "slug": "bearracuda-sf-flsm-6bcb20fd",
+    "url": "https://bearracuda.com/events/flsm/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#1b1533:23:6 #0b030b:17:3 #432c49:15:6 #a532a7:6:20",
+    "accent": "#a532a7"
+  },
+  {
     "slug": "bearracuda-sf-presents-horse-meat-disco-151154b5",
     "url": "https://bearracuda.com/events/flsm-friday/",
     "faviconBg": "#ff1901",
@@ -144,6 +154,10 @@
   },
   {
     "slug": "chunk-sf-presents-father-figure-305593c7",
+    "url": "https://www.chunk-party.com/event-details/chunk-sf-presents-father-figure",
+    "faviconBg": "#f6f4f5",
+    "faviconFg": "#2e2933",
+    "faviconPlate": "#ffffff",
     "paletteSource": "flyer",
     "palette": "#c3ae82:20:6 #8c639c:20:10 #6b427c:16:10 #ec6a66:12:16 #eadc1e:6:18",
     "accent": "#ec6a66"
