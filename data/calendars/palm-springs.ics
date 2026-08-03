@@ -8,7 +8,7 @@ X-WR-TIMEZONE:America/Los_Angeles
 BEGIN:VEVENT
 DTSTART:20260222T050000Z
 DTEND:20260222T200000Z
-DTSTAMP:20260802T143030Z
+DTSTAMP:20260803T183508Z
 UID:88686A1C-DD82-4C9B-A917-74B3647FD814
 CREATED:20260117T210201Z
 DESCRIPTION:description: SHINY DISCO BALLS IBC WEEKEND\nbar: Palm Springs\n
@@ -35,7 +35,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260911T180000Z
 DTEND:20260914T070000Z
-DTSTAMP:20260802T143030Z
+DTSTAMP:20260803T183508Z
 UID:E21A39AC-AC29-47E3-A8C2-23C3D36AD105
 CREATED:20260802T134345Z
 DESCRIPTION:description: 3 Days Of BIG Fun In The Sun Pool Parties Food Mus
@@ -43,16 +43,16 @@ DESCRIPTION:description: 3 Days Of BIG Fun In The Sun Pool Parties Food Mus
  USA\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F11
  81907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&auto=format%2C
  compress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e\ncover: $55.20-$1
- 50.16\ntimezone: America/Los_Angeles\naddressSource: page\nwebsite: https:/
- /www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-ticke
- ts-1975884326209?utm-campaign=social&utm-content=attendeeshare&utm-medium=d
- iscovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl\ngmaps: https://w
- ww.google.com/maps/search/?api=1&query=33.7796835%2C-116.4689784\npinSource
- : geocoded-exact\nshortName: CLUB CHUB\ninstagram: https://www.instagram.co
- m/clubchubparty\nbearSource: keyword\nkey: club-chub-weekend-2026-—-the-ult
- imate-celebration|2026-09-11|ccbc resort\nbar: CCBC Resort\nimageSource: js
- onld\nbarSource: page-adjacent
-LAST-MODIFIED:20260802T134345Z
+ 50.16\ntimezone: America/Los_Angeles\nwebsite: https://www.eventbrite.com/e
+ /club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209?utm-
+ campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=lis
+ ting&utm-source=cp&aff=ebdsshcopyurl\nshortName: CLUB CHUB\ninstagram: http
+ s://www.instagram.com/clubchubparty\nbearSource: keyword\nkey: club-chub-we
+ ekend-2026-—-the-ultimate-celebration|2026-09-11|ccbc resort\nbar: CCBC Res
+ ort\npinSource: geocoded-exact\naddressSource: page\nimageSource: jsonld\nb
+ arSource: page-adjacent\ngmaps: https://www.google.com/maps/search/?api=1&q
+ uery=33.7796835%2C-116.4689784
+LAST-MODIFIED:20260803T175839Z
 LOCATION:33.7796835\, -116.4689784
 SEQUENCE:0
 STATUS:CONFIRMED
