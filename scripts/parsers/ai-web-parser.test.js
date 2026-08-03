@@ -8950,6 +8950,353 @@ test('image slots: real bearracuda.com og:image dimensions resolve a portrait sl
   assert.equal(event.imageHorizontal, undefined);
 });
 
+// ---------------------------------------------------------------------------
+// MEASURED IMAGE DIMENSIONS (header bytes) → orientation slots
+// ---------------------------------------------------------------------------
+// Published/URL-encoded dimensions covered only a minority of real images, so
+// both orientation slots were effectively never populated. These pin the byte
+// math that reads a file's real shape out of its own header, and the wiring
+// that turns it into imageVertical/imageHorizontal.
+//
+// Every fixture below is CONSTRUCTED — minimal valid headers, no network. The
+// pixel pairs are the real dimensions of the corresponding images in the
+// cached OCR corpus (verified against `sips` on the downloaded files).
+
+function toBase64Fixture(byteValues) {
+  return Buffer.from(Uint8Array.from(byteValues)).toString('base64');
+}
+
+function be32(value) {
+  return [(value >>> 24) & 0xFF, (value >>> 16) & 0xFF, (value >>> 8) & 0xFF, value & 0xFF];
+}
+
+function be16(value) {
+  return [(value >>> 8) & 0xFF, value & 0xFF];
+}
+
+function le16(value) {
+  return [value & 0xFF, (value >>> 8) & 0xFF];
+}
+
+function le24(value) {
+  return [value & 0xFF, (value >>> 8) & 0xFF, (value >>> 16) & 0xFF];
+}
+
+// PNG: 8-byte signature + IHDR chunk (length, type, width, height, ...).
+function pngHeaderBytes(width, height) {
+  return [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+    .concat(be32(13), [0x49, 0x48, 0x44, 0x52], be32(width), be32(height), [8, 6, 0, 0, 0, 0, 0, 0, 0]);
+}
+
+// JPEG: SOI, an optional metadata segment of `paddingBytes` payload (an ICC/
+// EXIF stand-in the SOF scan has to walk past), then SOF0 and EOI.
+function jpegHeaderBytes(width, height, paddingBytes = 0, sofMarker = 0xC0) {
+  const bytes = [0xFF, 0xD8];
+  if (paddingBytes > 0) {
+    bytes.push(0xFF, 0xE1, ...be16(paddingBytes + 2));
+    for (let i = 0; i < paddingBytes; i++) bytes.push(0x00);
+  }
+  // SOF payload: length(2) precision(1) height(2) width(2) components(1) ...
+  bytes.push(0xFF, sofMarker, ...be16(17), 8, ...be16(height), ...be16(width), 3,
+    1, 0x22, 0, 2, 0x11, 1, 3, 0x11, 1);
+  bytes.push(0xFF, 0xD9);
+  return bytes;
+}
+
+function riffWrap(fourCC, payload) {
+  const chunk = [].concat(
+    Array.from(fourCC, (c) => c.charCodeAt(0)),
+    le16(payload.length).concat([0, 0]),
+    payload
+  );
+  const body = Array.from('WEBP', (c) => c.charCodeAt(0)).concat(chunk);
+  return Array.from('RIFF', (c) => c.charCodeAt(0))
+    .concat(le16(body.length).concat([0, 0]), body);
+}
+
+// WebP lossy ("VP8 "): 3-byte frame tag, the 9D 01 2A start code, 14-bit dims.
+function webpLossyBytes(width, height) {
+  return riffWrap('VP8 ', [0x30, 0x01, 0x00, 0x9D, 0x01, 0x2A]
+    .concat(le16(width & 0x3FFF), le16(height & 0x3FFF), [0, 0, 0, 0]));
+}
+
+// WebP lossless ("VP8L"): 0x2F signature then 14 bits (width-1), 14 bits (height-1).
+function webpLosslessBytes(width, height) {
+  const w = width - 1;
+  const h = height - 1;
+  const b0 = w & 0xFF;
+  const b1 = ((w >> 8) & 0x3F) | ((h & 0x03) << 6);
+  const b2 = (h >> 2) & 0xFF;
+  const b3 = (h >> 10) & 0x0F;
+  return riffWrap('VP8L', [0x2F, b0, b1, b2, b3, 0, 0, 0, 0, 0]);
+}
+
+// WebP extended ("VP8X"): 4 flag bytes then canvas (width-1)/(height-1) as LE24.
+function webpExtendedBytes(width, height) {
+  return riffWrap('VP8X', [0x10, 0, 0, 0].concat(le24(width - 1), le24(height - 1), [0, 0, 0, 0]));
+}
+
+// GIF: "GIF89a" then little-endian screen width/height.
+function gifHeaderBytes(width, height) {
+  return Array.from('GIF89a', (c) => c.charCodeAt(0))
+    .concat(le16(width), le16(height), [0xF7, 0x00, 0x00]);
+}
+
+test('measured dimensions: PNG IHDR, JPEG SOFn, WebP VP8/VP8L/VP8X and GIF headers all decode', () => {
+  const parser = createParser();
+  const read = (bytes) => parser.readImageDimensionsFromBase64(toBase64Fixture(bytes));
+
+  // bearracuda.com/wp-content/uploads/2026/05/45-3.png — real 1111x1389.
+  assert.deepEqual(read(pngHeaderBytes(1111, 1389)), { width: 1111, height: 1389 });
+  // bearracuda.com/wp-content/uploads/2025/11/ttfinal.jpg — real 1206x1510.
+  assert.deepEqual(read(jpegHeaderBytes(1206, 1510)), { width: 1206, height: 1510 });
+  // eaglela.com/wp-content/uploads/IG_Lucky-Break-poster-2024.jpg — real 1000x1000.
+  assert.deepEqual(read(jpegHeaderBytes(1000, 1000)), { width: 1000, height: 1000 });
+  // massive.club webflow flyer (…_dc685dbe…webp) — real lossy 1080x1350.
+  assert.deepEqual(read(webpLossyBytes(1080, 1350)), { width: 1080, height: 1350 });
+  // massive.club …6765b8ee…_cal.webp — real extended-format 2400x1600.
+  assert.deepEqual(read(webpExtendedBytes(2400, 1600)), { width: 2400, height: 1600 });
+  assert.deepEqual(read(webpLosslessBytes(1155, 1540)), { width: 1155, height: 1540 });
+  assert.deepEqual(read(gifHeaderBytes(600, 800)), { width: 600, height: 800 });
+
+  // Progressive JPEG (SOF2) states its frame the same way.
+  assert.deepEqual(read(jpegHeaderBytes(1800, 1500, 0, 0xC2)), { width: 1800, height: 1500 });
+  // …and the scan walks past a metadata segment to reach the frame header.
+  assert.deepEqual(read(jpegHeaderBytes(620, 958, 4096)), { width: 620, height: 958 });
+});
+
+test('measured dimensions: a JPEG whose SOF sits past the cheap prefix is still measured', () => {
+  const parser = createParser();
+  // Real corpus: static.wixstatic.com/media/f91121_262bf60c…~mv2.jpg carries a
+  // ~550KB ICC profile chunked across nine 64KB APP2 segments and puts SOF0 at
+  // byte 591,621 — far beyond the first-stage prefix.
+  const padding = parser.imageHeaderPrefixBytes + 4096;
+  const bytes = jpegHeaderBytes(1448, 1448, padding);
+  assert.equal(parser.readImageDimensionsFromBytes(
+    parser.decodeBase64Prefix(toBase64Fixture(bytes), parser.imageHeaderPrefixBytes)
+  ), null, 'the first-stage prefix genuinely cannot reach this frame header');
+  assert.deepEqual(parser.readImageDimensionsFromBase64(toBase64Fixture(bytes)), { width: 1448, height: 1448 });
+});
+
+test('measured dimensions: unreadable bytes fail open and quietly — never a throw, never a guess', () => {
+  const parser = createParser();
+  const read = (value) => parser.readImageDimensionsFromBase64(value);
+
+  assert.equal(read(''), null);
+  assert.equal(read(null), null);
+  assert.equal(read('not base64 at all !!!'), null);
+  // An SVG (the parser's own nonImageAssetExtensions list already skips these).
+  assert.equal(read(Buffer.from('<svg width="800" height="1200"></svg>').toString('base64')), null);
+  // An HTML error page served with an image content-type.
+  assert.equal(read(Buffer.from('<!doctype html><html><body>404</body></html>').toString('base64')), null);
+  // A PNG signature with the IHDR chunk truncated away.
+  assert.equal(read(toBase64Fixture(pngHeaderBytes(800, 1200).slice(0, 14))), null);
+  // A RIFF container that is not WebP at all.
+  assert.equal(read(Buffer.from('RIFF    WAVEfmt ').toString('base64')), null);
+  // AVIF: out of the four covered formats — unmeasured, not mis-measured.
+  assert.equal(read(toBase64Fixture([0, 0, 0, 0x20].concat(
+    Array.from('ftypavifavifmif1miafMA1B', (c) => c.charCodeAt(0))
+  ))), null);
+});
+
+test('measured dimensions: 1x1 lazy-load placeholders and tracking pixels are never artwork', () => {
+  const parser = createParser();
+  // The exact 1x1 transparent GIF real pages inline as a lazy-loading src.
+  const placeholder = 'R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+  assert.equal(parser.readImageDimensionsFromBase64(placeholder), null);
+  // dice.fm/static/images/1px.png in the real corpus — a 1x1 PNG spacer.
+  assert.equal(parser.readImageDimensionsFromBase64(toBase64Fixture(pngHeaderBytes(1, 1))), null);
+  // A 1x8 spacer is not "portrait artwork".
+  assert.equal(parser.readImageDimensionsFromBase64(toBase64Fixture(gifHeaderBytes(1, 8))), null);
+  // The guard is a floor, not a shape test — real artwork above it still reads.
+  assert.deepEqual(parser.readImageDimensionsFromBase64(toBase64Fixture(pngHeaderBytes(16, 32))), { width: 16, height: 32 });
+});
+
+test('image slots: a measured portrait fills imageVertical and leaves image untouched', () => {
+  const parser = createParser();
+  // massive.club flyer, real lossy-WebP 1080x1350 — the URL advertises nothing
+  // and the page publishes no dimensions, so before measurement this filled
+  // NO slot at all.
+  const flyer = 'https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a5aa7114f13cc7c6b4f5068_dc685dbe-a18c-49bb-abed-28941ad9a8fd.webp';
+  assert.equal(parser.getMeasuredImageDimensions(flyer), null);
+  parser.measureImageDimensionsFromBase64(flyer, toBase64Fixture(webpLossyBytes(1080, 1350)));
+  assert.deepEqual(parser.getMeasuredImageDimensions(flyer), { width: 1080, height: 1350 });
+
+  const event = { title: 'MASSIVE', image: flyer };
+  parser.applyImageSlots(event, { url: 'https://massive.club/events', html: '' });
+  assert.equal(event.imageVertical, flyer);
+  assert.equal(event.imageHorizontal, undefined);
+  assert.equal(event.image, flyer, 'image keeps its existing meaning and value');
+});
+
+test('image slots: a measured landscape fills imageHorizontal', () => {
+  const parser = createParser();
+  // bearracuda.com/wp-content/uploads/2026/03/pdxnew.jpg — real 1800x1500.
+  const banner = 'https://bearracuda.com/wp-content/uploads/2026/03/pdxnew.jpg';
+  parser.measureImageDimensionsFromBase64(banner, toBase64Fixture(jpegHeaderBytes(1800, 1500)));
+
+  const event = { title: 'Bearracuda Portland', image: banner };
+  parser.applyImageSlots(event, { url: 'https://bearracuda.com/events/portland/', html: '' });
+  assert.equal(event.imageHorizontal, banner);
+  assert.equal(event.imageVertical, undefined);
+});
+
+test('image slots: measured square artwork fills NEITHER slot (Eagle LA ships 1000x1000 flyers)', () => {
+  const parser = createParser();
+  // Every eaglela.com flyer in the cached corpus is a 1000x1000 Instagram
+  // poster, and its WordPress derivative is 300x300 — "or neither (squarish)".
+  const square = 'https://eaglela.com/wp-content/uploads/IG_Lucky-Break-poster-2024.jpg';
+  const derivative = 'https://eaglela.com/wp-content/uploads/IG_Lucky-Break-poster-2024-300x300.jpg';
+  parser.measureImageDimensionsFromBase64(square, toBase64Fixture(jpegHeaderBytes(1000, 1000)));
+  parser.measureImageDimensionsFromBase64(derivative, toBase64Fixture(jpegHeaderBytes(300, 300)));
+
+  const event = { title: 'Lucky Break', image: square };
+  parser.rememberImageSlotCandidates(event, [{ url: derivative, width: null, height: null, authoritative: false }]);
+  const logs = captureLogs(() => parser.applyImageSlots(event, { url: 'https://eaglela.com/events/', html: '' }));
+
+  assert.equal(Object.prototype.hasOwnProperty.call(event, 'imageVertical'), false);
+  assert.equal(Object.prototype.hasOwnProperty.call(event, 'imageHorizontal'), false);
+  assert.equal(event.image, square, 'the primary image is untouched');
+  assert.deepEqual(logs, [], 'no slot filled → no slot log line');
+
+  // The deadband is what makes "squarish" mean something: a 1000x1050 flyer is
+  // 5% off square and still belongs in neither slot, while 1000x1100 (exactly
+  // the 1.1 threshold) is a portrait.
+  assert.equal(parser.orientationFromImageDimensions(1000, 1050), 'square');
+  assert.equal(parser.orientationFromImageDimensions(1000, 1100), 'portrait');
+});
+
+test('image slots: measured pixels outrank a published dimension that describes another rendition', () => {
+  const parser = createParser();
+  // The page advertises the ORIGINAL's landscape shape while serving a
+  // portrait crop. The bytes are the only thing that knows what was served.
+  const html = `
+    <html><head>
+      <meta property="og:image" content="https://cdn.example/served-crop.jpg" />
+      <meta property="og:image:width" content="1600" />
+      <meta property="og:image:height" content="900" />
+    </head><body></body></html>`;
+  parser.measureImageDimensionsFromBase64('https://cdn.example/served-crop.jpg', toBase64Fixture(jpegHeaderBytes(1080, 1920)));
+
+  const event = { title: 'Lying Meta' };
+  parser.applyImageSlots(event, { url: 'https://promoter.example/e/measured', html });
+  assert.equal(event.imageVertical, 'https://cdn.example/served-crop.jpg');
+  assert.equal(event.imageHorizontal, undefined, 'the published claim never overrides the file itself');
+});
+
+test('image slots: a measured slot logs additively without touching the existing slot line', () => {
+  const parser = createParser();
+  const portrait = 'https://cdn.example/measured-tall.jpg';
+  const landscape = 'https://cdn.example/measured-wide.jpg';
+  parser.measureImageDimensionsFromBase64(portrait, toBase64Fixture(jpegHeaderBytes(1200, 1500)));
+  parser.measureImageDimensionsFromBase64(landscape, toBase64Fixture(webpExtendedBytes(2400, 1600)));
+
+  const event = { title: 'Measured Logging' };
+  parser.rememberImageSlotCandidates(event, [
+    { url: portrait, width: null, height: null, authoritative: false },
+    { url: landscape, width: null, height: null, authoritative: false }
+  ]);
+  const logs = captureLogs(() => parser.applyImageSlots(event, { html: '' }));
+  assert.deepEqual(logs, [
+    '🤖 AI Web: imageVertical measured 1200x1500 from image header for "Measured Logging"',
+    '🤖 AI Web: imageHorizontal measured 2400x1600 from image header for "Measured Logging"',
+    '🖼️ IMAGE SLOTS: vertical=https://cdn.example/measured-tall.jpg horizontal=https://cdn.example/measured-wide.jpg for "Measured Logging"'
+  ]);
+});
+
+test('image slots: a data: URI candidate is never measured and never fills a slot', () => {
+  const parser = createParser();
+  const placeholder = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+  assert.equal(parser.measureImageDimensionsFromBase64(placeholder, toBase64Fixture(pngHeaderBytes(800, 1200))), null,
+    'a non-http value cannot be keyed, so it can never carry a measurement');
+  assert.equal(parser.getMeasuredImageDimensions(placeholder), null);
+
+  const event = { title: 'Lazy Placeholder', image: placeholder };
+  parser.rememberImageSlotCandidates(event, [{ url: placeholder, width: null, height: null, authoritative: false }]);
+  parser.applyImageSlots(event, { html: '' });
+  assert.equal(Object.prototype.hasOwnProperty.call(event, 'imageVertical'), false);
+  assert.equal(Object.prototype.hasOwnProperty.call(event, 'imageHorizontal'), false);
+});
+
+test('measured dimensions: the OCR download path measures the bytes it already fetched', async () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ocr-measure-test-'));
+
+  const parser = new AiWebParser({ normalizeUrl, ocrCacheDir: cacheDir });
+  parser.core = new SharedCore({}, { eventSchema: EventSchema });
+
+  const imageUrl = 'https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a45a0af_flyer.webp';
+  const ocrConfig = { cacheEnabled: true, model: 'test-vision', prompt: 'ocr prompt', timeoutSeconds: 30 };
+  let downloads = 0;
+  const httpAdapter = {
+    fetchImageAsBase64: async () => {
+      downloads++;
+      return toBase64Fixture(webpLossyBytes(1155, 1540));
+    }
+  };
+  parser.core.callAiGenerate = async () => JSON.stringify({ text: 'BEAR NIGHT', imageClassification: 'event-flyer', confidence: 90 });
+
+  const result = await parser.getOcrTextForImage(imageUrl, ocrConfig, 'ocr-all', httpAdapter);
+  assert.equal(result.text, 'BEAR NIGHT');
+  assert.equal(downloads, 1, 'the measurement reuses the OCR download — no second fetch');
+  assert.deepEqual(parser.getMeasuredImageDimensions(imageUrl), { width: 1155, height: 1540 });
+
+  const event = { title: 'Bear Night', image: imageUrl };
+  parser.applyImageSlots(event, { url: 'https://massive.club/events', html: '' });
+  assert.equal(event.imageVertical, imageUrl);
+
+  // A second parser starts with no measurements, hits the OCR cache (so the
+  // bytes are never re-downloaded) and must STILL be able to fill the slot.
+  const nextRun = new AiWebParser({ normalizeUrl, ocrCacheDir: cacheDir });
+  nextRun.core = new SharedCore({}, { eventSchema: EventSchema });
+  nextRun.core.callAiGenerate = async () => { throw new Error('AI must not run on a cache hit'); };
+  const cached = await nextRun.getOcrTextForImage(imageUrl, ocrConfig, 'ocr-all', {
+    fetchImageAsBase64: async () => { throw new Error('a cache hit must not re-download the image'); }
+  });
+  assert.equal(cached.cached, true);
+  assert.deepEqual(nextRun.getMeasuredImageDimensions(imageUrl), { width: 1155, height: 1540 },
+    'the stored measurement is what keeps orientation alive across runs');
+
+  const cachedEvent = { title: 'Bear Night', image: imageUrl };
+  nextRun.applyImageSlots(cachedEvent, { url: 'https://massive.club/events', html: '' });
+  assert.equal(cachedEvent.imageVertical, imageUrl);
+
+  fs.rmSync(cacheDir, { recursive: true, force: true });
+});
+
+test('measured dimensions: an unmeasurable OCR image writes a cache entry with no dimensions and no slot', async () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ocr-measure-open-'));
+
+  const parser = new AiWebParser({ normalizeUrl, ocrCacheDir: cacheDir });
+  parser.core = new SharedCore({}, { eventSchema: EventSchema });
+  parser.core.callAiGenerate = async () => JSON.stringify({ text: 'SOME TEXT', imageClassification: 'event-flyer' });
+
+  const imageUrl = 'https://cdn.example/mystery-format.avif';
+  const ocrConfig = { cacheEnabled: true, model: 'test-vision', prompt: 'ocr prompt', timeoutSeconds: 30 };
+  const result = await parser.getOcrTextForImage(imageUrl, ocrConfig, 'ocr-all', {
+    fetchImageAsBase64: async () => toBase64Fixture([0, 0, 0, 0x20].concat(
+      Array.from('ftypavifavifmif1miafMA1B', (c) => c.charCodeAt(0))
+    ))
+  });
+  assert.equal(result.text, 'SOME TEXT', 'OCR is completely unaffected by an unreadable header');
+  assert.equal(parser.getMeasuredImageDimensions(imageUrl), null);
+
+  const stored = JSON.parse(fs.readFileSync(result.cachePath, 'utf8'));
+  assert.equal(Object.prototype.hasOwnProperty.call(stored, 'imagePixels'), false,
+    'nothing measured → nothing stored, rather than a guess');
+
+  const event = { title: 'Mystery', image: imageUrl };
+  parser.applyImageSlots(event, { html: '' });
+  assert.equal(Object.prototype.hasOwnProperty.call(event, 'imageVertical'), false);
+
+  fs.rmSync(cacheDir, { recursive: true, force: true });
+});
+
 test('strips a leading date phrase from an event title, and only then', () => {
   const parser = createParser();
   const strip = (title) => parser.stripLeadingDatePhraseFromTitle(title);
