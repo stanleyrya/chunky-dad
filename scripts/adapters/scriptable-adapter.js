@@ -5403,6 +5403,35 @@ class ScriptableAdapter {
     // recurring card registers its event natively and embeds only the id.
     this.resetIcsExportEvents();
     const allEvents = this.getAllEventsFromResults(results);
+    // Per-render payload budget: every card's debug JSON gets an equal share
+    // of one document-wide constant, so page size stops scaling with the
+    // number of events (see buildBudgetedEventJson).
+    const budgetedCardCount = Array.isArray(allEvents) ? allEvents.length : 0;
+    this._eventJsonBudgetReport = [];
+    this._eventJsonBudgetBytes =
+      this.computeEventJsonBudgetBytes(budgetedCardCount);
+    // Same construction for the two merge diff renderings, but shared out
+    // over the cards that actually RENDER a diff (only merges carry
+    // _original) and over both renderings each of those cards emits — so a
+    // run full of brand-new events never shrinks the allowance of the few
+    // merges the owner has to adjudicate.
+    const diffClaimCount =
+      2 *
+      Math.max(
+        1,
+        (Array.isArray(allEvents) ? allEvents : []).filter(
+          (event) => event && event._original,
+        ).length,
+      );
+    this._mergeDiffBudgetReport = [];
+    this._mergeDiffRemainingBytes =
+      ScriptableAdapter.MERGE_DIFF_TOTAL_BUDGET_BYTES;
+    this._mergeDiffPerCardBytes = Math.min(
+      Math.floor(
+        ScriptableAdapter.MERGE_DIFF_TOTAL_BUDGET_BYTES / diffClaimCount,
+      ),
+      ScriptableAdapter.MERGE_DIFF_MAX_PER_CARD_BYTES,
+    );
     const availableCalendars = await Calendar.forEvents();
 
     // Detect dark mode for better bar/low-light readability
@@ -6078,7 +6107,81 @@ class ScriptableAdapter {
             background: var(--background-primary);
             position: relative;
         }
-        
+
+        /* Shared chrome that used to be repeated as an inline style="" on
+           every copy button, every merge-table cell and every line-diff row.
+           At ~200 bytes a copy and ~2400 table cells per big run that
+           repetition alone was ~300 KB of the 3198 KB page. */
+        .copy-json-btn {
+            padding: 4px 8px;
+            font-size: 11px;
+            background: var(--primary-color);
+            color: var(--text-inverse);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 500;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .raw-json {
+            font-size: 11px;
+            background: #333;
+            color: #fff;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+
+        .payload-cap-note {
+            font-size: 11px;
+            color: var(--warn-color);
+            margin-bottom: 6px;
+            line-height: 1.5;
+        }
+
+        .cmp-table {
+            width: 100%;
+            font-size: 12px;
+            border-collapse: collapse;
+            table-layout: auto;
+        }
+
+        .cmp-table th,
+        .cmp-table td {
+            padding: 5px;
+            border-bottom: 1px solid var(--border-color);
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            word-break: break-word;
+            color: var(--text-primary);
+            text-align: left;
+        }
+
+        .cmp-table th { vertical-align: bottom; }
+        .cmp-table td.cmp-field { vertical-align: top; }
+        .cmp-table td.cmp-field small { color: var(--text-secondary); }
+        .cmp-table th.cmp-flow,
+        .cmp-table td.cmp-flow {
+            text-align: center;
+            font-size: 16px;
+            color: var(--primary-color);
+            word-break: normal;
+        }
+        .cmp-table td.cmp-result { text-align: center; }
+
+        .notes-line { margin: 2px 0; }
+        .notes-line strong { color: #666; }
+
+        /* "…+N chars" affordance on a truncated diff value. */
+        .cmp-more {
+            color: var(--text-secondary);
+            font-size: 10px;
+            white-space: nowrap;
+        }
+
         .notes-preview strong {
             font-weight: 600;
             color: var(--text-primary);
@@ -7098,7 +7201,10 @@ class ScriptableAdapter {
         function toggleDisplayMode() {
             const toggle = document.getElementById('displayToggle');
             const eventCards = document.querySelectorAll('.event-card');
-            
+            // Raw mode is the first moment the debug dump is actually looked
+            // at, so that is when the compact payload gets re-indented.
+            if (toggle && toggle.checked) prettyPrintCardPayloads();
+
             eventCards.forEach(card => {
                 if (toggle.checked) {
                     card.classList.add('raw-mode');
@@ -7380,6 +7486,7 @@ class ScriptableAdapter {
 
         function copyRawOutput() {
             // Get all event cards
+            prettyPrintCardPayloads();
             const eventCards = document.querySelectorAll('.event-card');
             let rawOutput = '';
             
@@ -7535,9 +7642,46 @@ class ScriptableAdapter {
             }
         }
 
+        // Each card embeds its event JSON exactly ONCE, compact, in
+        // .raw-display pre.raw-json. Both the pretty debug dump and the two
+        // Copy JSON buttons are derived from that single payload in the DOM
+        // instead of being three escaped copies in the HTML string.
+        function prettyPrintCardPayloads() {
+            const payloads = document.querySelectorAll('pre.raw-json');
+            for (let i = 0; i < payloads.length; i++) {
+                const pre = payloads[i];
+                if (pre.getAttribute('data-pretty') === '1') continue;
+                try {
+                    pre.textContent = JSON.stringify(JSON.parse(pre.textContent), null, 2);
+                } catch (error) {
+                    // Leave the payload byte-for-byte as embedded.
+                }
+                pre.setAttribute('data-pretty', '1');
+            }
+        }
+
+        // Copy semantics are unchanged from the old data-event-json attribute:
+        // the same slimmed event, indented two spaces, minus _original at any
+        // depth (the Merge Comparison table is where provenance is read).
+        function readCardEventJSON(button) {
+            const card = button && button.closest ? button.closest('.event-card') : null;
+            const pre = card ? card.querySelector('pre.raw-json') : null;
+            const text = pre ? pre.textContent : '';
+            if (!text) return '';
+            try {
+                const parsed = JSON.parse(text, function (key, value) {
+                    return key === '_original' ? undefined : value;
+                });
+                return JSON.stringify(parsed, null, 2);
+            } catch (error) {
+                return text;
+            }
+        }
+
         function copyEventJSON(button) {
-            const eventJSON = button.getAttribute('data-event-json');
-            
+            prettyPrintCardPayloads();
+            const eventJSON = readCardEventJSON(button);
+
             // Try modern clipboard API first
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(eventJSON).then(() => {
@@ -7595,6 +7739,7 @@ class ScriptableAdapter {
         }
         
         function exportAsJSON() {
+            prettyPrintCardPayloads();
             const eventCards = document.querySelectorAll('.event-card');
             const exportData = {
                 timestamp: new Date().toISOString(),
@@ -7721,6 +7866,10 @@ class ScriptableAdapter {
 </body>
 </html>
         `;
+
+    this.logEventJsonBudgetReport();
+    this.logMergeDiffBudgetReport();
+    this.logResultsHtmlSizeGuard(html, budgetedCardCount);
 
     return html;
   }
@@ -9638,10 +9787,10 @@ class ScriptableAdapter {
                                   const value = line
                                     .substring(colonIndex + 1)
                                     .trim();
-                                  formattedHtml += `<div style="margin: 2px 0;"><strong style="color: #666;">${this.escapeHtml(key)}:</strong> ${this.escapeHtml(value)}</div>`;
+                                  formattedHtml += `<div class="notes-line"><strong>${this.escapeHtml(key)}:</strong> ${this.escapeHtml(value)}</div>`;
                                 } else {
                                   // Freeform description line
-                                  formattedHtml += `<div style="margin: 2px 0;">${this.escapeHtml(line)}</div>`;
+                                  formattedHtml += `<div class="notes-line">${this.escapeHtml(line)}</div>`;
                                 }
                               });
 
@@ -9714,25 +9863,24 @@ class ScriptableAdapter {
                                     Shows how each field will be merged between existing and new event data
                                 </div>
                             </div>
-                            <button onclick="copyEventJSON(this)" 
-                                    style="padding: 4px 8px; font-size: 11px; background: var(--primary-color); color: var(--text-inverse); border: none; border-radius: 8px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 500; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);"
-                                    data-event-json='${this.escapeHtml(
-                                      this.buildEmbeddedEventJson(event, {
-                                        includeOriginal: false,
-                                      }),
-                                    )}'>
+                            <button onclick="copyEventJSON(this)" class="copy-json-btn">
                                 📋 Copy JSON
                             </button>
                         </div>
-                        <table style="width: 100%; font-size: 12px; border-collapse: collapse; table-layout: auto;">
+                        <table class="cmp-table">
                             <tr>
-                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid var(--border-color); word-wrap: break-word; overflow-wrap: break-word; color: var(--text-primary);">Field</th>
-                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid var(--border-color); word-wrap: break-word; overflow-wrap: break-word; color: var(--text-primary);">Existing Event</th>
-                                <th style="text-align: center; padding: 5px; border-bottom: 1px solid var(--border-color); word-wrap: break-word; overflow-wrap: break-word; color: var(--text-primary);">Flow</th>
-                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid var(--border-color); word-wrap: break-word; overflow-wrap: break-word; color: var(--text-primary);">New Event</th>
-                                <th style="text-align: left; padding: 5px; border-bottom: 1px solid var(--border-color); word-wrap: break-word; overflow-wrap: break-word; color: var(--text-primary);">Result</th>
+                                <th>Field</th>
+                                <th>Existing Event</th>
+                                <th class="cmp-flow">Flow</th>
+                                <th>New Event</th>
+                                <th>Result</th>
                             </tr>
-                            ${this.generateComparisonRows(event)}
+                            ${this.claimMergeDiffBudget(
+                              "field-by-field comparison",
+                              this.generateComparisonRows(event),
+                              event,
+                              { asTableRow: true },
+                            )}
                         </table>
                     </div>
                     
@@ -9744,7 +9892,11 @@ class ScriptableAdapter {
                                 Git-style diff showing additions (+), deletions (-), and unchanged (=) fields
                             </div>
                         </div>
-                        ${this.generateLineDiffView(event)}
+                        ${this.claimMergeDiffBudget(
+                          "line-by-line diff",
+                          this.generateLineDiffView(event),
+                          event,
+                        )}
                     </div>
                     </div>
                 </div>
@@ -9814,21 +9966,35 @@ class ScriptableAdapter {
             }
             
             <div class="raw-display">
-                <pre style="font-size: 11px; background: #333; color: #fff; padding: 10px; border-radius: 5px; overflow-x: auto;">${this.escapeHtml(
-                  // Keeps _original (merge provenance) but drops the AI
-                  // prompt/validation blobs — see buildEmbeddedEventJson
-                  this.buildEmbeddedEventJson(event, {
-                    includeOriginal: true,
-                  }),
-                )}</pre>
+                ${(() => {
+                  // ONE payload per card. Keeps _original (merge provenance)
+                  // but drops the AI prompt/validation blobs — see
+                  // buildEmbeddedEventJson — and is budgeted so a big run
+                  // cannot grow the page without bound (buildBudgetedEventJson).
+                  const payload = this.buildBudgetedEventJson(event, runInfo);
+                  const what = [
+                    payload.dropped.length
+                      ? `dropped ${payload.dropped.join(", ")}`
+                      : "",
+                    payload.truncated && payload.truncated.length
+                      ? `shortened ${payload.truncated.slice(0, 6).join(", ")}`
+                      : "",
+                  ]
+                    .filter(Boolean)
+                    .join("; ");
+                  const notice = payload.capped
+                    ? `<div class="payload-cap-note">✂️ Debug JSON trimmed to fit the page (${this.escapeHtml(
+                        what,
+                      )}). Everything trimmed is still rendered above in this card; the untrimmed event is in the saved run file${
+                        payload.runFile
+                          ? ` <code>${this.escapeHtml(payload.runFile)}</code>`
+                          : ""
+                      }.</div>`
+                    : "";
+                  return `${notice}<pre class="raw-json">${this.escapeHtml(payload.json)}</pre>`;
+                })()}
                 <div style="margin-top: 8px; text-align: right;">
-                    <button onclick="copyEventJSON(this)" 
-                            style="padding: 4px 8px; font-size: 11px; background: var(--primary-color); color: var(--text-inverse); border: none; border-radius: 8px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 500; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);"
-                            data-event-json='${this.escapeHtml(
-                              this.buildEmbeddedEventJson(event, {
-                                includeOriginal: false,
-                              }),
-                            )}'>
+                    <button onclick="copyEventJSON(this)" class="copy-json-btn">
                         📋 Copy JSON
                     </button>
                 </div>
@@ -9853,7 +10019,11 @@ class ScriptableAdapter {
   //     blobs) since that's where a human reads the merge provenance.
   //   - _parserConfig/_existingEvent/_conflicts/placeId/function slimming
   //     is unchanged from the previous inline replacers.
-  buildEmbeddedEventJson(event, { includeOriginal = true } = {}) {
+  //   - pretty:false emits the SAME object with no indentation. The card now
+  //     embeds the payload exactly once (compact, in the raw <pre>) and the
+  //     page re-indents it in the DOM on load, so the ~15% of the payload
+  //     that was pure indent whitespace never crosses into the HTML string.
+  buildEmbeddedEventJson(event, { includeOriginal = true, pretty = true } = {}) {
     return JSON.stringify(
       event,
       (key, value) => {
@@ -9887,7 +10057,316 @@ class ScriptableAdapter {
         }
         return value;
       },
-      2,
+      pretty ? 2 : 0,
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // Embedded-payload budget.
+  //
+  // The debug JSON is the single heaviest thing a card emits, and it grows
+  // with the event's own content (notes/description/_original), so "it fits
+  // today" was luck, not design: run 20260803-143036 (52 events) rendered a
+  // 3198 KB page and WebView.loadHTML white-screened.
+  //
+  // The budget is DOCUMENT-scoped, not per-card: every card gets
+  // TOTAL_BUDGET / eventCount, clamped to a per-card maximum so small runs
+  // (the common case) are never touched. That makes the payload contribution
+  // O(TOTAL_BUDGET) instead of O(events x content) — a 200-event run is
+  // bounded by the same constant a 5-event run is.
+  //
+  // Nothing here is deleted silently: whatever gets pruned is named in the
+  // in-card notice, stamped into the copied JSON under `_trimmed`, and
+  // logged once per run by logEventJsonBudgetReport().
+  // ---------------------------------------------------------------------
+  static get EVENT_JSON_TOTAL_BUDGET_BYTES() {
+    return 220 * 1024;
+  }
+
+  static get EVENT_JSON_MAX_PER_CARD_BYTES() {
+    return 24 * 1024;
+  }
+
+  // Same shape, one level up: a document-wide allowance for the two merge
+  // DIFF RENDERINGS (the 📊 Merge Comparison table and its line-by-line
+  // alternate view). Both are collapsed by default and both are derived
+  // views of _original, which the card's own payload still carries — so
+  // trimming them defers detail, it never destroys the only copy.
+  static get MERGE_DIFF_TOTAL_BUDGET_BYTES() {
+    return 400 * 1024;
+  }
+
+  static get MERGE_DIFF_MAX_PER_CARD_BYTES() {
+    return 40 * 1024;
+  }
+
+  // Evidence-derived safe ceiling for the whole page. Every run that the
+  // owner actually reviewed rendered at <= 1923 KB (20260801-192818, 15
+  // events, 30 s of review). The one silent white-screen was 3198 KB
+  // (20260803-143036, 52 events, "reviewed" in 3.3 s). Crossing this is not
+  // fatal, but it must never be silent — see logResultsHtmlSizeGuard.
+  static get RESULTS_HTML_WARN_BYTES() {
+    return 1923 * 1024;
+  }
+
+  // Pruned in this order, heaviest-and-most-redundant first. Every one of
+  // these is ALSO rendered as HTML elsewhere in the same card, so pruning it
+  // from the debug dump never removes the only copy:
+  //   _original        -> the "📊 Merge Comparison" table renders it
+  //                       field-by-field (existing / new / result)
+  //   _mergeDiff       -> same table's Result column
+  //   _mergeDecisions  -> same table's Result column + the AI merge insights
+  //   _fieldPriorities -> same table's per-field strategy label
+  //   _evidenceLines   -> the card's own evidence lines section
+  //   _analysis        -> the card's action badge + reason line
+  static get EVENT_JSON_PRUNE_ORDER() {
+    return [
+      "_original",
+      "_mergeDiff",
+      "_mergeDecisions",
+      "_fieldPriorities",
+      "_evidenceLines",
+      "_analysis",
+    ];
+  }
+
+  // Successively tighter per-string caps, tried in order once key-dropping
+  // has bottomed out. 320 chars still shows a whole notes line; 60 is the
+  // last resort on a run large enough that nothing else would fit.
+  static get EVENT_JSON_STRING_CAPS() {
+    return [1200, 480, 240, 120, 60];
+  }
+
+  // Depth-first copy with every long string shortened to `maxChars` and a
+  // marker appended naming the true length and where the full value lives.
+  // Never mutates the input — the calendar writer reads these same objects.
+  truncateLongStringsForBudget(value, maxChars, record, runFile) {
+    if (typeof value === "string") {
+      if (value.length <= maxChars) return value;
+      return `${value.substring(0, maxChars)}... [truncated ${
+        value.length - maxChars
+      } of ${value.length} chars to fit the results page — full value in ${
+        runFile || "the saved run JSON"
+      }]`;
+    }
+    if (Array.isArray(value)) {
+      return value.map((item) =>
+        this.truncateLongStringsForBudget(item, maxChars, record, runFile),
+      );
+    }
+    if (value && typeof value === "object") {
+      const out = {};
+      for (const key of Object.keys(value)) {
+        const child = value[key];
+        if (typeof child === "string" && child.length > maxChars) {
+          record.push(key);
+        }
+        out[key] = this.truncateLongStringsForBudget(
+          child,
+          maxChars,
+          record,
+          runFile,
+        );
+      }
+      return out;
+    }
+    return value;
+  }
+
+  // Per-card payload budget for a run of `eventCount` cards.
+  computeEventJsonBudgetBytes(eventCount) {
+    const cards = Number.isFinite(eventCount) && eventCount > 0 ? eventCount : 1;
+    const share = Math.floor(
+      ScriptableAdapter.EVENT_JSON_TOTAL_BUDGET_BYTES / cards,
+    );
+    return Math.min(share, ScriptableAdapter.EVENT_JSON_MAX_PER_CARD_BYTES);
+  }
+
+  // Serialize one card's payload within the active budget.
+  // Returns { json, capped, dropped[], bytes, budget, runFile }.
+  buildBudgetedEventJson(event, runInfo = {}) {
+    const budget = Number.isFinite(this._eventJsonBudgetBytes)
+      ? this._eventJsonBudgetBytes
+      : ScriptableAdapter.EVENT_JSON_MAX_PER_CARD_BYTES;
+    const runFile = runInfo && runInfo.runId ? `data/runs/${runInfo.runId}.json` : "";
+
+    let working = event;
+    const dropped = [];
+    let json = this.buildEmbeddedEventJson(working, {
+      includeOriginal: true,
+      pretty: false,
+    });
+
+    for (const key of ScriptableAdapter.EVENT_JSON_PRUNE_ORDER) {
+      if (json.length <= budget) break;
+      if (!working || typeof working !== "object" || !(key in working)) continue;
+      // Shallow clone so the analyzed event itself is never mutated — the
+      // calendar writer reads these same keys after the HTML is built.
+      working = { ...working };
+      delete working[key];
+      dropped.push(key);
+      json = this.buildEmbeddedEventJson(working, {
+        includeOriginal: true,
+        pretty: false,
+      });
+    }
+
+    // Dropping whole keys bottoms out at the event's own content (title,
+    // notes, description). Past that the only way to stay inside the budget
+    // is to shorten the long VALUES — with a marker that says how much was
+    // cut and where the whole thing still is, so a truncated payload can
+    // never be misread as a complete one.
+    const truncatedFields = [];
+    if (json.length > budget) {
+      for (const cap of ScriptableAdapter.EVENT_JSON_STRING_CAPS) {
+        truncatedFields.length = 0;
+        const shortened = this.truncateLongStringsForBudget(
+          working,
+          cap,
+          truncatedFields,
+          runFile,
+        );
+        json = this.buildEmbeddedEventJson(shortened, {
+          includeOriginal: true,
+          pretty: false,
+        });
+        if (json.length <= budget) {
+          working = shortened;
+          break;
+        }
+        working = shortened;
+      }
+    }
+
+    if (!dropped.length && !truncatedFields.length) {
+      return { json, capped: false, dropped, bytes: json.length, budget, runFile };
+    }
+
+    // Stamp the provenance of the trim INTO the payload, so a copied JSON
+    // can never be mistaken for the complete object.
+    working = {
+      ...working,
+      _trimmed: {
+        reason: "results-html-budget",
+        droppedKeys: dropped,
+        truncatedFields: truncatedFields.slice(0, 20),
+        note: "Dropped keys are rendered field-by-field in this card's Merge Comparison table.",
+        fullEventAt: runFile || "the saved run JSON",
+      },
+    };
+    json = this.buildEmbeddedEventJson(working, {
+      includeOriginal: true,
+      pretty: false,
+    });
+
+    const title = (event && (event.title || event.name)) || "(untitled)";
+    const uniqueTruncated = [...new Set(truncatedFields)];
+    if (Array.isArray(this._eventJsonBudgetReport)) {
+      this._eventJsonBudgetReport.push({
+        title,
+        dropped,
+        truncated: uniqueTruncated,
+        bytes: json.length,
+        budget,
+      });
+    }
+    return {
+      json,
+      capped: true,
+      dropped,
+      truncated: uniqueTruncated,
+      bytes: json.length,
+      budget,
+      runFile,
+    };
+  }
+
+  // Per-card allowance for the merge diff renderings, drawn from a shared
+  // document-wide pool. A card that spends less leaves the rest for later
+  // cards, but no card may draw more than its equal share — so the total is
+  // <= MERGE_DIFF_TOTAL_BUDGET_BYTES no matter how many events a run has.
+  claimMergeDiffBudget(kind, html, event, { asTableRow = false } = {}) {
+    const text = typeof html === "string" ? html : "";
+    if (!text) return text;
+    if (!Number.isFinite(this._mergeDiffRemainingBytes)) return text;
+
+    const share = Number.isFinite(this._mergeDiffPerCardBytes)
+      ? this._mergeDiffPerCardBytes
+      : ScriptableAdapter.MERGE_DIFF_MAX_PER_CARD_BYTES;
+    const allowance = Math.min(share, this._mergeDiffRemainingBytes);
+
+    if (text.length <= allowance) {
+      this._mergeDiffRemainingBytes -= text.length;
+      return text;
+    }
+
+    const title = (event && (event.title || event.name)) || "(untitled)";
+    if (Array.isArray(this._mergeDiffBudgetReport)) {
+      this._mergeDiffBudgetReport.push({ title, kind, bytes: text.length, allowance });
+    }
+    const notice = `✂️ This card's ${this.escapeHtml(kind)} was too large to render inline (${Math.round(
+      text.length / 1024,
+    )} KB) and was deferred to keep the page renderable. The same before/after values are in this card's 📋 Copy JSON and in the saved run JSON.`;
+    // A <table> child has to stay a row or the WebView drops it entirely.
+    return asTableRow
+      ? `<tr><td colspan="5" class="payload-cap-note">${notice}</td></tr>`
+      : `<div class="payload-cap-note">${notice}</div>`;
+  }
+
+  // One line per run naming exactly which cards were trimmed and why. A cap
+  // nobody can see reads as "everything is here" when it is not.
+  logMergeDiffBudgetReport() {
+    const report = Array.isArray(this._mergeDiffBudgetReport)
+      ? this._mergeDiffBudgetReport
+      : [];
+    if (!report.length) return;
+    const detail = report
+      .slice(0, 12)
+      .map((entry) => `"${entry.title}" (${entry.kind}, ${Math.round(entry.bytes / 1024)} KB)`)
+      .join(", ");
+    const more = report.length > 12 ? `, +${report.length - 12} more` : "";
+    console.log(
+      `📱 Scriptable: Merge diff rendering deferred on ${report.length} card section(s) to stay inside the ${Math.round(
+        ScriptableAdapter.MERGE_DIFF_TOTAL_BUDGET_BYTES / 1024,
+      )} KB page diff budget — the same values remain in each card's Copy JSON and the saved run JSON: ${detail}${more}`,
+    );
+  }
+
+  // Last line of defence: the page can still be large for reasons no budget
+  // here controls (one fixed card per event). It must never be large
+  // SILENTLY, because a white-screened review looks exactly like an approved
+  // one from the log.
+  logResultsHtmlSizeGuard(html, eventCount) {
+    const bytes = typeof html === "string" ? html.length : 0;
+    if (bytes <= ScriptableAdapter.RESULTS_HTML_WARN_BYTES) return;
+    console.log(
+      `📱 Scriptable: ⚠️ Results HTML is ${Math.round(bytes / 1024)} KB for ${eventCount} event(s) — above the ${Math.round(
+        ScriptableAdapter.RESULTS_HTML_WARN_BYTES / 1024,
+      )} KB size that has actually rendered on device. If the results screen comes up blank, that is why: re-run with fewer parsers, or review from the saved run JSON.`,
+    );
+  }
+
+  logEventJsonBudgetReport() {
+    const report = Array.isArray(this._eventJsonBudgetReport)
+      ? this._eventJsonBudgetReport
+      : [];
+    if (!report.length) return;
+    const detail = report
+      .slice(0, 12)
+      .map((entry) => {
+        const parts = [];
+        if (entry.dropped.length) parts.push(`-${entry.dropped.join("/")}`);
+        if (entry.truncated && entry.truncated.length) {
+          parts.push(`shortened ${entry.truncated.slice(0, 4).join("/")}`);
+        }
+        return `"${entry.title}" (${parts.join("; ")})`;
+      })
+      .join(", ");
+    const more = report.length > 12 ? `, +${report.length - 12} more` : "";
+    console.log(
+      `📱 Scriptable: Debug JSON trimmed on ${report.length} card(s) to stay inside the ${Math.round(
+        ScriptableAdapter.EVENT_JSON_TOTAL_BUDGET_BYTES / 1024,
+      )} KB page payload budget — every trimmed key is still rendered in that card's Merge Comparison table: ${detail}${more}`,
     );
   }
 
@@ -10886,8 +11365,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         // This is important for showing "scraped value X, existing undefined, preserved undefined"
       }
 
-      // Format values for display - show exactly what the merge logic saw
-      const formatValue = (val, maxLength = 30) => {
+      // Format values for display - show exactly what the merge logic saw.
+      // `anchor` is the index of the first character at which the two sides
+      // of this row diverge; the visible window is centred there so a long
+      // description whose change is at character 900 does not render as two
+      // identical-looking 30-character stubs.
+      const formatValue = (val, anchor = 0, maxLength = 30) => {
         if (val === null) return '<em style="color: #999;">null</em>';
         if (val === undefined) return '<em style="color: #999;">undefined</em>';
         if (val === "") return '<em style="color: #999;">empty string</em>';
@@ -10921,10 +11404,45 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         }
         const str = stringValue;
         if (str.length > maxLength) {
-          return `<span title="${this.escapeHtml(str)}">${this.escapeHtml(str.substring(0, maxLength))}...</span>`;
+          // BOUNDED BY CONSTRUCTION. This used to emit the ENTIRE value into a
+          // title="" attribute on both the existing and the new cell, so a
+          // single long description cost ~2x its own length per row, per
+          // event, forever. Visible text is capped at maxLength and the
+          // tooltip at TOOLTIP_MAX_CHARS; the "+N chars" badge is the
+          // affordance that says how much is hidden and the complete value is
+          // one tap away via this card's 📋 Copy JSON / raw dump.
+          const TOOLTIP_MAX_CHARS = 240;
+          const start =
+            anchor > maxLength ? Math.max(0, anchor - Math.floor(maxLength / 3)) : 0;
+          const lead = start > 0 ? "..." : "";
+          const visible = str.substring(start, start + maxLength);
+          const tooltipSource = str.substring(start);
+          const tooltip =
+            tooltipSource.length > TOOLTIP_MAX_CHARS
+              ? `${tooltipSource.substring(0, TOOLTIP_MAX_CHARS)}... (+${
+                  tooltipSource.length - TOOLTIP_MAX_CHARS
+                } more chars - use Copy JSON for the full value)`
+              : tooltipSource;
+          return `<span title="${this.escapeHtml(tooltip)}">${lead}${this.escapeHtml(visible)}...</span><span class="cmp-more"> ${str.length} chars</span>`;
         }
         return this.escapeHtml(str);
       };
+
+      // Index of the first character at which the two sides differ, so a
+      // truncated diff always shows the part that actually changed.
+      const diffAnchor = (() => {
+        const asText = (v) => {
+          if (v === null || v === undefined || typeof v === "object") return "";
+          return String(v);
+        };
+        const a = asText(existingValue);
+        const b = asText(newValue);
+        if (!a || !b) return 0;
+        const max = Math.min(a.length, b.length);
+        let i = 0;
+        while (i < max && a[i] === b[i]) i++;
+        return i;
+      })();
 
       // Identity for DISPLAY only. Strict === was reporting startDate/endDate
       // as CLOBBERED on every merge even when nothing changed: those values are
@@ -11081,29 +11599,42 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         resultText = '<span style="color: #999;">NO CHANGE</span>';
       }
 
-      rows.push(`
-                <tr>
-                    <td style="padding: 5px; border-bottom: 1px solid var(--border-color); vertical-align: top; word-wrap: break-word; overflow-wrap: break-word; color: var(--text-primary);">
-                        <strong>${field}</strong>
-                        <br><small style="color: var(--text-secondary);">${strategy}</small>
-                    </td>
-                    <td style="padding: 5px; border-bottom: 1px solid var(--border-color); word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; color: var(--text-primary);">
-                        ${formatValue(existingValue)}
-                    </td>
-                    <td style="padding: 5px; border-bottom: 1px solid var(--border-color); text-align: center; font-size: 16px; color: var(--primary-color); word-wrap: break-word; overflow-wrap: break-word;">
-                        ${flowIcon}
-                    </td>
-                    <td style="padding: 5px; border-bottom: 1px solid var(--border-color); word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; color: var(--text-primary);">
-                        ${formatValue(newValue)}
-                    </td>
-                    <td style="padding: 5px; border-bottom: 1px solid var(--border-color); text-align: center; word-wrap: break-word; overflow-wrap: break-word; color: var(--text-primary);">
-                        ${resultText}
-                    </td>
-                </tr>
-            `);
+      rows.push(
+        `<tr><td class="cmp-field"><strong>${field}</strong><br><small>${strategy}</small></td>` +
+          `<td>${formatValue(existingValue, diffAnchor)}</td>` +
+          `<td class="cmp-flow">${flowIcon}</td>` +
+          `<td>${formatValue(newValue, diffAnchor)}</td>` +
+          `<td class="cmp-result">${resultText}</td></tr>`,
+      );
     });
 
     return rows.join("");
+  }
+
+  // Longest slice of any single value the line-by-line diff will render.
+  static get LINE_DIFF_MAX_CHARS() {
+    return 220;
+  }
+
+  // BOUNDED BY CONSTRUCTION.
+  //
+  // The line diff used to emit every value with escapeHtml() and no cap at
+  // all, and a REPLACED field emits both sides — so one 6 KB description
+  // cost ~12 KB of page, per event, forever. It is the one place in a card
+  // whose size was set purely by how chatty a venue's copywriter is.
+  //
+  // The slice is capped at LINE_DIFF_MAX_CHARS and anchored on the first
+  // diverging character, so the visible text always contains the change. The
+  // affordance is explicit: the badge states the true length and names where
+  // the complete value still lives (this card's 📋 Copy JSON / raw dump).
+  renderBoundedDiffValue(text, anchor = 0) {
+    const str = text === null || text === undefined ? "" : String(text);
+    const max = ScriptableAdapter.LINE_DIFF_MAX_CHARS;
+    if (str.length <= max) return this.escapeHtml(str);
+    const start = anchor > max ? Math.max(0, anchor - Math.floor(max / 4)) : 0;
+    const lead = start > 0 ? "..." : "";
+    const visible = str.substring(start, start + max);
+    return `${lead}${this.escapeHtml(visible)}...<span class="cmp-more"> [${str.length} chars total — 📋 Copy JSON for the full value]</span>`;
   }
 
   // Generate line-by-line diff view
@@ -11149,6 +11680,19 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         }
         return val.toString();
       };
+
+      // First character at which the two sides diverge — renderBoundedDiffValue
+      // centres its window there, so a replaced 4 KB description shows the
+      // part that actually changed instead of two identical opening lines.
+      const diffAnchor = (() => {
+        const a = formatValue(existingValue);
+        const b = formatValue(newValue);
+        if (!a || !b) return 0;
+        const max = Math.min(a.length, b.length);
+        let i = 0;
+        while (i < max && a[i] === b[i]) i++;
+        return i;
+      })();
 
       // Determine what happened with this field by comparing values
       let wasUsed = "unknown";
@@ -11200,44 +11744,44 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       if (isNew) {
         // Only new value exists - show as addition
         html += `<div class=\"diff-line diff-added\">`;
-        html += `<span>+</span> ${this.escapeHtml(formatValue(newValue))} <em class=\"diff-meta\">(new field)</em>`;
+        html += `<span>+</span> ${this.renderBoundedDiffValue(formatValue(newValue), diffAnchor)} <em class=\"diff-meta\">(new field)</em>`;
         html += `</div>`;
       } else if (isUnchanged) {
         // Only existing value exists - show as context (orange)
         html += `<div class=\"diff-line diff-context\">`;
-        html += `<span>═</span> ${this.escapeHtml(formatValue(existingValue))} <em class=\"diff-meta\">(existing, unchanged)</em>`;
+        html += `<span>═</span> ${this.renderBoundedDiffValue(formatValue(existingValue), diffAnchor)} <em class=\"diff-meta\">(existing, unchanged)</em>`;
         html += `</div>`;
       } else if (isSame) {
         // Existing and new are the same for display - avoid +/- noise
         html += `<div class=\"diff-line diff-same\">`;
-        html += `<span>═</span> ${this.escapeHtml(formatValue(existingValue))} <em class=\"diff-meta\">(same in both)</em>`;
+        html += `<span>═</span> ${this.renderBoundedDiffValue(formatValue(existingValue), diffAnchor)} <em class=\"diff-meta\">(same in both)</em>`;
         html += `</div>`;
       } else if (isReplaced) {
         // Value was replaced - show old as deletion, new as addition
         html += `<div class=\"diff-line diff-removed\">`;
-        html += `<span>-</span> ${this.escapeHtml(formatValue(existingValue))} <em class=\"diff-meta\">(removed)</em>`;
+        html += `<span>-</span> ${this.renderBoundedDiffValue(formatValue(existingValue), diffAnchor)} <em class=\"diff-meta\">(removed)</em>`;
         html += `</div>`;
         html += `<div class=\"diff-line diff-added\">`;
-        html += `<span>+</span> ${this.escapeHtml(formatValue(newValue))} <em class=\"diff-meta\">(added)</em>`;
+        html += `<span>+</span> ${this.renderBoundedDiffValue(formatValue(newValue), diffAnchor)} <em class=\"diff-meta\">(added)</em>`;
         html += `</div>`;
       } else if (isKept) {
         // New value exists but existing was kept - show both with context
         html += `<div class=\"diff-line diff-same\">`;
-        html += `<span>═</span> ${this.escapeHtml(formatValue(existingValue))} <em class=\"diff-meta\">(kept existing)</em>`;
+        html += `<span>═</span> ${this.renderBoundedDiffValue(formatValue(existingValue), diffAnchor)} <em class=\"diff-meta\">(kept existing)</em>`;
         html += `</div>`;
         html += `<div class=\"diff-line diff-ignored\" style=\"opacity:0.85;\">`;
-        html += `<span>~</span> ${this.escapeHtml(formatValue(newValue))} <em class=\"diff-meta\">(ignored new value)</em>`;
+        html += `<span>~</span> ${this.renderBoundedDiffValue(formatValue(newValue), diffAnchor)} <em class=\"diff-meta\">(ignored new value)</em>`;
         html += `</div>`;
       } else if (isMerged) {
         // Values were merged - show all three
         html += `<div class=\"diff-line diff-removed\">`;
-        html += `<span>-</span> ${this.escapeHtml(formatValue(existingValue))} <em class=\"diff-meta\">(original)</em>`;
+        html += `<span>-</span> ${this.renderBoundedDiffValue(formatValue(existingValue), diffAnchor)} <em class=\"diff-meta\">(original)</em>`;
         html += `</div>`;
         html += `<div class=\"diff-line diff-ignored\">`;
-        html += `<span>~</span> ${this.escapeHtml(formatValue(newValue))} <em class=\"diff-meta\">(proposed)</em>`;
+        html += `<span>~</span> ${this.renderBoundedDiffValue(formatValue(newValue), diffAnchor)} <em class=\"diff-meta\">(proposed)</em>`;
         html += `</div>`;
         html += `<div class=\"diff-line diff-merged\">`;
-        html += `<span>+</span> ${this.escapeHtml(formatValue(finalValue))} <em class=\"diff-meta\">(merged result)</em>`;
+        html += `<span>+</span> ${this.renderBoundedDiffValue(formatValue(finalValue), diffAnchor)} <em class=\"diff-meta\">(merged result)</em>`;
         html += `</div>`;
       }
 
