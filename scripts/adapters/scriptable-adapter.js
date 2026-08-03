@@ -3290,7 +3290,7 @@ class ScriptableAdapter {
               // so URL data is stored exclusively as "website:" in notes.
               targetEvent.title = event.title;
               targetEvent.startDate = event.startDate;
-              targetEvent.endDate = event.endDate;
+              targetEvent.endDate = this.resolveCalendarWriteEndDate(event);
               targetEvent.location = event.location;
               targetEvent.notes = event.notes;
 
@@ -3361,12 +3361,49 @@ class ScriptableAdapter {
     }
   }
 
+  // The endDate this adapter is willing to WRITE for an event.
+  //
+  // An INVERTED span (endDate strictly before startDate) is never written:
+  // EventKit refuses to save it, the rejection lands in the caller's catch as
+  // a "failed" event, and a real night is silently lost. Such an end is a
+  // normalization artifact, not data (SharedCore.hasDegenerateEnd has said so
+  // on the merge paths since those rules were written — the create path just
+  // never consulted it), so it is discarded and the start is written instead.
+  //
+  // A ZERO-LENGTH span (endDate === startDate) is written through UNCHANGED,
+  // deliberately. EKEvent has no way to represent "no end stated" — an end
+  // date is mandatory — so `end === start` IS that statement on this platform,
+  // and 48 of the 134 events analyzed on 2026-08-02 are exactly that case
+  // (Eagle LA flyers reading "BAR OPENS 2PM" / "9PM EVERY SUNDAY" with no
+  // closing time anywhere on the page). Inventing a duration would fabricate
+  // data and dropping the event would lose a real night; both shapes are
+  // instead surfaced report-only by SharedCore.getEventSanityFlags as
+  // `end-not-after-start`.
+  resolveCalendarWriteEndDate(event) {
+    // Coerced, never `instanceof` — Scriptable hands every module its own Date
+    // constructor, so a Date built in shared-core fails `instanceof Date` here.
+    const toMs = (value) => {
+      if (value === null || value === undefined || value === "") return null;
+      const ms = new Date(value).getTime();
+      return Number.isNaN(ms) ? null : ms;
+    };
+    const startMs = toMs(event && event.startDate);
+    const endMs = toMs(event && event.endDate);
+    if (startMs !== null && endMs !== null && endMs < startMs) {
+      console.log(
+        `📱 Scriptable: ⚠️ "${event?.title || "event"}" endDate is before startDate — refusing to write an inverted span, writing the start instead`,
+      );
+      return event.startDate;
+    }
+    return event.endDate;
+  }
+
   // Helper method to create and save a calendar event
   async createCalendarEvent(event, calendar) {
     const calendarEvent = new CalendarEvent();
     calendarEvent.title = event.title;
     calendarEvent.startDate = event.startDate;
-    calendarEvent.endDate = event.endDate;
+    calendarEvent.endDate = this.resolveCalendarWriteEndDate(event);
     calendarEvent.location = event.location;
     calendarEvent.notes = event.notes;
     // Note: Scriptable cannot read or write CalendarEvent.url — URL is stored as "website:" in notes.
@@ -4442,6 +4479,15 @@ class ScriptableAdapter {
       if (results.errors.length > 0) {
         console.log(`❌ Errors: ${results.errors.length}`);
         results.errors.forEach((error) => console.log(`   • ${error}`));
+      }
+
+      // Permanently-gone crawl targets (HTTP 404/410) are reported separately
+      // from errors on purpose — they are facts about the web, not run faults,
+      // and counting them as errors kept a standing "errors: 7" on runs where
+      // nothing was wrong. Still surfaced in full (flag, don't drop).
+      if (Array.isArray(results.permanentlyGone) && results.permanentlyGone.length > 0) {
+        console.log(`🪦 Permanently gone (404/410): ${results.permanentlyGone.length}`);
+        results.permanentlyGone.forEach((entry) => console.log(`   • ${entry}`));
       }
 
       console.log("\n📋 Parser Results:");

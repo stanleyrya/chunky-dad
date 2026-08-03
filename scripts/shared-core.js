@@ -165,11 +165,32 @@ const COVER_FREE_PHRASES = new Set([
     'gratis',
     'kostenlos'
 ]);
+// The same free-admission vocabulary matched ANYWHERE inside a longer value,
+// for the report-only self-contradiction check ("$10, NO COVER" — a real
+// 2026-08-02 cover that classifies as `price` because a currency amount wins,
+// while simultaneously claiming free entry). Longest-first so "free entry"
+// wins over "free"; word-boundary anchored on both ends so "freedom" and
+// "gratitude" never match. Built from COVER_FREE_PHRASES so the two can never
+// drift apart.
+const COVER_FREE_PHRASE_ANYWHERE_PATTERN = new RegExp(
+    `(?:^|[^a-z])(?:${[...COVER_FREE_PHRASES].sort((a, b) => b.length - a.length).join('|')})(?:$|[^a-z])`,
+    'i'
+);
 
 // The ONE calendar target an unrecognized city may produce. See
 // SharedCore.resolveCalendarTarget — the fallback must never be derived from
 // the city string itself, or a page's free text becomes a calendar name.
 const UNKNOWN_CALENDAR_NAME = 'chunky-dad-unknown';
+
+// Minimum alphanumeric characters a SALVAGED shortName may carry (see the
+// salvage loop in deriveShortNameForEvent). Three, because the shortest real
+// display names in the corpus are three characters ("CUB", "PUP", "BLK") while
+// every observed one- and two-character salvage was a truncation artifact
+// ("B" from "B BAR", "IT" from "IT GIRL"). The AI's own gated answers are NOT
+// subject to this floor — a model that deliberately answers "XL" for a party
+// called "XL" is making a real choice; the floor exists only for the
+// mechanical fragments this loop manufactures.
+const SHORTNAME_SALVAGE_MIN_ALNUM_CHARS = 3;
 
 // ---------------------------------------------------------------------------
 // Title date/time vocabulary — ONE set of pattern fragments shared by
@@ -968,10 +989,25 @@ class SharedCore {
     // formatter spaced the range dash ("$22.10 - $39.98"), the sticker-price
     // formatter doesn't ("$22.10-$39.98"), and that formatting twin burned an
     // AI arbitration on every run.
+    //
+    // Case and trailing !/. are folded for exactly the same reason, using the
+    // SAME folding classifyCoverShape already applies to free phrases: the
+    // 2026-08-02 corpus carries five spellings of one claim — "No cover",
+    // "NO COVER", "no cover", "No cover!", "NO COVER!" — and each pairing was
+    // a "genuine conflict" that reached AI arbitration and could rewrite the
+    // stored value on any run. Only UNAMBIGUOUS twins fold: "FREE" and "No
+    // cover" are different words and stay a real conflict, and nothing here
+    // rewrites a stored cover — this is a comparison, so the value the merge
+    // keeps is untouched.
     coverValuesEquivalent(valueA, valueB) {
-        const stripWhitespace = (value) => String(value === null || value === undefined ? '' : value).replace(/\s+/g, '');
-        const strippedA = stripWhitespace(valueA);
-        return strippedA !== '' && strippedA === stripWhitespace(valueB);
+        const fold = (value) => String(value === null || value === undefined ? '' : value)
+            .normalize('NFKC')
+            .trim()
+            .replace(/[!.]+$/, '')
+            .replace(/\s+/g, '')
+            .toLowerCase();
+        const foldedA = fold(valueA);
+        return foldedA !== '' && foldedA === fold(valueB);
     }
 
     // Deterministic cover SHAPE classifier (2026-08-02): `cover` accumulates
@@ -1584,6 +1620,60 @@ class SharedCore {
                 code: 'duration-implausible',
                 detail: `spans ${spanDays} days (longest curated festival is ${SANITY_MAX_EVENT_DURATION_DAYS})`
             });
+        }
+
+        // 6. end-not-after-start — endDate <= startDate, i.e. the record
+        //    carries a zero-duration (or inverted) span. hasDegenerateEnd has
+        //    existed since the merge rules were written, but it is consulted
+        //    ONLY on the two merge paths (mergeParsedEvents / the calendar
+        //    merge) — a CREATE never passes through either, so 48 of the 134
+        //    distinct events analyzed on 2026-08-02 reached the write plan
+        //    with startDate === endDate and nothing said so anywhere.
+        //    Deliberately REPORT-ONLY, and deliberately NOT a repair: for many
+        //    of these the page genuinely states a start and no end (Eagle LA
+        //    flyers: "BAR OPENS 2PM", "9PM EVERY SUNDAY", "$8 COVER - 8PM"),
+        //    so inventing a duration would be fabricating data, and dropping
+        //    the event would lose a real night. What is wrong is that "no end
+        //    stated" and "the end really equals the start" are indistinguishable
+        //    downstream — this flag makes the population visible so the upstream
+        //    materialization can be fixed with evidence.
+        if (this.hasDegenerateEnd(event)) {
+            const zeroLength = Number.isFinite(startMs) && Number.isFinite(endMs) && endMs === startMs;
+            flags.push({
+                code: 'end-not-after-start',
+                detail: zeroLength
+                    ? 'endDate equals startDate (zero-duration event)'
+                    : 'endDate is before startDate'
+            });
+        }
+
+        // 7. cover-not-a-price / cover-self-contradictory — `cover` is the one
+        //    money field, and on a single-source write NOTHING checks its
+        //    shape: classifyCoverShape is only ever consulted by the two-sided
+        //    conflict resolvers, and the one-sided short-circuit in
+        //    mergeParsedEvents returns before either. Real 2026-08-02 covers
+        //    that shipped unchecked: "white & silver" (a dress code),
+        //    "3dollarbillbk.com", "TICKETS @ CHUNK-PARTY.COM",
+        //    "GAYMAFIABOSTON.COM FURBALL.NYC", "Free Tequila Shot for Singers",
+        //    "Entrada gratu…" (truncated mid-word), and "$10, NO COVER".
+        //    Report-only and never a rewrite (flag, don't drop): a prose cover
+        //    can still be the most useful thing the page said ("ADV. TIX AT
+        //    BEARRACUDA.COM"), so it is surfaced, not deleted.
+        const coverText = typeof event.cover === 'string' ? event.cover.trim() : '';
+        if (coverText) {
+            const coverShape = this.classifyCoverShape(coverText);
+            if (coverShape === 'prose') {
+                flags.push({
+                    code: 'cover-not-a-price',
+                    detail: `cover "${coverText}" is neither a price nor a free-admission phrase`
+                });
+            } else if (coverShape === 'price'
+                && COVER_FREE_PHRASE_ANYWHERE_PATTERN.test(coverText.normalize('NFKC'))) {
+                flags.push({
+                    code: 'cover-self-contradictory',
+                    detail: `cover "${coverText}" states both a price and free admission`
+                });
+            }
         }
 
         return flags;
@@ -3321,6 +3411,11 @@ class SharedCore {
             bearEvents: 0,
             duplicatesRemoved: 0,
             errors: [],
+            // Crawl failures whose HTTP status says the URL is permanently
+            // gone (404/410). Kept OUT of `errors` on purpose — see the
+            // severity split in crawlUrlsForEvents — but never dropped: the
+            // adapters surface the count and the URLs.
+            permanentlyGone: [],
             parserResults: [],
             allProcessedEvents: [], // All events ready for calendar
             // Enforce-mode bear-check drops, surfaced for the results UI and the
@@ -3409,6 +3504,13 @@ class SharedCore {
                 // header's totals and the results-UI errors section).
                 if (Array.isArray(parserResult.crawlErrors) && parserResult.crawlErrors.length > 0) {
                     results.errors.push(...parserResult.crawlErrors);
+                }
+
+                // Permanently-gone URLs (404/410) are recorded and surfaced,
+                // but they are NOT run errors — the server is telling us the
+                // page will never come back, which is information, not a fault.
+                if (Array.isArray(parserResult.crawlGoneUrls) && parserResult.crawlGoneUrls.length > 0) {
+                    results.permanentlyGone.push(...parserResult.crawlGoneUrls);
                 }
 
                 await displayAdapter.logSuccess(`SYSTEM: ${parserConfig.name}: ${parserResult.bearEvents} bear events`);
@@ -3556,6 +3658,11 @@ class SharedCore {
         // Crawl-page failures, returned on the parser result so processEvents
         // can fold them into results.errors (the run header's error count).
         const crawlErrorCollector = [];
+        // Crawl-page failures whose status says the URL is PERMANENTLY gone
+        // (404/410). Recorded and surfaced like any other failure, but folded
+        // into results.permanentlyGone instead of results.errors so a dead
+        // ticketing page stops inflating the run's error count.
+        const crawlGoneCollector = [];
         // Events found on another org's site and NOT ingested (cross-org crawl
         // guard) — flagged, never silently dropped.
         const foreignOrgDropCollector = [];
@@ -3580,6 +3687,7 @@ class SharedCore {
             enrichOnlyByUrl: null,
             enrichDropCollector,
             crawlErrorCollector,
+            crawlGoneCollector,
             foreignOrgDropCollector
         });
 
@@ -3660,6 +3768,10 @@ class SharedCore {
 
         if (crawlErrorCollector.length > 0) {
             result.crawlErrors = crawlErrorCollector;
+        }
+
+        if (crawlGoneCollector.length > 0) {
+            result.crawlGoneUrls = crawlGoneCollector;
         }
 
         if (foreignOrgDropCollector.length > 0) {
@@ -4628,6 +4740,19 @@ class SharedCore {
         return Number.isFinite(statusCode) ? statusCode : null;
     }
 
+    // HTTP statuses that mean the resource is PERMANENTLY unavailable, as
+    // opposed to the bot-wall statuses (401/403) which mean "not to you, not
+    // right now". 410 Gone is the strongest never-retry signal the protocol
+    // has — the origin is explicitly stating the resource is gone and that no
+    // forwarding address is known. 404 is the ordinary shape of the same thing
+    // for an expired event page (eventim retires a sold/past event's URL).
+    // Static + pure so both the dead-end store and the error-severity split
+    // read one definition. Deliberately narrow: 5xx, 429 and timeouts are
+    // transient and must stay ordinary errors.
+    static isPermanentlyGoneHttpStatus(statusCode) {
+        return statusCode === 410 || statusCode === 404;
+    }
+
     isRetryableFailure(error) {
         if (error && typeof error.retryable === 'boolean') {
             return error.retryable;
@@ -4699,6 +4824,7 @@ class SharedCore {
         // "errors" total can count them (run 20260802-093526: 10 [ERROR]
         // lines, header said "errors":0 — crawl failures were log-only).
         crawlErrorCollector = null,
+        crawlGoneCollector = null,
         // Events dropped by the cross-org crawl guard (flag, don't drop):
         // collected per host with the owning org so the run surfaces them.
         foreignOrgDropCollector = null
@@ -5045,6 +5171,7 @@ class SharedCore {
                             enrichOnlyByUrl: childEnrichOnlyByUrl,
                             enrichDropCollector,
                             crawlErrorCollector,
+                            crawlGoneCollector,
                             foreignOrgDropCollector
                         });
                     }
@@ -5058,8 +5185,15 @@ class SharedCore {
                 // Generic status check — no host list. Cached-failure replays
                 // count too (the failure cache would otherwise mask the store
                 // from ever learning the URL).
+                // 404/410 join them (isPermanentlyGoneHttpStatus): 410 Gone is
+                // the strongest never-retry signal HTTP has, and 404 is the
+                // ordinary shape of an expired event page. Across 2026-08-02
+                // the corpus holds 42 × 410 and 12 × 404 while dead-ends.json
+                // contains ZERO eventim entries, so every one of them was
+                // re-attempted and re-counted as a run error on every run.
                 const failureStatusCode = this.extractHttpStatusCodeFromError(error);
-                if (failureStatusCode === 403 || failureStatusCode === 401) {
+                const permanentlyGone = SharedCore.isPermanentlyGoneHttpStatus(failureStatusCode);
+                if (failureStatusCode === 403 || failureStatusCode === 401 || permanentlyGone) {
                     this.recordDeadEndFetchFailure({ url, currentDepth, statusCode: failureStatusCode });
                 }
                 try {
@@ -5077,10 +5211,22 @@ class SharedCore {
                 // Count the failure in the run totals (the header's "errors"
                 // comes from results.errors) — the log lines below are
                 // unchanged; this only records the same message.
-                if (Array.isArray(crawlErrorCollector)) {
-                    crawlErrorCollector.push(currentDepth === 0
-                        ? `SYSTEM: Failed to process URL ${url}: ${message}`
-                        : `SYSTEM: Failed to process crawl page ${url}: ${message}`);
+                //
+                // Severity split (flag, don't drop — the entry is still
+                // recorded and surfaced, just not as an ERROR): a URL the
+                // server says is permanently gone is not a run failure, it is
+                // a fact about the web. Counting it produced a standing
+                // `errors: 7` on 2026-08-02 runs where nothing was wrong,
+                // which is exactly the noise floor that hides a real
+                // regression. Gone entries land on `crawlGoneCollector` →
+                // `result.crawlGoneUrls` → `results.permanentlyGone`.
+                const failureRecord = currentDepth === 0
+                    ? `SYSTEM: Failed to process URL ${url}: ${message}`
+                    : `SYSTEM: Failed to process crawl page ${url}: ${message}`;
+                if (permanentlyGone && Array.isArray(crawlGoneCollector)) {
+                    crawlGoneCollector.push(failureRecord);
+                } else if (Array.isArray(crawlErrorCollector)) {
+                    crawlErrorCollector.push(failureRecord);
                 }
                 if (currentDepth === 0) {
                     await displayAdapter.logError(`SYSTEM: Failed to process URL ${url}: ${message}`);
@@ -5443,8 +5589,10 @@ class SharedCore {
     // Learned dead-end store (pure logic — persistence lives in adapters).
     // A URL is a dead end only if it FETCHED successfully AND produced 0 raw
     // events (pre future/bear filtering), 0 segments, AND 0 valid discovered
-    // links. Fetch failures are never dead-ended, with one exception: bot-wall
-    // statuses (401/403) are recorded via recordDeadEndFetchFailure below.
+    // links. Fetch failures are never dead-ended, with two exceptions: bot-wall
+    // statuses (401/403) and permanently-gone statuses (404/410, see
+    // isPermanentlyGoneHttpStatus) are recorded via recordDeadEndFetchFailure
+    // below.
     // Configured root URLs are never dead-ended.
     // ------------------------------------------------------------------
 
@@ -5464,6 +5612,26 @@ class SharedCore {
                 }
             }
         }
+        // How many unproductive OBSERVATIONS a URL needs before it is actually
+        // suppressed. Two, not one: the old one-strike rule suppressed a URL
+        // for the whole retry window (30 days by default) on a SINGLE
+        // unproductive fetch — 38 of the 40 entries in the device store were
+        // learned that way. One of them, an etix ticket page, is the only page
+        // in the corpus that names the true venue of the four "The Have Not
+        // Room" events; one bad fetch on 2026-07-28 suppressed it, it was still
+        // suppressed on 2026-08-02, and those events shipped with no venue and
+        // no coordinates. A page that returns 0 events AND 0 segments AND 0
+        // valid links is usually an anti-bot interstitial or a JS shell — the
+        // signal is real but it is not proof, so require it TWICE. The first
+        // miss is still recorded (the counter has to start somewhere) and the
+        // next run confirms or clears it. Server-STATED permanence is exempt
+        // and stays one-strike — see the lastStatus branch in the skip checks:
+        // 401/403/404/410 are the origin telling us, not our inference.
+        // `deadEndMinMisses: 1` restores the old behaviour exactly.
+        const rawMinMisses = Number(globalConfig.deadEndMinMisses);
+        const minMisses = Number.isFinite(rawMinMisses) && rawMinMisses >= 1
+            ? Math.floor(rawMinMisses)
+            : 2;
         const store = config && config.deadEndStore && typeof config.deadEndStore === 'object' && !Array.isArray(config.deadEndStore)
             ? config.deadEndStore
             : {};
@@ -5471,6 +5639,7 @@ class SharedCore {
             enabled: !disabledExplicitly,
             disabledExplicitly,
             retryDays,
+            minMisses,
             store,
             dirty: false,
             skippedCount: 0,
@@ -5485,6 +5654,17 @@ class SharedCore {
     // window. Older entries pass through and get retried once. discoveryOnly
     // runs never skip — discovery is the mapping/debugging mode and must fetch
     // everything (productive pages then self-heal out of the store).
+    // A store entry suppresses its URL only when it is BOTH young enough (the
+    // retry window) and confirmed: `misses >= minMisses`, or the origin itself
+    // stated the URL is unavailable (lastStatus — a bot wall or a permanently
+    // gone page, which need no second opinion).
+    isConfirmedDeadEndEntry(context, entry) {
+        if (!entry) return false;
+        if (Number.isFinite(Number(entry.lastStatus))) return true;
+        const minMisses = Number.isFinite(Number(context && context.minMisses)) ? Number(context.minMisses) : 2;
+        return (Number(entry.misses) || 0) >= minMisses;
+    }
+
     filterKnownDeadEndUrls(urls, discoveryOnly = false, nowMs = Date.now()) {
         const context = this.deadEndRunContext;
         const list = Array.isArray(urls) ? urls : [];
@@ -5496,7 +5676,8 @@ class SharedCore {
         for (const url of list) {
             const entry = context.store[url];
             const lastSeenMs = entry && entry.lastSeen ? Date.parse(entry.lastSeen) : NaN;
-            if (entry && Number.isFinite(lastSeenMs) && (nowMs - lastSeenMs) < retryMs) {
+            if (entry && this.isConfirmedDeadEndEntry(context, entry)
+                && Number.isFinite(lastSeenMs) && (nowMs - lastSeenMs) < retryMs) {
                 context.skippedCount += 1;
                 if (context.skippedSamples.length < 3 && !context.skippedSamples.includes(url)) {
                     context.skippedSamples.push(url);
@@ -5523,7 +5704,8 @@ class SharedCore {
         const entry = context.store[url];
         const lastSeenMs = entry && entry.lastSeen ? Date.parse(entry.lastSeen) : NaN;
         const retryMs = context.retryDays * 24 * 60 * 60 * 1000;
-        if (entry && Number.isFinite(lastSeenMs) && (nowMs - lastSeenMs) < retryMs) {
+        if (entry && this.isConfirmedDeadEndEntry(context, entry)
+            && Number.isFinite(lastSeenMs) && (nowMs - lastSeenMs) < retryMs) {
             context.skippedCount += 1;
             if (context.skippedSamples.length < 3 && !context.skippedSamples.includes(url)) {
                 context.skippedSamples.push(url);
@@ -6565,8 +6747,21 @@ class SharedCore {
         const answer = typeof answerText === 'string' ? answerText.trim() : '';
         if (!answer) return { ok: false, reason: 'unusable response' };
         if (answer.length > maxChars) return { ok: false, reason: 'too long' };
-        const strippedFoldedAnswer = this.foldDiacritics(answer.replace(/-/g, ''));
+        // A hyphen in the answer is a line-break hint, and the prompt's own
+        // example ("CUBSCOUT" → "CUB-SCOUT") inserts it INSIDE a word — so the
+        // primary comparison removes hyphens from both sides. But the model
+        // also hyphenates where the title has a SPACE ("IT GIRL" → "IT-GIRL",
+        // "B BAR" → "B-BAR"), and removing the hyphen then yields "ITGIRL" /
+        // "BBAR", which is not a substring of the spaced title — the gate
+        // rejected the answer and the salvage loop shipped the degenerate
+        // first token instead ("IT", and the real "B" on B BAR in run
+        // 20260802-221204). Both readings of a hyphen are legitimate display
+        // changes, so try both: hyphen→nothing, then hyphen→space. The title
+        // side keeps its own hyphens stripped in both readings (mid-word
+        // hyphens the SOURCE carries must not block a match).
         const strippedFoldedTitle = this.foldDiacritics(String(title).replace(/-/g, ''));
+        const answerReadings = [answer.replace(/-/g, '')];
+        if (answer.includes('-')) answerReadings.push(answer.replace(/-/g, ' '));
         // The occurrence must align on WORD BOUNDARIES in the title: "BEEF"
         // inside "BEEFMINCE" is a contiguous substring but a mid-word cut
         // that makes a wrong-looking chip ("Never cut a word in the middle",
@@ -6574,7 +6769,11 @@ class SharedCore {
         // suffices.
         const isWordChar = (ch) => /[a-z0-9]/.test(ch);
         let aligned = false;
-        if (strippedFoldedAnswer) {
+        let alignedReadingIndex = -1;
+        for (let readingIndex = 0; readingIndex < answerReadings.length; readingIndex++) {
+            const reading = answerReadings[readingIndex];
+            const strippedFoldedAnswer = this.foldDiacritics(reading);
+            if (!strippedFoldedAnswer) continue;
             let from = 0;
             for (;;) {
                 const at = strippedFoldedTitle.indexOf(strippedFoldedAnswer, from);
@@ -6584,17 +6783,29 @@ class SharedCore {
                 const afterOk = endIndex === strippedFoldedTitle.length
                     || !isWordChar(strippedFoldedTitle[endIndex])
                     || !isWordChar(strippedFoldedAnswer[strippedFoldedAnswer.length - 1]);
-                if (beforeOk && afterOk) { aligned = true; break; }
+                if (beforeOk && afterOk) { aligned = true; alignedReadingIndex = readingIndex; break; }
                 from = at + 1;
             }
+            if (aligned) break;
         }
         if (!aligned) {
             return { ok: false, reason: 'not a verbatim substring' };
         }
-        if (answer === String(title).trim()) {
+        // WHICH reading matched decides what we STORE. Reading 0 (hyphen →
+        // nothing) means the hyphen sits inside a word the title spells solid
+        // — the documented line-break hint, keep it ("CUBSCOUT" → "CUB-SCOUT").
+        // Reading 1 means the hyphen stands where the title has a SPACE, so it
+        // is not a hint at all and storing it invents punctuation the source
+        // never had ("BEEFMINCE x RVT" → "BEEFMINCE-X-RVT"). Store the spaced
+        // form there, which also lets the equals-title check below do its job:
+        // a title short enough that its "short name" IS the title should ship
+        // NO shortName (the display falls back to the title) rather than a
+        // hyphenated twin of it.
+        const storedValue = alignedReadingIndex > 0 ? answer.replace(/-/g, ' ') : answer;
+        if (storedValue === String(title).trim()) {
             return { ok: false, reason: 'equals title' };
         }
-        return { ok: true, value: answer };
+        return { ok: true, value: storedValue };
     }
 
     // Derive a shortName for one FINAL analyzed event that lacks one. All
@@ -6680,8 +6891,27 @@ class SharedCore {
                     const candidate = rawCandidate.replace(/[\s:;,.!–—-]+$/, '');
                     if (!candidate || seenCandidates.has(candidate)) continue;
                     seenCandidates.add(candidate);
+                    // FLOOR: a salvaged chip must still be a recognizable name.
+                    // The loop walks `keep` down to 1, so with no floor it will
+                    // happily emit the title's first token however short — run
+                    // 20260802-221204 shipped shortName "B" for the event
+                    // "B BAR", and "IT GIRL" reduces the same way to "IT".
+                    // Those are worse than nothing: ONYX correctly gave up and
+                    // shipped no shortName at all, and the site's own fallback
+                    // (the full title) beats a one-letter chip. Counted on
+                    // alphanumerics so punctuation and the line-break hyphens
+                    // cannot pad a fragment over the bar.
+                    if (this.foldDiacritics(candidate).replace(/[^a-z0-9]/g, '').length
+                        < SHORTNAME_SALVAGE_MIN_ALNUM_CHARS) continue;
                     const lastToken = candidate.split(/\s+/).pop().toLowerCase();
                     if (trailingStopwords.has(lastToken)) continue;
+                    // MID-PHRASE guard: the trailing-punctuation strip only
+                    // fires when the cut lands ON punctuation, so
+                    // "SUGAR, WE'RE HOEIN DOWN" salvaged to "SUGAR, WE'RE" —
+                    // a fragment ending in a contraction, which no display name
+                    // does. Rejecting it lets the loop keep shrinking to
+                    // "SUGAR", a chip that reads as a name.
+                    if (/[’']\s*[a-z]+$/i.test(lastToken)) continue;
                     const salvage = this.evaluateDerivedShortName(title, candidate, maxChars);
                     if (salvage.ok) {
                         event.shortName = salvage.value;
@@ -7449,6 +7679,19 @@ class SharedCore {
         // a final bar neither side stamped carries no barSource (fail open).
         delete mergedEvent.barSource;
         this.setProvenanceSource(mergedEvent, 'bar', 'barSource', newEvent, existingEvent);
+
+        // _citySource is city provenance and needs the SAME treatment, which it
+        // never got: the `{ ...newEvent }` base spread copies newEvent's stamp,
+        // the resolution loop skips every `_`-prefixed field, and `city` is
+        // arbitrated on its own — so a merged event could claim
+        // _citySource: 'curated-bar' while carrying the OTHER record's
+        // AI-chosen city. Provenance that describes a value the record does not
+        // hold is worse than no provenance: it is a false claim of curated
+        // backing, and curated data is exactly what outranks everything
+        // downstream. Recomputed with the same strict attribution — a final
+        // city neither side stamped carries no _citySource (fail open).
+        delete mergedEvent._citySource;
+        this.setProvenanceSource(mergedEvent, 'city', '_citySource', newEvent, existingEvent);
 
         // _coverFromJsonLdOffers must describe the merged event's COVER, not
         // the base record: the `{ ...newEvent }` spread copies newEvent's
@@ -11507,12 +11750,42 @@ class SharedCore {
     // Sanity window for same-URL dedup: recurring events reuse their event page,
     // so records far apart in time are different nights, not duplicates. Returns
     // false when either start date is missing or unparseable (stay conservative).
+    //
+    // The window is EXCLUSIVE at `days`, and measured in LOCAL CALENDAR DAYS
+    // whenever both records' wall clocks resolve. Both details exist for the
+    // same reason — a WEEKLY series is the exact case the window must protect,
+    // and it lands precisely on the boundary:
+    //   - Exclusivity: run 20260802-221204 extracted two genuinely distinct
+    //     Sundays of "SUNDAY BEER BUST" off the same event page
+    //     (?occurrence=2026-08-02 → 2026-08-02T21:00Z and ?occurrence=2026-08-09
+    //     → 2026-08-09T21:00Z, exactly 604800000 ms apart). `<=` swallowed the
+    //     Aug 9 occurrence into the Aug 2 one.
+    //   - Local days: across a DST transition the SAME weekly pair is 7 days
+    //     ∓1 hour apart in absolute milliseconds, so a millisecond window can
+    //     never separate it. Consecutive occurrences are always exactly 7 local
+    //     calendar days apart, whatever the clocks did in between.
+    // Records whose local clock cannot be resolved (no timezone, no city
+    // timezone) fall back to the millisecond comparison — still exclusive.
     areStartDatesWithinDays(eventA, eventB, days) {
         const toDate = (value) => value instanceof Date ? value : this.parseDate(value);
         const dateA = toDate(eventA && eventA.startDate);
         const dateB = toDate(eventB && eventB.startDate);
         if (!dateA || !dateB || Number.isNaN(dateA.getTime()) || Number.isNaN(dateB.getTime())) return false;
-        return Math.abs(dateA.getTime() - dateB.getTime()) <= days * 24 * 60 * 60 * 1000;
+        const localA = this.getMergeLocalStartParts(eventA);
+        const localB = this.getMergeLocalStartParts(eventB);
+        if (localA && localB && localA.localDay && localB.localDay) {
+            const toDayMs = (localDay) => {
+                const parts = String(localDay).split('-').map(Number);
+                if (parts.length !== 3 || parts.some(part => !Number.isFinite(part))) return null;
+                return Date.UTC(parts[0], parts[1] - 1, parts[2]);
+            };
+            const dayMsA = toDayMs(localA.localDay);
+            const dayMsB = toDayMs(localB.localDay);
+            if (dayMsA !== null && dayMsB !== null) {
+                return Math.abs(dayMsA - dayMsB) < days * 24 * 60 * 60 * 1000;
+            }
+        }
+        return Math.abs(dateA.getTime() - dateB.getTime()) < days * 24 * 60 * 60 * 1000;
     }
 
     // When two records of the same event disagree on identity fields (city/key),

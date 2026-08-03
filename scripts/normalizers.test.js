@@ -173,17 +173,44 @@ test('forward geocode does not append the city when the address already contains
   );
 });
 
-test('forward geocode without an event city keeps the legacy query and accepts the result', async () => {
+// REPLACES 'forward geocode without an event city keeps the legacy query and
+// accepts the result', which asserted `event.location === '43.2105820,
+// -83.0771632'` with the comment "no city context means no validation (old
+// behavior)" — i.e. it locked IN the defect: a city-less street line is
+// geocoded globally and whatever comes back (here Burnside, MICHIGAN, from
+// the very fixture the file names WRONG_CITY_RESULT) is written as the
+// event's pin, with nothing left that could ever check it. Run
+// 20260802-220918 shipped that exact failure at scale: "619 E Pine" with an
+// unresolved city pinned a Seattle event at 39.2327933, -86.6282171 —
+// southern Indiana, ~3,000 km off — stamped pinSource "geocoded-exact".
+// Fail closed instead: no anchor and no place context in the address means
+// the question has no answer, so it is never asked.
+test('forward geocode refuses a city-less address when the event has no city either', async () => {
   const normalizer = createOsmNormalizer();
   const httpAdapter = createStubHttpAdapter([WRONG_CITY_RESULT]);
   const event = { title: 'MYSTERY EVENT', address: '922 E. BURNSIDE' };
 
+  const lines = await withCapturedConsole(() => normalizer.normalizeAsync(event, httpAdapter));
+
+  assert.equal(event.location, undefined, 'an unverifiable pin is worse than no pin');
+  assert.equal(httpAdapter.requests.length, 0, 'the planet is never asked a question only a local could answer');
+  assert.ok(
+    lines.some(l => l.includes('Address "922 E. BURNSIDE" names no city or region and the event has none')),
+    `the refusal must be visible: ${lines.join(' | ')}`
+  );
+});
+
+test('forward geocode still runs when the address carries its own place context', async () => {
+  const normalizer = createOsmNormalizer();
+  const httpAdapter = createStubHttpAdapter([PORTLAND_RESULT]);
+  const event = { title: 'MYSTERY EVENT', address: '922 E. BURNSIDE, Portland, OR' };
+
   await normalizer.normalizeAsync(event, httpAdapter);
 
-  assert.equal(event.location, '43.2105820, -83.0771632', 'no city context means no validation (old behavior)');
+  assert.equal(event.location, '45.5230622, -122.6564816', 'the address itself says where on earth it is');
   assert.equal(
     httpAdapter.requests[0],
-    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent('922 E. BURNSIDE')}&limit=1&addressdetails=1`,
+    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent('922 E. BURNSIDE, Portland, OR')}&limit=1&addressdetails=1`,
     'the request keeps the legacy query but always carries address details for the grade gate'
   );
 });
@@ -636,7 +663,9 @@ test('geocode requests carry a cache predicate that rejects empty/unparseable bo
       return JSON.stringify([WRONG_CITY_RESULT]);
     }
   };
-  const event = { title: 'MYSTERY EVENT', address: '922 E. BURNSIDE' };
+  // Place context in the address so a request is actually issued (the ladder
+  // refuses region-less queries outright — see the fail-closed test above).
+  const event = { title: 'MYSTERY EVENT', address: '922 E. BURNSIDE, Portland, OR' };
 
   await normalizer.normalizeAsync(event, httpAdapter);
 
@@ -803,13 +832,13 @@ test('geocode verification: a POI-grade result pins exactly as before, with no f
   const normalizer = createOsmNormalizer();
   normalizer.delayForRateLimit = async () => {};
   const httpAdapter = createRoutedStubAdapter([['nominatim', [POWERHOUSE_POI_RESULT]]]);
-  const event = { title: 'CHUNK', address: '1192 Folsom St' };
+  const event = { title: 'CHUNK', address: '1192 Folsom St, San Francisco' };
 
   const lines = await withCapturedConsole(() => normalizer.normalizeAsync(event, httpAdapter));
 
   assert.equal(event.location, '37.7756941, -122.4103049');
   assert.ok(
-    lines.some(l => l.includes('OpenStreetMapNormalizer: Found coordinates for address "1192 Folsom St"')),
+    lines.some(l => l.includes('OpenStreetMapNormalizer: Found coordinates for address "1192 Folsom St, San Francisco"')),
     `the load-bearing success line must still emit: ${lines.join(' | ')}`
   );
   assert.ok(!lines.some(l => l.includes('GEOCODE VERIFY')), `a clean first-rung accept stays silent: ${lines.join(' | ')}`);
@@ -820,7 +849,7 @@ test('geocode verification: a coarse result is refused in every mode, including 
     const normalizer = createOsmNormalizer();
     normalizer.delayForRateLimit = async () => {};
     const httpAdapter = createRoutedStubAdapter([['nominatim', [BROOKLYN_SUBURB_RESULT]]]);
-    const event = { title: 'BK BEAR', address: 'Brooklyn' };
+    const event = { title: 'BK BEAR', address: 'Brooklyn, NY' };
 
     const lines = await withCapturedConsole(() =>
       normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode } })
@@ -828,7 +857,7 @@ test('geocode verification: a coarse result is refused in every mode, including 
 
     assert.equal(event.location, undefined, `mode "${mode}" must never write a borough/suburb centroid`);
     assert.ok(
-      lines.some(l => l.includes('🗺️ GEOCODE VERIFY: "BK BEAR" refused generic pin (suburb) for address "Brooklyn"')),
+      lines.some(l => l.includes('🗺️ GEOCODE VERIFY: "BK BEAR" refused generic pin (suburb) for address "Brooklyn, NY"')),
       `mode "${mode}" must log the refusal flag: ${lines.join(' | ')}`
     );
   }
@@ -838,7 +867,7 @@ test('geocode verification: street-grade pin for a house-numbered input is kept 
   const normalizer = createOsmNormalizer();
   normalizer.delayForRateLimit = async () => {};
   const httpAdapter = createRoutedStubAdapter([['nominatim', [FOLSOM_STREET_ONLY_RESULT]]]);
-  const event = { title: 'CHUNK', address: '1192 Folsom St' };
+  const event = { title: 'CHUNK', address: '1192 Folsom St, San Francisco' };
 
   const lines = await withCapturedConsole(() =>
     normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'report' } })
@@ -846,7 +875,7 @@ test('geocode verification: street-grade pin for a house-numbered input is kept 
 
   assert.equal(event.location, '37.7740000, -122.4120000', 'report mode still writes the pin');
   assert.ok(
-    lines.some(l => l.includes('🗺️ GEOCODE VERIFY: "CHUNK" street-grade pin for house-numbered address "1192 Folsom St" — verify pin')),
+    lines.some(l => l.includes('🗺️ GEOCODE VERIFY: "CHUNK" street-grade pin for house-numbered address "1192 Folsom St, San Francisco" — verify pin')),
     `the suspect flag must be logged: ${lines.join(' | ')}`
   );
 });
@@ -864,7 +893,7 @@ test('geocode verification: enforce mode exhausts the ladder on street-grade res
       }]
     }]
   ]);
-  const event = { title: 'CHUNK', address: '1192 Folsom St' };
+  const event = { title: 'CHUNK', address: '1192 Folsom St, San Francisco' };
 
   const lines = await withCapturedConsole(() =>
     normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'enforce' } })
@@ -885,7 +914,7 @@ test('geocode verification: cross-check mismatch keeps the pin but flags it in r
     [['nominatim', [WRONG_STREET_POI_RESULT]]],
     { reverseGeocodePlacemark: async () => MISSION_PLACEMARK }
   );
-  const event = { title: 'CHUNK', address: '1192 Folsom St' };
+  const event = { title: 'CHUNK', address: '1192 Folsom St, San Francisco' };
 
   const lines = await withCapturedConsole(() =>
     normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'report' } })
@@ -936,7 +965,7 @@ test('geocode verification: cross-check pass writes the pin with no mismatch fla
     [['nominatim', [POWERHOUSE_POI_RESULT]]],
     { reverseGeocodePlacemark: async () => FOLSOM_PLACEMARK }
   );
-  const event = { title: 'CHUNK', address: '1192 Folsom St' };
+  const event = { title: 'CHUNK', address: '1192 Folsom St, San Francisco' };
 
   const lines = await withCapturedConsole(() =>
     normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'report' } })
@@ -983,7 +1012,7 @@ test('geocode verification: the Photon rung recovers when Nominatim returns noth
       }]
     }]
   ]);
-  const event = { title: 'CHUNK', address: '1192 Folsom St' };
+  const event = { title: 'CHUNK', address: '1192 Folsom St, San Francisco' };
 
   const lines = await withCapturedConsole(() => normalizer.normalizeAsync(event, httpAdapter));
 
@@ -1003,7 +1032,7 @@ test('geocode verification: an adapter without the placemark hook skips the cros
     [['nominatim', [POWERHOUSE_POI_RESULT]]],
     { reverseGeocodePlacemark: async () => null }
   );
-  const event = { title: 'CHUNK', address: '1192 Folsom St' };
+  const event = { title: 'CHUNK', address: '1192 Folsom St, San Francisco' };
 
   const lines = await withCapturedConsole(() =>
     normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'report' } })
@@ -1014,7 +1043,7 @@ test('geocode verification: an adapter without the placemark hook skips the cros
 
   // and an adapter with no hook at all (plain fetch stub) must not crash
   const bareAdapter = createRoutedStubAdapter([['nominatim', [POWERHOUSE_POI_RESULT]]]);
-  const bareEvent = { title: 'CHUNK', address: '1192 Folsom St' };
+  const bareEvent = { title: 'CHUNK', address: '1192 Folsom St, San Francisco' };
   await withCapturedConsole(() =>
     normalizer.normalizeAsync(bareEvent, bareAdapter, { geocodeVerification: { mode: 'enforce' } })
   );
@@ -1101,7 +1130,7 @@ test('geocode verdict fields record grade, cross-check, source, and rung on acce
     [['nominatim', [POWERHOUSE_POI_RESULT]]],
     { reverseGeocodePlacemark: async () => FOLSOM_PLACEMARK }
   );
-  const event = { title: 'CHUNK', address: '1192 Folsom St' };
+  const event = { title: 'CHUNK', address: '1192 Folsom St, San Francisco' };
 
   await withCapturedConsole(() =>
     normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'report' } })
@@ -1123,7 +1152,7 @@ test('geocode verdict: report-mode cross-check failure and street-grade accepts 
     [['nominatim', [WRONG_STREET_POI_RESULT]]],
     { reverseGeocodePlacemark: async () => MISSION_PLACEMARK }
   );
-  const failEvent = { title: 'CHUNK', address: '1192 Folsom St' };
+  const failEvent = { title: 'CHUNK', address: '1192 Folsom St, San Francisco' };
   await withCapturedConsole(() =>
     normalizer.normalizeAsync(failEvent, failAdapter, { geocodeVerification: { mode: 'report' } })
   );
@@ -1134,7 +1163,7 @@ test('geocode verdict: report-mode cross-check failure and street-grade accepts 
   const streetNormalizer = createOsmNormalizer();
   streetNormalizer.delayForRateLimit = async () => {};
   const streetAdapter = createRoutedStubAdapter([['nominatim', [FOLSOM_STREET_ONLY_RESULT]]]);
-  const streetEvent = { title: 'CHUNK', address: '1192 Folsom St' };
+  const streetEvent = { title: 'CHUNK', address: '1192 Folsom St, San Francisco' };
   await withCapturedConsole(() =>
     streetNormalizer.normalizeAsync(streetEvent, streetAdapter, { geocodeVerification: { mode: 'report' } })
   );
@@ -1345,7 +1374,7 @@ test('geocode verification: structural absence of the cross-check (Node/web) sti
     [['nominatim', [POWERHOUSE_POI_RESULT]]],
     { reverseGeocodePlacemark: async () => null, supportsReverseGeocode: () => false }
   );
-  const event = { title: 'CHUNK', address: '1192 Folsom St' };
+  const event = { title: 'CHUNK', address: '1192 Folsom St, San Francisco' };
 
   const lines = await withCapturedConsole(() =>
     normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'enforce' } })
@@ -1362,7 +1391,7 @@ test('geocode verification: report mode is unchanged for street-specific inputs 
     [['nominatim', [POWERHOUSE_POI_RESULT]]],
     { reverseGeocodePlacemark: async () => null, supportsReverseGeocode: () => true }
   );
-  const event = { title: 'CHUNK', address: '1192 Folsom St' };
+  const event = { title: 'CHUNK', address: '1192 Folsom St, San Francisco' };
 
   const lines = await withCapturedConsole(() =>
     normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'report' } })
@@ -1868,7 +1897,7 @@ test('geo-POI corroboration: an uncorroborated bar upgrades to geo-poi with the 
   const normalizer = createOsmNormalizer();
   normalizer.delayForRateLimit = async () => {};
   const httpAdapter = createRoutedStubAdapter([['nominatim', [MASSIVE_POI_RESULT]]]);
-  const event = { title: 'BEARRACUDA', address: '619 E Pine St', bar: 'MASSIVE', barSource: 'uncorroborated' };
+  const event = { title: 'BEARRACUDA', address: '619 E Pine St, Seattle', bar: 'MASSIVE', barSource: 'uncorroborated' };
 
   const lines = await withCapturedConsole(() => normalizer.normalizeAsync(event, httpAdapter));
 
@@ -1885,7 +1914,7 @@ test('geo-POI corroboration: an unstamped bar upgrades via the venue-led display
   const normalizer = createOsmNormalizer();
   normalizer.delayForRateLimit = async () => {};
   const httpAdapter = createRoutedStubAdapter([['nominatim', [POWERHOUSE_POI_RESULT]]]);
-  const event = { title: 'CHUNK', address: '1192 Folsom St', bar: 'The Powerhouse' };
+  const event = { title: 'CHUNK', address: '1192 Folsom St, San Francisco', bar: 'The Powerhouse' };
 
   const lines = await withCapturedConsole(() => normalizer.normalizeAsync(event, httpAdapter));
 
@@ -1902,7 +1931,7 @@ test('geo-POI corroboration: curated/venue-site/page-adjacent stamps are never o
     const normalizer = createOsmNormalizer();
     normalizer.delayForRateLimit = async () => {};
     const httpAdapter = createRoutedStubAdapter([['nominatim', [MASSIVE_POI_RESULT]]]);
-    const event = { title: 'BEARRACUDA', address: '619 E Pine St', bar: 'Massive', barSource: stamp };
+    const event = { title: 'BEARRACUDA', address: '619 E Pine St, Seattle', bar: 'Massive', barSource: stamp };
 
     const lines = await withCapturedConsole(() => normalizer.normalizeAsync(event, httpAdapter));
 
@@ -1918,7 +1947,7 @@ test('geo-POI corroboration: POI ≠ uncorroborated bar flags a possible venue-n
   const normalizer = createOsmNormalizer();
   normalizer.delayForRateLimit = async () => {};
   const httpAdapter = createRoutedStubAdapter([['nominatim', [MASSIVE_POI_RESULT]]]);
-  const event = { title: 'BEARRACUDA', address: '619 E Pine St', bar: 'Neighbours', barSource: 'uncorroborated' };
+  const event = { title: 'BEARRACUDA', address: '619 E Pine St, Seattle', bar: 'Neighbours', barSource: 'uncorroborated' };
 
   const lines = await withCapturedConsole(() => normalizer.normalizeAsync(event, httpAdapter));
 
@@ -1934,7 +1963,7 @@ test('geo-POI corroboration: POI ≠ uncorroborated bar flags a possible venue-n
     const quietNormalizer = createOsmNormalizer();
     quietNormalizer.delayForRateLimit = async () => {};
     const quietAdapter = createRoutedStubAdapter([['nominatim', [MASSIVE_POI_RESULT]]]);
-    const quietEvent = { title: 'BEARRACUDA', address: '619 E Pine St', bar: 'Neighbours' };
+    const quietEvent = { title: 'BEARRACUDA', address: '619 E Pine St, Seattle', bar: 'Neighbours' };
     if (stamp) quietEvent.barSource = stamp;
     const quietLines = await withCapturedConsole(() => quietNormalizer.normalizeAsync(quietEvent, quietAdapter));
     assert.ok(
@@ -1950,7 +1979,7 @@ test('geo-POI corroboration: bare-address hits and street-grade pins harvest not
   const normalizer = createOsmNormalizer();
   normalizer.delayForRateLimit = async () => {};
   const httpAdapter = createRoutedStubAdapter([['nominatim', [PINE_STREET_ADDRESS_RESULT]]]);
-  const event = { title: 'BEARRACUDA', address: '619 E Pine St', bar: 'Massive', barSource: 'uncorroborated' };
+  const event = { title: 'BEARRACUDA', address: '619 E Pine St, Seattle', bar: 'Massive', barSource: 'uncorroborated' };
   const lines = await withCapturedConsole(() => normalizer.normalizeAsync(event, httpAdapter));
   assert.equal(event.location, '47.6152000, -122.3204000', 'the pin itself is unaffected');
   assert.equal(event.barSource, 'uncorroborated', 'no POI → no upgrade (fail open)');
@@ -1963,7 +1992,7 @@ test('geo-POI corroboration: bare-address hits and street-grade pins harvest not
   const streetNormalizer = createOsmNormalizer();
   streetNormalizer.delayForRateLimit = async () => {};
   const streetAdapter = createRoutedStubAdapter([['nominatim', [FOLSOM_STREET_ONLY_RESULT]]]);
-  const streetEvent = { title: 'CHUNK', address: 'Folsom St', bar: 'Folsom', barSource: 'uncorroborated' };
+  const streetEvent = { title: 'CHUNK', address: 'Folsom St, San Francisco', bar: 'Folsom', barSource: 'uncorroborated' };
   const streetLines = await withCapturedConsole(() => streetNormalizer.normalizeAsync(streetEvent, streetAdapter));
   assert.equal(streetEvent.location, '37.7740000, -122.4120000');
   assert.equal(streetEvent.barSource, 'uncorroborated', 'a street name must never corroborate a bar');
@@ -1976,7 +2005,7 @@ test('geo-POI corroboration: bare-address hits and street-grade pins harvest not
   const unpinnedNormalizer = createOsmNormalizer();
   unpinnedNormalizer.delayForRateLimit = async () => {};
   const unpinnedAdapter = createRoutedStubAdapter([['nominatim', []]]);
-  const unpinnedEvent = { title: 'CHUNK', address: '1192 Folsom St', bar: 'Powerhouse', barSource: 'uncorroborated' };
+  const unpinnedEvent = { title: 'CHUNK', address: '1192 Folsom St, San Francisco', bar: 'Powerhouse', barSource: 'uncorroborated' };
   const unpinnedLines = await withCapturedConsole(() => unpinnedNormalizer.normalizeAsync(unpinnedEvent, unpinnedAdapter));
   assert.equal(unpinnedEvent.location, undefined);
   assert.equal(unpinnedEvent.barSource, 'uncorroborated');
@@ -2004,7 +2033,7 @@ test('geo-POI corroboration: the Apple reverse placemark corroborates when the f
       }
     }
   );
-  const event = { title: 'CHUNK', address: '1192 Folsom St', bar: 'Powerhouse', barSource: 'uncorroborated' };
+  const event = { title: 'CHUNK', address: '1192 Folsom St, San Francisco', bar: 'Powerhouse', barSource: 'uncorroborated' };
 
   const lines = await withCapturedConsole(() =>
     normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'report' } })
@@ -2027,7 +2056,7 @@ test('geo-POI corroboration: the Apple reverse placemark corroborates when the f
     [['nominatim', [POWERHOUSE_POI_RESULT]]],
     { reverseGeocodePlacemark: async () => FOLSOM_PLACEMARK }
   );
-  const staleEvent = { title: 'CHUNK', address: '1192 Folsom St', bar: 'Some Other Bar', barSource: 'uncorroborated' };
+  const staleEvent = { title: 'CHUNK', address: '1192 Folsom St, San Francisco', bar: 'Some Other Bar', barSource: 'uncorroborated' };
   const staleLines = await withCapturedConsole(() =>
     staleNormalizer.normalizeAsync(staleEvent, staleAdapter, { geocodeVerification: { mode: 'report' } })
   );
@@ -2046,7 +2075,7 @@ test('geo-POI harvest stashes _geoPoiName/_geoPoiBarMatch on the event for the e
   const normalizer = createOsmNormalizer();
   normalizer.delayForRateLimit = async () => {};
   const httpAdapter = createRoutedStubAdapter([['nominatim', [MASSIVE_POI_RESULT]]]);
-  const event = { title: 'BEARRACUDA', address: '619 E Pine St', bar: 'MASSIVE', barSource: 'uncorroborated' };
+  const event = { title: 'BEARRACUDA', address: '619 E Pine St, Seattle', bar: 'MASSIVE', barSource: 'uncorroborated' };
   await withCapturedConsole(() => normalizer.normalizeAsync(event, httpAdapter));
   assert.equal(event._geoPoiName, 'Massive', 'harvested POI name stashed (underscore — never serialized)');
   assert.equal(event._geoPoiBarMatch, true, 'match verdict stashed alongside');
@@ -2055,7 +2084,7 @@ test('geo-POI harvest stashes _geoPoiName/_geoPoiBarMatch on the event for the e
   const mismatchNormalizer = createOsmNormalizer();
   mismatchNormalizer.delayForRateLimit = async () => {};
   const mismatchAdapter = createRoutedStubAdapter([['nominatim', [MASSIVE_POI_RESULT]]]);
-  const mismatchEvent = { title: 'BEARRACUDA', address: '619 E Pine St', bar: 'Neighbours', barSource: 'uncorroborated' };
+  const mismatchEvent = { title: 'BEARRACUDA', address: '619 E Pine St, Seattle', bar: 'Neighbours', barSource: 'uncorroborated' };
   await withCapturedConsole(() => mismatchNormalizer.normalizeAsync(mismatchEvent, mismatchAdapter));
   assert.equal(mismatchEvent._geoPoiName, 'Massive');
   assert.equal(mismatchEvent._geoPoiBarMatch, false);
@@ -2064,7 +2093,7 @@ test('geo-POI harvest stashes _geoPoiName/_geoPoiBarMatch on the event for the e
   const noBarNormalizer = createOsmNormalizer();
   noBarNormalizer.delayForRateLimit = async () => {};
   const noBarAdapter = createRoutedStubAdapter([['nominatim', [MASSIVE_POI_RESULT]]]);
-  const noBarEvent = { title: 'BEARRACUDA', address: '619 E Pine St' };
+  const noBarEvent = { title: 'BEARRACUDA', address: '619 E Pine St, Seattle' };
   await withCapturedConsole(() => noBarNormalizer.normalizeAsync(noBarEvent, noBarAdapter));
   assert.equal(noBarEvent._geoPoiName, 'Massive');
   assert.ok(!('_geoPoiBarMatch' in noBarEvent), 'no bar → no verdict field');
@@ -2074,7 +2103,7 @@ test('geo-POI harvest stashes _geoPoiName/_geoPoiBarMatch on the event for the e
   const inertNormalizer = createOsmNormalizer();
   inertNormalizer.delayForRateLimit = async () => {};
   const inertAdapter = createRoutedStubAdapter([['nominatim', [PINE_STREET_ADDRESS_RESULT]]]);
-  const inertEvent = { title: 'BEARRACUDA', address: '619 E Pine St', bar: 'Massive', barSource: 'uncorroborated' };
+  const inertEvent = { title: 'BEARRACUDA', address: '619 E Pine St, Seattle', bar: 'Massive', barSource: 'uncorroborated' };
   await withCapturedConsole(() => inertNormalizer.normalizeAsync(inertEvent, inertAdapter));
   assert.ok(!('_geoPoiName' in inertEvent), 'no harvest → no stash');
   assert.ok(!('_geoPoiBarMatch' in inertEvent));
@@ -2517,7 +2546,7 @@ test('POI-pin tolerance never applies to regular address-geocoded pins (strict h
       supportsReverseGeocode: () => true
     }
   );
-  const event = { title: 'CHUNK', address: '1192 Folsom St' };
+  const event = { title: 'CHUNK', address: '1192 Folsom St, San Francisco' };
 
   const lines = await withCapturedConsole(() =>
     normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'enforce' } })
@@ -3508,4 +3537,337 @@ test('isPromotableTitleFromBarField: shared-word variants blocked, distinct name
   assert.equal(normalizer.isPromotableTitleFromBarField('Eagle Bear Night', 'Eagle'), true,
     'a name that adds words to the venue is a real title');
   assert.equal(normalizer.isPromotableTitleFromBarField('UNDERBEAR', 'Eagle'), true);
+});
+
+// ---------------------------------------------------------------------------
+// Unrecognized-city gate (run 20260802-221204: "ONYX" shipped
+// city "socal / southwest" — ONYX's regional-chapter branding, real flyer
+// artwork text, so the verbatim-evidence gate correctly passed it — and every
+// run since routed it to the calendar target "chunky-dad-unknown", which does
+// not exist and cannot be written; that one target appears 158 times across a
+// single day's logs. The same run had the right answer in hand: it logged
+// `Backfilled city "la" from curated bar "Eagle LA" for "ONYX"` twice from the
+// detail pages, and the merge then preferred the listing page's regional
+// string).
+// ---------------------------------------------------------------------------
+
+const CITY_GATE_CITIES = {
+  la: { calendar: 'chunky-dad-la', timezone: 'America/Los_Angeles', patterns: ['los angeles', 'weho'] },
+  seattle: { calendar: 'chunky-dad-seattle', timezone: 'America/Los_Angeles', patterns: ['seattle'] }
+};
+
+const EAGLE_LA_BAR = {
+  name: 'Eagle LA',
+  city: 'la',
+  address: '4219 Santa Monica Blvd, Los Angeles, CA 90029',
+  coordinates: '34.0918224, -118.2795639',
+  website: 'https://eaglela.com'
+};
+
+function createCityGateNormalizer(bars) {
+  const core = new SharedCore(CITY_GATE_CITIES, { eventSchema: EventSchema, bars: bars || {} });
+  return new LocationNormalizer(core);
+}
+
+test('unrecognized city: literal ONYX repro — "socal / southwest" is refused and the curated bar restores "la"', () => {
+  const normalizer = createCityGateNormalizer({ la: [EAGLE_LA_BAR] });
+  const event = {
+    title: 'ONYX',
+    bar: 'Eagle LA',
+    city: 'socal / southwest',
+    startDate: '2026-08-09T16:00:00.000Z',
+    _timezoneUnresolved: true
+  };
+
+  const lines = captureConsoleLog(() => { normalizer.normalize(event); });
+
+  assert.equal(event.city, 'la', 'the curated bar knows where Eagle LA is');
+  assert.equal(event._citySource, 'curated-bar');
+  assert.equal(event._unrecognizedCity, 'socal / southwest', 'what the page said is kept as evidence');
+  assert.equal(event.timezone, 'America/Los_Angeles', 'a routable city also resolves the timezone');
+  assert.ok(
+    lines.some(line => line.includes('Refused unrecognized city "socal / southwest" for "ONYX"')),
+    `the refusal must be visible: ${lines.join('\n')}`
+  );
+  assert.ok(
+    lines.some(line => line.includes('"ONYX" city recovered as "la" (curated-bar) after refusing "socal / southwest"')),
+    `the recovery must be visible: ${lines.join('\n')}`
+  );
+});
+
+test('unrecognized city: with nothing curated to recover it the event is flagged, never routed', async () => {
+  const normalizer = createCityGateNormalizer({ la: [EAGLE_LA_BAR] });
+  const event = {
+    title: 'BEAR HAPPY HOUR',
+    bar: 'Some Uncurated Room',
+    city: 'Tulsa',
+    description: 'Weekly happy hour',
+    url: 'https://example.com/bear-happy-hour'
+  };
+
+  const lines = await withCapturedConsole(() => { normalizer.normalize(event); });
+
+  assert.equal(event.city, 'unknown', 'a city with no configured calendar never propagates');
+  assert.equal(event._unrecognizedCity, 'tulsa', 'normalizeCityName lowercases before the gate sees it');
+  // flag-don't-drop: everything else about the event survives untouched
+  assert.equal(event.title, 'BEAR HAPPY HOUR');
+  assert.equal(event.bar, 'Some Uncurated Room');
+  assert.equal(event.description, 'Weekly happy hour');
+  assert.equal(event.url, 'https://example.com/bear-happy-hour');
+  assert.ok(
+    lines.some(line => line.includes('"BEAR HAPPY HOUR" has no resolvable city — the page said "tulsa"')),
+    `the unresolved flag must be visible: ${lines.join('\n')}`
+  );
+});
+
+test('unrecognized city: configured keys, aliases and the unknown sentinel are all untouched', () => {
+  const normalizer = createCityGateNormalizer({});
+  for (const [input, expected] of [['la', 'la'], ['Los Angeles', 'la'], ['WEHO', 'la'], ['seattle', 'seattle'], ['unknown', 'unknown']]) {
+    const event = { title: 'CONTROL', city: input };
+    captureConsoleLog(() => { normalizer.normalize(event); });
+    assert.equal(event.city, expected, `"${input}" must resolve to "${expected}"`);
+    assert.equal(event._unrecognizedCity, undefined, `"${input}" must never be refused`);
+  }
+});
+
+test('unrecognized city: the gate is inert when no cities config is injected (missing dependency ≠ erase)', () => {
+  const core = new SharedCore({}, { eventSchema: EventSchema });
+  const normalizer = new LocationNormalizer(core);
+  const event = { title: 'NO CONFIG', city: 'socal / southwest' };
+
+  captureConsoleLog(() => { normalizer.normalize(event); });
+
+  assert.equal(event.city, 'socal / southwest', 'with no allowlist there is nothing to fail closed against');
+  assert.equal(event._unrecognizedCity, undefined);
+});
+
+// ---------------------------------------------------------------------------
+// Curated venue backfill from site identity (run 20260802-222252: "SHOCK
+// Therapy" logged `Backfilled city "dallas" ... from site identity
+// thedallaseagle.com (curated: "Dallas Eagle")` and still shipped with no bar,
+// no address and no pin — while every sibling event on that page carried
+// "Dallas Eagle", "525 S Riverfront Blvd, Dallas, TX 75207" and the curated
+// coordinates. Its maps link degraded to a search for the bare word "dallas").
+// ---------------------------------------------------------------------------
+
+const DALLAS_EAGLE_BAR = {
+  name: 'Dallas Eagle',
+  city: 'dallas',
+  address: '525 S Riverfront Blvd, Dallas, TX 75207',
+  coordinates: '32.7693483, -96.8112576',
+  website: 'https://www.thedallaseagle.com',
+  instagram: 'https://www.instagram.com/thedallaseagle',
+  googleMaps: 'https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I'
+};
+
+function createVenueIdentityNormalizer(bars) {
+  const core = new SharedCore(
+    { dallas: { calendar: 'chunky-dad-dallas', timezone: 'America/Chicago', patterns: ['dallas'] },
+      nyc: { calendar: 'chunky-dad-nyc', timezone: 'America/New_York', patterns: ['new york', 'nyc'] } },
+    { eventSchema: EventSchema, bars }
+  );
+  return new LocationNormalizer(core);
+}
+
+test('site-identity venue backfill: literal SHOCK Therapy repro — bar, address and pin come from the same curated match', () => {
+  const normalizer = createVenueIdentityNormalizer({ dallas: [DALLAS_EAGLE_BAR] });
+  const event = {
+    title: 'SHOCK Therapy',
+    city: 'unknown',
+    website: 'https://www.thedallaseagle.com/events/',
+    startDate: '2026-08-01T22:00:00.000Z'
+  };
+
+  const lines = captureConsoleLog(() => { normalizer.normalize(event); });
+
+  assert.equal(event.city, 'dallas');
+  assert.equal(event.bar, 'Dallas Eagle', 'the host names the venue, not just the city');
+  assert.equal(event.barSource, 'venue-site-identity');
+  assert.equal(event.address, '525 S Riverfront Blvd, Dallas, TX 75207', 'the curated address, never the stale Maple Ave one');
+  assert.equal(event.addressSource, 'curated');
+  assert.equal(event.location, '32.7693483, -96.8112576');
+  assert.equal(event.pinSource, 'curated');
+  assert.equal(event.gmaps, DALLAS_EAGLE_BAR.googleMaps, 'the curated place_id link, not a search for the word "dallas"');
+  assert.equal(event.instagram, DALLAS_EAGLE_BAR.instagram);
+  assert.ok(
+    lines.some(line => line.includes('Filled bar, address, location, gmaps, instagram for "SHOCK Therapy" from curated bar "Dallas Eagle"')),
+    `the venue fill must be visible: ${lines.join('\n')}`
+  );
+});
+
+test('site-identity venue backfill: fill-only — a bar the page named is never replaced', () => {
+  const normalizer = createVenueIdentityNormalizer({ dallas: [DALLAS_EAGLE_BAR] });
+  const event = {
+    title: 'Road Show',
+    city: 'unknown',
+    bar: 'Some Other Room',
+    website: 'https://www.thedallaseagle.com/events/road-show/'
+  };
+
+  captureConsoleLog(() => { normalizer.normalize(event); });
+
+  assert.equal(event.city, 'dallas', 'the city still backfills');
+  assert.equal(event.bar, 'Some Other Room', 'the page outranks an inference from the host');
+  assert.equal(event.address, undefined, 'nothing else is filled from a venue the event did not claim');
+  assert.equal(event.location, undefined);
+});
+
+test('site-identity venue backfill: an off-site street address fails closed (multi-venue safety)', () => {
+  const normalizer = createVenueIdentityNormalizer({ dallas: [DALLAS_EAGLE_BAR] });
+  const event = {
+    title: 'Warehouse Takeover',
+    city: 'unknown',
+    address: '900 Elm St, Dallas, TX 75202',
+    website: 'https://www.thedallaseagle.com/events/warehouse/'
+  };
+
+  const lines = captureConsoleLog(() => { normalizer.normalize(event); });
+
+  assert.equal(event.city, 'dallas');
+  assert.equal(event.bar, undefined, 'a party at another address is not this venue');
+  assert.equal(event.location, undefined, 'and never gets this venue\'s pin');
+  assert.ok(
+    lines.some(line => line.includes('Venue backfill skipped for "Warehouse Takeover" — its address "900 Elm St, Dallas, TX 75202" is not curated "Dallas Eagle"\'s address')),
+    `the skip must be visible: ${lines.join('\n')}`
+  );
+});
+
+test('site-identity venue backfill: two curated claimants on one host fill the city only', () => {
+  const normalizer = createVenueIdentityNormalizer(THREE_DOLLAR_BILL_BARS);
+  const event = {
+    title: 'The Have Not Room',
+    city: 'unknown',
+    website: 'https://www.3dollarbillbk.com'
+  };
+
+  const lines = captureConsoleLog(() => { normalizer.normalize(event); });
+
+  assert.equal(event.city, 'nyc', 'sister venues still agree on the city');
+  assert.equal(event.bar, undefined, 'but not on which room the event is in');
+  assert.equal(event.address, undefined);
+  assert.equal(event.location, undefined);
+  assert.ok(
+    lines.some(line => line.includes('Venue backfill skipped for "The Have Not Room" — site 3dollarbillbk.com is claimed by 2 curated bars')),
+    `the ambiguity skip must be visible: ${lines.join('\n')}`
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Region-less geocoding (run 20260802-220918: "Get 2 Soaked | Babe Night" —
+// address "619 E Pine", city unresolved. The ladder issued
+// "Massive Club, 619 E Pine, unknown" and "619 E Pine, unknown" (0 results
+// each), then handed Photon the bare street line, which answered
+// 39.2327933, -86.6282171 — southern Indiana, ~3,000 km from Seattle. It was
+// written as pinSource "geocoded-exact"; the reverse cross-check compares the
+// placemark against the INPUT ADDRESS STRING only, so a city-less address
+// matches its own street name anywhere on earth.)
+// ---------------------------------------------------------------------------
+
+test('region-less geocode: the literal 619 E Pine repro asks nobody and pins nothing', async () => {
+  const normalizer = createOsmNormalizer();
+  normalizer.delayForRateLimit = async () => {};
+  const httpAdapter = createRoutedStubAdapter([
+    ['nominatim', []],
+    ['photon.komoot.io', { features: [{
+      geometry: { coordinates: [-86.6282171, 39.2327933] },
+      properties: { name: 'Pine', housenumber: '619', street: 'East Pine Street', city: 'Nashville', osm_key: 'building', osm_value: 'yes' }
+    }] }]
+  ]);
+  // 'unknown' is what LocationNormalizer writes when nothing resolves — the
+  // literal value the run carried into the ladder.
+  const event = { title: 'Get 2 Soaked | Babe Night', bar: 'Massive Club', address: '619 E Pine', city: 'unknown' };
+
+  const lines = await withCapturedConsole(() => normalizer.normalizeAsync(event, httpAdapter));
+
+  assert.equal(event.location, undefined, 'no pin beats a pin 3,000 km away');
+  assert.ok(
+    !httpAdapter.requests.some(url => url.includes('photon.komoot.io')),
+    `Photon must never be handed the bare street line: ${httpAdapter.requests.join(' | ')}`
+  );
+  assert.ok(
+    !httpAdapter.requests.some(url => url.includes(encodeURIComponent('unknown'))),
+    `the 'unknown' sentinel is not a place and never anchors a query: ${httpAdapter.requests.join(' | ')}`
+  );
+  assert.ok(
+    lines.some(l => l.includes('Address "619 E Pine" names no city or region and the event has none')),
+    `the refusal must be visible: ${lines.join(' | ')}`
+  );
+});
+
+test('region-less geocode: a resolvable city still anchors the ladder exactly as before', async () => {
+  const normalizer = createOsmNormalizerWithCoords();
+  normalizer.delayForRateLimit = async () => {};
+  const httpAdapter = createStubHttpAdapter([PORTLAND_RESULT]);
+  const event = { title: 'PRIDE FRIDAY', address: '722 E Burnside', city: 'portland' };
+
+  await normalizer.normalizeAsync(event, httpAdapter);
+
+  assert.equal(event.location, '45.5230622, -122.6564816', 'a real city anchors the query and the gate stays out of the way');
+  assert.ok(
+    httpAdapter.requests[0].includes(encodeURIComponent('722 E Burnside, portland')),
+    `the city must still anchor: ${httpAdapter.requests[0]}`
+  );
+});
+
+test('metro cross-check: a placemark in another metro refuses the pin even when the street name matches', async () => {
+  const normalizer = createOsmNormalizer();
+  normalizer.delayForRateLimit = async () => {};
+  // The address carries place context, so the query IS issued — but the
+  // geocoder answers with a same-named street in another state.
+  const httpAdapter = createRoutedStubAdapter([
+    ['nominatim', [{
+      lat: '39.2327933',
+      lon: '-86.6282171',
+      class: 'building',
+      type: 'yes',
+      addresstype: 'building',
+      display_name: '619, East Pine Street, Nashville, Brown County, Indiana, United States',
+      address: { house_number: '619', road: 'East Pine Street', town: 'Nashville' }
+    }]]
+  ], {
+    supportsReverseGeocode: () => true,
+    reverseGeocodePlacemark: async () => ({
+      subThoroughfare: '619',
+      thoroughfare: 'East Pine Street',
+      locality: 'Nashville',
+      administrativeArea: 'Indiana'
+    })
+  });
+  const event = { title: 'Get 2 Soaked | Babe Night', address: '619 E Pine, Capitol Hill' };
+
+  const lines = await withCapturedConsole(() => normalizer.normalizeAsync(event, httpAdapter));
+
+  assert.equal(event.location, undefined, 'the street name matched — the metro did not');
+  assert.ok(
+    lines.some(l => l.includes('pin refused — it sits in "Nashville, Indiana"')),
+    `the metro refusal must be visible: ${lines.join(' | ')}`
+  );
+});
+
+test('metro cross-check: a placemark the address itself names is corroborated and pins', async () => {
+  const normalizer = createOsmNormalizer();
+  normalizer.delayForRateLimit = async () => {};
+  const httpAdapter = createRoutedStubAdapter([['nominatim', [POWERHOUSE_POI_RESULT]]], {
+    supportsReverseGeocode: () => true,
+    reverseGeocodePlacemark: async () => FOLSOM_PLACEMARK
+  });
+  const event = { title: 'CHUNK', address: '1192 Folsom St, San Francisco' };
+
+  await normalizer.normalizeAsync(event, httpAdapter);
+
+  assert.equal(event.location, '37.7756941, -122.4103049', 'the address names San Francisco and so does the placemark');
+});
+
+test('extractCityFromAddress probes an address without reporting it as an Unknown city', async () => {
+  const core = new SharedCore(CITY_GATE_CITIES, { eventSchema: EventSchema });
+  const normalizer = new LocationNormalizer(core);
+
+  const lines = await withCapturedConsole(() => {
+    assert.equal(normalizer.extractCityFromAddress('619 E Pine'), null, 'a bare street line is still no city');
+  });
+
+  assert.ok(
+    !lines.some(l => l.includes('Unknown city "619 e pine"')),
+    `an internal probe must not manufacture an Unknown-city warning: ${lines.join(' | ')}`
+  );
 });

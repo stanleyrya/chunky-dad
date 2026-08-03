@@ -786,9 +786,22 @@ class CalendarCore {
         const startTime = formatTime(startDate);
         
         if (endDate) {
+            // An end equal to the start is not a duration — it is how "the page
+            // stated a start and no end" is stored, because a calendar event
+            // must carry an end date (EKEvent has no "no end"). 48 of 134
+            // events on 2026-08-02 were shaped this way, and rendering the
+            // range gave "9PM-9PM". Compare INSTANTS, not the formatted
+            // strings, so a genuine 24-hour event (same wall clock, next day)
+            // still renders as a range.
             const endTime = formatTime(endDate);
+            // All-day detection runs FIRST: a midnight-to-midnight event is
+            // also start === end, and it must keep returning null (no time
+            // shown) rather than rendering "12AM".
             if ((startTime === '12AM' && endTime === '12AM') || (startTime === '12AM' && endTime === '11:59PM')) {
                 return null; // All day event, no time to display
+            }
+            if (endDate.getTime() === startDate.getTime()) {
+                return startTime;
             }
             return `${startTime}-${endTime}`;
         }

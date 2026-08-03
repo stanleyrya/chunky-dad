@@ -162,6 +162,43 @@ const DAY_PHRASE_ORDINAL_ALTERNATION = DAY_PHRASE_ORDINAL_WORDS
 // them with margin on both sides.
 const DAY_PHRASE_TITLE_GAP_MAX = 25;
 
+// ── Schedule-label lines (run 20260802-222252, thedallaseagle.com) ───────────
+// Listing widgets that print an event's schedule as its OWN labelled lines
+// ("Start from: August 9, 2026 - 9:00 pm" / "End at: August 10, 2026 - 12:00
+// am") carry a date signal on every one of those lines. Segment discovery
+// therefore opened a NEW segment on each of them — 16 segments for ~7 real
+// listings, every window straddling two events — and
+// deriveListingTitleSpanFromDatedLine handed the bare LABEL back as the
+// page's own listing title, so "Start from" (x3) and "End at" (x2) shipped as
+// calendar events.
+//
+// A schedule label states WHEN an already-named event happens; it is never a
+// listing head and never a title. The rule below is a SHAPE rule, not a venue
+// rule: a short bare label assembled only from schedule vocabulary, a
+// separator, and a remainder made of nothing but date/time tokens.
+const SCHEDULE_LABEL_HEAD_WORDS = new Set([
+    'start', 'starts', 'started', 'starting',
+    'begin', 'begins', 'beginning',
+    'end', 'ends', 'ended', 'ending',
+    'open', 'opens', 'opening',
+    'close', 'closes', 'closed', 'closing',
+    'door', 'doors',
+    'until', 'til', 'till', 'thru', 'through',
+    'when', 'date', 'dates', 'time', 'times',
+    'run', 'runs', 'running'
+]);
+
+// Words allowed to pad a label around its head word ("Start FROM", "End AT",
+// "Doors OPEN", "Start TIME"). Purely connective — none of them can carry an
+// event name on its own.
+const SCHEDULE_LABEL_FILLER_WORDS = new Set([
+    'from', 'at', 'to', 'on', 'the', 'up', 'and', 'of'
+]);
+
+// A label is short by construction: at most 3 words. Longer left-hand sides
+// are prose, not labels, and fall through to the untouched behaviour.
+const SCHEDULE_LABEL_MAX_WORDS = 3;
+
 // ── Multilingual date-vocabulary locales ─────────────────────────────────────
 // The languages of the configured cities (sitges/madrid/pv/mexico-city →
 // es/ca; paris → fr; berlin → de; milan → it; sao-paulo → pt), plus en for
@@ -1451,6 +1488,10 @@ class AiWebParser {
             const line = this.normalizeWhitespace(rawLine);
             if (!line) continue;
             if (/^(SEGMENT_[A-Z_]+|OCR_IMAGE_TEXT)/i.test(line)) continue;
+            // "Start from: August 9, 2026 - 9:00 pm" is a schedule label, not
+            // a listing head — the dated-line span path below would hand back
+            // the bare label ("Start from") as the page's own event name.
+            if (this.isScheduleLabelDateLine(line)) continue;
             if (this.hasMultiEventDateSignal(line)) {
                 // Listing widgets that print the name and the date on ONE line
                 // ("CHUNK Portland - 5/23 Sat, May 23") used to lose the title
@@ -1624,6 +1665,13 @@ class AiWebParser {
             // with just 1 prior line that has a date signal, rather than minSegmentLines.
             const effectiveSplitMin = this.isCompactEventLine(line) ? 1 : minSegmentLines;
             const startsNewByDate = this.hasMultiEventDateSignal(line) &&
+                // "Start from: August 9, 2026 - 9:00 pm" / "End at: …" state
+                // WHEN the event named above happens. Every such line used to
+                // open a boundary, so each window straddled two listings
+                // (thedallaseagle.com: 16 segments for ~7 events, plus five
+                // ghost "Start from"/"End at" calendar rows). Fold them into
+                // the preceding segment instead.
+                !this.isScheduleLabelDateLine(line) &&
                 currentLines.length >= effectiveSplitMin &&
                 this.segmentHasDateSignal(currentLines);
             const startsNewByTitle = this.isStrongMultiEventTitleLine(line) &&
@@ -1679,7 +1727,16 @@ class AiWebParser {
                 lines: trimmedLines,
                 html: this.extractRawHtmlForMultiEventSegment(html, trimmedLines)
             });
-            if (uniqueSegments.length >= this.extractionLimits.multiEventMaxSegments) break;
+            if (uniqueSegments.length >= this.extractionLimits.multiEventMaxSegments) {
+                // No silent caps. This break truncates the page: on
+                // thedallaseagle.com/events/ (a full month, ~27 listings) it
+                // stopped at Aug 15 and everything after was never segmented,
+                // extracted, or reported — the run simply looked like a
+                // 15-event month. Logging only; raising the cap is a cost
+                // decision for the owner, not a silent default change.
+                console.log(`🤖 AI Web: Segment cap reached (${this.extractionLimits.multiEventMaxSegments}) — later content on this page was not segmented and will not produce events`);
+                break;
+            }
         }
         return this.attachSequentialImageHintsToSegments(html, uniqueSegments, sourceUrl, ocrResults);
     }
@@ -1877,7 +1934,16 @@ class AiWebParser {
                 lines: trimmedLines,
                 html: this.extractRawHtmlForMultiEventSegment(html, trimmedLines)
             });
-            if (uniqueSegments.length >= this.extractionLimits.multiEventMaxSegments) break;
+            if (uniqueSegments.length >= this.extractionLimits.multiEventMaxSegments) {
+                // No silent caps. This break truncates the page: on
+                // thedallaseagle.com/events/ (a full month, ~27 listings) it
+                // stopped at Aug 15 and everything after was never segmented,
+                // extracted, or reported — the run simply looked like a
+                // 15-event month. Logging only; raising the cap is a cost
+                // decision for the owner, not a silent default change.
+                console.log(`🤖 AI Web: Segment cap reached (${this.extractionLimits.multiEventMaxSegments}) — later content on this page was not segmented and will not produce events`);
+                break;
+            }
         }
         return this.attachSequentialImageHintsToSegments(html, uniqueSegments, sourceUrl, ocrResults);
     }
@@ -1981,7 +2047,16 @@ class AiWebParser {
                 );
                 addSegment({ lines: trimmedLines, html: entry.html });
             }
-            if (uniqueSegments.length >= this.extractionLimits.multiEventMaxSegments) break;
+            if (uniqueSegments.length >= this.extractionLimits.multiEventMaxSegments) {
+                // No silent caps. This break truncates the page: on
+                // thedallaseagle.com/events/ (a full month, ~27 listings) it
+                // stopped at Aug 15 and everything after was never segmented,
+                // extracted, or reported — the run simply looked like a
+                // 15-event month. Logging only; raising the cap is a cost
+                // decision for the owner, not a silent default change.
+                console.log(`🤖 AI Web: Segment cap reached (${this.extractionLimits.multiEventMaxSegments}) — later content on this page was not segmented and will not produce events`);
+                break;
+            }
         }
         return uniqueSegments;
     }
@@ -2003,6 +2078,9 @@ class AiWebParser {
             if (!line) continue;
             const effectiveSplitMin = this.isCompactEventLine(line) ? 1 : minSegmentLines;
             const startsNewByDate = this.hasMultiEventDateSignal(line) &&
+                // A schedule label restates the CURRENT event's times — it
+                // folds into the segment above (see buildMultiEventSegments).
+                !this.isScheduleLabelDateLine(line) &&
                 currentLines.length >= effectiveSplitMin &&
                 this.segmentHasDateSignal(currentLines);
             const startsNewByTitle = this.isStrongMultiEventTitleLine(line) &&
@@ -2978,6 +3056,55 @@ class AiWebParser {
         const numericDatePattern = /\b(?:0?[1-9]|1[0-2])[\/.-](?:0?[1-9]|[12]\d|3[01])(?:[\/.-](?:\d{2}|\d{4}))?\b/;
         if (numericDatePattern.test(line)) return true;
         return this.hasMultilingualDateSignal(line);
+    }
+
+    // TRUE when a line's date signal is introduced by a bare schedule LABEL
+    // ("Start from: August 9, 2026 - 9:00 pm", "Doors open — 8:00 pm",
+    // "Until: 2am"). Such a line restates the schedule of the event named
+    // ABOVE it: it must not open a segment boundary and must never yield a
+    // listing title. See SCHEDULE_LABEL_HEAD_WORDS for the why.
+    //
+    // Fails closed in both directions:
+    // - no date/time signal at all → false (nothing to guard)
+    // - a remainder carrying anything word-like beyond date/time tokens
+    //   ("Start: Bear Happy Hour Aug 9") → false, so a genuine listing head
+    //   that merely begins with a schedule word keeps its old behaviour.
+    isScheduleLabelDateLine(value) {
+        const line = this.normalizeWhitespace(value);
+        if (!line) return false;
+        if (!this.hasMultiEventDateSignal(line) && !/\d/.test(line)) return false;
+
+        // Label / value split on the FIRST separator only — a later ":" is
+        // part of a clock time ("9:00 pm"), not a second label.
+        const match = line.match(/^([^:\-–—]{1,40}?)\s*[:\-–—]\s*(.+)$/);
+        if (!match) return false;
+        const label = this.normalizeWhitespace(match[1]);
+        const remainder = this.normalizeWhitespace(match[2]);
+        if (!label || !remainder) return false;
+
+        const labelWords = label.toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(Boolean);
+        if (labelWords.length === 0 || labelWords.length > SCHEDULE_LABEL_MAX_WORDS) return false;
+        if (!labelWords.some(word => SCHEDULE_LABEL_HEAD_WORDS.has(word))) return false;
+        if (!labelWords.every(word => SCHEDULE_LABEL_HEAD_WORDS.has(word) || SCHEDULE_LABEL_FILLER_WORDS.has(word))) return false;
+
+        return this.isScheduleValueOnlyText(remainder);
+    }
+
+    // TRUE when a span contains nothing but date/time tokens and connectives —
+    // the remainder test for isScheduleLabelDateLine. Any surviving word is
+    // treated as a possible event name, so the guard declines (fail closed).
+    isScheduleValueOnlyText(value) {
+        const text = this.normalizeWhitespace(value);
+        if (!text) return false;
+        if (!/\d/.test(text)) return false;
+        const stripped = text
+            .replace(/\b(?:mon|tues?|wed(?:nes)?|thur?s?|fri|sat(?:ur)?|sun)(?:day)?\b/gi, ' ')
+            .replace(/\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b/gi, ' ')
+            .replace(/\b(?:am|pm|a\.m|p\.m|noon|midnight|hrs?|hours?|mins?|minutes?|o'clock|est|edt|cst|cdt|mst|mdt|pst|pdt|utc|gmt)\b/gi, ' ')
+            .replace(/\b(?:st|nd|rd|th)\b/gi, ' ')
+            .replace(/\b(?:at|to|until|til|till|thru|through|and|on|the|from|of)\b/gi, ' ')
+            .replace(/[^a-z]/gi, ' ');
+        return !/[a-z]/i.test(stripped);
     }
 
     // ── Multilingual segment date-signal vocabulary (es/ca/fr/de/it/pt) ──
@@ -5589,6 +5716,45 @@ class AiWebParser {
         return results;
     }
 
+    // "…/flyer-1-1-300x300.jpg" → "…/flyer-1-1.jpg". The WordPress/webflow
+    // resize convention: "-<width>x<height>" immediately before a known image
+    // extension. Returns '' when the URL carries no such suffix.
+    getResizedImageOriginalUrl(url) {
+        const text = typeof url === 'string' ? url.trim() : '';
+        if (!text) return '';
+        const match = text.match(/^(.*)-\d{2,5}x\d{2,5}(\.(?:jpe?g|png|gif|webp|avif|bmp|tiff?))((?:[?#].*)?)$/i);
+        return match ? `${match[1]}${match[2]}${match[3]}` : '';
+    }
+
+    // Drop resized derivatives whose FULL-SIZE original is in the same URL
+    // set. Low-resolution OCR is unreliable, and — because its output becomes
+    // the corpus the verbatim-evidence gate validates against — its mistakes
+    // pass at confidence 100. Proven on one image, same source, same run:
+    // "…ig_wed-hump-night-2024-web-1-1-300x300.jpg" read "DOLENTIC PITCHERS /
+    // $8 WELL DRINKS / $10 / 420 SANTA MONICA BLVD / TULSA, OK 74101", while
+    // the full-size original read "DOMESTIC PITCHERS / $6 WELL DRINKS /
+    // 9PM-2AM / 4219 SANTA MONICA BLVD / 323.669.9472 EAGLELA.COM" — a phone
+    // number became a Tulsa address and a time became a price, and that TULSA
+    // reached a real event's city field. Store-wide: 404 OCR records, 29
+    // resized thumbnails, 15 images OCR'd at BOTH sizes — wasted calls AND a
+    // degraded corpus competing with a good one.
+    //
+    // The justification is "prefer the better source", not "thumbnails are
+    // always wrong" (the Bear Happy Hour 300x300 read correctly), so a
+    // thumbnail whose original is ABSENT is never dropped — that would lose
+    // data. Nothing is inferred: the original must literally be in the set.
+    dropResizedImageUrlsWithOriginal(urls) {
+        const list = Array.isArray(urls) ? urls : [];
+        if (list.length < 2) return list;
+        const present = new Set(list.map(url => String(url || '').trim()).filter(Boolean));
+        return list.filter(url => {
+            const original = this.getResizedImageOriginalUrl(url);
+            if (!original || !present.has(original)) return true;
+            console.log(`🤖 AI Web: OCR skipped resized image ${url} — the full-size original ${original} is on the same page`);
+            return false;
+        });
+    }
+
     async extractOcrFromAllImages(htmlData, ocrConfig = {}, httpAdapter = null, maxImages = 10) {
         const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
         const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
@@ -5604,7 +5770,8 @@ class AiWebParser {
             console.log(`🤖 AI Web: OCR skipped ${candidateUrls.length - interestingUrls.length} uninteresting images`);
         }
 
-        const imageUrls = interestingUrls.slice(0, maxImages);
+        // Prefer the full-size original over its own resized derivative.
+        const imageUrls = this.dropResizedImageUrlsWithOriginal(interestingUrls).slice(0, maxImages);
         if (imageUrls.length < interestingUrls.length || candidateUrls.length >= maxCandidates) {
             console.log(`🤖 AI Web: OCR image cap (${maxImages}) applied — images beyond the cap rely on segment top-up`);
         }
@@ -5724,9 +5891,11 @@ class AiWebParser {
                 ),
                 ...(Array.isArray(segment && segment.imageHintUrls) ? segment.imageHintUrls : [])
             ];
-            const normalizedUrls = segmentImageUrls
-                .map(url => this.normalizeHttpUrlValue(url))
-                .filter(Boolean);
+            const normalizedUrls = this.dropResizedImageUrlsWithOriginal(
+                segmentImageUrls
+                    .map(url => this.normalizeHttpUrlValue(url))
+                    .filter(Boolean)
+            );
             const hasCoverage = normalizedUrls.some(url => coveredStrippedUrls.has(this.stripSizeParams(url)));
             if (hasCoverage) continue;
 
@@ -11107,6 +11276,18 @@ TEXT:
                 droppedEntry.reason = RRULE_SCHEDULE_REASON;
                 if (scheduleEvidence.reason === 'schedule-mismatch') {
                     console.log(`🤖 AI Web: Dropped rrule "${value}" — schedule words in evidence do not corroborate the rule`);
+                    // Recover, don't discard: the cited evidence often states
+                    // the CORRECT rule the model mistranslated ("second
+                    // Sundays…" → emitted FREQ=WEEKLY;BYDAY=SU). Candidate
+                    // only — recoverScheduleMismatchedRrules decides, and the
+                    // drop above stands regardless.
+                    if (!Array.isArray(report.rruleScheduleRecoveries)) report.rruleScheduleRecoveries = [];
+                    report.rruleScheduleRecoveries.push({
+                        field: rule.field,
+                        key,
+                        value: String(value),
+                        evidence: String(modelEvidence || '')
+                    });
                 }
             }
             report.dropped.push(droppedEntry);
@@ -11479,6 +11660,12 @@ TEXT:
         // wins (the start copy stays dropped).
         this.reassignEndMarkerStartFields(validated, report, aiEvent);
 
+        // === STEP 3.6: Schedule-mismatch rrule recovery ===
+        // A rule dropped because the cited evidence contradicts it usually has
+        // the RIGHT rule sitting in that same evidence — recover it instead of
+        // shipping the event with no recurrence at all.
+        this.recoverScheduleMismatchedRrules(validated, report, aiEvent);
+
         // === STEP 4: Return Result ===
         if (report.dropped.length > 0) {
             console.warn(`🤖 AI Web: Dropped ${report.dropped.length} field(s) lacking source evidence: ${report.dropped.map(entry => entry.key).join(', ')}`);
@@ -11523,6 +11710,91 @@ TEXT:
                 console.log(`🤖 AI Web: Dropped end-marker-cited ${entry.key} "${entry.value}" — ${existingKey} already has "${validated[existingKey]}" for "${title}"`);
             }
         });
+    }
+
+    // Recover the rule the evidence actually states, for rrules the
+    // schedule-evidence gate dropped as 'schedule-mismatch'.
+    //
+    // The gate is right to reject FREQ=WEEKLY;BYDAY=SU cited to "second
+    // Sundays at the Dallas Eagle" — but the event then shipped with NO
+    // recurrence at all (5 of 66 rule-emitting extraction records, 7.6%).
+    // The deterministic day-phrase extractor already reads exactly this
+    // English ("second" → 2, so "second Sundays" → FREQ=MONTHLY;BYDAY=2SU);
+    // it was merely gated on dateless events. Re-running it over THE CITED
+    // EVIDENCE ONLY — never the whole corpus — keeps the recovery anchored to
+    // the same verbatim quote the gate already validated.
+    //
+    // Fails closed on every ambiguity:
+    //   - the evidence names an EXCEPTION ("Trivia … (except the last Tuesday
+    //     - Drink and Draw)") — that phrase is what the schedule excludes,
+    //     not what it is, and the event really is weekly;
+    //   - more than one distinct rule in the quote (conflict), or none;
+    //   - a recovered rule that does not itself pass the schedule gate;
+    //   - a recovered rule identical to the one just dropped;
+    //   - a recovered rule naming DIFFERENT weekdays than the dropped one
+    //     ("every Tuesday" cited for BYDAY=FR): the model and its own quote
+    //     disagree about which day, so neither side is trustworthy. Recovery
+    //     only ever repairs the FREQUENCY/ordinal both sides already agree
+    //     the weekday of ("second Sundays": SU → 2SU).
+    //   - a field that already carries a usable value.
+    // Never removes anything — the gate's drop already happened.
+    recoverScheduleMismatchedRrules(validated, report, aiEvent) {
+        const entries = report && Array.isArray(report.rruleScheduleRecoveries) ? report.rruleScheduleRecoveries : [];
+        if (entries.length === 0) return;
+        const title = aiEvent && typeof aiEvent.title === 'string' && aiEvent.title.trim()
+            ? aiEvent.title.trim()
+            : 'untitled event';
+        entries.forEach(entry => {
+            const evidence = String(entry.evidence || '').trim();
+            const quote = this.trimToMaxLength(evidence, 60);
+            if (!evidence) return;
+            if (this.isUsableAiFieldValue(validated[entry.key])) return;
+            if (this.scheduleEvidenceStatesAnException(evidence)) {
+                console.log(`🤖 AI Web: No rrule recovery for "${title}" — evidence "${quote}" states an exception, not the schedule`);
+                return;
+            }
+            const derived = this.extractRecurrenceFromDayPhrases(evidence, '');
+            if (!derived || !derived.rrule) {
+                console.log(`🤖 AI Web: No rrule recovery for "${title}" — evidence "${quote}" yields ${derived && derived.conflict ? 'more than one schedule pattern' : 'no unambiguous schedule pattern'}`);
+                return;
+            }
+            const dropped = this.normalizeRruleValue(entry.value);
+            const recovered = this.normalizeRruleValue(derived.rrule);
+            if (!recovered || recovered === dropped) return;
+            if (!this.rruleMatchesScheduleEvidence(recovered, evidence)) {
+                console.log(`🤖 AI Web: No rrule recovery for "${title}" — derived rule "${recovered}" does not itself match evidence "${quote}"`);
+                return;
+            }
+            const droppedDays = this.rruleWeekdayCodes(dropped);
+            const recoveredDays = this.rruleWeekdayCodes(recovered);
+            if (droppedDays.length === 0 || droppedDays.join(',') !== recoveredDays.join(',')) {
+                console.log(`🤖 AI Web: No rrule recovery for "${title}" — derived rule "${recovered}" names different weekdays than the dropped "${dropped}"`);
+                return;
+            }
+            validated[entry.key] = recovered;
+            console.log(`🤖 AI Web: Recovered rrule "${recovered}" for "${title}" from cited evidence "${quote}" (model emitted "${entry.value}", dropped for schedule mismatch)`);
+        });
+    }
+
+    // The sorted, de-duplicated weekday codes of an rrule's BYDAY, ordinal
+    // prefixes stripped ("BYDAY=2FR,SU" → ['FR','SU']). Empty when the rule
+    // names no parseable weekday.
+    rruleWeekdayCodes(normalizedRrule) {
+        const match = String(normalizedRrule || '').match(/(?:^|;)BYDAY=([^;]*)/);
+        if (!match) return [];
+        const codes = match[1].split(',')
+            .map(token => (token.trim().match(/^(?:[+-]?\d)?(MO|TU|WE|TH|FR|SA|SU)$/) || [])[1])
+            .filter(Boolean);
+        return [...new Set(codes)].sort();
+    }
+
+    // Generic English exclusion prose ("except the last Tuesday", "excluding
+    // Mondays", "but not the first Friday"). A day phrase inside such a clause
+    // names what the schedule SKIPS, so it can never be promoted to the
+    // schedule itself — the whole quote is disqualified from recovery.
+    scheduleEvidenceStatesAnException(evidence) {
+        return /\b(?:except(?:ing)?|exclud(?:e|es|ing)|other\s+than|apart\s+from|aside\s+from|besides|unless|save\s+for|but\s+not|skipping|no\s+(?:show|event))\b/i
+            .test(this.foldDayPhraseText(evidence));
     }
 
     normalizeRruleValue(value) {
@@ -11603,6 +11875,22 @@ TEXT:
         if (this.hasStaticAssetFilenameAtEnd(text)) {
             console.log(`🤖 AI Web: Rejected ${field} "${text}" — static asset URL, not an event page`);
             return '';
+        }
+        // Scheme-less dotted hosts are plausible on purpose ("TICKETS AT
+        // 3DOLLARBILLBK.COM" → "3DOLLARBILLBK.COM"), but shipping one verbatim
+        // renders href="3DOLLARBILLBK.COM", which the browser resolves
+        // RELATIVE to the city page — a dead link (run 20260802-194055:
+        // analyzedEvents[4].ticketUrl and bearDroppedEvents[0].url both).
+        // shared-core's normalizeSchemelessHostUrl names exactly this case and
+        // was simply never wired to this path; values that already carry a
+        // scheme come back null and pass through untouched. Fail open: an
+        // unwired core leaves the value exactly as before.
+        const schemelessHostUrl = this.core && typeof this.core.normalizeSchemelessHostUrl === 'function'
+            ? this.core.normalizeSchemelessHostUrl(text)
+            : null;
+        if (schemelessHostUrl && schemelessHostUrl !== text) {
+            console.log(`🤖 AI Web: Normalized scheme-less ${field} "${text}" → "${schemelessHostUrl}"`);
+            return schemelessHostUrl;
         }
         return text;
     }
@@ -14620,12 +14908,21 @@ TEXT:
                 if (!configEntry || configEntry.key !== identity.city) continue;
             }
             const title = typeof event.title === 'string' && event.title.trim() ? event.title.trim() : 'unknown';
+            // Sibling venues sharing one site are a real shape, and the
+            // primary is a RANKING, not evidence. Run 20260802-194055:
+            // 3dollarbillbk.com is claimed by "3 Dollar Bill" (coordinates)
+            // and "The Yard at 9 Bob Note" (address only), and four of the
+            // unresolved events were at the SIBLING — filling every blank
+            // with the coordinate-carrying primary would have shipped four
+            // confidently wrong venues. When the event's own evidence names
+            // no claimant, the bar stays blank and the miss is surfaced.
             const resolved = claimants.length === 1
                 ? { claimant: claimants[0], reason: 'sole curated claimant of the host' }
-                : (this.resolveCuratedWebsiteSubVenue(event, claimants)
-                    || { claimant: identity.primary, reason: `primary claimant — ${identity.primaryReason}` });
+                : this.resolveCuratedWebsiteSubVenue(event, claimants);
             const bar = typeof event.bar === 'string' ? event.bar.trim() : '';
-            if (!bar) {
+            if (!bar && !resolved) {
+                console.log(`🤖 AI Web: Left bar blank for "${title}" — ${claimants.length} curated bars share ${host} (${claimants.map(claimant => `"${claimant.bar.name}"`).join(', ')}) and this event's own evidence names none; the primary "${identity.primary.bar.name}" is a ranking, not evidence`);
+            } else if (!bar) {
                 event.bar = resolved.claimant.bar.name;
                 event.barSource = 'venue-site-identity';
                 console.log(`🤖 AI Web: Filled bar "${resolved.claimant.bar.name}" from curated-website identity for "${title}" (${resolved.reason})`);
@@ -14673,6 +14970,14 @@ TEXT:
                 console.log(`🤖 AI Web: Venue-site identity for ${host} established: "${curatedBar.name}" (${identity.city}) — signals: ${signals.join(', ')}`);
             };
             if (identity.hostLevel) logIdentityOnce();
+            // Establishing is not applying. The POI-gated rung (hostLevel:
+            // false) requires every event to carry a matching _geoPoiName;
+            // run 20260802-194055's listing-page events carried none, so the
+            // rung established, applied to ZERO events, and — because the
+            // fallback was gated on `!identity` — the weaker curated-website
+            // fills never got their turn: 7 of 10 events shipped from the
+            // venue's OWN site with no bar, no address and no coordinates.
+            let identityAppliedCount = 0;
             for (const event of eventList) {
                 if (!event || typeof event !== 'object' || event._venueSitePageHost !== host) continue;
                 if (!identity.hostLevel) {
@@ -14691,6 +14996,7 @@ TEXT:
                     continue;
                 }
                 logIdentityOnce();
+                identityAppliedCount++;
                 const title = typeof event.title === 'string' && event.title.trim() ? event.title.trim() : 'unknown';
                 const bar = typeof event.bar === 'string' ? event.bar.trim() : '';
                 const barSource = typeof event.barSource === 'string' ? event.barSource.trim() : '';
@@ -14735,6 +15041,10 @@ TEXT:
                 if (!existingCity || existingCity === 'unknown') {
                     event.city = identity.city;
                 }
+            }
+            if (identityAppliedCount === 0) {
+                console.log(`🤖 AI Web: Venue-site identity for ${host} established but applied to no event — falling back to the curated-website fills`);
+                this.applyCuratedWebsiteIdentityFills(host, entry, eventList, cityConfig);
             }
         }
     }

@@ -483,6 +483,10 @@ class LocationNormalizer extends BaseNormalizer {
             event.city = extractedCity;
         }
 
+        // Unrecognized-city gate — runs BEFORE the two curated backfills below
+        // precisely so they get their chance (see refuseUnrecognizedCity).
+        const refusedCity = this.refuseUnrecognizedCity(event);
+
         // Curated-bar → city backfill: an event whose page never names its
         // city (run 20260724-161423: massive.club events came out
         // city "unknown") can still resolve when its bar is a curated bar.
@@ -494,6 +498,12 @@ class LocationNormalizer extends BaseNormalizer {
         // (see backfillCityFromIdentitySignals) — same placement, BEFORE
         // resolveWallClockDates, for the same re-anchoring reason.
         this.backfillCityFromIdentitySignals(event, options);
+
+        // Verdict on a refused city, once per refusal (flag-don't-drop: the
+        // event keeps every other field and still reaches the results UI).
+        if (refusedCity) {
+            this.reportRefusedCityOutcome(event, refusedCity);
+        }
 
         // Warn when the event references a city we have no config for
         // (diacritic-folded lookup so "Montréal" counts as configured)
@@ -795,8 +805,11 @@ class LocationNormalizer extends BaseNormalizer {
 
         if (addressParts.length > 0) {
             const firstPart = addressParts[0].toLowerCase();
-            const normalizedCity = this.normalizeCityName(firstPart);
-            // Guard: normalizeCityName echoes unmapped input back (lowercased), so
+            // Quiet resolver: this is a PROBE, not a claim about the event's
+            // city — the warning half of normalizeCityName would report every
+            // bare street line as an "Unknown city" (see resolveCityKeyQuietly).
+            const normalizedCity = this.resolveCityKeyQuietly(firstPart);
+            // Guard: the resolver echoes unmapped input back (lowercased), so
             // without this check a bare street address ("1192 folsom st") would
             // masquerade as a city and poison timezone resolution and geocoding
             // (observed 2026-07-13). Only return candidates that map to a known
@@ -845,6 +858,83 @@ class LocationNormalizer extends BaseNormalizer {
         // behavior (merges can resolve a city AFTER this normalizer already ran).
         if (!this.core || typeof this.core.resolveWallClockDates !== 'function') return event;
         return this.core.resolveWallClockDates(event);
+    }
+
+    // True when a city string IS one of the configured cities — a key of the
+    // cities config (diacritic-folded, so "montreal" answers for "Montréal")
+    // or a value of the derived cityMappings. This is the ONLY allowlist:
+    // nothing is enumerated in code, the injected config decides.
+    isConfiguredCityKey(cityKey) {
+        const key = String(cityKey === null || cityKey === undefined ? '' : cityKey).trim().toLowerCase();
+        if (!key || !this.core) return false;
+        const folded = this.foldDiacritics(key);
+        const cities = this.core.cities;
+        if (cities && typeof cities === 'object'
+            && (Object.prototype.hasOwnProperty.call(cities, key)
+                || Object.prototype.hasOwnProperty.call(cities, folded))) {
+            return true;
+        }
+        const mappings = this.core.cityMappings;
+        if (mappings && typeof mappings === 'object') {
+            const cityKeys = Object.values(mappings);
+            if (cityKeys.includes(key) || cityKeys.includes(folded)) return true;
+        }
+        return false;
+    }
+
+    // Unrecognized-city gate (run 20260802-221204: "ONYX" shipped
+    // city "socal / southwest" — ONYX's regional-chapter branding, real flyer
+    // artwork text, so the verbatim-evidence gate correctly passed it — and
+    // every run since routed it to the calendar target "chunky-dad-unknown",
+    // which does not exist and cannot be written; that one target appears 158
+    // times across a single day's logs). The leak is that normalizeCityName
+    // has the allowlist in hand, uses it only to WARN, and then echoes the
+    // unmapped string straight back, so a city no calendar can ever exist for
+    // propagates all the way to the calendar write.
+    //
+    // Fail closed instead: park the unrecognized string on _unrecognizedCity
+    // (underscore field — provenance/evidence only, never serialized into
+    // notes) and reset event.city to the 'unknown' sentinel the rest of the
+    // pipeline already understands. Resetting is exactly what gives the
+    // CURATED rungs their chance: backfillCityFromCuratedBar and
+    // backfillCityFromIdentitySignals both refuse to touch a city that is
+    // already set, and the SAME run logged "Backfilled city "la" from curated
+    // bar "Eagle LA" for "ONYX"" twice from the detail pages — only the
+    // listing page's unrecognized string survived the merge.
+    //
+    // Flag-don't-drop: nothing else on the event is touched, so it still
+    // reaches the results UI; only the unroutable calendar target is refused.
+    // Fails INERT when no cities config is injected — a missing dependency
+    // must never silently erase every city on every event.
+    // Returns the refused string, or '' when nothing was refused.
+    refuseUnrecognizedCity(event) {
+        if (!event || !this.core) return '';
+        const cities = this.core.cities;
+        if (!cities || typeof cities !== 'object' || Object.keys(cities).length === 0) return '';
+        const raw = typeof event.city === 'string' ? event.city.trim() : '';
+        if (!raw || raw.toLowerCase() === 'unknown') return '';
+        if (this.isConfiguredCityKey(raw)) return '';
+        const title = event.title || 'unknown';
+        event._unrecognizedCity = raw;
+        event.city = 'unknown';
+        console.log(`🗺️ LocationNormalizer: Refused unrecognized city "${raw}" for "${title}" — no configured calendar exists for it; failing closed to "unknown" so curated signals can resolve the real city`);
+        return raw;
+    }
+
+    // Outcome line for a refused city, emitted after the curated backfill
+    // rungs have had their chance. Either a curated signal recovered the real
+    // city, or the event stays visibly unresolved for a human — never a
+    // silently invented calendar target.
+    reportRefusedCityOutcome(event, refusedCity) {
+        if (!event || !refusedCity) return event;
+        const title = event.title || 'unknown';
+        const cityNow = typeof event.city === 'string' ? event.city.trim() : '';
+        if (cityNow && cityNow.toLowerCase() !== 'unknown') {
+            console.log(`🗺️ LocationNormalizer: "${title}" city recovered as "${cityNow}" (${event._citySource || 'curated'}) after refusing "${refusedCity}"`);
+            return event;
+        }
+        console.warn(`⚠️ LocationNormalizer: "${title}" has no resolvable city — the page said "${refusedCity}", no curated bar or site identity claims it; left unresolved for review`);
+        return event;
     }
 
     // Curated-bar → city backfill (fail closed everywhere): fills event.city
@@ -929,6 +1019,9 @@ class LocationNormalizer extends BaseNormalizer {
                 event.city = match.city;
                 event._citySource = 'curated-website';
                 console.log(`🗺️ LocationNormalizer: Backfilled city "${match.city}" for "${title}" from site identity ${hostKey} (curated: ${claimedBy})`);
+                // The very same curated record that named the city also names
+                // the VENUE — take the rest of it too (see below).
+                this.fillVenueFromCuratedSiteIdentity(event, match, hostKey, title);
                 return event;
             }
         }
@@ -943,6 +1036,99 @@ class LocationNormalizer extends BaseNormalizer {
             console.log(`🗺️ LocationNormalizer: Backfilled city "${normalizedCity}" for "${title}" from the parser config's declared city`);
         }
         return event;
+    }
+
+    // Site identity resolves a curated VENUE, not merely a city (run
+    // 20260802-222252: "SHOCK Therapy" was backfilled city "dallas" from
+    // thedallaseagle.com — whose sole curated claimant is "Dallas Eagle" —
+    // and still shipped with no bar, no address and no pin, while every
+    // sibling event on that page carried "Dallas Eagle",
+    // "525 S Riverfront Blvd, Dallas, TX 75207" and the curated coordinates.
+    // Its maps link degraded to a search for the bare word "dallas" instead
+    // of the curated place_id). The city fill above and this fill read the
+    // SAME curated record, so taking only the city was throwing away data
+    // already in hand.
+    //
+    // Fail closed on every axis:
+    //   • more than one curated bar claims the host (sister venues agree on
+    //     the CITY but not on which building the event is in) → city only;
+    //   • the event already names a bar → left alone entirely (whatever the
+    //     page said outranks an inference from the host);
+    //   • the event carries a street address that is NOT this venue's → it is
+    //     a party at another venue announced on this site → left alone;
+    //   • every field is FILL-ONLY: a value the event already carries is
+    //     never replaced.
+    // Provenance is honest: the bar is stamped 'venue-site-identity' (the
+    // host pointed at it), while address and pin are stamped 'curated'
+    // because they are the curated record verbatim — the same stamps
+    // BarDataNormalizer uses for the same values.
+    // Returns true when the event was modified.
+    fillVenueFromCuratedSiteIdentity(event, match, hostKey, title) {
+        if (!event || !match) return false;
+        const bars = (Array.isArray(match.bars) ? match.bars : [])
+            .filter(bar => bar && typeof bar.name === 'string' && bar.name.trim());
+        if (bars.length === 0) return false;
+        if (bars.length > 1) {
+            console.log(`🗺️ LocationNormalizer: Venue backfill skipped for "${title}" — site ${hostKey} is claimed by ${bars.length} curated bars (${bars.map(bar => `"${bar.name}"`).join(', ')})`);
+            return false;
+        }
+        const curated = bars[0];
+        if (typeof event.bar === 'string' && event.bar.trim()) return false;
+        const existingAddress = typeof event.address === 'string' ? event.address.trim() : '';
+        if (existingAddress && !this.addressesAgree(existingAddress, curated.address)) {
+            console.log(`🗺️ LocationNormalizer: Venue backfill skipped for "${title}" — its address "${existingAddress}" is not curated "${curated.name}"'s address`);
+            return false;
+        }
+        const filled = [];
+        event.bar = curated.name.trim();
+        event.barSource = 'venue-site-identity';
+        filled.push('bar');
+        const curatedAddress = typeof curated.address === 'string' ? curated.address.trim() : '';
+        if (!existingAddress && curatedAddress) {
+            event.address = curatedAddress;
+            event.addressSource = 'curated';
+            filled.push('address');
+        }
+        const curatedPin = typeof curated.coordinates === 'string' ? curated.coordinates.trim() : '';
+        const hasPin = typeof event.location === 'string' && event.location.trim();
+        if (!hasPin && this.isCoordinatePairString(curatedPin)) {
+            event.location = curatedPin;
+            event.pinSource = 'curated';
+            filled.push('location');
+        }
+        const curatedMaps = typeof curated.googleMaps === 'string' ? curated.googleMaps.trim() : '';
+        if (!event.gmaps && curatedMaps) {
+            event.gmaps = curatedMaps;
+            filled.push('gmaps');
+        }
+        const curatedInstagram = typeof curated.instagram === 'string' ? curated.instagram.trim() : '';
+        if (!event.instagram && curatedInstagram) {
+            event.instagram = curatedInstagram;
+            filled.push('instagram');
+        }
+        console.log(`🗺️ LocationNormalizer: Filled ${filled.join(', ')} for "${title}" from curated bar "${curated.name}" — the same site-identity match that gave the city (${hostKey})`);
+        return true;
+    }
+
+    // Token-level address agreement for the venue backfill above: the same
+    // normalization the merge address rungs use (SharedCore.normalizeAddressTokens
+    // — case/punctuation/abbreviation tolerant), with containment either way so
+    // a fragment ("525 S Riverfront Blvd") agrees with the full curated line.
+    // Falls back to a plain comparison when the core helper is absent, and
+    // fails closed (false) whenever either side is missing.
+    addressesAgree(a, b) {
+        const left = String(a || '').trim();
+        const right = String(b || '').trim();
+        if (!left || !right) return false;
+        if (this.core && typeof this.core.normalizeAddressTokens === 'function') {
+            const leftTokens = this.core.normalizeAddressTokens(left).join(' ');
+            const rightTokens = this.core.normalizeAddressTokens(right).join(' ');
+            if (!leftTokens || !rightTokens) return false;
+            return leftTokens === rightTokens
+                || leftTokens.includes(rightTokens)
+                || rightTokens.includes(leftTokens);
+        }
+        return left.toLowerCase() === right.toLowerCase();
     }
 
     extractCityFromEvent(event) {
@@ -1000,8 +1186,17 @@ class LocationNormalizer extends BaseNormalizer {
         return 'unknown';
     }
 
-    // Normalize city name to lowercase, handle common variations
-    normalizeCityName(cityName) {
+    // Silent half of normalizeCityName: mapping resolution with NO warning.
+    // Split out because extractCityFromAddress PROBES an address's first
+    // component with it, and the warn below then reported street lines as
+    // "Unknown city" — run 20260802-220918 logged
+    // `Unknown city "619 e pine" (no mapping or timezone)` for an event whose
+    // city was never anything but "unknown" (the probe's own guard rejects a
+    // non-configured candidate two lines later). That false alarm reads as
+    // "an address string was loaded into city" and it never was.
+    // Returns the canonical city key, or the lowercased input when nothing
+    // maps (the caller decides what that means).
+    resolveCityKeyQuietly(cityName) {
         if (!cityName || typeof cityName !== 'string' || !this.core || !this.core.cityMappings) return null;
 
         const normalized = cityName.toLowerCase().trim();
@@ -1016,6 +1211,14 @@ class LocationNormalizer extends BaseNormalizer {
                 return city;
             }
         }
+        return normalized;
+    }
+
+    // Normalize city name to lowercase, handle common variations
+    normalizeCityName(cityName) {
+        const normalized = this.resolveCityKeyQuietly(cityName);
+        if (normalized === null) return null;
+        const folded = this.foldDiacritics(cityName);
 
         if (normalized && this.core.cities && !this.core.cities[normalized] && !this.core.cities[folded]) {
             this.core.warnOnce(`city:${normalized}`, `⚠️ LocationNormalizer: Unknown city "${normalized}" (no mapping or timezone)`);
@@ -1488,6 +1691,66 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
         return null;
     }
 
+    // Human-readable place of a reverse placemark, for the refusal log line.
+    describePlacemarkPlace(placemark) {
+        const clean = value => (typeof value === 'string' || typeof value === 'number') ? String(value).trim() : '';
+        const parts = [
+            clean(placemark && placemark.locality),
+            clean(placemark && placemark.subAdministrativeArea),
+            clean(placemark && placemark.administrativeArea),
+            clean(placemark && placemark.country)
+        ].filter(Boolean);
+        const unique = [];
+        parts.forEach(part => { if (!unique.includes(part)) unique.push(part); });
+        return unique.join(', ') || 'an unnamed place';
+    }
+
+    // Metro consistency for an accepted pin — the half of the reverse
+    // cross-check that comparePinToAddress structurally cannot do.
+    //
+    // comparePinToAddress compares the placemark to the INPUT ADDRESS STRING.
+    // When that string carries no city ("619 E Pine"), its street name matches
+    // the same street in any town on earth and the check passes: run
+    // 20260802-220918 shipped a Seattle event pinned at
+    // 39.2327933, -86.6282171 — southern Indiana, ~3,000 km away — stamped
+    // pinSource "geocoded-exact".
+    //
+    // The placemark's OWN locality is the independent second opinion. It must
+    // be corroborated by something the event actually claims: the configured
+    // city (its key or any of its patterns), or the address text itself.
+    // Consulted ONLY when there is no city center to arbitrate by distance —
+    // a configured city with coordinates is already governed by the
+    // CITY_CENTER_RADIUS_KM checks on every rung — and only when the placemark
+    // names a place at all (no locality → nothing to compare, existing
+    // behavior). Fail closed: an uncorroborated locality refuses the pin in
+    // every mode but 'off', because "location is always coordinates" makes a
+    // 3,000 km pin a data corruption, not a flaggable approximation.
+    placemarkLocalityCorroborated(placemark, eventCity, address, cityCenter) {
+        if (cityCenter) return true;
+        const clean = value => (typeof value === 'string' || typeof value === 'number') ? String(value).trim() : '';
+        const locality = clean(placemark && placemark.locality)
+            || clean(placemark && placemark.subAdministrativeArea);
+        if (!locality) return true;
+        const localityTokens = this.expandAddressTokens(locality).filter(token => token.length > 2);
+        if (localityTokens.length === 0) return true;
+
+        const addressTokens = this.expandAddressTokens(address);
+        if (localityTokens.some(token => addressTokens.includes(token))) return true;
+
+        const cityKey = String(eventCity || '').trim().toLowerCase();
+        if (!cityKey || cityKey === 'unknown') return false;
+        const names = [cityKey];
+        const cityConfig = this.core && this.core.cities
+            ? (this.core.cities[cityKey] || this.core.cities[this.foldDiacritics(cityKey)])
+            : null;
+        if (cityConfig && Array.isArray(cityConfig.patterns)) names.push(...cityConfig.patterns);
+        const cityTokens = [];
+        names.forEach(name => this.expandAddressTokens(name).forEach(token => {
+            if (!cityTokens.includes(token)) cityTokens.push(token);
+        }));
+        return localityTokens.some(token => cityTokens.includes(token));
+    }
+
     // -----------------------------------------------------------------------
     // Geo-POI harvest + bar corroboration (bar corroboration phase 3): the
     // geocoder responses the pipeline ALREADY fetches name the place at the
@@ -1794,6 +2057,16 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                 // Geo-POI harvest from the SAME placemark the cross-check
                 // fetched — no additional reverse-geocode call.
                 poiNames = this.extractPlacemarkPoiNames(placemark);
+                // Metro consistency, BEFORE the street comparison below: the
+                // street check compares the placemark against the INPUT
+                // ADDRESS STRING only, so a city-less address matches its own
+                // street name anywhere on earth and passes. See
+                // placemarkLocalityCorroborated.
+                if (!this.placemarkLocalityCorroborated(placemark, context.eventCity, address, context.cityCenter)) {
+                    const placeLabel = this.describePlacemarkPlace(placemark);
+                    console.warn(`🗺️ GEOCODE VERIFY: "${title}" pin refused — it sits in "${placeLabel}", which neither the event's city nor the address "${address}" names — left unpinned`);
+                    return { location: null, crossCheck: 'fail' };
+                }
                 const comparison = this.comparePinToAddress(placemark, address);
                 if (comparison) {
                     let matched = comparison.matched;
@@ -1891,6 +2164,23 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
         return /,\s*[A-Za-z]{2}\.?\s*(?:,\s*(?:USA|US|United States)\s*)?$/i.test(text);
     }
 
+    // Does the address text ITSELF say where on earth it is? A street line
+    // alone ("619 E Pine") does not: the same street name exists in thousands
+    // of towns, so a geocoder answering it is picking one arbitrarily (run
+    // 20260802-220918 pinned a Seattle event at 39.2327933, -86.6282171 —
+    // southern Indiana, ~3,000 km off — and the reverse cross-check passed it
+    // because a city-less address matches its own street name anywhere).
+    // Place context = a component beyond the street line (any comma), or a
+    // postal code. Shape-based only: no city, state or country is named in
+    // code, so this stays as portable as the addresses it reads.
+    addressCarriesPlaceContext(address) {
+        const text = String(address || '').trim();
+        if (!text) return false;
+        const parts = text.split(',').map(part => part.trim()).filter(Boolean);
+        if (parts.length > 1) return true;
+        return /\b\d{5}(?:-\d{4})?\b/.test(text);
+    }
+
     // Strip directionals that FOLLOW a street-type word — at the end of the
     // address or before a comma. "2069 Cheshire Bridge Rd NE" → "2069 Cheshire
     // Bridge Rd"; "…Road Northeast, Atlanta, GA" → "…Road, Atlanta, GA".
@@ -1912,6 +2202,14 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
     // geocodeResultMatchesCity keep using the raw key.
     geocodeCityAnchorName(cityKey) {
         const key = String(cityKey || '').trim();
+        // The 'unknown' sentinel is not a place. Run 20260802-220918 anchored
+        // the ladder with it and issued the literal queries
+        // "Massive Club, 619 E Pine, unknown" and "619 E Pine, unknown" — both
+        // returned nothing, and the rescue rungs then fell back to the bare,
+        // city-less street and pinned the Seattle event in southern Indiana.
+        // No anchor is the honest answer; the callers refuse to issue a
+        // region-less query rather than guess (see addressCarriesPlaceContext).
+        if (key.toLowerCase() === 'unknown') return '';
         if (!key || !this.core || !this.core.cities) return key;
         const cityConfig = this.core.cities[key] || this.core.cities[this.foldDiacritics(key)];
         const patterns = cityConfig && Array.isArray(cityConfig.patterns) ? cityConfig.patterns : [];
@@ -1961,7 +2259,18 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
         // query; its ladder is the venue+city rescue rung alone.
         const baseAddress = String(address || '').trim();
         const leadingBarName = typeof bar === 'string' ? bar.trim() : '';
-        if (baseAddress) {
+        // Region gate: a street line with NO city anchor and no place context
+        // of its own ("619 E Pine") names a street that exists in thousands of
+        // towns — geocoding it asks the planet a question only a local can
+        // answer, and run 20260802-220918 got southern Indiana back for a
+        // Seattle event. Emit no address rung at all rather than a guess; the
+        // venue+city rescue below is likewise already gated on a real city.
+        const addressIsGeocodable = Boolean(baseAddress)
+            && (Boolean(city) || this.addressCarriesPlaceContext(baseAddress));
+        if (baseAddress && !addressIsGeocodable) {
+            console.warn(`🗺️ OpenStreetMapNormalizer: Address "${baseAddress}" names no city or region and the event has none — refusing to geocode it globally`);
+        }
+        if (addressIsGeocodable) {
             // Name-led rung first (only when the address doesn't already start
             // with the venue name — ticketing pages sometimes publish it that
             // way, and a doubled name is a query nothing matches).
@@ -2040,7 +2349,9 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
             const addressAdoptable = !address || !this.isStreetSpecificAddress(address);
             // flags carries the once-per-event verification flag lines across
             // ladder rungs (the per-rung spreads copy this same object reference).
-            const verifyContext = { title, address, inputHasHouseNumber, verifyMode, streetSpecific, flags: {} };
+            // eventCity/cityCenter ride along for the metro-consistency half of
+            // the reverse cross-check (placemarkLocalityCorroborated).
+            const verifyContext = { title, address, inputHasHouseNumber, verifyMode, streetSpecific, flags: {}, eventCity, cityCenter };
 
             // Retry ladder: when a query returns 0 candidates (or every candidate
             // is rejected by the grade gate / distance / city checks), retry with
@@ -2285,7 +2596,24 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                 // GeoJSON coordinates are [lon, lat]. Events with NO usable
                 // address query the venue+city string instead — pin/address may
                 // then only be adopted from a hit whose POI name matches the bar.
-                const photonQueries = [hasAddress ? address : venueRescueQuery];
+                // Region gate, same rule the Nominatim ladder applies (see
+                // buildGeocodeQueryVariants): Photon queries the address
+                // VERBATIM, so a city-less street line goes to it completely
+                // unanchored. Run 20260802-220918: every city-anchored
+                // Nominatim rung returned nothing, Photon was handed the bare
+                // "619 E Pine", and the Seattle event was pinned in southern
+                // Indiana. Refuse the query rather than ask the planet.
+                const photonAddressAllowed = hasAddress
+                    && (Boolean(cityAnchor) || this.addressCarriesPlaceContext(address));
+                if (hasAddress && !photonAddressAllowed) {
+                    console.warn(`🗺️ OpenStreetMapNormalizer: Skipped Photon rescue for "${address}" — it names no city or region and the event has none`);
+                }
+                const photonQueries = [];
+                if (photonAddressAllowed) {
+                    photonQueries.push(address);
+                } else if (!hasAddress && venueRescueQuery) {
+                    photonQueries.push(venueRescueQuery);
+                }
                 // Venue-name follow-up (run 20260723-152928: bar "AQUA
                 // EMPORIO" — Nominatim's venue+city rescue knew nothing, the
                 // Photon rescue only queried the address, and the fusion
