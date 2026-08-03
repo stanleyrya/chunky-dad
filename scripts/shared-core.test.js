@@ -6868,8 +6868,11 @@ test('dead-end store: young entries are skipped before enqueueing, with the rese
   const core = deadEndCore();
   const display = createDisplayAdapterStub();
   const youngLastSeen = new Date(Date.now() - 1 * DAY_MS).toISOString();
+  // misses: 2 — this test is about the retry WINDOW and the reset hint; a
+  // single unproductive observation no longer suppresses a URL on its own
+  // (see the confirmation test below).
   const store = {
-    'https://site.example/dead': { firstSeen: youngLastSeen, lastSeen: youngLastSeen, misses: 1 }
+    'https://site.example/dead': { firstSeen: youngLastSeen, lastSeen: youngLastSeen, misses: 2 }
   };
   const pages = {
     'https://hub.example/': { additionalLinks: ['https://site.example/dead'] },
@@ -12079,7 +12082,15 @@ test('shortName salvage: fully invented answer still rejects', async () => {
   assert.ok(lines.includes(`🏷️ SHORTNAME: rejected AI answer for "${title}" — not a verbatim substring`));
 });
 
-test('shortName salvage: hyphens-as-spaces answer is repaired to the spaced form', async () => {
+// The gate now reads a hyphen BOTH ways (see evaluateDerivedShortName): as an
+// inserted line-break hint inside a word AND as one standing in for a space.
+// "BEEFMINCE-X-RVT" is therefore accepted outright and STORED WITH ITS HYPHENS
+// — it used to fail the gate and reach the salvage loop, which handed back the
+// spaced form and destroyed the model's line-break hints on every event that
+// hyphenated a space. Same mechanism, same run family: "IT GIRL" → "IT-GIRL"
+// (which previously degraded all the way to "IT"). The salvage loop still
+// exists for genuinely broken answers — see the tests below it.
+test('shortName gate: hyphens standing in for spaces are accepted and kept', async () => {
   const core = createFinalBuildCore();
   const title = 'BEEFMINCE x RVT';
   const adapter = createShortNameAdapter('{"shortName": {"value": "BEEFMINCE-X-RVT"}}');
@@ -12094,8 +12105,8 @@ test('shortName salvage: hyphens-as-spaces answer is repaired to the spaced form
   } finally {
     restore();
   }
-  assert.equal(analyzed.shortName, 'BEEFMINCE X RVT', 'hyphens turned back into spaces (case-lift stored)');
-  assert.ok(lines.includes(`🏷️ SHORTNAME: salvaged "BEEFMINCE X RVT" from rejected answer for "${title}"`));
+  assert.equal(analyzed.shortName, 'BEEFMINCE-X-RVT', 'line-break hyphens survive derivation');
+  assert.ok(lines.includes(`🏷️ SHORTNAME: derived "BEEFMINCE-X-RVT" for "${title}"`));
 });
 
 test('shortName salvage: overlong answer drops tokens past punctuation and stopwords', async () => {
@@ -13310,4 +13321,394 @@ test('cross-realm: sanity flags fire on foreign Dates (start-long-past, duration
     endDate: crossRealmDate('2026-08-14T09:00:00.000Z')
   };
   assert.deepEqual(core.getEventSanityFlags(healthy, { nowMs }), []);
+});
+
+// ---------------------------------------------------------------------------
+// 2026-08-02 run-evidence wave: same-URL weekly collapse, zero-duration ends,
+// unchecked single-source covers, permanently-gone crawl targets, degenerate
+// shortName salvage, and false city provenance.
+// ---------------------------------------------------------------------------
+
+test('same-URL dedup: two occurrences EXACTLY 7 days apart are different nights', async () => {
+  const core = createCore();
+  // Run 20260802-221204: one event page served both Sundays via a query
+  // parameter (?occurrence=2026-08-02 / ?occurrence=2026-08-09). The records
+  // are exactly 604800000 ms apart — the `<=` window swallowed the Aug 9
+  // occurrence into the Aug 2 one and the log said
+  // `🔄 SharedCore: Same event URL — merging "SUNDAY BEER BUST" and "SUNDAY BEER BUST"`.
+  const occurrence = (startIso) => ({
+    title: 'SUNDAY BEER BUST',
+    bar: 'Eagle LA',
+    city: 'dallas',
+    timezone: 'America/Chicago',
+    startDate: new Date(startIso),
+    url: 'https://eaglela.example/events/sunday-beer-bust',
+    source: 'ai-web'
+  });
+  const first = occurrence('2026-08-02T21:00:00.000Z');
+  const second = occurrence('2026-08-09T21:00:00.000Z');
+  assert.equal(
+    second.startDate.getTime() - first.startDate.getTime(),
+    7 * 24 * 60 * 60 * 1000,
+    'precondition: the pair sits exactly on the window boundary'
+  );
+
+  const result = await core.deduplicateEvents([first, second], null);
+  assert.equal(result.length, 2, 'adjacent weekly occurrences must never collapse into one');
+});
+
+test('same-URL dedup: a weekly pair straddling a DST change is still two nights', async () => {
+  // The same weekly series across the US spring-forward is 7 days MINUS an
+  // hour in absolute milliseconds, so no millisecond window can separate it —
+  // the local calendar-day comparison is what keeps the pair apart.
+  const core = createCore();
+  const occurrence = (startIso) => ({
+    title: 'SUNDAY BEER BUST',
+    bar: 'Eagle LA',
+    city: 'dallas',
+    timezone: 'America/Chicago',
+    startDate: new Date(startIso),
+    url: 'https://eaglela.example/events/sunday-beer-bust',
+    source: 'ai-web'
+  });
+  // 2027-03-07 21:00 America/Chicago (CST, UTC-6) → 2027-03-08T03:00Z
+  // 2027-03-14 21:00 America/Chicago (CDT, UTC-5) → 2027-03-15T02:00Z
+  const before = occurrence('2027-03-08T03:00:00.000Z');
+  const after = occurrence('2027-03-15T02:00:00.000Z');
+  assert.ok(
+    after.startDate.getTime() - before.startDate.getTime() < 7 * 24 * 60 * 60 * 1000,
+    'precondition: a DST-crossing weekly pair is under 7×24h of wall time'
+  );
+
+  const result = await core.deduplicateEvents([before, after], null);
+  assert.equal(result.length, 2, 'consecutive local Sundays are two nights whatever the clocks did');
+});
+
+test('sanity: a zero-duration (or inverted) end flags end-not-after-start', () => {
+  const core = createSanityCore();
+  // 48 of the 134 events analyzed on 2026-08-02 shipped startDate === endDate
+  // with nothing anywhere saying so — hasDegenerateEnd is consulted only on
+  // the two merge paths, and a CREATE passes through neither.
+  assert.deepEqual(
+    sanityCodes(core, {
+      title: 'SUNDAY BEER BUST',
+      startDate: '2026-08-02T21:00:00.000Z',
+      endDate: '2026-08-02T21:00:00.000Z'
+    }),
+    ['end-not-after-start']
+  );
+  assert.equal(
+    core.getEventSanityFlags({
+      title: 'SUNDAY BEER BUST',
+      startDate: '2026-08-02T21:00:00.000Z',
+      endDate: '2026-08-02T21:00:00.000Z'
+    }, { nowMs: SANITY_NOW_MS })[0].detail,
+    'endDate equals startDate (zero-duration event)'
+  );
+  assert.deepEqual(
+    sanityCodes(core, {
+      title: 'PERVERT',
+      startDate: '2026-08-02T22:00:00.000Z',
+      endDate: '2026-08-02T20:00:00.000Z'
+    }),
+    ['end-not-after-start']
+  );
+  // A real span, and an event with no end at all, both stay clean — the flag
+  // must not fire on the ordinary shapes.
+  assert.deepEqual(sanityCodes(core, {
+    title: 'PACK PARTY',
+    startDate: '2026-08-02T21:00:00.000Z',
+    endDate: '2026-08-03T02:00:00.000Z'
+  }), []);
+  assert.deepEqual(sanityCodes(core, {
+    title: 'PACK PARTY',
+    startDate: '2026-08-02T21:00:00.000Z'
+  }), []);
+});
+
+test('sanity: a cover that is neither a price nor a free phrase flags cover-not-a-price', () => {
+  const core = createSanityCore();
+  // Every one of these shipped on 2026-08-02 through the one-sided
+  // short-circuit, which returns before either classifyCoverShape call site.
+  for (const cover of [
+    'white & silver',
+    '3dollarbillbk.com',
+    'TICKETS @ CHUNK-PARTY.COM',
+    'GAYMAFIABOSTON.COM FURBALL.NYC',
+    'Free Tequila Shot for Singers',
+    'Entrada gratu'
+  ]) {
+    assert.deepEqual(sanityCodes(core, { title: 'PACK PARTY', cover }), ['cover-not-a-price'],
+      `expected cover-not-a-price for ${JSON.stringify(cover)}`);
+  }
+  // Real prices and real free-admission phrases (every casing) stay clean.
+  for (const cover of ['$20', '20 EUR', 'From £10', '$22.10-$39.98',
+    'No cover', 'NO COVER', 'no cover', 'No cover!', 'NO COVER!', 'FREE', 'Entrada Libre']) {
+    assert.deepEqual(sanityCodes(core, { title: 'PACK PARTY', cover }), [],
+      `expected no flag for ${JSON.stringify(cover)}`);
+  }
+});
+
+test('sanity: a cover claiming both a price and free entry flags cover-self-contradictory', () => {
+  const core = createSanityCore();
+  // "$10, NO COVER" classifies as `price` (a currency amount wins), so the
+  // shape classifier alone can never see the contradiction.
+  assert.deepEqual(sanityCodes(core, { title: 'PACK PARTY', cover: '$10, NO COVER' }),
+    ['cover-self-contradictory']);
+  assert.deepEqual(sanityCodes(core, { title: 'PACK PARTY', cover: '$20 before 11PM' }), [],
+    'an ordinary conditional price is not a contradiction');
+  assert.deepEqual(sanityCodes(core, { title: 'PACK PARTY', cover: '$15 FREEDOM PARTY' }), [],
+    'word-boundary anchored — "FREEDOM" is not "FREE"');
+});
+
+test('cover twins: case and trailing punctuation are the SAME value, not a conflict', () => {
+  const core = createCore();
+  // The 2026-08-02 corpus carries five spellings of one claim. Each pairing
+  // used to reach AI arbitration as a "genuine conflict".
+  const spellings = ['No cover', 'NO COVER', 'no cover', 'No cover!', 'NO COVER!'];
+  for (const a of spellings) {
+    for (const b of spellings) {
+      assert.equal(core.coverValuesEquivalent(a, b), true, `${a} ≡ ${b}`);
+      assert.equal(core.isGenuineFieldConflict('cover', a, b), false, `${a} vs ${b} is not a conflict`);
+    }
+  }
+  // Different WORDS stay a real conflict — this folds twins, not meanings.
+  assert.equal(core.coverValuesEquivalent('FREE', 'No cover'), false);
+  assert.equal(core.isGenuineFieldConflict('cover', 'FREE', 'No cover'), true);
+  // And the whitespace rule it was built on still holds.
+  assert.equal(core.coverValuesEquivalent('$22.10 - $39.98', '$22.10-$39.98'), true);
+  assert.equal(core.coverValuesEquivalent('$20', '$25'), false);
+});
+
+test('permanently-gone HTTP statuses: 410 and 404 only', () => {
+  assert.equal(SharedCore.isPermanentlyGoneHttpStatus(410), true);
+  assert.equal(SharedCore.isPermanentlyGoneHttpStatus(404), true);
+  // Bot walls are "not to you", not "gone" — they keep their own branch.
+  assert.equal(SharedCore.isPermanentlyGoneHttpStatus(403), false);
+  assert.equal(SharedCore.isPermanentlyGoneHttpStatus(401), false);
+  // Transient statuses must never be treated as permanent.
+  for (const status of [408, 425, 429, 500, 502, 503, 504, null]) {
+    assert.equal(SharedCore.isPermanentlyGoneHttpStatus(status), false, `status ${status}`);
+  }
+});
+
+test('crawl queue: HTTP 410 pages are learned as dead ends and are NOT run errors', async () => {
+  const goneUrl = 'https://www.eventim.us/event/retired/699269';
+  const failure = `HTTP request failed for ${goneUrl}: HTTP 410 error from ${goneUrl}`;
+  const core = deadEndCore();
+  const display = createDisplayAdapterStub();
+  const pages = {
+    'https://hub.example/': { additionalLinks: [goneUrl] },
+    [goneUrl]: { fail: failure }
+  };
+  const { httpAdapter, parsers } = createCrawlHarness(pages);
+
+  const results = await core.processEvents(deadEndConfig({ name: 'Gone Run' }), httpAdapter, display, parsers);
+
+  const entry = results.deadEndStore[goneUrl];
+  assert.ok(entry, '410 Gone is the strongest never-retry signal — it must be learned');
+  assert.equal(entry.lastStatus, 410);
+  assert.ok(display.logs.includes(`SYSTEM: Learned 1 new dead-end URL(s): ${goneUrl}`));
+  // Severity split: 42 × 410 across 2026-08-02 produced a standing `errors: 7`
+  // on runs where nothing was wrong, which is exactly the noise that hides a
+  // real regression. Recorded and surfaced — just not as an error.
+  assert.deepEqual(results.errors, [], 'a permanently-gone URL is not a run error');
+  assert.deepEqual(results.permanentlyGone,
+    [`SYSTEM: Failed to process crawl page ${goneUrl}: ${failure}`],
+    'the failure is still recorded in full (flag, don\'t drop)');
+});
+
+test('crawl queue: HTTP 404 pages are dead ends too, while 503 stays an ordinary error', async () => {
+  const missingUrl = 'https://www.eventim.us/event/expired/700051';
+  const flakyUrl = 'https://site.example/flaky';
+  const missingFailure = `HTTP request failed for ${missingUrl}: HTTP 404 error from ${missingUrl}`;
+  const flakyFailure = `HTTP request failed for ${flakyUrl}: HTTP 503 error from ${flakyUrl}`;
+  const core = deadEndCore();
+  const display = createDisplayAdapterStub();
+  const pages = {
+    'https://hub.example/': { additionalLinks: [missingUrl, flakyUrl] },
+    [missingUrl]: { fail: missingFailure },
+    [flakyUrl]: { fail: flakyFailure }
+  };
+  const { httpAdapter, parsers } = createCrawlHarness(pages);
+
+  const results = await core.processEvents(deadEndConfig({ name: 'Gone Run 404' }), httpAdapter, display, parsers);
+
+  assert.ok(results.deadEndStore[missingUrl], '404 is the ordinary shape of an expired event page');
+  assert.equal(results.deadEndStore[missingUrl].lastStatus, 404);
+  assert.ok(!(flakyUrl in results.deadEndStore), '503 is transient and must stay un-learned');
+  assert.equal(results.errors.length, 1, 'only the transient failure counts as an error');
+  assert.ok(results.errors[0].includes(flakyUrl));
+  assert.equal(results.permanentlyGone.length, 1);
+  assert.ok(results.permanentlyGone[0].includes(missingUrl));
+});
+
+test('shortName gate: a hyphen standing in for a space is a verbatim answer', () => {
+  const core = createCore();
+  // Run 20260802-221204: the AI answered "B-BAR" for "B BAR". Removing the
+  // hyphen yields "BBAR", which is not a substring of "B BAR", so the gate
+  // rejected it and the salvage loop shipped the first token — the single
+  // letter "B". Reading the hyphen as the space it replaced accepts the answer
+  // and keeps the line-break hint the prompt asked for.
+  assert.deepEqual(core.evaluateDerivedShortName('B BAR', 'B-BAR', 16),
+    { ok: true, value: 'B-BAR' });
+  assert.deepEqual(core.evaluateDerivedShortName('IT GIRL', 'IT-GIRL', 16),
+    { ok: true, value: 'IT-GIRL' });
+  // The mid-word reading the prompt actually documents still works…
+  assert.deepEqual(core.evaluateDerivedShortName('CUBSCOUT', 'CUB-SCOUT', 16),
+    { ok: true, value: 'CUB-SCOUT' });
+  // …and neither reading may invent or splice text.
+  assert.deepEqual(core.evaluateDerivedShortName('BEEFMINCE MEET MARKET', 'BEEF-MARKET', 16),
+    { ok: false, reason: 'not a verbatim substring' });
+  assert.deepEqual(core.evaluateDerivedShortName('B BAR', 'B-BARS', 16),
+    { ok: false, reason: 'not a verbatim substring' });
+});
+
+test('shortName salvage: never emits a one- or two-character fragment', async () => {
+  const core = createFinalBuildCore();
+  const title = 'B BAR';
+  // An invented tail forces the salvage loop, which walks `keep` down to 1 and
+  // used to hand back "B" — the exact value shipped in run 20260802-221204.
+  // ONYX, by contrast, correctly gave up and shipped no shortName at all.
+  const adapter = createShortNameAdapter('{"shortName": {"value": "B BAR NYC"}}');
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent({
+      title,
+      startDate: new Date('2026-09-19T21:00:00.000Z')
+    }, NEW_ACTION_ANALYSIS, adapter, { ai: {} });
+  } finally {
+    restore();
+  }
+  assert.equal(analyzed.shortName, undefined, 'no shortName beats a one-letter shortName');
+  assert.ok(!lines.some(line => line.startsWith('🏷️ SHORTNAME: salvaged')),
+    `nothing salvaged, got: ${JSON.stringify(lines.filter(l => l.startsWith('🏷️')))}`);
+});
+
+test('shortName salvage: does not cut mid-phrase on a contraction', async () => {
+  const core = createFinalBuildCore();
+  const title = "SUGAR, WE'RE HOEIN DOWN";
+  // Same run family: the overlong answer was cut down to "SUGAR, WE'RE" — the
+  // trailing-punctuation strip never fired because the fragment ends in a
+  // letter. Shrinking one more token gives a chip that reads as a name.
+  const adapter = createShortNameAdapter(`{"shortName": {"value": "${title}"}}`);
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent({
+      title,
+      startDate: new Date('2026-09-19T21:00:00.000Z')
+    }, NEW_ACTION_ANALYSIS, adapter, { ai: {} });
+  } finally {
+    restore();
+  }
+  assert.equal(analyzed.shortName, 'SUGAR', 'the contraction fragment is skipped, not shipped');
+  assert.ok(lines.includes(`🏷️ SHORTNAME: salvaged "SUGAR" from rejected answer for "${title}"`));
+});
+
+test('mergeParsedEvents: _citySource follows the finalized city, never the base spread', async () => {
+  const core = createCore();
+  const priorities = {
+    city: { priority: ['static', 'ai-web'], merge: 'ai' },
+    cover: { priority: ['ai-web'], merge: 'ai' }
+  };
+  // The incoming record carries a curated-bar city stamp; the merge keeps the
+  // OTHER record's city (decisive priority). The `{ ...newEvent }` base spread
+  // copied the stamp anyway, and the resolution loop skips `_`-prefixed
+  // fields — so the merged event claimed curated backing for a city curation
+  // never chose. imageSource/barSource were given exactly this treatment; city
+  // provenance never was.
+  const existing = { title: 'PACK PARTY', city: 'sf', source: 'static', _fieldPriorities: priorities };
+  const incoming = {
+    title: 'PACK PARTY',
+    city: 'sitges',
+    _citySource: 'curated-bar',
+    source: 'ai-web',
+    _fieldPriorities: priorities
+  };
+  const merged = await core.mergeParsedEvents(existing, incoming, {});
+  assert.equal(merged.city, 'sf', 'precondition: the static side\'s city wins');
+  assert.equal(merged._citySource, undefined,
+    'a stamp for a city that lost must not survive the merge');
+
+  // The stamp DOES follow when its own side's city is the one kept.
+  const mergedKept = await core.mergeParsedEvents(
+    { title: 'PACK PARTY', city: 'sf', source: 'ai-web', _fieldPriorities: priorities },
+    { title: 'PACK PARTY', city: 'sf', _citySource: 'curated-bar', source: 'static', _fieldPriorities: priorities },
+    {}
+  );
+  assert.equal(mergedKept.city, 'sf');
+  assert.equal(mergedKept._citySource, 'curated-bar', 'provenance survives when its value does');
+});
+
+test('dead-end store: one unproductive fetch is not enough — a second confirms it', async () => {
+  // 38 of the 40 entries in the device store were learned on a SINGLE miss and
+  // then suppressed for the full 30-day window. One of them
+  // (etix .../the-have-note-room-big-brother-brooklyn-9-bob-note) is the only
+  // page in the corpus naming the true venue of the four "The Have Not Room"
+  // events; one bad fetch on 2026-07-28 was still suppressing it on
+  // 2026-08-02, and those events shipped with no venue and no coordinates.
+  const url = 'https://www.etix.com/ticket/e/1059479/the-have-note-room';
+  const youngLastSeen = new Date(Date.now() - 1 * DAY_MS).toISOString();
+  const pages = {
+    'https://hub.example/': { additionalLinks: [url] },
+    [url]: {}
+  };
+
+  // One prior miss → retried (and the retry records the confirming second miss)
+  {
+    const core = deadEndCore();
+    const display = createDisplayAdapterStub();
+    const store = { [url]: { firstSeen: youngLastSeen, lastSeen: youngLastSeen, misses: 1 } };
+    const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+    const results = await core.processEvents(deadEndConfig({ store }), httpAdapter, display, parsers);
+    assert.ok(fetched.includes(url), 'a single unproductive observation must not suppress a URL');
+    assert.equal(results.deadEndStore[url].misses, 2, 'the retry records the confirming miss');
+  }
+
+  // Two prior misses → confirmed, suppressed for the retry window
+  {
+    const core = deadEndCore();
+    const display = createDisplayAdapterStub();
+    const store = { [url]: { firstSeen: youngLastSeen, lastSeen: youngLastSeen, misses: 2 } };
+    const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+    await core.processEvents(deadEndConfig({ store }), httpAdapter, display, parsers);
+    assert.ok(!fetched.includes(url), 'a confirmed dead end is still skipped');
+  }
+
+  // Server-STATED unavailability needs no second opinion: a 403 bot wall or a
+  // 410 Gone entry carries lastStatus and suppresses on its first observation.
+  for (const lastStatus of [403, 410, 404]) {
+    const core = deadEndCore();
+    const display = createDisplayAdapterStub();
+    const store = { [url]: { firstSeen: youngLastSeen, lastSeen: youngLastSeen, misses: 1, lastStatus } };
+    const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+    await core.processEvents(deadEndConfig({ store }), httpAdapter, display, parsers);
+    assert.ok(!fetched.includes(url), `HTTP ${lastStatus} is the origin's own statement — one strike stands`);
+  }
+
+  // The old one-strike rule stays reachable, exactly, via config.
+  {
+    const core = deadEndCore();
+    const display = createDisplayAdapterStub();
+    const store = { [url]: { firstSeen: youngLastSeen, lastSeen: youngLastSeen, misses: 1 } };
+    const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+    const config = deadEndConfig({ store });
+    config.config.deadEndMinMisses = 1;
+    await core.processEvents(config, httpAdapter, display, parsers);
+    assert.ok(!fetched.includes(url), 'deadEndMinMisses: 1 restores the previous behaviour');
+  }
+
+  // And the kill switch is untouched: deadEndRetryDays <= 0 disables the store.
+  {
+    const core = deadEndCore();
+    const display = createDisplayAdapterStub();
+    const store = { [url]: { firstSeen: youngLastSeen, lastSeen: youngLastSeen, misses: 5 } };
+    const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+    await core.processEvents(deadEndConfig({ store, retryDays: 0 }), httpAdapter, display, parsers);
+    assert.ok(fetched.includes(url), 'deadEndRetryDays: 0 still disables the store entirely');
+  }
 });
