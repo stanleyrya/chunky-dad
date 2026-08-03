@@ -6298,7 +6298,8 @@ class SharedCore {
 
         const aiVerdict = await this.getAiBearVerdict(event, parserConfig, httpAdapter);
         if (aiVerdict) {
-            return { result: aiVerdict.verdict, provenance: `ai: ${aiVerdict.reason || 'no reason given'}` };
+            const aiDecision = { result: aiVerdict.verdict, provenance: `ai: ${aiVerdict.reason || 'no reason given'}` };
+            return this.applyBearEvidenceGate(aiDecision, event, parserConfig, aiVerdict.evidence);
         }
 
         if (trust.affinity === 'always') {
@@ -6345,6 +6346,90 @@ class SharedCore {
         return matched;
     }
 
+    // True when the event was actually extracted from a page on a DIFFERENT
+    // site than the parser's configured host(s). Extracted verbatim from
+    // buildBearCheckProvenance so the curated-source test can reuse it.
+    isBearCheckCrossHost(event, parserConfig) {
+        const actualPageUrl = event && typeof event._sourcePageUrl === 'string' ? event._sourcePageUrl : '';
+        const actualHost = this.getHostFromUrl(actualPageUrl);
+        const configuredUrls = parserConfig && Array.isArray(parserConfig.urls) ? parserConfig.urls : [];
+        const configuredHosts = configuredUrls.map(configuredUrl => this.getHostFromUrl(configuredUrl)).filter(Boolean);
+        return Boolean(actualHost) && configuredHosts.length > 0 &&
+            !configuredHosts.some(configuredHost => this.areUrlHostsSameSite(actualHost, configuredHost));
+    }
+
+    // "Curated" = the calendar OWNER put this promoter on the bear calendar,
+    // as opposed to the model merely believing a venue has a bear reputation.
+    // Only curated sources get the trusting prompt variant and the
+    // evidence-gate bypass; every other source must show event-level evidence.
+    //   - registry bearAffinity=always: matched by the event's OWN content, so
+    //     it stays curated wherever the page lived.
+    //   - parserConfig.alwaysBear: covers that promoter's own pages only, so a
+    //     cross-host page found while crawling it is NOT curated.
+    isBearCheckCurated(event, parserConfig) {
+        const trust = this.getEventBearTrust(event, parserConfig);
+        if (!trust.trusted) return false;
+        if (trust.affinity === 'always') return true;
+        return !this.isBearCheckCrossHost(event, parserConfig);
+    }
+
+    // Normalizer for the verbatim-quote gate: case-folded, curly punctuation
+    // folded to ASCII, every run of non-alphanumerics collapsed to one space.
+    // Emoji, smart quotes and line breaks therefore never break a real quote,
+    // while a paraphrase still fails to appear in the corpus.
+    normalizeBearEvidenceText(text) {
+        return String(text === null || text === undefined ? '' : text)
+            .toLowerCase()
+            .replace(/[‘’‛]/g, "'")
+            .replace(/[“”]/g, '"')
+            .replace(/[^a-z0-9]+/g, ' ')
+            .trim();
+    }
+
+    // Keeps only the quotes the model claims that are VERBATIM contiguous
+    // spans of the event's OWN text (title + description). The venue field is
+    // deliberately excluded from the corpus: a venue name is context, never
+    // evidence, so "Dallas Eagle" can never satisfy the gate. Quotes shorter
+    // than 3 normalized characters are dropped as non-evidence.
+    verifyBearEvidenceQuotes(quotes, event) {
+        if (!Array.isArray(quotes) || !event) return [];
+        const corpus = this.normalizeBearEvidenceText(`${event.title || ''} ${event.description || ''}`);
+        if (!corpus) return [];
+        const venue = this.normalizeBearEvidenceText(event.bar || event.venue || '');
+        const verified = [];
+        for (const quote of quotes) {
+            if (typeof quote !== 'string') continue;
+            const normalized = this.normalizeBearEvidenceText(quote);
+            if (normalized.length < 3) continue;
+            if (venue && normalized === venue) continue;
+            if (corpus.includes(normalized)) verified.push(quote);
+        }
+        return verified;
+    }
+
+    // Deterministic post-check on the AI tier. A 'bear' verdict from a source
+    // the OWNER has not curated must be backed by at least one quote the model
+    // can point at in the event's own text; a verdict resting only on the
+    // venue's or promoter's reputation is demoted to 'unsure' (→ FLAG, kept
+    // for review) rather than dropped. It keys on STRUCTURE — "is the claimed
+    // evidence array non-empty after verbatim verification" — never on the
+    // English of the reason, so it cannot rot as model wording drifts.
+    applyBearEvidenceGate(decision, event, parserConfig, claimedEvidence) {
+        if (!decision || decision.result !== 'bear') return decision;
+        if (this.isBearCheckCurated(event, parserConfig)) return decision;
+        const verified = this.verifyBearEvidenceQuotes(claimedEvidence, event);
+        if (verified.length > 0) return decision;
+        const claimedCount = Array.isArray(claimedEvidence) ? claimedEvidence.length : 0;
+        const detail = claimedCount > 0
+            ? `${claimedCount} quoted span(s) not found in the event text`
+            : 'no event-level evidence quoted';
+        console.log(`🐻 BEAR CHECK: evidence gate demoted "${event && event.title ? event.title : 'Unknown'}" from bear to unsure — ${detail} (venue/promoter reputation is context, not evidence)`);
+        return {
+            result: 'unsure',
+            provenance: `${decision.provenance} [evidence gate: ${detail}]`
+        };
+    }
+
     // Provenance context for the bear-check prompt: where the event was scraped
     // from, plus the owner's trusted-promoter marking when alwaysBear is set —
     // that promoter context is what lets the model keep promoter events with
@@ -6371,8 +6456,7 @@ class SharedCore {
         const actualHost = this.getHostFromUrl(actualPageUrl);
         const configuredUrls = Array.isArray(parserConfig.urls) ? parserConfig.urls : [];
         const configuredHosts = configuredUrls.map(configuredUrl => this.getHostFromUrl(configuredUrl)).filter(Boolean);
-        const isCrossHost = Boolean(actualHost) && configuredHosts.length > 0 &&
-            !configuredHosts.some(configuredHost => this.areUrlHostsSameSite(actualHost, configuredHost));
+        const isCrossHost = this.isBearCheckCrossHost(event, parserConfig);
         if (isCrossHost) {
             let crossProvenance = `extracted from ${actualHost}, a page discovered while crawling source entry "${parserConfig.name || 'unknown'}" (${configuredHosts[0]}). The source entry's promoter did NOT necessarily produce this event — judge by the event content and the hosting site.`;
             if (parserConfig.alwaysBear === true) {
@@ -6395,8 +6479,93 @@ class SharedCore {
         return provenance + matchedPromoterSentence;
     }
 
+    // Bear-check prompt. TWO variants, chosen by isBearCheckCurated:
+    //
+    //   curated (the owner marked this promoter trusted) — the owner's
+    //     curation IS the evidence, so the promoter's own events default to
+    //     "bear" unless the event itself targets a different audience. This is
+    //     the pre-existing semantics; owner curation is the mechanism that
+    //     works, and nothing here needs to change.
+    //
+    //   uncurated (everything else, including a bear bar's own site) — the
+    //     model's belief that a venue "is a bear venue" is world knowledge,
+    //     not evidence. A bear bar runs a full weekly calendar (trivia,
+    //     karaoke, 80s night, drag, pet night, underwear night) for its whole
+    //     mixed clientele, and the pre-fix prompt's "the promoter's crowd
+    //     follows the promoter" rule turned that reputation into a blanket
+    //     bear verdict (run 20260803-091731: 15 of 16 Dallas Eagle events
+    //     wrongly marked bear, every reason citing the venue). This variant
+    //     inverts it: the venue RAISES the bar, and a "bear" verdict must be
+    //     backed by a quote from the event's own text.
+    //
+    // Both variants share one output contract so applyBearEvidenceGate always
+    // has a structured field to read instead of parsing prose.
+    buildBearCheckPrompt(event, parserConfig, provenance) {
+        const title = String(event.title || '').trim();
+        const description = String(event.description || '').trim();
+        const bar = String(event.bar || '').trim();
+
+        const eventBlock = [
+            'Event:',
+            `- Title: ${title}`,
+            `- Venue: ${bar || 'unknown'}`,
+            `- City: ${event.city || 'unknown'}`,
+            `- Description: ${description ? description.slice(0, 500) : '(none)'}`,
+            `- Provenance: ${provenance}`,
+            ''
+        ];
+
+        const outputContract = [
+            'Respond with ONLY a JSON object, no other text:',
+            '{"verdict": "bear" | "not_bear" | "unsure", "eventEvidence": ["<words copied exactly from the Title or Description>"], "reason": "<one short sentence>"}',
+            '',
+            'eventEvidence is checked automatically against the text above:',
+            '- Every string must be copied WORD FOR WORD from the Title or the Description. Never paraphrase, summarize or invent.',
+            '- Never quote the Venue, City or Provenance lines. The venue name is not evidence.',
+            '- Quote only wording that shows the EVENT ITSELF is aimed at the bear community. If there is none, return [].'
+        ];
+
+        if (this.isBearCheckCurated(event, parserConfig)) {
+            return [
+                'You are curating a calendar for the gay bear community. Decide whether the event below belongs on a BEAR calendar.',
+                '',
+                "The calendar owner has already curated this event's promoter into the bear calendar, so this promoter's own events belong on it.",
+                '',
+                "Bear events include: bear/cub/chub/otter parties, bear happy hours, bear-run dance parties, leather/kink nights with bear crowds, and cruise/underwear/jockstrap parties thrown by bear promoters. Events thrown by this curated promoter are almost always bear events even when the event text has no bear words — the promoter's crowd follows the promoter.",
+                '',
+                'NOT bear events: shows or parties aimed at a clearly different audience (e.g. a drag-headliner show, a lesbian night, a general-audience concert) even when a bear promoter produces them.',
+                '',
+                ...eventBlock,
+                ...outputContract,
+                '',
+                'Verdict rules: answer "bear" unless the event itself clearly targets a different audience. Answer "not_bear" only when you are confident it targets a different audience. Answer "unsure" only when you genuinely cannot tell. eventEvidence may be empty for a "bear" verdict here — the owner\'s curation of the promoter is the evidence.'
+            ].join('\n');
+        }
+
+        return [
+            'You are curating a calendar for the gay bear community. Decide whether the event below is aimed at the bear community.',
+            '',
+            'EVIDENCE vs CONTEXT — read this before deciding:',
+            "- EVIDENCE is the event's OWN content: its title, its description, the party series or brand it belongs to, the bear club or bear organization named as its host. Only evidence can make an event a bear event.",
+            "- CONTEXT is everything else: the venue, the venue's reputation, the promoter, the city, and anything you happen to know about them. Context can never make an event a bear event on its own.",
+            '',
+            "Bear bars, leather bars and Eagle bars run a full weekly calendar for their whole mixed queer clientele: trivia, karaoke, retro and pop dance nights, drag, bingo, beer busts, underwear nights, pup and pet nights, wig nights, art nights, charity and sports fundraisers. Those are the venue's events, not the bear community's events. \"This is a well-known bear venue\" is NEVER a reason to answer \"bear\". A bear venue RAISES the bar: it means you must say what in THIS event, beyond the venue, is aimed at bears — and if you cannot quote it from the event's own title or description, it is not there.",
+            '',
+            'Bear evidence looks like: bear/cub/chub/otter/musclebear/hairy/burly vocabulary aimed at the crowd; a named bear party brand or series (Bearracuda, Furball, MegaWoof, CHUNK, Bear Happy Hour, ...); a bear club, bear run, bear night or bear week; explicit body-type targeting (big men, hairy men, husky, thick); an announced bear crowd.',
+            '',
+            ...eventBlock,
+            ...outputContract,
+            '- A "bear" verdict whose quotes are empty or not found in the text is demoted automatically, so do not answer "bear" unless you can quote it.',
+            '',
+            'Verdict rules:',
+            '- "bear" — you quoted real bear-community wording from the event\'s own text.',
+            '- "not_bear" — the event\'s own text shows a general-audience or different-audience event (trivia, karaoke, retro/pop dance night, drag show, women\'s night, sports or charity fundraiser, art night), including when it is held at a bear venue.',
+            '- "unsure" — the event\'s own text is too thin to tell either way.'
+        ].join('\n');
+    }
+
     // AI verdict tier of the bear-check cascade. Returns
-    // { verdict: 'bear'|'not_bear'|'unsure', reason, provenance } or null when
+    // { verdict: 'bear'|'not_bear'|'unsure', reason, evidence, provenance } or null when
     // AI is unavailable or the response is unusable (caller falls back).
     // Memoized per run by title+description+bar so duplicate records and
     // repeat titles cost one request.
@@ -6427,27 +6596,11 @@ class SharedCore {
         }
 
         const provenance = this.buildBearCheckProvenance(event, parserConfig);
-        const prompt = [
-            'You are curating a calendar for the gay bear community. Decide whether the event below belongs on a BEAR calendar.',
-            '',
-            "Bear events include: bear/cub/chub/otter parties, bear happy hours, bear-run dance parties, leather/kink nights with bear crowds, and cruise/underwear/jockstrap parties thrown by bear promoters. Events thrown by a bear-scene promoter are almost always bear events even when the event text has no bear words — the promoter's crowd follows the promoter.",
-            '',
-            'NOT bear events: shows or parties aimed at a clearly different audience (e.g. a drag-headliner show, a lesbian night, a general-audience concert) even when a bear promoter produces them, and generic events with no connection to the bear scene.',
-            '',
-            'Event:',
-            `- Title: ${title}`,
-            `- Venue: ${bar || 'unknown'}`,
-            `- City: ${event.city || 'unknown'}`,
-            `- Description: ${description ? description.slice(0, 500) : '(none)'}`,
-            `- Provenance: ${provenance}`,
-            '',
-            'Respond with ONLY a JSON object, no other text:',
-            '{"verdict": "bear" | "not_bear" | "unsure", "reason": "<one short sentence>"}',
-            '',
-            'Rules: answer "bear" when the promoter is bear-scene and nothing signals a different target audience. When the calendar owner has marked the promoter as trusted, default to "bear" — but still answer "not_bear" when the event itself clearly targets a different audience (e.g. a drag-headliner show). Answer "not_bear" only when you are confident. Answer "unsure" only when you genuinely cannot tell.'
-        ].join('\n');
+        const prompt = this.buildBearCheckPrompt(event, parserConfig, provenance);
 
-        const verdictConfig = { ...resolved, temperature: 0, numPredict: Math.min(Number(resolved.numPredict) || 200, 200) };
+        // 400 (was 200): the response now carries verbatim evidence quotes on
+        // top of the verdict and reason, and a truncated JSON body is unusable.
+        const verdictConfig = { ...resolved, temperature: 0, numPredict: Math.min(Number(resolved.numPredict) || 400, 400) };
         const pending = (async () => {
             const rawResponse = await this.callAiGenerate(verdictConfig, prompt, 'bear-check', httpAdapter);
             if (!rawResponse) return null;
@@ -6459,9 +6612,15 @@ class SharedCore {
             }
             const verdict = parsed && typeof parsed.verdict === 'string' ? parsed.verdict.trim().toLowerCase() : '';
             if (verdict !== 'bear' && verdict !== 'not_bear' && verdict !== 'unsure') return null;
+            // eventEvidence: the model's CLAIMED verbatim spans. Never trusted
+            // here — applyBearEvidenceGate verifies each against the event text.
+            const evidence = Array.isArray(parsed.eventEvidence)
+                ? parsed.eventEvidence.filter(item => typeof item === 'string')
+                : [];
             return {
                 verdict,
                 reason: typeof parsed.reason === 'string' ? parsed.reason.trim() : '',
+                evidence,
                 provenance
             };
         })().catch(() => null);
@@ -13084,7 +13243,13 @@ SharedCore.PROVENANCE_COMPANION_FIELDS = Object.freeze([
 //                    — manual always outranks automatic)
 // Values absent from a family rank null (fail open); blank ranks 0 (unstamped).
 SharedCore.PROVENANCE_TRUST_TIERS = Object.freeze({
-    pinSource: Object.freeze({ 'curated': 4, 'geocoded-exact': 3, 'geocoded-approx': 2, 'page': 1 }),
+    // 'curated-geocoded' is a pin geocoded from a CURATED address (used when a
+    // curated bar carries an address but no coordinates). Ranked level with
+    // 'geocoded-exact' rather than above it: the input address is more
+    // trustworthy, but neither is a surveyed coordinate, and a deliberate tie
+    // means this axis simply declines to pick a winner instead of inventing a
+    // ranking. Without an entry it ranked `null` and failed open in merges.
+    pinSource: Object.freeze({ 'curated': 4, 'curated-geocoded': 3, 'geocoded-exact': 3, 'geocoded-approx': 2, 'page': 1 }),
     addressSource: Object.freeze({ 'curated': 3, 'geo-poi': 2, 'page': 2, 'venue-site': 2, 'inferred': 1 }),
     barSource: Object.freeze({ 'curated': 3, 'venue-site': 2, 'venue-site-identity': 2, 'page-adjacent': 2, 'geo-poi': 2, 'uncorroborated': 1 }),
     imageSource: Object.freeze({ 'og-image': 2, 'jsonld': 2, 'page': 1 }),

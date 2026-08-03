@@ -112,6 +112,42 @@ class BaseNormalizer {
             && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
     }
 
+    // CURATED-ADDRESS PIN HANDOFF (run 20260803-091019: the corpus's ONE
+    // curated bar carrying an `address` with no `coordinates` — "The Yard at 9
+    // Bob Note", 270 Meserole St — could never contribute a pin, so every
+    // event matched to it shipped with no `location` at all, and the
+    // sibling-venue tie-breaks that rank claimants by "carries curated
+    // coordinates" could never rank it either).
+    //
+    // A curated address is the owner's own record of where the venue IS —
+    // fully place-anchored (street, city, state, postal code), not a bare
+    // street line lifted off a flyer — so asking a geocoder about it is safe
+    // in exactly the way the unanchored scraped line #1619 removed was not.
+    // The geocode itself is async and belongs to OpenStreetMapNormalizer, so
+    // the sync curated rungs only HAND THE ADDRESS OVER on an underscore field
+    // (metadata — systematically excluded from notes/merge serialization);
+    // geocodeCuratedBarAddress is its sole consumer.
+    //
+    // Fail closed on every axis: only a curated bar with a non-empty address
+    // and NO usable curated coordinate pair qualifies, only while the event is
+    // still unpinned, and what is handed over is ALWAYS the curated address —
+    // never the event's own scraped one.
+    // Returns true when the handoff was stamped.
+    markCuratedAddressForGeocode(event, curatedBar) {
+        if (!event || !curatedBar || typeof curatedBar !== 'object') return false;
+        if (typeof event.location === 'string' && event.location.trim()) return false;
+        const curatedAddress = typeof curatedBar.address === 'string' ? curatedBar.address.trim() : '';
+        if (!curatedAddress) return false;
+        const curatedPin = typeof curatedBar.coordinates === 'string' ? curatedBar.coordinates.trim() : '';
+        if (this.isCoordinatePairString(curatedPin)) return false;
+        if (event._curatedPinAddress === curatedAddress) return false;
+        const curatedName = typeof curatedBar.name === 'string' ? curatedBar.name.trim() : '';
+        event._curatedPinAddress = curatedAddress;
+        event._curatedPinBar = curatedName;
+        console.log(`🗺️ CURATED PIN: curated bar "${curatedName || 'unnamed'}" has an address but no coordinates — handing "${curatedAddress}" to the geocode rung for "${event.title || 'unknown'}"`);
+        return true;
+    }
+
     normalize(event) {
         return event;
     }
@@ -364,6 +400,11 @@ class BarDataNormalizer extends BaseNormalizer {
                 event.location = matchedBar.coordinates;
                 event.pinSource = 'curated';
                 modified = true;
+            } else if (!event.location) {
+                // Curated bar with an address but no coordinates: hand the
+                // CURATED address to the async geocode rung rather than leave
+                // the event unpinned (see markCuratedAddressForGeocode).
+                this.markCuratedAddressForGeocode(event, matchedBar);
             }
 
             // Prefer the bar's Google Maps link if missing in event
@@ -1095,6 +1136,11 @@ class LocationNormalizer extends BaseNormalizer {
             event.location = curatedPin;
             event.pinSource = 'curated';
             filled.push('location');
+        } else if (!hasPin) {
+            // Same handoff the BarDataNormalizer rung makes: this curated
+            // record names the venue and its address but carries no pin, so
+            // the async geocode rung gets the CURATED address.
+            this.markCuratedAddressForGeocode(event, curated);
         }
         const curatedMaps = typeof curated.googleMaps === 'string' ? curated.googleMaps.trim() : '';
         if (!event.gmaps && curatedMaps) {
@@ -2292,6 +2338,97 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
         return variants.slice(0, MAX_GEOCODE_QUERIES_PER_EVENT);
     }
 
+    // CURATED-ADDRESS PIN RUNG — the first rung of the forward-geocode ladder,
+    // and the only one that geocodes something the EVENT did not supply.
+    //
+    // Its input is the address of the CURATED bar the sync rungs matched,
+    // handed over on _curatedPinAddress (see markCuratedAddressForGeocode). It
+    // is never a scraped address: a curated address is the owner's own record
+    // of where the venue is, complete with city and postal code, so it is
+    // fully place-anchored. The city-less street line #1619 refused ("619 E
+    // Pine" → a pin in southern Indiana for a Seattle event) cannot reach here
+    // — this rung reads ONE field and that field is curated. The same
+    // place-context guard still applies anyway: the query is built by
+    // buildGeocodeQueryVariants, which emits nothing at all for an address
+    // with no city anchor and no place context of its own.
+    //
+    // Exactly ONE query per curated address, issued through
+    // fetchDataWithCacheAndRateLimit like every other geocode in this file —
+    // the run-local memory cache and the adapter's persistent page cache both
+    // key on the request URL, and this rung's URL is identical for every event
+    // at that venue and identical across runs, so a curated address is
+    // geocoded once rather than once per event or once per run. No second
+    // store is introduced.
+    //
+    // The answer still has to earn the pin: the same grade gate, the same
+    // city-center radius / city-name checks and the same reverse cross-check
+    // (confirmGeocodeCandidate) every other rung passes through. Returns
+    // { location, grade, crossCheck, query, poiNames } or null.
+    async geocodeCuratedBarAddress(curatedAddress, context, httpAdapter, options) {
+        const { eventCity, cityCenter, resultLimit, title, verifyContext, rung } = context;
+        const variants = this.buildGeocodeQueryVariants(curatedAddress, eventCity, '');
+        const queryText = variants.length > 0 ? variants[0] : '';
+        if (!queryText) return null;
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryText)}&limit=${resultLimit}&addressdetails=1`;
+        let data = null;
+        try {
+            data = await this.fetchDataWithCacheAndRateLimit(url, options, httpAdapter);
+        } catch (err) {
+            console.log(`🗺️ OpenStreetMapNormalizer: Failed to geocode curated address "${curatedAddress}": ${err.message}`);
+            return null;
+        }
+        const inputHasHouseNumber = GEOCODE_HOUSE_NUMBER_RE.test(curatedAddress);
+        const verifyMode = verifyContext && verifyContext.verifyMode;
+        const graded = [];
+        for (const result of (Array.isArray(data) ? data : [])) {
+            const grade = this.gradeNominatimResult(result);
+            if (grade === 'coarse') {
+                const kind = result.addresstype || result.type || 'unknown';
+                console.warn(`🗺️ GEOCODE VERIFY: "${title}" refused generic pin (${kind}) for curated address "${curatedAddress}"`);
+                continue;
+            }
+            if (grade === 'street' && inputHasHouseNumber && verifyMode === 'enforce') continue;
+            graded.push({ result, grade });
+        }
+        if (graded.length === 0) return null;
+        let picked = null;
+        if (cityCenter) {
+            const nearest = this.pickNearestGeocodeCandidate(
+                graded.map(entry => entry.result), cityCenter, eventCity, queryText);
+            if (nearest) picked = { lat: nearest.lat, lon: nearest.lon, grade: graded[nearest.index].grade };
+        } else {
+            const first = graded[0].result;
+            if (first.lat && first.lon) {
+                if (eventCity && !this.geocodeResultMatchesCity(first, eventCity)) {
+                    console.warn(`🗺️ OpenStreetMapNormalizer: Curated-address geocode for "${queryText}" resolved outside event city "${eventCity}" ("${first.display_name || 'no display name'}") — ignoring coordinates`);
+                } else {
+                    picked = { lat: first.lat, lon: first.lon, grade: graded[0].grade };
+                }
+            }
+        }
+        if (!picked) return null;
+        const confirmed = await this.confirmGeocodeCandidate(
+            picked,
+            {
+                ...verifyContext,
+                address: curatedAddress,
+                inputHasHouseNumber,
+                streetSpecific: this.isStreetSpecificAddress(curatedAddress),
+                source: 'curated-address',
+                rung
+            },
+            httpAdapter
+        );
+        if (!confirmed.location) return null;
+        return {
+            location: confirmed.location,
+            grade: picked.grade,
+            crossCheck: confirmed.crossCheck,
+            query: queryText,
+            poiNames: Array.isArray(confirmed.poiNames) ? confirmed.poiNames : []
+        };
+    }
+
     async normalizeAsync(event, httpAdapter, pipelineOptions = {}) {
         if (!event || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return event;
 
@@ -2324,7 +2461,11 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
         // pin AND a street address from the venue+city lookup — but ONLY when
         // the hit's map POI name matches the bar (see findVenuePoiAdoption).
         const rescueBarName = typeof event.bar === 'string' ? event.bar.trim() : '';
-        if (!hasLocation && (hasAddress || rescueBarName)) {
+        // Curated address handed over by the sync curated rungs for a curated
+        // bar that has no curated coordinates (markCuratedAddressForGeocode).
+        const curatedPinAddress = typeof event._curatedPinAddress === 'string' ? event._curatedPinAddress.trim() : '';
+        const curatedPinBar = typeof event._curatedPinBar === 'string' ? event._curatedPinBar.trim() : '';
+        if (!hasLocation && (hasAddress || rescueBarName || curatedPinAddress)) {
             const address = hasAddress ? event.address.trim() : '';
             // Bare street strings geocode anywhere on the planet: a flyer-OCR typo like
             // "922 E. BURNSIDE" (real address: 722 E Burnside, Portland) resolved to
@@ -2380,6 +2521,38 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
             // below additionally runs the venue+city query, whose fuzzy
             // matcher may still know the venue (adoption + fusion detection).
             let venueRescueNominatimUsable = false;
+            // CURATED-ADDRESS PIN RUNG — runs FIRST (curated data beats
+            // derived) and only when the sync curated rungs handed over a
+            // curated address for a bar the corpus gave no coordinates. When
+            // it produces nothing, the event's own address rungs below run
+            // completely unchanged.
+            let curatedAddressPin = null;
+            if (curatedPinAddress) {
+                attempts += 1;
+                curatedAddressPin = await this.geocodeCuratedBarAddress(
+                    curatedPinAddress,
+                    { eventCity, cityCenter, resultLimit, title, verifyContext, rung: attempts },
+                    httpAdapter,
+                    options
+                );
+                if (curatedAddressPin) {
+                    resolvedLocation = curatedAddressPin.location;
+                    resolvedVerdict = {
+                        grade: curatedAddressPin.grade,
+                        crossCheck: curatedAddressPin.crossCheck,
+                        source: 'curated-address',
+                        rung: attempts
+                    };
+                    resolvedPoiNames = this.collectAcceptedPoiNames('', curatedAddressPin);
+                    event.location = resolvedLocation;
+                    event._geocodeQuery = curatedAddressPin.query;
+                    event._geocodeQueryHadAddress = true;
+                    modified = true;
+                    console.log(`🗺️ CURATED PIN: "${title}" pinned from curated bar "${curatedPinBar || 'unnamed'}" address "${curatedPinAddress}" -> ${resolvedLocation}`);
+                } else {
+                    console.log(`🗺️ CURATED PIN: curated address "${curatedPinAddress}" for "${curatedPinBar || 'unnamed'}" produced no usable pin — falling back to the event's own address rungs for "${title}"`);
+                }
+            }
             for (let i = 0; i < queryVariants.length && !resolvedLocation; i++) {
                 const queryText = queryVariants[i];
                 const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryText)}&limit=${resultLimit}&addressdetails=1`;
@@ -2741,9 +2914,19 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                 // reverse cross-check did not fail is our best pin
                 // (geocoded-exact). Everything else — street/photon/census-grade
                 // or a failed cross-check — is only approximate (geocoded-approx).
-                event.pinSource = (resolvedVerdict && resolvedVerdict.grade === 'exact' && resolvedVerdict.crossCheck !== 'fail')
-                    ? 'geocoded-exact'
-                    : 'geocoded-approx';
+                // A pin geocoded from the CURATED address is stamped
+                // 'curated-geocoded' — honest on both halves: the address is
+                // curated, the coordinates are the geocoder's reading of it,
+                // not a surveyed curated pin. It is deliberately NOT 'curated'
+                // (that would claim the corpus supplied the coordinates) and
+                // deliberately not 'geocoded-*' (those mean the pin was
+                // derived from the event's OWN address, which is what
+                // SharedCore.getAddressPinEvidence attributes them to).
+                event.pinSource = curatedAddressPin
+                    ? 'curated-geocoded'
+                    : ((resolvedVerdict && resolvedVerdict.grade === 'exact' && resolvedVerdict.crossCheck !== 'fail')
+                        ? 'geocoded-exact'
+                        : 'geocoded-approx');
                 // Retain the harvested map POI name for the results-UI evidence
                 // panel (underscore fields — display-only, systematically
                 // excluded from notes/merge serialization; only set when THIS
