@@ -2112,8 +2112,8 @@ class SharedCore {
         const platform = PLATFORM_IDENTITY_HOSTS.find(candidate =>
             host === candidate || host.endsWith(`.${candidate}`));
         if (!platform || host === platform) return false;
-        // No `new URL(` in scripts/ — take the path with the same regex shape
-        // used elsewhere in this file.
+        // The WHATWG URL parser is banned in scripts/ (platform purity), so
+        // take the path with the same regex shape used elsewhere in this file.
         const pathMatch = raw.match(/^https?:\/\/[^\/?#]+([^?#]*)/i);
         const path = pathMatch ? pathMatch[1] : '';
         return path === '' || path === '/';
