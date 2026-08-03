@@ -108,9 +108,11 @@ function buildEventHtml(cityKey, cityName, event) {
   const url = `${SITE_BASE}/${cityKey}/${encodeURIComponent(event.slug)}/`;
   // The flyer the OG card should paint. The artboard is 1200×630, so the
   // LANDSCAPE candidate wins when the event has one; otherwise the primary
-  // image (orientation unknown for most URLs) and finally nothing, which
-  // leaves the text-only card that has always been generated.
-  const flyerUrl = String(event.imageHorizontal || event.image || '').trim();
+  // image (orientation unknown for most URLs), then the vertical slot — the
+  // art slot is object-fit:contain, so portrait artwork is never distorted and
+  // showing it beats showing nothing. Finally nothing, which leaves the
+  // text-only card that has always been generated.
+  const flyerUrl = String(event.imageHorizontal || event.image || event.imageVertical || '').trim();
   const flyerMeta = /^https?:\/\//i.test(flyerUrl)
     ? `\n  <meta name="chunky:flyer" content="${sanitize(flyerUrl).replace(/"/g, '&quot;')}">`
     : '';

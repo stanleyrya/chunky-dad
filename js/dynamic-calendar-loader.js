@@ -2175,32 +2175,71 @@ class DynamicCalendarLoader extends CalendarCore {
         return this.escapeCardText(raw);
     }
 
+    // A raw image value turned into something that is safe to hand an <img
+    // src>, or '' when it is not usable as an image at all. Returned value is
+    // RAW (not entity-escaped) — callers escape it for the attribute.
+    //
+    // Rejects, in order:
+    //  - blanks,
+    //  - javascript:/vbscript: and every data: URL — the 1×1 transparent GIF
+    //    placeholder some pages carry for lazy loading lives behind data:, and
+    //    it must never render as an event's artwork,
+    //  - anything that is neither absolute nor root-relative. A page-relative
+    //    value resolves against the CITY PAGE, which is how a bare
+    //    "3DOLLARBILLBK.COM" once shipped as a link to /nyc/3DOLLARBILLBK.COM;
+    //    the same value in an src is that bug with a broken <img> at the end of
+    //    it. The one rescue is a scheme-less host whose path still ends in an
+    //    image extension ("example.com/flyer.jpg") — a real flyer missing its
+    //    scheme. A bare host with no image path is a WEBSITE in the wrong
+    //    field, so it is dropped without ever being requested.
+    normalizeFlyerUrl(url) {
+        const raw = String(url === null || url === undefined ? '' : url).trim();
+        if (!raw) return '';
+        if (/^(javascript|data|vbscript):/i.test(raw.replace(/[\s\u0000-\u001f]/g, ''))) return '';
+        if (/^https?:\/\//i.test(raw)) return raw;
+        if (/^\/\//.test(raw)) return raw;                  // protocol-relative
+        if (/^\//.test(raw)) return raw;                    // root-relative (downloaded flyers)
+        // host.tld/…/name.jpg with the scheme accidentally missing.
+        if (/^[^\s/?#@]+\.[a-z]{2,}\/\S*\.(?:png|jpe?g|gif|webp|avif|svg|bmp)(?:[?#]|$)/i.test(raw)) {
+            return `https://${raw}`;
+        }
+        return '';
+    }
+
     // Ordered flyer candidates for one event, best first, as
-    // { u: rawUrl, o: 'portrait' | 'landscape' | '' } entries. `want` is the
+    // { u: url, o: 'portrait' | 'landscape' | '' } entries. `want` is the
     // orientation the layout prefers; `o` is only set when the orientation is
     // KNOWN (i.e. the URL came out of an orientation slot), which is the
     // minority case — orientation is unknowable for most URLs, so an empty `o`
     // has to keep behaving exactly like today's single-image card.
     //
-    // EventSchema.pickImageForOrientation owns the preference order when it is
-    // available; the local fallback (wanted slot → primary → other slot) keeps
-    // this working on its own.
-    getFlyerCandidates(event, want = 'portrait') {
+    // The rule the site follows everywhere: prefer the wanted orientation, then
+    // show whatever else exists rather than nothing. EventSchema
+    // .pickImageForOrientation owns the head of that order when it is
+    // available; the local order (wanted slot → primary → other slot) is the
+    // same answer and keeps this working on its own.
+    //
+    // Every candidate is passed through normalizeFlyerUrl, so a data: /
+    // page-relative / blank value drops out of the chain instead of becoming a
+    // broken <img> — including out of the data-flyer-fallbacks queue.
+    getFlyerCandidates(event, want = 'landscape') {
         if (!event) return [];
-        const readSlot = value => (typeof value === 'string' ? value.trim() : '');
+        const readSlot = value => this.normalizeFlyerUrl(value);
         const vertical = readSlot(event.imageVertical);
         const horizontal = readSlot(event.imageHorizontal);
         const primary = readSlot(event.image);
-        const wantedSlot = want === 'landscape' ? horizontal : vertical;
-        const otherSlot = want === 'landscape' ? vertical : horizontal;
+        const wantedSlot = want === 'portrait' ? vertical : horizontal;
+        const otherSlot = want === 'portrait' ? horizontal : vertical;
 
         let preferred = wantedSlot;
         const schema = typeof EventSchema !== 'undefined' ? EventSchema : null;
         if (schema && typeof schema.pickImageForOrientation === 'function') {
             try {
-                const picked = schema.pickImageForOrientation(event, want);
-                if (typeof picked === 'string' && picked.trim()) {
-                    preferred = picked.trim();
+                // Normalized so it compares equal to the slots below (and so a
+                // schema pick that is itself unusable falls back to wantedSlot).
+                const picked = this.normalizeFlyerUrl(schema.pickImageForOrientation(event, want));
+                if (picked) {
+                    preferred = picked;
                 }
             } catch (error) {
                 logger.debug('CALENDAR', 'pickImageForOrientation failed; using local flyer order', {
@@ -2217,13 +2256,14 @@ class DynamicCalendarLoader extends CalendarCore {
 
         const candidates = [];
         const seen = new Set();
-        [preferred, wantedSlot, primary, otherSlot].forEach(url => {
+        const push = (url, orientation) => {
             if (!url || seen.has(url)) return;
             seen.add(url);
-            // safeCardUrl doubles as the scheme guard: '' means javascript:/data:.
-            if (!this.safeCardUrl(url)) return;
-            candidates.push({ u: url, o: orientationOf(url) });
-        });
+            candidates.push({ u: url, o: orientation || '' });
+        };
+        // Each entry is already normalizeFlyerUrl'd, so '' here means the slot
+        // was empty or unusable.
+        [preferred, wantedSlot, primary, otherSlot].forEach(url => push(url, orientationOf(url)));
         return candidates;
     }
 
@@ -2661,12 +2701,15 @@ class DynamicCalendarLoader extends CalendarCore {
         // back to the exact original URL. data-flyer-url is kept so ensureFlyerLoaded()
         // still recognises the container.
         //
-        // The card shows the flyer at its natural aspect ratio in a fairly wide
-        // box, so it asks for the PORTRAIT candidate; the rest of the chain is
-        // queued in data-flyer-fallbacks for advanceFlyerImage(). The known
-        // orientation rides along on the container so CSS can cap portrait and
-        // landscape differently BEFORE the image loads (no layout shift).
-        const flyerCandidates = this.getFlyerCandidates(event, 'portrait');
+        // The card shows the flyer at its natural aspect ratio in a box as wide
+        // as the card, so it asks for the LANDSCAPE candidate — horizontal
+        // artwork fills that box without eating the whole viewport. Anything
+        // else the event has (primary, then vertical) still shows rather than
+        // nothing; the rest of the chain is queued in data-flyer-fallbacks for
+        // advanceFlyerImage(). The known orientation rides along on the
+        // container so CSS can cap portrait and landscape differently BEFORE
+        // the image loads (no layout shift).
+        const flyerCandidates = this.getFlyerCandidates(event, 'landscape');
         const flyerPick = flyerCandidates[0] || null;
         const flyerUrl = flyerPick ? this.safeCardUrl(flyerPick.u) : '';
         const flyerOrientationAttr = flyerPick && flyerPick.o
