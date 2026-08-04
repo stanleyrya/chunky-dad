@@ -341,6 +341,21 @@ function buildExportIssueJson(event, options = {}) {
     }
 }
 
+// Same payload, no indentation — for embedding in the data-payload attribute
+// ONLY. That attribute is percent-encoded, and percent-encoding charges 3
+// bytes for every indent space (`%20`), so indent-2 was the single largest
+// item left on the results page after the 2026-08-03 size fix: 240 KB of a
+// 1462 KB page. The page-side handler re-indents before showing the textarea,
+// so what the owner copies is unchanged. buildExportIssueJson stays pretty —
+// it is the exported, tested serialization.
+function buildExportIssueCompactJson(event, options = {}) {
+    try {
+        return JSON.stringify(buildExportIssuePayload(event, options));
+    } catch (error) {
+        return JSON.stringify({ error: `Failed to build export payload: ${error.message}` });
+    }
+}
+
 // One value cell: truncated preview with the full value in title= for long
 // values, missing values as an em dash.
 function buildValueCellHtml(value) {
@@ -358,7 +373,7 @@ function buildValueCellHtml(value) {
 // exportProvenanceIssue() handler (defined by the display's script block)
 // reveals the textarea, selects it and attempts document.execCommand('copy').
 function buildExportControlsHtml(event, options = {}) {
-    const encoded = encodeURIComponent(buildExportIssueJson(event, options));
+    const encoded = encodeURIComponent(buildExportIssueCompactJson(event, options));
     return `
             <div class="provenance-export">
                 <button type="button" class="provenance-export-btn" onclick="exportProvenanceIssue(this)" data-payload="${escapeHtml(encoded)}">📤 Export issue</button>
@@ -434,6 +449,7 @@ const EventProvenance = {
     buildProvenanceModel,
     buildExportIssuePayload,
     buildExportIssueJson,
+    buildExportIssueCompactJson,
     buildEventProvenanceSectionHtml
 };
 
@@ -448,6 +464,7 @@ if (typeof module !== 'undefined' && module.exports) {
         buildProvenanceModel,
         buildExportIssuePayload,
         buildExportIssueJson,
+    buildExportIssueCompactJson,
         buildEventProvenanceSectionHtml
     };
 } else if (typeof window !== 'undefined') {
