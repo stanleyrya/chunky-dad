@@ -308,7 +308,9 @@ const scraperCities = {
     "timezone": "America/Mexico_City",
     "patterns": [
       "puerto vallarta",
-      "vallarta"
+      "vallarta",
+      "pv",
+      "p.v"
     ],
     "coordinates": {
       "lat": 20.6534,

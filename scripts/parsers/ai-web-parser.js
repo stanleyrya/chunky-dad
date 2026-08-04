@@ -485,6 +485,10 @@ class AiWebParser {
         this.extractionLimits = {
             yearWindowPastDays: 45,
             yearWindowFutureDays: 210,
+            // Minimum model confidence for a verbatim four-digit source year to
+            // be treated as stated fact instead of a repairable guess
+            // (see resolveExplicitSourceYear).
+            explicitSourceYearMinConfidence: 90,
             // Small iteration limit for timezone offset convergence around DST boundaries.
             timezoneConvergenceIterations: 4,
             millisPerDay: 24 * 60 * 60 * 1000,
@@ -8487,6 +8491,17 @@ class AiWebParser {
                 };
                 return;
             }
+            // Explicitly stated source years (see resolveExplicitSourceYear):
+            // union across passes exactly like the pin flags above, so a start
+            // year stated in one pass is not shadowed by a retry that only
+            // covered the end.
+            if (key === '__explicitSourceYears' && value && typeof value === 'object') {
+                merged.__explicitSourceYears = {
+                    ...(merged.__explicitSourceYears && typeof merged.__explicitSourceYears === 'object' ? merged.__explicitSourceYears : {}),
+                    ...value
+                };
+                return;
+            }
             // Per-field model evidence strings (see parseAndFilterConfidence): union
             // across passes like the pin flags — each pass's evidence covers the
             // fields that pass extracted. Consumed by the evidence gate at pass time;
@@ -10149,6 +10164,19 @@ TEXT:
                                 filteredEvent.__weekdayPinnedYears = {};
                             }
                             filteredEvent.__weekdayPinnedYears[pinBucket] = true;
+                        }
+                        // Explicitly stated source year (see
+                        // resolveExplicitSourceYear). Same seam, same reason:
+                        // the evidence string and the confidence exist HERE
+                        // and nowhere downstream. Resolved against the
+                        // post-pin value so a weekday pin, which is itself
+                        // deterministic, stays the authority when it fired.
+                        const explicitYear = this.resolveExplicitSourceYear(value, fieldData.evidence, confidence);
+                        if (explicitYear !== null) {
+                            if (!filteredEvent.__explicitSourceYears || typeof filteredEvent.__explicitSourceYears !== 'object') {
+                                filteredEvent.__explicitSourceYears = {};
+                            }
+                            filteredEvent.__explicitSourceYears[pinBucket] = explicitYear;
                         }
                     }
                     filteredEvent[key] = value;
@@ -12820,8 +12848,24 @@ TEXT:
             end: Boolean(weekdayPinnedYears.end) || (!endProvided && !endDateRaw && Boolean(weekdayPinnedYears.start))
         };
 
-        let { startDate, endDate } = this.normalizeEventDates(finalStartDate, finalEndDate, effectivePinnedYears);
+        // Explicitly stated source years (see resolveExplicitSourceYear) ride
+        // alongside the pin flags; both say "this year is not a guess".
+        const explicitSourceYears = aiEvent.__explicitSourceYears && typeof aiEvent.__explicitSourceYears === 'object'
+            ? aiEvent.__explicitSourceYears
+            : {};
+
+        let { startDate, endDate, archivalSourceYear } = this.normalizeEventDates(finalStartDate, finalEndDate, effectivePinnedYears, explicitSourceYears);
         console.log(`🤖 AI Web: Normalized dates — startDate=${startDate instanceof Date ? startDate.toISOString() : startDate}, endDate=${endDate instanceof Date ? endDate.toISOString() : endDate}`);
+
+        // Archived event: the source states its year outright and that year is
+        // already past. Previously the window repair walked these forward
+        // silently — a 2021 charity brunch ("SUNDAY/DOMINGO 01.31.2021",
+        // confidence 100) shipped as a 2027 event (run 20260804). Drop it and
+        // say why, rather than publishing a fabricated date.
+        if (archivalSourceYear) {
+            console.warn(`🤖 AI Web: Dropping "${title}" — source states an explicit ${archivalSourceYear} date (${startDate instanceof Date ? startDate.toISOString() : startDate}); this is an archived event, not a year to re-anchor`);
+            return null;
+        }
 
         // Recurring events survive without a concrete date (run
         // 20260728-113040: The Lumberyard's events are recurring+dateless —
@@ -13405,6 +13449,52 @@ TEXT:
         return null;
     }
 
+    // A four-digit year the model copied VERBATIM off the page, at high
+    // confidence, is a stated fact — not a hallucinated guess for the window
+    // repair to "fix". BeefDip's archived 2021 charity brunch arrived as
+    // {"startDate": "2021-01-31", "evidence": "SUNDAY/DOMINGO 01.31.2021",
+    // "confidence": 100} and adjustLikelyEventYear walked it forward to 2027
+    // (run 20260804) — a six-year relocation of an event the source dated
+    // unambiguously.
+    //
+    // The guard is deliberately narrow, and every condition is load-bearing:
+    //   • confidence >= explicitSourceYearMinConfidence — a hedged year is
+    //     still a guess and stays repairable.
+    //   • the value carries a 19xx/20xx year at all — bare "Aug 22" values
+    //     (the actual hallucination case the window repair exists for) are
+    //     untouched.
+    //   • the SAME four digits appear literally in the model's evidence
+    //     string — the anti-hallucination gate's own standard. A year the
+    //     model invented cannot pass this; only one printed on the page can.
+    // Returns the year number, or null when the year stays repairable.
+    resolveExplicitSourceYear(value, evidence, confidence) {
+        const minConfidence = this.extractionLimits && typeof this.extractionLimits.explicitSourceYearMinConfidence === 'number'
+            ? this.extractionLimits.explicitSourceYearMinConfidence
+            : 90;
+        if (typeof confidence !== 'number' || !Number.isFinite(confidence) || confidence < minConfidence) return null;
+
+        const rawValue = String(value === null || value === undefined ? '' : value);
+        const valueYearMatch = rawValue.match(/(?:19|20)\d{2}/);
+        if (!valueYearMatch) return null;
+
+        const evidenceText = String(evidence || '');
+        if (!evidenceText || !evidenceText.includes(valueYearMatch[0])) return null;
+
+        const year = Number(valueYearMatch[0]);
+        return Number.isFinite(year) ? year : null;
+    }
+
+    // True when `date` still carries the explicitly stated year (so skipping
+    // the window repair is honoring the source rather than freezing a value
+    // some other stage already moved). Accepts either calendar view: a
+    // UTC-midnight date reads as the previous year in negative-offset host
+    // timezones.
+    dateCarriesExplicitYear(date, explicitYear) {
+        if (!(date instanceof Date) || Number.isNaN(date.getTime())) return false;
+        if (typeof explicitYear !== 'number' || !Number.isFinite(explicitYear)) return false;
+        return date.getFullYear() === explicitYear || date.getUTCFullYear() === explicitYear;
+    }
+
     // Extract a weekday stated adjacent to a date in free text ("Sat, Aug 22",
     // "Aug 22, Saturday", "Sat 8/22"). Returns the JS day index (0=Sunday) or
     // null when no weekday sits next to a date-looking token.
@@ -13620,18 +13710,36 @@ TEXT:
         return { value: chosen.text, pinnedYear: chosen.year, aiYear };
     }
 
-    normalizeEventDates(startDate, endDate, weekdayPinnedYears = null) {
+    normalizeEventDates(startDate, endDate, weekdayPinnedYears = null, explicitSourceYears = null) {
         const pinned = weekdayPinnedYears && typeof weekdayPinnedYears === 'object' ? weekdayPinnedYears : {};
+        const explicit = explicitSourceYears && typeof explicitSourceYears === 'object' ? explicitSourceYears : {};
+        // An explicitly stated, high-confidence source year is as deterministic
+        // as a weekday pin and is held the same way — the window repair does
+        // not get to move it (see resolveExplicitSourceYear).
+        const startIsExplicit = this.dateCarriesExplicitYear(startDate, explicit.start);
+        const endIsExplicit = this.dateCarriesExplicitYear(endDate, explicit.end);
         // A weekday-pinned year is deterministic — never "repair" it toward the
         // window (that is exactly the wrong-weekday failure pinning prevents).
-        const adjustedStart = pinned.start && startDate instanceof Date && !Number.isNaN(startDate.getTime())
+        const adjustedStart = (pinned.start || startIsExplicit) && startDate instanceof Date && !Number.isNaN(startDate.getTime())
             ? new Date(startDate)
             : this.adjustLikelyEventYear(startDate);
-        const adjustedEnd = pinned.end && endDate instanceof Date && !Number.isNaN(endDate.getTime())
+        const adjustedEnd = (pinned.end || endIsExplicit) && endDate instanceof Date && !Number.isNaN(endDate.getTime())
             ? new Date(endDate)
             : this.adjustLikelyEventYear(endDate);
         if (!adjustedStart) {
-            return { startDate: null, endDate: null };
+            return { startDate: null, endDate: null, archivalSourceYear: null };
+        }
+
+        // Holding the stated year makes an ARCHIVED event visible as such
+        // instead of laundering it into the future. A source-dated event that
+        // sits before the past edge of the window is over; report the year and
+        // let the caller drop it.
+        if (startIsExplicit) {
+            const dayMs = this.extractionLimits.millisPerDay;
+            const windowStart = new Date(this.now().getTime() - (this.extractionLimits.yearWindowPastDays * dayMs));
+            if (adjustedStart < windowStart) {
+                return { startDate: adjustedStart, endDate: adjustedEnd || new Date(adjustedStart), archivalSourceYear: explicit.start };
+            }
         }
         let normalizedEnd = adjustedEnd || new Date(adjustedStart);
         if (normalizedEnd < adjustedStart) {
@@ -13656,7 +13764,7 @@ TEXT:
                 normalizedEnd = new Date(adjustedStart);
             }
         }
-        return { startDate: adjustedStart, endDate: normalizedEnd };
+        return { startDate: adjustedStart, endDate: normalizedEnd, archivalSourceYear: null };
     }
 
     adjustLikelyEventYear(date) {
