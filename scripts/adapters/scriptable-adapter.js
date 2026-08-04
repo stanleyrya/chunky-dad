@@ -385,6 +385,14 @@ const SIMPLE_URL_PARSE_REGEX =
 const HEADER_LOGO_URL = "https://chunky.dad/favicons/logo-hero.png";
 const HEADER_LOGO_CACHE_FILE = "logo-hero.png";
 const HEADER_LOGO_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+// The header logo is drawn at ~50 CSS px. The cached source is 320x320 and
+// 96,923 bytes — photo-like pixels in a lossless format, which inlines as a
+// ~129 KB base64 data URI, by far the heaviest single non-card item on the
+// page. Downscaled to 160 px (still 3x the drawn size, so it stays crisp on a
+// 3x screen) and re-encoded as JPEG it costs ~16 KB instead. The re-encoded
+// data URI is cached next to the PNG so it is built once, not once per page.
+const HEADER_LOGO_INLINE_PX = 160;
+const HEADER_LOGO_INLINE_CACHE_FILE = "logo-hero-inline.txt";
 const { EventSchema: SharedEventSchema } = importModule("event-schema");
 const { SharedCore } = importModule("shared-core");
 const { RunLogSummary } = importModule("run-log-summary");
@@ -567,9 +575,121 @@ class ScriptableAdapter {
     return label;
   }
 
+  // Inlined header logo, memoized for the life of the adapter. Paging renders
+  // the same chrome once per page, so this must never re-read, re-decode and
+  // re-encode the image per page — and `undefined` vs `null` distinguishes
+  // "not built yet" from "built, and there is no logo".
   async loadHeaderLogoData() {
+    if (typeof this._headerLogoDataUri !== "undefined") {
+      return this._headerLogoDataUri;
+    }
+    this._headerLogoDataUri = await this.buildHeaderLogoDataUri();
+    return this._headerLogoDataUri;
+  }
+
+  // Build (or read back) the small inlined logo. Order:
+  //   1. the cached data URI string — nothing is decoded or re-encoded.
+  //   2. the cached/downloaded PNG, downscaled and JPEG-encoded, then cached.
+  //   3. the full-size PNG data URI (old behaviour) if this device has no
+  //      DrawContext/Data.fromJPEG — degrade heavier, never blank.
+  async buildHeaderLogoDataUri() {
+    const inlinePath = this.fm.joinPath(
+      this.cacheDir,
+      HEADER_LOGO_INLINE_CACHE_FILE,
+    );
+    try {
+      if (this.fm.fileExists(inlinePath)) {
+        const mtime = this.fm.modificationDate(inlinePath);
+        if (mtime && Date.now() - mtime.getTime() < HEADER_LOGO_CACHE_TTL_MS) {
+          const cached = this.fm.readString(inlinePath);
+          if (typeof cached === "string" && cached.indexOf("data:image/") === 0) {
+            return cached;
+          }
+        }
+      }
+    } catch (error) {
+      console.log(
+        `📱 Scriptable: Inline logo cache read failed: ${error.message}`,
+      );
+    }
+
     const logoImage = await this.loadHeaderLogoImage();
-    return logoImage ? this.imageToDataUri(logoImage) : null;
+    if (!logoImage) return null;
+    const scaled = this.downscaleImage(logoImage, HEADER_LOGO_INLINE_PX);
+    const dataUri =
+      this.imageToJpegDataUri(scaled) || this.imageToDataUri(scaled);
+    if (!dataUri) return null;
+    console.log(
+      `📱 Scriptable: Header logo inlined at ${Math.round(ScriptableAdapter.utf8ByteLength(dataUri) / 1024)} KB (${HEADER_LOGO_INLINE_PX}px ${dataUri.indexOf("data:image/jpeg") === 0 ? "JPEG" : "PNG"})`,
+    );
+    try {
+      if (!this.fm.fileExists(this.cacheDir)) {
+        this.fm.createDirectory(this.cacheDir, true);
+      }
+      this.fm.writeString(inlinePath, dataUri);
+    } catch (error) {
+      console.log(
+        `📱 Scriptable: Inline logo cache write failed: ${error.message}`,
+      );
+    }
+    return dataUri;
+  }
+
+  // Redraw an Image at most `maxPx` on its longest side. Returns the original
+  // image unchanged if it is already small enough or if the drawing globals
+  // are missing (headless test/server runs), so callers never have to branch.
+  downscaleImage(image, maxPx) {
+    try {
+      if (!image || !image.size) return image;
+      if (
+        typeof DrawContext === "undefined" ||
+        typeof Size === "undefined" ||
+        typeof Rect === "undefined"
+      ) {
+        return image;
+      }
+      const width = Number(image.size.width) || 0;
+      const height = Number(image.size.height) || 0;
+      if (width <= 0 || height <= 0) return image;
+      if (width <= maxPx && height <= maxPx) return image;
+      const scale = Math.min(maxPx / width, maxPx / height);
+      const targetW = Math.max(1, Math.round(width * scale));
+      const targetH = Math.max(1, Math.round(height * scale));
+      const ctx = new DrawContext();
+      ctx.size = new Size(targetW, targetH);
+      // Points, not pixels: without this a 3x screen would redraw at 480 px
+      // and the byte win would evaporate on exactly the devices that matter.
+      ctx.respectScreenScale = false;
+      // JPEG has no alpha; an opaque canvas keeps a transparent source from
+      // matting to black against the header gradient.
+      ctx.opaque = true;
+      if (typeof Color !== "undefined" && typeof Color.white === "function") {
+        ctx.setFillColor(Color.white());
+        ctx.fillRect(new Rect(0, 0, targetW, targetH));
+      }
+      ctx.drawImageInRect(image, new Rect(0, 0, targetW, targetH));
+      return ctx.getImage() || image;
+    } catch (error) {
+      console.log(`📱 Scriptable: Logo downscale failed: ${error.message}`);
+      return image;
+    }
+  }
+
+  imageToJpegDataUri(image) {
+    if (!image) return null;
+    try {
+      if (typeof Data === "undefined" || typeof Data.fromJPEG !== "function") {
+        return null;
+      }
+      const data = Data.fromJPEG(image);
+      const base64 = data && data.toBase64String();
+      return base64 ? `data:image/jpeg;base64,${base64}` : null;
+    } catch (error) {
+      console.log(
+        `📱 Scriptable: Logo JPEG conversion failed: ${error.message}`,
+      );
+      return null;
+    }
   }
 
   async loadHeaderLogoImage() {
@@ -5325,25 +5445,21 @@ class ScriptableAdapter {
   // Rich UI presentation using WebView with HTML
   async presentRichResults(results) {
     try {
-      // Generate HTML for rich display (before the presenting log so the
-      // size line lands next to it — WebView.loadHTML fails SILENTLY with a
-      // white screen past ~1 MB, so the size must be in the log by itself)
-      const html = await this.generateRichHTML(results);
-      console.log(
-        `📱 Scriptable: Results HTML size: ${Math.round(html.length / 1024)} KB`,
-      );
-      // The line above counts UTF-16 code units; WebKit holds UTF-8 bytes,
-      // and the difference on a page this size is tens of KB.
-      console.log(
-        `📱 Scriptable: Results HTML size (UTF-8 bytes): ${Math.round(ScriptableAdapter.utf8ByteLength(html) / 1024)} KB`,
-      );
-      console.log("📱 Scriptable: Presenting results UI...");
-
       // Present using an instance WebView so page buttons can signal native
       // via shouldAllowRequest (assigned BEFORE present() — the reliable
       // webview→native pattern, see presentReviewResults). Currently used by
       // the discovered-venue "Copy parser entry" buttons (chunkyscrape://).
       const venueEntrySnippets = this.collectVenueEntrySnippets(results);
+      // ------------------------------------------------------------------
+      // EVERYTHING THE OWNER TAPPED LIVES OUT HERE, ABOVE THE PAGING LOOP.
+      //
+      // A large run is now shown a page at a time, and each page is its own
+      // present() cycle. If this state were per-page it would be silently
+      // discarded every time the sheet re-opened — the owner's page-1 bear
+      // verdicts would vanish when page 2 appeared, and he would have no way
+      // to tell. Overrides accumulate across every page and are applied ONCE,
+      // after the last page is dismissed.
+      // ------------------------------------------------------------------
       // Manual bear/not-bear override taps recorded during the WebView session,
       // applied after dismissal. Keyed by namespaced card id ("k<i>" kept /
       // "d<i>" dropped) so repeat taps stay idempotent and the two directions
@@ -5356,75 +5472,172 @@ class ScriptableAdapter {
       // Venue-queue taps this session: candidate index → timesSeen after the
       // write. Repeat taps re-flash feedback without re-writing the queue.
       const venueQueueTaps = {};
-      // Liveness beacons the page fires on DOM-ready and after first paint.
-      // present() resolves the same way whether WebKit rendered the page or
-      // silently killed its content process, so this array — and above all
-      // its emptiness — is the only evidence of which one happened.
-      const pageBeacons = [];
-      const webView = new WebView();
-      await webView.loadHTML(html);
-      webView.shouldAllowRequest = (request) => {
-        const url = request && request.url ? String(request.url) : "";
-        if (url.indexOf("chunkyscrape://") !== 0) {
-          return true; // normal navigation (links, about:blank, …)
-        }
-        const params = this.parseReviewActionUrl(url);
-        if (params.a === "copy-venue") {
-          const snippet = venueEntrySnippets[params.id];
-          if (typeof snippet === "string" && snippet.length > 0) {
-            // Fire-and-forget: the handler must return a bool synchronously
-            this.copyVenueEntryAndReport(snippet, params.id, webView);
+
+      // Paging state. `pendingPage` is set by a pager tap on the current page
+      // and consumed after that page's sheet is dismissed; null means "done",
+      // which is also what a plain swipe-down with no tap means. That is the
+      // finish-early path: review page 1, dismiss, execute.
+      let currentPage = 1;
+      let pendingPage = null;
+      let pageCount = 1;
+      let presentedPages = 0;
+
+      for (;;) {
+        pendingPage = null;
+        // A throw inside this loop must NOT unwind past the override
+        // application below. Before paging there was one render and one
+        // present, and no tap could exist before them, so a throw cost
+        // nothing. Now a failed page 2 would silently discard every verdict
+        // the owner recorded on page 1 and skip the execute prompt entirely.
+        // A page that fails ends PAGING; it does not end the review.
+        try {
+          // Generate HTML for rich display (before the presenting log so the
+          // size line lands next to it — WebView.loadHTML fails SILENTLY with a
+          // white screen past ~1 MB, so the size must be in the log by itself)
+          const html = await this.generateRichHTML(results, {
+            target: "scriptable",
+            page: currentPage,
+          });
+          pageCount = this.getResultsPageCount();
+          if (currentPage > pageCount) currentPage = pageCount;
+          console.log(
+            `📱 Scriptable: Results HTML size: ${Math.round(html.length / 1024)} KB`,
+          );
+          // The line above counts UTF-16 code units; WebKit holds UTF-8 bytes,
+          // and the difference on a page this size is tens of KB.
+          console.log(
+            `📱 Scriptable: Results HTML size (UTF-8 bytes): ${Math.round(ScriptableAdapter.utf8ByteLength(html) / 1024)} KB`,
+          );
+          if (pageCount > 1) {
+            console.log(
+              `📱 Scriptable: 📄 Presenting results page ${currentPage} of ${pageCount} — taps on every page are kept and applied once, after the last one.`,
+            );
           }
-        } else if (params.a === "mark-bear" || params.a === "mark-not-bear") {
-          // Fire-and-forget: records the override natively; the page gets
-          // best-effort "Marked ✓" feedback via evaluateJavaScript.
-          this.recordBearOverrideAndReport(
-            params.a,
-            params.id,
-            results,
-            bearOverridePending,
-            webView,
+          console.log("📱 Scriptable: Presenting results UI...");
+
+          // Liveness beacons the page fires on DOM-ready and after first paint.
+          // present() resolves the same way whether WebKit rendered the page or
+          // silently killed its content process, so this array — and above all
+          // its emptiness — is the only evidence of which one happened.
+          // Per PAGE, so one bad page in a run is still visible as a bad page.
+          const pageBeacons = [];
+          const webView = new WebView();
+          await webView.loadHTML(html);
+          webView.shouldAllowRequest = (request) => {
+            const url = request && request.url ? String(request.url) : "";
+            if (url.indexOf("chunkyscrape://") !== 0) {
+              return true; // normal navigation (links, about:blank, …)
+            }
+            const params = this.parseReviewActionUrl(url);
+            if (params.a === "page" || params.a === "page-done") {
+              // Arm the next page (or "finish"). Nothing can dismiss a presented
+              // WebView from native, so the sheet's own swipe-down is what hands
+              // control back here; the page already told the owner that on tap.
+              const requested = Number(params.id);
+              pendingPage =
+                params.a === "page-done" ||
+                !Number.isFinite(requested) ||
+                requested < 1 ||
+                requested > pageCount
+                  ? null
+                  : requested;
+              console.log(
+                pendingPage
+                  ? `📱 Scriptable: 📄 Page ${pendingPage} armed — swipe down to open it (taps so far are kept).`
+                  : "📱 Scriptable: 📄 Review marked done — swipe down to apply taps and continue.",
+              );
+            } else if (params.a === "copy-venue") {
+              const snippet = venueEntrySnippets[params.id];
+              if (typeof snippet === "string" && snippet.length > 0) {
+                // Fire-and-forget: the handler must return a bool synchronously
+                this.copyVenueEntryAndReport(snippet, params.id, webView);
+              }
+            } else if (params.a === "mark-bear" || params.a === "mark-not-bear") {
+              // Fire-and-forget: records the override natively; the page gets
+              // best-effort "Marked ✓" feedback via evaluateJavaScript.
+              this.recordBearOverrideAndReport(
+                params.a,
+                params.id,
+                results,
+                bearOverridePending,
+                webView,
+              );
+            } else if (params.a === "queue-venue") {
+              // Fire-and-forget: appends the candidate to the gathering-only
+              // bar-additions queue; the page gets best-effort "Queued ✓"
+              // feedback via evaluateJavaScript.
+              this.queueVenueCandidateAndReport(
+                params.id,
+                results,
+                venueQueueTaps,
+                webView,
+              );
+            } else if (params.a === "open-url") {
+              // Fire-and-forget: opens the registered map verify link in Safari
+              // ON TOP of the results sheet (the WebView never navigates).
+              this.openMapVerifyUrl(params.id);
+            } else if (params.a === "export-ics") {
+              // Fire-and-forget: builds the recurring event's ICS natively and
+              // hands it to DocumentPicker/ShareSheet (the WebView never
+              // navigates; recurring series are export-only, never auto-written).
+              this.exportRecurringEventIcs(params.id);
+            } else if (params.a === "copy-logs") {
+              // Fire-and-forget: the run log is no longer embedded in the page,
+              // so 📋 Copy / 📋 Compact ask native for it here.
+              this.copyRunLogAndReport(params.id, webView);
+            } else if (params.a === "ai-prompts") {
+              // Fire-and-forget: native owns the prompt bodies and presents the
+              // picker on top of the sheet (same pattern as Safari/DocumentPicker).
+              this.presentAiPromptPickerAndCopy(webView);
+            } else if (params.a === "beacon") {
+              this.recordResultsPageBeacon(params.id, params.d, pageBeacons);
+            }
+            return false; // cancel the fake navigation; the page stays put
+          };
+          // If the page could not be shed under the render ceiling, say so through
+          // the ONE channel that survives a document WebKit refuses to run: a
+          // native Alert, raised before the sheet, not a banner buried inside it.
+          await this.warnResultsPageUnrenderable();
+          await webView.present(true);
+          presentedPages += 1;
+          // The page's own account of whether it ever rendered. Logged AFTER the
+          // sheet closes so a blank review leaves a different trace than a real one.
+          if (pageCount > 1) {
+            console.log(
+              `📱 Scriptable: 📄 Page ${currentPage} of ${pageCount} dismissed.`,
+            );
+          }
+          this.reportResultsPageLiveness(pageBeacons);
+
+          if (pendingPage === null || pendingPage === currentPage) break;
+          currentPage = pendingPage;
+          // Runaway guard: a page can only be re-armed so many times before
+          // something is wrong, and an unbounded loop would trap the run.
+          if (presentedPages > pageCount * 20) {
+            console.log(
+              "📱 Scriptable: 📄 Stopping the results pager — too many page presentations for this run.",
+            );
+            break;
+          }
+        } catch (pageError) {
+          console.log(
+            `📱 Scriptable: ✗ Failed to present results page ${currentPage}: ${pageError.message}`,
           );
-        } else if (params.a === "queue-venue") {
-          // Fire-and-forget: appends the candidate to the gathering-only
-          // bar-additions queue; the page gets best-effort "Queued ✓"
-          // feedback via evaluateJavaScript.
-          this.queueVenueCandidateAndReport(
-            params.id,
-            results,
-            venueQueueTaps,
-            webView,
+          if (presentedPages === 0) throw pageError;
+          // Pages already reviewed carry real verdicts. Stop paging and fall
+          // through to apply them and ask about execution — losing the rest
+          // of the pages is recoverable, losing the owner's taps is not.
+          console.log(
+            "📱 Scriptable: 📄 Ending paging early — every tap recorded so far is still applied below.",
           );
-        } else if (params.a === "open-url") {
-          // Fire-and-forget: opens the registered map verify link in Safari
-          // ON TOP of the results sheet (the WebView never navigates).
-          this.openMapVerifyUrl(params.id);
-        } else if (params.a === "export-ics") {
-          // Fire-and-forget: builds the recurring event's ICS natively and
-          // hands it to DocumentPicker/ShareSheet (the WebView never
-          // navigates; recurring series are export-only, never auto-written).
-          this.exportRecurringEventIcs(params.id);
-        } else if (params.a === "copy-logs") {
-          // Fire-and-forget: the run log is no longer embedded in the page,
-          // so 📋 Copy / 📋 Compact ask native for it here.
-          this.copyRunLogAndReport(params.id, webView);
-        } else if (params.a === "ai-prompts") {
-          // Fire-and-forget: native owns the prompt bodies and presents the
-          // picker on top of the sheet (same pattern as Safari/DocumentPicker).
-          this.presentAiPromptPickerAndCopy(webView);
-        } else if (params.a === "beacon") {
-          this.recordResultsPageBeacon(params.id, params.d, pageBeacons);
+          break;
         }
-        return false; // cancel the fake navigation; the page stays put
-      };
-      // If the page could not be shed under the render ceiling, say so through
-      // the ONE channel that survives a document WebKit refuses to run: a
-      // native Alert, raised before the sheet, not a banner buried inside it.
-      await this.warnResultsPageUnrenderable();
-      await webView.present(true);
-      // The page's own account of whether it ever rendered. Logged AFTER the
-      // sheet closes so a blank review leaves a different trace than a real one.
-      this.reportResultsPageLiveness(pageBeacons);
+      }
+      if (pageCount > 1) {
+        console.log(
+          `📱 Scriptable: 📄 Results paging finished after ${presentedPages} page view(s) across ${pageCount} page(s) — applying every tap now, once.`,
+        );
+      }
 
       // Apply recorded overrides: marked-bear drops get the same calendar prep
       // as normally kept events and join the write plan; marked-not-bear events
@@ -5436,6 +5649,9 @@ class ScriptableAdapter {
 
       // After displaying results, prompt for calendar execution if we have analyzed events
       // Don't prompt when displaying saved runs (they should use isDryRun override instead)
+      // This sits OUTSIDE the paging loop on purpose: the owner is asked to
+      // execute exactly once, after he has finished paging — never once per
+      // page, and never before his last page's taps have been applied above.
       if (
         results.analyzedEvents &&
         results.analyzedEvents.length > 0 &&
@@ -5482,8 +5698,19 @@ class ScriptableAdapter {
     }
   }
 
-  // Generate rich HTML for WebView display
-  async generateRichHTML(results) {
+  // Generate rich HTML for WebView display.
+  //
+  // options:
+  //   target: "scriptable" (default) | "web"
+  //     "web" is the desktop/server flow (tools/serve-results.js). Safari has
+  //     no loadHTML size cliff, so that flow renders EVERY event on ONE page
+  //     and sheds nothing — the paging and the shed ladder below are both
+  //     Scriptable-only defences against a WebKit limit desktop does not have.
+  //   page: 1-based page number for the Scriptable flow.
+  //
+  // Side effect: this.getResultsPageCount() reports how many pages the last
+  // render planned, so presentRichResults can drive the paging loop.
+  async generateRichHTML(results, options = {}) {
     // Fresh per-render registry for the open-url bridge: every map verify
     // link rendered below registers its real URL natively and embeds only
     // the returned id, so ids in this HTML always match the handler's map.
@@ -5601,7 +5828,25 @@ class ScriptableAdapter {
         interactive: keptCardsInteractive,
       });
 
-    const html = `
+    // Every card is built EXACTLY ONCE, up front, and the page template below
+    // only ever slices these arrays. generateEventCard is not a pure function
+    // — it registers map-verify/ICS-export ids natively and draws down the
+    // shared merge-diff byte budget — so building a card twice would both
+    // double-charge the budget and make the second render differ from the
+    // first. Assembling a second page must never re-run it.
+    const newCards = newEvents.map(keptCard);
+    const mergeCards = mergeEvents.map(keptCard);
+    const conflictCards = conflictEvents.map(keptCard);
+    const droppedCards = this.buildBearDroppedCards(results);
+    // Same rule for the non-card sections: hoisted out of the template so
+    // they are generated once and reused verbatim on every page.
+    const proposalSectionHtml =
+      this.generateSeriesChangeProposalSection(results);
+    const discoveredVenueSectionHtml =
+      this.generateDiscoveredVenueSection(results);
+    const discoverySectionHtml = this.generateDiscoverySection(results);
+
+    const buildPage = (view) => `
 <!DOCTYPE html>
 <html>
 <head>
@@ -6999,46 +7244,46 @@ class ScriptableAdapter {
         </div>
     </div>
     
-    ${
-      newEvents.length > 0
+    ${view.pagerTopHtml}${
+      view.newCards.length > 0
         ? `
     <div class="section">
         <div class="section-header">
             <span class="section-icon">✨</span>
             <span class="section-title">New Events to Add</span>
-            <span class="section-count">${newEvents.length}</span>
+            <span class="section-count">${view.newCountLabel}</span>
         </div>
-        ${newEvents.map(keptCard).join("")}
+        ${view.newCards.join("")}
     </div>
     `
         : ""
     }
     
     ${
-      mergeEvents.length > 0
+      view.mergeCards.length > 0
         ? `
     <div class="section">
         <div class="section-header">
             <span class="section-icon">🔀</span>
             <span class="section-title">Events to Merge (Adding Info)</span>
-            <span class="section-count">${mergeEvents.length}</span>
+            <span class="section-count">${view.mergeCountLabel}</span>
         </div>
-        ${mergeEvents.map(keptCard).join("")}
+        ${view.mergeCards.join("")}
     </div>
     `
         : ""
     }
     
     ${
-      conflictEvents.length > 0
+      view.conflictCards.length > 0
         ? `
     <div class="section">
         <div class="section-header">
             <span class="section-icon">⚠️</span>
                             <span class="section-title">Events Requiring Review</span>
-            <span class="section-count">${conflictEvents.length}</span>
+            <span class="section-count">${view.conflictCountLabel}</span>
         </div>
-        ${conflictEvents.map(keptCard).join("")}
+        ${view.conflictCards.join("")}
     </div>
     `
         : ""
@@ -7079,16 +7324,16 @@ class ScriptableAdapter {
         : ""
     }
 
-    ${this.generateSeriesChangeProposalSection(results)}${this.generateBearDroppedSection(results)}
+    ${proposalSectionHtml}${view.droppedSectionHtml}
 
-    ${this.generateDiscoveredVenueSection(results)}
+    ${discoveredVenueSectionHtml}
 
     ${newVenueSectionHtml}
 
-    ${this.generateDiscoverySection(results)}
+    ${discoverySectionHtml}
 
     ${logSectionHtml}
-    
+    ${view.pagerBottomHtml}
     <script>
         // Discovered-venue copy buttons signal native via a custom-scheme
         // navigation intercepted by shouldAllowRequest (set before present()) —
@@ -7772,7 +8017,291 @@ class ScriptableAdapter {
     this.logEventJsonBudgetReport();
     this.logMergeDiffBudgetReport();
 
-    return this.applyResultsHtmlSizeGuard(html, budgetedCardCount);
+    // ---------------------------------------------------------------------
+    // One page or several?
+    //
+    // The whole-run page is assembled first. It is what the desktop flow
+    // serves verbatim, it is what a small Scriptable run gets (identical to
+    // the pre-pagination render), and its byte count is what tells the
+    // paginator how much of the page is chrome and how much is cards.
+    // ---------------------------------------------------------------------
+    const pageableCards = [
+      ...newCards.map((html) => ({ group: "new", html })),
+      ...mergeCards.map((html) => ({ group: "merge", html })),
+      ...conflictCards.map((html) => ({ group: "conflict", html })),
+      ...droppedCards.map((html) => ({ group: "dropped", html })),
+    ];
+    const fullView = {
+      pagerTopHtml: "",
+      pagerBottomHtml: "",
+      newCards,
+      mergeCards,
+      conflictCards,
+      newCountLabel: newEvents.length,
+      mergeCountLabel: mergeEvents.length,
+      conflictCountLabel: conflictEvents.length,
+      droppedSectionHtml: droppedCards.length
+        ? this.buildBearDroppedSectionHtml(
+            droppedCards,
+            this.bearDroppedEntryCount(results),
+          )
+        : "",
+    };
+    const fullHtml = buildPage(fullView);
+
+    // Desktop Safari has no loadHTML cliff: it gets everything, on one page,
+    // with nothing shed. Paging and shedding are both workarounds for a
+    // WebKit-in-Scriptable limit, and applying them here only cost the owner
+    // detail he could have had for free.
+    if (this.resolveRenderTarget(options) === "web") {
+      this._resultsPagePlan = null;
+      this._resultsSizeReduction = null;
+      return fullHtml;
+    }
+
+    const plan = this.planResultsPages(fullHtml, pageableCards);
+    this._resultsPagePlan = plan;
+    if (plan.pageCount <= 1) {
+      // Unchanged single-page render: same string the pre-pagination code
+      // produced, shed ladder and all.
+      return this.applyResultsHtmlSizeGuard(fullHtml, budgetedCardCount);
+    }
+
+    const requestedPage = Math.min(
+      Math.max(1, Math.floor(Number(options && options.page) || 1)),
+      plan.pageCount,
+    );
+    const slice = plan.pages[requestedPage - 1];
+    const take = (group) =>
+      slice.cards.filter((c) => c.group === group).map((c) => c.html);
+    const pageNewCards = take("new");
+    const pageMergeCards = take("merge");
+    const pageConflictCards = take("conflict");
+    const pageDroppedCards = take("dropped");
+    const label = (shown, total) =>
+      shown === total ? total : `${shown} of ${total}`;
+    const pagerTopHtml = this.buildResultsPagerHtml(plan, requestedPage, false);
+    const pagerBottomHtml = this.buildResultsPagerHtml(
+      plan,
+      requestedPage,
+      true,
+    );
+    const pageHtml = buildPage({
+      pagerTopHtml,
+      pagerBottomHtml,
+      newCards: pageNewCards,
+      mergeCards: pageMergeCards,
+      conflictCards: pageConflictCards,
+      newCountLabel: label(pageNewCards.length, newEvents.length),
+      mergeCountLabel: label(pageMergeCards.length, mergeEvents.length),
+      conflictCountLabel: label(pageConflictCards.length, conflictEvents.length),
+      droppedSectionHtml: pageDroppedCards.length
+        ? this.buildBearDroppedSectionHtml(
+            pageDroppedCards,
+            label(pageDroppedCards.length, this.bearDroppedEntryCount(results)),
+          )
+        : "",
+    });
+    console.log(
+      `📱 Scriptable: 📄 Results page ${requestedPage}/${plan.pageCount} — ${slice.cards.length} of ${pageableCards.length} card(s), ${Math.round(ScriptableAdapter.utf8ByteLength(pageHtml) / 1024)} KB (budget ${Math.round(ScriptableAdapter.RESULTS_PAGE_BUDGET_BYTES / 1024)} KB/page).`,
+    );
+    // The shed ladder still runs, but as a BACKSTOP only: pagination bounds
+    // the page by construction, so the ladder can now only fire for a single
+    // card that is itself bigger than a whole page budget.
+    return this.applyResultsHtmlSizeGuard(pageHtml, slice.cards.length);
+  }
+
+  // "scriptable" unless the caller explicitly asks for the web flow. Default
+  // stays Scriptable so every existing bare call keeps its cliff defences.
+  resolveRenderTarget(options) {
+    const target = options && options.target ? String(options.target) : "";
+    return target === "web" ? "web" : "scriptable";
+  }
+
+  // How many pages the last generateRichHTML render planned (1 when the run
+  // fits on one page, or on the web flow, which never pages).
+  getResultsPageCount() {
+    const plan = this._resultsPagePlan;
+    return plan && plan.pageCount > 1 ? plan.pageCount : 1;
+  }
+
+  // ---------------------------------------------------------------------
+  // Size-driven pagination.
+  //
+  // Three separate attempts to name WebView.loadHTML's silent size cliff
+  // (1923 KB → 960 KB → 800 KB) were all wrong, because each was anchored on
+  // a page observed to FAIL rather than one observed to WORK. This stops
+  // guessing where the cliff is and bounds the page by construction instead:
+  // cards are packed onto a page until the next one would push it past a
+  // budget far below anything that has ever failed, then a new page starts.
+  //
+  // Packing by BYTES, not by a fixed card count, is the point: one card is
+  // not one unit of page weight (a merge card with diffs is many times a
+  // plain new-event card), so "5 per page" bounds nothing. A 35-event run
+  // becomes about 3 pages here, not 17.
+  //
+  // chrome = the whole-page bytes minus the sum of its cards. It is the same
+  // on every page (header, CSS, controls, discovery/log sections, scripts),
+  // so each page's card allowance is budget − chrome − pager.
+  planResultsPages(fullHtml, pageableCards) {
+    const budget = ScriptableAdapter.RESULTS_PAGE_BUDGET_BYTES;
+    const totalBytes = ScriptableAdapter.utf8ByteLength(fullHtml);
+    const sizedCards = pageableCards.map((card) => ({
+      group: card.group,
+      html: card.html,
+      bytes: ScriptableAdapter.utf8ByteLength(card.html),
+    }));
+    const cardBytes = sizedCards.reduce((sum, card) => sum + card.bytes, 0);
+    const chromeBytes = Math.max(0, totalBytes - cardBytes);
+    // Signature of the CARDS only. Chrome is not constant across a review:
+    // queueing a venue on page 1 shortens that section's markup, which would
+    // otherwise enlarge the next page's card allowance and slide every
+    // boundary — leaving a card that page 1 no longer shows and page 2 has
+    // already passed. So the boundaries are computed once and pinned for as
+    // long as the cards themselves are unchanged.
+    const signature = `${sizedCards.length}:${cardBytes}`;
+    const pinned = this._resultsPagePlan;
+    if (pinned && pinned.signature === signature && pinned.bounds) {
+      return {
+        ...pinned,
+        pages: pinned.bounds.map((bound) => ({
+          cards: sizedCards.slice(bound[0], bound[1]),
+          bytes:
+            chromeBytes +
+            sizedCards
+              .slice(bound[0], bound[1])
+              .reduce((sum, card) => sum + card.bytes, 0),
+        })),
+        chromeBytes,
+        totalBytes,
+      };
+    }
+    if (totalBytes <= budget || sizedCards.length <= 1) {
+      return {
+        pageCount: 1,
+        pages: [{ cards: sizedCards, bytes: totalBytes }],
+        bounds: [[0, sizedCards.length]],
+        signature,
+        chromeBytes,
+        totalBytes,
+        budget,
+      };
+    }
+
+    // What is left for cards once the repeated chrome and the pager are paid
+    // for. Floored so a run with unusually heavy chrome still makes progress
+    // one card at a time instead of planning infinite empty pages — the shed
+    // ladder is the backstop for that case.
+    const allowance = Math.max(
+      budget - chromeBytes - ScriptableAdapter.RESULTS_PAGER_RESERVE_BYTES,
+      ScriptableAdapter.RESULTS_PAGE_MIN_CARD_ALLOWANCE_BYTES,
+    );
+    const pages = [];
+    const bounds = [];
+    let current = [];
+    let currentBytes = 0;
+    let start = 0;
+    sizedCards.forEach((card, index) => {
+      // Always at least one card per page: a single card larger than the
+      // whole allowance gets a page to itself rather than an empty page.
+      if (current.length > 0 && currentBytes + card.bytes > allowance) {
+        pages.push({ cards: current, bytes: chromeBytes + currentBytes });
+        bounds.push([start, index]);
+        current = [];
+        currentBytes = 0;
+        start = index;
+      }
+      current.push(card);
+      currentBytes += card.bytes;
+    });
+    if (current.length > 0) {
+      pages.push({ cards: current, bytes: chromeBytes + currentBytes });
+      bounds.push([start, sizedCards.length]);
+    }
+
+    console.log(
+      `📱 Scriptable: 📄 Results split into ${pages.length} page(s): ${Math.round(totalBytes / 1024)} KB of page for ${sizedCards.length} card(s) is over the ${Math.round(budget / 1024)} KB per-page budget (chrome ${Math.round(chromeBytes / 1024)} KB, ${Math.round(allowance / 1024)} KB of cards per page). Every page is bounded by construction — no size threshold is being guessed at.`,
+    );
+    return {
+      pageCount: pages.length,
+      pages,
+      bounds,
+      signature,
+      chromeBytes,
+      totalBytes,
+      budget,
+      allowance,
+    };
+  }
+
+  // Page navigation rides the SAME chunkyscrape:// bridge every other button
+  // uses (shouldAllowRequest, assigned before present()). There is no API to
+  // dismiss a presented WebView from native, so a tap only ARMS the next page
+  // natively and the page itself says so; the swipe-down that closes the
+  // sheet is what hands control back, and presentRichResults re-presents.
+  // Dismissing without tapping anything means "done" — that is the finish-
+  // early path, and it is the default.
+  buildResultsPagerHtml(plan, page, withScript) {
+    const pageCount = plan.pageCount;
+    const slice = plan.pages[page - 1] || { cards: [] };
+    const before = plan.pages
+      .slice(0, page - 1)
+      .reduce((sum, p) => sum + p.cards.length, 0);
+    const totalCards = plan.pages.reduce((sum, p) => sum + p.cards.length, 0);
+    const first = totalCards === 0 ? 0 : before + 1;
+    const last = before + slice.cards.length;
+    const prevBtn =
+      page > 1
+        ? `<button type="button" class="results-pager-btn" onclick="gotoResultsPage(${page - 1})">← Page ${page - 1}</button>`
+        : "";
+    const nextBtn =
+      page < pageCount
+        ? `<button type="button" class="results-pager-btn is-primary" onclick="gotoResultsPage(${page + 1})">Page ${page + 1} →</button>`
+        : "";
+    const nav = `
+    <div class="results-pager">
+        <div class="results-pager-label">Page ${page} of ${pageCount} · cards ${first}–${last} of ${totalCards}</div>
+        <div class="results-pager-buttons">
+            ${prevBtn}${nextBtn}
+            <button type="button" class="results-pager-btn is-done" onclick="finishResultsPaging()">✅ Done reviewing</button>
+        </div>
+        <div class="results-pager-hint">Your 🐻 / 🚫 taps are kept across every page and applied once, when you finish. Swipe the sheet down to move on.</div>
+    </div>`;
+    if (!withScript) return nav;
+    return `${nav}
+    <style>
+        .results-pager { background: var(--background-primary); border: 1px solid var(--border-color); border-radius: 15px; padding: 16px 20px; margin-bottom: 20px; box-shadow: var(--card-shadow); }
+        .results-pager-label { font-size: 14px; font-weight: 600; margin-bottom: 10px; }
+        .results-pager-buttons { display: flex; flex-wrap: wrap; gap: 10px; }
+        .results-pager-btn { padding: 10px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--background-light); color: var(--text-primary); font-family: var(--font-sans); font-size: 14px; font-weight: 600; cursor: pointer; }
+        .results-pager-btn.is-primary { background: var(--primary-color); color: var(--text-inverse); border-color: transparent; }
+        .results-pager-btn.is-done { background: var(--secondary-color); color: var(--text-inverse); border-color: transparent; }
+        .results-pager-hint { font-size: 12px; color: var(--text-secondary); margin-top: 10px; }
+        .results-pager-hint.is-armed { color: var(--primary-color); font-weight: 600; }
+    </style>
+    <script>
+        // Paging bridge. The tap tells native which page to build next; the
+        // hint below is updated by the PAGE itself (no evaluateJavaScript on
+        // a presented web view — that is not a supported direction here), so
+        // the instruction is on screen the instant the button is pressed.
+        window.__pagerNonce = 0;
+        function armResultsPager(message) {
+            var hints = document.querySelectorAll('.results-pager-hint');
+            for (var i = 0; i < hints.length; i++) {
+                hints[i].textContent = message;
+                hints[i].className = 'results-pager-hint is-armed';
+            }
+        }
+        function gotoResultsPage(n) {
+            armResultsPager('Page ' + n + ' is queued — swipe this sheet down to open it. Your taps are safe.');
+            window.location.href = 'chunkyscrape://act?a=page&id=' +
+                encodeURIComponent(String(n)) + '&n=' + (window.__pagerNonce++);
+        }
+        function finishResultsPaging() {
+            armResultsPager('Finishing — swipe this sheet down to apply your taps and continue.');
+            window.location.href = 'chunkyscrape://act?a=page-done&n=' + (window.__pagerNonce++);
+        }
+    </script>`;
   }
 
   buildRunLogSectionHtml(logInfo, promptInfo = null) {
@@ -8949,16 +9478,40 @@ class ScriptableAdapter {
   // execution there) and for rows already rescued by a calendar manual-bear
   // record.
   generateBearDroppedSection(results) {
+    const cards = this.buildBearDroppedCards(results);
+    if (cards.length === 0) return "";
+    return this.buildBearDroppedSectionHtml(
+      cards,
+      this.bearDroppedEntryCount(results),
+    );
+  }
+
+  // The chip's total counts DROP ENTRIES, not rendered cards, exactly as it
+  // did before the cards were split out — an unrenderable entry still
+  // happened, and quietly changing the number would be a display change
+  // smuggled in under a pagination change.
+  bearDroppedEntryCount(results) {
+    return Array.isArray(results && results.bearDroppedEvents)
+      ? results.bearDroppedEvents.length
+      : 0;
+  }
+
+  // The dropped cards as an ARRAY, so the paginator can measure them one by
+  // one and spread them across pages like any other event card. These carry
+  // the "Mark as bear" rescue buttons, so they are review surface, not a
+  // debug appendix — leaving them out of the page budget would be the same
+  // unbounded-page bug the paginator exists to remove.
+  buildBearDroppedCards(results) {
     const entries = Array.isArray(results && results.bearDroppedEvents)
       ? results.bearDroppedEvents
       : [];
-    if (entries.length === 0) return "";
+    if (entries.length === 0) return [];
     const interactive = !results || results._isDisplayingSavedRun !== true;
     const runInfo = {
       runId: (results && (results.savedRunId || results.sourceRunId)) || null,
     };
 
-    const cards = entries
+    return entries
       .map((entry, index) => {
         if (!entry) return "";
         // The drop entry keeps the full event under `.event`; older/partial
@@ -8994,17 +9547,21 @@ class ScriptableAdapter {
               : "",
         });
       })
-      .join("");
+      .filter((card) => typeof card === "string" && card.length > 0);
+  }
 
+  // `countLabel` is what the section-count chip shows: the plain total on a
+  // one-page render (unchanged), "n of N" once the cards are spread out.
+  buildBearDroppedSectionHtml(cards, countLabel) {
     return `
     <div class="section">
         <div class="section-header">
             <span class="section-icon">🚫</span>
             <span class="section-title">Dropped as non-bear</span>
-            <span class="section-count">${entries.length}</span>
+            <span class="section-count">${countLabel}</span>
         </div>
         <div style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;">These events were filtered out by the bear check and will NOT be written. Tap "Mark as bear" to pull one back into this run's write plan — the verdict sticks on the calendar record for future scrapes.</div>
-        ${cards}
+        ${cards.join("")}
     </div>
     `;
   }
@@ -10095,6 +10652,45 @@ class ScriptableAdapter {
   // that job: a banner lives INSIDE the document WebKit refuses to run.
   static get RESULTS_HTML_MAX_BYTES() {
     return 800 * 1024;
+  }
+
+  // Per-PAGE budget for the Scriptable flow (the web flow never pages).
+  //
+  // Everything above this line is a ceiling: an estimate of where the cliff
+  // is, which the page is allowed to walk right up to. Three of those
+  // estimates have now been wrong. This number is a different kind of thing —
+  // a budget the page is built to, low enough that where the cliff actually
+  // sits stops mattering:
+  //
+  //   248 KB   rendered ✅        400 KB budget
+  //   486 KB   rendered ✅          ↑ under FOUR independently observed
+  //   489 KB   rendered ✅            successes, not just the largest one
+  //   862 KB   rendered ✅          ↑ 46% of the biggest proven success
+  //   955 KB   BLANK    ❌ 3/3     ↑ 42% of the smallest known failure
+  //
+  // Anchoring under the SMALLEST proven success rather than the largest is
+  // the whole correction: 862 KB tells us only that the cliff is above 862,
+  // while 248/486/489 KB are four separate demonstrations that a page of
+  // this order renders. 400 KB leaves better than 2x headroom to the nearest
+  // failure, and pagination means the cost of the margin is one extra swipe
+  // per ~400 KB, not lost review detail.
+  static get RESULTS_PAGE_BUDGET_BYTES() {
+    return 400 * 1024;
+  }
+
+  // The pager nav is emitted twice per page plus its style/script block.
+  // Measured well under 3 KB; 6 KB is the margin, charged to every page so a
+  // page's cards can never grow into the space the pager will need.
+  static get RESULTS_PAGER_RESERVE_BYTES() {
+    return 6 * 1024;
+  }
+
+  // Floor for the per-page card allowance. Chrome (CSS, scripts, discovery
+  // and log sections) repeats on every page; if a run's chrome alone ate the
+  // budget the packer would otherwise plan pages that hold nothing. One card
+  // per page still terminates, and the shed ladder backstops the size.
+  static get RESULTS_PAGE_MIN_CARD_ALLOWANCE_BYTES() {
+    return 32 * 1024;
   }
 
   // The "what got shed" banner is written into the page AFTER the shed loop
