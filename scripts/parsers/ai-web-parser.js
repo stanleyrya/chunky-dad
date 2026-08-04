@@ -502,7 +502,23 @@ class AiWebParser {
             fuzzyDescriptionMinTokenMatches: 2,
             fuzzyDescriptionTokenMatchRatio: 0.45,
             validationReportValueMaxLength: 140,
-            multiEventScanLineLimit: 500,
+            // 1200 (was 500, and dead: both segmentation call sites did
+            // `extractBodyParts(html).slice(0, 500)` while extractBodyParts
+            // itself already stopped at maxBodyParts=300, so 500 never
+            // bound and 300 silently truncated the scan corpus). It is now
+            // passed INTO extractBodyParts as that call's own cap, so it is
+            // the live, logged bound for everything that reads the page as
+            // a line list: multi-event classification, the deterministic
+            // splitter, the AI boundary pass and page date context.
+            // 1200 covers every page in the cached corpus (largest is
+            // sickening.events at 890 body lines) with headroom. Raising it
+            // costs pure-JS scanning only — AI spend is bounded by the
+            // segment budget below, and the boundary prompt has its own
+            // 24,000-char listing cap that already logs when it trims.
+            // maxBodyParts stays 300 for the whole-page PROMPT payload
+            // (getPromptSectionBundle / cleanHtml), so prompt token counts
+            // are unchanged by this raise.
+            multiEventScanLineLimit: 1200,
             // 16 (was 12, then 14): an 11-day festival programme is intro +
             // 11 day sections + interleaved continuation segments — 12 cut
             // the final day of Bears Sitges Week (run 20260728); 16 adds
@@ -512,6 +528,25 @@ class AiWebParser {
             // are dropped by shared-core's filterFutureEvents. The AI
             // boundary pass interpolates this cap as its upper bound.
             multiEventMaxSegments: 16,
+            // Ceiling for the DENSE-page segment budget (see
+            // resolveMultiEventSegmentBudget). A flat 16 charged a 4-listing
+            // venue page and a 40-listing month page the same budget, so the
+            // dense page silently lost its tail while the sparse page never
+            // came close. The budget now scales with how many DATED
+            // candidate items the page actually offers, floored at
+            // multiEventMaxSegments and ceilinged here.
+            // 48 is a measured value, not a round one: across the 317-page
+            // cached corpus it takes every truncating page to COMPLETE
+            // coverage — www.3dollarbillbk.com/rsvp (40 items),
+            // chunky.dad portland.ics (35), beefdip planned-events (32),
+            // london.ics (27), chicago.ics (22), sf.ics (20) — for +22%
+            // segments corpus-wide (511 -> 624). The one page it does not
+            // finish is sickening.events/events (a national aggregator with
+            // ~478 in-window dated listings); covering that page in full
+            // would be ~485 AI calls / ~40 minutes for one URL, which is an
+            // owner cost decision, not a default. That page now LOGS its
+            // real item count next to the budget so the decision is visible.
+            multiEventMaxSegmentsDenseCeiling: 48,
             multiEventMinSegmentLines: 2,
             multiEventMaxSegmentLines: 24,
             multiEventMinSegmentChars: 25,
@@ -1661,7 +1696,7 @@ class AiWebParser {
         }
 
         const bodyParts = this.trimLeadingMultiEventNoise(
-            this.extractBodyParts(html).slice(0, this.extractionLimits.multiEventScanLineLimit)
+            this.extractBodyParts(html, this.extractionLimits.multiEventScanLineLimit)
         );
         if (bodyParts.length === 0) return [];
         const rawSegments = [];
@@ -1723,7 +1758,22 @@ class AiWebParser {
 
         const uniqueSegments = [];
         const seen = new Set();
+        // Dated candidate windows, not raw lines: each rawSegment that
+        // carries a date signal is one listing this page is offering.
+        const datedCandidateCount = rawSegments.filter(lines => this.segmentHasDateSignal(lines)).length;
+        const segmentBudget = this.resolveMultiEventSegmentBudget(datedCandidateCount);
         for (const lines of rawSegments) {
+            if (uniqueSegments.length >= segmentBudget) {
+                // No silent caps. This break truncates the page: on
+                // thedallaseagle.com/events/ (a full month, ~27 listings) it
+                // stopped at Aug 15 and everything after was never segmented,
+                // extracted, or reported — the run simply looked like a
+                // 15-event month. Checked at the TOP of the loop so it fires
+                // only when a candidate really goes unprocessed.
+                this.logMultiEventSegmentBudget(segmentBudget, datedCandidateCount, 'text splitter');
+                console.log(`🤖 AI Web: Segment cap reached (${segmentBudget}) — later content on this page was not segmented and will not produce events`);
+                break;
+            }
             const normalizedLines = Array.isArray(lines)
                 ? lines.map(line => this.normalizeWhitespace(line)).filter(Boolean)
                 : [];
@@ -1745,16 +1795,6 @@ class AiWebParser {
                 lines: trimmedLines,
                 html: this.extractRawHtmlForMultiEventSegment(html, trimmedLines)
             });
-            if (uniqueSegments.length >= this.extractionLimits.multiEventMaxSegments) {
-                // No silent caps. This break truncates the page: on
-                // thedallaseagle.com/events/ (a full month, ~27 listings) it
-                // stopped at Aug 15 and everything after was never segmented,
-                // extracted, or reported — the run simply looked like a
-                // 15-event month. Logging only; raising the cap is a cost
-                // decision for the owner, not a silent default change.
-                console.log(`🤖 AI Web: Segment cap reached (${this.extractionLimits.multiEventMaxSegments}) — later content on this page was not segmented and will not produce events`);
-                break;
-            }
         }
         return this.attachSequentialImageHintsToSegments(html, uniqueSegments, sourceUrl, ocrResults);
     }
@@ -1792,7 +1832,7 @@ class AiWebParser {
         // Mirror of the deterministic splitter's line corpus, so verified
         // boundary indices address the exact lines tier 1 scanned.
         const scannedLines = this.trimLeadingMultiEventNoise(
-            this.extractBodyParts(html).slice(0, this.extractionLimits.multiEventScanLineLimit)
+            this.extractBodyParts(html, this.extractionLimits.multiEventScanLineLimit)
         );
         const timeLines = this.countScheduleTimeLines(scannedLines);
         const scannedChars = scannedLines.join('\n').length;
@@ -1934,7 +1974,25 @@ class AiWebParser {
         const maxSegmentLines = this.extractionLimits.multiEventMaxSegmentLines;
         const uniqueSegments = [];
         const seen = new Set();
+        // DELIBERATELY the flat baseline, not the density budget: the
+        // boundary prompt instructs the model to return at most
+        // multiEventMaxSegments lines, so scaling the acceptance budget above
+        // the number we asked for would be incoherent. Raising this means
+        // raising the prompt's own bound too, which is a separate decision.
+        const datedCandidateCount = boundaryIndices.length;
+        const segmentBudget = this.extractionLimits.multiEventMaxSegments;
         for (let k = 0; k < boundaryIndices.length; k++) {
+            if (uniqueSegments.length >= segmentBudget) {
+                // No silent caps. Checked at the TOP of the loop so it fires
+                // only when a candidate really goes unprocessed — the old
+                // bottom-of-loop break also logged when the budget was hit by
+                // the LAST candidate, i.e. when nothing was actually lost
+                // (5 of the 9 corpus pages that logged this were false
+                // alarms: bearssitges, seattle/portland/chicago/sf .ics).
+                this.logMultiEventSegmentBudget(segmentBudget, datedCandidateCount, 'AI boundary pass');
+                console.log(`🤖 AI Web: Segment cap reached (${segmentBudget}) — later content on this page was not segmented and will not produce events`);
+                break;
+            }
             const start = boundaryIndices[k];
             const end = k + 1 < boundaryIndices.length ? boundaryIndices[k + 1] : lines.length;
             // Preamble before the first boundary is deliberately discarded.
@@ -1952,16 +2010,6 @@ class AiWebParser {
                 lines: trimmedLines,
                 html: this.extractRawHtmlForMultiEventSegment(html, trimmedLines)
             });
-            if (uniqueSegments.length >= this.extractionLimits.multiEventMaxSegments) {
-                // No silent caps. This break truncates the page: on
-                // thedallaseagle.com/events/ (a full month, ~27 listings) it
-                // stopped at Aug 15 and everything after was never segmented,
-                // extracted, or reported — the run simply looked like a
-                // 15-event month. Logging only; raising the cap is a cost
-                // decision for the owner, not a silent default change.
-                console.log(`🤖 AI Web: Segment cap reached (${this.extractionLimits.multiEventMaxSegments}) — later content on this page was not segmented and will not produce events`);
-                break;
-            }
         }
         return this.attachSequentialImageHintsToSegments(html, uniqueSegments, sourceUrl, ocrResults);
     }
@@ -2034,6 +2082,16 @@ class AiWebParser {
         const entries = group && Array.isArray(group.entries) ? group.entries : [];
         const uniqueSegments = [];
         const seen = new Set();
+        // The repeated structural entries ARE the page's own item list — one
+        // card per listing — so their count is the event-tracking signal here
+        // (this is the path both www.3dollarbillbk.com/rsvp and
+        // sickening.events/events take; neither ever reached the deterministic
+        // text splitter, so neither was ever bounded by a LINE cap). The
+        // budget only PERMITS more segments; every entry still has to clear
+        // the date/title gates below, so a 200-item navigation group is
+        // rejected on content exactly as it is today.
+        const datedCandidateCount = entries.length;
+        const segmentBudget = this.resolveMultiEventSegmentBudget(datedCandidateCount);
         const addSegment = (segment) => {
             if (!segment || !Array.isArray(segment.lines)) return;
             const segmentText = segment.lines.join('\n');
@@ -2045,6 +2103,17 @@ class AiWebParser {
         };
 
         for (const entry of entries) {
+            if (uniqueSegments.length >= segmentBudget) {
+                // No silent caps. This break truncates the page: on
+                // thedallaseagle.com/events/ (a full month, ~27 listings) it
+                // stopped at Aug 15 and everything after was never segmented,
+                // extracted, or reported — the run simply looked like a
+                // 15-event month. Checked at the TOP of the loop so it fires
+                // only when an entry really goes unprocessed.
+                this.logMultiEventSegmentBudget(segmentBudget, datedCandidateCount, 'structure group');
+                console.log(`🤖 AI Web: Segment cap reached (${segmentBudget}) — later content on this page was not segmented and will not produce events`);
+                break;
+            }
             const normalizedLines = this.extractBodyParts(entry.html)
                 .map(line => this.normalizeWhitespace(line))
                 .filter(Boolean);
@@ -2064,16 +2133,6 @@ class AiWebParser {
                     this.extractionLimits.multiEventMaxSegmentChars
                 );
                 addSegment({ lines: trimmedLines, html: entry.html });
-            }
-            if (uniqueSegments.length >= this.extractionLimits.multiEventMaxSegments) {
-                // No silent caps. This break truncates the page: on
-                // thedallaseagle.com/events/ (a full month, ~27 listings) it
-                // stopped at Aug 15 and everything after was never segmented,
-                // extracted, or reported — the run simply looked like a
-                // 15-event month. Logging only; raising the cap is a cost
-                // decision for the owner, not a silent default change.
-                console.log(`🤖 AI Web: Segment cap reached (${this.extractionLimits.multiEventMaxSegments}) — later content on this page was not segmented and will not produce events`);
-                break;
             }
         }
         return uniqueSegments;
@@ -2143,6 +2202,30 @@ class AiWebParser {
         return segments;
     }
 
+    // Segment budget = how many segments (≈ how many AI extraction calls)
+    // this page is allowed to spend. Bounded on the page's DATED CANDIDATE
+    // ITEM count rather than on its raw size, because raw size does not
+    // track events: an 890-line page that is mostly navigation chrome
+    // deserves the baseline budget, while a 396-line page holding 40 dated
+    // listings deserves all 40. Below the baseline nothing changes — the
+    // budget IS multiEventMaxSegments — so sparse pages log and behave
+    // byte-identically to before.
+    resolveMultiEventSegmentBudget(datedCandidateCount) {
+        const base = this.extractionLimits.multiEventMaxSegments;
+        const ceiling = this.extractionLimits.multiEventMaxSegmentsDenseCeiling;
+        if (!Number.isFinite(Number(ceiling)) || Number(ceiling) <= base) return base;
+        const dated = Number(datedCandidateCount);
+        if (!Number.isFinite(dated) || dated <= base) return base;
+        return Math.min(Math.floor(ceiling), Math.floor(dated));
+    }
+
+    // Companion to the "Segment cap reached" line: states the budget the page
+    // earned and how many dated candidates it actually offered, so a run log
+    // shows the SIZE of what was lost, not just that something was.
+    logMultiEventSegmentBudget(budget, datedCandidateCount, sourceLabel) {
+        console.log(`🤖 AI Web: Segment budget ${budget} for ${sourceLabel} (${datedCandidateCount} dated candidate item(s), baseline ${this.extractionLimits.multiEventMaxSegments}, ceiling ${this.extractionLimits.multiEventMaxSegmentsDenseCeiling}) — items beyond the budget produce no events`);
+    }
+
     countMultiEventDateSignals(lines) {
         return (Array.isArray(lines) ? lines : []).filter(line => this.hasMultiEventDateSignal(line)).length;
     }
@@ -2156,7 +2239,11 @@ class AiWebParser {
     }
 
     isMultiEventLikeHtml(html) {
-        const lines = this.extractBodyParts(html);
+        // Scans the same corpus the splitter will: classifying off the
+        // prompt-sized 300-line slice could call a page single-event because
+        // its dates only start at line 340, and a page classified
+        // single-event is never segmented at all.
+        const lines = this.extractBodyParts(html, this.extractionLimits.multiEventScanLineLimit);
         return this.segmentHasDateSignal(lines) && this.segmentHasTitleSignal(lines);
     }
 
@@ -3309,8 +3396,7 @@ class AiWebParser {
     // agree on one month; any ambiguity → null (segments stay unanchored and
     // extraction's existing date handling copes/drops as today).
     derivePageDateContext(html) {
-        const lines = this.extractBodyParts(String(html || ''))
-            .slice(0, this.extractionLimits.multiEventScanLineLimit)
+        const lines = this.extractBodyParts(String(html || ''), this.extractionLimits.multiEventScanLineLimit)
             .map(line => this.normalizeWhitespace(line))
             .filter(Boolean);
         if (lines.length === 0) return null;
@@ -16666,7 +16752,18 @@ TEXT:
         return chunks;
     }
 
-    extractBodyParts(html) {
+    // `limit` overrides maxBodyParts for THIS call. maxBodyParts sizes the
+    // whole-page prompt payload; the segmentation/classification readers pass
+    // multiEventScanLineLimit instead, because they need to see the whole
+    // page, not a prompt-sized slice of it. Either way the cap that fires is
+    // logged — a cap that drops page text without saying so is exactly how
+    // www.3dollarbillbk.com/rsvp lost 96 lines (and sickening.events/events
+    // 590) with nothing in the run log to show for it.
+    extractBodyParts(html, limit = null) {
+        const requestedLimit = Number(limit);
+        const cap = Number.isFinite(requestedLimit) && requestedLimit > 0
+            ? Math.floor(requestedLimit)
+            : this.extractionLimits.maxBodyParts;
         // Dedup is scoped PER CORPUS (OCR vs page): flyer OCR text is
         // prepended ahead of the page text, so a single shared seen-set let
         // OCR lines evict the page's own lines — run 20260724-122902 lost
@@ -16675,9 +16772,16 @@ TEXT:
         // in page context. OCR lines dedup only against OCR lines, page
         // lines only against page lines; intra-corpus duplicates (repeated
         // boilerplate, the segment's embedded second OCR copy) still
-        // collapse, and the maxBodyParts cap stays global.
+        // collapse, and the line cap (maxBodyParts, or `limit`) stays global
+        // across both corpora.
         const seenByCorpus = { ocr: new Set(), page: new Set() };
         const results = [];
+        // Flag-don't-drop bookkeeping: once the cap is reached we keep
+        // scanning (same string work, no new parsing) purely to COUNT what
+        // is being thrown away, and how much of it carried a date signal —
+        // dropped dated lines are the ones that were plausibly events.
+        let droppedCount = 0;
+        let droppedDatedCount = 0;
         for (const chunk of this.splitOcrAndPageChunks(String(html))) {
             const seen = seenByCorpus[chunk.corpus];
             let text = chunk.text;
@@ -16701,9 +16805,16 @@ TEXT:
                 if (this.looksLikeCssContent(line)) continue;
                 if (seen.has(lower)) continue;
                 seen.add(lower);
+                if (results.length >= cap) {
+                    droppedCount++;
+                    if (this.hasMultiEventDateSignal(line)) droppedDatedCount++;
+                    continue;
+                }
                 results.push(line);
-                if (results.length >= this.extractionLimits.maxBodyParts) return results;
             }
+        }
+        if (droppedCount > 0) {
+            console.log(`🤖 AI Web: Body line cap reached (${cap}) — dropped ${droppedCount} further page line(s), ${droppedDatedCount} of them date-bearing; that text never reaches segmentation or extraction`);
         }
         return results;
     }
