@@ -10878,3 +10878,188 @@ test('the segment cap only reports truncation when content is actually left over
   assert.equal(logs.filter(line => line.includes('Segment budget')).length, 0,
     `no budget warning when the page fits: ${JSON.stringify(logs)}`);
 });
+
+// ---------------------------------------------------------------------------
+// Run 20260803-141425, thelumberyardbar.com — two defects with one theme:
+// junk that never appeared in the model's own corpus, so no verbatim-evidence
+// gate could ever have caught it.
+//
+//   1. bar "</svg>" on "Dolly and the DJ". The bar-convergence rescue reads
+//      htmlData.segmentText as its PAGE corpus, but segmentText carried the
+//      segment's RAW recovered HTML (9 KB of Wix tag soup), so a footer icon's
+//      closing tag became a "page line", converged with the SEGMENT_LINK_URL
+//      slug of the SVG xmlns (http://www.w3.org/2000/svg → token "svg"), and
+//      was adopted as the venue. The prompt the model saw was clean.
+//   2. an event titled "My Account". The 500,000-char corpus cap slices
+//      through a 228 KB <script type="application/json" id="wix-viewer-model">,
+//      orphaning its opening tag, so the whole Wix router config — including
+//      {"title":"My Account"} — became "page text" for whole-page extraction.
+// ---------------------------------------------------------------------------
+
+// The real footer fragment: a social-icon SVG whose closing tag lands on its
+// own line, plus the xmlns that feeds the URL slug signal.
+const LUMBERYARD_SEGMENT_RAW_HTML = [
+  '<div id="comp-le3o2qlk" class="wixui-rich-text"><h3>Dolly and the DJ</h3></div>',
+  '<h4>Most Saturday Nights</h4>',
+  '<h4>Sunday afternoons</h4>',
+  '<h4>come hang with the friendly bears 2-6pm</h4>',
+  '<a data-testid="linkElement" href="mailto:thelumberyardbar@gmail.com" aria-label="Email Us"><span><svg data-bbox="13.05 2.55 33.878 54.8" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60">',
+  '<path d="M0 0h10v10H0z"/>',
+  '</svg>',
+  '</span></a>',
+  '<p>bottom of page</p>'
+].join('\n');
+
+const LUMBERYARD_SEGMENT_LINES = [
+  'Dolly and the DJ',
+  'Most Saturday Nights',
+  'Sunday afternoons',
+  'come hang with the friendly bears 2-6pm',
+  'bottom of page'
+];
+
+test('lumberyard: a multi-event segment hands the bar rescue TEXT, never the raw recovered HTML', () => {
+  const parser = createParser();
+  const htmlData = parser.buildMultiEventSegmentHtmlData(
+    { url: 'https://www.thelumberyardbar.com/events', html: '<html><body></body></html>' },
+    { lines: LUMBERYARD_SEGMENT_LINES, html: LUMBERYARD_SEGMENT_RAW_HTML },
+    2,
+    3,
+    [],
+    null
+  );
+  // The prompt payload keeps the raw HTML (cleanHtml strips it downstream and
+  // the resource extractors need the attributes) — only the PAGE corpus changes.
+  assert.ok(htmlData.html.includes('</svg>'), 'the prompt payload still carries the raw segment HTML');
+  // The exact URL signal from the run: the SVG's own xmlns is the segment's
+  // only link, and its slug token "svg" is what "</svg>" converged with.
+  assert.ok(htmlData.html.includes('SEGMENT_LINK_URL: http://www.w3.org/2000/svg'),
+    'the fixture must reproduce the run\'s xmlns link signal');
+  assert.equal(htmlData.segmentText, LUMBERYARD_SEGMENT_LINES.join('\n'));
+  assert.equal(/<[a-zA-Z!/]/.test(htmlData.segmentText), false, 'no markup reaches the rescue PAGE corpus');
+});
+
+test('lumberyard: the bar rescue no longer adopts the footer SVG closing tag as the venue', () => {
+  const parser = createParser();
+  const htmlData = parser.buildMultiEventSegmentHtmlData(
+    { url: 'https://www.thelumberyardbar.com/events', html: '<html><body></body></html>' },
+    { lines: LUMBERYARD_SEGMENT_LINES, html: LUMBERYARD_SEGMENT_RAW_HTML },
+    2,
+    3,
+    [],
+    null
+  );
+  const event = { title: 'Dolly and the DJ', city: 'seattle' };
+  const logs = captureLogs(() => {
+    parser.applyBarConvergenceRescue(event, htmlData, { name: 'The Lumber Yard Bar' }, null);
+  });
+  assert.equal('bar' in event, false, 'no bar is invented from markup');
+  assert.equal('_barRescue' in event, false);
+  assert.equal(
+    logs.some(line => line.includes('</svg>')), false,
+    `no markup candidate should even be considered, got: ${JSON.stringify(logs)}`);
+});
+
+test('lumberyard: markup is never a venue name — gate drops it, rescue never nominates it, real names untouched', () => {
+  const parser = createParser();
+
+  assert.equal(parser.looksLikeMarkupFragment('</svg>'), true);
+  assert.equal(parser.looksLikeMarkupFragment('<div class="wixui-rich-text">'), true);
+  assert.equal(parser.looksLikeMarkupFragment('<h3>Dolly and the DJ</h3>'), true);
+  assert.equal(parser.looksLikeMarkupFragment('<svg xmlns'), true, 'a truncated opening tag is still markup');
+  assert.equal(parser.looksLikeMarkupFragment('class="gRkIq0 sFiSiq"'), true, 'a bare attribute fragment is markup');
+  // Real venue names — including the awkward ones the curated corpus proves.
+  assert.equal(parser.looksLikeMarkupFragment('The Lumber Yard Bar'), false);
+  assert.equal(parser.looksLikeMarkupFragment('massive.club'), false);
+  assert.equal(parser.looksLikeMarkupFragment("Ty's"), false);
+  assert.equal(parser.looksLikeMarkupFragment('X BAR'), false);
+  assert.equal(parser.looksLikeMarkupFragment('<3 Lounge'), false, 'a heart is not a tag — a tag name starts with a letter');
+  assert.equal(parser.looksLikeMarkupFragment('R&B > Jazz'), false);
+  assert.equal(parser.looksLikeMarkupFragment(''), false);
+
+  // Gate layer: the exact value the run shipped.
+  const event = { title: 'Dolly and the DJ', bar: '</svg>', city: 'seattle' };
+  const logs = captureLogs(() => { parser.applyBarPlausibilityGate(event, null); });
+  assert.equal('bar' in event, false, 'the markup bar is cleared');
+  assert.ok(
+    logs.includes('🤖 AI Web: Dropped implausible bar "</svg>" (markup fragment — not a venue name)'),
+    `expected the markup drop line, got: ${JSON.stringify(logs)}`);
+
+  // Candidate layer: parity with the gate, so the rescue can never re-adopt it.
+  assert.equal(parser.getVenueLineCandidateRejection('</svg>', {}, {}, null, null), 'markup');
+  assert.equal(parser.getVenueLineCandidateRejection('Legacy', {}, {}, null, null), '');
+  assert.equal(parser.getVenueLineCandidateRejection('The Lumber Yard Bar', {}, {}, null, null), '');
+});
+
+test('lumberyard: a <script> straddling the corpus cap is sealed, not served as page text', () => {
+  const parser = createParser();
+  // The real shape: a huge inline application/json blob whose closing tag sits
+  // beyond the 500,000-char cap, followed by the page's actual copy.
+  const wixBlob = `{"dynamicPages":{"pageRoles":{"jfc17":{"title":"My Account","pageUriSEO":"my-account"}},"pad":"${'x'.repeat(520000)}"}}`;
+  const html = [
+    '<html><head><title>Upcoming Events | lumberyardbar</title></head><body>',
+    '<h1>QUEERAOKE</h1><p>Wednesday nights @ 8:30pm</p>',
+    `<script type="application/json" id="wix-viewer-model">${wixBlob}</script>`,
+    '<p>bottom of page</p>',
+    '</body></html>'
+  ].join('');
+  assert.ok(html.length > 500000, 'the fixture must actually exceed the corpus cap');
+
+  const cleaned = parser.cleanHtml(html, {});
+  assert.equal(cleaned.includes('My Account'), false, 'the orphaned script body never becomes page text');
+  assert.equal(cleaned.includes('dynamicPages'), false);
+  assert.ok(cleaned.includes('QUEERAOKE'), 'real copy before the cut survives');
+  assert.ok(cleaned.includes('Wednesday nights @ 8:30pm'));
+
+  const bundle = parser.getPromptSectionBundle(html, {});
+  const contentLines = bundle.content ? bundle.content.lines.join('\n') : '';
+  assert.equal(contentLines.includes('My Account'), false);
+  assert.ok(contentLines.includes('QUEERAOKE'));
+
+  // The seal is additive and idempotent: well-formed HTML is returned as-is.
+  const balanced = '<html><body><script>var a=1;</script><p>hi</p></body></html>';
+  assert.equal(parser.sealTruncatedHtmlBlocks(balanced), balanced);
+  assert.equal(parser.sealTruncatedHtmlBlocks('<body><p>hi</p><script>var a=1;'),
+    '<body><p>hi</p><script>var a=1;</script>');
+  assert.equal(parser.sealTruncatedHtmlBlocks('<p>hi</p><!-- cut here'), '<p>hi</p><!-- cut here-->');
+});
+
+test('lumberyard: a site-chrome title is not an event, and every real scraped title survives', () => {
+  const parser = createParser();
+  // The reported junk and its Wix siblings.
+  assert.equal(parser.isSiteChromeTitle('My Account'), true);
+  assert.equal(parser.isSiteChromeTitle('My Wallet'), true);
+  assert.equal(parser.isSiteChromeTitle('Log In'), true);
+  assert.equal(parser.isSiteChromeTitle('Sign Up'), true);
+  assert.equal(parser.isSiteChromeTitle('Cart'), true);
+  assert.equal(parser.isSiteChromeTitle('Search'), true);
+  assert.equal(parser.isSiteChromeTitle('Contact Us'), true);
+  assert.equal(parser.isSiteChromeTitle('About Us'), true);
+  assert.equal(parser.isSiteChromeTitle('Privacy Policy'), true);
+
+  // Real Lumberyard / Massive / BEEFMINCE titles from the same run history.
+  for (const title of [
+    'QUEERAOKE', 'Dolly and the DJ', 'Trivia Taco night', 'Drink and Draw',
+    'Taco Tuesday', 'Happy hour menu', 'BRUNCH 11-2pm', 'Brunch Menu',
+    'Bear Happy Hour', 'Massive Saturdays', 'Make Out Party', 'Bottom Forty',
+    'SABOR (Latin Night)', 'Discipline (Kink/Fetish)', 'BLOWPOP', 'THE BEAR CAVE',
+    'Member Appreciation Night', 'Menu Night', 'Home Cooking', 'Info Night'
+  ]) {
+    assert.equal(parser.isSiteChromeTitle(title), false, `real event title rejected as chrome: ${title}`);
+  }
+  // A bare weak anchor is a plausible party name and is always kept.
+  assert.equal(parser.isSiteChromeTitle('CONTACT'), false);
+  assert.equal(parser.isSiteChromeTitle('Home'), false);
+  assert.equal(parser.isSiteChromeTitle('Members'), false);
+  assert.equal(parser.isSiteChromeTitle(''), false);
+  assert.equal(parser.isSiteChromeTitle(null), false);
+
+  // Flag-don't-drop escape hatch: a chrome-shaped listing that states a real
+  // time or cover is kept for a human, never silently dropped.
+  assert.equal(parser.hasScheduleOrPriceSignal({ title: 'My Account' }), false);
+  assert.equal(parser.hasScheduleOrPriceSignal({ title: 'My Account', startDate: '2026-08-03' }), false,
+    'a synthesized startDate is not evidence of a schedule');
+  assert.equal(parser.hasScheduleOrPriceSignal({ title: 'Members Night', description: 'doors 10pm' }), true);
+  assert.equal(parser.hasScheduleOrPriceSignal({ title: 'Cart', cover: '$10' }), true);
+  assert.equal(parser.hasScheduleOrPriceSignal({ title: 'Cart', startTime: '22:00' }), true);
+});

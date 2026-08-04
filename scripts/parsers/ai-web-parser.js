@@ -1300,6 +1300,24 @@ class AiWebParser {
             console.log(`🤖 AI Web: Skipped day-header echo "${event.title}" — weekday heading, not an event name`);
             return null;
         }
+        // Site-chrome guard (run 20260803-141425: thelumberyardbar.com's
+        // /upcoming-events produced an event titled "My Account", bar "The
+        // Lumber Yard Bar", rendered with the venue logo — a member-account
+        // nav link, not a night out). Same linguistic-generic contract as the
+        // guards above: the title must be NOTHING but site-chrome vocabulary
+        // AND the event must carry no schedule or price signal of its own, so
+        // a real party that happens to be called "Cruise Control" or "Menu
+        // Night" — anything with a non-chrome word — never qualifies, and a
+        // chrome-named listing that really does state a time or a cover is
+        // kept and left for a human.
+        if (this.isSiteChromeTitle(event.title)) {
+            if (this.hasScheduleOrPriceSignal(event)) {
+                console.log(`🤖 AI Web: Site-chrome title "${event.title}" carries a time/price signal — kept, verify manually`);
+            } else {
+                console.log(`🤖 AI Web: Skipped site chrome "${event.title}" — navigation/account link, not an event`);
+                return null;
+            }
+        }
         // Address plausibility gate: a venue name is not an address (run
         // 20260723-140457: extraction stored address "Legacy" — the bar's own
         // name — and it sailed through to geocoding). Runs BEFORE the bar
@@ -1393,6 +1411,82 @@ class AiWebParser {
     // "Dark Disco" are real event names), and a closed-word alone without a
     // weekday is not a notice either. Token classes only — no per-venue rules,
     // no position heuristics.
+    // Is this title nothing but site chrome? Shape, not a per-site list: a
+    // web page's furniture (account/session, commerce, navigation, legal)
+    // draws from a small closed vocabulary that no event name is built out
+    // of. EVERY token must be chrome and at least one must be an ANCHOR, so
+    // the modifier list alone ("my page", "the us") can never trigger it and
+    // one non-chrome word ("Bear Menu Night", "Home Cooking", "Info Night")
+    // makes the title a name again.
+    //
+    // WEAK anchors are the words a party could plausibly be named after on
+    // their own — a fetish night really could be called "CONTACT", a bar
+    // really could run "SIGN" — so they only count as chrome inside a
+    // multi-word title ("Contact Us", "Sign In", "About Us"). A bare weak
+    // anchor is always kept.
+    isSiteChromeTitle(title) {
+        const normalized = String(title || '')
+            .toLowerCase()
+            .replace(/&#?[0-9a-z]+;/gi, ' ')
+            .replace(/[^a-z0-9]+/g, ' ')
+            .trim();
+        if (!normalized) return false;
+        const strongAnchors = new Set([
+            'account', 'accounts', 'login', 'logins', 'logout', 'signin', 'signup', 'signout',
+            'register', 'registration', 'password', 'profile', 'wallet', 'membership',
+            'dashboard', 'settings', 'preferences', 'subscribe', 'newsletter', 'unsubscribe',
+            'cart', 'basket', 'checkout', 'wishlist', 'search', 'menu', 'navigation', 'nav',
+            'sitemap', 'homepage', 'faq', 'faqs', 'privacy', 'cookies', 'accessibility',
+            'disclaimer', 'copyright', 'careers'
+        ]);
+        const weakAnchors = new Set([
+            'log', 'sign', 'contact', 'home', 'about', 'help', 'support', 'info',
+            'information', 'directions', 'member', 'members', 'terms', 'policy',
+            'conditions', 'reservations', 'booking', 'bookings'
+        ]);
+        const modifiers = new Set([
+            'my', 'your', 'our', 'the', 'a', 'an', 'us', 'we', 'me', 'in', 'out', 'up', 'to',
+            'and', 'or', 'of', 'page', 'pages', 'site', 'link', 'links', 'here', 'view',
+            'main', 'skip', 'content', 'user', 'users', 'client', 'customer', 'go', 'back',
+            'top', 'bottom', 'more', 'new', 'create', 'edit', 'update', 'manage'
+        ]);
+        const tokens = normalized.split(/\s+/);
+        const weakCounts = tokens.length > 1;
+        let anchorCount = 0;
+        for (const token of tokens) {
+            if (strongAnchors.has(token)) {
+                anchorCount++;
+                continue;
+            }
+            if (weakAnchors.has(token)) {
+                if (weakCounts) anchorCount++;
+                continue;
+            }
+            if (modifiers.has(token)) continue;
+            return false;
+        }
+        return anchorCount > 0;
+    }
+
+    // Does the event state a schedule or a price in its OWN extracted text?
+    // startDate/endDate are excluded on purpose — normalization always
+    // synthesizes them, so they prove nothing about the source. Used only to
+    // spare a chrome-shaped title that nevertheless looks like a real
+    // listing (flag-don't-drop: it is kept and logged, never silently fixed).
+    hasScheduleOrPriceSignal(event) {
+        if (!event || typeof event !== 'object') return false;
+        for (const key of ['startTime', 'endTime', 'cover', 'ticketUrl']) {
+            if (typeof event[key] === 'string' && event[key].trim()) return true;
+        }
+        const text = ['title', 'description', 'shortName']
+            .map(key => (typeof event[key] === 'string' ? event[key] : ''))
+            .join(' ');
+        if (!text.trim()) return false;
+        return /\b\d{1,2}:\d{2}\b/.test(text)
+            || /\b\d{1,2}\s*(?:am|pm)\b/i.test(text)
+            || /[$€£]\s*\d/.test(text);
+    }
+
     isVenueHoursNoticeTitle(title) {
         const normalized = String(title || '')
             .toLowerCase()
@@ -1640,6 +1734,19 @@ class AiWebParser {
         return !this.isVenueHoursNoticeTitle(this.deriveSegmentListingTitle(segment));
     }
 
+    // A segment's page TEXT. Every segment constructor carries `lines` — the
+    // same extractBodyParts corpus the prompt and the verbatim-evidence gate
+    // read — so that is the authority. A segment that somehow arrives with no
+    // lines falls back to running the shared corpus builder over whatever
+    // content it has, which strips markup exactly the way cleanHtml does.
+    getSegmentPageText(segment, segmentContent) {
+        const lines = segment && Array.isArray(segment.lines) ? segment.lines.filter(Boolean) : [];
+        if (lines.length > 0) return lines.join('\n');
+        const content = String(segmentContent || '');
+        if (!/<[a-zA-Z!/]/.test(content)) return content;
+        return this.extractBodyParts(content).join('\n');
+    }
+
     buildMultiEventSegmentHtmlData(htmlData, segment, index, totalSegments, ocrResults = [], pageDateContext = null) {
         const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
         const segmentHtml = segment && typeof segment.html === 'string' ? segment.html : '';
@@ -1672,7 +1779,15 @@ class AiWebParser {
             // The segment's own page text WITHOUT the resource/OCR context
             // lines — the bar-convergence rescue's PAGE corpus, so OCR text
             // stays an independent signal instead of leaking into the page.
-            segmentText: segmentContent,
+            // TEXT, never markup: segmentContent prefers segment.html (the
+            // raw recovered HTML — that is what the prompt builder wants,
+            // because cleanHtml strips it), so this field used to hand the
+            // rescue 9 KB of Wix tag soup as "page lines". Run
+            // 20260803-141425 adopted the footer icon's own closing tag as
+            // the venue: bar "</svg>" on "Dolly and the DJ". The prompt the
+            // model saw was clean, so no verbatim-evidence gate could ever
+            // have caught it.
+            segmentText: this.getSegmentPageText(segment, segmentContent),
             aiEvent: null,
             aiExtraction: null,
             ocrResults: segmentOcrResults,
@@ -7456,8 +7571,52 @@ class AiWebParser {
         return `${section.label}\n${section.lines.join('\n')}`;
     }
 
+    // The 500,000-char corpus cap can slice through the middle of a <script>,
+    // <style> or comment block, orphaning its opening tag. Every corpus
+    // stripper matches open→close PAIRS, so an orphaned opener means the
+    // block body is not markup any more — it is "page text". On
+    // thelumberyardbar.com the cap lands inside a 228 KB
+    // <script type="application/json" id="wix-viewer-model"> and run
+    // 20260803-141425 extracted an event titled "My Account" straight out of
+    // that JSON's Wix member-router config ("title":"My Account"). Sealing
+    // the tail (never trimming it) keeps every byte of real content before
+    // the cut and lets the existing strippers remove the block as intended.
+    sealTruncatedHtmlBlocks(html) {
+        const source = String(html || '');
+        if (!source) return source;
+        const blockTypes = [
+            { open: /<script\b[^>]*>/gi, close: /<\/script[^>]*>/gi, seal: '</script>' },
+            { open: /<style\b[^>]*>/gi, close: /<\/style[^>]*>/gi, seal: '</style>' },
+            { open: /<!--/g, close: /-->/g, seal: '-->' }
+        ];
+        const lastMatchEnd = (pattern, from) => {
+            pattern.lastIndex = from;
+            let match;
+            let end = -1;
+            let start = -1;
+            while ((match = pattern.exec(source)) !== null) {
+                start = match.index;
+                end = match.index + match[0].length;
+            }
+            return { start, end };
+        };
+        const unsealed = [];
+        for (const type of blockTypes) {
+            const opener = lastMatchEnd(type.open, 0);
+            if (opener.start < 0) continue;
+            type.close.lastIndex = opener.end;
+            if (type.close.exec(source) !== null) continue;
+            unsealed.push({ start: opener.start, seal: type.seal });
+        }
+        if (unsealed.length === 0) return source;
+        // Innermost (latest opener) sealed first, so a comment opened inside
+        // a truncated script closes before the script does.
+        unsealed.sort((a, b) => b.start - a.start);
+        return source + unsealed.map(entry => entry.seal).join('');
+    }
+
     getPromptSectionBundle(html, aiConfig = {}) {
-        const source = String(html || '').slice(0, 500000);
+        const source = this.sealTruncatedHtmlBlocks(String(html || '').slice(0, 500000));
         const title = this.extractTitlePart(source);
         const metaParts = this.extractMetaParts(source);
         const jsonLdParts = this.extractJsonLdParts(source);
@@ -8957,7 +9116,7 @@ class AiWebParser {
     cleanHtml(html, aiConfig = {}) {
         if (!html) return '';
         const payloadMode = this.normalizePayloadMode(aiConfig.payloadMode);
-        const source = String(html).slice(0, 500000);
+        const source = this.sealTruncatedHtmlBlocks(String(html).slice(0, 500000));
         const title = this.extractTitlePart(source);
         const metaParts = this.extractMetaParts(source);
         const jsonLdParts = this.extractJsonLdParts(source);
@@ -15566,7 +15725,7 @@ TEXT:
     // them, but "the venue's address in the site footer" is exactly the
     // signal the single-recurring-address fact needs).
     getPageTextForSiteRole(html) {
-        let text = String(html || '').slice(0, 500000);
+        let text = this.sealTruncatedHtmlBlocks(String(html || '').slice(0, 500000));
         text = text.replace(/<script\b[^>]*>[\s\S]*?<\/script[^>]*>/gi, ' ');
         text = text.replace(/<style\b[^>]*>[\s\S]*?<\/style[^>]*>/gi, ' ');
         text = text.replace(/<!--[\s\S]*?-->/g, ' ');
@@ -15913,6 +16072,24 @@ TEXT:
         return this.getGenericInfrastructureDomainLabels().has(hostMatch[1].toLowerCase());
     }
 
+    // Raw markup is never a venue name — SHAPE only, no vocabulary. A value
+    // that is (or opens with, or is an attribute off) an HTML tag came from
+    // tag soup that leaked into a text corpus, and no venue on earth is
+    // called "</svg>" (run 20260803-141425 shipped exactly that as the bar
+    // for "Dolly and the DJ", rendering as "Dolly and the DJ - 📍</svg>").
+    // Deliberately narrow so real names survive: "<3" is not a tag (a tag
+    // name must start with a letter), and a value with no "<" at all can
+    // only qualify through the attribute shape (name="…"), which no venue
+    // name has.
+    looksLikeMarkupFragment(value) {
+        const text = String(value || '').trim();
+        if (!text) return false;
+        if (/<\/?[a-zA-Z][^<>]*>/.test(text)) return true;
+        if (/^<\/?[a-zA-Z][a-zA-Z0-9:-]*(?:\s|$)/.test(text)) return true;
+        if (/^[a-zA-Z][a-zA-Z0-9:-]*\s*=\s*["']/.test(text)) return true;
+        return false;
+    }
+
     // Post-extraction bar plausibility gate (mirror of
     // applyAddressPlausibilityGate: flag-and-drop, additive log): an
     // address-shaped bar VALUE is never a valid extraction. Run
@@ -15936,7 +16113,8 @@ TEXT:
         // never wired in here, so run 20260731 shipped SPOOKMINCE with bar
         // "Venue TBA" as if an unannounced venue were a real one.
         let reason = '';
-        if (this.isAddressShapedBarValue(bar)) reason = 'address-shaped';
+        if (this.looksLikeMarkupFragment(bar)) reason = 'markup fragment — not a venue name';
+        else if (this.isAddressShapedBarValue(bar)) reason = 'address-shaped';
         else if (this.isPlaceholderVenueName(bar)) reason = 'placeholder — venue not announced';
         else if (this.isDomainShapedBarValue(bar)) reason = 'website domain — not a venue name';
         else reason = this.getCityShapedBarRejection(bar, event, cityConfig);
@@ -16265,6 +16443,11 @@ TEXT:
             ? this.core.normalizeBarNameKey(text)
             : String(text).toLowerCase().replace(/^\s*the\s+/, '').replace(/[^a-z0-9]/g, '');
         if (identityKey.length < 3) return 'too short';
+        // Parity with applyBarPlausibilityGate: a value the gate would DELETE
+        // as markup must never be adoptable by the rescue either. Runs before
+        // every other shape test because a tag normalizes to an innocent key
+        // ("</svg>" → "svg"), which is what let it converge on page+url.
+        if (this.looksLikeMarkupFragment(text)) return 'markup';
         if (/(?:https?:\/\/|www\.)/i.test(text)) return 'url';
         // Parity with applyBarPlausibilityGate: a value the bar gate would
         // DELETE as a website domain must never be adoptable by the rescue

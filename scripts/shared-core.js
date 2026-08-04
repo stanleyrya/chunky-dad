@@ -2080,6 +2080,55 @@ class SharedCore {
         return matches.length === 1 ? matches[0].entry : null;
     }
 
+    // True when a URL on a platform-identity host is the promoter's OWN
+    // curated presence on that platform — instagram.com/<handle>, or an
+    // eventbrite.com/o/<organizer-id> page named in the entry's urlPatterns —
+    // rather than a listing for one event. Only HOST-ANCHORED curated tokens
+    // (those carrying a path separator) can prove it: a bare brand token like
+    // Goldiloxx's "goldiloxx" also occurs inside the ticket URL
+    // sickening.events/e/goldiloxx-chicago/tickets, which is exactly the
+    // vendor link this must NOT protect. Fails closed — no matched entry, no
+    // host-anchored token, no protection.
+    // A BRANDED SUBDOMAIN on a ticketing host with a bare path is that
+    // organizer's home page, not a ticket link — the same thing
+    // `eventbrite.com/o/<organizer-id>` already is, in a different shape.
+    // Measured on the corpus (2026-08-03), the two shapes never overlap:
+    //   organizer home  bbromp2026.eventbrite.com/          Big Bear ROMP 2026
+    //                   westernxposurefall2026.eventbrite.com/
+    //                   xxl2026.eventbrite.com/             Western Xposure XXL
+    //                   lazybearweek.eventbrite.com/        Lazy Bear Week 2026
+    //                   newduro.eventbrite.com              D>U>R>O
+    //   ticket link     eventbrite.com/e/quenchd-tickets-1993587626256
+    //                   eventbrite.com/e/club-chub-weekend-2026-…
+    // So this is decided by URL SHAPE and needs no curated data — which is why
+    // it is preferred over four hand-written registry entries. A path of any
+    // substance ('/e/…', '/o/…' handled elsewhere) is never an organizer home.
+    isPlatformOrganizerHomeUrl(url) {
+        const raw = String(url || '').trim();
+        if (!raw) return false;
+        const host = this.getHostFromUrl(raw).toLowerCase().replace(/^www\./, '');
+        if (!host || !isPlatformIdentityHost(host)) return false;
+        // The host must carry a brand label ABOVE the platform domain.
+        const platform = PLATFORM_IDENTITY_HOSTS.find(candidate =>
+            host === candidate || host.endsWith(`.${candidate}`));
+        if (!platform || host === platform) return false;
+        // The WHATWG URL parser is banned in scripts/ (platform purity), so
+        // take the path with the same regex shape used elsewhere in this file.
+        const pathMatch = raw.match(/^https?:\/\/[^\/?#]+([^?#]*)/i);
+        const path = pathMatch ? pathMatch[1] : '';
+        return path === '' || path === '/';
+    }
+
+    isCuratedPlatformSelfIdentityUrl(event, url) {
+        const lowered = String(url || '').toLowerCase();
+        if (!lowered) return false;
+        const entry = this.getCuratedPromoterIdentityEntry(event);
+        if (!entry) return false;
+        const indexed = this.getPromoterRegistryIndex().entries.find(item => item.entry === entry);
+        const tokens = indexed && Array.isArray(indexed.urlTokens) ? indexed.urlTokens : [];
+        return tokens.some(token => token.includes('/') && lowered.includes(token));
+    }
+
     // Per-run match index over this.promoters (rebuilt when the registry
     // array is replaced, e.g. by the remote refresh). Precomputes:
     //   - nameKeys: identity keys of name + aliases (organizer equality)
@@ -6304,15 +6353,35 @@ class SharedCore {
             }
         }
 
+        // Keyword tier, split by WHERE the hit lives (owner ruling 2026-08-03:
+        // "Pet Night" and "Gear Night" are NOT bear events — both were keyword
+        // verdicts that short-circuited the AI on description prose, "unleash
+        // your inner pup" and a dress-code aside "you can always wear your
+        // regular leather or gear"). See classifyBearKeywordMatch: title and
+        // venue-name hits are identity and still short-circuit; a hit found
+        // ONLY in the free-text description short-circuits only when that
+        // description NAMES a registry brand.
         const matched = this.matchBearKeywords(searchText);
-        if (matched.length > 0) {
+        const keywordTier = this.classifyBearKeywordMatch(event, matched);
+        if (matched.length > 0 && keywordTier.shortCircuit) {
             return { result: 'bear', provenance: `keyword: ${matched.join(', ')}` };
+        }
+        if (matched.length > 0) {
+            console.log(`🐻 BEAR CHECK: keyword ${matched.join(', ')} appears only in the description of "${event.title || 'Unknown'}" and names no registry brand — deferring to the AI tier`);
         }
 
         const aiVerdict = await this.getAiBearVerdict(event, parserConfig, httpAdapter);
         if (aiVerdict) {
             const aiDecision = { result: aiVerdict.verdict, provenance: `ai: ${aiVerdict.reason || 'no reason given'}` };
             return this.applyBearEvidenceGate(aiDecision, event, parserConfig, aiVerdict.evidence);
+        }
+
+        // Fail closed: a deferred description-only match the AI tier could not
+        // judge keeps its legacy keyword verdict. The split RE-ROUTES the
+        // decision to a better judge — it never drops a bear event when that
+        // judge is unavailable.
+        if (matched.length > 0) {
+            return { result: 'bear', provenance: `keyword: ${matched.join(', ')} (ai unavailable)` };
         }
 
         if (trust.affinity === 'always') {
@@ -6357,6 +6426,87 @@ class SharedCore {
             if (new RegExp(`\\b${escaped}\\b`, 'i').test(source)) matched.push(keyword);
         }
         return matched;
+    }
+
+    // Registry-derived brand phrases that themselves carry bear vocabulary:
+    // "Bearracuda", "MEGA-WOOF", "Club Chub", "Bears Sitges Week". Derived
+    // from the curated promoter registry, never a hardcoded list — a brand
+    // whose own name contains no bear word (Goldiloxx, SPOOKMINCE) can never
+    // be the source of a keyword hit and is skipped. Cached against the
+    // registry array's identity, like getPromoterRegistryIndex.
+    getBearBrandPhraseIndex() {
+        if (this._bearBrandPhraseIndex && this._bearBrandPhraseIndex.source === this.promoters) {
+            return this._bearBrandPhraseIndex;
+        }
+        const list = Array.isArray(this.promoters) ? this.promoters : [];
+        const phrases = [];
+        const keys = [];
+        for (const entry of list) {
+            if (!entry) continue;
+            const names = [entry.name, entry.shortName, entry.shorterName,
+                ...(Array.isArray(entry.aliases) ? entry.aliases : [])];
+            for (const name of names) {
+                if (!name || this.matchBearKeywords(name).length === 0) continue;
+                const phrase = this.buildPromoterTokenPhrase(name);
+                if (phrase && !phrases.includes(phrase)) phrases.push(phrase);
+                // Compact key too: curated shortNames carry display hyphens
+                // ("MEGA-WOOF", "BEAR-RAC-UDA") that padded-token containment
+                // could never match against a description writing "MEGAWOOF".
+                const key = this.normalizePromoterNameKey(name);
+                if (key.length >= 5 && !keys.includes(key)) keys.push(key);
+            }
+        }
+        this._bearBrandPhraseIndex = { source: this.promoters, phrases, keys };
+        return this._bearBrandPhraseIndex;
+    }
+
+    // The registry brand this text NAMES ('' when none). Padded-token
+    // containment — the same idiom promoter title matching uses — plus
+    // compact-key containment for the hyphenated shortName variants.
+    textNamesBearBrand(text) {
+        const index = this.getBearBrandPhraseIndex();
+        const padded = this.buildPaddedPromoterTitleText(text);
+        if (padded) {
+            for (const phrase of index.phrases) {
+                if (padded.includes(` ${phrase} `)) return phrase;
+            }
+        }
+        const compact = this.normalizePromoterNameKey(text);
+        if (compact) {
+            for (const key of index.keys) {
+                if (compact.includes(key)) return key;
+            }
+        }
+        return '';
+    }
+
+    // Where a bear keyword hit lives, and whether that location may
+    // short-circuit the AI tier (owner ruling 2026-08-03).
+    //   title   → yes. A bear word in the event's own name is identity.
+    //   venue   → yes. `bar` is a NAME, not prose: BEARS DISCO, Bear-Village,
+    //             CHUNK-PARTY.COM are all correct keyword bears, and the venue
+    //             name is curated/extracted identity data (curated beats
+    //             derived).
+    //   description + a registry brand → yes. Bearracuda's Portland NYE / SF
+    //             FLSM / Treasure Trail family puts the BRAND in the
+    //             description and not the title; that is still identity.
+    //   description, generic vocabulary only → NO. "unleash your inner pup",
+    //             "wear your regular leather or gear" is prose about a
+    //             dress code, and the AI tier gets these right when it is
+    //             allowed to see them.
+    classifyBearKeywordMatch(event, matched) {
+        if (!Array.isArray(matched) || matched.length === 0) {
+            return { shortCircuit: false, source: 'none', brand: '' };
+        }
+        if (this.matchBearKeywords(event && event.title).length > 0) {
+            return { shortCircuit: true, source: 'title', brand: '' };
+        }
+        if (this.matchBearKeywords(event && event.bar).length > 0) {
+            return { shortCircuit: true, source: 'venue', brand: '' };
+        }
+        const brand = this.textNamesBearBrand(event && event.description);
+        if (brand) return { shortCircuit: true, source: 'description-brand', brand };
+        return { shortCircuit: false, source: 'description-generic', brand: '' };
     }
 
     // True when the event was actually extracted from a page on a DIFFERENT
@@ -11207,8 +11357,12 @@ class SharedCore {
             // platform value is simply replaced) and website/url adopt the
             // curated link. A curated linktree (Megawoof, Cubhouse) is fine
             // and intended — the site handles linktree favicons specially.
-            // Platform host but NO curated identity → flag-only log, nothing
-            // changes; a website on a non-platform host is never touched.
+            // Platform host but NO curated website → the platform link is
+            // CLEARED out of website/url and parked in ticketUrl (owner ruling
+            // 2026-08-03, see the branch below); the one exception is a URL
+            // that is the promoter's own curated presence ON that platform,
+            // which is a real identity link and is left alone. A website on a
+            // non-platform host is never touched.
             {
                 const platformWebsite = typeof analyzedEvent.website === 'string' ? analyzedEvent.website.trim() : '';
                 const websiteHost = platformWebsite
@@ -11230,8 +11384,57 @@ class SharedCore {
                         }
                         notesNeedRebuild = true;
                         console.log(`🔗 LINKS: replaced platform website ${platformWebsite} with ${curatedWebsite}${existingTicketUrl ? '' : ' (platform link moved to ticketUrl)'} — curated identity of "${promoterEntry.name}" for "${analyzedEvent.title || 'event'}"`);
-                    } else if (!curatedWebsite) {
+                    } else if (!curatedWebsite && this.isPlatformOrganizerHomeUrl(platformWebsite)) {
+                        // A branded subdomain with a bare path is the
+                        // organizer's HOME on that platform, not a ticket
+                        // link — see isPlatformOrganizerHomeUrl. Decided by
+                        // URL shape, so it needs no registry entry.
+                        console.log(`🔗 LINKS: website ${platformWebsite} is a platform organizer home page, not a ticket link — left as-is for "${analyzedEvent.title || 'event'}"`);
+                    } else if (!curatedWebsite && this.isCuratedPlatformSelfIdentityUrl(analyzedEvent, platformWebsite)) {
+                        // The promoter's OWN presence on the platform (their
+                        // instagram profile, their eventbrite organizer page).
+                        // That IS an identity link — never stripped.
                         console.log(`🔗 LINKS: website ${platformWebsite} is on a platform host but no curated identity to fall back to — left as-is for "${analyzedEvent.title || 'event'}"`);
+                    } else if (!curatedWebsite) {
+                        // Owner ruling 2026-08-03, verbatim: "ticket URLs
+                        // shouldn't be website/url fields, they should always
+                        // go in the ticketUrl … filling it with the ticket
+                        // link again isn't helpful. It would be better to have
+                        // that field empty."  website/url are ONE canonical
+                        // field and drive the site favicon, so a vendor or
+                        // social LISTING url sitting there renders Eventbrite's
+                        // icon (or none) instead of the promoter's. With no
+                        // curated website to adopt, EMPTY is strictly better:
+                        // the site then falls back to the promoter's curated
+                        // favicon (Goldiloxx deliberately ships
+                        // `favicon: https://linktr.ee/goldiloxx` and NO
+                        // website). Observed 2026-08-03: Club Chub DTLA carried
+                        // website = facebook.com/events/1376781057883088 with
+                        // an empty ticketUrl, and GOLDILOXX Chicago carried the
+                        // same sickening.events ticket link in both fields
+                        // under two different paths.
+                        // Flag, don't drop: the link is never lost — it moves
+                        // into an EMPTY ticketUrl; when a real ticketUrl is
+                        // already there it wins and the platform duplicate goes.
+                        const existingTicketUrl = typeof analyzedEvent.ticketUrl === 'string' ? analyzedEvent.ticketUrl.trim() : '';
+                        if (!existingTicketUrl) {
+                            analyzedEvent.ticketUrl = platformWebsite;
+                        }
+                        delete analyzedEvent.website;
+                        // `url` is an ALIAS of website — ONE canonical field —
+                        // so it goes with it, exactly as the curated-adopt
+                        // branch above writes both. Deliberately NOT "promote a
+                        // differing url into website": in the corpus every such
+                        // url is a link-aggregator's own copy of the event page
+                        // (thebearcalendar.com/events/…), which
+                        // applyAggregatorWebsitePointers exists to move AWAY
+                        // from. Trust the pointer, not the copy.
+                        delete analyzedEvent.url;
+                        notesNeedRebuild = true;
+                        const parked = existingTicketUrl
+                            ? `existing ticketUrl ${existingTicketUrl} kept`
+                            : 'moved to ticketUrl';
+                        console.log(`🔗 LINKS: cleared platform website ${platformWebsite} — a ticketing/social link is never the identity link (${parked}, website/url left empty) for "${analyzedEvent.title || 'event'}"`);
                     }
                 }
             }

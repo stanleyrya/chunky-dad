@@ -2732,7 +2732,7 @@ test('generateEventCard embeds are all built by the shared serializer (no AI blo
   const html = adapter.generateEventCard(event, { runId: '20260725-210227' });
   assert.ok(!html.includes('PROMPT PROMPT'), 'no AI prompt text anywhere in the card HTML');
   assert.ok(!html.includes('VALIDATE VALIDATE'), 'no AI validation text anywhere in the card HTML');
-  assert.ok(html.includes('data-event-json'), 'copy buttons still carry event JSON');
+  assert.ok(html.includes('copyEventJSON(this)'), 'copy buttons are still wired up');
   assert.ok(html.includes('&quot;_original&quot;'), 'the raw <pre> dump still shows _original provenance');
 }
 );
@@ -4413,4 +4413,327 @@ test('run summary counts overrides and proposals, and stays silent when there ar
   assert.ok(
     !quiet.some(l => l.includes('verride') || l.includes('roposal')),
     `no authority lines when nothing is stamped, got: ${JSON.stringify(quiet)}`);
+});
+
+// ---------------------------------------------------------------------------
+// Results-HTML size (run 20260803-143036: 52 analyzed events rendered a
+// 3198 KB page, WebView.loadHTML white-screened, and the log shows the owner
+// "reviewing" 52 events in 3.3 seconds — i.e. he never saw them). Every run
+// he actually reviewed rendered at <= 1923 KB.
+//
+// The page was NOT big because of images, CSS or scripts. Measured on that
+// exact run it was: the same event JSON embedded THREE times per card
+// (2 x data-event-json + the raw <pre>) = 1290 KB / 43%; ~2400 merge-table
+// cells each carrying ~200 bytes of duplicated inline style = 300 KB; and a
+// line-by-line diff that emitted every value in full, both sides, uncapped.
+//
+// These guards are about construction, not one lucky number: the payload and
+// the diff renderings draw from DOCUMENT-WIDE budgets, so their contribution
+// is bounded by a constant instead of growing with the event count.
+// ---------------------------------------------------------------------------
+
+function buildSizedAnalyzedEvent(index) {
+  // Shaped like the real run's merge events: long notes + description, a
+  // full _original triple, per-field priorities and merge bookkeeping.
+  const blurb =
+    `Doors at 9. ${'Bears, cubs, otters and their admirers welcome. '.repeat(24)}`;
+  const notes = [
+    'website: https://example.com/party',
+    'instagram: https://instagram.com/example',
+    `description: ${blurb}`,
+    `shortName: Party ${index}`
+  ].join('\n');
+  const scraper = {
+    title: `MEGAWOOF ${index}`,
+    description: `${blurb}NEW LOCATION for ${index}.`,
+    startDate: '2026-09-01T02:00:00.000Z',
+    endDate: '2026-09-01T08:00:00.000Z',
+    bar: `Club ${index}`,
+    address: `${index} Main St, Los Angeles, CA`,
+    url: `https://example.com/e/${index}`,
+    image: `https://example.com/img/${index}.jpg`,
+    notes
+  };
+  const calendar = {
+    ...scraper,
+    description: `${blurb}OLD LOCATION for ${index}.`,
+    bar: `Club ${index} (old)`
+  };
+  return {
+    title: `MEGAWOOF ${index}`,
+    key: `megawoof-${index}`,
+    city: 'la',
+    _action: 'merge',
+    startDate: '2026-09-01T02:00:00.000Z',
+    endDate: '2026-09-01T08:00:00.000Z',
+    bar: `Club ${index}`,
+    address: `${index} Main St, Los Angeles, CA`,
+    description: `${blurb}NEW LOCATION for ${index}.`,
+    notes,
+    _fieldPriorities: {
+      title: { priority: ['ai-web'], merge: 'ai' },
+      description: { priority: ['ai-web'], merge: 'clobber' },
+      bar: { priority: ['ai-web'], merge: 'ai' },
+      address: { priority: ['ai-web'], merge: 'preserve' }
+    },
+    _mergeDecisions: { description: 'clobbered', bar: 'ai chose new' },
+    _mergeDiff: { description: [calendar.description, scraper.description] },
+    _original: { scraper, calendar, merged: { ...scraper }, aiArbitration: { arbitrated: ['bar'] } }
+  };
+}
+
+// Mirrors run 20260803-143036's composition: 52 analyzed events of which
+// roughly a third are merges carrying the full _original triple (that run had
+// 15). A page of nothing but merges is not what white-screened.
+function buildSizedResults(count) {
+  const analyzedEvents = [];
+  for (let i = 0; i < count; i++) {
+    const event = buildSizedAnalyzedEvent(i);
+    if (i % 3 !== 0) {
+      delete event._original;
+      delete event._mergeDiff;
+      delete event._mergeDecisions;
+      event._action = 'new';
+    }
+    analyzedEvents.push(event);
+  }
+  return { analyzedEvents };
+}
+
+function countPayloadEmbeds(html) {
+  return {
+    dataEventJson: (html.match(/data-event-json=/g) || []).length,
+    rawJsonPre: (html.match(/<pre class="raw-json">/g) || []).length
+  };
+}
+
+test('results HTML: a card embeds its event JSON exactly ONCE (three copies is what white-screened run 20260803-143036)', () => {
+  const adapter = buildAdapter();
+  const event = buildSizedAnalyzedEvent(1);
+  const html = adapter.generateEventCard(event, { runId: '20260803-143036' });
+
+  const embeds = countPayloadEmbeds(html);
+  assert.equal(embeds.dataEventJson, 0,
+    'no data-event-json attributes: the copy buttons derive from the card payload');
+  assert.equal(embeds.rawJsonPre, 1, 'exactly one embedded payload per card');
+
+  // The payload is compact — the ~15% of it that was pure indent whitespace
+  // never crosses into the HTML string; the page re-indents it in the DOM.
+  const payload = html.match(/<pre class="raw-json">([\s\S]*?)<\/pre>/)[1];
+  assert.ok(!payload.includes('\n  &quot;'),
+    'embedded payload is compact, not indented');
+
+  // ...and it is still the real, parseable event, still escaped.
+  const parsed = JSON.parse(payload
+    .replace(/&quot;/g, '"').replace(/&#039;/g, "'")
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&'));
+  assert.equal(parsed.title, 'MEGAWOOF 1');
+  assert.ok(parsed._original && parsed._original.calendar,
+    'merge provenance is still reachable from the card payload');
+});
+
+test('results HTML: page-derived text in the single payload is still escaped', () => {
+  const adapter = buildAdapter();
+  const event = buildSizedAnalyzedEvent(2);
+  event.title = 'Bear </pre><script>alert(1)</script> Night';
+  event._original.scraper.bar = 'Club "><img src=x onerror=alert(1)>';
+  const html = adapter.generateEventCard(event, { runId: 'r1' });
+  assert.ok(!html.includes('<script>alert(1)</script>'), 'no unescaped script tag');
+  assert.ok(!html.includes('onerror=alert(1)>'), 'no unescaped event handler');
+  assert.ok(html.includes('&lt;script&gt;'), 'the script tag is escaped, not stripped');
+  // The restructuring must not have left a second, differently-escaped copy
+  // of the same hostile text behind.
+  assert.equal(countPayloadEmbeds(html).dataEventJson, 0, 'no attribute-embedded copy');
+  assert.equal(countPayloadEmbeds(html).rawJsonPre, 1, 'exactly one escaped payload');
+});
+
+test('results HTML: the 52-event run that white-screened now renders well under the size that has actually rendered on device', async () => {
+  const adapter = buildAdapter();
+  const html = await adapter.generateRichHTML(buildSizedResults(52));
+  const kb = html.length / 1024;
+  assert.ok(kb < 1500,
+    `52-event page must be far below the 1923 KB that has rendered on device, got ${Math.round(kb)} KB`);
+});
+
+test('results HTML: small runs are not regressed — a 3-event page stays small and keeps its full detail', async () => {
+  const adapter = buildAdapter();
+  const html = await adapter.generateRichHTML(buildSizedResults(3));
+  const kb = html.length / 1024;
+  assert.ok(kb < 250, `3-event page stays small, got ${Math.round(kb)} KB`);
+  // Nothing is trimmed on a small run: the payloads keep their heavy keys.
+  assert.ok(html.includes('&quot;_original&quot;'), 'small-run payload keeps _original');
+  assert.ok(html.includes('&quot;_fieldPriorities&quot;'), 'small-run payload keeps _fieldPriorities');
+  assert.ok(!html.includes('&quot;_trimmed&quot;'), 'nothing was trimmed on a small run');
+  assert.equal(countPayloadEmbeds(html).rawJsonPre, 3, 'one payload per card');
+});
+
+test('results HTML is bounded BY CONSTRUCTION: 4x the events does not 4x the embedded payload', async () => {
+  const adapter = buildAdapter();
+  const totalPayloadBytes = async (count) => {
+    const html = await adapter.generateRichHTML(buildSizedResults(count));
+    let bytes = 0;
+    const re = /<pre class="raw-json">([\s\S]*?)<\/pre>/g;
+    let match;
+    while ((match = re.exec(html))) bytes += match[1].length;
+    return bytes;
+  };
+
+  const at50 = await totalPayloadBytes(50);
+  const at200 = await totalPayloadBytes(200);
+  const budget = ScriptableAdapter.EVENT_JSON_TOTAL_BUDGET_BYTES;
+
+  // Escaping inflates the embedded form, so compare against a generous
+  // multiple of the budget — the point is that it does NOT scale with N.
+  assert.ok(at200 < budget * 2,
+    `200-event payload total stays bounded by the ${Math.round(budget / 1024)} KB budget, got ${Math.round(at200 / 1024)} KB`);
+  assert.ok(at200 < at50 * 2,
+    `4x the events must not 4x the payload (50 events: ${Math.round(at50 / 1024)} KB, 200 events: ${Math.round(at200 / 1024)} KB)`);
+});
+
+test('results HTML: a trimmed payload is never silent — it is logged, stamped, and its keys are still rendered', async () => {
+  const adapter = buildAdapter();
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (...args) => { lines.push(args.join(' ')); };
+  let html;
+  try {
+    html = await adapter.generateRichHTML(buildSizedResults(60));
+  } finally {
+    console.log = originalLog;
+  }
+
+  const trimLine = lines.find(l => l.includes('Debug JSON trimmed on'));
+  assert.ok(trimLine, `a trim must be logged, got: ${JSON.stringify(lines.slice(0, 5))}`);
+  assert.ok(trimLine.includes('MEGAWOOF'), 'the log names the affected event(s)');
+  assert.ok(trimLine.includes('_original') || trimLine.includes('_fieldPriorities'),
+    'the log names which keys were dropped');
+  assert.ok(trimLine.includes('Merge Comparison'),
+    'the log says where the dropped keys are still rendered');
+
+  // The copied JSON self-documents the trim, so it can never be mistaken
+  // for the complete object.
+  assert.ok(html.includes('&quot;_trimmed&quot;'), 'the payload stamps _trimmed');
+  assert.ok(html.includes('results-html-budget'), 'the stamp names the reason');
+  // And the page says so where the owner is looking.
+  assert.ok(html.includes('Debug JSON trimmed to fit the page'),
+    'the affected card carries a visible notice');
+  // The information itself is still on the page: the merge table renders it.
+  assert.ok(html.includes('Merge Comparison'), 'the merge comparison table is still rendered');
+});
+
+test('results HTML: an oversized page is never silent about its own size', async () => {
+  const adapter = buildAdapter();
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (...args) => { lines.push(args.join(' ')); };
+  try {
+    // Far below the warn threshold: no noise on a normal run.
+    await adapter.generateRichHTML(buildSizedResults(3));
+  } finally {
+    console.log = originalLog;
+  }
+  assert.ok(!lines.some(l => l.includes('above the')),
+    'no size warning on a page that is comfortably small');
+
+  // The guard itself fires on anything past what has actually rendered.
+  const oversized = 'x'.repeat(ScriptableAdapter.RESULTS_HTML_WARN_BYTES + 1);
+  const warned = [];
+  const restore = console.log;
+  console.log = (...args) => { warned.push(args.join(' ')); };
+  try {
+    adapter.logResultsHtmlSizeGuard(oversized, 200);
+  } finally {
+    console.log = restore;
+  }
+  assert.equal(warned.length, 1, 'exactly one warning line');
+  assert.ok(warned[0].includes('200 event(s)'), 'the warning names the event count');
+  assert.ok(warned[0].includes('blank'), 'the warning explains the blank screen it predicts');
+});
+
+test('line-by-line diff bounds each value with an affordance instead of emitting it in full, twice', () => {
+  const adapter = buildAdapter();
+  const event = buildSizedAnalyzedEvent(7);
+  const longOld = `OLD ${'a'.repeat(20000)}`;
+  const longNew = `NEW ${'a'.repeat(20000)}`;
+  event._original.calendar.description = longOld;
+  event._original.scraper.description = longNew;
+  event.description = longNew;
+
+  const html = adapter.generateLineDiffView(event);
+  assert.ok(!html.includes('a'.repeat(1000)),
+    'a 20 KB value is not emitted in full');
+  assert.ok(html.length < 20000,
+    `the whole line diff stays smaller than ONE of the values it shows, got ${html.length} bytes`);
+  // The affordance: the true length and where the full value still lives.
+  assert.ok(html.includes('chars total'), 'the badge states the real length');
+  assert.ok(html.includes('Copy JSON'), 'the badge names where the full value is');
+});
+
+test('a truncated diff still shows WHAT changed: the window follows the first divergence', () => {
+  const adapter = buildAdapter();
+  const shared = 'z'.repeat(4000);
+  const oldValue = `${shared}ANCIENT-VENUE-NAME${'z'.repeat(2000)}`;
+  const newValue = `${shared}BRAND-NEW-VENUE-NAME${'z'.repeat(2000)}`;
+
+  // Line view: both sides are rendered, and both must reveal the change.
+  const event = buildSizedAnalyzedEvent(8);
+  event._original.calendar.description = oldValue;
+  event._original.scraper.description = newValue;
+  event.description = newValue;
+  const lineHtml = adapter.generateLineDiffView(event);
+  assert.ok(lineHtml.includes('ANCIENT-VENUE-NAME'),
+    'the removed side shows the text that actually differs');
+  assert.ok(lineHtml.includes('BRAND-NEW-VENUE-NAME'),
+    'the added side shows the text that actually differs');
+  // Revealing the change is only half of it — showing it must not cost the
+  // whole 1300-character value twice, which is how it used to be done.
+  assert.ok(lineHtml.length < oldValue.length,
+    `the diff shows the change without emitting both values in full, got ${lineHtml.length} bytes`);
+
+  // Table view: the two cells must not truncate into identical stubs.
+  const rows = adapter.generateComparisonRows(event);
+  assert.ok(rows.includes('ANCIENT-VENUE-NAME') || rows.includes('BRAND-NEW-VENUE-NAME'),
+    `the table cells reveal the divergence, got: ${rows.slice(0, 400)}`);
+});
+
+test('merge-table cells carry no per-cell inline styles (2400 copies of one style string was 300 KB of the white-screened page)', () => {
+  const adapter = buildAdapter();
+  const rows = adapter.generateComparisonRows(buildSizedAnalyzedEvent(9));
+  assert.ok(rows.length > 0, 'the fixture actually produces comparison rows');
+  assert.ok(!/<td[^>]*style="/.test(rows),
+    'no <td style="..."> — the shared chrome lives in one CSS class');
+  assert.ok(/<td class="cmp-field">/.test(rows), 'cells are classed instead');
+});
+
+test('merge-table value cells no longer carry the ENTIRE value in a title attribute', () => {
+  const adapter = buildAdapter();
+  const event = buildSizedAnalyzedEvent(10);
+  const huge = `HUGE ${'q'.repeat(30000)}`;
+  event._original.calendar.address = huge;
+  event._original.scraper.address = `${huge} CHANGED`;
+  event.address = `${huge} CHANGED`;
+  const rows = adapter.generateComparisonRows(event);
+  const titles = rows.match(/title="[^"]*"/g) || [];
+  for (const title of titles) {
+    assert.ok(title.length < 1000,
+      `every tooltip is bounded, got a ${title.length}-byte title attribute`);
+  }
+  assert.ok(rows.includes('chars'), 'the cell states how long the real value is');
+});
+
+test('the results page derives Copy JSON from the single card payload and still drops _original', async () => {
+  const adapter = buildAdapter();
+  const html = await adapter.generateRichHTML(buildSizedResults(2));
+  assert.ok(html.includes('function readCardEventJSON('),
+    'the page derives the copy payload from the embedded card payload');
+  const fnStart = html.indexOf('function readCardEventJSON(');
+  const fnBody = html.slice(fnStart, fnStart + 900);
+  assert.ok(fnBody.includes("key === '_original'"),
+    'the copy path still strips _original, as the old button attribute did');
+  assert.ok(fnBody.includes('JSON.stringify(parsed, null, 2)'),
+    'the copied JSON keeps its two-space indentation');
+  assert.ok(!html.includes("getAttribute('data-event-json')"),
+    'nothing reads the removed attribute any more');
+  assert.ok(html.includes('function prettyPrintCardPayloads('),
+    'the page re-indents the compact payload in the DOM');
 });

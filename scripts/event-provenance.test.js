@@ -6,6 +6,7 @@ const {
     buildProvenanceModel,
     buildExportIssuePayload,
     buildExportIssueJson,
+    buildExportIssueCompactJson,
     buildEventProvenanceSectionHtml
 } = require('./event-provenance');
 
@@ -310,4 +311,29 @@ test('the export control embeds a URI-encoded payload the page JS can decode', (
     assert.ok(html.includes(`onclick="exportProvenanceIssue(this)"`));
     assert.ok(html.includes('provenance-export-text'));
     assert.ok(html.includes('onfocus="this.select()"'));
+});
+
+// The data-payload attribute is percent-encoded, where every indent space
+// costs 3 bytes (`%20`). The embedded copy is therefore compact and the page
+// handler re-indents before showing the textarea — so the payload the owner
+// copies must be IDENTICAL in content to the pretty serialization.
+test('export payload: the compact embed round-trips to the same object as the pretty form', () => {
+  const event = buildMergedEventFixture();
+  const options = { action: 'merge', parser: 'Eagle LA', runId: '20260803-143036' };
+  const pretty = buildExportIssueJson(event, options);
+  const compact = buildExportIssueCompactJson(event, options);
+
+  assert.deepEqual(JSON.parse(compact), JSON.parse(pretty), 'same payload, different whitespace');
+  assert.ok(compact.length < pretty.length, 'the compact form is smaller');
+  assert.ok(!/\n/.test(compact), 'no newlines to percent-encode');
+  // What the page does before showing the textarea.
+  assert.equal(JSON.stringify(JSON.parse(compact), null, 2), pretty, 're-indenting reproduces the pretty form exactly');
+});
+
+test('export payload: the compact builder degrades like the pretty one', () => {
+  assert.equal(typeof JSON.parse(buildExportIssueCompactJson(null)), 'object');
+  const circular = { title: 'Loop' };
+  circular.self = circular;
+  const stub = JSON.parse(buildExportIssueCompactJson(circular));
+  assert.ok(typeof stub === 'object' && stub !== null, 'never throws, always parseable');
 });

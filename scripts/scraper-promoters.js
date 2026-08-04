@@ -170,7 +170,8 @@ const scraperPromoters = [
     "name": "Club Chub",
     "shortName": "CLUB CHUB",
     "instagram": "https://www.instagram.com/clubchubparty",
-    "bearAffinity": "always"
+    "bearAffinity": "always",
+    "website": "https://www.clubchubusa.com"
   },
   {
     "name": "Fat Dad",
