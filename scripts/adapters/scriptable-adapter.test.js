@@ -4596,6 +4596,12 @@ test('results HTML: small runs are not regressed — a 3-event page stays small 
 
 test('results HTML is bounded BY CONSTRUCTION: 4x the events does not 4x the embedded payload', async () => {
   const adapter = buildAdapter();
+  // The per-card payload budget is what is under test here. The page-level
+  // shed ladder (applyResultsHtmlSizeGuard) is a SEPARATE, later mechanism —
+  // at these event counts it would strip the payloads outright and the
+  // measurement below would prove nothing about the budget. It has its own
+  // tests further down.
+  adapter.applyResultsHtmlSizeGuard = (html) => html;
   const totalPayloadBytes = async (count) => {
     const html = await adapter.generateRichHTML(buildSizedResults(count));
     let bytes = 0;
@@ -4619,6 +4625,9 @@ test('results HTML is bounded BY CONSTRUCTION: 4x the events does not 4x the emb
 
 test('results HTML: a trimmed payload is never silent — it is logged, stamped, and its keys are still rendered', async () => {
   const adapter = buildAdapter();
+  // Same separation as above: this pins the per-card budget's stamp, not the
+  // page-level shed ladder that would replace the whole payload at 60 events.
+  adapter.applyResultsHtmlSizeGuard = (html) => html;
   const lines = [];
   const originalLog = console.log;
   console.log = (...args) => { lines.push(args.join(' ')); };
@@ -4663,7 +4672,7 @@ test('results HTML: an oversized page is never silent about its own size', async
     'no size warning on a page that is comfortably small');
 
   // The guard itself fires on anything past what has actually rendered.
-  const oversized = 'x'.repeat(ScriptableAdapter.RESULTS_HTML_WARN_BYTES + 1);
+  const oversized = 'x'.repeat(ScriptableAdapter.RESULTS_HTML_MAX_BYTES + 1);
   const warned = [];
   const restore = console.log;
   console.log = (...args) => { warned.push(args.join(' ')); };
@@ -4941,11 +4950,11 @@ test('size guard counts UTF-8 bytes, not UTF-16 code units', () => {
   // A page whose UTF-16 length is comfortably UNDER the threshold but whose
   // real UTF-8 size is over it. The old guard measured html.length and would
   // have stayed silent on exactly this page.
-  const units = Math.floor(ScriptableAdapter.RESULTS_HTML_WARN_BYTES * 0.7);
+  const units = Math.floor(ScriptableAdapter.RESULTS_HTML_MAX_BYTES * 0.7);
   const page = '→'.repeat(units);
-  assert.ok(page.length < ScriptableAdapter.RESULTS_HTML_WARN_BYTES,
+  assert.ok(page.length < ScriptableAdapter.RESULTS_HTML_MAX_BYTES,
     'UTF-16 length is under the threshold');
-  assert.ok(ScriptableAdapter.utf8ByteLength(page) > ScriptableAdapter.RESULTS_HTML_WARN_BYTES,
+  assert.ok(ScriptableAdapter.utf8ByteLength(page) > ScriptableAdapter.RESULTS_HTML_MAX_BYTES,
     'UTF-8 size is over it');
 
   const adapter = buildAdapter();
@@ -4970,7 +4979,7 @@ test('an over-budget page says so ON the page, not only in a log the owner canno
   let loud;
   try {
     quiet = adapter.applyResultsHtmlSizeGuard(small, 3);
-    const oversized = `<html><body>${'x'.repeat(ScriptableAdapter.RESULTS_HTML_WARN_BYTES + 1)}</body></html>`;
+    const oversized = `<html><body>${'x'.repeat(ScriptableAdapter.RESULTS_HTML_MAX_BYTES + 1)}</body></html>`;
     loud = adapter.applyResultsHtmlSizeGuard(oversized, 80);
   } finally {
     console.log = originalLog;
@@ -4981,6 +4990,237 @@ test('an over-budget page says so ON the page, not only in a log the owner canno
   assert.ok(loud.indexOf('results-size-warning') < loud.indexOf('xxxx'),
     'the banner is the first thing in the body, so it renders first');
   assert.ok(loud.includes('80 event(s)'), 'the banner names the run it is describing');
+});
+
+// ---------------------------------------------------------------------------
+// WebView.loadHTML's silent size cliff: over it WebKit never runs the page.
+//
+// Empirical bounds, one deployed build, 2026-08-04, verdicts from the #1629
+// liveness beacons: 862 KB rendered ("painted, interacted"); 955 KB produced
+// NO beacon at all, three runs out of three — no DOM, no scripts, literally
+// <html><head></head><body></body></html>. The old 960 KB threshold sat ABOVE
+// that cliff, so BEEFMINCE at 959 KB UTF-8 slipped under the guard and
+// white-screened anyway; and the guard's only response was a banner INSIDE
+// the document WebKit refuses to draw.
+// ---------------------------------------------------------------------------
+
+// A page big enough to trip the ceiling on its own, with real sheddable
+// structure in it: an inlined base64 header logo (the single heaviest
+// non-card item on the device page) plus real merge cards.
+async function renderOversizedResultsPage(adapter, { events = 40, logoBytes = 300 * 1024 } = {}) {
+  adapter.loadHeaderLogoData = async () => `data:image/png;base64,${'A'.repeat(logoBytes)}`;
+  return adapter.generateRichHTML(buildSizedResults(events));
+}
+
+function captureLog(fn) {
+  const lines = [];
+  const original = console.log;
+  console.log = (...args) => { lines.push(args.join(' ')); };
+  try {
+    return { value: fn(), lines };
+  } finally {
+    console.log = original;
+  }
+}
+
+async function captureLogAsync(fn) {
+  const lines = [];
+  const original = console.log;
+  console.log = (...args) => { lines.push(args.join(' ')); };
+  try {
+    const value = await fn();
+    return { value, lines };
+  } finally {
+    console.log = original;
+  }
+}
+
+test('size cliff: an over-ceiling page is REDUCED under the ceiling, not merely annotated', async () => {
+  const adapter = buildAdapter();
+  const { value: html } = await captureLogAsync(() => renderOversizedResultsPage(adapter));
+
+  const reduction = adapter._resultsSizeReduction;
+  assert.ok(reduction, 'the render records what it had to do to fit');
+  assert.ok(reduction.bytesBefore > ScriptableAdapter.RESULTS_HTML_MAX_BYTES,
+    `the unreduced page really was over the ceiling (${reduction.bytesBefore} bytes)`);
+  assert.ok(reduction.sheds.length > 0, 'something was actually shed');
+  assert.equal(reduction.overBudget, false, 'and it got under the ceiling');
+
+  // The point of the whole change: the STRING HANDED TO loadHTML is smaller.
+  // A banner cannot do this, which is why a banner was never the fix.
+  const finalBytes = ScriptableAdapter.utf8ByteLength(html);
+  assert.ok(finalBytes < reduction.bytesBefore,
+    'the returned page is smaller than the page that was built');
+  assert.ok(finalBytes <= ScriptableAdapter.RESULTS_HTML_MAX_BYTES,
+    `the returned page — banner included — is under the ceiling (${finalBytes} bytes)`);
+
+  // The heaviest rung is the inlined logo, and it degrades to the same remote
+  // URL the page already falls back to when the logo cache is cold.
+  assert.ok(!html.includes('data:image/png;base64,AAAA'),
+    'the inlined base64 logo is gone');
+  assert.ok(html.includes('https://chunky.dad/favicons/logo-hero.png'),
+    'the logo falls back to its remote URL rather than vanishing');
+
+  // Reduction is not mutilation: every card survives.
+  assert.equal((html.match(/class="event-card"/g) || []).length, 40,
+    'all 40 cards are still on the page');
+});
+
+test('size cliff: the ceiling is set from a size PROVEN to render, not from a size observed blank', () => {
+  // 862 KB rendered; 955 KB did not. A ceiling at or above the largest
+  // observed success is a ceiling with no margin against a cliff whose exact
+  // position is unknown — and 960 KB was above the BLANK page, which is how
+  // BEEFMINCE (959 KB UTF-8) slipped under it.
+  const ceilingKb = ScriptableAdapter.RESULTS_HTML_MAX_BYTES / 1024;
+  assert.ok(ceilingKb < 862, `ceiling (${ceilingKb} KB) is below the 862 KB that rendered`);
+  assert.ok(ceilingKb < 955, `ceiling (${ceilingKb} KB) is below the 955 KB that white-screened`);
+  assert.ok(ceilingKb >= 512, 'but not so low that ordinary runs get gutted');
+});
+
+test('size cliff: every shed is logged with what went and what it cost — no silent caps', async () => {
+  const adapter = buildAdapter();
+  const { lines } = await captureLogAsync(() => renderOversizedResultsPage(adapter));
+
+  const shedLines = lines.filter(l => l.includes('Results page shed'));
+  assert.equal(shedLines.length, adapter._resultsSizeReduction.sheds.length,
+    'exactly one log line per shed');
+  for (const shed of adapter._resultsSizeReduction.sheds) {
+    const line = shedLines.find(l => l.includes(`"${shed.id}"`));
+    assert.ok(line, `shed "${shed.id}" is named in the log`);
+    assert.ok(/recovering \d+ KB/.test(line), `shed "${shed.id}" reports its byte cost`);
+    assert.ok(/page now \d+ KB/.test(line), `shed "${shed.id}" reports the running size`);
+    assert.ok(shed.bytes > 0, `shed "${shed.id}" actually removed bytes`);
+  }
+  assert.ok(lines.some(l => l.includes('back under the')),
+    'and the run says, in one line, that the page ended up renderable');
+});
+
+test('size cliff: the shed ladder runs heaviest-first and stops as soon as the page fits', async () => {
+  const adapter = buildAdapter();
+  // A modest overshoot: the logo alone should cover it, so nothing else is
+  // touched. A page must never lose more than it had to.
+  await captureLogAsync(() => renderOversizedResultsPage(adapter, { events: 8, logoBytes: 700 * 1024 }));
+
+  const ids = adapter._resultsSizeReduction.sheds.map(s => s.id);
+  assert.deepEqual(ids, ['header-logo'],
+    'only the first rung fired; the debug JSON and provenance sections are untouched');
+  assert.equal(adapter._resultsSizeReduction.overBudget, false);
+});
+
+test('size cliff: shedding a section leaves the page structurally intact and its controls honest', () => {
+  const adapter = buildAdapter();
+  // Nested same-tag elements: a lazy regex would cut at the first inner
+  // </div> and shred the page. The strip is depth-counted for this reason.
+  const nested = '<div id="line-view-a" class="diff-view"><div><div>x</div></div></div>';
+  const stripped = ScriptableAdapter.stripBalancedElements(
+    `<body><div class="card">before${nested}after</div></body>`,
+    '<div id="line-view-',
+    'div'
+  );
+  assert.equal(stripped.removed, 1);
+  assert.equal(stripped.html, '<body><div class="card">beforeafter</div></body>');
+
+  // An unbalanced fragment is left alone rather than half-cut.
+  const unbalanced = ScriptableAdapter.stripBalancedElements(
+    '<div id="line-view-a">oops',
+    '<div id="line-view-',
+    'div'
+  );
+  assert.equal(unbalanced.removed, 0, 'nothing is cut when the element never closes');
+
+  // The button that used to open the shed pane says why it no longer does —
+  // and the page's inline script, which contains the same words, is untouched.
+  const rung = ScriptableAdapter.RESULTS_HTML_SHED_LADDER.find(r => r.id === 'line-diff-views');
+  const page = '<button id="diff-toggle-a">\n  Switch to Line View\n</button>'
+    + '<div id="line-view-a"><div>diff</div></div>'
+    + "<script>button.textContent = 'Switch to Line View';</script>";
+  const out = rung.apply(page).html;
+  assert.ok(out.includes('Line view trimmed for page size'), 'the dead button is relabelled');
+  assert.ok(out.includes("button.textContent = 'Switch to Line View';"),
+    "the page's own script is not rewritten");
+
+  // A shed debug payload still parses, so "Copy JSON" copies an explanation
+  // instead of copying silence.
+  const jsonRung = ScriptableAdapter.RESULTS_HTML_SHED_LADDER.find(r => r.id === 'debug-json');
+  const shedJson = jsonRung.apply('<pre class="raw-json">{"title":"x"}</pre>').html;
+  const payload = shedJson.match(/<pre class="raw-json">([\s\S]*?)<\/pre>/)[1];
+  assert.ok(JSON.parse(payload)._shed, 'the placeholder is valid JSON that names itself');
+});
+
+test('size cliff: an un-shrinkable page surfaces via a NATIVE alert, not an in-page banner', async () => {
+  const adapter = buildAdapter();
+  // Nothing on this page is sheddable, so it stays over the ceiling — the
+  // exact case where an in-page banner is invisible by construction.
+  const unshrinkable = `<html><body>${'x'.repeat(ScriptableAdapter.RESULTS_HTML_MAX_BYTES + 1)}</body></html>`;
+  const { lines } = captureLog(() => adapter.applyResultsHtmlSizeGuard(unshrinkable, 90));
+
+  assert.equal(adapter._resultsSizeReduction.overBudget, true);
+  assert.ok(lines.some(l => l.includes('Raising a native alert')),
+    'the run says it is falling back to the one channel that survives a blank page');
+
+  const presented = [];
+  const originalAlert = global.Alert;
+  global.Alert = class {
+    constructor() { this.actions = []; }
+    addAction(title) { this.actions.push(title); }
+    async presentAlert() { presented.push({ title: this.title, message: this.message }); }
+  };
+  let raised;
+  try {
+    raised = await adapter.warnResultsPageUnrenderable();
+  } finally {
+    if (originalAlert === undefined) delete global.Alert; else global.Alert = originalAlert;
+  }
+
+  assert.equal(raised, true, 'the alert was raised');
+  assert.equal(presented.length, 1, 'exactly one alert');
+  assert.ok(presented[0].message.includes('90 event(s)'), 'it names the run');
+  assert.ok(presented[0].message.includes('blank'),
+    'it warns that the next screen may be blank, which the page itself could not');
+  assert.ok(presented[0].message.includes('not'), 'and that a blank sheet is not a reviewed run');
+});
+
+test('size cliff: no alert when the page came back under the ceiling', async () => {
+  const adapter = buildAdapter();
+  const presented = [];
+  const originalAlert = global.Alert;
+  global.Alert = class {
+    addAction() {}
+    async presentAlert() { presented.push(this.message); }
+  };
+  try {
+    await captureLogAsync(() => renderOversizedResultsPage(adapter));
+    const raised = await adapter.warnResultsPageUnrenderable();
+    assert.equal(raised, false, 'a page that was successfully reduced raises nothing');
+  } finally {
+    if (originalAlert === undefined) delete global.Alert; else global.Alert = originalAlert;
+  }
+  assert.equal(presented.length, 0);
+
+  // A small page leaves no reduction record at all.
+  const clean = buildAdapter();
+  captureLog(() => clean.applyResultsHtmlSizeGuard('<html><body>ok</body></html>', 1));
+  assert.equal(clean._resultsSizeReduction, null);
+  assert.equal(await clean.warnResultsPageUnrenderable(), false);
+});
+
+test('size cliff: the ceiling is measured in UTF-8 BYTES, not UTF-16 code units (regression pin)', () => {
+  const adapter = buildAdapter();
+  // A page whose String.length is comfortably under the ceiling but whose
+  // real UTF-8 size — what WebKit holds — is over it. Measuring html.length
+  // here is how a 959 KB page reads as "fine".
+  const filler = '→'.repeat(Math.floor(ScriptableAdapter.RESULTS_HTML_MAX_BYTES * 0.7));
+  const page = `<html><body><div id="line-view-a" class="diff-view">${filler}</div></body></html>`;
+  assert.ok(page.length < ScriptableAdapter.RESULTS_HTML_MAX_BYTES,
+    'UTF-16 length is under the ceiling');
+  assert.ok(ScriptableAdapter.utf8ByteLength(page) > ScriptableAdapter.RESULTS_HTML_MAX_BYTES,
+    'UTF-8 size is over it');
+
+  const { value: reduced } = captureLog(() => adapter.applyResultsHtmlSizeGuard(page, 12));
+  assert.ok(adapter._resultsSizeReduction, 'the guard fired on the real byte size');
+  assert.equal(adapter._resultsSizeReduction.sheds.length, 1);
+  assert.equal(adapter._resultsSizeReduction.overBudget, false);
+  assert.ok(!reduced.includes('→'), 'the multi-byte payload was actually removed');
 });
 
 // ---------------------------------------------------------------------------
