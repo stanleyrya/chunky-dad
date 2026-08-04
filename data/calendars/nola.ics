@@ -6,35 +6,9 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-new-orleans
 X-WR-TIMEZONE:America/Chicago
 BEGIN:VEVENT
-DTSTART:20260905T020000Z
-DTEND:20260905T070000Z
-DTSTAMP:20260803T183508Z
-UID:74648B34-07A1-4BD2-8E78-D67B991A920E
-CREATED:20260514T005857Z
-DESCRIPTION:bar: Joy Theater\naddress: 1200 Canal St\, New Orleans\, LA 701
- 12\ntimezone: America/Chicago\nticketUrl: https://www.ticketmaster.com/even
- t/1B006454A32CE162\nimage: https://bearracuda.com/wp-content/uploads/2026/0
- 3/igdecad-2.jpg\nimageVertical: https://bearracuda.com/wp-content/uploads/2
- 026/03/igdecad-2.jpg\nwebsite: https://bearracuda.com/events/decadence/\nsh
- ortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\nfav
- icon: https://bearracuda.com/\nbearSource: keyword\nkey: bearracuda-new-orl
- eans⚜️|2026-09-05|joy theater\ndescription: SOUTHERN DECADENCE\npinSource: 
- curated\naddressSource: curated\nimageSource: og-image\nbarSource: page-adj
- acent\ngmaps: https://www.google.com/maps/search/?api=1&query=29.9559524%2C
- -90.0738975
-LAST-MODIFIED:20260803T182212Z
-LOCATION:29.9559524\, -90.0738975
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:BEARRACUDA: New Orleans⚜️
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20250830T020000Z
 DTEND:20250830T070000Z
-DTSTAMP:20260803T183508Z
+DTSTAMP:20260804T174847Z
 UID:96ED5A57-14F4-4189-81C5-1AA44B8E365F
 CREATED:20250830T003601Z
 DESCRIPTION:description: Music & Entertainment\n• Matt Stands &amp\; Freddy
@@ -53,6 +27,32 @@ LOCATION:29.9559524\, -90.0738975
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:NEW ORLEANS
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260905T020000Z
+DTEND:20260905T070000Z
+DTSTAMP:20260804T174847Z
+UID:74648B34-07A1-4BD2-8E78-D67B991A920E
+CREATED:20260514T005857Z
+DESCRIPTION:description: SOUTHERN DECADENCE\nbar: Joy Theater\naddress: 120
+ 0 Canal St\, New Orleans\, LA 70112\ntimezone: America/Chicago\nticketUrl: 
+ https://www.ticketmaster.com/event/1B006454A32CE162\nimage: https://bearrac
+ uda.com/wp-content/uploads/2026/03/igdecad-2.jpg\nimageVertical: https://be
+ arracuda.com/wp-content/uploads/2026/03/igdecad-2.jpg\nwebsite: https://bea
+ rracuda.com/events/decadence/\nshortName: Bear-rac-uda\ninstagram: https://
+ www.instagram.com/bearracuda\nfavicon: https://bearracuda.com/\nbearSource:
+  keyword\nkey: bearracuda-new-orleans⚜️|2026-09-05|joy theater\npinSource: 
+ curated\naddressSource: curated\nimageSource: og-image\nbarSource: page-adj
+ acent\ngmaps: https://www.google.com/maps/search/?api=1&query=29.9559524%2C
+ -90.0738975
+LAST-MODIFIED:20260804T165132Z
+LOCATION:29.9559524\, -90.0738975
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEARRACUDA: New Orleans⚜️
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

@@ -4126,3 +4126,149 @@ test('curated corpus: the 3 Dollar Bill sibling venue pins its events straight f
   assert.equal(normalized.pinSource, 'curated');
   assert.equal(httpAdapter.requests.length, 0, 'curated data means no geocode request at all');
 });
+
+// ---------------------------------------------------------------------------
+// City routing: word-boundary matching, the "pv" registry patterns, and the
+// description-is-not-authoritative precedence rule.
+//
+// Run 20260804 (BeefDip, Puerto Vallarta bear week, 35 events): 21 of 35 (60%)
+// routed to the nonexistent chunky-dad-unknown calendar and 3 more routed to
+// the WRONG city, each one then re-anchoring its wall-clock times to that
+// city's timezone. Three distinct mechanisms, all reproduced below.
+// ---------------------------------------------------------------------------
+
+const CITY_ROUTING_CITIES = {
+  nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc', 'manhattan', 'brooklyn', 'queens', 'bronx'] },
+  sf: { timezone: 'America/Los_Angeles', patterns: ['san francisco', 'sf', 'castro'] },
+  toronto: { timezone: 'America/Toronto', patterns: ['toronto'] },
+  montreal: { timezone: 'America/Toronto', patterns: ['montreal', 'mtl'] },
+  pv: { timezone: 'America/Mexico_City', patterns: ['puerto vallarta', 'vallarta', 'pv', 'p.v'] }
+};
+
+function createCityRoutingNormalizer() {
+  const core = new SharedCore(CITY_ROUTING_CITIES, { eventSchema: EventSchema });
+  return new LocationNormalizer(core);
+}
+
+test('city routing: a bare substring hit inside a longer word never routes an event ("TRANSFERABLE" is not sf)', () => {
+  const normalizer = createCityRoutingNormalizer();
+  // Verbatim BeefDip title. Pre-fix: 'transferable'.includes('sf') === true,
+  // so this Puerto Vallarta party shipped to chunky-dad-sf and had its times
+  // re-anchored to America/Los_Angeles.
+  assert.equal(
+    normalizer.extractCityFromEvent({ title: 'DOG TAGS ARE NON REFUNDABLE OR TRANSFERABLE' }),
+    'unknown'
+  );
+  // Same collision class on the venue rung.
+  assert.equal(normalizer.extractCityFromEvent({ title: 'Bear Night', bar: 'Transferable Lounge' }), 'unknown');
+  // The genuine token still routes, on every rung.
+  assert.equal(normalizer.extractCityFromEvent({ title: 'CHUNK SF' }), 'sf');
+  assert.equal(normalizer.extractCityFromEvent({ title: 'Bear Night', bar: 'SF Eagle' }), 'sf');
+  assert.equal(normalizer.extractCityFromAddress('398 12th St, SF, CA 94103'), 'sf');
+  assert.equal(normalizer.extractCityFromText('the party moves to SF next week'), 'sf');
+});
+
+test('city routing: the two-character "pv" patterns cannot collide with ordinary words', () => {
+  const normalizer = createCityRoutingNormalizer();
+  // The ordering dependency made explicit: these are exactly the substrings a
+  // raw String.includes('pv') would have claimed for Puerto Vallarta.
+  assert.equal(normalizer.extractCityFromEvent({ title: 'PVC Fetish Night' }), 'unknown');
+  assert.equal(normalizer.extractCityFromEvent({ title: 'Improv Comedy Night' }), 'unknown');
+  assert.equal(normalizer.extractCityFromEvent({ title: 'Bear Night', bar: 'Improv Lounge' }), 'unknown');
+});
+
+test('city routing: "PV" and "P.V." resolve to the pv calendar (the 60%-unknown BeefDip run)', () => {
+  const normalizer = createCityRoutingNormalizer();
+  // Verbatim evidence string the model returned for the dropped city field.
+  assert.equal(
+    normalizer.extractCityFromEvent({ title: 'Welcome Party', address: 'ZONA ROMÁNTICA, EMILIANO ZAPATA, P.V.' }),
+    'pv'
+  );
+  // Both spellings, on every rung that reads them.
+  assert.equal(normalizer.extractCityFromAddress('Blvd. Francisco Medina Ascencio, PV, Jalisco'), 'pv');
+  assert.equal(normalizer.extractCityFromAddress('Olas Altas 425, Zona Romántica, P.V.'), 'pv');
+  assert.equal(normalizer.extractCityFromEvent({ title: 'PV Bear Week Kickoff' }), 'pv');
+  assert.equal(normalizer.extractCityFromEvent({ title: 'Beach Day', bar: 'Mantamar PV' }), 'pv');
+  assert.equal(normalizer.extractCityFromText('join us in P.V. for bear week'), 'pv');
+  // The long-form patterns are untouched.
+  assert.equal(normalizer.extractCityFromEvent({ title: 'Puerto Vallarta Bear Week' }), 'pv');
+  // And the whole point: the resolved city carries a real timezone.
+  assert.equal(normalizer.core.getCityTimezone('pv'), 'America/Mexico_City');
+});
+
+test('city routing: "Montréal" still matches the unaccented pattern (diacritic-folding regression guard)', () => {
+  const normalizer = createCityRoutingNormalizer();
+  // Word boundaries must not have cost the fold from run 20260727-145617.
+  assert.equal(normalizer.extractCityFromEvent({ title: 'Concours PUP Montréal' }), 'montreal');
+  assert.equal(normalizer.extractCityFromEvent({ title: 'Bear Night', bar: 'Bar Le Cocktail Montréal' }), 'montreal');
+  assert.equal(normalizer.extractCityFromAddress('2915 Rue Ontario E, Montréal, QC H2K 1X7'), 'montreal');
+  assert.equal(normalizer.extractCityFromText('the Montréal chapter hosts it'), 'montreal');
+  // Multi-word patterns still match across collapsed whitespace.
+  assert.equal(normalizer.extractCityFromText('held in Puerto\n  Vallarta this year'), 'pv');
+});
+
+test('city routing: free description text never overrules an event that has its own venue context', () => {
+  const normalizer = createCityRoutingNormalizer();
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (...args) => lines.push(args.join(' '));
+  let djCredit;
+  let dragQueens;
+  let noContext;
+  try {
+    // Verbatim BeefDip misroute #1: a visiting DJ's home city claimed the event
+    // and re-anchored it to America/Toronto.
+    djCredit = normalizer.extractCityFromEvent({
+      title: 'SWEAT – SINGLET, UNDERWEAR & JOCKSTRAP PARTY',
+      bar: 'Mantamar Beach Club',
+      description: 'DJ TK (TORONTO) pumps the floor all night'
+    });
+    // Verbatim BeefDip misroute #2: the nyc pattern "queens" inside prose.
+    // Word-boundary clean — only the precedence rule can catch this one.
+    dragQueens = normalizer.extractCityFromEvent({
+      title: 'Welcome Party',
+      bar: 'Blue Chairs Resort',
+      description: 'with our resident drag queens and a live show'
+    });
+    // A truly context-free event (no venue name, no address) still falls
+    // through to the prose — the last-resort rung is demoted, not deleted.
+    noContext = normalizer.extractCityFromEvent({
+      title: 'Bear Happy Hour',
+      description: 'a monthly gathering in Toronto'
+    });
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.equal(djCredit, 'unknown', 'a lineup credit must not route the event');
+  assert.equal(dragQueens, 'unknown', '"drag queens" must not route the event to nyc');
+  assert.equal(noContext, 'toronto', 'with no venue context at all the description is all there is');
+  assert.ok(
+    lines.some(line => line.includes('description text is not authoritative for routing')),
+    'the demotion must leave a trail in the log'
+  );
+
+  // Authoritative context still wins outright when it resolves — the same PV
+  // event that carries an address routes to pv despite the Toronto credit.
+  assert.equal(
+    normalizer.extractCityFromEvent({
+      title: 'SWEAT – SINGLET, UNDERWEAR & JOCKSTRAP PARTY',
+      address: 'Olas Altas 425, Zona Romántica, P.V.',
+      description: 'DJ TK (TORONTO) pumps the floor all night'
+    }),
+    'pv'
+  );
+});
+
+test('city routing: the generated scraper-cities config carries the pv patterns (js/ ↔ scripts/ sync)', () => {
+  const realCities = require('./scraper-cities');
+  const core = new SharedCore(realCities, { eventSchema: EventSchema });
+  const normalizer = new LocationNormalizer(core);
+  // scripts/scraper-cities.js is generated from js/city-config.js; a fix that
+  // only lands in the source file never reaches the scraper.
+  assert.deepEqual(realCities.pv.patterns, ['puerto vallarta', 'vallarta', 'pv', 'p.v']);
+  assert.equal(normalizer.extractCityFromEvent({ title: 'Welcome Party', address: 'EMILIANO ZAPATA, P.V.' }), 'pv');
+  // Against the full 48-city registry, the boundary rule still holds.
+  assert.equal(normalizer.extractCityFromEvent({ title: 'DOG TAGS ARE NON REFUNDABLE OR TRANSFERABLE' }), 'unknown');
+  assert.equal(normalizer.extractCityFromEvent({ title: 'Improv Comedy Night' }), 'unknown');
+});
