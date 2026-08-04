@@ -5417,6 +5417,10 @@ class ScriptableAdapter {
         }
         return false; // cancel the fake navigation; the page stays put
       };
+      // If the page could not be shed under the render ceiling, say so through
+      // the ONE channel that survives a document WebKit refuses to run: a
+      // native Alert, raised before the sheet, not a banner buried inside it.
+      await this.warnResultsPageUnrenderable();
       await webView.present(true);
       // The page's own account of whether it ever rendered. Logged AFTER the
       // sheet closes so a blank review leaves a different trace than a real one.
@@ -10064,11 +10068,41 @@ class ScriptableAdapter {
   // renders at after the Run Logs cut, so it warns approaching the danger
   // zone instead of after it.
   //
-  // Crossing it is not fatal, but it must never be silent — see
-  // applyResultsHtmlSizeGuard, which both logs it and puts a banner on the
-  // page, because the owner is looking at a WebView, not at the log.
-  static get RESULTS_HTML_WARN_BYTES() {
-    return 960 * 1024;
+  // 960 KB was still too high, and for the same reason as 1923 KB before it:
+  // it was picked from a blank page's own size instead of from a size that had
+  // been PROVEN to render. The liveness beacons added in #1629 finally made
+  // that provable per run. One deployed build, 2026-08-04:
+  //
+  //     Dallas Eagle  486 KB  ✅ painted, interacted
+  //     Goldiloxx     248 KB  ✅ rendered
+  //     CHUNK         862 KB  ✅ painted, interacted
+  //     Furball       489 KB  ✅ painted, interacted
+  //     BEEFMINCE     955 KB  ❌ no beacon at all (3 runs out of 3)
+  //
+  // "No beacon at all" means WebKit never ran the page: no DOM, no scripts,
+  // literally <html><head></head><body></body></html>. So the cliff is
+  // somewhere in (862, 955] and 960 KB sat ABOVE it — BEEFMINCE measured
+  // 959 KB UTF-8, slipped under the guard, and white-screened anyway.
+  //
+  // 800 KB is the largest round number that keeps a ~7% margin under the
+  // 862 KB that is actually proven to render. It is deliberately NOT set to
+  // the largest observed success: the cliff's true position is unknown, only
+  // bounded, and the cost of being over it is a blank screen with no
+  // diagnostics on it.
+  //
+  // Crossing it is not a warning — see applyResultsHtmlSizeGuard, which sheds
+  // page content until the page is back under this number. A banner cannot do
+  // that job: a banner lives INSIDE the document WebKit refuses to run.
+  static get RESULTS_HTML_MAX_BYTES() {
+    return 800 * 1024;
+  }
+
+  // The "what got shed" banner is written into the page AFTER the shed loop
+  // has measured it, so the loop has to stop short of the ceiling by at least
+  // the banner's own size or the finished document lands back over it. Four
+  // rungs' worth of banner text is under 1 KB; 2 KB is the margin.
+  static get RESULTS_HTML_BANNER_RESERVE_BYTES() {
+    return 2 * 1024;
   }
 
   // UTF-8 byte length without Buffer/TextEncoder (neither exists in
@@ -10323,32 +10357,268 @@ class ScriptableAdapter {
   // one from the log.
   logResultsHtmlSizeGuard(html, eventCount) {
     const bytes = ScriptableAdapter.utf8ByteLength(html);
-    if (bytes <= ScriptableAdapter.RESULTS_HTML_WARN_BYTES) return;
+    if (bytes <= ScriptableAdapter.RESULTS_HTML_MAX_BYTES) return;
     console.log(
       `📱 Scriptable: ⚠️ Results HTML is ${Math.round(bytes / 1024)} KB for ${eventCount} event(s) — above the ${Math.round(
-        ScriptableAdapter.RESULTS_HTML_WARN_BYTES / 1024,
+        ScriptableAdapter.RESULTS_HTML_MAX_BYTES / 1024,
       )} KB size that has actually rendered on device. If the results screen comes up blank, that is why: re-run with fewer parsers, or review from the saved run JSON.`,
     );
   }
 
-  // The log line above is invisible to someone staring at a WebView, which is
-  // exactly the situation the guard exists to describe. So the same warning
-  // also goes ON the page, at the very top, where it is the first thing that
-  // renders — and if the page never renders, its absence and the missing
-  // liveness beacons say the same thing from two directions.
+  // Removes every balanced `<tag …>…</tag>` element whose opening tag starts
+  // with `startMarker`. Depth-counted rather than regex-matched because these
+  // sections nest the same tag inside themselves (a <div> full of <div>s), and
+  // a lazy regex would cut at the first inner close and leave a broken page.
+  static stripBalancedElements(html, startMarker, tagName) {
+    const source = typeof html === "string" ? html : "";
+    const scanner = new RegExp(`<${tagName}[\\s>]|</${tagName}>`, "g");
+    let out = "";
+    let cursor = 0;
+    let removed = 0;
+    for (;;) {
+      const start = source.indexOf(startMarker, cursor);
+      if (start === -1) break;
+      scanner.lastIndex = start;
+      let depth = 0;
+      let end = -1;
+      let match;
+      while ((match = scanner.exec(source)) !== null) {
+        depth += match[0].charAt(1) === "/" ? -1 : 1;
+        if (depth === 0) {
+          end = match.index + match[0].length;
+          break;
+        }
+      }
+      if (end === -1) break; // Unbalanced — leave the rest of the page alone.
+      out += source.slice(cursor, start);
+      cursor = end;
+      removed += 1;
+    }
+    return { html: removed ? out + source.slice(cursor) : source, removed };
+  }
+
+  // Shed ladder, heaviest-and-least-valuable first. Each rung returns the
+  // reduced page plus a count of what it touched; applyResultsHtmlSizeGuard
+  // stops at the first rung that gets the page under the ceiling, so a run
+  // only ever loses what it actually had to lose.
+  //
+  // Nothing here is the ONLY copy of anything:
+  //   header-logo   decoration, zero information; falls back to the same
+  //                 remote URL the page already uses when the cache is cold.
+  //   line-diff     the "Line-by-Line Diff" pane is display:none by default
+  //                 AND renders the same fields as the Field-by-Field table
+  //                 sitting directly above it. toggleDiffView already
+  //                 no-ops when the pane is absent.
+  //   debug-json    the same event is rendered field-by-field across the
+  //                 whole card, and verbatim in the saved run JSON file.
+  //   provenance    collapsed by default; field origins are in the run JSON.
+  static get RESULTS_HTML_SHED_LADDER() {
+    return [
+      {
+        id: "header-logo",
+        describe: (n) =>
+          `${n} inlined base64 image(s) (the header logo) swapped for their remote URL`,
+        apply: (html) => {
+          let removed = 0;
+          const next = html.replace(
+            /src="data:image\/[a-z0-9+.-]+;base64,[^"]*"/gi,
+            () => {
+              removed += 1;
+              return `src="${HEADER_LOGO_URL}"`;
+            },
+          );
+          return { html: next, removed };
+        },
+      },
+      {
+        id: "line-diff-views",
+        describe: (n) =>
+          `${n} hidden "Line-by-Line Diff" pane(s) (same fields as the Field-by-Field table above them)`,
+        apply: (html) => {
+          const stripped = ScriptableAdapter.stripBalancedElements(
+            html,
+            '<div id="line-view-',
+            "div",
+          );
+          if (!stripped.removed) return stripped;
+          // toggleDiffView already no-ops when the pane is gone, but a button
+          // that silently does nothing is a display that lies. Relabel it —
+          // scoped to the toggle's own id so the page's inline script, which
+          // contains the same words, is never touched.
+          stripped.html = stripped.html.replace(
+            /(id="diff-toggle-[^"]*"\s*>)\s*Switch to Line View\s*(<\/button>)/g,
+            "$1Line view trimmed for page size$2",
+          );
+          return stripped;
+        },
+      },
+      {
+        id: "debug-json",
+        describe: (n) =>
+          `${n} embedded debug JSON payload(s) (still verbatim in the saved run file)`,
+        apply: (html) => {
+          let removed = 0;
+          const next = html.replace(
+            /(<pre class="raw-json">)[\s\S]*?(<\/pre>)/g,
+            (_all, open, close) => {
+              removed += 1;
+              return `${open}${ScriptableAdapter.SHED_DEBUG_JSON_PLACEHOLDER}${close}`;
+            },
+          );
+          return { html: next, removed };
+        },
+      },
+      {
+        id: "provenance",
+        describe: (n) =>
+          `${n} collapsed "🔍 Provenance" section(s) (field origins are in the saved run file)`,
+        apply: (html) =>
+          ScriptableAdapter.stripBalancedElements(
+            html,
+            '<details class="provenance-details"',
+            "details",
+          ),
+      },
+    ];
+  }
+
+  // Valid JSON on purpose: readCardEventJSON parses whatever is in the <pre>,
+  // so "Copy JSON" on a shed card copies this sentence instead of copying
+  // silence. A button that copies an empty string is a display that lies.
+  static get SHED_DEBUG_JSON_PLACEHOLDER() {
+    return '{"_shed":"Debug JSON was removed so this page would render at all — see the saved run file for the untrimmed event."}';
+  }
+
+  // The old guard put a banner on the page and stopped there. That banner is
+  // useless in the exact case it was written for: past WebView.loadHTML's
+  // silent size cliff WebKit never runs the document, so nothing inside it —
+  // banner included — is ever drawn. Over-budget therefore has to REDUCE the
+  // page, not annotate it.
+  //
+  // Order of operations:
+  //   1. under the ceiling  -> return untouched, no noise.
+  //   2. over it            -> shed rungs in order until under, log each drop
+  //                            with its byte cost, banner what was lost (that
+  //                            banner is now on a page that WILL render).
+  //   3. still over         -> record it so presentRichResults can raise a
+  //                            native Alert, which does not live inside the
+  //                            document that cannot be drawn.
   applyResultsHtmlSizeGuard(html, eventCount) {
-    const page = typeof html === "string" ? html : "";
+    let page = typeof html === "string" ? html : "";
     this.logResultsHtmlSizeGuard(page, eventCount);
-    const bytes = ScriptableAdapter.utf8ByteLength(page);
-    if (bytes <= ScriptableAdapter.RESULTS_HTML_WARN_BYTES) return page;
-    const banner = `
-    <div class="results-size-warning">⚠️ This page is ${Math.round(bytes / 1024)} KB for ${eventCount} event(s), above the ${Math.round(
-      ScriptableAdapter.RESULTS_HTML_WARN_BYTES / 1024,
-    )} KB that has reliably rendered on device. If it looks blank or stops scrolling, that is why — re-run with fewer parsers, or review the saved run JSON.</div>`;
+    const bytesBefore = ScriptableAdapter.utf8ByteLength(page);
+    this._resultsSizeReduction = null;
+    if (bytesBefore <= ScriptableAdapter.RESULTS_HTML_MAX_BYTES) return page;
+
+    const sheds = [];
+    const shedTarget =
+      ScriptableAdapter.RESULTS_HTML_MAX_BYTES -
+      ScriptableAdapter.RESULTS_HTML_BANNER_RESERVE_BYTES;
+    let bytes = bytesBefore;
+    for (const rung of ScriptableAdapter.RESULTS_HTML_SHED_LADDER) {
+      if (bytes <= shedTarget) break;
+      const result = rung.apply(page);
+      if (!result || !result.removed) continue;
+      const after = ScriptableAdapter.utf8ByteLength(result.html);
+      const saved = bytes - after;
+      page = result.html;
+      bytes = after;
+      const shed = {
+        id: rung.id,
+        count: result.removed,
+        bytes: saved,
+        detail: rung.describe(result.removed),
+      };
+      sheds.push(shed);
+      // NO SILENT CAPS: one line per drop, naming what went and what it cost.
+      console.log(
+        `📱 Scriptable: ✂️ Results page shed "${shed.id}" to fit the ${Math.round(
+          ScriptableAdapter.RESULTS_HTML_MAX_BYTES / 1024,
+        )} KB render ceiling — dropped ${shed.detail}, recovering ${Math.round(
+          saved / 1024,
+        )} KB (page now ${Math.round(bytes / 1024)} KB).`,
+      );
+    }
+
+    const overBudget = bytes > shedTarget;
+    this._resultsSizeReduction = {
+      eventCount,
+      bytesBefore,
+      bytesAfter: bytes,
+      sheds,
+      overBudget,
+    };
+
+    if (overBudget) {
+      console.log(
+        `📱 Scriptable: ⚠️ Results page is still ${Math.round(bytes / 1024)} KB after shedding everything sheddable (ceiling ${Math.round(
+          ScriptableAdapter.RESULTS_HTML_MAX_BYTES / 1024,
+        )} KB) — WebKit may refuse to run it. Raising a native alert, since a message printed inside an undrawn page cannot be read.`,
+      );
+    } else if (sheds.length) {
+      console.log(
+        `📱 Scriptable: ✅ Results page reduced ${Math.round(bytesBefore / 1024)} KB → ${Math.round(
+          bytes / 1024,
+        )} KB for ${eventCount} event(s), back under the ${Math.round(
+          ScriptableAdapter.RESULTS_HTML_MAX_BYTES / 1024,
+        )} KB ceiling.`,
+      );
+    }
+
+    const summary = sheds.length
+      ? sheds
+          .map((s) => `${s.detail} (−${Math.round(s.bytes / 1024)} KB)`)
+          .join("; ")
+      : "nothing on this page was sheddable";
+    const banner = overBudget
+      ? `
+    <div class="results-size-warning">⚠️ This page is ${Math.round(bytes / 1024)} KB for ${eventCount} event(s), still above the ${Math.round(
+      ScriptableAdapter.RESULTS_HTML_MAX_BYTES / 1024,
+    )} KB that has reliably rendered on device — if you can read this, it rendered anyway. Trimmed: ${summary}. Re-run with fewer parsers, or review the saved run JSON.</div>`
+      : `
+    <div class="results-size-warning">✂️ This page was ${Math.round(bytesBefore / 1024)} KB for ${eventCount} event(s), above the ${Math.round(
+      ScriptableAdapter.RESULTS_HTML_MAX_BYTES / 1024,
+    )} KB that reliably renders on device, so it was trimmed to ${Math.round(
+      bytes / 1024,
+    )} KB. Dropped: ${summary}. Everything dropped is still in the saved run JSON.</div>`;
     const bodyIndex = page.indexOf("<body>");
     if (bodyIndex === -1) return page;
     const insertAt = bodyIndex + "<body>".length;
     return page.slice(0, insertAt) + banner + page.slice(insertAt);
+  }
+
+  // The only channel that survives a page WebKit will not run. Called from
+  // presentRichResults BEFORE present(), so the owner reads it and then sees
+  // whatever the sheet turns out to be — instead of staring at white and
+  // guessing.
+  async warnResultsPageUnrenderable(reduction) {
+    const info = reduction || this._resultsSizeReduction;
+    if (!info || !info.overBudget) return false;
+    if (typeof Alert === "undefined") return false;
+    const dropped = (info.sheds || [])
+      .map((s) => `• ${s.detail} (−${Math.round(s.bytes / 1024)} KB)`)
+      .join("\n");
+    try {
+      const alert = new Alert();
+      alert.title = "Results page may not render";
+      alert.message = [
+        `The results page is ${Math.round(info.bytesAfter / 1024)} KB for ${info.eventCount} event(s), above the ${Math.round(
+          ScriptableAdapter.RESULTS_HTML_MAX_BYTES / 1024,
+        )} KB that WebKit has been proven to draw. If the next screen is blank, that is why — do not treat it as a reviewed run.`,
+        dropped ? `Already trimmed:\n${dropped}` : "Nothing was sheddable.",
+        "Re-run with fewer parsers, or review the saved run JSON.",
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+      alert.addAction("Show it anyway");
+      await alert.presentAlert();
+      return true;
+    } catch (error) {
+      console.log(
+        `📱 Scriptable: Results size alert failed: ${error.message}`,
+      );
+      return false;
+    }
   }
 
   logEventJsonBudgetReport() {
