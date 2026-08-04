@@ -2340,6 +2340,101 @@ test('normalizeEventDates keeps weekday-pinned past dates instead of repairing t
   assert.equal(unpinnedResult.startDate.toISOString().slice(0, 10), '2026-10-11');
 });
 
+// ---------------------------------------------------------------------------
+// Explicitly stated source years (run 20260804, BeefDip): an archived 2021
+// charity brunch arrived as {"startDate": "2021-01-31", "evidence":
+// "SUNDAY/DOMINGO 01.31.2021", "confidence": 100} and the window repair walked
+// it forward to a 2027 "event". A verbatim four-digit year at high confidence
+// is a stated fact, not a hallucination to repair.
+// ---------------------------------------------------------------------------
+
+test('resolveExplicitSourceYear accepts only a verbatim, high-confidence four-digit year', () => {
+  const parser = createParser();
+  // Verbatim BeefDip field.
+  assert.equal(parser.resolveExplicitSourceYear('2021-01-31', 'SUNDAY/DOMINGO 01.31.2021', 100), 2021);
+  // Other printed forms of the same year.
+  assert.equal(parser.resolveExplicitSourceYear('2021-01-31', 'January 31, 2021', 90), 2021);
+  // Hedged confidence stays repairable.
+  assert.equal(parser.resolveExplicitSourceYear('2021-01-31', 'SUNDAY/DOMINGO 01.31.2021', 89), null);
+  // A year the model did NOT quote is a guess — exactly what the window repair
+  // exists for ("Sat, Aug 22" hallucinated as 2024).
+  assert.equal(parser.resolveExplicitSourceYear('2024-08-22', 'Sat, Aug 22', 100), null);
+  // Evidence naming a DIFFERENT year does not vouch for the value's year.
+  assert.equal(parser.resolveExplicitSourceYear('2021-01-31', 'January 31, 2020', 100), null);
+  // No year in the value at all, and junk input.
+  assert.equal(parser.resolveExplicitSourceYear('Aug 22', 'Sat, Aug 22 2026', 100), null);
+  assert.equal(parser.resolveExplicitSourceYear(null, null, 100), null);
+  assert.equal(parser.resolveExplicitSourceYear('2021-01-31', 'SUNDAY/DOMINGO 01.31.2021', undefined), null);
+});
+
+test('normalizeEventDates never relocates an explicitly stated year — it reports the event as archival', () => {
+  const parser = createParser();
+  parser.now = FROZEN_NOW; // 2026-07-13
+  const archived = new Date(Date.UTC(2021, 0, 31, 18, 0, 0));
+
+  // Pre-fix behavior, still intact when the year was NOT stated: the window
+  // repair moves it (this is the 2027 result the run shipped).
+  const repaired = parser.normalizeEventDates(new Date(archived), new Date(archived));
+  assert.notEqual(repaired.startDate.getUTCFullYear(), 2021, 'an unattested year is still repaired');
+  assert.equal(repaired.archivalSourceYear, null);
+
+  // With the stated year held, the date is untouched and flagged archival.
+  const held = parser.normalizeEventDates(new Date(archived), new Date(archived), null, { start: 2021, end: 2021 });
+  assert.equal(held.startDate.toISOString(), '2021-01-31T18:00:00.000Z');
+  assert.equal(held.archivalSourceYear, 2021);
+
+  // A stated FUTURE year past the window edge is held too, but is not archival
+  // — a 2027 bear week announced today is a real event.
+  const future = new Date(Date.UTC(2027, 4, 15, 18, 0, 0));
+  const futureHeld = parser.normalizeEventDates(new Date(future), new Date(future), null, { start: 2027, end: 2027 });
+  assert.equal(futureHeld.startDate.toISOString(), '2027-05-15T18:00:00.000Z');
+  assert.equal(futureHeld.archivalSourceYear, null);
+
+  // A stated year that no longer matches the date it was stamped for does not
+  // freeze anything — the repair still applies.
+  const mismatched = parser.normalizeEventDates(new Date(archived), new Date(archived), null, { start: 2019 });
+  assert.notEqual(mismatched.startDate.getUTCFullYear(), 2021);
+  assert.equal(mismatched.archivalSourceYear, null);
+});
+
+test('normalizeAiEvent drops an explicitly-dated archived event instead of shipping it as a future one', async () => {
+  global.EventSchema = EventSchema; // earlier tests leak a mocked schema
+  const parser = createParser();
+  parser.now = FROZEN_NOW;
+
+  // The stamp is produced at the extraction seam, where evidence + confidence
+  // still exist. Verbatim BeefDip response shape.
+  const response = JSON.stringify({
+    title: { value: 'BEEF DIP CHARITY BRUNCH', evidence: 'BEEF DIP CHARITY BRUNCH', confidence: 100 },
+    startDate: { value: '2021-01-31', evidence: 'SUNDAY/DOMINGO 01.31.2021', confidence: 100 }
+  });
+  parser.core.callAiGenerate = async () => response;
+  const extracted = await parser.extractEventWithTwoPassAi(
+    { html: '<p>SUNDAY/DOMINGO 01.31.2021 BEEF DIP CHARITY BRUNCH</p>', url: 'https://beefdip.example/planned-events/' },
+    {}, null, {}, ['title', 'startDate'], 'SUNDAY/DOMINGO 01.31.2021 BEEF DIP CHARITY BRUNCH', 'test',
+    { dataFlags: { jsonLd: true } }
+  );
+  assert.deepEqual(extracted.__explicitSourceYears, { start: 2021 });
+
+  const dropped = parser.normalizeAiEvent({
+    title: 'BEEF DIP CHARITY BRUNCH',
+    startDate: '2021-01-31',
+    startTime: '12:00',
+    __explicitSourceYears: { start: 2021 }
+  }, {}, null, null, null);
+  assert.equal(dropped, null, 'an archived event is dropped, not relocated');
+
+  // Without the stamp the old silent relocation is exactly what happens — the
+  // defect, reproduced.
+  const relocated = parser.normalizeAiEvent({
+    title: 'BEEF DIP CHARITY BRUNCH',
+    startDate: '2021-01-31',
+    startTime: '12:00'
+  }, {}, null, null, null);
+  assert.ok(relocated);
+  assert.notEqual(relocated.startDate.getUTCFullYear(), 2021);
+});
+
 test('extraction flattens field objects through weekday pinning and normalizeAiEvent honors the pin', async () => {
   global.EventSchema = EventSchema; // earlier tests leak a mocked schema — pin the real one
   const parser = createParser();

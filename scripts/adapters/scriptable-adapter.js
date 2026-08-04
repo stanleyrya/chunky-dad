@@ -9406,9 +9406,29 @@ class ScriptableAdapter {
         if (!Array.isArray(results.analyzedEvents)) {
           results.analyzedEvents = [];
         }
-        results.analyzedEvents.push(...prepped);
+        // Duplicate-row guard (same ordering defect as the prep-time rescue in
+        // SharedCore): these events join the plan after both dedup passes have
+        // run, so a twin already in the plan would leave two rows aimed at ONE
+        // calendar record. Fold into the existing row when there is one — the
+        // owner's verdict still counts either way, so the tally is unchanged.
+        const added = [];
+        for (const preppedEvent of prepped) {
+          const folded = core.foldBearOverrideIntoPlanEntry(
+            results.analyzedEvents,
+            preppedEvent,
+            {
+              existingIdentifier:
+                preppedEvent._existingEvent &&
+                preppedEvent._existingEvent.identifier,
+              manualBearSource: preppedEvent.bearSource,
+            },
+          );
+          if (folded) continue;
+          results.analyzedEvents.push(preppedEvent);
+          added.push(preppedEvent);
+        }
         counts.markedBear += prepped.length;
-        prepped.forEach((event) =>
+        added.forEach((event) =>
           console.log(
             `📱 Scriptable: Manual override — "${event.title || "Unknown"}" marked bear and prepped for calendar (${event._action || "new"})`,
           ),

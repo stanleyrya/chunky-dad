@@ -98,6 +98,70 @@ class BaseNormalizer {
             .trim();
     }
 
+    // Word-boundary containment for city-config patterns. THE bug this closes:
+    // the title/venue loops in extractCityFromEvent used raw String.includes,
+    // so 'TRANSFERABLE'.toLowerCase().includes('sf') === true and a Puerto
+    // Vallarta party titled "DOG TAGS ARE NON REFUNDABLE OR TRANSFERABLE"
+    // shipped to the sf calendar — and got its wall-clock times re-anchored to
+    // America/Los_Angeles on the way out (run 20260804).
+    //
+    // Deliberately NOT a RegExp: the pattern list carries punctuation
+    // ("p.v.", "downtown l.a.", "d>u>r>o") that a naive RegExp treats as
+    // metacharacters — the pre-existing `\b${pattern}\b` shape in
+    // extractCityFromAddress/extractCityFromText both mis-escaped those dots
+    // AND structurally could not match a pattern that ENDS in punctuation
+    // (\b after "." demands a following word character, so "…, P.V." never
+    // matched "p.v."). An index scan with explicit neighbor checks handles
+    // both, with no escaping to get wrong.
+    //
+    // Both sides must already be diacritic-folded by the caller (foldDiacritics
+    // → lowercase, accents stripped) so "Montréal" still matches "montreal".
+    // Internal whitespace is collapsed on both sides, preserving the `\s+`
+    // tolerance the old regex had for multi-word patterns like
+    // "puerto vallarta" split across a line break.
+    matchesCityPattern(foldedText, foldedPattern) {
+        const text = String(foldedText || '').replace(/\s+/g, ' ');
+        const pattern = String(foldedPattern || '').replace(/\s+/g, ' ').trim();
+        if (!text || !pattern) return false;
+
+        const isWordChar = (character) => character >= 'a' && character <= 'z'
+            || character >= '0' && character <= '9';
+
+        // A boundary is only required on a side where the PATTERN itself ends
+        // in a word character; "p.v." needs no boundary after its trailing dot.
+        const needsLeadingBoundary = isWordChar(pattern[0]);
+        const needsTrailingBoundary = isWordChar(pattern[pattern.length - 1]);
+
+        let index = text.indexOf(pattern);
+        while (index !== -1) {
+            const before = index > 0 ? text[index - 1] : '';
+            const afterIndex = index + pattern.length;
+            const after = afterIndex < text.length ? text[afterIndex] : '';
+            const leadingOk = !needsLeadingBoundary || !before || !isWordChar(before);
+            const trailingOk = !needsTrailingBoundary || !after || !isWordChar(after);
+            if (leadingOk && trailingOk) return true;
+            index = text.indexOf(pattern, index + 1);
+        }
+        return false;
+    }
+
+    // First configured city whose patterns match the given text, word-boundary
+    // aware (see matchesCityPattern). Folds the text once and each pattern
+    // once. Null when nothing matches; callers decide what that means.
+    matchCityInText(text) {
+        if (!this.core || !this.core.cityMappings) return null;
+        const folded = this.foldDiacritics(text);
+        if (!folded) return null;
+        for (const [patterns, city] of Object.entries(this.core.cityMappings)) {
+            for (const pattern of patterns.split('|')) {
+                if (this.matchesCityPattern(folded, this.foldDiacritics(pattern))) {
+                    return city;
+                }
+            }
+        }
+        return null;
+    }
+
     // Coordinate-pair check kept local so the normalizers stay platform-pure
     // (mirrors SharedCore.isCoordinatePair: two finite floats, lat within ±90,
     // lng within ±180). On the base class because both the page-provenance
@@ -816,9 +880,11 @@ class LocationNormalizer extends BaseNormalizer {
         for (const [patterns, city] of Object.entries(this.core.cityMappings)) {
             const patternList = patterns.split('|');
             for (const pattern of patternList) {
-                const foldedPattern = this.foldDiacritics(pattern);
-                const regex = new RegExp(`\\b${foldedPattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
-                if (regex.test(lowerAddress)) {
+                // Word-boundary aware and punctuation-safe (see
+                // matchesCityPattern) — the old `\b${pattern}\b` regex could
+                // never match a pattern ending in punctuation, which is why
+                // "ZONA ROMÁNTICA, EMILIANO ZAPATA, P.V." resolved to nothing.
+                if (this.matchesCityPattern(lowerAddress, this.foldDiacritics(pattern))) {
                     return city;
                 }
             }
@@ -836,8 +902,7 @@ class LocationNormalizer extends BaseNormalizer {
                     if (cityName === foldedPattern) {
                         return city;
                     }
-                    const regex = new RegExp(`\\b${foldedPattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
-                    if (regex.test(cityName)) {
+                    if (this.matchesCityPattern(cityName, foldedPattern)) {
                         return city;
                     }
                 }
@@ -871,21 +936,9 @@ class LocationNormalizer extends BaseNormalizer {
     extractCityFromText(text) {
         if (!text || typeof text !== 'string' || !this.core || !this.core.cityMappings) return null;
 
-        // Diacritic-folded on BOTH sides (see extractCityFromAddress)
-        const lowerText = this.foldDiacritics(text);
-
-        for (const [patterns, city] of Object.entries(this.core.cityMappings)) {
-            const patternList = patterns.split('|');
-            for (const pattern of patternList) {
-                const foldedPattern = this.foldDiacritics(pattern);
-                const regex = new RegExp(`\\b${foldedPattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
-                if (regex.test(lowerText)) {
-                    return city;
-                }
-            }
-        }
-
-        return null;
+        // Diacritic-folded on BOTH sides (see extractCityFromAddress) and
+        // word-boundary aware (see matchesCityPattern).
+        return this.matchCityInText(text);
     }
 
     // Extract city from event data or URL
@@ -1186,26 +1239,17 @@ class LocationNormalizer extends BaseNormalizer {
         if (!this.core || !this.core.cityMappings) return 'unknown';
 
         // Diacritic-folded on BOTH sides so "Montréal" in a title/venue
-        // matches the unaccented "montreal" pattern (run 20260727-145617)
-        const title = this.foldDiacritics(event.title);
-
-        for (const [patterns, city] of Object.entries(this.core.cityMappings)) {
-            const cityPatterns = patterns.split('|');
-            for (const pattern of cityPatterns) {
-                if (title.includes(this.foldDiacritics(pattern))) {
-                    return city;
-                }
-            }
+        // matches the unaccented "montreal" pattern (run 20260727-145617),
+        // and word-boundary aware so "TRANSFERABLE" is not an "sf" venue
+        // (see matchesCityPattern).
+        const cityFromTitle = this.matchCityInText(event.title);
+        if (cityFromTitle) {
+            return cityFromTitle;
         }
 
-        const venue = this.foldDiacritics(event.bar);
-        for (const [patterns, city] of Object.entries(this.core.cityMappings)) {
-            const cityPatterns = patterns.split('|');
-            for (const pattern of cityPatterns) {
-                if (venue.includes(this.foldDiacritics(pattern))) {
-                    return city;
-                }
-            }
+        const cityFromVenueName = this.matchCityInText(event.bar);
+        if (cityFromVenueName) {
+            return cityFromVenueName;
         }
 
         if (event.venue?.address) {
@@ -1221,6 +1265,36 @@ class LocationNormalizer extends BaseNormalizer {
             if (cityFromAddress) {
                 return cityFromAddress;
             }
+        }
+
+        // Free description text is NOT authoritative for routing. Every rung
+        // above is location context the source asserts ABOUT this event —
+        // title, venue name, venue/event address. A description is prose, and
+        // prose names other cities for reasons that have nothing to do with
+        // where the event happens:
+        //   • "DJ TK (TORONTO) pumps the floor" — a visiting DJ's home city.
+        //     A Puerto Vallarta bear-week party shipped to chunky-dad-toronto
+        //     and had its times re-anchored to America/Toronto (run 20260804).
+        //   • "resident drag queens" — the nyc pattern "queens", matched in
+        //     plain prose, sent a Blue Chairs Resort (PV) party to nyc.
+        // Neither is a substring accident; both are word-boundary CLEAN, so
+        // fix 1 cannot help. The deterministic rule is precedence, not
+        // cleverness: when the event carries ANY venue/address context of its
+        // own and that context does not resolve, the description does not get
+        // to overrule the silence — 'unknown' is the honest answer and the
+        // curated-bar / site-identity / parser-config backfills downstream
+        // still get their turn at it. Only a truly context-free event (no
+        // venue name, no address of any kind) falls through to the prose.
+        const hasVenueContext = Boolean(
+            (typeof event.bar === 'string' && event.bar.trim())
+            || (event.venue && (event.venue.name || event.venue.address))
+            || (typeof event.address === 'string' && event.address.trim())
+        );
+
+        if (hasVenueContext) {
+            const title = String(event.title || event.name || '').trim();
+            console.log(`🗺️ LocationNormalizer: No city from title/venue/address for "${title || 'untitled'}" — description text is not authoritative for routing, leaving city unknown`);
+            return 'unknown';
         }
 
         const searchText = `${event.title || event.name || ''} ${event.description || ''} ${event.bar || ''}`;

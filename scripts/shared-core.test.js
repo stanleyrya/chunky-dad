@@ -5477,6 +5477,209 @@ test('prep-time override: a freshly tapped manual-bear event is never demoted by
   );
 });
 
+// The bear check has THREE outcomes: keep, DROP and FLAG. A FLAGGED event is
+// pushed to `kept` with a `bearReview` stamp and never reaches the drop
+// collector, so it is invisible to the rescue loop — and the kept-event branch
+// used to react only to `manual-not-bear`. A stored `manual-bear` verdict could
+// therefore never promote a flagged event, and js/calendar-core.js
+// `isHiddenForBearReview` re-hid it on chunky.dad every run.
+test('prep-time override: kept-but-FLAGGED event with a manual-bear calendar match is promoted and unflagged', async () => {
+  const core = createCore();
+  const calendarRecord = {
+    identifier: 'CAL-FLAGGED-1',
+    title: 'Treasure Trail',
+    startDate: new Date('2026-08-08T21:00:00.000Z'),
+    endDate: new Date('2026-08-09T01:00:00.000Z'),
+    location: '',
+    notes: 'bar: The Eagle\nbearSource: manual-bear (overrode ai: drag show)'
+  };
+  const adapter = buildPrepCalendarAdapter([calendarRecord]);
+  const flaggedEvent = {
+    title: 'Treasure Trail',
+    startDate: new Date('2026-08-08T21:00:00.000Z'),
+    bar: 'The Eagle',
+    bearSource: 'ai',
+    bearReview: 'unsure — ai: no explicit bear signal'
+  };
+  const context = buildOverrideContext();
+
+  const analyzed = await core.prepareEventsForCalendar([flaggedEvent], adapter, {}, context);
+
+  assert.equal(analyzed.length, 1, 'the flagged event stays in the write plan');
+  assert.equal(analyzed[0].isBearEvent, true, 'the stored verdict promotes it to a bear event');
+  assert.equal(analyzed[0].bearReview, undefined, 'the review flag is removed from the event');
+  const fields = core.parseNotesIntoFields(analyzed[0].notes);
+  assert.equal(fields.bearReview, undefined, 'the review flag never reaches the calendar notes');
+  assert.equal(
+    fields.bearSource,
+    'manual-bear (overrode ai: drag show)',
+    'the owner\'s stored verdict is adopted verbatim'
+  );
+  assert.equal(adapter.calls.length, 1, 'the promote check reuses prep\'s one existing-event search');
+});
+
+// Records already in the wild are self-contradictory: they carry BOTH
+// `bearReview: unsure — …` and `bearSource: manual-bear (…)`. Even when this
+// run's cascade says "bear" (no fresh flag), the bearReview merge rule is
+// calendar-wins, so the stale flag would be copied forward and keep the event
+// hidden forever. Adopting the stored verdict clears it.
+test('prep-time override: a stale bearReview on a manual-bear calendar record is cleared', async () => {
+  const core = createCore();
+  const calendarRecord = {
+    identifier: 'CAL-STALE-1',
+    title: 'Treasure Trail',
+    startDate: new Date('2026-08-08T21:00:00.000Z'),
+    endDate: new Date('2026-08-09T01:00:00.000Z'),
+    location: '',
+    notes: 'bar: The Eagle\nbearReview: unsure — ai\\: no explicit bear signal\nbearSource: manual-bear (overrode ai: drag show)'
+  };
+  const adapter = buildPrepCalendarAdapter([calendarRecord]);
+  const bearEvent = {
+    title: 'Treasure Trail',
+    startDate: new Date('2026-08-08T21:00:00.000Z'),
+    bar: 'The Eagle',
+    isBearEvent: true,
+    bearSource: 'keyword'
+  };
+
+  const analyzed = await core.prepareEventsForCalendar([bearEvent], adapter, {}, buildOverrideContext());
+
+  assert.equal(analyzed.length, 1);
+  assert.equal(
+    core.parseNotesIntoFields(analyzed[0].notes).bearReview,
+    undefined,
+    'the stale hide flag is not carried forward onto the owner\'s bear verdict'
+  );
+});
+
+// Regression guard for the other direction: making the check bidirectional must
+// not let a flagged event slip past the manual-not-bear tombstone.
+test('prep-time override: a flagged event with a manual-not-bear calendar match is still demoted', async () => {
+  const core = createCore();
+  const tombstoneNotes = 'bar: Neon Room\nbearSource: manual-not-bear (overrode ai: kept wrongly)';
+  const calendarRecord = {
+    identifier: 'CAL-TOMB-1',
+    title: 'Bronze Babez',
+    startDate: new Date('2026-08-05T21:00:00.000Z'),
+    endDate: new Date('2026-08-06T01:00:00.000Z'),
+    location: '',
+    notes: tombstoneNotes
+  };
+  const adapter = buildPrepCalendarAdapter([calendarRecord]);
+  const flaggedEvent = {
+    title: 'Bronze Babez',
+    startDate: new Date('2026-08-05T21:00:00.000Z'),
+    bar: 'Neon Room',
+    bearSource: 'ai',
+    bearReview: 'unlikely — ai: drag show'
+  };
+  const context = buildOverrideContext();
+
+  const analyzed = await core.prepareEventsForCalendar([flaggedEvent], adapter, {}, context);
+
+  assert.equal(analyzed.length, 0, 'demoted events never enter the write plan');
+  assert.equal(context.demoted.length, 1);
+  assert.equal(calendarRecord.notes, tombstoneNotes, 'the calendar tombstone stays exactly as-is');
+});
+
+// filterBearEvents runs BEFORE deduplicateEvents, so a twin the bear check
+// DROPped never entered dedup — it is rescued and appended after both dedup
+// passes, and nothing re-dedups the plan. Result in the wild: two `_action:
+// "merge"` rows carrying one `_existingEvent.identifier`, both matching on
+// `ticket-url` (the calendar layer logged `Merge eligibility match (ticket-url)`
+// twice).
+test('prep-time override: a rescued drop matching an analyzed event by ticket-url produces ONE plan row', async () => {
+  const core = createCore();
+  const calendarRecord = {
+    identifier: 'CAL-TWIN-1',
+    title: 'Treasure Trail',
+    startDate: new Date('2026-08-08T21:00:00.000Z'),
+    endDate: new Date('2026-08-09T01:00:00.000Z'),
+    location: '',
+    notes: 'bar: The Eagle\nbearSource: manual-bear (overrode ai: drag show)\nticketUrl: https://tixr.com/e/198706'
+  };
+  const adapter = buildPrepCalendarAdapter([calendarRecord]);
+  const keptTwin = {
+    title: 'Treasure Trail',
+    startDate: new Date('2026-08-08T21:00:00.000Z'),
+    bar: 'The Eagle',
+    ticketUrl: 'https://tixr.com/e/198706',
+    isBearEvent: true,
+    bearSource: 'keyword'
+  };
+  const droppedEntry = {
+    title: 'TREASURE TRAIL — Bear Night',
+    reason: 'ai: drag show',
+    event: {
+      title: 'TREASURE TRAIL — Bear Night',
+      startDate: new Date('2026-08-08T22:00:00.000Z'),
+      bar: 'The Eagle',
+      ticketUrl: 'https://tixr.com/e/198706'
+    }
+  };
+  const context = buildOverrideContext([droppedEntry]);
+
+  const analyzed = await core.prepareEventsForCalendar([keptTwin], adapter, {}, context);
+
+  assert.equal(analyzed.length, 1, 'the rescued twin folds into the row that already covers the event');
+  assert.equal(analyzed[0].isBearEvent, true);
+  assert.equal(droppedEntry.rescued, true, 'the drop is still reported as rescued');
+  assert.deepEqual(context.rescued, [droppedEntry]);
+
+  // No two plan rows may ever target the same calendar record.
+  const identifiers = analyzed
+    .map(entry => entry._existingEvent && entry._existingEvent.identifier)
+    .filter(Boolean);
+  assert.equal(
+    new Set(identifiers).size,
+    identifiers.length,
+    'two plan rows must never share one _existingEvent.identifier'
+  );
+});
+
+test('foldBearOverrideIntoPlanEntry: folds by calendar identifier, leaves genuinely new events alone', async () => {
+  const core = createCore();
+  const planRow = {
+    title: 'Treasure Trail',
+    startDate: new Date('2026-08-08T21:00:00.000Z'),
+    bar: 'The Eagle',
+    bearReview: 'unsure — ai: no explicit bear signal',
+    _action: 'merge',
+    _existingEvent: { identifier: 'CAL-TWIN-1' }
+  };
+  const plan = [planRow];
+
+  // Different day, different everything → genuinely new, nothing folded.
+  assert.equal(
+    core.foldBearOverrideIntoPlanEntry(plan, {
+      title: 'Some Other Party',
+      startDate: new Date('2026-09-20T21:00:00.000Z'),
+      bar: 'Elsewhere'
+    }, {}),
+    null,
+    'an unrelated override still gets its own row'
+  );
+  assert.equal(plan.length, 1);
+
+  // Same target calendar record → folded, verdict stamped, flag cleared.
+  const folded = core.foldBearOverrideIntoPlanEntry(plan, {
+    title: 'TREASURE TRAIL — Bear Night',
+    startDate: new Date('2026-08-08T22:00:00.000Z'),
+    bar: 'The Eagle'
+  }, {
+    existingIdentifier: 'CAL-TWIN-1',
+    manualBearSource: 'manual-bear (overrode ai: drag show)'
+  });
+  assert.equal(folded, planRow, 'the existing row is returned, not a new one');
+  assert.equal(planRow.isBearEvent, true);
+  assert.equal(planRow.bearReview, undefined, 'the review flag is cleared on the folded row');
+  assert.equal(planRow.bearSource, 'manual-bear (overrode ai: drag show)');
+  assert.equal(core.parseNotesIntoFields(planRow.notes).bearSource, 'manual-bear (overrode ai: drag show)');
+
+  // An empty plan has nothing to fold into.
+  assert.equal(core.foldBearOverrideIntoPlanEntry([], { title: 'x' }, { existingIdentifier: 'CAL-TWIN-1' }), null);
+});
+
 // ---------------------------------------------------------------------------
 // logDebug / logAiPayloadDebug (two-tier logging)
 // ---------------------------------------------------------------------------
