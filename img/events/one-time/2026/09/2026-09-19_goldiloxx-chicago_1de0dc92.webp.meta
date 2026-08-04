@@ -1,0 +1,16 @@
+{
+  "originalUrl": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782172240/saas/logos/image_1782172179876_tide1jxnd.webp",
+  "adjustedUrl": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782172240/saas/logos/image_1782172179876_tide1jxnd.webp",
+  "type": "event",
+  "filename": "2026-09-19_goldiloxx-chicago_1de0dc92.webp",
+  "contentType": "image/jpeg",
+  "contentLength": "354440",
+  "eventInfo": {
+    "name": "GOLDILOXX Chicago",
+    "startDate": "2026-09-19T21:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-08-04T16:36:53.635Z",
+  "etag": "\"bc1baa060cd7233ce1f91aceccc8f3a0\"",
+  "lastModified": "Tue, 23 Jun 2026 00:04:34 GMT"
+}
