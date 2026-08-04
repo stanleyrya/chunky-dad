@@ -10693,3 +10693,188 @@ test('OCR prefers a full-size original over its own resized derivative, and neve
     parser.dropResizedImageUrlsWithOriginal([thumbnail, 'https://eaglela.com/wp-content/uploads/other-1-1.jpg']),
     [thumbnail, 'https://eaglela.com/wp-content/uploads/other-1-1.jpg']);
 });
+
+// ---------------------------------------------------------------------------
+// Body-line cap / segment-budget truncation (run 20260803).
+//
+// extractionLimits.maxBodyParts = 300 stopped extractBodyParts dead and said
+// nothing about it. Measured against the 296-page cached corpus it discarded
+// 1,222 lines across 6 pages — 590 of them on sickening.events/events (365
+// date-bearing) and 96 on www.3dollarbillbk.com/rsvp (34 date-bearing).
+// multiEventScanLineLimit = 500 was dead code alongside it: both segmentation
+// call sites did `extractBodyParts(html).slice(0, 500)` on a list that had
+// already stopped at 300.
+//
+// The cap that actually costs those two pages their events is the SEGMENT cap:
+// both take the repeated-structure path, which is bounded by segment count and
+// never by any line cap at all.
+// ---------------------------------------------------------------------------
+
+// 320 dateless house-rule lines ahead of four real dated listings: every event
+// on this page lives past body line 300.
+function buildDeepListingHtml() {
+  const filler = [];
+  for (let i = 1; i <= 320; i++) {
+    filler.push(`<p>Venue house rule number ${i} about coats and lockers</p>`);
+  }
+  const listings = ['Woofers Night', 'Cub Social', 'Leather Social', 'Beard Bash'].map((title, i) => (
+    `<div><h3>${title}</h3><p>Saturday, September ${12 + i}, 2026</p>` +
+    '<p>Doors at 9pm at the main bar with music all night.</p></div>'
+  ));
+  return `<html><body><h1>Venue rules and listings</h1>${filler.join('')}${listings.join('')}</body></html>`;
+}
+
+function buildRepeatedCardHtml(count, label, month) {
+  const cards = [];
+  for (let i = 1; i <= count; i++) {
+    cards.push(
+      `<div class="event-card"><h3>${label} Number ${i}</h3>` +
+      `<p>Saturday, ${month} ${i}, 2026</p>` +
+      '<p>A big night with music and dancing at the main bar downtown.</p></div>'
+    );
+  }
+  return `<html><body><h1>Listings</h1>${cards.join('')}</body></html>`;
+}
+
+test('extractBodyParts takes a per-call line cap and never truncates silently', () => {
+  const parser = createParser();
+  const lines = [];
+  for (let i = 1; i <= 12; i++) {
+    lines.push(`<p>Plain notice number ${i} about the cloakroom</p>`);
+  }
+  lines.push('<p>Saturday, September 12, 2026</p>');
+  lines.push('<p>Sunday, September 13, 2026</p>');
+  const html = `<html><body>${lines.join('')}</body></html>`;
+
+  // The per-call limit overrides maxBodyParts. Before this change the second
+  // argument did not exist and every caller silently got maxBodyParts.
+  const logs = captureLogs(() => {
+    const capped = parser.extractBodyParts(html, 5);
+    assert.equal(capped.length, 5, 'the per-call limit must bind, not maxBodyParts');
+  });
+  const capLine = logs.find(line => line.includes('Body line cap reached'));
+  assert.ok(capLine, `expected a body-line-cap log, got ${JSON.stringify(logs)}`);
+  assert.ok(capLine.startsWith('🤖 AI Web:'), 'cap log must use the 🤖 AI Web: prefix');
+  assert.ok(capLine.includes('(5)'), `cap log must name the cap that fired: ${capLine}`);
+  // 14 lines total, 5 kept, 9 dropped, 2 of the dropped ones date-bearing.
+  assert.ok(capLine.includes('dropped 9 further page line(s)'), `cap log must count what it dropped: ${capLine}`);
+  assert.ok(capLine.includes('2 of them date-bearing'), `cap log must count dropped dated lines: ${capLine}`);
+
+  // A cap that does not bind stays silent — no new noise on ordinary pages.
+  const quiet = captureLogs(() => {
+    assert.equal(parser.extractBodyParts(html, 500).length, 14);
+  });
+  assert.equal(quiet.filter(line => line.includes('Body line cap reached')).length, 0,
+    `a cap that never fires must not log: ${JSON.stringify(quiet)}`);
+
+  // Junk limits fall back to maxBodyParts rather than capping at 0.
+  assert.equal(parser.extractBodyParts(html, 0).length, 14);
+  assert.equal(parser.extractBodyParts(html, 'nonsense').length, 14);
+  assert.equal(parser.extractBodyParts(html, null).length, 14);
+});
+
+test('segmentation scans past body line 300 — listings below the old cap still produce segments', () => {
+  const parser = createParser();
+  const html = buildDeepListingHtml();
+
+  // maxBodyParts stays 300 for the whole-page PROMPT payload; the scan corpus
+  // is multiEventScanLineLimit, which is now live and much larger.
+  assert.equal(parser.extractionLimits.maxBodyParts, 300);
+  assert.ok(parser.extractionLimits.multiEventScanLineLimit > 300,
+    'the segmentation scan limit must exceed the prompt payload cap or it cannot see deep listings');
+  assert.equal(captureLogs(() => parser.extractBodyParts(html)).length > 0, true,
+    'the 300-line prompt cap must announce itself on this page');
+
+  const scanned = parser.extractBodyParts(html, parser.extractionLimits.multiEventScanLineLimit);
+  assert.ok(scanned.length > 300, `scan corpus should exceed 300 lines, got ${scanned.length}`);
+  assert.ok(scanned.some(line => line.includes('Beard Bash')),
+    'the last listing on the page must be inside the scan corpus');
+
+  // The classifier reads the same corpus: off the 300-line slice this page has
+  // no date signal at all and is called single-event, so it is never segmented.
+  assert.equal(parser.isMultiEventLikeHtml(html), true);
+
+  const segments = parser.buildMultiEventSegments(html, 'https://venue.example/events');
+  assert.equal(segments.length, 4, 'all four deep listings must be segmented');
+  const segmentText = segments.map(segment => segment.lines.join('\n')).join('\n');
+  ['Woofers Night', 'Cub Social', 'Leather Social', 'Beard Bash'].forEach(title => {
+    assert.ok(segmentText.includes(title), `deep listing "${title}" must reach segmentation`);
+  });
+});
+
+test('resolveMultiEventSegmentBudget scales with dated items between the baseline and the ceiling', () => {
+  const parser = createParser();
+  const base = parser.extractionLimits.multiEventMaxSegments;
+  const ceiling = parser.extractionLimits.multiEventMaxSegmentsDenseCeiling;
+  assert.equal(base, 16, 'the baseline budget is unchanged history — 12 → 14 → 16');
+  assert.ok(ceiling > base, 'the dense ceiling must sit above the baseline');
+
+  // Sparse pages are byte-identical to the old flat cap.
+  assert.equal(parser.resolveMultiEventSegmentBudget(0), base);
+  assert.equal(parser.resolveMultiEventSegmentBudget(1), base);
+  assert.equal(parser.resolveMultiEventSegmentBudget(base), base);
+  // Dense pages earn exactly what they show, never more.
+  assert.equal(parser.resolveMultiEventSegmentBudget(base + 1), base + 1);
+  assert.equal(parser.resolveMultiEventSegmentBudget(ceiling), ceiling);
+  // The ceiling is a hard bound: an aggregator listing hundreds of items
+  // cannot turn into hundreds of AI calls by itself.
+  assert.equal(parser.resolveMultiEventSegmentBudget(485), ceiling);
+  assert.equal(parser.resolveMultiEventSegmentBudget(100000), ceiling);
+  // Garbage falls back to the baseline rather than to 0 or NaN.
+  assert.equal(parser.resolveMultiEventSegmentBudget(NaN), base);
+  assert.equal(parser.resolveMultiEventSegmentBudget(null), base);
+  assert.equal(parser.resolveMultiEventSegmentBudget('lots'), base);
+  assert.equal(parser.resolveMultiEventSegmentBudget(-5), base);
+});
+
+test('a date-dense listing page earns segments beyond the flat 16, a sparse one does not', () => {
+  const dense = createParser();
+  const denseSegments = dense.buildMultiEventSegments(
+    buildRepeatedCardHtml(30, 'Bear Night', 'October'), 'https://venue.example/events');
+  assert.equal(denseSegments.length, 30, '30 dated listings must yield 30 segments, not 16');
+  const lastTitle = denseSegments[denseSegments.length - 1].lines.join('\n');
+  assert.ok(lastTitle.includes('Bear Night Number 30'), 'the tail of the listing must survive');
+
+  // Past the ceiling the budget stops, and it says so with the real item count
+  // so the cost of full coverage is visible instead of invisible.
+  const huge = createParser();
+  const ceiling = huge.extractionLimits.multiEventMaxSegmentsDenseCeiling;
+  let hugeSegments = [];
+  const logs = captureLogs(() => {
+    hugeSegments = huge.buildMultiEventSegments(
+      buildRepeatedCardHtml(ceiling + 20, 'Cub Night', 'November'), 'https://venue.example/events');
+  });
+  assert.equal(hugeSegments.length, ceiling, 'the ceiling must still be a hard bound');
+  const budgetLine = logs.find(line => line.includes('Segment budget'));
+  assert.ok(budgetLine, `expected a segment-budget log, got ${JSON.stringify(logs)}`);
+  assert.ok(budgetLine.startsWith('🤖 AI Web:'), 'budget log must use the 🤖 AI Web: prefix');
+  assert.ok(budgetLine.includes(`Segment budget ${ceiling}`), `budget log must name the budget: ${budgetLine}`);
+  assert.ok(budgetLine.includes(`${ceiling + 20} dated candidate item(s)`),
+    `budget log must name how many items the page really offered: ${budgetLine}`);
+  assert.ok(logs.some(line => line.includes('Segment cap reached')),
+    'the pre-existing cap line must still fire when content is genuinely lost');
+
+  // Sparse pages keep the baseline budget and are unaffected.
+  const sparse = createParser();
+  assert.equal(
+    sparse.buildMultiEventSegments(buildRepeatedCardHtml(5, 'Otter Night', 'December'),
+      'https://venue.example/events').length, 5);
+});
+
+test('the segment cap only reports truncation when content is actually left over', () => {
+  const parser = createParser();
+  const base = parser.extractionLimits.multiEventMaxSegments;
+  let segments = [];
+  // Exactly `base` listings: the budget is reached by the LAST candidate, so
+  // nothing is lost. The old bottom-of-loop break logged here anyway — 5 of
+  // the 9 corpus pages that reported "Segment cap reached" were false alarms.
+  const logs = captureLogs(() => {
+    segments = parser.buildMultiEventSegments(
+      buildRepeatedCardHtml(base, 'Wolf Night', 'October'), 'https://venue.example/events');
+  });
+  assert.equal(segments.length, base);
+  assert.equal(logs.filter(line => line.includes('Segment cap reached')).length, 0,
+    `nothing was dropped, so nothing may claim it was: ${JSON.stringify(logs)}`);
+  assert.equal(logs.filter(line => line.includes('Segment budget')).length, 0,
+    `no budget warning when the page fits: ${JSON.stringify(logs)}`);
+});
