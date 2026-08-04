@@ -221,6 +221,13 @@ function exportRecurringIcs(btn) {
 // gathering-only venue queue) — phone-only in v1, so the buttons go inert.
 function markBearOverride() {}
 function queueVenueCandidate() {}
+// The liveness beacons and the native log/prompt copy bridges have no browser
+// counterpart (there is no Scriptable console to log into, and the log text
+// lives on the phone). Inert here so a plain browser never attempts a
+// bridge-disabled:// navigation — the beacon fires by itself on every load.
+function sendResultsBeacon() {}
+function requestNativeLogCopy() {}
+function showAiPromptPicker() {}
 (function disablePhoneOnlyButtons() {
     var buttons = document.querySelectorAll('.bear-override-btn, .venue-queue-btn');
     for (var i = 0; i < buttons.length; i++) {
