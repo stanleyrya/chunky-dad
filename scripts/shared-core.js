@@ -4349,8 +4349,10 @@ class SharedCore {
 
         // Overlong-field trim outcomes (_fieldTrims — underscore field, never
         // serialized; stamped by trimOverlongFieldsForEvent). Rendered so
-        // every trim / would-trim / failed-gate outcome stays visible in the
-        // results UI next to the value it describes.
+        // every trim / would-trim / failure outcome stays visible in the
+        // results UI next to the value it describes. The three failure
+        // statuses are rendered apart on purpose — "still too long",
+        // "not verbatim", and "no answer" have different fixes.
         const fieldTrims = Array.isArray(event._fieldTrims) ? event._fieldTrims : [];
         fieldTrims.forEach(trim => {
             if (!trim || typeof trim !== 'object') return;
@@ -4360,8 +4362,19 @@ class SharedCore {
                 lines.push(`${trimField} trimmed: ${trim.originalLength} → ${trim.trimmedLength} chars — "${trim.trimmedValue}"`);
             } else if (trim.status === 'would-trim') {
                 lines.push(`${trimField} would trim: ${trim.originalLength} → ${trim.trimmedLength} chars — "${trim.trimmedValue}" (report mode)`);
-            } else if (trim.status === 'failed-gate') {
-                lines.push(`⚠️ ${trimField} overlong (${trim.originalLength} > ${trim.maxChars} chars) — trim failed verbatim gate, original kept`);
+            } else if (trim.status === 'failed-length') {
+                // The dominant real-world failure: the model gave back text
+                // that IS verbatim but still over the limit (usually the
+                // whole input). Named apart from a hallucination so the card
+                // does not accuse the model of inventing text it did not.
+                const answerNote = Number.isFinite(trim.answerLength)
+                    ? ` — AI trim came back ${trim.answerLength} chars, still over the limit`
+                    : ' — no cut point fits the limit without cutting a word';
+                lines.push(`⚠️ ${trimField} overlong (${trim.originalLength} > ${trim.maxChars} chars)${answerNote}, original kept`);
+            } else if (trim.status === 'failed-verbatim') {
+                lines.push(`⚠️ ${trimField} overlong (${trim.originalLength} > ${trim.maxChars} chars) — AI trim was not verbatim from the original, original kept`);
+            } else if (trim.status === 'no-answer') {
+                lines.push(`⚠️ ${trimField} overlong (${trim.originalLength} > ${trim.maxChars} chars) — no usable AI trim answer, original kept`);
             }
         });
 
@@ -6831,33 +6844,237 @@ class SharedCore {
         return overlong;
     }
 
+    // ------------------------------------------------------------------
+    // CUT-POINT trimming. The answer is REQUIRED to be a contiguous
+    // substring of the original, so the model's only real job is choosing
+    // WHERE to cut — not producing text. Asking it for text instead let it
+    // satisfy "must be an exact contiguous substring" the laziest way
+    // available: by echoing the whole input back (measured 2026-07-28 over
+    // 28 cached field-trim calls — 20/28 answers were the original
+    // byte-identical, only 4/28 were usable, and 84% of all response bytes
+    // were echoed input). So the value is pre-split into numbered PARTS at
+    // boundaries the code chose, the model answers with ONE part range, and
+    // the code re-joins the parts by offset. Over-length becomes
+    // IMPOSSIBLE BY CONSTRUCTION (the join is clamped to the limit by
+    // dropping trailing parts) and non-verbatim becomes impossible too (the
+    // returned string is always a .slice() of the original).
+    // ------------------------------------------------------------------
+
+    // Cut positions after sentence/paragraph ends. Strong boundaries: these
+    // are tried first so description parts are whole sentences.
+    collectTrimSentenceCuts(text) {
+        const cuts = new Set();
+        const sentence = /([.!?…]+["'”’)\]]*)(\s+)/g;
+        let match;
+        while ((match = sentence.exec(text)) !== null) {
+            // "vom 09. bis 11. Oktober", "10.10.2026", "1. Doors at 9" — a
+            // period straight after a digit is an ordinal, a date, or a list
+            // marker, never a sentence end.
+            if (match[1] === '.' && /\d/.test(text.charAt(match.index - 1))) continue;
+            cuts.add(match.index + match[1].length + match[2].length);
+        }
+        const paragraph = /\n+/g;
+        while ((match = paragraph.exec(text)) !== null) cuts.add(match.index + match[0].length);
+        return cuts;
+    }
+
+    // Cut positions around segment separators — the boundaries that matter
+    // for titles and shortNames ("D>U>R>O — Precinct DTLA — SOLD OUT").
+    collectTrimSeparatorCuts(text) {
+        const cuts = new Set();
+        const separator = /[—–|•·@:;,/()[\]]+|\s-\s|\s{2,}/g;
+        let match;
+        while ((match = separator.exec(text)) !== null) {
+            if (match.index > 0) cuts.add(match.index);
+            const after = match.index + match[0].length;
+            if (after < text.length) cuts.add(after);
+        }
+        return cuts;
+    }
+
+    // Weakest boundaries: word starts. NEVER mid-word — the whole pass
+    // refuses mid-word truncation by design, and every cut set obeys that.
+    collectTrimWordCuts(text) {
+        const cuts = new Set();
+        const whitespace = /\s+/g;
+        let match;
+        while ((match = whitespace.exec(text)) !== null) {
+            const after = match.index + match[0].length;
+            if (after < text.length && match.index > 0) cuts.add(after);
+        }
+        return cuts;
+    }
+
+    // A URL is one token no matter how much punctuation it contains — cutting
+    // "https://tickets.example/duro" at its ":" or "/" would leave a broken
+    // link in a title. Cuts strictly inside a URL span are dropped; the span's
+    // own edges stay legal.
+    collectUrlSpans(text) {
+        const spans = [];
+        const url = /(?:https?:\/\/|www\.)\S+/gi;
+        let match;
+        while ((match = url.exec(text)) !== null) {
+            spans.push({ start: match.index, end: match.index + match[0].length });
+        }
+        return spans;
+    }
+
+    isLegalTrimCut(text, cut, urlSpans) {
+        if (!(cut > 0 && cut < text.length)) return false;
+        const spans = urlSpans || this.collectUrlSpans(text);
+        return !spans.some(span => cut > span.start && cut < span.end);
+    }
+
+    // Turn a set of cut offsets into gapless [{ start, end }] parts covering
+    // the whole string, so any part range re-joins by a single .slice().
+    cutOffsetsToTrimParts(text, cutSet) {
+        const urlSpans = this.collectUrlSpans(text);
+        const cuts = [...cutSet]
+            .filter(cut => this.isLegalTrimCut(text, cut, urlSpans))
+            .sort((a, b) => a - b);
+        const parts = [];
+        let start = 0;
+        for (const cut of cuts) {
+            if (cut <= start) continue;
+            parts.push({ start, end: cut });
+            start = cut;
+        }
+        parts.push({ start, end: text.length });
+        return parts;
+    }
+
+    // One part longer than the whole budget can never be kept, so break it
+    // down on weaker boundaries until each piece fits. A single "word"
+    // longer than the limit (a bare URL) stays oversized on purpose — the
+    // pass flags it rather than cutting a word in half.
+    subdivideOverlongTrimPart(text, part, maxChars) {
+        const slice = text.slice(part.start, part.end);
+        if (slice.length <= maxChars) return [part];
+        const urlSpans = this.collectUrlSpans(slice);
+        for (const collect of ['collectTrimSeparatorCuts', 'collectTrimWordCuts']) {
+            const local = [...this[collect](slice)]
+                .filter(cut => this.isLegalTrimCut(slice, cut, urlSpans))
+                .sort((a, b) => a - b);
+            if (local.length === 0) continue;
+            const pieces = [];
+            let position = 0;
+            while (slice.length - position > maxChars) {
+                let best = -1;
+                for (const cut of local) {
+                    if (cut > position && cut - position <= maxChars) best = cut;
+                }
+                if (best < 0) break;
+                pieces.push({ start: part.start + position, end: part.start + best });
+                position = best;
+            }
+            if (pieces.length > 0 && slice.length - position <= maxChars) {
+                pieces.push({ start: part.start + position, end: part.end });
+                return pieces;
+            }
+        }
+        return [part];
+    }
+
+    // Pure: split one overlong value into the numbered parts the model picks
+    // from. Sentence boundaries first, separators for values that have no
+    // sentence end (titles), word starts as the last resort. The list stops
+    // once it holds enough text to overfill the budget twice over — parts
+    // beyond that can never be reached from part 1, and a shorter menu is a
+    // cheaper prompt.
+    splitIntoTrimParts(value, maxChars) {
+        const text = String(value === null || value === undefined ? '' : value);
+        if (!text) return [];
+        const limit = Number.isFinite(maxChars) && maxChars > 0 ? Math.floor(maxChars) : text.length;
+        let parts = this.cutOffsetsToTrimParts(text, this.collectTrimSentenceCuts(text));
+        if (parts.length < 2) parts = this.cutOffsetsToTrimParts(text, this.collectTrimSeparatorCuts(text));
+        if (parts.length < 2) parts = this.cutOffsetsToTrimParts(text, this.collectTrimWordCuts(text));
+        const sized = [];
+        for (const part of parts) sized.push(...this.subdivideOverlongTrimPart(text, part, limit));
+        const capped = [];
+        let total = 0;
+        for (const part of sized) {
+            capped.push(part);
+            total += part.end - part.start;
+            if (capped.length >= 4 && total >= limit * 2) break;
+            if (capped.length >= 20) break;
+        }
+        return capped.filter(part => text.slice(part.start, part.end).trim().length > 0);
+    }
+
+    // Shape check only: "3", "3-9", "3 - 9", "3 to 9" → { from, to }. Kept
+    // separate from resolution so a range answer that resolves to nothing is
+    // still reported as a LENGTH failure, not a bogus hallucination claim.
+    parseTrimPartRange(rangeAnswer) {
+        const raw = String(rangeAnswer === null || rangeAnswer === undefined ? '' : rangeAnswer).trim();
+        const match = raw.match(/^(\d+)\s*(?:(?:-|–|—|to)\s*(\d+))?$/);
+        if (!match) return null;
+        let from = parseInt(match[1], 10);
+        let to = match[2] === undefined ? from : parseInt(match[2], 10);
+        if (!Number.isFinite(from) || !Number.isFinite(to)) return null;
+        if (to < from) { const swap = from; from = to; to = swap; }
+        return { from, to };
+    }
+
+    // Resolve a model part-range answer into the actual substring. THIS is the
+    // mechanism that makes an over-limit or invented answer impossible: the
+    // result is always text.slice(...) of the original (verbatim by
+    // construction) and trailing parts are dropped until it fits (within the
+    // limit by construction). Returns null when the answer is not a range, or
+    // when not even the first requested part fits on its own.
+    resolveTrimPartRange(value, maxChars, rangeAnswer) {
+        const text = String(value === null || value === undefined ? '' : value);
+        const parts = this.splitIntoTrimParts(text, maxChars);
+        if (parts.length === 0) return null;
+        const range = this.parseTrimPartRange(rangeAnswer);
+        if (!range) return null;
+        let { from, to } = range;
+        from = Math.max(1, Math.min(from, parts.length));
+        to = Math.max(from, Math.min(to, parts.length));
+        const first = from - 1;
+        for (let last = to - 1; last >= first; last--) {
+            const candidate = text.slice(parts[first].start, parts[last].end).trim();
+            if (candidate.length > 0 && candidate.length <= maxChars) return candidate;
+        }
+        return null;
+    }
+
     // Prompt for one event's batched trim request. EVENT carries the title
     // only (no dates) so the AI-response cache key stays stable across runs.
+    // The model never writes text — it names a part range, which is why the
+    // response is ~30 characters instead of a ~1000-character echo.
     buildFieldTrimPrompt({ eventTitle, entries }) {
-        const fieldLines = (Array.isArray(entries) ? entries : []).map(entry =>
-            `- field: ${entry.field}\n  max_chars: ${entry.maxChars}\n  value: ${JSON.stringify(entry.value)}`
-        );
+        const fieldBlocks = (Array.isArray(entries) ? entries : []).map(entry => {
+            const text = String(entry.value);
+            const parts = this.splitIntoTrimParts(text, entry.maxChars);
+            const partLines = parts.map((part, index) =>
+                `${index + 1}. (${part.end - part.start} chars) ${JSON.stringify(text.slice(part.start, part.end).trim())}`);
+            return [
+                `FIELD: ${entry.field} — limit ${entry.maxChars} characters, currently ${text.length}`,
+                `PARTS (${parts.length}):`,
+                ...partLines
+            ].join('\n');
+        });
         return [
-            'You are shortening overlong text fields for one event.',
+            'You pick which numbered PARTS of an overlong event field to keep. You never write text.',
             `EVENT: ${eventTitle}`,
-            'Each field below exceeds its maximum display length. Return a shorter version of each.',
-            'FIELDS:',
-            ...fieldLines,
+            ...fieldBlocks,
             'Rules:',
-            '- Each answer MUST be an EXACT contiguous substring of that field\'s original value — copy characters verbatim; never paraphrase, reorder, re-case, merge parts, or add words.',
-            '- Each answer must be at most max_chars characters long.',
-            '- For "title", keep the portion that names the event itself — drop venue, city, date, status text, and marketing phrases.',
-            '- For "description", keep the most informative complete sentences; start at a sentence start and end at a natural boundary.',
-            '- For "shortName", keep the shortest recognizable brand name.',
-            '- Never cut a word in the middle.',
-            'Return JSON only:',
-            '{"trims": {"<field>": {"value": "<exact contiguous substring>", "reason": "<one short sentence>"}}}'
+            '- Answer with ONE range of consecutive part numbers to keep, written "first-last" (e.g. "2-5"). A single part is "3-3".',
+            '- The program joins the kept parts back together verbatim and drops parts off the END until the limit fits — so choose the START carefully and extend as far as you like.',
+            '- Choose the START: the first part that carries real information. Skip a pure greeting, hype, or navigation opener.',
+            '- Choose the LAST: stop before ticket links, disclaimers, sponsor lists, and repeated calls to action.',
+            '- For "title" keep only the parts naming the event itself — drop venue, city, date, status text, and marketing.',
+            '- For "shortName" keep the single part that is the recognizable brand name.',
+            'Return JSON only, no prose:',
+            '{"trims": {"<field>": "<first>-<last>"}}'
         ].join('\n');
     }
 
     // Deterministic anti-hallucination gate: an answer is usable only when it
     // is non-empty, fits the limit, is strictly shorter than the original, and
-    // is a case-sensitive contiguous substring of the original value.
+    // is a case-sensitive contiguous substring of the original value. A
+    // part-range answer passes this by construction — it stays as the final
+    // check so BOTH routes (range, raw text) are enforced by the same code.
     isVerbatimTrimAnswer(originalValue, answerText, maxChars) {
         const answer = String(answerText === null || answerText === undefined ? '' : answerText).trim();
         if (!answer) return false;
@@ -6866,19 +7083,40 @@ class SharedCore {
             && String(originalValue).includes(answer);
     }
 
+    // Why an answer failed the gate. The old single 'failed-gate' status read
+    // as "the AI hallucinated" when the cause was almost always LENGTH — the
+    // model echoed the input back verbatim (23 of 24 failures in the cached
+    // 2026-07-28 sample). Callers get the two causes apart so the log line
+    // and the results-UI evidence line can say which one happened.
+    classifyFailedTrimAnswer(originalValue, answerText, maxChars) {
+        const answer = String(answerText === null || answerText === undefined ? '' : answerText).trim();
+        if (!answer) return 'no-answer';
+        if (String(originalValue).includes(answer)) return 'failed-length';
+        return 'failed-verbatim';
+    }
+
     // ONE AI call per event batching all overlong fields (passLabel
     // 'field-trim', same callAiGenerate path arbitration uses — so the
     // response cache applies). Gate pass + mode 'enforce' → value replaced;
     // mode 'report' → value kept; gate fail / no answer → value kept. Every
     // outcome is recorded on event._fieldTrims for evidence-line rendering.
     // NEVER falls back to deterministic mid-word truncation.
+    //
+    // The model answers with a PART RANGE ("3-9"), which resolveTrimPartRange
+    // turns into a .slice() of the original clamped to the limit — an answer
+    // on that route can never be over-length and can never be text the
+    // original did not contain. A raw substring answer is still accepted as a
+    // fallback (older cached responses, a model that ignores the format), and
+    // both routes go through the same isVerbatimTrimAnswer gate.
     async trimOverlongFieldsForEvent(event, trimConfig, aiConfig, httpAdapter) {
         const overlong = this.findOverlongFields(event, trimConfig);
         if (overlong.length === 0) return [];
 
         const title = String(event.title || 'Unknown');
         const prompt = this.buildFieldTrimPrompt({ eventTitle: title, entries: overlong });
-        const trimAiConfig = { ...aiConfig, numPredict: Math.min(Number(aiConfig.numPredict) || 800, 800) };
+        // A part range is ~10 tokens; the old text-echo answers ran to ~300.
+        // Capping the decode keeps a model that ignores the format cheap.
+        const trimAiConfig = { ...aiConfig, numPredict: Math.min(Number(aiConfig.numPredict) || 200, 200) };
         const rawResponse = await this.callAiGenerate(trimAiConfig, prompt, 'field-trim', httpAdapter);
 
         let parsed = null;
@@ -6896,8 +7134,14 @@ class SharedCore {
         const records = [];
         for (const entry of overlong) {
             const answerEntry = trims[entry.field];
-            const answerText = answerEntry && typeof answerEntry === 'object' ? answerEntry.value : answerEntry;
-            const answer = String(answerText === null || answerText === undefined ? '' : answerText).trim();
+            const rawAnswer = answerEntry && typeof answerEntry === 'object'
+                ? (answerEntry.value !== undefined ? answerEntry.value
+                    : (answerEntry.range !== undefined ? answerEntry.range : answerEntry.keep))
+                : answerEntry;
+            const rangeValue = this.resolveTrimPartRange(entry.value, entry.maxChars, rawAnswer);
+            const answer = rangeValue !== null
+                ? rangeValue
+                : String(rawAnswer === null || rawAnswer === undefined ? '' : rawAnswer).trim();
             if (this.isVerbatimTrimAnswer(entry.value, answer, entry.maxChars)) {
                 if (trimConfig.mode === 'enforce') {
                     event[entry.field] = answer;
@@ -6922,13 +7166,31 @@ class SharedCore {
                     console.log(`✂️ TRIM [report]: "${title}" — ${entry.field} would trim ${entry.value.length} → ${answer.length} chars`);
                 }
             } else {
-                records.push({
+                // CORRECTED LOG TEXT (was "answer failed verbatim gate" for
+                // every failure): length and hallucination are different
+                // problems and the old wording blamed the wrong one 23 times
+                // out of 24 in the cached sample.
+                const unresolvableRange = Boolean(this.parseTrimPartRange(rawAnswer)) && rangeValue === null;
+                const status = unresolvableRange
+                    ? 'failed-length'
+                    : this.classifyFailedTrimAnswer(entry.value, answer, entry.maxChars);
+                const record = {
                     field: entry.field,
-                    status: 'failed-gate',
+                    status,
                     originalLength: entry.value.length,
                     maxChars: entry.maxChars
-                });
-                console.log(`✂️ TRIM: "${title}" — ${entry.field} answer failed verbatim gate ("${answer.slice(0, 80)}") — original kept`);
+                };
+                if (status === 'failed-length' && !unresolvableRange) record.answerLength = answer.length;
+                records.push(record);
+                if (unresolvableRange) {
+                    console.log(`✂️ TRIM: "${title}" — ${entry.field} part range "${answer}" has no piece that fits ${entry.maxChars} chars without cutting a word — original kept`);
+                } else if (status === 'no-answer') {
+                    console.log(`✂️ TRIM: "${title}" — ${entry.field} no usable answer (${entry.value.length} > ${entry.maxChars} chars) — original kept`);
+                } else if (status === 'failed-length') {
+                    console.log(`✂️ TRIM: "${title}" — ${entry.field} answer too long (${answer.length} > ${entry.maxChars} chars, original ${entry.value.length}) — original kept`);
+                } else {
+                    console.log(`✂️ TRIM: "${title}" — ${entry.field} answer not verbatim from the original ("${answer.slice(0, 80)}") — original kept`);
+                }
             }
         }
         event._fieldTrims = records;

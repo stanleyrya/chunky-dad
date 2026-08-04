@@ -10422,6 +10422,147 @@ test('isVerbatimTrimAnswer: case-sensitive contiguous substring, non-empty, with
   assert.equal(core.isVerbatimTrimAnswer(OVERLONG_TITLE, 'DURO at Precinct', 60), false, 'paraphrases fail');
 });
 
+// ---------------------------------------------------------------------------
+// CUT-POINT trimming. Real 918-character description from the 2026-07-28 run
+// (club-chub D>U>R>O). Against that exact prompt the model returned the value
+// back byte-identical — verbatim, and 918 > 600, so the gate discarded it and
+// the original was kept. 20 of 28 cached answers did exactly this. The fix
+// stops asking the model for TEXT and asks it for a part range instead.
+// ---------------------------------------------------------------------------
+const OVERLONG_DESCRIPTION = "D>U>R>O is back NEW OUTDOOR LOCATION _ NIGHT FOAM PARTY and SPECIAL GUEST LOS ANGELES WOOFERS WE HEARD YOU! And we've finally found the perfect home for the return ofD>U>R>O!A true underground-style venue in the heart of Downtown Los Angeles,featuring a beautiful outdoor space where you can dance under the stars. Saturday, August 1st For our comeback edition, we're bringing you a special Night Foam Party(foam will be limited to a designated dance floor area), plus: Indoor & Outdoor Bars Outdoor Dance Floors The legendary Relax Room for the friskiest ones And yes... we'll be going all night long! The full lineup is finally here with : Special Guest - Los Angeles Exclusive ALEX RAMOS GLOVIBES SANTO and in collaboration with CLUB CHUB Tickets on sale now! Join us for the return of one of LA's favorite underground experiences. D>U>R>O Saturday, August 1st Downtown Los Angeles— this one is going to be massive.";
+
+test('splitIntoTrimParts: gapless contiguous parts, every part inside the limit, never a mid-word cut', () => {
+  const core = createCore();
+  assert.equal(OVERLONG_DESCRIPTION.length, 918, 'fixture must stay the real 918-char value');
+
+  for (const [value, maxChars] of [[OVERLONG_DESCRIPTION, 600], [OVERLONG_TITLE, 60], ['NO PUNCTUATION AT ALL JUST WORDS RUNNING ON AND ON', 20]]) {
+    const parts = core.splitIntoTrimParts(value, maxChars);
+    assert.ok(parts.length >= 2, `expected a real part menu for ${JSON.stringify(value.slice(0, 30))}`);
+    assert.equal(parts[0].start, 0, 'parts start at the beginning');
+    for (let i = 1; i < parts.length; i++) {
+      assert.equal(parts[i].start, parts[i - 1].end, 'parts are gapless — a range re-joins with one slice');
+    }
+    for (const part of parts) {
+      assert.ok(part.end - part.start <= maxChars, 'no part can be bigger than the whole budget');
+      // a cut is only ever at a whitespace/punctuation boundary, never mid-word
+      const before = value.charAt(part.start - 1);
+      if (part.start > 0) {
+        assert.ok(/[\s.,;:!?…—–|•·@/()[\]-]/.test(before), `cut after ${JSON.stringify(before)} would split a word`);
+      }
+    }
+  }
+
+  // A period right after a digit is an ordinal/date, not a sentence end
+  const german = core.splitIntoTrimParts('Das Fest lädt vom 09. bis 11. Oktober ein. Danach ist Ruhe.', 40);
+  assert.ok(german.every(part => !/^\s*bis 11\.\s*$/.test('Das Fest lädt vom 09. bis 11. Oktober ein. Danach ist Ruhe.'.slice(part.start, part.end))),
+    `ordinals must not become their own part: ${JSON.stringify(german)}`);
+});
+
+test('resolveTrimPartRange: over-length is impossible by construction, whatever range the model names', () => {
+  const core = createCore();
+  const max = 600;
+  // Every range the model could possibly emit, including nonsense ones.
+  const ranges = ['1-1', '1-2', '1-99', '3-9', '0-0', '99-99', '9-3', '1 - 40', '2 to 8', '1-1000000'];
+  for (const range of ranges) {
+    const result = core.resolveTrimPartRange(OVERLONG_DESCRIPTION, max, range);
+    assert.ok(result !== null, `range ${range} must resolve to something`);
+    assert.ok(result.length <= max, `range ${range} produced ${result.length} chars — over the limit`);
+    assert.ok(OVERLONG_DESCRIPTION.includes(result), `range ${range} produced text the original does not contain`);
+    assert.ok(result.length > 0);
+  }
+  // "1-99" asks for far more than fits: trailing parts are dropped, never the middle of a word
+  const greedy = core.resolveTrimPartRange(OVERLONG_DESCRIPTION, max, '1-99');
+  assert.ok(greedy.length <= max && greedy.length > 300, `greedy range should fill the budget, got ${greedy.length}`);
+  assert.ok(OVERLONG_DESCRIPTION.startsWith(greedy.slice(0, 40)));
+
+  // Non-range answers are not cut points — the raw-text gate handles those
+  assert.equal(core.resolveTrimPartRange(OVERLONG_DESCRIPTION, max, 'the first three sentences'), null);
+  assert.equal(core.resolveTrimPartRange(OVERLONG_DESCRIPTION, max, ''), null);
+  assert.equal(core.resolveTrimPartRange(OVERLONG_DESCRIPTION, max, null), null);
+  assert.equal(core.resolveTrimPartRange(OVERLONG_DESCRIPTION, max, OVERLONG_DESCRIPTION), null);
+});
+
+test('buildFieldTrimPrompt asks for a cut point, never for text, and its parts rebuild the original exactly', () => {
+  const core = createCore();
+  const entries = [
+    { field: 'title', value: OVERLONG_TITLE, maxChars: 60 },
+    { field: 'description', value: OVERLONG_DESCRIPTION, maxChars: 600 }
+  ];
+  const prompt = core.buildFieldTrimPrompt({ eventTitle: 'D>U>R>O', entries });
+
+  assert.ok(prompt.includes('You never write text.'), `got: ${prompt.slice(0, 200)}`);
+  assert.ok(prompt.includes('{"trims": {"<field>": "<first>-<last>"}}'), 'the answer schema is a range, not a string');
+  assert.ok(!prompt.includes('EXACT contiguous substring'), 'the old copy-the-text framing is gone');
+  assert.ok(prompt.includes('FIELD: description — limit 600 characters, currently 918'));
+  assert.ok(/^1\. \(\d+ chars\) /m.test(prompt), `numbered parts missing: ${prompt.slice(0, 400)}`);
+
+  // The menu is the whole value, split — concatenating every part restores it
+  for (const entry of entries) {
+    const parts = core.splitIntoTrimParts(entry.value, entry.maxChars);
+    const rebuilt = parts.map(part => entry.value.slice(part.start, part.end)).join('');
+    assert.equal(rebuilt, entry.value, `parts must tile ${entry.field} with no loss`);
+  }
+});
+
+test('the real 918-char echo answer is reported as too long, and a part range trims it instead', async () => {
+  const core = createCore();
+  const trimConfig = core.getTrimConfig(buildTrimParserConfig());
+
+  // What the live model actually returned for this prompt: the input, verbatim.
+  const echoAdapter = buildTrimAnswerAdapter(JSON.stringify({ trims: { description: { value: OVERLONG_DESCRIPTION } } }));
+  const echoed = { title: 'D>U>R>O', description: OVERLONG_DESCRIPTION };
+  const echoRecords = await core.trimOverlongFieldsForEvent(echoed, trimConfig, buildAiTestConfig(), echoAdapter);
+  assert.equal(echoed.description, OVERLONG_DESCRIPTION, 'flag, don\'t drop — the original is kept');
+  assert.equal(echoRecords[0].status, 'failed-length', 'the cause is length, not hallucination');
+  assert.equal(echoRecords[0].answerLength, 918);
+
+  // The cut-point answer the same model gives for the new prompt.
+  const rangeCalls = [];
+  const rangeAdapter = buildTrimAnswerAdapter(JSON.stringify({ trims: { description: '2-6' } }), rangeCalls);
+  const trimmed = { title: 'D>U>R>O', description: OVERLONG_DESCRIPTION };
+  const rangeRecords = await core.trimOverlongFieldsForEvent(trimmed, trimConfig, buildAiTestConfig(), rangeAdapter);
+  assert.equal(rangeRecords[0].status, 'trimmed');
+  assert.ok(trimmed.description.length <= 600, `enforced value is ${trimmed.description.length} chars`);
+  assert.ok(trimmed.description.length < 918);
+  assert.ok(OVERLONG_DESCRIPTION.includes(trimmed.description), 'still a verbatim contiguous substring');
+  assert.equal(rangeRecords[0].trimmedValue, trimmed.description);
+  // The decode budget is capped for a ~10-token answer instead of an echo
+  assert.equal(rangeCalls[0].payload.max_tokens, 200);
+
+  // A range the model over-asks with still cannot bust the limit
+  const greedyAdapter = buildTrimAnswerAdapter(JSON.stringify({ trims: { description: '1-99' } }));
+  const greedy = { title: 'D>U>R>O', description: OVERLONG_DESCRIPTION };
+  const greedyRecords = await core.trimOverlongFieldsForEvent(greedy, trimConfig, buildAiTestConfig(), greedyAdapter);
+  assert.equal(greedyRecords[0].status, 'trimmed');
+  assert.ok(greedy.description.length <= 600, `greedy range enforced ${greedy.description.length} chars`);
+});
+
+test('report mode never mutates for a part-range answer either', async () => {
+  const core = createCore();
+  const trimConfig = core.getTrimConfig(buildTrimParserConfig({ mode: 'report' }));
+  const adapter = buildTrimAnswerAdapter(JSON.stringify({ trims: { description: '1-4' } }));
+  const event = { title: 'D>U>R>O', description: OVERLONG_DESCRIPTION };
+  const records = await core.trimOverlongFieldsForEvent(event, trimConfig, buildAiTestConfig(), adapter);
+  assert.equal(event.description, OVERLONG_DESCRIPTION, 'report mode is non-mutating');
+  assert.equal(records[0].status, 'would-trim');
+  assert.ok(records[0].trimmedLength <= 600 && records[0].trimmedLength < 918);
+  assert.ok(OVERLONG_DESCRIPTION.includes(records[0].trimmedValue));
+});
+
+test('a part range naming only pieces that cannot fit is a LENGTH failure, and the original survives', async () => {
+  const core = createCore();
+  // A single "word" longer than the limit: no legal cut point exists, and
+  // mid-word truncation stays forbidden.
+  const unbreakable = 'https://tickets.example.com/' + 'x'.repeat(80);
+  const trimConfig = core.getTrimConfig(buildTrimParserConfig({ titleMaxChars: 30 }));
+  const adapter = buildTrimAnswerAdapter(JSON.stringify({ trims: { title: '1-1' } }));
+  const event = { title: unbreakable };
+  const records = await core.trimOverlongFieldsForEvent(event, trimConfig, buildAiTestConfig(), adapter);
+  assert.equal(event.title, unbreakable, 'never a mid-word truncation');
+  assert.equal(records[0].status, 'failed-length');
+  assert.equal(records[0].answerLength, undefined, 'no answer length: nothing was ever produced');
+});
+
 test('trimOverlongFieldsForEvent replaces a verbatim answer in enforce mode and stamps _fieldTrims', async () => {
   const core = createCore();
   const parserConfig = buildTrimParserConfig();
@@ -10434,7 +10575,7 @@ test('trimOverlongFieldsForEvent replaces a verbatim answer in enforce mode and 
 
   assert.equal(event.title, 'D>U>R>O', 'enforce mode replaces the value');
   assert.equal(calls.length, 1, 'one batched request per event');
-  assert.ok(String(calls[0].payload.messages[0].content).includes('You are shortening overlong text fields for one event.'));
+  assert.ok(String(calls[0].payload.messages[0].content).includes('You pick which numbered PARTS of an overlong event field to keep.'));
   assert.deepEqual(records, event._fieldTrims);
   assert.equal(records.length, 1);
   assert.equal(records[0].field, 'title');
@@ -10444,25 +10585,33 @@ test('trimOverlongFieldsForEvent replaces a verbatim answer in enforce mode and 
   assert.equal(records[0].trimmedValue, 'D>U>R>O');
 });
 
-test('trimOverlongFieldsForEvent keeps the original on paraphrased, re-cased, or over-limit answers (failed-gate)', async () => {
+test('trimOverlongFieldsForEvent keeps the original on paraphrased, re-cased, or over-limit answers, and names the cause', async () => {
   const core = createCore();
   const trimConfig = core.getTrimConfig(buildTrimParserConfig());
-  for (const badAnswer of ['DURO at Precinct DTLA', 'd>u>r>o', OVERLONG_TITLE]) {
-    const adapter = buildTrimAnswerAdapter(JSON.stringify({ trims: { title: { value: badAnswer } } }));
+  // status tells the two failure causes apart: text the original does not
+  // contain is 'failed-verbatim'; verbatim text that still busts the limit
+  // (the model echoing its input) is 'failed-length'.
+  const cases = [
+    { answer: 'DURO at Precinct DTLA', status: 'failed-verbatim' },
+    { answer: 'd>u>r>o', status: 'failed-verbatim' },
+    { answer: OVERLONG_TITLE, status: 'failed-length' }
+  ];
+  for (const { answer, status } of cases) {
+    const adapter = buildTrimAnswerAdapter(JSON.stringify({ trims: { title: { value: answer } } }));
     const event = { title: OVERLONG_TITLE };
     const records = await core.trimOverlongFieldsForEvent(event, trimConfig, buildAiTestConfig(), adapter);
-    assert.equal(event.title, OVERLONG_TITLE, `original kept for answer ${JSON.stringify(badAnswer)}`);
-    assert.equal(records[0].status, 'failed-gate');
+    assert.equal(event.title, OVERLONG_TITLE, `original kept for answer ${JSON.stringify(answer)}`);
+    assert.equal(records[0].status, status, `answer ${JSON.stringify(answer)}`);
     assert.equal(records[0].originalLength, 74);
     assert.equal(records[0].maxChars, 60);
   }
 
-  // No usable response at all → failed-gate, original kept, never truncated
+  // No usable response at all → 'no-answer', original kept, never truncated
   const emptyAdapter = { postJson: async () => ({ ok: true, status: 200, text: buildOpenAiResponsePayload('') }) };
   const event = { title: OVERLONG_TITLE };
   const records = await core.trimOverlongFieldsForEvent(event, trimConfig, buildAiTestConfig(), emptyAdapter);
   assert.equal(event.title, OVERLONG_TITLE);
-  assert.equal(records[0].status, 'failed-gate');
+  assert.equal(records[0].status, 'no-answer');
 });
 
 test('trimOverlongFieldsForEvent report mode records would-trim without changing the value', async () => {
@@ -10518,19 +10667,27 @@ test('applyOverlongFieldTrims shares the AI response cache: two identical runs, 
   assert.equal(calls.length, 1, 'the second run must be served from the cache');
 });
 
-test('buildEventEvidenceLines renders the trimmed, would-trim, and failed-gate shapes', () => {
+test('buildEventEvidenceLines renders the trimmed, would-trim, and the three failure shapes apart', () => {
   const core = createCore();
   const lines = core.buildEventEvidenceLines({
     title: 'D>U>R>O',
     _fieldTrims: [
       { field: 'title', status: 'trimmed', originalLength: 74, trimmedLength: 7, trimmedValue: 'D>U>R>O', maxChars: 60 },
       { field: 'description', status: 'would-trim', originalLength: 846, trimmedLength: 491, trimmedValue: 'Doors at 9.', maxChars: 600 },
-      { field: 'shortName', status: 'failed-gate', originalLength: 39, maxChars: 30 }
+      { field: 'shortName', status: 'failed-verbatim', originalLength: 39, maxChars: 30 },
+      { field: 'venue', status: 'failed-length', originalLength: 918, answerLength: 918, maxChars: 600 },
+      { field: 'bar', status: 'failed-length', originalLength: 700, maxChars: 600 },
+      { field: 'city', status: 'no-answer', originalLength: 80, maxChars: 60 }
     ]
   }, { cityKey: 'dallas' });
   assert.ok(lines.includes('title trimmed: 74 → 7 chars — "D>U>R>O"'), `got: ${JSON.stringify(lines)}`);
   assert.ok(lines.includes('description would trim: 846 → 491 chars — "Doors at 9." (report mode)'), `got: ${JSON.stringify(lines)}`);
-  assert.ok(lines.includes('⚠️ shortName overlong (39 > 30 chars) — trim failed verbatim gate, original kept'), `got: ${JSON.stringify(lines)}`);
+  assert.ok(lines.includes('⚠️ shortName overlong (39 > 30 chars) — AI trim was not verbatim from the original, original kept'), `got: ${JSON.stringify(lines)}`);
+  // The dominant real cause is LENGTH — the card must not call it a hallucination
+  assert.ok(lines.includes('⚠️ venue overlong (918 > 600 chars) — AI trim came back 918 chars, still over the limit, original kept'), `got: ${JSON.stringify(lines)}`);
+  assert.ok(lines.includes('⚠️ bar overlong (700 > 600 chars) — no cut point fits the limit without cutting a word, original kept'), `got: ${JSON.stringify(lines)}`);
+  assert.ok(lines.includes('⚠️ city overlong (80 > 60 chars) — no usable AI trim answer, original kept'), `got: ${JSON.stringify(lines)}`);
+  assert.ok(!lines.some(line => line.includes('failed verbatim gate')), 'the old blame-the-model wording is gone');
 });
 
 test('_fieldTrims survives createFinalEventObject like _organizer', async () => {
@@ -10606,7 +10763,7 @@ test('final trim pass: a merge that resurrects the untrimmed title is re-trimmed
   assert.equal(analyzed[0]._action, 'merge');
   assert.equal(analyzed[0].title, 'D>U>R>O', 'the final analyzed title is the trimmed form, within the limit');
   assert.equal(trimCalls.length, 1, 'one trim call for the resurrected overlong title');
-  assert.ok(String(trimCalls[0].payload.messages[0].content).includes('You are shortening overlong text fields for one event.'));
+  assert.ok(String(trimCalls[0].payload.messages[0].content).includes('You pick which numbered PARTS of an overlong event field to keep.'));
 
   // The final-pass record REPLACES the pre-merge title record — never a duplicate
   const titleRecords = analyzed[0]._fieldTrims.filter(record => record.field === 'title');
