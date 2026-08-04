@@ -290,7 +290,18 @@ const CITY_CONFIG = {
         calendarId: 'b6b1cf804e795b1cce41e9a58faeb80564d3ae60dbb7c7324123c34cf3db15bc@group.calendar.google.com',
         calendar: 'chunky-dad-pv',
         timezone: 'America/Mexico_City',
-        patterns: ['puerto vallarta', 'vallarta'],
+        // "pv" / "p.v" are how Puerto Vallarta actually writes itself on local
+        // event pages ("ZONA ROMÁNTICA, EMILIANO ZAPATA, P.V."), and neither
+        // could ever match the two long patterns — 60% of one BeefDip run
+        // routed to the nonexistent chunky-dad-unknown calendar because of it.
+        // ORDERING DEPENDENCY: a bare two-character pattern is only safe
+        // because city matching is word-boundary anchored (see
+        // LocationNormalizer.matchesCityPattern). Under the old raw
+        // String.includes it would have matched inside "improv", "PVC",
+        // "approved" and every other word containing "pv". "p.v" also covers
+        // "P.V." — the trailing dot is not a word character, so no boundary is
+        // required after it.
+        patterns: ['puerto vallarta', 'vallarta', 'pv', 'p.v'],
         coordinates: { lat: 20.6534, lng: -105.2253 },
         mapZoom: 11,
         visible: false
