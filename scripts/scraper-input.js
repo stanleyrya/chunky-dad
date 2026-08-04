@@ -60,14 +60,26 @@ const scraperConfig = {
       // Homeless promoter — events scatter across ticketing platforms (links
       // rotate in their Instagram bio). Stable doors: the RedEye JSON API
       // search (self-refreshing; JSON-API pathway extracts it structurally)
-      // and Sickening's all-platform listing filtered to goldiloxx links.
+      // and Sickening's own server-side search, scoped to the promoter.
       urls: [
         "https://api.redeyetickets.com/api/v1/events/search?q=goldiloxx&per_page=25",
-        "https://sickening.events/events",
+        // `?q=` is Sickening's real search input (`<input name="q">` on the
+        // events page, GET to the same path) and it filters SERVER-side —
+        // verified 2026-08-04: unfiltered = 1,227,723 bytes / 453 distinct
+        // /e/ links, `?q=goldiloxx` = 61,756 bytes / 2 links (both
+        // goldiloxx), `?q=<nonsense>` = 0 links. Same 2 events either way,
+        // 20x less page, and segmentation drops from 485 segments to ~2.
+        // JSON-LD and the visible date strings both survive the filter.
+        "https://sickening.events/events?q=goldiloxx",
       ],
-      // Only follow discovered links naming the promoter — the listing has
-      // ~900 events. Note: sickening JSON-LD "organizer" is the VENUE, and
-      // the site soft-404s (every URL returns 200 with an empty shell).
+      // Kept as a safety net for the RedEye door and any followed link. NOTE:
+      // now that the sickening URL itself contains the pattern, the allowlist
+      // treats that page as the promoter's own and stops filtering it — which
+      // is correct (the page IS scoped to goldiloxx) but means the net is only
+      // as tight as Sickening's search. Verified non-fuzzy: q=goldiloxx
+      // returns goldiloxx links only. Note also that sickening JSON-LD
+      // "organizer" is the VENUE, and the site soft-404s (every URL returns
+      // 200 with an empty shell), so "no events" and "site broken" look alike.
       discoveryAllowedPatterns: ["goldiloxx"],
     },
     {
