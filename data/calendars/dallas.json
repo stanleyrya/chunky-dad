@@ -58,6 +58,68 @@
         }
       ],
       "slug": "furball-442f8415"
+    },
+    {
+      "name": "Bear and Twink Night",
+      "day": "Friday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 32.7693483,
+        "lng": -96.8112576
+      },
+      "startDate": "2026-08-14T21:00:00",
+      "endDate": "2026-08-15T02:00:00",
+      "unprocessedDescription": "description: It’s time for another delicious combo, it’s BEAR \r& TWINK NIGHT at the Dallas Eagle!! 🐻🕺🦅 Opposites attract at this event, so come on out and enjoy the variety! Big or small, hirsute or svelte, here you’ll find all types to satisfy your desires. Mix it up on the dance floor with heart-pounding hous , ...\nbar: Dallas Eagle\nticketUrl: https://www.thedallaseagle.com/events/bear-and-twink-night/\ninstagram: https://www.instagram.com/thedallaseagle/\nfacebook: https://www.facebook.com/lonestareagle\nwebsite: https://www.thedallaseagle.com\nmastodon: https://mastodon.social/@dallaseagle\nbarSource: venue-site\ntimezone: America/Chicago\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I\naddress: 525 S Riverfront Blvd, Dallas, TX 75207\naddressSource: curated\npinSource: curated\nbearSource: keyword\nkey: bear-and-twink-night|2026-08-15|dallas eagle\nshortName: BEAR AND TWINK",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "13889125-C3DE-4D92-9227-86C5EE9B1005",
+      "uid": "13889125-C3DE-4D92-9227-86C5EE9B1005",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Dallas Eagle",
+      "tea": "It’s time for another delicious combo, it’s BEAR & TWINK NIGHT at the Dallas Eagle!! 🐻🕺🦅 Opposites attract at this event, so come on out and enjoy the variety! Big or small, hirsute or svelte, here you’ll find all types to satisfy your desires. Mix it up on the dance floor with heart-pounding hous , ...",
+      "address": "525 S Riverfront Blvd, Dallas, TX 75207",
+      "website": "https://www.thedallaseagle.com",
+      "instagram": "https://www.instagram.com/thedallaseagle/",
+      "facebook": "https://www.facebook.com/lonestareagle",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+      "ticketUrl": "https://www.thedallaseagle.com/events/bear-and-twink-night/",
+      "shortName": "BEAR AND TWINK",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.thedallaseagle.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thedallaseagle/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/lonestareagle",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.thedallaseagle.com/events/bear-and-twink-night/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bear-and-twink-night-36f7f7ac"
     }
   ]
 }
