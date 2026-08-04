@@ -125,6 +125,12 @@
     "palette": "#25242b:46:1 #fefefe:45:0 #131216:3:1"
   },
   {
+    "slug": "goldiloxx-chicago-7c2b222b",
+    "paletteSource": "flyer",
+    "palette": "#1a0e12:19:2 #6d4443:15:6 #432629:15:4 #b99483:14:5 #d54721:6:18",
+    "accent": "#d54721"
+  },
+  {
     "slug": "goldiloxx-chicago-nycs-interactive-nightlife-experience-7c2b222b",
     "paletteSource": "flyer",
     "palette": "#1a0e12:19:2 #6d4443:15:6 #432629:15:4 #b99483:14:5 #d54721:6:18",
