@@ -11384,3 +11384,53 @@ test('OCR top-up bounds FRESH vision calls by the miss budget; cached images rid
   assert.equal(sparseLogs.filter(line => line.includes('OCR top-up miss budget')).length, 0,
     'a budget that does not bind stays silent');
 });
+
+// ---------------------------------------------------------------------------
+// Discovery-allowlist SEGMENT pre-filter (2026-08-04).
+//
+// filterEventsByDiscoveryAllowlist drops foreign events AFTER extraction, so
+// on the Goldiloxx parser's configured sickening.events/events listing (~900
+// events, patterns ["goldiloxx"]) the scraper paid AI extraction for
+// candle-making workshops in Virginia and then discarded them — and the
+// cache-miss budget would have faithfully converged on extracting ALL of
+// them. On a non-allowlist-matched page, a segment with no trace of any
+// pattern can only yield events the post-filter is guaranteed to drop, so it
+// is never sent to the AI. Measured on the real cached page: 485 segments →
+// 1, and the 1 is the GOLDILOXX Chicago listing.
+// ---------------------------------------------------------------------------
+
+test('discovery allowlist: segments with no pattern trace are never sent to the AI', () => {
+  const parser = createParser();
+  const cfg = { discoveryAllowedPatterns: ['goldiloxx'] };
+  const segments = [
+    { lines: ['Pour + Sip Candle Making Experience', 'Sunday, Nov 23, 2025', 'Coastal Virginia Candle Co.'] },
+    { lines: ['GOLDILOXX Chicago', 'Saturday, Sep 19, 2026 at 9:00 PM', 'Hydrate Nightclub'] },
+    { lines: ['Comedy Night', 'Friday, Aug 7, 2026'], linkUrl: 'https://sickening.events/e/comedy-night' },
+    // pattern in the LINK, not the text — must be kept
+    { lines: ['Interactive Nightlife Experience', 'Saturday'], linkUrl: 'https://sickening.events/e/goldiloxx-nyc/tickets' }
+  ];
+  const kept = parser.filterSegmentsByDiscoveryAllowlist(segments, 'https://sickening.events/events', cfg);
+  assert.equal(kept.length, 2, 'only segments that could yield an allowlist-matching event survive');
+  assert.ok(kept[0].lines[0].includes('GOLDILOXX'));
+  assert.equal(kept[1].linkUrl, 'https://sickening.events/e/goldiloxx-nyc/tickets', 'a pattern match in the segment link keeps it');
+});
+
+test('discovery allowlist: segment filter is a no-op on own pages and without patterns', () => {
+  const parser = createParser();
+  const segments = [
+    { lines: ['Candle Making', 'Sunday'] },
+    { lines: ['Comedy Night', 'Friday'] }
+  ];
+  // the page URL itself matches → promoter's own page, extract freely
+  assert.equal(
+    parser.filterSegmentsByDiscoveryAllowlist(segments, 'https://api.redeyetickets.com/search?q=goldiloxx', { discoveryAllowedPatterns: ['goldiloxx'] }).length,
+    2
+  );
+  // no patterns configured → no-op (every parser without an allowlist)
+  assert.equal(
+    parser.filterSegmentsByDiscoveryAllowlist(segments, 'https://sickening.events/events', {}).length,
+    2
+  );
+  // null/absent parserConfig → no-op, never a throw
+  assert.equal(parser.filterSegmentsByDiscoveryAllowlist(segments, 'https://x.com/', null).length, 2);
+});

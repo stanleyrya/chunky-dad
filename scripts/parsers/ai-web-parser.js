@@ -1246,6 +1246,20 @@ class AiWebParser {
         // frontier are extracted for free while uncached ones wait for a
         // future run — each run's budget lands on genuinely new content and
         // the page converges to full coverage.
+        // ── Discovery-allowlist SEGMENT pre-filter ──────────────────────
+        // filterEventsByDiscoveryAllowlist already drops foreign events
+        // AFTER extraction — correct output, wasted AI. On the Goldiloxx
+        // parser's configured sickening.events/events listing (~900 events,
+        // discoveryAllowedPatterns: ["goldiloxx"]) that meant extracting
+        // candle-making workshops in Virginia and then discarding them; the
+        // cache-miss budget would have faithfully converged on extracting
+        // ALL of them. Apply the same allowlist to the SEGMENTS instead: on
+        // a non-allowlist-matched page, a segment whose own text carries no
+        // pattern match can only ever produce events the post-filter drops,
+        // so it is never sent to the AI at all. Same dual matching, same
+        // no-op when no patterns are configured, and the post-extraction
+        // filter stays as the safety net.
+        segments = this.filterSegmentsByDiscoveryAllowlist(segments, sourceUrl, parserConfig);
         const missBudget = this.resolveMultiEventMissBudget(segments);
         const segmentAiConfig = this.getAiConfig(parserConfig);
         // With no usable response cache every extracted segment counts
@@ -7168,6 +7182,41 @@ class AiWebParser {
     // own URL matches the allowlist (the promoter's API search, followed event
     // pages) extract freely; on non-matching pages each extracted event must
     // itself match (title or any of its URLs). No patterns configured → no-op.
+    // The SEGMENT half of the discovery allowlist (see
+    // filterEventsByDiscoveryAllowlist below for the event half and the full
+    // rationale). On a listing page whose own URL does not match the
+    // allowlist, a segment is worth extracting only if its text or attached
+    // link could produce an allowlist-matching event — otherwise the
+    // post-extraction filter is guaranteed to drop everything it yields, so
+    // sending it to the AI is pure spend. Matching is deliberately broad
+    // (whole segment text + segment link URL) so a pattern appearing
+    // anywhere in the listing entry keeps it; only segments with NO trace of
+    // any pattern are skipped. No patterns configured → no-op, page-URL
+    // match → no-op, exactly like the event half.
+    filterSegmentsByDiscoveryAllowlist(segments, sourceUrl, parserConfig) {
+        const patterns = Array.isArray(parserConfig && parserConfig.discoveryAllowedPatterns)
+            ? parserConfig.discoveryAllowedPatterns
+            : [];
+        if (patterns.length === 0 || !Array.isArray(segments) || segments.length === 0) return segments;
+        if (this.matchesDiscoveryAllowedPattern(sourceUrl, patterns)) return segments;
+        const kept = [];
+        for (const segment of segments) {
+            if (!segment || typeof segment !== 'object') continue;
+            const haystacks = [
+                Array.isArray(segment.lines) ? segment.lines.join('\n') : '',
+                typeof segment.html === 'string' ? segment.html : '',
+                typeof segment.linkUrl === 'string' ? segment.linkUrl : ''
+            ];
+            if (haystacks.some(value => this.matchesDiscoveryAllowedPattern(value, patterns))) {
+                kept.push(segment);
+            }
+        }
+        if (kept.length !== segments.length) {
+            console.log(`🤖 AI Web: Discovery allowlist kept ${kept.length} of ${segments.length} segment(s) from ${sourceUrl} — non-matching segments are never sent to the AI`);
+        }
+        return kept;
+    }
+
     filterEventsByDiscoveryAllowlist(events, sourceUrl, parserConfig) {
         const patterns = Array.isArray(parserConfig && parserConfig.discoveryAllowedPatterns)
             ? parserConfig.discoveryAllowedPatterns
