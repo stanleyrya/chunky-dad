@@ -4737,3 +4737,103 @@ test('the results page derives Copy JSON from the single card payload and still 
   assert.ok(html.includes('function prettyPrintCardPayloads('),
     'the page re-indents the compact payload in the DOM');
 });
+
+// ---------------------------------------------------------------------------
+// applyPendingBearOverrides: one calendar record, one plan row
+// ---------------------------------------------------------------------------
+
+// Events marked bear from the results UI are prepped and appended AFTER both
+// dedup passes have run (filterBearEvents runs before deduplicateEvents, so a
+// dropped twin never entered dedup). Without a guard, a twin already in the
+// plan leaves two `_action: "merge"` rows aimed at ONE calendar record.
+test('applyPendingBearOverrides folds a marked-bear twin into the existing plan row', async () => {
+  const adapter = buildAdapter();
+  const calendarRecord = {
+    identifier: 'CAL-TWIN-9',
+    title: 'Treasure Trail',
+    startDate: new Date('2026-08-08T21:00:00.000Z'),
+    endDate: new Date('2026-08-09T01:00:00.000Z'),
+    location: '',
+    notes: 'bar: The Eagle\nticketUrl: https://tixr.com/e/198706'
+  };
+  adapter.getExistingEvents = async () => [calendarRecord];
+
+  const existingRow = {
+    title: 'Treasure Trail',
+    startDate: new Date('2026-08-08T21:00:00.000Z'),
+    bar: 'The Eagle',
+    ticketUrl: 'https://tixr.com/e/198706',
+    isBearEvent: true,
+    bearReview: 'unsure — ai: no explicit bear signal',
+    _action: 'merge',
+    _existingEvent: { identifier: 'CAL-TWIN-9' }
+  };
+  const results = { analyzedEvents: [existingRow], config: { config: {} } };
+  const pending = {
+    markedBear: {
+      d0: {
+        title: 'TREASURE TRAIL — Bear Night',
+        reason: 'ai: drag show',
+        event: {
+          title: 'TREASURE TRAIL — Bear Night',
+          startDate: new Date('2026-08-08T22:00:00.000Z'),
+          bar: 'The Eagle',
+          ticketUrl: 'https://tixr.com/e/198706'
+        }
+      }
+    },
+    markedNotBear: {},
+    keptMarkedBear: {}
+  };
+
+  const counts = await adapter.applyPendingBearOverrides(results, pending);
+
+  assert.equal(results.analyzedEvents.length, 1, 'the marked twin folds into the row that already covers it');
+  assert.equal(counts.markedBear, 1, 'the owner\'s verdict still counts even when folded');
+  assert.equal(results.analyzedEvents[0].isBearEvent, true);
+  assert.equal(results.analyzedEvents[0].bearReview, undefined, 'the folded row loses its hide flag');
+  assert.ok(
+    String(results.analyzedEvents[0].bearSource || '').startsWith('manual-bear'),
+    'the manual verdict is stamped on the surviving row'
+  );
+
+  const identifiers = results.analyzedEvents
+    .map((entry) => entry._existingEvent && entry._existingEvent.identifier)
+    .filter(Boolean);
+  assert.equal(new Set(identifiers).size, identifiers.length,
+    'two plan rows must never share one _existingEvent.identifier');
+});
+
+test('applyPendingBearOverrides still appends a genuinely new marked-bear event', async () => {
+  const adapter = buildAdapter();
+  adapter.getExistingEvents = async () => [];
+
+  const existingRow = {
+    title: 'Unrelated Party',
+    startDate: new Date('2026-09-20T21:00:00.000Z'),
+    bar: 'Elsewhere',
+    _action: 'new'
+  };
+  const results = { analyzedEvents: [existingRow], config: { config: {} } };
+  const pending = {
+    markedBear: {
+      d0: {
+        title: 'Treasure Trail',
+        reason: 'ai: drag show',
+        event: {
+          title: 'Treasure Trail',
+          startDate: new Date('2026-08-08T22:00:00.000Z'),
+          bar: 'The Eagle'
+        }
+      }
+    },
+    markedNotBear: {},
+    keptMarkedBear: {}
+  };
+
+  const counts = await adapter.applyPendingBearOverrides(results, pending);
+
+  assert.equal(results.analyzedEvents.length, 2, 'an unrelated marked-bear event still gets its own row');
+  assert.equal(counts.markedBear, 1);
+  assert.equal(results.analyzedEvents[1].isBearEvent, true);
+});

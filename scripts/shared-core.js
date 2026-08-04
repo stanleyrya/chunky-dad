@@ -11131,9 +11131,11 @@ class SharedCore {
             // UI) is newer than the stored one and is never demoted by it.
             // Reuses the existing-event search prep just performed — no extra
             // calendar scans.
+            let preparedEvent = event;
             if (bearOverrideContext && !this.isManualBearSource(event.bearSource)) {
                 const matchedRecord = analysis.existingEvent || analysis.sourceEvent || null;
-                if (matchedRecord && this.getManualBearVerdictFromRecord(matchedRecord) === 'manual-not-bear') {
+                const storedVerdict = matchedRecord ? this.getManualBearVerdictFromRecord(matchedRecord) : null;
+                if (storedVerdict === 'manual-not-bear') {
                     console.log(`🐻 BEAR CHECK: "${event.title || 'Unknown'}" → not_bear (manual override on calendar record)`);
                     if (Array.isArray(bearOverrideContext.demoted)) {
                         bearOverrideContext.demoted.push({
@@ -11148,9 +11150,39 @@ class SharedCore {
                     }
                     continue;
                 }
+                // Manual override, promote direction: the bear check has THREE
+                // outcomes (keep / drop / flag) and only two were covered here.
+                // A FLAGGED event is pushed to `kept` with a `bearReview` stamp
+                // and never enters the drop collector, so it was invisible to
+                // both the demote branch above and the dropped-event rescue loop
+                // below — a stored `manual-bear` verdict could never clear the
+                // flag, and js/calendar-core.js `isHiddenForBearReview` re-hid
+                // the event on every run, silently undoing the owner's verdict
+                // (the record ended up carrying BOTH `bearReview: unsure — …`
+                // and `bearSource: manual-bear (…)`).
+                // The owner's stored verdict is authoritative regardless of this
+                // run's cascade result: adopting it unconditionally also clears a
+                // STALE flag already sitting on the calendar record (the merge
+                // rule's manual-bear branch drops the calendar's bearReview when
+                // the scraped side carries none), which a run whose cascade said
+                // "bear" would otherwise inherit and re-hide on forever.
+                // Mirrors the live-tap `keptMarkedBear` branch in the Scriptable
+                // adapter (isBearEvent set, stored bearSource adopted, review flag
+                // deleted) so a stored verdict and a live tap converge on one state.
+                if (storedVerdict === 'manual-bear') {
+                    const storedFields = this.parseNotesIntoFields(matchedRecord.notes || '');
+                    const storedBearSource = typeof storedFields.bearSource === 'string' ? storedFields.bearSource.trim() : '';
+                    preparedEvent = { ...event, isBearEvent: true };
+                    if (storedBearSource) preparedEvent.bearSource = storedBearSource;
+                    const clearedFlag = typeof preparedEvent.bearReview === 'string' && preparedEvent.bearReview
+                        ? preparedEvent.bearReview
+                        : '';
+                    delete preparedEvent.bearReview;
+                    console.log(`🐻 BEAR CHECK: "${event.title || 'Unknown'}" → bear (manual override on calendar record${clearedFlag ? `, cleared review flag: ${clearedFlag}` : ''})`);
+                }
             }
 
-            analyzedEvents.push(await this.buildAnalyzedCalendarEvent(event, analysis, calendarAdapter, config));
+            analyzedEvents.push(await this.buildAnalyzedCalendarEvent(preparedEvent, analysis, calendarAdapter, config));
         }
 
         // Manual override, rescue direction: an enforce-mode dropped event whose
@@ -11168,7 +11200,26 @@ class SharedCore {
                 if (!matchedRecord || this.getManualBearVerdictFromRecord(matchedRecord) !== 'manual-bear') continue;
                 console.log(`🐻 BEAR CHECK: "${droppedEvent.title || 'Unknown'}" → bear (manual override on calendar record)`);
                 const rescuedEvent = { ...droppedEvent, isBearEvent: true };
-                analyzedEvents.push(await this.buildAnalyzedCalendarEvent(rescuedEvent, analysis, calendarAdapter, config));
+                // Duplicate-row guard: filterBearEvents runs BEFORE
+                // deduplicateEvents, so a twin the bear check DROPped never
+                // entered dedup — it arrives here, after both dedup passes, and
+                // nothing re-dedups the plan. Pushing it blind produced two
+                // `_action: "merge"` rows carrying one `_existingEvent.identifier`
+                // (run evidence: two "Treasure Trail" rows, both matching the
+                // other on `ticket-url`, the strongest identity rung — the
+                // calendar layer even logged `Merge eligibility match
+                // (ticket-url)` twice). Fold the rescue into the row that already
+                // covers this event instead. The structural fix (dedup before the
+                // bear check) is deferred: it reorders an expensive AI stage and
+                // changes bear verdicts run-wide.
+                const storedFields = this.parseNotesIntoFields(matchedRecord.notes || '');
+                const folded = this.foldBearOverrideIntoPlanEntry(analyzedEvents, rescuedEvent, {
+                    existingIdentifier: analysis.existingEvent && analysis.existingEvent.identifier,
+                    manualBearSource: typeof storedFields.bearSource === 'string' ? storedFields.bearSource.trim() : ''
+                });
+                if (!folded) {
+                    analyzedEvents.push(await this.buildAnalyzedCalendarEvent(rescuedEvent, analysis, calendarAdapter, config));
+                }
                 dropped.rescued = true;
                 if (Array.isArray(bearOverrideContext.rescued)) {
                     bearOverrideContext.rescued.push(dropped);
@@ -11179,6 +11230,61 @@ class SharedCore {
         this.logCalendarStickinessSummary();
 
         return analyzedEvents;
+    }
+
+    // A late bear-override event (a drop rescued by a stored calendar verdict,
+    // or a live "Mark as bear" tap from the results UI) joins the write plan
+    // AFTER both dedup passes have run, because filterBearEvents runs before
+    // deduplicateEvents and a dropped twin therefore never entered dedup. When
+    // the plan already carries a row for the same event — same target calendar
+    // record, or a same-event identity signal — a second row would mean two
+    // writes aimed at ONE calendar record. Fold the override into the existing
+    // row instead and return it; return null when the override is genuinely new
+    // to the plan and the caller should push its own row.
+    //
+    // The fold is deterministic and additive (bear verdict fields + notes only):
+    // re-running the row's merge analysis would mean a second AI merge
+    // arbitration for one record. Same treatment the adapter's live-tap
+    // `keptMarkedBear` branch applies to a row already in the plan.
+    foldBearOverrideIntoPlanEntry(analyzedEvents, overrideEvent, options = {}) {
+        if (!Array.isArray(analyzedEvents) || analyzedEvents.length === 0) return null;
+        if (!overrideEvent || typeof overrideEvent !== 'object') return null;
+
+        const asIdentifier = (value) => (value === undefined || value === null ? '' : String(value));
+        const targetIdentifier = asIdentifier(options.existingIdentifier);
+        let match = null;
+        let matchReason = '';
+        if (targetIdentifier) {
+            match = analyzedEvents.find(entry => entry && entry !== overrideEvent && entry._existingEvent
+                && asIdentifier(entry._existingEvent.identifier) === targetIdentifier) || null;
+            if (match) matchReason = 'same calendar record';
+        }
+        if (!match) {
+            // Same relaxation deduplicateEvents uses for its identity scan: a
+            // degraded twin (missing start time → midnight default) must still
+            // match its properly-timed sibling.
+            let signal = null;
+            match = analyzedEvents.find(entry => {
+                if (!entry || entry === overrideEvent) return false;
+                signal = this.getSameEventIdentitySignal(overrideEvent, entry, { requireCloseStartTimes: false });
+                return Boolean(signal);
+            }) || null;
+            if (match) matchReason = signal;
+        }
+        if (!match) return null;
+
+        match.isBearEvent = true;
+        const manualSource = typeof options.manualBearSource === 'string' ? options.manualBearSource.trim() : '';
+        if (manualSource && this.isManualBearSource(manualSource) && !this.isManualBearSource(match.bearSource)) {
+            match.bearSource = manualSource;
+        }
+        // The website hides flagged events; an explicit bear verdict clears it.
+        if (typeof match.bearReview === 'string' && match.bearReview) {
+            delete match.bearReview;
+        }
+        match.notes = this.formatEventNotes(match);
+        console.log(`🐻 BEAR CHECK: "${overrideEvent.title || 'Unknown'}" bear override folded into the existing plan row (${matchReason}) — no duplicate write`);
+        return match;
     }
 
     // One event's calendar-prep analysis (extracted from prepareEventsForCalendar
