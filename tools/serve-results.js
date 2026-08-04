@@ -461,7 +461,11 @@ async function renderLatestResults(state, saved) {
     const results = saved.results || {};
     const cities = (results.config && results.config.cities) || {};
     const adapter = new ScriptableAdapter({ cities });
-    const html = await adapter.generateRichHTML(results);
+    // target: 'web' — desktop Safari has no WebView.loadHTML size cliff, so
+    // this flow renders EVERY event on one page and sheds nothing. Paging and
+    // the shed ladder exist only to survive that Scriptable-side limit; on
+    // desktop they would just cost the owner review detail he can have free.
+    const html = await adapter.generateRichHTML(results, { target: 'web' });
     const registries = {
         mapVerifyUrls: adapter._mapVerifyUrls || {},
         venueSnippets: typeof adapter.collectVenueEntrySnippets === 'function'
