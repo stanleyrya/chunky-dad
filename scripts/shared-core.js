@@ -935,16 +935,33 @@ class SharedCore {
     // wherever a value CROSSES a module boundary. Prefer coercion
     // (toEpochMillis) when you want the number; prefer this when you need to
     // know the type without turning unrelated strings into dates.
-    isDateLike(value) {
+    //
+    // Exposed BOTH ways on purpose: the instance form is what shared-core's own
+    // methods call, and the static form is what the adapters reach for (they
+    // hold the class, not an instance — `const { SharedCore } = importModule(...)`)
+    // and what SharedCore's own `static` methods can use. One implementation,
+    // two spellings; never fork the predicate.
+    static isDateLike(value) {
         return Object.prototype.toString.call(value) === '[object Date]';
     }
 
+    isDateLike(value) {
+        return SharedCore.isDateLike(value);
+    }
+
     // Date-or-ISO-string → epoch milliseconds, or null when absent/unparseable.
-    toEpochMillis(value) {
+    // `new Date(dateObject)` reads the [[DateValue]] internal slot, which is
+    // realm-agnostic, so this coerces a cross-realm Date correctly on either
+    // branch — that is why the `instanceof` here is safe and stays.
+    static toEpochMillis(value) {
         if (value === null || value === undefined || value === '') return null;
         const date = value instanceof Date ? value : new Date(value);
         const time = date.getTime();
         return Number.isNaN(time) ? null : time;
+    }
+
+    toEpochMillis(value) {
+        return SharedCore.toEpochMillis(value);
     }
 
     // Value equality for clobber TRACKING/logging only — never for choosing a
@@ -9305,7 +9322,14 @@ class SharedCore {
             if (!value) return value;
             const converted = this.convertWallClockDateToUtc(value, timezone);
             if (!converted || isNaN(converted.getTime())) return value;
-            return value instanceof Date ? converted : converted.toISOString();
+            // isDateLike, never `instanceof`: parsers are loaded through
+            // Scriptable's importModule and hold their OWN Date constructor, so
+            // a genuine parser-made Date fails `instanceof Date` here and used
+            // to take the string branch — turning event.startDate into an ISO
+            // STRING. EventKit's setter is typed, so the very next calendar
+            // write threw "Expected value of type Date but got value of type
+            // string" and the run saved nothing (Dallas Eagle, 2026-08-02).
+            return this.isDateLike(value) ? converted : converted.toISOString();
         };
 
         const originalStart = event.startDate;
@@ -9314,7 +9338,12 @@ class SharedCore {
         event.timezone = timezone;
         delete event._timezoneUnresolved;
 
-        const format = (value) => value instanceof Date ? value.toISOString() : String(value);
+        // Same realm hazard as reanchor above: this formatter printed
+        // `Date.prototype.toString()` output ("Fri Aug 14 2026 17:00:00
+        // GMT-0400 (Eastern Daylight Time)") for 85 genuine Dates on
+        // 2026-08-02, which is how the string-conversion bug was finally
+        // spotted. The format string is unchanged — only the branch it takes.
+        const format = (value) => this.isDateLike(value) ? value.toISOString() : String(value);
         console.log(`🗺️ LocationNormalizer: Re-anchored wall-clock dates to ${timezone} — start ${format(originalStart)} → ${format(event.startDate)}`);
         return event;
     }

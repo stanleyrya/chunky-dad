@@ -433,6 +433,10 @@ class ScriptableAdapter {
     this.runStartedAt = new Date();
     this.warnCount = 0;
     this.lastExecutionActionCounts = null;
+    // Per-event calendar write failures from the last executeCalendarActions
+    // pass. Promoted into results.errors by presentRichResults — see
+    // recordCalendarWriteFailures.
+    this.lastExecutionFailures = [];
   }
 
   getScriptableRuntimeContext() {
@@ -3220,6 +3224,7 @@ class ScriptableAdapter {
 
   // Execute calendar actions determined by shared-core
   async executeCalendarActions(analyzedEvents, config) {
+    this.lastExecutionFailures = [];
     if (!analyzedEvents || analyzedEvents.length === 0) {
       console.log("📱 Scriptable: No events to process");
       this.lastExecutionActionCounts = {
@@ -3289,7 +3294,8 @@ class ScriptableAdapter {
               // Note: Scriptable cannot read or write the native CalendarEvent.url field,
               // so URL data is stored exclusively as "website:" in notes.
               targetEvent.title = event.title;
-              targetEvent.startDate = event.startDate;
+              // Same typed-setter hazard as the create path below.
+              targetEvent.startDate = this.toCalendarWriteDate(event.startDate);
               targetEvent.endDate = this.resolveCalendarWriteEndDate(event);
               targetEvent.location = event.location;
               targetEvent.notes = event.notes;
@@ -3334,6 +3340,11 @@ class ScriptableAdapter {
         );
       }
 
+      // Every per-event write failure, not just the first — these are the only
+      // record that a calendar write was attempted and lost, and until now they
+      // lived and died inside this function. See recordCalendarWriteFailures.
+      this.lastExecutionFailures = failedEvents.slice();
+
       if (failedEvents.length > 0) {
         console.log(
           `📱 Scriptable: ✗ Failed to process ${failedEvents.length} events: ${failedEvents.map((f) => f.title).join(", ")}`,
@@ -3361,6 +3372,32 @@ class ScriptableAdapter {
     }
   }
 
+  // Promote per-event calendar write failures into results.errors.
+  //
+  // executeCalendarActions catches each failed write into a local array and
+  // logged only the FIRST message, so the saved run JSON reported
+  // `errors: []` alongside `calendarEvents: 0` — byte-identical to a run where
+  // the user never pressed Execute. That false signal is exactly what hid the
+  // wall-clock stringification bug: the run said nothing was attempted when in
+  // fact every write had thrown. errors[] is persisted by saveRun and rendered
+  // by the results UI, so failures now survive the session.
+  recordCalendarWriteFailures(results) {
+    const failures = Array.isArray(this.lastExecutionFailures)
+      ? this.lastExecutionFailures
+      : [];
+    if (!results || failures.length === 0) return 0;
+    if (!Array.isArray(results.errors)) results.errors = [];
+    for (const failure of failures) {
+      results.errors.push(
+        `Calendar write failed for "${failure?.title || "unknown event"}": ${failure?.error || "unknown error"}`,
+      );
+    }
+    // Consumed — promoting twice (success path, then the outer catch) must not
+    // duplicate the entries.
+    this.lastExecutionFailures = [];
+    return failures.length;
+  }
+
   // The endDate this adapter is willing to WRITE for an event.
   //
   // An INVERTED span (endDate strictly before startDate) is never written:
@@ -3382,27 +3419,46 @@ class ScriptableAdapter {
   resolveCalendarWriteEndDate(event) {
     // Coerced, never `instanceof` — Scriptable hands every module its own Date
     // constructor, so a Date built in shared-core fails `instanceof Date` here.
-    const toMs = (value) => {
-      if (value === null || value === undefined || value === "") return null;
-      const ms = new Date(value).getTime();
-      return Number.isNaN(ms) ? null : ms;
-    };
-    const startMs = toMs(event && event.startDate);
-    const endMs = toMs(event && event.endDate);
+    const startMs = SharedCore.toEpochMillis(event && event.startDate);
+    const endMs = SharedCore.toEpochMillis(event && event.endDate);
     if (startMs !== null && endMs !== null && endMs < startMs) {
       console.log(
         `📱 Scriptable: ⚠️ "${event?.title || "event"}" endDate is before startDate — refusing to write an inverted span, writing the start instead`,
       );
-      return event.startDate;
+      return this.toCalendarWriteDate(event.startDate);
     }
-    return event.endDate;
+    // This method already knew the coercion hazard but still RETURNED the raw
+    // value, so an ISO string walked straight into the typed EventKit setter.
+    return this.toCalendarWriteDate(event.endDate);
+  }
+
+  // Last gate before a value reaches a typed EventKit setter.
+  //
+  // `CalendarEvent.startDate`/`.endDate` are native, typed properties: handing
+  // them a string throws "Expected value of type Date but got value of type
+  // string", the throw lands in executeCalendarActions' per-event catch, and
+  // the night is silently lost (Dallas Eagle, 2026-08-02 — 1 good event, 0
+  // written). Upstream is fixed (SharedCore.resolveWallClockDates no longer
+  // stringifies cross-realm Dates), but the boundary must not depend on that:
+  // every producer feeding this adapter is a different importModule realm.
+  //
+  // Real Dates pass through by IDENTITY — including cross-realm ones, which
+  // the native bridge accepts because it reads the [[DateValue]] slot, not a
+  // realm-local constructor. Only non-Dates are rebuilt, and anything
+  // unparseable (or absent) is returned untouched so this stays fail-open and
+  // never invents an instant.
+  toCalendarWriteDate(value) {
+    if (SharedCore.isDateLike(value)) return value;
+    const ms = SharedCore.toEpochMillis(value);
+    return ms === null ? value : new Date(ms);
   }
 
   // Helper method to create and save a calendar event
   async createCalendarEvent(event, calendar) {
     const calendarEvent = new CalendarEvent();
     calendarEvent.title = event.title;
-    calendarEvent.startDate = event.startDate;
+    // Coerced at the boundary: these setters are typed and throw on a string.
+    calendarEvent.startDate = this.toCalendarWriteDate(event.startDate);
     calendarEvent.endDate = this.resolveCalendarWriteEndDate(event);
     calendarEvent.location = event.location;
     calendarEvent.notes = event.notes;
@@ -5377,6 +5433,9 @@ class ScriptableAdapter {
             bearOverrideCounts,
           );
           results.calendarEvents = executedCount;
+          // Writes that threw are run faults — surface them in the saved run
+          // JSON instead of leaving `errors: []` next to `calendarEvents: 0`.
+          this.recordCalendarWriteFailures(results);
         } else {
           const reason = globalDryRun ? "global dry run" : "no active events";
           console.log(`📱 Scriptable: Skipping execution prompt (${reason})`);
@@ -5387,6 +5446,9 @@ class ScriptableAdapter {
         );
       }
     } catch (error) {
+      // A throw out of the execution prompt must not swallow the per-event
+      // write failures recorded before it.
+      this.recordCalendarWriteFailures(results);
       console.log(
         `📱 Scriptable: ✗ Failed to present rich UI: ${error.message}`,
       );
