@@ -14843,3 +14843,115 @@ test('buildNotesMergeDiff: preserve-strategy semantics are unchanged', () => {
   assert.deepEqual(diff.removed, [{ key: 'old', value: 'gone' }]);
   assert.deepEqual(diff.added, [], 'a preserve-strategy arrival is preserved, not added');
 });
+
+// ---------------------------------------------------------------------------
+// Cross-realm Dates in resolveWallClockDates.
+//
+// Scriptable loads every file through its own importModule, so shared-core and
+// the parsers hold DIFFERENT Date constructors: a Date built in ai-web-parser
+// is a genuine Date here but fails `instanceof Date`. resolveWallClockDates
+// used that exact test to decide whether to hand back a Date or an ISO string,
+// so on device EVERY re-anchored event had its startDate silently turned into
+// a STRING — and `CalendarEvent.startDate` is a typed native setter, so the
+// next calendar write threw "Expected value of type Date but got value of type
+// string" and the run saved nothing (Dallas Eagle, 2026-08-02: 1 good event,
+// Execute pressed, 0 written).
+//
+// vm.runInNewContext reproduces the production condition faithfully — the
+// value below IS a real Date (`[object Date]`, working methods) built by a
+// foreign realm's constructor.
+// ---------------------------------------------------------------------------
+
+const vm = require('node:vm');
+
+function buildCrossRealmDate(iso) {
+  return vm.runInNewContext(`new Date(${JSON.stringify(iso)})`);
+}
+
+test('cross-realm precondition: a foreign-realm Date is a real Date that fails instanceof', () => {
+  const foreign = buildCrossRealmDate('2026-08-15T02:00:00.000Z');
+  assert.equal(foreign instanceof Date, false, 'this is the Scriptable importModule condition');
+  assert.equal(Object.prototype.toString.call(foreign), '[object Date]', 'and it is still a genuine Date');
+  assert.equal(foreign.toISOString(), '2026-08-15T02:00:00.000Z', 'with working Date methods');
+  assert.equal(createCore().isDateLike(foreign), true, 'isDateLike is the realm-agnostic test');
+});
+
+test('resolveWallClockDates returns Dates for a cross-realm Date, never ISO strings', () => {
+  const core = createCore();
+  const event = {
+    title: 'Pet Night with DJ Boost',
+    city: 'dallas',
+    startDate: buildCrossRealmDate('2026-08-15T02:00:00.000Z'),
+    endDate: buildCrossRealmDate('2026-08-15T05:00:00.000Z'),
+    _timezoneUnresolved: true
+  };
+
+  core.resolveWallClockDates(event);
+
+  // The type is the whole bug: a string here is what EventKit rejects.
+  assert.notEqual(typeof event.startDate, 'string', 'a re-anchored cross-realm start must not become a string');
+  assert.notEqual(typeof event.endDate, 'string', 'nor the end');
+  assert.equal(Object.prototype.toString.call(event.startDate), '[object Date]');
+  assert.equal(Object.prototype.toString.call(event.endDate), '[object Date]');
+  // 02:00 wall clock in America/Chicago (CDT, UTC-5) is 07:00Z.
+  assert.equal(event.startDate.toISOString(), '2026-08-15T07:00:00.000Z');
+  assert.equal(event.endDate.toISOString(), '2026-08-15T10:00:00.000Z');
+  assert.equal(event.timezone, 'America/Chicago');
+  assert.equal(event._timezoneUnresolved, undefined, 're-anchoring clears the flag');
+});
+
+test('resolveWallClockDates still returns ISO strings for ISO-string input', () => {
+  // The string branch is real and must survive: only the Date test changed.
+  const core = createCore();
+  const event = {
+    title: 'Gear Night',
+    city: 'dallas',
+    startDate: '2026-08-15T02:00:00.000Z',
+    _timezoneUnresolved: true
+  };
+  core.resolveWallClockDates(event);
+  assert.equal(typeof event.startDate, 'string', 'a string in stays a string out');
+  assert.equal(event.startDate, '2026-08-15T07:00:00.000Z');
+});
+
+test('resolveWallClockDates logs the cross-realm start as an ISO instant, not Date.toString()', () => {
+  // The log formatter carried the identical `instanceof` bug and is how the
+  // stringification was finally spotted in production: it printed
+  // "Fri Aug 14 2026 17:00:00 GMT-0400 (Eastern Daylight Time)" for 85 genuine
+  // Dates. The format string is unchanged — only the branch it takes.
+  const core = createCore();
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (message) => { logs.push(String(message)); };
+  try {
+    core.resolveWallClockDates({
+      title: 'Eagle Karaoke',
+      city: 'dallas',
+      startDate: buildCrossRealmDate('2026-08-15T02:00:00.000Z'),
+      _timezoneUnresolved: true
+    });
+  } finally {
+    console.log = originalLog;
+  }
+  const line = logs.find(entry => entry.includes('Re-anchored wall-clock dates'));
+  assert.ok(line, `expected the re-anchor log, got: ${JSON.stringify(logs)}`);
+  assert.ok(line.includes('2026-08-15T02:00:00.000Z → 2026-08-15T07:00:00.000Z'),
+    `both sides must print as ISO instants, got: ${line}`);
+  assert.ok(!line.includes('GMT'), `Date.prototype.toString() output means the wrong branch ran: ${line}`);
+});
+
+test('isDateLike and toEpochMillis are reachable statically for adapters and static methods', () => {
+  // The adapters hold the CLASS (`const { SharedCore } = importModule(...)`),
+  // not an instance, and shared-core's own statics have no `this` to call.
+  const foreign = buildCrossRealmDate('2026-08-15T02:00:00.000Z');
+  assert.equal(SharedCore.isDateLike(foreign), true);
+  assert.equal(SharedCore.isDateLike('2026-08-15T02:00:00.000Z'), false, 'a string is not a Date');
+  assert.equal(SharedCore.toEpochMillis(foreign), Date.parse('2026-08-15T02:00:00.000Z'));
+  assert.equal(SharedCore.toEpochMillis('2026-08-15T02:00:00.000Z'), Date.parse('2026-08-15T02:00:00.000Z'));
+  assert.equal(SharedCore.toEpochMillis(''), null);
+  assert.equal(SharedCore.toEpochMillis('not a date'), null);
+  // The instance form still works and agrees with the static one.
+  const core = createCore();
+  assert.equal(core.isDateLike(foreign), SharedCore.isDateLike(foreign));
+  assert.equal(core.toEpochMillis(foreign), SharedCore.toEpochMillis(foreign));
+});

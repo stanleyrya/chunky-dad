@@ -4737,3 +4737,218 @@ test('the results page derives Copy JSON from the single card payload and still 
   assert.ok(html.includes('function prettyPrintCardPayloads('),
     'the page re-indents the compact payload in the DOM');
 });
+
+// ---------------------------------------------------------------------------
+// Typed EventKit setters at the calendar-write boundary.
+//
+// `CalendarEvent.startDate`/`.endDate` are native, typed properties. Handing
+// one a string throws "Expected value of type Date but got value of type
+// string"; that throw lands in executeCalendarActions' per-event catch and the
+// night is silently lost. It happened for real on 2026-08-02 (Dallas Eagle: 1
+// good event, Execute pressed, 0 written) because SharedCore.resolveWallClockDates
+// stringified cross-realm Dates. That root cause is fixed in shared-core, but
+// the boundary must not depend on any single producer behaving: every module
+// feeding this adapter is a different importModule realm.
+//
+// The stub below is the only faithful model of the platform — a setter that
+// rejects anything that is not a Date.
+// ---------------------------------------------------------------------------
+
+function isRealDate(value) {
+  return Object.prototype.toString.call(value) === '[object Date]';
+}
+
+function installTypedCalendarEventStub() {
+  const original = global.CalendarEvent;
+  const assigned = { saved: 0 };
+  global.CalendarEvent = class {
+    set startDate(value) {
+      if (!isRealDate(value)) {
+        throw new Error(`Expected value of type Date but got value of type ${typeof value}`);
+      }
+      assigned.startDate = value;
+    }
+    get startDate() { return assigned.startDate; }
+    set endDate(value) {
+      if (!isRealDate(value)) {
+        throw new Error(`Expected value of type Date but got value of type ${typeof value}`);
+      }
+      assigned.endDate = value;
+    }
+    get endDate() { return assigned.endDate; }
+    async save() { assigned.saved += 1; }
+  };
+  return { assigned, restore: () => { global.CalendarEvent = original; } };
+}
+
+test('createCalendarEvent assigns real Dates to the typed EventKit setters, even from ISO strings', async () => {
+  const adapter = buildAdapter();
+  const { assigned, restore } = installTypedCalendarEventStub();
+  try {
+    await adapter.createCalendarEvent(
+      {
+        title: 'Pet Night with DJ Boost',
+        startDate: '2026-08-15T07:00:00.000Z',
+        endDate: '2026-08-15T10:00:00.000Z',
+        location: '32.810535, -96.8110709',
+        notes: 'bar: Dallas Eagle'
+      },
+      { title: 'chunky-dad-dallas' }
+    );
+  } finally {
+    restore();
+  }
+  assert.ok(isRealDate(assigned.startDate), 'a string start is coerced before it reaches EventKit');
+  assert.ok(isRealDate(assigned.endDate), 'and so is the end');
+  assert.equal(assigned.startDate.toISOString(), '2026-08-15T07:00:00.000Z', 'the instant is unchanged');
+  assert.equal(assigned.endDate.toISOString(), '2026-08-15T10:00:00.000Z');
+  assert.equal(assigned.saved, 1, 'the write actually happened');
+});
+
+test('createCalendarEvent passes real Dates through by identity', async () => {
+  const adapter = buildAdapter();
+  const start = new Date('2026-08-15T07:00:00.000Z');
+  const end = new Date('2026-08-15T10:00:00.000Z');
+  const { assigned, restore } = installTypedCalendarEventStub();
+  try {
+    await adapter.createCalendarEvent(
+      { title: 'Gear Night', startDate: start, endDate: end, location: '', notes: '' },
+      { title: 'chunky-dad-dallas' }
+    );
+  } finally {
+    restore();
+  }
+  assert.equal(assigned.startDate, start, 'a real Date is never gratuitously rebuilt');
+  assert.equal(assigned.endDate, end);
+});
+
+test('toCalendarWriteDate coerces strings, keeps Dates, and fails open on junk', () => {
+  const adapter = buildAdapter();
+  const real = new Date('2026-08-15T07:00:00.000Z');
+  assert.equal(adapter.toCalendarWriteDate(real), real, 'identity for a real Date');
+
+  const coerced = adapter.toCalendarWriteDate('2026-08-15T07:00:00.000Z');
+  assert.ok(isRealDate(coerced));
+  assert.equal(coerced.toISOString(), '2026-08-15T07:00:00.000Z');
+
+  // A cross-realm Date (Scriptable importModule) is a real Date and is kept —
+  // the native bridge reads the [[DateValue]] slot, not a realm-local constructor.
+  const foreign = require('node:vm').runInNewContext('new Date("2026-08-15T07:00:00.000Z")');
+  assert.equal(foreign instanceof Date, false, 'precondition: the production condition');
+  assert.equal(adapter.toCalendarWriteDate(foreign), foreign);
+
+  // Fail open — never invent an instant.
+  assert.equal(adapter.toCalendarWriteDate(undefined), undefined);
+  assert.equal(adapter.toCalendarWriteDate(null), null);
+  assert.equal(adapter.toCalendarWriteDate(''), '');
+  assert.equal(adapter.toCalendarWriteDate('not a date'), 'not a date');
+});
+
+test('resolveCalendarWriteEndDate returns a real Date for an ISO-string end', () => {
+  // This method already documented the coercion hazard (its own toMs) but
+  // still RETURNED the raw value, so a string walked into the typed setter.
+  const adapter = buildAdapter();
+  const written = adapter.resolveCalendarWriteEndDate({
+    title: 'Eagle Karaoke',
+    startDate: '2026-08-15T07:00:00.000Z',
+    endDate: '2026-08-15T10:00:00.000Z'
+  });
+  assert.ok(isRealDate(written));
+  assert.equal(written.toISOString(), '2026-08-15T10:00:00.000Z');
+
+  // The inverted-span refusal still returns the START, now as a real Date.
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (message) => { logs.push(String(message)); };
+  let refused;
+  try {
+    refused = adapter.resolveCalendarWriteEndDate({
+      title: 'PERVERT',
+      startDate: '2026-08-02T22:00:00.000Z',
+      endDate: '2026-08-02T20:00:00.000Z'
+    });
+  } finally {
+    console.log = originalLog;
+  }
+  assert.ok(isRealDate(refused));
+  assert.equal(refused.toISOString(), '2026-08-02T22:00:00.000Z');
+  assert.ok(logs.some((line) => line.includes('endDate is before startDate')));
+});
+
+// ---------------------------------------------------------------------------
+// Per-event write failures must reach results.errors.
+//
+// executeCalendarActions caught each failed write into a local array and
+// logged only the FIRST message. The saved run JSON therefore read
+// `errors: []` next to `calendarEvents: 0` — byte-identical to a run where the
+// user never pressed Execute. That false signal is what hid the bug above for
+// days, so the failures are now promoted onto the results object saveRun
+// persists and the results UI renders.
+// ---------------------------------------------------------------------------
+
+test('per-event calendar write failures are promoted into results.errors', async () => {
+  const adapter = buildAdapter();
+  adapter.getOrCreateCalendar = async () => ({ title: 'chunky-dad-dallas' });
+  const originalCalendarEvent = global.CalendarEvent;
+  global.CalendarEvent = class {
+    async save() {
+      throw new Error('Expected value of type Date but got value of type string');
+    }
+  };
+  let processed;
+  try {
+    processed = await adapter.executeCalendarActions(
+      [
+        {
+          title: 'Pet Night with DJ Boost',
+          city: 'dallas',
+          _action: 'new',
+          startDate: new Date('2026-08-15T07:00:00.000Z'),
+          endDate: new Date('2026-08-15T10:00:00.000Z')
+        }
+      ],
+      {}
+    );
+  } finally {
+    global.CalendarEvent = originalCalendarEvent;
+  }
+
+  assert.equal(processed, 0, 'nothing was written');
+  assert.equal(adapter.lastExecutionActionCounts.failed, 1);
+
+  const results = { errors: [], calendarEvents: 0 };
+  assert.equal(adapter.recordCalendarWriteFailures(results), 1);
+  assert.equal(results.errors.length, 1, 'the failure is no longer invisible in the run JSON');
+  assert.match(results.errors[0], /Pet Night with DJ Boost/);
+  assert.match(results.errors[0], /Expected value of type Date/);
+
+  // Promoting twice (success path, then the outer catch) must not duplicate.
+  assert.equal(adapter.recordCalendarWriteFailures(results), 0);
+  assert.equal(results.errors.length, 1);
+});
+
+test('recordCalendarWriteFailures creates errors[] when absent and is a no-op on a clean run', async () => {
+  const adapter = buildAdapter();
+  adapter.getOrCreateCalendar = async () => ({ title: 'chunky-dad-dallas' });
+  const originalCalendarEvent = global.CalendarEvent;
+  global.CalendarEvent = class {
+    async save() { throw new Error('boom'); }
+  };
+  try {
+    await adapter.executeCalendarActions(
+      [{ title: 'Gear Night', city: 'dallas', _action: 'new', startDate: new Date('2026-08-15T07:00:00.000Z') }],
+      {}
+    );
+  } finally {
+    global.CalendarEvent = originalCalendarEvent;
+  }
+  const results = {};
+  assert.equal(adapter.recordCalendarWriteFailures(results), 1);
+  assert.deepEqual(results.errors, ['Calendar write failed for "Gear Night": boom']);
+
+  // A run with nothing to execute leaves errors alone.
+  await adapter.executeCalendarActions([], {});
+  const clean = { errors: [] };
+  assert.equal(adapter.recordCalendarWriteFailures(clean), 0);
+  assert.deepEqual(clean.errors, []);
+});
