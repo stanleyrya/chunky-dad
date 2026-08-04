@@ -57,6 +57,17 @@ const ImportedDetectTitleDateSegment = (() => {
 // iCloud sync churn).
 const CACHE_TOUCH_INTERVAL_DAYS = 7;
 
+// Sentinel error code for the multi-event MISS-budget probe: when the
+// per-page budget of fresh AI calls is spent, remaining segments are still
+// offered to extraction, but the FIRST cache read that cannot be served
+// from the persistent AI response cache throws this instead of recording a
+// miss. The segment loop catches it, skips the segment (it is left for a
+// future run), and counts it toward the frontier log. Because the throw
+// happens inside the cache read — before any HTTP request — an aborted
+// probe costs zero AI calls, and because the miss counter is not touched,
+// a probe that aborts and is extracted on a later run is ONE miss, not two.
+const MULTI_EVENT_MISS_PROBE_ABORT = 'MULTI_EVENT_MISS_PROBE_ABORT';
+
 // Evidence-pointer rescue (LOG-ONLY observation phase): the extraction model
 // is a good FINDER and a bad COPIER. When the evidence gate drops a field
 // because the VALUE is not verbatim in the corpus, but the model's own
@@ -547,6 +558,19 @@ class AiWebParser {
             // owner cost decision, not a default. That page now LOGS its
             // real item count next to the budget so the decision is visible.
             multiEventMaxSegmentsDenseCeiling: 48,
+            // SEGMENTATION safety ceiling — not an AI budget. Segmentation is
+            // deterministic string work, so pages are now segmented in FULL
+            // and the 48-ceiling above bounds AI cache-MISSES per run instead
+            // (see resolveMultiEventSegmentBudget's use in
+            // extractEventsFromMultiEventPage): segments beyond the miss
+            // budget are probed against the persistent AI response cache and
+            // extracted for free on hits, so capped pages CONVERGE to full
+            // coverage across runs instead of re-extracting the same prefix
+            // forever. 512 exists only so a pathological page (a 10,000-item
+            // scraped index) cannot make the pure-JS segment pipeline and its
+            // per-segment logging unbounded; the largest real corpus page is
+            // sickening.events/events at 485 segments, which fits.
+            multiEventMaxSegmentsSafetyCeiling: 512,
             multiEventMinSegmentLines: 2,
             multiEventMaxSegmentLines: 24,
             multiEventMinSegmentChars: 25,
@@ -629,6 +653,17 @@ class AiWebParser {
         // In-memory only, scoped to this parser instance (one run).
         this.contextPrepResponseCache = new Map();
         this.aiResponseCacheStats = { hits: 0, misses: 0, writes: 0 };
+        // Multi-event MISS-budget probe flag: while true, readCachedAiResponse
+        // throws MULTI_EVENT_MISS_PROBE_ABORT instead of recording a miss (see
+        // the constant's comment). Set/cleared ONLY by the segment loop in
+        // extractEventsFromMultiEventPage, and only after the page's miss
+        // budget is spent — sparse pages never enter probe mode.
+        this.multiEventMissProbeActive = false;
+        // What the LAST segmentation pass measured (dated candidate count +
+        // which tier produced the segments). The extraction loop reads this to
+        // size the per-run miss budget, because the segments array itself may
+        // be re-created by the image-hint pass and cannot carry the count.
+        this.lastMultiEventSegmentationStats = null;
         this.defaultOcrModel = 'qwen3-vl:4b-instruct';
         this.defaultOcrPrompt = "You are performing OCR on an event flyer.\n\nSTEP 1: OCR\nExtract ALL visible text from the image.\n\nRules:\n- Copy text exactly as shown.\n- Preserve line breaks when possible.\n- Do not summarize.\n- Do not interpret.\n- Do not correct spelling.\n- Do not infer missing words.\n\nSTEP 2: Classification\n\nClassify the image into ONE category:\n\nad-banner: Advertisement or promotional banner (usually has \"buy\", \"get tickets\", \"sale\")\nevent-flyer: Single event poster/flyer - ONE primary event with ONE title, ONE venue, and ONE date or continuous date range. May contain schedules, activities, DJs, performers, or sub-events that are clearly part of the same event. Examples: Bear Week, Bear Weekend, Pride Festival, Camp Weekend, Resort Weekend Package.\nmulti-event-flyer: Two or more independent events with different titles, different dates/times, and separate ticketing. Often appears as a calendar, event listing, or monthly schedule.\nlogo: Brand or organization logo (minimal text, just brand name)\nthumbnail: Small preview image (low detail)\nhero-banner: Large header/banner image (prominent on page)\n\nDecision rule: If there is ONE overarching event name and the listed activities appear to belong to that event, classify as event-flyer. Only classify as multi-event-flyer when multiple independent events are advertised that require separate tickets.\n\nIMPORTANT CONTEXT: This is for a gay bear community travel guide. Events may be part of:\n- \"Bear Week\" or \"Bear Weekend\" themed events\n- Annual bear gatherings (e.g., \"Puerto Vallarta Bear Week\", \"Sitges Bear Week\")\n- Regular bear-themed parties or meetups\n- Events at bear-owned businesses or bear-friendly venues\n\nSTEP 3: Event Analysis\n\nDetermine:\n- eventName: The primary event title\n- venue: The venue or venue group name\n- startDate: Start date/time if visible\n- endDate: End date/time if visible\n\nUse only information visible in the image.\n\nSTEP 4: Summary\n\nCreate a concise summary describing:\n- event name\n- venue\n- date/time\n- why it may be relevant to the bear community\n\nReturn JSON only with these fields:\n{\n  \"text\": \"full extracted text\",\n  \"imageClassification\": \"ad-banner|event-flyer|multi-event-flyer|logo|thumbnail|hero-banner\",\n  \"eventSummary\": \"a concise 1-2 sentence summary of the event including: event name, venue, date/time, and any bear-week context if applicable. Focus on what makes this event notable for the bear community.\",\n  \"confidence\": 0-100,\n  \"reason\": \"brief explanation for classification\"\n}";
         // When an image overflows the vision model's context, retry once at this
@@ -1199,22 +1234,72 @@ class AiWebParser {
             console.log(`🤖 AI Web: Page-level date context: ${monthNamesEn[pageDateContext.month - 1]}${Number.isFinite(pageDateContext.year) ? ` ${pageDateContext.year}` : ''} (from "${pageDateContext.phrase}")`);
         }
 
+        // ── Per-run AI cache-MISS budget ────────────────────────────────
+        // The budget (clamp(dated, 16, 48) — the exact wave-6 segment budget)
+        // no longer bounds which segments EXIST; it bounds how many segments
+        // may spend FRESH AI calls this run. Segments are processed in page
+        // order; a segment whose extraction is answered entirely by the
+        // persistent AI response cache consumes nothing. Once the budget is
+        // spent, remaining segments run in PROBE mode: the first cache read
+        // that cannot be served aborts the segment before any HTTP request
+        // (MULTI_EVENT_MISS_PROBE_ABORT), so still-cached segments beyond the
+        // frontier are extracted for free while uncached ones wait for a
+        // future run — each run's budget lands on genuinely new content and
+        // the page converges to full coverage.
+        const missBudget = this.resolveMultiEventMissBudget(segments);
+        const segmentAiConfig = this.getAiConfig(parserConfig);
+        // With no usable response cache every extracted segment counts
+        // against the budget (stats can't move), degrading to exactly the
+        // wave-6 behavior: at most `missBudget` segments do AI work per run.
+        const responseCacheActive = segmentAiConfig.cacheEnabled !== false
+            && Boolean(this.getAiResponseCacheRuntime());
+        let missSegmentsSpent = 0;
+        let uncachedSegmentsSkipped = 0;
+
         const events = [];
         for (let i = 0; i < segments.length; i++) {
+            const budgetSpent = missSegmentsSpent >= missBudget;
+            const missesBefore = this.aiResponseCacheStats.misses;
+            const promptHistoryDepth = this.aiPromptHistory.length;
             try {
+                this.multiEventMissProbeActive = budgetSpent;
                 const segment = segments[i];
                 const segmentHtmlData = this.buildMultiEventSegmentHtmlData(htmlData, segment, i, segments.length, ocrResults, pageDateContext);
                 const event = await this.extractSingleEvent(segmentHtmlData, parserConfig, cityConfig, segmentPromptFields, segmentDataFlags, httpAdapter);
-                if (!event) continue;
-                event._multiEventSegment = {
-                    index: i + 1,
-                    total: segments.length,
-                    lineCount: segment.lines.length
-                };
-                events.push(event);
+                if (event) {
+                    event._multiEventSegment = {
+                        index: i + 1,
+                        total: segments.length,
+                        lineCount: segment.lines.length
+                    };
+                    events.push(event);
+                }
             } catch (err) {
+                if (err && err.code === MULTI_EVENT_MISS_PROBE_ABORT) {
+                    // Aborted before any AI call: skip silently here (the
+                    // frontier log below reports the total), drop the prompt
+                    // history the aborted attempt recorded, and leave the
+                    // segment for a future run's budget.
+                    uncachedSegmentsSkipped += 1;
+                    this.aiPromptHistory.length = promptHistoryDepth;
+                    continue;
+                }
                 console.warn(`🤖 AI Web: Segment ${i + 1}/${segments.length} extraction failed: ${err.message}`);
+            } finally {
+                this.multiEventMissProbeActive = false;
             }
+            // One budget unit per SEGMENT that needed fresh AI work (however
+            // many passes that took) — the same unit the wave-6 segment
+            // budget charged. Probe-mode iterations can never get here with a
+            // miss (a miss aborts), so only pre-frontier segments spend.
+            if (!budgetSpent && (!responseCacheActive || this.aiResponseCacheStats.misses > missesBefore)) {
+                missSegmentsSpent += 1;
+            }
+        }
+        if (uncachedSegmentsSkipped > 0) {
+            // No silent caps: say what is left and how long convergence takes.
+            const runsToConverge = Math.ceil(uncachedSegmentsSkipped / Math.max(1, missBudget));
+            console.log(`🤖 AI Web: Miss budget ${missBudget} spent — ${uncachedSegmentsSkipped} of ${segments.length} segments still uncached; ~${runsToConverge} more run${runsToConverge === 1 ? '' : 's'} to full coverage at this budget`);
         }
         return events;
     }
@@ -1876,7 +1961,12 @@ class AiWebParser {
         // Dated candidate windows, not raw lines: each rawSegment that
         // carries a date signal is one listing this page is offering.
         const datedCandidateCount = rawSegments.filter(lines => this.segmentHasDateSignal(lines)).length;
-        const segmentBudget = this.resolveMultiEventSegmentBudget(datedCandidateCount);
+        // Segmentation runs to the safety ceiling, not to the AI budget:
+        // creating a segment costs pure JS, and the extraction loop bounds AI
+        // spend by CACHE MISSES per run instead, so segments past the old
+        // budget are still created and converge to coverage across runs.
+        this.recordMultiEventSegmentationStats(datedCandidateCount, 'text splitter');
+        const segmentBudget = this.resolveMultiEventSegmentationCeiling();
         for (const lines of rawSegments) {
             if (uniqueSegments.length >= segmentBudget) {
                 // No silent caps. This break truncates the page: on
@@ -2096,6 +2186,11 @@ class AiWebParser {
         // raising the prompt's own bound too, which is a separate decision.
         const datedCandidateCount = boundaryIndices.length;
         const segmentBudget = this.extractionLimits.multiEventMaxSegments;
+        // Record 0 dated candidates so the downstream MISS budget stays at
+        // the flat baseline for boundary-derived segments — the same wave-6
+        // decision as the acceptance cap above (≤ baseline segments exist, so
+        // the miss budget can never bind mid-page here).
+        this.recordMultiEventSegmentationStats(0, 'AI boundary pass');
         for (let k = 0; k < boundaryIndices.length; k++) {
             if (uniqueSegments.length >= segmentBudget) {
                 // No silent caps. Checked at the TOP of the loop so it fires
@@ -2206,7 +2301,10 @@ class AiWebParser {
         // the date/title gates below, so a 200-item navigation group is
         // rejected on content exactly as it is today.
         const datedCandidateCount = entries.length;
-        const segmentBudget = this.resolveMultiEventSegmentBudget(datedCandidateCount);
+        // Segmentation runs to the safety ceiling (deterministic work); the
+        // entry count still sizes the per-run AI MISS budget downstream.
+        this.recordMultiEventSegmentationStats(datedCandidateCount, 'structure group');
+        const segmentBudget = this.resolveMultiEventSegmentationCeiling();
         const addSegment = (segment) => {
             if (!segment || !Array.isArray(segment.lines)) return;
             const segmentText = segment.lines.join('\n');
@@ -2332,6 +2430,43 @@ class AiWebParser {
         const dated = Number(datedCandidateCount);
         if (!Number.isFinite(dated) || dated <= base) return base;
         return Math.min(Math.floor(ceiling), Math.floor(dated));
+    }
+
+    // How many segments a page may CREATE — deterministic work, so this is a
+    // pure safety ceiling against pathological inputs, far above the AI
+    // budget. resolveMultiEventSegmentBudget (clamp(dated, 16, 48)) now
+    // bounds AI cache-MISSES per run at extraction time instead of bounding
+    // segment creation: cost per run is unchanged, but cached segments ride
+    // for free, so a dense page converges to full coverage across runs.
+    resolveMultiEventSegmentationCeiling() {
+        const ceiling = Number(this.extractionLimits.multiEventMaxSegmentsSafetyCeiling);
+        const floor = Number(this.extractionLimits.multiEventMaxSegmentsDenseCeiling) || 0;
+        if (!Number.isFinite(ceiling) || ceiling < floor) return Math.max(Math.floor(floor), 512);
+        return Math.floor(ceiling);
+    }
+
+    // Every segmentation tier records what it measured; the extraction loop
+    // (and the OCR top-up) size the per-run miss budget from the LAST record,
+    // which is always the tier whose segments are actually in use.
+    recordMultiEventSegmentationStats(datedCandidateCount, source) {
+        const dated = Number(datedCandidateCount);
+        this.lastMultiEventSegmentationStats = {
+            datedCandidateCount: Number.isFinite(dated) && dated >= 0 ? Math.floor(dated) : 0,
+            source: String(source || '')
+        };
+    }
+
+    // The per-page, per-RUN budget of segments allowed to spend fresh AI
+    // calls — same clamp(dated, 16, 48) semantics the wave-6 segment budget
+    // had, so a cold-cache run costs exactly what it did before. Falls back
+    // to the segment count when no segmentation stats were recorded (direct
+    // test calls), which keeps the budget ≥ the wave-6 segment cap.
+    resolveMultiEventMissBudget(segments) {
+        const stats = this.lastMultiEventSegmentationStats;
+        const dated = stats && Number.isFinite(Number(stats.datedCandidateCount))
+            ? Number(stats.datedCandidateCount)
+            : (Array.isArray(segments) ? segments.length : 0);
+        return this.resolveMultiEventSegmentBudget(dated);
     }
 
     // Companion to the "Segment cap reached" line: states the budget the page
@@ -4421,6 +4556,28 @@ class AiWebParser {
         }
     }
 
+    // Existence-only probe for the OCR top-up's per-run miss budget: answers
+    // "would getOcrTextForImage be served from cache?" without reading the
+    // payload, touching lastUsedAt, or recording anything. False when the OCR
+    // cache is disabled or unavailable, so every target then counts against
+    // the budget (fail-closed on cost, same as the extraction miss budget).
+    async hasCachedOcrResult(imageUrl, ocrConfig = {}) {
+        if (!ocrConfig.cacheEnabled) return false;
+        const runtime = this.getOcrCacheRuntime();
+        if (!runtime) return false;
+        const { hostDir, fileName } = this.getOcrCachePathParts(imageUrl, ocrConfig);
+        try {
+            if (runtime.type === 'scriptable') {
+                const hostDirPath = runtime.fm.joinPath(runtime.baseDir, hostDir);
+                return runtime.fm.fileExists(runtime.fm.joinPath(hostDirPath, fileName));
+            }
+            await runtime.fs.promises.access(runtime.path.join(runtime.baseDir, hostDir, fileName));
+            return true;
+        } catch (_) {
+            return false;
+        }
+    }
+
     async readCachedOcrResult(imageUrl, ocrConfig = {}) {
         if (!ocrConfig.cacheEnabled) return null;
         const runtime = this.getOcrCacheRuntime();
@@ -4560,6 +4717,23 @@ class AiWebParser {
         };
     }
 
+    // Cache IDENTITY for an AI request's prompt — NOT the prompt itself,
+    // which is sent to the model byte-for-byte unchanged. Multi-event
+    // segment prompts open with a provenance line `SEGMENT_INDEX: i/N`
+    // (buildMultiEventSegmentHtmlData) whose numbers move whenever the page
+    // adds or removes a listing: one new card shifts `i` for every later
+    // segment and `N` for ALL of them, which used to orphan the entire
+    // page's cached extractions and reset convergence on every page change.
+    // The line states where the segment sat, never what it contains, so it
+    // is canonicalized out of the cache signature: an unchanged segment hits
+    // its cache entry no matter where the page moved it. First-match-only
+    // (the real line is the prompt's first context line); applied
+    // identically on write, read-hash and stored-prompt comparison, so the
+    // mapping stays deterministic even for pathological body text.
+    getAiResponseCacheSignatureText(prompt) {
+        return String(prompt).replace(/^SEGMENT_INDEX: \d+\/\d+$/m, 'SEGMENT_INDEX: <position-normalized>');
+    }
+
     getAiResponseCachePathParts(aiConfig, prompt, passLabel) {
         const config = aiConfig && typeof aiConfig === 'object' ? aiConfig : {};
         // Endpoint deliberately excluded from the signature (recorded in the
@@ -4578,7 +4752,7 @@ class AiWebParser {
         const requestSignature = JSON.stringify({
             provider: String(config.provider || ''),
             model: String(config.model || ''),
-            prompt: String(prompt),
+            prompt: this.getAiResponseCacheSignatureText(prompt),
             options
         });
         const signatureHash = this.hashCacheValue(requestSignature);
@@ -4591,6 +4765,25 @@ class AiWebParser {
     }
 
     async readCachedAiResponse(aiConfig, prompt, passLabel) {
+        if (!this.multiEventMissProbeActive) {
+            return this.readCachedAiResponseInternal(aiConfig, prompt, passLabel, true);
+        }
+        // MISS-budget probe: the page's budget of fresh AI calls is spent, so
+        // this read must either serve the response from cache (a real hit —
+        // counted and touched exactly as always) or abort the segment BEFORE
+        // any AI request is made. The miss is deliberately NOT recorded: the
+        // segment is skipped, not extracted, so the one real miss happens on
+        // the future run that extracts it — one miss total, never two.
+        const cachedText = await this.readCachedAiResponseInternal(aiConfig, prompt, passLabel, false);
+        if (typeof cachedText === 'string' && cachedText.length > 0) {
+            return cachedText;
+        }
+        const abort = new Error('multi-event miss budget spent — segment deferred to a future run');
+        abort.code = MULTI_EVENT_MISS_PROBE_ABORT;
+        throw abort;
+    }
+
+    async readCachedAiResponseInternal(aiConfig, prompt, passLabel, countMiss) {
         if (!aiConfig || aiConfig.cacheEnabled === false) return null;
         const runtime = this.getAiResponseCacheRuntime();
         if (!runtime) return null;
@@ -4603,7 +4796,7 @@ class AiWebParser {
                 const passDirPath = runtime.fm.joinPath(runtime.baseDir, dirSegments[0]);
                 cachePath = runtime.fm.joinPath(passDirPath, fileName);
                 if (!runtime.fm.fileExists(cachePath)) {
-                    this.aiResponseCacheStats.misses += 1;
+                    if (countMiss) this.aiResponseCacheStats.misses += 1;
                     return null;
                 }
                 try {
@@ -4619,10 +4812,14 @@ class AiWebParser {
                 ? cached.response.text
                 : '';
             // The filename is only a 32-bit hash — verify the stored prompt so a
-            // hash collision can never serve another request's response.
-            const promptMatches = cached && cached.request && cached.request.prompt === String(prompt);
+            // hash collision can never serve another request's response. The
+            // comparison canonicalizes the SEGMENT_INDEX provenance line the
+            // same way the hash does (see getAiResponseCacheSignatureText):
+            // a segment that merely moved on the page is the SAME request.
+            const promptMatches = cached && cached.request
+                && this.getAiResponseCacheSignatureText(cached.request.prompt) === this.getAiResponseCacheSignatureText(prompt);
             if (!responseText || !promptMatches) {
-                this.aiResponseCacheStats.misses += 1;
+                if (countMiss) this.aiResponseCacheStats.misses += 1;
                 return null;
             }
             await this.touchCacheEntryOnHit(runtime, cachePath, cached);
@@ -4633,7 +4830,7 @@ class AiWebParser {
             if (!missingFile) {
                 console.log(`🤖 AI Web: AI response cache read failed: ${error.message}`);
             }
-            this.aiResponseCacheStats.misses += 1;
+            if (countMiss) this.aiResponseCacheStats.misses += 1;
             return null;
         }
     }
@@ -6152,8 +6349,39 @@ class AiWebParser {
         }
         if (targets.length === 0) return ocrResults;
 
-        console.log(`🤖 AI Web: OCR top-up for ${targets.length} segment image(s) missed by the page-level cap`);
-        const rawResults = await this.mapWithConcurrencyLimit(targets, ocrConfig.maxConcurrentRequests || 1, url =>
+        // Segment-adjacent AI work is bounded the same way extraction is:
+        // OCR results are URL-keyed and persistently cached, so a target
+        // whose image is already in the OCR cache is processed for free,
+        // while FRESH downloads+vision calls are capped at the page's miss
+        // budget per run. Targets keep page order, so the OCR frontier always
+        // runs at-or-ahead of the extraction frontier (targets are a subset
+        // of segments in the same order) and every segment the extraction
+        // budget reaches has its OCR text ready — prompts stay stable across
+        // runs and cache hits stay hits.
+        const ocrMissBudget = this.resolveMultiEventMissBudget(segments);
+        let freshOcrAllowed = ocrMissBudget;
+        const allowedTargets = [];
+        let deferredTargets = 0;
+        for (const targetUrl of targets) {
+            if (await this.hasCachedOcrResult(targetUrl, ocrConfig)) {
+                allowedTargets.push(targetUrl);
+                continue;
+            }
+            if (freshOcrAllowed > 0) {
+                freshOcrAllowed -= 1;
+                allowedTargets.push(targetUrl);
+                continue;
+            }
+            deferredTargets += 1;
+        }
+        if (deferredTargets > 0) {
+            // No silent caps — mirror of the extraction frontier log.
+            console.log(`🤖 AI Web: OCR top-up miss budget ${ocrMissBudget} spent — ${deferredTargets} of ${targets.length} segment image(s) still uncached; deferred to future runs`);
+        }
+        if (allowedTargets.length === 0) return ocrResults;
+
+        console.log(`🤖 AI Web: OCR top-up for ${allowedTargets.length} segment image(s) missed by the page-level cap`);
+        const rawResults = await this.mapWithConcurrencyLimit(allowedTargets, ocrConfig.maxConcurrentRequests || 1, url =>
             this.getOcrTextForImage(url, ocrConfig, 'ocr-segment', httpAdapter).catch(() => null)
         );
         for (const rawResult of rawResults) {

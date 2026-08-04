@@ -10835,8 +10835,10 @@ test('a date-dense listing page earns segments beyond the flat 16, a sparse one 
   const lastTitle = denseSegments[denseSegments.length - 1].lines.join('\n');
   assert.ok(lastTitle.includes('Bear Night Number 30'), 'the tail of the listing must survive');
 
-  // Past the ceiling the budget stops, and it says so with the real item count
-  // so the cost of full coverage is visible instead of invisible.
+  // Segmentation is deterministic string work, so the old 48 AI-budget
+  // ceiling no longer bounds segment CREATION — the miss budget bounds AI
+  // spend at extraction time instead. A page past 48 items segments in full,
+  // silently (nothing was dropped, so nothing may claim it was).
   const huge = createParser();
   const ceiling = huge.extractionLimits.multiEventMaxSegmentsDenseCeiling;
   let hugeSegments = [];
@@ -10844,21 +10846,56 @@ test('a date-dense listing page earns segments beyond the flat 16, a sparse one 
     hugeSegments = huge.buildMultiEventSegments(
       buildRepeatedCardHtml(ceiling + 20, 'Cub Night', 'November'), 'https://venue.example/events');
   });
-  assert.equal(hugeSegments.length, ceiling, 'the ceiling must still be a hard bound');
-  const budgetLine = logs.find(line => line.includes('Segment budget'));
-  assert.ok(budgetLine, `expected a segment-budget log, got ${JSON.stringify(logs)}`);
-  assert.ok(budgetLine.startsWith('🤖 AI Web:'), 'budget log must use the 🤖 AI Web: prefix');
-  assert.ok(budgetLine.includes(`Segment budget ${ceiling}`), `budget log must name the budget: ${budgetLine}`);
-  assert.ok(budgetLine.includes(`${ceiling + 20} dated candidate item(s)`),
-    `budget log must name how many items the page really offered: ${budgetLine}`);
-  assert.ok(logs.some(line => line.includes('Segment cap reached')),
-    'the pre-existing cap line must still fire when content is genuinely lost');
+  assert.equal(hugeSegments.length, ceiling + 20,
+    'every dated listing must become a segment — the AI budget no longer truncates segmentation');
+  assert.ok(hugeSegments[hugeSegments.length - 1].lines.join('\n').includes(`Cub Night Number ${ceiling + 20}`),
+    'the tail listing past the old ceiling must survive segmentation');
+  assert.equal(logs.filter(line => line.includes('Segment cap reached')).length, 0,
+    `nothing was dropped, so nothing may claim it was: ${JSON.stringify(logs)}`);
+  // The dated-candidate measurement still feeds the extraction miss budget.
+  assert.equal(huge.lastMultiEventSegmentationStats.datedCandidateCount, ceiling + 20);
+  assert.equal(huge.resolveMultiEventMissBudget(hugeSegments), ceiling,
+    'the per-run MISS budget keeps the wave-6 clamp semantics');
 
   // Sparse pages keep the baseline budget and are unaffected.
   const sparse = createParser();
   assert.equal(
     sparse.buildMultiEventSegments(buildRepeatedCardHtml(5, 'Otter Night', 'December'),
       'https://venue.example/events').length, 5);
+});
+
+test('the segmentation SAFETY ceiling still exists and still announces itself', () => {
+  // 512 is a pathological-input guard, not an AI budget: pure-JS segment
+  // work and per-segment logging must stay bounded even on a scraped index
+  // with thousands of repeated cards. When it fires, the pre-existing cap
+  // logs fire with it — no silent caps.
+  const parser = createParser();
+  const safetyCeiling = parser.extractionLimits.multiEventMaxSegmentsSafetyCeiling;
+  assert.equal(parser.resolveMultiEventSegmentationCeiling(), safetyCeiling);
+  assert.ok(safetyCeiling >= 512, 'the safety ceiling must cover sickening.events (485 segments)');
+  assert.ok(safetyCeiling > parser.extractionLimits.multiEventMaxSegmentsDenseCeiling,
+    'the safety ceiling must sit far above the AI miss budget');
+
+  // Junk config falls back to a sane bound instead of 0 (which would
+  // silently produce zero segments on every multi-event page).
+  parser.extractionLimits.multiEventMaxSegmentsSafetyCeiling = NaN;
+  assert.ok(parser.resolveMultiEventSegmentationCeiling() >= 512);
+
+  const huge = createParser();
+  // Cheap repeated-card page just past the safety ceiling. Uses the text
+  // splitter path via compact dated lines to keep generation fast.
+  let segments = [];
+  const logs = captureLogs(() => {
+    segments = huge.buildMultiEventSegments(
+      buildRepeatedCardHtml(huge.extractionLimits.multiEventMaxSegmentsSafetyCeiling + 5, 'Grizzly Night', 'March'),
+      'https://venue.example/events');
+  });
+  assert.equal(segments.length, huge.extractionLimits.multiEventMaxSegmentsSafetyCeiling,
+    'the safety ceiling must be a hard bound on segment creation');
+  assert.ok(logs.some(line => line.includes('Segment cap reached')),
+    `the cap line must fire when segments are genuinely not created: ${JSON.stringify(logs)}`);
+  assert.ok(logs.some(line => line.includes('Segment budget')),
+    `the budget line must state the size of what was lost: ${JSON.stringify(logs)}`);
 });
 
 test('the segment cap only reports truncation when content is actually left over', () => {
@@ -11062,4 +11099,288 @@ test('lumberyard: a site-chrome title is not an event, and every real scraped ti
   assert.equal(parser.hasScheduleOrPriceSignal({ title: 'Members Night', description: 'doors 10pm' }), true);
   assert.equal(parser.hasScheduleOrPriceSignal({ title: 'Cart', cover: '$10' }), true);
   assert.equal(parser.hasScheduleOrPriceSignal({ title: 'Cart', startTime: '22:00' }), true);
+});
+
+// ---------------------------------------------------------------------------
+// Per-run AI cache-MISS budget (multi-event pages).
+//
+// The wave-6 segment budget (clamp(dated, 16, 48)) capped which segments were
+// CREATED, so a capped page re-extracted the same prefix every run and never
+// reached its tail. Segmentation is deterministic string work, so pages now
+// segment in full (safety ceiling 512) and the same clamp bounds AI cache
+// MISSES per run at extraction time instead: cached segments ride free, fresh
+// AI work is budgeted, and coverage converges across runs. These tests drive
+// the REAL persistent-cache read/write path (temp cache dir + real
+// SharedCore.callAiGenerate + fake HTTP adapter), not a stubbed callAiGenerate.
+// ---------------------------------------------------------------------------
+
+const fsForMissBudget = require('fs');
+const osForMissBudget = require('os');
+const pathForMissBudget = require('path');
+
+function makeMissBudgetCacheDir() {
+  return fsForMissBudget.mkdtempSync(pathForMissBudget.join(osForMissBudget.tmpdir(), 'ai-miss-budget-'));
+}
+
+// Real caching pipeline: the parser's persistent AI response cache is wired
+// into SharedCore exactly as the orchestrator wires it
+// (bear-event-scraper-unified.js: sharedCore.aiResponseCache =
+// aiParser.getAiResponseCache()), and the HTTP adapter answers extraction
+// prompts by echoing title/date verbatim out of the prompt content so the
+// evidence gates pass. missBase/missCeiling pin the budget for the test.
+function createMissBudgetHarness(cacheDir, options = {}) {
+  const parser = new AiWebParser({ normalizeUrl, aiResponseCacheDir: cacheDir });
+  parser.core = new SharedCore({}, { eventSchema: EventSchema });
+  parser.core.aiResponseCache = parser.getAiResponseCache();
+  if (Number.isFinite(options.missBase)) parser.extractionLimits.multiEventMaxSegments = options.missBase;
+  if (Number.isFinite(options.missCeiling)) parser.extractionLimits.multiEventMaxSegmentsDenseCeiling = options.missCeiling;
+  const aiRequests = [];
+  const httpAdapter = {
+    postJson: async (endpoint, payload) => {
+      const prompt = String((payload && payload.prompt) || '');
+      aiRequests.push(prompt);
+      let content;
+      if (prompt.startsWith('Analyze this raw event data.')) {
+        content = 'CORRECTIONS:\n- Cleaned Times: none stated\n- Core Event Date: as printed\n- Parent Festival Dates: None';
+      } else {
+        const titleMatch = prompt.match(/([A-Z][A-Za-z]+ Night Number \d+)/);
+        const dateMatch = prompt.match(/Saturday, (January|February|March|April|May|June|July|August|September|October|November|December) (\d{1,2}), (\d{4})/);
+        const monthNumbers = {
+          January: '01', February: '02', March: '03', April: '04', May: '05', June: '06',
+          July: '07', August: '08', September: '09', October: '10', November: '11', December: '12'
+        };
+        const isoDate = dateMatch
+          ? `${dateMatch[3]}-${monthNumbers[dateMatch[1]]}-${String(dateMatch[2]).padStart(2, '0')}`
+          : '2099-01-01';
+        content = JSON.stringify({
+          title: { value: titleMatch ? titleMatch[1] : 'Unknown Party', evidence: titleMatch ? titleMatch[1] : '', confidence: 95 },
+          startDate: { value: isoDate, evidence: dateMatch ? dateMatch[0] : '', confidence: 95 }
+        });
+      }
+      return { ok: true, status: 200, text: JSON.stringify({ response: content }) };
+    }
+  };
+  const parserConfig = { ai: { enabled: true, provider: 'ollama' } };
+  return { parser, aiRequests, httpAdapter, parserConfig };
+}
+
+test('miss budget: misses are budgeted, hits are free, and capped pages converge across runs', async () => {
+  const cacheDir = makeMissBudgetCacheDir();
+  const url = 'https://venue.example/events';
+  const html = buildRepeatedCardHtml(4, 'Bear Night', 'October');
+  try {
+    // ── Run 1 (cold cache, miss budget 2) ─────────────────────────────
+    const run1 = createMissBudgetHarness(cacheDir, { missBase: 2, missCeiling: 2 });
+    let events1 = [];
+    const logs1 = await captureLogsAsync(async () => {
+      events1 = await run1.parser.extractEventsFromMultiEventPage(
+        { html, url }, run1.parserConfig, null, null, [], run1.httpAdapter);
+    });
+    assert.equal(events1.length, 2, 'run 1 extracts exactly the budgeted segments');
+    assert.ok(events1.some(e => e.title === 'Bear Night Number 1'));
+    assert.ok(events1.some(e => e.title === 'Bear Night Number 2'));
+    const run1Requests = run1.aiRequests.length;
+    assert.ok(run1Requests > 0, 'run 1 must make real AI requests');
+    // The two skipped segments were PROBED, not missed: the probe aborts
+    // before any HTTP request and records nothing, so a probe that misses
+    // and is extracted next run is ONE miss, not two.
+    assert.equal(run1.parser.aiResponseCacheStats.misses,
+      run1.parser.aiResponseCacheStats.writes,
+      'every recorded miss corresponds to a real AI call that was then cached — probes recorded none');
+    const frontier1 = logs1.find(line => line.includes('Miss budget'));
+    assert.ok(frontier1, `run 1 must log the frontier: ${JSON.stringify(logs1.slice(-5))}`);
+    assert.ok(frontier1.startsWith('🤖 AI Web: Miss budget 2 spent — 2 of 4 segments still uncached'),
+      `frontier log must count what is left: ${frontier1}`);
+    assert.ok(frontier1.includes('~1 more run to full coverage at this budget'),
+      `frontier log must estimate convergence: ${frontier1}`);
+
+    // ── Run 2 (same cache): the budget lands on genuinely new content ──
+    const run2 = createMissBudgetHarness(cacheDir, { missBase: 2, missCeiling: 2 });
+    let events2 = [];
+    const logs2 = await captureLogsAsync(async () => {
+      events2 = await run2.parser.extractEventsFromMultiEventPage(
+        { html, url }, run2.parserConfig, null, null, [], run2.httpAdapter);
+    });
+    assert.equal(events2.length, 4, 'run 2 completes the page: 2 cached + 2 fresh');
+    assert.ok(events2.some(e => e.title === 'Bear Night Number 3'));
+    assert.ok(events2.some(e => e.title === 'Bear Night Number 4'));
+    assert.ok(run2.parser.aiResponseCacheStats.hits > 0, 'run 2 must serve the first segments from cache');
+    assert.equal(logs2.filter(line => line.includes('Miss budget')).length, 0,
+      'run 2 finishes the page — no frontier left to log');
+
+    // ── Run 3: fully converged, zero AI requests ───────────────────────
+    const run3 = createMissBudgetHarness(cacheDir, { missBase: 2, missCeiling: 2 });
+    const events3 = await run3.parser.extractEventsFromMultiEventPage(
+      { html, url }, run3.parserConfig, null, null, [], run3.httpAdapter);
+    assert.equal(events3.length, 4, 'run 3 still yields the full page');
+    assert.equal(run3.aiRequests.length, 0, 'a converged page costs zero AI calls');
+    assert.equal(run3.parser.aiResponseCacheStats.misses, 0, 'a converged page records zero misses');
+  } finally {
+    fsForMissBudget.rmSync(cacheDir, { recursive: true, force: true });
+  }
+});
+
+test('miss budget: an interleaved fresh segment is extracted without consuming budget on the cached ones', async () => {
+  const cacheDir = makeMissBudgetCacheDir();
+  const url = 'https://venue.example/events';
+  try {
+    // Seed: three cards, default budget — all three cached.
+    const seed = createMissBudgetHarness(cacheDir);
+    const seedEvents = await seed.parser.extractEventsFromMultiEventPage(
+      { html: buildRepeatedCardHtml(3, 'Bear Night', 'October'), url },
+      seed.parserConfig, null, null, [], seed.httpAdapter);
+    assert.equal(seedEvents.length, 3, 'seed run caches all three listings');
+
+    // The page changes: a NEW listing appears between cards 2 and 3, the way
+    // real pages insert events in date order. Every later segment's index
+    // and every segment's total shift — cache identity must not care.
+    const cards = buildRepeatedCardHtml(3, 'Bear Night', 'October');
+    const freshCard = '<div class="event-card"><h3>Fresh Night Number 99</h3>' +
+      '<p>Saturday, October 9, 2027</p>' +
+      '<p>A big night with music and dancing at the main bar downtown.</p></div>';
+    const interleaved = cards.replace('<div class="event-card"><h3>Bear Night Number 3</h3>', `${freshCard}<div class="event-card"><h3>Bear Night Number 3</h3>`);
+    assert.ok(interleaved.includes('Fresh Night Number 99'), 'fixture: the fresh card must be inserted');
+
+    // Miss budget 1: if any cached segment consumed budget, the fresh
+    // segment (position 3 of 4) or the shifted last segment could never be
+    // extracted this run.
+    const run = createMissBudgetHarness(cacheDir, { missBase: 1, missCeiling: 1 });
+    let events = [];
+    const logs = await captureLogsAsync(async () => {
+      events = await run.parser.extractEventsFromMultiEventPage(
+        { html: interleaved, url }, run.parserConfig, null, null, [], run.httpAdapter);
+    });
+    assert.equal(events.length, 4, 'all four listings extract: three cached hits plus one budgeted miss');
+    assert.ok(events.some(e => e.title === 'Fresh Night Number 99'), 'the fresh listing is extracted this run');
+    assert.ok(events.some(e => e.title === 'Bear Night Number 3'),
+      'the shifted last listing still hits its cache entry (position must not be identity)');
+    // Only the fresh segment paid: every AI request this run belongs to it.
+    assert.ok(run.aiRequests.length > 0, 'the fresh segment must reach the AI');
+    for (const prompt of run.aiRequests) {
+      assert.ok(prompt.includes('Fresh Night Number 99'),
+        `every AI request this run must be for the fresh segment, got: ${prompt.slice(0, 200)}`);
+    }
+    assert.equal(logs.filter(line => line.includes('Miss budget')).length, 0,
+      'nothing was skipped, so no frontier log');
+  } finally {
+    fsForMissBudget.rmSync(cacheDir, { recursive: true, force: true });
+  }
+});
+
+test('miss budget: a sparse page under the budget behaves like wave 6 — no probes, no new logs', async () => {
+  const cacheDir = makeMissBudgetCacheDir();
+  try {
+    const run = createMissBudgetHarness(cacheDir); // default budget: 16 baseline
+    let events = [];
+    const logs = await captureLogsAsync(async () => {
+      events = await run.parser.extractEventsFromMultiEventPage(
+        { html: buildRepeatedCardHtml(3, 'Otter Night', 'December'), url: 'https://venue.example/events' },
+        run.parserConfig, null, null, [], run.httpAdapter);
+    });
+    assert.equal(events.length, 3, 'every segment on a sparse page extracts, cold cache');
+    assert.ok(run.aiRequests.length > 0);
+    // The miss-budget machinery must be invisible here: no frontier log, no
+    // OCR-deferral log, and probe mode never engaged.
+    assert.equal(logs.filter(line => line.includes('Miss budget')).length, 0);
+    assert.equal(logs.filter(line => line.includes('OCR top-up miss budget')).length, 0);
+    assert.equal(run.parser.multiEventMissProbeActive, false);
+    // The segmentation stats that size the budget were recorded (red on the
+    // wave-6 base, where segmentation itself consumed the budget instead).
+    assert.ok(run.parser.lastMultiEventSegmentationStats, 'segmentation must record its measurement');
+    assert.equal(run.parser.resolveMultiEventMissBudget([]), run.parser.extractionLimits.multiEventMaxSegments);
+  } finally {
+    fsForMissBudget.rmSync(cacheDir, { recursive: true, force: true });
+  }
+});
+
+test('miss budget: with the response cache disabled every segment counts, degrading to wave-6 behavior', async () => {
+  const cacheDir = makeMissBudgetCacheDir();
+  const url = 'https://venue.example/events';
+  try {
+    const run = createMissBudgetHarness(cacheDir, { missBase: 2, missCeiling: 2 });
+    run.parserConfig.ai.cache = false; // resolveAiConfig → cacheEnabled: false
+    let events = [];
+    const logs = await captureLogsAsync(async () => {
+      events = await run.parser.extractEventsFromMultiEventPage(
+        { html: buildRepeatedCardHtml(4, 'Bear Night', 'October'), url },
+        run.parserConfig, null, null, [], run.httpAdapter);
+    });
+    // No cache means no convergence — but also no cost explosion: at most
+    // `missBudget` segments do AI work per run, exactly like wave 6.
+    assert.equal(events.length, 2, 'only the budgeted segments run when nothing can be cached');
+    assert.ok(logs.some(line => line.includes('Miss budget 2 spent — 2 of 4 segments still uncached')),
+      `the frontier is still reported: ${JSON.stringify(logs.slice(-5))}`);
+  } finally {
+    fsForMissBudget.rmSync(cacheDir, { recursive: true, force: true });
+  }
+});
+
+test('segment cache identity survives page repositioning (SEGMENT_INDEX is provenance, not content)', () => {
+  const parser = createParser();
+  const aiConfig = { provider: 'ollama', model: 'test-model' };
+  const promptAt3of10 = 'SEGMENT_INDEX: 3/10\nSEGMENT_LINK_URL: https://x.example/e/1\nBear Night\nSaturday, October 3, 2026';
+  const promptAt7of12 = 'SEGMENT_INDEX: 7/12\nSEGMENT_LINK_URL: https://x.example/e/1\nBear Night\nSaturday, October 3, 2026';
+  const differentContent = 'SEGMENT_INDEX: 3/10\nSEGMENT_LINK_URL: https://x.example/e/2\nCub Night\nSaturday, October 4, 2026';
+
+  const a = parser.getAiResponseCachePathParts(aiConfig, promptAt3of10, 'extraction');
+  const b = parser.getAiResponseCachePathParts(aiConfig, promptAt7of12, 'extraction');
+  const c = parser.getAiResponseCachePathParts(aiConfig, differentContent, 'extraction');
+  assert.equal(a.fileName, b.fileName,
+    'the same segment at a different page position must map to the same cache entry');
+  assert.notEqual(a.fileName, c.fileName, 'different CONTENT must still map to different entries');
+
+  // Prompts without a SEGMENT_INDEX line (single pages, classification,
+  // arbitration) hash byte-for-byte as before — no cache invalidation there.
+  const plain = 'Extract the event fields from this page.\nBear Night\nSaturday, October 3, 2026';
+  assert.equal(parser.getAiResponseCacheSignatureText(plain), plain);
+});
+
+test('OCR top-up bounds FRESH vision calls by the miss budget; cached images ride free', async () => {
+  const parser = createParser();
+  parser.extractionLimits.multiEventMaxSegments = 2;
+  parser.extractionLimits.multiEventMaxSegmentsDenseCeiling = 2;
+  const sourceUrl = 'https://venue.example/events';
+  const segments = [1, 2, 3, 4, 5].map(i => ({
+    lines: [`Bear Night Number ${i}`, `Saturday, October ${i}, 2026`],
+    html: `<div><img src="https://venue.example/flyers/party-${i}.jpg" /><h3>Bear Night Number ${i}</h3></div>`
+  }));
+  // Segments 2 and 4 already have their flyers in the persistent OCR cache.
+  const cachedImages = new Set([
+    'https://venue.example/flyers/party-2.jpg',
+    'https://venue.example/flyers/party-4.jpg'
+  ]);
+  parser.hasCachedOcrResult = async (imageUrl) => cachedImages.has(imageUrl);
+  const ocrCalls = [];
+  parser.getOcrTextForImage = async (imageUrl) => {
+    ocrCalls.push(imageUrl);
+    return { url: imageUrl, text: `OCR text for ${imageUrl}`, imageClassification: 'event-flyer' };
+  };
+
+  let ocrResults = [];
+  const logs = await captureLogsAsync(async () => {
+    ocrResults = await parser.ensureSegmentOcrCoverage(segments, [], { ai: { ocr: {} } }, sourceUrl, null);
+  });
+  // Budget 2 of fresh OCR: flyers 1 and 3 spend it, cached 2 and 4 are free,
+  // flyer 5 is deferred to a future run.
+  assert.deepEqual(ocrCalls, [
+    'https://venue.example/flyers/party-1.jpg',
+    'https://venue.example/flyers/party-2.jpg',
+    'https://venue.example/flyers/party-3.jpg',
+    'https://venue.example/flyers/party-4.jpg'
+  ], 'page order is preserved; the OCR frontier never falls behind the extraction frontier');
+  assert.equal(ocrResults.length, 4);
+  const deferLine = logs.find(line => line.includes('OCR top-up miss budget'));
+  assert.ok(deferLine, `the deferral must be logged, no silent caps: ${JSON.stringify(logs)}`);
+  assert.ok(deferLine.includes('OCR top-up miss budget 2 spent — 1 of 5 segment image(s) still uncached'),
+    `the deferral log must count what is left: ${deferLine}`);
+
+  // A page whose targets fit the budget defers nothing and logs nothing new.
+  const sparseCalls = [];
+  parser.getOcrTextForImage = async (imageUrl) => { sparseCalls.push(imageUrl); return { url: imageUrl, text: 'x' }; };
+  const sparseLogs = await captureLogsAsync(async () => {
+    await parser.ensureSegmentOcrCoverage(segments.slice(0, 2), [], { ai: { ocr: {} } }, sourceUrl, null);
+  });
+  assert.equal(sparseCalls.length, 2, 'both targets processed');
+  assert.equal(sparseLogs.filter(line => line.includes('OCR top-up miss budget')).length, 0,
+    'a budget that does not bind stays silent');
 });
