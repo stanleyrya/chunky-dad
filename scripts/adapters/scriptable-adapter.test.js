@@ -72,41 +72,65 @@ function buildAdapter() {
   return new ScriptableAdapter({ cities: {} });
 }
 
-test('buildRunInsightSectionsHtml renders both collapsed sections from a run log', () => {
+// A saved-run render (the heavy path: it is the only one that builds the Run
+// Logs section) with the log lookup stubbed to a fixture.
+async function renderSavedRunPage(adapter, logInfo) {
+  adapter.loadRunLogsForDisplay = async () => logInfo;
+  return adapter.generateRichHTML({
+    ...buildResultsStub(),
+    _isDisplayingSavedRun: true,
+    savedRunId: '20260804-125703',
+    totalEvents: 2,
+    bearEvents: 2,
+    calendarEvents: 0,
+    errors: [],
+    parserResults: []
+  });
+}
+
+function savedRunLogInfo() {
+  const lines = LOG_FIXTURE.split('\n');
+  return {
+    runId: '20260804-125703',
+    exists: true,
+    text: LOG_FIXTURE,
+    fullText: LOG_FIXTURE,
+    totalLines: lines.length,
+    shownLines: lines.length,
+    truncated: false
+  };
+}
+
+test('the results page no longer renders the What Happened / What We Did sections', async () => {
   const adapter = buildAdapter();
+  const html = await renderSavedRunPage(adapter, savedRunLogInfo());
+
+  assert.ok(!html.includes('What Happened'), 'the crawl-tree section is gone');
+  assert.ok(!html.includes('What We Did'), 'the decisions section is gone');
+  assert.ok(!html.includes('insight-section'), 'no leftover section markup');
+
+  // The same parsed insights still feed the one-line header health badge —
+  // only the two unused sections were cut, not the parsing behind them.
   const insights = adapter.buildRunInsightsFromLogText(LOG_FIXTURE);
   assert.equal(insights.available, true);
-
-  const html = adapter.buildRunInsightSectionsHtml(insights, buildResultsStub());
-
-  // Both sections exist, with <details> collapsed by default
-  assert.ok(html.includes('What Happened'));
-  assert.ok(html.includes('What We Did'));
-  assert.equal((html.match(/<details class="log-details">/g) || []).length, 2);
-  assert.ok(!html.includes('<details open'));
-
-  // Crawl tree content: source, root and followed pages
-  assert.ok(html.includes('Bearracuda (bearracuda parser)'));
-  assert.ok(html.includes('https://bearracuda.com/ [eventlist]'));
-  assert.ok(html.includes('├─ https://bearracuda.com/events/atlanta'));
-
-  // Decisions: structured event actions + log-derived merge reason
-  assert.ok(html.includes('NEW → CREATE: &quot;Bear &lt;b&gt;Night&lt;/b&gt;&quot;'));
-  assert.ok(html.includes('MERGE → UPDATE: &quot;BEARRACUDA: Atlanta&quot; — matched existing calendar event'));
-  assert.ok(html.includes('fresher source'));
-  assert.ok(html.includes('Dropped 1 field(s)'));
+  assert.ok(html.includes('header-health-badge'), 'the run-health badge survives');
 });
 
-test('run-insight HTML escapes markup and never embeds AI payload bodies', () => {
+test('the saved-run page never embeds AI payload bodies or the raw log text', async () => {
   const adapter = buildAdapter();
-  const insights = adapter.buildRunInsightsFromLogText(LOG_FIXTURE);
-  const html = adapter.buildRunInsightSectionsHtml(insights, buildResultsStub());
+  const html = await renderSavedRunPage(adapter, savedRunLogInfo());
 
-  assert.ok(!html.includes('SECRET PAYLOAD BODY'));
-  assert.ok(!html.includes('<b>Night</b>'));
+  // The prompt bodies exist for this run — the picker button proves it — but
+  // neither the raw nor the URI-encoded form is anywhere in the page.
+  assert.ok(html.includes('🤖 AI Prompts'), 'the prompt picker is still offered');
+  assert.ok(!html.includes('SECRET PAYLOAD BODY'), 'no raw prompt body');
+  assert.ok(!html.includes(encodeURIComponent('SECRET PAYLOAD BODY')), 'no encoded prompt body');
+  assert.ok(!html.includes('data-ai-prompts'), 'the prompt payload attribute is gone');
+  assert.ok(!html.includes('<pre class="log-output">'), 'the raw log <pre> is gone');
+  assert.ok(!html.includes('Classified https://bearracuda.com/'), 'no log lines embedded');
 });
 
-test('saved run without a log file renders sections with a graceful note', () => {
+test('saved run without a log file still renders the Run Logs section with a graceful note', async () => {
   const adapter = buildAdapter();
   const insights = adapter.loadRunInsightsForDisplay(
     { _isDisplayingSavedRun: true },
@@ -116,12 +140,14 @@ test('saved run without a log file renders sections with a graceful note', () =>
   assert.equal(insights.available, false);
   assert.ok(insights.reason.includes('Log not found for run 20260101-000000'));
 
-  const html = adapter.buildRunInsightSectionsHtml(insights, buildResultsStub());
-  assert.ok(html.includes('What Happened'));
-  assert.ok(html.includes('What We Did'));
-  assert.ok(html.includes('Log not found for run 20260101-000000'));
-  // Structured event actions still render from the saved-run JSON
-  assert.ok(html.includes('NEW → CREATE: &quot;Bear &lt;b&gt;Night&lt;/b&gt;&quot;'));
+  const html = await renderSavedRunPage(adapter, {
+    runId: '20260101-000000',
+    exists: false,
+    reason: 'missing-log-file'
+  });
+  assert.ok(html.includes('No log file found for run 20260101-000000'));
+  assert.ok(!html.includes('What Happened'));
+  assert.ok(!html.includes('What We Did'));
 });
 
 test('saved run with a log file feeds its full text through the summary', () => {
@@ -228,8 +254,9 @@ test('results-UI header contains the one-line run-health badge', async () => {
   assert.equal((html.match(/<div class="header-health-badge/g) || []).length, 1);
 });
 
-test('long crawl lists are capped in the rendered HTML', () => {
+test('long crawl lists are capped by the shared summariser the adapter feeds', () => {
   const adapter = buildAdapter();
+  const { RunLogSummary } = require('../run-log-summary.js');
   const manyPages = [
     '2026-07-12T05:00:00.000Z [INFO] SYSTEM: Big source → ai-web (1 URL): https://big.example/',
     '2026-07-12T05:00:01.000Z [INFO] SYSTEM: Parsed https://big.example/ → 0 events, 80 links',
@@ -239,10 +266,10 @@ test('long crawl lists are capped in the rendered HTML', () => {
     manyPages.push(`2026-07-12T05:00:03.000Z [INFO] SYSTEM: Parsed https://big.example/page-${i} → 1 event`);
   }
   const insights = adapter.buildRunInsightsFromLogText(manyPages.join('\n'));
-  const html = adapter.buildRunInsightSectionsHtml(insights, buildResultsStub());
+  const text = RunLogSummary.formatCrawlTreeText(insights.summary.crawl, { maxNodes: 50 });
 
-  assert.ok(html.includes('more page(s) not shown'));
-  assert.ok(!html.includes('page-79'));
+  assert.ok(text.includes('more page(s) not shown'));
+  assert.ok(!text.includes('page-79'));
 });
 
 // ---------------------------------------------------------------------------
@@ -4736,6 +4763,224 @@ test('the results page derives Copy JSON from the single card payload and still 
     'nothing reads the removed attribute any more');
   assert.ok(html.includes('function prettyPrintCardPayloads('),
     'the page re-indents the compact payload in the DOM');
+});
+
+// ---------------------------------------------------------------------------
+// Blank-results-screen fixes: first paint, liveness, log delivery, size guard.
+//
+// The BEEFMINCE run came up as a white sheet in the WebView. Size was ruled
+// out (the same UI had been tapped through at 1782 KB; the blank page was
+// 986 KB) and so was a JS/HTML error (the exact page parses clean under jsdom
+// and renders 16 cards in Chrome with zero page errors). What was left was
+// the render-blocking Google Fonts <link> — and the fact that the page could
+// not report anything back, so "blank" was unfalsifiable.
+// ---------------------------------------------------------------------------
+
+test('results page: nothing in it blocks first paint on a network request', async () => {
+  const adapter = buildAdapter();
+  const html = await adapter.generateRichHTML(buildSizedResults(3));
+
+  assert.ok(!/<link\b[^>]*rel=["']?stylesheet/i.test(html),
+    'no external stylesheet — WKWebView blocks first paint until it resolves');
+  assert.ok(!html.includes('fonts.googleapis.com'),
+    'the Google Fonts link is gone');
+  assert.ok(!html.includes('fonts.gstatic.com'), 'and so is its font host');
+  assert.ok(!/@import\b/.test(html), 'no CSS @import, which blocks the same way');
+  assert.ok(!/<script\b[^>]*\ssrc=/i.test(html),
+    'no external script — a parser-blocking remote fetch is the same failure');
+
+  // The replacement is a stack the device already has installed.
+  assert.ok(html.includes('--font-sans: -apple-system'),
+    'the system font stack is defined once as a custom property');
+  assert.ok(!html.includes('Poppins'), 'no reference to the downloaded face remains');
+});
+
+test('results page: a liveness beacon is emitted and parses as a real bridge action', async () => {
+  const adapter = buildAdapter();
+  const html = await adapter.generateRichHTML(buildSizedResults(2));
+
+  assert.ok(html.includes("'chunkyscrape://act?a=beacon&id='"),
+    'the page navigates the existing chunkyscrape:// bridge, not evaluateJavaScript');
+  assert.ok(html.includes("sendResultsBeacon('dom-ready'"),
+    'a beacon fires from DOMContentLoaded');
+  assert.ok(html.includes("sendResultsBeacon('painted'"),
+    'a second beacon fires after the first rendered frame');
+  assert.ok(html.includes("sendResultsBeacon('interacted'"),
+    'a gesture-backed beacon separates "suppressed" from "never rendered"');
+
+  // The URL the page builds is one the native handler actually understands.
+  const parsed = adapter.parseReviewActionUrl('chunkyscrape://act?a=beacon&id=painted&d=22524px');
+  assert.equal(parsed.a, 'beacon');
+  assert.equal(parsed.id, 'painted');
+  assert.equal(parsed.d, '22524px');
+});
+
+test('results page liveness: a painted beacon reads as rendered, and silence reads as blank', () => {
+  const adapter = buildAdapter();
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (...args) => { lines.push(args.join(' ')); };
+  try {
+    const seen = [];
+    adapter.recordResultsPageBeacon('dom-ready', '16 cards', seen);
+    adapter.recordResultsPageBeacon('painted', '22524px', seen);
+    adapter.reportResultsPageLiveness(seen);
+    adapter.reportResultsPageLiveness([]);
+    adapter.reportResultsPageLiveness(['dom-ready']);
+    adapter.reportResultsPageLiveness(['interacted']);
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.ok(lines.some(l => l.includes('beacon: dom-ready (16 cards)')));
+  assert.ok(lines.some(l => l.includes('Results page rendered on device')));
+  assert.ok(lines.some(l => l.includes('never reported liveness')),
+    'no beacons at all is logged as a blank sheet, not as a review');
+  assert.ok(lines.some(l => l.includes('never reported a painted frame')),
+    'parsed-but-not-painted is its own, distinguishable verdict');
+  assert.ok(lines.some(l => l.includes('navigation is being suppressed')),
+    'a touched-but-silent page is not reported as blank');
+});
+
+test('saved-run page: the raw log and the AI prompt bodies are no longer embedded', async () => {
+  const adapter = buildAdapter();
+  // A log the size of a real run's: 452 KB of it used to be pasted into the
+  // page inside a <pre>, and the prompt bodies another 225 KB in an attribute.
+  const bulk = new Array(6000).fill(
+    '2026-08-04T12:57:03.000Z [INFO] SYSTEM: Parsed https://beefmince.example/page → 1 event'
+  ).join('\n');
+  const logText = `${bulk}\n2026-08-04T12:57:04.000Z [DEBUG] 🤖 AI Web: Full prompt (extraction pass) (4000 chars)\n${'PROMPT-BODY '.repeat(4000)}`;
+  const html = await renderSavedRunPage(adapter, {
+    runId: '20260804-125703',
+    exists: true,
+    text: logText,
+    fullText: logText,
+    totalLines: logText.split('\n').length,
+    shownLines: logText.split('\n').length,
+    truncated: false
+  });
+
+  assert.ok(!html.includes('<pre class="log-output">'), 'no raw log <pre>');
+  assert.ok(!html.includes('data-ai-prompts'), 'no prompt payload attribute');
+  assert.ok(!html.includes('PROMPT-BODY'), 'no prompt body text anywhere');
+  assert.ok(!html.includes('https://beefmince.example/page'), 'no log lines anywhere');
+
+  // Generous lower bound rather than a byte count: the point is that a
+  // ~550 KB log contributes essentially nothing to the page.
+  assert.ok(html.length < logText.length / 2,
+    `the whole page must be far smaller than the log it used to embed (page ${Math.round(html.length / 1024)} KB, log ${Math.round(logText.length / 1024)} KB)`);
+
+  // The section itself is still there, still counting lines.
+  assert.ok(html.includes('Run Logs'), 'the section survives');
+  assert.ok(html.includes('📋 Copy'), 'and so does its copy control');
+});
+
+test('saved-run page: the log copy buttons still resolve to real content, natively', async () => {
+  const adapter = buildAdapter();
+  const html = await renderSavedRunPage(adapter, savedRunLogInfo());
+
+  // The buttons address the native bridge and are addressable back for feedback.
+  assert.ok(html.includes('data-log-copy-mode="full"'));
+  assert.ok(html.includes('data-log-copy-mode="compact"'));
+  assert.ok(html.includes('data-log-copy-mode="prompts"'));
+  assert.ok(html.includes("'chunkyscrape://act?a=copy-logs&id='"));
+  assert.ok(html.includes("'chunkyscrape://act?a=ai-prompts'"));
+  assert.ok(html.includes('function markLogsCopied('), 'native can flash the button back');
+
+  // ...and native is actually holding the content those buttons ask for.
+  assert.equal(adapter._runLogCopyText, LOG_FIXTURE);
+  assert.ok(adapter._runAiPrompts.length > 0, 'the prompt registry is populated');
+  assert.ok(adapter._runAiPrompts.some(p => p.prompt.includes('SECRET PAYLOAD BODY')),
+    'and it holds the real prompt body the page no longer carries');
+
+  // Compact mode is the same filter the page used to apply.
+  const compact = adapter.compactifyRunLogText(LOG_FIXTURE);
+  assert.ok(!compact.includes('Full prompt (extraction pass)'), 'prompt dumps dropped');
+  assert.ok(compact.includes('Event filtering complete'), 'everything else kept');
+
+  // A live run must not inherit the previous render's log.
+  await adapter.generateRichHTML(buildSizedResults(2));
+  assert.equal(adapter._runLogCopyText, '');
+  assert.deepEqual(adapter._runAiPrompts, []);
+});
+
+test('saved-run page: 📋 Copy puts the registered log on the clipboard', async () => {
+  const adapter = buildAdapter();
+  await renderSavedRunPage(adapter, savedRunLogInfo());
+
+  const copied = [];
+  const originalPasteboard = global.Pasteboard;
+  global.Pasteboard = { copy: (text) => copied.push(text) };
+  const evaluated = [];
+  const webViewStub = { evaluateJavaScript: async (js) => { evaluated.push(js); } };
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (...args) => { lines.push(args.join(' ')); };
+  try {
+    await adapter.copyRunLogAndReport('full', webViewStub);
+    await adapter.copyRunLogAndReport('compact', webViewStub);
+  } finally {
+    console.log = originalLog;
+    global.Pasteboard = originalPasteboard;
+  }
+
+  assert.equal(copied.length, 2);
+  assert.equal(copied[0], LOG_FIXTURE, 'full copy is the whole registered log');
+  assert.ok(!copied[1].includes('Full prompt (extraction pass)'), 'compact copy is filtered');
+  assert.ok(evaluated.includes('markLogsCopied("full")'));
+  assert.ok(lines.some(l => l.includes('Copied full run log to clipboard')));
+});
+
+test('size guard counts UTF-8 bytes, not UTF-16 code units', () => {
+  assert.equal(ScriptableAdapter.utf8ByteLength('abc'), 3);
+  assert.equal(ScriptableAdapter.utf8ByteLength('é'), 2, 'two-byte character');
+  assert.equal(ScriptableAdapter.utf8ByteLength('→'), 3, 'three-byte character');
+  assert.equal(ScriptableAdapter.utf8ByteLength('🐻'), 4, 'surrogate pair is one 4-byte code point');
+  assert.equal('🐻'.length, 2, '...which String.length reports as two');
+
+  // A page whose UTF-16 length is comfortably UNDER the threshold but whose
+  // real UTF-8 size is over it. The old guard measured html.length and would
+  // have stayed silent on exactly this page.
+  const units = Math.floor(ScriptableAdapter.RESULTS_HTML_WARN_BYTES * 0.7);
+  const page = '→'.repeat(units);
+  assert.ok(page.length < ScriptableAdapter.RESULTS_HTML_WARN_BYTES,
+    'UTF-16 length is under the threshold');
+  assert.ok(ScriptableAdapter.utf8ByteLength(page) > ScriptableAdapter.RESULTS_HTML_WARN_BYTES,
+    'UTF-8 size is over it');
+
+  const adapter = buildAdapter();
+  const warned = [];
+  const originalLog = console.log;
+  console.log = (...args) => { warned.push(args.join(' ')); };
+  try {
+    adapter.logResultsHtmlSizeGuard(page, 40);
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(warned.length, 1, 'the guard fires on real byte size');
+  assert.ok(warned[0].includes('40 event(s)'));
+});
+
+test('an over-budget page says so ON the page, not only in a log the owner cannot see', () => {
+  const adapter = buildAdapter();
+  const small = '<html><body><div class="section">ok</div></body></html>';
+  const originalLog = console.log;
+  console.log = () => {};
+  let quiet;
+  let loud;
+  try {
+    quiet = adapter.applyResultsHtmlSizeGuard(small, 3);
+    const oversized = `<html><body>${'x'.repeat(ScriptableAdapter.RESULTS_HTML_WARN_BYTES + 1)}</body></html>`;
+    loud = adapter.applyResultsHtmlSizeGuard(oversized, 80);
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.equal(quiet, small, 'a normal page is returned untouched');
+  assert.ok(loud.includes('results-size-warning'), 'an over-budget page carries a banner');
+  assert.ok(loud.indexOf('results-size-warning') < loud.indexOf('xxxx'),
+    'the banner is the first thing in the body, so it renders first');
+  assert.ok(loud.includes('80 event(s)'), 'the banner names the run it is describing');
 });
 
 // ---------------------------------------------------------------------------

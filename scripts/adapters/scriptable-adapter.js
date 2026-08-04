@@ -5332,6 +5332,11 @@ class ScriptableAdapter {
       console.log(
         `📱 Scriptable: Results HTML size: ${Math.round(html.length / 1024)} KB`,
       );
+      // The line above counts UTF-16 code units; WebKit holds UTF-8 bytes,
+      // and the difference on a page this size is tens of KB.
+      console.log(
+        `📱 Scriptable: Results HTML size (UTF-8 bytes): ${Math.round(ScriptableAdapter.utf8ByteLength(html) / 1024)} KB`,
+      );
       console.log("📱 Scriptable: Presenting results UI...");
 
       // Present using an instance WebView so page buttons can signal native
@@ -5351,6 +5356,11 @@ class ScriptableAdapter {
       // Venue-queue taps this session: candidate index → timesSeen after the
       // write. Repeat taps re-flash feedback without re-writing the queue.
       const venueQueueTaps = {};
+      // Liveness beacons the page fires on DOM-ready and after first paint.
+      // present() resolves the same way whether WebKit rendered the page or
+      // silently killed its content process, so this array — and above all
+      // its emptiness — is the only evidence of which one happened.
+      const pageBeacons = [];
       const webView = new WebView();
       await webView.loadHTML(html);
       webView.shouldAllowRequest = (request) => {
@@ -5394,10 +5404,23 @@ class ScriptableAdapter {
           // hands it to DocumentPicker/ShareSheet (the WebView never
           // navigates; recurring series are export-only, never auto-written).
           this.exportRecurringEventIcs(params.id);
+        } else if (params.a === "copy-logs") {
+          // Fire-and-forget: the run log is no longer embedded in the page,
+          // so 📋 Copy / 📋 Compact ask native for it here.
+          this.copyRunLogAndReport(params.id, webView);
+        } else if (params.a === "ai-prompts") {
+          // Fire-and-forget: native owns the prompt bodies and presents the
+          // picker on top of the sheet (same pattern as Safari/DocumentPicker).
+          this.presentAiPromptPickerAndCopy(webView);
+        } else if (params.a === "beacon") {
+          this.recordResultsPageBeacon(params.id, params.d, pageBeacons);
         }
         return false; // cancel the fake navigation; the page stays put
       };
       await webView.present(true);
+      // The page's own account of whether it ever rendered. Logged AFTER the
+      // sheet closes so a blank review leaves a different trace than a real one.
+      this.reportResultsPageLiveness(pageBeacons);
 
       // Apply recorded overrides: marked-bear drops get the same calendar prep
       // as normally kept events and join the write plan; marked-not-bear events
@@ -5517,11 +5540,13 @@ class ScriptableAdapter {
     const logSectionHtml = shouldShowLogs
       ? this.buildRunLogSectionHtml(runLogInfo, runPromptInfo)
       : "";
+    // Per-render sources the Run Logs buttons read natively on tap. Always
+    // called, so a live run clears whatever a previous saved-run render left.
+    this.registerRunLogCopySources(runLogInfo, runPromptInfo);
+    // Still parsed — the one-line run-health badge in the header is derived
+    // from it. The two big "What Happened" / "What We Did" sections it used to
+    // render are gone: the owner never used them.
     const runInsights = this.loadRunInsightsForDisplay(results, runLogInfo);
-    const insightSectionsHtml = this.buildRunInsightSectionsHtml(
-      runInsights,
-      results,
-    );
     const runHealthBadgeHtml = this.buildRunHealthBadgeHtml(
       runInsights,
       results,
@@ -5579,9 +5604,18 @@ class ScriptableAdapter {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bear Event Scraper Results</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
+            /* Typography. NOTHING here may be a network request: WKWebView
+               blocks first paint on an external stylesheet, so the Google
+               Fonts stylesheet element that used to sit above this style
+               block turned any stalled/blocked/slow font fetch into a white
+               screen for as long as the request took to time out —
+               indistinguishable from a crash. The system stack is already
+               installed on the device, costs zero bytes and zero requests,
+               and paints immediately. */
+            --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
             /* chunky.dad brand colors - light mode */
             --primary-color: #667eea;
             --secondary-color: #ff6b6b;
@@ -5620,7 +5654,7 @@ class ScriptableAdapter {
         }
         
         body {
-            font-family: 'Poppins', sans-serif;
+            font-family: var(--font-sans);
             margin: 0;
             padding: 20px;
             background-color: var(--background-light);
@@ -5883,7 +5917,7 @@ class ScriptableAdapter {
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            font-family: 'Poppins', sans-serif;
+            font-family: var(--font-sans);
             font-weight: 500;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
@@ -5937,7 +5971,7 @@ class ScriptableAdapter {
         }
 
         .bear-verdict-btn {
-            font-family: 'Poppins', sans-serif;
+            font-family: var(--font-sans);
             font-size: 12px;
             font-weight: 600;
             padding: 6px 12px;
@@ -5986,7 +6020,7 @@ class ScriptableAdapter {
             margin-bottom: 12px;
             color: var(--text-primary);
             line-height: 1.3;
-            font-family: 'Poppins', sans-serif;
+            font-family: var(--font-sans);
         }
         
         .event-details {
@@ -5995,7 +6029,7 @@ class ScriptableAdapter {
             gap: 8px;
             font-size: 14px;
             color: var(--text-secondary);
-            font-family: 'Poppins', sans-serif;
+            font-family: var(--font-sans);
         }
         
         .event-detail {
@@ -6120,7 +6154,7 @@ class ScriptableAdapter {
             text-align: center;
             padding: 40px;
             color: var(--text-secondary);
-            font-family: 'Poppins', sans-serif;
+            font-family: var(--font-sans);
         }
         
         .error-item {
@@ -6131,7 +6165,7 @@ class ScriptableAdapter {
             margin-bottom: 10px;
             font-size: 14px;
             color: var(--secondary-color);
-            font-family: 'Poppins', sans-serif;
+            font-family: var(--font-sans);
             font-weight: 500;
         }
         
@@ -6182,7 +6216,7 @@ class ScriptableAdapter {
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            font-family: 'Poppins', sans-serif;
+            font-family: var(--font-sans);
             font-weight: 500;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
@@ -6616,21 +6650,6 @@ class ScriptableAdapter {
             margin-top: 10px;
         }
 
-        .log-output {
-            background: ${isDarkMode ? "#1e1e1e" : "#f8f8f8"};
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 15px;
-            font-family: monospace;
-            font-size: 12px;
-            line-height: 1.4;
-            white-space: pre-wrap;
-            max-height: 360px;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-            color: var(--text-primary);
-        }
-
         .discovery-output {
             background: ${isDarkMode ? "#1e1e1e" : "#f8f8f8"};
             border: 1px solid var(--border-color);
@@ -6653,7 +6672,7 @@ class ScriptableAdapter {
             border-radius: 6px;
             font-size: 12px;
             cursor: pointer;
-            font-family: 'Poppins', sans-serif;
+            font-family: var(--font-sans);
             color: var(--text-primary);
             transition: all 0.2s ease;
         }
@@ -6664,54 +6683,20 @@ class ScriptableAdapter {
             border-color: var(--primary-color);
         }
 
-        .log-line {
-            display: block;
-            padding: 2px 4px;
-            border-radius: 4px;
-            white-space: pre-wrap;
-        }
-
-        .log-line-error {
-            color: ${isDarkMode ? "#ff8a80" : "#d32f2f"};
-            background: ${isDarkMode ? "rgba(255, 138, 128, 0.15)" : "rgba(211, 47, 47, 0.12)"};
-        }
-
-        .log-line-warn {
-            color: ${isDarkMode ? "#ffcc80" : "#ef6c00"};
-            background: ${isDarkMode ? "rgba(255, 204, 128, 0.15)" : "rgba(239, 108, 0, 0.12)"};
-        }
-
-        .log-line-success {
-            color: ${isDarkMode ? "#a5d6a7" : "#2e7d32"};
-            background: ${isDarkMode ? "rgba(165, 214, 167, 0.15)" : "rgba(46, 125, 50, 0.12)"};
-        }
-
         .log-empty {
             color: var(--text-secondary);
             font-size: 14px;
         }
 
-        .insight-subtitle {
-            font-weight: 600;
-            font-size: 13px;
-            margin: 12px 0 4px;
-            color: var(--text-primary);
-        }
-
-        .insight-list {
+        /* Injected by applyResultsHtmlSizeGuard when the page is over budget. */
+        .results-size-warning {
             margin: 0;
-            padding-left: 18px;
-            font-size: 12px;
-            font-family: monospace;
+            padding: 12px 16px;
+            background: ${isDarkMode ? "rgba(255, 204, 128, 0.15)" : "rgba(239, 108, 0, 0.12)"};
+            color: ${isDarkMode ? "#ffcc80" : "#ef6c00"};
+            font-size: 13px;
             line-height: 1.5;
-            color: var(--text-primary);
-            word-break: break-word;
-        }
-
-        .insight-note {
-            color: var(--text-secondary);
-            font-size: 12px;
-            margin: 4px 0;
+            font-weight: 600;
         }
 
         /* Per-event provenance section (built by event-provenance.js) */
@@ -6801,7 +6786,7 @@ class ScriptableAdapter {
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            font-family: 'Poppins', sans-serif;
+            font-family: var(--font-sans);
             font-weight: 500;
         }
 
@@ -6953,7 +6938,7 @@ class ScriptableAdapter {
                 font-size: 14px;
                 outline: none;
                 transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                font-family: 'Poppins', sans-serif;
+                font-family: var(--font-sans);
                 background: var(--background-primary);
             " onfocus="this.style.borderColor='var(--primary-color)'; this.style.boxShadow='0 0 0 3px rgba(102, 126, 234, 0.1)'" 
                onblur="this.style.borderColor='rgba(102, 126, 234, 0.2)'; this.style.boxShadow='none'">
@@ -6965,7 +6950,7 @@ class ScriptableAdapter {
                 font-size: 12px;
                 cursor: pointer;
                 transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                font-family: 'Poppins', sans-serif;
+                font-family: var(--font-sans);
                 color: var(--text-primary);
             " onmouseover="this.style.background='var(--primary-color)'; this.style.color='var(--text-inverse)'; this.style.transform='translateY(-1px)'" 
                onmouseout="this.style.background='var(--background-light)'; this.style.color='var(--text-primary)'; this.style.transform='translateY(0)'">
@@ -6985,7 +6970,7 @@ class ScriptableAdapter {
                 cursor: pointer;
                 transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                 box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-                font-family: 'Poppins', sans-serif;
+                font-family: var(--font-sans);
             " onmouseover="this.style.background='var(--accent-color)'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 15px rgba(102, 126, 234, 0.4)'" 
                onmouseout="this.style.background='var(--primary-color)'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(102, 126, 234, 0.3)'">
                 📋 Copy Raw Output
@@ -7002,7 +6987,7 @@ class ScriptableAdapter {
                 cursor: pointer;
                 transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                 box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
-                font-family: 'Poppins', sans-serif;
+                font-family: var(--font-sans);
             " onmouseover="this.style.background='#ff5252'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 15px rgba(255, 107, 107, 0.4)'" 
                onmouseout="this.style.background='var(--secondary-color)'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(255, 107, 107, 0.3)'">
                 📄 Export JSON
@@ -7097,8 +7082,6 @@ class ScriptableAdapter {
     ${newVenueSectionHtml}
 
     ${this.generateDiscoverySection(results)}
-
-    ${insightSectionsHtml}
 
     ${logSectionHtml}
     
@@ -7317,152 +7300,31 @@ class ScriptableAdapter {
             }
         }
         
-        function copyLogs(button) {
-            const logPre = document.querySelector('.log-output');
-            const logText = logPre ? logPre.textContent : '';
-            if (!logText) return;
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(logText).then(() => {
-                    showCopySuccess(button);
-                }).catch(err => {
-                    console.error('Modern clipboard failed, trying fallback: ', err);
-                    copyToClipboardFallback(logText, button);
-                });
-            } else {
-                copyToClipboardFallback(logText, button);
-            }
+        // Run Logs buttons: the log text is no longer embedded in this page
+        // (it was ~450 KB of a file already on disk), so the copy happens
+        // natively over the chunkyscrape:// bridge and flashes the button back
+        // through markLogsCopied.
+        function requestNativeLogCopy(mode) {
+            window.location.href = 'chunkyscrape://act?a=copy-logs&id=' + encodeURIComponent(mode);
         }
 
-        function compactifyLogs(logText) {
-            return logText
-                .split('\\n')
-                .filter(line => !/🤖 AI Web: Full prompt \(extraction pass\)(?: \(\d+ chars\))?/.test(line))
-                .join('\\n');
+        function markLogsCopied(mode) {
+            const button = document.querySelector('[data-log-copy-mode="' + mode + '"]');
+            if (button) showCopySuccess(button);
         }
 
-        function copyCompactLogs(button) {
-            const logPre = document.querySelector('.log-output');
-            const logText = logPre ? logPre.textContent : '';
-            if (!logText) return;
-            const compactText = compactifyLogs(logText);
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(compactText).then(() => {
-                    showCopySuccess(button);
-                }).catch(err => {
-                    console.error('Modern clipboard failed, trying fallback: ', err);
-                    copyToClipboardFallback(compactText, button);
-                });
-            } else {
-                copyToClipboardFallback(compactText, button);
-            }
+        function copyLogs() {
+            requestNativeLogCopy('full');
         }
 
-        function ensureAiPromptModal() {
-            let overlay = document.getElementById('ai-prompt-modal-overlay');
-            if (overlay) {
-                return {
-                    overlay,
-                    title: document.getElementById('ai-prompt-modal-title'),
-                    subtitle: document.getElementById('ai-prompt-modal-subtitle'),
-                    list: document.getElementById('ai-prompt-modal-list'),
-                    preview: document.getElementById('ai-prompt-modal-preview'),
-                    status: document.getElementById('ai-prompt-modal-status')
-                };
-            }
-
-            overlay = document.createElement('div');
-            overlay.id = 'ai-prompt-modal-overlay';
-            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.7);display:none;align-items:center;justify-content:center;padding:20px;z-index:9999;';
-
-            const modal = document.createElement('div');
-            modal.style.cssText = 'width:min(900px,100%);max-height:90vh;overflow:hidden;background:var(--card-bg,#fff);border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,0.25);display:flex;flex-direction:column;';
-            overlay.appendChild(modal);
-
-            const header = document.createElement('div');
-            header.style.cssText = 'display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 20px 12px;border-bottom:1px solid rgba(148,163,184,0.2);';
-            modal.appendChild(header);
-
-            const headerText = document.createElement('div');
-            header.appendChild(headerText);
-
-            const title = document.createElement('div');
-            title.id = 'ai-prompt-modal-title';
-            title.style.cssText = 'font-size:18px;font-weight:700;color:var(--text-color,#111827);';
-            title.textContent = 'AI Prompts';
-            headerText.appendChild(title);
-
-            const subtitle = document.createElement('div');
-            subtitle.id = 'ai-prompt-modal-subtitle';
-            subtitle.style.cssText = 'margin-top:4px;font-size:13px;color:var(--text-secondary,#64748b);';
-            headerText.appendChild(subtitle);
-
-            const closeButton = document.createElement('button');
-            closeButton.type = 'button';
-            closeButton.textContent = '✕';
-            closeButton.style.cssText = 'border:none;background:transparent;color:var(--text-secondary,#64748b);font-size:20px;cursor:pointer;padding:2px 6px;';
-            closeButton.onclick = () => closeAiPromptModal();
-            header.appendChild(closeButton);
-
-            const body = document.createElement('div');
-            body.style.cssText = 'display:flex;flex-direction:column;gap:14px;padding:16px 20px 20px;overflow:auto;';
-            modal.appendChild(body);
-
-            const status = document.createElement('div');
-            status.id = 'ai-prompt-modal-status';
-            status.style.cssText = 'display:none;padding:10px 12px;border-radius:12px;background:rgba(34,197,94,0.12);color:#166534;font-size:13px;font-weight:600;';
-            body.appendChild(status);
-
-            const list = document.createElement('div');
-            list.id = 'ai-prompt-modal-list';
-            list.style.cssText = 'display:flex;flex-direction:column;gap:10px;';
-            body.appendChild(list);
-
-            const preview = document.createElement('textarea');
-            preview.id = 'ai-prompt-modal-preview';
-            preview.readOnly = true;
-            preview.style.cssText = 'width:100%;min-height:220px;border:1px solid rgba(148,163,184,0.3);border-radius:12px;padding:12px;font:12px/1.5 Menlo,Monaco,monospace;color:var(--text-color,#111827);background:var(--input-bg,#f8fafc);resize:vertical;';
-            body.appendChild(preview);
-
-            overlay.onclick = event => {
-                if (event.target === overlay) {
-                    closeAiPromptModal();
-                }
-            };
-
-            if (!window.__aiPromptModalKeyHandlerAttached) {
-                document.addEventListener('keydown', event => {
-                    const modalOverlay = document.getElementById('ai-prompt-modal-overlay');
-                    if (event.key === 'Escape' && modalOverlay && modalOverlay.style.display !== 'none') {
-                        closeAiPromptModal();
-                    }
-                });
-                window.__aiPromptModalKeyHandlerAttached = true;
-            }
-
-            document.body.appendChild(overlay);
-
-            return { overlay, title, subtitle, list, preview, status };
+        function copyCompactLogs() {
+            requestNativeLogCopy('compact');
         }
 
-        function closeAiPromptModal() {
-            const overlay = document.getElementById('ai-prompt-modal-overlay');
-            if (overlay) {
-                overlay.style.display = 'none';
-            }
-        }
-
-        function setAiPromptModalStatus(message, isError) {
-            const status = document.getElementById('ai-prompt-modal-status');
-            if (!status) return;
-            if (!message) {
-                status.style.display = 'none';
-                status.textContent = '';
-                return;
-            }
-            status.textContent = message;
-            status.style.display = 'block';
-            status.style.background = isError ? 'rgba(239,68,68,0.12)' : 'rgba(34,197,94,0.12)';
-            status.style.color = isError ? '#991b1b' : '#166534';
+        // Same move for the prompt bodies (~225 KB as an attribute): native
+        // owns the list and presents the picker on top of this sheet.
+        function showAiPromptPicker() {
+            window.location.href = 'chunkyscrape://act?a=ai-prompts';
         }
 
         function copyTextWithFeedback(text, button, onSuccess) {
@@ -7480,70 +7342,6 @@ class ScriptableAdapter {
                 const fallbackSucceeded = copyToClipboardFallback(text, button);
                 if (fallbackSucceeded && typeof onSuccess === 'function') onSuccess();
             }
-        }
-
-        const EMPTY_AI_PROMPTS_ENCODED = '%5B%5D';
-
-        function showAiPromptPicker(button) {
-            if (!button) return;
-            const raw = button.getAttribute('data-ai-prompts') || EMPTY_AI_PROMPTS_ENCODED;
-            let prompts = [];
-            try {
-                prompts = JSON.parse(decodeURIComponent(raw));
-            } catch (error) {
-                console.error('Failed to parse AI prompt payload:', error);
-                alert('Could not load AI prompts for this run.');
-                return;
-            }
-            if (!Array.isArray(prompts) || prompts.length === 0) {
-                alert('No AI prompts found for this run.');
-                return;
-            }
-            const modal = ensureAiPromptModal();
-            modal.title.textContent = 'AI Prompts';
-            modal.subtitle.textContent = prompts.length + ' prompt' + (prompts.length === 1 ? '' : 's') + ' available. Tap one to preview and copy it to the clipboard.';
-            modal.list.innerHTML = '';
-            modal.preview.value = '';
-            setAiPromptModalStatus('', false);
-
-            prompts.forEach((entry, index) => {
-                const promptText = entry && typeof entry.prompt === 'string' ? entry.prompt : '';
-                if (!promptText) return;
-                const pass = entry && entry.pass ? String(entry.pass) : 'prompt ' + (index + 1);
-                const chars = Number.isFinite(Number(entry?.chars)) ? String(Number(entry.chars)) + ' chars' : '';
-                const model = entry && entry.model ? String(entry.model) : '';
-                const endpoint = entry && entry.endpoint ? String(entry.endpoint) : '';
-                const meta = [chars, model, endpoint].filter(Boolean).join(' • ');
-
-                const item = document.createElement('button');
-                item.type = 'button';
-                item.style.cssText = 'text-align:left;border:1px solid rgba(148,163,184,0.25);border-radius:12px;background:var(--card-bg,#fff);padding:12px 14px;cursor:pointer;';
-                const passLabel = document.createElement('div');
-                passLabel.style.cssText = 'font-weight:700;color:var(--text-color,#111827);';
-                passLabel.textContent = pass;
-                item.appendChild(passLabel);
-                if (meta) {
-                    const metaLabel = document.createElement('div');
-                    metaLabel.style.cssText = 'margin-top:4px;font-size:12px;color:var(--text-secondary,#64748b);';
-                    metaLabel.textContent = meta;
-                    item.appendChild(metaLabel);
-                }
-                item.onclick = () => {
-                    modal.preview.value = promptText;
-                    copyTextWithFeedback(promptText, button, () => {
-                        setAiPromptModalStatus('Copied "' + pass + '" to the clipboard.', false);
-                    });
-                };
-                modal.list.appendChild(item);
-            });
-
-            if (!modal.list.children.length) {
-                alert('No AI prompts found for this run.');
-                return;
-            }
-
-            modal.preview.value = prompts[0] && typeof prompts[0].prompt === 'string' ? prompts[0].prompt : '';
-            modal.overlay.style.display = 'flex';
         }
 
         function copyRawOutput() {
@@ -7898,39 +7696,69 @@ class ScriptableAdapter {
             });
         }
 
-        function getLogLineClass(line) {
-            const lower = line.toLowerCase();
-            if (lower.includes('error') || lower.includes('exception') || lower.includes('failed') || lower.includes('fail')) {
-                return 'log-line log-line-error';
-            }
-            if (lower.includes('warn')) {
-                return 'log-line log-line-warn';
-            }
-            if (lower.includes('success') || lower.includes('saved') || lower.includes('completed')) {
-                return 'log-line log-line-success';
-            }
-            return 'log-line';
+        // -------------------------------------------------------------------
+        // Liveness beacons (page → native, same chunkyscrape:// bridge every
+        // other button uses; NEVER evaluateJavaScript on a presented WebView).
+        //
+        // A blank results sheet used to be unfalsifiable: generateRichHTML,
+        // loadHTML and present() all return successfully whether WebKit
+        // painted the page or its content process died, so the log read
+        // exactly the same either way. These two navigations are the page
+        // saying "I parsed" and "I painted". Their ABSENCE from the run log
+        // is itself the diagnosis — see reportResultsPageLiveness.
+        // -------------------------------------------------------------------
+        var __beaconQueue = [];
+        var __beaconDraining = false;
+
+        function sendResultsBeacon(stage, detail) {
+            __beaconQueue.push({ stage: stage, detail: detail });
+            if (__beaconDraining) return;
+            __beaconDraining = true;
+            drainResultsBeacons();
         }
 
-        function highlightLogOutput() {
-            const logBlocks = document.querySelectorAll('.log-output');
-            logBlocks.forEach(block => {
-                const rawText = block.textContent || '';
-                const lines = rawText.split(/\\r?\\n/);
-                block.textContent = '';
-                lines.forEach(line => {
-                    const span = document.createElement('span');
-                    span.className = getLogLineClass(line);
-                    span.textContent = line === '' ? ' ' : line;
-                    block.appendChild(span);
-                });
-            });
+        // Serialized with a small gap: two location assignments in the same
+        // task would collapse into one navigation and lose a beacon.
+        function drainResultsBeacons() {
+            if (!__beaconQueue.length) {
+                __beaconDraining = false;
+                return;
+            }
+            var next = __beaconQueue.shift();
+            try {
+                window.location.href = 'chunkyscrape://act?a=beacon&id=' +
+                    encodeURIComponent(String(next.stage)) +
+                    '&d=' + encodeURIComponent(String(next.detail == null ? '' : next.detail));
+            } catch (error) {
+                /* diagnostics must never break the page they are diagnosing */
+            }
+            setTimeout(drainResultsBeacons, 50);
         }
-        
+
         // Initialize image display state on page load
         document.addEventListener('DOMContentLoaded', function() {
             toggleImages();
-            highlightLogOutput();
+            sendResultsBeacon('dom-ready', document.querySelectorAll('.event-card').length + ' cards');
+            // Two frames deep: the first callback can be scheduled before the
+            // first paint, the second only runs after one has happened. If
+            // rendering is blocked, this beacon never fires — which is the
+            // distinction the log could not make before.
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(function() {
+                    requestAnimationFrame(function() {
+                        sendResultsBeacon('painted', (document.body ? document.body.scrollHeight : 0) + 'px');
+                    });
+                });
+            }
+            // One gesture-backed beacon, so "no beacons" can be told apart
+            // from "programmatic navigation was suppressed": if the page is
+            // visible enough to touch, this one gets through regardless.
+            var interactionBeaconSent = false;
+            document.addEventListener('touchstart', function() {
+                if (interactionBeaconSent) return;
+                interactionBeaconSent = true;
+                sendResultsBeacon('interacted', 'first touch');
+            }, true);
         });
     </script>
 </body>
@@ -7939,9 +7767,8 @@ class ScriptableAdapter {
 
     this.logEventJsonBudgetReport();
     this.logMergeDiffBudgetReport();
-    this.logResultsHtmlSizeGuard(html, budgetedCardCount);
 
-    return html;
+    return this.applyResultsHtmlSizeGuard(html, budgetedCardCount);
   }
 
   buildRunLogSectionHtml(logInfo, promptInfo = null) {
@@ -7981,39 +7808,160 @@ class ScriptableAdapter {
     const summaryLabel = logInfo.truncated
       ? `Showing last ${shownLines} of ${totalLines} lines`
       : `Showing ${totalLines} lines`;
-    const logText = logInfo.text || "";
     const prompts = Array.isArray(promptInfo?.prompts)
       ? promptInfo.prompts
       : [];
     const promptCount = prompts.length;
-    const promptDataJson = encodeURIComponent(JSON.stringify(prompts));
     const promptCountBadge =
       promptCount > 0 ? ` • AI prompts: ${promptCount}` : "";
     const promptButtonHtml =
       promptCount > 0
-        ? `<button onclick="showAiPromptPicker(this)" class="log-copy-btn" data-ai-prompts='${this.escapeHtml(promptDataJson)}'>🤖 AI Prompts</button>`
+        ? `<button onclick="showAiPromptPicker(this)" class="log-copy-btn" data-log-copy-mode="prompts">🤖 AI Prompts</button>`
         : "";
 
+    // DELIVERY, not capability: the log text and the AI prompt bodies used to
+    // be embedded in this section (a raw <pre> plus a data-ai-prompts
+    // attribute) — together the single largest thing on a saved-run page, and
+    // every byte of it was already sitting in a file on disk. The buttons now
+    // ask native for the same content over the chunkyscrape:// bridge, which
+    // reads the per-render registries registerRunLogCopySources() filled in.
+    // Nothing the owner could do before is gone; only the copy in the HTML is.
     return `
     <div class="section log-section">
         <div class="section-header">
             <span class="section-icon">LOG</span>
             <span class="section-title">Run Logs</span>
             <span class="section-count">${totalLines}</span>
-            <button onclick="copyLogs(this)" class="log-copy-btn">📋 Copy</button>
-            <button onclick="copyCompactLogs(this)" class="log-copy-btn">📋 Compact</button>
+            <button onclick="copyLogs(this)" class="log-copy-btn" data-log-copy-mode="full">📋 Copy</button>
+            <button onclick="copyCompactLogs(this)" class="log-copy-btn" data-log-copy-mode="compact">📋 Compact</button>
             ${promptButtonHtml}
         </div>
-        <details class="log-details">
-            <summary>${this.escapeHtml(`${summaryLabel}${promptCountBadge}`)}</summary>
-            <pre class="log-output">${this.escapeHtml(logText)}</pre>
-        </details>
+        <div class="log-empty">${this.escapeHtml(`${summaryLabel}${promptCountBadge}`)} — tap 📋 Copy to put the full log on the clipboard.</div>
     </div>
         `;
   }
 
+  // Per-render sources for the Run Logs buttons. The page carries only the
+  // button; the content lives here and is copied natively on tap, so the
+  // HTML never has to hold a second copy of a 450 KB log file.
+  // Always called (with nulls on a live run) so a previous render's log can
+  // never leak into the next one's buttons.
+  registerRunLogCopySources(logInfo, promptInfo) {
+    this._runLogCopyText =
+      logInfo && logInfo.exists && typeof logInfo.text === "string"
+        ? logInfo.text
+        : "";
+    this._runAiPrompts = Array.isArray(promptInfo?.prompts)
+      ? promptInfo.prompts
+      : [];
+  }
+
+  // Native twin of the page's old compactifyLogs(): drops the full-prompt
+  // dump lines, which are the bulk of a long run's log and are individually
+  // retrievable through the 🤖 AI Prompts button.
+  compactifyRunLogText(text) {
+    return String(text || "")
+      .split("\n")
+      .filter(
+        (line) =>
+          !/🤖 AI Web: Full prompt \(extraction pass\)(?: \(\d+ chars\))?/.test(
+            line,
+          ),
+      )
+      .join("\n");
+  }
+
+  // Copy the run log natively (📋 Copy / 📋 Compact). Fire-and-forget from
+  // shouldAllowRequest, which must return a bool synchronously.
+  async copyRunLogAndReport(mode, webView) {
+    const full = typeof this._runLogCopyText === "string" ? this._runLogCopyText : "";
+    if (!full) {
+      console.log(
+        "📱 Scriptable: Run log copy requested but no log text is registered for this render",
+      );
+      return;
+    }
+    const text = mode === "compact" ? this.compactifyRunLogText(full) : full;
+    try {
+      Pasteboard.copy(text);
+      console.log(
+        `📱 Scriptable: Copied ${mode === "compact" ? "compact" : "full"} run log to clipboard (${text.length} chars)`,
+      );
+    } catch (error) {
+      console.warn(
+        `📱 Scriptable: Failed to copy run log: ${error.message}`,
+      );
+      return;
+    }
+    try {
+      await webView.evaluateJavaScript(
+        `markLogsCopied(${JSON.stringify(String(mode))})`,
+        false,
+      );
+    } catch (error) {
+      /* button feedback is optional polish; the copy already happened */
+    }
+  }
+
+  // 🤖 AI Prompts: native picker over the per-render prompt registry, then
+  // Pasteboard.copy of the chosen prompt. Same "native UI on top of the
+  // presented sheet" pattern the map-verify and ICS-export bridges use.
+  async presentAiPromptPickerAndCopy(webView) {
+    const prompts = Array.isArray(this._runAiPrompts) ? this._runAiPrompts : [];
+    if (prompts.length === 0) {
+      console.log(
+        "📱 Scriptable: AI prompt picker requested but no prompts are registered for this render",
+      );
+      return;
+    }
+    const MAX_ACTIONS = 12;
+    const shown = prompts.slice(0, MAX_ACTIONS);
+    if (prompts.length > shown.length) {
+      // No silent caps: say which ones the sheet could not list.
+      console.log(
+        `📱 Scriptable: AI prompt picker lists the first ${shown.length} of ${prompts.length} prompts — the remaining ${prompts.length - shown.length} are in the saved run log (📋 Copy)`,
+      );
+    }
+    try {
+      const alert = new Alert();
+      alert.title = "AI Prompts";
+      alert.message =
+        prompts.length > shown.length
+          ? `${prompts.length} prompts captured; showing the first ${shown.length}. Pick one to copy it to the clipboard.`
+          : `${prompts.length} prompt${prompts.length === 1 ? "" : "s"} captured. Pick one to copy it to the clipboard.`;
+      shown.forEach((entry, index) => {
+        const pass = entry && entry.pass ? String(entry.pass) : `prompt ${index + 1}`;
+        const chars = Number.isFinite(Number(entry?.chars))
+          ? ` — ${Number(entry.chars)} chars`
+          : "";
+        alert.addAction(`${pass}${chars}`);
+      });
+      alert.addCancelAction("Cancel");
+      const choice = await alert.presentSheet();
+      if (choice < 0 || !shown[choice]) return;
+      const promptText =
+        typeof shown[choice].prompt === "string" ? shown[choice].prompt : "";
+      if (!promptText) return;
+      Pasteboard.copy(promptText);
+      console.log(
+        `📱 Scriptable: Copied AI prompt "${shown[choice].pass || choice}" to clipboard (${promptText.length} chars)`,
+      );
+      try {
+        await webView.evaluateJavaScript('markLogsCopied("prompts")', false);
+      } catch (error) {
+        /* button feedback is optional polish; the copy already happened */
+      }
+    } catch (error) {
+      console.warn(
+        `📱 Scriptable: AI prompt picker failed: ${error.message}`,
+      );
+    }
+  }
+
   // ---------------------------------------------------------------------------
-  // Run-insight sections ("What Happened" crawl tree / "What We Did" decisions)
+  // Run-insight summary. The "What Happened" / "What We Did" sections this
+  // used to render are gone (the owner never used them); what remains feeds
+  // the one-line run-health badge in the results header.
   // ---------------------------------------------------------------------------
 
   // Parse a run log into the structured insight summary (business logic lives
@@ -8115,135 +8063,6 @@ class ScriptableAdapter {
     }
   }
 
-  // Structured per-event decisions from the analyzed results (preferred over
-  // log-derived data where both exist).
-  collectEventDecisionLines(results) {
-    const events = Array.isArray(results?.analyzedEvents)
-      ? results.analyzedEvents
-      : [];
-    return events.map((event) => {
-      const intent = this.normalizeIntentAction(event) || "other";
-      const write = this.getWriteActionFromEvent(event);
-      const title = event?.title || event?.name || "(untitled)";
-      const reason =
-        typeof event?._analysis?.reason === "string" &&
-        event._analysis.reason.trim()
-          ? ` — ${event._analysis.reason.trim()}`
-          : "";
-      return `${this.formatIntentActionLabel(intent)} → ${this.formatWriteActionLabel(write)}: "${title}"${reason}`;
-    });
-  }
-
-  // Capped, escaped <ul> for insight line lists (keeps total HTML size bounded).
-  buildInsightListHtml(lines, maxItems = 50) {
-    const allLines = Array.isArray(lines) ? lines : [];
-    if (allLines.length === 0) {
-      return `<div class="insight-note">(none)</div>`;
-    }
-    const shown = allLines.slice(0, maxItems);
-    const items = shown
-      .map((line) => `<li>${this.escapeHtml(line)}</li>`)
-      .join("");
-    const moreNote =
-      allLines.length > shown.length
-        ? `<div class="insight-note">… +${allLines.length - shown.length} more</div>`
-        : "";
-    return `<ul class="insight-list">${items}</ul>${moreNote}`;
-  }
-
-  // Two collapsed sections appended to the results display. Only summary lines
-  // are embedded — debug payload bodies (full AI prompts/responses) never are.
-  buildRunInsightSectionsHtml(insights, results) {
-    const summary = insights?.available ? insights.summary : null;
-    const unavailableNote = `<div class="insight-note">${this.escapeHtml(
-      insights?.reason || "Run log unavailable.",
-    )}</div>`;
-
-    // --- Section 1: What Happened (crawl/discovery tree) ---
-    const crawlSources = summary && Array.isArray(summary.crawl) ? summary.crawl : [];
-    const pageCount = RunLogSummary.countCrawlNodes(crawlSources);
-    let happenedBody;
-    if (!summary) {
-      happenedBody = unavailableNote;
-    } else {
-      const treeText =
-        crawlSources.length > 0
-          ? RunLogSummary.formatCrawlTreeText(crawlSources, { maxNodes: 50 })
-          : "";
-      const treeHtml = treeText
-        ? `<pre class="discovery-output">${this.escapeHtml(treeText)}</pre>`
-        : `<div class="insight-note">No crawl activity found in this run's log.</div>`;
-      const aiLines = (summary.aiRequestsByPass || []).map(
-        (stats) =>
-          `${stats.pass}: ${stats.sent} sent, ${stats.succeeded} succeeded, total ${stats.totalMs}ms, avg ${stats.avgMs}ms`,
-      );
-      const aiHtml =
-        aiLines.length > 0
-          ? `<div class="insight-subtitle">AI requests by pass</div>${this.buildInsightListHtml(aiLines)}`
-          : "";
-      const ocrHtml =
-        Array.isArray(summary.ocr) && summary.ocr.length > 0
-          ? `<div class="insight-subtitle">OCR activity</div>${this.buildInsightListHtml(summary.ocr)}`
-          : "";
-      happenedBody = `${treeHtml}${aiHtml}${ocrHtml}`;
-    }
-    const happenedSection = `
-    <div class="section insight-section">
-        <div class="section-header">
-            <span class="section-icon">🌳</span>
-            <span class="section-title">What Happened</span>
-            <span class="section-count">${pageCount}</span>
-        </div>
-        <details class="log-details">
-            <summary>Crawl &amp; extraction tree — tap to expand</summary>
-            ${happenedBody}
-        </details>
-    </div>
-        `;
-
-    // --- Section 2: What We Did (decisions) ---
-    const eventDecisions = this.collectEventDecisionLines(results);
-    const merges = summary ? summary.merges || [] : [];
-    const droppedFields = summary ? summary.droppedFields || [] : [];
-    const dedupeAndFilter = summary
-      ? [...(summary.dedupe || []), ...(summary.filtered || [])]
-      : [];
-    const problems = summary
-      ? (summary.problems || []).map(
-          (problem) => `[${problem.level.toUpperCase()}] ${problem.line}`,
-        )
-      : [];
-    const decisionCount = eventDecisions.length + merges.length;
-    const logOnlyParts = summary
-      ? `
-            <div class="insight-subtitle">AI merge decisions (${merges.length})</div>
-            ${this.buildInsightListHtml(merges)}
-            <div class="insight-subtitle">Dropped fields (${droppedFields.length})</div>
-            ${this.buildInsightListHtml(droppedFields)}
-            <div class="insight-subtitle">Dedup / filter</div>
-            ${this.buildInsightListHtml(dedupeAndFilter)}
-            <div class="insight-subtitle">Warnings &amp; errors (${problems.length})</div>
-            ${this.buildInsightListHtml(problems)}`
-      : unavailableNote;
-    const didSection = `
-    <div class="section insight-section">
-        <div class="section-header">
-            <span class="section-icon">🧭</span>
-            <span class="section-title">What We Did</span>
-            <span class="section-count">${decisionCount}</span>
-        </div>
-        <details class="log-details">
-            <summary>Decisions — actions, merges, drops — tap to expand</summary>
-            <div class="insight-subtitle">Event actions (${eventDecisions.length})</div>
-            ${this.buildInsightListHtml(eventDecisions)}
-            ${logOnlyParts}
-        </details>
-    </div>
-        `;
-
-    return `${happenedSection}${didSection}`;
-  }
-
   // Generate HTML for the segments panel in discovery section
   generateDiscoverySegmentsPanel(safeId, segmentsByUrl) {
     const segmentUrlEntries = Object.entries(segmentsByUrl);
@@ -8343,6 +8162,49 @@ class ScriptableAdapter {
       }
     });
     return snippets;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Results-page liveness (results-UI → native, chunkyscrape:// bridge).
+  // The page fires "dom-ready" once it has parsed and "painted" after its
+  // first rendered frame. Before this existed, a white screen and a fully
+  // reviewed page produced byte-identical logs — presentRichResults' catch
+  // never fired either way, because nothing in the failure mode throws.
+  // ---------------------------------------------------------------------------
+
+  recordResultsPageBeacon(stage, detail, seen) {
+    const label = String(stage || "unknown");
+    if (Array.isArray(seen)) seen.push(label);
+    const extra = detail ? ` (${detail})` : "";
+    console.log(`📱 Scriptable: 🫀 Results page beacon: ${label}${extra}`);
+  }
+
+  // One verdict line per presentation. The interesting case is the empty one.
+  reportResultsPageLiveness(seen) {
+    const stages = Array.isArray(seen) ? seen : [];
+    if (stages.indexOf("painted") >= 0) {
+      console.log(
+        `📱 Scriptable: ✅ Results page rendered on device (beacons: ${stages.join(", ")})`,
+      );
+      return;
+    }
+    if (stages.indexOf("interacted") >= 0) {
+      // A touch reached the page, so it was on screen and alive; only the
+      // unattended beacons were suppressed. Not a blank sheet.
+      console.log(
+        `📱 Scriptable: ✅ Results page was interacted with, but reported no painted frame (beacons: ${stages.join(", ")}) — unattended page→native navigation is being suppressed; the page itself rendered.`,
+      );
+      return;
+    }
+    if (stages.length > 0) {
+      console.log(
+        `📱 Scriptable: ⚠️ Results page parsed but never reported a painted frame (beacons: ${stages.join(", ")}) — the sheet was blank or blocked before first paint. Check for a stalled remote asset or a WebKit content-process termination.`,
+      );
+      return;
+    }
+    console.log(
+      "📱 Scriptable: ⚠️ Results page never reported liveness — no beacon arrived at all, so WebKit did not run the page. That is a blank white sheet, not a reviewed one; treat any approval from this run as unverified.",
+    );
   }
 
   // Copy one venue's parser entry natively and (best-effort) flash the button.
@@ -9928,7 +9790,7 @@ class ScriptableAdapter {
                             </h4>
                         </div>
                         <button onclick="toggleDiffView(this, '${safeEventId}');" 
-                                style="padding: 4px 10px; font-size: 11px; background: var(--primary-color); color: var(--text-inverse); border: none; border-radius: 8px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 500; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3); ${!isExpanded ? "display: none;" : ""}"
+                                style="padding: 4px 10px; font-size: 11px; background: var(--primary-color); color: var(--text-inverse); border: none; border-radius: 8px; cursor: pointer; font-family: var(--font-sans); font-weight: 500; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3); ${!isExpanded ? "display: none;" : ""}"
                                 id="diff-toggle-${safeEventId}">
                             Switch to Line View
                         </button>
@@ -10190,13 +10052,46 @@ class ScriptableAdapter {
     return 40 * 1024;
   }
 
-  // Evidence-derived safe ceiling for the whole page. Every run that the
-  // owner actually reviewed rendered at <= 1923 KB (20260801-192818, 15
-  // events, 30 s of review). The one silent white-screen was 3198 KB
-  // (20260803-143036, 52 events, "reviewed" in 3.3 s). Crossing this is not
-  // fatal, but it must never be silent — see logResultsHtmlSizeGuard.
+  // Ceiling for the whole page, in UTF-8 BYTES (what WebKit actually holds,
+  // not the UTF-16 code-unit count this used to measure — every non-ASCII
+  // character in the page, and there are many, made the old number too small).
+  //
+  // The previous value, 1923 KB, was circular: it was set to "the largest
+  // page the owner had ever reviewed", so by construction it could never fire
+  // below its own evidence. It then failed to fire on the BEEFMINCE run,
+  // which came up blank at 986 KB — half of it. 960 KB sits just under that
+  // observed blank, and comfortably above the 825 KB the same run now
+  // renders at after the Run Logs cut, so it warns approaching the danger
+  // zone instead of after it.
+  //
+  // Crossing it is not fatal, but it must never be silent — see
+  // applyResultsHtmlSizeGuard, which both logs it and puts a banner on the
+  // page, because the owner is looking at a WebView, not at the log.
   static get RESULTS_HTML_WARN_BYTES() {
-    return 1923 * 1024;
+    return 960 * 1024;
+  }
+
+  // UTF-8 byte length without Buffer/TextEncoder (neither exists in
+  // Scriptable). String.length counts UTF-16 code units and undercounts
+  // every multi-byte character on the page.
+  static utf8ByteLength(text) {
+    const value = typeof text === "string" ? text : String(text || "");
+    let bytes = 0;
+    for (let i = 0; i < value.length; i += 1) {
+      const code = value.charCodeAt(i);
+      if (code < 0x80) {
+        bytes += 1;
+      } else if (code < 0x800) {
+        bytes += 2;
+      } else if (code >= 0xd800 && code <= 0xdbff) {
+        // Surrogate pair → one 4-byte code point (consume the low surrogate).
+        bytes += 4;
+        i += 1;
+      } else {
+        bytes += 3;
+      }
+    }
+    return bytes;
   }
 
   // Pruned in this order, heaviest-and-most-redundant first. Every one of
@@ -10427,13 +10322,33 @@ class ScriptableAdapter {
   // SILENTLY, because a white-screened review looks exactly like an approved
   // one from the log.
   logResultsHtmlSizeGuard(html, eventCount) {
-    const bytes = typeof html === "string" ? html.length : 0;
+    const bytes = ScriptableAdapter.utf8ByteLength(html);
     if (bytes <= ScriptableAdapter.RESULTS_HTML_WARN_BYTES) return;
     console.log(
       `📱 Scriptable: ⚠️ Results HTML is ${Math.round(bytes / 1024)} KB for ${eventCount} event(s) — above the ${Math.round(
         ScriptableAdapter.RESULTS_HTML_WARN_BYTES / 1024,
       )} KB size that has actually rendered on device. If the results screen comes up blank, that is why: re-run with fewer parsers, or review from the saved run JSON.`,
     );
+  }
+
+  // The log line above is invisible to someone staring at a WebView, which is
+  // exactly the situation the guard exists to describe. So the same warning
+  // also goes ON the page, at the very top, where it is the first thing that
+  // renders — and if the page never renders, its absence and the missing
+  // liveness beacons say the same thing from two directions.
+  applyResultsHtmlSizeGuard(html, eventCount) {
+    const page = typeof html === "string" ? html : "";
+    this.logResultsHtmlSizeGuard(page, eventCount);
+    const bytes = ScriptableAdapter.utf8ByteLength(page);
+    if (bytes <= ScriptableAdapter.RESULTS_HTML_WARN_BYTES) return page;
+    const banner = `
+    <div class="results-size-warning">⚠️ This page is ${Math.round(bytes / 1024)} KB for ${eventCount} event(s), above the ${Math.round(
+      ScriptableAdapter.RESULTS_HTML_WARN_BYTES / 1024,
+    )} KB that has reliably rendered on device. If it looks blank or stops scrolling, that is why — re-run with fewer parsers, or review the saved run JSON.</div>`;
+    const bodyIndex = page.indexOf("<body>");
+    if (bodyIndex === -1) return page;
+    const insertAt = bodyIndex + "<body>".length;
+    return page.slice(0, insertAt) + banner + page.slice(insertAt);
   }
 
   logEventJsonBudgetReport() {
