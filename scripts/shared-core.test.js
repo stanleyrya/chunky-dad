@@ -14765,3 +14765,81 @@ test('platform organizer home: branded subdomains keep website, event listings d
     assert.equal(core.isPlatformOrganizerHomeUrl(url), false, `not an organizer home: ${url}`);
   }
 });
+
+// ---------------------------------------------------------------------------
+// _mergeDiff must describe the write that ACTUALLY happens (2026-08-04).
+//
+// The diff was built straight out of createFinalEventObject, ~350 lines before
+// the URL cleanups / promoter metadata / final trim run — all of which can
+// change a notes-carried value. Real case, Goldiloxx run 20260804-095251: the
+// card reported
+//   website: ".../goldiloxx-chicago-2/tickets" → ".../goldiloxx-chicago"
+// while the notes actually written carried NO website line, because the
+// ticketing-host cleanup had removed it. The owner read the card and asked
+// "why do we keep saving ticket url in website field?" — the behaviour was
+// already right; the display was lying.
+// ---------------------------------------------------------------------------
+
+test('merge diff: a field removed by the late URL cleanup is reported removed, not updated', async () => {
+  const core = createFinalBuildCore({ promoters: require('../data/promoters.json') });
+  // Calendar side holds the OLD bad value: a ticketing URL sitting in website.
+  const existingEvent = {
+    title: 'GOLDILOXX Chicago',
+    startDate: new Date('2026-09-20T02:00:00.000Z'),
+    notes: [
+      'bar: Jackhammer',
+      'website: https://www.sickening.events/e/goldiloxx-chicago-2/tickets',
+      'ticketUrl: https://www.sickening.events/e/goldiloxx-chicago-2/tickets'
+    ].join('\n')
+  };
+  const scraped = {
+    title: 'GOLDILOXX Chicago',
+    startDate: new Date('2026-09-20T02:00:00.000Z'),
+    city: 'chicago',
+    bar: 'Jackhammer',
+    website: 'https://sickening.events/e/goldiloxx-chicago',
+    url: 'https://sickening.events/e/goldiloxx-chicago',
+    _promoter: 'Goldiloxx'
+  };
+  const restore = captureFinalBuildLogs([]);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(
+      scraped,
+      { action: 'merge', reason: 'matched', existingEvent, sourceEvent: null, overrideIdentity: null },
+      {},
+      {}
+    );
+  } finally {
+    restore();
+  }
+
+  // The behaviour that was already correct: no ticketing URL in website.
+  assert.equal(analyzed.website, undefined, 'a ticketing host never occupies website');
+  assert.ok(!String(analyzed.notes || '').includes('website:'), 'and no website line is written');
+
+  // The display must agree with it.
+  const updatedWebsite = (analyzed._mergeDiff.updated || []).find(entry => entry.key === 'website');
+  assert.equal(updatedWebsite, undefined, 'the card must not claim a website update that never happens');
+  const removedWebsite = (analyzed._mergeDiff.removed || []).find(entry => entry.key === 'website');
+  assert.ok(removedWebsite, 'the stale calendar website is reported as removed');
+  assert.equal(removedWebsite.value, 'https://www.sickening.events/e/goldiloxx-chicago-2/tickets');
+
+  // The scratch field never survives onto the event or into notes.
+  assert.equal(analyzed._mergeDiffBaselineNotes, undefined, 'baseline scratch field is cleaned up');
+  assert.ok(!String(analyzed.notes || '').includes('mergeDiffBaseline'));
+});
+
+test('buildNotesMergeDiff: preserve-strategy semantics are unchanged', () => {
+  const core = createCore();
+  const priorities = { cover: { merge: 'clobber' }, description: { merge: 'preserve' } };
+  const diff = core.buildNotesMergeDiff(
+    'bar: Eagle LA\ncover: $10\nold: gone',
+    'bar: Eagle LA\ncover: $15\ndescription: new text',
+    priorities
+  );
+  assert.deepEqual(diff.preserved, ['bar', 'description'], 'unchanged field, and a new preserve-strategy field');
+  assert.deepEqual(diff.updated, [{ key: 'cover', from: '$10', to: '$15' }]);
+  assert.deepEqual(diff.removed, [{ key: 'old', value: 'gone' }]);
+  assert.deepEqual(diff.added, [], 'a preserve-strategy arrival is preserved, not added');
+});

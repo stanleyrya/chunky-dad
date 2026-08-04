@@ -11183,6 +11183,44 @@ class SharedCore {
 
     // One event's calendar-prep analysis (extracted from prepareEventsForCalendar
     // so manually rescued events run the exact same merge/diff pipeline).
+    // Notes-level merge diff for the results card. Extracted so it can be
+    // recomputed after the late field cleanups; semantics are byte-for-byte
+    // the inline version it replaces, including the preserve-strategy rules
+    // (a field absent from BOTH sides, or newly present under 'preserve',
+    // counts as preserved rather than removed/added).
+    buildNotesMergeDiff(originalNotes, mergedNotes, fieldPriorities = {}) {
+        const originalFields = this.parseNotesIntoFields(originalNotes || '');
+        const mergedFields = this.parseNotesIntoFields(mergedNotes || '');
+        const diff = { preserved: [], added: [], updated: [], removed: [] };
+        const strategyFor = (key) => {
+            const priorityConfig = fieldPriorities && fieldPriorities[key];
+            return (priorityConfig && priorityConfig.merge) || 'preserve';
+        };
+        Object.keys(originalFields).forEach(key => {
+            if (mergedFields[key] === originalFields[key]) {
+                diff.preserved.push(key);
+            } else if (!mergedFields[key]) {
+                if (strategyFor(key) === 'preserve' && originalFields[key] === undefined) {
+                    diff.preserved.push(key);
+                } else {
+                    diff.removed.push({ key, value: originalFields[key] });
+                }
+            } else {
+                diff.updated.push({ key, from: originalFields[key], to: mergedFields[key] });
+            }
+        });
+        Object.keys(mergedFields).forEach(key => {
+            if (!originalFields[key]) {
+                if (strategyFor(key) === 'preserve') {
+                    diff.preserved.push(key);
+                } else {
+                    diff.added.push({ key, value: mergedFields[key] });
+                }
+            }
+        });
+        return diff;
+    }
+
     async buildAnalyzedCalendarEvent(event, analysis, calendarAdapter, config = {}) {
         // (Block wrapper keeps the extracted loop body byte-identical to its
         // original prepareEventsForCalendar form — minimal, reviewable diff.)
@@ -11205,6 +11243,7 @@ class SharedCore {
                 analyzedEvent = await this.createFinalEventObject(analysis.existingEvent, event, { httpAdapter: calendarAdapter, globalConfig: config });
                 
                 // Calculate merge diff for display purposes
+                analyzedEvent._mergeDiffBaselineNotes = analysis.existingEvent.notes || '';
                 const originalFields = this.parseNotesIntoFields(analysis.existingEvent.notes || '');
                 const mergedFields = this.parseNotesIntoFields(analyzedEvent.notes || '');
                 
@@ -11270,6 +11309,7 @@ class SharedCore {
 
                 // Compute a merge diff comparing the base recurring event to the new override
                 // being created. This enables diff display for intent:merge + action:new cases.
+                analyzedEvent._mergeDiffBaselineNotes = analysis.sourceEvent.notes || '';
                 const originalFields = this.parseNotesIntoFields(analysis.sourceEvent.notes || '');
                 const mergedFields = this.parseNotesIntoFields(analyzedEvent.notes || '');
                 analyzedEvent._mergeDiff = {
@@ -11553,6 +11593,30 @@ class SharedCore {
                 if (finalTrimRecords.some(record => record && record.status === 'trimmed' && record.field !== 'title')) {
                     analyzedEvent.notes = this.formatEventNotes(analyzedEvent);
                 }
+            }
+
+            // Recompute the merge diff against the FINAL notes. It is first
+            // built ~350 lines above, straight out of createFinalEventObject —
+            // before the URL cleanups, the promoter/static metadata stamps and
+            // the final trim pass have run. Every one of those can change a
+            // notes-carried value, so the card was describing a write that no
+            // longer happens. Observed 2026-08-04 (Goldiloxx, run
+            // 20260804-095251): the card reported
+            //   website: ".../goldiloxx-chicago-2/tickets" → ".../goldiloxx-chicago"
+            // while the notes that actually get written carry NO website line
+            // at all — the ticketing-host cleanup had removed it. The owner
+            // reasonably read that as "we keep saving the ticket url in
+            // website". Behaviour was already correct; the display was not.
+            //
+            // Same inputs as the original computation, so a diff that was
+            // already accurate is unchanged.
+            if (analyzedEvent._mergeDiff && analyzedEvent._mergeDiffBaselineNotes !== undefined) {
+                analyzedEvent._mergeDiff = this.buildNotesMergeDiff(
+                    analyzedEvent._mergeDiffBaselineNotes,
+                    analyzedEvent.notes || '',
+                    analyzedEvent._fieldPriorities || {}
+                );
+                delete analyzedEvent._mergeDiffBaselineNotes;
             }
 
             // Computed evidence panel for the results-UI event card (underscore
