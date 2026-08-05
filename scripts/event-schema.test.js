@@ -169,6 +169,211 @@ test('pickImageForOrientation walks the fallback chain and never loses an image'
   }), 'P.jpg');
 });
 
+// ---------------------------------------------------------------------------
+// Same-asset crop detection — the "why are square images cropped?" bug.
+//
+// dice.fm publishes ONE flyer and two delivery URLs for it: `image` is the whole
+// 768×768 square, `imageHorizontal` is an imgix rect= crop of THAT SAME FILE
+// keeping rows 154–614 (461 of 768 rows → 307 rows, 40% of the artwork, sliced
+// off the top and bottom). Preferring the "horizontal" slot therefore showed the
+// flyer with its head and feet cut off. A genuinely separate wide image — a
+// different asset — must still win.
+// ---------------------------------------------------------------------------
+
+// Verbatim from data/calendars/london.json, event "BEEFMINCE x RVT".
+const DICE_SQUARE = 'https://dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C0%2C768%2C768';
+const DICE_CROP = 'https://dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress';
+
+test('imageAssetKey/isSameImageAsset: one stored file under different delivery queries', () => {
+  const key = EventSchema.imageAssetKey;
+  assert.equal(key(DICE_SQUARE), key(DICE_CROP), 'crop params are not part of the asset identity');
+  assert.ok(EventSchema.isSameImageAsset(DICE_SQUARE, DICE_CROP));
+
+  // Scheme and host case are irrelevant; the path is not.
+  assert.ok(EventSchema.isSameImageAsset('http://CDN.example/a/flyer.jpg', 'https://cdn.example/a/flyer.jpg'));
+  assert.ok(EventSchema.isSameImageAsset('//cdn.example/a/flyer.jpg', 'https://cdn.example/a/flyer.jpg?w=10'));
+  assert.equal(EventSchema.isSameImageAsset('https://cdn.example/a/flyer.jpg', 'https://cdn.example/a/wide.jpg'), false);
+  assert.equal(EventSchema.isSameImageAsset('https://cdn.example/a/flyer.jpg', 'https://other.example/a/flyer.jpg'), false);
+  assert.equal(EventSchema.isSameImageAsset('https://cdn.example/A/flyer.jpg', 'https://cdn.example/a/flyer.jpg'), false);
+  // Root-relative (downloaded flyers) compares verbatim; blanks are never a match.
+  assert.ok(EventSchema.isSameImageAsset('/images/events/x.jpg?v=2', '/images/events/x.jpg'));
+  assert.equal(EventSchema.isSameImageAsset('', ''), false);
+  assert.equal(EventSchema.isSameImageAsset(DICE_CROP, ''), false);
+  assert.equal(EventSchema.isSameImageAsset(null, undefined), false);
+});
+
+test('pickImageForOrientation: a crop of the primary loses, a separate wide image still wins', () => {
+  const pick = EventSchema.pickImageForOrientation;
+
+  // The real dice.fm event: landscape asked for, uncropped square handed back.
+  assert.equal(pick({ image: DICE_SQUARE, imageHorizontal: DICE_CROP }, 'landscape'), DICE_SQUARE);
+  assert.equal(pick({ image: DICE_SQUARE, imageHorizontal: DICE_CROP }, 'horizontal'), DICE_SQUARE);
+
+  // A genuinely different asset keeps the owner's orientation preference.
+  assert.equal(pick({ image: 'https://cdn.example/a/square.jpg', imageHorizontal: 'https://cdn.example/a/wide.jpg' }, 'landscape'),
+    'https://cdn.example/a/wide.jpg');
+
+  // Portrait obeys the same rule in both directions.
+  assert.equal(pick({ image: DICE_SQUARE, imageVertical: DICE_CROP }, 'portrait'), DICE_SQUARE);
+  assert.equal(pick({ image: 'https://cdn.example/a/square.jpg', imageVertical: 'https://cdn.example/a/tall.jpg' }, 'portrait'),
+    'https://cdn.example/a/tall.jpg');
+
+  // …and on the other-slot fallback (step 4): portrait wanted, no vertical slot,
+  // and a primary that classifies as the WRONG shape, so the horizontal slot is
+  // the last thing left to try.
+  const classifyLandscape = () => 'landscape';
+  assert.equal(pick({ image: DICE_SQUARE, imageHorizontal: DICE_CROP }, 'portrait',
+    { classifyOrientation: classifyLandscape }), DICE_SQUARE,
+  'a crop of the primary is not a fallback worth taking');
+  assert.equal(pick({ image: 'https://cdn.example/a/square.jpg', imageHorizontal: 'https://cdn.example/a/wide.jpg' }, 'portrait',
+    { classifyOrientation: classifyLandscape }), 'https://cdn.example/a/wide.jpg',
+  'a different asset is still better than nothing');
+  // With no classifier the unknown primary wins, exactly as before.
+  assert.equal(pick({ image: DICE_SQUARE, imageHorizontal: DICE_CROP }, 'portrait'), DICE_SQUARE);
+
+  // No primary to fall back to → the slot is still used (never blank).
+  assert.equal(pick({ imageHorizontal: DICE_CROP }, 'landscape'), DICE_CROP);
+  assert.equal(pick({ imageVertical: DICE_CROP }, 'portrait'), DICE_CROP);
+});
+
+// ---------------------------------------------------------------------------
+// The website side of the same rule: DynamicCalendarLoader.getFlyerCandidates
+// owns what the card actually renders. It is a browser script (no module
+// exports), so it is evaluated in a vm context with the same globals the page
+// gives it — the same "load the real file, don't reimplement it" approach the
+// adapter tests use.
+// ---------------------------------------------------------------------------
+
+let cachedLoaderClass = null;
+function loadCalendarLoaderClass() {
+  if (cachedLoaderClass) return cachedLoaderClass;
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const vm = require('node:vm');
+  const noop = () => {};
+  const context = {
+    console,
+    window: {},
+    document: { addEventListener: noop },
+    navigator: {},
+    logger: new Proxy({}, { get: () => noop }),
+    setTimeout,
+    clearTimeout,
+    module: { exports: {} }
+  };
+  context.globalThis = context;
+  vm.createContext(context);
+  ['calendar-core.js', 'event-schema.js', 'dynamic-calendar-loader.js'].forEach(file => {
+    const full = path.join(__dirname, '..', 'js', file);
+    context.module = { exports: {} };
+    vm.runInContext(fs.readFileSync(full, 'utf8'), context, { filename: file });
+  });
+  cachedLoaderClass = context.window.DynamicCalendarLoader;
+  assert.equal(typeof cachedLoaderClass, 'function', 'DynamicCalendarLoader loaded');
+  return cachedLoaderClass;
+}
+
+// Prototype-only instance: getFlyerCandidates touches no constructor state, and
+// constructing the real loader would go looking for the DOM.
+function flyerLoader() {
+  return Object.create(loadCalendarLoaderClass().prototype);
+}
+
+test('getFlyerCandidates: an imgix crop of the primary never leads the flyer chain', () => {
+  const loader = flyerLoader();
+
+  const real = loader.getFlyerCandidates({ image: DICE_SQUARE, imageHorizontal: DICE_CROP }, 'landscape');
+  assert.equal(real[0].u, DICE_SQUARE, 'the uncropped square is displayed');
+  assert.ok(real.some(candidate => candidate.u === DICE_CROP),
+    'the crop stays in the fallback chain rather than being thrown away');
+
+  // Portrait request, same asset in the vertical slot.
+  const portrait = loader.getFlyerCandidates({ image: DICE_SQUARE, imageVertical: DICE_CROP }, 'portrait');
+  assert.equal(portrait[0].u, DICE_SQUARE);
+});
+
+test('getFlyerCandidates: a separate wide image still wins, and a lone slot is still shown', () => {
+  const loader = flyerLoader();
+
+  const separate = loader.getFlyerCandidates(
+    { image: 'https://cdn.example/a/square.jpg', imageHorizontal: 'https://cdn.example/a/wide.jpg' }, 'landscape');
+  assert.equal(separate[0].u, 'https://cdn.example/a/wide.jpg', "the owner's landscape preference is intact");
+  assert.equal(separate[0].o, 'landscape');
+
+  const tall = loader.getFlyerCandidates(
+    { image: 'https://cdn.example/a/square.jpg', imageVertical: 'https://cdn.example/a/tall.jpg' }, 'portrait');
+  assert.equal(tall[0].u, 'https://cdn.example/a/tall.jpg');
+
+  // Only the horizontal slot exists → it is still used (no regression to blank).
+  const only = loader.getFlyerCandidates({ imageHorizontal: DICE_CROP }, 'landscape');
+  assert.equal(only.length, 1);
+  assert.equal(only[0].u, DICE_CROP);
+
+  // Only a primary → unchanged single-image behaviour. Field-by-field, not
+  // deepEqual: these objects are made inside the vm context, so they are
+  // cross-realm and never structurally equal to a plain object made here.
+  const single = loader.getFlyerCandidates({ image: DICE_SQUARE }, 'landscape');
+  assert.equal(single.length, 1);
+  assert.equal(single[0].u, DICE_SQUARE);
+  assert.equal(single[0].o, '');
+
+  // No images at all → no candidates.
+  assert.equal(loader.getFlyerCandidates({}, 'landscape').length, 0);
+});
+
+test('getFlyerCandidates: local img/events paths still resolve via the stamped source URLs', () => {
+  // parseEventData rewrites cached slots to img/events paths whose filename is a
+  // hash of the FULL url, so the two delivery variants of one file land on two
+  // unrelated names — 2026-10-17_beefmince-x-rvt_5929ec4.jpg (768×768) and
+  // …_683d1276.jpg (768×461), both committed under img/events. Without the
+  // stamped originals nothing downstream can tell they are one picture.
+  const { convertImageUrlToLocalPath } = require('../js/filename-utils.js');
+  const loader = flyerLoader();
+  const eventInfo = { name: 'BEEFMINCE x RVT', startDate: '2026-10-17T22:00:00.000Z', recurring: false };
+  const localPrimary = '/' + convertImageUrlToLocalPath(DICE_SQUARE, eventInfo, 'img/events');
+  const localCrop = '/' + convertImageUrlToLocalPath(DICE_CROP, eventInfo, 'img/events');
+  assert.notEqual(localPrimary, localCrop, 'the two crops hash to different local files');
+
+  const candidates = loader.getFlyerCandidates({
+    image: localPrimary,
+    imageHorizontal: localCrop,
+    _imageSourceUrls: { image: DICE_SQUARE, imageHorizontal: DICE_CROP }
+  }, 'landscape');
+  assert.equal(candidates[0].u, localPrimary, 'the uncropped local file leads');
+
+  // Without the stamp the paths are genuinely unrelated and the slot preference
+  // stands — the rule must not guess.
+  const unstamped = loader.getFlyerCandidates({ image: localPrimary, imageHorizontal: localCrop }, 'landscape');
+  assert.equal(unstamped[0].u, localCrop);
+});
+
+test('getFlyerCandidates: every published same-asset flyer pair resolves to the uncropped image', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const loader = flyerLoader();
+  const dir = path.join(__dirname, '..', 'data', 'calendars');
+  const pairs = [];
+  fs.readdirSync(dir).filter(name => name.endsWith('.json')).forEach(name => {
+    const parsed = JSON.parse(fs.readFileSync(path.join(dir, name), 'utf8'));
+    const events = Array.isArray(parsed) ? parsed : (parsed.events || []);
+    events.forEach(event => {
+      const fields = EventSchema.parseNotesIntoFields(event.unprocessedDescription || '');
+      const image = event.image || fields.image;
+      const horizontal = event.imageHorizontal || fields.imageHorizontal;
+      if (image && horizontal && EventSchema.isSameImageAsset(image, horizontal)) {
+        pairs.push({ image, horizontal });
+      }
+    });
+  });
+  // Guards the fixture itself: if the published data ever stops carrying these
+  // pairs this test must fail loudly rather than silently assert nothing.
+  assert.ok(pairs.length > 0, 'published calendars carry same-asset image/imageHorizontal pairs');
+  pairs.forEach(pair => {
+    const candidates = loader.getFlyerCandidates({ image: pair.image, imageHorizontal: pair.horizontal }, 'landscape');
+    assert.equal(candidates[0].u, pair.image, `uncropped flyer chosen for ${pair.image}`);
+  });
+});
+
 test('parseNotesIntoFields: a value line that looks like "key: value" stays part of the value', () => {
   // The multi-line description contains an escaped "Doors\: 9pm" line; it must not
   // be promoted to its own field.

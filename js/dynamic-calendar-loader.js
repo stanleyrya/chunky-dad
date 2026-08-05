@@ -840,6 +840,16 @@ class DynamicCalendarLoader extends CalendarCore {
                 const originalImageUrl = eventData[field];
                 if (!originalImageUrl) return;
                 if (this.dataSource === 'cached') {
+                    // Remember where this slot CAME FROM before the rewrite.
+                    // The local filename is a hash of the full URL, so two
+                    // delivery variants of one stored file (…/x.jpg?rect=A and
+                    // …/x.jpg?rect=B) land on two unrelated local paths and
+                    // nothing downstream can tell they are the same artwork.
+                    // getFlyerCandidates needs that fact to refuse a crop of
+                    // the image it already has. Underscore-prefixed, so
+                    // formatEventNotes can never write it to a calendar.
+                    if (!eventData._imageSourceUrls) eventData._imageSourceUrls = {};
+                    eventData._imageSourceUrls[field] = originalImageUrl;
                     eventData[field] = this.convertImageUrlToLocal(originalImageUrl, eventData);
 
                     logger.debug('CALENDAR', 'Converted image URL for cached data', {
@@ -2206,6 +2216,35 @@ class DynamicCalendarLoader extends CalendarCore {
         return '';
     }
 
+    // The identity of the STORED FILE a flyer URL points at: host + path, with
+    // the query string, the fragment and the scheme dropped. Two URLs sharing
+    // this key are one picture delivered with different parameters (imgix /
+    // Cloudinary / thumbor style crop + resize), not two pictures.
+    //
+    // EventSchema.imageAssetKey owns this rule (the scraper side shares it);
+    // the inline copy below is the fallback for a page that loaded the loader
+    // without the schema, and must stay identical to it.
+    //
+    // String parsing, not `new URL(` — the schema twin runs inside Scriptable,
+    // where neither URL nor URLSearchParams exists.
+    flyerAssetKey(url) {
+        const schema = typeof EventSchema !== 'undefined' ? EventSchema : null;
+        if (schema && typeof schema.imageAssetKey === 'function') {
+            return schema.imageAssetKey(url);
+        }
+        const raw = String(url === null || url === undefined ? '' : url).trim();
+        if (!raw) return '';
+        const withoutQuery = raw.split('#')[0].split('?')[0];
+        if (!withoutQuery) return '';
+        const authorityMatch = /^(?:[a-z][a-z0-9+.-]*:)?\/\//i.exec(withoutQuery);
+        if (!authorityMatch) return withoutQuery;   // root-relative: compare verbatim
+        const rest = withoutQuery.slice(authorityMatch[0].length);
+        const slash = rest.indexOf('/');
+        const host = (slash < 0 ? rest : rest.slice(0, slash)).toLowerCase();
+        const path = slash < 0 ? '' : rest.slice(slash);
+        return `${host}${path}`;                    // scheme ignored on purpose
+    }
+
     // Ordered flyer candidates for one event, best first, as
     // { u: url, o: 'portrait' | 'landscape' | '' } entries. `want` is the
     // orientation the layout prefers; `o` is only set when the orientation is
@@ -2245,6 +2284,36 @@ class DynamicCalendarLoader extends CalendarCore {
                 logger.debug('CALENDAR', 'pickImageForOrientation failed; using local flyer order', {
                     error: error && error.message
                 });
+            }
+        }
+
+        // A slot that is only a CROP of the primary (same host + path, different
+        // crop/resize query) is not a better-shaped picture — it is this picture
+        // with its edges cut off, so the uncropped primary leads instead. Applied
+        // after the schema pick so it also covers a schema that predates the rule.
+        // A separate wide image (different asset) keeps its preference untouched.
+        //
+        // Identity is read off the ORIGINAL url (parseEventData stamps
+        // _imageSourceUrls before rewriting cached slots to local img/events
+        // paths); on the live site the slot values are hashed filenames that
+        // hide the shared asset entirely.
+        const sources = event._imageSourceUrls || null;
+        const slotFieldOf = url => {
+            if (!url) return '';
+            if (url === primary) return 'image';
+            if (url === vertical) return 'imageVertical';
+            if (url === horizontal) return 'imageHorizontal';
+            return '';
+        };
+        const assetKeyOf = url => {
+            const field = slotFieldOf(url);
+            const source = sources && field && sources[field] ? sources[field] : url;
+            return this.flyerAssetKey(source);
+        };
+        if (primary && preferred && preferred !== primary) {
+            const preferredKey = assetKeyOf(preferred);
+            if (preferredKey && preferredKey === assetKeyOf(primary)) {
+                preferred = primary;
             }
         }
 

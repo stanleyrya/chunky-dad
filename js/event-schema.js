@@ -368,10 +368,50 @@ function readImageSlotValue(event, fieldName) {
     return typeof value === 'string' ? value.trim() : '';
 }
 
+// The identity of the STORED FILE an image URL points at: host + path, with the
+// query string, the fragment and the scheme dropped. Two URLs that share this
+// key are the same picture served with different delivery parameters (imgix /
+// Cloudinary / thumbor style crop + resize), not two different pictures.
+//
+// String parsing on purpose: no `new URL(` / `URLSearchParams` — the Scriptable
+// runtime that runs scripts/event-schema.js — this file's twin — has neither.
+function imageAssetKey(url) {
+    const raw = typeof url === 'string' ? url.trim() : '';
+    if (!raw) return '';
+    const withoutQuery = raw.split('#')[0].split('?')[0];
+    if (!withoutQuery) return '';
+    // "https://host/path", "//host/path" — anything else (root-relative,
+    // downloaded flyers) has no host and compares verbatim.
+    const authorityMatch = /^(?:[a-z][a-z0-9+.-]*:)?\/\//i.exec(withoutQuery);
+    if (!authorityMatch) return withoutQuery;
+    const rest = withoutQuery.slice(authorityMatch[0].length);
+    const slash = rest.indexOf('/');
+    const host = (slash < 0 ? rest : rest.slice(0, slash)).toLowerCase();
+    const path = slash < 0 ? '' : rest.slice(slash);
+    // Scheme is deliberately ignored: http and https of one file are one file.
+    return `${host}${path}`;
+}
+
+// True when two image URLs resolve to the same stored asset and differ only in
+// their delivery query (crop/resize/format). See pickImageForOrientation.
+function isSameImageAsset(a, b) {
+    const keyA = imageAssetKey(a);
+    if (!keyA) return false;
+    return keyA === imageAssetKey(b);
+}
+
 // Pick the best image for a wanted orientation from the three slots.
 //   want: 'portrait' | 'vertical' | 'landscape' | 'horizontal' (anything else
 //         means "no preference" and returns the primary).
 // Fallback chain, in order:
+//   0. …unless the exact-orientation slot is the SAME STORED ASSET as the
+//      primary with a different crop query (isSameImageAsset). A "horizontal"
+//      variant of the picture we already have is not a wider picture — it is
+//      this picture with its top and bottom cut off (dice.fm ships a 768×768
+//      flyer as `image` and a rect=0,154,768,461 imgix crop of that same file
+//      as `imageHorizontal`, discarding 40% of the artwork). In that case the
+//      uncropped primary wins. A genuinely SEPARATE wide image — different
+//      host or path — still wins, which is the whole point of the slot.
 //   1. the exact-orientation slot (imageVertical / imageHorizontal)
 //   2. the primary `image` when it classifies as the wanted orientation
 //   3. the primary `image` when its orientation is UNKNOWN — by far the common
@@ -400,7 +440,10 @@ function pickImageForOrientation(event, want, options = {}) {
     }
 
     const exactSlot = wantsPortrait ? vertical : horizontal;
-    if (exactSlot) return exactSlot;
+    // Same file, different crop → the slot is a degraded copy of the primary,
+    // so the primary wins (isSameImageAsset is false whenever there is no
+    // primary to fall back to, which keeps the slot-only event answering).
+    if (exactSlot) return isSameImageAsset(exactSlot, primary) ? primary : exactSlot;
 
     const otherSlot = wantsPortrait ? horizontal : vertical;
     if (primary) {
@@ -415,7 +458,9 @@ function pickImageForOrientation(event, want, options = {}) {
         if (orientation === 'unknown') return primary;
         if (orientation === (wantsPortrait ? 'portrait' : 'landscape')) return primary;
     }
-    return otherSlot || primary || '';
+    // Same rule on the way out: a crop of the primary is never an upgrade.
+    if (otherSlot && !isSameImageAsset(otherSlot, primary)) return otherSlot;
+    return primary || otherSlot || '';
 }
 
 function getEventBuilderStateKey(paramKey) {
@@ -843,6 +888,8 @@ const EventSchema = {
     parseNotesIntoFields,
     formatEventNotes,
     pickImageForOrientation,
+    imageAssetKey,
+    isSameImageAsset,
     getEventBuilderStateKey,
     escapeIcsText,
     foldIcsLine,
