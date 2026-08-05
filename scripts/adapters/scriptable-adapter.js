@@ -5622,12 +5622,30 @@ class ScriptableAdapter {
             } else if (params.a === "beacon") {
               this.recordResultsPageBeacon(params.id, params.d, pageBeacons);
             }
+            // Checkpoint the log while the sheet is still up. Every branch
+            // above has already logged its line by the time we reach here: the
+            // synchronous ones directly, and the fire-and-forget ones because
+            // the prologue of an un-awaited async call runs inline, up to its
+            // first await — which in each of them is after the console.log.
+            // This handler must still return a bool synchronously, and
+            // flushLogCheckpoint is sync and never throws.
+            this.flushLogCheckpoint(results, {
+              force: ScriptableAdapter.LOG_CHECKPOINT_FORCED_ACTIONS.has(
+                params.a,
+              ),
+            });
             return false; // cancel the fake navigation; the page stays put
           };
           // If the page could not be shed under the render ceiling, say so through
           // the ONE channel that survives a document WebKit refuses to run: a
           // native Alert, raised before the sheet, not a banner buried inside it.
           await this.warnResultsPageUnrenderable();
+          // LAST CHANCE BEFORE THE CLIFF. present() is where the run hangs: no
+          // sheet, no return, force-quit. Forced past the throttle so the page
+          // sizes, the paging lines and "Presenting results UI..." are on disk
+          // before control leaves for WebKit — after this, only the
+          // shouldAllowRequest handler above can write anything.
+          this.flushLogCheckpoint(results, { force: true });
           await webView.present(true);
           presentedPages += 1;
           // The page's own account of whether it ever rendered. Logged AFTER the
@@ -5638,6 +5656,9 @@ class ScriptableAdapter {
             );
           }
           this.reportResultsPageLiveness(pageBeacons);
+          // The verdict line is the whole point — put it on disk before the
+          // NEXT page gets its chance to hang. Forced: one write per page.
+          this.flushLogCheckpoint(results, { force: true });
 
           if (pendingPage === null || pendingPage === currentPage) break;
           currentPage = pendingPage;
@@ -5676,6 +5697,10 @@ class ScriptableAdapter {
         results,
         bearOverridePending,
       );
+      // Paging is over but appendLogSummary is still a calendar-execution
+      // prompt away — another native UI, another chance to stall. Forced, so
+      // what the overrides actually did survives that too.
+      this.flushLogCheckpoint(results, { force: true });
 
       // After displaying results, prompt for calendar execution if we have analyzed events
       // Don't prompt when displaying saved runs (they should use isDryRun override instead)
@@ -14235,6 +14260,111 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     return this.fm.joinPath(this.logsDir, `${runId}.log`);
   }
 
+  // ---------------------------------------------------------------------------
+  // UI-phase log checkpoints.
+  //
+  // FileLogger keeps every line in MEMORY (its `entries` array) and only ever
+  // touches disk when something asks it to — getLogText() → fm.writeString().
+  // In a run that finishes, that happens exactly once, in appendLogSummary,
+  // AFTER the results sheet has been dismissed. There is no incremental write.
+  //
+  // So when the sheet HANGS — the failure being chased here: no sheet appears,
+  // present() never returns, the script is force-quit — every line emitted from
+  // "Presenting results UI..." onwards dies in memory. That is:
+  //   • the liveness-beacon verdict ("rendered on device" / "never reported
+  //     liveness") — the single most diagnostic line in the whole run, because
+  //     it is the only evidence of whether WebKit ever ran the page at all
+  //   • the page-arming and "Results page N of M" lines
+  //   • every bear-override tap and venue-queue copy the owner made
+  //   • the calendar-execution prompt and its outcome
+  // A hang therefore destroyed precisely the evidence needed to explain the
+  // hang, and the saved log stopped on the same line the owner was already
+  // pasting in by hand. Persisting the run before the UI fixed the DATA loss;
+  // this fixes the EVIDENCE loss.
+  //
+  // THE MECHANISM THAT MAKES IT POSSIBLE: a WebView's shouldAllowRequest
+  // handler runs WHILE the sheet is presented — it fires on every tap, long
+  // before `await webView.present(true)` resolves. Anything flushed from
+  // inside one is already on disk when a later hang or force-quit arrives, so
+  // a killed run loses at most the handful of lines since the last checkpoint.
+  //
+  // This writes the SAME file appendLogSummary rewrites at the end (same run
+  // id, same path, whole buffer via writeString), so checkpointing never
+  // produces a second log — the final write simply supersedes the last
+  // checkpoint. Silent on success after the first announcement: every
+  // console.log here would itself land in the buffer being written.
+  getLogCheckpointPath(results) {
+    const runId = this.getRunIdForLogs(results);
+    if (runId) {
+      return this.getLogFilePath(runId);
+    }
+    // No run id yet — the run has not been saved, so there is nothing to name
+    // the file after. Checkpoints still have to land somewhere, so they go to
+    // one fixed file that each run overwrites. It is only ever read when a run
+    // died before it could be saved, which is exactly the case it exists for.
+    return this.fm.joinPath(this.logsDir, "ui-phase-checkpoint.log");
+  }
+
+  // Write the log buffer to disk mid-review. Throttled unless `force`.
+  // NEVER throws: a checkpoint failing is a lost diagnostic, while a throw out
+  // of shouldAllowRequest would break the sheet the owner is standing in front
+  // of. Returns whether a write actually happened (tests assert on it).
+  flushLogCheckpoint(results, options = {}) {
+    try {
+      // Redisplaying a saved run: getRunIdForLogs would resolve to that run's
+      // sourceRunId, and checkpointing would overwrite a historical log with
+      // this session's buffer. Never write during display mode — the same rule
+      // displayResults already applies to appendLogSummary.
+      if (!results || results._isDisplayingSavedRun) return false;
+      const force = options.force === true;
+      const now = Date.now();
+      if (
+        !force &&
+        Number.isFinite(this._lastLogCheckpointAt) &&
+        now - this._lastLogCheckpointAt <
+          ScriptableAdapter.LOG_CHECKPOINT_MIN_INTERVAL_MS
+      ) {
+        return false;
+      }
+      const fm = this.fm;
+      if (!fm) return false;
+      const logPath = this.getLogCheckpointPath(results);
+      if (!logPath) return false;
+      if (!this._logCheckpointAnnounced) {
+        // Announced BEFORE the buffer is read, so the first checkpoint file
+        // says where checkpoints are going. Once per run — this line is itself
+        // a log line, and one per flush would grow the file it is describing.
+        this._logCheckpointAnnounced = true;
+        console.log(
+          `📱 Scriptable: 🧷 Checkpointing the run log to ${logPath} while the results UI is open — a hang or force-quit now keeps everything up to the last tap.`,
+        );
+      }
+      // Always the full buffer: a checkpoint only ever gets read when the run
+      // died at the UI, and a trimmed one would drop the beacon verdicts. The
+      // buffer is byte-capped (FileLogger maxBytes), so this rewrite is bounded.
+      const content = logger.getLogText({ mode: "full" });
+      if (!content) return false;
+      if (!fm.fileExists(this.logsDir)) {
+        fm.createDirectory(this.logsDir, true);
+      }
+      fm.writeString(logPath, content);
+      this._lastLogCheckpointAt = now;
+      return true;
+    } catch (e) {
+      if (!this._logCheckpointFailed) {
+        this._logCheckpointFailed = true;
+        try {
+          console.log(
+            `📱 Scriptable: Log checkpoint failed (the review continues, the final log write is unaffected): ${e.message}`,
+          );
+        } catch (_) {
+          /* even the complaint is optional */
+        }
+      }
+      return false;
+    }
+  }
+
   async appendLogSummary(results, options = {}) {
     try {
       const runId =
@@ -14293,6 +14423,30 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
 // Scriptable-specific CalendarEvent fields that must not be written to notes.
 // Passed to SharedCore via options.additionalExcludedFields so that shared-core.js
 // stays free of iOS-only API knowledge.
+// Throttle for UI-phase log checkpoints (see flushLogCheckpoint).
+// getLogText() + writeString() rewrite the WHOLE buffer, so an unthrottled
+// flush-per-line would be O(n^2) over a run. Measured at the 1 MB byte cap
+// (7,462 entries, 976 KB written): 0.16 ms to join + 0.14 ms to write, ~0.30 ms
+// per flush on a Mac; the phone's iCloud FileManager is slower but the same
+// shape. 250 ms therefore caps throttled traffic at ~4 writes/second — far
+// under any tap rate a human produces — while costing nothing that matters,
+// and every line the owner actually needs is forced past it anyway (below).
+ScriptableAdapter.LOG_CHECKPOINT_MIN_INTERVAL_MS = 250;
+
+// Bridge actions whose line must reach disk immediately, throttle or not.
+// Beacons are the reason this whole thing exists: the beacon verdict is the
+// only proof of whether WebKit ran the page, and it is worthless if the hang
+// that follows eats it. Bear overrides and venue copies are the owner's review
+// decisions — those go on disk as he makes them, not when the sheet closes.
+// Everything else (page arming, map/ICS/log/prompt taps) is repeatable noise
+// and rides the throttle.
+ScriptableAdapter.LOG_CHECKPOINT_FORCED_ACTIONS = new Set([
+  "beacon",
+  "mark-bear",
+  "mark-not-bear",
+  "copy-venue",
+]);
+
 ScriptableAdapter.NOTES_EXCLUDED_FIELDS = new Set([
   "identifier",
   "availability",
