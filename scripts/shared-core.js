@@ -140,6 +140,47 @@ function urlPartsEndInAssetExtension(parts) {
 
 const IMAGE_MERGE_FIELDS = new Set(['image', 'imageVertical', 'imageHorizontal']);
 
+// Placeholder-image vocabulary for getPlaceholderImageUrlReason below. Words a
+// file can be NAMED that mean "there is no picture here" — the 1x1 spacer /
+// lazy-load / tracking pixel. Whole tokens only (see the caller), so a real
+// flyer that merely CONTAINS one of these words is untouched. Data only —
+// shared-core stays platform-pure, and nothing here names a host, venue,
+// promoter or city.
+//
+// Deliberately absent: "trans" (a gay/bear events site has real trans-pride
+// artwork), "loading"/"logo"/"icon" (already handled by the parser's
+// isLikelyUninterestingImageUrl, and "loading" would swallow "loading-dock").
+const PLACEHOLDER_IMAGE_NAME_TOKENS = new Set([
+    'px', 'pixel', 'pixels', 'spacer', 'spacers', 'blank', 'transparent',
+    'placeholder', 'placeholders', 'dot', 'clear', 'empty', 'shim', 'none',
+    'null', 'noimage', 'nopic', 'dummy'
+]);
+// Any advertised dimension at or below this is not a picture anybody looks at.
+// Kept tiny on purpose: an 8px favicon or a 10x64 sprite is a different problem
+// (isLikelyUninterestingImageUrl's job), and widening this would start eating
+// real path tokens like "10x64" or a "300x300" thumbnail.
+const PLACEHOLDER_MAX_TINY_DIMENSION = 4;
+// The canonical 1x1 transparent GIF is a 70-character base64 payload; the
+// smallest real flyer is orders of magnitude larger.
+const PLACEHOLDER_DATA_URI_MAX_PAYLOAD_CHARS = 512;
+
+// One token of an image filename's base name (lowercased, split on
+// non-alphanumerics) that means "placeholder": a vocabulary word, a
+// self-declared pixel size ("1px"), or a self-declared tiny box ("1x1").
+function isPlaceholderImageNameToken(token) {
+    const text = String(token || '');
+    if (!text) return false;
+    if (PLACEHOLDER_IMAGE_NAME_TOKENS.has(text)) return true;
+    const pixelSize = text.match(/^(\d{1,3})px$/);
+    if (pixelSize) return parseInt(pixelSize[1], 10) <= PLACEHOLDER_MAX_TINY_DIMENSION;
+    const box = text.match(/^(\d{1,3})x(\d{1,3})$/);
+    if (box) {
+        return parseInt(box[1], 10) <= PLACEHOLDER_MAX_TINY_DIMENSION
+            && parseInt(box[2], 10) <= PLACEHOLDER_MAX_TINY_DIMENSION;
+    }
+    return false;
+}
+
 // classifyCoverShape data (2026-08-02, all shapes drawn from real run values).
 // A currency-marked amount: a symbol adjacent to digits ("$20", "$15-$30",
 // "From £10", "20$") — NFKC folding upstream already collapsed full-width and
@@ -1212,6 +1253,113 @@ class SharedCore {
             score = url.length;
         }
         return score;
+    }
+
+    // The 1x1 spacer / lazy-load / tracking pixel every CDN and lazy-loader
+    // ships, and its relatives. Returns a human-readable REASON string when the
+    // URL's own shape says "this is not artwork", '' otherwise.
+    //
+    // Companion to getImageSizeScoreFromUrl / getImageDimensionsFromUrl above
+    // and bound by the same rules: no network, no `new URL` / URLSearchParams.
+    // Where the scorer answers "how big" and the dimension reader answers "what
+    // shape", this answers "is this an image at all" — and the size score
+    // cannot: a placeholder that advertises nothing scores on the URL-LENGTH
+    // noise floor, exactly like a real flyer with an opaque asset-ID filename
+    // (run 20260805-125954: an event shipped a 1px tracking pixel as its
+    // flyer, handed to the model as a segment's only SEGMENT_IMAGE_URL).
+    //
+    // SHAPE ONLY, never the host: which site serves the pixel is irrelevant,
+    // and pinning this to a domain would just move the bug to the next site.
+    // Deliberately conservative — every rule needs the URL to NAME itself a
+    // placeholder or ADVERTISE a sub-5px dimension, so an opaque asset ID
+    // ("238fae_c4047c55…jpg") and any real rendition fall through as ''.
+    getPlaceholderImageUrlReason(url) {
+        const text = typeof url === 'string' ? url.trim() : '';
+        if (!text) return '';
+
+        // data: URIs. A flyer is tens of kilobytes; the canonical 1x1
+        // transparent GIF is a 70-character base64 payload. Anything under the
+        // threshold can only be a solid-colour pixel or an empty SVG.
+        if (/^data:/i.test(text)) {
+            if (!/^data:image\//i.test(text)) return '';
+            const commaIndex = text.indexOf(',');
+            if (commaIndex < 0) return '';
+            const payload = text.slice(commaIndex + 1);
+            if (payload.length <= PLACEHOLDER_DATA_URI_MAX_PAYLOAD_CHARS) {
+                return `inline data: image with only ${payload.length} payload characters`;
+            }
+            return '';
+        }
+
+        const parsed = this.parseUrl(text);
+        const path = parsed ? String(parsed.pathname || '') : text.replace(/[?#].*$/, '');
+        const search = parsed ? String(parsed.search || '') : '';
+        const segments = path.split('/').filter(Boolean);
+
+        // 1. A filename that names itself: "1px.png", "spacer.gif",
+        //    "transparent-pixel.png", "blank_1x1.gif". EVERY token of the base
+        //    name must be a placeholder word — "pixel-party-flyer.jpg" and
+        //    "flyer-1px-border.png" carry real words and are left alone.
+        const lastSegment = segments.length > 0 ? segments[segments.length - 1] : '';
+        const baseName = lastSegment.toLowerCase().replace(/\.[a-z0-9]{1,5}$/, '');
+        if (baseName) {
+            const tokens = baseName.split(/[^a-z0-9]+/).filter(Boolean);
+            if (tokens.length > 0 && tokens.every(token => isPlaceholderImageNameToken(token))) {
+                return `filename "${lastSegment}" names itself a placeholder`;
+            }
+        }
+
+        // 2. Explicit sub-5px dimensions in the query string ("?w=1&h=1"). One
+        //    is enough: nothing anybody would look at is served 4 pixels wide.
+        for (const key of ['w', 'width', 'h', 'height']) {
+            const raw = String(this.extractSearchParamValue(search, key) || '').trim();
+            if (!/^\d{1,5}$/.test(raw)) continue;
+            if (parseInt(raw, 10) <= PLACEHOLDER_MAX_TINY_DIMENSION) {
+                return `URL advertises ${key}=${raw}`;
+            }
+        }
+
+        // 3. Explicit sub-5px dimensions in the path — the generic "/1x1/"
+        //    token and Wix's comma-joined "w_1,h_1" transform, the same two
+        //    syntaxes getImageDimensionsFromUrl reads. Both dimensions must be
+        //    tiny, so "10x64" and "w_577,h_1027" never match.
+        //
+        //    The NxN token must be delimited by NON-ALPHANUMERICS on both
+        //    sides — getImageDimensionsFromUrl's "ab12x34cd.jpg" lesson, which
+        //    bites here too: dice.fm's opaque event id "v3x3n7-spookmince-…"
+        //    reads as a 3x3 image if you let the token float inside a blob.
+        //
+        //    DIRECTORY SEGMENTS ONLY — the FILENAME is rule 1's job. "1x1" in a
+        //    filename is far more often an ASPECT RATIO than a size: a CMS that
+        //    emits "flyer-1x1.jpg" for the square Instagram crop is naming a
+        //    real, full-size picture. A directory literally called "1x1/" is a
+        //    size bucket. Rule 1 still rejects a filename that is NOTHING but
+        //    the box ("1x1.png", "blank_1x1.gif"), so the spacer is caught
+        //    either way and the square flyer survives. Discarding a real flyer
+        //    is a worse failure here than keeping a pixel.
+        for (const segment of segments.slice(0, -1)) {
+            const lower = segment.toLowerCase();
+            const box = lower.match(/(?:^|[^a-z0-9])(\d{1,3})x(\d{1,3})(?![a-z0-9])/);
+            if (box
+                && parseInt(box[1], 10) <= PLACEHOLDER_MAX_TINY_DIMENSION
+                && parseInt(box[2], 10) <= PLACEHOLDER_MAX_TINY_DIMENSION) {
+                return `URL path advertises a ${box[1]}x${box[2]} image`;
+            }
+            const wixWidth = lower.match(/(?:^|,)w_(\d{1,5})(?=,|$)/);
+            const wixHeight = lower.match(/(?:^|,)h_(\d{1,5})(?=,|$)/);
+            if (wixWidth && wixHeight
+                && parseInt(wixWidth[1], 10) <= PLACEHOLDER_MAX_TINY_DIMENSION
+                && parseInt(wixHeight[1], 10) <= PLACEHOLDER_MAX_TINY_DIMENSION) {
+                return `URL path advertises a ${wixWidth[1]}x${wixHeight[1]} image`;
+            }
+        }
+
+        return '';
+    }
+
+    // Boolean face of getPlaceholderImageUrlReason for callers that only gate.
+    isPlaceholderImageUrl(url) {
+        return this.getPlaceholderImageUrlReason(url) !== '';
     }
 
     // Width/height advertised BY the URL itself — { width, height } or null.
@@ -2643,6 +2791,20 @@ class SharedCore {
             // conservative behavior — imageSource stays a companion of `image`
             // alone, with no per-slot provenance.
             if (IMAGE_MERGE_FIELDS.has(fieldName)) {
+                // A self-declared placeholder pixel never beats a real image.
+                // Extraction now refuses these outright, but a value already
+                // stored on the calendar from an earlier run still arrives
+                // here, and the arbitration model has no reliable read on it
+                // (it once called a genuine og:image flyer "a generic
+                // placeholder"). Both-or-neither placeholder still arbitrates.
+                const placeholderReasonA = this.getPlaceholderImageUrlReason(String(valueA).trim());
+                const placeholderReasonB = this.getPlaceholderImageUrlReason(String(valueB).trim());
+                if (Boolean(placeholderReasonA) !== Boolean(placeholderReasonB)) {
+                    return {
+                        winner: placeholderReasonA ? 'b' : 'a',
+                        reason: `real image beats placeholder (${placeholderReasonA || placeholderReasonB})`
+                    };
+                }
                 const hasLogoSegment = (parts) => parts.segments.some(segment => /logo/i.test(segment));
                 const logoA = hasLogoSegment(urlA);
                 const logoB = hasLogoSegment(urlB);
@@ -11253,6 +11415,50 @@ class SharedCore {
                 if (Array.isArray(bearOverrideContext.rescued)) {
                     bearOverrideContext.rescued.push(dropped);
                 }
+            }
+        }
+
+        // WHY A DROPPED EVENT CAN BE A TWIN OF A KEPT ONE.
+        //
+        // filterBearEvents runs BEFORE deduplicateEvents, so a thin second
+        // record of an event the run also scraped richly is bear-checked on
+        // its own — with none of its twin's description, host or evidence to
+        // judge by — and gets DROPped before dedup ever sees it. The owner
+        // then reads one event twice: kept in the write plan, and again in the
+        // dropped section with "no bear-specific wording".
+        //
+        // Run evidence (2026-08-05 BEEFMINCE): "TURKEYMINCE" merged into the
+        // London calendar for 19 Dec 22:00, while a second TURKEYMINCE record
+        // — same venue, same day, midnight placeholder start because the page
+        // stated no time — was dropped as "no bear-specific wording or
+        // evidence".
+        //
+        // Report only. The structural fix (dedup before the bear check) is
+        // still deferred for the reason recorded above: it reorders an
+        // expensive AI stage and changes bear verdicts run-wide. Saying so on
+        // the card costs nothing and stops the owner re-deciding an event he
+        // has already kept.
+        if (bearOverrideContext && Array.isArray(bearOverrideContext.droppedEvents)) {
+            for (const dropped of bearOverrideContext.droppedEvents) {
+                const droppedEvent = dropped && dropped.event;
+                if (!droppedEvent || dropped.rescued || dropped.duplicateOfPlanned) continue;
+                let signal = null;
+                const twin = analyzedEvents.find(entry => {
+                    if (!entry) return false;
+                    // Same relaxation the rescue fold uses: a twin whose start
+                    // time degraded to midnight must still match its sibling.
+                    signal = this.getSameEventIdentitySignal(droppedEvent, entry, { requireCloseStartTimes: false });
+                    return Boolean(signal);
+                }) || null;
+                if (!twin) continue;
+                // The signal is the identity rung that matched ('ticket-url',
+                // 'place-time-name', …) — the same vocabulary the calendar
+                // layer's "Merge eligibility match" lines use.
+                dropped.duplicateOfPlanned = {
+                    title: twin.title || '',
+                    signal: typeof signal === 'string' ? signal : ''
+                };
+                console.log(`🐻 BEAR CHECK: dropped "${droppedEvent.title || 'Unknown'}" is the same event as "${twin.title || 'Unknown'}" already in the write plan (${dropped.duplicateOfPlanned.signal || 'identity match'}) — one event scraped twice, not a second event`);
             }
         }
 

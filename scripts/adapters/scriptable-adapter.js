@@ -4482,11 +4482,16 @@ class ScriptableAdapter {
     const list = Array.isArray(findings) ? findings : [];
     const html = this.generateReviewHTML(list, options);
     const webView = new WebView();
-    await webView.loadHTML(html);
 
     const appliedCounts = { applied: 0, failed: 0 };
     const inFlight = [];
 
+    // Handler first, THEN loadHTML — same ordering the results sheet needs.
+    // This page happens not to navigate during its own load today, so it was
+    // not implicated in the page-3 hang, but leaving the window open is how
+    // that bug got written in the first place: any future beacon, redirect or
+    // auto-submit fired from DOMContentLoaded would hit a WebView with no
+    // handler and become a live main-frame navigation mid-load.
     webView.shouldAllowRequest = (request) => {
       const url = request && request.url ? String(request.url) : "";
       if (url.indexOf("chunkyreview://") !== 0) {
@@ -4504,6 +4509,7 @@ class ScriptableAdapter {
       return false; // cancel the fake navigation; the page stays put
     };
 
+    await webView.loadHTML(html);
     await webView.present(true); // blocks until the user dismisses the sheet
     await Promise.allSettled(inFlight);
     console.log(
@@ -4995,8 +5001,34 @@ class ScriptableAdapter {
           [calendar],
         );
 
+        // AN EVENT IS NOT A DUPLICATE OF ITSELF.
+        //
+        // This check runs AFTER analysis, so an event that matched something
+        // in the calendar carries the record it matched in `_existingEvent`.
+        // That record is the merge target — the thing this run is about to
+        // UPDATE — and it is same-title, same-minute by construction, which is
+        // exactly the test below. Counting it made every successful merge
+        // report itself as a duplicate and as a time conflict with itself:
+        // BEEFMINCE on 2026-08-05 logged "15 events, 0 missing, 15 duplicates,
+        // 15 conflicts" for 15 events that each had exactly one calendar twin,
+        // while the write plan for the same run read "UPDATE: 15, CREATE: 0".
+        // Nothing was duplicated; the report was.
+        //
+        // A REAL second copy still shows up, because only the one matched
+        // record is excluded — two twins leave one behind.
+        const matchedIdentifier =
+          event._existingEvent && event._existingEvent.identifier
+            ? String(event._existingEvent.identifier)
+            : null;
+        const isMergeTarget = (existing) =>
+          matchedIdentifier !== null &&
+          existing &&
+          existing.identifier &&
+          String(existing.identifier) === matchedIdentifier;
+
         // Check for exact duplicates
         const duplicates = existingEvents.filter((existing) => {
+          if (isMergeTarget(existing)) return false;
           const titleMatch = existing.title === (event.title || event.name);
           const timeMatch =
             Math.abs(existing.startDate.getTime() - startDate.getTime()) <
@@ -5023,7 +5055,10 @@ class ScriptableAdapter {
         }
 
         // Check for time conflicts (overlapping events)
+        // Same exclusion: the record this event is merging INTO overlaps it
+        // completely, which is the whole point of a merge, not a clash.
         const conflicts = existingEvents.filter((existing) => {
+          if (isMergeTarget(existing)) return false;
           const existingStart = existing.startDate.getTime();
           const existingEnd = existing.endDate.getTime();
           const newStart = startDate.getTime();
@@ -9667,7 +9702,9 @@ class ScriptableAdapter {
             ? "Rescued (manual override on calendar record)"
             : entry.manuallyMarkedBear === true
               ? "Rescued (marked bear by calendar owner this run)"
-              : "",
+              : entry.duplicateOfPlanned
+                ? `Same event as "${entry.duplicateOfPlanned.title || "an event"}" in the write plan — one event scraped twice, already kept`
+                : "",
         });
       })
       .filter((card) => typeof card === "string" && card.length > 0);

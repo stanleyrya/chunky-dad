@@ -6877,3 +6877,154 @@ test('a JPEG inline-logo cache is discarded and re-encoded instead of reused', a
   assert.equal(await adapter.buildHeaderLogoDataUri(),
     'data:image/png;base64,iVBORw0KGgo', 'a PNG cache is reused untouched');
 });
+
+// ---------------------------------------------------------------------------
+// THE MERGE TARGET IS NOT A DUPLICATE, AND IT IS NOT A CONFLICT.
+//
+// compareWithExistingCalendars runs after analysis, so an event that matched
+// something in the calendar carries that record in `_existingEvent`. It is
+// same-title/same-minute by construction — precisely the duplicate test — and
+// it overlaps in time completely, which is what a merge IS. Counting it made
+// BEEFMINCE report "15 events, 0 missing, 15 duplicates, 15 conflicts" for 15
+// events with exactly one calendar twin each, while the same run's write plan
+// read "UPDATE: 15, CREATE: 0".
+// ---------------------------------------------------------------------------
+function installCalendarCompareStubs(existingEvents) {
+  global.Calendar = { forEvents: async () => [{ title: 'chunky-dad-london' }] };
+  global.CalendarEvent = { between: async () => existingEvents };
+}
+
+function runCalendarCompare(adapter, results) {
+  const originalLog = console.log;
+  const lines = [];
+  console.log = (message) => { lines.push(String(message)); };
+  return adapter.compareWithExistingCalendars(results)
+    .then(() => { console.log = originalLog; return lines; })
+    .catch((error) => { console.log = originalLog; throw error; });
+}
+
+test('compareWithExistingCalendars does not report an event as a duplicate of its own merge target', async () => {
+  const adapter = buildAdapter();
+  adapter.getCalendarNameForDisplay = () => 'chunky-dad-london';
+  // Without this the timezone lookup throws, the method's catch swallows it,
+  // and the test would pass on an empty log for the wrong reason.
+  adapter.getTimezoneForCity = () => 'Europe/London';
+  const twin = {
+    identifier: 'CAL-1',
+    title: 'BEEFMINCE Trunk Den',
+    startDate: new Date('2026-08-15T21:00:00.000Z'),
+    endDate: new Date('2026-08-16T03:00:00.000Z')
+  };
+  const event = {
+    title: 'BEEFMINCE Trunk Den',
+    startDate: '2026-08-15T21:00:00.000Z',
+    endDate: '2026-08-16T03:00:00.000Z',
+    _action: 'merge',
+    _existingEvent: { identifier: 'CAL-1', title: 'BEEFMINCE Trunk Den' }
+  };
+  adapter.getAllEventsFromResults = () => [event];
+  installCalendarCompareStubs([twin]);
+  try {
+    const lines = await runCalendarCompare(adapter, {});
+    assert.ok(!lines.some((l) => l.includes('duplicate(s) in')),
+      'the record being merged into is not reported as a duplicate');
+    assert.ok(!lines.some((l) => l.includes('time conflict(s) in')),
+      'nor as a time conflict with itself');
+    assert.ok(lines.some((l) => l.includes('1 events, 0 missing, 0 duplicates, 0 conflicts')),
+      `summary counts nothing: ${lines.filter((l) => l.includes('Calendar check complete')).join(' | ')}`);
+  } finally {
+    delete global.Calendar;
+    delete global.CalendarEvent;
+  }
+});
+
+test('compareWithExistingCalendars still reports a REAL second copy alongside the merge target', async () => {
+  const adapter = buildAdapter();
+  adapter.getCalendarNameForDisplay = () => 'chunky-dad-london';
+  // Without this the timezone lookup throws, the method's catch swallows it,
+  // and the test would pass on an empty log for the wrong reason.
+  adapter.getTimezoneForCity = () => 'Europe/London';
+  const shape = {
+    title: 'BEEFMINCE Trunk Den',
+    startDate: new Date('2026-08-15T21:00:00.000Z'),
+    endDate: new Date('2026-08-16T03:00:00.000Z')
+  };
+  const event = {
+    title: 'BEEFMINCE Trunk Den',
+    startDate: '2026-08-15T21:00:00.000Z',
+    endDate: '2026-08-16T03:00:00.000Z',
+    _action: 'merge',
+    _existingEvent: { identifier: 'CAL-1' }
+  };
+  adapter.getAllEventsFromResults = () => [event];
+  installCalendarCompareStubs([
+    { identifier: 'CAL-1', ...shape },
+    { identifier: 'CAL-2', ...shape } // a genuine second copy
+  ]);
+  try {
+    const lines = await runCalendarCompare(adapter, {});
+    assert.ok(lines.some((l) => l.includes('1 duplicate(s) in chunky-dad-london')),
+      'the extra copy is still flagged — exactly one, not two');
+    assert.ok(lines.some((l) => l.includes('1 events, 0 missing, 1 duplicates, 1 conflicts')),
+      `summary counts the extra copy only: ${lines.filter((l) => l.includes('Calendar check complete')).join(' | ')}`);
+  } finally {
+    delete global.Calendar;
+    delete global.CalendarEvent;
+  }
+});
+
+test('an event with no calendar match still reports a same-title twin as a duplicate', async () => {
+  const adapter = buildAdapter();
+  adapter.getCalendarNameForDisplay = () => 'chunky-dad-london';
+  // Without this the timezone lookup throws, the method's catch swallows it,
+  // and the test would pass on an empty log for the wrong reason.
+  adapter.getTimezoneForCity = () => 'Europe/London';
+  const event = {
+    title: 'BEEFMINCE Trunk Den',
+    startDate: '2026-08-15T21:00:00.000Z',
+    endDate: '2026-08-16T03:00:00.000Z',
+    _action: 'new' // nothing matched, so nothing is excluded
+  };
+  adapter.getAllEventsFromResults = () => [event];
+  installCalendarCompareStubs([{
+    identifier: 'CAL-9',
+    title: 'BEEFMINCE Trunk Den',
+    startDate: new Date('2026-08-15T21:00:00.000Z'),
+    endDate: new Date('2026-08-16T03:00:00.000Z')
+  }]);
+  try {
+    const lines = await runCalendarCompare(adapter, {});
+    assert.ok(lines.some((l) => l.includes('1 duplicate(s) in chunky-dad-london')),
+      'a NEW event that collides with an existing one is still a real duplicate');
+  } finally {
+    delete global.Calendar;
+    delete global.CalendarEvent;
+  }
+});
+
+test('presentReviewResults installs shouldAllowRequest before loadHTML too', async () => {
+  const adapter = buildAdapter();
+  adapter.showReviewSummaryAlert = async () => {};
+  let handler = null;
+  let resolvePresent = null;
+  const handlerSetWhenLoadRan = [];
+  global.WebView = class {
+    async loadHTML() { handlerSetWhenLoadRan.push(handler !== null); }
+    set shouldAllowRequest(fn) { handler = fn; }
+    get shouldAllowRequest() { return handler; }
+    present() { return new Promise((resolve) => { resolvePresent = resolve; }); }
+    async evaluateJavaScript() { return undefined; }
+  };
+  try {
+    const done = adapter.presentReviewResults([buildBridgeFinding()], {});
+    for (let i = 0; i < 500 && !resolvePresent; i++) {
+      await new Promise((r) => setImmediate(r));
+    }
+    assert.deepEqual(handlerSetWhenLoadRan, [true],
+      'the handler was already on the WebView when loadHTML ran');
+    resolvePresent();
+    await done;
+  } finally {
+    delete global.WebView;
+  }
+});

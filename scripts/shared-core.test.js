@@ -2010,6 +2010,94 @@ test('guardrail: own-page artwork (og-image/jsonld) beats a page-sourced image; 
   assert.equal(core.resolveConflictDeterministically('image', og, page), null);
 });
 
+// ---------------------------------------------------------------------------
+// Placeholder-image guard. Run 20260805-125954 published a 1x1 lazy-load pixel
+// as an event's flyer (imageSource "page" — a listing page's segment offered no
+// other <img>, so the URL reached the model as SEGMENT_IMAGE_URL and passed the
+// verbatim evidence gate because it really is on the page). The rules are about
+// the SHAPE of the URL — never the host that served it.
+// ---------------------------------------------------------------------------
+
+test('getPlaceholderImageUrlReason names self-declared placeholder images and leaves real artwork alone', () => {
+  const core = createCore();
+  const reason = (url) => core.getPlaceholderImageUrlReason(url);
+
+  // The exact URL from the run that motivated the guard.
+  assert.match(reason('https://dice.fm/static/images/1px.png'), /names itself a placeholder/);
+  assert.equal(core.isPlaceholderImageUrl('https://dice.fm/static/images/1px.png'), true);
+
+  // Filenames that name themselves, including multi-token and mixed forms.
+  for (const url of [
+    'https://x.example/a/spacer.gif',
+    'https://x.example/assets/blank.png',
+    'https://x.example/i/px.gif',
+    'https://x.example/i/1x1.png',
+    'https://x.example/i/transparent-pixel.png',
+    'https://x.example/i/blank_1x1.gif',
+    'https://x.example/i/dot.gif',
+    'https://x.example/i/clear.gif',
+    'https://bearracuda.com/wp-content/uploads/2023/06/placeholder.png'
+  ]) {
+    assert.match(reason(url), /names itself a placeholder/, url);
+  }
+
+  // Dimensions the URL advertises about itself: query params, a generic path
+  // token, and Wix's comma-joined transform.
+  assert.match(reason('https://cdn.example.com/i.jpg?w=1&h=1'), /advertises w=1/);
+  assert.match(reason('https://cdn.example.com/i.jpg?height=1'), /advertises height=1/);
+  assert.match(reason('https://x.example/img/1x1/p.png'), /advertises a 1x1 image/);
+  assert.match(
+    reason('https://static.wixstatic.com/media/a~mv2.png/v1/fill/w_1,h_1,al_c/a.png'),
+    /advertises a 1x1 image/);
+
+  // A data: URI too small to be anything but a solid colour (the canonical 1x1
+  // transparent GIF), while a real inline image passes.
+  assert.match(
+    reason('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'),
+    /inline data: image with only \d+ payload characters/);
+  assert.equal(reason(`data:image/png;base64,${'A'.repeat(4000)}`), '');
+  assert.equal(reason(`data:text/html;base64,${'A'.repeat(4)}`), '', 'non-image data: URIs are not our business');
+
+  // Real artwork must survive — every one of these is a shape that exists in
+  // this repo's own calendars/fixtures or in a saved run.
+  for (const url of [
+    'https://static.wixstatic.com/media/238fae_c4047c55f4534a0990b2b7fdc19dab8f~mv2.png/v1/fill/w_577,h_1027,al_c,q_90,enc_avif/238fae.png',
+    'https://cdn.example.com/img/1920x1080/flyer.jpg',
+    'https://x.example/uploads/pixel-party-flyer.jpg',
+    'https://x.example/uploads/os-windows-10x64-download.png',
+    'https://img.evbuc.com/x.jpg?crop=focalpoint&fit=crop&h=230&w=460',
+    'https://x.example/uploads/flyer-1-1-300x300.jpg',
+    'https://bearracuda.com/wp-content/uploads/2026/06/sausageweb.jpg',
+    // dice.fm's opaque event id contains "3x3" — an id blob is not a dimension
+    'https://dice.fm/event/v3x3n7-spookmince-31st-oct-venue-tba-london-london-tickets',
+    ''
+  ]) {
+    assert.equal(reason(url), '', url);
+  }
+});
+
+test('merge rung: a placeholder pixel never beats a real image, in any image slot', () => {
+  const core = createCore();
+  const flyer = 'https://bearracuda.com/wp-content/uploads/2026/06/sausageweb.jpg';
+  const pixel = 'https://dice.fm/static/images/1px.png';
+
+  for (const field of ['image', 'imageVertical', 'imageHorizontal']) {
+    const a = core.resolveConflictDeterministically(field, flyer, pixel);
+    assert.equal(a && a.winner, 'a', `${field}: real image wins from the a side`);
+    assert.match(a.reason, /real image beats placeholder/);
+    const b = core.resolveConflictDeterministically(field, pixel, flyer);
+    assert.equal(b && b.winner, 'b', `${field}: real image wins from the b side`);
+  }
+
+  // Both placeholders is a genuine question, not a rung — fall through.
+  assert.equal(
+    core.resolveConflictDeterministically('image', pixel, 'https://x.example/a/spacer.gif'),
+    null, 'two placeholders decide nothing here');
+
+  // The rung is image-only: a ticketUrl that happens to look tiny is untouched.
+  assert.equal(core.resolveConflictDeterministically('ticketUrl', flyer, pixel), null);
+});
+
 test('imageSource is never arbitration-eligible and round-trips through notes like pinSource', () => {
   const core = createCore();
   assert.equal(core.isArbitrationEligibleField('imageSource'), false);
@@ -15157,4 +15245,92 @@ test('isDateLike and toEpochMillis are reachable statically for adapters and sta
   const core = createCore();
   assert.equal(core.isDateLike(foreign), SharedCore.isDateLike(foreign));
   assert.equal(core.toEpochMillis(foreign), SharedCore.toEpochMillis(foreign));
+});
+
+// ---------------------------------------------------------------------------
+// A DROPPED EVENT THAT IS A TWIN OF A KEPT ONE SAYS SO.
+//
+// filterBearEvents runs before deduplicateEvents, so a thin second record of
+// an event the run also scraped richly is bear-checked alone — with none of
+// its twin's description or evidence — and dropped before dedup can fold it
+// in. The owner then reads one event twice. Report only: the structural fix
+// (dedup before the bear check) reorders an expensive AI stage.
+// ---------------------------------------------------------------------------
+test('prep-time twins: a dropped event that duplicates a planned one is labelled, not silently listed', async () => {
+  const core = createCore();
+  const ticketUrl = 'https://dice.fm/event/ww93qg-turkeymince-19th-dec';
+  const keptEvent = {
+    title: 'TURKEYMINCE',
+    startDate: new Date('2026-12-19T22:00:00.000Z'),
+    bar: 'Royal Vauxhall Tavern',
+    timezone: 'Europe/London',
+    ticketUrl
+  };
+  // The degraded twin: no stated time on the page, so it defaults to midnight.
+  const droppedEntry = {
+    title: 'TURKEYMINCE',
+    reason: 'ai: no bear-specific wording',
+    event: {
+      title: 'TURKEYMINCE',
+      startDate: new Date('2026-12-19T00:00:00.000Z'),
+      bar: 'Royal Vauxhall Tavern',
+      // Every identity signal is gated on the same LOCAL day, so the twin only
+      // matches once both records carry the timezone the real ones do.
+      timezone: 'Europe/London',
+      ticketUrl
+    }
+  };
+  const context = buildOverrideContext([droppedEntry]);
+
+  const analyzed = await core.prepareEventsForCalendar(
+    [keptEvent], buildPrepCalendarAdapter([]), {}, context);
+
+  assert.equal(analyzed.length, 1, 'the kept event is planned exactly once');
+  assert.ok(droppedEntry.duplicateOfPlanned,
+    'the drop is marked as a twin of something already in the plan');
+  assert.equal(droppedEntry.duplicateOfPlanned.title, 'TURKEYMINCE');
+  assert.equal(droppedEntry.duplicateOfPlanned.signal, 'ticket-url',
+    'and names the identity rung that matched');
+  assert.equal(droppedEntry.rescued, undefined,
+    'labelling is not rescuing — the bear verdict is untouched');
+});
+
+test('prep-time twins: an unrelated dropped event is left unlabelled', async () => {
+  const core = createCore();
+  const keptEvent = {
+    title: 'TURKEYMINCE',
+    startDate: new Date('2026-12-19T22:00:00.000Z'),
+    bar: 'Royal Vauxhall Tavern',
+    timezone: 'Europe/London',
+    ticketUrl: 'https://dice.fm/event/ww93qg-turkeymince-19th-dec'
+  };
+  const droppedEntry = {
+    title: 'Quiz Night',
+    reason: 'ai: no bear-specific wording',
+    event: {
+      title: 'Quiz Night',
+      startDate: new Date('2026-07-02T19:00:00.000Z'),
+      bar: 'Somewhere Else',
+      ticketUrl: 'https://example.com/quiz'
+    }
+  };
+  const context = buildOverrideContext([droppedEntry]);
+
+  await core.prepareEventsForCalendar([keptEvent], buildPrepCalendarAdapter([]), {}, context);
+
+  assert.equal(droppedEntry.duplicateOfPlanned, undefined,
+    'a genuinely separate event is not labelled a twin');
+});
+
+test('placeholder images: a square-crop filename is artwork, a size-bucket directory is not', () => {
+  const core = createCore();
+  // "1x1" in a FILENAME is usually an aspect ratio — the square Instagram crop
+  // of a real flyer. Rejecting it would throw away artwork to catch a pixel.
+  assert.equal(core.isPlaceholderImageUrl('https://example.com/photos/1x1-crop-of-the-bear-party.jpg'), false);
+  assert.equal(core.isPlaceholderImageUrl('https://example.com/flyer-16x9.jpg'), false);
+  // A filename that is NOTHING but the box, or a directory named for the size,
+  // is still a placeholder.
+  assert.equal(core.isPlaceholderImageUrl('https://cdn.example.com/img/1x1.png'), true);
+  assert.equal(core.isPlaceholderImageUrl('https://example.com/i/blank_1x1.gif'), true);
+  assert.equal(core.isPlaceholderImageUrl('https://cdn.example.com/assets/1x1/bucket/real-flyer.jpg'), true);
 });

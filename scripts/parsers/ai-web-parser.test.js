@@ -1146,6 +1146,89 @@ test('embedded Google Maps URLs are uninteresting images', () => {
   assert.equal(parser.isLikelyUninterestingImageUrl('https://x.example/images/flyer.jpg'), false);
 });
 
+// ---------------------------------------------------------------------------
+// Placeholder-image guard (run 20260805-125954). A dice.fm listing page lazy-
+// loads its flyers, so the TURKEYMINCE segment's only <img> was
+// ".../static/images/1px.png". It reached the model as SEGMENT_IMAGE_URL, the
+// verbatim evidence gate passed it (it IS on the page), and it shipped as the
+// event's flyer stamped imageSource "page". The guard is about the SHAPE of the
+// URL — nothing here or in shared-core names dice.fm.
+// ---------------------------------------------------------------------------
+
+test('placeholder pixels are uninteresting images (never OCR targets or slot candidates)', () => {
+  const parser = createParser();
+  assert.equal(parser.isLikelyUninterestingImageUrl('https://dice.fm/static/images/1px.png'), true);
+  assert.equal(parser.isLikelyUninterestingImageUrl('https://x.example/i/1x1.png'), true);
+  assert.equal(parser.isLikelyUninterestingImageUrl('https://cdn.example.com/i.jpg?w=1&h=1'), true);
+  // Real artwork is untouched, including the Wix asset ID that already tripped
+  // the '404' rule once.
+  assert.equal(parser.isLikelyUninterestingImageUrl('https://x.example/images/flyer.jpg'), false);
+  assert.equal(
+    parser.isLikelyUninterestingImageUrl('https://static.wixstatic.com/media/238fae_c4047c55f4534a0990b2b7fdc19dab8f~mv2.png/v1/fill/w_577,h_1027,al_c,q_90,enc_avif/238fae.png'),
+    false
+  );
+});
+
+test('rejectPlaceholderImageValues clears every image slot it drops, with one named log line each', () => {
+  const parser = createParser();
+  const event = {
+    title: 'TURKEYMINCE',
+    image: 'https://dice.fm/static/images/1px.png',
+    imageSource: 'page',
+    imageVertical: 'https://x.example/i/spacer.gif',
+    imageHorizontal: 'https://bearracuda.com/wp-content/uploads/2026/06/sausageweb.jpg'
+  };
+  const logs = captureLogs(() => parser.rejectPlaceholderImageValues(event));
+
+  assert.equal('image' in event, false, 'the placeholder primary is dropped');
+  assert.equal('imageSource' in event, false, 'provenance never outlives the value it describes');
+  assert.equal('imageVertical' in event, false, 'orientation slots are guarded too');
+  assert.equal(event.imageHorizontal, 'https://bearracuda.com/wp-content/uploads/2026/06/sausageweb.jpg',
+    'a real flyer is left alone');
+
+  const rejections = logs.filter(line => line.includes('Rejected placeholder'));
+  assert.equal(rejections.length, 2);
+  assert.ok(rejections.some(line =>
+    line.includes('https://dice.fm/static/images/1px.png') && line.includes('names itself a placeholder')),
+    `the log names the URL and the reason: ${rejections.join(' | ')}`);
+
+  // Nothing to reject → nothing said.
+  const clean = { title: 'CLEAN', image: 'https://x.example/flyer.jpg', imageSource: 'og-image' };
+  assert.equal(captureLogs(() => parser.rejectPlaceholderImageValues(clean)).length, 0);
+  assert.equal(clean.image, 'https://x.example/flyer.jpg');
+  assert.equal(clean.imageSource, 'og-image');
+});
+
+test('normalizeAiEvent refuses a placeholder flyer and adopts the page\'s real artwork instead', () => {
+  const parser = createParser();
+  const htmlData = {
+    url: 'https://dice.fm/event/ww93qg-turkeymince-19th-dec-the-royal-vauxhall-tavern-london-tickets',
+    html: `<html><head>
+      <meta property="og:image" content="https://images.dice.fm/turkeymince-flyer.jpg" />
+    </head><body></body></html>`
+  };
+  const logs = captureLogs(() => {
+    const event = parser.normalizeAiEvent(
+      { title: 'TURKEYMINCE', startDate: '2026-12-19', img: 'https://dice.fm/static/images/1px.png' },
+      {}, htmlData, null, null);
+    assert.notEqual(event.image, 'https://dice.fm/static/images/1px.png',
+      'the 1x1 tracking pixel never becomes the flyer');
+    assert.equal(event.image, 'https://images.dice.fm/turkeymince-flyer.jpg');
+    assert.equal(event.imageSource, 'og-image', 'the stamp follows the artwork actually kept');
+  });
+  assert.ok(logs.some(line => line.includes('Rejected placeholder image')
+    && line.includes('https://dice.fm/static/images/1px.png')),
+    'the rejection is visible in the run log');
+
+  // With no page artwork to fall back on, the event simply has no image —
+  // better than a pixel, and no orphaned provenance stamp.
+  const bare = parser.normalizeAiEvent(
+    { title: 'TURKEYMINCE', startDate: '2026-12-19', img: 'https://dice.fm/static/images/1px.png' },
+    {}, { url: htmlData.url, html: '<html><head></head><body></body></html>' }, null, null);
+  assert.equal('image' in bare, false);
+  assert.equal('imageSource' in bare, false);
+});
+
 test("'404' flags standalone segments only, never hex asset IDs or pixel sizes", () => {
   const parser = createParser();
   // Regression (run 20260723-152928): the Boston flyer's Wix asset ID contains
