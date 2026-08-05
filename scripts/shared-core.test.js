@@ -15158,3 +15158,78 @@ test('isDateLike and toEpochMillis are reachable statically for adapters and sta
   assert.equal(core.isDateLike(foreign), SharedCore.isDateLike(foreign));
   assert.equal(core.toEpochMillis(foreign), SharedCore.toEpochMillis(foreign));
 });
+
+// ---------------------------------------------------------------------------
+// A DROPPED EVENT THAT IS A TWIN OF A KEPT ONE SAYS SO.
+//
+// filterBearEvents runs before deduplicateEvents, so a thin second record of
+// an event the run also scraped richly is bear-checked alone — with none of
+// its twin's description or evidence — and dropped before dedup can fold it
+// in. The owner then reads one event twice. Report only: the structural fix
+// (dedup before the bear check) reorders an expensive AI stage.
+// ---------------------------------------------------------------------------
+test('prep-time twins: a dropped event that duplicates a planned one is labelled, not silently listed', async () => {
+  const core = createCore();
+  const ticketUrl = 'https://dice.fm/event/ww93qg-turkeymince-19th-dec';
+  const keptEvent = {
+    title: 'TURKEYMINCE',
+    startDate: new Date('2026-12-19T22:00:00.000Z'),
+    bar: 'Royal Vauxhall Tavern',
+    timezone: 'Europe/London',
+    ticketUrl
+  };
+  // The degraded twin: no stated time on the page, so it defaults to midnight.
+  const droppedEntry = {
+    title: 'TURKEYMINCE',
+    reason: 'ai: no bear-specific wording',
+    event: {
+      title: 'TURKEYMINCE',
+      startDate: new Date('2026-12-19T00:00:00.000Z'),
+      bar: 'Royal Vauxhall Tavern',
+      // Every identity signal is gated on the same LOCAL day, so the twin only
+      // matches once both records carry the timezone the real ones do.
+      timezone: 'Europe/London',
+      ticketUrl
+    }
+  };
+  const context = buildOverrideContext([droppedEntry]);
+
+  const analyzed = await core.prepareEventsForCalendar(
+    [keptEvent], buildPrepCalendarAdapter([]), {}, context);
+
+  assert.equal(analyzed.length, 1, 'the kept event is planned exactly once');
+  assert.ok(droppedEntry.duplicateOfPlanned,
+    'the drop is marked as a twin of something already in the plan');
+  assert.equal(droppedEntry.duplicateOfPlanned.title, 'TURKEYMINCE');
+  assert.equal(droppedEntry.duplicateOfPlanned.signal, 'ticket-url',
+    'and names the identity rung that matched');
+  assert.equal(droppedEntry.rescued, undefined,
+    'labelling is not rescuing — the bear verdict is untouched');
+});
+
+test('prep-time twins: an unrelated dropped event is left unlabelled', async () => {
+  const core = createCore();
+  const keptEvent = {
+    title: 'TURKEYMINCE',
+    startDate: new Date('2026-12-19T22:00:00.000Z'),
+    bar: 'Royal Vauxhall Tavern',
+    timezone: 'Europe/London',
+    ticketUrl: 'https://dice.fm/event/ww93qg-turkeymince-19th-dec'
+  };
+  const droppedEntry = {
+    title: 'Quiz Night',
+    reason: 'ai: no bear-specific wording',
+    event: {
+      title: 'Quiz Night',
+      startDate: new Date('2026-07-02T19:00:00.000Z'),
+      bar: 'Somewhere Else',
+      ticketUrl: 'https://example.com/quiz'
+    }
+  };
+  const context = buildOverrideContext([droppedEntry]);
+
+  await core.prepareEventsForCalendar([keptEvent], buildPrepCalendarAdapter([]), {}, context);
+
+  assert.equal(droppedEntry.duplicateOfPlanned, undefined,
+    'a genuinely separate event is not labelled a twin');
+});

@@ -11256,6 +11256,50 @@ class SharedCore {
             }
         }
 
+        // WHY A DROPPED EVENT CAN BE A TWIN OF A KEPT ONE.
+        //
+        // filterBearEvents runs BEFORE deduplicateEvents, so a thin second
+        // record of an event the run also scraped richly is bear-checked on
+        // its own — with none of its twin's description, host or evidence to
+        // judge by — and gets DROPped before dedup ever sees it. The owner
+        // then reads one event twice: kept in the write plan, and again in the
+        // dropped section with "no bear-specific wording".
+        //
+        // Run evidence (2026-08-05 BEEFMINCE): "TURKEYMINCE" merged into the
+        // London calendar for 19 Dec 22:00, while a second TURKEYMINCE record
+        // — same venue, same day, midnight placeholder start because the page
+        // stated no time — was dropped as "no bear-specific wording or
+        // evidence".
+        //
+        // Report only. The structural fix (dedup before the bear check) is
+        // still deferred for the reason recorded above: it reorders an
+        // expensive AI stage and changes bear verdicts run-wide. Saying so on
+        // the card costs nothing and stops the owner re-deciding an event he
+        // has already kept.
+        if (bearOverrideContext && Array.isArray(bearOverrideContext.droppedEvents)) {
+            for (const dropped of bearOverrideContext.droppedEvents) {
+                const droppedEvent = dropped && dropped.event;
+                if (!droppedEvent || dropped.rescued || dropped.duplicateOfPlanned) continue;
+                let signal = null;
+                const twin = analyzedEvents.find(entry => {
+                    if (!entry) return false;
+                    // Same relaxation the rescue fold uses: a twin whose start
+                    // time degraded to midnight must still match its sibling.
+                    signal = this.getSameEventIdentitySignal(droppedEvent, entry, { requireCloseStartTimes: false });
+                    return Boolean(signal);
+                }) || null;
+                if (!twin) continue;
+                // The signal is the identity rung that matched ('ticket-url',
+                // 'place-time-name', …) — the same vocabulary the calendar
+                // layer's "Merge eligibility match" lines use.
+                dropped.duplicateOfPlanned = {
+                    title: twin.title || '',
+                    signal: typeof signal === 'string' ? signal : ''
+                };
+                console.log(`🐻 BEAR CHECK: dropped "${droppedEvent.title || 'Unknown'}" is the same event as "${twin.title || 'Unknown'}" already in the write plan (${dropped.duplicateOfPlanned.signal || 'identity match'}) — one event scraped twice, not a second event`);
+            }
+        }
+
         this.logCalendarStickinessSummary();
 
         return analyzedEvents;
