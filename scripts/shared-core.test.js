@@ -15321,3 +15321,16 @@ test('prep-time twins: an unrelated dropped event is left unlabelled', async () 
   assert.equal(droppedEntry.duplicateOfPlanned, undefined,
     'a genuinely separate event is not labelled a twin');
 });
+
+test('placeholder images: a square-crop filename is artwork, a size-bucket directory is not', () => {
+  const core = createCore();
+  // "1x1" in a FILENAME is usually an aspect ratio — the square Instagram crop
+  // of a real flyer. Rejecting it would throw away artwork to catch a pixel.
+  assert.equal(core.isPlaceholderImageUrl('https://example.com/photos/1x1-crop-of-the-bear-party.jpg'), false);
+  assert.equal(core.isPlaceholderImageUrl('https://example.com/flyer-16x9.jpg'), false);
+  // A filename that is NOTHING but the box, or a directory named for the size,
+  // is still a placeholder.
+  assert.equal(core.isPlaceholderImageUrl('https://cdn.example.com/img/1x1.png'), true);
+  assert.equal(core.isPlaceholderImageUrl('https://example.com/i/blank_1x1.gif'), true);
+  assert.equal(core.isPlaceholderImageUrl('https://cdn.example.com/assets/1x1/bucket/real-flyer.jpg'), true);
+});

@@ -1328,7 +1328,16 @@ class SharedCore {
         //    sides — getImageDimensionsFromUrl's "ab12x34cd.jpg" lesson, which
         //    bites here too: dice.fm's opaque event id "v3x3n7-spookmince-…"
         //    reads as a 3x3 image if you let the token float inside a blob.
-        for (const segment of segments) {
+        //
+        //    DIRECTORY SEGMENTS ONLY — the FILENAME is rule 1's job. "1x1" in a
+        //    filename is far more often an ASPECT RATIO than a size: a CMS that
+        //    emits "flyer-1x1.jpg" for the square Instagram crop is naming a
+        //    real, full-size picture. A directory literally called "1x1/" is a
+        //    size bucket. Rule 1 still rejects a filename that is NOTHING but
+        //    the box ("1x1.png", "blank_1x1.gif"), so the spacer is caught
+        //    either way and the square flyer survives. Discarding a real flyer
+        //    is a worse failure here than keeping a pixel.
+        for (const segment of segments.slice(0, -1)) {
             const lower = segment.toLowerCase();
             const box = lower.match(/(?:^|[^a-z0-9])(\d{1,3})x(\d{1,3})(?![a-z0-9])/);
             if (box
