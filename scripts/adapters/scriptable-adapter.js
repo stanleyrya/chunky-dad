@@ -589,9 +589,19 @@ class ScriptableAdapter {
 
   // Build (or read back) the small inlined logo. Order:
   //   1. the cached data URI string — nothing is decoded or re-encoded.
-  //   2. the cached/downloaded PNG, downscaled and JPEG-encoded, then cached.
+  //   2. the cached/downloaded PNG, downscaled and re-encoded as PNG, cached.
   //   3. the full-size PNG data URI (old behaviour) if this device has no
-  //      DrawContext/Data.fromJPEG — degrade heavier, never blank.
+  //      DrawContext — degrade heavier, never blank.
+  //
+  // PNG, not JPEG. Shrinking to 160 px is where essentially all of the byte
+  // win comes from; switching the CODEC to JPEG on top of it saved another
+  // ~28 KB of base64 and cost the logo its ALPHA CHANNEL, which JPEG does not
+  // have — the transparent mark came back with a solid block behind it.
+  // Measured on the real 320x320 cache/logo-hero.png:
+  //   320px PNG  96,923 B -> ~129,231 B base64   transparent   (before #1631)
+  //   160px JPEG 11,633 B ->  ~15,512 B base64   OPAQUE        (#1631's bug)
+  //   160px PNG  33,105 B ->  ~44,140 B base64   transparent   (this)
+  // ~3x smaller than the original and the background stays gone.
   async buildHeaderLogoDataUri() {
     const inlinePath = this.fm.joinPath(
       this.cacheDir,
@@ -616,8 +626,7 @@ class ScriptableAdapter {
     const logoImage = await this.loadHeaderLogoImage();
     if (!logoImage) return null;
     const scaled = this.downscaleImage(logoImage, HEADER_LOGO_INLINE_PX);
-    const dataUri =
-      this.imageToJpegDataUri(scaled) || this.imageToDataUri(scaled);
+    const dataUri = this.imageToDataUri(scaled);
     if (!dataUri) return null;
     console.log(
       `📱 Scriptable: Header logo inlined at ${Math.round(ScriptableAdapter.utf8ByteLength(dataUri) / 1024)} KB (${HEADER_LOGO_INLINE_PX}px ${dataUri.indexOf("data:image/jpeg") === 0 ? "JPEG" : "PNG"})`,
@@ -660,13 +669,11 @@ class ScriptableAdapter {
       // Points, not pixels: without this a 3x screen would redraw at 480 px
       // and the byte win would evaporate on exactly the devices that matter.
       ctx.respectScreenScale = false;
-      // JPEG has no alpha; an opaque canvas keeps a transparent source from
-      // matting to black against the header gradient.
-      ctx.opaque = true;
-      if (typeof Color !== "undefined" && typeof Color.white === "function") {
-        ctx.setFillColor(Color.white());
-        ctx.fillRect(new Rect(0, 0, targetW, targetH));
-      }
+      // TRANSPARENT canvas. This was `opaque = true` plus a white fill, which
+      // is what JPEG output required — and it is exactly what put a solid
+      // background behind the logo. The output is PNG now, so the alpha
+      // channel is kept and the header gradient shows through the mark.
+      ctx.opaque = false;
       ctx.drawImageInRect(image, new Rect(0, 0, targetW, targetH));
       return ctx.getImage() || image;
     } catch (error) {
@@ -675,22 +682,10 @@ class ScriptableAdapter {
     }
   }
 
-  imageToJpegDataUri(image) {
-    if (!image) return null;
-    try {
-      if (typeof Data === "undefined" || typeof Data.fromJPEG !== "function") {
-        return null;
-      }
-      const data = Data.fromJPEG(image);
-      const base64 = data && data.toBase64String();
-      return base64 ? `data:image/jpeg;base64,${base64}` : null;
-    } catch (error) {
-      console.log(
-        `📱 Scriptable: Logo JPEG conversion failed: ${error.message}`,
-      );
-      return null;
-    }
-  }
+  // (imageToJpegDataUri lived here. Deleted rather than left unwired: its only
+  // purpose was to encode the header logo as JPEG, and JPEG is what stripped
+  // the logo's alpha channel. Leaving it around is an invitation to re-wire
+  // the regression.)
 
   async loadHeaderLogoImage() {
     try {
@@ -5473,10 +5468,16 @@ class ScriptableAdapter {
       // write. Repeat taps re-flash feedback without re-writing the queue.
       const venueQueueTaps = {};
 
-      // Paging state. `pendingPage` is set by a pager tap on the current page
-      // and consumed after that page's sheet is dismissed; null means "done",
-      // which is also what a plain swipe-down with no tap means. That is the
-      // finish-early path: review page 1, dismiss, execute.
+      // Paging state. `pendingPage` is what happens after this page's sheet is
+      // dismissed: a page number to open next, or null for "done".
+      //
+      // THE DEFAULT IS ADVANCE, NOT FINISH. It used to be the other way round:
+      // a plain swipe-down meant "done", so getting to page 2 cost a tap, and
+      // so did stopping at the end — two taps per page for the one behaviour
+      // everybody actually wants. Now dismissing the sheet just moves on, the
+      // last page's dismissal finishes on its own, and the only tap left is
+      // the explicit one: "✅ Done reviewing" to stop early, or "← Page N-1"
+      // to go back (a swipe can only go forward).
       let currentPage = 1;
       let pendingPage = null;
       let pageCount = 1;
@@ -5511,6 +5512,15 @@ class ScriptableAdapter {
           if (pageCount > 1) {
             console.log(
               `📱 Scriptable: 📄 Presenting results page ${currentPage} of ${pageCount} — taps on every page are kept and applied once, after the last one.`,
+            );
+            // Armed BEFORE present(), so a sheet dismissed with no tap at all
+            // advances instead of ending the review. shouldAllowRequest only
+            // ever overrides this (a jump-back, or an explicit finish).
+            pendingPage = currentPage < pageCount ? currentPage + 1 : null;
+            console.log(
+              pendingPage
+                ? `📱 Scriptable: 📄 Swiping this sheet down opens page ${pendingPage} — no tap needed. Tap "Done reviewing" instead to stop here.`
+                : "📱 Scriptable: 📄 Last page — swiping this sheet down finishes the review and applies every tap.",
             );
           }
           console.log("📱 Scriptable: Presenting results UI...");
@@ -8056,7 +8066,7 @@ class ScriptableAdapter {
     if (this.resolveRenderTarget(options) === "web") {
       this._resultsPagePlan = null;
       this._resultsSizeReduction = null;
-      return fullHtml;
+      return this.finalizeRenderedHtml(fullHtml);
     }
 
     const plan = this.planResultsPages(fullHtml, pageableCards);
@@ -8064,7 +8074,9 @@ class ScriptableAdapter {
     if (plan.pageCount <= 1) {
       // Unchanged single-page render: same string the pre-pagination code
       // produced, shed ladder and all.
-      return this.applyResultsHtmlSizeGuard(fullHtml, budgetedCardCount);
+      return this.finalizeRenderedHtml(
+        this.applyResultsHtmlSizeGuard(fullHtml, budgetedCardCount),
+      );
     }
 
     const requestedPage = Math.min(
@@ -8108,7 +8120,24 @@ class ScriptableAdapter {
     // The shed ladder still runs, but as a BACKSTOP only: pagination bounds
     // the page by construction, so the ladder can now only fire for a single
     // card that is itself bigger than a whole page budget.
-    return this.applyResultsHtmlSizeGuard(pageHtml, slice.cards.length);
+    return this.finalizeRenderedHtml(
+      this.applyResultsHtmlSizeGuard(pageHtml, slice.cards.length),
+    );
+  }
+
+  // LAST THING every render passes through. One unpaired surrogate anywhere in
+  // this string makes WKWebView draw an empty document, so the page is swept
+  // for them after every shed, banner and pager has had its say — nothing
+  // downstream can reintroduce one. Fires almost never; when it does it says
+  // so, because a silently repaired page is a bug that hides itself.
+  finalizeRenderedHtml(html) {
+    const swept = ScriptableAdapter.stripLoneSurrogates(html);
+    if (swept.count > 0) {
+      console.log(
+        `📱 Scriptable: 🧹 Replaced ${swept.count} unpaired UTF-16 surrogate(s) in the results HTML with U+FFFD — WebKit renders an EMPTY document for a page containing one, at any size. Something upstream cut a string through the middle of an emoji.`,
+      );
+    }
+    return swept.html;
   }
 
   // "scriptable" unless the caller explicitly asks for the web flow. Default
@@ -8236,11 +8265,17 @@ class ScriptableAdapter {
 
   // Page navigation rides the SAME chunkyscrape:// bridge every other button
   // uses (shouldAllowRequest, assigned before present()). There is no API to
-  // dismiss a presented WebView from native, so a tap only ARMS the next page
+  // dismiss a presented WebView from native, so a tap only ARMS a page
   // natively and the page itself says so; the swipe-down that closes the
   // sheet is what hands control back, and presentRichResults re-presents.
-  // Dismissing without tapping anything means "done" — that is the finish-
-  // early path, and it is the default.
+  //
+  // SWIPING DOWN IS "NEXT". Native arms page+1 before present(), so the plain
+  // dismissal — the gesture that closes the sheet anyway — is the whole
+  // forward path, and the last page's dismissal ends the review by itself.
+  // That is why there is no "Page N+1 →" button any more: it did exactly what
+  // the swipe already does, and having to press it and THEN swipe was the
+  // complaint. The two buttons left are the two things a swipe cannot express:
+  // go BACK, and STOP EARLY.
   buildResultsPagerHtml(plan, page, withScript) {
     const pageCount = plan.pageCount;
     const slice = plan.pages[page - 1] || { cards: [] };
@@ -8250,22 +8285,26 @@ class ScriptableAdapter {
     const totalCards = plan.pages.reduce((sum, p) => sum + p.cards.length, 0);
     const first = totalCards === 0 ? 0 : before + 1;
     const last = before + slice.cards.length;
+    const remaining = pageCount - page;
     const prevBtn =
       page > 1
         ? `<button type="button" class="results-pager-btn" onclick="gotoResultsPage(${page - 1})">← Page ${page - 1}</button>`
         : "";
-    const nextBtn =
-      page < pageCount
-        ? `<button type="button" class="results-pager-btn is-primary" onclick="gotoResultsPage(${page + 1})">Page ${page + 1} →</button>`
+    const doneBtn =
+      remaining > 0
+        ? `<button type="button" class="results-pager-btn is-done" onclick="finishResultsPaging()">✅ Done reviewing — skip the last ${remaining} page${remaining === 1 ? "" : "s"}</button>`
         : "";
+    const hint =
+      remaining > 0
+        ? `Swipe this sheet down for page ${page + 1} — no button needed. Your 🐻 / 🚫 taps are kept across every page and applied once, at the end.`
+        : "Last page. Swipe this sheet down to apply your 🐻 / 🚫 taps from every page and continue.";
     const nav = `
     <div class="results-pager">
         <div class="results-pager-label">Page ${page} of ${pageCount} · cards ${first}–${last} of ${totalCards}</div>
         <div class="results-pager-buttons">
-            ${prevBtn}${nextBtn}
-            <button type="button" class="results-pager-btn is-done" onclick="finishResultsPaging()">✅ Done reviewing</button>
+            ${prevBtn}${doneBtn}
         </div>
-        <div class="results-pager-hint">Your 🐻 / 🚫 taps are kept across every page and applied once, when you finish. Swipe the sheet down to move on.</div>
+        <div class="results-pager-hint">${hint}</div>
     </div>`;
     if (!withScript) return nav;
     return `${nav}
@@ -10650,8 +10689,25 @@ class ScriptableAdapter {
   // Crossing it is not a warning — see applyResultsHtmlSizeGuard, which sheds
   // page content until the page is back under this number. A banner cannot do
   // that job: a banner lives INSIDE the document WebKit refuses to run.
+  //
+  // ---- CORRECTION: the 955 KB failure above was never a size failure. ----
+  // That BEEFMINCE page carried two LONE SURROGATES (a provenance preview cut
+  // through the middle of 🏳), and WebKit renders the empty shell for ANY
+  // document containing one — reproduced against real WebKit at 49 CHARACTERS.
+  // Paginated, the same run blanked only on page 3 (371 KB, its SMALLEST
+  // page), the one holding the bad card, while 383 KB and 376 KB rendered.
+  // So "the cliff is in (862, 955]" was an inference from a poisoned sample:
+  // there is no size-attributable blank anywhere in the record.
+  //
+  // 800 KB was therefore shedding real review detail off pages that would
+  // have rendered — CHUNK at 862 KB is a page that WORKED. Raised to 1 MB:
+  // above every page ever observed on device (largest: 959 KB), so no run in
+  // the recorded history is shed or split at all, while still bounding a
+  // genuinely runaway future run. The lone-surrogate sweep in
+  // finalizeRenderedHtml is what actually keeps a page from blanking now, and
+  // the liveness beacons still report it per page if one ever does.
   static get RESULTS_HTML_MAX_BYTES() {
-    return 800 * 1024;
+    return 1024 * 1024;
   }
 
   // Per-PAGE budget for the Scriptable flow (the web flow never pages).
@@ -10674,8 +10730,35 @@ class ScriptableAdapter {
   // this order renders. 400 KB leaves better than 2x headroom to the nearest
   // failure, and pagination means the cost of the margin is one extra swipe
   // per ~400 KB, not lost review detail.
+  //
+  // ---- CORRECTION: 400 KB was paying a margin against a phantom. ----
+  // The only failure that budget was hedging against turned out to be a lone
+  // surrogate, not bytes (see RESULTS_HTML_MAX_BYTES). The margin was not
+  // free either: it split Furball — 490 KB, a single page for its entire
+  // history — into pages for no reason, and the extra swipes were the first
+  // thing the owner complained about.
+  //
+  // The evidence, re-read with the real cause known:
+  //
+  //   PARSER      PAGE   SIZE     RESULT   lone surrogates on the page
+  //   Goldiloxx  single  248 KB     ✅ 0
+  //   Furball    single  489 KB     ✅ 0     <- must not page
+  //   CHUNK      single  862 KB     ✅ 0     <- must not page
+  //   BEEFMINCE  single  959 KB     ❌ 2     blank at 959…
+  //   BEEFMINCE  single  713 KB     ❌ 2     …and still blank 246 KB smaller
+  //   BEEFMINCE   1/3    383 KB     ✅ 0
+  //   BEEFMINCE   2/3    376 KB     ✅ 0
+  //   BEEFMINCE   3/3    371 KB     ❌ 2     the SMALLEST page is the one
+  //                                          that fails — because it is the
+  //                                          one holding the bad card
+  //
+  // Every ✅ has zero, every ❌ has two, and size predicts nothing. So the
+  // budget is set to bound a runaway run, not to dodge a cliff: 1 MB sits
+  // above every page ever produced on device, which makes pagination a rare
+  // fallback rather than the default. Matches RESULTS_HTML_MAX_BYTES, so a
+  // page built to this budget is never also shed.
   static get RESULTS_PAGE_BUDGET_BYTES() {
-    return 400 * 1024;
+    return 1024 * 1024;
   }
 
   // The pager nav is emitted twice per page plus its style/script block.
@@ -10724,6 +10807,68 @@ class ScriptableAdapter {
     return bytes;
   }
 
+  // ---------------------------------------------------------------------
+  // LONE SURROGATES: the one thing that blanks a results page at ANY size.
+  //
+  // WKWebView.loadHTMLString (which Scriptable's WebView.loadHTML wraps) hands
+  // the document to its content process as UTF-8. A lone surrogate — half of
+  // an astral character's UTF-16 pair — has no UTF-8 encoding, so the whole
+  // document is dropped and WebKit renders the empty shell
+  // `<html><head></head><body></body></html>`: no DOM, no scripts, no beacons.
+  // Verified against real WebKit: a 49-CHARACTER page carrying one lone
+  // \uD83C blanks exactly like a 371 KB one, while 383 KB and 864 KB pages
+  // with none render fine. Size was never the mechanism.
+  //
+  // Lone surrogates are not in the scraped data; they are MANUFACTURED at
+  // render time by every preview/tooltip/diff truncation that cuts a string at
+  // a code-unit index, because one emoji is two units. The truncators below
+  // use safeSubstring so they stop making them; this sweep is the backstop
+  // that guarantees no future truncation anywhere can blank the sheet again.
+  // ---------------------------------------------------------------------
+
+  // Matches a well-formed pair FIRST, so only genuinely unpaired surrogates
+  // fall through to the single-unit alternative.
+  static stripLoneSurrogates(html) {
+    const text = typeof html === "string" ? html : String(html || "");
+    let count = 0;
+    const cleaned = text.replace(
+      /[\uD800-\uDBFF][\uDC00-\uDFFF]|[\uD800-\uDFFF]/g,
+      (match) => {
+        if (match.length === 2) return match;
+        count += 1;
+        return "�";
+      },
+    );
+    return { html: count > 0 ? cleaned : text, count };
+  }
+
+  // Substring that never cuts a surrogate pair in half: a start index sitting
+  // on a low surrogate steps forward past it, and an end index sitting between
+  // the halves steps back. Both ends can land mid-pair when the slice is
+  // anchored on a diff position rather than on 0.
+  static safeSubstring(text, start, end) {
+    const str = typeof text === "string" ? text : String(text || "");
+    let from = Math.max(0, Math.min(str.length, Math.floor(start || 0)));
+    if (from > 0 && from < str.length) {
+      const code = str.charCodeAt(from);
+      // Landed on the LOW half of a pair whose HIGH half is being cut away.
+      if (code >= 0xdc00 && code <= 0xdfff) from += 1;
+    }
+    let to =
+      end === undefined
+        ? str.length
+        : Math.max(0, Math.min(str.length, Math.floor(end)));
+    if (to > from && to < str.length) {
+      const code = str.charCodeAt(to - 1);
+      // Last kept unit is a HIGH half whose LOW half is being cut away.
+      if (code >= 0xd800 && code <= 0xdbff) to -= 1;
+    }
+    // Clamped LAST: both adjustments above can cross the other end, and
+    // String.prototype.substring SWAPS reversed arguments — which would hand
+    // back exactly the orphaned half this function exists to remove.
+    return to <= from ? "" : str.substring(from, to);
+  }
+
   // Pruned in this order, heaviest-and-most-redundant first. Every one of
   // these is ALSO rendered as HTML elsewhere in the same card, so pruning it
   // from the debug dump never removes the only copy:
@@ -10758,7 +10903,9 @@ class ScriptableAdapter {
   truncateLongStringsForBudget(value, maxChars, record, runFile) {
     if (typeof value === "string") {
       if (value.length <= maxChars) return value;
-      return `${value.substring(0, maxChars)}... [truncated ${
+      // safeSubstring: this string is JSON-embedded into the page, and a lone
+      // surrogate left by a mid-emoji cut blanks the whole document.
+      return `${ScriptableAdapter.safeSubstring(value, 0, maxChars)}... [truncated ${
         value.length - maxChars
       } of ${value.length} chars to fit the results page — full value in ${
         runFile || "the saved run JSON"
@@ -12286,11 +12433,18 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
           const start =
             anchor > maxLength ? Math.max(0, anchor - Math.floor(maxLength / 3)) : 0;
           const lead = start > 0 ? "..." : "";
-          const visible = str.substring(start, start + maxLength);
-          const tooltipSource = str.substring(start);
+          // safeSubstring, not substring: a cut through an emoji's surrogate
+          // pair leaves a lone surrogate, which makes WebKit render an EMPTY
+          // document (see stripLoneSurrogates).
+          const visible = ScriptableAdapter.safeSubstring(
+            str,
+            start,
+            start + maxLength,
+          );
+          const tooltipSource = ScriptableAdapter.safeSubstring(str, start);
           const tooltip =
             tooltipSource.length > TOOLTIP_MAX_CHARS
-              ? `${tooltipSource.substring(0, TOOLTIP_MAX_CHARS)}... (+${
+              ? `${ScriptableAdapter.safeSubstring(tooltipSource, 0, TOOLTIP_MAX_CHARS)}... (+${
                   tooltipSource.length - TOOLTIP_MAX_CHARS
                 } more chars - use Copy JSON for the full value)`
               : tooltipSource;
@@ -12504,7 +12658,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     if (str.length <= max) return this.escapeHtml(str);
     const start = anchor > max ? Math.max(0, anchor - Math.floor(max / 4)) : 0;
     const lead = start > 0 ? "..." : "";
-    const visible = str.substring(start, start + max);
+    // safeSubstring: cutting an emoji's surrogate pair in half blanks the page.
+    const visible = ScriptableAdapter.safeSubstring(str, start, start + max);
     return `${lead}${this.escapeHtml(visible)}...<span class="cmp-more"> [${str.length} chars total — 📋 Copy JSON for the full value]</span>`;
   }
 

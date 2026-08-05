@@ -5074,15 +5074,20 @@ test('size cliff: an over-ceiling page is REDUCED under the ceiling, not merely 
     'all 40 cards are still on the page');
 });
 
-test('size cliff: the ceiling is set from a size PROVEN to render, not from a size observed blank', () => {
-  // 862 KB rendered; 955 KB did not. A ceiling at or above the largest
-  // observed success is a ceiling with no margin against a cliff whose exact
-  // position is unknown — and 960 KB was above the BLANK page, which is how
-  // BEEFMINCE (959 KB UTF-8) slipped under it.
+test('size cliff: the ceiling no longer sheds pages that are PROVEN to render', () => {
+  // The 955 KB blank that this ceiling was hedging against was never a size
+  // failure: that page carried two lone surrogates, and WebKit renders the
+  // empty shell for any document containing one (proven at 49 characters).
+  // Paginated, the SAME run blanked only on its smallest page — the one with
+  // the bad card. So a ceiling under 862 KB was shedding review detail off
+  // pages like CHUNK's, which WORKED.
   const ceilingKb = ScriptableAdapter.RESULTS_HTML_MAX_BYTES / 1024;
-  assert.ok(ceilingKb < 862, `ceiling (${ceilingKb} KB) is below the 862 KB that rendered`);
-  assert.ok(ceilingKb < 955, `ceiling (${ceilingKb} KB) is below the 955 KB that white-screened`);
-  assert.ok(ceilingKb >= 512, 'but not so low that ordinary runs get gutted');
+  assert.ok(ceilingKb > 862,
+    `ceiling (${ceilingKb} KB) is above the 862 KB CHUNK page that rendered, so it is not shed`);
+  assert.ok(ceilingKb >= 959,
+    `ceiling (${ceilingKb} KB) is at or above every page ever produced on device (max 959 KB)`);
+  assert.ok(ceilingKb <= 2048,
+    'but still bounds a runaway run rather than being no ceiling at all');
 });
 
 test('size cliff: every shed is logged with what went and what it cost — no silent caps', async () => {
@@ -5107,7 +5112,7 @@ test('size cliff: the shed ladder runs heaviest-first and stops as soon as the p
   const adapter = buildAdapter();
   // A modest overshoot: the logo alone should cover it, so nothing else is
   // touched. A page must never lose more than it had to.
-  await captureLogAsync(() => renderOversizedResultsPage(adapter, { events: 8, logoBytes: 700 * 1024 }));
+  await captureLogAsync(() => renderOversizedResultsPage(adapter, { events: 8, logoBytes: 980 * 1024 }));
 
   const ids = adapter._resultsSizeReduction.sheds.map(s => s.id);
   assert.deepEqual(ids, ['header-logo'],
@@ -5556,10 +5561,14 @@ test('recordCalendarWriteFailures creates errors[] when absent and is a no-op on
 // cliff — shows everything with nothing shed.
 // ---------------------------------------------------------------------------
 
-// Image globals modelled on the real cached logo: PNG bytes ≈ px², JPEG ≈ px²/2
-// (the 320px source is 96,923 B as PNG and ~12 KB as a 160px JPEG). Modelling
-// the size as a function of the pixel dimension is what makes the assertion
-// below cover the DOWNSCALE as well as the re-encode.
+// Image globals modelled on the real cached logo, measured with `sips` on the
+// actual cache/logo-hero.png (320x320, 96,923 B, alpha):
+//   320px PNG  96,923 B   ~ px²      transparent
+//   160px PNG  33,105 B   ~ px²*1.3  transparent
+//   160px JPEG 11,633 B   ~ px²/2    OPAQUE  <- #1631's regression
+// Modelling size as a function of the pixel dimension is what makes the
+// assertions cover the DOWNSCALE as well as the encode; modelling ALPHA is
+// what catches a codec that silently drops it.
 function installFakeImageGlobals() {
   const saved = {
     Size: global.Size, Rect: global.Rect, Color: global.Color,
@@ -5574,18 +5583,29 @@ function installFakeImageGlobals() {
     setFillColor() { this.__fill = true; }
     fillRect() { this.filled = true; }
     drawImageInRect(image) { this.__drew = image; }
-    getImage() { return { size: this.size, __drawn: true }; }
+    // An opaque canvas (or one painted with a background fill) yields an image
+    // with no usable alpha — exactly what put a block behind the logo.
+    getImage() {
+      return { size: this.size, __drawn: true, hasAlpha: !this.opaque && !this.filled };
+    }
   };
   global.Data = {
-    fromPNG: (img) => ({ toBase64String: () => 'P'.repeat(b64len(img.size.width * img.size.width)) }),
-    fromJPEG: (img) => ({ toBase64String: () => 'J'.repeat(b64len((img.size.width * img.size.width) / 2)) })
+    // PNG keeps whatever alpha the image had; JPEG cannot carry any.
+    fromPNG: (img) => ({
+      __hasAlpha: img.hasAlpha !== false,
+      toBase64String: () => 'P'.repeat(b64len(img.size.width * img.size.width))
+    }),
+    fromJPEG: (img) => ({
+      __hasAlpha: false,
+      toBase64String: () => 'J'.repeat(b64len((img.size.width * img.size.width) / 2))
+    })
   };
-  global.Image = { fromFile: () => ({ size: new global.Size(320, 320) }) };
+  global.Image = { fromFile: () => ({ size: new global.Size(320, 320), hasAlpha: true }) };
   return () => { Object.assign(global, saved); };
 }
 
 function withInlinedLogo(adapter) {
-  adapter.loadHeaderLogoImage = async () => ({ size: new global.Size(320, 320) });
+  adapter.loadHeaderLogoImage = async () => ({ size: new global.Size(320, 320), hasAlpha: true });
   return adapter;
 }
 
@@ -5593,6 +5613,12 @@ function inlinedLogoPayload(html) {
   const match = /src="data:image\/([a-z]+);base64,([^"]*)"/i.exec(html);
   return match ? { format: match[1], bytes: match[2].length } : null;
 }
+
+// How many heavy events it now takes to actually PAGE. The budget is 1 MB
+// (pagination is a rare fallback, not the default), and 40 of these events
+// render as ~899 KB — one page, as they should. 80 is ~1.6 MB and really
+// splits, which is what the paging-behaviour tests below need to exercise.
+const PAGING_EVENTS = 80;
 
 // A WebView that can be presented more than once, the way the paging loop
 // does: every present() cycle gets its own promise and its own handler.
@@ -5624,12 +5650,131 @@ function installPagingWebView() {
   };
 }
 
+// ---------------------------------------------------------------------------
+// LONE SURROGATES — the thing that actually blanked the results sheet.
+//
+// WKWebView (which Scriptable's WebView.loadHTML wraps) hands the document to
+// its content process as UTF-8. A lone surrogate has no UTF-8 encoding, so the
+// document is dropped and WebKit renders `<html><head></head><body></body>
+// </html>` — no DOM, no scripts, no beacons. Verified against real WebKit
+// (a Swift WKWebView driven with loadHTMLString) at 49 CHARACTERS.
+//
+// They are not in the scraped data. They are MANUFACTURED by render-time
+// truncation: one emoji is two UTF-16 code units, and a preview that cuts at a
+// code-unit index can cut between them. Real case: run 20260804-201054's
+// "BEEFMINCE Brighton Pride" description, whose provenance preview cut through
+// the 🏳 of 🏳️‍🌈 and left \uD83C. That one card blanked the whole 959 KB page,
+// and after pagination blanked page 3 — the run's SMALLEST page — while its
+// larger pages 1 and 2 rendered fine.
+// ---------------------------------------------------------------------------
+
+function findLoneSurrogates(text) {
+  const hits = [];
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    if (c >= 0xd800 && c <= 0xdbff) {
+      const n = text.charCodeAt(i + 1);
+      if (n >= 0xdc00 && n <= 0xdfff) { i++; continue; }
+      hits.push({ index: i, code: c });
+    } else if (c >= 0xdc00 && c <= 0xdfff) {
+      hits.push({ index: i, code: c });
+    }
+  }
+  return hits;
+}
+
+test('blank page: the exact BEEFMINCE description that blanked the sheet renders with ZERO lone surrogates', async () => {
+  const adapter = buildAdapter();
+  // Verbatim shape of the card that did it: a long description with 🏳️‍🌈
+  // sitting where the 80-char provenance preview cuts. The scraped string is
+  // perfectly well-formed — the damage was entirely ours.
+  const description =
+    'Now it’s happening — BEEFMINCE Brighton Pride on Saturday 1 August at Horizon 🏳️‍🌈🔥 For the first time ever, BEEFMINCE has a Saturday night party for Pride.';
+  assert.equal(findLoneSurrogates(description).length, 0,
+    'the SOURCE data is clean — this is a render bug, not a data bug');
+
+  const event = {
+    ...buildSizedAnalyzedEvent(0),
+    title: 'BEEFMINCE Brighton Pride',
+    description,
+    _original: {
+      scraper: { description, title: 'BEEFMINCE Brighton Pride' },
+      calendar: { title: 'BEEFMINCE Brighton Pride' },
+      merged: { description, title: 'BEEFMINCE Brighton Pride' }
+    }
+  };
+  const html = await adapter.generateRichHTML({ analyzedEvents: [event] }, { target: 'scriptable', page: 1 });
+
+  const hits = findLoneSurrogates(html);
+  assert.deepEqual(hits, [],
+    `the rendered page must contain no unpaired surrogate; found ${hits.length}` +
+    (hits.length ? ` (first: U+${hits[0].code.toString(16).toUpperCase()} at ${hits[0].index})` : ''));
+  // And the truncation still truncated — the fix is a safe cut, not no cut.
+  assert.ok(html.includes('…'), 'the preview is still elided');
+});
+
+test('blank page: truncation cuts a surrogate pair whole or not at all, at BOTH ends', () => {
+  const flag = '🏳'; // one character, two code units
+  const s = `abc${flag}def`;
+
+  // End cut landing between the halves backs up past the whole pair.
+  assert.equal(ScriptableAdapter.safeSubstring(s, 0, 4), 'abc',
+    'a cut between the high and low half drops the whole character');
+  assert.equal(ScriptableAdapter.safeSubstring(s, 0, 5), `abc${flag}`,
+    'a cut after the pair keeps it intact');
+  // Start cut landing on the low half steps forward past it.
+  assert.equal(ScriptableAdapter.safeSubstring(s, 4), 'def',
+    'a start index on the low half skips the orphaned half');
+  assert.equal(ScriptableAdapter.safeSubstring(s, 3), `${flag}def`,
+    'a start index on the high half keeps the pair');
+  for (let start = 0; start <= s.length; start++) {
+    for (let end = start; end <= s.length; end++) {
+      assert.equal(findLoneSurrogates(ScriptableAdapter.safeSubstring(s, start, end)).length, 0,
+        `safeSubstring(${start}, ${end}) produced a lone surrogate`);
+    }
+  }
+
+  // The provenance value preview is where the real one came from: its cut is
+  // at 79 units, so sweep an emoji across every position that straddles it.
+  const { buildEventProvenanceSectionHtml } = require('../event-provenance');
+  for (let pad = 70; pad <= 88; pad++) {
+    const description = `${'x'.repeat(pad)}🏳${'y'.repeat(40)}`;
+    const section = buildEventProvenanceSectionHtml(
+      { description, title: 'T', _original: { scraper: { description }, calendar: {}, merged: { description } } },
+      {}
+    );
+    assert.equal(findLoneSurrogates(section).length, 0,
+      `provenance preview left half an emoji behind with the pair at offset ${pad}`);
+  }
+});
+
+test('blank page: the render sweep is the backstop, and it SAYS SO — no silent repair', async () => {
+  const adapter = buildAdapter();
+  // A truncation nobody has thought of yet, simulated: something upstream puts
+  // an unpaired surrogate into a card. The page must still be renderable.
+  const poisoned = '<html><body><h1>hel\uD83Clo</h1></body></html>';
+  assert.equal(findLoneSurrogates(poisoned).length, 1, 'the fixture really is poisoned');
+
+  const { lines, value } = captureLog(() => adapter.finalizeRenderedHtml(poisoned));
+  assert.deepEqual(findLoneSurrogates(value), [], 'the swept page carries none');
+  assert.ok(value.includes('�'), 'the damage is marked with U+FFFD rather than hidden');
+  assert.equal(lines.filter((l) => l.includes('unpaired UTF-16 surrogate')).length, 1,
+    'exactly one log line names what was repaired and why it matters');
+
+  // A clean page is returned untouched and says nothing.
+  const clean = '<html><body><h1>hel🏳lo</h1></body></html>';
+  const quiet = captureLog(() => adapter.finalizeRenderedHtml(clean));
+  assert.equal(quiet.value, clean, 'a clean page is the same string, not a rebuilt one');
+  assert.equal(quiet.lines.filter((l) => l.includes('unpaired UTF-16 surrogate')).length, 0,
+    'and nothing is logged when nothing fired');
+});
+
 test('pagination: a run whose cards exceed one page budget is split, and EVERY page is under budget', async () => {
   const adapter = buildAdapter();
-  const results = buildSizedResults(40);
+  const results = buildSizedResults(PAGING_EVENTS);
   const page1 = await adapter.generateRichHTML(results, { target: 'scriptable', page: 1 });
   const pageCount = adapter.getResultsPageCount();
-  assert.ok(pageCount > 1, `40 heavy cards must not fit on one page, got ${pageCount} page(s)`);
+  assert.ok(pageCount > 1, `${PAGING_EVENTS} heavy cards must not fit on one page, got ${pageCount} page(s)`);
 
   const budget = ScriptableAdapter.RESULTS_PAGE_BUDGET_BYTES;
   const htmls = [page1];
@@ -5648,8 +5793,8 @@ test('pagination: a run whose cards exceed one page budget is split, and EVERY p
 
   // Splitting is not dropping: every card is on exactly one page.
   const cardsPerPage = htmls.map((html) => (html.match(/class="event-card"/g) || []).length);
-  assert.equal(cardsPerPage.reduce((a, b) => a + b, 0), 40,
-    `all 40 cards are spread across the pages, got ${cardsPerPage.join('+')}`);
+  assert.equal(cardsPerPage.reduce((a, b) => a + b, 0), PAGING_EVENTS,
+    `all ${PAGING_EVENTS} cards are spread across the pages, got ${cardsPerPage.join('+')}`);
   assert.ok(cardsPerPage.every((n) => n > 0), 'no page is empty');
 
   // Size-driven, not count-driven: heavy merge cards and light new-event cards
@@ -5664,22 +5809,42 @@ test('pagination: a run whose cards exceed one page budget is split, and EVERY p
   assert.ok(page1.includes('finishResultsPaging'), 'and offers a finish-early control');
 });
 
-test('pagination: the per-page budget is anchored under every size PROVEN to render', () => {
+test('pagination: is a RARE FALLBACK — every run ever observed stays one page', () => {
   const kb = ScriptableAdapter.RESULTS_PAGE_BUDGET_BYTES / 1024;
-  // 248/486/489/862 KB all rendered on device; 955 KB was blank 3 times out
-  // of 3. Anchor on the successes, with a factor-of-two margin, not on the
-  // failure — every previous threshold was set just under a page observed to
-  // FAIL, and every one of them was wrong.
-  assert.ok(kb <= 862 / 2,
-    `per-page budget (${kb} KB) keeps 2x headroom under the 862 KB proven to render`);
-  assert.ok(kb < 955 / 2,
-    `per-page budget (${kb} KB) is less than half the 955 KB that white-screened 3/3`);
-  assert.ok(kb <= 489,
-    `per-page budget (${kb} KB) is at or under the 486/489 KB pages that rendered`);
-  assert.ok(kb >= 128,
-    `per-page budget (${kb} KB) is not so small that ordinary runs fragment`);
-  assert.ok(kb < ScriptableAdapter.RESULTS_HTML_MAX_BYTES / 1024,
-    'and it is strictly tighter than the shed ceiling it makes redundant');
+  // Size predicted nothing: 248/486/489/862 KB rendered with zero lone
+  // surrogates, 959/713/371 KB blanked with two. The budget therefore exists
+  // to bound a runaway run, not to dodge a cliff — so it sits above every
+  // page ever produced on device, and Furball (490 KB) and CHUNK (864 KB)
+  // are both a single page again.
+  assert.ok(kb > 490, `Furball (490 KB) must not be split; budget is ${kb} KB`);
+  assert.ok(kb > 864, `CHUNK (864 KB, proven to render) must not be split; budget is ${kb} KB`);
+  assert.ok(kb >= 959, `budget (${kb} KB) covers the largest page ever produced on device`);
+  assert.ok(kb <= 2048, `budget (${kb} KB) still bounds a genuinely runaway run`);
+  assert.ok(kb <= ScriptableAdapter.RESULTS_HTML_MAX_BYTES / 1024,
+    'and a page built to this budget is never ALSO shed by the ceiling');
+});
+
+// A page's byte size is not what blanks it; a lone UTF-16 surrogate is. These
+// two guard the actual mechanism.
+test('page budget: a 490 KB run and an 864 KB run are each exactly ONE page', () => {
+  const adapter = buildAdapter();
+  const budget = ScriptableAdapter.RESULTS_PAGE_BUDGET_BYTES;
+  // Cards sized so the whole page lands on the real observed totals. The
+  // planner only ever sees (fullHtml, cards), so feeding it those directly is
+  // the honest way to assert on a specific page size.
+  for (const kb of [490, 864]) {
+    const cardCount = 16;
+    const chrome = 120 * 1024;
+    const cardBytes = Math.floor((kb * 1024 - chrome) / cardCount);
+    const cards = Array.from({ length: cardCount }, (_, i) => ({
+      group: 'new', html: 'x'.repeat(cardBytes) + String(i).padStart(0, '0')
+    }));
+    const fullHtml = 'c'.repeat(chrome) + cards.map((c) => c.html).join('');
+    adapter._resultsPagePlan = null;
+    const plan = adapter.planResultsPages(fullHtml, cards);
+    assert.equal(plan.pageCount, 1,
+      `a ${kb} KB run is ONE page (got ${plan.pageCount}); ${Math.round(budget / 1024)} KB budget`);
+  }
 });
 
 test('pagination: a small run is ONE page and is byte-identical to showing everything', async () => {
@@ -5738,7 +5903,7 @@ test('web flow: every event on ONE page, nothing shed, no pager', async () => {
   }
 });
 
-test('logo: inlined on BOTH flows, downscaled and JPEG-encoded to well under 20 KB', async () => {
+test('logo: inlined on BOTH flows as a downscaled PNG that KEEPS ITS ALPHA, well under 50 KB', async () => {
   const restore = installFakeImageGlobals();
   try {
     const scriptableAdapter = withInlinedLogo(buildAdapter());
@@ -5750,13 +5915,36 @@ test('logo: inlined on BOTH flows, downscaled and JPEG-encoded to well under 20 
     for (const [name, html] of [['scriptable', scriptable], ['web', web]]) {
       const logo = inlinedLogoPayload(html);
       assert.ok(logo, `${name} flow inlines the header logo (the cute icon is on both)`);
-      assert.equal(logo.format, 'jpeg', `${name} flow re-encodes the photo-like logo as JPEG`);
-      assert.ok(logo.bytes < 20 * 1024,
-        `${name} flow inlines ${Math.round(logo.bytes / 1024)} KB, must be under 20 KB (was ~129 KB)`);
+      // THE REGRESSION: #1631 encoded this as JPEG for the extra ~28 KB, and
+      // JPEG has no alpha channel — the transparent mark came back with a
+      // solid block behind it ("The icon has a background now?"). PNG or the
+      // background is back.
+      assert.equal(logo.format, 'png',
+        `${name} flow keeps the logo as PNG — JPEG has no alpha channel and put a background behind it`);
+      assert.ok(logo.bytes < 50 * 1024,
+        `${name} flow inlines ${Math.round(logo.bytes / 1024)} KB, must be under 50 KB (was ~129 KB)`);
     }
 
-    // The win is downscale AND re-encode: at the source 320 px even a JPEG
-    // would be ~68 KB, so passing the 20 KB bar above proves both happened.
+    // The win is the DOWNSCALE, and it is the only thing the byte budget ever
+    // needed: at the source 320 px the PNG alone is ~129 KB of base64, so
+    // passing the 50 KB bar above proves the redraw happened.
+  } finally {
+    restore();
+  }
+});
+
+test('logo: the redraw canvas is transparent, so the inlined PNG really carries alpha', () => {
+  const restore = installFakeImageGlobals();
+  try {
+    const adapter = buildAdapter();
+    const scaled = adapter.downscaleImage({ size: new global.Size(320, 320), hasAlpha: true }, 160);
+    assert.equal(scaled.size.width, 160, 'the logo is redrawn at 160 px');
+    assert.equal(scaled.hasAlpha, true,
+      'the redraw canvas is NOT opaque and is NOT background-filled — an opaque canvas plus a white fill is what JPEG needed and what erased the transparency');
+
+    // And the encode preserves it: PNG carries the alpha through, JPEG cannot.
+    assert.equal(global.Data.fromPNG(scaled).__hasAlpha, true, 'PNG keeps the alpha channel');
+    assert.equal(global.Data.fromJPEG(scaled).__hasAlpha, false, 'JPEG would drop it — which is why it is not used');
   } finally {
     restore();
   }
@@ -5768,7 +5956,7 @@ test('logo: the re-encoded data URI is built once and cached, not rebuilt per pa
     const adapter = buildAdapter();
     let builds = 0;
     adapter.loadHeaderLogoImage = async () => { builds += 1; return { size: new global.Size(320, 320) }; };
-    const results = buildSizedResults(40);
+    const results = buildSizedResults(PAGING_EVENTS);
     await adapter.generateRichHTML(results, { target: 'scriptable', page: 1 });
     const pageCount = adapter.getResultsPageCount();
     assert.ok(pageCount > 1, 'this run really does page');
@@ -5783,7 +5971,7 @@ test('logo: the re-encoded data URI is built once and cached, not rebuilt per pa
 
 test('paging: bear overrides tapped on page 1 SURVIVE to page 2 and are all applied, once', async () => {
   const adapter = buildAdapter();
-  const results = buildSizedResults(40);
+  const results = buildSizedResults(PAGING_EVENTS);
   results.config = { config: { dryRun: false } };
   results.calendarEvents = 0;
   results.bearDroppedEvents = [];
@@ -5845,30 +6033,123 @@ test('paging: bear overrides tapped on page 1 SURVIVE to page 2 and are all appl
   assert.equal(promptCalls, 1, 'the execute prompt fired exactly once across two page views');
 });
 
-test('paging: dismissing page 1 without tapping anything finishes the review (finish-early default)', async () => {
+test('paging: a plain swipe-down ADVANCES — every page, no button, and the last one ends the review', async () => {
+  // "Kinda weird that I have to hit buttons to proceed to the next page and
+  // close at the end." Dismissing the sheet is now the whole forward path:
+  // native arms page+1 BEFORE present(), so a review of N pages costs N swipes
+  // and zero taps.
   const adapter = buildAdapter();
-  const results = buildSizedResults(40);
+  const results = buildSizedResults(PAGING_EVENTS);
   results.config = { config: { dryRun: false } };
   results.calendarEvents = 0;
   let promptCalls = 0;
   adapter.promptForCalendarExecution = async () => { promptCalls += 1; return 0; };
 
   const wv = installPagingWebView();
+  let pageCount = 0;
   try {
     const done = adapter.presentRichResults(results);
     await wv.waitForPage(1);
+    pageCount = adapter.getResultsPageCount();
+    assert.ok(pageCount > 1, 'this run really does page');
+    // Swipe, and only swipe, all the way through.
+    for (let p = 1; p <= pageCount; p++) {
+      wv.dismiss();
+      if (p < pageCount) await wv.waitForPage(p + 1);
+    }
+    await done;
+  } finally {
+    delete global.WebView;
+  }
+
+  assert.equal(wv.loads.length, pageCount,
+    `every page was reached by swiping alone (${wv.loads.length} of ${pageCount} built, no taps)`);
+  wv.loads.forEach((html, i) => {
+    assert.ok(html.includes(`Page ${i + 1} of ${pageCount}`), `load ${i + 1} really is page ${i + 1}`);
+  });
+  // The last page's dismissal ends it — nothing had to be pressed to "close at the end".
+  assert.equal(promptCalls, 1, 'the execute prompt fired exactly once, after the last swipe');
+
+  // And the page says so instead of offering a redundant Next button.
+  assert.ok(!wv.loads[0].includes('Page 2 →'),
+    'no "next page" button — it did exactly what the swipe already does');
+  assert.ok(wv.loads[0].includes('Swipe this sheet down for page 2'),
+    'page 1 tells the owner the swipe is the way forward');
+  assert.ok(wv.loads[pageCount - 1].includes('Last page.'),
+    'the final page says it is the last one');
+  assert.ok(!wv.loads[pageCount - 1].includes('class="results-pager-btn is-done"'),
+    'and offers no finish-early BUTTON, because dismissing it IS finishing');
+});
+
+test('paging: "Done reviewing" is the explicit way to stop early, and it still applies every tap', async () => {
+  const adapter = buildAdapter();
+  const results = buildSizedResults(PAGING_EVENTS);
+  results.config = { config: { dryRun: false } };
+  results.calendarEvents = 0;
+  results.bearDroppedEvents = [];
+  const appliedWith = [];
+  const realApply = adapter.applyPendingBearOverrides.bind(adapter);
+  adapter.applyPendingBearOverrides = async (res, pending) => {
+    appliedWith.push(Object.keys(pending.markedNotBear).slice().sort());
+    return realApply(res, pending);
+  };
+  let promptCalls = 0;
+  adapter.promptForCalendarExecution = async () => { promptCalls += 1; return 0; };
+
+  const wv = installPagingWebView();
+  let pageCount = 0;
+  try {
+    const done = adapter.presentRichResults(results);
+    await wv.waitForPage(1);
+    pageCount = adapter.getResultsPageCount();
+    assert.ok(wv.loads[0].includes('finishResultsPaging()'),
+      'a page with pages after it carries the finish-early control');
+    assert.ok(wv.loads[0].includes(`skip the last ${pageCount - 1} page`),
+      'and the button says exactly what it skips');
+    wv.tap('chunkyscrape://act?a=mark-not-bear&id=k0&n=1');
+    await wv.settle();
+    assert.equal(wv.tap('chunkyscrape://act?a=page-done&n=2'), false,
+      'the finish tap cancels the fake navigation');
     wv.dismiss();
     await done;
   } finally {
     delete global.WebView;
   }
-  assert.equal(wv.loads.length, 1, 'a plain swipe-down ends the review — no page 2 was ever built');
+
+  assert.equal(wv.loads.length, 1, 'stopping early really stopped — page 2 was never built');
+  assert.deepEqual(appliedWith, [['k0']], 'the tap made before stopping is still applied, once');
   assert.equal(promptCalls, 1, 'and the execute prompt still fired, exactly once');
+});
+
+test('paging: "← Page N-1" still jumps BACK, which a swipe cannot express', async () => {
+  const adapter = buildAdapter();
+  const results = buildSizedResults(PAGING_EVENTS);
+  results.calendarEvents = 1; // skip the execution prompt
+
+  const wv = installPagingWebView();
+  try {
+    const done = adapter.presentRichResults(results);
+    await wv.waitForPage(1);
+    assert.ok(!wv.loads[0].includes('← Page'), 'page 1 has nothing to go back to');
+    wv.dismiss();
+    await wv.waitForPage(2);
+    assert.ok(wv.loads[1].includes('← Page 1'), 'page 2 offers the way back');
+    wv.tap('chunkyscrape://act?a=page&id=1&n=1');
+    wv.dismiss();
+    await wv.waitForPage(3);
+    assert.ok(wv.loads[2].includes('Page 1 of'), 'the back tap really re-opened page 1');
+    wv.tap('chunkyscrape://act?a=page-done&n=2');
+    wv.dismiss();
+    await done;
+  } finally {
+    delete global.WebView;
+  }
+  assert.equal(wv.loads.length, 3, 'three presentations: page 1, page 2, page 1 again');
 });
 
 test('paging: each page fires its own liveness beacons, so one bad page is still detectable', async () => {
   const adapter = buildAdapter();
-  const results = buildSizedResults(40);
+  const results = buildSizedResults(PAGING_EVENTS);
   results.calendarEvents = 1; // skip the execution prompt
 
   const wv = installPagingWebView();
@@ -5903,7 +6184,7 @@ test('paging: each page fires its own liveness beacons, so one bad page is still
 
 test('paging: page boundaries are PINNED — chrome that shrinks mid-review cannot slide a card out of view', async () => {
   const adapter = buildAdapter();
-  const results = buildSizedResults(40);
+  const results = buildSizedResults(PAGING_EVENTS);
   // Chrome is not constant across a review: queueing a venue on page 1
   // replaces a button with a shorter label. If the boundaries were recomputed
   // from each render's chrome, the freed bytes would enlarge page 1 and page 2
@@ -5938,12 +6219,12 @@ test('paging: page boundaries are PINNED — chrome that shrinks mid-review cann
   // And still nothing is lost: the union is the whole run.
   const seen = after.flat();
   assert.equal(new Set(seen).size, seen.length, 'no card appears on two pages');
-  assert.equal(seen.length, 40, 'no card fell between two pages');
+  assert.equal(seen.length, PAGING_EVENTS, 'no card fell between two pages');
 });
 
 test('paging: a page that fails to render still applies the taps already made, and still asks about execution', async () => {
   const adapter = buildAdapter();
-  const results = buildSizedResults(40);
+  const results = buildSizedResults(PAGING_EVENTS);
   results.config = { config: { dryRun: false } };
   results.calendarEvents = 0;
 
