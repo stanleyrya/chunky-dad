@@ -77,10 +77,26 @@ function formatValueText(value) {
     return String(value);
 }
 
+// Cut length is in UTF-16 code UNITS, and an astral character (emoji, and every
+// flag/skin-tone sequence) is two of them. Cutting between the two halves
+// leaves a LONE SURROGATE in the string, which is not representable in UTF-8 —
+// and WKWebView, handed a document containing one, renders NOTHING AT ALL:
+// `<html><head></head><body></body></html>`, no DOM, no scripts, no matter how
+// small the page is. One truncated description therefore used to blank the
+// entire results sheet. Back the cut up by one unit when it would land inside
+// a surrogate pair, so the pair is either wholly kept or wholly dropped.
+function safeSliceEnd(str, end) {
+    if (end <= 0) return 0;
+    if (end >= str.length) return str.length;
+    const code = str.charCodeAt(end - 1);
+    // Last kept unit is a HIGH surrogate whose LOW half would be cut away.
+    return code >= 0xd800 && code <= 0xdbff ? end - 1 : end;
+}
+
 function truncateText(text, maxLength = VALUE_PREVIEW_MAX) {
     const str = String(text || '');
     if (str.length <= maxLength) return str;
-    return `${str.slice(0, maxLength - 1)}…`;
+    return `${str.slice(0, safeSliceEnd(str, maxLength - 1))}…`;
 }
 
 // Field-aware equality: date fields compare by instant so a saved run's ISO
