@@ -862,6 +862,11 @@ class AiWebParser {
                 // never skips or replaces an extraction step.
                 this.applyWixServerDataEnrichment(structuredEvents, effectiveHtmlData, cityConfig);
                 await this.applyJsonLdGapFill(structuredEvents, effectiveHtmlData, parserConfig, cityConfig, httpAdapter);
+                // Placeholder pixels are not artwork — drop them BEFORE the
+                // og:image fill below, so an event whose structured data
+                // published a 1x1 spacer can still adopt the page's real
+                // artwork instead of keeping the pixel.
+                structuredEvents.forEach(event => this.rejectPlaceholderImageValues(event));
                 // A single structured event whose node carried no image adopts
                 // the page's own og:image artwork (multi-event pages never do:
                 // one shared meta image cannot be attributed to one event).
@@ -6142,6 +6147,10 @@ class AiWebParser {
         for (const pattern of uninterestingPatterns) {
             if (lowerUrl.includes(pattern)) return true;
         }
+        // A self-declared placeholder (1x1 spacer, lazy-load pixel, tiny data:
+        // URI) is never worth OCR'ing and never an orientation-slot candidate.
+        // The shape rules live in shared-core so the merge rung agrees.
+        if (this.getPlaceholderImageReason(lowerUrl)) return true;
         // '404' only counts when it stands alone between non-alphanumerics
         // ("/404.png", "error-404.jpg") — as a bare substring it matches
         // random hex asset IDs (a Wix flyer named "238fae_c4047c55…" was
@@ -6607,6 +6616,48 @@ class AiWebParser {
             return this.core.getImageSizeScoreFromUrl(url);
         }
         return url.length;
+    }
+
+    /**
+     * Why this URL is a placeholder rather than artwork ('' when it isn't).
+     * The rules live in SharedCore.getPlaceholderImageUrlReason so extraction
+     * here and the merge's deterministic image rung judge a 1x1 spacer the same
+     * way. Same wiring contract as getImageSizeFromUrl above: core is always
+     * present in production, and a stubbed core simply fails open.
+     */
+    getPlaceholderImageReason(url) {
+        if (!url || typeof url !== 'string') return '';
+        if (this.core && typeof this.core.getPlaceholderImageUrlReason === 'function') {
+            return this.core.getPlaceholderImageUrlReason(url);
+        }
+        return '';
+    }
+
+    /**
+     * Drop `image` / `imageVertical` / `imageHorizontal` values that are
+     * self-declared placeholders (1x1 spacers, lazy-load pixels, tiny data:
+     * URIs). Run 20260805-125954 shipped "…/static/images/1px.png" as an
+     * event's flyer: a lazy-loading listing page gave the segment no other
+     * <img>, the URL reached the model as SEGMENT_IMAGE_URL, and it is
+     * genuinely on the page — so the verbatim evidence gate passed it. Nothing
+     * downstream of extraction was ever going to catch that, because every
+     * later check asks "is this URL real?", not "is this URL a picture?".
+     *
+     * Clearing `image` clears its imageSource stamp with it: provenance is a
+     * companion of the value, never an orphan.
+     */
+    rejectPlaceholderImageValues(event) {
+        if (!event || typeof event !== 'object') return event;
+        for (const field of ['image', 'imageVertical', 'imageHorizontal']) {
+            const value = typeof event[field] === 'string' ? event[field].trim() : '';
+            if (!value) continue;
+            const reason = this.getPlaceholderImageReason(value);
+            if (!reason) continue;
+            console.log(`🤖 AI Web: Rejected placeholder ${field} ${value} for "${event.title || ''}" — ${reason}`);
+            delete event[field];
+            if (field === 'image') delete event.imageSource;
+        }
+        return event;
     }
 
     /**
@@ -13098,6 +13149,12 @@ TEXT:
                 }
             });
         }
+
+        // Placeholder pixels are not artwork. Runs after the parser-config
+        // metadata override above (so a configured slot is judged too) and
+        // before the og:image fill below, so an event whose only extracted
+        // image was a 1x1 spacer can still adopt the page's real artwork.
+        this.rejectPlaceholderImageValues(event);
 
         // A single-event page (never a multi-event segment — one shared meta
         // image cannot be attributed to one segment) whose extraction found no
