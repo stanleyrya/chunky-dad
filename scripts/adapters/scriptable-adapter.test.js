@@ -6800,3 +6800,80 @@ test('log checkpoint: a saved-run redisplay never overwrites the historical log'
   assert.equal(files.get(adapter.getLogFilePath('20260804-125703')), 'the original run log',
     'the run being reviewed keeps its own log');
 });
+
+// ---------------------------------------------------------------------------
+// THE HANDLER MUST BE INSTALLED BEFORE loadHTML, NOT AFTER.
+//
+// The results page fires its first liveness beacon from DOMContentLoaded —
+// while loadHTML is still running. With shouldAllowRequest assigned after the
+// load, that beacon met a WebView with no handler, so the `return false` that
+// cancels the fake navigation never ran and a real main-frame navigation to
+// `chunkyscrape://` started on top of a main frame that had not finished
+// loading. The evidence was an absence: every run ever logged recorded
+// `painted` and `interacted` beacons and not one `dom-ready`.
+// ---------------------------------------------------------------------------
+test('shouldAllowRequest is installed before loadHTML, so the DOM-ready beacon is not a live navigation', async () => {
+  const adapter = buildAdapter();
+  const results = { ...buildResultsStub(), calendarEvents: 1 };
+
+  let handler = null;
+  let resolvePresent = null;
+  const handlerSetWhenLoadRan = [];
+  let beaconDuringLoad = null;
+  global.WebView = class {
+    async loadHTML() {
+      handlerSetWhenLoadRan.push(handler !== null);
+      // Exactly what the page does at DOMContentLoaded, at the moment it does
+      // it: navigate to the beacon URL while the document is still loading.
+      beaconDuringLoad = handler
+        ? handler({ url: 'chunkyscrape://act?a=beacon&id=dom-ready&d=2%20cards' })
+        : 'UNHANDLED';
+    }
+    set shouldAllowRequest(fn) { handler = fn; }
+    get shouldAllowRequest() { return handler; }
+    present() { return new Promise((resolve) => { resolvePresent = resolve; }); }
+    async evaluateJavaScript() { return undefined; }
+  };
+  try {
+    const done = adapter.presentRichResults(results);
+    for (let i = 0; i < 500 && !resolvePresent; i++) {
+      await new Promise((r) => setImmediate(r));
+    }
+    assert.deepEqual(handlerSetWhenLoadRan, [true],
+      'the handler was already on the WebView when loadHTML ran');
+    assert.equal(beaconDuringLoad, false,
+      'a beacon fired during the load is CANCELLED, not allowed to navigate');
+    resolvePresent();
+    await done;
+  } finally {
+    delete global.WebView;
+  }
+});
+
+// A cached logo from before the PNG fix must not be served forever: the codec
+// is what carries the alpha channel, so a JPEG data URI on disk is the white
+// background, not just a stale byte count.
+test('a JPEG inline-logo cache is discarded and re-encoded instead of reused', async () => {
+  const adapter = buildAdapter();
+  const written = [];
+  adapter.fm = {
+    joinPath: (a, b) => `${a}/${b}`,
+    fileExists: () => true,
+    modificationDate: () => new Date(),
+    readString: () => 'data:image/jpeg;base64,/9j/4AAQSkZJRg',
+    writeString: (p, value) => { written.push(value); },
+    createDirectory: () => {}
+  };
+  adapter.cacheDir = '/cache';
+  // No image available → the rebuild returns null. What matters is that the
+  // stale JPEG was NOT handed back as if it were fine.
+  adapter.loadHeaderLogoImage = async () => null;
+  const uri = await adapter.buildHeaderLogoDataUri();
+  assert.equal(uri, null, 'the JPEG cache is rejected, not returned');
+  assert.deepEqual(written, [], 'nothing re-cached when there is no image to encode');
+
+  // A PNG cache is still a cache hit — this must not re-encode on every run.
+  adapter.fm.readString = () => 'data:image/png;base64,iVBORw0KGgo';
+  assert.equal(await adapter.buildHeaderLogoDataUri(),
+    'data:image/png;base64,iVBORw0KGgo', 'a PNG cache is reused untouched');
+});
