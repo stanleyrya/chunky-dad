@@ -1401,14 +1401,19 @@ class ScriptableAdapter {
     return existing;
   }
 
-  // Stamp the just-saved run id into venue-queue entries tapped this session.
-  // Queue taps happen while the results sheet is up, BEFORE the run is saved,
-  // so results.savedRunId is null at queue-write time and entries were landing
-  // with runIds: []. The run id is generated from the save timestamp
-  // (saveRun → getRunId), so assigning it earlier would change what a run id
-  // means; instead queueVenueCandidateAndReport records which candidate keys
-  // it wrote and this backfill — called right after saveRun assigns
-  // results.savedRunId — stamps the now-known id into exactly those entries.
+  // Stamp the saved run id into venue-queue entries tapped this session.
+  // Queue taps happen while the results sheet is up. They used to run before
+  // the run was saved at all, so results.savedRunId was null at queue-write
+  // time and entries landed with runIds: []; the id is generated from the save
+  // timestamp (saveRun → getRunId), so it could not simply be assigned earlier
+  // without changing what a run id means. Now that the run is saved BEFORE the
+  // sheet (persistRunSnapshot, phase "pre-ui") the id usually exists at tap
+  // time and mergeBarAdditionEntry stamps it directly — but the id is still
+  // minted by saveRun, and a pre-UI save that failed leaves taps unstamped, so
+  // this backfill stays as the safety net: queueVenueCandidateAndReport records
+  // which candidate keys it wrote and this pass — called right after the
+  // post-review save confirms results.savedRunId — stamps the id into exactly
+  // those entries. Already-stamped entries are skipped, so it is idempotent.
   // Fail open: any failure leaves entries as the tap wrote them.
   async backfillQueuedVenueRunIds(results) {
     try {
@@ -4676,14 +4681,6 @@ class ScriptableAdapter {
 
       console.log("\n" + "=".repeat(60));
 
-      const shouldSkipUi = this.shouldSkipResultsUi(results);
-      if (!shouldSkipUi) {
-        // Present rich UI display (may update results.calendarEvents if user executes)
-        await this.presentRichResults(results);
-      } else {
-        console.log("📱 Scriptable: Skipping results UI (automation run)");
-      }
-
       // Persist this run for later display (skip when showing saved runs)
       const hasAnalyzedEvents = Array.isArray(results?.analyzedEvents);
       const parserConfigs = results?.config?.parsers || [];
@@ -4711,16 +4708,39 @@ class ScriptableAdapter {
         hasAnalyzedEvents &&
         hasActiveParsers;
       const retentionDays = 30;
+
+      // ------------------------------------------------------------------
+      // SAVE BEFORE SHOWING. The run JSON and its log are written HERE, above
+      // the results sheet, and rewritten below it.
+      //
+      // They used to be written only after the sheet came down, which meant
+      // any failure at the UI stage destroyed the entire run: every scraped
+      // event, every AI call's output, the whole log. That is not theory — a
+      // BEEFMINCE run ended with "Presenting results UI..." as its last line
+      // ever logged and had to be force-quit, and there was no run JSON left
+      // to diagnose it from. A UI failure must cost the REVIEW, never the
+      // DATA.
+      //
+      // The second write below lands on the SAME file (see
+      // persistRunSnapshot): the id minted here is reused, so post-review
+      // state — bear overrides, executed calendar actions, calendarEvents,
+      // errors raised during the review — updates this run instead of
+      // creating a second one.
+      // ------------------------------------------------------------------
       if (shouldSaveRun) {
-        await this.ensureRelativeStorageDirs();
-        const runId = await this.saveRun(results);
-        if (runId) {
-          results.savedRunId = runId;
-          results.savedRunPath = this.getRunFilePath(runId);
-          // Venue-queue taps happened before this id existed — stamp it into
-          // the entries queued during this session's results sheet.
-          await this.backfillQueuedVenueRunIds(results);
-        }
+        await this.persistRunSnapshot(results, { phase: "pre-ui" });
+      }
+
+      const shouldSkipUi = this.shouldSkipResultsUi(results);
+      if (!shouldSkipUi) {
+        // Present rich UI display (may update results.calendarEvents if user executes)
+        await this.presentRichResults(results);
+      } else {
+        console.log("📱 Scriptable: Skipping results UI (automation run)");
+      }
+
+      if (shouldSaveRun) {
+        await this.persistRunSnapshot(results, { phase: "post-ui" });
         // Cleanup old JSON runs
         await this.cleanupOldFiles("chunky-dad-scraper/runs", {
           maxAgeDays: retentionDays,
@@ -9462,9 +9482,10 @@ class ScriptableAdapter {
         await this.saveBarAdditions(queue);
         timesSeen = Number(entry.timesSeen) || 1;
         tapped[key] = timesSeen;
-        // Remember which entries this session wrote: the run id does not
-        // exist yet (the run is saved after the sheet is dismissed), so
-        // backfillQueuedVenueRunIds stamps it into these keys post-save.
+        // Remember which entries this session wrote. The run is now saved
+        // before the sheet opens, so the id above is normally already real —
+        // but if that pre-UI save failed there is still no id here, and
+        // backfillQueuedVenueRunIds stamps these keys after the final save.
         if (!Array.isArray(results._queuedVenueCandidateKeys)) {
           results._queuedVenueCandidateKeys = [];
         }
@@ -10731,8 +10752,25 @@ class ScriptableAdapter {
   // genuinely runaway future run. The lone-surrogate sweep in
   // finalizeRenderedHtml is what actually keeps a page from blanking now, and
   // the liveness beacons still report it per page if one ever does.
+  //
+  // ---- CORRECTION: 1 MB was an over-correction. ----
+  // With the surrogate fixed and deployed, the very next run put an 878 KB
+  // single page on the device and it did not blank — it HUNG. No sheet, no
+  // return, force-quit; the log ends on "Presenting results UI...". The same
+  // page renders fine in desktop WebKit, so this is iOS resource exhaustion,
+  // not a content defect, and it is a size-shaped failure after all: the
+  // surrogate bug was confounding the earlier reads, not standing in for them.
+  //
+  // Lowered to 768 KB. Note what this number is NOT anchored on: not 878 KB,
+  // the failure (that is the anchoring mistake made three times already —
+  // 1923 → 960 → 800 → 1024 KB, each picked off a page that failed). It is a
+  // BACKSTOP number now, and pagination is the primary defence, so it is set
+  // by its two jobs: 1.5x the 512 KB page budget, so it can never fire on a
+  // page the packer planned, and comfortably under the one size at which the
+  // device has actually failed. CHUNK's 864 KB success no longer argues for
+  // raising it — CHUNK is two ~430 KB pages now.
   static get RESULTS_HTML_MAX_BYTES() {
-    return 1024 * 1024;
+    return 768 * 1024;
   }
 
   // Per-PAGE budget for the Scriptable flow (the web flow never pages).
@@ -10782,8 +10820,36 @@ class ScriptableAdapter {
   // above every page ever produced on device, which makes pagination a rare
   // fallback rather than the default. Matches RESULTS_HTML_MAX_BYTES, so a
   // page built to this budget is never also shed.
+  //
+  // ---- CORRECTION: "size predicts nothing" was read off a poisoned sample
+  // in the other direction. ----
+  // The table above is every page from the surrogate era, where the bad card
+  // explained the blanks and left nothing for size to explain. With the
+  // surrogate fix DEPLOYED, the device evidence restarts, and it is:
+  //
+  //   BEEFMINCE  1/3   383 KB   ✅ rendered
+  //   BEEFMINCE  2/3   373 KB   ✅ rendered
+  //   Furball   single 490 KB   ✅ rendered      <- must not page (his ask)
+  //   CHUNK     single 864 KB   ✅ rendered      (once, pre-surrogate-fix)
+  //   BEEFMINCE single 878 KB   ❌ HANGS — sheet never appears, force-quit
+  //
+  // A hang is not a blank: WebKit is not refusing the document, iOS is
+  // running out of room to build it. Desktop WebKit renders that same 878 KB
+  // page fine, so it is environmental to the phone and there is no content
+  // fix for it — only a smaller page.
+  //
+  // 512 KB, and the anchor is 490 KB — the LARGEST PAGE PROVEN TO WORK at or
+  // under this ceiling — not 878 KB, the one that failed. Anchoring on the
+  // failure is the error that produced 1923 → 960 → 800 → 1024 KB, each of
+  // which was set just under something broken and was itself broken. 512 KB
+  // is the smallest round value that still keeps Furball's 490 KB history on
+  // ONE page, which was the owner's explicit complaint about pagination; the
+  // price is that BEEFMINCE (878 KB) and CHUNK (864 KB) become two pages
+  // each, one swipe, versus the three-to-four that he objected to. Sits at
+  // 2/3 of RESULTS_HTML_MAX_BYTES, so a page built to this budget is never
+  // also shed.
   static get RESULTS_PAGE_BUDGET_BYTES() {
-    return 1024 * 1024;
+    return 512 * 1024;
   }
 
   // The pager nav is emitted twice per page plus its style/script block.
@@ -12984,14 +13050,77 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     return this.fm.joinPath(this.runsDir, `${runId}.json`);
   }
 
-  async saveRun(results) {
+  // Writes (or rewrites) this run's JSON, and its log alongside it.
+  //
+  // Called TWICE per saved run, on purpose:
+  //   phase "pre-ui"  — before the results sheet is presented. Everything the
+  //                     scrape produced is already on disk by the time the UI
+  //                     can fail, so a hang/crash/force-quit at review costs
+  //                     the review only.
+  //   phase "post-ui" — after the sheet is dismissed. Rewrites the SAME file
+  //                     with what the review added (bear overrides, executed
+  //                     calendar actions, calendarEvents, errors).
+  //
+  // One run, one id, one file: the pre-ui pass stamps results.savedRunId (and
+  // the timestamp that id encodes), and the post-ui pass hands both back to
+  // saveRun, which reuses them instead of minting a second id from a second
+  // timestamp. If the pre-ui pass failed to write, the post-ui pass simply
+  // mints the id itself — exactly the old behaviour.
+  async persistRunSnapshot(results, { phase } = {}) {
+    // Saved-run redisplay never writes: displayResults gates on
+    // shouldSaveRun, and this second check keeps that true for any future
+    // caller (re-saving a redisplay would fork a viewed run into a new one).
+    if (!results || results._isDisplayingSavedRun) return null;
+    const preUi = phase === "pre-ui";
+    await this.ensureRelativeStorageDirs();
+    const runId = await this.saveRun(results, {
+      runId: results.savedRunId || null,
+      timestamp: results._savedRunTimestamp || null,
+      preUi,
+    });
+    if (runId) {
+      results.savedRunId = runId;
+      results.savedRunPath = this.getRunFilePath(runId);
+      if (!preUi) {
+        // Venue-queue taps that predate the id (or predate this fix) — stamp
+        // it into the entries queued during this session's results sheet.
+        await this.backfillQueuedVenueRunIds(results);
+      }
+    }
+    if (preUi) {
+      // The log is data too: it is the only record of what the AI passes did,
+      // and it died with the run JSON on a UI hang. Written here with the run
+      // so far, and rewritten in full (writeString, not append) once the
+      // review is done.
+      try {
+        await this.appendLogSummary(results, { preUi: true });
+      } catch (logErr) {
+        console.log(
+          `📱 Scriptable: Pre-UI log write failed: ${logErr.message}`,
+        );
+      }
+    }
+    return runId;
+  }
+
+  async saveRun(results, options = {}) {
     if (!this.fm) return;
     try {
       // Ensure directories exist first
       await this.ensureRelativeStorageDirs();
 
-      const ts = new Date();
-      const runId = this.getRunId(ts);
+      // A run is saved twice (see persistRunSnapshot). The second write must
+      // land on the FIRST write's file, so it passes back the id and the
+      // timestamp that id was minted from — reusing both is what keeps this
+      // one run instead of two.
+      const reusedRunId =
+        typeof options.runId === "string" && options.runId ? options.runId : "";
+      const reusedTs = options.timestamp ? new Date(options.timestamp) : null;
+      const ts =
+        reusedRunId && reusedTs && !Number.isNaN(reusedTs.getTime())
+          ? reusedTs
+          : new Date();
+      const runId = reusedRunId || this.getRunId(ts);
       const runFilePath = this.getRunFilePath(runId);
       const runContext = results.runContext || null;
       const analyzedEvents = this.sanitizeEventsForRunSave(
@@ -13054,7 +13183,21 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
 
       // Save run using absolute path
       this.fm.writeString(runFilePath, JSON.stringify(payload));
-      console.log(`📱 Scriptable: ✓ Saved run ${runId} to ${runFilePath}`);
+      // Remember which timestamp this id was minted from, so the post-review
+      // rewrite reuses it and summary.timestamp keeps agreeing with runId.
+      if (results && typeof results === "object") {
+        results._savedRunTimestamp = ts.toISOString();
+      }
+      if (options.preUi) {
+        // Distinct from the line below on purpose: same run, first of two
+        // writes. It is not a second run, and on a UI hang it is the only
+        // save line the log will ever show.
+        console.log(
+          `📱 Scriptable: 💾 Run ${runId} persisted to ${runFilePath} BEFORE the results UI — a hang, crash or force-quit at review can no longer lose this run's data.`,
+        );
+      } else {
+        console.log(`📱 Scriptable: ✓ Saved run ${runId} to ${runFilePath}`);
+      }
       return runId;
     } catch (e) {
       console.log(`📱 Scriptable: ✗ Failed to save run: ${e.message}`);
@@ -14222,7 +14365,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     }
   }
 
-  async appendLogSummary(results) {
+  async appendLogSummary(results, options = {}) {
     try {
       const runId =
         results?.savedRunId ||
@@ -14260,8 +14403,17 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         fm.createDirectory(this.logsDir, true);
       }
 
+      // writeString, not append: the pre-UI pass writes the run so far and the
+      // post-review pass overwrites it with the complete log, so calling this
+      // twice never duplicates a line.
       fm.writeString(logPath, content);
-      console.log(`📱 Scriptable: Successfully wrote log to ${logPath}`);
+      if (options.preUi) {
+        console.log(
+          `📱 Scriptable: 💾 Log for run ${runId} written to ${logPath} before the results UI (rewritten in full after review).`,
+        );
+      } else {
+        console.log(`📱 Scriptable: Successfully wrote log to ${logPath}`);
+      }
     } catch (e) {
       console.log(`📱 Scriptable: Failed to append log: ${e.message}`);
     }

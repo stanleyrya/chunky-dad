@@ -2916,6 +2916,9 @@ function installMemoryFm(adapter) {
   adapter.fm = {
     joinPath: (a, b) => `${a}/${b}`,
     fileExists: (p) => files.has(p) || p === adapter.baseDir,
+    // Real FileManagers have this, and saveRun asks it of any path that
+    // already exists — which the second write of a run always does.
+    isDirectory: (p) => !files.has(p),
     createDirectory: () => {},
     readString: (p) => (files.has(p) ? files.get(p) : null),
     writeString: (p, text) => {
@@ -5074,20 +5077,23 @@ test('size cliff: an over-ceiling page is REDUCED under the ceiling, not merely 
     'all 40 cards are still on the page');
 });
 
-test('size cliff: the ceiling no longer sheds pages that are PROVEN to render', () => {
-  // The 955 KB blank that this ceiling was hedging against was never a size
-  // failure: that page carried two lone surrogates, and WebKit renders the
-  // empty shell for any document containing one (proven at 49 characters).
-  // Paginated, the SAME run blanked only on its smallest page — the one with
-  // the bad card. So a ceiling under 862 KB was shedding review detail off
-  // pages like CHUNK's, which WORKED.
+test('size cliff: the ceiling is a BACKSTOP behind pagination, under the size that hung the device', () => {
+  // The ceiling stopped being a cliff estimate when pagination started
+  // bounding the page by construction. Its two jobs now:
+  //   1. never fire on a page the packer planned (or the shed ladder would be
+  //      taking review detail off pages that are already in budget), and
+  //   2. cut in BEFORE 878 KB, the single page that hung the phone outright —
+  //      no sheet, no return, force-quit.
+  // It is deliberately not set just under 878 KB: anchoring on the failure is
+  // what produced 1923 -> 960 -> 800 -> 1024 KB, four wrong numbers in a row.
   const ceilingKb = ScriptableAdapter.RESULTS_HTML_MAX_BYTES / 1024;
-  assert.ok(ceilingKb > 862,
-    `ceiling (${ceilingKb} KB) is above the 862 KB CHUNK page that rendered, so it is not shed`);
-  assert.ok(ceilingKb >= 959,
-    `ceiling (${ceilingKb} KB) is at or above every page ever produced on device (max 959 KB)`);
-  assert.ok(ceilingKb <= 2048,
-    'but still bounds a runaway run rather than being no ceiling at all');
+  const budgetKb = ScriptableAdapter.RESULTS_PAGE_BUDGET_BYTES / 1024;
+  assert.ok(ceilingKb >= budgetKb * 1.25,
+    `ceiling (${ceilingKb} KB) clears the ${budgetKb} KB page budget by enough that a planned page is never also shed`);
+  assert.ok(ceilingKb < 878,
+    `ceiling (${ceilingKb} KB) sheds before the 878 KB page that hung the device`);
+  assert.ok(ceilingKb > 490,
+    `ceiling (${ceilingKb} KB) is still above the largest page proven to render on device (490 KB)`);
 });
 
 test('size cliff: every shed is logged with what went and what it cost — no silent caps', async () => {
@@ -5809,41 +5815,52 @@ test('pagination: a run whose cards exceed one page budget is split, and EVERY p
   assert.ok(page1.includes('finishResultsPaging'), 'and offers a finish-early control');
 });
 
-test('pagination: is a RARE FALLBACK — every run ever observed stays one page', () => {
+test('pagination: the budget is anchored on the largest page PROVEN to render, never on one that failed', () => {
   const kb = ScriptableAdapter.RESULTS_PAGE_BUDGET_BYTES / 1024;
-  // Size predicted nothing: 248/486/489/862 KB rendered with zero lone
-  // surrogates, 959/713/371 KB blanked with two. The budget therefore exists
-  // to bound a runaway run, not to dodge a cliff — so it sits above every
-  // page ever produced on device, and Furball (490 KB) and CHUNK (864 KB)
-  // are both a single page again.
-  assert.ok(kb > 490, `Furball (490 KB) must not be split; budget is ${kb} KB`);
-  assert.ok(kb > 864, `CHUNK (864 KB, proven to render) must not be split; budget is ${kb} KB`);
-  assert.ok(kb >= 959, `budget (${kb} KB) covers the largest page ever produced on device`);
-  assert.ok(kb <= 2048, `budget (${kb} KB) still bounds a genuinely runaway run`);
+  // Post-surrogate-fix device evidence: 383/373/490 KB rendered, 878 KB HUNG
+  // (sheet never appeared, force-quit). The anchor is 490 KB — the largest
+  // page proven to work — because every previous value (1923, 960, 800, 1024)
+  // was picked from just under a page that had FAILED, and every one of them
+  // was wrong. Keeping Furball's 490 KB on one page is also the owner's
+  // stated requirement.
+  assert.ok(kb >= 490, `Furball (490 KB, device-proven) must not be split; budget is ${kb} KB`);
+  assert.ok(kb < 864, `budget (${kb} KB) splits the 864 KB and 878 KB pages instead of shipping them whole`);
+  assert.ok(kb < 878 / 1.5,
+    `budget (${kb} KB) leaves real headroom under the 878 KB hang rather than sitting just below it`);
   assert.ok(kb <= ScriptableAdapter.RESULTS_HTML_MAX_BYTES / 1024,
     'and a page built to this budget is never ALSO shed by the ceiling');
 });
 
 // A page's byte size is not what blanks it; a lone UTF-16 surrogate is. These
 // two guard the actual mechanism.
-test('page budget: a 490 KB run and an 864 KB run are each exactly ONE page', () => {
+// Builds a (fullHtml, cards) pair whose page total lands on a given KB size.
+// The planner only ever sees those two things, so feeding it them directly is
+// the honest way to assert on a specific page size.
+function buildSizedPageInputs(kb, cardCount = 16, chrome = 120 * 1024) {
+  const cardBytes = Math.floor((kb * 1024 - chrome) / cardCount);
+  const cards = Array.from({ length: cardCount }, (_, i) => ({
+    group: 'new', html: 'x'.repeat(cardBytes) + String(i).padStart(0, '0')
+  }));
+  return { cards, fullHtml: 'c'.repeat(chrome) + cards.map((c) => c.html).join('') };
+}
+
+test('page budget: the 490 KB run stays ONE page and the 878 KB run that hung becomes TWO', () => {
   const adapter = buildAdapter();
-  const budget = ScriptableAdapter.RESULTS_PAGE_BUDGET_BYTES;
-  // Cards sized so the whole page lands on the real observed totals. The
-  // planner only ever sees (fullHtml, cards), so feeding it those directly is
-  // the honest way to assert on a specific page size.
-  for (const kb of [490, 864]) {
-    const cardCount = 16;
-    const chrome = 120 * 1024;
-    const cardBytes = Math.floor((kb * 1024 - chrome) / cardCount);
-    const cards = Array.from({ length: cardCount }, (_, i) => ({
-      group: 'new', html: 'x'.repeat(cardBytes) + String(i).padStart(0, '0')
-    }));
-    const fullHtml = 'c'.repeat(chrome) + cards.map((c) => c.html).join('');
+  const budgetKb = Math.round(ScriptableAdapter.RESULTS_PAGE_BUDGET_BYTES / 1024);
+  // 490 KB is Furball's entire history and it rendered on device — splitting
+  // it was the owner's complaint, so it must not split. 878 KB is the
+  // BEEFMINCE page that hung the phone; it must.
+  const expected = [[490, 1], [864, 2], [878, 2]];
+  for (const [kb, wantPages] of expected) {
+    const { cards, fullHtml } = buildSizedPageInputs(kb);
     adapter._resultsPagePlan = null;
     const plan = adapter.planResultsPages(fullHtml, cards);
-    assert.equal(plan.pageCount, 1,
-      `a ${kb} KB run is ONE page (got ${plan.pageCount}); ${Math.round(budget / 1024)} KB budget`);
+    assert.equal(plan.pageCount, wantPages,
+      `a ${kb} KB run is ${wantPages} page(s), got ${plan.pageCount}; ${budgetKb} KB budget`);
+    plan.pages.forEach((page, i) => {
+      assert.ok(page.bytes <= ScriptableAdapter.RESULTS_PAGE_BUDGET_BYTES,
+        `${kb} KB run, page ${i + 1}: ${Math.round(page.bytes / 1024)} KB is within the ${budgetKb} KB budget`);
+    });
   }
 });
 
@@ -6266,6 +6283,191 @@ test('paging: a page that fails to render still applies the taps already made, a
   assert.equal(promptCalls, 1, 'the execute prompt still fires — a broken page 2 does not end the review');
   assert.ok(lines.some((l) => l.includes('Failed to present results page 2')),
     'and the failure is named in the log, not swallowed');
+});
+
+// ---------------------------------------------------------------------------
+// Data outlives review: the run JSON is on disk BEFORE the results UI opens.
+//
+// It used to be written only after the sheet came down, so a hang or a
+// force-quit at the review stage destroyed the whole run — every scraped
+// event, every AI call's output, the log. These tests pin the write ORDER
+// (a present stub that reads the filesystem stub back), and that the second
+// write lands on the SAME file rather than forking the run in two.
+// ---------------------------------------------------------------------------
+
+function buildRunSaveResults(overrides = {}) {
+  return {
+    analyzedEvents: [{ title: 'Bear Night', _action: 'new' }],
+    bearDroppedEvents: [],
+    parserResults: [{ name: 'megaparser', bearEvents: 1, totalEvents: 1 }],
+    errors: [],
+    totalEvents: 1,
+    bearEvents: 1,
+    calendarEvents: 0,
+    runContext: { type: 'manual', environment: 'app', trigger: 'run' },
+    config: { parsers: [{ name: 'megaparser', enabled: true }], runtime: {} },
+    ...overrides
+  };
+}
+
+// displayResults with everything but the save/present ordering stubbed out.
+// onPresent stands in for the review: it sees the filesystem exactly as the
+// results sheet would.
+function installRunSaveHarness(adapter, onPresent) {
+  const files = installMemoryFm(adapter);
+  const runFiles = () => [...files.keys()].filter((p) => p.startsWith(adapter.runsDir));
+  const seenAtPresent = [];
+  adapter.displayCalendarProperties = async () => {};
+  adapter.compareWithExistingCalendars = async () => {};
+  adapter.displayEnrichedEvents = async () => {};
+  adapter.cleanupOldFiles = async () => 0;
+  adapter.appendMetricsRecord = async () => {};
+  adapter.updateMetricsSummary = async () => {};
+  adapter.presentRichResults = async (results) => {
+    seenAtPresent.push(runFiles().map((p) => ({ path: p, json: JSON.parse(files.get(p)) })));
+    if (onPresent) await onPresent(results, files);
+  };
+  return { files, runFiles, seenAtPresent };
+}
+
+async function runDisplayResultsQuietly(adapter, results) {
+  const originalLog = console.log;
+  const lines = [];
+  console.log = (...args) => { lines.push(args.join(' ')); };
+  try {
+    await adapter.displayResults(results);
+  } finally {
+    console.log = originalLog;
+  }
+  return lines;
+}
+
+test('save-before-present: the complete run JSON is already on disk when the results UI opens', async () => {
+  const adapter = buildAdapter();
+  const { seenAtPresent, runFiles } = installRunSaveHarness(adapter);
+  const results = buildRunSaveResults();
+
+  const lines = await runDisplayResultsQuietly(adapter, results);
+
+  assert.equal(seenAtPresent.length, 1, 'the results UI was actually presented');
+  const atPresent = seenAtPresent[0];
+  assert.equal(atPresent.length, 1, 'exactly one run file existed BEFORE present() was called');
+  // Not a placeholder — the scrape's whole payload is in it.
+  const early = atPresent[0].json;
+  assert.equal(early.version, 2);
+  assert.equal(early.analyzedEvents.length, 1, 'the scraped events are in the pre-UI save');
+  assert.equal(early.analyzedEvents[0].title, 'Bear Night');
+  assert.equal(early.parserResults.length, 1, 'and so are the parser results');
+  assert.ok(early.summary.runId, 'the pre-UI save carries a real run id');
+
+  assert.equal(runFiles().length, 1, 'and the post-review write did not add a second file');
+  assert.ok(lines.some((l) => l.includes('BEFORE the results UI')),
+    'the pre-UI save says so in the log, distinctly from the final save line');
+  assert.equal(lines.filter((l) => l.includes('✓ Saved run')).length, 1,
+    'the existing saved-run line still appears exactly once — one run, not two');
+});
+
+test('save-before-present: a throw at the UI stage still leaves the whole run saved', async () => {
+  const adapter = buildAdapter();
+  const { files, runFiles } = installRunSaveHarness(adapter, () => {
+    // Stands in for the 878 KB page that hung the phone: whatever goes wrong
+    // at review, it must not take the data with it.
+    throw new Error('WebView.present never returned');
+  });
+  const results = buildRunSaveResults();
+
+  await runDisplayResultsQuietly(adapter, results);
+
+  const paths = runFiles();
+  assert.equal(paths.length, 1, 'the run survived the UI failure');
+  const payload = JSON.parse(files.get(paths[0]));
+  assert.equal(payload.analyzedEvents.length, 1, 'with its events intact');
+  assert.equal(payload.parserResults[0].name, 'megaparser', 'and its parser results intact');
+  assert.equal(payload.summary.totals.totalEvents, 1, 'and its totals intact');
+});
+
+test('save-before-present: post-review state updates the SAME run file, no duplicate run', async () => {
+  const adapter = buildAdapter();
+  const { files, runFiles, seenAtPresent } = installRunSaveHarness(adapter, (results) => {
+    // What a real review changes on its way out.
+    results.analyzedEvents[0].manuallyMarkedBear = true;
+    results.calendarEvents = 3;
+    results.errors.push('calendar write failed for one event');
+  });
+  const results = buildRunSaveResults();
+
+  await runDisplayResultsQuietly(adapter, results);
+
+  const paths = runFiles();
+  assert.equal(paths.length, 1, 'still exactly one run file');
+  assert.equal(paths[0], seenAtPresent[0][0].path, 'and it is the file the pre-UI save wrote');
+
+  const payload = JSON.parse(files.get(paths[0]));
+  assert.equal(payload.analyzedEvents[0].manuallyMarkedBear, true, 'the bear override landed');
+  assert.equal(payload.summary.totals.calendarEvents, 3, 'the executed calendar writes landed');
+  assert.equal(payload.errors.length, 1, 'and errors raised during review landed');
+
+  // Same id, both writes, and the timestamp the id encodes was not re-minted.
+  assert.equal(payload.summary.runId, seenAtPresent[0][0].json.summary.runId,
+    'the run id is unchanged by the second write');
+  assert.equal(payload.summary.timestamp, seenAtPresent[0][0].json.summary.timestamp,
+    'and so is the timestamp that id was minted from');
+  assert.equal(results.savedRunId, payload.summary.runId);
+  assert.equal(results.savedRunPath, paths[0]);
+});
+
+test('save-before-present: the run log is written pre-UI too, and rewritten in full afterwards', async () => {
+  const adapter = buildAdapter();
+  const { files } = installRunSaveHarness(adapter, () => {});
+  const logFiles = () => [...files.keys()].filter((p) => p.startsWith(adapter.logsDir));
+  let logsAtPresent = [];
+  const present = adapter.presentRichResults;
+  adapter.presentRichResults = async (r) => {
+    logsAtPresent = logFiles();
+    return present(r);
+  };
+
+  await runDisplayResultsQuietly(adapter, buildRunSaveResults());
+
+  assert.equal(logsAtPresent.length, 1, 'the log existed before the UI opened');
+  assert.equal(logFiles().length, 1, 'and the post-review write overwrote it rather than adding another');
+  assert.ok(logFiles()[0].endsWith('.log'));
+});
+
+test('save-before-present: a saved-run redisplay never re-saves', async () => {
+  const adapter = buildAdapter();
+  const { runFiles } = installRunSaveHarness(adapter);
+  const results = buildRunSaveResults({
+    _isDisplayingSavedRun: true,
+    sourceRunId: '20260804-125703'
+  });
+
+  const lines = await runDisplayResultsQuietly(adapter, results);
+
+  assert.equal(runFiles().length, 0, 'viewing a past run does not fork it into a new one');
+  assert.ok(lines.some((l) => l.includes('Skipping run save (display mode)')));
+  // And directly, so a future caller cannot route around displayResults' gate.
+  assert.equal(await adapter.persistRunSnapshot(results, { phase: 'pre-ui' }), null);
+  assert.equal(runFiles().length, 0, 'persistRunSnapshot refuses a redisplay on its own');
+});
+
+test('save-before-present: venue-queue backfill still stamps the run id', async () => {
+  const adapter = buildAdapter();
+  installRunSaveHarness(adapter, (results) => {
+    // A venue queued during the sheet, recorded the way a tap records it.
+    results._queuedVenueCandidateKeys = ['the-eagle|dallas'];
+  });
+  const queue = { 'the-eagle|dallas': { name: 'The Eagle', runIds: [] } };
+  adapter.loadBarAdditions = async () => queue;
+  let saved = null;
+  adapter.saveBarAdditions = async (q) => { saved = q; };
+
+  const results = buildRunSaveResults();
+  await runDisplayResultsQuietly(adapter, results);
+
+  assert.ok(saved, 'the queue was written back');
+  assert.deepEqual(saved['the-eagle|dallas'].runIds, [results.savedRunId],
+    'the tapped entry carries this run id, exactly once');
 });
 
 // ---------------------------------------------------------------------------
