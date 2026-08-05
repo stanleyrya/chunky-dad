@@ -6267,3 +6267,334 @@ test('paging: a page that fails to render still applies the taps already made, a
   assert.ok(lines.some((l) => l.includes('Failed to present results page 2')),
     'and the failure is named in the log, not swallowed');
 });
+
+// ---------------------------------------------------------------------------
+// UI-phase log checkpoints (flushLogCheckpoint).
+//
+// The results sheet HANGS on device: it never appears, present() never
+// returns, the script is force-quit. FileLogger holds every line in memory and
+// only touches disk in appendLogSummary — AFTER the sheet is dismissed — so
+// every line from "Presenting results UI..." onwards died with the run. That
+// is the liveness-beacon verdict (the only proof of whether WebKit ran the
+// page), the paging lines, and every override tap: exactly the evidence needed
+// to explain the hang.
+//
+// shouldAllowRequest handlers run WHILE the sheet is presented, before
+// present() resolves — so a flush from inside one is on disk before the hang.
+// ---------------------------------------------------------------------------
+
+// Routes this module's console into the adapter's singleton FileLogger (the
+// same buffer captureConsole fills on device) so a checkpoint has real lines
+// to write, and collects them for assertions.
+function captureIntoRunLog() {
+  const tee = getConsoleTee();
+  const lines = [];
+  const originals = { log: console.log, warn: console.warn };
+  console.log = (...args) => { lines.push(args.join(' ')); tee('info', args); };
+  console.warn = (...args) => { lines.push(args.join(' ')); tee('warn', args); };
+  return {
+    lines,
+    restore: () => { console.log = originals.log; console.warn = originals.warn; }
+  };
+}
+
+// Memory FileManager that records the order of writes, so a test can ask what
+// was on disk at a given moment.
+function installCheckpointFm(adapter, { failWritesTo = null } = {}) {
+  const files = new Map();
+  const writes = [];
+  adapter.fm = {
+    joinPath: (a, b) => `${a}/${b}`,
+    fileExists: (p) => files.has(p) || p === adapter.baseDir || p === adapter.logsDir || p === adapter.runsDir,
+    isDirectory: () => false,
+    createDirectory: () => {},
+    fileName: (p) => String(p).split('/').pop(),
+    readString: (p) => (files.has(p) ? files.get(p) : null),
+    writeString: (p, text) => {
+      if (failWritesTo && failWritesTo(p)) throw new Error('simulated disk failure');
+      files.set(p, text);
+      writes.push(p);
+    },
+    downloadFileFromiCloud: async () => {}
+  };
+  return { files, writes };
+}
+
+// Like installFakeWebView, but present() runs a hook first — the device's
+// "the sheet is now up and native has not regained control" moment.
+function installFakeWebViewWithPresentHook(onPresent) {
+  let handler = null;
+  let resolvePresent = null;
+  const evals = [];
+  global.WebView = class {
+    async loadHTML() {}
+    set shouldAllowRequest(fn) { handler = fn; }
+    get shouldAllowRequest() { return handler; }
+    present() {
+      if (onPresent) onPresent();
+      return new Promise((resolve) => { resolvePresent = resolve; });
+    }
+    async evaluateJavaScript(js) { evals.push(js); return undefined; }
+  };
+  return {
+    tap: (url) => handler({ url }),
+    dismiss: () => resolvePresent(),
+    evals,
+    getHandler: () => handler
+  };
+}
+
+async function waitForHandler(wv) {
+  for (let i = 0; i < 300 && !wv.getHandler(); i++) {
+    await new Promise((r) => setImmediate(r));
+  }
+  assert.ok(wv.getHandler(), 'shouldAllowRequest assigned before present()');
+}
+
+test('log checkpoint: "Presenting results UI" is on disk BEFORE present() resolves', async () => {
+  const adapter = buildAdapter();
+  const { files } = installCheckpointFm(adapter);
+  const capture = captureIntoRunLog();
+  const results = { ...buildResultsStub(), calendarEvents: 1, config: { config: {} } };
+  const logPath = adapter.getLogCheckpointPath(results);
+
+  let onDiskWhilePresented = null;
+  const wv = installFakeWebViewWithPresentHook(() => {
+    // Read the filesystem stub from INSIDE present(), i.e. at the exact
+    // moment the device hangs: nothing after this point ever runs.
+    onDiskWhilePresented = files.get(logPath) || null;
+  });
+  try {
+    const done = adapter.presentRichResults(results);
+    await waitForHandler(wv);
+    wv.dismiss();
+    await done;
+  } finally {
+    delete global.WebView;
+    capture.restore();
+  }
+
+  assert.ok(onDiskWhilePresented, 'the run log exists on disk while the sheet is up');
+  assert.ok(
+    onDiskWhilePresented.includes('Presenting results UI'),
+    'the last line before the cliff is already persisted — a force-quit here keeps it'
+  );
+  assert.ok(
+    onDiskWhilePresented.includes('Results HTML size'),
+    'and so are the page-size lines that say how big the page that hung was'
+  );
+});
+
+test('log checkpoint: a beacon verdict reaches disk synchronously, so a hang after it keeps it', async () => {
+  const adapter = buildAdapter();
+  const { files } = installCheckpointFm(adapter);
+  const capture = captureIntoRunLog();
+  const results = { ...buildResultsStub(), calendarEvents: 1, config: { config: {} } };
+  const logPath = adapter.getLogCheckpointPath(results);
+
+  const wv = installFakeWebViewWithPresentHook();
+  let afterBeacon = null;
+  try {
+    const done = adapter.presentRichResults(results);
+    await waitForHandler(wv);
+
+    // The page reports it painted. No await between the tap and this read:
+    // whatever is on disk here is what survives a force-quit one line later.
+    assert.equal(wv.tap('chunkyscrape://act?a=beacon&id=painted&d=1px&n=1'), false);
+    afterBeacon = files.get(logPath) || null;
+
+    wv.dismiss();
+    await done;
+  } finally {
+    delete global.WebView;
+    capture.restore();
+  }
+
+  assert.ok(afterBeacon, 'the beacon flush wrote without awaiting anything');
+  assert.ok(
+    afterBeacon.includes('Results page beacon: painted'),
+    'the single most diagnostic line in the run is on disk before the sheet closes'
+  );
+});
+
+test('log checkpoint: a bear-override tap is on disk before the sheet closes', async () => {
+  const adapter = buildAdapter();
+  const { files } = installCheckpointFm(adapter);
+  const capture = captureIntoRunLog();
+  const results = {
+    ...buildResultsStub(),
+    calendarEvents: 1,
+    config: { config: {} },
+    bearDroppedEvents: [buildBearDroppedFixture()]
+  };
+  const logPath = adapter.getLogCheckpointPath(results);
+
+  const wv = installFakeWebViewWithPresentHook();
+  let afterTap = null;
+  try {
+    const done = adapter.presentRichResults(results);
+    await waitForHandler(wv);
+    assert.equal(wv.tap('chunkyscrape://act?a=mark-not-bear&id=k0&n=1'), false);
+    afterTap = files.get(logPath) || null;
+    wv.dismiss();
+    await done;
+  } finally {
+    delete global.WebView;
+    capture.restore();
+  }
+
+  assert.ok(afterTap && afterTap.includes('Bear override tapped'),
+    'the owner\'s review decision is durable the moment he makes it');
+});
+
+test('log checkpoint: throttled actions coalesce, forced ones always write', async () => {
+  const adapter = buildAdapter();
+  const { writes } = installCheckpointFm(adapter);
+  const capture = captureIntoRunLog();
+  const results = { ...buildResultsStub(), calendarEvents: 1, config: { config: {} } };
+  const logPath = adapter.getLogCheckpointPath(results);
+  const countLogWrites = () => writes.filter((p) => p === logPath).length;
+
+  const wv = installFakeWebViewWithPresentHook();
+  let afterBurst = 0;
+  let afterForced = 0;
+  const TAPS = 12;
+  try {
+    const done = adapter.presentRichResults(results);
+    await waitForHandler(wv);
+    const beforeBurst = countLogWrites();
+
+    // Page-arming taps are repeatable noise and ride the throttle.
+    for (let i = 0; i < TAPS; i++) wv.tap(`chunkyscrape://act?a=page&id=1&n=${i}`);
+    afterBurst = countLogWrites() - beforeBurst;
+
+    // A forced action bypasses it, in the same millisecond window.
+    const beforeForced = countLogWrites();
+    wv.tap('chunkyscrape://act?a=beacon&id=dom-ready&n=99');
+    afterForced = countLogWrites() - beforeForced;
+
+    wv.dismiss();
+    await done;
+  } finally {
+    delete global.WebView;
+    capture.restore();
+  }
+
+  assert.ok(afterBurst < TAPS, `throttle coalesces rapid taps (${afterBurst} writes for ${TAPS} taps)`);
+  assert.equal(afterForced, 1, 'a forced flush always writes, throttle window or not');
+});
+
+test('log checkpoint: a flush that throws breaks neither the sheet nor the run', async () => {
+  const adapter = buildAdapter();
+  installCheckpointFm(adapter, { failWritesTo: (p) => String(p).includes('/logs/') });
+  const capture = captureIntoRunLog();
+  const results = {
+    ...buildResultsStub(),
+    calendarEvents: 1,
+    config: { config: {} },
+    bearDroppedEvents: [buildBearDroppedFixture()]
+  };
+  const keptEvent = results.analyzedEvents[0];
+
+  const wv = installFakeWebViewWithPresentHook();
+  try {
+    const done = adapter.presentRichResults(results);
+    await waitForHandler(wv);
+    assert.equal(wv.tap('chunkyscrape://act?a=beacon&id=painted&n=1'), false,
+      'the handler still returns its bool — a flush failure never escapes it');
+    assert.equal(wv.tap('chunkyscrape://act?a=mark-not-bear&id=k0&n=2'), false);
+    await new Promise((r) => setImmediate(r));
+    wv.dismiss();
+    await done; // must resolve, not reject
+  } finally {
+    delete global.WebView;
+    capture.restore();
+  }
+
+  // The review still happened: the verdict was applied after dismissal.
+  assert.ok(String(keptEvent.bearSource).startsWith('manual-not-bear'),
+    'the override survived a failing checkpoint');
+  const complaints = capture.lines.filter((l) => l.includes('Log checkpoint failed'));
+  assert.equal(complaints.length, 1, 'the failure is reported exactly once, not once per flush');
+});
+
+test('log checkpoint: checkpoints land on the SAME file the final log write uses', async () => {
+  // Protects the single-file invariant: once the run has an id (the run is
+  // saved before the sheet), checkpointing must reuse <runId>.log rather than
+  // leave a second log behind — and it must never touch the run JSON.
+  const adapter = buildAdapter();
+  const { files, writes } = installCheckpointFm(adapter);
+  const capture = captureIntoRunLog();
+  const results = {
+    ...buildResultsStub(),
+    calendarEvents: 1,
+    config: { config: {} },
+    savedRunId: '20260805-101112',
+    totalEvents: 2,
+    bearEvents: 2,
+    errors: [],
+    parserResults: []
+  };
+
+  const wv = installFakeWebViewWithPresentHook();
+  let duringSheet = null;
+  try {
+    const done = adapter.presentRichResults(results);
+    await waitForHandler(wv);
+    wv.tap('chunkyscrape://act?a=beacon&id=painted&n=1');
+    duringSheet = files.get(adapter.getLogFilePath('20260805-101112')) || null;
+    wv.dismiss();
+    await done;
+    await adapter.saveRun(results);
+    await adapter.appendLogSummary(results);
+  } finally {
+    delete global.WebView;
+    capture.restore();
+  }
+
+  assert.ok(duringSheet && duringSheet.includes('Results page beacon: painted'),
+    'checkpoints wrote the run\'s own log file while the sheet was up');
+  const logWrites = [...new Set(writes.filter((p) => p.includes('/logs/')))];
+  assert.deepEqual(logWrites, [adapter.getLogFilePath('20260805-101112')],
+    'one log file for the run — checkpoints and the final write share it');
+  assert.ok(!files.has(`${adapter.logsDir}/ui-phase-checkpoint.log`),
+    'no fallback file once the run has an id');
+
+  const runWrites = writes.filter((p) => p.includes('/runs/'));
+  assert.equal(runWrites.length, 1, 'exactly one run file written — checkpoints never save runs');
+  const savedRunLines = capture.lines.filter((l) => l.includes('Saved run'));
+  assert.equal(savedRunLines.length, 1, '"Saved run" still appears exactly once');
+  assert.ok(files.get(adapter.getLogFilePath('20260805-101112')).includes('Results page beacon: painted'),
+    'and the final log still carries everything the checkpoints captured');
+});
+
+test('log checkpoint: a saved-run redisplay never overwrites the historical log', async () => {
+  const adapter = buildAdapter();
+  const { files, writes } = installCheckpointFm(adapter);
+  const capture = captureIntoRunLog();
+  const results = {
+    ...buildResultsStub(),
+    calendarEvents: 1,
+    config: { config: {} },
+    _isDisplayingSavedRun: true,
+    sourceRunId: '20260804-125703'
+  };
+  adapter.loadRunLogsForDisplay = async () => savedRunLogInfo();
+  files.set(adapter.getLogFilePath('20260804-125703'), 'the original run log');
+
+  const wv = installFakeWebViewWithPresentHook();
+  try {
+    const done = adapter.presentRichResults(results);
+    await waitForHandler(wv);
+    wv.tap('chunkyscrape://act?a=beacon&id=painted&n=1');
+    wv.dismiss();
+    await done;
+  } finally {
+    delete global.WebView;
+    capture.restore();
+  }
+
+  assert.equal(writes.filter((p) => p.includes('/logs/')).length, 0, 'display mode writes no log at all');
+  assert.equal(files.get(adapter.getLogFilePath('20260804-125703')), 'the original run log',
+    'the run being reviewed keeps its own log');
+});
