@@ -6419,6 +6419,9 @@ class SharedCore {
         const tag = mode === 'report' ? ' [report]' : '';
         const counts = { bear: 0, keyword: 0, ai: 0, flagged: 0, dropped: 0 };
         const kept = [];
+        // Drops are decided per record here but FINALISED after the loop, once
+        // every record's verdict exists — see the twin sweep below.
+        const pendingDrops = [];
         for (const event of events) {
             // Trust is per-event: a registry-matched promoter's bearAffinity
             // wins over parserConfig.alwaysBear in both directions; unmatched
@@ -6453,16 +6456,18 @@ class SharedCore {
                 // Flag, don't drop silently: enforce-mode drops are surfaced to
                 // the results UI (and prep-time manual-override rescue) via the
                 // caller's collector. Report mode changes nothing.
-                if (dropCollector && mode === 'enforce') {
-                    dropCollector.push({
+                pendingDrops.push({
+                    event,
+                    title,
+                    entry: {
                         title,
                         startDate: event.startDate || event.date || null,
                         venue: event.bar || event.venue || '',
                         reason: decision.provenance,
                         host: this.getHostFromUrl(event._sourcePageUrl || event.url || event.website || '') || '',
                         event: { ...event }
-                    });
-                }
+                    }
+                });
             } else {
                 // alwaysBear sources never lose events: not_bear/unsure is kept
                 // with a review flag; untrusted unsure is likewise kept+flagged.
@@ -6472,6 +6477,55 @@ class SharedCore {
                 kept.push({...event, bearReview: `${label} — ${decision.provenance}`});
             }
         }
+        // ONE EVENT SCRAPED TWICE IS ONE EVENT.
+        //
+        // A listing page yields a stub per event (title + date, no time, no
+        // description) and the crawler then follows the stub's own link and
+        // yields the full record. Both enter this filter as separate records,
+        // and this filter runs BEFORE deduplicateEvents — so the stub is
+        // bear-judged ALONE, with none of its twin's description or evidence
+        // to judge by, and is gone before dedup can fold it in.
+        //
+        // 2026-08-05 BEEFMINCE, 26 records for 15 events: dedup folded 10 of
+        // the 11 twin pairs, and the 11th never reached it. "TURKEYMINCE" the
+        // stub (19 Dec 00:00, description EMPTY) was dropped for "lack of
+        // description", while "TURKEYMINCE" the event page (19 Dec 22:00,
+        // "TIS' THE SEASON TO BE BEARY!") was kept on those very words. Same
+        // ticket URL. Same event. The owner then reviewed it twice.
+        //
+        // So a drop only stands if NO other record of the same event survived.
+        // If one did, this record is a fragment of a kept event, not a second
+        // event to judge — dedup folds it moments later. Nothing new reaches
+        // the calendar: the event was already going there via its twin.
+        //
+        // requireCloseStartTimes: false is the same relaxation dedup itself
+        // uses, because a stub's missing start time degrades to midnight and
+        // must still match its properly-timed sibling.
+        for (const pending of pendingDrops) {
+            let signal = null;
+            const twin = kept.find(candidate => {
+                signal = this.getSameEventIdentitySignal(pending.event, candidate, { requireCloseStartTimes: false });
+                return Boolean(signal);
+            }) || null;
+            if (!twin) {
+                if (dropCollector && mode === 'enforce') dropCollector.push(pending.entry);
+                continue;
+            }
+            counts.dropped--;
+            counts.bear++;
+            console.log(`🐻 BEAR CHECK${tag}: "${pending.title}" DROP reversed — same event as kept "${twin.title || 'Unknown'}" (${signal}); it is one event scraped twice, and the record that carried the evidence was kept`);
+            // Inherit the twin's provenance rather than minting a new
+            // bearSource value: the verdict genuinely came from that record's
+            // evidence, and FIELD_SOURCE_PRIORITY.bearSource ranks a fixed
+            // vocabulary (manual-bear/manual-not-bear/keyword/ai/config) — an
+            // unranked token would fail open in every merge that consults it.
+            const rescued = { ...pending.event, isBearEvent: true };
+            if (typeof twin.bearSource === 'string' && twin.bearSource) {
+                rescued.bearSource = twin.bearSource;
+            }
+            kept.push(rescued);
+        }
+
         const flagLabel = mode === 'report' ? 'would-flag' : 'flagged';
         const dropLabel = mode === 'report' ? 'would-drop' : 'dropped';
         console.log(`🐻 BEAR CHECK${tag}: ${counts.bear} bear (${counts.keyword} keyword, ${counts.ai} ai), ${counts.flagged} ${flagLabel}, ${counts.dropped} ${dropLabel}`);
