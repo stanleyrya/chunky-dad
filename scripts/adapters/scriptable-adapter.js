@@ -612,8 +612,22 @@ class ScriptableAdapter {
         const mtime = this.fm.modificationDate(inlinePath);
         if (mtime && Date.now() - mtime.getTime() < HEADER_LOGO_CACHE_TTL_MS) {
           const cached = this.fm.readString(inlinePath);
-          if (typeof cached === "string" && cached.indexOf("data:image/") === 0) {
+          // PNG ONLY — the codec is a correctness property here, not a size
+          // choice, and this cache outlives the bug that wrote it. #1631
+          // encoded the logo as JPEG, which has no alpha, so the transparent
+          // mark came back with a white block behind it. #1632 switched the
+          // encoder to PNG and the white block STAYED, because this read hits
+          // first and hands back the JPEG string that is already on disk,
+          // under a 7-day TTL, before any of the fixed code runs. Accepting
+          // only the current codec makes every device carrying the bad cache
+          // heal itself on its next run.
+          if (typeof cached === "string" && cached.indexOf("data:image/png") === 0) {
             return cached;
+          }
+          if (typeof cached === "string" && cached.indexOf("data:image/") === 0) {
+            console.log(
+              `📱 Scriptable: Inline logo cache discarded — it holds ${cached.slice(11, cached.indexOf(";"))}, and only PNG keeps the logo's transparent background. Re-encoding.`,
+            );
           }
         }
       }
@@ -5552,7 +5566,22 @@ class ScriptableAdapter {
           // Per PAGE, so one bad page in a run is still visible as a bad page.
           const pageBeacons = [];
           const webView = new WebView();
-          await webView.loadHTML(html);
+          // THE HANDLER GOES ON BEFORE loadHTML, NOT AFTER.
+          //
+          // The page fires its first beacon from DOMContentLoaded — i.e. WHILE
+          // loadHTML is still running. With the handler installed afterwards,
+          // that beacon met a WebView with no shouldAllowRequest at all, so
+          // `return false` below never ran and the `chunkyscrape://` assignment
+          // went through as a REAL main-frame navigation to an unknown scheme,
+          // started on top of a main frame that had not finished loading.
+          //
+          // The proof is an absence: across every run ever logged the page sent
+          // a `dom-ready` beacon and the log recorded 11 `painted`, 11
+          // `interacted` and ZERO `dom-ready`. Not one arrived. Whether that
+          // stray navigation is survivable is a race with the rest of the load,
+          // which is why it cost a page only sometimes — BEEFMINCE page 3 hung
+          // with no sheet, no beacon and no further log lines while pages 1 and
+          // 2 of the same run rendered.
           webView.shouldAllowRequest = (request) => {
             const url = request && request.url ? String(request.url) : "";
             if (url.indexOf("chunkyscrape://") !== 0) {
@@ -5636,6 +5665,15 @@ class ScriptableAdapter {
             });
             return false; // cancel the fake navigation; the page stays put
           };
+          await webView.loadHTML(html);
+          // Splits the two places a page can hang. Until now the last line on
+          // disk was "Presenting results UI..." for BOTH "loadHTML never came
+          // back" and "present() never came back", because nothing was logged
+          // between them — so a force-quit left no way to tell which one ate
+          // the run. This line is that way.
+          console.log(
+            `📱 Scriptable: 📥 Page document handed to WebKit (loadHTML returned) — anything after this is present().`,
+          );
           // If the page could not be shed under the render ceiling, say so through
           // the ONE channel that survives a document WebKit refuses to run: a
           // native Alert, raised before the sheet, not a banner buried inside it.
