@@ -4079,27 +4079,44 @@ class SharedCore {
         // event's own evidence to data/promoters.json and — in enforce mode —
         // stamp the curated identity + metadata.
         this.applyPromoterRegistryMatches(futureEvents, effectiveParserConfig, mainConfig);
-        const bearEvents = await this.filterBearEvents(futureEvents, effectiveParserConfig, httpAdapter, bearDropCollector);
         // Overlong-field trims run before dedup so trimmed values feed the
         // dedup keys/merges (report mode by default; see getTrimConfig).
-        await this.applyOverlongFieldTrims(bearEvents, effectiveParserConfig, httpAdapter);
-        const deduplicatedEvents = await this.deduplicateEvents(bearEvents, httpAdapter, mainConfig?.config || mainConfig || null);
-        
+        await this.applyOverlongFieldTrims(futureEvents, effectiveParserConfig, httpAdapter);
+        // Dedup BEFORE the bear check (reordered 2026-08-06): one real event is
+        // scraped up to three times (listing stub + bare event page +
+        // ?occurrence= page), and judging each record separately meant split
+        // verdicts on partial evidence plus triplicate cards in the
+        // dropped-events UI (Eagle LA run: 20 dropped records for 9 real
+        // events, three "mark as bear" taps for one MEAT RACK). Fold the
+        // records first so the bear check judges each real event ONCE, with
+        // its merged evidence. Safe now that segmentation no longer produces
+        // neighbor-URL chimera events (#1644) — dedup's same-URL rung can no
+        // longer weld two different real events together.
+        const deduplicatedEvents = await this.deduplicateEvents(futureEvents, httpAdapter, mainConfig?.config || mainConfig || null);
+
         // Calculate deduplication stats
-        const duplicatesRemoved = bearEvents.length - deduplicatedEvents.length;
-        
-        await displayAdapter.logInfo(`SYSTEM: Event filtering complete: ${allEvents.length} → ${futureEvents.length} future → ${bearEvents.length} bear → ${deduplicatedEvents.length} final`);
+        const duplicatesRemoved = futureEvents.length - deduplicatedEvents.length;
+        if (duplicatesRemoved > 0) {
+            await displayAdapter.logInfo(`SYSTEM: Deduplicated ${futureEvents.length} → ${deduplicatedEvents.length} before bear filtering (${duplicatesRemoved} duplicate record(s) folded)`);
+        }
+        const bearEvents = await this.filterBearEvents(deduplicatedEvents, effectiveParserConfig, httpAdapter, bearDropCollector);
+
+        await displayAdapter.logInfo(`SYSTEM: Event filtering complete: ${allEvents.length} → ${futureEvents.length} future → ${bearEvents.length} bear → ${bearEvents.length} final`);
 
         const result = {
             name: effectiveParserConfig.name,
             parserType: parserName,
             urlCount,
             totalEvents: allEvents.length,
+            // Since the 2026-08-06 reorder (dedup before the bear check) there
+            // is no post-filter dedup step: rawBearEvents and bearEvents are
+            // the same count, and duplicatesRemoved covers the FULL parsed set
+            // (bear and non-bear records alike), not just bear duplicates.
             rawBearEvents: bearEvents.length,
-            bearEvents: deduplicatedEvents.length,
+            bearEvents: bearEvents.length,
             duplicatesRemoved: duplicatesRemoved,
             durationMs: Date.now() - parserStartedAt,
-            events: deduplicatedEvents,
+            events: bearEvents,
             urlClassifications,
             config: effectiveParserConfig // Include config for orchestrator to use
         };
@@ -6648,10 +6665,14 @@ class SharedCore {
         //
         // A listing page yields a stub per event (title + date, no time, no
         // description) and the crawler then follows the stub's own link and
-        // yields the full record. Both enter this filter as separate records,
-        // and this filter runs BEFORE deduplicateEvents — so the stub is
-        // bear-judged ALONE, with none of its twin's description or evidence
-        // to judge by, and is gone before dedup can fold it in.
+        // yields the full record. Historically both entered this filter as
+        // separate records because it ran BEFORE deduplicateEvents — the stub
+        // was bear-judged ALONE, with none of its twin's description or
+        // evidence to judge by, and was gone before dedup could fold it in.
+        // Since 2026-08-06 dedup runs FIRST, so folded twins never reach this
+        // sweep; it stays as a safety net for same-event pairs dedup could not
+        // fold (e.g. records it kept apart on a place veto, or whose identity
+        // only this scan's laxer options match).
         //
         // 2026-08-05 BEEFMINCE, 26 records for 15 events: dedup folded 10 of
         // the 11 twin pairs, and the 11th never reached it. "TURKEYMINCE" the
@@ -7597,8 +7618,10 @@ class SharedCore {
         return records;
     }
 
-    // Trim pass over one parser's bear events (processParser: after the bear
-    // filter, before dedup — so trimmed values feed dedup keys and merges).
+    // Trim pass over one parser's future events (processParser: after the
+    // future filter, before dedup — so trimmed values feed dedup keys and
+    // merges; since 2026-08-06 dedup runs before the bear check, so this
+    // pass sees the full pre-dedup set rather than only bear events).
     // Zero AI calls when mode is 'off', AI is unavailable, or nothing is
     // overlong. NOTE: report mode still fires AI calls for overlong values —
     // a future golden-fixture text exceeding a limit would fire AI calls
@@ -11633,18 +11656,18 @@ class SharedCore {
                 if (!matchedRecord || this.getManualBearVerdictFromRecord(matchedRecord) !== 'manual-bear') continue;
                 console.log(`🐻 BEAR CHECK: "${droppedEvent.title || 'Unknown'}" → bear (manual override on calendar record)`);
                 const rescuedEvent = { ...droppedEvent, isBearEvent: true };
-                // Duplicate-row guard: filterBearEvents runs BEFORE
-                // deduplicateEvents, so a twin the bear check DROPped never
-                // entered dedup — it arrives here, after both dedup passes, and
-                // nothing re-dedups the plan. Pushing it blind produced two
-                // `_action: "merge"` rows carrying one `_existingEvent.identifier`
-                // (run evidence: two "Treasure Trail" rows, both matching the
-                // other on `ticket-url`, the strongest identity rung — the
-                // calendar layer even logged `Merge eligibility match
-                // (ticket-url)` twice). Fold the rescue into the row that already
-                // covers this event instead. The structural fix (dedup before the
-                // bear check) is deferred: it reorders an expensive AI stage and
-                // changes bear verdicts run-wide.
+                // Duplicate-row guard: this rescue joins the plan AFTER every
+                // dedup pass has run, and nothing re-dedups the plan. Pushing
+                // it blind produced two `_action: "merge"` rows carrying one
+                // `_existingEvent.identifier` (run evidence: two "Treasure
+                // Trail" rows, both matching the other on `ticket-url`, the
+                // strongest identity rung — the calendar layer even logged
+                // `Merge eligibility match (ticket-url)` twice). Fold the
+                // rescue into the row that already covers this event instead.
+                // Dropped records are deduplicated since the 2026-08-06
+                // reorder (dedup before the bear check), but a rescued drop
+                // can still coincide with a plan row from another parser or an
+                // earlier rescue, so the guard stays.
                 const storedFields = this.parseNotesIntoFields(matchedRecord.notes || '');
                 const folded = this.foldBearOverrideIntoPlanEntry(analyzedEvents, rescuedEvent, {
                     existingIdentifier: analysis.existingEvent && analysis.existingEvent.identifier,
@@ -11662,12 +11685,12 @@ class SharedCore {
 
         // WHY A DROPPED EVENT CAN BE A TWIN OF A KEPT ONE.
         //
-        // filterBearEvents runs BEFORE deduplicateEvents, so a thin second
-        // record of an event the run also scraped richly is bear-checked on
-        // its own — with none of its twin's description, host or evidence to
-        // judge by — and gets DROPped before dedup ever sees it. The owner
-        // then reads one event twice: kept in the write plan, and again in the
-        // dropped section with "no bear-specific wording".
+        // Historically filterBearEvents ran BEFORE deduplicateEvents, so a
+        // thin second record of an event the run also scraped richly was
+        // bear-checked on its own — with none of its twin's description, host
+        // or evidence to judge by — and got DROPped before dedup ever saw it.
+        // The owner then read one event twice: kept in the write plan, and
+        // again in the dropped section with "no bear-specific wording".
         //
         // Run evidence (2026-08-05 BEEFMINCE): "TURKEYMINCE" merged into the
         // London calendar for 19 Dec 22:00, while a second TURKEYMINCE record
@@ -11675,9 +11698,10 @@ class SharedCore {
         // stated no time — was dropped as "no bear-specific wording or
         // evidence".
         //
-        // Report only. The structural fix (dedup before the bear check) is
-        // still deferred for the reason recorded above: it reorders an
-        // expensive AI stage and changes bear verdicts run-wide. Saying so on
+        // Report only. The structural fix (dedup before the bear check)
+        // shipped 2026-08-06, so dropped records are now deduplicated — but a
+        // dropped event can still coincide with a kept row from another
+        // parser, or with a pair dedup deliberately kept apart. Saying so on
         // the card costs nothing and stops the owner re-deciding an event he
         // has already kept.
         if (bearOverrideContext && Array.isArray(bearOverrideContext.droppedEvents)) {
@@ -11711,8 +11735,7 @@ class SharedCore {
 
     // A late bear-override event (a drop rescued by a stored calendar verdict,
     // or a live "Mark as bear" tap from the results UI) joins the write plan
-    // AFTER both dedup passes have run, because filterBearEvents runs before
-    // deduplicateEvents and a dropped twin therefore never entered dedup. When
+    // AFTER every dedup pass has run, and nothing re-dedups the plan. When
     // the plan already carries a row for the same event — same target calendar
     // record, or a same-event identity signal — a second row would mean two
     // writes aimed at ONE calendar record. Fold the override into the existing

@@ -16041,3 +16041,178 @@ test('isRetryableFailure recognises the wordings iOS actually produces when serv
     assert.equal(core.isRetryableFailure(new Error(message)), false, message);
   }
 });
+
+// ---------------------------------------------------------------------------
+// Pipeline order: deduplicateEvents runs BEFORE filterBearEvents (2026-08-06
+// reorder). One real event is scraped up to three times (listing stub + bare
+// event page + ?occurrence= page); dedup must fold the records FIRST so the
+// bear check judges each real event once, on merged evidence, and the
+// dropped-events UI shows one card (one "mark as bear" tap) per real event.
+// Wiring mirrors the processParser test above: stub parser, stub fetchData,
+// bear-verdict AI on postJson, arbitrateMerges off so merges stay
+// deterministic and `calls` counts bear-check requests only.
+// ---------------------------------------------------------------------------
+
+function futureIsoAt(daysFromNow, utcHour) {
+  const d = new Date(Date.now() + daysFromNow * 86400000);
+  d.setUTCHours(utcHour, 0, 0, 0);
+  return d.toISOString();
+}
+
+async function runDedupFirstPipeline(rawEvents, verdict) {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const calls = [];
+  const httpAdapter = {
+    fetchData: async (url) => ({ html: '<html><body>venue calendar</body></html>', url, statusCode: 200, headers: {} }),
+    postJson: async (endpoint, payload) => {
+      calls.push(payload);
+      return { ok: true, status: 200, text: JSON.stringify({ response: JSON.stringify(verdict) }) };
+    }
+  };
+  let served = false;
+  const parsers = {
+    'ai-web': {
+      parseEvents: () => {
+        if (served) return { events: [], additionalLinks: [] };
+        served = true;
+        return { events: rawEvents.map(e => ({ ...e })), additionalLinks: [] };
+      }
+    }
+  };
+  const parserConfig = {
+    name: 'Venue Calendar',
+    urls: ['https://venue.example/events'],
+    ai: {
+      provider: 'ollama',
+      endpoint: 'http://ai.example/api/generate',
+      model: 'test-model',
+      classifyPages: false,
+      arbitrateMerges: false,
+      bearCheck: { mode: 'enforce' }
+    }
+  };
+  const result = await core.processParser(parserConfig, {}, httpAdapter, display, parsers, new Set());
+  return { core, result, calls };
+}
+
+function venueRecord(overrides = {}) {
+  return {
+    title: 'Trivia Night',
+    startDate: futureIsoAt(14, 22),
+    bar: 'Dallas Eagle',
+    city: 'dallas',
+    timezone: 'America/Chicago',
+    source: 'ai-web',
+    url: 'https://venue.example/events/trivia-night',
+    ...overrides
+  };
+}
+
+test('pipeline order: a non-bear triple is folded BEFORE the bear check — one dropped card, one AI verdict, one mark-bear target with merged evidence', async () => {
+  // The Eagle LA shape: listing stub (no description), crawled event page,
+  // and the ?occurrence= crawl of the same page (extra image).
+  const stub = venueRecord({});
+  const page = venueRecord({ description: 'Weekly trivia and karaoke with prizes.' });
+  const occurrence = venueRecord({
+    description: 'Weekly trivia and karaoke with prizes.',
+    url: 'https://venue.example/events/trivia-night?occurrence=2026-08-19',
+    image: 'https://venue.example/img/trivia.jpg'
+  });
+
+  const { core, result, calls } = await runDedupFirstPipeline([stub, page, occurrence], {
+    verdict: 'not_bear',
+    reason: 'venue trivia night, no bear-specific wording'
+  });
+
+  assert.equal(result.totalEvents, 3);
+  assert.equal(result.duplicatesRemoved, 2, 'dedup must fold the full parsed set, not just bear-approved records');
+  assert.equal(result.rawBearEvents, 0);
+  assert.equal(result.bearEvents, 0);
+  assert.deepEqual(result.events, []);
+  assert.equal(calls.length, 1, 'ONE real event = ONE bear verdict, judged on the merged record');
+
+  const dropped = result.bearDroppedEvents || [];
+  assert.equal(dropped.length, 1, 'the dropped-events UI must show one card per real event, not one per scraped record');
+  const entry = dropped[0];
+  assert.equal(entry.title, 'Trivia Night');
+  // The single card carries the MERGED record, so one "mark as bear" tap
+  // (adapter flow: entry.event → prepareEventsForCalendar) rescues every
+  // field the duplicates contributed — no second card left unmarked.
+  assert.equal(entry.event.description, 'Weekly trivia and karaoke with prizes.', 'merged evidence from the crawled page');
+  assert.equal(entry.event.image, 'https://venue.example/img/trivia.jpg', 'merged evidence from the ?occurrence= record');
+  const manualSource = SharedCore.buildManualBearSource('bear', entry.reason);
+  assert.equal(core.isManualBearSource(manualSource), true, 'the tap-produced verdict stamps onto the one merged record');
+});
+
+test('pipeline order: a bear event and its thin duplicate merge FIRST and get one verdict — no split verdicts on partial evidence', async () => {
+  // Bear-ness lives only in the crawled page description (description-only
+  // generic keywords defer to the AI tier). Judged alone, the thin stub has
+  // no evidence at all — the old order gave the twins different verdicts.
+  const page = venueRecord({
+    title: 'Rack Night',
+    url: 'https://venue.example/events/rack-night',
+    description: 'A party for bears and cubs all night.'
+  });
+  const stub = venueRecord({ title: 'Rack Night', url: 'https://venue.example/events/rack-night' });
+
+  const { result, calls } = await runDedupFirstPipeline([page, stub], {
+    verdict: 'bear',
+    reason: 'explicit bear party wording',
+    eventEvidence: ['A party for bears and cubs all night.']
+  });
+
+  assert.equal(calls.length, 1, 'one merged record, one AI verdict — never one per scraped record');
+  assert.equal(result.duplicatesRemoved, 1);
+  assert.equal(result.rawBearEvents, 1, 'the verdict count is per real event now');
+  assert.equal(result.bearEvents, 1);
+  assert.equal(result.events.length, 1);
+  const merged = result.events[0];
+  assert.equal(merged.title, 'Rack Night');
+  assert.equal(merged.isBearEvent, true);
+  assert.equal(merged.bearSource, 'ai');
+  assert.equal(merged.bearReview, undefined, 'no stray review flag from a partial-evidence twin verdict');
+  assert.equal(merged.description, 'A party for bears and cubs all night.');
+  assert.equal(result.bearDroppedEvents, undefined, 'nothing to drop — the thin record is a fragment, not a second event');
+});
+
+test('pipeline order: counters stay truthful — duplicatesRemoved covers the FULL set and rawBearEvents equals the final bear count', async () => {
+  const day = 14;
+  const triviaStub = venueRecord({});
+  const triviaPage = venueRecord({ description: 'Weekly trivia and karaoke with prizes.' });
+  const bearNight = venueRecord({
+    title: 'BEAR NIGHT',
+    startDate: futureIsoAt(day + 1, 23),
+    url: 'https://venue.example/events/bear-night',
+    description: 'Bears take over the patio.'
+  });
+  const bashStub = venueRecord({
+    title: 'BEAR BASH',
+    startDate: futureIsoAt(day + 2, 23),
+    url: 'https://venue.example/events/bear-bash'
+  });
+  const bashPage = venueRecord({
+    title: 'BEAR BASH',
+    startDate: futureIsoAt(day + 2, 23),
+    url: 'https://venue.example/events/bear-bash',
+    description: 'The bash returns.'
+  });
+
+  const { result, calls } = await runDedupFirstPipeline(
+    [triviaStub, triviaPage, bearNight, bashStub, bashPage],
+    { verdict: 'not_bear', reason: 'venue trivia night, no bear-specific wording' }
+  );
+
+  assert.equal(result.totalEvents, 5, 'totalEvents = every parsed record');
+  assert.equal(result.duplicatesRemoved, 2, 'duplicates removed across the FULL set (one trivia twin + one bash twin)');
+  assert.equal(result.rawBearEvents, 2, 'bear events after filtering the deduplicated set');
+  assert.equal(result.bearEvents, 2, 'no post-filter dedup: final == rawBearEvents');
+  assert.equal(result.events.length, result.bearEvents);
+  assert.equal((result.bearDroppedEvents || []).length, 1);
+  assert.equal(calls.length, 1, 'keyword bears short-circuit; only the merged trivia record reaches the AI');
+  // The printed sentence must add up: parsed − dupes = kept + dropped.
+  assert.equal(
+    result.totalEvents - result.duplicatesRemoved,
+    result.events.length + (result.bearDroppedEvents || []).length
+  );
+});

@@ -4701,9 +4701,23 @@ class ScriptableAdapter {
       );
       if (results.duplicatesRemoved > 0) {
         console.log(`🔄 Duplicates Removed: ${results.duplicatesRemoved}`);
-        console.log(
-          `🐻 Final Bear Events: ${results.bearEvents} (${results.rawBearEvents} - ${results.duplicatesRemoved} dupes)`,
-        );
+        // Since the 2026-08-06 reorder dedup runs BEFORE the bear filter, so
+        // rawBearEvents === bearEvents and the legacy "raw - dupes" subtraction
+        // no longer describes the pipeline. Keep printing the legacy sentence
+        // for old saved runs (where its arithmetic holds) and print the
+        // new-order sentence otherwise.
+        if (
+          results.rawBearEvents - results.duplicatesRemoved ===
+          results.bearEvents
+        ) {
+          console.log(
+            `🐻 Final Bear Events: ${results.bearEvents} (${results.rawBearEvents} - ${results.duplicatesRemoved} dupes)`,
+          );
+        } else {
+          console.log(
+            `🐻 Final Bear Events: ${results.bearEvents} (${results.duplicatesRemoved} dupes removed before bear filtering)`,
+          );
+        }
       } else {
         console.log(
           `🐻 Final Bear Events: ${results.bearEvents} (no duplicates found)`,
@@ -12261,9 +12275,21 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     );
     if (results.duplicatesRemoved > 0) {
       lines.push(`🔄 Duplicates Removed: ${results.duplicatesRemoved}`);
-      lines.push(
-        `🐻 Final Bear Events: ${results.bearEvents} (${results.rawBearEvents} - ${results.duplicatesRemoved} dupes)`,
-      );
+      // Same consistency guard as the console summary: the legacy
+      // "raw - dupes" sentence only prints when its arithmetic holds
+      // (old saved runs from before the dedup-before-bear-filter reorder).
+      if (
+        results.rawBearEvents - results.duplicatesRemoved ===
+        results.bearEvents
+      ) {
+        lines.push(
+          `🐻 Final Bear Events: ${results.bearEvents} (${results.rawBearEvents} - ${results.duplicatesRemoved} dupes)`,
+        );
+      } else {
+        lines.push(
+          `🐻 Final Bear Events: ${results.bearEvents} (${results.duplicatesRemoved} dupes removed before bear filtering)`,
+        );
+      }
     } else {
       lines.push(
         `🐻 Final Bear Events: ${results.bearEvents} (no duplicates found)`,
