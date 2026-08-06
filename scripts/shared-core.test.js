@@ -15334,3 +15334,163 @@ test('placeholder images: a square-crop filename is artwork, a size-bucket direc
   assert.equal(core.isPlaceholderImageUrl('https://example.com/i/blank_1x1.gif'), true);
   assert.equal(core.isPlaceholderImageUrl('https://cdn.example.com/assets/1x1/bucket/real-flyer.jpg'), true);
 });
+
+// ---------------------------------------------------------------------------
+// ONE EVENT SCRAPED TWICE IS ONE EVENT.
+//
+// A listing page yields a stub (title + date, no time, no description); the
+// crawler follows the stub's own link and yields the full record. Both reach
+// filterBearEvents, which runs BEFORE deduplicateEvents — so the stub is
+// bear-judged alone and can be dropped before dedup folds it in. 2026-08-05
+// BEEFMINCE: the TURKEYMINCE stub was dropped for "lack of description" while
+// the TURKEYMINCE event page was kept on "TIS' THE SEASON TO BE BEARY!".
+// ---------------------------------------------------------------------------
+// The twin sweep is what these pin, not the AI cascade that produced the
+// verdicts — so the decision seam is stubbed and the AI plumbing stays out of
+// it. `not_bear` on an untrusted parser is what DROPs a record.
+function buildTwinBearCore(verdicts) {
+  const core = createCore();
+  core.computeBearCheckDecision = async (event) => verdicts[event.description] || verdicts.default;
+  return core;
+}
+
+function buildTwinBearParserConfig() {
+  return { name: 'BEEFMINCE', ai: { bearCheck: { mode: 'enforce' } } };
+}
+
+test('bear check: a drop is reversed when another record of the SAME event was kept', async () => {
+  const ticketUrl = 'https://dice.fm/event/ww93qg-turkeymince-19th-dec';
+  const stub = {
+    title: 'TURKEYMINCE',
+    startDate: new Date('2026-12-19T00:00:00.000Z'), // no time stated on the listing
+    bar: 'Royal Vauxhall Tavern',
+    timezone: 'Europe/London',
+    description: '',
+    ticketUrl
+  };
+  const full = {
+    title: 'TURKEYMINCE',
+    startDate: new Date('2026-12-19T22:00:00.000Z'),
+    bar: 'Royal Vauxhall Tavern',
+    timezone: 'Europe/London',
+    description: "TIS' THE SEASON TO BE BEARY!",
+    ticketUrl
+  };
+  const core = buildTwinBearCore({
+    '': { result: 'not_bear', provenance: 'ai: no bear-specific wording' },
+    "TIS' THE SEASON TO BE BEARY!": { result: 'bear', provenance: 'keyword: bear' }
+  });
+  const drops = [];
+  const kept = await core.filterBearEvents([stub, full], buildTwinBearParserConfig(), null, drops);
+
+  assert.equal(kept.length, 2, 'both records survive — dedup folds them moments later');
+  assert.deepEqual(drops, [], 'nothing is surfaced to the owner as a dropped event');
+  const rescued = kept.find((e) => e.startDate.getTime() === stub.startDate.getTime());
+  assert.ok(rescued, 'the stub is the record that came back');
+  assert.equal(rescued.isBearEvent, true);
+  assert.equal(rescued.bearSource, 'keyword',
+    "it inherits the twin's provenance instead of minting an unranked bearSource");
+});
+
+test('bear check: the twin must have been KEPT — two dropped records of one event both drop', async () => {
+  const ticketUrl = 'https://dice.fm/event/ww93qg-turkeymince-19th-dec';
+  const base = {
+    title: 'TURKEYMINCE', bar: 'Royal Vauxhall Tavern', timezone: 'Europe/London', ticketUrl
+  };
+  const core = buildTwinBearCore({
+    default: { result: 'not_bear', provenance: 'ai: no bear-specific wording' }
+  });
+  const drops = [];
+  const kept = await core.filterBearEvents([
+    { ...base, description: 'a', startDate: new Date('2026-12-19T00:00:00.000Z') },
+    { ...base, description: 'b', startDate: new Date('2026-12-19T22:00:00.000Z') }
+  ], buildTwinBearParserConfig(), null, drops);
+
+  assert.equal(kept.length, 0, 'a twin that was itself dropped rescues nothing');
+  assert.equal(drops.length, 2);
+});
+
+test('bear check: a drop with no surviving twin still drops', async () => {
+  const core = buildTwinBearCore({
+    'Pub quiz, teams of four.': { result: 'not_bear', provenance: 'ai: not a bear event' },
+    'Bears, cubs and chubs.': { result: 'bear', provenance: 'keyword: bear' }
+  });
+  const drops = [];
+  const kept = await core.filterBearEvents([
+    {
+      title: 'Quiz Night', startDate: new Date('2026-12-19T19:00:00.000Z'), bar: 'Somewhere Else',
+      timezone: 'Europe/London', description: 'Pub quiz, teams of four.', ticketUrl: 'https://example.com/quiz'
+    },
+    {
+      title: 'BEEFMINCE x RVT', startDate: new Date('2026-12-19T22:00:00.000Z'), bar: 'Royal Vauxhall Tavern',
+      timezone: 'Europe/London', description: 'Bears, cubs and chubs.', ticketUrl: 'https://dice.fm/event/other'
+    }
+  ], buildTwinBearParserConfig(), null, drops);
+
+  assert.equal(kept.length, 1, 'a genuinely separate event is still dropped');
+  assert.equal(kept[0].title, 'BEEFMINCE x RVT');
+  assert.equal(drops.length, 1, 'and is still surfaced to the owner');
+  assert.equal(drops[0].title, 'Quiz Night');
+});
+
+// ---------------------------------------------------------------------------
+// THE PARSER IS EVIDENCE TOO.
+//
+// A parser configured to read a promoter's own site tells you whose events
+// these are, regardless of what any individual event says. 2026-08-05: the
+// BEEFMINCE parser reads beefmince.com and the registry's BEEFMINCE entry IS
+// beefmince.com, yet the pass matched 24 of 26 events and left both
+// TURKEYMINCE records promoter-less — that page's events link out to dice.fm,
+// so no per-event field ever mentions beefmince.com.
+// ---------------------------------------------------------------------------
+test('parser promoter: a parser reading a promoter\'s own site resolves to that promoter', () => {
+  const core = createRegistryCore();
+  // Host equality, not name equality — the parser is "Bearracuda Events" and
+  // the entry is "Bearracuda", and the trailing slash on the entry's website
+  // and the parser's deep path must not matter.
+  assert.equal(
+    core.resolveParserPromoterEntry({ name: 'Bearracuda Events', urls: ['https://www.bearracuda.com/events/'] }).name,
+    'Bearracuda');
+});
+
+test('parser promoter: fails closed on an aggregator, no urls, or an ambiguous site', () => {
+  const core = createRegistryCore();
+  assert.equal(core.resolveParserPromoterEntry({ name: 'x', urls: ['https://www.eventbrite.com/o/someone-1'] }), null,
+    'an aggregator matches no registry website');
+  assert.equal(core.resolveParserPromoterEntry({ name: 'x' }), null, 'no urls, no inference');
+  assert.equal(core.resolveParserPromoterEntry(null), null);
+
+  const shared = createRegistryCore([
+    { name: 'A', website: 'https://shared.example', bearAffinity: 'always' },
+    { name: 'B', website: 'https://shared.example', bearAffinity: 'always' }
+  ]);
+  assert.equal(shared.resolveParserPromoterEntry({ name: 'x', urls: ['https://shared.example/events'] }), null,
+    'two entries on one site is a tie, and a tie is not an answer');
+});
+
+test('parser promoter: fills the gap where the event named nobody, and never overrules the event', () => {
+  const core = createRegistryCore();
+  const parserConfig = { name: 'Bearracuda Events', urls: ['https://bearracuda.com/'] };
+
+  // Nothing in this event mentions Bearracuda — tickets link out, as they do
+  // on the real page that caused this.
+  const anonymous = { title: 'TURKEY TAKEOVER', startDate: new Date('2026-08-01T21:00:00.000Z'),
+    ticketUrl: 'https://dice.fm/event/abc123-turkey-takeover' };
+  // A title that names a DIFFERENT promoter must still win.
+  const named = { title: 'Goldiloxx presents', startDate: new Date('2026-08-01T21:00:00.000Z') };
+
+  core.applyPromoterRegistryMatches([anonymous, named], parserConfig, ENFORCE_REGISTRY_CONFIG);
+
+  assert.equal(anonymous._promoter, 'Bearracuda', 'the parser fills a gap the event left');
+  assert.equal(named._promoter, 'Goldiloxx', 'per-event evidence still beats the parser');
+});
+
+test('parser promoter: an ambiguous event stays ambiguous — the parser does not break the tie', () => {
+  const core = createRegistryCore();
+  const event = { title: 'Bearracuda x Goldiloxx Takeover', startDate: new Date('2026-08-01T21:00:00.000Z') };
+  const before = JSON.parse(JSON.stringify(event));
+  core.applyPromoterRegistryMatches([event], { name: 'Bearracuda Events', urls: ['https://bearracuda.com/'] },
+    ENFORCE_REGISTRY_CONFIG);
+  assert.deepEqual(JSON.parse(JSON.stringify(event)), before,
+    'refusing to guess is a decision, and the weakest rung must not overrule it');
+});

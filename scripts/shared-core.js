@@ -2484,25 +2484,87 @@ class SharedCore {
     // would-stamp decisions and changes NOTHING; enforce stamps _promoter,
     // curated metadata, and (when the organizer was empty and the match came
     // from title/url evidence) _organizer.
+    // The promoter a PARSER is, derived from the site it is configured to
+    // scrape: the one registry entry whose curated website is the same site as
+    // one of `parserConfig.urls`. Null unless exactly one entry matches.
+    //
+    // This is the weakest evidence rung and the last one tried, because it
+    // says nothing about the individual event — only "this parser reads this
+    // promoter's own site". That is enough, and until now it was thrown away:
+    // the BEEFMINCE parser is configured with `urls: ["https://beefmince.com/
+    // events"]` and the registry's BEEFMINCE entry has
+    // `website: "https://beefmince.com"`, yet 2026-08-05 matched 24 of 26
+    // events and left BOTH TURKEYMINCE records with no promoter at all —
+    // because that page's events link out to dice.fm, so no per-event field
+    // ever mentions beefmince.com.
+    //
+    // Not circular, unlike the static-metadata exclusion in
+    // evaluatePromoterEntryMatch: that rejects matching on a value the
+    // pipeline itself stamped onto the event. This joins two independently
+    // curated sources — scraper-input.js's parser URLs and the registry — and
+    // neither is derived from the other.
+    //
+    // Fail closed, the same way matchEventToPromoter does: zero matching
+    // entries or more than one and this returns null rather than guessing. An
+    // aggregator parser (Eventbrite, a ticketing platform, a city listings
+    // site) matches no registry website, so it inherits nothing.
+    resolveParserPromoterEntry(parserConfig) {
+        if (!parserConfig || !Array.isArray(this.promoters)) return null;
+        const parserUrls = Array.isArray(parserConfig.urls) ? parserConfig.urls : [];
+        if (parserUrls.length === 0) return null;
+        const parserHosts = parserUrls
+            .map(url => this.getHostFromUrl(url))
+            .filter(Boolean);
+        if (parserHosts.length === 0) return null;
+
+        const matches = [];
+        for (const entry of this.promoters) {
+            const entryHost = entry && entry.website ? this.getHostFromUrl(entry.website) : '';
+            if (!entryHost) continue;
+            if (parserHosts.some(host => this.areUrlHostsSameSite(host, entryHost))) {
+                matches.push(entry);
+            }
+        }
+        return matches.length === 1 ? matches[0] : null;
+    }
+
     applyPromoterRegistryMatches(events, parserConfig, mainConfig) {
         const mode = this.getPromoterRegistryMode(mainConfig);
         if (mode === 'off') return;
         if (!Array.isArray(this.promoters) || this.promoters.length === 0) return;
         if (!Array.isArray(events) || events.length === 0) return;
         const tag = mode === 'report' ? '[report]' : '';
-        const counts = { matched: 0, organizer: 0, title: 0, url: 0 };
+        const counts = { matched: 0, organizer: 0, title: 0, url: 0, parser: 0 };
+        // Last resort only — computed once, applied per event below when the
+        // event's OWN fields matched nothing.
+        const parserEntry = this.resolveParserPromoterEntry(parserConfig);
         for (const event of events) {
-            const match = this.matchEventToPromoter(event);
+            const ownMatch = this.matchEventToPromoter(event);
+            // A sub-brand the title named (BOATMINCE, SPOOKMINCE) must keep
+            // winning over the parent site the parser reads, so this only fills
+            // the gap where nothing at all matched. Ambiguity still fails
+            // closed: `ownMatch.ambiguous` is a decision not to guess, and the
+            // parser must not overrule it.
+            const fromParser = !ownMatch && Boolean(parserEntry);
+            const match = fromParser ? { entry: parserEntry, evidence: 'parser-site' } : ownMatch;
             if (!match) continue;
             const title = event.title || 'Unknown';
             if (match.ambiguous) {
                 console.log(`🪪 PROMOTER REGISTRY${tag}: "${title}" -> no match (ambiguous: ${match.ambiguous.join(', ')})`);
                 continue;
             }
-            counts.matched++;
-            if (match.evidence === 'organizer') counts.organizer++;
-            else if (match.evidence === 'title') counts.title++;
-            else counts.url++;
+            if (fromParser) {
+                // Counted separately, and NOT into `counts.matched`: the
+                // "N of M event(s) matched (…organizer, …title, …url)" line
+                // below is the per-event-evidence tally and its breakdown has
+                // to keep adding up. The parser rung gets its own line.
+                counts.parser++;
+            } else {
+                counts.matched++;
+                if (match.evidence === 'organizer') counts.organizer++;
+                else if (match.evidence === 'title') counts.title++;
+                else counts.url++;
+            }
             const metadataBlock = this.promoterEntryToMetadataBlock(match.entry);
             const stampKeys = Object.keys(metadataBlock);
             if (mode === 'enforce') {
@@ -2519,6 +2581,9 @@ class SharedCore {
         }
         if (counts.matched > 0 || mode === 'report') {
             console.log(`🪪 PROMOTER REGISTRY${tag}: ${counts.matched} of ${events.length} event(s) matched (${counts.organizer} organizer, ${counts.title} title, ${counts.url} url)`);
+        }
+        if (counts.parser > 0) {
+            console.log(`🪪 PROMOTER REGISTRY${tag}: ${counts.parser} more event(s) inherited ${parserEntry.name} from the parser's own site (${this.getHostFromUrl(parserEntry.website)}) — nothing in the event itself named a promoter`);
         }
     }
 
@@ -6419,6 +6484,9 @@ class SharedCore {
         const tag = mode === 'report' ? ' [report]' : '';
         const counts = { bear: 0, keyword: 0, ai: 0, flagged: 0, dropped: 0 };
         const kept = [];
+        // Drops are decided per record here but FINALISED after the loop, once
+        // every record's verdict exists — see the twin sweep below.
+        const pendingDrops = [];
         for (const event of events) {
             // Trust is per-event: a registry-matched promoter's bearAffinity
             // wins over parserConfig.alwaysBear in both directions; unmatched
@@ -6453,16 +6521,18 @@ class SharedCore {
                 // Flag, don't drop silently: enforce-mode drops are surfaced to
                 // the results UI (and prep-time manual-override rescue) via the
                 // caller's collector. Report mode changes nothing.
-                if (dropCollector && mode === 'enforce') {
-                    dropCollector.push({
+                pendingDrops.push({
+                    event,
+                    title,
+                    entry: {
                         title,
                         startDate: event.startDate || event.date || null,
                         venue: event.bar || event.venue || '',
                         reason: decision.provenance,
                         host: this.getHostFromUrl(event._sourcePageUrl || event.url || event.website || '') || '',
                         event: { ...event }
-                    });
-                }
+                    }
+                });
             } else {
                 // alwaysBear sources never lose events: not_bear/unsure is kept
                 // with a review flag; untrusted unsure is likewise kept+flagged.
@@ -6472,6 +6542,55 @@ class SharedCore {
                 kept.push({...event, bearReview: `${label} — ${decision.provenance}`});
             }
         }
+        // ONE EVENT SCRAPED TWICE IS ONE EVENT.
+        //
+        // A listing page yields a stub per event (title + date, no time, no
+        // description) and the crawler then follows the stub's own link and
+        // yields the full record. Both enter this filter as separate records,
+        // and this filter runs BEFORE deduplicateEvents — so the stub is
+        // bear-judged ALONE, with none of its twin's description or evidence
+        // to judge by, and is gone before dedup can fold it in.
+        //
+        // 2026-08-05 BEEFMINCE, 26 records for 15 events: dedup folded 10 of
+        // the 11 twin pairs, and the 11th never reached it. "TURKEYMINCE" the
+        // stub (19 Dec 00:00, description EMPTY) was dropped for "lack of
+        // description", while "TURKEYMINCE" the event page (19 Dec 22:00,
+        // "TIS' THE SEASON TO BE BEARY!") was kept on those very words. Same
+        // ticket URL. Same event. The owner then reviewed it twice.
+        //
+        // So a drop only stands if NO other record of the same event survived.
+        // If one did, this record is a fragment of a kept event, not a second
+        // event to judge — dedup folds it moments later. Nothing new reaches
+        // the calendar: the event was already going there via its twin.
+        //
+        // requireCloseStartTimes: false is the same relaxation dedup itself
+        // uses, because a stub's missing start time degrades to midnight and
+        // must still match its properly-timed sibling.
+        for (const pending of pendingDrops) {
+            let signal = null;
+            const twin = kept.find(candidate => {
+                signal = this.getSameEventIdentitySignal(pending.event, candidate, { requireCloseStartTimes: false });
+                return Boolean(signal);
+            }) || null;
+            if (!twin) {
+                if (dropCollector && mode === 'enforce') dropCollector.push(pending.entry);
+                continue;
+            }
+            counts.dropped--;
+            counts.bear++;
+            console.log(`🐻 BEAR CHECK${tag}: "${pending.title}" DROP reversed — same event as kept "${twin.title || 'Unknown'}" (${signal}); it is one event scraped twice, and the record that carried the evidence was kept`);
+            // Inherit the twin's provenance rather than minting a new
+            // bearSource value: the verdict genuinely came from that record's
+            // evidence, and FIELD_SOURCE_PRIORITY.bearSource ranks a fixed
+            // vocabulary (manual-bear/manual-not-bear/keyword/ai/config) — an
+            // unranked token would fail open in every merge that consults it.
+            const rescued = { ...pending.event, isBearEvent: true };
+            if (typeof twin.bearSource === 'string' && twin.bearSource) {
+                rescued.bearSource = twin.bearSource;
+            }
+            kept.push(rescued);
+        }
+
         const flagLabel = mode === 'report' ? 'would-flag' : 'flagged';
         const dropLabel = mode === 'report' ? 'would-drop' : 'dropped';
         console.log(`🐻 BEAR CHECK${tag}: ${counts.bear} bear (${counts.keyword} keyword, ${counts.ai} ai), ${counts.flagged} ${flagLabel}, ${counts.dropped} ${dropLabel}`);
