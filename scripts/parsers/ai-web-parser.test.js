@@ -12371,3 +12371,260 @@ test('an OCR result with no classification is paired on its text, not refused', 
   const none = parser.getSegmentImagePairingCostWithOcr(bounds, imageRecord, null, '');
   assert.equal(none.cost, Infinity);
 });
+
+// ---------------------------------------------------------------------------
+// SALVAGED OCR CACHE HEAL — a truncated-salvaged cache entry is retried (same
+// prompt/options, same cache key) instead of replaying its partial answer
+// forever; a failed heal falls back to the salvage and never hurts the run.
+// ---------------------------------------------------------------------------
+
+// Fixture mirrors a real device entry (eaglela.com B-Bar poster): salvage kept
+// the OCR text but lost the classification.
+const SALVAGED_OCR_ENTRY = JSON.stringify({
+  text: 'NO COVER!\n\nB BAR\nEVERY THURSDAY\n\nBEARS CUBS OTTERS\nand OTHER\nFURRY\nCRITTERS!',
+  imageClassification: '',
+  eventSummary: null,
+  confidence: null,
+  reason: 'salvaged-from-truncated-response'
+});
+
+test('a truncated-salvaged OCR cache entry is healed by a fresh call that overwrites it', async () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ocr-heal-test-'));
+
+  const parser = new AiWebParser({ normalizeUrl, ocrCacheDir: cacheDir });
+  parser.core = new SharedCore({}, { eventSchema: EventSchema });
+  const ocrConfig = { cacheEnabled: true, model: 'test-vision', prompt: 'ocr prompt', timeoutSeconds: 30 };
+  const imageUrl = 'https://eagle.example/wp-content/uploads/B-Bar-poster.jpg';
+  const cachePath = await parser.writeCachedOcrResult(imageUrl, ocrConfig, SALVAGED_OCR_ENTRY);
+  assert.ok(cachePath);
+
+  let aiCalls = 0;
+  parser.core.callAiGenerate = async () => {
+    aiCalls++;
+    return JSON.stringify({
+      text: 'NO COVER!\n\nB BAR\nEVERY THURSDAY',
+      imageClassification: 'event-flyer',
+      eventSummary: 'B Bar weekly bear night',
+      confidence: 95,
+      reason: 'clear poster'
+    });
+  };
+  const result = await parser.getOcrTextForImage(imageUrl, ocrConfig, 'ocr-all', {
+    fetchImageAsBase64: async () => 'base64imagedata'
+  });
+
+  assert.equal(aiCalls, 1, 'a salvaged cache entry must trigger a fresh OCR call, not a plain hit');
+  assert.equal(result.imageClassification, 'event-flyer', 'the fresh classification replaces the salvage blank');
+  assert.equal(result.cached, false);
+
+  const stored = JSON.parse(JSON.parse(fs.readFileSync(cachePath, 'utf8')).response.text);
+  assert.equal(stored.imageClassification, 'event-flyer', 'the cache entry is overwritten with the fresh result');
+  assert.notEqual(stored.reason, 'salvaged-from-truncated-response');
+
+  // Next read is a plain hit — no further AI calls.
+  const second = await parser.getOcrTextForImage(imageUrl, ocrConfig, 'ocr-all', {
+    fetchImageAsBase64: async () => { throw new Error('a healed entry must be a plain cache hit'); }
+  });
+  assert.equal(aiCalls, 1);
+  assert.equal(second.cached, true);
+  assert.equal(second.imageClassification, 'event-flyer');
+
+  fs.rmSync(cacheDir, { recursive: true, force: true });
+});
+
+test('a stubbornly-truncating image stops being retried after the salvageRetries cap', async () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ocr-heal-cap-test-'));
+
+  const parser = new AiWebParser({ normalizeUrl, ocrCacheDir: cacheDir });
+  parser.core = new SharedCore({}, { eventSchema: EventSchema });
+  const ocrConfig = { cacheEnabled: true, model: 'test-vision', prompt: 'ocr prompt', timeoutSeconds: 30 };
+  const imageUrl = 'https://eagle.example/wp-content/uploads/cursed-poster.jpg';
+  const cachePath = await parser.writeCachedOcrResult(imageUrl, ocrConfig, SALVAGED_OCR_ENTRY);
+
+  // The model truncates every time: unbalanced JSON, text cut mid-string.
+  let aiCalls = 0;
+  parser.core.callAiGenerate = async () => {
+    aiCalls++;
+    return '{"text": "NO COVER!\\n\\nB BAR\\nEVERY THURSDAY';
+  };
+  const adapter = { fetchImageAsBase64: async () => 'base64imagedata' };
+
+  const first = await parser.getOcrTextForImage(imageUrl, ocrConfig, 'ocr-all', adapter);
+  assert.equal(aiCalls, 1);
+  assert.ok(first.text.includes('B BAR'), 'the fresher salvage still carries the text');
+  let stored = JSON.parse(JSON.parse(fs.readFileSync(cachePath, 'utf8')).response.text);
+  assert.equal(stored.reason, 'salvaged-from-truncated-response');
+  assert.equal(stored.salvageRetries, 1, 'the first failed heal stamps the retry counter');
+
+  const second = await parser.getOcrTextForImage(imageUrl, ocrConfig, 'ocr-all', adapter);
+  assert.equal(aiCalls, 2);
+  stored = JSON.parse(JSON.parse(fs.readFileSync(cachePath, 'utf8')).response.text);
+  assert.equal(stored.salvageRetries, 2);
+
+  const third = await parser.getOcrTextForImage(imageUrl, ocrConfig, 'ocr-all', adapter);
+  assert.equal(aiCalls, 2, 'at salvageRetries >= 2 the entry is a plain hit — no more ~2s heal calls, ever');
+  assert.equal(third.cached, true);
+  assert.ok(third.text.includes('B BAR'), 'the salvaged text is still served');
+
+  fs.rmSync(cacheDir, { recursive: true, force: true });
+});
+
+test('a failed heal call falls back to the salvaged cache entry without failing the operation', async () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ocr-heal-fallback-test-'));
+
+  const parser = new AiWebParser({ normalizeUrl, ocrCacheDir: cacheDir });
+  parser.core = new SharedCore({}, { eventSchema: EventSchema });
+  const ocrConfig = { cacheEnabled: true, model: 'test-vision', prompt: 'ocr prompt', timeoutSeconds: 30 };
+  const imageUrl = 'https://eagle.example/wp-content/uploads/B-Bar-poster.jpg';
+  const cachePath = await parser.writeCachedOcrResult(imageUrl, ocrConfig, SALVAGED_OCR_ENTRY);
+
+  // rybook is unreachable: the image download itself throws.
+  let downloadAttempts = 0;
+  parser.core.callAiGenerate = async () => { throw new Error('server unreachable'); };
+  const result = await parser.getOcrTextForImage(imageUrl, ocrConfig, 'ocr-all', {
+    fetchImageAsBase64: async () => {
+      downloadAttempts++;
+      throw new Error('connection refused');
+    }
+  });
+  assert.equal(downloadAttempts, 1, 'the heal must actually be attempted before falling back');
+
+  assert.ok(result, 'the salvaged entry is legitimate data — a heal failure must not become an OCR failure');
+  assert.equal(result.cached, true);
+  assert.ok(result.text.includes('B BAR'));
+  assert.equal(result.reason, 'salvaged-from-truncated-response');
+
+  // The cache entry survives untouched — no negative-cache clobber either.
+  const stored = JSON.parse(JSON.parse(fs.readFileSync(cachePath, 'utf8')).response.text);
+  assert.equal(stored.reason, 'salvaged-from-truncated-response');
+  assert.equal(stored.failureKind, undefined);
+  assert.ok(stored.text.includes('B BAR'));
+
+  // A model-side context overflow during a heal must not clobber the salvage
+  // with a negative-cache entry (that WOULD lose legitimate text forever).
+  parser.core.callAiGenerate = async (config, prompt, label, adapter, recorder, image, diagnostics) => {
+    if (diagnostics) diagnostics.failureKind = 'context-overflow';
+    return null;
+  };
+  const afterOverflow = await parser.getOcrTextForImage(imageUrl, ocrConfig, 'ocr-all', {
+    fetchImageAsBase64: async () => 'base64imagedata'
+  });
+  assert.equal(afterOverflow.cached, true, 'overflow during a heal still falls back to the salvage');
+  assert.ok(afterOverflow.text.includes('B BAR'));
+  const afterOverflowStored = JSON.parse(JSON.parse(fs.readFileSync(cachePath, 'utf8')).response.text);
+  assert.equal(afterOverflowStored.failureKind, undefined, 'no negative-cache write over a salvaged entry');
+
+  fs.rmSync(cacheDir, { recursive: true, force: true });
+});
+
+// ---------------------------------------------------------------------------
+// SEGMENTATION MEMOIZATION — parseEvents and extractEventsFromMultiEventPage
+// both segment the same page; the second call must reuse the first result
+// instead of re-running the full segments×images pairing pass.
+// ---------------------------------------------------------------------------
+
+test('buildMultiEventSegments memoizes: the second identical call does not recompute', () => {
+  const parser = createParser();
+  let computes = 0;
+  const original = parser.buildStructuredMultiEventSegments.bind(parser);
+  parser.buildStructuredMultiEventSegments = (...args) => {
+    computes++;
+    return original(...args);
+  };
+
+  const html = '<html><body><h3>FURBALL BLACKOUT</h3><p>July 10, 2026</p><h3>FURBALL POOL PARTY</h3><p>July 24, 2026</p></body></html>';
+  const sourceUrl = 'https://furball.example/events';
+  const ocrResults = [];
+
+  const first = parser.buildMultiEventSegments(html, sourceUrl, ocrResults);
+  const second = parser.buildMultiEventSegments(html, sourceUrl, ocrResults);
+  assert.equal(computes, 1, 'the duplicated diagnostics+extraction pass must run the pipeline once');
+  assert.equal(second, first, 'the identical result is reused, byte-identical outcomes');
+
+  // Different arguments are a different computation — never force-shared.
+  parser.buildMultiEventSegments(html + '<p>changed</p>', sourceUrl, ocrResults);
+  assert.equal(computes, 2);
+
+  // An ocrResults array that changed length is different input too.
+  parser.buildMultiEventSegments(html + '<p>changed</p>', sourceUrl, [{ url: 'https://cdn.example/f.jpg', text: 'X', imageClassification: 'event-flyer' }]);
+  assert.equal(computes, 3);
+});
+
+// ---------------------------------------------------------------------------
+// PAIRING SIMILARITY RESCUE — 'ad-banner' and 'multi-event-flyer' labels the
+// local vision model demonstrably misapplies to real posters may pair when
+// the flyer text strongly matches the segment (>= 0.4); everything else the
+// model states stays hard-refused.
+// ---------------------------------------------------------------------------
+
+test('an ad-banner-labeled poster whose text strongly matches the segment is rescued', () => {
+  const parser = createParser();
+  // Real corpus: the Lucki Break poster was labeled 'ad-banner' because it
+  // says "no cover" — its OCR text scored 0.75-1.0 against its own segment.
+  const bounds = { rawStart: 100, rawEnd: 400, matchedRecords: [{ text: 'LUCKI BREAK\nFriday August 14\nThe Eagle LA\nNo cover before 10pm' }] };
+  const imageRecord = { url: 'https://cdn.example/uploads/2026/08/lucki-break.jpg', start: 150, end: 200 };
+  const flyerText = 'LUCKI BREAK\nNO COVER\nFRIDAY AUGUST 14\nEAGLE LA';
+
+  const rescued = parser.getSegmentImagePairingCostWithOcr(
+    bounds, imageRecord, { url: imageRecord.url, imageClassification: 'ad-banner', text: flyerText }, ''
+  );
+  assert.ok(Number.isFinite(rescued.cost), 'a mislabeled real poster must be pairable when its text proves the match');
+  assert.ok(rescued.score > 100, 'the match is earned through text similarity');
+});
+
+test('an ad-banner below the elevated similarity bar is refused exactly as before', () => {
+  const parser = createParser();
+  const bounds = { rawStart: 100, rawEnd: 400, matchedRecords: [{ text: 'LUCKI BREAK\nFriday August 14\nThe Eagle LA\nNo cover before 10pm' }] };
+  const imageRecord = { url: 'https://cdn.example/uploads/happy-hour-banner.jpg', start: 150, end: 200 };
+  // Two of eight tokens overlap (~0.25): clears the normal 0.15 threshold but
+  // not the elevated 0.4 rescue bar — a real ad stays out.
+  const adText = 'HAPPY HOUR FRIDAY\nDOWNLOAD OUR APP\nfollow eagle';
+
+  const refused = parser.getSegmentImagePairingCostWithOcr(
+    bounds, imageRecord, { url: imageRecord.url, imageClassification: 'ad-banner', text: adText }, ''
+  );
+  assert.equal(refused.cost, Infinity, 'weakly-matching ad-banner text does not earn a segment');
+  assert.equal(refused.score, -Infinity);
+});
+
+test('a multi-event flyer is the correct image for its umbrella event segment', () => {
+  const parser = createParser();
+  // A festival/bear-week umbrella card overlaps its own multi-event flyer
+  // heavily — the user explicitly wants this match possible.
+  const bounds = { rawStart: 100, rawEnd: 400, matchedRecords: [{ text: 'BEAR WEEK PROVINCETOWN\nJuly 11-19 2026\nBearracuda Kickoff\nPool Party\nClosing Tea' }] };
+  const imageRecord = { url: 'https://cdn.example/uploads/bear-week-lineup.jpg', start: 150, end: 200 };
+  const flyerText = 'BEAR WEEK PROVINCETOWN\nBEARRACUDA KICKOFF\nPOOL PARTY\nCLOSING TEA';
+
+  const rescued = parser.getSegmentImagePairingCostWithOcr(
+    bounds, imageRecord, { url: imageRecord.url, imageClassification: 'multi-event-flyer', text: flyerText }, ''
+  );
+  assert.ok(Number.isFinite(rescued.cost), 'the umbrella event may claim its own lineup flyer');
+  assert.ok(rescued.score > 100);
+});
+
+test('a logo is still hard-refused even at perfect text similarity', () => {
+  const parser = createParser();
+  // Behavior guard (passes before and after the rescue existed): site chrome
+  // whose text happens to echo the card — a header logo with the venue name —
+  // must never earn a segment, whatever its similarity.
+  const segmentLine = 'THE EAGLE LA\nFriday August 14';
+  const bounds = { rawStart: 100, rawEnd: 400, matchedRecords: [{ text: segmentLine }] };
+  const imageRecord = { url: 'https://cdn.example/assets/site-logo.png', start: 150, end: 200 };
+
+  for (const chrome of ['logo', 'thumbnail', 'hero-banner', 'screenshot']) {
+    const refused = parser.getSegmentImagePairingCostWithOcr(
+      bounds, imageRecord, { url: imageRecord.url, imageClassification: chrome, text: segmentLine }, ''
+    );
+    assert.equal(refused.cost, Infinity, `${chrome} must stay refused at similarity 1.0`);
+    assert.equal(refused.score, -Infinity);
+  }
+});
