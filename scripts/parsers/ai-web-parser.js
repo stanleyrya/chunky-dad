@@ -2250,10 +2250,93 @@ class AiWebParser {
     buildStructuredMultiEventSegments(html) {
         const groups = this.extractRepeatedMultiEventStructureGroups(html);
         for (const group of groups) {
-            const segments = this.buildSegmentsFromStructureGroup(group);
-            if (segments.length >= 2) return segments;
+            const result = this.segmentStructureGroup(group);
+            if (result.segments.length >= 2) {
+                return this.coverRepeatedEventUnits(group, result);
+            }
         }
         return [];
+    }
+
+    // Coverage guard: a segmentation that produces far fewer windows than the
+    // page has SELF-IDENTIFYING EVENT UNITS is the wrong segmentation, even
+    // when it "succeeded".
+    //
+    // The page states its own event count structurally: a repeated card that
+    // carries its own navigable link — one no sibling card in the same group
+    // carries — plus its own date and its own title is a complete event unit.
+    // Nothing else on a listing page repeats with a per-copy identity like
+    // that. eaglela.com/events/ is the worked example: 12 such units, every
+    // one of them correctly bounded by the winning group, and 9 of the 12
+    // were then dropped by the generic minimum-character floor because their
+    // whole visible text is a short name and a day ("ONYX" / "09 Aug", 11
+    // chars). Segmentation reported success with 3 windows for 12 cards, so
+    // nine real events were never extracted and the run looked like a
+    // three-event week.
+    //
+    // A character count does not measure completeness — identity does. So
+    // when windows < identified units, this re-segments the SAME group with
+    // the character floor waived for units that identify themselves. Group
+    // selection is untouched (the winner is already chosen), entry
+    // boundaries are untouched (each entry still spans exactly what it
+    // spanned), and every other gate still applies: only windows that were
+    // being silently discarded come back. Pages whose segmentation already
+    // covers their units take the early return and are byte-identical.
+    coverRepeatedEventUnits(group, result) {
+        const segments = result && Array.isArray(result.segments) ? result.segments : [];
+        const identifiedUnitCount = Number(result && result.identifiedUnitCount) || 0;
+        if (identifiedUnitCount <= segments.length) return segments;
+        const covered = this.segmentStructureGroup(group, { allowTerseIdentifiedUnits: true });
+        if (covered.segments.length <= segments.length) return segments;
+        console.log(`🤖 AI Web: Segmentation covered ${segments.length} of ${identifiedUnitCount} repeated event unit(s) on this page — re-segmenting to ${covered.segments.length} window(s)`);
+        return covered.segments;
+    }
+
+    // The entry's own primary destination. Fragment-only, javascript:, mailto:
+    // and tel: hrefs are not destinations, so they never stand in for one.
+    // Query strings are KEPT: a listing that repeats one detail page per
+    // occurrence distinguishes its cards purely by query, and stripping it
+    // would make two real cards look like one. Regex only — no URL parsing
+    // (iOS JavaScriptCore has no URL/URLSearchParams).
+    extractMultiEventEntryIdentityLink(html) {
+        const pattern = /<a\b[^>]*\bhref\s*=\s*["']([^"']+)["']/gi;
+        let match;
+        while ((match = pattern.exec(String(html || ''))) !== null) {
+            const href = String(match[1] || '').split('#')[0].trim();
+            if (!href) continue;
+            if (/^(?:javascript|mailto|tel|sms|data):/i.test(href)) continue;
+            return href;
+        }
+        return '';
+    }
+
+    // Which entries of a repeated group identify THEMSELVES: each holds a
+    // primary destination that no sibling entry in the group holds. Cards in
+    // a listing point at their own detail pages; a repeated nav block, a
+    // pagination strip or a row of identical ticket buttons all point at the
+    // same place, so none of them qualifies.
+    mapMultiEventGroupIdentityLinks(entries) {
+        const links = (Array.isArray(entries) ? entries : [])
+            .map(entry => this.extractMultiEventEntryIdentityLink(entry && entry.html));
+        const counts = new Map();
+        links.forEach(link => {
+            if (!link) return;
+            counts.set(link, (counts.get(link) || 0) + 1);
+        });
+        return links.map(link => Boolean(link) && counts.get(link) === 1);
+    }
+
+    // The content gates every structural entry has to clear before it can be
+    // a window. Extracted verbatim from buildSegmentsFromStructureGroup so
+    // the coverage count and the segment build ask exactly the same question.
+    multiEventEntryClearsContentGates(normalizedLines) {
+        const lines = Array.isArray(normalizedLines) ? normalizedLines : [];
+        if (lines.length < this.extractionLimits.multiEventMinSegmentLines) return false;
+        if (this.hasMultiEventScriptLikeText(lines)) return false;
+        if (this.countMultiEventDateSignals(lines) > 2) return false;
+        if (!this.segmentHasDateSignal(lines)) return false;
+        if (!this.segmentHasTitleSignal(lines) && !this.segmentIsDateHeadedSchedule(lines)) return false;
+        return true;
     }
 
 
@@ -2311,8 +2394,19 @@ class AiWebParser {
     }
 
 
-    buildSegmentsFromStructureGroup(group) {
+    buildSegmentsFromStructureGroup(group, options = {}) {
+        return this.segmentStructureGroup(group, options).segments;
+    }
+
+    // Returns { segments, identifiedUnitCount } — the windows this group
+    // yields, and how many of its entries are self-identifying event units
+    // that cleared the content gates. The gap between the two IS the
+    // under-coverage signal coverRepeatedEventUnits acts on.
+    segmentStructureGroup(group, options = {}) {
         const entries = group && Array.isArray(group.entries) ? group.entries : [];
+        const identifiedUnits = this.mapMultiEventGroupIdentityLinks(entries);
+        const allowTerseIdentifiedUnits = Boolean(options && options.allowTerseIdentifiedUnits);
+        let identifiedUnitCount = 0;
         const uniqueSegments = [];
         const seen = new Set();
         // The repeated structural entries ARE the page's own item list — one
@@ -2328,17 +2422,24 @@ class AiWebParser {
         // entry count still sizes the per-run AI MISS budget downstream.
         this.recordMultiEventSegmentationStats(datedCandidateCount, 'structure group');
         const segmentBudget = this.resolveMultiEventSegmentationCeiling();
-        const addSegment = (segment) => {
+        const addSegment = (segment, isIdentifiedUnit = false) => {
             if (!segment || !Array.isArray(segment.lines)) return;
             const segmentText = segment.lines.join('\n');
-            if (segmentText.length < this.extractionLimits.multiEventMinSegmentChars) return;
+            if (!segmentText) return;
+            // The character floor rejects scraps of text that cannot be an
+            // event. A card that carries its own name, its own date and its
+            // own destination is not a scrap however few characters it
+            // spends, so identity replaces the floor for those.
+            const waiveMinChars = allowTerseIdentifiedUnits && isIdentifiedUnit;
+            if (!waiveMinChars && segmentText.length < this.extractionLimits.multiEventMinSegmentChars) return;
             const dedupeKey = segmentText.toLowerCase();
             if (seen.has(dedupeKey)) return;
             seen.add(dedupeKey);
             uniqueSegments.push(segment);
         };
 
-        for (const entry of entries) {
+        for (let entryIndex = 0; entryIndex < entries.length; entryIndex++) {
+            const entry = entries[entryIndex];
             if (uniqueSegments.length >= segmentBudget) {
                 // No silent caps. This break truncates the page: on
                 // thedallaseagle.com/events/ (a full month, ~27 listings) it
@@ -2353,25 +2454,25 @@ class AiWebParser {
             const normalizedLines = this.extractBodyParts(entry.html)
                 .map(line => this.normalizeWhitespace(line))
                 .filter(Boolean);
-            if (normalizedLines.length < this.extractionLimits.multiEventMinSegmentLines) continue;
-            if (this.hasMultiEventScriptLikeText(normalizedLines)) continue;
-            if (this.countMultiEventDateSignals(normalizedLines) > 2) continue;
-            if (!this.segmentHasDateSignal(normalizedLines)) continue;
-            if (!this.segmentHasTitleSignal(normalizedLines) && !this.segmentIsDateHeadedSchedule(normalizedLines)) continue;
+            if (!this.multiEventEntryClearsContentGates(normalizedLines)) continue;
+            const isIdentifiedUnit = identifiedUnits[entryIndex] === true;
+            if (isIdentifiedUnit) identifiedUnitCount++;
 
             const splitSegments = this.buildTextMultiEventSegmentsFromLines(normalizedLines, entry.html);
             if (splitSegments.length > 1) {
-                splitSegments.forEach(addSegment);
+                // Split windows are slices of one entry, not the entry's own
+                // identity — the floor still applies to each of them.
+                splitSegments.forEach(splitSegment => addSegment(splitSegment, false));
             } else {
                 const segmentLines = splitSegments.length === 1 ? splitSegments[0].lines : normalizedLines;
                 const trimmedLines = this.trimSegmentLinesToChars(
                     this.trimLinesAfterTerminalCallToAction(segmentLines),
                     this.extractionLimits.multiEventMaxSegmentChars
                 );
-                addSegment({ lines: trimmedLines, html: entry.html });
+                addSegment({ lines: trimmedLines, html: entry.html }, isIdentifiedUnit);
             }
         }
-        return uniqueSegments;
+        return { segments: uniqueSegments, identifiedUnitCount };
     }
 
     buildTextMultiEventSegmentsFromLines(lines, html = '') {
@@ -3954,6 +4055,18 @@ class AiWebParser {
             console.warn(`🤖 AI Web: Error extracting additional URLs: ${error}`);
         }
 
+        // A page's own rel="canonical" / og:url is a pointer AT THE DOCUMENT WE
+        // ALREADY HAVE — never a new page to crawl. It reaches this Map through
+        // several harvest routes at once (the generic href scan picks up
+        // <link rel="canonical" href>, the raw-HTML scan picks up
+        // <meta property="og:url" content>, and SEO plugins repeat the same URL
+        // as a JSON-LD WebPage @id), which is why the suppression lives here at
+        // the single funnel instead of on any one extractor.
+        // Run 20260806-124046: 9 of 24 AI extractions were the crawler
+        // re-fetching a detail page it had already extracted, purely because
+        // the page advertised its own canonical.
+        this.suppressSelfCanonicalUrls(urls, html, sourceUrl);
+
         const rankedUrls = this.rankAdditionalUrls(urls);
         const maxAdditionalUrls = this.resolveMaxAdditionalUrls(parserConfig);
         const hasFiniteLimit = Number.isFinite(maxAdditionalUrls) && maxAdditionalUrls >= 0;
@@ -4005,6 +4118,106 @@ class AiWebParser {
         }
 
         return limitedUrls;
+    }
+
+    /**
+     * The URLs a document declares as ITSELF: <link rel="canonical" href> and
+     * <meta property="og:url" content>. Attribute-order agnostic, raw values —
+     * resolution against the page URL is the caller's job.
+     * Strict on rel: only a lone `canonical` token counts, so rel lists like
+     * `rel="alternate canonical"` are left alone rather than guessed at.
+     */
+    extractSelfDeclaredCanonicalUrls(html) {
+        const declared = [];
+        if (!html || typeof html !== 'string') return declared;
+
+        const linkRegex = /<link\b[^>]*>/gi;
+        let match;
+        while ((match = linkRegex.exec(html)) !== null) {
+            const tag = match[0];
+            if (!/\brel\s*=\s*(?:"\s*canonical\s*"|'\s*canonical\s*'|canonical(?=[\s/>]))/i.test(tag)) continue;
+            const href = tag.match(/\bhref\s*=\s*["']([^"']+)["']/i);
+            if (href && href[1] && href[1].trim()) declared.push(href[1].trim());
+        }
+
+        const metaRegex = /<meta\b[^>]*>/gi;
+        while ((match = metaRegex.exec(html)) !== null) {
+            const tag = match[0];
+            if (!/\b(?:property|name)\s*=\s*["']og:url["']/i.test(tag)) continue;
+            const content = tag.match(/\bcontent\s*=\s*["']([^"']+)["']/i);
+            if (content && content[1] && content[1].trim()) declared.push(content[1].trim());
+        }
+
+        return declared;
+    }
+
+    /**
+     * host+path identity of a URL, ignoring query, fragment, trailing slash,
+     * `www.` and default ports. Two URLs with the same key address the same
+     * resource path — they are NOT necessarily the same rendered document, so
+     * this is only ever used to recognise a SELF-reference, never to dedupe
+     * crawl targets (parameterized variants of one path are real, distinct
+     * pages and must all still be crawled).
+     * Pure string work: iOS JavaScriptCore has no URL global.
+     */
+    getUrlPathIdentityKey(url) {
+        const text = String(url || '').trim();
+        if (!text) return '';
+        const match = text.match(/^https?:\/\/([^/?#]+)([^?#]*)/i);
+        if (!match) return '';
+        const host = match[1].toLowerCase().replace(/^www\./, '').replace(/:(?:80|443)$/, '');
+        if (!host) return '';
+        const path = String(match[2] || '').replace(/\/+$/, '').toLowerCase();
+        return `${host}${path}`;
+    }
+
+    /**
+     * Drop discovered links that are just this page's own canonical/og:url
+     * self-reference. Site-agnostic — nothing here knows about any CMS, query
+     * parameter or host.
+     *
+     * FAIL CLOSED: only a declared canonical that resolves to the SAME host+path
+     * as the page we actually fetched is suppressed. A canonical pointing at a
+     * different path or host may be a genuinely different resource (a slug
+     * alias, a section index), so it stays in the crawl queue and costs us at
+     * most one redundant fetch — never a lost page.
+     *
+     * Returns the suppressed URLs (for tests/callers); the crawl-visible effect
+     * is the mutation of `urls`.
+     */
+    suppressSelfCanonicalUrls(urls, html, sourceUrl) {
+        const suppressed = [];
+        if (!urls || typeof urls.get !== 'function' || urls.size === 0) return suppressed;
+        if (!html || !sourceUrl) return suppressed;
+
+        const sourceKey = this.getUrlPathIdentityKey(sourceUrl);
+        if (!sourceKey) return suppressed;
+
+        const seen = new Set();
+        for (const rawDeclared of this.extractSelfDeclaredCanonicalUrls(html)) {
+            let resolved = '';
+            try {
+                resolved = this.stripTrackingParams(this.normalizeUrl(rawDeclared, sourceUrl));
+            } catch (_) {
+                resolved = '';
+            }
+            if (!resolved) continue;
+            // Not the page we fetched → not a self-reference → leave it alone.
+            if (this.getUrlPathIdentityKey(resolved) !== sourceKey) continue;
+
+            const key = this.getUrlDedupeKey(resolved);
+            if (!key || seen.has(key)) continue;
+            seen.add(key);
+            const entry = urls.get(key);
+            if (!entry) continue;
+            urls.delete(key);
+            suppressed.push(entry.url);
+        }
+
+        if (suppressed.length > 0) {
+            console.log(`🤖 AI Web: Self-canonical link skipped for ${sourceUrl}: ${suppressed.join(', ')} — the page's own canonical/og:url is this same document, not a new page to crawl`);
+        }
+        return suppressed;
     }
 
     getDefaultMaxAdditionalUrls() {
