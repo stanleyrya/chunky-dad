@@ -1245,6 +1245,11 @@ class AiWebParser {
         // BEFORE any per-segment prompt content is built below.
         this.applySegmentOcrConsistencyGate(segments, ocrResults, sourceUrl);
 
+        // Report-only tripwire: a window carrying a NEIGHBORING card's
+        // JSON-LD would have its url/date/image hijacked by the structured
+        // pass of per-segment extraction — announce it (nothing is dropped).
+        this.applySegmentStructuredDataConsistencyGate(segments, sourceUrl);
+
         // Segment-derived site-role facts (multiple distinct addresses →
         // organizer; one recurring address that also appears outside the
         // listings → venue) can settle what the JSON-LD types alone could not.
@@ -2382,13 +2387,32 @@ class AiWebParser {
 
         for (const pattern of containerPatterns) {
             pattern.lastIndex = 0;
+            // Oversized containers are discarded as candidates, but the regex
+            // has already advanced past their ENTIRE body — so a page-level
+            // wrapper <section> would hide every per-card <article> inside it
+            // (MEC-style listings wrap all cards in one 80KB+ section, and the
+            // cards were never scanned: the winning group fell through to
+            // image-anchor fence-post slices that leak each neighbor's
+            // JSON-LD). Resume the scan just past the oversized container's
+            // opening tag instead, so its children get their own turn.
+            // lastIndex only ever moves forward, and the resume count is
+            // capped so pathologically nested markup stays linear.
+            let oversizedResumes = 0;
+            const maxOversizedResumes = 200;
             let match;
             while ((match = pattern.exec(source)) !== null) {
                 const tagName = String(match[1] || '').toLowerCase();
                 const attrs = match[2] || '';
                 if (tagName === 'div' && !this.hasMultiEventStructureHint(attrs)) continue;
                 const containerHtml = match[0];
-                if (containerHtml.length > this.extractionLimits.multiEventMaxSegmentChars * 4) continue;
+                if (containerHtml.length > this.extractionLimits.multiEventMaxSegmentChars * 4) {
+                    const openTagEnd = containerHtml.indexOf('>');
+                    if (openTagEnd >= 0 && oversizedResumes < maxOversizedResumes) {
+                        oversizedResumes++;
+                        pattern.lastIndex = match.index + openTagEnd + 1;
+                    }
+                    continue;
+                }
                 const signature = this.getMultiEventStructureSignature(tagName, attrs);
                 addCandidate(`container:${signature}`, {
                     html: containerHtml,
@@ -2688,6 +2712,42 @@ class AiWebParser {
         return Array.from(new Set(tokens)).sort();
     }
 
+    // A fence-post slice runs from one card's anchor to the NEXT card's
+    // anchor, so structured data emitted BETWEEN two cards (MEC-style
+    // plugins print each card's <script type="application/ld+json">
+    // immediately BEFORE its markup) lands at the TAIL of the PREVIOUS
+    // card's slice — and the per-segment jsonld extraction pass then reads
+    // the neighbor's url/date/image as this card's own (eaglela.com run
+    // 20260806: all 12 listings title-shifted by one). The rule here is
+    // purely positional: a trailing JSON-LD block, followed by nothing but
+    // markup (no visible text) whose first tag is not a closing tag,
+    // belongs to the next card — truncate the slice at the block's start.
+    // A block genuinely inside the entry's own container is untouched:
+    // either visible entry text follows it, or its container's closing tag
+    // does, and both keep it.
+    trimTrailingJsonLdFromFencePostSlice(entryHtml) {
+        let html = String(entryHtml || '');
+        const blockPattern = /<script[^>]*type\s*=\s*["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi;
+        for (let pass = 0; pass < 8; pass++) {
+            blockPattern.lastIndex = 0;
+            let lastBlockStart = -1;
+            let lastBlockEnd = -1;
+            let match;
+            while ((match = blockPattern.exec(html)) !== null) {
+                lastBlockStart = match.index;
+                lastBlockEnd = blockPattern.lastIndex;
+            }
+            if (lastBlockStart <= 0) break;
+            const tail = html.slice(lastBlockEnd);
+            const tailText = tail.replace(/<[^>]*>?/g, ' ').replace(/\s+/g, ' ').trim();
+            if (tailText) break;
+            const firstTag = (tail.match(/<\s*\/?[a-z]/i) || [''])[0];
+            if (/<\s*\//.test(firstTag)) break;
+            html = html.slice(0, lastBlockStart);
+        }
+        return html;
+    }
+
     extractRepeatedMultiEventResourceGroups(html) {
         const source = String(html || '');
         const anchors = [];
@@ -2726,10 +2786,11 @@ class AiWebParser {
                 const end = nextAnchor
                     ? nextAnchor.start
                     : Math.min(source.length, anchor.start + this.extractionLimits.multiEventMaxSegmentChars * 4);
+                const entryHtml = this.trimTrailingJsonLdFromFencePostSlice(source.slice(anchor.start, end));
                 return {
-                    html: source.slice(anchor.start, end),
+                    html: entryHtml,
                     start: anchor.start,
-                    end,
+                    end: anchor.start + entryHtml.length,
                     kind: 'resource'
                 };
             });
@@ -2810,10 +2871,11 @@ class AiWebParser {
                 const end = nextAnchor
                     ? nextAnchor.start
                     : Math.min(text.length, anchor.start + this.extractionLimits.multiEventMaxSegmentChars * 4);
+                const entryHtml = this.trimTrailingJsonLdFromFencePostSlice(text.slice(anchor.start, end));
                 return {
-                    html: text.slice(anchor.start, end),
+                    html: entryHtml,
                     start: anchor.start,
-                    end,
+                    end: anchor.start + entryHtml.length,
                     kind: 'resource-link'
                 };
             });
@@ -6928,6 +6990,80 @@ class AiWebParser {
                 } else {
                     console.log(`🤖 AI Web: Detached OCR image ${ocr.url} from segment ${i + 1} ("${owner.title}") — flyer text matches multiple sibling titles`);
                 }
+            }
+        }
+        return sourceSegments;
+    }
+
+    // Report-only structured-data consistency tripwire, mirroring the spirit
+    // of applySegmentOcrConsistencyGate: a multi-event window whose html
+    // carries an Event-typed JSON-LD node pointing at a DIFFERENT same-site
+    // event page than the window's own identity link is very likely holding a
+    // neighboring card's structured data — the per-segment extraction reads
+    // that block FIRST, so the neighbor's url/date/image would win over the
+    // card's own text (eaglela.com run 20260806: 12 chimera events, each
+    // titled by card k with card k+1's url/date/poster). The segmentation
+    // fixes upstream should make this impossible on known layouts; this line
+    // is the tripwire for layouts they don't cover. LOG ONLY — nothing is
+    // dropped or rewritten here (report-only before enforce).
+    applySegmentStructuredDataConsistencyGate(segments, sourceUrl = '') {
+        const sourceSegments = Array.isArray(segments) ? segments : [];
+        if (sourceSegments.length < 2) return sourceSegments;
+        if (!this.core || typeof this.core.extractJsonLdEventNodes !== 'function') return sourceSegments;
+
+        // String splitting only — no URL parsing (iOS JavaScriptCore has no
+        // URL/URLSearchParams). Fragment dropped; query kept (listing pages
+        // can distinguish occurrences purely by query).
+        const splitUrlParts = (value) => {
+            const raw = String(value || '').split('#')[0].trim();
+            if (!raw) return null;
+            const schemeMatch = raw.match(/^(?:[a-z][a-z0-9+.-]*:)?\/\//i);
+            if (!schemeMatch) return { host: '', path: raw };
+            const rest = raw.slice(schemeMatch[0].length);
+            const pathStart = rest.search(/[/?]/);
+            if (pathStart === -1) return { host: rest.toLowerCase(), path: '/' };
+            return { host: rest.slice(0, pathStart).toLowerCase(), path: rest.slice(pathStart) };
+        };
+        const toPathKey = (path) => String(path || '').replace(/\/+(\?|$)/, '$1').toLowerCase() || '/';
+        const stripWww = (host) => String(host || '').replace(/^www\./, '');
+        const pageParts = splitUrlParts(sourceUrl);
+        const pageHost = pageParts ? pageParts.host : '';
+        const isSameSiteHost = (host) => {
+            if (!host) return true; // relative url — same site by construction
+            if (!pageHost) return false;
+            if (this.core && typeof this.core.areUrlHostsSameSite === 'function') {
+                return this.core.areUrlHostsSameSite(host, pageHost);
+            }
+            return stripWww(host) === stripWww(pageHost);
+        };
+
+        for (const segment of sourceSegments) {
+            const segmentHtml = segment && typeof segment.html === 'string' ? segment.html : '';
+            if (!segmentHtml || !segmentHtml.includes('ld+json')) continue;
+            const identityLink = this.extractMultiEventEntryIdentityLink(segmentHtml);
+            const identityParts = splitUrlParts(identityLink);
+            if (!identityParts) continue;
+            const identityKey = toPathKey(identityParts.path);
+            let nodes = [];
+            try {
+                nodes = this.core.extractJsonLdEventNodes(segmentHtml);
+            } catch (_) {
+                continue;
+            }
+            const reported = new Set();
+            for (const node of nodes) {
+                const nodeUrl = typeof node.url === 'string' && node.url.trim()
+                    ? node.url.trim()
+                    : (typeof node['@id'] === 'string' ? node['@id'].trim() : '');
+                if (!nodeUrl || reported.has(nodeUrl)) continue;
+                const nodeParts = splitUrlParts(nodeUrl);
+                if (!nodeParts) continue;
+                if (!isSameSiteHost(nodeParts.host)) continue; // off-site (ticketing etc.) — not a neighbor card
+                if (toPathKey(nodeParts.path) === identityKey) continue; // the window's own event
+                reported.add(nodeUrl);
+                const title = this.deriveSegmentListingTitle(segment) ||
+                    ((segment.lines && segment.lines[0]) ? String(segment.lines[0]) : '');
+                console.log(`🧬 SEGMENT: window for "${title}" carries foreign JSON-LD for ${nodeUrl} — structured data likely belongs to a neighboring card`);
             }
         }
         return sourceSegments;

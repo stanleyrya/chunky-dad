@@ -6521,6 +6521,168 @@ test('OCR consistency gate: an excluded flyer\'s OCR text and image lines never 
 });
 
 // ---------------------------------------------------------------------------
+// Segment window integrity (MEC-shaped listings): each card's JSON-LD script
+// sits BETWEEN the previous card and its own <article>, and all cards live in
+// one oversized wrapper <section>. The container scan must not let the
+// oversized wrapper hide the per-card articles, fence-post slices must not
+// carry the NEXT card's JSON-LD, and a window that still holds foreign
+// JSON-LD trips the report-only 🧬 SEGMENT line.
+// ---------------------------------------------------------------------------
+
+function buildJsonLdBeforeCardListingHtml(cardCount = 4) {
+  const cards = [];
+  for (let i = 1; i <= cardCount; i++) {
+    const url = `https://venue.example/events/night-${i}/?occurrence=2026-09-0${i}`;
+    cards.push(
+      `<script type="application/ld+json">${JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'Event',
+        name: `NIGHT ${i} SPECTACULAR`,
+        startDate: `2026-09-0${i}T21:00:00-07:00`,
+        url,
+        image: `https://venue.example/media/night-${i}.jpg`
+      })}</script>\n` +
+      '<article class="event-article" itemscope>' +
+      '<div class="topsec">' +
+      `<h3 class="card-title"><a class="event-link" href="${url}">NIGHT ${i} SPECTACULAR</a></h3>` +
+      `<p>Saturday, September ${i}, 2026</p>` +
+      '<p>A big night with music and dancing at the main bar downtown.</p>' +
+      '</div></article>'
+    );
+  }
+  // The wrapper must exceed multiEventMaxSegmentChars * 4 so the container
+  // scan discards it as a candidate — the bug was that the discard also
+  // skipped everything inside it.
+  const filler = `<div class="chrome">${'lorem ipsum wrapper chrome padding '.repeat(400)}</div>`;
+  return `<html><body><section class="events-wrap">${filler}\n${cards.join('\n')}</section></body></html>`;
+}
+
+test('an oversized wrapper section does not hide its per-card articles, and no window carries a neighboring card\'s JSON-LD', () => {
+  const parser = createParser();
+  const html = buildJsonLdBeforeCardListingHtml(4);
+  assert.ok(html.indexOf('</section>') - html.indexOf('<section') >
+    parser.extractionLimits.multiEventMaxSegmentChars * 4,
+    'fixture wrapper must exceed the container size cap');
+
+  const groups = parser.extractRepeatedMultiEventStructureGroups(html);
+  const articleGroup = groups.find(group => group.signature === 'container:article:event');
+  assert.ok(articleGroup, `container:article:event group must be found inside the oversized wrapper, got ${JSON.stringify(groups.map(g => g.signature))}`);
+  assert.equal(articleGroup.entries.length, 4, 'all four cards must be scanned');
+  assert.equal(groups[0].signature, 'container:article:event',
+    'the per-card container group must outrank the fence-post resource groups');
+
+  const segments = parser.buildMultiEventSegments(html, 'https://venue.example/events/');
+  assert.equal(segments.length, 4, 'one window per card');
+  segments.forEach((segment, index) => {
+    const identity = parser.extractMultiEventEntryIdentityLink(segment.html);
+    assert.ok(identity.includes(`night-${index + 1}`), `window ${index + 1} keeps its own identity link, got ${identity}`);
+    const nodes = parser.core.extractJsonLdEventNodes(segment.html || '');
+    for (const node of nodes) {
+      assert.equal(String(node.url || ''), identity,
+        `window ${index + 1} ("${segment.lines[0]}") must not carry a neighbor's JSON-LD, found ${node.url}`);
+    }
+  });
+});
+
+test('fence-post slices: trailing JSON-LD between cards is trimmed; a block inside the entry\'s own markup is kept', () => {
+  const parser = createParser();
+
+  // Between-cards: the block trails the entry's content and is followed only
+  // by the NEXT card's opening markup — strip it and everything after.
+  const betweenCards =
+    '<div class="event-image"><img src="/night-1.jpg" /></div>' +
+    '<h3>NIGHT ONE</h3><p>Saturday, September 5, 2026</p></article>\n' +
+    '<script type="application/ld+json">{"@type":"Event","name":"NIGHT TWO","startDate":"2026-09-06","url":"https://venue.example/events/night-2/"}</script>\n' +
+    '<article class="event-article"><div class="topsec">';
+  const trimmed = parser.trimTrailingJsonLdFromFencePostSlice(betweenCards);
+  assert.ok(!trimmed.includes('ld+json'), 'the neighbor JSON-LD block must be trimmed');
+  assert.ok(!trimmed.includes('night-2'), 'nothing after the block rides along');
+  assert.ok(trimmed.includes('NIGHT ONE'), 'the entry\'s own content survives');
+
+  // Stacked neighbor blocks at the tail all go.
+  const stacked = betweenCards.replace('<article class="event-article">',
+    '<script type="application/ld+json">{"@type":"Event","name":"X","startDate":"2026-09-07"}</script><article class="event-article">');
+  assert.ok(!parser.trimTrailingJsonLdFromFencePostSlice(stacked).includes('ld+json'));
+
+  // Inside the entry's own container (closing tag follows): keep.
+  const insideOwnContainer =
+    '<div><h3>NIGHT ONE</h3><script type="application/ld+json">{"@type":"Event","name":"NIGHT ONE","startDate":"2026-09-05"}</script></div>';
+  assert.equal(parser.trimTrailingJsonLdFromFencePostSlice(insideOwnContainer), insideOwnContainer);
+
+  // Followed by visible entry text: keep.
+  const followedByText =
+    '<h3>NIGHT ONE</h3><script type="application/ld+json">{"@type":"Event","name":"NIGHT ONE","startDate":"2026-09-05"}</script><p>Doors at 9pm</p>';
+  assert.equal(parser.trimTrailingJsonLdFromFencePostSlice(followedByText), followedByText);
+
+  // End to end: image-anchored fence-post entries come back without the
+  // neighbor's block.
+  const cards = [];
+  for (let i = 1; i <= 3; i++) {
+    cards.push(
+      `<script type="application/ld+json">{"@type":"Event","name":"NIGHT ${i}","startDate":"2026-09-0${i}","url":"https://venue.example/events/night-${i}/"}</script>` +
+      `<div class="listing-row"><div class="event-image"><a href="https://venue.example/events/night-${i}/"><img src="/night-${i}.jpg" /></a></div>` +
+      `<h3>NIGHT ${i}</h3><p>Saturday, September ${i}, 2026</p></div>`
+    );
+  }
+  const groups = parser.extractRepeatedMultiEventResourceGroups(`<html><body>${cards.join('\n')}</body></html>`);
+  const imageGroup = groups.find(group => group.signature === 'resource:div:event.image');
+  assert.ok(imageGroup, `image fence-post group expected, got ${JSON.stringify(groups.map(g => g.signature))}`);
+  imageGroup.entries.forEach((entry, index) => {
+    assert.ok(!entry.html.includes('ld+json'),
+      `fence-post entry ${index + 1} must not carry the next card's JSON-LD`);
+  });
+});
+
+test('structured-data consistency gate: foreign same-site JSON-LD logs the 🧬 tripwire and drops nothing', () => {
+  const parser = createParser();
+  const foreignJsonLd =
+    '<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Event","name":"NIGHT TWO","startDate":"2026-09-06T21:00:00-07:00","url":"https://venue.example/events/night-2/"}]}</script>';
+  const ownJsonLd =
+    '<script type="application/ld+json">{"@type":"Event","name":"NIGHT TWO","startDate":"2026-09-06T21:00:00-07:00","url":"https://venue.example/events/night-2/"}</script>';
+  const segments = [
+    {
+      lines: ['NIGHT ONE', 'Saturday, September 5, 2026'],
+      html: `<a href="https://venue.example/events/night-1/">NIGHT ONE</a><p>Saturday, September 5, 2026</p>${foreignJsonLd}`
+    },
+    {
+      lines: ['NIGHT TWO', 'Sunday, September 6, 2026'],
+      html: `<a href="https://venue.example/events/night-2/">NIGHT TWO</a><p>Sunday, September 6, 2026</p>${ownJsonLd}`
+    }
+  ];
+  const htmlBefore = segments.map(segment => segment.html);
+
+  let returned;
+  const logs = captureLogs(() => {
+    returned = parser.applySegmentStructuredDataConsistencyGate(segments, 'https://venue.example/events/');
+  });
+
+  const tripwires = logs.filter(line => line.includes('🧬 SEGMENT:'));
+  assert.equal(tripwires.length, 1, `exactly one tripwire expected, got ${JSON.stringify(logs)}`);
+  assert.ok(tripwires[0].includes('carries foreign JSON-LD for https://venue.example/events/night-2/'), tripwires[0]);
+  assert.ok(tripwires[0].includes('structured data likely belongs to a neighboring card'), tripwires[0]);
+
+  // Report-only: nothing dropped, nothing rewritten.
+  assert.equal(returned, segments);
+  assert.equal(segments.length, 2);
+  segments.forEach((segment, index) => assert.equal(segment.html, htmlBefore[index]));
+
+  // Off-site JSON-LD (ticketing platforms) is not a neighboring card.
+  const offsite = [
+    {
+      lines: ['NIGHT ONE', 'Saturday, September 5, 2026'],
+      html: '<a href="https://venue.example/events/night-1/">NIGHT ONE</a>' +
+        '<script type="application/ld+json">{"@type":"Event","name":"NIGHT ONE","startDate":"2026-09-05","url":"https://tickets.example/e/12345"}</script>'
+    },
+    { lines: ['NIGHT TWO', 'Sunday, September 6, 2026'], html: '<a href="https://venue.example/events/night-2/">NIGHT TWO</a>' }
+  ];
+  const offsiteLogs = captureLogs(() => {
+    parser.applySegmentStructuredDataConsistencyGate(offsite, 'https://venue.example/events/');
+  });
+  assert.equal(offsiteLogs.filter(line => line.includes('🧬 SEGMENT:')).length, 0,
+    `off-site JSON-LD must not trip the gate, got ${JSON.stringify(offsiteLogs)}`);
+});
+
+// ---------------------------------------------------------------------------
 // og:image fill for imageless single-event pages (2c): a page that produced
 // exactly one event adopts its own og:image; multi-event segments never do.
 // ---------------------------------------------------------------------------
