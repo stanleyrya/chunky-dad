@@ -11802,3 +11802,267 @@ test('repeated anchors need their own listing identity before they can segment a
   assert.deepEqual(linesOf(NAKED_ANCHOR_PROGRAMME_HTML), linesOf(withoutAnchors),
     'repeated naked anchors leave a schedule page\'s segmentation exactly as it was');
 });
+
+// ── Self-canonical links are not new pages ────────────────────────────────
+// Run 20260806-124046 (Eagle LA): the listing links only parameterized
+// occurrence URLs (/events/b-bar/?occurrence=2026-08-06, …), and every one of
+// those pages advertises `<link rel="canonical" href=".../b-bar/">` plus a
+// matching `og:url`. The crawler harvested that self-reference as a discovered
+// link and re-fetched + AI-extracted the same document a second time — 9 of the
+// run's 24 extractions were exactly this.
+// The parameterized variants are NOT interchangeable (the bare URL renders
+// whichever occurrence is next), so nothing here may collapse them; only the
+// page's own self-declared canonical is suppressed.
+const SELF_CANONICAL_PAGE_HTML = `
+  <html><head>
+    <link rel="canonical" href="https://venue.example/events/beer-bust/" />
+    <meta property="og:url" content="https://venue.example/events/beer-bust/" />
+  </head><body>
+    <a href="https://venue.example/events/beer-bust/?occurrence=2026-09-10">Next week</a>
+    <a href="https://venue.example/events/hump-night/?occurrence=2026-09-09">Hump Night</a>
+  </body></html>
+`;
+
+test('a page\'s own rel=canonical / og:url self-reference is never offered as a crawlable link', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://venue.example/events/beer-bust/?occurrence=2026-09-03';
+  const links = parser.extractAdditionalUrls(SELF_CANONICAL_PAGE_HTML, sourceUrl, {});
+
+  assert.ok(!links.some(link => /^https:\/\/venue\.example\/events\/beer-bust\/?$/.test(link)),
+    `the page's own canonical must not be a discovered link, got: ${JSON.stringify(links)}`);
+  // …and the parameterized siblings, which ARE distinct documents, all survive.
+  assert.ok(links.includes('https://venue.example/events/beer-bust/?occurrence=2026-09-10'),
+    'a different occurrence of the same path is a real page and must still be crawled');
+  assert.ok(links.includes('https://venue.example/events/hump-night/?occurrence=2026-09-09'),
+    'unrelated event links are untouched');
+});
+
+test('og:url alone (no rel=canonical) is enough to recognise a self-reference', () => {
+  const parser = createParser();
+  const html = `
+    <html><head>
+      <meta property="og:url" content="https://venue.example/events/beer-bust/" />
+    </head><body>
+      <a href="https://venue.example/events/beer-bust/">Permalink</a>
+      <a href="https://venue.example/events/onyx/?occurrence=2026-09-12">Onyx</a>
+    </body></html>
+  `;
+  const links = parser.extractAdditionalUrls(html, 'https://venue.example/events/beer-bust/?occurrence=2026-09-03', {});
+  assert.ok(!links.includes('https://venue.example/events/beer-bust/'),
+    `og:url self-reference must be suppressed, got: ${JSON.stringify(links)}`);
+  assert.ok(links.includes('https://venue.example/events/onyx/?occurrence=2026-09-12'));
+});
+
+test('the self-canonical is suppressed no matter which harvest route re-offers it (JSON-LD @id)', () => {
+  const parser = createParser();
+  // SEO plugins publish the same self-URL as a JSON-LD WebPage @id/url, so the
+  // link reaches the candidate map through a second, independent extractor.
+  // Suppression sits at the shared funnel precisely so both routes are covered.
+  const html = `
+    <html><head>
+      <link rel="canonical" href="https://venue.example/events/beer-bust/" />
+      <script type="application/ld+json">
+        {"@context":"https://schema.org","@graph":[
+          {"@type":"WebPage","@id":"https://venue.example/events/beer-bust/","url":"https://venue.example/events/beer-bust/"}
+        ]}
+      </script>
+    </head><body>
+      <a href="https://venue.example/events/onyx/?occurrence=2026-09-12">Onyx</a>
+    </body></html>
+  `;
+  const links = parser.extractAdditionalUrls(html, 'https://venue.example/events/beer-bust/?occurrence=2026-09-03', {});
+  assert.ok(!links.includes('https://venue.example/events/beer-bust/'),
+    `the JSON-LD copy of the self-canonical must be suppressed too, got: ${JSON.stringify(links)}`);
+});
+
+test('skipping a self-canonical link is logged', () => {
+  const parser = createParser();
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  try {
+    parser.extractAdditionalUrls(SELF_CANONICAL_PAGE_HTML, 'https://venue.example/events/beer-bust/?occurrence=2026-09-03', {});
+  } finally {
+    console.log = originalLog;
+  }
+  assert.ok(logs.some(line => line.includes('Self-canonical link skipped')
+    && line.includes('https://venue.example/events/beer-bust/')),
+    `a self-canonical skip log line is expected, got: ${JSON.stringify(logs)}`);
+});
+
+// GUARD (passes on origin/main too, by construction): the point is that the fix
+// must NOT start eating these. A canonical that names a different path or host
+// may be a genuinely different resource, so it stays in the crawl queue.
+test('a canonical pointing at a different resource is still crawled (fail closed)', () => {
+  const parser = createParser();
+  const html = `
+    <html><head>
+      <link rel="canonical" href="https://venue.example/events/" />
+      <meta property="og:url" content="https://other.example/mirror/beer-bust/" />
+    </head><body>
+      <a href="https://venue.example/events/">All events</a>
+      <a href="https://other.example/mirror/beer-bust/">Mirror</a>
+    </body></html>
+  `;
+  const links = parser.extractAdditionalUrls(html, 'https://venue.example/events/beer-bust/?occurrence=2026-09-03', {});
+  assert.ok(links.includes('https://venue.example/events/'),
+    'a cross-path canonical is not a self-reference and must survive');
+  assert.ok(links.includes('https://other.example/mirror/beer-bust/'),
+    'a cross-host og:url is not a self-reference and must survive');
+});
+
+test('getUrlPathIdentityKey folds only query/fragment/slash/www/port — never the path', () => {
+  const parser = createParser();
+  const key = 'venue.example/events/beer-bust';
+  assert.equal(parser.getUrlPathIdentityKey('https://venue.example/events/beer-bust/'), key);
+  assert.equal(parser.getUrlPathIdentityKey('https://www.venue.example/events/beer-bust?occurrence=2026-09-03#top'), key);
+  assert.equal(parser.getUrlPathIdentityKey('https://venue.example:443/EVENTS/Beer-Bust/'), key);
+  assert.notEqual(parser.getUrlPathIdentityKey('https://venue.example/events/beer-bust-2/'), key,
+    'a different path is a different resource');
+  assert.equal(parser.getUrlPathIdentityKey('mailto:x@y.example'), '', 'non-http input yields no key');
+  assert.equal(parser.getUrlPathIdentityKey(''), '');
+});
+
+test('self-canonical suppression needs no URL global (iOS JavaScriptCore)', () => {
+  const parser = createParser();
+  // Scriptable's JavaScriptCore has neither URL nor URLSearchParams; the
+  // path-identity comparison is pure string work and must survive without them.
+  const originalUrl = global.URL;
+  const originalUsp = global.URLSearchParams;
+  try {
+    delete global.URL;
+    delete global.URLSearchParams;
+    assert.equal(parser.getUrlPathIdentityKey('https://www.venue.example/events/beer-bust/?occurrence=2026-09-03'),
+      'venue.example/events/beer-bust');
+    const urls = new Map();
+    const key = parser.getUrlDedupeKey('https://venue.example/events/beer-bust/');
+    urls.set(key, { url: 'https://venue.example/events/beer-bust/', score: 1, index: 0 });
+    const suppressed = parser.suppressSelfCanonicalUrls(urls, SELF_CANONICAL_PAGE_HTML,
+      'https://venue.example/events/beer-bust/?occurrence=2026-09-03');
+    assert.deepEqual(suppressed, ['https://venue.example/events/beer-bust/']);
+    assert.equal(urls.size, 0);
+  } finally {
+    if (originalUrl === undefined) delete global.URL; else global.URL = originalUrl;
+    if (originalUsp === undefined) delete global.URLSearchParams; else global.URLSearchParams = originalUsp;
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Segmentation must not silently UNDER-COVER a listing.
+//
+// Run 20260806 over eaglela.com/events/: the page shows 12 cards, the winning
+// structure group bounded all 12 correctly — and segmentation reported success
+// with 3 windows. The other 9 died on the generic minimum-character floor,
+// because a card whose whole visible text is a short name and a day ("ONYX" /
+// "09 Aug", 11 chars) does not spend 25 characters. Nine real events were
+// never segmented, never extracted and never reported.
+//
+// The page states its own event count structurally: a repeated card carrying
+// its own navigable destination — one no sibling card in the group carries —
+// plus its own date and its own title is a complete event unit. Characters do
+// not measure completeness; identity does.
+// ---------------------------------------------------------------------------
+
+const terseIdentifiedCard = (slug, name, day) => `
+  <article class="event-card">
+    <div class="event-image"><a href="/events/${slug}/?occurrence=2026-08-${day}"><img src="/img/${slug}.jpg" alt="${name}" /></a></div>
+    <h4 class="event-title"><a href="/events/${slug}/?occurrence=2026-08-${day}">${name}</a></h4>
+    <span class="event-date">${day} Aug</span>
+  </article>`;
+
+const verboseIdentifiedCard = (slug, name, day, blurb) => `
+  <article class="event-card">
+    <div class="event-image"><a href="/events/${slug}/?occurrence=2026-08-${day}"><img src="/img/${slug}.jpg" alt="${name}" /></a></div>
+    <h4 class="event-title"><a href="/events/${slug}/?occurrence=2026-08-${day}">${name}</a></h4>
+    <p class="event-excerpt">${blurb}</p>
+    <span class="event-date">${day} Aug</span>
+  </article>`;
+
+const TERSE_CARD_LISTING_HTML = `
+  <html><body><main class="event-list">
+    ${terseIdentifiedCard('onyx', 'ONYX', '09')}
+    ${terseIdentifiedCard('b-bar', 'B BAR', '10')}
+    ${terseIdentifiedCard('cub-scout', 'CUBSCOUT', '11')}
+    ${terseIdentifiedCard('meat-rack', 'MEAT RACK', '12')}
+    ${verboseIdentifiedCard('tightwad', 'Tightwad Tuesday', '13', 'Any 12oz beer only $3, all day, all night, no cover.')}
+    ${verboseIdentifiedCard('hump-night', 'Hump Night', '14', '$10 domestic pitchers and $6 well drinks from 9pm to 2am.')}
+  </main></body></html>`;
+
+test('segmentation covers every repeated card that identifies itself, however terse its text', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://venue.example/events';
+
+  const segments = parser.buildMultiEventSegments(TERSE_CARD_LISTING_HTML, sourceUrl);
+  assert.equal(segments.length, 6,
+    `one window per card — the two wordy cards must not stand in for all six, got ${JSON.stringify(segments.map(s => s.lines))}`);
+
+  const expected = [
+    ['ONYX', '09 Aug', 'https://venue.example/events/onyx/?occurrence=2026-08-09'],
+    ['B BAR', '10 Aug', 'https://venue.example/events/b-bar/?occurrence=2026-08-10'],
+    ['CUBSCOUT', '11 Aug', 'https://venue.example/events/cub-scout/?occurrence=2026-08-11'],
+    ['MEAT RACK', '12 Aug', 'https://venue.example/events/meat-rack/?occurrence=2026-08-12'],
+    ['Tightwad Tuesday', '13 Aug', 'https://venue.example/events/tightwad/?occurrence=2026-08-13'],
+    ['Hump Night', '14 Aug', 'https://venue.example/events/hump-night/?occurrence=2026-08-14']
+  ];
+  segments.forEach((segment, index) => {
+    const [title, date, link] = expected[index];
+    assert.equal(segment.lines[0], title, `window ${index + 1} opens on its own card title`);
+    assert.ok(segment.lines.includes(date),
+      `window ${index + 1} keeps its own date, got ${JSON.stringify(segment.lines)}`);
+    const resourceLines = parser.extractMultiEventSegmentResourceLines(segment.html, sourceUrl);
+    assert.ok(resourceLines.includes(`SEGMENT_LINK_URL: ${link}`),
+      `window ${index + 1} carries its OWN card link, got ${JSON.stringify(resourceLines)}`);
+  });
+
+  // The windows the old floor already let through are untouched — coverage
+  // ADDS the dropped cards, it never moves a boundary.
+  assert.deepEqual(segments[4].lines,
+    ['Tightwad Tuesday', 'Any 12oz beer only $3, all day, all night, no cover.', '13 Aug']);
+  assert.deepEqual(segments[5].lines,
+    ['Hump Night', '$10 domestic pitchers and $6 well drinks from 9pm to 2am.', '14 Aug']);
+});
+
+test('only a card with its OWN destination counts as a repeated event unit', () => {
+  const parser = createParser();
+
+  // Distinct per-card destinations → every card identifies itself.
+  const identifiedGroup = parser.extractRepeatedMultiEventStructureGroups(TERSE_CARD_LISTING_HTML)
+    .find(group => group.entries.length === 6);
+  assert.ok(identifiedGroup, 'the six cards form a repeated structure group');
+  assert.deepEqual(parser.mapMultiEventGroupIdentityLinks(identifiedGroup.entries),
+    [true, true, true, true, true, true]);
+
+  // One shared destination for every card (a row of identical ticket
+  // buttons, a repeated nav block): nothing identifies itself, so the
+  // character floor still stands and the terse rows stay out.
+  const sharedLinkHtml = TERSE_CARD_LISTING_HTML.replace(/href="\/events\/[^"]*"/g, 'href="/tickets"');
+  const sharedGroup = parser.extractRepeatedMultiEventStructureGroups(sharedLinkHtml)
+    .find(group => group.entries.length === 6);
+  assert.ok(sharedGroup, 'the shared-link cards still form a repeated structure group');
+  assert.deepEqual(parser.mapMultiEventGroupIdentityLinks(sharedGroup.entries),
+    [false, false, false, false, false, false]);
+  assert.equal(parser.buildMultiEventSegments(sharedLinkHtml, 'https://venue.example/events').length, 2,
+    'a group whose entries share one destination earns no coverage allowance');
+});
+
+test('an entry identity link is a real destination, query string included', () => {
+  const parser = createParser();
+
+  // Fragment-only, javascript: and mailto: targets are not destinations.
+  assert.equal(parser.extractMultiEventEntryIdentityLink('<a href="#">x</a><a href="/events/onyx/">ONYX</a>'),
+    '/events/onyx/');
+  assert.equal(parser.extractMultiEventEntryIdentityLink('<a href="javascript:void(0)">x</a><a href="/events/b-bar/">B BAR</a>'),
+    '/events/b-bar/');
+  assert.equal(parser.extractMultiEventEntryIdentityLink('<a href="mailto:a@b.c">mail</a>'), '');
+  assert.equal(parser.extractMultiEventEntryIdentityLink('<p>no links here</p>'), '');
+
+  // A fragment is not part of the destination; a query string IS — a listing
+  // that repeats one detail page per occurrence distinguishes its cards by
+  // query alone, and folding those together would erase real cards.
+  assert.equal(parser.extractMultiEventEntryIdentityLink('<a href="/events/b-bar/?occurrence=2026-08-06#top">B BAR</a>'),
+    '/events/b-bar/?occurrence=2026-08-06');
+  assert.deepEqual(parser.mapMultiEventGroupIdentityLinks([
+    { html: '<a href="/events/b-bar/?occurrence=2026-08-06">B BAR</a>' },
+    { html: '<a href="/events/b-bar/?occurrence=2026-08-13">B BAR</a>' }
+  ]), [true, true]);
+});
