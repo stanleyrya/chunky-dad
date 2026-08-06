@@ -15494,3 +15494,176 @@ test('parser promoter: an ambiguous event stays ambiguous — the parser does no
   assert.deepEqual(JSON.parse(JSON.stringify(event)), before,
     'refusing to guess is a decision, and the weakest rung must not overrule it');
 });
+
+// ---------------------------------------------------------------------------
+// The event's own page is the event's identity link (2026-08-06, Dallas Eagle
+// run 20260806-102824). Three separate ways the pipeline lost it:
+//   1. a curated venue homepage in parser metadata clobbered the whole
+//      identity field, so every event shipped pointing at the front door;
+//   2. the model files a venue's own event link under `tickets` (the prompt
+//      offers only `web` and `tickets`), and no URL rung compares website
+//      against ticketUrl — they all arbitrate one field at a time;
+//   3. a crawled single-event page never named itself, leaving the static
+//      root behind and killing the event-page-url dedup rung, which returns
+//      nothing for a domain root.
+
+test('static metadata website does not bury the page\'s own event URL on the same site', () => {
+  const core = createCore();
+  const event = core.applyFieldPriorities(
+    {
+      title: "Womxn's Night",
+      startDate: new Date('2026-08-29T02:00:00.000Z'),
+      url: 'https://www.thedallaseagle.com/events/womxns-night-5/'
+    },
+    { name: 'Dallas Eagle', metadata: { website: { value: 'https://www.thedallaseagle.com' } } },
+    {}
+  );
+
+  assert.equal(event.url, 'https://www.thedallaseagle.com/events/womxns-night-5/', 'page-derived event URL survives');
+  assert.equal(event.website, undefined, 'the bare homepage is not stamped over it');
+  assert.equal((event._staticFields || {}).website, undefined, 'and it is not recorded as a static field');
+});
+
+test('static metadata website still applies with nothing better, and across sites', () => {
+  const core = createCore();
+  const config = { name: 'Dallas Eagle', metadata: { website: { value: 'https://www.thedallaseagle.com' } } };
+
+  // Nothing page-derived to protect → the curated homepage is the best identity there is.
+  const bare = core.applyFieldPriorities(
+    { title: 'Bear and Twink Night', startDate: new Date('2026-08-15T02:00:00.000Z') }, config, {});
+  assert.equal(bare.website, 'https://www.thedallaseagle.com', 'curated homepage still stamped');
+
+  // A DIFFERENT site's deep link is not this venue's identity — the guard is
+  // same-site only, so curated config still wins exactly as before.
+  const crossSite = core.applyFieldPriorities(
+    {
+      title: 'Bear and Twink Night',
+      startDate: new Date('2026-08-15T02:00:00.000Z'),
+      url: 'https://www.eventbrite.com/e/bear-and-twink-tickets-1'
+    }, config, {});
+  assert.equal(crossSite.website, 'https://www.thedallaseagle.com', 'cross-site link does not disarm the stamp');
+});
+
+test('final build promotes a same-site "ticketUrl" that is really the event\'s own page', async () => {
+  const core = createFinalBuildCore();
+  const event = {
+    title: 'Bear and Twink Night',
+    startDate: new Date('2026-08-15T02:00:00.000Z'),
+    city: 'dallas',
+    website: 'https://www.thedallaseagle.com',
+    url: 'https://www.thedallaseagle.com',
+    ticketUrl: 'https://www.thedallaseagle.com/events/bear-and-twink-night/'
+  };
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(event, NEW_ACTION_ANALYSIS, {}, {});
+  } finally {
+    restore();
+  }
+
+  assert.equal(analyzed.website, 'https://www.thedallaseagle.com/events/bear-and-twink-night/', 'event page becomes the identity link');
+  assert.equal(analyzed.url, 'https://www.thedallaseagle.com/events/bear-and-twink-night/', 'url follows website — one canonical field');
+  assert.equal(analyzed.ticketUrl, undefined, 'it was never a ticket link');
+  assert.ok(lines.some(line => line.startsWith('🔗 LINKS: "Bear and Twink Night" ticketUrl https://www.thedallaseagle.com/events/bear-and-twink-night/ is a page on the venue\'s own site')),
+    `got: ${JSON.stringify(lines.filter(l => l.startsWith('🔗 LINKS:')))}`);
+});
+
+test('final build never promotes a real ticket vendor into the identity field', async () => {
+  const core = createFinalBuildCore();
+  // Same bare-homepage website as the Dallas shape, but the ticket link is a
+  // genuine cross-host vendor — exactly what #1614/#1622 fought to keep OUT
+  // of website/url, because it steals the card's favicon.
+  const event = {
+    title: 'BEEFMINCE MEET MARKET',
+    startDate: new Date('2026-08-15T02:00:00.000Z'),
+    city: 'dallas',
+    website: 'https://www.thedallaseagle.com',
+    ticketUrl: 'https://dice.fm/event/xyz-beefmince'
+  };
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(event, NEW_ACTION_ANALYSIS, {}, {});
+  } finally {
+    restore();
+  }
+
+  assert.equal(analyzed.website, 'https://www.thedallaseagle.com', 'identity link untouched');
+  assert.equal(analyzed.ticketUrl, 'https://dice.fm/event/xyz-beefmince', 'the vendor link stays a ticket link');
+  assert.equal(lines.some(line => line.includes('is a page on the venue\'s own site')), false, 'no promotion');
+});
+
+test('final build drops a same-site homepage parked in ticketUrl', async () => {
+  const core = createFinalBuildCore();
+  // Mirror shape found in the published corpus (chunk-party.com ×3,
+  // bearracuda.com ×1): the ticketUrl is the site's own front door while
+  // website already names the event. A homepage sells no tickets.
+  const core2 = core;
+  const event = {
+    title: 'CHUNK LONDON',
+    startDate: new Date('2026-08-15T02:00:00.000Z'),
+    city: 'london',
+    website: 'https://www.chunk-party.com/events/chunk-london-august/',
+    ticketUrl: 'https://www.chunk-party.com'
+  };
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core2.buildAnalyzedCalendarEvent(event, NEW_ACTION_ANALYSIS, {}, {});
+  } finally {
+    restore();
+  }
+
+  assert.equal(analyzed.ticketUrl, undefined, 'the homepage is not a ticket link');
+  assert.equal(analyzed.website, 'https://www.chunk-party.com/events/chunk-london-august/', 'identity link untouched');
+  assert.ok(lines.some(line => line.includes('it is the same site\'s homepage, not a ticket link')),
+    `got: ${JSON.stringify(lines.filter(l => l.startsWith('🔗 LINKS:')))}`);
+});
+
+test('a crawled single-event page names itself; a listing page does not', async () => {
+  const core = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    pageClassificationRules: [
+      { pattern: /venuehub\.example\/$/i, classification: 'multi-event-page' },
+      { pattern: /venuehub\.example\/events\//i, classification: 'event-page' }
+    ]
+  });
+  const display = createDisplayAdapterStub();
+  const day = new Date(Date.now() + 7 * 86400000);
+  const pages = {
+    // The listing: TWO events, so the page is not any one event's page.
+    'https://venuehub.example/': {
+      events: [
+        { title: 'Bear Tea Dance', bar: 'Hub Hall', startDate: day, url: 'https://venuehub.example' },
+        { title: 'Drag Brunch', bar: 'Hub Hall', startDate: new Date(day.getTime() + 86400000) }
+      ],
+      additionalLinks: ['https://venuehub.example/events/underwear-night']
+    },
+    // The detail page: ONE event, carrying only the venue's bare root.
+    'https://venuehub.example/events/underwear-night': {
+      events: [{
+        title: 'Underwear Night', bar: 'Hub Hall',
+        startDate: new Date(day.getTime() + 2 * 86400000),
+        url: 'https://venuehub.example'
+      }]
+    }
+  };
+  const { httpAdapter, parsers } = createCrawlHarness(pages);
+
+  const result = await core.processParser(
+    { name: 'Venue Hub', urls: ['https://venuehub.example/'], alwaysBear: true, ai: CRAWL_AI },
+    {}, httpAdapter, display, parsers
+  );
+
+  const byTitle = {};
+  for (const event of result.events) byTitle[event.title] = event;
+
+  assert.equal(byTitle['Underwear Night'].url, 'https://venuehub.example/events/underwear-night',
+    'the single-event page becomes that event\'s url');
+  assert.equal(byTitle['Bear Tea Dance'].url, 'https://venuehub.example',
+    'a listing page never overwrites its events\' urls');
+});

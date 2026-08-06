@@ -1153,6 +1153,22 @@ class SharedCore {
             normalized === platform || normalized.endsWith(`.${platform}`));
     }
 
+    // True when `candidate` is a bare domain root and `incumbent` is an
+    // event-specific page on the SAME site. Used by the identity fields
+    // (website/url), where a venue's front door must never replace the page
+    // that describes THIS event — the same ruling the "same-host deeper URL
+    // beats domain root" rung already makes inside
+    // resolveConflictDeterministically. Fails closed: either side unparseable,
+    // different sites, or a candidate that is itself pathed all return false.
+    isBareRootBuryingSameSiteEventPage(candidate, incumbent) {
+        const candidateParts = this.getUrlRuleParts(candidate);
+        const incumbentParts = this.getUrlRuleParts(incumbent);
+        if (!candidateParts || !incumbentParts) return false;
+        if (!this.areUrlHostsSameSite(candidateParts.host, incumbentParts.host)) return false;
+        const candidateIsRoot = candidateParts.segments.length === 0 && !candidateParts.hasQuery;
+        return candidateIsRoot && incumbentParts.segments.length > 0;
+    }
+
     // Query-string parameter lookup built on plain string splitting —
     // URLSearchParams does not exist in iOS JavaScriptCore (Scriptable).
     extractSearchParamValue(search, key) {
@@ -5292,6 +5308,27 @@ class SharedCore {
                             event._sourcePageUrl = url;
                         }
                     });
+                    // A page that describes exactly ONE event IS that event's
+                    // page, so it can name itself. The structured-data routes
+                    // already do this (JSON-LD and the JSON-API reader both set
+                    // url from the page they read); the AI-extraction route had
+                    // no equivalent, so a crawled detail page left `url` on
+                    // whatever the parser's static metadata supplied — the
+                    // venue's bare homepage. That also killed the
+                    // `event-page-url` dedup rung, which returns nothing for a
+                    // domain root, leaving these events to match on name+time
+                    // alone. Only fills a blank or replaces a same-site bare
+                    // root: a listing page (many events) is skipped by the
+                    // count, and a URL the page actually named is never
+                    // displaced.
+                    if (parsedEvents.length === 1) {
+                        const soleEvent = parsedEvents[0];
+                        const existingUrl = typeof soleEvent.url === 'string' ? soleEvent.url.trim() : '';
+                        if (!existingUrl || this.isBareRootBuryingSameSiteEventPage(existingUrl, url)) {
+                            soleEvent.url = url;
+                            console.log(`🔗 LINKS: "${soleEvent.title || 'event'}" takes its own page ${url} as its url${existingUrl ? ` (was ${existingUrl})` : ''} — one event on the page`);
+                        }
+                    }
                     // Cross-org crawl guard: a DISCOVERED page whose site curated
                     // data attributes to another promoter/parser contributes no
                     // events to this parser — that org has its own entry. Only
@@ -11370,6 +11407,27 @@ class SharedCore {
                     }
                     const resolvedValue = this.applyMetadataTemplate(selectedValue, event);
 
+                    // A curated venue/organizer homepage identifies the VENUE.
+                    // It is the event's identity only when the page itself gave
+                    // us nothing more specific. Observed 2026-08-06 (Dallas
+                    // Eagle, run 20260806-102824): the parser extracted
+                    // .../events/womxns-night-5/ into `url`, this block then
+                    // stamped the bare homepage over the whole identity field,
+                    // and every event on that calendar shipped pointing at the
+                    // venue's front door. url/website are ONE canonical field,
+                    // so the incumbent is whichever of the two currently holds
+                    // the page-derived value. Identity fields only — every
+                    // other metadata key clobbers exactly as before.
+                    if (key === 'website' || key === 'url') {
+                        const pageDerived = (typeof event.website === 'string' && event.website.trim())
+                            ? event.website.trim()
+                            : (typeof event.url === 'string' ? event.url.trim() : '');
+                        if (this.isBareRootBuryingSameSiteEventPage(resolvedValue, pageDerived)) {
+                            console.log(`🔗 LINKS: kept the page's own ${pageDerived} over curated ${resolvedValue} for "${event.title || 'event'}" — same site, and the deeper URL is the one that describes THIS event`);
+                            return;
+                        }
+                    }
+
                     // Check if "static" has priority for this field
                     if (priorityConfig && priorityConfig.priority && priorityConfig.priority.includes('static')) {
                         // Apply static value since it's in the priority list
@@ -11935,6 +11993,60 @@ class SharedCore {
                             ? `existing ticketUrl ${existingTicketUrl} kept`
                             : 'moved to ticketUrl';
                         console.log(`🔗 LINKS: cleared platform website ${platformWebsite} — a ticketing/social link is never the identity link (${parked}, website/url left empty) for "${analyzedEvent.title || 'event'}"`);
+                    }
+                }
+            }
+
+            // A "ticket" link on the venue's OWN site that sells nothing is
+            // not a ticket — it is the event's page, filed under the wrong
+            // name. Observed 2026-08-06 (Dallas Eagle, run 20260806-102824):
+            // Bear and Twink Night shipped with
+            //   website:   https://www.thedallaseagle.com          (front door)
+            //   ticketUrl: https://www.thedallaseagle.com/events/bear-and-twink-night/
+            // The prompt offers the model only `web` and `tickets`, so a
+            // venue's own event link with a TICKETS button beside it lands in
+            // `tickets` and nothing downstream can notice: every URL rung
+            // arbitrates two candidates for the SAME field and none compares
+            // website against ticketUrl.
+            //
+            // Fails closed in both directions. A known ticketing/social
+            // platform host is never promoted (that is the vendor-stealing-
+            // the-favicon defect #1614 and #1622 fixed, and this must not
+            // reintroduce it). Promotion additionally requires the link to be
+            // on the same site we actually crawled, so a real vendor missing
+            // from both host lists still stays put.
+            {
+                const canonicalWebsite = typeof analyzedEvent.website === 'string' && analyzedEvent.website.trim()
+                    ? analyzedEvent.website.trim()
+                    : (typeof analyzedEvent.url === 'string' ? analyzedEvent.url.trim() : '');
+                const ticketUrl = typeof analyzedEvent.ticketUrl === 'string' ? analyzedEvent.ticketUrl.trim() : '';
+                const ticketParts = ticketUrl ? this.getUrlRuleParts(ticketUrl) : null;
+                const isVendorHost = ticketParts
+                    && (this.isKnownTicketingPlatformHost(ticketParts.host) || isPlatformIdentityHost(ticketParts.host));
+                if (ticketParts && !isVendorHost) {
+                    const sourcePageHost = this.getHostFromUrl(
+                        typeof analyzedEvent._sourcePageUrl === 'string' ? analyzedEvent._sourcePageUrl : ''
+                    );
+                    const websiteHost = this.getHostFromUrl(canonicalWebsite);
+                    const onCrawledSite =
+                        (websiteHost && this.areUrlHostsSameSite(ticketParts.host, websiteHost))
+                        || (sourcePageHost && this.areUrlHostsSameSite(ticketParts.host, sourcePageHost));
+                    const buriesEventPage = this.isBareRootBuryingSameSiteEventPage(canonicalWebsite, ticketUrl);
+                    if (onCrawledSite && (!canonicalWebsite || buriesEventPage)) {
+                        analyzedEvent.website = ticketUrl;
+                        analyzedEvent.url = ticketUrl;
+                        delete analyzedEvent.ticketUrl;
+                        notesNeedRebuild = true;
+                        console.log(`🔗 LINKS: "${analyzedEvent.title || 'event'}" ticketUrl ${ticketUrl} is a page on the venue's own site, not a ticket vendor — promoted to website/url${canonicalWebsite ? ` over ${canonicalWebsite}` : ''}`);
+                    } else if (canonicalWebsite && this.isBareRootBuryingSameSiteEventPage(ticketUrl, canonicalWebsite)) {
+                        // The mirror shape: the ticketUrl is the same site's
+                        // bare front door while website already names the
+                        // event. A homepage sells no tickets, so the field is
+                        // noise (corpus 2026-08-06: chunk-party.com ×3 and
+                        // bearracuda.com ×1 stored exactly this way).
+                        delete analyzedEvent.ticketUrl;
+                        notesNeedRebuild = true;
+                        console.log(`🔗 LINKS: dropped ticketUrl ${ticketUrl} for "${analyzedEvent.title || 'event'}" — it is the same site's homepage, not a ticket link`);
                     }
                 }
             }
