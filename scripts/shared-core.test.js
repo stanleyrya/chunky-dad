@@ -15667,3 +15667,377 @@ test('a crawled single-event page names itself; a listing page does not', async 
   assert.equal(byTitle['Bear Tea Dance'].url, 'https://venuehub.example',
     'a listing page never overwrites its events\' urls');
 });
+
+// ---------------------------------------------------------------------------
+// NetworkResilience — transient-failure retry + time-based give-up
+//
+// Every number below comes from the 241-run log corpus plus the owner's one
+// hard constraint ("gaps between subway stations is a few mins long"):
+//   * healthy runs go at most ~15s (p99) / ~30s (p99.9) between successful
+//     network calls, so a 300s give-up window has a 10x margin;
+//   * the longest failure burst ever recorded was 134s, and it was one bad
+//     host, not an outage — hence the two-distinct-hosts requirement;
+//   * the AI client timeout is 120s, so any give-up window under ~250s could
+//     be tripped by one hung request.
+//
+// Not one of these tests sleeps: the clock and the timer are injected, so the
+// whole 5-minute ladder is exercised in microseconds.
+// ---------------------------------------------------------------------------
+
+const { NetworkResilience } = require('./shared-core');
+
+// A fake timeline. `sleep` advances the clock by exactly what was asked for,
+// which is the "no suspension" case; `suspendBy` simulates iOS freezing the
+// app mid-wait by adding extra wall time the sleeper never asked for.
+function createTimeline({ suspendBy = 0 } = {}) {
+  const timeline = {
+    nowMs: 1000000,
+    sleeps: [],
+    logs: [],
+    now: () => timeline.nowMs,
+    advance: (ms) => { timeline.nowMs += ms; },
+    sleep: async (ms) => {
+      timeline.sleeps.push(ms);
+      timeline.nowMs += ms + suspendBy;
+    },
+    log: (message) => { timeline.logs.push(message); }
+  };
+  return timeline;
+}
+
+function createResilience(timeline, overrides = {}) {
+  const classifierCore = createCore();
+  return new NetworkResilience({
+    classifyRetryable: (error) => classifierCore.isRetryableFailure(error),
+    sleep: timeline.sleep,
+    now: timeline.now,
+    log: timeline.log,
+    ...overrides
+  });
+}
+
+function timeoutError() {
+  return new Error('POST request failed: The request timed out.');
+}
+
+test('NetworkResilience rides out a minutes-long outage on the backoff ladder', async () => {
+  const timeline = createTimeline();
+  const net = createResilience(timeline);
+  let attempts = 0;
+
+  const value = await net.run('page fetch', 'https://example.com/a', async () => {
+    attempts += 1;
+    if (attempts < 4) throw timeoutError();
+    return 'ok';
+  });
+
+  assert.equal(value, 'ok');
+  assert.equal(attempts, 4);
+  assert.deepEqual(timeline.sleeps, [5000, 15000, 30000],
+    'the ladder is measured in tens of seconds, not milliseconds — a subway gap lasts minutes');
+  const totalPatience = NetworkResilience.DEFAULT_RETRY_DELAYS_MS.reduce((a, b) => a + b, 0);
+  assert.ok(totalPatience >= 180000 && totalPatience <= 300000,
+    `full patience is ${totalPatience}ms — it has to span an inter-station gap without outliving the give-up window`);
+  assert.ok(timeline.logs.some(line => line.includes('waiting 5s before attempt 2')),
+    'a silent 90-second pause reads as a hang and gets the run killed — every wait announces itself');
+});
+
+test('NetworkResilience never adds latency to a permanent failure', async () => {
+  const timeline = createTimeline();
+  const net = createResilience(timeline);
+  let attempts = 0;
+
+  await assert.rejects(
+    net.run('page fetch', 'https://example.com/gone', async () => {
+      attempts += 1;
+      throw new Error('HTTP request failed for x: HTTP 410 error from x');
+    }),
+    /410/
+  );
+
+  assert.equal(attempts, 1, '410 Gone must still fail fast');
+  assert.deepEqual(timeline.sleeps, [], 'not one millisecond of backoff is spent on a permanent failure');
+});
+
+test('NetworkResilience gives up on elapsed time, not on a failure count', async () => {
+  const timeline = createTimeline();
+  const net = createResilience(timeline, { retryDelaysMs: [1000] });
+
+  // A tunnel produces a burst of failures within seconds. A consecutive-failure
+  // counter would stop the run here; the time-based rule must not.
+  for (let i = 0; i < 12; i++) {
+    const host = i % 2 === 0 ? 'https://a.example/x' : 'https://b.example/x';
+    await assert.rejects(net.run('page fetch', host, async () => { throw timeoutError(); }));
+  }
+  assert.equal(net.isGivenUp(), false,
+    'twelve failures in seconds is a tunnel, not an outage — counting failures trips at exactly the wrong moment');
+
+  // Same failures, but now five minutes of wall clock have passed with nothing
+  // succeeding anywhere.
+  timeline.advance(NetworkResilience.DEFAULT_GIVE_UP_AFTER_MS);
+  await assert.rejects(
+    net.run('page fetch', 'https://a.example/x', async () => { throw timeoutError(); }),
+    (error) => NetworkResilience.isGiveUpError(error)
+  );
+  assert.equal(net.isGivenUp(), true);
+  assert.ok(net.getGiveUpReport().hosts.length >= 2);
+  assert.ok(timeline.logs.some(line => line.includes('GIVING UP')));
+});
+
+test('NetworkResilience: any success resets the give-up clock', async () => {
+  const timeline = createTimeline();
+  const net = createResilience(timeline, { maxOperationMs: 0 });
+
+  for (let i = 0; i < 3; i++) {
+    await assert.rejects(net.run('page fetch', `https://h${i}.example/x`, async () => { throw timeoutError(); }));
+  }
+  timeline.advance(NetworkResilience.DEFAULT_GIVE_UP_AFTER_MS - 1000);
+  assert.equal(await net.run('page fetch', 'https://ok.example/x', async () => 'fine'), 'fine');
+
+  timeline.advance(NetworkResilience.DEFAULT_GIVE_UP_AFTER_MS - 1000);
+  for (let i = 0; i < 3; i++) {
+    await assert.rejects(net.run('page fetch', `https://h${i}.example/x`, async () => { throw timeoutError(); }));
+  }
+  assert.equal(net.isGivenUp(), false,
+    'the clock measures time since the last SUCCESS — one success buys the full window again');
+});
+
+test('NetworkResilience: one dead host can never stop the run', async () => {
+  const timeline = createTimeline();
+  const net = createResilience(timeline, { maxOperationMs: 0 });
+
+  // An hour of nothing but this one host failing, with no other host attempted.
+  for (let i = 0; i < 30; i++) {
+    timeline.advance(120000);
+    await assert.rejects(net.run('image download', 'https://cdn.dead.example/a.jpg', async () => { throw timeoutError(); }));
+  }
+
+  assert.equal(net.isGivenUp(), false,
+    'a flaky image CDN is not an offline phone — give-up needs failures from at least two distinct hosts');
+});
+
+test('NetworkResilience: a failure the SERVER answered proves the network is up', async () => {
+  const timeline = createTimeline();
+  const net = createResilience(timeline, { maxOperationMs: 0 });
+
+  for (let i = 0; i < 10; i++) {
+    timeline.advance(120000);
+    const host = i % 2 === 0 ? 'https://a.example/x' : 'https://b.example/x';
+    await assert.rejects(net.run('page fetch', host, async () => {
+      throw new Error('HTTP request failed for x: HTTP 403 error from x');
+    }));
+  }
+
+  assert.equal(net.isGivenUp(), false,
+    'a 403 bot wall means packets are flowing — bot-hostile hosts must never look like a subway tunnel');
+});
+
+test('NetworkResilience reads an oversleeping wait as app suspension, not as an outage', async () => {
+  // iOS suspends Scriptable's JavaScript when the app is backgrounded, so an
+  // await on a 5s timer can return with 20 minutes of wall clock behind it.
+  // That is the owner walking away, not the network dying.
+  const timeline = createTimeline({ suspendBy: 20 * 60 * 1000 });
+  const net = createResilience(timeline, { retryDelaysMs: [5000, 5000, 5000] });
+
+  await assert.rejects(net.run('page fetch', 'https://a.example/x', async () => { throw timeoutError(); }));
+  await assert.rejects(net.run('page fetch', 'https://b.example/x', async () => { throw timeoutError(); }));
+
+  assert.equal(net.isGivenUp(), false,
+    'an hour of wall clock spent suspended must not be charged to the give-up window');
+  assert.ok(net.suspensionsDetected > 0);
+  assert.ok(timeline.logs.some(line => line.includes('backgrounded')));
+});
+
+test('NetworkResilience: retry patience is a time budget, so a hanging host cannot own the run', async () => {
+  // Corpus: one image download hung 120881ms before timing out. Six attempts of
+  // that plus the full ladder would be 12+ minutes on a single image.
+  const timeline = createTimeline();
+  const net = createResilience(timeline);
+  let attempts = 0;
+
+  await assert.rejects(net.run('image download', 'https://slow.example/a.jpg', async () => {
+    attempts += 1;
+    timeline.advance(120000);
+    throw timeoutError();
+  }));
+
+  assert.ok(attempts <= 3, `a host that hangs for the client timeout got ${attempts} attempts — the budget must cut it short`);
+  const spent = timeline.sleeps.reduce((a, b) => a + b, 0) + attempts * 120000;
+  assert.ok(spent <= NetworkResilience.DEFAULT_MAX_OPERATION_MS + 120000,
+    'one operation must not be able to spend more than its budget plus one in-flight attempt');
+});
+
+test('NetworkResilience: a host that burned its whole budget stops costing minutes', async () => {
+  const timeline = createTimeline();
+  const net = createResilience(timeline);
+
+  await assert.rejects(net.run('image download', 'https://cdn.example/1.jpg', async () => { throw timeoutError(); }));
+  const sleepsAfterFirst = timeline.sleeps.length;
+  assert.ok(sleepsAfterFirst > 0);
+
+  await assert.rejects(net.run('image download', 'https://cdn.example/2.jpg', async () => { throw timeoutError(); }));
+  assert.equal(timeline.sleeps.length, sleepsAfterFirst,
+    'the second image on the same dead host gets one attempt and no waiting');
+
+  // Anything succeeding anywhere means the network came back — full patience returns.
+  await net.run('page fetch', 'https://other.example/', async () => 'ok');
+  await assert.rejects(net.run('image download', 'https://cdn.example/3.jpg', async () => { throw timeoutError(); }));
+  assert.ok(timeline.sleeps.length > sleepsAfterFirst, 'a success anywhere restores every host\'s patience');
+});
+
+test('NetworkResilience: giving up is sticky and instant for every later call', async () => {
+  const timeline = createTimeline();
+  const net = createResilience(timeline, { maxOperationMs: 0 });
+
+  for (const host of ['https://a.example/x', 'https://b.example/x', 'https://c.example/x']) {
+    await assert.rejects(net.run('page fetch', host, async () => { throw timeoutError(); }));
+  }
+  timeline.advance(NetworkResilience.DEFAULT_GIVE_UP_AFTER_MS);
+  await assert.rejects(net.run('page fetch', 'https://d.example/x', async () => { throw timeoutError(); }));
+  assert.equal(net.isGivenUp(), true);
+
+  let called = false;
+  await assert.rejects(
+    net.run('page fetch', 'https://e.example/x', async () => { called = true; return 'ok'; }),
+    (error) => NetworkResilience.isGiveUpError(error) && error.retryable === true
+  );
+  assert.equal(called, false, 'once the run has given up, nothing else touches the network');
+});
+
+test('NetworkResilience give-up errors must never poison the permanent failure cache', async () => {
+  const timeline = createTimeline();
+  const net = createResilience(timeline);
+  net.giveUpReport = { idleSeconds: 300, failures: 5, hosts: ['a', 'b'] };
+  const core = createCore();
+  const saved = [];
+  const httpAdapter = { saveFailureNote: async (url) => { saved.push(url); } };
+
+  await core.saveNonRetryableFailureNote(httpAdapter, 'https://a.example/x', net.buildGiveUpError(), 'crawl-page');
+
+  assert.deepEqual(saved, [],
+    'losing service is transient by definition — a give-up must never be cached as a permanent no-retry failure');
+});
+
+test('isRetryableFailure trusts a status the adapter stamped over the message it wrote', () => {
+  const core = createCore();
+  // The real shape from 94 of the 95 image failures in the corpus: the host
+  // answered 200 with bytes that were not an image, but the adapter's wrapper
+  // text matches the /failed to fetch/ pattern.
+  const decodeFailure = new Error('Failed to fetch image as base64: Cannot parse response to an image.');
+  assert.equal(core.isRetryableFailure(decodeFailure), true,
+    'message alone cannot tell a decode failure from a dead network');
+  decodeFailure.statusCode = 200;
+  assert.equal(core.isRetryableFailure(decodeFailure), false,
+    'the server answered 200 — retrying gets the same bytes back, forever');
+
+  const serverError = new Error('Failed to fetch image as base64: whatever');
+  serverError.statusCode = 503;
+  assert.equal(core.isRetryableFailure(serverError), true, '5xx is still worth another try');
+
+  const explicit = new Error('anything');
+  explicit.retryable = false;
+  explicit.statusCode = 503;
+  assert.equal(core.isRetryableFailure(explicit), false, 'an explicit retryable flag still outranks everything');
+});
+
+test('processEvents stamps a truncated run and stops starting parsers', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  core.networkResilience = {
+    isGivenUp: () => true,
+    getGiveUpReport: () => ({ idleSeconds: 312, failures: 6, hosts: ['a.example', 'b.example'] })
+  };
+  const config = { parsers: [{ name: 'First', urls: [] }, { name: 'Second', urls: [] }] };
+
+  const results = await core.processEvents(config, {}, display, STUB_PARSERS);
+
+  assert.deepEqual(results.parserResults, [], 'no parser starts once the run has given up on the network');
+  assert.ok(results.networkTruncated, 'the run must carry the truncation forward — the calendar write reads it');
+  assert.equal(results.networkTruncated.idleSeconds, 312);
+  assert.deepEqual(results.networkTruncated.skippedParsers, ['First', 'Second']);
+  assert.ok(display.logs.some(line => line.includes('RUN TRUNCATED') && line.includes('will NOT be written to the calendar')),
+    'the owner must never mistake a network-truncated run for a complete one');
+});
+
+test('processEvents leaves a healthy run completely untouched', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  core.networkResilience = { isGivenUp: () => false, getGiveUpReport: () => null };
+  const config = { parsers: [{ name: 'First', urls: [] }] };
+
+  const results = await core.processEvents(config, {}, display, STUB_PARSERS);
+
+  assert.deepEqual(results.parserResults.map(r => r.name), ['First']);
+  assert.equal(results.networkTruncated, undefined, 'a healthy run carries no truncation marker at all');
+});
+
+test('end to end: losing service mid-crawl abandons the queue and truncates the run', async () => {
+  // Wires the real NetworkResilience behind a real crawl, the way the adapter
+  // does on the phone: every fetch goes through the one choke point.
+  const timeline = createTimeline();
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const net = createResilience(timeline);
+  core.networkResilience = net;
+
+  const attemptedUrls = new Set();
+  const httpAdapter = {
+    fetchData: async (url) => net.run('page fetch', url, async () => {
+      attemptedUrls.add(url);
+      // The tunnel: nothing at all gets through, on any host.
+      throw new Error('HTTP request failed for x: The network connection was lost.');
+    })
+  };
+  const parsers = { 'ai-web': { parseEvents: () => ({ events: [], additionalLinks: [] }) } };
+  const config = {
+    parsers: [
+      { name: 'First', urls: ['https://a.example/1', 'https://a.example/2', 'https://b.example/1', 'https://b.example/2'], ai: CRAWL_AI },
+      { name: 'Second', urls: ['https://c.example/1'], ai: CRAWL_AI }
+    ]
+  };
+
+  const results = await core.processEvents(config, httpAdapter, display, parsers);
+
+  assert.ok(net.isGivenUp(), 'a tunnel that outlasts the give-up window has to stop the run');
+  assert.ok(results.networkTruncated, 'the truncation is what the calendar write reads to refuse itself');
+  assert.deepEqual(results.networkTruncated.skippedParsers, ['Second'],
+    'the parser that never got a chance is named, so a short run is obviously short');
+  assert.ok(attemptedUrls.size < 5,
+    `the crawl queue was abandoned rather than walked to the end (reached ${attemptedUrls.size} of 5 URLs)`);
+  assert.equal(attemptedUrls.has('https://c.example/1'), false,
+    'the second parser was never started, so its URL was never touched');
+  assert.ok(display.logs.some(line => line.includes('RUN TRUNCATED')));
+  assert.ok(display.logs.some(line => line.includes('Network gave up — abandoning')));
+});
+
+test('isRetryableFailure recognises the wordings iOS actually produces when service drops', () => {
+  const core = createCore();
+  // Verbatim from the 241-run corpus and from NSURLError. Before this, only
+  // "The request timed out." was recognised — the other three were classified
+  // PERMANENT, which skipped every retry AND wrote the URL into the no-retry
+  // failure cache, poisoning it for later runs.
+  const transient = [
+    'HTTP request failed for x: The network connection was lost.',
+    'HTTP request failed for x: A server with the specified hostname could not be found.',
+    'HTTP request failed for x: The Internet connection appears to be offline.',
+    'HTTP request failed for x: Could not connect to the server.',
+    'HTTP request failed for x: The request timed out.'
+  ];
+  for (const message of transient) {
+    assert.equal(core.isRetryableFailure(new Error(message)), true, message);
+  }
+
+  // The permanent shapes stay permanent — a looser classifier would start
+  // buying minutes of backoff for the 403/404/410 walls that fill the corpus.
+  const permanent = [
+    'HTTP request failed for x: Cannot parse response to a string.',
+    'HTTP request failed for x: Empty response from https://a',
+    'HTTP request failed for x: HTTP 404 error from https://a',
+    'HTTP request failed for x: HTTP 410 error from https://a',
+    'HTTP request failed for x: HTTP 403 error from https://a',
+    'HTTP request failed for x: unsupported URL'
+  ];
+  for (const message of permanent) {
+    assert.equal(core.isRetryableFailure(new Error(message)), false, message);
+  }
+});

@@ -1471,13 +1471,72 @@ class ScriptableAdapter {
     return Number.isFinite(statusCode) ? statusCode : null;
   }
 
+  // ---------------------------------------------------------------------
+  // NETWORK RESILIENCE — the run's one choke point
+  // ---------------------------------------------------------------------
+  // Every byte the scraper pulls goes through exactly three methods on this
+  // adapter (fetchData / postJson / fetchImageAsBase64), so all three delegate
+  // to withNetworkResilience and nothing else in the codebase grows a retry.
+  // The POLICY — what counts as transient, how long to wait, when to stop the
+  // run — lives in the platform-pure SharedCore.NetworkResilience; this method
+  // supplies only the two things iOS owns: a real clock and a real timer.
+  //
+  // Lazily built so an adapter constructed for HTML rendering or a URL-input
+  // preview pays nothing. The orchestrator hands the same instance to
+  // SharedCore so the crawl loop can see the give-up verdict.
+  getNetworkResilience() {
+    if (this.networkResilience === undefined || this.networkResilience === null) {
+      // isRetryableFailure is an instance method that touches no instance
+      // state; this bare core exists only to reuse it. There is deliberately
+      // no second classifier anywhere in this feature.
+      const classifierCore = new SharedCore(this.config?.cities || {}, {
+        eventSchema: SharedEventSchema,
+      });
+      this.networkResilience = new SharedCore.NetworkResilience({
+        classifyRetryable: (error) => classifierCore.isRetryableFailure(error),
+        sleep: (delayMs) => this.sleepForNetworkRetry(delayMs),
+        now: () => Date.now(),
+        log: (message) => console.log(message),
+      });
+    }
+    return this.networkResilience;
+  }
+
+  // Same ladder the reverse-geocode rate limiter uses: setTimeout where it
+  // exists, Scriptable's Timer otherwise, resolve immediately if neither does
+  // (which is what makes this harmless under test doubles).
+  sleepForNetworkRetry(delayMs) {
+    return new Promise((resolve) => {
+      if (typeof setTimeout !== "undefined") {
+        setTimeout(resolve, delayMs);
+      } else if (typeof Timer !== "undefined") {
+        const timer = new Timer();
+        timer.timeInterval = delayMs;
+        timer.schedule(() => resolve());
+      } else {
+        resolve();
+      }
+    });
+  }
+
+  async withNetworkResilience(label, url, operation) {
+    return this.getNetworkResilience().run(label, url, operation);
+  }
+
   // Default maxDimension of 1024 matches what the OCR overflow-retry path uses:
   // first attempts at ~1568px reliably overflowed the vision model's context
   // (0 tokens, finish_reason "length") and only succeeded after retrying ≤1024,
   // so every large image paid a wasted round trip.
   async fetchImageAsBase64(url, timeoutSeconds = 30, maxDimension = 1024) {
+    return this.withNetworkResilience("image download", url, () =>
+      this.fetchImageAsBase64Once(url, timeoutSeconds, maxDimension),
+    );
+  }
+
+  async fetchImageAsBase64Once(url, timeoutSeconds = 30, maxDimension = 1024) {
+    let request = null;
     try {
-      const request = new Request(url);
+      request = new Request(url);
       request.timeoutInterval = timeoutSeconds;
       let image = await request.loadImage();
       // Vision-model image tokens scale with pixel count, not file size. Oversized
@@ -1503,11 +1562,32 @@ class ScriptableAdapter {
       const jpegData = Data.fromJPEG(image);
       return jpegData.toBase64String();
     } catch (error) {
-      throw new Error(`Failed to fetch image as base64: ${error.message}`);
+      const wrapped = new Error(
+        `Failed to fetch image as base64: ${error.message}`,
+      );
+      // Ground truth about what actually happened, stamped where it is known.
+      // If the request carries a response the host ANSWERED, so this is not a
+      // connectivity failure — it is bytes that would not decode (94 of the 95
+      // image failures across 241 run logs are "Cannot parse response to an
+      // image" behind a perfectly healthy 200). The wrapper text above matches
+      // isRetryableFailure's /failed to fetch/ pattern, so without this stamp
+      // every one of them would buy minutes of pointless backoff.
+      const responseStatus =
+        request && request.response ? request.response.statusCode : null;
+      if (Number.isFinite(responseStatus)) {
+        wrapped.statusCode = responseStatus;
+      }
+      throw wrapped;
     }
   }
 
   async postJson(url, payload, options = {}) {
+    return this.withNetworkResilience("AI/POST request", url, () =>
+      this.postJsonOnce(url, payload, options),
+    );
+  }
+
+  async postJsonOnce(url, payload, options = {}) {
     try {
       const request = new Request(url);
       request.method = "POST";
@@ -1585,47 +1665,60 @@ class ScriptableAdapter {
         }
       }
 
-      const request = new Request(url);
-      request.method = options.method || "GET";
-      request.headers = {
-        "User-Agent": this.config.userAgent,
-        Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        ...options.headers,
-      };
+      // Only the round trip is retried — the cache read above is not network
+      // and must never be re-run (nor counted as a network success) just
+      // because the fetch behind it needs another attempt.
+      const responseData = await this.withNetworkResilience(
+        "page fetch",
+        url,
+        async () => {
+          const request = new Request(url);
+          request.method = options.method || "GET";
+          request.headers = {
+            "User-Agent": this.config.userAgent,
+            Accept:
+              "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            ...options.headers,
+          };
 
-      if (options.body) {
-        request.body = options.body;
+          if (options.body) {
+            request.body = options.body;
+          }
+
+          const response = await request.loadString();
+
+          // Check response status
+          const statusCode = request.response
+            ? request.response.statusCode
+            : 200;
+
+          if (statusCode >= 400) {
+            throw new Error(`HTTP ${statusCode} error from ${url}`);
+          }
+
+          if (response && response.length > 0) {
+            return {
+              html: response,
+              url: url,
+              statusCode: statusCode,
+              headers: request.response ? request.response.headers : {},
+            };
+          }
+          console.error(`📱 Scriptable: ✗ Empty response from ${url}`);
+          throw new Error(`Empty response from ${url}`);
+        },
+      );
+
+      if (canUseCache && isCacheableResponse(responseData)) {
+        await this.writeCachedPage(url, responseData, pageCacheConfig);
       }
 
-      const response = await request.loadString();
-
-      // Check response status
-      const statusCode = request.response ? request.response.statusCode : 200;
-
-      if (statusCode >= 400) {
-        throw new Error(`HTTP ${statusCode} error from ${url}`);
-      }
-
-      if (response && response.length > 0) {
-        const responseData = {
-          html: response,
-          url: url,
-          statusCode: statusCode,
-          headers: request.response ? request.response.headers : {},
-        };
-
-        if (canUseCache && isCacheableResponse(responseData)) {
-          await this.writeCachedPage(url, responseData, pageCacheConfig);
-        }
-
-        return responseData;
-      } else {
-        console.error(`📱 Scriptable: ✗ Empty response from ${url}`);
-        throw new Error(`Empty response from ${url}`);
-      }
+      return responseData;
     } catch (error) {
-      if (error?.cachedFailure) {
+      // Both of these carry decisions on the error object itself, so rewrapping
+      // would erase them: cachedFailure carries `retryable: false`, and a
+      // give-up carries the marker the crawl loop reads to stop the run.
+      if (error?.cachedFailure || error?.networkGiveUp) {
         throw error;
       }
       const errorMessage = `📱 Scriptable: ✗ HTTP request failed for ${url}: ${error.message}`;
@@ -5793,8 +5886,13 @@ class ScriptableAdapter {
 
         const globalDryRun = results.config?.config?.dryRun;
         const hasActiveEvents = eventsFromActiveParsers.length > 0;
+        // The interactive path is where the phone actually writes the calendar
+        // (the orchestrator only writes headless), so the truncated-run refusal
+        // has to be repeated here or a half-scraped run could still be saved
+        // with one tap. The results sheet above has already been shown.
+        const networkTruncated = Boolean(results.networkTruncated);
 
-        if (!globalDryRun && hasActiveEvents) {
+        if (!globalDryRun && !networkTruncated && hasActiveEvents) {
           console.log(
             `📱 Scriptable: Prompting for calendar execution (${eventsFromActiveParsers.length} events)`,
           );
@@ -5807,6 +5905,10 @@ class ScriptableAdapter {
           // Writes that threw are run faults — surface them in the saved run
           // JSON instead of leaving `errors: []` next to `calendarEvents: 0`.
           this.recordCalendarWriteFailures(results);
+        } else if (networkTruncated) {
+          console.log(
+            `📱 Scriptable: 🛑 Skipping execution prompt — this run was TRUNCATED by network loss (${results.networkTruncated.idleSeconds}s unreachable). Nothing will be written to the calendar; rerun with service.`,
+          );
         } else {
           const reason = globalDryRun ? "global dry run" : "no active events";
           console.log(`📱 Scriptable: Skipping execution prompt (${reason})`);
@@ -5910,6 +6012,8 @@ class ScriptableAdapter {
       runInsights,
       results,
     );
+    const networkTruncationBannerHtml =
+      this.buildNetworkTruncationBannerHtml(results);
     const headerLogoData = await this.loadHeaderLogoData();
     const headerLogoSrc = headerLogoData || HEADER_LOGO_URL;
     // Async section (reads the gathering-only venue queue for badge state),
@@ -7217,6 +7321,7 @@ class ScriptableAdapter {
     </style>
 </head>
 <body>
+    ${networkTruncationBannerHtml}
     <div class="header">
         <div class="header-content">
             <img src="${headerLogoSrc}" 
@@ -8707,6 +8812,29 @@ class ScriptableAdapter {
         summary: null,
       };
     }
+  }
+
+  // Full-width, unmissable, above everything: a run the network cut short must
+  // never be mistaken for a complete one. It sits ABOVE the header rather than
+  // inside it because the header scrolls past and the stat tiles below read
+  // like a finished run. Empty string on a healthy run, so nothing changes.
+  buildNetworkTruncationBannerHtml(results) {
+    const truncation = results && results.networkTruncated;
+    if (!truncation) return "";
+    const hosts = Array.isArray(truncation.hosts) ? truncation.hosts : [];
+    const skipped = Array.isArray(truncation.skippedParsers)
+      ? truncation.skippedParsers
+      : [];
+    const skippedLine =
+      skipped.length > 0
+        ? `<div style="margin-top:6px; font-weight:400;">Never even started: ${this.escapeHtml(skipped.join(", "))}</div>`
+        : "";
+    return `<div style="background:#b3261e; color:#fff; padding:16px 18px; border-radius:12px; margin-bottom:16px; font-size:15px; font-weight:700; line-height:1.45; box-shadow:0 2px 10px rgba(0,0,0,0.25);">
+        🛑 INCOMPLETE RUN — stopped by network loss
+        <div style="margin-top:6px; font-weight:400;">Nothing reached the network for ${this.escapeHtml(String(truncation.idleSeconds))}s (${this.escapeHtml(String(truncation.failures))} failed calls across ${hosts.length} host${hosts.length === 1 ? "" : "s"}${hosts.length > 0 ? `: ${this.escapeHtml(hosts.join(", "))}` : ""}).</div>
+        <div style="margin-top:6px; font-weight:400;">These results are PARTIAL and <strong>nothing has been written to the calendar</strong>. Rerun with service — every page and OCR result already fetched is cached, so it picks up from here.</div>
+        ${skippedLine}
+    </div>`;
   }
 
   // One-line run-health badge for the results-UI header, derived from the same
