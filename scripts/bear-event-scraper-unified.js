@@ -253,6 +253,15 @@ class BearEventScraperOrchestrator {
                 });
             }
 
+            // Network resilience: the adapter owns the retry/give-up state
+            // because it owns the timers, but the crawl and parser loops in
+            // shared-core have to see the same verdict to stop a doomed run.
+            // One instance, shared. Adapters without it (web) leave core null
+            // and behave exactly as before.
+            if (typeof finalAdapter.getNetworkResilience === 'function') {
+                sharedCore.networkResilience = finalAdapter.getNetworkResilience();
+            }
+
             // Curated bar data: the website's merged copy is fresher than any
             // local scraper-bars.js the moment a bar edit lands. Refresh ALL
             // cities up front (null cityKeys — the scraper can't know its
@@ -352,6 +361,12 @@ class BearEventScraperOrchestrator {
 
                 // Check if we should add to calendar
                 const isDryRun = Boolean(config.config?.dryRun);
+                // A run the network truncated is NOT a run. "I don't want
+                // partial runs… I will rerun when I can" — so it is refused
+                // here exactly like a dry run, while everything below still
+                // renders so the owner can see what was found before the
+                // service dropped. The results UI gate mirrors this.
+                const networkTruncated = Boolean(results.networkTruncated);
 
                 // Always prepare events for analysis (even in dry run mode) to show action types
                 // Perform cross-parser deduplication to merge events from different parsers
@@ -392,7 +407,11 @@ class BearEventScraperOrchestrator {
                     console.log('🐻 Orchestrator: Automation run detected - executing without UI prompt');
                 }
 
-                if (!isDryRun && typeof finalAdapter.executeCalendarActions === 'function' && analyzedEvents) {
+                if (networkTruncated) {
+                    const truncation = results.networkTruncated;
+                    console.error(`🐻 Orchestrator: 🛑 NETWORK-TRUNCATED RUN — refusing the calendar write. The network was unreachable for ${truncation.idleSeconds}s (${truncation.failures} failures across ${truncation.hosts.length} hosts). Nothing was written; rerun when you have service and the cache will pick up where this stopped.`);
+                    results.errors.push(`Run truncated: network unreachable for ${truncation.idleSeconds}s — calendar write refused, nothing was saved`);
+                } else if (!isDryRun && typeof finalAdapter.executeCalendarActions === 'function' && analyzedEvents) {
                     if (hasDisplay && !isWidget) {
                         // If we have a display (not widget), show results first and let user decide
                         console.log('🐻 Orchestrator: Display mode - review results before execution');

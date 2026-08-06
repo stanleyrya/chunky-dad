@@ -7028,3 +7028,95 @@ test('presentReviewResults installs shouldAllowRequest before loadHTML too', asy
     delete global.WebView;
   }
 });
+
+// ---------------------------------------------------------------------------
+// Network resilience: the adapter is the one choke point (fetchData / postJson
+// / fetchImageAsBase64 all funnel through withNetworkResilience) and the one
+// place that knows what actually happened on the wire.
+// ---------------------------------------------------------------------------
+
+test('fetchImageAsBase64 stamps the status the host answered with, so a non-image 200 is not retried', async () => {
+  const adapter = buildAdapter();
+  let attempts = 0;
+  const slept = [];
+  adapter.sleepForNetworkRetry = async (ms) => { slept.push(ms); };
+  global.Request = class {
+    constructor() { this.response = null; }
+    async loadImage() {
+      attempts += 1;
+      // Exactly what the corpus shows 94 times: the fetch succeeded, the bytes
+      // just are not an image.
+      this.response = { statusCode: 200 };
+      throw new Error('Cannot parse response to an image.');
+    }
+  };
+  try {
+    await assert.rejects(
+      adapter.fetchImageAsBase64('https://cdn.example/not-an-image', 30, 1024),
+      (error) => error.statusCode === 200 &&
+        /Failed to fetch image as base64/.test(error.message)
+    );
+  } finally {
+    delete global.Request;
+  }
+  assert.equal(attempts, 1,
+    'the wrapper text matches /failed to fetch/, so without the stamped status this would buy minutes of backoff');
+  assert.deepEqual(slept, [], 'not one millisecond of waiting on a host that answered');
+});
+
+test('fetchImageAsBase64 still retries a real connectivity failure on the minutes-long ladder', async () => {
+  const adapter = buildAdapter();
+  let attempts = 0;
+  const slept = [];
+  adapter.sleepForNetworkRetry = async (ms) => { slept.push(ms); };
+  global.Request = class {
+    constructor() { this.response = null; }
+    async loadImage() {
+      attempts += 1;
+      // No response object at all: nothing came back from the host.
+      throw new Error('The network connection was lost.');
+    }
+  };
+  try {
+    await assert.rejects(adapter.fetchImageAsBase64('https://cdn.example/a.jpg', 30, 1024));
+  } finally {
+    delete global.Request;
+  }
+  assert.ok(attempts > 1, 'losing service mid-download is exactly what the retry exists for');
+  assert.ok(slept.length > 0 && slept[0] >= 5000,
+    'backoff starts in seconds, not milliseconds — an inter-station gap lasts minutes');
+});
+
+test('a network-truncated run gets an unmissable banner and never claims to be complete', () => {
+  const adapter = buildAdapter();
+  const html = adapter.buildNetworkTruncationBannerHtml({
+    networkTruncated: {
+      idleSeconds: 312,
+      failures: 6,
+      hosts: ['a.example', 'b.example'],
+      skippedParsers: ['Furball', 'CHUNK']
+    }
+  });
+  assert.match(html, /INCOMPLETE RUN/);
+  assert.match(html, /nothing has been written to the calendar/i);
+  assert.match(html, /312s/);
+  assert.match(html, /Furball, CHUNK/);
+  assert.equal(adapter.buildNetworkTruncationBannerHtml({}), '',
+    'a healthy run renders exactly as it did before');
+});
+
+test('generateRichHTML puts the truncation banner above everything else on the page', async () => {
+  const adapter = buildAdapter();
+  const results = { ...buildResultsStub(), totalEvents: 2, rawBearEvents: 2, bearEvents: 2, calendarEvents: 0 };
+  results.networkTruncated = { idleSeconds: 300, failures: 4, hosts: ['a.example', 'b.example'], skippedParsers: [] };
+  // Earlier tests in this file delete the Calendar stub the module-level setup
+  // installed; generateRichHTML reads it.
+  global.Calendar = { forEvents: async () => [] };
+  const html = await adapter.generateRichHTML(results, {});
+  const bannerIndex = html.indexOf('INCOMPLETE RUN');
+  const headerIndex = html.indexOf('<div class="header">');
+  assert.ok(bannerIndex > -1, 'the banner has to be in the rendered page, not just the log');
+  assert.ok(headerIndex > -1);
+  assert.ok(bannerIndex < headerIndex,
+    'above the header: the header scrolls away and the stat tiles below read like a finished run');
+});

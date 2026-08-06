@@ -346,6 +346,10 @@ class SharedCore {
         // the orchestrator from AiWebParser.getAiResponseCache() — persistence
         // stays out of shared-core. Null = no caching.
         this.aiResponseCache = null;
+        // Shared NetworkResilience instance (the adapter owns it; the
+        // orchestrator hands it over). Null = no retry/give-up awareness, which
+        // is exactly how every non-networked test and the web path behave.
+        this.networkResilience = options.networkResilience || null;
         this.trackingParamPattern = /^(aff|affix|affiliate|utm[-_](?:source|medium|campaign|content|term)|ref|referral|fbclid|gclid|msclkid|dclid|source|mc_cid|mc_eid)$/i;
         
         // URL-to-parser mapping for automatic parser detection (parser: "auto").
@@ -3751,10 +3755,19 @@ class SharedCore {
 
         // Global URL tracking across all parsers to prevent duplicate processing
         const globalProcessedUrls = new Set();
+        // Parsers never started because the network gave up part-way through.
+        const networkTruncatedParsers = [];
 
         for (let i = 0; i < config.parsers.length; i++) {
+            // Network gave up mid-run: stop starting new parsers. Whatever the
+            // earlier parsers already produced is kept and shown, but the run is
+            // stamped truncated below and the calendar write is refused.
+            if (this.networkResilience && this.networkResilience.isGivenUp()) {
+                networkTruncatedParsers.push(...config.parsers.slice(i).map(p => p?.name || 'unnamed'));
+                break;
+            }
             const parserConfig = config.parsers[i];
-            
+
             // "enabled" is for manual runs only; automation runs use automation.automationEnabled
             if (!automationContext.filterParsers && parserConfig.enabled === false) {
                 disabledParsers.push(parserConfig.name);
@@ -3883,6 +3896,26 @@ class SharedCore {
         }
 
         await this.finalizeDeadEndRun(displayAdapter, results);
+
+        // Truncated run: say so unmistakably. The owner must never mistake a run
+        // the subway ended for a complete one, so this is loud in the log, it is
+        // carried on `results` for the UI banner, and downstream it REFUSES the
+        // calendar write ("I don't want partial runs… I will rerun when I can").
+        const giveUpReport = this.networkResilience ? this.networkResilience.getGiveUpReport() : null;
+        if (giveUpReport) {
+            results.networkTruncated = {
+                idleSeconds: giveUpReport.idleSeconds,
+                failures: giveUpReport.failures,
+                hosts: giveUpReport.hosts.slice(),
+                skippedParsers: networkTruncatedParsers.slice()
+            };
+            const skippedSuffix = networkTruncatedParsers.length > 0
+                ? ` Parsers never started: ${networkTruncatedParsers.join(', ')}.`
+                : '';
+            await displayAdapter.logError(
+                `SYSTEM: 🛑 RUN TRUNCATED — the network was unreachable for ${giveUpReport.idleSeconds}s (${giveUpReport.failures} failures across ${giveUpReport.hosts.length} hosts). THIS RUN IS INCOMPLETE and will NOT be written to the calendar.${skippedSuffix}`
+            );
+        }
 
         const duplicateSummary = results.duplicatesRemoved > 0
             ? ` (removed ${results.duplicatesRemoved} dupes)`
@@ -5080,7 +5113,16 @@ class SharedCore {
             return error.retryable;
         }
 
-        const statusCode = this.extractHttpStatusCodeFromError(error);
+        // A numeric `statusCode` stamped by the adapter outranks message
+        // scraping: the adapter watched the response come back, the message is
+        // a reconstruction. This matters for image downloads, whose wrapper
+        // text ("Failed to fetch image as base64: …") matches the /failed to
+        // fetch/ pattern below and so used to look retryable even when the
+        // server had answered 200 with bytes that simply were not an image —
+        // 94 of the 95 image failures across 241 run logs are exactly that.
+        const statusCode = (error && Number.isFinite(error.statusCode))
+            ? error.statusCode
+            : this.extractHttpStatusCodeFromError(error);
         if (typeof statusCode === 'number') {
             return [408, 425, 429, 500, 502, 503, 504].includes(statusCode);
         }
@@ -5099,7 +5141,23 @@ class SharedCore {
             /unavailable/i,
             /econnreset/i,
             /enotfound/i,
-            /eai_again/i
+            /eai_again/i,
+            // ---- The wordings iOS actually produces --------------------
+            // The patterns above are Node/browser vocabulary. Checked against
+            // the 241-run log corpus, only /time(d)?\s*out/ ever fired on a
+            // real device error: iOS says "The network connection WAS lost"
+            // (the adjacent-word pattern above misses it), it never says the
+            // letters "DNS", and NSURLErrorNotConnectedToInternet — the exact
+            // subway/elevator case this whole feature exists for — reads
+            // "The Internet connection appears to be offline." Without these,
+            // losing service was classified PERMANENT, which not only skipped
+            // any retry but wrote the URL into the no-retry failure cache, so
+            // one tunnel could poison a page for future runs too.
+            /connection was lost/i,
+            /appears to be offline/i,
+            /hostname could not be found/i,
+            /could not connect to the server/i,
+            /data connection is not currently allowed/i
         ];
         return retryablePatterns.some(pattern => pattern.test(message));
     }
@@ -5163,6 +5221,13 @@ class SharedCore {
         }
 
         for (let i = 0; i < urlsToProcess.length; i++) {
+            // The run has already concluded the phone has no service. Stop
+            // walking the queue rather than failing every remaining URL one by
+            // one — see processEvents, which turns this into results.networkTruncated.
+            if (this.networkResilience && this.networkResilience.isGivenUp()) {
+                await displayAdapter.logWarn(`SYSTEM: Network gave up — abandoning ${urlsToProcess.length - i} remaining URL(s) at depth ${currentDepth}`);
+                break;
+            }
             const rawUrl = urlsToProcess[i];
             const url = this.normalizeUrl(rawUrl, rawUrl);
             if (!url) {
@@ -14726,9 +14791,282 @@ SharedCore.PROVENANCE_TRUST_TIERS = Object.freeze({
     bearSource: Object.freeze({ 'manual-bear': 2, 'manual-not-bear': 2, 'keyword': 1, 'ai': 1, 'config': 1 })
 });
 
+// ============================================================================
+// NETWORK RESILIENCE — transient-failure retry + time-based give-up
+// ============================================================================
+// The scraper runs from a phone in motion. The owner's words: "these happen all
+// the time when I need to temporarily leave the app, or when I'm in the subway
+// and i lose service in between stops" and "gaps between subway stations is a
+// few mins long". That single sentence decides the whole design:
+//
+//   * Backoff measured in SECONDS is useless — an outage lasts MINUTES. The
+//     default ladder sleeps 5s/15s/30s/60s/90s (200s = 3m20s of patience),
+//     which rides out an inter-station gap.
+//   * Giving up after N CONSECUTIVE FAILURES is the wrong shape — a tunnel
+//     produces N failures within seconds and would kill a run that was about
+//     to recover. Give-up is therefore measured as ELAPSED TIME WITH ZERO
+//     SUCCESSES. Any success anywhere resets the clock.
+//
+// Everything here is platform-pure: the clock, the sleep and the failure
+// classifier are all injected. That keeps shared-core free of timers AND lets
+// the tests exercise minutes of backoff in microseconds.
+//
+// Three things deliberately do NOT count as "the network is down":
+//   1. A failure carrying an HTTP status code. The server answered, so the
+//      phone has service; a 403 wall or a 500 origin is not an outage. Those
+//      reset the give-up clock exactly like a success does.
+//   2. A cached-failure replay (error.cachedFailure) — no packet was sent.
+//   3. Failures from a single host. Give-up needs failures from at least two
+//      distinct hosts, so one dead image CDN can never stop a run even when it
+//      is the only thing the run happens to be touching at that moment.
+// ============================================================================
+class NetworkResilience {
+    constructor(options = {}) {
+        if (typeof options.classifyRetryable !== 'function') {
+            throw new Error('NetworkResilience requires a classifyRetryable(error) function — pass SharedCore.isRetryableFailure, never a second classifier');
+        }
+        if (typeof options.sleep !== 'function') {
+            throw new Error('NetworkResilience requires a sleep(ms) function — shared-core never imports a platform timer');
+        }
+        this.classifyRetryable = options.classifyRetryable;
+        this.sleep = options.sleep;
+        this.now = typeof options.now === 'function' ? options.now : (() => Date.now());
+        this.log = typeof options.log === 'function' ? options.log : (() => {});
+
+        this.retryDelaysMs = Array.isArray(options.retryDelaysMs) && options.retryDelaysMs.length > 0
+            ? options.retryDelaysMs.slice()
+            : NetworkResilience.DEFAULT_RETRY_DELAYS_MS.slice();
+        this.maxOperationMs = Number.isFinite(options.maxOperationMs)
+            ? options.maxOperationMs
+            : NetworkResilience.DEFAULT_MAX_OPERATION_MS;
+        this.giveUpAfterMs = Number.isFinite(options.giveUpAfterMs)
+            ? options.giveUpAfterMs
+            : NetworkResilience.DEFAULT_GIVE_UP_AFTER_MS;
+        this.minFailuresBeforeGiveUp = Number.isFinite(options.minFailuresBeforeGiveUp)
+            ? options.minFailuresBeforeGiveUp
+            : NetworkResilience.DEFAULT_MIN_FAILURES_BEFORE_GIVE_UP;
+        this.minHostsBeforeGiveUp = Number.isFinite(options.minHostsBeforeGiveUp)
+            ? options.minHostsBeforeGiveUp
+            : NetworkResilience.DEFAULT_MIN_HOSTS_BEFORE_GIVE_UP;
+        this.suspensionSlackMs = Number.isFinite(options.suspensionSlackMs)
+            ? options.suspensionSlackMs
+            : NetworkResilience.DEFAULT_SUSPENSION_SLACK_MS;
+
+        this.lastSuccessAtMs = this.now();
+        this.failuresSinceSuccess = 0;
+        this.hostsFailedSinceSuccess = new Set();
+        // Hosts that already burned a full retry budget in this run. They get
+        // one attempt and no waiting until something, anywhere, succeeds again.
+        this.exhaustedHosts = new Set();
+        this.giveUpReport = null;
+        this.totalRetries = 0;
+        this.suspensionsDetected = 0;
+    }
+
+    // Host key without a URL global (iOS JavaScriptCore has neither `URL` nor
+    // `URLSearchParams`). Scheme+authority is all the give-up rule needs; a
+    // value that isn't an http(s) URL keys under itself so it still groups.
+    static hostKeyForUrl(url) {
+        if (typeof url !== 'string' || url.length === 0) return 'unknown-host';
+        const match = url.match(/^[a-z][a-z0-9+.-]*:\/\/([^/?#]+)/i);
+        return match ? match[1].toLowerCase() : url.toLowerCase();
+    }
+
+    static isGiveUpError(error) {
+        return Boolean(error && error.networkGiveUp === true);
+    }
+
+    isGivenUp() {
+        return this.giveUpReport !== null;
+    }
+
+    getGiveUpReport() {
+        return this.giveUpReport;
+    }
+
+    // A network round trip completed. The give-up clock only ever measures
+    // "time since something last worked", so this is the one reset point.
+    noteSuccess() {
+        this.lastSuccessAtMs = this.now();
+        this.failuresSinceSuccess = 0;
+        this.hostsFailedSinceSuccess.clear();
+        // Something got through, so every host deserves its full patience back.
+        this.exhaustedHosts.clear();
+    }
+
+    // Returns true when the failure is evidence that the PHONE has no network,
+    // as opposed to evidence that one URL is unhappy.
+    noteFailure(hostKey, error) {
+        if (error && error.cachedFailure === true) {
+            // Replayed from the negative cache — nothing left the device.
+            return false;
+        }
+        const statusCode = error && Number.isFinite(error.statusCode)
+            ? error.statusCode
+            : NetworkResilience.readStatusFromMessage(error);
+        if (Number.isFinite(statusCode)) {
+            // The server answered. Service exists. Treat it like a success for
+            // give-up purposes so a bot wall or a 500 origin can never be
+            // mistaken for a tunnel.
+            this.noteSuccess();
+            return false;
+        }
+        this.failuresSinceSuccess += 1;
+        this.hostsFailedSinceSuccess.add(hostKey);
+        return true;
+    }
+
+    static readStatusFromMessage(error) {
+        const message = error && typeof error.message === 'string' ? error.message : '';
+        const match = message.match(/HTTP\s+(\d{3})/i);
+        if (!match) return null;
+        const statusCode = Number(match[1]);
+        return Number.isFinite(statusCode) ? statusCode : null;
+    }
+
+    // Sticky: once the run has given up it stays given up, so every later call
+    // fails instantly instead of adding minutes of pointless waiting.
+    evaluateGiveUp() {
+        if (this.giveUpReport) return this.giveUpReport;
+        const idleMs = this.now() - this.lastSuccessAtMs;
+        if (idleMs < this.giveUpAfterMs) return null;
+        if (this.failuresSinceSuccess < this.minFailuresBeforeGiveUp) return null;
+        if (this.hostsFailedSinceSuccess.size < this.minHostsBeforeGiveUp) return null;
+        this.giveUpReport = {
+            atMs: this.now(),
+            idleMs,
+            idleSeconds: Math.round(idleMs / 1000),
+            failures: this.failuresSinceSuccess,
+            hosts: Array.from(this.hostsFailedSinceSuccess)
+        };
+        return this.giveUpReport;
+    }
+
+    buildGiveUpError() {
+        const report = this.giveUpReport || { idleSeconds: 0, failures: 0, hosts: [] };
+        const error = new Error(
+            `Network unreachable for ${report.idleSeconds}s (${report.failures} failed calls across ${report.hosts.length} hosts) — run stopped`
+        );
+        error.networkGiveUp = true;
+        // Transient by definition: the phone will have service again later, so
+        // this must never be written to the permanent no-retry failure cache.
+        error.retryable = true;
+        error.giveUpReport = report;
+        return error;
+    }
+
+    // Wall time asleep is measured, not assumed. iOS suspends Scriptable's
+    // JavaScript when the app is backgrounded, so an `await` on a 15s timer can
+    // return with 20 minutes of wall clock behind it. That is the owner walking
+    // away, not the network dying, so the give-up clock restarts.
+    async sleepAndDetectSuspension(delayMs) {
+        const startedAt = this.now();
+        await this.sleep(delayMs);
+        const elapsedMs = this.now() - startedAt;
+        if (elapsedMs - delayMs >= this.suspensionSlackMs) {
+            this.suspensionsDetected += 1;
+            this.log(
+                `🌐 Network: ${Math.round(elapsedMs / 1000)}s of wall time passed during a ${Math.round(delayMs / 1000)}s wait — the app was backgrounded, not the network. Restarting the give-up clock.`
+            );
+            this.lastSuccessAtMs = this.now();
+            this.failuresSinceSuccess = 0;
+            this.hostsFailedSinceSuccess.clear();
+            this.exhaustedHosts.clear();
+        }
+        return elapsedMs;
+    }
+
+    // The single choke point. `operation` is one network attempt; everything
+    // about when to try again, how long to wait, and when to stop the run lives
+    // here and nowhere else.
+    async run(label, url, operation) {
+        if (this.giveUpReport) {
+            throw this.buildGiveUpError();
+        }
+        const hostKey = NetworkResilience.hostKeyForUrl(url);
+        const budgetMs = this.exhaustedHosts.has(hostKey) ? 0 : this.maxOperationMs;
+        const startedAt = this.now();
+        let attempt = 0;
+
+        for (;;) {
+            attempt += 1;
+            try {
+                const value = await operation();
+                if (attempt > 1) {
+                    this.log(`🌐 Network: recovered — ${label} succeeded on attempt ${attempt} (${url})`);
+                }
+                this.noteSuccess();
+                return value;
+            } catch (error) {
+                if (NetworkResilience.isGiveUpError(error)) {
+                    throw error;
+                }
+                const looksOffline = this.noteFailure(hostKey, error);
+                if (looksOffline && this.evaluateGiveUp()) {
+                    const report = this.giveUpReport;
+                    this.log(
+                        `🌐 Network: 🛑 GIVING UP — nothing has reached the network for ${report.idleSeconds}s (${report.failures} consecutive failures across ${report.hosts.length} hosts: ${report.hosts.join(', ')}). Stopping the run; everything already fetched is cached, so a rerun with service resumes from there.`
+                    );
+                    throw this.buildGiveUpError();
+                }
+
+                if (this.classifyRetryable(error) !== true) {
+                    throw error;
+                }
+                const delayMs = this.retryDelaysMs[attempt - 1];
+                if (!Number.isFinite(delayMs)) {
+                    this.markExhausted(hostKey, label, url);
+                    throw error;
+                }
+                // Patience is a TIME budget, not an attempt count: a host whose
+                // requests hang for the full client timeout must not be able to
+                // hold the run for six of them.
+                const elapsedMs = this.now() - startedAt;
+                if (elapsedMs + delayMs > budgetMs) {
+                    // budgetMs === 0 means this host is already known-exhausted
+                    // (or retries are configured off), so there is nothing new
+                    // to learn or to say.
+                    if (budgetMs > 0) {
+                        this.markExhausted(hostKey, label, url);
+                    }
+                    throw error;
+                }
+                this.totalRetries += 1;
+                this.log(
+                    `🌐 Network: ${label} failed (${error && error.message ? error.message : 'unknown error'}) — waiting ${Math.round(delayMs / 1000)}s before attempt ${attempt + 1}/${this.retryDelaysMs.length + 1}: ${url}`
+                );
+                await this.sleepAndDetectSuspension(delayMs);
+                if (this.giveUpReport) {
+                    throw this.buildGiveUpError();
+                }
+            }
+        }
+    }
+
+    markExhausted(hostKey, label, url) {
+        if (this.exhaustedHosts.has(hostKey)) return;
+        this.exhaustedHosts.add(hostKey);
+        this.log(
+            `🌐 Network: ${hostKey} used its whole retry budget on ${label} (${url}) — further calls to it get one attempt and no waiting until something else succeeds.`
+        );
+    }
+}
+
+NetworkResilience.DEFAULT_RETRY_DELAYS_MS = [5000, 15000, 30000, 60000, 90000];
+NetworkResilience.DEFAULT_MAX_OPERATION_MS = 240000;
+NetworkResilience.DEFAULT_GIVE_UP_AFTER_MS = 300000;
+NetworkResilience.DEFAULT_MIN_FAILURES_BEFORE_GIVE_UP = 3;
+NetworkResilience.DEFAULT_MIN_HOSTS_BEFORE_GIVE_UP = 2;
+NetworkResilience.DEFAULT_SUSPENSION_SLACK_MS = 30000;
+
+// Hung off SharedCore so it travels through every environment's export shape
+// (module.exports / window / Scriptable `this`) without a second export line.
+SharedCore.NetworkResilience = NetworkResilience;
+
 // Export for both environments
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
+        NetworkResilience,
         SharedCore,
         PROVENANCE_COMPANION_FIELDS: SharedCore.PROVENANCE_COMPANION_FIELDS,
         // Pure title date-segment detector, shared with the ai-web parser's
