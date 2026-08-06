@@ -674,6 +674,11 @@ class AiWebParser {
         // byte-identical context-prep prompt, so the HTTP round-trip can be reused.
         // In-memory only, scoped to this parser instance (one run).
         this.contextPrepResponseCache = new Map();
+        // Last buildMultiEventSegments computation, keyed on its arguments.
+        // parseEvents and extractEventsFromMultiEventPage both segment the
+        // same page in one invocation; the memo makes the second call free.
+        // In-memory only, single entry, scoped to this parser instance.
+        this._multiEventSegmentsMemo = null;
         this.aiResponseCacheStats = { hits: 0, misses: 0, writes: 0 };
         // Multi-event MISS-budget probe flag: while true, readCachedAiResponse
         // throws MULTI_EVENT_MISS_PROBE_ABORT instead of recording a miss (see
@@ -1936,7 +1941,32 @@ class AiWebParser {
         };
     }
 
+    // The full segmentation pass — structured-segment discovery plus the
+    // segments×images OCR-similarity cross-product inside
+    // attachSequentialImageHintsToSegments — runs once for diagnostics in
+    // parseEvents and again for extraction in extractEventsFromMultiEventPage,
+    // with identical inputs and an identical result. Memoize the last
+    // computation, keyed on the actual arguments, so the second call reuses
+    // the first result instead of re-running the matcher and re-printing
+    // every per-pair log line. Single entry: the next page's html naturally
+    // evicts the previous page's result; differing arguments (including an
+    // ocrResults array that changed identity or length) recompute as before.
     buildMultiEventSegments(html, sourceUrl = '', ocrResults = []) {
+        const ocrResultsLength = Array.isArray(ocrResults) ? ocrResults.length : 0;
+        const memo = this._multiEventSegmentsMemo;
+        if (memo
+            && memo.html === html
+            && memo.sourceUrl === sourceUrl
+            && memo.ocrResults === ocrResults
+            && memo.ocrResultsLength === ocrResultsLength) {
+            return memo.segments;
+        }
+        const segments = this.computeMultiEventSegments(html, sourceUrl, ocrResults);
+        this._multiEventSegmentsMemo = { html, sourceUrl, ocrResults, ocrResultsLength, segments };
+        return segments;
+    }
+
+    computeMultiEventSegments(html, sourceUrl = '', ocrResults = []) {
         const structuredSegments = this.buildStructuredMultiEventSegments(html);
         if (structuredSegments.length >= 2) {
             return this.attachSequentialImageHintsToSegments(html, structuredSegments, sourceUrl, ocrResults);
@@ -3115,7 +3145,22 @@ class AiWebParser {
         // <img> on the page — footer chrome. Unknown fails open; every
         // classification the model actually states behaves exactly as before.
         const pairingClassification = String(ocrResult?.imageClassification || '').toLowerCase().trim();
-        if (pairingClassification && pairingClassification !== 'event-flyer') {
+        // Similarity rescue for two specific labels the local vision model
+        // demonstrably gets wrong on genuine posters: 'ad-banner' (a real
+        // Lucki Break flyer saying "no cover") and 'multi-event-flyer' (a
+        // Movie Mondays poster listing several films). And a genuinely
+        // multi-event flyer IS the correct image for the multi-day umbrella
+        // event it advertises (festival/bear-week), whose card text overlaps
+        // the flyer heavily. For these two labels ONLY, let the pairing
+        // proceed when the OCR text clears an ELEVATED similarity bar (0.4 vs
+        // the normal 0.15) against this segment's text — a site-wide
+        // aggregate flyer or a real ad won't clear it against a single card.
+        // Every other stated label (logo, thumbnail, hero-banner, anything
+        // unrecognized) stays hard-refused exactly as before: site chrome
+        // must never earn a segment by accident, whatever its text says.
+        const similarityRescueClassifications = ['ad-banner', 'multi-event-flyer'];
+        const needsSimilarityRescue = similarityRescueClassifications.includes(pairingClassification);
+        if (pairingClassification && pairingClassification !== 'event-flyer' && !needsSimilarityRescue) {
             return { cost: Infinity, score: -Infinity };
         }
         if (!ocrResult) {
@@ -3150,6 +3195,17 @@ class AiWebParser {
                     cost = 20000; // Arbitrary high finite cost, but beatable by a good score
                 }
             }
+        }
+
+        // Rescue classifications ('ad-banner' / 'multi-event-flyer') pair only
+        // when their OCR text strongly matches this segment; below the
+        // elevated bar they are refused exactly as before this rescue existed.
+        if (needsSimilarityRescue) {
+            if (similarity < 0.4) {
+                return { cost: Infinity, score: -Infinity };
+            }
+            const rescueSegmentTitle = String(segmentText || '').split('\n').map(line => line.trim()).filter(Boolean)[0] || '';
+            console.log(`🖼️ PAIRING: allowing ${pairingClassification} image ${ocrResult.url || ''} for segment "${rescueSegmentTitle}" — flyer text strongly matches (similarity ${similarity.toFixed(2)} ≥ 0.40)`);
         }
 
         if (!Number.isFinite(cost)) {
@@ -5008,6 +5064,10 @@ class AiWebParser {
                 eventSummary: normalized.eventSummary,
                 confidence: normalized.confidence,
                 reason: normalized.reason,
+                // Additive: how many times a truncated-salvaged entry has been
+                // re-attempted (heal path in getOcrTextForImage). Absent on
+                // entries that were never salvaged or never retried.
+                ...(Number.isFinite(Number(parsed && parsed.salvageRetries)) ? { salvageRetries: Number(parsed.salvageRetries) } : {}),
                 cachePath,
                 cached: true
             };
@@ -7137,6 +7197,31 @@ class AiWebParser {
                 console.log(`🤖 AI Web: OCR negative cache hit (${cached.failureKind}) for ${cached.imageUrl || imageUrl} — skipping known-bad image`);
                 return null;
             }
+            // Heal truncated-salvaged cache entries: a salvage kept the OCR
+            // text but lost the classification, and the cache would replay
+            // that partial answer forever (64 of 442 device entries, 15%).
+            // Retry the SAME request (same prompt/options — cache key
+            // unchanged) and overwrite the entry with the fresh result. A
+            // fresh result that is itself salvaged still overwrites (fresher)
+            // but bumps salvageRetries so a stubbornly-truncating image stops
+            // costing a call once it has been retried twice. A FAILED heal
+            // call falls back to the salvaged entry and the run continues
+            // exactly as before this fix — the salvaged text is legitimate
+            // data and a heal must never make a run worse.
+            if (cached.reason === 'salvaged-from-truncated-response') {
+                const priorSalvageRetries = Number.isFinite(Number(cached.salvageRetries)) ? Number(cached.salvageRetries) : 0;
+                if (priorSalvageRetries < 2) {
+                    console.log(`🤖 AI Web: OCR cache entry for ${cached.imageUrl || imageUrl} was salvaged from a truncated response — retrying OCR to heal it (attempt ${priorSalvageRetries + 1}/2)`);
+                    let healed = null;
+                    try {
+                        healed = await this.requestAndCacheOcrResult(imageUrl, ocrConfig, passLabel, httpAdapter, { priorSalvageRetries });
+                    } catch (error) {
+                        console.log(`🤖 AI Web: OCR heal attempt failed for ${cached.imageUrl || imageUrl} (${error.message}) — keeping the salvaged cache entry`);
+                    }
+                    if (healed) return healed;
+                    console.log(`🤖 AI Web: OCR heal produced no fresh result for ${cached.imageUrl || imageUrl} — using the salvaged cache entry as before`);
+                }
+            }
             console.log(`🤖 AI Web: OCR cache hit for ${cached.imageUrl || imageUrl}`);
             // A cache hit is a verdict we already paid for — remember it here,
             // not downstream, because extractOcrFromAllImages drops textless
@@ -7146,6 +7231,18 @@ class AiWebParser {
             return cached;
         }
 
+        return this.requestAndCacheOcrResult(imageUrl, ocrConfig, passLabel, httpAdapter);
+    }
+
+    // The fresh-call half of getOcrTextForImage: download the image, run the
+    // vision model, write the per-image cache entry, return the result. Body
+    // unchanged from when it lived inline; extracted so the salvage-heal path
+    // above can reuse it verbatim. healContext ({ priorSalvageRetries }) is
+    // only passed by that heal path: it stamps the retry counter on a
+    // still-salvaged fresh result and suppresses the negative-cache write (a
+    // context-overflow verdict must not clobber a cache entry that already
+    // holds legitimate salvaged text).
+    async requestAndCacheOcrResult(imageUrl, ocrConfig = {}, passLabel = 'ocr', httpAdapter = null, healContext = null) {
         const rawUrl = String(imageUrl || '').trim();
         const normalizedUrl = this.normalizeHttpUrlValue(this.unwrapImageProxyUrl(rawUrl) || rawUrl);
         if (!normalizedUrl) {
@@ -7198,7 +7295,9 @@ class AiWebParser {
             // Context overflow is deterministic for a given image+model — cache the
             // failure so the same image is not re-downloaded and re-sent on every
             // page (and every run) that references it.
-            if (diagnostics.failureKind === 'context-overflow') {
+            // Never during a salvage heal, though: the existing cache entry
+            // holds legitimate OCR text and must survive a failed retry.
+            if (diagnostics.failureKind === 'context-overflow' && !healContext) {
                 const cachePath = await this.writeCachedOcrResult(imageUrl, ocrConfig, JSON.stringify({ failureKind: diagnostics.failureKind }));
                 if (cachePath) {
                     console.warn(`🤖 AI Web: Cached OCR failure (${diagnostics.failureKind}) for ${normalizedUrl} so it is not retried`);
@@ -7213,6 +7312,14 @@ class AiWebParser {
         }
         if (!parsed.text) {
             console.log(`🤖 AI Web: OCR response for ${imageUrl} has no text (imageClassification: ${parsed.imageClassification})`);
+        }
+        // Salvage-heal bookkeeping: the fresh call ALSO truncated. Overwrite
+        // the cache anyway (fresher salvage) but stamp the retry counter so
+        // the heal loop gives up after two attempts instead of spending ~2s
+        // on this image every future run forever.
+        if (healContext && parsed.reason === 'salvaged-from-truncated-response') {
+            parsed.salvageRetries = Number(healContext.priorSalvageRetries || 0) + 1;
+            console.log(`🤖 AI Web: OCR heal for ${normalizedUrl} still came back truncated — caching the fresher salvage (salvageRetries: ${parsed.salvageRetries})`);
         }
         const normalized = this.normalizeOcrResult(parsed);
         this.recordOcrImageVerdict(imageUrl, { ...normalized, imageUrl });
