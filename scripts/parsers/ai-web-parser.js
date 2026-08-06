@@ -2610,6 +2610,90 @@ class AiWebParser {
             });
             groups.push({ signature, entries });
         }
+        for (const linkGroup of this.extractRepeatedMultiEventLinkGroups(source)) {
+            groups.push(linkGroup);
+        }
+        return groups;
+    }
+
+    // Card-aligned windows anchored on a page's REPEATED HYPERLINKS.
+    //
+    // The container scan above assumes each card is one element. Plenty of
+    // listing markup breaks that assumption: the card's link/title and its
+    // date/description are SIBLINGS under a shared cell, with no element
+    // enclosing exactly one card. thedallaseagle.com/events/ is the worked
+    // example — 42 cards, and the container scan produced 170 fragment
+    // entries of which ZERO cleared the per-entry date+title gates, so
+    // segmentation fell through to the flat text splitter, which knows
+    // nothing about card boundaries and fused 7 of 16 windows onto a
+    // neighbouring card's date/time.
+    //
+    // The structural invariant that still holds on such a page is the
+    // repeated hyperlink: one anchor per card, all sharing an attribute
+    // signature, in document order. Slicing between consecutive
+    // same-signature anchors reconstructs the card — its own link, its own
+    // title, its own date text — with no knowledge of the site, its CMS, or
+    // its class names.
+    //
+    // Nav bars, footers and pagination repeat anchors too. Nothing here
+    // trusts an anchor group on its own: the caller still requires >= 2
+    // event-like entries, and every entry still has to clear the same
+    // line-count/date/title gates in buildSegmentsFromStructureGroup that
+    // container entries clear.
+    extractRepeatedMultiEventLinkGroups(source) {
+        const text = String(source || '');
+        if (!text) return [];
+
+        const anchors = [];
+        const pattern = /<a\b[^>]*\bhref\s*=\s*["'][^"']+["'][^>]*>/gi;
+        let match;
+        while ((match = pattern.exec(text)) !== null) {
+            const attrs = (match[0].match(/^<a\b([^>]*)>/i) || [])[1] || '';
+            // The anchor must carry its own listing identity, exactly as the
+            // container scan demands of a <div>. Without this, every bare
+            // <a href> on a page joins one giant "a:plain" group; on
+            // bearssitges.org that group (69 anchors, 16 event-like) outranked
+            // the correct festival day-programme segmentation and replaced 16
+            // day sections with 11 windows headed "www.bearsevents.com )".
+            // A repeated link that identifies itself as an event/card/item
+            // link is a listing; a naked <a> is just a link.
+            if (!this.hasMultiEventStructureHint(attrs)) continue;
+            const start = match.index;
+            // Same proximity rule the image anchors use: a card that links
+            // its poster AND its title must open ONE window, not two.
+            // Anchors arrive in ascending order here, so comparing against
+            // the previous kept anchor is equivalent to the image path's
+            // scan of every anchor — and stays linear on link-heavy pages.
+            if (anchors.length > 0 && start - anchors[anchors.length - 1].start < 200) continue;
+            anchors.push({
+                start,
+                signature: `resource-link:${this.getMultiEventStructureSignature('a', attrs)}`
+            });
+        }
+
+        const bySignature = new Map();
+        anchors.forEach(anchor => {
+            if (!bySignature.has(anchor.signature)) bySignature.set(anchor.signature, []);
+            bySignature.get(anchor.signature).push(anchor);
+        });
+
+        const groups = [];
+        for (const [signature, groupAnchors] of bySignature.entries()) {
+            if (groupAnchors.length < 2) continue;
+            const entries = groupAnchors.map((anchor, index) => {
+                const nextAnchor = groupAnchors[index + 1];
+                const end = nextAnchor
+                    ? nextAnchor.start
+                    : Math.min(text.length, anchor.start + this.extractionLimits.multiEventMaxSegmentChars * 4);
+                return {
+                    html: text.slice(anchor.start, end),
+                    start: anchor.start,
+                    end,
+                    kind: 'resource-link'
+                };
+            });
+            groups.push({ signature, entries });
+        }
         return groups;
     }
 
@@ -10820,6 +10904,22 @@ TEXT:
             `${month}-${day}`,
             `${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
         ]);
+        // Zero-padded day beside a month name ("Aug 05 2026") — the numeric
+        // slash/dash forms above already carry both paddings, but the
+        // month-name forms only ever emitted the UNPADDED day, so any page
+        // whose date formatter pads single-digit days ("M d Y") corroborated
+        // nothing and the gate dropped a real, verbatim-on-the-page date.
+        // Run 20260806-102824: startDate "2026-08-05" cited "Aug 05 2026",
+        // which IS in the corpus; no variant matched, the date became null
+        // and an rrule fallback invented 2026-08-12 for a real event.
+        // "aug 05" is exactly as specific as "aug 5" — one calendar day, no
+        // fuzziness — and because matching is substring-based it also covers
+        // "August 05", "Aug 05, 2026" and "Aug 05 2026".
+        const paddedDay = String(day).padStart(2, '0');
+        if (paddedDay !== String(day)) {
+            variants.add(`${monthNames[monthIndex]} ${paddedDay}`);
+            variants.add(`${monthShortNames[monthIndex]} ${paddedDay}`);
+        }
         if (Number.isFinite(year) && year > 0) {
             variants.add(`${monthNames[monthIndex]} ${day}, ${year}`);
             variants.add(`${monthShortNames[monthIndex]} ${day}, ${year}`);

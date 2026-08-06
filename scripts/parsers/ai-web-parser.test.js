@@ -3807,6 +3807,66 @@ test('date-mode values with a time component need that time in the source (T00:0
 });
 
 // ---------------------------------------------------------------------------
+// Run 20260806-102824: a single-event page rendered its date as "Aug 05 2026"
+// (zero-padded day — a very common date-format setting). The model returned
+// startdate 2026-08-05 citing that exact string, but buildDateEvidenceVariants
+// only ever emitted the UNPADDED month-name form ("aug 5"), so nothing matched,
+// the gate dropped a REAL date, and an rrule fallback then invented the next
+// occurrence — shipping a fabricated date that collided with a different real
+// event. The padded day is exactly as specific as the unpadded one.
+// ---------------------------------------------------------------------------
+
+test('a zero-padded day beside a month name corroborates the date (Aug 05 2026)', () => {
+  const parser = createParser();
+  const validationContext = { imageEvidenceUrls: new Set() };
+  const source = 'BEAR NIGHT\nDate\nAug 05 2026\nTime\n7:00 pm - 9:00 pm';
+  const evidenceContext = parser.buildAiEvidenceContextFromText(source);
+
+  assert.ok(
+    parser.buildDateEvidenceVariants(parser.extractDateEvidenceParts('2026-08-05')).includes('aug 05'),
+    'the padded short-month form must be among the generated variants'
+  );
+
+  const result = parser.validateAiEventEvidence(
+    {
+      startDate: '2026-08-05',
+      endDate: '2026-08-05',
+      __fieldEvidence: { startDate: 'Aug 05 2026', endDate: 'Aug 05 2026' }
+    },
+    { html: source }, {}, null,
+    { evidenceContext, validationContext }
+  );
+  assert.equal(result.event.startDate, '2026-08-05', 'the page states this date verbatim — it must survive the gate');
+  assert.equal(result.event.endDate, '2026-08-05', 'the same holds for the end date');
+  assert.equal(result.report.dropped.length, 0, 'nothing is dropped when the date is on the page');
+
+  // Padded long-month spelling and a comma-separated rendering work too.
+  const longMonth = parser.buildAiEvidenceContextFromText('Date: August 05, 2026');
+  assert.equal(
+    parser.validateAiEventEvidence(
+      { startDate: '2026-08-05' }, { html: 'x' }, {}, null,
+      { evidenceContext: longMonth, validationContext }
+    ).event.startDate,
+    '2026-08-05',
+    '"August 05, 2026" is the same day'
+  );
+
+  // ...and the gate is not one notch looser: every date the page does NOT
+  // state is still dropped, including the exact fabrication this bug shipped
+  // (the rrule's "next occurrence", 2026-08-12).
+  const check = (value) => parser.validateAiEventEvidence(
+    { startDate: value }, { html: source }, {}, null,
+    { evidenceContext, validationContext }
+  ).event.startDate;
+  assert.equal(check('2026-08-12'), undefined, 'a date the page never states is still dropped');
+  assert.equal(check('2026-08-15'), undefined, 'a padded variant must not match by prefix ("aug 05" vs "aug 15")');
+  assert.equal(check('2026-09-05'), undefined, 'the month still has to match');
+  const twoDigit = parser.buildDateEvidenceVariants(parser.extractDateEvidenceParts('2026-08-15'));
+  assert.ok(twoDigit.includes('aug 15'), 'two-digit days keep their existing variant');
+  assert.ok(!twoDigit.includes('aug 015'), 'two-digit days are never double-padded');
+});
+
+// ---------------------------------------------------------------------------
 // NYE year-jump: a Dec 31 event ending 2am must land on Jan 1 of the NEXT
 // year — never the same year's Jan 1 eleven months in the past (which used to
 // collapse the end onto the start).
@@ -11611,4 +11671,134 @@ test('discovery allowlist: segment filter is a no-op on own pages and without pa
   );
   // null/absent parserConfig → no-op, never a throw
   assert.equal(parser.filterSegmentsByDiscoveryAllowlist(segments, 'https://x.com/', null).length, 2);
+});
+
+// ---------------------------------------------------------------------------
+// Card-aligned segmentation when NO element encloses a whole card.
+//
+// Run 20260806 over thedallaseagle.com/events/ (42 cards): the container scan
+// found the right group (170 entries) but every entry was a FRAGMENT — the
+// card's link/title and its date/description are SIBLINGS under a shared day
+// cell, so no container holds one card. Zero entries cleared the per-entry
+// date+title gates, buildStructuredMultiEventSegments returned 0, and
+// segmentation fell through to the flat text splitter: 16 windows, 7 of them
+// carrying a DIFFERENT card's date/time (80s Retro dated Aug 19 when its card
+// says Aug 16; Drink Draw and Dine given Gear Night's 10pm-2am).
+//
+// The generic invariant that survives this markup is the repeated HYPERLINK:
+// one identified anchor per card, in document order. Windows sliced between
+// consecutive same-signature anchors reconstruct the card.
+// ---------------------------------------------------------------------------
+
+const SIBLING_CARD_LISTING_HTML = `
+  <html><body><dl class="calendar-row">
+    <dt class="calendar-day"><div class="daynum">5</div>
+      <div class="past-relative"><a class="listing-tooltip event-single-link" href="https://eagle.example/events/leather-night/"><h4 class="event-title">Leather Night</h4></a></div>
+      <div class="tooltip_templates event-single-content"><div id="tip-1">
+        <div class="tooltip-event-title">Leather Night</div>
+        <div class="event-detailed-time"><div class="detailed-time-start">Start from: August 5, 2026 - 9:00 pm</div><div class="detailed-time-end">End at: August 6, 2026 - 2:00 am</div></div>
+        <div class="tooltip-event-content"><div class="tooltip-event-desc">Gear up and join us for the monthly leather social.</div></div>
+      </div></div></dt>
+    <dt class="calendar-day"><div class="daynum">12</div>
+      <div class="past-relative"><a class="listing-tooltip event-single-link" href="https://eagle.example/events/otter-night/"><h4 class="event-title">Otter Night</h4></a></div>
+      <div class="tooltip_templates event-single-content"><div id="tip-2">
+        <div class="tooltip-event-title">Otter Night</div>
+        <div class="event-detailed-time"><div class="detailed-time-start">Start from: August 12, 2026 - 10:00 pm</div><div class="detailed-time-end">End at: August 13, 2026 - 1:00 am</div></div>
+        <div class="tooltip-event-content"><div class="tooltip-event-desc">Sleek and playful, the monthly otter meetup takes the back bar.</div></div>
+      </div></div></dt>
+    <dt class="calendar-day"><div class="daynum">19</div>
+      <div class="past-relative"><a class="listing-tooltip event-single-link" href="https://eagle.example/events/cub-social/"><h4 class="event-title">Cub Social</h4></a></div>
+      <div class="tooltip_templates event-single-content"><div id="tip-3">
+        <div class="tooltip-event-title">Cub Social</div>
+        <div class="event-detailed-time"><div class="detailed-time-start">Start from: August 19, 2026 - 8:00 pm</div><div class="detailed-time-end">End at: August 20, 2026 - 12:00 am</div></div>
+        <div class="tooltip-event-content"><div class="tooltip-event-desc">Cheap drafts and a patio takeover for the cubs and their admirers.</div></div>
+      </div></div></dt>
+  </dl></body></html>`;
+
+test('card-aligned segments survive when a card link and its date are sibling elements', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://eagle.example/events/';
+
+  // The failure this fixes: the container scan cannot see a whole card here.
+  const containerGroups = parser.extractRepeatedMultiEventStructureGroups(SIBLING_CARD_LISTING_HTML)
+    .filter(group => String(group.signature || '').startsWith('container:'));
+  const containerSegments = containerGroups
+    .map(group => parser.buildSegmentsFromStructureGroup(group))
+    .find(segments => segments.length >= 2);
+  assert.equal(containerSegments, undefined,
+    'no single container encloses one card on this shape — the repeated-anchor path is what has to carry it');
+
+  const segments = parser.buildStructuredMultiEventSegments(SIBLING_CARD_LISTING_HTML);
+  assert.equal(segments.length, 3,
+    `one segment per card, got ${segments.length}: ${JSON.stringify(segments.map(s => s.lines[0]))}`);
+
+  const expected = [
+    ['Leather Night', 'Start from: August 5, 2026 - 9:00 pm', 'End at: August 6, 2026 - 2:00 am', 'https://eagle.example/events/leather-night/'],
+    ['Otter Night', 'Start from: August 12, 2026 - 10:00 pm', 'End at: August 13, 2026 - 1:00 am', 'https://eagle.example/events/otter-night/'],
+    ['Cub Social', 'Start from: August 19, 2026 - 8:00 pm', 'End at: August 20, 2026 - 12:00 am', 'https://eagle.example/events/cub-social/']
+  ];
+  segments.forEach((segment, index) => {
+    const [title, start, end, link] = expected[index];
+    assert.equal(segment.lines[0], title, `segment ${index + 1} opens on its own card title`);
+    assert.ok(segment.lines.includes(start), `segment ${index + 1} keeps its own start, got ${JSON.stringify(segment.lines)}`);
+    assert.ok(segment.lines.includes(end), `segment ${index + 1} keeps its own end, got ${JSON.stringify(segment.lines)}`);
+    const resourceLines = parser.extractMultiEventSegmentResourceLines(segment.html, sourceUrl);
+    assert.ok(resourceLines.includes(`SEGMENT_LINK_URL: ${link}`),
+      `segment ${index + 1} recovers its OWN card link, got ${JSON.stringify(resourceLines)}`);
+  });
+
+  // No fusion in either direction: a card never carries a neighbour's clock.
+  expected.forEach(([, start, end], index) => {
+    segments.forEach((segment, other) => {
+      if (other === index) return;
+      assert.ok(!segment.lines.includes(start), `segment ${other + 1} must not carry card ${index + 1}'s start`);
+      assert.ok(!segment.lines.includes(end), `segment ${other + 1} must not carry card ${index + 1}'s end`);
+    });
+  });
+});
+
+// A repeated anchor only counts as a listing when it carries its own listing
+// identity — the same structure-hint vocabulary the container scan already
+// demands of a <div>. Without that requirement every bare <a href> on a page
+// joins one giant group: on bearssitges.org that group (69 anchors) outranked
+// the correct festival day-programme segmentation and replaced 16 day sections
+// with 11 windows headed "www.bearsevents.com )".
+const NAKED_ANCHOR_PROGRAMME_HTML = `
+  <html><body>
+    <div class="programme">
+      <p>JUEVES - 03</p>
+      <p>21:00 Opening dinner at the port <a href="https://bears.example/a">info</a></p>
+      <p>01h a 06h Opening Party at the disco <a href="https://bears.example/b">tickets</a></p>
+      <p>VIERNES - 04</p>
+      <p>14:00 Pool party at the beach club <a href="https://bears.example/c">info</a></p>
+      <p>01h a 06h White Party at the disco <a href="https://bears.example/d">tickets</a></p>
+      <p>SABADO - 05</p>
+      <p>12:00 Bear market on the promenade <a href="https://bears.example/e">info</a></p>
+      <p>01h a 06h Sailor Party at the disco <a href="https://bears.example/f">tickets</a></p>
+    </div>
+  </body></html>`;
+
+test('repeated anchors need their own listing identity before they can segment a page', () => {
+  const parser = createParser();
+
+  // Positive: identified anchors DO form a listing group.
+  const identified = parser.extractRepeatedMultiEventLinkGroups(SIBLING_CARD_LISTING_HTML);
+  assert.equal(identified.length, 1, 'the identified card anchors form exactly one group');
+  assert.equal(identified[0].entries.length, 3);
+  assert.ok(String(identified[0].signature).startsWith('resource-link:'));
+
+  // Guard: naked <a href> links carry no listing identity, so they never
+  // group — the day-programme keeps its own segmentation.
+  assert.deepEqual(parser.extractRepeatedMultiEventLinkGroups(NAKED_ANCHOR_PROGRAMME_HTML), [],
+    'bare anchors must never form a listing group and hijack a schedule page');
+
+  // Inertness, stated as invariance: whatever this page segments into, the
+  // naked anchors must not have influenced it. Segmenting the page with the
+  // anchors stripped out has to produce exactly the same windows.
+  const withoutAnchors = NAKED_ANCHOR_PROGRAMME_HTML.replace(/<a\b[^>]*>|<\/a>/gi, '');
+  const linesOf = (html) => parser
+    .buildMultiEventSegments(html, 'https://bears.example/programa/')
+    .map(segment => segment.lines.map(line => line.replace(/\s*(?:info|tickets)$/, '').trim()));
+  assert.deepEqual(linesOf(NAKED_ANCHOR_PROGRAMME_HTML), linesOf(withoutAnchors),
+    'repeated naked anchors leave a schedule page\'s segmentation exactly as it was');
 });
