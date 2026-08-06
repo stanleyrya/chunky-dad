@@ -8,33 +8,28 @@ X-WR-TIMEZONE:Europe/London
 BEGIN:VEVENT
 DTSTART:20260801T210000Z
 DTEND:20260802T040000Z
-DTSTAMP:20260803T183508Z
+DTSTAMP:20260806T235249Z
 UID:22724512-536F-464D-9592-A7104E2BC7E3
 CREATED:20260731T131551Z
-DESCRIPTION:description: BEEFMINCE\\: BRIGHTON PRIDE You asked. You waited.
-  Now it’s happening — BEEFMINCE Brighton Pride on Saturday 1 August at Hori
- zon 🏳️‍🌈🔥 For the first time ever\, BEEFMINCE has a Saturday night party
-  for Pride and it’s going to be major. Two rooms\, huge sea-front terrace a
- nd attitude-free\, proud vibes until the very early hours. Plus\, making th
- eir BEEFMINCE debut\, expect a no-holds-barred Pride blowout with FREEMASON
- S (Russell Small) at the helm! Freemasons are one of the most successful da
- nce acts in the UK thanks to their remixes of major artists like Beyonce\, 
- Kelly Rowland\, Faith Evans\, and Moby as well as their own productions for
-  which they have earned three 20 top hits. \\\\--- MAIN ROOM FREEMASONS (Ru
- ssell Small) SILVERHOOK JON BYRNE \\\\--- POP TUNNEL GARY SCOTT ALEX BAKER 
- \\\\-- 18+. ID REQUIRED\nbar: Horizon\naddress: 214 King's Road\, Brighton\
- , BN1 1NB\, United Kingdom\nticketUrl: https://dice.fm/event/8er825-beefmin
- ce-brighton-pride-1st-aug-horizon-brighton-tickets\nimage: https://dice-med
- ia.imgix.net/attachments/2026-02-07/92683f1d-efd9-49af-9b55-e93c17060038.jp
- g?rect=1%2C0%2C768%2C768\ntimezone: Europe/London\ncover: £25\nimageHorizon
- tal: https://dice-media.imgix.net/attachments/2026-02-07/92683f1d-efd9-49af
- -9b55-e93c17060038.jpg?rect=0%2C154%2C769%2C461&w=1300&h=630&auto=compress\
- nwebsite: https://beefmince.com\ninstagram: horizon.brighton\nshortName: BE
- EF-MINCE\nfavicon: https://beefmince.com\nbearSource: keyword\nkey: beefmin
- ce-brighton-pride|2026-08-01|horizon\npinSource: curated\naddressSource: pa
- ge\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/
- maps/search/?api=1&query=50.819936%2C-0.140382
-LAST-MODIFIED:20260803T181031Z
+DESCRIPTION:description: Now it’s happening — BEEFMINCE Brighton Pride on S
+ aturday 1 August at Horizon 🏳️‍🌈🔥 For the first time ever\, BEEFMINCE ha
+ s a Saturday night party for Pride and it’s going to be major. Two rooms\, 
+ huge sea-front terrace and attitude-free\, proud vibes until the very early
+  hours. Plus\, making their BEEFMINCE debut\, expect a no-holds-barred Prid
+ e blowout with FREEMASONS (Russell Small) at the helm!\nbar: Horizon\naddre
+ ss: 214 King's Road\, Brighton\, BN1 1NB\, United Kingdom\nticketUrl: https
+ ://dice.fm/event/8er825-beefmince-brighton-pride-1st-aug-horizon-brighton-t
+ ickets\nimage: https://dice-media.imgix.net/attachments/2026-02-07/92683f1d
+ -efd9-49af-9b55-e93c17060038.jpg?rect=1%2C0%2C768%2C768\ntimezone: Europe/L
+ ondon\nimageHorizontal: https://dice-media.imgix.net/attachments/2026-02-07
+ /92683f1d-efd9-49af-9b55-e93c17060038.jpg?rect=0%2C154%2C769%2C461&w=1300&h
+ =630&auto=compress\nwebsite: https://beefmince.com\ninstagram: horizon.brig
+ hton\nshortName: BEEF-MINCE\nfavicon: https://beefmince.com\nbearSource: ke
+ yword\nkey: beefmince-brighton-pride|2026-08-01|horizon\ncover: £25\npinSou
+ rce: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\
+ ngmaps: https://www.google.com/maps/search/?api=1&query=50.819936%2C-0.1403
+ 82
+LAST-MODIFIED:20260806T152125Z
 LOCATION:50.819936\, -0.140382
 SEQUENCE:0
 STATUS:CONFIRMED
@@ -46,7 +41,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20261205T230000Z
 DTEND:20261206T040000Z
-DTSTAMP:20260803T183508Z
+DTSTAMP:20260806T235249Z
 UID:AC82B5F3-1E3E-4098-99F8-51208AFC7C58
 CREATED:20260731T131552Z
 DESCRIPTION:description: BEEFMINCE\; the UK’s tastiest bear club is famous 

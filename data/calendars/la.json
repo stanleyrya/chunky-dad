@@ -22,6 +22,59 @@
   },
   "events": [
     {
+      "name": "CUBSCOUT",
+      "day": "Friday",
+      "time": "9PM-2AM",
+      "eventType": "monthly",
+      "recurring": true,
+      "recurrence": "FREQ=MONTHLY;BYDAY=1FR",
+      "coordinates": {
+        "lat": 34.0912127,
+        "lng": -118.2840632
+      },
+      "startDate": "2026-09-04T21:00:00",
+      "endDate": "2026-09-05T02:00:00",
+      "unprocessedDescription": "shortName: CUB-SCOUT\ntea: CubScout First Fridays 9pm $7\ncover\r: $7\nbar: Eagle LA\naddress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\ntimezone: America/Los_Angeles\nuid: cubscout-20260731T193113Z@chunky.dad\nimage: https://eaglela.com/wp-content/uploads/CubScout-generic.jpg\nwebsite: https://eaglela.com/events/cub-scout-3/\ninstagram: https://www.instagram.com/dirtybird_la\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+      "startTimezone": "America/Los_Angeles",
+      "endTimezone": "America/Los_Angeles",
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": false,
+      "sourceUid": "cubscout-20260731T193113Z@chunky.dad",
+      "uid": "cubscout-20260731T193113Z@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 2,
+      "overrideIdentityType": null,
+      "bar": "Eagle LA",
+      "cover": "$7",
+      "image": "https://eaglela.com/wp-content/uploads/CubScout-generic.jpg",
+      "tea": "CubScout First Fridays 9pm $7",
+      "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
+      "website": "https://eaglela.com/events/cub-scout-3/",
+      "instagram": "https://www.instagram.com/dirtybird_la",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+      "shortName": "CUB-SCOUT",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglela.com/events/cub-scout-3/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/dirtybird_la",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "cubscout-4fdf801f"
+    },
+    {
       "name": "MEGAWOOF",
       "day": "Saturday",
       "time": "9PM-2AM",
@@ -82,40 +135,35 @@
     {
       "name": "MEGAWOOF",
       "day": "Saturday",
-      "time": "10PM-3AM",
+      "time": "10PM-5AM",
       "eventType": "routine",
       "recurring": false,
-      "coordinates": {
-        "lat": 33.9139036,
-        "lng": -118.2805709
-      },
-      "startDate": "2025-08-16T22:00:00",
-      "endDate": "2025-08-17T03:00:00",
-      "unprocessedDescription": "description: Location TBA, but likely in a dark DTLA warehouse\r 😈 Be sure to follow them on IG for location, updates, and more!\ninstagram: https://www.instagram.com/megawoof_america\nkey: megawoof|2025-08-17|tba|eventbrite\nbar: Sanctuary Studios\nurl: https://www.eventbrite.com/e/duro-summer-night-foam-edition-tickets-1446957562019\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1096137783%2F185013722403%2F1%2Foriginal.20250814-194101?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=f20000487492df90f51bb44fe04473cb\nshortName: MEGA-WOOF\nwebsite: https://www.eventbrite.com/e/duro-summer-night-foam-edition-tickets-1446957562019\ncover: $11.58 - $36.83 (as of 8/16)\ngmaps: https://www.google.com/maps/search/?api=1&query=33.9139036%2C-118.2805709&query_place_id=ChIJg2cOgOq2woAR8bONfuIJg_k\naddress: 13012 Athens Way, Los Angeles, CA 90061\naddressSource: inferred",
+      "startDate": "2025-10-25T22:00:00",
+      "endDate": "2025-10-26T05:00:00",
+      "unprocessedDescription": "description: D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY ED\rITION\ntimezone: America/Los_Angeles\nurl: https://linktr.ee/megawoof_america\nticketUrl: https://www.eventbrite.com/e/duro-megawoof-america-10-year-anniversary-edition-tickets-1688815666119\ncover: $22.10 - $39.98 (as of 10/1)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1121300433%2F185013722403%2F1%2Foriginal.20250911-154733?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=999820b38fc33236aa167ad0d4ea5f7a\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nkey: megawoof|2025-10-26||eventbrite",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Los_Angeles",
       "wasUTC": true,
-      "sourceUid": "1o1kijpavt9mfq2f5bbtcj4jng@google.com",
-      "uid": "1o1kijpavt9mfq2f5bbtcj4jng@google.com",
+      "sourceUid": "342C3C24-21CD-4149-8634-E60F5CB0A57A",
+      "uid": "342C3C24-21CD-4149-8634-E60F5CB0A57A",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
-      "sequence": 1,
+      "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "Sanctuary Studios",
-      "cover": "$11.58 - $36.83 (as of 8/16)",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1096137783%2F185013722403%2F1%2Foriginal.20250814-194101?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=f20000487492df90f51bb44fe04473cb",
-      "tea": "Location TBA, but likely in a dark DTLA warehouse 😈 Be sure to follow them on IG for location, updates, and more!",
-      "address": "13012 Athens Way, Los Angeles, CA 90061",
-      "website": "https://www.eventbrite.com/e/duro-summer-night-foam-edition-tickets-1446957562019",
+      "cover": "$22.10 - $39.98 (as of 10/1)",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1121300433%2F185013722403%2F1%2Foriginal.20250911-154733?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=999820b38fc33236aa167ad0d4ea5f7a",
+      "tea": "D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY EDITION",
+      "address": null,
+      "website": "https://linktr.ee/megawoof_america",
       "instagram": "https://www.instagram.com/megawoof_america",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=33.9139036%2C-118.2805709&query_place_id=ChIJg2cOgOq2woAR8bONfuIJg_k",
+      "ticketUrl": "https://www.eventbrite.com/e/duro-megawoof-america-10-year-anniversary-edition-tickets-1688815666119",
       "shortName": "MEGA-WOOF",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://www.eventbrite.com/e/duro-summer-night-foam-edition-tickets-1446957562019",
+          "url": "https://linktr.ee/megawoof_america",
           "label": "🌐 Website"
         },
         {
@@ -124,12 +172,112 @@
           "label": "📷 Instagram"
         },
         {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=33.9139036%2C-118.2805709&query_place_id=ChIJg2cOgOq2woAR8bONfuIJg_k",
-          "label": "🗺️ Google Maps"
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/duro-megawoof-america-10-year-anniversary-edition-tickets-1688815666119",
+          "label": "🎫 Tickets"
         }
       ],
-      "slug": "megawoof-69e037bc"
+      "slug": "megawoof-33341c08"
+    },
+    {
+      "name": "CLUB CHUB: QUENCHD",
+      "day": "Saturday",
+      "time": "1PM-7PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 34.0964585,
+        "lng": -118.3291653
+      },
+      "startDate": "2026-08-22T13:00:00",
+      "endDate": "2026-08-22T19:00:00",
+      "unprocessedDescription": "description: LA's Premier Queer Pool Party for Bears, Chubs, \rChasers & Friends!\nbar: The Godfrey Hotel Hollywood\naddress: 1400 Cahuenga Blvd, Los Angeles, CA 90028, USA\ntimezone: America/Los_Angeles\nticketUrl: https://www.eventbrite.com/e/quenchd-tickets-1993587626256\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1189173721%2F2157238730203%2F1%2Foriginal.20260719-200439?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=aac2ee4007a230c60a79d3edaaede3db\ncover: $12.51-$33.85\nwebsite: https://www.clubchubusa.com\nshortName: CLUB CHUB\ninstagram: https://www.instagram.com/clubchubparty\nfavicon: https://www.clubchubusa.com\nbearSource: keyword\nkey: club-chub-quenchd|2026-08-22|the godfrey hotel hollywood\npinSource: geocoded-exact\naddressSource: page\nimageSource: jsonld\nbarSource: geo-poi\ngmaps: https://www.google.com/maps/search/?api=1&query=34.0964585%2C-118.3291653",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "D5378088-C88D-46FD-ADE4-407711D61161",
+      "uid": "D5378088-C88D-46FD-ADE4-407711D61161",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The Godfrey Hotel Hollywood",
+      "cover": "$12.51-$33.85",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1189173721%2F2157238730203%2F1%2Foriginal.20260719-200439?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=aac2ee4007a230c60a79d3edaaede3db",
+      "favicon": "https://www.clubchubusa.com",
+      "tea": "LA's Premier Queer Pool Party for Bears, Chubs, Chasers & Friends!",
+      "address": "1400 Cahuenga Blvd, Los Angeles, CA 90028, USA",
+      "website": "https://www.clubchubusa.com",
+      "instagram": "https://www.instagram.com/clubchubparty",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=34.0964585%2C-118.3291653",
+      "ticketUrl": "https://www.eventbrite.com/e/quenchd-tickets-1993587626256",
+      "shortName": "CLUB CHUB",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.clubchubusa.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/clubchubparty",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=34.0964585%2C-118.3291653",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/quenchd-tickets-1993587626256",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "club-chub-quenchd-21628c63"
+    },
+    {
+      "name": "Bear Happy Hour",
+      "day": "Thursday",
+      "time": "5PM-9PM",
+      "eventType": "weekly",
+      "recurring": true,
+      "recurrence": "FREQ=WEEKLY",
+      "startDate": "2025-07-17T17:00:00",
+      "endDate": "2025-07-17T21:00:00",
+      "unprocessedDescription": "Bar: Check instagram for this week’s location.\nTea: Popular ha\rppy hour that changes location every week.\nShorter: BHH\nInstagram: https://www.instagram.com/bearhappyhourla\nWeb: https://linktr.ee/bearhappyhour",
+      "startTimezone": "America/Vancouver",
+      "endTimezone": "America/Vancouver",
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": false,
+      "sourceUid": "9vnvsm6kjpievu62279lco139k@google.com",
+      "uid": "9vnvsm6kjpievu62279lco139k@google.com",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Check instagram for this week’s location.",
+      "tea": "Popular happy hour that changes location every week.",
+      "address": null,
+      "website": "https://linktr.ee/bearhappyhour",
+      "instagram": "https://www.instagram.com/bearhappyhourla",
+      "shorterName": "BHH",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/bearhappyhour",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearhappyhourla",
+          "label": "📷 Instagram"
+        }
+      ],
+      "slug": "bear-happy-hour-67a26f5d"
     },
     {
       "name": "MEGAWOOF AMERICA - LONG BEACH PRIDE",
@@ -190,51 +338,107 @@
       "slug": "megawoof-america-long-beach-pride-152ddd6b"
     },
     {
-      "name": "MEGAWOOF",
-      "day": "Saturday",
-      "time": "10PM-5AM",
+      "name": "Club Chub",
+      "day": "Sunday",
+      "time": "3PM-9PM",
       "eventType": "routine",
       "recurring": false,
-      "startDate": "2025-10-25T22:00:00",
-      "endDate": "2025-10-26T05:00:00",
-      "unprocessedDescription": "description: D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY ED\rITION\ntimezone: America/Los_Angeles\nurl: https://linktr.ee/megawoof_america\nticketUrl: https://www.eventbrite.com/e/duro-megawoof-america-10-year-anniversary-edition-tickets-1688815666119\ncover: $22.10 - $39.98 (as of 10/1)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1121300433%2F185013722403%2F1%2Foriginal.20250911-154733?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=999820b38fc33236aa167ad0d4ea5f7a\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nkey: megawoof|2025-10-26||eventbrite",
+      "coordinates": {
+        "lat": 34.0498043,
+        "lng": -118.2493258
+      },
+      "startDate": "2025-07-20T15:00:00",
+      "endDate": "2025-07-20T21:00:00",
+      "unprocessedDescription": "Bar: Precinct DTLA\nGoogle Maps: https://maps.app.goo.gl/pfwrr6\roMcbTvdFtx7?g_st=ipc\nInstagram: https://www.instagram.com/clubchubparty?igsh=MWxjZHprZnl6NWc0NQ==\naddress: 357 S Broadway, Los Angeles, CA 90013\naddressSource: inferred",
+      "startTimezone": "America/Los_Angeles",
+      "endTimezone": "America/Los_Angeles",
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": false,
+      "sourceUid": "44n2vcp54ehl3nlh4b3o61ndm0@google.com",
+      "uid": "44n2vcp54ehl3nlh4b3o61ndm0@google.com",
+      "recurrenceId": "2025-07-20T15:00:00",
+      "recurrenceIdTimezone": "America/Los_Angeles",
+      "sequence": 1,
+      "overrideIdentityType": "legacy",
+      "bar": "Precinct DTLA",
+      "address": "357 S Broadway, Los Angeles, CA 90013",
+      "website": null,
+      "instagram": "https://www.instagram.com/clubchubparty?igsh=MWxjZHprZnl6NWc0NQ==",
+      "gmaps": "https://maps.app.goo.gl/pfwrr6oMcbTvdFtx7?g_st=ipc",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/clubchubparty?igsh=MWxjZHprZnl6NWc0NQ==",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://maps.app.goo.gl/pfwrr6oMcbTvdFtx7?g_st=ipc",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "club-chub-0e67a66c"
+    },
+    {
+      "name": "Club Chub DTLA - Latin Night",
+      "day": "Sunday",
+      "time": "3PM-9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "recurrence": null,
+      "coordinates": {
+        "lat": 34.0498149,
+        "lng": -118.2493321
+      },
+      "startDate": "2026-08-16T15:00:00",
+      "endDate": "2026-08-16T21:00:00",
+      "unprocessedDescription": "address: 357 S Broadway, Los Angeles, CA 90013, USA\ntimezon\re: America/Los_Angeles\nticketUrl: https://www.facebook.com/events/1376781057883088/\nimage: https://static.wixstatic.com/media/f91121_e3b1ab7a472246b89131b92dcc1cba5f~mv2.jpg\ncover: NO COVER\nwebsite: https://www.clubchubusa.com\ninstagram: https://www.instagram.com/clubchubparty\nshortName: CLUB CHUB\nfavicon: https://www.clubchubusa.com\nbearSource: keyword\nkey: club-chub-dtla-latin-night|2026-08-16|precinct\ndescription: LATIN PARTY\nSUNDAY AUGUST 16TH 3-9PM\nDJ SANTO | DRAG SHOW\nNO COVER | PRECINCT\nPRECINCT\nDTLA\noverrideUid: 44n2vcp54ehl3nlh4b3o61ndm0@google.com\noverrideRecurrenceId: 20260816T220000Z\nbar: Precinct DTLA\npinSource: curated\naddressSource: page\nimageSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=34.0498149%2C-118.2493321",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Los_Angeles",
       "wasUTC": true,
-      "sourceUid": "342C3C24-21CD-4149-8634-E60F5CB0A57A",
-      "uid": "342C3C24-21CD-4149-8634-E60F5CB0A57A",
-      "recurrenceId": null,
+      "sourceUid": "DD3EA174-CD55-487D-A3E4-04B5B129D28B",
+      "uid": "44n2vcp54ehl3nlh4b3o61ndm0@google.com",
+      "recurrenceId": "2026-08-16T15:00:00",
       "recurrenceIdTimezone": null,
       "sequence": 0,
-      "overrideIdentityType": null,
-      "cover": "$22.10 - $39.98 (as of 10/1)",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1121300433%2F185013722403%2F1%2Foriginal.20250911-154733?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=999820b38fc33236aa167ad0d4ea5f7a",
-      "tea": "D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY EDITION",
-      "address": null,
-      "website": "https://linktr.ee/megawoof_america",
-      "instagram": "https://www.instagram.com/megawoof_america",
-      "ticketUrl": "https://www.eventbrite.com/e/duro-megawoof-america-10-year-anniversary-edition-tickets-1688815666119",
-      "shortName": "MEGA-WOOF",
+      "overrideIdentityType": "custom",
+      "bar": "Precinct DTLA",
+      "cover": "NO COVER",
+      "image": "https://static.wixstatic.com/media/f91121_e3b1ab7a472246b89131b92dcc1cba5f~mv2.jpg",
+      "favicon": "https://www.clubchubusa.com",
+      "tea": "LATIN PARTY",
+      "address": "357 S Broadway, Los Angeles, CA 90013, USA",
+      "website": "https://www.clubchubusa.com",
+      "instagram": "https://www.instagram.com/clubchubparty",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=34.0498149%2C-118.2493321",
+      "ticketUrl": "https://www.facebook.com/events/1376781057883088/",
+      "shortName": "CLUB CHUB",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://linktr.ee/megawoof_america",
+          "url": "https://www.clubchubusa.com",
           "label": "🌐 Website"
         },
         {
           "type": "instagram",
-          "url": "https://www.instagram.com/megawoof_america",
+          "url": "https://www.instagram.com/clubchubparty",
           "label": "📷 Instagram"
         },
         {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=34.0498149%2C-118.2493321",
+          "label": "🗺️ Google Maps"
+        },
+        {
           "type": "tickets",
-          "url": "https://www.eventbrite.com/e/duro-megawoof-america-10-year-anniversary-edition-tickets-1688815666119",
+          "url": "https://www.facebook.com/events/1376781057883088/",
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "megawoof-33341c08"
+      "slug": "club-chub-dtla-latin-night-190605ad"
     },
     {
       "name": "Club Chub",
@@ -279,111 +483,6 @@
         }
       ],
       "slug": "club-chub-0e67a66c"
-    },
-    {
-      "name": "CUBSCOUT",
-      "day": "Friday",
-      "time": "9PM-2AM",
-      "eventType": "monthly",
-      "recurring": true,
-      "recurrence": "FREQ=MONTHLY;BYDAY=1FR",
-      "coordinates": {
-        "lat": 34.0912127,
-        "lng": -118.2840632
-      },
-      "startDate": "2026-09-04T21:00:00",
-      "endDate": "2026-09-05T02:00:00",
-      "unprocessedDescription": "shortName: CUB-SCOUT\ntea: CubScout First Fridays 9pm $7\ncover\r: $7\nbar: Eagle LA\naddress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\ntimezone: America/Los_Angeles\nuid: cubscout-20260731T193113Z@chunky.dad\nimage: https://eaglela.com/wp-content/uploads/CubScout-generic.jpg\nwebsite: https://eaglela.com/events/cub-scout-3/\ninstagram: https://www.instagram.com/dirtybird_la\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
-      "startTimezone": "America/Los_Angeles",
-      "endTimezone": "America/Los_Angeles",
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": false,
-      "sourceUid": "cubscout-20260731T193113Z@chunky.dad",
-      "uid": "cubscout-20260731T193113Z@chunky.dad",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 2,
-      "overrideIdentityType": null,
-      "bar": "Eagle LA",
-      "cover": "$7",
-      "image": "https://eaglela.com/wp-content/uploads/CubScout-generic.jpg",
-      "tea": "CubScout First Fridays 9pm $7",
-      "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
-      "website": "https://eaglela.com/events/cub-scout-3/",
-      "instagram": "https://www.instagram.com/dirtybird_la",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
-      "shortName": "CUB-SCOUT",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglela.com/events/cub-scout-3/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/dirtybird_la",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "cubscout-4fdf801f"
-    },
-    {
-      "name": "CLUB CHUB: QUENCHD",
-      "day": "Saturday",
-      "time": "1PM-7PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 34.0964585,
-        "lng": -118.3291653
-      },
-      "startDate": "2026-08-22T13:00:00",
-      "endDate": "2026-08-22T19:00:00",
-      "unprocessedDescription": "description: LA's Premier Queer Pool Party for Bears, Chubs, \rChasers & Friends!\nbar: The Godfrey Hotel Hollywood\naddress: 1400 Cahuenga Blvd, Los Angeles, CA 90028, USA\ntimezone: America/Los_Angeles\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1189173721%2F2157238730203%2F1%2Foriginal.20260719-200439?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=aac2ee4007a230c60a79d3edaaede3db\ncover: $12.51-$33.85\nwebsite: https://www.eventbrite.com/e/quenchd-tickets-1993587626256\nshortName: CLUB CHUB\ninstagram: https://www.instagram.com/clubchubparty\nbearSource: keyword\nkey: club-chub-quenchd|2026-08-22|the godfrey hotel hollywood\npinSource: geocoded-exact\naddressSource: page\nimageSource: jsonld\nbarSource: geo-poi\ngmaps: https://www.google.com/maps/search/?api=1&query=34.0964585%2C-118.3291653",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "D5378088-C88D-46FD-ADE4-407711D61161",
-      "uid": "D5378088-C88D-46FD-ADE4-407711D61161",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "The Godfrey Hotel Hollywood",
-      "cover": "$12.51-$33.85",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1189173721%2F2157238730203%2F1%2Foriginal.20260719-200439?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=aac2ee4007a230c60a79d3edaaede3db",
-      "tea": "LA's Premier Queer Pool Party for Bears, Chubs, Chasers & Friends!",
-      "address": "1400 Cahuenga Blvd, Los Angeles, CA 90028, USA",
-      "website": "https://www.eventbrite.com/e/quenchd-tickets-1993587626256",
-      "instagram": "https://www.instagram.com/clubchubparty",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=34.0964585%2C-118.3291653",
-      "shortName": "CLUB CHUB",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.eventbrite.com/e/quenchd-tickets-1993587626256",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/clubchubparty",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=34.0964585%2C-118.3291653",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "club-chub-quenchd-21628c63"
     },
     {
       "name": "MEGAWOOF PRIDE - FREE - JUNE 6th FREE TKTS @The Globe",
@@ -444,141 +543,56 @@
       "slug": "megawoof-pride-free-june-6th-free-tkts-the-globe-0bb27076"
     },
     {
-      "name": "Bear Happy Hour",
-      "day": "Thursday",
-      "time": "5PM-9PM",
-      "eventType": "weekly",
-      "recurring": true,
-      "recurrence": "FREQ=WEEKLY",
-      "startDate": "2025-07-17T17:00:00",
-      "endDate": "2025-07-17T21:00:00",
-      "unprocessedDescription": "Bar: Check instagram for this week’s location.\nTea: Popular ha\rppy hour that changes location every week.\nShorter: BHH\nInstagram: https://www.instagram.com/bearhappyhourla\nWeb: https://linktr.ee/bearhappyhour",
-      "startTimezone": "America/Vancouver",
-      "endTimezone": "America/Vancouver",
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": false,
-      "sourceUid": "9vnvsm6kjpievu62279lco139k@google.com",
-      "uid": "9vnvsm6kjpievu62279lco139k@google.com",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Check instagram for this week’s location.",
-      "tea": "Popular happy hour that changes location every week.",
-      "address": null,
-      "website": "https://linktr.ee/bearhappyhour",
-      "instagram": "https://www.instagram.com/bearhappyhourla",
-      "shorterName": "BHH",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://linktr.ee/bearhappyhour",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearhappyhourla",
-          "label": "📷 Instagram"
-        }
-      ],
-      "slug": "bear-happy-hour-67a26f5d"
-    },
-    {
-      "name": "Club Chub",
-      "day": "Sunday",
-      "time": "3PM-9PM",
+      "name": "MEGAWOOF",
+      "day": "Saturday",
+      "time": "10PM-3AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
-        "lat": 34.0498043,
-        "lng": -118.2493258
+        "lat": 33.9139036,
+        "lng": -118.2805709
       },
-      "startDate": "2025-07-20T15:00:00",
-      "endDate": "2025-07-20T21:00:00",
-      "unprocessedDescription": "Bar: Precinct DTLA\nGoogle Maps: https://maps.app.goo.gl/pfwrr6\roMcbTvdFtx7?g_st=ipc\nInstagram: https://www.instagram.com/clubchubparty?igsh=MWxjZHprZnl6NWc0NQ==\naddress: 357 S Broadway, Los Angeles, CA 90013\naddressSource: inferred",
-      "startTimezone": "America/Los_Angeles",
-      "endTimezone": "America/Los_Angeles",
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": false,
-      "sourceUid": "44n2vcp54ehl3nlh4b3o61ndm0@google.com",
-      "uid": "44n2vcp54ehl3nlh4b3o61ndm0@google.com",
-      "recurrenceId": "2025-07-20T15:00:00",
-      "recurrenceIdTimezone": "America/Los_Angeles",
-      "sequence": 1,
-      "overrideIdentityType": "legacy",
-      "bar": "Precinct DTLA",
-      "address": "357 S Broadway, Los Angeles, CA 90013",
-      "website": null,
-      "instagram": "https://www.instagram.com/clubchubparty?igsh=MWxjZHprZnl6NWc0NQ==",
-      "gmaps": "https://maps.app.goo.gl/pfwrr6oMcbTvdFtx7?g_st=ipc",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/clubchubparty?igsh=MWxjZHprZnl6NWc0NQ==",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://maps.app.goo.gl/pfwrr6oMcbTvdFtx7?g_st=ipc",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "club-chub-0e67a66c"
-    },
-    {
-      "name": "Club Chub DTLA - Latin Night",
-      "day": "Sunday",
-      "time": "3PM-9PM",
-      "eventType": "routine",
-      "recurring": false,
-      "recurrence": null,
-      "coordinates": {
-        "lat": 34.0498149,
-        "lng": -118.2493321
-      },
-      "startDate": "2026-08-16T15:00:00",
-      "endDate": "2026-08-16T21:00:00",
-      "unprocessedDescription": "address: 357 S Broadway, Los Angeles, CA 90013, USA\ntimezon\re: America/Los_Angeles\nimage: https://static.wixstatic.com/media/f91121_e3b1ab7a472246b89131b92dcc1cba5f~mv2.jpg\ncover: NO COVER\nwebsite: https://www.facebook.com/events/1376781057883088/\ninstagram: https://www.instagram.com/clubchubparty\nshortName: CLUB CHUB\nbearSource: keyword\nkey: club-chub-dtla-latin-night|2026-08-16|precinct\ndescription: LATIN PARTY\nSUNDAY AUGUST 16TH 3-9PM\nDJ SANTO | DRAG SHOW\nNO COVER | PRECINCT\nPRECINCT\nDTLA\noverrideUid: 44n2vcp54ehl3nlh4b3o61ndm0@google.com\noverrideRecurrenceId: 20260816T220000Z\nbar: Precinct DTLA\npinSource: curated\naddressSource: page\nimageSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=34.0498149%2C-118.2493321",
+      "startDate": "2025-08-16T22:00:00",
+      "endDate": "2025-08-17T03:00:00",
+      "unprocessedDescription": "description: Location TBA, but likely in a dark DTLA warehouse\r 😈 Be sure to follow them on IG for location, updates, and more!\ninstagram: https://www.instagram.com/megawoof_america\nkey: megawoof|2025-08-17|tba|eventbrite\nbar: Sanctuary Studios\nurl: https://www.eventbrite.com/e/duro-summer-night-foam-edition-tickets-1446957562019\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1096137783%2F185013722403%2F1%2Foriginal.20250814-194101?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=f20000487492df90f51bb44fe04473cb\nshortName: MEGA-WOOF\nwebsite: https://www.eventbrite.com/e/duro-summer-night-foam-edition-tickets-1446957562019\ncover: $11.58 - $36.83 (as of 8/16)\ngmaps: https://www.google.com/maps/search/?api=1&query=33.9139036%2C-118.2805709&query_place_id=ChIJg2cOgOq2woAR8bONfuIJg_k\naddress: 13012 Athens Way, Los Angeles, CA 90061\naddressSource: inferred",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Los_Angeles",
       "wasUTC": true,
-      "sourceUid": "DD3EA174-CD55-487D-A3E4-04B5B129D28B",
-      "uid": "44n2vcp54ehl3nlh4b3o61ndm0@google.com",
-      "recurrenceId": "2026-08-16T15:00:00",
+      "sourceUid": "1o1kijpavt9mfq2f5bbtcj4jng@google.com",
+      "uid": "1o1kijpavt9mfq2f5bbtcj4jng@google.com",
+      "recurrenceId": null,
       "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": "custom",
-      "bar": "Precinct DTLA",
-      "cover": "NO COVER",
-      "image": "https://static.wixstatic.com/media/f91121_e3b1ab7a472246b89131b92dcc1cba5f~mv2.jpg",
-      "tea": "LATIN PARTY",
-      "address": "357 S Broadway, Los Angeles, CA 90013, USA",
-      "website": "https://www.facebook.com/events/1376781057883088/",
-      "instagram": "https://www.instagram.com/clubchubparty",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=34.0498149%2C-118.2493321",
-      "shortName": "CLUB CHUB",
+      "sequence": 1,
+      "overrideIdentityType": null,
+      "bar": "Sanctuary Studios",
+      "cover": "$11.58 - $36.83 (as of 8/16)",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1096137783%2F185013722403%2F1%2Foriginal.20250814-194101?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=f20000487492df90f51bb44fe04473cb",
+      "tea": "Location TBA, but likely in a dark DTLA warehouse 😈 Be sure to follow them on IG for location, updates, and more!",
+      "address": "13012 Athens Way, Los Angeles, CA 90061",
+      "website": "https://www.eventbrite.com/e/duro-summer-night-foam-edition-tickets-1446957562019",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=33.9139036%2C-118.2805709&query_place_id=ChIJg2cOgOq2woAR8bONfuIJg_k",
+      "shortName": "MEGA-WOOF",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://www.facebook.com/events/1376781057883088/",
+          "url": "https://www.eventbrite.com/e/duro-summer-night-foam-edition-tickets-1446957562019",
           "label": "🌐 Website"
         },
         {
           "type": "instagram",
-          "url": "https://www.instagram.com/clubchubparty",
+          "url": "https://www.instagram.com/megawoof_america",
           "label": "📷 Instagram"
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=34.0498149%2C-118.2493321",
+          "url": "https://www.google.com/maps/search/?api=1&query=33.9139036%2C-118.2805709&query_place_id=ChIJg2cOgOq2woAR8bONfuIJg_k",
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "club-chub-dtla-latin-night-190605ad"
+      "slug": "megawoof-69e037bc"
     }
   ]
 }

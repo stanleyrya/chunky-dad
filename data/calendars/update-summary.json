@@ -27,13 +27,13 @@
     "brighton": {
       "name": "Brighton",
       "status": "success",
-      "dataLength": 4135,
+      "dataLength": 3701,
       "eventCount": 2
     },
     "chicago": {
       "name": "Chicago",
       "status": "success",
-      "dataLength": 22702,
+      "dataLength": 22699,
       "eventCount": 18
     },
     "dallas": {
@@ -63,13 +63,13 @@
     "la": {
       "name": "Los Angeles",
       "status": "success",
-      "dataLength": 14552,
+      "dataLength": 14714,
       "eventCount": 12
     },
     "london": {
       "name": "London",
       "status": "success",
-      "dataLength": 15938,
+      "dataLength": 15533,
       "eventCount": 9
     },
     "nola": {
@@ -87,7 +87,7 @@
     "palm-springs": {
       "name": "Palm Springs",
       "status": "success",
-      "dataLength": 2966,
+      "dataLength": 3047,
       "eventCount": 2
     },
     "philly": {
@@ -123,7 +123,7 @@
     "seattle": {
       "name": "Seattle",
       "status": "success",
-      "dataLength": 15847,
+      "dataLength": 15895,
       "eventCount": 12
     },
     "sf": {
