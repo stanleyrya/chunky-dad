@@ -11,12 +11,20 @@
   },
   {
     "slug": "club-chub-dtla-latin-night-190605ad",
+    "url": "https://www.clubchubusa.com",
+    "faviconBg": "#e43383",
+    "faviconFg": "#f3368c",
+    "faviconPlate": "#ffffff",
     "paletteSource": "flyer",
     "palette": "#040203:60:1 #faf9f6:7:0 #191516:7:1 #50292a:6:6 #b32325:4:18",
     "accent": "#b32325"
   },
   {
     "slug": "club-chub-quenchd-21628c63",
+    "url": "https://www.clubchubusa.com",
+    "faviconBg": "#e43383",
+    "faviconFg": "#f3368c",
+    "faviconPlate": "#ffffff",
     "paletteSource": "flyer",
     "palette": "#e3a59b:17:8 #cd8365:15:10 #222f33:14:2 #ab6141:12:11 #753127:9:10",
     "accent": "#cd8365"
