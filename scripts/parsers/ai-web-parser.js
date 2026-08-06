@@ -638,6 +638,24 @@ class AiWebParser {
         // are already in hand) and by OCR cache hits that carry a stored
         // measurement. In-memory only, scoped to this parser instance (one run).
         this.measuredImageDimensionsByUrl = new Map();
+        // What the OCR vision pass actually SAW in an image — { classification,
+        // hasText } keyed by canonical image URL. Populated by every OCR read,
+        // fresh call AND disk-cache hit, so a verdict we already paid for
+        // survives extractOcrFromAllImages' textless filter (which drops the
+        // whole result, classification included) and outlives the run that
+        // produced it — the OCR cache is on disk and stores imageClassification,
+        // so a site's chrome stays known across runs and across parsers.
+        // In-memory only, scoped to this parser instance, exactly like the
+        // measured dimensions above.
+        this.ocrImageVerdictsByUrl = new Map();
+        // OCR classifications that mean "page furniture, not this event's
+        // artwork". Derived from the real cache corpus (441 OCR'd images):
+        // 'thumbnail' is 57/61 textless, 'logo' 16/83, 'hero-banner' 1/6.
+        // 'ad-banner' is DELIBERATELY ABSENT — every ad-banner in that corpus
+        // carried readable text and several were genuine weekly venue posters
+        // ("Tightwad Tuesday", "Lucky Break"), so rejecting it would throw away
+        // real flyers. 'multi-event-flyer' is absent for the same reason.
+        this.nonEventOcrImageClassifications = new Set(['logo', 'thumbnail', 'hero-banner']);
         // How far into an image the header scan reads. PNG/GIF/WebP answer in
         // the first 30 bytes; a JPEG's frame header sits after its EXIF/ICC
         // blocks, which on real camera-sourced flyers routinely run past 32KB.
@@ -867,6 +885,12 @@ class AiWebParser {
                 // published a 1x1 spacer can still adopt the page's real
                 // artwork instead of keeping the pixel.
                 structuredEvents.forEach(event => this.rejectPlaceholderImageValues(event));
+                // …and neither is a logo the vision pass already read as page
+                // furniture. Same position and same reasoning as the
+                // placeholder rejection above: reject BEFORE the og:image fill,
+                // so the event trades site chrome for the page's real artwork
+                // instead of simply losing its picture.
+                structuredEvents.forEach(event => this.rejectNonEventImageValues(event));
                 // A single structured event whose node carried no image adopts
                 // the page's own og:image artwork (multi-event pages never do:
                 // one shared meta image cannot be attributed to one event).
@@ -3079,8 +3103,26 @@ class AiWebParser {
         const proximityCost = this.getSegmentImagePairingCost(segmentBounds, imageRecord);
 
         // Only allow event-flyer classification - other image types don't contain event details
-        if (ocrResult?.imageClassification !== 'event-flyer') {
+        //
+        // …but "no classification at all" is not an image TYPE, it is a missing
+        // answer, and answering it with a rejection fails CLOSED. In the real
+        // OCR cache corpus 64 of 441 stored results (15%) came back with an
+        // empty imageClassification — and they are genuine flyers: "BEAR WEEK
+        // KICK OFF / BEARRACUDA / PROVINCETOWN", "JUNGLE LUST / NEON BEACH
+        // PARTY", a full burlesque line-up. Every one of them was refused a
+        // segment here, which is precisely how a segment ends up with no
+        // matched flyer and falls back to offering the model the first four
+        // <img> on the page — footer chrome. Unknown fails open; every
+        // classification the model actually states behaves exactly as before.
+        const pairingClassification = String(ocrResult?.imageClassification || '').toLowerCase().trim();
+        if (pairingClassification && pairingClassification !== 'event-flyer') {
             return { cost: Infinity, score: -Infinity };
+        }
+        if (!ocrResult) {
+            return { cost: Infinity, score: -Infinity };
+        }
+        if (!pairingClassification) {
+            console.log(`🤖 AI Web: OCR result for ${ocrResult.url || 'an image'} carries no imageClassification — pairing on its text instead of refusing it`);
         }
 
         // Start with proximity-based cost and base score for valid event-flyer
@@ -3468,6 +3510,17 @@ class AiWebParser {
             if (!normalized || !/^https?:\/\//i.test(normalized)) return;
             const finalUrl = this.normalizeHttpUrlValue(this.unwrapImageProxyUrl(normalized) || normalized);
             if (!finalUrl) return;
+            // Never OFFER the model an image the vision pass already read as
+            // page furniture. The image loops below fall back to "the first
+            // four <img> in this segment's HTML" when nothing was OCR-matched,
+            // which on a footer-heavy page is social icons and decorative
+            // vectors — and the model dutifully returns one as `image`, with
+            // real evidence, at confidence 100. Image lines only: a
+            // SEGMENT_LINK_URL is not artwork and is never judged here.
+            if (/_IMAGE/i.test(label) && this.getNonEventImageOcrReason(finalUrl)) {
+                console.log(`🤖 AI Web: Segment image ${finalUrl} withheld from the prompt — ${this.getNonEventImageOcrReason(finalUrl)}`);
+                return;
+            }
             // Check for duplicates using stripped URL to handle same image at different sizes
             const strippedUrl = this.stripSizeParams(finalUrl);
             // Consistency-gate exclusions: an image reassigned/detached from
@@ -7085,6 +7138,11 @@ class AiWebParser {
                 return null;
             }
             console.log(`🤖 AI Web: OCR cache hit for ${cached.imageUrl || imageUrl}`);
+            // A cache hit is a verdict we already paid for — remember it here,
+            // not downstream, because extractOcrFromAllImages drops textless
+            // results entirely and a 'logo with no text' is exactly the verdict
+            // image selection needs most.
+            this.recordOcrImageVerdict(imageUrl, cached);
             return cached;
         }
 
@@ -7157,6 +7215,7 @@ class AiWebParser {
             console.log(`🤖 AI Web: OCR response for ${imageUrl} has no text (imageClassification: ${parsed.imageClassification})`);
         }
         const normalized = this.normalizeOcrResult(parsed);
+        this.recordOcrImageVerdict(imageUrl, { ...normalized, imageUrl });
         const cachePath = await this.writeCachedOcrResult(imageUrl, ocrConfig, JSON.stringify(parsed), measuredPixels);
         return {
             imageUrl,
@@ -13469,6 +13528,13 @@ TEXT:
         // image was a 1x1 spacer can still adopt the page's real artwork.
         this.rejectPlaceholderImageValues(event);
 
+        // A picture that IS a picture can still be the wrong one. The vision
+        // pass already classified every image it read; a logo/thumbnail/
+        // hero-banner it found no text on is site chrome, never this event's
+        // flyer. Also before the og:image fill, so the slot can be refilled
+        // with real artwork rather than left empty.
+        this.rejectNonEventImageValues(event);
+
         // A single-event page (never a multi-event segment — one shared meta
         // image cannot be attributed to one segment) whose extraction found no
         // image adopts the page's own og:image artwork.
@@ -14667,6 +14733,9 @@ TEXT:
         for (const candidate of this.collectPageMetaImageCandidates(htmlData)) {
             const upgraded = candidate.url;
             if (!upgraded || this.isLikelyUninterestingImageUrl(upgraded)) continue;
+            // A page whose og:image is its own brand logo must not hand that
+            // logo to the event the URL-shape test just let through.
+            if (this.getNonEventImageOcrReason(upgraded)) continue;
             event.image = upgraded;
             event.imageSource = 'og-image';
             console.log(`🤖 AI Web: Filled image from page og:image for "${event.title}"`);
@@ -15000,6 +15069,107 @@ TEXT:
         return this.measuredImageDimensionsByUrl.get(key) || null;
     }
 
+    // ------------------------------------------------------------------
+    // OCR IMAGE VERDICTS (the classification we already paid for)
+    // ------------------------------------------------------------------
+    // The OCR prompt has always returned an `imageClassification`, but the only
+    // consumer was segment↔image pairing (getSegmentImagePairingCostWithOcr)
+    // and the OCR dedup key. Nothing asked it before letting a URL become
+    // event.image, so a decorative site asset the model had ALREADY called a
+    // logo could still be published as an event's flyer. Recording the verdict
+    // here makes that free answer available to image selection.
+
+    // Remember one OCR verdict under the image's canonical URL. Same key rules
+    // as recordMeasuredImageDimensions: exact URL identity, both the raw and
+    // normalized forms, so whichever spelling the event carries can find it.
+    recordOcrImageVerdict(imageUrl, result) {
+        if (!result || typeof result !== 'object') return null;
+        const classification = String(result.imageClassification || '').toLowerCase().trim();
+        if (!classification) return null;
+        const verdict = {
+            classification,
+            hasText: Boolean(String(result.text || '').trim())
+        };
+        let recorded = false;
+        for (const url of [imageUrl, result.imageUrl, result.url, this.normalizeHttpUrlValue(imageUrl)]) {
+            const key = this.canonicalizeImageUrlForComparison(url);
+            if (!key) continue;
+            this.ocrImageVerdictsByUrl.set(key, verdict);
+            recorded = true;
+        }
+        return recorded ? verdict : null;
+    }
+
+    // The OCR verdict for an image URL, or null when nothing OCR'd it. Null is
+    // "unknown", never "not artwork" — most images on most pages are never
+    // OCR'd at all, so every caller must fail open on null.
+    getOcrImageVerdict(imageUrl) {
+        if (!this.ocrImageVerdictsByUrl || this.ocrImageVerdictsByUrl.size === 0) return null;
+        const key = this.canonicalizeImageUrlForComparison(imageUrl);
+        if (!key) return null;
+        return this.ocrImageVerdictsByUrl.get(key) || null;
+    }
+
+    /**
+     * Why the vision pass says this URL is not an event's artwork ('' when it
+     * doesn't say so). TWO conditions, both required, because either alone
+     * loses real flyers:
+     *
+     *   1. the model classified it as page furniture (logo/thumbnail/
+     *      hero-banner — see nonEventOcrImageClassifications for why ad-banner
+     *      is not in that set), AND
+     *   2. the model read NO text off it.
+     *
+     * Condition 2 is what makes this safe. In the real OCR cache corpus two
+     * images classified 'logo' carried 587 and 573 characters of text — those
+     * are misclassified flyers, and a classification-only rule would have
+     * deleted them. Every event-flyer in that same corpus has text (median 179
+     * chars, minimum non-zero), so requiring "no text" can never reject one.
+     *
+     * Unknown is always keep: an image nobody OCR'd, an OCR result with no
+     * classification, or a classification outside the set all return ''.
+     */
+    getNonEventImageOcrReason(url) {
+        const verdict = this.getOcrImageVerdict(url);
+        if (!verdict) return '';
+        if (verdict.hasText) return '';
+        if (!this.nonEventOcrImageClassifications.has(verdict.classification)) return '';
+        return `the vision pass classified it as ${verdict.classification} with no readable text`;
+    }
+
+    /**
+     * Drop `image` / `imageVertical` / `imageHorizontal` values the vision pass
+     * already told us are site chrome. Companion to
+     * rejectPlaceholderImageValues: that one asks "is this URL a picture at
+     * all?" from the URL's own shape, this one asks "is this picture this
+     * event's artwork?" using the classification OCR returns for free.
+     *
+     * Run 20260806-125121 shipped a decorative butterfly ("…/2024/04/Vector.png",
+     * a design-tool default export) as the Dallas Eagle "Gear Night" image: the
+     * page's segment had no OCR-matched flyer, so the segment prompt fell back
+     * to the first four <img> on the page — footer chrome — and the model
+     * returned the butterfly with confidence 100 and perfectly valid evidence.
+     * The very same asset had ALREADY been OCR'd and classified `logo`; the
+     * pairing gate used that verdict to refuse it as a segment flyer and then
+     * nothing carried the verdict forward to image selection.
+     *
+     * Clearing `image` clears its imageSource stamp with it, exactly like the
+     * placeholder rejection — provenance is a companion of the value.
+     */
+    rejectNonEventImageValues(event) {
+        if (!event || typeof event !== 'object') return event;
+        for (const field of ['image', 'imageVertical', 'imageHorizontal']) {
+            const value = typeof event[field] === 'string' ? event[field].trim() : '';
+            if (!value) continue;
+            const reason = this.getNonEventImageOcrReason(value);
+            if (!reason) continue;
+            console.log(`🤖 AI Web: Rejected non-event ${field} ${value} for "${event.title || ''}" — ${reason}`);
+            delete event[field];
+            if (field === 'image') delete event.imageSource;
+        }
+        return event;
+    }
+
     // Orientation of one candidate. Dimensions the page PUBLISHED (JSON-LD
     // ImageObject width/height, og:image:width/height) are authoritative and
     // answer first; only then do we ask shared-core to read dimensions out of
@@ -15165,6 +15335,10 @@ TEXT:
         const bySlot = { portrait: null, landscape: null };
         for (const candidate of byUrl.values()) {
             if (this.isLikelyUninterestingImageUrl(candidate.url)) continue;
+            // …and neither is an image the vision pass read as page furniture.
+            // Without this a rejected `image` could walk straight back in as an
+            // orientation slot, because `image` is a slot candidate itself.
+            if (this.getNonEventImageOcrReason(candidate.url)) continue;
             const orientation = this.resolveImageCandidateOrientation(candidate);
             if (orientation !== 'portrait' && orientation !== 'landscape') continue;
             const incumbent = bySlot[orientation];

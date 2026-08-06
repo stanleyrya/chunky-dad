@@ -12066,3 +12066,146 @@ test('an entry identity link is a real destination, query string included', () =
     { html: '<a href="/events/b-bar/?occurrence=2026-08-13">B BAR</a>' }
   ]), [true, true]);
 });
+
+// ---------------------------------------------------------------------------
+// OCR IMAGE VERDICTS — the classification we already pay for, used to keep a
+// decorative site asset from becoming an event's flyer.
+// ---------------------------------------------------------------------------
+
+test('a logo the vision pass found no text on never becomes an event image', () => {
+  const parser = createParser();
+  const butterfly = 'https://cdn.example/3335593/wp-content/uploads/2024/04/Vector.png?lossy=2&strip=1&webp=1';
+  parser.recordOcrImageVerdict(butterfly, { imageClassification: 'logo', text: '' });
+
+  const event = { title: 'Gear Night', image: butterfly, imageSource: 'page', imageVertical: butterfly };
+  parser.rejectNonEventImageValues(event);
+
+  assert.equal(Object.prototype.hasOwnProperty.call(event, 'image'), false,
+    'a decorative vector the model called a logo is not this event\'s artwork');
+  assert.equal(Object.prototype.hasOwnProperty.call(event, 'imageSource'), false,
+    'provenance dies with the value it described');
+  assert.equal(Object.prototype.hasOwnProperty.call(event, 'imageVertical'), false);
+});
+
+test('an image the vision pass read words off survives, whatever it called it', () => {
+  const parser = createParser();
+  // Real corpus: two images classified "logo" carried 587 and 573 characters
+  // of OCR text — misclassified flyers. Text is the veto on the classification.
+  const misread = 'https://static.example/media/f45f1a_36ccf2f3fc5c48f0b4adbf2d4c339048~mv2.jpeg';
+  parser.recordOcrImageVerdict(misread, {
+    imageClassification: 'logo',
+    text: 'BEAR NIGHT\nSaturday July 18\n10PM - 4AM\nThe Eagle'
+  });
+  // ad-banner is not in the rejection set at all: every ad-banner in the corpus
+  // carried text and several were genuine weekly venue posters.
+  const poster = 'https://venue.example/wp-content/uploads/Tightwad-Tues-poster-2024.jpg';
+  parser.recordOcrImageVerdict(poster, { imageClassification: 'ad-banner', text: 'TIGHTWAD TUESDAY $3 WELL' });
+  // Never OCR'd at all → unknown → keep. This is the common case.
+  const unseen = 'https://venue.example/wp-content/uploads/2026/07/some-flyer.jpg';
+
+  for (const url of [misread, poster, unseen]) {
+    const event = { title: 'Keep It', image: url, imageVertical: url };
+    parser.rejectNonEventImageValues(event);
+    assert.equal(event.image, url, `${url} must survive — losing a real flyer is worse than keeping chrome`);
+    assert.equal(event.imageVertical, url);
+  }
+});
+
+test('a rejected non-event image cannot walk back in as an orientation slot or an og:image', () => {
+  const parser = createParser();
+  const chrome = 'https://cdn.example/assets/hero-header-2024.png';
+  parser.recordOcrImageVerdict(chrome, { imageClassification: 'hero-banner', text: '' });
+  parser.recordMeasuredImageDimensions(chrome, { width: 1600, height: 600 });
+
+  const slotEvent = { title: 'Slotted', image: chrome };
+  parser.applyImageSlots(slotEvent, { url: 'https://venue.example/events', html: '' });
+  assert.equal(Object.prototype.hasOwnProperty.call(slotEvent, 'imageHorizontal'), false,
+    'a landscape shape is still not artwork when the model called it page chrome');
+
+  const metaEvent = { title: 'Meta' };
+  parser.fillImageFromPageMetaArtwork(metaEvent, {
+    url: 'https://venue.example/events',
+    html: `<meta property="og:image" content="${chrome}">`
+  });
+  assert.equal(Object.prototype.hasOwnProperty.call(metaEvent, 'image'), false,
+    'a page whose og:image is its own banner must not hand it to an event');
+});
+
+test('a known non-event image is withheld from the segment prompt entirely', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://venue.example/events/';
+  const butterfly = 'https://cdn.example/uploads/2024/04/Vector.png';
+  const socialIcon = 'https://cdn.example/uploads/2025/04/mastodon_hover.png';
+  const segmentHtml = `<div><img src="${butterfly}"><img src="${socialIcon}"></div>`;
+
+  const before = parser.extractMultiEventSegmentResourceLines(segmentHtml, sourceUrl);
+  assert.equal(before.filter(line => line.startsWith('SEGMENT_IMAGE_URL:')).length, 2,
+    'with no verdicts the fallback still offers every image it finds (fail open)');
+
+  parser.recordOcrImageVerdict(butterfly, { imageClassification: 'logo', text: '' });
+  parser.recordOcrImageVerdict(socialIcon, { imageClassification: 'logo', text: '' });
+  const after = parser.extractMultiEventSegmentResourceLines(segmentHtml, sourceUrl);
+  assert.deepEqual(after.filter(line => line.startsWith('SEGMENT_IMAGE_URL:')), [],
+    'the model is never offered an image the vision pass already called a logo');
+});
+
+test('the OCR cache carries an image classification across runs even when it has no text', async () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ocr-verdict-test-'));
+
+  const imageUrl = 'https://cdn.example/uploads/2024/04/Vector.png';
+  const ocrConfig = { cacheEnabled: true, model: 'test-vision', prompt: 'ocr prompt', timeoutSeconds: 30 };
+
+  const first = new AiWebParser({ normalizeUrl, ocrCacheDir: cacheDir });
+  first.core = new SharedCore({}, { eventSchema: EventSchema });
+  first.core.callAiGenerate = async () => JSON.stringify({ text: '', imageClassification: 'logo', confidence: 95 });
+  await first.getOcrTextForImage(imageUrl, ocrConfig, 'ocr-all', {
+    fetchImageAsBase64: async () => toBase64Fixture(webpLossyBytes(200, 200))
+  });
+  assert.equal(first.getOcrImageVerdict(imageUrl).classification, 'logo');
+
+  // The textless filter in extractOcrFromAllImages throws this result away, so
+  // the verdict has to live somewhere the filter cannot reach.
+  const nextRun = new AiWebParser({ normalizeUrl, ocrCacheDir: cacheDir });
+  nextRun.core = new SharedCore({}, { eventSchema: EventSchema });
+  nextRun.core.callAiGenerate = async () => { throw new Error('AI must not run on a cache hit'); };
+  await nextRun.getOcrTextForImage(imageUrl, ocrConfig, 'ocr-all', {
+    fetchImageAsBase64: async () => { throw new Error('a cache hit must not re-download the image'); }
+  });
+
+  const event = { title: 'Gear Night', image: imageUrl };
+  nextRun.rejectNonEventImageValues(event);
+  assert.equal(Object.prototype.hasOwnProperty.call(event, 'image'), false,
+    'a site\'s chrome stays known across runs and across parsers, for free');
+
+  fs.rmSync(cacheDir, { recursive: true, force: true });
+});
+
+test('an OCR result with no classification is paired on its text, not refused', () => {
+  const parser = createParser();
+  const bounds = { rawStart: 100, rawEnd: 400, matchedRecords: [{ text: 'BEAR WEEK KICK OFF\nBearracuda Provincetown' }] };
+  const imageRecord = { url: 'https://cdn.example/uploads/2026/05/web.jpg', start: 150, end: 200 };
+  const flyerText = 'BEAR WEEK KICK OFF\nBEARRACUDA\nPROVINCETOWN\n\nBEATS BY\nKELLY';
+
+  // 15% of the real OCR cache came back with an empty imageClassification and
+  // was refused a segment — these are genuine flyers, not page furniture.
+  const unclassified = parser.getSegmentImagePairingCostWithOcr(
+    bounds, imageRecord, { url: imageRecord.url, imageClassification: '', text: flyerText }, ''
+  );
+  assert.ok(Number.isFinite(unclassified.cost), 'a missing classification must not veto a real flyer');
+  assert.ok(unclassified.score > 100, 'and its text still has to earn the match');
+
+  // A classification the model actually STATES is unchanged: a logo is still
+  // refused, exactly as before.
+  const logo = parser.getSegmentImagePairingCostWithOcr(
+    bounds, imageRecord, { url: imageRecord.url, imageClassification: 'logo', text: '' }, ''
+  );
+  assert.equal(logo.cost, Infinity);
+  assert.equal(logo.score, -Infinity);
+
+  // No OCR result at all is still no pairing.
+  const none = parser.getSegmentImagePairingCostWithOcr(bounds, imageRecord, null, '');
+  assert.equal(none.cost, Infinity);
+});
