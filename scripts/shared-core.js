@@ -8165,6 +8165,81 @@ class SharedCore {
             crossSourceDeduplicated = kept;
         }
 
+        // Fourth pass: same-series export collapse (run 20260806-171735). When
+        // a run lands on a weekly series' own weekday, the site surfaces BOTH
+        // this week's and next week's occurrence stubs ("B BAR"
+        // ?occurrence=2026-08-06 AND ?occurrence=2026-08-13, each carrying
+        // FREQ=WEEKLY;BYDAY=TH) — and each record is a FULL series export whose
+        // rrule alone already covers every occurrence, so keeping both exports
+        // the same series twice. This is deliberately NOT the
+        // areStartDatesWithinDays territory: that exclusive window protects two
+        // DISTINCT single occurrences of a recurring event (SUNDAY BEER BUST's
+        // two Sundays, each a discrete upcoming night), and such records pass
+        // through this loop untouched because they are not series exports.
+        // Records collapse ONLY when the strict series identity of
+        // getSeriesExportIdentity matches on BOTH sides (full-series export,
+        // never slot-host; identical normalized rrule; same base event page
+        // with the ?occurrence= query stripped; parseable startDate — anything
+        // less fails closed) AND the existing same-event notion agrees
+        // (name-similar identity shapes, no positive different-place veto).
+        // The kept record is the EARLIEST occurrence — dedup runs on
+        // future-filtered events, so earliest IS the next upcoming one — and
+        // fields merge through the same mergeParsedEvents machinery as the
+        // passes above, with the kept occurrence's own date/url reasserted
+        // afterwards (the dropped record's ?occurrence= url and dates name the
+        // night being folded, not the night being kept).
+        const seriesCollapsed = [];
+        const seriesCollapseCounts = new Map();
+        for (const event of crossSourceDeduplicated) {
+            const eventSeries = this.getSeriesExportIdentity(event);
+            const match = eventSeries ? seriesCollapsed.find(existing => {
+                const existingSeries = this.getSeriesExportIdentity(existing);
+                if (!existingSeries) return false;
+                if (existingSeries.rrule !== eventSeries.rrule) return false;
+                if (existingSeries.hostPath !== eventSeries.hostPath) return false;
+                const shapeA = this.buildIdentityComparisonShape(event);
+                const shapeB = this.buildIdentityComparisonShape(existing);
+                if (!this.areIdentityNamesSimilar(shapeA, shapeB)) return false;
+                return !this.areEventsDistinctByPlace(event, existing);
+            }) : null;
+            if (!match) {
+                seriesCollapsed.push(event);
+                continue;
+            }
+            const matchSeries = this.getSeriesExportIdentity(match);
+            const keeper = matchSeries.startMs <= eventSeries.startMs ? match : event;
+            const dropped = keeper === match ? event : match;
+            const merged = await this.mergeParsedEvents(dropped, keeper, { httpAdapter, globalConfig });
+            merged.key = keeper.key;
+            // Reassert the kept occurrence's own instant and pointer: the merge
+            // may prefer the dropped side's values, but those name the folded
+            // night. A keeper without an endDate DELETES the dropped one — an
+            // end time seven days after the kept start is not a duration.
+            merged.startDate = keeper.startDate;
+            for (const occurrenceField of ['endDate', 'url', 'website']) {
+                const keeperValue = keeper[occurrenceField];
+                if (keeperValue === null || keeperValue === undefined || keeperValue === '') {
+                    delete merged[occurrenceField];
+                } else {
+                    merged[occurrenceField] = keeperValue;
+                }
+            }
+            // The owner's manual bear verdict lives on the event, whichever
+            // occurrence record he happened to tap it on.
+            if (event.manuallyMarkedBear === true || match.manuallyMarkedBear === true) {
+                merged.manuallyMarkedBear = true;
+            }
+            if (merged._timezoneUnresolved) {
+                this.resolveWallClockDates(merged);
+            }
+            const collapsedCount = (seriesCollapseCounts.get(match) || 1) + 1;
+            seriesCollapseCounts.set(merged, collapsedCount);
+            seriesCollapsed[seriesCollapsed.indexOf(match)] = merged;
+            const keptDay = new Date(Math.min(matchSeries.startMs, eventSeries.startMs)).toISOString().slice(0, 10);
+            console.log(`🔁 SERIES: collapsed ${collapsedCount} same-series exports of "${merged.title || 'event'}" (${eventSeries.rrule}) to the next occurrence ${keptDay} — the recurrence already covers the rest`);
+        }
+        crossSourceDeduplicated = seriesCollapsed;
+
         // Log results for large batches
         if (logProgress) {
             const duplicatesFound = events.length - crossSourceDeduplicated.length;
@@ -13503,6 +13578,40 @@ class SharedCore {
             }
         }
         return Math.abs(dateA.getTime() - dateB.getTime()) < days * 24 * 60 * 60 * 1000;
+    }
+
+    // Series-export identity for the series-collapse pass in deduplicateEvents.
+    // Returns { rrule, hostPath, startMs } ONLY when this record is a
+    // FULL-SERIES export whose series can be named — anything less returns null
+    // and the collapse fails closed, exactly the conservatism of
+    // areStartDatesWithinDays returning false on unparseable dates:
+    //   - it defines a recurring series (isRecurringSeriesEvent) and is not a
+    //     slot-host override — a slot host's record is a deliberate
+    //     single-occurrence override of someone else's series, never a series
+    //     export. Dedup runs before the analysis stage stamps
+    //     _seriesAuthority/_recurringExport, so pre-analysis records qualify on
+    //     the series claim alone; the stamps are honored when present (replayed
+    //     analyzed events);
+    //   - it states a non-empty recurrence rule (normalized: trimmed,
+    //     uppercased). A bare _recurring flag with no rule cannot prove two
+    //     records share ONE rule, so it never collapses;
+    //   - its url/website resolves to a real event page
+    //     (getEventPageUrlIdentity: query/fragment stripped so ?occurrence=
+    //     variants of one page match; domain roots and statically stamped
+    //     websites never yield an identity);
+    //   - its startDate parses (toEpochMillis — realm-safe for Scriptable's
+    //     cross-realm Dates).
+    getSeriesExportIdentity(event) {
+        if (!SharedCore.isRecurringSeriesEvent(event)) return null;
+        if (event._seriesAuthority === 'slot-host') return null;
+        if (event._recurringExport === false) return null;
+        const rrule = String(event.recurrenceRule || event.recurrence || '').trim().toUpperCase();
+        if (!rrule) return null;
+        const page = this.getEventPageUrlIdentity(event);
+        if (!page) return null;
+        const startMs = this.toEpochMillis(event.startDate);
+        if (startMs === null) return null;
+        return { rrule, hostPath: page.hostPath, startMs };
     }
 
     // When two records of the same event disagree on identity fields (city/key),
