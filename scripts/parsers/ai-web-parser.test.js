@@ -12409,7 +12409,7 @@ test('a MEC month-grid page replays its own admin-ajax month feed and harvests n
     { url: 'https://venue.example/calendar/', html: MEC_MONTH_GRID_PAGE_HTML },
     { discoveryOnly: true }, null, 'link-aggregator', stubAdapter);
 
-  assert.equal(postCalls.length, 1, 'default lookahead is exactly ONE future month');
+  assert.equal(postCalls.length, 2, 'default lookahead is exactly TWO future months');
   assert.equal(postCalls[0].url, 'https://venue.example/wp-admin/admin-ajax.php');
   assert.equal(postCalls[0].options.headers['X-Requested-With'], 'XMLHttpRequest');
   assert.ok(postCalls[0].body.startsWith('action=mec_monthly_view_load_month&mec_year=2026&mec_month=09&navigator_click=true&'),
@@ -12445,7 +12445,7 @@ test('the month-feed POST body carries the page\'s atts blob verbatim and a stab
   await parser.parseEvents(
     { url: 'https://venue.example/calendar/', html: MEC_MONTH_GRID_PAGE_HTML },
     { discoveryOnly: true }, null, 'link-aggregator', stubAdapter);
-  assert.equal(postCalls.length, 1);
+  assert.equal(postCalls.length, 2);
   assert.ok(postCalls[0].body.endsWith(`&${MEC_FIXTURE_ATTS}`),
     `the atts blob is harvested from the page and replayed VERBATIM, got: ${postCalls[0].body}`);
   assert.equal(postCalls[0].options.cacheUrl,
@@ -12477,7 +12477,7 @@ test('a failed month-feed POST degrades like any failed crawled page: logged, ru
 
 test('calendarLookaheadMonths is clamped 0..3 and 0 disables the feed', async () => {
   const parser = createParser();
-  assert.equal(parser.resolveCalendarLookaheadMonths({}), 1, 'default: current + 1 month');
+  assert.equal(parser.resolveCalendarLookaheadMonths({}), 2, 'default: current + 2 months — one month of observations is provably one short for cadence derivation (Dallas GEAR NIGHT)');
   assert.equal(parser.resolveCalendarLookaheadMonths({ calendarLookaheadMonths: 9 }), 3);
   assert.equal(parser.resolveCalendarLookaheadMonths({ calendarLookaheadMonths: -2 }), 0);
   let posts = 0;
