@@ -10428,23 +10428,153 @@ class SharedCore {
     // absence or errors leave today's behavior untouched.
     async resolveCalendarAnalysisWithSeriesProbe(event, existingEventsData, mergeMode, calendarAdapter) {
         let analysis = this.analyzeEventAction(event, existingEventsData, mergeMode);
-        if (analysis.action !== 'merge' || !analysis.existingEvent) {
-            return analysis;
-        }
-        if (!calendarAdapter || typeof calendarAdapter.probeRecurringSeries !== 'function') {
-            return analysis;
-        }
-        try {
-            const isSeries = await calendarAdapter.probeRecurringSeries(analysis.existingEvent, event);
-            if (isSeries === true) {
-                const identifier = analysis.existingEvent.identifier || analysis.existingEvent.id || '';
-                this.noteConfirmedRecurringSeries(identifier);
-                analysis = this.analyzeEventAction(event, existingEventsData, mergeMode);
+        if (analysis.action === 'merge' && analysis.existingEvent) {
+            if (!calendarAdapter || typeof calendarAdapter.probeRecurringSeries !== 'function') {
+                return analysis;
             }
-        } catch (error) {
-            // Fail open — probe errors never change merge behavior.
+            try {
+                const isSeries = await calendarAdapter.probeRecurringSeries(analysis.existingEvent, event);
+                if (isSeries === true) {
+                    const identifier = analysis.existingEvent.identifier || analysis.existingEvent.id || '';
+                    this.noteConfirmedRecurringSeries(identifier);
+                    analysis = this.analyzeEventAction(event, existingEventsData, mergeMode);
+                }
+            } catch (error) {
+                // Fail open — probe errors never change merge behavior.
+            }
+            return analysis;
+        }
+        // The day-window search matched nothing this event maps to, but the
+        // scraped event itself EXPORTS a series. A saved series' visible
+        // instances legitimately live on OTHER days than the scraped
+        // occurrence (a monthly series whose next saved instance is a
+        // different day; a weekly series saved last week), so `found=0` here
+        // proves nothing — run the saved-series lookup before letting the
+        // run claim NEW and re-offer the same ICS (run 20260807-161034:
+        // B BAR/CUBSCOUT/ONYX all "new" the day after their series were
+        // saved). Reporting-only: the analysis action stays 'new' and the
+        // write stays withheld — a match only changes what the run SAYS.
+        if (analysis.action === 'new' && !analysis.existingEvent && !analysis.sourceEvent &&
+            SharedCore.isRecurringSeriesEvent(event)) {
+            try {
+                const seriesMatch = await this.findSavedSeriesMatch(event, calendarAdapter);
+                if (seriesMatch) {
+                    analysis.seriesMatch = seriesMatch;
+                }
+            } catch (error) {
+                // Fail open — lookup errors leave today's NEW verdict untouched.
+            }
         }
         return analysis;
+    }
+
+    // Identity gate for the saved-series lookup: the dedup's own name and
+    // place helpers (areIdentityNamesSimilar / areIdentityPlacesSimilar —
+    // nothing looser), minus getSameEventIdentitySignal's same-local-day
+    // gate. Relaxing the day is the entire point — the saved series' visible
+    // instances are on other days — and it is compensated by the caller
+    // requiring the candidate to be a POSITIVELY CONFIRMED saved series
+    // before anything is claimed.
+    matchesSavedSeriesIdentity(event, candidate) {
+        const incoming = this.buildIdentityComparisonShape(event);
+        const existing = this.buildIdentityComparisonShape(candidate);
+        return this.areIdentityNamesSimilar(incoming, existing) &&
+            this.areIdentityPlacesSimilar(incoming, existing);
+    }
+
+    // Saved-series lookup for a series-export event whose own day window
+    // found nothing. Two layers, both adapter-provided and both fail-open:
+    //   1. Wide-window calendar candidates (calendarAdapter
+    //      .getWideWindowCalendarEvents): match by dedup identity, then
+    //      require the candidate to be a saved series via the doctrine's
+    //      detection order — notes `recurrence:` key (or the expanded
+    //      record's own recurrence field) → local multi-instance identifier
+    //      count → adapter probe (published calendar ICS, then wide-window
+    //      identifier probe).
+    //   2. Published calendar ICS records (calendarAdapter
+    //      .getPublishedCalendarRecords): a series VEVENT with matching
+    //      identity in the city's published calendar also proves "already
+    //      saved".
+    // Returns { identifier, title, startDate, endDate, instances,
+    // calendarName, reason } or null. Never changes any analysis action.
+    async findSavedSeriesMatch(event, calendarAdapter) {
+        if (!calendarAdapter) return null;
+        const calendarNameFor = () => {
+            try {
+                return typeof calendarAdapter.getCalendarName === 'function'
+                    ? String(calendarAdapter.getCalendarName(event.city || 'default') || '')
+                    : String(event.city || '');
+            } catch (error) {
+                return String(event.city || '');
+            }
+        };
+        // Layer 1: wide-window calendar candidates.
+        if (typeof calendarAdapter.getWideWindowCalendarEvents === 'function') {
+            const lookup = await calendarAdapter.getWideWindowCalendarEvents(event);
+            const candidates = lookup && Array.isArray(lookup.events) ? lookup.events : [];
+            const lookupCalendarName = lookup && lookup.calendarName
+                ? String(lookup.calendarName)
+                : calendarNameFor();
+            for (const candidate of candidates) {
+                if (!candidate) continue;
+                if (!this.matchesSavedSeriesIdentity(event, candidate)) continue;
+                const fields = this.parseNotesIntoFields(candidate.notes || '');
+                const statedRule = (typeof fields.recurrence === 'string' && fields.recurrence.trim())
+                    || (typeof candidate.recurrence === 'string' && candidate.recurrence.trim())
+                    || '';
+                const identifier = candidate.identifier || candidate.id || '';
+                const probeDecision = SharedCore.resolveSeriesProbeDecision(candidates, identifier);
+                let confirmed = Boolean(statedRule) || probeDecision.isSeries;
+                if (!confirmed && typeof calendarAdapter.probeRecurringSeries === 'function') {
+                    confirmed = (await calendarAdapter.probeRecurringSeries(candidate, event)) === true;
+                }
+                if (!confirmed) continue;
+                this.noteConfirmedRecurringSeries(identifier);
+                return {
+                    identifier,
+                    title: candidate.title || '',
+                    startDate: candidate.startDate || null,
+                    endDate: candidate.endDate || candidate.startDate || null,
+                    instances: Math.max(probeDecision.instanceCount, 1),
+                    calendarName: lookupCalendarName,
+                    reason: 'Saved series match (wide-window)'
+                };
+            }
+        }
+        // Layer 2 (fallback): published calendar ICS records.
+        if (typeof calendarAdapter.getPublishedCalendarRecords === 'function') {
+            const records = await calendarAdapter.getPublishedCalendarRecords(event.city || '');
+            if (Array.isArray(records)) {
+                for (const record of records) {
+                    // Only series-defining VEVENTs count: an RRULE and no
+                    // RECURRENCE-ID (override instances are not the series).
+                    if (!record || !record.rrule || record.recurrenceId) continue;
+                    const candidate = {
+                        identifier: record.uid || '',
+                        title: record.summary || '',
+                        startDate: record.start && record.start.date ? record.start.date : null,
+                        endDate: record.end && record.end.date
+                            ? record.end.date
+                            : (record.start && record.start.date) || null,
+                        location: record.location || '',
+                        notes: record.description || ''
+                    };
+                    if (!candidate.identifier || !candidate.startDate) continue;
+                    if (!this.matchesSavedSeriesIdentity(event, candidate)) continue;
+                    this.noteConfirmedRecurringSeries(candidate.identifier);
+                    return {
+                        identifier: candidate.identifier,
+                        title: candidate.title,
+                        startDate: candidate.startDate,
+                        endDate: candidate.endDate,
+                        instances: 1,
+                        calendarName: calendarNameFor(),
+                        reason: 'Saved series match (published calendar ICS)'
+                    };
+                }
+            }
+        }
+        return null;
     }
 
     resolveRecurringMergeCandidate(existingEventsData, existingEvent) {
@@ -10816,7 +10946,20 @@ class SharedCore {
     static isRecurringSeriesEvent(event) {
         if (!event || typeof event !== 'object') return false;
         if (event._recurring === true) return true;
-        return typeof event.recurrenceRule === 'string' && event.recurrenceRule.trim() !== '';
+        if (typeof event.recurrenceRule === 'string' && event.recurrenceRule.trim() !== '') return true;
+        // The canonical schema field: event-schema canonicalizes
+        // rrule/recurrenceRule → `recurrence`, so a builder-made event may
+        // carry ONLY `recurrence` — without this it was invisible as a
+        // series (no 🔁 badge, no ICS export, no withhold, and the RRULE
+        // silently dropped on write because createCalendarEvent never sets
+        // one). BUT: `recurrence` also leaks off an EXISTING record's notes
+        // onto a single-occurrence override during the merge
+        // (createFinalEventObject), and an override-identified event is by
+        // definition ONE occurrence — treating that leak as a series claim
+        // would withhold the one write the scraper IS allowed to make into
+        // an existing series (see the pinned override-survival test).
+        if (event.overrideUid || event.overrideRecurrenceId) return false;
+        return typeof event.recurrence === 'string' && event.recurrence.trim() !== '';
     }
 
     // Scriptable identifiers look like `<calendarUUID>:<icsUid>` — the suffix
@@ -12564,6 +12707,28 @@ class SharedCore {
                 // fact found it, merged it, and confirmed the series.
                 const matchedRecord = analysis.existingEvent || analysis.sourceEvent || null;
                 if (matchedRecord) {
+                    // Same-day match: instance count comes from the probe's
+                    // cached wide-window decision (when the adapter exposes
+                    // it), calendar name from the adapter's city mapping.
+                    let probedInstances = 0;
+                    try {
+                        if (calendarAdapter && typeof calendarAdapter.getSeriesProbeDecision === 'function') {
+                            const probeDecision = calendarAdapter.getSeriesProbeDecision(matchedRecord.identifier || matchedRecord.id || '');
+                            if (probeDecision && Number.isFinite(probeDecision.instanceCount)) {
+                                probedInstances = probeDecision.instanceCount;
+                            }
+                        }
+                    } catch (probeCacheError) {
+                        // Reporting-only — never let display data block the plan.
+                    }
+                    let matchedCalendarName = '';
+                    try {
+                        if (calendarAdapter && typeof calendarAdapter.getCalendarName === 'function') {
+                            matchedCalendarName = String(calendarAdapter.getCalendarName(analyzedEvent.city || event.city || 'default') || '');
+                        }
+                    } catch (calendarNameError) {
+                        matchedCalendarName = '';
+                    }
                     analyzedEvent._seriesMatch = {
                         identifier: matchedRecord.identifier || matchedRecord.id || '',
                         title: matchedRecord.title || '',
@@ -12573,9 +12738,30 @@ class SharedCore {
                         // this record's start.
                         startDate: matchedRecord.startDate || null,
                         endDate: matchedRecord.endDate || matchedRecord.startDate || null,
-                        reason: analysis.reason || ''
+                        reason: analysis.reason || '',
+                        instances: probedInstances,
+                        calendarName: matchedCalendarName
                     };
                     console.log(`🔁 RECURRING: "${event.title || 'Unknown'}" matches a series already saved in the calendar — not a new event (${analysis.reason || 'existing match'})`);
+                } else if (analysis.seriesMatch) {
+                    // Saved-series lookup match (the day window held nothing,
+                    // but the wide window / published calendar does): the
+                    // event is NOT new — it matched a saved series. Scalars
+                    // only; the run JSON persists this stamp.
+                    analyzedEvent._seriesMatch = {
+                        identifier: analysis.seriesMatch.identifier || '',
+                        title: analysis.seriesMatch.title || '',
+                        startDate: analysis.seriesMatch.startDate || null,
+                        endDate: analysis.seriesMatch.endDate || null,
+                        reason: analysis.seriesMatch.reason || 'Saved series match',
+                        instances: Number.isFinite(analysis.seriesMatch.instances) ? analysis.seriesMatch.instances : 0,
+                        calendarName: analysis.seriesMatch.calendarName || ''
+                    };
+                }
+                if (analyzedEvent._seriesMatch &&
+                    analyzedEvent._seriesMatch.calendarName &&
+                    analyzedEvent._seriesMatch.instances > 0) {
+                    console.log(`🔁 RECURRING: "${event.title || 'Unknown'}" matches the saved series already in ${analyzedEvent._seriesMatch.calendarName} (${analyzedEvent._seriesMatch.instances} instances) — not a new event`);
                 }
                 console.log(`🔁 RECURRING: "${event.title || 'Unknown'}" withheld from calendar write — save via ICS export`);
             }

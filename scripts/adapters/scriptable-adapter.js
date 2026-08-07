@@ -2730,6 +2730,22 @@ class ScriptableAdapter {
       ) {
         return this._publishedRecurringUidsByCity[key];
       }
+      const body = await this.fetchPublishedCalendarIcsBody(key);
+      const uids = body ? SharedCore.extractRecurringUidsFromIcs(body) : null;
+      this._publishedRecurringUidsByCity[key] = uids;
+      return uids;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  // One published-calendar ICS body fetch, shared by the UID scan and the
+  // full-record parse (page-cached, so both consumers cost one request per
+  // TTL). Null on any failure.
+  async fetchPublishedCalendarIcsBody(cityKey) {
+    try {
+      const key = String(cityKey || "").trim();
+      if (!key) return null;
       const url = `https://chunky.dad/data/calendars/${encodeURIComponent(key)}.ics`;
       const icsCacheConfig = {
         enabled: this.getPageCacheConfig().enabled,
@@ -2749,9 +2765,7 @@ class ScriptableAdapter {
           await this.writeCachedPage(url, responseData, icsCacheConfig);
         }
       }
-      const uids = body ? SharedCore.extractRecurringUidsFromIcs(body) : null;
-      this._publishedRecurringUidsByCity[key] = uids;
-      return uids;
+      return body;
     } catch (error) {
       return null;
     }
@@ -2774,6 +2788,11 @@ class ScriptableAdapter {
         instances,
         identifier,
       );
+      // Cache the full decision (not just the boolean) so the honest-state
+      // report can say HOW MANY instances the confirmed series has without a
+      // second calendar read.
+      if (!this._seriesProbeDecisions) this._seriesProbeDecisions = {};
+      this._seriesProbeDecisions[String(identifier).trim()] = decision;
       if (decision.isSeries) {
         console.log(
           `🔁 RECURRING: series detected via wide-window identifier probe for "${title}" (${decision.instanceCount} instances)`,
@@ -2783,6 +2802,98 @@ class ScriptableAdapter {
     } catch (error) {
       // Fail open — probe errors never change merge behavior.
       return false;
+    }
+  }
+
+  // Cached wide-window probe decision ({ instanceCount, isSeries }) for an
+  // identifier this run, or null. Reporting-only consumer: SharedCore's
+  // series-match stamp reads the instance count off it.
+  getSeriesProbeDecision(identifier) {
+    const key =
+      identifier === null || identifier === undefined
+        ? ""
+        : String(identifier).trim();
+    if (!key || !this._seriesProbeDecisions) return null;
+    return Object.prototype.hasOwnProperty.call(this._seriesProbeDecisions, key)
+      ? this._seriesProbeDecisions[key]
+      : null;
+  }
+
+  // Wide-window candidate fetch for the saved-series lookup (SharedCore
+  // .findSavedSeriesMatch): every calendar event in the same now-anchored
+  // window the identifier probe uses. The day-window getExistingEvents
+  // search can legitimately return found=0 for a series the owner ALREADY
+  // saved — a monthly series whose next instance is on a different day, a
+  // weekly series saved last week — so the lookup needs the whole window,
+  // cached per calendar per run. Read-only; fails open to null.
+  async getWideWindowCalendarEvents(event) {
+    try {
+      const city = (event && event.city) || "default";
+      const calendarName = this.getCalendarName(city);
+      if (!this._wideWindowEventsByCalendar) {
+        this._wideWindowEventsByCalendar = {};
+      }
+      if (
+        Object.prototype.hasOwnProperty.call(
+          this._wideWindowEventsByCalendar,
+          calendarName,
+        )
+      ) {
+        return this._wideWindowEventsByCalendar[calendarName];
+      }
+      let entry = null;
+      try {
+        const calendar = await this.getOrCreateCalendar(calendarName);
+        const now = new Date();
+        const windowStart = new Date(now.getTime() - 35 * 24 * 60 * 60 * 1000);
+        const windowEnd = new Date(now.getTime() + 70 * 24 * 60 * 60 * 1000);
+        const instances = await CalendarEvent.between(windowStart, windowEnd, [
+          calendar,
+        ]);
+        entry = {
+          calendarName,
+          events: Array.isArray(instances) ? instances : [],
+        };
+        console.log(
+          `📱 Scriptable: Wide-window series lookup calendar="${calendarName}" window=${windowStart.toISOString()} → ${windowEnd.toISOString()} found=${entry.events.length}`,
+        );
+      } catch (error) {
+        // Fail open (missing calendar, EventKit error): the lookup layer
+        // simply has no candidates and the published-ICS fallback runs.
+        entry = null;
+      }
+      this._wideWindowEventsByCalendar[calendarName] = entry;
+      return entry;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  // Parsed published-calendar VEVENT records for one city (fallback layer of
+  // the saved-series lookup). Same fetch/cache machinery as
+  // getPublishedRecurringUids — the body is page-cached, so the two helpers
+  // share one network fetch per run. Null on any failure (callers fail open).
+  async getPublishedCalendarRecords(cityKey) {
+    try {
+      const key = String(cityKey || "").trim();
+      if (!key) return null;
+      if (!this._publishedCalendarRecordsByCity) {
+        this._publishedCalendarRecordsByCity = {};
+      }
+      if (
+        Object.prototype.hasOwnProperty.call(
+          this._publishedCalendarRecordsByCity,
+          key,
+        )
+      ) {
+        return this._publishedCalendarRecordsByCity[key];
+      }
+      const body = await this.fetchPublishedCalendarIcsBody(key);
+      const records = body ? SharedCore.parsePublishedCalendarIcs(body) : null;
+      this._publishedCalendarRecordsByCity[key] = records;
+      return records;
+    } catch (error) {
+      return null;
     }
   }
 
@@ -5376,6 +5487,7 @@ class ScriptableAdapter {
       merge: [],
       conflict: [],
       missing_calendar: [],
+      series_match: [],
       other: [],
     };
 
@@ -5396,6 +5508,15 @@ class ScriptableAdapter {
     console.log(
       `   ❌ Missing Calendar: ${eventsByAction.missing_calendar.length} events`,
     );
+    // Additive bucket (line only when non-zero, same rule as Other): series
+    // the run matched to an already-saved series and withheld — these are
+    // deliberately NOT counted toward ➕ New, which is exactly the claim
+    // that kept re-offering already-saved series for import.
+    if (eventsByAction.series_match.length > 0) {
+      console.log(
+        `   🔁 Series match: ${eventsByAction.series_match.length} events (already saved — withheld)`,
+      );
+    }
     if (eventsByAction.other.length > 0) {
       console.log(`   ❓ Other: ${eventsByAction.other.length} events`);
     }
@@ -5548,6 +5669,7 @@ class ScriptableAdapter {
       merge: 0,
       conflict: 0,
       missing_calendar: 0,
+      series_match: 0,
       other: 0,
     };
 
@@ -5573,6 +5695,7 @@ class ScriptableAdapter {
               merge: "🔄",
               conflict: "⚠️",
               missing_calendar: "❌",
+              series_match: "🔁",
               other: "❓",
             }[action] || "❓";
 
@@ -6123,6 +6246,12 @@ class ScriptableAdapter {
           newEvents.push(entry);
           break;
         case "merge":
+          mergeEvents.push(entry);
+          break;
+        // A series-matched (already saved, withheld) event matched an
+        // existing record — its card belongs with the matches, never in the
+        // New section whose framing is what re-offered saved series.
+        case "series_match":
           mergeEvents.push(entry);
           break;
         case "conflict":
@@ -10368,6 +10497,8 @@ class ScriptableAdapter {
           conflict: '<span class="action-badge badge-warning">CONFLICT</span>',
           missing_calendar:
             '<span class="action-badge badge-error">MISSING CALENDAR</span>',
+          series_match:
+            '<span class="action-badge badge-merge">SERIES MATCH</span>',
         }[intentAction] ||
         '<span class="action-badge badge-warning">OTHER</span>';
     // Recurring series are display+export only (never auto-written): badge
@@ -13765,6 +13896,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     if (normalized === "new") return "NEW";
     if (normalized === "conflict") return "CONFLICT";
     if (normalized === "missing_calendar") return "MISSING_CALENDAR";
+    if (normalized === "series_match") return "SERIES MATCH";
     return "OTHER";
   }
 
@@ -13779,6 +13911,16 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
   }
 
   normalizeIntentAction(event) {
+    const action = this.normalizeIntentActionBase(event);
+    // Honest terminal state: a withheld series that MATCHED a saved series
+    // is not NEW (and not a plain merge either — nothing will be written).
+    // Display/summary intent only; normalizeMetricsIntentAction keeps the
+    // base derivation so the metrics schema and its buckets are untouched.
+    if (action && event && event._seriesMatch) return "series_match";
+    return action;
+  }
+
+  normalizeIntentActionBase(event) {
     const action = this.normalizeWriteAction(event);
     if (!action) return null;
     if (action !== "new") return action;
@@ -13802,7 +13944,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
   }
 
   normalizeMetricsIntentAction(event) {
-    return this.normalizeIntentAction(event);
+    return this.normalizeIntentActionBase(event);
   }
 
   countMetricsActions(events) {

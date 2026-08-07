@@ -3930,6 +3930,203 @@ test('event card: a series already in the calendar says so, next to the ICS badg
 });
 
 // ---------------------------------------------------------------------------
+// Honest terminal state for a matched-but-withheld series: SERIES MATCH /
+// WITHHELD with its own summary bucket, never counted toward ➕ New (runs
+// 20260807-161034 / 20260807-114625: B BAR, CUBSCOUT, ONYX came back "NEW"
+// the day after the owner saved exactly those series).
+// ---------------------------------------------------------------------------
+
+test('intent action: a series-matched withheld event reports SERIES MATCH / WITHHELD, metrics keep the base bucket', () => {
+  const adapter = buildAdapter();
+  const event = buildRecurringCardEvent({
+    _seriesMatch: {
+      identifier: 'CAL-UUID:fuzzy-uid@chunky.dad',
+      instances: 2,
+      calendarName: 'chunky-dad-dallas'
+    }
+  });
+
+  assert.equal(adapter.normalizeIntentAction(event), 'series_match');
+  assert.equal(adapter.formatIntentActionLabel('series_match'), 'SERIES MATCH');
+  assert.equal(adapter.getWriteActionFromEvent(event), 'withheld');
+  assert.equal(adapter.formatWriteActionLabel('withheld'), 'WITHHELD');
+  // Metrics are untouched: the base derivation still buckets this as new,
+  // so the metrics schema and historical comparisons keep their meaning.
+  assert.equal(adapter.normalizeMetricsIntentAction(event), 'new');
+  const counts = adapter.countMetricsActions([event]);
+  assert.equal(counts.new, 1, 'metrics bucket unchanged');
+  assert.equal(counts.other, 0, 'and nothing leaks into other');
+});
+
+test('event actions summary: series matches get their own bucket instead of counting toward New', async () => {
+  const adapter = buildAdapter();
+  const matchedSeries = buildRecurringCardEvent({
+    _seriesMatch: { identifier: 'CAL-UUID:fuzzy-uid@chunky.dad', instances: 2, calendarName: 'chunky-dad-dallas' }
+  });
+  const genuinelyNewSeries = buildRecurringCardEvent({ title: 'BRAND NEW SERIES' });
+  const plainNew = {
+    title: 'ONE OFF',
+    _action: 'new',
+    startDate: '2026-08-09T02:00:00.000Z',
+    city: 'dallas'
+  };
+
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (...args) => lines.push(args.join(' '));
+  try {
+    await adapter.displayEnrichedEvents({
+      analyzedEvents: [matchedSeries, genuinelyNewSeries, plainNew],
+      errors: []
+    });
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.ok(lines.some(l => l.includes('➕ New: 2 events')),
+    `the matched series is NOT new — only the genuine discoveries are: ${JSON.stringify(lines.filter(l => l.includes('events')))}`);
+  assert.ok(lines.some(l => l.includes('🔁 Series match: 1 events (already saved — withheld)')),
+    'the matched series gets its own bucket');
+});
+
+test('getSeriesProbeDecision: the wide-window probe caches its instance count for the honest-state report', async () => {
+  const adapter = new ScriptableAdapter({
+    cities: { la: { calendar: 'chunky-dad-la', timezone: 'America/Los_Angeles', patterns: ['los angeles'] } }
+  });
+  const identifier = 'CAL-UUID:cubscout-1@chunky.dad';
+  const instances = [{ identifier }, { identifier }, { identifier: 'CAL-UUID:other' }];
+  const isSeries = await withStubbedCalendar('chunky-dad-la', instances, () =>
+    adapter.probeSeriesByWideWindow(identifier, 'la', 'CUBSCOUT'));
+
+  assert.equal(isSeries, true);
+  assert.deepEqual(adapter.getSeriesProbeDecision(identifier), { instanceCount: 2, isSeries: true });
+  assert.equal(adapter.getSeriesProbeDecision('CAL-UUID:never-probed'), null);
+  assert.equal(adapter.getSeriesProbeDecision(''), null);
+});
+
+test('getWideWindowCalendarEvents: fetches the probe window once per calendar and fails open', async () => {
+  const adapter = new ScriptableAdapter({
+    cities: { la: { calendar: 'chunky-dad-la', timezone: 'America/Los_Angeles', patterns: ['los angeles'] } }
+  });
+  const saved = [{
+    identifier: 'CAL-UUID:cubscout-1@chunky.dad',
+    title: 'CUBSCOUT',
+    startDate: new Date('2026-09-05T04:00:00.000Z'),
+    endDate: new Date('2026-09-05T09:00:00.000Z'),
+    notes: 'bar: Eagle LA'
+  }];
+
+  let betweenCalls = 0;
+  const originalCalendar = global.Calendar;
+  const originalCalendarEvent = global.CalendarEvent;
+  global.Calendar = { forEvents: async () => [{ title: 'chunky-dad-la', identifier: 'CAL-UUID' }] };
+  global.CalendarEvent = { between: async () => { betweenCalls += 1; return saved; } };
+  try {
+    const first = await adapter.getWideWindowCalendarEvents({ city: 'la', title: 'CUBSCOUT' });
+    assert.ok(first, 'lookup succeeds');
+    assert.equal(first.calendarName, 'chunky-dad-la');
+    assert.equal(first.events.length, 1);
+    const second = await adapter.getWideWindowCalendarEvents({ city: 'la', title: 'B BAR' });
+    assert.equal(second, first, 'cached per calendar per run');
+    assert.equal(betweenCalls, 1, 'one calendar read for the whole run');
+  } finally {
+    global.Calendar = originalCalendar;
+    global.CalendarEvent = originalCalendarEvent;
+  }
+
+  // Missing calendar → fail open to null (the published-ICS fallback runs).
+  const failing = new ScriptableAdapter({
+    cities: { la: { calendar: 'chunky-dad-la', timezone: 'America/Los_Angeles', patterns: ['los angeles'] } }
+  });
+  const result = await withStubbedCalendar('some-other-calendar', [], () =>
+    failing.getWideWindowCalendarEvents({ city: 'la' }));
+  assert.equal(result, null, 'no calendar, no candidates — never a throw');
+});
+
+test('getPublishedCalendarRecords: parses the published city ICS through the shared body fetch', async () => {
+  const adapter = buildAdapter();
+  const ics = [
+    'BEGIN:VCALENDAR',
+    'BEGIN:VEVENT',
+    'DTSTART;TZID=America/Los_Angeles:20260904T210000',
+    'RRULE:FREQ=MONTHLY;BYDAY=1FR',
+    'UID:cubscout-20260731T193113Z@chunky.dad',
+    'SUMMARY:CUBSCOUT',
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n');
+  const fetched = [];
+  adapter.fetchPublishedCalendarIcsBody = async (cityKey) => {
+    fetched.push(cityKey);
+    return ics;
+  };
+
+  const records = await adapter.getPublishedCalendarRecords('la');
+  assert.ok(Array.isArray(records));
+  assert.equal(records.length, 1);
+  assert.equal(records[0].uid, 'cubscout-20260731T193113Z@chunky.dad');
+  assert.equal(records[0].summary, 'CUBSCOUT');
+  assert.equal(records[0].rrule, 'FREQ=MONTHLY;BYDAY=1FR');
+
+  await adapter.getPublishedCalendarRecords('la');
+  assert.deepEqual(fetched, ['la'], 'memoized per city per run');
+  assert.equal(await adapter.getPublishedCalendarRecords(''), null, 'no city, no fetch');
+});
+
+test('event card actions: a recurrence-only builder event now gets the ICS export button', () => {
+  const adapter = buildAdapter();
+  adapter.resetMapVerifyUrls();
+  adapter.resetIcsExportEvents();
+  const builderEvent = {
+    title: 'CUBSCOUT',
+    startDate: '2026-09-05T04:00:00.000Z',
+    endDate: '2026-09-05T09:00:00.000Z',
+    city: 'la',
+    // The canonical schema field only — no recurrenceRule, no _recurring.
+    recurrence: 'FREQ=MONTHLY;BYDAY=1FR'
+  };
+  const html = adapter.buildEventCardActionsHtml(builderEvent);
+  assert.ok(html.includes('Save recurring (.ics)'),
+    'the RRULE is routed to the ICS channel instead of silently dropping');
+});
+
+test('getEventOverrideIdentity: notes-carried override identity, source uid, and date key', () => {
+  const adapter = buildAdapter();
+  const uid = 'cubscout-20260731T193113Z@chunky.dad';
+  const override = {
+    identifier: 'CAL-UUID:override-1',
+    startDate: new Date('2026-09-05T04:00:00.000Z'),
+    notes: `bar: Eagle LA\nuid: ${uid}\noverrideUid: ${uid}\noverrideRecurrenceId: 20260905`
+  };
+  const identity = adapter.getEventOverrideIdentity(override);
+  assert.equal(identity.overrideUid, uid);
+  assert.equal(identity.overrideRecurrenceId, '20260905');
+  assert.equal(identity.overrideKey, `${uid.toLowerCase()}::20260905`);
+  assert.equal(identity.sourceUid, uid);
+  assert.ok(identity.recurrenceDateKey, 'the occurrence date key is derived from the start date');
+
+  // A plain series occurrence has NO override identity, only a source uid.
+  const occurrence = {
+    identifier: `CAL-UUID:${uid}`,
+    startDate: new Date('2026-09-05T04:00:00.000Z'),
+    notes: 'bar: Eagle LA'
+  };
+  const plain = adapter.getEventOverrideIdentity(occurrence);
+  assert.equal(plain.overrideKey, '', 'no override claim');
+  assert.equal(plain.sourceUid, uid, 'the identifier suffix IS the ICS UID');
+
+  const empty = adapter.getEventOverrideIdentity(null);
+  assert.equal(empty.overrideKey, '');
+  assert.equal(empty.sourceUid, '');
+});
+
+test('normalizeOverrideUid delegates to the shared normalization (trim, keep case)', () => {
+  const adapter = buildAdapter();
+  assert.equal(adapter.normalizeOverrideUid('  MixedCase@Chunky.dad '), 'MixedCase@Chunky.dad');
+  assert.equal(adapter.normalizeOverrideUid(null), '');
+});
+
+// ---------------------------------------------------------------------------
 // Event Builder links carry editing context when the run matched a record.
 // Without it the builder opened in "brand new event" mode even though the run
 // had just matched and merged the event — so a saved series kept being
