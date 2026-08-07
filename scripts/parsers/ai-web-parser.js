@@ -783,7 +783,18 @@ class AiWebParser {
                 ? { ...htmlData, html: this.linearizeJsonForPrompt(jsonApiPayload) }
                 : htmlData;
             const html = effectiveHtmlData && effectiveHtmlData.html ? effectiveHtmlData.html : '';
-            const additionalLinks = this.extractAdditionalUrls(html, sourceUrl, parserConfig);
+            // Calendar month feeds: a MEC month-grid page gets its NEXT
+            // month(s) fetched by replaying the page's own AJAX call, and the
+            // returned grids join URL discovery as additional sources (links
+            // only — the grid HTML never segments). Non-MEC pages, adapters
+            // without postForm and lookahead 0 all no-op here.
+            const monthFeedSources = await this.collectMecMonthFeeds(effectiveHtmlData, parserConfig, httpAdapter);
+            const additionalLinks = this.extractAdditionalUrls(html, sourceUrl, parserConfig, monthFeedSources);
+            if (monthFeedSources.length > 0) {
+                // Report-only cadence evidence from the page grid + month
+                // feeds (never sets recurrence on anything).
+                this.reportOccurrenceCadence([html, ...monthFeedSources.map(feed => feed.html)], sourceUrl);
+            }
 
             // Derive the page's organizer/site brand ONCE per page (from JSON-LD
             // Organization/WebSite and og:site_name). Extraction prompts, the
@@ -4361,7 +4372,12 @@ class AiWebParser {
         return !/^[^a-z0-9]+$/i.test(line);
     }
 
-    extractAdditionalUrls(html, sourceUrl, parserConfig) {
+    // `monthFeedSources` (optional): calendar month grids fetched via the
+    // page's own AJAX month feed (see collectMecMonthFeeds) — each entry is
+    // { label: 'YYYY-MM', html } and contributes candidates to the SAME map,
+    // before ranking, so month-feed links compete under the one budget instead
+    // of being bolted on past the cut.
+    extractAdditionalUrls(html, sourceUrl, parserConfig, monthFeedSources = null) {
         const urls = new Map();
         const discoveryStats = {
             hrefCandidates: 0,
@@ -4436,6 +4452,14 @@ class AiWebParser {
             }
         } catch (error) {
             console.warn(`🤖 AI Web: Error extracting additional URLs: ${error}`);
+        }
+
+        // Calendar month feeds fetched from the page's own AJAX endpoint: their
+        // grids are URL-discovery sources ONLY (the grid HTML itself does not
+        // segment), and only for event pages the page's own links don't already
+        // reach — see addMonthFeedUrlCandidates for the collapse rule.
+        if (Array.isArray(monthFeedSources) && monthFeedSources.length > 0) {
+            this.addMonthFeedUrlCandidates(urls, monthFeedSources, sourceUrl, parserConfig, discoveryStats);
         }
 
         // A page's own rel="canonical" / og:url is a pointer AT THE DOCUMENT WE
@@ -4538,9 +4562,11 @@ class AiWebParser {
      * host+path identity of a URL, ignoring query, fragment, trailing slash,
      * `www.` and default ports. Two URLs with the same key address the same
      * resource path — they are NOT necessarily the same rendered document, so
-     * this is only ever used to recognise a SELF-reference, never to dedupe
-     * crawl targets (parameterized variants of one path are real, distinct
-     * pages and must all still be crawled).
+     * this is only used (a) to recognise a SELF-reference and (b) to pick
+     * which month-feed grid links are NET-NEW event pages
+     * (addMonthFeedUrlCandidates) — never to dedupe the page's own crawl
+     * targets (parameterized variants of one path are real, distinct pages
+     * and must all still be crawled).
      * Pure string work: iOS JavaScriptCore has no URL global.
      */
     getUrlPathIdentityKey(url) {
@@ -4552,6 +4578,249 @@ class AiWebParser {
         if (!host) return '';
         const path = String(match[2] || '').replace(/\/+$/, '').toLowerCase();
         return `${host}${path}`;
+    }
+
+    // ------------------------------------------------------------------
+    // Calendar month feeds (Modern Events Calendar / "MEC" WordPress
+    // plugin). A MEC month-grid page drives its own "next month" button
+    // with an admin-ajax POST; replaying the page's OWN call (its ajax URL,
+    // its verbatim atts blob) returns the next month's grid as JSON without
+    // a browser — verified live against eaglela.com 2026-08-07. Plugin-
+    // protocol markers only, like the ticketing-platform integrations: no
+    // domain, venue or city is named here.
+    // ------------------------------------------------------------------
+
+    /**
+     * Detect a MEC month-grid page and harvest everything the month-feed
+     * replay needs FROM THE PAGE ITSELF: the plugin's ajax endpoint, the
+     * URL-encoded `atts%5B...%5D` shortcode-attributes blob (taken verbatim —
+     * never constructed), and the grid's active month. Returns
+     * { ajaxUrl, attsQuery, year, month } or null when any piece is missing
+     * (fail open: no feed, page behaves exactly as before).
+     * Pure string/regex work — no URL global (iOS JavaScriptCore).
+     */
+    detectMecMonthlyView(html) {
+        const text = String(html || '');
+        if (!/data-mec-cell=|mec-load-month/.test(text)) return null;
+        const ajaxMatch = text.match(/["']ajax_url["']\s*:\s*["'](https?:[^"']*admin-ajax\.php[^"']*)["']/i);
+        const ajaxUrl = ajaxMatch ? ajaxMatch[1].replace(/\\\//g, '/') : '';
+        if (!ajaxUrl) return null;
+        const attsMatch = text.match(/atts:\s*["']((?:atts%5B|atts\[)[^"']+)["']/);
+        const attsQuery = attsMatch ? attsMatch[1] : '';
+        if (!attsQuery) return null;
+        let year = NaN;
+        let month = NaN;
+        const activeMatch = text.match(/active_month:\s*\{\s*year:\s*["'](\d{4})["']\s*,\s*month:\s*["'](\d{1,2})["']/);
+        if (activeMatch) {
+            year = parseInt(activeMatch[1], 10);
+            month = parseInt(activeMatch[2], 10);
+        } else {
+            const currentMatch = text.match(/["']current_year["']\s*:\s*["'](\d{4})["']\s*,\s*["']current_month["']\s*:\s*["'](\d{1,2})["']/);
+            if (currentMatch) {
+                year = parseInt(currentMatch[1], 10);
+                month = parseInt(currentMatch[2], 10);
+            }
+        }
+        if (!Number.isFinite(year) || !Number.isFinite(month) || month < 1 || month > 12) return null;
+        return { ajaxUrl, attsQuery, year, month };
+    }
+
+    // How many FUTURE months of a detected calendar month grid to fetch.
+    // Default 1 (current + next): phone wall-clock is the budget that
+    // matters, and one month ahead is what turns "the event appeared when
+    // the venue's grid rolled over" into "we saw it a month early". Clamped
+    // 0..3; per-parser `calendarLookaheadMonths` wins over the global knob.
+    resolveCalendarLookaheadMonths(parserConfig) {
+        const configured = parserConfig && parserConfig.calendarLookaheadMonths !== undefined
+            ? parserConfig.calendarLookaheadMonths
+            : (this.config ? this.config.calendarLookaheadMonths : undefined);
+        const value = Number(configured);
+        if (!Number.isFinite(value)) return 1;
+        return Math.max(0, Math.min(3, Math.floor(value)));
+    }
+
+    /**
+     * Replay the page's own MEC month-feed AJAX call for the next month(s).
+     * Returns [{ label: 'YYYY-MM', html: '<grid html>' }, ...] — [] whenever
+     * the page is not a MEC month grid, the adapter cannot form-POST, or the
+     * lookahead is 0. A failed month POST degrades exactly like any failed
+     * crawled page: log and continue — never abort the run.
+     *
+     * All HTTP goes through the injected httpAdapter (postForm), so the
+     * NetworkResilience wrapper and the page cache apply. Each month is
+     * cached under a stable synthetic URL (ajax URL + mec_month_feed=YYYY-MM
+     * query suffix — query, not fragment: the cache normalizer strips
+     * fragments) so repeat runs inside the TTL replay the same grid without
+     * touching the network.
+     */
+    async collectMecMonthFeeds(htmlData, parserConfig, httpAdapter) {
+        const html = htmlData && htmlData.html ? htmlData.html : '';
+        const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
+        if (!html || !sourceUrl || !httpAdapter || typeof httpAdapter.postForm !== 'function') return [];
+        const mec = this.detectMecMonthlyView(html);
+        if (!mec) return [];
+        // Never POST cross-host: the ajax endpoint must live on the page's own
+        // registrable domain (it always does for a real WordPress install —
+        // anything else is an injected or mangled URL).
+        const pageDomain = this.getRegistrableDomainFromUrl(sourceUrl);
+        if (!pageDomain || this.getRegistrableDomainFromUrl(mec.ajaxUrl) !== pageDomain) {
+            console.log(`🤖 AI Web: MEC month feed skipped for ${sourceUrl} — ajax endpoint ${mec.ajaxUrl} is not on the page's own site`);
+            return [];
+        }
+        const lookahead = this.resolveCalendarLookaheadMonths(parserConfig);
+        if (lookahead <= 0) return [];
+        const activeLabel = `${mec.year}-${String(mec.month).padStart(2, '0')}`;
+        console.log(`🤖 AI Web: MEC month grid detected on ${sourceUrl} (active month ${activeLabel}) — fetching ${lookahead} future month(s) via ${mec.ajaxUrl}`);
+        const feeds = [];
+        let year = mec.year;
+        let month = mec.month;
+        for (let step = 0; step < lookahead; step++) {
+            month += 1;
+            if (month > 12) {
+                month = 1;
+                year += 1;
+            }
+            const monthNumber = String(month).padStart(2, '0');
+            const monthLabel = `${year}-${monthNumber}`;
+            // The page's own protocol, replayed: fixed action/navigator fields
+            // plus the atts blob EXACTLY as the page embedded it.
+            const body = `action=mec_monthly_view_load_month&mec_year=${year}&mec_month=${monthNumber}&navigator_click=true&${mec.attsQuery}`;
+            const cacheUrl = `${mec.ajaxUrl}${mec.ajaxUrl.includes('?') ? '&' : '?'}mec_month_feed=${monthLabel}`;
+            try {
+                const response = await httpAdapter.postForm(mec.ajaxUrl, body, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    cacheUrl
+                });
+                if (!response || response.ok === false) {
+                    throw new Error(`HTTP ${response && response.status !== undefined ? response.status : 'error'} from month feed`);
+                }
+                const payload = JSON.parse(String(response.text || ''));
+                const monthHtml = typeof payload.month === 'string' ? payload.month : '';
+                const sideHtml = typeof payload.events_side === 'string' ? payload.events_side : '';
+                const gridHtml = `${monthHtml}\n${sideHtml}`;
+                if (!gridHtml.trim()) throw new Error('month feed response carried no grid HTML');
+                feeds.push({ label: monthLabel, html: gridHtml });
+                console.log(`🤖 AI Web: MEC month feed ${monthLabel} loaded (${gridHtml.length} chars of grid HTML)`);
+            } catch (error) {
+                // Same degradation as any failed crawled page: this month's
+                // grid is a bonus discovery source, not a required subsystem.
+                console.log(`🤖 AI Web: MEC month feed ${monthLabel} failed for ${sourceUrl}: ${error && error.message ? error.message : error} — continuing without it`);
+            }
+        }
+        return feeds;
+    }
+
+    /**
+     * Feed month-grid links into the shared candidate map. Collapse rule
+     * (what the crawl actually NEEDS from a future month): each distinct
+     * event page once — a grid lists one `?occurrence=` link per day it
+     * repeats on, and the page behind them is the same document, so only the
+     * FIRST (earliest) occurrence of a path the page's own links don't
+     * already reach is added. The page's own candidates are never collapsed
+     * (parameterized variants the page itself links are real, distinct
+     * cards — see getUrlPathIdentityKey).
+     */
+    addMonthFeedUrlCandidates(urls, monthFeedSources, sourceUrl, parserConfig, discoveryStats) {
+        const knownPageKeys = new Set();
+        for (const entry of urls.values()) {
+            const pathKey = this.getUrlPathIdentityKey(entry.url);
+            if (pathKey) knownPageKeys.add(pathKey);
+        }
+        for (const feed of monthFeedSources) {
+            if (!feed || !feed.html) continue;
+            let addedCount = 0;
+            for (const candidate of this.extractHrefCandidates(feed.html)) {
+                const url = this.stripTrackingParams(this.normalizeUrl(candidate.url, sourceUrl));
+                const validation = this.validateEventUrl(url, sourceUrl, parserConfig);
+                if (!validation.valid) {
+                    if (discoveryStats && typeof discoveryStats === 'object') {
+                        this.recordRejectedCandidate(discoveryStats, validation.reason, candidate.url, url);
+                    }
+                    continue;
+                }
+                const pathKey = this.getUrlPathIdentityKey(url);
+                if (pathKey && knownPageKeys.has(pathKey)) continue;
+                if (pathKey) knownPageKeys.add(pathKey);
+                const dedupeKey = this.getUrlDedupeKey(url);
+                if (urls.has(dedupeKey)) continue;
+                // Net-new event page seen a month early: a bump over the
+                // scoring rules sized to clear the band the current grid's
+                // occurrence repeats occupy — they score identically in shape
+                // AND can carry a +30 anchor-keyword bonus ("night", "party"),
+                // and rank ties break on insertion order, which the page's own
+                // links always win. Net-new information outranks one more
+                // repeat of a page the crawl can already reach.
+                const score = this.scoreAdditionalUrl(url, sourceUrl, candidate.context) + 40;
+                urls.set(dedupeKey, { url, score, index: urls.size });
+                addedCount++;
+            }
+            console.log(`🤖 AI Web: MEC month feed ${feed.label} contributed ${addedCount} net-new event page link(s) to URL discovery`);
+        }
+    }
+
+    /**
+     * Report-only occurrence-cadence evidence from calendar grids: when one
+     * event page shows up on 2+ dates across the page and its month feeds,
+     * log the observed dates and the cadence they imply. LOG ONLY — no event
+     * gains a recurrence field from this path (doctrine: report-only before
+     * enforce; the scraper never writes series).
+     */
+    reportOccurrenceCadence(htmlSources, sourceUrl = '') {
+        const datesByPage = new Map();
+        for (const source of Array.isArray(htmlSources) ? htmlSources : []) {
+            if (!source) continue;
+            for (const candidate of this.extractHrefCandidates(source)) {
+                const url = this.normalizeUrl(candidate.url, sourceUrl);
+                const occurrenceMatch = String(url || '').match(/[?&]occurrence=(\d{4}-\d{2}-\d{2})(?!\d)/);
+                if (!occurrenceMatch) continue;
+                const pathKey = this.getUrlPathIdentityKey(url);
+                if (!pathKey) continue;
+                if (!datesByPage.has(pathKey)) datesByPage.set(pathKey, new Set());
+                datesByPage.get(pathKey).add(occurrenceMatch[1]);
+            }
+        }
+        for (const [pathKey, dateSet] of datesByPage) {
+            if (dateSet.size < 2) continue;
+            const dates = Array.from(dateSet).sort();
+            const slug = pathKey.split('/').filter(Boolean).pop() || pathKey;
+            const cadence = this.describeOccurrenceCadence(dates);
+            console.log(`🔁 CADENCE: "${slug}" observed on ${dates.length} dates (${cadence.summary}) — ${cadence.verdict} (report-only)`);
+        }
+    }
+
+    /**
+     * Cadence math for sorted unique YYYY-MM-DD dates (2+): uniform 7-day
+     * gaps → weekly candidate; same ordinal weekday across 2+ months (e.g.
+     * every 2nd Saturday) → monthly candidate; anything else is reported
+     * as-is with no candidate verdict. Date.UTC on split digits only — no
+     * Date parsing of strings, no timezone involvement.
+     */
+    describeOccurrenceCadence(dates) {
+        const parts = dates.map(date => {
+            const [year, month, day] = date.split('-').map(piece => parseInt(piece, 10));
+            return { date, year, month, day, epochMs: Date.UTC(year, month - 1, day) };
+        });
+        const gapsDays = [];
+        for (let i = 1; i < parts.length; i++) {
+            gapsDays.push(Math.round((parts[i].epochMs - parts[i - 1].epochMs) / 86400000));
+        }
+        if (gapsDays.length > 0 && gapsDays.every(gap => gap === 7)) {
+            return { summary: `${parts[0].date} +7d ×${gapsDays.length}`, verdict: 'weekly candidate' };
+        }
+        const weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const weekdays = parts.map(part => new Date(part.epochMs).getUTCDay());
+        const ordinals = parts.map(part => Math.floor((part.day - 1) / 7) + 1);
+        const monthKeys = new Set(parts.map(part => `${part.year}-${part.month}`));
+        if (monthKeys.size >= 2 && monthKeys.size === parts.length
+            && weekdays.every(weekday => weekday === weekdays[0])
+            && ordinals.every(ordinal => ordinal === ordinals[0])) {
+            const ordinalNames = ['1st', '2nd', '3rd', '4th', '5th'];
+            return {
+                summary: `${parts.length}× ${ordinalNames[ordinals[0] - 1]} ${weekdayNames[weekdays[0]]}`,
+                verdict: 'monthly candidate'
+            };
+        }
+        return { summary: dates.join(', '), verdict: 'no clear cadence' };
     }
 
     /**
@@ -7762,6 +8031,39 @@ class AiWebParser {
         if (/\/(?:about|contact|privacy|terms|login|signin|signup|search|tag|category|blog)(?:\/|$)/i.test(path)) score -= 35;
         // Eventbrite /l/ paths are marketing/landing pages, not event detail or listing pages
         if (/eventbrite\./i.test(parsedUrl.hostname) && /^\/l\//i.test(path)) score -= 100;
+        // Same-site events-calendar HUB links (a /calendar/ or /schedule/ path
+        // segment, or anchor text naming a calendar). A venue's /events/
+        // listing often links its month-grid view, which can carry more of the
+        // venue's programme than the listing itself (Eagle LA: 25 events on
+        // /calendar/ vs 12 on /events/) — but the hub URL names no event, so
+        // every event-like link outranks it (they score ~160 here, the bare
+        // hub nets -35 after the bare-listing demotion above) and the hub
+        // never survives the maxAdditionalUrls cut. The bonus is sized to
+        // clear the event-link band INCLUDING its +30 anchor-keyword case
+        // (85+40+25+10+30 = 190) without competing with rich ticketing links
+        // (~240). Guard rails: SAME registrable domain only (a
+        // cross-host calendar link gets nothing), and detail-shaped paths
+        // (/events/<slug>, /e/<id>) are excluded so ordinary event links whose
+        // anchor text mentions a calendar cannot ride it. Links the reject
+        // filters drop (.ics / ?ical=1 calendar exports, blocked hosts) never
+        // reach scoring at all, so this cannot resurrect them.
+        const isDetailShapedPath = /\/e\/[^/?#]+/i.test(path) || /\/events?\/[^/?#]+/i.test(path);
+        if (parsedSource && !isDetailShapedPath) {
+            const linkDomain = this.getRegistrableDomainFromUrl(url);
+            const sameRegistrableDomain = linkDomain && linkDomain === this.getRegistrableDomainFromUrl(sourceUrl);
+            // Hub-shaped = the path ENDS at the hub word (/calendar/,
+            // /events/schedule/). A hub word mid-path (/calendar/<junk>) is
+            // some sub-resource, not the hub. Slash-variant self-references
+            // (//calendar// on the /calendar/ page) are excluded by comparing
+            // slash-normalized path segments against the source page's own.
+            const linkSegments = path.split('/').filter(Boolean);
+            const hasCalendarHubSegment = linkSegments.length > 0
+                && /^(?:calendar|calendars|schedule|events?-calendar)$/.test(linkSegments[linkSegments.length - 1]);
+            const contextNamesCalendar = /\bcalendar\b/.test(contextText);
+            const sourceSegmentsKey = String(parsedSource.pathname || '').toLowerCase().split('/').filter(Boolean).join('/');
+            const isSourcePathVariant = linkSegments.join('/') === sourceSegmentsKey;
+            if (sameRegistrableDomain && !isSourcePathVariant && (hasCalendarHubSegment || contextNamesCalendar)) score += 240;
+        }
         return score;
     }
 

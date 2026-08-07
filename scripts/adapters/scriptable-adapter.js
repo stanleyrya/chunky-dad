@@ -1611,6 +1611,79 @@ class ScriptableAdapter {
     }
   }
 
+  // Form-encoded POST (application/x-www-form-urlencoded) — the shape
+  // WordPress admin-ajax endpoints expect; postJson sends a JSON body, which
+  // admin-ajax ignores. Same resilience choke point as its siblings
+  // (fetchData / postJson / fetchImageAsBase64): the round trip runs under
+  // withNetworkResilience and nothing else grows a retry.
+  //
+  // options.cacheUrl (optional) keys the response into the page cache under a
+  // stable synthetic URL: POST responses can never ride fetchData's GET-only
+  // cache, so callers that replay a page's own AJAX call (calendar month
+  // feeds) pass the synthetic URL they want the response remembered as —
+  // same storage, same TTL as every cached page.
+  async postForm(url, body, options = {}) {
+    const pageCacheConfig = this.getPageCacheConfig();
+    const cacheUrl =
+      typeof options.cacheUrl === "string" && options.cacheUrl
+        ? options.cacheUrl
+        : null;
+    const canUseCache = pageCacheConfig.enabled && cacheUrl !== null;
+    if (canUseCache) {
+      const cachedPage = await this.readCachedPage(cacheUrl, pageCacheConfig);
+      if (cachedPage) {
+        this.logPageCacheHit(cacheUrl, cachedPage, pageCacheConfig);
+        return {
+          ok: true,
+          status: cachedPage.statusCode || 200,
+          text: cachedPage.html,
+        };
+      }
+    }
+    const response = await this.withNetworkResilience("form POST", url, () =>
+      this.postFormOnce(url, body, options),
+    );
+    if (
+      canUseCache &&
+      response &&
+      response.ok &&
+      typeof response.text === "string" &&
+      response.text.length > 0
+    ) {
+      await this.writeCachedPage(
+        cacheUrl,
+        { html: response.text, url: cacheUrl, statusCode: response.status, headers: {} },
+        pageCacheConfig,
+      );
+    }
+    return response;
+  }
+
+  async postFormOnce(url, body, options = {}) {
+    try {
+      const request = new Request(url);
+      request.method = "POST";
+      request.headers = {
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "User-Agent": this.config.userAgent,
+        ...options.headers,
+      };
+      request.body = String(body == null ? "" : body);
+      if (options.timeoutSeconds) {
+        request.timeoutInterval = options.timeoutSeconds;
+      }
+      const responseText = await request.loadString();
+      const statusCode = request.response ? request.response.statusCode : 200;
+      return {
+        ok: statusCode >= 200 && statusCode < 300,
+        status: statusCode,
+        text: responseText,
+      };
+    } catch (error) {
+      throw new Error(`Form POST request failed: ${error.message}`);
+    }
+  }
+
   async saveFailureNote(url, error, metadata = {}) {
     if (metadata && metadata.retryable === true) {
       return false;

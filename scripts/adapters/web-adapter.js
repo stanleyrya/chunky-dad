@@ -460,6 +460,56 @@ class WebAdapter {
         }
     }
 
+    // Node-side mirror of ScriptableAdapter.postForm: form-encoded POST (the
+    // shape WordPress admin-ajax endpoints expect) with the same optional
+    // cacheUrl contract — a stable synthetic URL the response is remembered
+    // as in the page cache (POSTs can never ride fetchData's GET-only cache).
+    async postForm(url, body, options = {}) {
+        const pageCacheConfig = this.getPageCacheConfig();
+        const cacheUrl = typeof options.cacheUrl === 'string' && options.cacheUrl ? options.cacheUrl : null;
+        const canUseCache = pageCacheConfig.enabled && cacheUrl !== null;
+        if (canUseCache) {
+            const cachedPage = await this.readCachedPage(cacheUrl, pageCacheConfig);
+            if (cachedPage) {
+                this.logPageCacheHit(cacheUrl, cachedPage, pageCacheConfig);
+                return {
+                    ok: true,
+                    status: cachedPage.statusCode || 200,
+                    text: cachedPage.html
+                };
+            }
+        }
+        const timeout = options.timeoutSeconds ? options.timeoutSeconds * 1000 : this.config.timeout;
+        let result;
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'User-Agent': this.config.userAgent,
+                    ...options.headers
+                },
+                body: String(body == null ? '' : body),
+                signal: AbortSignal.timeout(timeout)
+            });
+            result = {
+                ok: response.ok,
+                status: response.status,
+                text: await response.text()
+            };
+        } catch (error) {
+            throw new Error(`Form POST request failed: ${error.message}`);
+        }
+        if (canUseCache && result.ok && typeof result.text === 'string' && result.text.length > 0) {
+            await this.writeCachedPage(
+                cacheUrl,
+                { html: result.text, url: cacheUrl, statusCode: result.status, headers: {} },
+                pageCacheConfig
+            );
+        }
+        return result;
+    }
+
 async saveFailureNote(url, error, metadata = {}) {
         if (metadata && metadata.retryable === true) {
             return false;

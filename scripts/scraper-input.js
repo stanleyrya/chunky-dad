@@ -176,7 +176,11 @@ const scraperConfig = {
       // prefixer is a no-op on venue-role sites. The CubScout LA PROMOTER
       // entry in scraper-promoters.js is unchanged and still claims the
       // CUBSCOUT title alias.
-      urls: ["https://eaglela.com/events/"],
+      //
+      // /calendar/ is the MEC month grid — it lists MORE of the month than
+      // the /events/ archive (25 vs 12 in Aug 2026) and is where the
+      // month-feed lookahead fetches next month's grid from.
+      urls: ["https://eaglela.com/events/", "https://eaglela.com/calendar/"],
     },
     {
       name: "BEEFMINCE",

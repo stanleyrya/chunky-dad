@@ -7087,6 +7087,104 @@ test('fetchImageAsBase64 still retries a real connectivity failure on the minute
     'backoff starts in seconds, not milliseconds — an inter-station gap lasts minutes');
 });
 
+// postForm (form-encoded POST for admin-ajax month feeds) is a sibling of
+// fetchData/postJson and must sit behind the SAME resilience choke point.
+test('postForm retries a real connectivity failure on the same minutes-long ladder as its siblings', async () => {
+  const adapter = buildAdapter();
+  let attempts = 0;
+  const slept = [];
+  adapter.sleepForNetworkRetry = async (ms) => { slept.push(ms); };
+  global.Request = class {
+    constructor() { this.response = null; }
+    async loadString() {
+      attempts += 1;
+      throw new Error('The network connection was lost.');
+    }
+  };
+  try {
+    await assert.rejects(
+      adapter.postForm('https://venue.example/wp-admin/admin-ajax.php', 'action=mec_monthly_view_load_month&mec_year=2026&mec_month=09')
+    );
+  } finally {
+    delete global.Request;
+  }
+  assert.ok(attempts > 1, 'a month feed on a train ride deserves the same patience as a page fetch');
+  assert.ok(slept.length > 0 && slept[0] >= 5000,
+    'same ladder as fetchData/postJson — nothing else in the codebase grows a retry');
+});
+
+test('postForm sends a form-encoded body and caches the response under the synthetic cacheUrl — the second run never touches the network', async () => {
+  const adapter = new ScriptableAdapter({ cities: {}, pageCache: { enabled: true, ttlDays: 3 } });
+  const store = new Map();
+  adapter.readCachedPage = async (url, config) => {
+    assert.equal(config.ttlDays, 3, 'month feeds ride the global page-cache TTL, not a private one');
+    return store.get(url) || null;
+  };
+  adapter.writeCachedPage = async (url, responseData, config) => {
+    store.set(url, { html: responseData.html, url, statusCode: responseData.statusCode, headers: {} });
+  };
+  let attempts = 0;
+  let seenHeaders = null;
+  let seenBody = null;
+  global.Request = class {
+    constructor(url) { this.url = url; this.response = null; }
+    async loadString() {
+      attempts += 1;
+      seenHeaders = this.headers;
+      seenBody = this.body;
+      this.response = { statusCode: 200 };
+      return '{"month":"<a href=\\"https://venue.example/events/x/?occurrence=2026-09-05\\">X</a>"}';
+    }
+  };
+  const cacheUrl = 'https://venue.example/wp-admin/admin-ajax.php?mec_month_feed=2026-09';
+  try {
+    const first = await adapter.postForm(
+      'https://venue.example/wp-admin/admin-ajax.php',
+      'action=mec_monthly_view_load_month&mec_year=2026&mec_month=09&navigator_click=true&atts%5Bid%5D=1224',
+      { headers: { 'X-Requested-With': 'XMLHttpRequest' }, cacheUrl }
+    );
+    assert.equal(first.ok, true);
+    assert.match(seenHeaders['Content-Type'], /application\/x-www-form-urlencoded/,
+      'admin-ajax reads form fields, not JSON');
+    assert.equal(seenHeaders['X-Requested-With'], 'XMLHttpRequest');
+    assert.equal(seenBody, 'action=mec_monthly_view_load_month&mec_year=2026&mec_month=09&navigator_click=true&atts%5Bid%5D=1224',
+      'the body is sent exactly as handed over — nothing re-encodes the atts blob');
+
+    const second = await adapter.postForm(
+      'https://venue.example/wp-admin/admin-ajax.php',
+      'action=mec_monthly_view_load_month&mec_year=2026&mec_month=09&navigator_click=true&atts%5Bid%5D=1224',
+      { headers: { 'X-Requested-With': 'XMLHttpRequest' }, cacheUrl }
+    );
+    assert.equal(second.text, first.text, 'the cached grid is byte-identical');
+  } finally {
+    delete global.Request;
+  }
+  assert.equal(attempts, 1, 'the second run must be a page-cache hit, not a network call');
+});
+
+test('postForm without a cacheUrl neither reads nor writes the page cache', async () => {
+  const adapter = new ScriptableAdapter({ cities: {}, pageCache: { enabled: true, ttlDays: 3 } });
+  let cacheReads = 0;
+  let cacheWrites = 0;
+  adapter.readCachedPage = async () => { cacheReads += 1; return null; };
+  adapter.writeCachedPage = async () => { cacheWrites += 1; };
+  global.Request = class {
+    constructor() { this.response = null; }
+    async loadString() {
+      this.response = { statusCode: 200 };
+      return 'ok';
+    }
+  };
+  try {
+    const response = await adapter.postForm('https://venue.example/wp-admin/admin-ajax.php', 'action=x');
+    assert.equal(response.ok, true);
+  } finally {
+    delete global.Request;
+  }
+  assert.equal(cacheReads, 0, 'an uncached POST must not consult the page cache');
+  assert.equal(cacheWrites, 0, 'an uncached POST must not write the page cache');
+});
+
 test('a network-truncated run gets an unmissable banner and never claims to be complete', () => {
   const adapter = buildAdapter();
   const html = adapter.buildNetworkTruncationBannerHtml({
