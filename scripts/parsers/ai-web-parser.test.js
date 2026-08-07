@@ -12743,6 +12743,123 @@ test('a known non-event image is withheld from the segment prompt entirely', () 
     'the model is never offered an image the vision pass already called a logo');
 });
 
+// ── MEANINGFUL text, not any text (run 20260807-155753) ────────────────────
+// The Dallas Eagle listing shipped the site's Mastodon icon as GEAR NIGHT's
+// image: the vision model classified it "logo" but transcribed the logo's
+// single stylized letter as text "m" (its own reason field said "which is a
+// logo, not text"), and that one glyph satisfied the furniture gate's
+// hasText condition — immunizing the icon against the verdict withhold. The
+// sibling mastodon-150x150.png fell to the icon-scale filename tell;
+// mastodon_hover.png has no -WxH suffix and appeared in only one segment, so
+// the furniture verdict was the only layer left. "Has text" now means "has
+// MEANINGFUL text": at least one token of 3+ word characters. Genuine event
+// flyers always contain multi-character words (titles, times, venue), so
+// within the already-suspicious classifications a ≤2-word-char transcription
+// is glyph noise.
+
+test('a logo whose entire transcription is one glyph is furniture — withheld from prompts and rejected as a value', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://venue.example/events/';
+  const icon = 'https://venue.example/uploads/2025/04/social_hover.png';
+  parser.recordOcrImageVerdict(icon, { imageClassification: 'logo', text: 'm' });
+
+  const lines = parser.extractMultiEventSegmentResourceLines(`<div><img src="${icon}"></div>`, sourceUrl);
+  assert.deepEqual(lines.filter(line => line.startsWith('SEGMENT_IMAGE_URL:')), [],
+    'a single-glyph transcription is not readable text — the logo verdict withholds the offer');
+
+  const event = { title: 'Gear Night', image: icon, imageSource: 'page', imageVertical: icon };
+  const logs = captureLogs(() => parser.rejectNonEventImageValues(event));
+  assert.equal(Object.prototype.hasOwnProperty.call(event, 'image'), false,
+    'one transcribed glyph must not immunize a logo against value rejection');
+  assert.equal(Object.prototype.hasOwnProperty.call(event, 'imageSource'), false);
+  assert.equal(Object.prototype.hasOwnProperty.call(event, 'imageVertical'), false);
+  assert.ok(logs.some(line => line.includes('glyph noise')),
+    `the withhold reason says the model transcribed glyph noise, got ${JSON.stringify(logs)}`);
+});
+
+test('a logo carrying a real word keeps today\'s behavior exactly — text vetoes the classification', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://venue.example/events/';
+  const misread = 'https://venue.example/uploads/misread-flyer.jpg';
+  parser.recordOcrImageVerdict(misread, { imageClassification: 'logo', text: 'BEAR NIGHT 10PM' });
+
+  const lines = parser.extractMultiEventSegmentResourceLines(`<div><img src="${misread}"></div>`, sourceUrl);
+  assert.deepEqual(lines.filter(line => line.startsWith('SEGMENT_IMAGE_URL:')), [`SEGMENT_IMAGE_URL: ${misread}`],
+    'a logo-classified image with real words is a misclassified flyer and is still offered');
+
+  const event = { title: 'Keep It', image: misread };
+  parser.rejectNonEventImageValues(event);
+  assert.equal(event.image, misread, 'real words still veto the logo classification');
+});
+
+test('an event-flyer with a one-glyph transcription is untouched by the meaningful-text gate', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://venue.example/events/';
+  const flyer = 'https://venue.example/uploads/minimal-flyer.jpg';
+  // The gate is scoped to the furniture classifications — an event-flyer
+  // verdict never consults it, however thin its transcription.
+  parser.recordOcrImageVerdict(flyer, { imageClassification: 'event-flyer', text: 'm' });
+
+  const lines = parser.extractMultiEventSegmentResourceLines(`<div><img src="${flyer}"></div>`, sourceUrl);
+  assert.deepEqual(lines.filter(line => line.startsWith('SEGMENT_IMAGE_URL:')), [`SEGMENT_IMAGE_URL: ${flyer}`]);
+
+  const event = { title: 'Minimal', image: flyer };
+  parser.rejectNonEventImageValues(event);
+  assert.equal(event.image, flyer, 'the meaningful-text rule must never touch event-flyer-classified images');
+});
+
+test('a thumbnail whose transcription is pure punctuation has no text — withheld', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://venue.example/events/';
+  const thumb = 'https://venue.example/uploads/preview-strip.png';
+  parser.recordOcrImageVerdict(thumb, { imageClassification: 'thumbnail', text: '•·—' });
+
+  const lines = parser.extractMultiEventSegmentResourceLines(`<div><img src="${thumb}"></div>`, sourceUrl);
+  assert.deepEqual(lines.filter(line => line.startsWith('SEGMENT_IMAGE_URL:')), [],
+    'punctuation-only OCR output is not text');
+
+  const event = { title: 'Strip', image: thumb };
+  parser.rejectNonEventImageValues(event);
+  assert.equal(Object.prototype.hasOwnProperty.call(event, 'image'), false);
+});
+
+test('replay 20260807-155753: the cached "m" verdict for mastodon_hover.png now withholds it, no cache change needed', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://www.thedallaseagle.com/events';
+  // The REAL device cache entry, verbatim (storage/ocr/b3335593.assetcdn.net/
+  // 3335593__wp-content__uploads__2025__04__mastodon_hover.png--…json).
+  const iconUrl = 'https://b3335593.assetcdn.net/3335593/wp-content/uploads/2025/04/mastodon_hover.png?lossy=2&strip=1&webp=1';
+  const cachedEntry = {
+    url: iconUrl,
+    text: 'm',
+    imageClassification: 'logo',
+    eventSummary: '',
+    confidence: 100,
+    reason: "The image contains only a stylized red 'm' logo, which is a logo, not text or event information."
+  };
+  // Segment html modeled on the Dallas listing markup around the icon: a
+  // lazyloaded <img> whose real URL lives in data-src.
+  const segmentHtml = `
+    <div class="event-card">
+      <h4>Gear Night</h4>
+      <span class="x-image x-graphic-child x-graphic-image x-graphic-secondary"><img data-src="${iconUrl}" width="78" height="78" alt="Image" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" class="lazyload"></span>
+    </div>`;
+
+  // Fixture validity: with no verdict recorded the gate fails open and the
+  // icon IS offered — exactly what shipped it as Gear Night's image.
+  const before = parser.extractMultiEventSegmentResourceLines(segmentHtml, sourceUrl);
+  assert.ok(before.some(line => line.includes('mastodon_hover.png')),
+    `without a verdict the fallback offers the icon, got ${JSON.stringify(before)}`);
+
+  // Reading the same cache entry (getOcrTextForImage records the verdict on
+  // every cache hit) must now withhold it: the gate is a read-time
+  // interpretation, the cached text stays "m" forever.
+  parser.recordOcrImageVerdict(iconUrl, cachedEntry);
+  const after = parser.extractMultiEventSegmentResourceLines(segmentHtml, sourceUrl);
+  assert.deepEqual(after.filter(line => line.includes('mastodon_hover.png')), [],
+    `mastodon_hover.png must appear in ZERO prompt image lines, got ${JSON.stringify(after)}`);
+});
+
 // ---------------------------------------------------------------------------
 // VET BEFORE OFFER — runs 20260807-143442 (Dallas: the site's Mastodon social
 // icon shipped as GEAR NIGHT's image) and 20260807-142024 (Eagle LA calendar:
