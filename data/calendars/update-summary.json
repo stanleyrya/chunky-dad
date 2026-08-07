@@ -39,8 +39,8 @@
     "dallas": {
       "name": "Dallas",
       "status": "success",
-      "dataLength": 2588,
-      "eventCount": 2
+      "dataLength": 3917,
+      "eventCount": 3
     },
     "dc": {
       "name": "DC",

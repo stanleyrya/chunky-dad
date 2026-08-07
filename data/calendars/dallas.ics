@@ -7,7 +7,7 @@ X-WR-CALNAME:chunky-dad-dallas
 X-WR-TIMEZONE:America/Chicago
 BEGIN:VEVENT
 DTSTART:20260705T220000Z
-DTSTAMP:20260804T203059Z
+DTSTAMP:20260807T222821Z
 UID:53B4DABD-D3AE-47EC-AE4A-7D8C33A7652D
 CREATED:20260701T132043Z
 DESCRIPTION:bar: STATION 4\naddress: 3911 Cedar Springs Rd\, Dallas\, TX 75
@@ -31,27 +31,55 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260815T020000Z
 DTEND:20260815T070000Z
-DTSTAMP:20260804T203059Z
+DTSTAMP:20260807T222821Z
 UID:13889125-C3DE-4D92-9227-86C5EE9B1005
 CREATED:20260804T184803Z
 DESCRIPTION:description: It’s time for another delicious combo\, it’s BEAR 
  & TWINK NIGHT at the Dallas Eagle!! 🐻🕺🦅 Opposites attract at this event\
  , so come on out and enjoy the variety! Big or small\, hirsute or svelte\, 
  here you’ll find all types to satisfy your desires. Mix it up on the dance 
- floor with heart-pounding hous \, ...\nbar: Dallas Eagle\nticketUrl: https:
- //www.thedallaseagle.com/events/bear-and-twink-night/\ninstagram: https://w
- ww.instagram.com/thedallaseagle/\nfacebook: https://www.facebook.com/lonest
- areagle\nwebsite: https://www.thedallaseagle.com\nmastodon: https://mastodo
- n.social/@dallaseagle\nbarSource: venue-site\ntimezone: America/Chicago\ngm
- aps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p
- 4-I\naddress: 525 S Riverfront Blvd\, Dallas\, TX 75207\naddressSource: cur
- ated\npinSource: curated\nbearSource: keyword\nkey: bear-and-twink-night|20
- 26-08-15|dallas eagle\nshortName: BEAR AND TWINK
-LAST-MODIFIED:20260804T184804Z
+ floor with heart-pounding hous \, ...\nbar: Dallas Eagle\ninstagram: https:
+ //www.instagram.com/thedallaseagle/\nfacebook: https://www.facebook.com/lon
+ estareagle\nwebsite: https://www.thedallaseagle.com/events/bear-and-twink-n
+ ight/\nmastodon: https://mastodon.social/@dallaseagle\ntimezone: America/Ch
+ icago\naddress: 525 S Riverfront Blvd\, Dallas\, TX 75207\nkey: bear-and-tw
+ ink-night|2026-08-15|dallas eagle\nbearSource: keyword\nshortName: BEAR AND
+  TWINK\npinSource: curated\naddressSource: curated\nbarSource: venue-site\n
+ gmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM
+ 8p4-I
+LAST-MODIFIED:20260807T210714Z
 LOCATION:32.7693483\, -96.8112576
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:Bear and Twink Night
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260814T220000Z
+DTEND:20260815T020000Z
+DTSTAMP:20260807T222821Z
+UID:21FF8507-F5EF-4E34-8764-F47BF75FB118
+CREATED:20260807T210713Z
+DESCRIPTION:description: The Brewery Bears have a new home bar at the Dalla
+ s Eagle! 🐻🍻🦅 Join us for an all new monthly Happy Hour event with the bi
+ ggest beer drinking crowd in town! Enjoy discount ice cold craft and draft 
+ beers\, and our rotating Brewery Bears Reserve selections. Bears gotta eat\
+ , so we’re serving up fresh and delicious sc \, ...\nbar: Dallas Eagle\nins
+ tagram: https://www.instagram.com/thedallaseagle/\nfacebook: https://www.fa
+ cebook.com/lonestareagle\nwebsite: https://www.thedallaseagle.com/events/br
+ ewery-bears-happy-hour-5/\nmastodon: https://mastodon.social/@dallaseagle\n
+ barSource: venue-site\ntimezone: America/Chicago\ngmaps: https://www.google
+ .com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I\naddress: 525 S Riv
+ erfront Blvd\, Dallas\, TX 75207\naddressSource: curated\npinSource: curate
+ d\nkey: brewery-bears-happy-hour|2026-08-14|dallas eagle\nbearSource: keywo
+ rd\nshortName: BREWERY BEARS
+LAST-MODIFIED:20260807T210713Z
+LOCATION:32.7693483\, -96.8112576
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Brewery Bears Happy Hour
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
