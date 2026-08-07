@@ -4729,16 +4729,24 @@ class AiWebParser {
     }
 
     // How many FUTURE months of a detected calendar month grid to fetch.
-    // Default 1 (current + next): phone wall-clock is the budget that
+    // Default 2 (current + two ahead): phone wall-clock is the budget that
     // matters, and one month ahead is what turns "the event appeared when
     // the venue's grid rolled over" into "we saw it a month early". Clamped
     // 0..3; per-parser `calendarLookaheadMonths` wins over the global knob.
+    // Why 2, not 1: cadence derivation needs enough observations to commit,
+    // and one month is provably one short — Dallas GEAR NIGHT looked like
+    // "mixed 7/14-day Saturday gaps" on the August grid alone, while the
+    // September grid (4 consecutive Saturdays) settles it as weekly; the
+    // Discipline Corps ordinal (2nd Friday) likewise only repeats once a
+    // second future month is visible. The marginal cost is one cached
+    // admin-ajax POST per site per page-cache TTL plus that month's net-new
+    // detail crawls.
     resolveCalendarLookaheadMonths(parserConfig) {
         const configured = parserConfig && parserConfig.calendarLookaheadMonths !== undefined
             ? parserConfig.calendarLookaheadMonths
             : (this.config ? this.config.calendarLookaheadMonths : undefined);
         const value = Number(configured);
-        if (!Number.isFinite(value)) return 1;
+        if (!Number.isFinite(value)) return 2;
         return Math.max(0, Math.min(3, Math.floor(value)));
     }
 
