@@ -4759,11 +4759,15 @@ class AiWebParser {
     }
 
     /**
-     * Report-only occurrence-cadence evidence from calendar grids: when one
-     * event page shows up on 2+ dates across the page and its month feeds,
-     * log the observed dates and the cadence they imply. LOG ONLY — no event
-     * gains a recurrence field from this path (doctrine: report-only before
-     * enforce; the scraper never writes series).
+     * Occurrence-cadence evidence from calendar grids: when one event page
+     * shows up on 2+ dates across the page and its month feeds, log the
+     * observed dates and the cadence they imply. The per-page-identity dates
+     * ALSO accumulate into a per-run stash (occurrenceCadenceObservations,
+     * union across every page of the crawl — same lifecycle as
+     * venueSiteHarvest) which applyDerivedCadenceStamps consumes after the
+     * whole crawl. Logging here stays report-shaped; enforcement happens only
+     * in the post-crawl stamp pass, and stamped series still flow through the
+     * existing withhold+ICS machinery (the scraper never writes series).
      */
     reportOccurrenceCadence(htmlSources, sourceUrl = '') {
         const datesByPage = new Map();
@@ -4778,6 +4782,17 @@ class AiWebParser {
                 if (!datesByPage.has(pathKey)) datesByPage.set(pathKey, new Set());
                 datesByPage.get(pathKey).add(occurrenceMatch[1]);
             }
+        }
+        // Accumulate EVERY observation (even single dates — another page of
+        // the crawl may add more) into the per-run stash for the post-crawl
+        // stamp pass.
+        if (!this.occurrenceCadenceObservations) this.occurrenceCadenceObservations = new Map();
+        for (const [pathKey, dateSet] of datesByPage) {
+            if (!this.occurrenceCadenceObservations.has(pathKey)) {
+                this.occurrenceCadenceObservations.set(pathKey, new Set());
+            }
+            const accumulated = this.occurrenceCadenceObservations.get(pathKey);
+            for (const date of dateSet) accumulated.add(date);
         }
         for (const [pathKey, dateSet] of datesByPage) {
             if (dateSet.size < 2) continue;
@@ -4821,6 +4836,192 @@ class AiWebParser {
             };
         }
         return { summary: dates.join(', '), verdict: 'no clear cadence' };
+    }
+
+    /**
+     * Conservative cadence → RRULE derivation from sorted unique YYYY-MM-DD
+     * dates. Only two shapes ever derive a rule; everything else returns null
+     * and stays report-only:
+     *   - WEEKLY: every observed date falls on the SAME weekday AND the
+     *     sorted dates contain a run of >= 3 consecutive 7-day gaps (four
+     *     back-to-back weeks). Skipped weeks elsewhere are tolerated — a
+     *     holiday gap does not un-weekly a residency — but a biweekly
+     *     pattern (all 14-day gaps) can never produce the required run.
+     *   - MONTHLY: >= 2 observations, every date in a DIFFERENT month, all
+     *     on the same ordinal weekday (all "1st Thursday" etc.).
+     * Same digit-only date math as describeOccurrenceCadence — no Date
+     * string parsing, no timezone involvement.
+     */
+    deriveCadenceRrule(dates) {
+        if (!Array.isArray(dates) || dates.length < 2) return null;
+        const parts = [];
+        for (const date of dates) {
+            const match = String(date || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (!match) return null;
+            const year = parseInt(match[1], 10);
+            const month = parseInt(match[2], 10);
+            const day = parseInt(match[3], 10);
+            parts.push({ year, month, day, epochMs: Date.UTC(year, month - 1, day) });
+        }
+        parts.sort((a, b) => a.epochMs - b.epochMs);
+        const BYDAY_CODES = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+        const weekdays = parts.map(part => new Date(part.epochMs).getUTCDay());
+        if (!weekdays.every(weekday => weekday === weekdays[0])) return null;
+        let consecutiveWeeklyGaps = 0;
+        let bestWeeklyRun = 0;
+        for (let i = 1; i < parts.length; i++) {
+            const gapDays = Math.round((parts[i].epochMs - parts[i - 1].epochMs) / 86400000);
+            if (gapDays === 7) {
+                consecutiveWeeklyGaps++;
+                if (consecutiveWeeklyGaps > bestWeeklyRun) bestWeeklyRun = consecutiveWeeklyGaps;
+            } else {
+                consecutiveWeeklyGaps = 0;
+            }
+        }
+        if (bestWeeklyRun >= 3) {
+            return { rrule: `FREQ=WEEKLY;BYDAY=${BYDAY_CODES[weekdays[0]]}` };
+        }
+        const ordinals = parts.map(part => Math.floor((part.day - 1) / 7) + 1);
+        const monthKeys = new Set(parts.map(part => `${part.year}-${part.month}`));
+        if (monthKeys.size >= 2 && monthKeys.size === parts.length
+            && ordinals.every(ordinal => ordinal === ordinals[0])
+            && ordinals[0] >= 1 && ordinals[0] <= 5) {
+            return { rrule: `FREQ=MONTHLY;BYDAY=${ordinals[0]}${BYDAY_CODES[weekdays[0]]}` };
+        }
+        return null;
+    }
+
+    /**
+     * Post-crawl derived-cadence enforcement (called by shared-core's
+     * processParser once every page of the run has been crawled, BEFORE
+     * dedup — the same seam as applyVenueSiteAddressConsensus, and for the
+     * same reason: cadence can only be judged with the whole run's records
+     * and observations in view).
+     *
+     * Two observation sources feed one decision per record group:
+     *   1. ?occurrence= link observations stashed by reportOccurrenceCadence
+     *      (per event-page identity, union across listing + month feeds);
+     *   2. the run's own extracted records grouped by the dedup's existing
+     *      title/venue identity (areIdentityNamesSimilar + positive
+     *      getCrossSourceVenueIdentity + no distinct-place veto — the exact
+     *      helpers the dedup passes already trust, nothing looser). This is
+     *      what catches MEC installs that renumber slugs per occurrence
+     *      (karaoke-19, karaoke-20 …), where URL-keyed observation never
+     *      accumulates.
+     *
+     * A qualifying group (deriveCadenceRrule) gets recurrenceRule stamped on
+     * every member that lacks one, so the EXISTING series machinery folds the
+     * occurrence-singles into one withheld series export (ICS button — the
+     * scraper never writes series to the calendar). Members also get a
+     * per-run _cadenceGroup marker: the series collapse in deduplicateEvents
+     * only folds records on DIFFERENT base pages when both carry the same
+     * marker (renumbered-slug case), so nothing outside this pass ever
+     * loosens the #1647 same-page identity.
+     *
+     * Stated beats derived (curated data beats derived, fail closed): a
+     * record that already carries a recurrence rule is NEVER overridden. If
+     * any stated rule in the group disagrees with the derived one, the whole
+     * group is left untouched and one conflict line is logged; agreement
+     * makes the stamp a no-op for that record. Records without a parseable
+     * start date never join a group (getEventNightKey fails closed), so the
+     * rrule-fallback date-fabrication path in normalizeAiEvent — which only
+     * runs for records WITHOUT a startDate, and runs before this pass — can
+     * never newly fire because of a stamp.
+     */
+    applyDerivedCadenceStamps(events) {
+        const observations = this.occurrenceCadenceObservations || null;
+        this.occurrenceCadenceObservations = null;
+        const eventList = Array.isArray(events) ? events : [];
+        if (eventList.length === 0) return;
+        const core = this.core;
+        if (!core
+            || typeof core.getEventNightKey !== 'function'
+            || typeof core.buildIdentityComparisonShape !== 'function'
+            || typeof core.areIdentityNamesSimilar !== 'function'
+            || typeof core.getCrossSourceVenueIdentity !== 'function'
+            || typeof core.areEventsDistinctByPlace !== 'function') {
+            return; // fail closed: without the dedup's own identity helpers, stamp nothing
+        }
+
+        const groups = [];
+        for (const event of eventList) {
+            if (!event || typeof event !== 'object') continue;
+            if (typeof event.title !== 'string' || !event.title.trim()) continue;
+            const nightKey = core.getEventNightKey(event);
+            if (!nightKey) continue; // fail closed: undated records observe nothing
+            const shape = core.buildIdentityComparisonShape(event);
+            const group = groups.find(candidate => candidate.members.some(member =>
+                core.areIdentityNamesSimilar(member.shape, shape)
+                && core.getCrossSourceVenueIdentity(member.event, event) !== null
+                && !core.areEventsDistinctByPlace(member.event, event)));
+            if (group) {
+                group.members.push({ event, shape, nightKey });
+            } else {
+                groups.push({ members: [{ event, shape, nightKey }] });
+            }
+        }
+
+        let groupIndex = 0;
+        for (const group of groups) {
+            const dates = new Set(group.members.map(member => member.nightKey));
+            // Fold in the ?occurrence= observations whose page identity
+            // matches one of this group's records (the record IS the page's
+            // event — its identity ties the link observations to the group).
+            const memberPathKeys = new Set();
+            for (const member of group.members) {
+                for (const value of [member.event.url, member.event.website]) {
+                    const pathKey = this.getUrlPathIdentityKey(value);
+                    if (pathKey) memberPathKeys.add(pathKey);
+                }
+            }
+            if (observations) {
+                for (const [pathKey, dateSet] of observations) {
+                    if (!memberPathKeys.has(pathKey)) continue;
+                    for (const date of dateSet) dates.add(date);
+                }
+            }
+            const sortedDates = Array.from(dates).sort();
+            const derived = this.deriveCadenceRrule(sortedDates);
+            if (!derived) continue; // existing report-only line already covered it
+
+            const title = group.members[0].event.title;
+            const statedRules = new Set();
+            for (const member of group.members) {
+                const stated = String(member.event.recurrenceRule || member.event.recurrence || '').trim().toUpperCase();
+                if (stated) statedRules.add(stated);
+            }
+            const disagreeing = Array.from(statedRules).filter(rule => rule !== derived.rrule);
+            if (disagreeing.length > 0) {
+                console.log(`🔁 CADENCE: derived ${derived.rrule} for "${title}" disagrees with stated rule(s) ${disagreeing.join(', ')} — stated cadence kept, nothing stamped (curated data beats derived)`);
+                continue;
+            }
+            const unstamped = group.members.filter(member =>
+                !String(member.event.recurrenceRule || member.event.recurrence || '').trim());
+            // The same-series marker goes on EVERY member of a derived group,
+            // including groups whose members all already state the (agreeing)
+            // rule: a renumbered-slug install mints a new page per occurrence
+            // (run 20260807-143442: 5 "Underwear Happy Hour" records, each
+            // stating FREQ=WEEKLY;BYDAY=WE on its own slug), and without the
+            // marker the series collapse can never fold them. The marker
+            // asserts nothing beyond what this pass just proved — the rules
+            // stay exactly as stated.
+            groupIndex++;
+            const groupMarker = `cadence-${groupIndex}:${derived.rrule}`;
+            for (const member of group.members) {
+                member.event._cadenceGroup = groupMarker;
+            }
+            const basis = this.describeOccurrenceCadence(sortedDates);
+            if (unstamped.length === 0) {
+                if (group.members.length > 1) {
+                    console.log(`🔁 CADENCE: derived ${derived.rrule} agrees with the stated rule on ${group.members.length} "${title}" record(s) — same-series marker only, nothing stamped (report basis: ${basis.summary})`);
+                }
+                continue;
+            }
+            for (const member of unstamped) {
+                member.event.recurrenceRule = derived.rrule;
+            }
+            console.log(`🔁 CADENCE: stamped ${derived.rrule} on ${unstamped.length} "${title}" record(s) — derived from ${sortedDates.length} observed dates (report basis: ${basis.summary})`);
+        }
     }
 
     /**

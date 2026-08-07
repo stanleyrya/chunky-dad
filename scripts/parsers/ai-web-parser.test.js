@@ -13200,3 +13200,217 @@ test('a lone "-WxH" thumbnail keeps its own identity and still gets OCR coverage
   assert.deepEqual(ocrCalls, [thumbnail], 'genuine coverage is not reduced');
   assert.equal(ocrResults.length, 1);
 });
+
+// ===========================================================================
+// Derived-cadence enforcement (occurrence links + same-title record groups →
+// conservative recurrenceRule stamps; stated rules always win). Venue names
+// below are fixtures only.
+// ===========================================================================
+
+function buildCadenceStampRecord(overrides = {}) {
+  return {
+    title: 'KARAOKE',
+    bar: 'Fixture Eagle',
+    startDate: new Date('2026-08-05T20:00:00.000Z'), // Wednesday
+    endDate: new Date('2026-08-05T23:00:00.000Z'),
+    url: 'https://fixture-eagle.example/events/karaoke-19/',
+    source: 'ai-web',
+    ...overrides
+  };
+}
+
+function withCapturedLogs(run) {
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  try {
+    run();
+  } finally {
+    console.log = originalLog;
+  }
+  return logs;
+}
+
+test('deriveCadenceRrule: weekly needs same weekday + a run of 3 consecutive 7-day gaps, tolerating skipped weeks', () => {
+  const parser = createParser();
+  // lucki-break shape (run 20260807-142024): Mondays with Labor-Day Sep 7
+  // skipped — four consecutive 7-day gaps in August still prove weekly.
+  const skippedWeek = ['2026-08-03', '2026-08-10', '2026-08-17', '2026-08-24', '2026-08-31', '2026-09-14', '2026-09-21', '2026-09-28'];
+  assert.deepEqual(parser.deriveCadenceRrule(skippedWeek), { rrule: 'FREQ=WEEKLY;BYDAY=MO' });
+  // Exactly at the threshold: 4 dates = 3 consecutive gaps.
+  assert.deepEqual(parser.deriveCadenceRrule(['2026-08-05', '2026-08-12', '2026-08-19', '2026-08-26']),
+    { rrule: 'FREQ=WEEKLY;BYDAY=WE' });
+  // Below the threshold: 3 dates = only 2 consecutive gaps.
+  assert.equal(parser.deriveCadenceRrule(['2026-08-05', '2026-08-12', '2026-08-19']), null);
+  // Biweekly-looking (same weekday, all 14-day gaps) never derives.
+  assert.equal(parser.deriveCadenceRrule(['2026-08-05', '2026-08-19', '2026-09-02', '2026-09-16']), null);
+  // Mixed weekdays never derive.
+  assert.equal(parser.deriveCadenceRrule(['2026-08-05', '2026-08-13', '2026-08-21', '2026-08-29']), null);
+  // Monthly: >=2 observations, all different months, same ordinal weekday.
+  assert.deepEqual(parser.deriveCadenceRrule(['2026-08-07', '2026-09-04']), { rrule: 'FREQ=MONTHLY;BYDAY=1FR' });
+  // Same ordinal but a repeated month fails closed.
+  assert.equal(parser.deriveCadenceRrule(['2026-08-08', '2026-08-22', '2026-09-12']), null);
+  // Single observation derives nothing.
+  assert.equal(parser.deriveCadenceRrule(['2026-08-05']), null);
+});
+
+test('applyDerivedCadenceStamps: weekly stamp from ?occurrence= link observations', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://fixture-eagle.example/calendar/';
+  const html = ['2026-08-05', '2026-08-12', '2026-08-19', '2026-08-26']
+    .map(date => `<a href="https://fixture-eagle.example/events/hump-night/?occurrence=${date}">HUMP NIGHT</a>`)
+    .join('\n');
+  parser.reportOccurrenceCadence([html], sourceUrl);
+  const record = buildCadenceStampRecord({
+    title: 'HUMP NIGHT',
+    url: 'https://fixture-eagle.example/events/hump-night/?occurrence=2026-08-05'
+  });
+  const logs = withCapturedLogs(() => parser.applyDerivedCadenceStamps([record]));
+  assert.equal(record.recurrenceRule, 'FREQ=WEEKLY;BYDAY=WE', 'link observations alone carry the weekly proof');
+  assert.ok(typeof record._cadenceGroup === 'string' && record._cadenceGroup, 'group marker stamped');
+  assert.ok(logs.some(line => line.includes('🔁 CADENCE: stamped FREQ=WEEKLY;BYDAY=WE on 1 "HUMP NIGHT" record(s)')),
+    `enforce line expected, got: ${JSON.stringify(logs)}`);
+});
+
+test('applyDerivedCadenceStamps: weekly stamp from same-title records on renumbered slugs (no occurrence links)', () => {
+  const parser = createParser();
+  // MEC renumbering (run 20260807-143442): one weekly night, a NEW slug per
+  // occurrence — URL-keyed observation can never accumulate these.
+  const records = ['2026-08-05', '2026-08-12', '2026-08-19', '2026-08-26'].map((date, index) =>
+    buildCadenceStampRecord({
+      startDate: new Date(`${date}T20:00:00.000Z`),
+      endDate: new Date(`${date}T23:00:00.000Z`),
+      url: `https://fixture-eagle.example/events/karaoke-${19 + index}/`
+    }));
+  parser.applyDerivedCadenceStamps(records);
+  for (const record of records) {
+    assert.equal(record.recurrenceRule, 'FREQ=WEEKLY;BYDAY=WE');
+  }
+  const markers = new Set(records.map(record => record._cadenceGroup));
+  assert.equal(markers.size, 1, 'all four records share ONE same-series marker');
+  assert.ok([...markers][0], 'the shared marker is non-empty');
+});
+
+test('applyDerivedCadenceStamps: monthly stamp from two same-ordinal observations in different months', () => {
+  const parser = createParser();
+  const records = [
+    buildCadenceStampRecord({
+      title: 'CUB SCOUT',
+      startDate: new Date('2026-08-07T21:00:00.000Z'), // 1st Friday
+      endDate: new Date('2026-08-07T23:00:00.000Z'),
+      url: 'https://fixture-eagle.example/events/cub-scout-3/'
+    }),
+    buildCadenceStampRecord({
+      title: 'CUB SCOUT',
+      startDate: new Date('2026-09-04T21:00:00.000Z'), // 1st Friday
+      endDate: new Date('2026-09-04T23:00:00.000Z'),
+      url: 'https://fixture-eagle.example/events/cub-scout-4/'
+    })
+  ];
+  parser.applyDerivedCadenceStamps(records);
+  assert.equal(records[0].recurrenceRule, 'FREQ=MONTHLY;BYDAY=1FR');
+  assert.equal(records[1].recurrenceRule, 'FREQ=MONTHLY;BYDAY=1FR');
+});
+
+test('applyDerivedCadenceStamps: mixed weekdays stamp nothing', () => {
+  const parser = createParser();
+  const records = [
+    buildCadenceStampRecord({ startDate: new Date('2026-08-05T20:00:00.000Z') }), // Wednesday
+    buildCadenceStampRecord({ startDate: new Date('2026-08-13T20:00:00.000Z'), url: 'https://fixture-eagle.example/events/karaoke-20/' }), // Thursday
+    buildCadenceStampRecord({ startDate: new Date('2026-08-21T20:00:00.000Z'), url: 'https://fixture-eagle.example/events/karaoke-21/' }), // Friday
+    buildCadenceStampRecord({ startDate: new Date('2026-08-29T20:00:00.000Z'), url: 'https://fixture-eagle.example/events/karaoke-22/' }) // Saturday
+  ];
+  parser.applyDerivedCadenceStamps(records);
+  for (const record of records) {
+    assert.equal(record.recurrenceRule, undefined, 'no clear cadence → no stamp');
+    assert.equal(record._cadenceGroup, undefined, 'no derivation → no marker');
+  }
+});
+
+test('applyDerivedCadenceStamps: stated rule beats derived — conflict logs, nothing stamped, stated kept', () => {
+  const parser = createParser();
+  // The model extracted an explicit stated cadence on one record; the derived
+  // weekday disagrees. Curated/stated data beats derived — fail closed for
+  // the WHOLE group.
+  const records = ['2026-08-05', '2026-08-12', '2026-08-19', '2026-08-26'].map((date, index) =>
+    buildCadenceStampRecord({
+      startDate: new Date(`${date}T20:00:00.000Z`),
+      endDate: new Date(`${date}T23:00:00.000Z`),
+      url: `https://fixture-eagle.example/events/karaoke-${19 + index}/`
+    }));
+  records[0].recurrenceRule = 'FREQ=WEEKLY;BYDAY=FR';
+  const logs = withCapturedLogs(() => parser.applyDerivedCadenceStamps(records));
+  assert.equal(records[0].recurrenceRule, 'FREQ=WEEKLY;BYDAY=FR', 'the stated rule is NEVER overridden');
+  for (const record of records.slice(1)) {
+    assert.equal(record.recurrenceRule, undefined, 'siblings of a conflicting stated rule stay unstamped');
+    assert.equal(record._cadenceGroup, undefined, 'no marker on a conflicted group');
+  }
+  assert.ok(logs.some(line => line.includes('disagrees with stated rule(s) FREQ=WEEKLY;BYDAY=FR') && line.includes('stated cadence kept')),
+    `conflict line expected, got: ${JSON.stringify(logs)}`);
+});
+
+test('applyDerivedCadenceStamps: derived agreeing with stated is a no-op stamp but still marks the same-series group', () => {
+  const parser = createParser();
+  // Run 20260807-143442: all five "Underwear Happy Hour" records already
+  // state FREQ=WEEKLY;BYDAY=WE, each on its own renumbered slug. The rules
+  // stay untouched; the marker is what lets the series collapse fold them.
+  const records = ['2026-08-05', '2026-08-12', '2026-08-19', '2026-08-26'].map((date, index) =>
+    buildCadenceStampRecord({
+      startDate: new Date(`${date}T20:00:00.000Z`),
+      endDate: new Date(`${date}T23:00:00.000Z`),
+      url: `https://fixture-eagle.example/events/underwear-${11 + index}/`,
+      title: 'UNDERWEAR HAPPY HOUR',
+      recurrenceRule: 'FREQ=WEEKLY;BYDAY=WE'
+    }));
+  const logs = withCapturedLogs(() => parser.applyDerivedCadenceStamps(records));
+  const markers = new Set(records.map(record => record._cadenceGroup));
+  assert.equal(markers.size, 1, 'one shared marker across the stated-rule group');
+  assert.ok([...markers][0]);
+  for (const record of records) {
+    assert.equal(record.recurrenceRule, 'FREQ=WEEKLY;BYDAY=WE', 'stated rules untouched');
+  }
+  assert.ok(logs.some(line => line.includes('same-series marker only, nothing stamped')),
+    `marker-only line expected, got: ${JSON.stringify(logs)}`);
+});
+
+test('applyDerivedCadenceStamps: different venues never share a group, and undated records are never stamped', () => {
+  const parser = createParser();
+  // Same title + same weekday cadence at TWO different venues: positive
+  // venue identity fails → two separate groups → each below the weekly
+  // threshold on its own → nothing stamped anywhere.
+  const atFixtureEagle = ['2026-08-05', '2026-08-12'].map((date, index) =>
+    buildCadenceStampRecord({
+      startDate: new Date(`${date}T20:00:00.000Z`),
+      url: `https://fixture-eagle.example/events/karaoke-${19 + index}/`
+    }));
+  const atOtherBar = ['2026-08-19', '2026-08-26'].map((date, index) =>
+    buildCadenceStampRecord({
+      bar: 'Fixture Tavern',
+      address: '999 Other St, Dallas, TX 75201',
+      startDate: new Date(`${date}T20:00:00.000Z`),
+      url: `https://fixture-tavern.example/events/karaoke-${3 + index}/`
+    }));
+  parser.applyDerivedCadenceStamps([...atFixtureEagle, ...atOtherBar]);
+  for (const record of [...atFixtureEagle, ...atOtherBar]) {
+    assert.equal(record.recurrenceRule, undefined, 'cross-venue dates never combine into one cadence');
+  }
+
+  // The rrule-fallback guard: the date-fabrication path in normalizeAiEvent
+  // only serves records WITHOUT a startDate, and such records never join a
+  // group here (getEventNightKey fails closed) — so a stamp can never hand
+  // the fallback a new rrule to fabricate a date from.
+  const undated = buildCadenceStampRecord({ startDate: null, endDate: null });
+  const dated = ['2026-08-05', '2026-08-12', '2026-08-19', '2026-08-26'].map((date, index) =>
+    buildCadenceStampRecord({
+      startDate: new Date(`${date}T20:00:00.000Z`),
+      url: `https://fixture-eagle.example/events/karaoke-${19 + index}/`
+    }));
+  const before = dated.map(record => record.startDate.getTime());
+  parser.applyDerivedCadenceStamps([undated, ...dated]);
+  assert.equal(undated.recurrenceRule, undefined, 'an undated record is never stamped');
+  assert.equal(undated.startDate, null, 'an undated record gains no fabricated date');
+  assert.deepEqual(dated.map(record => record.startDate.getTime()), before, 'stamping never mutates startDate');
+  for (const record of dated) {
+    assert.equal(record.recurrenceRule, 'FREQ=WEEKLY;BYDAY=WE', 'the dated group still stamps normally');
+  }
+});

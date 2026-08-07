@@ -4068,6 +4068,95 @@ test('deduplicateEvents series collapse preserves manuallyMarkedBear from the dr
   assert.equal(result[0].startDate.getTime(), thisWeek.getTime(), 'the earliest occurrence is still the one kept');
 });
 
+// === Run 20260807-143442: renumbered-slug series collapse (cadence marker) ===
+// The Dallas Eagle's MEC install mints a NEW slug per occurrence (karaoke-19,
+// karaoke-20 …), so one weekly series shows N different base pages and the
+// same-page identity above can never fold it. The derived-cadence pass in the
+// ai-web parser stamps a per-run _cadenceGroup marker on groups it proved
+// title-similar + positively same-venue with a jointly derived rule; ONLY a
+// shared marker lets records on different base pages collapse. Venue names
+// below are fixtures.
+
+function buildRenumberedSlugSeriesExport(startDate, slugNumber, overrides = {}) {
+  return {
+    title: 'KARAOKE',
+    bar: 'Fixture Eagle',
+    startDate,
+    endDate: new Date(startDate.getTime() + 3 * 60 * 60 * 1000),
+    url: `https://fixture-eagle.example/events/karaoke-${slugNumber}/`,
+    recurrenceRule: 'FREQ=WEEKLY;BYDAY=TH',
+    _cadenceGroup: 'cadence-1:FREQ=WEEKLY;BYDAY=TH',
+    timezone: 'America/Chicago',
+    source: 'ai-web',
+    ...overrides
+  };
+}
+
+test('deduplicateEvents collapses a cadence-marked group across renumbered slug pages to one withheld series export', async () => {
+  const core = createCore();
+  const first = new Date(Date.now() + 7 * SERIES_DAY_MS);
+  const records = [0, 1, 2].map(week =>
+    buildRenumberedSlugSeriesExport(new Date(first.getTime() + week * 7 * SERIES_DAY_MS), 19 + week));
+
+  const result = await core.deduplicateEvents(records, null);
+  assert.equal(result.length, 1, 'three occurrence-singles of one marked series fold to one record');
+  const kept = result[0];
+  assert.equal(kept.startDate.getTime(), first.getTime(), 'the earliest (next upcoming) occurrence is kept');
+  assert.equal(kept.recurrenceRule, 'FREQ=WEEKLY;BYDAY=TH');
+  assert.equal(kept.url, records[0].url, 'the kept occurrence keeps its own slug page');
+
+  // Recurring-events doctrine: the survivor flows into the EXISTING
+  // withhold+ICS path — display + export only, never a calendar write.
+  const adapter = buildPrepCalendarAdapter([]);
+  const analyzed = await core.prepareEventsForCalendar([{ ...kept, city: 'dallas' }], adapter, {});
+  assert.equal(analyzed.length, 1);
+  assert.equal(analyzed[0]._recurringExport, true, 'stamped display+export only');
+  assert.deepEqual(SharedCore.filterEventsForExecution(analyzed), [],
+    'a cadence-derived series never reaches a calendar write');
+});
+
+test('deduplicateEvents never folds different base pages without a shared cadence marker, nor different venues with one', async () => {
+  const core = createCore();
+  const thisWeek = new Date(Date.now() + 7 * SERIES_DAY_MS);
+  const nextWeek = new Date(thisWeek.getTime() + 7 * SERIES_DAY_MS);
+
+  // Same title + same rrule on different base pages, NO marker on either
+  // side (stated rules, not cadence-derived): the #1647 fail-closed identity
+  // stands — lookalike pairs are not always twins.
+  const unmarked = await core.deduplicateEvents([
+    buildRenumberedSlugSeriesExport(thisWeek, 19, { _cadenceGroup: undefined }),
+    buildRenumberedSlugSeriesExport(nextWeek, 20, { _cadenceGroup: undefined })
+  ], null);
+  assert.equal(unmarked.length, 2, 'no shared marker → different base pages never fold');
+
+  // Marker on ONE side only never folds either.
+  const halfMarked = await core.deduplicateEvents([
+    buildRenumberedSlugSeriesExport(thisWeek, 19),
+    buildRenumberedSlugSeriesExport(nextWeek, 20, { _cadenceGroup: undefined })
+  ], null);
+  assert.equal(halfMarked.length, 2, 'a one-sided marker proves nothing');
+
+  // Two genuinely different events with the same rrule, similar titles and
+  // even the same marker string, at DIFFERENT venues: the positive
+  // different-place veto still blocks the fold.
+  const differentVenues = await core.deduplicateEvents([
+    buildRenumberedSlugSeriesExport(thisWeek, 19, { address: '100 Fixture St, Dallas, TX 75201' }),
+    buildRenumberedSlugSeriesExport(nextWeek, 3, {
+      bar: 'Fixture Tavern',
+      address: '999 Other Ave, Dallas, TX 75226',
+      url: 'https://fixture-tavern.example/events/karaoke-3/'
+    })
+  ], null);
+  assert.equal(differentVenues.length, 2, 'different venues never fold, marker or not');
+
+  // Different rules with the same marker never fold (rule check runs first).
+  const differentRules = await core.deduplicateEvents([
+    buildRenumberedSlugSeriesExport(thisWeek, 19),
+    buildRenumberedSlugSeriesExport(nextWeek, 20, { recurrenceRule: 'FREQ=MONTHLY;BYDAY=1TH' })
+  ], null);
+  assert.equal(differentRules.length, 2, 'different rules are different series claims — never fold them');
+});
+
 // === Run 20260802-135030: 3dollarbillbk.com + its eventim ticketing pages ===
 // Six verbatim records were three real events and duplicatesRemoved was 1.
 // URL identity (same event page modulo query/fragment; same trailing platform
