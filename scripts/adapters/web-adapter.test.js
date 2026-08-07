@@ -123,6 +123,38 @@ test('getExistingEvents returns window-filtered events from the published calend
   });
 });
 
+// Node-side mirrors of the Scriptable saved-series lookup hooks: the wide
+// window is the published calendar expanded over the probe window, and the
+// record fallback is the parsed VEVENT list itself.
+test('getWideWindowCalendarEvents mirrors the probe window off the published calendar', async () => {
+  await withFetchStub(LA_ICS_FIXTURE, async (fetchCalls) => {
+    const adapter = makeAdapter();
+    const lookup = await adapter.getWideWindowCalendarEvents({ city: 'la', title: 'Club Chub' });
+
+    assert.ok(lookup, 'lookup available on Node');
+    assert.equal(lookup.calendarName, 'la');
+    const chubOccurrences = lookup.events.filter((e) => e.identifier === 'chub-la@test');
+    assert.ok(chubOccurrences.length >= 1, 'the monthly series expands into the now-anchored window');
+    assert.equal(chubOccurrences[0].recurrence, 'FREQ=MONTHLY;BYDAY=3SU',
+      'expanded occurrences carry the series evidence the lookup reads');
+    assert.equal(fetchCalls(), 1, 'shares the per-run published-calendar memo');
+  });
+});
+
+test('getPublishedCalendarRecords exposes the parsed VEVENTs and fails open', async () => {
+  await withFetchStub(LA_ICS_FIXTURE, async () => {
+    const adapter = makeAdapter();
+    const records = await adapter.getPublishedCalendarRecords('la');
+    assert.ok(Array.isArray(records));
+    assert.deepEqual(records.map((r) => r.uid).sort(), ['chub-la@test', 'duro-la@test', 'gala-la@test']);
+    assert.equal(records.find((r) => r.uid === 'chub-la@test').rrule, 'FREQ=MONTHLY;BYDAY=3SU');
+  });
+  await withFetchStub(new Error('network down'), async () => {
+    const adapter = makeAdapter();
+    assert.equal(await adapter.getPublishedCalendarRecords('la'), null, 'fetch failure fails open to null');
+  });
+});
+
 test('disk cache honors the 0.25-day TTL across adapter instances', async () => {
   const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-ics-cache-'));
   const pageCache = { enabled: true, ttlDays: 3 };

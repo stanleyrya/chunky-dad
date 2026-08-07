@@ -12288,6 +12288,266 @@ test('noteConfirmedRecurringSeries feeds shouldCreateOverrideFromRecurringMatch'
 });
 
 // ---------------------------------------------------------------------------
+// Saved-series lookup beyond the same-day hit (runs 20260807-161034 /
+// 20260807-114625): the day-window search legitimately returns found=0 for a
+// series the owner ALREADY saved — a monthly series whose next saved instance
+// is on a different day, a weekly series saved last week — so a series-export
+// event must get a wide-window / published-calendar lookup before the run
+// claims NEW and re-offers the same ICS.
+// ---------------------------------------------------------------------------
+
+// The owner's real saved shape (data/calendars/la.ics CUBSCOUT): notes carry
+// uid:/timezone: keys but NO recurrence: key — series-ness is proven by the
+// multi-instance identifier count or the published calendar, never assumed.
+const CUBSCOUT_SAVED_NOTES = [
+  'shortName: CUB-SCOUT',
+  'bar: Eagle LA',
+  'address: 4219 Santa Monica Blvd, Los Angeles, CA 90029',
+  'timezone: America/Los_Angeles',
+  'uid: cubscout-20260731T193113Z@chunky.dad'
+].join('\n');
+
+function buildSavedCubscoutOccurrence(startIso) {
+  const startDate = new Date(startIso);
+  return {
+    identifier: 'CAL-UUID:cubscout-20260731T193113Z@chunky.dad',
+    title: 'CUBSCOUT',
+    startDate,
+    endDate: new Date(startDate.getTime() + 5 * 3600 * 1000),
+    location: '34.0912127, -118.2840632',
+    notes: CUBSCOUT_SAVED_NOTES
+  };
+}
+
+// Scraped series export whose own day window will hold nothing: the saved
+// series' instances are Sep-anchored while the scraped occurrence is Aug 7.
+function buildScrapedCubscoutSeriesExport() {
+  return {
+    title: 'CUBSCOUT',
+    startDate: new Date('2026-08-08T02:00:00.000Z'),
+    endDate: new Date('2026-08-08T09:00:00.000Z'),
+    bar: 'Eagle LA',
+    city: 'la',
+    recurrenceRule: 'FREQ=MONTHLY;BYDAY=1FR',
+    _recurring: true
+  };
+}
+
+const LA_CITIES = { la: { timezone: 'America/Los_Angeles', patterns: ['la'] } };
+
+function createLaCore() {
+  return new SharedCore(LA_CITIES, { eventSchema: EventSchema });
+}
+
+function buildSeriesLookupAdapter(wideWindowEvents, overrides = {}) {
+  return {
+    getExistingEvents: async () => [],
+    getCalendarName: (city) => `chunky-dad-${city || 'default'}`,
+    getWideWindowCalendarEvents: async () => ({
+      calendarName: 'chunky-dad-la',
+      events: wideWindowEvents
+    }),
+    getPublishedCalendarRecords: async () => null,
+    ...overrides
+  };
+}
+
+test('saved-series lookup: found=0 + series export matches the saved series in the wide window and stamps the honest state', async () => {
+  const core = createLaCore();
+  const saved = [
+    buildSavedCubscoutOccurrence('2026-09-05T04:00:00.000Z'),
+    buildSavedCubscoutOccurrence('2026-10-03T04:00:00.000Z')
+  ];
+  const adapter = buildSeriesLookupAdapter(saved);
+  const event = buildScrapedCubscoutSeriesExport();
+
+  const analysis = await core.resolveCalendarAnalysisWithSeriesProbe(event, [], 'upsert', adapter);
+  assert.equal(analysis.action, 'new', 'the analysis ACTION is untouched — matching and reporting only');
+  assert.ok(analysis.seriesMatch, 'the lookup found the saved series');
+  assert.equal(analysis.seriesMatch.identifier, 'CAL-UUID:cubscout-20260731T193113Z@chunky.dad');
+  assert.equal(analysis.seriesMatch.instances, 2, 'both wide-window instances counted');
+  assert.equal(analysis.seriesMatch.calendarName, 'chunky-dad-la');
+
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (message) => { lines.push(String(message)); };
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(event, analysis, adapter, {});
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.equal(analyzed._action, 'new', 'still not a write — the scraper never writes series');
+  assert.ok(analyzed._seriesMatch, 'the match survives onto the analyzed event');
+  assert.equal(analyzed._seriesMatch.instances, 2);
+  assert.equal(analyzed._seriesMatch.calendarName, 'chunky-dad-la');
+  assert.equal(analyzed._seriesMatch.reason, 'Saved series match (wide-window)');
+  assert.equal(analyzed._recurringExport, true, 'the ICS export is still offered');
+  assert.ok(
+    lines.some(l => l.includes('matches the saved series already in chunky-dad-la (2 instances) — not a new event')),
+    `the run says so out loud: ${JSON.stringify(lines)}`
+  );
+  assert.ok(
+    lines.some(l => l.includes('withheld from calendar write')),
+    'the withhold line is unchanged'
+  );
+  assert.deepEqual(SharedCore.filterEventsForExecution([analyzed]), [], 'and nothing is written');
+});
+
+test('saved-series lookup: a notes recurrence key confirms a series with a single visible instance', async () => {
+  const core = createLaCore();
+  const single = buildSavedCubscoutOccurrence('2026-09-05T04:00:00.000Z');
+  single.notes = `${CUBSCOUT_SAVED_NOTES}\nrecurrence: FREQ=MONTHLY;BYDAY=1FR`;
+  const adapter = buildSeriesLookupAdapter([single], {
+    probeRecurringSeries: async () => {
+      throw new Error('the notes key already fired — the probe must not run');
+    }
+  });
+
+  const analysis = await core.resolveCalendarAnalysisWithSeriesProbe(
+    buildScrapedCubscoutSeriesExport(), [], 'upsert', adapter);
+  assert.ok(analysis.seriesMatch, 'notes recurrence key alone confirms the candidate');
+  assert.equal(analysis.seriesMatch.instances, 1);
+});
+
+test('saved-series lookup: an identity match WITHOUT series evidence is never claimed', async () => {
+  const core = createLaCore();
+  // One saved one-off titled like the series, probe says not-a-series.
+  const oneOff = buildSavedCubscoutOccurrence('2026-09-05T04:00:00.000Z');
+  const adapter = buildSeriesLookupAdapter([oneOff], {
+    probeRecurringSeries: async () => false
+  });
+
+  const analysis = await core.resolveCalendarAnalysisWithSeriesProbe(
+    buildScrapedCubscoutSeriesExport(), [], 'upsert', adapter);
+  assert.equal(analysis.seriesMatch, undefined, 'a lone one-off is not a saved series');
+  assert.equal(analysis.action, 'new');
+});
+
+test('saved-series lookup: a genuinely-new series matches nothing and still reports NEW with the ICS offer', async () => {
+  const core = createLaCore();
+  // The calendar holds an unrelated series — identity must not match.
+  const unrelated = {
+    identifier: 'CAL-UUID:onyx-1@chunky.dad',
+    title: 'ONYX',
+    startDate: new Date('2026-09-14T04:00:00.000Z'),
+    endDate: new Date('2026-09-14T08:00:00.000Z'),
+    location: '',
+    notes: 'bar: Eagle LA\nrecurrence: FREQ=MONTHLY;BYDAY=2SU'
+  };
+  const adapter = buildSeriesLookupAdapter([unrelated]);
+  const event = buildScrapedCubscoutSeriesExport();
+
+  const analysis = await core.resolveCalendarAnalysisWithSeriesProbe(event, [], 'upsert', adapter);
+  assert.equal(analysis.seriesMatch, undefined, 'nothing matched, nothing claimed');
+
+  const analyzed = await core.buildAnalyzedCalendarEvent(event, analysis, adapter, {});
+  assert.equal(analyzed._action, 'new');
+  assert.equal(analyzed._seriesMatch, undefined);
+  assert.equal(analyzed._recurringExport, true, 'a genuinely-new series still offers the ICS');
+});
+
+test('saved-series lookup: the published calendar ICS is the fallback proof of "already saved"', async () => {
+  const core = createLaCore();
+  const publishedIcs = [
+    'BEGIN:VCALENDAR',
+    'BEGIN:VEVENT',
+    'DTSTART;TZID=America/Los_Angeles:20260904T210000',
+    'DTEND;TZID=America/Los_Angeles:20260905T020000',
+    'RRULE:FREQ=MONTHLY;BYDAY=1FR',
+    'UID:cubscout-20260731T193113Z@chunky.dad',
+    'DESCRIPTION:bar: Eagle LA\\naddress: 4219 Santa Monica Blvd\\, Los Angeles\\,',
+    '  CA 90029\\ntimezone: America/Los_Angeles\\nuid: cubscout-20260731T193113Z@c',
+    ' hunky.dad',
+    'LOCATION:34.0912127\\, -118.2840632',
+    'SUMMARY:CUBSCOUT',
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n');
+  const adapter = buildSeriesLookupAdapter([], {
+    // Wide window unavailable (missing calendar fails open to null).
+    getWideWindowCalendarEvents: async () => null,
+    getPublishedCalendarRecords: async () => SharedCore.parsePublishedCalendarIcs(publishedIcs)
+  });
+
+  const analysis = await core.resolveCalendarAnalysisWithSeriesProbe(
+    buildScrapedCubscoutSeriesExport(), [], 'upsert', adapter);
+  assert.ok(analysis.seriesMatch, 'the published series proves already-saved');
+  assert.equal(analysis.seriesMatch.identifier, 'cubscout-20260731T193113Z@chunky.dad');
+  assert.equal(analysis.seriesMatch.reason, 'Saved series match (published calendar ICS)');
+});
+
+test('saved-series lookup: fails open on adapter errors and never runs for non-series events', async () => {
+  const core = createLaCore();
+  const throwing = buildSeriesLookupAdapter([], {
+    getWideWindowCalendarEvents: async () => { throw new Error('calendar unavailable'); },
+    getPublishedCalendarRecords: async () => { throw new Error('network unavailable'); }
+  });
+  const analysis = await core.resolveCalendarAnalysisWithSeriesProbe(
+    buildScrapedCubscoutSeriesExport(), [], 'upsert', throwing);
+  assert.equal(analysis.action, 'new', 'errors leave the NEW verdict untouched');
+  assert.equal(analysis.seriesMatch, undefined);
+
+  let lookupCalls = 0;
+  const counting = buildSeriesLookupAdapter([], {
+    getWideWindowCalendarEvents: async () => { lookupCalls += 1; return null; }
+  });
+  const plain = {
+    title: 'ONE OFF',
+    startDate: new Date('2026-08-08T02:00:00.000Z'),
+    bar: 'Eagle LA',
+    city: 'la'
+  };
+  const plainAnalysis = await core.resolveCalendarAnalysisWithSeriesProbe(plain, [], 'upsert', counting);
+  assert.equal(plainAnalysis.action, 'new');
+  assert.equal(lookupCalls, 0, 'a non-series event never triggers the lookup');
+});
+
+test('isRecurringSeriesEvent: the canonical `recurrence` field counts as a series stamp — except on an override', () => {
+  // Builder-made events carry ONLY the canonical field (event-schema
+  // canonicalizes rrule/recurrenceRule → recurrence); they must be a series
+  // (🔁 badge, ICS export, withhold) instead of silently dropping the RRULE.
+  assert.equal(SharedCore.isRecurringSeriesEvent({ recurrence: 'FREQ=MONTHLY;BYDAY=1FR' }), true);
+  assert.equal(SharedCore.isRecurringSeriesEvent({ recurrence: '   ' }), false);
+  // The pinned leak case: `recurrence` rides off the EXISTING record's notes
+  // onto a single-occurrence override during the merge — an override is ONE
+  // occurrence, and treating the leak as a series claim would withhold the
+  // one write the scraper IS allowed to make into an existing series.
+  assert.equal(SharedCore.isRecurringSeriesEvent({
+    recurrence: 'FREQ=MONTHLY;BYDAY=1FR',
+    overrideUid: 'cubscout-20260731T193113Z@chunky.dad',
+    overrideRecurrenceId: '20260905'
+  }), false);
+});
+
+test('recurrence-only builder event: withheld from writes, offered as ICS export', async () => {
+  const core = createLaCore();
+  const builderEvent = {
+    title: 'CUBSCOUT',
+    startDate: new Date('2026-09-05T04:00:00.000Z'),
+    endDate: new Date('2026-09-05T09:00:00.000Z'),
+    bar: 'Eagle LA',
+    city: 'la',
+    recurrence: 'FREQ=MONTHLY;BYDAY=1FR'
+  };
+  const analysis = { action: 'new', reason: 'No existing events found', sourceEvent: null, overrideIdentity: null };
+  const analyzed = await core.buildAnalyzedCalendarEvent(builderEvent, analysis, null, {});
+  assert.equal(analyzed._recurringExport, true, 'the series is routed to the ICS export');
+  assert.deepEqual(SharedCore.filterEventsForExecution([analyzed]), [],
+    'and withheld from the calendar write instead of dropping the RRULE');
+});
+
+test('normalizeOverrideUid: trims, preserves case, and blanks null/undefined', () => {
+  assert.equal(SharedCore.normalizeOverrideUid('  cubscout-1@chunky.dad  '), 'cubscout-1@chunky.dad');
+  assert.equal(SharedCore.normalizeOverrideUid('MixedCase@Chunky.dad'), 'MixedCase@Chunky.dad');
+  assert.equal(SharedCore.normalizeOverrideUid(''), '');
+  assert.equal(SharedCore.normalizeOverrideUid('   '), '');
+  assert.equal(SharedCore.normalizeOverrideUid(null), '');
+  assert.equal(SharedCore.normalizeOverrideUid(undefined), '');
+});
+
+// ---------------------------------------------------------------------------
 // Published-calendar ICS parsing + RRULE expansion (Mac/Node merge fidelity)
 // ---------------------------------------------------------------------------
 

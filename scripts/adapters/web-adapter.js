@@ -971,6 +971,41 @@ async saveFailureNote(url, error, metadata = {}) {
         }
     }
 
+    // Node-side mirror of ScriptableAdapter.getWideWindowCalendarEvents (the
+    // saved-series lookup's candidate source): expand the published city
+    // calendar over the same now-anchored -35d..+70d window the identifier
+    // probe uses. Expanded series occurrences carry `recurrence`, which the
+    // lookup reads as the candidate's series evidence. Fails open to null.
+    async getWideWindowCalendarEvents(event) {
+        try {
+            const city = (event && event.city) || 'default';
+            const published = await this.getPublishedCalendarEvents(city);
+            const core = this.getSharedCoreRef();
+            if (!published || !core) return null;
+            const now = new Date();
+            const windowStart = new Date(now.getTime() - 35 * 24 * 60 * 60 * 1000);
+            const windowEnd = new Date(now.getTime() + 70 * 24 * 60 * 60 * 1000);
+            const expansion = core.expandPublishedCalendarEventsInWindow(
+                published.records, windowStart, windowEnd
+            );
+            return { calendarName: city, events: expansion.events };
+        } catch (error) {
+            return null;
+        }
+    }
+
+    // Node-side mirror of ScriptableAdapter.getPublishedCalendarRecords: the
+    // parsed VEVENT records already fetched for getExistingEvents. Null on
+    // any failure (callers fail open).
+    async getPublishedCalendarRecords(cityKey) {
+        try {
+            const published = await this.getPublishedCalendarEvents(cityKey || '');
+            return published && Array.isArray(published.records) ? published.records : null;
+        } catch (error) {
+            return null;
+        }
+    }
+
     // Display/Logging Adapter Implementation
     async logInfo(message) {
         console.log(`%cℹ️ ${message}`, 'color: #2196F3');
