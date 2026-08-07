@@ -12628,3 +12628,143 @@ test('a logo is still hard-refused even at perfect text similarity', () => {
     assert.equal(refused.score, -Infinity);
   }
 });
+
+// ---------------------------------------------------------------------------
+// "-WxH" resized-filename variants are the SAME image as their base
+// (identity), while URL selection keeps preferring the full-size original.
+// Run findings: the device OCR cache held BOTH renditions of ~12 Eagle LA
+// posters (~34 entries for ~12 images) because stripSizeParams collapsed
+// proxy wraps and transform tails but not the filename convention — so the
+// segment top-up judged thumbnail-only segments "uncovered" and OCR'd the
+// thumbnail even when the full-size original was already read.
+// ---------------------------------------------------------------------------
+
+test('stripSizeParams collapses a "-WxH" resized filename variant into its base image', () => {
+  const parser = createParser();
+  assert.equal(
+    parser.stripSizeParams('https://eaglela.com/wp-content/uploads/flyer-300x300.jpg'),
+    'https://eaglela.com/wp-content/uploads/flyer.jpg',
+    'the WordPress-style thumbnail strips to its base asset');
+  assert.equal(
+    parser.stripSizeParams('https://eaglela.com/wp-content/uploads/flyer-1024x683.png'),
+    'https://eaglela.com/wp-content/uploads/flyer.png',
+    'any -WxH rendition strips to its base asset');
+  assert.equal(
+    parser.stripSizeParams('https://eaglela.com/wp-content/uploads/flyer-300x300.jpg'),
+    parser.stripSizeParams('https://eaglela.com/wp-content/uploads/flyer.jpg'),
+    'variant and base share one identity key');
+
+  // Legitimate digits that are NOT a "-WxH immediately before the extension"
+  // token must never be mangled.
+  for (const url of [
+    'https://eaglela.com/wp-content/uploads/poster-8_8_26-square.jpg',
+    'https://eaglela.com/wp-content/uploads/foo-2026.jpg',
+    'https://eaglela.com/wp-content/uploads/foo-4x4-party.jpg'
+  ]) {
+    assert.equal(parser.stripSizeParams(url), url, `${url} must pass through unchanged`);
+  }
+});
+
+test('segment OCR top-up counts a "-WxH" variant as covered by its full-size OCR result', async () => {
+  const parser = createParser();
+  const original = 'https://eaglela.com/wp-content/uploads/hump-night-flyer.jpg';
+  const thumbnail = 'https://eaglela.com/wp-content/uploads/hump-night-flyer-300x300.jpg';
+
+  // The segment's HTML carries ONLY the thumbnail rendition; the page-level
+  // pass already OCR'd the full-size original.
+  const segments = [{ lines: [], html: '', imageHintUrls: [thumbnail] }];
+  const ocrResults = [{ url: original, text: 'HUMP NIGHT 9PM', imageClassification: 'event-flyer' }];
+
+  let ocrCalled = false;
+  parser.getOcrTextForImage = async () => {
+    ocrCalled = true;
+    return null;
+  };
+
+  await parser.ensureSegmentOcrCoverage(segments, ocrResults, {}, 'https://eaglela.com/events', null);
+  assert.equal(ocrCalled, false, 'the thumbnail is the same image — no second OCR call');
+  assert.equal(ocrResults.length, 1, 'no redundant OCR entry is appended');
+
+  // ...and the full-size OCR result pairs with the thumbnail-only segment.
+  const matched = parser.filterOcrResultsForSegment(ocrResults, segments[0], 'https://eaglela.com/events');
+  assert.equal(matched.length, 1);
+  assert.equal(matched[0].url, original);
+});
+
+test('harvest and pairing dedup treat a "-WxH" variant and its original as ONE image', () => {
+  const parser = createParser();
+  const original = 'https://eaglela.com/wp-content/uploads/meat-rack-poster.jpg';
+  const thumbnail = 'https://eaglela.com/wp-content/uploads/meat-rack-poster-300x300.jpg';
+
+  const html = `<img src="${thumbnail}"><img src="${original}">`;
+  const records = parser.extractOrderedImageRecordsFromHtml(html, 'https://eaglela.com/events');
+  assert.equal(records.length, 1, 'both renditions harvest to one record');
+  assert.equal(records[0].url, original, 'the full-size original is the representative URL');
+
+  // Pairing's URL dedup collapses OCR entries for both renditions to one
+  // image — and the full-size original wins the entry.
+  const deduped = parser.deduplicateOcrResultsByUrl([
+    { url: thumbnail, text: 'MEAT RACK' },
+    { url: original, text: 'MEAT RACK' }
+  ]);
+  assert.equal(deduped.length, 1, 'OCR results for both renditions collapse to one image');
+  assert.equal(deduped[0].url, original, 'the full-size original wins the OCR entry');
+});
+
+test('OCR consolidation never crowns a "-WxH" variant over the full-size original', () => {
+  const parser = createParser();
+  const original = 'https://eaglela.com/wp-content/uploads/b-bar-poster.jpg';
+  const thumbnail = 'https://eaglela.com/wp-content/uploads/b-bar-poster-1024x683.jpg';
+
+  // Same text + classification groups them; on size score alone the variant's
+  // advertised 1024x683 would beat the base's URL-length noise floor.
+  const consolidated = parser.consolidateDuplicateOcrResults([
+    { url: thumbnail, text: 'B BAR SATURDAY', imageClassification: 'event-flyer' },
+    { url: original, text: 'B BAR SATURDAY', imageClassification: 'event-flyer' }
+  ]);
+  assert.equal(consolidated.length, 1);
+  assert.equal(consolidated[0].url, original, 'the base rendition is the representative');
+});
+
+// Behavior guard (passes before and after this change): when both renditions
+// are harvested, exactly one OCR call is made and it targets the full-size
+// original — dropResizedImageUrlsWithOriginal and the harvest representative
+// agree on the same answer.
+test('extractOcrFromAllImages OCRs the full-size original exactly once, never the "-WxH" variant', async () => {
+  const parser = createParser();
+  const original = 'https://eaglela.com/wp-content/uploads/onyx-poster.jpg';
+  const thumbnail = 'https://eaglela.com/wp-content/uploads/onyx-poster-300x300.jpg';
+  const html = `<img src="${thumbnail}" srcset="${original} 1024w">`;
+
+  const ocrCalls = [];
+  parser.getOcrTextForImage = async (url) => {
+    ocrCalls.push(url);
+    return { url, text: 'ONYX NIGHT', imageClassification: 'event-flyer' };
+  };
+
+  const results = await parser.extractOcrFromAllImages({ url: 'https://eaglela.com/events', html }, { enabled: true }, null, 10);
+  assert.deepEqual(ocrCalls, [original], 'one OCR call, aimed at the full-size original');
+  assert.equal(results.length, 1);
+  assert.equal(results[0].url, original);
+});
+
+test('a lone "-WxH" thumbnail keeps its own identity and still gets OCR coverage', async () => {
+  const parser = createParser();
+  // Flag, don't drop: when the original is nowhere on the page, the variant
+  // is still harvested, still judged uncovered, and still OCR'd.
+  const thumbnail = 'https://eaglela.com/wp-content/uploads/lone-poster-300x300.jpg';
+  const records = parser.extractOrderedImageRecordsFromHtml(`<img src="${thumbnail}">`, 'https://eaglela.com/events');
+  assert.equal(records.length, 1);
+  assert.equal(records[0].url, thumbnail, 'a lone thumbnail is never rewritten to a URL the page does not carry');
+
+  const segments = [{ lines: [], html: '', imageHintUrls: [thumbnail] }];
+  const ocrResults = [];
+  const ocrCalls = [];
+  parser.getOcrTextForImage = async (url) => {
+    ocrCalls.push(url);
+    return { url, text: 'LONE POSTER 10PM', imageClassification: 'event-flyer' };
+  };
+  await parser.ensureSegmentOcrCoverage(segments, ocrResults, {}, 'https://eaglela.com/events', null);
+  assert.deepEqual(ocrCalls, [thumbnail], 'genuine coverage is not reduced');
+  assert.equal(ocrResults.length, 1);
+});

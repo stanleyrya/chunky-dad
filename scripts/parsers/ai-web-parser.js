@@ -610,6 +610,14 @@ class AiWebParser {
         this.maxRejectedSamplesPerReason = 3;
         this.maxRejectedSampleLength = 120;
         this.supportedImageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.tif', '.tiff'];
+        // "-<width>x<height>" immediately before the image extension in a
+        // FILENAME (e.g. flyer-300x300.jpg for flyer.jpg — the WordPress-style
+        // resize convention). Single source of truth shared by
+        // getResizedImageOriginalUrl / getResizedImageFilenameArea (URL
+        // selection: prefer the full-size original) and stripSizeParams
+        // (identity: a resized rendition IS its base image) so the two notions
+        // of "resized derivative" can never drift apart.
+        this.resizedImageFilenameSuffixPattern = /-(\d{2,5})x(\d{2,5})(\.(?:jpe?g|png|gif|webp|avif|bmp|tiff?))$/i;
         // Non-image static-asset extensions (fonts/stylesheets/scripts + image
         // formats not in supportedImageExtensions). Together with that list
         // these mark a URL as a FILE, never an event page — see
@@ -3309,7 +3317,7 @@ class AiWebParser {
         if (limit === 0) return [];
 
         const results = [];
-        const seen = new Set();
+        const seen = new Map();
         const addImageRecord = (rawUrl, start, end) => {
             const normalized = this.normalizeUrl(String(rawUrl || '').trim(), sourceUrl);
             if (!normalized) return;
@@ -3318,14 +3326,27 @@ class AiWebParser {
             if (!finalUrl) return;
             // Use stripped URL for deduplication to handle same image at different sizes
             const strippedUrl = this.stripSizeParams(finalUrl);
-            if (seen.has(strippedUrl)) return;
+            if (seen.has(strippedUrl)) {
+                // Another rendition of an image already held. The first
+                // sighting keeps the record and its document position, but the
+                // representative URL is promoted when this rendition is the
+                // full-size original of a stored "-WxH" resized filename
+                // variant (or a strictly larger such variant) — the record's
+                // URL is what gets OCR'd and offered to the model.
+                const existing = seen.get(strippedUrl);
+                if (existing && this.isPreferredResizedRendition(finalUrl, existing.url)) {
+                    existing.url = finalUrl;
+                }
+                return;
+            }
             if (!this.hasSupportedImageFilenameAtEnd(finalUrl) && !this.hasLikelyImageUrl(finalUrl)) return;
-            seen.add(strippedUrl);
-            results.push({
+            const record = {
                 url: finalUrl,
                 start: Number.isFinite(Number(start)) ? Number(start) : -1,
                 end: Number.isFinite(Number(end)) ? Number(end) : (Number.isFinite(Number(start)) ? Number(start) : -1)
-            });
+            };
+            seen.set(strippedUrl, record);
+            results.push(record);
         };
 
         const attrPatterns = [
@@ -4649,6 +4670,15 @@ class AiWebParser {
         pathname = pathname.replace(/\/w_\d+(?:,h_\d+)?\/?/i, '/');  // w_296,h_370 patterns
         pathname = pathname.replace(/\/h_\d+(?:,w_\d+)?\/?/i, '/');  // h_370,w_296 patterns
         pathname = pathname.replace(/\/(?:w|h|width|height|wpx|hpx)=\d+\/?/gi, '/');  // /w=1920/ patterns
+        // A "-<width>x<height>" tail in the FILENAME right before the
+        // extension (flyer-300x300.jpg — the WordPress-style resize
+        // convention, resizedImageFilenameSuffixPattern) is a resized
+        // rendition of the same asset, not a different image: collapse it so
+        // every identity check built on this function (harvest dedup, segment
+        // OCR coverage, pairing maps, OCR-result dedup) sees ONE image.
+        // Choosing the representative URL still prefers the full-size
+        // original — see getResizedImageOriginalUrl and its callers.
+        pathname = pathname.replace(this.resizedImageFilenameSuffixPattern, '$3');
 
         // Remove size query parameters (both w=1920 and w_296,h_370 formats).
         const keptPairs = [];
@@ -6650,12 +6680,44 @@ class AiWebParser {
 
     // "…/flyer-1-1-300x300.jpg" → "…/flyer-1-1.jpg". The WordPress/webflow
     // resize convention: "-<width>x<height>" immediately before a known image
-    // extension. Returns '' when the URL carries no such suffix.
+    // extension (resizedImageFilenameSuffixPattern — the same pattern
+    // stripSizeParams collapses for identity). Returns '' when the URL
+    // carries no such suffix.
     getResizedImageOriginalUrl(url) {
         const text = typeof url === 'string' ? url.trim() : '';
         if (!text) return '';
-        const match = text.match(/^(.*)-\d{2,5}x\d{2,5}(\.(?:jpe?g|png|gif|webp|avif|bmp|tiff?))((?:[?#].*)?)$/i);
-        return match ? `${match[1]}${match[2]}${match[3]}` : '';
+        const tailIndex = text.search(/[?#]/);
+        const base = tailIndex >= 0 ? text.slice(0, tailIndex) : text;
+        const tail = tailIndex >= 0 ? text.slice(tailIndex) : '';
+        const match = base.match(this.resizedImageFilenameSuffixPattern);
+        return match ? `${base.slice(0, match.index)}${match[3]}${tail}` : '';
+    }
+
+    // Pixel area a "-WxH" resized filename variant advertises; 0 when the URL
+    // carries no such suffix. Companion to getResizedImageOriginalUrl, built
+    // on the same shared pattern.
+    getResizedImageFilenameArea(url) {
+        const text = typeof url === 'string' ? url.trim() : '';
+        if (!text) return 0;
+        const tailIndex = text.search(/[?#]/);
+        const base = tailIndex >= 0 ? text.slice(0, tailIndex) : text;
+        const match = base.match(this.resizedImageFilenameSuffixPattern);
+        if (!match) return 0;
+        return (parseInt(match[1], 10) || 0) * (parseInt(match[2], 10) || 0);
+    }
+
+    // Should `candidate` replace `incumbent` as the representative URL of ONE
+    // image identity (the caller has already proven them the same image via
+    // stripSizeParams)? Only the "-WxH" resized-filename convention votes
+    // here: the full-size base beats its resized variant, and a larger
+    // variant beats a smaller one. Renditions that differ any other way
+    // (query params, proxy wraps, transform tails) keep the incumbent —
+    // first sighting wins, exactly as before.
+    isPreferredResizedRendition(candidate, incumbent) {
+        const incumbentIsResized = Boolean(this.getResizedImageOriginalUrl(incumbent));
+        if (!incumbentIsResized) return false;
+        if (!this.getResizedImageOriginalUrl(candidate)) return true;
+        return this.getResizedImageFilenameArea(candidate) > this.getResizedImageFilenameArea(incumbent);
     }
 
     // Drop resized derivatives whose FULL-SIZE original is in the same URL
@@ -7164,6 +7226,20 @@ class AiWebParser {
         return url.length;
     }
 
+    // Order OCR results inside ONE dedup/consolidation group so index 0 is
+    // the best representative. A "-WxH" resized filename variant never
+    // outranks a base rendition: the URL size score reads "300x300" as a
+    // large ADVERTISED size while the full-size base (which advertises
+    // nothing) scores only the URL-length noise floor — sorted on score
+    // alone, the thumbnail would be crowned "largest". Within the same
+    // rendition kind the existing size-score order is unchanged.
+    compareOcrResultsForRepresentative(a, b) {
+        const aResized = this.getResizedImageOriginalUrl(a && a.url) ? 1 : 0;
+        const bResized = this.getResizedImageOriginalUrl(b && b.url) ? 1 : 0;
+        if (aResized !== bResized) return aResized - bResized;
+        return this.getImageSizeFromUrl(b && b.url) - this.getImageSizeFromUrl(a && a.url);
+    }
+
     /**
      * Why this URL is a placeholder rather than artwork ('' when it isn't).
      * The rules live in SharedCore.getPlaceholderImageUrlReason so extraction
@@ -7243,7 +7319,7 @@ class AiWebParser {
                 deduped.push(group[0]);
             } else {
                 // Sort by size score (descending) and pick the largest
-                group.sort((a, b) => this.getImageSizeFromUrl(b.url) - this.getImageSizeFromUrl(a.url));
+                group.sort((a, b) => this.compareOcrResultsForRepresentative(a, b));
                 // A Wix asset served as a portrait `fill` AND a landscape `fill`
                 // strips to ONE key here, so the group can hold two different
                 // SHAPES, not just two sizes. Keep the losers reachable for the
@@ -7296,7 +7372,7 @@ class AiWebParser {
                 consolidated.push(group[0]);
             } else {
                 // Sort by size score (descending) and pick the largest
-                group.sort((a, b) => this.getImageSizeFromUrl(b.url) - this.getImageSizeFromUrl(a.url));
+                group.sort((a, b) => this.compareOcrResultsForRepresentative(a, b));
                 // Identical OCR text means identical ARTWORK — which is exactly
                 // how a portrait flyer and its landscape banner twin look to
                 // this grouping. The twin survives on the winner instead of
