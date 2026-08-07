@@ -9,6 +9,15 @@
     "palette": "#ffffff:100:0"
   },
   {
+    "slug": "brewery-bears-happy-hour-247d1b27",
+    "url": "https://www.thedallaseagle.com/events/brewery-bears-happy-hour-5/",
+    "faviconBg": "#ffffff",
+    "faviconFg": "#fefefe",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:100:0"
+  },
+  {
     "slug": "furball-442f8415",
     "url": "https://www.furball.nyc",
     "faviconBg": "#2d2c32",
