@@ -3952,6 +3952,122 @@ test('deduplicateEvents merges a vetoed event into a suffixed holder via the ide
   assert.equal(result.length, 2, 'shared ticketUrl on the same local day must merge the vetoed event');
 });
 
+// === Run 20260806-171735: eaglela.com "B BAR" exported one weekly series ===
+// twice. The run landed on the series' own weekday (a Thursday), so the site
+// surfaced this week's AND next week's occurrence stubs — same base event page
+// differing only in ?occurrence=, identical FREQ=WEEKLY;BYDAY=TH, both
+// full-series exports whose rrule already covers every Thursday. The series
+// collapse folds THAT pair only; distinct single occurrences of a recurring
+// event (SUNDAY BEER BUST's two Sundays, run 20260802-221204) must stay two
+// events. Dates are computed relative to now so "earliest = next upcoming"
+// holds whenever the suite runs.
+
+const SERIES_DAY_MS = 24 * 60 * 60 * 1000;
+
+function buildWeeklySeriesExport(startDate, overrides = {}) {
+  const occurrenceUrl = `https://eaglela.com/events/b-bar/?occurrence=${startDate.toISOString().slice(0, 10)}`;
+  return {
+    title: 'B BAR',
+    bar: 'Eagle LA',
+    startDate,
+    endDate: new Date(startDate.getTime() + 5 * 60 * 60 * 1000),
+    url: occurrenceUrl,
+    website: occurrenceUrl,
+    recurrenceRule: 'FREQ=WEEKLY;BYDAY=TH',
+    _recurring: true,
+    timezone: 'America/Los_Angeles',
+    source: 'ai-web',
+    ...overrides
+  };
+}
+
+test('deduplicateEvents collapses two full-series exports of one series to the next occurrence', async () => {
+  const core = createCore();
+  const thisWeek = new Date(Date.now() + 7 * SERIES_DAY_MS);
+  const nextWeek = new Date(thisWeek.getTime() + 7 * SERIES_DAY_MS);
+  const first = buildWeeklySeriesExport(thisWeek);
+  const second = buildWeeklySeriesExport(nextWeek);
+
+  const result = await core.deduplicateEvents([first, second], null);
+  assert.equal(result.length, 1, 'two exports of ONE series are redundant — the rrule covers every occurrence');
+  const kept = result[0];
+  assert.equal(kept.startDate.getTime(), thisWeek.getTime(), 'the earliest (next upcoming) occurrence is kept');
+  assert.equal(kept.url, first.url, 'the kept occurrence keeps its own ?occurrence= url');
+  assert.equal(kept.recurrenceRule, 'FREQ=WEEKLY;BYDAY=TH', 'the series rule survives the collapse');
+});
+
+test('deduplicateEvents keeps two distinct single occurrences of a recurring event separate', async () => {
+  // Behavior-preservation guard (passes on main and on the collapse branch):
+  // run 20260802-221204's SUNDAY BEER BUST extracted two genuinely distinct
+  // Sundays off the same event page — each a discrete upcoming night, NOT a
+  // full-series export (no recurrence claim). areStartDatesWithinDays'
+  // exclusive window keeps them apart and the series collapse must too.
+  const core = createCore();
+  const thisWeek = new Date(Date.now() + 7 * SERIES_DAY_MS);
+  const nextWeek = new Date(thisWeek.getTime() + 7 * SERIES_DAY_MS);
+  const buildOccurrence = (startDate) => ({
+    title: 'SUNDAY BEER BUST',
+    bar: 'Eagle LA',
+    startDate,
+    url: `https://eaglela.com/events/sunday-beer-bust-4/?occurrence=${startDate.toISOString().slice(0, 10)}`,
+    timezone: 'America/Los_Angeles',
+    source: 'ai-web'
+  });
+
+  const plainResult = await core.deduplicateEvents([buildOccurrence(thisWeek), buildOccurrence(nextWeek)], null);
+  assert.equal(plainResult.length, 2, 'two discrete upcoming nights stay two events');
+
+  // Slot-host overrides are deliberate single-occurrence overrides of someone
+  // else's series — even with a scraped rrule still attached they never
+  // qualify as full-series exports.
+  const slotHostResult = await core.deduplicateEvents([
+    buildWeeklySeriesExport(thisWeek, { _seriesAuthority: 'slot-host' }),
+    buildWeeklySeriesExport(nextWeek, { _seriesAuthority: 'slot-host' })
+  ], null);
+  assert.equal(slotHostResult.length, 2, 'slot-host overrides never collapse as a series');
+});
+
+test('deduplicateEvents does not collapse same-title series on different base pages', async () => {
+  // Lookalike pairs are not always twins: the same brand can hold two real
+  // weekly slots, each with its own event page. Same title + same rrule but a
+  // different base page must never fold.
+  const core = createCore();
+  const thisWeek = new Date(Date.now() + 7 * SERIES_DAY_MS);
+  const nextWeek = new Date(thisWeek.getTime() + 7 * SERIES_DAY_MS);
+  const first = buildWeeklySeriesExport(thisWeek);
+  const second = buildWeeklySeriesExport(nextWeek, {
+    url: 'https://eaglela.com/events/b-bar-patio/',
+    website: 'https://eaglela.com/events/b-bar-patio/'
+  });
+
+  const result = await core.deduplicateEvents([first, second], null);
+  assert.equal(result.length, 2, 'a different base event page is a different series record');
+});
+
+test('deduplicateEvents does not collapse same-page exports with different recurrence rules', async () => {
+  const core = createCore();
+  const thisWeek = new Date(Date.now() + 7 * SERIES_DAY_MS);
+  const nextWeek = new Date(thisWeek.getTime() + 7 * SERIES_DAY_MS);
+  const first = buildWeeklySeriesExport(thisWeek);
+  const second = buildWeeklySeriesExport(nextWeek, { recurrenceRule: 'FREQ=MONTHLY;BYDAY=1TH' });
+
+  const result = await core.deduplicateEvents([first, second], null);
+  assert.equal(result.length, 2, 'different rules are different series claims — never fold them');
+});
+
+test('deduplicateEvents series collapse preserves manuallyMarkedBear from the dropped occurrence', async () => {
+  const core = createCore();
+  const thisWeek = new Date(Date.now() + 7 * SERIES_DAY_MS);
+  const nextWeek = new Date(thisWeek.getTime() + 7 * SERIES_DAY_MS);
+  const first = buildWeeklySeriesExport(thisWeek);
+  const second = buildWeeklySeriesExport(nextWeek, { manuallyMarkedBear: true });
+
+  const result = await core.deduplicateEvents([first, second], null);
+  assert.equal(result.length, 1, 'the pair still collapses');
+  assert.equal(result[0].manuallyMarkedBear, true, "the owner's verdict survives whichever occurrence he tapped it on");
+  assert.equal(result[0].startDate.getTime(), thisWeek.getTime(), 'the earliest occurrence is still the one kept');
+});
+
 // === Run 20260802-135030: 3dollarbillbk.com + its eventim ticketing pages ===
 // Six verbatim records were three real events and duplicatesRemoved was 1.
 // URL identity (same event page modulo query/fragment; same trailing platform
