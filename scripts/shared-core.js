@@ -4053,6 +4053,17 @@ class SharedCore {
         if (aiWebParser && typeof aiWebParser.applyVenueSiteIdentityCorrections === 'function') {
             aiWebParser.applyVenueSiteIdentityCorrections(allEvents, mainConfig?.cities || null);
         }
+        // Derived-cadence enforcement (deterministic, parser-derived): with
+        // every page of the run seen, the ai-web parser's occurrence-link
+        // observations plus the run's own same-title record groups derive a
+        // conservative recurrenceRule (weekly/monthly only; stated rules are
+        // never overridden). Judged only here — before dedup — so the
+        // EXISTING series machinery folds the stamped occurrence-singles
+        // into one withheld series export (ICS only; never a calendar
+        // write). Platform-pure: the parser hook receives injected data.
+        if (aiWebParser && typeof aiWebParser.applyDerivedCadenceStamps === 'function') {
+            aiWebParser.applyDerivedCadenceStamps(allEvents);
+        }
 
         // Aggregator website pointer (trust the pointer, not the copy —
         // battery run 20260728: all 42 The Bear Calendar events carried
@@ -8196,7 +8207,24 @@ class SharedCore {
                 const existingSeries = this.getSeriesExportIdentity(existing);
                 if (!existingSeries) return false;
                 if (existingSeries.rrule !== eventSeries.rrule) return false;
-                if (existingSeries.hostPath !== eventSeries.hostPath) return false;
+                if (existingSeries.hostPath !== eventSeries.hostPath) {
+                    // Renumbered-slug extension (run 20260807-143442: a MEC
+                    // install mints a NEW slug per occurrence — karaoke-19,
+                    // karaoke-20 — so one weekly series shows N different
+                    // base pages and the same-page identity above can never
+                    // fold it). Equally fail-closed as the original: records
+                    // on different base pages collapse ONLY when BOTH carry
+                    // the SAME per-run _cadenceGroup marker, stamped by the
+                    // parser's derived-cadence pass exclusively on groups it
+                    // proved title-similar + positively same-venue with a
+                    // jointly-derived rule. Same title + same rrule WITHOUT
+                    // that shared marker (two real weekly slots of one brand,
+                    // stated rules, different venues) still never folds —
+                    // lookalike pairs are not always twins.
+                    const eventGroup = typeof event._cadenceGroup === 'string' ? event._cadenceGroup : '';
+                    const existingGroup = typeof existing._cadenceGroup === 'string' ? existing._cadenceGroup : '';
+                    if (!eventGroup || eventGroup !== existingGroup) return false;
+                }
                 const shapeA = this.buildIdentityComparisonShape(event);
                 const shapeB = this.buildIdentityComparisonShape(existing);
                 if (!this.areIdentityNamesSimilar(shapeA, shapeB)) return false;
