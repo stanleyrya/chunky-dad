@@ -5549,6 +5549,14 @@ class ScriptableAdapter {
         `   📐 Series-change proposals: ${proposalCount} (not written — owner decides)`,
       );
     }
+    // Additive line, same rule (only when non-zero): report-only hygiene
+    // checklist — never a write, never a delete.
+    const hygieneCount = this.getCalendarHygieneFindings(results).length;
+    if (hygieneCount > 0) {
+      console.log(
+        `   🧹 Calendar hygiene: ${hygieneCount} event(s) look superseded by saved series (report-only — deletion stays manual)`,
+      );
+    }
 
     const detailedActions = ["merge", "conflict"];
     const actionsToShow = detailedActions.filter(
@@ -6290,6 +6298,7 @@ class ScriptableAdapter {
     // they are generated once and reused verbatim on every page.
     const proposalSectionHtml =
       this.generateSeriesChangeProposalSection(results);
+    const hygieneSectionHtml = this.generateCalendarHygieneSection(results);
     const discoveredVenueSectionHtml =
       this.generateDiscoveredVenueSection(results);
     const discoverySectionHtml = this.generateDiscoverySection(results);
@@ -7773,7 +7782,7 @@ class ScriptableAdapter {
         : ""
     }
 
-    ${proposalSectionHtml}${view.droppedSectionHtml}
+    ${proposalSectionHtml}${hygieneSectionHtml}${view.droppedSectionHtml}
 
     ${discoveredVenueSectionHtml}
 
@@ -10150,6 +10159,83 @@ class ScriptableAdapter {
         </div>
         <div style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;">A source that owns these series says their schedule changed. The scraper does NOT write series changes: a wrong override costs one night and is reversible, a wrong series change repeats into the future. Nothing here is in this run's write plan — accept one by editing the series yourself (ICS import).</div>
         ${cards}
+    </div>
+    `;
+  }
+
+  // Findings SharedCore.collectCalendarHygieneFindings attached to the run
+  // (report-only checklist of singles a matched saved series appears to
+  // supersede). Array, possibly empty; tolerant of saved runs predating it.
+  getCalendarHygieneFindings(results) {
+    return Array.isArray(results && results.calendarHygiene)
+      ? results.calendarHygiene.filter(Boolean)
+      : [];
+  }
+
+  // One plain-text line per hygiene finding — the copy button's payload, so
+  // the owner can carry the checklist into the Calendar app.
+  buildCalendarHygieneCopyText(findings) {
+    return findings
+      .map((finding) => {
+        const label =
+          finding.kind === "off-pattern" ? "OFF-PATTERN" : "SUPERSEDED";
+        const series = finding.series || {};
+        const caution = finding.caution
+          ? ` [CAUTION: ${finding.cautionReason}]`
+          : "";
+        return `${label}: "${finding.title}" ${finding.day || ""} [${finding.calendarName}] — series "${series.title || ""}" (${series.rrule || "?"}; ${series.instances || 0} instance(s) in window) — ${finding.reason || ""}${caution}`;
+      })
+      .join("\n");
+  }
+
+  // REPORT-ONLY calendar hygiene section: a collapsed checklist of calendar
+  // singles that look superseded by series this run positively matched.
+  // Deliberately button-free except for copy — deletion stays manual in the
+  // Calendar app, and nothing in this section is in any write plan.
+  generateCalendarHygieneSection(results) {
+    const findings = this.getCalendarHygieneFindings(results);
+    if (findings.length === 0) return "";
+
+    const rows = findings
+      .map((finding) => {
+        const isOffPattern = finding.kind === "off-pattern";
+        const series = finding.series || {};
+        const badge = isOffPattern
+          ? `<span class="action-badge badge-warning">🌀 off-pattern single — might be a special night</span>`
+          : `<span class="action-badge badge-merge">🧹 looks superseded — series covers this night</span>`;
+        const cautionHtml = finding.caution
+          ? `<div style="font-size:12px; color:var(--secondary-color); margin-top:4px;">⚠️ Carries a manual bear verdict/review flag (${this.escapeHtml(finding.cautionReason || "")}) — extra caution before touching it.</div>`
+          : "";
+        return `
+        <div class="event-card hygiene-card">
+            ${badge}
+            <div class="event-title">${this.escapeHtml(finding.title || "Untitled event")}</div>
+            <div style="font-size:13px; color:var(--text-primary); margin:6px 0;">📅 ${this.escapeHtml(finding.day || "")} • 📱 ${this.escapeHtml(finding.calendarName || "")}</div>
+            <div style="font-size:12px; color:var(--text-secondary);">Series: "${this.escapeHtml(series.title || "")}" — ${this.escapeHtml(series.rrule || "?")} (${series.instances || 0} instance(s) in the search window, rule from ${this.escapeHtml(series.ruleSource || "calendar")})</div>
+            <div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">Why: ${this.escapeHtml(finding.reason || "")}</div>
+            ${cautionHtml}
+        </div>
+        `;
+      })
+      .join("");
+
+    const copyEncoded = encodeURIComponent(
+      this.buildCalendarHygieneCopyText(findings),
+    );
+
+    return `
+    <div class="section">
+        <div class="section-header">
+            <span class="section-icon">🧹</span>
+            <span class="section-title">Calendar hygiene</span>
+            <span class="section-count">${findings.length}</span>
+        </div>
+        <details>
+            <summary>🧹 Calendar hygiene: ${findings.length} event(s) look superseded by saved series — tap to review</summary>
+            <div style="font-size:12px; color:var(--text-secondary); margin:12px 0;">Report-only checklist. These calendar singles identity-match a recurring series you have already saved; where the series' own rule generates the single's date, the single looks redundant. The scraper NEVER deletes events and nothing here is in this run's write plan — if you agree, delete them yourself in the Calendar app. Off-pattern entries are dates the series rule does NOT generate: they might be stale mistakes, or genuinely special nights.</div>
+            ${rows}
+            <button onclick="copyDiscoveryText(this)" class="log-copy-btn" data-encoded="${this.escapeHtml(copyEncoded)}">📋 Copy checklist</button>
+        </details>
     </div>
     `;
   }
@@ -13594,6 +13680,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         ),
         parserResults: results.parserResults || [],
         errors: results.errors || [],
+        // Report-only hygiene checklist (scalars only) — persisted so a
+        // saved-run display can re-render the section for auditing.
+        calendarHygiene: Array.isArray(results.calendarHygiene)
+          ? results.calendarHygiene
+          : [],
       };
 
       // Ensure directory exists before writing (same pattern as FileLogger)

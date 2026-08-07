@@ -233,6 +233,9 @@ class SavedRunDisplay {
                 // (Overrides stay inert: _isDisplayingSavedRun renders the
                 // section read-only.)
                 bearDroppedEvents: Array.isArray(saved?.bearDroppedEvents) ? saved.bearDroppedEvents : [],
+                // Report-only calendar hygiene checklist — render it for
+                // saved runs too (older runs simply have none).
+                calendarHygiene: Array.isArray(saved?.calendarHygiene) ? saved.calendarHygiene : [],
                 config: config,
                 sourceRunId: saved?.summary?.runId || null,
                 runContext: {
