@@ -1917,9 +1917,19 @@ class AiWebParser {
         // no unambiguous date context or the segment states its own month,
         // so existing segments stay byte-identical (additive line only).
         const segmentDateContextLine = this.buildSegmentDateContextLine(segment, pageDateContext);
+        // Ancestor-inherited date (calendar-grid layouts, see
+        // findAncestorDateForMultiEventEntry): rendered as an ADDITIVE
+        // context line quoting the ancestor's own attribute markup, so the
+        // stated date is present verbatim in what the model sees and the
+        // evidence gate can corroborate it. '' for every segment without a
+        // hint — those prompts stay byte-identical.
+        const ancestorDateLine = segment && segment.ancestorDateContext && segment.ancestorDateContext.dateText
+            ? `SEGMENT_ANCESTOR_DATE: ${segment.ancestorDateContext.dateText} (this segment's card sits inside an enclosing dated container: ${segment.ancestorDateContext.attrName}="${segment.ancestorDateContext.attrValue}")`
+            : '';
         const contextLines = [
             `SEGMENT_INDEX: ${index + 1}/${totalSegments}`,
             segmentDateContextLine,
+            ancestorDateLine,
             ...resourceLines
         ].filter(Boolean);
         const segmentContent = segmentHtml || (segment && Array.isArray(segment.lines) ? segment.lines.join('\n') : '');
@@ -2319,7 +2329,19 @@ class AiWebParser {
         for (const group of groups) {
             const result = this.segmentStructureGroup(group);
             if (result.segments.length >= 2) {
-                return this.coverRepeatedEventUnits(group, result);
+                // The winning group is chosen on the PRE-EXISTING gates only;
+                // ancestor-date inheritance then re-runs the SAME group so it
+                // can only add cards within the winning segmentation. Letting
+                // inheritance vote during group selection would crown junk:
+                // a page's fragment-cut container group (whose dateless
+                // fragments all sit under some dated ancestor) would clear
+                // the two-segment bar and outrank the real card-aligned
+                // group.
+                const withAncestorDates = this.segmentStructureGroup(group, { pageHtml: html });
+                const finalResult = withAncestorDates.segments.length > result.segments.length
+                    ? withAncestorDates
+                    : result;
+                return this.coverRepeatedEventUnits(group, finalResult, html);
             }
         }
         return [];
@@ -2349,11 +2371,11 @@ class AiWebParser {
     // spanned), and every other gate still applies: only windows that were
     // being silently discarded come back. Pages whose segmentation already
     // covers their units take the early return and are byte-identical.
-    coverRepeatedEventUnits(group, result) {
+    coverRepeatedEventUnits(group, result, pageHtml = '') {
         const segments = result && Array.isArray(result.segments) ? result.segments : [];
         const identifiedUnitCount = Number(result && result.identifiedUnitCount) || 0;
         if (identifiedUnitCount <= segments.length) return segments;
-        const covered = this.segmentStructureGroup(group, { allowTerseIdentifiedUnits: true });
+        const covered = this.segmentStructureGroup(group, { allowTerseIdentifiedUnits: true, pageHtml });
         if (covered.segments.length <= segments.length) return segments;
         console.log(`🤖 AI Web: Segmentation covered ${segments.length} of ${identifiedUnitCount} repeated event unit(s) on this page — re-segmenting to ${covered.segments.length} window(s)`);
         return covered.segments;
@@ -2396,14 +2418,147 @@ class AiWebParser {
     // The content gates every structural entry has to clear before it can be
     // a window. Extracted verbatim from buildSegmentsFromStructureGroup so
     // the coverage count and the segment build ask exactly the same question.
-    multiEventEntryClearsContentGates(normalizedLines) {
+    multiEventEntryClearsContentGates(normalizedLines, options = null) {
         const lines = Array.isArray(normalizedLines) ? normalizedLines : [];
         if (lines.length < this.extractionLimits.multiEventMinSegmentLines) return false;
         if (this.hasMultiEventScriptLikeText(lines)) return false;
         if (this.countMultiEventDateSignals(lines) > 2) return false;
-        if (!this.segmentHasDateSignal(lines)) return false;
+        // Ancestor-date inheritance (calendar-grid layouts): a structural
+        // ancestor's own dated markup can satisfy the date gate for an entry
+        // whose text states no date — every other gate still applies, and
+        // callers only set this after resolving a real enclosing date (see
+        // findAncestorDateForMultiEventEntry).
+        const assumeAncestorDate = Boolean(options && options.assumeAncestorDate);
+        if (!assumeAncestorDate && !this.segmentHasDateSignal(lines)) return false;
         if (!this.segmentHasTitleSignal(lines) && !this.segmentIsDateHeadedSchedule(lines)) return false;
         return true;
+    }
+
+    // Nearest structural ANCESTOR of a group entry that carries a resolvable
+    // full calendar date in its own attributes (datetime / data-* /
+    // aria-label — the generic attribute families calendar grids and day
+    // cells use, never a per-site or per-plugin name). Regex only, no DOM,
+    // no URL parsing. An ancestor is an opening tag BEFORE the entry whose
+    // element is still open when the entry starts: any tag that closed
+    // earlier — a sibling card, a previous day cell — fails the check, so a
+    // date can never be inherited sideways. The backward scan is bounded to
+    // the same oversized-container window segmentation itself uses, which
+    // keeps the lookup inside the entry's own segmentation container.
+    // Returns { dateText, attrName, attrValue } or null.
+    findAncestorDateForMultiEventEntry(pageHtml, entry) {
+        const source = String(pageHtml || '');
+        const entryStart = entry && Number.isFinite(entry.start) ? entry.start : -1;
+        if (!source || entryStart <= 0 || entryStart > source.length) return null;
+        const windowStart = Math.max(0, entryStart - this.extractionLimits.multiEventMaxSegmentChars * 4);
+        const windowHtml = source.slice(windowStart, entryStart);
+        // Elements that can never contain the entry (HTML void elements) are
+        // skipped up front: they have no close tag, so the still-open check
+        // below would mistake them for ancestors.
+        const voidTags = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr']);
+        const tagPattern = /<([a-z][a-z0-9]*)\b([^>]*)>/gi;
+        const candidates = [];
+        let match;
+        while ((match = tagPattern.exec(windowHtml)) !== null) {
+            const tagName = String(match[1] || '').toLowerCase();
+            const attrsText = match[2] || '';
+            if (voidTags.has(tagName)) continue;
+            if (/\/\s*$/.test(attrsText)) continue; // self-closing: encloses nothing
+            const dated = this.resolveDateFromTagAttributes(attrsText);
+            if (!dated) continue;
+            candidates.push({
+                tagName,
+                afterOpenIndex: windowStart + match.index + match[0].length,
+                dated
+            });
+        }
+        // Nearest ancestor first.
+        for (let i = candidates.length - 1; i >= 0; i--) {
+            const candidate = candidates[i];
+            if (this.multiEventTagRemainsOpenBefore(source, candidate.tagName, candidate.afterOpenIndex, entryStart)) {
+                return candidate.dated;
+            }
+        }
+        return null;
+    }
+
+    // Whether the element whose opening tag ends at afterOpenIndex is still
+    // open at limitIndex: count same-name opens/closes between the two.
+    // Stray unmatched close tags only ever close the element EARLIER, which
+    // is the safe direction (no false ancestors).
+    multiEventTagRemainsOpenBefore(source, tagName, afterOpenIndex, limitIndex) {
+        const scanText = String(source || '').slice(afterOpenIndex, limitIndex);
+        const pairPattern = new RegExp(`<(/?)${tagName}\\b`, 'gi');
+        let depth = 1;
+        let match;
+        while ((match = pairPattern.exec(scanText)) !== null) {
+            depth += match[1] ? -1 : 1;
+            if (depth <= 0) return false;
+        }
+        return depth >= 1;
+    }
+
+    // First attribute on an opening tag whose value resolves to a full
+    // calendar date. Only the generic date-bearing attribute families are
+    // read: datetime, data-*, aria-label.
+    resolveDateFromTagAttributes(attrsText) {
+        const attrPattern = /\b(datetime|aria-label|data-[a-z0-9_-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/gi;
+        const text = String(attrsText || '');
+        let match;
+        while ((match = attrPattern.exec(text)) !== null) {
+            const attrName = String(match[1] || '').toLowerCase();
+            const attrValue = match[2] !== undefined ? match[2] : (match[3] || '');
+            const parts = this.resolveFullDatePartsFromText(attrValue);
+            if (!parts) continue;
+            const monthNamesEn = ['January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'];
+            return {
+                dateText: `${monthNamesEn[parts.month - 1]} ${parts.day}, ${parts.year}`,
+                attrName,
+                attrValue
+            };
+        }
+        return null;
+    }
+
+    // Full year+month+day from a short attribute-style text: ISO
+    // ("2026-08-06", with or without a time suffix), compact 8-digit
+    // ("20260806"), or an English month-name form ("August 6, 2026" /
+    // "6 August 2026" — aria-label style). Yearless or partial forms never
+    // resolve: inheriting a date is only safe when the ancestor states one
+    // completely. Returns { year, month, day } or null.
+    resolveFullDatePartsFromText(text) {
+        const value = String(text || '').trim();
+        if (!value || value.length > 120) return null;
+        const validated = (year, month, day) => {
+            if (!Number.isFinite(year) || year < 1970 || year > 2100) return null;
+            if (!Number.isFinite(month) || month < 1 || month > 12) return null;
+            if (!Number.isFinite(day) || day < 1 || day > 31) return null;
+            return { year, month, day };
+        };
+        const isoMatch = value.match(/(?:^|[^0-9])(\d{4})-(\d{1,2})-(\d{1,2})(?![0-9])/);
+        if (isoMatch) {
+            const parts = validated(parseInt(isoMatch[1], 10), parseInt(isoMatch[2], 10), parseInt(isoMatch[3], 10));
+            if (parts) return parts;
+        }
+        const compactMatch = value.match(/(?:^|[^0-9])(20\d{2})(\d{2})(\d{2})(?![0-9])/);
+        if (compactMatch) {
+            const parts = validated(parseInt(compactMatch[1], 10), parseInt(compactMatch[2], 10), parseInt(compactMatch[3], 10));
+            if (parts) return parts;
+        }
+        const monthNamePattern = '(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)';
+        const monthIndexOf = (name) => ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+            .indexOf(String(name || '').slice(0, 3).toLowerCase()) + 1;
+        const monthFirst = value.match(new RegExp(`\\b${monthNamePattern}\\s+(\\d{1,2})(?:st|nd|rd|th)?,?\\s+(\\d{4})\\b`, 'i'));
+        if (monthFirst) {
+            const parts = validated(parseInt(monthFirst[3], 10), monthIndexOf(monthFirst[1]), parseInt(monthFirst[2], 10));
+            if (parts) return parts;
+        }
+        const dayFirst = value.match(new RegExp(`\\b(\\d{1,2})(?:st|nd|rd|th)?\\s+${monthNamePattern}\\s+(\\d{4})\\b`, 'i'));
+        if (dayFirst) {
+            const parts = validated(parseInt(dayFirst[3], 10), monthIndexOf(dayFirst[2]), parseInt(dayFirst[1], 10));
+            if (parts) return parts;
+        }
+        return null;
     }
 
 
@@ -2492,6 +2647,7 @@ class AiWebParser {
         const entries = group && Array.isArray(group.entries) ? group.entries : [];
         const identifiedUnits = this.mapMultiEventGroupIdentityLinks(entries);
         const allowTerseIdentifiedUnits = Boolean(options && options.allowTerseIdentifiedUnits);
+        const pageHtml = options && typeof options.pageHtml === 'string' ? options.pageHtml : '';
         let identifiedUnitCount = 0;
         const uniqueSegments = [];
         const seen = new Set();
@@ -2518,7 +2674,15 @@ class AiWebParser {
             // spends, so identity replaces the floor for those.
             const waiveMinChars = allowTerseIdentifiedUnits && isIdentifiedUnit;
             if (!waiveMinChars && segmentText.length < this.extractionLimits.multiEventMinSegmentChars) return;
-            const dedupeKey = segmentText.toLowerCase();
+            // A recurring card repeated under several day cells has IDENTICAL
+            // text — only the inherited ancestor date tells the occurrences
+            // apart ("lookalike pairs are not always twins"). Salt the dedupe
+            // key with that date so each dated occurrence keeps its window;
+            // segments without a hint keep the exact key they had.
+            const ancestorDateSalt = segment.ancestorDateContext && segment.ancestorDateContext.dateText
+                ? `${segment.ancestorDateContext.dateText}\n`
+                : '';
+            const dedupeKey = ancestorDateSalt + segmentText.toLowerCase();
             if (seen.has(dedupeKey)) return;
             seen.add(dedupeKey);
             uniqueSegments.push(segment);
@@ -2540,7 +2704,32 @@ class AiWebParser {
             const normalizedLines = this.extractBodyParts(entry.html)
                 .map(line => this.normalizeWhitespace(line))
                 .filter(Boolean);
-            if (!this.multiEventEntryClearsContentGates(normalizedLines)) continue;
+            // Ancestor-date inheritance (generic, no per-site rules): on
+            // calendar-grid layouts each card's DAY lives on a structural
+            // ANCESTOR element (the enclosing day cell's datetime / data-* /
+            // aria-label markup), so the entry's own text carries a title and
+            // a time but no date, and the date gate discards a real card
+            // (thedallaseagle.com/events/: 23 of 42 cards). When — and only
+            // when — the entry states no date of its own yet clears every
+            // OTHER gate, resolve the nearest still-open ancestor tag that
+            // carries a full calendar date and attach it as a segment-level
+            // hint; the prompt builder renders it as an additive context line
+            // so extraction can state the date WITH gate-verifiable evidence.
+            // Deterministic and bounded: nearest ancestor first, bounded scan
+            // window, and sibling cards can never leak a date sideways (their
+            // tags close before this entry starts, failing the ancestor
+            // check). An entry with its own date signal never looks up.
+            let ancestorDateContext = null;
+            if (!this.multiEventEntryClearsContentGates(normalizedLines)) {
+                const dateGateIsOnlyFailure = pageHtml
+                    && !this.segmentHasDateSignal(normalizedLines)
+                    && this.multiEventEntryClearsContentGates(normalizedLines, { assumeAncestorDate: true });
+                ancestorDateContext = dateGateIsOnlyFailure
+                    ? this.findAncestorDateForMultiEventEntry(pageHtml, entry)
+                    : null;
+                if (!ancestorDateContext) continue;
+                console.log(`🤖 AI Web: Segment inherits date ${ancestorDateContext.dateText} from an enclosing container's ${ancestorDateContext.attrName}="${ancestorDateContext.attrValue}" — the card's own text states no date`);
+            }
             const isIdentifiedUnit = identifiedUnits[entryIndex] === true;
             if (isIdentifiedUnit) identifiedUnitCount++;
 
@@ -2555,7 +2744,9 @@ class AiWebParser {
                     this.trimLinesAfterTerminalCallToAction(segmentLines),
                     this.extractionLimits.multiEventMaxSegmentChars
                 );
-                addSegment({ lines: trimmedLines, html: entry.html }, isIdentifiedUnit);
+                const segment = { lines: trimmedLines, html: entry.html };
+                if (ancestorDateContext) segment.ancestorDateContext = ancestorDateContext;
+                addSegment(segment, isIdentifiedUnit);
             }
         }
         return { segments: uniqueSegments, identifiedUnitCount };
@@ -13233,6 +13424,25 @@ TEXT:
         return text;
     }
 
+    // The evidence-gate-dropped STATED start-date value retained on the event
+    // (the __droppedFieldValues memo the per-snippet validation accumulates,
+    // keyed by normalized field name), if any. Read-only observation input
+    // for the rrule-fallback's report-only rescue census — the value is never
+    // fed back into the dates actually used.
+    getDroppedStatedStartDateValue(aiEvent) {
+        const values = aiEvent && aiEvent.__droppedFieldValues && typeof aiEvent.__droppedFieldValues === 'object'
+            ? aiEvent.__droppedFieldValues
+            : null;
+        if (!values) return '';
+        const startDateFields = new Set(['startdate', 'start', 'date']);
+        for (const key of Object.keys(values)) {
+            if (!startDateFields.has(this.normalizePromptFieldName(key))) continue;
+            const value = values[key];
+            if (typeof value === 'string' && value.trim()) return value.trim();
+        }
+        return '';
+    }
+
     normalizeAiEvent(aiEvent, parserConfig, htmlData = null, cityConfig = null, promptFields = null) {
         const scrapedLinks = this.extractLinksFromPage(
             htmlData && typeof htmlData.html === 'string' ? htmlData.html : '',
@@ -13685,6 +13895,26 @@ TEXT:
                     console.log(`🔁 RECURRING: derived next occurrence ${nextOccurrence} from rrule for "${title}"`);
                     if (dayPhraseSynthesis) {
                         console.log(`🔁 RECURRING: "${title}" synthesized from day phrase "${dayPhraseSynthesis.phrase}" → ${recurrenceRule}, next ${nextOccurrence} — will be withheld from calendar write (ICS only)`);
+                    }
+                    // Report-only rescue census ("trust the pointer, not the
+                    // copy": rescuing gate-dropped fields is LOG-ONLY before
+                    // any enforce step). A 241-log device corpus showed 46
+                    // rrule-derived dates, and 35 of them fired immediately
+                    // after the evidence gate dropped a REAL stated date
+                    // (usually a rendering-variant mismatch) — the fallback
+                    // then invented a DIFFERENT day than the page's own. Log
+                    // which population this firing belongs to so future logs
+                    // can count both; the derived date stays in use either
+                    // way (zero behavior change).
+                    const droppedStatedStart = this.getDroppedStatedStartDateValue(aiEvent);
+                    if (droppedStatedStart) {
+                        const droppedParsed = this.parseDateValue(droppedStatedStart, timezone);
+                        const droppedParsedLabel = droppedParsed instanceof Date && !Number.isNaN(droppedParsed.getTime())
+                            ? ` (parses to ${droppedParsed.toISOString().slice(0, 10)})`
+                            : '';
+                        console.log(`🔁 RECURRING: fallback derived ${nextOccurrence} for "${title}" but the evidence gate dropped a stated date "${droppedStatedStart}"${droppedParsedLabel} — a rescue would keep the page's own date (report-only)`);
+                    } else {
+                        console.log(`🔁 RECURRING: fallback derived ${nextOccurrence} for "${title}" with no gate-dropped stated date available (report-only)`);
                     }
                 } else {
                     // Additive diagnostics. Both guards on this path used to

@@ -7932,6 +7932,82 @@ test('normalizeAiEvent still discards dateless events with unsupported or missin
 });
 
 // ---------------------------------------------------------------------------
+// rrule-fallback report-only rescue census ("trust the pointer, not the
+// copy"): when the fallback fabricates a next occurrence, log whether the
+// evidence gate had just dropped a REAL stated date for the same event
+// (35 of 46 fallback firings in a 241-log device corpus). LOG-ONLY — the
+// derived date stays in use either way; this builds the evidence base for a
+// later enforce step.
+// ---------------------------------------------------------------------------
+
+test('rrule fallback census: a gate-dropped stated date is reported and the derived date stays in use (report-only)', () => {
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  parser.now = () => new Date(2026, 6, 22, 15, 0, 0); // Wed 2026-07-22 local
+
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let event;
+  try {
+    event = parser.normalizeAiEvent(
+      {
+        title: 'DRINK AND DRAW',
+        rrule: 'FREQ=WEEKLY;BYDAY=TU',
+        // The dropped-value memo exactly as the per-snippet evidence gate
+        // retains it (field names are normalized lowercase canonical keys).
+        __droppedFieldValues: { startdate: 'July 21, 2026' }
+      },
+      {}, null, null, null
+    );
+  } finally {
+    console.log = originalLog;
+  }
+  assert.ok(event, 'the recurring event survives normalization exactly as before');
+  assert.equal(event.startDate.toISOString().slice(0, 10), '2026-07-28',
+    'REPORT-ONLY: the derived occurrence is still the date in use — the dropped stated date changes nothing');
+  assert.ok(logs.includes('🔁 RECURRING: derived next occurrence 2026-07-28 from rrule for "DRINK AND DRAW"'),
+    'the pre-existing derivation line is untouched');
+  assert.ok(logs.includes('🔁 RECURRING: fallback derived 2026-07-28 for "DRINK AND DRAW" but the evidence gate dropped a stated date "July 21, 2026" (parses to 2026-07-21) — a rescue would keep the page\'s own date (report-only)'),
+    `dropped-date census line expected, got: ${JSON.stringify(logs.filter(l => l.includes('report-only')))}`);
+});
+
+test('rrule fallback census: firing with NO dropped stated date logs the counting line (report-only)', () => {
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  parser.now = () => new Date(2026, 6, 22, 15, 0, 0);
+
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let event;
+  try {
+    event = parser.normalizeAiEvent(
+      { title: 'DRINK AND DRAW', rrule: 'FREQ=WEEKLY;BYDAY=TU' },
+      {}, null, null, null
+    );
+  } finally {
+    console.log = originalLog;
+  }
+  assert.ok(event, 'survives normalization');
+  assert.equal(event.startDate.toISOString().slice(0, 10), '2026-07-28', 'derived date unchanged');
+  assert.ok(logs.includes('🔁 RECURRING: fallback derived 2026-07-28 for "DRINK AND DRAW" with no gate-dropped stated date available (report-only)'),
+    `no-drop counting line expected, got: ${JSON.stringify(logs.filter(l => l.includes('report-only')))}`);
+  assert.ok(!logs.some(l => l.includes('a rescue would keep')),
+    'the dropped-date line never fires without a dropped value — the two populations stay countable');
+});
+
+test('getDroppedStatedStartDateValue reads only start-date-shaped memo fields', () => {
+  const parser = createParser();
+  assert.equal(parser.getDroppedStatedStartDateValue({ __droppedFieldValues: { startdate: 'Aug 5 2026' } }), 'Aug 5 2026');
+  assert.equal(parser.getDroppedStatedStartDateValue({ __droppedFieldValues: { date: '8/5/2026' } }), '8/5/2026');
+  assert.equal(parser.getDroppedStatedStartDateValue({ __droppedFieldValues: { start: '2026-08-05 21:00' } }), '2026-08-05 21:00');
+  assert.equal(parser.getDroppedStatedStartDateValue({ __droppedFieldValues: { city: 'Dallas', starttime: '21:00' } }), '',
+    'city and time-only drops are not stated dates');
+  assert.equal(parser.getDroppedStatedStartDateValue({}), '', 'no memo → empty');
+});
+
+// ---------------------------------------------------------------------------
 // Dateless-weekly day-phrase synthesis (run 20260802-140413, The Lumberyard):
 // pages that state a weekday pattern but never a date — deterministic regex
 // turns the phrase into an rrule + next occurrence so the event reaches the
@@ -8271,6 +8347,100 @@ test('Sitges-shaped multi-event page splits into per-day segments with September
   if (intro) {
     assert.equal(parser.buildSegmentDateContextLine(intro, ctx), '', 'segments stating their own month are never anchored');
   }
+});
+
+// ---------------------------------------------------------------------------
+// Calendar-grid ancestor dates: on monthly-calendar layouts each card's DAY
+// lives on a structural ANCESTOR (the enclosing day cell's dated attribute),
+// so the card's own slice has a title and a time but no date and the date
+// gate used to discard the real card (thedallaseagle.com/events/: 23 of 42).
+// Generic inheritance: the nearest STILL-OPEN ancestor tag carrying a full
+// date in datetime/data-*/aria-label markup dates the segment via an
+// additive SEGMENT_ANCESTOR_DATE context line. No per-site rules.
+// ---------------------------------------------------------------------------
+
+function buildCalendarGridCellHtml(dateAttr, dayNumber, slug, title, detailsLine, descSentence) {
+  return `<dt class="calendar-day"${dateAttr ? ` data-date="${dateAttr}"` : ''}>
+      <div>${dayNumber}</div>
+      <a class="day-event-link" href="https://grid.example/events/${slug}/"><h4>${title}</h4></a>
+      <div class="details">${detailsLine}</div>
+      <div class="desc">${descSentence.repeat(4)}</div>
+    </dt>`;
+}
+
+const CALENDAR_GRID_HTML = `<html><body><dl class="calendar">
+  ${buildCalendarGridCellHtml('2026-08-05', 5, 'disco-night', 'Disco Night', 'August 5, 2026 - 9:00 pm', 'Dance floor classics with our resident DJ spinning all night long. ')}
+  ${buildCalendarGridCellHtml('2026-08-06', 6, 'karaoke-1', 'Karaoke', '7:00 pm - 10:00 pm', 'Hit the stage and sing your heart out with all of your friends. ')}
+  ${buildCalendarGridCellHtml('2026-08-07', 7, 'gear-night', 'Gear Night', 'August 7, 2026 - 10:00 pm', 'Grab your gear and join the whole crew for the biggest night. ')}
+  ${buildCalendarGridCellHtml('2026-08-08', 8, 'trivia-1', 'Trivia', '8:00 pm - 10:00 pm', 'Solos and squads compete for prizes each week with our host. ')}
+</dl></body></html>`;
+
+test('calendar-grid ancestor dates: dateless cards inherit the enclosing cell date as a segment hint; own dates are never overridden', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://grid.example/events/';
+  const segments = parser.buildMultiEventSegments(CALENDAR_GRID_HTML, sourceUrl);
+  assert.equal(segments.length, 4,
+    `all four cards get windows (two dated, two rescued via ancestor cells), got ${segments.length}: ${JSON.stringify(segments.map(s => s.lines[0]))}`);
+
+  const karaoke = segments.find(s => s.lines[0] === 'Karaoke');
+  assert.ok(karaoke, 'the dateless Karaoke card gains a window');
+  assert.deepEqual(karaoke.ancestorDateContext,
+    { dateText: 'August 6, 2026', attrName: 'data-date', attrValue: '2026-08-06' },
+    'the hint carries the enclosing cell\'s OWN date and its verbatim attribute markup');
+  const trivia = segments.find(s => s.lines[0] === 'Trivia');
+  assert.ok(trivia, 'the second dateless card gains a window too');
+  assert.equal(trivia.ancestorDateContext.dateText, 'August 8, 2026',
+    'each card inherits from ITS OWN cell — never a neighbouring one');
+
+  const disco = segments.find(s => s.lines[0] === 'Disco Night');
+  assert.ok(disco, 'dated cards keep their windows');
+  assert.equal(disco.ancestorDateContext, undefined,
+    'a segment that states its own date is never overridden by an ancestor date');
+
+  // The hint rides into the segment prompt/evidence corpus as an ADDITIVE
+  // context line quoting the ancestor's actual attribute text, so a stated
+  // startDate of 2026-08-06 is corroborable by the evidence gate.
+  const htmlData = parser.buildMultiEventSegmentHtmlData({ html: CALENDAR_GRID_HTML, url: sourceUrl }, karaoke, 1, segments.length, []);
+  assert.ok(htmlData.html.includes('SEGMENT_ANCESTOR_DATE: August 6, 2026 (this segment\'s card sits inside an enclosing dated container: data-date="2026-08-06")'),
+    `ancestor date line rides into the segment prompt html, got context: ${htmlData.html.split('\n').slice(0, 4).join(' | ')}`);
+  const evidence = parser.buildAiEvidenceContextFromText(htmlData.html);
+  assert.equal(parser.hasDateEvidence(evidence, '2026-08-06'), true, 'the inherited date is gate-verifiable evidence');
+  assert.equal(parser.hasDateEvidence(evidence, '2026-08-13'), false, 'a different day still fails the gate');
+
+  const discoHtmlData = parser.buildMultiEventSegmentHtmlData({ html: CALENDAR_GRID_HTML, url: sourceUrl }, disco, 0, segments.length, []);
+  assert.ok(!discoHtmlData.html.includes('SEGMENT_ANCESTOR_DATE'),
+    'segments without a hint keep byte-identical prompt content');
+});
+
+test('calendar-grid ancestor dates: a sibling card\'s own dated markup is never inherited sideways', () => {
+  const parser = createParser();
+  // The dated cards carry their date INSIDE the card (a closed <time> tag);
+  // the cells themselves are undated. The dateless card therefore has no
+  // dated ANCESTOR — only closed sibling markup — and must stay dropped.
+  const html = `<html><body><dl class="calendar">
+    ${buildCalendarGridCellHtml('', 5, 'disco-night', 'Disco Night', '<time datetime="2026-08-05">August 5, 2026 - 9:00 pm</time>', 'Dance floor classics with our resident DJ spinning all night long. ')}
+    ${buildCalendarGridCellHtml('', 6, 'karaoke-1', 'Karaoke', '7:00 pm - 10:00 pm', 'Hit the stage and sing your heart out with all of your friends. ')}
+    ${buildCalendarGridCellHtml('', 7, 'gear-night', 'Gear Night', '<time datetime="2026-08-07">August 7, 2026 - 10:00 pm</time>', 'Grab your gear and join the whole crew for the biggest night. ')}
+  </dl></body></html>`;
+  const segments = parser.buildMultiEventSegments(html, 'https://grid.example/events/');
+  assert.equal(segments.length, 2,
+    `only the self-dated cards get windows, got ${segments.length}: ${JSON.stringify(segments.map(s => s.lines[0]))}`);
+  assert.ok(!segments.some(s => s.lines[0] === 'Karaoke'),
+    'the dateless card is NOT rescued by a sibling\'s closed <time> markup');
+  assert.ok(segments.every(s => s.ancestorDateContext === undefined),
+    'no segment carries a fabricated ancestor hint');
+});
+
+test('resolveFullDatePartsFromText: only complete, plausible dates resolve', () => {
+  const parser = createParser();
+  assert.deepEqual(parser.resolveFullDatePartsFromText('2026-08-06'), { year: 2026, month: 8, day: 6 }, 'ISO');
+  assert.deepEqual(parser.resolveFullDatePartsFromText('20260806'), { year: 2026, month: 8, day: 6 }, 'compact calendar-cell form');
+  assert.deepEqual(parser.resolveFullDatePartsFromText('Friday, August 7, 2026'), { year: 2026, month: 8, day: 7 }, 'aria-label month-name form');
+  assert.deepEqual(parser.resolveFullDatePartsFromText('7 August 2026'), { year: 2026, month: 8, day: 7 }, 'day-first form');
+  assert.equal(parser.resolveFullDatePartsFromText('202608'), null, 'month-only compact never resolves');
+  assert.equal(parser.resolveFullDatePartsFromText('6'), null, 'bare day number never resolves');
+  assert.equal(parser.resolveFullDatePartsFromText('20269999'), null, 'implausible month/day rejected');
+  assert.equal(parser.resolveFullDatePartsFromText('id-1234567890'), null, 'long ids never resolve');
 });
 
 test('derivePageDateContext: year capture, ambiguity, and majority fallback', () => {
