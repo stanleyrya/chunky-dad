@@ -618,6 +618,24 @@ class AiWebParser {
         // (identity: a resized rendition IS its base image) so the two notions
         // of "resized derivative" can never drift apart.
         this.resizedImageFilenameSuffixPattern = /-(\d{2,5})x(\d{2,5})(\.(?:jpe?g|png|gif|webp|avif|bmp|tiff?))$/i;
+        // A "-WxH" rendition whose BOTH dimensions fit under this is an
+        // icon-scale derivative — WordPress' 150x150 "thumbnail" size class,
+        // social-icon sprites, favicons-as-uploads. Run 20260807-143442
+        // (thedallaseagle.com/events/): the site's 150x150 Mastodon social
+        // icon reached a segment prompt as SEGMENT_IMAGE_URL and shipped as
+        // GEAR NIGHT's `image`. 300x300 poster thumbs are deliberately ABOVE
+        // this bound — eaglela.com serves real flyers as -300x300 renditions.
+        this.iconScaleRenditionMaxDimension = 200;
+        // An image identity offered by at least this many DISTINCT segments'
+        // own HTML on ONE multi-event page is site furniture by definition
+        // (social icons, sponsor strips, footer chrome) — no single event's
+        // artwork repeats across three different listings on the same page.
+        this.segmentImageChromeMinSegments = 3;
+        // Per-PAGE record of those repeated-image identities, written by
+        // applyRepeatedSegmentImageChromeGate and keyed to the page URL so a
+        // stale page's verdicts can never leak into the next page's prompts.
+        // Never persisted: this is a per-parse determination, not an OCR fact.
+        this._repeatedSegmentChrome = null;
         // Non-image static-asset extensions (fonts/stylesheets/scripts + image
         // formats not in supportedImageExtensions). Together with that list
         // these mark a URL as a FILE, never an event page — see
@@ -1260,6 +1278,11 @@ class AiWebParser {
             return [];
         }
         console.log(`🤖 AI Web: multi-event-page split into ${segments.length} candidate segment${segments.length === 1 ? '' : 's'}`);
+
+        // Repeated-across-segments chrome first: an image identity offered by
+        // 3+ distinct segments' own HTML is site furniture — settle that
+        // BEFORE the OCR top-up/vet pass so no call is spent reading it.
+        this.applyRepeatedSegmentImageChromeGate(segments, sourceUrl);
 
         // OCR any segment images the capped page-level pass missed
         await this.ensureSegmentOcrCoverage(segments, ocrResults, parserConfig, sourceUrl, httpAdapter);
@@ -3794,10 +3817,84 @@ class AiWebParser {
         if (candidates.length === 0) return textStart;
 
         const candidateStart = start + Math.max(...candidates);
+        // Same-day-neighbor guard (run 20260807-142024, eaglela.com/calendar/):
+        // on a MEC day-cell grid the window for one event begins right after
+        // its SAME-DAY NEIGHBOR's tooltip, so the last <img> before the
+        // window's title is the neighbor's poster — sitting inside the
+        // neighbor's own event anchor, which the window boundary truncated.
+        // The page states the ownership itself: the captured image sits in an
+        // <a> that CLOSES before the window's title text, and the title sits
+        // in a DIFFERENT anchor (a different event link). Capturing through
+        // that boundary is how "MR BEAR LA MEET AND GREET" shipped with the
+        // B BAR Thursday-weekly poster. Both hrefs are required and compared
+        // verbatim, so a card whose linked thumbnail and linked title share
+        // one destination — or whose title is not inside any link — keeps its
+        // image exactly as before (fail open).
+        const imageAnchorHref = this.getOpenAnchorHrefAtPosition(source, candidateStart, start);
+        if (imageAnchorHref) {
+            const titleTextIndex = this.findFirstBodyTextIndex(source, textStart, Math.min(source.length, textStart + 600));
+            if (titleTextIndex >= 0) {
+                // Does the image's enclosing anchor close before the title text?
+                const between = source.slice(candidateStart, titleTextIndex);
+                const anchorTagPattern = /<\/?a\b[^>]*>/gi;
+                let anchorDepth = 1;
+                let imageAnchorClosesBeforeTitle = false;
+                let tagMatch;
+                while ((tagMatch = anchorTagPattern.exec(between)) !== null) {
+                    anchorDepth += tagMatch[0].charAt(1) === '/' ? -1 : 1;
+                    if (anchorDepth === 0) {
+                        imageAnchorClosesBeforeTitle = true;
+                        break;
+                    }
+                }
+                if (imageAnchorClosesBeforeTitle) {
+                    const titleAnchorHref = this.getOpenAnchorHrefAtPosition(source, titleTextIndex, candidateStart);
+                    if (titleAnchorHref && titleAnchorHref !== imageAnchorHref) {
+                        console.log(`🤖 AI Web: Segment image capture stopped — the preceding <img> belongs to a truncated neighboring card's anchor (${imageAnchorHref}), not this segment's (${titleAnchorHref})`);
+                        return textStart;
+                    }
+                }
+            }
+        }
         const interveningText = this.extractBodyParts(source.slice(candidateStart, textStart));
         const crossesPriorEvent = interveningText.some(line => this.isStrongMultiEventTitleLine(line)) &&
             interveningText.some(line => this.hasMultiEventDateSignal(line));
         return crossesPriorEvent ? textStart : candidateStart;
+    }
+
+    // First position at or after `fromIndex` (before `limit`) holding a
+    // non-whitespace character OUTSIDE any tag — where a segment's title TEXT
+    // actually begins, as opposed to where its record's element markup does.
+    findFirstBodyTextIndex(source, fromIndex, limit) {
+        const text = String(source || '');
+        const end = Math.min(text.length, Math.max(0, Number(limit) || 0));
+        let inTag = false;
+        for (let i = Math.max(0, Number(fromIndex) || 0); i < end; i++) {
+            const ch = text[i];
+            if (ch === '<') { inTag = true; continue; }
+            if (ch === '>') { inTag = false; continue; }
+            if (inTag) continue;
+            if (/\S/.test(ch)) return i;
+        }
+        return -1;
+    }
+
+    // The href of the <a …> tag still OPEN at `index`, scanning tags no
+    // earlier than `windowStart`; '' when no anchor is open there or the open
+    // tag carries no href. Pure string scanning — no URL parsing.
+    getOpenAnchorHrefAtPosition(source, index, windowStart = 0) {
+        const from = Math.max(0, Number(windowStart) || 0);
+        const to = Math.max(from, Number(index) || 0);
+        const slice = String(source || '').slice(from, to);
+        const anchorTagPattern = /<\/?a\b[^>]*>/gi;
+        let openTag = '';
+        let match;
+        while ((match = anchorTagPattern.exec(slice)) !== null) {
+            openTag = match[0].charAt(1) === '/' ? '' : match[0];
+        }
+        if (!openTag) return '';
+        const hrefMatch = openTag.match(/\bhref=["']([^"']*)["']/i);
+        return hrefMatch ? hrefMatch[1].trim() : '';
     }
 
     findMultiEventSegmentResourceEnd(html, lastTextEnd) {
@@ -3858,9 +3955,15 @@ class AiWebParser {
             // vectors — and the model dutifully returns one as `image`, with
             // real evidence, at confidence 100. Image lines only: a
             // SEGMENT_LINK_URL is not artwork and is never judged here.
-            if (/_IMAGE/i.test(label) && this.getNonEventImageOcrReason(finalUrl)) {
-                console.log(`🤖 AI Web: Segment image ${finalUrl} withheld from the prompt — ${this.getNonEventImageOcrReason(finalUrl)}`);
-                return;
+            // Three reasons can withhold an image line, checked in one place:
+            // page-chrome (repeated across 3+ segments), icon-scale "-WxH"
+            // renditions, and the vision pass' own furniture verdict.
+            if (/_IMAGE/i.test(label)) {
+                const withholdReason = this.getSegmentPromptImageWithholdReason(finalUrl, sourceUrl);
+                if (withholdReason) {
+                    console.log(`🤖 AI Web: Segment image ${finalUrl} withheld from the prompt — ${withholdReason}`);
+                    return;
+                }
             }
             // Check for duplicates using stripped URL to handle same image at different sizes
             const strippedUrl = this.stripSizeParams(finalUrl);
@@ -7314,6 +7417,13 @@ class AiWebParser {
         // URI) is never worth OCR'ing and never an orientation-slot candidate.
         // The shape rules live in shared-core so the merge rung agrees.
         if (this.getPlaceholderImageReason(lowerUrl)) return true;
+        // An icon-scale "-WxH" rendition (both dimensions ≤ 200 — WordPress'
+        // 150x150 thumbnail class, social icons) is never an event-image
+        // candidate. This judges only the CANDIDATE/offer layer — nothing
+        // here deletes an image an event already carries — and -300x300
+        // poster thumbs stay above the bound (eaglela.com uses them for real
+        // flyers).
+        if (this.isIconScaleImageRendition(url)) return true;
         // '404' only counts when it stands alone between non-alphanumerics
         // ("/404.png", "error-404.jpg") — as a bare substring it matches
         // random hex asset IDs (a Wix flyer named "238fae_c4047c55…" was
@@ -7365,6 +7475,26 @@ class AiWebParser {
         const match = base.match(this.resizedImageFilenameSuffixPattern);
         if (!match) return 0;
         return (parseInt(match[1], 10) || 0) * (parseInt(match[2], 10) || 0);
+    }
+
+    // Is this URL a "-WxH" filename rendition at icon scale — BOTH dimensions
+    // at or under iconScaleRenditionMaxDimension? Built on the same shared
+    // resizedImageFilenameSuffixPattern as identity/selection, so the notion
+    // of "rendition" can never drift. A URL with no such suffix is never
+    // icon-scale here, whatever its true pixels — this is a filename tell,
+    // not a measurement.
+    isIconScaleImageRendition(url) {
+        const text = typeof url === 'string' ? url.trim() : '';
+        if (!text) return false;
+        const tailIndex = text.search(/[?#]/);
+        const base = tailIndex >= 0 ? text.slice(0, tailIndex) : text;
+        const match = base.match(this.resizedImageFilenameSuffixPattern);
+        if (!match) return false;
+        const width = parseInt(match[1], 10) || 0;
+        const height = parseInt(match[2], 10) || 0;
+        return width > 0 && height > 0
+            && width <= this.iconScaleRenditionMaxDimension
+            && height <= this.iconScaleRenditionMaxDimension;
     }
 
     // Should `candidate` replace `incumbent` as the representative URL of ONE
@@ -7554,7 +7684,8 @@ class AiWebParser {
             const hasCoverage = normalizedUrls.some(url => coveredStrippedUrls.has(this.stripSizeParams(url)));
             if (hasCoverage) continue;
 
-            const candidate = normalizedUrls.find(url => !this.isLikelyUninterestingImageUrl(url));
+            const candidate = normalizedUrls.find(url => !this.isLikelyUninterestingImageUrl(url)
+                && !this.getRepeatedSegmentChromeReason(url, sourceUrl));
             if (!candidate) {
                 // A segment whose images ALL look uninteresting gets no OCR at
                 // all — say so instead of silently skipping (this hid the run
@@ -7568,6 +7699,42 @@ class AiWebParser {
             if (targetStrippedUrls.has(strippedCandidate)) continue;
             targetStrippedUrls.add(strippedCandidate);
             targets.push(candidate);
+        }
+
+        // ── Vet-before-offer ────────────────────────────────────────────
+        // Never offer the model an image URL the vision pass has not read.
+        // Runs 20260807-143442 (Dallas: a Mastodon social icon shipped as
+        // GEAR NIGHT's image) and 20260807-142024 (Eagle LA: same-day
+        // neighbors' posters) both trace to SEGMENT_IMAGE_URL /
+        // SEGMENT_IMAGE_HINT_URL lines whose URLs no OCR pass ever vetted —
+        // the furniture-verdict withhold and the consistency gate can only
+        // judge images that were actually read. So: every image URL a
+        // segment prompt could emit (its hint URLs, or the first-4-<img>
+        // fallback of a segment with no OCR text) gets an OCR read here
+        // first. Bounded by DISTINCT image identities on the page (the
+        // targetStrippedUrls dedupe) and by the same per-run miss budget as
+        // the top-up; a cached read is free and an identity is only ever
+        // read once, so a page's vet cost is paid on its first run only.
+        const vetTargets = [];
+        for (const segment of segments) {
+            for (const offeredUrl of this.collectOfferableSegmentImageUrls(segment, ocrResults, sourceUrl)) {
+                const strippedOffered = this.stripSizeParams(offeredUrl);
+                if (!strippedOffered || targetStrippedUrls.has(strippedOffered)) continue;
+                if (coveredStrippedUrls.has(strippedOffered)) continue;
+                // Already vetted (a verdict from this run's cache hits), or
+                // already withheld from every prompt (chrome / icon-scale /
+                // furniture) — no read needed to keep it away from the model.
+                if (this.getOcrImageVerdict(offeredUrl)) continue;
+                if (this.getSegmentPromptImageWithholdReason(offeredUrl, sourceUrl)) continue;
+                // Not a fetchable picture at all (1x1 spacers, data: URIs).
+                if (this.getPlaceholderImageReason(offeredUrl)) continue;
+                targetStrippedUrls.add(strippedOffered);
+                vetTargets.push(offeredUrl);
+            }
+        }
+        if (vetTargets.length > 0) {
+            console.log(`🤖 AI Web: OCR vet pass queued ${vetTargets.length} segment prompt image(s) offered without a prior OCR read`);
+            targets.push(...vetTargets);
         }
         if (targets.length === 0) return ocrResults;
 
@@ -7608,10 +7775,56 @@ class AiWebParser {
         );
         for (const rawResult of rawResults) {
             const normalized = this.normalizeOcrResult(rawResult);
-            if (!normalized || !normalized.text || normalized.text.trim().length === 0) continue;
+            if (!normalized) continue;
+            // Record the verdict at this seam too: getOcrTextForImage records
+            // it on real reads and cache hits, but the offer layer must see a
+            // verdict for every image read here even when a test/stubbed OCR
+            // path returned the result directly. Idempotent with the inner
+            // recording — same key, same verdict.
+            this.recordOcrImageVerdict(normalized.url, normalized);
+            if (!normalized.text || normalized.text.trim().length === 0) continue;
             ocrResults.push(normalized);
         }
         return ocrResults;
+    }
+
+    // Every image URL a segment's prompt could emit as a SEGMENT_IMAGE_HINT_URL
+    // or SEGMENT_IMAGE_URL line, mirroring extractMultiEventSegmentResourceLines:
+    // hint URLs are always offered (up to the 4-line cap); the first-4-<img>
+    // fallback fires only for a segment contributing no OCR text lines and no
+    // hints. A conservative superset is fine here — an extra vet read is one
+    // cached OCR call — but the mirror keeps the vet pass from reading images
+    // no prompt would ever mention.
+    collectOfferableSegmentImageUrls(segment, ocrResults, sourceUrl = '') {
+        if (!segment || typeof segment !== 'object') return [];
+        const offerable = [];
+        const seen = new Set();
+        const pushUrl = (rawUrl) => {
+            const normalized = this.normalizeHttpUrlValue(this.unwrapImageProxyUrl(rawUrl) || rawUrl);
+            if (!normalized || seen.has(normalized)) return;
+            seen.add(normalized);
+            offerable.push(normalized);
+        };
+        const hints = Array.isArray(segment.imageHintUrls) ? segment.imageHintUrls : [];
+        hints.slice(0, 4).forEach(pushUrl);
+        if (hints.length === 0) {
+            const { normalized: normalizedKeys, stripped: strippedKeys } =
+                this.getSegmentImageUrlKeys(segment, sourceUrl);
+            const hasOcrTextLine = (Array.isArray(ocrResults) ? ocrResults : []).some(ocr => {
+                if (!ocr || !String(ocr.text || '').trim()) return false;
+                const ocrUrl = this.normalizeHttpUrlValue(ocr.url);
+                const strippedOcrUrl = this.stripSizeParams(ocrUrl);
+                return normalizedKeys.has(ocrUrl) || (Boolean(strippedOcrUrl) && strippedKeys.has(strippedOcrUrl));
+            });
+            if (!hasOcrTextLine) {
+                this.extractOrderedImageUrlsFromHtml(
+                    typeof segment.html === 'string' ? segment.html : '',
+                    sourceUrl,
+                    4
+                ).forEach(pushUrl);
+            }
+        }
+        return offerable;
     }
 
     // The URL keys a segment claims OCR results with — normalized exact URLs
@@ -7677,6 +7890,12 @@ class AiWebParser {
             // or detached from this segment never matches, even via exact URL.
             if (excludedUrlKeys && strippedOcrUrl && excludedUrlKeys.has(strippedOcrUrl)) return false;
 
+            // Page-chrome exclusion: an identity offered by 3+ distinct
+            // segments on this page is site furniture and belongs to NO
+            // segment — its OCR text must not become any window's
+            // OCR_IMAGE_TEXT evidence.
+            if (this.getRepeatedSegmentChromeReason(ocrUrl, sourceUrl)) return false;
+
             const exactMatch = normalizedSegmentImageSet.has(ocrUrl);
             const strippedMatch = strippedOcrUrl && strippedSegmentImageSet.has(strippedOcrUrl);
 
@@ -7730,6 +7949,10 @@ class AiWebParser {
             const ocrUrl = this.normalizeHttpUrlValue(ocr.url);
             const strippedOcrUrl = this.stripSizeParams(ocrUrl);
             if (!strippedOcrUrl) continue;
+            // Page chrome belongs to nobody — it is already withheld from
+            // every segment on this page, so reassigning it to a "matching"
+            // sibling would smuggle it back in as a hint.
+            if (this.getRepeatedSegmentChromeReason(ocrUrl, sourceUrl)) continue;
             const ocrTokens = new Set(this.core.getCrossSourceTitleTokens(
                 `${String(ocr.text || '')} ${String(ocr.eventSummary || '')}`));
             const matchedCount = info => info.titleTokens.filter(token => ocrTokens.has(token)).length;
@@ -7776,6 +7999,74 @@ class AiWebParser {
             }
         }
         return sourceSegments;
+    }
+
+    // ── Repeated-across-segments = site chrome ─────────────────────────────
+    // An image identity (post-#1648 stripSizeParams key) that 3+ DISTINCT
+    // segments' own HTML all offer on ONE page is site furniture by
+    // definition — social icons, sponsor strips, footer chrome. No single
+    // event's artwork appears inside three different listings on the same
+    // page. Recorded per PAGE (keyed to sourceUrl, replaced on the next
+    // page's gate run) and NEVER written to the OCR cache: this is a layout
+    // fact about this parse, not a vision fact about the image. Withholding
+    // happens at the offer layer only — segment prompt lines, segment OCR
+    // matching, hint reassignment — an image an event ALREADY carries is
+    // never deleted by this rule.
+    applyRepeatedSegmentImageChromeGate(segments, sourceUrl = '') {
+        const store = { sourceUrl: String(sourceUrl || ''), reasonsByKey: new Map() };
+        this._repeatedSegmentChrome = store;
+        const sourceSegments = Array.isArray(segments) ? segments : [];
+        if (sourceSegments.length < this.segmentImageChromeMinSegments) return sourceSegments;
+
+        const segmentsByIdentity = new Map(); // stripped key → { count, url }
+        for (const segment of sourceSegments) {
+            const segmentHtml = segment && typeof segment.html === 'string' ? segment.html : '';
+            if (!segmentHtml) continue;
+            const seenInSegment = new Set();
+            for (const imageUrl of this.extractOrderedImageUrlsFromHtml(segmentHtml, sourceUrl)) {
+                const key = this.stripSizeParams(imageUrl);
+                if (!key || seenInSegment.has(key)) continue;
+                seenInSegment.add(key);
+                const entry = segmentsByIdentity.get(key) || { count: 0, url: imageUrl };
+                entry.count += 1;
+                segmentsByIdentity.set(key, entry);
+            }
+        }
+        for (const [key, entry] of segmentsByIdentity) {
+            if (entry.count < this.segmentImageChromeMinSegments) continue;
+            store.reasonsByKey.set(key, `it is offered by ${entry.count} distinct segments on this page — repeated across listings means site chrome, not one event's artwork`);
+            console.log(`🤖 AI Web: Page-chrome image ${entry.url} — offered by ${entry.count} distinct segments on one page; withholding it from every segment prompt`);
+        }
+        return sourceSegments;
+    }
+
+    // Why this page's chrome gate withholds a URL ('' when it doesn't, when
+    // no gate ran, or when the caller's page is not the page the verdicts
+    // were computed on — a stale page's chrome can never leak forward).
+    getRepeatedSegmentChromeReason(url, sourceUrl = '') {
+        const store = this._repeatedSegmentChrome;
+        if (!store || store.reasonsByKey.size === 0) return '';
+        if (String(sourceUrl || '') !== store.sourceUrl) return '';
+        const raw = String(url || '').trim();
+        if (!raw) return '';
+        const normalized = this.normalizeHttpUrlValue(this.unwrapImageProxyUrl(raw) || raw);
+        const key = this.stripSizeParams(normalized || raw);
+        if (!key) return '';
+        return store.reasonsByKey.get(key) || '';
+    }
+
+    // The one funnel every segment-prompt image line passes through before it
+    // may be offered to the model: page-chrome first (no OCR needed), then
+    // the icon-scale filename tell, then the vision pass' furniture verdict.
+    // '' means "offer it" — unknown always fails open, exactly like
+    // getNonEventImageOcrReason.
+    getSegmentPromptImageWithholdReason(url, sourceUrl = '') {
+        const chromeReason = this.getRepeatedSegmentChromeReason(url, sourceUrl);
+        if (chromeReason) return chromeReason;
+        if (this.isIconScaleImageRendition(url)) {
+            return `its "-WxH" filename suffix advertises an icon-scale rendition (both dimensions at or under ${this.iconScaleRenditionMaxDimension}px)`;
+        }
+        return this.getNonEventImageOcrReason(url);
     }
 
     // Report-only structured-data consistency tripwire, mirroring the spirit

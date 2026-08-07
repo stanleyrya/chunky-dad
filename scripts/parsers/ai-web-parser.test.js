@@ -12743,6 +12743,176 @@ test('a known non-event image is withheld from the segment prompt entirely', () 
     'the model is never offered an image the vision pass already called a logo');
 });
 
+// ---------------------------------------------------------------------------
+// VET BEFORE OFFER — runs 20260807-143442 (Dallas: the site's Mastodon social
+// icon shipped as GEAR NIGHT's image) and 20260807-142024 (Eagle LA calendar:
+// same-day neighbors' posters on the MR BEAR windows). A segment prompt must
+// never offer an image URL the OCR layer never read: the furniture-verdict
+// withhold and the consistency gate can only judge images that were vetted.
+// ---------------------------------------------------------------------------
+
+test('an unvetted segment image is OCR-vetted before the prompt is built, and its furniture verdict then withholds it', async () => {
+  const parser = createParser();
+  const sourceUrl = 'https://venue.example/events/';
+  const flyer = 'https://venue.example/uploads/gear-night-flyer.jpg';
+  const icon = 'https://venue.example/uploads/2025/04/fediverse-icon.png';
+
+  // The segment already has OCR coverage via its flyer, so the coverage
+  // top-up has nothing to do — but the icon hint would still be offered as a
+  // SEGMENT_IMAGE_HINT_URL line, and nothing has ever read it.
+  const segment = { lines: ['GEAR NIGHT', 'September 5, 2026'], html: '', imageHintUrls: [flyer, icon] };
+  const ocrResults = [{ url: flyer, text: 'GEAR NIGHT 10PM', imageClassification: 'event-flyer' }];
+
+  const ocrCalls = [];
+  parser.getOcrTextForImage = async (url) => {
+    ocrCalls.push(url);
+    return { url, text: '', imageClassification: 'logo' };
+  };
+
+  await parser.ensureSegmentOcrCoverage([segment], ocrResults, {}, sourceUrl, null);
+  assert.deepEqual(ocrCalls, [icon],
+    'the offered-but-unvetted icon gets an OCR read before any prompt is built; the covered flyer costs nothing');
+
+  const lines = parser.extractMultiEventSegmentResourceLines('', sourceUrl, segment.imageHintUrls, ocrResults);
+  assert.ok(lines.some(line => line === `SEGMENT_IMAGE_HINT_URL: ${flyer}`),
+    `the real flyer is still offered, got ${JSON.stringify(lines)}`);
+  assert.ok(!lines.some(line => line.includes(icon)),
+    `the vetted icon's furniture verdict withholds it from the prompt, got ${JSON.stringify(lines)}`);
+});
+
+test('a window never captures a truncated neighboring card\'s poster, so the wrong-title flyer is not offered to it', async () => {
+  const parser = createParser();
+  const sourceUrl = 'https://venue.example/calendar/';
+  const poster = 'https://venue.example/uploads/b-bar-poster-generic.jpg';
+  // The MEC day-cell shape from run 20260807-142024: the neighbor's tooltip
+  // anchor holds its poster and is truncated by the window boundary — the
+  // window's own title lives inside a DIFFERENT event's anchor.
+  const html = `
+    <div class="grid">
+      <a href="https://venue.example/events/b-bar/?occurrence=2026-08-13">
+        <div class="tooltip-event-desc"><img src="${poster}" alt=""></div>
+      </a>
+      <a class="listing-tooltip" href="https://venue.example/events/mr-bear-meet/?occurrence=2026-08-13"><h4>MR BEAR MEET AND GREET</h4></a>
+    </div>`;
+
+  const segmentHtml = parser.extractRawHtmlForMultiEventSegment(html, ['MR BEAR MEET AND GREET']);
+  assert.ok(!segmentHtml.includes(poster),
+    `the neighbor's poster must not ride into the window html, got: ${JSON.stringify(segmentHtml)}`);
+
+  // End to end: even with the poster OCR'd (text naming B BAR, the neighbor),
+  // the MR BEAR window's prompt carries no line for it.
+  const segment = { lines: ['MR BEAR MEET AND GREET'], html: segmentHtml, imageHintUrls: [] };
+  const ocrResults = [{ url: poster, text: 'B BAR EVERY THURSDAY NO COVER', imageClassification: 'event-flyer' }];
+  parser.applySegmentOcrConsistencyGate([segment], ocrResults, sourceUrl);
+  const data = parser.buildMultiEventSegmentHtmlData({ url: sourceUrl, html }, segment, 0, 1, ocrResults);
+  assert.ok(!String(data.html).includes(poster),
+    `no OCR_IMAGE_URL/SEGMENT_IMAGE_URL line may offer the neighbor's poster, got: ${data.html}`);
+
+  // Guard: a card whose linked thumbnail and linked title share ONE
+  // destination keeps its image capture exactly as before.
+  const ownHtml = `
+    <div class="grid">
+      <a href="https://venue.example/events/leather-night/"><img src="https://venue.example/uploads/leather-night.jpg"></a>
+      <a href="https://venue.example/events/leather-night/"><h4>LEATHER NIGHT</h4></a>
+    </div>`;
+  const ownSegmentHtml = parser.extractRawHtmlForMultiEventSegment(ownHtml, ['LEATHER NIGHT']);
+  assert.ok(ownSegmentHtml.includes('leather-night.jpg'),
+    'a same-destination linked image is still this card\'s own artwork');
+});
+
+test('an image offered by 3+ distinct segments is page chrome — withheld from every segment prompt', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://venue.example/events/';
+  const icon = 'https://venue.example/uploads/2025/04/social-mastodon-badge.png';
+  const segments = [
+    { lines: ['GEAR NIGHT', 'September 5, 2026'], html: `<div><img src="https://venue.example/uploads/gear.jpg"><img src="${icon}"></div>`, imageHintUrls: [] },
+    { lines: ['LEATHER NIGHT', 'September 6, 2026'], html: `<div><img src="https://venue.example/uploads/leather.jpg"><img src="${icon}"></div>`, imageHintUrls: [] },
+    { lines: ['UNDIES NIGHT', 'September 7, 2026'], html: `<div><img src="https://venue.example/uploads/undies.jpg"><img src="${icon}"></div>`, imageHintUrls: [] }
+  ];
+
+  const logs = captureLogs(() => {
+    parser.applyRepeatedSegmentImageChromeGate(segments, sourceUrl);
+  });
+  assert.ok(logs.some(line => line.includes(`Page-chrome image ${icon}`) && line.includes('3 distinct segments')),
+    `chrome determination log expected, got ${JSON.stringify(logs)}`);
+
+  for (const segment of segments) {
+    const lines = parser.extractMultiEventSegmentResourceLines(segment.html, sourceUrl);
+    assert.ok(!lines.some(line => line.includes(icon)),
+      `chrome is withheld from every segment's prompt lines, got ${JSON.stringify(lines)}`);
+    assert.equal(lines.filter(line => line.startsWith('SEGMENT_IMAGE_URL:')).length, 1,
+      'each segment still offers its own flyer');
+  }
+
+  // Its OCR text (if any) reaches no segment either, and per-event flyers
+  // repeated across only two segments are untouched.
+  const iconOcr = [{ url: icon, text: 'JOIN US ON MASTODON', imageClassification: 'logo' }];
+  assert.deepEqual(parser.filterOcrResultsForSegment(iconOcr, segments[0], sourceUrl), []);
+  assert.equal(parser.getRepeatedSegmentChromeReason('https://venue.example/uploads/gear.jpg', sourceUrl), '');
+  // Page-scoped: the SAME url on a DIFFERENT page is not chrome there.
+  assert.equal(parser.getRepeatedSegmentChromeReason(icon, 'https://other.example/events/'), '');
+});
+
+test('an icon-scale -WxH rendition (both dims <= 200) is never offered or harvested; -300x300 posters are untouched', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://venue.example/events/';
+  const iconRendition = 'https://venue.example/uploads/2025/04/social-badge-150x150.png?lossy=2&strip=1&webp=1';
+  const posterThumb = 'https://venue.example/uploads/ig_b-bar-poster-2026-300x300.jpg';
+
+  // Candidate layer: the shared uninteresting-URL test now refuses the
+  // icon-scale rendition (so OCR slots, top-up and image slots all skip it)…
+  assert.equal(parser.isLikelyUninterestingImageUrl(iconRendition), true,
+    'a 150x150 filename rendition is icon-scale, never an event-image candidate');
+  // …while the 300x300 poster class eaglela.com serves real flyers at stays.
+  assert.equal(parser.isLikelyUninterestingImageUrl(posterThumb), false,
+    '-300x300 renditions are above the icon bound and must not regress');
+  assert.equal(parser.isIconScaleImageRendition('https://venue.example/uploads/wide-banner-600x150.jpg'), false,
+    'one large dimension is enough to clear the icon bound');
+  assert.equal(parser.isIconScaleImageRendition('https://venue.example/uploads/plain-flyer.jpg'), false,
+    'no -WxH suffix, no verdict — a filename tell only');
+
+  // Offer layer: the segment prompt withholds the icon-scale rendition even
+  // with no OCR verdict recorded for it, and still offers the poster thumb.
+  const segmentHtml = `<div><img src="${iconRendition}"><img src="${posterThumb}"></div>`;
+  const logs = captureLogs(() => {
+    const lines = parser.extractMultiEventSegmentResourceLines(segmentHtml, sourceUrl);
+    assert.ok(!lines.some(line => line.includes('social-badge-150x150')),
+      `icon-scale rendition must be withheld, got ${JSON.stringify(lines)}`);
+    assert.ok(lines.some(line => line === `SEGMENT_IMAGE_URL: ${posterThumb}`),
+      `the -300x300 poster is still offered, got ${JSON.stringify(lines)}`);
+  });
+  assert.ok(logs.some(line => line.includes('withheld from the prompt') && line.includes('icon-scale')),
+    `withhold log expected, got ${JSON.stringify(logs)}`);
+});
+
+// Behavior guard (passes before and after this change): a legitimately paired
+// -300x300 poster on a normal listing keeps its pairing end to end.
+test('guard: a -300x300 poster paired to its own listing keeps its OCR pairing and prompt lines', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://venue.example/events/';
+  const posterThumb = 'https://venue.example/uploads/ig_b-bar-poster-2026-300x300.jpg';
+  const segment = {
+    lines: ['B BAR', '13 Aug'],
+    html: `<a class="listing-tooltip" href="/events/b-bar/?occurrence=2026-08-13"><h4>B BAR</h4></a><div class="tooltip"><img src="${posterThumb}"></div>`,
+    imageHintUrls: []
+  };
+  const ocrResults = [{
+    url: 'https://venue.example/uploads/ig_b-bar-poster-2026.jpg',
+    text: 'B BAR EVERY THURSDAY NO COVER',
+    imageClassification: 'event-flyer'
+  }];
+
+  parser.applySegmentOcrConsistencyGate([segment, { lines: ['ONYX', '14 Aug'], html: '', imageHintUrls: [] }], ocrResults, sourceUrl);
+  assert.equal(segment.ocrExcludedUrlKeys, undefined, 'the gate leaves a matching pairing alone');
+
+  const matched = parser.filterOcrResultsForSegment(ocrResults, segment, sourceUrl);
+  assert.equal(matched.length, 1, 'the full-size OCR result still pairs with the -300x300-only segment');
+
+  const data = parser.buildMultiEventSegmentHtmlData({ url: sourceUrl, html: '<html></html>' }, segment, 0, 2, ocrResults);
+  assert.ok(String(data.html).includes('B BAR EVERY THURSDAY'),
+    'the poster\'s OCR text reaches its own listing\'s prompt');
+});
+
 test('the OCR cache carries an image classification across runs even when it has no text', async () => {
   const fs = require('fs');
   const os = require('os');
