@@ -16422,6 +16422,21 @@ TEXT:
     // logo could still be published as an event's flyer. Recording the verdict
     // here makes that free answer available to image selection.
 
+    // Does an OCR transcription carry MEANINGFUL text — at least one token of
+    // three or more word characters (letters/digits)? Genuine event flyers
+    // always contain multi-character words (title, time, venue: "BEAR",
+    // "10PM", "NO COVER"), so within the already-suspicious furniture
+    // classifications (logo/thumbnail/hero-banner) a transcription with no
+    // such token is glyph noise, not readable text: run 20260807-155753
+    // shipped a social icon as an event image because the vision model
+    // transcribed the logo's single letter ("m") as text, and hasText alone
+    // immunized it against the furniture gate. Scoped to that gate only —
+    // event-flyer-classified images and the pairing-similarity path (where a
+    // 1-char text simply scores ~0 naturally) never consult this.
+    ocrTextHasMeaningfulContent(text) {
+        return /[\p{L}\p{N}]{3,}/u.test(String(text || ''));
+    }
+
     // Remember one OCR verdict under the image's canonical URL. Same key rules
     // as recordMeasuredImageDimensions: exact URL identity, both the raw and
     // normalized forms, so whichever spelling the event carries can find it.
@@ -16429,9 +16444,15 @@ TEXT:
         if (!result || typeof result !== 'object') return null;
         const classification = String(result.imageClassification || '').toLowerCase().trim();
         if (!classification) return null;
+        const rawText = String(result.text || '').trim();
         const verdict = {
             classification,
-            hasText: Boolean(String(result.text || '').trim())
+            // "Has text" means "has MEANINGFUL text" — see
+            // ocrTextHasMeaningfulContent. hasGlyphNoiseOnly remembers that the
+            // model DID transcribe something, so the withhold reason can say
+            // so instead of claiming "no readable text".
+            hasText: this.ocrTextHasMeaningfulContent(rawText),
+            hasGlyphNoiseOnly: Boolean(rawText) && !this.ocrTextHasMeaningfulContent(rawText)
         };
         let recorded = false;
         for (const url of [imageUrl, result.imageUrl, result.url, this.normalizeHttpUrlValue(imageUrl)]) {
@@ -16461,7 +16482,10 @@ TEXT:
      *   1. the model classified it as page furniture (logo/thumbnail/
      *      hero-banner — see nonEventOcrImageClassifications for why ad-banner
      *      is not in that set), AND
-     *   2. the model read NO text off it.
+     *   2. the model read NO text off it — where "text" means MEANINGFUL
+     *      text (ocrTextHasMeaningfulContent): a transcription with no token
+     *      of 3+ word characters ("m" off a social icon, stray punctuation)
+     *      is glyph noise and counts as no text.
      *
      * Condition 2 is what makes this safe. In the real OCR cache corpus two
      * images classified 'logo' carried 587 and 573 characters of text — those
@@ -16477,6 +16501,11 @@ TEXT:
         if (!verdict) return '';
         if (verdict.hasText) return '';
         if (!this.nonEventOcrImageClassifications.has(verdict.classification)) return '';
+        if (verdict.hasGlyphNoiseOnly) {
+            // New wording for the new case only — the model DID transcribe
+            // something, just nothing that clears the meaningful-text bar.
+            return `the vision pass classified it as ${verdict.classification} and transcribed only glyph noise (no token of 3+ word characters)`;
+        }
         return `the vision pass classified it as ${verdict.classification} with no readable text`;
     }
 
