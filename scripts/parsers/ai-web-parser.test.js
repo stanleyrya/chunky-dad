@@ -12280,6 +12280,268 @@ test('self-canonical suppression needs no URL global (iOS JavaScriptCore)', () =
 });
 
 // ---------------------------------------------------------------------------
+// Calendar-hub awareness in URL discovery + MEC month feeds.
+//
+// A venue's /events/ listing links its month-grid calendar view, but the hub
+// URL names no event, so every event-like link outranks it and it never
+// survived the ranking cut (Eagle LA: /calendar/ shows 25 events in Aug 2026,
+// /events/ shows 12 — and the hub link scored -35). The month-grid pages
+// (Modern Events Calendar plugin) additionally publish their "next month"
+// button as an admin-ajax POST the parser can replay — plugin-protocol
+// markers only, nothing here names a real venue outside fixture text.
+// ---------------------------------------------------------------------------
+
+function buildEventListingLinks(count) {
+  // Anchor text carries a scoring keyword ("party") so these links sit at the
+  // TOP of the event-link band (score 190) — the hub must clear even that.
+  return Array.from({ length: count }, (_, i) =>
+    `<a href="https://venue.example/events/night-${i + 1}/?occurrence=2026-08-${String((i % 28) + 1).padStart(2, '0')}">Party Night ${i + 1}</a>`
+  ).join('\n');
+}
+
+test('a same-site /calendar/ hub link survives a ranking cut that event links would otherwise fill', () => {
+  const parser = createParser();
+  const html = `
+    <html><body>
+      ${buildEventListingLinks(16)}
+      <a href="https://venue.example/calendar/">Events Calendar</a>
+    </body></html>
+  `;
+  const links = parser.extractAdditionalUrls(html, 'https://venue.example/events/', {});
+  const hubRank = links.indexOf('https://venue.example/calendar/');
+  assert.ok(hubRank !== -1,
+    `the calendar hub must survive the maxAdditionalUrls cut, got: ${JSON.stringify(links)}`);
+  // The crawl loop re-slices to its own default budget of 12 at the next
+  // depth (SharedCore.limitAdditionalUrls) — surviving the parser's cut but
+  // not that one would still lose the hub.
+  assert.ok(hubRank < 12, `the hub must sit inside the crawl budget of 12, got rank ${hubRank}`);
+});
+
+// GUARD (passes on origin/main too, by construction): the point is that the
+// hub bonus must NOT start resurrecting what the reject filters drop or
+// boosting links off the page's own site.
+test('a cross-host calendar link and an .ics export link get no hub boost', () => {
+  const parser = createParser();
+  const html = `
+    <html><body>
+      ${buildEventListingLinks(16)}
+      <a href="https://othersite.example/calendar/">Calendar</a>
+      <a href="https://venue.example/events/?ical=1">Subscribe (.ics)</a>
+      <a href="https://venue.example/feed/events.ics">Export calendar</a>
+    </body></html>
+  `;
+  const links = parser.extractAdditionalUrls(html, 'https://venue.example/events/', {});
+  assert.ok(!links.some(link => link.startsWith('https://othersite.example/')),
+    `a cross-host calendar link must never be boosted into the cut, got: ${JSON.stringify(links)}`);
+  assert.ok(!links.some(link => /ical=1|\.ics/.test(link)),
+    `the #1559 calendar-export reject must keep winning, got: ${JSON.stringify(links)}`);
+  // Belt and braces at the scoring level: cross-host means no bonus at all.
+  const crossHostScore = parser.scoreAdditionalUrl('https://othersite.example/calendar/', 'https://venue.example/events/', '<a>Calendar</a>');
+  assert.ok(crossHostScore < 0, `cross-host calendar hub must keep its bare-listing demotion, got ${crossHostScore}`);
+});
+
+// Trimmed from the real eaglela.com capture (2026-08-07): the atts blob is the
+// page's own URL-encoded shortcode-attributes querystring — the protocol
+// replays it VERBATIM, never constructs it.
+const MEC_FIXTURE_ATTS = 'atts%5B_edit_lock%5D=1626389781%3A1&atts%5Bsf_status%5D=1&atts%5Bshow_past_events%5D=1&atts%5Bid%5D=1224';
+
+const MEC_MONTH_GRID_PAGE_HTML = `
+  <html><head><title>Calendar - Venue</title></head><body>
+    <div class="mec-wrap">
+      <dt class="mec-calendar-day mec-has-event" data-mec-cell="20260802">
+        <a href="https://venue.example/events/beer-bust/?occurrence=2026-08-02">SUNDAY BEER BUST</a>
+      </dt>
+      <dt class="mec-calendar-day mec-has-event" data-mec-cell="20260805">
+        <a href="https://venue.example/events/hump-night/?occurrence=2026-08-05">HUMP NIGHT</a>
+      </dt>
+      <div class="mec-next-month mec-load-month" data-mec-year="2026" data-mec-month="09"><a href="#" class="mec-load-month-link">September</a></div>
+    </div>
+    <script id="mec-frontend-script-js-extra">
+    var mecdata = {"elementor_edit_mode":"no","ajax_url":"https://venue.example/wp-admin/admin-ajax.php","current_year":"2026","current_month":"08"};
+    </script>
+    <script>
+    jQuery("#mec_monthly_view_month_101_202608").mecMonthlyView(
+    {
+        id: "101",
+        today: "20260807",
+        month_id: "202608",
+        active_month: {year: "2026", month: "08"},
+        next_month: {year: "2026", month: "09"},
+        month_navigator: 1,
+        atts: "${MEC_FIXTURE_ATTS}",
+    });
+    </script>
+  </body></html>
+`;
+
+// Trimmed from the real September response: JSON whose "month" (grid) and
+// "events_side" HTML carry the /events/<slug>/?occurrence= links. hump-night
+// repeats from the page's own August grid; jockstrapped appears twice.
+const MEC_SEPTEMBER_RESPONSE_JSON = JSON.stringify({
+  month: `
+    <dt class="mec-calendar-day" data-mec-cell="20260902">
+      <a class="mec-monthly-tooltip" href="https://venue.example/events/hump-night/?occurrence=2026-09-02">HUMP NIGHT</a>
+    </dt>
+    <dt class="mec-calendar-day" data-mec-cell="20260911">
+      <a class="mec-monthly-tooltip" href="https://venue.example/events/jockstrapped/?occurrence=2026-09-11">JOCKSTRAPPED</a>
+    </dt>
+    <dt class="mec-calendar-day" data-mec-cell="20260925">
+      <a class="mec-monthly-tooltip" href="https://venue.example/events/jockstrapped/?occurrence=2026-09-25">JOCKSTRAPPED</a>
+    </dt>
+  `,
+  events_side: '<a href="https://venue.example/events/stynk/?occurrence=2026-09-05">STYNK</a>',
+  navigator: '<div class="mec-next-month mec-load-month" data-mec-year="2026" data-mec-month="10"></div>',
+  previous_month: { label: '2026 August', id: '202608', year: '2026', month: '08' },
+  current_month: { label: '2026 September', id: '202609', year: '2026', month: '09' },
+  next_month: { label: '2026 October', id: '202610', year: '2026', month: '10' }
+});
+
+test('a MEC month-grid page replays its own admin-ajax month feed and harvests next month\'s links', async () => {
+  const parser = createParser();
+  const postCalls = [];
+  const stubAdapter = {
+    postForm: async (url, body, options) => {
+      postCalls.push({ url, body, options });
+      return { ok: true, status: 200, text: MEC_SEPTEMBER_RESPONSE_JSON };
+    }
+  };
+  const result = await parser.parseEvents(
+    { url: 'https://venue.example/calendar/', html: MEC_MONTH_GRID_PAGE_HTML },
+    { discoveryOnly: true }, null, 'link-aggregator', stubAdapter);
+
+  assert.equal(postCalls.length, 1, 'default lookahead is exactly ONE future month');
+  assert.equal(postCalls[0].url, 'https://venue.example/wp-admin/admin-ajax.php');
+  assert.equal(postCalls[0].options.headers['X-Requested-With'], 'XMLHttpRequest');
+  assert.ok(postCalls[0].body.startsWith('action=mec_monthly_view_load_month&mec_year=2026&mec_month=09&navigator_click=true&'),
+    `the replay uses the plugin's own action/month fields, got: ${postCalls[0].body.slice(0, 120)}`);
+
+  const links = result.additionalLinks;
+  assert.ok(links.includes('https://venue.example/events/jockstrapped/?occurrence=2026-09-11'),
+    `net-new September pages must join discovery, got: ${JSON.stringify(links)}`);
+  assert.ok(links.includes('https://venue.example/events/stynk/?occurrence=2026-09-05'),
+    'events_side links are harvested too');
+  assert.ok(!links.includes('https://venue.example/events/jockstrapped/?occurrence=2026-09-25'),
+    'one distinct event page once: only the earliest occurrence of a net-new page is enqueued');
+  assert.ok(!links.includes('https://venue.example/events/hump-night/?occurrence=2026-09-02'),
+    'a page the listing already links (any occurrence) is already reachable — its September repeat adds no new page');
+  assert.ok(links.includes('https://venue.example/events/hump-night/?occurrence=2026-08-05'),
+    'the page\'s own links are never collapsed');
+
+  // Report-only doctrine: nothing on this path may set recurrence on anything.
+  assert.equal(result.events.length, 0, 'discoveryOnly returns no events');
+  assert.ok(!JSON.stringify(result).includes('"recurrence"'),
+    'no recurrence field may appear anywhere in the parse result from month feeds');
+});
+
+test('the month-feed POST body carries the page\'s atts blob verbatim and a stable synthetic cache URL', async () => {
+  const parser = createParser();
+  const postCalls = [];
+  const stubAdapter = {
+    postForm: async (url, body, options) => {
+      postCalls.push({ url, body, options });
+      return { ok: true, status: 200, text: MEC_SEPTEMBER_RESPONSE_JSON };
+    }
+  };
+  await parser.parseEvents(
+    { url: 'https://venue.example/calendar/', html: MEC_MONTH_GRID_PAGE_HTML },
+    { discoveryOnly: true }, null, 'link-aggregator', stubAdapter);
+  assert.equal(postCalls.length, 1);
+  assert.ok(postCalls[0].body.endsWith(`&${MEC_FIXTURE_ATTS}`),
+    `the atts blob is harvested from the page and replayed VERBATIM, got: ${postCalls[0].body}`);
+  assert.equal(postCalls[0].options.cacheUrl,
+    'https://venue.example/wp-admin/admin-ajax.php?mec_month_feed=2026-09',
+    'the synthetic cache key must be stable across runs so the page cache can answer the next one');
+});
+
+test('a failed month-feed POST degrades like any failed crawled page: logged, run continues', async () => {
+  const parser = createParser();
+  const stubAdapter = {
+    postForm: async () => { throw new Error('HTTP 500 error from https://venue.example/wp-admin/admin-ajax.php'); }
+  };
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let result;
+  try {
+    result = await parser.parseEvents(
+      { url: 'https://venue.example/calendar/', html: MEC_MONTH_GRID_PAGE_HTML },
+      { discoveryOnly: true }, null, 'link-aggregator', stubAdapter);
+  } finally {
+    console.log = originalLog;
+  }
+  assert.ok(logs.some(line => line.includes('MEC month feed 2026-09 failed') && line.includes('continuing without it')),
+    `the failure must be visible in the log, got: ${JSON.stringify(logs.filter(l => l.includes('MEC')))}`);
+  assert.ok(result.additionalLinks.includes('https://venue.example/events/hump-night/?occurrence=2026-08-05'),
+    'the page\'s own discovery must be untouched by the month-feed failure');
+});
+
+test('calendarLookaheadMonths is clamped 0..3 and 0 disables the feed', async () => {
+  const parser = createParser();
+  assert.equal(parser.resolveCalendarLookaheadMonths({}), 1, 'default: current + 1 month');
+  assert.equal(parser.resolveCalendarLookaheadMonths({ calendarLookaheadMonths: 9 }), 3);
+  assert.equal(parser.resolveCalendarLookaheadMonths({ calendarLookaheadMonths: -2 }), 0);
+  let posts = 0;
+  const stubAdapter = { postForm: async () => { posts++; return { ok: true, status: 200, text: MEC_SEPTEMBER_RESPONSE_JSON }; } };
+  await parser.parseEvents(
+    { url: 'https://venue.example/calendar/', html: MEC_MONTH_GRID_PAGE_HTML },
+    { discoveryOnly: true, calendarLookaheadMonths: 0 }, null, 'link-aggregator', stubAdapter);
+  assert.equal(posts, 0, 'lookahead 0 must never touch the network');
+});
+
+// GUARD (passes on origin/main too, by construction): the month feed must
+// never gain the ability to POST off the page's own site.
+test('the month feed never POSTs to an ajax endpoint off the page\'s own site', async () => {
+  const parser = createParser();
+  const crossHostPage = MEC_MONTH_GRID_PAGE_HTML.replace(
+    'https://venue.example/wp-admin/admin-ajax.php',
+    'https://evil.example/wp-admin/admin-ajax.php');
+  let posts = 0;
+  const stubAdapter = { postForm: async () => { posts++; return { ok: true, status: 200, text: MEC_SEPTEMBER_RESPONSE_JSON }; } };
+  await parser.parseEvents(
+    { url: 'https://venue.example/calendar/', html: crossHostPage },
+    { discoveryOnly: true }, null, 'link-aggregator', stubAdapter);
+  assert.equal(posts, 0, 'a cross-host ajax_url is an injected or mangled URL — never replay it');
+});
+
+test('cadence report: 7-day gaps log a weekly candidate, a single date logs nothing (report-only)', () => {
+  const parser = createParser();
+  const weeklyHtml = ['2026-09-01', '2026-09-08', '2026-09-15', '2026-09-22', '2026-09-29']
+    .map(date => `<a href="https://venue.example/events/hump-night/?occurrence=${date}">HUMP NIGHT</a>`)
+    .join('\n');
+  const singleHtml = '<a href="https://venue.example/events/one-off/?occurrence=2026-09-19">ONE OFF</a>';
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  try {
+    parser.reportOccurrenceCadence([weeklyHtml, singleHtml], 'https://venue.example/calendar/');
+  } finally {
+    console.log = originalLog;
+  }
+  assert.ok(logs.includes('🔁 CADENCE: "hump-night" observed on 5 dates (2026-09-01 +7d ×4) — weekly candidate (report-only)'),
+    `expected the weekly-candidate line, got: ${JSON.stringify(logs)}`);
+  assert.ok(!logs.some(line => line.includes('"one-off"')),
+    'a single observed date is no cadence evidence — log nothing');
+});
+
+test('cadence report: same ordinal weekday across months logs a monthly candidate', () => {
+  const parser = createParser();
+  // 2nd Sunday of August and September 2026.
+  const html = ['2026-08-09', '2026-09-13']
+    .map(date => `<a href="https://venue.example/events/onyx/?occurrence=${date}">ONYX</a>`)
+    .join('\n');
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  try {
+    parser.reportOccurrenceCadence([html], 'https://venue.example/calendar/');
+  } finally {
+    console.log = originalLog;
+  }
+  assert.ok(logs.includes('🔁 CADENCE: "onyx" observed on 2 dates (2× 2nd Sunday) — monthly candidate (report-only)'),
+    `expected the monthly-candidate line, got: ${JSON.stringify(logs)}`);
+});
+
+// ---------------------------------------------------------------------------
 // Segmentation must not silently UNDER-COVER a listing.
 //
 // Run 20260806 over eaglela.com/events/: the page shows 12 cards, the winning
