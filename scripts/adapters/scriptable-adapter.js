@@ -1587,7 +1587,28 @@ class ScriptableAdapter {
     );
   }
 
+  // A non-2xx status the server ANSWERED with used to come back as
+  // {ok: false} — a SUCCESSFUL operation as far as withNetworkResilience
+  // could see, so a 503 from the local AI server (model loading, busy)
+  // never engaged the #1643 retry ladder and the run degraded instead of
+  // riding it out. Transient statuses (5xx/429 — the exact list
+  // SharedCore.isRetryableHttpStatus keeps, the same one isRetryableFailure
+  // classifies by) now THROW from inside the resilience-wrapped attempt
+  // with `error.statusCode` stamped as ground truth; client rejections
+  // (4xx) keep the {ok: false} return shape callers already branch on.
+  throwIfRetryableHttpStatus(label, url, statusCode, responseText) {
+    if (!Number.isFinite(statusCode)) return;
+    if (statusCode >= 200 && statusCode < 300) return;
+    if (!SharedCore.isRetryableHttpStatus(statusCode)) return;
+    const error = new Error(`${label} failed: HTTP ${statusCode} from ${url}`);
+    error.statusCode = statusCode;
+    error.responseText = typeof responseText === "string" ? responseText : "";
+    throw error;
+  }
+
   async postJsonOnce(url, payload, options = {}) {
+    let responseText;
+    let statusCode;
     try {
       const request = new Request(url);
       request.method = "POST";
@@ -1599,16 +1620,17 @@ class ScriptableAdapter {
       if (options.timeoutSeconds) {
         request.timeoutInterval = options.timeoutSeconds;
       }
-      const responseText = await request.loadString();
-      const statusCode = request.response ? request.response.statusCode : 200;
-      return {
-        ok: statusCode >= 200 && statusCode < 300,
-        status: statusCode,
-        text: responseText,
-      };
+      responseText = await request.loadString();
+      statusCode = request.response ? request.response.statusCode : 200;
     } catch (error) {
       throw new Error(`POST request failed: ${error.message}`);
     }
+    this.throwIfRetryableHttpStatus("POST request", url, statusCode, responseText);
+    return {
+      ok: statusCode >= 200 && statusCode < 300,
+      status: statusCode,
+      text: responseText,
+    };
   }
 
   // Form-encoded POST (application/x-www-form-urlencoded) — the shape
@@ -1660,6 +1682,8 @@ class ScriptableAdapter {
   }
 
   async postFormOnce(url, body, options = {}) {
+    let responseText;
+    let statusCode;
     try {
       const request = new Request(url);
       request.method = "POST";
@@ -1672,16 +1696,19 @@ class ScriptableAdapter {
       if (options.timeoutSeconds) {
         request.timeoutInterval = options.timeoutSeconds;
       }
-      const responseText = await request.loadString();
-      const statusCode = request.response ? request.response.statusCode : 200;
-      return {
-        ok: statusCode >= 200 && statusCode < 300,
-        status: statusCode,
-        text: responseText,
-      };
+      responseText = await request.loadString();
+      statusCode = request.response ? request.response.statusCode : 200;
     } catch (error) {
       throw new Error(`Form POST request failed: ${error.message}`);
     }
+    // Same transient-status contract as postJsonOnce: 5xx/429 throw into the
+    // ladder, everything else keeps the {ok:false} shape.
+    this.throwIfRetryableHttpStatus("Form POST request", url, statusCode, responseText);
+    return {
+      ok: statusCode >= 200 && statusCode < 300,
+      status: statusCode,
+      text: responseText,
+    };
   }
 
   async saveFailureNote(url, error, metadata = {}) {

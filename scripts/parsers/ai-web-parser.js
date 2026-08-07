@@ -626,6 +626,14 @@ class AiWebParser {
         // GEAR NIGHT's `image`. 300x300 poster thumbs are deliberately ABOVE
         // this bound — eaglela.com serves real flyers as -300x300 renditions.
         this.iconScaleRenditionMaxDimension = 200;
+        // Single-event pages: how many candidate images BEYOND the capped
+        // page-level OCR pass the imageless-event top-up may read (see
+        // ensureSinglePageImageCoverage). Corpus of 37 cached Eagle LA /
+        // Dallas Eagle detail pages: 7-9 distinct post-filter candidates per
+        // page, full-size poster at position 3 wherever one exists — cap 2 + 4
+        // reaches every observed poster; positions 7+ were emoji-CDN paths and
+        // plugin icons on every measured page.
+        this.singlePageOcrTopUpMaxImages = 4;
         // An image identity offered by at least this many DISTINCT segments'
         // own HTML on ONE multi-event page is site furniture by definition
         // (social icons, sponsor strips, footer chrome) — no single event's
@@ -1219,6 +1227,12 @@ class AiWebParser {
         const adjustedPromptFields = this.getAiPromptFields(parserConfig, dataFlags, htmlData && htmlData.url ? htmlData.url : '');
 
         const event = await this.extractSingleEvent(segmentHtmlData, parserConfig, cityConfig, adjustedPromptFields, dataFlags, httpAdapter);
+        if (event) {
+            // Bounded rescue for an event that came out imageless — see
+            // ensureSinglePageImageCoverage (single-page sibling of the
+            // multi-event segment top-up).
+            await this.ensureSinglePageImageCoverage(event, htmlData, parserConfig, ocrResults, httpAdapter);
+        }
         return event ? [event] : [];
     }
 
@@ -7794,6 +7808,102 @@ class AiWebParser {
             ocrResults.push(normalized);
         }
         return ocrResults;
+    }
+
+    // Single-event pages: the page-level OCR pass stops at ocrConfig.maxImages
+    // (clamped 1..4, default 2) and the segment top-up above runs ONLY on the
+    // multi-event path — so a genuine poster sitting 3rd or later in the
+    // page's <img> order was never OCR'd, and the og:image fill was the one
+    // rescue. Bounded top-up, AFTER extraction and only when it matters: when
+    // the extracted event carries NO image (nothing the AI offered survived
+    // the placeholder/furniture gates, and the og:image fill found nothing),
+    // read the candidate images the cap skipped — same filter chain as the
+    // capped pass (uninteresting-URL filter, resized-variant collapse) plus
+    // the #1652 vet rules (icon-scale renditions, placeholder pixels) and the
+    // post-#1648 stripped-identity collapse — up to singlePageOcrTopUpMaxImages
+    // more, then adopt the first one the vision pass POSITIVELY classified as
+    // an event flyer with meaningful text. Never fail-open: no flyer verdict,
+    // no adoption. Why not vet ALL candidates up front instead: the measured
+    // corpus (37 cached Eagle LA / Dallas Eagle detail pages) carries 7-9
+    // distinct post-filter candidates per page, so an up-front vet would
+    // spend 5-7 extra OCR calls (~10-14s wall clock) on EVERY page — including
+    // the majority whose top-2 pass or og:image already lands the poster —
+    // and would grow every extraction prompt (invalidating the AI response
+    // cache across the board). The conditional pass costs at most 4 reads
+    // (~8s) and only on pages that would otherwise ship imageless.
+    // ocrConfig.maxImages semantics are untouched: the capped pass still
+    // honors an explicitly configured value exactly as before.
+    async ensureSinglePageImageCoverage(event, htmlData, parserConfig, ocrResults, httpAdapter) {
+        if (!event || typeof event !== 'object') return event;
+        const existingImage = typeof event.image === 'string' ? event.image.trim() : '';
+        if (existingImage) return event;
+        // Never on the multi-event whole-page fallback: that page's <img>
+        // order is a stack of SIBLING events' flyers, and "first flyer on the
+        // page" would ship a neighbor's poster.
+        if (htmlData && htmlData._wholePageFallback === true) return event;
+        const ocrConfig = this.getOcrConfig(parserConfig);
+        if (!ocrConfig.enabled) return event;
+        const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        if (!html) return event;
+
+        // Same candidate pipeline as extractOcrFromAllImages, read past the cap.
+        const candidateUrls = this.extractOrderedImageUrlsFromHtml(html, sourceUrl, 20);
+        const interestingUrls = candidateUrls.filter(url => !this.isLikelyUninterestingImageUrl(url));
+        const orderedUrls = this.dropResizedImageUrlsWithOriginal(interestingUrls);
+
+        // What the extraction prompt already saw: identities carried by the
+        // ocrResults handed to the AI. Those images were offered and judged —
+        // re-reading them cannot change the outcome.
+        const offeredIdentities = new Set(
+            (Array.isArray(ocrResults) ? ocrResults : [])
+                .map(ocr => this.stripSizeParams(this.normalizeHttpUrlValue(ocr && ocr.url)))
+                .filter(Boolean)
+        );
+
+        const seenIdentities = new Set();
+        const targets = [];
+        for (const rawUrl of orderedUrls) {
+            const url = this.normalizeHttpUrlValue(rawUrl);
+            if (!url) continue;
+            if (this.isIconScaleImageRendition(url)) continue;
+            if (this.getPlaceholderImageReason(url)) continue;
+            const identity = this.stripSizeParams(url) || url;
+            if (seenIdentities.has(identity) || offeredIdentities.has(identity)) continue;
+            seenIdentities.add(identity);
+            targets.push(url);
+            if (targets.length >= this.singlePageOcrTopUpMaxImages) break;
+        }
+        if (targets.length === 0) return event;
+
+        console.log(`🤖 AI Web: Single-page OCR top-up reading ${targets.length} image(s) beyond the cap for imageless event "${event.title || ''}" (bound ${this.singlePageOcrTopUpMaxImages})`);
+        const rawResults = await this.mapWithConcurrencyLimit(targets, ocrConfig.maxConcurrentRequests || 1, url =>
+            this.getOcrTextForImage(url, ocrConfig, 'ocr-topup', httpAdapter).catch(() => null)
+        );
+        for (const rawResult of rawResults) {
+            const normalized = this.normalizeOcrResult(rawResult);
+            if (!normalized) continue;
+            // Same seam-level verdict recording as the segment top-up:
+            // idempotent with the inner recording, and it is what the
+            // adoption test below and rejectNonEventImageValues consult.
+            this.recordOcrImageVerdict(normalized.url, normalized);
+            if (!normalized.text || normalized.text.trim().length === 0) continue;
+            if (Array.isArray(ocrResults)) ocrResults.push(normalized);
+        }
+
+        for (const url of targets) {
+            const verdict = this.getOcrImageVerdict(url);
+            if (!verdict || verdict.classification !== 'event-flyer' || !verdict.hasText) continue;
+            event.image = url;
+            console.log(`🤖 AI Web: Single-page OCR top-up adopted event flyer ${url} for "${event.title || ''}"`);
+            // Same companions the normalize pipeline gives every image value:
+            // a provenance stamp and an orientation-slot pass over the final
+            // value (both fail open and are idempotent on re-run).
+            this.stampImageProvenance(event, htmlData);
+            this.applyImageSlots(event, htmlData, { allowPageMetaCandidates: true });
+            break;
+        }
+        return event;
     }
 
     // Every image URL a segment's prompt could emit as a SEGMENT_IMAGE_HINT_URL

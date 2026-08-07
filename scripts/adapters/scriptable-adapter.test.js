@@ -7415,3 +7415,165 @@ test('generateRichHTML puts the truncation banner above everything else on the p
   assert.ok(bannerIndex < headerIndex,
     'above the header: the header scrolls away and the stat tiles below read like a finished run');
 });
+
+// ---------------------------------------------------------------------------
+// Transient HTTP statuses on the POST paths: a 503 the AI server answered
+// with (model loading, busy) is a failure the retry ladder exists for — it
+// must THROW from inside the resilience-wrapped attempt with the status
+// stamped, while 4xx client rejections keep the {ok:false} return shape.
+// ---------------------------------------------------------------------------
+
+test('postJson: a 503 the AI server answered with engages the retry ladder and succeeds on attempt 2', async () => {
+  const adapter = buildAdapter();
+  let attempts = 0;
+  const slept = [];
+  adapter.sleepForNetworkRetry = async (ms) => { slept.push(ms); };
+  global.Request = class {
+    constructor() { this.response = null; }
+    async loadString() {
+      attempts += 1;
+      if (attempts === 1) {
+        this.response = { statusCode: 503 };
+        return '{"error":"model is loading"}';
+      }
+      this.response = { statusCode: 200 };
+      return '{"choices":[{"message":{"content":"ok"}}]}';
+    }
+  };
+  try {
+    const response = await adapter.postJson('http://rybook.example:8001/v1/chat/completions', { prompt: 'x' });
+    assert.equal(response.ok, true, 'the retried attempt came back as an ordinary success');
+    assert.equal(response.status, 200);
+  } finally {
+    delete global.Request;
+  }
+  assert.equal(attempts, 2, 'the 503 threw into the ladder and a second attempt went out');
+  assert.deepEqual(slept, [5000], 'exactly one ladder wait — the first rung');
+});
+
+// Behavior guard (passes before and after the fix): genuine client
+// rejections keep the return shape every caller already branches on.
+test('postJson: a 400 client rejection keeps the {ok:false} return shape with zero retries', async () => {
+  const adapter = buildAdapter();
+  let attempts = 0;
+  const slept = [];
+  adapter.sleepForNetworkRetry = async (ms) => { slept.push(ms); };
+  global.Request = class {
+    constructor() { this.response = null; }
+    async loadString() {
+      attempts += 1;
+      this.response = { statusCode: 400 };
+      return 'bad request';
+    }
+  };
+  try {
+    const response = await adapter.postJson('http://rybook.example:8001/v1/chat/completions', { prompt: 'x' });
+    assert.deepEqual(response, { ok: false, status: 400, text: 'bad request' },
+      'callers that log the error body still get it');
+  } finally {
+    delete global.Request;
+  }
+  assert.equal(attempts, 1, 'a permanent rejection never buys a retry');
+  assert.deepEqual(slept, [], 'and never a millisecond of waiting');
+});
+
+test('postJson: a sustained 503 exhausts the ladder into the existing stop semantics, never into give-up', async () => {
+  const adapter = buildAdapter();
+  let attempts = 0;
+  const slept = [];
+  adapter.sleepForNetworkRetry = async (ms) => { slept.push(ms); };
+  global.Request = class {
+    constructor() { this.response = null; }
+    async loadString() {
+      attempts += 1;
+      this.response = { statusCode: 503 };
+      return 'busy';
+    }
+  };
+  try {
+    await assert.rejects(
+      adapter.postJson('http://rybook.example:8001/v1/chat/completions', { prompt: 'x' }),
+      (error) => error.statusCode === 503 && /HTTP\s+503/.test(error.message)
+    );
+    assert.equal(attempts, 6, 'first attempt plus all five ladder rungs');
+    assert.deepEqual(slept, [5000, 15000, 30000, 60000, 90000], 'the whole #1643 ladder, unchanged');
+    assert.equal(adapter.getNetworkResilience().isGivenUp(), false,
+      'the server ANSWERED every time — a 503 storm is proof the network is up, never a give-up');
+    // Existing exhaustion semantics take over: the host burned its budget,
+    // so the next call to it gets one attempt and no waiting.
+    slept.length = 0;
+    const attemptsBefore = attempts;
+    await assert.rejects(adapter.postJson('http://rybook.example:8001/v1/chat/completions', { prompt: 'x' }));
+    assert.equal(attempts - attemptsBefore, 1, 'exhausted host: one attempt');
+    assert.deepEqual(slept, [], 'exhausted host: no waiting');
+  } finally {
+    delete global.Request;
+  }
+});
+
+test('postForm: a 503 month feed rides the same ladder as postJson and recovers', async () => {
+  const adapter = buildAdapter();
+  let attempts = 0;
+  const slept = [];
+  adapter.sleepForNetworkRetry = async (ms) => { slept.push(ms); };
+  global.Request = class {
+    constructor() { this.response = null; }
+    async loadString() {
+      attempts += 1;
+      if (attempts === 1) {
+        this.response = { statusCode: 502 };
+        return 'bad gateway';
+      }
+      this.response = { statusCode: 200 };
+      return '{"month":"<div></div>"}';
+    }
+  };
+  try {
+    const response = await adapter.postForm('https://venue.example/wp-admin/admin-ajax.php', 'action=x');
+    assert.equal(response.ok, true);
+  } finally {
+    delete global.Request;
+  }
+  assert.equal(attempts, 2, 'the 502 threw into the ladder and the retry landed');
+  assert.deepEqual(slept, [5000], 'same ladder, same first rung');
+});
+
+// The Node-side mirror: WebAdapter has no ladder of its own, but the two POST
+// methods must keep ONE contract across platforms — transient statuses throw
+// with the status stamped (callers catch and degrade exactly as they do when
+// the Scriptable ladder exhausts), client rejections keep {ok:false}.
+test('WebAdapter.postJson mirrors the contract: 503 throws with the status stamped, 400 keeps {ok:false}', async () => {
+  const { WebAdapter } = require('./web-adapter');
+  const adapter = new WebAdapter({ cities: {} });
+  const originalFetch = global.fetch;
+  try {
+    global.fetch = async () => ({ ok: false, status: 503, text: async () => 'busy' });
+    await assert.rejects(
+      adapter.postJson('http://rybook.example:8000/v1/chat/completions', { prompt: 'x' }),
+      (error) => error.statusCode === 503 && /HTTP\s+503/.test(error.message)
+    );
+    global.fetch = async () => ({ ok: false, status: 400, text: async () => 'bad request' });
+    const rejected = await adapter.postJson('http://rybook.example:8000/v1/chat/completions', { prompt: 'x' });
+    assert.deepEqual(rejected, { ok: false, status: 400, text: 'bad request' });
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test('WebAdapter.postForm mirrors the contract too: 5xx throws stamped, 4xx keeps {ok:false}', async () => {
+  const { WebAdapter } = require('./web-adapter');
+  const adapter = new WebAdapter({ cities: {} });
+  const originalFetch = global.fetch;
+  try {
+    global.fetch = async () => ({ ok: false, status: 500, text: async () => 'server error' });
+    await assert.rejects(
+      adapter.postForm('https://venue.example/wp-admin/admin-ajax.php', 'action=x'),
+      (error) => error.statusCode === 500 && /HTTP\s+500/.test(error.message)
+    );
+    global.fetch = async () => ({ ok: false, status: 404, text: async () => 'no such action' });
+    const rejected = await adapter.postForm('https://venue.example/wp-admin/admin-ajax.php', 'action=x');
+    assert.deepEqual(rejected, { ok: false, status: 404, text: 'no such action' });
+  } finally {
+    global.fetch = originalFetch;
+  }
+});

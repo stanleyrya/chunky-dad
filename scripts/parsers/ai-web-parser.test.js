@@ -13701,3 +13701,111 @@ test('applyDerivedCadenceStamps: different venues never share a group, and undat
     assert.equal(record.recurrenceRule, 'FREQ=WEEKLY;BYDAY=WE', 'the dated group still stamps normally');
   }
 });
+
+// ---------------------------------------------------------------------------
+// Single-page OCR top-up (ensureSinglePageImageCoverage): a poster sitting
+// past the capped page-level OCR pass on a single-event page gets a bounded
+// second look when the extracted event came out imageless.
+// ---------------------------------------------------------------------------
+
+function buildSinglePageTopUpFixture() {
+  const sourceUrl = 'https://fixture-eagle.example/events/bear-night/';
+  const html = [
+    '<img src="https://fixture-eagle.example/wp-content/uploads/first-square.jpg" />',
+    '<img src="https://fixture-eagle.example/wp-content/uploads/second-photo.jpg" />',
+    '<img src="https://fixture-eagle.example/wp-content/uploads/main-poster.jpg" />',
+    '<img src="https://fixture-eagle.example/wp-content/uploads/fourth-mural.jpg" />'
+  ].join('\n');
+  // The capped pass (maxImages 2) read the first two images already.
+  const ocrResults = [
+    { url: 'https://fixture-eagle.example/wp-content/uploads/first-square.jpg', text: 'happy hour daily', imageClassification: 'hero-banner' },
+    { url: 'https://fixture-eagle.example/wp-content/uploads/second-photo.jpg', text: 'patio view', imageClassification: 'hero-banner' }
+  ];
+  return { sourceUrl, htmlData: { html, url: sourceUrl }, ocrResults };
+}
+
+test('single-page top-up: the position-3 poster the cap skipped is OCR d once and becomes the event image', async () => {
+  const parser = createParser();
+  const { htmlData, ocrResults } = buildSinglePageTopUpFixture();
+  const ocrCalls = [];
+  parser.getOcrTextForImage = async (url) => {
+    ocrCalls.push(url);
+    if (url.includes('main-poster')) {
+      return { url, text: 'BEAR NIGHT SATURDAY 9PM FIXTURE EAGLE', imageClassification: 'event-flyer' };
+    }
+    return { url, text: '', imageClassification: 'hero-banner' };
+  };
+  const event = { title: 'BEAR NIGHT' };
+  await parser.ensureSinglePageImageCoverage(event, htmlData, {}, ocrResults, null);
+  assert.equal(event.image, 'https://fixture-eagle.example/wp-content/uploads/main-poster.jpg',
+    'the poster the capped pass never reached is now the event image');
+  assert.equal(ocrCalls.filter((url) => url.includes('main-poster')).length, 1, 'the poster was OCR d exactly once');
+  assert.ok(!ocrCalls.some((url) => url.includes('first-square') || url.includes('second-photo')),
+    'identities the extraction prompt already saw are never re-read');
+  assert.ok(ocrResults.some((r) => r.url.includes('main-poster')),
+    'the poster text joined the OCR results, so it is offerable downstream');
+});
+
+test('single-page top-up: an event that already has an image costs zero OCR calls', async () => {
+  const parser = createParser();
+  const { htmlData, ocrResults } = buildSinglePageTopUpFixture();
+  let ocrCalls = 0;
+  parser.getOcrTextForImage = async () => { ocrCalls += 1; return null; };
+  const event = { title: 'BEAR NIGHT', image: 'https://fixture-eagle.example/wp-content/uploads/first-square.jpg' };
+  await parser.ensureSinglePageImageCoverage(event, htmlData, {}, ocrResults, null);
+  assert.equal(ocrCalls, 0, 'nothing to rescue, nothing spent');
+});
+
+test('single-page top-up: never adopts without a POSITIVE event-flyer verdict, and never on the whole-page fallback', async () => {
+  const parser = createParser();
+  const { htmlData, ocrResults } = buildSinglePageTopUpFixture();
+  parser.getOcrTextForImage = async (url) => ({ url, text: '', imageClassification: 'hero-banner' });
+  const event = { title: 'BEAR NIGHT' };
+  await parser.ensureSinglePageImageCoverage(event, htmlData, {}, ocrResults.slice(), null);
+  assert.equal(event.image, undefined, 'furniture verdicts fill nothing — no fail-open adoption');
+
+  let fallbackCalls = 0;
+  parser.getOcrTextForImage = async (url) => { fallbackCalls += 1; return { url, text: 'SIBLING EVENT', imageClassification: 'event-flyer' }; };
+  const fallbackEvent = { title: 'WHITE CENTER' };
+  await parser.ensureSinglePageImageCoverage(
+    fallbackEvent, { ...htmlData, _wholePageFallback: true }, {}, ocrResults.slice(), null);
+  assert.equal(fallbackCalls, 0, 'a multi-event page extracted whole never runs the top-up');
+  assert.equal(fallbackEvent.image, undefined, 'so a sibling flyer can never be adopted');
+});
+
+test('single-page top-up: the +4 bound is respected and OCR-off disables the pass', async () => {
+  const parser = createParser();
+  const sourceUrl = 'https://fixture-eagle.example/events/busy-page/';
+  const imageTags = [];
+  for (let i = 1; i <= 10; i++) {
+    imageTags.push(`<img src="https://fixture-eagle.example/wp-content/uploads/candidate-${i}.jpg" />`);
+  }
+  const htmlData = { html: imageTags.join('\n'), url: sourceUrl };
+  const ocrCalls = [];
+  parser.getOcrTextForImage = async (url) => { ocrCalls.push(url); return { url, text: '', imageClassification: 'hero-banner' }; };
+  const event = { title: 'BUSY NIGHT' };
+  await parser.ensureSinglePageImageCoverage(event, htmlData, {}, [], null);
+  assert.equal(ocrCalls.length, parser.singlePageOcrTopUpMaxImages, 'the top-up reads at most its bound');
+  assert.deepEqual(ocrCalls, [1, 2, 3, 4].map((i) => `https://fixture-eagle.example/wp-content/uploads/candidate-${i}.jpg`),
+    'candidates are taken in page order');
+
+  ocrCalls.length = 0;
+  await parser.ensureSinglePageImageCoverage(
+    { title: 'BUSY NIGHT' }, htmlData, { ai: { ocr: { enabled: false } } }, [], null);
+  assert.equal(ocrCalls.length, 0, 'OCR off means no top-up either');
+});
+
+// Behavior guard (passes before and after the top-up): an explicitly
+// configured ocr.maxImages still caps the page-level pass exactly as before —
+// the top-up is a separate, conditional mechanism.
+test('single-page top-up: explicit ocr.maxImages still caps the page-level pass exactly as configured', async () => {
+  const parser = createParser();
+  const { htmlData } = buildSinglePageTopUpFixture();
+  const ocrCalls = [];
+  parser.getOcrTextForImage = async (url) => { ocrCalls.push(url); return { url, text: 'text', imageClassification: 'event-flyer' }; };
+  const parserConfig = { ai: { ocr: { maxImages: 3 } } };
+  const ocrConfig = parser.getOcrConfig(parserConfig);
+  assert.equal(ocrConfig.maxImages, 3, 'the clamp and default are untouched');
+  await parser.extractOcrFromAllImages(htmlData, ocrConfig, null, ocrConfig.maxImages);
+  assert.equal(ocrCalls.length, 3, 'the capped pass reads exactly the configured number of images');
+});

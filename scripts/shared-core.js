@@ -5136,6 +5136,17 @@ class SharedCore {
         return statusCode === 410 || statusCode === 404;
     }
 
+    // The single list of TRANSIENT HTTP statuses (server overloaded/loading,
+    // rate limited, timed out at a proxy). Static + pure so the adapters can
+    // consult the SAME definition isRetryableFailure classifies stamped
+    // statuses against: a non-2xx POST response with one of these statuses
+    // must THROW from inside the resilience-wrapped attempt (engaging the
+    // #1643 ladder), while every other non-2xx keeps the {ok:false} return
+    // shape callers already branch on. One list, never a second classifier.
+    static isRetryableHttpStatus(statusCode) {
+        return [408, 425, 429, 500, 502, 503, 504].includes(statusCode);
+    }
+
     isRetryableFailure(error) {
         if (error && typeof error.retryable === 'boolean') {
             return error.retryable;
@@ -5152,7 +5163,7 @@ class SharedCore {
             ? error.statusCode
             : this.extractHttpStatusCodeFromError(error);
         if (typeof statusCode === 'number') {
-            return [408, 425, 429, 500, 502, 503, 504].includes(statusCode);
+            return SharedCore.isRetryableHttpStatus(statusCode);
         }
 
         const message = error && typeof error.message === 'string'
