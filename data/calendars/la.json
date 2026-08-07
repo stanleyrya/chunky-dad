@@ -22,164 +22,6 @@
   },
   "events": [
     {
-      "name": "CUBSCOUT",
-      "day": "Friday",
-      "time": "9PM-2AM",
-      "eventType": "monthly",
-      "recurring": true,
-      "recurrence": "FREQ=MONTHLY;BYDAY=1FR",
-      "coordinates": {
-        "lat": 34.0912127,
-        "lng": -118.2840632
-      },
-      "startDate": "2026-09-04T21:00:00",
-      "endDate": "2026-09-05T02:00:00",
-      "unprocessedDescription": "shortName: CUB-SCOUT\ntea: CubScout First Fridays 9pm $7\ncover\r: $7\nbar: Eagle LA\naddress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\ntimezone: America/Los_Angeles\nuid: cubscout-20260731T193113Z@chunky.dad\nimage: https://eaglela.com/wp-content/uploads/CubScout-generic.jpg\nwebsite: https://eaglela.com/events/cub-scout-3/\ninstagram: https://www.instagram.com/dirtybird_la\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
-      "startTimezone": "America/Los_Angeles",
-      "endTimezone": "America/Los_Angeles",
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": false,
-      "sourceUid": "cubscout-20260731T193113Z@chunky.dad",
-      "uid": "cubscout-20260731T193113Z@chunky.dad",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 2,
-      "overrideIdentityType": null,
-      "bar": "Eagle LA",
-      "cover": "$7",
-      "image": "https://eaglela.com/wp-content/uploads/CubScout-generic.jpg",
-      "tea": "CubScout First Fridays 9pm $7",
-      "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
-      "website": "https://eaglela.com/events/cub-scout-3/",
-      "instagram": "https://www.instagram.com/dirtybird_la",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
-      "shortName": "CUB-SCOUT",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglela.com/events/cub-scout-3/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/dirtybird_la",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "cubscout-4fdf801f"
-    },
-    {
-      "name": "MEGAWOOF",
-      "day": "Saturday",
-      "time": "9PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 33.87445400000001,
-        "lng": -118.1680614
-      },
-      "startDate": "2025-08-30T21:00:00",
-      "endDate": "2025-08-31T02:00:00",
-      "unprocessedDescription": "description: LONG BEACH — WE’RE BACK! \n The bears of MEGAWOOF \r\nreturn to close out the Summer Tour in you —\nSATURDAY, AUGUST 30th  and it’s all goin\nbar: Falcon North\naddress: 2020 East Artesia Boulevard, Long Beach, CA 90805\ntimezone: America/Los_Angeles\nurl: https://www.eventbrite.com/e/megawoof-america-bear-watchers-long-beach-tickets-1520432868639\nticketUrl: https://www.eventbrite.com/e/megawoof-america-bear-watchers-long-beach-tickets-1520432868639\ncover: $11.58 - $20 (as of 8/30)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1080748773%2F185013722403%2F1%2Foriginal.20250724-190615?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=6b2534b07c6687d67975f54c65af5b3a\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=33.87445400000001%2C-118.1680614&query_place_id=ChIJ91NzVy4z3YARBNuS8BZHBGg\nkey: megawoof|2025-08-31|falcon north|eventbrite",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "848D15A3-27B4-4F56-AAD0-9D7D66DD12A1",
-      "uid": "848D15A3-27B4-4F56-AAD0-9D7D66DD12A1",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Falcon North",
-      "cover": "$11.58 - $20 (as of 8/30)",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1080748773%2F185013722403%2F1%2Foriginal.20250724-190615?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=6b2534b07c6687d67975f54c65af5b3a",
-      "tea": "LONG BEACH — WE’RE BACK!",
-      "address": "2020 East Artesia Boulevard, Long Beach, CA 90805",
-      "website": "https://www.eventbrite.com/e/megawoof-america-bear-watchers-long-beach-tickets-1520432868639",
-      "instagram": "https://www.instagram.com/megawoof_america",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=33.87445400000001%2C-118.1680614&query_place_id=ChIJ91NzVy4z3YARBNuS8BZHBGg",
-      "ticketUrl": "https://www.eventbrite.com/e/megawoof-america-bear-watchers-long-beach-tickets-1520432868639",
-      "shortName": "MEGA-WOOF",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.eventbrite.com/e/megawoof-america-bear-watchers-long-beach-tickets-1520432868639",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/megawoof_america",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=33.87445400000001%2C-118.1680614&query_place_id=ChIJ91NzVy4z3YARBNuS8BZHBGg",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/megawoof-america-bear-watchers-long-beach-tickets-1520432868639",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "megawoof-6062add7"
-    },
-    {
-      "name": "MEGAWOOF",
-      "day": "Saturday",
-      "time": "10PM-5AM",
-      "eventType": "routine",
-      "recurring": false,
-      "startDate": "2025-10-25T22:00:00",
-      "endDate": "2025-10-26T05:00:00",
-      "unprocessedDescription": "description: D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY ED\rITION\ntimezone: America/Los_Angeles\nurl: https://linktr.ee/megawoof_america\nticketUrl: https://www.eventbrite.com/e/duro-megawoof-america-10-year-anniversary-edition-tickets-1688815666119\ncover: $22.10 - $39.98 (as of 10/1)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1121300433%2F185013722403%2F1%2Foriginal.20250911-154733?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=999820b38fc33236aa167ad0d4ea5f7a\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nkey: megawoof|2025-10-26||eventbrite",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "342C3C24-21CD-4149-8634-E60F5CB0A57A",
-      "uid": "342C3C24-21CD-4149-8634-E60F5CB0A57A",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "cover": "$22.10 - $39.98 (as of 10/1)",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1121300433%2F185013722403%2F1%2Foriginal.20250911-154733?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=999820b38fc33236aa167ad0d4ea5f7a",
-      "tea": "D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY EDITION",
-      "address": null,
-      "website": "https://linktr.ee/megawoof_america",
-      "instagram": "https://www.instagram.com/megawoof_america",
-      "ticketUrl": "https://www.eventbrite.com/e/duro-megawoof-america-10-year-anniversary-edition-tickets-1688815666119",
-      "shortName": "MEGA-WOOF",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://linktr.ee/megawoof_america",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/megawoof_america",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/duro-megawoof-america-10-year-anniversary-edition-tickets-1688815666119",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "megawoof-33341c08"
-    },
-    {
       "name": "CLUB CHUB: QUENCHD",
       "day": "Saturday",
       "time": "1PM-7PM",
@@ -237,148 +79,6 @@
         }
       ],
       "slug": "club-chub-quenchd-21628c63"
-    },
-    {
-      "name": "Bear Happy Hour",
-      "day": "Thursday",
-      "time": "5PM-9PM",
-      "eventType": "weekly",
-      "recurring": true,
-      "recurrence": "FREQ=WEEKLY",
-      "startDate": "2025-07-17T17:00:00",
-      "endDate": "2025-07-17T21:00:00",
-      "unprocessedDescription": "Bar: Check instagram for this week’s location.\nTea: Popular ha\rppy hour that changes location every week.\nShorter: BHH\nInstagram: https://www.instagram.com/bearhappyhourla\nWeb: https://linktr.ee/bearhappyhour",
-      "startTimezone": "America/Vancouver",
-      "endTimezone": "America/Vancouver",
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": false,
-      "sourceUid": "9vnvsm6kjpievu62279lco139k@google.com",
-      "uid": "9vnvsm6kjpievu62279lco139k@google.com",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Check instagram for this week’s location.",
-      "tea": "Popular happy hour that changes location every week.",
-      "address": null,
-      "website": "https://linktr.ee/bearhappyhour",
-      "instagram": "https://www.instagram.com/bearhappyhourla",
-      "shorterName": "BHH",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://linktr.ee/bearhappyhour",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearhappyhourla",
-          "label": "📷 Instagram"
-        }
-      ],
-      "slug": "bear-happy-hour-67a26f5d"
-    },
-    {
-      "name": "MEGAWOOF AMERICA - LONG BEACH PRIDE",
-      "day": "Saturday",
-      "time": "9PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 33.874454,
-        "lng": -118.1680614
-      },
-      "startDate": "2026-05-16T21:00:00",
-      "endDate": "2026-05-17T02:00:00",
-      "unprocessedDescription": "description: MEGAWOOF AMERICA - LONG BEACH PRIDE\nbar: Falcon N\rorth\naddress: 2020 East Artesia Boulevard, Long Beach, CA 90805\nticketUrl: https://www.eventbrite.com/e/megawoof-america-long-beach-pride-tickets-1986926425425\ninstagram: https://www.instagram.com/megawoof_america\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181624525%2F185013722403%2F1%2Foriginal.20260407-190035?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=251ea205299011add78dbf1d4b7fe8bd\ncover: $11.58-$22.09\nshortName: MEGA-WOOF\n_aiPrompts\\: [object Object],[object Object],[object Object]\n_aiValidation\\: [object Object]\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=Falcon%20North%2C%202020%20East%20Artesia%20Boulevard%2C%20Long%20Beach%2C%20CA%2090805\nkey: megawoof-america-long-beach-pride|2026-05-17|falcon north",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "F5435015-D350-4B57-8C02-6227EB96FDE1",
-      "uid": "F5435015-D350-4B57-8C02-6227EB96FDE1",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 1,
-      "overrideIdentityType": null,
-      "bar": "Falcon North",
-      "cover": "$11.58-$22.09",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181624525%2F185013722403%2F1%2Foriginal.20260407-190035?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=251ea205299011add78dbf1d4b7fe8bd",
-      "tea": "MEGAWOOF AMERICA - LONG BEACH PRIDE",
-      "address": "2020 East Artesia Boulevard, Long Beach, CA 90805",
-      "website": "https://linktr.ee/megawoof_america",
-      "instagram": "https://www.instagram.com/megawoof_america",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Falcon%20North%2C%202020%20East%20Artesia%20Boulevard%2C%20Long%20Beach%2C%20CA%2090805",
-      "ticketUrl": "https://www.eventbrite.com/e/megawoof-america-long-beach-pride-tickets-1986926425425",
-      "shortName": "MEGA-WOOF",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://linktr.ee/megawoof_america",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/megawoof_america",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Falcon%20North%2C%202020%20East%20Artesia%20Boulevard%2C%20Long%20Beach%2C%20CA%2090805",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/megawoof-america-long-beach-pride-tickets-1986926425425",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "megawoof-america-long-beach-pride-152ddd6b"
-    },
-    {
-      "name": "Club Chub",
-      "day": "Sunday",
-      "time": "3PM-9PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 34.0498043,
-        "lng": -118.2493258
-      },
-      "startDate": "2025-07-20T15:00:00",
-      "endDate": "2025-07-20T21:00:00",
-      "unprocessedDescription": "Bar: Precinct DTLA\nGoogle Maps: https://maps.app.goo.gl/pfwrr6\roMcbTvdFtx7?g_st=ipc\nInstagram: https://www.instagram.com/clubchubparty?igsh=MWxjZHprZnl6NWc0NQ==\naddress: 357 S Broadway, Los Angeles, CA 90013\naddressSource: inferred",
-      "startTimezone": "America/Los_Angeles",
-      "endTimezone": "America/Los_Angeles",
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": false,
-      "sourceUid": "44n2vcp54ehl3nlh4b3o61ndm0@google.com",
-      "uid": "44n2vcp54ehl3nlh4b3o61ndm0@google.com",
-      "recurrenceId": "2025-07-20T15:00:00",
-      "recurrenceIdTimezone": "America/Los_Angeles",
-      "sequence": 1,
-      "overrideIdentityType": "legacy",
-      "bar": "Precinct DTLA",
-      "address": "357 S Broadway, Los Angeles, CA 90013",
-      "website": null,
-      "instagram": "https://www.instagram.com/clubchubparty?igsh=MWxjZHprZnl6NWc0NQ==",
-      "gmaps": "https://maps.app.goo.gl/pfwrr6oMcbTvdFtx7?g_st=ipc",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/clubchubparty?igsh=MWxjZHprZnl6NWc0NQ==",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://maps.app.goo.gl/pfwrr6oMcbTvdFtx7?g_st=ipc",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "club-chub-0e67a66c"
     },
     {
       "name": "Club Chub DTLA - Latin Night",
@@ -441,48 +141,196 @@
       "slug": "club-chub-dtla-latin-night-190605ad"
     },
     {
-      "name": "Club Chub",
-      "day": "Sunday",
-      "time": "3PM-9PM",
+      "name": "CUBSCOUT",
+      "day": "Friday",
+      "time": "9PM-2AM",
       "eventType": "monthly",
       "recurring": true,
-      "recurrence": "FREQ=MONTHLY;BYDAY=3SU",
+      "recurrence": "FREQ=MONTHLY;BYDAY=1FR",
       "coordinates": {
-        "lat": 34.0498043,
-        "lng": -118.2493258
+        "lat": 34.0912127,
+        "lng": -118.2840632
       },
-      "startDate": "2025-07-20T15:00:00",
-      "endDate": "2025-07-20T21:00:00",
-      "unprocessedDescription": "Bar: Precinct DTLA\nGoogle Maps: https://maps.app.goo.gl/pfwrr6\roMcbTvdFtx7?g_st=ipc\nInstagram: https://www.instagram.com/clubchubparty?igsh=MWxjZHprZnl6NWc0NQ==",
+      "startDate": "2026-09-04T21:00:00",
+      "endDate": "2026-09-05T02:00:00",
+      "unprocessedDescription": "shortName: CUB-SCOUT\ntea: CubScout First Fridays 9pm $7\ncover\r: $7\nbar: Eagle LA\naddress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\ntimezone: America/Los_Angeles\nuid: cubscout-20260731T193113Z@chunky.dad\nimage: https://eaglela.com/wp-content/uploads/CubScout-generic.jpg\nwebsite: https://eaglela.com/events/cub-scout-3/\ninstagram: https://www.instagram.com/dirtybird_la\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
       "startTimezone": "America/Los_Angeles",
       "endTimezone": "America/Los_Angeles",
       "calendarTimezone": "America/Los_Angeles",
       "wasUTC": false,
-      "sourceUid": "44n2vcp54ehl3nlh4b3o61ndm0@google.com",
-      "uid": "44n2vcp54ehl3nlh4b3o61ndm0@google.com",
+      "sourceUid": "cubscout-20260731T193113Z@chunky.dad",
+      "uid": "cubscout-20260731T193113Z@chunky.dad",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
-      "sequence": 1,
+      "sequence": 2,
       "overrideIdentityType": null,
-      "bar": "Precinct DTLA",
-      "address": null,
-      "website": null,
-      "instagram": "https://www.instagram.com/clubchubparty?igsh=MWxjZHprZnl6NWc0NQ==",
-      "gmaps": "https://maps.app.goo.gl/pfwrr6oMcbTvdFtx7?g_st=ipc",
+      "bar": "Eagle LA",
+      "cover": "$7",
+      "image": "https://eaglela.com/wp-content/uploads/CubScout-generic.jpg",
+      "tea": "CubScout First Fridays 9pm $7",
+      "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
+      "website": "https://eaglela.com/events/cub-scout-3/",
+      "instagram": "https://www.instagram.com/dirtybird_la",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+      "shortName": "CUB-SCOUT",
       "bearReview": null,
       "links": [
         {
+          "type": "website",
+          "url": "https://eaglela.com/events/cub-scout-3/",
+          "label": "🌐 Website"
+        },
+        {
           "type": "instagram",
-          "url": "https://www.instagram.com/clubchubparty?igsh=MWxjZHprZnl6NWc0NQ==",
+          "url": "https://www.instagram.com/dirtybird_la",
           "label": "📷 Instagram"
         },
         {
           "type": "gmaps",
-          "url": "https://maps.app.goo.gl/pfwrr6oMcbTvdFtx7?g_st=ipc",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "club-chub-0e67a66c"
+      "slug": "cubscout-4fdf801f"
+    },
+    {
+      "name": "SUNDAY BEER BUST",
+      "day": "Sunday",
+      "time": "2PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 34.0912127,
+        "lng": -118.2840632
+      },
+      "startDate": "2026-08-09T14:00:00",
+      "unprocessedDescription": "bar: Eagle LA\naddress: 4219 Santa Monica Blvd, Los Angeles, \rCA 90029\ntimezone: America/Los_Angeles\nticketUrl: https://eaglela.com/events/sunday-beer-bust-4/\nimage: https://eaglela.com/wp-content/uploads/Sun-Beer-Bust-poster-2024-web-1.jpg\ncover: NO COVER\nimageVertical: https://eaglela.com/wp-content/uploads/Sun-Beer-Bust-poster-2024-web-1.jpg\naddressSource: curated\nwebsite: https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-08-09\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\npinSource: curated\ninstagram: dirtybird_la\nkey: sunday-beer-bust|2026-08-09|eagle la\ndescription: BEAR BUST\nBar Opens 2PM\nNO COVER\n5 DOMESTIC DRAFTS\nimageSource: og-image\nbarSource: venue-site\nbearSource: ai",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "CA8D02F4-CC9F-414D-913F-5E782016485D",
+      "uid": "CA8D02F4-CC9F-414D-913F-5E782016485D",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle LA",
+      "cover": "NO COVER",
+      "image": "https://eaglela.com/wp-content/uploads/Sun-Beer-Bust-poster-2024-web-1.jpg",
+      "imageVertical": "https://eaglela.com/wp-content/uploads/Sun-Beer-Bust-poster-2024-web-1.jpg",
+      "tea": "BEAR BUST",
+      "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
+      "website": "https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-08-09",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+      "ticketUrl": "https://eaglela.com/events/sunday-beer-bust-4/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-08-09",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://eaglela.com/events/sunday-beer-bust-4/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "sunday-beer-bust-64216cca"
+    },
+    {
+      "name": "MEGAWOOF",
+      "day": "Saturday",
+      "time": "10PM-5AM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2025-10-25T22:00:00",
+      "endDate": "2025-10-26T05:00:00",
+      "unprocessedDescription": "description: D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY ED\rITION\ntimezone: America/Los_Angeles\nurl: https://linktr.ee/megawoof_america\nticketUrl: https://www.eventbrite.com/e/duro-megawoof-america-10-year-anniversary-edition-tickets-1688815666119\ncover: $22.10 - $39.98 (as of 10/1)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1121300433%2F185013722403%2F1%2Foriginal.20250911-154733?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=999820b38fc33236aa167ad0d4ea5f7a\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nkey: megawoof|2025-10-26||eventbrite",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "342C3C24-21CD-4149-8634-E60F5CB0A57A",
+      "uid": "342C3C24-21CD-4149-8634-E60F5CB0A57A",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "cover": "$22.10 - $39.98 (as of 10/1)",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1121300433%2F185013722403%2F1%2Foriginal.20250911-154733?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=999820b38fc33236aa167ad0d4ea5f7a",
+      "tea": "D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY EDITION",
+      "address": null,
+      "website": "https://linktr.ee/megawoof_america",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "ticketUrl": "https://www.eventbrite.com/e/duro-megawoof-america-10-year-anniversary-edition-tickets-1688815666119",
+      "shortName": "MEGA-WOOF",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/megawoof_america",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/megawoof_america",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/duro-megawoof-america-10-year-anniversary-edition-tickets-1688815666119",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "megawoof-33341c08"
+    },
+    {
+      "name": "Bear Happy Hour",
+      "day": "Thursday",
+      "time": "5PM-9PM",
+      "eventType": "weekly",
+      "recurring": true,
+      "recurrence": "FREQ=WEEKLY",
+      "startDate": "2025-07-17T17:00:00",
+      "endDate": "2025-07-17T21:00:00",
+      "unprocessedDescription": "Bar: Check instagram for this week’s location.\nTea: Popular ha\rppy hour that changes location every week.\nShorter: BHH\nInstagram: https://www.instagram.com/bearhappyhourla\nWeb: https://linktr.ee/bearhappyhour",
+      "startTimezone": "America/Vancouver",
+      "endTimezone": "America/Vancouver",
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": false,
+      "sourceUid": "9vnvsm6kjpievu62279lco139k@google.com",
+      "uid": "9vnvsm6kjpievu62279lco139k@google.com",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Check instagram for this week’s location.",
+      "tea": "Popular happy hour that changes location every week.",
+      "address": null,
+      "website": "https://linktr.ee/bearhappyhour",
+      "instagram": "https://www.instagram.com/bearhappyhourla",
+      "shorterName": "BHH",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/bearhappyhour",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearhappyhourla",
+          "label": "📷 Instagram"
+        }
+      ],
+      "slug": "bear-happy-hour-67a26f5d"
     },
     {
       "name": "MEGAWOOF PRIDE - FREE - JUNE 6th FREE TKTS @The Globe",
@@ -541,6 +389,315 @@
         }
       ],
       "slug": "megawoof-pride-free-june-6th-free-tkts-the-globe-0bb27076"
+    },
+    {
+      "name": "Bear Happy Hour",
+      "day": "Thursday",
+      "time": "5PM-9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "recurrence": null,
+      "coordinates": {
+        "lat": 34.0912127,
+        "lng": -118.2840632
+      },
+      "startDate": "2026-08-06T17:00:00",
+      "endDate": "2026-08-06T21:00:00",
+      "unprocessedDescription": "bar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/BH\rH-IG.png\nwebsite: https://eaglela.com/events/bear-happy-hour-2/\ntimezone: America/Los_Angeles\naddress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\nshortName: BHH\nshorterName: BHH\nfavicon: https://linktr.ee/bearhappyhour\nkey: bear-happy-hour|2026-08-07|eagle la\nticketUrl: https://eaglela.com/events/bear-happy-hour-2/?occurrence=2026-08-06\nbearSource: keyword\noverrideUid: 9vnvsm6kjpievu62279lco139k@google.com\noverrideRecurrenceId: 20260807T000000Z\ndescription: Bear Happy Hour First Thursdays 5pm\ninstagram: https://www.instagram.com/bearhappyhourla\npinSource: curated\naddressSource: curated\nimageSource: og-image\nbarSource: venue-site\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "7696C0F2-5708-44C9-9AFC-49CC0BDBF0F4",
+      "uid": "9vnvsm6kjpievu62279lco139k@google.com",
+      "recurrenceId": "2026-08-06T17:00:00",
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": "custom",
+      "bar": "Eagle LA",
+      "image": "https://eaglela.com/wp-content/uploads/BHH-IG.png",
+      "favicon": "https://linktr.ee/bearhappyhour",
+      "tea": "Bear Happy Hour First Thursdays 5pm",
+      "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
+      "website": "https://eaglela.com/events/bear-happy-hour-2/",
+      "instagram": "https://www.instagram.com/bearhappyhourla",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+      "ticketUrl": "https://eaglela.com/events/bear-happy-hour-2/?occurrence=2026-08-06",
+      "shortName": "BHH",
+      "shorterName": "BHH",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglela.com/events/bear-happy-hour-2/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearhappyhourla",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://eaglela.com/events/bear-happy-hour-2/?occurrence=2026-08-06",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bear-happy-hour-14140597"
+    },
+    {
+      "name": "MEGAWOOF",
+      "day": "Saturday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 33.87445400000001,
+        "lng": -118.1680614
+      },
+      "startDate": "2025-08-30T21:00:00",
+      "endDate": "2025-08-31T02:00:00",
+      "unprocessedDescription": "description: LONG BEACH — WE’RE BACK! \n The bears of MEGAWOOF \r\nreturn to close out the Summer Tour in you —\nSATURDAY, AUGUST 30th  and it’s all goin\nbar: Falcon North\naddress: 2020 East Artesia Boulevard, Long Beach, CA 90805\ntimezone: America/Los_Angeles\nurl: https://www.eventbrite.com/e/megawoof-america-bear-watchers-long-beach-tickets-1520432868639\nticketUrl: https://www.eventbrite.com/e/megawoof-america-bear-watchers-long-beach-tickets-1520432868639\ncover: $11.58 - $20 (as of 8/30)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1080748773%2F185013722403%2F1%2Foriginal.20250724-190615?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=6b2534b07c6687d67975f54c65af5b3a\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=33.87445400000001%2C-118.1680614&query_place_id=ChIJ91NzVy4z3YARBNuS8BZHBGg\nkey: megawoof|2025-08-31|falcon north|eventbrite",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "848D15A3-27B4-4F56-AAD0-9D7D66DD12A1",
+      "uid": "848D15A3-27B4-4F56-AAD0-9D7D66DD12A1",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Falcon North",
+      "cover": "$11.58 - $20 (as of 8/30)",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1080748773%2F185013722403%2F1%2Foriginal.20250724-190615?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=6b2534b07c6687d67975f54c65af5b3a",
+      "tea": "LONG BEACH — WE’RE BACK!",
+      "address": "2020 East Artesia Boulevard, Long Beach, CA 90805",
+      "website": "https://www.eventbrite.com/e/megawoof-america-bear-watchers-long-beach-tickets-1520432868639",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=33.87445400000001%2C-118.1680614&query_place_id=ChIJ91NzVy4z3YARBNuS8BZHBGg",
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-america-bear-watchers-long-beach-tickets-1520432868639",
+      "shortName": "MEGA-WOOF",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.eventbrite.com/e/megawoof-america-bear-watchers-long-beach-tickets-1520432868639",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/megawoof_america",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=33.87445400000001%2C-118.1680614&query_place_id=ChIJ91NzVy4z3YARBNuS8BZHBGg",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/megawoof-america-bear-watchers-long-beach-tickets-1520432868639",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "megawoof-6062add7"
+    },
+    {
+      "name": "Club Chub",
+      "day": "Sunday",
+      "time": "3PM-9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 34.0498043,
+        "lng": -118.2493258
+      },
+      "startDate": "2025-07-20T15:00:00",
+      "endDate": "2025-07-20T21:00:00",
+      "unprocessedDescription": "Bar: Precinct DTLA\nGoogle Maps: https://maps.app.goo.gl/pfwrr6\roMcbTvdFtx7?g_st=ipc\nInstagram: https://www.instagram.com/clubchubparty?igsh=MWxjZHprZnl6NWc0NQ==\naddress: 357 S Broadway, Los Angeles, CA 90013\naddressSource: inferred",
+      "startTimezone": "America/Los_Angeles",
+      "endTimezone": "America/Los_Angeles",
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": false,
+      "sourceUid": "44n2vcp54ehl3nlh4b3o61ndm0@google.com",
+      "uid": "44n2vcp54ehl3nlh4b3o61ndm0@google.com",
+      "recurrenceId": "2025-07-20T15:00:00",
+      "recurrenceIdTimezone": "America/Los_Angeles",
+      "sequence": 1,
+      "overrideIdentityType": "legacy",
+      "bar": "Precinct DTLA",
+      "address": "357 S Broadway, Los Angeles, CA 90013",
+      "website": null,
+      "instagram": "https://www.instagram.com/clubchubparty?igsh=MWxjZHprZnl6NWc0NQ==",
+      "gmaps": "https://maps.app.goo.gl/pfwrr6oMcbTvdFtx7?g_st=ipc",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/clubchubparty?igsh=MWxjZHprZnl6NWc0NQ==",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://maps.app.goo.gl/pfwrr6oMcbTvdFtx7?g_st=ipc",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "club-chub-0e67a66c"
+    },
+    {
+      "name": "MEAT RACK",
+      "day": "Saturday",
+      "time": "8PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 34.0912127,
+        "lng": -118.2840632
+      },
+      "startDate": "2026-08-08T20:00:00",
+      "endDate": "2026-08-09T02:00:00",
+      "unprocessedDescription": "description: Meat Rack Aug 8 8pm $8\nbar: Eagle LA\naddress: 42\r19 Santa Monica Blvd, Los Angeles, CA 90029\ntimezone: America/Los_Angeles\nimage: https://eaglela.com/wp-content/uploads/IG_M_Rack-poster-8_8_26-square.jpg\ncover: $8\nimageVertical: https://eaglela.com/wp-content/uploads/M_Rack-poster-8_8_26-web-1.jpg\naddressSource: curated\nwebsite: https://eaglela.com/events/meat-rack-102/\ngmaps: https://www.google.com/maps/search/?api=1&query=34.0912127%2C-118.2840632\npinSource: curated\ninstagram: dirtybird_la\nkey: meat-rack|2026-08-09|eagle la\nimageSource: og-image\nbarSource: venue-site\nbearSource: manual-bear (overrode ai\\: The title 'MEAT RACK' and description 'Meat Rack Aug 8 8pm $8' contain no bea...)",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "898799F0-F844-4DEA-BCC5-D24EC2661DD3",
+      "uid": "898799F0-F844-4DEA-BCC5-D24EC2661DD3",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle LA",
+      "cover": "$8",
+      "image": "https://eaglela.com/wp-content/uploads/IG_M_Rack-poster-8_8_26-square.jpg",
+      "imageVertical": "https://eaglela.com/wp-content/uploads/M_Rack-poster-8_8_26-web-1.jpg",
+      "tea": "Meat Rack Aug 8 8pm $8",
+      "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
+      "website": "https://eaglela.com/events/meat-rack-102/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=34.0912127%2C-118.2840632",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglela.com/events/meat-rack-102/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=34.0912127%2C-118.2840632",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "meat-rack-5a8ef73f"
+    },
+    {
+      "name": "Club Chub",
+      "day": "Sunday",
+      "time": "3PM-9PM",
+      "eventType": "monthly",
+      "recurring": true,
+      "recurrence": "FREQ=MONTHLY;BYDAY=3SU",
+      "coordinates": {
+        "lat": 34.0498043,
+        "lng": -118.2493258
+      },
+      "startDate": "2025-07-20T15:00:00",
+      "endDate": "2025-07-20T21:00:00",
+      "unprocessedDescription": "Bar: Precinct DTLA\nGoogle Maps: https://maps.app.goo.gl/pfwrr6\roMcbTvdFtx7?g_st=ipc\nInstagram: https://www.instagram.com/clubchubparty?igsh=MWxjZHprZnl6NWc0NQ==",
+      "startTimezone": "America/Los_Angeles",
+      "endTimezone": "America/Los_Angeles",
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": false,
+      "sourceUid": "44n2vcp54ehl3nlh4b3o61ndm0@google.com",
+      "uid": "44n2vcp54ehl3nlh4b3o61ndm0@google.com",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 1,
+      "overrideIdentityType": null,
+      "bar": "Precinct DTLA",
+      "address": null,
+      "website": null,
+      "instagram": "https://www.instagram.com/clubchubparty?igsh=MWxjZHprZnl6NWc0NQ==",
+      "gmaps": "https://maps.app.goo.gl/pfwrr6oMcbTvdFtx7?g_st=ipc",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/clubchubparty?igsh=MWxjZHprZnl6NWc0NQ==",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://maps.app.goo.gl/pfwrr6oMcbTvdFtx7?g_st=ipc",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "club-chub-0e67a66c"
+    },
+    {
+      "name": "MEGAWOOF AMERICA - LONG BEACH PRIDE",
+      "day": "Saturday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 33.874454,
+        "lng": -118.1680614
+      },
+      "startDate": "2026-05-16T21:00:00",
+      "endDate": "2026-05-17T02:00:00",
+      "unprocessedDescription": "description: MEGAWOOF AMERICA - LONG BEACH PRIDE\nbar: Falcon N\rorth\naddress: 2020 East Artesia Boulevard, Long Beach, CA 90805\nticketUrl: https://www.eventbrite.com/e/megawoof-america-long-beach-pride-tickets-1986926425425\ninstagram: https://www.instagram.com/megawoof_america\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181624525%2F185013722403%2F1%2Foriginal.20260407-190035?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=251ea205299011add78dbf1d4b7fe8bd\ncover: $11.58-$22.09\nshortName: MEGA-WOOF\n_aiPrompts\\: [object Object],[object Object],[object Object]\n_aiValidation\\: [object Object]\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=Falcon%20North%2C%202020%20East%20Artesia%20Boulevard%2C%20Long%20Beach%2C%20CA%2090805\nkey: megawoof-america-long-beach-pride|2026-05-17|falcon north",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "F5435015-D350-4B57-8C02-6227EB96FDE1",
+      "uid": "F5435015-D350-4B57-8C02-6227EB96FDE1",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 1,
+      "overrideIdentityType": null,
+      "bar": "Falcon North",
+      "cover": "$11.58-$22.09",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181624525%2F185013722403%2F1%2Foriginal.20260407-190035?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=251ea205299011add78dbf1d4b7fe8bd",
+      "tea": "MEGAWOOF AMERICA - LONG BEACH PRIDE",
+      "address": "2020 East Artesia Boulevard, Long Beach, CA 90805",
+      "website": "https://linktr.ee/megawoof_america",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Falcon%20North%2C%202020%20East%20Artesia%20Boulevard%2C%20Long%20Beach%2C%20CA%2090805",
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-america-long-beach-pride-tickets-1986926425425",
+      "shortName": "MEGA-WOOF",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/megawoof_america",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/megawoof_america",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Falcon%20North%2C%202020%20East%20Artesia%20Boulevard%2C%20Long%20Beach%2C%20CA%2090805",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/megawoof-america-long-beach-pride-tickets-1986926425425",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "megawoof-america-long-beach-pride-152ddd6b"
     },
     {
       "name": "MEGAWOOF",
