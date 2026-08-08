@@ -34,9 +34,185 @@ DTSTART:19700101T000000
 END:STANDARD
 END:VTIMEZONE
 BEGIN:VEVENT
+DTSTART:20260607T040000Z
+DTEND:20260607T090000Z
+DTSTAMP:20260808T010847Z
+UID:FC6AD30A-ABEE-4135-91A0-18E30D96674D
+CREATED:20260512T171311Z
+DESCRIPTION:description: MEGAWOOF PRIDE - FIRST 200 TICKETS FREE -\nbar: Th
+ e Globe\naddress: 740 South Broadway\, Los Angeles\, CA 90014\nticketUrl: h
+ ttps://www.eventbrite.com/e/megawoof-pride-free-june-6th-free-tkts-the-glob
+ e-tickets-1987743346859\ninstagram: https://www.instagram.com/megawoof_amer
+ ica\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F11
+ 83615730%2F185013722403%2F1%2Foriginal.20260503-000457?crop=focalpoint&fit=
+ crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=bffadc8
+ 0cfbaa15ecbe0f81f67bae150\ncover: FREE\nshortName: MEGA-WOOF\n_aiPrompts\\:
+  [object Object]\,[object Object]\n_aiValidation\\: [object Object]\nwebsit
+ e: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/s
+ earch/?api=1&query=The%20Globe%2C%20740%20South%20Broadway%2C%20Los%20Angel
+ es%2C%20CA%2090014\nkey: megawoof-pride-free-june-6th-free-tkts-the-globe|2
+ 026-06-07|the globe
+LAST-MODIFIED:20260514T005410Z
+LOCATION:34.044092\,-118.2542355
+SEQUENCE:1
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF PRIDE - FREE - JUNE 6th FREE TKTS @The Globe
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/Vancouver:20250717T170000
+DTEND;TZID=America/Vancouver:20250717T210000
+RRULE:FREQ=WEEKLY
+DTSTAMP:20260808T010847Z
+UID:9vnvsm6kjpievu62279lco139k@google.com
+CREATED:20250715T045103Z
+DESCRIPTION:Bar: Check instagram for this week’s location.\nTea: Popular ha
+ ppy hour that changes location every week.\nShorter: BHH\nInstagram: https:
+ //www.instagram.com/bearhappyhourla\nWeb: https://linktr.ee/bearhappyhour
+LAST-MODIFIED:20251012T161157Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Happy Hour
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260807T000000Z
+DTEND:20260807T040000Z
+DTSTAMP:20260808T010847Z
+UID:7696C0F2-5708-44C9-9AFC-49CC0BDBF0F4
+CREATED:20260807T164824Z
+DESCRIPTION:bar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/BH
+ H-IG.png\nwebsite: https://eaglela.com/events/bear-happy-hour-2/\ntimezone:
+  America/Los_Angeles\naddress: 4219 Santa Monica Blvd\, Los Angeles\, CA 90
+ 029\nshortName: BHH\nshorterName: BHH\nfavicon: https://linktr.ee/bearhappy
+ hour\nkey: bear-happy-hour|2026-08-07|eagle la\nticketUrl: https://eaglela.
+ com/events/bear-happy-hour-2/?occurrence=2026-08-06\nbearSource: keyword\no
+ verrideUid: 9vnvsm6kjpievu62279lco139k@google.com\noverrideRecurrenceId: 20
+ 260807T000000Z\ndescription: Bear Happy Hour First Thursdays 5pm\ninstagram
+ : https://www.instagram.com/bearhappyhourla\npinSource: curated\naddressSou
+ rce: curated\nimageSource: og-image\nbarSource: venue-site\ngmaps: https://
+ www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4
+LAST-MODIFIED:20260807T164824Z
+LOCATION:34.0912127\, -118.2840632
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Happy Hour
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260809T030000Z
+DTEND:20260809T090000Z
+DTSTAMP:20260808T010847Z
+UID:898799F0-F844-4DEA-BCC5-D24EC2661DD3
+CREATED:20260807T164825Z
+DESCRIPTION:description: Meat Rack Aug 8 8pm $8\nbar: Eagle LA\naddress: 42
+ 19 Santa Monica Blvd\, Los Angeles\, CA 90029\ntimezone: America/Los_Angele
+ s\nimage: https://eaglela.com/wp-content/uploads/IG_M_Rack-poster-8_8_26-sq
+ uare.jpg\ncover: $8\nimageVertical: https://eaglela.com/wp-content/uploads/
+ M_Rack-poster-8_8_26-web-1.jpg\naddressSource: curated\nwebsite: https://ea
+ glela.com/events/meat-rack-102/\ngmaps: https://www.google.com/maps/search/
+ ?api=1&query=34.0912127%2C-118.2840632\npinSource: curated\ninstagram: dirt
+ ybird_la\nkey: meat-rack|2026-08-09|eagle la\nimageSource: og-image\nbarSou
+ rce: venue-site\nbearSource: manual-bear (overrode ai\\: The title 'MEAT RA
+ CK' and description 'Meat Rack Aug 8 8pm $8' contain no bea...)
+LAST-MODIFIED:20260807T164825Z
+LOCATION:34.0912127\, -118.2840632
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MEAT RACK
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260517T040000Z
+DTEND:20260517T090000Z
+DTSTAMP:20260808T010847Z
+UID:F5435015-D350-4B57-8C02-6227EB96FDE1
+CREATED:20260512T171310Z
+DESCRIPTION:description: MEGAWOOF AMERICA - LONG BEACH PRIDE\nbar: Falcon N
+ orth\naddress: 2020 East Artesia Boulevard\, Long Beach\, CA 90805\nticketU
+ rl: https://www.eventbrite.com/e/megawoof-america-long-beach-pride-tickets-
+ 1986926425425\ninstagram: https://www.instagram.com/megawoof_america\nimage
+ : https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181624525%2
+ F185013722403%2F1%2Foriginal.20260407-190035?crop=focalpoint&fit=crop&w=940
+ &auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=251ea205299011add
+ 78dbf1d4b7fe8bd\ncover: $11.58-$22.09\nshortName: MEGA-WOOF\n_aiPrompts\\: 
+ [object Object]\,[object Object]\,[object Object]\n_aiValidation\\: [object
+  Object]\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.g
+ oogle.com/maps/search/?api=1&query=Falcon%20North%2C%202020%20East%20Artesi
+ a%20Boulevard%2C%20Long%20Beach%2C%20CA%2090805\nkey: megawoof-america-long
+ -beach-pride|2026-05-17|falcon north
+LAST-MODIFIED:20260514T005409Z
+LOCATION:33.874454\,-118.1680614
+SEQUENCE:1
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF AMERICA - LONG BEACH PRIDE
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20250817T050000Z
+DTEND:20250817T100000Z
+DTSTAMP:20260808T010847Z
+UID:1o1kijpavt9mfq2f5bbtcj4jng@google.com
+CREATED:20250719T045039Z
+DESCRIPTION:description: Location TBA\, but likely in a dark DTLA warehouse
+  😈 Be sure to follow them on IG for location\, updates\, and more!\ninstag
+ ram: https://www.instagram.com/megawoof_america\nkey: megawoof|2025-08-17|t
+ ba|eventbrite\nbar: Sanctuary Studios\nurl: https://www.eventbrite.com/e/du
+ ro-summer-night-foam-edition-tickets-1446957562019\nimage: https://img.evbu
+ c.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1096137783%2F185013722403%2F1%
+ 2Foriginal.20250814-194101?crop=focalpoint&fit=crop&h=230&w=460&auto=format
+ %2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=f20000487492df90f51bb44fe
+ 04473cb\nshortName: MEGA-WOOF\nwebsite: https://www.eventbrite.com/e/duro-s
+ ummer-night-foam-edition-tickets-1446957562019\ncover: $11.58 - $36.83 (as 
+ of 8/16)\ngmaps: https://www.google.com/maps/search/?api=1&query=33.9139036
+ %2C-118.2805709&query_place_id=ChIJg2cOgOq2woAR8bONfuIJg_k\naddress: 13012 
+ Athens Way\, Los Angeles\, CA 90061\naddressSource: inferred
+LAST-MODIFIED:20260717T211306Z
+LOCATION:33.9139036\, -118.2805709
+SEQUENCE:1
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260816T220000Z
+DTEND:20260817T040000Z
+DTSTAMP:20260808T010847Z
+UID:DD3EA174-CD55-487D-A3E4-04B5B129D28B
+CREATED:20260731T160001Z
+DESCRIPTION:address: 357 S Broadway\, Los Angeles\, CA 90013\, USA\ntimezon
+ e: America/Los_Angeles\nticketUrl: https://www.facebook.com/events/13767810
+ 57883088/\nimage: https://static.wixstatic.com/media/f91121_e3b1ab7a472246b
+ 89131b92dcc1cba5f~mv2.jpg\ncover: NO COVER\nwebsite: https://www.clubchubus
+ a.com\ninstagram: https://www.instagram.com/clubchubparty\nshortName: CLUB 
+ CHUB\nfavicon: https://www.clubchubusa.com\nkey: club-chub-dtla-latin-night
+ |2026-08-16|precinct\ndescription: LATIN PARTY\nSUNDAY AUGUST 16TH 3-9PM\nD
+ J SANTO | DRAG SHOW\nNO COVER | PRECINCT\nPRECINCT\nDTLA\nbearSource: keywo
+ rd\noverrideUid: 44n2vcp54ehl3nlh4b3o61ndm0@google.com\noverrideRecurrenceI
+ d: 20260816T220000Z\nbar: Precinct DTLA\npinSource: curated\naddressSource:
+  page\nimageSource: page\ngmaps: https://www.google.com/maps/search/?api=1&
+ query=34.0498149%2C-118.2493321
+LAST-MODIFIED:20260808T003310Z
+LOCATION:34.0498149\, -118.2493321
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Club Chub DTLA - Latin Night
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20260822T200000Z
 DTEND:20260823T020000Z
-DTSTAMP:20260807T175037Z
+DTSTAMP:20260808T010847Z
 UID:D5378088-C88D-46FD-ADE4-407711D61161
 CREATED:20260731T160001Z
 DESCRIPTION:description: LA's Premier Queer Pool Party for Bears\, Chubs\, 
@@ -48,11 +224,11 @@ DESCRIPTION:description: LA's Premier Queer Pool Party for Bears\, Chubs\,
  to=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=aac2ee4007a230c60a79
  d3edaaede3db\ncover: $12.51-$33.85\nwebsite: https://www.clubchubusa.com\ns
  hortName: CLUB CHUB\ninstagram: https://www.instagram.com/clubchubparty\nfa
- vicon: https://www.clubchubusa.com\nbearSource: keyword\nkey: club-chub-que
- nchd|2026-08-22|the godfrey hotel hollywood\npinSource: geocoded-exact\nadd
+ vicon: https://www.clubchubusa.com\nkey: club-chub-quenchd|2026-08-22|the g
+ odfrey hotel hollywood\nbearSource: keyword\npinSource: geocoded-exact\nadd
  ressSource: page\nimageSource: jsonld\nbarSource: geo-poi\ngmaps: https://w
  ww.google.com/maps/search/?api=1&query=34.0964585%2C-118.3291653
-LAST-MODIFIED:20260806T153805Z
+LAST-MODIFIED:20260808T003312Z
 LOCATION:34.0964585\, -118.3291653
 SEQUENCE:0
 STATUS:CONFIRMED
@@ -62,9 +238,80 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
+DTSTART;TZID=America/Los_Angeles:20250720T150000
+DTEND;TZID=America/Los_Angeles:20250720T210000
+DTSTAMP:20260808T010847Z
+UID:44n2vcp54ehl3nlh4b3o61ndm0@google.com
+RECURRENCE-ID;TZID=America/Los_Angeles:20250720T150000
+CREATED:20250719T050204Z
+DESCRIPTION:Bar: Precinct DTLA\nGoogle Maps: https://maps.app.goo.gl/pfwrr6
+ oMcbTvdFtx7?g_st=ipc\nInstagram: https://www.instagram.com/clubchubparty?ig
+ sh=MWxjZHprZnl6NWc0NQ==\naddress: 357 S Broadway\, Los Angeles\, CA 90013\n
+ addressSource: inferred
+LAST-MODIFIED:20260717T211304Z
+LOCATION:34.0498043\, -118.2493258
+SEQUENCE:1
+STATUS:CONFIRMED
+SUMMARY:Club Chub
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+BEGIN:VALARM
+ACTION:NONE
+TRIGGER;VALUE=DATE-TIME:19760401T005545Z
+END:VALARM
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260809T210000Z
+DTSTAMP:20260808T010847Z
+UID:CA8D02F4-CC9F-414D-913F-5E782016485D
+CREATED:20260807T164824Z
+DESCRIPTION:bar: Eagle LA\naddress: 4219 Santa Monica Blvd\, Los Angeles\, 
+ CA 90029\ntimezone: America/Los_Angeles\nticketUrl: https://eaglela.com/eve
+ nts/sunday-beer-bust-4/\nimage: https://eaglela.com/wp-content/uploads/Sun-
+ Beer-Bust-poster-2024-web-1.jpg\ncover: NO COVER\nimageVertical: https://ea
+ glela.com/wp-content/uploads/Sun-Beer-Bust-poster-2024-web-1.jpg\naddressSo
+ urce: curated\nwebsite: https://eaglela.com/events/sunday-beer-bust-4/?occu
+ rrence=2026-08-09\ngmaps: https://www.google.com/maps/place/?q=place_id:ChI
+ JLwuhHU_HwoARdQQ1PfOn6B4\npinSource: curated\ninstagram: dirtybird_la\nkey:
+  sunday-beer-bust|2026-08-09|eagle la\ndescription: BEAR BUST\nBar Opens 2P
+ M\nNO COVER\n5 DOMESTIC DRAFTS\nimageSource: og-image\nbarSource: venue-sit
+ e\nbearSource: ai
+LAST-MODIFIED:20260807T164825Z
+LOCATION:34.0912127\, -118.2840632
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:SUNDAY BEER BUST
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/Los_Angeles:20260904T210000
+DTEND;TZID=America/Los_Angeles:20260905T020000
+RRULE:FREQ=MONTHLY;BYDAY=1FR
+DTSTAMP:20260808T010847Z
+UID:cubscout-20260731T193113Z@chunky.dad
+URL:https://eaglela.com/events/cub-scout-3/
+CREATED:20260731T193145Z
+DESCRIPTION:shortName: CUB-SCOUT\ntea: CubScout First Fridays 9pm $7\ncover
+ : $7\nbar: Eagle LA\naddress: 4219 Santa Monica Blvd\, Los Angeles\, CA 900
+ 29\ntimezone: America/Los_Angeles\nuid: cubscout-20260731T193113Z@chunky.da
+ d\nimage: https://eaglela.com/wp-content/uploads/CubScout-generic.jpg\nwebs
+ ite: https://eaglela.com/events/cub-scout-3/\ninstagram: https://www.instag
+ ram.com/dirtybird_la\ngmaps: https://www.google.com/maps/place/?q=place_id:
+ ChIJLwuhHU_HwoARdQQ1PfOn6B4
+LAST-MODIFIED:20260801T205838Z
+LOCATION:34.0912127\, -118.2840632
+SEQUENCE:2
+STATUS:CONFIRMED
+SUMMARY:CUBSCOUT
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20260802T050000Z
 DTEND:20260802T113000Z
-DTSTAMP:20260807T175037Z
+DTSTAMP:20260808T010847Z
 UID:A3B037C4-449C-4785-82BF-811EB8890D67
 CREATED:20260712T004133Z
 DESCRIPTION:address: DTLA\, Los Angeles\, CA 90013\nticketUrl: https://www.
@@ -94,83 +341,9 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260816T220000Z
-DTEND:20260817T040000Z
-DTSTAMP:20260807T175037Z
-UID:DD3EA174-CD55-487D-A3E4-04B5B129D28B
-CREATED:20260731T160001Z
-DESCRIPTION:address: 357 S Broadway\, Los Angeles\, CA 90013\, USA\ntimezon
- e: America/Los_Angeles\nticketUrl: https://www.facebook.com/events/13767810
- 57883088/\nimage: https://static.wixstatic.com/media/f91121_e3b1ab7a472246b
- 89131b92dcc1cba5f~mv2.jpg\ncover: NO COVER\nwebsite: https://www.clubchubus
- a.com\ninstagram: https://www.instagram.com/clubchubparty\nshortName: CLUB 
- CHUB\nfavicon: https://www.clubchubusa.com\nbearSource: keyword\nkey: club-
- chub-dtla-latin-night|2026-08-16|precinct\ndescription: LATIN PARTY\nSUNDAY
-  AUGUST 16TH 3-9PM\nDJ SANTO | DRAG SHOW\nNO COVER | PRECINCT\nPRECINCT\nDT
- LA\noverrideUid: 44n2vcp54ehl3nlh4b3o61ndm0@google.com\noverrideRecurrenceI
- d: 20260816T220000Z\nbar: Precinct DTLA\npinSource: curated\naddressSource:
-  page\nimageSource: page\ngmaps: https://www.google.com/maps/search/?api=1&
- query=34.0498149%2C-118.2493321
-LAST-MODIFIED:20260806T153804Z
-LOCATION:34.0498149\, -118.2493321
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Club Chub DTLA - Latin Night
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART;TZID=America/Los_Angeles:20260904T210000
-DTEND;TZID=America/Los_Angeles:20260905T020000
-RRULE:FREQ=MONTHLY;BYDAY=1FR
-DTSTAMP:20260807T175037Z
-UID:cubscout-20260731T193113Z@chunky.dad
-URL:https://eaglela.com/events/cub-scout-3/
-CREATED:20260731T193145Z
-DESCRIPTION:shortName: CUB-SCOUT\ntea: CubScout First Fridays 9pm $7\ncover
- : $7\nbar: Eagle LA\naddress: 4219 Santa Monica Blvd\, Los Angeles\, CA 900
- 29\ntimezone: America/Los_Angeles\nuid: cubscout-20260731T193113Z@chunky.da
- d\nimage: https://eaglela.com/wp-content/uploads/CubScout-generic.jpg\nwebs
- ite: https://eaglela.com/events/cub-scout-3/\ninstagram: https://www.instag
- ram.com/dirtybird_la\ngmaps: https://www.google.com/maps/place/?q=place_id:
- ChIJLwuhHU_HwoARdQQ1PfOn6B4
-LAST-MODIFIED:20260801T205838Z
-LOCATION:34.0912127\, -118.2840632
-SEQUENCE:2
-STATUS:CONFIRMED
-SUMMARY:CUBSCOUT
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260809T210000Z
-DTSTAMP:20260807T175037Z
-UID:CA8D02F4-CC9F-414D-913F-5E782016485D
-CREATED:20260807T164824Z
-DESCRIPTION:bar: Eagle LA\naddress: 4219 Santa Monica Blvd\, Los Angeles\, 
- CA 90029\ntimezone: America/Los_Angeles\nticketUrl: https://eaglela.com/eve
- nts/sunday-beer-bust-4/\nimage: https://eaglela.com/wp-content/uploads/Sun-
- Beer-Bust-poster-2024-web-1.jpg\ncover: NO COVER\nimageVertical: https://ea
- glela.com/wp-content/uploads/Sun-Beer-Bust-poster-2024-web-1.jpg\naddressSo
- urce: curated\nwebsite: https://eaglela.com/events/sunday-beer-bust-4/?occu
- rrence=2026-08-09\ngmaps: https://www.google.com/maps/place/?q=place_id:ChI
- JLwuhHU_HwoARdQQ1PfOn6B4\npinSource: curated\ninstagram: dirtybird_la\nkey:
-  sunday-beer-bust|2026-08-09|eagle la\ndescription: BEAR BUST\nBar Opens 2P
- M\nNO COVER\n5 DOMESTIC DRAFTS\nimageSource: og-image\nbarSource: venue-sit
- e\nbearSource: ai
-LAST-MODIFIED:20260807T164825Z
-LOCATION:34.0912127\, -118.2840632
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:SUNDAY BEER BUST
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20251026T050000Z
 DTEND:20251026T120000Z
-DTSTAMP:20260807T175037Z
+DTSTAMP:20260808T010847Z
 UID:342C3C24-21CD-4149-8634-E60F5CB0A57A
 CREATED:20250921T003523Z
 DESCRIPTION:description: D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY ED
@@ -191,79 +364,9 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART;TZID=America/Vancouver:20250717T170000
-DTEND;TZID=America/Vancouver:20250717T210000
-RRULE:FREQ=WEEKLY
-DTSTAMP:20260807T175037Z
-UID:9vnvsm6kjpievu62279lco139k@google.com
-CREATED:20250715T045103Z
-DESCRIPTION:Bar: Check instagram for this week’s location.\nTea: Popular ha
- ppy hour that changes location every week.\nShorter: BHH\nInstagram: https:
- //www.instagram.com/bearhappyhourla\nWeb: https://linktr.ee/bearhappyhour
-LAST-MODIFIED:20251012T161157Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Bear Happy Hour
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260607T040000Z
-DTEND:20260607T090000Z
-DTSTAMP:20260807T175037Z
-UID:FC6AD30A-ABEE-4135-91A0-18E30D96674D
-CREATED:20260512T171311Z
-DESCRIPTION:description: MEGAWOOF PRIDE - FIRST 200 TICKETS FREE -\nbar: Th
- e Globe\naddress: 740 South Broadway\, Los Angeles\, CA 90014\nticketUrl: h
- ttps://www.eventbrite.com/e/megawoof-pride-free-june-6th-free-tkts-the-glob
- e-tickets-1987743346859\ninstagram: https://www.instagram.com/megawoof_amer
- ica\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F11
- 83615730%2F185013722403%2F1%2Foriginal.20260503-000457?crop=focalpoint&fit=
- crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=bffadc8
- 0cfbaa15ecbe0f81f67bae150\ncover: FREE\nshortName: MEGA-WOOF\n_aiPrompts\\:
-  [object Object]\,[object Object]\n_aiValidation\\: [object Object]\nwebsit
- e: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/s
- earch/?api=1&query=The%20Globe%2C%20740%20South%20Broadway%2C%20Los%20Angel
- es%2C%20CA%2090014\nkey: megawoof-pride-free-june-6th-free-tkts-the-globe|2
- 026-06-07|the globe
-LAST-MODIFIED:20260514T005410Z
-LOCATION:34.044092\,-118.2542355
-SEQUENCE:1
-STATUS:CONFIRMED
-SUMMARY:MEGAWOOF PRIDE - FREE - JUNE 6th FREE TKTS @The Globe
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260807T000000Z
-DTEND:20260807T040000Z
-DTSTAMP:20260807T175037Z
-UID:7696C0F2-5708-44C9-9AFC-49CC0BDBF0F4
-CREATED:20260807T164824Z
-DESCRIPTION:bar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/BH
- H-IG.png\nwebsite: https://eaglela.com/events/bear-happy-hour-2/\ntimezone:
-  America/Los_Angeles\naddress: 4219 Santa Monica Blvd\, Los Angeles\, CA 90
- 029\nshortName: BHH\nshorterName: BHH\nfavicon: https://linktr.ee/bearhappy
- hour\nkey: bear-happy-hour|2026-08-07|eagle la\nticketUrl: https://eaglela.
- com/events/bear-happy-hour-2/?occurrence=2026-08-06\nbearSource: keyword\no
- verrideUid: 9vnvsm6kjpievu62279lco139k@google.com\noverrideRecurrenceId: 20
- 260807T000000Z\ndescription: Bear Happy Hour First Thursdays 5pm\ninstagram
- : https://www.instagram.com/bearhappyhourla\npinSource: curated\naddressSou
- rce: curated\nimageSource: og-image\nbarSource: venue-site\ngmaps: https://
- www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4
-LAST-MODIFIED:20260807T164824Z
-LOCATION:34.0912127\, -118.2840632
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Bear Happy Hour
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20250831T040000Z
 DTEND:20250831T090000Z
-DTSTAMP:20260807T175037Z
+DTSTAMP:20260808T010847Z
 UID:848D15A3-27B4-4F56-AAD0-9D7D66DD12A1
 CREATED:20250823T205552Z
 DESCRIPTION:description: LONG BEACH — WE’RE BACK! \n The bears of MEGAWOOF 
@@ -292,57 +395,8 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART;TZID=America/Los_Angeles:20250720T150000
 DTEND;TZID=America/Los_Angeles:20250720T210000
-DTSTAMP:20260807T175037Z
-UID:44n2vcp54ehl3nlh4b3o61ndm0@google.com
-RECURRENCE-ID;TZID=America/Los_Angeles:20250720T150000
-CREATED:20250719T050204Z
-DESCRIPTION:Bar: Precinct DTLA\nGoogle Maps: https://maps.app.goo.gl/pfwrr6
- oMcbTvdFtx7?g_st=ipc\nInstagram: https://www.instagram.com/clubchubparty?ig
- sh=MWxjZHprZnl6NWc0NQ==\naddress: 357 S Broadway\, Los Angeles\, CA 90013\n
- addressSource: inferred
-LAST-MODIFIED:20260717T211304Z
-LOCATION:34.0498043\, -118.2493258
-SEQUENCE:1
-STATUS:CONFIRMED
-SUMMARY:Club Chub
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-BEGIN:VALARM
-ACTION:NONE
-TRIGGER;VALUE=DATE-TIME:19760401T005545Z
-END:VALARM
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260809T030000Z
-DTEND:20260809T090000Z
-DTSTAMP:20260807T175037Z
-UID:898799F0-F844-4DEA-BCC5-D24EC2661DD3
-CREATED:20260807T164825Z
-DESCRIPTION:description: Meat Rack Aug 8 8pm $8\nbar: Eagle LA\naddress: 42
- 19 Santa Monica Blvd\, Los Angeles\, CA 90029\ntimezone: America/Los_Angele
- s\nimage: https://eaglela.com/wp-content/uploads/IG_M_Rack-poster-8_8_26-sq
- uare.jpg\ncover: $8\nimageVertical: https://eaglela.com/wp-content/uploads/
- M_Rack-poster-8_8_26-web-1.jpg\naddressSource: curated\nwebsite: https://ea
- glela.com/events/meat-rack-102/\ngmaps: https://www.google.com/maps/search/
- ?api=1&query=34.0912127%2C-118.2840632\npinSource: curated\ninstagram: dirt
- ybird_la\nkey: meat-rack|2026-08-09|eagle la\nimageSource: og-image\nbarSou
- rce: venue-site\nbearSource: manual-bear (overrode ai\\: The title 'MEAT RA
- CK' and description 'Meat Rack Aug 8 8pm $8' contain no bea...)
-LAST-MODIFIED:20260807T164825Z
-LOCATION:34.0912127\, -118.2840632
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:MEAT RACK
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART;TZID=America/Los_Angeles:20250720T150000
-DTEND;TZID=America/Los_Angeles:20250720T210000
 RRULE:FREQ=MONTHLY;BYDAY=3SU
-DTSTAMP:20260807T175037Z
+DTSTAMP:20260808T010847Z
 UID:44n2vcp54ehl3nlh4b3o61ndm0@google.com
 CREATED:20250719T050204Z
 DESCRIPTION:Bar: Precinct DTLA\nGoogle Maps: https://maps.app.goo.gl/pfwrr6
@@ -353,60 +407,6 @@ LOCATION:34.0498043\, -118.2493258
 SEQUENCE:1
 STATUS:CONFIRMED
 SUMMARY:Club Chub
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260517T040000Z
-DTEND:20260517T090000Z
-DTSTAMP:20260807T175037Z
-UID:F5435015-D350-4B57-8C02-6227EB96FDE1
-CREATED:20260512T171310Z
-DESCRIPTION:description: MEGAWOOF AMERICA - LONG BEACH PRIDE\nbar: Falcon N
- orth\naddress: 2020 East Artesia Boulevard\, Long Beach\, CA 90805\nticketU
- rl: https://www.eventbrite.com/e/megawoof-america-long-beach-pride-tickets-
- 1986926425425\ninstagram: https://www.instagram.com/megawoof_america\nimage
- : https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181624525%2
- F185013722403%2F1%2Foriginal.20260407-190035?crop=focalpoint&fit=crop&w=940
- &auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=251ea205299011add
- 78dbf1d4b7fe8bd\ncover: $11.58-$22.09\nshortName: MEGA-WOOF\n_aiPrompts\\: 
- [object Object]\,[object Object]\,[object Object]\n_aiValidation\\: [object
-  Object]\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.g
- oogle.com/maps/search/?api=1&query=Falcon%20North%2C%202020%20East%20Artesi
- a%20Boulevard%2C%20Long%20Beach%2C%20CA%2090805\nkey: megawoof-america-long
- -beach-pride|2026-05-17|falcon north
-LAST-MODIFIED:20260514T005409Z
-LOCATION:33.874454\,-118.1680614
-SEQUENCE:1
-STATUS:CONFIRMED
-SUMMARY:MEGAWOOF AMERICA - LONG BEACH PRIDE
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20250817T050000Z
-DTEND:20250817T100000Z
-DTSTAMP:20260807T175037Z
-UID:1o1kijpavt9mfq2f5bbtcj4jng@google.com
-CREATED:20250719T045039Z
-DESCRIPTION:description: Location TBA\, but likely in a dark DTLA warehouse
-  😈 Be sure to follow them on IG for location\, updates\, and more!\ninstag
- ram: https://www.instagram.com/megawoof_america\nkey: megawoof|2025-08-17|t
- ba|eventbrite\nbar: Sanctuary Studios\nurl: https://www.eventbrite.com/e/du
- ro-summer-night-foam-edition-tickets-1446957562019\nimage: https://img.evbu
- c.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1096137783%2F185013722403%2F1%
- 2Foriginal.20250814-194101?crop=focalpoint&fit=crop&h=230&w=460&auto=format
- %2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=f20000487492df90f51bb44fe
- 04473cb\nshortName: MEGA-WOOF\nwebsite: https://www.eventbrite.com/e/duro-s
- ummer-night-foam-edition-tickets-1446957562019\ncover: $11.58 - $36.83 (as 
- of 8/16)\ngmaps: https://www.google.com/maps/search/?api=1&query=33.9139036
- %2C-118.2805709&query_place_id=ChIJg2cOgOq2woAR8bONfuIJg_k\naddress: 13012 
- Athens Way\, Los Angeles\, CA 90061\naddressSource: inferred
-LAST-MODIFIED:20260717T211306Z
-LOCATION:33.9139036\, -118.2805709
-SEQUENCE:1
-STATUS:CONFIRMED
-SUMMARY:MEGAWOOF
 TRANSP:OPAQUE
 END:VEVENT
 END:VCALENDAR

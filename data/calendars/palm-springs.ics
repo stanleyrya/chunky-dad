@@ -6,39 +6,9 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-palm-springs
 X-WR-TIMEZONE:America/Los_Angeles
 BEGIN:VEVENT
-DTSTART:20260911T180000Z
-DTEND:20260914T070000Z
-DTSTAMP:20260806T235249Z
-UID:E21A39AC-AC29-47E3-A8C2-23C3D36AD105
-CREATED:20260802T134345Z
-DESCRIPTION:description: 3 Days Of BIG Fun In The Sun Pool Parties Food Mus
- ic Drinks Fun\naddress: 68-300 Gay Resort Dr\, Cathedral City\, CA 92234\, 
- USA\nticketUrl: https://www.eventbrite.com/e/club-chub-weekend-2026-the-ult
- imate-celebration-tickets-1975884326209?utm-campaign=social&utm-content=att
- endeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshco
- pyurl\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F
- 1181907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&auto=format%
- 2Ccompress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e\ncover: $55.20-
- $150.16\ntimezone: America/Los_Angeles\nwebsite: https://www.clubchubusa.co
- m\nshortName: CLUB CHUB\ninstagram: https://www.instagram.com/clubchubparty
- \nfavicon: https://www.clubchubusa.com\nbearSource: keyword\nkey: club-chub
- -weekend-2026-—-the-ultimate-celebration|2026-09-11|ccbc resort\nbar: CCBC 
- Resort\npinSource: geocoded-exact\naddressSource: page\nimageSource: jsonld
- \nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/search/?api=
- 1&query=33.7796835%2C-116.4689784
-LAST-MODIFIED:20260806T153802Z
-LOCATION:33.7796835\, -116.4689784
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Club Chub Weekend 2026 — The Ultimate Celebration!
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20260222T050000Z
 DTEND:20260222T200000Z
-DTSTAMP:20260806T235249Z
+DTSTAMP:20260808T010847Z
 UID:88686A1C-DD82-4C9B-A917-74B3647FD814
 CREATED:20260117T210201Z
 DESCRIPTION:description: SHINY DISCO BALLS IBC WEEKEND\nbar: Palm Springs\n
@@ -58,6 +28,36 @@ LOCATION:33.8189101\, -116.5470896
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:MEGAWOOF
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260911T180000Z
+DTEND:20260914T070000Z
+DTSTAMP:20260808T010847Z
+UID:E21A39AC-AC29-47E3-A8C2-23C3D36AD105
+CREATED:20260802T134345Z
+DESCRIPTION:description: 3 Days Of BIG Fun In The Sun Pool Parties Food Mus
+ ic Drinks Fun\naddress: 68-300 Gay Resort Dr\, Cathedral City\, CA 92234\, 
+ USA\nticketUrl: https://www.eventbrite.com/e/club-chub-weekend-2026-the-ult
+ imate-celebration-tickets-1975884326209?utm-campaign=social&utm-content=att
+ endeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshco
+ pyurl\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F
+ 1181907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&auto=format%
+ 2Ccompress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e\ncover: $55.20-
+ $150.16\ntimezone: America/Los_Angeles\nwebsite: https://www.clubchubusa.co
+ m\nshortName: CLUB CHUB\ninstagram: https://www.instagram.com/clubchubparty
+ \nfavicon: https://www.clubchubusa.com\nkey: club-chub-weekend-2026-—-the-u
+ ltimate-celebration|2026-09-11|ccbc resort\nbar: CCBC Resort\nbearSource: k
+ eyword\npinSource: geocoded-exact\naddressSource: page\nimageSource: jsonld
+ \nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/search/?api=
+ 1&query=33.7796835%2C-116.4689784
+LAST-MODIFIED:20260808T003304Z
+LOCATION:33.7796835\, -116.4689784
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Club Chub Weekend 2026 — The Ultimate Celebration!
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
