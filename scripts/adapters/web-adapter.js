@@ -438,8 +438,29 @@ class WebAdapter {
         }
     }
 
+    // Mirror of ScriptableAdapter.throwIfRetryableHttpStatus so the two POST
+    // methods keep one contract on both platforms: transient statuses
+    // (5xx/429 — SharedCore.isRetryableHttpStatus, the same list
+    // isRetryableFailure classifies stamped statuses by) THROW with
+    // `error.statusCode` stamped; client rejections (4xx) keep the
+    // {ok: false} return shape callers already branch on. If SharedCore is
+    // unavailable (browser page without the script tag) the pre-fix
+    // {ok: false} return survives unchanged.
+    throwIfRetryableHttpStatus(label, url, statusCode, responseText) {
+        if (!Number.isFinite(statusCode)) return;
+        if (statusCode >= 200 && statusCode < 300) return;
+        const core = this.getSharedCoreRef();
+        if (!core || typeof core.isRetryableHttpStatus !== 'function') return;
+        if (!core.isRetryableHttpStatus(statusCode)) return;
+        const error = new Error(`${label} failed: HTTP ${statusCode} from ${url}`);
+        error.statusCode = statusCode;
+        error.responseText = typeof responseText === 'string' ? responseText : '';
+        throw error;
+    }
+
     async postJson(url, payload, options = {}) {
         const timeout = options.timeoutSeconds ? options.timeoutSeconds * 1000 : this.config.timeout;
+        let result;
         try {
             const response = await fetch(url, {
                 method: 'POST',
@@ -450,7 +471,7 @@ class WebAdapter {
                 body: JSON.stringify(payload),
                 signal: AbortSignal.timeout(timeout)
             });
-            return {
+            result = {
                 ok: response.ok,
                 status: response.status,
                 text: await response.text()
@@ -458,6 +479,8 @@ class WebAdapter {
         } catch (error) {
             throw new Error(`POST request failed: ${error.message}`);
         }
+        this.throwIfRetryableHttpStatus('POST request', url, result.status, result.text);
+        return result;
     }
 
     // Node-side mirror of ScriptableAdapter.postForm: form-encoded POST (the
@@ -500,6 +523,9 @@ class WebAdapter {
         } catch (error) {
             throw new Error(`Form POST request failed: ${error.message}`);
         }
+        // Same transient-status contract as postJson: 5xx/429 throw with the
+        // status stamped, everything else keeps the {ok:false} shape.
+        this.throwIfRetryableHttpStatus('Form POST request', url, result.status, result.text);
         if (canUseCache && result.ok && typeof result.text === 'string' && result.text.length > 0) {
             await this.writeCachedPage(
                 cacheUrl,
