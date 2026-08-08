@@ -113,6 +113,16 @@
     "accent": "#ed6966"
   },
   {
+    "slug": "chunk-folsom-bear-playground-58dafe55",
+    "url": "https://www.chunk-party.com/event-details/chunk-folsom-bear-playground-9-26",
+    "faviconBg": "#f6f4f5",
+    "faviconFg": "#2e2933",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#343434:43:0 #4b4748:16:1 #5b5b5b:11:0 #ab0b0b:4:19",
+    "accent": "#ab0b0b"
+  },
+  {
     "slug": "chunk-presents-folsom-25-6a09272f",
     "url": "https://www.chunk-party.com/event-details/chunk-presents-folsom-25",
     "faviconBg": "#f6f4f5",
