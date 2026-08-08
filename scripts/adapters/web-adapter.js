@@ -1132,6 +1132,19 @@ async saveFailureNote(url, error, metadata = {}) {
                 console.log(`   • ${result.name}: ${result.bearEvents} bear events`);
             });
 
+            // Node-side mirror of the Scriptable results-UI hygiene section:
+            // report-only checklist, additive lines only, absent when empty.
+            if (Array.isArray(results.calendarHygiene) && results.calendarHygiene.length > 0) {
+                console.log(`\n🧹 Calendar hygiene: ${results.calendarHygiene.length} event(s) look superseded by saved series (report-only — deletion stays manual):`);
+                results.calendarHygiene.forEach(finding => {
+                    if (!finding) return;
+                    const series = finding.series || {};
+                    const label = finding.kind === 'off-pattern' ? 'off-pattern vs' : 'covered by';
+                    const caution = finding.caution ? ` [CAUTION: ${finding.cautionReason}]` : '';
+                    console.log(`   • "${finding.title}" ${finding.day || ''} [${finding.calendarName}] — ${label} series "${series.title || ''}" (${series.rrule || '?'}; ${series.instances || 0} instance(s)) — ${finding.reason || ''}${caution}`);
+                });
+            }
+
             if (results.discoveredVenueSummary) {
                 console.log('\n' + results.discoveredVenueSummary);
             }

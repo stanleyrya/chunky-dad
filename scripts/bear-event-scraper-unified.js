@@ -395,6 +395,19 @@ class BearEventScraperOrchestrator {
 
                 // Store analyzed events back into results for display
                 results.analyzedEvents = analyzedEvents;
+
+                // REPORT-ONLY calendar hygiene: singles the run's matched
+                // saved series appear to supersede. Runs AFTER the calendar
+                // prep so the write path is byte-identical; any failure just
+                // leaves the checklist empty. Deletion stays manual — nothing
+                // here feeds executeCalendarActions.
+                try {
+                    if (typeof sharedCore.collectCalendarHygieneFindings === 'function') {
+                        results.calendarHygiene = await sharedCore.collectCalendarHygieneFindings(analyzedEvents, finalAdapter);
+                    }
+                } catch (error) {
+                    results.calendarHygiene = [];
+                }
                 
                 // Update totals to reflect cross-parser deduplication
                 results.deduplicatedEvents = deduplicatedEvents.length;

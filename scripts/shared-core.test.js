@@ -12504,6 +12504,317 @@ test('saved-series lookup: fails open on adapter errors and never runs for non-s
   assert.equal(lookupCalls, 0, 'a non-series event never triggers the lookup');
 });
 
+// ---------------------------------------------------------------------------
+// Calendar hygiene (STRICTLY REPORT-ONLY): when a run's analysis positively
+// matched saved series (_seriesMatch stamps), the wide-window singles those
+// series supersede become a CHECKLIST — never a write, never a delete.
+// Fixtures model the owner's real calendar shapes (data/calendars/la.ics):
+// device series instances share one identifier and carry uid:/timezone: notes
+// with NO recurrence: key (the RRULE lives in the published ICS); scraper-
+// written singles carry bar:/key: notes; the Bear Happy Hour slot-host
+// override carries overrideUid:/overrideRecurrenceId: notes.
+// ---------------------------------------------------------------------------
+
+const BBAR_SERIES_IDENTIFIER = 'CAL-UUID:bbar-20260801T000000Z@chunky.dad';
+const BBAR_INSTANCE_NOTES = [
+  'bar: B BAR',
+  'timezone: America/Los_Angeles',
+  'uid: bbar-20260801T000000Z@chunky.dad'
+].join('\n');
+
+// Thursdays 9pm America/Los_Angeles (04:00Z next day).
+function buildBbarSeriesInstance(startIso) {
+  const startDate = new Date(startIso);
+  return {
+    identifier: BBAR_SERIES_IDENTIFIER,
+    title: 'B BAR',
+    startDate,
+    endDate: new Date(startDate.getTime() + 4 * 3600 * 1000),
+    location: '',
+    notes: BBAR_INSTANCE_NOTES
+  };
+}
+
+// The leftover scraper-written single (real shape: device-minted UID, bar/key
+// notes, no uid:/recurrence: keys).
+function buildBbarLeftoverSingle(startIso, extraNotes = '') {
+  const startDate = new Date(startIso);
+  return {
+    identifier: 'CAL-UUID:AAAAAAAA-1111-2222-3333-444444444444',
+    title: 'B BAR',
+    startDate,
+    endDate: new Date(startDate.getTime() + 4 * 3600 * 1000),
+    location: '',
+    notes: `bar: B BAR\ntimezone: America/Los_Angeles\nkey: b-bar|2026-08-13|b bar${extraNotes ? `\n${extraNotes}` : ''}`
+  };
+}
+
+const BBAR_PUBLISHED_ICS = [
+  'BEGIN:VCALENDAR',
+  'BEGIN:VEVENT',
+  'DTSTART;TZID=America/Los_Angeles:20260806T210000',
+  'DTEND;TZID=America/Los_Angeles:20260807T010000',
+  'RRULE:FREQ=WEEKLY;BYDAY=TH',
+  'UID:bbar-20260801T000000Z@chunky.dad',
+  'DESCRIPTION:bar: B BAR\\ntimezone: America/Los_Angeles',
+  'SUMMARY:B BAR',
+  'END:VEVENT',
+  'END:VCALENDAR'
+].join('\r\n');
+
+function buildBbarSeriesStamp() {
+  return {
+    city: 'la',
+    title: 'B BAR',
+    _seriesMatch: {
+      identifier: BBAR_SERIES_IDENTIFIER,
+      title: 'B BAR',
+      calendarName: 'chunky-dad-la',
+      instances: 2,
+      reason: 'Saved series match (wide-window)'
+    }
+  };
+}
+
+function buildHygieneAdapter(candidates, publishedIcs) {
+  return buildSeriesLookupAdapter(candidates, {
+    getPublishedCalendarRecords: async () =>
+      publishedIcs ? SharedCore.parsePublishedCalendarIcs(publishedIcs) : null
+  });
+}
+
+async function collectHygieneWithLogs(core, analyzedEvents, adapter) {
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (message) => { lines.push(String(message)); };
+  try {
+    const findings = await core.collectCalendarHygieneFindings(analyzedEvents, adapter);
+    return { findings, lines };
+  } finally {
+    console.log = originalLog;
+  }
+}
+
+test('calendar hygiene: a weekly-covered single is listed as superseded — report-only', async () => {
+  const core = createLaCore();
+  const candidates = [
+    buildBbarSeriesInstance('2026-08-14T04:00:00.000Z'), // Thu Aug 13 9pm LA
+    buildBbarSeriesInstance('2026-08-21T04:00:00.000Z'), // Thu Aug 20 9pm LA
+    buildBbarLeftoverSingle('2026-08-14T04:00:00.000Z')  // stale single, same Thursday
+  ];
+  const adapter = buildHygieneAdapter(candidates, BBAR_PUBLISHED_ICS);
+  const { findings, lines } = await collectHygieneWithLogs(core, [buildBbarSeriesStamp()], adapter);
+
+  assert.equal(findings.length, 1, 'exactly the leftover single is listed');
+  const finding = findings[0];
+  assert.equal(finding.kind, 'superseded');
+  assert.equal(finding.title, 'B BAR');
+  assert.equal(finding.identifier, 'CAL-UUID:AAAAAAAA-1111-2222-3333-444444444444');
+  assert.equal(finding.day, '2026-08-13', 'the local day, in the series timezone');
+  assert.equal(finding.calendarName, 'chunky-dad-la');
+  assert.equal(finding.series.identifier, BBAR_SERIES_IDENTIFIER);
+  assert.equal(finding.series.rrule, 'FREQ=WEEKLY;BYDAY=TH');
+  assert.equal(finding.series.ruleSource, 'published-calendar-ics');
+  assert.equal(finding.caution, false);
+  assert.ok(lines.some(l => l.includes('🧹 HYGIENE:') && l.includes('looks superseded by saved series "B BAR"')),
+    `the run says so out loud: ${JSON.stringify(lines)}`);
+  assert.ok(lines.some(l => l.includes('report-only, nothing is deleted')),
+    'every hygiene line restates that nothing is deleted');
+});
+
+test('calendar hygiene: an off-pattern single is listed with the distinct label (the wrong-Sunday beer bust case)', async () => {
+  const core = createLaCore();
+  // Weekly SU beer bust whose saved series EXDATEs the 2nd Sunday (the ONYX
+  // takeover) — plus a single on a Saturday the rule never generates.
+  const beerBustIcs = [
+    'BEGIN:VCALENDAR',
+    'BEGIN:VEVENT',
+    'DTSTART;TZID=America/Los_Angeles:20260802T140000',
+    'DTEND;TZID=America/Los_Angeles:20260802T200000',
+    'RRULE:FREQ=WEEKLY;BYDAY=SU',
+    'EXDATE;TZID=America/Los_Angeles:20260809T140000',
+    'UID:sunday-beer-bust-20260807T000000Z@chunky.dad',
+    'DESCRIPTION:bar: Eagle LA\\ntimezone: America/Los_Angeles',
+    'SUMMARY:SUNDAY BEER BUST',
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n');
+  const seriesIdentifier = 'CAL-UUID:sunday-beer-bust-20260807T000000Z@chunky.dad';
+  const seriesInstance = {
+    identifier: seriesIdentifier,
+    title: 'SUNDAY BEER BUST',
+    startDate: new Date('2026-08-16T21:00:00.000Z'), // Sun Aug 16 2pm LA
+    endDate: new Date('2026-08-17T03:00:00.000Z'),
+    location: '',
+    notes: 'bar: Eagle LA\ntimezone: America/Los_Angeles\nuid: sunday-beer-bust-20260807T000000Z@chunky.dad'
+  };
+  const wrongSundaySingle = {
+    identifier: 'CAL-UUID:CA8D02F4-CC9F-414D-913F-5E782016485D',
+    title: 'SUNDAY BEER BUST',
+    startDate: new Date('2026-08-09T21:00:00.000Z'), // the EXDATEd 2nd Sunday
+    endDate: new Date('2026-08-10T03:00:00.000Z'),
+    location: '',
+    notes: 'bar: Eagle LA\ntimezone: America/Los_Angeles\nkey: sunday-beer-bust|2026-08-09|eagle la\nbearSource: ai'
+  };
+  const saturdaySingle = {
+    identifier: 'CAL-UUID:BBBBBBBB-0000-0000-0000-000000000000',
+    title: 'SUNDAY BEER BUST',
+    startDate: new Date('2026-08-15T21:00:00.000Z'), // a Saturday — never generated
+    endDate: new Date('2026-08-16T03:00:00.000Z'),
+    location: '',
+    notes: 'bar: Eagle LA\ntimezone: America/Los_Angeles'
+  };
+  const adapter = buildHygieneAdapter([seriesInstance, wrongSundaySingle, saturdaySingle], beerBustIcs);
+  const stamp = {
+    city: 'la',
+    title: 'SUNDAY BEER BUST',
+    _seriesMatch: {
+      identifier: seriesIdentifier,
+      title: 'SUNDAY BEER BUST',
+      calendarName: 'chunky-dad-la',
+      instances: 1
+    }
+  };
+  const { findings, lines } = await collectHygieneWithLogs(core, [stamp], adapter);
+
+  assert.equal(findings.length, 2);
+  const exdated = findings.find(f => f.identifier.includes('CA8D02F4'));
+  assert.ok(exdated, 'the wrong-Sunday single is listed');
+  assert.equal(exdated.kind, 'off-pattern', 'distinct label — NOT "superseded"');
+  assert.ok(exdated.reason.includes('EXDATE'), `the reason says the series excludes that night: ${exdated.reason}`);
+  const saturday = findings.find(f => f.identifier.includes('BBBBBBBB'));
+  assert.ok(saturday, 'the never-generated date is listed too');
+  assert.equal(saturday.kind, 'off-pattern');
+  assert.ok(saturday.reason.includes('not generated'), saturday.reason);
+  assert.ok(lines.some(l => l.includes('OFF-PATTERN') && l.includes('might be a genuinely special night')),
+    `the log line carries the distinct label: ${JSON.stringify(lines)}`);
+});
+
+test('calendar hygiene: series instances (multi-instance identifier) and the series anchor are never listed', async () => {
+  const core = createLaCore();
+  // Only the series' own records in the window: two instances sharing the
+  // identifier, all on-pattern. Nothing may be listed.
+  const adapter = buildHygieneAdapter([
+    buildBbarSeriesInstance('2026-08-14T04:00:00.000Z'),
+    buildBbarSeriesInstance('2026-08-21T04:00:00.000Z')
+  ], BBAR_PUBLISHED_ICS);
+  const { findings } = await collectHygieneWithLogs(core, [buildBbarSeriesStamp()], adapter);
+  assert.deepEqual(findings, [], 'the series is not its own hygiene problem');
+
+  // Even a LONE instance sharing the confirmed identifier (window edge) is
+  // the series' own record, not a single.
+  const loneAnchorAdapter = buildHygieneAdapter([
+    buildBbarSeriesInstance('2026-08-14T04:00:00.000Z')
+  ], BBAR_PUBLISHED_ICS);
+  const lone = await collectHygieneWithLogs(core, [buildBbarSeriesStamp()], loneAnchorAdapter);
+  assert.deepEqual(lone.findings, [], 'a lone anchor instance is still the series');
+});
+
+test('calendar hygiene: a slot-host override (overrideUid notes) is NEVER listed — it is deliberate', async () => {
+  const core = createLaCore();
+  // Real shape (la.ics Bear Happy Hour): the override single sits ON a date
+  // the parent weekly rule generates and identity-matches the series — the
+  // overrideUid/overrideRecurrenceId notes alone must keep it off the list.
+  const overrideSingle = buildBbarLeftoverSingle(
+    '2026-08-14T04:00:00.000Z',
+    'overrideUid: bbar-20260801T000000Z@chunky.dad\noverrideRecurrenceId: 20260814T040000Z'
+  );
+  const adapter = buildHygieneAdapter([
+    buildBbarSeriesInstance('2026-08-21T04:00:00.000Z'),
+    buildBbarSeriesInstance('2026-08-28T04:00:00.000Z'),
+    overrideSingle
+  ], BBAR_PUBLISHED_ICS);
+  const { findings, lines } = await collectHygieneWithLogs(core, [buildBbarSeriesStamp()], adapter);
+  assert.deepEqual(findings, [], 'overrides are the slot-host mechanism, not stale singles');
+  assert.ok(!lines.some(l => l.includes('🧹 HYGIENE:')), 'no hygiene claim at all');
+});
+
+test('calendar hygiene: an unparseable/unsupported rrule lists NOTHING — fail closed', async () => {
+  const core = createLaCore();
+  // Identity matches, the date would look covered — but the rule carries a
+  // key the evaluator does not support, so no claim is made either way.
+  const unsupportedIcs = BBAR_PUBLISHED_ICS.replace(
+    'RRULE:FREQ=WEEKLY;BYDAY=TH',
+    'RRULE:FREQ=WEEKLY;BYDAY=TH;BYSETPOS=2'
+  );
+  const adapter = buildHygieneAdapter([
+    buildBbarSeriesInstance('2026-08-14T04:00:00.000Z'),
+    buildBbarSeriesInstance('2026-08-21T04:00:00.000Z'),
+    buildBbarLeftoverSingle('2026-08-14T04:00:00.000Z')
+  ], unsupportedIcs);
+  const { findings, lines } = await collectHygieneWithLogs(core, [buildBbarSeriesStamp()], adapter);
+  assert.deepEqual(findings, [], 'an unevaluable rule yields silence, never a guess');
+  assert.ok(!lines.some(l => l.includes('🧹 HYGIENE:')), 'no hygiene lines either');
+
+  // Same fail-closed rule when the only rule source is a notes recurrence
+  // key that does not parse at all.
+  const proseInstance = buildBbarSeriesInstance('2026-08-14T04:00:00.000Z');
+  proseInstance.notes = `${BBAR_INSTANCE_NOTES}\nrecurrence: every thursday night`;
+  const proseAdapter = buildHygieneAdapter([
+    proseInstance,
+    buildBbarLeftoverSingle('2026-08-21T04:00:00.000Z')
+  ], null);
+  const prose = await collectHygieneWithLogs(core, [buildBbarSeriesStamp()], proseAdapter);
+  assert.deepEqual(prose.findings, [], 'prose is not a rule');
+});
+
+test('calendar hygiene: notes-anchored rule covers forward from the anchor and fails closed before it', async () => {
+  const core = createLaCore();
+  // No published record: the rule comes from the instance's own notes
+  // recurrence key, anchored at the earliest visible instance (Aug 13).
+  const notesInstance = buildBbarSeriesInstance('2026-08-14T04:00:00.000Z');
+  notesInstance.notes = `${BBAR_INSTANCE_NOTES}\nrecurrence: FREQ=WEEKLY;BYDAY=TH`;
+  const coveredSingle = buildBbarLeftoverSingle('2026-08-21T04:00:00.000Z'); // Thu after the anchor
+  const preAnchorSingle = buildBbarLeftoverSingle('2026-08-07T04:00:00.000Z'); // Thu BEFORE the anchor
+  preAnchorSingle.identifier = 'CAL-UUID:CCCCCCCC-0000-0000-0000-000000000000';
+  const adapter = buildHygieneAdapter([notesInstance, coveredSingle, preAnchorSingle], null);
+  const { findings } = await collectHygieneWithLogs(core, [buildBbarSeriesStamp()], adapter);
+
+  assert.equal(findings.length, 1, 'only the post-anchor Thursday is claimed');
+  assert.equal(findings[0].kind, 'superseded');
+  assert.equal(findings[0].identifier, 'CAL-UUID:AAAAAAAA-1111-2222-3333-444444444444');
+  assert.equal(findings[0].series.ruleSource, 'calendar-notes');
+});
+
+test('calendar hygiene: a manual bear verdict on the single adds the caution tag', async () => {
+  const core = createLaCore();
+  const cautionSingle = buildBbarLeftoverSingle(
+    '2026-08-14T04:00:00.000Z',
+    'bearSource: manual-bear (overrode ai: flyer says bears)'
+  );
+  const adapter = buildHygieneAdapter([
+    buildBbarSeriesInstance('2026-08-14T04:00:00.000Z'),
+    buildBbarSeriesInstance('2026-08-21T04:00:00.000Z'),
+    cautionSingle
+  ], BBAR_PUBLISHED_ICS);
+  const { findings, lines } = await collectHygieneWithLogs(core, [buildBbarSeriesStamp()], adapter);
+  assert.equal(findings.length, 1, 'still listed — but flagged');
+  assert.equal(findings[0].caution, true);
+  assert.ok(findings[0].cautionReason.includes('manual-bear'));
+  assert.ok(lines.some(l => l.includes('extra caution')), 'the log carries the caution too');
+});
+
+test('calendar hygiene: no matched series, adapter failures, or empty windows → empty checklist, never a throw', async () => {
+  const core = createLaCore();
+  // No _seriesMatch stamps at all.
+  const idle = await core.collectCalendarHygieneFindings(
+    [{ city: 'la', title: 'ONE OFF' }],
+    buildHygieneAdapter([buildBbarLeftoverSingle('2026-08-14T04:00:00.000Z')], BBAR_PUBLISHED_ICS)
+  );
+  assert.deepEqual(idle, []);
+
+  // Adapter blows up mid-lookup: report-only means silence, not failure.
+  const throwing = buildSeriesLookupAdapter([], {
+    getWideWindowCalendarEvents: async () => { throw new Error('calendar unavailable'); },
+    getPublishedCalendarRecords: async () => { throw new Error('network unavailable'); }
+  });
+  const broken = await core.collectCalendarHygieneFindings([buildBbarSeriesStamp()], throwing);
+  assert.deepEqual(broken, []);
+
+  // No adapter at all.
+  assert.deepEqual(await core.collectCalendarHygieneFindings([buildBbarSeriesStamp()], null), []);
+});
+
 test('isRecurringSeriesEvent: the canonical `recurrence` field counts as a series stamp — except on an override', () => {
   // Builder-made events carry ONLY the canonical field (event-schema
   // canonicalizes rrule/recurrenceRule → recurrence); they must be a series
