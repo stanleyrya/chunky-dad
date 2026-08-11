@@ -13809,3 +13809,142 @@ test('single-page top-up: explicit ocr.maxImages still caps the page-level pass 
   await parser.extractOcrFromAllImages(htmlData, ocrConfig, null, ocrConfig.maxImages);
   assert.equal(ocrCalls.length, 3, 'the capped pass reads exactly the configured number of images');
 });
+
+// ---------------------------------------------------------------------------
+// Merge integrity wave 1 — og:image chrome and venue-brand logos as event
+// images (runs 20260811-162602 "Leipzig Bear Weekend" og-default.png,
+// 20260811-141654 "South Seattle Bear Social" venue logo).
+// ---------------------------------------------------------------------------
+
+test('fillImageFromPageMetaArtwork refuses site-default og:image filenames (og-default / og-image)', () => {
+  const parser = createParser();
+  for (const filename of ['og-default.png', 'og-image.jpg', 'og_default.png', 'ogimage.png', 'default-og.webp']) {
+    const event = { title: 'Leipzig Bear Weekend' };
+    const htmlData = {
+      url: 'https://thebearcalendar.com/events/leipzig-baren-weekend-2026/',
+      html: `<meta property="og:image" content="https://thebearcalendar.com/${filename}" />`
+    };
+    parser.fillImageFromPageMetaArtwork(event, htmlData);
+    assert.equal(event.image, undefined, `${filename} is a site-default social card, never an event image`);
+  }
+  // A real per-event og:image still fills as before.
+  const event = { title: 'Leipzig Bear Weekend' };
+  const htmlData = {
+    url: 'https://promoter.example/events/leipzig-weekend/',
+    html: '<meta property="og:image" content="https://promoter.example/media/leipzig-weekend-flyer.jpg" />'
+  };
+  parser.fillImageFromPageMetaArtwork(event, htmlData);
+  assert.equal(event.image, 'https://promoter.example/media/leipzig-weekend-flyer.jpg');
+});
+
+test('fillImageFromPageMetaArtwork refuses an og:image shared by multiple event pages of the same host', () => {
+  const parser = createParser();
+  const sharedCard = 'https://aggregator.example/media/social/site-card.jpg';
+  const pageOne = {
+    url: 'https://aggregator.example/events/first-party-2026/',
+    html: `<meta property="og:image" content="${sharedCard}" />`
+  };
+  const pageTwo = {
+    url: 'https://aggregator.example/events/second-party-2026/',
+    html: `<meta property="og:image" content="${sharedCard}" />`
+  };
+  // Page one is seen first (its candidates get collected during its own parse).
+  parser.collectPageMetaImageCandidates(pageOne);
+  const event = { title: 'Second Party' };
+  parser.fillImageFromPageMetaArtwork(event, pageTwo);
+  assert.equal(event.image, undefined,
+    'an og:image published by two distinct pages of one host is the site default');
+  // A different host publishing the same-shaped card on ONE page still fills.
+  const soloEvent = { title: 'Solo Party' };
+  const soloPage = {
+    url: 'https://solo.example/events/solo-party/',
+    html: '<meta property="og:image" content="https://solo.example/media/social/solo-card.jpg" />'
+  };
+  parser.fillImageFromPageMetaArtwork(soloEvent, soloPage);
+  assert.equal(soloEvent.image, 'https://solo.example/media/social/solo-card.jpg');
+});
+
+test('vetPageMetaArtworkCandidates OCRs the would-be og:image so the furniture gate can refuse it', async () => {
+  const parser = createParser();
+  const ocrCalls = [];
+  parser.getOcrConfig = () => ({ enabled: true });
+  parser.getOcrTextForImage = async (imageUrl, _ocrConfig, passLabel) => {
+    ocrCalls.push({ imageUrl, passLabel });
+    return { imageUrl, text: '', imageClassification: 'logo' };
+  };
+  const event = { title: 'Leipzig Bear Weekend' };
+  const htmlData = {
+    url: 'https://aggregator.example/events/leipzig-weekend/',
+    html: '<meta property="og:image" content="https://aggregator.example/media/site-hero.jpg" />'
+  };
+  await parser.vetPageMetaArtworkCandidates(event, htmlData, {}, null);
+  assert.equal(ocrCalls.length, 1, 'the adoptable candidate is OCR-read');
+  assert.equal(ocrCalls[0].imageUrl, 'https://aggregator.example/media/site-hero.jpg');
+  const verdict = parser.getOcrImageVerdict('https://aggregator.example/media/site-hero.jpg');
+  assert.ok(verdict, 'the vet records the verdict for the fill to consult');
+  assert.equal(verdict.classification, 'logo');
+  parser.fillImageFromPageMetaArtwork(event, htmlData);
+  assert.equal(event.image, undefined, 'the textless-logo verdict now refuses the adoption');
+
+  // Fail open: OCR disabled → no calls, and the fill behaves as before.
+  const offParser = createParser();
+  offParser.getOcrConfig = () => ({ enabled: false });
+  let called = false;
+  offParser.getOcrTextForImage = async () => { called = true; return null; };
+  await offParser.vetPageMetaArtworkCandidates({ title: 'X' }, htmlData, {}, null);
+  assert.equal(called, false, 'disabled OCR never issues requests');
+});
+
+test('a logo whose only OCR text is the page brand/venue name is refused (venue-logo blind spot)', () => {
+  const parser = createParser();
+  // Run 20260811-141654: the venue banner OCR'd classification=logo,
+  // text="LUMBER YARD\nBAR" — brand-explained text must not immunize it.
+  const bannerUrl = 'https://static.wixstatic.com/media/f45f1a_62d985d6be0d4852bffc072c1ef3c7d2~mv2_d_2400_1200_s_2.jpg';
+  parser.recordOcrImageVerdict(bannerUrl, { imageClassification: 'logo', text: 'LUMBER YARD\nBAR' });
+  const htmlData = {
+    url: 'https://www.thelumberyardbar.com/events',
+    html: '<meta property="og:site_name" content="The Lumber Yard Bar" />'
+  };
+  const reason = parser.getNonEventImageOcrReason(bannerUrl, htmlData);
+  assert.ok(reason, 'brand-only logo text is treated as no text');
+  assert.match(reason, /brand/i);
+  const event = { title: 'South Seattle Bear Social', image: bannerUrl, imageSource: 'page' };
+  parser.rejectNonEventImageValues(event, htmlData);
+  assert.equal(event.image, undefined, 'the venue-brand logo is rejected as the event image');
+  assert.equal(event.imageSource, undefined, 'provenance clears with the value');
+
+  // Without page context the historical fail-open behavior is unchanged.
+  assert.equal(parser.getNonEventImageOcrReason(bannerUrl), '', 'no htmlData → text-bearing logo still passes');
+});
+
+test('text-bearing logos NOT explained by the brand still pass (misclassified real flyers)', () => {
+  const parser = createParser();
+  const htmlData = {
+    url: 'https://www.thelumberyardbar.com/events',
+    html: '<meta property="og:site_name" content="The Lumber Yard Bar" />'
+  };
+  // The OCR corpus holds two images classified 'logo' carrying 500+ chars of
+  // real flyer text — the two conditions of the gate must keep passing them.
+  const flyerUrl = 'https://static.wixstatic.com/media/misclassified-flyer.jpg';
+  const flyerText = [
+    'LUMBER YARD BAR EVENTS', 'TUE AUG 11', 'TRIVIA TUESDAY W/ NATHAN 7:30PM + TACO TUESDAY',
+    'WED AUG 12', "QUEERAOKE! LET'S SING LOUD & PROUD 8PM-MIDNIGHT", 'THU AUG 13',
+    'GAY BINGO! FREE TO PLAY + PLUS PRIZES! 7PM', 'FRI AUG 14',
+    'EXPOSED SOAKED THEME: GET WET & WILD 9PM + WET UNDERWEAR CONTEST AT 11PM',
+    'W/ DJ REDLINE & DJ CLOVER $5 DOOR FREE CLOTHES CHK', 'SAT AUG 15',
+    'QUEER MARKET: GAY MADE & GAY OWNED 1PM-5PM',
+    'LEZ OUT W/ THE BURLESIANS (TIX AVAIL) 6PM-8PM',
+    'DOLLY & THE DJ DRAG SHOW NO COVER 9PM', 'SUN AUG 16',
+    'SOUTH SEATTLE BEAR SOCIAL 2PM-7PM'
+  ].join('\n');
+  assert.ok(flyerText.length > 500, 'regression fixture mirrors the 500+ char corpus flyers');
+  parser.recordOcrImageVerdict(flyerUrl, { imageClassification: 'logo', text: flyerText });
+  assert.equal(parser.getNonEventImageOcrReason(flyerUrl, htmlData), '',
+    'flyer text beyond the brand name keeps immunizing the image');
+  // …and an event-flyer classification never enters the furniture gate at all,
+  // even when its text happens to be brand-only.
+  const brandFlyerUrl = 'https://static.wixstatic.com/media/brand-flyer.jpg';
+  parser.recordOcrImageVerdict(brandFlyerUrl, { imageClassification: 'event-flyer', text: 'LUMBER YARD BAR' });
+  assert.equal(parser.getNonEventImageOcrReason(brandFlyerUrl, htmlData), '',
+    'event-flyer classifications are never refused by the brand gate');
+});

@@ -690,6 +690,15 @@ class AiWebParser {
         // ("Tightwad Tuesday", "Lucky Break"), so rejecting it would throw away
         // real flyers. 'multi-event-flyer' is absent for the same reason.
         this.nonEventOcrImageClassifications = new Set(['logo', 'thumbnail', 'hero-banner']);
+        // Page-meta (og:image family) artwork sightings for THIS run:
+        // canonical image key → Set of page keys that published it as their
+        // social card. A meta image repeated across multiple distinct pages
+        // of one host is the site's DEFAULT card, never any single event's
+        // artwork — fillImageFromPageMetaArtwork refuses it (site-default
+        // tell; run 20260811-162602 adopted thebearcalendar.com/og-default.png
+        // as an event image). In-memory, this parser instance only, exactly
+        // like the OCR verdicts above.
+        this.pageMetaImagePagesByImageKey = new Map();
         // How far into an image the header scan reads. PNG/GIF/WebP answer in
         // the first 30 bytes; a JPEG's frame header sits after its EXIF/ICC
         // blocks, which on real camera-sourced flyers routinely run past 32KB.
@@ -940,11 +949,17 @@ class AiWebParser {
                 // placeholder rejection above: reject BEFORE the og:image fill,
                 // so the event trades site chrome for the page's real artwork
                 // instead of simply losing its picture.
-                structuredEvents.forEach(event => this.rejectNonEventImageValues(event));
+                structuredEvents.forEach(event => this.rejectNonEventImageValues(event, effectiveHtmlData));
                 // A single structured event whose node carried no image adopts
                 // the page's own og:image artwork (multi-event pages never do:
                 // one shared meta image cannot be attributed to one event).
+                // OCR-vet the would-be adoption FIRST: this short-circuit path
+                // never runs the ocr-all pass, so without the vet the fill's
+                // furniture gate fails open on "unknown" (run 20260811-162602:
+                // thebearcalendar.com/og-default.png became "Leipzig Bear
+                // Weekend"'s image). OCR is free — local MLX.
                 if (structuredEvents.length === 1) {
+                    await this.vetPageMetaArtworkCandidates(structuredEvents[0], effectiveHtmlData, parserConfig, httpAdapter);
                     this.fillImageFromPageMetaArtwork(structuredEvents[0], effectiveHtmlData);
                 }
                 // Images the structured nodes carried are already stamped
@@ -14994,7 +15009,7 @@ TEXT:
         // hero-banner it found no text on is site chrome, never this event's
         // flyer. Also before the og:image fill, so the slot can be refilled
         // with real artwork rather than left empty.
-        this.rejectNonEventImageValues(event);
+        this.rejectNonEventImageValues(event, htmlData);
 
         // A single-event page (never a multi-event segment — one shared meta
         // image cannot be attributed to one segment) whose extraction found no
@@ -16181,10 +16196,108 @@ TEXT:
                 }
             }
         }
+        // Sightings are recorded exactly once per page (the cache above makes
+        // re-entry return early), feeding the cross-page site-default tell.
+        this.recordPageMetaImageSightings(htmlData, candidates);
         if (Object.isExtensible(htmlData)) {
             htmlData.pageMetaImageCandidates = candidates;
         }
         return candidates;
+    }
+
+    // Remember which page published each og:image-family candidate this run.
+    // Keyed by the page's own URL with query string AND fragment stripped
+    // (trailing slashes ignored, lowercased): ?occurrence= variants of ONE
+    // event page legitimately share that event's real artwork and must count
+    // as one page (fail open), and the same page recording twice is a no-op.
+    recordPageMetaImageSightings(htmlData, candidates) {
+        const pageUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url.trim() : '';
+        if (!pageUrl || !Array.isArray(candidates) || candidates.length === 0) return;
+        const pageKey = this.getPageKeyForMetaImageSightings(pageUrl);
+        if (!pageKey) return;
+        for (const candidate of candidates) {
+            if (!candidate || !candidate.url) continue;
+            const imageKey = this.canonicalizeImageUrlForComparison(candidate.url);
+            if (!imageKey) continue;
+            let pages = this.pageMetaImagePagesByImageKey.get(imageKey);
+            if (!pages) {
+                pages = new Set();
+                this.pageMetaImagePagesByImageKey.set(imageKey, pages);
+            }
+            pages.add(pageKey);
+        }
+    }
+
+    getPageKeyForMetaImageSightings(pageUrl) {
+        return String(pageUrl || '').split('#')[0].split('?')[0].replace(/\/+$/, '').toLowerCase();
+    }
+
+    // Deterministic site-default tells for a page-meta (og:image) candidate.
+    // Two generic signals, no domain rules:
+    //   1. filename convention — a basename like "og-default" / "og-image"
+    //      names the site's fallback social card, not an event (run
+    //      20260811-162602: thebearcalendar.com/og-default.png became
+    //      "Leipzig Bear Weekend"'s image);
+    //   2. cross-page reuse — the SAME image published as the page-meta
+    //      artwork of two or more distinct pages on this host this run is
+    //      the site's shared card (one event's artwork belongs to one page).
+    // '' means no tell; unknown always fails open.
+    getSiteDefaultMetaImageReason(url, htmlData = null) {
+        const value = String(url || '').trim();
+        if (!value) return '';
+        const pathMatch = value.match(/^https?:\/\/[^/?#]+\/(?:[^?#]*\/)?([^/?#]+)/i);
+        const basename = pathMatch ? pathMatch[1].replace(/\.[A-Za-z0-9]+$/, '').toLowerCase() : '';
+        if (/^(?:og[-_]?(?:default|image|img)|default[-_]?og|open-?graph(?:[-_](?:default|image))?)$/.test(basename)) {
+            return `its "${basename}" filename is a site-default social-card convention`;
+        }
+        const imageKey = this.canonicalizeImageUrlForComparison(value);
+        const pages = imageKey && this.pageMetaImagePagesByImageKey
+            ? this.pageMetaImagePagesByImageKey.get(imageKey) : null;
+        if (pages && pages.size >= 2) {
+            const pageHost = htmlData && typeof htmlData.url === 'string'
+                ? this.getRegistrableDomainFromUrl(htmlData.url) : '';
+            const sameHostPages = pageHost
+                ? Array.from(pages).filter(pageKey => this.getRegistrableDomainFromUrl(pageKey) === pageHost)
+                : Array.from(pages);
+            if (sameHostPages.length >= 2) {
+                return `the same og:image is the page-meta artwork of ${sameHostPages.length} distinct ${pageHost || 'same-site'} pages this run (site default, not this event's)`;
+            }
+        }
+        return '';
+    }
+
+    // OCR-vet every page-meta candidate fillImageFromPageMetaArtwork could
+    // adopt, so its existing furniture gate (getNonEventImageOcrReason) has a
+    // verdict to consult instead of failing open on "unknown". Used by the
+    // structured-data short-circuit, which never runs the ocr-all pass. OCR
+    // is free (local MLX) — never optimized for fewer calls. No-ops when the
+    // event already has an image, OCR is disabled, or a candidate already has
+    // a verdict; a failed OCR read leaves the candidate unknown (fail open,
+    // same as before this vet existed).
+    async vetPageMetaArtworkCandidates(event, htmlData, parserConfig, httpAdapter) {
+        if (!event || typeof event !== 'object') return;
+        const existingImage = typeof event.image === 'string' ? event.image.trim() : '';
+        if (existingImage) return;
+        const ocrConfig = this.getOcrConfig(parserConfig);
+        if (!ocrConfig.enabled) return;
+        for (const candidate of this.collectPageMetaImageCandidates(htmlData)) {
+            const upgraded = candidate.url;
+            if (!upgraded || this.isLikelyUninterestingImageUrl(upgraded)) continue;
+            // Already refused deterministically — no verdict needed.
+            if (this.getSiteDefaultMetaImageReason(upgraded, htmlData)) continue;
+            if (this.getOcrImageVerdict(upgraded)) continue;
+            const rawResult = await this.getOcrTextForImage(upgraded, ocrConfig, 'og-image-vet', httpAdapter).catch(() => null);
+            const normalized = this.normalizeOcrResult(rawResult);
+            if (!normalized) continue;
+            // Same seam-level recording as the OCR top-ups: idempotent with
+            // the inner recording, and it is what the fill's gate consults —
+            // keyed under the candidate URL itself so the fill's own lookup
+            // always finds it (recordOcrImageVerdict also keys the result's
+            // own url forms).
+            this.recordOcrImageVerdict(upgraded, normalized);
+            const verdict = this.getOcrImageVerdict(upgraded);
+            console.log(`🤖 AI Web: OCR-vetted page og:image ${upgraded} before adoption — ${verdict ? verdict.classification : 'no classification'}`);
+        }
     }
 
     fillImageFromPageMetaArtwork(event, htmlData) {
@@ -16194,9 +16307,17 @@ TEXT:
         for (const candidate of this.collectPageMetaImageCandidates(htmlData)) {
             const upgraded = candidate.url;
             if (!upgraded || this.isLikelyUninterestingImageUrl(upgraded)) continue;
+            // A site-default social card (filename convention or cross-page
+            // reuse) is the page template's chrome, never this event's
+            // artwork — refuse it before the OCR gate even asks.
+            const siteDefaultReason = this.getSiteDefaultMetaImageReason(upgraded, htmlData);
+            if (siteDefaultReason) {
+                console.log(`🤖 AI Web: Refused page og:image ${upgraded} for "${event.title || ''}" — ${siteDefaultReason}`);
+                continue;
+            }
             // A page whose og:image is its own brand logo must not hand that
             // logo to the event the URL-shape test just let through.
-            if (this.getNonEventImageOcrReason(upgraded)) continue;
+            if (this.getNonEventImageOcrReason(upgraded, htmlData)) continue;
             event.image = upgraded;
             event.imageSource = 'og-image';
             console.log(`🤖 AI Web: Filled image from page og:image for "${event.title}"`);
@@ -16570,7 +16691,11 @@ TEXT:
             // model DID transcribe something, so the withhold reason can say
             // so instead of claiming "no readable text".
             hasText: this.ocrTextHasMeaningfulContent(rawText),
-            hasGlyphNoiseOnly: Boolean(rawText) && !this.ocrTextHasMeaningfulContent(rawText)
+            hasGlyphNoiseOnly: Boolean(rawText) && !this.ocrTextHasMeaningfulContent(rawText),
+            // The transcription itself, for the brand-token furniture gate in
+            // getNonEventImageOcrReason: a logo whose only readable text is
+            // the page's own brand/venue name is still page furniture.
+            text: rawText
         };
         let recorded = false;
         for (const url of [imageUrl, result.imageUrl, result.url, this.normalizeHttpUrlValue(imageUrl)]) {
@@ -16614,10 +16739,23 @@ TEXT:
      * Unknown is always keep: an image nobody OCR'd, an OCR result with no
      * classification, or a classification outside the set all return ''.
      */
-    getNonEventImageOcrReason(url) {
+    getNonEventImageOcrReason(url, htmlData = null) {
         const verdict = this.getOcrImageVerdict(url);
         if (!verdict) return '';
-        if (verdict.hasText) return '';
+        if (verdict.hasText) {
+            // A text-bearing logo normally passes (condition 2 above — the two
+            // misclassified real flyers in the corpus carry 500+ chars). But
+            // when EVERY meaningful token the model read is explained by the
+            // page's own brand/venue name, the "text" is just the brand
+            // wordmark: a venue logo transcribing "LUMBER YARD BAR" on
+            // thelumberyardbar.com (run 20260811-141654, South Seattle Bear
+            // Social) is page furniture, and hasText must not immunize it.
+            // Callers without page context (htmlData) keep the historical
+            // fail-open behavior unchanged.
+            if (!this.nonEventOcrImageClassifications.has(verdict.classification)) return '';
+            if (!htmlData || !this.isOcrTextExplainedByPageBrand(verdict.text, htmlData)) return '';
+            return `the vision pass classified it as ${verdict.classification} and its only readable text is the page's own brand/venue name`;
+        }
         if (!this.nonEventOcrImageClassifications.has(verdict.classification)) return '';
         if (verdict.hasGlyphNoiseOnly) {
             // New wording for the new case only — the model DID transcribe
@@ -16646,12 +16784,38 @@ TEXT:
      * Clearing `image` clears its imageSource stamp with it, exactly like the
      * placeholder rejection — provenance is a companion of the value.
      */
-    rejectNonEventImageValues(event) {
+    // Do the page's own brand/venue names explain EVERY meaningful token of an
+    // OCR transcription? Token = 3+ word characters (the same bar
+    // ocrTextHasMeaningfulContent sets), matched as a substring of the brand
+    // corpus with separators stripped, so "LUMBER YARD BAR" is explained by
+    // "The Lumberyard Bar" AND by the page host's own label
+    // ("thelumberyardbar"). The corpus is the page's derived brand names
+    // (getPageBrandNames — JSON-LD Organization/WebSite + og:site_name) plus
+    // the registrable domain's first label; empty transcriptions and pages
+    // with no derivable brand always answer false (fail open — the furniture
+    // gate never fires on them).
+    isOcrTextExplainedByPageBrand(text, htmlData) {
+        const tokens = String(text || '').toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) || [];
+        if (tokens.length === 0) return false;
+        const corpus = [];
+        for (const name of this.getPageBrandNames(htmlData)) {
+            const squashed = String(name || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+            if (squashed.length >= 3) corpus.push(squashed);
+        }
+        const pageUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
+        const registrable = pageUrl ? this.getRegistrableDomainFromUrl(pageUrl) : '';
+        const hostLabel = registrable ? registrable.split('.')[0] : '';
+        if (hostLabel.length >= 3) corpus.push(hostLabel);
+        if (corpus.length === 0) return false;
+        return tokens.every(token => corpus.some(brand => brand.includes(token)));
+    }
+
+    rejectNonEventImageValues(event, htmlData = null) {
         if (!event || typeof event !== 'object') return event;
         for (const field of ['image', 'imageVertical', 'imageHorizontal']) {
             const value = typeof event[field] === 'string' ? event[field].trim() : '';
             if (!value) continue;
-            const reason = this.getNonEventImageOcrReason(value);
+            const reason = this.getNonEventImageOcrReason(value, htmlData);
             if (!reason) continue;
             console.log(`🤖 AI Web: Rejected non-event ${field} ${value} for "${event.title || ''}" — ${reason}`);
             delete event[field];
@@ -16828,7 +16992,7 @@ TEXT:
             // …and neither is an image the vision pass read as page furniture.
             // Without this a rejected `image` could walk straight back in as an
             // orientation slot, because `image` is a slot candidate itself.
-            if (this.getNonEventImageOcrReason(candidate.url)) continue;
+            if (this.getNonEventImageOcrReason(candidate.url, htmlData)) continue;
             const orientation = this.resolveImageCandidateOrientation(candidate);
             if (orientation !== 'portrait' && orientation !== 'landscape') continue;
             const incumbent = bySlot[orientation];

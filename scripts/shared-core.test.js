@@ -6537,7 +6537,9 @@ test('applyAggregatorWebsitePointers prefers the cross-host ticketUrl over the a
     ticketUrl: 'https://dice.fm/event/cubscout',
     _sourcePageUrl: 'https://eaglela.com/events/cub-scout-3/'
   };
-  // Same-host ticketUrl on the aggregator: no better pointer exists — untouched.
+  // Same-host ticketUrl on the aggregator: no OUTBOUND pointer exists, so the
+  // self-referential website is cleared (run 20260811-162602: empty beats a
+  // copy of the source page); the distinct same-host tickets page survives.
   const sameHostEvent = {
     title: 'BEAR NIGHT',
     website: 'https://thebearcalendar.com/events/bear-night-2026/',
@@ -6559,8 +6561,10 @@ test('applyAggregatorWebsitePointers prefers the cross-host ticketUrl over the a
     'aggregator-page website is replaced by the original ticketing URL');
   assert.equal(venueEvent.website, 'https://eaglela.com/events/cub-scout-3/',
     'non-aggregator pages are unchanged');
-  assert.equal(sameHostEvent.website, 'https://thebearcalendar.com/events/bear-night-2026/',
-    'a same-host ticketUrl never rewrites website');
+  assert.equal(sameHostEvent.website, '',
+    'a same-host ticketUrl is not an outbound pointer — the self-referential website is cleared');
+  assert.equal(sameHostEvent.ticketUrl, 'https://www.thebearcalendar.com/tickets/bear-night-2026',
+    'a same-host ticketUrl that is not the source page itself survives the clear');
   assert.equal(alreadyOriginalEvent.website, 'https://megawoof.com/houston',
     'a website already pointing at the original source is untouched');
 });
@@ -16991,4 +16995,222 @@ test('pipeline order: counters stay truthful — duplicatesRemoved covers the FU
     result.totalEvents - result.duplicatesRemoved,
     result.events.length + (result.bearDroppedEvents || []).length
   );
+});
+
+// ---------------------------------------------------------------------------
+// Merge integrity wave 1 (run 20260811-162602, The Bear Calendar): the AI
+// arbiter clobbered saved calendar data — platform artwork lost to the
+// aggregator's storage re-host on 4/5 events, canonical slug ticket URLs lost
+// to opaque link.* shortlinks on 3/5 — while the 🧊 STICKY report logged the
+// correct preference every time. These tests replay the run's REAL field
+// pairs (BOATMINCE / SPOOKMINCE / BEEFMINCE x Bear Brum 2026).
+// ---------------------------------------------------------------------------
+
+test('ticketUrl same-domain shortlink rung: event-slug apex URL beats opaque link.* shortlink', () => {
+  const core = createCore();
+  // Real pairs from run 20260811-162602 (calendar slug URL vs scraped shortlink).
+  const pairs = [
+    ['https://dice.fm/event/g5dyeb-boatmince-30th-aug-westminster-pier-london-tickets', 'https://link.dice.fm/hcad51b9f844'],
+    ['https://dice.fm/event/v3x3n7-spookmince-31st-oct-venue-tba-london-london-tickets', 'https://link.dice.fm/Gffadd9feb4a'],
+    ['https://dice.fm/event/oepd2a-beefmince-x-bear-brum-2026-26th-sep-eden-birmingham-tickets', 'https://link.dice.fm/k485cb41bf1e']
+  ];
+  for (const [slugUrl, shortlink] of pairs) {
+    const forward = core.resolveConflictDeterministically('ticketUrl', slugUrl, shortlink);
+    assert.ok(forward, `slug vs shortlink must resolve deterministically (${shortlink})`);
+    assert.equal(forward.winner, 'a', 'the slug-bearing apex URL wins');
+    const reversed = core.resolveConflictDeterministically('ticketUrl', shortlink, slugUrl);
+    assert.ok(reversed, 'order independence: reversed orientation still resolves');
+    assert.equal(reversed.winner, 'b', 'the slug-bearing apex URL wins from either slot');
+  }
+  // Fail open: different registrable domains — a shortlink-shaped URL on an
+  // unrelated host is a genuine conflict, not a same-platform alias.
+  assert.equal(
+    core.resolveConflictDeterministically('ticketUrl',
+      'https://dice.fm/event/g5dyeb-boatmince-30th-aug-westminster-pier-london-tickets',
+      'https://link.otherplatform.example/hcad51b9f844'),
+    null, 'cross-domain shortlink pairs still arbitrate');
+  // Fail open: two slug URLs on the same domain are a genuine question.
+  assert.equal(
+    core.resolveConflictDeterministically('ticketUrl',
+      'https://dice.fm/event/g5dyeb-boatmince-30th-aug-tickets',
+      'https://dice.fm/event/aaaaaa-boatmince-31st-aug-tickets'),
+    null, 'two slug URLs on one domain still arbitrate');
+});
+
+test('image platform-artwork rung: ticketing platform artwork beats the aggregator source re-host', () => {
+  const core = createCore();
+  // Real BOATMINCE records from run 20260811-162602 _original.
+  const calendarRecord = {
+    image: 'https://dice-media.imgix.net/attachments/2025-01-15/aa1288a2-6cf8-4c42-8c29-581b1cfe5ba2.jpg?rect=0%2C0%2C768%2C768',
+    ticketUrl: 'https://dice.fm/event/g5dyeb-boatmince-30th-aug-westminster-pier-london-tickets',
+    imageSource: 'jsonld'
+  };
+  const scrapedRecord = {
+    image: 'https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/5e1181f38157ddbb.jpg',
+    ticketUrl: 'https://link.dice.fm/hcad51b9f844',
+    website: 'https://link.dice.fm/hcad51b9f844',
+    url: 'https://beefmince.com',
+    imageSource: 'jsonld',
+    _sourcePageUrl: 'https://thebearcalendar.com/events/boatmince-2026/'
+  };
+  const context = {
+    cityKey: 'london',
+    barNames: [],
+    eventTitle: 'BOATMINCE',
+    sideLabels: { a: 'calendar', b: 'scraped' },
+    records: { a: calendarRecord, b: scrapedRecord }
+  };
+  const resolved = core.resolveConflictDeterministically('image', calendarRecord.image, scrapedRecord.image, context);
+  assert.ok(resolved, 'platform artwork vs source re-host must resolve deterministically');
+  assert.equal(resolved.winner, 'a', "the ticketing platform's own artwork wins");
+  assert.match(resolved.reason, /platform/i);
+
+  // Strict-attribution guard: a FIRST-PARTY page hosting its own artwork is
+  // never a "re-host" — same shape but the scrape source IS the event's own
+  // site (record website/url domain) → fall through (null, AI arbitrates).
+  const firstPartyRecord = {
+    ...scrapedRecord,
+    image: 'https://beefmince.com/media/own-flyer.jpg',
+    website: 'https://beefmince.com',
+    url: 'https://beefmince.com',
+    _sourcePageUrl: 'https://beefmince.com/events/boatmince/'
+  };
+  const firstPartyContext = { ...context, records: { a: calendarRecord, b: firstPartyRecord } };
+  assert.equal(
+    core.resolveConflictDeterministically('image', calendarRecord.image, firstPartyRecord.image, firstPartyContext),
+    null, "a promoter site's own artwork never loses to the platform rung");
+});
+
+test('calendar stickiness is BINDING for image and ticketUrl — the AI is never asked', async () => {
+  const core = createCore();
+  // No deterministic rung can decide these pairs (unrelated hosts, no
+  // shortlink/platform/asset/logo shape), so on the old behavior they went to
+  // the position-biased arbiter, which clobbered the saved calendar values.
+  const scraped = {
+    title: 'CLUB NIGHT',
+    startDate: new Date('2026-09-05T21:00:00.000Z'),
+    endDate: new Date('2026-09-06T02:00:00.000Z'),
+    image: 'https://elsewhere.example/media/fresh-flyer.jpg',
+    ticketUrl: 'https://tickets-b.example/e/99887/order',
+    city: 'seattle',
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: { ai: { provider: 'ollama', endpoint: 'http://ai.example/api/generate', model: 'test-model' } }
+  };
+  const existing = {
+    title: 'CLUB NIGHT',
+    startDate: new Date('2026-09-05T21:00:00.000Z'),
+    endDate: new Date('2026-09-06T02:00:00.000Z'),
+    url: '',
+    notes: [
+      'image: https://calendar-images.example/artwork/saved-flyer.jpg',
+      'ticketUrl: https://tickets-a.example/event/bear-night'
+    ].join('\n')
+  };
+  // An adapter that would pick the scraped side for both fields — it must
+  // never even be consulted for image/ticketUrl.
+  const adapter = buildArbitrationAdapter({
+    image: { pick: 'scraped', value: 'https://elsewhere.example/media/fresh-flyer.jpg' },
+    ticketUrl: { pick: 'scraped', value: 'https://tickets-b.example/e/99887/order' }
+  });
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  assert.equal(finalEvent.image, 'https://calendar-images.example/artwork/saved-flyer.jpg',
+    'binding stickiness keeps the saved calendar image');
+  assert.equal(finalEvent.ticketUrl, 'https://tickets-a.example/event/bear-night',
+    'binding stickiness keeps the saved calendar ticketUrl');
+  assert.equal(adapter.calls.length, 0,
+    'image/ticketUrl conflicts with a saved calendar value are never sent to the AI');
+
+  // An EMPTY calendar side is not sticky: the scraped value must still fill it.
+  const fillAdapter = buildArbitrationAdapter({});
+  const filled = await core.createFinalEventObject(
+    { title: 'CLUB NIGHT', startDate: new Date('2026-09-05T21:00:00.000Z'), endDate: new Date('2026-09-06T02:00:00.000Z'), url: '', notes: '' },
+    { ...scraped },
+    { httpAdapter: fillAdapter }
+  );
+  assert.equal(filled.image, 'https://elsewhere.example/media/fresh-flyer.jpg',
+    'an empty calendar image is filled by the scrape, never held empty by stickiness');
+});
+
+test('replay 20260811-162602: BOATMINCE merge keeps the calendar image and slug ticketUrl deterministically', async () => {
+  const core = createCore();
+  const scraped = {
+    title: 'BOATMINCE',
+    startDate: new Date('2026-08-30T13:00:00.000Z'),
+    endDate: new Date('2026-08-30T17:00:00.000Z'),
+    image: 'https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/5e1181f38157ddbb.jpg',
+    ticketUrl: 'https://link.dice.fm/hcad51b9f844',
+    website: 'https://link.dice.fm/hcad51b9f844',
+    url: 'https://beefmince.com',
+    imageSource: 'jsonld',
+    _sourcePageUrl: 'https://thebearcalendar.com/events/boatmince-2026/',
+    city: 'london',
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: { ai: { provider: 'ollama', endpoint: 'http://ai.example/api/generate', model: 'test-model' } }
+  };
+  const existing = {
+    title: 'BOATMINCE',
+    startDate: new Date('2026-08-30T13:00:00.000Z'),
+    endDate: new Date('2026-08-30T17:00:00.000Z'),
+    url: '',
+    notes: [
+      'image: https://dice-media.imgix.net/attachments/2025-01-15/aa1288a2-6cf8-4c42-8c29-581b1cfe5ba2.jpg?rect=0%2C0%2C768%2C768',
+      'ticketUrl: https://dice.fm/event/g5dyeb-boatmince-30th-aug-westminster-pier-london-tickets',
+      'imageSource: jsonld'
+    ].join('\n')
+  };
+  // The run's arbiter picked the supabase re-host and (on the sibling events)
+  // the shortlink; feed those same answers — they must not matter anymore.
+  const adapter = buildArbitrationAdapter({
+    image: { pick: 'scraped', value: scraped.image },
+    ticketUrl: { pick: 'scraped', value: scraped.ticketUrl }
+  });
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  assert.equal(finalEvent.image,
+    'https://dice-media.imgix.net/attachments/2025-01-15/aa1288a2-6cf8-4c42-8c29-581b1cfe5ba2.jpg?rect=0%2C0%2C768%2C768',
+    'the dice-media platform artwork survives the merge');
+  assert.equal(finalEvent.ticketUrl,
+    'https://dice.fm/event/g5dyeb-boatmince-30th-aug-westminster-pier-london-tickets',
+    'the canonical slug ticket URL survives the merge');
+});
+
+test('applyAggregatorWebsitePointers clears self-referential pointers on offer-less aggregator listings', () => {
+  const core = createCore();
+  const urlClassifications = { 'https://thebearcalendar.com/events/': 'link-aggregator' };
+  // Run 20260811-162602: six offer-less listings shipped
+  // website=url=ticketUrl=their own aggregator page (San Francisco Bear
+  // Weekend shape) — every self-referential pointer must clear so nothing
+  // survives for the merge-time url→website fold to resurrect.
+  const offerLess = {
+    title: 'San Francisco Bear Weekend',
+    website: 'https://thebearcalendar.com/events/san-francisco-bear-weekend-2026/',
+    url: 'https://thebearcalendar.com/events/san-francisco-bear-weekend-2026/',
+    ticketUrl: 'https://thebearcalendar.com/events/san-francisco-bear-weekend-2026/',
+    _sourcePageUrl: 'https://thebearcalendar.com/events/san-francisco-bear-weekend-2026/'
+  };
+  // Outbound website (Leipzig shape): untouched even though url is a self-pointer.
+  const outboundWebsite = {
+    title: 'Leipzig Bear Weekend',
+    website: 'https://www.leipzig-baeren.de/party/#ticketshop',
+    url: 'https://thebearcalendar.com/events/leipzig-baren-weekend-2026/',
+    ticketUrl: 'https://www.leipzig-baeren.de/party/#ticketshop',
+    _sourcePageUrl: 'https://thebearcalendar.com/events/leipzig-baren-weekend-2026/'
+  };
+  // A venue site's legitimate self-pointer: its root is never classified
+  // 'link-aggregator', so the clear can never reach it.
+  const venueSelfPointer = {
+    title: 'Gear Night',
+    website: 'https://eaglela.com/events/gear-night/',
+    url: 'https://eaglela.com/events/gear-night/',
+    ticketUrl: '',
+    _sourcePageUrl: 'https://eaglela.com/events/gear-night/'
+  };
+  core.applyAggregatorWebsitePointers([offerLess, outboundWebsite, venueSelfPointer], urlClassifications);
+  assert.equal(offerLess.website, '', 'self-referential website clears (empty beats a copy of the source page)');
+  assert.equal(offerLess.url, '', 'the url alias clears with it — nothing left for the merge-time fold');
+  assert.equal(offerLess.ticketUrl, '', 'a ticketUrl equal to the source page is not a ticket link');
+  assert.equal(outboundWebsite.website, 'https://www.leipzig-baeren.de/party/#ticketshop', 'an outbound website is never cleared');
+  assert.equal(venueSelfPointer.website, 'https://eaglela.com/events/gear-night/', 'venue-site self-pointers are untouched');
+  assert.equal(venueSelfPointer.url, 'https://eaglela.com/events/gear-night/', 'venue-site url alias is untouched');
 });
