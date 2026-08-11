@@ -181,13 +181,12 @@ const scraperConfig = {
       // the /events/ archive (25 vs 12 in Aug 2026) and is where the
       // month-feed lookahead fetches next month's grid from.
       //
-      // alwaysBear: Eagle LA is a bear/leather venue and the bear check was
-      // dropping its flagship parties as "no bear-specific vocabulary" —
-      // run 20260811-132948 dropped 17/30 events including MEAT RACK, ONYX,
-      // SUNDAY BEER BUST, JUNGLE, BLUF LA. alwaysBear is AI trust context,
-      // not a bypass: not_bear/unsure events are KEPT with review flags for
-      // human judgment instead of silently dropped (flag, don't drop).
-      alwaysBear: true,
+      // NOT alwaysBear (owner call, 2026-08-11): the venue hosts many
+      // non-bear nights, so trusted-source keep-everything would flood the
+      // review pile. The bear check does over-drop flagship parties here
+      // (run 20260811-132948 dropped MEAT RACK, ONYX, SUNDAY BEER BUST as
+      // "no bear-specific vocabulary") — the intended remedy is persistent
+      // manual bear verdicts, not alwaysBear.
       urls: ["https://eaglela.com/events/", "https://eaglela.com/calendar/"],
     },
     {
