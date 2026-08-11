@@ -8,7 +8,7 @@ X-WR-TIMEZONE:America/New_York
 BEGIN:VEVENT
 DTSTART:20260726T020000Z
 DTEND:20260726T070000Z
-DTSTAMP:20260801T221821Z
+DTSTAMP:20260811T145221Z
 UID:81BB9D62-D2CA-4E17-B6ED-72E4A2155C8E
 CREATED:20260724T182614Z
 DESCRIPTION:description: Bear Week Return\nUNDERWEAR & GEAR PARTY\nCLOTHES 
@@ -27,6 +27,31 @@ LOCATION:42.3499063\, -71.0658453
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:FURBALL Boston
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260816T020000Z
+DTSTAMP:20260811T145221Z
+UID:9BFAC10A-73DA-4703-8B46-EEC0A0AC0C4C
+CREATED:20260811T142853Z
+DESCRIPTION:description: Dog Days Pup Party\nbar: Legacy\naddress: 79 Warre
+ nton St\, Boston\, MA 02116\ntimezone: America/New_York\nticketUrl: https:/
+ /www.ticketweb.com/event/furball-boston-dog-days-partyt-legacy-tickets/1500
+ 6453\nimage: https://static.wixstatic.com/media/238fae_e4a65e7702694690bd49
+ e4428c1218a2~mv2.png\nimageSource: page\nimageVertical: https://static.wixs
+ tatic.com/media/238fae_e4a65e7702694690bd49e4428c1218a2~mv2.png\nbarSource:
+  curated\naddressSource: curated\nwebsite: https://www.furball.nyc\ngmaps: 
+ https://www.google.com/maps/search/?api=1&query=42.3499063%2C-71.0658453\np
+ inSource: curated\ninstagram: https://instagram.com/furballnyc/\nshortName:
+  FUR-BALL\nfavicon: https://linktr.ee/furballnyc\nkey: furball|2026-08-16|l
+ egacy\nbearSource: keyword
+LAST-MODIFIED:20260811T142853Z
+LOCATION:42.3499063\, -71.0658453
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:FURBALL
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

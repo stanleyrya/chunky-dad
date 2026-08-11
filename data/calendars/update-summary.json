@@ -21,8 +21,8 @@
     "boston": {
       "name": "Boston",
       "status": "success",
-      "dataLength": 1397,
-      "eventCount": 1
+      "dataLength": 2570,
+      "eventCount": 2
     },
     "brighton": {
       "name": "Brighton",
@@ -75,8 +75,8 @@
     "nola": {
       "name": "New Orleans",
       "status": "success",
-      "dataLength": 2589,
-      "eventCount": 2
+      "dataLength": 3810,
+      "eventCount": 3
     },
     "nyc": {
       "name": "New York",
@@ -111,8 +111,8 @@
     "ptown": {
       "name": "Provincetown",
       "status": "success",
-      "dataLength": 2710,
-      "eventCount": 2
+      "dataLength": 3921,
+      "eventCount": 3
     },
     "san-diego": {
       "name": "San Diego",

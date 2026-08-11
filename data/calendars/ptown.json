@@ -63,6 +63,64 @@
       "slug": "riptide-3342cdd1"
     },
     {
+      "name": "FURBALL P'Town",
+      "day": "Tuesday",
+      "time": "10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0510476,
+        "lng": -70.1876737
+      },
+      "startDate": "2026-08-18T22:00:00",
+      "unprocessedDescription": "description: Carnival Deep Sea Disco\nbar: Red Room\naddress: 2\r58 Commercial St, Provincetown, MA 02657\ntimezone: America/New_York\nticketUrl: https://events.ticketleap.com/tickets/furballnyc/furball-underwear-party-carnival-week\nimage: https://static.wixstatic.com/media/238fae_67817ca3aad448c59fa804866d89bd92~mv2.jpg\nimageSource: page\nimageVertical: https://static.wixstatic.com/media/238fae_67817ca3aad448c59fa804866d89bd92~mv2.jpg\nbarSource: page-adjacent\naddressSource: curated\nwebsite: https://www.furball.nyc\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak\npinSource: curated\ninstagram: https://instagram.com/furballnyc/\nshortName: FUR-BALL\nfavicon: https://linktr.ee/furballnyc\nkey: furball-p'town|2026-08-19|red room\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "42DA779D-6393-4D26-B639-49FBB415029D",
+      "uid": "42DA779D-6393-4D26-B639-49FBB415029D",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Red Room",
+      "image": "https://static.wixstatic.com/media/238fae_67817ca3aad448c59fa804866d89bd92~mv2.jpg",
+      "imageVertical": "https://static.wixstatic.com/media/238fae_67817ca3aad448c59fa804866d89bd92~mv2.jpg",
+      "favicon": "https://linktr.ee/furballnyc",
+      "tea": "Carnival Deep Sea Disco",
+      "address": "258 Commercial St, Provincetown, MA 02657",
+      "website": "https://www.furball.nyc",
+      "instagram": "https://instagram.com/furballnyc/",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
+      "ticketUrl": "https://events.ticketleap.com/tickets/furballnyc/furball-underwear-party-carnival-week",
+      "shortName": "FUR-BALL",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.furball.nyc",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://instagram.com/furballnyc/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://events.ticketleap.com/tickets/furballnyc/furball-underwear-party-carnival-week",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "furball-ptown-2d335fcd"
+    },
+    {
       "name": "FURBALL",
       "day": "Saturday",
       "time": "10PM",

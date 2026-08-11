@@ -62,6 +62,64 @@
         }
       ],
       "slug": "furball-boston-003b3ace"
+    },
+    {
+      "name": "FURBALL",
+      "day": "Saturday",
+      "time": "10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.3499063,
+        "lng": -71.0658453
+      },
+      "startDate": "2026-08-15T22:00:00",
+      "unprocessedDescription": "description: Dog Days Pup Party\nbar: Legacy\naddress: 79 Warre\rnton St, Boston, MA 02116\ntimezone: America/New_York\nticketUrl: https://www.ticketweb.com/event/furball-boston-dog-days-partyt-legacy-tickets/15006453\nimage: https://static.wixstatic.com/media/238fae_e4a65e7702694690bd49e4428c1218a2~mv2.png\nimageSource: page\nimageVertical: https://static.wixstatic.com/media/238fae_e4a65e7702694690bd49e4428c1218a2~mv2.png\nbarSource: curated\naddressSource: curated\nwebsite: https://www.furball.nyc\ngmaps: https://www.google.com/maps/search/?api=1&query=42.3499063%2C-71.0658453\npinSource: curated\ninstagram: https://instagram.com/furballnyc/\nshortName: FUR-BALL\nfavicon: https://linktr.ee/furballnyc\nkey: furball|2026-08-16|legacy\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "9BFAC10A-73DA-4703-8B46-EEC0A0AC0C4C",
+      "uid": "9BFAC10A-73DA-4703-8B46-EEC0A0AC0C4C",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Legacy",
+      "image": "https://static.wixstatic.com/media/238fae_e4a65e7702694690bd49e4428c1218a2~mv2.png",
+      "imageVertical": "https://static.wixstatic.com/media/238fae_e4a65e7702694690bd49e4428c1218a2~mv2.png",
+      "favicon": "https://linktr.ee/furballnyc",
+      "tea": "Dog Days Pup Party",
+      "address": "79 Warrenton St, Boston, MA 02116",
+      "website": "https://www.furball.nyc",
+      "instagram": "https://instagram.com/furballnyc/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=42.3499063%2C-71.0658453",
+      "ticketUrl": "https://www.ticketweb.com/event/furball-boston-dog-days-partyt-legacy-tickets/15006453",
+      "shortName": "FUR-BALL",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.furball.nyc",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://instagram.com/furballnyc/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=42.3499063%2C-71.0658453",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.ticketweb.com/event/furball-boston-dog-days-partyt-legacy-tickets/15006453",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "furball-3a9e89bc"
     }
   ]
 }

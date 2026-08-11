@@ -7,7 +7,7 @@ X-WR-CALNAME:chunky-dad-provincetown
 X-WR-TIMEZONE:America/New_York
 BEGIN:VEVENT
 DTSTART:20260717T020000Z
-DTSTAMP:20260712T002922Z
+DTSTAMP:20260811T145221Z
 UID:EA8572E1-44B4-47B7-A8F3-9D128EE5C5A5
 CREATED:20260701T132043Z
 DESCRIPTION:description: MUSIC\\:\nGSP + HARLOW\nJOCKS · UNDERWEAR · GEAR\n
@@ -32,8 +32,33 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
+DTSTART:20260819T020000Z
+DTSTAMP:20260811T145221Z
+UID:42DA779D-6393-4D26-B639-49FBB415029D
+CREATED:20260811T142850Z
+DESCRIPTION:description: Carnival Deep Sea Disco\nbar: Red Room\naddress: 2
+ 58 Commercial St\, Provincetown\, MA 02657\ntimezone: America/New_York\ntic
+ ketUrl: https://events.ticketleap.com/tickets/furballnyc/furball-underwear-
+ party-carnival-week\nimage: https://static.wixstatic.com/media/238fae_67817
+ ca3aad448c59fa804866d89bd92~mv2.jpg\nimageSource: page\nimageVertical: http
+ s://static.wixstatic.com/media/238fae_67817ca3aad448c59fa804866d89bd92~mv2.
+ jpg\nbarSource: page-adjacent\naddressSource: curated\nwebsite: https://www
+ .furball.nyc\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJqbgq
+ yVOn_IkRIAI-jRz2eak\npinSource: curated\ninstagram: https://instagram.com/f
+ urballnyc/\nshortName: FUR-BALL\nfavicon: https://linktr.ee/furballnyc\nkey
+ : furball-p'town|2026-08-19|red room\nbearSource: keyword
+LAST-MODIFIED:20260811T142850Z
+LOCATION:42.0510476\, -70.1876737
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:FURBALL P'Town
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20260712T020000Z
-DTSTAMP:20260712T002922Z
+DTSTAMP:20260811T145221Z
 UID:D0D6C7F9-24C0-48F2-B9AB-8F785BF13389
 CREATED:20260701T132042Z
 DESCRIPTION:description: PROVINCETOWN BEAR WEEK OFFICIAL 26TH ANNIVERSARY O
