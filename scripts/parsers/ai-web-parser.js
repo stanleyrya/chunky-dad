@@ -4967,11 +4967,17 @@ class AiWebParser {
      * Conservative cadence → RRULE derivation from sorted unique YYYY-MM-DD
      * dates. Only two shapes ever derive a rule; everything else returns null
      * and stays report-only:
-     *   - WEEKLY: every observed date falls on the SAME weekday AND the
-     *     sorted dates contain a run of >= 3 consecutive 7-day gaps (four
-     *     back-to-back weeks). Skipped weeks elsewhere are tolerated — a
+     *   - WEEKLY: every observed date falls on the SAME weekday AND EITHER
+     *     (a) the sorted dates contain a run of >= 3 consecutive 7-day gaps
+     *     (four back-to-back weeks), OR (b) every gap is a positive multiple
+     *     of 7 days and at least 3 of the gaps are exactly 7 days (GEAR
+     *     NIGHT, run 20260811-134734: Saturdays with gaps 7,14,7,7,14 — six
+     *     records, no run of 3 consecutive weeks, plainly weekly with two
+     *     skipped Saturdays). Skipped weeks are tolerated on both paths — a
      *     holiday gap does not un-weekly a residency — but a biweekly
-     *     pattern (all 14-day gaps) can never produce the required run.
+     *     pattern (all 14-day gaps, zero 7-day gaps) can never satisfy
+     *     either acceptance, and two observations 14 days apart are still
+     *     refused (fail closed: too few 7-day gaps to prove weekly).
      *   - MONTHLY: >= 2 observations, every date in a DIFFERENT month, all
      *     on the same ordinal weekday (all "1st Thursday" etc.).
      * Same digit-only date math as describeOccurrenceCadence — no Date
@@ -4992,10 +4998,13 @@ class AiWebParser {
         const BYDAY_CODES = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
         const weekdays = parts.map(part => new Date(part.epochMs).getUTCDay());
         if (!weekdays.every(weekday => weekday === weekdays[0])) return null;
+        const gapsDays = [];
+        for (let i = 1; i < parts.length; i++) {
+            gapsDays.push(Math.round((parts[i].epochMs - parts[i - 1].epochMs) / 86400000));
+        }
         let consecutiveWeeklyGaps = 0;
         let bestWeeklyRun = 0;
-        for (let i = 1; i < parts.length; i++) {
-            const gapDays = Math.round((parts[i].epochMs - parts[i - 1].epochMs) / 86400000);
+        for (const gapDays of gapsDays) {
             if (gapDays === 7) {
                 consecutiveWeeklyGaps++;
                 if (consecutiveWeeklyGaps > bestWeeklyRun) bestWeeklyRun = consecutiveWeeklyGaps;
@@ -5006,6 +5015,19 @@ class AiWebParser {
         if (bestWeeklyRun >= 3) {
             return { rrule: `FREQ=WEEKLY;BYDAY=${BYDAY_CODES[weekdays[0]]}` };
         }
+        // Skipped-week acceptance (additional condition; the consecutive-run
+        // path above is untouched): weekly with holes reads as gaps that are
+        // all positive multiples of 7 on one weekday, anchored by >= 3 gaps
+        // of exactly 7 days. Any non-multiple-of-7 gap refuses this path
+        // entirely (it cannot coexist with the same-weekday check above, but
+        // the guard stays explicit — fail closed, defense in depth), and a
+        // sparse pattern with fewer than three exact 7-day gaps proves
+        // nothing (two observations 14 days apart are biweekly-or-anything).
+        if (gapsDays.length > 0
+            && gapsDays.every(gap => gap > 0 && gap % 7 === 0)
+            && gapsDays.filter(gap => gap === 7).length >= 3) {
+            return { rrule: `FREQ=WEEKLY;BYDAY=${BYDAY_CODES[weekdays[0]]}` };
+        }
         const ordinals = parts.map(part => Math.floor((part.day - 1) / 7) + 1);
         const monthKeys = new Set(parts.map(part => `${part.year}-${part.month}`));
         if (monthKeys.size >= 2 && monthKeys.size === parts.length
@@ -5014,6 +5036,52 @@ class AiWebParser {
             return { rrule: `FREQ=MONTHLY;BYDAY=${ordinals[0]}${BYDAY_CODES[weekdays[0]]}` };
         }
         return null;
+    }
+
+    /**
+     * Strip a trailing guest-performer suffix from a title, for CADENCE
+     * GROUPING ONLY — never for general dedup (lookalike pairs are not
+     * always twins: same title/venue/day can be two real events, so the
+     * general matchers must keep seeing the full titles). Conservative on
+     * purpose: only a clause at the END of the title, introduced by a
+     * with/feat./featuring/w\/ marker followed by a DJ/VJ credit, is cut
+     * ("Discipline Corps Bar Night with DJ Philip Webb" → "Discipline Corps
+     * Bar Night"; run 20260811-134734, where the Sep 11 + Oct 9 2nd-Friday
+     * pair stayed two singletons because each record wore a different DJ's
+     * name). Anything else — "with" clauses that aren't performer credits,
+     * DJ names mid-title, a title that IS a DJ credit — returns unchanged.
+     */
+    stripGuestPerformerSuffix(title) {
+        const text = String(title || '');
+        const stripped = text.replace(/\s*(?:[-–—:|]\s*)?(?:with|w\/|feat\.?|featuring)\s+(?:dj|vj)\s+\S.*$/i, '');
+        // Never strip down to nothing: a title that IS entirely a performer
+        // clause keeps its original form (fail closed).
+        return stripped.trim() ? stripped.trim() : text;
+    }
+
+    /**
+     * Identity-shape name comparison with guest-performer suffixes removed,
+     * used EXCLUSIVELY by the cadence-grouping pass below as an addition to
+     * core.areIdentityNamesSimilar — the venue-identity requirements of that
+     * pass are unchanged, and nothing outside applyDerivedCadenceStamps
+     * consults this. Only pairs where a suffix was actually stripped get the
+     * second comparison, so this can never loosen a comparison the plain
+     * helper already makes.
+     */
+    areShapeNamesSimilarIgnoringGuestSuffix(shapeA, shapeB) {
+        const core = this.core;
+        if (!core || typeof core.areTitlesSimilar !== 'function') return false;
+        const namesA = shapeA && Array.isArray(shapeA.names) ? shapeA.names : [];
+        const namesB = shapeB && Array.isArray(shapeB.names) ? shapeB.names : [];
+        for (const nameA of namesA) {
+            for (const nameB of namesB) {
+                const strippedA = this.stripGuestPerformerSuffix(nameA);
+                const strippedB = this.stripGuestPerformerSuffix(nameB);
+                if (strippedA === nameA && strippedB === nameB) continue;
+                if (core.areTitlesSimilar(strippedA, strippedB)) return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -5076,7 +5144,8 @@ class AiWebParser {
             if (!nightKey) continue; // fail closed: undated records observe nothing
             const shape = core.buildIdentityComparisonShape(event);
             const group = groups.find(candidate => candidate.members.some(member =>
-                core.areIdentityNamesSimilar(member.shape, shape)
+                (core.areIdentityNamesSimilar(member.shape, shape)
+                    || this.areShapeNamesSimilarIgnoringGuestSuffix(member.shape, shape))
                 && core.getCrossSourceVenueIdentity(member.event, event) !== null
                 && !core.areEventsDistinctByPlace(member.event, event)));
             if (group) {
@@ -5115,7 +5184,19 @@ class AiWebParser {
                 const stated = String(member.event.recurrenceRule || member.event.recurrence || '').trim().toUpperCase();
                 if (stated) statedRules.add(stated);
             }
-            const disagreeing = Array.from(statedRules).filter(rule => rule !== derived.rrule);
+            // A derived rule that REFINES a stated one — identical up to the
+            // stated rule's end, with only additional ;KEY=VALUE detail
+            // appended ("FREQ=MONTHLY" stated on both Discipline Corps
+            // records, "FREQ=MONTHLY;BYDAY=2FR" derived from their observed
+            // 2nd Fridays, run 20260811-134734) — is agreement, not
+            // conflict: the observations prove a more specific reading of
+            // the same cadence. The stated rule is still NEVER overridden
+            // (records with a stated rule are excluded from `unstamped`
+            // below); a stated rule whose own detail differs
+            // ("FREQ=MONTHLY;BYDAY=3FR" vs derived 2FR) still conflicts and
+            // fails the whole group closed.
+            const disagreeing = Array.from(statedRules).filter(rule =>
+                rule !== derived.rrule && !derived.rrule.startsWith(`${rule};`));
             if (disagreeing.length > 0) {
                 console.log(`🔁 CADENCE: derived ${derived.rrule} for "${title}" disagrees with stated rule(s) ${disagreeing.join(', ')} — stated cadence kept, nothing stamped (curated data beats derived)`);
                 continue;
@@ -5146,6 +5227,67 @@ class AiWebParser {
                 member.event.recurrenceRule = derived.rrule;
             }
             console.log(`🔁 CADENCE: stamped ${derived.rrule} on ${unstamped.length} "${title}" record(s) — derived from ${sortedDates.length} observed dates (report basis: ${basis.summary})`);
+        }
+    }
+
+    /**
+     * REPORT-ONLY roundup-tile tell (📰), judged at the same post-crawl seam
+     * as applyDerivedCadenceStamps because it needs the whole run's records
+     * in view. "THIS WEEK AT MASSIVE" (run 20260811-132205) — an Instagram
+     * weekly-lineup graphic enumerating five different MON–SAT parties —
+     * extracted as a single 5-day umbrella event and reached a calendar
+     * write: its 5-day span cleared the 10-day duration sanity bound and its
+     * 308-day-old dates cleared the 370-day long-past bound. The structural
+     * tell that separates a listing/roundup tile from a legitimate umbrella
+     * (a bear week, a festival) is that the tile's own extracted text NAMES
+     * the individual events, and the same run extracts those events
+     * separately. No title-phrase blocklists, nothing per-venue: the signal
+     * is purely "multi-day span + its text contains >= 3 other dated
+     * records' titles". This wave logs only — no flag, no withhold, no drop
+     * (report-only before enforce for anything that would suppress data).
+     * Short normalized titles (< 8 chars) never count: a venue's own name
+     * ("MASSIVE") or a generic word appearing in the tile text is not
+     * evidence that a distinct event was enumerated.
+     */
+    reportProbableRoundupTiles(events) {
+        const eventList = Array.isArray(events) ? events : [];
+        if (eventList.length < 4) return; // an umbrella + at least 3 named events
+        const core = this.core;
+        if (!core
+            || typeof core.toEpochMillis !== 'function'
+            || typeof core.normalizeIdentityText !== 'function') {
+            return; // fail closed: report nothing without the shared helpers
+        }
+        const DAY_MS = 24 * 60 * 60 * 1000;
+        for (const event of eventList) {
+            if (!event || typeof event !== 'object') continue;
+            const startMs = core.toEpochMillis(event.startDate);
+            const endMs = core.toEpochMillis(event.endDate);
+            if (startMs === null || endMs === null) continue;
+            if (endMs - startMs < 2 * DAY_MS) continue; // multi-day umbrellas only
+            const ownText = core.normalizeIdentityText(
+                [event.description, event.title]
+                    .filter(value => typeof value === 'string')
+                    .join('\n'));
+            if (!ownText) continue;
+            const ownTitle = core.normalizeIdentityText(event.title || '');
+            const seenTitles = new Set();
+            const matchedTitles = [];
+            for (const other of eventList) {
+                if (other === event || !other || typeof other !== 'object') continue;
+                if (typeof other.title !== 'string') continue;
+                if (core.toEpochMillis(other.startDate) === null) continue; // dated records only
+                const normalizedTitle = core.normalizeIdentityText(other.title);
+                if (normalizedTitle.length < 8) continue;
+                if (normalizedTitle === ownTitle) continue;
+                if (seenTitles.has(normalizedTitle)) continue;
+                if (!ownText.includes(normalizedTitle)) continue;
+                seenTitles.add(normalizedTitle);
+                matchedTitles.push(other.title.trim());
+            }
+            if (matchedTitles.length >= 3) {
+                console.log(`📰 ROUNDUP: "${event.title || 'Unknown'}" is probably a listing/roundup tile, not one event — its own text names ${matchedTitles.length} events this run extracted separately (${matchedTitles.join(', ')}) — report-only, nothing changed`);
+            }
         }
     }
 

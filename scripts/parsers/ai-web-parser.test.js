@@ -13702,6 +13702,201 @@ test('applyDerivedCadenceStamps: different venues never share a group, and undat
   }
 });
 
+test('deriveCadenceRrule: weekly with skipped weeks — every gap a multiple of 7 and >=3 exact 7-day gaps (GEAR NIGHT)', () => {
+  const parser = createParser();
+  // The exact GEAR NIGHT night vector from run 20260811-134734 (Dallas
+  // Eagle): Saturdays with gaps 7,14,7,7,14 — the longest consecutive
+  // 7-day run is 2, so the consecutive-run acceptance never fires, yet
+  // three exact 7-day gaps on one weekday with every gap a multiple of 7
+  // is plainly a weekly night with two skipped Saturdays.
+  const gearNight = ['2026-08-15', '2026-08-22', '2026-09-05', '2026-09-12', '2026-09-19', '2026-10-03'];
+  assert.deepEqual(parser.deriveCadenceRrule(gearNight), { rrule: 'FREQ=WEEKLY;BYDAY=SA' });
+  // Two observations 14 days apart are still refused (fail closed:
+  // biweekly-or-anything, zero exact 7-day gaps).
+  assert.equal(parser.deriveCadenceRrule(['2026-08-15', '2026-08-29']), null);
+  // Only two exact 7-day gaps among multiple-of-7 gaps: still refused.
+  assert.equal(parser.deriveCadenceRrule(['2026-08-15', '2026-08-22', '2026-09-12', '2026-09-19']), null);
+  // All-14-day gaps (biweekly-looking) still derive nothing.
+  assert.equal(parser.deriveCadenceRrule(['2026-08-15', '2026-08-29', '2026-09-12', '2026-09-26']), null);
+  // A non-multiple-of-7 gap necessarily lands on a different weekday and
+  // refuses the whole derivation.
+  assert.equal(parser.deriveCadenceRrule(['2026-08-15', '2026-08-22', '2026-08-29', '2026-09-04']), null);
+});
+
+test('applyDerivedCadenceStamps: the six real GEAR NIGHT records fold to one weekly group (skipped weeks + DJ suffixes)', () => {
+  const parser = createParser();
+  // Run 20260811-134734 verbatim: six GEAR NIGHT records on renumbered MEC
+  // slugs (gear-night-5/7/11/17/19/22), two wearing per-record DJ credits,
+  // observed Saturdays Aug 15, 22, Sep 5, 12, 19, Oct 3 (America/Chicago).
+  // On main these survived as six separate calendar writes: the weekly rule
+  // demanded 3 CONSECUTIVE 7-day gaps (longest run here is 2), and the
+  // DJ-suffixed pair could not even join the group.
+  const gearNight = [
+    ['Gear Night with DJ Tristan Jaxx', '2026-08-16T02:00:00.000Z', 'gear-night-5'],
+    ['Gear Night with DJ Philip Webb', '2026-08-23T03:00:00.000Z', 'gear-night-7'],
+    ['Gear Night', '2026-09-06T03:00:00.000Z', 'gear-night-17'],
+    ['GEAR NIGHT', '2026-09-13T02:00:00.000Z', 'gear-night-11'],
+    ['GEAR NIGHT', '2026-09-20T01:00:00.000Z', 'gear-night-19'],
+    ['GEAR NIGHT', '2026-10-04T03:00:00.000Z', 'gear-night-22']
+  ].map(([title, start, slug]) => ({
+    title,
+    bar: 'Dallas Eagle',
+    timezone: 'America/Chicago',
+    startDate: new Date(start),
+    endDate: new Date(new Date(start).getTime() + 4 * 60 * 60 * 1000),
+    url: `https://www.thedallaseagle.com/events/${slug}/`,
+    source: 'ai-web'
+  }));
+  parser.applyDerivedCadenceStamps(gearNight);
+  for (const record of gearNight) {
+    assert.equal(record.recurrenceRule, 'FREQ=WEEKLY;BYDAY=SA', `"${record.title}" (${record.url}) joins the weekly stamp`);
+  }
+  const markers = new Set(gearNight.map(record => record._cadenceGroup));
+  assert.equal(markers.size, 1, 'all six records share ONE same-series marker');
+  assert.ok([...markers][0], 'the shared marker is non-empty');
+});
+
+test('applyDerivedCadenceStamps: per-record guest-DJ suffixes group into one monthly series; different parties never do', () => {
+  const parser = createParser();
+  // Run 20260811-134734 verbatim: a genuine 2nd-Friday monthly pair whose
+  // records each wear a different guest DJ's name — no bare-title anchor,
+  // so the plain name similarity never groups them. Both pages state a bare
+  // FREQ=MONTHLY; the derived FREQ=MONTHLY;BYDAY=2FR REFINES it (agreement,
+  // not conflict), so the stated rules stay untouched and the same-series
+  // marker is minted.
+  const disciplinePair = [
+    {
+      title: 'Discipline Corps Bar Night with DJ Philip Webb',
+      bar: 'Dallas Eagle',
+      timezone: 'America/Chicago',
+      startDate: new Date('2026-09-12T02:00:00.000Z'), // Fri Sep 11, 9pm CDT — 2nd Friday
+      endDate: new Date('2026-09-12T07:00:00.000Z'),
+      url: 'https://www.thedallaseagle.com/events/discipline-corps-bar-night-7/',
+      recurrenceRule: 'FREQ=MONTHLY',
+      source: 'ai-web'
+    },
+    {
+      title: 'Discipline Corps Bar Night with DJ Blaine',
+      bar: 'Dallas Eagle',
+      timezone: 'America/Chicago',
+      startDate: new Date('2026-10-10T02:00:00.000Z'), // Fri Oct 9, 9pm CDT — 2nd Friday
+      endDate: new Date('2026-10-10T07:00:00.000Z'),
+      url: 'https://www.thedallaseagle.com/events/discipline-corps-bar-night-with-dj-blaine/',
+      recurrenceRule: 'FREQ=MONTHLY',
+      source: 'ai-web'
+    }
+  ];
+  parser.applyDerivedCadenceStamps(disciplinePair);
+  const markers = new Set(disciplinePair.map(record => record._cadenceGroup));
+  assert.equal(markers.size, 1, 'the DJ-suffixed pair shares ONE same-series marker');
+  assert.match([...markers][0], /FREQ=MONTHLY;BYDAY=2FR$/, 'grouped via the existing >=2-months ordinal rule');
+  for (const record of disciplinePair) {
+    assert.equal(record.recurrenceRule, 'FREQ=MONTHLY', 'the stated rule is NEVER overridden by its refinement');
+  }
+
+  // Two DIFFERENT party names at one venue, each with a guest-DJ suffix,
+  // must not group: the strip only removes the performer clause, and the
+  // remaining base titles are dissimilar.
+  const differentParties = [
+    {
+      title: 'Underwear Night with DJ Philip Webb',
+      bar: 'Dallas Eagle',
+      timezone: 'America/Chicago',
+      startDate: new Date('2026-09-12T02:00:00.000Z'),
+      endDate: new Date('2026-09-12T07:00:00.000Z'),
+      url: 'https://www.thedallaseagle.com/events/underwear-night-9/',
+      source: 'ai-web'
+    },
+    {
+      title: 'Karaoke with DJ Blaine',
+      bar: 'Dallas Eagle',
+      timezone: 'America/Chicago',
+      startDate: new Date('2026-10-10T02:00:00.000Z'),
+      endDate: new Date('2026-10-10T07:00:00.000Z'),
+      url: 'https://www.thedallaseagle.com/events/karaoke-31/',
+      source: 'ai-web'
+    }
+  ];
+  parser.applyDerivedCadenceStamps(differentParties);
+  for (const record of differentParties) {
+    assert.equal(record._cadenceGroup, undefined, 'different parties never share a group');
+    assert.equal(record.recurrenceRule, undefined, 'and two singletons derive nothing');
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Roundup-tile tell (📰, report-only): a multi-day umbrella whose own text
+// names >= 3 events the run also extracted separately is probably a
+// listing/roundup graphic, not one attendable event.
+// ---------------------------------------------------------------------------
+
+test('reportProbableRoundupTiles: THIS WEEK AT MASSIVE logs only once enough of its lineup is separately extracted', () => {
+  const parser = createParser();
+  // The real record from run 20260811-132205: an Instagram weekly-lineup
+  // graphic (Oct 6–11 2025) extracted as a 5-day umbrella whose OCR text
+  // became its description.
+  const umbrella = {
+    title: 'THIS WEEK AT MASSIVE',
+    description: [
+      'THIS WEEK AT', 'MASSIVE',
+      'MON OCT 6th', 'DRAGULA TITANS WATCH PARTY', 'MISS MIMI GINA',
+      'WED OCT 8th', 'IMPACT SOCIAL', 'OPEN DECKS', 'BRING YOUR USB AND IMPRESS US',
+      'THUR OCT 9th', 'BUTT BLAST', 'MENS UNDERWEAR NIGHT', 'SPECIAL NUDE PHOTOSSHOOT EDITION',
+      'FRI OCT 10th', 'BEARRACUDA - SERIOUS WOOD', 'MATT CONSOLA + FREDDY KOP',
+      'GOGOS: MIKE WEST | ZEKE | FU22BALL | MICHAEL',
+      'SAT OCT 11th', 'DARK ROOM', 'NICK BERTOSSI (VAN)', 'GOGOS: HALIL | IGNACIO',
+      'Pioneer Dj'
+    ].join('\n'),
+    startDate: new Date('2025-10-07T05:00:00.000Z'),
+    endDate: new Date('2025-10-12T05:00:00.000Z'),
+    bar: 'Massive',
+    source: 'ai-web'
+  };
+  // Separately extracted records from the same run (massive.club calendar).
+  const buttBlast = { title: 'Butt Blast', startDate: new Date('2026-08-14T04:00:00.000Z'), source: 'ai-web' };
+  const bearracuda = { title: 'Bearracuda', startDate: new Date('2026-09-13T04:00:00.000Z'), source: 'ai-web' };
+  const treasureTrail = { title: 'Treasure Trail', startDate: new Date('2026-08-16T04:00:00.000Z'), source: 'ai-web' };
+  const massiveVenueRecord = { title: 'MASSIVE', startDate: new Date('2023-06-22T07:00:00.000Z'), source: 'ai-web' };
+
+  // The real 20260811-132205 population: only TWO of the tile's named
+  // parties were separately extracted (Butt Blast, Bearracuda) — below the
+  // >=3 bar, so the tell stays silent (fail closed). "MASSIVE" is in the
+  // tile text but too short/generic to ever count, and "Treasure Trail" is
+  // not named by the tile at all.
+  let logs = withCapturedLogs(() =>
+    parser.reportProbableRoundupTiles([umbrella, buttBlast, bearracuda, treasureTrail, massiveVenueRecord]));
+  assert.deepEqual(logs.filter(line => line.startsWith('📰 ROUNDUP:')), [],
+    'two separately-extracted lineup names are not enough evidence');
+
+  // A fuller run that also extracts a third named lineup party ("DARK
+  // ROOM", the tile's SAT OCT 11 event) crosses the bar and the tell fires
+  // — report-only, nothing on any record changes.
+  const darkRoom = { title: 'Dark Room', startDate: new Date('2025-10-12T05:00:00.000Z'), source: 'ai-web' };
+  const before = JSON.stringify(umbrella);
+  logs = withCapturedLogs(() =>
+    parser.reportProbableRoundupTiles([umbrella, buttBlast, bearracuda, treasureTrail, darkRoom]));
+  const roundupLines = logs.filter(line => line.startsWith('📰 ROUNDUP:'));
+  assert.equal(roundupLines.length, 1, `expected one 📰 line, got: ${JSON.stringify(logs)}`);
+  assert.ok(roundupLines[0].includes('"THIS WEEK AT MASSIVE"'));
+  assert.ok(roundupLines[0].includes('names 3 events'));
+  assert.ok(roundupLines[0].includes('report-only'));
+  assert.equal(JSON.stringify(umbrella), before, 'report-only: the umbrella record is untouched');
+
+  // A future-dated multi-day umbrella (a real bear week) whose text names
+  // no separately extracted events never trips the tell.
+  const bearWeek = {
+    title: 'Bear Week Provincetown',
+    description: 'Seven days of bear events in Provincetown',
+    startDate: new Date('2027-07-10T00:00:00.000Z'),
+    endDate: new Date('2027-07-17T00:00:00.000Z'),
+    source: 'ai-web'
+  };
+  logs = withCapturedLogs(() =>
+    parser.reportProbableRoundupTiles([bearWeek, buttBlast, bearracuda, treasureTrail, darkRoom]));
+  assert.deepEqual(logs.filter(line => line.startsWith('📰 ROUNDUP:')), [],
+    'a legitimate umbrella whose text does not enumerate the run is silent');
+});
+
 // ---------------------------------------------------------------------------
 // Single-page OCR top-up (ensureSinglePageImageCoverage): a poster sitting
 // past the capped page-level OCR pass on a single-event page gets a bounded

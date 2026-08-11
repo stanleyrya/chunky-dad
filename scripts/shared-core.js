@@ -1861,7 +1861,44 @@ class SharedCore {
             }
         }
 
+        // 8. span-fully-past — the ENTIRE span (start AND end) precedes
+        //    analysis time: there is nothing left to attend, so a write
+        //    proposal for it is describing history, not an event ("THIS WEEK
+        //    AT MASSIVE", run 20260811-132205: an Instagram weekly-lineup
+        //    graphic dated Oct 6–11 2025 proposed as a CREATE ~10 months
+        //    later — 5-day span cleared the duration bound, 308 days past
+        //    cleared the 370-day long-past bound). Objective on purpose:
+        //    unlike start-long-past there is no CREATE-only carve-out,
+        //    because even an UPDATE payload for a fully-elapsed span has no
+        //    attendable content to deliver. This flag is the card surface;
+        //    the matching write withhold is stamped separately in
+        //    buildAnalyzedCalendarEvent via isEventSpanFullyPast.
+        if (this.isEventSpanFullyPast(event, nowMs)) {
+            const startMs = toMs(event.startDate);
+            const endReferenceMs = toMs(event.endDate);
+            const spanEndMs = Number.isFinite(endReferenceMs) ? endReferenceMs : startMs;
+            const daysPast = Math.max(0, Math.round((nowMs - spanEndMs) / (24 * 60 * 60 * 1000)));
+            flags.push({
+                code: 'span-fully-past',
+                detail: `entire span (start and end) ended ${daysPast} day(s) before analysis — nothing left to attend`
+            });
+        }
+
         return flags;
+    }
+
+    // TRUE only when the event's whole span is provably behind analysis
+    // time: a parseable start strictly in the past AND a span end (endDate,
+    // or the start itself when no end parses) strictly in the past. Missing
+    // or unparseable dates return false — fail closed, this helper feeds a
+    // write withhold and must never suppress an event it cannot date.
+    isEventSpanFullyPast(event, nowMs = Date.now()) {
+        if (!event || typeof event !== 'object') return false;
+        const startMs = this.toEpochMillis(event.startDate);
+        if (startMs === null || startMs >= nowMs) return false;
+        const endMs = this.toEpochMillis(event.endDate);
+        const spanEndMs = endMs === null ? startMs : endMs;
+        return spanEndMs < nowMs;
     }
 
     // A value shaped like a street address is NEVER a venue name. Anchored on
@@ -4063,6 +4100,16 @@ class SharedCore {
         // write). Platform-pure: the parser hook receives injected data.
         if (aiWebParser && typeof aiWebParser.applyDerivedCadenceStamps === 'function') {
             aiWebParser.applyDerivedCadenceStamps(allEvents);
+        }
+        // Roundup-tile tell (report-only, parser-derived): a multi-day
+        // umbrella record whose own extracted text names >= 3 events this
+        // run ALSO extracted separately is probably a listing/roundup
+        // graphic ("THIS WEEK AT MASSIVE", run 20260811-132205), not an
+        // attendable umbrella. Judged only here because "also extracted
+        // separately" needs every record of the run in view. Log line only
+        // this wave — no flag, no drop. Platform-pure: injected hook.
+        if (aiWebParser && typeof aiWebParser.reportProbableRoundupTiles === 'function') {
+            aiWebParser.reportProbableRoundupTiles(allEvents);
         }
 
         // Aggregator website pointer (trust the pointer, not the copy —
@@ -8218,6 +8265,9 @@ class SharedCore {
                 const existingSeries = this.getSeriesExportIdentity(existing);
                 if (!existingSeries) return false;
                 if (existingSeries.rrule !== eventSeries.rrule) return false;
+                const eventGroup = typeof event._cadenceGroup === 'string' ? event._cadenceGroup : '';
+                const existingGroup = typeof existing._cadenceGroup === 'string' ? existing._cadenceGroup : '';
+                const sharedCadenceMarker = Boolean(eventGroup) && eventGroup === existingGroup;
                 if (existingSeries.hostPath !== eventSeries.hostPath) {
                     // Renumbered-slug extension (run 20260807-143442: a MEC
                     // install mints a NEW slug per occurrence — karaoke-19,
@@ -8232,13 +8282,23 @@ class SharedCore {
                     // that shared marker (two real weekly slots of one brand,
                     // stated rules, different venues) still never folds —
                     // lookalike pairs are not always twins.
-                    const eventGroup = typeof event._cadenceGroup === 'string' ? event._cadenceGroup : '';
-                    const existingGroup = typeof existing._cadenceGroup === 'string' ? existing._cadenceGroup : '';
-                    if (!eventGroup || eventGroup !== existingGroup) return false;
+                    if (!sharedCadenceMarker) return false;
                 }
-                const shapeA = this.buildIdentityComparisonShape(event);
-                const shapeB = this.buildIdentityComparisonShape(existing);
-                if (!this.areIdentityNamesSimilar(shapeA, shapeB)) return false;
+                // A shared cadence marker IS the name proof: the derived-
+                // cadence pass minted it this run only after judging the
+                // group title-similar (including its grouping-only
+                // guest-performer-suffix comparison — "Discipline Corps Bar
+                // Night with DJ Philip Webb" / "… with DJ Blaine", run
+                // 20260811-134734, whose full titles fail the plain name
+                // check here and left the pair unfolded). Re-checking the
+                // full titles would veto exactly what the marker proved.
+                // Without a shared marker the plain name check stands, and
+                // the positive different-place veto applies in all cases.
+                if (!sharedCadenceMarker) {
+                    const shapeA = this.buildIdentityComparisonShape(event);
+                    const shapeB = this.buildIdentityComparisonShape(existing);
+                    if (!this.areIdentityNamesSimilar(shapeA, shapeB)) return false;
+                }
                 return !this.areEventsDistinctByPlace(event, existing);
             }) : null;
             if (!match) {
@@ -11326,6 +11386,11 @@ class SharedCore {
         if (!Array.isArray(analyzedEvents)) return [];
         return analyzedEvents.filter(event =>
             event?._parserConfig?.dryRun !== true &&
+            // Fully-past spans are display-only: nothing left to attend, so
+            // the write is withheld at analysis (buildAnalyzedCalendarEvent
+            // stamps _pastSpanWithheld + the span-fully-past review flag)
+            // and gated here, exactly like the recurring-series withhold.
+            event?._pastSpanWithheld !== true &&
             !SharedCore.isRecurringSeriesEvent(event));
     }
 
@@ -12952,6 +13017,25 @@ class SharedCore {
                 console.log(`⚠️ SANITY: "${analyzedEvent.title || 'Unknown'}" flagged ${analyzedEvent._sanityFlags.map(flag => flag.code).join(', ')} — ${analyzedEvent._sanityFlags[0].detail}`);
             }
 
+            // FULLY-PAST SPAN WITHHOLD — the one enforced sibling of the
+            // report-only flags above, judged by the same objective test the
+            // `span-fully-past` flag reports (isEventSpanFullyPast, computed
+            // independently here so the flag channel itself still never
+            // withholds anything). An event whose start AND end are both
+            // behind analysis time has nothing left to attend; writing it
+            // publishes history as if it were upcoming ("THIS WEEK AT
+            // MASSIVE", run 20260811-132205: a stale Oct 2025 lineup graphic
+            // reached a calendar CREATE in Aug 2026). Flag, don't drop: the
+            // card stays in the results UI with its review flag; only the
+            // calendar write is withheld (filterEventsForExecution), exactly
+            // the recurring-series withhold pattern below. Legitimate
+            // umbrellas (bear weeks, festivals) are future-dated and never
+            // trip this.
+            if (this.isEventSpanFullyPast(analyzedEvent)) {
+                analyzedEvent._pastSpanWithheld = true;
+                console.log(`⏳ PAST SPAN: "${analyzedEvent.title || 'Unknown'}" withheld from calendar write — entire span (start and end) is already past at analysis time; card kept in results`);
+            }
+
             // Recurring series are display+export only: keep the card in the
             // results UI (flag-don't-drop) but withhold it from calendar
             // execution — the owner saves the series via the ICS export
@@ -13374,9 +13458,31 @@ class SharedCore {
             });
         }
 
+        // Cross-parser reconciliation: same local day + positive venue
+        // identity + title token-subset (getCalendarTitleSubsetSignal —
+        // "Treasure Trail" vs "Treasure Trail Seattle", one real event
+        // reaching the calendar under two parsers' keys). Runs after the
+        // stronger signals above so a ticket-url/event-page/identifier match
+        // always wins first, and before the overlap check below, whose
+        // 60-minute window is exactly what different sources' stated clock
+        // times fail.
+        for (const existing of existingEventsData) {
+            const subsetSignal = this.getCalendarTitleSubsetSignal(event, existing);
+            if (!subsetSignal) continue;
+            const recurringMergeDecision = this.resolveRecurringMergeCandidate(existingEventsData, existing);
+            if (recurringMergeDecision) {
+                return finalize(recurringMergeDecision);
+            }
+            return finalize({
+                action: 'merge',
+                reason: `Same-day venue title-subset match (${subsetSignal})`,
+                existingEvent: existing
+            });
+        }
+
         // Check for overlapping events - only merge when time and title/venue are similar
-        const timeConflicts = existingEventsData.filter(existing => 
-            this.doDatesOverlap(existing.startDate, existing.endDate, 
+        const timeConflicts = existingEventsData.filter(existing =>
+            this.doDatesOverlap(existing.startDate, existing.endDate,
                                event.startDate, event.endDate || event.startDate)
         );
         
@@ -14453,6 +14559,55 @@ class SharedCore {
         const longerSet = new Set(longer);
         if (!shorter.every(token => longerSet.has(token))) return null;
         return 'venue+night+title-subset';
+    }
+
+    // Calendar-side sibling of getCrossSourceDuplicateSignal, for
+    // analyzeEventAction: two PARSERS name one real event with variant
+    // titles — one a token-subset of the other, typically base name vs base
+    // name + a city/location token ("Treasure Trail" from massive.club vs
+    // "Treasure Trail Seattle" from bearracuda, runs 20260811-132205 /
+    // -133948, keys treasure-trail|2026-08-16|massive vs
+    // treasure-trail-seattle|2026-08-16|massive) — so findEventByKey can
+    // never reconcile them across runs, the 1-minute "Similar event found"
+    // window misses whenever the two sources state different clock times,
+    // and the place-time-name identity signal gives up beyond 2 hours.
+    // Everything fails closed:
+    //   - EXACT same local calendar day, resolved through the identity
+    //     shapes (which read a calendar record's timezone/bar out of its
+    //     notes and its coordinates out of `location`) — different days
+    //     never match, however similar the titles: the within-run relaxation
+    //     for degraded start times already demands the same local day, and
+    //     the lookalike-pairs doctrine (same title/venue/day can be two real
+    //     events when a DATE was fabricated) is precisely about crossing
+    //     days;
+    //   - POSITIVE venue identity via areIdentityPlacesSimilar (bar-name
+    //     match, bar-in-location, address, or coordinates) — a side with no
+    //     place evidence never matches;
+    //   - title TOKEN subset via getCrossSourceTitleTokens (performer
+    //     clauses cut, city tokens dropped, venue tokens dropped): every
+    //     significant token of the shorter title must appear in the longer.
+    //     Unrelated titles sharing a token ("Treasure Hunt" / "Treasure
+    //     Trail") never match — the subset must be total.
+    getCalendarTitleSubsetSignal(newEvent, existingEvent) {
+        if (!newEvent || typeof newEvent !== 'object' || !existingEvent || typeof existingEvent !== 'object') {
+            return null;
+        }
+        const incoming = this.buildIdentityComparisonShape(newEvent);
+        const existing = this.buildIdentityComparisonShape(existingEvent);
+        if (!this.areIdentityDatesOnSameLocalDay(incoming, existing)) return null;
+        if (!this.areIdentityPlacesSimilar(incoming, existing)) return null;
+        const venueKeys = [
+            this.normalizeBarNameKey(incoming.bar),
+            this.normalizeBarNameKey(existing.bar)
+        ].filter(Boolean);
+        const tokensA = this.getCrossSourceTitleTokens(newEvent.title || newEvent.name, venueKeys);
+        if (tokensA.length === 0) return null;
+        const tokensB = this.getCrossSourceTitleTokens(existingEvent.title || existingEvent.name, venueKeys);
+        if (tokensB.length === 0) return null;
+        const [shorter, longer] = tokensA.length <= tokensB.length ? [tokensA, tokensB] : [tokensB, tokensA];
+        const longerSet = new Set(longer);
+        if (!shorter.every(token => longerSet.has(token))) return null;
+        return 'place+day+title-subset';
     }
 
     // Primary designation for a cross-source merge: the record with more

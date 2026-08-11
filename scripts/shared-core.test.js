@@ -110,6 +110,96 @@ test('analyzeEventAction keeps genuinely different same-venue events separate', 
   assert.equal(analysis.action, 'new');
 });
 
+// === Cross-parser calendar reconciliation (runs 20260811-132205 / -133948) ===
+// One real event — 2026-08-16 at Massive, Seattle — reached the calendar as
+// "Treasure Trail" (massive.club, key treasure-trail|2026-08-16|massive) and
+// "Treasure Trail Seattle" (bearracuda, key
+// treasure-trail-seattle|2026-08-16|massive). findEventByKey can never
+// reconcile the two keys, the "Similar event found" path needs the stated
+// clock times within ONE minute, and the place-time-name identity signal
+// gives up beyond 2 hours — so whenever the two sources state different
+// times, the same night is written twice. The reconciliation is fail-closed:
+// exact same local day + POSITIVE venue identity + total title token-subset.
+
+function buildTreasureTrailIncoming(overrides = {}) {
+  // The real bearracuda-side record (run 20260811-133948).
+  return {
+    title: 'Treasure Trail Seattle',
+    startDate: new Date('2026-08-16T04:00:00.000Z'), // Sat Aug 15, 9pm PDT
+    endDate: new Date('2026-08-16T10:00:00.000Z'),
+    bar: 'Massive',
+    address: '619 E Pine St, Seattle, WA 98122',
+    location: '47.6150824, -122.3237201',
+    timezone: 'America/Los_Angeles',
+    city: 'seattle',
+    url: 'https://bearracuda.com/',
+    key: 'treasure-trail-seattle|2026-08-16|massive',
+    source: 'ai-web',
+    ...overrides
+  };
+}
+
+function buildTreasureTrailSaved(overrides = {}) {
+  // The massive.club-side calendar record, saved with an earlier stated
+  // clock time (doors listing) — 3 hours from the incoming start, so every
+  // pre-existing match path refuses while the local day is identical.
+  return {
+    name: 'Treasure Trail',
+    startDate: new Date('2026-08-16T01:00:00.000Z'), // Sat Aug 15, 6pm PDT
+    endDate: new Date('2026-08-16T02:00:00.000Z'),
+    location: '47.6150824, -122.3237201',
+    calendarTimezone: 'America/Los_Angeles',
+    notes: [
+      'bar: Massive',
+      'timezone: America/Los_Angeles',
+      'key: treasure-trail|2026-08-16|massive'
+    ].join('\n'),
+    ...overrides
+  };
+}
+
+test('analyzeEventAction reconciles cross-parser title-subset duplicates at the same day and venue (Treasure Trail)', () => {
+  const core = createCore();
+  const analysis = core.analyzeEventAction(buildTreasureTrailIncoming(), [buildTreasureTrailSaved()]);
+  assert.equal(analysis.action, 'merge',
+    'same local day + venue identity + title token-subset is the same event');
+  assert.match(analysis.reason, /Same-day venue title-subset match/);
+
+  // The same pair in the OTHER direction (bare title incoming, suffixed
+  // title saved) reconciles too.
+  const reversed = core.analyzeEventAction(
+    buildTreasureTrailIncoming({ title: 'Treasure Trail', key: 'treasure-trail|2026-08-16|massive' }),
+    [buildTreasureTrailSaved({ name: 'Treasure Trail Seattle', notes: buildTreasureTrailSaved().notes.replace('treasure-trail|', 'treasure-trail-seattle|') })]);
+  assert.equal(reversed.action, 'merge');
+  assert.match(reversed.reason, /Same-day venue title-subset match/);
+
+  // --- Fail-closed guards, same test so the vectors stay side by side ---
+  // Different local day — same titles, same venue: NEVER a match (the
+  // lookalike-pairs doctrine lives on the day axis).
+  const nextWeek = core.analyzeEventAction(
+    buildTreasureTrailIncoming({
+      startDate: new Date('2026-08-23T04:00:00.000Z'),
+      endDate: new Date('2026-08-23T10:00:00.000Z'),
+      key: 'treasure-trail-seattle|2026-08-23|massive'
+    }),
+    [buildTreasureTrailSaved()]);
+  assert.equal(nextWeek.action, 'new', 'a different day is a different night, however similar the titles');
+
+  // Unrelated titles sharing ONE token at the same day + venue: the subset
+  // must be total, so "Treasure Hunt" never folds into "Treasure Trail".
+  const sharedToken = core.analyzeEventAction(
+    buildTreasureTrailIncoming({ title: 'Treasure Hunt', key: 'treasure-hunt|2026-08-16|massive' }),
+    [buildTreasureTrailSaved()]);
+  assert.equal(sharedToken.action, 'new', 'sharing a token is not a subset — two real events stay separate');
+
+  // No venue evidence on the saved side (empty notes, no coordinates): the
+  // POSITIVE venue-identity requirement refuses, whatever the titles say.
+  const noVenue = core.analyzeEventAction(
+    buildTreasureTrailIncoming(),
+    [buildTreasureTrailSaved({ location: null, notes: '' })]);
+  assert.equal(noVenue.action, 'new', 'no positive venue identity → fail closed');
+});
+
 test('parseAiEventResponse rejects array responses', () => {
   const core = createCore();
   assert.equal(core.parseAiEventResponse('[0]'), null, 'bare arrays are not event objects');
@@ -4155,6 +4245,47 @@ test('deduplicateEvents never folds different base pages without a shared cadenc
     buildRenumberedSlugSeriesExport(nextWeek, 20, { recurrenceRule: 'FREQ=MONTHLY;BYDAY=1TH' })
   ], null);
   assert.equal(differentRules.length, 2, 'different rules are different series claims — never fold them');
+});
+
+test('deduplicateEvents: a shared cadence marker IS the name proof — the DJ-suffixed Discipline Corps pair folds', async () => {
+  const core = createCore();
+  // Run 20260811-134734 verbatim: a 2nd-Friday monthly pair whose records
+  // each wear a different guest DJ's name. The derived-cadence pass groups
+  // them (guest-suffix-stripped comparison) and mints one marker; the
+  // series collapse must not re-veto the fold by re-checking the FULL
+  // titles, which are deliberately dissimilar (that is exactly why the
+  // marker exists). Venue identity still applies: the different-place veto
+  // is untouched (covered by the different-venues case above).
+  const buildDisciplineRecord = (title, start, slug) => ({
+    title,
+    bar: 'Dallas Eagle',
+    city: 'dallas',
+    timezone: 'America/Chicago',
+    startDate: new Date(start),
+    endDate: new Date(new Date(start).getTime() + 5 * 60 * 60 * 1000),
+    url: `https://www.thedallaseagle.com/events/${slug}/`,
+    recurrenceRule: 'FREQ=MONTHLY',
+    _cadenceGroup: 'cadence-1:FREQ=MONTHLY;BYDAY=2FR',
+    source: 'ai-web'
+  });
+  const pair = [
+    buildDisciplineRecord('Discipline Corps Bar Night with DJ Philip Webb', '2026-09-12T02:00:00.000Z', 'discipline-corps-bar-night-7'),
+    buildDisciplineRecord('Discipline Corps Bar Night with DJ Blaine', '2026-10-10T02:00:00.000Z', 'discipline-corps-bar-night-with-dj-blaine')
+  ];
+  const result = await core.deduplicateEvents(pair, null);
+  assert.equal(result.length, 1, 'the marker-shared pair folds to one withheld series export');
+  assert.equal(result[0].startDate.getTime(), Date.parse('2026-09-12T02:00:00.000Z'),
+    'the earliest occurrence is kept');
+  assert.equal(result[0].recurrenceRule, 'FREQ=MONTHLY', 'the stated rule survives the fold');
+
+  // Without the shared marker the same pair NEVER folds — full titles are
+  // dissimilar and the plain name check stands (lookalike pairs are not
+  // always twins).
+  const withMarker = buildDisciplineRecord('Discipline Corps Bar Night with DJ Philip Webb', '2026-09-12T02:00:00.000Z', 'discipline-corps-bar-night-7');
+  const withoutMarker = buildDisciplineRecord('Discipline Corps Bar Night with DJ Blaine', '2026-10-10T02:00:00.000Z', 'discipline-corps-bar-night-with-dj-blaine');
+  delete withoutMarker._cadenceGroup;
+  const unmarked = await core.deduplicateEvents([withMarker, withoutMarker], null);
+  assert.equal(unmarked.length, 2, 'a one-sided marker still proves nothing');
 });
 
 // === Run 20260802-135030: 3dollarbillbk.com + its eventim ticketing pages ===
@@ -12084,17 +12215,20 @@ test('isRecurringSeriesEvent: _recurring stamp or non-empty recurrenceRule', () 
 test('recurring events are excluded from calendar-write execution but present in results', async () => {
   const core = createCore();
   const adapter = buildPrepCalendarAdapter([]);
+  // Future-dated relative to the wall clock: a fixed past date would now trip
+  // the (separate) fully-past-span withhold and hide what THIS test proves.
+  const upcoming = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
   const recurring = {
     title: 'FUZZY',
-    startDate: new Date('2026-08-08T02:00:00.000Z'),
-    endDate: new Date('2026-08-08T07:00:00.000Z'),
+    startDate: upcoming,
+    endDate: new Date(upcoming.getTime() + 5 * 60 * 60 * 1000),
     bar: 'Dallas Eagle',
     city: 'dallas',
     recurrenceRule: 'FREQ=WEEKLY;BYDAY=FR'
   };
   const plain = {
     title: 'ONE-OFF',
-    startDate: new Date('2026-08-09T02:00:00.000Z'),
+    startDate: new Date(upcoming.getTime() + 24 * 60 * 60 * 1000),
     city: 'dallas'
   };
 
@@ -14821,24 +14955,31 @@ test('sanity: sentence fragments and filler announcements are DELIBERATELY not f
 
 test('sanity: a CREATE more than 370 days past flags start-long-past; updates and recent creates never do', () => {
   const core = createSanityCore();
+  // Every fixture below is fully elapsed at SANITY_NOW_MS, so since wave 3
+  // each also carries the (action-independent) span-fully-past flag — the
+  // start-long-past rule itself is unchanged: CREATE-shaped only, 370-day
+  // bound.
   // Real case: ONBEAR FEST proposed as NEW at 2021-01-31 — five years past.
   assert.deepEqual(
     sanityCodes(core, { title: 'ONBEAR FEST', _action: 'new', startDate: '2021-01-31T20:00:00Z' }),
-    ['start-long-past']);
-  // A normal past-event UPDATE is routine calendar maintenance.
+    ['start-long-past', 'span-fully-past']);
+  // A normal past-event UPDATE is routine calendar maintenance for THIS
+  // rule; the fully-past span still gets its own flag (and write withhold —
+  // an update payload for an elapsed span has nothing attendable to say).
   assert.deepEqual(
     sanityCodes(core, { title: 'ONBEAR FEST', _action: 'merge', startDate: '2021-01-31T20:00:00Z' }),
-    []);
+    ['span-fully-past']);
   // Real case under the bound: ursamen's "Out of Hibernation" carried a date
-  // ~5 months past — inside 370 days, so this rule stays silent (the bound
-  // exists to keep just-passed annual events out of the flag).
+  // ~5 months past — inside 370 days, so start-long-past stays silent (the
+  // bound exists to keep just-passed annual events out of THAT flag); the
+  // span-fully-past flag is exactly the one that should speak here.
   assert.deepEqual(
     sanityCodes(core, { title: 'Out of Hibernation', _action: 'new', startDate: '2026-03-01T20:00:00Z' }),
-    []);
+    ['span-fully-past']);
   // _analysis.action counts as CREATE-shaped too.
   assert.deepEqual(
     sanityCodes(core, { title: 'ONBEAR FEST', _analysis: { action: 'new' }, startDate: '2021-01-31T20:00:00Z' }),
-    ['start-long-past']);
+    ['start-long-past', 'span-fully-past']);
 });
 
 test('sanity: spans longer than any curated festival flag duration-implausible; festival-length spans never do', () => {
@@ -14884,10 +15025,13 @@ test('sanity: getEventSanityFlags never mutates the event and stacks multiple fl
 test('sanity flags are stamped on the analyzed event with the ⚠️ SANITY log line', async () => {
   const core = createCore();
   const adapter = buildPrepCalendarAdapter([]); // no existing events → CREATE
+  // Future-dated so the (separate) span-fully-past flag stays out of the
+  // exact single-flag log-line assertion below.
+  const upcomingStart = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
   const scraped = {
     title: 'DOG TAGS ARE NON REFUNDABLE · TAGS ARE NON TRANSFERABLE',
-    startDate: new Date('2026-08-08T02:00:00.000Z'),
-    endDate: new Date('2026-08-08T07:00:00.000Z'),
+    startDate: upcomingStart,
+    endDate: new Date(upcomingStart.getTime() + 5 * 60 * 60 * 1000),
     bar: 'STATION 4',
     city: 'dallas',
     shortName: 'TAGS' // keeps the shortName derivation pass inert
@@ -14912,10 +15056,14 @@ test('sanity flags are stamped on the analyzed event with the ⚠️ SANITY log 
 
 test('no enforcement: a flagged event\'s action and write fields are byte-identical to an unflagged twin\'s', async () => {
   const core = createCore();
+  // Future-dated: a fixed past date would add the span-fully-past flag (and
+  // its separate withhold) to BOTH twins and muddy the no-enforcement claim
+  // this test pins for the report-only flags.
+  const twinStart = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
   const buildTwin = (title) => ({
     title,
-    startDate: new Date('2026-08-08T02:00:00.000Z'),
-    endDate: new Date('2026-08-08T07:00:00.000Z'),
+    startDate: twinStart,
+    endDate: new Date(twinStart.getTime() + 5 * 60 * 60 * 1000),
     bar: 'STATION 4',
     city: 'dallas',
     shortName: 'TAGS'
@@ -14945,6 +15093,78 @@ test('no enforcement: a flagged event\'s action and write fields are byte-identi
     notes: event.notes
   });
   assert.equal(writeShape(flagged[0]), writeShape(twin[0]));
+});
+
+test('fully-past span: the write is withheld with a review flag; a future umbrella is untouched (THIS WEEK AT MASSIVE)', async () => {
+  const core = createCore();
+  const adapter = buildPrepCalendarAdapter([]); // no existing events → CREATE
+  // The real record from run 20260811-132205: an Instagram weekly-lineup
+  // graphic (Oct 6–11 2025) extracted as a 5-day umbrella and PROPOSED AS A
+  // CALENDAR CREATE ten months after it ended — 5-day span under the 10-day
+  // duration bound, 308 days under the 370-day long-past bound, so no
+  // pre-existing rule spoke. Span fully past is objective: nothing left to
+  // attend, so the write is withheld while the card stays in results
+  // (flag, don't drop).
+  const staleTile = {
+    title: 'THIS WEEK AT MASSIVE',
+    startDate: new Date('2025-10-07T05:00:00.000Z'),
+    endDate: new Date('2025-10-12T05:00:00.000Z'),
+    bar: 'Massive',
+    city: 'seattle',
+    timezone: 'America/Los_Angeles',
+    ticketUrl: 'https://tixr.com/e/202303',
+    shortName: 'THIS WEEK' // keeps the shortName derivation pass inert
+  };
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logLines.push(args.join(' ')); };
+  let analyzed;
+  try {
+    analyzed = await core.prepareEventsForCalendar([staleTile], adapter, {});
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(analyzed.length, 1, "flag-don't-drop: the card stays in the results");
+  assert.equal(analyzed[0]._pastSpanWithheld, true, 'the write withhold is stamped at analysis');
+  assert.ok(analyzed[0]._sanityFlags.some(flag => flag.code === 'span-fully-past'),
+    'the review flag rides the existing sanity-flag card surface');
+  assert.ok(logLines.some(line => line.startsWith('⏳ PAST SPAN: "THIS WEEK AT MASSIVE" withheld from calendar write')),
+    `withhold line expected, got: ${JSON.stringify(logLines.filter(line => line.includes('PAST')))}`);
+  assert.deepEqual(SharedCore.filterEventsForExecution(analyzed), [],
+    'a fully-past span never reaches a calendar write');
+
+  // A legitimate FUTURE multi-day umbrella (a bear week) is untouched:
+  // no flag, no stamp, still executable.
+  const upcoming = new Date(Date.now() + 150 * 24 * 60 * 60 * 1000);
+  const bearWeek = {
+    title: 'Bear Week Kickoff',
+    startDate: upcoming,
+    endDate: new Date(upcoming.getTime() + 5 * 24 * 60 * 60 * 1000),
+    bar: 'Massive',
+    city: 'seattle',
+    timezone: 'America/Los_Angeles',
+    shortName: 'BWK'
+  };
+  const futureAnalyzed = await core.prepareEventsForCalendar([bearWeek], buildPrepCalendarAdapter([]), {});
+  assert.equal(futureAnalyzed.length, 1);
+  assert.equal(futureAnalyzed[0]._pastSpanWithheld, undefined, 'future spans are never stamped');
+  assert.ok(!futureAnalyzed[0]._sanityFlags.some(flag => flag.code === 'span-fully-past'));
+  assert.equal(SharedCore.filterEventsForExecution(futureAnalyzed).length, 1,
+    'a future umbrella still reaches the write plan');
+
+  // An event that has STARTED but not ENDED (ongoing) is not fully past.
+  const ongoing = {
+    title: 'Ongoing Weekender',
+    startDate: new Date(Date.now() - 24 * 60 * 60 * 1000),
+    endDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    bar: 'Massive',
+    city: 'seattle',
+    timezone: 'America/Los_Angeles',
+    shortName: 'OW'
+  };
+  const ongoingAnalyzed = await core.prepareEventsForCalendar([ongoing], buildPrepCalendarAdapter([]), {});
+  assert.equal(ongoingAnalyzed[0]._pastSpanWithheld, undefined, 'an ongoing span still has something to attend');
+  assert.equal(SharedCore.filterEventsForExecution(ongoingAnalyzed).length, 1);
 });
 
 // ---------------------------------------------------------------------------
@@ -15031,7 +15251,7 @@ test('cross-realm: sanity flags fire on foreign Dates (start-long-past, duration
   };
   assert.deepEqual(
     core.getEventSanityFlags(nark, { nowMs }).map(flag => flag.code),
-    ['start-long-past']
+    ['start-long-past', 'span-fully-past']
   );
 
   // The real Lumberyard record: 2025-03-22 → 2026-10-17 from JSON-LD.
@@ -15512,8 +15732,11 @@ function buildBhhSeriesRecord(overrides = {}) {
   return {
     identifier: '2DDBF0E6-6877-4FBF-BB94-EC2708DFD113:9vnvsm6kjpievu62279lco139k@google.com',
     title: 'Bear Happy Hour',
-    startDate: new Date('2026-08-07T00:00:00.000Z'),
-    endDate: new Date('2026-08-07T04:00:00.000Z'),
+    // A first Thursday far in the future: the occurrence being overridden
+    // must be upcoming, or the (unrelated) fully-past-span withhold would
+    // hide the write this suite asserts.
+    startDate: new Date('2030-08-01T00:00:00.000Z'),
+    endDate: new Date('2030-08-01T04:00:00.000Z'),
     location: null,
     recurrence: 'FREQ=WEEKLY',
     notes: [
@@ -15531,8 +15754,8 @@ function buildBhhScrapedEvent(overrides = {}) {
   return {
     title: 'BEAR HAPPY HOUR',
     description: 'Bear Happy Hour First Thursdays 5pm',
-    startDate: new Date('2026-08-07T00:00:00.000Z'),
-    endDate: new Date('2026-08-07T04:00:00.000Z'),
+    startDate: new Date('2030-08-01T00:00:00.000Z'),
+    endDate: new Date('2030-08-01T04:00:00.000Z'),
     bar: 'Eagle LA',
     barSource: 'venue-site',
     address: '4219 Santa Monica Blvd, Los Angeles, CA 90029',
@@ -15693,7 +15916,7 @@ test('series authority end-to-end: BHH at Eagle LA keeps its override and writes
   // The override identity survives (#1588 dropped it here) and the per-night
   // facts the calendar was missing are exactly what gets written.
   assert.equal(analyzed.overrideUid, '9vnvsm6kjpievu62279lco139k@google.com');
-  assert.equal(analyzed.overrideRecurrenceId, '20260807T000000Z');
+  assert.equal(analyzed.overrideRecurrenceId, '20300801T000000Z');
   assert.equal(analyzed.bar, 'Eagle LA');
   assert.equal(analyzed.address, '4219 Santa Monica Blvd, Los Angeles, CA 90029');
   assert.equal(analyzed.location, '34.0912127, -118.2840632');
