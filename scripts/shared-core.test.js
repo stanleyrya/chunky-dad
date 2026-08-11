@@ -17023,8 +17023,11 @@ test('junk-title records are withheld from calendar execution with the 🚫 JUNK
   const core = createCore();
   const buildScraped = (title) => ({
     title,
-    startDate: new Date('2026-08-08T02:00:00.000Z'),
-    endDate: new Date('2026-08-08T07:00:00.000Z'),
+    // Future-dated on purpose: a fully-elapsed span would trip wave 3's
+    // span-fully-past flag once both waves land, and this test isolates
+    // the junk-title flag.
+    startDate: new Date('2027-08-08T02:00:00.000Z'),
+    endDate: new Date('2027-08-08T07:00:00.000Z'),
     bar: 'STATION 4',
     city: 'dallas',
     shortName: 'TAGS' // keeps the shortName derivation pass inert
