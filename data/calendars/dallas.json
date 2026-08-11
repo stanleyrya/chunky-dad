@@ -60,62 +60,6 @@
       "slug": "furball-442f8415"
     },
     {
-      "name": "Bear and Twink Night",
-      "day": "Friday",
-      "time": "9PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 32.7693483,
-        "lng": -96.8112576
-      },
-      "startDate": "2026-08-14T21:00:00",
-      "endDate": "2026-08-15T02:00:00",
-      "unprocessedDescription": "description: It’s time for another delicious combo, it’s BEAR \r& TWINK NIGHT at the Dallas Eagle!! 🐻🕺🦅 Opposites attract at this event, so come on out and enjoy the variety! Big or small, hirsute or svelte, here you’ll find all types to satisfy your desires. Mix it up on the dance floor with heart-pounding hous , ...\nbar: Dallas Eagle\ninstagram: https://www.instagram.com/thedallaseagle/\nfacebook: https://www.facebook.com/lonestareagle\nwebsite: https://www.thedallaseagle.com/events/bear-and-twink-night/\nmastodon: https://mastodon.social/@dallaseagle\ntimezone: America/Chicago\naddress: 525 S Riverfront Blvd, Dallas, TX 75207\nkey: bear-and-twink-night|2026-08-15|dallas eagle\nbearSource: keyword\nshortName: BEAR AND TWINK\npinSource: curated\naddressSource: curated\nbarSource: venue-site\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Chicago",
-      "wasUTC": true,
-      "sourceUid": "13889125-C3DE-4D92-9227-86C5EE9B1005",
-      "uid": "13889125-C3DE-4D92-9227-86C5EE9B1005",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Dallas Eagle",
-      "tea": "It’s time for another delicious combo, it’s BEAR & TWINK NIGHT at the Dallas Eagle!! 🐻🕺🦅 Opposites attract at this event, so come on out and enjoy the variety! Big or small, hirsute or svelte, here you’ll find all types to satisfy your desires. Mix it up on the dance floor with heart-pounding hous , ...",
-      "address": "525 S Riverfront Blvd, Dallas, TX 75207",
-      "website": "https://www.thedallaseagle.com/events/bear-and-twink-night/",
-      "instagram": "https://www.instagram.com/thedallaseagle/",
-      "facebook": "https://www.facebook.com/lonestareagle",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
-      "shortName": "BEAR AND TWINK",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.thedallaseagle.com/events/bear-and-twink-night/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/thedallaseagle/",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "facebook",
-          "url": "https://www.facebook.com/lonestareagle",
-          "label": "📘 Facebook"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "bear-and-twink-night-36f7f7ac"
-    },
-    {
       "name": "Brewery Bears Happy Hour",
       "day": "Friday",
       "time": "5PM-9PM",
@@ -127,7 +71,7 @@
       },
       "startDate": "2026-08-14T17:00:00",
       "endDate": "2026-08-14T21:00:00",
-      "unprocessedDescription": "description: The Brewery Bears have a new home bar at the Dalla\rs Eagle! 🐻🍻🦅 Join us for an all new monthly Happy Hour event with the biggest beer drinking crowd in town! Enjoy discount ice cold craft and draft beers, and our rotating Brewery Bears Reserve selections. Bears gotta eat, so we’re serving up fresh and delicious sc , ...\nbar: Dallas Eagle\ninstagram: https://www.instagram.com/thedallaseagle/\nfacebook: https://www.facebook.com/lonestareagle\nwebsite: https://www.thedallaseagle.com/events/brewery-bears-happy-hour-5/\nmastodon: https://mastodon.social/@dallaseagle\nbarSource: venue-site\ntimezone: America/Chicago\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I\naddress: 525 S Riverfront Blvd, Dallas, TX 75207\naddressSource: curated\npinSource: curated\nkey: brewery-bears-happy-hour|2026-08-14|dallas eagle\nbearSource: keyword\nshortName: BREWERY BEARS",
+      "unprocessedDescription": "description: The Brewery Bears have a new home bar at the Dalla\rs Eagle! 🐻🍻🦅 Join us for an all new monthly Happy Hour event with the biggest beer drinking crowd in town! Enjoy discount ice cold craft and draft beers, and our rotating Brewery Bears Reserve selections. Bears gotta eat, so we’re serving up fresh and delicious sc , ...\nbar: Dallas Eagle\ninstagram: https://www.instagram.com/thedallaseagle/\nfacebook: https://www.facebook.com/lonestareagle\nwebsite: https://www.thedallaseagle.com/events/brewery-bears-happy-hour-5/\nmastodon: https://mastodon.social/@dallaseagle\ntimezone: America/Chicago\naddress: 525 S Riverfront Blvd, Dallas, TX 75207\nkey: brewery-bears-happy-hour|2026-08-14|dallas eagle\nbearSource: keyword\nshortName: BREWERY BEARS\npinSource: curated\naddressSource: curated\nbarSource: venue-site\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Chicago",
@@ -170,6 +114,62 @@
         }
       ],
       "slug": "brewery-bears-happy-hour-247d1b27"
+    },
+    {
+      "name": "Bear and Twink Night with DJ Level",
+      "day": "Friday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 32.7693483,
+        "lng": -96.8112576
+      },
+      "startDate": "2026-08-14T21:00:00",
+      "endDate": "2026-08-15T02:00:00",
+      "unprocessedDescription": "description: It’s time for another delicious combo, it’s BEAR \r& TWINK NIGHT at the Dallas Eagle!! 🐻🕺🦅 Opposites attract at this event, so come on out and enjoy the variety! Big or small, hirsute or svelte, here you’ll find all types to satisfy your desires. Mix it up on the dance floor with heart-pounding hous , ...\nbar: Dallas Eagle\ninstagram: https://www.instagram.com/thedallaseagle/\nfacebook: https://www.facebook.com/lonestareagle\nwebsite: https://www.thedallaseagle.com/events/bear-and-twink-night/\nmastodon: https://mastodon.social/@dallaseagle\ntimezone: America/Chicago\naddress: 525 S Riverfront Blvd, Dallas, TX 75207\nkey: bear-and-twink-night-with-dj-level|2026-08-15|dallas eagle\nbearSource: keyword\nshortName: BEAR AND TWINK\npinSource: curated\naddressSource: curated\nbarSource: venue-site\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "13889125-C3DE-4D92-9227-86C5EE9B1005",
+      "uid": "13889125-C3DE-4D92-9227-86C5EE9B1005",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Dallas Eagle",
+      "tea": "It’s time for another delicious combo, it’s BEAR & TWINK NIGHT at the Dallas Eagle!! 🐻🕺🦅 Opposites attract at this event, so come on out and enjoy the variety! Big or small, hirsute or svelte, here you’ll find all types to satisfy your desires. Mix it up on the dance floor with heart-pounding hous , ...",
+      "address": "525 S Riverfront Blvd, Dallas, TX 75207",
+      "website": "https://www.thedallaseagle.com/events/bear-and-twink-night/",
+      "instagram": "https://www.instagram.com/thedallaseagle/",
+      "facebook": "https://www.facebook.com/lonestareagle",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+      "shortName": "BEAR AND TWINK",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.thedallaseagle.com/events/bear-and-twink-night/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thedallaseagle/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/lonestareagle",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bear-and-twink-night-with-dj-level-36f7f7ac"
     }
   ]
 }

@@ -8,7 +8,7 @@ X-WR-TIMEZONE:Europe/London
 BEGIN:VEVENT
 DTSTART:20260926T210000Z
 DTEND:20260927T030000Z
-DTSTAMP:20260803T183508Z
+DTSTAMP:20260811T185357Z
 UID:2F6B95B8-EB63-4396-AB18-A5F6F20D84F2
 CREATED:20260731T131550Z
 DESCRIPTION:description: 🐻🔥 BEEFMINCE x Bear Brum 2026 🔥🐻 Join BEEFMINC
@@ -27,11 +27,11 @@ DESCRIPTION:description: 🐻🔥 BEEFMINCE x Bear Brum 2026 🔥🐻 Join BEEFM
  ps://dice-media.imgix.net/attachments/2026-03-29/7ec0f877-c521-402f-9647-d4
  8e7e765d89.jpg?rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress\nwebsit
  e: https://beefmince.com\nshortName: BEEF-MINCE\nfavicon: https://beefmince
- .com\nbearSource: keyword\nkey: beefmince-x-bear-brum-2026|2026-09-26|eden\
+ .com\nkey: beefmince-x-bear-brum-2026|2026-09-26|eden\nbearSource: keyword\
  npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: c
  urated\ngmaps: https://www.google.com/maps/search/?api=1&query=52.46975%2C-
  1.89513
-LAST-MODIFIED:20260803T181038Z
+LAST-MODIFIED:20260811T175713Z
 LOCATION:52.46975\, -1.89513
 SEQUENCE:0
 STATUS:CONFIRMED

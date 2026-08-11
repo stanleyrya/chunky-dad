@@ -39,7 +39,7 @@
     "dallas": {
       "name": "Dallas",
       "status": "success",
-      "dataLength": 3917,
+      "dataLength": 3945,
       "eventCount": 3
     },
     "dc": {
@@ -69,7 +69,7 @@
     "london": {
       "name": "London",
       "status": "success",
-      "dataLength": 15533,
+      "dataLength": 15528,
       "eventCount": 9
     },
     "nola": {
@@ -81,8 +81,8 @@
     "nyc": {
       "name": "New York",
       "status": "success",
-      "dataLength": 16658,
-      "eventCount": 16
+      "dataLength": 18403,
+      "eventCount": 17
     },
     "palm-springs": {
       "name": "Palm Springs",

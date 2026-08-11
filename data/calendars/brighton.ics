@@ -8,7 +8,7 @@ X-WR-TIMEZONE:Europe/London
 BEGIN:VEVENT
 DTSTART:20260801T210000Z
 DTEND:20260802T040000Z
-DTSTAMP:20260806T235249Z
+DTSTAMP:20260811T185357Z
 UID:22724512-536F-464D-9592-A7104E2BC7E3
 CREATED:20260731T131551Z
 DESCRIPTION:description: Now it’s happening — BEEFMINCE Brighton Pride on S
@@ -24,12 +24,12 @@ DESCRIPTION:description: Now it’s happening — BEEFMINCE Brighton Pride on S
  ondon\nimageHorizontal: https://dice-media.imgix.net/attachments/2026-02-07
  /92683f1d-efd9-49af-9b55-e93c17060038.jpg?rect=0%2C154%2C769%2C461&w=1300&h
  =630&auto=compress\nwebsite: https://beefmince.com\ninstagram: horizon.brig
- hton\nshortName: BEEF-MINCE\nfavicon: https://beefmince.com\nbearSource: ke
- yword\nkey: beefmince-brighton-pride|2026-08-01|horizon\ncover: £25\npinSou
+ hton\nshortName: BEEF-MINCE\nfavicon: https://beefmince.com\nkey: beefmince
+ -brighton-pride|2026-08-01|horizon\nbearSource: keyword\ncover: £25\npinSou
  rce: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\
  ngmaps: https://www.google.com/maps/search/?api=1&query=50.819936%2C-0.1403
  82
-LAST-MODIFIED:20260806T152125Z
+LAST-MODIFIED:20260811T175719Z
 LOCATION:50.819936\, -0.140382
 SEQUENCE:0
 STATUS:CONFIRMED
@@ -41,7 +41,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20261205T230000Z
 DTEND:20261206T040000Z
-DTSTAMP:20260806T235249Z
+DTSTAMP:20260811T185357Z
 UID:AC82B5F3-1E3E-4098-99F8-51208AFC7C58
 CREATED:20260731T131552Z
 DESCRIPTION:description: BEEFMINCE\; the UK’s tastiest bear club is famous 
@@ -58,11 +58,11 @@ DESCRIPTION:description: BEEFMINCE\; the UK’s tastiest bear club is famous
  \ncover: £12\nimageHorizontal: https://dice-media.imgix.net/attachments/202
  5-01-13/bf6a78f1-f924-41ef-aba7-8e35d4211d38.jpg?rect=0%2C154%2C768%2C461&w
  =1300&h=630&auto=compress\nwebsite: https://beefmince.com\nshortName: BEEF-
- MINCE\nfavicon: https://beefmince.com\nbearSource: keyword\nkey: beefmince-
- x-brighton|2026-12-05|concorde 2\npinSource: curated\naddressSource: page\n
+ MINCE\nfavicon: https://beefmince.com\nkey: beefmince-x-brighton|2026-12-05
+ |concorde 2\nbearSource: keyword\npinSource: curated\naddressSource: page\n
  imageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps
  /search/?api=1&query=50.8172912%2C-0.1225875
-LAST-MODIFIED:20260803T181032Z
+LAST-MODIFIED:20260811T175719Z
 LOCATION:50.8172912\, -0.1225875
 SEQUENCE:0
 STATUS:CONFIRMED

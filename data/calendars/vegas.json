@@ -16,7 +16,7 @@
       },
       "startDate": "2026-09-05T21:00:00",
       "endDate": "2026-09-06T12:00:00",
-      "unprocessedDescription": "description: DADDIES AT WORK – Labor Day Weekend | Las Vegas Th\ris Labor Day Weekend, the hardest-working daddies are clocking in! Join us in La\nbar: Dust Las Vegas\naddress: 855 East Twain Avenue, #Unit 114, Las Vegas, NV 89169\nticketUrl: https://www.eventbrite.com/e/megawoof-america-las-vegas-daddies-at-work-tickets-1995597047489\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1189743644%2F185013722403%2F1%2Foriginal.20260727-232408?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=5cca955f143a1da141e178d4106a33f1\ncover: $11.58-$27.37\ntimezone: America/Los_Angeles\nwebsite: https://linktr.ee/megawoof_america\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nfavicon: https://linktr.ee/megawoof_america\nbearSource: keyword\nkey: megawoof-america-las-vegas-daddies-at-work|2026-09-06|dust las vegas\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=36.1213962%2C-115.145091",
+      "unprocessedDescription": "description: DADDIES AT WORK – Labor Day Weekend | Las Vegas Th\ris Labor Day Weekend, the hardest-working daddies are clocking in! Join us in La\nbar: Dust Las Vegas\naddress: 855 East Twain Avenue, #Unit 114, Las Vegas, NV 89169\nticketUrl: https://www.eventbrite.com/e/megawoof-america-las-vegas-daddies-at-work-tickets-1995597047489\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1189743644%2F185013722403%2F1%2Foriginal.20260727-232408?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=5cca955f143a1da141e178d4106a33f1\ncover: $11.58-$27.37\ntimezone: America/Los_Angeles\nwebsite: https://linktr.ee/megawoof_america\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nfavicon: https://linktr.ee/megawoof_america\nkey: megawoof-america-las-vegas-daddies-at-work|2026-09-06|dust las vegas\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=36.1213962%2C-115.145091",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Los_Angeles",
@@ -62,64 +62,6 @@
         }
       ],
       "slug": "megawoof-america-las-vegas-daddies-at-work-55a3a90c"
-    },
-    {
-      "name": "MEGAWOOF",
-      "day": "Saturday",
-      "time": "9PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 36.1214368,
-        "lng": -115.144945
-      },
-      "startDate": "2025-08-30T21:00:00",
-      "endDate": "2025-08-31T02:00:00",
-      "unprocessedDescription": "description: MEGAWOOF AMERICA - LAS VEGAS - LABOR DAY WEEKEND :\r BEARS AT WORK\nbar: Dust Las Vegas\naddress: 855 East Twain Avenue, Las Vegas, NV 89169\ntimezone: America/Los_Angeles\nurl: https://www.eventbrite.com/e/megawoof-america-las-vegas-labor-day-weekend-bears-at-work-tickets-1531257726079\nticketUrl: https://www.eventbrite.com/e/megawoof-america-las-vegas-labor-day-weekend-bears-at-work-tickets-1531257726079\ncover: $11.58 - $23.14 (as of 8/30)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1081598603%2F185013722403%2F1%2Foriginal.20250725-224704?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=73fd269e7d0c3aa5168b99f977aba5d7\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=36.1214368%2C-115.144945&query_place_id=ChIJxfTt6N_FyIARvHYdOaAV7t8\nkey: megawoof|2025-08-31|dust las vegas|eventbrite",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "A6BB3951-52D8-4124-B6CD-3E5AC290BBBF",
-      "uid": "A6BB3951-52D8-4124-B6CD-3E5AC290BBBF",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Dust Las Vegas",
-      "cover": "$11.58 - $23.14 (as of 8/30)",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1081598603%2F185013722403%2F1%2Foriginal.20250725-224704?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=73fd269e7d0c3aa5168b99f977aba5d7",
-      "tea": "MEGAWOOF AMERICA - LAS VEGAS - LABOR DAY WEEKEND : BEARS AT WORK",
-      "address": "855 East Twain Avenue, Las Vegas, NV 89169",
-      "website": "https://www.eventbrite.com/e/megawoof-america-las-vegas-labor-day-weekend-bears-at-work-tickets-1531257726079",
-      "instagram": "https://www.instagram.com/megawoof_america",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=36.1214368%2C-115.144945&query_place_id=ChIJxfTt6N_FyIARvHYdOaAV7t8",
-      "ticketUrl": "https://www.eventbrite.com/e/megawoof-america-las-vegas-labor-day-weekend-bears-at-work-tickets-1531257726079",
-      "shortName": "MEGA-WOOF",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.eventbrite.com/e/megawoof-america-las-vegas-labor-day-weekend-bears-at-work-tickets-1531257726079",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/megawoof_america",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=36.1214368%2C-115.144945&query_place_id=ChIJxfTt6N_FyIARvHYdOaAV7t8",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/megawoof-america-las-vegas-labor-day-weekend-bears-at-work-tickets-1531257726079",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "megawoof-00b39ef8"
     },
     {
       "name": "MEGAWOOF",
@@ -236,6 +178,64 @@
         }
       ],
       "slug": "megawoof-las-vegas-memorial-day-weekend--741892f2"
+    },
+    {
+      "name": "MEGAWOOF",
+      "day": "Saturday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 36.1214368,
+        "lng": -115.144945
+      },
+      "startDate": "2025-08-30T21:00:00",
+      "endDate": "2025-08-31T02:00:00",
+      "unprocessedDescription": "description: MEGAWOOF AMERICA - LAS VEGAS - LABOR DAY WEEKEND :\r BEARS AT WORK\nbar: Dust Las Vegas\naddress: 855 East Twain Avenue, Las Vegas, NV 89169\ntimezone: America/Los_Angeles\nurl: https://www.eventbrite.com/e/megawoof-america-las-vegas-labor-day-weekend-bears-at-work-tickets-1531257726079\nticketUrl: https://www.eventbrite.com/e/megawoof-america-las-vegas-labor-day-weekend-bears-at-work-tickets-1531257726079\ncover: $11.58 - $23.14 (as of 8/30)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1081598603%2F185013722403%2F1%2Foriginal.20250725-224704?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=73fd269e7d0c3aa5168b99f977aba5d7\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=36.1214368%2C-115.144945&query_place_id=ChIJxfTt6N_FyIARvHYdOaAV7t8\nkey: megawoof|2025-08-31|dust las vegas|eventbrite",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "A6BB3951-52D8-4124-B6CD-3E5AC290BBBF",
+      "uid": "A6BB3951-52D8-4124-B6CD-3E5AC290BBBF",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Dust Las Vegas",
+      "cover": "$11.58 - $23.14 (as of 8/30)",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1081598603%2F185013722403%2F1%2Foriginal.20250725-224704?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=73fd269e7d0c3aa5168b99f977aba5d7",
+      "tea": "MEGAWOOF AMERICA - LAS VEGAS - LABOR DAY WEEKEND : BEARS AT WORK",
+      "address": "855 East Twain Avenue, Las Vegas, NV 89169",
+      "website": "https://www.eventbrite.com/e/megawoof-america-las-vegas-labor-day-weekend-bears-at-work-tickets-1531257726079",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=36.1214368%2C-115.144945&query_place_id=ChIJxfTt6N_FyIARvHYdOaAV7t8",
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-america-las-vegas-labor-day-weekend-bears-at-work-tickets-1531257726079",
+      "shortName": "MEGA-WOOF",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.eventbrite.com/e/megawoof-america-las-vegas-labor-day-weekend-bears-at-work-tickets-1531257726079",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/megawoof_america",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=36.1214368%2C-115.144945&query_place_id=ChIJxfTt6N_FyIARvHYdOaAV7t8",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/megawoof-america-las-vegas-labor-day-weekend-bears-at-work-tickets-1531257726079",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "megawoof-00b39ef8"
     }
   ]
 }
