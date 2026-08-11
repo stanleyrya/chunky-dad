@@ -10,6 +10,16 @@
     "accent": "#5c2b5f"
   },
   {
+    "slug": "furball-nola-26765d8a",
+    "url": "https://www.furball.nyc",
+    "faviconBg": "#302f35",
+    "faviconFg": "#f8f8f8",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#010a0f:45:2 #1c232c:20:2 #51433a:15:2 #f4a27b:9:11 #a9633b:8:11",
+    "accent": "#f4a27b"
+  },
+  {
     "slug": "new-orleans-578ac888",
     "url": "https://bearracuda.com/events/decadence/",
     "faviconBg": "#ff1901",
