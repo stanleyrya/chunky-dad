@@ -5797,9 +5797,38 @@ class AiWebParser {
                 const fs = require('fs');
                 const path = require('path');
                 const os = require('os');
+                // Shared Mac↔phone cache root (opt-in, Node only): when
+                // CHUNKY_SHARED_STORAGE_DIR points at the phone's
+                // chunky-dad-scraper tree, the OCR/classification/AI caches
+                // read and write the phone's storage/<subdir> dirs — the
+                // key derivation and envelopes above are already identical on
+                // both platforms. An explicit per-parser overrideDir still
+                // wins. Scriptable never reaches this branch (FileManager is
+                // checked first), so phone behavior is untouched.
+                const sharedRoot = (typeof process !== 'undefined' && process.env)
+                    ? String(process.env.CHUNKY_SHARED_STORAGE_DIR || '').trim()
+                    : '';
+                if (!overrideDir && sharedRoot) {
+                    // NO PARTIAL RUNS: an unreachable shared root must abort
+                    // the run loudly, never degrade to the local cache — a
+                    // degraded run that later syncs is worse than no run.
+                    let sharedStorageDir = null;
+                    try {
+                        sharedStorageDir = fs.statSync(path.join(sharedRoot, 'storage'));
+                    } catch (_) {
+                        sharedStorageDir = null;
+                    }
+                    if (!sharedStorageDir || !sharedStorageDir.isDirectory()) {
+                        const abort = new Error(`Shared storage root unreachable for ${subdir} cache: ${sharedRoot} has no storage/ subtree (iCloud signed out? wrong path?) — aborting instead of falling back to the local cache`);
+                        abort.sharedStorageAbort = true;
+                        throw abort;
+                    }
+                }
                 const baseDir = overrideDir
                     ? String(overrideDir)
-                    : path.join(os.homedir(), '.chunky-dad-scraper', 'storage', subdir);
+                    : (sharedRoot
+                        ? path.join(sharedRoot, 'storage', subdir)
+                        : path.join(os.homedir(), '.chunky-dad-scraper', 'storage', subdir));
                 return {
                     type: 'node',
                     fs,
@@ -5807,11 +5836,23 @@ class AiWebParser {
                     baseDir
                 };
             } catch (error) {
+                // The shared-root abort must not be swallowed into the
+                // fail-open "no cache" path — rethrow it so the run stops.
+                if (error && error.sharedStorageAbort) throw error;
                 console.log(`🤖 AI Web: ${subdir} cache setup unavailable in Node: ${error.message}`);
                 return null;
             }
         }
         return null;
+    }
+
+    // Node cache writes go temp-file-then-rename (same directory) so an
+    // iCloud-synced shared root never ships a torn file. Scriptable writes
+    // stay fm.writeString — iOS-side writes are not the torn-file risk here.
+    async writeNodeCacheFileAtomically(runtime, cachePath, contents) {
+        const tmpPath = `${cachePath}.tmp-${process.pid.toString(36)}-${Date.now().toString(36)}`;
+        await runtime.fs.promises.writeFile(tmpPath, contents, 'utf8');
+        await runtime.fs.promises.rename(tmpPath, cachePath);
     }
 
     // "Touch" a cache entry on a hit so pruning can work from last USE instead
@@ -5833,11 +5874,24 @@ class AiWebParser {
             if (runtime.type === 'scriptable') {
                 runtime.fm.writeString(cachePath, JSON.stringify(cached, null, 2));
             } else {
-                await runtime.fs.promises.writeFile(cachePath, JSON.stringify(cached, null, 2), 'utf8');
+                await this.writeNodeCacheFileAtomically(runtime, cachePath, JSON.stringify(cached, null, 2));
             }
         } catch (_) {
             // A failed touch is harmless — the entry just keeps aging by mtime
         }
+    }
+
+    // Device-parity cache keys: Scriptable's JavaScriptCore has no
+    // URL/URLSearchParams, so the phone derives OCR cache filenames WITHOUT
+    // the query-sorting normalization below — the raw query order is what its
+    // `--q-` hash is computed over. When the shared Mac↔phone storage root is
+    // active, the phone's derivation is canonical, so Node must skip that
+    // normalization too or the same image gets a second, differently-named
+    // entry. Phone behavior is untouched (FileManager check → always false).
+    isSharedCacheParityModeActive() {
+        if (typeof FileManager !== 'undefined') return false;
+        if (typeof process === 'undefined' || !process.env) return false;
+        return String(process.env.CHUNKY_SHARED_STORAGE_DIR || '').trim() !== '';
     }
 
     getOcrCachePathParts(imageUrl, ocrConfig = {}) {
@@ -5845,7 +5899,7 @@ class AiWebParser {
         const normalizedSource = this.normalizeHttpUrlValue(this.unwrapImageProxyUrl(rawUrl) || rawUrl);
         let normalizedUrl = normalizedSource || rawUrl;
         try {
-            if (typeof URL === 'function' && normalizedUrl) {
+            if (typeof URL === 'function' && normalizedUrl && !this.isSharedCacheParityModeActive()) {
                 const parsed = new URL(normalizedUrl);
                 parsed.hash = '';
                 parsed.protocol = String(parsed.protocol || '').toLowerCase();
@@ -6025,7 +6079,7 @@ class AiWebParser {
             const hostDirPath = runtime.path.join(runtime.baseDir, hostDir);
             await runtime.fs.promises.mkdir(hostDirPath, { recursive: true });
             const cachePath = runtime.path.join(hostDirPath, fileName);
-            await runtime.fs.promises.writeFile(cachePath, JSON.stringify(payload, null, 2), 'utf8');
+            await this.writeNodeCacheFileAtomically(runtime, cachePath, JSON.stringify(payload, null, 2));
             return cachePath;
         } catch (error) {
             console.log(`🤖 AI Web: classification cache write failed for ${url}: ${error.message}`);
@@ -6177,7 +6231,7 @@ class AiWebParser {
                 const hostDirPath = runtime.path.join(runtime.baseDir, hostDir);
                 await runtime.fs.promises.mkdir(hostDirPath, { recursive: true });
                 cachePath = runtime.path.join(hostDirPath, fileName);
-                await runtime.fs.promises.writeFile(cachePath, JSON.stringify(payload, null, 2), 'utf8');
+                await this.writeNodeCacheFileAtomically(runtime, cachePath, JSON.stringify(payload, null, 2));
             }
             return cachePath;
         } catch (error) {
@@ -6353,7 +6407,7 @@ class AiWebParser {
                 const passDirPath = runtime.path.join(runtime.baseDir, dirSegments[0]);
                 await runtime.fs.promises.mkdir(passDirPath, { recursive: true });
                 cachePath = runtime.path.join(passDirPath, fileName);
-                await runtime.fs.promises.writeFile(cachePath, JSON.stringify(payload, null, 2), 'utf8');
+                await this.writeNodeCacheFileAtomically(runtime, cachePath, JSON.stringify(payload, null, 2));
             }
             this.aiResponseCacheStats.writes += 1;
             return cachePath;

@@ -379,3 +379,76 @@ test('tailLines keeps only the last N lines', () => {
   assert.ok(tail.startsWith('line 100'));
   assert.ok(tail.endsWith('line 599'));
 });
+
+// ---------------------------------------------------------------------------
+// tools/run-once.js exported helpers (safe to require: execution and the
+// WebAdapter prototype patch only happen when run-once is the main module).
+// ---------------------------------------------------------------------------
+const runOnce = require(path.join(__dirname, '..', 'tools', 'run-once.js'));
+
+test('run-once: shapeRunOnceConfig stamps automation runtime and always re-forces dryRun last', () => {
+  const config = {
+    parsers: [
+      { name: 'AutoOff', automationEnabled: false },
+      { name: 'AutoOn' }
+    ],
+    config: {}
+  };
+  const shaped = runOnce.shapeRunOnceConfig(config, {
+    CHUNKY_RUN_AUTOMATION: '1',
+    CHUNKY_RUN_OVERRIDES: JSON.stringify({ config: { dryRun: false } })
+  });
+  assert.equal(shaped.runtime.automationRun, true,
+    'automation env marks the run so SharedCore applies the automationEnabled parser filter');
+  assert.equal(shaped.config.dryRun, true,
+    'dryRun is forced AFTER the override merge — the phone stays the only calendar writer');
+
+  const manual = runOnce.shapeRunOnceConfig({ parsers: [], config: {} }, {});
+  assert.equal(manual.runtime, undefined, 'no automation stamp without the env');
+  assert.equal(manual.config.dryRun, true, 'dryRun forced on manual runs too');
+});
+
+test('run-once: parser filter still selects exactly the named parser and throws on unknown names', () => {
+  const shaped = runOnce.shapeRunOnceConfig({
+    parsers: [{ name: 'A', enabled: false }, { name: 'B', enabled: true }],
+    config: {}
+  }, { CHUNKY_RUN_PARSER: 'A' });
+  assert.deepEqual(shaped.parsers.map((p) => p.enabled), [true, false]);
+
+  assert.throws(() => runOnce.shapeRunOnceConfig({ parsers: [{ name: 'A' }], config: {} },
+    { CHUNKY_RUN_PARSER: 'Nope' }), /no parser named "Nope"/);
+});
+
+test('run-once: shared-storage preflight aborts loudly on unreachable/malformed roots and passes valid ones', () => {
+  const fs = require('node:fs');
+  const os = require('node:os');
+
+  assert.equal(runOnce.assertSharedStorageRootUsable({}, fs), null, 'env unset → feature off, no check');
+
+  assert.throws(
+    () => runOnce.assertSharedStorageRootUsable({ CHUNKY_SHARED_STORAGE_DIR: path.join(os.tmpdir(), `gone-${Date.now()}`) }, fs),
+    /unreachable/i,
+    'missing root aborts before the pipeline starts'
+  );
+
+  const bare = fs.mkdtempSync(path.join(os.tmpdir(), 'runonce-bare-'));
+  try {
+    assert.throws(
+      () => runOnce.assertSharedStorageRootUsable({ CHUNKY_SHARED_STORAGE_DIR: bare }, fs),
+      /storage\/ subtree/i,
+      'a root without storage/ is the wrong directory — abort, never mkdir'
+    );
+    fs.mkdirSync(path.join(bare, 'storage'));
+    assert.equal(runOnce.assertSharedStorageRootUsable({ CHUNKY_SHARED_STORAGE_DIR: bare }, fs), bare);
+  } finally {
+    fs.rmSync(bare, { recursive: true, force: true });
+  }
+});
+
+test('run-once: isAutomationEnv accepts the documented truthy spellings only', () => {
+  assert.equal(runOnce.isAutomationEnv({ CHUNKY_RUN_AUTOMATION: '1' }), true);
+  assert.equal(runOnce.isAutomationEnv({ CHUNKY_RUN_AUTOMATION: 'true' }), true);
+  assert.equal(runOnce.isAutomationEnv({ CHUNKY_RUN_AUTOMATION: 'yes' }), true);
+  assert.equal(runOnce.isAutomationEnv({ CHUNKY_RUN_AUTOMATION: '0' }), false);
+  assert.equal(runOnce.isAutomationEnv({}), false);
+});
