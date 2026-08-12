@@ -1657,8 +1657,13 @@ test('buildBearVerdictActionsHtml escapes the card id and marks the active verdi
   assert.equal(adapter.buildBearVerdictActionsHtml({ bearVerdict: 'bear' }), '', 'no row without a card id');
 
   const bear = adapter.buildBearVerdictActionsHtml({ bearIdx: 'k3', bearVerdict: 'bear', interactive: true });
-  assert.ok(bear.includes('🐻 Mark as bear'));
-  assert.ok(bear.includes('🚫 Mark as not bear'));
+  // Wave 7 compact toggle: icon-scale buttons, the words kept for
+  // accessibility in a visually-hidden span — never deleted.
+  assert.ok(bear.includes('🐻'));
+  assert.ok(bear.includes('🚫'));
+  assert.ok(bear.includes('Mark as bear'));
+  assert.ok(bear.includes('Mark as not bear'));
+  assert.ok(bear.includes('bear-verdict-btn-text'), 'button words ride in the hidden text span');
   assert.ok(bear.includes('data-bear-act="mark-bear"') && bear.includes('is-active" data-bear-idx="k3" data-bear-act="mark-bear"'));
   assert.ok(!bear.includes('is-active" data-bear-idx="k3" data-bear-act="mark-not-bear"'));
 
@@ -5058,7 +5063,7 @@ test('merge-table cells carry no per-cell inline styles (2400 copies of one styl
   assert.ok(rows.length > 0, 'the fixture actually produces comparison rows');
   assert.ok(!/<td[^>]*style="/.test(rows),
     'no <td style="..."> — the shared chrome lives in one CSS class');
-  assert.ok(/<td class="cmp-field">/.test(rows), 'cells are classed instead');
+  assert.ok(/<td class="field-row-field">/.test(rows), 'cells are classed instead');
 });
 
 test('merge-table value cells no longer carry the ENTIRE value in a title attribute', () => {
@@ -8263,10 +8268,13 @@ test('merge rows label deterministic vs AI vs no-op decisions in plain words', (
   };
   const html = adapter.generateEventCard(event);
 
-  // Deterministic resolution: labeled as such, with outcome and reason.
-  assert.ok(html.includes('🔒 DETERMINISTIC — kept existing — identity link beats a ticketing/social platform URL'));
-  // AI arbitration: labeled AI with the pick.
-  assert.ok(html.includes('🤝 AI — chose new — poster names this event'));
+  // Deterministic resolution: labeled as such, with outcome; the WHY lives
+  // in the shared row format's own reason cell.
+  assert.ok(html.includes('🔒 DETERMINISTIC — kept existing'));
+  assert.ok(html.includes('identity link beats a ticketing/social platform URL'));
+  // AI arbitration: labeled AI with the pick, reason in its own cell.
+  assert.ok(html.includes('🤝 AI — chose new'));
+  assert.ok(html.includes('poster names this event'));
   // No-decision identical field: a clear no-op label, not a mystery token.
   assert.ok(html.includes('SAME VALUE'));
   // Strategy under the field name reads as words, not a bare "ai".
@@ -8672,4 +8680,197 @@ test('saved-run execution honors the loaded config dryRun as a preview and degra
     brokenCaptured.notices.some((notice) => notice.title === 'Live Analysis Failed'),
     'missing calendar degrades with clear messaging, not a throw'
   );
+});
+
+// ---------------------------------------------------------------------------
+// Wave 7 — dense default card face (rework of the rejected wave-6 redesign):
+// image/date/route/verdict visible with NO expander interaction, honest end
+// times, and ONE shared row format for merge/provenance/notes field data.
+// ---------------------------------------------------------------------------
+
+function buildDenseFaceEvent(overrides = {}) {
+  return {
+    title: 'Bear Night',
+    _action: 'new',
+    startDate: '2026-09-01T19:00:00.000Z',
+    endDate: '2026-09-01T22:00:00.000Z',
+    bar: 'The Eagle',
+    address: '4444 Hollywood Blvd, Los Angeles, CA',
+    location: '34.0522,-118.2437',
+    city: 'unknown',
+    image: 'https://example.com/poster.jpg',
+    ...overrides
+  };
+}
+
+test('default card face shows thumbnail, full date line, route line and verdict control without expanding', () => {
+  const adapter = buildAdapter();
+  const card = adapter.generateEventCard(buildDenseFaceEvent(), {}, {
+    bearIdx: 'k0',
+    bearVerdict: 'bear',
+    interactive: true
+  });
+  const detailsIdx = card.indexOf('<details class="event-card-details">');
+  assert.ok(detailsIdx !== -1, 'card still has the detail expander');
+  const face = card.slice(0, detailsIdx);
+
+  // The image is visible by default again (owner: "it removed the image").
+  assert.ok(face.includes('event-thumb'), 'thumbnail block on the face');
+  assert.ok(face.includes('<img src="https://example.com/poster.jpg"'), 'the event image itself');
+
+  // Full date line: start AND end time, no tap needed.
+  assert.ok(face.includes('📅'), 'date line present');
+  assert.ok(face.includes('7:00 PM - 10:00 PM'), 'start and end time on the face');
+
+  // Compact route line: bar • short street address • pin link over the
+  // existing openMapVerify bridge.
+  assert.ok(face.includes('event-route-line'), 'route line present');
+  assert.ok(face.includes('The Eagle'), 'bar on the route line');
+  assert.ok(face.includes('4444 Hollywood Blvd'), 'street address on the route line');
+  assert.ok(!face.includes('4444 Hollywood Blvd, Los Angeles'), 'address is the SHORT street form');
+  assert.ok(face.includes('data-map-url-id='), 'pin link registered on the bridge');
+  assert.ok(face.includes('34.0522,-118.2437'), 'coordinates readable on the face');
+
+  // Bear verdict control on the face, same handlers as ever.
+  assert.ok(face.includes('markBearOverride(this)'), 'verdict control needs no expanding');
+  assert.ok(face.includes('data-bear-act="mark-bear"'));
+});
+
+test('zero-duration events render "(no end listed)" and never a fabricated end time', () => {
+  const adapter = buildAdapter();
+  // Eagle LA MEC-feed shape: endDate === startDate on every event.
+  const card = adapter.generateEventCard(buildDenseFaceEvent({
+    startDate: '2026-08-13T02:00:00.000Z',
+    endDate: '2026-08-13T02:00:00.000Z'
+  }));
+  assert.ok(card.includes('(no end listed)'), 'zero-duration says so honestly');
+  assert.ok(!card.includes('2:00 AM - 2:00 AM'), 'no fabricated "start - start" end time');
+
+  // A missing endDate is the same truth.
+  const noEnd = adapter.generateEventCard(buildDenseFaceEvent({
+    startDate: '2026-08-13T02:00:00.000Z',
+    endDate: null
+  }));
+  assert.ok(noEnd.includes('(no end listed)'));
+
+  // A REAL end still renders in full — the honesty note never eats real data.
+  const real = adapter.generateEventCard(buildDenseFaceEvent());
+  assert.ok(real.includes('7:00 PM - 10:00 PM'));
+  assert.ok(!real.includes('(no end listed)'));
+});
+
+test('multi-day default face renders both dates with the honest end-time logic', () => {
+  const adapter = buildAdapter();
+  const card = adapter.generateEventCard(buildDenseFaceEvent({
+    startDate: '2026-08-28T20:00:00.000Z',
+    endDate: '2026-08-31T20:00:00.000Z'
+  }));
+  const face = card.slice(0, card.indexOf('<details class="event-card-details">'));
+  assert.ok(/Aug 28.*Aug 31/s.test(face), 'both start and end dates on the face');
+  assert.ok(!face.includes('(no end listed)'));
+});
+
+function buildSharedFormatMergeEvent() {
+  return {
+    title: 'Shared Format',
+    _action: 'merge',
+    startDate: '2026-09-01T02:00:00.000Z',
+    city: 'unknown',
+    key: 'shared-format',
+    bar: 'The Eagle',
+    website: 'https://www.example.com',
+    notes: 'website: https://www.example.com\nShow up early',
+    _original: {
+      scraper: { bar: 'Eagle LA', website: 'https://tickets.example/x' },
+      calendar: { bar: 'The Eagle', website: 'https://www.example.com' },
+      merged: { bar: 'The Eagle', website: 'https://www.example.com' }
+    },
+    _fieldPriorities: { website: { merge: 'ai' } },
+    _mergeDecisions: [{
+      field: 'website',
+      existingValue: 'https://www.example.com',
+      newValue: 'https://tickets.example/x',
+      chosenValue: 'https://www.example.com',
+      reason: 'identity link beats a ticketing URL',
+      source: 'deterministic'
+    }]
+  };
+}
+
+test('merge, provenance and notes-preview rows all share the one field-row format', () => {
+  const adapter = buildAdapter();
+  const event = buildSharedFormatMergeEvent();
+  const headerRow = '<tr><th>Field</th><th>Value</th><th>Source / Outcome</th><th>Reason</th></tr>';
+
+  // 1) Merge comparison rows.
+  const mergeRows = adapter.generateComparisonRows(event);
+  assert.ok(mergeRows.includes('class="field-row"'), 'merge rows use the shared row class');
+  assert.ok(mergeRows.includes('field-row-source'), 'merge rows carry the source/outcome cell');
+
+  // 2) Provenance section.
+  const provenance = adapter.buildEventProvenanceHtml(event, { runId: 'r1' });
+  assert.ok(provenance.includes('class="field-row"'), 'provenance rows use the shared row class');
+  assert.ok(provenance.includes(headerRow), 'provenance renders the shared table header');
+  assert.ok(provenance.includes('<details class="provenance-details">'), 'collapsed wrapper kept (pagination shed rung marker)');
+  assert.ok(provenance.includes('🔍 Provenance'));
+  assert.ok(provenance.includes('exportProvenanceIssue(this)'), 'export-issue handler kept');
+  assert.ok(provenance.includes('provenance-export-btn'), 'export control classes kept');
+
+  // 3) Calendar-notes preview inside the card.
+  const card = adapter.generateEventCard(event);
+  const notesIdx = card.indexOf('📝 Calendar Notes Preview');
+  assert.ok(notesIdx !== -1);
+  const notesRegion = card.slice(notesIdx, card.indexOf('</details>', notesIdx));
+  assert.ok(notesRegion.includes('class="field-row"'), 'notes preview uses the shared row class');
+  assert.ok(notesRegion.includes(headerRow), 'notes preview renders the shared table header');
+
+  // The card's merge table renders the same header too — one format, three surfaces.
+  assert.ok(card.includes(headerRow));
+});
+
+test('secondary material stays behind the expander and its handlers survive', () => {
+  const adapter = buildAdapter();
+  const event = buildSharedFormatMergeEvent();
+  const card = adapter.generateEventCard(event);
+  const detailsIdx = card.indexOf('<details class="event-card-details">');
+  assert.ok(detailsIdx !== -1);
+
+  // Diff/merge table, provenance, notes preview and debug JSON are all
+  // INSIDE the expander (owner feedback #7: these MAY be behind a tap).
+  for (const marker of [
+    'Merge Comparison',
+    '<details class="provenance-details">',
+    '📝 Calendar Notes Preview',
+    'class="raw-json"'
+  ]) {
+    const idx = card.indexOf(marker);
+    assert.ok(idx > detailsIdx, `"${marker}" lives inside the expander`);
+  }
+
+  // Every existing expander action handler still present.
+  assert.ok(card.includes('toggleComparisonSection('));
+  assert.ok(card.includes('toggleDiffView(this'));
+  assert.ok(card.includes('exportProvenanceIssue(this)'));
+  assert.ok(card.includes('copyEventJSON(this)'));
+});
+
+test('placeholder-badged thumbnails stay visible on the face with their badge', async () => {
+  const sharedImage = 'https://venue.example/MORE-INFO-Coming-Soon.jpg';
+  const makeEvent = (i) => ({
+    title: `Event ${i}`,
+    _action: 'new',
+    startDate: '2026-09-01T02:00:00.000Z',
+    image: sharedImage
+  });
+  const adapter = buildAdapter();
+  const html = await adapter.generateRichHTML({
+    analyzedEvents: [makeEvent(1), makeEvent(2), makeEvent(3)],
+    errors: [],
+    parserResults: []
+  });
+  // The thumb renders (visible), greyed via the placeholder class, with a
+  // compact badge — flagged, never dropped.
+  assert.ok(html.includes('event-thumb venue-placeholder-thumb'), 'thumb greyed via class');
+  assert.ok(html.includes('event-thumb-badge'), 'compact placeholder badge on the thumb');
+  assert.ok(html.includes('🖼️ placeholder ×3'), 'badge states the reuse count');
 });
