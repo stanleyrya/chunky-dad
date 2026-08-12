@@ -180,6 +180,13 @@ const scraperConfig = {
       // /calendar/ is the MEC month grid — it lists MORE of the month than
       // the /events/ archive (25 vs 12 in Aug 2026) and is where the
       // month-feed lookahead fetches next month's grid from.
+      //
+      // NOT alwaysBear (owner call, 2026-08-11): the venue hosts many
+      // non-bear nights, so trusted-source keep-everything would flood the
+      // review pile. The bear check does over-drop flagship parties here
+      // (run 20260811-132948 dropped MEAT RACK, ONYX, SUNDAY BEER BUST as
+      // "no bear-specific vocabulary") — the intended remedy is persistent
+      // manual bear verdicts, not alwaysBear.
       urls: ["https://eaglela.com/events/", "https://eaglela.com/calendar/"],
     },
     {
@@ -227,6 +234,10 @@ const scraperConfig = {
       // 📋 SUGGESTED CONFIG block (with harvested instagram/facebook/website)
       // you can paste right back here.
       name: "New Site Template",
+      // template: documentation-only entry. The parser picker, parser-name
+      // matching, and scheduled automation runs all skip entries carrying
+      // template: true — remove the marker (or copy the entry) to go live.
+      template: true,
       urls: ["https://example.com/events"],
       alwaysBear: false, // set true for trusted bear promoters (AI trust context)
       metadata: {

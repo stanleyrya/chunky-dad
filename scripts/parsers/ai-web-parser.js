@@ -98,6 +98,19 @@ const END_MARKER_START_FIELDS = new Map([
     ['starttime', 'endtime']
 ]);
 
+// Start-marker misattribution — the INVERSE of the end-marker gate above
+// (run 20260811-102550, FURBALL NOLA): the flyer prints
+// "DOORS: 9PM • PARTY: 10PM", the confidence retry returned endtime "22:00"
+// citing that exact line, and the gate passed it (10PM IS verbatim in the
+// corpus) — but 10PM is the party's START, so the event shipped 9PM-10PM
+// instead of 10PM-late. An END field whose evidence cites only start-side
+// markers (doors/party/show/starts) carries misattributed START data — its
+// own rejection class, symmetric with END_MARKER_CITED_REASON. Evidence that
+// also carries a genuine end signal ("Doors 8pm until 2am", "10PM-2AM")
+// fails open: the cited value may genuinely be the end of a stated range.
+const START_MARKER_CITED_REASON = 'start-marker-cited-evidence';
+const START_MARKER_END_FIELDS = new Set(['enddate', 'endtime']);
+
 // rrule rejection class (run 20260728-113040, CubScout): an iCal RRULE is a
 // DERIVED TRANSLATION of schedule prose ("1ST FRIDAY OF THE MONTH" →
 // FREQ=MONTHLY;BYDAY=1FR) and is never verbatim on the page, so the default
@@ -6907,6 +6920,67 @@ class AiWebParser {
         }
     }
 
+    // Generic price harvest from an event-like JSON API object (run
+    // 20260811-133623, Goldiloxx: redeyetickets' detail payload carries
+    // performances[].ticket_options[].price_cents = 2500/3000/3500, but the
+    // converter mapped no price field at all and the NYC event lost its
+    // cover). Key-PATTERN matching, never a vendor schema: any depth-limited
+    // scalar whose normalized key names a price (price/ticket_price/cost/
+    // price_min/price_max, with or without a _cents suffix) counts;
+    // presentation/surcharge keys (display_*, tax/fee/service) and currency/
+    // id keys are excluded. Amounts under *cents* keys are divided by 100.
+    // Formatting follows formatJsonLdOffersCover's conventions exactly:
+    // min==max → "$25"; range → "$25-$35"; a non-USD currency key renders
+    // "25 EUR" style. Empty string when the object states no price (the
+    // search-endpoint shape) — fail open, never fabricate.
+    formatJsonApiPriceCover(obj) {
+        try {
+            const amounts = [];
+            let currency = '';
+            const priceKeyPattern = /(^|_)(price|cost)(_|$)/;
+            const excludedKeyPattern = /(^|_)(display|tax|fee|service|id|status|currency)(_|$)|display/;
+            const visit = (node, depth) => {
+                if (!node || depth > 3) return;
+                if (Array.isArray(node)) {
+                    node.forEach(item => visit(item, depth + 1));
+                    return;
+                }
+                if (typeof node !== 'object') return;
+                for (const [key, value] of Object.entries(node)) {
+                    const normalizedKey = this.normalizeJsonApiKey(key);
+                    if (value && typeof value === 'object') {
+                        visit(value, depth + 1);
+                        continue;
+                    }
+                    if (!currency && /(^|_)currency(_|$)/.test(normalizedKey)
+                        && typeof value === 'string' && /^[A-Za-z]{3}$|^[$€£¥]$/.test(value.trim())) {
+                        currency = value.trim().toUpperCase();
+                        continue;
+                    }
+                    if (!priceKeyPattern.test(normalizedKey)) continue;
+                    if (excludedKeyPattern.test(normalizedKey)) continue;
+                    const amount = Number(String(value === null || value === undefined ? '' : value).trim());
+                    if (!Number.isFinite(amount) || amount <= 0) continue;
+                    amounts.push(/cents/.test(normalizedKey) ? amount / 100 : amount);
+                }
+            };
+            visit(obj, 0);
+            if (amounts.length === 0) return '';
+            const min = Math.min(...amounts);
+            const max = Math.max(...amounts);
+            const formatAmount = (amount) => Number.isInteger(amount) ? String(amount) : amount.toFixed(2);
+            if (!currency || currency === 'USD' || currency === '$') {
+                return min === max ? `$${formatAmount(min)}` : `$${formatAmount(min)}-$${formatAmount(max)}`;
+            }
+            return min === max
+                ? `${formatAmount(min)} ${currency}`
+                : `${formatAmount(min)}-${formatAmount(max)} ${currency}`;
+        } catch (error) {
+            console.warn(`🤖 AI Web: JSON API price→cover mapping failed: ${error && error.message ? error.message : error}`);
+            return '';
+        }
+    }
+
     // Field mapping from one event-like JSON object, case/snake/camel-
     // insensitive first match. Shares the JSON-LD path's cleaning
     // (tag-strip + entity-decode), date parsing (trailing-Z instants are
@@ -7005,6 +7079,16 @@ class AiWebParser {
         // data the API itself published. Absent image → no stamp (fail open).
         if (event.image) {
             event.imageSource = 'json-api';
+        }
+        // Price → cover from the payload's own price-ish keys (generic
+        // pattern harvest, see formatJsonApiPriceCover). Stamped with the
+        // SAME provenance flag the JSON-LD offers path uses: these are live
+        // ticket-vendor tier prices (they move as tiers sell out), so the
+        // merge layer's stored-door-price rule applies to them identically.
+        const cover = this.formatJsonApiPriceCover(obj);
+        if (cover) {
+            event.cover = cover;
+            event._coverFromJsonLdOffers = true;
         }
         // Timezone: an IANA name in the payload is authoritative; otherwise the
         // address→city resolution below may supply the city's timezone.
@@ -13196,6 +13280,35 @@ TEXT:
     }
 
     /**
+     * START-marker-cited evidence for an END field — the inverse of
+     * evidenceCitesEndMarker (run 20260811-102550, FURBALL NOLA: the
+     * confidence retry returned endtime "22:00" citing
+     * "DOORS: 9PM • PARTY: 10PM" and passed the gate — 10PM is the PARTY's
+     * start, not an end). True only when the evidence carries a start-side
+     * marker (doors/party/show/starts/begins/from) and NO end-side signal.
+     * Deliberately fails open on any genuine end signal: an end-marker word
+     * (til/until/close/end — the same vocabulary the end-marker gate above
+     * detects) or an explicit time RANGE ("10PM-2AM", "8pm to 2am") means
+     * the cited value may really be the end.
+     */
+    evidenceCitesStartMarker(evidence) {
+        const text = String(evidence || '').trim();
+        if (!text) return false;
+        // Genuine end-side signal anywhere → fail open.
+        const endMarker = /\bend(?:s|ed|ing)?\s*(?:at\b|:|by\b)?|\bdoors?\s+clos(?:e|es|ed|ing)\b|\bclos(?:e|es|ed|ing)\b|\buntil\b|\btill?\b|'til+\b|\blate\b/i;
+        if (endMarker.test(text)) return false;
+        // A time range ("10PM-2AM", "10:00 PM to 2:00 AM") states an end.
+        const timeToken = "\\d{1,2}(?::\\d{2})?\\s*(?:am|pm)|\\d{1,2}:\\d{2}";
+        const timeRange = new RegExp(`(?:${timeToken})\\s*(?:-|–|—|to|thru|through)\\s*(?:${timeToken})`, 'i');
+        if (timeRange.test(text)) return false;
+        // Start-side markers. Broader than the end-marker gate's startMarker
+        // regex on purpose: flyers write "DOORS: 9PM" and "PARTY: 10PM" —
+        // bare doors/party/show labels with a colon are start statements.
+        const startMarker = /\bdoors?\s*(?:[:@]|at\b|open(?:s|ed|ing)?\b)|\bpart(?:y|ies)\s*(?:[:@]|at\b|starts?\b)|\bshow\s*(?:[:@]|at\b|time\b|starts?\b)|\bstart(?:s|ed|ing)?\s*(?:at\b|[:@])|\bbegin(?:s|ning)?\s*(?:at\b|[:@])|\bfrom\s*\d/i;
+        return startMarker.test(text);
+    }
+
+    /**
      * Evidence citing the ADDITIONAL CONTEXT block. That block is injected
      * with an explicit DO-NOT-EXTRACT instruction, so evidence referencing it
      * is a violation by definition — for ANY field. Observed in run
@@ -13695,6 +13808,16 @@ TEXT:
         const endMarkerStart = !citesForbiddenContext
             && END_MARKER_START_FIELDS.has(rule.field)
             && this.evidenceCitesEndMarker(modelEvidence);
+        // The inverse class: END fields whose model-cited evidence is a
+        // start-marker statement ("DOORS: 9PM • PARTY: 10PM" — run
+        // 20260811-102550, FURBALL NOLA retry endtime "22:00") carry
+        // misattributed START data. Like the end-marker class, the value is
+        // often verbatim in the corpus, so corroboration alone cannot catch
+        // it. The value is dropped, never reassigned: the doors-vs-party
+        // disambiguation at normalization owns start-time correction.
+        const startMarkerEnd = !citesForbiddenContext
+            && START_MARKER_END_FIELDS.has(rule.field)
+            && this.evidenceCitesStartMarker(modelEvidence);
         // rrule/recurrence ('schedule-evidence' mode): the value is a derived
         // translation, never verbatim — validated against the model's cited
         // EVIDENCE phrase instead (see validateRruleScheduleEvidence).
@@ -13705,6 +13828,7 @@ TEXT:
             && !brandOnlyCityEvidence
             && !inventedTime
             && !endMarkerStart
+            && !startMarkerEnd
             && !datelessDateEvidence
             && (scheduleEvidence
                 ? scheduleEvidence.valid
@@ -13721,6 +13845,10 @@ TEXT:
             if (citesForbiddenContext) droppedEntry.reason = 'context-cited-evidence';
             else if (brandOnlyCityEvidence) droppedEntry.reason = 'brand-cited-evidence';
             else if (endMarkerStart) droppedEntry.reason = END_MARKER_CITED_REASON;
+            else if (startMarkerEnd) {
+                droppedEntry.reason = START_MARKER_CITED_REASON;
+                console.log(`🤖 AI Web: Dropped ${rule.field} "${this.trimToMaxLength(String(value), 40)}" — cited evidence "${this.trimToMaxLength(String(modelEvidence), 60)}" states a start-side marker (doors/party/show/starts), not an end`);
+            }
             else if (datelessDateEvidence) {
                 droppedEntry.reason = 'dateless-cited-evidence';
                 console.log(`🤖 AI Web: Dropped ${rule.field} "${this.trimToMaxLength(String(value), 40)}" — cited evidence "${this.trimToMaxLength(String(modelEvidence), 60)}" carries no concrete date (weekday/schedule words cannot corroborate a specific date)`);
@@ -13767,6 +13895,7 @@ TEXT:
                 brandOnlyCityEvidence,
                 inventedTime,
                 endMarkerStart,
+                startMarkerEnd,
                 datelessDateEvidence
             });
             return false;
@@ -13797,7 +13926,7 @@ TEXT:
         try {
             if (!EVIDENCE_RESCUE_FIELDS.has(rule.field)) return;
             // ONLY the plain "value not verbatim" rejection class qualifies.
-            if (dropFlags && (dropFlags.citesForbiddenContext || dropFlags.brandOnlyCityEvidence || dropFlags.inventedTime || dropFlags.endMarkerStart || dropFlags.datelessDateEvidence)) return;
+            if (dropFlags && (dropFlags.citesForbiddenContext || dropFlags.brandOnlyCityEvidence || dropFlags.inventedTime || dropFlags.endMarkerStart || dropFlags.startMarkerEnd || dropFlags.datelessDateEvidence)) return;
             const evidence = String(modelEvidence || '').trim();
             if (!evidence) return;
             // Inference language or context citations anywhere in the
@@ -14370,6 +14499,65 @@ TEXT:
         return '';
     }
 
+    // Doors-vs-party disambiguation (run 20260811-102550, FURBALL NOLA): the
+    // flyer prints "DOORS: 9PM • PARTY: 10PM" and extraction adopted 21:00
+    // (the DOORS time) as startTime — the event starts when the party starts,
+    // not when the doors open. Deterministic and page-derived: when the
+    // event's own source corpus states exactly ONE doors time X and exactly
+    // ONE distinct party/show/start time Y later than X, and the extracted
+    // startTime equals X, the start is promoted to Y. Fails closed on any
+    // ambiguity (multiple distinct doors or party times, Y not after X, or
+    // the extracted start not matching the doors time) — then nothing
+    // changes. Returns the promoted "HH:MM" or '' when no promotion applies.
+    resolveDoorsVsPartyStartTime(startTimeRaw, htmlData) {
+        const normalizedStart = String(startTimeRaw || '').trim();
+        const startMatch = normalizedStart.match(/^(\d{2}):(\d{2})$/);
+        if (!startMatch) return '';
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        if (!html) return '';
+        const corpus = this.stripTags(html);
+        // A time token: "9PM", "9:30 PM", or 24h "21:00".
+        const timeToken = '(\\d{1,2})(?::(\\d{2}))?\\s*(am|pm)|(\\d{1,2}):(\\d{2})';
+        const toMinutes = (match) => {
+            if (match[3]) {
+                let hour = parseInt(match[1], 10);
+                const minute = match[2] ? parseInt(match[2], 10) : 0;
+                const ampm = match[3].toLowerCase();
+                if (ampm === 'pm' && hour !== 12) hour += 12;
+                if (ampm === 'am' && hour === 12) hour = 0;
+                if (hour > 23 || minute > 59) return null;
+                return (hour * 60) + minute;
+            }
+            const hour = parseInt(match[4], 10);
+            const minute = parseInt(match[5], 10);
+            if (hour > 23 || minute > 59) return null;
+            return (hour * 60) + minute;
+        };
+        const collectTimes = (labelPattern) => {
+            const times = new Set();
+            const re = new RegExp(`(?:${labelPattern})\\s*(?:${timeToken})`, 'gi');
+            let match;
+            while ((match = re.exec(corpus)) !== null) {
+                const minutes = toMinutes(match);
+                if (minutes !== null) times.add(minutes);
+            }
+            return times;
+        };
+        // Linguistic-generic label vocabulary (no per-site terms): doors on
+        // one side, party/show/start statements on the other.
+        const doorsTimes = collectTimes('\\bdoors?\\s*(?:[:@]|at\\b|open(?:s|ed|ing)?\\b\\s*(?:[:@]|at\\b)?)');
+        const partyTimes = collectTimes('\\b(?:part(?:y|ies)|show|event|music)\\s*(?:[:@]|at\\b|starts?\\s*(?:[:@]|at\\b)?)|\\bstart(?:s|ed|ing)?\\s*(?:[:@]|at\\b)');
+        // Fail closed: exactly one of each, distinct, party strictly later.
+        if (doorsTimes.size !== 1 || partyTimes.size !== 1) return '';
+        const doors = [...doorsTimes][0];
+        const party = [...partyTimes][0];
+        if (party <= doors) return '';
+        const startMinutes = (parseInt(startMatch[1], 10) * 60) + parseInt(startMatch[2], 10);
+        if (startMinutes !== doors) return '';
+        const pad = (value) => String(value).padStart(2, '0');
+        return `${pad(Math.floor(party / 60))}:${pad(party % 60)}`;
+    }
+
     normalizeAiEvent(aiEvent, parserConfig, htmlData = null, cityConfig = null, promptFields = null) {
         const scrapedLinks = this.extractLinksFromPage(
             htmlData && typeof htmlData.html === 'string' ? htmlData.html : '',
@@ -14615,6 +14803,19 @@ TEXT:
         console.log(`🤖 AI Web: Date normalization — rawStartDate=${aiEvent.startDate}, rawStartTime=${aiEvent.startTime}, rawStart=${aiEvent.start}, rawEndDate=${aiEvent.endDate}, rawEndTime=${aiEvent.endTime}, rawEnd=${aiEvent.end}`);
         console.log(`🤖 AI Web: Parsed raw values — startDateRaw=${startDateRaw instanceof Date ? startDateRaw.toISOString() : startDateRaw}, startTimeRaw=${startTimeRaw}, endDateRaw=${endDateRaw instanceof Date ? endDateRaw.toISOString() : endDateRaw}, endTimeRaw=${endTimeRaw}`);
 
+        // Doors-vs-party disambiguation (run 20260811-102550, FURBALL NOLA):
+        // an extracted start equal to the corpus's stated DOORS time, when
+        // the corpus also states one distinct later party/show/start time,
+        // is the doors-open time — the event starts at the party time. The
+        // doors information itself stays wherever the page put it
+        // (description/notes untouched); only the start-of-event moves.
+        let effectiveStartTime = startTimeRaw;
+        const doorsPromotedStart = this.resolveDoorsVsPartyStartTime(startTimeRaw, htmlData);
+        if (doorsPromotedStart) {
+            console.log(`🤖 AI Web: Start time ${startTimeRaw} matches the page's DOORS time — promoted start to the party/show time ${doorsPromotedStart} (doors-vs-party disambiguation)`);
+            effectiveStartTime = doorsPromotedStart;
+        }
+
         // Check if start/end were explicitly provided (full datetime format)
         // These contain full datetime like "2026-05-12T22:30" or "2026-05-12 22:30" - use directly without combining
         const startProvided = aiEvent.start && this.parseDateValue(aiEvent.start, timezone) !== null;
@@ -14629,10 +14830,10 @@ TEXT:
             combinedStartDate = this.parseDateValue(aiEvent.start, timezone);
         } else if (startDateRaw) {
             // Default to local midnight if no start time provided
-            const timeStr = startTimeRaw || '00:00:00';
-            combinedStartDate = this.convertLocalDateTimeToUtc(startDateRaw.toISOString().split('T')[0] + ' ' + timeStr, timezone) || combineDateAndTime(startDateRaw, startTimeRaw || '00:00') || startDateRaw;
-        } else if (startTimeRaw) {
-            combinedStartDate = this.parseDateValue(startTimeRaw, timezone);
+            const timeStr = effectiveStartTime || '00:00:00';
+            combinedStartDate = this.convertLocalDateTimeToUtc(startDateRaw.toISOString().split('T')[0] + ' ' + timeStr, timezone) || combineDateAndTime(startDateRaw, effectiveStartTime || '00:00') || startDateRaw;
+        } else if (effectiveStartTime) {
+            combinedStartDate = this.parseDateValue(effectiveStartTime, timezone);
         }
 
         let combinedEndDate = null;
@@ -14791,7 +14992,7 @@ TEXT:
                 ? schema.computeNextRruleOccurrence(recurrenceRule, this.now())
                 : null;
             if (nextOccurrence) {
-                const derivedStartTime = startTimeRaw || (dayPhraseSynthesis && dayPhraseSynthesis.startTime) || '';
+                const derivedStartTime = effectiveStartTime || (dayPhraseSynthesis && dayPhraseSynthesis.startTime) || '';
                 const derivedStart = this.convertLocalDateTimeToUtc(`${nextOccurrence} ${derivedStartTime || '00:00:00'}`, timezone)
                     || combineDateAndTime(nextOccurrence, derivedStartTime || '00:00')
                     || null;

@@ -6290,6 +6290,157 @@ test('end-marker steering: getFieldContext appends the END-line sentence to star
 });
 
 // ---------------------------------------------------------------------------
+// Start-marker misattribution + doors-vs-party disambiguation (run
+// 20260811-102550, FURBALL NOLA). The flyer prints
+// "DOORS: 9PM • PARTY: 10PM"; extraction adopted 21:00 (doors) as startTime,
+// dropped endTime at confidence 0, and the confidence retry then returned
+// endtime "22:00" citing the very same line — which PASSED the evidence gate
+// (10PM is verbatim in the corpus). Final event: 9PM-10PM instead of
+// 10PM-late. The values below are the LITERAL model outputs from the run log.
+// ---------------------------------------------------------------------------
+
+const FURBALL_NOLA_SEGMENT = [
+  'OCR_IMAGE_TEXT',
+  'JOE FIORE', 'PRESENTS', 'FURBALL', 'SOUTHERN DECADENCE',
+  'MR. BEAR', 'GERMANY', '2026', 'JOCKS', 'UNDERWEAR GEAR',
+  'CLOTHES CHECK', 'AVAILABLE', 'MUSIC:', 'GSP',
+  'SATURDAY, SEPTEMBER 5', 'LABOR DAY WEEKEND',
+  'DOORS: 9PM • PARTY: 10PM',
+  'TWO FLOORS • BALCONY • DARK ROOM',
+  'TICKETS: TICKLEAP', 'SANTOS', '1135 DECATUR ST, NEW ORLEANS',
+  'FURBALL NOLA', 'Southern Decadence', 'September 5, 2026',
+  'Santos Bar - New Orleans, LA'
+].join('\n');
+
+test('start-marker gate: retry endtime citing "DOORS: 9PM • PARTY: 10PM" is dropped (FURBALL NOLA)', () => {
+  const parser = createParser();
+  const evidenceContext = parser.buildAiEvidenceContextFromText(FURBALL_NOLA_SEGMENT);
+  const validationContext = { imageEvidenceUrls: new Set() };
+
+  // Literal retry output from the run log: endtime 22:00, confidence 95.
+  const result = parser.validateAiEventEvidence(
+    {
+      title: 'FURBALL NOLA',
+      endtime: '22:00',
+      __fieldEvidence: { endtime: 'DOORS: 9PM • PARTY: 10PM' }
+    },
+    { html: FURBALL_NOLA_SEGMENT }, {}, null,
+    { evidenceContext, validationContext }
+  );
+
+  assert.equal(result.event.endtime, undefined,
+    'an end value whose evidence cites only start-side markers (doors/party) must not survive');
+  const dropped = result.report.dropped.find(entry => entry.field === 'endtime');
+  assert.ok(dropped, 'the drop is recorded');
+  assert.equal(dropped.reason, 'start-marker-cited-evidence', 'the drop carries its own rejection class');
+
+  // Fail-open guards, same test so the class ships with its boundaries:
+  // genuine end evidence ("until", a stated time range) keeps the end value.
+  const source = 'BEAR NIGHT Doors 9pm until 2am SHOW: 10PM-2AM';
+  const guardContext = parser.buildAiEvidenceContextFromText(source);
+  const untilResult = parser.validateAiEventEvidence(
+    { endtime: '02:00', __fieldEvidence: { endtime: 'Doors 9pm until 2am' } },
+    { html: source }, {}, null, { evidenceContext: guardContext, validationContext }
+  );
+  assert.equal(untilResult.event.endtime, '02:00', 'an end marker in the evidence keeps the end value');
+  const rangeResult = parser.validateAiEventEvidence(
+    { endtime: '02:00', __fieldEvidence: { endtime: 'SHOW: 10PM-2AM' } },
+    { html: source }, {}, null, { evidenceContext: guardContext, validationContext }
+  );
+  assert.equal(rangeResult.event.endtime, '02:00', 'a time range in the evidence keeps the end value');
+});
+
+test('start-marker detection: doors/party/show colon labels detected, end-side signals fail open', () => {
+  const parser = createParser();
+  // Literal run evidence string.
+  assert.ok(parser.evidenceCitesStartMarker('DOORS: 9PM • PARTY: 10PM'));
+  assert.ok(parser.evidenceCitesStartMarker('Doors 9pm') === false, 'bare doors with no [:@]/at/open is not claimed');
+  assert.ok(parser.evidenceCitesStartMarker('Doors: 9pm'));
+  assert.ok(parser.evidenceCitesStartMarker('PARTY: 10PM'));
+  assert.ok(parser.evidenceCitesStartMarker('Show starts 10pm'));
+  assert.ok(parser.evidenceCitesStartMarker('Starts at 10pm'));
+  // End-side or range signals fail open.
+  assert.ok(!parser.evidenceCitesStartMarker('Doors 8pm until 2am'));
+  assert.ok(!parser.evidenceCitesStartMarker('PARTY: 10PM til late'));
+  assert.ok(!parser.evidenceCitesStartMarker('SHOW: 10PM-2AM'));
+  assert.ok(!parser.evidenceCitesStartMarker('doors close at 2'));
+  assert.ok(!parser.evidenceCitesStartMarker('Ends: 2am'));
+  assert.ok(!parser.evidenceCitesStartMarker(''));
+});
+
+test('doors-vs-party: FURBALL NOLA start 21:00 (doors) is promoted to 22:00 (party), end stays absent', () => {
+  global.EventSchema = EventSchema; // earlier tests leak a mocked schema — pin the real one
+  const parser = createParser();
+  const cityConfig = {
+    'new orleans': { timezone: 'America/Chicago', patterns: ['new orleans', 'nola'] }
+  };
+
+  // The first-pass values exactly as the run log recorded them AFTER the
+  // gate: startDate 2026-09-05, startTime 21:00 ("DOORS: 9PM"), end fields
+  // dropped (confidence 0 / start-marker gate).
+  const logs = captureLogs(() => {
+    const event = parser.normalizeAiEvent(
+      {
+        title: 'FURBALL NOLA',
+        startDate: '2026-09-05',
+        startTime: '21:00',
+        city: 'new orleans',
+        bar: 'Santos Bar',
+        address: '1135 DECATUR ST'
+      },
+      {},
+      { html: FURBALL_NOLA_SEGMENT, url: 'https://www.furball.nyc' },
+      cityConfig,
+      null
+    );
+    assert.ok(event, 'the event survives normalization');
+    // 10PM CDT (UTC-5) on Sep 5 = 03:00 UTC Sep 6 — the run shipped
+    // 2026-09-06T02:00:00.000Z (9PM doors) instead.
+    assert.equal(event.startDate.toISOString(), '2026-09-06T03:00:00.000Z',
+      'start must be the PARTY time (22:00 local), not the doors time');
+    // No end was stated: the end matches the start exactly (the existing
+    // ambiguous-end convention) — no invented 10PM end survives anywhere.
+    assert.equal(event.endDate.getTime(), event.startDate.getTime(), 'no end is invented');
+  });
+  assert.ok(
+    logs.some(l => l.includes('promoted start to the party/show time 22:00 (doors-vs-party disambiguation)')),
+    `the correction logs its own line: ${logs.join(' | ')}`
+  );
+});
+
+test('doors-vs-party: ambiguity fails closed, non-doors starts untouched', () => {
+  const parser = createParser();
+
+  // Two distinct doors times → no promotion.
+  assert.equal(
+    parser.resolveDoorsVsPartyStartTime('21:00', { html: 'DOORS: 9PM • PARTY: 10PM\nDOORS: 8PM' }),
+    '', 'multiple candidate doors times must change nothing'
+  );
+  // Two distinct party-side times → no promotion.
+  assert.equal(
+    parser.resolveDoorsVsPartyStartTime('21:00', { html: 'DOORS: 9PM • PARTY: 10PM\nSHOW: 11PM' }),
+    '', 'multiple candidate party times must change nothing'
+  );
+  // Extracted start is NOT the doors time → no promotion.
+  assert.equal(
+    parser.resolveDoorsVsPartyStartTime('22:00', { html: 'DOORS: 9PM • PARTY: 10PM' }),
+    '', 'a start already at the party time is untouched'
+  );
+  // Party not later than doors → no promotion.
+  assert.equal(
+    parser.resolveDoorsVsPartyStartTime('21:00', { html: 'DOORS: 9PM • PARTY: 8PM' }),
+    '', 'a party time before doors is not a promotion target'
+  );
+  // No corpus → no promotion.
+  assert.equal(parser.resolveDoorsVsPartyStartTime('21:00', null), '');
+  // The clean FURBALL shape promotes.
+  assert.equal(
+    parser.resolveDoorsVsPartyStartTime('21:00', { html: 'DOORS: 9PM • PARTY: 10PM' }),
+    '22:00'
+  );
+});
+
+// ---------------------------------------------------------------------------
 // Venue-hours notice guard (runs 20260724-161423 / 20260725-170031:
 // massive.club's "Hours … Tuesday Closed …" block became a calendar-bound
 // bear event titled "Tuesday Closed" with a startDate hallucinated from the
@@ -7405,6 +7556,91 @@ test('buildEventFromJsonApiObject strips HTML from descriptions and never invent
   assert.equal(event.ticketUrl, '', 'a slug is not an absolute URL — nothing is fabricated');
   assert.equal(event.image, 'https://cdn.example/flyer.jpg');
   assert.equal(event.imageSource, 'json-api');
+});
+
+// Captured live 2026-08-11 from
+// GET https://api.redeyetickets.com/api/v1/events/golidloxx-august (trimmed to
+// the fields the converter reads): prices live at
+// performances[].ticket_options[].price_cents (integer cents, base sticker
+// price) beside display_price_cents (fee-inclusive presentation copy). Run
+// 20260811-133623 lost this event's cover because the converter mapped no
+// price field at all.
+const REDEYE_GOLDILOXX_DETAIL_PAYLOAD = {
+  data: {
+    id: 'd0e392c4-a05b-48fa-bb70-95daba4ad447',
+    slug: 'golidloxx-august',
+    status: 'approved',
+    name: 'GOLIDLOXX AUGUST ',
+    headline: 'GOLDILOXX ',
+    description: '<p>GOLDILOXX is an NYC based monthly bear party for bears and their admirers.</p>',
+    venue: 'Red Eye NY',
+    venue_time_zone: 'America/New_York',
+    first_performance_start_at: '2026-08-30T01:00:00Z',
+    first_performance_end_at: '2026-08-30T20:00:00Z',
+    twenty_one_plus: true,
+    tax_rate: 0.0,
+    max_tickets_per_user: 9999,
+    performances: [{
+      performance_id: '1e3f8838-ace3-49a6-9687-e1179cdb59d1',
+      start_at: '2026-08-30T01:00:00Z',
+      end_at: '2026-08-30T20:00:00Z',
+      time_zone: 'America/New_York',
+      position: 0,
+      ticket_options: [
+        { ticket_option_id: '6255abdd', price_cents: 2500, display_price_cents: 2748, tier_name: 'EARLY BEAR ', quantity_remaining: 33, sale_state: 'on_sale' },
+        { ticket_option_id: 'da5bae48', price_cents: 3000, display_price_cents: 3297, tier_name: 'Tier 1', quantity_remaining: 100, sale_state: 'upcoming' },
+        { ticket_option_id: '2d72b298', price_cents: 3500, display_price_cents: 3847, tier_name: 'Tier 2', quantity_remaining: 150, sale_state: 'upcoming' }
+      ]
+    }],
+    venue_address_line_1: '355 West 41st Street',
+    venue_locality: 'New York',
+    venue_admin_area: 'NY',
+    venue_postal_code: '10036',
+    venue_city: 'New York',
+    venue_state: 'NY',
+    venue_zip: '10036'
+  }
+};
+
+test('JSON-API price mapping: Goldiloxx ticket_options price_cents materialize as the cover (run 20260811-133623)', () => {
+  const parser = createParser();
+  const cityConfig = { nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'] } };
+  const events = parser.extractEventsFromJsonApiPayload(
+    REDEYE_GOLDILOXX_DETAIL_PAYLOAD,
+    'https://api.redeyetickets.com/api/v1/events/golidloxx-august',
+    cityConfig
+  );
+
+  assert.equal(events.length, 1);
+  const event = events[0];
+  assert.equal(event.title, 'GOLIDLOXX AUGUST');
+  assert.equal(event.cover, '$25-$35',
+    'base tier prices (price_cents 2500/3000/3500) form the cover range');
+  assert.equal(event._coverFromJsonLdOffers, true,
+    'ticket-vendor tier prices carry the offers provenance flag for the merge layer');
+  // display_price_cents (fee-inclusive presentation copies) must not leak in:
+  // their max would be $38.47.
+  assert.ok(!String(event.cover).includes('38'), 'display_* keys are excluded from the price harvest');
+});
+
+test('JSON-API price mapping: generic key patterns, cents handling, currency, and fail-open on priceless payloads', () => {
+  const parser = createParser();
+  // The search-endpoint shape (run 20260811-133623's actual fetch) carries
+  // NO price keys at all — no cover is fabricated.
+  assert.equal(parser.formatJsonApiPriceCover(REDEYE_SEARCH_PAYLOAD.data[0]), '');
+  // Conventional flat keys.
+  assert.equal(parser.formatJsonApiPriceCover({ price: 20 }), '$20');
+  assert.equal(parser.formatJsonApiPriceCover({ ticket_price: '12.50' }), '$12.50');
+  assert.equal(parser.formatJsonApiPriceCover({ price_min: 10, price_max: 15 }), '$10-$15');
+  assert.equal(parser.formatJsonApiPriceCover({ tickets: [{ price: 10 }, { price: 15 }] }), '$10-$15');
+  // Cents variants divide by 100.
+  assert.equal(parser.formatJsonApiPriceCover({ price_cents: 2500 }), '$25');
+  // A currency key renders ISO style for non-USD.
+  assert.equal(parser.formatJsonApiPriceCover({ price: 8, currency: 'GBP' }), '8 GBP');
+  // Zero/negative/unparseable prices and excluded key families never count.
+  assert.equal(parser.formatJsonApiPriceCover({ price: 0 }), '');
+  assert.equal(parser.formatJsonApiPriceCover({ display_price_cents: 2748, tax_rate: 5, service_fee: 3 }), '');
+  assert.equal(parser.formatJsonApiPriceCover(null), '');
 });
 
 test('linearizeJsonForPrompt emits keyPath lines for scalar leaves, skipping null/empty and stripping tags', () => {
