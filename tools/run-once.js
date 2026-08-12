@@ -13,9 +13,12 @@
 //   .loadConfiguration in THIS process only (require-cache shared with the
 //   orchestrator's own require of web-adapter).
 // - dryRun is FORCED on: v1 of the server is report-only, no calendar writes.
+//   The phone remains the ONLY calendar writer.
 // - This file must be run in a CHILD process, never required by the server:
 //   the orchestrator/pipeline expects clean globals (no Scriptable stubs),
 //   and the server parent installs Scriptable stubs for rendering.
+//   (Requiring it for its exported helpers is safe — execution and the
+//   prototype patch only happen when run-once is the main module.)
 //
 // Env contract (all optional):
 //   CHUNKY_RUN_PARSER    — run only the parser with this exact name
@@ -27,6 +30,24 @@
 //                          test to point parsers/AI at local fixture servers.
 //                          NOTE: config.config.dryRun is re-forced to true
 //                          after the merge — overrides cannot disable it.
+//   CHUNKY_SHARED_STORAGE_DIR
+//                        — opt-in shared Mac↔phone storage root: the phone's
+//                          `chunky-dad-scraper` tree (the directory containing
+//                          storage/, runs/ and logs/). Page/OCR/AI caches then
+//                          read+write the phone's entries, and this run's JSON
+//                          and log are ALSO written into the shared runs/ and
+//                          logs/ dirs with the phone's YYYYMMDD-HHMMSS naming.
+//                          If the root is unreachable the run ABORTS LOUDLY at
+//                          startup — never a silent local-cache fallback
+//                          (no-partial-runs doctrine). Retention pruning is
+//                          never performed here: the phone owns deletion.
+//   CHUNKY_RUN_AUTOMATION — truthy ("1"/"true"/"yes") marks this run as an
+//                          automation run, exactly like the phone's scheduled
+//                          runs: config.runtime.automationRun is stamped so
+//                          SharedCore.resolveAutomationContext applies the
+//                          per-parser automationEnabled filter (parsers with
+//                          automationEnabled: false are skipped). Used by
+//                          tools/schedule-mac-run.sh.
 // ============================================================================
 
 'use strict';
@@ -69,28 +90,32 @@ function safeStringify(value) {
     });
 }
 
-// ---------------------------------------------------------------------------
-// Config injection: wrap the Node loadConfiguration path. The orchestrator's
-// own `require('./adapters/web-adapter')` returns this same patched module.
-// ---------------------------------------------------------------------------
-const { WebAdapter } = require(path.join(repoRoot, 'scripts', 'adapters', 'web-adapter'));
-const originalLoadConfiguration = WebAdapter.prototype.loadConfiguration;
+// Truthy CHUNKY_RUN_AUTOMATION values (same set WebAdapter accepts).
+function isAutomationEnv(env) {
+    const raw = String((env && env.CHUNKY_RUN_AUTOMATION) || '').trim().toLowerCase();
+    return raw === '1' || raw === 'true' || raw === 'yes';
+}
 
-WebAdapter.prototype.loadConfiguration = async function patchedLoadConfiguration(...args) {
-    const config = await originalLoadConfiguration.apply(this, args);
+// ---------------------------------------------------------------------------
+// Config shaping applied on top of the loaded configuration. Order matters:
+// 1. CHUNKY_RUN_OVERRIDES first (may replace the parsers array),
+// 2. CHUNKY_RUN_PARSER exact-name filter over the FINAL parser list,
+// 3. CHUNKY_RUN_AUTOMATION stamps config.runtime.automationRun so the
+//    shared-core automation filter (per-parser automationEnabled) applies —
+//    the scheduled Mac run behaves like the phone's automation runs,
+// 4. SAFETY LAST: dryRun re-forced true — nothing can switch it back off.
+// ---------------------------------------------------------------------------
+function shapeRunOnceConfig(config, env = process.env) {
     config.config = config.config || {};
 
-    // Test/smoke overrides FIRST (fixture URLs, stub AI endpoint, cache
-    // toggles) — they may replace the parsers array, and the parser filter
-    // below must see the final list.
-    const overridesRaw = String(process.env.CHUNKY_RUN_OVERRIDES || '').trim();
+    const overridesRaw = String((env && env.CHUNKY_RUN_OVERRIDES) || '').trim();
     if (overridesRaw) {
         deepMergeInto(config, JSON.parse(overridesRaw));
     }
 
     // Parser filter: run exactly the named parser (even if disabled in the
     // checked-in config — picking it in the UI is an explicit request).
-    const parserFilter = String(process.env.CHUNKY_RUN_PARSER || '').trim();
+    const parserFilter = String((env && env.CHUNKY_RUN_PARSER) || '').trim();
     if (parserFilter && Array.isArray(config.parsers)) {
         config.parsers = config.parsers.map((parser) => ({
             ...parser,
@@ -102,26 +127,134 @@ WebAdapter.prototype.loadConfiguration = async function patchedLoadConfiguration
         }
     }
 
+    if (isAutomationEnv(env)) {
+        config.runtime = (config.runtime && typeof config.runtime === 'object')
+            ? config.runtime
+            : {};
+        config.runtime.automationRun = true;
+    }
+
     // SAFETY LAST: v1 server runs are report-only, no calendar writes —
     // forced after the override merge so nothing can switch it back off.
     config.config.dryRun = true;
 
     return config;
-};
+}
 
-// Safe to require AFTER the patch above: the orchestrator only auto-executes
-// when it is the require.main module (here, run-once.js is).
-const { BearEventScraperOrchestrator } = require(
-    path.join(repoRoot, 'scripts', 'bear-event-scraper-unified')
-);
+// ---------------------------------------------------------------------------
+// Shared-storage preflight (NO PARTIAL RUNS). When the shared root env is
+// set, the root and its phone-created storage/ subtree must already exist —
+// otherwise abort BEFORE the pipeline starts. Never mkdir here: creating the
+// tree while iCloud is signed out (or at a mistyped path) would fork a local
+// orphan whose later sync writes confusing state into the real cache.
+// ---------------------------------------------------------------------------
+function assertSharedStorageRootUsable(env = process.env, fsLike = fs) {
+    const sharedRoot = String((env && env.CHUNKY_SHARED_STORAGE_DIR) || '').trim();
+    if (!sharedRoot) return null;
+    const isDir = (p) => {
+        try {
+            return fsLike.statSync(p).isDirectory();
+        } catch (_) {
+            return false;
+        }
+    };
+    if (!isDir(sharedRoot)) {
+        throw new Error(`run-once: shared storage root unreachable: ${sharedRoot} does not exist or is not a directory (iCloud signed out? wrong path?) — ABORTING instead of silently falling back to the local cache`);
+    }
+    if (!isDir(path.join(sharedRoot, 'storage'))) {
+        throw new Error(`run-once: shared storage root ${sharedRoot} has no storage/ subtree — expected the phone's chunky-dad-scraper directory (did you point at .../Documents instead of .../Documents/chunky-dad-scraper?) — ABORTING`);
+    }
+    return sharedRoot;
+}
 
-(async () => {
+// Tee console output into a buffer (still printed) so shared-storage runs can
+// persist a per-run log file the way the phone's FileLogger does.
+function installConsoleTee(lines) {
+    const wrap = (level, original) => (...args) => {
+        try {
+            lines.push(args.map((arg) => {
+                if (typeof arg === 'string') return arg;
+                try {
+                    return JSON.stringify(arg);
+                } catch (_) {
+                    return String(arg);
+                }
+            }).join(' '));
+        } catch (_) { /* the tee must never break the run */ }
+        original.apply(console, args);
+    };
+    console.log = wrap('log', console.log);
+    console.warn = wrap('warn', console.warn);
+    console.error = wrap('error', console.error);
+}
+
+// ---------------------------------------------------------------------------
+// Config injection: wrap the Node loadConfiguration path. The orchestrator's
+// own `require('./adapters/web-adapter')` returns this same patched module.
+// Only applied when run-once IS the process entry point — requiring this file
+// for its helpers must not mutate WebAdapter for the requiring process.
+// ---------------------------------------------------------------------------
+function patchLoadConfiguration(WebAdapter) {
+    const originalLoadConfiguration = WebAdapter.prototype.loadConfiguration;
+    WebAdapter.prototype.loadConfiguration = async function patchedLoadConfiguration(...args) {
+        const config = await originalLoadConfiguration.apply(this, args);
+        return shapeRunOnceConfig(config, process.env);
+    };
+}
+
+async function main() {
+    // Abort loudly BEFORE any module of the pipeline runs (the WebAdapter
+    // constructor re-checks this — belt and suspenders).
+    const sharedRoot = assertSharedStorageRootUsable(process.env, fs);
+
+    const logLines = [];
+    if (sharedRoot) {
+        installConsoleTee(logLines);
+    }
+
+    const { WebAdapter } = require(path.join(repoRoot, 'scripts', 'adapters', 'web-adapter'));
+    patchLoadConfiguration(WebAdapter);
+
+    // Safe to require AFTER the patch above: the orchestrator only
+    // auto-executes when it is the require.main module (here, run-once.js is).
+    const { BearEventScraperOrchestrator } = require(
+        path.join(repoRoot, 'scripts', 'bear-event-scraper-unified')
+    );
+
     const startedAt = new Date().toISOString();
     const parserFilter = String(process.env.CHUNKY_RUN_PARSER || '').trim();
-    console.log(`run-once: starting pipeline (dryRun forced)${parserFilter ? ` — parser filter: ${parserFilter}` : ''}`);
+    const automationRun = isAutomationEnv(process.env);
+    console.log(`run-once: starting pipeline (dryRun forced)${parserFilter ? ` — parser filter: ${parserFilter}` : ''}${automationRun ? ' — automation run (automationEnabled parser filter applies)' : ''}`);
+    if (sharedRoot) {
+        console.log(`run-once: shared storage root ${sharedRoot} — caches, run JSON and log are shared with the phone; retention pruning deferred to the cache owner (the phone)`);
+    }
 
     const orchestrator = new BearEventScraperOrchestrator();
-    const results = await orchestrator.run();
+    let results;
+    try {
+        results = await orchestrator.run();
+    } catch (error) {
+        // A failed shared-storage run still writes its log — that log is the
+        // only evidence of what went wrong (mirrors the phone's pre-UI log
+        // persistence). The run JSON is deliberately NOT written.
+        if (sharedRoot) {
+            try {
+                const adapter = new WebAdapter({});
+                await adapter.saveRunToSharedStorage(null, {
+                    logText: logLines.join('\n'),
+                    failure: error && error.message ? error.message : String(error)
+                });
+            } catch (_) { /* the failure below is the primary signal */ }
+        }
+        throw error;
+    }
+
+    // Shared save FIRST (the Node analog of the phone's save-before-UI
+    // ordering: persist before the parent server renders/publishes anything).
+    if (sharedRoot) {
+        const adapter = new WebAdapter({});
+        await adapter.saveRunToSharedStorage(results, { logText: logLines.join('\n') });
+    }
 
     const outPath = process.env.CHUNKY_RUN_OUT ||
         path.join(os.homedir(), '.chunky-dad-scraper', 'server', 'latest-run.json');
@@ -138,7 +271,20 @@ const { BearEventScraperOrchestrator } = require(
     fs.writeFileSync(tmpPath, safeStringify(payload));
     fs.renameSync(tmpPath, outPath);
     console.log(`run-once: results written to ${outPath}`);
-})().catch((error) => {
-    console.error(`run-once: pipeline failed: ${error && error.stack ? error.stack : error}`);
-    process.exitCode = 1;
-});
+}
+
+if (require.main === module) {
+    main().catch((error) => {
+        console.error(`run-once: pipeline failed: ${error && error.stack ? error.stack : error}`);
+        process.exitCode = 1;
+    });
+}
+
+module.exports = {
+    deepMergeInto,
+    safeStringify,
+    isAutomationEnv,
+    shapeRunOnceConfig,
+    assertSharedStorageRootUsable,
+    installConsoleTee
+};

@@ -14399,3 +14399,119 @@ test('text-bearing logos NOT explained by the brand still pass (misclassified re
   assert.equal(parser.getNonEventImageOcrReason(brandFlyerUrl, htmlData), '',
     'event-flyer classifications are never refused by the brand gate');
 });
+
+// ---------------------------------------------------------------------------
+// Shared Mac↔phone storage root (CHUNKY_SHARED_STORAGE_DIR): the OCR /
+// classification / AI-response caches repoint at the phone's tree, derive
+// device-parity keys (the phone has no URL/URLSearchParams, so its --q-
+// hashes preserve raw query order), write atomically, and ABORT LOUDLY when
+// the root is unreachable instead of silently degrading to the local cache.
+// ---------------------------------------------------------------------------
+
+test('shared storage root repoints OCR/classification/AI cache runtimes; explicit overrideDir still wins', async () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-shared-ai-'));
+  for (const subdir of ['ocr', 'classification', 'ai-responses']) {
+    fs.mkdirSync(path.join(root, 'storage', subdir), { recursive: true });
+  }
+  const prev = process.env.CHUNKY_SHARED_STORAGE_DIR;
+  process.env.CHUNKY_SHARED_STORAGE_DIR = root;
+  try {
+    const parser = new AiWebParser({ normalizeUrl });
+    assert.equal(parser.getOcrCacheRuntime().baseDir, path.join(root, 'storage', 'ocr'));
+    assert.equal(parser.getAiClassificationCacheRuntime().baseDir, path.join(root, 'storage', 'classification'));
+    assert.equal(parser.getAiResponseCacheRuntime().baseDir, path.join(root, 'storage', 'ai-responses'));
+
+    const overridden = new AiWebParser({ normalizeUrl, ocrCacheDir: '/tmp/explicit-ocr-dir' });
+    assert.equal(overridden.getOcrCacheRuntime().baseDir, '/tmp/explicit-ocr-dir',
+      'per-parser cache dir overrides beat the shared root');
+  } finally {
+    if (prev === undefined) delete process.env.CHUNKY_SHARED_STORAGE_DIR;
+    else process.env.CHUNKY_SHARED_STORAGE_DIR = prev;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('unreachable shared storage root ABORTS the cache runtime (no silent local fallback)', async () => {
+  const os = require('os');
+  const path = require('path');
+  const prev = process.env.CHUNKY_SHARED_STORAGE_DIR;
+  process.env.CHUNKY_SHARED_STORAGE_DIR = path.join(os.tmpdir(), `chunky-gone-${Date.now()}`);
+  try {
+    const parser = new AiWebParser({ normalizeUrl });
+    assert.throws(() => parser.getOcrCacheRuntime(), /unreachable/i,
+      'a missing shared root must stop the run, not degrade it');
+  } finally {
+    if (prev === undefined) delete process.env.CHUNKY_SHARED_STORAGE_DIR;
+    else process.env.CHUNKY_SHARED_STORAGE_DIR = prev;
+  }
+});
+
+test('shared root: OCR cache keys preserve raw query order (device parity) and writes are atomic with the device envelope', async () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-shared-ocr-'));
+  fs.mkdirSync(path.join(root, 'storage', 'ocr'), { recursive: true });
+  const prev = process.env.CHUNKY_SHARED_STORAGE_DIR;
+  process.env.CHUNKY_SHARED_STORAGE_DIR = root;
+  try {
+    const parser = new AiWebParser({ normalizeUrl });
+    const ocrConfig = {
+      cacheEnabled: true,
+      endpoint: 'http://localhost:1',
+      model: 'test-model',
+      prompt: 'ocr prompt',
+      numCtx: 4096,
+      numPredict: 900,
+      temperature: 0,
+      think: false,
+      keepAlive: '5m'
+    };
+
+    // Device parity: the phone hashes the RAW query string (its runtime has
+    // no URL/URLSearchParams to re-sort it with).
+    const queryUrl = 'https://cdn.example.com/flyer.jpg?b=2&a=1';
+    const parts = parser.getOcrCachePathParts(queryUrl, ocrConfig);
+    assert.ok(parts.fileName.includes(`--q-${parser.hashCacheValue('?b=2&a=1')}`),
+      `raw-order query hash expected, got ${parts.fileName}`);
+
+    // Atomic write with the exact device envelope.
+    const realRuntime = parser.getOcrCacheRuntime();
+    const renames = [];
+    const recordingRuntime = {
+      ...realRuntime,
+      fs: {
+        ...realRuntime.fs,
+        promises: {
+          ...realRuntime.fs.promises,
+          rename: async (from, to) => { renames.push({ from, to }); return realRuntime.fs.promises.rename(from, to); }
+        }
+      }
+    };
+    parser.getOcrCacheRuntime = () => recordingRuntime;
+
+    const cachePath = await parser.writeCachedOcrResult(queryUrl, ocrConfig, JSON.stringify({ text: 'OCR TEXT' }));
+    assert.ok(cachePath, 'write succeeded');
+    assert.equal(renames.length, 1, 'temp-file-then-rename');
+    assert.equal(path.dirname(renames[0].from), path.dirname(renames[0].to), 'temp file in the same directory');
+    const written = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+    assert.deepEqual(Object.keys(written), ['url', 'cachedAt', 'cacheKeyVersion', 'request', 'response'],
+      'exact device OCR envelope (field order included)');
+    assert.equal(written.cacheKeyVersion, 1);
+    assert.deepEqual(Object.keys(written.request), ['endpoint', 'model', 'prompt', 'signatureHash', 'options']);
+    const leftovers = fs.readdirSync(path.dirname(cachePath)).filter((name) => name.includes('.tmp-'));
+    assert.deepEqual(leftovers, [], 'no torn temp files');
+
+    // Dataless iCloud stub (0-byte placeholder) → miss, never a crash.
+    fs.writeFileSync(cachePath, '');
+    const missed = await parser.readCachedOcrResult(queryUrl, ocrConfig);
+    assert.equal(missed, null, 'evicted stub fails open to a fresh OCR call');
+  } finally {
+    if (prev === undefined) delete process.env.CHUNKY_SHARED_STORAGE_DIR;
+    else process.env.CHUNKY_SHARED_STORAGE_DIR = prev;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Template for the daily scheduled Mac scraper run (Node-only tooling; never
+  ships to the phone). Rendered and installed by tools/schedule-mac-run.sh —
+  do not install this file directly; the __PLACEHOLDERS__ must be substituted.
+
+  The job runs tools/run-once.js with:
+    - CHUNKY_SHARED_STORAGE_DIR → the phone's chunky-dad-scraper tree, so the
+      run shares the phone's page/OCR/AI caches and writes its run JSON + log
+      into the shared runs/ and logs/ dirs (dry-run only; the phone remains
+      the ONLY calendar writer).
+    - CHUNKY_RUN_AUTOMATION=1 → parsers with automationEnabled: false are
+      skipped, exactly like the phone's scheduled automation runs.
+
+  launchd's own stdout/stderr streams go to ~/Library/Logs/chunky-dad-scraper/
+  ON PURPOSE (not the shared logs dir): when the shared root is unreachable
+  the run aborts loudly, and that abort message must land somewhere that does
+  not depend on the unreachable dir. The per-run log itself is written into
+  the shared logs/ dir by run-once.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>__LABEL__</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>__NODE__</string>
+        <string>__REPO__/tools/run-once.js</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>__REPO__</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>CHUNKY_SHARED_STORAGE_DIR</key>
+        <string>__SHARED_DIR__</string>
+        <key>CHUNKY_RUN_AUTOMATION</key>
+        <string>1</string>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>__HOUR__</integer>
+        <key>Minute</key>
+        <integer>__MINUTE__</integer>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>__LAUNCHD_LOG_DIR__/scheduled-run.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>__LAUNCHD_LOG_DIR__/scheduled-run.err.log</string>
+</dict>
+</plist>

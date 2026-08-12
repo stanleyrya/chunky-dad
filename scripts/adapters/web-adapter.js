@@ -18,6 +18,12 @@
 
 const PAGE_CACHE_MAX_FILE_BASENAME = 120;
 const PAGE_CACHE_TRUNCATED_PREFIX_LENGTH = 80;
+// Sentinel for the bounded shared-root cache read (dataless iCloud stubs).
+const SHARED_CACHE_READ_TIMED_OUT = Symbol('shared-cache-read-timed-out');
+// Copy of the Scriptable adapter's SIMPLE_URL_PARSE_REGEX (device-parity page
+// cache keys — see getDeviceParityPageCachePathParts).
+// Captures: 1=scheme, 2=authority, 3=path, 4=query (without fragment).
+const DEVICE_PARITY_URL_PARSE_REGEX = /^([a-z][a-z0-9+.-]*):\/\/([^/?#]+)([^?#]*)(\?[^#]*)?/i;
 
 class WebAdapter {
     constructor(config = {}) {
@@ -37,6 +43,8 @@ class WebAdapter {
         this.path = null;
         this.pageStorageDir = null;
 
+        this.sharedStorageRoot = null;
+
         if (this.isNode) {
             try {
                 this.fs = require('fs');
@@ -46,7 +54,72 @@ class WebAdapter {
             } catch (error) {
                 console.log(`🟢 Node.js: Page cache setup unavailable: ${error.message}`);
             }
+
+            // Shared Mac↔phone cache root (opt-in): CHUNKY_SHARED_STORAGE_DIR
+            // points at the phone's `chunky-dad-scraper` tree (the directory
+            // that CONTAINS storage/, runs/ and logs/ — on the real device
+            // dir that is .../iCloud~dk~simonbs~Scriptable/Documents/
+            // chunky-dad-scraper). The on-disk key derivation and JSON
+            // envelopes are already byte-identical across platforms, so
+            // repointing the roots makes device entries and Mac entries
+            // interchangeable. Validation is deliberately OUTSIDE the
+            // try/catch above: an unreachable shared root must ABORT the run
+            // loudly (no-partial-runs doctrine) — a silent fallback to the
+            // local cache would produce a degraded run that later syncs
+            // confusing state.
+            const sharedRoot = this.resolveSharedStorageRootSetting();
+            if (sharedRoot) {
+                this.assertSharedStorageRootUsable(sharedRoot);
+                this.sharedStorageRoot = sharedRoot;
+                this.pageStorageDir = this.path.join(sharedRoot, 'storage', 'pages');
+                console.log(`🟢 Node.js: Shared storage root active: ${sharedRoot} — caches, runs and logs read/write the phone's tree; retention pruning is deferred to the cache owner (the phone)`);
+            }
         }
+    }
+
+    // The raw CHUNKY_SHARED_STORAGE_DIR setting (trimmed), or '' when the
+    // feature is off. Node-only by construction: browsers have no process.env.
+    resolveSharedStorageRootSetting() {
+        if (!this.isNode || typeof process === 'undefined' || !process.env) return '';
+        return String(process.env.CHUNKY_SHARED_STORAGE_DIR || '').trim();
+    }
+
+    // NO PARTIAL RUNS: the shared root must already exist AND contain the
+    // phone-created storage/ subtree. Never mkdir here — if iCloud is signed
+    // out or the path is wrong, creating the tree would silently fork a local
+    // orphan that later syncs confusing state into the real cache.
+    assertSharedStorageRootUsable(sharedRoot) {
+        if (!this.fs || !this.path) {
+            throw new Error(`CHUNKY_SHARED_STORAGE_DIR is set but Node fs/path are unavailable — aborting instead of running with a local cache`);
+        }
+        let rootStat = null;
+        try {
+            rootStat = this.fs.statSync(sharedRoot);
+        } catch (_) {
+            rootStat = null;
+        }
+        if (!rootStat || !rootStat.isDirectory()) {
+            throw new Error(`Shared storage root unreachable: ${sharedRoot} does not exist or is not a directory (iCloud signed out? wrong path?) — aborting the run instead of silently falling back to the local cache`);
+        }
+        const storageDir = this.path.join(sharedRoot, 'storage');
+        let storageStat = null;
+        try {
+            storageStat = this.fs.statSync(storageDir);
+        } catch (_) {
+            storageStat = null;
+        }
+        if (!storageStat || !storageStat.isDirectory()) {
+            throw new Error(`Shared storage root ${sharedRoot} has no storage/ subtree — expected the phone's chunky-dad-scraper directory (did you point at .../Documents instead of .../Documents/chunky-dad-scraper?) — aborting the run`);
+        }
+    }
+
+    // Cache writes under an iCloud-synced tree must never leave a torn file
+    // for the sync engine to ship: write the full payload to a temp file in
+    // the SAME directory, then rename over the final name (atomic on APFS).
+    async writeFileAtomicallyNode(filePath, contents) {
+        const tmpPath = `${filePath}.tmp-${process.pid.toString(36)}-${Date.now().toString(36)}`;
+        await this.fs.promises.writeFile(tmpPath, contents, 'utf8');
+        await this.fs.promises.rename(tmpPath, filePath);
     }
 
     // Apple's native reverse geocoder is a Scriptable-only capability; Node has
@@ -137,7 +210,70 @@ class WebAdapter {
         return (hash >>> 0).toString(36);
     }
 
+    // Device-parity page cache keys. The phone's JavaScriptCore has no
+    // URL/URLSearchParams, so ScriptableAdapter.normalizePageCacheUrl ALWAYS
+    // lands in its catch (raw trimmed URL, query order preserved) and
+    // parsePageCacheUrl always takes its regex fallback. Node's `new URL`
+    // branch re-sorts and re-encodes the query, so the SAME page would get a
+    // DIFFERENT filename (verified against the real device entry
+    // api__v1__events__search--q-1b8y3s1.json — the sorted-query hash is
+    // 10f5jmh). When the shared root is active the phone's derivation is
+    // canonical, so this replicates its regex path byte-for-byte.
+    getDeviceParityPageCachePathParts(url) {
+        // Device normalizePageCacheUrl: `new URL` throws (undefined) → catch.
+        const normalizedUrl = String(url || '').trim();
+        const match = normalizedUrl.match(DEVICE_PARITY_URL_PARSE_REGEX);
+        if (!match) {
+            return {
+                normalizedUrl,
+                hostDir: 'unknown-host',
+                fileName: `${this.hashPageCacheValue(normalizedUrl || url)}.json`
+            };
+        }
+
+        // Device parsePageCacheUrl regex path: lowercase authority, strip
+        // userinfo, keep the port in `host` (which names the host dir).
+        const authority = String(match[2] || '').toLowerCase();
+        let host = authority;
+        const authSeparatorIndex = host.lastIndexOf('@');
+        if (authSeparatorIndex >= 0) {
+            host = host.slice(authSeparatorIndex + 1);
+        }
+        let hostname = host;
+        if (host.startsWith('[')) {
+            const ipv6EndIndex = host.indexOf(']');
+            hostname = ipv6EndIndex > 0 ? host.slice(0, ipv6EndIndex + 1) : host;
+        } else {
+            hostname = host.split(':')[0] || '';
+        }
+        const pathname = match[3] || '/';
+        const search = match[4] || '';
+
+        const hostDir = this.sanitizePageCacheSegment(host || hostname || 'unknown-host');
+        const pathSegments = pathname
+            .split('/')
+            .filter(Boolean)
+            .map(segment => this.sanitizePageCacheSegment(segment));
+
+        let fileBase = pathSegments.length > 0 ? pathSegments.join('__') : 'index';
+        if (search) {
+            fileBase += `--q-${this.hashPageCacheValue(search)}`;
+        }
+        if (fileBase.length > PAGE_CACHE_MAX_FILE_BASENAME) {
+            fileBase = `${fileBase.slice(0, PAGE_CACHE_TRUNCATED_PREFIX_LENGTH)}--${this.hashPageCacheValue(fileBase)}`;
+        }
+
+        return {
+            normalizedUrl,
+            hostDir,
+            fileName: `${fileBase}.json`
+        };
+    }
+
     getPageCachePathParts(url) {
+        if (this.sharedStorageRoot) {
+            return this.getDeviceParityPageCachePathParts(url);
+        }
         const normalizedUrl = this.normalizePageCacheUrl(url);
 
         try {
@@ -186,7 +322,13 @@ class WebAdapter {
                 return null;
             }
 
-            const cachedText = await this.fs.promises.readFile(cachePath, 'utf8');
+            const cachedText = await this.readCacheFileBounded(cachePath);
+            // Dataless-file handling: macOS evicts iCloud files to placeholder
+            // stubs, and an evicted/timed-out/empty entry is a cache MISS, not
+            // a crash — the run refetches and rewrites it (fail open).
+            if (typeof cachedText !== 'string' || cachedText.trim().length === 0) {
+                return null;
+            }
             const cached = JSON.parse(cachedText);
             const fetchState = typeof cached.fetchState === 'string' ? cached.fetchState.toLowerCase() : '';
             if (fetchState === 'failed' && cached.failure && cached.failure.nonRetryable === true) {
@@ -230,6 +372,34 @@ class WebAdapter {
         }
     }
 
+    // Read a cache file with an upper bound when the shared root is active:
+    // opening a dataless iCloud stub normally blocks while fileproviderd
+    // downloads the bytes (which IS the cheap materialization trigger), but a
+    // dead network could park that read forever, so it is raced against the
+    // adapter's existing timeout and a timeout is reported as a miss.
+    async readCacheFileBounded(cachePath) {
+        const readPromise = this.fs.promises.readFile(cachePath, 'utf8');
+        if (!this.sharedStorageRoot) {
+            return readPromise;
+        }
+        let timer = null;
+        const timeoutMs = this.config.timeout;
+        const timeoutPromise = new Promise((resolve) => {
+            timer = setTimeout(() => resolve(SHARED_CACHE_READ_TIMED_OUT), timeoutMs);
+        });
+        try {
+            const result = await Promise.race([readPromise, timeoutPromise]);
+            if (result === SHARED_CACHE_READ_TIMED_OUT) {
+                readPromise.catch(() => {});
+                console.log(`🟢 Node.js: Shared cache read timed out after ${timeoutMs}ms (dataless iCloud stub still downloading?) — treating ${cachePath} as a cache miss`);
+                return null;
+            }
+            return result;
+        } finally {
+            if (timer) clearTimeout(timer);
+        }
+    }
+
     // Hours below 24h ("5.3h"), days otherwise ("2.1d"); null when unknown.
     formatPageCacheAge(ageMs) {
         if (!Number.isFinite(ageMs) || ageMs < 0) {
@@ -267,7 +437,9 @@ class WebAdapter {
 
         try {
             await this.fs.promises.mkdir(cacheDir, { recursive: true });
-            await this.fs.promises.writeFile(cachePath, JSON.stringify(payload, null, 2), 'utf8');
+            // temp-file-then-rename: under the shared iCloud root a plain
+            // writeFile can be synced mid-write; the rename is atomic.
+            await this.writeFileAtomicallyNode(cachePath, JSON.stringify(payload, null, 2));
         } catch (error) {
             console.log(`🟢 Node.js: Page cache write failed for ${url}: ${error.message}`);
         }
@@ -291,11 +463,245 @@ class WebAdapter {
     getRunContext() {
         const isNode = typeof window === 'undefined';
         const environment = isNode ? 'node' : 'web';
+        // Scheduled Mac runs (tools/schedule-mac-run.sh → tools/run-once.js
+        // with CHUNKY_RUN_AUTOMATION set) mirror the phone's automation runs:
+        // the run context says so, so saved runs and the results header report
+        // the honest trigger instead of "manual".
+        if (this.isAutomationRunRequested()) {
+            return {
+                type: 'automated',
+                environment,
+                trigger: 'scheduled',
+                automationRun: true
+            };
+        }
         return {
             type: 'manual',
             environment,
             trigger: environment
         };
+    }
+
+    // Truthy CHUNKY_RUN_AUTOMATION (Node only) marks this process's run as an
+    // automation run — same meaning as the phone's scheduled automation.
+    isAutomationRunRequested() {
+        if (!this.isNode || typeof process === 'undefined' || !process.env) return false;
+        const raw = String(process.env.CHUNKY_RUN_AUTOMATION || '').trim().toLowerCase();
+        return raw === '1' || raw === 'true' || raw === 'yes';
+    }
+
+    // ------------------------------------------------------------------
+    // Shared runs/logs (Mac↔phone). When the shared storage root is active,
+    // Mac runs persist into the SAME runs/ and logs/ dirs the phone writes,
+    // with the phone's YYYYMMDD-HHMMSS naming and version-2 run envelope, so
+    // the phone's saved-run browser (display-saved-run.js) and the tailnet
+    // server list Mac runs exactly like phone runs. Timestamp-second ids
+    // keep Mac and phone writes from colliding. The phone's "save before UI"
+    // ordering maps here to "save before the caller renders/publishes":
+    // tools/run-once.js calls this FIRST, before writing its own
+    // latest-run.json for the server to render.
+    // ------------------------------------------------------------------
+
+    // Same filesystem-friendly local-time id the Scriptable adapter mints.
+    getRunId(timestamp = new Date()) {
+        const pad = (n) => String(n).padStart(2, '0');
+        const y = timestamp.getFullYear();
+        const m = pad(timestamp.getMonth() + 1);
+        const d = pad(timestamp.getDate());
+        const hh = pad(timestamp.getHours());
+        const mm = pad(timestamp.getMinutes());
+        const ss = pad(timestamp.getSeconds());
+        return `${y}${m}${d}-${hh}${mm}${ss}`;
+    }
+
+    // Node copy of ScriptableAdapter.sanitizeEventForRunSave — same slimming
+    // rules so a Mac-saved run renders identically in the phone's browser.
+    sanitizeEventForRunSave(event) {
+        if (!event || typeof event !== 'object') return event;
+        const seen = new WeakSet();
+        try {
+            return JSON.parse(JSON.stringify(event, (key, value) => {
+                if (key === '_parserConfig' && value) {
+                    return {
+                        name: value.name,
+                        parser: value.parser,
+                        dryRun: value.dryRun,
+                        city: value.city,
+                        calendarSearchRangeDays: value.calendarSearchRangeDays
+                    };
+                }
+                if (key === '_existingEvent' && value) {
+                    return {
+                        title: value.title,
+                        identifier: value.identifier,
+                        startDate: value.startDate,
+                        endDate: value.endDate,
+                        location: value.location,
+                        url: value.url
+                    };
+                }
+                if (key === '_conflicts' && value && Array.isArray(value)) {
+                    return value.map((conflict) => ({
+                        title: conflict.title,
+                        startDate: conflict.startDate,
+                        endDate: conflict.endDate,
+                        identifier: conflict.identifier
+                    }));
+                }
+                if (key === 'calendar' && value && value.title && value.identifier) {
+                    return {
+                        title: value.title,
+                        identifier: value.identifier
+                    };
+                }
+                if (typeof value === 'function') {
+                    return undefined;
+                }
+                if (value && typeof value === 'object') {
+                    if (seen.has(value)) {
+                        return undefined;
+                    }
+                    seen.add(value);
+                }
+                return value;
+            }));
+        } catch (error) {
+            console.log(`🟢 Node.js: Failed to serialize event "${event.title || event.name || 'unknown'}" for run save: ${error.message}`);
+            return {
+                title: event.title || event.name || '',
+                startDate: event.startDate || null,
+                endDate: event.endDate || null,
+                location: event.location || event.venue || '',
+                url: event.url || '',
+                city: event.city || '',
+                _action: event._action || null,
+                _analysis: event._analysis || null,
+                _mergeDiff: event._mergeDiff || null,
+                _original: event._original || null
+            };
+        }
+    }
+
+    sanitizeEventsForRunSave(events) {
+        if (!Array.isArray(events)) return [];
+        return events
+            .map((event) => this.sanitizeEventForRunSave(event))
+            .filter(Boolean);
+    }
+
+    // Node copy of ScriptableAdapter.sanitizeDroppedEntriesForRunSave.
+    sanitizeDroppedEntriesForRunSave(entries) {
+        if (!Array.isArray(entries)) return [];
+        return entries.map((entry) => {
+            if (!entry || typeof entry !== 'object') return entry;
+            const copy = { ...entry };
+            delete copy._parserConfig;
+            if (copy.event && typeof copy.event === 'object') {
+                const event = {};
+                for (const key of Object.keys(copy.event)) {
+                    if (key.startsWith('_')) continue;
+                    event[key] = copy.event[key];
+                }
+                copy.event = event;
+            }
+            return copy;
+        });
+    }
+
+    // The phone stringifies its run payload plainly (and a cycle fails the
+    // save); Node results occasionally self-reference, so try the identical
+    // plain stringify first and only fall back to dropping repeated object
+    // branches — the same semantics sanitizeEventForRunSave already applies
+    // per event.
+    stringifyRunPayload(payload) {
+        try {
+            return JSON.stringify(payload);
+        } catch (_) {
+            const seen = new WeakSet();
+            return JSON.stringify(payload, (key, value) => {
+                if (value && typeof value === 'object') {
+                    if (seen.has(value)) return undefined;
+                    seen.add(value);
+                }
+                return value;
+            });
+        }
+    }
+
+    // Persist this run's JSON and log into the shared root's runs/ and logs/
+    // dirs. `results` may be null for a FAILED run — the log (the evidence of
+    // what went wrong) is still written; the run JSON is not. Returns the
+    // runId, or null when the shared root is off or the save failed.
+    async saveRunToSharedStorage(results, options = {}) {
+        if (!this.isNode || !this.sharedStorageRoot || !this.fs || !this.path) return null;
+        try {
+            const ts = new Date();
+            const runId = this.getRunId(ts);
+            const runsDir = this.path.join(this.sharedStorageRoot, 'runs');
+            const logsDir = this.path.join(this.sharedStorageRoot, 'logs');
+            await this.fs.promises.mkdir(runsDir, { recursive: true });
+            await this.fs.promises.mkdir(logsDir, { recursive: true });
+
+            const runContext = (results && results.runContext) || this.getRunContext();
+            const totals = {
+                totalEvents: (results && results.totalEvents) || 0,
+                bearEvents: (results && results.bearEvents) || 0,
+                calendarEvents: (results && results.calendarEvents) || 0,
+                errors: ((results && results.errors) || []).length
+            };
+
+            if (results && typeof results === 'object') {
+                const summary = {
+                    runId,
+                    timestamp: ts.toISOString(),
+                    runContext,
+                    totals,
+                    parserSummaries: (results.parserResults || []).map((r) => ({
+                        name: r.name,
+                        bearEvents: r.bearEvents,
+                        totalEvents: r.totalEvents
+                    }))
+                };
+                const payload = {
+                    version: 2,
+                    summary,
+                    runContext,
+                    config: results.config || null,
+                    analyzedEvents: this.sanitizeEventsForRunSave(results.analyzedEvents || []),
+                    bearDroppedEvents: this.sanitizeDroppedEntriesForRunSave(results.bearDroppedEvents),
+                    parserResults: results.parserResults || [],
+                    errors: results.errors || [],
+                    calendarHygiene: Array.isArray(results.calendarHygiene)
+                        ? results.calendarHygiene
+                        : []
+                };
+                const runFilePath = this.path.join(runsDir, `${runId}.json`);
+                await this.writeFileAtomicallyNode(runFilePath, this.stringifyRunPayload(payload));
+                results.savedRunId = runId;
+                results.savedRunPath = runFilePath;
+                console.log(`🟢 Node.js: 💾 Saved run ${runId} to ${runFilePath} (shared storage — the phone's saved-run browser lists it like a phone run)`);
+            }
+
+            // Same first-line shape as the phone's appendLogSummary, so log
+            // tooling can parse phone and Mac logs identically.
+            const logSummary = {
+                timestamp: new Date().toISOString(),
+                runId,
+                runContext,
+                totals,
+                ...(options.failure ? { failure: String(options.failure) } : {})
+            };
+            const summaryLine = `${new Date().toISOString()} - ${JSON.stringify(logSummary)}`;
+            const logText = typeof options.logText === 'string' ? options.logText : '';
+            const content = logText ? `${summaryLine}\n${logText}` : `${summaryLine}\n`;
+            const logFilePath = this.path.join(logsDir, `${runId}.log`);
+            await this.writeFileAtomicallyNode(logFilePath, content);
+            console.log(`🟢 Node.js: 💾 Log for run ${runId} written to ${logFilePath} (shared storage)`);
+            return runId;
+        } catch (error) {
+            console.log(`🟢 Node.js: ✗ Failed to save run to shared storage: ${error.message}`);
+            return null;
+        }
     }
 
     // Get calendar name for a city (matching scriptable-adapter pattern)
@@ -564,7 +970,7 @@ async saveFailureNote(url, error, metadata = {}) {
         };
 
         await this.fs.promises.mkdir(cacheDir, { recursive: true });
-        await this.fs.promises.writeFile(cachePath, JSON.stringify(payload, null, 2), 'utf8');
+        await this.writeFileAtomicallyNode(cachePath, JSON.stringify(payload, null, 2));
         console.log(`🌐 Web: 📝 Saved non-retryable failure cache entry to ${cachePath}`);
         return true;
     }
