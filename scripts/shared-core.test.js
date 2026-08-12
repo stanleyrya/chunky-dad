@@ -17815,3 +17815,127 @@ test('doors-corrected start: any mismatch falls through to existing behavior (fa
   assert.equal(adapter2.calls.length, 1, 'a stamp that does not match the scraped start is ignored');
   assert.equal(final2.startDate.toISOString(), '2026-09-06T02:00:00.000Z');
 });
+
+// ---------------------------------------------------------------------------
+// Execute-from-saved-run: re-analysis support statics
+// ---------------------------------------------------------------------------
+
+test('stripCalendarAnalysisStamps removes analysis-time stamps and keeps event data', () => {
+  const saved = {
+    title: 'Bear Night',
+    startDate: '2026-08-01T02:00:00.000Z',
+    bar: 'The Eagle',
+    key: 'bear-night|eagle',
+    recurrenceRule: '',
+    _parserConfig: { name: 'Eagle', dryRun: false },
+    _fieldPriorities: { title: { merge: 'preserve' } },
+    _recurring: false,
+    // analysis-time stamps that MUST come off before a fresh pass
+    _action: 'new',
+    _analysis: { action: 'new', reason: 'no match' },
+    _mergeDiff: { preserved: [] },
+    _mergeDiffBaselineNotes: 'x',
+    _existingEvent: { title: 'Bear Night', identifier: 'abc' },
+    _existingKey: 'uid:1',
+    _conflicts: [],
+    _evidenceLines: ['line'],
+    _sanityFlags: [{ code: 'junk-title' }],
+    _original: { scraper: {}, calendar: {} },
+    _pastSpanWithheld: true,
+    _duplicateOfKept: 'Other',
+    _seriesAuthority: 'slot-host',
+    _recurringExport: true,
+    _savedRunSourceIndex: 3,
+    overrideUid: 'u',
+    overrideRecurrenceId: 'r'
+  };
+  const stripped = SharedCore.stripCalendarAnalysisStamps(saved);
+  for (const stamp of SharedCore.getCalendarAnalysisStampKeys()) {
+    assert.equal(Object.prototype.hasOwnProperty.call(stripped, stamp), false, `${stamp} stripped`);
+  }
+  assert.equal(stripped.title, 'Bear Night');
+  assert.equal(stripped._parserConfig.dryRun, false, 'parse-time parser config kept');
+  assert.equal(stripped._recurring, false, 'parse-time recurring stamp kept');
+  assert.equal(stripped.key, 'bear-night|eagle', 'identity key kept');
+  // the input is not mutated
+  assert.equal(saved._action, 'new');
+  // non-objects pass through
+  assert.equal(SharedCore.stripCalendarAnalysisStamps(null), null);
+});
+
+test('describeExecutionDisposition labels agree with the filterEventsForExecution gates', () => {
+  assert.equal(SharedCore.describeExecutionDisposition({ _action: 'new', title: 'X' }), 'NEW');
+  assert.equal(SharedCore.describeExecutionDisposition({ _action: 'merge' }), 'MERGE');
+  assert.equal(SharedCore.describeExecutionDisposition({}), 'NEW', 'no-analysis fallback matches the execute path');
+  assert.equal(
+    SharedCore.describeExecutionDisposition({ _action: 'new', _parserConfig: { dryRun: true } }),
+    'WITHHELD (dry-run parser)'
+  );
+  assert.equal(
+    SharedCore.describeExecutionDisposition({ _action: 'new', _pastSpanWithheld: true }),
+    'WITHHELD (span fully past)'
+  );
+  assert.equal(
+    SharedCore.describeExecutionDisposition({ _action: 'new', recurrenceRule: 'FREQ=WEEKLY' }),
+    'WITHHELD (recurring series — ICS export only)'
+  );
+  assert.equal(
+    SharedCore.describeExecutionDisposition({ _action: 'new', _sanityFlags: [{ code: 'junk-title' }] }),
+    'WITHHELD (junk title)'
+  );
+  // Every WITHHELD label must correspond to an event filterEventsForExecution refuses
+  const withheld = [
+    { _action: 'new', _parserConfig: { dryRun: true } },
+    { _action: 'new', _pastSpanWithheld: true },
+    { _action: 'new', recurrenceRule: 'FREQ=WEEKLY' },
+    { _action: 'new', _sanityFlags: [{ code: 'junk-title' }] }
+  ];
+  assert.equal(SharedCore.filterEventsForExecution(withheld).length, 0);
+});
+
+test('diffSavedVsFreshExecutionPlan pairs by source index and reports stale intents', () => {
+  const saved = [
+    { title: 'Bear Night', _action: 'new' },
+    { title: 'Fur Ball', _action: 'new' },
+    { title: 'Demoted Party', _action: 'merge' }
+  ];
+  const fresh = [
+    // saved NEW, live analysis now says MERGE — the classic stale intent
+    { title: 'Bear Night', _action: 'merge', _savedRunSourceIndex: 0 },
+    // unchanged
+    { title: 'Fur Ball', _action: 'new', _savedRunSourceIndex: 1 },
+    // index 2 missing: live analysis dropped it (e.g. manual-not-bear demote)
+    // and one rescue joined the plan without a saved source
+    { title: 'Rescued Drop', _action: 'new' }
+  ];
+  const diff = SharedCore.diffSavedVsFreshExecutionPlan(saved, fresh);
+  assert.equal(diff.entries.length, 4);
+  const byTitle = Object.fromEntries(diff.entries.map((entry) => [entry.title, entry]));
+  assert.deepEqual(
+    { saved: byTitle['Bear Night'].savedLabel, fresh: byTitle['Bear Night'].freshLabel, changed: byTitle['Bear Night'].changed },
+    { saved: 'NEW', fresh: 'MERGE', changed: true }
+  );
+  assert.equal(byTitle['Fur Ball'].changed, false);
+  assert.equal(byTitle['Demoted Party'].freshLabel, 'DROPPED (live analysis removed it)');
+  assert.equal(byTitle['Demoted Party'].changed, true);
+  assert.equal(byTitle['Rescued Drop'].savedLabel, 'NOT IN SAVED PLAN');
+  assert.equal(diff.changed.length, 3);
+  // degenerate inputs never throw
+  assert.deepEqual(SharedCore.diffSavedVsFreshExecutionPlan(null, null), { entries: [], changed: [] });
+});
+
+test('formatRunAgeLabel prefers the ISO timestamp and falls back to the runId', () => {
+  const now = new Date('2026-08-12T12:00:00.000Z').getTime();
+  assert.equal(SharedCore.formatRunAgeLabel('2026-08-09T12:00:00.000Z', '', now), '3 days old');
+  assert.equal(SharedCore.formatRunAgeLabel('2026-08-12T07:00:00.000Z', '', now), '5 hours old');
+  assert.equal(SharedCore.formatRunAgeLabel('2026-08-12T11:48:00.000Z', '', now), '12 minutes old');
+  assert.equal(SharedCore.formatRunAgeLabel('2026-08-12T11:59:30.000Z', '', now), '0 minutes old');
+  // runId fallback parses local time — build the expected origin the same way
+  const localOrigin = new Date(2026, 7, 2, 10, 15, 0).getTime();
+  const label = SharedCore.formatRunAgeLabel(null, '20260802-101500', localOrigin + 2 * 24 * 60 * 60 * 1000);
+  assert.equal(label, '2 days old');
+  // a future timestamp clamps to zero instead of going negative
+  assert.equal(SharedCore.formatRunAgeLabel('2026-08-13T12:00:00.000Z', '', now), '0 minutes old');
+  assert.equal(SharedCore.formatRunAgeLabel(null, 'not-a-run-id', now), 'of unknown age');
+  assert.equal(SharedCore.formatRunAgeLabel('garbage', '', now), 'of unknown age');
+});

@@ -8411,3 +8411,265 @@ test('_duplicateOfKept records render as one-liners, not full cards (feature-det
   assert.ok(!html.includes('data-bear-idx="k1"'), 'no full card for the analyzed duplicate');
   assert.ok(!html.includes('data-bear-idx="d0"'), 'no full card for the dropped duplicate');
 });
+
+// ---------------------------------------------------------------------------
+// Execute from saved run: affordance, mandatory re-analysis, audit trail
+// ---------------------------------------------------------------------------
+
+function buildSavedRunResults(overrides = {}) {
+  return {
+    _isDisplayingSavedRun: true,
+    sourceRunId: '20260810-101010',
+    _savedRunTimestamp: '2026-08-10T10:10:10.000Z',
+    totalEvents: 1,
+    bearEvents: 1,
+    calendarEvents: 0,
+    errors: [],
+    parserResults: [{ name: 'Eagle', bearEvents: 1, totalEvents: 1 }],
+    analyzedEvents: [
+      {
+        title: 'Bear Night',
+        startDate: '2026-08-20T02:00:00.000Z',
+        bar: 'The Eagle',
+        _action: 'new',
+        _analysis: { action: 'new', reason: 'no match at Mac-run time' }
+      }
+    ],
+    config: { parsers: [{ name: 'Eagle', dryRun: false }], config: {} },
+    ...overrides
+  };
+}
+
+// Wires every UI/persistence seam to capturing stubs so the flow runs
+// headlessly; individual tests re-override what they assert on.
+function instrumentSavedRunAdapter(adapter, captured) {
+  adapter.getIdentityCore = () => ({
+    prepareEventsForCalendar: async (events) => {
+      captured.analyzed = events;
+      return events.map((event) => ({ ...event, _action: 'merge' }));
+    }
+  });
+  adapter.executeCalendarActions = async (events) => {
+    captured.executed = events;
+    return events.length;
+  };
+  adapter.presentSavedRunExecutionConfirm = async (events, extras) => {
+    captured.confirmEvents = events;
+    captured.confirmExtras = extras;
+    return true;
+  };
+  adapter.presentSavedRunExecutionNotice = async (title, message) => {
+    captured.notices.push({ title, message });
+  };
+  adapter.preflightSavedRunWriteAccess = async () => true;
+  adapter.persistExecutedSavedRunSnapshot = async (results) => {
+    captured.persisted = results;
+    return results.savedRunId || results.sourceRunId || null;
+  };
+}
+
+test('saved-run display renders the execute affordance; live and web renders do not', async () => {
+  const adapter = buildAdapter();
+  const html = await renderSavedRunPage(adapter, savedRunLogInfo());
+  assert.ok(html.includes('id="saved-run-execute"'), 'affordance section rendered for a saved run');
+  assert.ok(html.includes("Execute this run's writes"), 'explicit execute button label');
+  assert.ok(html.includes('requestSavedRunExecute'), 'button wired to the chunkyscrape:// bridge');
+  assert.ok(html.includes('a=execute-run'), 'bridge action emitted');
+  assert.ok(/is <strong>[^<]+<\/strong>/.test(html), 'run age surfaced on the affordance');
+
+  // A live run gets no execute-from-saved-run affordance
+  const liveHtml = await adapter.generateRichHTML({
+    ...buildResultsStub(),
+    totalEvents: 2,
+    bearEvents: 2,
+    calendarEvents: 0,
+    errors: [],
+    parserResults: []
+  });
+  assert.ok(!liveHtml.includes('id="saved-run-execute"'), 'live runs have no saved-run execute section');
+
+  // The web target has no chunkyscrape:// bridge: no affordance there either
+  adapter.loadRunLogsForDisplay = async () => savedRunLogInfo();
+  const webHtml = await adapter.generateRichHTML(
+    {
+      ...buildResultsStub(),
+      _isDisplayingSavedRun: true,
+      savedRunId: '20260804-125703',
+      totalEvents: 2,
+      bearEvents: 2,
+      calendarEvents: 0,
+      errors: [],
+      parserResults: []
+    },
+    { target: 'web' }
+  );
+  assert.ok(!webHtml.includes('id="saved-run-execute"'), 'web renders stay report-only');
+});
+
+test('saved-run display keeps verdict taps live when the verdict store is present', async () => {
+  const adapter = buildAdapter();
+  const html = await renderSavedRunPage(adapter, savedRunLogInfo());
+  // Kept cards carry tappable verdict buttons (k0/k1 from buildResultsStub)
+  assert.ok(html.includes('data-bear-idx="k0"'), 'kept card verdict row rendered');
+  assert.ok(!html.includes('data-bear-act="mark-bear" disabled'), 'saved-run verdict buttons are NOT disabled on the phone');
+  // Direct callers (and web renders) keep the read-only default: the
+  // generateBearDroppedSection tests above still assert disabled buttons.
+});
+
+test('executing a saved run re-analyzes against the live calendar and executes ONLY the fresh plan', async () => {
+  const adapter = buildAdapter();
+  const captured = { notices: [] };
+  instrumentSavedRunAdapter(adapter, captured);
+  const results = buildSavedRunResults();
+
+  const processed = await adapter.executeSavedRunWrites(results);
+
+  assert.equal(processed, 1);
+  // the live-analysis seam received the STRIPPED underlying event, not the stale intent
+  assert.equal(captured.analyzed.length, 1);
+  assert.equal(captured.analyzed[0]._action, undefined, 'stale saved _action never enters re-analysis');
+  assert.equal(captured.analyzed[0]._analysis, undefined, 'stale saved _analysis never enters re-analysis');
+  assert.equal(captured.analyzed[0]._savedRunSourceIndex, 0, 'source index stamped for the delta report');
+  // what EXECUTES is the fresh verdict: saved said NEW, live analysis says MERGE
+  assert.equal(captured.executed.length, 1);
+  assert.equal(captured.executed[0]._action, 'merge', 'fresh MERGE executes, never the saved NEW');
+  // the confirmation surfaced the staleness + the delta
+  const header = (captured.confirmExtras.headerLines || []).join('\n');
+  assert.ok(header.includes('This run is'), 'run age on the confirmation');
+  assert.ok(header.includes('saved NEW → now MERGE'), 'saved-vs-fresh delta on the confirmation');
+  assert.equal(results.calendarEvents, 1, 'executed count recorded on results');
+  assert.ok(captured.persisted, 'execution outcome persisted back to the run');
+});
+
+test('withheld/recurring events never reach the write call even if the saved JSON claims otherwise', async () => {
+  const adapter = buildAdapter();
+  const captured = { notices: [] };
+  instrumentSavedRunAdapter(adapter, captured);
+  // Passthrough analysis: the live pass returns the events as analyzed —
+  // the recurring rule on the event data is what must gate the write.
+  adapter.getIdentityCore = () => ({
+    prepareEventsForCalendar: async (events) => {
+      captured.analyzed = events;
+      return events.map((event) => ({ ...event, _action: 'new' }));
+    }
+  });
+  let confirmCalled = false;
+  adapter.presentSavedRunExecutionConfirm = async () => {
+    confirmCalled = true;
+    return true;
+  };
+  const results = buildSavedRunResults({
+    analyzedEvents: [
+      {
+        // the saved JSON CLAIMS this is a plain writable NEW event…
+        title: 'Weekly Bear Trivia',
+        _action: 'new',
+        // …but the event data defines a recurring series
+        recurrenceRule: 'FREQ=WEEKLY;BYDAY=TU'
+      },
+      {
+        title: 'Dry Run Parser Event',
+        _action: 'new',
+        _parserConfig: { name: 'X', dryRun: true }
+      }
+    ]
+  });
+
+  const processed = await adapter.executeSavedRunWrites(results);
+
+  assert.equal(processed, 0);
+  assert.equal(captured.executed, undefined, 'executeCalendarActions never called');
+  assert.equal(confirmCalled, false, 'nothing executable → no execute confirmation at all');
+  assert.ok(
+    captured.notices.some((notice) => notice.title === 'Nothing Executable'),
+    'degrades with clear messaging instead of writing or throwing'
+  );
+});
+
+test('executing a saved run rewrites the SAME run file with the execution audit trail', async () => {
+  const adapter = buildAdapter();
+  const writes = [];
+  adapter.fm = {
+    documentsDirectory: () => '/tmp/chunky-dad-adapter-test',
+    joinPath: (a, b) => `${a}/${b}`,
+    fileExists: () => false,
+    isDirectory: () => false,
+    createDirectory: () => {},
+    remove: () => {},
+    writeString: (filePath, content) => writes.push({ filePath, content })
+  };
+  const captured = { notices: [] };
+  instrumentSavedRunAdapter(adapter, captured);
+  // real persistence path (instrumentSavedRunAdapter stubbed it)
+  adapter.persistExecutedSavedRunSnapshot =
+    Object.getPrototypeOf(adapter).persistExecutedSavedRunSnapshot.bind(adapter);
+  const results = buildSavedRunResults({
+    // the display clone carries the readOnly-forced dryRun; the stashed
+    // original is what must land back on disk
+    config: { parsers: [{ name: 'Eagle', dryRun: true }], config: {} },
+    _savedRunOriginalConfig: { parsers: [{ name: 'Eagle', dryRun: false }], config: {} },
+    savedRunExecutions: []
+  });
+
+  const processed = await adapter.executeSavedRunWrites(results);
+  assert.equal(processed, 1);
+
+  const runWrite = writes.find((write) => write.filePath.endsWith('/runs/20260810-101010.json'));
+  assert.ok(runWrite, 'the SAME run file (loaded run id) is rewritten — no fork into a new id');
+  const payload = JSON.parse(runWrite.content);
+  assert.equal(payload.summary.runId, '20260810-101010');
+  assert.equal(payload.summary.timestamp, '2026-08-10T10:10:10.000Z', 'original run timestamp preserved');
+  assert.equal(payload.summary.totals.calendarEvents, 1, 'executed count on the audit totals');
+  assert.equal(payload.executions.length, 1, 'execution recorded');
+  assert.equal(payload.executions[0].processed, 1);
+  assert.ok(payload.executions[0].executedAt, 'executed-at stamped');
+  assert.equal(payload.config.parsers[0].dryRun, false, 'ORIGINAL config persisted, not the readOnly-forced clone');
+  assert.equal(payload.analyzedEvents[0]._action, 'merge', 'run file now shows the fresh plan that executed');
+});
+
+test('saved-run execution honors the loaded config dryRun as a preview and degrades on empty runs', async () => {
+  // dryRun: plan previewed, nothing written, run file untouched
+  const adapter = buildAdapter();
+  const captured = { notices: [] };
+  instrumentSavedRunAdapter(adapter, captured);
+  const dryResults = buildSavedRunResults({
+    config: { parsers: [{ name: 'Eagle', dryRun: false }], config: { dryRun: true } }
+  });
+  const dryProcessed = await adapter.executeSavedRunWrites(dryResults);
+  assert.equal(dryProcessed, 0);
+  assert.equal(captured.executed, undefined, 'dry run never writes');
+  assert.equal(captured.persisted, undefined, 'dry run never rewrites the run file');
+  const dryNotice = captured.notices.find((notice) => notice.title === 'Dry Run Preview');
+  assert.ok(dryNotice, 'dry-run preview messaged');
+  assert.ok(String(dryNotice.message).includes('This run is'), 'staleness still surfaced in the preview');
+
+  // zero analyzable events: clear messaging, no throw
+  const emptyAdapter = buildAdapter();
+  const emptyCaptured = { notices: [] };
+  instrumentSavedRunAdapter(emptyAdapter, emptyCaptured);
+  const emptyProcessed = await emptyAdapter.executeSavedRunWrites(
+    buildSavedRunResults({ analyzedEvents: [] })
+  );
+  assert.equal(emptyProcessed, 0);
+  assert.ok(
+    emptyCaptured.notices.some((notice) => notice.title === 'Nothing to Execute'),
+    'zero-event saved runs degrade with clear messaging'
+  );
+
+  // missing/unreachable calendar: live analysis throws → degrade, never write
+  const brokenAdapter = buildAdapter();
+  const brokenCaptured = { notices: [] };
+  instrumentSavedRunAdapter(brokenAdapter, brokenCaptured);
+  brokenAdapter.getIdentityCore = () => ({
+    prepareEventsForCalendar: async () => {
+      throw new Error('calendar unavailable');
+    }
+  });
+  const brokenProcessed = await brokenAdapter.executeSavedRunWrites(buildSavedRunResults());
+  assert.equal(brokenProcessed, 0);
+  assert.equal(brokenCaptured.executed, undefined, 'no writes without a fresh analysis');
+  assert.ok(
+    brokenCaptured.notices.some((notice) => notice.title === 'Live Analysis Failed'),
+    'missing calendar degrades with clear messaging, not a throw'
+  );
+});

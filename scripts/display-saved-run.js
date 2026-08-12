@@ -238,6 +238,17 @@ class SavedRunDisplay {
                 calendarHygiene: Array.isArray(saved?.calendarHygiene) ? saved.calendarHygiene : [],
                 config: config,
                 sourceRunId: saved?.summary?.runId || null,
+                // Execute-from-saved-run support (adapter feature-detects all
+                // of these; older adapters simply ignore them):
+                // — the run's saved timestamp drives the staleness guard and
+                //   keeps a post-execution rewrite on the SAME file/timestamp
+                _savedRunTimestamp: saved?.summary?.timestamp || null,
+                // — prior executions are threaded back so a re-execution
+                //   APPENDS to the audit trail instead of overwriting it
+                savedRunExecutions: Array.isArray(saved?.executions) ? saved.executions : [],
+                // — the ORIGINAL config (pre readOnly dryRun-forcing clone),
+                //   so a post-execution rewrite records what the run really ran with
+                _savedRunOriginalConfig: saved?.config || null,
                 runContext: {
                     type: 'display',
                     environment: 'scriptable',
