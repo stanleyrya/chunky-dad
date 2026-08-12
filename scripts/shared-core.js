@@ -331,6 +331,14 @@ class SharedCore {
         // Curated promoter registry (data/promoters.json via the adapters —
         // injected like bars; shared-core never loads files itself).
         this.promoters = options.promoters || [];
+        // Persistent manual bear verdicts (bear-verdicts.json via the
+        // adapters — injected like bars/promoters; shared-core never loads
+        // files itself). Entries: { verdict: 'bear'|'not_bear', stampedAt,
+        // title, venue, address?, location?, city? }. A stored verdict
+        // outranks every automatic bear-check tier (see
+        // computeBearCheckDecision) so an owner tap survives runs where the
+        // event was never written to the calendar.
+        this.bearVerdicts = Array.isArray(options.bearVerdicts) ? options.bearVerdicts : [];
         this.notesExcludedFields = new Set([
             ...this.eventSchema.DEFAULT_NOTES_EXCLUDED_FIELDS,
             ...(options.additionalExcludedFields || [])
@@ -908,6 +916,61 @@ class SharedCore {
         if (!reason) return label;
         if (reason.length > 80) reason = `${reason.slice(0, 77)}...`;
         return `${label} (overrode ai: ${reason})`;
+    }
+
+    // One-line manual bearSource value for a verdict-store hit:
+    // `manual-bear (verdict store 2026-08-12)`. Same ranked manual-*
+    // vocabulary the results-UI override writes (FIELD_SOURCE_PRIORITY /
+    // getProvenanceTrustTier rank by the prefix at a word boundary), so a
+    // store-kept event written to the calendar converges with a live tap —
+    // getManualBearVerdictFromRecord recognizes it on future runs.
+    static buildBearVerdictStoreSource(verdict, stampedAt) {
+        const label = verdict === 'bear' ? 'manual-bear' : 'manual-not-bear';
+        const stamp = String(stampedAt || '').slice(0, 10);
+        return stamp ? `${label} (verdict store ${stamp})` : `${label} (verdict store)`;
+    }
+
+    // Title identity for the persistent verdict store: the cross-source token
+    // family (case/punctuation/emoji folded, venue-key and city-alias tokens
+    // stripped) joined into one comparable string. "MEAT RACK" == "Meat Rack"
+    // but != "MEAT RACK INFERNO" — equality, never subset, so a different
+    // party at the same venue can never inherit a verdict.
+    getBearVerdictTitleKey(title, barNames = []) {
+        const venueKeys = (Array.isArray(barNames) ? barNames : [barNames])
+            .map(name => this.normalizeBarNameKey(name))
+            .filter(Boolean);
+        return this.getCrossSourceTitleTokens(title, venueKeys).join(' ');
+    }
+
+    // The owner's stored manual verdict for this event, or null. Fail-closed
+    // twice over: the title token identity must be EQUAL (see
+    // getBearVerdictTitleKey) AND the stored snapshot must positively match
+    // the event's venue identity (areIdentityPlacesSimilar — no fuzzy
+    // cross-venue hits, and an event without venue data never matches).
+    // Dates are deliberately NOT compared: the verdict is about the party at
+    // that venue, which recurs.
+    findStoredBearVerdict(event) {
+        const store = Array.isArray(this.bearVerdicts) ? this.bearVerdicts : [];
+        if (store.length === 0 || !event || typeof event !== 'object') return null;
+        const eventKey = this.getBearVerdictTitleKey(event.title || event.name, [event.bar]);
+        if (!eventKey) return null;
+        const eventShape = this.buildIdentityComparisonShape(event);
+        for (const entry of store) {
+            if (!entry || typeof entry !== 'object') continue;
+            if (entry.verdict !== 'bear' && entry.verdict !== 'not_bear') continue;
+            const entryKey = this.getBearVerdictTitleKey(entry.title, [entry.venue]);
+            if (!entryKey || entryKey !== eventKey) continue;
+            const entryShape = this.buildIdentityComparisonShape({
+                title: entry.title,
+                bar: entry.venue,
+                address: entry.address,
+                location: entry.location,
+                city: entry.city
+            });
+            if (!this.areIdentityPlacesSimilar(eventShape, entryShape)) continue;
+            return entry;
+        }
+        return null;
     }
 
     // Provenance (pinSource/addressSource) follows the finalized value: whichever
@@ -2900,6 +2963,22 @@ class SharedCore {
     // records }) for the city-aware title, curated-bar, curated-address, and
     // address-evidence rules.
     resolveConflictDeterministically(fieldName, valueA, valueB, context = null) {
+        // Corrected-time healing (doors-vs-party, run 20260812-001228 FURBALL
+        // NOLA): wave 2's extraction fix promoted a DOORS start to the
+        // party/show time and stamps the event (_doorsTimeRejected /
+        // _doorsTimePromoted, ai-web-parser). When the saved calendar start
+        // sits exactly on the rejected doors wall-clock time — a record
+        // written during the pre-fix era — the corrected scraped start wins
+        // DETERMINISTICALLY. The AI kept re-choosing the stale calendar time
+        // with circular reasoning ("matches the event's stated start time"),
+        // so the wrong time survived forever. Calendar-merge path only
+        // (sideLabels a=calendar/b=scraped); every mismatch falls through.
+        if (fieldName === 'startDate' && context && context.records && context.sideLabels
+            && context.sideLabels.a === 'calendar' && context.sideLabels.b === 'scraped') {
+            const doorsDecision = this.resolveDoorsCorrectedStartConflict(valueA, valueB, context.records.a, context.records.b);
+            if (doorsDecision) return doorsDecision;
+        }
+
         const urlA = this.getUrlRuleParts(valueA);
         const urlB = this.getUrlRuleParts(valueB);
         if (urlA && urlB) {
@@ -6900,15 +6979,22 @@ class SharedCore {
                 console.log(`🐻 BEAR CHECK${tag}: "${title}" → bear (${decision.provenance})${rescueNote}`);
                 // bearSource provenance stamp (notes-serialized like pinSource):
                 // records which cascade tier produced the bear verdict so a
-                // later manual override can say what it overrode.
-                const bearSource = decision.provenance.startsWith('keyword:') ? 'keyword'
-                    : decision.provenance.startsWith('ai:') ? 'ai'
-                        : decision.provenance.startsWith('config:') ? 'config'
-                            : '';
+                // later manual override can say what it overrode. A verdict-
+                // store hit stamps the ranked manual-* vocabulary, so writing
+                // the event also locks the calendar record for future runs.
+                const bearSource = decision.manualStore
+                    ? SharedCore.buildBearVerdictStoreSource('bear', decision.storedVerdictEntry && decision.storedVerdictEntry.stampedAt)
+                    : decision.provenance.startsWith('keyword:') ? 'keyword'
+                        : decision.provenance.startsWith('ai:') ? 'ai'
+                            : decision.provenance.startsWith('config:') ? 'config'
+                                : '';
                 kept.push(bearSource
                     ? {...event, isBearEvent: true, bearSource}
                     : {...event, isBearEvent: true});
-            } else if (decision.result === 'not_bear' && !trusted) {
+            } else if (decision.result === 'not_bear' && (!trusted || decision.manualStore === true)) {
+                // A stored manual not_bear drops even TRUSTED (alwaysBear /
+                // promoter-always) events: the owner's explicit verdict wins
+                // in both directions, like the calendar-record demote path.
                 counts.dropped++;
                 console.log(`🐻 BEAR CHECK${tag}: "${title}" → DROP (${decision.provenance})`);
                 // Flag, don't drop silently: enforce-mode drops are surfaced to
@@ -6917,6 +7003,7 @@ class SharedCore {
                 pendingDrops.push({
                     event,
                     title,
+                    manualStore: decision.manualStore === true,
                     entry: {
                         title,
                         startDate: event.startDate || event.date || null,
@@ -6964,6 +7051,12 @@ class SharedCore {
         // uses, because a stub's missing start time degrades to midnight and
         // must still match its properly-timed sibling.
         for (const pending of pendingDrops) {
+            // A manual-store drop is the owner's explicit verdict — a kept
+            // twin must never silently resurrect it.
+            if (pending.manualStore) {
+                if (dropCollector && mode === 'enforce') dropCollector.push(pending.entry);
+                continue;
+            }
             let signal = null;
             const twin = kept.find(candidate => {
                 signal = this.getSameEventIdentitySignal(pending.event, candidate, { requireCloseStartTimes: false });
@@ -7025,6 +7118,23 @@ class SharedCore {
     // One cascade decision per event: { result: 'bear'|'not_bear'|'unsure',
     // provenance: 'keyword: ...' | 'allowlist: ...' | 'ai: ...' | 'config/fallback: ...' }.
     async computeBearCheckDecision(event, parserConfig, httpAdapter) {
+        // Tier 0 — the owner's persistent verdict store (results-UI taps the
+        // adapters persist to bear-verdicts.json). A stored manual verdict
+        // outranks every automatic tier IN BOTH DIRECTIONS, exactly like the
+        // manual-override-on-calendar-record path: the owner already judged
+        // this party at this venue, and the AI re-litigating it every run is
+        // how MEAT RACK kept getting re-dropped (run 20260812-002001).
+        const storedVerdict = this.findStoredBearVerdict(event);
+        if (storedVerdict) {
+            const stamp = String(storedVerdict.stampedAt || '').slice(0, 10);
+            return {
+                result: storedVerdict.verdict,
+                provenance: `manual store: ${storedVerdict.verdict}${stamp ? ` (verdict stamped ${stamp})` : ''}`,
+                manualStore: true,
+                storedVerdictEntry: storedVerdict
+            };
+        }
+
         const searchText = `${event.title || ''} ${event.description || ''} ${event.bar || ''}`;
 
         // Per-event trust: a registry-matched promoter's bearAffinity
@@ -10061,6 +10171,45 @@ class SharedCore {
         }
     }
 
+    // 'HH:MM' → minutes-of-day, or null for anything else. Strict on purpose:
+    // the doors stamps are written by resolveDoorsVsPartyStartTime, which
+    // only ever emits zero-padded 24h 'HH:MM' strings.
+    parseTimeToMinutesOfDay(value) {
+        const match = /^(\d{2}):(\d{2})$/.exec(String(value || '').trim());
+        if (!match) return null;
+        const hours = parseInt(match[1], 10);
+        const minutes = parseInt(match[2], 10);
+        if (hours > 23 || minutes > 59) return null;
+        return (hours * 60) + minutes;
+    }
+
+    // Deterministic startDate rung for the calendar merge (see the call site
+    // in resolveConflictDeterministically): { winner: 'b', reason } when the
+    // scraped side carries the parser's doors-rejection stamp, its own start
+    // is the promoted party/show wall-clock time, and the calendar start is
+    // exactly the rejected DOORS wall-clock time on the same local day.
+    // Anything less than that full match returns null (fail-closed — the
+    // conflict arbitrates exactly as today).
+    resolveDoorsCorrectedStartConflict(calendarValue, scraperValue, calendarRecord, scraperRecord) {
+        if (!scraperRecord || typeof scraperRecord !== 'object') return null;
+        if (!calendarRecord || typeof calendarRecord !== 'object') return null;
+        const rejected = this.parseTimeToMinutesOfDay(scraperRecord._doorsTimeRejected);
+        const promoted = this.parseTimeToMinutesOfDay(scraperRecord._doorsTimePromoted);
+        if (rejected === null || promoted === null) return null;
+        const calendarLocal = this.getMergeLocalStartParts({ ...calendarRecord, startDate: calendarValue });
+        const scrapedLocal = this.getMergeLocalStartParts({ ...scraperRecord, startDate: scraperValue });
+        if (!calendarLocal || !scrapedLocal) return null;
+        if (calendarLocal.localDay !== scrapedLocal.localDay) return null;
+        // The stamp must describe THIS record: the scraped start must be the
+        // promoted time, and the calendar start exactly the rejected time.
+        if (scrapedLocal.minutesOfDay !== promoted) return null;
+        if (calendarLocal.minutesOfDay !== rejected) return null;
+        return {
+            winner: 'b',
+            reason: `calendar start ${scraperRecord._doorsTimeRejected} is the DOORS time this run's extraction already rejected — corrected party/show start ${scraperRecord._doorsTimePromoted} wins (doors-vs-party healing)`
+        };
+    }
+
     // Local wall-clock view of a record's startDate for the merge midnight-
     // placeholder rung: { minutesOfDay, localDay } or null when the local
     // clock cannot be resolved. A _timezoneUnresolved record's UTC components
@@ -12597,6 +12746,11 @@ class SharedCore {
             for (const dropped of bearOverrideContext.droppedEvents) {
                 const droppedEvent = dropped && dropped.event;
                 if (!droppedEvent || dropped.rescued) continue;
+                // A drop the VERDICT STORE decided is the owner's newest
+                // explicit action — a stale calendar manual-bear stamp must
+                // not resurrect it (taps keep the store and the calendar
+                // stamp in sync going forward, so the store is never older).
+                if (typeof dropped.reason === 'string' && dropped.reason.startsWith('manual store:')) continue;
                 const existingEvents = await calendarAdapter.getExistingEvents(droppedEvent);
                 const analysis = await this.resolveCalendarAnalysisWithSeriesProbe(droppedEvent, existingEvents, mergeMode, calendarAdapter);
                 const matchedRecord = analysis.existingEvent || analysis.sourceEvent || null;
@@ -12672,6 +12826,29 @@ class SharedCore {
                     signal: typeof signal === 'string' ? signal : ''
                 };
                 console.log(`🐻 BEAR CHECK: dropped "${droppedEvent.title || 'Unknown'}" is the same event as "${twin.title || 'Unknown'}" already in the write plan (${dropped.duplicateOfPlanned.signal || 'identity match'}) — one event scraped twice, not a second event`);
+            }
+        }
+
+        // CROSS-BUCKET DUPLICATE FOLD (display). Run 20260812-001632: scraped
+        // "Treasure Trail" was bear-DROPPED while the identity-matching
+        // manual-override calendar row "Treasure Trail Seattle" stayed KEPT —
+        // the owner saw the same party twice every run, once in the write
+        // plan and once in the dropped pile (the rescued entry above skips
+        // the twin pass, so nothing labelled it). When a dropped record is
+        // the SAME party as a kept plan row — same local day + positive venue
+        // identity + title token-subset, every rung of
+        // getCalendarTitleSubsetSignal fail-closed — stamp the ENTRY (not the
+        // embedded event, so saved runs keep it through
+        // sanitizeDroppedEntriesForRunSave) and the results UI renders the
+        // card OUT of the dropped pile with a one-line count note.
+        if (bearOverrideContext && Array.isArray(bearOverrideContext.droppedEvents)) {
+            for (const dropped of bearOverrideContext.droppedEvents) {
+                const droppedEvent = dropped && dropped.event;
+                if (!droppedEvent || dropped._duplicateOfKept) continue;
+                const kept = analyzedEvents.find(entry => entry && Boolean(this.getCalendarTitleSubsetSignal(droppedEvent, entry))) || null;
+                if (!kept) continue;
+                dropped._duplicateOfKept = kept.title || 'Unknown';
+                console.log(`🐻 BEAR CHECK: dropped "${droppedEvent.title || 'Unknown'}" duplicates kept "${dropped._duplicateOfKept}" (place+day+title-subset) — folded out of the dropped list`);
             }
         }
 

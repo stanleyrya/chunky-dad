@@ -15310,6 +15310,19 @@ TEXT:
             event._timezoneUnresolved = true;
         }
 
+        // Corrected-time healing stamp (underscore fields: internal metadata,
+        // excluded from notes and merge field loops). When the doors-vs-party
+        // promotion above moved the start, record BOTH the rejected DOORS
+        // time and the promoted party/show time on the event, so the calendar
+        // merge can deterministically heal a saved start written during the
+        // pre-fix era (run 20260812-001228, FURBALL NOLA: the AI merge kept
+        // re-choosing the stale doors-time calendar start). See shared-core
+        // resolveDoorsCorrectedStartConflict.
+        if (doorsPromotedStart) {
+            event._doorsTimeRejected = startTimeRaw;
+            event._doorsTimePromoted = doorsPromotedStart;
+        }
+
         // Stamp the derived organizer as internal metadata (underscore fields are
         // excluded from calendar notes and merge field loops) so downstream merge
         // arbitration can warn the model off picking the organizer as the venue.

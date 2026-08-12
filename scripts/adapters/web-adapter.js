@@ -36,16 +36,65 @@ class WebAdapter {
         this.fs = null;
         this.path = null;
         this.pageStorageDir = null;
+        // Local state dir for adapter-owned JSON stores (bear-verdicts.json);
+        // Node-only, same root the page cache lives under.
+        this.localStateDir = null;
 
         if (this.isNode) {
             try {
                 this.fs = require('fs');
                 this.path = require('path');
                 const os = require('os');
-                this.pageStorageDir = this.path.join(os.homedir(), '.chunky-dad-scraper', 'storage', 'pages');
+                this.localStateDir = this.path.join(os.homedir(), '.chunky-dad-scraper');
+                this.pageStorageDir = this.path.join(this.localStateDir, 'storage', 'pages');
             } catch (error) {
                 console.log(`🟢 Node.js: Page cache setup unavailable: ${error.message}`);
             }
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // PERSISTENT MANUAL BEAR VERDICTS — web/Node twin of the Scriptable
+    // store (bear-verdicts.json, same shape: { version, verdicts: [...] }).
+    // The phone's results UI is where verdicts are tapped; here the store is
+    // honored when the file exists under the local state dir (e.g. synced
+    // for Mac-server runs) and fails soft to empty everywhere else. Browser
+    // runs have no local file access and report an empty store.
+    // -----------------------------------------------------------------------
+    getBearVerdictsFilePath() {
+        if (!this.isNode || !this.path || !this.localStateDir) return null;
+        return this.path.join(this.localStateDir, 'bear-verdicts.json');
+    }
+
+    async loadBearVerdicts() {
+        const filePath = this.getBearVerdictsFilePath();
+        if (!filePath || !this.fs) return [];
+        try {
+            if (!this.fs.existsSync(filePath)) return [];
+            const parsed = JSON.parse(await this.fs.promises.readFile(filePath, 'utf8'));
+            const verdicts = parsed && !Array.isArray(parsed) && Array.isArray(parsed.verdicts)
+                ? parsed.verdicts
+                : Array.isArray(parsed) ? parsed : null;
+            if (!verdicts) {
+                console.log('🟢 Node.js: Bear verdict store has unexpected shape — starting empty');
+                return [];
+            }
+            return verdicts.filter(entry => entry && typeof entry === 'object');
+        } catch (error) {
+            console.log(`🟢 Node.js: Bear verdict store read failed (${error.message}) — starting empty`);
+            return [];
+        }
+    }
+
+    async saveBearVerdicts(verdicts) {
+        const filePath = this.getBearVerdictsFilePath();
+        if (!filePath || !this.fs || !Array.isArray(verdicts)) return;
+        try {
+            await this.fs.promises.mkdir(this.localStateDir, { recursive: true });
+            await this.fs.promises.writeFile(filePath, JSON.stringify({ version: 1, verdicts }, null, 2), 'utf8');
+            console.log(`🟢 Node.js: ✓ Saved bear verdict store (${verdicts.length} entries) to ${filePath}`);
+        } catch (error) {
+            console.log(`🟢 Node.js: Bear verdict store write failed: ${error.message}`);
         }
     }
 
