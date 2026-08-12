@@ -10228,7 +10228,16 @@ class ScriptableAdapter {
     const cards = entries
       .map((entry, index) => {
         if (!entry) return "";
-        if (entry._duplicateOfKept) return "";
+        // A folded duplicate never renders as a full card. When the
+        // skimmability wave's one-liner renderer is present (feature-detected
+        // — it ships on its own branch), the fold shows as that one-liner;
+        // otherwise the record is simply folded behind the count note below.
+        if (entry._duplicateOfKept)
+          return (
+            (typeof this.buildDuplicateFoldedLineHtml === "function" &&
+              this.buildDuplicateFoldedLineHtml(entry)) ||
+            ""
+          );
         // The drop entry keeps the full event under `.event`; older/partial
         // entries fall back to the flat summary fields so a card still renders.
         const hasFullEvent = !!(entry.event && typeof entry.event === "object");
