@@ -16992,3 +16992,92 @@ test('pipeline order: counters stay truthful — duplicatesRemoved covers the FU
     result.events.length + (result.bearDroppedEvents || []).length
   );
 });
+
+// ---------------------------------------------------------------------------
+// junk-title (sanity rule 8) + its write withhold, and template-entry
+// filtering — fix wave 4. junk-title is the ONE enforced sanity code:
+// detection is deterministic (≤3 plain word tokens ending in an arrow/chevron
+// glyph — link-text shape, not a phrase blocklist), the record stays in
+// results (flag, don't drop), and filterEventsForExecution withholds the
+// calendar write.
+// ---------------------------------------------------------------------------
+
+test('sanity: CTA/navigation link text as a title flags junk-title; real titles never do', () => {
+  const core = createSanityCore();
+  // Run 20260811-141004 (3 Dollar Bill): six segments whose whole text was
+  // "View Event →\nAug\n4:00 PM" each became a calendar event.
+  assert.deepEqual(sanityCodes(core, { title: 'View Event →' }), ['junk-title']);
+  assert.deepEqual(sanityCodes(core, { title: 'Tickets »' }), ['junk-title']);
+  // Real titles that must never flag.
+  assert.deepEqual(sanityCodes(core, { title: 'WINK: LESBIAN LEATHER & LACE' }), []);
+  assert.deepEqual(sanityCodes(core, { title: 'Bear Tea' }), []);
+  assert.deepEqual(sanityCodes(core, { title: '🍸 Cocktail Party' }), []);
+  assert.deepEqual(sanityCodes(core, { title: 'THE HUNT' }), []);
+  // Conservative by design: a non-letter token breaks the link-text shape
+  // even with a trailing arrow, and a mid-title ">" is not a terminal glyph.
+  assert.deepEqual(sanityCodes(core, { title: 'MEAT RACK 2026 →' }), []);
+  assert.deepEqual(sanityCodes(core, { title: 'Bears > Twinks' }), []);
+});
+
+test('junk-title records are withheld from calendar execution with the 🚫 JUNK TITLE line, but stay in results', async () => {
+  const core = createCore();
+  const buildScraped = (title) => ({
+    title,
+    // Future-dated on purpose: a fully-elapsed span would trip wave 3's
+    // span-fully-past flag once both waves land, and this test isolates
+    // the junk-title flag.
+    startDate: new Date('2027-08-08T02:00:00.000Z'),
+    endDate: new Date('2027-08-08T07:00:00.000Z'),
+    bar: 'STATION 4',
+    city: 'dallas',
+    shortName: 'TAGS' // keeps the shortName derivation pass inert
+  });
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logLines.push(args.join(' ')); };
+  let flagged;
+  let clean;
+  try {
+    flagged = await core.prepareEventsForCalendar(
+      [buildScraped('View Event →')], buildPrepCalendarAdapter([]), {});
+    clean = await core.prepareEventsForCalendar(
+      [buildScraped('Bear Tea')], buildPrepCalendarAdapter([]), {});
+  } finally {
+    console.log = originalLog;
+  }
+  // Flag, don't drop: the record is analyzed, flagged, and visible.
+  assert.equal(flagged.length, 1);
+  assert.deepEqual(flagged[0]._sanityFlags.map(flag => flag.code), ['junk-title']);
+  assert.deepEqual(clean[0]._sanityFlags, []);
+  // The withhold decision is logged at the stamp site.
+  const junkLines = logLines.filter(line => line.startsWith('🚫 JUNK TITLE: '));
+  assert.deepEqual(junkLines, [
+    '🚫 JUNK TITLE: "View Event →" withheld from calendar write — CTA/navigation link text (report-only: still shown in results)'
+  ]);
+  // The gate itself: the flagged record never reaches execution; the clean
+  // twin passes through untouched.
+  assert.deepEqual(
+    SharedCore.filterEventsForExecution([flagged[0], clean[0]]),
+    [clean[0]]);
+  assert.equal(SharedCore.hasJunkTitleSanityFlag(flagged[0]), true);
+  assert.equal(SharedCore.hasJunkTitleSanityFlag(clean[0]), false);
+});
+
+test('template entries are never runnable: evaluateAutomationForParser refuses them in every mode', () => {
+  const core = createCore();
+  const template = { name: 'New Site Template', template: true, automationEnabled: true };
+  // Automation mode (filterParsers) and manual mode both refuse.
+  assert.deepEqual(
+    core.evaluateAutomationForParser(template, { filterParsers: true }),
+    { shouldRun: false, reason: 'template-entry' });
+  assert.deepEqual(
+    core.evaluateAutomationForParser(template, null),
+    { shouldRun: false, reason: 'template-entry' });
+  // Live entries are unaffected in both modes.
+  assert.deepEqual(
+    core.evaluateAutomationForParser({ name: 'Live Parser' }, { filterParsers: true }),
+    { shouldRun: true, reason: null });
+  assert.deepEqual(
+    core.evaluateAutomationForParser({ name: 'Live Parser' }, null),
+    { shouldRun: true, reason: null });
+});

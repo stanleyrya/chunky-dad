@@ -7693,3 +7693,147 @@ test('WebAdapter.postForm mirrors the contract too: 5xx throws stamped, 4xx keep
     global.fetch = originalFetch;
   }
 });
+
+// ---------------------------------------------------------------------------
+// Fix wave 4: multi-day card dates, empty-run suppression, template entries,
+// junk-title withhold labeling.
+// ---------------------------------------------------------------------------
+
+test('generateEventCard renders the end date on multi-day events and stays start-only for same-day events', () => {
+  // Real timezone config for the real record: Spooky Bear, run
+  // 20260811-155725 — Oct 29 → Nov 2 2026, ptown (America/New_York).
+  const adapter = new ScriptableAdapter({
+    cities: { ptown: { timezone: 'America/New_York', patterns: ['ptown'] } }
+  });
+  const tz = { timeZone: 'America/New_York' };
+  const fmtDate = (date) => date.toLocaleDateString('en-US', {
+    weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', ...tz
+  });
+  const fmtTime = (date) => date.toLocaleTimeString('en-US', {
+    hour: 'numeric', minute: '2-digit', ...tz
+  });
+
+  const start = new Date('2026-10-29T04:00:00.000Z');
+  const end = new Date('2026-11-02T04:59:59.000Z');
+  assert.notEqual(fmtDate(start), fmtDate(end), 'fixture spans calendar days');
+  const multiDay = adapter.generateEventCard({
+    title: 'Spooky Bear',
+    _action: 'new',
+    startDate: '2026-10-29T04:00:00.000Z',
+    endDate: '2026-11-02T04:59:59.000Z',
+    city: 'ptown'
+  });
+  // Both dates appear, joined as "<start date> <start time> - <end date> <end time>".
+  assert.ok(multiDay.includes(fmtDate(start)), 'start date renders');
+  assert.ok(multiDay.includes(fmtDate(end)), 'end date renders');
+  assert.ok(
+    multiDay.includes(`${fmtDate(start)} ${fmtTime(start)} - ${fmtDate(end)} ${fmtTime(end)}`),
+    'multi-day span renders both dates with their times');
+
+  // Same-calendar-day events keep the original start-only format.
+  const sameStart = new Date('2026-10-29T18:00:00.000Z');
+  const sameEnd = new Date('2026-10-29T23:00:00.000Z');
+  assert.equal(fmtDate(sameStart), fmtDate(sameEnd), 'fixture is one calendar day');
+  const sameDay = adapter.generateEventCard({
+    title: 'Bear Tea',
+    _action: 'new',
+    startDate: '2026-10-29T18:00:00.000Z',
+    endDate: '2026-10-29T23:00:00.000Z',
+    city: 'ptown'
+  });
+  assert.ok(
+    sameDay.includes(`${fmtDate(sameStart)} ${fmtTime(sameStart)} - ${fmtTime(sameEnd)}`),
+    'same-day span is unchanged');
+  assert.ok(
+    !sameDay.includes(` - ${fmtDate(sameEnd)}`),
+    'no end date on a same-day card');
+});
+
+test('zero-parsers-processed runs neither save nor present, but parsers-with-zero-events still save', async () => {
+  const buildResults = (parserResults) => ({
+    totalEvents: 0,
+    rawBearEvents: 0,
+    bearEvents: 0,
+    duplicatesRemoved: 0,
+    calendarEvents: 0,
+    errors: [],
+    analyzedEvents: [],
+    parserResults,
+    config: { parsers: [{ name: 'Live Parser', enabled: true }], runtime: {} }
+  });
+  const drive = async (results) => {
+    const adapter = buildAdapter();
+    const calls = { saved: 0, presented: 0 };
+    // Keep the save/UI decision logic real; stub the heavy display helpers
+    // and every storage side effect.
+    adapter.displayCalendarProperties = async () => {};
+    adapter.compareWithExistingCalendars = async () => {};
+    adapter.displayEnrichedEvents = async () => {};
+    adapter.persistRunSnapshot = async () => { calls.saved += 1; };
+    adapter.presentRichResults = async () => { calls.presented += 1; };
+    adapter.ensureRelativeStorageDirs = async () => {};
+    adapter.appendLogSummary = async () => {};
+    adapter.cleanupOldFiles = async () => 0;
+    adapter.buildMetricsRecord = () => null;
+    const logLines = [];
+    const originalLog = console.log;
+    console.log = (...args) => { logLines.push(args.join(' ')); };
+    try {
+      await adapter.displayResults(results);
+    } finally {
+      console.log = originalLog;
+    }
+    return { calls, logLines };
+  };
+
+  // Start pressed, no parser ever processed (e.g. picker cancelled): no run
+  // file, no results sheet, and the reason is logged.
+  const emptyRun = await drive(buildResults([]));
+  assert.equal(emptyRun.calls.saved, 0, 'zero-parsers-processed run is not saved');
+  assert.equal(emptyRun.calls.presented, 0, 'zero-parsers-processed run presents no UI');
+  assert.ok(
+    emptyRun.logLines.some((line) =>
+      line === '📱 Scriptable: Zero parsers processed this run — skipping run save and results UI'),
+    'the suppression is logged');
+
+  // A run that processed parsers and found 0 events is a REAL run (audit
+  // doctrine): it must still save and still present.
+  const zeroEvents = await drive(buildResults([
+    { name: 'Live Parser', totalEvents: 0, rawBearEvents: 0, bearEvents: 0, duplicatesRemoved: 0 }
+  ]));
+  assert.ok(zeroEvents.calls.saved >= 1, '0-event run with processed parsers still saves');
+  assert.equal(zeroEvents.calls.presented, 1, 'and still presents the results UI');
+});
+
+test('template entries are invisible to parser-name override matching', () => {
+  const adapter = buildAdapter();
+  const config = {
+    parsers: [
+      { name: 'New Site Template', template: true, urls: ['https://example.com/events'] },
+      { name: 'Live Parser', urls: ['https://example.org/events'] }
+    ]
+  };
+  // Even an exact-name request cannot run a template entry, and the error's
+  // available-parsers list does not advertise it.
+  assert.throws(
+    () => adapter.buildParserNameOverrideConfig('New Site Template', config),
+    /not found in scraper-input\.js\. Available parsers: Live Parser$/);
+  const live = adapter.buildParserNameOverrideConfig('Live Parser', config);
+  assert.equal(live.parserConfig.name, 'Live Parser');
+});
+
+test('junk-title flagged events surface Write: withheld instead of promising a CREATE', () => {
+  const adapter = buildAdapter();
+  const event = {
+    title: 'View Event →',
+    _action: 'new',
+    startDate: '2026-08-15T02:00:00.000Z',
+    city: 'unknown',
+    _sanityFlags: [{ code: 'junk-title', detail: 'title reads as link/CTA text' }]
+  };
+  assert.equal(adapter.getWriteActionFromEvent(event), 'withheld');
+  // The card still renders (flag, don't drop) and carries the sanity badge.
+  const html = adapter.generateEventCard(event);
+  assert.ok(html.includes('sanity-flag-badge'));
+  assert.ok(html.includes('junk-title'));
+});

@@ -1861,6 +1861,36 @@ class SharedCore {
             }
         }
 
+        // 8. junk-title — the title is navigation/CTA link text scraped as an
+        //    event name. Run 20260811-141004 (3 Dollar Bill): six segments
+        //    whose ENTIRE text was "View Event →\nAug\n4:00 PM" each became a
+        //    calendar event titled "View Event →". The tell is generic, not a
+        //    phrase blocklist: the title ENDS in an arrow/chevron glyph — a
+        //    link affordance; real event names don't point anywhere — and what
+        //    precedes the arrow is at most three plain word tokens (letters
+        //    only, so dates/prices/emoji never qualify as link text). "WINK:
+        //    LESBIAN LEATHER & LACE", "Bear Tea", "🍸 Cocktail Party",
+        //    "THE HUNT" carry no terminal arrow and can never flag. A
+        //    title that is ONLY arrows has no letters and is already rule 3's
+        //    case. Unlike the codes above, this one is additionally consumed
+        //    by the calendar write path, which withholds the write for flagged
+        //    records (the card still shows them — flag, don't drop; the
+        //    withhold lives at the write site, not here).
+        if (title) {
+            const arrowTail = title.match(/(?:\s*(?:→|⇒|⟶|➔|➜|›|»|≫|>|▶|►)+)+$/u);
+            if (arrowTail) {
+                const preArrow = title.slice(0, title.length - arrowTail[0].length).trim();
+                const tokens = preArrow ? preArrow.split(/\s+/) : [];
+                if (tokens.length > 0 && tokens.length <= 3
+                    && tokens.every(token => /^\p{L}+$/u.test(token))) {
+                    flags.push({
+                        code: 'junk-title',
+                        detail: `title reads as link/CTA text (${tokens.length} plain word${tokens.length === 1 ? '' : 's'} ending in an arrow/chevron)`
+                    });
+                }
+            }
+        }
+
         return flags;
     }
 
@@ -3702,6 +3732,12 @@ class SharedCore {
     }
 
     evaluateAutomationForParser(parserConfig, automationContext) {
+        // Documentation-only template entries (template: true in
+        // scraper-input.js) are never runnable in ANY mode — checked before
+        // the filterParsers early-return so manual runs skip them too.
+        if (parserConfig && parserConfig.template === true) {
+            return { shouldRun: false, reason: 'template-entry' };
+        }
         if (!automationContext || !automationContext.filterParsers) {
             return { shouldRun: true, reason: null };
         }
@@ -3850,6 +3886,18 @@ class SharedCore {
 
         if (disabledParsers.length > 0) {
             await displayAdapter.logInfo(`SYSTEM: Skipped disabled parsers: ${disabledParsers.join(', ')}`);
+        }
+
+        // Template entries are skipped in every mode; in automation mode the
+        // "Skipped parsers (automation)" line below already names them, so
+        // this line keeps the skip visible on manual runs too.
+        if (!automationContext.filterParsers) {
+            const templateSkipped = automationSkipped
+                .filter(item => item.reason === 'template-entry')
+                .map(item => item.name);
+            if (templateSkipped.length > 0) {
+                await displayAdapter.logInfo(`SYSTEM: Skipped template entries (documentation-only): ${templateSkipped.join(', ')}`);
+            }
         }
 
         if (automationContext.filterParsers) {
@@ -11322,11 +11370,26 @@ class SharedCore {
     // an occurrence object detaches that occurrence instead of editing the
     // series (see the EKSpanThisEvent evidence in buildAnalyzedCalendarEvent).
     // Series edits go through the ICS channel, which owns UID + SEQUENCE.
+    // junk-title sanity-flagged events are withheld the same way: CTA link
+    // text ("View Event →") is not an event name, so the record stays fully
+    // visible in results (flag, don't drop) but never reaches a write — see
+    // getEventSanityFlags rule 8 and the 🚫 JUNK TITLE log at the stamp site.
     static filterEventsForExecution(analyzedEvents) {
         if (!Array.isArray(analyzedEvents)) return [];
         return analyzedEvents.filter(event =>
             event?._parserConfig?.dryRun !== true &&
-            !SharedCore.isRecurringSeriesEvent(event));
+            !SharedCore.isRecurringSeriesEvent(event) &&
+            !SharedCore.hasJunkTitleSanityFlag(event));
+    }
+
+    // True when the stamped sanity flags include the junk-title code — the
+    // one sanity code that is ENFORCED (write withheld) rather than
+    // report-only. Kept as its own predicate so the execution filter, the
+    // stamp-site log, and the adapters' "withheld" labeling all agree on
+    // exactly what counts.
+    static hasJunkTitleSanityFlag(event) {
+        return Array.isArray(event?._sanityFlags)
+            && event._sanityFlags.some(flag => flag && flag.code === 'junk-title');
     }
 
     // An event that DEFINES a recurring series: stamped _recurring in
@@ -12946,10 +13009,20 @@ class SharedCore {
             // serialization like _evidenceLines) and surfaced by the
             // adapters. Flags NEVER change _action, withhold a write, or
             // reorder anything — enforcement, if ever, is a separately
-            // approved change.
+            // approved change. ONE such approval exists: `junk-title`
+            // (rule 8 — CTA link text as an event name) is withheld from
+            // calendar execution by filterEventsForExecution; nothing about
+            // that changes _action or this stamping, and the card stays in
+            // the results UI.
             analyzedEvent._sanityFlags = this.getEventSanityFlags(analyzedEvent);
             if (analyzedEvent._sanityFlags.length > 0) {
                 console.log(`⚠️ SANITY: "${analyzedEvent.title || 'Unknown'}" flagged ${analyzedEvent._sanityFlags.map(flag => flag.code).join(', ')} — ${analyzedEvent._sanityFlags[0].detail}`);
+            }
+            // The one enforced sanity code, logged at the stamp site so the
+            // run log shows the withhold decision next to the flag that
+            // caused it (the actual gate is filterEventsForExecution).
+            if (SharedCore.hasJunkTitleSanityFlag(analyzedEvent)) {
+                console.log(`🚫 JUNK TITLE: "${analyzedEvent.title || 'Unknown'}" withheld from calendar write — CTA/navigation link text (report-only: still shown in results)`);
             }
 
             // Recurring series are display+export only: keep the card in the

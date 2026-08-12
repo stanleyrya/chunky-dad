@@ -2341,12 +2341,16 @@ class ScriptableAdapter {
 
     const normalizedTarget = this.normalizeParserName(parserName);
     const matchingParser = config.parsers.find((parser) => {
+      // Documentation-only template entries are never runnable, even by
+      // explicit name — remove `template: true` from the entry to go live.
+      if (parser && parser.template === true) return false;
       const name = parser && parser.name ? parser.name : "";
       return this.normalizeParserName(name) === normalizedTarget;
     });
 
     if (!matchingParser) {
       const availableParsers = config.parsers
+        .filter((parser) => !(parser && parser.template === true))
         .map((parser) => (parser && parser.name ? parser.name : ""))
         .filter((name) => this.hasNonEmptyValue(name));
       const availableLabel =
@@ -5033,6 +5037,9 @@ class ScriptableAdapter {
       const automationFilterForSave =
         automationRunForSave && runtimeForSave.automationFilter !== false;
       const activeParsers = parserConfigs.filter((parser) => {
+        // Template entries are never runnable in any mode (mirrors the
+        // template-entry check in SharedCore.evaluateAutomationForParser)
+        if (parser && parser.template === true) return false;
         if (automationFilterForSave) {
           // Mirrors SharedCore.evaluateAutomationForParser: automationEnabled
           // defaults to true, only an explicit false opts out
@@ -5041,10 +5048,25 @@ class ScriptableAdapter {
         return parser?.enabled !== false;
       });
       const hasActiveParsers = activeParsers.length > 0;
+      // Zero parsers PROCESSED is different from zero events found. Each
+      // parser that actually ran pushed an entry onto results.parserResults
+      // (SharedCore.processEvents does this unconditionally per processed
+      // parser, even for 0-event and discovery-only results) — so an empty
+      // parserResults means the run never did anything: start pressed and
+      // closed, picker cancelled, or every parser skipped. Those runs used
+      // to save a junk run file AND pop the results sheet. A run that
+      // processed parsers and found 0 events still has parserResults entries
+      // and MUST still save (audit doctrine: no silent partial/empty holes).
+      const hasProcessedParsers =
+        Array.isArray(results?.parserResults) &&
+        results.parserResults.length > 0;
+      const suppressEmptyRun =
+        !results?._isDisplayingSavedRun && !hasProcessedParsers;
       const shouldSaveRun =
         !results?._isDisplayingSavedRun &&
         hasAnalyzedEvents &&
-        hasActiveParsers;
+        hasActiveParsers &&
+        hasProcessedParsers;
       const retentionDays = 30;
 
       // ------------------------------------------------------------------
@@ -5070,7 +5092,13 @@ class ScriptableAdapter {
       }
 
       const shouldSkipUi = this.shouldSkipResultsUi(results);
-      if (!shouldSkipUi) {
+      if (suppressEmptyRun) {
+        // Nothing ran — nothing to review. Saved-run display is exempt above
+        // (an explicitly requested saved run always presents).
+        console.log(
+          "📱 Scriptable: Zero parsers processed this run — skipping run save and results UI",
+        );
+      } else if (!shouldSkipUi) {
         // Present rich UI display (may update results.calendarEvents if user executes)
         await this.presentRichResults(results);
       } else {
@@ -5087,11 +5115,13 @@ class ScriptableAdapter {
       } else {
         const reason = results?._isDisplayingSavedRun
           ? "display mode"
-          : !hasActiveParsers
-            ? automationFilterForSave
-              ? "no automation-enabled parsers"
-              : "no enabled parsers"
-            : "missing analyzed events";
+          : !hasProcessedParsers
+            ? "zero parsers processed"
+            : !hasActiveParsers
+              ? automationFilterForSave
+                ? "no automation-enabled parsers"
+                : "no enabled parsers"
+              : "missing analyzed events";
         console.log(`📱 Scriptable: Skipping run save (${reason})`);
       }
 
@@ -10710,6 +10740,28 @@ class ScriptableAdapter {
           ...timeZoneOptions,
         })
       : "";
+    // Multi-day events: when the end falls on a DIFFERENT calendar day than
+    // the start in the event's timezone, render the end DATE too — an
+    // Aug 28–31 festival card used to read "Thu, Aug 28 … 9:00 PM - 2:00 AM"
+    // as if it were one Thursday night. Same-calendar-day events render
+    // byte-identically to before. A past-midnight bar night (9 PM - 2 AM)
+    // does cross a calendar day, so its card now says which day the 2 AM
+    // belongs to — that is the disambiguation this exists for. Day equality
+    // is judged in the event's timezone via the same toLocaleDateString
+    // options, never via UTC date math.
+    const isMultiDay =
+      endDate &&
+      endDate.toLocaleDateString("en-US", timeZoneOptions) !==
+        eventDate.toLocaleDateString("en-US", timeZoneOptions);
+    const endDateStr = isMultiDay
+      ? endDate.toLocaleDateString("en-US", {
+          weekday: "short",
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+          ...timeZoneOptions,
+        })
+      : "";
 
     // Also show UTC time for verification
     const utcTimeStr = eventDate.toLocaleTimeString("en-US", {
@@ -10724,6 +10776,21 @@ class ScriptableAdapter {
           timeZone: "UTC",
         })
       : "";
+    // Same multi-day treatment for the UTC verification row, judged in UTC
+    // calendar days (which can differ from the event-timezone judgement
+    // above — each row is honest about its own timezone).
+    const endUtcDateStr =
+      endDate &&
+      endDate.toLocaleDateString("en-US", { timeZone: "UTC" }) !==
+        eventDate.toLocaleDateString("en-US", { timeZone: "UTC" })
+        ? endDate.toLocaleDateString("en-US", {
+            weekday: "short",
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            timeZone: "UTC",
+          })
+        : "";
 
     // Use the final notes that will actually be saved
     const notes = event.notes || "";
@@ -10788,11 +10855,23 @@ class ScriptableAdapter {
                 ${evidenceBlock}
                 <div class="event-detail">
                     <span>📅</span>
-                    <span>${dateStr} ${timeStr}${endTimeStr ? ` - ${endTimeStr}` : ""}</span>
+                    <span>${dateStr} ${timeStr}${
+                      endDateStr
+                        ? ` - ${endDateStr} ${endTimeStr}`
+                        : endTimeStr
+                          ? ` - ${endTimeStr}`
+                          : ""
+                    }</span>
                 </div>
                 <div class="event-detail" style="font-size: 12px; color: #666; margin-left: 20px;">
                     <span>🌍</span>
-                    <span>UTC: ${utcTimeStr}${endUtcTimeStr ? ` - ${endUtcTimeStr}` : ""}</span>
+                    <span>UTC: ${utcTimeStr}${
+                      endUtcDateStr
+                        ? ` - ${endUtcDateStr} ${endUtcTimeStr}`
+                        : endUtcTimeStr
+                          ? ` - ${endUtcTimeStr}`
+                          : ""
+                    }</span>
                 </div>
                 <div class="event-detail">
                     <span>📱</span>
@@ -12419,7 +12498,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
   // parsers run), never as run-as-configured.
   async presentParserPicker(config) {
     try {
-      const parsers = Array.isArray(config?.parsers) ? config.parsers : [];
+      // Documentation-only template entries (template: true) never appear in
+      // the picker — they are config to copy, not parsers to run.
+      const parsers = (
+        Array.isArray(config?.parsers) ? config.parsers : []
+      ).filter((parser) => !(parser && parser.template === true));
       if (parsers.length === 0) return null;
 
       const records = await this.readMetricsRecordsForPicker();
@@ -13851,6 +13934,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     // buckets off normalizeWriteAction, not this, so the metrics schema is
     // untouched.
     if (SharedCore.isRecurringSeriesEvent(event)) return "withheld";
+    // junk-title sanity-flagged events are withheld by the same
+    // filterEventsForExecution gate (CTA link text is not an event name) —
+    // the card must say so instead of promising a CREATE that never runs.
+    if (SharedCore.hasJunkTitleSanityFlag(event)) return "withheld";
     // Same display-only treatment for the other direction: a slot-host source
     // fills in ONE dated occurrence of somebody else's series, so the write is
     // neither a new event nor a change to the series. Checked after the
