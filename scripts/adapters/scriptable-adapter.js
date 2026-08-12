@@ -6931,12 +6931,12 @@ class ScriptableAdapter {
             background: var(--background-primary);
             border: 1px solid var(--border-color);
             border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 16px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             box-shadow: var(--card-shadow);
         }
-        
+
         .event-card:hover {
             box-shadow: var(--card-hover-shadow);
             transform: translateY(-3px);
@@ -6949,22 +6949,81 @@ class ScriptableAdapter {
             border-left: 4px solid var(--secondary-color);
         }
 
-        /* Wave 6 — skimmable headline + collapsed per-card detail expander. */
+        /* Wave 7 — dense default face: thumbnail + title + full date line +
+           route line all visible with no tap, shrunk type/spacing instead of
+           hidden content. The expander below holds only secondary material. */
         .event-headline {
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .event-headline-badges {
-            margin-bottom: 6px;
+            margin-bottom: 4px;
+        }
+
+        .event-headline-main {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+        }
+
+        .event-headline-body {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+        /* Default-visible thumbnail: fixed small vertical slot, object-fit
+           cover — a giant poster can never blow up the card height. */
+        .event-thumb {
+            flex: 0 0 auto;
+        }
+
+        .event-thumb img {
+            display: block;
+            width: 64px;
+            height: 88px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .venue-placeholder-thumb img {
+            filter: grayscale(1);
+            opacity: 0.5;
+        }
+
+        .event-thumb-badge {
+            max-width: 64px;
+            font-size: 9px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-top: 2px;
+            line-height: 1.2;
         }
 
         .event-headline-meta {
             display: flex;
             flex-wrap: wrap;
-            gap: 6px 16px;
-            font-size: 14px;
+            gap: 4px 12px;
+            font-size: 13px;
             color: var(--text-primary);
-            margin-top: 6px;
+            margin-top: 2px;
+        }
+
+        .no-end-note {
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        /* Compact route line: bar • short address • pin link. */
+        .event-route-line {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 3px;
+            word-break: break-word;
+        }
+
+        .route-sep {
+            opacity: 0.6;
         }
 
         .headline-reason-chip {
@@ -7050,21 +7109,24 @@ class ScriptableAdapter {
             margin-bottom: 4px;
         }
 
-        /* Bear verdict row: both directions on every card, active one filled. */
+        /* Bear verdict: both directions on every card, active one filled.
+           Wave 7 shrinks it to an icon-scale inline toggle (owner feedback:
+           "bear verdict takes up too much space") — same handlers, same
+           ids, the button words visually hidden, not removed. */
         .bear-verdict-row {
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 5px;
             flex-wrap: wrap;
-            margin: 0 0 12px 0;
-            padding: 8px 10px;
+            margin: 0 0 6px 0;
+            padding: 2px 8px;
             background: var(--background-light);
             border: 1px solid var(--border-color);
-            border-radius: 10px;
+            border-radius: 999px;
         }
 
         .bear-verdict-label {
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 600;
             letter-spacing: 0.06em;
             text-transform: uppercase;
@@ -7073,15 +7135,26 @@ class ScriptableAdapter {
 
         .bear-verdict-btn {
             font-family: var(--font-sans);
-            font-size: 12px;
+            font-size: 14px;
+            line-height: 1;
             font-weight: 600;
-            padding: 6px 12px;
+            padding: 3px 8px;
             border-radius: 999px;
             border: 1px solid var(--border-color);
             background: var(--background-primary);
             color: var(--text-secondary);
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Accessible words for the icon toggle, off-screen not deleted. */
+        .bear-verdict-btn-text {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0 0 0 0);
+            white-space: nowrap;
         }
 
         .bear-verdict-btn:hover:not(:disabled) {
@@ -7114,14 +7187,68 @@ class ScriptableAdapter {
             color: var(--text-secondary);
             flex: 1 1 100%;
         }
-        
+
         .event-title {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 600;
-            margin-bottom: 12px;
+            margin-bottom: 2px;
             color: var(--text-primary);
             line-height: 1.3;
             font-family: var(--font-sans);
+        }
+
+        /* ONE row format for field data: merge decisions, provenance and the
+           calendar-notes preview all render this table (field | value |
+           source/outcome | reason). */
+        .field-rows-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+            table-layout: fixed;
+        }
+
+        .field-rows-table th {
+            text-align: left;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--text-secondary);
+            padding: 4px 6px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .field-rows-table td {
+            padding: 4px 6px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: top;
+            word-break: break-word;
+        }
+
+        .field-rows-table th:nth-child(1),
+        .field-row-field { width: 20%; }
+        .field-rows-table th:nth-child(2),
+        .field-row-value { width: 38%; }
+        .field-rows-table th:nth-child(3),
+        .field-row-source { width: 22%; }
+        .field-rows-table th:nth-child(4),
+        .field-row-reason { width: 20%; color: var(--text-secondary); }
+
+        .field-row-field small {
+            color: var(--text-secondary);
+        }
+
+        .field-row-was {
+            font-size: 10px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .field-row-missing {
+            color: var(--text-secondary);
+        }
+
+        .field-row-flow {
+            opacity: 0.7;
         }
         
         .event-details {
@@ -9554,11 +9681,136 @@ class ScriptableAdapter {
   // buildRunHealthBadgeHtml).
   buildEventProvenanceHtml(event, runInfo = {}) {
     try {
-      return EventProvenance.buildEventProvenanceSectionHtml(event, {
+      const options = {
         action: this.normalizeIntentAction(event),
         runId: runInfo.runId || null,
         timestamp: runInfo.timestamp || null,
-      });
+      };
+      // ONE FORMAT (owner feedback #5): render the provenance MODEL through
+      // the adapter's shared field-row builder — field | value | source |
+      // reason — instead of the module's own five-column table, so this
+      // section reads exactly like the merge table and the notes preview.
+      // The <details class="provenance-details"> wrapper, the summary text
+      // and the export-issue control markup (exportProvenanceIssue page
+      // handler, .provenance-export* classes) are kept byte-compatible.
+      const model = EventProvenance.buildProvenanceModel(event, options);
+
+      const metaParts = [];
+      if (model.parser) metaParts.push(`Parser: ${model.parser}`);
+      if (model.action) metaParts.push(`Action: ${model.action}`);
+      if (model.arbitrationSummary) metaParts.push(model.arbitrationSummary);
+      const metaLine =
+        metaParts.length > 0
+          ? `<div class="provenance-meta">${this.escapeHtml(metaParts.join(" • "))}</div>`
+          : "";
+      const urlLine = model.sourceUrl
+        ? `<div class="provenance-meta provenance-url" title="${this.escapeHtml(model.sourceUrl)}">Source: ${this.escapeHtml(
+            model.sourceUrl.length > 80
+              ? `${ScriptableAdapter.safeSubstring(model.sourceUrl, 0, 79)}…`
+              : model.sourceUrl,
+          )}</div>`
+        : "";
+
+      let body;
+      if (!model.hasProvenance) {
+        body =
+          '<div class="provenance-note">No provenance recorded for this event (new event or older saved run).</div>';
+      } else if (model.rows.length === 0) {
+        body = `<div class="provenance-note">All ${model.unchangedCount} tracked field${
+          model.unchangedCount === 1 ? "" : "s"
+        } passed through unchanged.</div>`;
+      } else {
+        const rowsHtml = model.rows
+          .map((row) => {
+            const finalText = EventProvenance.formatValueText(row.finalValue);
+            const scraperText = EventProvenance.formatValueText(
+              row.scraperValue,
+            );
+            const calendarText = EventProvenance.formatValueText(
+              row.calendarValue,
+            );
+            const matchesScraper =
+              Boolean(finalText) &&
+              Boolean(scraperText) &&
+              EventProvenance.valuesEqual(
+                row.field,
+                row.finalValue,
+                row.scraperValue,
+              );
+            const matchesCalendar =
+              Boolean(finalText) &&
+              Boolean(calendarText) &&
+              EventProvenance.valuesEqual(
+                row.field,
+                row.finalValue,
+                row.calendarValue,
+              );
+            const sourceLabel =
+              matchesScraper && matchesCalendar
+                ? "both agree"
+                : matchesScraper
+                  ? "scraper"
+                  : matchesCalendar
+                    ? "calendar"
+                    : finalText
+                      ? "merged"
+                      : "dropped";
+            // Final value first; the losing side(s) as small sub-lines, so
+            // nothing the old Scraper/Calendar columns showed is lost.
+            const valueParts = [this.formatFieldRowValueHtml(row.finalValue)];
+            if (scraperText && !matchesScraper) {
+              valueParts.push(
+                `<div class="field-row-was">scraper: ${this.formatFieldRowValueHtml(row.scraperValue)}</div>`,
+              );
+            }
+            if (calendarText && !matchesCalendar) {
+              valueParts.push(
+                `<div class="field-row-was">calendar: ${this.formatFieldRowValueHtml(row.calendarValue)}</div>`,
+              );
+            }
+            return this.buildFieldRowHtml({
+              fieldHtml: `<strong>${this.escapeHtml(row.field)}</strong>`,
+              valueHtml: valueParts.join(""),
+              sourceHtml: this.escapeHtml(sourceLabel),
+              reasonHtml: this.escapeHtml(row.decisionText || ""),
+            });
+          })
+          .join("");
+        const unchangedNote =
+          model.unchangedCount > 0
+            ? `<div class="provenance-note">${model.unchangedCount} field${
+                model.unchangedCount === 1 ? "" : "s"
+              } unchanged</div>`
+            : "";
+        body = `
+            <div class="provenance-table-wrap">
+                ${this.buildFieldRowsTableHtml(rowsHtml)}
+            </div>
+            ${unchangedNote}`;
+      }
+
+      // Same markup contract as EventProvenance.buildExportControlsHtml —
+      // the exportProvenanceIssue page handler walks these exact classes.
+      const exportEncoded = encodeURIComponent(
+        EventProvenance.buildExportIssueCompactJson(event, options),
+      );
+      const exportControls = `
+            <div class="provenance-export">
+                <button type="button" class="provenance-export-btn" onclick="exportProvenanceIssue(this)" data-payload="${this.escapeHtml(exportEncoded)}">📤 Export issue</button>
+                <div class="provenance-export-area" style="display: none;">
+                    <textarea class="provenance-export-text" readonly rows="10" spellcheck="false" onfocus="this.select()"></textarea>
+                    <div class="provenance-export-status"></div>
+                </div>
+            </div>`;
+
+      return `
+        <details class="provenance-details">
+            <summary>🔍 Provenance</summary>
+            ${metaLine}
+            ${urlLine}
+            ${body}
+            ${exportControls}
+        </details>`;
     } catch (error) {
       console.log(
         `📱 Scriptable: Provenance section build failed for "${event?.title || "unknown"}": ${error.message}`,
@@ -10434,11 +10686,16 @@ class ScriptableAdapter {
     const note = opts.note
       ? `<span class="bear-verdict-note">${this.escapeHtml(String(opts.note))}</span>`
       : "";
+    // Compact icon-scale toggle (owner feedback #1: "bear verdict takes up
+    // too much space"). The words stay in the DOM for accessibility but are
+    // visually hidden (.bear-verdict-btn-text) — the handler ids, attribute
+    // order and row/note class names are byte-identical to the block layout
+    // so nothing behind the bridge changes.
     return `
             <div class="bear-verdict-row" data-bear-verdict="${isBear ? "bear" : "not-bear"}">
                 <span class="bear-verdict-label">Bear verdict</span>
-                ${button("mark-bear", "🐻 Mark as bear")}
-                ${button("mark-not-bear", "🚫 Mark as not bear")}
+                ${button("mark-bear", '🐻<span class="bear-verdict-btn-text">Mark as bear</span>')}
+                ${button("mark-not-bear", '🚫<span class="bear-verdict-btn-text">Mark as not bear</span>')}
                 ${note}
             </div>`;
   }
@@ -11107,6 +11364,55 @@ class ScriptableAdapter {
         `;
   }
 
+  // ---------------------------------------------------------------------------
+  // ONE row format for per-field data (owner feedback #5: "I hate how
+  // merge/provenance/calendar notes preview are all so different"). The merge
+  // comparison, the provenance section and the calendar-notes preview all
+  // render through this single row builder — field | value | source/outcome |
+  // reason — so the three surfaces read as one table style. Callers pass
+  // HTML-safe strings (escape before calling).
+  // ---------------------------------------------------------------------------
+  buildFieldRowHtml({ fieldHtml, valueHtml, sourceHtml, reasonHtml } = {}) {
+    return (
+      `<tr class="field-row">` +
+      `<td class="field-row-field">${fieldHtml || ""}</td>` +
+      `<td class="field-row-value">${valueHtml || ""}</td>` +
+      `<td class="field-row-source">${sourceHtml || ""}</td>` +
+      `<td class="field-row-reason">${reasonHtml || ""}</td>` +
+      `</tr>`
+    );
+  }
+
+  // The matching table wrapper: one header, four columns, everywhere.
+  buildFieldRowsTableHtml(rowsHtml) {
+    if (!rowsHtml) return "";
+    return (
+      `<table class="field-rows-table">` +
+      `<tr><th>Field</th><th>Value</th><th>Source / Outcome</th><th>Reason</th></tr>` +
+      rowsHtml +
+      `</table>`
+    );
+  }
+
+  // Bounded plain-text value cell for the shared row format. Escapes, cuts at
+  // a preview length with a bounded tooltip (never the whole value — that is
+  // the page-size bug the merge table already fixed), and renders missing
+  // values as an em dash.
+  formatFieldRowValueHtml(value) {
+    const text = EventProvenance.formatValueText(value);
+    if (!text) return '<em class="field-row-missing">—</em>';
+    const PREVIEW_MAX = 80;
+    const TOOLTIP_MAX = 240;
+    if (text.length <= PREVIEW_MAX) return this.escapeHtml(text);
+    // safeSubstring: cutting an emoji's surrogate pair in half blanks the page.
+    const visible = ScriptableAdapter.safeSubstring(text, 0, PREVIEW_MAX);
+    const tooltip =
+      text.length > TOOLTIP_MAX
+        ? `${ScriptableAdapter.safeSubstring(text, 0, TOOLTIP_MAX)}…`
+        : text;
+    return `<span title="${this.escapeHtml(tooltip)}">${this.escapeHtml(visible)}…</span><span class="cmp-more"> ${text.length} chars</span>`;
+  }
+
   // Generate HTML for individual event card
   generateEventCard(event, runInfo = {}, bearOptions = null) {
     // bearOptions carries this card's bear verdict + bridge index (see
@@ -11222,7 +11528,19 @@ class ScriptableAdapter {
       minute: "2-digit",
       ...timeZoneOptions,
     });
-    const endTimeStr = endDate
+    // End-time honesty (owner feedback #2): some feeds publish NO end time —
+    // Eagle LA's MEC feed stamps endDate === startDate on every event — and
+    // the old card rendered that as "9:00 PM - 9:00 PM", a fabricated end.
+    // A card may only claim an end that actually exists: the end renders
+    // only when it is strictly AFTER the start; otherwise the date line says
+    // "(no end listed)". Never fabricate.
+    const hasRealEnd = !!(
+      endDate &&
+      Number.isFinite(endDate.getTime()) &&
+      Number.isFinite(eventDate.getTime()) &&
+      endDate.getTime() > eventDate.getTime()
+    );
+    const endTimeStr = hasRealEnd
       ? endDate.toLocaleTimeString("en-US", {
           hour: "numeric",
           minute: "2-digit",
@@ -11239,7 +11557,7 @@ class ScriptableAdapter {
     // is judged in the event's timezone via the same toLocaleDateString
     // options, never via UTC date math.
     const isMultiDay =
-      endDate &&
+      hasRealEnd &&
       endDate.toLocaleDateString("en-US", timeZoneOptions) !==
         eventDate.toLocaleDateString("en-US", timeZoneOptions);
     const endDateStr = isMultiDay
@@ -11258,7 +11576,7 @@ class ScriptableAdapter {
       minute: "2-digit",
       timeZone: "UTC",
     });
-    const endUtcTimeStr = endDate
+    const endUtcTimeStr = hasRealEnd
       ? endDate.toLocaleTimeString("en-US", {
           hour: "numeric",
           minute: "2-digit",
@@ -11269,7 +11587,7 @@ class ScriptableAdapter {
     // calendar days (which can differ from the event-timezone judgement
     // above — each row is honest about its own timezone).
     const endUtcDateStr =
-      endDate &&
+      hasRealEnd &&
       endDate.toLocaleDateString("en-US", { timeZone: "UTC" }) !==
         eventDate.toLocaleDateString("en-US", { timeZone: "UTC" })
         ? endDate.toLocaleDateString("en-US", {
@@ -11300,21 +11618,49 @@ class ScriptableAdapter {
     // Event Builder prefill link (every card) + ICS export (recurring cards).
     const eventActionsRow = this.buildEventCardActionsHtml(event);
 
-    // ----- Skimmable headline (wave 6) -----------------------------------
-    // The always-visible face of the card: badges, title, 📅 date (with the
-    // end DATE when it falls on a different day) and 📍 venue. Everything
-    // else the card used to show up front — field tables, merge provenance,
-    // notes preview, debug JSON — moves into the collapsed
-    // <details class="event-card-details"> expander below. Relocated, never
-    // removed: the expander contains the card body byte-for-byte.
-    const headlineDate = `${dateStr} ${timeStr}${
-      endDateStr
-        ? ` - ${endDateStr} ${endTimeStr}`
-        : endTimeStr
-          ? ` - ${endTimeStr}`
-          : ""
+    // ----- Dense default face (wave 7) ------------------------------------
+    // The always-visible face of the card, everything a review needs with no
+    // tap (owner feedback #4/#6: "I don't like pressing 'see more' on every
+    // fucking event", "show more with less by default"): small thumbnail,
+    // badges + title, the FULL 📅 date line (start – end, end date only when
+    // it falls on a different day, "(no end listed)" when no real end
+    // exists), and one compact 📍 route line (bar • short address • pin
+    // link). Secondary material — merge diff, provenance, notes preview,
+    // debug JSON — stays behind the <details class="event-card-details">
+    // expander (feedback #7: SOME things may be behind a tap, not everything).
+    // ONE date string, used verbatim on the face and in the expander row.
+    const dateLineHtml = `${dateStr} ${timeStr}${
+      hasRealEnd
+        ? ` - ${endDateStr ? `${endDateStr} ` : ""}${endTimeStr}`
+        : ' <span class="no-end-note">(no end listed)</span>'
     }`;
     const headlineVenue = event.venue || event.bar || "";
+    // Compact route line (owner feedback #3: "I miss the route info … show
+    // the bar/address/coordinates in a smaller more easy to view way"):
+    // bar • street part of the address • the stored pin as a small Google
+    // Maps link through the SAME openMapVerify bridge the Verify row uses
+    // (full Bar/Address/Pin/Route verify links stay in the expander).
+    const routeStreetAddress =
+      typeof event.address === "string"
+        ? event.address.split(",")[0].trim()
+        : "";
+    const routePinUrl = this.buildPinMapsSearchUrl(event.location);
+    const routeParts = [];
+    if (headlineVenue) routeParts.push(this.escapeHtml(headlineVenue));
+    if (routeStreetAddress && routeStreetAddress !== headlineVenue)
+      routeParts.push(this.escapeHtml(routeStreetAddress));
+    if (routePinUrl) {
+      const routePinId = this.registerMapVerifyUrl(routePinUrl);
+      routeParts.push(
+        `<a href="#" onclick="return openMapVerify(this)" data-map-url-id="${routePinId}" class="map-verify-link route-pin-link">${this.escapeHtml(
+          this.buildPinMapsQuery(event.location),
+        )} ↗</a>`,
+      );
+    }
+    const routeLineHtml =
+      routeParts.length > 0
+        ? `<div class="event-route-line">📍 ${routeParts.join('<span class="route-sep"> • </span>')}</div>`
+        : "";
     // Reason chip ON the headline: a card that will not be written says why
     // without expanding. Dropped cards reuse the bear-check reason; withheld
     // and already-saved cards get the section reason passed in by the pile
@@ -11339,18 +11685,37 @@ class ScriptableAdapter {
         : 0;
     const isRepeatedImage = repeatedImageCount >= 3;
 
+    // Default-visible thumbnail (owner: "it removed the image" — the image
+    // MUST be visible without a tap). Fixed small vertical slot with
+    // object-fit cover (CSS .event-thumb) so a huge poster can never blow up
+    // the card height on an iPhone screen. Placeholder-badged images from
+    // the per-run census stay VISIBLE — greyed with a tiny chip, exactly the
+    // flag-don't-drop treatment the full image block in the expander uses.
+    const thumbHtml =
+      typeof event.image === "string" && event.image.trim()
+        ? `<div class="event-thumb${isRepeatedImage ? " venue-placeholder-thumb" : ""}">
+                <img src="${this.escapeHtml(event.image)}" alt="Event image" onerror="this.style.display='none'">
+                ${
+                  isRepeatedImage
+                    ? `<div class="event-thumb-badge">🖼️ placeholder ×${repeatedImageCount}</div>`
+                    : ""
+                }
+            </div>`
+        : "";
+
     let html = `
         <div class="event-card${isDroppedCard ? " bear-dropped-card" : ""}">
             <div class="event-headline">
                 <div class="event-headline-badges">${actionBadge}${recurringBadge}${seriesMatchBadge}${sanityBadge}${overrideBadge}${seriesProposalBadge}${headlineReasonChip}</div>
-                <div class="event-title">${this.escapeHtml(event.title || event.name)}</div>
-                <div class="event-headline-meta">
-                    <span class="event-headline-date">📅 ${headlineDate}</span>
-                    ${
-                      headlineVenue
-                        ? `<span class="event-headline-venue">📍 ${this.escapeHtml(headlineVenue)}</span>`
-                        : ""
-                    }
+                <div class="event-headline-main">
+                    ${thumbHtml}
+                    <div class="event-headline-body">
+                        <div class="event-title">${this.escapeHtml(event.title || event.name)}</div>
+                        <div class="event-headline-meta">
+                            <span class="event-headline-date">📅 ${dateLineHtml}</span>
+                        </div>
+                        ${routeLineHtml}
+                    </div>
                 </div>
             </div>
             ${bearVerdictRow}
@@ -11394,22 +11759,14 @@ class ScriptableAdapter {
                 ${evidenceBlock}
                 <div class="event-detail">
                     <span>📅</span>
-                    <span>${dateStr} ${timeStr}${
-                      endDateStr
-                        ? ` - ${endDateStr} ${endTimeStr}`
-                        : endTimeStr
-                          ? ` - ${endTimeStr}`
-                          : ""
-                    }</span>
+                    <span>${dateLineHtml}</span>
                 </div>
                 <div class="event-detail" style="font-size: 12px; color: #666; margin-left: 20px;">
                     <span>🌍</span>
                     <span>UTC: ${utcTimeStr}${
-                      endUtcDateStr
-                        ? ` - ${endUtcDateStr} ${endUtcTimeStr}`
-                        : endUtcTimeStr
-                          ? ` - ${endUtcTimeStr}`
-                          : ""
+                      endUtcTimeStr
+                        ? ` - ${endUtcDateStr ? `${endUtcDateStr} ` : ""}${endUtcTimeStr}`
+                        : ' <span class="no-end-note">(no end listed)</span>'
                     }</span>
                 </div>
                 <div class="event-detail">
@@ -11522,34 +11879,42 @@ class ScriptableAdapter {
                         <summary style="cursor: pointer; font-size: 13px; color: #007aff; padding: 5px;">📝 Calendar Notes Preview</summary>
                         <div class="notes-preview">
                             ${(() => {
-                              // Parse and format notes for better readability
-                              const lines = notes.split("\n");
-                              let formattedHtml = "";
-
-                              lines.forEach((line) => {
-                                const trimmed = line.trim();
-                                if (trimmed === "") {
-                                  formattedHtml += "<br>";
-                                  return;
-                                }
-
-                                const colonIndex = line.indexOf(":");
-                                if (colonIndex > 0) {
-                                  // Key-value metadata line
-                                  const key = line
-                                    .substring(0, colonIndex)
-                                    .trim();
-                                  const value = line
-                                    .substring(colonIndex + 1)
-                                    .trim();
-                                  formattedHtml += `<div class="notes-line"><strong>${this.escapeHtml(key)}:</strong> ${this.escapeHtml(value)}</div>`;
-                                } else {
+                              // ONE FORMAT (owner feedback #5): the notes
+                              // preview renders through the same
+                              // field | value | source | reason row builder
+                              // the merge table and provenance section use.
+                              const rowsHtml = notes
+                                .split("\n")
+                                .filter((line) => line.trim() !== "")
+                                .map((line) => {
+                                  const colonIndex = line.indexOf(":");
+                                  if (colonIndex > 0) {
+                                    // Key-value metadata line
+                                    const key = line
+                                      .substring(0, colonIndex)
+                                      .trim();
+                                    const value = line
+                                      .substring(colonIndex + 1)
+                                      .trim();
+                                    return this.buildFieldRowHtml({
+                                      fieldHtml: `<strong>${this.escapeHtml(key)}</strong>`,
+                                      valueHtml:
+                                        this.formatFieldRowValueHtml(value),
+                                      sourceHtml: "calendar notes",
+                                    });
+                                  }
                                   // Freeform description line
-                                  formattedHtml += `<div class="notes-line">${this.escapeHtml(line)}</div>`;
-                                }
-                              });
-
-                              return formattedHtml || "<em>No notes</em>";
+                                  return this.buildFieldRowHtml({
+                                    valueHtml:
+                                      this.formatFieldRowValueHtml(line),
+                                    sourceHtml: "calendar notes",
+                                  });
+                                })
+                                .join("");
+                              return (
+                                this.buildFieldRowsTableHtml(rowsHtml) ||
+                                "<em>No notes</em>"
+                              );
                             })()}
                         </div>
                     </details>
@@ -11622,21 +11987,14 @@ class ScriptableAdapter {
                                 📋 Copy JSON
                             </button>
                         </div>
-                        <table class="cmp-table">
-                            <tr>
-                                <th>Field</th>
-                                <th>Existing Event</th>
-                                <th class="cmp-flow">Flow</th>
-                                <th>New Event</th>
-                                <th>Result</th>
-                            </tr>
-                            ${this.claimMergeDiffBudget(
-                              "field-by-field comparison",
-                              this.generateComparisonRows(event),
-                              event,
-                              { asTableRow: true },
-                            )}
-                        </table>
+                        ${this.buildFieldRowsTableHtml(
+                          this.claimMergeDiffBudget(
+                            "field-by-field comparison",
+                            this.generateComparisonRows(event),
+                            event,
+                            { asTableRow: true },
+                          ),
+                        )}
                     </div>
                     
                     <!-- Line view (hidden by default) -->
@@ -12319,8 +12677,9 @@ class ScriptableAdapter {
       text.length / 1024,
     )} KB) and was deferred to keep the page renderable. The same before/after values are in this card's 📋 Copy JSON and in the saved run JSON.`;
     // A <table> child has to stay a row or the WebView drops it entirely.
+    // colspan 4 = the shared field-row format (field | value | source | reason).
     return asTableRow
-      ? `<tr><td colspan="5" class="payload-cap-note">${notice}</td></tr>`
+      ? `<tr><td colspan="4" class="payload-cap-note">${notice}</td></tr>`
       : `<div class="payload-cap-note">${notice}</div>`;
   }
 
@@ -13771,9 +14130,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
           )
         : null;
 
-      // Determine flow direction and result
+      // Determine flow direction and result. The WHY of a recorded decision
+      // goes into its own reason cell (the shared row format's fourth
+      // column) instead of being glued onto the outcome label.
       let flowIcon = "";
       let resultText = "";
+      let reasonCellHtml = "";
 
       if (decisionRecord) {
         const keptExisting = mergeValuesLookIdentical(
@@ -13788,22 +14150,22 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
           : tookNew
             ? "took new"
             : "rewrote";
-        const reason = decisionRecord.reason
-          ? ` — ${this.escapeHtml(String(decisionRecord.reason))}`
+        reasonCellHtml = decisionRecord.reason
+          ? this.escapeHtml(String(decisionRecord.reason))
           : "";
         const source = String(decisionRecord.source || "").toLowerCase();
         flowIcon = keptExisting ? "←" : "→";
         if (source === "deterministic") {
-          resultText = `<span style="color: #007aff;">🔒 DETERMINISTIC — ${outcome}${reason}</span>`;
+          resultText = `<span style="color: #007aff;">🔒 DETERMINISTIC — ${outcome}</span>`;
         } else if (source === "sticky") {
           flowIcon = "←";
-          resultText = `<span style="color: #007aff;">🧊 KEPT EXISTING (calendar stickiness)${reason}</span>`;
+          resultText = `<span style="color: #007aff;">🧊 KEPT EXISTING (calendar stickiness)</span>`;
         } else if (source === "ai") {
-          resultText = `<span style="color: #34c759;">🤝 AI — ${keptExisting ? "chose existing" : "chose new"}${reason}</span>`;
+          resultText = `<span style="color: #34c759;">🤝 AI — ${keptExisting ? "chose existing" : "chose new"}</span>`;
         } else if (source === "fallback") {
-          resultText = `<span style="color: #ff9500;">⚠️ NO AI ANSWER — ${outcome} (clobber fallback)${reason}</span>`;
+          resultText = `<span style="color: #ff9500;">⚠️ NO AI ANSWER — ${outcome} (clobber fallback)</span>`;
         } else {
-          resultText = `<span style="color: #999;">${this.escapeHtml(source || "resolved")} — ${outcome}${reason}</span>`;
+          resultText = `<span style="color: #999;">${this.escapeHtml(source || "resolved")} — ${outcome}</span>`;
         }
       } else if (!existingValue && newValue) {
         // New field being added
@@ -13942,12 +14304,38 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
           clobber: "fresh wins",
         }[strategy] || strategy;
 
+      // Shared row format (field | value | source/outcome | reason): the
+      // value cell leads with the FINAL value; when the sides disagreed, the
+      // losing side(s) ride along as small "calendar:"/"scraped:" sub-lines
+      // (same anchored, bounded truncation as before), so the row still
+      // shows what the merge chose BETWEEN.
+      const finalMatchesExisting = mergeValuesLookIdentical(
+        finalValue,
+        existingValue,
+      );
+      const finalMatchesNew = mergeValuesLookIdentical(finalValue, newValue);
+      const sidesAgree = mergeValuesLookIdentical(existingValue, newValue);
+      const valueParts = [formatValue(finalValue, diffAnchor)];
+      if (!sidesAgree) {
+        if (!finalMatchesExisting) {
+          valueParts.push(
+            `<div class="field-row-was">calendar: ${formatValue(existingValue, diffAnchor)}</div>`,
+          );
+        }
+        if (!finalMatchesNew) {
+          valueParts.push(
+            `<div class="field-row-was">scraped: ${formatValue(newValue, diffAnchor)}</div>`,
+          );
+        }
+      }
+
       rows.push(
-        `<tr><td class="cmp-field"><strong>${field}</strong><br><small>${strategyLabel}</small></td>` +
-          `<td>${formatValue(existingValue, diffAnchor)}</td>` +
-          `<td class="cmp-flow">${flowIcon}</td>` +
-          `<td>${formatValue(newValue, diffAnchor)}</td>` +
-          `<td class="cmp-result">${resultText}</td></tr>`,
+        this.buildFieldRowHtml({
+          fieldHtml: `<strong>${field}</strong><br><small>${strategyLabel}</small>`,
+          valueHtml: valueParts.join(""),
+          sourceHtml: `${flowIcon ? `<span class="field-row-flow">${flowIcon}</span> ` : ""}${resultText}`,
+          reasonHtml: reasonCellHtml,
+        }),
       );
     });
 
