@@ -11791,6 +11791,150 @@ class SharedCore {
             && event._sanityFlags.some(flag => flag && flag.code === 'junk-title');
     }
 
+    // -------------------------------------------------------------------------
+    // EXECUTE FROM SAVED RUN — re-analysis support (platform-pure).
+    //
+    // A saved run's calendar analysis is STALE by definition: the calendar has
+    // changed since the run was saved (events written/deleted, verdicts
+    // flipped, other runs executed). Executing a saved run therefore NEVER
+    // replays its saved intents — the saved analyzedEvents are stripped back
+    // to their underlying event data and pushed through the SAME live
+    // prepareEventsForCalendar path a live run uses, and only the FRESH plan
+    // executes. (Replay is also structurally impossible: a merge needs a live
+    // _existingEvent calendar object, and the run file only holds a JSON
+    // summary of it.)
+    // -------------------------------------------------------------------------
+
+    // Every key buildAnalyzedCalendarEvent (and the merge path it delegates
+    // to) stamps onto an event AT ANALYSIS TIME. Stripping exactly these
+    // returns the underlying scraped event, ready for a fresh analysis pass;
+    // parse-time keys (_parserConfig, _recurring, recurrenceRule, key, city,
+    // _fieldPriorities, …) are deliberately NOT in this list — the fresh pass
+    // needs them.
+    static getCalendarAnalysisStampKeys() {
+        return [
+            '_analysis',
+            '_action',
+            '_mergeDiff',
+            '_mergeDiffBaselineNotes',
+            '_existingEvent',
+            '_existingKey',
+            '_conflicts',
+            '_evidenceLines',
+            '_sanityFlags',
+            '_original',
+            '_pastSpanWithheld',
+            '_duplicateOfKept',
+            '_seriesAuthority',
+            '_recurringExport',
+            '_savedRunSourceIndex',
+            'overrideUid',
+            'overrideRecurrenceId'
+        ];
+    }
+
+    // Shallow copy of a saved analyzed event with every analysis-time stamp
+    // removed — the input to the mandatory re-analysis at execute time.
+    static stripCalendarAnalysisStamps(event) {
+        if (!event || typeof event !== 'object') return event;
+        const copy = { ...event };
+        for (const key of SharedCore.getCalendarAnalysisStampKeys()) {
+            delete copy[key];
+        }
+        return copy;
+    }
+
+    // One-line human label for what execution would DO with an analyzed event.
+    // Withheld states are checked with the exact predicates
+    // filterEventsForExecution enforces, so this label and the write gate can
+    // never disagree.
+    static describeExecutionDisposition(event) {
+        if (!event || typeof event !== 'object') return 'UNKNOWN';
+        if (event._parserConfig && event._parserConfig.dryRun === true) return 'WITHHELD (dry-run parser)';
+        if (event._pastSpanWithheld === true) return 'WITHHELD (span fully past)';
+        if (SharedCore.isRecurringSeriesEvent(event)) return 'WITHHELD (recurring series — ICS export only)';
+        if (SharedCore.hasJunkTitleSanityFlag(event)) return 'WITHHELD (junk title)';
+        const action = typeof event._action === 'string' && event._action ? event._action : 'new';
+        return action.toUpperCase();
+    }
+
+    // Saved plan vs fresh plan, paired by the _savedRunSourceIndex the caller
+    // stamps before re-analysis (prepareEventsForCalendar can DROP an event —
+    // e.g. a manual-not-bear demote — so index-by-position would misalign).
+    // Returns { entries, changed }: every saved event gets an entry; fresh
+    // rows without a saved source (rescues added during review) are appended.
+    static diffSavedVsFreshExecutionPlan(savedEvents, freshEvents) {
+        const saved = Array.isArray(savedEvents) ? savedEvents : [];
+        const fresh = Array.isArray(freshEvents) ? freshEvents : [];
+        const freshBySource = new Map();
+        const unsourced = [];
+        for (const event of fresh) {
+            const idx = event && Number.isInteger(event._savedRunSourceIndex)
+                ? event._savedRunSourceIndex
+                : null;
+            if (idx === null) {
+                unsourced.push(event);
+            } else if (!freshBySource.has(idx)) {
+                freshBySource.set(idx, event);
+            }
+        }
+        const entries = saved.map((savedEvent, index) => {
+            const freshEvent = freshBySource.get(index) || null;
+            const savedLabel = SharedCore.describeExecutionDisposition(savedEvent);
+            const freshLabel = freshEvent
+                ? SharedCore.describeExecutionDisposition(freshEvent)
+                : 'DROPPED (live analysis removed it)';
+            return {
+                index,
+                title: (savedEvent && (savedEvent.title || savedEvent.name)) || 'Unknown',
+                savedLabel,
+                freshLabel,
+                changed: savedLabel !== freshLabel
+            };
+        });
+        for (const event of unsourced) {
+            entries.push({
+                index: -1,
+                title: (event && (event.title || event.name)) || 'Unknown',
+                savedLabel: 'NOT IN SAVED PLAN',
+                freshLabel: SharedCore.describeExecutionDisposition(event),
+                changed: true
+            });
+        }
+        return { entries, changed: entries.filter((entry) => entry.changed) };
+    }
+
+    // Human age label for the staleness guard ("3 days old"). Prefers the
+    // run's ISO timestamp; falls back to parsing a runId of the form
+    // YYYYMMDD-HHMMSS as LOCAL time (that is how getRunId mints them). Epoch
+    // millis only — never Date instanceof checks (Scriptable cross-realm
+    // Dates).
+    static formatRunAgeLabel(timestampIso, runId, nowMs = Date.now()) {
+        let originMs = null;
+        if (timestampIso) {
+            const parsed = new Date(timestampIso).getTime();
+            if (!Number.isNaN(parsed)) originMs = parsed;
+        }
+        if (originMs === null && typeof runId === 'string') {
+            const match = /^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})$/.exec(runId.trim());
+            if (match) {
+                const parsed = new Date(
+                    Number(match[1]), Number(match[2]) - 1, Number(match[3]),
+                    Number(match[4]), Number(match[5]), Number(match[6])
+                ).getTime();
+                if (!Number.isNaN(parsed)) originMs = parsed;
+            }
+        }
+        if (originMs === null) return 'of unknown age';
+        const diffMs = Math.max(0, nowMs - originMs);
+        const minutes = Math.floor(diffMs / 60000);
+        if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} old`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 48) return `${hours} hour${hours === 1 ? '' : 's'} old`;
+        const days = Math.floor(hours / 24);
+        return `${days} days old`;
+    }
+
     // An event that DEFINES a recurring series: stamped _recurring in
     // normalization, or carrying a non-empty extracted RRULE.
     static isRecurringSeriesEvent(event) {

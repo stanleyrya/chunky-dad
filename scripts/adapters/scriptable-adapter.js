@@ -6042,6 +6042,12 @@ class ScriptableAdapter {
       // Venue-queue taps this session: candidate index → timesSeen after the
       // write. Repeat taps re-flash feedback without re-writing the queue.
       const venueQueueTaps = {};
+      // Execute-from-saved-run tap (saved-run display only). Like the bear
+      // overrides above, the tap only ARMS execution — the writes themselves
+      // happen after the last sheet is dismissed, behind a mandatory fresh
+      // live-calendar re-analysis and an explicit confirmation alert (stale
+      // saved intents are never written; see executeSavedRunWrites).
+      const savedRunExecuteState = { requested: false };
 
       // Paging state. `pendingPage` is what happens after this page's sheet is
       // dismissed: a page number to open next, or null for "done".
@@ -6162,6 +6168,15 @@ class ScriptableAdapter {
                 bearOverridePending,
                 webView,
               );
+            } else if (params.a === "execute-run") {
+              // Fire-and-forget: arms saved-run execution (performed after
+              // dismissal, behind live re-analysis + confirmation); the page
+              // gets best-effort "Armed ✓" feedback via evaluateJavaScript.
+              this.recordSavedRunExecuteRequest(
+                results,
+                savedRunExecuteState,
+                webView,
+              );
             } else if (params.a === "queue-venue") {
               // Fire-and-forget: appends the candidate to the gathering-only
               // bar-additions queue; the page gets best-effort "Queued ✓"
@@ -6280,6 +6295,16 @@ class ScriptableAdapter {
       // prompt away — another native UI, another chance to stall. Forced, so
       // what the overrides actually did survives that too.
       this.flushLogCheckpoint(results, { force: true });
+
+      // EXECUTE FROM SAVED RUN. Saved-run display skips the live execution
+      // prompt below on purpose — execution of a saved run happens ONLY here,
+      // behind the explicit affordance the owner tapped, and never from the
+      // run's stale saved intents: executeSavedRunWrites re-analyzes the
+      // events against the LIVE calendar and confirms the FRESH plan first.
+      if (results?._isDisplayingSavedRun && savedRunExecuteState.requested) {
+        await this.executeSavedRunWrites(results);
+        this.flushLogCheckpoint(results, { force: true });
+      }
 
       // After displaying results, prompt for calendar execution if we have analyzed events
       // Don't prompt when displaying saved runs (they should use isDryRun override instead)
@@ -6414,6 +6439,13 @@ class ScriptableAdapter {
     const logSectionHtml = shouldShowLogs
       ? this.buildRunLogSectionHtml(runLogInfo, runPromptInfo)
       : "";
+    // EXECUTE FROM SAVED RUN — the explicit affordance. Rendered only for
+    // phone saved-run displays ("" everywhere else), and hoisted so every
+    // page of a paged run carries the same section.
+    const savedRunExecuteSectionHtml = this.buildSavedRunExecuteSectionHtml(
+      results,
+      options,
+    );
     // Per-render sources the Run Logs buttons read natively on tap. Always
     // called, so a live run clears whatever a previous saved-run render left.
     this.registerRunLogCopySources(runLogInfo, runPromptInfo);
@@ -6514,7 +6546,22 @@ class ScriptableAdapter {
     // Kept events are, by definition, the cascade's "bear" verdicts: their
     // cards show that verdict active with a one-tap "Mark as not bear" beside
     // it. Saved-run display renders the verdict read-only (no execution).
-    const keptCardsInteractive = results?._isDisplayingSavedRun !== true;
+    //
+    // EXCEPT on the phone when the persistent verdict store is available
+    // (feature-detected): review-then-execute is the whole point of opening a
+    // Mac-scheduled run on the phone, so verdict taps in saved-run display
+    // stay LIVE and persist to the store at tap time exactly like a live run
+    // (recordBearOverrideAndReport → persistBearVerdictTap). The web target
+    // has no chunkyscrape:// bridge and stays read-only. The flag is stashed
+    // per-render so buildBearDroppedCards agrees, while direct callers (and
+    // web renders) keep the read-only default.
+    const savedRunVerdictTapsEnabled =
+      results?._isDisplayingSavedRun === true &&
+      options.target !== "web" &&
+      typeof this.persistBearVerdictTap === "function";
+    this._savedRunVerdictTapsEnabled = savedRunVerdictTapsEnabled;
+    const keptCardsInteractive =
+      results?._isDisplayingSavedRun !== true || savedRunVerdictTapsEnabled;
     const keptCard = (entry) => {
       // Duplicate-folding stamp (feature-detected, never required): a record
       // an upstream pass marked as the duplicate of a kept card renders as a
@@ -8050,6 +8097,7 @@ class ScriptableAdapter {
         </div>
     </div>
     
+    ${savedRunExecuteSectionHtml}
     ${view.pagerTopHtml}${
       view.newCards.length > 0
         ? `
@@ -8228,6 +8276,24 @@ class ScriptableAdapter {
                         row.appendChild(note);
                     }
                     note.textContent = act === 'mark-bear' ? 'Marked as bear ✓ (applied when you close this view)' : 'Marked as not bear ✓ (applied when you close this view)';
+                }
+            } catch (ignore) {}
+        }
+
+        // "Execute this run's writes" (saved-run display only) uses the same
+        // chunkyscrape:// navigation bridge. The tap only ARMS execution —
+        // the writes happen native-side AFTER this sheet is dismissed, behind
+        // a fresh live-calendar re-analysis and an explicit confirmation.
+        window.__savedRunExecNonce = 0;
+        function requestSavedRunExecute(btn) {
+            window.location.href = 'chunkyscrape://act?a=execute-run&n=' +
+                (window.__savedRunExecNonce++);
+        }
+        function markSavedRunExecuteArmed() {
+            try {
+                var btn = document.getElementById('saved-run-execute-btn');
+                if (btn) {
+                    btn.textContent = '✅ Armed — swipe this sheet down to re-analyze against the live calendar and confirm';
                 }
             } catch (ignore) {}
         }
@@ -10412,7 +10478,14 @@ class ScriptableAdapter {
       ? results.bearDroppedEvents
       : [];
     if (entries.length === 0) return [];
-    const interactive = !results || results._isDisplayingSavedRun !== true;
+    // Saved-run display keeps the rescue buttons live when the current render
+    // opted in (generateRichHTML stashes _savedRunVerdictTapsEnabled for
+    // phone renders with the verdict store present); direct callers keep the
+    // read-only default.
+    const interactive =
+      !results ||
+      results._isDisplayingSavedRun !== true ||
+      this._savedRunVerdictTapsEnabled === true;
     const runInfo = {
       runId: (results && (results.savedRunId || results.sourceRunId)) || null,
     };
@@ -14168,6 +14241,382 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     return 0;
   }
 
+  // =========================================================================
+  // EXECUTE FROM SAVED RUN
+  //
+  // The owner's workflow: the Mac runs the scraper on a schedule (dry-run,
+  // writing run JSON into the shared runs/ dir); the owner opens that run on
+  // the phone (display-saved-run.js), reviews it, taps verdicts, and executes
+  // the calendar writes FROM the saved run — the phone stays the only
+  // calendar writer.
+  //
+  // THE SAFETY CORE: a saved run's calendar analysis is STALE. Execution
+  // never replays the saved intents — the saved analyzedEvents are stripped
+  // back to their underlying event data (SharedCore.stripCalendarAnalysisStamps)
+  // and re-analyzed against the LIVE calendar through the same
+  // prepareEventsForCalendar path a live run uses; only the FRESH plan is
+  // executed, gated by the same filterEventsForExecution withholds (recurring
+  // series, dry-run parsers, junk titles, fully-past spans). An event whose
+  // fresh analysis says merge/withheld follows the fresh verdict, never the
+  // saved one, and the confirmation alert shows the delta plus the run's age.
+  // =========================================================================
+
+  // The affordance: a section with one explicit button, rendered only for
+  // phone saved-run displays (never for the web target — no chunkyscrape://
+  // bridge there, and the Mac server flow is structurally report-only).
+  buildSavedRunExecuteSectionHtml(results, options = {}) {
+    if (!results || results._isDisplayingSavedRun !== true) return "";
+    if (options && options.target === "web") return "";
+    const analyzedCount = Array.isArray(results.analyzedEvents)
+      ? results.analyzedEvents.length
+      : 0;
+    const ageLabel = this.escapeHtml(this.describeSavedRunAgeLabel(results));
+    const runIdLabel = this.escapeHtml(
+      String(results.sourceRunId || results.savedRunId || "unknown run"),
+    );
+    const buttonStyle =
+      "padding: 10px 18px; background: var(--primary-color); color: var(--text-inverse); border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: var(--font-sans); width: 100%;";
+    const body =
+      analyzedCount === 0
+        ? `<div class="section-blurb">Saved run ${runIdLabel} is ${ageLabel} and has no analyzable events — there is nothing to execute.</div>`
+        : `<div class="section-blurb">⏳ This saved run is <strong>${ageLabel}</strong>. Executing does <strong>not</strong> replay its saved plan: the ${analyzedCount} analyzed event(s) are first re-analyzed against the LIVE calendar, and you confirm the fresh write plan — with any changes since the run was saved called out — before anything is written.</div>
+        <button type="button" id="saved-run-execute-btn" onclick="requestSavedRunExecute(this)" style="${buttonStyle}">▶️ Execute this run's writes…</button>`;
+    return `
+    <div class="section" id="saved-run-execute">
+        <div class="section-header">
+            <span class="section-icon">▶️</span>
+            <span class="section-title">Execute This Run</span>
+            ${analyzedCount > 0 ? `<span class="section-count">${analyzedCount}</span>` : ""}
+        </div>
+        ${body}
+    </div>
+    `;
+  }
+
+  // Called fire-and-forget from shouldAllowRequest (which must synchronously
+  // return a bool). Only ARMS execution — nothing can dismiss a presented
+  // WebView from native, so the actual run happens after the owner swipes the
+  // sheet down (see the savedRunExecuteState block in presentRichResults).
+  async recordSavedRunExecuteRequest(results, state, webView) {
+    try {
+      if (!results || results._isDisplayingSavedRun !== true) {
+        console.log(
+          "📱 Scriptable: ▶️ Execute-run tap ignored (not a saved-run display)",
+        );
+        return;
+      }
+      state.requested = true;
+      console.log(
+        "📱 Scriptable: ▶️ Saved-run execution ARMED — swipe the sheet down to run the live re-analysis and confirm the fresh write plan.",
+      );
+      try {
+        await webView.evaluateJavaScript("markSavedRunExecuteArmed()", false);
+      } catch (error) {
+        /* in-page feedback is optional polish; the arm is recorded */
+      }
+    } catch (error) {
+      console.warn(
+        `📱 Scriptable: Failed to arm saved-run execution: ${error.message}`,
+      );
+    }
+  }
+
+  // Staleness guard label ("3 days old"): prefers the run's saved ISO
+  // timestamp (threaded through by display-saved-run.js), falls back to the
+  // runId's encoded local time.
+  describeSavedRunAgeLabel(results) {
+    return SharedCore.formatRunAgeLabel(
+      results && results._savedRunTimestamp,
+      (results && (results.sourceRunId || results.savedRunId)) || "",
+    );
+  }
+
+  // One OK-only alert + a log line. Every degrade path (zero events, missing
+  // calendar, dry-run preview, nothing executable) reports through here —
+  // clear messaging, never a throw.
+  async presentSavedRunExecutionNotice(title, message) {
+    console.log(
+      `📱 Scriptable: ▶️ Saved-run execution notice — ${title}: ${String(message).replace(/\n+/g, " ")}`,
+    );
+    try {
+      const alert = new Alert();
+      alert.title = title;
+      alert.message = String(message);
+      alert.addAction("OK");
+      await alert.presentAlert();
+    } catch (error) {
+      /* the log line above is the durable record; the alert is best-effort */
+    }
+  }
+
+  // The confirmation surface: run age + saved-vs-fresh deltas + the FRESH
+  // write plan's counts. Returns true only on an explicit "Execute" tap.
+  async presentSavedRunExecutionConfirm(freshExecutable, extras = {}) {
+    const alert = new Alert();
+    alert.title = "Execute Saved Run?";
+    const headerLines = Array.isArray(extras.headerLines)
+      ? extras.headerLines
+      : [];
+    const intentCounts = this.countMetricsActions(freshExecutable);
+    const writeCounts = this.countMetricsCalendarActions(freshExecutable);
+    let message = "";
+    headerLines.forEach((line) => {
+      message += `${line}\n`;
+    });
+    message += "\nFresh write plan (live calendar, analyzed just now):\n";
+    if (intentCounts.new) message += `🎯 Intent NEW: ${intentCounts.new}\n`;
+    if (intentCounts.merge)
+      message += `🎯 Intent MERGE: ${intentCounts.merge}\n`;
+    if (intentCounts.conflict)
+      message += `🎯 Intent CONFLICT: ${intentCounts.conflict}\n`;
+    if (writeCounts.create) message += `➕ Create ${writeCounts.create}\n`;
+    if (writeCounts.update) message += `🔄 Update ${writeCounts.update}\n`;
+    if (writeCounts.skip) message += `⏭️ Skip ${writeCounts.skip}\n`;
+    alert.message = message;
+    alert.addAction("Execute fresh plan");
+    alert.addCancelAction("Cancel");
+    const response = await alert.presentAlert();
+    return response === 0;
+  }
+
+  // Same write-capability preflight the live execution prompt performs: if
+  // the runs dir cannot take a test write, the audit trail could not record
+  // the execution, so nothing is executed.
+  async preflightSavedRunWriteAccess() {
+    try {
+      await this.ensureRelativeStorageDirs();
+      const testFilePath = this.fm.joinPath(this.runsDir, ".write-test.json");
+      this.fm.writeString(
+        testFilePath,
+        JSON.stringify({ ts: new Date().toISOString() }),
+      );
+      if (
+        typeof this.fm.remove === "function" &&
+        this.fm.fileExists(testFilePath)
+      ) {
+        this.fm.remove(testFilePath);
+      }
+      return true;
+    } catch (error) {
+      await this.presentSavedRunExecutionNotice(
+        "Cannot Proceed",
+        "Failed to write to the runs directory, so the execution could not be recorded on the run file. Calendar changes were not executed.",
+      );
+      return false;
+    }
+  }
+
+  // The execute-from-saved-run flow. Returns the number of processed events
+  // (0 for every degrade/cancel path). Never throws.
+  async executeSavedRunWrites(results) {
+    try {
+      const savedEvents = Array.isArray(results && results.analyzedEvents)
+        ? results.analyzedEvents
+        : [];
+      const ageLabel = this.describeSavedRunAgeLabel(results);
+      console.log(
+        `📱 Scriptable: ▶️ Saved-run execution starting — run is ${ageLabel}, ${savedEvents.length} saved analyzed event(s). Saved intents are NEVER written; a fresh live-calendar analysis decides everything below.`,
+      );
+      if (savedEvents.length === 0) {
+        await this.presentSavedRunExecutionNotice(
+          "Nothing to Execute",
+          `This saved run (${ageLabel}) has no analyzable events, so there is nothing to write.`,
+        );
+        return 0;
+      }
+      const core = this.getIdentityCore();
+      if (!core || typeof core.prepareEventsForCalendar !== "function") {
+        await this.presentSavedRunExecutionNotice(
+          "Cannot Execute",
+          "Shared core failed to initialize for the live calendar analysis. Nothing was written.",
+        );
+        return 0;
+      }
+
+      // MANDATORY RE-ANALYSIS. Strip every analysis-time stamp so the fresh
+      // pass starts from the underlying event data, and tag each event with
+      // its saved index so the delta report can pair saved and fresh rows
+      // even when the fresh pass drops one.
+      const toAnalyze = savedEvents.map((event, index) => ({
+        ...SharedCore.stripCalendarAnalysisStamps(event),
+        _savedRunSourceIndex: index,
+      }));
+      const globalConfig =
+        (results && results.config && results.config.config) || {};
+      let freshAnalyzed;
+      try {
+        freshAnalyzed = await core.prepareEventsForCalendar(
+          toAnalyze,
+          this,
+          globalConfig,
+        );
+      } catch (error) {
+        // Missing/unreachable calendar lands here: degrade with clear
+        // messaging, never a throw, and never a write from stale intents.
+        await this.presentSavedRunExecutionNotice(
+          "Live Analysis Failed",
+          `Could not re-analyze this run against the live calendar (${error.message}). Nothing was written.`,
+        );
+        return 0;
+      }
+      if (!Array.isArray(freshAnalyzed)) freshAnalyzed = [];
+
+      const diff = SharedCore.diffSavedVsFreshExecutionPlan(
+        savedEvents,
+        freshAnalyzed,
+      );
+      // The fresh plan passes the SAME execution gate a live run uses:
+      // dry-run parsers, recurring series, junk titles and fully-past spans
+      // stay withheld no matter what the saved JSON claimed.
+      const freshExecutable =
+        SharedCore.filterEventsForExecution(freshAnalyzed);
+      diff.changed.forEach((delta) => {
+        console.log(
+          `📱 Scriptable: 🔁 Saved-run delta — "${delta.title}": saved run said ${delta.savedLabel}, live analysis now says ${delta.freshLabel}`,
+        );
+      });
+      console.log(
+        `📱 Scriptable: 🔁 Saved-run re-analysis complete — ${freshAnalyzed.length} analyzed, ${freshExecutable.length} executable, ${diff.changed.length} changed vs the saved plan.`,
+      );
+      const deltaLines = diff.changed
+        .slice(0, 8)
+        .map(
+          (delta) =>
+            `🔁 "${delta.title}": saved ${delta.savedLabel} → now ${delta.freshLabel}`,
+        );
+      if (diff.changed.length > 8) {
+        deltaLines.push(
+          `🔁 …and ${diff.changed.length - 8} more change(s) — see the run log`,
+        );
+      }
+      const headerLines = [
+        `⏳ This run is ${ageLabel}.`,
+        `🔍 Live re-analysis: ${freshAnalyzed.length} analyzed, ${freshExecutable.length} executable, ${diff.changed.length} changed since the run was saved.`,
+        ...deltaLines,
+      ];
+
+      // dryRun semantics: the LOADED config's global dryRun previews exactly
+      // like a live run — plan shown, nothing written. (The Mac-side run-once
+      // dryRun forcing is a separate, untouched mechanism.)
+      if (globalConfig && globalConfig.dryRun) {
+        console.log(
+          "📱 Scriptable: ▶️ Saved-run execution is a DRY RUN preview (loaded config says dryRun) — nothing will be written.",
+        );
+        await this.presentSavedRunExecutionNotice(
+          "Dry Run Preview",
+          `${headerLines.join("\n")}\n\nThis run's config says dryRun — nothing was written.`,
+        );
+        return 0;
+      }
+      if (freshExecutable.length === 0) {
+        await this.presentSavedRunExecutionNotice(
+          "Nothing Executable",
+          `${headerLines.join("\n")}\n\nAfter the live re-analysis, no events are eligible for calendar writes (withheld, dry-run parser, or dropped).`,
+        );
+        return 0;
+      }
+
+      const confirmed = await this.presentSavedRunExecutionConfirm(
+        freshExecutable,
+        { ageLabel, headerLines },
+      );
+      if (!confirmed) {
+        console.log(
+          "📱 Scriptable: ▶️ Saved-run execution cancelled at confirmation — nothing was written.",
+        );
+        return 0;
+      }
+      if (!(await this.preflightSavedRunWriteAccess())) return 0;
+
+      const processedCount = await this.executeCalendarActions(
+        freshExecutable,
+        results.config,
+      );
+      results.calendarEvents = processedCount;
+      const failureCount = this.recordCalendarWriteFailures(results);
+
+      // Audit trail back onto the SAME run file: what executed, when, and how
+      // the fresh plan differed from the saved one. analyzedEvents become the
+      // fresh plan — the file now reflects what was actually executed.
+      results.analyzedEvents = freshAnalyzed;
+      if (!Array.isArray(results.savedRunExecutions)) {
+        results.savedRunExecutions = [];
+      }
+      results.savedRunExecutions.push({
+        executedAt: new Date().toISOString(),
+        runAgeAtExecution: ageLabel,
+        analyzed: freshAnalyzed.length,
+        executable: freshExecutable.length,
+        processed: processedCount,
+        failed: failureCount,
+        actionCounts: this.lastExecutionActionCounts || null,
+        deltas: diff.changed.map(
+          (delta) =>
+            `${delta.title}: saved ${delta.savedLabel} → executed-as ${delta.freshLabel}`,
+        ),
+      });
+      await this.persistExecutedSavedRunSnapshot(results);
+      await this.presentSavedRunExecutionNotice(
+        "Calendar Updated",
+        `Processed ${processedCount} event(s) from the fresh plan${failureCount > 0 ? ` — ${failureCount} write(s) FAILED (recorded on the run file)` : ""}.`,
+      );
+      return processedCount;
+    } catch (error) {
+      console.log(
+        `📱 Scriptable: ✗ Saved-run execution failed: ${error.message}`,
+      );
+      try {
+        await this.presentSavedRunExecutionNotice(
+          "Saved-Run Execution Failed",
+          `${error.message}\n\nSome writes may have completed; the run log has details.`,
+        );
+      } catch (noticeError) {
+        /* already logged above */
+      }
+      return 0;
+    }
+  }
+
+  // Rewrite the SAME run file with the execution outcome. persistRunSnapshot
+  // stays saved-run-guarded (a redisplay must never fork a run into a new
+  // id); this path is the one deliberate exception, and it reuses the loaded
+  // run's id + timestamp so the write lands on the file it came from.
+  async persistExecutedSavedRunSnapshot(results) {
+    const runId =
+      (results &&
+        typeof results.savedRunId === "string" &&
+        results.savedRunId) ||
+      (results &&
+        typeof results.sourceRunId === "string" &&
+        results.sourceRunId) ||
+      "";
+    if (!runId) {
+      console.log(
+        "📱 Scriptable: ⚠️ Executed saved run carries no run id — the execution outcome could not be written back to a run file.",
+      );
+      return null;
+    }
+    try {
+      results.savedRunId = runId;
+      await this.ensureRelativeStorageDirs();
+      const savedId = await this.saveRun(results, {
+        runId,
+        timestamp: results._savedRunTimestamp || null,
+        preUi: false,
+      });
+      if (savedId) {
+        console.log(
+          `📱 Scriptable: 🧾 Saved-run file updated with the execution outcome (${savedId}.json) — the audit trail shows what was executed and when.`,
+        );
+      }
+      return savedId || null;
+    } catch (error) {
+      console.log(
+        `📱 Scriptable: ✗ Failed to update the saved-run file after execution: ${error.message}`,
+      );
+      return null;
+    }
+  }
 
   async ensureRelativeStorageDirs() {
     try {
@@ -14302,7 +14751,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         version: 2,
         summary,
         runContext,
-        config: results.config || null,
+        // Execute-from-saved-run rewrites this file after executing, and the
+        // display copy of the config may carry the readOnly-forced parser
+        // dryRun override — the ORIGINAL loaded config (stashed by
+        // display-saved-run.js) wins for the on-disk record. Live runs never
+        // set the stash and are unchanged.
+        config: results._savedRunOriginalConfig || results.config || null,
         analyzedEvents,
         // Events the bear check dropped. Saved so a past run can be reviewed
         // as it actually happened: the results UI renders these as real event
@@ -14320,6 +14774,14 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         calendarHygiene: Array.isArray(results.calendarHygiene)
           ? results.calendarHygiene
           : [],
+        // Execute-from-saved-run audit trail: one entry per execution of this
+        // run from the saved-run display (absent until the first execution;
+        // display-saved-run.js threads prior entries back through so
+        // re-executions append instead of overwriting).
+        ...(Array.isArray(results.savedRunExecutions) &&
+        results.savedRunExecutions.length > 0
+          ? { executions: results.savedRunExecutions }
+          : {}),
       };
 
       // Ensure directory exists before writing (same pattern as FileLogger)
