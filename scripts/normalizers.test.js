@@ -907,7 +907,13 @@ test('geocode verification: enforce mode exhausts the ladder on street-grade res
   );
 });
 
-test('geocode verification: cross-check mismatch keeps the pin but flags it in report mode', async () => {
+test('geocode verification: cross-check mismatch refuses the pin in report mode too (run 20260811-133948, Bearracuda Phoenix)', async () => {
+  // Doctrine: curated data beats derived, FAIL CLOSED — a reverse
+  // cross-check that RAN and FAILED is positive evidence the pin is wrong.
+  // "Flag, don't drop" covers suspect-but-unverifiable pins (street-grade,
+  // vague input, skipped checks); an affirmatively failed verification must
+  // never be silently accepted in any mode (the Phoenix run stored
+  // 33.497757,-112.077333 after two failed cross-checks for the address).
   const normalizer = createOsmNormalizer();
   normalizer.delayForRateLimit = async () => {};
   const httpAdapter = createRoutedStubAdapter(
@@ -920,10 +926,14 @@ test('geocode verification: cross-check mismatch keeps the pin but flags it in r
     normalizer.normalizeAsync(event, httpAdapter, { geocodeVerification: { mode: 'report' } })
   );
 
-  assert.equal(event.location, '37.7752000, -122.4180000', 'report mode keeps the suspect pin');
+  assert.equal(event.location, undefined, 'a pin whose reverse cross-check failed must not be written');
   assert.ok(
     lines.some(l => l.includes('🗺️ GEOCODE VERIFY: "CHUNK" pin failed reverse cross-check') && l.includes('— verify pin')),
     `the mismatch flag must be logged: ${lines.join(' | ')}`
+  );
+  assert.ok(
+    lines.some(l => l.includes('🗺️ GEOCODE VERIFY: "CHUNK" pin refused — reverse cross-check ran and failed')),
+    `the refusal must be explained with its own line: ${lines.join(' | ')}`
   );
 });
 
@@ -1156,8 +1166,8 @@ test('geocode verdict: report-mode cross-check failure and street-grade accepts 
   await withCapturedConsole(() =>
     normalizer.normalizeAsync(failEvent, failAdapter, { geocodeVerification: { mode: 'report' } })
   );
-  assert.equal(failEvent.location, '37.7752000, -122.4180000', 'report mode still keeps the suspect pin');
-  assert.equal(failEvent._geocodeCrossCheck, 'fail');
+  assert.equal(failEvent.location, undefined, 'a failed cross-check refuses the pin in report mode too');
+  assert.equal(failEvent._geocodeCrossCheck, 'fail', 'the unpinned event carries the rejection breadcrumb');
   assert.equal(failEvent._geocodeGrade, 'exact');
 
   const streetNormalizer = createOsmNormalizer();
@@ -1488,6 +1498,51 @@ test('BasicDataNormalizer never overwrites a source that is already set', () => 
   normalizer.normalize(event);
   assert.equal(event.pinSource, 'curated');
   assert.equal(event.addressSource, 'curated');
+});
+
+// ---------------------------------------------------------------------------
+// Cover shape gate at normalization (run 20260811-133948, Bearracuda):
+// cover "21+" — the flyer's AGE RESTRICTION — shipped to the record (the
+// cover-not-a-price sanity flag fired at log 1882 but flags never rewrite),
+// alongside "ADV. TICKETS", "ADV. TIX AT BEARRACUDA.COM", and "SUPER EARLY
+// tix available". Prose is not money: it drops at normalization, before the
+// record is final. The sanity flag itself is untouched.
+// ---------------------------------------------------------------------------
+
+test('cover gate: Phoenix "21+" and ticket-availability prose drop at normalization with a log line', () => {
+  const normalizer = createBasicNormalizer();
+  // Literal run values (Bearracuda 20260811-133948) plus FURBALL's "TICKLEAP".
+  const proseCovers = ['21+', 'ADV. TICKETS', 'ADV. TIX AT BEARRACUDA.COM', 'SUPER EARLY tix available', 'TICKLEAP'];
+  for (const cover of proseCovers) {
+    const event = { title: 'BEARRACUDA: PHOENIX PRIDE', city: 'nyc', cover };
+    const lines = [];
+    const realLog = console.log;
+    console.log = (message) => { lines.push(String(message)); };
+    try {
+      normalizer.normalize(event);
+    } finally {
+      console.log = realLog;
+    }
+    assert.equal(event.cover, undefined, `prose cover "${cover}" must not survive normalization`);
+    assert.ok(
+      lines.some(l => l.includes(`🧹 NORMALIZE: dropped cover "${cover}"`) && l.includes('neither a price nor a free-admission phrase')),
+      `the drop states the value and the reason: ${lines.join(' | ')}`
+    );
+  }
+
+  // Survivor guards, same test so the gate ships with its boundaries:
+  // genuine prices, free phrases, and bare numeric amounts pass untouched.
+  const genuineCovers = ['$10', '10', 'free', 'no cover', '£8 adv / £10 door', '$15-$20'];
+  for (const cover of genuineCovers) {
+    const event = { title: 'REAL PRICE', city: 'nyc', cover };
+    normalizer.normalize(event);
+    assert.equal(event.cover, cover, `genuine cover "${cover}" must survive unchanged`);
+  }
+  // No core wired → fail open, never delete.
+  const bare = new BasicDataNormalizer();
+  const uncored = { title: 'NO CORE', cover: '21+' };
+  bare.normalize(uncored);
+  assert.equal(uncored.cover, '21+', 'without a core the gate fails open');
 });
 
 function createBarNormalizerWithBar() {
