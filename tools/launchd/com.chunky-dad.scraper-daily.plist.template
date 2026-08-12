@@ -18,6 +18,18 @@
   the run aborts loudly, and that abort message must land somewhere that does
   not depend on the unreachable dir. The per-run log itself is written into
   the shared logs/ dir by run-once.
+
+  WHY /bin/zsh IS THE PROGRAM (TCC / Full Disk Access): macOS attributes a
+  launchd job's file access to the job's main executable. Running node
+  directly means the Full Disk Access grant is pinned to one node binary
+  path (…/.nvm/versions/node/vX.Y.Z/bin/node) and silently breaks on every
+  node upgrade — proven live 2026-08-12: the identical command read the
+  iCloud shared cache instantly from a shell but wedged in kernel open()
+  under launchd until node was granted access. With /bin/zsh as the program
+  and node as its CHILD (no exec — zsh must stay alive as the responsible
+  process), one grant to /bin/zsh (a stable system binary) covers every
+  future node version. Grant once: System Settings → Privacy & Security →
+  Full Disk Access → add /bin/zsh (⌘⇧G to type the path).
 -->
 <plist version="1.0">
 <dict>
@@ -25,8 +37,9 @@
     <string>__LABEL__</string>
     <key>ProgramArguments</key>
     <array>
-        <string>__NODE__</string>
-        <string>__REPO__/tools/run-once.js</string>
+        <string>/bin/zsh</string>
+        <string>-c</string>
+        <string>"__NODE__" "__REPO__/tools/run-once.js"</string>
     </array>
     <key>WorkingDirectory</key>
     <string>__REPO__</string>
