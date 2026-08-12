@@ -510,6 +510,128 @@ test('shared root: dataless iCloud stub (0-byte placeholder) is a cache MISS, ne
   }
 });
 
+// 2026-08 incident: writeFileAtomicallyNode renamed a temp file OVER a
+// dataless (evicted) iCloud placeholder, which deadlocks inside fileproviderd
+// — the awaited rename never resolves and the run hangs silently. Defense:
+// under the shared root the destination is unlinked before the rename.
+test('shared root: writeFileAtomicallyNode unlinks an existing destination BEFORE the rename (never rename over a possibly-dataless target)', async () => {
+  const root = makeSharedRootFixture();
+  try {
+    await withSharedRootEnv(root, async () => {
+      const adapter = makeAdapter({ pageCache: { enabled: true, ttlDays: 3 } });
+      const realFs = adapter.fs;
+      const ops = [];
+      adapter.fs = {
+        ...realFs,
+        promises: {
+          ...realFs.promises,
+          unlink: async (p) => { ops.push(['unlink', p]); return realFs.promises.unlink(p); },
+          rename: async (from, to) => { ops.push(['rename', to]); return realFs.promises.rename(from, to); }
+        }
+      };
+
+      const hostDir = path.join(root, 'storage', 'pages', DEVICE_PAGE_HOST_DIR);
+      fs.mkdirSync(hostDir, { recursive: true });
+      const finalPath = path.join(hostDir, DEVICE_PAGE_FILE);
+      fs.writeFileSync(finalPath, 'stale entry (a dataless stub in production)');
+
+      await adapter.writeFileAtomicallyNode(finalPath, 'fresh contents');
+
+      const unlinkIndex = ops.findIndex(([op, p]) => op === 'unlink' && p === finalPath);
+      const renameIndex = ops.findIndex(([op, p]) => op === 'rename' && p === finalPath);
+      assert.notEqual(unlinkIndex, -1, 'existing destination is unlinked (a dataless target would deadlock the rename in fileproviderd)');
+      assert.notEqual(renameIndex, -1, 'write still lands via rename');
+      assert.ok(unlinkIndex < renameIndex, 'unlink happens BEFORE the rename');
+      assert.equal(fs.readFileSync(finalPath, 'utf8'), 'fresh contents');
+    });
+
+    // Shared root OFF: the pure atomic rename is preserved (no unlink — the
+    // local tree has no dataless files and the rename-over is what makes the
+    // write atomic for concurrent readers).
+    await withSharedRootEnv(undefined, async () => {
+      const adapter = makeAdapter();
+      const realFs = adapter.fs;
+      const unlinks = [];
+      adapter.fs = {
+        ...realFs,
+        promises: {
+          ...realFs.promises,
+          unlink: async (p) => { unlinks.push(p); return realFs.promises.unlink(p); }
+        }
+      };
+      const localDir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-local-write-'));
+      try {
+        const target = path.join(localDir, 'entry.json');
+        fs.writeFileSync(target, 'old');
+        await adapter.writeFileAtomicallyNode(target, 'new');
+        assert.deepEqual(unlinks, [], 'local writes keep the pure atomic rename');
+        assert.equal(fs.readFileSync(target, 'utf8'), 'new');
+      } finally {
+        fs.rmSync(localDir, { recursive: true, force: true });
+      }
+    });
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// JS-side timeouts cannot cancel a wedged syscall, but they MUST stop the
+// run from awaiting it forever: a wedged rename/unlink under the shared root
+// is treated as a failed write (loud line, error thrown to the caller's
+// catch) instead of hanging the pipeline — the incident's 22-minute silence.
+test('shared root: a wedged rename/unlink is bounded — fails loudly instead of hanging the run', async () => {
+  const root = makeSharedRootFixture();
+  const HUNG = Symbol('hung');
+  const raceAgainstGuard = (promise) => Promise.race([
+    promise.then(() => 'resolved', (error) => error),
+    new Promise((resolve) => setTimeout(() => resolve(HUNG), 2000))
+  ]);
+  try {
+    await withSharedRootEnv(root, async () => {
+      const hostDir = path.join(root, 'storage', 'pages', DEVICE_PAGE_HOST_DIR);
+      fs.mkdirSync(hostDir, { recursive: true });
+      const finalPath = path.join(hostDir, DEVICE_PAGE_FILE);
+
+      const lines = [];
+      const originalLog = console.log;
+      console.log = (...args) => { lines.push(args.join(' ')); originalLog.apply(console, args); };
+      try {
+        // Wedged rename (kernel-stuck syscall in production; a promise that
+        // never settles here — the destination does not exist, so no unlink).
+        const renameAdapter = makeAdapter({ timeout: 80 });
+        const realFs = renameAdapter.fs;
+        renameAdapter.fs = {
+          ...realFs,
+          promises: { ...realFs.promises, rename: () => new Promise(() => {}) }
+        };
+        const renameOutcome = await raceAgainstGuard(renameAdapter.writeFileAtomicallyNode(finalPath, 'contents'));
+        assert.notEqual(renameOutcome, HUNG, 'a wedged rename must not hang the run (bounded shared-root fs op)');
+        assert.match(renameOutcome.message, /timed out/i, 'the bounded op reports the timeout as a failed write');
+
+        // Wedged unlink (destination exists → the unlink-first path runs).
+        fs.writeFileSync(finalPath, 'existing');
+        const unlinkAdapter = makeAdapter({ timeout: 80 });
+        const realFs2 = unlinkAdapter.fs;
+        unlinkAdapter.fs = {
+          ...realFs2,
+          promises: { ...realFs2.promises, unlink: () => new Promise(() => {}) }
+        };
+        const unlinkOutcome = await raceAgainstGuard(unlinkAdapter.writeFileAtomicallyNode(finalPath, 'contents'));
+        assert.notEqual(unlinkOutcome, HUNG, 'a wedged unlink must not hang the run either');
+        assert.match(unlinkOutcome.message, /timed out/i);
+      } finally {
+        console.log = originalLog;
+      }
+      assert.ok(
+        lines.some((line) => line.includes('Shared storage fs op timed out')),
+        'timed-out shared-root fs ops say so loudly'
+      );
+    });
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('shared root: saveRunToSharedStorage writes the phone version-2 run JSON + log with YYYYMMDD-HHMMSS naming', async () => {
   const root = makeSharedRootFixture();
   try {

@@ -18,7 +18,9 @@
 
 const PAGE_CACHE_MAX_FILE_BASENAME = 120;
 const PAGE_CACHE_TRUNCATED_PREFIX_LENGTH = 80;
-// Sentinel for the bounded shared-root cache read (dataless iCloud stubs).
+// Sentinel for bounded shared-root fs operations (dataless iCloud stubs).
+// Originally only the cache read was bounded; the 2026-08 scheduled-run hang
+// proved EVERY fs op against an evicted file can wedge (see boundedSharedFsOp).
 const SHARED_CACHE_READ_TIMED_OUT = Symbol('shared-cache-read-timed-out');
 // Copy of the Scriptable adapter's SIMPLE_URL_PARSE_REGEX (device-parity page
 // cache keys — see getDeviceParityPageCachePathParts).
@@ -120,10 +122,77 @@ class WebAdapter {
     // Cache writes under an iCloud-synced tree must never leave a torn file
     // for the sync engine to ship: write the full payload to a temp file in
     // the SAME directory, then rename over the final name (atomic on APFS).
+    //
+    // DATALESS-TARGET HAZARD (2026-08 scheduled-run hang): renaming a temp
+    // file OVER a dataless (evicted) iCloud placeholder deadlocks inside
+    // fileproviderd — the rename syscall never returns and the awaited
+    // promise never settles, silently hanging the whole run. So when the
+    // shared root is active, the destination is unlinked FIRST. The unlink
+    // itself can also wedge on a dataless file, which is why (a) the startup
+    // materialization sweep in tools/run-once.js downloads every evicted file
+    // before parser work begins, and (b) every op here is bounded by
+    // boundedSharedFsOp as belt-and-braces on top of that sweep.
     async writeFileAtomicallyNode(filePath, contents) {
         const tmpPath = `${filePath}.tmp-${process.pid.toString(36)}-${Date.now().toString(36)}`;
-        await this.fs.promises.writeFile(tmpPath, contents, 'utf8');
-        await this.fs.promises.rename(tmpPath, filePath);
+        await this.boundedSharedFsOp(() => this.fs.promises.writeFile(tmpPath, contents, 'utf8'), `write ${tmpPath}`);
+        if (this.sharedStorageRoot) {
+            // Never rename over a possibly-dataless target (fileproviderd
+            // deadlock). ENOENT is the normal first-write case.
+            try {
+                await this.boundedSharedFsOp(() => this.fs.promises.unlink(filePath), `unlink ${filePath}`);
+            } catch (error) {
+                if (!error || error.code !== 'ENOENT') {
+                    throw error;
+                }
+            }
+        }
+        await this.boundedSharedFsOp(() => this.fs.promises.rename(tmpPath, filePath), `rename ${tmpPath} -> ${filePath}`);
+    }
+
+    // Run a shared-root fs operation with an upper bound. When the shared
+    // root is OFF this is a pure passthrough (no timers, byte-identical
+    // behavior for local-cache runs).
+    //
+    // WHY THIS EXISTS: syscalls against dataless (evicted) iCloud files can
+    // block in the kernel indefinitely (open/read/stat/rename/unlink alike —
+    // the 2026-08 incident sampled two of them wedged for 22+ minutes). A
+    // JS-side timeout CANNOT cancel the syscall: the libuv threadpool slot
+    // stays hostage even after this helper gives up, and four wedged ops
+    // exhaust the default 4-slot pool and starve every later fs/dns call.
+    // That is why (1) tools/run-once.js materializes the whole tree BEFORE
+    // parser work — this helper is only the last line of defense — and
+    // (2) run-once bumps UV_THREADPOOL_SIZE so a few leaked slots cannot
+    // stall the loop. On timeout the op is treated as FAILED (reads report a
+    // miss, writes are skipped by the caller's catch) with a loud log line,
+    // and the run keeps moving.
+    async boundedSharedFsOp(startOp, label, options = {}) {
+        if (!this.sharedStorageRoot) {
+            return startOp();
+        }
+        const timeoutMs = Number.isFinite(options.timeoutMs) ? options.timeoutMs : this.config.timeout;
+        const opPromise = startOp();
+        let timer = null;
+        const timeoutPromise = new Promise((resolve) => {
+            timer = setTimeout(() => resolve(SHARED_CACHE_READ_TIMED_OUT), timeoutMs);
+        });
+        try {
+            const result = await Promise.race([opPromise, timeoutPromise]);
+            if (result === SHARED_CACHE_READ_TIMED_OUT) {
+                // The abandoned promise may still settle (or reject) later;
+                // never let it surface as an unhandled rejection.
+                opPromise.catch(() => {});
+                if (!options.quiet) {
+                    console.log(`🟢 Node.js: Shared storage fs op timed out after ${timeoutMs}ms (dataless iCloud stub? fileproviderd wedge?) — treating as failed: ${label}`);
+                }
+                const error = new Error(`Shared storage fs op timed out after ${timeoutMs}ms: ${label}`);
+                error.code = 'ESHAREDFSTIMEOUT';
+                error.sharedFsTimeout = true;
+                throw error;
+            }
+            return result;
+        } finally {
+            if (timer) clearTimeout(timer);
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -365,7 +434,11 @@ class WebAdapter {
         const cachePath = this.path.join(this.pageStorageDir, hostDir, fileName);
 
         try {
-            const stats = await this.fs.promises.stat(cachePath);
+            // stat can also wedge against a dataless stub (the incident's
+            // kernel samples were open() and rename(), but any path-based
+            // syscall on an evicted file qualifies) — bounded like the read;
+            // a timeout throws, lands in the catch below, and reads as a miss.
+            const stats = await this.boundedSharedFsOp(() => this.fs.promises.stat(cachePath), `stat ${cachePath}`);
             const maxAgeMs = pageCacheConfig.ttlDays * 24 * 60 * 60 * 1000;
             if ((Date.now() - stats.mtimeMs) > maxAgeMs) {
                 return null;
@@ -426,26 +499,21 @@ class WebAdapter {
     // downloads the bytes (which IS the cheap materialization trigger), but a
     // dead network could park that read forever, so it is raced against the
     // adapter's existing timeout and a timeout is reported as a miss.
+    // Built on boundedSharedFsOp (quiet: this path keeps its own miss line).
     async readCacheFileBounded(cachePath) {
-        const readPromise = this.fs.promises.readFile(cachePath, 'utf8');
-        if (!this.sharedStorageRoot) {
-            return readPromise;
-        }
-        let timer = null;
         const timeoutMs = this.config.timeout;
-        const timeoutPromise = new Promise((resolve) => {
-            timer = setTimeout(() => resolve(SHARED_CACHE_READ_TIMED_OUT), timeoutMs);
-        });
         try {
-            const result = await Promise.race([readPromise, timeoutPromise]);
-            if (result === SHARED_CACHE_READ_TIMED_OUT) {
-                readPromise.catch(() => {});
+            return await this.boundedSharedFsOp(
+                () => this.fs.promises.readFile(cachePath, 'utf8'),
+                `read ${cachePath}`,
+                { timeoutMs, quiet: true }
+            );
+        } catch (error) {
+            if (error && error.sharedFsTimeout) {
                 console.log(`🟢 Node.js: Shared cache read timed out after ${timeoutMs}ms (dataless iCloud stub still downloading?) — treating ${cachePath} as a cache miss`);
                 return null;
             }
-            return result;
-        } finally {
-            if (timer) clearTimeout(timer);
+            throw error;
         }
     }
 

@@ -48,15 +48,49 @@
 //                          per-parser automationEnabled filter (parsers with
 //                          automationEnabled: false are skipped). Used by
 //                          tools/schedule-mac-run.sh.
+//   CHUNKY_SHARED_MATERIALIZE_CEILING_MS
+//                        — upper bound (ms) for the shared-root dataless-file
+//                          materialization sweep at startup (default 15 min).
+//                          macOS evicts iCloud files to dataless stubs, and
+//                          ANY fs syscall against a stub can wedge a libuv
+//                          threadpool thread in the kernel forever (the
+//                          2026-08 scheduled run hung 22+ minutes this way),
+//                          so before parser work the sweep force-downloads
+//                          every evicted file (`brctl download`) and polls
+//                          `find -flags +dataless` until the tree is clean.
+//                          Ceiling breach ABORTS LOUDLY (no-partial-runs).
+//   UV_THREADPOOL_SIZE   — defaulted to 16 below (and set explicitly in the
+//                          launchd plist template): JS-side timeouts cannot
+//                          cancel a wedged syscall, so each one leaks a
+//                          threadpool slot; with the default pool of 4, four
+//                          leaks starve every later fs/dns call.
 // ============================================================================
 
 'use strict';
 
+// Threadpool headroom FIRST, before anything can touch the async fs pool:
+// libuv reads UV_THREADPOOL_SIZE lazily at first threadpool use, so setting
+// it at entry works for direct `node tools/run-once.js` invocations too (the
+// launchd plist also sets it for scheduled runs — belt and braces).
+ensureThreadpoolHeadroom(process.env);
+
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const childProcess = require('child_process');
 
 const repoRoot = path.resolve(__dirname, '..');
+
+// Default UV_THREADPOOL_SIZE to 16 unless the caller already chose a value.
+// Hoisted function declaration so the entry-point call above can run before
+// the requires. Returns the effective value for observability/tests.
+function ensureThreadpoolHeadroom(env) {
+    if (!env || typeof env !== 'object') return null;
+    if (!String(env.UV_THREADPOOL_SIZE || '').trim()) {
+        env.UV_THREADPOOL_SIZE = '16';
+    }
+    return env.UV_THREADPOOL_SIZE;
+}
 
 // Plain-object deep merge: objects merge key-wise, arrays and scalars replace.
 function deepMergeInto(target, source) {
@@ -167,6 +201,110 @@ function assertSharedStorageRootUsable(env = process.env, fsLike = fs) {
     return sharedRoot;
 }
 
+// ---------------------------------------------------------------------------
+// Shared-root MATERIALIZATION sweep (defense #1 against dataless iCloud
+// stubs). macOS evicts synced files to dataless placeholders; ANY fs syscall
+// against one (open/read/stat/rename/unlink) can block in the kernel until
+// fileproviderd materializes it — or forever when fileproviderd wedges, as it
+// did on the first scheduled run (two libuv threads sampled stuck 22+ minutes
+// in open() and rename()). JS-side promise timeouts cannot cancel those
+// syscalls, so the ONLY safe order is: download everything FIRST, then run.
+//
+// Detection deliberately never opens the files: `find -type f -flags
+// +dataless` reads only directory entries + inode flags. `brctl download`
+// asks fileproviderd to materialize the tree; the poll then watches the
+// dataless count fall to 0. Ceiling breach ABORTS LOUDLY (no-partial-runs: a
+// run that would wedge or silently miss shared cache entries must not limp).
+// Non-macOS, or find/brctl unavailable → sweep skipped (feature is Mac-only
+// in practice; the bounded fs ops in web-adapter remain as last defense).
+// ---------------------------------------------------------------------------
+const MATERIALIZE_CEILING_DEFAULT_MS = 15 * 60 * 1000;
+const MATERIALIZE_POLL_INTERVAL_MS = 30 * 1000;
+
+function resolveMaterializeCeilingMs(env = process.env) {
+    const raw = Number(String((env && env.CHUNKY_SHARED_MATERIALIZE_CEILING_MS) || '').trim());
+    return Number.isFinite(raw) && raw > 0 ? raw : MATERIALIZE_CEILING_DEFAULT_MS;
+}
+
+// Count dataless files under root without opening any of them.
+// Returns a number, or null when the probe is unavailable (non-macOS find,
+// missing binary) — null means "cannot sweep", never "zero".
+function countDatalessFilesViaFind(root) {
+    try {
+        const result = childProcess.spawnSync(
+            '/usr/bin/find',
+            [root, '-type', 'f', '-flags', '+dataless'],
+            { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }
+        );
+        if (result.error || result.status !== 0 || typeof result.stdout !== 'string') {
+            return null;
+        }
+        return result.stdout.split('\n').filter(Boolean).length;
+    } catch (_) {
+        return null;
+    }
+}
+
+// Ask fileproviderd to materialize the whole tree. Returns false when brctl
+// is unavailable/failed (caller skips the sweep instead of polling forever).
+function kickDatalessDownloadViaBrctl(root) {
+    try {
+        const result = childProcess.spawnSync('/usr/bin/brctl', ['download', root], { encoding: 'utf8' });
+        return !result.error && result.status === 0;
+    } catch (_) {
+        return false;
+    }
+}
+
+async function materializeSharedStorageTree(sharedRoot, options = {}) {
+    const {
+        platform = process.platform,
+        countDataless = countDatalessFilesViaFind,
+        kickDownload = kickDatalessDownloadViaBrctl,
+        ceilingMs = resolveMaterializeCeilingMs(process.env),
+        pollIntervalMs = MATERIALIZE_POLL_INTERVAL_MS,
+        sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+        now = Date.now,
+        log = console.log
+    } = options;
+
+    if (!sharedRoot) return { skipped: 'no-shared-root' };
+    if (platform !== 'darwin') {
+        log(`run-once: dataless materialization sweep skipped (platform ${platform} — the shared iCloud root is Mac-only in practice)`);
+        return { skipped: 'non-macos' };
+    }
+    const initialCount = countDataless(sharedRoot);
+    if (initialCount === null) {
+        log('run-once: dataless materialization sweep skipped (find -flags probe unavailable) — bounded fs ops remain the only dataless defense this run');
+        return { skipped: 'probe-unavailable' };
+    }
+    if (initialCount === 0) {
+        log('run-once: shared storage tree fully materialized (0 dataless files) — safe to start parser work');
+        return { datalessAtStart: 0, waitedMs: 0 };
+    }
+    log(`run-once: ${initialCount} dataless (evicted) file(s) under ${sharedRoot} — kicking iCloud download BEFORE parser work (touching a stub mid-run wedges libuv threadpool slots at syscall level)`);
+    if (!kickDownload(sharedRoot)) {
+        log('run-once: dataless materialization sweep skipped (brctl download unavailable/failed) — bounded fs ops remain the only dataless defense this run');
+        return { skipped: 'brctl-unavailable' };
+    }
+    const startedAt = now();
+    let count = initialCount;
+    while (count > 0) {
+        if (now() - startedAt >= ceilingMs) {
+            throw new Error(`run-once: shared storage tree still has ${count} dataless file(s) after ${Math.round(ceilingMs / 1000)}s — ABORTING (no-partial-runs: proceeding would wedge fs syscalls or miss shared cache entries). One-time fix: right-click the chunky-dad-scraper folder in Finder and choose "Keep Downloaded" so iCloud never evicts it; or re-run once the download finishes.`);
+        }
+        await sleep(pollIntervalMs);
+        count = countDataless(sharedRoot);
+        if (count === null) {
+            throw new Error('run-once: dataless probe (find -flags +dataless) broke mid-sweep — ABORTING instead of guessing the tree is materialized (no-partial-runs)');
+        }
+        log(`run-once: materialization progress — ${count} dataless file(s) remaining under the shared root`);
+    }
+    const waitedMs = now() - startedAt;
+    log(`run-once: shared storage tree fully materialized after ${Math.round(waitedMs / 1000)}s (${initialCount} file(s) downloaded) — safe to start parser work`);
+    return { datalessAtStart: initialCount, waitedMs };
+}
+
 // Tee console output into a buffer (still printed) so shared-storage runs can
 // persist a per-run log file the way the phone's FileLogger does.
 function installConsoleTee(lines) {
@@ -210,6 +348,10 @@ async function main() {
     const logLines = [];
     if (sharedRoot) {
         installConsoleTee(logLines);
+        // Defense #1 (dataless iCloud stubs): download every evicted file
+        // BEFORE any parser work. A ceiling breach throws — abort loudly to
+        // launchd's err log rather than start a run that would wedge.
+        await materializeSharedStorageTree(sharedRoot);
     }
 
     const { WebAdapter } = require(path.join(repoRoot, 'scripts', 'adapters', 'web-adapter'));
@@ -286,5 +428,8 @@ module.exports = {
     isAutomationEnv,
     shapeRunOnceConfig,
     assertSharedStorageRootUsable,
-    installConsoleTee
+    installConsoleTee,
+    ensureThreadpoolHeadroom,
+    resolveMaterializeCeilingMs,
+    materializeSharedStorageTree
 };

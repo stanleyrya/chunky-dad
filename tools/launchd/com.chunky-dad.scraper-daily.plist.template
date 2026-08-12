@@ -12,6 +12,12 @@
       the ONLY calendar writer).
     - CHUNKY_RUN_AUTOMATION=1 → parsers with automationEnabled: false are
       skipped, exactly like the phone's scheduled automation runs.
+    - UV_THREADPOOL_SIZE=16 → headroom against wedged syscalls on dataless
+      (evicted) iCloud files: a JS-side timeout cannot cancel the syscall, so
+      each wedge leaks a libuv threadpool slot; with the default pool of 4,
+      four leaks starve every later fs/dns call (the 2026-08 22-minute hang).
+      run-once also materializes the whole shared tree at startup, so this is
+      belt-and-braces.
 
   launchd's own stdout/stderr streams go to ~/Library/Logs/chunky-dad-scraper/
   ON PURPOSE (not the shared logs dir): when the shared root is unreachable
@@ -36,6 +42,8 @@
         <string>__SHARED_DIR__</string>
         <key>CHUNKY_RUN_AUTOMATION</key>
         <string>1</string>
+        <key>UV_THREADPOOL_SIZE</key>
+        <string>16</string>
         <key>PATH</key>
         <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
     </dict>
