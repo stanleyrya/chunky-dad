@@ -9500,6 +9500,26 @@ test('image slots: og:image:width / og:image:height are parsed and drive orienta
   assert.equal(event.imageHorizontal, undefined);
 });
 
+test('image slots: a site-default og:image (og-default basename) never lands in a slot', () => {
+  // Local run 2026-08-12: fillImageFromPageMetaArtwork correctly REFUSED
+  // thebearcalendar.com/og-default.png for "Leipzig Bear Weekend", but the
+  // slot pass consumes page-meta candidates directly and assigned the same
+  // refused URL to imageHorizontal anyway. The slot loop must apply the same
+  // site-default tell (getSiteDefaultMetaImageReason) the fill uses.
+  const parser = createParser();
+  const html = `
+    <html><head>
+      <meta property="og:image" content="https://aggregator.example/og-default.png" />
+      <meta property="og:image:width" content="1200" />
+      <meta property="og:image:height" content="630" />
+    </head><body></body></html>`;
+
+  const event = { title: 'Leipzig Bear Weekend' };
+  parser.applyImageSlots(event, { url: 'https://aggregator.example/events/leipzig/', html });
+  assert.equal(event.imageHorizontal, undefined, 'site-default social card must not fill the landscape slot');
+  assert.equal(event.imageVertical, undefined);
+});
+
 test('image slots: two og:image tags on one page are BOTH considered', () => {
   const parser = createParser();
   const html = `

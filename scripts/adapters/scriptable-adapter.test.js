@@ -7962,3 +7962,452 @@ test('bear dropped section: _duplicateOfKept entries fold out of the pile with a
   const allFolded = adapter.generateBearDroppedSection({ bearDroppedEvents: [folded, { ...folded }] });
   assert.match(allFolded, /2 dropped records were duplicates of kept events/);
 });
+
+// ---------------------------------------------------------------------------
+// Wave 6 — results-UI skimmability: sectioned pile, headline+expander cards,
+// collapsed dropped pile, repeated-image badge, plain merge-row labels.
+// ---------------------------------------------------------------------------
+
+// One event per pile plus a dropped entry, so section order and counts are
+// all observable in a single render.
+function buildWave6Results() {
+  return {
+    analyzedEvents: [
+      { title: 'Actionable New', _action: 'new', startDate: '2026-09-01T02:00:00.000Z' },
+      {
+        title: 'Actionable Merge',
+        _action: 'merge',
+        startDate: '2026-09-02T02:00:00.000Z',
+        _changes: ['image'],
+        _analysis: { reason: 'matched existing calendar event' }
+      },
+      {
+        title: 'Saved Series Match',
+        _action: 'merge',
+        startDate: '2026-09-03T02:00:00.000Z',
+        _seriesMatch: true
+      },
+      {
+        title: 'Saved Merge NoOp',
+        _action: 'merge',
+        startDate: '2026-09-04T02:00:00.000Z',
+        _changes: []
+      },
+      {
+        title: 'Withheld Recurring',
+        _action: 'new',
+        startDate: '2026-09-05T02:00:00.000Z',
+        recurrenceRule: 'FREQ=WEEKLY;BYDAY=FR'
+      },
+      {
+        title: 'Withheld Past Span',
+        _action: 'new',
+        startDate: '2026-01-05T02:00:00.000Z',
+        _pastSpanWithheld: true
+      },
+      {
+        title: 'View Event →',
+        _action: 'new',
+        startDate: '2026-09-06T02:00:00.000Z',
+        _sanityFlags: [{ code: 'junk-title', detail: 'title reads as link/CTA text' }]
+      }
+    ],
+    bearDroppedEvents: [
+      {
+        title: 'Trivia Night',
+        startDate: '2026-09-07T02:00:00.000Z',
+        venue: 'Some Bar',
+        reason: 'ai: no bear-specific language',
+        host: 'somebar.example',
+        event: { title: 'Trivia Night', startDate: '2026-09-07T02:00:00.000Z', bar: 'Some Bar' }
+      }
+    ],
+    errors: [],
+    parserResults: []
+  };
+}
+
+test('results sheet renders the skim piles in order with counts (live run)', async () => {
+  const adapter = buildAdapter();
+  const html = await adapter.generateRichHTML(buildWave6Results());
+
+  const order = [
+    'New Events to Add',
+    'Events to Merge (Adding Info)',
+    'Already Saved (No Action)',
+    'Withheld (Not Written)',
+    'Dropped as non-bear'
+  ];
+  const positions = order.map((title) => html.indexOf(title));
+  positions.forEach((pos, i) => {
+    assert.ok(pos !== -1, `section "${order[i]}" is present`);
+    if (i > 0) {
+      assert.ok(positions[i - 1] < pos, `"${order[i - 1]}" renders before "${order[i]}"`);
+    }
+  });
+
+  // Counts: 2 already-saved (series match + merge no-op), 3 withheld
+  // (recurring, past span, junk title), 1 dropped.
+  const savedSection = html.slice(html.indexOf('Already Saved (No Action)'), html.indexOf('Withheld (Not Written)'));
+  assert.ok(savedSection.includes('<span class="section-count">2</span>'), 'already-saved count chip says 2');
+  const withheldSection = html.slice(html.indexOf('Withheld (Not Written)'), html.indexOf('Dropped as non-bear'));
+  assert.ok(withheldSection.includes('<span class="section-count">3</span>'), 'withheld count chip says 3');
+
+  // The withheld/saved reasons ride the card headline as chips.
+  assert.ok(html.includes('🔁 already saved — matches this series'));
+  assert.ok(html.includes('✅ merge no-op — calendar already has all of this'));
+  assert.ok(html.includes('⏳ span fully past — nothing left to attend'));
+  assert.ok(html.includes('🚫 junk title — write withheld'));
+  assert.ok(html.includes('🔁 recurring — save via ICS, never auto-written'));
+
+  // The saved/withheld events left the actionable piles: New counts only the
+  // one actionable new event.
+  const newSection = html.slice(html.indexOf('New Events to Add'), html.indexOf('Events to Merge (Adding Info)'));
+  assert.ok(newSection.includes('<span class="section-count">1</span>'), 'New pile holds only the actionable event');
+});
+
+test('saved-run display renders the same skim piles (rehydration path)', async () => {
+  const adapter = buildAdapter();
+  adapter.loadRunLogsForDisplay = async () => ({ runId: '20260812-000000', exists: false });
+  const html = await adapter.generateRichHTML({
+    ...buildWave6Results(),
+    _isDisplayingSavedRun: true,
+    savedRunId: '20260812-000000'
+  });
+  for (const title of [
+    'New Events to Add',
+    'Already Saved (No Action)',
+    'Withheld (Not Written)',
+    'Dropped as non-bear'
+  ]) {
+    assert.ok(html.includes(title), `saved-run render has "${title}"`);
+  }
+  assert.ok(html.includes('⏳ span fully past — nothing left to attend'));
+  // Saved-run cards render verdicts read-only, but the buttons still exist.
+  assert.ok(html.includes('markBearOverride(this)'));
+});
+
+test('the dropped pile is collapsed by default and keeps the mark-bear rescue button', async () => {
+  const adapter = buildAdapter();
+  const html = await adapter.generateRichHTML(buildWave6Results());
+
+  const detailsIdx = html.indexOf('<details class="bear-dropped-details">');
+  assert.ok(detailsIdx !== -1, 'dropped section wraps its cards in a <details>');
+  assert.ok(!html.includes('<details class="bear-dropped-details" open'), 'the dropped <details> starts collapsed');
+
+  const droppedSection = html.slice(detailsIdx);
+  assert.ok(droppedSection.includes('data-bear-act="mark-bear"'), 'mark-bear rescue button rendered inside');
+  assert.ok(droppedSection.includes('🚫 DROPPED — NOT BEAR'), 'dropped card badge rendered inside');
+  // The bear-check reason is on the collapsed card headline, not buried.
+  assert.ok(droppedSection.includes('headline-reason-chip'));
+  assert.ok(droppedSection.includes('ai: no bear-specific language'));
+});
+
+test('event cards are headline + collapsed details, nothing deleted', async () => {
+  const adapter = buildAdapter();
+  const event = {
+    title: 'Bear Night',
+    _action: 'new',
+    startDate: '2026-09-01T02:00:00.000Z',
+    endDate: '2026-09-01T05:00:00.000Z',
+    bar: 'The Eagle',
+    address: '1 Main St',
+    city: 'unknown',
+    description: 'A very bear night',
+    notes: 'website: https://example.com',
+    image: 'https://example.com/poster.jpg'
+  };
+  const html = adapter.generateEventCard(event);
+
+  // Headline face: title, 📅 date, 📍 venue.
+  const headlineIdx = html.indexOf('<div class="event-headline">');
+  assert.ok(headlineIdx !== -1, 'card has a headline block');
+  const detailsIdx = html.indexOf('<details class="event-card-details">');
+  assert.ok(detailsIdx !== -1, 'card has the detail expander');
+  assert.ok(headlineIdx < detailsIdx, 'headline renders before the expander');
+  const headline = html.slice(headlineIdx, detailsIdx);
+  assert.ok(headline.includes('Bear Night'));
+  assert.ok(headline.includes('📅'));
+  assert.ok(headline.includes('📍'));
+  assert.ok(headline.includes('The Eagle'));
+
+  // Everything else moved INTO the expander — still present, not deleted.
+  const details = html.slice(detailsIdx);
+  assert.ok(details.includes('1 Main St'), 'address kept');
+  assert.ok(details.includes('A very bear night'), 'description kept');
+  assert.ok(details.includes('📝 Calendar Notes Preview'), 'notes preview kept');
+  assert.ok(details.includes('raw-json'), 'debug JSON kept');
+  assert.ok(details.includes('copyEventJSON(this)'), 'copy button kept');
+  assert.ok(details.includes('image-container'), 'image kept');
+});
+
+test('multi-day headline carries the end date, same-day only the end time', () => {
+  const adapter = buildAdapter();
+  const multiDay = adapter.generateEventCard({
+    title: 'Festival',
+    _action: 'new',
+    startDate: '2026-08-28T20:00:00.000Z',
+    endDate: '2026-08-31T20:00:00.000Z',
+    city: 'unknown'
+  });
+  const headline = multiDay.slice(
+    multiDay.indexOf('<div class="event-headline">'),
+    multiDay.indexOf('<details class="event-card-details">')
+  );
+  assert.ok(/Aug 28.*Aug 31/s.test(headline), 'headline shows both start and end dates');
+});
+
+test('repeated-image badge fires at 3+ uses in one run and never at 2', async () => {
+  const sharedImage = 'https://venue.example/MORE-INFO-Coming-Soon.jpg';
+  const makeEvent = (i) => ({
+    title: `Event ${i}`,
+    _action: 'new',
+    startDate: '2026-09-01T02:00:00.000Z',
+    image: sharedImage
+  });
+
+  const adapter3 = buildAdapter();
+  const html3 = await adapter3.generateRichHTML({
+    analyzedEvents: [makeEvent(1), makeEvent(2), makeEvent(3)],
+    errors: [],
+    parserResults: []
+  });
+  assert.ok(html3.includes('venue placeholder image'), 'badge fires at 3 uses');
+  assert.ok(html3.includes('same image on 3 events this run'));
+  // The class lands on the image block itself (the bare selector string also
+  // lives in the page CSS, so assert the applied class, not the substring).
+  assert.ok(html3.includes('event-image venue-placeholder-image'), 'image block greyed via class');
+
+  const adapter2 = buildAdapter();
+  const html2 = await adapter2.generateRichHTML({
+    analyzedEvents: [makeEvent(1), makeEvent(2)],
+    errors: [],
+    parserResults: []
+  });
+  assert.ok(!html2.includes('venue placeholder image'), 'no badge at 2 uses');
+  assert.ok(!html2.includes('event-image venue-placeholder-image'));
+});
+
+test('dropped cards count toward the repeated-image census', async () => {
+  const sharedImage = 'https://venue.example/placeholder.jpg';
+  const adapter = buildAdapter();
+  const html = await adapter.generateRichHTML({
+    analyzedEvents: [
+      { title: 'Kept 1', _action: 'new', startDate: '2026-09-01T02:00:00.000Z', image: sharedImage },
+      { title: 'Kept 2', _action: 'new', startDate: '2026-09-02T02:00:00.000Z', image: sharedImage }
+    ],
+    bearDroppedEvents: [
+      {
+        title: 'Dropped 1',
+        reason: 'ai: not bear',
+        host: 'venue.example',
+        event: { title: 'Dropped 1', startDate: '2026-09-03T02:00:00.000Z', image: sharedImage }
+      }
+    ],
+    errors: [],
+    parserResults: []
+  });
+  assert.ok(html.includes('venue placeholder image'), '2 kept + 1 dropped = 3 uses, badge fires');
+});
+
+test('merge rows label deterministic vs AI vs no-op decisions in plain words', () => {
+  const adapter = buildAdapter();
+  const event = {
+    title: 'Merge Labels',
+    _action: 'merge',
+    startDate: '2026-09-01T02:00:00.000Z',
+    city: 'unknown',
+    website: 'https://www.furball.example',
+    image: 'https://cdn.example/new-poster.jpg',
+    bar: 'Same Bar',
+    key: 'merge-labels',
+    _original: {
+      scraper: {
+        website: 'https://events.ticketleap.example/furball',
+        image: 'https://cdn.example/new-poster.jpg',
+        bar: 'Same Bar'
+      },
+      calendar: {
+        website: 'https://www.furball.example',
+        image: 'https://cdn.example/old-poster.jpg',
+        bar: 'Same Bar'
+      },
+      merged: {
+        website: 'https://www.furball.example',
+        image: 'https://cdn.example/new-poster.jpg',
+        bar: 'Same Bar'
+      }
+    },
+    _fieldPriorities: {
+      website: { merge: 'ai' },
+      image: { merge: 'ai' }
+    },
+    _mergeDecisions: [
+      {
+        field: 'website',
+        existingValue: 'https://www.furball.example',
+        newValue: 'https://events.ticketleap.example/furball',
+        chosenValue: 'https://www.furball.example',
+        reason: 'identity link beats a ticketing/social platform URL',
+        source: 'deterministic'
+      },
+      {
+        field: 'image',
+        existingValue: 'https://cdn.example/old-poster.jpg',
+        newValue: 'https://cdn.example/new-poster.jpg',
+        chosenValue: 'https://cdn.example/new-poster.jpg',
+        reason: 'poster names this event',
+        source: 'ai'
+      }
+    ]
+  };
+  const html = adapter.generateEventCard(event);
+
+  // Deterministic resolution: labeled as such, with outcome and reason.
+  assert.ok(html.includes('🔒 DETERMINISTIC — kept existing — identity link beats a ticketing/social platform URL'));
+  // AI arbitration: labeled AI with the pick.
+  assert.ok(html.includes('🤝 AI — chose new — poster names this event'));
+  // No-decision identical field: a clear no-op label, not a mystery token.
+  assert.ok(html.includes('SAME VALUE'));
+  // Strategy under the field name reads as words, not a bare "ai".
+  assert.ok(html.includes('<small>AI-arbitrated</small>'));
+  assert.ok(!html.includes('<small>ai</small>'));
+});
+
+test('merge rows label calendar stickiness and clobber fallback', () => {
+  const adapter = buildAdapter();
+  const base = {
+    title: 'Sticky Labels',
+    _action: 'merge',
+    startDate: '2026-09-01T02:00:00.000Z',
+    city: 'unknown',
+    key: 'sticky-labels',
+    _original: {
+      scraper: { ticketUrl: 'https://tickets.example/new' },
+      calendar: { ticketUrl: 'https://tickets.example/saved' },
+      merged: { ticketUrl: 'https://tickets.example/saved' }
+    },
+    _fieldPriorities: { ticketUrl: { merge: 'ai' } }
+  };
+  const stickyHtml = adapter.generateEventCard({
+    ...base,
+    ticketUrl: 'https://tickets.example/saved',
+    _mergeDecisions: [{
+      field: 'ticketUrl',
+      existingValue: 'https://tickets.example/saved',
+      newValue: 'https://tickets.example/new',
+      chosenValue: 'https://tickets.example/saved',
+      reason: 'calendar stickiness (binding) — saved value kept without AI arbitration',
+      source: 'sticky'
+    }]
+  });
+  assert.ok(stickyHtml.includes('🧊 KEPT EXISTING (calendar stickiness)'));
+
+  const fallbackHtml = adapter.generateEventCard({
+    ...base,
+    ticketUrl: 'https://tickets.example/new',
+    _mergeDecisions: [{
+      field: 'ticketUrl',
+      existingValue: 'https://tickets.example/saved',
+      newValue: 'https://tickets.example/new',
+      chosenValue: 'https://tickets.example/new',
+      reason: 'ai unavailable/rejected — clobber fallback',
+      source: 'fallback'
+    }]
+  });
+  assert.ok(fallbackHtml.includes('⚠️ NO AI ANSWER — took new (clobber fallback)'));
+});
+
+test('every existing card action survives the headline redesign (live + saved run)', async () => {
+  const results = {
+    analyzedEvents: [
+      {
+        title: 'Recurring With Everything',
+        _action: 'new',
+        startDate: '2026-09-04T02:00:00.000Z',
+        recurrenceRule: 'FREQ=WEEKLY;BYDAY=TH',
+        bar: 'The Eagle',
+        city: 'unknown',
+        address: '1 Main St',
+        location: '34.05,-118.24'
+      }
+    ],
+    bearDroppedEvents: [
+      {
+        title: 'Dropped One',
+        reason: 'ai: not bear',
+        host: 'x.example',
+        event: { title: 'Dropped One', startDate: '2026-09-05T02:00:00.000Z', bar: 'Bar X' }
+      }
+    ],
+    errors: [],
+    parserResults: []
+  };
+
+  const assertActions = (html, label) => {
+    // ICS export for the recurring card.
+    assert.ok(html.includes('exportRecurringIcs(this)'), `${label}: ICS export button`);
+    assert.ok(html.includes('data-ics-export-id='), `${label}: ICS export id registered`);
+    // Event Builder prefill link.
+    assert.ok(html.includes('event-builder-link'), `${label}: event-builder link`);
+    // Map verify links (bar/address/pin → openMapVerify bridge).
+    assert.ok(html.includes('openMapVerify(this)'), `${label}: map verify handler`);
+    assert.ok(html.includes('data-map-url-id='), `${label}: map verify id registered`);
+    // Bear verdict buttons (kept card and dropped card).
+    assert.ok(html.includes('markBearOverride(this)'), `${label}: bear verdict buttons`);
+    assert.ok(html.includes('data-bear-act="mark-bear"'), `${label}: mark-bear action`);
+    assert.ok(html.includes('data-bear-act="mark-not-bear"'), `${label}: mark-not-bear action`);
+    // Copy buttons.
+    assert.ok(html.includes('copyEventJSON(this)'), `${label}: copy JSON button`);
+    // The chunkyscrape:// bridge page handlers are still installed.
+    assert.ok(html.includes("chunkyscrape://act?a="), `${label}: chunkyscrape bridge`);
+  };
+
+  const liveAdapter = buildAdapter();
+  assertActions(await liveAdapter.generateRichHTML(results), 'live');
+
+  const savedAdapter = buildAdapter();
+  savedAdapter.loadRunLogsForDisplay = async () => ({ runId: '20260812-000001', exists: false });
+  assertActions(
+    await savedAdapter.generateRichHTML({
+      ...results,
+      _isDisplayingSavedRun: true,
+      savedRunId: '20260812-000001'
+    }),
+    'saved run'
+  );
+});
+
+test('_duplicateOfKept records render as one-liners, not full cards (feature-detected)', async () => {
+  const adapter = buildAdapter();
+  const html = await adapter.generateRichHTML({
+    analyzedEvents: [
+      { title: 'Kept Event', _action: 'new', startDate: '2026-09-01T02:00:00.000Z' },
+      {
+        title: 'Second Copy',
+        _action: 'new',
+        startDate: '2026-09-01T02:00:00.000Z',
+        _duplicateOfKept: 'Kept Event'
+      }
+    ],
+    bearDroppedEvents: [
+      {
+        title: 'Dropped Copy',
+        reason: 'ai: not bear',
+        host: 'x.example',
+        _duplicateOfKept: { title: 'Kept Event' },
+        event: { title: 'Dropped Copy', startDate: '2026-09-01T02:00:00.000Z' }
+      }
+    ],
+    errors: [],
+    parserResults: []
+  });
+
+  assert.ok(html.includes('duplicate-folded-line'), 'one-liner rendered');
+  assert.ok(html.includes('"Second Copy" — duplicate of "Kept Event"'), 'analyzed duplicate folded');
+  assert.ok(html.includes('"Dropped Copy" — duplicate of "Kept Event"'), 'dropped duplicate folded');
+  // The folded records never render as full cards: their bear-verdict button
+  // ids (k1 for the analyzed copy, d0 for the dropped copy) must not exist.
+  assert.ok(!html.includes('data-bear-idx="k1"'), 'no full card for the analyzed duplicate');
+  assert.ok(!html.includes('data-bear-idx="d0"'), 'no full card for the dropped duplicate');
+});

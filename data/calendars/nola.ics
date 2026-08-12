@@ -6,27 +6,27 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-new-orleans
 X-WR-TIMEZONE:America/Chicago
 BEGIN:VEVENT
-DTSTART:20260906T020000Z
-DTEND:20260906T030000Z
-DTSTAMP:20260811T145221Z
-UID:177A2A66-DFD8-4AF9-BC41-A6292A422E58
-CREATED:20260811T142851Z
-DESCRIPTION:description: Southern Decadence\nbar: Santos Bar\naddress: 1135
-  DECATUR ST\ntimezone: America/Chicago\nticketUrl: https://events.ticketlea
- p.com/tickets/furballnyc/furball-new-orleans-southern-decadence-2026\nimage
- : https://static.wixstatic.com/media/238fae_fd76b69c05fa4e788b9acb5ef77178e
- e~mv2.jpg\ncover: TICKLEAP\nimageSource: page\nimageVertical: https://stati
- c.wixstatic.com/media/238fae_fd76b69c05fa4e788b9acb5ef77178ee~mv2.jpg\nbarS
- ource: geo-poi\naddressSource: page\nwebsite: https://www.furball.nyc\ngmap
- s: https://www.google.com/maps/search/?api=1&query=29.9605893%2C-90.0594606
- \npinSource: geocoded-exact\nshortName: FUR-BALL\ninstagram: https://instag
- ram.com/furballnyc/\nfavicon: https://linktr.ee/furballnyc\nkey: furball-no
- la|2026-09-06|santos bar\nbearSource: keyword
-LAST-MODIFIED:20260811T142852Z
-LOCATION:29.9605893\, -90.0594606
+DTSTART:20260905T020000Z
+DTEND:20260905T070000Z
+DTSTAMP:20260812T054150Z
+UID:74648B34-07A1-4BD2-8E78-D67B991A920E
+CREATED:20260514T005857Z
+DESCRIPTION:description: SOUTHERN DECADENCE\nbar: Joy Theater\naddress: 120
+ 0 Canal St\, New Orleans\, LA 70112\ntimezone: America/Chicago\nticketUrl: 
+ https://www.ticketmaster.com/event/1B006454A32CE162\nimage: https://bearrac
+ uda.com/wp-content/uploads/2026/03/igdecad-2.jpg\nimageVertical: https://be
+ arracuda.com/wp-content/uploads/2026/03/igdecad-2.jpg\nwebsite: https://bea
+ rracuda.com/events/decadence/\nshortName: Bear-rac-uda\ninstagram: https://
+ www.instagram.com/bearracuda\nfavicon: https://bearracuda.com/\nbearSource:
+  keyword\nkey: bearracuda-new-orleans⚜️|2026-09-05|joy theater\npinSource: 
+ curated\naddressSource: curated\nimageSource: og-image\nbarSource: page-adj
+ acent\ngmaps: https://www.google.com/maps/search/?api=1&query=29.9559524%2C
+ -90.0738975
+LAST-MODIFIED:20260804T165132Z
+LOCATION:29.9559524\, -90.0738975
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:FURBALL NOLA
+SUMMARY:BEARRACUDA: New Orleans⚜️
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
@@ -34,7 +34,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20250830T020000Z
 DTEND:20250830T070000Z
-DTSTAMP:20260811T145221Z
+DTSTAMP:20260812T054150Z
 UID:96ED5A57-14F4-4189-81C5-1AA44B8E365F
 CREATED:20250830T003601Z
 DESCRIPTION:description: Music & Entertainment\n• Matt Stands &amp\; Freddy
@@ -58,27 +58,27 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260905T020000Z
-DTEND:20260905T070000Z
-DTSTAMP:20260811T145221Z
-UID:74648B34-07A1-4BD2-8E78-D67B991A920E
-CREATED:20260514T005857Z
-DESCRIPTION:description: SOUTHERN DECADENCE\nbar: Joy Theater\naddress: 120
- 0 Canal St\, New Orleans\, LA 70112\ntimezone: America/Chicago\nticketUrl: 
- https://www.ticketmaster.com/event/1B006454A32CE162\nimage: https://bearrac
- uda.com/wp-content/uploads/2026/03/igdecad-2.jpg\nimageVertical: https://be
- arracuda.com/wp-content/uploads/2026/03/igdecad-2.jpg\nwebsite: https://bea
- rracuda.com/events/decadence/\nshortName: Bear-rac-uda\ninstagram: https://
- www.instagram.com/bearracuda\nfavicon: https://bearracuda.com/\nbearSource:
-  keyword\nkey: bearracuda-new-orleans⚜️|2026-09-05|joy theater\npinSource: 
- curated\naddressSource: curated\nimageSource: og-image\nbarSource: page-adj
- acent\ngmaps: https://www.google.com/maps/search/?api=1&query=29.9559524%2C
- -90.0738975
-LAST-MODIFIED:20260804T165132Z
-LOCATION:29.9559524\, -90.0738975
+DTSTART:20260906T020000Z
+DTEND:20260906T030000Z
+DTSTAMP:20260812T054150Z
+UID:177A2A66-DFD8-4AF9-BC41-A6292A422E58
+CREATED:20260811T142851Z
+DESCRIPTION:description: Southern Decadence\nbar: Santos Bar\naddress: 1135
+  DECATUR ST\ntimezone: America/Chicago\nticketUrl: https://events.ticketlea
+ p.com/tickets/furballnyc/furball-new-orleans-southern-decadence-2026\nimage
+ : https://static.wixstatic.com/media/238fae_fd76b69c05fa4e788b9acb5ef77178e
+ e~mv2.jpg\nimageVertical: https://static.wixstatic.com/media/238fae_fd76b69
+ c05fa4e788b9acb5ef77178ee~mv2.jpg\nwebsite: https://www.furball.nyc\nshortN
+ ame: FUR-BALL\ninstagram: https://instagram.com/furballnyc/\nfavicon: https
+ ://linktr.ee/furballnyc\nkey: furball-nola|2026-09-06|santos bar\nbearSourc
+ e: keyword\ncover: TICKLEAP\npinSource: geocoded-exact\naddressSource: page
+ \nimageSource: page\nbarSource: geo-poi\ngmaps: https://www.google.com/maps
+ /search/?api=1&query=29.9605893%2C-90.0594606
+LAST-MODIFIED:20260812T041511Z
+LOCATION:29.9605893\, -90.0594606
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:BEARRACUDA: New Orleans⚜️
+SUMMARY:FURBALL NOLA
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

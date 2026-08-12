@@ -6434,50 +6434,100 @@ class ScriptableAdapter {
     const newVenueSectionHtml =
       await this.generateNewVenueCandidateSection(results);
 
+    // Per-run image reuse census for the venue-placeholder badge: the same
+    // image URL on 3+ cards in one run is a venue's generic tile (e.g. Eagle
+    // LA's MORE-INFO-Coming-Soon poster on 11 events), not any event's own
+    // artwork. Pure URL counting across kept AND dropped cards — the tile
+    // does not care which side of the bear check an event landed on — and no
+    // filename/domain matching, ever. generateEventCard feature-detects the
+    // map, so standalone card renders (tests, other callers) badge nothing.
+    const imageUseCounts = new Map();
+    const countImageUse = (candidate) => {
+      const url =
+        candidate && typeof candidate.image === "string"
+          ? candidate.image.trim()
+          : "";
+      if (!url) return;
+      imageUseCounts.set(url, (imageUseCounts.get(url) || 0) + 1);
+    };
+    allEvents.forEach(countImageUse);
+    (Array.isArray(results.bearDroppedEvents)
+      ? results.bearDroppedEvents
+      : []
+    ).forEach((entry) => countImageUse(entry && entry.event));
+    this._repeatedImageCounts = imageUseCounts;
+    const repeatedImageUrls = [...imageUseCounts].filter(
+      ([, count]) => count >= 3,
+    );
+    if (repeatedImageUrls.length > 0) {
+      console.log(
+        `📱 Scriptable: 🖼️ ${repeatedImageUrls.length} image URL(s) appear on 3+ cards this run — badged as venue placeholder: ${repeatedImageUrls
+          .map(([url, count]) => `${count}x ${url}`)
+          .join(", ")}`,
+      );
+    }
+
     // Group events by intent actions (intent can differ from write action for overrides).
     // Each entry keeps its index into allEvents — which IS the index into
     // results.analyzedEvents (getAllEventsFromResults preserves order) — so a
     // card's bear-verdict buttons address the right event over the bridge.
+    // Wave 6 splits two more piles out of the actionable sections so records
+    // the run will NOT write stop reading as actionable bugs:
+    //   saved    — already in the calendar (series match / merge no-op)
+    //   withheld — visible but never written (recurring export / span fully
+    //              past / junk title), reason chip on the card headline
     const newEvents = [];
     const mergeEvents = [];
     const conflictEvents = [];
+    const savedEvents = [];
+    const withheldEvents = [];
 
     allEvents.forEach((event, index) => {
       const entry = { event, index };
-      switch (this.normalizeIntentAction(event)) {
-        case "new":
-          newEvents.push(entry);
-          break;
-        case "merge":
-          mergeEvents.push(entry);
-          break;
-        // A series-matched (already saved, withheld) event matched an
-        // existing record — its card belongs with the matches, never in the
-        // New section whose framing is what re-offered saved series.
-        case "series_match":
-          mergeEvents.push(entry);
-          break;
-        case "conflict":
-        case "missing_calendar":
-          conflictEvents.push(entry);
-          break;
-        default:
-          // Fallback for events without analysis
-          newEvents.push(entry);
-          break;
+      const intent = this.normalizeIntentAction(event);
+      // Conflicts stay in the review pile whatever else is true of them —
+      // requiring review outranks the saved/withheld shelves.
+      if (intent === "conflict" || intent === "missing_calendar") {
+        conflictEvents.push(entry);
+        return;
       }
+      const placement = this.classifyEventForResultsSection(event);
+      if (placement.section === "saved") {
+        // A series-matched event matched an existing record — its card
+        // belongs with the already-saved pile, never in the New section
+        // whose framing is what re-offered saved series.
+        savedEvents.push({ ...entry, sectionReason: placement.reason });
+        return;
+      }
+      if (placement.section === "withheld") {
+        withheldEvents.push({ ...entry, sectionReason: placement.reason });
+        return;
+      }
+      if (intent === "merge") {
+        mergeEvents.push(entry);
+        return;
+      }
+      // "new" and the no-analysis fallback both land in the New pile.
+      newEvents.push(entry);
     });
 
     // Kept events are, by definition, the cascade's "bear" verdicts: their
     // cards show that verdict active with a one-tap "Mark as not bear" beside
     // it. Saved-run display renders the verdict read-only (no execution).
     const keptCardsInteractive = results?._isDisplayingSavedRun !== true;
-    const keptCard = (entry) =>
-      this.generateEventCard(entry.event, provenanceRunInfo, {
+    const keptCard = (entry) => {
+      // Duplicate-folding stamp (feature-detected, never required): a record
+      // an upstream pass marked as the duplicate of a kept card renders as a
+      // one-liner pointing at the kept card, not as a second full card.
+      const foldedLine = this.buildDuplicateFoldedLineHtml(entry.event);
+      if (foldedLine) return foldedLine;
+      return this.generateEventCard(entry.event, provenanceRunInfo, {
         bearIdx: `k${entry.index}`,
         bearVerdict: "bear",
         interactive: keptCardsInteractive,
+        sectionReason: entry.sectionReason || "",
       });
+    };
 
     // Every card is built EXACTLY ONCE, up front, and the page template below
     // only ever slices these arrays. generateEventCard is not a pure function
@@ -6488,6 +6538,8 @@ class ScriptableAdapter {
     const newCards = newEvents.map(keptCard);
     const mergeCards = mergeEvents.map(keptCard);
     const conflictCards = conflictEvents.map(keptCard);
+    const savedCards = savedEvents.map(keptCard);
+    const withheldCards = withheldEvents.map(keptCard);
     const droppedCards = this.buildBearDroppedCards(results);
     // Same rule for the non-card sections: hoisted out of the template so
     // they are generated once and reused verbatim on every page.
@@ -6848,6 +6900,107 @@ class ScriptableAdapter {
            events; the accent stripe is the only visual difference. */
         .event-card.bear-dropped-card {
             border-left: 4px solid var(--secondary-color);
+        }
+
+        /* Wave 6 — skimmable headline + collapsed per-card detail expander. */
+        .event-headline {
+            margin-bottom: 8px;
+        }
+
+        .event-headline-badges {
+            margin-bottom: 6px;
+        }
+
+        .event-headline-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 16px;
+            font-size: 14px;
+            color: var(--text-primary);
+            margin-top: 6px;
+        }
+
+        .headline-reason-chip {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 10px;
+            margin: 2px;
+            background: var(--background-light);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .event-card-details > summary {
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--primary-color);
+            padding: 6px 0;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .duplicate-folded-line {
+            font-size: 12px;
+            color: var(--text-secondary);
+            padding: 6px 12px;
+            margin-bottom: 8px;
+            border-left: 3px solid var(--border-color);
+            background: var(--background-light);
+            border-radius: 6px;
+        }
+
+        .section-blurb {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
+        /* Collapsed dropped pile: the summary row doubles as the section
+           header, chevron on the right so the count chip stays put. */
+        .bear-dropped-details > summary {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 20px;
+            list-style: none;
+        }
+
+        .bear-dropped-details > summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .bear-dropped-details > summary::after {
+            content: "▸";
+            margin-left: 8px;
+            color: var(--text-secondary);
+        }
+
+        .bear-dropped-details[open] > summary::after {
+            content: "▾";
+        }
+
+        .bear-dropped-hint {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-left: 10px;
+        }
+
+        /* Venue placeholder tile: greyed, badged, still viewable in full. */
+        .venue-placeholder-image .image-container img {
+            filter: grayscale(1);
+            opacity: 0.5;
+        }
+
+        .venue-placeholder-badge {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
         }
 
         /* Bear verdict row: both directions on every card, active one filled. */
@@ -7941,7 +8094,39 @@ class ScriptableAdapter {
     `
         : ""
     }
-    
+
+    ${
+      view.savedCards.length > 0
+        ? `
+    <div class="section">
+        <div class="section-header">
+            <span class="section-icon">✅</span>
+            <span class="section-title">Already Saved (No Action)</span>
+            <span class="section-count">${view.savedCountLabel}</span>
+        </div>
+        <div class="section-blurb">These matched what the calendar already has — a saved series, or a merge with nothing new to add. Nothing will be written.</div>
+        ${view.savedCards.join("")}
+    </div>
+    `
+        : ""
+    }
+
+    ${
+      view.withheldCards.length > 0
+        ? `
+    <div class="section">
+        <div class="section-header">
+            <span class="section-icon">⏸️</span>
+            <span class="section-title">Withheld (Not Written)</span>
+            <span class="section-count">${view.withheldCountLabel}</span>
+        </div>
+        <div class="section-blurb">Kept visible but never written this run — each card's headline chip says why (recurring series save via ICS, span fully past, junk title).</div>
+        ${view.withheldCards.join("")}
+    </div>
+    `
+        : ""
+    }
+
     ${
       results.errors && results.errors.length > 0
         ? `
@@ -8682,6 +8867,8 @@ class ScriptableAdapter {
       ...newCards.map((html) => ({ group: "new", html })),
       ...mergeCards.map((html) => ({ group: "merge", html })),
       ...conflictCards.map((html) => ({ group: "conflict", html })),
+      ...savedCards.map((html) => ({ group: "saved", html })),
+      ...withheldCards.map((html) => ({ group: "withheld", html })),
       ...droppedCards.map((html) => ({ group: "dropped", html })),
     ];
     const fullView = {
@@ -8690,9 +8877,13 @@ class ScriptableAdapter {
       newCards,
       mergeCards,
       conflictCards,
+      savedCards,
+      withheldCards,
       newCountLabel: newEvents.length,
       mergeCountLabel: mergeEvents.length,
       conflictCountLabel: conflictEvents.length,
+      savedCountLabel: savedEvents.length,
+      withheldCountLabel: withheldEvents.length,
       droppedSectionHtml: droppedCards.length
         ? this.buildBearDroppedSectionHtml(
             droppedCards,
@@ -8732,6 +8923,8 @@ class ScriptableAdapter {
     const pageNewCards = take("new");
     const pageMergeCards = take("merge");
     const pageConflictCards = take("conflict");
+    const pageSavedCards = take("saved");
+    const pageWithheldCards = take("withheld");
     const pageDroppedCards = take("dropped");
     const label = (shown, total) =>
       shown === total ? total : `${shown} of ${total}`;
@@ -8747,9 +8940,16 @@ class ScriptableAdapter {
       newCards: pageNewCards,
       mergeCards: pageMergeCards,
       conflictCards: pageConflictCards,
+      savedCards: pageSavedCards,
+      withheldCards: pageWithheldCards,
       newCountLabel: label(pageNewCards.length, newEvents.length),
       mergeCountLabel: label(pageMergeCards.length, mergeEvents.length),
       conflictCountLabel: label(pageConflictCards.length, conflictEvents.length),
+      savedCountLabel: label(pageSavedCards.length, savedEvents.length),
+      withheldCountLabel: label(
+        pageWithheldCards.length,
+        withheldEvents.length,
+      ),
       droppedSectionHtml: pageDroppedCards.length
         ? this.buildBearDroppedSectionHtml(
             pageDroppedCards,
@@ -10248,6 +10448,13 @@ class ScriptableAdapter {
               startDate: entry.startDate,
               bar: entry.venue,
             };
+        // Duplicate-folding stamp (feature-detected on the entry or its
+        // nested event, wherever the folding pass put it): render the
+        // one-liner instead of a full duplicate card.
+        const foldedLine = this.buildDuplicateFoldedLineHtml(
+          entry._duplicateOfKept ? entry : event,
+        );
+        if (foldedLine) return foldedLine;
         // Two rescue flags, one treatment: `rescued` (a calendar manual-bear
         // record pre-empted the drop) and `manuallyMarkedBear` (the owner
         // rescued it during the run via the verdict buttons — saved runs
@@ -10287,18 +10494,49 @@ class ScriptableAdapter {
     return cards;
   }
 
+  // Duplicate-folding one-liner. `_duplicateOfKept` is stamped by the
+  // duplicate-folding pass when a record is the same real-world event as a
+  // card the run already keeps; a second full card would only re-present
+  // information the kept card carries. Feature-detected: the stamp may be
+  // absent from every run this code ever sees (older runs, the stamp's
+  // branch unmerged) and then this returns null and the caller renders the
+  // normal full card. The stamp is accepted as a string (kept title/key) or
+  // an object carrying title/key — no schema dependency either way.
+  buildDuplicateFoldedLineHtml(record) {
+    const stamp = record && record._duplicateOfKept;
+    if (!stamp) return null;
+    const keptLabel =
+      typeof stamp === "string"
+        ? stamp
+        : (stamp && typeof stamp === "object" && (stamp.title || stamp.key)) ||
+          "";
+    const title = (record && (record.title || record.name)) || "Unknown";
+    return `<div class="duplicate-folded-line">↩︎ "${this.escapeHtml(
+      title,
+    )}" — duplicate of ${
+      keptLabel ? `"${this.escapeHtml(String(keptLabel))}"` : "a kept event"
+    }, folded into the kept card</div>`;
+  }
+
   // `countLabel` is what the section-count chip shows: the plain total on a
   // one-page render (unchanged), "n of N" once the cards are spread out.
+  // The whole pile is COLLAPSED by default (wave 6): drops are review
+  // surface, not part of the write plan, and 17 of them above the fold made
+  // a healthy run read as a pile of bugs. The <details> keeps every card —
+  // and its mark-bear rescue buttons — one tap away.
   buildBearDroppedSectionHtml(cards, countLabel) {
     return `
-    <div class="section">
-        <div class="section-header">
-            <span class="section-icon">🚫</span>
-            <span class="section-title">Dropped as non-bear</span>
-            <span class="section-count">${countLabel}</span>
-        </div>
-        <div style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;">These events were filtered out by the bear check and will NOT be written. Tap "Mark as bear" to pull one back into this run's write plan — the verdict sticks on the calendar record for future scrapes.</div>
-        ${cards.join("")}
+    <div class="section bear-dropped-section">
+        <details class="bear-dropped-details">
+            <summary class="bear-dropped-summary">
+                <span class="section-icon">🚫</span>
+                <span class="section-title">Dropped as non-bear</span>
+                <span class="section-count">${countLabel}</span>
+                <span class="bear-dropped-hint">collapsed — tap to review</span>
+            </summary>
+            <div style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;">These events were filtered out by the bear check and will NOT be written. Tap "Mark as bear" to pull one back into this run's write plan — the verdict sticks on the calendar record for future scrapes.</div>
+            ${cards.join("")}
+        </details>
     </div>
     `;
   }
@@ -10989,13 +11227,63 @@ class ScriptableAdapter {
     // Event Builder prefill link (every card) + ICS export (recurring cards).
     const eventActionsRow = this.buildEventCardActionsHtml(event);
 
+    // ----- Skimmable headline (wave 6) -----------------------------------
+    // The always-visible face of the card: badges, title, 📅 date (with the
+    // end DATE when it falls on a different day) and 📍 venue. Everything
+    // else the card used to show up front — field tables, merge provenance,
+    // notes preview, debug JSON — moves into the collapsed
+    // <details class="event-card-details"> expander below. Relocated, never
+    // removed: the expander contains the card body byte-for-byte.
+    const headlineDate = `${dateStr} ${timeStr}${
+      endDateStr
+        ? ` - ${endDateStr} ${endTimeStr}`
+        : endTimeStr
+          ? ` - ${endTimeStr}`
+          : ""
+    }`;
+    const headlineVenue = event.venue || event.bar || "";
+    // Reason chip ON the headline: a card that will not be written says why
+    // without expanding. Dropped cards reuse the bear-check reason; withheld
+    // and already-saved cards get the section reason passed in by the pile
+    // classifier (sectionReason is '' for plain actionable cards).
+    const headlineReason = isDroppedCard
+      ? dropDetail
+      : bearOpts.sectionReason
+        ? String(bearOpts.sectionReason)
+        : "";
+    const headlineReasonChip = headlineReason
+      ? `<span class="headline-reason-chip">${this.escapeHtml(headlineReason)}</span>`
+      : "";
+    // Repeated-image badge: generateRichHTML censuses image URLs across the
+    // whole run; the same URL on 3+ cards is a venue placeholder tile, not
+    // this event's artwork. Feature-detected — standalone card renders (no
+    // census map) badge nothing. Generic counting only, no filename/domain
+    // matching.
+    const repeatedImageCount =
+      this._repeatedImageCounts instanceof Map &&
+      typeof event.image === "string"
+        ? this._repeatedImageCounts.get(event.image.trim()) || 0
+        : 0;
+    const isRepeatedImage = repeatedImageCount >= 3;
+
     let html = `
         <div class="event-card${isDroppedCard ? " bear-dropped-card" : ""}">
-            ${actionBadge}${recurringBadge}${seriesMatchBadge}${sanityBadge}${overrideBadge}${seriesProposalBadge}
-            ${actionNote}${cadenceHintNote}
-            <div class="event-title">${this.escapeHtml(event.title || event.name)}</div>
+            <div class="event-headline">
+                <div class="event-headline-badges">${actionBadge}${recurringBadge}${seriesMatchBadge}${sanityBadge}${overrideBadge}${seriesProposalBadge}${headlineReasonChip}</div>
+                <div class="event-title">${this.escapeHtml(event.title || event.name)}</div>
+                <div class="event-headline-meta">
+                    <span class="event-headline-date">📅 ${headlineDate}</span>
+                    ${
+                      headlineVenue
+                        ? `<span class="event-headline-venue">📍 ${this.escapeHtml(headlineVenue)}</span>`
+                        : ""
+                    }
+                </div>
+            </div>
             ${bearVerdictRow}
-            
+            <details class="event-card-details">
+            <summary class="event-card-details-summary">Details</summary>
+            ${actionNote}${cadenceHintNote}
             <!-- Main Event Info -->
             <div class="event-details">
                 ${
@@ -11078,7 +11366,12 @@ class ScriptableAdapter {
                 ${
                   event.image
                     ? `
-                    <div class=\"event-image\">
+                    <div class=\"event-image${isRepeatedImage ? " venue-placeholder-image" : ""}\">
+                        ${
+                          isRepeatedImage
+                            ? `<div class=\"venue-placeholder-badge\">🖼️ venue placeholder image — same image on ${repeatedImageCount} events this run</div>`
+                            : ""
+                        }
                         <a href=\"${this.escapeHtml(event.image)}\" target=\"_blank\" rel=\"noopener\" style=\"color: var(--primary-color); font-weight: 500;\">View Full Image</a>
                         <div class=\"image-container\" style=\"margin-top: 8px; display: block;\">
                             <img src=\"${this.escapeHtml(event.image)}\" alt=\"Event Image\" onerror=\"this.style.display='none'\">
@@ -11388,6 +11681,7 @@ class ScriptableAdapter {
                     </button>
                 </div>
             </div>
+            </details>
         </div>
         `;
 
@@ -13391,11 +13685,54 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         return false;
       };
 
+      // The merge pipeline records WHY each contested field resolved the way
+      // it did (_mergeDecisions: deterministic rung 🔒 / calendar stickiness
+      // 🧊 / AI arbitration 🤝 / clobber fallback). When this field carries a
+      // record, the row says so in plain words — source AND outcome — instead
+      // of leaving the reader to reverse-engineer it from two value cells and
+      // a bare strategy name. The strategy-heuristic chain below stays as the
+      // fallback for fields (and older saved runs) with no record.
+      const decisionRecord = Array.isArray(event._mergeDecisions)
+        ? event._mergeDecisions.find(
+            (record) => record && record.field === field,
+          )
+        : null;
+
       // Determine flow direction and result
       let flowIcon = "";
       let resultText = "";
 
-      if (!existingValue && newValue) {
+      if (decisionRecord) {
+        const keptExisting = mergeValuesLookIdentical(
+          decisionRecord.chosenValue,
+          existingValue,
+        );
+        const tookNew =
+          !keptExisting &&
+          mergeValuesLookIdentical(decisionRecord.chosenValue, newValue);
+        const outcome = keptExisting
+          ? "kept existing"
+          : tookNew
+            ? "took new"
+            : "rewrote";
+        const reason = decisionRecord.reason
+          ? ` — ${this.escapeHtml(String(decisionRecord.reason))}`
+          : "";
+        const source = String(decisionRecord.source || "").toLowerCase();
+        flowIcon = keptExisting ? "←" : "→";
+        if (source === "deterministic") {
+          resultText = `<span style="color: #007aff;">🔒 DETERMINISTIC — ${outcome}${reason}</span>`;
+        } else if (source === "sticky") {
+          flowIcon = "←";
+          resultText = `<span style="color: #007aff;">🧊 KEPT EXISTING (calendar stickiness)${reason}</span>`;
+        } else if (source === "ai") {
+          resultText = `<span style="color: #34c759;">🤝 AI — ${keptExisting ? "chose existing" : "chose new"}${reason}</span>`;
+        } else if (source === "fallback") {
+          resultText = `<span style="color: #ff9500;">⚠️ NO AI ANSWER — ${outcome} (clobber fallback)${reason}</span>`;
+        } else {
+          resultText = `<span style="color: #999;">${this.escapeHtml(source || "resolved")} — ${outcome}${reason}</span>`;
+        }
+      } else if (!existingValue && newValue) {
         // New field being added
         flowIcon = "→";
         resultText = '<span style="color: #34c759;">ADDED</span>';
@@ -13426,7 +13763,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
           resultText = '<span style="color: #ff9500;">CLEARED</span>';
         } else {
           flowIcon = "—";
-          resultText = '<span style="color: #999;">NO CHANGE</span>';
+          resultText = '<span style="color: #999;">KEPT EXISTING (no change)</span>';
         }
       } else if (strategy === "clobber") {
         // Clobber strategy - should always use new value (even if empty)
@@ -13500,15 +13837,15 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       } else if (wasUsed === "existing") {
         // Merge strategy explicitly chose existing value
         flowIcon = "←";
-        resultText = '<span style="color: #007aff;">EXISTING</span>';
+        resultText = '<span style="color: #007aff;">KEPT EXISTING</span>';
       } else if (finalValue === newValue) {
         // Replaced with new value
         flowIcon = "→";
-        resultText = '<span style="color: #ff9500;">NEW</span>';
+        resultText = '<span style="color: #ff9500;">TOOK NEW</span>';
       } else if (finalValue === existingValue && existingValue !== newValue) {
         // Preserved existing value when values differ
         flowIcon = "←";
-        resultText = '<span style="color: #007aff;">EXISTING</span>';
+        resultText = '<span style="color: #007aff;">KEPT EXISTING</span>';
       } else if (
         finalValue &&
         finalValue !== existingValue &&
@@ -13519,11 +13856,21 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         resultText = '<span style="color: #32d74b;">MERGED</span>';
       } else {
         flowIcon = "—";
-        resultText = '<span style="color: #999;">NO CHANGE</span>';
+        resultText = '<span style="color: #999;">KEPT EXISTING (no change)</span>';
       }
 
+      // Plain-words strategy label: "ai" under a field name read as a
+      // mystery token (owner pasted a `website ai … NO CHANGE` row as the
+      // example of the confusion). Unknown strategies fall through verbatim.
+      const strategyLabel =
+        {
+          ai: "AI-arbitrated",
+          preserve: "preserve saved",
+          clobber: "fresh wins",
+        }[strategy] || strategy;
+
       rows.push(
-        `<tr><td class="cmp-field"><strong>${field}</strong><br><small>${strategy}</small></td>` +
+        `<tr><td class="cmp-field"><strong>${field}</strong><br><small>${strategyLabel}</small></td>` +
           `<td>${formatValue(existingValue, diffAnchor)}</td>` +
           `<td class="cmp-flow">${flowIcon}</td>` +
           `<td>${formatValue(newValue, diffAnchor)}</td>` +
@@ -14101,6 +14448,57 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     if (action === "key_conflict" || action === "time_conflict")
       return "conflict";
     return action;
+  }
+
+  // Which results-sheet pile a kept event belongs to (wave 6). DISPLAY ONLY:
+  // the real execution gate stays SharedCore.filterEventsForExecution — this
+  // helper only decides where the card sits and what its headline reason
+  // chip says, so already-saved and withheld records stop reading as
+  // actionable bugs. Returns { section: 'actionable'|'saved'|'withheld',
+  // reason } where reason is the headline chip text ('' for actionable).
+  // Order matters: a matched series is reported as already saved (the honest
+  // terminal state) even though it is also a withheld recurring export.
+  classifyEventForResultsSection(event) {
+    if (!event || typeof event !== "object") {
+      return { section: "actionable", reason: "" };
+    }
+    if (event._seriesMatch) {
+      return {
+        section: "saved",
+        reason: "🔁 already saved — matches this series",
+      };
+    }
+    if (
+      this.normalizeIntentAction(event) === "merge" &&
+      Array.isArray(event._changes) &&
+      event._changes.length === 0
+    ) {
+      return {
+        section: "saved",
+        reason: "✅ merge no-op — calendar already has all of this",
+      };
+    }
+    // The withheld reasons below mirror filterEventsForExecution's
+    // predicates one-for-one, so the pile and the gate can never disagree.
+    if (event._pastSpanWithheld === true) {
+      return {
+        section: "withheld",
+        reason: "⏳ span fully past — nothing left to attend",
+      };
+    }
+    if (SharedCore.hasJunkTitleSanityFlag(event)) {
+      return {
+        section: "withheld",
+        reason: "🚫 junk title — write withheld",
+      };
+    }
+    if (SharedCore.isRecurringSeriesEvent(event)) {
+      return {
+        section: "withheld",
+        reason: "🔁 recurring — save via ICS, never auto-written",
+      };
+    }
+    return { section: "actionable", reason: "" };
   }
 
   getWriteActionFromEvent(event) {

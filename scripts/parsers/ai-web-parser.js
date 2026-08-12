@@ -17349,6 +17349,13 @@ TEXT:
             // Without this a rejected `image` could walk straight back in as an
             // orientation slot, because `image` is a slot candidate itself.
             if (this.getNonEventImageOcrReason(candidate.url, htmlData)) continue;
+            // …and neither is the site's default social card. The og:image
+            // fill refuses these (getSiteDefaultMetaImageReason), but page-meta
+            // candidates also arrive here directly, so without the same check
+            // a refused og-default walks into a slot anyway (local run
+            // 2026-08-12: Leipzig Bear Weekend's image was correctly refused
+            // yet imageHorizontal still got thebearcalendar.com/og-default.png).
+            if (this.getSiteDefaultMetaImageReason(candidate.url, htmlData)) continue;
             const orientation = this.resolveImageCandidateOrientation(candidate);
             if (orientation !== 'portrait' && orientation !== 'landscape') continue;
             const incumbent = bySlot[orientation];
