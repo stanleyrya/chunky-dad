@@ -242,8 +242,36 @@ class BasicDataNormalizer extends BaseNormalizer {
         // Sync URL and website fields
         event = this.syncUrlAndWebsiteFields(event);
 
+        // Cover shape gate: prose never ships as a cover (see dropProseCover).
+        event = this.dropProseCover(event);
+
         // Normalize basic text fields
         return this.core.normalizeEventTextFields(event);
+    }
+
+    // Cover is the ONE money field, and non-price prose kept shipping in it
+    // (run 20260811-133948, Bearracuda: cover "21+" — the flyer's AGE
+    // RESTRICTION — plus "ADV. TICKETS", "ADV. TIX AT BEARRACUDA.COM",
+    // "SUPER EARLY tix available"; the cover-not-a-price sanity flag fired
+    // but flags never rewrite). At normalization time — before the record is
+    // final — a cover whose shape classifies as 'prose' (neither a price nor
+    // a free-admission phrase, SharedCore.classifyCoverShape) is dropped
+    // with a log line. One carve-out: bare numeric amounts/ranges ("10",
+    // "15-20", "12.50") are prices whose currency marker the flyer omitted —
+    // the classifier calls them prose (no currency symbol/ISO code), but
+    // they survive. The getEventSanityFlags flag itself is untouched: it
+    // still covers every path that does not run this pipeline. Platform-pure
+    // (classifyCoverShape is pure); no core → fail open, change nothing.
+    dropProseCover(event) {
+        if (!event || typeof event !== 'object') return event;
+        if (!this.core || typeof this.core.classifyCoverShape !== 'function') return event;
+        const coverText = typeof event.cover === 'string' ? event.cover.trim() : '';
+        if (!coverText) return event;
+        if (this.core.classifyCoverShape(coverText) !== 'prose') return event;
+        if (/^\d{1,4}(?:[.,]\d{1,2})?(?:\s*[-–—/]\s*\d{1,4}(?:[.,]\d{1,2})?)?$/.test(coverText)) return event;
+        console.log(`🧹 NORMALIZE: dropped cover "${coverText}" for "${event.title || 'unknown'}" — neither a price nor a free-admission phrase (age restrictions and ticket-availability prose are not a cover)`);
+        delete event.cover;
+        return event;
     }
 
     stampPageProvenanceDefaults(event) {
@@ -2142,8 +2170,9 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
     // against the input address (Apple placemark via the adapter, when that
     // capability exists) plus suspect flagging per verification mode. Returns
     // { location, crossCheck, poiNames } — the "lat, lon" string to write, the
-    // cross-check verdict ('pass' | 'fail' | 'skipped'; 'fail' only survives
-    // in report mode), and any POI names harvested from the reverse placemark
+    // cross-check verdict ('pass' | 'fail' | 'skipped'; a 'fail' NEVER
+    // returns a location — a check that ran and failed refuses the pin in
+    // every mode that runs checks), and any POI names harvested from the reverse placemark
     // the cross-check already fetched (geo-POI bar corroboration; empty when
     // no placemark or no name) — or, when enforce mode sends the ladder on to
     // its next rung, { location: null, crossCheck } carrying the rejection
@@ -2214,6 +2243,17 @@ class OpenStreetMapNormalizer extends BaseNormalizer {
                     if (!matched) {
                         console.warn(`🗺️ GEOCODE VERIFY: "${title}" pin failed reverse cross-check ("${comparison.got}" vs "${address}") — verify pin`);
                         if (verifyMode === 'enforce') return { location: null, crossCheck: 'fail' };
+                        // Fail closed in report mode too (run 20260811-133948,
+                        // Bearracuda Phoenix: reverse cross-checks FAILED yet a
+                        // pin for the same address was still accepted). A
+                        // cross-check that RAN and FAILED is positive evidence
+                        // the pin is wrong — "flag, don't drop" covers the
+                        // suspect-but-unverifiable shapes below, never a
+                        // verification that affirmatively failed. The event
+                        // stays unpinned (gmaps falls back to the text query
+                        // downstream); pass/skipped acceptance is untouched.
+                        console.warn(`🗺️ GEOCODE VERIFY: "${title}" pin refused — reverse cross-check ran and failed, so the pin is not written (left unpinned; later rungs may still verify one)`);
+                        return { location: null, crossCheck: 'fail' };
                     }
                 }
             }
