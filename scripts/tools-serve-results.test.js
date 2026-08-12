@@ -452,3 +452,123 @@ test('run-once: isAutomationEnv accepts the documented truthy spellings only', (
   assert.equal(runOnce.isAutomationEnv({ CHUNKY_RUN_AUTOMATION: '0' }), false);
   assert.equal(runOnce.isAutomationEnv({}), false);
 });
+
+// ---------------------------------------------------------------------------
+// Dataless-stub defenses (2026-08 incident: the first scheduled run hung 22+
+// minutes with libuv threads kernel-wedged in open()/rename() against evicted
+// iCloud files). Defense #1 is the startup materialization sweep: download
+// everything BEFORE parser work, poll the dataless count to 0, abort loudly
+// at the ceiling — a run that would wedge or miss the shared cache must not
+// limp (no-partial-runs).
+// ---------------------------------------------------------------------------
+test('run-once: materialization sweep waits for the dataless count to reach 0, then proceeds', async () => {
+  const logs = [];
+  const log = (line) => logs.push(String(line));
+  let fakeNow = 0;
+  const counts = [2, 1, 0]; // initial probe, then one per poll
+  const kicked = [];
+
+  const result = await runOnce.materializeSharedStorageTree('/shared/root', {
+    platform: 'darwin',
+    countDataless: () => counts.shift(),
+    kickDownload: (root) => { kicked.push(root); return true; },
+    ceilingMs: 90000,
+    pollIntervalMs: 30000,
+    sleep: async (ms) => { fakeNow += ms; },
+    now: () => fakeNow,
+    log
+  });
+
+  assert.deepEqual(result, { datalessAtStart: 2, waitedMs: 60000 });
+  assert.deepEqual(kicked, ['/shared/root'], 'brctl download is kicked once, on the whole root');
+  assert.ok(logs.some((line) => line.includes('materialization progress')), 'each poll logs progress');
+  assert.ok(logs.some((line) => line.includes('fully materialized')), 'the all-clear is loud');
+
+  // Already-clean tree: no download kick, no waiting.
+  const clean = await runOnce.materializeSharedStorageTree('/shared/root', {
+    platform: 'darwin',
+    countDataless: () => 0,
+    kickDownload: () => { throw new Error('must not kick a clean tree'); },
+    log: () => {}
+  });
+  assert.deepEqual(clean, { datalessAtStart: 0, waitedMs: 0 });
+});
+
+test('run-once: materialization sweep ABORTS LOUDLY at the ceiling (no-partial-runs) and recommends Keep Downloaded', async () => {
+  let fakeNow = 0;
+  await assert.rejects(
+    runOnce.materializeSharedStorageTree('/shared/root', {
+      platform: 'darwin',
+      countDataless: () => 2, // never drains — fileproviderd wedged / offline
+      kickDownload: () => true,
+      ceilingMs: 90000,
+      pollIntervalMs: 30000,
+      sleep: async (ms) => { fakeNow += ms; },
+      now: () => fakeNow,
+      log: () => {}
+    }),
+    /ABORTING[\s\S]*Keep Downloaded/,
+    'a tree that will not materialize must abort the run, not limp into wedged syscalls'
+  );
+
+  // A probe that breaks mid-sweep is also an abort — never guess "clean".
+  let firstProbe = true;
+  await assert.rejects(
+    runOnce.materializeSharedStorageTree('/shared/root', {
+      platform: 'darwin',
+      countDataless: () => { if (firstProbe) { firstProbe = false; return 3; } return null; },
+      kickDownload: () => true,
+      ceilingMs: 90000,
+      pollIntervalMs: 30000,
+      sleep: async () => {},
+      now: () => 0,
+      log: () => {}
+    }),
+    /probe[\s\S]*ABORTING/i
+  );
+});
+
+test('run-once: materialization sweep skips honestly when it cannot run (non-macOS, no find probe, no brctl)', async () => {
+  const log = () => {};
+  assert.deepEqual(
+    await runOnce.materializeSharedStorageTree('/x', { platform: 'linux', log }),
+    { skipped: 'non-macos' }
+  );
+  assert.deepEqual(
+    await runOnce.materializeSharedStorageTree('/x', { platform: 'darwin', countDataless: () => null, log }),
+    { skipped: 'probe-unavailable' }
+  );
+  assert.deepEqual(
+    await runOnce.materializeSharedStorageTree('/x', { platform: 'darwin', countDataless: () => 3, kickDownload: () => false, log }),
+    { skipped: 'brctl-unavailable' }
+  );
+  assert.deepEqual(await runOnce.materializeSharedStorageTree('', {}), { skipped: 'no-shared-root' });
+});
+
+// Defense #3b: JS-side timeouts cannot cancel wedged syscalls — each one
+// leaks a libuv threadpool slot, and the default pool is only 4 slots. Both
+// the run-once entry and the launchd plist give the pool headroom.
+test('run-once: UV_THREADPOOL_SIZE headroom is defaulted at the entry point and pinned in the launchd plist template', () => {
+  const fs = require('node:fs');
+
+  const env = {};
+  assert.equal(runOnce.ensureThreadpoolHeadroom(env), '16');
+  assert.equal(env.UV_THREADPOOL_SIZE, '16');
+  assert.equal(
+    runOnce.ensureThreadpoolHeadroom({ UV_THREADPOOL_SIZE: '32' }),
+    '32',
+    'an explicit caller value is respected'
+  );
+  assert.ok(String(process.env.UV_THREADPOOL_SIZE || '').trim() !== '',
+    'requiring run-once ensured the headroom for this process (entry-point call, pre-set values respected)');
+
+  const template = fs.readFileSync(
+    path.join(__dirname, '..', 'tools', 'launchd', 'com.chunky-dad.scraper-daily.plist.template'),
+    'utf8'
+  );
+  assert.match(
+    template,
+    /<key>UV_THREADPOOL_SIZE<\/key>\s*<string>16<\/string>/,
+    'scheduled runs get the headroom even if the entry-point default ever moves'
+  );
+});

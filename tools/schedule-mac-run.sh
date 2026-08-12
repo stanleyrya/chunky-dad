@@ -20,6 +20,15 @@
 #   - If the shared root is unreachable (iCloud signed out, wrong path) the
 #     run ABORTS LOUDLY at startup instead of degrading to a local cache —
 #     check ~/Library/Logs/chunky-dad-scraper/scheduled-run.err.log.
+#   - DATALESS (EVICTED) iCLOUD FILES: macOS can evict synced files to
+#     placeholder stubs, and any fs syscall against a stub can wedge in the
+#     kernel (the 2026-08 first scheduled run hung 22+ minutes this way).
+#     run-once now materializes the whole shared tree at startup (brctl
+#     download + find -flags +dataless polling, 15-min ceiling → loud abort)
+#     and runs with UV_THREADPOOL_SIZE=16 headroom. RECOMMENDED one-time
+#     mitigation: right-click the chunky-dad-scraper folder in Finder and
+#     choose "Keep Downloaded" — iCloud then never evicts it and the sweep
+#     is always instant.
 #
 # RECOMMENDED CADENCE: daily (the default). Additionally, after script
 # updates that change AI/OCR prompts, run one MANUAL warm run — prompt
@@ -51,7 +60,7 @@ LAUNCHD_LOG_DIR="${HOME}/Library/Logs/chunky-dad-scraper"
 DEFAULT_SHARED_DIR="${HOME}/Library/Mobile Documents/iCloud~dk~simonbs~Scriptable/Documents/chunky-dad-scraper"
 
 usage() {
-    sed -n '2,40p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    sed -n '2,49p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
     exit 1
 }
 
@@ -166,6 +175,19 @@ cmd_status() {
         echo "recent stderr (${LAUNCHD_LOG_DIR}/scheduled-run.err.log):"
         tail -n 5 "${LAUNCHD_LOG_DIR}/scheduled-run.err.log" | sed 's/^/  /'
     fi
+    # Dataless (evicted) iCloud files wedge fs syscalls at kernel level;
+    # run-once materializes them at startup, but a standing non-zero count
+    # here means slower starts (or an abort at the 15-min ceiling).
+    local shared_dir=""
+    if [[ -f "${PLIST_PATH}" ]]; then
+        shared_dir="$(plutil -extract EnvironmentVariables.CHUNKY_SHARED_STORAGE_DIR raw "${PLIST_PATH}" 2>/dev/null || true)"
+    fi
+    if [[ -n "${shared_dir}" && -d "${shared_dir}" ]]; then
+        local dataless_count
+        dataless_count="$(/usr/bin/find "${shared_dir}" -type f -flags +dataless 2>/dev/null | wc -l | tr -d ' ' || true)"
+        echo "dataless (evicted) files under shared dir: ${dataless_count:-unknown}"
+    fi
+    echo 'tip: right-click the chunky-dad-scraper folder in Finder and choose "Keep Downloaded" — prevents iCloud eviction entirely, so scheduled runs never wait on (or abort over) dataless-file materialization.'
 }
 
 case "${1:-}" in
