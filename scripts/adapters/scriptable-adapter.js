@@ -1339,6 +1339,144 @@ class ScriptableAdapter {
     }
   }
 
+  // ---------------------------------------------------------------------
+  // PERSISTENT MANUAL BEAR VERDICTS — bear-verdicts.json (adapter-owned
+  // runtime DATA file, created on first tap). Written the MOMENT the owner
+  // taps a verdict button in the results UI, so a verdict survives even when
+  // the event is never written to the calendar (un-executed rescues used to
+  // evaporate and the bear filter re-dropped MEAT RACK every Eagle LA run —
+  // run 20260812-002001). Read at run start by the orchestrator and injected
+  // into SharedCore (core.bearVerdicts), where a stored verdict outranks the
+  // automatic cascade in both directions. The calendar-notes bearReview /
+  // bearSource path is untouched — verdicts still land in notes when events
+  // ARE written.
+  //
+  // Shape: { version: 1, verdicts: [ { verdict: 'bear'|'not_bear',
+  //   stampedAt: ISO, title, venue, address, location, city } ] }
+  // ---------------------------------------------------------------------
+  getBearVerdictsFilePath() {
+    return this.fm.joinPath(this.baseDir, "bear-verdicts.json");
+  }
+
+  async loadBearVerdicts() {
+    const path = this.getBearVerdictsFilePath();
+    try {
+      if (!this.fm.fileExists(path)) {
+        return [];
+      }
+      try {
+        await this.fm.downloadFileFromiCloud(path);
+      } catch (_) {}
+      const parsed = JSON.parse(this.fm.readString(path));
+      const verdicts =
+        parsed && !Array.isArray(parsed) && Array.isArray(parsed.verdicts)
+          ? parsed.verdicts
+          : Array.isArray(parsed)
+            ? parsed
+            : null;
+      if (!verdicts) {
+        console.log(
+          "📱 Scriptable: Bear verdict store has unexpected shape — starting empty",
+        );
+        return [];
+      }
+      return verdicts.filter((entry) => entry && typeof entry === "object");
+    } catch (error) {
+      // Corrupt or unreadable file must never break the UI or a run — the
+      // store rebuilds itself from future taps.
+      console.log(
+        `📱 Scriptable: Bear verdict store read failed (${error.message}) — starting empty`,
+      );
+      return [];
+    }
+  }
+
+  async saveBearVerdicts(verdicts) {
+    if (!Array.isArray(verdicts)) return;
+    const path = this.getBearVerdictsFilePath();
+    try {
+      this.ensureDirectoryExists(this.baseDir);
+      this.fm.writeString(
+        path,
+        JSON.stringify({ version: 1, verdicts }, null, 2),
+      );
+      console.log(
+        `📱 Scriptable: ✓ Saved bear verdict store (${verdicts.length} entries) to ${path}`,
+      );
+    } catch (error) {
+      console.log(
+        `📱 Scriptable: Bear verdict store write failed: ${error.message}`,
+      );
+    }
+  }
+
+  // Upsert one tapped verdict into the persistent store and save IMMEDIATELY
+  // (at tap time, never deferred to view dismissal). Identity is SharedCore's
+  // verdict-store identity (title token family + fail-closed venue identity),
+  // so a later tap on either card variant updates ONE entry: the opposite
+  // direction overwrites (last tap wins), the same direction refreshes the
+  // stamp.
+  async persistBearVerdictTap(event, verdict) {
+    if (!event || typeof event !== "object") return;
+    const core = this.getIdentityCore();
+    if (!core) {
+      console.warn(
+        "📱 Scriptable: Bear verdict not persisted (identity core failed to initialize)",
+      );
+      return;
+    }
+    const title = event.title || event.name || "";
+    const venue = event.bar || event.venue || "";
+    const key = core.getBearVerdictTitleKey(title, [venue]);
+    if (!key) {
+      console.log(
+        `📱 Scriptable: Bear verdict for "${title || "Unknown"}" not persisted (no title identity)`,
+      );
+      return;
+    }
+    const entry = {
+      verdict,
+      stampedAt: new Date().toISOString(),
+      title: String(title),
+      venue: String(venue),
+      address: typeof event.address === "string" ? event.address : "",
+      location: typeof event.location === "string" ? event.location : "",
+      city: typeof event.city === "string" ? event.city : "",
+    };
+    const verdicts = await this.loadBearVerdicts();
+    const entryShape = core.buildIdentityComparisonShape({
+      title: entry.title,
+      bar: entry.venue,
+      address: entry.address,
+      location: entry.location,
+      city: entry.city,
+    });
+    const index = verdicts.findIndex(
+      (existing) =>
+        existing &&
+        core.getBearVerdictTitleKey(existing.title, [existing.venue]) === key &&
+        core.areIdentityPlacesSimilar(
+          core.buildIdentityComparisonShape({
+            title: existing.title,
+            bar: existing.venue,
+            address: existing.address,
+            location: existing.location,
+            city: existing.city,
+          }),
+          entryShape,
+        ),
+    );
+    if (index >= 0) {
+      verdicts[index] = entry;
+    } else {
+      verdicts.push(entry);
+    }
+    await this.saveBearVerdicts(verdicts);
+    console.log(
+      `📱 Scriptable: Bear verdict persisted — "${entry.title}" @ "${entry.venue}" → ${verdict}`,
+    );
+  }
+
   // Fold one tapped candidate into the queue object (caller persists).
   // Existing key → merge: bump lastSeen/timesSeen, union signals/runIds/
   // sourceEvents (runIds keep the 10 most recent, sourceEvents cap at 5),
@@ -10079,9 +10217,18 @@ class ScriptableAdapter {
       runId: (results && (results.savedRunId || results.sourceRunId)) || null,
     };
 
-    return entries
+    // Cross-bucket duplicate fold: an entry stamped `_duplicateOfKept` (in
+    // prepareEventsForCalendar — same party as a KEPT plan row) is rendered
+    // OUT of the pile; a one-line count note replaces the duplicate cards so
+    // the owner never re-reviews an event the plan already keeps.
+    const foldedCount = entries.filter(
+      (entry) => entry && entry._duplicateOfKept,
+    ).length;
+
+    const cards = entries
       .map((entry, index) => {
         if (!entry) return "";
+        if (entry._duplicateOfKept) return "";
         // The drop entry keeps the full event under `.event`; older/partial
         // entries fall back to the flat summary fields so a card still renders.
         const hasFullEvent = !!(entry.event && typeof entry.event === "object");
@@ -10118,6 +10265,17 @@ class ScriptableAdapter {
         });
       })
       .filter((card) => typeof card === "string" && card.length > 0);
+
+    if (foldedCount > 0) {
+      cards.push(
+        `<div class="bear-dupe-fold-note" style="font-size:12px; color:var(--text-secondary); margin:8px 0;">${
+          foldedCount === 1
+            ? "1 dropped record was a duplicate of a kept event"
+            : `${foldedCount} dropped records were duplicates of kept events`
+        } and ${foldedCount === 1 ? "is" : "are"} not shown again.</div>`,
+      );
+    }
+    return cards;
   }
 
   // `countLabel` is what the section-count chip shows: the plain total on a
@@ -10323,6 +10481,7 @@ class ScriptableAdapter {
       if (!parsed) return;
       const { key, index } = parsed;
       let title = "";
+      let overrideEvent = null;
       if (parsed.list === "dropped") {
         const entries = Array.isArray(results && results.bearDroppedEvents)
           ? results.bearDroppedEvents
@@ -10330,6 +10489,7 @@ class ScriptableAdapter {
         const entry = entries[index];
         if (!entry || !entry.event || entry.rescued) return;
         title = entry.title || "";
+        overrideEvent = entry.event;
         if (action === "mark-bear") {
           pending.markedBear[key] = entry;
         } else {
@@ -10344,6 +10504,7 @@ class ScriptableAdapter {
         const event = events[index];
         if (!event) return;
         title = event.title || "";
+        overrideEvent = event;
         if (action === "mark-bear") {
           pending.keptMarkedBear[key] = event;
           delete pending.markedNotBear[key];
@@ -10354,6 +10515,14 @@ class ScriptableAdapter {
       }
       console.log(
         `📱 Scriptable: Bear override tapped — ${action} #${key} "${title}"`,
+      );
+      // Persist the verdict the moment it is tapped: un-executed verdicts
+      // must not evaporate with the view (run 20260812-002001 — MEAT RACK
+      // re-dropped every Eagle LA run because the tap only lived in event
+      // notes, which are written only when the event is).
+      await this.persistBearVerdictTap(
+        overrideEvent,
+        action === "mark-bear" ? "bear" : "not_bear",
       );
       const feedbackJs = `markBearOverrideDone(${JSON.stringify(key)}, ${JSON.stringify(String(action))})`;
       try {

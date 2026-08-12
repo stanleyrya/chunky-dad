@@ -332,6 +332,24 @@ class BearEventScraperOrchestrator {
                 config.deadEndStore = {};
             }
 
+            // Persistent manual bear verdicts: the adapter owns the file
+            // (bear-verdicts.json, written the moment a verdict is tapped in
+            // the results UI), shared-core consumes the entries as a pure
+            // injected list — a stored verdict outranks the automatic bear
+            // cascade in both directions.
+            try {
+                if (typeof finalAdapter.loadBearVerdicts === 'function') {
+                    const storedVerdicts = await finalAdapter.loadBearVerdicts();
+                    sharedCore.bearVerdicts = Array.isArray(storedVerdicts) ? storedVerdicts : [];
+                    if (sharedCore.bearVerdicts.length > 0) {
+                        console.log(`🐻 Orchestrator: Loaded ${sharedCore.bearVerdicts.length} stored manual bear verdict(s)`);
+                    }
+                }
+            } catch (error) {
+                console.log(`🐻 Orchestrator: Bear verdict store load failed (${error.message}) — continuing without stored verdicts`);
+                sharedCore.bearVerdicts = [];
+            }
+
             // Process events using shared core
             const results = await sharedCore.processEvents(config, finalAdapter, finalAdapter, parsers);
 

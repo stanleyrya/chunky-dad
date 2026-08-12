@@ -7837,3 +7837,128 @@ test('junk-title flagged events surface Write: withheld instead of promising a C
   assert.ok(html.includes('sanity-flag-badge'));
   assert.ok(html.includes('junk-title'));
 });
+
+// ---------------------------------------------------------------------------
+// PERSISTENT MANUAL BEAR VERDICTS — bear-verdicts.json (wave 5).
+// A results-UI verdict tap used to survive only if the event was written to
+// the calendar; un-executed verdicts evaporated and the bear filter
+// re-dropped MEAT RACK every Eagle LA run (run 20260812-002001). The tap now
+// persists immediately to the adapter-owned bear-verdicts.json; the next run
+// loads it and the bear check honors it.
+// ---------------------------------------------------------------------------
+
+const { SharedCore: VerdictSharedCore } = require(path.join(__dirname, '..', 'shared-core'));
+
+function createBearVerdictFmStub() {
+  const files = new Map();
+  return {
+    files,
+    documentsDirectory: () => '/tmp/chunky-dad-adapter-test',
+    joinPath: (a, b) => `${a}/${b}`,
+    fileExists: (p) => files.has(p),
+    isDirectory: () => false,
+    createDirectory: () => {},
+    readString: (p) => (files.has(p) ? files.get(p) : null),
+    writeString: (p, s) => { files.set(p, s); },
+    downloadFileFromiCloud: async () => {}
+  };
+}
+
+function buildMeatRackDropEntry() {
+  return {
+    title: 'MEAT RACK',
+    startDate: '2026-09-13T03:00:00.000Z',
+    venue: 'Eagle LA',
+    reason: "ai: 'Meat Rack' is generic and not confirmed as a known bear party series",
+    host: 'eaglela.com',
+    event: {
+      title: 'MEAT RACK',
+      startDate: '2026-09-13T03:00:00.000Z',
+      bar: 'Eagle LA',
+      address: '4219 Santa Monica Blvd, Los Angeles, CA 90029',
+      city: 'los angeles'
+    }
+  };
+}
+
+test('bear verdict store: a tap persists to bear-verdicts.json, reloads, and the bear check consumes it', async () => {
+  const adapter = buildAdapter();
+  adapter.fm = createBearVerdictFmStub();
+  const results = { bearDroppedEvents: [buildMeatRackDropEntry()], analyzedEvents: [] };
+  const pending = { markedBear: {}, markedNotBear: {}, keptMarkedBear: {} };
+  const webView = { evaluateJavaScript: async () => {} };
+
+  await adapter.recordBearOverrideAndReport('mark-bear', 'd0', results, pending, webView);
+
+  // WRITE happened at tap time — not deferred to view dismissal.
+  const persisted = adapter.fm.files.get(adapter.getBearVerdictsFilePath());
+  assert.ok(persisted, 'bear-verdicts.json is written the moment the verdict is tapped');
+  // The tap still records the pending rescue exactly as before.
+  assert.ok(pending.markedBear.d0, 'the in-session rescue slot is unchanged');
+
+  // READ at next-run load.
+  const loaded = await adapter.loadBearVerdicts();
+  assert.equal(loaded.length, 1);
+  assert.equal(loaded[0].verdict, 'bear');
+  assert.equal(loaded[0].title, 'MEAT RACK');
+  assert.equal(loaded[0].venue, 'Eagle LA');
+  assert.ok(loaded[0].stampedAt, 'the entry is date-stamped');
+
+  // CONSUME: injected as core.bearVerdicts, the stored verdict outranks the
+  // cascade on the NEXT run — for a different date of the same party.
+  const core = new VerdictSharedCore({}, { eventSchema: TestEventSchema });
+  core.bearVerdicts = loaded;
+  const drops = [];
+  const kept = await core.filterBearEvents(
+    [{ ...buildMeatRackDropEntry().event, startDate: new Date('2026-09-27T03:00:00.000Z') }],
+    { name: 'eagle', ai: { bearCheck: { mode: 'enforce' } } },
+    null,
+    drops
+  );
+  assert.equal(kept.length, 1, 'next run keeps MEAT RACK');
+  assert.equal(drops.length, 0);
+  assert.ok(String(kept[0].bearSource || '').startsWith('manual-bear (verdict store'),
+    'provenance names the manual store');
+});
+
+test('bear verdict store: the opposite tap overwrites the stored verdict (last tap wins)', async () => {
+  const adapter = buildAdapter();
+  adapter.fm = createBearVerdictFmStub();
+  const entry = buildMeatRackDropEntry();
+  const results = { bearDroppedEvents: [entry], analyzedEvents: [{ ...entry.event }] };
+  const pending = { markedBear: {}, markedNotBear: {}, keptMarkedBear: {} };
+  const webView = { evaluateJavaScript: async () => {} };
+
+  await adapter.recordBearOverrideAndReport('mark-bear', 'd0', results, pending, webView);
+  // The reverse verdict, tapped on the kept card of the same identity.
+  await adapter.recordBearOverrideAndReport('mark-not-bear', 'k0', results, pending, webView);
+
+  const loaded = await adapter.loadBearVerdicts();
+  assert.equal(loaded.length, 1, 'one identity, one entry — the reverse tap updates in place');
+  assert.equal(loaded[0].verdict, 'not_bear');
+});
+
+test('bear dropped section: _duplicateOfKept entries fold out of the pile with a count note', () => {
+  const adapter = buildAdapter();
+  const shown = buildBearDroppedFixture();
+  const folded = {
+    ...buildBearDroppedFixture(),
+    title: 'Treasure Trail',
+    _duplicateOfKept: 'Treasure Trail Seattle',
+    event: { ...buildBearDroppedFixture().event, title: 'Treasure Trail' }
+  };
+
+  const html = adapter.generateBearDroppedSection({ bearDroppedEvents: [shown, folded] });
+  assert.ok(html.includes('Twink Bash'), 'a real drop still renders');
+  assert.ok(!html.includes('event-title">Treasure Trail<'),
+    'the duplicate card is folded out of the dropped pile');
+  assert.match(html, /1 dropped record was a duplicate of a kept event/,
+    'a one-line note reports the fold');
+
+  // The chip still counts ENTRIES (the drop happened), not rendered cards.
+  assert.equal(adapter.bearDroppedEntryCount({ bearDroppedEvents: [shown, folded] }), 2);
+
+  // All-folded still renders the section as just the note.
+  const allFolded = adapter.generateBearDroppedSection({ bearDroppedEvents: [folded, { ...folded }] });
+  assert.match(allFolded, /2 dropped records were duplicates of kept events/);
+});
