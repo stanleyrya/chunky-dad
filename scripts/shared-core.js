@@ -1157,6 +1157,96 @@ class SharedCore {
             normalized === platform || normalized.endsWith(`.${platform}`));
     }
 
+    // Registrable domain for an already-extracted host (companion of
+    // getRegistrableDomainFromUrl, which wants a full URL). '' for empty input.
+    getRegistrableDomainFromHost(host) {
+        const cleaned = String(host || '').trim();
+        if (!cleaned) return '';
+        return this.getRegistrableDomainFromUrl(`https://${cleaned}/`);
+    }
+
+    // A link-shortener-shaped URL: a SUBDOMAIN of its registrable domain (the
+    // apex never counts — getUrlRuleParts already strips www) whose entire
+    // path is ONE opaque token — letters and digits only, no word-separating
+    // hyphens or underscores — with no query. link.dice.fm/C5d572326aa6 is
+    // the observed shape (run 20260811-162602); the test is pure URL shape,
+    // never a host list.
+    isOpaqueShortlinkUrlParts(parts) {
+        if (!parts || !parts.host) return false;
+        const registrable = this.getRegistrableDomainFromHost(parts.host);
+        if (!registrable || parts.host === registrable) return false;
+        if (!Array.isArray(parts.segments) || parts.segments.length !== 1 || parts.hasQuery) return false;
+        return /^[A-Za-z0-9]{6,24}$/.test(parts.segments[0]);
+    }
+
+    // The opposite shape: the registrable APEX host serving a path with a
+    // hyphenated slug segment (words joined by "-"), i.e. a URL that NAMES an
+    // event rather than encoding it as an opaque token.
+    isApexEventSlugUrlParts(parts) {
+        if (!parts || !parts.host) return false;
+        const registrable = this.getRegistrableDomainFromHost(parts.host);
+        if (!registrable || parts.host !== registrable) return false;
+        if (!Array.isArray(parts.segments) || parts.segments.length === 0) return false;
+        return parts.segments.some(segment => /[a-z0-9]-[a-z0-9]/i.test(segment) && segment.length >= 8);
+    }
+
+    // Image-conflict rung body (see the call in the IMAGE_MERGE_FIELDS block of
+    // resolveConflictDeterministically): "the ticketing platform's own artwork
+    // beats the scrape source's re-hosted copy", derived entirely from host
+    // relationships available at merge time:
+    //   - the PLATFORM is the registrable domain of either record's ticketUrl;
+    //   - a candidate is the platform's artwork when its host is on that
+    //     domain OR carries the platform's name as a hyphen-bounded DNS label
+    //     (dice.fm → dice-media.imgix.net), the platform-media-CDN convention;
+    //   - the OTHER candidate is a source re-host only under strict
+    //     attribution: it IS some record's own value for this field, that
+    //     record was scraped from a page (_sourcePageUrl) on a registrable
+    //     domain that is NOT the platform, and that source is NOT the event's
+    //     own site (record website/url domains) — an aggregator serving its
+    //     copy of someone else's event, the weakest provenance there is.
+    // Any missing piece returns null (fail open → later rungs / AI).
+    resolvePlatformArtworkVsSourceRehost(fieldName, valueA, valueB, urlA, urlB, context) {
+        const records = context && context.records && typeof context.records === 'object' ? context.records : null;
+        if (!records || !urlA || !urlB) return null;
+        const hostReferencesPlatform = (host, platformDomain) => {
+            if (!host || !platformDomain) return false;
+            if (this.getRegistrableDomainFromHost(host) === platformDomain) return true;
+            const base = platformDomain.split('.')[0];
+            if (base.length < 3) return false;
+            return host.split('.').some(label => label === base || label.startsWith(`${base}-`) || label.endsWith(`-${base}`));
+        };
+        const platformDomains = [];
+        for (const side of ['a', 'b']) {
+            const record = records[side];
+            const ticketUrl = record && typeof record.ticketUrl === 'string' ? record.ticketUrl.trim() : '';
+            const domain = ticketUrl ? this.getRegistrableDomainFromUrl(ticketUrl) : '';
+            if (domain && !platformDomains.includes(domain)) platformDomains.push(domain);
+        }
+        for (const platformDomain of platformDomains) {
+            const referencesA = hostReferencesPlatform(urlA.host, platformDomain);
+            const referencesB = hostReferencesPlatform(urlB.host, platformDomain);
+            if (referencesA === referencesB) continue;
+            const rehostValue = String(referencesA ? valueB : valueA).trim();
+            for (const side of ['a', 'b']) {
+                const record = records[side];
+                if (!record || typeof record !== 'object') continue;
+                const ownValue = typeof record[fieldName] === 'string' ? record[fieldName].trim() : '';
+                if (!ownValue || ownValue !== rehostValue) continue;
+                const sourceDomain = this.getRegistrableDomainFromUrl(record._sourcePageUrl);
+                if (!sourceDomain || sourceDomain === platformDomain) continue;
+                const identityDomains = [record.website, record.url]
+                    .map(value => typeof value === 'string' ? this.getRegistrableDomainFromUrl(value) : '')
+                    .filter(Boolean);
+                if (identityDomains.includes(sourceDomain)) continue;
+                return {
+                    winner: referencesA ? 'a' : 'b',
+                    reason: `ticketing platform's own artwork (${platformDomain}) beats the scrape source's re-hosted copy`
+                };
+            }
+        }
+        return null;
+    }
+
     // True when `candidate` is a bare domain root and `incumbent` is an
     // event-specific page on the SAME site. Used by the identity fields
     // (website/url), where a venue's front door must never replace the page
@@ -2890,6 +2980,30 @@ class SharedCore {
                     }
                 }
             }
+            // Same-domain shortlink rung (2026-08-11, run 20260811-162602):
+            // ticketing platforms publish BOTH a canonical event page
+            // (dice.fm/event/<slug>) and an opaque tracking shortlink on a
+            // sibling subdomain (link.dice.fm/<token>), and the arbitration
+            // model flip-flopped between them with self-contradictory reasons
+            // — it called the shortlink "canonical" on 3 of 5 events and the
+            // slug URL "canonical" on the other 2, in the same run. When both
+            // candidates live on the SAME registrable domain and exactly one
+            // is an opaque short-token link on a subdomain while the other is
+            // a slug-bearing path on the apex host, the slug URL names the
+            // event and wins deterministically. Generic URL shape only — no
+            // platform names; different registrable domains, two shortlinks,
+            // or two slug URLs all still arbitrate (fail open).
+            if (fieldName === 'ticketUrl' && urlA.host !== urlB.host
+                && this.getRegistrableDomainFromHost(urlA.host) === this.getRegistrableDomainFromHost(urlB.host)) {
+                const shortlinkA = this.isOpaqueShortlinkUrlParts(urlA);
+                const shortlinkB = this.isOpaqueShortlinkUrlParts(urlB);
+                if (shortlinkA !== shortlinkB && (shortlinkA ? this.isApexEventSlugUrlParts(urlB) : this.isApexEventSlugUrlParts(urlA))) {
+                    return {
+                        winner: shortlinkA ? 'b' : 'a',
+                        reason: 'event-slug URL beats opaque shortlink on the same domain'
+                    };
+                }
+            }
             // A logo-path image never beats a non-logo image: ticketing
             // services attach their own ".../saas/logos/..." asset, which the
             // model picked over the actual event poster. Matches path
@@ -2926,6 +3040,21 @@ class SharedCore {
                 if (logoA !== logoB) {
                     return { winner: logoA ? 'b' : 'a', reason: 'event artwork beats logo-path image' };
                 }
+                // Platform-artwork rung (2026-08-11, run 20260811-162602): an
+                // aggregator page serves its OWN re-hosted copy of another
+                // platform's event artwork, and the arbitration model
+                // preferred the re-host on 4 of 5 events with confabulated
+                // provenance claims ("hosted directly by the organizer").
+                // When the event's tickets are sold on a third-party platform
+                // (either record's ticketUrl), a candidate hosted BY that
+                // platform beats a candidate that is merely the scraping
+                // source's own copy. Everything derives from the records'
+                // ticketUrl/_sourcePageUrl/website host relationships — no
+                // named CDNs — and attribution is strict, so a first-party
+                // venue or promoter page hosting its own artwork never loses
+                // here (fail open).
+                const platformArtworkResolution = this.resolvePlatformArtworkVsSourceRehost(fieldName, valueA, valueB, urlA, urlB, context);
+                if (platformArtworkResolution) return platformArtworkResolution;
                 // Provenance rung: an image that IS the event page's own
                 // artwork — its og:image/twitter:image meta ('og-image') or
                 // its published structured data ('jsonld'), as stamped at
@@ -4245,14 +4374,42 @@ class SharedCore {
             const website = typeof event.website === 'string' ? event.website.trim() : '';
             const ticketUrl = typeof event.ticketUrl === 'string' ? event.ticketUrl.trim() : '';
             const sourcePageUrl = typeof event._sourcePageUrl === 'string' ? event._sourcePageUrl.trim() : '';
-            if (!website || !ticketUrl || !sourcePageUrl) continue;
+            if (!sourcePageUrl) continue;
             const sourceHost = this.getHostFromUrl(sourcePageUrl).toLowerCase().replace(/^www\./, '');
             if (!sourceHost || !aggregatorHosts.has(sourceHost)) continue;
-            if (this.getUrlDedupeKey(website) !== this.getUrlDedupeKey(sourcePageUrl)) continue;
-            const ticketHost = this.getHostFromUrl(ticketUrl);
-            if (!ticketHost || this.areUrlHostsSameSite(ticketHost, sourceHost)) continue;
-            event.website = ticketUrl;
-            console.log(`🤖 AI Web: website set to original source ${ticketHost} (aggregator page pointer)`);
+            const sourcePageKey = this.getUrlDedupeKey(sourcePageUrl);
+            const websiteIsOwnSourcePage = Boolean(website) && this.getUrlDedupeKey(website) === sourcePageKey;
+            const ticketHost = ticketUrl ? this.getHostFromUrl(ticketUrl) : '';
+            const ticketUrlIsOutbound = Boolean(ticketHost) && !this.areUrlHostsSameSite(ticketHost, sourceHost);
+            if (websiteIsOwnSourcePage && ticketUrlIsOutbound) {
+                event.website = ticketUrl;
+                console.log(`🤖 AI Web: website set to original source ${ticketHost} (aggregator page pointer)`);
+                continue;
+            }
+            // Offer-less aggregator listing (2026-08-11, run 20260811-162602:
+            // six events shipped website = their own aggregator page because
+            // the rescue above had no outbound ticketUrl to hand them). Every
+            // pointer field equal to the event's own source page is a copy of
+            // where we scraped, not a pointer to the event — empty beats that
+            // self-reference. Cleared ONLY under the rescue pass's own
+            // applicability conditions (the source's root classified
+            // 'link-aggregator'), so a venue site's legitimate self-pointer
+            // never gets here; an outbound website or ticketUrl leaves the
+            // event untouched. url is cleared alongside website (they are ONE
+            // field — createFinalEventObject folds url back into website, so
+            // a surviving self-referential url would resurrect the pointer at
+            // merge time).
+            if (ticketUrlIsOutbound || (website && !websiteIsOwnSourcePage)) continue;
+            const clearedFields = [];
+            for (const field of ['website', 'url', 'ticketUrl']) {
+                const value = typeof event[field] === 'string' ? event[field].trim() : '';
+                if (!value || this.getUrlDedupeKey(value) !== sourcePageKey) continue;
+                event[field] = '';
+                clearedFields.push(field);
+            }
+            if (clearedFields.length > 0) {
+                console.log(`🤖 AI Web: cleared self-referential aggregator pointer (${clearedFields.join(', ')}) for "${event.title || 'event'}" — the ${sourceHost} listing has no outbound link, empty beats a copy of the source page`);
+            }
         }
     }
 
@@ -9007,6 +9164,34 @@ class SharedCore {
         const queueArbitrationConflict = (fieldName, calendarValue, scraperValue) => {
             const resolved = this.resolveConflictDeterministically(fieldName, calendarValue, scraperValue, mergeContext);
             if (!resolved) {
+                // BINDING calendar stickiness for image/ticketUrl (2026-08-11):
+                // run 20260811-162602 clobbered platform artwork on 4 of 5
+                // events and canonical slug ticket URLs on 3 of 5 while the
+                // 🧊 STICKY report logged the correct preference every time.
+                // For these two fields an AI opinion alone — no deterministic
+                // rung fired, or the sticky preconditions hold — must never
+                // overwrite saved calendar data: the saved value wins outright
+                // and the conflict is never sent to the AI. Every other field
+                // keeps the existing report/enforce behavior unchanged.
+                if ((fieldName === 'image' || fieldName === 'ticketUrl')
+                    && this.shouldReportCalendarStickiness(fieldName, calendarValue, scraperValue, 'scraped')) {
+                    const stickyPreview = (value) => {
+                        const text = this.serializeArbitrationValue(fieldName, value);
+                        return text.length > 60 ? `${text.slice(0, 57)}...` : text;
+                    };
+                    mergedObject[fieldName] = calendarValue;
+                    console.log(`🧊 STICKY: "${mergeTitle}" field=${fieldName} kept calendar "${stickyPreview(calendarValue)}" over scraped "${stickyPreview(scraperValue)}" — binding for ${fieldName} (no deterministic reason to overwrite; AI arbitration skipped)`);
+                    this.recordCalendarStickinessObservation(mergeTitle);
+                    aiDecisionRecords.push({
+                        field: fieldName,
+                        existingValue: calendarValue,
+                        newValue: scraperValue,
+                        chosenValue: calendarValue,
+                        reason: 'calendar stickiness (binding) — saved value kept without AI arbitration',
+                        source: 'sticky'
+                    });
+                    return;
+                }
                 pendingAiConflicts.push({
                     field: fieldName,
                     values: { calendar: calendarValue, scraped: scraperValue }
