@@ -17526,3 +17526,292 @@ test('template entries are never runnable: evaluateAutomationForParser refuses t
     core.evaluateAutomationForParser({ name: 'Live Parser' }, null),
     { shouldRun: true, reason: null });
 });
+
+// ---------------------------------------------------------------------------
+// PERSISTENT MANUAL BEAR VERDICTS (wave 5). A results-UI verdict tap only
+// survived when the event was written to the calendar (the verdict lives in
+// event notes) — un-executed verdicts evaporated, and the bear filter
+// re-dropped MEAT RACK every Eagle LA run (run 20260812-002001). The adapters
+// persist taps to bear-verdicts.json and inject the entries as
+// core.bearVerdicts; a stored verdict outranks every automatic tier, in both
+// directions, with fail-closed identity (same venue required, exact
+// title-token identity — never a fuzzy cross-venue hit).
+// ---------------------------------------------------------------------------
+
+// The MEAT RACK entry exactly as a tap on the 20260812-002001 dropped card
+// would store it.
+function buildMeatRackVerdictEntry(overrides = {}) {
+  return {
+    verdict: 'bear',
+    stampedAt: '2026-08-12T04:20:00.000Z',
+    title: 'MEAT RACK',
+    venue: 'Eagle LA',
+    address: '4219 Santa Monica Blvd, Los Angeles, CA 90029',
+    location: '',
+    city: 'los angeles',
+    ...overrides
+  };
+}
+
+function buildMeatRackEvent(overrides = {}) {
+  return {
+    title: 'MEAT RACK',
+    description: 'Meat Rack 2nd and 4th Saturday of each month 8pm $8',
+    startDate: new Date('2026-09-13T03:00:00.000Z'),
+    bar: 'Eagle LA',
+    address: '4219 Santa Monica Blvd, Los Angeles, CA 90029',
+    city: 'los angeles',
+    ...overrides
+  };
+}
+
+test('bear verdict store: a stored manual bear verdict outranks the AI drop (MEAT RACK, run 20260812-002001)', async () => {
+  const core = createCore();
+  core.bearVerdicts = [buildMeatRackVerdictEntry()];
+  // The very verdict that re-dropped MEAT RACK every run.
+  const adapter = buildBearVerdictAdapter({
+    verdict: 'not_bear',
+    reason: "'Meat Rack' is generic and not confirmed as a known bear party series"
+  });
+  const drops = [];
+  const kept = await core.filterBearEvents([buildMeatRackEvent()], bearCheckConfig('enforce'), adapter, drops);
+  assert.equal(adapter.calls.length, 0, 'the stored verdict short-circuits the AI tier entirely');
+  assert.equal(kept.length, 1, 'MEAT RACK stays kept');
+  assert.equal(drops.length, 0);
+  assert.equal(kept[0].isBearEvent, true);
+  assert.equal(kept[0].bearSource, 'manual-bear (verdict store 2026-08-12)',
+    'provenance says the verdict came from the manual store, in the ranked manual-* vocabulary');
+  assert.equal(kept[0].bearReview, undefined, 'no review flag on an owner-confirmed bear');
+});
+
+test('bear verdict store: a stored not_bear verdict drops keyword-kept and trusted events alike', async () => {
+  // CUBSCOUT carries a title keyword ("cub") — without the store it is kept
+  // by the keyword tier. The owner's explicit not-bear outranks it.
+  const cubscout = buildMeatRackEvent({ title: 'CUBSCOUT', description: '' });
+
+  const core = createCore();
+  core.bearVerdicts = [buildMeatRackVerdictEntry({ verdict: 'not_bear', title: 'CUBSCOUT' })];
+  const drops = [];
+  const kept = await core.filterBearEvents([cubscout], bearCheckConfig('enforce'), null, drops);
+  assert.equal(kept.length, 0, 'the owner verdict outranks the keyword tier');
+  assert.equal(drops.length, 1, 'flag-dont-drop: the drop is surfaced to the results UI');
+  assert.match(drops[0].reason, /^manual store: not_bear/, 'the drop reason names the manual store');
+
+  // A trusted (alwaysBear) source cannot resurrect the owner's explicit
+  // not-bear — the manual verdict wins in both directions, exactly like the
+  // calendar-record demote path.
+  const trustedCore = createCore();
+  trustedCore.bearVerdicts = [buildMeatRackVerdictEntry({ verdict: 'not_bear', title: 'CUBSCOUT' })];
+  const trustedDrops = [];
+  const trustedKept = await trustedCore.filterBearEvents(
+    [cubscout], bearCheckConfig('enforce', { alwaysBear: true }), null, trustedDrops);
+  assert.equal(trustedKept.length, 0, 'alwaysBear does not override the owner');
+  assert.equal(trustedDrops.length, 1);
+  assert.match(trustedDrops[0].reason, /^manual store: not_bear/);
+});
+
+test('bear verdict store identity: fail-closed venue identity and exact title-token identity', () => {
+  const core = createCore();
+  core.bearVerdicts = [buildMeatRackVerdictEntry()];
+
+  // Case/punctuation variants of the same party at the same venue match.
+  assert.ok(core.findStoredBearVerdict(buildMeatRackEvent({ title: 'Meat Rack' })),
+    'case variants match');
+  assert.ok(core.findStoredBearVerdict(buildMeatRackEvent({ title: 'MEAT  RACK!' })),
+    'punctuation/whitespace variants match');
+
+  // A DIFFERENT party at the same venue must never inherit the verdict —
+  // token EQUALITY is required, never a subset.
+  assert.equal(core.findStoredBearVerdict(buildMeatRackEvent({ title: 'MEAT RACK INFERNO' })), null,
+    'a different party at the same venue never matches');
+
+  // The same title at a DIFFERENT venue must never match (no fuzzy
+  // cross-venue hits).
+  assert.equal(core.findStoredBearVerdict({
+    title: 'MEAT RACK',
+    bar: 'The Bullet Bar',
+    address: '10522 Burbank Blvd, North Hollywood, CA',
+    city: 'los angeles'
+  }), null, 'same title at another venue never matches');
+
+  // No venue identity data at all → no match (fail closed, never open).
+  assert.equal(core.findStoredBearVerdict({ title: 'MEAT RACK' }), null,
+    'an event without venue identity cannot match');
+
+  // Malformed entries are ignored.
+  core.bearVerdicts = [{ verdict: 'maybe', title: 'MEAT RACK', venue: 'Eagle LA' }, null, 'junk'];
+  assert.equal(core.findStoredBearVerdict(buildMeatRackEvent()), null);
+});
+
+// ---------------------------------------------------------------------------
+// CROSS-BUCKET DUPLICATE FOLD (wave 5). Run 20260812-001632: scraped
+// "Treasure Trail" was bear-DROPPED while the identity-matching
+// manual-override calendar row "Treasure Trail Seattle" stayed KEPT — the
+// owner saw the same party twice every run. A dropped record that duplicates
+// a KEPT plan row (same local day + positive venue identity + title
+// token-subset, getCalendarTitleSubsetSignal) is stamped `_duplicateOfKept`
+// at the ENTRY level so the results UI folds the card out of the pile and
+// saved runs keep the stamp.
+// ---------------------------------------------------------------------------
+
+function buildTreasureTrailFoldPair() {
+  const keptEvent = {
+    title: 'Treasure Trail Seattle',
+    startDate: new Date('2026-08-16T04:00:00.000Z'),
+    endDate: new Date('2026-08-17T06:59:59.000Z'),
+    bar: 'Massive',
+    address: '619 East Pine Street, Seattle, WA, 98122',
+    timezone: 'America/Los_Angeles',
+    isBearEvent: true
+  };
+  // The scraped twin the bear check dropped — in the evidence run it was even
+  // rescued by the calendar manual-bear record, and STILL rendered as a
+  // second Treasure Trail card.
+  const droppedEntry = {
+    title: 'Treasure Trail',
+    reason: "ai: The event description uses general queer party language but contains no bear-specific vocabulary",
+    rescued: true,
+    event: {
+      title: 'Treasure Trail',
+      startDate: new Date('2026-08-16T04:00:00.000Z'),
+      bar: 'Massive',
+      address: '619 E Pine St, Seattle, WA 98122',
+      timezone: 'America/Los_Angeles'
+    }
+  };
+  return { keptEvent, droppedEntry };
+}
+
+test('cross-bucket duplicate fold: a bear-dropped twin of a KEPT plan row is stamped _duplicateOfKept (Treasure Trail, run 20260812-001632)', async () => {
+  const core = createCore();
+  const { keptEvent, droppedEntry } = buildTreasureTrailFoldPair();
+  const context = buildOverrideContext([droppedEntry]);
+
+  await core.prepareEventsForCalendar([keptEvent], buildPrepCalendarAdapter([]), {}, context);
+
+  assert.equal(droppedEntry._duplicateOfKept, 'Treasure Trail Seattle',
+    'the entry names the kept event it duplicates');
+});
+
+test('cross-bucket duplicate fold: never stamps across days or venues (fail-closed)', async () => {
+  // Different local day → no stamp, even with identical title/venue.
+  const dayCore = createCore();
+  const dayPair = buildTreasureTrailFoldPair();
+  dayPair.droppedEntry.event.startDate = new Date('2026-08-23T04:00:00.000Z');
+  dayPair.droppedEntry.startDate = dayPair.droppedEntry.event.startDate;
+  const dayContext = buildOverrideContext([dayPair.droppedEntry]);
+  await dayCore.prepareEventsForCalendar([dayPair.keptEvent], buildPrepCalendarAdapter([]), {}, dayContext);
+  assert.equal(dayPair.droppedEntry._duplicateOfKept, undefined, 'dates differ → no fold');
+
+  // Same day, but no positive venue identity → no stamp.
+  const venueCore = createCore();
+  const venuePair = buildTreasureTrailFoldPair();
+  venuePair.droppedEntry.event.bar = 'Diesel';
+  venuePair.droppedEntry.event.address = '1413 14th Ave, Seattle, WA';
+  const venueContext = buildOverrideContext([venuePair.droppedEntry]);
+  await venueCore.prepareEventsForCalendar([venuePair.keptEvent], buildPrepCalendarAdapter([]), {}, venueContext);
+  assert.equal(venuePair.droppedEntry._duplicateOfKept, undefined, 'venue identity not positive → no fold');
+});
+
+// ---------------------------------------------------------------------------
+// CORRECTED-TIME MERGE HEALING (wave 5). Run 20260812-001228, FURBALL NOLA:
+// wave 2's doors-vs-party fix promoted start 21:00 → 22:00 at extraction, but
+// the AI merge then chose the CALENDAR's stale 02:00Z (21:00 local, written
+// during the buggy era) with circular reasoning — the wrong time survived
+// forever. When the scraped side carries the parser's rejection stamp and the
+// calendar start sits exactly on the rejected DOORS wall-clock time, the
+// corrected start wins deterministically (never reaches the AI).
+// ---------------------------------------------------------------------------
+
+test('doors-corrected start: a stale calendar doors-time start is healed deterministically (FURBALL NOLA, run 20260812-001228)', async () => {
+  const core = createCore();
+  const scraped = {
+    title: 'FURBALL NOLA',
+    // 22:00 America/Chicago — the promoted party time (2026-09-06T03:00Z).
+    startDate: new Date('2026-09-06T03:00:00.000Z'),
+    endDate: new Date('2026-09-06T07:00:00.000Z'),
+    bar: 'Santos',
+    timezone: 'America/Chicago',
+    source: 'ai-web',
+    _doorsTimeRejected: '21:00',
+    _doorsTimePromoted: '22:00',
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: { ai: { provider: 'ollama', endpoint: 'http://ai.example/api/generate', model: 'test-model' } }
+  };
+  const existing = {
+    title: 'FURBALL NOLA',
+    // 21:00 America/Chicago — the doors time, written during the buggy era.
+    startDate: new Date('2026-09-06T02:00:00.000Z'),
+    endDate: new Date('2026-09-06T07:00:00.000Z'),
+    location: '',
+    url: '',
+    notes: ['bar: Santos', 'timezone: America/Chicago'].join('\n')
+  };
+  const adapter = buildArbitrationAdapter({
+    startDate: { pick: 'calendar', value: '2026-09-06T02:00:00.000Z', reason: 'matches the stated start time' }
+  });
+
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+
+  assert.equal(adapter.calls.length, 0, 'the startDate conflict never reaches the AI');
+  assert.equal(finalEvent.startDate.toISOString(), '2026-09-06T03:00:00.000Z',
+    'the corrected party/show start wins');
+  const decision = (finalEvent._mergeDecisions || []).find(d => d.field === 'startDate');
+  assert.ok(decision, 'the deterministic decision is recorded');
+  assert.equal(decision.source, 'deterministic');
+  assert.match(decision.reason, /doors/i, 'the reason names the doors-vs-party healing');
+});
+
+test('doors-corrected start: any mismatch falls through to existing behavior (fail-closed)', async () => {
+  // Calendar start is NOT the rejected doors wall-clock time → AI arbitration
+  // decides, exactly as today.
+  const core = createCore();
+  const scraped = {
+    title: 'FURBALL NOLA',
+    startDate: new Date('2026-09-06T03:00:00.000Z'),
+    endDate: new Date('2026-09-06T07:00:00.000Z'),
+    bar: 'Santos',
+    timezone: 'America/Chicago',
+    source: 'ai-web',
+    _doorsTimeRejected: '21:00',
+    _doorsTimePromoted: '22:00',
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: { ai: { provider: 'ollama', endpoint: 'http://ai.example/api/generate', model: 'test-model' } }
+  };
+  const existing = {
+    title: 'FURBALL NOLA',
+    // 20:00 local — not the rejected doors time.
+    startDate: new Date('2026-09-06T01:00:00.000Z'),
+    endDate: new Date('2026-09-06T07:00:00.000Z'),
+    location: '',
+    url: '',
+    notes: ['bar: Santos', 'timezone: America/Chicago'].join('\n')
+  };
+  const adapter = buildArbitrationAdapter({
+    startDate: { pick: 'calendar', value: '2026-09-06T01:00:00.000Z', reason: 'saved value' }
+  });
+
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+
+  assert.equal(adapter.calls.length, 1, 'the mismatch is arbitrated exactly as before');
+  assert.equal(finalEvent.startDate.toISOString(), '2026-09-06T01:00:00.000Z');
+
+  // A stamp without the promoted time actually on the scraped start also
+  // falls through (the stamp must describe THIS record).
+  const staleStampCore = createCore();
+  const wrongPromoted = {
+    ...scraped,
+    startDate: new Date('2026-09-06T04:00:00.000Z'), // 23:00 local ≠ promoted 22:00
+    _fieldPriorities: staleStampCore.getResolvedFieldPriorities({})
+  };
+  const doorsExisting = {
+    ...existing,
+    startDate: new Date('2026-09-06T02:00:00.000Z') // 21:00 local == rejected
+  };
+  const adapter2 = buildArbitrationAdapter({
+    startDate: { pick: 'calendar', value: '2026-09-06T02:00:00.000Z', reason: 'saved value' }
+  });
+  const final2 = await staleStampCore.createFinalEventObject(doorsExisting, wrongPromoted, { httpAdapter: adapter2 });
+  assert.equal(adapter2.calls.length, 1, 'a stamp that does not match the scraped start is ignored');
+  assert.equal(final2.startDate.toISOString(), '2026-09-06T02:00:00.000Z');
+});

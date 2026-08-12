@@ -14515,3 +14515,52 @@ test('shared root: OCR cache keys preserve raw query order (device parity) and w
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test('doors-vs-party: promotion stamps the rejected doors time so the merge can heal stale calendar starts', () => {
+  global.EventSchema = EventSchema; // earlier tests leak a mocked schema — pin the real one
+  const parser = createParser();
+  const cityConfig = {
+    'new orleans': { timezone: 'America/Chicago', patterns: ['new orleans', 'nola'] }
+  };
+
+  // Same first-pass values as the promotion test above: the promoted event
+  // must carry BOTH the rejected DOORS time and the promoted party/show time
+  // so shared-core's deterministic merge rung can recognize a stale calendar
+  // start written during the pre-fix era (run 20260812-001228, FURBALL NOLA).
+  const promoted = parser.normalizeAiEvent(
+    {
+      title: 'FURBALL NOLA',
+      startDate: '2026-09-05',
+      startTime: '21:00',
+      city: 'new orleans',
+      bar: 'Santos Bar',
+      address: '1135 DECATUR ST'
+    },
+    {},
+    { html: FURBALL_NOLA_SEGMENT, url: 'https://www.furball.nyc' },
+    cityConfig,
+    null
+  );
+  assert.ok(promoted, 'the event survives normalization');
+  assert.equal(promoted._doorsTimeRejected, '21:00', 'the rejected DOORS time rides on the event');
+  assert.equal(promoted._doorsTimePromoted, '22:00', 'so does the promoted party/show time');
+
+  // No promotion → no stamps (a start already at the party time is untouched).
+  const untouched = parser.normalizeAiEvent(
+    {
+      title: 'FURBALL NOLA',
+      startDate: '2026-09-05',
+      startTime: '22:00',
+      city: 'new orleans',
+      bar: 'Santos Bar',
+      address: '1135 DECATUR ST'
+    },
+    {},
+    { html: FURBALL_NOLA_SEGMENT, url: 'https://www.furball.nyc' },
+    cityConfig,
+    null
+  );
+  assert.ok(untouched, 'the control event survives normalization');
+  assert.equal(untouched._doorsTimeRejected, undefined, 'no stamp without a promotion');
+  assert.equal(untouched._doorsTimePromoted, undefined);
+});

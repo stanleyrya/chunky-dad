@@ -610,3 +610,36 @@ test('CHUNKY_RUN_AUTOMATION marks the run context as a scheduled automation run'
     else process.env.CHUNKY_RUN_AUTOMATION = prev;
   }
 });
+
+// ---------------------------------------------------------------------------
+// PERSISTENT MANUAL BEAR VERDICTS — web/Node twin of the Scriptable store
+// (wave 5): same bear-verdicts.json contract under the adapter's local state
+// dir, so Mac-server runs honor the phone's stored verdicts when the file is
+// synced there (and fail soft to an empty store everywhere else).
+// ---------------------------------------------------------------------------
+
+test('bear verdict store: web adapter round-trips bear-verdicts.json under its local state dir', async () => {
+  const adapter = makeAdapter();
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-verdicts-'));
+  adapter.localStateDir = stateDir;
+  try {
+    assert.deepEqual(await adapter.loadBearVerdicts(), [], 'missing file → empty store');
+
+    await adapter.saveBearVerdicts([{
+      verdict: 'bear',
+      stampedAt: '2026-08-12T04:20:00.000Z',
+      title: 'MEAT RACK',
+      venue: 'Eagle LA'
+    }]);
+    const loaded = await adapter.loadBearVerdicts();
+    assert.equal(loaded.length, 1);
+    assert.equal(loaded[0].verdict, 'bear');
+    assert.equal(loaded[0].title, 'MEAT RACK');
+
+    // Corrupt file fails soft to an empty store, never throws.
+    fs.writeFileSync(path.join(stateDir, 'bear-verdicts.json'), '{nope');
+    assert.deepEqual(await adapter.loadBearVerdicts(), []);
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
+});
