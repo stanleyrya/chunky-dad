@@ -731,3 +731,30 @@ test('computeNextRruleOccurrence: coercion accepts an ISO string but still rejec
   assert.equal(f('FREQ=WEEKLY;BYDAY=WE', undefined), null);
   assert.equal(f('FREQ=WEEKLY;BYDAY=WE', {}), null);
 });
+
+// ---------------------------------------------------------------------------
+// url/website are ONE field: notes carry exactly one `website:` line, `url`
+// never lands in any write path (notes or ICS export).
+// ---------------------------------------------------------------------------
+test('write paths: website is canonical — url is notes-excluded and the ICS URL line reads website', () => {
+  const event = {
+    title: 'BEEFMINCE x RVT',
+    website: 'https://beefmince.com',
+    url: 'https://beefmince.com', // legacy alias still present on old records
+    ticketUrl: 'https://dice.fm/event/yoepxa-beefmince-x-rvt-19th-sep-the-royal-vauxhall-tavern-london-tickets',
+    recurrenceRule: 'FREQ=MONTHLY;BYDAY=3SA',
+    startDate: new Date('2026-09-19T21:00:00.000Z')
+  };
+
+  const notes = EventSchema.formatEventNotes(event);
+  const noteLines = notes.split('\n');
+  assert.equal(noteLines.filter((line) => line.startsWith('website:')).length, 1,
+    'exactly one website: line in notes');
+  assert.equal(noteLines.some((line) => /^url:/.test(line)), false,
+    'url is notes-excluded on every write');
+
+  const ics = EventSchema.buildRecurringEventIcs(event);
+  assert.ok(ics.includes('URL:https://beefmince.com'), 'ICS URL property reads the canonical website');
+  assert.equal((ics.match(/^URL:/gm) || []).length, 1, 'one URL property per VEVENT');
+  assert.equal(/DESCRIPTION:[^\r\n]*url:/.test(ics), false, 'no url: key leaks into the ICS description notes');
+});

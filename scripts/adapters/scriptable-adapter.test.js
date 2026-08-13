@@ -8874,3 +8874,25 @@ test('placeholder-badged thumbnails stay visible on the face with their badge', 
   assert.ok(html.includes('event-thumb-badge'), 'compact placeholder badge on the thumb');
   assert.ok(html.includes('🖼️ placeholder ×3'), 'badge states the reuse count');
 });
+
+// ---------------------------------------------------------------------------
+// url/website are ONE field: the comparison display never renders a separate
+// `url` row (run 20260811-135556: every merge card carried a phantom scraped
+// `url` differing from the calendar's native empty one).
+// ---------------------------------------------------------------------------
+test('getFieldsForComparison excludes url — one links row, never a url twin', () => {
+  const adapter = new ScriptableAdapter({ cities: {} });
+  const event = {
+    title: 'BEEFMINCE x RVT',
+    website: 'https://beefmince.com',
+    url: 'https://beefmince.com',
+    _original: {
+      scraper: { website: 'https://beefmince.com' },
+      calendar: { website: 'https://beefmince.com', url: undefined },
+      merged: { website: 'https://beefmince.com' }
+    }
+  };
+  const fields = adapter.getFieldsForComparison(event);
+  assert.equal(fields.includes('website'), true, 'website is the ONE canonical links field');
+  assert.equal(fields.includes('url'), false, 'url is an alias/view — never a comparison row of its own');
+});

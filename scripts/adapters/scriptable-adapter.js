@@ -11841,11 +11841,11 @@ class ScriptableAdapter {
                     : ""
                 }
                 ${
-                  event.url || event.website
+                  event.website || event.url
                     ? `
                     <div class="event-detail">
                         <span>🌐</span>
-                        <span><a href="${this.escapeHtml(event.url || event.website)}" target="_blank" rel="noopener" style="color: var(--primary-color);">Website</a></span>
+                        <span><a href="${this.escapeHtml(event.website || event.url)}" target="_blank" rel="noopener" style="color: var(--primary-color);">Website</a></span>
                     </div>
                 `
                     : ""
@@ -13789,6 +13789,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     // even though they are not stored in notes.
     const excludeFields = new Set([
       "notes",
+      // url is an alias/view of website (ONE canonical field) — comparing it
+      // separately rendered a phantom second links row on every diff.
+      "url",
       "isBearEvent",
       "source",
       "city",

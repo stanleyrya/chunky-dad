@@ -6655,11 +6655,23 @@ test('applyAggregatorWebsitePointers prefers the cross-host ticketUrl over the a
   // website=url=their thebearcalendar.com page while ticketUrl pointed at
   // the ORIGINAL ticketing host. Trust the pointer, not the copy.
   const urlClassifications = { 'https://thebearcalendar.com/events/': 'link-aggregator' };
+  // Outbound pointer on a TICKETING PLATFORM (dice.fm): never adopted as
+  // website — url/website are the ONE canonical identity field and a platform
+  // link is never the identity link. The self-referential copy is cleared,
+  // the dice link stays in ticketUrl.
   const aggregatorEvent = {
     title: 'D>U>R>O',
     website: 'https://thebearcalendar.com/events/d-u-r-o-2026/',
     ticketUrl: 'https://dice.fm/event/duro-la-2026',
     _sourcePageUrl: 'https://thebearcalendar.com/events/d-u-r-o-2026/'
+  };
+  // Outbound pointer on the promoter's OWN (non-platform) site: still adopted
+  // — trust the pointer, not the copy.
+  const promoterPointerEvent = {
+    title: 'FURBALL TAMPA',
+    website: 'https://thebearcalendar.com/events/furball-tampa-2026/',
+    ticketUrl: 'https://www.furball.nyc/tampa-2026',
+    _sourcePageUrl: 'https://thebearcalendar.com/events/furball-tampa-2026/'
   };
   // Non-aggregator page: untouched even with a cross-host ticketUrl.
   const venueEvent = {
@@ -6685,11 +6697,15 @@ test('applyAggregatorWebsitePointers prefers the cross-host ticketUrl over the a
     _sourcePageUrl: 'https://thebearcalendar.com/events/megawoof-houston-richs-2026/'
   };
   core.applyAggregatorWebsitePointers(
-    [aggregatorEvent, venueEvent, sameHostEvent, alreadyOriginalEvent],
+    [aggregatorEvent, promoterPointerEvent, venueEvent, sameHostEvent, alreadyOriginalEvent],
     urlClassifications
   );
-  assert.equal(aggregatorEvent.website, 'https://dice.fm/event/duro-la-2026',
-    'aggregator-page website is replaced by the original ticketing URL');
+  assert.equal(aggregatorEvent.website, '',
+    'a platform outbound pointer is never adopted as website — the self-referential copy is cleared');
+  assert.equal(aggregatorEvent.ticketUrl, 'https://dice.fm/event/duro-la-2026',
+    'the platform link survives where it belongs: ticketUrl');
+  assert.equal(promoterPointerEvent.website, 'https://www.furball.nyc/tampa-2026',
+    'a non-platform outbound pointer (the promoter\'s own site) is still adopted');
   assert.equal(venueEvent.website, 'https://eaglela.com/events/cub-scout-3/',
     'non-aggregator pages are unchanged');
   assert.equal(sameHostEvent.website, '',
@@ -11800,7 +11816,17 @@ test('registry pass: enforce stamps _promoter, curated metadata, and a title/url
   assert.equal(event._organizer, 'Bearracuda', 'empty organizer is backfilled on title/url evidence');
   assert.equal(event.shortName, 'Bear-rac-uda');
   assert.equal(event.instagram, 'https://www.instagram.com/bearracuda');
-  assert.equal(event.url, 'https://bearracuda.com/', 'website maps to the canonical url field');
+  // url and website are ONE field (canonical `website`): the registry no
+  // longer stamps a distinct `url` value — the identity link is applied to
+  // `website` by canonicalizeIdentityLinks (fill a blank / replace a platform
+  // link), never as a static clobber over a page-stated site.
+  assert.equal(event.url, undefined, 'url never exists as a distinct stored value');
+  assert.equal(event.website, undefined, 'the stamp pass itself leaves website alone');
+  core.canonicalizeIdentityLinks([event]);
+  assert.equal(event.website, 'https://bearracuda.com/', 'the identity ladder fills the blank website from the registry');
+  assert.equal(event.url, undefined, 'canonicalization never re-mints url');
+  assert.equal(event._staticFields.website, 'https://bearracuda.com/',
+    'the filled value is registry branding — marked static so it is never dedup identity or match evidence');
   assert.equal(event._staticFields.shortName, 'Bear-rac-uda');
 
   // A non-empty organizer is never overwritten
@@ -11819,9 +11845,12 @@ test('registry application parity: registry stamp ≡ parser metadata through ap
   // Parser path: the same facts as parser-config metadata
   const viaParser = core.applyFieldPriorities(baseEvent(), { name: 'p', metadata: block }, {});
 
-  // Registry path: bare parser first (no metadata), then the registry stamp
+  // Registry path: bare parser first (no metadata), then the registry stamp.
+  // The identity website rides along OUTSIDE the static block (url/website
+  // are ONE canonical field applied by canonicalizeIdentityLinks) — here it
+  // only feeds the favicon fallback.
   const viaRegistry = core.applyFieldPriorities(baseEvent(), { name: 'p' }, {});
-  core.applyPromoterMetadata(viaRegistry, block);
+  core.applyPromoterMetadata(viaRegistry, block, entry.website);
 
   const publicFields = (event) => {
     const copy = {};
@@ -11851,13 +11880,13 @@ test('registry favicon fallback never overrides an existing favicon and loses th
 
   // Scraped event already carries the VENUE's favicon: untouched.
   const withVenueIcon = { title: 'Portland PRIDE FRIDAY', startDate: new Date('2026-08-01T21:00:00.000Z'), favicon: 'https://venue.example/icon.png' };
-  core.applyPromoterMetadata(withVenueIcon, block);
+  core.applyPromoterMetadata(withVenueIcon, block, REGISTRY_FIXTURE[0].website);
   assert.equal(withVenueIcon.favicon, 'https://venue.example/icon.png', 'existing favicon is never replaced by the fallback');
 
   // Blank favicon: filled — but a stored calendar favicon must win the merge
   // (review 2026-07-30: the clobber version silently reverted hand-fixes).
   const blank = { title: 'Portland PRIDE FRIDAY', startDate: new Date('2026-08-01T21:00:00.000Z') };
-  core.applyPromoterMetadata(blank, block);
+  core.applyPromoterMetadata(blank, block, REGISTRY_FIXTURE[0].website);
   assert.equal(blank.favicon, REGISTRY_FIXTURE[0].website, 'blank favicon filled from identity link');
   const existingEvent = {
     title: 'Portland PRIDE FRIDAY',
@@ -16665,10 +16694,14 @@ test('a crawled single-event page names itself; a listing page does not', async 
   const byTitle = {};
   for (const event of result.events) byTitle[event.title] = event;
 
-  assert.equal(byTitle['Underwear Night'].url, 'https://venuehub.example/events/underwear-night',
-    'the single-event page becomes that event\'s url');
-  assert.equal(byTitle['Bear Tea Dance'].url, 'https://venuehub.example',
-    'a listing page never overwrites its events\' urls');
+  // url/website are ONE canonical field: the self-naming pass now writes
+  // `website`, and `url` never exists as a distinct stored value.
+  assert.equal(byTitle['Underwear Night'].website, 'https://venuehub.example/events/underwear-night',
+    'the single-event page becomes that event\'s website');
+  assert.equal(byTitle['Underwear Night'].url, undefined, 'url is never re-minted');
+  assert.equal(byTitle['Bear Tea Dance'].website, 'https://venuehub.example',
+    'a listing page never overwrites its events\' identity links');
+  assert.equal(byTitle['Bear Tea Dance'].url, undefined, 'url is never re-minted');
 });
 
 // ---------------------------------------------------------------------------
@@ -17938,4 +17971,224 @@ test('formatRunAgeLabel prefers the ISO timestamp and falls back to the runId', 
   assert.equal(SharedCore.formatRunAgeLabel('2026-08-13T12:00:00.000Z', '', now), '0 minutes old');
   assert.equal(SharedCore.formatRunAgeLabel(null, 'not-a-run-id', now), 'of unknown age');
   assert.equal(SharedCore.formatRunAgeLabel('garbage', '', now), 'of unknown age');
+});
+
+// ---------------------------------------------------------------------------
+// url/website canonicalization — ONE identity field, resolved BEFORE the merge
+//
+// The "website/url duplication debacle", pinned with the owner's own pasted
+// evidence (run 20260811-135556, BEEFMINCE x RVT):
+//   website: ═ https://beefmince.com (kept existing)
+//            ~ https://link.dice.fm/V0890510c6bd (ignored new value)
+//   gmaps:   ═ …place_id:ChIJ… (kept existing)
+//            ~ …query=The Royal Vauxhall Tavern… (ignored new value)
+// The merge OUTCOME was right every run, but the scraper re-offered platform
+// links as `website` candidates forever, so the same no-op conflict rows
+// rendered on every run. These tests pin the fix: canonicalizeIdentityLinks
+// resolves ONE `website` per event before the merge, and `url` ceases to
+// exist as a distinct stored value post-normalization.
+// ---------------------------------------------------------------------------
+
+const LINKS_REGISTRY = [
+  { name: 'BEEFMINCE', shortName: 'BEEF-MINCE', website: 'https://beefmince.com', bearAffinity: 'always' },
+  { name: 'BOATMINCE', shortName: 'BOAT-MINCE', parent: 'BEEFMINCE', keywords: ['boatmince'], bearAffinity: 'always' }
+];
+
+test('canonicalizeIdentityLinks: the real BEEFMINCE shapes — platform links never survive as website', () => {
+  const core = createRegistryCore(LINKS_REGISTRY);
+  // Run 20260811-135556, verbatim scraped fields: the dice shortlink from the
+  // page's ticket widget sat in `website`, the real slug URL in ticketUrl.
+  const trunkDen = {
+    title: 'BEEFMINCE Trunk Den',
+    website: 'https://link.dice.fm/V0890510c6bd',
+    ticketUrl: 'https://dice.fm/event/mxdpgl-beefmince-trunk-den-15th-aug-the-royal-vauxhall-tavern-london-tickets',
+    _promoter: 'BEEFMINCE'
+  };
+  // The dice event page offered as website AND ticketUrl (BOATMINCE shape).
+  const boatmince = {
+    title: 'BOATMINCE',
+    website: 'https://dice.fm/event/g5dyeb-boatmince-30th-aug-westminster-pier-london-tickets',
+    ticketUrl: 'https://dice.fm/event/g5dyeb-boatmince-30th-aug-westminster-pier-london-tickets',
+    _promoter: 'BOATMINCE'
+  };
+  // Venue-site event (Sitges Bear Cave): its own page IS the identity link.
+  const venueSite = {
+    title: 'BEEFMINCE MEET MARKET',
+    website: 'https://sitgesbearcave.com/event/wednesday-beefmince-meet-market/',
+    _promoter: 'BEEFMINCE'
+  };
+  const noPromoter = {
+    title: 'RANDOM PARTY',
+    website: 'https://www.eventbrite.com/e/random-party-tickets-1234567890'
+  };
+  const socialProfile = {
+    title: 'WOOF NIGHT',
+    website: 'https://www.instagram.com/megawoof_america'
+  };
+  const organizerHome = {
+    title: 'Lazy Bear Week 2026',
+    website: 'https://lazybearweek.eventbrite.com/'
+  };
+  const curatedStamp = {
+    title: 'CURATED LINKTREE',
+    website: 'https://linktr.ee/cubhouse',
+    _staticFields: { website: 'https://linktr.ee/cubhouse' }
+  };
+
+  core.canonicalizeIdentityLinks([
+    trunkDen, boatmince, venueSite, noPromoter, socialProfile, organizerHome, curatedStamp
+  ]);
+
+  assert.equal(trunkDen.website, 'https://beefmince.com',
+    'the dice shortlink is replaced by the curated identity link');
+  assert.equal(trunkDen.ticketUrl,
+    'https://dice.fm/event/mxdpgl-beefmince-trunk-den-15th-aug-the-royal-vauxhall-tavern-london-tickets',
+    'the real ticketUrl is never overwritten — the shortlink is dropped');
+  assert.equal(trunkDen._staticFields.website, 'https://beefmince.com',
+    'the replacement is registry branding — static-marked, never dedup identity or match evidence');
+
+  assert.equal(boatmince.website, 'https://beefmince.com',
+    'a sub-brand inherits the parent identity link');
+
+  assert.equal(venueSite.website, 'https://sitgesbearcave.com/event/wednesday-beefmince-meet-market/',
+    'a venue-site event keeps its own page — curated never displaces a real non-platform site');
+  assert.equal(venueSite._staticFields, undefined, 'an untouched organic website is not static-marked');
+
+  assert.equal(noPromoter.website, undefined,
+    'platform link with no curated identity: empty beats a platform link (owner ruling 2026-08-03)');
+  assert.equal(noPromoter.ticketUrl, 'https://www.eventbrite.com/e/random-party-tickets-1234567890',
+    'flag, don\'t drop: the link parks in the EMPTY ticketUrl');
+
+  assert.equal(socialProfile.website, undefined, 'a social profile is never the identity link');
+  assert.equal(socialProfile.instagram, 'https://www.instagram.com/megawoof_america',
+    'a social PROFILE routes to its own field, not to ticketUrl');
+
+  assert.equal(organizerHome.website, 'https://lazybearweek.eventbrite.com/',
+    'a platform organizer HOME page is an identity link — kept (same exception as the final-build pass)');
+  assert.equal(curatedStamp.website, 'https://linktr.ee/cubhouse',
+    'a statically stamped website is curated config — never re-routed');
+});
+
+test('canonicalizeIdentityLinks: url folds into website and ceases to exist as a stored value', () => {
+  const core = createRegistryCore(LINKS_REGISTRY);
+  const folded = { title: 'CHUNK BROOKLYN', url: 'https://www.chunk-party.com/events/brooklyn-return' };
+  const both = { title: 'DETAIL', url: 'https://beefmince.com', website: 'https://sitgesbearcave.com/event/x/' };
+  core.canonicalizeIdentityLinks([folded, both]);
+  assert.equal(folded.website, 'https://www.chunk-party.com/events/brooklyn-return',
+    'a lone url becomes the canonical website');
+  assert.equal('url' in folded, false, 'url never survives canonicalization');
+  assert.equal(both.website, 'https://sitgesbearcave.com/event/x/',
+    'an existing website is never overwritten by the alias');
+  assert.equal('url' in both, false, 'url never survives canonicalization');
+});
+
+test('canonicalizeIdentityLinks: registry identity fills an EMPTY website (ladder: registry > page > empty)', () => {
+  const core = createRegistryCore(LINKS_REGISTRY);
+  const blank = { title: 'SPOOKMINCE', _promoter: 'BOATMINCE' };
+  const noMatch = { title: 'UNRELATED NIGHT' };
+  core.canonicalizeIdentityLinks([blank, noMatch]);
+  assert.equal(blank.website, 'https://beefmince.com', 'the curated identity link fills the blank');
+  assert.equal(blank._staticFields.website, 'https://beefmince.com', 'the fill is branding — static-marked');
+  assert.equal(noMatch.website, undefined, 'no promoter, no page site → empty is correct');
+});
+
+test('final merge: the pasted BEEFMINCE x RVT rows are gone at the source', async () => {
+  const core = createRegistryCore(LINKS_REGISTRY);
+  const existingEvent = {
+    title: 'BEEFMINCE x RVT',
+    startDate: new Date('2026-09-19T21:00:00.000Z'),
+    endDate: new Date('2026-09-20T03:00:00.000Z'),
+    location: '51.48598,-0.11556',
+    notes: [
+      'website: https://beefmince.com',
+      'ticketUrl: https://dice.fm/event/yoepxa-beefmince-x-rvt-19th-sep-the-royal-vauxhall-tavern-london-tickets',
+      'gmaps: https://www.google.com/maps/place/?q=place_id:ChIJuYgA--wEdkgRD-0ylWTyMkw'
+    ].join('\n')
+  };
+  // The scraped record as it now reaches the merge: canonicalizeIdentityLinks
+  // already replaced the dice link with the curated identity, and gmaps still
+  // carries the page-derived text query.
+  const scraped = {
+    title: 'BEEFMINCE x RVT',
+    startDate: new Date('2026-09-19T21:00:00.000Z'),
+    website: 'https://beefmince.com',
+    _staticFields: { website: 'https://beefmince.com' },
+    ticketUrl: 'https://dice.fm/event/yoepxa-beefmince-x-rvt-19th-sep-the-royal-vauxhall-tavern-london-tickets',
+    gmaps: 'https://www.google.com/maps/search/?api=1&query=The%20Royal%20Vauxhall%20Tavern%2C%20london',
+    _fieldPriorities: core.getResolvedFieldPriorities({})
+  };
+  const finalEvent = await core.createFinalEventObject(existingEvent, scraped, { httpAdapter: null });
+
+  assert.equal(finalEvent.website, 'https://beefmince.com');
+  assert.equal(finalEvent.url, 'https://beefmince.com', 'url is only an output view of website');
+  const decisions = finalEvent._mergeDecisions || [];
+  assert.equal(decisions.find((decision) => decision.field === 'website'), undefined,
+    'no website conflict is recorded — the sides agree, no row to render');
+  assert.equal(decisions.find((decision) => decision.field === 'gmaps'), undefined,
+    'no gmaps conflict is recorded');
+  assert.equal(finalEvent._original.scraper.gmaps, undefined,
+    'a text-query gmaps is not a candidate against a place-anchored calendar link (calendar-as-database)');
+  assert.equal(finalEvent._original.scraper.url, undefined,
+    'the scraped side offers no distinct url — the phantom url diff row is dead');
+  assert.equal(finalEvent.gmaps, 'https://www.google.com/maps/place/?q=place_id:ChIJuYgA--wEdkgRD-0ylWTyMkw',
+    'the place-anchored calendar link survives');
+
+  const noteLines = String(finalEvent.notes || '').split('\n');
+  assert.equal(noteLines.filter((line) => line.startsWith('website:')).length, 1,
+    'exactly one website: line lands in notes');
+  assert.equal(noteLines.some((line) => /^url:/.test(line)), false,
+    'url never lands in notes');
+});
+
+test('final merge: a legacy scraped url (replay/cached record) folds into website and is dropped', async () => {
+  const core = createRegistryCore(LINKS_REGISTRY);
+  const existingEvent = {
+    title: 'BEEFMINCE Brighton Pride',
+    startDate: new Date('2026-08-01T21:00:00.000Z'),
+    notes: ''
+  };
+  const scraped = {
+    title: 'BEEFMINCE Brighton Pride',
+    startDate: new Date('2026-08-01T21:00:00.000Z'),
+    url: 'https://beefmince.com'
+  };
+  const finalEvent = await core.createFinalEventObject(existingEvent, scraped, { httpAdapter: null });
+  assert.equal(finalEvent.website, 'https://beefmince.com', 'the alias folds into the canonical field');
+  assert.equal(finalEvent._original.scraper.url, undefined, 'the alias is dropped from the scraped side');
+});
+
+test('gmaps URL classification: place/coordinate-anchored vs text query (real run shapes)', () => {
+  const core = createCore();
+  // place_id-anchored (calendar, BEEFMINCE x RVT)
+  assert.equal(core.isPlaceAnchoredGmapsUrl('https://www.google.com/maps/place/?q=place_id:ChIJuYgA--wEdkgRD-0ylWTyMkw'), true);
+  // query_place_id variant
+  assert.equal(core.isPlaceAnchoredGmapsUrl('https://www.google.com/maps/search/?api=1&query=51.48%2C-0.11&query_place_id=ChIJx'), true);
+  // encoded coordinate pair (calendar, BEEFMINCE Brighton Pride)
+  assert.equal(core.isPlaceAnchoredGmapsUrl('https://www.google.com/maps/search/?api=1&query=50.819936%2C-0.140382'), true);
+  // raw-comma coordinate pair
+  assert.equal(core.isPlaceAnchoredGmapsUrl('https://www.google.com/maps/search/?api=1&query=51.5022544,-0.1231736'), true);
+  // text query (scraped, the pasted row) — %2C inside prose is not a coordinate
+  assert.equal(core.isPlaceAnchoredGmapsUrl('https://www.google.com/maps/search/?api=1&query=The%20Royal%20Vauxhall%20Tavern%2C%20london'), false);
+  assert.equal(core.isTextQueryGmapsUrl('https://www.google.com/maps/search/?api=1&query=The%20Royal%20Vauxhall%20Tavern%2C%20london'), true);
+  assert.equal(core.isTextQueryGmapsUrl('https://www.google.com/maps/search/?api=1&query=Venue%20TBA%2C%20London'), true);
+  assert.equal(core.isTextQueryGmapsUrl('https://www.google.com/maps/place/?q=place_id:ChIJuYgA--wEdkgRD-0ylWTyMkw'), false);
+  assert.equal(core.isTextQueryGmapsUrl(''), false);
+  assert.equal(core.isPlaceAnchoredGmapsUrl(''), false);
+});
+
+test('registry pass + canonicalization end-to-end: BEEFMINCE match routes the platform link and adopts the curated identity', () => {
+  const core = createRegistryCore(LINKS_REGISTRY);
+  const event = {
+    title: 'BEEFMINCE x RVT',
+    startDate: new Date('2026-09-19T21:00:00.000Z'),
+    website: 'https://link.dice.fm/V0890510c6bd',
+    ticketUrl: 'https://dice.fm/event/yoepxa-beefmince-x-rvt-19th-sep-the-royal-vauxhall-tavern-london-tickets'
+  };
+  core.applyPromoterRegistryMatches([event], { name: 'p' }, ENFORCE_REGISTRY_CONFIG);
+  assert.equal(event._promoter, 'BEEFMINCE', 'title evidence matches the registry');
+  assert.equal(event.url, undefined, 'the registry no longer stamps a distinct url value');
+  core.canonicalizeIdentityLinks([event]);
+  assert.equal(event.website, 'https://beefmince.com', 'the ladder lands on the curated identity link');
+  assert.equal(event.ticketUrl, 'https://dice.fm/event/yoepxa-beefmince-x-rvt-19th-sep-the-royal-vauxhall-tavern-london-tickets');
+  assert.equal(event.url, undefined, 'url never exists post-canonicalization');
 });
