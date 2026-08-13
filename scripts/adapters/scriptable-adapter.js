@@ -7026,6 +7026,33 @@ class ScriptableAdapter {
             opacity: 0.6;
         }
 
+        /* Every route-line part is a tappable bridge link (owner: "make the
+           bar, address, and coordinates be links"). */
+        .event-route-line .map-verify-link {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        /* Compact write tag on the face (the expander's "Intent … • Write …"
+           note, compressed to a badge). */
+        .badge-write {
+            background: var(--background-light);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .badge-write::before {
+            content: "✍️ ";
+        }
+
+        /* One muted line standing in for all the merge rows that changed
+           nothing (owner: the merge section should just be the changes). */
+        .merge-noop-summary td {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
         .headline-reason-chip {
             display: inline-block;
             font-size: 11px;
@@ -10106,6 +10133,25 @@ class ScriptableAdapter {
     return url;
   }
 
+  // Best single maps URL for a compact list row (owner: "make the route
+  // link on the list too"): the Route directions link when >= 2 location
+  // points exist, else the strongest single point (pin → address → bar).
+  // "" when the event carries no location signal at all.
+  buildEventListRowMapsUrl(event) {
+    if (!event || typeof event !== "object") return "";
+    return (
+      this.buildRouteMapsDirectionsUrl({
+        bar: event.venue || event.bar,
+        city: event.city,
+        address: event.address,
+        coordinates: event.location,
+      }) ||
+      this.buildPinMapsSearchUrl(event.location) ||
+      this.buildAddressMapsSearchUrl(event.address, event.city) ||
+      this.buildBarMapsSearchUrl(event.venue || event.bar, event.city)
+    );
+  }
+
   // Keyless OpenStreetMap embed centered on the pin (~400m box, marker on
   // the pin). OSM because it needs no API key and matches the Nominatim
   // stack the scraper already geocodes with; Google Maps embeds require an
@@ -11424,6 +11470,14 @@ class ScriptableAdapter {
     const bearVerdictRow = this.buildBearVerdictActionsHtml(bearOpts);
     const intentAction = this.normalizeIntentAction(event) || "other";
     const writeAction = this.getWriteActionFromEvent(event);
+    // Compressed merge state (owner: "the merge/write section in the
+    // expanded details should just be the merge tag and maybe a new write
+    // tag on the main card"): the MERGE badge carries the changed-field
+    // count (·N), computed from the SAME per-field records the details
+    // table renders, so the tag and the table can never disagree.
+    const changedFieldCount = this.countChangedMergeFields(event);
+    const mergeCountSuffix =
+      changedFieldCount === null ? "" : ` ·${changedFieldCount}`;
     // Dropped-as-non-bear cards never reached calendar analysis, so their
     // intent/write labels would read "OTHER / OTHER" — the drop badge and the
     // bear-check reason say something true instead.
@@ -11431,7 +11485,7 @@ class ScriptableAdapter {
       ? '<span class="action-badge badge-error">🚫 DROPPED — NOT BEAR</span>'
       : {
           new: '<span class="action-badge badge-new">NEW</span>',
-          merge: '<span class="action-badge badge-merge">MERGE</span>',
+          merge: `<span class="action-badge badge-merge">MERGE${mergeCountSuffix}</span>`,
           conflict: '<span class="action-badge badge-warning">CONFLICT</span>',
           missing_calendar:
             '<span class="action-badge badge-error">MISSING CALENDAR</span>',
@@ -11503,11 +11557,19 @@ class ScriptableAdapter {
     ]
       .filter(Boolean)
       .join(" • ");
+    // The expander's "Intent: … • Write: …" note is compressed onto the
+    // face: intent is the action badge, the write plan is the write tag
+    // below. Only dropped cards keep an expander note (the bear-check
+    // reason, which has no badge of its own).
+    const writeBadge =
+      !isDroppedCard && writeAction
+        ? `<span class="action-badge badge-write write-badge">${this.formatWriteActionLabel(writeAction)}</span>`
+        : "";
     const actionNote = isDroppedCard
       ? dropDetail
         ? `<div class="write-action-note">Bear check: ${this.escapeHtml(dropDetail)}</div>`
         : ""
-      : `<div class="write-action-note">Intent: ${this.formatIntentActionLabel(intentAction)} • Write: ${this.formatWriteActionLabel(writeAction)}</div>`;
+      : "";
 
     const eventDate = new Date(event.startDate);
     const endDate = event.endDate ? new Date(event.endDate) : null;
@@ -11603,17 +11665,11 @@ class ScriptableAdapter {
     const notes = event.notes || "";
     const calendarName = this.getCalendarNameForDisplay(event);
 
-    // Secondary verification surface (kept small): the same Bar/Address/Pin
-    // Google Maps links as the new-venue-candidates section, rendered only
-    // when the card has data for them (empty string otherwise).
-    const mapVerifyRow = this.buildMapVerifyLinksHtml({
-      bar: event.bar || event.venue,
-      city: event.city,
-      address: event.address,
-      coordinates: event.location,
-    });
     // Computed evidence panel (SharedCore attaches _evidenceLines during
     // calendar prep); "" when absent — e.g. saved-run display (fail open).
+    // Rendered inside the debug raw-display block ONLY (owner: "This section
+    // doesn't really help me") — display placement change, the lines stay in
+    // the run JSON untouched.
     const evidenceBlock = this.buildEvidenceLinesHtml(event._evidenceLines);
     // Event Builder prefill link (every card) + ICS export (recurring cards).
     const eventActionsRow = this.buildEventCardActionsHtml(event);
@@ -11635,26 +11691,73 @@ class ScriptableAdapter {
         : ' <span class="no-end-note">(no end listed)</span>'
     }`;
     const headlineVenue = event.venue || event.bar || "";
-    // Compact route line (owner feedback #3: "I miss the route info … show
-    // the bar/address/coordinates in a smaller more easy to view way"):
-    // bar • street part of the address • the stored pin as a small Google
-    // Maps link through the SAME openMapVerify bridge the Verify row uses
-    // (full Bar/Address/Pin/Route verify links stay in the expander).
+    // Tappable route line (owner: "Can we make the bar, address, and
+    // coordinates be links? Then make the route link on the list too?
+    // Instead of having it in both the main card and expanded details"):
+    // every part links out through the SAME openMapVerify bridge — bar →
+    // the event's own gmaps/place link when it has one, else a
+    // "<bar>, <city>" maps search; address → a maps search on the FULL
+    // stored address (short street form stays the visible label); pin → the
+    // stored coordinates; plus the Route directions link that used to live
+    // in the expander's Verify row. The expander's venue/address/coordinates
+    // rows and Verify row are GONE — this line is the one place a card
+    // carries route info.
+    const routeBridgeLink = (url, labelHtml, extraClass) => {
+      if (!url) return "";
+      const id = this.registerMapVerifyUrl(url);
+      return `<a href="#" onclick="return openMapVerify(this)" data-map-url-id="${id}" class="map-verify-link ${extraClass}">${labelHtml}</a>`;
+    };
     const routeStreetAddress =
       typeof event.address === "string"
         ? event.address.split(",")[0].trim()
         : "";
     const routePinUrl = this.buildPinMapsSearchUrl(event.location);
     const routeParts = [];
-    if (headlineVenue) routeParts.push(this.escapeHtml(headlineVenue));
-    if (routeStreetAddress && routeStreetAddress !== headlineVenue)
-      routeParts.push(this.escapeHtml(routeStreetAddress));
-    if (routePinUrl) {
-      const routePinId = this.registerMapVerifyUrl(routePinUrl);
+    if (headlineVenue) {
+      const ownGmapsLink = [event.gmaps, event.googleMapsLink].find((url) =>
+        this.isSafeExternalUrl(url),
+      );
+      const barUrl =
+        ownGmapsLink || this.buildBarMapsSearchUrl(headlineVenue, event.city);
       routeParts.push(
-        `<a href="#" onclick="return openMapVerify(this)" data-map-url-id="${routePinId}" class="map-verify-link route-pin-link">${this.escapeHtml(
-          this.buildPinMapsQuery(event.location),
-        )} ↗</a>`,
+        routeBridgeLink(
+          barUrl,
+          this.escapeHtml(headlineVenue),
+          "route-bar-link",
+        ) || this.escapeHtml(headlineVenue),
+      );
+    }
+    if (routeStreetAddress && routeStreetAddress !== headlineVenue) {
+      const addressUrl = this.buildAddressMapsSearchUrl(
+        event.address,
+        event.city,
+      );
+      routeParts.push(
+        routeBridgeLink(
+          addressUrl,
+          this.escapeHtml(routeStreetAddress),
+          "route-address-link",
+        ) || this.escapeHtml(routeStreetAddress),
+      );
+    }
+    if (routePinUrl) {
+      routeParts.push(
+        routeBridgeLink(
+          routePinUrl,
+          `${this.escapeHtml(this.buildPinMapsQuery(event.location))} ↗`,
+          "route-pin-link",
+        ),
+      );
+    }
+    const routeDirectionsUrl = this.buildRouteMapsDirectionsUrl({
+      bar: headlineVenue,
+      city: event.city,
+      address: event.address,
+      coordinates: event.location,
+    });
+    if (routeDirectionsUrl) {
+      routeParts.push(
+        routeBridgeLink(routeDirectionsUrl, "Route ↗", "route-directions-link"),
       );
     }
     const routeLineHtml =
@@ -11706,7 +11809,7 @@ class ScriptableAdapter {
     let html = `
         <div class="event-card${isDroppedCard ? " bear-dropped-card" : ""}">
             <div class="event-headline">
-                <div class="event-headline-badges">${actionBadge}${recurringBadge}${seriesMatchBadge}${sanityBadge}${overrideBadge}${seriesProposalBadge}${headlineReasonChip}</div>
+                <div class="event-headline-badges">${actionBadge}${writeBadge}${recurringBadge}${seriesMatchBadge}${sanityBadge}${overrideBadge}${seriesProposalBadge}${headlineReasonChip}</div>
                 <div class="event-headline-main">
                     ${thumbHtml}
                     <div class="event-headline-body">
@@ -11722,45 +11825,12 @@ class ScriptableAdapter {
             <details class="event-card-details">
             <summary class="event-card-details-summary">Details</summary>
             ${actionNote}${cadenceHintNote}
-            <!-- Main Event Info -->
+            <!-- Main Event Info. The face already carries venue/address/pin
+                 (as bridge links), the date line, and the thumbnail — none of
+                 them repeat here (owner: "I don't want to duplicate it in the
+                 details"). -->
             <div class="event-details">
-                ${
-                  event.venue || event.bar
-                    ? `
-                    <div class="event-detail">
-                        <span>📍</span>
-                        <span>${this.escapeHtml(event.venue || event.bar)}</span>
-                    </div>
-                `
-                    : ""
-                }
-                ${
-                  event.address
-                    ? `
-                    <div class="event-detail">
-                        <span>🏠</span>
-                        <span>${this.escapeHtml(event.address)}</span>
-                    </div>
-                `
-                    : ""
-                }
-                ${
-                  event.location
-                    ? `
-                    <div class="event-detail coordinates">
-                        <span>🌐</span>
-                        <span>Coordinates: ${this.escapeHtml(event.location)}</span>
-                    </div>
-                `
-                    : ""
-                }
-                ${mapVerifyRow}
                 ${eventActionsRow}
-                ${evidenceBlock}
-                <div class="event-detail">
-                    <span>📅</span>
-                    <span>${dateLineHtml}</span>
-                </div>
                 <div class="event-detail" style="font-size: 12px; color: #666; margin-left: 20px;">
                     <span>🌍</span>
                     <span>UTC: ${utcTimeStr}${
@@ -11789,23 +11859,6 @@ class ScriptableAdapter {
                     <div class="event-detail" style="background: #e8f5e9; padding: 8px; border-radius: 5px; margin-top: 8px;">
                         <span>☕</span>
                         <span style="font-style: italic;">${this.escapeHtml(event.tea)}</span>
-                    </div>
-                `
-                    : ""
-                }
-                ${
-                  event.image
-                    ? `
-                    <div class=\"event-image${isRepeatedImage ? " venue-placeholder-image" : ""}\">
-                        ${
-                          isRepeatedImage
-                            ? `<div class=\"venue-placeholder-badge\">🖼️ venue placeholder image — same image on ${repeatedImageCount} events this run</div>`
-                            : ""
-                        }
-                        <a href=\"${this.escapeHtml(event.image)}\" target=\"_blank\" rel=\"noopener\" style=\"color: var(--primary-color); font-weight: 500;\">View Full Image</a>
-                        <div class=\"image-container\" style=\"margin-top: 8px; display: block;\">
-                            <img src=\"${this.escapeHtml(event.image)}\" alt=\"Event Image\" onerror=\"this.style.display='none'\">
-                        </div>
                     </div>
                 `
                     : ""
@@ -11990,7 +12043,7 @@ class ScriptableAdapter {
                         ${this.buildFieldRowsTableHtml(
                           this.claimMergeDiffBudget(
                             "field-by-field comparison",
-                            this.generateComparisonRows(event),
+                            this.generateComparisonRowsCompressed(event),
                             event,
                             { asTableRow: true },
                           ),
@@ -12079,6 +12132,7 @@ class ScriptableAdapter {
             }
             
             <div class="raw-display">
+                ${evidenceBlock}
                 ${(() => {
                   // ONE payload per card. Keeps _original (merge provenance)
                   // but drops the AI prompt/validation blobs — see
@@ -13111,6 +13165,23 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
           eventCell.subtitleText = subtitle.join(" • ") || "Event details";
           eventCell.subtitleColor = Color.gray();
 
+          // Route link on the list row too (owner: "make the route link on
+          // the list too") — a native button cell opening the same maps URL
+          // the card's route line uses. Native UITable API, no WebView
+          // bridge involved (this fallback only renders when the WebView
+          // could not).
+          const rowMapsUrl = this.buildEventListRowMapsUrl(event);
+          if (rowMapsUrl) {
+            eventRow.dismissOnSelect = false;
+            eventCell.widthWeight = 75;
+            const routeCell = eventRow.addButton("📍 Route");
+            routeCell.widthWeight = 25;
+            routeCell.rightAligned();
+            routeCell.onTap = () => {
+              Safari.open(rowMapsUrl);
+            };
+          }
+
           table.addRow(eventRow);
         });
 
@@ -13958,9 +14029,56 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     });
   }
 
-  // Generate comparison rows for conflict display
+  // Generate comparison rows for conflict display (every row, uncompressed).
   generateComparisonRows(event) {
-    if (!event._original) return "";
+    const records = this.buildComparisonRowRecords(event);
+    if (!records) return "";
+    return records.map((record) => record.html).join("");
+  }
+
+  // Compressed variant for the card expander (owner: "the merge/write
+  // section in the expanded details should just be the merge tag"): only
+  // rows that CHANGED something render; no-op rows ("same in both", "kept
+  // existing" with an ignored candidate) collapse to one muted summary line
+  // naming the untouched fields.
+  generateComparisonRowsCompressed(event) {
+    const records = this.buildComparisonRowRecords(event);
+    if (!records) return "";
+    const parts = records
+      .filter((record) => record.changed)
+      .map((record) => record.html);
+    const noopFields = records
+      .filter((record) => !record.changed)
+      .map((record) => record.field);
+    if (noopFields.length > 0) {
+      const MAX_NAMES = 8;
+      const names =
+        noopFields.slice(0, MAX_NAMES).join(", ") +
+        (noopFields.length > MAX_NAMES ? ", …" : "");
+      parts.push(
+        `<tr class="field-row merge-noop-summary"><td colspan="4">${noopFields.length} field${
+          noopFields.length === 1 ? "" : "s"
+        } unchanged — ${this.escapeHtml(names)}</td></tr>`,
+      );
+    }
+    return parts.join("");
+  }
+
+  // Changed-field count behind the card's "MERGE ·N" tag. null when the
+  // event has no merge provenance to count (e.g. NEW events, saved runs
+  // stripped of _original) — the badge then renders without a count.
+  countChangedMergeFields(event) {
+    const records = this.buildComparisonRowRecords(event);
+    if (!records) return null;
+    return records.filter((record) => record.changed).length;
+  }
+
+  // One record per comparison field: { field, changed, html }. `changed`
+  // means the merge left the field DIFFERENT from what the calendar already
+  // had (added/clobbered/cleared/rewrote); kept-existing and same-value
+  // rows are no-ops. null (not []) when the event has no _original.
+  buildComparisonRowRecords(event) {
+    if (!event || !event._original) return null;
 
     // Use the same field logic as comparison (includes core fields not in notes)
     const fieldsToCompare = this.getFieldsForComparison(event);
@@ -14329,17 +14447,46 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         }
       }
 
-      rows.push(
-        this.buildFieldRowHtml({
+      // No-op detection for the compressed view: the merge left this field
+      // as the calendar already had it. Date-aware via
+      // mergeValuesLookIdentical, empty-aware (undefined/null/"" are all
+      // "nothing"), and object-aware (JSON-equal). Anything unclear counts
+      // as changed — better a superfluous row than a hidden change.
+      const isEmptyish = (value) =>
+        value === undefined || value === null || value === "";
+      const valuesJsonEqual = (a, b) => {
+        if (
+          typeof a !== "object" ||
+          a === null ||
+          typeof b !== "object" ||
+          b === null
+        ) {
+          return false;
+        }
+        try {
+          return JSON.stringify(a) === JSON.stringify(b);
+        } catch (error) {
+          return false;
+        }
+      };
+      const rowIsNoop =
+        mergeValuesLookIdentical(finalValue, existingValue) ||
+        (isEmptyish(finalValue) && isEmptyish(existingValue)) ||
+        valuesJsonEqual(finalValue, existingValue);
+
+      rows.push({
+        field,
+        changed: !rowIsNoop,
+        html: this.buildFieldRowHtml({
           fieldHtml: `<strong>${field}</strong><br><small>${strategyLabel}</small>`,
           valueHtml: valueParts.join(""),
           sourceHtml: `${flowIcon ? `<span class="field-row-flow">${flowIcon}</span> ` : ""}${resultText}`,
           reasonHtml: reasonCellHtml,
         }),
-      );
+      });
     });
 
-    return rows.join("");
+    return rows;
   }
 
   // Longest slice of any single value the line-by-line diff will render.

@@ -2546,8 +2546,9 @@ test('candidate rows carry the verify row and a lazy inline dual-map toggle', as
   assert.ok(noCoords.includes('Bar ↗'), 'other links unaffected');
 });
 
-test('event cards carry the compact verify row only when venue-ish data exists', () => {
+test('event cards carry the verify links on the face route line, never a details verify row', () => {
   const adapter = buildMapsAdapter();
+  adapter.resetMapVerifyUrls();
   const html = adapter.generateEventCard({
     title: 'Bear Night',
     startDate: '2026-08-01T02:00:00.000Z',
@@ -2557,8 +2558,17 @@ test('event cards carry the compact verify row only when venue-ish data exists',
     location: '47.6135, -122.3163',
     _action: 'new'
   });
-  assert.ok(html.includes('map-verify-row'), 'compact row on the card');
-  assert.ok(html.includes('Bar ↗') && html.includes('Address ↗') && html.includes('Pin ↗'));
+  // The old expander Verify row is gone (owner: "Instead of having it in
+  // both the main card and expanded details") — its four links now ARE the
+  // route-line parts on the face, all through the same bridge registry.
+  assert.ok(!html.includes('map-verify-row'), 'no separate verify row on cards');
+  for (const cls of ['route-bar-link', 'route-address-link', 'route-pin-link', 'route-directions-link']) {
+    assert.ok(html.includes(cls), `${cls} on the face route line`);
+  }
+  const urls = Object.values(adapter._mapVerifyUrls);
+  assert.ok(urls.some((u) => u.startsWith(MAPS_SEARCH_PREFIX) && u.includes('Massive')), 'bar search URL registered');
+  assert.ok(urls.some((u) => u.startsWith(MAPS_SEARCH_PREFIX) && u.includes('1400%2012th%20Ave')), 'address search URL registered');
+  assert.ok(urls.some((u) => u.startsWith(MAPS_DIR_PREFIX)), 'route directions URL registered');
 
   const bare = adapter.generateEventCard({
     title: 'No venue data',
@@ -2566,6 +2576,7 @@ test('event cards carry the compact verify row only when venue-ish data exists',
     _action: 'new'
   });
   assert.ok(!bare.includes('map-verify-row'), 'no row without bar/address/location');
+  assert.ok(!bare.includes('route-bar-link'), 'no links without venue data');
 });
 
 test('presentRichResults opens verify links in Safari via the open-url bridge', async () => {
@@ -4571,13 +4582,14 @@ test('override card: slot-host events are badged as a single-occurrence override
   // Which occurrence: the RECURRENCE-ID rendered in the calendar's timezone —
   // 2026-08-07T00:00Z is Thursday Aug 6 in Los Angeles, not Friday Aug 7.
   assert.ok(card.includes('Thu, Aug 6, 2026'), `expected the LA-local occurrence date, got: ${card.slice(0, 900)}`);
-  // Distinct from NEW/CREATE in the write plan line, not only in the badge.
-  assert.ok(card.includes('Write: OVERRIDE'), 'write plan line says OVERRIDE');
-  assert.ok(!card.includes('Write: CREATE'), 'an override is never reported as a plain create');
+  // Distinct from NEW/CREATE in the write tag on the face, not only in the
+  // override badge (the old expander "Write: …" note is compressed to a tag).
+  assert.ok(card.includes('write-badge">OVERRIDE</span>'), 'write tag says OVERRIDE');
+  assert.ok(!card.includes('write-badge">CREATE</span>'), 'an override is never reported as a plain create');
 
   const plain = adapter.generateEventCard({ title: 'Plain', _action: 'new', startDate: '2026-08-07T00:00:00.000Z' });
   assert.ok(!plain.includes('series-override-badge'), 'no badge without the stamp');
-  assert.ok(plain.includes('Write: CREATE'), 'unstamped events keep their old write label');
+  assert.ok(plain.includes('write-badge">CREATE</span>'), 'unstamped events keep their old write label');
 });
 
 test('override label falls back to the event start, and a floating RECURRENCE-ID is read as a wall clock', () => {
@@ -4600,7 +4612,7 @@ test('a recurring series stamped slot-host stays WITHHELD — the label never pr
   const event = buildSlotHostOverrideEvent({ _recurring: true });
   assert.equal(adapter.getWriteActionFromEvent(event), 'withheld');
   const card = adapter.generateEventCard(event);
-  assert.ok(card.includes('Write: WITHHELD'), 'filterEventsForExecution is the real gate');
+  assert.ok(card.includes('write-badge">WITHHELD</span>'), 'filterEventsForExecution is the real gate');
   assert.ok(card.includes('series-override-badge'), 'the override state is still surfaced (flag, do not drop)');
 });
 
@@ -4616,7 +4628,7 @@ test('cadence hints are reported on the card and never become a series write', (
   assert.ok(card.includes('Cadence hint (not written): FREQ=WEEKLY;BYDAY=TH'), 'hint surfaced');
   assert.ok(!card.includes('<script>alert(1)</script>'), 'page-derived evidence is escaped');
   assert.ok(card.includes('&lt;script&gt;'), 'escaped rather than dropped');
-  assert.ok(card.includes('Write: OVERRIDE'), 'a cadence hint does not upgrade the write to a series');
+  assert.ok(card.includes('write-badge">OVERRIDE</span>'), 'a cadence hint does not upgrade the write to a series');
 });
 
 test('series-change proposals render current vs proposed with evidence, source and calendar', () => {
@@ -8136,14 +8148,17 @@ test('event cards are headline + collapsed details, nothing deleted', async () =
   assert.ok(headline.includes('📍'));
   assert.ok(headline.includes('The Eagle'));
 
-  // Everything else moved INTO the expander — still present, not deleted.
+  // The face carries the route info (as bridge links) and the thumbnail;
+  // the expander keeps ONLY what the face does not show — nothing deleted,
+  // nothing duplicated (owner: "I don't want to duplicate it in the details").
+  assert.ok(headline.includes('1 Main St'), 'address on the face route line');
+  assert.ok(headline.includes('event-thumb'), 'image visible on the face');
   const details = html.slice(detailsIdx);
-  assert.ok(details.includes('1 Main St'), 'address kept');
   assert.ok(details.includes('A very bear night'), 'description kept');
   assert.ok(details.includes('📝 Calendar Notes Preview'), 'notes preview kept');
   assert.ok(details.includes('raw-json'), 'debug JSON kept');
   assert.ok(details.includes('copyEventJSON(this)'), 'copy button kept');
-  assert.ok(details.includes('image-container'), 'image kept');
+  assert.ok(!details.includes('image-container'), 'no duplicate image block in the details');
 });
 
 test('multi-day headline carries the end date, same-day only the end time', () => {
@@ -8177,11 +8192,10 @@ test('repeated-image badge fires at 3+ uses in one run and never at 2', async ()
     errors: [],
     parserResults: []
   });
-  assert.ok(html3.includes('venue placeholder image'), 'badge fires at 3 uses');
-  assert.ok(html3.includes('same image on 3 events this run'));
-  // The class lands on the image block itself (the bare selector string also
-  // lives in the page CSS, so assert the applied class, not the substring).
-  assert.ok(html3.includes('event-image venue-placeholder-image'), 'image block greyed via class');
+  // The census surfaces on the face thumbnail (the details image block is
+  // gone — the thumb IS the card's image now): greyed class + count chip.
+  assert.ok(html3.includes('🖼️ placeholder ×3'), 'badge fires at 3 uses');
+  assert.ok(html3.includes('event-thumb venue-placeholder-thumb'), 'thumb greyed via class');
 
   const adapter2 = buildAdapter();
   const html2 = await adapter2.generateRichHTML({
@@ -8189,8 +8203,8 @@ test('repeated-image badge fires at 3+ uses in one run and never at 2', async ()
     errors: [],
     parserResults: []
   });
-  assert.ok(!html2.includes('venue placeholder image'), 'no badge at 2 uses');
-  assert.ok(!html2.includes('event-image venue-placeholder-image'));
+  assert.ok(!html2.includes('🖼️ placeholder ×'), 'no badge at 2 uses');
+  assert.ok(!html2.includes('event-thumb venue-placeholder-thumb'));
 });
 
 test('dropped cards count toward the repeated-image census', async () => {
@@ -8212,7 +8226,7 @@ test('dropped cards count toward the repeated-image census', async () => {
     errors: [],
     parserResults: []
   });
-  assert.ok(html.includes('venue placeholder image'), '2 kept + 1 dropped = 3 uses, badge fires');
+  assert.ok(html.includes('🖼️ placeholder ×3'), '2 kept + 1 dropped = 3 uses, badge fires');
 });
 
 test('merge rows label deterministic vs AI vs no-op decisions in plain words', () => {
@@ -8268,18 +8282,27 @@ test('merge rows label deterministic vs AI vs no-op decisions in plain words', (
   };
   const html = adapter.generateEventCard(event);
 
-  // Deterministic resolution: labeled as such, with outcome; the WHY lives
-  // in the shared row format's own reason cell.
-  assert.ok(html.includes('🔒 DETERMINISTIC — kept existing'));
-  assert.ok(html.includes('identity link beats a ticketing/social platform URL'));
-  // AI arbitration: labeled AI with the pick, reason in its own cell.
+  // The card table renders ONLY rows that changed something: the AI adoption
+  // in full, reason in the shared row format's own reason cell.
   assert.ok(html.includes('🤝 AI — chose new'));
   assert.ok(html.includes('poster names this event'));
-  // No-decision identical field: a clear no-op label, not a mystery token.
-  assert.ok(html.includes('SAME VALUE'));
+  // No-op rows (deterministic kept-existing, same-value) compress into one
+  // summary line naming the untouched fields (owner: the merge section
+  // should just be the changes).
+  assert.ok(!html.includes('🔒 DETERMINISTIC — kept existing'));
+  assert.ok(!html.includes('SAME VALUE'));
+  assert.ok(html.includes('2 fields unchanged'), 'summary line counts the no-ops');
+  assert.ok(/2 fields unchanged — [^<]*website/.test(html), 'summary names the untouched fields');
   // Strategy under the field name reads as words, not a bare "ai".
   assert.ok(html.includes('<small>AI-arbitrated</small>'));
   assert.ok(!html.includes('<small>ai</small>'));
+
+  // The uncompressed renderer keeps EVERY row — deterministic label and its
+  // reason intact for tooling and the provenance-preserve tests.
+  const fullRows = adapter.generateComparisonRows(event);
+  assert.ok(fullRows.includes('🔒 DETERMINISTIC — kept existing'));
+  assert.ok(fullRows.includes('identity link beats a ticketing/social platform URL'));
+  assert.ok(fullRows.includes('SAME VALUE'));
 });
 
 test('merge rows label calendar stickiness and clobber fallback', () => {
@@ -8297,7 +8320,7 @@ test('merge rows label calendar stickiness and clobber fallback', () => {
     },
     _fieldPriorities: { ticketUrl: { merge: 'ai' } }
   };
-  const stickyHtml = adapter.generateEventCard({
+  const stickyEvent = {
     ...base,
     ticketUrl: 'https://tickets.example/saved',
     _mergeDecisions: [{
@@ -8308,8 +8331,13 @@ test('merge rows label calendar stickiness and clobber fallback', () => {
       reason: 'calendar stickiness (binding) — saved value kept without AI arbitration',
       source: 'sticky'
     }]
-  });
-  assert.ok(stickyHtml.includes('🧊 KEPT EXISTING (calendar stickiness)'));
+  };
+  const stickyHtml = adapter.generateEventCard(stickyEvent);
+  // A sticky keep is a no-op — compressed off the card table into the
+  // summary line; the labeled row survives in the uncompressed renderer.
+  assert.ok(!stickyHtml.includes('🧊 KEPT EXISTING (calendar stickiness)'));
+  assert.ok(/\d+ fields? unchanged — [^<]*ticketUrl/.test(stickyHtml), 'ticketUrl named in the unchanged summary');
+  assert.ok(adapter.generateComparisonRows(stickyEvent).includes('🧊 KEPT EXISTING (calendar stickiness)'));
 
   const fallbackHtml = adapter.generateEventCard({
     ...base,
@@ -8873,4 +8901,245 @@ test('placeholder-badged thumbnails stay visible on the face with their badge', 
   assert.ok(html.includes('event-thumb venue-placeholder-thumb'), 'thumb greyed via class');
   assert.ok(html.includes('event-thumb-badge'), 'compact placeholder badge on the thumb');
   assert.ok(html.includes('🖼️ placeholder ×3'), 'badge states the reuse count');
+});
+
+// ---------------------------------------------------------------------------
+// Results-UI compression (owner feedback): tappable route line, merge tag +
+// changed-rows-only details, Evidence in the debug block only
+// ---------------------------------------------------------------------------
+
+function buildCompressionMergeEvent(overrides = {}) {
+  const shared = {
+    bar: 'Massive',
+    address: '1400 12th Ave, Seattle, WA 98122',
+    location: '47.6135, -122.3163',
+    title: 'Compressed Night',
+    startDate: '2026-09-01T02:00:00.000Z',
+    endDate: '2026-09-01T05:00:00.000Z',
+    // Real runs stamp key on BOTH _original sides (checked against
+    // rerun-0812) — an absent key would inflate the changed-field count.
+    key: 'compressed-night'
+  };
+  return {
+    ...shared,
+    _action: 'merge',
+    city: 'seattle',
+    image: 'https://cdn.example/new-poster.jpg',
+    website: 'https://www.example.com',
+    _evidenceLines: ['pin is 0 m from curated pin', 'bar corroborated: curated'],
+    _original: {
+      scraper: { ...shared, image: 'https://cdn.example/new-poster.jpg', website: 'https://tickets.example/x' },
+      calendar: { ...shared, image: 'https://cdn.example/old-poster.jpg', website: 'https://www.example.com' },
+      merged: { ...shared, image: 'https://cdn.example/new-poster.jpg', website: 'https://www.example.com' }
+    },
+    _fieldPriorities: { image: { merge: 'ai' }, website: { merge: 'ai' } },
+    _mergeDecisions: [
+      {
+        field: 'image',
+        existingValue: 'https://cdn.example/old-poster.jpg',
+        newValue: 'https://cdn.example/new-poster.jpg',
+        chosenValue: 'https://cdn.example/new-poster.jpg',
+        reason: 'poster names this event',
+        source: 'ai'
+      },
+      {
+        field: 'website',
+        existingValue: 'https://www.example.com',
+        newValue: 'https://tickets.example/x',
+        chosenValue: 'https://www.example.com',
+        reason: 'identity link beats a ticketing URL',
+        source: 'deterministic'
+      }
+    ],
+    ...overrides
+  };
+}
+
+test('route line parts are tappable bridge links: bar (own gmaps first), address, pin, and Route', () => {
+  const adapter = buildMapsAdapter();
+  adapter.resetMapVerifyUrls();
+  const card = adapter.generateEventCard(
+    buildCompressionMergeEvent({ gmaps: 'https://maps.app.goo.gl/abc123' })
+  );
+  const face = card.slice(0, card.indexOf('<details class="event-card-details">'));
+
+  const urlFor = (cls) => {
+    const m = face.match(new RegExp(`data-map-url-id="(\\d+)" class="map-verify-link ${cls}"`));
+    return m ? adapter._mapVerifyUrls[m[1]] : undefined;
+  };
+  assert.equal(urlFor('route-bar-link'), 'https://maps.app.goo.gl/abc123',
+    'bar links the event\'s own gmaps/place link when it has one');
+  assert.ok(urlFor('route-address-link').startsWith(MAPS_SEARCH_PREFIX), 'address links a maps search');
+  assert.ok(urlFor('route-address-link').includes('1400%2012th%20Ave'), 'search carries the stored address');
+  assert.ok(urlFor('route-pin-link').endsWith('47.6135%2C-122.3163'), 'pin links the stored coordinates');
+  assert.ok(urlFor('route-directions-link').startsWith(MAPS_DIR_PREFIX),
+    'the Route directions link rides the face route line now');
+  // Every part goes through the SAME shouldAllowRequest bridge — no plain
+  // https hrefs that would navigate the results WebView away.
+  assert.ok(!face.includes('href="https'), 'no plain https hrefs on the route line');
+
+  // Without an own gmaps link the bar falls back to a "<bar>, <city>" search.
+  adapter.resetMapVerifyUrls();
+  const fallbackCard = adapter.generateEventCard(buildCompressionMergeEvent());
+  const fallbackFace = fallbackCard.slice(0, fallbackCard.indexOf('<details class="event-card-details">'));
+  const m = fallbackFace.match(/data-map-url-id="(\d+)" class="map-verify-link route-bar-link"/);
+  assert.ok(m, 'bar link present without gmaps');
+  assert.ok(adapter._mapVerifyUrls[m[1]].startsWith(MAPS_SEARCH_PREFIX));
+  assert.ok(adapter._mapVerifyUrls[m[1]].includes('Massive'));
+});
+
+test('UITable fallback list rows carry a tappable route link', async () => {
+  const adapter = buildMapsAdapter();
+  const rows = [];
+  const makeCell = (type, title) => ({
+    type,
+    title,
+    rightAligned() {},
+    leftAligned() {},
+    centerAligned() {}
+  });
+  class FakeUITableRow {
+    constructor() { this.cells = []; }
+    addText(title) { const c = makeCell('text', title); this.cells.push(c); return c; }
+    addButton(title) { const c = makeCell('button', title); this.cells.push(c); return c; }
+  }
+  class FakeUITable {
+    constructor() { this.rows = []; }
+    addRow(row) { rows.push(row); this.rows.push(row); }
+    async present() {}
+  }
+  const opened = [];
+  global.UITable = FakeUITable;
+  global.UITableRow = FakeUITableRow;
+  global.Font = {
+    boldSystemFont: () => ({}),
+    systemFont: () => ({}),
+    italicSystemFont: () => ({})
+  };
+  global.Color = {
+    white: () => ({}), brown: () => ({}), gray: () => ({}),
+    blue: () => ({}), green: () => ({}), red: () => ({})
+  };
+  global.Safari = { open: (url) => opened.push(url) };
+  try {
+    await adapter.presentUITableFallback({
+      totalEvents: 1,
+      bearEvents: 1,
+      calendarEvents: 0,
+      errors: [],
+      parserResults: [],
+      analyzedEvents: [{
+        title: 'Bear Night',
+        _action: 'new',
+        startDate: '2026-08-01T02:00:00.000Z',
+        city: 'seattle',
+        bar: 'Massive',
+        address: '1400 12th Ave',
+        location: '47.6135, -122.3163'
+      }]
+    });
+    const routeCells = rows.flatMap((row) =>
+      row.cells.filter((cell) => cell.type === 'button' && cell.title === '📍 Route'));
+    assert.equal(routeCells.length, 1, 'the event list row got a route button');
+    routeCells[0].onTap();
+    assert.equal(opened.length, 1, 'tap opens the maps URL natively');
+    assert.ok(opened[0].startsWith(MAPS_DIR_PREFIX), 'route directions URL — same builders as the card');
+  } finally {
+    delete global.UITable;
+    delete global.UITableRow;
+    delete global.Font;
+    delete global.Color;
+    delete global.Safari;
+  }
+
+  // The row URL degrades gracefully as location data thins out.
+  assert.ok(adapter.buildEventListRowMapsUrl({ location: '47.61, -122.33' }).startsWith(MAPS_SEARCH_PREFIX));
+  assert.ok(adapter.buildEventListRowMapsUrl({ bar: 'Massive', city: 'seattle' }).includes('Massive'));
+  assert.equal(adapter.buildEventListRowMapsUrl({}), '');
+  assert.equal(adapter.buildEventListRowMapsUrl(null), '');
+});
+
+test('expanded details carry no duplicate route/address/date/image blocks', () => {
+  const adapter = buildMapsAdapter();
+  const card = adapter.generateEventCard(buildCompressionMergeEvent());
+  const detailsIdx = card.indexOf('<details class="event-card-details">');
+  const rawIdx = card.indexOf('class="raw-display"');
+  assert.ok(detailsIdx !== -1 && rawIdx > detailsIdx, 'expander then debug block');
+  const details = card.slice(detailsIdx, rawIdx);
+
+  assert.ok(!details.includes('map-verify-row'), 'no verify row in the details');
+  assert.ok(!details.includes('<span>📍</span>'), 'no duplicate venue row');
+  assert.ok(!details.includes('<span>🏠</span>'), 'no duplicate address row');
+  assert.ok(!details.includes('Coordinates:'), 'no duplicate coordinates row');
+  assert.ok(!details.includes('<span>📅</span>'), 'no duplicate date row');
+  assert.ok(details.includes('<span>🌍</span>'), 'UTC verification row kept (unique info)');
+  assert.ok(!details.includes('image-container'), 'no duplicate image block');
+  assert.ok(!details.includes('View Full Image'));
+});
+
+test('merge state compresses to a counted MERGE tag plus a write tag on the card face', () => {
+  const adapter = buildMapsAdapter();
+  const card = adapter.generateEventCard(buildCompressionMergeEvent());
+  const face = card.slice(0, card.indexOf('<details class="event-card-details">'));
+
+  // Face: MERGE ·N (N = changed fields) + the write plan as a tag.
+  assert.ok(face.includes('MERGE ·1</span>'), 'MERGE tag carries the changed-field count');
+  assert.ok(face.includes('write-badge">UPDATE</span>'), 'write tag on the face');
+  // The expander note that used to duplicate this is gone.
+  assert.ok(!card.includes('Intent: MERGE'), 'no Intent/Write note in the details');
+
+  // Details table: ONLY the changed row, plus one summary line for no-ops.
+  assert.ok(card.includes('🤝 AI — chose new'), 'the changed row renders in full');
+  assert.ok(!card.includes('🔒 DETERMINISTIC'), 'no-op decision row compressed out');
+  const summary = card.match(/(\d+) fields? unchanged/);
+  assert.ok(summary, 'one summary line for the unchanged fields');
+  assert.ok(Number(summary[1]) >= 5, 'the untouched fields are counted, not rendered as rows');
+  assert.ok(card.includes('merge-noop-summary'), 'summary rides the shared table as one row');
+  // Tag and table agree by construction.
+  assert.equal(adapter.countChangedMergeFields(buildCompressionMergeEvent()), 1);
+});
+
+test('Evidence lines render only inside the debug raw-display block', () => {
+  const adapter = buildMapsAdapter();
+  const card = adapter.generateEventCard(buildCompressionMergeEvent());
+  const rawIdx = card.indexOf('class="raw-display"');
+  const evidenceIdx = card.indexOf('evidence-block');
+  assert.ok(evidenceIdx !== -1, 'evidence still reachable in the debug expander');
+  assert.ok(evidenceIdx > rawIdx, 'evidence lives in the debug block, not the default details');
+  assert.ok(card.indexOf('pin is 0 m from curated pin') > rawIdx, 'the lines render there');
+
+  const bare = adapter.generateEventCard(buildCompressionMergeEvent({ _evidenceLines: [] }));
+  assert.ok(!bare.includes('evidence-block'), 'no lines → no block anywhere (fail open)');
+});
+
+test('compression keeps every bridge action id and card handler intact', () => {
+  const adapter = buildMapsAdapter();
+  // Every chunkyscrape action id round-trips through the bridge URL parser.
+  for (const action of [
+    'page', 'page-done', 'copy-venue', 'mark-bear', 'mark-not-bear',
+    'execute-run', 'queue-venue', 'open-url', 'export-ics', 'copy-logs',
+    'ai-prompts', 'beacon'
+  ]) {
+    const params = adapter.parseReviewActionUrl(`chunkyscrape://act?a=${action}&n=1`);
+    assert.equal(params.a, action, `${action} round-trips through the bridge URL`);
+  }
+  // The compressed card still wires every existing handler.
+  const event = buildCompressionMergeEvent({ recurrenceRule: 'FREQ=WEEKLY;BYDAY=TH' });
+  const card = adapter.generateEventCard(event, { runId: 'r1' }, {
+    bearIdx: 'k0',
+    bearVerdict: 'bear',
+    interactive: true
+  });
+  assert.ok(card.includes('route-directions-link'), 'compressed layout marker present');
+  for (const handler of [
+    'openMapVerify(this)',
+    'markBearOverride(this)',
+    'copyEventJSON(this)',
+    'exportRecurringIcs(this)',
+    'exportProvenanceIssue(this)',
+    'toggleComparisonSection(',
+    'toggleDiffView(this'
+  ]) {
+    assert.ok(card.includes(handler), `${handler} intact on the compressed card`);
+  }
 });
