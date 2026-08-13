@@ -689,7 +689,9 @@ class WebAdapter {
                 startDate: event.startDate || null,
                 endDate: event.endDate || null,
                 location: event.location || event.venue || '',
-                url: event.url || '',
+                // url/website are ONE field — website is canonical; the url
+                // key is kept for older saved-run readers as a view of it.
+                url: event.website || event.url || '',
                 city: event.city || '',
                 _action: event._action || null,
                 _analysis: event._analysis || null,
@@ -1270,7 +1272,7 @@ async saveFailureNote(url, error, metadata = {}) {
                 console.log(`   Title: ${event.title}`);
                 console.log(`   Date: ${event.startDate}`);
                 console.log(`   Venue: ${event.venue || 'N/A'}`);
-                console.log(`   URL: ${event.url || 'N/A'}`);
+                console.log(`   URL: ${event.website || event.url || 'N/A'}`);
                 // Additive line: report-only sanity flags stamped by
                 // SharedCore.getEventSanityFlags (absent → nothing printed).
                 if (Array.isArray(event._sanityFlags) && event._sanityFlags.length > 0) {
@@ -1316,7 +1318,7 @@ async saveFailureNote(url, error, metadata = {}) {
                 `SUMMARY:${event.title}`,
                 `DESCRIPTION:${event.description || ''}`,
                 `LOCATION:${event.venue || ''}`,
-                event.url ? `URL:${event.url}` : '',
+                (event.website || event.url) ? `URL:${event.website || event.url}` : '',
                 `UID:${event.title}-${startDate}@chunkydad.com`,
                 'END:VEVENT'
             );

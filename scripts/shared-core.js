@@ -120,6 +120,35 @@ function isPlatformIdentityHost(host) {
         normalized === platform || normalized.endsWith(`.${platform}`));
 }
 
+// Social platform → the event field a PROFILE link on that platform belongs
+// in. Every host here is already named in PLATFORM_IDENTITY_HOSTS — this maps
+// existing classification to a destination field, it is not a new host list.
+// '' = social platform with no dedicated event field (the link is dropped
+// rather than parked in ticketUrl, because a social link is not a ticket
+// link). Used by canonicalizeIdentityLinks to route a social PROFILE offered
+// as `website` into its own field instead of losing it.
+const SOCIAL_IDENTITY_FIELD_BY_HOST = {
+    'instagram.com': 'instagram',
+    'facebook.com': 'facebook',
+    'twitter.com': 'twitter',
+    'x.com': 'twitter',
+    'tiktok.com': ''
+};
+
+// The social destination field for a host: a field name, '' (social host with
+// no field), or undefined (not a social host). Suffix matching mirrors
+// isPlatformIdentityHost so m.facebook.com routes like facebook.com.
+function getSocialIdentityFieldForHost(host) {
+    const normalized = String(host || '').toLowerCase();
+    if (!normalized) return undefined;
+    for (const domain of Object.keys(SOCIAL_IDENTITY_FIELD_BY_HOST)) {
+        if (normalized === domain || normalized.endsWith(`.${domain}`)) {
+            return SOCIAL_IDENTITY_FIELD_BY_HOST[domain];
+        }
+    }
+    return undefined;
+}
+
 // Path extensions that mark a URL as a static ASSET (image/font/stylesheet/
 // script) — a file, never a page a person visits (observed 2026-08-02: a
 // webflow CDN ".../image-asset%20(4).jpeg" beat https://www.massive.club/ for
@@ -2664,8 +2693,13 @@ class SharedCore {
     // Registry entry → static-metadata block in the exact {field: {value}}
     // shape parser metadata uses, so curated facts flow through the SAME
     // application machinery (applyStaticMetadataBlock). Sub-brands inherit
-    // unspecified fields from their parent entry; website maps to the
-    // canonical url field (url and website are ONE field).
+    // unspecified fields from their parent entry. The entry's identity
+    // website is deliberately NOT in this block: url and website are ONE
+    // canonical field (`website`), and a static clobber stamp here would
+    // overwrite a venue's own event page on every registry-matched event.
+    // The curated identity link is applied by canonicalizeIdentityLinks
+    // instead (fill a blank, replace a platform link, never displace a real
+    // page-stated site) — see getPromoterEntryIdentityWebsite.
     promoterEntryToMetadataBlock(entry) {
         if (!entry || typeof entry !== 'object') return {};
         const parent = typeof entry.parent === 'string' && entry.parent
@@ -2682,16 +2716,30 @@ class SharedCore {
             const value = pick(field);
             if (value) block[field] = { value };
         }
-        const website = pick('website');
-        if (website) block.url = { value: website };
         return block;
+    }
+
+    // The registry entry's curated identity link (own `website`, else the
+    // parent's — same inheritance as promoterEntryToMetadataBlock's pick).
+    // This is the top rung of the identity-link ladder: registry/venue
+    // identity link > official non-platform site stated on the page > empty.
+    getPromoterEntryIdentityWebsite(entry) {
+        if (!entry || typeof entry !== 'object') return '';
+        const own = typeof entry.website === 'string' && entry.website.trim() ? entry.website.trim() : '';
+        if (own) return own;
+        const parent = typeof entry.parent === 'string' && entry.parent
+            ? this.getPromoterEntryByName(entry.parent)
+            : null;
+        return parent && typeof parent.website === 'string' && parent.website.trim()
+            ? parent.website.trim()
+            : '';
     }
 
     // Enforce-mode stamp: curated promoter facts through the same
     // static-metadata machinery as parser metadata (registry runs after the
     // parser-time application, so its static clobber wins on match; parser
     // metadata remains the no-match fallback).
-    applyPromoterMetadata(event, metadataBlock) {
+    applyPromoterMetadata(event, metadataBlock, identityWebsite = '') {
         const fieldPriorities = this.getResolvedFieldPriorities({ metadata: metadataBlock });
         if (!event._fieldPriorities) {
             event._fieldPriorities = {};
@@ -2712,8 +2760,8 @@ class SharedCore {
         // scraped favicon always survives it.
         if (!metadataBlock.favicon
             && this.isEmptyArbitrationValue(event.favicon)
-            && metadataBlock.url && metadataBlock.url.value) {
-            event.favicon = metadataBlock.url.value;
+            && typeof identityWebsite === 'string' && identityWebsite.trim()) {
+            event.favicon = identityWebsite.trim();
             event._fieldPriorities.favicon = { priority: ['ai-web'], merge: 'upsert' };
         }
         return stamped;
@@ -2806,14 +2854,21 @@ class SharedCore {
                 else counts.url++;
             }
             const metadataBlock = this.promoterEntryToMetadataBlock(match.entry);
+            // The curated identity link is not part of the static block (see
+            // promoterEntryToMetadataBlock) — it rides along for the favicon
+            // fallback here and is applied to `website` by
+            // canonicalizeIdentityLinks after dedup. Listed in the stamp log
+            // as 'website' so the line keeps naming every curated fact in play.
+            const identityWebsite = this.getPromoterEntryIdentityWebsite(match.entry);
             const stampKeys = Object.keys(metadataBlock);
+            if (identityWebsite) stampKeys.push('website');
             if (mode === 'enforce') {
                 event._promoter = match.entry.name;
                 if (!event._organizer && match.evidence !== 'organizer') {
                     event._organizer = match.entry.name;
                 }
                 if (stampKeys.length > 0) {
-                    this.applyPromoterMetadata(event, metadataBlock);
+                    this.applyPromoterMetadata(event, metadataBlock, identityWebsite);
                 }
             }
             const stampLabel = mode === 'enforce' ? 'stamped' : 'would-stamp';
@@ -4413,6 +4468,13 @@ class SharedCore {
         if (duplicatesRemoved > 0) {
             await displayAdapter.logInfo(`SYSTEM: Deduplicated ${futureEvents.length} → ${deduplicatedEvents.length} before bear filtering (${duplicatesRemoved} duplicate record(s) folded)`);
         }
+        // ONE canonical `website` per event before anything downstream sees
+        // it: after dedup (whose URL-identity keys need the raw scraped link)
+        // and the registry pass (whose curated identity the ladder consults),
+        // before the bear check and the calendar merge. Platform links are
+        // routed or dropped here, so they never surface as website candidates
+        // in merge arbitration — see canonicalizeIdentityLinks.
+        this.canonicalizeIdentityLinks(deduplicatedEvents);
         const bearEvents = await this.filterBearEvents(deduplicatedEvents, effectiveParserConfig, httpAdapter, bearDropCollector);
 
         await displayAdapter.logInfo(`SYSTEM: Event filtering complete: ${allEvents.length} → ${futureEvents.length} future → ${bearEvents.length} bear → ${bearEvents.length} final`);
@@ -4508,8 +4570,26 @@ class SharedCore {
             const ticketHost = ticketUrl ? this.getHostFromUrl(ticketUrl) : '';
             const ticketUrlIsOutbound = Boolean(ticketHost) && !this.areUrlHostsSameSite(ticketHost, sourceHost);
             if (websiteIsOwnSourcePage && ticketUrlIsOutbound) {
-                event.website = ticketUrl;
-                console.log(`🤖 AI Web: website set to original source ${ticketHost} (aggregator page pointer)`);
+                // The outbound pointer is only adoptable as `website` when it
+                // is NOT a ticketing/social platform link: url/website are the
+                // ONE canonical identity field, and a platform link is never
+                // the identity link (it already lives in ticketUrl). Adopting
+                // dice/eventbrite here just re-offered the platform link as a
+                // website candidate at merge time, forever. The aggregator's
+                // own copy is still cleared — empty beats a copy of the
+                // source page — and the platform link survives in ticketUrl.
+                const normalizedTicketHost = String(ticketHost).toLowerCase().replace(/^www\./, '');
+                if (!isPlatformIdentityHost(normalizedTicketHost)
+                    && !this.isKnownTicketingPlatformHost(normalizedTicketHost)) {
+                    event.website = ticketUrl;
+                    console.log(`🤖 AI Web: website set to original source ${ticketHost} (aggregator page pointer)`);
+                } else {
+                    event.website = '';
+                    if (typeof event.url === 'string' && this.getUrlDedupeKey(event.url) === sourcePageKey) {
+                        event.url = '';
+                    }
+                    console.log(`🤖 AI Web: cleared aggregator self-pointer website for "${event.title || 'event'}" — outbound ${normalizedTicketHost} is a ticketing/social platform link, never the identity link (it stays in ticketUrl)`);
+                }
                 continue;
             }
             // Offer-less aggregator listing (2026-08-11, run 20260811-162602:
@@ -4535,6 +4615,125 @@ class SharedCore {
             }
             if (clearedFields.length > 0) {
                 console.log(`🤖 AI Web: cleared self-referential aggregator pointer (${clearedFields.join(', ')}) for "${event.title || 'event'}" — the ${sourceHost} listing has no outbound link, empty beats a copy of the source page`);
+            }
+        }
+    }
+
+    // ONE `website` per event, resolved BEFORE the merge — the once-and-for-
+    // all canonicalization of the url/website field (they are ONE field;
+    // canonical `website`). Runs after dedup (URL-identity dedup needs the
+    // raw scraped link) and after the promoter-registry pass (the curated
+    // identity and self-identity exceptions need the match), and before the
+    // bear check and calendar analysis, so a platform link NEVER reaches
+    // merge arbitration as a website candidate. That is what killed the
+    // owner's forever-rows: the merge OUTCOME was always right ("identity
+    // link beats a ticketing/social platform URL"), but the scraped side
+    // kept re-offering dice/eventbrite links as `website`, so the same
+    // "kept existing / ignored new value" row rendered on every run.
+    //
+    // The deterministic ladder per event:
+    //   1. curated registry/venue identity link (promoter match) — replaces a
+    //      platform website, fills an empty one; never displaces a real
+    //      non-platform site the page itself stated;
+    //   2. official non-platform site stated on the page — kept untouched;
+    //   3. empty — strictly better than a platform link (owner ruling
+    //      2026-08-03).
+    // Platform links routed OFF website are never lost: a social PROFILE
+    // goes to its own field (instagram/facebook/twitter) when empty, a
+    // ticket-ish link parks in an EMPTY ticketUrl; everything else drops
+    // with one log line. Exceptions mirror the final-build LINKS pass (which
+    // stays as the backstop for cached/merged objects): a platform organizer
+    // HOME page and the promoter's own curated presence on a platform are
+    // identity links and are kept. Statically stamped websites are curated
+    // config and never re-routed. Generic host classification only —
+    // PLATFORM_IDENTITY_HOSTS / TICKETING_PLATFORM_HOSTS / opaque-shortlink
+    // URL shape; nothing per venue.
+    canonicalizeIdentityLinks(events) {
+        if (!Array.isArray(events) || events.length === 0) return;
+        for (const event of events) {
+            if (!event || typeof event !== 'object') continue;
+            // Alias fold backstop: normalization already folded url→website
+            // and dropped url (BasicDataNormalizer.canonicalizeIdentityLink);
+            // repeat here for records that reached this pass some other way,
+            // so `url` never exists as a distinct stored value past this line.
+            const legacyUrl = typeof event.url === 'string' ? event.url.trim() : '';
+            if (legacyUrl && !(typeof event.website === 'string' && event.website.trim())) {
+                event.website = legacyUrl;
+            }
+            if ('url' in event) delete event.url;
+
+            const website = typeof event.website === 'string' ? event.website.trim() : '';
+            const staticFields = event._staticFields && typeof event._staticFields === 'object'
+                ? event._staticFields
+                : {};
+            const websiteIsStatic = Object.prototype.hasOwnProperty.call(staticFields, 'website')
+                || Object.prototype.hasOwnProperty.call(staticFields, 'url');
+            const promoterEntry = this.getCuratedPromoterIdentityEntry(event);
+            const curatedWebsite = promoterEntry ? this.getPromoterEntryIdentityWebsite(promoterEntry) : '';
+            const title = event.title || 'event';
+
+            if (!website) {
+                // Ladder rung 1 on a blank: the curated identity link fills it
+                // (what the old registry `url` stamp + merge-time fold used to
+                // do). Marked static — the value is registry branding, so it
+                // must never count as same-event dedup identity or as registry
+                // match evidence (de-circularization).
+                if (curatedWebsite && !websiteIsStatic) {
+                    event.website = curatedWebsite;
+                    if (!event._staticFields) event._staticFields = {};
+                    event._staticFields.website = curatedWebsite;
+                    console.log(`🔗 LINKS: website set to curated identity link ${curatedWebsite} of "${promoterEntry.name}" for "${title}" — registry identity beats an empty website (url/website are ONE field)`);
+                }
+                continue;
+            }
+            if (websiteIsStatic) continue;
+
+            const host = this.getHostFromUrl(website).toLowerCase().replace(/^www\./, '');
+            if (!host) continue;
+            const parts = this.getUrlRuleParts(website);
+            const isPlatform = isPlatformIdentityHost(host)
+                || this.isKnownTicketingPlatformHost(host)
+                || (parts ? this.isOpaqueShortlinkUrlParts(parts) : false);
+            if (!isPlatform) continue; // rung 2: a real page-stated site is kept
+            if (this.isPlatformOrganizerHomeUrl(website)) continue;
+            if (this.isCuratedPlatformSelfIdentityUrl(event, website)) continue;
+
+            // Route the platform link off `website` without losing it: social
+            // PROFILE (single path segment on a social host) → its own empty
+            // field; anything else ticket-ish → an EMPTY ticketUrl.
+            const socialField = getSocialIdentityFieldForHost(host);
+            const isSocialProfile = socialField !== undefined
+                && parts && Array.isArray(parts.segments)
+                && parts.segments.length === 1 && !parts.hasQuery
+                && parts.segments[0].toLowerCase() !== 'events';
+            let routedTo = '';
+            if (isSocialProfile && socialField
+                && !(typeof event[socialField] === 'string' && event[socialField].trim())) {
+                event[socialField] = website;
+                routedTo = socialField;
+            } else if (!isSocialProfile || !socialField) {
+                // Everything that is not a routable social profile parks in an
+                // EMPTY ticketUrl — the same flag-don't-drop parking the
+                // final-build LINKS pass has always used (owner ruling
+                // 2026-08-03: a real ticketUrl is never overwritten).
+                const existingTicketUrl = typeof event.ticketUrl === 'string' ? event.ticketUrl.trim() : '';
+                if (!existingTicketUrl) {
+                    event.ticketUrl = website;
+                    routedTo = 'ticketUrl';
+                }
+            }
+            const parked = routedTo ? `routed to ${routedTo}` : 'dropped (destination field already set)';
+
+            if (curatedWebsite && curatedWebsite !== website) {
+                // Ladder rung 1: curated identity replaces the platform link.
+                event.website = curatedWebsite;
+                if (!event._staticFields) event._staticFields = {};
+                event._staticFields.website = curatedWebsite;
+                console.log(`🔗 LINKS: platform website ${website} replaced with curated identity link ${curatedWebsite} of "${promoterEntry.name}" for "${title}" (${parked}) — a ticketing/social link is never the identity link`);
+            } else {
+                // Ladder rung 3: empty beats a platform link.
+                delete event.website;
+                console.log(`🔗 LINKS: cleared platform website ${website} for "${title}" (${parked}) — a ticketing/social link is never the identity link, canonicalized before the merge`);
             }
         }
     }
@@ -5746,21 +5945,31 @@ class SharedCore {
                     // A page that describes exactly ONE event IS that event's
                     // page, so it can name itself. The structured-data routes
                     // already do this (JSON-LD and the JSON-API reader both set
-                    // url from the page they read); the AI-extraction route had
-                    // no equivalent, so a crawled detail page left `url` on
-                    // whatever the parser's static metadata supplied — the
-                    // venue's bare homepage. That also killed the
-                    // `event-page-url` dedup rung, which returns nothing for a
-                    // domain root, leaving these events to match on name+time
-                    // alone. Only fills a blank or replaces a same-site bare
-                    // root: a listing page (many events) is skipped by the
-                    // count, and a URL the page actually named is never
-                    // displaced.
+                    // the page they read as the event's link, which the
+                    // pipeline folds into the canonical `website`); the
+                    // AI-extraction route had no equivalent, so a crawled
+                    // detail page left the identity link on whatever the
+                    // parser's static metadata supplied — the venue's bare
+                    // homepage. That also killed the `event-page-url` dedup
+                    // rung, which returns nothing for a domain root, leaving
+                    // these events to match on name+time alone. Only fills a
+                    // blank or replaces a same-site bare root: a listing page
+                    // (many events) is skipped by the count, and a URL the
+                    // page actually named is never displaced. Writes the
+                    // canonical `website` (url/website are ONE field; `url`
+                    // no longer exists post-normalization); when it replaces
+                    // a statically stamped root, the static marker goes too —
+                    // the value is now organic (the page named itself), so it
+                    // must count as same-event dedup identity again.
                     if (parsedEvents.length === 1) {
                         const soleEvent = parsedEvents[0];
-                        const existingUrl = typeof soleEvent.url === 'string' ? soleEvent.url.trim() : '';
+                        const existingUrl = typeof soleEvent.website === 'string' ? soleEvent.website.trim() : '';
                         if (!existingUrl || this.isBareRootBuryingSameSiteEventPage(existingUrl, url)) {
-                            soleEvent.url = url;
+                            soleEvent.website = url;
+                            if (soleEvent._staticFields
+                                && Object.prototype.hasOwnProperty.call(soleEvent._staticFields, 'website')) {
+                                delete soleEvent._staticFields.website;
+                            }
                             console.log(`🔗 LINKS: "${soleEvent.title || 'event'}" takes its own page ${url} as its url${existingUrl ? ` (was ${existingUrl})` : ''} — one event on the page`);
                         }
                     }
@@ -9253,6 +9462,27 @@ class SharedCore {
     // Create complete merged event object that represents exactly what will be saved
     // Following the 6-step process: 1) scraper object, 2) calendar object, 3) simple merge, 4) gmaps, 5) notes, 6) display
     //
+    // A Google Maps link anchored to a verified place: it names a place_id
+    // (maps/place/?q=place_id:… or &query_place_id=…) or its query is a bare
+    // coordinate pair (query=51.50,-0.12, comma raw or %2C-encoded). String
+    // shape only — the WHATWG URL parser is banned in scripts/ (platform
+    // purity, no `new URL(`).
+    isPlaceAnchoredGmapsUrl(value) {
+        const raw = typeof value === 'string' ? value.trim() : '';
+        if (!raw) return false;
+        if (/[?&](?:q=)?place_id:/i.test(raw)) return true;
+        if (/[?&]query_place_id=/i.test(raw)) return true;
+        return /[?&]query=-?\d{1,3}(?:\.\d+)?(?:%2C|,)\s*-?\d{1,3}(?:\.\d+)?(?:&|$)/i.test(raw);
+    }
+
+    // A Google Maps link whose query is TEXT (venue name/address prose) —
+    // i.e. it has a query= but is not place/coordinate-anchored.
+    isTextQueryGmapsUrl(value) {
+        const raw = typeof value === 'string' ? value.trim() : '';
+        if (!raw || this.isPlaceAnchoredGmapsUrl(raw)) return false;
+        return /[?&]query=/i.test(raw);
+    }
+
     // url vs website: they are ONE logical field. Notes persist only a "website:"
     // line (url is notes-excluded) and Scriptable cannot read or write the native
     // CalendarEvent.url property, so `website` is the canonical field that merges
@@ -9267,6 +9497,12 @@ class SharedCore {
         if (this.isEmptyArbitrationValue(scraperObject.website) && scraperObject.url) {
             scraperObject.website = scraperObject.url;
         }
+        // The alias then ceases to exist on the scraped side: `url` is never a
+        // distinct stored value post-normalization (canonicalizeIdentityLinks
+        // already dropped it for pipeline events; this covers replayed/cached
+        // records), so the comparison display never sees a phantom scraped
+        // `url` differing from the calendar's native one.
+        if ('url' in scraperObject) delete scraperObject.url;
 
         // STEP 2: Build calendar object using calendar data
         const calendarObject = {
@@ -9286,6 +9522,21 @@ class SharedCore {
         // shadow the notes-parsed website.
         if (this.isEmptyArbitrationValue(calendarObject.website) && existingEvent.url) {
             calendarObject.website = existingEvent.url;
+        }
+
+        // gmaps candidate hygiene (calendar-as-database: location is always
+        // coordinates, and gmaps is rebuilt from verified coords). A scraped
+        // text-query gmaps ("?query=The Royal Vauxhall Tavern, london") is
+        // derived from page prose; when the calendar link is anchored to a
+        // place_id or a coordinate pair it is strictly more precise, so the
+        // text query is not a candidate at all — deleting it here keeps the
+        // comparison display from rendering a no-op "kept existing / ignored
+        // new value" row for gmaps on every run. Deterministic and quiet:
+        // gmaps never merges anyway (STEP 4 below regenerates it), this only
+        // removes the noise the display would otherwise show forever.
+        if (this.isPlaceAnchoredGmapsUrl(calendarObject.gmaps)
+            && this.isTextQueryGmapsUrl(scraperObject.gmaps)) {
+            delete scraperObject.gmaps;
         }
 
         // STEP 3: Simple merge - respect merge logic, grab from correct object
@@ -13284,8 +13535,10 @@ class SharedCore {
                     : '';
                 if (websiteHost && isPlatformIdentityHost(websiteHost)) {
                     const promoterEntry = this.getCuratedPromoterIdentityEntry(analyzedEvent);
-                    const curatedWebsite = promoterEntry && typeof promoterEntry.website === 'string'
-                        ? promoterEntry.website.trim()
+                    // Sub-brands (BOATMINCE, SPOOKMINCE) inherit the parent's
+                    // identity link, same as the ingest-time ladder.
+                    const curatedWebsite = promoterEntry
+                        ? this.getPromoterEntryIdentityWebsite(promoterEntry)
                         : '';
                     if (curatedWebsite && curatedWebsite !== platformWebsite) {
                         const existingTicketUrl = typeof analyzedEvent.ticketUrl === 'string' ? analyzedEvent.ticketUrl.trim() : '';

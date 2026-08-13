@@ -239,8 +239,9 @@ class BasicDataNormalizer extends BaseNormalizer {
         }
 
         if (!this.core) return event;
-        // Sync URL and website fields
-        event = this.syncUrlAndWebsiteFields(event);
+        // url and website are ONE field — fold the alias into the canonical
+        // `website` and drop `url` (it never exists post-normalization)
+        event = this.canonicalizeIdentityLink(event);
 
         // Cover shape gate: prose never ships as a cover (see dropProseCover).
         event = this.dropProseCover(event);
@@ -285,7 +286,17 @@ class BasicDataNormalizer extends BaseNormalizer {
         return event;
     }
 
-    syncUrlAndWebsiteFields(event) {
+    // url and website are ONE field (aliases; canonical `website`, written as
+    // `website:` in calendar notes). The old bidirectional sync MINTED a
+    // `url` copy of every website, and that phantom twin resurfaced across
+    // every seam downstream (merge candidates, comparison rows, notes
+    // exclusions) — the website/url duplication debacle. Canonical form now:
+    // fold `url` into an empty `website`, then delete `url` so it ceases to
+    // exist as a distinct stored value the moment an event is normalized.
+    // Platform-link ROUTING (dice/eventbrite/social links offered as website)
+    // happens later in SharedCore.canonicalizeIdentityLinks — after dedup,
+    // which needs the raw scraped link for same-event URL identity.
+    canonicalizeIdentityLink(event) {
         if (!event || typeof event !== 'object') {
             return event;
         }
@@ -296,9 +307,8 @@ class BasicDataNormalizer extends BaseNormalizer {
         if (!hasWebsite && hasUrl) {
             event.website = event.url;
         }
-
-        if (!hasUrl && hasWebsite) {
-            event.url = event.website;
+        if ('url' in event) {
+            delete event.url;
         }
 
         return event;

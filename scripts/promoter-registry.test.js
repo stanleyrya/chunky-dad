@@ -229,7 +229,12 @@ test('migrated Furball identity (incl. favicon) stamps on match exactly like the
   // The exact values the removed parser-config metadata block used to stamp
   assert.equal(event.shortName, 'FUR-BALL');
   assert.equal(event.instagram, 'https://instagram.com/furballnyc/');
-  assert.equal(event.url, 'https://www.furball.nyc', 'website maps to the canonical url field');
+  // url/website are ONE canonical field now: the registry stamps no distinct
+  // `url` value — canonicalizeIdentityLinks fills the blank `website` from
+  // the entry's identity link instead.
+  assert.equal(event.url, undefined, 'url never exists as a distinct stored value');
+  core.canonicalizeIdentityLinks([event]);
+  assert.equal(event.website, 'https://www.furball.nyc', 'identity ladder fills the blank website');
   assert.equal(event.favicon, 'https://linktr.ee/furballnyc', 'favicon migrated into the registry');
   // Same static machinery: stamped fields are tracked for de-circularization
   assert.equal(event._staticFields.favicon, 'https://linktr.ee/furballnyc');
@@ -259,7 +264,12 @@ test('migrated festival identities: Bears Sitges shortName and the Spooky Bear s
   assert.equal(spooky.entry.parent, 'Northeast Ursamen');
   const block = core.promoterEntryToMetadataBlock(spooky.entry);
   assert.equal(block.shortName.value, 'SPOOKY BEAR');
-  assert.equal(block.url.value, 'https://www.ursamen.org/spookybear');
+  // url/website are ONE canonical field: the identity link is no longer a
+  // static block stamp (that minted a distinct `url` value on every matched
+  // event) — it is carried by getPromoterEntryIdentityWebsite and applied to
+  // `website` by canonicalizeIdentityLinks.
+  assert.equal(block.url, undefined, 'no url key in the static block — url never exists as a stored field');
+  assert.equal(core.getPromoterEntryIdentityWebsite(spooky.entry), 'https://www.ursamen.org/spookybear');
   assert.equal(block.instagram.value, 'https://www.instagram.com/ne.ursamen', 'inherited from Northeast Ursamen');
   assert.equal(block.facebook.value, 'https://www.facebook.com/NEUrsamen', 'inherited from Northeast Ursamen');
   assert.equal(spooky.entry.bearAffinity, 'always',

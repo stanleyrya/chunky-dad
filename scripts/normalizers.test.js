@@ -4327,3 +4327,33 @@ test('city routing: the generated scraper-cities config carries the pv patterns 
   assert.equal(normalizer.extractCityFromEvent({ title: 'DOG TAGS ARE NON REFUNDABLE OR TRANSFERABLE' }), 'unknown');
   assert.equal(normalizer.extractCityFromEvent({ title: 'Improv Comedy Night' }), 'unknown');
 });
+
+// ---------------------------------------------------------------------------
+// url/website are ONE field — canonicalized the moment an event is normalized
+// (the website/url duplication debacle: the old bidirectional sync MINTED a
+// `url` twin of every website, which then resurfaced as phantom merge
+// candidates and diff rows on every run).
+// ---------------------------------------------------------------------------
+test('BasicDataNormalizer folds url into website and deletes url at ingest', () => {
+  const core = new SharedCore(CITIES, { eventSchema: require('./event-schema').EventSchema });
+  const normalizer = new BasicDataNormalizer(core);
+
+  // Lone url (JSON-LD/structured routes set the page they read as `url`)
+  const folded = normalizer.normalize({ title: 'CHUNK', url: 'https://www.chunk-party.com/events/brooklyn-return' });
+  assert.equal(folded.website, 'https://www.chunk-party.com/events/brooklyn-return', 'url becomes the canonical website');
+  assert.equal('url' in folded, false, 'url ceases to exist post-normalization');
+
+  // Both present: website wins, the alias is dropped (never synced back)
+  const both = normalizer.normalize({
+    title: 'DETAIL',
+    website: 'https://sitgesbearcave.com/event/wednesday-beefmince-meet-market/',
+    url: 'https://beefmince.com'
+  });
+  assert.equal(both.website, 'https://sitgesbearcave.com/event/wednesday-beefmince-meet-market/');
+  assert.equal('url' in both, false, 'the alias never survives alongside website');
+
+  // Website only: no url twin is ever minted (the old sync did exactly that)
+  const site = normalizer.normalize({ title: 'PARTY', website: 'https://beefmince.com' });
+  assert.equal(site.website, 'https://beefmince.com');
+  assert.equal('url' in site, false, 'no url twin is minted from website');
+});
