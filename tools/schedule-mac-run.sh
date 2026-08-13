@@ -140,11 +140,15 @@ cmd_install() {
 
     echo "Installed ${LABEL}:"
     echo "  runs daily at $(printf '%02d:%02d' "${hour}" "${minute}") (local time)"
+    echo "  program:     /bin/zsh (TCC responsible process; node runs as its child)"
     echo "  node:        ${node_bin}"
     echo "  repo:        ${REPO_ROOT}"
     echo "  shared dir:  ${shared_dir}"
     echo "  launchd log: ${LAUNCHD_LOG_DIR}/scheduled-run.{out,err}.log"
     echo "  per-run log: ${shared_dir}/logs/<YYYYMMDD-HHMMSS>.log (written by run-once)"
+    echo "ONE-TIME PERMISSION (survives node upgrades): System Settings → Privacy &"
+    echo "Security → Full Disk Access → add /bin/zsh (⌘⇧G to type the path). Without"
+    echo "it, launchd runs hang reading the iCloud shared cache (proven 2026-08-12)."
     echo "Reminder: after prompt-changing script updates, do one manual warm run (see header)."
 }
 
