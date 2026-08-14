@@ -545,6 +545,38 @@ test('run-once: materialization sweep skips honestly when it cannot run (non-mac
   assert.deepEqual(await runOnce.materializeSharedStorageTree('', {}), { skipped: 'no-shared-root' });
 });
 
+// Defense #1 SCOPE (2026-08-13 incident): the blocking sweep must cover only
+// the storage/ cache tree a run READS. A real run rode the ceiling toward an
+// abort over five phone LOG files whose bytes had not yet uploaded FROM the
+// phone — undrainable from the Mac side, and irrelevant to the run (logs/
+// and runs/ are write-only here, new filenames, atomic writes). Files
+// outside storage/ are an advisory line, never a blocker.
+test('run-once: sweep blocks only on storage/ and reports outside-storage dataless files as advisory', async () => {
+  const logs = [];
+  const log = (line) => logs.push(String(line));
+  const probedRoots = [];
+  // storage/ tree is clean; 5 phone logs are dataless in the wider root.
+  const countDataless = (root) => {
+    probedRoots.push(root);
+    return root.endsWith('/storage') ? 0 : 5;
+  };
+  const result = await runOnce.sweepSharedStorageBeforeRun('/shared/root', {
+    platform: 'darwin',
+    countDataless,
+    kickDownload: () => { throw new Error('must not kick a download for a clean blocking tree'); },
+    log
+  });
+  assert.equal(result.datalessAtStart, 0, 'blocking sweep saw a clean storage tree');
+  assert.equal(probedRoots[0], '/shared/root/storage', 'the BLOCKING probe is scoped to storage/');
+  assert.ok(probedRoots.includes('/shared/root'), 'the advisory probe covers the whole root');
+  assert.ok(
+    logs.some((line) => line.includes('5 dataless file(s) remain OUTSIDE the storage/ cache tree')),
+    'outside-storage dataless files are reported as advisory, not blocked on'
+  );
+  // And the run did NOT abort: five undrainable phone-log stubs must never
+  // ride the ceiling (the exact 2026-08-13 failure).
+});
+
 // Defense #3b: JS-side timeouts cannot cancel wedged syscalls — each one
 // leaks a libuv threadpool slot, and the default pool is only 4 slots. Both
 // the run-once entry and the launchd plist give the pool headroom.
