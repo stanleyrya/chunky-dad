@@ -10283,11 +10283,12 @@ test('round5: compact card keeps the thumbnail LEFT of the title block; enlargin
   assert.match(bodyRule[1], /flex:\s*1\s+1\s+0/,
     'compact state: zero flex-basis keeps the title block beside the thumb');
 
-  // Enlarged: the breakout row renders BELOW the title block, not above it.
+  // Enlarged: the breakout row renders ABOVE the title block (round 6,
+  // owner request — flipped from round 5's below-the-title placement).
   const expandedRule = html.match(/\.event-thumb\.thumb-expanded\s*\{([^}]*)\}/);
   assert.ok(expandedRule, 'expanded rule present');
   assert.match(expandedRule[1], /flex:\s*1\s+1\s+100%/, 'expanded thumb takes a full-width row');
-  assert.match(expandedRule[1], /order:\s*2/, 'the full-width row moves below the title block');
+  assert.match(expandedRule[1], /order:\s*-1/, 'the full-width row stays above the title block');
 
   // Round 4's toggle survives: the same tap returns the thumb to the slot.
   assert.ok(card.includes('onclick="toggleThumbSize(this)"'), 'tap-to-enlarge toggle intact');

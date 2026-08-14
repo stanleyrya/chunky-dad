@@ -6984,12 +6984,13 @@ class ScriptableAdapter {
         .event-thumb.thumb-expanded {
             flex: 1 1 100%;
             width: 100%;
-            /* Round 5: the full-width breakout row renders BELOW the title
-               block (the thumb is first in the DOM so the left slot works;
-               order moves only the EXPANDED state after the text). Tapping
-               again removes the class and the thumb returns to the left
-               slot. */
-            order: 2;
+            /* Round 6 (owner): the full-width breakout row renders ABOVE the
+               title block — the thumb is first in the DOM, so the expanded
+               state simply keeps DOM order (order: -1 pins it ahead of the
+               text even if siblings ever gain explicit orders). Tapping
+               again removes the class and the thumb returns to the compact
+               left slot. */
+            order: -1;
         }
 
         .event-thumb.thumb-expanded img {
