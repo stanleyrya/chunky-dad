@@ -3354,7 +3354,8 @@ test('event card: every event gets an Event Builder prefill link', () => {
     website: 'https://example.com/one-off'
   });
 
-  assert.ok(html.includes('🛠 Event Builder'), 'builder link rendered on a plain card');
+  assert.ok(html.includes('class="event-builder-link"'), 'builder link rendered on a plain card');
+  assert.ok(html.includes('title="Open in Event Builder"'), 'icon-only builder link keeps its label as a title');
   assert.ok(!html.includes('Save recurring'), 'no ICS export button on a plain card');
   assert.ok(!html.includes('recurring — save via ICS'), 'no recurring badge on a plain card');
 
@@ -3416,7 +3417,7 @@ test('event card: recurring events get the badge, the builder link, and the ICS 
   const html = adapter.generateEventCard(buildRecurringCardEvent());
 
   assert.ok(html.includes('🔁 recurring — save via ICS'), 'recurring badge present');
-  assert.ok(html.includes('🛠 Event Builder'), 'builder link present');
+  assert.ok(html.includes('class="event-builder-link"'), 'builder link present');
   assert.ok(html.includes('💾 Save recurring (.ics)'), 'ICS export button present');
   assert.match(html, /data-ics-export-id="\d+"/, 'export button carries a registered id');
 
@@ -3446,7 +3447,7 @@ test('event card: a recurring event with no start time gets the builder link but
     console.log = originalLog;
   }
 
-  assert.ok(html.includes('🛠 Event Builder'), 'builder link still present');
+  assert.ok(html.includes('class="event-builder-link"'), 'builder link still present');
   assert.ok(!html.includes('💾 Save recurring (.ics)'), 'no ICS export button without a start time');
   assert.ok(logs.includes('🔁 RECURRING: "DRINK AND DRAW" has no start time — ICS export disabled, use Event Builder'),
     `gating log expected, got: ${JSON.stringify(logs.filter((l) => l.includes('RECURRING')))}`);
@@ -8120,7 +8121,7 @@ test('the dropped pile is collapsed by default and keeps the mark-bear rescue bu
   assert.ok(droppedSection.includes('ai: no bear-specific language'));
 });
 
-test('event cards are headline + collapsed details, nothing deleted', async () => {
+test('event cards are headline + main section + debug expander, nothing deleted', async () => {
   const adapter = buildAdapter();
   const event = {
     title: 'Bear Night',
@@ -8139,26 +8140,30 @@ test('event cards are headline + collapsed details, nothing deleted', async () =
   // Headline face: title, 📅 date, 📍 venue.
   const headlineIdx = html.indexOf('<div class="event-headline">');
   assert.ok(headlineIdx !== -1, 'card has a headline block');
-  const detailsIdx = html.indexOf('<details class="event-card-details">');
-  assert.ok(detailsIdx !== -1, 'card has the detail expander');
-  assert.ok(headlineIdx < detailsIdx, 'headline renders before the expander');
-  const headline = html.slice(headlineIdx, detailsIdx);
+  // Round 3: the "Details" expander is dissolved — the card body IS the main
+  // section, and only debug material sits behind the 🐞 Debug expander.
+  assert.ok(!html.includes('<details class="event-card-details">'), 'no monolithic Details expander');
+  const bodyIdx = html.indexOf('<div class="event-details">');
+  const debugIdx = html.indexOf('<details class="event-card-debug');
+  assert.ok(bodyIdx !== -1, 'card has a main section');
+  assert.ok(debugIdx !== -1, 'card has the debug expander');
+  assert.ok(headlineIdx < bodyIdx && bodyIdx < debugIdx, 'headline, then main section, then debug');
+  const headline = html.slice(headlineIdx, bodyIdx);
   assert.ok(headline.includes('Bear Night'));
   assert.ok(headline.includes('📅'));
   assert.ok(headline.includes('📍'));
   assert.ok(headline.includes('The Eagle'));
 
-  // The face carries the route info (as bridge links) and the thumbnail;
-  // the expander keeps ONLY what the face does not show — nothing deleted,
-  // nothing duplicated (owner: "I don't want to duplicate it in the details").
+  // The face carries the route info (as bridge links) and the thumbnail.
   assert.ok(headline.includes('1 Main St'), 'address on the face route line');
   assert.ok(headline.includes('event-thumb'), 'image visible on the face');
-  const details = html.slice(detailsIdx);
-  assert.ok(details.includes('A very bear night'), 'description kept');
-  assert.ok(details.includes('📝 Calendar Notes Preview'), 'notes preview kept');
-  assert.ok(details.includes('raw-json'), 'debug JSON kept');
-  assert.ok(details.includes('copyEventJSON(this)'), 'copy button kept');
-  assert.ok(!details.includes('image-container'), 'no duplicate image block in the details');
+  const body = html.slice(bodyIdx, debugIdx);
+  assert.ok(body.includes('A very bear night'), 'description on the main section');
+  assert.ok(body.includes('📝 Calendar Notes Preview'), 'notes preview kept');
+  const debug = html.slice(debugIdx);
+  assert.ok(debug.includes('raw-json'), 'debug JSON kept');
+  assert.ok(debug.includes('copyEventJSON(this)'), 'copy button kept');
+  assert.ok(!html.includes('image-container'), 'no duplicate image block anywhere');
 });
 
 test('multi-day headline carries the end date, same-day only the end time', () => {
@@ -8172,7 +8177,7 @@ test('multi-day headline carries the end date, same-day only the end time', () =
   });
   const headline = multiDay.slice(
     multiDay.indexOf('<div class="event-headline">'),
-    multiDay.indexOf('<details class="event-card-details">')
+    multiDay.indexOf('<div class="event-face-controls">')
   );
   assert.ok(/Aug 28.*Aug 31/s.test(headline), 'headline shows both start and end dates');
 });
@@ -8738,9 +8743,9 @@ test('default card face shows thumbnail, full date line, route line and verdict 
     bearVerdict: 'bear',
     interactive: true
   });
-  const detailsIdx = card.indexOf('<details class="event-card-details">');
-  assert.ok(detailsIdx !== -1, 'card still has the detail expander');
-  const face = card.slice(0, detailsIdx);
+  const debugIdx = card.indexOf('<details class="event-card-debug');
+  assert.ok(debugIdx !== -1, 'card still has the debug expander');
+  const face = card.slice(0, debugIdx);
 
   // The image is visible by default again (owner: "it removed the image").
   assert.ok(face.includes('event-thumb'), 'thumbnail block on the face');
@@ -8793,7 +8798,7 @@ test('multi-day default face renders both dates with the honest end-time logic',
     startDate: '2026-08-28T20:00:00.000Z',
     endDate: '2026-08-31T20:00:00.000Z'
   }));
-  const face = card.slice(0, card.indexOf('<details class="event-card-details">'));
+  const face = card.slice(0, card.indexOf('<div class="event-face-controls">'));
   assert.ok(/Aug 28.*Aug 31/s.test(face), 'both start and end dates on the face');
   assert.ok(!face.includes('(no end listed)'));
 });
@@ -8856,26 +8861,28 @@ test('merge, provenance and notes-preview rows all share the one field-row forma
   assert.ok(card.includes(headerRow));
 });
 
-test('secondary material stays behind the expander and its handlers survive', () => {
+test('review subsections live on the main section; debug material behind the debug expander', () => {
   const adapter = buildAdapter();
   const event = buildSharedFormatMergeEvent();
   const card = adapter.generateEventCard(event);
-  const detailsIdx = card.indexOf('<details class="event-card-details">');
-  assert.ok(detailsIdx !== -1);
+  // Round 3: the monolithic Details expander is dissolved.
+  assert.ok(!card.includes('<details class="event-card-details">'), 'no Details expander');
+  const bodyIdx = card.indexOf('<div class="event-details">');
+  const debugIdx = card.indexOf('<details class="event-card-debug');
+  assert.ok(bodyIdx !== -1 && debugIdx !== -1 && bodyIdx < debugIdx);
 
-  // Diff/merge table, provenance, notes preview and debug JSON are all
-  // INSIDE the expander (owner feedback #7: these MAY be behind a tap).
-  for (const marker of [
-    'Merge Comparison',
-    '<details class="provenance-details">',
-    '📝 Calendar Notes Preview',
-    'class="raw-json"'
-  ]) {
+  // Merge comparison and notes preview are MAIN-SECTION subsections now.
+  for (const marker of ['Merge Comparison', '📝 Calendar Notes Preview']) {
     const idx = card.indexOf(marker);
-    assert.ok(idx > detailsIdx, `"${marker}" lives inside the expander`);
+    assert.ok(idx > bodyIdx && idx < debugIdx, `"${marker}" lives on the main section`);
+  }
+  // Provenance and the raw JSON are debug material.
+  for (const marker of ['<details class="provenance-details">', 'class="raw-json"']) {
+    const idx = card.indexOf(marker);
+    assert.ok(idx > debugIdx, `"${marker}" lives inside the debug expander`);
   }
 
-  // Every existing expander action handler still present.
+  // Every existing action handler still present.
   assert.ok(card.includes('toggleComparisonSection('));
   assert.ok(card.includes('toggleDiffView(this'));
   assert.ok(card.includes('exportProvenanceIssue(this)'));
@@ -8983,7 +8990,7 @@ test('route line parts are tappable bridge links: bar (own gmaps first), address
   const card = adapter.generateEventCard(
     buildCompressionMergeEvent({ gmaps: 'https://maps.app.goo.gl/abc123' })
   );
-  const face = card.slice(0, card.indexOf('<details class="event-card-details">'));
+  const face = card.slice(0, card.indexOf('<div class="event-details">'));
 
   const urlFor = (cls) => {
     const m = face.match(new RegExp(`data-map-url-id="(\\d+)" class="map-verify-link ${cls}"`));
@@ -9003,7 +9010,7 @@ test('route line parts are tappable bridge links: bar (own gmaps first), address
   // Without an own gmaps link the bar falls back to a "<bar>, <city>" search.
   adapter.resetMapVerifyUrls();
   const fallbackCard = adapter.generateEventCard(buildCompressionMergeEvent());
-  const fallbackFace = fallbackCard.slice(0, fallbackCard.indexOf('<details class="event-card-details">'));
+  const fallbackFace = fallbackCard.slice(0, fallbackCard.indexOf('<div class="event-details">'));
   const m = fallbackFace.match(/data-map-url-id="(\d+)" class="map-verify-link route-bar-link"/);
   assert.ok(m, 'bar link present without gmaps');
   assert.ok(adapter._mapVerifyUrls[m[1]].startsWith(MAPS_SEARCH_PREFIX));
@@ -9081,28 +9088,29 @@ test('UITable fallback list rows carry a tappable route link', async () => {
   assert.equal(adapter.buildEventListRowMapsUrl(null), '');
 });
 
-test('expanded details carry no duplicate route/address/date/image blocks', () => {
+test('main section carries no duplicate route/address/date/image blocks', () => {
   const adapter = buildMapsAdapter();
   const card = adapter.generateEventCard(buildCompressionMergeEvent());
-  const detailsIdx = card.indexOf('<details class="event-card-details">');
-  const rawIdx = card.indexOf('class="raw-display"');
-  assert.ok(detailsIdx !== -1 && rawIdx > detailsIdx, 'expander then debug block');
-  const details = card.slice(detailsIdx, rawIdx);
+  const bodyIdx = card.indexOf('<div class="event-details">');
+  const debugIdx = card.indexOf('<details class="event-card-debug');
+  assert.ok(bodyIdx !== -1 && debugIdx > bodyIdx, 'main section then debug expander');
+  const body = card.slice(bodyIdx, debugIdx);
 
-  assert.ok(!details.includes('map-verify-row'), 'no verify row in the details');
-  assert.ok(!details.includes('<span>📍</span>'), 'no duplicate venue row');
-  assert.ok(!details.includes('<span>🏠</span>'), 'no duplicate address row');
-  assert.ok(!details.includes('Coordinates:'), 'no duplicate coordinates row');
-  assert.ok(!details.includes('<span>📅</span>'), 'no duplicate date row');
-  assert.ok(details.includes('<span>🌍</span>'), 'UTC verification row kept (unique info)');
-  assert.ok(!details.includes('image-container'), 'no duplicate image block');
-  assert.ok(!details.includes('View Full Image'));
+  assert.ok(!body.includes('map-verify-row'), 'no verify row in the main section');
+  assert.ok(!body.includes('<span>📍</span>'), 'no duplicate venue row');
+  assert.ok(!body.includes('<span>🏠</span>'), 'no duplicate address row');
+  assert.ok(!body.includes('Coordinates:'), 'no duplicate coordinates row');
+  assert.ok(!body.includes('<span>📅</span>'), 'no duplicate date row');
+  const debug = card.slice(debugIdx);
+  assert.ok(debug.includes('<span>🌍</span>'), 'UTC verification row kept in the debug expander (unique info)');
+  assert.ok(!body.includes('image-container'), 'no duplicate image block');
+  assert.ok(!body.includes('View Full Image'));
 });
 
 test('merge state compresses to a counted MERGE tag plus a write tag on the card face', () => {
   const adapter = buildMapsAdapter();
   const card = adapter.generateEventCard(buildCompressionMergeEvent());
-  const face = card.slice(0, card.indexOf('<details class="event-card-details">'));
+  const face = card.slice(0, card.indexOf('<div class="event-details">'));
 
   // Face: MERGE ·N (N = changed fields) + the write plan as a tag.
   assert.ok(face.includes('MERGE ·1</span>'), 'MERGE tag carries the changed-field count');
@@ -9164,4 +9172,867 @@ test('compression keeps every bridge action id and card handler intact', () => {
   ]) {
     assert.ok(card.includes(handler), `${handler} intact on the compressed card`);
   }
+});
+
+
+// ---------------------------------------------------------------------------
+// Results-UI cleanup round 3 (owner feedback): compact header, compact
+// buttons, dissolved details subsection, truthful diff state driven by the
+// REAL BEEFMINCE Trunk Den record from run 20260813-211637.
+// ---------------------------------------------------------------------------
+
+// Real no-op merge from run 20260813-211637 analyzedEvents[0]: every field's
+// merged value equals the calendar value (the only _changes entry is "notes",
+// which differs by key ordering alone) — the owner's pasted "Has changes over
+// 23 fields unchanged" case.
+const BEEFMINCE_NOOP_EVENT = {
+  "title": "BEEFMINCE Trunk Den",
+  "startDate": "2026-08-15T21:00:00.000Z",
+  "endDate": "2026-08-16T03:00:00.000Z",
+  "location": "51.4863391, -0.1217784",
+  "notes": "description: BEEFMINCE is turning the RVT into a sea of banana hammocks for the Trunk Den! Slip on those skimpy swimmers for a night of big boys, big tunes and little trunks, with DJs Ross Jones & Silverhook serving up the summer tunes for our swimwear special theme night in London's most iconic LGBTQ+ venue. Grab yourself a fancy new pair of swimmers from our friends at denloungewear.com and use promo code 'BEEFSWIM15' for 15% off your next swimwear purchase. For Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers & everyone in between!\nbar: Royal Vauxhall Tavern\naddress: 372 Kennington Ln, London, United Kingdom SE11 5HY\nticketUrl: https://dice.fm/event/mxdpgl-beefmince-trunk-den-15th-aug-the-royal-vauxhall-tavern-london-tickets\nimage: https://dice-media.imgix.net/attachments/2026-07-27/52a9b2c1-57f7-4a00-baa3-a6a04c4ded74.jpg?rect=0%2C0%2C1080%2C1080\ntimezone: Europe/London\ncover: £12\nwebsite: https://beefmince.com\ninstagram: https://www.instagram.com/rvtofficial\nshortName: BEEF-MINCE\nfavicon: https://beefmince.com\nkey: beefmince-trunk-den|2026-08-15|royal vauxhall tavern\nimageHorizontal: https://dice-media.imgix.net/attachments/2026-07-27/52a9b2c1-57f7-4a00-baa3-a6a04c4ded74.jpg?rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJuYgA--wEdkgRD-0ylWTyMkw",
+  "url": "https://beefmince.com",
+  "description": "BEEFMINCE is turning the RVT into a sea of banana hammocks for the Trunk Den! Slip on those skimpy swimmers for a night of big boys, big tunes and little trunks, with DJs Ross Jones & Silverhook serving up the summer tunes for our swimwear special theme night in London's most iconic LGBTQ+ venue. Grab yourself a fancy new pair of swimmers from our friends at denloungewear.com and use promo code 'BEEFSWIM15' for 15% off your next swimwear purchase. For Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers & everyone in between!",
+  "bar": "Royal Vauxhall Tavern",
+  "address": "372 Kennington Ln, London, United Kingdom SE11 5HY",
+  "ticketUrl": "https://dice.fm/event/mxdpgl-beefmince-trunk-den-15th-aug-the-royal-vauxhall-tavern-london-tickets",
+  "image": "https://dice-media.imgix.net/attachments/2026-07-27/52a9b2c1-57f7-4a00-baa3-a6a04c4ded74.jpg?rect=0%2C0%2C1080%2C1080",
+  "source": "ai-web",
+  "city": "london",
+  "timezone": "Europe/London",
+  "cover": "£12",
+  "website": "https://beefmince.com",
+  "instagram": "https://www.instagram.com/rvtofficial",
+  "shortName": "BEEF-MINCE",
+  "favicon": "https://beefmince.com",
+  "key": "beefmince-trunk-den|2026-08-15|royal vauxhall tavern",
+  "imageHorizontal": "https://dice-media.imgix.net/attachments/2026-07-27/52a9b2c1-57f7-4a00-baa3-a6a04c4ded74.jpg?rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress",
+  "isBearEvent": true,
+  "bearSource": "keyword",
+  "pinSource": "curated",
+  "addressSource": "page",
+  "imageSource": "jsonld",
+  "barSource": "curated",
+  "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJuYgA--wEdkgRD-0ylWTyMkw",
+  "_existingEvent": {
+    "title": "BEEFMINCE Trunk Den",
+    "identifier": "2DDBF0E6-6877-4FBF-BB94-EC2708DFD113:0B1AA776-F366-45ED-850F-FA5F026D4257",
+    "startDate": "2026-08-15T21:00:00.000Z",
+    "endDate": "2026-08-16T03:00:00.000Z",
+    "location": "51.4863391, -0.1217784"
+  },
+  "_action": "merge",
+  "_fieldPriorities": {
+    "title": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "instagram": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "facebook": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "website": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "description": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "rrule": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "bar": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "address": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "startDate": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "endDate": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "url": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "location": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "gmaps": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "image": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "imageVertical": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "imageHorizontal": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "cover": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "ticketUrl": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "key": {
+      "merge": "clobber"
+    },
+    "shortName": {
+      "priority": [
+        "static"
+      ],
+      "merge": "clobber"
+    },
+    "favicon": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "upsert"
+    }
+  },
+  "_promoter": "BEEFMINCE",
+  "_organizer": "DICE",
+  "_original": {
+    "scraper": {
+      "title": "BEEFMINCE Trunk Den",
+      "description": "**BEEFMINCE is turning the RVT into a sea of banana hammocks for the Trunk Den!** Slip on those skimpy swimmers for a night of big boys, big tunes and little trunks, with DJs Ross Jones & Silverhook serving up the summer tunes for our swimwear special theme night in London's most iconic LGBTQ+ venue. ***Grab yourself a fancy new pair of swimmers from our friends at denloungewear.com and use promo code 'BEEFSWIM15' for 15% off your next swimwear purchase.*** For Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers & everyone in between!",
+      "startDate": "2026-08-15T21:00:00.000Z",
+      "endDate": "2026-08-16T03:00:00.000Z",
+      "bar": "Royal Vauxhall Tavern",
+      "address": "372 Kennington Ln, London, United Kingdom SE11 5HY",
+      "ticketUrl": "https://dice.fm/event/mxdpgl-beefmince-trunk-den-15th-aug-the-royal-vauxhall-tavern-london-tickets",
+      "image": "https://dice-media.imgix.net/attachments/2026-07-27/52a9b2c1-57f7-4a00-baa3-a6a04c4ded74.jpg?rect=0%2C0%2C1080%2C1080",
+      "source": "ai-web",
+      "city": "london",
+      "timezone": "Europe/London",
+      "cover": "£12",
+      "addressSource": "page",
+      "website": "https://beefmince.com",
+      "location": "51.4863391, -0.1217784",
+      "pinSource": "curated",
+      "instagram": "https://www.instagram.com/rvtofficial",
+      "notes": "description: **BEEFMINCE is turning the RVT into a sea of banana hammocks for the Trunk Den!** Slip on those skimpy swimmers for a night of big boys, big tunes and little trunks, with DJs Ross Jones & Silverhook serving up the summer tunes for our swimwear special theme night in London's most iconic LGBTQ+ venue. ***Grab yourself a fancy new pair of swimmers from our friends at denloungewear.com and use promo code 'BEEFSWIM15' for 15% off your next swimwear purchase.*** For Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers & everyone in between!\nbar: Royal Vauxhall Tavern\naddress: 372 Kennington Ln, London SE11 5HY, UK\nticketUrl: https://dice.fm/event/mxdpgl-beefmince-trunk-den-15th-aug-the-royal-vauxhall-tavern-london-tickets\nimage: https://dice-media.imgix.net/attachments/2026-07-27/52a9b2c1-57f7-4a00-baa3-a6a04c4ded74.jpg?rect=0%2C0%2C1080%2C1080\nimageSource: jsonld\ntimezone: Europe/London\ncover: £12\nbarSource: curated\naddressSource: page\nwebsite: https://link.dice.fm/V0890510c6bd\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Royal%20Vauxhall%20Tavern%2C%20372%20Kennington%20Ln%2C%20London%20SE11%205HY%2C%20UK\npinSource: curated\ninstagram: https://www.instagram.com/rvtofficial",
+      "shortName": "BEEF-MINCE",
+      "favicon": "https://beefmince.com",
+      "key": "beefmince-trunk-den|2026-08-15|royal vauxhall tavern",
+      "imageHorizontal": "https://dice-media.imgix.net/attachments/2026-07-27/52a9b2c1-57f7-4a00-baa3-a6a04c4ded74.jpg?rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress",
+      "isBearEvent": true,
+      "imageSource": "jsonld",
+      "barSource": "curated",
+      "bearSource": "keyword"
+    },
+    "calendar": {
+      "description": "BEEFMINCE is turning the RVT into a sea of banana hammocks for the Trunk Den! Slip on those skimpy swimmers for a night of big boys, big tunes and little trunks, with DJs Ross Jones & Silverhook serving up the summer tunes for our swimwear special theme night in London's most iconic LGBTQ+ venue. Grab yourself a fancy new pair of swimmers from our friends at denloungewear.com and use promo code 'BEEFSWIM15' for 15% off your next swimwear purchase. For Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers & everyone in between!",
+      "bar": "Royal Vauxhall Tavern",
+      "address": "372 Kennington Ln, London, United Kingdom SE11 5HY",
+      "ticketUrl": "https://dice.fm/event/mxdpgl-beefmince-trunk-den-15th-aug-the-royal-vauxhall-tavern-london-tickets",
+      "image": "https://dice-media.imgix.net/attachments/2026-07-27/52a9b2c1-57f7-4a00-baa3-a6a04c4ded74.jpg?rect=0%2C0%2C1080%2C1080",
+      "timezone": "Europe/London",
+      "cover": "£12",
+      "imageHorizontal": "https://dice-media.imgix.net/attachments/2026-07-27/52a9b2c1-57f7-4a00-baa3-a6a04c4ded74.jpg?rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress",
+      "website": "https://beefmince.com",
+      "instagram": "https://www.instagram.com/rvtofficial",
+      "shortName": "BEEF-MINCE",
+      "favicon": "https://beefmince.com",
+      "key": "beefmince-trunk-den|2026-08-15|royal vauxhall tavern",
+      "bearSource": "keyword",
+      "pinSource": "curated",
+      "addressSource": "page",
+      "imageSource": "jsonld",
+      "barSource": "curated",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJuYgA--wEdkgRD-0ylWTyMkw",
+      "title": "BEEFMINCE Trunk Den",
+      "startDate": "2026-08-15T21:00:00.000Z",
+      "endDate": "2026-08-16T03:00:00.000Z",
+      "location": "51.4863391, -0.1217784",
+      "notes": "description: BEEFMINCE is turning the RVT into a sea of banana hammocks for the Trunk Den! Slip on those skimpy swimmers for a night of big boys, big tunes and little trunks, with DJs Ross Jones & Silverhook serving up the summer tunes for our swimwear special theme night in London's most iconic LGBTQ+ venue. Grab yourself a fancy new pair of swimmers from our friends at denloungewear.com and use promo code 'BEEFSWIM15' for 15% off your next swimwear purchase. For Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers & everyone in between!\nbar: Royal Vauxhall Tavern\naddress: 372 Kennington Ln, London, United Kingdom SE11 5HY\nticketUrl: https://dice.fm/event/mxdpgl-beefmince-trunk-den-15th-aug-the-royal-vauxhall-tavern-london-tickets\nimage: https://dice-media.imgix.net/attachments/2026-07-27/52a9b2c1-57f7-4a00-baa3-a6a04c4ded74.jpg?rect=0%2C0%2C1080%2C1080\ntimezone: Europe/London\ncover: £12\nimageHorizontal: https://dice-media.imgix.net/attachments/2026-07-27/52a9b2c1-57f7-4a00-baa3-a6a04c4ded74.jpg?rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress\nwebsite: https://beefmince.com\ninstagram: https://www.instagram.com/rvtofficial\nshortName: BEEF-MINCE\nfavicon: https://beefmince.com\nkey: beefmince-trunk-den|2026-08-15|royal vauxhall tavern\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJuYgA--wEdkgRD-0ylWTyMkw"
+    },
+    "merged": {
+      "title": "BEEFMINCE Trunk Den",
+      "description": "BEEFMINCE is turning the RVT into a sea of banana hammocks for the Trunk Den! Slip on those skimpy swimmers for a night of big boys, big tunes and little trunks, with DJs Ross Jones & Silverhook serving up the summer tunes for our swimwear special theme night in London's most iconic LGBTQ+ venue. Grab yourself a fancy new pair of swimmers from our friends at denloungewear.com and use promo code 'BEEFSWIM15' for 15% off your next swimwear purchase. For Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers & everyone in between!",
+      "startDate": "2026-08-15T21:00:00.000Z",
+      "endDate": "2026-08-16T03:00:00.000Z",
+      "bar": "Royal Vauxhall Tavern",
+      "address": "372 Kennington Ln, London, United Kingdom SE11 5HY",
+      "ticketUrl": "https://dice.fm/event/mxdpgl-beefmince-trunk-den-15th-aug-the-royal-vauxhall-tavern-london-tickets",
+      "image": "https://dice-media.imgix.net/attachments/2026-07-27/52a9b2c1-57f7-4a00-baa3-a6a04c4ded74.jpg?rect=0%2C0%2C1080%2C1080",
+      "source": "ai-web",
+      "city": "london",
+      "timezone": "Europe/London",
+      "cover": "£12",
+      "website": "https://beefmince.com",
+      "instagram": "https://www.instagram.com/rvtofficial",
+      "shortName": "BEEF-MINCE",
+      "favicon": "https://beefmince.com",
+      "key": "beefmince-trunk-den|2026-08-15|royal vauxhall tavern",
+      "imageHorizontal": "https://dice-media.imgix.net/attachments/2026-07-27/52a9b2c1-57f7-4a00-baa3-a6a04c4ded74.jpg?rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress",
+      "isBearEvent": true,
+      "bearSource": "keyword",
+      "location": "51.4863391, -0.1217784",
+      "pinSource": "curated",
+      "addressSource": "page",
+      "imageSource": "jsonld",
+      "barSource": "curated",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Royal%20Vauxhall%20Tavern%2C%20372%20Kennington%20Ln%2C%20London%2C%20United%20Kingdom%20SE11%205HY"
+    },
+    "aiArbitration": {
+      "arbitrated": [],
+      "fallbacks": [],
+      "deterministic": [
+        "description"
+      ]
+    }
+  },
+  "_mergeDecisions": [
+    {
+      "field": "description",
+      "existingValue": "BEEFMINCE is turning the RVT into a sea of banana hammocks for the Trunk Den! Slip on those skimpy swimmers for a night of big boys, big tunes and little trunks, with DJs Ross Jones & Silverhook serving up the summer tunes for our swimwear special theme night in London's most iconic LGBTQ+ venue. Grab yourself a fancy new pair of swimmers from our friends at denloungewear.com and use promo code 'BEEFSWIM15' for 15% off your next swimwear purchase. For Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers & everyone in between!",
+      "newValue": "**BEEFMINCE is turning the RVT into a sea of banana hammocks for the Trunk Den!** Slip on those skimpy swimmers for a night of big boys, big tunes and little trunks, with DJs Ross Jones & Silverhook serving up the summer tunes for our swimwear special theme night in London's most iconic LGBTQ+ venue. ***Grab yourself a fancy new pair of swimmers from our friends at denloungewear.com and use promo code 'BEEFSWIM15' for 15% off your next swimwear purchase.*** For Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers & everyone in between!",
+      "chosenValue": "BEEFMINCE is turning the RVT into a sea of banana hammocks for the Trunk Den! Slip on those skimpy swimmers for a night of big boys, big tunes and little trunks, with DJs Ross Jones & Silverhook serving up the summer tunes for our swimwear special theme night in London's most iconic LGBTQ+ venue. Grab yourself a fancy new pair of swimmers from our friends at denloungewear.com and use promo code 'BEEFSWIM15' for 15% off your next swimwear purchase. For Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers & everyone in between!",
+      "reason": "descriptions are identical once formatting markup is stripped",
+      "source": "deterministic"
+    }
+  ],
+  "_changes": [
+    "notes"
+  ],
+  "_mergeDiff": {
+    "preserved": [
+      "description",
+      "bar",
+      "address",
+      "ticketUrl",
+      "image",
+      "timezone",
+      "cover",
+      "imageHorizontal",
+      "website",
+      "instagram",
+      "shortName",
+      "favicon",
+      "key",
+      "bearSource",
+      "pinSource",
+      "addressSource",
+      "imageSource",
+      "barSource",
+      "gmaps"
+    ],
+    "added": [],
+    "updated": [],
+    "removed": []
+  },
+  "_existingKey": "beefmince-trunk-den|2026-08-15|royal vauxhall tavern",
+  "_analysis": {
+    "action": "merge",
+    "reason": "Key match found",
+    "sourceEvent": false,
+    "hasOverrideIdentity": false
+  },
+  "_sanityFlags": []
+};
+
+// Real merge WITH a change from the same run (analyzedEvents[4]): the
+// calendar had no website, the merge added https://beefmince.com.
+const SPOOKMINCE_CHANGE_EVENT = {
+  "title": "SPOOKMINCE",
+  "startDate": "2026-10-31T22:00:00.000Z",
+  "endDate": "2026-11-01T04:00:00.000Z",
+  "notes": "description: BEEFMINCE's big Halloween bash is back, and we're haunting a new venue this year! Full info and line up soon.\naddress: London, UK\nticketUrl: https://dice.fm/event/v3x3n7-spookmince-31st-oct-venue-tba-london-london-tickets\nimage: https://dice-media.imgix.net/attachments/2026-07-20/b18c3952-51b5-488c-a72d-8e999074b562.jpg?rect=0%2C0%2C1080%2C1080\ntimezone: Europe/London\ncover: £15\nimageHorizontal: https://dice-media.imgix.net/attachments/2026-07-20/b18c3952-51b5-488c-a72d-8e999074b562.jpg?rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress\nwebsite: https://beefmince.com\nshortName: SPOOK-MINCE\nfavicon: https://beefmince.com\nkey: spookmince|2026-10-31|\nbearSource: keyword\nbar: Venue TBA\nbearReview: unsure — ai\\: The event title 'SPOOKMINCE' and minimal description provide no clear indication of bear-scene alignment or audience, and no evidence confirms it was produced by the bear-scene promoter.\naddressSource: page\nimageSource: jsonld\ngmaps: https://www.google.com/maps/search/?api=1&query=Venue%20TBA%2C%20London%2C%20UK",
+  "url": "https://beefmince.com",
+  "description": "BEEFMINCE's big Halloween bash is back, and we're haunting a new venue this year! Full info and line up soon.",
+  "address": "London, UK",
+  "ticketUrl": "https://dice.fm/event/v3x3n7-spookmince-31st-oct-venue-tba-london-london-tickets",
+  "image": "https://dice-media.imgix.net/attachments/2026-07-20/b18c3952-51b5-488c-a72d-8e999074b562.jpg?rect=0%2C0%2C1080%2C1080",
+  "source": "ai-web",
+  "city": "london",
+  "timezone": "Europe/London",
+  "cover": "£15",
+  "imageHorizontal": "https://dice-media.imgix.net/attachments/2026-07-20/b18c3952-51b5-488c-a72d-8e999074b562.jpg?rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress",
+  "website": "https://beefmince.com",
+  "shortName": "SPOOK-MINCE",
+  "favicon": "https://beefmince.com",
+  "key": "spookmince|2026-10-31|",
+  "isBearEvent": true,
+  "bearSource": "keyword",
+  "bar": "Venue TBA",
+  "bearReview": "unsure — ai: The event title 'SPOOKMINCE' and minimal description provide no clear indication of bear-scene alignment or audience, and no evidence confirms it was produced by the bear-scene promoter.",
+  "addressSource": "page",
+  "imageSource": "jsonld",
+  "gmaps": "https://www.google.com/maps/search/?api=1&query=Venue%20TBA%2C%20London%2C%20UK",
+  "_existingEvent": {
+    "title": "SPOOKMINCE",
+    "identifier": "2DDBF0E6-6877-4FBF-BB94-EC2708DFD113:C35D68BF-3219-4B72-8EE8-CD8360B483BA",
+    "startDate": "2026-10-31T22:00:00.000Z",
+    "endDate": "2026-11-01T04:00:00.000Z",
+    "location": null
+  },
+  "_action": "merge",
+  "_fieldPriorities": {
+    "title": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "instagram": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "facebook": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "website": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "description": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "rrule": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "bar": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "address": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "startDate": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "endDate": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "url": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "location": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "gmaps": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "image": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "imageVertical": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "imageHorizontal": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "cover": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "ticketUrl": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "ai"
+    },
+    "key": {
+      "merge": "clobber"
+    },
+    "shortName": {
+      "priority": [
+        "static"
+      ],
+      "merge": "clobber"
+    },
+    "favicon": {
+      "priority": [
+        "ai-web"
+      ],
+      "merge": "upsert"
+    }
+  },
+  "_promoter": "SPOOKMINCE",
+  "_organizer": "DICE",
+  "_original": {
+    "scraper": {
+      "title": "SPOOKMINCE",
+      "description": "**BEEFMINCE's big Halloween bash is back, and we're haunting a new venue this year!** Full info and line up soon.",
+      "startDate": "2026-10-31T22:00:00.000Z",
+      "endDate": "2026-11-01T04:00:00.000Z",
+      "address": "London, UK",
+      "ticketUrl": "https://dice.fm/event/v3x3n7-spookmince-31st-oct-venue-tba-london-london-tickets",
+      "image": "https://dice-media.imgix.net/attachments/2026-07-20/b18c3952-51b5-488c-a72d-8e999074b562.jpg?rect=0%2C0%2C1080%2C1080",
+      "source": "ai-web",
+      "city": "london",
+      "timezone": "Europe/London",
+      "cover": "£15",
+      "imageHorizontal": "https://dice-media.imgix.net/attachments/2026-07-20/b18c3952-51b5-488c-a72d-8e999074b562.jpg?rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress",
+      "addressSource": "page",
+      "website": "https://beefmince.com",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=london",
+      "shortName": "SPOOK-MINCE",
+      "favicon": "https://beefmince.com",
+      "key": "spookmince|2026-10-31|",
+      "isBearEvent": true,
+      "imageSource": "jsonld",
+      "bearSource": "keyword"
+    },
+    "calendar": {
+      "description": "BEEFMINCE's big Halloween bash is back, and we're haunting a new venue this year! Full info and line up soon.",
+      "address": "London, UK",
+      "ticketUrl": "https://dice.fm/event/v3x3n7-spookmince-31st-oct-venue-tba-london-london-tickets",
+      "image": "https://dice-media.imgix.net/attachments/2026-07-20/b18c3952-51b5-488c-a72d-8e999074b562.jpg?rect=0%2C0%2C1080%2C1080",
+      "timezone": "Europe/London",
+      "cover": "£15",
+      "imageHorizontal": "https://dice-media.imgix.net/attachments/2026-07-20/b18c3952-51b5-488c-a72d-8e999074b562.jpg?rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress",
+      "shortName": "SPOOK-MINCE",
+      "favicon": "https://beefmince.com",
+      "key": "spookmince|2026-10-31|",
+      "bearSource": "keyword",
+      "bar": "Venue TBA",
+      "bearReview": "unsure — ai: The event title 'SPOOKMINCE' and minimal description provide no clear indication of bear-scene alignment or audience, and no evidence confirms it was produced by the bear-scene promoter.",
+      "addressSource": "page",
+      "imageSource": "jsonld",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Venue%20TBA%2C%20London%2C%20UK",
+      "title": "SPOOKMINCE",
+      "startDate": "2026-10-31T22:00:00.000Z",
+      "endDate": "2026-11-01T04:00:00.000Z",
+      "location": null,
+      "notes": "description: BEEFMINCE's big Halloween bash is back, and we're haunting a new venue this year! Full info and line up soon.\naddress: London, UK\nticketUrl: https://dice.fm/event/v3x3n7-spookmince-31st-oct-venue-tba-london-london-tickets\nimage: https://dice-media.imgix.net/attachments/2026-07-20/b18c3952-51b5-488c-a72d-8e999074b562.jpg?rect=0%2C0%2C1080%2C1080\ntimezone: Europe/London\ncover: £15\nimageHorizontal: https://dice-media.imgix.net/attachments/2026-07-20/b18c3952-51b5-488c-a72d-8e999074b562.jpg?rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress\nshortName: SPOOK-MINCE\nfavicon: https://beefmince.com\nkey: spookmince|2026-10-31|\nbearSource: keyword\nbar: Venue TBA\nbearReview: unsure — ai\\: The event title 'SPOOKMINCE' and minimal description provide no clear indication of bear-scene alignment or audience, and no evidence confirms it was produced by the bear-scene promoter.\naddressSource: page\nimageSource: jsonld\ngmaps: https://www.google.com/maps/search/?api=1&query=Venue%20TBA%2C%20London%2C%20UK"
+    },
+    "merged": {
+      "title": "SPOOKMINCE",
+      "description": "BEEFMINCE's big Halloween bash is back, and we're haunting a new venue this year! Full info and line up soon.",
+      "startDate": "2026-10-31T22:00:00.000Z",
+      "endDate": "2026-11-01T04:00:00.000Z",
+      "address": "London, UK",
+      "ticketUrl": "https://dice.fm/event/v3x3n7-spookmince-31st-oct-venue-tba-london-london-tickets",
+      "image": "https://dice-media.imgix.net/attachments/2026-07-20/b18c3952-51b5-488c-a72d-8e999074b562.jpg?rect=0%2C0%2C1080%2C1080",
+      "source": "ai-web",
+      "city": "london",
+      "timezone": "Europe/London",
+      "cover": "£15",
+      "imageHorizontal": "https://dice-media.imgix.net/attachments/2026-07-20/b18c3952-51b5-488c-a72d-8e999074b562.jpg?rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress",
+      "website": "https://beefmince.com",
+      "shortName": "SPOOK-MINCE",
+      "favicon": "https://beefmince.com",
+      "key": "spookmince|2026-10-31|",
+      "isBearEvent": true,
+      "bearSource": "keyword",
+      "bar": "Venue TBA",
+      "bearReview": "unsure — ai: The event title 'SPOOKMINCE' and minimal description provide no clear indication of bear-scene alignment or audience, and no evidence confirms it was produced by the bear-scene promoter.",
+      "addressSource": "page",
+      "imageSource": "jsonld",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Venue%20TBA%2C%20London%2C%20UK"
+    },
+    "aiArbitration": {
+      "arbitrated": [],
+      "fallbacks": [],
+      "deterministic": [
+        "description"
+      ]
+    }
+  },
+  "_mergeDecisions": [
+    {
+      "field": "description",
+      "existingValue": "BEEFMINCE's big Halloween bash is back, and we're haunting a new venue this year! Full info and line up soon.",
+      "newValue": "**BEEFMINCE's big Halloween bash is back, and we're haunting a new venue this year!** Full info and line up soon.",
+      "chosenValue": "BEEFMINCE's big Halloween bash is back, and we're haunting a new venue this year! Full info and line up soon.",
+      "reason": "descriptions are identical once formatting markup is stripped",
+      "source": "deterministic"
+    }
+  ],
+  "_changes": [
+    "location",
+    "url",
+    "notes"
+  ],
+  "_mergeDiff": {
+    "preserved": [
+      "description",
+      "address",
+      "ticketUrl",
+      "image",
+      "timezone",
+      "cover",
+      "imageHorizontal",
+      "shortName",
+      "favicon",
+      "key",
+      "bearSource",
+      "bar",
+      "bearReview",
+      "addressSource",
+      "imageSource",
+      "gmaps"
+    ],
+    "added": [
+      {
+        "key": "website",
+        "value": "https://beefmince.com"
+      }
+    ],
+    "updated": [],
+    "removed": []
+  },
+  "_existingKey": "spookmince|2026-10-31|",
+  "_analysis": {
+    "action": "merge",
+    "reason": "Key match found",
+    "sourceEvent": false,
+    "hasOverrideIdentity": false
+  },
+  "_sanityFlags": []
+};
+
+function freshRound3Event(source) {
+  return JSON.parse(JSON.stringify(source));
+}
+
+function round3Results(overrides = {}) {
+  return {
+    totalEvents: 3,
+    rawBearEvents: 3,
+    bearEvents: 2,
+    calendarEvents: 1,
+    duplicatesRemoved: 0,
+    errors: [],
+    parserResults: [],
+    analyzedEvents: [freshRound3Event(BEEFMINCE_NOOP_EVENT)],
+    ...overrides
+  };
+}
+
+test('round3: page header is one compact line — logo kept, huge title/stat tiles gone', async () => {
+  const adapter = buildAdapter();
+  const html = await adapter.generateRichHTML(round3Results());
+
+  // The cool logo stays.
+  assert.ok(html.includes('class="header-logo"'), 'logo kept');
+  // The huge markup is gone: no 32px title/subtitle blocks, no stat tiles.
+  assert.ok(!html.includes('header-subtitle'), 'no subtitle block');
+  assert.ok(!html.includes('<div class="header-title">'), 'no huge title block');
+  assert.ok(!html.includes('<div class="stats">'), 'no stat-tile grid');
+  assert.ok(!html.includes('Total Events Found'), 'no stat-tile labels');
+  // What remains is informative: run context + counts on one line.
+  assert.ok(html.includes('class="header-line"'), 'single compact header line');
+  assert.ok(html.includes('Run: '), 'run context in the header line');
+  const counts = html.match(/<span class="header-counts">([\s\S]*?)<\/span>\s*<\/div>/);
+  assert.ok(html.includes('class="header-counts"'), 'counts line present');
+  assert.ok(/3<\/span> found/.test(html), 'total count');
+  assert.ok(/2<\/span> bear/.test(html), 'bear count');
+  assert.ok(/1<\/span> calendar action/.test(html), 'calendar count');
+  // The page JS still finds its three .stat-value spans (copy/export paths).
+  assert.equal((html.match(/class="stat-value"/g) || []).length, 3);
+});
+
+test('round3: action buttons are a compact row, not full-width slabs', async () => {
+  const adapter = buildAdapter();
+  const html = await adapter.generateRichHTML(round3Results());
+
+  assert.ok(html.includes('class="controls-bar"'), 'one compact controls bar');
+  assert.ok(html.includes('onclick="copyRawOutput()"'), 'copy handler kept');
+  assert.ok(html.includes('onclick="exportAsJSON()"'), 'export handler kept');
+  assert.ok(html.includes('id="displayToggle"') && html.includes('id="sfwToggle"'), 'toggles kept');
+  assert.ok(html.includes('class="mini-btn"'), 'buttons are mini');
+  assert.ok(!html.includes('📋 Copy Raw Output'), 'no slab-sized button labels');
+  assert.ok(!html.includes('📄 Export JSON'), 'no slab-sized button labels');
+  assert.ok(!/action-buttons\s*\{[^}]*flex-direction:\s*column/.test(html),
+    'no full-width stacking rule for the action buttons');
+
+  // Saved-run execute button: compact inline, same id/handler, never 100% wide.
+  const section = adapter.buildSavedRunExecuteSectionHtml({
+    _isDisplayingSavedRun: true,
+    analyzedEvents: [freshRound3Event(BEEFMINCE_NOOP_EVENT)],
+    sourceRunId: '20260813-211637'
+  });
+  assert.ok(section.includes('id="saved-run-execute-btn"'));
+  assert.ok(section.includes('requestSavedRunExecute(this)'));
+  assert.ok(!section.includes('width: 100%'), 'execute button is not a full-width slab');
+});
+
+test('round3: description renders on the card face, clamped, with an in-page toggle', async () => {
+  const adapter = buildAdapter();
+  const card = adapter.generateEventCard(freshRound3Event(BEEFMINCE_NOOP_EVENT));
+
+  assert.ok(card.includes('class="event-desc clamped"'), 'description clamped by default');
+  assert.ok(card.includes('onclick="toggleDescClamp(this)"'), 'tap toggles the clamp');
+  assert.ok(card.includes('banana hammocks'), 'the description text itself is on the face');
+  // It is on the MAIN section, before the debug expander.
+  assert.ok(card.indexOf('event-desc clamped') < card.indexOf('<details class="event-card-debug'));
+  // The old details description row is gone.
+  assert.ok(!card.includes('event-description'), 'no old description row');
+
+  // The page defines the toggle (plain in-page JS, no bridge).
+  const html = await adapter.generateRichHTML(round3Results());
+  assert.ok(html.includes('function toggleDescClamp('), 'toggle defined in the page script');
+  assert.ok(html.includes('.event-desc.clamped'), 'clamp CSS present');
+});
+
+test('round3: links render as side-by-side chips with domain/handle labels, including gmaps', () => {
+  const adapter = buildAdapter();
+  adapter.resetMapVerifyUrls();
+  const event = freshRound3Event(BEEFMINCE_NOOP_EVENT);
+  event.facebook = 'https://www.facebook.com/BEEFMINCE';
+  const card = adapter.generateEventCard(event);
+
+  const row = card.match(/<div class="event-links-row">([\s\S]*?)<\/div>/);
+  assert.ok(row, 'one links row on the face');
+  const chips = row[1];
+  assert.ok(chips.includes('🌐 beefmince.com'), 'website chip shows the registrable domain');
+  assert.ok(chips.includes('🎟️ dice.fm'), 'tickets chip shows the ticketing domain');
+  assert.ok(chips.includes('📸 @rvtofficial'), 'instagram chip shows the handle');
+  assert.ok(chips.includes('👥 BEEFMINCE'), 'facebook chip shows the page name');
+  assert.ok(chips.includes('🗺️ maps'), 'gmaps chip present (owner: "we\'re missing some links like gmaps")');
+
+  // Every chip rides the openMapVerify bridge and resolves to its real URL.
+  const ids = [...chips.matchAll(/data-map-url-id="(\d+)"/g)].map((m) => m[1]);
+  assert.equal(ids.length, 5, 'five chips, five registered bridge ids');
+  const urls = ids.map((id) => adapter._mapVerifyUrls[id]);
+  assert.ok(urls.includes('https://beefmince.com'), 'website URL registered');
+  assert.ok(urls.includes(event.ticketUrl), 'ticket URL registered');
+  assert.ok(urls.includes(event.instagram), 'instagram URL registered');
+  assert.ok(urls.includes(event.gmaps), 'gmaps URL registered');
+  assert.ok(!chips.includes('href="https'), 'chips never navigate the WebView directly');
+
+  // The stacked one-per-row link list is gone.
+  assert.ok(!card.includes('>Website</a>'), 'no old Website row');
+  assert.ok(!card.includes('>Tickets</a>'), 'no old Tickets row');
+  assert.ok(!card.includes('>Instagram</a>'), 'no old Instagram row');
+  assert.ok(!card.includes('>Google Maps</a>'), 'no old Google Maps row');
+});
+
+test('round3: provenance is debug material — absent from the default view, present in the debug expander', () => {
+  const adapter = buildAdapter();
+  const card = adapter.generateEventCard(freshRound3Event(BEEFMINCE_NOOP_EVENT), { runId: 'r1' });
+
+  const bodyIdx = card.indexOf('<div class="event-details">');
+  const debugIdx = card.indexOf('<details class="event-card-debug');
+  const provIdx = card.indexOf('<details class="provenance-details">');
+  assert.ok(bodyIdx !== -1 && debugIdx !== -1 && provIdx !== -1);
+  assert.ok(provIdx > debugIdx, 'provenance lives inside the debug expander');
+  assert.ok(!card.slice(bodyIdx, debugIdx).includes('🔍 Provenance'),
+    'no provenance section in the default view');
+  // The field-counts noise line moved to debug too.
+  const countsIdx = card.indexOf('debug-field-counts');
+  assert.ok(countsIdx > debugIdx, 'Scraper/Calendar/Merged field counts live in debug');
+  assert.ok(card.slice(countsIdx).includes('<strong>Scraper:</strong>'));
+  assert.ok(!card.slice(bodyIdx, debugIdx).includes('<strong>Scraper:</strong>'),
+    'counts line no longer heads the merge comparison');
+});
+
+test('round3: notes preview and merge comparison share ONE container style, no divider above the comparison', () => {
+  const adapter = buildAdapter();
+  const card = adapter.generateEventCard(freshRound3Event(BEEFMINCE_NOOP_EVENT));
+
+  assert.ok(card.includes('<div class="card-subsection merge-comparison-subsection">'),
+    'merge comparison wrapped in the shared subsection container');
+  assert.ok(card.includes('<details class="card-subsection notes-preview-subsection">'),
+    'notes preview wrapped in the SAME subsection container class');
+  // The stray divider line that sat above the merge comparison is gone.
+  assert.ok(!card.includes('border-top: 1px solid #e0e0e0'), 'no stray divider line');
+  // No double wrapping: the notes preview <details> is not nested in an
+  // extra styled box of its own.
+  assert.ok(!/<details style="margin-top: 10px;">/.test(card), 'old bare notes wrapper gone');
+});
+
+test('round3: the BEEFMINCE no-op merge says "no changes" and its line view collapses every no-op row', () => {
+  const adapter = buildAdapter();
+  const event = freshRound3Event(BEEFMINCE_NOOP_EVENT);
+
+  // "Changed" means merged differs from calendar — this record has none.
+  assert.equal(adapter.countChangedMergeFields(event), 0);
+  assert.equal(adapter.hasEventDifferences(event), false);
+
+  const card = adapter.generateEventCard(event);
+  assert.ok(card.includes('no changes'), 'section chip tells the truth');
+  assert.ok(!card.includes('Has changes'), 'the lying chip is gone');
+  assert.ok(card.includes('MERGE ·0'), 'MERGE tag agrees with the chip');
+  assert.ok(card.includes('merge-noop-summary'), 'table view keeps its collapsed summary row');
+
+  // THE GAP HIS PASTE SHOWED: the line view must collapse no-ops too.
+  const line = adapter.generateLineDiffView(event);
+  assert.match(line, /\d+ fields unchanged — /, 'one summary line for the unchanged fields');
+  assert.ok(!line.includes('(same in both)'), 'no per-field same-in-both rows');
+  assert.ok(!line.includes('(kept existing)'), 'no kept-existing no-op rows');
+  assert.ok(!line.includes('(ignored new value)'), 'no ignored-new no-op rows');
+  assert.ok(!line.includes('(existing, unchanged)'), 'no existing-unchanged no-op rows');
+  const summaryCount = Number(line.match(/(\d+) fields unchanged/)[1]);
+  assert.ok(summaryCount >= 20, `all ${summaryCount} no-op fields are counted, not rendered`);
+});
+
+test('round3: a real change (SPOOKMINCE website added) still shows its diff in BOTH views', () => {
+  const adapter = buildAdapter();
+  const event = freshRound3Event(SPOOKMINCE_CHANGE_EVENT);
+
+  assert.equal(adapter.countChangedMergeFields(event), 1, 'exactly the website addition');
+  assert.equal(adapter.hasEventDifferences(event), true);
+
+  const card = adapter.generateEventCard(event);
+  assert.ok(card.includes('1 changed'), 'chip counts the real change');
+  assert.ok(!card.includes('no changes'), 'a changed card never claims no changes');
+
+  // Table view renders the changed row.
+  const rows = adapter.generateComparisonRowsCompressed(event);
+  assert.ok(rows.includes('website'), 'the changed field renders as a row');
+  assert.ok(rows.includes('beefmince.com'), 'with its new value');
+  assert.ok(rows.includes('merge-noop-summary'), 'and the untouched fields stay collapsed');
+
+  // Line view renders the diff AND collapses the rest.
+  const line = adapter.generateLineDiffView(event);
+  assert.ok(line.includes('website'), 'changed field header in the line view');
+  assert.ok(/\+<\/span>[^<]*beefmince\.com/.test(line.replace(/&#x2F;|&\/;/g, '/')) || line.includes('beefmince.com'),
+    'the added value renders as a + line');
+  assert.ok(line.includes('(new field)'), 'labelled as an addition');
+  assert.match(line, /\d+ fields unchanged — /, 'no-op rows still collapse to the summary');
+});
+
+test('round3: every existing bridge handler id and page handler survives the cleanup', async () => {
+  const adapter = buildAdapter();
+  // Bridge action ids round-trip through the URL parser.
+  for (const action of [
+    'page', 'page-done', 'copy-venue', 'mark-bear', 'mark-not-bear',
+    'execute-run', 'queue-venue', 'open-url', 'export-ics', 'copy-logs',
+    'ai-prompts', 'beacon'
+  ]) {
+    const params = adapter.parseReviewActionUrl(`chunkyscrape://act?a=${action}&n=1`);
+    assert.equal(params.a, action, `${action} round-trips through the bridge URL`);
+  }
+
+  // The page still defines every handler the buttons call — plus the new
+  // in-page description toggle.
+  const html = await adapter.generateRichHTML(round3Results());
+  for (const fn of [
+    'function copyVenueEntry(', 'function markBearOverride(',
+    'function requestSavedRunExecute(', 'function queueVenueCandidate(',
+    'function openMapVerify(', 'function exportRecurringIcs(',
+    'function requestNativeLogCopy(', 'function showAiPromptPicker(',
+    'function exportProvenanceIssue(', 'function copyEventJSON(',
+    'function toggleComparisonSection(', 'function toggleDiffView(',
+    'function toggleDisplayMode(', 'function toggleImages(',
+    'function filterEvents(', 'function toggleDescClamp(',
+    'function sendResultsBeacon('
+  ]) {
+    assert.ok(html.includes(fn), `${fn} still defined in the page script`);
+  }
+
+  // And the card wires them.
+  adapter.resetMapVerifyUrls();
+  const card = adapter.generateEventCard(freshRound3Event(BEEFMINCE_NOOP_EVENT), { runId: 'r1' }, {
+    bearIdx: 'k0',
+    bearVerdict: 'bear',
+    interactive: true
+  });
+  for (const handler of [
+    'openMapVerify(this)', 'markBearOverride(this)', 'copyEventJSON(this)',
+    'exportProvenanceIssue(this)', 'toggleComparisonSection(', 'toggleDiffView(this',
+    'toggleDescClamp(this)'
+  ]) {
+    assert.ok(card.includes(handler), `${handler} intact on the card`);
+  }
+  // Builder icon sits beside the verdict pill in the face controls row.
+  const controls = card.match(/<div class="event-face-controls">([\s\S]*?)<\/div>\s*<div class="event-details">/);
+  assert.ok(controls, 'face controls row present');
+  assert.ok(controls[1].includes('bear-verdict-row'), 'verdict pill in the controls row');
+  assert.ok(controls[1].includes('event-builder-link'), 'builder icon next to the verdict pill');
 });
