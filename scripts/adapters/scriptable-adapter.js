@@ -6940,6 +6940,10 @@ class ScriptableAdapter {
 
         .event-headline-main {
             display: flex;
+            /* wrap so an expanded thumbnail can take a full-width row of its
+               own (round 4: tap the image to enlarge it). The collapsed thumb
+               is a fixed 64px slot, so nothing wraps in the default state. */
+            flex-wrap: wrap;
             gap: 10px;
             align-items: flex-start;
         }
@@ -6953,6 +6957,7 @@ class ScriptableAdapter {
            cover — a giant poster can never blow up the card height. */
         .event-thumb {
             flex: 0 0 auto;
+            cursor: pointer;
         }
 
         .event-thumb img {
@@ -6962,6 +6967,27 @@ class ScriptableAdapter {
             object-fit: cover;
             border-radius: 8px;
             border: 1px solid var(--border-color);
+        }
+
+        /* Tap-to-enlarge (owner: "Can the image get bigger when we press it
+           too? Like description"): same in-page toggle pattern as the
+           description clamp — toggleThumbSize flips this class, a second tap
+           shrinks back. Expanded, the thumb takes a full-width row and the
+           poster renders whole (contain, bounded height). */
+        .event-thumb.thumb-expanded {
+            flex: 1 1 100%;
+            width: 100%;
+        }
+
+        .event-thumb.thumb-expanded img {
+            width: 100%;
+            height: auto;
+            max-height: 70vh;
+            object-fit: contain;
+        }
+
+        .event-thumb.thumb-expanded .event-thumb-badge {
+            max-width: none;
         }
 
         .venue-placeholder-thumb img {
@@ -6985,6 +7011,36 @@ class ScriptableAdapter {
             font-size: 13px;
             color: var(--text-primary);
             margin-top: 2px;
+        }
+
+        /* Atomic datetime halves (owner: "can it magically move the whole
+           end date to the next line?"): each start/end datetime is one
+           nowrap unit, so a narrow screen breaks at the separator and the
+           whole end datetime jumps to the next line instead of splitting
+           after the date. */
+        .dt-nowrap {
+            white-space: nowrap;
+        }
+
+        /* UTC verification, folded from the old debug expander onto the date
+           area of the face — smaller, muted, no block of its own. */
+        .event-headline-utc {
+            font-size: 10px;
+            color: var(--text-secondary);
+        }
+
+        /* Target-calendar chip, folded from the old debug expander into the
+           face badges row. */
+        .calendar-chip {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 7px;
+            border-radius: 10px;
+            margin: 2px;
+            background: var(--background-light);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
         }
 
         .no-end-note {
@@ -7138,26 +7194,10 @@ class ScriptableAdapter {
             font-style: italic;
         }
 
-        /* Per-card debug expander (raw JSON, provenance, field counts). */
-        .event-card-debug {
-            margin-top: 10px;
-        }
-
-        .event-card-debug > summary {
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            padding: 4px 0;
-            -webkit-user-select: none;
-            user-select: none;
-        }
-
-        .debug-field-counts {
-            font-size: 12px;
-            color: var(--text-secondary);
-            margin: 6px 0;
-        }
+        /* Round 4: the per-card debug expander is dissolved — UTC and the
+           calendar target live on the face, provenance rows fold into the
+           merge table, and the raw JSON stays embedded (hidden) for Raw mode
+           and the copy button. */
 
         .duplicate-folded-line {
             font-size: 12px;
@@ -7873,82 +7913,21 @@ class ScriptableAdapter {
         }
 
         /* Per-event provenance section (built by event-provenance.js) */
-        .provenance-details {
-            margin-top: 12px;
-            border-top: 1px solid var(--border-color);
-            padding-top: 8px;
-        }
-
-        .provenance-details > summary {
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--primary-color);
-            padding: 5px 0;
-        }
-
-        .provenance-meta {
-            font-size: 11px;
-            color: var(--text-secondary);
-            margin: 4px 0;
-        }
-
-        .provenance-url {
-            font-family: monospace;
-            word-break: break-all;
-        }
-
-        .provenance-table-wrap {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            margin-top: 6px;
-        }
-
-        .provenance-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 11px;
-        }
-
-        .provenance-table th {
-            text-align: left;
-            padding: 4px 6px;
-            border-bottom: 1px solid var(--border-color);
-            color: var(--text-primary);
-            white-space: nowrap;
-        }
-
-        .provenance-table td {
-            padding: 4px 6px;
-            border-bottom: 1px solid var(--border-color);
-            color: var(--text-primary);
-            word-break: break-word;
-            vertical-align: top;
-        }
-
-        .provenance-table .provenance-field {
-            font-family: monospace;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-
-        .provenance-table .provenance-missing {
-            color: var(--text-secondary);
-        }
-
-        .provenance-table .provenance-decision {
-            color: var(--text-secondary);
-            font-style: italic;
-        }
-
-        .provenance-note {
-            color: var(--text-secondary);
-            font-size: 11px;
-            margin: 6px 0 0;
-        }
-
+        /* Round 4: the 🔍 Provenance section is dissolved into the merge
+           table; only the export-issue control (now on the card actions row)
+           keeps its classes — the exportProvenanceIssue handler walks them. */
         .provenance-export {
             margin-top: 10px;
+        }
+
+        /* Round 4: the export control rides the card actions row — no top
+           margin there, and its reveal area may take the full row width. */
+        .event-actions-row .provenance-export {
+            margin-top: 0;
+        }
+
+        .event-actions-row .provenance-export-area {
+            min-width: 260px;
         }
 
         .provenance-export-btn {
@@ -8360,13 +8339,6 @@ class ScriptableAdapter {
                     card.classList.remove('raw-mode');
                 }
             });
-            // Raw mode exists to read the debug JSON — pop the per-card
-            // debug expanders open so it is actually visible.
-            if (toggle && toggle.checked) {
-                document.querySelectorAll('details.event-card-debug').forEach(d => {
-                    d.open = true;
-                });
-            }
         }
 
         // Description clamp toggle (pure page JS, no bridge): the face
@@ -8374,6 +8346,13 @@ class ScriptableAdapter {
         // tapping again re-clamps.
         function toggleDescClamp(el) {
             try { el.classList.toggle('clamped'); } catch (ignore) {}
+        }
+
+        // Thumbnail size toggle (round 4, same pattern: pure page JS, no
+        // bridge): tapping the face thumbnail enlarges it to a full-width
+        // contained poster; a second tap shrinks it back to the 64px slot.
+        function toggleThumbSize(el) {
+            try { el.classList.toggle('thumb-expanded'); } catch (ignore) {}
         }
         
         function toggleDiffView(button, safeEventId) {
@@ -8805,7 +8784,10 @@ class ScriptableAdapter {
                 
         function toggleImages() {
             const toggle = document.getElementById('sfwToggle');
-            const imageContainers = document.querySelectorAll('.image-container');
+            // Round 4 fix: round 3's dense face renders images as .event-thumb,
+            // but this handler still queried only .image-container — a class no
+            // card emits anymore — so the Images checkbox silently did nothing.
+            const imageContainers = document.querySelectorAll('.image-container, .event-thumb');
             
             imageContainers.forEach(container => {
                 if (toggle.checked) {
@@ -9514,147 +9496,138 @@ class ScriptableAdapter {
     }
   }
 
-  // Per-event "🔍 Provenance" section (field origins, merge decisions, and the
-  // export-issue payload). Builders live in the pure event-provenance module;
-  // this is just the environment glue. A failure here must never block an
-  // event card, so this degrades to an empty string (mirrors
-  // buildRunHealthBadgeHtml).
-  buildEventProvenanceHtml(event, runInfo = {}) {
+  // Round 4: the "🔍 Provenance" section is DISSOLVED (owner: "I don't like
+  // the debug section, it should be folded in to the other parts right?").
+  // Its merge-shaped rows fold into the merge comparison table through this
+  // helper (same shared row format, same no-op collapse); its source URL
+  // joins the face link chips; its parser/action meta line is dropped (the
+  // card's tags already say both); its export-issue control moved to the
+  // card actions row. Nothing is deleted from the run JSON.
+  //
+  // Only fields the comparison table does NOT already judge fold in
+  // (`coveredFields`) — in practice the routing-only fields the comparison
+  // excludes on purpose, like `city`. Classification keeps the truthful
+  // no-changes doctrine: a folded row is a REAL outcome only when the
+  // calendar side actually tracks the field AND the merge left it different
+  // — "city | london | scraper | took scraped value (calendar had none)" is
+  // a permanent pass-through (the calendar never stores city), so it joins
+  // the "N fields unchanged" summary instead of flagging every merge as
+  // changed forever. A failure here must never block a card: degrade to no
+  // folded rows.
+  buildFoldedProvenanceRecords(event, coveredFields) {
+    try {
+      const model = EventProvenance.buildProvenanceModel(event, {
+        action: this.normalizeIntentAction(event),
+      });
+      if (!model.hasProvenance) return [];
+      const calendarSide =
+        event._original &&
+        event._original.calendar &&
+        typeof event._original.calendar === "object"
+          ? event._original.calendar
+          : {};
+      const records = [];
+      for (const row of model.rows) {
+        if (coveredFields.has(row.field)) continue;
+        const calendarTracks = Object.prototype.hasOwnProperty.call(
+          calendarSide,
+          row.field,
+        );
+        const changed =
+          calendarTracks &&
+          !EventProvenance.valuesEqual(
+            row.field,
+            row.finalValue,
+            row.calendarValue,
+          );
+        const finalText = EventProvenance.formatValueText(row.finalValue);
+        const scraperText = EventProvenance.formatValueText(row.scraperValue);
+        const calendarText = EventProvenance.formatValueText(
+          row.calendarValue,
+        );
+        const matchesScraper =
+          Boolean(finalText) &&
+          Boolean(scraperText) &&
+          EventProvenance.valuesEqual(
+            row.field,
+            row.finalValue,
+            row.scraperValue,
+          );
+        const matchesCalendar =
+          Boolean(finalText) &&
+          Boolean(calendarText) &&
+          EventProvenance.valuesEqual(
+            row.field,
+            row.finalValue,
+            row.calendarValue,
+          );
+        const sourceLabel =
+          matchesScraper && matchesCalendar
+            ? "both agree"
+            : matchesScraper
+              ? "scraper"
+              : matchesCalendar
+                ? "calendar"
+                : finalText
+                  ? "merged"
+                  : "dropped";
+        // Final value first; the losing side(s) as small sub-lines, so
+        // nothing the old Scraper/Calendar columns showed is lost.
+        const valueParts = [this.formatFieldRowValueHtml(row.finalValue)];
+        if (scraperText && !matchesScraper) {
+          valueParts.push(
+            `<div class="field-row-was">scraper: ${this.formatFieldRowValueHtml(row.scraperValue)}</div>`,
+          );
+        }
+        if (calendarText && !matchesCalendar) {
+          valueParts.push(
+            `<div class="field-row-was">calendar: ${this.formatFieldRowValueHtml(row.calendarValue)}</div>`,
+          );
+        }
+        records.push({
+          field: row.field,
+          changed,
+          html: this.buildFieldRowHtml({
+            fieldHtml: `<strong>${this.escapeHtml(row.field)}</strong>`,
+            valueHtml: valueParts.join(""),
+            sourceHtml: this.escapeHtml(sourceLabel),
+            reasonHtml: this.escapeHtml(row.decisionText || ""),
+          }),
+        });
+      }
+      return records;
+    } catch (error) {
+      // Diagnostics must never break the table they annotate.
+      console.log(
+        `📱 Scriptable: Folded provenance rows build failed for "${event?.title || "unknown"}": ${error.message}`,
+      );
+      return [];
+    }
+  }
+
+  // The per-card "📤 Export issue" control, moved from the dissolved
+  // provenance section to the card actions row. Same markup contract as
+  // before — the exportProvenanceIssue page handler walks these exact
+  // classes (.provenance-export wrapper → area/text/status). Degrades to ""
+  // on hostile data instead of blocking the card.
+  buildExportIssueControlHtml(event, runInfo = {}) {
     try {
       const options = {
         action: this.normalizeIntentAction(event),
         runId: runInfo.runId || null,
         timestamp: runInfo.timestamp || null,
       };
-      // ONE FORMAT (owner feedback #5): render the provenance MODEL through
-      // the adapter's shared field-row builder — field | value | source |
-      // reason — instead of the module's own five-column table, so this
-      // section reads exactly like the merge table and the notes preview.
-      // The <details class="provenance-details"> wrapper, the summary text
-      // and the export-issue control markup (exportProvenanceIssue page
-      // handler, .provenance-export* classes) are kept byte-compatible.
-      const model = EventProvenance.buildProvenanceModel(event, options);
-
-      const metaParts = [];
-      if (model.parser) metaParts.push(`Parser: ${model.parser}`);
-      if (model.action) metaParts.push(`Action: ${model.action}`);
-      if (model.arbitrationSummary) metaParts.push(model.arbitrationSummary);
-      const metaLine =
-        metaParts.length > 0
-          ? `<div class="provenance-meta">${this.escapeHtml(metaParts.join(" • "))}</div>`
-          : "";
-      const urlLine = model.sourceUrl
-        ? `<div class="provenance-meta provenance-url" title="${this.escapeHtml(model.sourceUrl)}">Source: ${this.escapeHtml(
-            model.sourceUrl.length > 80
-              ? `${ScriptableAdapter.safeSubstring(model.sourceUrl, 0, 79)}…`
-              : model.sourceUrl,
-          )}</div>`
-        : "";
-
-      let body;
-      if (!model.hasProvenance) {
-        body =
-          '<div class="provenance-note">No provenance recorded for this event (new event or older saved run).</div>';
-      } else if (model.rows.length === 0) {
-        body = `<div class="provenance-note">All ${model.unchangedCount} tracked field${
-          model.unchangedCount === 1 ? "" : "s"
-        } passed through unchanged.</div>`;
-      } else {
-        const rowsHtml = model.rows
-          .map((row) => {
-            const finalText = EventProvenance.formatValueText(row.finalValue);
-            const scraperText = EventProvenance.formatValueText(
-              row.scraperValue,
-            );
-            const calendarText = EventProvenance.formatValueText(
-              row.calendarValue,
-            );
-            const matchesScraper =
-              Boolean(finalText) &&
-              Boolean(scraperText) &&
-              EventProvenance.valuesEqual(
-                row.field,
-                row.finalValue,
-                row.scraperValue,
-              );
-            const matchesCalendar =
-              Boolean(finalText) &&
-              Boolean(calendarText) &&
-              EventProvenance.valuesEqual(
-                row.field,
-                row.finalValue,
-                row.calendarValue,
-              );
-            const sourceLabel =
-              matchesScraper && matchesCalendar
-                ? "both agree"
-                : matchesScraper
-                  ? "scraper"
-                  : matchesCalendar
-                    ? "calendar"
-                    : finalText
-                      ? "merged"
-                      : "dropped";
-            // Final value first; the losing side(s) as small sub-lines, so
-            // nothing the old Scraper/Calendar columns showed is lost.
-            const valueParts = [this.formatFieldRowValueHtml(row.finalValue)];
-            if (scraperText && !matchesScraper) {
-              valueParts.push(
-                `<div class="field-row-was">scraper: ${this.formatFieldRowValueHtml(row.scraperValue)}</div>`,
-              );
-            }
-            if (calendarText && !matchesCalendar) {
-              valueParts.push(
-                `<div class="field-row-was">calendar: ${this.formatFieldRowValueHtml(row.calendarValue)}</div>`,
-              );
-            }
-            return this.buildFieldRowHtml({
-              fieldHtml: `<strong>${this.escapeHtml(row.field)}</strong>`,
-              valueHtml: valueParts.join(""),
-              sourceHtml: this.escapeHtml(sourceLabel),
-              reasonHtml: this.escapeHtml(row.decisionText || ""),
-            });
-          })
-          .join("");
-        const unchangedNote =
-          model.unchangedCount > 0
-            ? `<div class="provenance-note">${model.unchangedCount} field${
-                model.unchangedCount === 1 ? "" : "s"
-              } unchanged</div>`
-            : "";
-        body = `
-            <div class="provenance-table-wrap">
-                ${this.buildFieldRowsTableHtml(rowsHtml)}
-            </div>
-            ${unchangedNote}`;
-      }
-
-      // Same markup contract as EventProvenance.buildExportControlsHtml —
-      // the exportProvenanceIssue page handler walks these exact classes.
       const exportEncoded = encodeURIComponent(
         EventProvenance.buildExportIssueCompactJson(event, options),
       );
-      const exportControls = `
-            <div class="provenance-export">
+      return `<div class="provenance-export">
                 <button type="button" class="provenance-export-btn" onclick="exportProvenanceIssue(this)" data-payload="${this.escapeHtml(exportEncoded)}">📤 Export issue</button>
                 <div class="provenance-export-area" style="display: none;">
                     <textarea class="provenance-export-text" readonly rows="10" spellcheck="false" onfocus="this.select()"></textarea>
                     <div class="provenance-export-status"></div>
                 </div>
             </div>`;
-
-      return `
-        <details class="provenance-details">
-            <summary>🔍 Provenance</summary>
-            ${metaLine}
-            ${urlLine}
-            ${body}
-            ${exportControls}
-        </details>`;
     } catch (error) {
-      console.log(
-        `📱 Scriptable: Provenance section build failed for "${event?.title || "unknown"}": ${error.message}`,
-      );
       return "";
     }
   }
@@ -10302,19 +10275,19 @@ class ScriptableAdapter {
   }
 
   // Per-card actions row: an Event Builder prefill link on EVERY card (rides
-  // the existing open-url bridge), plus the ICS export button on recurring
-  // cards. "" only when no builder URL could be built.
-  buildEventCardActionsHtml(event) {
+  // the existing open-url bridge), the ICS export button on recurring cards,
+  // plus (round 4) the copy-JSON button and the export-issue control that
+  // used to hide behind the dissolved debug expander.
+  buildEventCardActionsHtml(event, runInfo = {}) {
     const parts = [];
     const builderUrl = this.buildEventBuilderUrl(event);
     if (builderUrl) {
       const id = this.registerMapVerifyUrl(builderUrl);
-      // Icon-scale (owner: "Event builder top right? Or next to bear
-      // verdict?") — the row renders beside the verdict pill on the card
-      // face, so the link is one small 🛠 instead of a labelled row. Same
-      // class, same bridge handler, same registry.
+      // Compact but labelled (round 4, owner: "I want a name for the event
+      // builder link") — still beside the verdict pill, same class, same
+      // bridge handler, same registry.
       parts.push(
-        `<a href="#" onclick="return openMapVerify(this)" data-map-url-id="${id}" class="event-builder-link" title="Open in Event Builder" aria-label="Open in Event Builder" style="color:var(--primary-color); text-decoration:none; font-size:15px;">🛠</a>`,
+        `<a href="#" onclick="return openMapVerify(this)" data-map-url-id="${id}" class="event-builder-link" title="Open in Event Builder" aria-label="Open in Event Builder" style="color:var(--primary-color); text-decoration:none; font-size:13px; font-weight:600;">🛠 Builder</a>`,
       );
     }
     if (SharedCore.isRecurringSeriesEvent(event)) {
@@ -10332,8 +10305,18 @@ class ScriptableAdapter {
         );
       }
     }
+    // Copy JSON stayed reachable when the debug expander dissolved: the
+    // button reads this card's embedded pre.raw-json payload, exactly like
+    // the merge-section header's copy of it.
+    parts.push(
+      `<button onclick="copyEventJSON(this)" class="copy-json-btn">📋 Copy JSON</button>`,
+    );
+    // 📤 Export issue moved next to the other card actions (from the
+    // dissolved debug expander's provenance section).
+    const exportControl = this.buildExportIssueControlHtml(event, runInfo);
+    if (exportControl) parts.push(exportControl);
     if (parts.length === 0) return "";
-    return `<div class="event-actions-row" style="display:flex; gap:12px; align-items:center;">${parts.join("")}</div>`;
+    return `<div class="event-actions-row" style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">${parts.join("")}</div>`;
   }
 
   // ---------------------------------------------------------------------------
@@ -10426,7 +10409,18 @@ class ScriptableAdapter {
         `<a href="#" onclick="return openMapVerify(this)" data-map-url-id="${id}" class="event-link-chip link-chip-${kind}" title="${this.escapeHtml(url)}">${icon} ${this.escapeHtml(label)}</a>`,
       );
     };
-    const website = event.website || event.url;
+    // Round 4 (dissolved provenance meta's "Source:" line): the source URL
+    // joins the chips row. In almost every event it IS the website/url chip
+    // already (url and website are ONE field); when the merged event lost its
+    // own link, fall back to the scraper side's so the chip still exists.
+    const scraperSide =
+      event._original &&
+      event._original.scraper &&
+      typeof event._original.scraper === "object"
+        ? event._original.scraper
+        : {};
+    const website =
+      event.website || event.url || scraperSide.url || scraperSide.website;
     addChip("website", "🌐", website, this.formatLinkChipLabel("website", website));
     addChip(
       "tickets",
@@ -11607,8 +11601,9 @@ class ScriptableAdapter {
     // doesn't really help me") — display placement change, the lines stay in
     // the run JSON untouched.
     const evidenceBlock = this.buildEvidenceLinesHtml(event._evidenceLines);
-    // Event Builder prefill link (every card) + ICS export (recurring cards).
-    const eventActionsRow = this.buildEventCardActionsHtml(event);
+    // Event Builder prefill link (every card) + ICS export (recurring cards)
+    // + copy-JSON + export-issue (round 4: folded out of the debug expander).
+    const eventActionsRow = this.buildEventCardActionsHtml(event, runInfo);
 
     // ----- Dense default face (wave 7, reorganized round 3) ---------------
     // The always-visible face of the card, everything a review needs with no
@@ -11619,14 +11614,27 @@ class ScriptableAdapter {
     // exists), and one compact 📍 route line (bar • short address • pin
     // link). Round 3 dissolved the "Details" expander: the clamped
     // description, link chips, merge comparison and notes preview live on
-    // the card body; only debug material (provenance, raw JSON, field
-    // counts, UTC row) sits behind the 🐞 Debug expander.
-    // ONE date string, used verbatim on the face.
-    const dateLineHtml = `${dateStr} ${timeStr}${
+    // the card body. Round 4 dissolved the debug expander too — UTC and the
+    // calendar chip sit on the face, provenance rows fold into the merge
+    // table, and only the hidden Raw-mode payload remains below the body.
+    // ONE date string, used verbatim on the face. Round 4 (owner: "can it
+    // magically move the whole end date to the next line?"): each datetime
+    // HALF is an atomic .dt-nowrap span and only the separator may break, so
+    // a narrow screen moves the whole end datetime down instead of splitting
+    // it after the date.
+    const dateLineHtml = `<span class="dt-nowrap">${dateStr} ${timeStr}</span>${
       hasRealEnd
-        ? ` - ${endDateStr ? `${endDateStr} ` : ""}${endTimeStr}`
+        ? ` - <span class="dt-nowrap">${endDateStr ? `${endDateStr} ` : ""}${endTimeStr}</span>`
         : ' <span class="no-end-note">(no end listed)</span>'
     }`;
+    // UTC verification, folded from the dissolved debug expander onto the
+    // face date area — smaller, muted, no block of its own. The face's main
+    // line already carries the no-end honesty note, so this stays compact.
+    const utcFaceHtml = `<span class="event-headline-utc">🌍 <span class="dt-nowrap">${utcTimeStr}</span>${
+      endUtcTimeStr
+        ? ` - <span class="dt-nowrap">${endUtcDateStr ? `${endUtcDateStr} ` : ""}${endUtcTimeStr}</span>`
+        : ""
+    } UTC</span>`;
     const headlineVenue = event.venue || event.bar || "";
     // Tappable route line (owner: "Can we make the bar, address, and
     // coordinates be links? Then make the route link on the list too?
@@ -11733,7 +11741,7 @@ class ScriptableAdapter {
     // flag-don't-drop treatment the full image block in the expander uses.
     const thumbHtml =
       typeof event.image === "string" && event.image.trim()
-        ? `<div class="event-thumb${isRepeatedImage ? " venue-placeholder-thumb" : ""}">
+        ? `<div class="event-thumb${isRepeatedImage ? " venue-placeholder-thumb" : ""}" onclick="toggleThumbSize(this)">
                 <img src="${this.escapeHtml(event.image)}" alt="Event image" onerror="this.style.display='none'">
                 ${
                   isRepeatedImage
@@ -11816,7 +11824,6 @@ class ScriptableAdapter {
       event._original && this.normalizeIntentAction(event) !== "new"
     );
     let comparisonHtml = "";
-    let fieldCountsLine = "";
     if (showComparison) {
       const diffChip =
         changedFieldCount === null
@@ -11834,14 +11841,8 @@ class ScriptableAdapter {
         .replace(/&quot;/g, '"')
         .replace(/&#39;/g, "'");
       const safeEventId = decodedEventId.replace(/[^a-zA-Z0-9\-_]/g, "_"); // Create safe ID for DOM elements
-      // The "N fields | N fields | N fields" counts line is debug material,
-      // not review material — it renders in the debug expander below.
-      fieldCountsLine = `
-                <div class="debug-field-counts">
-                    📊 <strong>Scraper:</strong> ${Object.keys(event._original?.scraper || {}).length} fields |
-                    📅 <strong>Calendar:</strong> ${Object.keys(event._original?.calendar || {}).length} fields |
-                    🔀 <strong>Merged:</strong> ${Object.keys(event._original?.merged || {}).length} fields
-                </div>`;
+      // Round 4: the "N fields | N fields | N fields" counts banner is
+      // DELETED from display entirely — the counts stay in the run JSON.
       comparisonHtml = `
             <div class="card-subsection merge-comparison-subsection">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -11905,7 +11906,7 @@ class ScriptableAdapter {
     let html = `
         <div class="event-card${isDroppedCard ? " bear-dropped-card" : ""}">
             <div class="event-headline">
-                <div class="event-headline-badges">${actionBadge}${writeBadge}${recurringBadge}${seriesMatchBadge}${sanityBadge}${overrideBadge}${seriesProposalBadge}${headlineReasonChip}</div>
+                <div class="event-headline-badges">${actionBadge}${writeBadge}${recurringBadge}${seriesMatchBadge}${sanityBadge}${overrideBadge}${seriesProposalBadge}${headlineReasonChip}<span class="calendar-chip">📱 ${this.escapeHtml(calendarName)}</span></div>
                 <div class="event-headline-main">
                     ${thumbHtml}
                     <div class="event-headline-body">
@@ -11915,7 +11916,7 @@ class ScriptableAdapter {
                               event.price
                                 ? ` <span class="event-headline-price">💵 ${this.escapeHtml(event.price)}</span>`
                                 : ""
-                            }
+                            } ${utcFaceHtml}
                         </div>
                         ${routeLineHtml}
                     </div>
@@ -11992,26 +11993,12 @@ class ScriptableAdapter {
             }
             </div>
 
-            <!-- Debug expander: UTC verification, calendar target, field
-                 counts, provenance (owner: "I don't understand what
-                 provenance is" — it is debug material now) and the raw JSON.
-                 raw-json-details keeps the expander visible in Raw mode. -->
-            <details class="event-card-debug raw-json-details">
-            <summary class="event-card-debug-summary">🐞 Debug</summary>
-            <div class="event-detail" style="font-size: 12px; color: #666;">
-                <span>🌍</span>
-                <span>UTC: ${utcTimeStr}${
-                  endUtcTimeStr
-                    ? ` - ${endUtcDateStr ? `${endUtcDateStr} ` : ""}${endUtcTimeStr}`
-                    : ' <span class="no-end-note">(no end listed)</span>'
-                }</span>
-            </div>
-            <div class="event-detail">
-                <span>📱</span>
-                <span>${this.escapeHtml(calendarName)}</span>
-            </div>
-            ${fieldCountsLine}
-            ${this.buildEventProvenanceHtml(event, runInfo)}
+            <!-- Round 4: the debug expander is dissolved. UTC + calendar
+                 target live on the face, the counts banner is display-deleted,
+                 provenance rows fold into the merge table, export-issue moved
+                 to the card actions. The raw payload stays embedded here —
+                 hidden by default, shown by Raw mode — because Copy JSON and
+                 prettyPrintCardPayloads read this card's pre.raw-json. -->
             <div class="raw-display">
                 ${evidenceBlock}
                 ${(() => {
@@ -12019,27 +12006,33 @@ class ScriptableAdapter {
                   // but drops the AI prompt/validation blobs — see
                   // buildEmbeddedEventJson — and is budgeted so a big run
                   // cannot grow the page without bound (buildBudgetedEventJson).
-                  const payload = this.buildBudgetedEventJson(event, runInfo);
-                  const what = [
-                    payload.dropped.length
-                      ? `dropped ${payload.dropped.join(", ")}`
-                      : "",
-                    payload.truncated && payload.truncated.length
-                      ? `shortened ${payload.truncated.slice(0, 6).join(", ")}`
-                      : "",
-                  ]
-                    .filter(Boolean)
-                    .join("; ");
-                  const notice = payload.capped
-                    ? `<div class="payload-cap-note">✂️ Debug JSON trimmed to fit the page (${this.escapeHtml(
-                        what,
-                      )}). Everything trimmed is still rendered above in this card; the untrimmed event is in the saved run file${
-                        payload.runFile
-                          ? ` <code>${this.escapeHtml(payload.runFile)}</code>`
-                          : ""
-                      }.</div>`
-                    : "";
-                  return `${notice}<pre class="raw-json">${this.escapeHtml(payload.json)}</pre>`;
+                  // Hostile field getters must cost this card its debug dump,
+                  // never the whole results page.
+                  try {
+                    const payload = this.buildBudgetedEventJson(event, runInfo);
+                    const what = [
+                      payload.dropped.length
+                        ? `dropped ${payload.dropped.join(", ")}`
+                        : "",
+                      payload.truncated && payload.truncated.length
+                        ? `shortened ${payload.truncated.slice(0, 6).join(", ")}`
+                        : "",
+                    ]
+                      .filter(Boolean)
+                      .join("; ");
+                    const notice = payload.capped
+                      ? `<div class="payload-cap-note">✂️ Debug JSON trimmed to fit the page (${this.escapeHtml(
+                          what,
+                        )}). Everything trimmed is still rendered above in this card; the untrimmed event is in the saved run file${
+                          payload.runFile
+                            ? ` <code>${this.escapeHtml(payload.runFile)}</code>`
+                            : ""
+                        }.</div>`
+                      : "";
+                    return `${notice}<pre class="raw-json">${this.escapeHtml(payload.json)}</pre>`;
+                  } catch (error) {
+                    return `<pre class="raw-json">{"_error":"debug payload unavailable — see the saved run file"}</pre>`;
+                  }
                 })()}
                 <div style="margin-top: 8px; text-align: right;">
                     <button onclick="copyEventJSON(this)" class="copy-json-btn">
@@ -12047,7 +12040,6 @@ class ScriptableAdapter {
                     </button>
                 </div>
             </div>
-            </details>
         </div>
         `;
 
@@ -14363,6 +14355,14 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         }),
       });
     });
+
+    // Round 4: provenance rows for fields the comparison does not already
+    // judge fold in here, so table view, compressed view, line-view summary
+    // count and the MERGE ·N tag all keep reading from ONE record list. See
+    // buildFoldedProvenanceRecords for the truthful no-op classification.
+    rows.push(
+      ...this.buildFoldedProvenanceRecords(event, new Set(fieldsToCompare)),
+    );
 
     return rows;
   }
