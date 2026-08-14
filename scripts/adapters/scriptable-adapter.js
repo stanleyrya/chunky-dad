@@ -6674,82 +6674,18 @@ class ScriptableAdapter {
             text-decoration: underline;
         }
         
+        /* Compact header: logo + ONE informative line (run/id/counts). */
         .header {
             background: var(--gradient-primary);
             color: var(--text-inverse);
-            padding: 30px;
-            border-radius: 15px;
-            margin-bottom: 30px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-bottom: 14px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             position: relative;
             overflow: hidden;
         }
-        
-        .header-controls {
-            margin-top: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 20px;
-        }
-        
-        .display-toggle {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 8px 16px;
-            border-radius: 20px;
-            backdrop-filter: blur(10px);
-        }
-        
-        .sfw-toggle {
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-            user-select: none;
-        }
-        
-        .sfw-toggle input[type="checkbox"] {
-            display: none;
-        }
-        
-        .toggle-slider {
-            width: 50px;
-            height: 24px;
-            background-color: rgba(255, 255, 255, 0.3);
-            border-radius: 12px;
-            position: relative;
-            transition: background-color 0.3s ease;
-            margin-right: 10px;
-        }
-        
-        .toggle-slider::before {
-            content: '';
-            position: absolute;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background-color: white;
-            top: 2px;
-            left: 2px;
-            transition: transform 0.3s ease;
-        }
-        
-        .sfw-toggle input[type="checkbox"]:checked + .toggle-slider {
-            background-color: rgba(255, 255, 255, 0.8);
-        }
-        
-        .sfw-toggle input[type="checkbox"]:checked + .toggle-slider::before {
-            transform: translateX(26px);
-        }
-        
-        .toggle-label {
-            color: var(--text-inverse);
-            font-weight: 500;
-            font-size: 14px;
-        }
-        
+
         .header::before {
             content: '';
             position: absolute;
@@ -6767,57 +6703,52 @@ class ScriptableAdapter {
             z-index: 1;
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 12px;
         }
-        
+
         .header-logo {
-            width: 80px;
-            height: 80px;
-            border-radius: 15px;
-            transition: transform 0.3s ease;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
             display: block;
             flex-shrink: 0;
         }
-        
-        .header-logo:hover {
-            transform: scale(1.05);
+
+        .header-line {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            gap: 2px 10px;
+            min-width: 0;
+            line-height: 1.35;
         }
-        
-        .header h1 {
-            margin: 0;
-            font-size: 28px;
-            position: relative;
-            z-index: 1;
+
+        .header-name {
+            font-size: 15px;
             font-weight: 700;
-            line-height: 1.2;
-            flex: 1;
         }
-        
-        .header-title {
-            font-size: 32px;
-            font-weight: 700;
-            margin-bottom: 5px;
-        }
-        
-        .header-subtitle {
-            font-size: 18px;
-            font-weight: 400;
-            opacity: 0.9;
-        }
-        
+
         .header-run-context {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 500;
             opacity: 0.85;
-            margin-top: 6px;
+        }
+
+        .header-counts {
+            font-size: 12px;
+            font-weight: 500;
+            opacity: 0.95;
+        }
+
+        .header-counts .stat-value {
+            font-weight: 700;
         }
 
         .header-health-badge {
             display: inline-block;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
-            margin-top: 6px;
-            padding: 3px 10px;
+            padding: 2px 8px;
             border-radius: 999px;
             background: rgba(255, 255, 255, 0.15);
             border: 1px solid rgba(255, 255, 255, 0.25);
@@ -6844,32 +6775,79 @@ class ScriptableAdapter {
             opacity: 0.9;
         }
         
-        .header .stats {
+        /* Compact controls bar: toggles + search + small action buttons in
+           one row (the two toggle cards and the full-width slab buttons are
+           gone). */
+        .controls-bar {
             display: flex;
-            gap: 30px;
-            margin-top: 20px;
-            position: relative;
-            z-index: 1;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px 12px;
+            background: var(--background-primary);
+            border-radius: 10px;
+            padding: 8px 12px;
+            margin-bottom: 14px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-color);
         }
-        
-        .stat {
+
+        .mini-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-primary);
+            cursor: pointer;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .controls-search {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            flex: 1;
+            min-width: 130px;
+        }
+
+        .controls-search input {
+            flex: 1;
+            min-width: 70px;
+            padding: 5px 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 12px;
+            outline: none;
+            font-family: var(--font-sans);
+            background: var(--background-primary);
+            color: var(--text-primary);
+        }
+
+        .action-buttons {
             display: flex;
-            flex-direction: column;
-            text-align: center;
+            gap: 6px;
+            margin-left: auto;
         }
-        
-        .stat-value {
-            font-size: 32px;
-            font-weight: 700;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+
+        .mini-btn {
+            padding: 4px 10px;
+            font-size: 12px;
+            font-weight: 600;
+            background: var(--primary-color);
+            color: var(--text-inverse);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: var(--font-sans);
         }
-        
-        .stat-label {
-            font-size: 14px;
-            opacity: 0.9;
-            font-weight: 400;
+
+        .mini-btn-quiet {
+            background: var(--background-light);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
         }
-        
+
         .section {
             background: var(--background-primary);
             border-radius: 15px;
@@ -7065,14 +7043,120 @@ class ScriptableAdapter {
             border: 1px solid var(--border-color);
         }
 
-        .event-card-details > summary {
+        /* Face controls: bear verdict pill + the event-builder icon side by
+           side (owner: "Event builder top right? Or next to bear verdict?"). */
+        .event-face-controls {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            margin: 2px 0 4px;
+        }
+
+        /* Description on the face, CSS-clamped; tapping toggles the clamp
+           (owner: "Description starts smaller and I can tap to expand it"). */
+        .event-desc {
+            font-size: 13px;
+            color: var(--text-primary);
+            margin: 4px 0;
+            white-space: pre-line;
+            cursor: pointer;
+        }
+
+        .event-desc.clamped {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        /* Side-by-side link chips with meaningful labels (owner: "Instagram,
+           tickets, etc., links are side by side? And show the actual link
+           name? Plus btw we're missing some links like gmaps"). */
+        .event-links-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin: 6px 0;
+        }
+
+        .event-link-chip {
+            display: inline-block;
+            font-size: 12px;
+            font-weight: 500;
+            padding: 3px 9px;
+            border-radius: 12px;
+            background: var(--background-light);
+            border: 1px solid var(--border-color);
+            color: var(--primary-color);
+            text-decoration: none;
+            max-width: 60vw;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* ONE container style for the card's collapsible subsections (owner:
+           "Calendar notes preview … look weird compared to merge comparison
+           … it's like they have an extra container around them"). */
+        .card-subsection {
+            margin-top: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 8px 10px;
+            background: var(--background-primary);
+        }
+
+        .card-subsection > summary,
+        .card-subsection-title {
             cursor: pointer;
             font-size: 13px;
             font-weight: 600;
             color: var(--primary-color);
-            padding: 6px 0;
             -webkit-user-select: none;
             user-select: none;
+        }
+
+        /* Truthful diff-state chip on the merge comparison header. */
+        .merge-diff-chip {
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .merge-diff-none {
+            color: var(--text-secondary);
+        }
+
+        .merge-diff-changed {
+            color: #ff9500;
+        }
+
+        /* Line view's collapsed no-op rows summary. */
+        .line-noop-summary {
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        /* Per-card debug expander (raw JSON, provenance, field counts). */
+        .event-card-debug {
+            margin-top: 10px;
+        }
+
+        .event-card-debug > summary {
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            padding: 4px 0;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .debug-field-counts {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin: 6px 0;
         }
 
         .duplicate-folded-line {
@@ -7665,65 +7749,15 @@ class ScriptableAdapter {
             }
             
             .header {
-                padding: 20px;
-                margin-bottom: 20px;
+                padding: 10px 12px;
+                margin-bottom: 12px;
             }
-            
-            .header h1 {
-                font-size: 24px;
-                font-weight: 700;
-            }
-            
+
             .header-logo {
-                width: 60px;
-                height: 60px;
+                width: 36px;
+                height: 36px;
             }
-            
-            .header-content {
-                gap: 15px;
-                flex-direction: column;
-                text-align: center;
-            }
-            
-            .header-content .header-logo {
-                align-self: center;
-            }
-            
-            .header .stats {
-                flex-direction: column;
-                gap: 15px;
-            }
-            
-            .stat {
-                text-align: center;
-            }
-            
-            .controls-section {
-                flex-direction: column !important;
-                gap: 15px !important;
-                align-items: stretch !important;
-            }
-            
-            .search-container {
-                max-width: none !important;
-                order: 2;
-            }
-            
-            .display-toggle {
-                justify-content: center;
-                order: 1;
-            }
-            
-            .action-buttons {
-                justify-content: center;
-                order: 3;
-            }
-            
-            .action-buttons button {
-                flex: 1;
-                max-width: 150px;
-            }
-            
+
             .section {
                 padding: 15px;
             }
@@ -7752,24 +7786,6 @@ class ScriptableAdapter {
         }
         
         @media (max-width: 480px) {
-            .header .stats {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 10px;
-            }
-            
-            .stat:last-child {
-                grid-column: 1 / -1;
-            }
-            
-            .action-buttons {
-                flex-direction: column;
-            }
-            
-            .action-buttons button {
-                max-width: none;
-            }
-            
             .diff-view {
                 padding: 6px !important;
             }
@@ -7784,104 +7800,6 @@ class ScriptableAdapter {
             font-family: monospace;
             font-size: 12px;
             color: var(--text-secondary);
-        }
-        
-        .controls-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            align-items: center;
-        }
-        
-        @media (max-width: 768px) {
-            .controls-grid {
-                grid-template-columns: 1fr;
-                gap: 20px;
-            }
-        }
-        
-        .control-group {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        
-        .control-label {
-            font-weight: 600;
-            font-size: 16px;
-            color: var(--text-primary);
-            margin-bottom: 8px;
-        }
-        
-        .control-toggle {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            justify-content: center;
-        }
-        
-        .toggle-label {
-            font-weight: 500;
-            font-size: 14px;
-            color: var(--text-secondary);
-            transition: color 0.3s ease;
-        }
-        
-        .modern-toggle {
-            position: relative;
-            display: inline-block;
-            width: 50px;
-            height: 28px;
-        }
-        
-        .modern-toggle input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        
-        .toggle-slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, #e0e0e0, #c0c0c0);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 28px;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        .toggle-slider:before {
-            position: absolute;
-            content: "";
-            height: 22px;
-            width: 22px;
-            left: 3px;
-            bottom: 3px;
-            background: linear-gradient(135deg, #ffffff, #f0f0f0);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 50%;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-        }
-        
-        .modern-toggle input:checked + .toggle-slider {
-            background: linear-gradient(135deg, var(--primary-color), #667eea);
-            box-shadow: inset 0 2px 4px rgba(102, 126, 234, 0.3);
-        }
-        
-        .modern-toggle input:checked + .toggle-slider:before {
-            transform: translateX(22px);
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
-        }
-        
-        .modern-toggle:hover .toggle-slider {
-            box-shadow: inset 0 2px 6px rgba(0,0,0,0.15);
-        }
-        
-        .modern-toggle:hover input:checked + .toggle-slider {
-            box-shadow: inset 0 2px 6px rgba(102, 126, 234, 0.4);
         }
         
         .raw-display {
@@ -8096,161 +8014,39 @@ class ScriptableAdapter {
 </head>
 <body>
     ${networkTruncationBannerHtml}
+    <!-- Compact header (owner: "The main title card at the top is HUGE for
+         what it shows … Don't remove the cool logo though!"): the logo stays,
+         shrunk inline, and the text is ONE informative line — run context/id,
+         then the three counts that used to be giant stat tiles. The counts
+         keep their .stat-value spans because the page's copyRawOutput /
+         exportAsJSON read them by that class. -->
     <div class="header">
         <div class="header-content">
-            <img src="${headerLogoSrc}" 
+            <img src="${headerLogoSrc}"
                  alt="chunky.dad logo" class="header-logo">
-            <h1>
-                <div class="header-title">chunky.dad</div>
-                <div class="header-subtitle">Bear Event Scraper Results</div>
-                <div class="header-run-context">${runMetaLabel}</div>
+            <div class="header-line">
+                <span class="header-name">chunky.dad</span>
+                <span class="header-run-context">${runMetaLabel}</span>
+                <span class="header-counts"><span class="stat-value">${results.totalEvents}</span> found · <span class="stat-value">${results.bearEvents}</span> bear${results.duplicatesRemoved > 0 ? ` (−${results.duplicatesRemoved} dupes)` : ""} · <span class="stat-value">${results.calendarEvents}</span> calendar action${results.calendarEvents === 1 ? "" : "s"}${results.calendarEvents === 0 ? " (dry run)" : ""}</span>
                 ${runHealthBadgeHtml}
-            </h1>
-        </div>
-        <div class="header-controls">
-            <!-- Controls moved to a separate section below -->
-        </div>
-        <div class="stats">
-            <div class="stat">
-                <div class="stat-value">${results.totalEvents}</div>
-                <div class="stat-label">Total Events Found</div>
-            </div>
-            <div class="stat">
-                <div class="stat-value">${results.rawBearEvents || "N/A"}</div>
-                <div class="stat-label">Raw Bear Events</div>
-            </div>
-            <div class="stat">
-                <div class="stat-value">${results.bearEvents}</div>
-                <div class="stat-label">Final Bear Events${results.duplicatesRemoved > 0 ? ` (-${results.duplicatesRemoved} dupes)` : ""}</div>
-            </div>
-            <div class="stat">
-                <div class="stat-value">${results.calendarEvents}</div>
-                <div class="stat-label">Calendar Actions${results.calendarEvents === 0 ? " (dry run/preview mode)" : ""}</div>
             </div>
         </div>
     </div>
-    
-    <div class="controls-section" style="
-        background: var(--background-primary);
-        border-radius: 15px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: var(--card-shadow);
-    ">
-        <div class="controls-grid">
-            <div class="control-group">
-                <div class="control-label">Display Mode</div>
-                <div class="control-toggle">
-                    <span class="toggle-label">Pretty</span>
-                    <label class="modern-toggle">
-                        <input type="checkbox" id="displayToggle" onchange="toggleDisplayMode()">
-                        <span class="toggle-slider"></span>
-                    </label>
-                    <span class="toggle-label">Raw</span>
-                </div>
-            </div>
-            
-            <div class="control-group">
-                <div class="control-label">Images</div>
-                <div class="control-toggle">
-                    <span class="toggle-label">Hide</span>
-                    <label class="modern-toggle">
-                        <input type="checkbox" id="sfwToggle" onchange="toggleImages()" checked>
-                        <span class="toggle-slider"></span>
-                    </label>
-                    <span class="toggle-label">Show</span>
-                </div>
-            </div>
+
+    <!-- One compact controls bar (owner: "The buttons take up almost the
+         whole screen which is crazy"): the two toggle cards and the two
+         full-width slab buttons collapse into small inline controls. Same
+         ids and onclick handlers as before — only the chrome shrank. -->
+    <div class="controls-bar">
+        <label class="mini-toggle" title="Raw display mode"><input type="checkbox" id="displayToggle" onchange="toggleDisplayMode()"><span class="mini-toggle-label">Raw</span></label>
+        <label class="mini-toggle" title="Show images"><input type="checkbox" id="sfwToggle" onchange="toggleImages()" checked><span class="mini-toggle-label">Images</span></label>
+        <span class="controls-search">🔍<input type="text" id="searchInput" placeholder="Search events..." onkeyup="filterEvents()"><button onclick="clearSearch()" class="mini-btn mini-btn-quiet" title="Clear search">✕</button></span>
+        <div class="action-buttons">
+            <button onclick="copyRawOutput()" class="mini-btn" title="Copy raw output">📋 Raw</button>
+            <button onclick="exportAsJSON()" class="mini-btn" title="Copy JSON export">📄 JSON</button>
         </div>
     </div>
-    
-    <div class="controls-section" style="
-        background: var(--background-primary);
-        border-radius: 15px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-        border: 1px solid rgba(102, 126, 234, 0.1);
-        display: flex;
-        flex-wrap: wrap;
-        gap: 20px;
-        align-items: center;
-        justify-content: space-between;
-    ">
-        
-        <div class="search-container" style="
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-grow: 1;
-            max-width: 400px;
-        ">
-            <span style="font-weight: 500;">🔍</span>
-            <input type="text" id="searchInput" placeholder="Search events..." onkeyup="filterEvents()" style="
-                flex-grow: 1;
-                padding: 8px 12px;
-                border: 2px solid rgba(102, 126, 234, 0.2);
-                border-radius: 8px;
-                font-size: 14px;
-                outline: none;
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                font-family: var(--font-sans);
-                background: var(--background-primary);
-            " onfocus="this.style.borderColor='var(--primary-color)'; this.style.boxShadow='0 0 0 3px rgba(102, 126, 234, 0.1)'" 
-               onblur="this.style.borderColor='rgba(102, 126, 234, 0.2)'; this.style.boxShadow='none'">
-            <button onclick="clearSearch()" style="
-                padding: 6px 10px;
-                background: var(--background-light);
-                border: 1px solid rgba(102, 126, 234, 0.2);
-                border-radius: 6px;
-                font-size: 12px;
-                cursor: pointer;
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                font-family: var(--font-sans);
-                color: var(--text-primary);
-            " onmouseover="this.style.background='var(--primary-color)'; this.style.color='var(--text-inverse)'; this.style.transform='translateY(-1px)'" 
-               onmouseout="this.style.background='var(--background-light)'; this.style.color='var(--text-primary)'; this.style.transform='translateY(0)'">
-                Clear
-            </button>
-        </div>
-        
-        <div class="action-buttons" style="display: flex; gap: 10px;">
-            <button onclick="copyRawOutput()" style="
-                padding: 8px 16px;
-                background: var(--primary-color);
-                color: var(--text-inverse);
-                border: none;
-                border-radius: 8px;
-                font-size: 14px;
-                font-weight: 600;
-                cursor: pointer;
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-                font-family: var(--font-sans);
-            " onmouseover="this.style.background='var(--accent-color)'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 15px rgba(102, 126, 234, 0.4)'" 
-               onmouseout="this.style.background='var(--primary-color)'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(102, 126, 234, 0.3)'">
-                📋 Copy Raw Output
-            </button>
-            
-            <button onclick="exportAsJSON()" style="
-                padding: 8px 16px;
-                background: var(--secondary-color);
-                color: var(--text-inverse);
-                border: none;
-                border-radius: 8px;
-                font-size: 14px;
-                font-weight: 600;
-                cursor: pointer;
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
-                font-family: var(--font-sans);
-            " onmouseover="this.style.background='#ff5252'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 15px rgba(255, 107, 107, 0.4)'" 
-               onmouseout="this.style.background='var(--secondary-color)'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(255, 107, 107, 0.3)'">
-                📄 Export JSON
-            </button>
-        </div>
-    </div>
-    
+
     ${savedRunExecuteSectionHtml}
     ${view.pagerTopHtml}${
       view.newCards.length > 0
@@ -8564,6 +8360,20 @@ class ScriptableAdapter {
                     card.classList.remove('raw-mode');
                 }
             });
+            // Raw mode exists to read the debug JSON — pop the per-card
+            // debug expanders open so it is actually visible.
+            if (toggle && toggle.checked) {
+                document.querySelectorAll('details.event-card-debug').forEach(d => {
+                    d.open = true;
+                });
+            }
+        }
+
+        // Description clamp toggle (pure page JS, no bridge): the face
+        // description starts CSS-clamped to ~2 lines; tapping it expands,
+        // tapping again re-clamps.
+        function toggleDescClamp(el) {
+            try { el.classList.toggle('clamped'); } catch (ignore) {}
         }
         
         function toggleDiffView(button, safeEventId) {
@@ -8661,10 +8471,12 @@ class ScriptableAdapter {
             rawOutput += '🐻 BEAR EVENT SCRAPER - RAW OUTPUT\\n';
             rawOutput += '=' + '='.repeat(50) + '\\n\\n';
             
-            // Add summary stats
-            const totalEvents = document.querySelector('.stat-value').textContent;
-            const bearEvents = document.querySelectorAll('.stat-value')[1].textContent;
-            const calendarActions = document.querySelectorAll('.stat-value')[2].textContent;
+            // Add summary stats (compact header counts; defensive because
+            // the header can be reshaped without this copy path noticing)
+            const statValues = document.querySelectorAll('.stat-value');
+            const totalEvents = statValues[0] ? statValues[0].textContent : '?';
+            const bearEvents = statValues[1] ? statValues[1].textContent : '?';
+            const calendarActions = statValues[2] ? statValues[2].textContent : '?';
             
             rawOutput += \`📊 SUMMARY:\\\\n\`;
             rawOutput += \`Total Events: \${totalEvents}\\\\n\`;
@@ -8916,12 +8728,13 @@ class ScriptableAdapter {
         function exportAsJSON() {
             prettyPrintCardPayloads();
             const eventCards = document.querySelectorAll('.event-card');
+            const exportStats = document.querySelectorAll('.stat-value');
             const exportData = {
                 timestamp: new Date().toISOString(),
                 summary: {
-                    totalEvents: document.querySelector('.stat-value').textContent,
-                    bearEvents: document.querySelectorAll('.stat-value')[1].textContent,
-                    calendarActions: document.querySelectorAll('.stat-value')[2].textContent
+                    totalEvents: exportStats[0] ? exportStats[0].textContent : '?',
+                    bearEvents: exportStats[1] ? exportStats[1].textContent : '?',
+                    calendarActions: exportStats[2] ? exportStats[2].textContent : '?'
                 },
                 events: []
             };
@@ -10496,8 +10309,12 @@ class ScriptableAdapter {
     const builderUrl = this.buildEventBuilderUrl(event);
     if (builderUrl) {
       const id = this.registerMapVerifyUrl(builderUrl);
+      // Icon-scale (owner: "Event builder top right? Or next to bear
+      // verdict?") — the row renders beside the verdict pill on the card
+      // face, so the link is one small 🛠 instead of a labelled row. Same
+      // class, same bridge handler, same registry.
       parts.push(
-        `<a href="#" onclick="return openMapVerify(this)" data-map-url-id="${id}" class="event-builder-link" style="color:var(--primary-color); text-decoration:none; font-size:12px;">🛠 Event Builder</a>`,
+        `<a href="#" onclick="return openMapVerify(this)" data-map-url-id="${id}" class="event-builder-link" title="Open in Event Builder" aria-label="Open in Event Builder" style="color:var(--primary-color); text-decoration:none; font-size:15px;">🛠</a>`,
       );
     }
     if (SharedCore.isRecurringSeriesEvent(event)) {
@@ -10516,7 +10333,126 @@ class ScriptableAdapter {
       }
     }
     if (parts.length === 0) return "";
-    return `<div class="event-actions-row" style="display:flex; gap:12px; align-items:center; margin:6px 0;">${parts.join("")}</div>`;
+    return `<div class="event-actions-row" style="display:flex; gap:12px; align-items:center;">${parts.join("")}</div>`;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Face link chips (owner: "Instagram, tickets, etc., links are side by side?
+  // And show the actual link name? Plus btw we're missing some links like
+  // gmaps"). One compact row of chips — website / tickets / instagram /
+  // facebook / gmaps — each labelled with something a human recognises
+  // (registrable domain, @handle, "maps") and each riding the SAME
+  // openMapVerify bridge as every other card link (a plain https href would
+  // navigate the results WebView away).
+  // ---------------------------------------------------------------------------
+
+  // "beefmince.com" from "https://www.beefmince.com/events" — hostname with
+  // the www. prefix dropped, folded to its registrable tail (last two labels,
+  // three when the second-to-last is a known second-level like co.uk).
+  registrableDomainFromUrl(url) {
+    const text = typeof url === "string" ? url.trim() : "";
+    const match = text.match(/^https?:\/\/([^/?#]+)/i);
+    if (!match) return "";
+    const host = match[1].replace(/^www\./i, "").toLowerCase();
+    const parts = host.split(".").filter(Boolean);
+    if (parts.length <= 2) return host;
+    const secondLevel = new Set(["co", "com", "org", "net", "ac", "gov", "edu"]);
+    if (
+      parts[parts.length - 1].length === 2 &&
+      secondLevel.has(parts[parts.length - 2])
+    ) {
+      return parts.slice(-3).join(".");
+    }
+    return parts.slice(-2).join(".");
+  }
+
+  // Chip label: @handle for instagram, page name for facebook, "maps" for
+  // gmaps, registrable domain for everything else. Falls back to the domain
+  // whenever a prettier label cannot be derived.
+  formatLinkChipLabel(kind, url) {
+    if (kind === "gmaps") return "maps";
+    const text = typeof url === "string" ? url.trim() : "";
+    const match = text.match(/^https?:\/\/([^/?#]+)([^?#]*)/i);
+    const host = match ? match[1].replace(/^www\./i, "").toLowerCase() : "";
+    const pathSegments = match
+      ? (match[2] || "").split("/").filter(Boolean)
+      : [];
+    if (kind === "instagram" && /(^|\.)instagram\.com$/.test(host)) {
+      const handle = pathSegments[0];
+      if (
+        handle &&
+        !["p", "reel", "reels", "explore", "stories"].includes(
+          handle.toLowerCase(),
+        )
+      ) {
+        return `@${handle}`;
+      }
+    }
+    if (kind === "facebook" && /(^|\.)facebook\.com$/.test(host)) {
+      const segment = pathSegments[0];
+      if (
+        segment &&
+        !["events", "groups", "pages", "profile.php", "share", "people"].includes(
+          segment.toLowerCase(),
+        )
+      ) {
+        return segment;
+      }
+      return "facebook";
+    }
+    return this.registrableDomainFromUrl(text) || text;
+  }
+
+  // Instagram is sometimes stored as a bare "@handle" — build the profile
+  // URL so the chip still links out. Real URLs pass through untouched.
+  normalizeInstagramChipUrl(value) {
+    const text = typeof value === "string" ? value.trim() : "";
+    if (!text) return "";
+    if (this.isSafeExternalUrl(text)) return text;
+    const handle = text.replace(/^@/, "");
+    if (/^[A-Za-z0-9._]+$/.test(handle)) {
+      return `https://www.instagram.com/${handle}`;
+    }
+    return "";
+  }
+
+  buildEventLinksRowHtml(event) {
+    if (!event || typeof event !== "object") return "";
+    const chips = [];
+    const addChip = (kind, icon, url, label) => {
+      if (!this.isSafeExternalUrl(url) || !label) return;
+      const id = this.registerMapVerifyUrl(url);
+      chips.push(
+        `<a href="#" onclick="return openMapVerify(this)" data-map-url-id="${id}" class="event-link-chip link-chip-${kind}" title="${this.escapeHtml(url)}">${icon} ${this.escapeHtml(label)}</a>`,
+      );
+    };
+    const website = event.website || event.url;
+    addChip("website", "🌐", website, this.formatLinkChipLabel("website", website));
+    addChip(
+      "tickets",
+      "🎟️",
+      event.ticketUrl,
+      this.formatLinkChipLabel("tickets", event.ticketUrl),
+    );
+    const instagramUrl = this.normalizeInstagramChipUrl(event.instagram);
+    addChip(
+      "instagram",
+      "📸",
+      instagramUrl,
+      this.formatLinkChipLabel("instagram", instagramUrl),
+    );
+    addChip(
+      "facebook",
+      "👥",
+      event.facebook,
+      this.formatLinkChipLabel("facebook", event.facebook),
+    );
+    const gmapsUrl = [event.gmaps, event.googleMapsLink].find((url) =>
+      this.isSafeExternalUrl(url),
+    );
+    addChip("gmaps", "🗺️", gmapsUrl, "maps");
+    if (chips.length === 0) return "";
+    return `<div class="event-links-row">${chips.join("")}</div>`;
   }
 
   // Open one registered verify link in Safari, on top of the results sheet.
@@ -11674,17 +11610,18 @@ class ScriptableAdapter {
     // Event Builder prefill link (every card) + ICS export (recurring cards).
     const eventActionsRow = this.buildEventCardActionsHtml(event);
 
-    // ----- Dense default face (wave 7) ------------------------------------
+    // ----- Dense default face (wave 7, reorganized round 3) ---------------
     // The always-visible face of the card, everything a review needs with no
     // tap (owner feedback #4/#6: "I don't like pressing 'see more' on every
     // fucking event", "show more with less by default"): small thumbnail,
     // badges + title, the FULL 📅 date line (start – end, end date only when
     // it falls on a different day, "(no end listed)" when no real end
     // exists), and one compact 📍 route line (bar • short address • pin
-    // link). Secondary material — merge diff, provenance, notes preview,
-    // debug JSON — stays behind the <details class="event-card-details">
-    // expander (feedback #7: SOME things may be behind a tap, not everything).
-    // ONE date string, used verbatim on the face and in the expander row.
+    // link). Round 3 dissolved the "Details" expander: the clamped
+    // description, link chips, merge comparison and notes preview live on
+    // the card body; only debug material (provenance, raw JSON, field
+    // counts, UTC row) sits behind the 🐞 Debug expander.
+    // ONE date string, used verbatim on the face.
     const dateLineHtml = `${dateStr} ${timeStr}${
       hasRealEnd
         ? ` - ${endDateStr ? `${endDateStr} ` : ""}${endTimeStr}`
@@ -11806,6 +11743,165 @@ class ScriptableAdapter {
             </div>`
         : "";
 
+    // Description ON the face, clamped to ~2 lines by CSS; a tap toggles the
+    // clamp via in-page toggleDescClamp (plain page JS, no native bridge —
+    // an expand/collapse never leaves the page).
+    const descriptionHtml = event.description
+      ? `<div class="event-desc clamped" onclick="toggleDescClamp(this)">${this.escapeHtml(event.description)}</div>`
+      : "";
+    const teaHtml = event.tea
+      ? `
+                <div class="event-detail" style="background: #e8f5e9; padding: 8px; border-radius: 5px; margin-top: 8px;">
+                    <span>☕</span>
+                    <span style="font-style: italic;">${this.escapeHtml(event.tea)}</span>
+                </div>`
+      : "";
+    // Side-by-side link chips with meaningful labels (registrable domain /
+    // @handle / "maps") replacing the stacked one-per-row link list — and
+    // gmaps joins the row (owner: "we're missing some links like gmaps").
+    const linksRowHtml = this.buildEventLinksRowHtml(event);
+    // Calendar Notes Preview in the SAME .card-subsection container style
+    // as the merge comparison (owner: "it's like they have an extra
+    // container around them").
+    const notesPreviewHtml = notes
+      ? `
+            <details class="card-subsection notes-preview-subsection">
+                <summary>📝 Calendar Notes Preview</summary>
+                <div class="notes-preview">
+                    ${(() => {
+                      // ONE FORMAT (owner feedback #5): the notes
+                      // preview renders through the same
+                      // field | value | source | reason row builder
+                      // the merge table and provenance section use.
+                      const rowsHtml = notes
+                        .split("\n")
+                        .filter((line) => line.trim() !== "")
+                        .map((line) => {
+                          const colonIndex = line.indexOf(":");
+                          if (colonIndex > 0) {
+                            // Key-value metadata line
+                            const key = line.substring(0, colonIndex).trim();
+                            const value = line
+                              .substring(colonIndex + 1)
+                              .trim();
+                            return this.buildFieldRowHtml({
+                              fieldHtml: `<strong>${this.escapeHtml(key)}</strong>`,
+                              valueHtml: this.formatFieldRowValueHtml(value),
+                              sourceHtml: "calendar notes",
+                            });
+                          }
+                          // Freeform description line
+                          return this.buildFieldRowHtml({
+                            valueHtml: this.formatFieldRowValueHtml(line),
+                            sourceHtml: "calendar notes",
+                          });
+                        })
+                        .join("");
+                      return (
+                        this.buildFieldRowsTableHtml(rowsHtml) ||
+                        "<em>No notes</em>"
+                      );
+                    })()}
+                </div>
+            </details>`
+      : "";
+    // Merge comparison as a .card-subsection (no stray divider line above
+    // it), with a TRUTHFUL diff-state chip: "changed" means the merge left
+    // the field different from what the calendar already had —
+    // countChangedMergeFields counts the SAME records the table renders and
+    // the line view collapses by, so chip, table and line view can never
+    // disagree (the old chip compared scraper vs calendar and said "Has
+    // changes" over a table of "23 fields unchanged").
+    const showComparison = !!(
+      event._original && this.normalizeIntentAction(event) !== "new"
+    );
+    let comparisonHtml = "";
+    let fieldCountsLine = "";
+    if (showComparison) {
+      const diffChip =
+        changedFieldCount === null
+          ? ""
+          : changedFieldCount === 0
+            ? '<span class="merge-diff-chip merge-diff-none">• no changes</span>'
+            : `<span class="merge-diff-chip merge-diff-changed">• ${changedFieldCount} changed</span>`;
+      const eventId =
+        event.key || `event-${Math.random().toString(36).substr(2, 9)}`;
+      // Decode HTML entities before creating safe ID
+      const decodedEventId = eventId
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'");
+      const safeEventId = decodedEventId.replace(/[^a-zA-Z0-9\-_]/g, "_"); // Create safe ID for DOM elements
+      // The "N fields | N fields | N fields" counts line is debug material,
+      // not review material — it renders in the debug expander below.
+      fieldCountsLine = `
+                <div class="debug-field-counts">
+                    📊 <strong>Scraper:</strong> ${Object.keys(event._original?.scraper || {}).length} fields |
+                    📅 <strong>Calendar:</strong> ${Object.keys(event._original?.calendar || {}).length} fields |
+                    🔀 <strong>Merged:</strong> ${Object.keys(event._original?.merged || {}).length} fields
+                </div>`;
+      comparisonHtml = `
+            <div class="card-subsection merge-comparison-subsection">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; cursor: pointer; flex: 1;"
+                         onclick="toggleComparisonSection('${safeEventId}')">
+                        <h4 class="card-subsection-title" style="margin: 0; font-size: 14px;">
+                            <span id="expand-icon-${safeEventId}" style="display: inline-block; width: 20px; transition: transform 0.2s;">▶</span>
+                            📊 ${event._action === "conflict" ? "Conflict Resolution" : "Merge Comparison"}
+                            ${diffChip}
+                        </h4>
+                    </div>
+                    <button onclick="toggleDiffView(this, '${safeEventId}');"
+                            style="padding: 4px 10px; font-size: 11px; background: var(--primary-color); color: var(--text-inverse); border: none; border-radius: 8px; cursor: pointer; font-family: var(--font-sans); font-weight: 500; display: none;"
+                            id="diff-toggle-${safeEventId}">
+                        Switch to Line View
+                    </button>
+                </div>
+
+                <div id="comparison-content-${safeEventId}" style="display: none;">
+                <!-- Table view (default) -->
+                <div id="table-view-${safeEventId}" class="diff-view" style="display: block; padding: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <div style="font-size: 12px; color: #666;">
+                            <strong>📊 Field-by-Field Comparison</strong>
+                            <div style="font-size: 10px; margin-top: 2px; color: #888;">
+                                Shows how each field will be merged between existing and new event data
+                            </div>
+                        </div>
+                        <button onclick="copyEventJSON(this)" class="copy-json-btn">
+                            📋 Copy JSON
+                        </button>
+                    </div>
+                    ${this.buildFieldRowsTableHtml(
+                      this.claimMergeDiffBudget(
+                        "field-by-field comparison",
+                        this.generateComparisonRowsCompressed(event),
+                        event,
+                        { asTableRow: true },
+                      ),
+                    )}
+                </div>
+
+                <!-- Line view (hidden by default) -->
+                <div id="line-view-${safeEventId}" class="diff-view" style="display: none; padding: 10px;">
+                    <div style="margin-bottom: 12px;">
+                        <strong style="font-size: 12px; color: #666;">📝 Line-by-Line Diff</strong>
+                        <div style="font-size: 10px; margin-top: 2px; color: #888;">
+                            Git-style diff showing additions (+), deletions (-), and unchanged (=) fields
+                        </div>
+                    </div>
+                    ${this.claimMergeDiffBudget(
+                      "line-by-line diff",
+                      this.generateLineDiffView(event),
+                      event,
+                    )}
+                </div>
+                </div>
+            </div>`;
+    }
+
     let html = `
         <div class="event-card${isDroppedCard ? " bear-dropped-card" : ""}">
             <div class="event-headline">
@@ -11815,264 +11911,28 @@ class ScriptableAdapter {
                     <div class="event-headline-body">
                         <div class="event-title">${this.escapeHtml(event.title || event.name)}</div>
                         <div class="event-headline-meta">
-                            <span class="event-headline-date">📅 ${dateLineHtml}</span>
+                            <span class="event-headline-date">📅 ${dateLineHtml}</span>${
+                              event.price
+                                ? ` <span class="event-headline-price">💵 ${this.escapeHtml(event.price)}</span>`
+                                : ""
+                            }
                         </div>
                         ${routeLineHtml}
                     </div>
                 </div>
             </div>
-            ${bearVerdictRow}
-            <details class="event-card-details">
-            <summary class="event-card-details-summary">Details</summary>
-            ${actionNote}${cadenceHintNote}
-            <!-- Main Event Info. The face already carries venue/address/pin
-                 (as bridge links), the date line, and the thumbnail — none of
-                 them repeat here (owner: "I don't want to duplicate it in the
-                 details"). -->
+            <!-- Face controls: verdict pill + event-builder icon side by side
+                 (owner: "Event builder top right? Or next to bear verdict?").
+                 The details expander is GONE — everything below is the main
+                 section of the card. -->
+            <div class="event-face-controls">${bearVerdictRow}${eventActionsRow}</div>
             <div class="event-details">
-                ${eventActionsRow}
-                <div class="event-detail" style="font-size: 12px; color: #666; margin-left: 20px;">
-                    <span>🌍</span>
-                    <span>UTC: ${utcTimeStr}${
-                      endUtcTimeStr
-                        ? ` - ${endUtcDateStr ? `${endUtcDateStr} ` : ""}${endUtcTimeStr}`
-                        : ' <span class="no-end-note">(no end listed)</span>'
-                    }</span>
-                </div>
-                <div class="event-detail">
-                    <span>📱</span>
-                    <span>${this.escapeHtml(calendarName)}</span>
-                </div>
-                ${
-                  event.description
-                    ? `
-                    <div class=\"event-detail event-description\">
-                        <span>📝</span>
-                        <span>${this.escapeHtml(event.description)}</span>
-                    </div>
-                `
-                    : ""
-                }
-                ${
-                  event.tea
-                    ? `
-                    <div class="event-detail" style="background: #e8f5e9; padding: 8px; border-radius: 5px; margin-top: 8px;">
-                        <span>☕</span>
-                        <span style="font-style: italic;">${this.escapeHtml(event.tea)}</span>
-                    </div>
-                `
-                    : ""
-                }
-                ${
-                  event.instagram
-                    ? `
-                    <div class="event-detail">
-                        <span>📸</span>
-                        <span><a href="${this.escapeHtml(event.instagram)}" target="_blank" rel="noopener" style="color: var(--primary-color);">Instagram</a></span>
-                    </div>
-                `
-                    : ""
-                }
-                ${
-                  event.facebook
-                    ? `
-                    <div class="event-detail">
-                        <span>👥</span>
-                        <span><a href="${this.escapeHtml(event.facebook)}" target="_blank" rel="noopener" style="color: var(--primary-color);">Facebook</a></span>
-                    </div>
-                `
-                    : ""
-                }
-                ${
-                  event.ticketUrl
-                    ? `
-                    <div class="event-detail">
-                        <span>🎟️</span>
-                        <span><a href="${this.escapeHtml(event.ticketUrl)}" target="_blank" rel="noopener" style="color: var(--primary-color);">Tickets</a></span>
-                    </div>
-                `
-                    : ""
-                }
-                ${
-                  event.website || event.url
-                    ? `
-                    <div class="event-detail">
-                        <span>🌐</span>
-                        <span><a href="${this.escapeHtml(event.website || event.url)}" target="_blank" rel="noopener" style="color: var(--primary-color);">Website</a></span>
-                    </div>
-                `
-                    : ""
-                }
-                ${
-                  event.googleMapsLink
-                    ? `
-                    <div class="event-detail">
-                        <span>🗺️</span>
-                        <span><a href="${this.escapeHtml(event.googleMapsLink)}" target="_blank" rel="noopener" style="color: var(--primary-color);">Google Maps</a></span>
-                    </div>
-                `
-                    : ""
-                }
-                ${
-                  event.price
-                    ? `
-                    <div class="event-detail">
-                        <span>💵</span>
-                        <span>${this.escapeHtml(event.price)}</span>
-                    </div>
-                `
-                    : ""
-                }
-                
-                <!-- Calendar Notes Preview -->
-                ${
-                  notes
-                    ? `
-                    <details style="margin-top: 10px;">
-                        <summary style="cursor: pointer; font-size: 13px; color: #007aff; padding: 5px;">📝 Calendar Notes Preview</summary>
-                        <div class="notes-preview">
-                            ${(() => {
-                              // ONE FORMAT (owner feedback #5): the notes
-                              // preview renders through the same
-                              // field | value | source | reason row builder
-                              // the merge table and provenance section use.
-                              const rowsHtml = notes
-                                .split("\n")
-                                .filter((line) => line.trim() !== "")
-                                .map((line) => {
-                                  const colonIndex = line.indexOf(":");
-                                  if (colonIndex > 0) {
-                                    // Key-value metadata line
-                                    const key = line
-                                      .substring(0, colonIndex)
-                                      .trim();
-                                    const value = line
-                                      .substring(colonIndex + 1)
-                                      .trim();
-                                    return this.buildFieldRowHtml({
-                                      fieldHtml: `<strong>${this.escapeHtml(key)}</strong>`,
-                                      valueHtml:
-                                        this.formatFieldRowValueHtml(value),
-                                      sourceHtml: "calendar notes",
-                                    });
-                                  }
-                                  // Freeform description line
-                                  return this.buildFieldRowHtml({
-                                    valueHtml:
-                                      this.formatFieldRowValueHtml(line),
-                                    sourceHtml: "calendar notes",
-                                  });
-                                })
-                                .join("");
-                              return (
-                                this.buildFieldRowsTableHtml(rowsHtml) ||
-                                "<em>No notes</em>"
-                              );
-                            })()}
-                        </div>
-                    </details>
-                `
-                    : ""
-                }
-            </div>
-            
-            <!-- Show comparison for all non-new events with original data -->
-            ${
-              event._original && this.normalizeIntentAction(event) !== "new"
-                ? (() => {
-                    const hasDifferences = this.hasEventDifferences(event);
-                    const eventId =
-                      event.key ||
-                      `event-${Math.random().toString(36).substr(2, 9)}`;
-                    // Decode HTML entities before creating safe ID
-                    const decodedEventId = eventId
-                      .replace(/&amp;/g, "&")
-                      .replace(/&lt;/g, "<")
-                      .replace(/&gt;/g, ">")
-                      .replace(/&quot;/g, '"')
-                      .replace(/&#39;/g, "'");
-                    const safeEventId = decodedEventId.replace(
-                      /[^a-zA-Z0-9\-_]/g,
-                      "_",
-                    ); // Create safe ID for DOM elements
-                    const isExpanded = false; // Start collapsed; expand on click
-
-                    return `
-                <div style="margin-top: 15px; border-top: 1px solid #e0e0e0; padding-top: 15px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <div style="display: flex; align-items: center; cursor: pointer; flex: 1;"
-                             onclick="toggleComparisonSection('${safeEventId}')">
-                            <h4 style="margin: 0; font-size: 14px;">
-                                <span id="expand-icon-${safeEventId}" style="display: inline-block; width: 20px; transition: transform 0.2s;">
-                                    ${isExpanded ? "▼" : "▶"}
-                                </span>
-                                📊 ${event._action === "conflict" ? "Conflict Resolution" : "Merge Comparison"}
-                                ${hasDifferences ? '<span style="color: #ff9500; font-size: 12px; margin-left: 8px;">• Has changes</span>' : ""}
-                            </h4>
-                        </div>
-                        <button onclick="toggleDiffView(this, '${safeEventId}');" 
-                                style="padding: 4px 10px; font-size: 11px; background: var(--primary-color); color: var(--text-inverse); border: none; border-radius: 8px; cursor: pointer; font-family: var(--font-sans); font-weight: 500; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3); ${!isExpanded ? "display: none;" : ""}"
-                                id="diff-toggle-${safeEventId}">
-                            Switch to Line View
-                        </button>
-                    </div>
-                    
-                    <div id="comparison-content-${safeEventId}" style="${!isExpanded ? "display: none;" : ""}">
-                    <!-- Simple three-object comparison -->
-                    <div style="margin-bottom: 10px;">
-                        <div style="font-size: 12px; color: #666; margin-bottom: 5px;">
-                            📊 <strong>Scraper:</strong> ${Object.keys(event._original?.scraper || {}).length} fields |
-                            📅 <strong>Calendar:</strong> ${Object.keys(event._original?.calendar || {}).length} fields |
-                            🔀 <strong>Merged:</strong> ${Object.keys(event._original?.merged || {}).length} fields
-                        </div>
-                    </div>
-                    
-                    <!-- Table view (default) -->
-                    <div id="table-view-${safeEventId}" class="diff-view" style="display: block; padding: 10px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                            <div style="font-size: 12px; color: #666;">
-                                <strong>📊 Field-by-Field Comparison</strong>
-                                <div style="font-size: 10px; margin-top: 2px; color: #888;">
-                                    Shows how each field will be merged between existing and new event data
-                                </div>
-                            </div>
-                            <button onclick="copyEventJSON(this)" class="copy-json-btn">
-                                📋 Copy JSON
-                            </button>
-                        </div>
-                        ${this.buildFieldRowsTableHtml(
-                          this.claimMergeDiffBudget(
-                            "field-by-field comparison",
-                            this.generateComparisonRowsCompressed(event),
-                            event,
-                            { asTableRow: true },
-                          ),
-                        )}
-                    </div>
-                    
-                    <!-- Line view (hidden by default) -->
-                    <div id="line-view-${safeEventId}" class="diff-view" style="display: none; padding: 10px;">
-                        <div style="margin-bottom: 12px;">
-                            <strong style="font-size: 12px; color: #666;">📝 Line-by-Line Diff</strong>
-                            <div style="font-size: 10px; margin-top: 2px; color: #888;">
-                                Git-style diff showing additions (+), deletions (-), and unchanged (=) fields
-                            </div>
-                        </div>
-                        ${this.claimMergeDiffBudget(
-                          "line-by-line diff",
-                          this.generateLineDiffView(event),
-                          event,
-                        )}
-                    </div>
-                    </div>
-                </div>
-                `;
-                  })()
-                : ""
-            }
-
-            <!-- Per-event provenance (field origins + export-issue button) -->
-            ${this.buildEventProvenanceHtml(event, runInfo)}
+            ${actionNote}${cadenceHintNote}
+            ${descriptionHtml}
+            ${teaHtml}
+            ${linksRowHtml}
+            ${comparisonHtml}
+            ${notesPreviewHtml}
 
             <!-- Simplified metadata -->
             ${
@@ -12130,7 +11990,28 @@ class ScriptableAdapter {
                         `
                 : ""
             }
-            
+            </div>
+
+            <!-- Debug expander: UTC verification, calendar target, field
+                 counts, provenance (owner: "I don't understand what
+                 provenance is" — it is debug material now) and the raw JSON.
+                 raw-json-details keeps the expander visible in Raw mode. -->
+            <details class="event-card-debug raw-json-details">
+            <summary class="event-card-debug-summary">🐞 Debug</summary>
+            <div class="event-detail" style="font-size: 12px; color: #666;">
+                <span>🌍</span>
+                <span>UTC: ${utcTimeStr}${
+                  endUtcTimeStr
+                    ? ` - ${endUtcDateStr ? `${endUtcDateStr} ` : ""}${endUtcTimeStr}`
+                    : ' <span class="no-end-note">(no end listed)</span>'
+                }</span>
+            </div>
+            <div class="event-detail">
+                <span>📱</span>
+                <span>${this.escapeHtml(calendarName)}</span>
+            </div>
+            ${fieldCountsLine}
+            ${this.buildEventProvenanceHtml(event, runInfo)}
             <div class="raw-display">
                 ${evidenceBlock}
                 ${(() => {
@@ -13819,35 +13700,15 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
   }
 
   // Check if event has actual differences to show
+  // TRUTHFUL diff state (owner's BEEFMINCE Trunk Den paste: chip said
+  // "Has changes" over a table of "23 fields unchanged"). "Changed" means
+  // the MERGE left a field different from what the CALENDAR already had —
+  // not that the scraper saw something different and the merge ignored it.
+  // Delegates to the same per-field records the comparison table renders,
+  // so the chip and the table can never disagree.
   hasEventDifferences(event) {
-    if (!event._original) return false;
-
-    // Get all fields used for comparison display (includes core fields beyond notes)
-    const fieldsToCheck = this.getFieldsForComparison(event);
-
-    for (const field of fieldsToCheck) {
-      // Skip notes field as it's a computed field that combines other fields
-      if (field === "notes") continue;
-
-      let newValue = event._original.scraper[field] || "";
-      let existingValue = event._original.calendar?.[field] || "";
-
-      // Skip empty fields
-      if (!newValue && !existingValue) continue;
-
-      const isDateField = field.toLowerCase().includes("date");
-
-      // Check for differences (date-aware to avoid timezone noise)
-      if (isDateField) {
-        if (!this.datesEqualForDisplay(existingValue, newValue)) {
-          return true;
-        }
-      } else if (newValue !== existingValue) {
-        return true;
-      }
-    }
-
-    return false;
+    const changed = this.countChangedMergeFields(event);
+    return changed === null ? false : changed > 0;
   }
 
   // Get all fields that should be compared/displayed - check ALL fields except underscore fields and functions
@@ -14076,6 +13937,62 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     return records.filter((record) => record.changed).length;
   }
 
+  // Identity for DISPLAY only. Strict === was reporting startDate/endDate
+  // as CLOBBERED on every merge even when nothing changed: those values are
+  // Date objects (or a Date on one side and an ISO string on the other),
+  // and two Dates naming the same instant are never ===. Mirrors
+  // SharedCore.mergeValuesEqualForTracking. Shared by the comparison table,
+  // the line diff view, and the diff-state chip so all three judge "same"
+  // identically.
+  mergeValuesLookIdentical(a, b) {
+    if (a === b) return true;
+    const toMs = (value) => {
+      if (value instanceof Date) return value.getTime();
+      if (typeof value === "string") {
+        const parsed = Date.parse(value);
+        return Number.isNaN(parsed) ? null : parsed;
+      }
+      return null;
+    };
+    if (a instanceof Date || b instanceof Date) {
+      const aMs = toMs(a);
+      const bMs = toMs(b);
+      return aMs !== null && aMs === bMs;
+    }
+    return false;
+  }
+
+  // No-op detection: the merge left this field as the calendar already had
+  // it. Date-aware via mergeValuesLookIdentical, empty-aware
+  // (undefined/null/"" are all "nothing"), and object-aware (JSON-equal).
+  // Anything unclear counts as changed — better a superfluous row than a
+  // hidden change. ONE definition for the table view, the line view and the
+  // chip.
+  mergeRowIsNoop(finalValue, existingValue) {
+    const isEmptyish = (value) =>
+      value === undefined || value === null || value === "";
+    const valuesJsonEqual = (a, b) => {
+      if (
+        typeof a !== "object" ||
+        a === null ||
+        typeof b !== "object" ||
+        b === null
+      ) {
+        return false;
+      }
+      try {
+        return JSON.stringify(a) === JSON.stringify(b);
+      } catch (error) {
+        return false;
+      }
+    };
+    return (
+      this.mergeValuesLookIdentical(finalValue, existingValue) ||
+      (isEmptyish(finalValue) && isEmptyish(existingValue)) ||
+      valuesJsonEqual(finalValue, existingValue)
+    );
+  }
+
   // One record per comparison field: { field, changed, html }. `changed`
   // means the merge left the field DIFFERENT from what the calendar already
   // had (added/clobbered/cleared/rewrote); kept-existing and same-value
@@ -14214,29 +14131,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         return i;
       })();
 
-      // Identity for DISPLAY only. Strict === was reporting startDate/endDate
-      // as CLOBBERED on every merge even when nothing changed: those values are
-      // Date objects (or a Date on one side and an ISO string on the other),
-      // and two Dates naming the same instant are never ===. Mirrors
-      // SharedCore.mergeValuesEqualForTracking, which already fixed the same
-      // bug for the merge LOG line but was never applied to this table.
-      const mergeValuesLookIdentical = (a, b) => {
-        if (a === b) return true;
-        const toMs = (value) => {
-          if (value instanceof Date) return value.getTime();
-          if (typeof value === "string") {
-            const parsed = Date.parse(value);
-            return Number.isNaN(parsed) ? null : parsed;
-          }
-          return null;
-        };
-        if (a instanceof Date || b instanceof Date) {
-          const aMs = toMs(a);
-          const bMs = toMs(b);
-          return aMs !== null && aMs === bMs;
-        }
-        return false;
-      };
+      // Identity for DISPLAY only — see the mergeValuesLookIdentical method
+      // (shared with the line view and the diff-state chip).
+      const mergeValuesLookIdentical = (a, b) =>
+        this.mergeValuesLookIdentical(a, b);
 
       // The merge pipeline records WHY each contested field resolved the way
       // it did (_mergeDecisions: deterministic rung 🔒 / calendar stickiness
@@ -14450,32 +14348,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         }
       }
 
-      // No-op detection for the compressed view: the merge left this field
-      // as the calendar already had it. Date-aware via
-      // mergeValuesLookIdentical, empty-aware (undefined/null/"" are all
-      // "nothing"), and object-aware (JSON-equal). Anything unclear counts
-      // as changed — better a superfluous row than a hidden change.
-      const isEmptyish = (value) =>
-        value === undefined || value === null || value === "";
-      const valuesJsonEqual = (a, b) => {
-        if (
-          typeof a !== "object" ||
-          a === null ||
-          typeof b !== "object" ||
-          b === null
-        ) {
-          return false;
-        }
-        try {
-          return JSON.stringify(a) === JSON.stringify(b);
-        } catch (error) {
-          return false;
-        }
-      };
-      const rowIsNoop =
-        mergeValuesLookIdentical(finalValue, existingValue) ||
-        (isEmptyish(finalValue) && isEmptyish(existingValue)) ||
-        valuesJsonEqual(finalValue, existingValue);
+      // No-op detection for the compressed view — the shared mergeRowIsNoop
+      // (one definition for the table view, the line view and the chip).
+      const rowIsNoop = this.mergeRowIsNoop(finalValue, existingValue);
 
       rows.push({
         field,
@@ -14519,31 +14394,44 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     return `${lead}${this.escapeHtml(visible)}...<span class="cmp-more"> [${str.length} chars total — 📋 Copy JSON for the full value]</span>`;
   }
 
-  // Generate line-by-line diff view
+  // Generate line-by-line diff view.
+  //
+  // TRUTHFUL like the table view (owner's BEEFMINCE paste showed this view
+  // still listing every "same in both"/"kept existing"/"existing, unchanged"
+  // row): fields whose merged value equals the calendar value — judged by
+  // the SAME mergeRowIsNoop the table and the chip use — collapse into ONE
+  // "N fields unchanged — field, field, …" summary line. Only real diffs
+  // render as +/−/~ entries.
   generateLineDiffView(event) {
     if (!event._original) return "<p>No comparison data available</p>";
 
     // Use the same field logic as comparison (includes core fields not in notes)
     const fieldsToCompare = this.getFieldsForComparison(event);
-    let html =
-      "<div style=\"font-family: 'SF Mono', Monaco, 'Courier New', monospace; font-size: 12px; background: var(--background-primary); padding: 12px; border-radius: 8px; line-height: 1.6; color: var(--text-primary);\">";
+    const changedBlocks = [];
+    const noopFields = [];
 
-    fieldsToCompare.forEach((field, index) => {
+    fieldsToCompare.forEach((field) => {
       // Skip notes field as it's a computed field that combines other fields
       // This makes the comparison confusing and it's often broken
       if (field === "notes") return;
 
-      let newValue = event._original.scraper[field] || "";
-      let existingValue = event._original.calendar?.[field] || "";
-      let finalValue = event[field] || "";
-      // Fix: Use _fieldPriorities instead of _fieldMergeStrategies
-      const strategy =
-        event._fieldPriorities?.[field]?.merge ||
-        event._fieldMergeStrategies?.[field] ||
-        "preserve";
+      const newValue = event._original.scraper?.[field];
+      const existingValue = event._original.calendar?.[field];
+      const finalValue = event[field];
 
-      // Skip if both are empty and no final value
-      if (!newValue && !existingValue && !finalValue) return;
+      const isEmptyish = (value) =>
+        value === undefined || value === null || value === "";
+      // Nothing anywhere — not even a collapsed-summary entry.
+      if (isEmptyish(newValue) && isEmptyish(existingValue) && isEmptyish(finalValue)) {
+        return;
+      }
+
+      // ONE no-op definition with the table view and the chip: the merge
+      // left this field as the calendar already had it.
+      if (this.mergeRowIsNoop(finalValue, existingValue)) {
+        noopFields.push(field);
+        return;
+      }
 
       // Format dates
       const formatValue = (val) => {
@@ -14563,12 +14451,17 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         return val.toString();
       };
 
-      // First character at which the two sides diverge — renderBoundedDiffValue
-      // centres its window there, so a replaced 4 KB description shows the
-      // part that actually changed instead of two identical opening lines.
+      const existingText = formatValue(existingValue);
+      const scrapedText = formatValue(newValue);
+      const finalText = formatValue(finalValue);
+
+      // First character at which the calendar and the merged result diverge
+      // — renderBoundedDiffValue centres its window there, so a replaced
+      // 4 KB description shows the part that actually changed instead of
+      // two identical opening lines.
       const diffAnchor = (() => {
-        const a = formatValue(existingValue);
-        const b = formatValue(newValue);
+        const a = existingText;
+        const b = finalText || scrapedText;
         if (!a || !b) return 0;
         const max = Math.min(a.length, b.length);
         let i = 0;
@@ -14576,103 +14469,65 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         return i;
       })();
 
-      // Determine what happened with this field by comparing values
-      let wasUsed = "unknown";
-      if (finalValue === newValue && finalValue !== existingValue) {
-        wasUsed = "new";
-      } else if (finalValue === existingValue && finalValue !== newValue) {
-        wasUsed = "existing";
-      } else if (finalValue === existingValue && finalValue === newValue) {
-        wasUsed = "same";
-      }
-      const isNew = !existingValue && newValue;
-      const isUnchanged = existingValue && !newValue;
-
-      const isDateField = field.toLowerCase().includes("date");
-      const equalForDisplay = isDateField
-        ? this.datesEqualForDisplay(existingValue, newValue)
-        : existingValue === newValue;
-      const isSame = existingValue && newValue && equalForDisplay;
-
-      const isReplaced =
-        existingValue &&
-        newValue &&
-        finalValue === newValue &&
-        !equalForDisplay;
-      const isKept =
-        existingValue &&
-        newValue &&
-        finalValue === existingValue &&
-        !equalForDisplay;
-      const isMerged =
-        existingValue &&
-        newValue &&
-        finalValue &&
-        finalValue !== existingValue &&
-        finalValue !== newValue &&
-        !equalForDisplay;
-
-      // Add field separator for readability (except for first field)
-      if (index > 0) {
-        html += `<div class=\"diff-sep\"></div>`;
-      }
-
-      // Add field header
-      html += `<div class=\"diff-header\">
+      // Git-style block for a REAL change (merged differs from calendar):
+      //   − what the calendar had (when it had anything)
+      //   ~ what the scraper proposed (when it differs from both sides)
+      //   + what the merge wrote (or an explicit "cleared" context line)
+      let block = `<div class=\"diff-header\">
                         ${field}
                      </div>`;
-
-      // Show git-style diff
-      if (isNew) {
-        // Only new value exists - show as addition
-        html += `<div class=\"diff-line diff-added\">`;
-        html += `<span>+</span> ${this.renderBoundedDiffValue(formatValue(newValue), diffAnchor)} <em class=\"diff-meta\">(new field)</em>`;
-        html += `</div>`;
-      } else if (isUnchanged) {
-        // Only existing value exists - show as context (orange)
-        html += `<div class=\"diff-line diff-context\">`;
-        html += `<span>═</span> ${this.renderBoundedDiffValue(formatValue(existingValue), diffAnchor)} <em class=\"diff-meta\">(existing, unchanged)</em>`;
-        html += `</div>`;
-      } else if (isSame) {
-        // Existing and new are the same for display - avoid +/- noise
-        html += `<div class=\"diff-line diff-same\">`;
-        html += `<span>═</span> ${this.renderBoundedDiffValue(formatValue(existingValue), diffAnchor)} <em class=\"diff-meta\">(same in both)</em>`;
-        html += `</div>`;
-      } else if (isReplaced) {
-        // Value was replaced - show old as deletion, new as addition
-        html += `<div class=\"diff-line diff-removed\">`;
-        html += `<span>-</span> ${this.renderBoundedDiffValue(formatValue(existingValue), diffAnchor)} <em class=\"diff-meta\">(removed)</em>`;
-        html += `</div>`;
-        html += `<div class=\"diff-line diff-added\">`;
-        html += `<span>+</span> ${this.renderBoundedDiffValue(formatValue(newValue), diffAnchor)} <em class=\"diff-meta\">(added)</em>`;
-        html += `</div>`;
-      } else if (isKept) {
-        // New value exists but existing was kept - show both with context
-        html += `<div class=\"diff-line diff-same\">`;
-        html += `<span>═</span> ${this.renderBoundedDiffValue(formatValue(existingValue), diffAnchor)} <em class=\"diff-meta\">(kept existing)</em>`;
-        html += `</div>`;
-        html += `<div class=\"diff-line diff-ignored\" style=\"opacity:0.85;\">`;
-        html += `<span>~</span> ${this.renderBoundedDiffValue(formatValue(newValue), diffAnchor)} <em class=\"diff-meta\">(ignored new value)</em>`;
-        html += `</div>`;
-      } else if (isMerged) {
-        // Values were merged - show all three
-        html += `<div class=\"diff-line diff-removed\">`;
-        html += `<span>-</span> ${this.renderBoundedDiffValue(formatValue(existingValue), diffAnchor)} <em class=\"diff-meta\">(original)</em>`;
-        html += `</div>`;
-        html += `<div class=\"diff-line diff-ignored\">`;
-        html += `<span>~</span> ${this.renderBoundedDiffValue(formatValue(newValue), diffAnchor)} <em class=\"diff-meta\">(proposed)</em>`;
-        html += `</div>`;
-        html += `<div class=\"diff-line diff-merged\">`;
-        html += `<span>+</span> ${this.renderBoundedDiffValue(formatValue(finalValue), diffAnchor)} <em class=\"diff-meta\">(merged result)</em>`;
-        html += `</div>`;
+      if (!isEmptyish(existingValue)) {
+        block += `<div class=\"diff-line diff-removed\">`;
+        block += `<span>-</span> ${this.renderBoundedDiffValue(existingText, diffAnchor)} <em class=\"diff-meta\">(removed)</em>`;
+        block += `</div>`;
       }
-
-      // Add spacing after each field (except last one)
-      if (index < fieldsToCompare.length - 1) {
-        html += `<div style="margin-bottom: 12px;"></div>`;
+      if (
+        !isEmptyish(newValue) &&
+        !this.mergeValuesLookIdentical(newValue, finalValue) &&
+        !this.mergeValuesLookIdentical(newValue, existingValue)
+      ) {
+        block += `<div class=\"diff-line diff-ignored\" style=\"opacity:0.85;\">`;
+        block += `<span>~</span> ${this.renderBoundedDiffValue(scrapedText, diffAnchor)} <em class=\"diff-meta\">(scraped)</em>`;
+        block += `</div>`;
       }
+      if (!isEmptyish(finalValue)) {
+        const addedLabel = isEmptyish(existingValue)
+          ? "(new field)"
+          : "(merged result)";
+        block += `<div class=\"diff-line diff-added\">`;
+        block += `<span>+</span> ${this.renderBoundedDiffValue(finalText, diffAnchor)} <em class=\"diff-meta\">${addedLabel}</em>`;
+        block += `</div>`;
+      } else {
+        block += `<div class=\"diff-line diff-context\">`;
+        block += `<span>═</span> <em class=\"diff-meta\">(cleared — no merged value)</em>`;
+        block += `</div>`;
+      }
+      changedBlocks.push(block);
     });
 
+    let html =
+      "<div style=\"font-family: 'SF Mono', Monaco, 'Courier New', monospace; font-size: 12px; background: var(--background-primary); padding: 12px; border-radius: 8px; line-height: 1.6; color: var(--text-primary);\">";
+    html += changedBlocks.join(
+      `<div class=\"diff-sep\"></div><div style="margin-bottom: 12px;"></div>`,
+    );
+    if (noopFields.length > 0) {
+      // Same phrasing and cap as the table view's merge-noop-summary row.
+      const MAX_NAMES = 8;
+      const names =
+        noopFields.slice(0, MAX_NAMES).join(", ") +
+        (noopFields.length > MAX_NAMES ? ", …" : "");
+      if (changedBlocks.length > 0) {
+        html += `<div class=\"diff-sep\"></div>`;
+      }
+      html += `<div class=\"diff-line diff-same line-noop-summary\">`;
+      html += `<span>═</span> ${noopFields.length} field${
+        noopFields.length === 1 ? "" : "s"
+      } unchanged — ${this.escapeHtml(names)}`;
+      html += `</div>`;
+    }
+    if (changedBlocks.length === 0 && noopFields.length === 0) {
+      html += `<div class=\"diff-line diff-same line-noop-summary\"><span>═</span> nothing to compare</div>`;
+    }
     html += "</div>";
     return html;
   }
@@ -14812,8 +14667,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     const runIdLabel = this.escapeHtml(
       String(results.sourceRunId || results.savedRunId || "unknown run"),
     );
+    // Compact inline button (owner: "The buttons take up almost the whole
+    // screen") — no full-width slab; same id and handler.
     const buttonStyle =
-      "padding: 10px 18px; background: var(--primary-color); color: var(--text-inverse); border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: var(--font-sans); width: 100%;";
+      "padding: 6px 14px; background: var(--primary-color); color: var(--text-inverse); border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: var(--font-sans);";
     const body =
       analyzedCount === 0
         ? `<div class="section-blurb">Saved run ${runIdLabel} is ${ageLabel} and has no analyzable events — there is nothing to execute.</div>`
