@@ -304,10 +304,12 @@ test('event cards embed the collapsed provenance section with the export control
 
   const card = adapter.generateEventCard(event, { runId: '20260713-090000' });
 
-  assert.ok(card.includes('provenance-details'));
-  assert.ok(card.includes('🔍 Provenance'));
-  assert.ok(card.includes('Parser: bearracuda'));
-  assert.ok(card.includes('AI: calendar end matches doors-close time'));
+  // Round 4: no separate provenance section — the merge decision's reason
+  // renders in the merge comparison table's reason cell, and the export
+  // control rides the card actions row.
+  assert.ok(!card.includes('provenance-details'));
+  assert.ok(!card.includes('🔍 Provenance'));
+  assert.ok(card.includes('calendar end matches doors-close time'), 'decision reason in the merge table');
   assert.ok(card.includes('exportProvenanceIssue(this)'));
 
   // The embedded export payload carries the run id passed through by the card
@@ -318,7 +320,7 @@ test('event cards embed the collapsed provenance section with the export control
   assert.equal(payload.mergeDecisions.length, 1);
 });
 
-test('a provenance build failure degrades to an empty section, never blocks the card', () => {
+test('a hostile export payload degrades to no control, never blocks the card', () => {
   const adapter = buildAdapter();
   const hostile = { title: 'Bad Event', startDate: '2026-08-01T02:00:00.000Z' };
   Object.defineProperty(hostile, '_mergeDecisions', {
@@ -326,9 +328,13 @@ test('a provenance build failure degrades to an empty section, never blocks the 
     enumerable: true
   });
 
-  // The adapter wrapper swallows the throw and returns an empty section —
-  // the card build continues without provenance instead of dying.
-  assert.equal(adapter.buildEventProvenanceHtml(hostile), '');
+  // The payload builder degrades to an error stub inside the module and the
+  // control builder never throws — the card build continues either way, and
+  // whatever payload exists is still exportable.
+  const control = adapter.buildExportIssueControlHtml(hostile, { runId: 'r1' });
+  assert.ok(control.includes('provenance-export-btn'), 'control renders');
+  assert.ok(decodeURIComponent(control.match(/data-payload="([^"]*)"/)[1]).includes('boom'),
+    'the error stub names the failure instead of copying silence');
 });
 
 test('generateRichHTML defines the exportProvenanceIssue page handler once', async () => {
@@ -343,8 +349,10 @@ test('generateRichHTML defines the exportProvenanceIssue page handler once', asy
   });
 
   assert.equal((html.match(/function exportProvenanceIssue\(/g) || []).length, 1);
-  assert.ok(html.includes('provenance-details'));
-  assert.ok(html.includes('No provenance recorded'));
+  // Round 4: the provenance section is dissolved; the handler survives for
+  // the export-issue control on the card actions row.
+  assert.ok(!html.includes('provenance-details'));
+  assert.ok(html.includes('provenance-export-btn'));
 });
 
 // ---------------------------------------------------------------------------
@@ -6243,7 +6251,7 @@ test('web flow: every event on ONE page, nothing shed, no pager', async () => {
     // The rungs the shed ladder would have pulled are all still here.
     assert.ok(html.includes('<div id="line-view-'), 'line-by-line diff panes survive');
     assert.ok(!html.includes(ScriptableAdapter.SHED_DEBUG_JSON_PLACEHOLDER), 'debug JSON survives');
-    assert.ok(html.includes('class="provenance-details"'), 'provenance sections survive');
+    assert.ok(html.includes('class="raw-display"'), 'embedded payload blocks survive');
     // Including the cute icon: it is inlined, not swapped for the remote URL.
     assert.ok(html.includes('src="data:image/'), 'the logo stays inlined on desktop');
   } finally {
@@ -7744,8 +7752,10 @@ test('generateEventCard renders the end date on multi-day events and stays start
   // Both dates appear, joined as "<start date> <start time> - <end date> <end time>".
   assert.ok(multiDay.includes(fmtDate(start)), 'start date renders');
   assert.ok(multiDay.includes(fmtDate(end)), 'end date renders');
+  // Round 4: each datetime half is an atomic .dt-nowrap span with the
+  // separator between them.
   assert.ok(
-    multiDay.includes(`${fmtDate(start)} ${fmtTime(start)} - ${fmtDate(end)} ${fmtTime(end)}`),
+    multiDay.includes(`<span class="dt-nowrap">${fmtDate(start)} ${fmtTime(start)}</span> - <span class="dt-nowrap">${fmtDate(end)} ${fmtTime(end)}</span>`),
     'multi-day span renders both dates with their times');
 
   // Same-calendar-day events keep the original start-only format.
@@ -7760,10 +7770,10 @@ test('generateEventCard renders the end date on multi-day events and stays start
     city: 'ptown'
   });
   assert.ok(
-    sameDay.includes(`${fmtDate(sameStart)} ${fmtTime(sameStart)} - ${fmtTime(sameEnd)}`),
-    'same-day span is unchanged');
+    sameDay.includes(`<span class="dt-nowrap">${fmtDate(sameStart)} ${fmtTime(sameStart)}</span> - <span class="dt-nowrap">${fmtTime(sameEnd)}</span>`),
+    'same-day span is unchanged (modulo the atomic wrap spans)');
   assert.ok(
-    !sameDay.includes(` - ${fmtDate(sameEnd)}`),
+    !sameDay.includes(` - <span class="dt-nowrap">${fmtDate(sameEnd)}`),
     'no end date on a same-day card');
 });
 
@@ -8121,7 +8131,7 @@ test('the dropped pile is collapsed by default and keeps the mark-bear rescue bu
   assert.ok(droppedSection.includes('ai: no bear-specific language'));
 });
 
-test('event cards are headline + main section + debug expander, nothing deleted', async () => {
+test('event cards are headline + main section + hidden raw payload, nothing deleted', async () => {
   const adapter = buildAdapter();
   const event = {
     title: 'Bear Night',
@@ -8140,14 +8150,16 @@ test('event cards are headline + main section + debug expander, nothing deleted'
   // Headline face: title, 📅 date, 📍 venue.
   const headlineIdx = html.indexOf('<div class="event-headline">');
   assert.ok(headlineIdx !== -1, 'card has a headline block');
-  // Round 3: the "Details" expander is dissolved — the card body IS the main
-  // section, and only debug material sits behind the 🐞 Debug expander.
+  // Round 3 dissolved the "Details" expander; round 4 dissolved the debug
+  // expander too — the card body IS the main section, and only the hidden
+  // Raw-mode payload block sits below it.
   assert.ok(!html.includes('<details class="event-card-details">'), 'no monolithic Details expander');
+  assert.ok(!html.includes('event-card-debug'), 'no debug expander either');
   const bodyIdx = html.indexOf('<div class="event-details">');
-  const debugIdx = html.indexOf('<details class="event-card-debug');
+  const rawIdx = html.indexOf('<div class="raw-display">');
   assert.ok(bodyIdx !== -1, 'card has a main section');
-  assert.ok(debugIdx !== -1, 'card has the debug expander');
-  assert.ok(headlineIdx < bodyIdx && bodyIdx < debugIdx, 'headline, then main section, then debug');
+  assert.ok(rawIdx !== -1, 'card keeps its raw payload block');
+  assert.ok(headlineIdx < bodyIdx && bodyIdx < rawIdx, 'headline, then main section, then raw payload');
   const headline = html.slice(headlineIdx, bodyIdx);
   assert.ok(headline.includes('Bear Night'));
   assert.ok(headline.includes('📅'));
@@ -8157,12 +8169,12 @@ test('event cards are headline + main section + debug expander, nothing deleted'
   // The face carries the route info (as bridge links) and the thumbnail.
   assert.ok(headline.includes('1 Main St'), 'address on the face route line');
   assert.ok(headline.includes('event-thumb'), 'image visible on the face');
-  const body = html.slice(bodyIdx, debugIdx);
+  const body = html.slice(bodyIdx, rawIdx);
   assert.ok(body.includes('A very bear night'), 'description on the main section');
   assert.ok(body.includes('📝 Calendar Notes Preview'), 'notes preview kept');
-  const debug = html.slice(debugIdx);
-  assert.ok(debug.includes('raw-json'), 'debug JSON kept');
-  assert.ok(debug.includes('copyEventJSON(this)'), 'copy button kept');
+  const raw = html.slice(rawIdx);
+  assert.ok(raw.includes('raw-json'), 'debug JSON kept');
+  assert.ok(raw.includes('copyEventJSON(this)'), 'copy button kept');
   assert.ok(!html.includes('image-container'), 'no duplicate image block anywhere');
 });
 
@@ -8743,17 +8755,18 @@ test('default card face shows thumbnail, full date line, route line and verdict 
     bearVerdict: 'bear',
     interactive: true
   });
-  const debugIdx = card.indexOf('<details class="event-card-debug');
-  assert.ok(debugIdx !== -1, 'card still has the debug expander');
-  const face = card.slice(0, debugIdx);
+  const rawIdx = card.indexOf('<div class="raw-display">');
+  assert.ok(rawIdx !== -1, 'card still embeds its raw payload block');
+  const face = card.slice(0, rawIdx);
 
   // The image is visible by default again (owner: "it removed the image").
   assert.ok(face.includes('event-thumb'), 'thumbnail block on the face');
   assert.ok(face.includes('<img src="https://example.com/poster.jpg"'), 'the event image itself');
 
-  // Full date line: start AND end time, no tap needed.
+  // Full date line: start AND end time, no tap needed (each half an atomic
+  // nowrap span since round 4).
   assert.ok(face.includes('📅'), 'date line present');
-  assert.ok(face.includes('7:00 PM - 10:00 PM'), 'start and end time on the face');
+  assert.ok(face.includes('7:00 PM</span> - <span class="dt-nowrap">10:00 PM'), 'start and end time on the face');
 
   // Compact route line: bar • short street address • pin link over the
   // existing openMapVerify bridge.
@@ -8788,7 +8801,7 @@ test('zero-duration events render "(no end listed)" and never a fabricated end t
 
   // A REAL end still renders in full — the honesty note never eats real data.
   const real = adapter.generateEventCard(buildDenseFaceEvent());
-  assert.ok(real.includes('7:00 PM - 10:00 PM'));
+  assert.ok(real.includes('7:00 PM</span> - <span class="dt-nowrap">10:00 PM'));
   assert.ok(!real.includes('(no end listed)'));
 });
 
@@ -8840,14 +8853,18 @@ test('merge, provenance and notes-preview rows all share the one field-row forma
   assert.ok(mergeRows.includes('class="field-row"'), 'merge rows use the shared row class');
   assert.ok(mergeRows.includes('field-row-source'), 'merge rows carry the source/outcome cell');
 
-  // 2) Provenance section.
-  const provenance = adapter.buildEventProvenanceHtml(event, { runId: 'r1' });
-  assert.ok(provenance.includes('class="field-row"'), 'provenance rows use the shared row class');
-  assert.ok(provenance.includes(headerRow), 'provenance renders the shared table header');
-  assert.ok(provenance.includes('<details class="provenance-details">'), 'collapsed wrapper kept (pagination shed rung marker)');
-  assert.ok(provenance.includes('🔍 Provenance'));
-  assert.ok(provenance.includes('exportProvenanceIssue(this)'), 'export-issue handler kept');
-  assert.ok(provenance.includes('provenance-export-btn'), 'export control classes kept');
+  // 2) Folded provenance rows (round 4: the provenance section dissolved
+  // into the merge table) use the very same row builder.
+  const folded = adapter.buildFoldedProvenanceRecords(
+    { ...event, _original: { ...event._original, calendar: { ...event._original.calendar, city: 'berlin' } }, city: 'unknown' },
+    new Set(['bar', 'website'])
+  );
+  assert.ok(folded.length > 0, 'provenance-only fields fold into records');
+  assert.ok(folded.every(r => r.html.includes('class="field-row"')), 'folded rows use the shared row class');
+  // Export control markup survives, on the card actions row.
+  const exportControl = adapter.buildExportIssueControlHtml(event, { runId: 'r1' });
+  assert.ok(exportControl.includes('exportProvenanceIssue(this)'), 'export-issue handler kept');
+  assert.ok(exportControl.includes('provenance-export-btn'), 'export control classes kept');
 
   // 3) Calendar-notes preview inside the card.
   const card = adapter.generateEventCard(event);
@@ -8861,26 +8878,24 @@ test('merge, provenance and notes-preview rows all share the one field-row forma
   assert.ok(card.includes(headerRow));
 });
 
-test('review subsections live on the main section; debug material behind the debug expander', () => {
+test('review subsections live on the main section; the raw payload hides below it', () => {
   const adapter = buildAdapter();
   const event = buildSharedFormatMergeEvent();
   const card = adapter.generateEventCard(event);
-  // Round 3: the monolithic Details expander is dissolved.
+  // Round 3 dissolved the Details expander; round 4 the debug expander.
   assert.ok(!card.includes('<details class="event-card-details">'), 'no Details expander');
+  assert.ok(!card.includes('event-card-debug'), 'no debug expander');
   const bodyIdx = card.indexOf('<div class="event-details">');
-  const debugIdx = card.indexOf('<details class="event-card-debug');
-  assert.ok(bodyIdx !== -1 && debugIdx !== -1 && bodyIdx < debugIdx);
+  const rawIdx = card.indexOf('<div class="raw-display">');
+  assert.ok(bodyIdx !== -1 && rawIdx !== -1 && bodyIdx < rawIdx);
 
   // Merge comparison and notes preview are MAIN-SECTION subsections now.
   for (const marker of ['Merge Comparison', '📝 Calendar Notes Preview']) {
     const idx = card.indexOf(marker);
-    assert.ok(idx > bodyIdx && idx < debugIdx, `"${marker}" lives on the main section`);
+    assert.ok(idx > bodyIdx && idx < rawIdx, `"${marker}" lives on the main section`);
   }
-  // Provenance and the raw JSON are debug material.
-  for (const marker of ['<details class="provenance-details">', 'class="raw-json"']) {
-    const idx = card.indexOf(marker);
-    assert.ok(idx > debugIdx, `"${marker}" lives inside the debug expander`);
-  }
+  // The raw JSON payload sits in the hidden Raw-mode block below the body.
+  assert.ok(card.indexOf('class="raw-json"') > rawIdx, 'raw JSON in the raw-display block');
 
   // Every existing action handler still present.
   assert.ok(card.includes('toggleComparisonSection('));
@@ -9092,17 +9107,20 @@ test('main section carries no duplicate route/address/date/image blocks', () => 
   const adapter = buildMapsAdapter();
   const card = adapter.generateEventCard(buildCompressionMergeEvent());
   const bodyIdx = card.indexOf('<div class="event-details">');
-  const debugIdx = card.indexOf('<details class="event-card-debug');
-  assert.ok(bodyIdx !== -1 && debugIdx > bodyIdx, 'main section then debug expander');
-  const body = card.slice(bodyIdx, debugIdx);
+  const rawIdx = card.indexOf('<div class="raw-display">');
+  assert.ok(bodyIdx !== -1 && rawIdx > bodyIdx, 'main section then raw payload block');
+  const body = card.slice(bodyIdx, rawIdx);
 
   assert.ok(!body.includes('map-verify-row'), 'no verify row in the main section');
   assert.ok(!body.includes('<span>📍</span>'), 'no duplicate venue row');
   assert.ok(!body.includes('<span>🏠</span>'), 'no duplicate address row');
   assert.ok(!body.includes('Coordinates:'), 'no duplicate coordinates row');
   assert.ok(!body.includes('<span>📅</span>'), 'no duplicate date row');
-  const debug = card.slice(debugIdx);
-  assert.ok(debug.includes('<span>🌍</span>'), 'UTC verification row kept in the debug expander (unique info)');
+  // Round 4: the UTC verification moved onto the face as a muted secondary
+  // element — unique info, exactly once.
+  const face = card.slice(0, bodyIdx);
+  assert.ok(face.includes('event-headline-utc'), 'UTC verification on the face');
+  assert.equal((card.match(/event-headline-utc/g) || []).length, 1, 'and only once');
   assert.ok(!body.includes('image-container'), 'no duplicate image block');
   assert.ok(!body.includes('View Full Image'));
 });
@@ -9858,8 +9876,8 @@ test('round3: description renders on the card face, clamped, with an in-page tog
   assert.ok(card.includes('class="event-desc clamped"'), 'description clamped by default');
   assert.ok(card.includes('onclick="toggleDescClamp(this)"'), 'tap toggles the clamp');
   assert.ok(card.includes('banana hammocks'), 'the description text itself is on the face');
-  // It is on the MAIN section, before the debug expander.
-  assert.ok(card.indexOf('event-desc clamped') < card.indexOf('<details class="event-card-debug'));
+  // It is on the MAIN section, before the hidden Raw-mode payload block.
+  assert.ok(card.indexOf('event-desc clamped') < card.indexOf('<div class="raw-display">'));
   // The old details description row is gone.
   assert.ok(!card.includes('event-description'), 'no old description row');
 
@@ -9902,23 +9920,17 @@ test('round3: links render as side-by-side chips with domain/handle labels, incl
   assert.ok(!card.includes('>Google Maps</a>'), 'no old Google Maps row');
 });
 
-test('round3: provenance is debug material — absent from the default view, present in the debug expander', () => {
+test('round3→4: the provenance section and the counts line are dissolved, not merely relocated', () => {
   const adapter = buildAdapter();
   const card = adapter.generateEventCard(freshRound3Event(BEEFMINCE_NOOP_EVENT), { runId: 'r1' });
 
-  const bodyIdx = card.indexOf('<div class="event-details">');
-  const debugIdx = card.indexOf('<details class="event-card-debug');
-  const provIdx = card.indexOf('<details class="provenance-details">');
-  assert.ok(bodyIdx !== -1 && debugIdx !== -1 && provIdx !== -1);
-  assert.ok(provIdx > debugIdx, 'provenance lives inside the debug expander');
-  assert.ok(!card.slice(bodyIdx, debugIdx).includes('🔍 Provenance'),
-    'no provenance section in the default view');
-  // The field-counts noise line moved to debug too.
-  const countsIdx = card.indexOf('debug-field-counts');
-  assert.ok(countsIdx > debugIdx, 'Scraper/Calendar/Merged field counts live in debug');
-  assert.ok(card.slice(countsIdx).includes('<strong>Scraper:</strong>'));
-  assert.ok(!card.slice(bodyIdx, debugIdx).includes('<strong>Scraper:</strong>'),
-    'counts line no longer heads the merge comparison');
+  // Round 4 dissolved the debug expander that round 3 had moved these into:
+  // no provenance section anywhere, no counts banner anywhere. The merge
+  // decisions still surface — as reasons inside the merge comparison table.
+  assert.ok(!card.includes('<details class="provenance-details">'), 'no provenance section');
+  assert.ok(!card.includes('🔍 Provenance'));
+  assert.ok(!card.includes('debug-field-counts'), 'no Scraper/Calendar/Merged counts banner');
+  assert.ok(!card.includes('<strong>Scraper:</strong>'));
 });
 
 test('round3: notes preview and merge comparison share ONE container style, no divider above the comparison', () => {
@@ -10035,4 +10047,210 @@ test('round3: every existing bridge handler id and page handler survives the cle
   assert.ok(controls, 'face controls row present');
   assert.ok(controls[1].includes('bear-verdict-row'), 'verdict pill in the controls row');
   assert.ok(controls[1].includes('event-builder-link'), 'builder icon next to the verdict pill');
+});
+
+// ---------------------------------------------------------------------------
+// Round 4 — owner feedback: labelled builder link, tap-to-enlarge thumbnail,
+// atomic datetime wrapping, a WORKING Images toggle, and the 🐞 Debug
+// expander dissolved into the places its contents belong.
+// ---------------------------------------------------------------------------
+
+test('round4: the event-builder link carries a visible label on the same bridge', () => {
+  const adapter = buildAdapter();
+  const card = adapter.generateEventCard(freshRound3Event(BEEFMINCE_NOOP_EVENT), { runId: 'r1' });
+  const link = card.match(/<a[^>]*class="event-builder-link"[^>]*>([\s\S]*?)<\/a>/);
+  assert.ok(link, 'builder link present');
+  assert.ok(link[0].includes('openMapVerify(this)'), 'still rides the openMapVerify bridge');
+  assert.ok(/🛠\s*Builder/.test(link[1]), 'visible "Builder" label, not a bare icon');
+});
+
+test('round4: tapping the thumbnail toggles it large in-page, like the description clamp', async () => {
+  const adapter = buildAdapter();
+  const card = adapter.generateEventCard(buildDenseFaceEvent());
+  const thumb = card.match(/<div class="event-thumb[^"]*"[^>]*>/);
+  assert.ok(thumb, 'thumbnail present');
+  assert.ok(thumb[0].includes('onclick="toggleThumbSize(this)"'), 'tap toggles the size in-page');
+
+  const html = await adapter.generateRichHTML(round3Results());
+  assert.ok(html.includes('function toggleThumbSize('), 'page defines the toggle handler');
+  assert.ok(html.includes('.event-thumb.thumb-expanded'), 'expanded-size CSS present');
+  // Same pattern as toggleDescClamp: pure page JS, never the native bridge.
+  const fnBody = html.match(/function toggleThumbSize\(([\s\S]*?)\n\s*\}/);
+  assert.ok(fnBody && !fnBody[0].includes('chunkyscrape'), 'expand/collapse never leaves the page');
+});
+
+test('round4: start and end datetimes each wrap as one atomic unit', () => {
+  const adapter = buildAdapter();
+  // Multi-day: the end HALF (date + time) must be one nowrap span so a
+  // narrow screen moves the whole end datetime to the next line instead of
+  // splitting it after the date.
+  const multi = adapter.generateEventCard(buildDenseFaceEvent({
+    startDate: '2026-08-28T20:00:00.000Z',
+    endDate: '2026-08-31T20:00:00.000Z'
+  }));
+  assert.match(
+    multi,
+    /<span class="dt-nowrap">[^<]*Aug 28[^<]*<\/span>\s*-\s*<span class="dt-nowrap">[^<]*Aug 31[^<]*<\/span>/,
+    'start and end halves are atomic; only the separator may break'
+  );
+
+  // Same-day: the end time is its own atomic span too.
+  const sameDay = adapter.generateEventCard(buildDenseFaceEvent());
+  assert.match(
+    sameDay,
+    /<span class="dt-nowrap">[^<]*7:00 PM<\/span>\s*-\s*<span class="dt-nowrap">10:00 PM<\/span>/,
+    'same-day end time still wraps as a unit'
+  );
+
+  // No fabricated separator when there is no real end.
+  const noEnd = adapter.generateEventCard(buildDenseFaceEvent({ endDate: null }));
+  assert.ok(noEnd.includes('(no end listed)'));
+});
+
+test('round4: the nowrap rule is actually defined in the page CSS', async () => {
+  const adapter = buildAdapter();
+  const html = await adapter.generateRichHTML(round3Results());
+  assert.match(html, /\.dt-nowrap\s*\{[^}]*white-space:\s*nowrap/, '.dt-nowrap CSS rule present');
+});
+
+test('round4: the Images toggle targets the image class the cards actually render', async () => {
+  const adapter = buildAdapter();
+  const html = await adapter.generateRichHTML({
+    analyzedEvents: [{
+      title: 'Pic Night',
+      _action: 'new',
+      startDate: '2026-09-01T02:00:00.000Z',
+      image: 'https://example.com/p.jpg'
+    }],
+    errors: [],
+    parserResults: []
+  });
+  assert.ok(html.includes('onchange="toggleImages()"'), 'checkbox wired to the handler');
+  assert.equal((html.match(/function toggleImages\(/g) || []).length, 1, 'handler defined once');
+
+  // The regression that made the button dead: the handler queried a class no
+  // card emits anymore. Whatever selector the handler uses must match at
+  // least one class attribute the page actually renders.
+  const fn = html.match(/function toggleImages\(\)[\s\S]*?querySelectorAll\('([^']+)'\)/);
+  assert.ok(fn, 'toggleImages queries a selector');
+  const classes = fn[1].split(',').map(s => s.trim().replace(/^\./, ''));
+  const covered = classes.filter(cls => new RegExp(`class="[^"]*\\b${cls}\\b`).test(html));
+  assert.ok(
+    covered.length > 0,
+    `selector "${fn[1]}" matches no rendered class attribute — the Images button is dead`
+  );
+});
+
+test('round4: the debug expander is dissolved — UTC and calendar chip on the face, counts banner gone', () => {
+  const adapter = buildAdapter();
+  const event = freshRound3Event(BEEFMINCE_NOOP_EVENT);
+  const card = adapter.generateEventCard(event, { runId: 'r1' });
+
+  assert.ok(!card.includes('event-card-debug'), 'debug expander markup gone');
+  assert.ok(!card.includes('🐞'), 'no debug summary anywhere');
+
+  const bodyIdx = card.indexOf('<div class="event-details">');
+  assert.ok(bodyIdx !== -1);
+  const face = card.slice(0, bodyIdx);
+  assert.ok(face.includes('event-headline-utc'), 'UTC rendered on the card face');
+  assert.ok(face.includes('🌍'), 'UTC keeps its globe marker');
+  assert.ok(face.includes('calendar-chip'), 'calendar target is a face chip');
+  assert.ok(
+    face.includes(adapter.getCalendarNameForDisplay(event)),
+    'the chip names the target calendar'
+  );
+
+  // The counts banner is DELETED from display (stays in the run JSON).
+  assert.ok(!card.includes('debug-field-counts'), 'counts banner markup gone');
+  assert.ok(!card.includes('<strong>Scraper:</strong>'), 'no Scraper/Calendar/Merged counts line');
+
+  // Raw JSON payload still embedded for Raw mode + the copy button.
+  assert.ok(card.includes('class="raw-display"'), 'raw display block kept (Raw mode)');
+  assert.ok(card.includes('<pre class="raw-json">'), 'embedded payload kept');
+});
+
+test('round4: provenance rows fold into the merge table under the shared no-op predicate', () => {
+  const adapter = buildAdapter();
+
+  // Real-run shape (run 20260813-223251, BEEFMINCE Trunk Den): the calendar
+  // side never stores `city`, so the old provenance table showed
+  // "city | london | scraper | took scraped value (calendar had none)" on a
+  // card whose merge changed NOTHING. Folded, that row is a no-op: it joins
+  // the "N fields unchanged" summary and the changed count stays 0.
+  const noop = freshRound3Event(BEEFMINCE_NOOP_EVENT);
+  delete noop._original.calendar.city;
+  const card = adapter.generateEventCard(noop, { runId: 'r1' });
+  assert.ok(!card.includes('provenance-details'), 'no separate provenance section');
+  assert.ok(!card.includes('🔍 Provenance'));
+  assert.ok(!card.includes('Parser: ai-web'), 'parser/action meta line dropped — the card tags carry it');
+  // The folded row joins the shared record list as a no-op (the visible
+  // summary line caps how many names it prints, so assert on the records).
+  const records = adapter.buildComparisonRowRecords(noop);
+  const cityRecord = records.find(r => r.field === 'city');
+  assert.ok(cityRecord, 'city folds into the shared record list');
+  assert.equal(cityRecord.changed, false, 'and it is a no-op, joining the unchanged summary');
+  assert.match(card, /\d+ fields unchanged — /, 'the unchanged summary line renders');
+  assert.equal(adapter.countChangedMergeFields(noop), 0, 'a routing-only field never counts as a change');
+  assert.ok(card.includes('MERGE ·0'), 'tag still truthful');
+
+  // But when the calendar DID track the field and the merge changed it, the
+  // folded row is a real outcome and renders normally.
+  const changed = freshRound3Event(BEEFMINCE_NOOP_EVENT);
+  changed._original.calendar.city = 'berlin';
+  const changedCard = adapter.generateEventCard(changed, { runId: 'r1' });
+  assert.match(changedCard, /<strong>city<\/strong>/, 'real city outcome renders as a row');
+  assert.ok(changedCard.includes('took scraped value'), 'with its provenance decision as the reason');
+  assert.equal(adapter.countChangedMergeFields(changed), 1);
+});
+
+test('round4: export-issue and copy-JSON ride the card actions row', () => {
+  const adapter = buildAdapter();
+  const card = adapter.generateEventCard(freshRound3Event(BEEFMINCE_NOOP_EVENT), { runId: 'r1' });
+  const bodyIdx = card.indexOf('<div class="event-details">');
+  const faceControls = card.slice(0, bodyIdx);
+
+  assert.ok(faceControls.includes('exportProvenanceIssue(this)'), 'export issue sits with the card actions');
+  assert.ok(faceControls.includes('provenance-export-area'), 'its reveal area rides inside the same wrapper');
+  assert.ok(faceControls.includes('copyEventJSON(this)'), 'copy JSON reachable without any expander');
+
+  // The export payload still carries the run id and merge decisions.
+  const payloadMatch = card.match(/data-payload="([^"]*)"/);
+  assert.ok(payloadMatch, 'export payload embedded');
+  const payload = JSON.parse(decodeURIComponent(payloadMatch[1]));
+  assert.equal(payload.runId, 'r1');
+});
+
+test('round4: a links row falls back to the scraper source URL when the event lost its own', () => {
+  const adapter = buildAdapter();
+  const event = {
+    title: 'Sourceless',
+    _action: 'merge',
+    startDate: '2026-09-01T02:00:00.000Z',
+    _original: {
+      scraper: { website: 'https://promoter.example/party' },
+      calendar: {},
+      merged: {}
+    }
+  };
+  const row = adapter.buildEventLinksRowHtml(event);
+  assert.ok(row.includes('promoter.example'), 'scraper source URL surfaces as a chip');
+
+  // When the event already links its website, no duplicate source chip.
+  const linked = adapter.buildEventLinksRowHtml({
+    ...event,
+    website: 'https://promoter.example/party'
+  });
+  assert.equal((linked.match(/promoter\.example/g) || []).length >= 1, true);
+});
+
+test('round4: hostile provenance data degrades to a card without the export control, never a crash', () => {
+  const adapter = buildAdapter();
+  const hostile = { title: 'Bad Event', _action: 'new', startDate: '2026-08-01T02:00:00.000Z' };
+  Object.defineProperty(hostile, '_mergeDecisions', {
+    get() { throw new Error('boom'); },
+    enumerable: true
+  });
+  const card = adapter.generateEventCard(hostile, { runId: 'r1' });
+  assert.ok(card.includes('event-card'), 'card still renders');
+  assert.ok(card.includes('Bad Event'));
 });
