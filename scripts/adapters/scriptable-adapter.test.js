@@ -10254,3 +10254,126 @@ test('round4: hostile provenance data degrades to a card without the export cont
   assert.ok(card.includes('event-card'), 'card still renders');
   assert.ok(card.includes('Bad Event'));
 });
+
+// ---------------------------------------------------------------------------
+// Round 5 — owner feedback: thumbnail back to the LEFT of the title block in
+// the compact state (round 4's flex-basis:auto wrapped the whole title block
+// under the image), calendar notes preview ABOVE the merge comparison, and
+// the trailing-arrow convention on EVERY non-button text link via one shared
+// helper.
+// ---------------------------------------------------------------------------
+
+test('round5: compact card keeps the thumbnail LEFT of the title block; enlarging breaks it out below and a tap returns it', async () => {
+  const adapter = buildAdapter();
+  const card = adapter.generateEventCard(buildDenseFaceEvent());
+
+  // Structural order: the thumb markup sits BEFORE the title block inside
+  // the flex row, so the compact state reads image-left, text-right.
+  const main = card.match(/<div class="event-headline-main">([\s\S]*?)<div class="event-headline-body">/);
+  assert.ok(main, 'headline main row present');
+  assert.ok(main[1].includes('class="event-thumb'), 'thumb sits before the title block in the row');
+
+  const html = await adapter.generateRichHTML(round3Results());
+  // Compact layout class: the title block shares the row with the fixed
+  // 64px thumb. flex-basis MUST be 0 — round 4's `flex: 1 1 auto` sized the
+  // basis from the content, so any long title/date line wrapped the whole
+  // body BELOW the image (the "image on top" regression).
+  const bodyRule = html.match(/\.event-headline-body\s*\{([^}]*)\}/);
+  assert.ok(bodyRule, '.event-headline-body rule present');
+  assert.match(bodyRule[1], /flex:\s*1\s+1\s+0/,
+    'compact state: zero flex-basis keeps the title block beside the thumb');
+
+  // Enlarged: the breakout row renders BELOW the title block, not above it.
+  const expandedRule = html.match(/\.event-thumb\.thumb-expanded\s*\{([^}]*)\}/);
+  assert.ok(expandedRule, 'expanded rule present');
+  assert.match(expandedRule[1], /flex:\s*1\s+1\s+100%/, 'expanded thumb takes a full-width row');
+  assert.match(expandedRule[1], /order:\s*2/, 'the full-width row moves below the title block');
+
+  // Round 4's toggle survives: the same tap returns the thumb to the slot.
+  assert.ok(card.includes('onclick="toggleThumbSize(this)"'), 'tap-to-enlarge toggle intact');
+  assert.ok(html.includes('function toggleThumbSize('), 'page still defines the toggle');
+});
+
+test('round5: calendar notes preview renders ABOVE the merge comparison', () => {
+  const adapter = buildAdapter();
+  const card = adapter.generateEventCard(freshRound3Event(BEEFMINCE_NOOP_EVENT), { runId: 'r1' });
+  const notesIdx = card.indexOf('notes-preview-subsection');
+  const mergeIdx = card.indexOf('merge-comparison-subsection');
+  assert.ok(notesIdx !== -1, 'notes preview subsection present');
+  assert.ok(mergeIdx !== -1, 'merge comparison subsection present');
+  assert.ok(notesIdx < mergeIdx, 'notes preview sits above the merge comparison');
+});
+
+test('round5: every non-button text link carries the shared arrow via the one helper', async () => {
+  const adapter = buildAdapter();
+
+  // The helper IS the convention: appends the glyph once, never doubles it,
+  // leaves empty labels alone.
+  assert.equal(adapter.textLinkLabelHtml('The Eagle'), 'The Eagle ↗');
+  assert.equal(adapter.textLinkLabelHtml('Route ↗'), 'Route ↗', 'never doubles the glyph');
+  assert.equal(adapter.textLinkLabelHtml(''), '', 'empty label stays empty');
+
+  // Sweep every rendered surface: a full results page, a fully-loaded merge
+  // card, a plain dense card, the verify row and the review pin block. ZERO
+  // anchors may render without the glyph; buttons must never carry it.
+  adapter.resetMapVerifyUrls();
+  const surfaces = [
+    await adapter.generateRichHTML(round3Results()),
+    adapter.generateEventCard(freshRound3Event(BEEFMINCE_NOOP_EVENT), { runId: 'r1' }),
+    adapter.generateEventCard(buildDenseFaceEvent()),
+    adapter.buildMapVerifyLinksHtml({
+      bar: 'The Eagle', city: 'los angeles',
+      address: '4444 Hollywood Blvd, Los Angeles, CA', coordinates: '34.0522,-118.2437'
+    }),
+    adapter.buildReviewPinHtml('51.4863, -0.1217', 'BEEFMINCE')
+  ];
+  for (const html of surfaces) {
+    const anchors = [...html.matchAll(/<a\b[^>]*>([\s\S]*?)<\/a>/g)];
+    assert.ok(anchors.length > 0 || html === surfaces[4], 'sweep surfaces render anchors');
+    const missing = anchors.filter((m) => !m[1].includes('↗'));
+    assert.equal(missing.length, 0,
+      `text links without the arrow: ${missing.map((m) => m[0]).slice(0, 5).join(' | ')}`);
+    const buttons = [...html.matchAll(/<button\b[^>]*>([\s\S]*?)<\/button>/g)];
+    const glyphButtons = buttons.filter((m) => m[1].includes('↗'));
+    assert.equal(glyphButtons.length, 0, 'buttons never carry the text-link glyph');
+  }
+
+  // The chips row and the route line specifically (the owner's examples).
+  const card = adapter.generateEventCard(freshRound3Event(BEEFMINCE_NOOP_EVENT), { runId: 'r1' });
+  const chip = card.match(/<a\b[^>]*event-link-chip[^>]*>([\s\S]*?)<\/a>/);
+  assert.ok(chip && chip[1].includes('↗'), 'link chips carry the arrow');
+  const routeBar = card.match(/<a\b[^>]*route-bar-link[^>]*>([\s\S]*?)<\/a>/);
+  assert.ok(routeBar && routeBar[1].includes('↗'), 'route-line venue link carries the arrow');
+});
+
+test('round5: bridge handler ids, page handlers and the Images toggle survive the reshuffle', async () => {
+  const adapter = buildAdapter();
+  for (const action of [
+    'page', 'page-done', 'copy-venue', 'mark-bear', 'mark-not-bear',
+    'execute-run', 'queue-venue', 'open-url', 'export-ics', 'copy-logs',
+    'ai-prompts', 'beacon'
+  ]) {
+    const params = adapter.parseReviewActionUrl(`chunkyscrape://act?a=${action}&n=1`);
+    assert.equal(params.a, action, `${action} still round-trips through the bridge URL`);
+  }
+  const html = await adapter.generateRichHTML(round3Results());
+  for (const fn of [
+    'function copyVenueEntry(', 'function markBearOverride(',
+    'function requestSavedRunExecute(', 'function queueVenueCandidate(',
+    'function openMapVerify(', 'function exportRecurringIcs(',
+    'function requestNativeLogCopy(', 'function showAiPromptPicker(',
+    'function exportProvenanceIssue(', 'function copyEventJSON(',
+    'function toggleComparisonSection(', 'function toggleDiffView(',
+    'function toggleDisplayMode(', 'function toggleImages(',
+    'function filterEvents(', 'function toggleDescClamp(',
+    'function toggleThumbSize(', 'function sendResultsBeacon('
+  ]) {
+    assert.ok(html.includes(fn), `${fn} still defined in the page script`);
+  }
+  // Images toggle still targets a class the cards actually render.
+  const fn = html.match(/function toggleImages\(\)[\s\S]*?querySelectorAll\('([^']+)'\)/);
+  assert.ok(fn, 'toggleImages queries a selector');
+  const classes = fn[1].split(',').map((s) => s.trim().replace(/^\./, ''));
+  const covered = classes.filter((cls) => new RegExp(`class="[^"]*\\b${cls}\\b`).test(html));
+  assert.ok(covered.length > 0, `selector "${fn[1]}" matches no rendered class`);
+});
