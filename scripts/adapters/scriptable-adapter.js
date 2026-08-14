@@ -4338,7 +4338,7 @@ class ScriptableAdapter {
     return `
                 <div class="pin-block">
                     <span class="pin-coords">📍 ${this.escapeHtml(`${lat}, ${lon}`)}</span>
-                    <a class="pin-link" href="${this.escapeHtml(appleUrl)}"> Apple Maps</a>
+                    <a class="pin-link" href="${this.escapeHtml(appleUrl)}"> ${this.textLinkLabelHtml("Apple Maps")}</a>
                     <details class="map-details" ontoggle="loadMapFrame(this)">
                         <summary>🗺️ Map preview</summary>
                         <iframe class="osm-frame" data-src="${this.escapeHtml(embedUrl)}"></iframe>
@@ -6949,7 +6949,14 @@ class ScriptableAdapter {
         }
 
         .event-headline-body {
-            flex: 1 1 auto;
+            /* Round 5 (owner: "Can the image still be to the left of the
+               title... It was much better before at saving space"): basis 0,
+               NOT auto. With the wrapping container round 4 added, an auto
+               basis sized this block from its content, so any long
+               title/date line wrapped the WHOLE block below the thumb and
+               the image sat on top of the card. Basis 0 always shares the
+               row with the fixed 64px thumb — image left, text right. */
+            flex: 1 1 0;
             min-width: 0;
         }
 
@@ -6977,6 +6984,12 @@ class ScriptableAdapter {
         .event-thumb.thumb-expanded {
             flex: 1 1 100%;
             width: 100%;
+            /* Round 5: the full-width breakout row renders BELOW the title
+               block (the thumb is first in the DOM so the left slot works;
+               order moves only the EXPANDED state after the text). Tapping
+               again removes the class and the thumb returns to the left
+               slot. */
+            order: 2;
         }
 
         .event-thumb.thumb-expanded img {
@@ -10002,7 +10015,7 @@ class ScriptableAdapter {
     const anchors = links
       .map(({ label, url }) => {
         const id = this.registerMapVerifyUrl(url);
-        return `<a href="#" onclick="return openMapVerify(this)" data-map-url-id="${id}" class="map-verify-link" style="color:var(--primary-color); text-decoration:none;">${label} ↗</a>`;
+        return `<a href="#" onclick="return openMapVerify(this)" data-map-url-id="${id}" class="map-verify-link" style="color:var(--primary-color); text-decoration:none;">${this.textLinkLabelHtml(label)}</a>`;
       })
       .join("");
     return `<div class="map-verify-row" style="display:flex; gap:10px; align-items:center; font-size:12px; margin:4px 0;"><span style="color:var(--text-secondary);">Verify:</span>${anchors}</div>`;
@@ -10287,7 +10300,7 @@ class ScriptableAdapter {
       // builder link") — still beside the verdict pill, same class, same
       // bridge handler, same registry.
       parts.push(
-        `<a href="#" onclick="return openMapVerify(this)" data-map-url-id="${id}" class="event-builder-link" title="Open in Event Builder" aria-label="Open in Event Builder" style="color:var(--primary-color); text-decoration:none; font-size:13px; font-weight:600;">🛠 Builder</a>`,
+        `<a href="#" onclick="return openMapVerify(this)" data-map-url-id="${id}" class="event-builder-link" title="Open in Event Builder" aria-label="Open in Event Builder" style="color:var(--primary-color); text-decoration:none; font-size:13px; font-weight:600;">${this.textLinkLabelHtml("🛠 Builder")}</a>`,
       );
     }
     if (SharedCore.isRecurringSeriesEvent(event)) {
@@ -10406,7 +10419,7 @@ class ScriptableAdapter {
       if (!this.isSafeExternalUrl(url) || !label) return;
       const id = this.registerMapVerifyUrl(url);
       chips.push(
-        `<a href="#" onclick="return openMapVerify(this)" data-map-url-id="${id}" class="event-link-chip link-chip-${kind}" title="${this.escapeHtml(url)}">${icon} ${this.escapeHtml(label)}</a>`,
+        `<a href="#" onclick="return openMapVerify(this)" data-map-url-id="${id}" class="event-link-chip link-chip-${kind}" title="${this.escapeHtml(url)}">${this.textLinkLabelHtml(`${icon} ${this.escapeHtml(label)}`)}</a>`,
       );
     };
     // Round 4 (dissolved provenance meta's "Source:" line): the source URL
@@ -10887,7 +10900,7 @@ class ScriptableAdapter {
       .map((proposal) => {
         const sourceLink = proposal.sourceUrl
           ? this.isSafeExternalUrl(proposal.sourceUrl)
-            ? `<a href="${this.escapeHtml(proposal.sourceUrl)}" target="_blank" rel="noopener" style="font-size:12px; color:var(--primary-color); word-break:break-all;">${this.escapeHtml(proposal.sourceUrl)}</a>`
+            ? `<a href="${this.escapeHtml(proposal.sourceUrl)}" target="_blank" rel="noopener" style="font-size:12px; color:var(--primary-color); word-break:break-all;">${this.textLinkLabelHtml(this.escapeHtml(proposal.sourceUrl))}</a>`
             : `<span style="font-size:12px; color:var(--text-secondary); word-break:break-all;">${this.escapeHtml(proposal.sourceUrl)}</span>`
           : "";
         const columnStyle =
@@ -11308,7 +11321,7 @@ class ScriptableAdapter {
             <div id="mermaid_${safeId}" class="disc-tab-panel"${hasSuggestedConfig ? ' style="display:none"' : ""}>
                 <div style="display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
                     <button onclick="copyDiscoveryText(this)" class="log-copy-btn" data-encoded="${this.escapeHtml(mermaidEncoded)}">📋 Copy Mermaid</button>
-                    <a href="https://mermaid.live" target="_blank" style="padding:4px 10px; background:var(--background-light); border:1px solid var(--border-color); border-radius:6px; font-size:12px; color:var(--primary-color); text-decoration:none;">Open mermaid.live ↗</a>
+                    <a href="https://mermaid.live" target="_blank" style="padding:4px 10px; background:var(--background-light); border:1px solid var(--border-color); border-radius:6px; font-size:12px; color:var(--primary-color); text-decoration:none;">${this.textLinkLabelHtml("Open mermaid.live")}</a>
                 </div>
                 <pre class="discovery-output">${this.escapeHtml(r.mermaidGraph || "")}</pre>
             </div>
@@ -11334,7 +11347,7 @@ class ScriptableAdapter {
             <span class="section-title">URL Discovery</span>
             <span class="section-count">${discoveryParsers.length}</span>
         </div>
-        <p style="font-size:12px; color:var(--text-secondary); margin:0 0 12px;">Discovery-only mode: links found up to configured depth. Paste the Mermaid graph at <a href="https://mermaid.live" target="_blank">mermaid.live</a> to visualize.</p>
+        <p style="font-size:12px; color:var(--text-secondary); margin:0 0 12px;">Discovery-only mode: links found up to configured depth. Paste the Mermaid graph at <a href="https://mermaid.live" target="_blank">${this.textLinkLabelHtml("mermaid.live")}</a> to visualize.</p>
         ${sections}
     </div>
         `;
@@ -11650,7 +11663,7 @@ class ScriptableAdapter {
     const routeBridgeLink = (url, labelHtml, extraClass) => {
       if (!url) return "";
       const id = this.registerMapVerifyUrl(url);
-      return `<a href="#" onclick="return openMapVerify(this)" data-map-url-id="${id}" class="map-verify-link ${extraClass}">${labelHtml}</a>`;
+      return `<a href="#" onclick="return openMapVerify(this)" data-map-url-id="${id}" class="map-verify-link ${extraClass}">${this.textLinkLabelHtml(labelHtml)}</a>`;
     };
     const routeStreetAddress =
       typeof event.address === "string"
@@ -11689,7 +11702,7 @@ class ScriptableAdapter {
       routeParts.push(
         routeBridgeLink(
           routePinUrl,
-          `${this.escapeHtml(this.buildPinMapsQuery(event.location))} ↗`,
+          this.escapeHtml(this.buildPinMapsQuery(event.location)),
           "route-pin-link",
         ),
       );
@@ -11702,7 +11715,7 @@ class ScriptableAdapter {
     });
     if (routeDirectionsUrl) {
       routeParts.push(
-        routeBridgeLink(routeDirectionsUrl, "Route ↗", "route-directions-link"),
+        routeBridgeLink(routeDirectionsUrl, "Route", "route-directions-link"),
       );
     }
     const routeLineHtml =
@@ -11932,8 +11945,11 @@ class ScriptableAdapter {
             ${descriptionHtml}
             ${teaHtml}
             ${linksRowHtml}
-            ${comparisonHtml}
+            <!-- Round 5 (owner: "Can merge comparison be below calendar
+                 notes preview?"): notes preview FIRST, merge comparison
+                 after it. -->
             ${notesPreviewHtml}
+            ${comparisonHtml}
 
             <!-- Simplified metadata -->
             ${
@@ -12934,6 +12950,20 @@ class ScriptableAdapter {
       "'": "&#039;",
     };
     return text.toString().replace(/[&<>"']/g, (m) => map[m]);
+  }
+
+  // Round 5 (owner: "If you're going to have arrows on some text links, can
+  // you put them in all (non-Button links)"): the ONE place the trailing-
+  // arrow convention for text links lives. Every renderer of a tappable <a>
+  // that reads as text — link chips, route-line parts, verify links, the
+  // builder link, inline/source URLs — routes its label through here, so
+  // the convention cannot drift. Real <button> controls never carry it.
+  // Appends exactly once; a label already ending in the glyph is unchanged.
+  textLinkLabelHtml(labelHtml) {
+    const label = String(labelHtml == null ? "" : labelHtml);
+    if (!label.trim()) return label;
+    if (label.trimEnd().endsWith("↗")) return label;
+    return `${label} ↗`;
   }
 
   // Fallback to UITable if WebView fails
