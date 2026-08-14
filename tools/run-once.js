@@ -305,6 +305,32 @@ async function materializeSharedStorageTree(sharedRoot, options = {}) {
     return { datalessAtStart: initialCount, waitedMs };
 }
 
+// Scope wrapper around the sweep. The BLOCKING sweep covers only what a run
+// actually READS — the storage/ cache tree — because blocking on the whole
+// root wedged a real run (2026-08-13) on five phone LOG files whose content
+// had not yet UPLOADED from the phone: iCloud had the metadata, the bytes
+// were still on the device, so no amount of Mac-side downloading could ever
+// drain the count and the sweep rode the ceiling into a pointless abort.
+// logs/ and runs/ are write-only for a Mac run (new filenames, atomic
+// writes), and the small root-level state files fail soft through the
+// bounded fs ops — dataless files there are reported as an ADVISORY line,
+// never a blocker.
+async function sweepSharedStorageBeforeRun(sharedRoot, options = {}) {
+    const {
+        joinPath = (a, b) => path.join(a, b),
+        countDataless = countDatalessFilesViaFind,
+        log = console.log
+    } = options;
+    if (!sharedRoot) return { skipped: 'no-shared-root' };
+    const blockingRoot = joinPath(sharedRoot, 'storage');
+    const result = await materializeSharedStorageTree(blockingRoot, { ...options, countDataless, log });
+    const totalCount = countDataless(sharedRoot);
+    if (typeof totalCount === 'number' && totalCount > 0) {
+        log(`run-once: ${totalCount} dataless file(s) remain OUTSIDE the storage/ cache tree (logs/runs — typically content still uploading from the phone) — not needed by this run, continuing`);
+    }
+    return result;
+}
+
 // Tee console output into a buffer (still printed) so shared-storage runs can
 // persist a per-run log file the way the phone's FileLogger does.
 function installConsoleTee(lines) {
@@ -351,7 +377,7 @@ async function main() {
         // Defense #1 (dataless iCloud stubs): download every evicted file
         // BEFORE any parser work. A ceiling breach throws — abort loudly to
         // launchd's err log rather than start a run that would wedge.
-        await materializeSharedStorageTree(sharedRoot);
+        await sweepSharedStorageBeforeRun(sharedRoot);
     }
 
     const { WebAdapter } = require(path.join(repoRoot, 'scripts', 'adapters', 'web-adapter'));
@@ -431,5 +457,6 @@ module.exports = {
     installConsoleTee,
     ensureThreadpoolHeadroom,
     resolveMaterializeCeilingMs,
+    sweepSharedStorageBeforeRun,
     materializeSharedStorageTree
 };
