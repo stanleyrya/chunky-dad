@@ -15561,9 +15561,14 @@ function sanityCodes(core, event) {
 test('sanity: a title that is entirely a date/time expression flags title-is-date-phrase', () => {
   const core = createSanityCore();
   // Real write-plan titles: the whole title is a date+time range; an event
-  // literally titled "6:30 PM" (earlier run).
-  assert.deepEqual(sanityCodes(core, { title: 'Saturday Jan 23 12 PM – 5 PM' }), ['title-is-date-phrase']);
-  assert.deepEqual(sanityCodes(core, { title: '6:30 PM' }), ['title-is-date-phrase']);
+  // literally titled "6:30 PM" (earlier run). Since run 20260815-102447
+  // (beefdip.com/tags/ shipped "Saturday Jan 23 12 PM – 5 PM" as a CREATE)
+  // the shape also joins the ENFORCED junk-title family (rule 9e) and
+  // carries the report-only untitled-shard hint.
+  assert.deepEqual(sanityCodes(core, { title: 'Saturday Jan 23 12 PM – 5 PM' }),
+    ['title-is-date-phrase', 'junk-title', 'date-phrase-untitled-shard']);
+  assert.deepEqual(sanityCodes(core, { title: '6:30 PM' }),
+    ['title-is-date-phrase', 'junk-title', 'date-phrase-untitled-shard']);
 });
 
 test('sanity: titles with real words beyond the date phrase never flag as date phrases', () => {
@@ -18504,9 +18509,12 @@ test('sanity: ticketing fine-print titles flag junk-title alongside the report-o
   assert.deepEqual(sanityCodes(core, { title: '*** !!! ***' }), ['title-looks-like-boilerplate']);
   // Policy-adjacent words without a table phrase never flag.
   assert.deepEqual(sanityCodes(core, { title: 'Terms of Endearment Party' }), []);
-  // Time-range titles are already title-is-date-phrase (rule 1) — verified
-  // here to stay OUT of junk-title (no duplication between rules).
-  assert.deepEqual(sanityCodes(core, { title: 'Saturday Jan 23 12 PM – 5 PM' }), ['title-is-date-phrase']);
+  // Time-range titles are title-is-date-phrase (rule 1) and, since run
+  // 20260815-102447, ALSO the enforced junk-title sibling via rule 9e — but
+  // never through the fine-print family exercised here (rule 9e pushes at
+  // most one junk-title flag, after 9d declined).
+  assert.deepEqual(sanityCodes(core, { title: 'Saturday Jan 23 12 PM – 5 PM' }),
+    ['title-is-date-phrase', 'junk-title', 'date-phrase-untitled-shard']);
 });
 
 test('junk-title sibling families are withheld with a detail-bearing 🚫 JUNK TITLE line; the CTA line is unchanged', async () => {
@@ -20113,4 +20121,145 @@ test('festival data is injected, never loaded: a core without festivals behaves 
   const analyzed = await core.prepareEventsForCalendar([buildBeefdipUmbrellaEvent()], adapter, {});
   assert.ok(!analyzed[0]._festivalMatch, 'no injected festivals → no matching, no withhold');
   assert.equal(SharedCore.filterEventsForExecution(analyzed).length, 1);
+});
+
+// ---------------------------------------------------------------------------
+// Festival source identity respects the curated URL's PATH, not just its host
+// (run 20260815-102447: bear-week-provincetown's curated website was an
+// eventbrite.com organizer URL, and host-only matching stamped five unrelated
+// Eventbrite events — Megawoof Houston/Vegas, Coach After Dark SF, Cubhouse
+// Philly, Twisted Bear SF — with Ptown _festivalContext + bogus
+// festival-window-violation flags). Synthetic curated fixtures on purpose:
+// the rule is generic, not data-dependent.
+// ---------------------------------------------------------------------------
+
+const PATH_IDENTITY_FESTIVALS = [
+  {
+    key: 'platform-fest',
+    name: 'Platform Fest',
+    cityKey: 'ptown',
+    recurring: 'annual',
+    website: 'https://www.eventbrite.com/o/someorg-12345',
+    nextDates: { start: '2027-07-10', end: '2027-07-17' }
+  },
+  {
+    key: 'insta-fest',
+    name: 'Insta Fest',
+    cityKey: 'sf',
+    recurring: 'annual',
+    website: 'https://www.instagram.com/some-account/',
+    nextDates: { start: '2027-05-01', end: '2027-05-03' }
+  },
+  {
+    key: 'root-fest',
+    name: 'Root Fest',
+    cityKey: 'pv',
+    recurring: 'annual',
+    website: 'https://example-fest.com/',
+    nextDates: { start: '2027-01-23', end: '2027-01-31' }
+  }
+];
+
+test('festival source identity: a platform-hosted curated website only claims URLs under its own path', () => {
+  const core = createFestivalCore(PATH_IDENTITY_FESTIVALS);
+  // A random event page on the shared platform host: host matches, path does
+  // not — no festival identity.
+  assert.equal(
+    core.findCuratedFestivalBySourceHost('www.eventbrite.com', 'https://www.eventbrite.com/e/random-party-tickets-999'),
+    null);
+  // A page UNDER the curated organizer path DOES match (case-insensitive,
+  // trailing-slash tolerant, www-insensitive).
+  assert.equal(
+    core.findCuratedFestivalBySourceHost('eventbrite.com', 'https://www.eventbrite.com/O/SomeOrg-12345/').key,
+    'platform-fest');
+  assert.equal(
+    core.findCuratedFestivalBySourceHost('www.eventbrite.com', 'https://www.eventbrite.com/o/someorg-12345/events/').key,
+    'platform-fest');
+  // Prefix means path-SEGMENT prefix: /o/someorg-12345-other is a different
+  // organizer, not a sub-path.
+  assert.equal(
+    core.findCuratedFestivalBySourceHost('www.eventbrite.com', 'https://www.eventbrite.com/o/someorg-12345-other'),
+    null);
+  // No source URL at all (only a stamped host) fails closed for a
+  // path-carrying curated website.
+  assert.equal(core.findCuratedFestivalBySourceHost('www.eventbrite.com'), null);
+});
+
+test('festival source identity: an instagram-account curated website never claims other accounts', () => {
+  const core = createFestivalCore(PATH_IDENTITY_FESTIVALS);
+  assert.equal(
+    core.findCuratedFestivalBySourceHost('instagram.com', 'https://www.instagram.com/other-account'),
+    null);
+  assert.equal(
+    core.findCuratedFestivalBySourceHost('instagram.com', 'https://www.instagram.com/some-account').key,
+    'insta-fest');
+  assert.equal(
+    core.findCuratedFestivalBySourceHost('instagram.com', 'https://www.instagram.com/some-account/p/xyz123/').key,
+    'insta-fest');
+});
+
+test('festival source identity: a root-path curated site still matches any URL on its host', () => {
+  const core = createFestivalCore(PATH_IDENTITY_FESTIVALS);
+  assert.equal(
+    core.findCuratedFestivalBySourceHost('example-fest.com', 'https://example-fest.com/schedule/day-2').key,
+    'root-fest');
+  // Host-only signal (no source URL) is still enough for a root-ish site.
+  assert.equal(core.findCuratedFestivalBySourceHost('www.example-fest.com').key, 'root-fest');
+  // A different host never matches, path or no path.
+  assert.equal(core.findCuratedFestivalBySourceHost('other-site.com', 'https://other-site.com/'), null);
+});
+
+test('festival source identity: a blank-city platform event no longer inherits the festival city', () => {
+  const core = createFestivalCore(PATH_IDENTITY_FESTIVALS);
+  // The latent danger from run 20260815-102447: a city-less Eventbrite event
+  // inside the festival window would have inherited city ptown via the
+  // host-only match. With path identity it resolves no festival at all.
+  const event = {
+    title: 'Some Unrelated Party',
+    city: 'unknown',
+    startDate: '2027-07-12T00:00:00.000Z',
+    _sourcePageUrl: 'https://www.eventbrite.com/e/some-unrelated-party-tickets-42'
+  };
+  assert.equal(core.resolveFestivalForSource(event, new Map()), null);
+  // The same event sourced from the organizer's own path resolves normally.
+  const organizerEvent = {
+    ...event,
+    _sourcePageUrl: 'https://www.eventbrite.com/o/someorg-12345/some-party'
+  };
+  assert.equal(core.resolveFestivalForSource(organizerEvent, new Map()).key, 'platform-fest');
+});
+
+// ---------------------------------------------------------------------------
+// Date-phrase titles are write-gated like their junk-title siblings (run
+// 20260815-102447: "Saturday Jan 23 12 PM – 5 PM" from beefdip.com/tags/
+// carried _action "new" and would have been WRITTEN while its address-shaped
+// and fine-print siblings were withheld).
+// ---------------------------------------------------------------------------
+
+test('sanity: a date-phrase title is withheld at the write gate, still visible in results', () => {
+  const core = createSanityCore();
+  const flags = core.getEventSanityFlags(
+    { title: 'Saturday Jan 23 12 PM – 5 PM' }, { nowMs: SANITY_NOW_MS });
+  const analyzed = {
+    title: 'Saturday Jan 23 12 PM – 5 PM',
+    _action: 'new',
+    _sanityFlags: flags
+  };
+  assert.equal(SharedCore.hasJunkTitleSanityFlag(analyzed), true);
+  assert.deepEqual(SharedCore.filterEventsForExecution([analyzed]), [],
+    'the date-phrase record never reaches a calendar write');
+  assert.equal(SharedCore.describeExecutionDisposition(analyzed), 'WITHHELD (junk title)');
+  assert.equal(analyzed._action, 'new', 'the withhold is a gate, not an action rewrite');
+  // The report-only shard hint rides along: a date/time-only title suggests
+  // an untitled REAL event on the source page. Hint only — nothing else.
+  assert.ok(flags.some(flag => flag.code === 'date-phrase-untitled-shard'));
+});
+
+test('sanity: a real title with a date inside it is NOT withheld', () => {
+  const core = createSanityCore();
+  const flags = core.getEventSanityFlags({ title: 'NYE 2027 Bash' }, { nowMs: SANITY_NOW_MS });
+  const analyzed = { title: 'NYE 2027 Bash', _action: 'new', _sanityFlags: flags };
+  assert.deepEqual(flags, [], 'no sanity flags at all for a dated real name');
+  assert.equal(SharedCore.filterEventsForExecution([analyzed]).length, 1,
+    'the write goes through');
 });

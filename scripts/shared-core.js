@@ -2270,6 +2270,31 @@ class SharedCore {
             }
         }
 
+        // 9e. DATE-PHRASE titles ("Saturday Jan 23 12 PM – 5 PM", run
+        //     20260815-102447 beefdip.com/tags/: a schedule card's date/time
+        //     line reached a CREATE while its address-shaped and fine-print
+        //     siblings were withheld). Rule 1 already detects the shape (the
+        //     whole title is a date/time expression); here it joins the
+        //     enforced junk-title family — same flag + write withhold, card
+        //     stays fully visible in results. Titles with real words around
+        //     a date ("NYE 2027 Bash") keep ≥3 word characters of residue in
+        //     rule 1 and can never reach this.
+        if (title && !hasJunkTitleFlag() && flags.some(flag => flag.code === 'title-is-date-phrase')) {
+            flags.push({
+                code: 'junk-title',
+                detail: 'title is entirely a date/time expression, not an event name'
+            });
+            // Report-only companion: a date/time-only title is usually a
+            // SHARD of a real event whose NAME failed to extract (this run:
+            // the date-phrase shard and an address-titled shard were two
+            // pieces of one shattered schedule card for a real Saturday
+            // 12–5 PM party). Hint only — no rescue machinery.
+            flags.push({
+                code: 'date-phrase-untitled-shard',
+                detail: 'date/time-only title suggests the source page has a real event whose name failed to extract (report-only hint, no rescue attempted)'
+            });
+        }
+
         // 10. flyer-time-conflict — the event's own paired flyer's OCR text
         //     states a start time that disagrees with the page-derived one
         //     by an hour or more (run 20260814-195026, Playground Toronto:
@@ -13156,17 +13181,43 @@ class SharedCore {
         return null;
     }
 
-    // Curated festival whose official website host matches the given host
+    // Path portion of an http(s) URL for identity-prefix comparison:
+    // lowercased, query/fragment dropped, trailing slashes stripped ('' for a
+    // root or absent path). Built on parseUrl, never `new URL` (iOS
+    // JavaScriptCore has no URL global) — same contract as getHostFromUrl.
+    getUrlPathForPrefixMatch(url) {
+        const parsed = this.parseUrl(String(url || '').trim());
+        if (!parsed) return '';
+        return String(parsed.pathname || '').replace(/\/+$/, '').toLowerCase();
+    }
+
+    // Curated festival whose official website matches the given source host
     // (www-insensitive, same rung as areUrlHostsSameSite). Source-host is the
     // page-family signal: everything extracted from beefdip.com is BeefDip
     // context, whatever the individual record managed to extract.
-    findCuratedFestivalBySourceHost(host) {
+    //
+    // The curated URL's own specificity decides how much identity the host
+    // carries (run 20260815-102447: a curated eventbrite.com organizer URL
+    // host-matched five unrelated Eventbrite events into Ptown context):
+    //   - root-ish website (path empty or "/") — the host IS the festival's
+    //     identity, host match suffices;
+    //   - website with a path (eventbrite.com/o/…, instagram.com/…) — the
+    //     host is shared platform infrastructure, so the source URL must
+    //     additionally live UNDER the curated path prefix (case-insensitive,
+    //     trailing-slash tolerant). No source URL → fail closed.
+    // Generic by construction: no platform/domain lists anywhere.
+    findCuratedFestivalBySourceHost(host, sourceUrl = '') {
         if (!host) return null;
         for (const festival of this.festivals) {
-            const festivalHost = festival && festival.website
-                ? this.getHostFromUrl(festival.website)
-                : '';
-            if (festivalHost && this.areUrlHostsSameSite(festivalHost, host)) {
+            const website = festival && typeof festival.website === 'string' ? festival.website.trim() : '';
+            const festivalHost = website ? this.getHostFromUrl(website) : '';
+            if (!festivalHost || !this.areUrlHostsSameSite(festivalHost, host)) continue;
+            const curatedPath = this.getUrlPathForPrefixMatch(website);
+            if (!curatedPath) return festival;
+            const sourceHost = this.getHostFromUrl(sourceUrl);
+            if (!sourceHost || !this.areUrlHostsSameSite(sourceHost, festivalHost)) continue;
+            const sourcePath = this.getUrlPathForPrefixMatch(sourceUrl);
+            if (sourcePath === curatedPath || sourcePath.startsWith(`${curatedPath}/`)) {
                 return festival;
             }
         }
@@ -13206,7 +13257,8 @@ class SharedCore {
     resolveFestivalForSource(event, festivalSourceHosts) {
         const host = this.getFestivalSourceHost(event);
         if (!host) return null;
-        const direct = this.findCuratedFestivalBySourceHost(host);
+        const sourceUrl = event && typeof event._sourcePageUrl === 'string' ? event._sourcePageUrl : '';
+        const direct = this.findCuratedFestivalBySourceHost(host, sourceUrl);
         if (direct) return direct;
         if (festivalSourceHosts && typeof festivalSourceHosts.get === 'function') {
             const key = String(host).toLowerCase().replace(/^www\./, '');
@@ -15157,6 +15209,16 @@ class SharedCore {
                     console.log(`🚫 JUNK TITLE: "${analyzedEvent.title || 'Unknown'}" withheld from calendar write — ${junkDetail} (report-only: still shown in results)`);
                 } else {
                     console.log(`🚫 JUNK TITLE: "${analyzedEvent.title || 'Unknown'}" withheld from calendar write — CTA/navigation link text (report-only: still shown in results)`);
+                }
+            }
+            // Report-only companion to the date-phrase junk-title family: the
+            // shard hint is surfaced next to the withhold decision it rides
+            // with, so review sees "this page probably has a real, untitled
+            // event" without any rescue machinery engaging.
+            {
+                const untitledShardFlag = analyzedEvent._sanityFlags.find(flag => flag && flag.code === 'date-phrase-untitled-shard');
+                if (untitledShardFlag) {
+                    console.log(`🧩 DATE-PHRASE SHARD: "${analyzedEvent.title || 'Unknown'}" (source ${analyzedEvent._sourcePageUrl || 'unknown'}) — ${untitledShardFlag.detail}`);
                 }
             }
 

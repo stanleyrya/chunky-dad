@@ -6608,6 +6608,11 @@ class AiWebParser {
                 return {
                     imageUrl: cached.url || normalizedUrl,
                     failureKind: String(parsed.failureKind),
+                    // Additive: how many times a context-overflow entry has
+                    // been re-attempted at capped resolution (overflow-heal
+                    // path in getOcrTextForImage). Absent on entries never
+                    // retried.
+                    ...(Number.isFinite(Number(parsed.overflowHealRetries)) ? { overflowHealRetries: Number(parsed.overflowHealRetries) } : {}),
                     cachePath,
                     cached: true
                 };
@@ -9298,6 +9303,30 @@ class AiWebParser {
         const cached = await this.readCachedOcrResult(imageUrl, ocrConfig);
         if (cached) {
             if (cached.failureKind) {
+                // Heal context-overflow negative entries: they were written
+                // when this platform sent the image at FULL resolution (the
+                // Node adapter ignored the downscale cap entirely), so the
+                // "deterministic failure" they cache describes a payload we
+                // no longer send. Retry the same request — the fetch now caps
+                // the longest side — and let the fresh result overwrite the
+                // entry. Bounded like the salvage heal (2 attempts, counter
+                // persisted in the entry) so a genuinely oversized image
+                // stops costing a download+call every run forever. A failed
+                // heal keeps the negative entry and the run continues exactly
+                // as before.
+                if (cached.failureKind === 'context-overflow') {
+                    const priorOverflowRetries = Number.isFinite(Number(cached.overflowHealRetries)) ? Number(cached.overflowHealRetries) : 0;
+                    if (priorOverflowRetries < 2) {
+                        console.log(`🤖 AI Web: OCR negative cache entry (context-overflow) for ${cached.imageUrl || imageUrl} predates downscaled payloads — retrying at capped resolution to heal it (attempt ${priorOverflowRetries + 1}/2)`);
+                        let healed = null;
+                        try {
+                            healed = await this.requestAndCacheOcrResult(imageUrl, ocrConfig, passLabel, httpAdapter, { priorOverflowRetries });
+                        } catch (error) {
+                            console.log(`🤖 AI Web: OCR overflow-heal attempt failed for ${cached.imageUrl || imageUrl} (${error.message}) — keeping the negative cache entry`);
+                        }
+                        if (healed) return healed;
+                    }
+                }
                 console.log(`🤖 AI Web: OCR negative cache hit (${cached.failureKind}) for ${cached.imageUrl || imageUrl} — skipping known-bad image`);
                 return null;
             }
@@ -9387,6 +9416,12 @@ class AiWebParser {
                     rawResponse = await this.core.callAiGenerate(ocrConfig, ocrConfig.prompt, passLabel, httpAdapter, this.recordAiPrompt.bind(this), retryImage, retryDiagnostics);
                     retrySucceeded = Boolean(rawResponse);
                     diagnostics.failureKind = retryDiagnostics.failureKind || (rawResponse ? null : diagnostics.failureKind);
+                } else if (retryImage) {
+                    // An adapter without a resize capability returns the same
+                    // bytes — say so instead of silently skipping the retry
+                    // (run 20260815-102447: this skip was invisible and the
+                    // vet quietly decided nothing six times).
+                    console.warn(`🚨 AI Web: OCR overflow retry skipped for ${normalizedUrl} — the adapter returned no smaller rendition (${retryImage.length} base64 chars, was ${base64Image.length}); no image-resize capability on this platform, so this image cannot fit the model context`);
                 }
             } catch (error) {
                 console.warn(`🤖 AI Web: Reduced-resolution OCR retry failed for ${normalizedUrl}: ${error.message}`);
@@ -9401,8 +9436,17 @@ class AiWebParser {
             // page (and every run) that references it.
             // Never during a salvage heal, though: the existing cache entry
             // holds legitimate OCR text and must survive a failed retry.
-            if (diagnostics.failureKind === 'context-overflow' && !healContext) {
-                const cachePath = await this.writeCachedOcrResult(imageUrl, ocrConfig, JSON.stringify({ failureKind: diagnostics.failureKind }));
+            // An OVERFLOW heal (healContext.priorOverflowRetries) is the
+            // opposite case: the existing entry is itself the failure record,
+            // so a still-failing retry rewrites it with the bumped counter —
+            // that is what bounds the heal loop at 2 attempts.
+            const isSalvageHeal = Boolean(healContext) && !Number.isFinite(Number(healContext.priorOverflowRetries));
+            if (diagnostics.failureKind === 'context-overflow' && !isSalvageHeal) {
+                const failurePayload = { failureKind: diagnostics.failureKind };
+                if (healContext && Number.isFinite(Number(healContext.priorOverflowRetries))) {
+                    failurePayload.overflowHealRetries = Number(healContext.priorOverflowRetries) + 1;
+                }
+                const cachePath = await this.writeCachedOcrResult(imageUrl, ocrConfig, JSON.stringify(failurePayload));
                 if (cachePath) {
                     console.warn(`🤖 AI Web: Cached OCR failure (${diagnostics.failureKind}) for ${normalizedUrl} so it is not retried`);
                 }

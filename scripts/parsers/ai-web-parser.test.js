@@ -829,7 +829,15 @@ test('getOcrTextForImage negative-caches context-overflow failures and skips the
   assert.equal(first, null);
   assert.equal(aiCalls, 1);
 
-  // Second call: the cached failure short-circuits before download or AI request
+  // The next two calls spend the bounded overflow-heal budget: the entry was
+  // written by a full-size sender, so it earns two capped-resolution retries
+  // (see the dedicated heal test below). Both still overflow here.
+  await parser.getOcrTextForImage(imageUrl, ocrConfig, 'ocr-all', httpAdapter);
+  await parser.getOcrTextForImage(imageUrl, ocrConfig, 'ocr-all', httpAdapter);
+  assert.equal(aiCalls, 3);
+
+  // With the heal budget spent, the cached failure short-circuits before
+  // download or AI request.
   parser.core.callAiGenerate = async () => {
     throw new Error('AI should not be called for a negative-cached image');
   };
@@ -852,6 +860,68 @@ test('getOcrTextForImage negative-caches context-overflow failures and skips the
   };
   await parser.getOcrTextForImage(otherUrl, ocrConfig, 'ocr-all', httpAdapter);
   assert.equal(retried, 1, 'a transient empty response should be retried on the next call');
+
+  fs.rmSync(cacheDir, { recursive: true, force: true });
+});
+
+test('getOcrTextForImage heals context-overflow negative cache entries once the payload is capped', async () => {
+  // Run 20260815-102447: dozens of "OCR negative cache hit (context-overflow)"
+  // entries were written back when the Node adapter sent images at FULL
+  // resolution. The cached "deterministic failure" describes a payload we no
+  // longer send, so the entry earns a bounded (2-attempt) retry — a success
+  // overwrites it, exhaustion restores the permanent skip.
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ocr-heal-test-'));
+
+  const parser = new AiWebParser({ normalizeUrl, ocrCacheDir: cacheDir });
+  parser.core = new SharedCore({}, { eventSchema: EventSchema });
+  const ocrConfig = {
+    cacheEnabled: true,
+    model: 'mlx-community/Qwen3-VL-4B-Instruct-4bit',
+    prompt: 'ocr prompt',
+    timeoutSeconds: 5
+  };
+  const httpAdapter = { fetchImageAsBase64: async () => 'base64imagedata' };
+
+  // Seed a negative entry, exactly how the pre-fix full-size sender did.
+  const imageUrl = 'https://cdn.example/formerly-huge.png';
+  parser.core.callAiGenerate = async (cfg, prompt, label, http, rec, image, diagnostics) => {
+    if (diagnostics) diagnostics.failureKind = 'context-overflow';
+    return null;
+  };
+  assert.equal(await parser.getOcrTextForImage(imageUrl, ocrConfig, 'ocr-all', httpAdapter), null);
+
+  // Next run: the heal retries the SAME request (payload now capped) and the
+  // fresh success overwrites the negative entry.
+  let healCalls = 0;
+  parser.core.callAiGenerate = async () => {
+    healCalls++;
+    return JSON.stringify({ text: 'FLYER TEXT', imageClassification: 'event-flyer', eventSummary: 's', confidence: 90, reason: 'r' });
+  };
+  const healed = await parser.getOcrTextForImage(imageUrl, ocrConfig, 'ocr-all', httpAdapter);
+  assert.equal(healed.text, 'FLYER TEXT');
+  assert.equal(healCalls, 1);
+
+  // The healed result is now an ordinary cache hit — no more AI calls.
+  parser.core.callAiGenerate = async () => {
+    throw new Error('a healed entry must be served from cache');
+  };
+  const hit = await parser.getOcrTextForImage(imageUrl, ocrConfig, 'ocr-all', httpAdapter);
+  assert.equal(hit.text, 'FLYER TEXT');
+  assert.equal(hit.cached, true);
+
+  // A download failure during a heal keeps the negative entry and returns
+  // null exactly as before the heal existed.
+  const flakyUrl = 'https://cdn.example/flaky.png';
+  parser.core.callAiGenerate = async (cfg, prompt, label, http, rec, image, diagnostics) => {
+    if (diagnostics) diagnostics.failureKind = 'context-overflow';
+    return null;
+  };
+  assert.equal(await parser.getOcrTextForImage(flakyUrl, ocrConfig, 'ocr-all', httpAdapter), null);
+  const brokenAdapter = { fetchImageAsBase64: async () => { throw new Error('network down'); } };
+  assert.equal(await parser.getOcrTextForImage(flakyUrl, ocrConfig, 'ocr-all', brokenAdapter), null);
 
   fs.rmSync(cacheDir, { recursive: true, force: true });
 });

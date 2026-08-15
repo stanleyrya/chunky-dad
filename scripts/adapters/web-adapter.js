@@ -1000,13 +1000,132 @@ class WebAdapter {
     }
 
 
-    async fetchImageAsBase64(url, timeoutSeconds = 30) {
+    // Longest-side cap decision for the Node image fetch below: returns the
+    // target {width, height} when the image exceeds maxDimension, null when it
+    // already fits (or the inputs are unusable — fail open, no resize). Pure
+    // math, extracted so the downscale decision is unit-testable without
+    // sharp or network. Mirrors ScriptableAdapter.fetchImageAsBase64Once's
+    // inline DrawContext math exactly.
+    static getDownscaledImageDimensions(width, height, maxDimension) {
+        const w = Number(width);
+        const h = Number(height);
+        const max = Number(maxDimension);
+        if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return null;
+        if (!Number.isFinite(max) || max <= 0) return null;
+        if (Math.max(w, h) <= max) return null;
+        const scale = max / Math.max(w, h);
+        return {
+            width: Math.max(1, Math.round(w * scale)),
+            height: Math.max(1, Math.round(h * scale))
+        };
+    }
+
+    // Resolve the platform's image-resize capability ONCE per adapter:
+    //   - sharp: the resize library the repo already ships for its image
+    //     tooling (tools/download-images.js) — present wherever npm install
+    //     ran (CI, tools environments);
+    //   - macOS sips: the Mac scheduler runs WITHOUT node_modules, and
+    //     /usr/bin/sips is part of the OS — the same system-binary precedent
+    //     as tools/run-once.js calling /usr/bin/brctl;
+    //   - none: announced LOUDLY once; callers keep the pre-fix full-size
+    //     behavior, and the parser's overflow warnings make every skipped
+    //     downscale visible per image.
+    getImageResizeCapability() {
+        if (this._imageResizeCapability !== undefined) return this._imageResizeCapability;
+        let capability = null;
+        try {
+            capability = { kind: 'sharp', sharp: require('sharp') };
+        } catch (_) {
+            try {
+                if (typeof process !== 'undefined' && process.platform === 'darwin'
+                    && this.fs && this.path && this.fs.existsSync('/usr/bin/sips')) {
+                    capability = { kind: 'sips' };
+                }
+            } catch (ignored) {}
+        }
+        if (!capability) {
+            console.warn(`🌐 Web: No image-resize capability on this platform (sharp not installed, sips unavailable) — OCR images will be sent full-size and oversized ones may overflow the vision model context`);
+        }
+        this._imageResizeCapability = capability;
+        return capability;
+    }
+
+    // Vision-model image tokens scale with pixel count, not file size —
+    // oversized payloads overflow the model context and come back as 0 tokens
+    // with finish_reason "length" (run 20260815-102447: six og-image-vet
+    // passes silently decided nothing this way). ScriptableAdapter has capped
+    // the longest side at 1024 via DrawContext all along; this is the Node
+    // twin. Every failure path is LOUD and falls back to the original bytes:
+    // behavior degrades to exactly the pre-fix payload, never silently to
+    // something else. JPEG re-encode matches ScriptableAdapter
+    // (Data.fromJPEG): the downscaled rendition only ever feeds the vision
+    // model, never the stored event image URL.
+    async downscaleImageBufferForOcr(buffer, maxDimension, url) {
+        if (!Number.isFinite(Number(maxDimension)) || Number(maxDimension) <= 0) return buffer;
+        const capability = this.getImageResizeCapability();
+        if (!capability) return buffer;
+        try {
+            if (capability.kind === 'sharp') {
+                const image = capability.sharp(buffer);
+                const metadata = await image.metadata();
+                const target = WebAdapter.getDownscaledImageDimensions(metadata.width, metadata.height, maxDimension);
+                if (!target) return buffer;
+                const resized = await image.resize(target.width, target.height).jpeg({ quality: 85 }).toBuffer();
+                console.log(`🌐 Web: Downscaled image ${metadata.width}x${metadata.height} → ${target.width}x${target.height} for OCR: ${url}`);
+                return resized;
+            }
+            return await this.downscaleImageBufferWithSips(buffer, maxDimension, url);
+        } catch (error) {
+            console.warn(`🌐 Web: Image downscale failed for ${url} (${error.message}) — sending full-size image; oversized images may overflow the vision model context`);
+            return buffer;
+        }
+    }
+
+    // sips leg of downscaleImageBufferForOcr: probe dimensions, decide with
+    // the same helper as the sharp leg (byte-identical passthrough when the
+    // image already fits), then resample the longest side and re-encode JPEG.
+    // Errors propagate to the caller's LOUD fallback.
+    async downscaleImageBufferWithSips(buffer, maxDimension, url) {
+        const os = require('os');
+        const { execFile } = require('child_process');
+        const tmpDir = this.fs.mkdtempSync(this.path.join(os.tmpdir(), 'chunky-ocr-resize-'));
+        const inPath = this.path.join(tmpDir, 'image-in');
+        const outPath = this.path.join(tmpDir, 'image-out.jpg');
+        const runSips = (args) => new Promise((resolve, reject) => {
+            execFile('/usr/bin/sips', args, { timeout: 30000 }, (error, stdout) => {
+                if (error) reject(error);
+                else resolve(String(stdout || ''));
+            });
+        });
+        try {
+            await this.fs.promises.writeFile(inPath, buffer);
+            const probe = await runSips(['-g', 'pixelWidth', '-g', 'pixelHeight', inPath]);
+            const width = Number((probe.match(/pixelWidth:\s*(\d+)/) || [])[1]);
+            const height = Number((probe.match(/pixelHeight:\s*(\d+)/) || [])[1]);
+            const target = WebAdapter.getDownscaledImageDimensions(width, height, maxDimension);
+            if (!target) return buffer;
+            await runSips(['-Z', String(Number(maxDimension)), '-s', 'format', 'jpeg', '-s', 'formatOptions', '85', inPath, '--out', outPath]);
+            const resized = await this.fs.promises.readFile(outPath);
+            console.log(`🌐 Web: Downscaled image ${width}x${height} → ${target.width}x${target.height} for OCR: ${url}`);
+            return resized;
+        } finally {
+            try { this.fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (_) {}
+        }
+    }
+
+    // Default maxDimension of 1024 matches ScriptableAdapter.fetchImageAsBase64:
+    // full-size first attempts reliably overflowed the vision model's context
+    // (0 tokens, finish_reason "length") on Node because this adapter used to
+    // ignore the cap entirely — including the overflow retry's explicit 768px
+    // request, which therefore returned identical bytes and was skipped.
+    async fetchImageAsBase64(url, timeoutSeconds = 30, maxDimension = 1024) {
         if (this.isNode) {
             try {
                 const response = await fetch(url, { signal: AbortSignal.timeout(timeoutSeconds * 1000) });
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const buffer = await response.arrayBuffer();
-                return Buffer.from(buffer).toString('base64');
+                const payload = await this.downscaleImageBufferForOcr(Buffer.from(buffer), maxDimension, url);
+                return payload.toString('base64');
             } catch (error) {
                 throw new Error(`Failed to fetch image as base64: ${error.message}`);
             }

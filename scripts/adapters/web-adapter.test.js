@@ -860,3 +860,146 @@ test('dead-end store: node adapter reads and writes dead-ends.json at the shared
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+// ---------------------------------------------------------------------------
+// OCR image downscale (run 20260815-102447: six og-image-vet passes returned
+// 0 tokens with finish_reason "length" — Node sent full-size images while
+// ScriptableAdapter has always capped the longest side at 1024, and the
+// overflow retry's 768px request returned identical bytes so it was skipped).
+// ---------------------------------------------------------------------------
+
+test('getDownscaledImageDimensions: longest-side cap decision, fail-open on bad input', () => {
+  // Landscape and portrait both scale by the longest side, aspect preserved.
+  assert.deepEqual(WebAdapter.getDownscaledImageDimensions(2000, 500, 1024), { width: 1024, height: 256 });
+  assert.deepEqual(WebAdapter.getDownscaledImageDimensions(500, 2000, 1024), { width: 256, height: 1024 });
+  // Already fits (or exactly fits) → no resize.
+  assert.equal(WebAdapter.getDownscaledImageDimensions(800, 600, 1024), null);
+  assert.equal(WebAdapter.getDownscaledImageDimensions(1024, 1024, 1024), null);
+  // Unusable inputs fail open — no resize rather than a guessed one.
+  assert.equal(WebAdapter.getDownscaledImageDimensions(0, 500, 1024), null);
+  assert.equal(WebAdapter.getDownscaledImageDimensions(undefined, 500, 1024), null);
+  assert.equal(WebAdapter.getDownscaledImageDimensions(2000, 500, 0), null);
+  assert.equal(WebAdapter.getDownscaledImageDimensions(2000, 500, NaN), null);
+  // A pathologically thin strip never collapses to zero.
+  assert.deepEqual(WebAdapter.getDownscaledImageDimensions(5000, 2, 1024), { width: 1024, height: 1 });
+});
+
+// Dependency-free PNG generator (node:zlib): 8-bit RGB, one solid color.
+function makeTestPng(width, height) {
+  const zlib = require('node:zlib');
+  const chunk = (type, data) => {
+    const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+    const length = Buffer.alloc(4);
+    length.writeUInt32BE(data.length, 0);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(zlib.crc32(body) >>> 0, 0);
+    return Buffer.concat([length, body, crc]);
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
+  ihdr[8] = 8; // bit depth
+  ihdr[9] = 2; // color type RGB
+  const row = Buffer.concat([Buffer.from([0]), Buffer.alloc(width * 3, 0x77)]);
+  const raw = Buffer.concat(Array.from({ length: height }, () => row));
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', ihdr),
+    chunk('IDAT', zlib.deflateSync(raw)),
+    chunk('IEND', Buffer.alloc(0))
+  ]);
+}
+
+// Independent JPEG dimension reader (SOF frame header) so the resized output
+// is verified without sharp/sips.
+function readJpegSize(buffer) {
+  if (buffer[0] !== 0xFF || buffer[1] !== 0xD8) return null;
+  let offset = 2;
+  while (offset + 9 < buffer.length) {
+    if (buffer[offset] !== 0xFF) { offset++; continue; }
+    const marker = buffer[offset + 1];
+    if (marker >= 0xC0 && marker <= 0xCF && marker !== 0xC4 && marker !== 0xC8 && marker !== 0xCC) {
+      return { height: buffer.readUInt16BE(offset + 5), width: buffer.readUInt16BE(offset + 7) };
+    }
+    offset += 2 + buffer.readUInt16BE(offset + 2);
+  }
+  return null;
+}
+
+// The CI test job runs WITHOUT npm install (see .github/workflows/tests.yml),
+// so resize-behavior tests only run where a capability exists: sharp
+// (anywhere npm install ran) or macOS sips (the Mac scheduler's environment).
+// Probed locally — not via the adapter — so these tests still RUN (and fail)
+// against code without the capability ladder.
+function probeLocalResizeCapability() {
+  try { require('sharp'); return true; } catch (_) {}
+  try {
+    return process.platform === 'darwin' && require('node:fs').existsSync('/usr/bin/sips');
+  } catch (_) { return false; }
+}
+const RESIZE_CAPABLE = probeLocalResizeCapability();
+
+// fetch stub returning raw image bytes for the Node image-fetch tests.
+async function withImageFetchStub(imageBuffer, run) {
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({
+    ok: true,
+    status: 200,
+    arrayBuffer: async () => imageBuffer.buffer.slice(imageBuffer.byteOffset, imageBuffer.byteOffset + imageBuffer.byteLength)
+  });
+  try {
+    return await run();
+  } finally {
+    global.fetch = originalFetch;
+  }
+}
+
+test('fetchImageAsBase64 (Node) caps the longest side at the default 1024 before encoding', { skip: !RESIZE_CAPABLE }, async () => {
+  const bigPng = makeTestPng(2000, 500);
+  await withImageFetchStub(bigPng, async () => {
+    const adapter = new WebAdapter();
+    const base64 = await adapter.fetchImageAsBase64('https://cdn.example/big.png');
+    const size = readJpegSize(Buffer.from(base64, 'base64'));
+    assert.ok(size, 'the downscaled payload is a decodable JPEG');
+    assert.equal(size.width, 1024);
+    assert.equal(size.height, 256);
+  });
+});
+
+test('fetchImageAsBase64 (Node) honors an explicit smaller maxDimension (the overflow retry contract)', { skip: !RESIZE_CAPABLE }, async () => {
+  const bigPng = makeTestPng(1600, 1600);
+  await withImageFetchStub(bigPng, async () => {
+    const adapter = new WebAdapter();
+    const base64 = await adapter.fetchImageAsBase64('https://cdn.example/square.png', 30, 768);
+    const size = readJpegSize(Buffer.from(base64, 'base64'));
+    assert.ok(size, 'the downscaled payload is a decodable JPEG');
+    assert.equal(size.width, 768);
+    assert.equal(size.height, 768);
+  });
+});
+
+test('fetchImageAsBase64 (Node) passes small images through byte-identical (no re-encode)', async () => {
+  const smallPng = makeTestPng(300, 200);
+  await withImageFetchStub(smallPng, async () => {
+    const adapter = new WebAdapter();
+    const base64 = await adapter.fetchImageAsBase64('https://cdn.example/small.png');
+    assert.equal(base64, smallPng.toString('base64'),
+      'an image that already fits is never recompressed');
+  });
+});
+
+test('fetchImageAsBase64 (Node) with maxDimension 0 disables the cap entirely', async () => {
+  const bigPng = makeTestPng(2000, 500);
+  await withImageFetchStub(bigPng, async () => {
+    const adapter = new WebAdapter();
+    const base64 = await adapter.fetchImageAsBase64('https://cdn.example/full.png', 30, 0);
+    assert.equal(base64, bigPng.toString('base64'), 'cap disabled → original bytes');
+  });
+});
+
+test('downscaleImageBufferForOcr falls back LOUDLY to the original buffer on undecodable bytes', async () => {
+  const adapter = new WebAdapter();
+  const garbage = Buffer.from('not an image at all');
+  const result = await adapter.downscaleImageBufferForOcr(garbage, 1024, 'https://cdn.example/garbage.bin');
+  assert.equal(result, garbage, 'undecodable bytes degrade to the pre-fix payload, never throw');
+});
