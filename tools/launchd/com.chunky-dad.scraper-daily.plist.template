@@ -25,6 +25,12 @@
   not depend on the unreachable dir. The per-run log itself is written into
   the shared logs/ dir by run-once.
 
+  AUTO-UPDATE: the job pulls origin/main (--ff-only) before every run so the
+  scheduled sweep always executes current code (owner: "make sure the Mac
+  script is always using up to date code"). A failed pull (offline, diverged
+  checkout) logs one line and runs with the existing checkout — a stale run
+  beats no run; a diverged checkout needs a human anyway.
+
   WHY /bin/zsh IS THE PROGRAM (TCC / Full Disk Access): macOS attributes a
   launchd job's file access to the job's main executable. Running node
   directly means the Full Disk Access grant is pinned to one node binary
@@ -45,7 +51,7 @@
     <array>
         <string>/bin/zsh</string>
         <string>-c</string>
-        <string>"__NODE__" "__REPO__/tools/run-once.js"</string>
+        <string>cd "__REPO__" &amp;&amp; { /usr/bin/git pull --ff-only --quiet origin main || echo "run-once: git pull failed — running with the current checkout"; }; "__NODE__" "__REPO__/tools/run-once.js"</string>
     </array>
     <key>WorkingDirectory</key>
     <string>__REPO__</string>

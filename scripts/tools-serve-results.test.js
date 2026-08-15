@@ -607,6 +607,60 @@ test('run-once: sweep blocks only on storage/ and reports outside-storage datale
 // Defense #3b: JS-side timeouts cannot cancel wedged syscalls — each one
 // leaks a libuv threadpool slot, and the default pool is only 4 slots. Both
 // the run-once entry and the launchd plist give the pool headroom.
+// Stall detection (2026-08-15 05:15 incident): 108 phone-written cache
+// entries sat dataless because their bytes were pending UPLOAD from the
+// phone — undrainable from the Mac — and the sweep rode the 15-min ceiling
+// into a pointless abort. A count that stops falling now proceeds with the
+// bounded-fs-ops defense; a still-falling count keeps waiting.
+test('run-once: materialization sweep proceeds after the dataless count stalls (pending phone uploads)', async () => {
+  const logs = [];
+  const log = (line) => logs.push(String(line));
+  let fakeNow = 0;
+  const result = await runOnce.materializeSharedStorageTree('/shared/root', {
+    platform: 'darwin',
+    countDataless: () => 108, // never drains
+    kickDownload: () => true,
+    ceilingMs: 900 * 1000,
+    pollIntervalMs: 1,
+    sleep: () => { fakeNow += 30 * 1000; },
+    now: () => fakeNow,
+    log
+  });
+  assert.equal(result.undrainable, 108, 'stall reported, not thrown');
+  assert.ok(
+    logs.some((line) => line.includes('have not drained across') && line.includes('pending UPLOAD')),
+    'the stall warning names the pending-upload cause'
+  );
+
+  // A still-falling count never trips the stall path — it drains normally.
+  const counts = [10, 8, 6, 4, 2, 0];
+  const drained = await runOnce.materializeSharedStorageTree('/shared/root', {
+    platform: 'darwin',
+    countDataless: () => counts.shift(),
+    kickDownload: () => true,
+    ceilingMs: 900 * 1000,
+    pollIntervalMs: 1,
+    sleep: () => {},
+    now: () => 0,
+    log
+  });
+  assert.equal(drained.datalessAtStart, 10);
+  assert.equal(drained.undrainable, undefined, 'a draining sweep completes fully');
+});
+
+// Auto-update (owner: "make sure the Mac script is always using up to date
+// code"): the launchd command pulls origin/main before invoking run-once,
+// and a failed pull falls through to running the current checkout.
+test('run-once: launchd plist template pulls origin/main before the run', () => {
+  const fs = require('node:fs');
+  const template = fs.readFileSync(
+    require('node:path').join(__dirname, '..', 'tools', 'launchd', 'com.chunky-dad.scraper-daily.plist.template'),
+    'utf8'
+  );
+  assert.match(template, /git pull --ff-only --quiet origin main/, 'auto-pull present');
+  assert.match(template, /git pull failed — running with the current checkout/, 'pull failure falls through to the run');
+});
+
 test('run-once: UV_THREADPOOL_SIZE headroom is defaulted at the entry point and pinned in the launchd plist template', () => {
   const fs = require('node:fs');
 

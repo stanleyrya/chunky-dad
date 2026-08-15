@@ -289,16 +289,35 @@ async function materializeSharedStorageTree(sharedRoot, options = {}) {
     }
     const startedAt = now();
     let count = initialCount;
+    // Stall detection: a count that stops FALLING is not "evicted, still
+    // downloading" — it is content that does not exist in iCloud yet (bytes
+    // pending UPLOAD from the phone; 2026-08-15 05:15 run: 108 fresh cache
+    // entries from the phone's evening runs sat undrainable and the sweep
+    // rode the 15-min ceiling into a pointless abort). Those files are
+    // unreadable no matter how long we wait, and the bounded fs ops treat
+    // each as a cache miss (a refetch, not a degraded run) with
+    // UV_THREADPOOL_SIZE headroom absorbing any wedged slots — so after
+    // STALL_POLLS unchanged polls we PROCEED with a loud warning instead of
+    // aborting. A still-falling count keeps waiting (genuine downloads), and
+    // the ceiling abort remains for that path.
+    const STALL_POLLS = 4;
+    let unchangedPolls = 0;
     while (count > 0) {
         if (now() - startedAt >= ceilingMs) {
             throw new Error(`run-once: shared storage tree still has ${count} dataless file(s) after ${Math.round(ceilingMs / 1000)}s — ABORTING (no-partial-runs: proceeding would wedge fs syscalls or miss shared cache entries). One-time fix: right-click the chunky-dad-scraper folder in Finder and choose "Keep Downloaded" so iCloud never evicts it; or re-run once the download finishes.`);
         }
         await sleep(pollIntervalMs);
-        count = countDataless(sharedRoot);
-        if (count === null) {
+        const nextCount = countDataless(sharedRoot);
+        if (nextCount === null) {
             throw new Error('run-once: dataless probe (find -flags +dataless) broke mid-sweep — ABORTING instead of guessing the tree is materialized (no-partial-runs)');
         }
+        unchangedPolls = nextCount >= count ? unchangedPolls + 1 : 0;
+        count = nextCount;
         log(`run-once: materialization progress — ${count} dataless file(s) remaining under the shared root`);
+        if (unchangedPolls >= STALL_POLLS) {
+            log(`run-once: ${count} dataless file(s) have not drained across ${STALL_POLLS} polls — content likely pending UPLOAD from another device (undrainable from this Mac). Proceeding with bounded fs ops as the defense; each such entry reads as a cache miss.`);
+            return { datalessAtStart: initialCount, waitedMs: now() - startedAt, undrainable: count };
+        }
     }
     const waitedMs = now() - startedAt;
     log(`run-once: shared storage tree fully materialized after ${Math.round(waitedMs / 1000)}s (${initialCount} file(s) downloaded) — safe to start parser work`);
