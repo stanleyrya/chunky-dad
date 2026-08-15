@@ -409,8 +409,11 @@ function normalizeStartTimeValue(value) {
         }
     }
 
-    // Handle European "20h30" / "20 h 30" format (h as hour-minute separator)
-    const europeanSeparatorMatch = timeStr.match(/^(\d{1,2})\s*[hH]\s*(\d{2})$/);
+    // Handle European "20h30" / "20 h 30" format (h as hour-minute separator).
+    // French schedule displays append a minute unit — "10 h 00 min"
+    // (bearitmtl.com tribe-events schedule text, run 20260814-195026) — so an
+    // optional trailing "min" token is accepted too.
+    const europeanSeparatorMatch = timeStr.match(/^(\d{1,2})\s*[hH]\s*(\d{2})(?:\s*min\.?)?$/i);
     if (europeanSeparatorMatch) {
         const hour = parseInt(europeanSeparatorMatch[1], 10);
         const minute = parseInt(europeanSeparatorMatch[2], 10);
@@ -4570,8 +4573,26 @@ class AiWebParser {
 
             const rawUrlCandidates = this.extractUrlCandidatesFromRawHtml(html);
             discoveryStats.rawHtmlCandidates = rawUrlCandidates.length;
+            // The raw scan reads the whole document, so resource-hint <link>
+            // hrefs (see collectResourceHintHrefs — asset origins, never
+            // pages) resurface here even though extractHrefCandidates already
+            // skips them. Compare on the normalized URL: the tag holds
+            // "//i0.wp.com" while the raw scan may capture either form.
+            const resourceHintUrls = new Set();
+            for (const hintHref of this.collectResourceHintHrefs(html)) {
+                const normalizedHint = this.stripTrackingParams(this.normalizeUrl(hintHref, sourceUrl));
+                if (normalizedHint) resourceHintUrls.add(this.getUrlDedupeKey(normalizedHint));
+            }
             for (const candidate of rawUrlCandidates) {
-                this.addAdditionalUrlCandidate(urls, candidate.url || candidate, sourceUrl, candidate.context || '', discoveryStats, parserConfig);
+                const candidateUrl = candidate.url || candidate;
+                if (resourceHintUrls.size > 0) {
+                    const normalizedCandidate = this.stripTrackingParams(this.normalizeUrl(candidateUrl, sourceUrl));
+                    if (normalizedCandidate && resourceHintUrls.has(this.getUrlDedupeKey(normalizedCandidate))) {
+                        this.recordRejectedCandidate(discoveryStats, 'resource-hint-origin', candidateUrl, normalizedCandidate);
+                        continue;
+                    }
+                }
+                this.addAdditionalUrlCandidate(urls, candidateUrl, sourceUrl, candidate.context || '', discoveryStats, parserConfig);
             }
 
             const jsonLdDiagnostics = {};
@@ -5534,6 +5555,10 @@ class AiWebParser {
     extractHrefCandidates(html) {
         if (!html) return [];
         const candidates = [];
+        // Resource-hint <link> hrefs never name navigable pages — see
+        // collectResourceHintHrefs. The generic href scan below has no tag
+        // context, so they are collected first and kept out of the pool.
+        const resourceHintHrefs = this.collectResourceHintHrefs(html);
         const anchorRegex = /<a\b[^>]*href\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
         let match;
         while ((match = anchorRegex.exec(html)) !== null) {
@@ -5545,9 +5570,31 @@ class AiWebParser {
 
         const hrefRegex = /href\s*=\s*["']([^"']+)["']/gi;
         while ((match = hrefRegex.exec(html)) !== null) {
+            if (resourceHintHrefs.has(match[1])) continue;
             candidates.push({ url: match[1], context: match[0] });
         }
         return candidates;
+    }
+
+    // The hrefs of resource-hint <link> tags (dns-prefetch/preconnect/preload/
+    // modulepreload): asset ORIGINS or bundles the browser should warm up,
+    // never navigable pages — WordPress heads publish
+    // <link rel='preconnect' href='//i0.wp.com'>, and run 20260814-195026
+    // queued and fetched the bare image-CDN origin "https://i0.wp.com" as a
+    // crawl page (HTTP 400, run error). rel=prefetch is deliberately NOT
+    // collected — it can legitimately reference next-page documents.
+    collectResourceHintHrefs(html) {
+        const hrefs = new Set();
+        if (!html) return hrefs;
+        const linkTagRegex = /<link\b[^>]*>/gi;
+        let linkMatch;
+        while ((linkMatch = linkTagRegex.exec(html)) !== null) {
+            const relMatch = linkMatch[0].match(/\brel\s*=\s*["']([^"']*)["']/i);
+            if (!relMatch || !/(?:^|\s)(?:dns-prefetch|preconnect|preload|modulepreload)(?:\s|$)/i.test(relMatch[1])) continue;
+            const hrefMatch = linkMatch[0].match(/\bhref\s*=\s*["']([^"']+)["']/i);
+            if (hrefMatch) hrefs.add(hrefMatch[1]);
+        }
+        return hrefs;
     }
 
     // Onboarding harvest (discoveryOnly runs only): instagram/facebook links are
@@ -6713,12 +6760,73 @@ class AiWebParser {
                 if (timezone) event.timezone = timezone;
             }
         }
+        // The Events Calendar emits JSON-LD datetimes with the site's CURRENT
+        // UTC offset, not the offset in force on the event's date (run
+        // 20260814-195026: bearitmtl.com published "2025-12-06T10:00:00-04:00"
+        // for a December Toronto event — EST, -05:00 — so the page's stated
+        // "10 h 00 min" shipped as 9:00). The wall-clock digits are what the
+        // page displays and what the venue entered; when the resolved event
+        // timezone disagrees with the claimed offset AT THAT DATE, keep the
+        // wall clock and re-anchor it in the event timezone. 'Z' instants and
+        // matching offsets are trusted verbatim; without a resolved timezone
+        // nothing changes (fail open).
+        if (event.timezone) {
+            const startReanchor = this.reanchorMismatchedJsonLdOffset(startDateRawText, event.startDate, event.timezone);
+            if (startReanchor) {
+                console.log(`🤖 AI Web: JSON-LD startDate offset ${startReanchor.claimedOffsetText} disagrees with ${event.timezone} (${startReanchor.zoneOffsetText} on that date) — kept wall clock ${startReanchor.wallClockText}: ${event.startDate.toISOString()} → ${startReanchor.date.toISOString()}`);
+                event.startDate = startReanchor.date;
+            }
+            if (event.endDate) {
+                const endDateRawText = typeof node.endDate === 'string' ? node.endDate.trim() : '';
+                const endReanchor = this.reanchorMismatchedJsonLdOffset(endDateRawText, event.endDate, event.timezone);
+                if (endReanchor) {
+                    console.log(`🤖 AI Web: JSON-LD endDate offset ${endReanchor.claimedOffsetText} disagrees with ${event.timezone} (${endReanchor.zoneOffsetText} on that date) — kept wall clock ${endReanchor.wallClockText}: ${event.endDate.toISOString()} → ${endReanchor.date.toISOString()}`);
+                    event.endDate = endReanchor.date;
+                }
+            }
+        }
         // Dates without an explicit offset are wall-clock times anchored as UTC;
         // LocationNormalizer re-anchors them once the city/timezone is known.
         if (start.timezoneUnresolved || (end.date && end.timezoneUnresolved)) {
             event._timezoneUnresolved = true;
         }
         return event;
+    }
+
+    // A raw ISO datetime whose explicit NUMERIC offset does not match
+    // `timezone` at that date gets its wall clock re-anchored in the zone
+    // (DST-converged via convertLocalDateTimeToUtc). Returns null — caller
+    // keeps the instant it already has — when the string has no numeric
+    // offset ('Z' is an intentional UTC anchor and is never second-guessed),
+    // the claimed offset is correct, or anything fails to parse.
+    reanchorMismatchedJsonLdOffset(rawText, parsedDate, timezone) {
+        if (!rawText || !timezone || !parsedDate || typeof parsedDate.getTime !== 'function'
+            || Number.isNaN(parsedDate.getTime())) {
+            return null;
+        }
+        const match = String(rawText).trim().match(
+            /^(\d{4}-\d{2}-\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?\s*([+-]\d{2}):?(\d{2})$/
+        );
+        if (!match) return null;
+        const claimedSign = match[5].charAt(0) === '-' ? -1 : 1;
+        const claimedOffsetMinutes = claimedSign * ((Math.abs(parseInt(match[5], 10)) * 60) + parseInt(match[6], 10));
+        const wallClockText = `${match[1]}T${match[2]}:${match[3]}:${match[4] || '00'}`;
+        const reanchored = this.convertLocalDateTimeToUtc(wallClockText, timezone);
+        if (!reanchored || Number.isNaN(reanchored.getTime())) return null;
+        const zoneOffsetMinutes = this.getTimezoneOffsetMinutes(reanchored, timezone);
+        if (!Number.isFinite(zoneOffsetMinutes) || zoneOffsetMinutes === claimedOffsetMinutes) return null;
+        if (reanchored.getTime() === parsedDate.getTime()) return null;
+        const formatOffset = (minutes) => {
+            const sign = minutes < 0 ? '-' : '+';
+            const abs = Math.abs(minutes);
+            return `${sign}${String(Math.floor(abs / 60)).padStart(2, '0')}:${String(abs % 60).padStart(2, '0')}`;
+        };
+        return {
+            date: reanchored,
+            wallClockText,
+            claimedOffsetText: formatOffset(claimedOffsetMinutes),
+            zoneOffsetText: formatOffset(zoneOffsetMinutes)
+        };
     }
 
     parseJsonLdDateValue(value) {

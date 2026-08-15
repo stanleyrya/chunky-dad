@@ -4357,3 +4357,57 @@ test('BasicDataNormalizer folds url into website and deletes url at ingest', () 
   assert.equal(site.website, 'https://beefmince.com');
   assert.equal('url' in site, false, 'no url twin is minted from website');
 });
+
+// ---------------------------------------------------------------------------
+// All-lowercase venue title-casing (run 20260814-195026: bearitmtl.com's own
+// JSON-LD published location.name "buddies in bad times theatre" verbatim and
+// the record shipped that casing — proper nouns should be capitalized)
+// ---------------------------------------------------------------------------
+
+test('BarDataNormalizer title-cases a bar name that arrived with no capitals at all', () => {
+  const core = new SharedCore(CITIES, { eventSchema: EventSchema, bars: {} });
+  const normalizer = new BarDataNormalizer(core);
+
+  const event = { title: 'Playground Toronto', city: 'toronto', bar: 'buddies in bad times theatre' };
+  normalizer.normalize(event);
+  assert.equal(event.bar, 'Buddies in Bad Times Theatre', 'connector "in" stays lowercase, every other word capitalizes');
+
+  // French connectors stay lowercase mid-name; the first word always capitalizes.
+  const french = { title: 'Soirée', city: 'montreal', bar: 'le bar de la montagne' };
+  normalizer.normalize(french);
+  assert.equal(french.bar, 'Le Bar de la Montagne');
+
+  // Hyphenated parts and single-letter French elisions both capitalize.
+  const hyphenated = { title: 'Soirée', city: 'montreal', bar: "cabaret l'ours saint-laurent" };
+  normalizer.normalize(hyphenated);
+  assert.equal(hyphenated.bar, "Cabaret L'Ours Saint-Laurent");
+});
+
+test('BarDataNormalizer never touches a venue name containing ANY capital', () => {
+  const core = new SharedCore(CITIES, { eventSchema: EventSchema, bars: {} });
+  const normalizer = new BarDataNormalizer(core);
+
+  const styledNames = ['mister Sister', 'BUT', 'The Eagle NYC', 'REDVoLUTiON'];
+  for (const name of styledNames) {
+    const event = { title: 'X', city: 'nyc', bar: name };
+    normalizer.normalize(event);
+    assert.equal(event.bar, name, `intentional styling "${name}" must survive verbatim`);
+  }
+
+  // Letterless / missing bars: no crash, no write.
+  const digitsOnly = { title: 'X', city: 'nyc', bar: '3030' };
+  normalizer.normalize(digitsOnly);
+  assert.equal(digitsOnly.bar, '3030');
+  const noBar = { title: 'X', city: 'nyc' };
+  normalizer.normalize(noBar);
+  assert.equal(noBar.bar, undefined);
+});
+
+test('curated canonicalization still wins for a known bar arriving all-lowercase', () => {
+  // Behavior-preservation pin for the fix's ordering: title-casing runs before
+  // curated matching, and the curated display name must still win.
+  const normalizer = createBarNormalizerWithBar();
+  const event = { title: 'Bear Night', city: 'nyc', bar: 'the eagle nyc' };
+  normalizer.normalize(event);
+  assert.equal(event.bar, 'The Eagle NYC', 'curated display name outranks generic title-casing');
+});

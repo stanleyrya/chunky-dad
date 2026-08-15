@@ -317,7 +317,19 @@ class BasicDataNormalizer extends BaseNormalizer {
 
 class BarDataNormalizer extends BaseNormalizer {
     normalize(event) {
-        if (!event || !this.core || !this.core.bars) return event;
+        if (!event || typeof event !== 'object') return event;
+
+        // A bar name that arrived with NO capitals at all is a casing defect
+        // of the source, not a styling choice (run 20260814-195026:
+        // bearitmtl.com's own JSON-LD published location.name "buddies in bad
+        // times theatre" verbatim). Title-case that one shape before curated
+        // matching — matching is case-insensitive, so a curated display name
+        // still wins below, and this covers only venues curated data does not
+        // know. Names containing ANY capital ("mister Sister", all-caps
+        // brands) are intentional stylings and are never touched.
+        this.titleCaseAllLowercaseBar(event);
+
+        if (!this.core || !this.core.bars) return event;
 
         const cityBars = this.core.bars[event.city];
         if (!cityBars || !Array.isArray(cityBars)) return event;
@@ -545,6 +557,48 @@ class BarDataNormalizer extends BaseNormalizer {
     // On upgrade: address becomes the curated street address, addressSource
     // is stamped 'curated', and an additive 🗺️ GEOCODE VERIFY line records
     // the replacement. Returns true when the event was modified.
+    // Title-case event.bar ONLY when it contains no capitals at all (see the
+    // call site in normalize). Returns true when the bar was rewritten.
+    titleCaseAllLowercaseBar(event) {
+        if (!event || typeof event.bar !== 'string') return false;
+        const cased = this.titleCaseAllLowercaseName(event.bar);
+        if (!cased || cased === event.bar) return false;
+        console.log(`🏷️ BarDataNormalizer: Title-cased all-lowercase bar name "${event.bar}" → "${cased}"`);
+        event.bar = cased;
+        return true;
+    }
+
+    // "buddies in bad times theatre" → "Buddies in Bad Times Theatre".
+    // Returns '' (leave the name alone) unless the input is a non-empty name
+    // with letters and not a single capital anywhere. French and English
+    // connector words stay lowercase mid-name; the first word always
+    // capitalizes; hyphenated parts ("saint-laurent") and single-letter
+    // French elisions ("l'ours") capitalize each segment.
+    titleCaseAllLowercaseName(name) {
+        const text = typeof name === 'string' ? name.trim() : '';
+        if (!text) return '';
+        // Any capital anywhere → intentional styling, never touched.
+        if (text !== text.toLowerCase()) return '';
+        // No letters at all (digits/punctuation only) → nothing to case.
+        if (text === text.toUpperCase()) return '';
+        const smallWords = new Set([
+            // English connectors
+            'a', 'an', 'and', 'at', 'by', 'for', 'in', 'of', 'on', 'or', 'the', 'to',
+            // French connectors
+            'à', 'au', 'aux', 'de', 'des', 'du', 'en', 'et', 'la', 'le', 'les', 'sur'
+        ]);
+        const capitalize = (token) => token.charAt(0).toUpperCase() + token.slice(1);
+        return text.split(/\s+/).map((word, index) => {
+            if (index > 0 && smallWords.has(word)) return word;
+            return word.split('-').map(part => {
+                if (!part) return part;
+                const elision = part.match(/^([a-zà-öø-ÿ])(['’])(.+)$/);
+                if (elision) return capitalize(elision[1]) + elision[2] + capitalize(elision[3]);
+                return capitalize(part);
+            }).join('-');
+        }).join(' ');
+    }
+
     upgradeDistrictAddressToCurated(event) {
         if (!event || !this.core) return false;
         if (typeof this.core.findCuratedBarByName !== 'function'
