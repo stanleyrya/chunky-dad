@@ -724,25 +724,49 @@ function slugifyIcsText(value) {
         .slice(0, 60);
 }
 
-// Build a complete VCALENDAR/VEVENT for one recurring event. DESCRIPTION is
-// the event's standard notes (EventSchema.formatEventNotes) PLUS an explicit
-// `recurrence: <rrule>` line — the notes key the merge machinery reads as a
-// series-detection signal once the owner has imported the ICS. (The default
-// notes-exclusion list applies to scraper CALENDAR writes; this ICS is the
-// deliberate, owner-driven channel, so the line is appended explicitly.)
-// options: { timezone, now } — now is injectable for deterministic tests.
-function buildRecurringEventIcs(event, options = {}) {
-    if (!event || typeof event !== 'object') return '';
+// Shared VCALENDAR envelope. Every export — single-event and batch — wraps
+// its VEVENTs in exactly this header (batch additionally slots X-WR-CALNAME
+// right after it) so the two channels can never drift apart.
+const ICS_VCALENDAR_HEADER_LINES = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//chunky.dad//Event Builder//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH'
+];
+
+// UID mint, event-builder style: <slug>-<utcstamp>@chunky.dad
+// (e.g. fuzzy-20260503T203532Z@chunky.dad). Exported so a caller that passes
+// an explicit `now` into buildRecurringEventIcs can compute the SAME uid the
+// export minted and record it (the run-JSON UID ledger) — the mint logic
+// lives here once, never re-derived by hand.
+function mintIcsUid(event, now) {
+    const title = String((event && (event.title || event.name)) || '').trim() || 'chunky-dad';
+    return `${slugifyIcsText(title) || 'chunky-dad'}-${formatIcsDateUtc(now)}@chunky.dad`;
+}
+
+// Emit the BEGIN:VEVENT..END:VEVENT lines (unfolded) for one event — the
+// single shared body behind buildRecurringEventIcs and buildCalendarBatchIcs.
+// DESCRIPTION is the event's standard notes (EventSchema.formatEventNotes)
+// PLUS an explicit `recurrence: <rrule>` line — the notes key the merge
+// machinery reads as a series-detection signal once the owner has imported
+// the ICS. (The default notes-exclusion list applies to scraper CALENDAR
+// writes; this ICS is the deliberate, owner-driven channel, so the line is
+// appended explicitly.)
+// options: { timezone, now, uid } — uid lets the batch builder pass a
+// collision-suffixed uid; absent, the standard mint applies.
+// Returns { lines, uid } or null for a non-object event.
+function buildEventVeventLines(event, options = {}) {
+    if (!event || typeof event !== 'object') return null;
     const rrule = String(event.recurrenceRule || event.recurrence || '')
         .replace(/^RRULE\s*:/i, '')
         .trim();
     const title = String(event.title || event.name || '').trim() || 'chunky-dad';
     const timezone = String(options.timezone || event.timezone || '').trim();
     const now = options.now instanceof Date ? options.now : new Date();
-
-    // UID matches the event-builder style: <slug>-<utcstamp>@chunky.dad
-    // (e.g. fuzzy-20260503T203532Z@chunky.dad).
-    const uid = `${slugifyIcsText(title) || 'chunky-dad'}-${formatIcsDateUtc(now)}@chunky.dad`;
+    const uid = typeof options.uid === 'string' && options.uid
+        ? options.uid
+        : mintIcsUid(event, now);
 
     const dateProperty = (name, date) => {
         const local = timezone ? formatIcsDateInTimezone(date, timezone) : '';
@@ -752,11 +776,6 @@ function buildRecurringEventIcs(event, options = {}) {
     };
 
     const lines = [
-        'BEGIN:VCALENDAR',
-        'VERSION:2.0',
-        'PRODID:-//chunky.dad//Event Builder//EN',
-        'CALSCALE:GREGORIAN',
-        'METHOD:PUBLISH',
         'BEGIN:VEVENT',
         `UID:${uid}`,
         `DTSTAMP:${formatIcsDateUtc(now)}`
@@ -787,8 +806,80 @@ function buildRecurringEventIcs(event, options = {}) {
     if (location) {
         lines.push(`LOCATION:${escapeIcsText(location)}`);
     }
-    lines.push('END:VEVENT', 'END:VCALENDAR');
-    return lines.map(foldIcsLine).join('\r\n');
+    lines.push('END:VEVENT');
+    return { lines, uid };
+}
+
+// Build a complete VCALENDAR/VEVENT for one recurring event. Body emission is
+// shared with the batch builder (buildEventVeventLines) — output is
+// byte-identical to the pre-batch single-event builder, pinned by test.
+// options: { timezone, now } — now is injectable for deterministic tests.
+function buildRecurringEventIcs(event, options = {}) {
+    if (!event || typeof event !== 'object') return '';
+    const vevent = buildEventVeventLines(event, options);
+    if (!vevent) return '';
+    return [...ICS_VCALENDAR_HEADER_LINES, ...vevent.lines, 'END:VCALENDAR']
+        .map(foldIcsLine)
+        .join('\r\n');
+}
+
+// ONE VCALENDAR carrying a VEVENT per exportable event — the per-calendar
+// batch import file. iOS Safari's Calendar import previews the whole batch
+// with "Add All" and asks for the target calendar ONCE per file, so the
+// correct granularity is one ICS per city calendar; X-WR-CALNAME names that
+// target so the import sheet says where the events belong. File imports are
+// ADDS on iOS (same-UID re-import duplicates), so callers must only batch
+// records that are not in the calendar yet (the withheld series exports).
+//
+// options:
+//   calendarName — target calendar (X-WR-CALNAME; also echoed in the result)
+//   timezone     — one IANA zone applied to every event, OR
+//   getTimezone  — (event) => zone, for per-event resolution
+//   now          — injectable clock (deterministic tests; shared DTSTAMP/uid stamp)
+//
+// Every event in the batch shares this export's `now` stamp, so two
+// same-titled events would mint the SAME uid — collisions get a counter
+// suffixed onto the slug (<slug>-2-<utcstamp>@chunky.dad). Because of that,
+// callers must take uids from the returned manifest, never re-mint them.
+//
+// Returns { icsText, calendarName, events: [{ uid, title }] } (events in
+// input order — the UID-ledger manifest), or null when nothing is exportable.
+function buildCalendarBatchIcs(events, options = {}) {
+    const list = Array.isArray(events)
+        ? events.filter(event => event && typeof event === 'object')
+        : [];
+    if (list.length === 0) return null;
+    const calendarName = String(options.calendarName || '').trim();
+    const now = options.now instanceof Date ? options.now : new Date();
+
+    const lines = [...ICS_VCALENDAR_HEADER_LINES];
+    if (calendarName) {
+        lines.push(`X-WR-CALNAME:${escapeIcsText(calendarName)}`);
+    }
+    const usedUids = new Set();
+    const manifest = [];
+    for (const event of list) {
+        const timezone = typeof options.getTimezone === 'function'
+            ? options.getTimezone(event)
+            : options.timezone;
+        const title = String(event.title || event.name || '').trim() || 'chunky-dad';
+        let uid = mintIcsUid(event, now);
+        for (let n = 2; usedUids.has(uid); n++) {
+            uid = `${slugifyIcsText(title) || 'chunky-dad'}-${n}-${formatIcsDateUtc(now)}@chunky.dad`;
+        }
+        const vevent = buildEventVeventLines(event, { timezone, now, uid });
+        if (!vevent) continue;
+        usedUids.add(vevent.uid);
+        lines.push(...vevent.lines);
+        manifest.push({ uid: vevent.uid, title });
+    }
+    if (manifest.length === 0) return null;
+    lines.push('END:VCALENDAR');
+    return {
+        icsText: lines.map(foldIcsLine).join('\r\n'),
+        calendarName,
+        events: manifest
+    };
 }
 
 // Deterministic next-occurrence date for the practical RRULE subset a
@@ -903,7 +994,10 @@ const EventSchema = {
     formatIcsDateUtc,
     formatIcsDateInTimezone,
     slugifyIcsText,
+    mintIcsUid,
+    buildEventVeventLines,
     buildRecurringEventIcs,
+    buildCalendarBatchIcs,
     computeNextRruleOccurrence
 };
 

@@ -43,6 +43,7 @@ const {
   injectHeaderBar,
   formatCalendarSnapshotLabel,
   buildEventIcs,
+  buildBatchIcs,
   tailLines,
   renderRunFormPage,
   parsePortFromArgv,
@@ -327,6 +328,32 @@ test('buildEventIcs keeps the RRULE for recurring events and falls back to UTC f
 test('buildEventIcs returns null for junk input', () => {
   assert.equal(buildEventIcs(null, CITIES, EventSchema), null);
   assert.equal(buildEventIcs({ title: 'x' }, CITIES, null), null);
+});
+
+test('buildBatchIcs exports a whole calendar batch as one VCALENDAR named for the calendar', () => {
+  const built = buildBatchIcs(
+    {
+      calendarName: 'chunky-dad-nola',
+      events: [
+        { title: 'FUZZY', city: 'nola', startDate: '2026-08-08T02:00:00.000Z', recurrenceRule: 'FREQ=WEEKLY;BYDAY=FR' },
+        { title: 'CUBSCOUT', city: 'nola', startDate: '2026-08-09T02:00:00.000Z', recurrenceRule: 'FREQ=MONTHLY;BYDAY=1SA' }
+      ]
+    },
+    CITIES,
+    EventSchema
+  );
+  assert.ok(built, 'builder returns a payload');
+  assert.equal((built.icsText.match(/BEGIN:VCALENDAR/g) || []).length, 1, 'single VCALENDAR wrapper');
+  assert.equal((built.icsText.match(/BEGIN:VEVENT/g) || []).length, 2, 'both series in one file');
+  assert.ok(built.icsText.includes('X-WR-CALNAME:chunky-dad-nola'), 'target calendar named');
+  assert.ok(built.icsText.includes('DTSTART;TZID=America/Chicago'), 'per-event city timezone applied');
+  assert.equal(built.fileName, 'chunky-dad-nola-series.ics');
+});
+
+test('buildBatchIcs returns null for junk input', () => {
+  assert.equal(buildBatchIcs(null, CITIES, EventSchema), null);
+  assert.equal(buildBatchIcs({ calendarName: 'x', events: [] }, CITIES, EventSchema), null);
+  assert.equal(buildBatchIcs({ calendarName: 'x', events: [{ title: 'y' }] }, CITIES, null), null);
 });
 
 // ---------------------------------------------------------------------------

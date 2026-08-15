@@ -25,7 +25,7 @@
 //     mark-bear / queue-venue → disabled, title "phone-only in v1"
 //
 // Endpoints: GET / (results or run form) · GET/POST /run · GET /run-form ·
-// GET /log · GET /ics/<id>
+// GET /log · GET /ics/<id> · GET /ics-batch/<id>
 //
 // House style: no `new URL` / URLSearchParams anywhere (matches the iOS-shared
 // scripts even though this file is Node-only). Pure helpers are exported for
@@ -217,6 +217,13 @@ function exportRecurringIcs(btn) {
     if (id === '') return;
     window.location.href = '/ics/' + encodeURIComponent(id);
 }
+// export-ics-batch: same treatment for the per-calendar "💾 ICS (N)" batch
+// buttons — the server rebuilds the whole calendar's batch on demand.
+function exportBatchIcs(btn) {
+    var id = btn ? (btn.getAttribute('data-ics-batch-id') || '') : '';
+    if (id === '') return;
+    window.location.href = '/ics-batch/' + encodeURIComponent(id);
+}
 // mark-bear / queue-venue write to on-device state (calendar overrides, the
 // gathering-only venue queue) — phone-only in v1, so the buttons go inert.
 function markBearOverride() {}
@@ -322,6 +329,27 @@ function buildEventIcs(event, cities, eventSchema) {
         ? eventSchema.slugifyIcsText(event.title || event.name || '')
         : '';
     return { icsText, fileName: `${slug || 'chunky-dad-event'}.ics` };
+}
+
+// Per-calendar batch ICS via the shared builder — the browser counterpart of
+// the adapter's exportCalendarBatchIcs. Same timezone resolution as
+// buildEventIcs. (No UID ledger here: v1 of the server is report-only and
+// never rewrites the phone's run JSON.)
+function buildBatchIcs(batch, cities, eventSchema) {
+    if (!batch || typeof batch !== 'object' || !eventSchema) return null;
+    if (typeof eventSchema.buildCalendarBatchIcs !== 'function') return null;
+    const built = eventSchema.buildCalendarBatchIcs(batch.events, {
+        calendarName: batch.calendarName,
+        getTimezone: (event) => {
+            const cityConfig = cities && event.city ? cities[event.city] : null;
+            return (cityConfig && cityConfig.timezone) || event.timezone || 'UTC';
+        }
+    });
+    if (!built || !built.icsText) return null;
+    const slug = typeof eventSchema.slugifyIcsText === 'function'
+        ? eventSchema.slugifyIcsText(batch.calendarName || '')
+        : '';
+    return { icsText: built.icsText, fileName: `${slug || 'chunky-dad'}-series.ics` };
 }
 
 // Last N lines of a (possibly large) log text.
@@ -449,6 +477,7 @@ function createServerState() {
     return {
         lock: createRunLock(),
         icsRegistry: {}, // id → event, captured from the adapter per render
+        icsBatchRegistry: {}, // id → { calendarName, events }, same capture
         lastRenderResults: null
     };
 }
@@ -473,6 +502,7 @@ async function renderLatestResults(state, saved) {
             : {}
     };
     state.icsRegistry = adapter._icsExportEvents || {};
+    state.icsBatchRegistry = adapter._icsBatchExports || {};
     state.lastRenderResults = results;
     let out = rewriteBridgeHtml(html, registries);
     out = injectHeaderBar(out, {
@@ -616,6 +646,25 @@ async function handleRequest(state, req, res) {
         }
     }
 
+    if (pathname.startsWith('/ics-batch/') && req.method === 'GET') {
+        const id = pathname.slice('/ics-batch/'.length);
+        const batch = state.icsBatchRegistry ? state.icsBatchRegistry[id] : null;
+        if (!batch) {
+            return sendText(res, 404, `No batch with ICS id "${id}" in the latest render.`);
+        }
+        const results = state.lastRenderResults || (loadLatestRun() || {}).results || {};
+        const cities = (results.config && results.config.cities) || {};
+        const built = buildBatchIcs(batch, cities, loadEventSchema());
+        if (!built) {
+            return sendText(res, 500, 'Batch ICS build failed.');
+        }
+        res.writeHead(200, {
+            'Content-Type': 'text/calendar; charset=utf-8',
+            'Content-Disposition': `attachment; filename="${built.fileName}"`
+        });
+        return res.end(built.icsText);
+    }
+
     if (pathname.startsWith('/ics/') && req.method === 'GET') {
         const id = pathname.slice('/ics/'.length);
         const event = lookupIcsEvent(state, id);
@@ -635,7 +684,7 @@ async function handleRequest(state, req, res) {
         return res.end(built.icsText);
     }
 
-    return sendText(res, 404, 'Not found. Endpoints: / /run /run-form /log /ics/<id>');
+    return sendText(res, 404, 'Not found. Endpoints: / /run /run-form /log /ics/<id> /ics-batch/<id>');
 }
 
 function parsePortFromArgv(argv) {
@@ -687,6 +736,7 @@ module.exports = {
     injectHeaderBar,
     formatCalendarSnapshotLabel,
     buildEventIcs,
+    buildBatchIcs,
     tailLines,
     renderRunFormPage,
     renderConfirmRunPage,

@@ -246,6 +246,10 @@ class SavedRunDisplay {
                 // — prior executions are threaded back so a re-execution
                 //   APPENDS to the audit trail instead of overwriting it
                 savedRunExecutions: Array.isArray(saved?.executions) ? saved.executions : [],
+                // — prior ICS-export UID ledger entries thread back the same
+                //   way, so a post-execution rewrite appends instead of
+                //   erasing the uids earlier exports minted
+                icsExports: Array.isArray(saved?.icsExports) ? saved.icsExports : [],
                 // — the ORIGINAL config (pre readOnly dryRun-forcing clone),
                 //   so a post-execution rewrite records what the run really ran with
                 _savedRunOriginalConfig: saved?.config || null,
