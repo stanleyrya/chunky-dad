@@ -1,6 +1,16 @@
 {
   "originalUrl": "https://bearracuda.com/wp-content/uploads/2026/08/bearracuda_denveroctober2026-ig-819x1024.jpg",
-  "error": "HTTP 415: Unsupported Media Type",
+  "adjustedUrl": "https://bearracuda.com/wp-content/uploads/2026/08/bearracuda_denveroctober2026-ig-819x1024.jpg",
   "type": "event",
-  "failureCount": 2
+  "filename": "2026-10-03_bearracuda-denver-17_693c3653.jpg",
+  "contentType": "image/jpeg",
+  "contentLength": "338746",
+  "eventInfo": {
+    "name": "BEARRACUDA: Denver 17",
+    "startDate": "2026-10-03T21:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-08-15T04:23:27.843Z",
+  "etag": "\"06a750bd0-0;;;\"",
+  "lastModified": "Thu, 06 Aug 2026 22:33:52 GMT"
 }
