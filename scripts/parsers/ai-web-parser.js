@@ -485,6 +485,240 @@ function combineDateAndTime(dateStr, timeStr) {
     return isNaN(date.getTime()) ? null : date;
 }
 
+// ---------------------------------------------------------------------------
+// Flyer-vs-site time-conflict reading (report-only; proposed in #1681).
+// Run 20260814-195026 (Playground Toronto, bearitmtl.com): the page's
+// JSON-LD/visible schedule stated 10:00 — the venue's own AM/PM entry error —
+// while the event's paired flyer OCR clearly read "10pm to 3am". Doctrine
+// ships what the site states; these helpers only READ the flyer's cached OCR
+// transcription so the disagreement can be SURFACED as a sanity flag
+// (flag, don't drop — never an override, never a write withhold).
+// Deterministic and fail-closed throughout: no unambiguous single start
+// reading in the OCR text → no reading → no flag.
+// ---------------------------------------------------------------------------
+
+// A clock-time token requires an explicit time marker — am/pm (dots
+// optional), a French/European "h" form ("22h", "22h30", "10 h 00 min"), or
+// a colon form ("22:30") — so bare numbers ("6th", "2025", "$10") are never
+// times. Group layout: 1=hour, 2=colon minutes, 3=h-separator marker,
+// 4=h-form minutes, 5=bare trailing h, 6=meridiem letter.
+const FLYER_OCR_TIME_TOKEN_PATTERN = /(?:^|[^0-9A-Za-z])(\d{1,2})(?::(\d{2})|\s*([hH])\s*(\d{2})(?:\s*min\.?)?|\s*([hH])(?![0-9A-Za-z]))?(?:\s*([ap])\.?\s?\.?m\.?(?![0-9A-Za-z]))?/gi;
+
+// A line carries date context when it names a month or weekday (EN/FR — the
+// same language-generic vocabulary the French time support already added), a
+// 4-digit contemporary year, or an ISO date. Context gate only, never a veto.
+const FLYER_OCR_DATE_CONTEXT_PATTERN = /\b(?:jan(?:uary|vier)?|feb(?:ruary)?|f[ée]vr?(?:ier)?|mar(?:ch)?|mars|apr(?:il)?|avr(?:il)?|may|mai|june?|juin|july?|juil(?:let)?|aug(?:ust)?|ao[ûu]t|sep(?:t(?:ember|embre)?)?|oct(?:ober|obre)?|nov(?:ember|embre)?|d[ée]c(?:ember|embre)?)\b|\b(?:mon|tues?|wednes|thurs?|fri|satur|sun)day\b|\b(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\b|\b20\d{2}\b|\b\d{4}-\d{2}-\d{2}\b/i;
+
+// Month-name → month-number tells for the date-contradiction veto (EN/FR,
+// full names and common abbreviations; \b-bounded so "mardi"≠March).
+const FLYER_OCR_MONTH_TOKEN_PATTERNS = [
+    [1, /\bjan(?:uary|vier)?\b/gi], [2, /\bfeb(?:ruary)?\b|\bf[ée]vr?(?:ier)?\b/gi],
+    [3, /\bmar(?:ch)?\b|\bmars\b/gi], [4, /\bapr(?:il)?\b|\bavr(?:il)?\b/gi],
+    [5, /\bmay\b|\bmai\b/gi], [6, /\bjune?\b|\bjuin\b/gi],
+    [7, /\bjuly?\b|\bjuil(?:let)?\b/gi], [8, /\baug(?:ust)?\b|\bao[ûu]t\b/gi],
+    [9, /\bsep(?:t(?:ember|embre)?)?\b/gi], [10, /\boct(?:ober|obre)?\b/gi],
+    [11, /\bnov(?:ember|embre)?\b/gi], [12, /\bd[ée]c(?:ember|embre)?\b/gi]
+];
+
+// Every clock-time reading in an OCR transcription, with just enough
+// structure to tell start candidates from doors times and range ends:
+// [{ minutes, raw, line, unambiguous, isDoors, isRangeEnd, isRangeStart }].
+// A reading is UNAMBIGUOUS when the flyer states which half of the day it
+// means (explicit meridiem, an "h" form — 24h by convention — or a colon
+// hour of 0 or ≥13); a bare 1–12 colon time ("10:00") is ambiguous and can
+// support an agreement check but never a conflict.
+function collectFlyerOcrTimeReadings(ocrText) {
+    const text = String(ocrText || '');
+    if (!text.trim()) return [];
+    const readings = [];
+    const lines = text.split(/\r?\n/);
+    const RANGE_CONNECTOR_PATTERN = /^\s*(?:to|until|till?|thru|through|from|[àa]|au|jusqu'[àa]|[-–—~])\s*$/i;
+    for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+        const line = lines[lineIndex];
+        FLYER_OCR_TIME_TOKEN_PATTERN.lastIndex = 0;
+        let match;
+        let previous = null;
+        let pendingBare = null;
+        while ((match = FLYER_OCR_TIME_TOKEN_PATTERN.exec(line)) !== null) {
+            const hasColonMinutes = match[2] !== undefined;
+            const hasHourSeparator = match[3] !== undefined;
+            const hasBareHourSuffix = match[5] !== undefined;
+            const meridiem = match[6] ? match[6].toLowerCase() : '';
+            const raw = match[0].replace(/^[^0-9]+/, '').trim();
+            const tokenStart = match.index + (match[0].length - match[0].replace(/^[^0-9]+/, '').length);
+            // No explicit time marker → not a time by itself (bare "6",
+            // "2025", "$10") — but a bare 1–12 may still be the start of a
+            // shared-meridiem range ("3-9PM"), so remember the latest one.
+            if (!hasColonMinutes && !hasHourSeparator && !hasBareHourSuffix && !meridiem) {
+                const bareValue = parseInt(match[1], 10);
+                pendingBare = (bareValue >= 1 && bareValue <= 12)
+                    ? { value: bareValue, endIndex: FLYER_OCR_TIME_TOKEN_PATTERN.lastIndex, raw }
+                    : null;
+                continue;
+            }
+            let hour = parseInt(match[1], 10);
+            const minute = hasColonMinutes ? parseInt(match[2], 10)
+                : (hasHourSeparator ? parseInt(match[4], 10) : 0);
+            let unambiguous;
+            if (meridiem) {
+                if (hour < 1 || hour > 12) { pendingBare = null; continue; } // "22pm" is nonsense
+                if (meridiem === 'p' && hour !== 12) hour += 12;
+                if (meridiem === 'a' && hour === 12) hour = 0;
+                unambiguous = true;
+            } else if (hasHourSeparator || hasBareHourSuffix) {
+                unambiguous = true; // "h" forms are 24-hour by convention
+            } else {
+                unambiguous = hour === 0 || hour >= 13;
+            }
+            if (hour > 23 || minute > 59) { pendingBare = null; continue; }
+            const before = line.slice(0, tokenStart);
+            const after = line.slice(FLYER_OCR_TIME_TOKEN_PATTERN.lastIndex);
+            // Doors label next to the time, either side ("DOORS: 9PM",
+            // "7:30PM DOORS" — EN doors / FR portes): reuses the
+            // doors-vs-party vocabulary — a doors time is real but is not
+            // the event's start, so it is never a start candidate.
+            const isDoors = /(?:\bdoors?\b|\bportes?\b)[^0-9\r\n]{0,24}$/i.test(before)
+                || /^[\s:;,.\-–—•|(/]{0,6}(?:doors?|portes?)\b/i.test(after);
+            const reading = {
+                minutes: (hour * 60) + minute,
+                raw,
+                line: lineIndex,
+                unambiguous,
+                isDoors,
+                isRangeEnd: false,
+                isRangeStart: false
+            };
+            // "10pm to 3am" / "22h – 3h" / "10pm-3am": a short connector
+            // between two adjacent times marks a range — the first time is
+            // the start, the second is the end (never a start candidate).
+            if (previous) {
+                const between = line.slice(previous.endIndex, tokenStart);
+                if (between.length <= 12 && RANGE_CONNECTOR_PATTERN.test(between)) {
+                    reading.isRangeEnd = true;
+                    previous.reading.isRangeStart = true;
+                }
+            } else if (pendingBare && meridiem) {
+                // Shared-meridiem range ("3-9PM" = 3 PM to 9 PM): the bare
+                // start borrows the end's meridiem — but only when that
+                // reading is coherent (start strictly before end within the
+                // shared half-day; "11-2PM" is NOT 11 PM, so it stays
+                // unreadable — fail closed) — and the end is always a range
+                // end, never a start candidate.
+                const between = line.slice(pendingBare.endIndex, tokenStart);
+                if (between.length <= 12 && RANGE_CONNECTOR_PATTERN.test(between)) {
+                    reading.isRangeEnd = true;
+                    if (pendingBare.value < parseInt(match[1], 10)) {
+                        let bareHour = pendingBare.value;
+                        if (meridiem === 'p' && bareHour !== 12) bareHour += 12;
+                        if (meridiem === 'a' && bareHour === 12) bareHour = 0;
+                        readings.push({
+                            minutes: bareHour * 60,
+                            raw: `${pendingBare.raw}${meridiem}m`,
+                            line: lineIndex,
+                            unambiguous: true,
+                            isDoors: reading.isDoors,
+                            isRangeEnd: false,
+                            isRangeStart: true
+                        });
+                    }
+                }
+            }
+            readings.push(reading);
+            previous = { endIndex: FLYER_OCR_TIME_TOKEN_PATTERN.lastIndex, reading };
+            pendingBare = null;
+        }
+    }
+    return readings;
+}
+
+// THE deterministic single-start reading of a flyer's OCR text, or null.
+// Fail-closed rules: candidates must be unambiguous, must not be doors
+// times or range ends, and must sit near date/time context (a time range,
+// or a date token on the same/adjacent line); every candidate must agree on
+// ONE clock time; and no ambiguous reading may point anywhere else. Returns
+// { time: 'HH:MM', raw: '10pm', minutes } or null.
+function readFlyerStartTimeFromOcrText(ocrText) {
+    const text = String(ocrText || '');
+    if (!text.trim()) return null;
+    const readings = collectFlyerOcrTimeReadings(text);
+    if (readings.length === 0) return null;
+    const lines = text.split(/\r?\n/);
+    const dateContextLines = lines.map(line => FLYER_OCR_DATE_CONTEXT_PATTERN.test(line));
+    // ±2 lines: flyers stack date / doors / party lines ("SATURDAY DEC 6" /
+    // "DOORS: 9PM" / "PARTY: 10PM"), so the date may sit two lines above the
+    // start time it dates.
+    const nearDateContext = (lineIndex) => dateContextLines
+        .slice(Math.max(0, lineIndex - 2), lineIndex + 3)
+        .some(Boolean);
+    const candidates = readings.filter(reading => reading.unambiguous
+        && !reading.isDoors
+        && !reading.isRangeEnd
+        && (reading.isRangeStart || nearDateContext(reading.line)));
+    if (candidates.length === 0) return null;
+    const distinctMinutes = new Set(candidates.map(reading => reading.minutes));
+    if (distinctMinutes.size !== 1) return null;
+    const chosen = candidates[0];
+    // An ambiguous reading that could mean a DIFFERENT time than the chosen
+    // start is conflicting information — fail closed.
+    for (const reading of readings) {
+        if (reading.unambiguous || reading.isDoors || reading.isRangeEnd) continue;
+        const alternate = (reading.minutes + 720) % 1440;
+        if (reading.minutes !== chosen.minutes && alternate !== chosen.minutes) return null;
+    }
+    const pad = (value) => String(value).padStart(2, '0');
+    return {
+        time: `${pad(Math.floor(chosen.minutes / 60))}:${pad(chosen.minutes % 60)}`,
+        raw: chosen.raw,
+        minutes: chosen.minutes
+    };
+}
+
+// Does the flyer's OCR text state this exact clock time ANYWHERE — as a
+// start, doors, or range-end time? Agreement anywhere means no conflict
+// (the page adopting the doors or end time is a known, legitimate reading).
+// Ambiguous 1–12 readings match under either meridiem interpretation.
+function flyerOcrStatesClockTime(ocrText, timeHHMM) {
+    const timeMatch = /^(\d{2}):(\d{2})$/.exec(String(timeHHMM || ''));
+    if (!timeMatch) return false;
+    const target = (parseInt(timeMatch[1], 10) * 60) + parseInt(timeMatch[2], 10);
+    return collectFlyerOcrTimeReadings(ocrText).some(reading => reading.minutes === target
+        || (!reading.unambiguous && (reading.minutes + 720) % 1440 === target));
+}
+
+// TRUE when the flyer's OCR text names a date that cannot be this event's
+// local start date (or the previous day — an after-midnight start belongs
+// to the prior night's flyer). Absent date tokens are never a
+// contradiction; only positively mismatched years, months, or month+day
+// pairs veto (the flyer is then likely another occurrence's artwork).
+function flyerOcrContradictsEventDate(ocrText, localDates) {
+    const text = String(ocrText || '');
+    if (!text.trim() || !Array.isArray(localDates) || localDates.length === 0) return false;
+    const years = new Set();
+    const yearPattern = /\b(20\d{2})\b/g;
+    let yearMatch;
+    while ((yearMatch = yearPattern.exec(text)) !== null) years.add(parseInt(yearMatch[1], 10));
+    if (years.size > 0 && !localDates.some(date => years.has(date.year))) return true;
+    const monthsFound = new Set();
+    const monthDayPairs = [];
+    for (const [monthNumber, pattern] of FLYER_OCR_MONTH_TOKEN_PATTERNS) {
+        pattern.lastIndex = 0;
+        let match;
+        while ((match = pattern.exec(text)) !== null) {
+            monthsFound.add(monthNumber);
+            const after = text.slice(pattern.lastIndex).match(/^\.?,?\s{0,3}(\d{1,2})(?:st|nd|rd|th|er|e)?\b/i);
+            if (after) monthDayPairs.push({ month: monthNumber, day: parseInt(after[1], 10) });
+            const before = text.slice(0, match.index).match(/(\d{1,2})(?:st|nd|rd|th|er|e)?\s{0,3}$/i);
+            if (before) monthDayPairs.push({ month: monthNumber, day: parseInt(before[1], 10) });
+        }
+    }
+    if (monthsFound.size > 0 && !localDates.some(date => monthsFound.has(date.month))) return true;
+    if (monthDayPairs.length > 0
+        && !localDates.some(date => monthDayPairs.some(pair => pair.month === date.month && pair.day === date.day))) {
+        return true;
+    }
+    return false;
+}
+
 class AiWebParser {
     constructor(config = {}) {
         this.config = {
@@ -1021,6 +1255,10 @@ class AiWebParser {
                 // whether the identity guard + curated precedence would let it
                 // fill a blank location. Writes nothing to event data.
                 this.logMapsLinkCoordinateCandidates(keptStructuredEvents, effectiveHtmlData);
+                // Report-only: does the event's own paired flyer (og-image
+                // adoption above OCR-vetted it into the verdict registry)
+                // state a different start time than the structured data?
+                this.applyFlyerTimeConflictFlag(keptStructuredEvents);
                 return {
                     events: keptStructuredEvents,
                     additionalLinks: additionalLinks,
@@ -1185,6 +1423,10 @@ class AiWebParser {
             // the identity guard + curated precedence would let it fill a
             // blank location. Writes nothing to event data.
             this.logMapsLinkCoordinateCandidates(keptEvents, effectiveHtmlData);
+            // Report-only: does the event's own paired flyer (ocr-all pass /
+            // segment pairing recorded its verdict) state a different start
+            // time than the page-derived one?
+            this.applyFlyerTimeConflictFlag(keptEvents);
 
             return {
                 events: keptEvents,
@@ -15062,6 +15304,110 @@ TEXT:
         return `${pad(Math.floor(party / 60))}:${pad(party % 60)}`;
     }
 
+    // The event's local start date and the previous day, as {year, month,
+    // day} — the two dates its own flyer may legitimately name (a start
+    // after local midnight belongs to the prior night's artwork). Null when
+    // the start is unparseable or the timezone read fails (fail closed:
+    // callers then never flag). Mirrors getEventNightKey's Intl usage.
+    getFlyerLocalDateCandidates(event) {
+        if (!this.core || typeof this.core.toEpochMillis !== 'function') return null;
+        const millis = this.core.toEpochMillis(event.startDate);
+        if (millis === null) return null;
+        const date = new Date(millis);
+        const timezone = typeof event.timezone === 'string' ? event.timezone.trim() : '';
+        let year = date.getUTCFullYear();
+        let month = date.getUTCMonth() + 1;
+        let day = date.getUTCDate();
+        if (timezone && !event._timezoneUnresolved) {
+            if (typeof Intl === 'undefined' || typeof Intl.DateTimeFormat !== 'function') return null;
+            try {
+                const formatter = new Intl.DateTimeFormat('en-CA', {
+                    timeZone: timezone,
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                });
+                const parts = formatter.formatToParts(date);
+                const read = (type) => {
+                    const part = parts.find(entry => entry.type === type);
+                    return part ? parseInt(part.value, 10) : NaN;
+                };
+                const localYear = read('year');
+                const localMonth = read('month');
+                const localDay = read('day');
+                if (![localYear, localMonth, localDay].every(Number.isFinite)) return null;
+                year = localYear;
+                month = localMonth;
+                day = localDay;
+            } catch (_) {
+                return null;
+            }
+        }
+        const previous = new Date(Date.UTC(year, month - 1, day) - (24 * 60 * 60 * 1000));
+        return [
+            { year, month, day },
+            { year: previous.getUTCFullYear(), month: previous.getUTCMonth() + 1, day: previous.getUTCDate() }
+        ];
+    }
+
+    // Report-only flyer-vs-page start-time conflict (proposed in #1681,
+    // Playground Toronto: page stated 10:00 — the venue's AM/PM entry error —
+    // while the event's own flyer read "10pm to 3am"). Runs on BOTH the
+    // structured-data and AI extraction routes, after each route has settled
+    // event.image (the segment↔image pairing / og-image adoption is that
+    // settling). Consults ONLY the in-memory OCR verdict registry — verdicts
+    // this run already paid for (ocr-all, og-image-vet, cache hits) — never
+    // a new vision call. Every rung fails closed: no verdict, a non-flyer
+    // classification, no unambiguous single OCR start reading, agreement
+    // anywhere (doors/end times included), a sub-hour difference, or a
+    // flyer-stated date that contradicts the event's own → nothing. Stamps
+    // the underscore channel only (_flyerTimeConflict, same convention as
+    // _doorsTimeRejected); the site's value always ships unchanged.
+    applyFlyerTimeConflictFlag(events) {
+        if (!Array.isArray(events) || events.length === 0) return;
+        if (!this.core || typeof this.core.formatLocalClockTime !== 'function') return;
+        for (const event of events) {
+            if (!event || typeof event !== 'object' || event._flyerTimeConflict) continue;
+            const imageUrl = typeof event.image === 'string' ? event.image.trim() : '';
+            if (!imageUrl || !event.startDate) continue;
+            const timezone = typeof event.timezone === 'string' ? event.timezone.trim() : '';
+            // No resolved timezone and no wall-clock-as-UTC marker → the local
+            // clock reading below would be a guess; fail closed.
+            if (!timezone && !event._timezoneUnresolved) continue;
+            const verdict = this.getOcrImageVerdict(imageUrl);
+            if (!verdict || verdict.classification !== 'event-flyer') continue;
+            const ocrText = typeof verdict.text === 'string' ? verdict.text : '';
+            if (!ocrText.trim()) continue;
+            const reading = readFlyerStartTimeFromOcrText(ocrText);
+            if (!reading) continue;
+            const pageTime = this.core.formatLocalClockTime(event.startDate, timezone);
+            const pageMatch = /^(\d{2}):(\d{2})$/.exec(pageTime);
+            if (!pageMatch) continue;
+            // A local-midnight start is the missing-time default (extraction
+            // found only a date — the getEventNightKey doctrine): the page
+            // never STATED 00:00, so there is nothing to conflict with
+            // (real FURBALL Boston sweep case: date-only page vs "10pm-3am"
+            // flyer would otherwise flag). Fail closed.
+            if (pageTime === '00:00') continue;
+            const pageMinutes = (parseInt(pageMatch[1], 10) * 60) + parseInt(pageMatch[2], 10);
+            // The flyer stating the page's time ANYWHERE (start, doors, or
+            // range end) is agreement, not a conflict.
+            if (flyerOcrStatesClockTime(ocrText, pageTime)) continue;
+            const linearDiff = Math.abs(reading.minutes - pageMinutes);
+            const circularDiff = Math.min(linearDiff, 1440 - linearDiff);
+            if (circularDiff < 60) continue;
+            const localDates = this.getFlyerLocalDateCandidates(event);
+            if (!localDates || flyerOcrContradictsEventDate(ocrText, localDates)) continue;
+            event._flyerTimeConflict = {
+                pageTime,
+                flyerTime: reading.time,
+                flyerRaw: reading.raw,
+                imageUrl
+            };
+            console.log(`🕐 AI Web: Flyer time conflict for "${event.title || 'Unknown'}" — page states ${pageTime}, flyer OCR reads ${reading.raw} (report-only; the site's value ships)`);
+        }
+    }
+
     normalizeAiEvent(aiEvent, parserConfig, htmlData = null, cityConfig = null, promptFields = null) {
         const scrapedLinks = this.extractLinksFromPage(
             htmlData && typeof htmlData.html === 'string' ? htmlData.html : '',
@@ -20695,17 +21041,19 @@ TEXT:
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { AiWebParser, normalizeCityValue, normalizeStartTimeValue, combineDateAndTime };
+    module.exports = { AiWebParser, normalizeCityValue, normalizeStartTimeValue, combineDateAndTime, readFlyerStartTimeFromOcrText };
 } else if (typeof window !== 'undefined') {
     window.AiWebParser = AiWebParser;
     window.normalizeCityValue = normalizeCityValue;
     window.normalizeStartTimeValue = normalizeStartTimeValue;
     window.combineDateAndTime = combineDateAndTime;
+    window.readFlyerStartTimeFromOcrText = readFlyerStartTimeFromOcrText;
 } else {
     this.AiWebParser = AiWebParser;
     this.normalizeCityValue = normalizeCityValue;
     this.normalizeStartTimeValue = normalizeStartTimeValue;
     this.combineDateAndTime = combineDateAndTime;
+    this.readFlyerStartTimeFromOcrText = readFlyerStartTimeFromOcrText;
 }
 
 // Scriptable gives every imported module its own console binding, so the

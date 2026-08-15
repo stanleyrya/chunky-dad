@@ -2261,6 +2261,32 @@ class SharedCore {
             }
         }
 
+        // 10. flyer-time-conflict — the event's own paired flyer's OCR text
+        //     states a start time that disagrees with the page-derived one
+        //     by an hour or more (run 20260814-195026, Playground Toronto:
+        //     the site's schedule said 10:00 — the venue's own AM/PM entry
+        //     error — while the flyer read "10pm to 3am"; #1681 shipped the
+        //     site's value per doctrine and proposed this surfacing).
+        //     Detection lives in the parser (applyFlyerTimeConflictFlag —
+        //     the only place the paired OCR verdict is in scope) and fails
+        //     closed on every ambiguity; this rule only converts its
+        //     _flyerTimeConflict stamp into the report-only flag channel.
+        //     Report-only: the site's value always ships, nothing is
+        //     withheld or rewritten.
+        const flyerConflict = event._flyerTimeConflict;
+        if (flyerConflict && typeof flyerConflict === 'object'
+            && typeof flyerConflict.pageTime === 'string' && flyerConflict.pageTime) {
+            const flyerStated = (typeof flyerConflict.flyerRaw === 'string' && flyerConflict.flyerRaw)
+                || (typeof flyerConflict.flyerTime === 'string' && flyerConflict.flyerTime)
+                || '';
+            if (flyerStated) {
+                flags.push({
+                    code: 'flyer-time-conflict',
+                    detail: `page states ${flyerConflict.pageTime}, flyer OCR reads ${flyerStated}`
+                });
+            }
+        }
+
         return flags;
     }
 
@@ -10656,7 +10682,13 @@ class SharedCore {
         if (typeof newEvent._organizer === 'string' && newEvent._organizer) {
             finalEvent._organizer = newEvent._organizer;
         }
-        
+        // Same carry for the report-only flyer-vs-page time-conflict stamp
+        // (parser-side applyFlyerTimeConflictFlag): getEventSanityFlags reads
+        // it off the FINAL analyzed event, so a merge must not shed it.
+        if (newEvent._flyerTimeConflict && typeof newEvent._flyerTimeConflict === 'object') {
+            finalEvent._flyerTimeConflict = newEvent._flyerTimeConflict;
+        }
+
         // STEP 6: Pass all three objects to rich display for comparison
         
         // Store the three objects for display comparison
