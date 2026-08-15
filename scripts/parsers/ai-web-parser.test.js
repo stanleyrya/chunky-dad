@@ -5780,6 +5780,73 @@ test('validateEventUrl rejects .avif assets (literal URL fetched as a crawl page
   assert.deepEqual(result, { valid: false, reason: 'static-asset-extension' });
 });
 
+test('validateEventUrl rejects unresolved JS concat residue as a crawl candidate (run 20260814-000011)', () => {
+  const parser = createParser();
+  // Literal candidates from the run: a script tag's string concatenation
+  // scraped as URLs — the "path" is unevaluated CODE, not a page.
+  assert.deepEqual(
+    parser.validateEventUrl('https://www.thelumberyardbar.com/+encodeURIComponent(l)+', 'https://www.thelumberyardbar.com/'),
+    { valid: false, reason: 'unresolved-code-syntax' });
+  assert.deepEqual(
+    parser.validateEventUrl('https://www.clubchubusa.com/+encodeURIComponent(l)+', 'https://www.clubchubusa.com/'),
+    { valid: false, reason: 'unresolved-code-syntax' });
+  // Generic syntax checks, not an identifier list: any concat-shaped call
+  // residue, raw quote/backtick residue, and unterminated template residue
+  // are equally rejected.
+  assert.deepEqual(
+    parser.validateEventUrl('https://example.com/+buildPath(slug)+', 'https://example.com/'),
+    { valid: false, reason: 'unresolved-code-syntax' });
+  assert.deepEqual(
+    parser.validateEventUrl("https://example.com/'+t.link+'", 'https://example.com/'),
+    { valid: false, reason: 'unresolved-code-syntax' });
+});
+
+test('validateEventUrl rejects implausible dotless hostnames (https://empty/ from the run)', () => {
+  const parser = createParser();
+  assert.deepEqual(
+    parser.validateEventUrl('https://empty/', 'https://www.thelumberyardbar.com/'),
+    { valid: false, reason: 'implausible-hostname' });
+  // localhost is the one legitimate dotless host (dev parsing targets).
+  const localhostResult = parser.validateEventUrl('http://localhost/events', 'http://localhost/');
+  assert.notEqual(localhostResult.reason, 'implausible-hostname');
+});
+
+test('validateEventUrl keeps legitimate plus-in-query and parens-in-path URLs valid', () => {
+  const parser = createParser();
+  // "+" as an encoded space in a query is not concat residue.
+  assert.deepEqual(
+    parser.validateEventUrl('https://www.thelumberyardbar.com/events?q=bear+night', 'https://www.thelumberyardbar.com/'),
+    { valid: true, reason: 'valid' });
+  // Wikipedia-style parenthetical path segments carry no "+ident(" / ")+"
+  // shape and never trip the syntax check.
+  assert.deepEqual(
+    parser.validateEventUrl('https://en.wikipedia.org/wiki/Bear_(gay_culture)', 'https://en.wikipedia.org/wiki/LGBT_culture'),
+    { valid: true, reason: 'valid' });
+});
+
+test('discovery end-to-end: script-concat residue and placeholder hosts are rejected with counted reasons', () => {
+  const core = new SharedCore({}, { eventSchema: EventSchema });
+  const parser = new AiWebParser({ normalizeUrl: core.normalizeUrl.bind(core) });
+  parser.core = core;
+  // Unquoted concat expression + a placeholder host, as the raw-HTML scan
+  // (which reads script bodies) captures them.
+  const html = '<script>u = https://www.clubchubusa.com/+encodeURIComponent(l)+ ; v = "https://empty/";</script>';
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logLines.push(args.join(' ')); };
+  let links;
+  try {
+    links = parser.extractAdditionalUrls(html, 'https://www.clubchubusa.com/events', {});
+  } finally {
+    console.log = originalLog;
+  }
+  assert.deepEqual(links.slice(), [], `no code fragment may survive discovery, got: ${JSON.stringify(links.slice())}`);
+  const statsLine = logLines.find(line => line.includes('URL discovery stats'));
+  assert.ok(statsLine, 'discovery stats line is emitted');
+  assert.ok(statsLine.includes('unresolved-code-syntax'), `stats count the concat rejection: ${statsLine}`);
+  assert.ok(statsLine.includes('implausible-hostname'), `stats count the host rejection: ${statsLine}`);
+});
+
 test('getUrlDedupeKey fallback (no URL global, as on iOS JavaScriptCore) still merges www and bare-host variants', () => {
   const parser = createParser();
   const originalUrl = global.URL;
