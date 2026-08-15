@@ -8978,6 +8978,12 @@ class SharedCore {
         if (!mergedEvent._fieldTrims && existingEvent && Array.isArray(existingEvent._fieldTrims) && existingEvent._fieldTrims.length > 0) {
             mergedEvent._fieldTrims = existingEvent._fieldTrims;
         }
+        // Same carry for the occurrence-expanded family stamp (_seriesInfo):
+        // a same-night stub+detail merge must keep the family metadata so the
+        // UI chip/grouping and the saved-series protection still see it.
+        if (!mergedEvent._seriesInfo && existingEvent && existingEvent._seriesInfo && typeof existingEvent._seriesInfo === 'object') {
+            mergedEvent._seriesInfo = existingEvent._seriesInfo;
+        }
 
         // Helper function to check if a value is empty/null/undefined
         const isEmpty = (value) => {
@@ -11158,8 +11164,14 @@ class SharedCore {
         // B BAR/CUBSCOUT/ONYX all "new" the day after their series were
         // saved). Reporting-only: the analysis action stays 'new' and the
         // write stays withheld — a match only changes what the run SAYS.
+        // Occurrence-expanded family members run the SAME lookup: the family's
+        // cadence evidence says the event recurs, which is exactly when the
+        // owner's calendar may already hold the series covering this date —
+        // and an occurrence write must never fight his imported series. For
+        // these the match is ENFORCED downstream (isSeriesCoveredOccurrence
+        // gates the write with the SERIES MATCH label), not report-only.
         if (analysis.action === 'new' && !analysis.existingEvent && !analysis.sourceEvent &&
-            SharedCore.isRecurringSeriesEvent(event)) {
+            (SharedCore.isRecurringSeriesEvent(event) || SharedCore.isOccurrenceExpandedEvent(event))) {
             try {
                 const seriesMatch = await this.findSavedSeriesMatch(event, calendarAdapter);
                 if (seriesMatch) {
@@ -12029,6 +12041,10 @@ class SharedCore {
             // and gated here, exactly like the recurring-series withhold.
             event?._pastSpanWithheld !== true &&
             !SharedCore.isRecurringSeriesEvent(event) &&
+            // An occurrence-expanded single whose date/identity the owner's
+            // SAVED series already covers (#1655 series-match): writing it
+            // would plant a duplicate single next to his imported series.
+            !SharedCore.isSeriesCoveredOccurrence(event) &&
             !SharedCore.hasJunkTitleSanityFlag(event));
     }
 
@@ -12104,6 +12120,7 @@ class SharedCore {
         if (event._parserConfig && event._parserConfig.dryRun === true) return 'WITHHELD (dry-run parser)';
         if (event._pastSpanWithheld === true) return 'WITHHELD (span fully past)';
         if (SharedCore.isRecurringSeriesEvent(event)) return 'WITHHELD (recurring series — ICS export only)';
+        if (SharedCore.isSeriesCoveredOccurrence(event)) return 'WITHHELD (occurrence covered by saved series — SERIES MATCH)';
         if (SharedCore.hasJunkTitleSanityFlag(event)) return 'WITHHELD (junk title)';
         const action = typeof event._action === 'string' && event._action ? event._action : 'new';
         return action.toUpperCase();
@@ -12205,6 +12222,26 @@ class SharedCore {
         // an existing series (see the pinned override-survival test).
         if (event.overrideUid || event.overrideRecurrenceId) return false;
         return typeof event.recurrence === 'string' && event.recurrence.trim() !== '';
+    }
+
+    // A member of an occurrence-expanded family (owner doctrine, stamped by
+    // the ai-web parser's source-shape classification): the site publishes
+    // each date individually, so the record is a plain single occurrence —
+    // but the family's cadence evidence says the event RECURS, which is
+    // exactly when the owner's calendar may already hold a saved series
+    // covering it.
+    static isOccurrenceExpandedEvent(event) {
+        return Boolean(event && typeof event === 'object' && event._seriesInfo);
+    }
+
+    // An occurrence-expanded single positively matched to a SAVED series
+    // (#1655 series-match, extended to occurrence singles): the write is
+    // withheld — planting a single next to the owner's imported series would
+    // fight it. Its own predicate (mirroring hasJunkTitleSanityFlag) so the
+    // execution gate, the disposition label, and the adapters' labeling can
+    // never disagree.
+    static isSeriesCoveredOccurrence(event) {
+        return SharedCore.isOccurrenceExpandedEvent(event) && Boolean(event._seriesMatch);
     }
 
     // Scriptable identifiers look like `<calendarUUID>:<icsUid>` — the suffix
@@ -13488,6 +13525,15 @@ class SharedCore {
                 hasOverrideIdentity: Boolean(analysis.overrideIdentity)
             };
 
+            // The occurrence-expanded family stamp (parse-time _seriesInfo)
+            // survives the same wholesale replacement: createFinalEventObject
+            // skips underscore fields, and the UI chip, the family grouping,
+            // and the saved-series occurrence withhold all read it off the
+            // analyzed event.
+            if (event._seriesInfo && !analyzedEvent._seriesInfo) {
+                analyzedEvent._seriesInfo = event._seriesInfo;
+            }
+
             // Final-stage field cleanups. Both run at the FINAL analyzed-event
             // build (so every parser, merge result, and cached AI response
             // passes through them) and BEFORE the notes generation/rebuild
@@ -14068,6 +14114,27 @@ class SharedCore {
                     console.log(`🔁 RECURRING: "${event.title || 'Unknown'}" matches the saved series already in ${analyzedEvent._seriesMatch.calendarName} (${analyzedEvent._seriesMatch.instances} instances) — not a new event`);
                 }
                 console.log(`🔁 RECURRING: "${event.title || 'Unknown'}" withheld from calendar write — save via ICS export`);
+            }
+
+            // Occurrence-expanded singles vs the owner's imported series
+            // (#1655 series-match, extended): the saved-series lookup matched
+            // this occurrence's identity, so its write is withheld with the
+            // SERIES MATCH label — occurrence-expansion must never fight a
+            // series he saved. Scalars only; the run JSON persists this
+            // stamp, and the execution gate (isSeriesCoveredOccurrence)
+            // reads exactly it.
+            if (analysis.seriesMatch && !analyzedEvent._seriesMatch &&
+                SharedCore.isOccurrenceExpandedEvent(analyzedEvent)) {
+                analyzedEvent._seriesMatch = {
+                    identifier: analysis.seriesMatch.identifier || '',
+                    title: analysis.seriesMatch.title || '',
+                    startDate: analysis.seriesMatch.startDate || null,
+                    endDate: analysis.seriesMatch.endDate || null,
+                    reason: analysis.seriesMatch.reason || 'Saved series match',
+                    instances: Number.isFinite(analysis.seriesMatch.instances) ? analysis.seriesMatch.instances : 0,
+                    calendarName: analysis.seriesMatch.calendarName || ''
+                };
+                console.log(`🔁 SHAPE: "${analyzedEvent.title || 'Unknown'}" occurrence is covered by the saved series in ${analyzedEvent._seriesMatch.calendarName || 'the calendar'} — write withheld (SERIES MATCH)`);
             }
 
             return analyzedEvent;
@@ -15143,6 +15210,12 @@ class SharedCore {
     //     cross-realm Dates).
     getSeriesExportIdentity(event) {
         if (!SharedCore.isRecurringSeriesEvent(event)) return null;
+        // Occurrence-expanded family member (owner doctrine): the site
+        // publishes each date individually, so the record is a real single
+        // occurrence — never a series export, never collapsed across dates.
+        // Its rules were already demoted to _seriesInfo at classification
+        // time, so this guard is defense-in-depth (fail closed).
+        if (event._seriesInfo) return null;
         if (event._seriesAuthority === 'slot-host') return null;
         if (event._recurringExport === false) return null;
         const rrule = String(event.recurrenceRule || event.recurrence || '').trim().toUpperCase();

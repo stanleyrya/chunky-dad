@@ -4086,6 +4086,23 @@ test('deduplicateEvents collapses two full-series exports of one series to the n
   assert.equal(kept.recurrenceRule, 'FREQ=WEEKLY;BYDAY=TH', 'the series rule survives the collapse');
 });
 
+// Series doctrine rework ("we can't condense the event with diff URLs"): an
+// occurrence-expanded family member carries report-only _seriesInfo — and
+// even if a recurrence claim survives on the record (defense in depth; the
+// classification pass normally demotes it), the series collapse must never
+// fold occurrence-expanded records across dates.
+test('deduplicateEvents never series-collapses records carrying _seriesInfo (occurrence-expanded)', async () => {
+  const core = createCore();
+  const thisWeek = new Date(Date.now() + 7 * SERIES_DAY_MS);
+  const nextWeek = new Date(thisWeek.getTime() + 7 * SERIES_DAY_MS);
+  const info = { rrule: 'FREQ=WEEKLY;BYDAY=TH', basis: '2 dates', occurrences: 2, family: 'shape-1' };
+  const first = buildWeeklySeriesExport(thisWeek, { _seriesInfo: info });
+  const second = buildWeeklySeriesExport(nextWeek, { _seriesInfo: info });
+  assert.equal(core.getSeriesExportIdentity(first), null, '_seriesInfo disqualifies the record as a series export');
+  const result = await core.deduplicateEvents([first, second], null);
+  assert.equal(result.length, 2, 'occurrence-expanded records keep every date individual');
+});
+
 test('deduplicateEvents keeps two distinct single occurrences of a recurring event separate', async () => {
   // Behavior-preservation guard (passes on main and on the collapse branch):
   // run 20260802-221204's SUNDAY BEER BUST extracted two genuinely distinct
@@ -12669,6 +12686,108 @@ test('saved-series lookup: fails open on adapter errors and never runs for non-s
   const plainAnalysis = await core.resolveCalendarAnalysisWithSeriesProbe(plain, [], 'upsert', counting);
   assert.equal(plainAnalysis.action, 'new');
   assert.equal(lookupCalls, 0, 'a non-series event never triggers the lookup');
+});
+
+// ---------------------------------------------------------------------------
+// Occurrence-expanded doctrine (series rework): a member of an
+// occurrence-expanded family carries report-only _seriesInfo (stamped by the
+// ai-web parser's source-shape classification) and is written like any
+// single event — EXCEPT when the owner's calendar already holds the series
+// covering it: then the write is withheld with the SERIES MATCH label, so
+// occurrence-expansion never fights his imported series.
+// ---------------------------------------------------------------------------
+
+function buildScrapedCubscoutOccurrence() {
+  // Future-relative (like the series-collapse fixtures): a past span would
+  // trip the _pastSpanWithheld gate before the doctrine under test.
+  const start = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  return {
+    title: 'CUBSCOUT',
+    startDate: start,
+    endDate: new Date(start.getTime() + 5 * 60 * 60 * 1000),
+    bar: 'Eagle LA',
+    city: 'la',
+    ticketUrl: 'https://dice.fm/event/abc123-cubscout-aug-7-tickets',
+    _seriesInfo: { rrule: 'FREQ=MONTHLY;BYDAY=1FR', basis: '3× 1st Friday', occurrences: 3, family: 'shape-1' }
+  };
+}
+
+test('occurrence-expanded predicates: isOccurrenceExpandedEvent / isSeriesCoveredOccurrence', () => {
+  const occurrence = buildScrapedCubscoutOccurrence();
+  assert.equal(SharedCore.isOccurrenceExpandedEvent(occurrence), true);
+  assert.equal(SharedCore.isOccurrenceExpandedEvent({ title: 'ONE OFF' }), false);
+  assert.equal(SharedCore.isRecurringSeriesEvent(occurrence), false, '_seriesInfo alone is never a series claim');
+  assert.equal(SharedCore.isSeriesCoveredOccurrence(occurrence), false, 'no saved-series match, no withhold');
+  occurrence._seriesMatch = { identifier: 'CAL-UUID:x', calendarName: 'chunky-dad-la' };
+  assert.equal(SharedCore.isSeriesCoveredOccurrence(occurrence), true);
+  assert.equal(SharedCore.isSeriesCoveredOccurrence({ _seriesMatch: { identifier: 'CAL-UUID:x' } }), false,
+    'a series-export _seriesMatch alone never trips the occurrence gate');
+});
+
+test('occurrence-expanded single vs saved series: lookup runs, write withheld with SERIES MATCH', async () => {
+  const core = createLaCore();
+  const saved = [
+    buildSavedCubscoutOccurrence('2026-09-05T04:00:00.000Z'),
+    buildSavedCubscoutOccurrence('2026-10-03T04:00:00.000Z')
+  ];
+  const adapter = buildSeriesLookupAdapter(saved);
+  const occurrence = buildScrapedCubscoutOccurrence();
+
+  const analysis = await core.resolveCalendarAnalysisWithSeriesProbe(occurrence, [], 'upsert', adapter);
+  assert.equal(analysis.action, 'new', 'the analysis action itself is untouched');
+  assert.ok(analysis.seriesMatch, 'the saved-series lookup runs for occurrence-expanded singles too');
+  assert.equal(analysis.seriesMatch.identifier, 'CAL-UUID:cubscout-20260731T193113Z@chunky.dad');
+
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (message) => { lines.push(String(message)); };
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(occurrence, analysis, adapter, {});
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.ok(analyzed._seriesInfo, 'the family metadata survives onto the analyzed event');
+  assert.ok(analyzed._seriesMatch, 'the saved-series match is stamped');
+  assert.equal(analyzed._seriesMatch.calendarName, 'chunky-dad-la');
+  assert.equal(analyzed._recurring, undefined, 'never turned into a series');
+  assert.equal(analyzed._recurringExport, undefined, 'no ICS-export series framing for an occurrence');
+  assert.equal(analyzed.ticketUrl, occurrence.ticketUrl, 'the occurrence keeps its own ticket link');
+  assert.ok(
+    lines.some(l => l.includes('🔁 SHAPE:') && l.includes('covered by the saved series in chunky-dad-la') && l.includes('SERIES MATCH')),
+    `the withhold says so out loud: ${JSON.stringify(lines)}`
+  );
+  assert.equal(SharedCore.isSeriesCoveredOccurrence(analyzed), true);
+  assert.equal(SharedCore.describeExecutionDisposition(analyzed),
+    'WITHHELD (occurrence covered by saved series — SERIES MATCH)');
+  assert.deepEqual(SharedCore.filterEventsForExecution([analyzed]), [], 'and nothing is written');
+});
+
+test('occurrence-expanded single with NO saved series: written like any single event', async () => {
+  const core = createLaCore();
+  const adapter = buildSeriesLookupAdapter([]);
+  const occurrence = buildScrapedCubscoutOccurrence();
+
+  const analysis = await core.resolveCalendarAnalysisWithSeriesProbe(occurrence, [], 'upsert', adapter);
+  assert.equal(analysis.action, 'new');
+  assert.equal(analysis.seriesMatch, undefined, 'nothing saved, nothing matched');
+
+  const analyzed = await core.buildAnalyzedCalendarEvent(occurrence, analysis, adapter, {});
+  assert.equal(analyzed._seriesMatch, undefined);
+  assert.ok(analyzed._seriesInfo, 'the report-only metadata rides along');
+  assert.equal(SharedCore.describeExecutionDisposition(analyzed), 'NEW');
+  assert.equal(SharedCore.filterEventsForExecution([analyzed]).length, 1,
+    'an uncovered occurrence writes exactly like any single event');
+});
+
+test('mergeParsedEvents carries _seriesInfo from the secondary record (same-night stub+detail fold)', async () => {
+  const core = createLaCore();
+  const info = { rrule: 'FREQ=MONTHLY;BYDAY=1FR', basis: '3× 1st Friday', occurrences: 3, family: 'shape-1' };
+  const stub = { ...buildScrapedCubscoutOccurrence(), _seriesInfo: info };
+  const detail = { title: 'CUBSCOUT', startDate: new Date('2026-08-08T02:00:00.000Z'), bar: 'Eagle LA', city: 'la' };
+  const merged = await core.mergeParsedEvents(stub, detail, {});
+  assert.deepEqual(merged._seriesInfo, info, 'the family stamp survives a merge that keeps the other record');
 });
 
 // ---------------------------------------------------------------------------

@@ -5113,6 +5113,67 @@ class AiWebParser {
     }
 
     /**
+     * SOURCE-SHAPE CLASSIFICATION (owner doctrine): "we only create series
+     * for single-events that are clearly recurring (a flyer, etc.) and we do
+     * single events for calendar websites that do the expansion for us" —
+     * plus "we can't condense the event with diff URLs".
+     *
+     * An event family is `occurrence-expanded` when the SITE already expands
+     * the recurrence and publishes per-date artifacts — the observed records
+     * carry DISTINCT per-date identity artifacts:
+     *   - ?occurrence=YYYY-MM-DD links harvested off the family's own pages
+     *     (the link format itself is a per-date publication), or
+     *   - different event-page URLs / ticket URLs / posters on different
+     *     dates (dice.fm per-event links, MEC renumbered slugs, per-date
+     *     flyers).
+     * It is `stated-series` when nothing is individually published per date:
+     * one page/flyer states or implies the schedule and every observed date
+     * shares the same artifact set. Detection is purely structural (value
+     * comparison across dates) — nothing per-site, nothing per-domain.
+     *
+     * Artifact comparison: for each identity-artifact field, a date whose
+     * value set contains a value ABSENT from another date's non-empty value
+     * set is per-date evidence. Two dates carrying the identical value
+     * (both pointing at the one series page) prove nothing; a value only
+     * one date wears is exactly a per-date publication. Same-date variance
+     * (listing stub + detail page of ONE night) never counts — only
+     * cross-date differences classify. Fail closed per the doctrine: when
+     * the artifacts say per-date, the family stays individual occurrences —
+     * unsure never converts to a series.
+     */
+    classifyCadenceSourceShape(group, hasOccurrenceLinkObservations) {
+        if (hasOccurrenceLinkObservations) {
+            return { shape: 'occurrence-expanded', reason: 'the site publishes per-date ?occurrence= links' };
+        }
+        const ARTIFACT_FIELDS = ['url', 'website', 'ticketUrl', 'image'];
+        for (const field of ARTIFACT_FIELDS) {
+            const valuesByDate = new Map();
+            for (const member of group.members) {
+                const value = typeof member.event[field] === 'string' ? member.event[field].trim() : '';
+                if (!value) continue;
+                if (!valuesByDate.has(member.nightKey)) valuesByDate.set(member.nightKey, new Set());
+                valuesByDate.get(member.nightKey).add(value);
+            }
+            if (valuesByDate.size < 2) continue;
+            const entries = Array.from(valuesByDate.values());
+            for (let i = 0; i < entries.length; i++) {
+                for (let j = 0; j < entries.length; j++) {
+                    if (i === j) continue;
+                    for (const value of entries[i]) {
+                        if (!entries[j].has(value)) {
+                            return {
+                                shape: 'occurrence-expanded',
+                                reason: `distinct per-date ${field} artifacts across ${valuesByDate.size} dates`
+                            };
+                        }
+                    }
+                }
+            }
+        }
+        return { shape: 'stated-series', reason: 'no per-date identity artifacts observed' };
+    }
+
+    /**
      * Post-crawl derived-cadence enforcement (called by shared-core's
      * processParser once every page of the run has been crawled, BEFORE
      * dedup — the same seam as applyVenueSiteAddressConsensus, and for the
@@ -5129,6 +5190,15 @@ class AiWebParser {
      *      what catches MEC installs that renumber slugs per occurrence
      *      (karaoke-19, karaoke-20 …), where URL-keyed observation never
      *      accumulates.
+     *
+     * SOURCE SHAPE comes first (owner doctrine, see
+     * classifyCadenceSourceShape): a family whose observed records carry
+     * distinct per-date identity artifacts (?occurrence= links, per-date
+     * event/ticket URLs or posters, renumbered slugs) is occurrence-expanded
+     * — the site already did the expansion, so the family gets report-only
+     * _seriesInfo metadata and every occurrence stays an individual event.
+     * Only a stated-series-shaped family (no per-date artifacts) continues
+     * into the stamping below.
      *
      * A qualifying group (deriveCadenceRrule) gets recurrenceRule stamped on
      * every member that lacks one, so the EXISTING series machinery folds the
@@ -5184,6 +5254,7 @@ class AiWebParser {
         }
 
         let groupIndex = 0;
+        let shapeIndex = 0;
         for (const group of groups) {
             const dates = new Set(group.members.map(member => member.nightKey));
             // Fold in the ?occurrence= observations whose page identity
@@ -5196,13 +5267,74 @@ class AiWebParser {
                     if (pathKey) memberPathKeys.add(pathKey);
                 }
             }
+            let occurrenceLinksObserved = false;
             if (observations) {
                 for (const [pathKey, dateSet] of observations) {
                     if (!memberPathKeys.has(pathKey)) continue;
+                    occurrenceLinksObserved = true;
                     for (const date of dateSet) dates.add(date);
                 }
             }
             const sortedDates = Array.from(dates).sort();
+
+            // SOURCE-SHAPE CLASSIFICATION (see classifyCadenceSourceShape):
+            // an occurrence-expanded family — the site publishes per-date
+            // artifacts — is NEVER converted to a series. No recurrenceRule
+            // stamp, no _cadenceGroup marker (so the same-series export
+            // collapse can never fold it across dates), stated rules demoted
+            // to report-only metadata. Every member instead carries
+            // _seriesInfo = { rrule, basis, occurrences, family }: the
+            // cadence stays visible (UI chip + family grouping) while each
+            // occurrence keeps its own date, ticketUrl, website and poster
+            // and is written/merged individually like any single event.
+            const shapeVerdict = sortedDates.length >= 2
+                ? this.classifyCadenceSourceShape(group, occurrenceLinksObserved)
+                : null;
+            if (shapeVerdict && shapeVerdict.shape === 'occurrence-expanded') {
+                shapeIndex++;
+                const derivedForInfo = this.deriveCadenceRrule(sortedDates);
+                const statedRuleSet = new Set();
+                for (const member of group.members) {
+                    const stated = String(member.event.recurrenceRule || member.event.recurrence || '').trim().toUpperCase();
+                    if (stated) statedRuleSet.add(stated);
+                }
+                // The report-only rrule: derived when every stated rule
+                // agrees with (or is refined by) it; the single stated rule
+                // when nothing was derivable; '' on disagreement or multiple
+                // stated rules — fail closed, the observed-dates basis
+                // string still describes the family.
+                const statedRuleList = Array.from(statedRuleSet);
+                const derivedRrule = derivedForInfo ? derivedForInfo.rrule : '';
+                let infoRrule = '';
+                if (derivedRrule && statedRuleList.every(rule =>
+                    rule === derivedRrule || derivedRrule.startsWith(`${rule};`))) {
+                    infoRrule = derivedRrule;
+                } else if (!derivedRrule && statedRuleList.length === 1) {
+                    infoRrule = statedRuleList[0];
+                }
+                const shapeBasis = this.describeOccurrenceCadence(sortedDates);
+                const shapeTitle = group.members[0].event.title;
+                let demotedCount = 0;
+                for (const member of group.members) {
+                    member.event._seriesInfo = {
+                        rrule: infoRrule,
+                        basis: shapeBasis.summary,
+                        occurrences: sortedDates.length,
+                        family: `shape-${shapeIndex}`
+                    };
+                    if (String(member.event.recurrenceRule || member.event.recurrence || '').trim()) {
+                        delete member.event.recurrenceRule;
+                        delete member.event.recurrence;
+                        demotedCount++;
+                    }
+                    if (member.event._recurring === true) {
+                        delete member.event._recurring;
+                    }
+                }
+                console.log(`🔁 SHAPE: "${shapeTitle}" is occurrence-expanded (${shapeVerdict.reason}) — ${group.members.length} record(s) over ${sortedDates.length} date(s) kept individual, no series conversion${demotedCount > 0 ? `; ${demotedCount} stated rule(s) demoted to report-only _seriesInfo` : ''}`);
+                continue;
+            }
+
             const derived = this.deriveCadenceRrule(sortedDates);
             if (!derived) continue; // existing report-only line already covered it
 
@@ -5228,6 +5360,9 @@ class AiWebParser {
             if (disagreeing.length > 0) {
                 console.log(`🔁 CADENCE: derived ${derived.rrule} for "${title}" disagrees with stated rule(s) ${disagreeing.join(', ')} — stated cadence kept, nothing stamped (curated data beats derived)`);
                 continue;
+            }
+            if (shapeVerdict) {
+                console.log(`🔁 SHAPE: "${title}" is stated-series (${shapeVerdict.reason}) — series flow retained`);
             }
             const unstamped = group.members.filter(member =>
                 !String(member.event.recurrenceRule || member.event.recurrence || '').trim());

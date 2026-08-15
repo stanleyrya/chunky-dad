@@ -13745,9 +13745,13 @@ test('a lone "-WxH" thumbnail keeps its own identity and still gets OCR coverage
 });
 
 // ===========================================================================
-// Derived-cadence enforcement (occurrence links + same-title record groups →
-// conservative recurrenceRule stamps; stated rules always win). Venue names
-// below are fixtures only.
+// Derived-cadence enforcement + source-shape classification (owner doctrine:
+// series only for stated schedules with no per-date publications; a family
+// whose records carry DISTINCT per-date identity artifacts — ?occurrence=
+// links, per-date event/ticket URLs, renumbered slugs, per-date posters — is
+// occurrence-expanded: every occurrence stays an individual event carrying
+// its own links, with report-only _seriesInfo metadata instead of a
+// recurrenceRule stamp). Venue names below are fixtures only.
 // ===========================================================================
 
 function buildCadenceStampRecord(overrides = {}) {
@@ -13797,7 +13801,11 @@ test('deriveCadenceRrule: weekly needs same weekday + a run of 3 consecutive 7-d
   assert.equal(parser.deriveCadenceRrule(['2026-08-05']), null);
 });
 
-test('applyDerivedCadenceStamps: weekly stamp from ?occurrence= link observations', () => {
+// PIN UPDATED (series doctrine rework): ?occurrence= links ARE per-date
+// publications — the site expands the recurrence itself — so the family is
+// occurrence-expanded: no recurrenceRule stamp, no _cadenceGroup marker,
+// report-only _seriesInfo instead. Previously this pinned a weekly stamp.
+test('applyDerivedCadenceStamps: ?occurrence= link observations classify occurrence-expanded — no stamp, _seriesInfo metadata', () => {
   const parser = createParser();
   const sourceUrl = 'https://fixture-eagle.example/calendar/';
   const html = ['2026-08-05', '2026-08-12', '2026-08-19', '2026-08-26']
@@ -13809,32 +13817,79 @@ test('applyDerivedCadenceStamps: weekly stamp from ?occurrence= link observation
     url: 'https://fixture-eagle.example/events/hump-night/?occurrence=2026-08-05'
   });
   const logs = withCapturedLogs(() => parser.applyDerivedCadenceStamps([record]));
-  assert.equal(record.recurrenceRule, 'FREQ=WEEKLY;BYDAY=WE', 'link observations alone carry the weekly proof');
-  assert.ok(typeof record._cadenceGroup === 'string' && record._cadenceGroup, 'group marker stamped');
-  assert.ok(logs.some(line => line.includes('🔁 CADENCE: stamped FREQ=WEEKLY;BYDAY=WE on 1 "HUMP NIGHT" record(s)')),
-    `enforce line expected, got: ${JSON.stringify(logs)}`);
+  assert.equal(record.recurrenceRule, undefined, 'occurrence-expanded families are never converted to a series');
+  assert.equal(record._cadenceGroup, undefined, 'no collapse marker on an occurrence-expanded family');
+  assert.ok(record._seriesInfo, 'report-only family metadata stamped');
+  assert.equal(record._seriesInfo.rrule, 'FREQ=WEEKLY;BYDAY=WE', 'the derived cadence survives as metadata');
+  assert.equal(record._seriesInfo.occurrences, 4, 'observation dates counted');
+  assert.ok(logs.some(line => line.includes('🔁 SHAPE: "HUMP NIGHT" is occurrence-expanded')
+    && line.includes('?occurrence=')),
+    `shape line expected, got: ${JSON.stringify(logs)}`);
 });
 
-test('applyDerivedCadenceStamps: weekly stamp from same-title records on renumbered slugs (no occurrence links)', () => {
+// PIN UPDATED (series doctrine rework): renumbered MEC slugs are per-date
+// event pages, so the family is occurrence-expanded — each occurrence keeps
+// its own URL and stays an individual event. Previously this pinned a weekly
+// stamp plus a shared _cadenceGroup marker.
+test('applyDerivedCadenceStamps: renumbered slugs classify occurrence-expanded — occurrences kept individual', () => {
   const parser = createParser();
   // MEC renumbering (run 20260807-143442): one weekly night, a NEW slug per
-  // occurrence — URL-keyed observation can never accumulate these.
+  // occurrence — the slugs themselves are the per-date artifacts.
   const records = ['2026-08-05', '2026-08-12', '2026-08-19', '2026-08-26'].map((date, index) =>
     buildCadenceStampRecord({
       startDate: new Date(`${date}T20:00:00.000Z`),
       endDate: new Date(`${date}T23:00:00.000Z`),
       url: `https://fixture-eagle.example/events/karaoke-${19 + index}/`
     }));
-  parser.applyDerivedCadenceStamps(records);
+  const logs = withCapturedLogs(() => parser.applyDerivedCadenceStamps(records));
+  const families = new Set();
+  records.forEach((record, index) => {
+    assert.equal(record.recurrenceRule, undefined, 'no series conversion');
+    assert.equal(record._cadenceGroup, undefined, 'no collapse marker');
+    assert.ok(record._seriesInfo, 'family metadata on every member');
+    assert.equal(record._seriesInfo.rrule, 'FREQ=WEEKLY;BYDAY=WE');
+    assert.equal(record._seriesInfo.occurrences, 4);
+    assert.equal(record.url, `https://fixture-eagle.example/events/karaoke-${19 + index}/`,
+      'each occurrence keeps its own per-date URL');
+    families.add(record._seriesInfo.family);
+  });
+  assert.equal(families.size, 1, 'all four records share ONE family marker');
+  assert.ok([...families][0], 'the family marker is non-empty');
+  assert.ok(logs.some(line => line.includes('🔁 SHAPE: "KARAOKE" is occurrence-expanded')
+    && line.includes('distinct per-date url artifacts')),
+    `shape line expected, got: ${JSON.stringify(logs)}`);
+});
+
+// Stamping-path coverage (stated-series shape): the SAME multi-date family
+// with NO per-date artifacts — every record pointing at the one page that
+// states the schedule — still stamps the derived rule and mints the collapse
+// marker, exactly the pre-rework flow.
+test('applyDerivedCadenceStamps: a shared-page family (no per-date artifacts) is stated-series — weekly stamp fires', () => {
+  const parser = createParser();
+  const records = ['2026-08-05', '2026-08-12', '2026-08-19', '2026-08-26'].map(date =>
+    buildCadenceStampRecord({
+      startDate: new Date(`${date}T20:00:00.000Z`),
+      endDate: new Date(`${date}T23:00:00.000Z`),
+      url: 'https://fixture-eagle.example/events/karaoke/'
+    }));
+  const logs = withCapturedLogs(() => parser.applyDerivedCadenceStamps(records));
   for (const record of records) {
-    assert.equal(record.recurrenceRule, 'FREQ=WEEKLY;BYDAY=WE');
+    assert.equal(record.recurrenceRule, 'FREQ=WEEKLY;BYDAY=WE', 'stated-series shape keeps the stamping flow');
+    assert.equal(record._seriesInfo, undefined, 'no occurrence-expanded metadata on a stated-series family');
   }
   const markers = new Set(records.map(record => record._cadenceGroup));
   assert.equal(markers.size, 1, 'all four records share ONE same-series marker');
   assert.ok([...markers][0], 'the shared marker is non-empty');
+  assert.ok(logs.some(line => line.includes('🔁 SHAPE: "KARAOKE" is stated-series')),
+    `stated-series shape line expected, got: ${JSON.stringify(logs)}`);
+  assert.ok(logs.some(line => line.includes('🔁 CADENCE: stamped FREQ=WEEKLY;BYDAY=WE on 4 "KARAOKE" record(s)')),
+    `enforce line expected, got: ${JSON.stringify(logs)}`);
 });
 
-test('applyDerivedCadenceStamps: monthly stamp from two same-ordinal observations in different months', () => {
+// PIN UPDATED (series doctrine rework): distinct per-date slugs → the
+// monthly pair is occurrence-expanded; the derived monthly cadence becomes
+// _seriesInfo metadata. Previously this pinned a FREQ=MONTHLY;BYDAY=1FR stamp.
+test('applyDerivedCadenceStamps: a monthly pair on per-date slugs keeps both occurrences individual', () => {
   const parser = createParser();
   const records = [
     buildCadenceStampRecord({
@@ -13851,8 +13906,12 @@ test('applyDerivedCadenceStamps: monthly stamp from two same-ordinal observation
     })
   ];
   parser.applyDerivedCadenceStamps(records);
-  assert.equal(records[0].recurrenceRule, 'FREQ=MONTHLY;BYDAY=1FR');
-  assert.equal(records[1].recurrenceRule, 'FREQ=MONTHLY;BYDAY=1FR');
+  for (const record of records) {
+    assert.equal(record.recurrenceRule, undefined, 'no series conversion on per-date slugs');
+    assert.ok(record._seriesInfo, 'family metadata stamped');
+    assert.equal(record._seriesInfo.rrule, 'FREQ=MONTHLY;BYDAY=1FR', 'derived cadence kept as metadata');
+    assert.equal(record._seriesInfo.occurrences, 2);
+  }
 });
 
 test('applyDerivedCadenceStamps: mixed weekdays stamp nothing', () => {
@@ -13870,16 +13929,43 @@ test('applyDerivedCadenceStamps: mixed weekdays stamp nothing', () => {
   }
 });
 
-test('applyDerivedCadenceStamps: stated rule beats derived — conflict logs, nothing stamped, stated kept', () => {
+// PIN UPDATED (series doctrine rework): the per-date slugs make this family
+// occurrence-expanded, so the conflicting stated rule is DEMOTED to
+// report-only metadata rather than kept as a series claim — each occurrence
+// is written individually either way, and _seriesInfo.rrule fails closed to
+// '' on the disagreement (the observed-dates basis still describes the
+// family). Previously this pinned "stated kept, nothing stamped".
+test('applyDerivedCadenceStamps: stated-vs-derived disagreement on an occurrence-expanded family demotes, rrule fails closed', () => {
   const parser = createParser();
-  // The model extracted an explicit stated cadence on one record; the derived
-  // weekday disagrees. Curated/stated data beats derived — fail closed for
-  // the WHOLE group.
   const records = ['2026-08-05', '2026-08-12', '2026-08-19', '2026-08-26'].map((date, index) =>
     buildCadenceStampRecord({
       startDate: new Date(`${date}T20:00:00.000Z`),
       endDate: new Date(`${date}T23:00:00.000Z`),
       url: `https://fixture-eagle.example/events/karaoke-${19 + index}/`
+    }));
+  records[0].recurrenceRule = 'FREQ=WEEKLY;BYDAY=FR';
+  const logs = withCapturedLogs(() => parser.applyDerivedCadenceStamps(records));
+  for (const record of records) {
+    assert.equal(record.recurrenceRule, undefined, 'occurrence-expanded members carry no series claim');
+    assert.equal(record._cadenceGroup, undefined, 'no collapse marker');
+    assert.ok(record._seriesInfo, 'family metadata on every member');
+    assert.equal(record._seriesInfo.rrule, '', 'disagreeing rules fail closed to no metadata rrule');
+    assert.ok(record._seriesInfo.basis, 'the observed-dates basis still describes the family');
+  }
+  assert.ok(logs.some(line => line.includes('🔁 SHAPE: "KARAOKE" is occurrence-expanded')
+    && line.includes('1 stated rule(s) demoted to report-only _seriesInfo')),
+    `shape+demotion line expected, got: ${JSON.stringify(logs)}`);
+});
+
+// Stated-beats-derived conflict coverage on the STAMPING path (stated-series
+// shape — no per-date artifacts): unchanged pre-rework behavior.
+test('applyDerivedCadenceStamps: stated rule beats derived on a stated-series family — conflict logs, nothing stamped', () => {
+  const parser = createParser();
+  const records = ['2026-08-05', '2026-08-12', '2026-08-19', '2026-08-26'].map(date =>
+    buildCadenceStampRecord({
+      startDate: new Date(`${date}T20:00:00.000Z`),
+      endDate: new Date(`${date}T23:00:00.000Z`),
+      url: 'https://fixture-eagle.example/events/karaoke/'
     }));
   records[0].recurrenceRule = 'FREQ=WEEKLY;BYDAY=FR';
   const logs = withCapturedLogs(() => parser.applyDerivedCadenceStamps(records));
@@ -13892,11 +13978,14 @@ test('applyDerivedCadenceStamps: stated rule beats derived — conflict logs, no
     `conflict line expected, got: ${JSON.stringify(logs)}`);
 });
 
-test('applyDerivedCadenceStamps: derived agreeing with stated is a no-op stamp but still marks the same-series group', () => {
+// PIN UPDATED (series doctrine rework): the renumbered underwear-N slugs are
+// per-date publications, so the stated-rule group is occurrence-expanded —
+// the five records each stay an individual Wednesday with their own page,
+// stated rules demoted to _seriesInfo (rrule preserved there: derived agrees
+// with stated). Previously this pinned "marker only, rules untouched" so the
+// series collapse could fold them; UI grouping now replaces that fold.
+test('applyDerivedCadenceStamps: stated rules on renumbered slugs are demoted — occurrences kept individual', () => {
   const parser = createParser();
-  // Run 20260807-143442: all five "Underwear Happy Hour" records already
-  // state FREQ=WEEKLY;BYDAY=WE, each on its own renumbered slug. The rules
-  // stay untouched; the marker is what lets the series collapse fold them.
   const records = ['2026-08-05', '2026-08-12', '2026-08-19', '2026-08-26'].map((date, index) =>
     buildCadenceStampRecord({
       startDate: new Date(`${date}T20:00:00.000Z`),
@@ -13906,14 +13995,18 @@ test('applyDerivedCadenceStamps: derived agreeing with stated is a no-op stamp b
       recurrenceRule: 'FREQ=WEEKLY;BYDAY=WE'
     }));
   const logs = withCapturedLogs(() => parser.applyDerivedCadenceStamps(records));
-  const markers = new Set(records.map(record => record._cadenceGroup));
-  assert.equal(markers.size, 1, 'one shared marker across the stated-rule group');
-  assert.ok([...markers][0]);
+  const families = new Set();
   for (const record of records) {
-    assert.equal(record.recurrenceRule, 'FREQ=WEEKLY;BYDAY=WE', 'stated rules untouched');
+    assert.equal(record.recurrenceRule, undefined, 'stated rules demoted on an occurrence-expanded family');
+    assert.equal(record._cadenceGroup, undefined, 'no collapse marker');
+    assert.ok(record._seriesInfo, 'family metadata on every member');
+    assert.equal(record._seriesInfo.rrule, 'FREQ=WEEKLY;BYDAY=WE', 'the agreed cadence survives as metadata');
+    families.add(record._seriesInfo.family);
   }
-  assert.ok(logs.some(line => line.includes('same-series marker only, nothing stamped')),
-    `marker-only line expected, got: ${JSON.stringify(logs)}`);
+  assert.equal(families.size, 1, 'one shared family across the demoted group');
+  assert.ok(logs.some(line => line.includes('🔁 SHAPE: "UNDERWEAR HAPPY HOUR" is occurrence-expanded')
+    && line.includes('4 stated rule(s) demoted to report-only _seriesInfo')),
+    `shape+demotion line expected, got: ${JSON.stringify(logs)}`);
 });
 
 test('applyDerivedCadenceStamps: different venues never share a group, and undated records are never stamped', () => {
@@ -13951,10 +14044,16 @@ test('applyDerivedCadenceStamps: different venues never share a group, and undat
   const before = dated.map(record => record.startDate.getTime());
   parser.applyDerivedCadenceStamps([undated, ...dated]);
   assert.equal(undated.recurrenceRule, undefined, 'an undated record is never stamped');
+  assert.equal(undated._seriesInfo, undefined, 'an undated record never joins a family');
   assert.equal(undated.startDate, null, 'an undated record gains no fabricated date');
-  assert.deepEqual(dated.map(record => record.startDate.getTime()), before, 'stamping never mutates startDate');
+  assert.deepEqual(dated.map(record => record.startDate.getTime()), before, 'classification never mutates startDate');
+  // PIN UPDATED (series doctrine rework): the dated group sits on renumbered
+  // karaoke-N slugs — occurrence-expanded, so it now carries _seriesInfo
+  // metadata instead of the weekly stamp it previously pinned.
   for (const record of dated) {
-    assert.equal(record.recurrenceRule, 'FREQ=WEEKLY;BYDAY=WE', 'the dated group still stamps normally');
+    assert.equal(record.recurrenceRule, undefined, 'per-date slugs never convert to a series');
+    assert.ok(record._seriesInfo, 'the dated family still classifies and carries metadata');
+    assert.equal(record._seriesInfo.rrule, 'FREQ=WEEKLY;BYDAY=WE');
   }
 });
 
@@ -13979,14 +14078,18 @@ test('deriveCadenceRrule: weekly with skipped weeks — every gap a multiple of 
   assert.equal(parser.deriveCadenceRrule(['2026-08-15', '2026-08-22', '2026-08-29', '2026-09-04']), null);
 });
 
-test('applyDerivedCadenceStamps: the six real GEAR NIGHT records fold to one weekly group (skipped weeks + DJ suffixes)', () => {
+// PIN UPDATED (series doctrine rework): the renumbered gear-night-N slugs
+// are per-date publications — Dallas Eagle's MEC install expands the series
+// itself — so the six records classify occurrence-expanded and each Saturday
+// stays an individual event carrying its own page URL, with the weekly
+// cadence preserved as _seriesInfo metadata and ONE shared family for UI
+// grouping. Previously this pinned a FREQ=WEEKLY;BYDAY=SA stamp plus a
+// shared _cadenceGroup marker (collapse-to-next-occurrence).
+test('applyDerivedCadenceStamps: the six real GEAR NIGHT records classify occurrence-expanded — one family, no stamps', () => {
   const parser = createParser();
   // Run 20260811-134734 verbatim: six GEAR NIGHT records on renumbered MEC
   // slugs (gear-night-5/7/11/17/19/22), two wearing per-record DJ credits,
   // observed Saturdays Aug 15, 22, Sep 5, 12, 19, Oct 3 (America/Chicago).
-  // On main these survived as six separate calendar writes: the weekly rule
-  // demanded 3 CONSECUTIVE 7-day gaps (longest run here is 2), and the
-  // DJ-suffixed pair could not even join the group.
   const gearNight = [
     ['Gear Night with DJ Tristan Jaxx', '2026-08-16T02:00:00.000Z', 'gear-night-5'],
     ['Gear Night with DJ Philip Webb', '2026-08-23T03:00:00.000Z', 'gear-night-7'],
@@ -14004,22 +14107,74 @@ test('applyDerivedCadenceStamps: the six real GEAR NIGHT records fold to one wee
     source: 'ai-web'
   }));
   parser.applyDerivedCadenceStamps(gearNight);
-  for (const record of gearNight) {
-    assert.equal(record.recurrenceRule, 'FREQ=WEEKLY;BYDAY=SA', `"${record.title}" (${record.url}) joins the weekly stamp`);
-  }
-  const markers = new Set(gearNight.map(record => record._cadenceGroup));
-  assert.equal(markers.size, 1, 'all six records share ONE same-series marker');
-  assert.ok([...markers][0], 'the shared marker is non-empty');
+  const families = new Set();
+  gearNight.forEach((record, index) => {
+    assert.equal(record.recurrenceRule, undefined, `"${record.title}" is never converted to a series`);
+    assert.equal(record._cadenceGroup, undefined, 'no collapse marker');
+    assert.ok(record._seriesInfo, `"${record.title}" (${record.url}) joins the family metadata`);
+    assert.equal(record._seriesInfo.rrule, 'FREQ=WEEKLY;BYDAY=SA', 'the weekly cadence survives as metadata');
+    assert.equal(record._seriesInfo.occurrences, 6);
+    assert.ok(record.url.includes('gear-night-'), 'each occurrence keeps its own per-date slug URL');
+    families.add(record._seriesInfo.family);
+  });
+  assert.equal(families.size, 1, 'all six records share ONE family (grouped in the UI, never folded in data)');
+  assert.ok([...families][0], 'the shared family is non-empty');
 });
 
-test('applyDerivedCadenceStamps: per-record guest-DJ suffixes group into one monthly series; different parties never do', () => {
+// Run 20260814-000011 verbatim (the evidence that drove the doctrine): three
+// observed 3rd-Saturday BEEFMINCE x RVT occurrences, each with its OWN
+// dice.fm per-event ticket link. On main these were stamped
+// FREQ=MONTHLY;BYDAY=3SA and collapsed to the Sep 19 occurrence — whose
+// ticketUrl is the Sep-19-SPECIFIC dice link, discarding October's and
+// November's. "We can't condense the event with diff URLs": the distinct
+// per-date ticketUrls classify the family occurrence-expanded, every
+// occurrence keeps its own dice link, and the cadence survives as metadata.
+test('applyDerivedCadenceStamps: BEEFMINCE x RVT — distinct per-date dice links keep every occurrence and its own ticketUrl', () => {
+  const parser = createParser();
+  const diceLinks = [
+    ['2026-09-19T21:00:00.000Z', 'https://dice.fm/event/yoepxa-beefmince-x-rvt-19th-sep-the-royal-vauxhall-tavern-london-tickets'],
+    ['2026-10-17T21:00:00.000Z', 'https://dice.fm/event/xednya-beefmince-x-rvt-17th-oct-the-royal-vauxhall-tavern-london-tickets'],
+    ['2026-11-21T22:00:00.000Z', 'https://dice.fm/event/927gr7-beefmince-x-rvt-21st-nov-the-royal-vauxhall-tavern-london-tickets']
+  ];
+  const records = diceLinks.map(([start, ticketUrl]) => ({
+    title: 'BEEFMINCE x RVT',
+    bar: 'The Royal Vauxhall Tavern',
+    timezone: 'Europe/London',
+    startDate: new Date(start),
+    endDate: new Date(new Date(start).getTime() + 6 * 60 * 60 * 1000),
+    website: 'https://beefmince.com',
+    ticketUrl,
+    source: 'ai-web'
+  }));
+  const logs = withCapturedLogs(() => parser.applyDerivedCadenceStamps(records));
+  const families = new Set();
+  records.forEach((record, index) => {
+    assert.equal(record.recurrenceRule, undefined, 'no FREQ=MONTHLY;BYDAY=3SA stamp — the site expands the dates itself');
+    assert.equal(record._cadenceGroup, undefined, 'no collapse marker — October and November keep their own dice links');
+    assert.ok(record._seriesInfo, 'family metadata on every occurrence');
+    assert.equal(record._seriesInfo.rrule, 'FREQ=MONTHLY;BYDAY=3SA', 'the derived cadence survives as report-only metadata');
+    assert.equal(record._seriesInfo.occurrences, 3);
+    assert.equal(record.ticketUrl, diceLinks[index][1], 'each occurrence keeps its own per-date dice link');
+    families.add(record._seriesInfo.family);
+  });
+  assert.equal(families.size, 1, 'one family across the three Saturdays');
+  assert.ok(logs.some(line => line.includes('🔁 SHAPE: "BEEFMINCE x RVT" is occurrence-expanded')
+    && line.includes('distinct per-date ticketUrl artifacts')),
+    `shape line expected, got: ${JSON.stringify(logs)}`);
+});
+
+// PIN UPDATED (series doctrine rework): the pair sits on distinct per-date
+// slugs, so it is occurrence-expanded — the guest-DJ grouping still proves
+// the family (that identity logic is untouched), but the stated bare
+// FREQ=MONTHLY rules are demoted and the refined 2FR cadence lands in
+// _seriesInfo. Previously this pinned "marker minted, stated rules kept".
+test('applyDerivedCadenceStamps: per-record guest-DJ suffixes still group into one family; different parties never do', () => {
   const parser = createParser();
   // Run 20260811-134734 verbatim: a genuine 2nd-Friday monthly pair whose
   // records each wear a different guest DJ's name — no bare-title anchor,
   // so the plain name similarity never groups them. Both pages state a bare
   // FREQ=MONTHLY; the derived FREQ=MONTHLY;BYDAY=2FR REFINES it (agreement,
-  // not conflict), so the stated rules stay untouched and the same-series
-  // marker is minted.
+  // not conflict), so the refined rule is what the metadata carries.
   const disciplinePair = [
     {
       title: 'Discipline Corps Bar Night with DJ Philip Webb',
@@ -14043,11 +14198,13 @@ test('applyDerivedCadenceStamps: per-record guest-DJ suffixes group into one mon
     }
   ];
   parser.applyDerivedCadenceStamps(disciplinePair);
-  const markers = new Set(disciplinePair.map(record => record._cadenceGroup));
-  assert.equal(markers.size, 1, 'the DJ-suffixed pair shares ONE same-series marker');
-  assert.match([...markers][0], /FREQ=MONTHLY;BYDAY=2FR$/, 'grouped via the existing >=2-months ordinal rule');
+  const families = new Set(disciplinePair.map(record => record._seriesInfo && record._seriesInfo.family));
+  assert.equal(families.size, 1, 'the DJ-suffixed pair shares ONE family');
+  assert.ok([...families][0], 'the shared family is non-empty');
   for (const record of disciplinePair) {
-    assert.equal(record.recurrenceRule, 'FREQ=MONTHLY', 'the stated rule is NEVER overridden by its refinement');
+    assert.equal(record.recurrenceRule, undefined, 'stated rules demoted on the occurrence-expanded pair');
+    assert.equal(record._cadenceGroup, undefined, 'no collapse marker');
+    assert.equal(record._seriesInfo.rrule, 'FREQ=MONTHLY;BYDAY=2FR', 'the refining derived rule is the metadata cadence');
   }
 
   // Two DIFFERENT party names at one venue, each with a guest-DJ suffix,
