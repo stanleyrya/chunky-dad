@@ -15325,6 +15325,232 @@ test('fully-past span: the write is withheld with a review flag; a future umbrel
 });
 
 // ---------------------------------------------------------------------------
+// span-fully-past narrowing (owner feedback 2026-08: "I don't like
+// 'span-fully-past' that much (I guess unless it's trying to save an event a
+// year ago or something)"): the flag + withhold only fire when the span ended
+// MORE than the withhold window ago (default 30 days, config-overridable via
+// sanity.pastSpanWithholdDays). A last-weekend event behaves like any other;
+// the THIS WEEK AT MASSIVE stale-roundup class (~300 days late) still trips
+// both — that case stays pinned by the test above.
+// ---------------------------------------------------------------------------
+
+test('recently-past span (5 days): no flag, no withhold — a last-weekend event behaves normally', async () => {
+  const core = createCore();
+  const now = Date.now();
+  const lastWeekend = {
+    title: 'Bear Night Last Weekend',
+    startDate: new Date(now - 5 * 24 * 60 * 60 * 1000),
+    endDate: new Date(now - 5 * 24 * 60 * 60 * 1000 + 6 * 60 * 60 * 1000),
+    bar: 'Massive',
+    city: 'seattle',
+    timezone: 'America/Los_Angeles',
+    shortName: 'BNLW' // keeps the shortName derivation pass inert
+  };
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logLines.push(args.join(' ')); };
+  let analyzed;
+  try {
+    analyzed = await core.prepareEventsForCalendar([lastWeekend], buildPrepCalendarAdapter([]), {});
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(analyzed.length, 1);
+  assert.equal(analyzed[0]._pastSpanWithheld, undefined, 'a recently-past span is never withheld');
+  assert.ok(!analyzed[0]._sanityFlags.some(flag => flag.code === 'span-fully-past'),
+    'no review flag inside the withhold window');
+  assert.ok(!logLines.some(line => line.startsWith('⏳ PAST SPAN:')), 'no withhold log line');
+  assert.equal(SharedCore.filterEventsForExecution(analyzed).length, 1, 'the write proceeds normally');
+});
+
+test('sanity.pastSpanWithholdDays override: 0 restores flag-everything-past, a wide window clears the stale tile', async () => {
+  const core = createCore();
+  const now = Date.now();
+  const fiveDaysPast = () => ({
+    title: 'Bear Night Last Weekend',
+    startDate: new Date(now - 5 * 24 * 60 * 60 * 1000),
+    endDate: new Date(now - 5 * 24 * 60 * 60 * 1000 + 6 * 60 * 60 * 1000),
+    bar: 'Massive',
+    city: 'seattle',
+    timezone: 'America/Los_Angeles',
+    shortName: 'BNLW'
+  });
+  const strict = await core.prepareEventsForCalendar(
+    [fiveDaysPast()], buildPrepCalendarAdapter([]), { sanity: { pastSpanWithholdDays: 0 } });
+  assert.equal(strict[0]._pastSpanWithheld, true, 'a 0-day window withholds every fully-past span again');
+  assert.ok(strict[0]._sanityFlags.some(flag => flag.code === 'span-fully-past'),
+    'the config override reaches the flag channel too');
+  assert.deepEqual(SharedCore.filterEventsForExecution(strict), []);
+
+  // The real stale tile under a window wider than its lateness sails through.
+  const staleTile = {
+    title: 'THIS WEEK AT MASSIVE',
+    startDate: new Date('2025-10-07T05:00:00.000Z'),
+    endDate: new Date('2025-10-12T05:00:00.000Z'),
+    bar: 'Massive',
+    city: 'seattle',
+    timezone: 'America/Los_Angeles',
+    shortName: 'THIS WEEK'
+  };
+  const permissive = await core.prepareEventsForCalendar(
+    [staleTile], buildPrepCalendarAdapter([]), { sanity: { pastSpanWithholdDays: 100000 } });
+  assert.equal(permissive[0]._pastSpanWithheld, undefined);
+  assert.ok(!permissive[0]._sanityFlags.some(flag => flag.code === 'span-fully-past'));
+  assert.equal(SharedCore.filterEventsForExecution(permissive).length, 1);
+});
+
+test('span-fully-past flag channel: 30-day threshold, detail text unchanged, context.config override honored', () => {
+  const core = createCore();
+  const nowMs = Date.parse('2026-08-02T12:00:00Z');
+  const endedDaysAgo = (days) => ({
+    title: 'Window Probe',
+    startDate: new Date(nowMs - (days * 24 + 4) * 60 * 60 * 1000),
+    endDate: new Date(nowMs - days * 24 * 60 * 60 * 1000)
+  });
+  assert.deepEqual(core.getEventSanityFlags(endedDaysAgo(10), { nowMs }).map(flag => flag.code), [],
+    'inside the window: recently past is not flagged');
+  const flags = core.getEventSanityFlags(endedDaysAgo(40), { nowMs });
+  assert.deepEqual(flags.map(flag => flag.code), ['span-fully-past'], 'beyond the window: still flagged');
+  assert.equal(flags[0].detail,
+    'entire span (start and end) ended 40 day(s) before analysis — nothing left to attend',
+    'the flag text is byte-identical to the pre-threshold wording');
+  assert.deepEqual(
+    core.getEventSanityFlags(endedDaysAgo(10), { nowMs, config: { sanity: { pastSpanWithholdDays: 5 } } })
+      .map(flag => flag.code),
+    ['span-fully-past'],
+    'a tighter configured window flags a 10-day-past span');
+});
+
+// ---------------------------------------------------------------------------
+// Merge no-op skip (owner feedback 2026-08: "I wouldn't mind not merging if
+// there is no change and nothing to merge"): a merge whose FINAL payload is
+// field-identical to the live calendar record — the same changed-fields
+// predicate _changes / the results-UI no-changes chip use, plus the notes
+// projection — writes nothing. Fail closed: ANY real notes-line difference
+// (a bearReview edit, a manual-verdict bearSource line) still writes.
+// BEEFMINCE Trunk Den shape from run 20260813-211637: every written field
+// equal, notes differing by key ordering alone.
+// ---------------------------------------------------------------------------
+
+function scrapedBeefminceShape(startDate, endDate, overrides = {}) {
+  return {
+    title: 'BEEFMINCE Trunk Den',
+    startDate: new Date(startDate),
+    endDate: new Date(endDate),
+    bar: 'Royal Vauxhall Tavern',
+    city: 'london',
+    timezone: 'Europe/London',
+    cover: '£12',
+    website: 'https://beefmince.com',
+    bearSource: 'keyword',
+    shortName: 'BEEF-MINCE',
+    ...overrides
+  };
+}
+
+// Settle the record once (merge into a minimal calendar record) and hand back
+// what the calendar would hold after that write — the input every no-op /
+// changed-twin case below re-scrapes against.
+async function settleBeefminceCalendarRecord(core, startDate, endDate) {
+  const seedRecord = {
+    title: 'BEEFMINCE Trunk Den',
+    startDate: new Date(startDate),
+    endDate: new Date(endDate),
+    // Calendar-as-database: location is the real record's coordinates, and
+    // the empty-scrape merge rule preserves it exactly.
+    location: '51.4863391, -0.1217784',
+    notes: 'bar: Royal Vauxhall Tavern'
+  };
+  const settleRun = await core.prepareEventsForCalendar(
+    [scrapedBeefminceShape(startDate, endDate)], buildPrepCalendarAdapter([seedRecord]), {});
+  assert.equal(settleRun.length, 1);
+  assert.equal(settleRun[0]._action, 'merge');
+  const settled = settleRun[0];
+  return {
+    title: settled.title,
+    startDate: new Date(settled.startDate),
+    endDate: new Date(settled.endDate),
+    location: settled.location || '',
+    notes: settled.notes
+  };
+}
+
+test('merge no-op: a field-identical re-scrape skips the write with the ⏸️ line (BEEFMINCE Trunk Den shape)', async () => {
+  const core = createCore();
+  const start = Date.now() + 30 * 24 * 60 * 60 * 1000;
+  const end = start + 6 * 60 * 60 * 1000;
+  const calendarRecord = await settleBeefminceCalendarRecord(core, start, end);
+
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logLines.push(args.join(' ')); };
+  let rerun;
+  try {
+    rerun = await core.prepareEventsForCalendar(
+      [scrapedBeefminceShape(start, end)], buildPrepCalendarAdapter([calendarRecord]), {});
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.equal(rerun.length, 1, "flag-don't-drop: the card stays in the results");
+  assert.equal(rerun[0]._action, 'merge', 'analysis still resolves a merge');
+  assert.equal(rerun[0]._mergeNoOp, true, 'a field-identical merge is stamped as a no-op');
+  assert.ok(logLines.some(line => line.startsWith('⏸️ MERGE: "BEEFMINCE Trunk Den" produced no field changes — write skipped')),
+    `no-op line expected, got: ${JSON.stringify(logLines.filter(line => line.includes('MERGE')))}`);
+  assert.deepEqual(SharedCore.filterEventsForExecution(rerun), [], 'nothing reaches the calendar write');
+  assert.equal(SharedCore.describeExecutionDisposition(rerun[0]),
+    'SKIPPED (merge no-op — no field changes)',
+    'the dryRun preview label and the execution gate agree');
+});
+
+test('merge no-op fail-closed: one real field change writes, and a verdict-line-only difference writes', async () => {
+  const core = createCore();
+  const start = Date.now() + 30 * 24 * 60 * 60 * 1000;
+  const end = start + 6 * 60 * 60 * 1000;
+  const calendarRecord = await settleBeefminceCalendarRecord(core, start, end);
+
+  // One-field-changed twin: the scrape now carries an instagram the calendar
+  // lacks — the merge must still write.
+  const changedRun = await core.prepareEventsForCalendar(
+    [scrapedBeefminceShape(start, end, { instagram: 'https://www.instagram.com/rvtofficial' })],
+    buildPrepCalendarAdapter([{ ...calendarRecord, startDate: new Date(calendarRecord.startDate), endDate: new Date(calendarRecord.endDate) }]),
+    {});
+  assert.equal(changedRun[0]._action, 'merge');
+  assert.equal(changedRun[0]._mergeNoOp, undefined, 'a real field change is never stamped as a no-op');
+  assert.equal(SharedCore.filterEventsForExecution(changedRun).length, 1, 'the changed merge still writes');
+
+  // Verdict-line-only twin: same fields, but the owner tapped manual-bear in
+  // the results UI. Title/dates/location are identical — the ONLY difference
+  // is the bearSource notes line, and the notes projection must catch it
+  // (his verdicts always land).
+  const verdictRun = await core.prepareEventsForCalendar(
+    [scrapedBeefminceShape(start, end, { bearSource: 'manual-bear (overrode ai: tapped in results)' })],
+    buildPrepCalendarAdapter([{ ...calendarRecord, startDate: new Date(calendarRecord.startDate), endDate: new Date(calendarRecord.endDate) }]),
+    {});
+  assert.equal(verdictRun[0]._action, 'merge');
+  assert.equal(core.parseNotesIntoFields(verdictRun[0].notes).bearSource,
+    'manual-bear (overrode ai: tapped in results)',
+    'the manual verdict is in the merged payload');
+  assert.equal(verdictRun[0]._mergeNoOp, undefined, 'a verdict-note-only difference is a change');
+  assert.equal(SharedCore.filterEventsForExecution(verdictRun).length, 1, 'the verdict write still lands');
+});
+
+test('notesProjectionsMatch: pure line reordering is a no-op, any real line difference is a change', () => {
+  const core = createCore();
+  const notes = 'bar: Royal Vauxhall Tavern\nwebsite: https://beefmince.com\nbearSource: keyword';
+  const reordered = 'website: https://beefmince.com\nbearSource: keyword\nbar: Royal Vauxhall Tavern';
+  assert.equal(core.notesProjectionsMatch(notes, reordered), true,
+    'formatEventNotes key-order churn alone is not a change (the real BEEFMINCE case)');
+  assert.equal(core.notesProjectionsMatch(notes, `${notes}\nbearReview: confirmed — owner`), false,
+    'an added bearReview line is a change');
+  assert.equal(core.notesProjectionsMatch(notes, notes.replace('keyword', 'manual-bear (overrode ai: tapped)')), false,
+    'a rewritten bearSource verdict line is a change');
+  assert.equal(core.notesProjectionsMatch('', ''), true);
+  assert.equal(core.notesProjectionsMatch(notes, `${notes}\n`), true,
+    'a trailing blank line is not a content difference');
+});
+
+// ---------------------------------------------------------------------------
 // Cross-realm Date handling (2026-08-03 run review).
 //
 // Scriptable loads every file through its own importModule, so shared-core and

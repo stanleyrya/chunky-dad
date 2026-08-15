@@ -308,6 +308,14 @@ const SANITY_START_LONG_PAST_DAYS = 370;
 // 2026-10-18) flags; note the 9-day WHITE PARTY club night sits UNDER this
 // bound — a deterministic span rule cannot tell it from Bears Sitges Week.
 const SANITY_MAX_EVENT_DURATION_DAYS = 10;
+// span-fully-past: how long after a span's END the review flag and the write
+// withhold engage. A recently-ended span is normal scrape churn — last
+// weekend's party still sitting on the venue page — and behaves like any
+// other event; the flag/withhold exist for the stale-roundup class ("THIS
+// WEEK AT MASSIVE": an Oct 2025 lineup tile proposed as a CREATE ~10 months
+// late). Owner-tunable via config.sanity.pastSpanWithholdDays (0 restores
+// the flag-everything-past behavior).
+const SANITY_PAST_SPAN_WITHHOLD_DAYS = 30;
 
 class SharedCore {
     constructor(cities, options = {}) {
@@ -2054,8 +2062,14 @@ class SharedCore {
         //    because even an UPDATE payload for a fully-elapsed span has no
         //    attendable content to deliver. This flag is the card surface;
         //    the matching write withhold is stamped separately in
-        //    buildAnalyzedCalendarEvent via isEventSpanFullyPast.
-        if (this.isEventSpanFullyPast(event, nowMs)) {
+        //    buildAnalyzedCalendarEvent via the same thresholded predicate.
+        //    Thresholded (owner feedback 2026-08): a span that ended within
+        //    the withhold window (default 30 days, config-overridable via
+        //    sanity.pastSpanWithholdDays through context.config) is recently
+        //    past — no flag, no withhold — while the months-late roundup
+        //    class still trips both.
+        const pastSpanWithholdDays = this.resolvePastSpanWithholdDays(context && context.config);
+        if (this.isEventSpanPastBeyondWithholdWindow(event, nowMs, pastSpanWithholdDays)) {
             const startMs = toMs(event.startDate);
             const endReferenceMs = toMs(event.endDate);
             const spanEndMs = Number.isFinite(endReferenceMs) ? endReferenceMs : startMs;
@@ -2221,6 +2235,32 @@ class SharedCore {
         const endMs = this.toEpochMillis(event.endDate);
         const spanEndMs = endMs === null ? startMs : endMs;
         return spanEndMs < nowMs;
+    }
+
+    // The span-fully-past flag/withhold window, in days. Reads the owner's
+    // config.sanity.pastSpanWithholdDays override when it is a usable
+    // non-negative number; anything else falls back to the 30-day default.
+    resolvePastSpanWithholdDays(config) {
+        const raw = config && config.sanity ? config.sanity.pastSpanWithholdDays : undefined;
+        const parsed = typeof raw === 'number' ? raw : (typeof raw === 'string' && raw.trim() !== '' ? Number(raw) : NaN);
+        return Number.isFinite(parsed) && parsed >= 0 ? parsed : SANITY_PAST_SPAN_WITHHOLD_DAYS;
+    }
+
+    // TRUE only when the whole span is past (isEventSpanFullyPast) AND its
+    // end is MORE than withholdDays behind analysis time. This is the
+    // condition the span-fully-past review flag and the _pastSpanWithheld
+    // write withhold both use: a span that ended within the window (a
+    // last-weekend party) is recently past — normal churn, no flag, no
+    // withhold — while the stale-roundup class (months to a year late)
+    // still trips it. Owner feedback 2026-08: "I don't like
+    // 'span-fully-past' that much (unless it's trying to save an event a
+    // year ago or something)".
+    isEventSpanPastBeyondWithholdWindow(event, nowMs = Date.now(), withholdDays = SANITY_PAST_SPAN_WITHHOLD_DAYS) {
+        if (!this.isEventSpanFullyPast(event, nowMs)) return false;
+        const startMs = this.toEpochMillis(event.startDate);
+        const endMs = this.toEpochMillis(event.endDate);
+        const spanEndMs = endMs === null ? startMs : endMs;
+        return (nowMs - spanEndMs) > withholdDays * 24 * 60 * 60 * 1000;
     }
 
     // A value shaped like a street address is NEVER a venue name. Anchored on
@@ -10539,6 +10579,19 @@ class SharedCore {
         }
         
         // Simple change detection for display
+        finalEvent._changes = this.computeCalendarWriteChanges(finalEvent, existingEvent, calendarObject);
+
+        return finalEvent;
+    }
+
+    // The "changed = merged differs from calendar" change list: exactly the
+    // fields the calendar write applies (title, dates, location, url view,
+    // notes), compared against the live calendar record. Stamped as
+    // _changes on the final merge object above (display: the results-UI
+    // no-changes chip / already-saved pile) and re-evaluated by the merge
+    // no-op gate in buildAnalyzedCalendarEvent AFTER every later notes/title
+    // pass has run.
+    computeCalendarWriteChanges(finalEvent, existingEvent, calendarObject) {
         const changes = [];
         if (finalEvent.title !== existingEvent.title) changes.push('title');
         if (!this.datesEqualForDisplay(finalEvent.startDate, existingEvent.startDate)) changes.push('startDate');
@@ -10550,12 +10603,29 @@ class SharedCore {
         // The 'url' label is kept for display continuity. Comparing a scraped
         // url against Scriptable's always-empty native url flagged 'url' on
         // every run.
-        if (finalEvent.url !== (calendarObject.website || '')) changes.push('url');
+        if (finalEvent.url !== ((calendarObject && calendarObject.website) || '')) changes.push('url');
         if (finalEvent.notes !== existingEvent.notes) changes.push('notes');
-        
-        finalEvent._changes = changes;
-        
-        return finalEvent;
+        return changes;
+    }
+
+    // Notes-projection equality for the merge no-op gate. Line-level and
+    // ORDER-INSENSITIVE: formatEventNotes key order can differ run to run
+    // while the content is identical (the real BEEFMINCE Trunk Den no-op,
+    // run 20260813-211637: every written field equal, notes differing by
+    // key ordering alone), so pure reordering is not a change — but ANY
+    // line-level difference is (a bearReview edit, a manual-verdict
+    // bearSource line, a sanity-driven note line must always land in the
+    // calendar). Fail closed: anything not provably identical writes.
+    notesProjectionsMatch(existingNotes, mergedNotes) {
+        const toSortedLines = (value) => String(value === null || value === undefined ? '' : value)
+            .replace(/\r\n?/g, '\n')
+            .split('\n')
+            .filter(line => line.trim() !== '')
+            .sort();
+        const existingLines = toSortedLines(existingNotes);
+        const mergedLines = toSortedLines(mergedNotes);
+        if (existingLines.length !== mergedLines.length) return false;
+        return existingLines.every((line, index) => line === mergedLines[index]);
     }
 
     // ============================================================================
@@ -12356,6 +12426,11 @@ class SharedCore {
             // stamps _pastSpanWithheld + the span-fully-past review flag)
             // and gated here, exactly like the recurring-series withhold.
             event?._pastSpanWithheld !== true &&
+            // A merge stamped _mergeNoOp writes nothing by definition — the
+            // final payload is field-identical to the calendar record
+            // (stamp site: buildAnalyzedCalendarEvent), so executing it
+            // would only churn the calendar's modification time.
+            event?._mergeNoOp !== true &&
             !SharedCore.isRecurringSeriesEvent(event) &&
             // An occurrence-expanded single whose date/identity the owner's
             // SAVED series already covers (#1655 series-match): writing it
@@ -12407,6 +12482,7 @@ class SharedCore {
             '_sanityFlags',
             '_original',
             '_pastSpanWithheld',
+            '_mergeNoOp',
             '_duplicateOfKept',
             '_seriesAuthority',
             '_recurringExport',
@@ -12438,6 +12514,7 @@ class SharedCore {
         if (SharedCore.isRecurringSeriesEvent(event)) return 'WITHHELD (recurring series — ICS export only)';
         if (SharedCore.isSeriesCoveredOccurrence(event)) return 'WITHHELD (occurrence covered by saved series — SERIES MATCH)';
         if (SharedCore.hasJunkTitleSanityFlag(event)) return 'WITHHELD (junk title)';
+        if (event._mergeNoOp === true) return 'SKIPPED (merge no-op — no field changes)';
         const action = typeof event._action === 'string' && event._action ? event._action : 'new';
         return action.toUpperCase();
     }
@@ -14219,7 +14296,7 @@ class SharedCore {
             // calendar execution by filterEventsForExecution; nothing about
             // that changes _action or this stamping, and the card stays in
             // the results UI.
-            analyzedEvent._sanityFlags = this.getEventSanityFlags(analyzedEvent);
+            analyzedEvent._sanityFlags = this.getEventSanityFlags(analyzedEvent, { config });
             if (analyzedEvent._sanityFlags.length > 0) {
                 console.log(`⚠️ SANITY: "${analyzedEvent.title || 'Unknown'}" flagged ${analyzedEvent._sanityFlags.map(flag => flag.code).join(', ')} — ${analyzedEvent._sanityFlags[0].detail}`);
             }
@@ -14253,8 +14330,11 @@ class SharedCore {
             // calendar write is withheld (filterEventsForExecution), exactly
             // the recurring-series withhold pattern below. Legitimate
             // umbrellas (bear weeks, festivals) are future-dated and never
-            // trip this.
-            if (this.isEventSpanFullyPast(analyzedEvent)) {
+            // trip this. Thresholded (owner feedback 2026-08): only a span
+            // that ended MORE than the withhold window ago (default 30 days,
+            // config sanity.pastSpanWithholdDays) is withheld — a
+            // last-weekend event behaves like any other.
+            if (this.isEventSpanPastBeyondWithholdWindow(analyzedEvent, Date.now(), this.resolvePastSpanWithholdDays(config))) {
                 analyzedEvent._pastSpanWithheld = true;
                 console.log(`⏳ PAST SPAN: "${analyzedEvent.title || 'Unknown'}" withheld from calendar write — entire span (start and end) is already past at analysis time; card kept in results`);
             }
@@ -14480,6 +14560,34 @@ class SharedCore {
                     calendarName: analysis.seriesMatch.calendarName || ''
                 };
                 console.log(`🔁 SHAPE: "${analyzedEvent.title || 'Unknown'}" occurrence is covered by the saved series in ${analyzedEvent._seriesMatch.calendarName || 'the calendar'} — write withheld (SERIES MATCH)`);
+            }
+
+            // MERGE NO-OP SKIP (owner feedback 2026-08: "I wouldn't mind not
+            // merging if there is no change and nothing to merge"): when the
+            // merge payload is field-identical to the live calendar record
+            // there is nothing to write, so the write becomes a no-op —
+            // skipped by filterEventsForExecution, labeled already-saved by
+            // the results UI. Judged against the FINAL payload (every
+            // notes/title pass above has run) with the same changed-fields
+            // predicate _changes / the no-changes chip use, PLUS the notes
+            // projection: ANY real notes-line difference (a bearReview
+            // verdict, a manual-verdict bearSource line, a sanity note)
+            // still writes; only pure line reordering is a no-op. The stamp
+            // is shared by live execution and the dryRun preview, so the
+            // preview shows exactly what execution would skip.
+            if (analyzedEvent._action === 'merge' && analyzedEvent._existingEvent) {
+                const finalWriteChanges = this.computeCalendarWriteChanges(
+                    analyzedEvent,
+                    analyzedEvent._existingEvent,
+                    analyzedEvent._original && analyzedEvent._original.calendar
+                );
+                const changedBeyondNotes = finalWriteChanges.filter(field => field !== 'notes');
+                const notesIdentical = !finalWriteChanges.includes('notes')
+                    || this.notesProjectionsMatch(analyzedEvent._existingEvent.notes, analyzedEvent.notes);
+                if (changedBeyondNotes.length === 0 && notesIdentical) {
+                    analyzedEvent._mergeNoOp = true;
+                    console.log(`⏸️ MERGE: "${analyzedEvent.title || 'Unknown'}" produced no field changes — write skipped`);
+                }
             }
 
             return analyzedEvent;
