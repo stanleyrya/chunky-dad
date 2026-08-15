@@ -19223,3 +19223,38 @@ test('final build gmaps tiers: corroborated name+address query, uncorroborated c
   assert.equal(lines.filter(line => line.includes('corroborated bar + address for "FURBALL"')).length, 1,
     'the stable pass is silent — no per-run churn');
 });
+
+// === Sanity rule 10: flyer-time-conflict (report-only; #1681's proposal) ===
+
+test('sanity: flyer-time-conflict surfaces the parser _flyerTimeConflict stamp with both values named', () => {
+  const core = createSanityCore();
+  const event = {
+    title: 'Playground Toronto',
+    startDate: new Date('2026-12-05T15:00:00.000Z'),
+    endDate: new Date('2026-12-06T08:00:00.000Z'),
+    _flyerTimeConflict: {
+      pageTime: '10:00',
+      flyerTime: '22:00',
+      flyerRaw: '10pm',
+      imageUrl: 'https://www.bearitmtl.com/wp-content/uploads/2025/11/Playground-Vignette2.jpg'
+    }
+  };
+  assert.deepEqual(sanityCodes(core, event), ['flyer-time-conflict']);
+  const flag = core.getEventSanityFlags(event, { nowMs: SANITY_NOW_MS })
+    .find(entry => entry.code === 'flyer-time-conflict');
+  assert.equal(flag.detail, 'page states 10:00, flyer OCR reads 10pm');
+});
+
+test('sanity: flyer-time-conflict never fires without a well-formed stamp', () => {
+  const core = createSanityCore();
+  const base = {
+    title: 'Playground Toronto',
+    startDate: new Date('2026-12-05T15:00:00.000Z'),
+    endDate: new Date('2026-12-06T08:00:00.000Z')
+  };
+  assert.deepEqual(sanityCodes(core, base), [], 'no stamp, no flag');
+  assert.deepEqual(sanityCodes(core, { ...base, _flyerTimeConflict: { flyerRaw: '10pm' } }), [],
+    'a stamp missing pageTime is malformed — fail closed');
+  assert.deepEqual(sanityCodes(core, { ...base, _flyerTimeConflict: { pageTime: '10:00' } }), [],
+    'a stamp missing the flyer reading is malformed — fail closed');
+});

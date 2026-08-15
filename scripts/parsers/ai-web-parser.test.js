@@ -15003,3 +15003,168 @@ test('URL discovery never promotes resource-hint link origins to crawl candidate
   assert.ok(!urls.some(url => url.includes('i0.wp.com')), 'preconnect origin never becomes a crawl page');
   assert.ok(!urls.some(url => url.includes('stats.wp.com')), 'dns-prefetch origin never becomes a crawl page');
 });
+
+// ===========================================================================
+// Flyer-vs-page time-conflict flag (report-only; proposed in #1681).
+// THE fixture is Playground Toronto (bearitmtl.com, run 20260814-195026): the
+// page's schedule/JSON-LD stated 10:00 (the venue's own AM/PM entry error)
+// while the event's paired flyer OCR read "10pm to 3am". The OCR text below
+// is the REAL cached verdict for Playground-Vignette2.jpg, verbatim.
+// ===========================================================================
+
+const { readFlyerStartTimeFromOcrText } = require('./ai-web-parser');
+
+const PLAYGROUND_TORONTO_FLYER_OCR_TEXT =
+  'PLAYGROUND\nToronto\nDec 6th, 2025\n10pm to 3am\nCanadian PUP & Handler\n' +
+  'OFFICIAL DANCE PARTY\n\nCANADIAN PUP & HANDLER\nCONTEST 2025\n\nPITBULL!\n\n' +
+  'buddies\nIN BAD TIMES THEATRE\n\nBear-It';
+const PLAYGROUND_TORONTO_FLYER_URL =
+  'https://www.bearitmtl.com/wp-content/uploads/2025/11/Playground-Vignette2.jpg';
+
+function createFlyerConflictParser() {
+  const parser = new AiWebParser({ normalizeUrl });
+  parser.core = new SharedCore({}, { eventSchema: EventSchema });
+  return parser;
+}
+
+test('readFlyerStartTimeFromOcrText: the real Playground Toronto flyer reads an unambiguous 22:00 start', () => {
+  const reading = readFlyerStartTimeFromOcrText(PLAYGROUND_TORONTO_FLYER_OCR_TEXT);
+  assert.ok(reading, 'the flyer has exactly one unambiguous start reading');
+  assert.equal(reading.time, '22:00');
+  assert.equal(reading.raw, '10pm');
+});
+
+test('readFlyerStartTimeFromOcrText fails closed on ambiguity', () => {
+  // Multiple distinct candidate times → no reading.
+  assert.equal(readFlyerStartTimeFromOcrText('Dec 6th, 2025\n8pm main room\n10pm patio'), null);
+  // A bare 1–12 clock never states its meridiem → no reading.
+  assert.equal(readFlyerStartTimeFromOcrText('Dec 6th, 2025\n10:00'), null);
+  // An ambiguous reading pointing at a DIFFERENT time than the unambiguous
+  // candidate is conflicting information → no reading.
+  assert.equal(readFlyerStartTimeFromOcrText('Dec 6th, 2025\n9:30\n10pm to 3am'), null);
+  // No time at all → no reading (bare day numbers and years are not times).
+  assert.equal(readFlyerStartTimeFromOcrText('PLAYGROUND\nDec 6th, 2025\nCONTEST 2025'), null);
+  // A time with no date context and no range shape → no reading.
+  assert.equal(readFlyerStartTimeFromOcrText('COVER $10\n10pm'), null);
+});
+
+test('readFlyerStartTimeFromOcrText: doors times are never start candidates, French h-forms read as 24h', () => {
+  // DOORS 9PM is excluded; PARTY 10PM is the single candidate.
+  const doorsParty = readFlyerStartTimeFromOcrText('SATURDAY DEC 6\nDOORS: 9PM\nPARTY: 10PM');
+  assert.ok(doorsParty);
+  assert.equal(doorsParty.time, '22:00');
+  // Doors label AFTER the time too (real Bronze Babez sweep case:
+  // "7:30PM DOORS" was the flyer's only time — a doors time, not a start).
+  assert.equal(readFlyerStartTimeFromOcrText('FRIDAY\nAUGUST 14\n7:30PM DOORS\n$15 DOORS'), null);
+  // French schedule range: "22 h 00 min – 3 h 00 min" → start 22:00.
+  const french = readFlyerStartTimeFromOcrText('Samedi 6 décembre 2025\n22 h 00 min – 3 h 00 min');
+  assert.ok(french);
+  assert.equal(french.time, '22:00');
+});
+
+test('readFlyerStartTimeFromOcrText: shared-meridiem ranges read coherently or not at all', () => {
+  // Real CLUB CHUB sweep case: "3-9PM" means 3 PM to 9 PM — the bare start
+  // borrows the end's meridiem, and 9PM is a range end, never a candidate.
+  const shared = readFlyerStartTimeFromOcrText('LATIN PARTY\nSUNDAY AUGUST 16TH 3-9PM\nDJ SANTO | DRAG SHOW');
+  assert.ok(shared);
+  assert.equal(shared.time, '15:00');
+  // "11-2PM" is NOT 11 PM (the range crosses the half-day): the bare start
+  // stays unreadable and the 2PM end is never a candidate — no reading.
+  assert.equal(readFlyerStartTimeFromOcrText('SUNDAY AUGUST 16TH 11-2PM'), null);
+});
+
+test('applyFlyerTimeConflictFlag: Playground Toronto page 10:00 vs flyer 10pm stamps the report-only conflict', () => {
+  const parser = createFlyerConflictParser();
+  parser.recordOcrImageVerdict(PLAYGROUND_TORONTO_FLYER_URL, {
+    imageClassification: 'event-flyer',
+    text: PLAYGROUND_TORONTO_FLYER_OCR_TEXT
+  });
+  const event = {
+    title: 'Playground Toronto',
+    image: PLAYGROUND_TORONTO_FLYER_URL,
+    // #1681's offset re-anchor ships the site's stated 10:00 as 15:00Z
+    // (10:00 EST) — the value the calendar receives.
+    startDate: new Date('2025-12-06T15:00:00.000Z'),
+    timezone: 'America/Toronto'
+  };
+  parser.applyFlyerTimeConflictFlag([event]);
+  assert.ok(event._flyerTimeConflict, 'the disagreement is stamped');
+  assert.equal(event._flyerTimeConflict.pageTime, '10:00');
+  assert.equal(event._flyerTimeConflict.flyerTime, '22:00');
+  assert.equal(event._flyerTimeConflict.flyerRaw, '10pm');
+  assert.equal(event._flyerTimeConflict.imageUrl, PLAYGROUND_TORONTO_FLYER_URL);
+  assert.equal(event.startDate.toISOString(), '2025-12-06T15:00:00.000Z',
+    'report-only: the shipped start never changes');
+});
+
+test('applyFlyerTimeConflictFlag fails closed on agreement, doors pairs, non-flyers, and date mismatches', () => {
+  const makeEvent = (overrides = {}) => ({
+    title: 'Playground Toronto',
+    image: PLAYGROUND_TORONTO_FLYER_URL,
+    startDate: new Date('2025-12-06T15:00:00.000Z'),
+    timezone: 'America/Toronto',
+    ...overrides
+  });
+
+  // Agreement: page states 22:00 EST (03:00Z next day) — the flyer's own
+  // 10pm — no conflict.
+  const agreeingParser = createFlyerConflictParser();
+  agreeingParser.recordOcrImageVerdict(PLAYGROUND_TORONTO_FLYER_URL, {
+    imageClassification: 'event-flyer',
+    text: PLAYGROUND_TORONTO_FLYER_OCR_TEXT
+  });
+  const agreeing = makeEvent({ startDate: new Date('2025-12-07T03:00:00.000Z') });
+  agreeingParser.applyFlyerTimeConflictFlag([agreeing]);
+  assert.equal(agreeing._flyerTimeConflict, undefined, 'agreeing times never flag');
+
+  // Doors-vs-start: page adopted the DOORS time the flyer also states — a
+  // stated time anywhere on the flyer is agreement, not a conflict.
+  const doorsParser = createFlyerConflictParser();
+  doorsParser.recordOcrImageVerdict(PLAYGROUND_TORONTO_FLYER_URL, {
+    imageClassification: 'event-flyer',
+    text: 'SATURDAY DEC 6\nDOORS: 9PM\nPARTY: 10PM'
+  });
+  const doors = makeEvent({ startDate: new Date('2025-12-07T02:00:00.000Z') }); // 21:00 EST
+  doorsParser.applyFlyerTimeConflictFlag([doors]);
+  assert.equal(doors._flyerTimeConflict, undefined, 'a doors time differing from page start is not a conflict');
+
+  // A multi-event flyer's times belong to many events → never this event's
+  // own start statement.
+  const multiParser = createFlyerConflictParser();
+  multiParser.recordOcrImageVerdict(PLAYGROUND_TORONTO_FLYER_URL, {
+    imageClassification: 'multi-event-flyer',
+    text: PLAYGROUND_TORONTO_FLYER_OCR_TEXT
+  });
+  const multi = makeEvent();
+  multiParser.applyFlyerTimeConflictFlag([multi]);
+  assert.equal(multi._flyerTimeConflict, undefined, 'non event-flyer classifications never flag');
+
+  // No OCR verdict for the image → nothing to read → no flag.
+  const noVerdictParser = createFlyerConflictParser();
+  const noVerdict = makeEvent();
+  noVerdictParser.applyFlyerTimeConflictFlag([noVerdict]);
+  assert.equal(noVerdict._flyerTimeConflict, undefined, 'no paired flyer OCR never flags');
+
+  // The flyer names a DIFFERENT date than the event's local start → the
+  // artwork is likely another occurrence's — no flag.
+  const otherDateParser = createFlyerConflictParser();
+  otherDateParser.recordOcrImageVerdict(PLAYGROUND_TORONTO_FLYER_URL, {
+    imageClassification: 'event-flyer',
+    text: 'PLAYGROUND\nToronto\nJan 17th, 2026\n10pm to 3am'
+  });
+  const otherDate = makeEvent();
+  otherDateParser.applyFlyerTimeConflictFlag([otherDate]);
+  assert.equal(otherDate._flyerTimeConflict, undefined, 'a flyer dated to another occurrence never flags');
+
+  // A local-midnight start is the missing-time default (the page stated a
+  // date, not 00:00 — real FURBALL Boston sweep case) → nothing to
+  // conflict with.
+  const midnightParser = createFlyerConflictParser();
+  midnightParser.recordOcrImageVerdict(PLAYGROUND_TORONTO_FLYER_URL, {
+    imageClassification: 'event-flyer',
+    text: PLAYGROUND_TORONTO_FLYER_OCR_TEXT
+  });
+  const midnight = makeEvent({ startDate: new Date('2025-12-06T05:00:00.000Z') }); // 00:00 EST
+  midnightParser.applyFlyerTimeConflictFlag([midnight]);
+  assert.equal(midnight._flyerTimeConflict, undefined, 'a date-only midnight start never flags');
+});
