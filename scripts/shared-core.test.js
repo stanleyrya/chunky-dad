@@ -7836,7 +7836,8 @@ test('dead-end store: barren discovered pages are learned; productive, failed-fe
 
   const results = await core.processEvents(config, httpAdapter, display, parsers);
 
-  assert.deepEqual(Object.keys(results.deadEndStore), ['https://site.example/dead']);
+  // '::hosts' is the host-level bot-wall stats section, not a URL entry
+  assert.deepEqual(Object.keys(results.deadEndStore).filter(k => k !== '::hosts'), ['https://site.example/dead']);
   const entry = results.deadEndStore['https://site.example/dead'];
   assert.equal(entry.misses, 1);
   assert.ok(Date.parse(entry.firstSeen) > 0 && entry.firstSeen === entry.lastSeen);
@@ -7854,7 +7855,12 @@ test('dead-end store: young entries are skipped before enqueueing, with the rese
   // single unproductive observation no longer suppresses a URL on its own
   // (see the confirmation test below).
   const store = {
-    'https://site.example/dead': { firstSeen: youngLastSeen, lastSeen: youngLastSeen, misses: 2 }
+    'https://site.example/dead': { firstSeen: youngLastSeen, lastSeen: youngLastSeen, misses: 2 },
+    // Fresh host success stats for every host this run fetches, so the run
+    // writes nothing new and "skipping does not touch the store" stays exact.
+    '::hosts': {
+      'hub.example': { firstSeen: youngLastSeen, lastSeen: youngLastSeen, successes: 3, lastSuccess: youngLastSeen }
+    }
   };
   const pages = {
     'https://hub.example/': { additionalLinks: ['https://site.example/dead'] },
@@ -7893,7 +7899,7 @@ test('dead-end store: expired entries retry once — removed when productive, re
     const results = await core.processEvents(deadEndConfig({ store }), httpAdapter, display, parsers);
 
     assert.ok(fetched.includes('https://site.example/revived'), 'expired entry is retried');
-    assert.deepEqual(results.deadEndStore, {}, 'productive page self-heals out of the store');
+    assert.ok(!('https://site.example/revived' in results.deadEndStore), 'productive page self-heals out of the store');
     assert.equal(results.deadEndStoreChanged, true);
   }
 
@@ -7933,7 +7939,7 @@ test('dead-end store: entries unseen for 2× the retry window are pruned at end 
 
   const results = await core.processEvents(deadEndConfig({ store }), httpAdapter, display, parsers);
 
-  assert.deepEqual(Object.keys(results.deadEndStore), ['https://site.example/recent']);
+  assert.deepEqual(Object.keys(results.deadEndStore).filter(k => k !== '::hosts'), ['https://site.example/recent']);
   assert.equal(results.deadEndStoreChanged, true);
   assert.ok(display.logs.some(line => line.includes('Pruned 1 stale dead-end URL(s)')));
 });
@@ -8025,7 +8031,319 @@ test('dead-end store: maxAdditionalUrls 0 cannot fake a dead end when the parser
     parseResult: { events: [], additionalLinks: budgetedLinks },
     pageClassification: 'multi-event-page'
   });
-  assert.deepEqual(core.deadEndRunContext.store, {}, 'valid-but-budget-capped links keep the page productive');
+  assert.deepEqual(
+    Object.keys(core.deadEndRunContext.store).filter(k => k !== '::hosts'),
+    [],
+    'valid-but-budget-capped links keep the page productive'
+  );
+  core.deadEndRunContext = null;
+});
+
+// ---------------------------------------------------------------------------
+// Bot-walled hosts (run 20260815-083809: 11 of 13 crawl errors were
+// eventim.us / wl.eventim.us ticket deep-links returning HTTP 403 — the
+// platform blocks non-browser fetches on EVERY page, and each week's new
+// event IDs mint fresh URLs, so per-URL learning is always one run behind).
+// Generic rule, no host named in source: 401/403 crawl failures on a host
+// with ZERO recorded successful fetches host-block that host; ANY recorded
+// success immunizes it (fail-closed).
+// ---------------------------------------------------------------------------
+
+// Literal ticket deep-links from run 20260815-083809's crawl errors
+const EVENTIM_403_URL_1 = 'https://wl.eventim.us/event/CONFESSIONS-RENAISSANCE/700030?afflky=3DollarBill';
+const EVENTIM_403_URL_2 = 'https://wl.eventim.us/event/MICHAEL-JACKSON-DANCE-PARTY/700845?afflky=9BobNote';
+const EVENTIM_403_URL_3 = 'https://wl.eventim.us/event/OUT-and-ABT-August/700533?afflky=3DollarBill';
+
+function botWallFailure(url) {
+  return { fail: `HTTP request failed for ${url}: HTTP 403: ` };
+}
+
+test('dead-end store: a host whose crawl pages only ever 403 is host-blocked — new URLs on it are skipped next run', async () => {
+  // Run 1: two distinct eventim deep-links 403 → host learned
+  const core1 = deadEndCore();
+  const display1 = createDisplayAdapterStub();
+  const pages1 = {
+    'https://hub.example/': { additionalLinks: [EVENTIM_403_URL_1, EVENTIM_403_URL_2] },
+    [EVENTIM_403_URL_1]: botWallFailure(EVENTIM_403_URL_1),
+    [EVENTIM_403_URL_2]: botWallFailure(EVENTIM_403_URL_2)
+  };
+  const harness1 = createCrawlHarness(pages1);
+  const results1 = await core1.processEvents(deadEndConfig({}), harness1.httpAdapter, display1, harness1.parsers);
+
+  const key1 = core1.getUrlDedupeKey(EVENTIM_403_URL_1);
+  assert.equal(results1.deadEndStore[key1]?.lastStatus, 403, 'each 403 URL still gets its own one-strike entry');
+  const hosts1 = results1.deadEndStore['::hosts'];
+  assert.ok(hosts1 && typeof hosts1 === 'object', 'host stats section exists in the store');
+  const hostEntry = hosts1['wl.eventim.us'];
+  assert.ok(hostEntry, 'bot-walled host recorded');
+  assert.equal(hostEntry.misses, 2, 'two DISTINCT bot-walled URLs counted');
+  assert.equal(hostEntry.lastStatus, 403);
+  assert.ok(!(hostEntry.successes > 0), 'no successes ever recorded for the host');
+  assert.equal(results1.deadEndStoreChanged, true);
+
+  // Run 2: a brand-new event ID on the same host is never fetched
+  const core2 = deadEndCore();
+  const display2 = createDisplayAdapterStub();
+  const pages2 = {
+    'https://hub.example/': { additionalLinks: [EVENTIM_403_URL_3] },
+    [EVENTIM_403_URL_3]: botWallFailure(EVENTIM_403_URL_3)
+  };
+  const harness2 = createCrawlHarness(pages2);
+  const results2 = await core2.processEvents(
+    deadEndConfig({ store: results1.deadEndStore }), harness2.httpAdapter, display2, harness2.parsers
+  );
+
+  const key3 = core2.getUrlDedupeKey(EVENTIM_403_URL_3);
+  assert.ok(!(key3 in results2.deadEndStore), 'skipped URL was never fetched, so no per-URL entry was recorded');
+  assert.ok(
+    display2.logs.some(line => line.includes('bot-walled host') && line.includes(EVENTIM_403_URL_3)),
+    'host-block skip is logged with the URL'
+  );
+  assert.ok(results2.deadEndStore['::hosts']['wl.eventim.us'], 'host entry survives the second run');
+});
+
+test('dead-end store: fail-closed — a host with ANY recorded successful fetch is never host-blocked', async () => {
+  // Run 1: one page on the host fetches fine, two others 403
+  const goodUrl = 'https://wl.eventim.us/event/GOOD-BEAR-NIGHT/123456?afflky=3DollarBill';
+  const core1 = deadEndCore();
+  const display1 = createDisplayAdapterStub();
+  const pages1 = {
+    'https://hub.example/': { additionalLinks: [goodUrl, EVENTIM_403_URL_1, EVENTIM_403_URL_2] },
+    [goodUrl]: { additionalLinks: ['https://site.example/party'] },
+    'https://site.example/party': {},
+    [EVENTIM_403_URL_1]: botWallFailure(EVENTIM_403_URL_1),
+    [EVENTIM_403_URL_2]: botWallFailure(EVENTIM_403_URL_2)
+  };
+  const harness1 = createCrawlHarness(pages1);
+  const results1 = await core1.processEvents(deadEndConfig({}), harness1.httpAdapter, display1, harness1.parsers);
+
+  const hostEntry = results1.deadEndStore['::hosts']['wl.eventim.us'];
+  assert.ok(hostEntry.successes >= 1, 'the successful fetch is recorded on the host');
+
+  // Run 2: a new URL on the host is still fetched (it 403s and earns only a per-URL entry)
+  const core2 = deadEndCore();
+  const display2 = createDisplayAdapterStub();
+  const pages2 = {
+    'https://hub.example/': { additionalLinks: [EVENTIM_403_URL_3] },
+    [EVENTIM_403_URL_3]: botWallFailure(EVENTIM_403_URL_3)
+  };
+  const harness2 = createCrawlHarness(pages2);
+  const results2 = await core2.processEvents(
+    deadEndConfig({ store: results1.deadEndStore }), harness2.httpAdapter, display2, harness2.parsers
+  );
+
+  assert.ok(
+    !display2.logs.some(line => line.includes('Skipping URL on bot-walled host')),
+    'host with a prior success never host-blocks'
+  );
+  const key3 = core2.getUrlDedupeKey(EVENTIM_403_URL_3);
+  assert.equal(results2.deadEndStore[key3]?.lastStatus, 403, 'the URL was fetched and earned its own entry');
+});
+
+test('dead-end store: a single 403 URL never host-blocks its host', async () => {
+  const core1 = deadEndCore();
+  const display1 = createDisplayAdapterStub();
+  const pages1 = {
+    'https://hub.example/': { additionalLinks: [EVENTIM_403_URL_1] },
+    [EVENTIM_403_URL_1]: botWallFailure(EVENTIM_403_URL_1)
+  };
+  const harness1 = createCrawlHarness(pages1);
+  const results1 = await core1.processEvents(deadEndConfig({}), harness1.httpAdapter, display1, harness1.parsers);
+
+  const core2 = deadEndCore();
+  const display2 = createDisplayAdapterStub();
+  const pages2 = {
+    'https://hub.example/': { additionalLinks: [EVENTIM_403_URL_3] },
+    [EVENTIM_403_URL_3]: botWallFailure(EVENTIM_403_URL_3)
+  };
+  const harness2 = createCrawlHarness(pages2);
+  const results2 = await core2.processEvents(
+    deadEndConfig({ store: results1.deadEndStore }), harness2.httpAdapter, display2, harness2.parsers
+  );
+
+  assert.ok(
+    !display2.logs.some(line => line.includes('Skipping URL on bot-walled host')),
+    'one bot-walled URL is not enough to block a whole host'
+  );
+  const key3 = core2.getUrlDedupeKey(EVENTIM_403_URL_3);
+  assert.ok(key3 in results2.deadEndStore, 'the second URL was fetched normally');
+});
+
+test('dead-end store: a configured ROOT on a bot-walled host is still fetched, and its success recovers the host', async () => {
+  const nowIso = new Date().toISOString();
+  const store = {
+    '::hosts': {
+      'hub.example': { firstSeen: nowIso, lastSeen: nowIso, misses: 5, lastStatus: 403 }
+    }
+  };
+  const core = deadEndCore();
+  const display = createDisplayAdapterStub();
+  const pages = {
+    'https://hub.example/': { additionalLinks: ['https://site.example/party'] },
+    'https://site.example/party': {}
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+  const results = await core.processEvents(deadEndConfig({ store }), httpAdapter, display, parsers);
+
+  assert.ok(fetched.includes('https://hub.example/'), 'configured start URL is never suppressed');
+  const hostEntry = results.deadEndStore['::hosts']['hub.example'];
+  assert.ok(hostEntry.successes >= 1, 'success recorded');
+  assert.ok(!('misses' in hostEntry), 'bot-wall misses cleared by the successful fetch');
+  assert.ok(
+    display.logs.some(line => line.includes('recovered host') && line.includes('hub.example')),
+    'host recovery is logged'
+  );
+});
+
+test('dead-end store: events keep a ticketUrl that points at a bot-walled host — only the CRAWL is suppressed', async () => {
+  const nowIso = new Date().toISOString();
+  const store = {
+    '::hosts': {
+      'wl.eventim.us': { firstSeen: nowIso, lastSeen: nowIso, misses: 11, lastStatus: 403 }
+    }
+  };
+  const core = deadEndCore();
+  const display = createDisplayAdapterStub();
+  const pages = {
+    'https://hub.example/': {
+      events: [{
+        title: 'Bear Ball',
+        startDate: new Date(Date.now() + 7 * 86400000),
+        city: 'dallas',
+        timezone: 'America/Chicago',
+        ticketUrl: EVENTIM_403_URL_3
+      }],
+      additionalLinks: [EVENTIM_403_URL_3]
+    },
+    [EVENTIM_403_URL_3]: botWallFailure(EVENTIM_403_URL_3)
+  };
+  const { httpAdapter, parsers } = createCrawlHarness(pages);
+  const results = await core.processEvents(deadEndConfig({ store }), httpAdapter, display, parsers);
+
+  assert.ok(
+    display.logs.some(line => line.includes('bot-walled host') && line.includes(EVENTIM_403_URL_3)),
+    'the ticket deep-link is not crawled'
+  );
+  const parsedEvents = (results.parserResults || []).flatMap(p => p.events || []);
+  const event = parsedEvents.find(e => (e.title || '').includes('Bear Ball'));
+  assert.ok(event, 'the event itself survives');
+  assert.equal(event.ticketUrl, EVENTIM_403_URL_3, 'the human-facing ticket link is untouched');
+});
+
+// ---------------------------------------------------------------------------
+// Statusless transport failures (run 20260815-083809: dead iqosvape.com fails
+// "fetch failed" on every run — no HTTP status, so it was never learnable).
+// Two-strike like other inferred dead ends, and committed only when the run
+// had at least one successful fetch (an offline run must not poison the store).
+// ---------------------------------------------------------------------------
+
+const IQOS_URL = 'https://www.iqosvape.com/';
+const IQOS_FAILURE = { fail: `HTTP request failed for ${IQOS_URL}: fetch failed` };
+
+test('dead-end store: statusless fetch failures are learned two-strike and then skipped', async () => {
+  const pages = {
+    'https://hub.example/': { additionalLinks: [IQOS_URL] },
+    [IQOS_URL]: IQOS_FAILURE
+  };
+
+  // Run 1: first miss recorded, no status stamped
+  const core1 = deadEndCore();
+  const display1 = createDisplayAdapterStub();
+  const harness1 = createCrawlHarness(pages);
+  const results1 = await core1.processEvents(deadEndConfig({}), harness1.httpAdapter, display1, harness1.parsers);
+  const key = core1.getUrlDedupeKey(IQOS_URL);
+  assert.equal(results1.deadEndStore[key]?.misses, 1, 'first network failure recorded');
+  assert.ok(!('lastStatus' in results1.deadEndStore[key]), 'no HTTP status was invented');
+
+  // Run 2: retried (one miss is not proof), second miss confirms
+  const core2 = deadEndCore();
+  const display2 = createDisplayAdapterStub();
+  const harness2 = createCrawlHarness(pages);
+  const results2 = await core2.processEvents(
+    deadEndConfig({ store: results1.deadEndStore }), harness2.httpAdapter, display2, harness2.parsers
+  );
+  assert.equal(results2.deadEndStore[key]?.misses, 2, 'second run confirms the dead end');
+
+  // Run 3: suppressed
+  const core3 = deadEndCore();
+  const display3 = createDisplayAdapterStub();
+  const harness3 = createCrawlHarness(pages);
+  const results3 = await core3.processEvents(
+    deadEndConfig({ store: results2.deadEndStore }), harness3.httpAdapter, display3, harness3.parsers
+  );
+  assert.equal(results3.deadEndStore[key]?.misses, 2, 'no fetch attempt, so no third miss');
+  assert.ok(
+    display3.logs.some(line => line.includes('known dead-end URL') && line.includes(IQOS_URL)),
+    'third run skips the URL'
+  );
+});
+
+test('dead-end store: network failures are NOT learned when the run had zero successful fetches', async () => {
+  const core = deadEndCore();
+  const display = createDisplayAdapterStub();
+  core.deadEndRunContext = core.createDeadEndRunContext({ deadEndStore: {} });
+  core.recordDeadEndNetworkFailure({ url: IQOS_URL, currentDepth: 1 });
+  assert.equal(core.deadEndRunContext.successfulFetchCount, 0);
+  const results = {};
+  await core.finalizeDeadEndRun(display, results);
+  assert.deepEqual(Object.keys(results.deadEndStore), [], 'offline run learns nothing');
+  assert.equal(results.deadEndStoreChanged, false);
+
+  // Same failure with one successful fetch in the run → committed at finalize
+  const core2 = deadEndCore();
+  const display2 = createDisplayAdapterStub();
+  core2.deadEndRunContext = core2.createDeadEndRunContext({ deadEndStore: {} });
+  core2.deadEndRunContext.successfulFetchCount = 1;
+  core2.recordDeadEndNetworkFailure({ url: IQOS_URL, currentDepth: 1 });
+  const results2 = {};
+  await core2.finalizeDeadEndRun(display2, results2);
+  const key = core2.getUrlDedupeKey(IQOS_URL);
+  assert.equal(results2.deadEndStore[key]?.misses, 1, 'network is up, so the failure is trustworthy');
+});
+
+// ---------------------------------------------------------------------------
+// Store keying: entries live under the URL dedupe key (www/tracking-param/
+// case variants share ONE entry — the phone store held eventim www-variant
+// twins), and legacy raw-URL entries from existing dead-ends.json files still
+// suppress and migrate on their next observation.
+// ---------------------------------------------------------------------------
+
+test('dead-end store: URL variants share one entry via the dedupe key', () => {
+  const core = deadEndCore();
+  core.deadEndRunContext = core.createDeadEndRunContext({ deadEndStore: {} });
+  core.recordDeadEndFetchFailure({
+    url: 'https://www.tickets.example/Event/42?utm_source=promo&id=7',
+    currentDepth: 1,
+    statusCode: 403
+  });
+  core.recordDeadEndFetchFailure({
+    url: 'https://tickets.example/Event/42/?id=7',
+    currentDepth: 1,
+    statusCode: 403
+  });
+  const store = core.deadEndRunContext.store;
+  const urlKeys = Object.keys(store).filter(k => k !== '::hosts');
+  assert.equal(urlKeys.length, 1, 'variants did not mint separate entries');
+  assert.equal(store[urlKeys[0]].misses, 2, 'both observations landed on the same entry');
+  const skippable = core.getSkippableDeadEndEntry('https://tickets.example/EVENT/42?id=7&utm_source=later');
+  assert.ok(skippable, 'any variant of the URL is skippable');
+  core.deadEndRunContext = null;
+});
+
+test('dead-end store: legacy raw-URL entries still suppress and migrate to the dedupe key when re-observed', () => {
+  const nowIso = new Date().toISOString();
+  const legacyKey = 'https://legacy.example/Path/';
+  const core = deadEndCore();
+  core.deadEndRunContext = core.createDeadEndRunContext({
+    deadEndStore: { [legacyKey]: { firstSeen: nowIso, lastSeen: nowIso, misses: 3 } }
+  });
+  assert.ok(core.getSkippableDeadEndEntry(legacyKey), 'legacy entry still suppresses its URL');
+
+  core.recordDeadEndFetchFailure({ url: legacyKey, currentDepth: 1, statusCode: 404 });
+  const store = core.deadEndRunContext.store;
+  assert.ok(!(legacyKey in store), 'legacy key removed');
+  const migratedKey = core.getUrlDedupeKey(legacyKey);
+  assert.equal(store[migratedKey].misses, 4, 'entry migrated with its history intact');
   core.deadEndRunContext = null;
 });
 
@@ -8082,9 +8400,12 @@ test('crawl queue: a recorded dead end is skipped even when the queued string di
   await core.processEvents(deadEndConfig({ store }), httpAdapter, display, parsers);
 
   assert.ok(!fetched.includes('https://site.example/gallery'), 'known dead end is not refetched');
+  // Dedupe-key store lookups now catch the mangled candidate at ENQUEUE time
+  // (both strings normalize to one key), so the skip shows up in the run
+  // summary; the processing-time check remains as the last line of defense.
   assert.ok(
-    display.logs.includes('SYSTEM: Skipping known dead-end URL (3 prior misses): https://site.example/gallery'),
-    `expected processing-time skip log, got: ${JSON.stringify(display.logs.filter(line => line.includes('dead-end')))}`
+    display.logs.some(line => line.includes('known dead-end URL') && line.includes('https://site.example/gallery')),
+    `expected a dead-end skip log, got: ${JSON.stringify(display.logs.filter(line => line.includes('dead-end')))}`
   );
 });
 
@@ -16032,10 +16353,12 @@ test('crawl queue: HTTP 410 pages are learned as dead ends and are NOT run error
 
   const results = await core.processEvents(deadEndConfig({ name: 'Gone Run' }), httpAdapter, display, parsers);
 
-  const entry = results.deadEndStore[goneUrl];
+  // Entries are keyed by the URL dedupe key (www stripped, lowercased)
+  const goneKey = core.getUrlDedupeKey(goneUrl);
+  const entry = results.deadEndStore[goneKey];
   assert.ok(entry, '410 Gone is the strongest never-retry signal — it must be learned');
   assert.equal(entry.lastStatus, 410);
-  assert.ok(display.logs.includes(`SYSTEM: Learned 1 new dead-end URL(s): ${goneUrl}`));
+  assert.ok(display.logs.includes(`SYSTEM: Learned 1 new dead-end URL(s): ${goneKey}`));
   // Severity split: 42 × 410 across 2026-08-02 produced a standing `errors: 7`
   // on runs where nothing was wrong, which is exactly the noise that hides a
   // real regression. Recorded and surfaced — just not as an error.
@@ -16061,9 +16384,11 @@ test('crawl queue: HTTP 404 pages are dead ends too, while 503 stays an ordinary
 
   const results = await core.processEvents(deadEndConfig({ name: 'Gone Run 404' }), httpAdapter, display, parsers);
 
-  assert.ok(results.deadEndStore[missingUrl], '404 is the ordinary shape of an expired event page');
-  assert.equal(results.deadEndStore[missingUrl].lastStatus, 404);
+  const missingKey = core.getUrlDedupeKey(missingUrl);
+  assert.ok(results.deadEndStore[missingKey], '404 is the ordinary shape of an expired event page');
+  assert.equal(results.deadEndStore[missingKey].lastStatus, 404);
   assert.ok(!(flakyUrl in results.deadEndStore), '503 is transient and must stay un-learned');
+  assert.ok(!(core.getUrlDedupeKey(flakyUrl) in results.deadEndStore), '503 is not learned under the dedupe key either');
   assert.equal(results.errors.length, 1, 'only the transient failure counts as an error');
   assert.ok(results.errors[0].includes(flakyUrl));
   assert.equal(results.permanentlyGone.length, 1);
@@ -16197,7 +16522,8 @@ test('dead-end store: one unproductive fetch is not enough — a second confirms
     const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
     const results = await core.processEvents(deadEndConfig({ store }), httpAdapter, display, parsers);
     assert.ok(fetched.includes(url), 'a single unproductive observation must not suppress a URL');
-    assert.equal(results.deadEndStore[url].misses, 2, 'the retry records the confirming miss');
+    // The retry migrates the legacy raw-URL entry to its dedupe key
+    assert.equal(results.deadEndStore[core.getUrlDedupeKey(url)].misses, 2, 'the retry records the confirming miss');
   }
 
   // Two prior misses → confirmed, suppressed for the retry window

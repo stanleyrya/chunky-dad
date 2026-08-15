@@ -6290,6 +6290,11 @@ class SharedCore {
                     await displayAdapter.logInfo(`SYSTEM: Skipping known dead-end URL (${Number(deadEndEntry.misses) || 0} prior misses): ${url}`);
                     continue;
                 }
+                const deadEndHostEntry = this.getSkippableDeadEndHostEntry(url, discoveryOnly);
+                if (deadEndHostEntry) {
+                    await displayAdapter.logInfo(`SYSTEM: Skipping URL on bot-walled host (${Number(deadEndHostEntry.misses) || 0} distinct 401/403 URL(s), zero successful fetches): ${url}`);
+                    continue;
+                }
             }
 
             try {
@@ -6644,6 +6649,13 @@ class SharedCore {
                 const permanentlyGone = SharedCore.isPermanentlyGoneHttpStatus(failureStatusCode);
                 if (failureStatusCode === 403 || failureStatusCode === 401 || permanentlyGone) {
                     this.recordDeadEndFetchFailure({ url, currentDepth, statusCode: failureStatusCode });
+                } else if (failureStatusCode === null && /HTTP request failed/i.test(message)) {
+                    // Statusless transport failure from the HTTP adapter
+                    // (dead DNS, refused connection — the adapters' fetch
+                    // wrapper is the only source of this marker, so parser/
+                    // extraction errors can't land here). Staged, two-strike,
+                    // and only committed when the run had successful fetches.
+                    this.recordDeadEndNetworkFailure({ url, currentDepth });
                 }
                 try {
                     if (!(error && error.cachedFailure === true)) {
@@ -7095,8 +7107,174 @@ class SharedCore {
             skippedSamples: [],
             learned: [],
             recovered: [],
-            prunedCount: 0
+            prunedCount: 0,
+            // Host-level bot-wall stats (see the "::hosts" section of the
+            // store) and statusless-transport-failure staging, all per-run:
+            successfulFetchCount: 0,
+            pendingNetworkFailures: [],
+            learnedHosts: [],
+            recoveredHosts: [],
+            hostSkippedCount: 0,
+            hostSkippedSamples: []
         };
+    }
+
+    // ------------------------------------------------------------------
+    // Host-level bot-wall stats. Run 20260815-083809: 11 of 13 crawl errors
+    // were eventim.us / wl.eventim.us ticket deep-links returning HTTP 403 —
+    // the platform blocks every non-browser fetch, and each week's events
+    // mint NEW deep-link URLs, so per-URL learning is permanently one run
+    // behind. The store therefore keeps a reserved "::hosts" section (the
+    // key can never collide with a URL entry — those always start with
+    // "http") mapping bare hostnames to { firstSeen, lastSeen, misses,
+    // lastStatus, successes, lastSuccess }:
+    //   - `misses` counts DISTINCT bot-walled (401/403) URLs on the host,
+    //   - `successes`/`lastSuccess` record that ANY page on the host ever
+    //     fetched successfully.
+    // A host is blocked only when it has at least two distinct bot-walled
+    // URLs AND zero recorded successes — fail-closed: one recorded success,
+    // ever, immunizes the host (a mixed host is not a bot wall; its dead
+    // pages are handled per-URL). Generic rule — no host is named in source.
+    // Blocking only applies to DISCOVERED crawl URLs: configured root URLs
+    // bypass every dead-end check, and events' ticketUrl fields are never
+    // touched (the link is for humans; we just stop crawling it).
+    // ------------------------------------------------------------------
+
+    getDeadEndHostsStoreKey() {
+        return '::hosts';
+    }
+
+    getDeadEndHostKey(url) {
+        const parsed = this.parseUrl(String(url || ''));
+        if (!parsed) return '';
+        return String(parsed.hostname || '').toLowerCase().replace(/^www\./, '');
+    }
+
+    getDeadEndHostStore(context, createIfMissing = false) {
+        if (!context || !context.store) return null;
+        const key = this.getDeadEndHostsStoreKey();
+        let hosts = context.store[key];
+        if (!hosts || typeof hosts !== 'object' || Array.isArray(hosts)) {
+            if (!createIfMissing) return null;
+            hosts = {};
+            context.store[key] = hosts;
+        }
+        return hosts;
+    }
+
+    // How many distinct bot-walled URLs a success-free host needs before it
+    // is blocked. Floored at 2 regardless of deadEndMinMisses: a SINGLE
+    // 403'd page can be page-level access control on an otherwise fine host.
+    getDeadEndHostMinMisses(context) {
+        const minMisses = Number.isFinite(Number(context && context.minMisses)) ? Number(context.minMisses) : 2;
+        return Math.max(2, minMisses);
+    }
+
+    isBlockedDeadEndHostEntry(context, entry) {
+        if (!entry) return false;
+        if (Number(entry.successes) > 0) return false; // fail-closed: any success, ever, immunizes
+        return (Number(entry.misses) || 0) >= this.getDeadEndHostMinMisses(context);
+    }
+
+    // The host entry that currently blocks this URL's host, or null. Young
+    // entries only — past the retry window the host gets retried once and
+    // either refreshes the block or self-heals via a recorded success.
+    getBlockedDeadEndHostEntry(context, url, nowMs = Date.now()) {
+        const hosts = this.getDeadEndHostStore(context);
+        if (!hosts) return null;
+        const hostKey = this.getDeadEndHostKey(url);
+        if (!hostKey) return null;
+        const entry = hosts[hostKey];
+        if (!entry || !this.isBlockedDeadEndHostEntry(context, entry)) return null;
+        const lastSeenMs = entry.lastSeen ? Date.parse(entry.lastSeen) : NaN;
+        const retryMs = context.retryDays * 24 * 60 * 60 * 1000;
+        if (!Number.isFinite(lastSeenMs) || (nowMs - lastSeenMs) >= retryMs) return null;
+        return entry;
+    }
+
+    // Record that a page on this host fetched successfully. Writes are rare
+    // by design so unchanged runs do not dirty the store: a new host is
+    // recorded once, a bot-walled host self-heals immediately, and an
+    // established entry only refreshes after a full retry window.
+    recordDeadEndHostSuccess(context, url, nowMs = Date.now()) {
+        const hostKey = this.getDeadEndHostKey(url);
+        if (!hostKey) return;
+        const nowIso = new Date(nowMs).toISOString();
+        const hosts = this.getDeadEndHostStore(context, true);
+        const entry = hosts[hostKey];
+        if (!entry) {
+            hosts[hostKey] = { firstSeen: nowIso, lastSeen: nowIso, successes: 1, lastSuccess: nowIso };
+            context.dirty = true;
+            return;
+        }
+        const hadBotWallMisses = (Number(entry.misses) || 0) > 0;
+        const lastSuccessMs = entry.lastSuccess ? Date.parse(entry.lastSuccess) : NaN;
+        const refreshMs = context.retryDays * 24 * 60 * 60 * 1000;
+        const refreshDue = !Number.isFinite(lastSuccessMs) || (nowMs - lastSuccessMs) > refreshMs;
+        if (!hadBotWallMisses && !refreshDue) return;
+        entry.successes = (Number(entry.successes) || 0) + 1;
+        entry.lastSuccess = nowIso;
+        entry.lastSeen = nowIso;
+        if (hadBotWallMisses) {
+            delete entry.misses;
+            delete entry.lastStatus;
+            if (!context.recoveredHosts.includes(hostKey)) {
+                context.recoveredHosts.push(hostKey);
+            }
+        }
+        context.dirty = true;
+    }
+
+    // ------------------------------------------------------------------
+    // URL entries are keyed by getUrlDedupeKey (www/tracking-param/case
+    // variants share ONE entry — the device store held www/bare twins of the
+    // same eventim page). Legacy stores keyed by raw normalized URLs still
+    // suppress via the exact-string fallback and migrate to the dedupe key
+    // the next time the URL is observed.
+    // ------------------------------------------------------------------
+
+    findDeadEndUrlEntry(context, url) {
+        const dedupeKey = this.getUrlDedupeKey(url) || String(url || '');
+        const store = context.store;
+        if (Object.prototype.hasOwnProperty.call(store, dedupeKey) && dedupeKey !== this.getDeadEndHostsStoreKey()) {
+            return { key: dedupeKey, dedupeKey, entry: store[dedupeKey] };
+        }
+        if (url && url !== dedupeKey && Object.prototype.hasOwnProperty.call(store, url)) {
+            return { key: url, dedupeKey, entry: store[url] };
+        }
+        return { key: dedupeKey, dedupeKey, entry: null };
+    }
+
+    // Shared write path for both HTTP-status failures and statusless network
+    // failures: bump-or-create the URL entry under the dedupe key (migrating
+    // a legacy raw-URL entry when present). statusCode null = inferred miss
+    // (no lastStatus stamped), which needs minMisses confirmations to
+    // suppress; a stamped 401/403/404/410 is origin-stated and one-strike.
+    recordDeadEndUrlMiss(context, url, statusCode, nowMs = Date.now()) {
+        const nowIso = new Date(nowMs).toISOString();
+        const found = this.findDeadEndUrlEntry(context, url);
+        const entry = found.entry;
+        if (entry) {
+            if (found.key !== found.dedupeKey) {
+                delete context.store[found.key];
+                context.store[found.dedupeKey] = entry;
+            }
+            entry.lastSeen = nowIso;
+            entry.misses = (Number(entry.misses) || 0) + 1;
+            if (statusCode !== null && statusCode !== undefined) {
+                entry.lastStatus = statusCode;
+            }
+            context.dirty = true;
+            return { entry, wasNew: false };
+        }
+        const created = { firstSeen: nowIso, lastSeen: nowIso, misses: 1 };
+        if (statusCode !== null && statusCode !== undefined) {
+            created.lastStatus = statusCode;
+        }
+        context.store[found.dedupeKey] = created;
+        context.dirty = true;
+        context.learned.push(found.dedupeKey);
+        return { entry: created, wasNew: true };
     }
 
     // Drop discovered URLs whose dead-end entry is younger than the retry
@@ -7123,13 +7301,20 @@ class SharedCore {
         const retryMs = context.retryDays * 24 * 60 * 60 * 1000;
         const allowed = [];
         for (const url of list) {
-            const entry = context.store[url];
+            const { entry } = this.findDeadEndUrlEntry(context, url);
             const lastSeenMs = entry && entry.lastSeen ? Date.parse(entry.lastSeen) : NaN;
             if (entry && this.isConfirmedDeadEndEntry(context, entry)
                 && Number.isFinite(lastSeenMs) && (nowMs - lastSeenMs) < retryMs) {
                 context.skippedCount += 1;
                 if (context.skippedSamples.length < 3 && !context.skippedSamples.includes(url)) {
                     context.skippedSamples.push(url);
+                }
+                continue;
+            }
+            if (this.getBlockedDeadEndHostEntry(context, url, nowMs)) {
+                context.hostSkippedCount += 1;
+                if (context.hostSkippedSamples.length < 3 && !context.hostSkippedSamples.includes(url)) {
+                    context.hostSkippedSamples.push(url);
                 }
                 continue;
             }
@@ -7150,7 +7335,7 @@ class SharedCore {
         if (!context || !context.enabled || discoveryOnly || !url) {
             return null;
         }
-        const entry = context.store[url];
+        const { entry } = this.findDeadEndUrlEntry(context, url);
         const lastSeenMs = entry && entry.lastSeen ? Date.parse(entry.lastSeen) : NaN;
         const retryMs = context.retryDays * 24 * 60 * 60 * 1000;
         if (entry && this.isConfirmedDeadEndEntry(context, entry)
@@ -7162,6 +7347,24 @@ class SharedCore {
             return entry;
         }
         return null;
+    }
+
+    // Processing-time twin for host-level blocks (bot-walled ticketing
+    // platforms): same guards as getSkippableDeadEndEntry — never in
+    // discovery mode, and the call site only runs it at currentDepth > 0 so
+    // configured root URLs are never suppressed.
+    getSkippableDeadEndHostEntry(url, discoveryOnly = false, nowMs = Date.now()) {
+        const context = this.deadEndRunContext;
+        if (!context || !context.enabled || discoveryOnly || !url) {
+            return null;
+        }
+        const entry = this.getBlockedDeadEndHostEntry(context, url, nowMs);
+        if (!entry) return null;
+        context.hostSkippedCount += 1;
+        if (context.hostSkippedSamples.length < 3 && !context.hostSkippedSamples.includes(url)) {
+            context.hostSkippedSamples.push(url);
+        }
+        return entry;
     }
 
     // Learned dead ends from FETCH FAILURES are limited to statuses that are
@@ -7181,18 +7384,53 @@ class SharedCore {
             // Configured root URLs are never dead-ended
             return;
         }
-        const nowIso = new Date(nowMs).toISOString();
-        const entry = context.store[url];
-        if (entry) {
-            entry.lastSeen = nowIso;
-            entry.misses = (Number(entry.misses) || 0) + 1;
-            entry.lastStatus = statusCode;
-            context.dirty = true;
-        } else {
-            context.store[url] = { firstSeen: nowIso, lastSeen: nowIso, misses: 1, lastStatus: statusCode };
-            context.dirty = true;
-            context.learned.push(url);
+        const { wasNew } = this.recordDeadEndUrlMiss(context, url, statusCode, nowMs);
+        // Bot-wall statuses additionally feed the host-level stats: a host
+        // whose pages ONLY ever 401/403 (and never once fetched) is a
+        // bot-walled platform, and new URLs on it are pre-lost. Distinct
+        // URLs only — a retried URL is one wall, not two.
+        if (statusCode === 401 || statusCode === 403) {
+            const hostKey = this.getDeadEndHostKey(url);
+            if (hostKey) {
+                const nowIso = new Date(nowMs).toISOString();
+                const hosts = this.getDeadEndHostStore(context, true);
+                let entry = hosts[hostKey];
+                const blockedBefore = this.isBlockedDeadEndHostEntry(context, entry);
+                if (!entry) {
+                    entry = { firstSeen: nowIso, lastSeen: nowIso };
+                    hosts[hostKey] = entry;
+                }
+                entry.lastSeen = nowIso;
+                entry.lastStatus = statusCode;
+                if (wasNew) {
+                    entry.misses = (Number(entry.misses) || 0) + 1;
+                }
+                context.dirty = true;
+                if (!blockedBefore && this.isBlockedDeadEndHostEntry(context, entry)
+                    && !context.learnedHosts.includes(hostKey)) {
+                    context.learnedHosts.push(hostKey);
+                }
+            }
         }
+    }
+
+    // Statusless transport failures (dead DNS, refused connections — e.g.
+    // iqosvape.com's "fetch failed" on every run of the 2026-08 corpus) are
+    // staged here and only committed by finalizeDeadEndRun when the run had
+    // at least one SUCCESSFUL fetch: with zero successes the network itself
+    // is the prime suspect, and an offline run must never poison the store.
+    // Committed entries carry no lastStatus, so they need minMisses
+    // confirmations (default 2, across runs) before they suppress anything.
+    recordDeadEndNetworkFailure({ url, currentDepth }) {
+        const context = this.deadEndRunContext;
+        if (!context || !context.enabled || !url) {
+            return;
+        }
+        if (currentDepth === 0) {
+            // Configured root URLs are never dead-ended
+            return;
+        }
+        context.pendingNetworkFailures.push(url);
     }
 
     // Record the outcome of a successfully-fetched page. Productive pages are
@@ -7206,6 +7444,13 @@ class SharedCore {
         if (!context || !context.enabled || !url) {
             return;
         }
+        // This method only runs for pages that FETCHED successfully — which
+        // is exactly the host-level success signal (any 2xx page, productive
+        // or not, proves the host is not a pure bot wall) and the proof the
+        // network works that finalizeDeadEndRun's statusless-failure commit
+        // gate requires.
+        context.successfulFetchCount += 1;
+        this.recordDeadEndHostSuccess(context, url, nowMs);
         // RAW pre-filter counts: a page whose events are all in the past still
         // produced events — it is NOT a dead end.
         const rawEventCount = Array.isArray(parseResult?.events) ? parseResult.events.length : 0;
@@ -7220,13 +7465,12 @@ class SharedCore {
         const productive = pageClassification !== 'ad'
             && (rawEventCount > 0 || segmentCount > 0 || uniqueValidLinkCount > 0);
 
-        const store = context.store;
-        const entry = store[url];
+        const found = this.findDeadEndUrlEntry(context, url);
         if (productive) {
-            if (entry) {
-                delete store[url];
+            if (found.entry) {
+                delete context.store[found.key];
                 context.dirty = true;
-                context.recovered.push(url);
+                context.recovered.push(found.key);
             }
             return;
         }
@@ -7234,16 +7478,7 @@ class SharedCore {
             // Configured root URLs are never dead-ended
             return;
         }
-        const nowIso = new Date(nowMs).toISOString();
-        if (entry) {
-            entry.lastSeen = nowIso;
-            entry.misses = (Number(entry.misses) || 0) + 1;
-            context.dirty = true;
-        } else {
-            store[url] = { firstSeen: nowIso, lastSeen: nowIso, misses: 1 };
-            context.dirty = true;
-            context.learned.push(url);
-        }
+        this.recordDeadEndUrlMiss(context, url, null, nowMs);
     }
 
     // End-of-run retention pass: entries unseen for 2× the retry window are
@@ -7254,12 +7489,30 @@ class SharedCore {
             return;
         }
         const horizonMs = 2 * context.retryDays * 24 * 60 * 60 * 1000;
+        const hostsKey = this.getDeadEndHostsStoreKey();
         for (const [url, entry] of Object.entries(context.store)) {
+            if (url === hostsKey) continue; // host stats pruned by their own lastSeen below
             const lastSeenMs = entry && entry.lastSeen ? Date.parse(entry.lastSeen) : NaN;
             if (!Number.isFinite(lastSeenMs) || (nowMs - lastSeenMs) > horizonMs) {
                 delete context.store[url];
                 context.prunedCount += 1;
                 context.dirty = true;
+            }
+        }
+        const hosts = this.getDeadEndHostStore(context);
+        if (hosts) {
+            let prunedHosts = 0;
+            for (const [hostKey, entry] of Object.entries(hosts)) {
+                const lastSeenMs = entry && entry.lastSeen ? Date.parse(entry.lastSeen) : NaN;
+                if (!Number.isFinite(lastSeenMs) || (nowMs - lastSeenMs) > horizonMs) {
+                    delete hosts[hostKey];
+                    prunedHosts += 1;
+                    context.prunedCount += 1;
+                    context.dirty = true;
+                }
+            }
+            if (prunedHosts > 0 && Object.keys(hosts).length === 0) {
+                delete context.store[hostsKey];
             }
         }
     }
@@ -7271,6 +7524,21 @@ class SharedCore {
             return;
         }
         if (context.enabled) {
+            // Commit staged statusless network failures — only when the run
+            // proved the network works (see recordDeadEndNetworkFailure).
+            if (context.pendingNetworkFailures.length > 0) {
+                if (context.successfulFetchCount > 0) {
+                    const committed = [];
+                    for (const url of context.pendingNetworkFailures) {
+                        const dedupeKey = this.getUrlDedupeKey(url) || String(url || '');
+                        if (committed.includes(dedupeKey)) continue; // one miss per URL per run
+                        committed.push(dedupeKey);
+                        this.recordDeadEndUrlMiss(context, url, null, nowMs);
+                    }
+                } else {
+                    await displayAdapter.logInfo(`SYSTEM: Not learning ${context.pendingNetworkFailures.length} network-failure URL(s) — this run had zero successful fetches, so the network itself is suspect`);
+                }
+            }
             this.pruneDeadEndStore(context, nowMs);
             if (context.skippedCount > 0) {
                 const samples = context.skippedSamples.length > 0 ? `: ${context.skippedSamples.join(', ')}` : '';
@@ -7281,6 +7549,16 @@ class SharedCore {
             }
             if (context.recovered.length > 0) {
                 await displayAdapter.logInfo(`SYSTEM: Removed ${context.recovered.length} recovered URL(s) from dead-end store: ${context.recovered.join(', ')}`);
+            }
+            if (context.hostSkippedCount > 0) {
+                const hostSamples = context.hostSkippedSamples.length > 0 ? `: ${context.hostSkippedSamples.join(', ')}` : '';
+                await displayAdapter.logInfo(`SYSTEM: Skipped ${context.hostSkippedCount} URL(s) on bot-walled host(s) (only 401/403 responses on record, zero successful fetches; retry after ${context.retryDays}d)${hostSamples}`);
+            }
+            if (context.learnedHosts.length > 0) {
+                await displayAdapter.logInfo(`SYSTEM: Learned ${context.learnedHosts.length} bot-walled host(s) — every crawl fetch got 401/403 and none ever succeeded, so new URLs on them will be skipped: ${context.learnedHosts.join(', ')}`);
+            }
+            if (context.recoveredHosts.length > 0) {
+                await displayAdapter.logInfo(`SYSTEM: Removed bot-wall flag from ${context.recoveredHosts.length} recovered host(s): ${context.recoveredHosts.join(', ')}`);
             }
             if (context.prunedCount > 0) {
                 await displayAdapter.logInfo(`SYSTEM: Pruned ${context.prunedCount} stale dead-end URL(s) (last seen more than ${2 * context.retryDays}d ago)`);
