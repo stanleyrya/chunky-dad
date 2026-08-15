@@ -15067,16 +15067,19 @@ test('sanity: titles with real words beyond the date phrase never flag as date p
 test('sanity: a curated bar name as the whole title flags; containment never does', () => {
   const core = createSanityCore();
   // Real case: "CC Slaughters" (a curated bar) as the title of a party.
-  assert.deepEqual(sanityCodes(core, { title: 'CC Slaughters', city: 'portland' }), ['title-is-curated-bar']);
+  // Since the extraction hygiene wave, a bare venue-identity title with no
+  // distinguishing copy ALSO carries the enforced junk-title flag (the
+  // venue-name-ghost family; see its dedicated tests below).
+  assert.deepEqual(sanityCodes(core, { title: 'CC Slaughters', city: 'portland' }), ['title-is-curated-bar', 'junk-title']);
   // Identity-key equality only — an event AT the bar keeps its name.
   assert.deepEqual(sanityCodes(core, { title: 'Bearracuda at CC Slaughters', city: 'portland' }), []);
   // Key normalization: "The CC-Slaughters!" collapses to the same key.
-  assert.deepEqual(sanityCodes(core, { title: 'The CC-Slaughters!', city: 'portland' }), ['title-is-curated-bar']);
+  assert.deepEqual(sanityCodes(core, { title: 'The CC-Slaughters!', city: 'portland' }), ['title-is-curated-bar', 'junk-title']);
 });
 
 test('sanity: with no resolved city, any city\'s curated bars can claim the title', () => {
   const core = createSanityCore();
-  assert.deepEqual(sanityCodes(core, { title: 'CC Slaughters' }), ['title-is-curated-bar']);
+  assert.deepEqual(sanityCodes(core, { title: 'CC Slaughters' }), ['title-is-curated-bar', 'junk-title']);
   // No bars data at all → fail open, no flag.
   assert.deepEqual(sanityCodes(createSanityCore(null), { title: 'CC Slaughters' }), []);
 });
@@ -15085,11 +15088,13 @@ test('sanity: legalese markers and letterless titles flag title-looks-like-boile
   const core = createSanityCore();
   // Real case: a liability waiver proposed as a CREATE (beefdip,
   // run 20260802-142231).
+  // Legalese titles also carry the enforced junk-title flag since the
+  // extraction hygiene wave (fine-print family; dedicated tests below).
   assert.deepEqual(
     sanityCodes(core, { title: 'DOG TAGS ARE NON REFUNDABLE · TAGS ARE NON TRANSFERABLE' }),
-    ['title-looks-like-boilerplate']);
+    ['title-looks-like-boilerplate', 'junk-title']);
   // Diacritic-folded + punctuation-collapsed matching.
-  assert.deepEqual(sanityCodes(core, { title: 'Entradas NON-REFUNDÁBLE' }), ['title-looks-like-boilerplate']);
+  assert.deepEqual(sanityCodes(core, { title: 'Entradas NON-REFUNDÁBLE' }), ['title-looks-like-boilerplate', 'junk-title']);
   // No letters at all.
   assert.deepEqual(sanityCodes(core, { title: '*** !!! ***' }), ['title-looks-like-boilerplate']);
 });
@@ -15198,12 +15203,12 @@ test('sanity flags are stamped on the analyzed event with the ⚠️ SANITY log 
     console.log = originalLog;
   }
   assert.equal(analyzed.length, 1);
-  assert.deepEqual(analyzed[0]._sanityFlags.map(flag => flag.code), ['title-looks-like-boilerplate']);
+  assert.deepEqual(analyzed[0]._sanityFlags.map(flag => flag.code), ['title-looks-like-boilerplate', 'junk-title']);
   const sanityLines = logLines.filter(line => line.startsWith('⚠️ SANITY: '));
   assert.equal(sanityLines.length, 1);
   assert.equal(
     sanityLines[0],
-    '⚠️ SANITY: "DOG TAGS ARE NON REFUNDABLE · TAGS ARE NON TRANSFERABLE" flagged title-looks-like-boilerplate — title carries legalese ("non refundable")');
+    '⚠️ SANITY: "DOG TAGS ARE NON REFUNDABLE · TAGS ARE NON TRANSFERABLE" flagged title-looks-like-boilerplate, junk-title — title carries legalese ("non refundable")');
 });
 
 test('no enforcement: a flagged event\'s action and write fields are byte-identical to an unflagged twin\'s', async () => {
@@ -17658,6 +17663,140 @@ test('junk-title records are withheld from calendar execution with the 🚫 JUNK
     [clean[0]]);
   assert.equal(SharedCore.hasJunkTitleSanityFlag(flagged[0]), true);
   assert.equal(SharedCore.hasJunkTitleSanityFlag(clean[0]), false);
+});
+
+// ---------------------------------------------------------------------------
+// junk-title sibling families (extraction hygiene wave, BeefDip run
+// 20260811-161424): three more non-event title shapes shipped as calendar
+// events and join the SAME junk-title flag + write withhold (flag, don't
+// drop — every card stays in results). Fixtures below are the run's real
+// records verbatim.
+// ---------------------------------------------------------------------------
+
+test('sanity: an address-shaped title that is not the venue\'s own name flags junk-title', () => {
+  const core = createSanityCore();
+  // Real record: Blue Chairs Resort's street-address block scraped as an
+  // event name. "Malecón 4" is the Latin "street Number" order, which
+  // looksLikeStreetAddress cannot anchor on (no LEADING house number), so
+  // the comma-chain branch must corroborate a title segment against the
+  // event's OWN address field ("Puerto Vallarta" appears in both).
+  assert.deepEqual(sanityCodes(core, {
+    title: 'Malecón 4, Zona Romántica, Puerto Vallarta',
+    bar: 'Blue Chairs Resort',
+    address: '4 Malecon, Puerto Vallarta, Jalisco'
+  }), ['junk-title']);
+  // US-shaped titles (leading house number + street-type word) are
+  // self-evident — looksLikeStreetAddress needs no corroboration.
+  assert.deepEqual(sanityCodes(core, { title: '4219 Santa Monica Blvd', bar: 'Eagle LA' }), ['junk-title']);
+  // Fail closed: the same comma chain WITHOUT the event's own address to
+  // corroborate never flags — a shape alone is not proof.
+  assert.deepEqual(sanityCodes(core, {
+    title: 'Malecón 4, Zona Romántica, Puerto Vallarta',
+    bar: 'Blue Chairs Resort'
+  }), []);
+  // "3 Dollar Bill" is the documented looksLikeStreetAddress non-match
+  // (leading number but no street-type word) — venue names with numbers
+  // never flag.
+  assert.deepEqual(sanityCodes(core, { title: '3 Dollar Bill' }), []);
+  // Comma-rich party names carry no street-number segment.
+  assert.deepEqual(sanityCodes(core, { title: 'Bears, Beers & Queers', address: 'Beers Ave 1, Portland' }), []);
+});
+
+test('sanity: venue-name-only ghost titles flag junk-title; parties that restate their venue name never do', () => {
+  const core = createSanityCore();
+  // Real ghosts: BeefDip listing-line venue slots ("Thu Jan 28 • 7PM–1AM •
+  // Blue Chairs Beach") promoted to titles — the event's own copy describes
+  // a differently-named party and never restates the venue.
+  assert.deepEqual(sanityCodes(core, {
+    title: 'Blue Chairs Beach',
+    bar: 'Blue Chairs Beach',
+    description: 'Glow on the sand with live drummers, fire dancers, and DJ Matt Consola . Primal beats under the stars.'
+  }), ['junk-title']);
+  assert.deepEqual(sanityCodes(core, {
+    title: 'Hotel Delfin',
+    bar: 'Hotel Delfin',
+    description: 'Our biggest pool party of the week, definitely honors its name! DJs Benjamin Koll from Spain and Division 4 from Australia will power an all-day pool and beach takeover with massive BeefDip energy.'
+  }), ['junk-title']);
+  // Curated-bar identity (rule 2's exact-key match) escalates the same way
+  // when the event's own bar field agrees with the title.
+  assert.deepEqual(sanityCodes(core, {
+    title: 'CC Slaughters',
+    city: 'portland',
+    bar: 'CC Slaughters',
+    description: 'Step into a full-throttle Mardi Gras frenzy at Vallarta’s hottest dance floor. Beads, glitter, and music by international guest DJ Josh Peace .'
+  }), ['title-is-curated-bar', 'junk-title']);
+  // Fail closed, three ways:
+  // 1. A party whose own copy RESTATES the title is a genuinely
+  //    venue-named event, not a ghost — bias to NOT flagging.
+  assert.deepEqual(sanityCodes(core, {
+    title: 'MASSIVE',
+    bar: 'MASSIVE',
+    description: 'MASSIVE returns to the warehouse with dirty grooves all night long.'
+  }), []);
+  // 2. Any token beyond the venue name is a real name (identity-key
+  //    EQUALITY only, exactly like curated matching).
+  assert.deepEqual(sanityCodes(core, { title: 'FURBALL POOL PARTY', bar: 'FURBALL' }), []);
+  assert.deepEqual(sanityCodes(core, { title: 'Bearracuda at CC Slaughters', bar: 'CC Slaughters' }), []);
+  // 3. Fuzzy is not identity: near-miss names never flag, and a curated
+  //    title contradicted by a DIFFERENT own venue is unproven — the
+  //    report-only curated flag stays, the withhold stays off.
+  assert.deepEqual(sanityCodes(core, { title: 'CC Slaughter', bar: 'CC Slaughters' }), []);
+  assert.deepEqual(sanityCodes(core, {
+    title: 'CC Slaughters',
+    city: 'portland',
+    bar: 'Hotel Delfin',
+    description: 'A party at some other venue entirely.'
+  }), ['title-is-curated-bar']);
+});
+
+test('sanity: ticketing fine-print titles flag junk-title alongside the report-only boilerplate flag', () => {
+  const core = createSanityCore();
+  // Real record: a liability waiver proposed as a CREATE. The tell is the
+  // existing tiny legalese table (generic ticketing-terms vocabulary), not
+  // a new phrase list.
+  assert.deepEqual(
+    sanityCodes(core, { title: 'DOG TAGS ARE NON REFUNDABLE · TAGS ARE NON TRANSFERABLE' }),
+    ['title-looks-like-boilerplate', 'junk-title']);
+  // The letterless-boilerplate branch is NOT fine-print: report-only stays.
+  assert.deepEqual(sanityCodes(core, { title: '*** !!! ***' }), ['title-looks-like-boilerplate']);
+  // Policy-adjacent words without a table phrase never flag.
+  assert.deepEqual(sanityCodes(core, { title: 'Terms of Endearment Party' }), []);
+  // Time-range titles are already title-is-date-phrase (rule 1) — verified
+  // here to stay OUT of junk-title (no duplication between rules).
+  assert.deepEqual(sanityCodes(core, { title: 'Saturday Jan 23 12 PM – 5 PM' }), ['title-is-date-phrase']);
+});
+
+test('junk-title sibling families are withheld with a detail-bearing 🚫 JUNK TITLE line; the CTA line is unchanged', async () => {
+  const core = createCore();
+  const scraped = {
+    title: 'Malecón 4, Zona Romántica, Puerto Vallarta',
+    address: '4 Malecon, Puerto Vallarta, Jalisco',
+    bar: 'Blue Chairs Resort',
+    city: 'dallas',
+    startDate: new Date('2027-08-08T02:00:00.000Z'),
+    endDate: new Date('2027-08-08T07:00:00.000Z'),
+    shortName: 'TAGS' // keeps the shortName derivation pass inert
+  };
+  const logLines = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logLines.push(args.join(' ')); };
+  let flagged;
+  try {
+    flagged = await core.prepareEventsForCalendar([scraped], buildPrepCalendarAdapter([]), {});
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(flagged.length, 1, 'flag, don\'t drop: the card stays in results');
+  assert.deepEqual(flagged[0]._sanityFlags.map(flag => flag.code), ['junk-title']);
+  // The sibling families log their own flag detail; the historical CTA
+  // wording is reserved for the original arrow/CTA family.
+  const junkLines = logLines.filter(line => line.startsWith('🚫 JUNK TITLE: '));
+  assert.deepEqual(junkLines, [
+    '🚫 JUNK TITLE: "Malecón 4, Zona Romántica, Puerto Vallarta" withheld from calendar write — title is address-shaped (comma-separated locality chain corroborated by the event\'s own address), not an event name (report-only: still shown in results)'
+  ]);
+  // Same gate as the CTA family: withheld from execution, visible verdict.
+  assert.deepEqual(SharedCore.filterEventsForExecution([flagged[0]]), []);
+  assert.equal(SharedCore.describeExecutionDisposition(flagged[0]), 'WITHHELD (junk title)');
 });
 
 test('template entries are never runnable: evaluateAutomationForParser refuses them in every mode', () => {

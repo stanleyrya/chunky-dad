@@ -9194,6 +9194,29 @@ class AiWebParser {
             return { valid: false, reason: 'template-url' };
         }
 
+        // CRAWL CANDIDATE HYGIENE (run 20260814-000011): the raw-HTML scan
+        // reads script bodies too, so a JS string concatenation around a real
+        // base URL was scraped as a candidate whose path is unevaluated CODE
+        // ("https://www.thelumberyardbar.com/+encodeURIComponent(l)+"), and a
+        // placeholder yielded a hostname no DNS could resolve
+        // ("https://empty/"). Both checks are pure syntax — generic, no
+        // domain or identifier list:
+        // - unresolved-code-syntax: concat-shaped call residue ("+ident(" or
+        //   ")+"), an encode/decodeURIComponent identifier, unterminated
+        //   template residue ("${"), or a RAW quote/backtick anywhere in the
+        //   host/path/query (legal URLs carry them percent-encoded). A bare
+        //   "+" stays valid — it is an encoded space in queries.
+        // - implausible-hostname: a hostname with no dot that is not
+        //   localhost. Real page hosts are dotted; "empty" is not a host.
+        const hostPathAndQuery = `${parsedUrl.hostname || ''}${parsedUrl.pathname || ''}${parsedUrl.search || ''}${parsedUrl.hash || ''}`;
+        if (/\$\{|["'`]|(?:en|de)codeURIComponent|\+\s*[A-Za-z_$][\w$]*\s*\(|\)\s*\+/.test(hostPathAndQuery)) {
+            return { valid: false, reason: 'unresolved-code-syntax' };
+        }
+        const lowerHostname = (parsedUrl.hostname || '').toLowerCase();
+        if (!lowerHostname.includes('.') && lowerHostname !== 'localhost') {
+            return { valid: false, reason: 'implausible-hostname' };
+        }
+
         const invalidUrlPatterns = [
             '/admin', '/login', '/wp-admin', '/wp-login', '/user/', '/profile/',
             '/wp-content', '/terms', '/privacy',

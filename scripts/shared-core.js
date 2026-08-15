@@ -2096,6 +2096,116 @@ class SharedCore {
             }
         }
 
+        // 9b–9d. junk-title sibling families (extraction hygiene wave,
+        //    BeefDip run 20260811-161424): three more non-event title shapes
+        //    shipped as calendar events. They join the SAME flag + write
+        //    withhold as the CTA family — flag, don't drop, the card always
+        //    stays in results — and each tell is deterministic and biased to
+        //    NOT flagging when unsure. At most one junk-title flag is pushed.
+        const hasJunkTitleFlag = () => flags.some(flag => flag.code === 'junk-title');
+        const titleBarKey = title ? this.normalizeBarNameKey(title) : '';
+        const ownBarKey = typeof event.bar === 'string' ? this.normalizeBarNameKey(event.bar) : '';
+        const titleIsOwnBar = Boolean(titleBarKey) && titleBarKey === ownBarKey;
+        // Shared fold: diacritics folded, punctuation collapsed to single
+        // spaces — the same normalization rule 3 uses for phrase matching.
+        const foldForCompare = (value) => this.foldDiacritics(value).replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+        // 9b. ADDRESS-SHAPED titles ("Malecón 4, Zona Romántica, Puerto
+        //     Vallarta" — the venue's address block scraped as an event
+        //     name). Two branches, both gated on the title NOT being the
+        //     venue's own name:
+        //     - looksLikeStreetAddress: leading house number + street-type
+        //       word ("4219 Santa Monica Blvd") — self-evident, and "3
+        //       Dollar Bill" is its documented non-match (number, no street
+        //       word).
+        //     - comma-chain: ≥3 comma segments, exactly ONE carrying a
+        //       street+number shape (either order — Latin addresses put the
+        //       number LAST, which looksLikeStreetAddress cannot anchor on),
+        //       the rest digit-free, AND a segment must be corroborated by
+        //       the event's OWN address field. No address field → no flag
+        //       (fail closed; a shape alone is not proof — "DISCO 2000, The
+        //       Eagle, NYC" stays untouched).
+        if (title && !hasJunkTitleFlag() && !titleIsOwnBar) {
+            let addressDetail = '';
+            if (this.looksLikeStreetAddress(title)) {
+                addressDetail = 'leading house number + street-type word';
+            } else {
+                const segments = title.split(',').map(segment => segment.trim()).filter(Boolean);
+                if (segments.length >= 3) {
+                    const streetNumberShape = /^\p{L}[\p{L}\s.'’-]*\s\d{1,6}$|^\d{1,6}\s\p{L}[\p{L}\s.'’-]*$/u;
+                    const numbered = segments.filter(segment => streetNumberShape.test(segment));
+                    const plain = segments.filter(segment => !streetNumberShape.test(segment));
+                    if (numbered.length === 1 && plain.every(segment => !/\d/.test(segment))) {
+                        const foldedAddress = typeof event.address === 'string' ? foldForCompare(event.address) : '';
+                        const corroborated = Boolean(foldedAddress) && segments.some(segment => {
+                            const foldedSegment = foldForCompare(segment);
+                            return foldedSegment.length >= 4 && foldedAddress.includes(foldedSegment);
+                        });
+                        if (corroborated) {
+                            addressDetail = 'comma-separated locality chain corroborated by the event\'s own address';
+                        }
+                    }
+                }
+            }
+            if (addressDetail) {
+                flags.push({
+                    code: 'junk-title',
+                    detail: `title is address-shaped (${addressDetail}), not an event name`
+                });
+            }
+        }
+
+        // 9c. VENUE-NAME-ONLY ghosts ("Blue Chairs Beach" / "CC Slaughters" /
+        //     "Hotel Delfin" — a listing line's VENUE slot promoted to the
+        //     title, so the record carries no event identity at all). Fires
+        //     only when BOTH hold:
+        //     - the title is EXACTLY a known venue identity (identity-key
+        //       equality, the curated-matching strictness): the event's own
+        //       bar field, or a curated bar (rule 2's match) not
+        //       contradicted by a different own bar field. Fuzzy never
+        //       flags.
+        //     - the event's own copy never restates the title: a party
+        //       genuinely named for its venue advertises that name in its
+        //       description ("MASSIVE returns…"); a mis-promoted venue slot
+        //       describes a differently-named party and never does. When
+        //       the description restates the name, we assume a real
+        //       venue-named party — bias to NOT flagging.
+        if (title && titleBarKey && !hasJunkTitleFlag()) {
+            const curatedTitleMatch = flags.some(flag => flag.code === 'title-is-curated-bar');
+            const isKnownVenueIdentity = titleIsOwnBar
+                || (curatedTitleMatch && (!ownBarKey || ownBarKey === titleBarKey));
+            if (isKnownVenueIdentity) {
+                const foldedDescription = typeof event.description === 'string' ? foldForCompare(event.description) : '';
+                const foldedTitle = foldForCompare(title);
+                const descriptionRestatesTitle = Boolean(foldedDescription) && Boolean(foldedTitle)
+                    && foldedDescription.includes(foldedTitle);
+                if (!descriptionRestatesTitle) {
+                    flags.push({
+                        code: 'junk-title',
+                        detail: `title is only the venue name ("${title}") and the event's own copy never restates it`
+                    });
+                }
+            }
+        }
+
+        // 9d. FINE-PRINT titles ("DOG TAGS ARE NON REFUNDABLE · TAGS ARE NON
+        //     TRANSFERABLE"). The tell is rule 3's existing tiny legalese
+        //     table (generic ticketing-terms vocabulary — no new phrase
+        //     list): a title carrying one is policy text, never an event
+        //     name, so the report-only boilerplate flag gains the enforced
+        //     junk-title sibling. The letterless branch of rule 3 stays
+        //     report-only (no letters ≠ fine-print).
+        if (title && !hasJunkTitleFlag() && /\p{L}/u.test(title)) {
+            const paddedTitle = ` ${foldForCompare(title)} `;
+            const legalese = TITLE_LEGALESE_PHRASES.find(phrase => paddedTitle.includes(` ${phrase} `));
+            if (legalese) {
+                flags.push({
+                    code: 'junk-title',
+                    detail: `title is ticketing fine-print ("${legalese}")`
+                });
+            }
+        }
+
         return flags;
     }
 
@@ -13892,7 +14002,17 @@ class SharedCore {
             // run log shows the withhold decision next to the flag that
             // caused it (the actual gate is filterEventsForExecution).
             if (SharedCore.hasJunkTitleSanityFlag(analyzedEvent)) {
-                console.log(`🚫 JUNK TITLE: "${analyzedEvent.title || 'Unknown'}" withheld from calendar write — CTA/navigation link text (report-only: still shown in results)`);
+                const junkFlag = analyzedEvent._sanityFlags.find(flag => flag && flag.code === 'junk-title');
+                const junkDetail = junkFlag && typeof junkFlag.detail === 'string' ? junkFlag.detail : '';
+                if (junkDetail && !junkDetail.startsWith('title reads as link/CTA text')) {
+                    // Sibling junk-title families (address-shaped /
+                    // venue-name-only / fine-print) log their own flag
+                    // detail; the historical CTA wording below stays
+                    // reserved for the original arrow/CTA family.
+                    console.log(`🚫 JUNK TITLE: "${analyzedEvent.title || 'Unknown'}" withheld from calendar write — ${junkDetail} (report-only: still shown in results)`);
+                } else {
+                    console.log(`🚫 JUNK TITLE: "${analyzedEvent.title || 'Unknown'}" withheld from calendar write — CTA/navigation link text (report-only: still shown in results)`);
+                }
             }
 
             // FULLY-PAST SPAN WITHHOLD — the one enforced sibling of the
