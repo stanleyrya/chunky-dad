@@ -6195,7 +6195,14 @@ class ScriptableAdapter {
               // Fire-and-forget: builds the recurring event's ICS natively and
               // hands it to DocumentPicker/ShareSheet (the WebView never
               // navigates; recurring series are export-only, never auto-written).
-              this.exportRecurringEventIcs(params.id);
+              // `results` rides along so the minted uid lands on the run's
+              // UID ledger (results.icsExports, persisted post-UI).
+              this.exportRecurringEventIcs(params.id, results);
+            } else if (params.a === "export-ics-batch") {
+              // Fire-and-forget: ONE .ics for the whole calendar's batch of
+              // new-series exports (same handoff ladder, same export-only
+              // doctrine — the import is the owner's channel, now batch-capable).
+              this.exportCalendarBatchIcs(params.id, results);
             } else if (params.a === "copy-logs") {
               // Fire-and-forget: the run log is no longer embedded in the page,
               // so 📋 Copy / 📋 Compact ask native for it here.
@@ -6587,6 +6594,12 @@ class ScriptableAdapter {
     const conflictCards = conflictEvents.map(keptCard);
     const savedCards = savedEvents.map(keptCard);
     const withheldCards = withheldEvents.map(keptCard);
+    // Per-calendar batch export controls for the Withheld header — built
+    // ONCE, after the cards (card build order owns the per-event export ids;
+    // batch ids follow), and reused verbatim on every page like the other
+    // hoisted section HTML.
+    const withheldBatchIcsControlsHtml =
+      this.buildWithheldBatchIcsControlsHtml(withheldEvents);
     const droppedCards = this.buildBearDroppedCards(results);
     // Same rule for the non-card sections: hoisted out of the template so
     // they are generated once and reused verbatim on every page.
@@ -8109,6 +8122,7 @@ class ScriptableAdapter {
         <div class="section-header">
             <span class="section-icon">⏸️</span>
             <span class="section-title">Withheld (Not Written)</span>
+            ${withheldBatchIcsControlsHtml}
             <span class="section-count">${view.withheldCountLabel}</span>
         </div>
         <div class="section-blurb">Kept visible but never written this run — each card's headline chip says why (recurring series save via ICS, span fully past, junk title).</div>
@@ -8282,6 +8296,15 @@ class ScriptableAdapter {
         function exportRecurringIcs(btn) {
             var id = btn ? (btn.getAttribute('data-ics-export-id') || '') : '';
             window.location.href = 'chunkyscrape://act?a=export-ics&id=' +
+                encodeURIComponent(id) + '&n=' + (window.__icsExportNonce++);
+        }
+
+        // "💾 ICS (N)" section-header buttons: the whole calendar's batch of
+        // new-series exports as ONE .ics, same bridge, same nonce pattern —
+        // the batch is built native-side from the registered id.
+        function exportBatchIcs(btn) {
+            var id = btn ? (btn.getAttribute('data-ics-batch-id') || '') : '';
+            window.location.href = 'chunkyscrape://act?a=export-ics-batch&id=' +
                 encodeURIComponent(id) + '&n=' + (window.__icsExportNonce++);
         }
 
@@ -10048,6 +10071,10 @@ class ScriptableAdapter {
   resetIcsExportEvents() {
     this._icsExportEvents = {};
     this._icsExportNextId = 0;
+    // Per-calendar batch exports ride the same per-render registry pattern:
+    // events stay native-side, only the integer id travels the bridge.
+    this._icsBatchExports = {};
+    this._icsBatchNextId = 0;
   }
 
   registerIcsExportEvent(event) {
@@ -10059,98 +10086,228 @@ class ScriptableAdapter {
     return id;
   }
 
+  // One registered batch per city calendar per render: the section header's
+  // "💾 ICS (N)" control embeds only this id; the events and the target
+  // calendar name stay native-side until the tap builds the file.
+  registerIcsBatchExport(calendarName, events) {
+    if (!this._icsBatchExports || typeof this._icsBatchNextId !== "number") {
+      this.resetIcsExportEvents();
+    }
+    const id = String(this._icsBatchNextId++);
+    this._icsBatchExports[id] = {
+      calendarName: String(calendarName || ""),
+      events: Array.isArray(events) ? events : [],
+    };
+    return id;
+  }
+
+  // Hand a built ICS text to iOS. Shared by the per-event export and the
+  // per-calendar batch export — ONE ladder, so the two channels can never
+  // drift. Returns the channel label ("" when nothing could present).
+  //
+  // HANDOFF ORDER, most-capable first. Each step is independently guarded
+  // so one unavailable API can never sink the others.
+  //
+  // ShareSheet leads because it is the iOS surface that actually routes a
+  // .ics onward (Calendar included). QuickLook, which this used to lead
+  // with, only PREVIEWS the file — on device it does not offer the import
+  // flow Safari gives you (reported 2026-07-30: "doesn't open up the same
+  // way it would on safari"), so the preview was a dead end.
+  // DocumentPicker remains last: it saves to Files, which still needs a
+  // second trip through the Files app to reach the calendar.
+  async presentIcsFileForImport(icsText, fileName) {
+    let exportedVia = "";
+    let filePath = "";
+    try {
+      const fm = FileManager.local();
+      filePath = fm.joinPath(fm.temporaryDirectory(), fileName);
+      fm.writeString(filePath, icsText);
+    } catch (writeError) {
+      console.warn(
+        `📱 Scriptable: Could not stage the ICS file (${writeError.message}) — trying a direct export`,
+      );
+      filePath = "";
+    }
+    if (filePath && typeof ShareSheet !== "undefined" && ShareSheet && typeof ShareSheet.present === "function") {
+      try {
+        // Scriptable's ShareSheet resolves on ANY dismissal, carrying
+        // {completed: bool} — user-cancel resolves too (review 2026-07-30).
+        // A cancel is a deliberate choice: mark it handled so the fallbacks
+        // don't double-present, but never log it as a successful handoff.
+        const shareResult = await ShareSheet.present([filePath]);
+        const cancelled = shareResult && typeof shareResult === "object"
+          && shareResult.completed === false;
+        exportedVia = cancelled ? "ShareSheet (cancelled by user)" : "ShareSheet";
+      } catch (shareError) {
+        console.warn(
+          `📱 Scriptable: ShareSheet ICS handoff failed (${shareError.message}) — falling back to QuickLook`,
+        );
+      }
+    }
+    if (!exportedVia && filePath && typeof QuickLook !== "undefined" && QuickLook && typeof QuickLook.present === "function") {
+      try {
+        await QuickLook.present(filePath, false);
+        exportedVia = "QuickLook";
+      } catch (quickLookError) {
+        console.warn(
+          `📱 Scriptable: QuickLook ICS preview failed (${quickLookError.message}) — falling back to DocumentPicker`,
+        );
+      }
+    }
+    if (!exportedVia) {
+      if (
+        typeof DocumentPicker !== "undefined" &&
+        DocumentPicker &&
+        typeof DocumentPicker.exportString === "function"
+      ) {
+        await DocumentPicker.exportString(icsText, fileName);
+        exportedVia = "DocumentPicker";
+      } else {
+        const fm = FileManager.local();
+        const filePath = fm.joinPath(fm.temporaryDirectory(), fileName);
+        fm.writeString(filePath, icsText);
+        await ShareSheet.present([filePath]);
+        exportedVia = "ShareSheet";
+      }
+    }
+    return exportedVia;
+  }
+
+  // UID ledger (groundwork for the future same-UID+SEQUENCE update
+  // experiment): every ICS export used to mint UIDs and never record them,
+  // so nothing could ever address an imported event again. Each export now
+  // appends {identity → uid, calendar, exportedAt} entries to
+  // results.icsExports, which the existing run-save path persists (saveRun
+  // rewrites the run JSON post-UI) — the run JSON is the ledger. No
+  // calendar or notes writes.
+  recordIcsExportsOnResults(results, entries) {
+    if (!results || typeof results !== "object") return;
+    if (!Array.isArray(entries) || entries.length === 0) return;
+    if (!Array.isArray(results.icsExports)) results.icsExports = [];
+    results.icsExports.push(...entries);
+    console.log(
+      `📱 Scriptable: 🧾 UID ledger: recorded ${entries.length} minted ICS uid(s) on the run (${results.icsExports.length} total) — persisted with the run JSON.`,
+    );
+  }
+
+  buildIcsExportLedgerEntry(event, uid, calendarName, exportedVia, now, mode) {
+    const toIso = (value) => {
+      if (!value) return "";
+      const date = value instanceof Date ? value : new Date(value);
+      return isNaN(date.getTime()) ? "" : date.toISOString();
+    };
+    return {
+      title: String(event.title || event.name || "").trim(),
+      startDate: toIso(event.startDate),
+      city: String(event.city || ""),
+      calendar: String(calendarName || ""),
+      uid: String(uid || ""),
+      exportedAt: now.toISOString(),
+      via: String(exportedVia || ""),
+      mode,
+    };
+  }
+
   // Build the ICS for one registered recurring event and hand it off via
   // DocumentPicker.exportString (fallback: temp file + ShareSheet). Called
   // fire-and-forget from shouldAllowRequest (which must synchronously return
   // false to cancel the fake navigation).
-  async exportRecurringEventIcs(id) {
+  async exportRecurringEventIcs(id, results = null) {
     try {
       const event = this._icsExportEvents
         ? this._icsExportEvents[String(id)]
         : undefined;
       if (!event || typeof event !== "object") return;
       const timezone = this.getTimezoneForCityOrUtc(event.city);
+      // Explicit `now` so the uid the builder mints is reproducible here for
+      // the UID ledger (mintIcsUid is the builder's own mint, not a copy).
+      const now = new Date();
       const icsText = SharedEventSchema.buildRecurringEventIcs(event, {
         timezone,
+        now,
       });
       if (!icsText) return;
       const slug =
         SharedEventSchema.slugifyIcsText(event.title || event.name || "") ||
         "chunky-dad-recurring";
       const fileName = `${slug}.ics`;
-      // HANDOFF ORDER, most-capable first. Each step is independently guarded
-      // so one unavailable API can never sink the others.
-      //
-      // ShareSheet leads because it is the iOS surface that actually routes a
-      // .ics onward (Calendar included). QuickLook, which this used to lead
-      // with, only PREVIEWS the file — on device it does not offer the import
-      // flow Safari gives you (reported 2026-07-30: "doesn't open up the same
-      // way it would on safari"), so the preview was a dead end.
-      // DocumentPicker remains last: it saves to Files, which still needs a
-      // second trip through the Files app to reach the calendar.
-      let exportedVia = "";
-      let filePath = "";
-      try {
-        const fm = FileManager.local();
-        filePath = fm.joinPath(fm.temporaryDirectory(), fileName);
-        fm.writeString(filePath, icsText);
-      } catch (writeError) {
-        console.warn(
-          `📱 Scriptable: Could not stage the ICS file (${writeError.message}) — trying a direct export`,
-        );
-        filePath = "";
-      }
-      if (filePath && typeof ShareSheet !== "undefined" && ShareSheet && typeof ShareSheet.present === "function") {
-        try {
-          // Scriptable's ShareSheet resolves on ANY dismissal, carrying
-          // {completed: bool} — user-cancel resolves too (review 2026-07-30).
-          // A cancel is a deliberate choice: mark it handled so the fallbacks
-          // don't double-present, but never log it as a successful handoff.
-          const shareResult = await ShareSheet.present([filePath]);
-          const cancelled = shareResult && typeof shareResult === "object"
-            && shareResult.completed === false;
-          exportedVia = cancelled ? "ShareSheet (cancelled by user)" : "ShareSheet";
-        } catch (shareError) {
-          console.warn(
-            `📱 Scriptable: ShareSheet ICS handoff failed (${shareError.message}) — falling back to QuickLook`,
-          );
-        }
-      }
-      if (!exportedVia && filePath && typeof QuickLook !== "undefined" && QuickLook && typeof QuickLook.present === "function") {
-        try {
-          await QuickLook.present(filePath, false);
-          exportedVia = "QuickLook";
-        } catch (quickLookError) {
-          console.warn(
-            `📱 Scriptable: QuickLook ICS preview failed (${quickLookError.message}) — falling back to DocumentPicker`,
-          );
-        }
-      }
-      if (!exportedVia) {
-        if (
-          typeof DocumentPicker !== "undefined" &&
-          DocumentPicker &&
-          typeof DocumentPicker.exportString === "function"
-        ) {
-          await DocumentPicker.exportString(icsText, fileName);
-          exportedVia = "DocumentPicker";
-        } else {
-          const fm = FileManager.local();
-          const filePath = fm.joinPath(fm.temporaryDirectory(), fileName);
-          fm.writeString(filePath, icsText);
-          await ShareSheet.present([filePath]);
-          exportedVia = "ShareSheet";
-        }
-      }
+      const exportedVia = await this.presentIcsFileForImport(icsText, fileName);
       console.log(
         `📱 Scriptable: Exported recurring event ICS "${fileName}" (#${id})`,
       );
       console.log(
         `📱 Scriptable: Recurring ICS handed off via ${exportedVia}`,
       );
+      if (typeof SharedEventSchema.mintIcsUid === "function") {
+        this.recordIcsExportsOnResults(results, [
+          this.buildIcsExportLedgerEntry(
+            event,
+            SharedEventSchema.mintIcsUid(event, now),
+            this.getCalendarNameForDisplay(event),
+            exportedVia,
+            now,
+            "single",
+          ),
+        ]);
+      }
     } catch (error) {
       console.warn(
         `📱 Scriptable: Failed to export recurring event ICS: ${error.message}`,
+      );
+    }
+  }
+
+  // Build ONE .ics carrying every registered event for a city calendar and
+  // hand it off through the same ladder as the per-event button. iOS asks
+  // for the target calendar once per import and offers "Add All", so one
+  // file per calendar is the ergonomic unit. Fire-and-forget from
+  // shouldAllowRequest, like exportRecurringEventIcs.
+  async exportCalendarBatchIcs(id, results = null) {
+    try {
+      const batch = this._icsBatchExports
+        ? this._icsBatchExports[String(id)]
+        : undefined;
+      if (!batch || !Array.isArray(batch.events) || batch.events.length === 0) {
+        return;
+      }
+      const now = new Date();
+      const built = SharedEventSchema.buildCalendarBatchIcs(batch.events, {
+        calendarName: batch.calendarName,
+        getTimezone: (event) => this.getTimezoneForCityOrUtc(event.city),
+        now,
+      });
+      if (!built || !built.icsText) return;
+      const slug =
+        SharedEventSchema.slugifyIcsText(batch.calendarName) || "chunky-dad";
+      const fileName = `${slug}-series.ics`;
+      const exportedVia = await this.presentIcsFileForImport(
+        built.icsText,
+        fileName,
+      );
+      console.log(
+        `📱 Scriptable: 💾 Exported batch ICS "${fileName}" — ${built.events.length} series for calendar "${batch.calendarName}" in one file (#${id}).`,
+      );
+      console.log(
+        `📱 Scriptable: Batch ICS handed off via ${exportedVia}`,
+      );
+      // The batch builder de-duplicates colliding uids internally, so the
+      // ledger MUST take uids from its manifest (same order as the input).
+      this.recordIcsExportsOnResults(
+        results,
+        built.events.map((manifestEntry, index) =>
+          this.buildIcsExportLedgerEntry(
+            batch.events[index],
+            manifestEntry.uid,
+            batch.calendarName,
+            exportedVia,
+            now,
+            "batch",
+          ),
+        ),
+      );
+    } catch (error) {
+      console.warn(
+        `📱 Scriptable: Failed to export batch ICS: ${error.message}`,
       );
     }
   }
@@ -10286,6 +10443,46 @@ class ScriptableAdapter {
     }
     addParam("searchStartDate", searchStart);
     addParam("searchEndDate", toIso(matched.endDate) || searchStart);
+  }
+
+  // Section-header batch controls for the Withheld pile: ONE "💾 ICS (N)"
+  // per city calendar, batching every withheld series export for that
+  // calendar into a single .ics. iOS Safari/Calendar shows a batch preview
+  // with "Add All" and asks for the target calendar once per FILE, so
+  // per-calendar is the ergonomic unit — N per-event taps become one.
+  // Scope is deliberately the records that already offer per-event ICS
+  // export today (new series with a usable start time): file imports are
+  // ADDS on iOS (same-UID re-import duplicates), so already-saved series
+  // (the Saved pile) and execute-flow writes never enter the batch.
+  // Per-event buttons stay.
+  buildWithheldBatchIcsControlsHtml(withheldEntries) {
+    const entries = Array.isArray(withheldEntries) ? withheldEntries : [];
+    const byCalendar = new Map(); // calendarName → events, first-seen order
+    for (const entry of entries) {
+      const event = entry && entry.event;
+      if (!event || typeof event !== "object") continue;
+      // Same eligibility as the per-event 💾 button on the card.
+      if (!SharedCore.isRecurringSeriesEvent(event)) continue;
+      if (event._recurringNoStartTime === true) continue;
+      const calendarName = this.getCalendarNameForDisplay(event);
+      if (!byCalendar.has(calendarName)) byCalendar.set(calendarName, []);
+      byCalendar.get(calendarName).push(event);
+    }
+    if (byCalendar.size === 0) return "";
+    const controls = [];
+    for (const [calendarName, events] of byCalendar) {
+      const batchId = this.registerIcsBatchExport(calendarName, events);
+      // Compact label; the calendar name only spells itself out when the run
+      // spans more than one target calendar.
+      const label =
+        byCalendar.size === 1
+          ? `💾 ICS (${events.length})`
+          : `💾 ${this.escapeHtml(calendarName)} (${events.length})`;
+      controls.push(
+        `<button onclick="exportBatchIcs(this)" class="log-copy-btn ics-export-btn ics-batch-btn" data-ics-batch-id="${batchId}" title="Save ${events.length} new series for ${this.escapeHtml(calendarName)} as one .ics">${label}</button>`,
+      );
+    }
+    return controls.join("");
   }
 
   // Per-card actions row: an Event Builder prefill link on EVERY card (rides
@@ -15220,6 +15417,14 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         ...(Array.isArray(results.savedRunExecutions) &&
         results.savedRunExecutions.length > 0
           ? { executions: results.savedRunExecutions }
+          : {}),
+        // UID ledger: every ICS export this run performed (single or batch)
+        // recorded as {title, startDate, city, calendar, uid, exportedAt,
+        // via, mode}. Exports happen while the results sheet is up, so the
+        // post-UI rewrite of this same file is what lands them on disk —
+        // groundwork for the future same-UID+SEQUENCE update experiment.
+        ...(Array.isArray(results.icsExports) && results.icsExports.length > 0
+          ? { icsExports: results.icsExports }
           : {}),
       };
 

@@ -619,6 +619,131 @@ test('buildRecurringEventIcs: UTC fallback when no timezone is resolvable', () =
   assert.ok(!unfolded.includes('TZID='), 'no TZID without a timezone');
 });
 
+// ---------------------------------------------------------------------------
+// Refactor pin: extracting the shared VEVENT emitter (buildEventVeventLines)
+// must leave buildRecurringEventIcs BYTE-IDENTICAL. These expected strings
+// were captured from the pre-refactor implementation on base — every byte,
+// including CRLF line endings and the RFC 5545 fold points.
+// ---------------------------------------------------------------------------
+
+test('buildRecurringEventIcs: byte-identical pin — full-fidelity recurring event', () => {
+  const ics = EventSchema.buildRecurringEventIcs(buildRecurringFixtureEvent(), {
+    timezone: 'America/Chicago',
+    now: RECURRING_ICS_NOW
+  });
+  assert.equal(
+    ics,
+    'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//chunky.dad//Event Builder//EN\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\nBEGIN:VEVENT\r\nUID:fuzzy-20260503T203532Z@chunky.dad\r\nDTSTAMP:20260503T203532Z\r\nDTSTART;TZID=America/Chicago:20260807T210000\r\nDTEND;TZID=America/Chicago:20260808T020000\r\nSUMMARY:FUZZY\r\nDESCRIPTION:bar: Dallas Eagle\\ncover: $10\\nwebsite: https://example.com/fuz\r\n zy\\nrecurrence: FREQ=WEEKLY\\;BYDAY=FR\r\nURL:https://example.com/fuzzy\r\nSTATUS:CONFIRMED\r\nTRANSP:OPAQUE\r\nRRULE:FREQ=WEEKLY;BYDAY=FR\r\nLOCATION:32.7767\\,-96.797\r\nEND:VEVENT\r\nEND:VCALENDAR'
+  );
+});
+
+test('buildRecurringEventIcs: byte-identical pin — one-off event, UTC fallback, sparse fields', () => {
+  const ics = EventSchema.buildRecurringEventIcs(
+    { title: 'One Off Party', startDate: new Date('2026-09-01T02:00:00.000Z'), bar: 'The Eagle' },
+    { now: RECURRING_ICS_NOW }
+  );
+  assert.equal(
+    ics,
+    'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//chunky.dad//Event Builder//EN\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\nBEGIN:VEVENT\r\nUID:one-off-party-20260503T203532Z@chunky.dad\r\nDTSTAMP:20260503T203532Z\r\nDTSTART:20260901T020000Z\r\nSUMMARY:One Off Party\r\nDESCRIPTION:bar: The Eagle\r\nSTATUS:CONFIRMED\r\nTRANSP:OPAQUE\r\nEND:VEVENT\r\nEND:VCALENDAR'
+  );
+});
+
+test('mintIcsUid matches the uid buildRecurringEventIcs emits for the same now', () => {
+  const event = buildRecurringFixtureEvent();
+  const uid = EventSchema.mintIcsUid(event, RECURRING_ICS_NOW);
+  assert.equal(uid, 'fuzzy-20260503T203532Z@chunky.dad');
+  const ics = EventSchema.buildRecurringEventIcs(event, { timezone: 'America/Chicago', now: RECURRING_ICS_NOW });
+  assert.ok(ics.includes(`UID:${uid}`), 'ledger uid and export uid agree');
+});
+
+// ---------------------------------------------------------------------------
+// Per-calendar batch export (buildCalendarBatchIcs)
+// ---------------------------------------------------------------------------
+
+test('buildCalendarBatchIcs: one VCALENDAR, N VEVENTs, X-WR-CALNAME, unique uids', () => {
+  const built = EventSchema.buildCalendarBatchIcs([
+    buildRecurringFixtureEvent(),
+    buildRecurringFixtureEvent({ title: 'CUBSCOUT', recurrenceRule: 'FREQ=WEEKLY;BYDAY=SA' }),
+    // Same title as the first — every batch event shares one `now` stamp, so
+    // this would mint a DUPLICATE uid without the collision counter.
+    buildRecurringFixtureEvent({ recurrenceRule: 'FREQ=MONTHLY;BYDAY=1FR' })
+  ], { calendarName: 'chunky-dad-dallas', timezone: 'America/Chicago', now: RECURRING_ICS_NOW });
+
+  const unfolded = built.icsText.replace(/\r\n[ \t]/g, '');
+  // Lint the VCALENDAR structure: single wrapper, N VEVENTs.
+  assert.equal((unfolded.match(/BEGIN:VCALENDAR/g) || []).length, 1, 'single VCALENDAR wrapper');
+  assert.equal((unfolded.match(/END:VCALENDAR/g) || []).length, 1);
+  assert.equal((unfolded.match(/BEGIN:VEVENT/g) || []).length, 3, 'one VEVENT per event');
+  assert.equal((unfolded.match(/END:VEVENT/g) || []).length, 3);
+  assert.ok(unfolded.startsWith('BEGIN:VCALENDAR'), 'wrapper opens the file');
+  assert.ok(unfolded.endsWith('END:VCALENDAR'), 'wrapper closes the file');
+  // Target calendar name rides X-WR-CALNAME.
+  assert.ok(unfolded.includes('X-WR-CALNAME:chunky-dad-dallas'), 'X-WR-CALNAME present');
+  // Unique uids, collision suffixed, and the manifest reports exactly them.
+  const uids = [...unfolded.matchAll(/UID:([^\r\n]+)/g)].map((m) => m[1]);
+  assert.equal(new Set(uids).size, 3, 'uids are unique within the batch');
+  assert.deepEqual(built.events.map((e) => e.uid), uids, 'manifest uids match emission order');
+  assert.deepEqual(uids, [
+    'fuzzy-20260503T203532Z@chunky.dad',
+    'cubscout-20260503T203532Z@chunky.dad',
+    'fuzzy-2-20260503T203532Z@chunky.dad'
+  ]);
+  // Each VEVENT keeps the single-export projections: RRULE, URL, DESCRIPTION
+  // with the recurrence detection line.
+  assert.ok(unfolded.includes('RRULE:FREQ=WEEKLY;BYDAY=SA'));
+  assert.ok(unfolded.includes('RRULE:FREQ=MONTHLY;BYDAY=1FR'));
+  assert.equal((unfolded.match(/URL:https:\/\/example\.com\/fuzzy/g) || []).length, 3);
+  assert.equal((unfolded.match(/recurrence: FREQ=/g) || []).length, 3, 'recurrence detection line per event');
+  // RFC 5545 folding applies to the whole batch document.
+  for (const line of built.icsText.split('\r\n')) {
+    assert.ok(Buffer.byteLength(line, 'utf8') <= 75, `line exceeds 75 octets: ${line}`);
+  }
+});
+
+test('buildCalendarBatchIcs: a batch VEVENT is byte-identical to the single export VEVENT', () => {
+  const event = buildRecurringFixtureEvent();
+  const single = EventSchema.buildRecurringEventIcs(event, { timezone: 'America/Chicago', now: RECURRING_ICS_NOW });
+  const built = EventSchema.buildCalendarBatchIcs([event], { calendarName: 'chunky-dad-dallas', timezone: 'America/Chicago', now: RECURRING_ICS_NOW });
+  const extractVevent = (text) => text.slice(text.indexOf('BEGIN:VEVENT'), text.indexOf('END:VEVENT') + 'END:VEVENT'.length);
+  assert.equal(extractVevent(built.icsText), extractVevent(single), 'shared emitter: same VEVENT bytes in both channels');
+});
+
+test('buildCalendarBatchIcs: per-event getTimezone resolution and null on nothing exportable', () => {
+  const built = EventSchema.buildCalendarBatchIcs(
+    [buildRecurringFixtureEvent(), buildRecurringFixtureEvent({ title: 'LA BEAR', city: 'la' })],
+    {
+      calendarName: 'chunky-dad-mixed',
+      getTimezone: (event) => (event.city === 'la' ? 'America/Los_Angeles' : 'America/Chicago'),
+      now: RECURRING_ICS_NOW
+    }
+  );
+  const unfolded = built.icsText.replace(/\r\n[ \t]/g, '');
+  assert.ok(unfolded.includes('DTSTART;TZID=America/Chicago:20260807T210000'), 'first event keeps Chicago wall-clock');
+  assert.ok(unfolded.includes('DTSTART;TZID=America/Los_Angeles:20260807T190000'), 'second event resolved per event');
+
+  assert.equal(EventSchema.buildCalendarBatchIcs([], { calendarName: 'x' }), null, 'empty list → null');
+  assert.equal(EventSchema.buildCalendarBatchIcs(null, { calendarName: 'x' }), null, 'non-array → null');
+  assert.equal(EventSchema.buildCalendarBatchIcs([null, 'nope'], { calendarName: 'x' }), null, 'no object events → null');
+});
+
+test('round-trip: js/calendar-core.js parseICalData parses a batch ICS into N events', () => {
+  const noop = () => {};
+  globalThis.logger = globalThis.logger || {
+    componentInit: noop, componentLoad: noop, componentError: noop,
+    apiCall: noop, debug: noop, info: noop, warn: noop, time: noop, timeEnd: noop
+  };
+  const CalendarCore = require('../js/calendar-core.js');
+  const built = EventSchema.buildCalendarBatchIcs([
+    buildRecurringFixtureEvent(),
+    buildRecurringFixtureEvent({ title: 'CUBSCOUT', recurrenceRule: 'FREQ=WEEKLY;BYDAY=SA' })
+  ], { calendarName: 'chunky-dad-dallas', timezone: 'America/Chicago', now: RECURRING_ICS_NOW });
+  const core = new CalendarCore();
+  const events = core.parseICalData(built.icsText);
+  assert.equal(events.length, 2, 'both VEVENTs parsed from the one file');
+  assert.deepEqual(events.map((e) => e.name).sort(), ['CUBSCOUT', 'FUZZY']);
+  assert.ok(events.every((e) => e.recurring === true), 'both parsed as recurring');
+});
+
 test('round-trip: js/calendar-core.js parseICalData parses the generated ICS and reports recurrence', () => {
   const noop = () => {};
   globalThis.logger = {

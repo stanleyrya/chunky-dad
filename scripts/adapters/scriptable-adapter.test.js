@@ -3492,9 +3492,18 @@ test('export-ics bridge: the handler builds the ICS for the registered event and
 test('export-ics bridge: shouldAllowRequest dispatches a=export-ics to the ICS handler', () => {
   const fs = require('node:fs');
   const source = fs.readFileSync(path.join(__dirname, 'scriptable-adapter.js'), 'utf8');
-  const branchMatch = source.match(/params\.a === "export-ics"[\s\S]{0,500}?exportRecurringEventIcs\(params\.id\)/);
+  // `results` rides along so the minted uid can land on the run's UID ledger.
+  const branchMatch = source.match(/params\.a === "export-ics"[\s\S]{0,700}?exportRecurringEventIcs\(params\.id, results\)/);
   assert.ok(branchMatch, 'export-ics action branch wired to exportRecurringEventIcs');
   assert.ok(source.includes("'chunkyscrape://act?a=export-ics&id='"), 'page JS builds the export-ics bridge URL');
+});
+
+test('export-ics-batch bridge: shouldAllowRequest dispatches a=export-ics-batch to the batch handler', () => {
+  const fs = require('node:fs');
+  const source = fs.readFileSync(path.join(__dirname, 'scriptable-adapter.js'), 'utf8');
+  const branchMatch = source.match(/params\.a === "export-ics-batch"[\s\S]{0,700}?exportCalendarBatchIcs\(params\.id, results\)/);
+  assert.ok(branchMatch, 'export-ics-batch action branch wired to exportCalendarBatchIcs');
+  assert.ok(source.includes("'chunkyscrape://act?a=export-ics-batch&id='"), 'page JS builds the export-ics-batch bridge URL');
 });
 
 test('probeRecurringSeries: published-ICS confirmation short-circuits the wide-window probe', async () => {
@@ -10401,4 +10410,186 @@ test('generateEventCard renders the venue-overlap chip only when the report-only
     bar: 'Eagle LA'
   });
   assert.ok(!plain.includes('venue-overlap-badge'), 'no chip without the stamp');
+});
+
+// ---------------------------------------------------------------------------
+// Per-calendar batch ICS export: "💾 ICS (N)" on the Withheld section header
+// (one iOS import = one target-calendar prompt + "Add All"), plus the UID
+// ledger groundwork (results.icsExports persisted through saveRun).
+// ---------------------------------------------------------------------------
+
+function buildBatchCitiesAdapter() {
+  return new ScriptableAdapter({
+    cities: {
+      dallas: { calendar: 'chunky-dad-dallas', timezone: 'America/Chicago' },
+      seattle: { calendar: 'chunky-dad-seattle', timezone: 'America/Los_Angeles' }
+    }
+  });
+}
+
+function buildWithheldSeriesEvent(overrides = {}) {
+  return {
+    title: 'FUZZY',
+    _action: 'new',
+    startDate: '2026-08-08T02:00:00.000Z',
+    endDate: '2026-08-08T07:00:00.000Z',
+    bar: 'Dallas Eagle',
+    city: 'dallas',
+    recurrenceRule: 'FREQ=WEEKLY;BYDAY=FR',
+    _recurring: true,
+    _recurringExport: true,
+    ...overrides
+  };
+}
+
+test('withheld header: one 💾 ICS (N) batch control per city calendar, per-event buttons intact', async () => {
+  const adapter = buildBatchCitiesAdapter();
+  const html = await adapter.generateRichHTML({
+    analyzedEvents: [
+      buildWithheldSeriesEvent(),
+      buildWithheldSeriesEvent({ title: 'CUBSCOUT', recurrenceRule: 'FREQ=MONTHLY;BYDAY=1SA' }),
+      { title: 'One Off', _action: 'new', startDate: '2026-08-01T02:00:00.000Z', city: 'dallas' }
+    ]
+  });
+
+  assert.ok(html.includes('Withheld (Not Written)'), 'withheld section rendered');
+  assert.match(html, /data-ics-batch-id="\d+"/, 'batch control carries a registered id');
+  assert.ok(html.includes('💾 ICS (2)'), 'single-calendar run keeps the compact label with the batch count');
+  assert.ok(html.includes('onclick="exportBatchIcs(this)"'), 'batch control rides the batch bridge handler');
+  // Per-event buttons stay — the batch is an addition, not a replacement.
+  assert.equal((html.match(/data-ics-export-id="\d+"/g) || []).length, 2, 'both per-event 💾 buttons still render');
+
+  const batches = Object.values(adapter._icsBatchExports || {});
+  assert.equal(batches.length, 1, 'one registered batch for the one calendar');
+  assert.equal(batches[0].calendarName, 'chunky-dad-dallas');
+  assert.deepEqual(batches[0].events.map((e) => e.title), ['FUZZY', 'CUBSCOUT'], 'batch = the withheld series only (no one-off)');
+});
+
+test('withheld header: a run spanning two calendars gets one labelled control per calendar', async () => {
+  const adapter = buildBatchCitiesAdapter();
+  const html = await adapter.generateRichHTML({
+    analyzedEvents: [
+      buildWithheldSeriesEvent(),
+      buildWithheldSeriesEvent({ title: 'SEATTLE STEAM', city: 'seattle', recurrenceRule: 'FREQ=WEEKLY;BYDAY=SA' })
+    ]
+  });
+
+  assert.ok(html.includes('💾 chunky-dad-dallas (1)'), 'dallas batch labelled with its calendar');
+  assert.ok(html.includes('💾 chunky-dad-seattle (1)'), 'seattle batch labelled with its calendar');
+  const batches = Object.values(adapter._icsBatchExports || {});
+  assert.equal(batches.length, 2, 'one registered batch per calendar');
+});
+
+test('withheld header: no batch control without exportable series (no-start-time series excluded)', async () => {
+  const adapter = buildBatchCitiesAdapter();
+  const html = await adapter.generateRichHTML({
+    analyzedEvents: [
+      { title: 'One Off', _action: 'new', startDate: '2026-08-01T02:00:00.000Z', city: 'dallas' },
+      buildWithheldSeriesEvent({ title: 'DRINK AND DRAW', _recurringNoStartTime: true })
+    ]
+  });
+  assert.ok(!html.includes('data-ics-batch-id='), 'no batch control when nothing can build a meaningful ICS');
+  assert.equal(Object.keys(adapter._icsBatchExports || {}).length, 0, 'nothing registered');
+});
+
+test('exportCalendarBatchIcs: ONE VCALENDAR with every series, X-WR-CALNAME, and the uid ledger on results', async () => {
+  const adapter = buildBatchCitiesAdapter();
+  adapter.resetIcsExportEvents();
+  const id = adapter.registerIcsBatchExport('chunky-dad-dallas', [
+    buildWithheldSeriesEvent(),
+    buildWithheldSeriesEvent({ title: 'CUBSCOUT', recurrenceRule: 'FREQ=MONTHLY;BYDAY=1SA' })
+  ]);
+
+  const exported = [];
+  global.DocumentPicker = {
+    exportString: async (content, name) => {
+      exported.push({ content, name });
+      return [name];
+    }
+  };
+  const results = {};
+  try {
+    await adapter.exportCalendarBatchIcs(id, results);
+  } finally {
+    delete global.DocumentPicker;
+  }
+
+  assert.equal(exported.length, 1, 'one file for the whole calendar');
+  assert.equal(exported[0].name, 'chunky-dad-dallas-series.ics', 'file named for the target calendar');
+  const unfolded = exported[0].content.replace(/\r\n[ \t]/g, '');
+  assert.equal((unfolded.match(/BEGIN:VCALENDAR/g) || []).length, 1, 'single VCALENDAR wrapper');
+  assert.equal((unfolded.match(/BEGIN:VEVENT/g) || []).length, 2, 'both series in the one file');
+  assert.ok(unfolded.includes('X-WR-CALNAME:chunky-dad-dallas'), 'target calendar named in the file');
+  assert.ok(unfolded.includes('DTSTART;TZID=America/Chicago:'), 'city timezone resolved per event');
+
+  // UID ledger groundwork: the run JSON records what this export minted.
+  assert.ok(Array.isArray(results.icsExports), 'ledger array created on results');
+  assert.equal(results.icsExports.length, 2, 'one ledger entry per exported event');
+  const uidsInFile = [...unfolded.matchAll(/UID:([^\r\n]+)/g)].map((m) => m[1]);
+  assert.deepEqual(results.icsExports.map((e) => e.uid), uidsInFile, 'ledger uids are the uids in the file');
+  for (const entry of results.icsExports) {
+    assert.equal(entry.calendar, 'chunky-dad-dallas');
+    assert.equal(entry.mode, 'batch');
+    assert.equal(entry.via, 'DocumentPicker');
+    assert.ok(entry.exportedAt.includes('T'), 'ISO exportedAt stamp');
+  }
+  assert.deepEqual(results.icsExports.map((e) => e.title), ['FUZZY', 'CUBSCOUT']);
+});
+
+test('exportRecurringEventIcs: the single-event export records its minted uid on the ledger too', async () => {
+  const adapter = buildBatchCitiesAdapter();
+  adapter.resetIcsExportEvents();
+  const id = adapter.registerIcsExportEvent(buildWithheldSeriesEvent());
+
+  const exported = [];
+  global.DocumentPicker = {
+    exportString: async (content, name) => {
+      exported.push({ content, name });
+      return [name];
+    }
+  };
+  const results = {};
+  try {
+    await adapter.exportRecurringEventIcs(id, results);
+  } finally {
+    delete global.DocumentPicker;
+  }
+
+  assert.equal(exported.length, 1);
+  assert.equal(results.icsExports.length, 1, 'single export records one ledger entry');
+  const entry = results.icsExports[0];
+  assert.match(entry.uid, /^fuzzy-\d{8}T\d{6}Z@chunky\.dad$/, 'ledger uid has the mint shape');
+  const unfolded = exported[0].content.replace(/\r\n[ \t]/g, '');
+  assert.ok(unfolded.includes(`UID:${entry.uid}`), 'ledger uid IS the uid in the exported file');
+  assert.equal(entry.calendar, 'chunky-dad-dallas');
+  assert.equal(entry.mode, 'single');
+});
+
+test('saveRun persists results.icsExports into the run JSON (and omits the key when empty)', async () => {
+  const adapter = buildBatchCitiesAdapter();
+  const writes = [];
+  adapter.fm = {
+    joinPath: (a, b) => `${a}/${b}`,
+    fileExists: () => true,
+    isDirectory: () => false,
+    createDirectory: () => {},
+    writeString: (filePath, content) => { writes.push({ filePath, content }); }
+  };
+  adapter.ensureRelativeStorageDirs = async () => {};
+  adapter.runsDir = '/tmp/chunky-dad-test-runs';
+
+  const ledger = [{
+    title: 'FUZZY', startDate: '2026-08-08T02:00:00.000Z', city: 'dallas',
+    calendar: 'chunky-dad-dallas', uid: 'fuzzy-20260503T203532Z@chunky.dad',
+    exportedAt: '2026-05-03T20:35:32.000Z', via: 'DocumentPicker', mode: 'batch'
+  }];
+  await adapter.saveRun({ analyzedEvents: [], icsExports: ledger });
+  assert.equal(writes.length, 1, 'run JSON written');
+  const payload = JSON.parse(writes[0].content);
+  assert.deepEqual(payload.icsExports, ledger, 'uid ledger lands in the run JSON');
+
+  writes.length = 0;
+  await adapter.saveRun({ analyzedEvents: [] });
+  const emptyPayload = JSON.parse(writes[0].content);
+  assert.ok(!('icsExports' in emptyPayload), 'no ledger key on runs that exported nothing');
 });
