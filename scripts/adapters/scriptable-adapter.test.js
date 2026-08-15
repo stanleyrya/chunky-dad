@@ -442,6 +442,17 @@ test('loadDeadEnds/saveDeadEnds round-trip through dead-ends.json', async () => 
       firstSeen: '2026-06-01T00:00:00.000Z',
       lastSeen: '2026-07-01T00:00:00.000Z',
       misses: 3
+    },
+    // Host-level bot-wall stats section (shared-core's "::hosts" key) must
+    // survive the phone round-trip untouched — Mac and phone share this file
+    // when the shared storage root is active.
+    '::hosts': {
+      'wl.eventim.us': {
+        firstSeen: '2026-08-15T08:38:09.000Z',
+        lastSeen: '2026-08-15T08:38:09.000Z',
+        misses: 2,
+        lastStatus: 403
+      }
     }
   };
   await adapter.saveDeadEnds(store);

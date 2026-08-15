@@ -1222,7 +1222,10 @@ class ScriptableAdapter {
 
   // ---------------------------------------------------------------------
   // Learned dead-end store persistence: dead-ends.json alongside the other
-  // scraper storage. Shape: { "<url>": { firstSeen, lastSeen, misses } }.
+  // scraper storage. Shape: { "<url>": { firstSeen, lastSeen, misses } },
+  // plus shared-core's reserved "::hosts" section for host-level bot-wall
+  // stats (persisted opaquely here — Mac runs write the same file when the
+  // shared storage root is active).
   // The semantics (skip/retry/prune) live in shared-core; the orchestrator
   // loads the store before the run and saves the updated store after it.
   // ---------------------------------------------------------------------
