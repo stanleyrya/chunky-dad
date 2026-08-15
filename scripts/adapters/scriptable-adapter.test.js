@@ -8380,6 +8380,128 @@ test('merge rows label calendar stickiness and clobber fallback', () => {
   assert.ok(fallbackHtml.includes('⚠️ NO AI ANSWER — took new (clobber fallback)'));
 });
 
+// ---------------------------------------------------------------------------
+// Display truth for post-merge deterministic rewrites — the REAL record from
+// run 20260815-083809, "TWISTED BEAR San Francisco Debut": the merge-time
+// gmaps regeneration replaced the calendar's 73-char coordinate query with
+// the 139-char bar+address query, nothing recorded the decision, and the row
+// rendered "AI-arbitrated … KEPT EXISTING (no change)" while counting as
+// changed. A row must never claim both.
+// ---------------------------------------------------------------------------
+
+const TWISTED_CAL_GMAPS =
+  'https://www.google.com/maps/search/?api=1&query=37.7699933%2C-122.4133375';
+const TWISTED_REBUILT_GMAPS =
+  'https://www.google.com/maps/search/?api=1&query=San%20Francisco%20Eagle%20Bar%2C%20398%2012th%20Street%2C%20San%20Francisco%2C%20CA%2094103';
+
+function twistedBearEvent(overrides = {}) {
+  const bar = 'San Francisco Eagle Bar';
+  const address = '398 12th Street, San Francisco, CA 94103';
+  return {
+    title: 'TWISTED BEAR San Francisco Debut',
+    _action: 'merge',
+    startDate: '2026-08-23T04:00:00.000Z',
+    endDate: '2026-08-23T09:00:00.000Z',
+    location: '37.7699933, -122.4133375',
+    bar,
+    address,
+    gmaps: TWISTED_REBUILT_GMAPS,
+    city: 'sf',
+    key: 'twisted-bear-san-francisco-debut|2026-08-23|san francisco eagle bar',
+    _original: {
+      // The scraper offered NO gmaps at all ("scraped: undefined" in the
+      // owner's paste); the calendar stored the coordinate query.
+      scraper: {
+        bar,
+        address,
+        location: '37.7699927, -122.4134077',
+        key: 'twisted-bear-san-francisco-debut|2026-08-23|san francisco eagle bar'
+      },
+      calendar: {
+        bar,
+        address,
+        gmaps: TWISTED_CAL_GMAPS,
+        location: '37.7699933, -122.4133375',
+        title: 'TWISTED BEAR San Francisco Debut',
+        startDate: '2026-08-23T04:00:00.000Z',
+        endDate: '2026-08-23T09:00:00.000Z',
+        key: 'twisted-bear-san-francisco-debut|2026-08-23|san francisco eagle bar'
+      },
+      merged: { bar, address, gmaps: TWISTED_REBUILT_GMAPS }
+    },
+    _fieldPriorities: {
+      gmaps: { merge: 'ai' },
+      bar: { merge: 'ai' },
+      address: { merge: 'ai' }
+    },
+    ...overrides
+  };
+}
+
+test('TWISTED BEAR: a recorded deterministic gmaps rebuild renders once, as a change, with its reason', () => {
+  const adapter = buildAdapter();
+  const event = twistedBearEvent({
+    _mergeDecisions: [
+      {
+        field: 'gmaps',
+        existingValue: TWISTED_CAL_GMAPS,
+        newValue: undefined,
+        chosenValue: TWISTED_REBUILT_GMAPS,
+        reason:
+          'gmaps rebuilt from the final merged bar + address (derived field — replaces the stored link)',
+        source: 'deterministic'
+      }
+    ]
+  });
+
+  const records = adapter.buildComparisonRowRecords(event);
+  const gmapsRows = records.filter((record) => record.field === 'gmaps');
+  assert.equal(gmapsRows.length, 1, 'the gmaps row renders exactly once');
+  const row = gmapsRows[0];
+  assert.equal(row.changed, true, 'a rebuilt link IS a change');
+  assert.ok(row.html.includes('🔒 DETERMINISTIC — rewrote'), `truthful outcome label: ${row.html}`);
+  assert.ok(row.html.includes('rebuilt from the final merged bar + address'), 'the rebuild reason rides in the reason cell');
+  assert.ok(row.html.includes('<small>deterministic</small>'), 'the strategy slot names the real source');
+  assert.ok(!row.html.includes('KEPT EXISTING (no change)'), 'a changed row never claims no change');
+  assert.ok(!row.html.includes('AI-arbitrated'), 'the AI touched nothing on this field');
+
+  assert.equal(adapter.countChangedMergeFields(event), 1, 'the chip counts the one real change');
+  const card = adapter.generateEventCard(event);
+  assert.ok(!card.includes('KEPT EXISTING (no change)'), 'no self-contradiction anywhere on the card');
+  assert.ok(!card.includes('AI-arbitrated'), 'no AI credit anywhere on the card');
+});
+
+test('TWISTED BEAR without a decision record (older saved runs) still never self-contradicts', () => {
+  const adapter = buildAdapter();
+  const event = twistedBearEvent(); // no _mergeDecisions — the pre-fix run shape
+
+  const records = adapter.buildComparisonRowRecords(event);
+  const row = records.find((record) => record.field === 'gmaps');
+  assert.equal(row.changed, true, 'value truth: merged differs from calendar');
+  assert.ok(row.html.includes('CHANGED (no decision recorded)'),
+    `an unattributed change says so plainly: ${row.html}`);
+  assert.ok(!row.html.includes('KEPT EXISTING (no change)'), 'the contradictory composite is dead');
+  assert.ok(!row.html.includes('AI-arbitrated'),
+    'aiArbitration is null for this event — the AI is never blamed');
+  assert.ok(row.html.includes('<small>ai (not arbitrated)</small>'),
+    'the strategy slot admits arbitration never ran');
+});
+
+test('TWISTED BEAR unchanged twin renders "no changes"', () => {
+  const adapter = buildAdapter();
+  const event = twistedBearEvent({ gmaps: TWISTED_CAL_GMAPS });
+  event._original = {
+    ...event._original,
+    merged: { ...event._original.merged, gmaps: TWISTED_CAL_GMAPS }
+  };
+
+  const records = adapter.buildComparisonRowRecords(event);
+  const row = records.find((record) => record.field === 'gmaps');
+  assert.equal(row.changed, false, 'identical link → no-op');
+  assert.ok(row.html.includes('KEPT EXISTING (no change)'), 'the no-op label is reserved for true no-ops');
+  assert.equal(adapter.countChangedMergeFields(event), 0, 'the twin card says "no changes"');
+});
+
 test('every existing card action survives the headline redesign (live + saved run)', async () => {
   const results = {
     analyzedEvents: [

@@ -13683,6 +13683,197 @@ test('final build drops a ticketUrl byte-identical to the canonical website', as
     `got: ${JSON.stringify(lines)}`);
 });
 
+// ---------------------------------------------------------------------------
+// Post-merge deterministic rewrites must RECORD themselves in _mergeDecisions
+// (run 20260815-083809, "TWISTED BEAR San Francisco Debut"): the merge-time
+// gmaps regeneration replaced the calendar's coordinate link with a
+// bar+address query, no decision recorded it, and the card rendered the
+// change as "AI-arbitrated … KEPT EXISTING (no change)".
+// ---------------------------------------------------------------------------
+
+const TWISTED_CAL_GMAPS = 'https://www.google.com/maps/search/?api=1&query=37.7699933%2C-122.4133375';
+const TWISTED_REBUILT_GMAPS = 'https://www.google.com/maps/search/?api=1&query=San%20Francisco%20Eagle%20Bar%2C%20398%2012th%20Street%2C%20San%20Francisco%2C%20CA%2094103';
+
+test('merge-time gmaps regeneration records a deterministic merge decision (TWISTED BEAR)', async () => {
+  const core = new SharedCore(
+    { sf: { timezone: 'America/Los_Angeles', patterns: ['san francisco'] } },
+    { eventSchema: EventSchema }
+  );
+  // The real pair from run 20260815-083809: scraper carries NO gmaps, the
+  // calendar carries the coordinate query, and the merged bar + address
+  // regenerate the labeled place query.
+  const scraped = {
+    title: 'TWISTED BEAR San Francisco Debut',
+    startDate: new Date('2026-08-23T04:00:00.000Z'),
+    endDate: new Date('2026-08-23T09:00:00.000Z'),
+    bar: 'San Francisco Eagle Bar',
+    address: '398 12th Street, San Francisco, CA 94103',
+    location: '37.7699927, -122.4134077',
+    city: 'sf',
+    source: 'ai-web',
+    _fieldPriorities: null
+  };
+  scraped._fieldPriorities = core.getResolvedFieldPriorities({});
+  const existing = {
+    title: 'TWISTED BEAR San Francisco Debut',
+    startDate: new Date('2026-08-23T04:00:00.000Z'),
+    endDate: new Date('2026-08-23T09:00:00.000Z'),
+    location: '37.7699933, -122.4133375',
+    url: '',
+    notes: [
+      'bar: San Francisco Eagle Bar',
+      'address: 398 12th Street, San Francisco, CA 94103',
+      `gmaps: ${TWISTED_CAL_GMAPS}`
+    ].join('\n')
+  };
+
+  const finalEvent = await core.createFinalEventObject(existing, scraped, {});
+
+  // Sanity (true before and after the fix): the rebuild itself.
+  assert.equal(finalEvent.gmaps, TWISTED_REBUILT_GMAPS, 'bar+address query replaces the coordinate link');
+
+  // THE FIX: the rewrite names itself in the channel the merge table reads.
+  const records = (finalEvent._mergeDecisions || []).filter(record => record.field === 'gmaps');
+  assert.equal(records.length, 1, 'exactly one gmaps decision record');
+  assert.equal(records[0].source, 'deterministic');
+  assert.equal(records[0].chosenValue, TWISTED_REBUILT_GMAPS);
+  assert.equal(records[0].existingValue, TWISTED_CAL_GMAPS);
+  assert.equal(records[0].newValue, undefined, 'scraper offered no gmaps');
+  assert.match(records[0].reason, /rebuilt from the final merged bar \+ address/);
+  assert.deepEqual(finalEvent._original.aiArbitration.deterministic, ['gmaps'],
+    'arbitration summary lists the rewrite as deterministic — the AI touched nothing');
+  assert.deepEqual(finalEvent._original.aiArbitration.arbitrated, []);
+});
+
+test('merge-time gmaps regeneration landing on the calendar value records nothing', async () => {
+  const core = new SharedCore(
+    { sf: { timezone: 'America/Los_Angeles', patterns: ['san francisco'] } },
+    { eventSchema: EventSchema }
+  );
+  const scraped = {
+    title: 'TWISTED BEAR San Francisco Debut',
+    startDate: new Date('2026-08-23T04:00:00.000Z'),
+    endDate: new Date('2026-08-23T09:00:00.000Z'),
+    bar: 'San Francisco Eagle Bar',
+    address: '398 12th Street, San Francisco, CA 94103',
+    location: '37.7699933, -122.4133375',
+    city: 'sf',
+    source: 'ai-web',
+    _fieldPriorities: null
+  };
+  scraped._fieldPriorities = core.getResolvedFieldPriorities({});
+  // The genuinely unchanged twin: the calendar already stores the rebuilt link.
+  const existing = {
+    title: 'TWISTED BEAR San Francisco Debut',
+    startDate: new Date('2026-08-23T04:00:00.000Z'),
+    endDate: new Date('2026-08-23T09:00:00.000Z'),
+    location: '37.7699933, -122.4133375',
+    url: '',
+    notes: [
+      'bar: San Francisco Eagle Bar',
+      'address: 398 12th Street, San Francisco, CA 94103',
+      `gmaps: ${TWISTED_REBUILT_GMAPS}`
+    ].join('\n')
+  };
+
+  const finalEvent = await core.createFinalEventObject(existing, scraped, {});
+
+  assert.equal(finalEvent.gmaps, TWISTED_REBUILT_GMAPS, 'value unchanged');
+  const records = (finalEvent._mergeDecisions || []).filter(record => record.field === 'gmaps');
+  assert.equal(records.length, 0, 'no change → no decision record → the card says "no changes"');
+});
+
+test('recordDeterministicFieldRewrite: merge results only, genuine changes only, appends supersede', () => {
+  const core = createCore();
+
+  // A rewrite that lands back on the calendar's own value records nothing.
+  const analyzed = { gmaps: 'https://maps.example/a', _original: { calendar: { gmaps: 'https://maps.example/a' }, scraper: {} } };
+  core.recordDeterministicFieldRewrite(analyzed, 'gmaps', 'noise');
+  assert.equal(analyzed._mergeDecisions, undefined);
+
+  // A NEW event (no _original/calendar side) records nothing.
+  const fresh = { gmaps: 'https://maps.example/b' };
+  core.recordDeterministicFieldRewrite(fresh, 'gmaps', 'noise');
+  assert.equal(fresh._mergeDecisions, undefined);
+
+  // A genuine change records field, sides, chosen value, reason, source.
+  analyzed.gmaps = 'https://maps.example/rebuilt';
+  core.recordDeterministicFieldRewrite(analyzed, 'gmaps', 'gmaps rebuilt: test reason');
+  assert.deepEqual(analyzed._mergeDecisions, [{
+    field: 'gmaps',
+    existingValue: 'https://maps.example/a',
+    newValue: undefined,
+    chosenValue: 'https://maps.example/rebuilt',
+    reason: 'gmaps rebuilt: test reason',
+    source: 'deterministic'
+  }]);
+
+  // A later rewrite APPENDS — readers take the last record for the field.
+  analyzed.gmaps = 'https://maps.example/curated';
+  core.recordDeterministicFieldRewrite(analyzed, 'gmaps', 'gmaps rebuilt: curated adoption');
+  assert.equal(analyzed._mergeDecisions.length, 2);
+  assert.equal(analyzed._mergeDecisions[1].chosenValue, 'https://maps.example/curated');
+});
+
+test('final-build curated gmaps adoption on a MERGE appends a superseding decision record', async () => {
+  const CURATED_EAGLE_GMAPS = 'https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4';
+  const core = createFinalBuildCore({
+    bars: {
+      la: [{
+        name: 'Eagle LA',
+        city: 'la',
+        coordinates: '34.0912127, -118.2840632',
+        googleMaps: CURATED_EAGLE_GMAPS
+      }]
+    }
+  });
+  const scraped = {
+    title: 'CUBSCOUT LA',
+    startDate: new Date('2026-09-05T04:00:00.000Z'),
+    endDate: new Date('2026-09-05T08:00:00.000Z'),
+    bar: 'Eagle LA',
+    address: '4219 Santa Monica Blvd, Los Angeles, CA 90029',
+    location: '34.0912127, -118.2840632',
+    city: 'la',
+    source: 'ai-web',
+    _fieldPriorities: null
+  };
+  scraped._fieldPriorities = core.getResolvedFieldPriorities({});
+  const existing = {
+    title: 'CUBSCOUT LA',
+    startDate: new Date('2026-09-05T04:00:00.000Z'),
+    endDate: new Date('2026-09-05T08:00:00.000Z'),
+    location: '34.0912127, -118.2840632',
+    url: '',
+    notes: [
+      'bar: Eagle LA',
+      'address: 4219 Santa Monica Blvd, Los Angeles, CA 90029',
+      'gmaps: https://www.google.com/maps/search/?api=1&query=Eagle%20LA'
+    ].join('\n')
+  };
+  const analysis = { action: 'merge', reason: 'same event', existingEvent: existing, sourceEvent: null, overrideIdentity: null };
+
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(scraped, analysis, {}, {});
+  } finally {
+    restore();
+  }
+
+  assert.equal(analyzed.gmaps, CURATED_EAGLE_GMAPS, 'curated place link wins the final build');
+  const records = (analyzed._mergeDecisions || []).filter(record => record.field === 'gmaps');
+  assert.equal(records.length, 2, 'merge-time regeneration + final-build curated adoption both recorded');
+  assert.equal(records[0].source, 'deterministic');
+  assert.match(records[0].reason, /rebuilt from the final merged bar \+ address/);
+  const last = records[records.length - 1];
+  assert.equal(last.source, 'deterministic');
+  assert.match(last.reason, /curated bar googleMaps link adopted/);
+  assert.equal(last.chosenValue, CURATED_EAGLE_GMAPS, 'the LAST record describes the final saved value');
+  assert.equal(last.existingValue, 'https://www.google.com/maps/search/?api=1&query=Eagle%20LA');
+});
+
 test('final build keeps a ticketUrl that differs from the website', async () => {
   const core = createFinalBuildCore();
   const event = {
