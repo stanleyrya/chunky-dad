@@ -10615,3 +10615,133 @@ test('saveRun persists results.icsExports into the run JSON (and omits the key w
   const emptyPayload = JSON.parse(writes[0].content);
   assert.ok(!('icsExports' in emptyPayload), 'no ledger key on runs that exported nothing');
 });
+
+// ---------------------------------------------------------------------------
+// Saved-run browser: iCloud placeholders must never block the screen.
+// Incident 2026-08-15: Mac-written 1.5MB run JSONs sit in the shared iCloud
+// runs/ dir as not-yet-downloaded placeholders on the phone; enumeration used
+// to await downloadFileFromiCloud on EVERY file, so one file mid-upload hung
+// "display saved runs" forever right after the frozen
+// "📱 Display: Checking for saved runs" log line.
+// ---------------------------------------------------------------------------
+
+function buildRunsDirFm(overrides = {}) {
+  const calls = { downloads: [], reads: [] };
+  const fm = {
+    joinPath: (a, b) => `${a}/${b}`,
+    listContents: () => ['20260814-010101.json', '20260815-020202.json', 'notes.txt', 'archive.json'],
+    isDirectory: (p) => p.endsWith('/archive.json'),
+    isFileDownloaded: (p) => !p.includes('20260815-020202'),
+    downloadFileFromiCloud: (p) => {
+      calls.downloads.push(p);
+      throw new Error('BLOCKING iCloud download during enumeration');
+    },
+    readString: (p) => {
+      calls.reads.push(p);
+      throw new Error('read of possibly-undownloaded file during enumeration');
+    },
+    ...overrides
+  };
+  return { fm, calls };
+}
+
+test('list building never downloads or reads run files — undownloaded runs still appear, marked as syncing', () => {
+  const { fm, calls } = buildRunsDirFm();
+
+  const { entries, errors } = ScriptableAdapter.listSavedRunEntries(fm, '/icloud/runs');
+
+  assert.equal(calls.downloads.length, 0, 'no downloadFileFromiCloud during enumeration');
+  assert.equal(calls.reads.length, 0, 'no readString during enumeration');
+  assert.equal(errors.length, 0, 'metadata-only listing has no errors');
+  assert.deepEqual(entries.map(e => e.runId), ['20260815-020202', '20260814-010101'], 'json runs only (no dirs, no non-json), newest first');
+  assert.equal(entries[0].downloaded, false, 'placeholder run is marked not-downloaded');
+  assert.equal(entries[1].downloaded, true, 'local run is marked downloaded');
+});
+
+test('list building unwraps .<name>.json.icloud placeholder names and treats fms without isFileDownloaded as downloaded', () => {
+  const { fm } = buildRunsDirFm({
+    listContents: () => ['.20260816-030303.json.icloud', '20260814-010101.json'],
+    isFileDownloaded: undefined,
+    isDirectory: () => false
+  });
+
+  const { entries } = ScriptableAdapter.listSavedRunEntries(fm, '/icloud/runs');
+
+  assert.deepEqual(
+    entries.map(e => [e.runId, e.downloaded]),
+    [['20260816-030303', false], ['20260814-010101', true]],
+    'icloud wrapper name yields the logical runId, marked syncing; no isFileDownloaded → assume local'
+  );
+});
+
+test('downloadFileBounded skips the download entirely for an already-local file', async () => {
+  let downloads = 0;
+  const fm = {
+    isFileDownloaded: () => true,
+    downloadFileFromiCloud: async () => { downloads += 1; }
+  };
+
+  const result = await ScriptableAdapter.downloadFileBounded(fm, '/icloud/runs/a.json', 50);
+
+  assert.deepEqual(result, { ok: true, timedOut: false });
+  assert.equal(downloads, 0, 'no iCloud call for a local file');
+});
+
+test('downloadFileBounded times out on a stalled iCloud sync instead of hanging (download stays kicked in the background)', async () => {
+  let downloads = 0;
+  const fm = {
+    isFileDownloaded: () => false,
+    downloadFileFromiCloud: () => {
+      downloads += 1;
+      return new Promise(() => {}); // never settles — file mid-upload from the Mac
+    }
+  };
+
+  const result = await ScriptableAdapter.downloadFileBounded(fm, '/icloud/runs/a.json', 25);
+
+  assert.equal(result.ok, false);
+  assert.equal(result.timedOut, true);
+  assert.equal(downloads, 1, 'the download was kicked once and left running in the background');
+});
+
+test('downloadFileBounded resolves ok when the download completes within the bound, and surfaces rejections as errors', async () => {
+  const okFm = {
+    isFileDownloaded: () => false,
+    downloadFileFromiCloud: async () => {}
+  };
+  assert.deepEqual(
+    await ScriptableAdapter.downloadFileBounded(okFm, '/icloud/runs/a.json', 1000),
+    { ok: true, timedOut: false }
+  );
+
+  const failFm = {
+    isFileDownloaded: () => false,
+    downloadFileFromiCloud: async () => { throw new Error('icloud says no'); }
+  };
+  const failed = await ScriptableAdapter.downloadFileBounded(failFm, '/icloud/runs/a.json', 1000);
+  assert.equal(failed.ok, false);
+  assert.equal(failed.timedOut, false);
+  assert.equal(failed.error, 'icloud says no');
+});
+
+test('loadRunLogsForDisplay returns icloud-sync-pending (bounded) for an undownloaded log instead of hanging, and the section renders a syncing message', async () => {
+  const adapter = buildAdapter();
+  adapter.savedFileDownloadTimeoutMs = 25;
+  adapter.fm = {
+    joinPath: (a, b) => `${a}/${b}`,
+    fileExists: () => true,
+    isFileDownloaded: () => false,
+    downloadFileFromiCloud: () => new Promise(() => {}), // stalled sync
+    readString: () => { throw new Error('must not read an undownloaded log'); }
+  };
+  adapter.logsDir = '/icloud/logs';
+
+  const logInfo = await adapter.loadRunLogsForDisplay({ savedRunId: '20260815-020202', _isDisplayingSavedRun: true });
+
+  assert.equal(logInfo.exists, false);
+  assert.equal(logInfo.reason, 'icloud-sync-pending');
+  assert.equal(logInfo.runId, '20260815-020202');
+
+  const html = adapter.buildRunLogSectionHtml(logInfo);
+  assert.ok(html.includes('still syncing from iCloud'), 'run-logs section explains the pending sync');
+});
