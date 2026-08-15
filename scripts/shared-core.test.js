@@ -18311,3 +18311,312 @@ test('registry pass + canonicalization end-to-end: BEEFMINCE match routes the pl
   assert.equal(event.ticketUrl, 'https://dice.fm/event/yoepxa-beefmince-x-rvt-19th-sep-the-royal-vauxhall-tavern-london-tickets');
   assert.equal(event.url, undefined, 'url never exists post-canonicalization');
 });
+
+// ===========================================================================
+// Same-venue overlap surfacing (report-only) — the ONYX/BEER BUST incident.
+// Real record shapes from run 20260811-132948 (Eagle LA venue site, MEC):
+// the weekly SUNDAY BEER BUST occurrence is published even on the 2nd Sunday
+// when ONYX takes over the slot. BEER BUST is zero-duration ("BAR OPENS
+// 2PM" — start == end at 2PM PDT); ONYX runs 4–8PM PDT the same Sunday.
+// The pipeline SURFACES the collision and never resolves it.
+// ===========================================================================
+
+function buildBeerBustEvent(overrides = {}) {
+  return {
+    title: 'SUNDAY BEER BUST',
+    description: 'BAR OPENS 2PM\nNO COVER\n$5 DOMESTIC DRAFTS',
+    startDate: new Date('2026-09-13T21:00:00.000Z'),
+    endDate: new Date('2026-09-13T21:00:00.000Z'),
+    bar: 'Eagle LA',
+    url: 'https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-09-13',
+    ticketUrl: 'https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-09-13',
+    city: 'la',
+    timezone: 'America/Los_Angeles',
+    address: '4219 Santa Monica Blvd, Los Angeles, CA 90029',
+    location: '34.0912127, -118.2840632',
+    key: 'sunday-beer-bust|2026-09-13|eagle la',
+    ...overrides
+  };
+}
+
+function buildOnyxEvent(overrides = {}) {
+  return {
+    title: 'ONYX',
+    startDate: new Date('2026-09-13T23:00:00.000Z'),
+    endDate: new Date('2026-09-14T03:00:00.000Z'),
+    bar: 'Eagle LA',
+    url: 'https://eaglela.com/events/onyx-2/',
+    ticketUrl: 'https://eaglela.com/events/onyx-2/',
+    city: 'la',
+    timezone: 'America/Los_Angeles',
+    address: '4219 Santa Monica Blvd, Los Angeles, CA 90029',
+    location: '34.0912127, -118.2840632',
+    key: 'onyx|2026-09-13|eagle la',
+    ...overrides
+  };
+}
+
+test('venue overlap: ONYX and the double-booked SUNDAY BEER BUST occurrence flag each other (report-only)', () => {
+  const core = createCore();
+  const beerBust = buildBeerBustEvent();
+  const onyx = buildOnyxEvent();
+  core.applyVenueOverlapFlags([
+    { event: beerBust, existingEvents: [] },
+    { event: onyx, existingEvents: [] }
+  ]);
+  assert.equal(beerBust._venueOverlap.length, 1, 'beer bust stamped once');
+  assert.equal(beerBust._venueOverlap[0].withTitle, 'ONYX');
+  assert.equal(beerBust._venueOverlap[0].date, '2026-09-13');
+  assert.equal(beerBust._venueOverlap[0].venue, 'Eagle LA');
+  assert.equal(beerBust._venueOverlap[0].source, 'run');
+  assert.ok(beerBust._venueOverlap[0].window.includes('(assumed end)'),
+    'the zero-duration listing claims the slot via the conservative assumed span');
+  assert.equal(onyx._venueOverlap.length, 1, 'onyx stamped once');
+  assert.equal(onyx._venueOverlap[0].withTitle, 'SUNDAY BEER BUST');
+  assert.equal(onyx._venueOverlap[0].window, '16:00–20:00', 'onyx window rendered in local time');
+});
+
+test('venue overlap: the same event scraped twice (listing stub + crawled page) never flags', () => {
+  const core = createCore();
+  const detail = buildOnyxEvent();
+  const stub = buildOnyxEvent({
+    title: 'ONYX at Eagle LA',
+    key: 'onyx-at-eagle-la|2026-09-13|eagle la',
+    endDate: new Date('2026-09-13T23:00:00.000Z')
+  });
+  core.applyVenueOverlapFlags([
+    { event: detail, existingEvents: [] },
+    { event: stub, existingEvents: [] }
+  ]);
+  assert.equal(detail._venueOverlap, undefined, 'detail record unflagged');
+  assert.equal(stub._venueOverlap, undefined, 'its own stub unflagged');
+});
+
+test('venue overlap: different venues never flag, even with identical times', () => {
+  const core = createCore();
+  const onyx = buildOnyxEvent();
+  const elsewhere = buildBeerBustEvent({
+    bar: 'The Bullet Bar',
+    address: '10522 Burbank Blvd, North Hollywood, CA 91601',
+    location: '34.1683000, -118.3585000',
+    url: 'https://bulletbarla.com/events/beer-bust/',
+    ticketUrl: 'https://bulletbarla.com/events/beer-bust/',
+    key: 'sunday-beer-bust|2026-09-13|the bullet bar',
+    startDate: new Date('2026-09-13T23:00:00.000Z'),
+    endDate: new Date('2026-09-14T03:00:00.000Z')
+  });
+  core.applyVenueOverlapFlags([
+    { event: onyx, existingEvents: [] },
+    { event: elsewhere, existingEvents: [] }
+  ]);
+  assert.equal(onyx._venueOverlap, undefined, 'no positive venue identity → nothing');
+  assert.equal(elsewhere._venueOverlap, undefined);
+});
+
+test('venue overlap: adjacent-but-not-overlapping windows never flag (strict intervals)', () => {
+  const core = createCore();
+  const onyx = buildOnyxEvent(); // 16:00–20:00 PDT
+  const later = buildBeerBustEvent({
+    title: 'MEAT RACK',
+    url: 'https://eaglela.com/events/meat-rack-9/',
+    ticketUrl: 'https://eaglela.com/events/meat-rack-9/',
+    key: 'meat-rack|2026-09-13|eagle la',
+    startDate: new Date('2026-09-14T03:00:00.000Z'), // 20:00 PDT, still Sunday
+    endDate: new Date('2026-09-14T06:00:00.000Z') // 23:00 PDT
+  });
+  core.applyVenueOverlapFlags([
+    { event: onyx, existingEvents: [] },
+    { event: later, existingEvents: [] }
+  ]);
+  assert.equal(onyx._venueOverlap, undefined, 'touching endpoints are adjacency, not overlap');
+  assert.equal(later._venueOverlap, undefined);
+});
+
+test('venue overlap: local-midnight zero-duration placeholders carry no time info and fail closed', () => {
+  const core = createCore();
+  // Real shapes from the same run: BLUF LA and the MR REGIMENT meet-and-greet
+  // are both published at 07:00Z = exactly local midnight PDT with zero
+  // duration — MEC's missing-time default, not a genuine slot claim.
+  const blufLa = buildBeerBustEvent({
+    title: 'BLUF LA',
+    url: 'https://eaglela.com/events/bluf-la-5/',
+    ticketUrl: 'https://eaglela.com/events/bluf-la-5/',
+    key: 'bluf-la|2026-09-18|eagle la',
+    startDate: new Date('2026-09-18T07:00:00.000Z'),
+    endDate: new Date('2026-09-18T07:00:00.000Z')
+  });
+  const meetAndGreet = buildBeerBustEvent({
+    title: 'MR REGIMENT LEATHER 2027 CONTEST MEET AND GREET',
+    url: 'https://eaglela.com/events/mr-regiment-meet-and-greet/',
+    ticketUrl: 'https://eaglela.com/events/mr-regiment-meet-and-greet/',
+    key: 'mr-regiment-leather-2027-contest-meet-and-greet|2026-09-18|eagle la',
+    startDate: new Date('2026-09-18T07:00:00.000Z'),
+    endDate: new Date('2026-09-18T07:00:00.000Z')
+  });
+  core.applyVenueOverlapFlags([
+    { event: blufLa, existingEvents: [] },
+    { event: meetAndGreet, existingEvents: [] }
+  ]);
+  assert.equal(blufLa._venueOverlap, undefined, 'no genuine time overlap → nothing');
+  assert.equal(meetAndGreet._venueOverlap, undefined);
+});
+
+test('venue overlap: an analyzed event flags against a colliding existing calendar record', () => {
+  const core = createCore();
+  const onyx = buildOnyxEvent();
+  const calendarBeerBust = {
+    name: 'SUNDAY BEER BUST',
+    startDate: new Date('2026-09-13T21:00:00.000Z'),
+    endDate: new Date('2026-09-13T21:00:00.000Z'),
+    location: '34.0912127, -118.2840632',
+    notes: 'bar: Eagle LA\ntimezone: America/Los_Angeles',
+    identifier: 'CAL-BEER-BUST-1'
+  };
+  core.applyVenueOverlapFlags([{ event: onyx, existingEvents: [calendarBeerBust] }]);
+  assert.equal(onyx._venueOverlap.length, 1);
+  assert.equal(onyx._venueOverlap[0].withTitle, 'SUNDAY BEER BUST');
+  assert.equal(onyx._venueOverlap[0].source, 'calendar');
+});
+
+test('venue overlap: the analyzed event\'s own merge target is never treated as a collision', () => {
+  const core = createCore();
+  const onyx = buildOnyxEvent();
+  onyx._existingEvent = { identifier: 'CAL-ONYX-1' };
+  const mergeTarget = {
+    name: 'SUNDAY BEER BUST',
+    startDate: new Date('2026-09-13T21:00:00.000Z'),
+    endDate: new Date('2026-09-13T21:00:00.000Z'),
+    location: '34.0912127, -118.2840632',
+    notes: 'bar: Eagle LA\ntimezone: America/Los_Angeles',
+    identifier: 'CAL-ONYX-1'
+  };
+  core.applyVenueOverlapFlags([{ event: onyx, existingEvents: [mergeTarget] }]);
+  assert.equal(onyx._venueOverlap, undefined, 'merge target excluded regardless of shape');
+});
+
+// ===========================================================================
+// Linked-ICS-feed discovery (report-only): detect feed links with generic
+// patterns, fetch once through the injected adapter, parse with the existing
+// published-calendar VEVENT machinery — rrules are never expanded.
+// ===========================================================================
+
+const ICS_FEED_FIXTURE = [
+  'BEGIN:VCALENDAR',
+  'VERSION:2.0',
+  'PRODID:-//Test//Feed//EN',
+  'BEGIN:VEVENT',
+  'UID:beer-bust-1@example.com',
+  'SUMMARY:SUNDAY BEER BUST',
+  'DTSTART:20260913T210000Z',
+  'DTEND:20260913T230000Z',
+  'RRULE:FREQ=WEEKLY;BYDAY=SU',
+  'URL:https://example.com/events/sunday-beer-bust/',
+  'LOCATION:Eagle LA',
+  'END:VEVENT',
+  'BEGIN:VEVENT',
+  'UID:onyx-1@example.com',
+  'SUMMARY:ONYX',
+  'DTSTART;TZID=America/Los_Angeles:20260913T160000',
+  'DTEND;TZID=America/Los_Angeles:20260913T200000',
+  'URL:https://example.com/events/onyx/',
+  'LOCATION:Eagle LA',
+  'END:VEVENT',
+  'BEGIN:VEVENT',
+  'UID:far-future@example.com',
+  'SUMMARY:NEW YEARS 2030',
+  'DTSTART:20301231T200000Z',
+  'END:VEVENT',
+  'END:VCALENDAR'
+].join('\r\n');
+
+test('ICS discovery: detects text/calendar links, webcal links, .ics hrefs and ?ical=1 exports (generic patterns, capped per page)', () => {
+  const core = createCore();
+  const html = [
+    '<link rel="alternate" type="text/calendar" href="/events/feed/ical" />',
+    '<a href="webcal://example.com/calendar.ics">Subscribe</a>',
+    '<a href="/events/list/?ical=1">Export Events</a>',
+    '<a href="/files/summer.ics">Download</a>',
+    '<a href="/events/party/">A normal link</a>'
+  ].join('\n');
+  const candidates = core.detectIcsFeedLinks(html, 'https://example.com/events/');
+  assert.equal(candidates.length, 3, 'capped at 3 candidates per page');
+  assert.deepEqual(candidates[0], {
+    url: 'https://example.com/events/feed/ical',
+    fetchUrl: 'https://example.com/events/feed/ical',
+    via: 'text-calendar-link'
+  });
+  assert.equal(candidates[1].via, 'webcal');
+  assert.equal(candidates[1].url, 'webcal://example.com/calendar.ics', 'original webcal url kept for display');
+  assert.equal(candidates[1].fetchUrl, 'https://example.com/calendar.ics', 'webcal fetches over https');
+  assert.equal(candidates[2].via, 'ical-query');
+  assert.equal(candidates[2].fetchUrl, 'https://example.com/events/list/?ical=1');
+});
+
+test('ICS discovery: a page without feed links yields nothing', () => {
+  const core = createCore();
+  const html = '<a href="/events/party/">Party</a> <img src="/pic.jpg">';
+  assert.deepEqual(core.detectIcsFeedLinks(html, 'https://example.com/'), []);
+});
+
+test('ICS discovery: fetches a feed once through the adapter and parses VEVENTs without expanding rrules', async () => {
+  const core = createCore();
+  const fetched = [];
+  const httpAdapter = {
+    fetchData: async (url) => {
+      fetched.push(url);
+      return { html: ICS_FEED_FIXTURE, url, statusCode: 200, headers: {} };
+    }
+  };
+  const collector = { seen: new Set(), findings: [] };
+  const html = '<a href="/?ical=1">Export</a>';
+  await core.collectIcsFeedFindings({ html, pageUrl: 'https://example.com/events/', httpAdapter, icsFeedCollector: collector });
+  // Second page advertising the SAME feed: never fetched twice per run.
+  await core.collectIcsFeedFindings({ html, pageUrl: 'https://example.com/other/', httpAdapter, icsFeedCollector: collector });
+  assert.equal(fetched.length, 1, 'one fetch per unique feed url');
+  assert.equal(collector.findings.length, 1);
+  const finding = collector.findings[0];
+  assert.equal(finding.discoveredVia, 'ical-query');
+  assert.equal(finding.discoveredOn, 'https://example.com/events/');
+  assert.equal(finding.vevents, 3);
+  assert.equal(finding.records.length, 3, 'concrete instances only — the weekly rrule was NOT expanded');
+  assert.equal(finding.records[0].hasRrule, true, 'rrule carried as evidence, not expanded');
+  assert.equal(finding.records[1].hasRrule, false);
+  assert.equal(finding.records[0].start, '2026-09-13T21:00:00.000Z');
+  assert.equal(finding.records[1].summary, 'ONYX');
+});
+
+test('ICS discovery: a candidate returning HTML is skipped, not recorded', async () => {
+  const core = createCore();
+  const httpAdapter = {
+    fetchData: async (url) => ({ html: '<!DOCTYPE html><html><body>nope</body></html>', url, statusCode: 200, headers: {} })
+  };
+  const collector = { seen: new Set(), findings: [] };
+  await core.collectIcsFeedFindings({
+    html: '<a href="/?ical=1">Export</a>',
+    pageUrl: 'https://example.com/',
+    httpAdapter,
+    icsFeedCollector: collector
+  });
+  assert.equal(collector.findings.length, 0, 'non-calendar body never becomes a finding');
+  assert.equal(collector.seen.size, 1, 'candidate still marked seen — no refetch loops');
+});
+
+test('ICS report: counts lookahead-window instances and identity matches against run events', () => {
+  const core = createCore();
+  const nowMs = new Date('2026-09-01T00:00:00.000Z').getTime();
+  const finding = {
+    feedUrl: 'https://example.com/?ical=1',
+    vevents: 3,
+    records: [
+      { summary: 'SUNDAY BEER BUST', start: '2026-09-13T21:00:00.000Z', end: '2026-09-13T23:00:00.000Z', url: 'https://example.com/events/sunday-beer-bust/', location: 'Eagle LA', hasRrule: true },
+      { summary: 'ONYX', start: '2026-09-13T23:00:00.000Z', end: '2026-09-14T03:00:00.000Z', url: 'https://example.com/events/onyx/', location: 'Eagle LA', hasRrule: false },
+      { summary: 'NEW YEARS 2030', start: '2030-12-31T20:00:00.000Z', end: null, url: '', location: '', hasRrule: false }
+    ]
+  };
+  const runEvents = [buildOnyxEvent()];
+  core.finalizeIcsFeedFindings([finding], runEvents, 30, nowMs);
+  assert.equal(finding.veventsWithinWindow, 2, 'the 2030 instance is outside the 30-day window');
+  assert.equal(finding.matchedRunEvents, 1, 'only ONYX was extracted this run');
+  assert.equal(finding.records[1].matchedRunEventTitle, 'ONYX');
+  assert.equal(finding.records[0].matchedRunEventTitle, undefined, 'beer bust matched nothing this run');
+});

@@ -4222,6 +4222,21 @@ class SharedCore {
             await displayAdapter.logInfo(results.discoveredVenueSummary);
         }
 
+        // Linked ICS feeds discovered during crawls (report-only): aggregated
+        // onto the run results as evidence for future enforcement — the feed
+        // is not a source this wave. Per-feed 📅 ICS FEED lines were already
+        // logged when each parser finalized its findings.
+        const icsFeedFindings = [];
+        for (const parserResult of results.parserResults) {
+            if (!parserResult || !Array.isArray(parserResult.icsFeedFindings)) continue;
+            for (const finding of parserResult.icsFeedFindings) {
+                icsFeedFindings.push({ parser: parserResult.name || '', ...finding });
+            }
+        }
+        if (icsFeedFindings.length > 0) {
+            results.icsFeedFindings = icsFeedFindings;
+        }
+
         // Cross-org crawl drops: events found on another promoter's/parser's
         // own site during this parser's crawl. Flagged, never silently dropped.
         const foreignOrgCrawlDrops = this.buildForeignOrgCrawlDrops(results.parserResults);
@@ -4356,6 +4371,9 @@ class SharedCore {
         // Events found on another org's site and NOT ingested (cross-org crawl
         // guard) — flagged, never silently dropped.
         const foreignOrgDropCollector = [];
+        // Linked ICS feeds discovered during the crawl (report-only evidence,
+        // never a source this wave) — see collectIcsFeedFindings.
+        const icsFeedCollector = { seen: new Set(), findings: [] };
 
         await this.crawlUrlsForEvents({
             urls: effectiveParserConfig.urls || [],
@@ -4378,7 +4396,8 @@ class SharedCore {
             enrichDropCollector,
             crawlErrorCollector,
             crawlGoneCollector,
-            foreignOrgDropCollector
+            foreignOrgDropCollector,
+            icsFeedCollector
         });
 
         // Venue-site address consensus (deterministic, parser-derived): the
@@ -4511,6 +4530,17 @@ class SharedCore {
 
         if (foreignOrgDropCollector.length > 0) {
             result.foreignOrgDrops = foreignOrgDropCollector;
+        }
+
+        // Linked ICS feeds (report-only): summarize each feed against this
+        // parser's full extracted set + lookahead window, then carry the
+        // findings on the parser result for the run-level aggregation.
+        if (icsFeedCollector.findings.length > 0) {
+            result.icsFeedFindings = this.finalizeIcsFeedFindings(
+                icsFeedCollector.findings,
+                allEvents,
+                effectiveParserConfig.daysToLookAhead
+            );
         }
 
         if (bearDropCollector.length > 0) {
@@ -5746,6 +5776,167 @@ class SharedCore {
         return true;
     }
 
+    // === Linked-ICS-feed discovery (report-only) ===
+    // Some venue/promoter sites publish a REAL machine-readable calendar feed
+    // (webcal:// links, .ics hrefs, type="text/calendar" links, WordPress
+    // calendar-plugin export params like ?ical=1). Doctrine: calendar websites
+    // do the expansion for us — a published feed is exactly the structured
+    // occurrence source the scraper wants. This wave is DISCOVERY + REPORT
+    // only: detect, fetch once through the injected http adapter (page-cached
+    // like any page), parse with the existing published-calendar VEVENT parser
+    // (parsePublishedCalendarIcs — rrules stay raw strings, never expanded),
+    // log one 📅 ICS FEED line, and stash the parse on the run results
+    // (results.icsFeedFindings) as evidence for future enforcement. No
+    // extraction or merge behavior changes. Generic patterns only — nothing
+    // per-site. The #1559 calendar-export CRAWL reject in the ai-web parser is
+    // untouched: these URLs are still never crawl candidates; this is a
+    // separate evidence channel.
+
+    // Pure scan of one page's HTML for ICS-feed candidates. Returns
+    // [{ url, fetchUrl, via }] capped at 3 per page; webcal:// links keep the
+    // original url for display and fetch over https.
+    detectIcsFeedLinks(html, pageUrl) {
+        if (!html || typeof html !== 'string') return [];
+        const candidates = new Map();
+        const addCandidate = (rawUrl, via) => {
+            if (candidates.size >= 3) return;
+            const trimmed = String(rawUrl || '').replace(/&amp;/gi, '&').trim();
+            if (!trimmed) return;
+            const isWebcal = /^webcal:\/\//i.test(trimmed);
+            const resolved = isWebcal ? trimmed : this.normalizeUrl(trimmed, pageUrl);
+            if (!resolved) return;
+            const fetchUrl = String(resolved).replace(/^webcal:\/\//i, 'https://');
+            if (!/^https?:\/\//i.test(fetchUrl)) return;
+            if (!candidates.has(fetchUrl)) {
+                candidates.set(fetchUrl, { url: String(resolved), fetchUrl, via });
+            }
+        };
+
+        // <link>/<a> tags that declare the calendar MIME type outright.
+        const typedTagRegex = /<[a-zA-Z][^>]*type\s*=\s*["']text\/calendar["'][^>]*>/gi;
+        let tagMatch;
+        while ((tagMatch = typedTagRegex.exec(html)) !== null) {
+            const hrefMatch = tagMatch[0].match(/href\s*=\s*["']([^"']+)["']/i);
+            if (hrefMatch) addCandidate(hrefMatch[1], 'text-calendar-link');
+        }
+
+        // webcal:// links anywhere in the document.
+        const webcalRegex = /webcal:\/\/[^\s"'<>()]+/gi;
+        let webcalMatch;
+        while ((webcalMatch = webcalRegex.exec(html)) !== null) {
+            addCandidate(webcalMatch[0], 'webcal');
+        }
+
+        // Plain hrefs: .ics files and the generic WordPress calendar-plugin
+        // export param (?ical=1 / ?outlook-ical=1 — the same shapes the #1559
+        // crawl reject names, consumed here as a feed channel instead).
+        const hrefRegex = /href\s*=\s*["']([^"']+)["']/gi;
+        let hrefMatch;
+        while ((hrefMatch = hrefRegex.exec(html)) !== null) {
+            const candidateText = hrefMatch[1].replace(/&amp;/gi, '&');
+            const lower = candidateText.toLowerCase();
+            const pathOnly = lower.split(/[?#]/)[0];
+            if (pathOnly.endsWith('.ics')) {
+                addCandidate(candidateText, 'ics-href');
+            } else if (/[?&](?:outlook-)?ical=1(?!\d)/.test(lower)) {
+                addCandidate(candidateText, 'ical-query');
+            }
+        }
+
+        return [...candidates.values()];
+    }
+
+    // Fetch + parse newly discovered feed candidates through the injected
+    // http adapter (transparently page-cached by the adapter). Collector:
+    // { seen: Set, findings: [] } scoped to one parser run; at most 5 feeds
+    // are fetched per parser. Degrades gracefully — a bad candidate logs and
+    // is skipped, never aborts the crawl.
+    async collectIcsFeedFindings({ html, pageUrl, httpAdapter, icsFeedCollector }) {
+        if (!icsFeedCollector || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return;
+        const candidates = this.detectIcsFeedLinks(html, pageUrl);
+        for (const candidate of candidates) {
+            if (icsFeedCollector.seen.has(candidate.fetchUrl)) continue;
+            icsFeedCollector.seen.add(candidate.fetchUrl);
+            if (icsFeedCollector.findings.length >= 5) return;
+            try {
+                const response = await httpAdapter.fetchData(candidate.fetchUrl);
+                const body = response && typeof response.html === 'string' ? response.html : '';
+                if (!/BEGIN:VCALENDAR/i.test(body)) {
+                    console.log(`📅 ICS FEED: candidate ${candidate.url} (found on ${pageUrl}) did not return calendar data — skipped`);
+                    continue;
+                }
+                const records = SharedCore.parsePublishedCalendarIcs(body) || [];
+                icsFeedCollector.findings.push({
+                    feedUrl: candidate.url,
+                    fetchUrl: candidate.fetchUrl,
+                    discoveredOn: pageUrl,
+                    discoveredVia: candidate.via,
+                    vevents: records.length,
+                    // Concrete instances only — rrule text is carried as a
+                    // boolean flag for future enforcement, never expanded.
+                    records: records.slice(0, 200).map(record => ({
+                        uid: record.uid,
+                        summary: record.summary,
+                        url: record.url,
+                        location: record.location,
+                        start: record.start && record.start.date ? record.start.date.toISOString() : null,
+                        end: record.end && record.end.date ? record.end.date.toISOString() : null,
+                        isAllDay: Boolean(record.isAllDay),
+                        hasRrule: Boolean(record.rrule)
+                    }))
+                });
+            } catch (error) {
+                console.log(`📅 ICS FEED: fetch failed for ${candidate.url} (${error && error.message ? error.message : error}) — skipped`);
+            }
+        }
+    }
+
+    // After a parser's crawl: count each feed's concrete VEVENT starts inside
+    // the parser's lookahead window and how many match events this run
+    // extracted (same-event identity signals, with a title+night fallback for
+    // feeds that carry no venue/url evidence), then emit the one 📅 ICS FEED
+    // summary line per feed. Mutates and returns the findings (report-only).
+    finalizeIcsFeedFindings(findings, events, daysToLookAhead = null, nowMs = Date.now()) {
+        if (!Array.isArray(findings) || findings.length === 0) return findings;
+        const runEvents = Array.isArray(events) ? events : [];
+        const lookAheadDays = Number(daysToLookAhead);
+        const windowEndMs = Number.isFinite(lookAheadDays) && lookAheadDays > 0
+            ? nowMs + (lookAheadDays * 24 * 60 * 60 * 1000)
+            : null;
+        for (const finding of findings) {
+            let withinWindow = 0;
+            let matched = 0;
+            const records = Array.isArray(finding.records) ? finding.records : [];
+            for (const record of records) {
+                const startMs = this.toEpochMillis(record.start);
+                if (startMs !== null && startMs >= nowMs && (windowEndMs === null || startMs <= windowEndMs)) {
+                    withinWindow += 1;
+                }
+                const pseudoEvent = {
+                    title: record.summary,
+                    startDate: record.start,
+                    endDate: record.end,
+                    url: record.url,
+                    location: record.location
+                };
+                const matchedEvent = runEvents.find(event =>
+                    this.areEventsSameIdentity(pseudoEvent, event) ||
+                    this.areEventsSameIdentity(event, pseudoEvent) ||
+                    (this.areTitlesSimilar(record.summary, event.title || event.name || '') &&
+                        Boolean(this.getEventNightKey(pseudoEvent)) &&
+                        this.getEventNightKey(pseudoEvent) === this.getEventNightKey(event))) || null;
+                if (matchedEvent) {
+                    matched += 1;
+                    record.matchedRunEventTitle = matchedEvent.title || matchedEvent.name || '';
+                }
+            }
+            finding.veventsWithinWindow = withinWindow;
+            finding.matchedRunEvents = matched;
+            console.log(`📅 ICS FEED: ${finding.feedUrl} — ${finding.vevents} VEVENTs, ${withinWindow} within the lookahead window; ${matched} match events this run extracted (by identity)`);
+        }
+        return findings;
+    }
+
     async crawlUrlsForEvents({
         urls,
         allEvents,
@@ -5776,7 +5967,10 @@ class SharedCore {
         crawlGoneCollector = null,
         // Events dropped by the cross-org crawl guard (flag, don't drop):
         // collected per host with the owning org so the run surfaces them.
-        foreignOrgDropCollector = null
+        foreignOrgDropCollector = null,
+        // Linked-ICS-feed discovery (report-only): { seen: Set, findings: [] }
+        // scoped to one parser run — see collectIcsFeedFindings.
+        icsFeedCollector = null
     }) {
         const adaptiveCrawl = maxDepth === ADAPTIVE_CRAWL_DEPTH;
         const urlsToProcess = currentDepth > 0
@@ -5880,6 +6074,17 @@ class SharedCore {
 
                 if (currentDepth === 0 && urlClassifications && typeof urlClassifications === 'object') {
                     urlClassifications[url] = pageClassification;
+                }
+
+                // Linked-ICS-feed discovery (report-only, never aborts the
+                // crawl): scan this page's raw HTML for feed links and fetch
+                // new candidates once through the same adapter + page cache.
+                if (icsFeedCollector && htmlData && typeof htmlData.html === 'string' && htmlData.html) {
+                    try {
+                        await this.collectIcsFeedFindings({ html: htmlData.html, pageUrl: url, httpAdapter, icsFeedCollector });
+                    } catch (error) {
+                        console.warn(`⚠️ SharedCore: ICS feed discovery failed on ${url} (report-only, crawl unaffected): ${error && error.message ? error.message : error}`);
+                    }
                 }
 
                 const eventCount = discoveryOnly ? 0 : (parseResult?.events?.length || 0);
@@ -6159,7 +6364,8 @@ class SharedCore {
                             enrichDropCollector,
                             crawlErrorCollector,
                             crawlGoneCollector,
-                            foreignOrgDropCollector
+                            foreignOrgDropCollector,
+                            icsFeedCollector
                         });
                     }
                 } else {
@@ -13098,6 +13304,11 @@ class SharedCore {
 
         // Analyze each event against existing calendar events
         const analyzedEvents = [];
+        // Same-venue overlap surfacing (report-only): each analyzed entry is
+        // kept alongside the existing-event candidates already fetched for its
+        // merge analysis, so the overlap pass below needs no extra calendar
+        // reads. See applyVenueOverlapFlags.
+        const venueOverlapEntries = [];
 
         for (const event of events) {
             // Get existing events from the adapter
@@ -13166,7 +13377,12 @@ class SharedCore {
                 }
             }
 
-            analyzedEvents.push(await this.buildAnalyzedCalendarEvent(preparedEvent, analysis, calendarAdapter, config));
+            const analyzedEntry = await this.buildAnalyzedCalendarEvent(preparedEvent, analysis, calendarAdapter, config);
+            analyzedEvents.push(analyzedEntry);
+            venueOverlapEntries.push({
+                event: analyzedEntry,
+                existingEvents: Array.isArray(existingEvents) ? existingEvents : []
+            });
         }
 
         // Manual override, rescue direction: an enforce-mode dropped event whose
@@ -13282,6 +13498,15 @@ class SharedCore {
                 dropped._duplicateOfKept = kept.title || 'Unknown';
                 console.log(`🐻 BEAR CHECK: dropped "${droppedEvent.title || 'Unknown'}" duplicates kept "${dropped._duplicateOfKept}" (place+day+title-subset) — folded out of the dropped list`);
             }
+        }
+
+        // Same-venue overlap surfacing (report-only, never throws): stamp
+        // colliding cards + one ⚔️ OVERLAP line per pair. Actions, merges and
+        // writes are untouched — the owner resolves double-booked slots.
+        try {
+            this.applyVenueOverlapFlags(venueOverlapEntries);
+        } catch (error) {
+            console.warn(`⚠️ SharedCore: venue-overlap pass failed (report-only, run unaffected): ${error && error.message ? error.message : error}`);
         }
 
         this.logCalendarStickinessSummary();
@@ -15252,6 +15477,197 @@ class SharedCore {
 
     areEventsSameIdentity(newEvent, existingEvent) {
         return Boolean(this.getSameEventIdentitySignal(newEvent, existingEvent));
+    }
+
+    // === Same-venue overlap surfacing (report-only) ===
+    // ONYX/BEER BUST incident: Eagle LA's site published the weekly SUNDAY
+    // BEER BUST listing even on the 2nd Sunday when ONYX takes over the slot —
+    // two scraped events, same venue, overlapping times, both "real" per the
+    // site, one factually wrong. The pipeline SURFACES the collision (stamp +
+    // one ⚔️ OVERLAP log line + a results-UI chip) and never resolves it —
+    // the owner decides. Every rung fails closed: no positive venue identity,
+    // no shared local day, or no genuine time information → nothing.
+
+    // Local wall-clock reading of a date in a timezone, or null when the date
+    // is unparseable. Mirrors getEventNightKey's Intl usage (UTC fallback when
+    // Intl or the timezone is unavailable — _timezoneUnresolved events store
+    // wall-clock components labeled UTC, so the UTC read IS the local one).
+    getLocalClockParts(dateInput, timezone) {
+        const millis = this.toEpochMillis(dateInput);
+        if (millis === null) return null;
+        const date = new Date(millis);
+        if (timezone && typeof Intl !== 'undefined' && typeof Intl.DateTimeFormat === 'function') {
+            try {
+                const formatter = new Intl.DateTimeFormat('en-CA', {
+                    timeZone: timezone,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hourCycle: 'h23'
+                });
+                const parts = formatter.formatToParts(date);
+                const read = (type) => {
+                    const part = parts.find(entry => entry.type === type);
+                    return part ? parseInt(part.value, 10) : NaN;
+                };
+                const hour = read('hour');
+                const minute = read('minute');
+                if (Number.isFinite(hour) && Number.isFinite(minute)) {
+                    return { hour, minute };
+                }
+            } catch (_) {
+                // fall through to the UTC read
+            }
+        }
+        return { hour: date.getUTCHours(), minute: date.getUTCMinutes() };
+    }
+
+    formatLocalClockTime(dateInput, timezone) {
+        const parts = this.getLocalClockParts(dateInput, timezone);
+        if (!parts) return '';
+        return `${String(parts.hour).padStart(2, '0')}:${String(parts.minute).padStart(2, '0')}`;
+    }
+
+    // The time window an event claims for overlap purposes, as epoch millis,
+    // or null when the event carries no genuine time information (fail closed).
+    // - A real positive-duration end → [start, end).
+    // - A degenerate end (missing, or end <= start — the normalization
+    //   artifact hasDegenerateEnd documents) with a REAL clock time → the
+    //   listing claims the slot from its stated start; assume a conservative
+    //   6-hour span (the real BEER BUST record is exactly this shape: "BAR
+    //   OPENS 2PM", zero duration, while ONYX runs 4–8PM the same Sunday).
+    // - A degenerate end at exactly local midnight → the missing-time default
+    //   (extraction found only a date, per the getEventNightKey doctrine) —
+    //   no genuine time info, never compared.
+    getVenueOverlapWindow(event, shape) {
+        const startMs = this.toEpochMillis(shape.startDate);
+        if (startMs === null) return null;
+        const endMs = this.toEpochMillis(event && event.endDate);
+        if (endMs !== null && endMs > startMs) {
+            return { startMs, endMs, assumedEnd: false };
+        }
+        const clock = this.getLocalClockParts(shape.startDate, shape.timezone);
+        if (!clock || (clock.hour === 0 && clock.minute === 0)) return null;
+        const ASSUMED_OPEN_ENDED_SPAN_MS = 6 * 60 * 60 * 1000;
+        return { startMs, endMs: startMs + ASSUMED_OPEN_ENDED_SPAN_MS, assumedEnd: true };
+    }
+
+    // Report-only finding for one pair, or null. Fails closed at every step;
+    // adjacency is never overlap (strict half-open interval test); rrules are
+    // never expanded — only the concrete dated instances in hand compare.
+    getVenueOverlapFinding(eventA, eventB) {
+        if (!eventA || typeof eventA !== 'object' || !eventB || typeof eventB !== 'object') return null;
+        const shapeA = this.buildIdentityComparisonShape(eventA);
+        const shapeB = this.buildIdentityComparisonShape(eventB);
+
+        // Same local calendar day (multi-day series-range artifacts die here:
+        // they only ever compare against events starting the same local day).
+        if (!this.areIdentityDatesOnSameLocalDay(shapeA, shapeB)) return null;
+
+        // POSITIVE venue identity — a side with no place evidence never flags.
+        if (!this.areIdentityPlacesSimilar(shapeA, shapeB)) return null;
+
+        // NOT the same event / title family. A stub+detail pair of one event,
+        // a merge target, or a title-subset twin must never read as a
+        // double-booking.
+        const keyA = eventA.key === undefined || eventA.key === null ? '' : String(eventA.key);
+        const keyB = eventB.key === undefined || eventB.key === null ? '' : String(eventB.key);
+        if (keyA && keyA === keyB) return null;
+        const idA = eventA.identifier || eventA.id;
+        const idB = eventB.identifier || eventB.id;
+        if (idA && idB && String(idA) === String(idB)) return null;
+        if (this.areEventsSameIdentity(eventA, eventB) || this.areEventsSameIdentity(eventB, eventA)) return null;
+        if (this.getCalendarTitleSubsetSignal(eventA, eventB) || this.getCalendarTitleSubsetSignal(eventB, eventA)) return null;
+        if (this.areIdentityNamesSimilar(shapeA, shapeB)) return null;
+
+        const windowA = this.getVenueOverlapWindow(eventA, shapeA);
+        if (!windowA) return null;
+        const windowB = this.getVenueOverlapWindow(eventB, shapeB);
+        if (!windowB) return null;
+        if (!(windowA.startMs < windowB.endMs && windowB.startMs < windowA.endMs)) return null;
+
+        const timezone = shapeA.timezone || shapeB.timezone || null;
+        const describeWindow = (window, ownTimezone) => {
+            const start = this.formatLocalClockTime(new Date(window.startMs), ownTimezone || timezone);
+            const end = this.formatLocalClockTime(new Date(window.endMs), ownTimezone || timezone);
+            return `${start}–${end}${window.assumedEnd ? ' (assumed end)' : ''}`;
+        };
+        const firstLocationLine = (shape) => String(shape.locationText || '').split('\n')[0].trim();
+        return {
+            date: this.normalizeEventDateLocal(shapeA.startDate, timezone),
+            venue: shapeA.bar || shapeB.bar || firstLocationLine(shapeA) || firstLocationLine(shapeB) || 'the same venue',
+            titleA: (shapeA.names[0] || 'Unknown'),
+            titleB: (shapeB.names[0] || 'Unknown'),
+            windowA: describeWindow(windowA, shapeA.timezone),
+            windowB: describeWindow(windowB, shapeB.timezone)
+        };
+    }
+
+    // Stamp `_venueOverlap` (report-only) on analyzed events that collide with
+    // another same-run analyzed event or an existing calendar record at the
+    // same venue. entries: [{ event: analyzedEvent, existingEvents: [...] }].
+    // Never throws; never changes actions, merges, or writes.
+    applyVenueOverlapFlags(entries) {
+        if (!Array.isArray(entries) || entries.length === 0) return;
+        const seenPairs = new Set();
+        const pairKeyFor = (finding) => {
+            const names = [this.normalizeIdentityText(finding.titleA), this.normalizeIdentityText(finding.titleB)].sort();
+            return `${names[0]}|${names[1]}|${finding.date}`;
+        };
+        const stamp = (event, finding, withTitle, ownWindow, otherWindow, source) => {
+            if (!Array.isArray(event._venueOverlap)) event._venueOverlap = [];
+            event._venueOverlap.push({
+                withTitle,
+                date: finding.date,
+                venue: finding.venue,
+                window: ownWindow,
+                otherWindow,
+                source
+            });
+        };
+        const logFinding = (finding) => {
+            console.log(`⚔️ OVERLAP: "${finding.titleA}" and "${finding.titleB}" overlap at ${finding.venue} on ${finding.date} — report-only, venue data may double-book the slot`);
+        };
+
+        // Same-run analyzed pairs: both cards get the chip.
+        for (let i = 0; i < entries.length; i++) {
+            for (let j = i + 1; j < entries.length; j++) {
+                const eventA = entries[i] && entries[i].event;
+                const eventB = entries[j] && entries[j].event;
+                if (!eventA || !eventB) continue;
+                const finding = this.getVenueOverlapFinding(eventA, eventB);
+                if (!finding) continue;
+                const pairKey = pairKeyFor(finding);
+                if (seenPairs.has(pairKey)) continue;
+                seenPairs.add(pairKey);
+                stamp(eventA, finding, finding.titleB, finding.windowA, finding.windowB, 'run');
+                stamp(eventB, finding, finding.titleA, finding.windowB, finding.windowA, 'run');
+                logFinding(finding);
+            }
+        }
+
+        // Analyzed event vs existing calendar records (the candidates already
+        // fetched for merge analysis — no extra calendar reads). The event's
+        // own merge target is excluded; a colliding record that ALSO arrived
+        // in this run dedupes to one finding via the title-pair key above.
+        for (const entry of entries) {
+            const event = entry && entry.event;
+            if (!event || !Array.isArray(entry.existingEvents)) continue;
+            const target = event._existingEvent && event._existingEvent.identifier
+                ? String(event._existingEvent.identifier)
+                : (event._existingKey ? String(event._existingKey) : '');
+            for (const record of entry.existingEvents) {
+                if (!record || typeof record !== 'object') continue;
+                const recordId = record.identifier || record.id;
+                if (target && recordId && String(recordId) === target) continue;
+                const finding = this.getVenueOverlapFinding(event, record);
+                if (!finding) continue;
+                const pairKey = pairKeyFor(finding);
+                if (seenPairs.has(pairKey)) continue;
+                seenPairs.add(pairKey);
+                stamp(event, finding, finding.titleB, finding.windowA, finding.windowB, 'calendar');
+                logFinding(finding);
+            }
+        }
     }
 
     // === Cross-source duplicate detection (within one parser run) ===
