@@ -391,6 +391,15 @@ class SharedCore {
         // computeBearCheckDecision) so an owner tap survives runs where the
         // event was never written to the calendar.
         this.bearVerdicts = Array.isArray(options.bearVerdicts) ? options.bearVerdicts : [];
+        // Curated festival dataset (data/festivals.json via the adapters —
+        // injected like bars/promoters; shared-core never loads files itself).
+        // The curated dataset is the authority on festivals: the scraper
+        // contributes parties, never umbrellas (see findCuratedFestivalMatch).
+        // Entries: { key, name, category, cityKey?, website?, nextDates? }.
+        this.festivals = Array.isArray(options.festivals) ? options.festivals : [];
+        // One drift report per festival key per prepareEventsForCalendar pass
+        // (report-only — the scraper NEVER writes festivals.json).
+        this.festivalDriftLogged = new Set();
         this.notesExcludedFields = new Set([
             ...this.eventSchema.DEFAULT_NOTES_EXCLUDED_FIELDS,
             ...(options.additionalExcludedFields || [])
@@ -12566,6 +12575,12 @@ class SharedCore {
             // SAVED series already covers (#1655 series-match): writing it
             // would plant a duplicate single next to his imported series.
             !SharedCore.isSeriesCoveredOccurrence(event) &&
+            // A curated-festival UMBRELLA (identity matches data/festivals.json):
+            // the curated dataset already renders the festival on the site, so
+            // the scraper contributes parties, never umbrellas. Writing it would
+            // also suppress the website's curated banner via its name-collision
+            // guard.
+            !SharedCore.isCuratedFestivalUmbrella(event) &&
             !SharedCore.hasJunkTitleSanityFlag(event));
     }
 
@@ -12611,6 +12626,8 @@ class SharedCore {
             '_evidenceLines',
             '_sanityFlags',
             '_original',
+            '_festivalMatch',
+            '_festivalContext',
             '_pastSpanWithheld',
             '_mergeNoOp',
             '_duplicateOfKept',
@@ -12643,6 +12660,7 @@ class SharedCore {
         if (event._pastSpanWithheld === true) return 'WITHHELD (span fully past)';
         if (SharedCore.isRecurringSeriesEvent(event)) return 'WITHHELD (recurring series — ICS export only)';
         if (SharedCore.isSeriesCoveredOccurrence(event)) return 'WITHHELD (occurrence covered by saved series — SERIES MATCH)';
+        if (SharedCore.isCuratedFestivalUmbrella(event)) return 'WITHHELD (matches curated festival — curated dataset renders it)';
         if (SharedCore.hasJunkTitleSanityFlag(event)) return 'WITHHELD (junk title)';
         if (event._mergeNoOp === true) return 'SKIPPED (merge no-op — no field changes)';
         const action = typeof event._action === 'string' && event._action ? event._action : 'new';
@@ -12765,6 +12783,221 @@ class SharedCore {
     // never disagree.
     static isSeriesCoveredOccurrence(event) {
         return SharedCore.isOccurrenceExpandedEvent(event) && Boolean(event._seriesMatch);
+    }
+
+    // =========================================================================
+    // CURATED FESTIVAL AWARENESS (data/festivals.json, injected via adapters)
+    //
+    // Doctrine: the curated festival dataset is the authority; the scraper
+    // contributes parties, never umbrellas. A scraped record whose IDENTITY
+    // matches a curated festival (name-family + city agreement + date overlap
+    // with nextDates ±7d) is a FESTIVAL UMBRELLA: the write is withheld — the
+    // curated dataset already renders the festival on the site (the website's
+    // mergeFestivalEvents injection), so writing the scraped copy would both
+    // duplicate it and suppress the curated banner via the site's
+    // name-collision guard. Sub-events from a festival's own site inherit
+    // BLANK city/timezone from the curated entry and get the festival window
+    // as a report-only sanity boundary (catches year-split extractions).
+    // Fail closed everywhere: no nextDates, no date overlap, or a clashing
+    // explicit city → not a match; nothing here is hardcoded per festival.
+    // =========================================================================
+
+    // ±7 days: curated nextDates are next-edition dates; scraped pages carry
+    // pre/post parties and off-by-one range endpoints, never whole seasons.
+    getFestivalWindowGraceMillis() {
+        return 7 * 24 * 60 * 60 * 1000;
+    }
+
+    // nextDates {start, end} (date-only ISO) → epoch-millis window with the
+    // END DAY INCLUSIVE ("end": "2027-01-31" covers all of Jan 31). Null when
+    // absent or unparseable — the fail-closed "never matches" signal.
+    getCuratedFestivalWindowMillis(festival) {
+        const nextDates = festival && festival.nextDates;
+        const startMs = this.toEpochMillis(nextDates && nextDates.start);
+        const endMs = this.toEpochMillis(nextDates && nextDates.end);
+        if (startMs === null || endMs === null || endMs < startMs) return null;
+        return { startMs, endMs: endMs + (24 * 60 * 60 * 1000) };
+    }
+
+    // City agreement: an UNKNOWN/blank event city agrees with anything (the
+    // whole point is rescuing city-less festival records); a festival without
+    // a cityKey constrains nothing. An explicit clash fails closed.
+    festivalCityAgrees(event, festival) {
+        const eventCity = String((event && event.city) || '').trim().toLowerCase();
+        if (!eventCity || eventCity === 'unknown') return true;
+        const festivalCity = String((festival && festival.cityKey) || '').trim().toLowerCase();
+        if (!festivalCity) return true;
+        return eventCity === festivalCity;
+    }
+
+    // Date overlap between the event's [start, end] and the curated window
+    // widened by the grace margin. Missing event dates fail closed.
+    eventOverlapsFestivalWindow(event, festival) {
+        const window = this.getCuratedFestivalWindowMillis(festival);
+        if (!window) return false;
+        const startMs = this.toEpochMillis(event && event.startDate);
+        if (startMs === null) return false;
+        const endMsRaw = this.toEpochMillis(event && event.endDate);
+        const endMs = endMsRaw === null ? startMs : Math.max(endMsRaw, startMs);
+        const grace = this.getFestivalWindowGraceMillis();
+        return startMs <= (window.endMs + grace) && endMs >= (window.startMs - grace);
+    }
+
+    // FESTIVAL UMBRELLA match: name-family similarity (the same
+    // areTitlesSimilar rung dedup identity uses) + city agreement + date
+    // overlap with nextDates ±7d. Returns the curated entry or null.
+    findCuratedFestivalMatch(event) {
+        if (!event || !event.title) return null;
+        for (const festival of this.festivals) {
+            if (!festival || !festival.name) continue;
+            if (!this.areTitlesSimilar(event.title, festival.name)) continue;
+            if (!this.festivalCityAgrees(event, festival)) continue;
+            if (!this.eventOverlapsFestivalWindow(event, festival)) continue;
+            return festival;
+        }
+        return null;
+    }
+
+    // Curated festival whose official website host matches the given host
+    // (www-insensitive, same rung as areUrlHostsSameSite). Source-host is the
+    // page-family signal: everything extracted from beefdip.com is BeefDip
+    // context, whatever the individual record managed to extract.
+    findCuratedFestivalBySourceHost(host) {
+        if (!host) return null;
+        for (const festival of this.festivals) {
+            const festivalHost = festival && festival.website
+                ? this.getHostFromUrl(festival.website)
+                : '';
+            if (festivalHost && this.areUrlHostsSameSite(festivalHost, host)) {
+                return festival;
+            }
+        }
+        return null;
+    }
+
+    // The host a record was extracted from (venue-site stamp first, then the
+    // source page URL) — '' when neither survives.
+    getFestivalSourceHost(event) {
+        if (!event || typeof event !== 'object') return '';
+        const stamped = typeof event._venueSitePageHost === 'string' ? event._venueSitePageHost.trim() : '';
+        if (stamped) return stamped;
+        return this.getHostFromUrl(event._sourcePageUrl || '') || '';
+    }
+
+    // Pre-pass over the whole batch: hosts whose pages produced a curated
+    // festival UMBRELLA match extend festival context to sibling records from
+    // the same source even when the source host differs from the curated
+    // website (aggregators). Direct website-host matches don't need this map.
+    collectFestivalSourceHosts(events) {
+        const hosts = new Map();
+        if (!Array.isArray(events)) return hosts;
+        for (const event of events) {
+            const festival = this.findCuratedFestivalMatch(event);
+            if (!festival) continue;
+            const host = this.getFestivalSourceHost(event);
+            if (!host) continue;
+            const key = String(host).toLowerCase().replace(/^www\./, '');
+            if (!hosts.has(key)) hosts.set(key, festival);
+        }
+        return hosts;
+    }
+
+    // Resolve the curated festival a record's SOURCE belongs to: the source
+    // host is the festival's own website, or an umbrella from the same source
+    // matched earlier in this batch (collectFestivalSourceHosts).
+    resolveFestivalForSource(event, festivalSourceHosts) {
+        const host = this.getFestivalSourceHost(event);
+        if (!host) return null;
+        const direct = this.findCuratedFestivalBySourceHost(host);
+        if (direct) return direct;
+        if (festivalSourceHosts && typeof festivalSourceHosts.get === 'function') {
+            const key = String(host).toLowerCase().replace(/^www\./, '');
+            const viaUmbrella = festivalSourceHosts.get(key);
+            if (viaUmbrella && this.eventOverlapsFestivalWindow(event, viaUmbrella)) {
+                return viaUmbrella;
+            }
+        }
+        return null;
+    }
+
+    // FESTIVAL CONTEXT inheritance for sub-events: fills BLANKS only. An
+    // explicitly extracted different city is never overwritten — the
+    // disagreement is reported instead. Stamps _festivalContext (key, name,
+    // cityKey, window) for the report-only window sanity check downstream.
+    applyCuratedFestivalContext(event, festival) {
+        if (!event || typeof event !== 'object' || !festival) return null;
+        const context = {
+            key: festival.key || '',
+            name: festival.name || '',
+            cityKey: festival.cityKey || null,
+            nextDates: festival.nextDates
+                ? { start: festival.nextDates.start || null, end: festival.nextDates.end || null }
+                : null
+        };
+        const eventCity = String(event.city || '').trim().toLowerCase();
+        const cityIsBlank = !eventCity || eventCity === 'unknown';
+        if (context.cityKey && cityIsBlank) {
+            event.city = context.cityKey;
+            event._citySource = 'curated-festival';
+            context.inheritedCity = true;
+            console.log(`🎪 FESTIVAL: "${event.title || 'Unknown'}" inherited city ${context.cityKey} from curated festival "${context.name}" (source ${this.getFestivalSourceHost(event) || 'unknown host'})`);
+        } else if (context.cityKey && eventCity !== context.cityKey.toLowerCase()) {
+            context.cityDisagreement = { eventCity: event.city, festivalCity: context.cityKey };
+            console.log(`🎪 FESTIVAL: "${event.title || 'Unknown'}" city ${event.city} differs from curated festival "${context.name}" city ${context.cityKey} — keeping the extracted city (report-only)`);
+        }
+        if (!event.timezone) {
+            const timezone = this.getCityTimezone(event.city);
+            if (timezone) {
+                event.timezone = timezone;
+                context.inheritedTimezone = true;
+            }
+        }
+        event._festivalContext = context;
+        return context;
+    }
+
+    // Report-only window sanity boundary for inherited-context sub-events:
+    // dates resolving OUTSIDE nextDates ±7d are the year-split signature
+    // (run 20260815-083809: BeefDip pages dated Jan 26 2026 extracted as
+    // 2027). Flag, don't drop — the flag never changes any action.
+    getFestivalWindowSanityFlag(event) {
+        const context = event && event._festivalContext;
+        if (!context || !context.nextDates) return null;
+        const pseudoFestival = { nextDates: context.nextDates };
+        if (this.toEpochMillis(event.startDate) === null) return null;
+        if (this.eventOverlapsFestivalWindow(event, pseudoFestival)) return null;
+        return {
+            code: 'festival-window-violation',
+            detail: `dates resolve outside curated "${context.name}" window ${context.nextDates.start || '?'} – ${context.nextDates.end || '?'} (±7d) — possible year-split extraction`
+        };
+    }
+
+    // ONE report-only drift line per festival per pass when a scraped
+    // umbrella's date range disagrees with curated nextDates. Curated wins;
+    // the scraper NEVER writes festivals.json.
+    reportCuratedFestivalDrift(event, festival) {
+        const window = festival && festival.nextDates;
+        if (!window || !window.start || !window.end) return;
+        const startMs = this.toEpochMillis(event && event.startDate);
+        if (startMs === null) return;
+        const endMsRaw = this.toEpochMillis(event && event.endDate);
+        const endMs = endMsRaw === null ? startMs : endMsRaw;
+        const toDay = (ms) => new Date(ms).toISOString().slice(0, 10);
+        const scrapedStart = toDay(startMs);
+        const scrapedEnd = toDay(endMs);
+        if (scrapedStart === window.start && scrapedEnd === window.end) return;
+        const driftKey = String(festival.key || festival.name || '');
+        if (this.festivalDriftLogged.has(driftKey)) return;
+        this.festivalDriftLogged.add(driftKey);
+        console.log(`📆 FESTIVAL: scraped ${festival.name} dates ${scrapedStart} – ${scrapedEnd} differ from curated ${window.start} – ${window.end} — curated wins; update data/festivals.json from the official source if real`);
+    }
+
+    // A record stamped as a curated-festival umbrella (_festivalMatch, set in
+    // prepareEventsForCalendar). Its own predicate — mirroring
+    // hasJunkTitleSanityFlag / isSeriesCoveredOccurrence — so the execution
+    // gate, the disposition label, and the adapters' labeling never disagree.
+    static isCuratedFestivalUmbrella(event) {
+        return Boolean(event && typeof event === 'object' && event._festivalMatch);
     }
 
     // Scriptable identifiers look like `<calendarUUID>:<icsUid>` — the suffix
@@ -13626,6 +13859,13 @@ class SharedCore {
         // Per-run calendar-stickiness tally (report-only observation phase).
         this.resetCalendarStickinessStats();
 
+        // Curated festival awareness: one drift line per festival per pass,
+        // and a batch pre-pass mapping source hosts whose pages produced an
+        // umbrella match — sibling records from the same source inherit the
+        // festival's context even when the host isn't the curated website.
+        this.festivalDriftLogged = new Set();
+        const festivalSourceHosts = this.collectFestivalSourceHosts(events);
+
         // Analyze each event against existing calendar events
         const analyzedEvents = [];
         // Same-venue overlap surfacing (report-only): each analyzed entry is
@@ -13635,6 +13875,16 @@ class SharedCore {
         const venueOverlapEntries = [];
 
         for (const event of events) {
+            // FESTIVAL CONTEXT: a record extracted from a curated festival's
+            // source inherits BLANK city/timezone from the curated entry.
+            // Must run BEFORE the calendar lookup so an inherited city routes
+            // the existing-event search to the right city calendar. Explicit
+            // extracted values are never overwritten (report-only).
+            const sourceFestival = this.resolveFestivalForSource(event, festivalSourceHosts);
+            if (sourceFestival) {
+                this.applyCuratedFestivalContext(event, sourceFestival);
+            }
+
             // Get existing events from the adapter
             const existingEvents = await calendarAdapter.getExistingEvents(event);
 
@@ -13702,6 +13952,38 @@ class SharedCore {
             }
 
             const analyzedEntry = await this.buildAnalyzedCalendarEvent(preparedEvent, analysis, calendarAdapter, config);
+            // The merge path rebuilds the analyzed object from the calendar
+            // record (createFinalEventObject), which can drop the pre-analysis
+            // festival-context stamp — carry it over so the window check and
+            // the results UI see it either way.
+            if (event._festivalContext && !analyzedEntry._festivalContext) {
+                analyzedEntry._festivalContext = event._festivalContext;
+            }
+            // FESTIVAL UMBRELLA: identity matches a curated festival — the
+            // curated dataset already renders it on the site, so the write is
+            // withheld (filterEventsForExecution) and date drift against
+            // curated nextDates is reported once, report-only.
+            const curatedFestival = this.findCuratedFestivalMatch(analyzedEntry);
+            if (curatedFestival) {
+                analyzedEntry._festivalMatch = {
+                    key: curatedFestival.key || '',
+                    name: curatedFestival.name || '',
+                    cityKey: curatedFestival.cityKey || null,
+                    nextDates: curatedFestival.nextDates
+                        ? { start: curatedFestival.nextDates.start || null, end: curatedFestival.nextDates.end || null }
+                        : null,
+                    reason: `matches curated festival: ${curatedFestival.name}`
+                };
+                console.log(`🎪 FESTIVAL: "${analyzedEntry.title || 'Unknown'}" matches curated festival "${curatedFestival.name}" — write withheld (curated dataset renders it)`);
+                this.reportCuratedFestivalDrift(analyzedEntry, curatedFestival);
+            } else if (analyzedEntry._festivalContext) {
+                const windowFlag = this.getFestivalWindowSanityFlag(analyzedEntry);
+                if (windowFlag) {
+                    if (!Array.isArray(analyzedEntry._sanityFlags)) analyzedEntry._sanityFlags = [];
+                    analyzedEntry._sanityFlags.push(windowFlag);
+                    console.log(`⚠️ FESTIVAL: "${analyzedEntry.title || 'Unknown'}" ${windowFlag.detail} (report-only)`);
+                }
+            }
             analyzedEvents.push(analyzedEntry);
             venueOverlapEntries.push({
                 event: analyzedEntry,

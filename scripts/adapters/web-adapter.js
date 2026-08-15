@@ -277,6 +277,17 @@ class WebAdapter {
         };
     }
 
+    // Same honest pass-through for the curated festival dataset: on Node the
+    // repo checkout IS the source chunky.dad deploys data/festivals.json
+    // from, so the local list is already current.
+    async refreshRemoteFestivals(localFestivals) {
+        const festivals = Array.isArray(localFestivals) ? localFestivals : [];
+        return {
+            festivals,
+            counts: { remote: 0, localOnly: festivals.length }
+        };
+    }
+
     getPageCacheConfig() {
         const pageCache = this.config.pageCache || {};
         const ttlDays = Number(pageCache.ttlDays);
@@ -1126,6 +1137,23 @@ async saveFailureNote(url, error, metadata = {}) {
                 } else {
                     config.promoters = [];
                 }
+
+                // Curated festival dataset ships as pure JSON (data/festivals.json,
+                // the same file chunky.dad serves) — no generated module needed.
+                // Fail-soft: a missing/unparseable file means no festival
+                // awareness, never a failed run.
+                const festivalsPath = require('path').join(__dirname, '..', '..', 'data', 'festivals.json');
+                config.festivals = [];
+                if (require('fs').existsSync(festivalsPath)) {
+                    try {
+                        const festivalsRaw = JSON.parse(require('fs').readFileSync(festivalsPath, 'utf8'));
+                        if (festivalsRaw && Array.isArray(festivalsRaw.festivals)) {
+                            config.festivals = festivalsRaw.festivals;
+                        }
+                    } catch (e) {
+                        config.festivals = [];
+                    }
+                }
             } else {
                 // Browser environment - use pre-loaded globals if available (loaded via script tags),
                 // otherwise fall back to fetching (only works when page is served from scripts/ directory)
@@ -1209,8 +1237,24 @@ async saveFailureNote(url, error, metadata = {}) {
                         config.promoters = [];
                     }
                 }
+
+                // Curated festival dataset (browser): fetched relative to the
+                // scripts/ directory the page is served from. Fail-soft like
+                // bars/promoters — no festivals means no festival awareness.
+                config.festivals = [];
+                try {
+                    const festivalsResponse = await fetch('../data/festivals.json');
+                    if (festivalsResponse.ok) {
+                        const festivalsRaw = await festivalsResponse.json();
+                        if (festivalsRaw && Array.isArray(festivalsRaw.festivals)) {
+                            config.festivals = festivalsRaw.festivals;
+                        }
+                    }
+                } catch (e) {
+                    config.festivals = [];
+                }
             }
-            
+
             // Validate configuration structure
             if (!config.parsers || !Array.isArray(config.parsers)) {
                 throw new Error('Configuration missing parsers array');

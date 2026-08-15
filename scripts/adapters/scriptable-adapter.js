@@ -3403,6 +3403,58 @@ class ScriptableAdapter {
     };
   }
 
+  // Curated festival dataset: data/festivals.json served from chunky.dad is
+  // the phone's source (there is no local scraper-festivals module — the
+  // repo file is the Node-side source). Same fetch helper and 1-day TTL
+  // cache as bars/promoters; any failure — offline, 404, unparseable —
+  // quietly keeps the injected local list. Union by key so an injected
+  // local-only entry survives until the site serves it, remote wins for a
+  // shared key. Returns { festivals, counts } for the freshness log line.
+  async refreshRemoteFestivals(localFestivals) {
+    const local = Array.isArray(localFestivals) ? localFestivals : [];
+    const festivalsCacheConfig = {
+      enabled: this.getPageCacheConfig().enabled,
+      ttlDays: 1,
+    };
+    const remoteRaw = await this.fetchRemoteBarsJson(
+      "https://chunky.dad/data/festivals.json",
+      festivalsCacheConfig,
+    );
+    const remote =
+      remoteRaw && Array.isArray(remoteRaw.festivals)
+        ? remoteRaw.festivals
+        : Array.isArray(remoteRaw)
+          ? remoteRaw
+          : null;
+    if (!remote) {
+      console.log(
+        `📱 Scriptable: Festivals data — 0 from chunky.dad, ${local.length} local-only`,
+      );
+      return { festivals: local, counts: { remote: 0, localOnly: local.length } };
+    }
+    const festivalIdentityKey = (entry) =>
+      String((entry && (entry.key || entry.name)) || "")
+        .trim()
+        .toLowerCase();
+    const seen = new Set(remote.map(festivalIdentityKey).filter(Boolean));
+    const merged = remote.slice();
+    let localOnly = 0;
+    for (const entry of local) {
+      const key = festivalIdentityKey(entry);
+      if (key && seen.has(key)) continue;
+      merged.push(entry);
+      localOnly += 1;
+      if (key) seen.add(key);
+    }
+    console.log(
+      `📱 Scriptable: Festivals data — ${remote.length} from chunky.dad, ${localOnly} local-only`,
+    );
+    return {
+      festivals: merged,
+      counts: { remote: remote.length, localOnly },
+    };
+  }
+
   // Get existing events for a specific event (called by shared-core)
   async getExistingEvents(event) {
     try {
@@ -5683,6 +5735,7 @@ class ScriptableAdapter {
       conflict: [],
       missing_calendar: [],
       series_match: [],
+      festival_match: [],
       other: [],
     };
 
@@ -5710,6 +5763,14 @@ class ScriptableAdapter {
     if (eventsByAction.series_match.length > 0) {
       console.log(
         `   🔁 Series match: ${eventsByAction.series_match.length} events (already saved — withheld)`,
+      );
+    }
+    // Additive bucket, same rule (line only when non-zero): scraped records
+    // matching a curated festival — the curated dataset renders these, so
+    // they are withheld, never counted toward ➕ New.
+    if (eventsByAction.festival_match.length > 0) {
+      console.log(
+        `   🎪 Festival match: ${eventsByAction.festival_match.length} events (curated festival — withheld)`,
       );
     }
     if (eventsByAction.other.length > 0) {
@@ -15574,6 +15635,16 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         reason: "🔁 already saved — matches this series",
       };
     }
+    // Curated-festival umbrella (shared-core _festivalMatch): the curated
+    // dataset renders the festival on the site, so the write is withheld —
+    // the chip names the matched festival, mirroring the series-match
+    // labeling seam.
+    if (event._festivalMatch) {
+      return {
+        section: "withheld",
+        reason: `🎪 ${event._festivalMatch.reason || "matches curated festival"}`,
+      };
+    }
     if (
       // _mergeNoOp is the write path's own no-op stamp (shared-core: final
       // payload field-identical to the calendar record, notes projection
@@ -15626,6 +15697,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     // filterEventsForExecution gate (CTA link text is not an event name) —
     // the card must say so instead of promising a CREATE that never runs.
     if (SharedCore.hasJunkTitleSanityFlag(event)) return "withheld";
+    // A curated-festival umbrella is withheld by the same gate — the curated
+    // dataset renders the festival, the scraper contributes parties only.
+    if (SharedCore.isCuratedFestivalUmbrella(event)) return "withheld";
     // A merge stamped _mergeNoOp is skipped by the same
     // filterEventsForExecution gate — the card must not promise an UPDATE
     // that never runs.
@@ -15794,6 +15868,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     if (normalized === "conflict") return "CONFLICT";
     if (normalized === "missing_calendar") return "MISSING_CALENDAR";
     if (normalized === "series_match") return "SERIES MATCH";
+    if (normalized === "festival_match") return "FESTIVAL MATCH";
     return "OTHER";
   }
 
@@ -15814,6 +15889,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     // Display/summary intent only; normalizeMetricsIntentAction keeps the
     // base derivation so the metrics schema and its buckets are untouched.
     if (action && event && event._seriesMatch) return "series_match";
+    // Same honest-terminal-state rule for a curated-festival umbrella:
+    // nothing will be written (the curated dataset renders the festival), so
+    // counting it as NEW would re-offer the umbrella every run.
+    if (action && event && event._festivalMatch) return "festival_match";
     return action;
   }
 

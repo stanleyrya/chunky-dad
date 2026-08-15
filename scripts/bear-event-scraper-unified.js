@@ -221,6 +221,7 @@ class BearEventScraperOrchestrator {
 
             const bars = config.bars || {};
             const promoters = config.promoters || [];
+            const festivals = Array.isArray(config.festivals) ? config.festivals : [];
 
             // Create the normalizer pipeline first
             const normalizerPipeline = new this.modules.NormalizerPipeline();
@@ -232,7 +233,8 @@ class BearEventScraperOrchestrator {
                 additionalExcludedFields: this.modules.adapter.NOTES_EXCLUDED_FIELDS,
                 pageClassificationRules: config.config?.pageClassificationRules || [],
                 bars,
-                promoters
+                promoters,
+                festivals
             });
             
             // Wire the core back into the pipeline
@@ -294,6 +296,23 @@ class BearEventScraperOrchestrator {
                     }
                 } catch (error) {
                     console.log(`🐻 Orchestrator: Promoter data refresh failed (${error.message}) — continuing with local promoters`);
+                }
+            }
+
+            // Curated festival dataset: same freshness story as bars and
+            // promoters — data/festivals.json is served from chunky.dad, the
+            // phone refreshes it with the same 1-day-TTL cached fetch, and on
+            // Node the repo checkout IS the deploy source (honest
+            // pass-through). Fail-soft: any error keeps the injected local
+            // list, and adapters without the method are tolerated.
+            if (typeof finalAdapter.refreshRemoteFestivals === 'function') {
+                try {
+                    const refreshed = await finalAdapter.refreshRemoteFestivals(festivals);
+                    if (refreshed && Array.isArray(refreshed.festivals)) {
+                        sharedCore.festivals = refreshed.festivals;
+                    }
+                } catch (error) {
+                    console.log(`🐻 Orchestrator: Festival data refresh failed (${error.message}) — continuing with local festivals`);
                 }
             }
 

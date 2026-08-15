@@ -29,8 +29,8 @@ function buildConfig(overrides = {}) {
 // so recorded calls live in a closure shared by all instances. refreshBars
 // (optional) becomes the adapter's refreshRemoteBars implementation — omit it
 // to model an adapter without the method (web-adapter-shaped tolerance).
-function createStubAdapter({ config, executeError = null, omitExecute = false, refreshBars = null, refreshPromoters = null } = {}) {
-  const calls = { executeCalendarActions: [], displayResults: [], showError: [], refreshRemoteBars: [], refreshRemotePromoters: [] };
+function createStubAdapter({ config, executeError = null, omitExecute = false, refreshBars = null, refreshPromoters = null, refreshFestivals = null } = {}) {
+  const calls = { executeCalendarActions: [], displayResults: [], showError: [], refreshRemoteBars: [], refreshRemotePromoters: [], refreshRemoteFestivals: [] };
 
   class StubAdapter {
     constructor(options = {}) {
@@ -69,6 +69,13 @@ function createStubAdapter({ config, executeError = null, omitExecute = false, r
     };
   }
 
+  if (refreshFestivals) {
+    StubAdapter.prototype.refreshRemoteFestivals = async function refreshRemoteFestivals(localFestivals) {
+      calls.refreshRemoteFestivals.push({ localFestivals });
+      return refreshFestivals(localFestivals);
+    };
+  }
+
   return { StubAdapter, calls };
 }
 
@@ -89,6 +96,7 @@ function createSharedCoreStub(events, coreOptionsLog = null) {
       if (coreOptionsLog && coreOptionsLog.length > 0) {
         coreOptionsLog[coreOptionsLog.length - 1].barsAtProcessEvents = this.bars;
         coreOptionsLog[coreOptionsLog.length - 1].promotersAtProcessEvents = this.promoters;
+        coreOptionsLog[coreOptionsLog.length - 1].festivalsAtProcessEvents = this.festivals;
       }
       return {
         totalEvents: events.length,
@@ -373,4 +381,66 @@ test('wireConsoleTees survives a module whose helper throws', () => {
 
   assert.deepEqual(wired, ['ok'], 'later modules still get wired');
   assert.equal(restores.length, 1);
+});
+
+// ---------------------------------------------------------------------------
+// Curated festival dataset wiring — config.festivals reaches the SharedCore
+// constructor, refreshRemoteFestivals refreshes it fail-soft, and adapters
+// without the method are tolerated.
+// ---------------------------------------------------------------------------
+
+test('run() wires config.festivals into SharedCore and applies the remote refresh', async () => {
+  const localFestivals = [{ key: 'beefdip-bear-week', name: 'BeefDip STALE' }];
+  const remoteFestivals = [
+    { key: 'beefdip-bear-week', name: 'BeefDip Bear Week', cityKey: 'pv' },
+    { key: 'spooky-bear', name: 'Spooky Bear', cityKey: 'ptown' }
+  ];
+  const config = buildConfig({ config: { dryRun: true } });
+  config.festivals = localFestivals;
+  const coreOptionsLog = [];
+  const { orch, calls } = createOrchestrator({
+    config,
+    events: buildEvents(),
+    coreOptionsLog,
+    adapterOptions: {
+      refreshFestivals: async () => ({ festivals: remoteFestivals, counts: { remote: 2, localOnly: 0 } })
+    }
+  });
+
+  await orch.run();
+
+  assert.deepEqual(coreOptionsLog[0].festivals, localFestivals,
+    'config.festivals reaches the SharedCore constructor');
+  assert.equal(calls.refreshRemoteFestivals.length, 1, 'exactly one festivals refresh per run');
+  assert.deepEqual(calls.refreshRemoteFestivals[0].localFestivals, localFestivals,
+    'the injected local list is offered as the fallback');
+  assert.deepEqual(coreOptionsLog[0].festivalsAtProcessEvents, remoteFestivals,
+    'the refreshed dataset is what festival matching actually sees');
+});
+
+test('run() tolerates an adapter without refreshRemoteFestivals and a failing refresh keeps local festivals', async () => {
+  const localFestivals = [{ key: 'spooky-bear', name: 'Spooky Bear' }];
+
+  const config = buildConfig({ config: { dryRun: true } });
+  config.festivals = localFestivals;
+  const coreOptionsLog = [];
+  const { orch } = createOrchestrator({ config, events: buildEvents(), coreOptionsLog });
+  await orch.run();
+  assert.deepEqual(coreOptionsLog[0].festivalsAtProcessEvents, localFestivals,
+    'no refresh method → the injected list flows through unchanged');
+
+  const failingConfig = buildConfig({ config: { dryRun: true } });
+  failingConfig.festivals = localFestivals;
+  const failingLog = [];
+  const { orch: failingOrch } = createOrchestrator({
+    config: failingConfig,
+    events: buildEvents(),
+    coreOptionsLog: failingLog,
+    adapterOptions: {
+      refreshFestivals: async () => { throw new Error('offline'); }
+    }
+  });
+  await failingOrch.run();
+  assert.deepEqual(failingLog[0].festivalsAtProcessEvents, localFestivals,
+    'a failing refresh is fail-soft — local festivals stand');
 });

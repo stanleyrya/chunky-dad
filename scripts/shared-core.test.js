@@ -19258,3 +19258,342 @@ test('sanity: flyer-time-conflict never fires without a well-formed stamp', () =
   assert.deepEqual(sanityCodes(core, { ...base, _flyerTimeConflict: { pageTime: '10:00' } }), [],
     'a stamp missing the flyer reading is malformed — fail closed');
 });
+
+// ===========================================================================
+// Curated festival awareness (data/festivals.json) — the curated dataset is
+// the authority; the scraper contributes parties, never umbrellas.
+// Real-data fixtures from run 20260815-083809 (BeefDip planned-events page).
+// ===========================================================================
+
+const FESTIVAL_CITIES = {
+  pv: { timezone: 'America/Mexico_City', patterns: ['puerto vallarta', 'pv'] },
+  ptown: { timezone: 'America/New_York', patterns: ['provincetown', 'ptown'] },
+  dallas: { timezone: 'America/Chicago', patterns: ['dallas'] },
+  sf: { timezone: 'America/Los_Angeles', patterns: ['san francisco', 'sf'] }
+};
+
+// Verbatim curated entries (subset of data/festivals.json); the last one has
+// no nextDates on purpose — it must never match (fail closed).
+const CURATED_FESTIVALS = [
+  {
+    key: 'beefdip-bear-week',
+    name: 'BeefDip Bear Week',
+    category: 'bear-run',
+    cityKey: 'pv',
+    recurring: 'annual',
+    website: 'https://beefdip.com/planned-events/',
+    nextDates: { start: '2027-01-23', end: '2027-01-31' }
+  },
+  {
+    key: 'spooky-bear',
+    name: 'Spooky Bear',
+    category: 'bear-run',
+    cityKey: 'ptown',
+    recurring: 'annual',
+    website: 'https://www.ursamen.org/spookybear',
+    nextDates: { start: '2026-10-29', end: '2026-11-01' }
+  },
+  {
+    key: 'amsterdam-bear-pride',
+    name: 'Amsterdam Bear Pride',
+    category: 'pride',
+    cityKey: 'amsterdam',
+    recurring: 'annual',
+    website: 'https://amsterdambearpride.com/en/'
+  }
+];
+
+function createFestivalCore(festivals = CURATED_FESTIVALS) {
+  return new SharedCore(FESTIVAL_CITIES, { eventSchema: EventSchema, festivals });
+}
+
+function buildFestivalPrepAdapter(records = []) {
+  const calls = [];
+  return {
+    calls,
+    getExistingEvents: async (event) => {
+      calls.push({ title: event.title, city: event.city });
+      return records;
+    }
+  };
+}
+
+// Run 20260815-083809: the zero-duration Jan 23 impostor ("BeefDip Bear
+// Week", startDate === endDate, action new) scraped off the planned-events
+// page — the AI split "BeefDip Bear Week 2026 / Jan 23 – 31" into 2027.
+function buildBeefdipUmbrellaEvent(overrides = {}) {
+  return {
+    title: 'BeefDip Bear Week',
+    startDate: '2027-01-23T06:00:00.000Z',
+    endDate: '2027-01-23T06:00:00.000Z',
+    city: 'pv',
+    timezone: 'America/Mexico_City',
+    source: 'ai-web',
+    isBearEvent: true,
+    _venueSitePageHost: 'beefdip.com',
+    _sourcePageUrl: 'https://beefdip.com/planned-events/',
+    _parserConfig: { name: 'BeefDip' },
+    ...overrides
+  };
+}
+
+// Run 20260815-083809: "🍸 Cocktail Party" from the same page, city unknown.
+function buildCocktailPartyEvent(overrides = {}) {
+  return {
+    title: '🍸 Cocktail Party',
+    startDate: '2027-01-24T00:00:00.000Z',
+    endDate: '2027-01-24T00:00:00.000Z',
+    city: 'unknown',
+    source: 'ai-web',
+    isBearEvent: true,
+    _venueSitePageHost: 'beefdip.com',
+    _sourcePageUrl: 'https://beefdip.com/planned-events/',
+    _parserConfig: { name: 'BeefDip' },
+    ...overrides
+  };
+}
+
+test('festival umbrella: run 20260815-083809 BeefDip impostor is withheld with the festival reason', async () => {
+  const core = createFestivalCore();
+  const adapter = buildFestivalPrepAdapter();
+  const analyzed = await core.prepareEventsForCalendar([buildBeefdipUmbrellaEvent()], adapter, {});
+
+  assert.equal(analyzed.length, 1);
+  const umbrella = analyzed[0];
+  assert.ok(umbrella._festivalMatch, 'the umbrella is stamped with the curated match');
+  assert.equal(umbrella._festivalMatch.key, 'beefdip-bear-week');
+  assert.equal(umbrella._festivalMatch.reason, 'matches curated festival: BeefDip Bear Week');
+  assert.equal(SharedCore.isCuratedFestivalUmbrella(umbrella), true);
+  assert.deepEqual(SharedCore.filterEventsForExecution(analyzed), [],
+    'a curated-festival umbrella never reaches a calendar write');
+  assert.equal(SharedCore.describeExecutionDisposition(umbrella),
+    'WITHHELD (matches curated festival — curated dataset renders it)');
+  assert.equal(umbrella._action, 'new', 'the withhold is a gate, not an action rewrite');
+});
+
+test('festival umbrella: a scraped Spooky Bear umbrella from ursamen.org gets the same treatment', async () => {
+  // ursamen.org is curated (key spooky-bear); the parser was disabled in run
+  // 20260815-083809, so this models the record it would produce when enabled.
+  const core = createFestivalCore();
+  const adapter = buildFestivalPrepAdapter();
+  const analyzed = await core.prepareEventsForCalendar([{
+    title: 'Spooky Bear',
+    startDate: '2026-10-29T16:00:00.000Z',
+    endDate: '2026-11-01T20:00:00.000Z',
+    city: 'unknown',
+    source: 'ai-web',
+    _venueSitePageHost: 'www.ursamen.org',
+    _sourcePageUrl: 'https://www.ursamen.org/spookybear',
+    _parserConfig: { name: 'Spooky Bear' }
+  }], adapter, {});
+
+  const umbrella = analyzed[0];
+  assert.equal(umbrella._festivalMatch && umbrella._festivalMatch.key, 'spooky-bear');
+  assert.deepEqual(SharedCore.filterEventsForExecution(analyzed), [],
+    'with the umbrella withheld, no scraped same-name event reaches the ptown calendar — the website name-collision guard finds no collision and the curated banner renders');
+});
+
+test('festival context: run 20260815-083809 "🍸 Cocktail Party" inherits city pv and timezone (blanks only)', async () => {
+  const core = createFestivalCore();
+  const adapter = buildFestivalPrepAdapter();
+  const analyzed = await core.prepareEventsForCalendar([buildCocktailPartyEvent()], adapter, {});
+
+  const party = analyzed[0];
+  assert.equal(party.city, 'pv', 'unknown city is filled from the curated festival');
+  assert.equal(party.timezone, 'America/Mexico_City', 'timezone follows the inherited cityKey');
+  assert.equal(party._citySource, 'curated-festival');
+  assert.ok(party._festivalContext, 'the sub-event carries the festival context stamp');
+  assert.equal(party._festivalContext.key, 'beefdip-bear-week');
+  assert.equal(party._festivalContext.inheritedCity, true);
+  assert.equal(adapter.calls[0].city, 'pv',
+    'inheritance runs BEFORE the calendar lookup so the search hits the pv calendar');
+  assert.ok(!party._festivalMatch, 'a sub-party is NOT an umbrella');
+  assert.ok(!(party._sanityFlags || []).some(flag => flag.code === 'festival-window-violation'),
+    'Jan 24 2027 sits inside the curated window — no violation');
+  assert.equal(SharedCore.filterEventsForExecution(analyzed).length, 1,
+    'sub-parties are normal events on the normal write path');
+});
+
+test('festival context: a year-split record resolving outside the curated window gets the report-only flag', async () => {
+  // Run 20260815-083809 evidence: the FOAM POOL PARTY record's own OCR reads
+  // "MONDAY JANUARY 26" with source image 2026-01-26, but extraction produced
+  // 2027-01-25 — this is the 2026-dated twin of that year-split.
+  const core = createFestivalCore();
+  const adapter = buildFestivalPrepAdapter();
+  const analyzed = await core.prepareEventsForCalendar([{
+    title: 'Foam Pool Party',
+    startDate: '2026-01-26T18:00:00.000Z',
+    endDate: '2026-01-27T00:00:00.000Z',
+    city: 'unknown',
+    source: 'ai-web',
+    _venueSitePageHost: 'beefdip.com',
+    _sourcePageUrl: 'https://beefdip.com/planned-events/',
+    _parserConfig: { name: 'BeefDip' }
+  }], adapter, {});
+
+  const twin = analyzed[0];
+  const flag = (twin._sanityFlags || []).find(entry => entry.code === 'festival-window-violation');
+  assert.ok(flag, 'dates a year off the curated window are flagged');
+  assert.match(flag.detail, /BeefDip Bear Week/);
+  assert.equal(twin._action, 'new', 'the flag never changes the action');
+});
+
+test('festival context: the window flag is report-only — a future out-of-window record still executes', async () => {
+  const core = createFestivalCore();
+  const adapter = buildFestivalPrepAdapter();
+  const analyzed = await core.prepareEventsForCalendar([{
+    title: 'Warm-Up Party',
+    startDate: '2026-11-20T02:00:00.000Z',
+    endDate: '2026-11-20T06:00:00.000Z',
+    city: 'unknown',
+    source: 'ai-web',
+    _venueSitePageHost: 'beefdip.com',
+    _sourcePageUrl: 'https://beefdip.com/planned-events/',
+    _parserConfig: { name: 'BeefDip' }
+  }], adapter, {});
+
+  assert.ok((analyzed[0]._sanityFlags || []).some(flag => flag.code === 'festival-window-violation'));
+  assert.equal(SharedCore.filterEventsForExecution(analyzed).length, 1,
+    'flag, do not drop: the write is NOT withheld by the window flag');
+});
+
+test('festival context: an explicitly extracted different city is never overwritten', async () => {
+  const core = createFestivalCore();
+  const adapter = buildFestivalPrepAdapter();
+  const analyzed = await core.prepareEventsForCalendar([buildCocktailPartyEvent({
+    title: 'Roadtrip Party',
+    city: 'sf',
+    timezone: 'America/Los_Angeles'
+  })], adapter, {});
+
+  const party = analyzed[0];
+  assert.equal(party.city, 'sf', 'explicit city stands');
+  assert.equal(party.timezone, 'America/Los_Angeles');
+  assert.ok(party._festivalContext.cityDisagreement, 'the disagreement is reported, not resolved');
+  assert.equal(party._festivalContext.cityDisagreement.festivalCity, 'pv');
+  assert.equal(party._festivalContext.inheritedCity, undefined);
+});
+
+test('festival matching fails closed: no date overlap, clashing city, or missing nextDates never match', () => {
+  const core = createFestivalCore();
+
+  // Same name + city, dates nowhere near the window → no match.
+  assert.equal(core.findCuratedFestivalMatch(buildBeefdipUmbrellaEvent({
+    startDate: '2026-06-15T06:00:00.000Z',
+    endDate: '2026-06-16T06:00:00.000Z'
+  })), null, 'no date overlap → not a match');
+
+  // Same name + dates, explicit clashing city → no match.
+  assert.equal(core.findCuratedFestivalMatch(buildBeefdipUmbrellaEvent({
+    city: 'dallas'
+  })), null, 'a clashing explicit city → not a match');
+
+  // Curated entry without nextDates can never umbrella-match.
+  assert.equal(core.findCuratedFestivalMatch({
+    title: 'Amsterdam Bear Pride',
+    startDate: '2026-06-18T12:00:00.000Z',
+    endDate: '2026-06-21T12:00:00.000Z',
+    city: 'unknown'
+  }), null, 'missing nextDates → fail closed');
+
+  // No event dates at all → fail closed.
+  assert.equal(core.findCuratedFestivalMatch(buildBeefdipUmbrellaEvent({
+    startDate: null,
+    endDate: null
+  })), null, 'a dateless record → not a match');
+
+  // The ±7d grace admits an off-by-a-few-days umbrella.
+  const grace = core.findCuratedFestivalMatch(buildBeefdipUmbrellaEvent({
+    startDate: '2027-01-20T06:00:00.000Z',
+    endDate: '2027-01-21T06:00:00.000Z'
+  }));
+  assert.equal(grace && grace.key, 'beefdip-bear-week', 'within the ±7d grace → match');
+});
+
+test('festival drift: ONE report-only line when a scraped umbrella disagrees with curated nextDates', async () => {
+  const core = createFestivalCore();
+  const adapter = buildFestivalPrepAdapter();
+  const originalLog = console.log;
+  const logLines = [];
+  console.log = (message) => { logLines.push(String(message)); };
+  try {
+    await core.prepareEventsForCalendar([
+      buildBeefdipUmbrellaEvent({
+        startDate: '2027-01-22T06:00:00.000Z',
+        endDate: '2027-01-30T06:00:00.000Z'
+      }),
+      buildBeefdipUmbrellaEvent({
+        title: 'BeefDip Bear Week 2027',
+        startDate: '2027-01-22T06:00:00.000Z',
+        endDate: '2027-01-30T06:00:00.000Z'
+      })
+    ], adapter, {});
+  } finally {
+    console.log = originalLog;
+  }
+  const driftLines = logLines.filter(line => line.startsWith('📆 FESTIVAL:'));
+  assert.equal(driftLines.length, 1, 'one drift line per festival per pass, not per record');
+  assert.equal(driftLines[0],
+    '📆 FESTIVAL: scraped BeefDip Bear Week dates 2027-01-22 – 2027-01-30 differ from curated 2027-01-23 – 2027-01-31 — curated wins; update data/festivals.json from the official source if real');
+});
+
+test('festival negative: a non-festival multi-day event is untouched', async () => {
+  const core = createFestivalCore();
+  const adapter = buildFestivalPrepAdapter();
+  const analyzed = await core.prepareEventsForCalendar([{
+    title: 'Hotel Takeover Weekend',
+    startDate: '2026-09-18T20:00:00.000Z',
+    endDate: '2026-09-20T20:00:00.000Z',
+    city: 'dallas',
+    timezone: 'America/Chicago',
+    source: 'ai-web',
+    _venueSitePageHost: 'hotelbears.example',
+    _sourcePageUrl: 'https://hotelbears.example/takeover',
+    _parserConfig: { name: 'Hotel Bears' }
+  }], adapter, {});
+
+  const event = analyzed[0];
+  assert.ok(!event._festivalMatch, 'no umbrella stamp');
+  assert.ok(!event._festivalContext, 'no inherited context');
+  assert.equal(event.city, 'dallas');
+  assert.ok(!(event._sanityFlags || []).some(flag => flag.code === 'festival-window-violation'));
+  assert.equal(SharedCore.filterEventsForExecution(analyzed).length, 1, 'normal write path');
+});
+
+test('festival context extends to siblings of an umbrella scraped from a NON-curated host (aggregator)', async () => {
+  // The source host differs from the curated website — the umbrella match
+  // itself (name+city+dates) teaches the run that this host is festival
+  // context, and in-window siblings from the same host inherit it.
+  const core = createFestivalCore();
+  const adapter = buildFestivalPrepAdapter();
+  const analyzed = await core.prepareEventsForCalendar([
+    buildBeefdipUmbrellaEvent({
+      _venueSitePageHost: 'gaytravel4u.example',
+      _sourcePageUrl: 'https://gaytravel4u.example/event/beefdip/',
+      city: 'unknown'
+    }),
+    buildCocktailPartyEvent({
+      title: 'Aggregator Pool Party',
+      _venueSitePageHost: 'gaytravel4u.example',
+      _sourcePageUrl: 'https://gaytravel4u.example/event/beefdip/'
+    })
+  ], adapter, {});
+
+  assert.ok(analyzed[0]._festivalMatch, 'the umbrella matches by identity regardless of host');
+  assert.equal(analyzed[1].city, 'pv', 'the sibling inherits the city via the umbrella-taught host');
+  assert.equal(analyzed[1]._festivalContext.key, 'beefdip-bear-week');
+});
+
+test('festival stamps are analysis-time: replay strips _festivalMatch/_festivalContext for fresh re-analysis', () => {
+  const stampKeys = SharedCore.getCalendarAnalysisStampKeys();
+  assert.ok(stampKeys.includes('_festivalMatch'));
+  assert.ok(stampKeys.includes('_festivalContext'));
+});
+
+test('festival data is injected, never loaded: a core without festivals behaves exactly as before', async () => {
+  const core = new SharedCore(FESTIVAL_CITIES, { eventSchema: EventSchema });
+  const adapter = buildFestivalPrepAdapter();
+  const analyzed = await core.prepareEventsForCalendar([buildBeefdipUmbrellaEvent()], adapter, {});
+  assert.ok(!analyzed[0]._festivalMatch, 'no injected festivals → no matching, no withhold');
+  assert.equal(SharedCore.filterEventsForExecution(analyzed).length, 1);
+});
