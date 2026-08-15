@@ -11463,6 +11463,19 @@ class ScriptableAdapter {
             sanityFlags.map((flag) => flag.code).join(", "),
           )}</span>`
         : "";
+    // Same-venue overlap chip (report-only, stamped by the ⚔️ OVERLAP pass in
+    // shared-core): another DIFFERENT event claims overlapping time at this
+    // venue — the venue's own data may double-book the slot (ONYX vs SUNDAY
+    // BEER BUST). Surfaced only; the owner resolves it.
+    const venueOverlaps = Array.isArray(event && event._venueOverlap)
+      ? event._venueOverlap.filter((entry) => entry && entry.withTitle)
+      : [];
+    const venueOverlapBadge =
+      venueOverlaps.length > 0
+        ? `<span class="action-badge badge-warning venue-overlap-badge">⚔️ overlaps: ${this.escapeHtml(
+            venueOverlaps.map((entry) => entry.withTitle).join(", "),
+          )}</span>`
+        : "";
     // Additive fourth badge, same pattern again: a slot-host source writes a
     // single-occurrence override of a series it does not own. Neither NEW nor
     // a series change — say which night it replaces so the action badge above
@@ -11920,7 +11933,7 @@ class ScriptableAdapter {
     let html = `
         <div class="event-card${isDroppedCard ? " bear-dropped-card" : ""}">
             <div class="event-headline">
-                <div class="event-headline-badges">${actionBadge}${writeBadge}${recurringBadge}${seriesMatchBadge}${sanityBadge}${overrideBadge}${seriesProposalBadge}${headlineReasonChip}<span class="calendar-chip">📱 ${this.escapeHtml(calendarName)}</span></div>
+                <div class="event-headline-badges">${actionBadge}${writeBadge}${recurringBadge}${seriesMatchBadge}${sanityBadge}${venueOverlapBadge}${overrideBadge}${seriesProposalBadge}${headlineReasonChip}<span class="calendar-chip">📱 ${this.escapeHtml(calendarName)}</span></div>
                 <div class="event-headline-main">
                     ${thumbHtml}
                     <div class="event-headline-body">

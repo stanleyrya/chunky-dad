@@ -10378,3 +10378,27 @@ test('round5: bridge handler ids, page handlers and the Images toggle survive th
   const covered = classes.filter((cls) => new RegExp(`class="[^"]*\\b${cls}\\b`).test(html));
   assert.ok(covered.length > 0, `selector "${fn[1]}" matches no rendered class`);
 });
+
+test('generateEventCard renders the venue-overlap chip only when the report-only flag is stamped', () => {
+  const adapter = buildAdapter();
+  const flagged = adapter.generateEventCard({
+    title: 'SUNDAY BEER BUST',
+    _action: 'new',
+    startDate: '2026-09-13T21:00:00.000Z',
+    bar: 'Eagle LA',
+    _venueOverlap: [
+      { withTitle: 'ONYX <2nd Sunday>', date: '2026-09-13', venue: 'Eagle LA', window: '14:00–20:00 (assumed end)', otherWindow: '16:00–20:00', source: 'run' }
+    ]
+  });
+  assert.ok(flagged.includes('venue-overlap-badge'), 'overlap chip rendered');
+  assert.ok(flagged.includes('⚔️ overlaps: ONYX &lt;2nd Sunday&gt;'), 'colliding title named and escaped');
+  assert.ok(!flagged.includes('ONYX <2nd Sunday>'), 'no raw markup from the overlap payload');
+
+  const plain = adapter.generateEventCard({
+    title: 'SUNDAY BEER BUST',
+    _action: 'new',
+    startDate: '2026-09-13T21:00:00.000Z',
+    bar: 'Eagle LA'
+  });
+  assert.ok(!plain.includes('venue-overlap-badge'), 'no chip without the stamp');
+});
