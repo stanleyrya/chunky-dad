@@ -173,6 +173,12 @@
     "accent": "#ec6a66"
   },
   {
+    "slug": "coach-after-dark-sf-20074ac5",
+    "paletteSource": "flyer",
+    "palette": "#ffffff:57:0 #ab6a5d:10:9 #e38b7c:10:11 #e81c33:7:23 #e0b43a:2:14",
+    "accent": "#e81c33"
+  },
+  {
     "slug": "father-figure-22ce3590",
     "url": "https://www.chunk-party.com/event-details/chunk-sf-presents-father-figure",
     "faviconBg": "#f6f4f5",

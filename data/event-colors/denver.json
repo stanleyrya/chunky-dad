@@ -10,6 +10,16 @@
     "accent": "#4840c7"
   },
   {
+    "slug": "bearracuda-denver-17-32a0e598",
+    "url": "https://bearracuda.com/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "favicon",
+    "palette": "#ff3c00:72:24 #fffefe:27:0 #ff9f81:1:12",
+    "accent": "#ff3c00"
+  },
+  {
     "slug": "denver-39553322",
     "url": "https://bearracuda.com/events/denverjockstrap/",
     "faviconBg": "#ff1901",
