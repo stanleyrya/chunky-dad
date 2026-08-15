@@ -10596,6 +10596,7 @@ class SharedCore {
             let finalGmaps = calendarHasGmaps
                 ? calendarObject.gmaps
                 : (scraperHasGmaps ? scraperObject.gmaps : '');
+            let regeneratedFromMergedFacts = false;
             if ((calendarHasGmaps || scraperHasGmaps) && (finalBar || finalAddressForGmaps)) {
                 const regenerated = SharedCore.generateGoogleMapsUrl({
                     coordinates: null,
@@ -10604,7 +10605,10 @@ class SharedCore {
                     venueName: finalBar || null,
                     cityName: null
                 });
-                if (regenerated) finalGmaps = regenerated;
+                if (regenerated) {
+                    finalGmaps = regenerated;
+                    regeneratedFromMergedFacts = true;
+                }
             }
             if (finalGmaps !== '' || allFields.has('gmaps')) {
                 mergedObject.gmaps = finalGmaps;
@@ -10614,6 +10618,22 @@ class SharedCore {
             const calendarGmaps = calendarHasGmaps ? String(calendarObject.gmaps).trim() : '';
             if (String(finalGmaps || '').trim() !== calendarGmaps) {
                 clobberedFields.push('gmaps');
+                // Display truth: this regeneration changed the saved value
+                // WITHOUT an arbitration conflict, so nothing else records it —
+                // run 20260815-083809 ("TWISTED BEAR San Francisco Debut")
+                // rendered exactly this rewrite as "AI-arbitrated … KEPT
+                // EXISTING (no change)" because the decisions channel was
+                // empty. Record it where the merge table reads.
+                aiDecisionRecords.push({
+                    field: 'gmaps',
+                    existingValue: calendarObject.gmaps,
+                    newValue: scraperObject.gmaps,
+                    chosenValue: finalGmaps,
+                    reason: regeneratedFromMergedFacts
+                        ? 'gmaps rebuilt from the final merged bar + address (derived field — replaces the stored link)'
+                        : 'scraped gmaps adopted (calendar had none)',
+                    source: 'deterministic'
+                });
             }
         }
 
@@ -13956,6 +13976,39 @@ class SharedCore {
         }) || '';
     }
 
+    // Post-merge deterministic rewrites (the final-build gmaps rebuild, the
+    // link folds, the description sanitizer) mutate the FINAL event AFTER
+    // createFinalEventObject stamped _mergeDecisions — so the merge table
+    // showed their changes with nobody's name on them (run 20260815-083809,
+    // "TWISTED BEAR San Francisco Debut": the gmaps row claimed
+    // "AI-arbitrated … KEPT EXISTING (no change)" for a change the rebuild
+    // made). Every such rewrite records itself HERE, in the same channel the
+    // table reads, as source 'deterministic' with the actual reason. Merge
+    // results only (a NEW event has no calendar side to diff against), and a
+    // rewrite that lands back on the calendar's own value records nothing —
+    // there is no change to attribute. Records APPEND: a later rewrite of the
+    // same field supersedes earlier records by position (readers take the
+    // last), keeping the full decision history for the provenance view.
+    recordDeterministicFieldRewrite(analyzedEvent, field, reason) {
+        if (!analyzedEvent || typeof analyzedEvent !== 'object') return;
+        const original = analyzedEvent._original;
+        if (!original || !original.calendar || typeof original.calendar !== 'object') return;
+        const calendarValue = original.calendar[field];
+        const chosenValue = analyzedEvent[field];
+        if (this.mergeValuesEqualForTracking(chosenValue, calendarValue)) return;
+        const bothEmpty = this.isEmptyArbitrationValue(chosenValue) && this.isEmptyArbitrationValue(calendarValue);
+        if (bothEmpty) return;
+        if (!Array.isArray(analyzedEvent._mergeDecisions)) analyzedEvent._mergeDecisions = [];
+        analyzedEvent._mergeDecisions.push({
+            field,
+            existingValue: calendarValue,
+            newValue: original.scraper && typeof original.scraper === 'object' ? original.scraper[field] : undefined,
+            chosenValue,
+            reason,
+            source: 'deterministic'
+        });
+    }
+
     async buildAnalyzedCalendarEvent(event, analysis, calendarAdapter, config = {}) {
         // (Block wrapper keeps the extracted loop body byte-identical to its
         // original prepareEventsForCalendar form — minimal, reviewable diff.)
@@ -14126,6 +14179,8 @@ class SharedCore {
                     analyzedEvent.description = sanitizedDescription;
                     notesNeedRebuild = true;
                     console.log(`🧼 DESCRIPTION: stripped formatting markup for "${analyzedEvent.title || 'event'}"`);
+                    this.recordDeterministicFieldRewrite(analyzedEvent, 'description',
+                        'description formatting sanitized at final build (markup stripped)');
                 }
             }
 
@@ -14138,6 +14193,10 @@ class SharedCore {
                     analyzedEvent, analyzedEvent.title || 'event');
                 if (purgedLinkFields.length > 0) {
                     notesNeedRebuild = true;
+                    for (const purgedField of purgedLinkFields) {
+                        this.recordDeterministicFieldRewrite(analyzedEvent, purgedField,
+                            'cleared at final build — an asset file/API endpoint is never an identity or ticket link');
+                    }
                 }
             }
 
@@ -14182,6 +14241,12 @@ class SharedCore {
                         }
                         notesNeedRebuild = true;
                         console.log(`🔗 LINKS: replaced platform website ${platformWebsite} with ${curatedWebsite}${existingTicketUrl ? '' : ' (platform link moved to ticketUrl)'} — curated identity of "${promoterEntry.name}" for "${analyzedEvent.title || 'event'}"`);
+                        this.recordDeterministicFieldRewrite(analyzedEvent, 'website',
+                            'platform website replaced by the promoter\'s curated identity link at final build');
+                        this.recordDeterministicFieldRewrite(analyzedEvent, 'url',
+                            'platform website replaced by the promoter\'s curated identity link at final build');
+                        this.recordDeterministicFieldRewrite(analyzedEvent, 'ticketUrl',
+                            'platform link parked in empty ticketUrl (curated identity adopted for website)');
                     } else if (!curatedWebsite && this.isPlatformOrganizerHomeUrl(platformWebsite)) {
                         // A branded subdomain with a bare path is the
                         // organizer's HOME on that platform, not a ticket
@@ -14233,6 +14298,12 @@ class SharedCore {
                             ? `existing ticketUrl ${existingTicketUrl} kept`
                             : 'moved to ticketUrl';
                         console.log(`🔗 LINKS: cleared platform website ${platformWebsite} — a ticketing/social link is never the identity link (${parked}, website/url left empty) for "${analyzedEvent.title || 'event'}"`);
+                        this.recordDeterministicFieldRewrite(analyzedEvent, 'website',
+                            'platform website cleared at final build — a ticketing/social link is never the identity link');
+                        this.recordDeterministicFieldRewrite(analyzedEvent, 'url',
+                            'platform website cleared at final build — a ticketing/social link is never the identity link');
+                        this.recordDeterministicFieldRewrite(analyzedEvent, 'ticketUrl',
+                            'platform link parked in empty ticketUrl (website/url cleared)');
                     }
                 }
             }
@@ -14278,6 +14349,12 @@ class SharedCore {
                         delete analyzedEvent.ticketUrl;
                         notesNeedRebuild = true;
                         console.log(`🔗 LINKS: "${analyzedEvent.title || 'event'}" ticketUrl ${ticketUrl} is a page on the venue's own site, not a ticket vendor — promoted to website/url${canonicalWebsite ? ` over ${canonicalWebsite}` : ''}`);
+                        this.recordDeterministicFieldRewrite(analyzedEvent, 'website',
+                            'venue-site event page promoted from ticketUrl to website/url at final build');
+                        this.recordDeterministicFieldRewrite(analyzedEvent, 'url',
+                            'venue-site event page promoted from ticketUrl to website/url at final build');
+                        this.recordDeterministicFieldRewrite(analyzedEvent, 'ticketUrl',
+                            'moved to website/url — a page on the venue\'s own site is not a ticket vendor link');
                     } else if (canonicalWebsite && this.isBareRootBuryingSameSiteEventPage(ticketUrl, canonicalWebsite)) {
                         // The mirror shape: the ticketUrl is the same site's
                         // bare front door while website already names the
@@ -14287,6 +14364,8 @@ class SharedCore {
                         delete analyzedEvent.ticketUrl;
                         notesNeedRebuild = true;
                         console.log(`🔗 LINKS: dropped ticketUrl ${ticketUrl} for "${analyzedEvent.title || 'event'}" — it is the same site's homepage, not a ticket link`);
+                        this.recordDeterministicFieldRewrite(analyzedEvent, 'ticketUrl',
+                            'ticketUrl dropped at final build — the same site\'s homepage, not a ticket link');
                     }
                 }
             }
@@ -14306,6 +14385,8 @@ class SharedCore {
                     delete analyzedEvent.ticketUrl;
                     notesNeedRebuild = true;
                     console.log(`🔗 LINKS: dropped ticketUrl duplicating website for "${analyzedEvent.title || 'event'}"`);
+                    this.recordDeterministicFieldRewrite(analyzedEvent, 'ticketUrl',
+                        'ticketUrl dropped at final build — byte-identical to the canonical website');
                 }
             }
 
@@ -14338,6 +14419,8 @@ class SharedCore {
                         analyzedEvent.gmaps = curatedGmaps;
                         notesNeedRebuild = true;
                         console.log(`🗺️ GMAPS: adopted curated googleMaps link for "${analyzedEvent.title || 'event'}"`);
+                        this.recordDeterministicFieldRewrite(analyzedEvent, 'gmaps',
+                            'gmaps rebuilt: curated bar googleMaps link adopted (curated beats derived)');
                     } else if (!curatedGmaps && finalCoordinates && !existingGmaps.includes('place_id')) {
                         // Built-link precedence (owner ask 2026-08-14):
                         //   1. place_id — curated googleMaps adoption above /
@@ -14359,6 +14442,8 @@ class SharedCore {
                                 analyzedEvent.gmaps = placeQueryGmaps;
                                 notesNeedRebuild = true;
                                 console.log(`🗺️ GMAPS: rebuilt link from corroborated bar + address for "${analyzedEvent.title || 'event'}"`);
+                                this.recordDeterministicFieldRewrite(analyzedEvent, 'gmaps',
+                                    'gmaps rebuilt: corroborated bar+address query replaces the previous link');
                             }
                         } else {
                             const coordinateGmaps = SharedCore.generateGoogleMapsUrl({
@@ -14372,6 +14457,8 @@ class SharedCore {
                                 analyzedEvent.gmaps = coordinateGmaps;
                                 notesNeedRebuild = true;
                                 console.log(`🗺️ GMAPS: rebuilt link from verified coordinates for "${analyzedEvent.title || 'event'}"`);
+                                this.recordDeterministicFieldRewrite(analyzedEvent, 'gmaps',
+                                    'gmaps rebuilt: verified final coordinates replace the previous link');
                             }
                         }
                     }

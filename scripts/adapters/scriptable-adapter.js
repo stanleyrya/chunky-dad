@@ -14375,12 +14375,26 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       // record, the row says so in plain words — source AND outcome — instead
       // of leaving the reader to reverse-engineer it from two value cells and
       // a bare strategy name. The strategy-heuristic chain below stays as the
-      // fallback for fields (and older saved runs) with no record.
+      // fallback for fields (and older saved runs) with no record. LAST
+      // record wins: post-merge deterministic rewrites append AFTER the
+      // arbitration records, and the row must describe the final state.
       const decisionRecord = Array.isArray(event._mergeDecisions)
-        ? event._mergeDecisions.find(
-            (record) => record && record.field === field,
+        ? event._mergeDecisions.reduce(
+            (latest, record) =>
+              record && record.field === field ? record : latest,
+            null,
           )
         : null;
+
+      // Value truth FIRST: did the merge leave this field different from
+      // what the calendar already had? Computed before any outcome branch so
+      // a row can never label itself "no change" while counting as changed —
+      // run 20260815-083809 ("TWISTED BEAR San Francisco Debut") rendered a
+      // rebuilt gmaps link as "AI-arbitrated … KEPT EXISTING (no change)" on
+      // a row whose value genuinely changed. Same predicate as the chip and
+      // the compressed view (mergeRowIsNoop).
+      const rowIsNoop = this.mergeRowIsNoop(finalValue, existingValue);
+      const arbitration = event._original?.aiArbitration;
 
       // Determine flow direction and result. The WHY of a recorded decision
       // goes into its own reason cell (the shared row format's fourth
@@ -14390,13 +14404,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       let reasonCellHtml = "";
 
       if (decisionRecord) {
-        const keptExisting = mergeValuesLookIdentical(
-          decisionRecord.chosenValue,
-          existingValue,
-        );
+        // Outcome is judged by the FINAL value (what the calendar write
+        // saves), not the record's chosenValue: it must agree with the
+        // changed/no-op classification above even against a stale record.
+        const keptExisting = rowIsNoop;
         const tookNew =
-          !keptExisting &&
-          mergeValuesLookIdentical(decisionRecord.chosenValue, newValue);
+          !keptExisting && mergeValuesLookIdentical(finalValue, newValue);
         const outcome = keptExisting
           ? "kept existing"
           : tookNew
@@ -14409,7 +14422,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         flowIcon = keptExisting ? "←" : "→";
         if (source === "deterministic") {
           resultText = `<span style="color: #007aff;">🔒 DETERMINISTIC — ${outcome}</span>`;
-        } else if (source === "sticky") {
+        } else if (source === "sticky" && keptExisting) {
           flowIcon = "←";
           resultText = `<span style="color: #007aff;">🧊 KEPT EXISTING (calendar stickiness)</span>`;
         } else if (source === "ai") {
@@ -14429,7 +14442,6 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         resultText = '<span style="color: #999;">SAME VALUE</span>';
       } else if (strategy === "ai") {
         // AI-arbitrated strategy — show which side the AI picked (or that it fell back)
-        const arbitration = event._original?.aiArbitration;
         if (arbitration?.fallbacks?.includes(field)) {
           flowIcon = "→";
           resultText = '<span style="color: #ff9500;">AI FALLBACK (CLOBBERED)</span>';
@@ -14448,6 +14460,14 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         } else if (!newValue && !finalValue) {
           flowIcon = "→";
           resultText = '<span style="color: #ff9500;">CLEARED</span>';
+        } else if (!rowIsNoop) {
+          // The value DID change but no decision record names the writer
+          // (saved runs recorded before post-merge rewrites logged their
+          // provenance). Never claim "no change" on a changed row — and
+          // never credit the AI with a change it did not make.
+          flowIcon = "→";
+          resultText =
+            '<span style="color: #ff9500;">CHANGED (no decision recorded)</span>';
         } else {
           flowIcon = "—";
           resultText = '<span style="color: #999;">KEPT EXISTING (no change)</span>';
@@ -14541,6 +14561,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         // Merged/combined value
         flowIcon = "↔";
         resultText = '<span style="color: #32d74b;">MERGED</span>';
+      } else if (!rowIsNoop) {
+        // Same guard as the ai-strategy chain: a changed value with no
+        // recorded writer must render as a change, never as "no change".
+        flowIcon = "→";
+        resultText =
+          '<span style="color: #ff9500;">CHANGED (no decision recorded)</span>';
       } else {
         flowIcon = "—";
         resultText = '<span style="color: #999;">KEPT EXISTING (no change)</span>';
@@ -14549,12 +14575,29 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       // Plain-words strategy label: "ai" under a field name read as a
       // mystery token (owner pasted a `website ai … NO CHANGE` row as the
       // example of the confusion). Unknown strategies fall through verbatim.
-      const strategyLabel =
-        {
-          ai: "AI-arbitrated",
-          preserve: "preserve saved",
-          clobber: "fresh wins",
-        }[strategy] || strategy;
+      // "AI-arbitrated" is reserved for rows the AI actually touched: a
+      // recorded decision labels by its SOURCE (the TWISTED BEAR gmaps row
+      // wore "AI-arbitrated" over a deterministic rebuild while aiArbitration
+      // was null), and an ai-strategy field the arbitration never saw says
+      // so instead of borrowing the AI's name.
+      const aiTouchedField =
+        arbitration?.arbitrated?.includes(field) ||
+        arbitration?.fallbacks?.includes(field);
+      const strategyLabel = decisionRecord
+        ? {
+            deterministic: "deterministic",
+            sticky: "calendar stickiness",
+            ai: "AI-arbitrated",
+            fallback: "clobber fallback",
+          }[String(decisionRecord.source || "").toLowerCase()] ||
+          "recorded decision"
+        : strategy === "ai" && !aiTouchedField
+          ? "ai (not arbitrated)"
+          : {
+              ai: "AI-arbitrated",
+              preserve: "preserve saved",
+              clobber: "fresh wins",
+            }[strategy] || strategy;
 
       // Shared row format (field | value | source/outcome | reason): the
       // value cell leads with the FINAL value; when the sides disagreed, the
@@ -14581,10 +14624,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         }
       }
 
-      // No-op detection for the compressed view — the shared mergeRowIsNoop
-      // (one definition for the table view, the line view and the chip).
-      const rowIsNoop = this.mergeRowIsNoop(finalValue, existingValue);
-
+      // No-op classification for the compressed view: rowIsNoop was computed
+      // above (before the outcome branches) from the shared mergeRowIsNoop —
+      // one definition for the table view, the line view and the chip.
       rows.push({
         field,
         changed: !rowIsNoop,
