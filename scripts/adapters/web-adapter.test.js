@@ -767,6 +767,32 @@ test('bear verdict store: web adapter round-trips bear-verdicts.json under its l
 });
 
 // ---------------------------------------------------------------------------
+// Curated festival dataset (data/festivals.json) — injected like bars and
+// promoters; on Node the repo checkout IS the deploy source.
+// ---------------------------------------------------------------------------
+
+test('loadConfiguration (Node) injects config.festivals from data/festivals.json', async () => {
+  const adapter = new WebAdapter();
+  const config = await adapter.loadConfiguration();
+  assert.ok(Array.isArray(config.festivals), 'festivals is an array');
+  assert.ok(config.festivals.length > 0, 'the curated dataset is non-empty');
+  const beefdip = config.festivals.find((entry) => entry.key === 'beefdip-bear-week');
+  assert.ok(beefdip, 'the curated BeefDip entry rides along');
+  assert.equal(beefdip.cityKey, 'pv');
+  assert.ok(beefdip.nextDates && beefdip.nextDates.start, 'nextDates survive the load');
+});
+
+test('refreshRemoteFestivals (Node) is an honest pass-through of the repo dataset', async () => {
+  const adapter = new WebAdapter();
+  const local = [{ key: 'beefdip-bear-week', name: 'BeefDip Bear Week' }];
+  const result = await adapter.refreshRemoteFestivals(local);
+  assert.deepEqual(result.festivals, local, 'the repo checkout is already current — no network');
+  assert.deepEqual(result.counts, { remote: 0, localOnly: 1 });
+  const empty = await adapter.refreshRemoteFestivals(null);
+  assert.deepEqual(empty.festivals, [], 'a missing list normalizes to an empty array');
+});
+
+// ---------------------------------------------------------------------------
 // Learned dead-end store persistence (run 20260815-083809: scheduled Mac runs
 // re-crawled the same 403'd eventim deep-links every run because the Node
 // adapter's store was in-memory only — it learned dead ends and threw them

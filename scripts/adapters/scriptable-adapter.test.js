@@ -10750,6 +10750,107 @@ test('saveRun persists results.icsExports into the run JSON (and omits the key w
 });
 
 // ---------------------------------------------------------------------------
+// Curated festival dataset — refreshRemoteFestivals fetches the published
+// data/festivals.json with the same helper and 1-day TTL as bars/promoters;
+// the results UI labels _festivalMatch records via the existing chip/bucket
+// mechanisms.
+// ---------------------------------------------------------------------------
+
+const REMOTE_FESTIVALS_URL = 'https://chunky.dad/data/festivals.json';
+
+function buildRemoteFestivalsAdapter(remotePayload) {
+  const adapter = buildAdapter();
+  adapter.getPageCacheConfig = () => ({ enabled: true, ttlDays: 3 });
+  adapter.cacheReads = [];
+  adapter.cacheWrites = [];
+  adapter.fetches = [];
+  adapter.readCachedPage = async (url, config) => {
+    adapter.cacheReads.push({ url, config });
+    return null;
+  };
+  adapter.writeCachedPage = async (url, responseData, config) => {
+    adapter.cacheWrites.push({ url, config });
+  };
+  adapter.fetchData = async (url, options) => {
+    adapter.fetches.push({ url, options });
+    if (remotePayload === undefined) {
+      throw new Error(`HTTP 404 error from ${url}`);
+    }
+    return {
+      html: typeof remotePayload === 'string' ? remotePayload : JSON.stringify(remotePayload),
+      url,
+      statusCode: 200,
+      headers: {}
+    };
+  };
+  return adapter;
+}
+
+test('refreshRemoteFestivals fetches the published dataset and unions by key (remote wins)', async () => {
+  const local = [
+    { key: 'beefdip-bear-week', name: 'BeefDip STALE' },
+    { key: 'local-only-fest', name: 'Local Only Fest' }
+  ];
+  const adapter = buildRemoteFestivalsAdapter({
+    festivals: [
+      { key: 'beefdip-bear-week', name: 'BeefDip Bear Week', cityKey: 'pv' },
+      { key: 'spooky-bear', name: 'Spooky Bear', cityKey: 'ptown' }
+    ]
+  });
+
+  const result = await adapter.refreshRemoteFestivals(local);
+
+  assert.equal(adapter.fetches.length, 1);
+  assert.equal(adapter.fetches[0].url, REMOTE_FESTIVALS_URL);
+  assert.deepEqual(result.festivals.map((entry) => entry.key),
+    ['beefdip-bear-week', 'spooky-bear', 'local-only-fest'],
+    'remote entries lead; the local-only festival survives the refresh');
+  assert.equal(result.festivals[0].name, 'BeefDip Bear Week', 'remote wins for a shared key');
+  assert.deepEqual(result.counts, { remote: 2, localOnly: 1 });
+});
+
+test('refreshRemoteFestivals caches with a 1-day TTL and keeps local on any failure', async () => {
+  const adapter = buildRemoteFestivalsAdapter({ festivals: [{ key: 'spooky-bear', name: 'Spooky Bear' }] });
+  await adapter.refreshRemoteFestivals([]);
+  assert.equal(adapter.cacheReads[0].config.ttlDays, 1, 'festivals cache reads use the 1-day TTL');
+  assert.equal(adapter.cacheWrites[0].config.ttlDays, 1, 'festivals cache writes use the 1-day TTL');
+
+  const local = [{ key: 'beefdip-bear-week', name: 'BeefDip Bear Week' }];
+  const failed = await buildRemoteFestivalsAdapter(undefined).refreshRemoteFestivals(local);
+  assert.deepEqual(failed.festivals, local, '404/offline keeps the injected list');
+  assert.deepEqual(failed.counts, { remote: 0, localOnly: 1 });
+
+  const invalid = await buildRemoteFestivalsAdapter('not json at all').refreshRemoteFestivals(local);
+  assert.deepEqual(invalid.festivals, local, 'invalid JSON keeps the injected list');
+
+  const wrongShape = await buildRemoteFestivalsAdapter({ object: 'not festivals' }).refreshRemoteFestivals(local);
+  assert.deepEqual(wrongShape.festivals, local, 'a payload without a festivals array never becomes data');
+});
+
+test('results UI: a _festivalMatch record lands in the withheld pile with the festival chip and bucket', () => {
+  const adapter = buildAdapter();
+  const umbrella = {
+    title: 'BeefDip Bear Week',
+    _action: 'new',
+    _festivalMatch: {
+      key: 'beefdip-bear-week',
+      name: 'BeefDip Bear Week',
+      reason: 'matches curated festival: BeefDip Bear Week'
+    }
+  };
+
+  assert.deepEqual(adapter.classifyEventForResultsSection(umbrella), {
+    section: 'withheld',
+    reason: '🎪 matches curated festival: BeefDip Bear Week'
+  });
+  assert.equal(adapter.normalizeIntentAction(umbrella), 'festival_match',
+    'the umbrella is never counted toward New');
+  assert.equal(adapter.formatIntentActionLabel('festival_match'), 'FESTIVAL MATCH');
+  assert.equal(adapter.getWriteActionFromEvent(umbrella), 'withheld',
+    'the card never promises a CREATE the gate withholds');
+});
+
+// ---------------------------------------------------------------------------
 // Saved-run browser: iCloud placeholders must never block the screen.
 // Incident 2026-08-15: Mac-written 1.5MB run JSONs sit in the shared iCloud
 // runs/ dir as not-yet-downloaded placeholders on the phone; enumeration used
