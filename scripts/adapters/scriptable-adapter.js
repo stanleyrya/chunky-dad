@@ -445,6 +445,132 @@ class ScriptableAdapter {
     // pass. Promoted into results.errors by presentRichResults — see
     // recordCalendarWriteFailures.
     this.lastExecutionFailures = [];
+    // Bounded wait for on-demand iCloud downloads of saved-run artifacts
+    // (run JSON on open, run log for the Run Logs section). The Mac scheduler
+    // writes 1.5MB+ run files into the shared iCloud runs/ dir; on the phone
+    // those exist as not-yet-downloaded placeholders and an unbounded
+    // downloadFileFromiCloud on one mid-upload file hangs the whole screen.
+    this.savedFileDownloadTimeoutMs = Number.isFinite(
+      config.savedFileDownloadTimeoutMs,
+    )
+      ? config.savedFileDownloadTimeoutMs
+      : 30000;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Saved-run browser file access (static: display-saved-run.js calls these
+  // without constructing an adapter).
+  //
+  // THE RULE: list building NEVER downloads. Scriptable's listContents /
+  // isDirectory / isFileDownloaded are metadata-only and safe on iCloud
+  // placeholders; downloadFileFromiCloud BLOCKS until the file is local and
+  // readString on a placeholder is version-dependent (fails or force-syncs) —
+  // both are open-time operations, never enumeration-time ones. The
+  // YYYYMMDD-HHMMSS.json filename already carries the list's primary label,
+  // so a not-yet-synced run can appear in the list (marked as syncing) with
+  // zero file reads.
+  // ---------------------------------------------------------------------------
+  static listSavedRunEntries(fm, runsDir) {
+    const names = fm.listContents(runsDir) || [];
+    const entries = [];
+    const errors = [];
+    for (const rawName of names) {
+      let name = rawName;
+      let placeholder = false;
+      // Undownloaded iCloud items can surface as ".<name>.icloud" wrappers
+      // depending on OS/Scriptable version — unwrap to the logical name.
+      if (name.startsWith(".") && name.endsWith(".icloud")) {
+        name = name.slice(1, -".icloud".length);
+        placeholder = true;
+      }
+      if (!name.endsWith(".json")) continue;
+      const filePath = fm.joinPath(runsDir, rawName);
+      let isDir = false;
+      try {
+        isDir = fm.isDirectory(filePath);
+      } catch (dirError) {
+        errors.push({ file: name, error: dirError.message });
+      }
+      if (isDir) continue;
+      let downloaded = !placeholder;
+      if (downloaded) {
+        try {
+          if (typeof fm.isFileDownloaded === "function") {
+            downloaded = fm.isFileDownloaded(filePath) === true;
+          }
+        } catch (_) {
+          // Metadata probe failed — assume downloaded; open-time download is
+          // bounded anyway.
+        }
+      }
+      entries.push({
+        runId: name.replace(/\.json$/, ""),
+        timestamp: null,
+        downloaded,
+      });
+    }
+    entries.sort((a, b) => (b.runId || "").localeCompare(a.runId || ""));
+    return { entries, errors };
+  }
+
+  // Bounded, single-file iCloud download for open-time use. Resolves
+  // { ok: true } once local, { ok: false, timedOut: true } when the sync
+  // outlasts timeoutMs (the underlying download keeps running in the
+  // background — the raced promise is not cancelled, so a later reopen
+  // usually finds the file already local), or { ok: false, error } when the
+  // download itself rejects.
+  static async downloadFileBounded(fm, filePath, timeoutMs = 30000) {
+    try {
+      if (
+        typeof fm.isFileDownloaded === "function" &&
+        fm.isFileDownloaded(filePath) === true
+      ) {
+        return { ok: true, timedOut: false };
+      }
+    } catch (_) {}
+
+    const downloadPromise = Promise.resolve()
+      .then(() => fm.downloadFileFromiCloud(filePath))
+      .then(() => ({ ok: true, timedOut: false }))
+      .catch((error) => ({
+        ok: false,
+        timedOut: false,
+        error:
+          error && error.message ? String(error.message) : String(error),
+      }));
+
+    let timerHandle = null;
+    let timeoutPromise = null;
+    if (typeof setTimeout !== "undefined") {
+      timeoutPromise = new Promise((resolve) => {
+        timerHandle = setTimeout(
+          () => resolve({ ok: false, timedOut: true }),
+          timeoutMs,
+        );
+      });
+    } else if (typeof Timer !== "undefined") {
+      timeoutPromise = new Promise((resolve) => {
+        const timer = new Timer();
+        timer.timeInterval = timeoutMs;
+        timer.schedule(() => resolve({ ok: false, timedOut: true }));
+        timerHandle = timer;
+      });
+    }
+
+    // No timer facility (bare test double): degrade to an unbounded await —
+    // real Scriptable always has Timer, Node always has setTimeout.
+    const result = timeoutPromise
+      ? await Promise.race([downloadPromise, timeoutPromise])
+      : await downloadPromise;
+
+    if (!result.timedOut && timerHandle) {
+      if (typeof timerHandle.invalidate === "function") {
+        timerHandle.invalidate(); // Scriptable Timer
+      } else if (typeof clearTimeout !== "undefined") {
+        clearTimeout(timerHandle);
+      }
+    }
+    return result;
   }
 
   getScriptableRuntimeContext() {
@@ -9253,6 +9379,8 @@ class ScriptableAdapter {
         emptyMessage = `Log file for ${runLabel} is empty.`;
       } else if (logInfo.reason === "read-failed") {
         emptyMessage = `Log file for ${runLabel} could not be read.`;
+      } else if (logInfo.reason === "icloud-sync-pending") {
+        emptyMessage = `Log for ${runLabel} is still syncing from iCloud — reopen this run shortly.`;
       }
       return `
     <div class="section log-section">
@@ -16548,11 +16676,22 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     }
 
     try {
-      try {
-        await fm.downloadFileFromiCloud(logPath);
-      } catch (downloadError) {
+      // Bounded download: an undownloaded iCloud log (Mac-written) must not
+      // hang the results screen — skip the log section instead.
+      const download = await ScriptableAdapter.downloadFileBounded(
+        fm,
+        logPath,
+        this.savedFileDownloadTimeoutMs,
+      );
+      if (!download.ok && download.timedOut) {
         console.log(
-          `📱 Scriptable: Log iCloud download failed: ${downloadError.message}`,
+          `📱 Scriptable: Log for run ${runId} is still syncing from iCloud after ${this.savedFileDownloadTimeoutMs}ms — skipping log display`,
+        );
+        return { runId, exists: false, reason: "icloud-sync-pending" };
+      }
+      if (!download.ok && download.error) {
+        console.log(
+          `📱 Scriptable: Log iCloud download failed: ${download.error}`,
         );
       }
       const content = fm.readString(logPath);
