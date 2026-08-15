@@ -18985,3 +18985,241 @@ test('ICS report: counts lookahead-window instances and identity matches against
   assert.equal(finding.records[1].matchedRunEventTitle, 'ONYX');
   assert.equal(finding.records[0].matchedRunEventTitle, undefined, 'beer bust matched nothing this run');
 });
+
+// ---------------------------------------------------------------------------
+// Links-correctness wave (owner reports 2026-08-14).
+// Defect 1 (run 20260814-191343, analyzedEvents[0]): the Goldiloxx json-api
+// parser's own fetch URL (api.redeyetickets.com/api/v1/events/search?q=…)
+// shipped as the published ticketUrl — the url→website fold plus the
+// ticketing-platform parking rung promoted the machine endpoint.
+// Defect 2 (run 20260814-192304, analyzedEvents[7]): bearracuda's ticketUrl
+// kept a wp-content flyer rendition (…/pdxnew-768x640.jpg) because the #1614
+// asset gate only ran in two-sided arbitration — a poisoned CALENDAR value
+// rode every one-sided merge unchallenged.
+// Defect 3: the final-build gmaps rung downgraded merge STEP 4's
+// "Bar Name, address" query to an anonymous coordinate pin even when bar and
+// address were positively corroborated.
+// ---------------------------------------------------------------------------
+
+const REDEYE_API_SEARCH_URL = 'https://api.redeyetickets.com/api/v1/events/search?q=goldiloxx&per_page=25';
+const BEARRACUDA_ASSET_TICKET_URL = 'https://bearracuda.com/wp-content/uploads/2026/03/pdxnew-768x640.jpg';
+const BEARRACUDA_EVENT_PAGE_URL = 'https://bearracuda.com/events/portlandnye/';
+const SICKENING_TICKET_URL = 'https://sickening.events/e/bearracuda-portland-nye';
+
+test('isApiEndpointUrl: structural machine-endpoint detection, fails closed', () => {
+  const core = createCore();
+  // The real Goldiloxx fetch URL: api host label + /api/v1/ + search params.
+  assert.equal(core.isApiEndpointUrl(REDEYE_API_SEARCH_URL), true);
+  // api host label + version segment, no query.
+  assert.equal(core.isApiEndpointUrl('https://api.example/v1/events/bear-night-august'), true);
+  // /api/ path segment + version segment on a normal host.
+  assert.equal(core.isApiEndpointUrl('https://example.com/api/v2/list'), true);
+  // Human pages never match.
+  assert.equal(core.isApiEndpointUrl(BEARRACUDA_EVENT_PAGE_URL), false);
+  assert.equal(core.isApiEndpointUrl(SICKENING_TICKET_URL), false);
+  // A gmaps link's api=1 query param is not an api HOST/PATH marker.
+  assert.equal(core.isApiEndpointUrl('https://www.google.com/maps/search/?api=1&query=45.5,-122.6'), false);
+  // Fail closed: a bare /api/ path with no version segment and no
+  // machine-shaped query is left alone (could be a docs page).
+  assert.equal(core.isApiEndpointUrl('https://example.com/api/'), false);
+  // 'api' must be a whole host label, not a prefix.
+  assert.equal(core.isApiEndpointUrl('https://apinews.example/v1/latest'), false);
+  assert.equal(core.isApiEndpointUrl(''), false);
+  assert.equal(core.isApiEndpointUrl(null), false);
+});
+
+test('canonicalizeIdentityLinks clears an API fetch endpoint instead of parking it, and the registry refills website', () => {
+  const core = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    promoters: [{ name: 'MegaBear', website: 'https://megabear.example/' }]
+  });
+  // The scraped shape the json-api route used to produce: url = the parser's
+  // own API search URL, matched to a curated promoter identity.
+  const event = {
+    title: 'MEGABEAR NIGHT',
+    url: REDEYE_API_SEARCH_URL,
+    _promoter: 'MegaBear',
+    _sourcePageUrl: REDEYE_API_SEARCH_URL
+  };
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (message) => { lines.push(String(message)); };
+  try {
+    core.canonicalizeIdentityLinks([event]);
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.equal(event.website, 'https://megabear.example/', 'registry identity fills the purged website');
+  assert.ok(!('url' in event), 'url alias never survives canonicalization');
+  assert.notEqual(event.ticketUrl, REDEYE_API_SEARCH_URL, 'the machine endpoint is never parked into ticketUrl');
+  assert.ok(lines.some(line => line.startsWith('🔗 LINKS: cleared website')
+    && line.includes(REDEYE_API_SEARCH_URL)
+    && line.includes('machine API endpoint')),
+    `expected the purge log line, got: ${JSON.stringify(lines)}`);
+});
+
+test('goldiloxx real record heals at final build: API endpoint purged from ticketUrl, gmaps upgrades to the labeled place query', async () => {
+  const core = createFinalBuildCore();
+  // Real analyzed shape from run 20260814-191343 analyzedEvents[0].
+  const event = {
+    title: 'GOLIDLOXX AUGUST',
+    startDate: new Date('2026-08-30T01:00:00.000Z'),
+    endDate: new Date('2026-08-30T20:00:00.000Z'),
+    location: '40.7577763, -73.9925418',
+    bar: 'Red Eye NY',
+    address: '355 West 41st Street, New York NY 10036',
+    city: 'nyc',
+    barSource: 'curated',
+    pinSource: 'curated',
+    addressSource: 'curated',
+    ticketUrl: REDEYE_API_SEARCH_URL,
+    gmaps: 'https://www.google.com/maps/search/?api=1&query=40.7577763%2C-73.9925418',
+    source: 'ai-web'
+  };
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzed;
+  try {
+    analyzed = await core.buildAnalyzedCalendarEvent(event, NEW_ACTION_ANALYSIS, {}, {});
+  } finally {
+    restore();
+  }
+
+  assert.equal(analyzed.ticketUrl || '', '', 'the API fetch endpoint never survives as ticketUrl');
+  assert.ok(!String(analyzed.notes || '').includes('redeyetickets'), 'the purged endpoint leaves the notes');
+  const expectedGmaps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Red Eye NY, 355 West 41st Street, New York NY 10036')}`;
+  assert.equal(analyzed.gmaps, expectedGmaps, 'corroborated bar + address beat the anonymous coordinate pin');
+  assert.ok(lines.some(line => line.startsWith('🔗 LINKS: cleared ticketUrl')
+    && line.includes('machine API endpoint')), `expected the purge line, got: ${JSON.stringify(lines)}`);
+  assert.ok(lines.includes('🗺️ GMAPS: rebuilt link from corroborated bar + address for "GOLIDLOXX AUGUST"'),
+    `expected the corroborated rebuild line, got: ${JSON.stringify(lines)}`);
+});
+
+test('merge heals a poisoned one-sided calendar ticketUrl asset and lets the real ticket link win', async () => {
+  const core = createCore();
+  // Real calendar shape from run 20260814-192304 analyzedEvents[7]: the
+  // stored ticketUrl is the flyer rendition, the scraper side (today, with
+  // the parser-side gate) offers no ticketUrl at all.
+  const buildExisting = () => ({
+    title: 'BEARRACUDA: Portland NYE',
+    startDate: new Date('2027-01-01T05:00:00.000Z'),
+    endDate: new Date('2027-01-01T11:00:00.000Z'),
+    notes: [
+      `website: ${BEARRACUDA_EVENT_PAGE_URL}`,
+      `ticketUrl: ${BEARRACUDA_ASSET_TICKET_URL}`
+    ].join('\n')
+  });
+  const buildScrapedSide = (overrides = {}) => ({
+    title: 'BEARRACUDA: Portland NYE',
+    startDate: new Date('2027-01-01T05:00:00.000Z'),
+    endDate: new Date('2027-01-01T11:00:00.000Z'),
+    website: BEARRACUDA_EVENT_PAGE_URL,
+    source: 'ai-web',
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: TEST_AI_PARSER_CONFIG,
+    ...overrides
+  });
+
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (message) => { lines.push(String(message)); };
+  let healed;
+  let rescued;
+  try {
+    // One-sided shape: the poisoned calendar value must heal, not carry.
+    healed = await core.createFinalEventObject(buildExisting(), buildScrapedSide(), {});
+    // Rescue shape: the parser found the real sickening.events pointer.
+    rescued = await core.createFinalEventObject(buildExisting(), buildScrapedSide({ ticketUrl: SICKENING_TICKET_URL }), {});
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.equal(healed.ticketUrl || '', '', 'the .jpg never rides the one-sided merge');
+  assert.ok(!String(healed.notes || '').includes('pdxnew-768x640'), 'the poisoned line leaves the notes');
+  assert.ok(lines.some(line => line.startsWith('🔗 LINKS: cleared ticketUrl')
+    && line.includes(BEARRACUDA_ASSET_TICKET_URL)
+    && line.includes('static asset file')),
+    `expected the asset purge line, got: ${JSON.stringify(lines)}`);
+
+  assert.equal(rescued.ticketUrl, SICKENING_TICKET_URL, 'the real ticket link wins the healed field');
+  assert.ok(String(rescued.notes || '').includes(SICKENING_TICKET_URL), 'the real link round-trips into notes');
+});
+
+test('final build gmaps tiers: corroborated name+address query, uncorroborated coordinates, place_id never regressed', async () => {
+  const core = createFinalBuildCore();
+
+  // Tier 2 — real FURBALL Boston shape (run 20260814-201040): curated bar +
+  // curated address → the labeled place query replaces the coordinate pin.
+  const furball = {
+    title: 'FURBALL',
+    startDate: new Date('2026-09-05T21:00:00.000Z'),
+    bar: 'Legacy',
+    address: '79 Warrenton St, Boston, MA 02116',
+    barSource: 'curated',
+    addressSource: 'curated',
+    location: '42.3499063, -71.0658453',
+    gmaps: 'https://www.google.com/maps/search/?api=1&query=42.3499063%2C-71.0658453'
+  };
+  // Tier 3 — real FURBALL Austin shape (same run): the bar was NOT found near
+  // the address → only coordinates are trusted, the coordinate query stands.
+  const furballAustin = {
+    title: 'FURBALL Austin',
+    startDate: new Date('2026-09-12T21:00:00.000Z'),
+    bar: 'Austin Eagle',
+    address: '8201 Cross Park Drive, Austin',
+    barSource: 'uncorroborated',
+    addressSource: 'page',
+    location: '30.3306335, -97.6672143',
+    gmaps: 'https://www.google.com/maps/search/?api=1&query=Austin%20Eagle'
+  };
+  // Tier 1 — an existing place_id-anchored link is never downgraded, even
+  // with fully corroborated bar + address.
+  const placeAnchored = {
+    title: 'PLACE ANCHORED',
+    startDate: new Date('2026-09-19T21:00:00.000Z'),
+    bar: 'Legacy',
+    address: '79 Warrenton St, Boston, MA 02116',
+    barSource: 'curated',
+    addressSource: 'curated',
+    location: '42.3499063, -71.0658453',
+    gmaps: 'https://www.google.com/maps/search/?api=1&query=42.3499063%2C-71.0658453&query_place_id=ChIJtest123'
+  };
+
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let analyzedFurball;
+  let analyzedAustin;
+  let analyzedPlace;
+  let analyzedStable;
+  try {
+    analyzedFurball = await core.buildAnalyzedCalendarEvent(furball, NEW_ACTION_ANALYSIS, {}, {});
+    analyzedAustin = await core.buildAnalyzedCalendarEvent(furballAustin, NEW_ACTION_ANALYSIS, {}, {});
+    analyzedPlace = await core.buildAnalyzedCalendarEvent(placeAnchored, NEW_ACTION_ANALYSIS, {}, {});
+    // Stability: a link already in the corroborated shape is left untouched.
+    analyzedStable = await core.buildAnalyzedCalendarEvent({
+      ...furball,
+      gmaps: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Legacy, 79 Warrenton St, Boston, MA 02116')}`
+    }, NEW_ACTION_ANALYSIS, {}, {});
+  } finally {
+    restore();
+  }
+
+  const expectedFurballGmaps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Legacy, 79 Warrenton St, Boston, MA 02116')}`;
+  assert.equal(analyzedFurball.gmaps, expectedFurballGmaps, 'tier 2: labeled place query');
+  assert.ok(lines.includes('🗺️ GMAPS: rebuilt link from corroborated bar + address for "FURBALL"'),
+    `expected the tier-2 line, got: ${JSON.stringify(lines)}`);
+
+  assert.equal(analyzedAustin.gmaps, 'https://www.google.com/maps/search/?api=1&query=30.3306335%2C-97.6672143',
+    'tier 3: uncorroborated bar keeps the coordinate query');
+  assert.ok(lines.includes('🗺️ GMAPS: rebuilt link from verified coordinates for "FURBALL Austin"'),
+    'tier 3 uses the unchanged coordinate-rebuild line');
+
+  assert.equal(analyzedPlace.gmaps, placeAnchored.gmaps, 'tier 1: a place_id link is never downgraded');
+  assert.ok(!lines.some(line => line.startsWith('🗺️ GMAPS:') && line.includes('PLACE ANCHORED')),
+    'no gmaps rewrite is logged for the place-anchored event');
+
+  assert.equal(analyzedStable.gmaps, expectedFurballGmaps, 'an already-corroborated link is stable');
+  assert.equal(lines.filter(line => line.includes('corroborated bar + address for "FURBALL"')).length, 1,
+    'the stable pass is silent — no per-run churn');
+});
