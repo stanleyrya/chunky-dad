@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { AiWebParser } = require('./ai-web-parser');
+const { AiWebParser, normalizeStartTimeValue } = require('./ai-web-parser');
 const { SharedCore } = require('../shared-core');
 const { EventSchema } = require('../event-schema');
 
@@ -14909,4 +14909,97 @@ test('extractEventsFromJsonApiPayload: the goldiloxx search payload yields no id
   assert.equal(events[0].ticketUrl, '', 'no link key in the payload — nothing is fabricated');
   assert.equal(events[0].bar, 'Red Eye NY');
   assert.equal(events[0].image, 'https://redeye-event-flyers.s3.us-east-2.amazonaws.com/artwork/events/live/goldi_aug.jpg');
+});
+
+// ---------------------------------------------------------------------------
+// Bear it MTL batch (run 20260814-195026, bearitmtl.com)
+// ---------------------------------------------------------------------------
+
+// The Events Calendar emits JSON-LD datetimes with the site's CURRENT UTC
+// offset, not the offset in force on the event's date: the cached
+// playground-toronto page (fetched Aug 2026, EDT) published
+// "2025-12-06T10:00:00-04:00" for a December Toronto event — EST, -05:00 —
+// so the page's stated "10 h 00 min – 3 h 00 min" shipped as 9:00–2:00.
+test('buildEventFromJsonLdNode re-anchors an explicit offset that disagrees with the event timezone', () => {
+  const parser = createParser();
+  const cityConfig = { toronto: { timezone: 'America/Toronto', patterns: ['toronto'] } };
+  const event = parser.buildEventFromJsonLdNode({
+    '@type': 'Event',
+    name: 'Playground Toronto',
+    startDate: '2025-12-06T10:00:00-04:00',
+    endDate: '2025-12-07T03:00:00-04:00',
+    location: {
+      '@type': 'Place',
+      name: 'buddies in bad times theatre',
+      address: { '@type': 'PostalAddress', streetAddress: '12 Alexander Street', addressLocality: 'Toronto', postalCode: 'M4Y1B4', addressCountry: 'Canada' }
+    }
+  }, 'https://www.bearitmtl.com/event/playground-toronto/', cityConfig);
+  assert.ok(event, 'node builds an event');
+  assert.equal(event.timezone, 'America/Toronto');
+  // Wall clock 10:00 is kept and re-anchored in EST (-05:00): 15:00Z, not 14:00Z.
+  assert.equal(event.startDate.toISOString(), '2025-12-06T15:00:00.000Z');
+  assert.equal(event.endDate.toISOString(), '2025-12-07T08:00:00.000Z');
+  // The raw string stays verbatim for the title strip.
+  assert.equal(event._startDateRawText, '2025-12-06T10:00:00-04:00');
+});
+
+test('buildEventFromJsonLdNode trusts correct offsets and Z instants verbatim', () => {
+  const parser = createParser();
+  const cityConfig = { toronto: { timezone: 'America/Toronto', patterns: ['toronto'] } };
+  const node = (startDate) => ({
+    '@type': 'Event',
+    name: 'POP Playground',
+    startDate,
+    location: {
+      '@type': 'Place',
+      name: 'Bain Mathieu',
+      address: { '@type': 'PostalAddress', streetAddress: '2915 Rue Ontario E', addressLocality: 'Toronto', postalCode: 'H2K 1X7' }
+    }
+  });
+
+  // July: -04:00 IS Toronto's offset (EDT) — untouched.
+  const summer = parser.buildEventFromJsonLdNode(node('2026-07-03T22:00:00-04:00'), 'https://www.bearitmtl.com/event/pop-playground/', cityConfig);
+  assert.equal(summer.timezone, 'America/Toronto');
+  assert.equal(summer.startDate.toISOString(), '2026-07-04T02:00:00.000Z');
+
+  // 'Z' is an intentional UTC anchor — never second-guessed.
+  const utc = parser.buildEventFromJsonLdNode(node('2025-12-06T15:00:00Z'), 'https://www.bearitmtl.com/event/pop-playground/', cityConfig);
+  assert.equal(utc.startDate.toISOString(), '2025-12-06T15:00:00.000Z');
+
+  // No resolved timezone (no cityConfig) → the claimed offset stands.
+  const noTz = parser.buildEventFromJsonLdNode(node('2025-12-06T10:00:00-04:00'), 'https://www.bearitmtl.com/event/pop-playground/');
+  assert.equal(noTz.timezone, undefined);
+  assert.equal(noTz.startDate.toISOString(), '2025-12-06T14:00:00.000Z');
+});
+
+// bearitmtl.com renders schedule times in the French 24-hour display format
+// "10 h 00 min" (tribe-events-schedule__time) — the deterministic helper's
+// European branch stopped at "20h30" and returned '' for the "min" suffix.
+test('normalizeStartTimeValue accepts the French "HH h MM min" display format', () => {
+  assert.equal(normalizeStartTimeValue('10 h 00 min'), '10:00');
+  assert.equal(normalizeStartTimeValue('21 h 00 min'), '21:00');
+  assert.equal(normalizeStartTimeValue('3 h 00 min'), '03:00');
+  assert.equal(normalizeStartTimeValue('22h30min'), '22:30');
+  // Existing European forms keep parsing.
+  assert.equal(normalizeStartTimeValue('20h30'), '20:30');
+  assert.equal(normalizeStartTimeValue('20 h 30'), '20:30');
+});
+
+// WordPress heads publish resource-hint tags whose href is a bare asset
+// ORIGIN (<link rel='preconnect' href='//i0.wp.com'>). The generic href scan
+// has no tag context, so run 20260814-195026 queued and fetched
+// "https://i0.wp.com" as a crawl page (HTTP 400, run error).
+test('URL discovery never promotes resource-hint link origins to crawl candidates', () => {
+  const parser = createParser();
+  const html = `<html><head>
+      <link rel='dns-prefetch' href='//stats.wp.com' />
+      <link rel='preconnect' href='//i0.wp.com' />
+      <link rel="preload" href="https://www.bearitmtl.com/wp-content/themes/x/app.css" as="style" />
+    </head><body>
+      <a href="https://www.bearitmtl.com/event/pop-playground/">POP Playground</a>
+    </body></html>`;
+  const urls = parser.extractAdditionalUrls(html, 'https://www.bearitmtl.com/events/', {});
+  assert.ok(urls.includes('https://www.bearitmtl.com/event/pop-playground/'), 'real anchors keep flowing');
+  assert.ok(!urls.some(url => url.includes('i0.wp.com')), 'preconnect origin never becomes a crawl page');
+  assert.ok(!urls.some(url => url.includes('stats.wp.com')), 'dns-prefetch origin never becomes a crawl page');
 });

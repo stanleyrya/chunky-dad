@@ -1,6 +1,16 @@
 {
   "originalUrl": "https://bearracuda.com/wp-content/uploads/2026/08/webphoenixweblarge.jpg",
-  "error": "HTTP 415: Unsupported Media Type",
+  "adjustedUrl": "https://bearracuda.com/wp-content/uploads/2026/08/webphoenixweblarge.jpg",
   "type": "event",
-  "failureCount": 2
+  "filename": "2026-10-10_bearracuda-phoenix-pride_5605ca45.jpg",
+  "contentType": "image/jpeg",
+  "contentLength": "411996",
+  "eventInfo": {
+    "name": "BEARRACUDA: PHOENIX PRIDE",
+    "startDate": "2026-10-10T21:30:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-08-15T04:23:31.566Z",
+  "etag": "\"06a78ccde-0;;;\"",
+  "lastModified": "Sun, 09 Aug 2026 18:54:22 GMT"
 }

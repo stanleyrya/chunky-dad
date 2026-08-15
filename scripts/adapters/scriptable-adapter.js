@@ -15575,9 +15575,15 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       };
     }
     if (
-      this.normalizeIntentAction(event) === "merge" &&
-      Array.isArray(event._changes) &&
-      event._changes.length === 0
+      // _mergeNoOp is the write path's own no-op stamp (shared-core: final
+      // payload field-identical to the calendar record, notes projection
+      // included) — the same skip filterEventsForExecution enforces, so the
+      // pile and the gate agree in live AND dryRun runs. The _changes form
+      // below stays for saved runs recorded before the stamp existed.
+      event._mergeNoOp === true ||
+      (this.normalizeIntentAction(event) === "merge" &&
+        Array.isArray(event._changes) &&
+        event._changes.length === 0)
     ) {
       return {
         section: "saved",
@@ -15620,6 +15626,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     // filterEventsForExecution gate (CTA link text is not an event name) —
     // the card must say so instead of promising a CREATE that never runs.
     if (SharedCore.hasJunkTitleSanityFlag(event)) return "withheld";
+    // A merge stamped _mergeNoOp is skipped by the same
+    // filterEventsForExecution gate — the card must not promise an UPDATE
+    // that never runs.
+    if (event._mergeNoOp === true) return "skip";
     // Same display-only treatment for the other direction: a slot-host source
     // fills in ONE dated occurrence of somebody else's series, so the write is
     // neither a new event nor a change to the series. Checked after the

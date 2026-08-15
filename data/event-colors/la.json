@@ -1,6 +1,26 @@
 [
   {
+    "slug": "b-bar-4fa6ffef",
+    "url": "https://eaglela.com/events/b-bar/?occurrence=2026-08-20",
+    "faviconBg": "#8a2129",
+    "faviconFg": "#c6bab8",
+    "faviconPlate": "#ee1b2c",
+    "paletteSource": "flyer",
+    "palette": "#333532:21:1 #465449:20:3 #dcac8b:13:7 #b3846b:13:7",
+    "accent": "#dcac8b"
+  },
+  {
     "slug": "bear-happy-hour-14140597",
+    "url": "https://eaglela.com/events/bear-happy-hour-2/",
+    "faviconBg": "#8a2129",
+    "faviconFg": "#c6bab8",
+    "faviconPlate": "#ee1b2c",
+    "paletteSource": "flyer",
+    "palette": "#ffffff:81:0 #000000:11:0 #442e23:3:4 #ed217c:1:24 #f1592a:1:20",
+    "accent": "#ed217c"
+  },
+  {
+    "slug": "bear-happy-hour-53b6c34e",
     "url": "https://eaglela.com/events/bear-happy-hour-2/",
     "faviconBg": "#8a2129",
     "faviconFg": "#c6bab8",
@@ -40,6 +60,16 @@
     "accent": "#cd8365"
   },
   {
+    "slug": "cruise-la-leather-bootblack-2027-meet-greet-31562c80",
+    "url": "https://eaglela.com/events/cruise-la-leather-bootblack-2027-meet-greet/",
+    "faviconBg": "#8a2129",
+    "faviconFg": "#c6bab8",
+    "faviconPlate": "#ee1b2c",
+    "paletteSource": "flyer",
+    "palette": "#1c1d21:30:1 #0b0409:14:2 #2b0102:12:7 #93030b:9:17 #540904:8:11",
+    "accent": "#93030b"
+  },
+  {
     "slug": "cubscout-2d0928e8",
     "url": "https://eaglela.com/events/cub-scout-3/",
     "faviconBg": "#8a2129",
@@ -51,6 +81,16 @@
   },
   {
     "slug": "cubscout-4fdf801f",
+    "url": "https://eaglela.com/events/cub-scout-3/",
+    "faviconBg": "#8a2129",
+    "faviconFg": "#c6bab8",
+    "faviconPlate": "#ee1b2c",
+    "paletteSource": "flyer",
+    "palette": "#3db2c3:52:10 #b3bb23:12:16 #334c2b:11:6 #a3dae4:5:6 #74602e:5:7",
+    "accent": "#3db2c3"
+  },
+  {
+    "slug": "cubscout-7b02b41a",
     "url": "https://eaglela.com/events/cub-scout-3/",
     "faviconBg": "#8a2129",
     "faviconFg": "#c6bab8",
@@ -80,10 +120,30 @@
     "accent": "#e45312"
   },
   {
+    "slug": "jockstrapped-0bfa1a7d",
+    "url": "https://eaglela.com/events/jockstrapped-3/",
+    "faviconBg": "#8a2129",
+    "faviconFg": "#c6bab8",
+    "faviconPlate": "#ee1b2c",
+    "paletteSource": "favicon",
+    "palette": "#cf242a:29:20 #380000:27:9 #c6acad:23:3 #a33542:16:14 #160000:5:5",
+    "accent": "#cf242a"
+  },
+  {
     "slug": "latin-party-190605ad",
     "paletteSource": "flyer",
     "palette": "#040203:60:1 #faf9f6:7:0 #191516:7:1 #50292a:6:6 #b32325:4:18",
     "accent": "#b32325"
+  },
+  {
+    "slug": "meat-rack-5101313e",
+    "url": "https://eaglela.com/events/meat-rack-8/",
+    "faviconBg": "#8a2129",
+    "faviconFg": "#c6bab8",
+    "faviconPlate": "#ee1b2c",
+    "paletteSource": "flyer",
+    "palette": "#a5231b:18:17 #d5a38d:15:7 #906f60:14:5 #e2463a:11:19 #431b14:9:6",
+    "accent": "#a5231b"
   },
   {
     "slug": "meat-rack-5a8ef73f",
@@ -94,6 +154,16 @@
     "paletteSource": "flyer",
     "palette": "#6b3514:21:9 #93522b:20:10 #140b03:18:2 #b47343:13:10 #ca9c72:10:8",
     "accent": "#93522b"
+  },
+  {
+    "slug": "meat-rack-inferno-4640259e",
+    "url": "https://eaglela.com/events/meat-rack-inferno-4/?occurrence=2026-08-22",
+    "faviconBg": "#8a2129",
+    "faviconFg": "#c6bab8",
+    "faviconPlate": "#ee1b2c",
+    "paletteSource": "flyer",
+    "palette": "#f2edec:30:1 #d49c8a:17:7 #f7223e:17:24 #86433a:8:9 #ab7661:8:7",
+    "accent": "#f7223e"
   },
   {
     "slug": "megawoof-33341c08",
@@ -156,10 +226,70 @@
     "accent": "#e34367"
   },
   {
+    "slug": "mr-bear-la-2027-victory-party-469adae6",
+    "url": "https://eaglela.com/events/mr-bear-la-2027-victory-party/?occurrence=2026-08-16",
+    "faviconBg": "#8a2129",
+    "faviconFg": "#c6bab8",
+    "faviconPlate": "#ee1b2c",
+    "paletteSource": "favicon",
+    "palette": "#cf242a:29:20 #380000:27:9 #c6acad:23:3 #a33542:16:14 #160000:5:5",
+    "accent": "#cf242a"
+  },
+  {
+    "slug": "mr-bear-la-and-cub-la-2027-contest-6efae77d",
+    "url": "https://eaglela.com/events/mr-bear-la-2027-contest/?occurrence=2026-08-15",
+    "faviconBg": "#8a2129",
+    "faviconFg": "#c6bab8",
+    "faviconPlate": "#ee1b2c",
+    "paletteSource": "favicon",
+    "palette": "#cf242a:29:20 #380000:27:9 #c6acad:23:3 #a33542:16:14 #160000:5:5",
+    "accent": "#cf242a"
+  },
+  {
+    "slug": "mr-regiment-leather-2027-contest-2d4648a2",
+    "url": "https://eaglela.com/events/mr-regiment-leather-2027-contest/",
+    "faviconBg": "#8a2129",
+    "faviconFg": "#c6bab8",
+    "faviconPlate": "#ee1b2c",
+    "paletteSource": "favicon",
+    "palette": "#cf242a:29:20 #380000:27:9 #c6acad:23:3 #a33542:16:14 #160000:5:5",
+    "accent": "#cf242a"
+  },
+  {
+    "slug": "mr-regiment-leather-2027-contest-meet-and-greet-6f204f3b",
+    "url": "https://eaglela.com/events/mr-regiment-leather-2027-contest-meet-and-greet/",
+    "faviconBg": "#8a2129",
+    "faviconFg": "#c6bab8",
+    "faviconPlate": "#ee1b2c",
+    "paletteSource": "favicon",
+    "palette": "#cf242a:29:20 #380000:27:9 #c6acad:23:3 #a33542:16:14 #160000:5:5",
+    "accent": "#cf242a"
+  },
+  {
+    "slug": "mr-regiment-leather-2027-contest-victory-party-19036134",
+    "url": "https://eaglela.com/events/mr-regiment-leather-2027-contest-victory-party/",
+    "faviconBg": "#8a2129",
+    "faviconFg": "#c6bab8",
+    "faviconPlate": "#ee1b2c",
+    "paletteSource": "favicon",
+    "palette": "#cf242a:29:20 #380000:27:9 #c6acad:23:3 #a33542:16:14 #160000:5:5",
+    "accent": "#cf242a"
+  },
+  {
     "slug": "quenchd-21628c63",
     "paletteSource": "flyer",
     "palette": "#e3a59b:17:8 #cd8365:15:10 #222f33:14:2 #ab6141:12:11 #753127:9:10",
     "accent": "#cd8365"
+  },
+  {
+    "slug": "sunday-beer-bust-33056523",
+    "url": "https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-08-16",
+    "faviconBg": "#8a2129",
+    "faviconFg": "#c6bab8",
+    "faviconPlate": "#ee1b2c",
+    "paletteSource": "flyer",
+    "palette": "#242a24:39:1 #b4bbbb:13:1 #633c34:12:6",
+    "accent": "#633c34"
   },
   {
     "slug": "sunday-beer-bust-64216cca",

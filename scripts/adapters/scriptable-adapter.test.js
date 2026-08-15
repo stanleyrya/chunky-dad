@@ -10008,6 +10008,28 @@ test('round3: a real change (SPOOKMINCE website added) still shows its diff in B
   assert.match(line, /\d+ fields unchanged — /, 'no-op rows still collapse to the summary');
 });
 
+test('write-policy: a _mergeNoOp merge sits in the already-saved pile and never promises an UPDATE', () => {
+  const adapter = buildAdapter();
+  // The real BEEFMINCE no-op record with the shared-core write-path stamp:
+  // its saved _changes is ['notes'] (ordering-only), so the stamp — not the
+  // legacy _changes.length === 0 form — is what moves it.
+  const event = freshRound3Event(BEEFMINCE_NOOP_EVENT);
+  event._mergeNoOp = true;
+  const placement = adapter.classifyEventForResultsSection(event);
+  assert.equal(placement.section, 'saved', 'no-op merges are already-saved, not actionable');
+  assert.equal(placement.reason, '✅ merge no-op — calendar already has all of this',
+    'reuses the existing merge-no-op bucket label');
+  assert.equal(adapter.getWriteActionFromEvent(event), 'skip',
+    'the card never promises an UPDATE that filterEventsForExecution skips');
+
+  // Without the stamp the same record keeps its old behavior (saved runs
+  // recorded before the stamp existed): _changes ['notes'] → actionable,
+  // write action update.
+  const unstamped = freshRound3Event(BEEFMINCE_NOOP_EVENT);
+  assert.equal(adapter.classifyEventForResultsSection(unstamped).section, 'actionable');
+  assert.equal(adapter.getWriteActionFromEvent(unstamped), 'update');
+});
+
 test('round3: every existing bridge handler id and page handler survives the cleanup', async () => {
   const adapter = buildAdapter();
   // Bridge action ids round-trip through the URL parser.
