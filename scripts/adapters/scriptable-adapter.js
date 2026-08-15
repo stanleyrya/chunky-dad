@@ -445,6 +445,132 @@ class ScriptableAdapter {
     // pass. Promoted into results.errors by presentRichResults — see
     // recordCalendarWriteFailures.
     this.lastExecutionFailures = [];
+    // Bounded wait for on-demand iCloud downloads of saved-run artifacts
+    // (run JSON on open, run log for the Run Logs section). The Mac scheduler
+    // writes 1.5MB+ run files into the shared iCloud runs/ dir; on the phone
+    // those exist as not-yet-downloaded placeholders and an unbounded
+    // downloadFileFromiCloud on one mid-upload file hangs the whole screen.
+    this.savedFileDownloadTimeoutMs = Number.isFinite(
+      config.savedFileDownloadTimeoutMs,
+    )
+      ? config.savedFileDownloadTimeoutMs
+      : 30000;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Saved-run browser file access (static: display-saved-run.js calls these
+  // without constructing an adapter).
+  //
+  // THE RULE: list building NEVER downloads. Scriptable's listContents /
+  // isDirectory / isFileDownloaded are metadata-only and safe on iCloud
+  // placeholders; downloadFileFromiCloud BLOCKS until the file is local and
+  // readString on a placeholder is version-dependent (fails or force-syncs) —
+  // both are open-time operations, never enumeration-time ones. The
+  // YYYYMMDD-HHMMSS.json filename already carries the list's primary label,
+  // so a not-yet-synced run can appear in the list (marked as syncing) with
+  // zero file reads.
+  // ---------------------------------------------------------------------------
+  static listSavedRunEntries(fm, runsDir) {
+    const names = fm.listContents(runsDir) || [];
+    const entries = [];
+    const errors = [];
+    for (const rawName of names) {
+      let name = rawName;
+      let placeholder = false;
+      // Undownloaded iCloud items can surface as ".<name>.icloud" wrappers
+      // depending on OS/Scriptable version — unwrap to the logical name.
+      if (name.startsWith(".") && name.endsWith(".icloud")) {
+        name = name.slice(1, -".icloud".length);
+        placeholder = true;
+      }
+      if (!name.endsWith(".json")) continue;
+      const filePath = fm.joinPath(runsDir, rawName);
+      let isDir = false;
+      try {
+        isDir = fm.isDirectory(filePath);
+      } catch (dirError) {
+        errors.push({ file: name, error: dirError.message });
+      }
+      if (isDir) continue;
+      let downloaded = !placeholder;
+      if (downloaded) {
+        try {
+          if (typeof fm.isFileDownloaded === "function") {
+            downloaded = fm.isFileDownloaded(filePath) === true;
+          }
+        } catch (_) {
+          // Metadata probe failed — assume downloaded; open-time download is
+          // bounded anyway.
+        }
+      }
+      entries.push({
+        runId: name.replace(/\.json$/, ""),
+        timestamp: null,
+        downloaded,
+      });
+    }
+    entries.sort((a, b) => (b.runId || "").localeCompare(a.runId || ""));
+    return { entries, errors };
+  }
+
+  // Bounded, single-file iCloud download for open-time use. Resolves
+  // { ok: true } once local, { ok: false, timedOut: true } when the sync
+  // outlasts timeoutMs (the underlying download keeps running in the
+  // background — the raced promise is not cancelled, so a later reopen
+  // usually finds the file already local), or { ok: false, error } when the
+  // download itself rejects.
+  static async downloadFileBounded(fm, filePath, timeoutMs = 30000) {
+    try {
+      if (
+        typeof fm.isFileDownloaded === "function" &&
+        fm.isFileDownloaded(filePath) === true
+      ) {
+        return { ok: true, timedOut: false };
+      }
+    } catch (_) {}
+
+    const downloadPromise = Promise.resolve()
+      .then(() => fm.downloadFileFromiCloud(filePath))
+      .then(() => ({ ok: true, timedOut: false }))
+      .catch((error) => ({
+        ok: false,
+        timedOut: false,
+        error:
+          error && error.message ? String(error.message) : String(error),
+      }));
+
+    let timerHandle = null;
+    let timeoutPromise = null;
+    if (typeof setTimeout !== "undefined") {
+      timeoutPromise = new Promise((resolve) => {
+        timerHandle = setTimeout(
+          () => resolve({ ok: false, timedOut: true }),
+          timeoutMs,
+        );
+      });
+    } else if (typeof Timer !== "undefined") {
+      timeoutPromise = new Promise((resolve) => {
+        const timer = new Timer();
+        timer.timeInterval = timeoutMs;
+        timer.schedule(() => resolve({ ok: false, timedOut: true }));
+        timerHandle = timer;
+      });
+    }
+
+    // No timer facility (bare test double): degrade to an unbounded await —
+    // real Scriptable always has Timer, Node always has setTimeout.
+    const result = timeoutPromise
+      ? await Promise.race([downloadPromise, timeoutPromise])
+      : await downloadPromise;
+
+    if (!result.timedOut && timerHandle) {
+      if (typeof timerHandle.invalidate === "function") {
+        timerHandle.invalidate(); // Scriptable Timer
+      } else if (typeof clearTimeout !== "undefined") {
+        clearTimeout(timerHandle);
+      }
+    }
+    return result;
   }
 
   getScriptableRuntimeContext() {
@@ -1222,7 +1348,10 @@ class ScriptableAdapter {
 
   // ---------------------------------------------------------------------
   // Learned dead-end store persistence: dead-ends.json alongside the other
-  // scraper storage. Shape: { "<url>": { firstSeen, lastSeen, misses } }.
+  // scraper storage. Shape: { "<url>": { firstSeen, lastSeen, misses } },
+  // plus shared-core's reserved "::hosts" section for host-level bot-wall
+  // stats (persisted opaquely here — Mac runs write the same file when the
+  // shared storage root is active).
   // The semantics (skip/retry/prune) live in shared-core; the orchestrator
   // loads the store before the run and saves the updated store after it.
   // ---------------------------------------------------------------------
@@ -9314,6 +9443,8 @@ class ScriptableAdapter {
         emptyMessage = `Log file for ${runLabel} is empty.`;
       } else if (logInfo.reason === "read-failed") {
         emptyMessage = `Log file for ${runLabel} could not be read.`;
+      } else if (logInfo.reason === "icloud-sync-pending") {
+        emptyMessage = `Log for ${runLabel} is still syncing from iCloud — reopen this run shortly.`;
       }
       return `
     <div class="section log-section">
@@ -14436,12 +14567,26 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       // record, the row says so in plain words — source AND outcome — instead
       // of leaving the reader to reverse-engineer it from two value cells and
       // a bare strategy name. The strategy-heuristic chain below stays as the
-      // fallback for fields (and older saved runs) with no record.
+      // fallback for fields (and older saved runs) with no record. LAST
+      // record wins: post-merge deterministic rewrites append AFTER the
+      // arbitration records, and the row must describe the final state.
       const decisionRecord = Array.isArray(event._mergeDecisions)
-        ? event._mergeDecisions.find(
-            (record) => record && record.field === field,
+        ? event._mergeDecisions.reduce(
+            (latest, record) =>
+              record && record.field === field ? record : latest,
+            null,
           )
         : null;
+
+      // Value truth FIRST: did the merge leave this field different from
+      // what the calendar already had? Computed before any outcome branch so
+      // a row can never label itself "no change" while counting as changed —
+      // run 20260815-083809 ("TWISTED BEAR San Francisco Debut") rendered a
+      // rebuilt gmaps link as "AI-arbitrated … KEPT EXISTING (no change)" on
+      // a row whose value genuinely changed. Same predicate as the chip and
+      // the compressed view (mergeRowIsNoop).
+      const rowIsNoop = this.mergeRowIsNoop(finalValue, existingValue);
+      const arbitration = event._original?.aiArbitration;
 
       // Determine flow direction and result. The WHY of a recorded decision
       // goes into its own reason cell (the shared row format's fourth
@@ -14451,13 +14596,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       let reasonCellHtml = "";
 
       if (decisionRecord) {
-        const keptExisting = mergeValuesLookIdentical(
-          decisionRecord.chosenValue,
-          existingValue,
-        );
+        // Outcome is judged by the FINAL value (what the calendar write
+        // saves), not the record's chosenValue: it must agree with the
+        // changed/no-op classification above even against a stale record.
+        const keptExisting = rowIsNoop;
         const tookNew =
-          !keptExisting &&
-          mergeValuesLookIdentical(decisionRecord.chosenValue, newValue);
+          !keptExisting && mergeValuesLookIdentical(finalValue, newValue);
         const outcome = keptExisting
           ? "kept existing"
           : tookNew
@@ -14470,7 +14614,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         flowIcon = keptExisting ? "←" : "→";
         if (source === "deterministic") {
           resultText = `<span style="color: #007aff;">🔒 DETERMINISTIC — ${outcome}</span>`;
-        } else if (source === "sticky") {
+        } else if (source === "sticky" && keptExisting) {
           flowIcon = "←";
           resultText = `<span style="color: #007aff;">🧊 KEPT EXISTING (calendar stickiness)</span>`;
         } else if (source === "ai") {
@@ -14490,7 +14634,6 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         resultText = '<span style="color: #999;">SAME VALUE</span>';
       } else if (strategy === "ai") {
         // AI-arbitrated strategy — show which side the AI picked (or that it fell back)
-        const arbitration = event._original?.aiArbitration;
         if (arbitration?.fallbacks?.includes(field)) {
           flowIcon = "→";
           resultText = '<span style="color: #ff9500;">AI FALLBACK (CLOBBERED)</span>';
@@ -14509,6 +14652,14 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         } else if (!newValue && !finalValue) {
           flowIcon = "→";
           resultText = '<span style="color: #ff9500;">CLEARED</span>';
+        } else if (!rowIsNoop) {
+          // The value DID change but no decision record names the writer
+          // (saved runs recorded before post-merge rewrites logged their
+          // provenance). Never claim "no change" on a changed row — and
+          // never credit the AI with a change it did not make.
+          flowIcon = "→";
+          resultText =
+            '<span style="color: #ff9500;">CHANGED (no decision recorded)</span>';
         } else {
           flowIcon = "—";
           resultText = '<span style="color: #999;">KEPT EXISTING (no change)</span>';
@@ -14602,6 +14753,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         // Merged/combined value
         flowIcon = "↔";
         resultText = '<span style="color: #32d74b;">MERGED</span>';
+      } else if (!rowIsNoop) {
+        // Same guard as the ai-strategy chain: a changed value with no
+        // recorded writer must render as a change, never as "no change".
+        flowIcon = "→";
+        resultText =
+          '<span style="color: #ff9500;">CHANGED (no decision recorded)</span>';
       } else {
         flowIcon = "—";
         resultText = '<span style="color: #999;">KEPT EXISTING (no change)</span>';
@@ -14610,12 +14767,29 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       // Plain-words strategy label: "ai" under a field name read as a
       // mystery token (owner pasted a `website ai … NO CHANGE` row as the
       // example of the confusion). Unknown strategies fall through verbatim.
-      const strategyLabel =
-        {
-          ai: "AI-arbitrated",
-          preserve: "preserve saved",
-          clobber: "fresh wins",
-        }[strategy] || strategy;
+      // "AI-arbitrated" is reserved for rows the AI actually touched: a
+      // recorded decision labels by its SOURCE (the TWISTED BEAR gmaps row
+      // wore "AI-arbitrated" over a deterministic rebuild while aiArbitration
+      // was null), and an ai-strategy field the arbitration never saw says
+      // so instead of borrowing the AI's name.
+      const aiTouchedField =
+        arbitration?.arbitrated?.includes(field) ||
+        arbitration?.fallbacks?.includes(field);
+      const strategyLabel = decisionRecord
+        ? {
+            deterministic: "deterministic",
+            sticky: "calendar stickiness",
+            ai: "AI-arbitrated",
+            fallback: "clobber fallback",
+          }[String(decisionRecord.source || "").toLowerCase()] ||
+          "recorded decision"
+        : strategy === "ai" && !aiTouchedField
+          ? "ai (not arbitrated)"
+          : {
+              ai: "AI-arbitrated",
+              preserve: "preserve saved",
+              clobber: "fresh wins",
+            }[strategy] || strategy;
 
       // Shared row format (field | value | source/outcome | reason): the
       // value cell leads with the FINAL value; when the sides disagreed, the
@@ -14642,10 +14816,9 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         }
       }
 
-      // No-op detection for the compressed view — the shared mergeRowIsNoop
-      // (one definition for the table view, the line view and the chip).
-      const rowIsNoop = this.mergeRowIsNoop(finalValue, existingValue);
-
+      // No-op classification for the compressed view: rowIsNoop was computed
+      // above (before the outcome branches) from the shared mergeRowIsNoop —
+      // one definition for the table view, the line view and the chip.
       rows.push({
         field,
         changed: !rowIsNoop,
@@ -16627,11 +16800,22 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     }
 
     try {
-      try {
-        await fm.downloadFileFromiCloud(logPath);
-      } catch (downloadError) {
+      // Bounded download: an undownloaded iCloud log (Mac-written) must not
+      // hang the results screen — skip the log section instead.
+      const download = await ScriptableAdapter.downloadFileBounded(
+        fm,
+        logPath,
+        this.savedFileDownloadTimeoutMs,
+      );
+      if (!download.ok && download.timedOut) {
         console.log(
-          `📱 Scriptable: Log iCloud download failed: ${downloadError.message}`,
+          `📱 Scriptable: Log for run ${runId} is still syncing from iCloud after ${this.savedFileDownloadTimeoutMs}ms — skipping log display`,
+        );
+        return { runId, exists: false, reason: "icloud-sync-pending" };
+      }
+      if (!download.ok && download.error) {
+        console.log(
+          `📱 Scriptable: Log iCloud download failed: ${download.error}`,
         );
       }
       const content = fm.readString(logPath);

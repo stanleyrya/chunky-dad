@@ -791,3 +791,72 @@ test('refreshRemoteFestivals (Node) is an honest pass-through of the repo datase
   const empty = await adapter.refreshRemoteFestivals(null);
   assert.deepEqual(empty.festivals, [], 'a missing list normalizes to an empty array');
 });
+
+// ---------------------------------------------------------------------------
+// Learned dead-end store persistence (run 20260815-083809: scheduled Mac runs
+// re-crawled the same 403'd eventim deep-links every run because the Node
+// adapter's store was in-memory only — it learned dead ends and threw them
+// away at process exit). Same dead-ends.json contract as the phone: at the
+// shared storage root when active (the phone's tree keeps ONE store for both
+// devices), under the local state dir otherwise.
+// ---------------------------------------------------------------------------
+
+const DEAD_END_STORE_FIXTURE = {
+  'https://wl.eventim.us/event/out-and-abt-august/700533?afflky=3dollarbill': {
+    firstSeen: '2026-08-15T08:38:09.000Z',
+    lastSeen: '2026-08-15T08:38:09.000Z',
+    misses: 1,
+    lastStatus: 403
+  },
+  '::hosts': {
+    'wl.eventim.us': {
+      firstSeen: '2026-08-15T08:38:09.000Z',
+      lastSeen: '2026-08-15T08:38:09.000Z',
+      misses: 2,
+      lastStatus: 403
+    }
+  }
+};
+
+test('dead-end store: node adapter round-trips dead-ends.json under its local state dir', async () => {
+  const adapter = makeAdapter();
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-deadends-'));
+  adapter.localStateDir = stateDir;
+  try {
+    assert.deepEqual(await adapter.loadDeadEnds(), {}, 'missing file → empty store');
+
+    await adapter.saveDeadEnds(DEAD_END_STORE_FIXTURE);
+    assert.ok(fs.existsSync(path.join(stateDir, 'dead-ends.json')), 'store written to dead-ends.json');
+
+    // A FRESH adapter instance (i.e. the next scheduled run's process) reads it back
+    const nextRun = makeAdapter();
+    nextRun.localStateDir = stateDir;
+    assert.deepEqual(await nextRun.loadDeadEnds(), DEAD_END_STORE_FIXTURE, 'store survives across processes');
+
+    // Corrupt file fails soft to an empty store, never throws.
+    fs.writeFileSync(path.join(stateDir, 'dead-ends.json'), '{nope');
+    assert.deepEqual(await nextRun.loadDeadEnds(), {});
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
+});
+
+test('dead-end store: node adapter reads and writes dead-ends.json at the shared storage root when active', async () => {
+  const root = makeSharedRootFixture();
+  try {
+    await withSharedRootEnv(root, async () => {
+      const adapter = makeAdapter();
+      assert.equal(
+        adapter.getDeadEndsFilePath(),
+        path.join(root, 'dead-ends.json'),
+        'same location the phone keeps its store (chunky-dad-scraper root)'
+      );
+      await adapter.saveDeadEnds(DEAD_END_STORE_FIXTURE);
+
+      const nextRun = makeAdapter();
+      assert.deepEqual(await nextRun.loadDeadEnds(), DEAD_END_STORE_FIXTURE, 'both devices share one store');
+    });
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

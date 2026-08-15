@@ -37,8 +37,9 @@ class WebAdapter {
         
         // Store cities configuration for calendar mapping
         this.cities = config.cities || {};
-        // In-memory learned dead-end store (web/Node runs don't persist it;
-        // the Scriptable adapter is the durable home for dead-ends.json)
+        // Learned dead-end store: Node runs persist dead-ends.json (shared
+        // storage root when active, local state dir otherwise — see
+        // getDeadEndsFilePath); this in-memory copy is the browser fallback.
         this.deadEndStore = {};
         this.isNode = typeof process !== 'undefined' && !!(process.versions && process.versions.node);
         this.fs = null;
@@ -573,18 +574,70 @@ class WebAdapter {
         }
     }
     
-    // In-memory equivalents of the Scriptable adapter's dead-end persistence:
-    // same interface, survives only for the adapter instance's lifetime.
-    async loadDeadEnds() {
-        if (!this.deadEndStore || typeof this.deadEndStore !== 'object' || Array.isArray(this.deadEndStore)) {
-            this.deadEndStore = {};
+    // Learned dead-end store persistence — the Node twin of the Scriptable
+    // adapter's dead-ends.json. Before run 20260815-083809 this was
+    // in-memory only, so scheduled Mac runs re-crawled the same 403'd
+    // eventim deep-links on every run: the store learned them and threw
+    // them away at process exit. Location mirrors the phone's contract:
+    // at the shared storage root when active (the phone's tree keeps ONE
+    // dead-ends.json both devices read and write), under the local state
+    // dir otherwise. Browser runs keep the old in-memory fallback.
+    getDeadEndsFilePath() {
+        if (!this.isNode || !this.path) return null;
+        if (this.sharedStorageRoot) {
+            return this.path.join(this.sharedStorageRoot, 'dead-ends.json');
         }
-        return this.deadEndStore;
+        if (!this.localStateDir) return null;
+        return this.path.join(this.localStateDir, 'dead-ends.json');
+    }
+
+    async loadDeadEnds() {
+        const filePath = this.getDeadEndsFilePath();
+        if (!filePath || !this.fs) {
+            if (!this.deadEndStore || typeof this.deadEndStore !== 'object' || Array.isArray(this.deadEndStore)) {
+                this.deadEndStore = {};
+            }
+            return this.deadEndStore;
+        }
+        try {
+            if (!this.fs.existsSync(filePath)) return {};
+            const raw = await this.boundedSharedFsOp(
+                () => this.fs.promises.readFile(filePath, 'utf8'),
+                `read ${filePath}`
+            );
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+                console.log('🟢 Node.js: Dead-end store has unexpected shape — starting with empty store');
+                return {};
+            }
+            return parsed;
+        } catch (error) {
+            // Corrupt or unreadable file must never break a run — the store
+            // is a pure optimization and rebuilds itself over later runs.
+            console.log(`🟢 Node.js: Dead-end store read failed (${error.message}) — starting with empty store`);
+            return {};
+        }
     }
 
     async saveDeadEnds(store) {
-        if (store && typeof store === 'object' && !Array.isArray(store)) {
+        if (!store || typeof store !== 'object' || Array.isArray(store)) {
+            return;
+        }
+        const filePath = this.getDeadEndsFilePath();
+        if (!filePath || !this.fs) {
             this.deadEndStore = store;
+            return;
+        }
+        try {
+            if (!this.sharedStorageRoot) {
+                // Never mkdir under the shared root (the phone owns that
+                // tree); the local state dir is ours to create.
+                await this.fs.promises.mkdir(this.localStateDir, { recursive: true });
+            }
+            await this.writeFileAtomicallyNode(filePath, JSON.stringify(store, null, 2));
+            console.log(`🟢 Node.js: ✓ Saved dead-end store (${Object.keys(store).length} entries) to ${filePath}`);
+        } catch (error) {
+            console.log(`🟢 Node.js: Dead-end store write failed: ${error.message}`);
         }
     }
 

@@ -442,6 +442,17 @@ test('loadDeadEnds/saveDeadEnds round-trip through dead-ends.json', async () => 
       firstSeen: '2026-06-01T00:00:00.000Z',
       lastSeen: '2026-07-01T00:00:00.000Z',
       misses: 3
+    },
+    // Host-level bot-wall stats section (shared-core's "::hosts" key) must
+    // survive the phone round-trip untouched — Mac and phone share this file
+    // when the shared storage root is active.
+    '::hosts': {
+      'wl.eventim.us': {
+        firstSeen: '2026-08-15T08:38:09.000Z',
+        lastSeen: '2026-08-15T08:38:09.000Z',
+        misses: 2,
+        lastStatus: 403
+      }
     }
   };
   await adapter.saveDeadEnds(store);
@@ -8380,6 +8391,128 @@ test('merge rows label calendar stickiness and clobber fallback', () => {
   assert.ok(fallbackHtml.includes('⚠️ NO AI ANSWER — took new (clobber fallback)'));
 });
 
+// ---------------------------------------------------------------------------
+// Display truth for post-merge deterministic rewrites — the REAL record from
+// run 20260815-083809, "TWISTED BEAR San Francisco Debut": the merge-time
+// gmaps regeneration replaced the calendar's 73-char coordinate query with
+// the 139-char bar+address query, nothing recorded the decision, and the row
+// rendered "AI-arbitrated … KEPT EXISTING (no change)" while counting as
+// changed. A row must never claim both.
+// ---------------------------------------------------------------------------
+
+const TWISTED_CAL_GMAPS =
+  'https://www.google.com/maps/search/?api=1&query=37.7699933%2C-122.4133375';
+const TWISTED_REBUILT_GMAPS =
+  'https://www.google.com/maps/search/?api=1&query=San%20Francisco%20Eagle%20Bar%2C%20398%2012th%20Street%2C%20San%20Francisco%2C%20CA%2094103';
+
+function twistedBearEvent(overrides = {}) {
+  const bar = 'San Francisco Eagle Bar';
+  const address = '398 12th Street, San Francisco, CA 94103';
+  return {
+    title: 'TWISTED BEAR San Francisco Debut',
+    _action: 'merge',
+    startDate: '2026-08-23T04:00:00.000Z',
+    endDate: '2026-08-23T09:00:00.000Z',
+    location: '37.7699933, -122.4133375',
+    bar,
+    address,
+    gmaps: TWISTED_REBUILT_GMAPS,
+    city: 'sf',
+    key: 'twisted-bear-san-francisco-debut|2026-08-23|san francisco eagle bar',
+    _original: {
+      // The scraper offered NO gmaps at all ("scraped: undefined" in the
+      // owner's paste); the calendar stored the coordinate query.
+      scraper: {
+        bar,
+        address,
+        location: '37.7699927, -122.4134077',
+        key: 'twisted-bear-san-francisco-debut|2026-08-23|san francisco eagle bar'
+      },
+      calendar: {
+        bar,
+        address,
+        gmaps: TWISTED_CAL_GMAPS,
+        location: '37.7699933, -122.4133375',
+        title: 'TWISTED BEAR San Francisco Debut',
+        startDate: '2026-08-23T04:00:00.000Z',
+        endDate: '2026-08-23T09:00:00.000Z',
+        key: 'twisted-bear-san-francisco-debut|2026-08-23|san francisco eagle bar'
+      },
+      merged: { bar, address, gmaps: TWISTED_REBUILT_GMAPS }
+    },
+    _fieldPriorities: {
+      gmaps: { merge: 'ai' },
+      bar: { merge: 'ai' },
+      address: { merge: 'ai' }
+    },
+    ...overrides
+  };
+}
+
+test('TWISTED BEAR: a recorded deterministic gmaps rebuild renders once, as a change, with its reason', () => {
+  const adapter = buildAdapter();
+  const event = twistedBearEvent({
+    _mergeDecisions: [
+      {
+        field: 'gmaps',
+        existingValue: TWISTED_CAL_GMAPS,
+        newValue: undefined,
+        chosenValue: TWISTED_REBUILT_GMAPS,
+        reason:
+          'gmaps rebuilt from the final merged bar + address (derived field — replaces the stored link)',
+        source: 'deterministic'
+      }
+    ]
+  });
+
+  const records = adapter.buildComparisonRowRecords(event);
+  const gmapsRows = records.filter((record) => record.field === 'gmaps');
+  assert.equal(gmapsRows.length, 1, 'the gmaps row renders exactly once');
+  const row = gmapsRows[0];
+  assert.equal(row.changed, true, 'a rebuilt link IS a change');
+  assert.ok(row.html.includes('🔒 DETERMINISTIC — rewrote'), `truthful outcome label: ${row.html}`);
+  assert.ok(row.html.includes('rebuilt from the final merged bar + address'), 'the rebuild reason rides in the reason cell');
+  assert.ok(row.html.includes('<small>deterministic</small>'), 'the strategy slot names the real source');
+  assert.ok(!row.html.includes('KEPT EXISTING (no change)'), 'a changed row never claims no change');
+  assert.ok(!row.html.includes('AI-arbitrated'), 'the AI touched nothing on this field');
+
+  assert.equal(adapter.countChangedMergeFields(event), 1, 'the chip counts the one real change');
+  const card = adapter.generateEventCard(event);
+  assert.ok(!card.includes('KEPT EXISTING (no change)'), 'no self-contradiction anywhere on the card');
+  assert.ok(!card.includes('AI-arbitrated'), 'no AI credit anywhere on the card');
+});
+
+test('TWISTED BEAR without a decision record (older saved runs) still never self-contradicts', () => {
+  const adapter = buildAdapter();
+  const event = twistedBearEvent(); // no _mergeDecisions — the pre-fix run shape
+
+  const records = adapter.buildComparisonRowRecords(event);
+  const row = records.find((record) => record.field === 'gmaps');
+  assert.equal(row.changed, true, 'value truth: merged differs from calendar');
+  assert.ok(row.html.includes('CHANGED (no decision recorded)'),
+    `an unattributed change says so plainly: ${row.html}`);
+  assert.ok(!row.html.includes('KEPT EXISTING (no change)'), 'the contradictory composite is dead');
+  assert.ok(!row.html.includes('AI-arbitrated'),
+    'aiArbitration is null for this event — the AI is never blamed');
+  assert.ok(row.html.includes('<small>ai (not arbitrated)</small>'),
+    'the strategy slot admits arbitration never ran');
+});
+
+test('TWISTED BEAR unchanged twin renders "no changes"', () => {
+  const adapter = buildAdapter();
+  const event = twistedBearEvent({ gmaps: TWISTED_CAL_GMAPS });
+  event._original = {
+    ...event._original,
+    merged: { ...event._original.merged, gmaps: TWISTED_CAL_GMAPS }
+  };
+
+  const records = adapter.buildComparisonRowRecords(event);
+  const row = records.find((record) => record.field === 'gmaps');
+  assert.equal(row.changed, false, 'identical link → no-op');
+  assert.ok(row.html.includes('KEPT EXISTING (no change)'), 'the no-op label is reserved for true no-ops');
+  assert.equal(adapter.countChangedMergeFields(event), 0, 'the twin card says "no changes"');
+});
+
 test('every existing card action survives the headline redesign (live + saved run)', async () => {
   const results = {
     analyzedEvents: [
@@ -10715,4 +10848,134 @@ test('results UI: a _festivalMatch record lands in the withheld pile with the fe
   assert.equal(adapter.formatIntentActionLabel('festival_match'), 'FESTIVAL MATCH');
   assert.equal(adapter.getWriteActionFromEvent(umbrella), 'withheld',
     'the card never promises a CREATE the gate withholds');
+});
+
+// ---------------------------------------------------------------------------
+// Saved-run browser: iCloud placeholders must never block the screen.
+// Incident 2026-08-15: Mac-written 1.5MB run JSONs sit in the shared iCloud
+// runs/ dir as not-yet-downloaded placeholders on the phone; enumeration used
+// to await downloadFileFromiCloud on EVERY file, so one file mid-upload hung
+// "display saved runs" forever right after the frozen
+// "📱 Display: Checking for saved runs" log line.
+// ---------------------------------------------------------------------------
+
+function buildRunsDirFm(overrides = {}) {
+  const calls = { downloads: [], reads: [] };
+  const fm = {
+    joinPath: (a, b) => `${a}/${b}`,
+    listContents: () => ['20260814-010101.json', '20260815-020202.json', 'notes.txt', 'archive.json'],
+    isDirectory: (p) => p.endsWith('/archive.json'),
+    isFileDownloaded: (p) => !p.includes('20260815-020202'),
+    downloadFileFromiCloud: (p) => {
+      calls.downloads.push(p);
+      throw new Error('BLOCKING iCloud download during enumeration');
+    },
+    readString: (p) => {
+      calls.reads.push(p);
+      throw new Error('read of possibly-undownloaded file during enumeration');
+    },
+    ...overrides
+  };
+  return { fm, calls };
+}
+
+test('list building never downloads or reads run files — undownloaded runs still appear, marked as syncing', () => {
+  const { fm, calls } = buildRunsDirFm();
+
+  const { entries, errors } = ScriptableAdapter.listSavedRunEntries(fm, '/icloud/runs');
+
+  assert.equal(calls.downloads.length, 0, 'no downloadFileFromiCloud during enumeration');
+  assert.equal(calls.reads.length, 0, 'no readString during enumeration');
+  assert.equal(errors.length, 0, 'metadata-only listing has no errors');
+  assert.deepEqual(entries.map(e => e.runId), ['20260815-020202', '20260814-010101'], 'json runs only (no dirs, no non-json), newest first');
+  assert.equal(entries[0].downloaded, false, 'placeholder run is marked not-downloaded');
+  assert.equal(entries[1].downloaded, true, 'local run is marked downloaded');
+});
+
+test('list building unwraps .<name>.json.icloud placeholder names and treats fms without isFileDownloaded as downloaded', () => {
+  const { fm } = buildRunsDirFm({
+    listContents: () => ['.20260816-030303.json.icloud', '20260814-010101.json'],
+    isFileDownloaded: undefined,
+    isDirectory: () => false
+  });
+
+  const { entries } = ScriptableAdapter.listSavedRunEntries(fm, '/icloud/runs');
+
+  assert.deepEqual(
+    entries.map(e => [e.runId, e.downloaded]),
+    [['20260816-030303', false], ['20260814-010101', true]],
+    'icloud wrapper name yields the logical runId, marked syncing; no isFileDownloaded → assume local'
+  );
+});
+
+test('downloadFileBounded skips the download entirely for an already-local file', async () => {
+  let downloads = 0;
+  const fm = {
+    isFileDownloaded: () => true,
+    downloadFileFromiCloud: async () => { downloads += 1; }
+  };
+
+  const result = await ScriptableAdapter.downloadFileBounded(fm, '/icloud/runs/a.json', 50);
+
+  assert.deepEqual(result, { ok: true, timedOut: false });
+  assert.equal(downloads, 0, 'no iCloud call for a local file');
+});
+
+test('downloadFileBounded times out on a stalled iCloud sync instead of hanging (download stays kicked in the background)', async () => {
+  let downloads = 0;
+  const fm = {
+    isFileDownloaded: () => false,
+    downloadFileFromiCloud: () => {
+      downloads += 1;
+      return new Promise(() => {}); // never settles — file mid-upload from the Mac
+    }
+  };
+
+  const result = await ScriptableAdapter.downloadFileBounded(fm, '/icloud/runs/a.json', 25);
+
+  assert.equal(result.ok, false);
+  assert.equal(result.timedOut, true);
+  assert.equal(downloads, 1, 'the download was kicked once and left running in the background');
+});
+
+test('downloadFileBounded resolves ok when the download completes within the bound, and surfaces rejections as errors', async () => {
+  const okFm = {
+    isFileDownloaded: () => false,
+    downloadFileFromiCloud: async () => {}
+  };
+  assert.deepEqual(
+    await ScriptableAdapter.downloadFileBounded(okFm, '/icloud/runs/a.json', 1000),
+    { ok: true, timedOut: false }
+  );
+
+  const failFm = {
+    isFileDownloaded: () => false,
+    downloadFileFromiCloud: async () => { throw new Error('icloud says no'); }
+  };
+  const failed = await ScriptableAdapter.downloadFileBounded(failFm, '/icloud/runs/a.json', 1000);
+  assert.equal(failed.ok, false);
+  assert.equal(failed.timedOut, false);
+  assert.equal(failed.error, 'icloud says no');
+});
+
+test('loadRunLogsForDisplay returns icloud-sync-pending (bounded) for an undownloaded log instead of hanging, and the section renders a syncing message', async () => {
+  const adapter = buildAdapter();
+  adapter.savedFileDownloadTimeoutMs = 25;
+  adapter.fm = {
+    joinPath: (a, b) => `${a}/${b}`,
+    fileExists: () => true,
+    isFileDownloaded: () => false,
+    downloadFileFromiCloud: () => new Promise(() => {}), // stalled sync
+    readString: () => { throw new Error('must not read an undownloaded log'); }
+  };
+  adapter.logsDir = '/icloud/logs';
+
+  const logInfo = await adapter.loadRunLogsForDisplay({ savedRunId: '20260815-020202', _isDisplayingSavedRun: true });
+
+  assert.equal(logInfo.exists, false);
+  assert.equal(logInfo.reason, 'icloud-sync-pending');
+  assert.equal(logInfo.runId, '20260815-020202');
+
+  const html = adapter.buildRunLogSectionHtml(logInfo);
+  assert.ok(html.includes('still syncing from iCloud'), 'run-logs section explains the pending sync');
 });

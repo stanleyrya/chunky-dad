@@ -44,46 +44,29 @@ class SavedRunDisplay {
                 return [];
             }
             
-            // Ensure iCloud files are downloaded before listing
-            try {
-                await fm.downloadFileFromiCloud(runsDir);
-            } catch (downloadError) {
-                console.log(`📱 Display: iCloud sync failed: ${downloadError.message}`);
-            }
-            
-            const files = fm.listContents(runsDir) || [];
-            
-            // Filter out directories and only keep JSON files
-            const jsonFiles = [];
-            const fileErrors = [];
-            for (const name of files) {
-                if (!name.endsWith('.json')) continue;
-                const filePath = fm.joinPath(runsDir, name);
-                try {
-                    await fm.downloadFileFromiCloud(filePath);
-                } catch (error) {
-                    fileErrors.push({ file: name, error: error.message });
-                }
-                let isDir = false;
-                try {
-                    isDir = fm.isDirectory(filePath);
-                } catch (dirError) {
-                    fileErrors.push({ file: name, error: dirError.message });
-                }
-                if (!isDir) {
-                    jsonFiles.push(name);
-                }
-            }
-            
+            // LIST WITHOUT DOWNLOADING: enumeration is metadata-only
+            // (listContents/isDirectory/isFileDownloaded). The old per-file
+            // downloadFileFromiCloud here blocked the entire screen on one
+            // Mac-written run file still uploading to iCloud (2026-08-15
+            // hang). The YYYYMMDD-HHMMSS filename already carries the list
+            // label; the actual download happens on OPEN, bounded — see
+            // loadSavedRun.
+            const { ScriptableAdapter } = importModule('adapters/scriptable-adapter');
+            const { entries: jsonFiles, errors: fileErrors } =
+                ScriptableAdapter.listSavedRunEntries(fm, runsDir);
+
             console.log(`📱 Display: Found ${jsonFiles.length} saved runs${fileErrors.length > 0 ? ` (${fileErrors.length} files had errors)` : ''}`);
-            
+
             if (jsonFiles.length === 0) {
                 console.log(`📱 Display: No .json run files found in directory`);
             }
-            
-            return jsonFiles
-                .map(name => ({ runId: name.replace('.json',''), timestamp: null }))
-                .sort((a, b) => (b.runId || '').localeCompare(a.runId || ''));
+
+            const syncingCount = jsonFiles.filter(e => e.downloaded === false).length;
+            if (syncingCount > 0) {
+                console.log(`📱 Display: ${syncingCount} run(s) not yet downloaded from iCloud — listed as syncing, downloaded on open`);
+            }
+
+            return jsonFiles;
         } catch (e) {
             console.log(`📱 Display: Failed to read runs directory: ${e.message}`);
             return [];
@@ -110,7 +93,24 @@ class SavedRunDisplay {
                 console.log(`📱 Display: Run file does not exist: ${runFilePath}`);
                 return null;
             }
-            
+
+            // DOWNLOAD ON OPEN, BOUNDED: fetch just this run's file with a
+            // 30s cap so an iCloud sync stall surfaces an alert and returns
+            // to the list instead of hanging the screen. On timeout the
+            // kicked download keeps running in the background, so trying
+            // again shortly usually finds the file already local.
+            const { ScriptableAdapter } = importModule('adapters/scriptable-adapter');
+            const syncTimeoutMs = 30000;
+            console.log(`📱 Display: Ensuring run file is local (bounded ${syncTimeoutMs / 1000}s iCloud download): ${fileName}`);
+            const download = await ScriptableAdapter.downloadFileBounded(fm, runFilePath, syncTimeoutMs);
+            if (!download.ok && download.timedOut) {
+                console.log(`📱 Display: Run ${runId} is still syncing from iCloud after ${syncTimeoutMs / 1000}s — not blocking the list`);
+                return { __icloudSyncPending: true, runId };
+            }
+            if (!download.ok && download.error) {
+                console.log(`📱 Display: Bounded iCloud download reported: ${download.error} — falling through to read retries`);
+            }
+
             // Robust iCloud download with multiple retries
             let content = null;
             const maxRetries = 3;
@@ -163,45 +163,63 @@ class SavedRunDisplay {
 
     async displaySavedRun(options = {}) {
         try {
-            let runToShow = null;
             const runs = await this.listSavedRuns();
             if (!runs || runs.length === 0) {
                 await this.showError('No saved runs', 'No saved runs were found to display.\n\nTo create runs, first run the bear-event-scraper-unified.js script.\n\nRuns are saved in the chunky-dad-scraper/runs/ directory relative to where this script is located.');
                 return;
             }
 
-            if (options.runId) {
-                runToShow = options.runId;
-            } else if (options.last) {
-                runToShow = runs[0].runId || runs[0];
-            } else if (options.presentHistory) {
-                // Simple selection UI using Alert
-                const alert = new Alert();
-                alert.title = 'Select Saved Run';
-                alert.message = 'Choose a run to display';
-                runs.slice(0, 25).forEach((r, idx) => {
-                    const label = r.timestamp ? `${idx + 1}. ${r.timestamp}` : `${idx + 1}. ${r.runId}`;
-                    alert.addAction(label);
-                });
-                alert.addCancelAction('Cancel');
-                const idx = await alert.present();
-                if (idx < 0 || idx >= runs.length) return;
-                runToShow = runs[idx].runId || runs[idx];
+            // Interactive mode loops back to the picker when a run's iCloud
+            // download times out, instead of hanging or dead-ending.
+            const interactive = !options.runId && !options.last && options.presentHistory;
+            let saved = null;
+            let runIdString = null;
+            for (;;) {
+                let runToShow = null;
+                if (options.runId) {
+                    runToShow = options.runId;
+                } else if (options.last) {
+                    runToShow = runs[0].runId || runs[0];
+                } else if (options.presentHistory) {
+                    // Simple selection UI using Alert
+                    const alert = new Alert();
+                    alert.title = 'Select Saved Run';
+                    alert.message = 'Choose a run to display';
+                    runs.slice(0, 25).forEach((r, idx) => {
+                        const syncMark = r.downloaded === false ? ' ☁️ syncing…' : '';
+                        const label = (r.timestamp ? `${idx + 1}. ${r.timestamp}` : `${idx + 1}. ${r.runId}`) + syncMark;
+                        alert.addAction(label);
+                    });
+                    alert.addCancelAction('Cancel');
+                    const idx = await alert.present();
+                    if (idx < 0 || idx >= runs.length) return;
+                    runToShow = runs[idx].runId || runs[idx];
+                }
+
+                if (!runToShow) {
+                    runToShow = runs[0].runId || runs[0];
+                }
+
+                console.log(`📱 Display: About to load runToShow: ${JSON.stringify(runToShow)} (type: ${typeof runToShow})`);
+
+                // Ensure runToShow is a string, not an object
+                runIdString = typeof runToShow === 'string' ? runToShow : runToShow.runId || runToShow.toString();
+                console.log(`📱 Display: Final runId to load: ${runIdString}`);
+
+                saved = await this.loadSavedRun(runIdString);
+                if (saved && saved.__icloudSyncPending === true) {
+                    await this.showError('Still syncing from iCloud', `Run ${runIdString} is still syncing from iCloud — try again shortly.`);
+                    if (interactive) {
+                        saved = null;
+                        continue; // back to the run list
+                    }
+                    return;
+                }
+                break;
             }
 
-            if (!runToShow) {
-                runToShow = runs[0].runId || runs[0];
-            }
-
-            console.log(`📱 Display: About to load runToShow: ${JSON.stringify(runToShow)} (type: ${typeof runToShow})`);
-            
-            // Ensure runToShow is a string, not an object
-            const runIdString = typeof runToShow === 'string' ? runToShow : runToShow.runId || runToShow.toString();
-            console.log(`📱 Display: Final runId to load: ${runIdString}`);
-
-            const saved = await this.loadSavedRun(runIdString);
             if (!saved) {
-                await this.showError('Load failed', `Could not load saved run: ${runToShow}`);
+                await this.showError('Load failed', `Could not load saved run: ${runIdString}`);
                 return;
             }
 
