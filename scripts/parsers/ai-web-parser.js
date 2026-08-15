@@ -5550,6 +5550,37 @@ class AiWebParser {
         return candidates;
     }
 
+    // The page's single outbound ticketing-platform link, or '' when there is
+    // none or more than one distinct link (ambiguity fails closed). Used by
+    // the normalizeAiEvent ticketUrl rescue when the model's extracted value
+    // was rejected as a static asset: the page anchor is the pointer the
+    // model copied badly. Deduped on the core's URL dedupe key so the same
+    // link repeated across buttons still counts as ONE. Generic
+    // TICKETING_PLATFORM_HOSTS classification only — nothing per venue.
+    findSoleTicketingPlatformAnchor(htmlData) {
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        if (!html) return '';
+        if (!this.core
+            || typeof this.core.isKnownTicketingPlatformHost !== 'function'
+            || typeof this.core.getUrlRuleParts !== 'function') {
+            return '';
+        }
+        const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
+        const linksByKey = new Map();
+        for (const candidate of this.extractHrefCandidates(html)) {
+            const url = this.normalizeHttpUrlValue(this.normalizeUrl(candidate.url, sourceUrl)) || '';
+            if (!url) continue;
+            const parts = this.core.getUrlRuleParts(url);
+            if (!parts || !this.core.isKnownTicketingPlatformHost(parts.host)) continue;
+            const key = typeof this.core.getUrlDedupeKey === 'function'
+                ? this.core.getUrlDedupeKey(url)
+                : url;
+            if (!linksByKey.has(key)) linksByKey.set(key, url);
+            if (linksByKey.size > 1) return '';
+        }
+        return linksByKey.size === 1 ? linksByKey.values().next().value : '';
+    }
+
     // Onboarding harvest (discoveryOnly runs only): instagram/facebook links are
     // scanned during URL discovery but rejected as blocked hosts — here the FIRST
     // profile-like link per host is collected instead, for the suggested-config
@@ -7388,6 +7419,17 @@ class AiWebParser {
         const rawTicketUrl = firstValue(/(^|_)(ticket|url|link|website)/, isHttpString, imageKeyPattern);
         const ticketUrl = rawTicketUrl ? (this.normalizeHttpUrlValue(rawTicketUrl) || '') : '';
 
+        // The json-api route by definition fetched a machine endpoint: when
+        // the source URL is structurally an API endpoint it is where we
+        // SCRAPED, never an identity link, and must not seed url/website
+        // (run 20260814-191343: the redeyetickets search-API fetch URL
+        // shipped as the published ticketUrl after the url→website fold and
+        // ticketing-platform parking). The payload's own event-page link —
+        // when the API exposes one — still arrives via ticketUrl above.
+        // Fail open: without the core helper, behavior is unchanged.
+        const sourceIsApiEndpoint = this.core && typeof this.core.isApiEndpointUrl === 'function'
+            ? this.core.isApiEndpointUrl(sourceUrl)
+            : false;
         const event = {
             title,
             description: clean(firstValue(/^(description|summary)$/, isNonEmptyString)),
@@ -7395,7 +7437,7 @@ class AiWebParser {
             endDate: end.date || null,
             bar,
             address,
-            url: sourceUrl,
+            url: sourceIsApiEndpoint ? '' : sourceUrl,
             ticketUrl,
             image,
             source: this.config.source
@@ -15086,12 +15128,35 @@ TEXT:
             this.getResolvedParserMetadataFieldValue(parserConfig, ['url', 'web', 'website'], aiEvent),
             ''
         );
-        const ticketUrl = this.firstNonEmpty(
+        let ticketUrl = this.firstNonEmpty(
             this.sanitizeExtractedUrlField('ticketUrl', aiEvent.ticketUrl),
             this.sanitizeExtractedUrlField('ticketUrl', aiEvent.tickets),
             this.getResolvedParserMetadataFieldValue(parserConfig, ['ticketUrl', 'tickets'], aiEvent),
             ''
         );
+        // Trust the pointer, not the copy: when the model asserted a ticket
+        // link but pointed at the flyer IMAGE (run 20260731 bearracuda
+        // portlandnye: ticketUrl = …/pdxnew-768x640.jpg, evidence "Purchase
+        // Tickets" — the real link was the page's sole sickening.events
+        // anchor), the asset gate above rightly drops the copy, and the
+        // page's own anchors carry the pointer. Rescue ONLY in that shape:
+        // an asset-rejected candidate AND exactly one distinct outbound
+        // ticketing-platform anchor on the page (generic host list, nothing
+        // per venue). Ambiguous pages (zero or 2+ platform links) fail
+        // closed and leave the field empty exactly as today.
+        if (!ticketUrl) {
+            const assetRejectedCandidate = [aiEvent.ticketUrl, aiEvent.tickets].some(candidate => {
+                const text = typeof candidate === 'string' ? candidate.trim() : '';
+                return text && this.isPlausibleEventUrlValue(text) && this.hasStaticAssetFilenameAtEnd(text);
+            });
+            if (assetRejectedCandidate) {
+                const rescuedTicketUrl = this.findSoleTicketingPlatformAnchor(htmlData);
+                if (rescuedTicketUrl) {
+                    ticketUrl = rescuedTicketUrl;
+                    console.log(`🤖 AI Web: ticketUrl rescued from the page's sole ticketing-platform anchor ${rescuedTicketUrl} — the extracted value was a static asset copy of the ticket pointer`);
+                }
+            }
+        }
         const instagram = this.firstNonEmpty(
             scrapedLinks.instagram,
             aiEvent.instagram,

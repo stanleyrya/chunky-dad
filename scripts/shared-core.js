@@ -38,6 +38,21 @@ const PIN_MOVED_THRESHOLD_KM = 0.4;
 const NEW_VENUE_CANDIDATE_BAR_SOURCES = Object.freeze(['page-adjacent', 'venue-site', 'geo-poi']);
 const NEW_VENUE_CANDIDATE_SOURCE_EVENT_CAP = 5;
 
+// Provenance stamps that positively corroborate a bar name / street address
+// for the BUILT gmaps link (owner ask 2026-08-14: a bare coordinate query is
+// an unlabeled dropped pin — when the pipeline already trusts the bar name
+// AND the address, "Bar Name, address" resolves to the labeled place).
+// Built-link precedence: place_id > corroborated name+address text query >
+// bare coordinate query. Excluded on purpose: barSource 'uncorroborated'/
+// absent, addressSource 'inferred'/absent — only coordinates are trusted
+// there, so the coordinate query stands. Data only — platform-pure.
+const CORROBORATED_GMAPS_BAR_SOURCES = Object.freeze([
+    'curated', 'page-adjacent', 'venue-site', 'venue-site-identity', 'geo-poi'
+]);
+const CORROBORATED_GMAPS_ADDRESS_SOURCES = Object.freeze([
+    'curated', 'page', 'venue-site', 'geo-poi'
+]);
+
 // Merge-time address comparison: street-type abbreviations and directionals
 // expanded on BOTH sides so "619 E. Pine St" and "619 East Pine Street"
 // tokenize identically. Modeled on normalizers.js
@@ -1247,6 +1262,32 @@ class SharedCore {
         if (!normalized) return false;
         return TICKETING_PLATFORM_HOSTS.some(platform =>
             normalized === platform || normalized.endsWith(`.${platform}`));
+    }
+
+    // A machine API endpoint — the URL a PROGRAM fetches, never a page a
+    // person visits (run 20260814-191343: the Goldiloxx json-api parser's own
+    // fetch URL https://api.redeyetickets.com/api/v1/events/search?q=…
+    // shipped as the published ticketUrl). Such a URL is NEVER an identity
+    // link (website/url/ticketUrl) — see clearNonIdentityLinkFields. The
+    // #1671 aggregator self-pointer clearing keyed on link-aggregator
+    // CLASSIFICATION and could not see this: a ticketing API host classifies
+    // as a ticketing platform, not an aggregator. Structural tells only,
+    // nothing per host/venue: an `api` host label or an `api` path segment,
+    // corroborated by an API version segment (v1, v2 …) or machine-shaped
+    // query params (q=, per_page=, …). Fails closed: a bare /api/ path with
+    // neither corroborating tell is left alone.
+    isApiEndpointUrl(value) {
+        const raw = typeof value === 'string' ? value.trim() : '';
+        if (!raw) return false;
+        const parts = this.getUrlRuleParts(raw);
+        if (!parts) return false;
+        const hostIsApi = parts.host.split('.')[0] === 'api';
+        const segments = parts.segments.map(segment => String(segment).toLowerCase());
+        const pathHasApi = segments.includes('api');
+        if (!hostIsApi && !pathHasApi) return false;
+        const hasVersionSegment = segments.some(segment => /^v\d+$/.test(segment));
+        const hasMachineQuery = /[?&](?:q|query|search|per_page|page|limit|offset|format|callback|api_key|apikey|key|token)=/i.test(raw);
+        return hasVersionSegment || hasMachineQuery;
     }
 
     // Registrable domain for an already-extracted host (companion of
@@ -4759,6 +4800,39 @@ class SharedCore {
         }
     }
 
+    // Identity-link hygiene shared by canonicalizeIdentityLinks (scraped
+    // side), createFinalEventObject (BOTH merge sides) and the final-build
+    // LINKS pass (cached/merged backstop): a static ASSET file (#1614) or a
+    // machine API ENDPOINT (isApiEndpointUrl) is never website/url/ticketUrl.
+    // The #1614 rejection only ran inside two-sided merge arbitration and the
+    // AI-output sanitizer, so a poisoned CALENDAR value rode every one-sided
+    // merge forever (run 20260814-192304: bearracuda ticketUrl kept a
+    // wp-content …-768x640.jpg for weeks after the parser-side gate started
+    // rejecting it; run 20260814-191343: goldiloxx ticketUrl kept the
+    // parser's own redeyetickets search-API fetch URL). Clearing to '' lets
+    // the merge fill from the other side and the identity ladder / promoter
+    // registry refill website. Returns the cleared field names.
+    clearNonIdentityLinkFields(event, label = 'event') {
+        const cleared = [];
+        if (!event || typeof event !== 'object') return cleared;
+        for (const field of ['website', 'url', 'ticketUrl']) {
+            const value = typeof event[field] === 'string' ? event[field].trim() : '';
+            if (!value) continue;
+            const parts = this.getUrlRuleParts(value);
+            let reason = '';
+            if (parts && urlPartsEndInAssetExtension(parts)) {
+                reason = 'a static asset file';
+            } else if (this.isApiEndpointUrl(value)) {
+                reason = 'a machine API endpoint';
+            }
+            if (!reason) continue;
+            event[field] = '';
+            cleared.push(field);
+            console.log(`🔗 LINKS: cleared ${field} ${value} for "${label}" — ${reason} is never an identity or ticket link`);
+        }
+        return cleared;
+    }
+
     // ONE `website` per event, resolved BEFORE the merge — the once-and-for-
     // all canonicalization of the url/website field (they are ONE field;
     // canonical `website`). Runs after dedup (URL-identity dedup needs the
@@ -4801,6 +4875,12 @@ class SharedCore {
                 event.website = legacyUrl;
             }
             if ('url' in event) delete event.url;
+
+            // Asset files and API fetch endpoints are never identity links —
+            // purge BEFORE the ladder so rung 1 can refill website from the
+            // curated registry instead of a self-referential machine URL
+            // being parked into ticketUrl as a "platform link" below.
+            this.clearNonIdentityLinkFields(event, event.title || 'event');
 
             const website = typeof event.website === 'string' ? event.website.trim() : '';
             const staticFields = event._staticFields && typeof event._staticFields === 'object'
@@ -9846,6 +9926,17 @@ class SharedCore {
             calendarObject.website = existingEvent.url;
         }
 
+        // Identity-link hygiene on BOTH sides. The deterministic asset rung
+        // below only fires when BOTH sides carry a URL, so a poisoned
+        // CALENDAR value (a flyer .jpg written as ticketUrl before the
+        // parser-side gate existed, a parser's own API fetch URL) rode every
+        // one-sided merge unchallenged and could never heal. Purging here
+        // lets the scraped side's real link win and the notes rebuild drop
+        // the poisoned line.
+        const hygieneLabel = scraperObject.title || calendarObject.title || 'event';
+        this.clearNonIdentityLinkFields(scraperObject, hygieneLabel);
+        this.clearNonIdentityLinkFields(calendarObject, hygieneLabel);
+
         // gmaps candidate hygiene (calendar-as-database: location is always
         // coordinates, and gmaps is rebuilt from verified coords). A scraped
         // text-query gmaps ("?query=The Royal Vauxhall Tavern, london") is
@@ -9856,6 +9947,13 @@ class SharedCore {
         // new value" row for gmaps on every run. Deterministic and quiet:
         // gmaps never merges anyway (STEP 4 below regenerates it), this only
         // removes the noise the display would otherwise show forever.
+        // NOTE (2026-08-14): this rung concerns the SCRAPED text-query
+        // candidate only — prose-derived, never trusted against a place or
+        // coordinate anchor. The BUILT link is different: the final-build
+        // gmaps rung regenerates from our own verified fields, where a
+        // corroborated "Bar Name, address" query deliberately replaces a bare
+        // coordinate link (built-link precedence: place_id > corroborated
+        // name+address query > coordinate query).
         if (this.isPlaceAnchoredGmapsUrl(calendarObject.gmaps)
             && this.isTextQueryGmapsUrl(scraperObject.gmaps)) {
             delete scraperObject.gmaps;
@@ -13188,6 +13286,13 @@ class SharedCore {
     
     // Static method to generate iOS-compatible Google Maps URLs
     // Works on Android, iOS (including iOS 11+), and web without API tokens
+    //
+    // Built-link precedence (owner ask 2026-08-14): place_id (with coords or
+    // address) > name+address text query (callers pass venueName+address only
+    // when both are positively corroborated — see
+    // buildCorroboratedPlaceQueryGmaps) > bare coordinate query > venue/city
+    // text fallback. A "Bar Name, street address" query resolves to the
+    // LABELED place card; a bare lat,lng renders an anonymous dropped pin.
     static generateGoogleMapsUrl({ coordinates, placeId, address, venueName, cityName }) {
         const lat = coordinates ? parseFloat(coordinates.lat) : null;
         const lng = coordinates ? parseFloat(coordinates.lng) : null;
@@ -13718,6 +13823,30 @@ class SharedCore {
         return diff;
     }
 
+    // "Bar Name, street address" gmaps query for the final-build rebuild —
+    // '' unless BOTH facts carry positive provenance (see the
+    // CORROBORATED_GMAPS_* constants: curated bar / verified pin adjacency /
+    // page address; never 'uncorroborated' or 'inferred'). Tier 2 of the
+    // built-link precedence: place_id > corroborated name+address query >
+    // bare coordinate query.
+    buildCorroboratedPlaceQueryGmaps(event) {
+        if (!event || typeof event !== 'object') return '';
+        const bar = typeof event.bar === 'string' ? event.bar.trim() : '';
+        const address = typeof event.address === 'string' ? event.address.trim() : '';
+        if (!bar || !address) return '';
+        const barSource = typeof event.barSource === 'string' ? event.barSource.trim() : '';
+        const addressSource = typeof event.addressSource === 'string' ? event.addressSource.trim() : '';
+        if (!CORROBORATED_GMAPS_BAR_SOURCES.includes(barSource)) return '';
+        if (!CORROBORATED_GMAPS_ADDRESS_SOURCES.includes(addressSource)) return '';
+        return SharedCore.generateGoogleMapsUrl({
+            coordinates: null,
+            placeId: null,
+            address,
+            venueName: bar,
+            cityName: null
+        }) || '';
+    }
+
     async buildAnalyzedCalendarEvent(event, analysis, calendarAdapter, config = {}) {
         // (Block wrapper keeps the extracted loop body byte-identical to its
         // original prepareEventsForCalendar form — minimal, reviewable diff.)
@@ -13888,6 +14017,18 @@ class SharedCore {
                     analyzedEvent.description = sanitizedDescription;
                     notesNeedRebuild = true;
                     console.log(`🧼 DESCRIPTION: stripped formatting markup for "${analyzedEvent.title || 'event'}"`);
+                }
+            }
+
+            // Backstop for cached/merged/replayed records that reached the
+            // final build without passing the ingest-time canonicalization or
+            // the merge-side hygiene: an asset file or API fetch endpoint is
+            // never website/url/ticketUrl (see clearNonIdentityLinkFields).
+            {
+                const purgedLinkFields = this.clearNonIdentityLinkFields(
+                    analyzedEvent, analyzedEvent.title || 'event');
+                if (purgedLinkFields.length > 0) {
+                    notesNeedRebuild = true;
                 }
             }
 
@@ -14089,17 +14230,40 @@ class SharedCore {
                         notesNeedRebuild = true;
                         console.log(`🗺️ GMAPS: adopted curated googleMaps link for "${analyzedEvent.title || 'event'}"`);
                     } else if (!curatedGmaps && finalCoordinates && !existingGmaps.includes('place_id')) {
-                        const coordinateGmaps = SharedCore.generateGoogleMapsUrl({
-                            coordinates: finalCoordinates,
-                            placeId: null,
-                            address: null,
-                            venueName: null,
-                            cityName: null
-                        }) || '';
-                        if (coordinateGmaps && coordinateGmaps !== existingGmaps) {
-                            analyzedEvent.gmaps = coordinateGmaps;
-                            notesNeedRebuild = true;
-                            console.log(`🗺️ GMAPS: rebuilt link from verified coordinates for "${analyzedEvent.title || 'event'}"`);
+                        // Built-link precedence (owner ask 2026-08-14):
+                        //   1. place_id — curated googleMaps adoption above /
+                        //      an existing place-anchored link (never
+                        //      downgraded, see the includes('place_id') gate);
+                        //   2. corroborated "Bar Name, street address" text
+                        //      query — Google resolves it to the LABELED
+                        //      place, unlike an anonymous dropped pin;
+                        //   3. bare coordinate query — the only truth left
+                        //      when neither bar nor address is corroborated.
+                        // The #1671 merge rung (text-query gmaps never offered
+                        // against a place/coordinate calendar link) concerns
+                        // SCRAPED candidates derived from page prose; this
+                        // link is BUILT from our own verified final fields and
+                        // deliberately still wins rebuilds.
+                        const placeQueryGmaps = this.buildCorroboratedPlaceQueryGmaps(analyzedEvent);
+                        if (placeQueryGmaps) {
+                            if (placeQueryGmaps !== existingGmaps) {
+                                analyzedEvent.gmaps = placeQueryGmaps;
+                                notesNeedRebuild = true;
+                                console.log(`🗺️ GMAPS: rebuilt link from corroborated bar + address for "${analyzedEvent.title || 'event'}"`);
+                            }
+                        } else {
+                            const coordinateGmaps = SharedCore.generateGoogleMapsUrl({
+                                coordinates: finalCoordinates,
+                                placeId: null,
+                                address: null,
+                                venueName: null,
+                                cityName: null
+                            }) || '';
+                            if (coordinateGmaps && coordinateGmaps !== existingGmaps) {
+                                analyzedEvent.gmaps = coordinateGmaps;
+                                notesNeedRebuild = true;
+                                console.log(`🗺️ GMAPS: rebuilt link from verified coordinates for "${analyzedEvent.title || 'event'}"`);
+                            }
                         }
                     }
                 }

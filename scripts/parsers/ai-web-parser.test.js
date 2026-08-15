@@ -7487,7 +7487,7 @@ test('parseEvents extracts the Red Eye search payload via the JSON-API structure
   assert.equal(event.image, 'https://redeye-event-flyers.s3.amazonaws.com/img_9849-optimized.jpg');
   assert.equal(event.imageSource, 'json-api');
   assert.equal(event.description, 'DJ JOE MICHAEL and DJ BOOMER BANKS', 'description is tag-stripped');
-  assert.equal(event.url, REDEYE_SOURCE_URL, 'no public URL is ever fabricated from the slug');
+  assert.equal(event.url, '', 'the API fetch endpoint is never an identity link, and no public URL is ever fabricated from the slug');
   assert.equal(event.ticketUrl, '', 'slug never becomes a ticket URL');
 
   assert.equal(aiCalls, 0, 'no extraction AI on the structured path');
@@ -7519,7 +7519,7 @@ test('extractEventsFromJsonApiPayload expands a detail-shaped payload into one e
   // Shared outer fields reach every performance
   assert.equal(events[0].bar, 'Red Eye NY');
   assert.equal(events[1].bar, 'Red Eye NY');
-  assert.equal(events[1].url, REDEYE_SOURCE_URL);
+  assert.equal(events[1].url, '', 'the API fetch endpoint is never an identity link');
 });
 
 test('parseEvents handles an empty JSON API payload: detection logged, zero events, no throw', async () => {
@@ -7619,7 +7619,7 @@ test('buildEventFromJsonApiObject strips HTML from descriptions and never invent
   assert.equal(event.title, 'BEAR NIGHT');
   assert.equal(event.description, 'Go-go bears & friends');
   assert.ok(!/</.test(event.description), 'tags are stripped');
-  assert.equal(event.url, 'https://api.example/v1/events/bear-night-august');
+  assert.equal(event.url, '', 'an api-host versioned fetch URL is a machine endpoint, never an identity link');
   assert.equal(event.ticketUrl, '', 'a slug is not an absolute URL — nothing is fabricated');
   assert.equal(event.image, 'https://cdn.example/flyer.jpg');
   assert.equal(event.imageSource, 'json-api');
@@ -14787,4 +14787,126 @@ test('doors-vs-party: promotion stamps the rejected doors time so the merge can 
   assert.ok(untouched, 'the control event survives normalization');
   assert.equal(untouched._doorsTimeRejected, undefined, 'no stamp without a promotion');
   assert.equal(untouched._doorsTimePromoted, undefined);
+});
+
+// ---------------------------------------------------------------------------
+// Links-correctness wave (owner reports 2026-08-14).
+// Bearracuda portlandnye (run 20260814-192304): the extraction model asserted
+// a ticket link but pointed at the flyer IMAGE (…/pdxnew-768x640.jpg,
+// evidence "Purchase Tickets"). The asset gate rightly rejects the copy; the
+// rescue below recovers the page's sole outbound ticketing-platform anchor —
+// the pointer the model copied badly. Excerpts below are verbatim from the
+// cached page storage/pages/bearracuda.com/events__portlandnye.json.
+// ---------------------------------------------------------------------------
+
+const BEARRACUDA_PORTLANDNYE_URL = 'https://bearracuda.com/events/portlandnye/';
+const BEARRACUDA_FLYER_RENDITION = 'https://bearracuda.com/wp-content/uploads/2026/03/pdxnew-768x640.jpg';
+const SICKENING_ANCHOR_URL = 'https://sickening.events/e/bearracuda-portland-nye';
+const BEARRACUDA_PORTLANDNYE_SNIPPET = `
+  <div class="elementor-element elementor-element-c8371c2 elementor-widget elementor-widget-image" data-id="c8371c2" data-element_type="widget" data-widget_type="image.default">
+    <div class="elementor-widget-container">
+      <img width="768" height="640" src="https://bearracuda.com/wp-content/uploads/2026/03/pdxnew-768x640.jpg" class="attachment-medium_large size-medium_large wp-image-3062" alt=""
+           srcset="https://bearracuda.com/wp-content/uploads/2026/03/pdxnew-768x640.jpg 768w, https://bearracuda.com/wp-content/uploads/2026/03/pdxnew-300x250.jpg 300w, https://bearracuda.com/wp-content/uploads/2026/03/pdxnew-1024x853.jpg 1024w">
+    </div>
+  </div>
+  <div class="elementor-widget-button" data-id="305a245" data-widget_type="button.default">
+    <div class="elementor-widget-container">
+      <div class="elementor-button-wrapper">
+        <a class="elementor-button elementor-button-link elementor-size-xl" href="https://sickening.events/e/bearracuda-portland-nye" target="_blank">
+          <span class="elementor-button-content-wrapper"><span class="elementor-button-text">Purchase Tickets</span></span>
+        </a>
+      </div>
+    </div>
+  </div>
+`;
+
+test('normalizeAiEvent rescues an asset-copy ticketUrl from the page\'s sole ticketing-platform anchor', () => {
+  const parser = createParser();
+  const htmlData = { url: BEARRACUDA_PORTLANDNYE_URL, html: BEARRACUDA_PORTLANDNYE_SNIPPET };
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (message) => { logs.push(String(message)); };
+  let event;
+  try {
+    event = parser.normalizeAiEvent({
+      title: 'Portland NYE',
+      startDate: '2026-12-31T21:00:00',
+      ticketUrl: BEARRACUDA_FLYER_RENDITION
+    }, {}, htmlData, null, null);
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.equal(event.ticketUrl, SICKENING_ANCHOR_URL, 'the real anchor pointer wins over the flyer copy');
+  assert.ok(logs.some(line => line.includes('Rejected ticketUrl') && line.includes('static asset URL')),
+    'the asset gate still logs the rejection');
+  assert.ok(logs.some(line => line.includes('ticketUrl rescued from the page\'s sole ticketing-platform anchor')),
+    `the rescue logs its adoption, got: ${JSON.stringify(logs)}`);
+});
+
+test('the ticketUrl rescue fails closed: ambiguous platform anchors, or no asset-rejected candidate', () => {
+  const parser = createParser();
+
+  // Two DISTINCT platform anchors → ambiguous, nothing is adopted.
+  const ambiguousHtml = `${BEARRACUDA_PORTLANDNYE_SNIPPET}
+    <a href="https://www.eventbrite.com/e/other-party-tickets-123">More tickets</a>`;
+  const ambiguous = parser.normalizeAiEvent({
+    title: 'Portland NYE',
+    startDate: '2026-12-31T21:00:00',
+    ticketUrl: BEARRACUDA_FLYER_RENDITION
+  }, {}, { url: BEARRACUDA_PORTLANDNYE_URL, html: ambiguousHtml }, null, null);
+  assert.equal(ambiguous.ticketUrl, '', 'two distinct platform links are ambiguous — fail closed');
+
+  // The same sole anchor repeated twice still counts as ONE link.
+  const repeatedHtml = `${BEARRACUDA_PORTLANDNYE_SNIPPET}
+    <a href="${SICKENING_ANCHOR_URL}">Purchase Tickets</a>`;
+  const repeated = parser.normalizeAiEvent({
+    title: 'Portland NYE',
+    startDate: '2026-12-31T21:00:00',
+    ticketUrl: BEARRACUDA_FLYER_RENDITION
+  }, {}, { url: BEARRACUDA_PORTLANDNYE_URL, html: repeatedHtml }, null, null);
+  assert.equal(repeated.ticketUrl, SICKENING_ANCHOR_URL, 'dedupe-key repeats are one pointer');
+
+  // No asset-rejected candidate → no harvest at all: an absent ticketUrl
+  // stays absent even with a platform anchor on the page.
+  const untouched = parser.normalizeAiEvent({
+    title: 'Portland NYE',
+    startDate: '2026-12-31T21:00:00'
+  }, {}, { url: BEARRACUDA_PORTLANDNYE_URL, html: BEARRACUDA_PORTLANDNYE_SNIPPET }, null, null);
+  assert.equal(untouched.ticketUrl, '', 'the rescue only fires for asset-rejected extractions');
+});
+
+// Real Goldiloxx search payload shape (cached
+// storage/pages/api.redeyetickets.com/api__v1__events__search--q-1b8y3s1.json):
+// the API exposes NO human event-page link — only a slug and flyer images —
+// so the fetch URL itself must never leak into url/website/ticketUrl.
+test('extractEventsFromJsonApiPayload: the goldiloxx search payload yields no identity link from the API fetch URL', () => {
+  const parser = createParser();
+  const payload = {
+    data: [{
+      id: 'd0e392c4-a05b-48fa-bb70-95daba4ad447',
+      slug: 'golidloxx-august',
+      name: 'GOLIDLOXX AUGUST ',
+      headline: 'GOLDILOXX ',
+      status: 'approved',
+      venue: 'Red Eye NY',
+      venue_city: 'New York',
+      venue_state: 'NY',
+      venue_country: 'US',
+      first_performance_start_at: '2026-08-30T01:00:00Z',
+      first_performance_end_at: '2026-08-30T20:00:00Z',
+      flyer_url: 'https://redeye-event-flyers.s3.us-east-2.amazonaws.com/artwork/events/live/goldi_aug.jpg'
+    }],
+    meta: { pagination: { per_page: 25 } }
+  };
+  const events = parser.extractEventsFromJsonApiPayload(
+    payload,
+    'https://api.redeyetickets.com/api/v1/events/search?q=goldiloxx&per_page=25',
+    null
+  );
+  assert.equal(events.length, 1);
+  assert.equal(events[0].url, '', 'the API fetch endpoint is never an identity link');
+  assert.equal(events[0].ticketUrl, '', 'no link key in the payload — nothing is fabricated');
+  assert.equal(events[0].bar, 'Red Eye NY');
+  assert.equal(events[0].image, 'https://redeye-event-flyers.s3.us-east-2.amazonaws.com/artwork/events/live/goldi_aug.jpg');
 });
