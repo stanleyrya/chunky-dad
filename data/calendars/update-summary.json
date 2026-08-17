@@ -81,7 +81,7 @@
     "nyc": {
       "name": "New York",
       "status": "success",
-      "dataLength": 18403,
+      "dataLength": 18471,
       "eventCount": 17
     },
     "palm-springs": {
@@ -105,7 +105,7 @@
     "portland": {
       "name": "Portland",
       "status": "success",
-      "dataLength": 26015,
+      "dataLength": 26071,
       "eventCount": 19
     },
     "ptown": {
@@ -129,7 +129,7 @@
     "sf": {
       "name": "San Francisco",
       "status": "success",
-      "dataLength": 23419,
+      "dataLength": 23560,
       "eventCount": 17
     },
     "sitges": {
