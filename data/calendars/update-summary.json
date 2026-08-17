@@ -21,7 +21,7 @@
     "boston": {
       "name": "Boston",
       "status": "success",
-      "dataLength": 2570,
+      "dataLength": 2605,
       "eventCount": 2
     },
     "brighton": {
@@ -75,7 +75,7 @@
     "nola": {
       "name": "New Orleans",
       "status": "success",
-      "dataLength": 3786,
+      "dataLength": 3799,
       "eventCount": 3
     },
     "nyc": {

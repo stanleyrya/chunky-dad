@@ -6,9 +6,34 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-new-orleans
 X-WR-TIMEZONE:America/Chicago
 BEGIN:VEVENT
+DTSTART:20260906T030000Z
+DTSTAMP:20260817T005449Z
+UID:177A2A66-DFD8-4AF9-BC41-A6292A422E58
+CREATED:20260811T142851Z
+DESCRIPTION:description: Southern Decadence\nbar: Santos Bar\naddress: 1135
+  DECATUR ST\ntimezone: America/Chicago\nticketUrl: https://events.ticketlea
+ p.com/tickets/furballnyc/furball-new-orleans-southern-decadence-2026\nimage
+ : https://static.wixstatic.com/media/238fae_fd76b69c05fa4e788b9acb5ef77178e
+ e~mv2.jpg\nimageVertical: https://static.wixstatic.com/media/238fae_fd76b69
+ c05fa4e788b9acb5ef77178ee~mv2.jpg\nwebsite: https://www.furball.nyc\nshortN
+ ame: FUR-BALL\ninstagram: https://instagram.com/furballnyc/\nfavicon: https
+ ://linktr.ee/furballnyc\nkey: furball-nola|2026-09-06|santos bar\nbearSourc
+ e: keyword\ncover: TICKLEAP\npinSource: geocoded-exact\naddressSource: page
+ \nimageSource: page\nbarSource: geo-poi\ngmaps: https://www.google.com/maps
+ /search/?api=1&query=Santos%20Bar%2C%201135%20DECATUR%20ST
+LAST-MODIFIED:20260817T005135Z
+LOCATION:29.9605893\, -90.0594606
+SEQUENCE:1
+STATUS:CONFIRMED
+SUMMARY:FURBALL NOLA
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20260905T020000Z
 DTEND:20260905T070000Z
-DTSTAMP:20260815T024542Z
+DTSTAMP:20260817T005449Z
 UID:74648B34-07A1-4BD2-8E78-D67B991A920E
 CREATED:20260514T005857Z
 DESCRIPTION:description: SOUTHERN DECADENCE\nbar: Joy Theater\naddress: 120
@@ -34,7 +59,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20250830T020000Z
 DTEND:20250830T070000Z
-DTSTAMP:20260815T024542Z
+DTSTAMP:20260817T005449Z
 UID:96ED5A57-14F4-4189-81C5-1AA44B8E365F
 CREATED:20250830T003601Z
 DESCRIPTION:description: Music & Entertainment\n• Matt Stands &amp\; Freddy
@@ -53,31 +78,6 @@ LOCATION:29.9559524\, -90.0738975
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:NEW ORLEANS
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260906T030000Z
-DTSTAMP:20260815T024542Z
-UID:177A2A66-DFD8-4AF9-BC41-A6292A422E58
-CREATED:20260811T142851Z
-DESCRIPTION:description: Southern Decadence\nbar: Santos Bar\naddress: 1135
-  DECATUR ST\ntimezone: America/Chicago\nticketUrl: https://events.ticketlea
- p.com/tickets/furballnyc/furball-new-orleans-southern-decadence-2026\nimage
- : https://static.wixstatic.com/media/238fae_fd76b69c05fa4e788b9acb5ef77178e
- e~mv2.jpg\nimageVertical: https://static.wixstatic.com/media/238fae_fd76b69
- c05fa4e788b9acb5ef77178ee~mv2.jpg\nwebsite: https://www.furball.nyc\nshortN
- ame: FUR-BALL\ninstagram: https://instagram.com/furballnyc/\nfavicon: https
- ://linktr.ee/furballnyc\nkey: furball-nola|2026-09-06|santos bar\nbearSourc
- e: keyword\ncover: TICKLEAP\npinSource: geocoded-exact\naddressSource: page
- \nimageSource: page\nbarSource: geo-poi\ngmaps: https://www.google.com/maps
- /search/?api=1&query=29.9605893%2C-90.0594606
-LAST-MODIFIED:20260815T020230Z
-LOCATION:29.9605893\, -90.0594606
-SEQUENCE:1
-STATUS:CONFIRMED
-SUMMARY:FURBALL NOLA
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

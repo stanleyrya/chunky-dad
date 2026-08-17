@@ -5,6 +5,65 @@
   },
   "events": [
     {
+      "name": "FURBALL NOLA",
+      "day": "Saturday",
+      "time": "10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 29.9605893,
+        "lng": -90.0594606
+      },
+      "startDate": "2026-09-05T22:00:00",
+      "unprocessedDescription": "description: Southern Decadence\nbar: Santos Bar\naddress: 1135\r DECATUR ST\ntimezone: America/Chicago\nticketUrl: https://events.ticketleap.com/tickets/furballnyc/furball-new-orleans-southern-decadence-2026\nimage: https://static.wixstatic.com/media/238fae_fd76b69c05fa4e788b9acb5ef77178ee~mv2.jpg\nimageVertical: https://static.wixstatic.com/media/238fae_fd76b69c05fa4e788b9acb5ef77178ee~mv2.jpg\nwebsite: https://www.furball.nyc\nshortName: FUR-BALL\ninstagram: https://instagram.com/furballnyc/\nfavicon: https://linktr.ee/furballnyc\nkey: furball-nola|2026-09-06|santos bar\nbearSource: keyword\ncover: TICKLEAP\npinSource: geocoded-exact\naddressSource: page\nimageSource: page\nbarSource: geo-poi\ngmaps: https://www.google.com/maps/search/?api=1&query=Santos%20Bar%2C%201135%20DECATUR%20ST",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "177A2A66-DFD8-4AF9-BC41-A6292A422E58",
+      "uid": "177A2A66-DFD8-4AF9-BC41-A6292A422E58",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 1,
+      "overrideIdentityType": null,
+      "bar": "Santos Bar",
+      "cover": "TICKLEAP",
+      "image": "https://static.wixstatic.com/media/238fae_fd76b69c05fa4e788b9acb5ef77178ee~mv2.jpg",
+      "imageVertical": "https://static.wixstatic.com/media/238fae_fd76b69c05fa4e788b9acb5ef77178ee~mv2.jpg",
+      "favicon": "https://linktr.ee/furballnyc",
+      "tea": "Southern Decadence",
+      "address": "1135 DECATUR ST",
+      "website": "https://www.furball.nyc",
+      "instagram": "https://instagram.com/furballnyc/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Santos%20Bar%2C%201135%20DECATUR%20ST",
+      "ticketUrl": "https://events.ticketleap.com/tickets/furballnyc/furball-new-orleans-southern-decadence-2026",
+      "shortName": "FUR-BALL",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.furball.nyc",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://instagram.com/furballnyc/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Santos%20Bar%2C%201135%20DECATUR%20ST",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://events.ticketleap.com/tickets/furballnyc/furball-new-orleans-southern-decadence-2026",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "furball-nola-26765d8a"
+    },
+    {
       "name": "BEARRACUDA: New Orleans⚜️",
       "day": "Friday",
       "time": "9PM-2AM",
@@ -125,65 +184,6 @@
         }
       ],
       "slug": "new-orleans-605b589e"
-    },
-    {
-      "name": "FURBALL NOLA",
-      "day": "Saturday",
-      "time": "10PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 29.9605893,
-        "lng": -90.0594606
-      },
-      "startDate": "2026-09-05T22:00:00",
-      "unprocessedDescription": "description: Southern Decadence\nbar: Santos Bar\naddress: 1135\r DECATUR ST\ntimezone: America/Chicago\nticketUrl: https://events.ticketleap.com/tickets/furballnyc/furball-new-orleans-southern-decadence-2026\nimage: https://static.wixstatic.com/media/238fae_fd76b69c05fa4e788b9acb5ef77178ee~mv2.jpg\nimageVertical: https://static.wixstatic.com/media/238fae_fd76b69c05fa4e788b9acb5ef77178ee~mv2.jpg\nwebsite: https://www.furball.nyc\nshortName: FUR-BALL\ninstagram: https://instagram.com/furballnyc/\nfavicon: https://linktr.ee/furballnyc\nkey: furball-nola|2026-09-06|santos bar\nbearSource: keyword\ncover: TICKLEAP\npinSource: geocoded-exact\naddressSource: page\nimageSource: page\nbarSource: geo-poi\ngmaps: https://www.google.com/maps/search/?api=1&query=29.9605893%2C-90.0594606",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Chicago",
-      "wasUTC": true,
-      "sourceUid": "177A2A66-DFD8-4AF9-BC41-A6292A422E58",
-      "uid": "177A2A66-DFD8-4AF9-BC41-A6292A422E58",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 1,
-      "overrideIdentityType": null,
-      "bar": "Santos Bar",
-      "cover": "TICKLEAP",
-      "image": "https://static.wixstatic.com/media/238fae_fd76b69c05fa4e788b9acb5ef77178ee~mv2.jpg",
-      "imageVertical": "https://static.wixstatic.com/media/238fae_fd76b69c05fa4e788b9acb5ef77178ee~mv2.jpg",
-      "favicon": "https://linktr.ee/furballnyc",
-      "tea": "Southern Decadence",
-      "address": "1135 DECATUR ST",
-      "website": "https://www.furball.nyc",
-      "instagram": "https://instagram.com/furballnyc/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=29.9605893%2C-90.0594606",
-      "ticketUrl": "https://events.ticketleap.com/tickets/furballnyc/furball-new-orleans-southern-decadence-2026",
-      "shortName": "FUR-BALL",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.furball.nyc",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://instagram.com/furballnyc/",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=29.9605893%2C-90.0594606",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://events.ticketleap.com/tickets/furballnyc/furball-new-orleans-southern-decadence-2026",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "furball-nola-26765d8a"
     }
   ]
 }
