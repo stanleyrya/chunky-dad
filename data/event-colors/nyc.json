@@ -146,6 +146,16 @@
     "accent": "#3f41a8"
   },
   {
+    "slug": "underbear-heatwave-30508312",
+    "url": "https://furball.nyc",
+    "faviconBg": "#302f35",
+    "faviconFg": "#f8f8f8",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#010101:32:1 #20070a:14:4 #541b03:14:9 #8d2209:11:15 #d34c13:8:18",
+    "accent": "#d34c13"
+  },
+  {
     "slug": "underbear-leather-kink-3fe96ee0",
     "url": "https://www.furball.nyc",
     "faviconBg": "#2d2c32",

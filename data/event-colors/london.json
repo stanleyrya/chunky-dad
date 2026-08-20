@@ -1,5 +1,15 @@
 [
   {
+    "slug": "beefmince-brief-encounter-174c5642",
+    "url": "https://beefmince.com",
+    "faviconBg": "#060606",
+    "faviconFg": "#131313",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#282829:36:0 #3b33d4:35:23 #2a5bf3:12:23 #34297b:4:13 #9fa4db:2:8",
+    "accent": "#3b33d4"
+  },
+  {
     "slug": "beefmince-new-years-eve-790f90b6",
     "url": "https://beefmince.com",
     "faviconBg": "#060606",

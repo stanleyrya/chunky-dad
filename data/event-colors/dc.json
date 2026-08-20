@@ -8,5 +8,11 @@
     "paletteSource": "flyer",
     "palette": "#05091c:22:4 #4a1cb2:21:21 #23096c:14:15 #c143d3:12:23 #01f62d:7:28",
     "accent": "#4a1cb2"
+  },
+  {
+    "slug": "twisted-bear-washington-dc-debut-12f06752",
+    "paletteSource": "flyer",
+    "palette": "#080809:29:0 #3b3333:16:1 #231c1b:15:1 #9b746e:9:5",
+    "accent": "#9b746e"
   }
 ]
