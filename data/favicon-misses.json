@@ -1,13 +1,13 @@
 {
   "bearpride.cologne": {
-    "misses": 3,
+    "misses": 4,
     "firstMiss": "2026-07-27T18:31:46.721Z",
-    "lastTried": "2026-08-11T14:52:36.592Z"
+    "lastTried": "2026-08-20T18:29:51.081Z"
   },
   "brightonbearweekend.com": {
-    "misses": 3,
+    "misses": 4,
     "firstMiss": "2026-07-27T18:31:50.333Z",
-    "lastTried": "2026-08-11T14:52:37.809Z"
+    "lastTried": "2026-08-20T18:29:52.013Z"
   },
   "noxsatvrn.carrd.co": {
     "misses": 4,
@@ -18,5 +18,10 @@
     "misses": 3,
     "firstMiss": "2026-07-31T14:48:28.682Z",
     "lastTried": "2026-08-15T02:46:02.221Z"
+  },
+  "www.clubxhubusa.com": {
+    "misses": 1,
+    "firstMiss": "2026-08-20T18:29:52.422Z",
+    "lastTried": "2026-08-20T18:29:52.422Z"
   }
 }
