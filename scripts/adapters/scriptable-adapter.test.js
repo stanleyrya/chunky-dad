@@ -8151,6 +8151,21 @@ test('the dropped pile is collapsed by default and keeps the mark-bear rescue bu
   assert.ok(droppedSection.includes('ai: no bear-specific language'));
 });
 
+test('the already-saved pile is collapsed by default (owner 2026-08-20: no-update events can fold away)', async () => {
+  const adapter = buildAdapter();
+  const html = await adapter.generateRichHTML(buildWave6Results());
+
+  const idx = html.indexOf('<details class="bear-dropped-details saved-noop-details">');
+  assert.ok(idx !== -1, 'saved section wraps its cards in a <details>');
+  assert.ok(!html.includes('<details class="bear-dropped-details saved-noop-details" open'),
+    'the saved <details> starts collapsed');
+
+  const savedDetails = html.slice(idx, html.indexOf('Withheld (Not Written)'));
+  assert.ok(savedDetails.includes('Already Saved (No Action)'), 'summary keeps the section title');
+  assert.ok(savedDetails.includes('✅ merge no-op — calendar already has all of this'),
+    'no-op card rendered inside the collapsed pile');
+});
+
 test('event cards are headline + main section + hidden raw payload, nothing deleted', async () => {
   const adapter = buildAdapter();
   const event = {

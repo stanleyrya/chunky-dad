@@ -9649,6 +9649,17 @@ class AiWebParser {
             return { valid: false, reason: 'unresolved-code-syntax' };
         }
         const lowerHostname = (parsedUrl.hostname || '').toLowerCase();
+        // IP-LITERAL HOSTS (run 20260820, phone): a widget's raw-IP origin
+        // ("https://52.60.137.136/") survived discovery and then spent the
+        // whole per-URL retry budget timing out as a crawl page. No event
+        // page is addressed by a bare IP — reject the literal shape itself.
+        // Pure syntax, no address list. Checked before the dotless-hostname
+        // rule because bracketed IPv6 literals carry no dot. The iOS regex
+        // fallback keeps ":port" in hostname, so strip a trailing port first.
+        const hostWithoutPort = lowerHostname.replace(/:\d+$/, '');
+        if (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostWithoutPort) || hostWithoutPort.startsWith('[')) {
+            return { valid: false, reason: 'ip-literal-host' };
+        }
         if (!lowerHostname.includes('.') && lowerHostname !== 'localhost') {
             return { valid: false, reason: 'implausible-hostname' };
         }
@@ -9665,7 +9676,11 @@ class AiWebParser {
             // Generic non-event site sections, anchored to WHOLE path segments so
             // event slugs containing these words survive (e.g. /events/all-about-bears).
             // /login is already covered by the substring list above.
-            /\/(?:shop|store|merch|cart|checkout|contact|about|faq|account|signin|signup)(?:\/|[?#]|$)/i,
+            // my-account/lost-password/boutique (run 20260820, phone): the
+            // segment anchor means "account" never matches "/my-account/", so
+            // WooCommerce account pages and the FR shop segment each got a
+            // classify + AI extraction pass for 0 events.
+            /\/(?:shop|store|merch|boutique|cart|checkout|contact|about|faq|account|my-account|lost-password|signin|signup)(?:\/|[?#]|$)/i,
             // Wix internal API endpoints (e.g. chunk-party.com/_api/...)
             '/_api/',
             // Eventbrite's Next.js image proxy (/e/_next/image?url=…) — an image
