@@ -8513,6 +8513,33 @@ test('TWISTED BEAR without a decision record (older saved runs) still never self
     'the strategy slot admits arbitration never ran');
 });
 
+test('matchKey never renders a comparison row (Goldiloxx: calendar cannot hold it, so "→ ADDED" repeated forever)', () => {
+  const adapter = buildAdapter();
+  // Goldiloxx shape from run 20260820: the promoter registry stamps
+  // matchKey onto the FRESH event every run, but the field is in
+  // DEFAULT_NOTES_EXCLUDED_FIELDS and never serializes into calendar
+  // notes — the calendar side is undefined by construction, so the row
+  // "fresh wins / calendar: undefined → ADDED" can never resolve.
+  const event = {
+    title: 'GOLDILOXX',
+    startDate: '2026-08-30T23:00:00.000Z',
+    matchKey: 'goldiloxx*|2026-08-*|*',
+    _action: 'merge',
+    _original: {
+      scraper: { title: 'GOLDILOXX', startDate: '2026-08-30T23:00:00.000Z', matchKey: 'goldiloxx*|2026-08-*|*' },
+      calendar: { title: 'GOLDILOXX', startDate: '2026-08-30T23:00:00.000Z' },
+      merged: { title: 'GOLDILOXX', startDate: '2026-08-30T23:00:00.000Z', matchKey: 'goldiloxx*|2026-08-*|*' }
+    },
+    _fieldPriorities: { matchKey: { merge: 'clobber' } }
+  };
+  const records = adapter.buildComparisonRowRecords(event);
+  assert.ok(Array.isArray(records), 'comparison records computed');
+  assert.equal(records.find((record) => record.field === 'matchKey'), undefined,
+    'registry matching plumbing renders no row');
+  assert.equal(adapter.countChangedMergeFields(event), 0,
+    'plumbing does not count toward the changed-fields chip');
+});
+
 test('TWISTED BEAR unchanged twin renders "no changes"', () => {
   const adapter = buildAdapter();
   const event = twistedBearEvent({ gmaps: TWISTED_CAL_GMAPS });

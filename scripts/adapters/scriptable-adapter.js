@@ -14187,6 +14187,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       // Search helper fields used only for identifier matching
       "searchStartDate",
       "searchEndDate",
+      // Promoter-registry matching plumbing (run 20260820, Goldiloxx): the
+      // registry stamps matchKey onto the FRESH event every run, but the
+      // field is notes-excluded and never persists to the calendar — the
+      // calendar side is undefined by construction, so its row would read
+      // "calendar: undefined → ADDED" on every run forever.
+      "matchKey",
       // Location-specific fields that are internal to geocoding
       "placeId",
       // Coordinate helpers that should not show in comparisons
