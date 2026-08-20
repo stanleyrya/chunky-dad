@@ -8151,6 +8151,21 @@ test('the dropped pile is collapsed by default and keeps the mark-bear rescue bu
   assert.ok(droppedSection.includes('ai: no bear-specific language'));
 });
 
+test('the already-saved pile is collapsed by default (owner 2026-08-20: no-update events can fold away)', async () => {
+  const adapter = buildAdapter();
+  const html = await adapter.generateRichHTML(buildWave6Results());
+
+  const idx = html.indexOf('<details class="bear-dropped-details saved-noop-details">');
+  assert.ok(idx !== -1, 'saved section wraps its cards in a <details>');
+  assert.ok(!html.includes('<details class="bear-dropped-details saved-noop-details" open'),
+    'the saved <details> starts collapsed');
+
+  const savedDetails = html.slice(idx, html.indexOf('Withheld (Not Written)'));
+  assert.ok(savedDetails.includes('Already Saved (No Action)'), 'summary keeps the section title');
+  assert.ok(savedDetails.includes('✅ merge no-op — calendar already has all of this'),
+    'no-op card rendered inside the collapsed pile');
+});
+
 test('event cards are headline + main section + hidden raw payload, nothing deleted', async () => {
   const adapter = buildAdapter();
   const event = {
@@ -8496,6 +8511,33 @@ test('TWISTED BEAR without a decision record (older saved runs) still never self
     'aiArbitration is null for this event — the AI is never blamed');
   assert.ok(row.html.includes('<small>ai (not arbitrated)</small>'),
     'the strategy slot admits arbitration never ran');
+});
+
+test('matchKey never renders a comparison row (Goldiloxx: calendar cannot hold it, so "→ ADDED" repeated forever)', () => {
+  const adapter = buildAdapter();
+  // Goldiloxx shape from run 20260820: the promoter registry stamps
+  // matchKey onto the FRESH event every run, but the field is in
+  // DEFAULT_NOTES_EXCLUDED_FIELDS and never serializes into calendar
+  // notes — the calendar side is undefined by construction, so the row
+  // "fresh wins / calendar: undefined → ADDED" can never resolve.
+  const event = {
+    title: 'GOLDILOXX',
+    startDate: '2026-08-30T23:00:00.000Z',
+    matchKey: 'goldiloxx*|2026-08-*|*',
+    _action: 'merge',
+    _original: {
+      scraper: { title: 'GOLDILOXX', startDate: '2026-08-30T23:00:00.000Z', matchKey: 'goldiloxx*|2026-08-*|*' },
+      calendar: { title: 'GOLDILOXX', startDate: '2026-08-30T23:00:00.000Z' },
+      merged: { title: 'GOLDILOXX', startDate: '2026-08-30T23:00:00.000Z', matchKey: 'goldiloxx*|2026-08-*|*' }
+    },
+    _fieldPriorities: { matchKey: { merge: 'clobber' } }
+  };
+  const records = adapter.buildComparisonRowRecords(event);
+  assert.ok(Array.isArray(records), 'comparison records computed');
+  assert.equal(records.find((record) => record.field === 'matchKey'), undefined,
+    'registry matching plumbing renders no row');
+  assert.equal(adapter.countChangedMergeFields(event), 0,
+    'plumbing does not count toward the changed-fields chip');
 });
 
 test('TWISTED BEAR unchanged twin renders "no changes"', () => {

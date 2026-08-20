@@ -8293,13 +8293,16 @@ class ScriptableAdapter {
       view.savedCards.length > 0
         ? `
     <div class="section">
-        <div class="section-header">
-            <span class="section-icon">✅</span>
-            <span class="section-title">Already Saved (No Action)</span>
-            <span class="section-count">${view.savedCountLabel}</span>
-        </div>
-        <div class="section-blurb">These matched what the calendar already has — a saved series, or a merge with nothing new to add. Nothing will be written.</div>
-        ${view.savedCards.join("")}
+        <details class="bear-dropped-details saved-noop-details">
+            <summary class="bear-dropped-summary">
+                <span class="section-icon">✅</span>
+                <span class="section-title">Already Saved (No Action)</span>
+                <span class="section-count">${view.savedCountLabel}</span>
+                <span class="bear-dropped-hint">collapsed — tap to review</span>
+            </summary>
+            <div class="section-blurb">These matched what the calendar already has — a saved series, or a merge with nothing new to add. Nothing will be written.</div>
+            ${view.savedCards.join("")}
+        </details>
     </div>
     `
         : ""
@@ -14184,6 +14187,12 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       // Search helper fields used only for identifier matching
       "searchStartDate",
       "searchEndDate",
+      // Promoter-registry matching plumbing (run 20260820, Goldiloxx): the
+      // registry stamps matchKey onto the FRESH event every run, but the
+      // field is notes-excluded and never persists to the calendar — the
+      // calendar side is undefined by construction, so its row would read
+      // "calendar: undefined → ADDED" on every run forever.
+      "matchKey",
       // Location-specific fields that are internal to geocoding
       "placeId",
       // Coordinate helpers that should not show in comparisons

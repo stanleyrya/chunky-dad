@@ -12056,6 +12056,17 @@ test('the repo scraper-input config resolves the promoter registry to enforce mo
   assert.equal(core.getPromoterRegistryMode(repoConfig), 'enforce');
 });
 
+test('the repo scraper-input config keeps writing past events up to a year back', () => {
+  // Owner 2026-08-20: "keep saving old events (maybe up to a year or so
+  // back) so the website looks more full" — and recent-past CHUNK diffs must
+  // WRITE once instead of re-showing forever. The shipped config must
+  // resolve the past-span withhold window to 365 days; removing the sanity
+  // block falls back to the 30-day default and fails here.
+  const core = createCore();
+  const repoConfig = require('./scraper-input');
+  assert.equal(core.resolvePastSpanWithholdDays(repoConfig.config), 365);
+});
+
 test('matcher: padded-token title containment matches a full name, never a bare substring', () => {
   const core = createRegistryCore();
   const match = core.matchEventToPromoter({ title: 'Bearracuda Atlanta 17 Year Anniversary' });

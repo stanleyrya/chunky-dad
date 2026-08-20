@@ -5894,6 +5894,46 @@ test('validateEventUrl keeps legitimate plus-in-query and parens-in-path URLs va
     { valid: true, reason: 'valid' });
 });
 
+test('validateEventUrl rejects IP-literal hosts (https://52.60.137.136/ burned the retry budget in run 20260820)', () => {
+  const parser = createParser();
+  // The literal raw-IP crawl candidate from the phone run: a widget's origin
+  // scraped as a page URL. No event page lives at a bare IP.
+  assert.deepEqual(
+    parser.validateEventUrl('https://52.60.137.136/', 'https://www.bearitmtl.com/'),
+    { valid: false, reason: 'ip-literal-host' });
+  // With a port (the regex URL fallback on iOS keeps ":port" in hostname).
+  assert.deepEqual(
+    parser.validateEventUrl('https://52.60.137.136:8443/events', 'https://www.bearitmtl.com/'),
+    { valid: false, reason: 'ip-literal-host' });
+  // Bracketed IPv6 literals are equally not event pages.
+  assert.deepEqual(
+    parser.validateEventUrl('https://[2607:f8b0::1]/events', 'https://www.bearitmtl.com/'),
+    { valid: false, reason: 'ip-literal-host' });
+  // A dotted DOMAIN that merely starts with digits is not an IP literal.
+  const numericPrefixDomain = parser.validateEventUrl('https://4bears.example.com/events', 'https://4bears.example.com/');
+  assert.notEqual(numericPrefixDomain.reason, 'ip-literal-host');
+});
+
+test('validateEventUrl rejects account/commerce path segments the segment-anchor missed (run 20260820: /my-account/, /boutique/)', () => {
+  const parser = createParser();
+  // Literal junk crawl pages from the Bear it MTL phone run — each one got
+  // classified and fed to AI extraction for 0 events.
+  const junk = [
+    'https://www.bearitmtl.com/my-account/',
+    'https://www.bearitmtl.com/my-account/lost-password/',
+    'https://www.bearitmtl.com/boutique/'
+  ];
+  for (const url of junk) {
+    const result = parser.validateEventUrl(url, 'https://www.bearitmtl.com/events/');
+    assert.equal(result.valid, false, `${url} must be rejected`);
+    assert.ok(String(result.reason).startsWith('blocked-pattern'), `${url} rejected as blocked-pattern, got: ${result.reason}`);
+  }
+  // Segment anchoring still protects event slugs CONTAINING these words.
+  assert.deepEqual(
+    parser.validateEventUrl('https://www.bearitmtl.com/event/my-account-of-a-bear-night/', 'https://www.bearitmtl.com/events/'),
+    { valid: true, reason: 'valid' });
+});
+
 test('discovery end-to-end: script-concat residue and placeholder hosts are rejected with counted reasons', () => {
   const core = new SharedCore({}, { eventSchema: EventSchema });
   const parser = new AiWebParser({ normalizeUrl: core.normalizeUrl.bind(core) });

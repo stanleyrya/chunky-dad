@@ -330,6 +330,12 @@ const scraperConfig = {
     // scrape time — the website reads fuller with history on it. Applies to
     // every parser; flip to false (or remove) to go back to future-only.
     allowPastEvents: true,
+    // Companion knob (owner 2026-08-20): keep WRITING updates to past events
+    // up to a year back, so recent-past cards with script-format diffs write
+    // once instead of re-showing the same diff forever. Only spans that ended
+    // MORE than this many days ago are withheld from calendar writes
+    // (span-fully-past). Remove to fall back to the 30-day default.
+    sanity: { pastSpanWithholdDays: 365 },
     // dryRun: true, // Preview mode: analyze + display without writing to the calendar (default: false)
     // Parser picker at run start OWNS run selection (default: false).
     // Manual Scriptable runs only; the selection is session-scoped and never
