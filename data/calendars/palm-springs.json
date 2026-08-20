@@ -5,6 +5,65 @@
   },
   "events": [
     {
+      "name": "Club Chub Weekend 2026 — The Ultimate Celebration!",
+      "day": "Friday",
+      "time": "11AM-12AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 33.7796835,
+        "lng": -116.4689784
+      },
+      "startDate": "2026-09-11T11:00:00",
+      "endDate": "2026-09-14T00:00:00",
+      "unprocessedDescription": "description: 3 Days Of BIG Fun In The Sun Pool Parties Food Mus\ric Drinks Fun\nticketUrl: https://www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&auto=format%2Ccompress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e\ncover: $55.20-$150.16\ntimezone: America/Los_Angeles\nwebsite: https://www.clubchubusa.com\nshortName: CLUB CHUB\ninstagram: https://www.instagram.com/clubchubparty\nfavicon: https://www.clubchubusa.com\nkey: club-chub-weekend-2026-—-the-ultimate-celebration|2026-09-12|ccbc resort\nbar: CCBC Resort\nbearSource: keyword\naddress: 68-300 Gay Resort Dr, Cathedral City, CA 92234, USA\npinSource: geocoded-exact\naddressSource: page\nimageSource: jsonld\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%2C%2068-300%20Gay%20Resort%20Dr%2C%20Cathedral%20City%2C%20CA%2092234%2C%20USA",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "E21A39AC-AC29-47E3-A8C2-23C3D36AD105",
+      "uid": "E21A39AC-AC29-47E3-A8C2-23C3D36AD105",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "CCBC Resort",
+      "cover": "$55.20-$150.16",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&auto=format%2Ccompress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e",
+      "favicon": "https://www.clubchubusa.com",
+      "tea": "3 Days Of BIG Fun In The Sun Pool Parties Food Music Drinks Fun",
+      "address": "68-300 Gay Resort Dr, Cathedral City, CA 92234, USA",
+      "website": "https://www.clubchubusa.com",
+      "instagram": "https://www.instagram.com/clubchubparty",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%2C%2068-300%20Gay%20Resort%20Dr%2C%20Cathedral%20City%2C%20CA%2092234%2C%20USA",
+      "ticketUrl": "https://www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl",
+      "shortName": "CLUB CHUB",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.clubchubusa.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/clubchubparty",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%2C%2068-300%20Gay%20Resort%20Dr%2C%20Cathedral%20City%2C%20CA%2092234%2C%20USA",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "club-chub-weekend-2026-the-ultimate-celebration-4e2fbd1c"
+    },
+    {
       "name": "MEGAWOOF",
       "day": "Saturday",
       "time": "9PM-12PM",
@@ -61,65 +120,6 @@
         }
       ],
       "slug": "megawoof-22570191"
-    },
-    {
-      "name": "Club Chub Weekend 2026 — The Ultimate Celebration!",
-      "day": "Friday",
-      "time": "11AM-12AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 33.7796835,
-        "lng": -116.4689784
-      },
-      "startDate": "2026-09-11T11:00:00",
-      "endDate": "2026-09-14T00:00:00",
-      "unprocessedDescription": "description: 3 Days Of BIG Fun In The Sun Pool Parties Food Mus\ric Drinks Fun\naddress: 68-300 Gay Resort Dr, Cathedral City, CA 92234, USA\nticketUrl: https://www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&auto=format%2Ccompress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e\ncover: $55.20-$150.16\ntimezone: America/Los_Angeles\nwebsite: https://www.clubchubusa.com\nshortName: CLUB CHUB\ninstagram: https://www.instagram.com/clubchubparty\nfavicon: https://www.clubchubusa.com\nkey: club-chub-weekend-2026-—-the-ultimate-celebration|2026-09-11|ccbc resort\nbar: CCBC Resort\nbearSource: keyword\npinSource: geocoded-exact\naddressSource: page\nimageSource: jsonld\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/search/?api=1&query=33.7796835%2C-116.4689784",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "E21A39AC-AC29-47E3-A8C2-23C3D36AD105",
-      "uid": "E21A39AC-AC29-47E3-A8C2-23C3D36AD105",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "CCBC Resort",
-      "cover": "$55.20-$150.16",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&auto=format%2Ccompress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e",
-      "favicon": "https://www.clubchubusa.com",
-      "tea": "3 Days Of BIG Fun In The Sun Pool Parties Food Music Drinks Fun",
-      "address": "68-300 Gay Resort Dr, Cathedral City, CA 92234, USA",
-      "website": "https://www.clubchubusa.com",
-      "instagram": "https://www.instagram.com/clubchubparty",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=33.7796835%2C-116.4689784",
-      "ticketUrl": "https://www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl",
-      "shortName": "CLUB CHUB",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.clubchubusa.com",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/clubchubparty",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=33.7796835%2C-116.4689784",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "club-chub-weekend-2026-the-ultimate-celebration-4e2fbd1c"
     }
   ]
 }

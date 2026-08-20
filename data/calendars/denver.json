@@ -5,43 +5,43 @@
   },
   "events": [
     {
-      "name": "DENVER",
+      "name": "Bearracuda",
       "day": "Saturday",
       "time": "9PM-2AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
-        "lat": 39.7526699,
-        "lng": -104.991983
+        "lat": 39.7533366,
+        "lng": -104.995064
       },
-      "startDate": "2026-03-14T21:00:00",
-      "endDate": "2026-03-15T02:00:00",
-      "unprocessedDescription": "description: Doors Open at 9\\:00 pm - Party Goes Until 2\\:00 \ram\nbar: Ophelia's\naddress: 1215 20th Street, Denver, CO\ntimezone: America/Denver\nurl: https://bearracuda.com/events/denvermarch/\nimage: https://bearracuda.com/wp-content/uploads/2026/01/denvernew2.jpg\nfacebook: https://www.facebook.com/events/1959773034896673\nticketUrl: https://www.ticketmaster.com/bearracuda-denver-colorado-03-14-2026/event/1E0064260CAC881B\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/search/?api=1&query=Ophelia's%2C%201215%2020th%20Street%2C%20Denver%2C%20CO\nkey: bearracuda-2026-03-15-denver\npinSource: geocoded-exact",
+      "startDate": "2025-09-06T21:00:00",
+      "endDate": "2025-09-07T02:00:00",
+      "unprocessedDescription": "description: 16 YEAR ANNIVERSARY\nDoors Open at 9\\:00 pm - Par\rty Goes Until 2\\:00 am\nbar: Summit\naddress: 1902 Blake St, Denver, CO 80202\ntimezone: America/Denver\nurl: https://bearracuda.com/events/denverpride/\nimage: https://bearracuda.com/wp-content/uploads/2025/01/den16web.jpg\nfacebook: https://www.facebook.com/events/747044714674555\nticketUrl: https://www.ticketmaster.com/event/1E0062E79CD214B2\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://maps.google.com/?q=1902%20Blake%20St%2C%20Denver%2C%20CO%2080202\nkey: bearracuda-2025-09-07-denver\npinSource: geocoded-exact",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Denver",
       "wasUTC": true,
-      "sourceUid": "CEB40CFA-CC09-4975-8972-54CF6AC84812",
-      "uid": "CEB40CFA-CC09-4975-8972-54CF6AC84812",
+      "sourceUid": "2EADF29C-DD45-4A7C-938D-D57E62DB56F7",
+      "uid": "2EADF29C-DD45-4A7C-938D-D57E62DB56F7",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
-      "sequence": 0,
+      "sequence": 1,
       "overrideIdentityType": null,
-      "bar": "Ophelia's",
-      "image": "https://bearracuda.com/wp-content/uploads/2026/01/denvernew2.jpg",
-      "tea": "Doors Open at 9:00 pm - Party Goes Until 2:00 am",
-      "address": "1215 20th Street, Denver, CO",
-      "website": "https://bearracuda.com/events/denvermarch/",
+      "bar": "Summit",
+      "image": "https://bearracuda.com/wp-content/uploads/2025/01/den16web.jpg",
+      "tea": "16 YEAR ANNIVERSARY",
+      "address": "1902 Blake St, Denver, CO 80202",
+      "website": "https://bearracuda.com/events/denverpride/",
       "instagram": "https://www.instagram.com/bearracuda",
-      "facebook": "https://www.facebook.com/events/1959773034896673",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Ophelia's%2C%201215%2020th%20Street%2C%20Denver%2C%20CO",
-      "ticketUrl": "https://www.ticketmaster.com/bearracuda-denver-colorado-03-14-2026/event/1E0064260CAC881B",
+      "facebook": "https://www.facebook.com/events/747044714674555",
+      "gmaps": "https://maps.google.com/?q=1902%20Blake%20St%2C%20Denver%2C%20CO%2080202",
+      "ticketUrl": "https://www.ticketmaster.com/event/1E0062E79CD214B2",
       "shortName": "Bear-rac-uda",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://bearracuda.com/events/denvermarch/",
+          "url": "https://bearracuda.com/events/denverpride/",
           "label": "🌐 Website"
         },
         {
@@ -51,21 +51,132 @@
         },
         {
           "type": "facebook",
-          "url": "https://www.facebook.com/events/1959773034896673",
+          "url": "https://www.facebook.com/events/747044714674555",
           "label": "📘 Facebook"
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Ophelia's%2C%201215%2020th%20Street%2C%20Denver%2C%20CO",
+          "url": "https://maps.google.com/?q=1902%20Blake%20St%2C%20Denver%2C%20CO%2080202",
           "label": "🗺️ Google Maps"
         },
         {
           "type": "tickets",
-          "url": "https://www.ticketmaster.com/bearracuda-denver-colorado-03-14-2026/event/1E0064260CAC881B",
+          "url": "https://www.ticketmaster.com/event/1E0062E79CD214B2",
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "denver-42126767"
+      "slug": "bearracuda-0f2c13d7"
+    },
+    {
+      "name": "MEGAWOOF",
+      "day": "Saturday",
+      "time": "9PM-4:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 39.7239346,
+        "lng": -104.9987819
+      },
+      "startDate": "2025-08-23T21:00:00",
+      "endDate": "2025-08-24T04:30:00",
+      "unprocessedDescription": "url: https://www.eventbrite.com/e/megawoof-america-denver-massi\rve-2-parties-1-ticket-tickets-1381219547849\nkey: megawoof|2025-08-24|trade|eventbrite\ndescription: Get ready for the ultimate party experience at MEGAWOOF AMERICA DENVER: MASSIVE 2 Parties 1 Ticket - double the fun, double the excitement!\nbar: Trade\naddress: 475 Santa Fe Drive, Denver, CO 80204\ncover: $16.84 - $27.37 (as of 8/23)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1042921273%2F185013722403%2F1%2Foriginal.20250531-143913?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=c06443fa220ad17e09684daaac345928\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=39.7239346%2C-104.9987819&query_place_id=ChIJly0oIDt_bIcRWYKaXvlNsQY",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Denver",
+      "wasUTC": true,
+      "sourceUid": "FA8F22C5-9B06-4F8D-B6DC-EB06F50184FF",
+      "uid": "FA8F22C5-9B06-4F8D-B6DC-EB06F50184FF",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Trade",
+      "cover": "$16.84 - $27.37 (as of 8/23)",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1042921273%2F185013722403%2F1%2Foriginal.20250531-143913?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=c06443fa220ad17e09684daaac345928",
+      "tea": "Get ready for the ultimate party experience at MEGAWOOF AMERICA DENVER: MASSIVE 2 Parties 1 Ticket - double the fun, double the excitement!",
+      "address": "475 Santa Fe Drive, Denver, CO 80204",
+      "website": "https://www.eventbrite.com/e/megawoof-america-denver-massive-2-parties-1-ticket-tickets-1381219547849",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=39.7239346%2C-104.9987819&query_place_id=ChIJly0oIDt_bIcRWYKaXvlNsQY",
+      "shortName": "MEGA-WOOF",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.eventbrite.com/e/megawoof-america-denver-massive-2-parties-1-ticket-tickets-1381219547849",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/megawoof_america",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=39.7239346%2C-104.9987819&query_place_id=ChIJly0oIDt_bIcRWYKaXvlNsQY",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "megawoof-37fcce1a"
+    },
+    {
+      "name": "TWISTED BEAR DENVER - feat. DJ/Producer MATT CONSOLA",
+      "day": "Saturday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 39.7402498,
+        "lng": -104.9790098
+      },
+      "startDate": "2026-05-09T21:00:00",
+      "endDate": "2026-05-10T02:00:00",
+      "unprocessedDescription": "description: Excited to return to Denver with a debut party at \rX Bar\nbar: X BAR\naddress: 629 East Colfax Avenue, Denver, CO 80203\nticketUrl: https://www.eventbrite.com/e/twisted-bear-denver-feat-djproducer-matt-consola-tickets-1985473771498\ncover: $17.85 - $23.18 (as of 4/12)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1180182811%2F1088207912863%2F1%2Foriginal.20260318-214151?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=b3cb8f1090035f0405afc6acb5b357f5\nshortName: TWIST-ED BEAR\ninstagram: https://www.instagram.com/twistedbearparty\nfacebook: https://www.facebook.com/twistedglobal/\ngmaps: https://www.google.com/maps/search/?api=1&query=39.7402498%2C-104.9790098&query_place_id=ChIJw4sroyx5bIcR5jU8EDoneGU\nkey: twisted-bear-denver-feat-dj-producer-matt-consola|2026-05-10|x bar",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Denver",
+      "wasUTC": true,
+      "sourceUid": "5CAA4C7D-1DF7-4658-A7DA-92DB96234ABB",
+      "uid": "5CAA4C7D-1DF7-4658-A7DA-92DB96234ABB",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "X BAR",
+      "cover": "$17.85 - $23.18 (as of 4/12)",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1180182811%2F1088207912863%2F1%2Foriginal.20260318-214151?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=b3cb8f1090035f0405afc6acb5b357f5",
+      "tea": "Excited to return to Denver with a debut party at X Bar",
+      "address": "629 East Colfax Avenue, Denver, CO 80203",
+      "website": null,
+      "instagram": "https://www.instagram.com/twistedbearparty",
+      "facebook": "https://www.facebook.com/twistedglobal/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=39.7402498%2C-104.9790098&query_place_id=ChIJw4sroyx5bIcR5jU8EDoneGU",
+      "ticketUrl": "https://www.eventbrite.com/e/twisted-bear-denver-feat-djproducer-matt-consola-tickets-1985473771498",
+      "shortName": "TWIST-ED BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/twistedbearparty",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/twistedglobal/",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=39.7402498%2C-104.9790098&query_place_id=ChIJw4sroyx5bIcR5jU8EDoneGU",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/twisted-bear-denver-feat-djproducer-matt-consola-tickets-1985473771498",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "twisted-bear-denver-feat-djproducer-matt-consola-0fcf1526"
     },
     {
       "name": "DENVER",
@@ -131,6 +242,128 @@
       "slug": "denver-39553322"
     },
     {
+      "name": "DENVER",
+      "day": "Saturday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 39.7526699,
+        "lng": -104.991983
+      },
+      "startDate": "2026-03-14T21:00:00",
+      "endDate": "2026-03-15T02:00:00",
+      "unprocessedDescription": "description: Doors Open at 9\\:00 pm - Party Goes Until 2\\:00 \ram\nbar: Ophelia's\naddress: 1215 20th Street, Denver, CO\ntimezone: America/Denver\nurl: https://bearracuda.com/events/denvermarch/\nimage: https://bearracuda.com/wp-content/uploads/2026/01/denvernew2.jpg\nfacebook: https://www.facebook.com/events/1959773034896673\nticketUrl: https://www.ticketmaster.com/bearracuda-denver-colorado-03-14-2026/event/1E0064260CAC881B\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/search/?api=1&query=Ophelia's%2C%201215%2020th%20Street%2C%20Denver%2C%20CO\nkey: bearracuda-2026-03-15-denver\npinSource: geocoded-exact",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Denver",
+      "wasUTC": true,
+      "sourceUid": "CEB40CFA-CC09-4975-8972-54CF6AC84812",
+      "uid": "CEB40CFA-CC09-4975-8972-54CF6AC84812",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Ophelia's",
+      "image": "https://bearracuda.com/wp-content/uploads/2026/01/denvernew2.jpg",
+      "tea": "Doors Open at 9:00 pm - Party Goes Until 2:00 am",
+      "address": "1215 20th Street, Denver, CO",
+      "website": "https://bearracuda.com/events/denvermarch/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "facebook": "https://www.facebook.com/events/1959773034896673",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Ophelia's%2C%201215%2020th%20Street%2C%20Denver%2C%20CO",
+      "ticketUrl": "https://www.ticketmaster.com/bearracuda-denver-colorado-03-14-2026/event/1E0064260CAC881B",
+      "shortName": "Bear-rac-uda",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/events/denvermarch/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/events/1959773034896673",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Ophelia's%2C%201215%2020th%20Street%2C%20Denver%2C%20CO",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.ticketmaster.com/bearracuda-denver-colorado-03-14-2026/event/1E0064260CAC881B",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "denver-42126767"
+    },
+    {
+      "name": "BEARRACUDA: Denver 17",
+      "day": "Saturday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 39.7526699,
+        "lng": -104.991983
+      },
+      "startDate": "2026-10-03T21:00:00",
+      "endDate": "2026-10-04T02:00:00",
+      "unprocessedDescription": "description: 17 YEAR ANNIVERSARY!!\nbar: Ophelia's\naddress: 12\r15 20th Street, Denver, Colorado, 80202\ntimezone: America/Denver\nticketUrl: https://bearracuda.com\nimage: https://bearracuda.com/wp-content/uploads/2026/08/bearracuda_denveroctober2026-ig-819x1024.jpg\nimageVertical: https://bearracuda.com/wp-content/uploads/2026/08/bearracuda_denveroctober2026-ig-819x1024.jpg\nwebsite: https://bearracuda.com/\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\nfavicon: https://bearracuda.com/\nkey: bearracuda-denver-17|2026-10-04|ophelia's\nbearSource: keyword\npinSource: curated\naddressSource: curated\nimageSource: og-image\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Ophelia's%2C%201215%2020th%20Street%2C%20Denver%2C%20Colorado%2C%2080202",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Denver",
+      "wasUTC": true,
+      "sourceUid": "18D22782-123F-488D-B3FD-232C020A2E3B",
+      "uid": "18D22782-123F-488D-B3FD-232C020A2E3B",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Ophelia's",
+      "image": "https://bearracuda.com/wp-content/uploads/2026/08/bearracuda_denveroctober2026-ig-819x1024.jpg",
+      "imageVertical": "https://bearracuda.com/wp-content/uploads/2026/08/bearracuda_denveroctober2026-ig-819x1024.jpg",
+      "favicon": "https://bearracuda.com/",
+      "tea": "17 YEAR ANNIVERSARY!!",
+      "address": "1215 20th Street, Denver, Colorado, 80202",
+      "website": "https://bearracuda.com/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Ophelia's%2C%201215%2020th%20Street%2C%20Denver%2C%20Colorado%2C%2080202",
+      "ticketUrl": "https://bearracuda.com",
+      "shortName": "Bear-rac-uda",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Ophelia's%2C%201215%2020th%20Street%2C%20Denver%2C%20Colorado%2C%2080202",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://bearracuda.com",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bearracuda-denver-17-32a0e598"
+    },
+    {
       "name": "DENVER PRIDE",
       "day": "Saturday",
       "time": "9PM-2AM",
@@ -192,239 +425,6 @@
         }
       ],
       "slug": "denver-pride-2021bba4"
-    },
-    {
-      "name": "MEGAWOOF",
-      "day": "Saturday",
-      "time": "9PM-4:30AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 39.7239346,
-        "lng": -104.9987819
-      },
-      "startDate": "2025-08-23T21:00:00",
-      "endDate": "2025-08-24T04:30:00",
-      "unprocessedDescription": "url: https://www.eventbrite.com/e/megawoof-america-denver-massi\rve-2-parties-1-ticket-tickets-1381219547849\nkey: megawoof|2025-08-24|trade|eventbrite\ndescription: Get ready for the ultimate party experience at MEGAWOOF AMERICA DENVER: MASSIVE 2 Parties 1 Ticket - double the fun, double the excitement!\nbar: Trade\naddress: 475 Santa Fe Drive, Denver, CO 80204\ncover: $16.84 - $27.37 (as of 8/23)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1042921273%2F185013722403%2F1%2Foriginal.20250531-143913?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=c06443fa220ad17e09684daaac345928\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=39.7239346%2C-104.9987819&query_place_id=ChIJly0oIDt_bIcRWYKaXvlNsQY",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Denver",
-      "wasUTC": true,
-      "sourceUid": "FA8F22C5-9B06-4F8D-B6DC-EB06F50184FF",
-      "uid": "FA8F22C5-9B06-4F8D-B6DC-EB06F50184FF",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Trade",
-      "cover": "$16.84 - $27.37 (as of 8/23)",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1042921273%2F185013722403%2F1%2Foriginal.20250531-143913?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=c06443fa220ad17e09684daaac345928",
-      "tea": "Get ready for the ultimate party experience at MEGAWOOF AMERICA DENVER: MASSIVE 2 Parties 1 Ticket - double the fun, double the excitement!",
-      "address": "475 Santa Fe Drive, Denver, CO 80204",
-      "website": "https://www.eventbrite.com/e/megawoof-america-denver-massive-2-parties-1-ticket-tickets-1381219547849",
-      "instagram": "https://www.instagram.com/megawoof_america",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=39.7239346%2C-104.9987819&query_place_id=ChIJly0oIDt_bIcRWYKaXvlNsQY",
-      "shortName": "MEGA-WOOF",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.eventbrite.com/e/megawoof-america-denver-massive-2-parties-1-ticket-tickets-1381219547849",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/megawoof_america",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=39.7239346%2C-104.9987819&query_place_id=ChIJly0oIDt_bIcRWYKaXvlNsQY",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "megawoof-37fcce1a"
-    },
-    {
-      "name": "Bearracuda",
-      "day": "Saturday",
-      "time": "9PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 39.7533366,
-        "lng": -104.995064
-      },
-      "startDate": "2025-09-06T21:00:00",
-      "endDate": "2025-09-07T02:00:00",
-      "unprocessedDescription": "description: 16 YEAR ANNIVERSARY\nDoors Open at 9\\:00 pm - Par\rty Goes Until 2\\:00 am\nbar: Summit\naddress: 1902 Blake St, Denver, CO 80202\ntimezone: America/Denver\nurl: https://bearracuda.com/events/denverpride/\nimage: https://bearracuda.com/wp-content/uploads/2025/01/den16web.jpg\nfacebook: https://www.facebook.com/events/747044714674555\nticketUrl: https://www.ticketmaster.com/event/1E0062E79CD214B2\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://maps.google.com/?q=1902%20Blake%20St%2C%20Denver%2C%20CO%2080202\nkey: bearracuda-2025-09-07-denver\npinSource: geocoded-exact",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Denver",
-      "wasUTC": true,
-      "sourceUid": "2EADF29C-DD45-4A7C-938D-D57E62DB56F7",
-      "uid": "2EADF29C-DD45-4A7C-938D-D57E62DB56F7",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 1,
-      "overrideIdentityType": null,
-      "bar": "Summit",
-      "image": "https://bearracuda.com/wp-content/uploads/2025/01/den16web.jpg",
-      "tea": "16 YEAR ANNIVERSARY",
-      "address": "1902 Blake St, Denver, CO 80202",
-      "website": "https://bearracuda.com/events/denverpride/",
-      "instagram": "https://www.instagram.com/bearracuda",
-      "facebook": "https://www.facebook.com/events/747044714674555",
-      "gmaps": "https://maps.google.com/?q=1902%20Blake%20St%2C%20Denver%2C%20CO%2080202",
-      "ticketUrl": "https://www.ticketmaster.com/event/1E0062E79CD214B2",
-      "shortName": "Bear-rac-uda",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://bearracuda.com/events/denverpride/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearracuda",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "facebook",
-          "url": "https://www.facebook.com/events/747044714674555",
-          "label": "📘 Facebook"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://maps.google.com/?q=1902%20Blake%20St%2C%20Denver%2C%20CO%2080202",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.ticketmaster.com/event/1E0062E79CD214B2",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "bearracuda-0f2c13d7"
-    },
-    {
-      "name": "BEARRACUDA: Denver 17",
-      "day": "Saturday",
-      "time": "9PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 39.7526699,
-        "lng": -104.991983
-      },
-      "startDate": "2026-10-03T21:00:00",
-      "endDate": "2026-10-04T02:00:00",
-      "unprocessedDescription": "description: 17 YEAR ANNIVERSARY!!\nbar: Ophelia's\naddress: 12\r15 20th Street, Denver, Colorado, 80202\ntimezone: America/Denver\nticketUrl: https://bearracuda.com\nimage: https://bearracuda.com/wp-content/uploads/2026/08/bearracuda_denveroctober2026-ig-819x1024.jpg\nimageSource: og-image\nimageVertical: https://bearracuda.com/wp-content/uploads/2026/08/bearracuda_denveroctober2026-ig-819x1024.jpg\nbarSource: curated\naddressSource: curated\nwebsite: https://bearracuda.com/\ngmaps: https://www.google.com/maps/search/?api=1&query=39.7526699%2C-104.991983\npinSource: curated\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\nfavicon: https://bearracuda.com/\nkey: bearracuda-denver-17|2026-10-04|ophelia's\nbearSource: keyword",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Denver",
-      "wasUTC": true,
-      "sourceUid": "18D22782-123F-488D-B3FD-232C020A2E3B",
-      "uid": "18D22782-123F-488D-B3FD-232C020A2E3B",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Ophelia's",
-      "image": "https://bearracuda.com/wp-content/uploads/2026/08/bearracuda_denveroctober2026-ig-819x1024.jpg",
-      "imageVertical": "https://bearracuda.com/wp-content/uploads/2026/08/bearracuda_denveroctober2026-ig-819x1024.jpg",
-      "favicon": "https://bearracuda.com/",
-      "tea": "17 YEAR ANNIVERSARY!!",
-      "address": "1215 20th Street, Denver, Colorado, 80202",
-      "website": "https://bearracuda.com/",
-      "instagram": "https://www.instagram.com/bearracuda",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=39.7526699%2C-104.991983",
-      "ticketUrl": "https://bearracuda.com",
-      "shortName": "Bear-rac-uda",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://bearracuda.com/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearracuda",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=39.7526699%2C-104.991983",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://bearracuda.com",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "bearracuda-denver-17-32a0e598"
-    },
-    {
-      "name": "TWISTED BEAR DENVER - feat. DJ/Producer MATT CONSOLA",
-      "day": "Saturday",
-      "time": "9PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 39.7402498,
-        "lng": -104.9790098
-      },
-      "startDate": "2026-05-09T21:00:00",
-      "endDate": "2026-05-10T02:00:00",
-      "unprocessedDescription": "description: Excited to return to Denver with a debut party at \rX Bar\nbar: X BAR\naddress: 629 East Colfax Avenue, Denver, CO 80203\nticketUrl: https://www.eventbrite.com/e/twisted-bear-denver-feat-djproducer-matt-consola-tickets-1985473771498\ncover: $17.85 - $23.18 (as of 4/12)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1180182811%2F1088207912863%2F1%2Foriginal.20260318-214151?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=b3cb8f1090035f0405afc6acb5b357f5\nshortName: TWIST-ED BEAR\ninstagram: https://www.instagram.com/twistedbearparty\nfacebook: https://www.facebook.com/twistedglobal/\ngmaps: https://www.google.com/maps/search/?api=1&query=39.7402498%2C-104.9790098&query_place_id=ChIJw4sroyx5bIcR5jU8EDoneGU\nkey: twisted-bear-denver-feat-dj-producer-matt-consola|2026-05-10|x bar",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Denver",
-      "wasUTC": true,
-      "sourceUid": "5CAA4C7D-1DF7-4658-A7DA-92DB96234ABB",
-      "uid": "5CAA4C7D-1DF7-4658-A7DA-92DB96234ABB",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "X BAR",
-      "cover": "$17.85 - $23.18 (as of 4/12)",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1180182811%2F1088207912863%2F1%2Foriginal.20260318-214151?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=b3cb8f1090035f0405afc6acb5b357f5",
-      "tea": "Excited to return to Denver with a debut party at X Bar",
-      "address": "629 East Colfax Avenue, Denver, CO 80203",
-      "website": null,
-      "instagram": "https://www.instagram.com/twistedbearparty",
-      "facebook": "https://www.facebook.com/twistedglobal/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=39.7402498%2C-104.9790098&query_place_id=ChIJw4sroyx5bIcR5jU8EDoneGU",
-      "ticketUrl": "https://www.eventbrite.com/e/twisted-bear-denver-feat-djproducer-matt-consola-tickets-1985473771498",
-      "shortName": "TWIST-ED BEAR",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/twistedbearparty",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "facebook",
-          "url": "https://www.facebook.com/twistedglobal/",
-          "label": "📘 Facebook"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=39.7402498%2C-104.9790098&query_place_id=ChIJw4sroyx5bIcR5jU8EDoneGU",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/twisted-bear-denver-feat-djproducer-matt-consola-tickets-1985473771498",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "twisted-bear-denver-feat-djproducer-matt-consola-0fcf1526"
     }
   ]
 }

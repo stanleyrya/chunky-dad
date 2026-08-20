@@ -70,7 +70,7 @@
       },
       "startDate": "2026-12-05T23:00:00",
       "endDate": "2026-12-06T04:00:00",
-      "unprocessedDescription": "description: BEEFMINCE; the UK’s tastiest bear club is famous \rfor our fun, social, bear full- attitude free parties with the best DJs playing the tastiest party anthems ranging from disco, house and electro and we're back to bring our recipe to the city of Brighton at the legendary Concorde2 for 2026! DJ Line Up TBC We’re here for the Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers & everyone in between. Come as you are, we’ll love you for it. *More info and FAQs at beefmince.com*\nbar: Concorde 2\naddress: 286A Madeira Drive, Brighton BN2 1EN\nticketUrl: https://dice.fm/event/53moed-beefmince-x-brighton-5th-dec-concorde-2-brighton-tickets\nimage: https://dice-media.imgix.net/attachments/2025-01-13/bf6a78f1-f924-41ef-aba7-8e35d4211d38.jpg?rect=0%2C0%2C768%2C768\ntimezone: Europe/London\ncover: £12\nimageHorizontal: https://dice-media.imgix.net/attachments/2025-01-13/bf6a78f1-f924-41ef-aba7-8e35d4211d38.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress\nwebsite: https://beefmince.com\nshortName: BEEF-MINCE\nfavicon: https://beefmince.com\nkey: beefmince-x-brighton|2026-12-05|concorde 2\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=50.8172912%2C-0.1225875",
+      "unprocessedDescription": "description: BEEFMINCE; the UK’s tastiest bear club is famous \rfor our fun, social, bear full- attitude free parties with the best DJs playing the tastiest party anthems ranging from disco, house and electro and we're back to bring our recipe to the city of Brighton at the legendary Concorde2 for 2026! DJ Line Up TBC We’re here for the Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers & everyone in between. Come as you are, we’ll love you for it. *More info and FAQs at beefmince.com*\nbar: Concorde 2\naddress: 286A Madeira Drive, Brighton BN2 1EN\nticketUrl: https://dice.fm/event/53moed-beefmince-x-brighton-5th-dec-concorde-2-brighton-tickets\nimage: https://dice-media.imgix.net/attachments/2025-01-13/bf6a78f1-f924-41ef-aba7-8e35d4211d38.jpg?rect=0%2C0%2C768%2C768\ntimezone: Europe/London\ncover: £12\nimageHorizontal: https://dice-media.imgix.net/attachments/2025-01-13/bf6a78f1-f924-41ef-aba7-8e35d4211d38.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress\nwebsite: https://beefmince.com\nshortName: BEEF-MINCE\nfavicon: https://beefmince.com\nkey: beefmince-x-brighton|2026-12-05|concorde 2\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Concorde%202%2C%20286A%20Madeira%20Drive%2C%20Brighton%20BN2%201EN",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "Europe/London",
@@ -89,7 +89,7 @@
       "tea": "BEEFMINCE; the UK’s tastiest bear club is famous for our fun, social, bear full- attitude free parties with the best DJs playing the tastiest party anthems ranging from disco, house and electro and we're back to bring our recipe to the city of Brighton at the legendary Concorde2 for 2026! DJ Line Up TBC We’re here for the Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers & everyone in between. Come as you are, we’ll love you for it. *More info and FAQs at beefmince.com*",
       "address": "286A Madeira Drive, Brighton BN2 1EN",
       "website": "https://beefmince.com",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=50.8172912%2C-0.1225875",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Concorde%202%2C%20286A%20Madeira%20Drive%2C%20Brighton%20BN2%201EN",
       "ticketUrl": "https://dice.fm/event/53moed-beefmince-x-brighton-5th-dec-concorde-2-brighton-tickets",
       "shortName": "BEEF-MINCE",
       "bearReview": null,
@@ -101,7 +101,7 @@
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=50.8172912%2C-0.1225875",
+          "url": "https://www.google.com/maps/search/?api=1&query=Concorde%202%2C%20286A%20Madeira%20Drive%2C%20Brighton%20BN2%201EN",
           "label": "🗺️ Google Maps"
         },
         {

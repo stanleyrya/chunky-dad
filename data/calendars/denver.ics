@@ -6,73 +6,25 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-denver
 X-WR-TIMEZONE:America/Denver
 BEGIN:VEVENT
-DTSTART:20260315T030000Z
-DTEND:20260315T080000Z
-DTSTAMP:20260815T024542Z
-UID:CEB40CFA-CC09-4975-8972-54CF6AC84812
-CREATED:20260126T235320Z
-DESCRIPTION:description: Doors Open at 9\\:00 pm - Party Goes Until 2\\:00 
- am\nbar: Ophelia's\naddress: 1215 20th Street\, Denver\, CO\ntimezone: Amer
- ica/Denver\nurl: https://bearracuda.com/events/denvermarch/\nimage: https:/
- /bearracuda.com/wp-content/uploads/2026/01/denvernew2.jpg\nfacebook: https:
- //www.facebook.com/events/1959773034896673\nticketUrl: https://www.ticketma
- ster.com/bearracuda-denver-colorado-03-14-2026/event/1E0064260CAC881B\nshor
- tName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps
- : https://www.google.com/maps/search/?api=1&query=Ophelia's%2C%201215%2020t
- h%20Street%2C%20Denver%2C%20CO\nkey: bearracuda-2026-03-15-denver\npinSourc
- e: geocoded-exact
-LAST-MODIFIED:20260717T211312Z
-LOCATION:39.7526699\, -104.9919830
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:DENVER
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20251109T040000Z
-DTEND:20251109T090000Z
-DTSTAMP:20260815T024542Z
-UID:C7EE5AFD-D875-467B-903D-095E6C0F0F61
-CREATED:20250913T110034Z
-DESCRIPTION:description: Doors Open at 9\\:00 pm - Party Goes Until 2\\:00 
- am\nbar: Ophelia's\naddress: 1215 20th Street\, Denver\, CO 80202\ntimezone
- : America/Denver\nurl: https://bearracuda.com/events/denverjockstrap/\nimag
- e: https://bearracuda.com/wp-content/uploads/2025/01/denvernov1.jpg\nfacebo
- ok: https://www.facebook.com/events/940668894946715\nticketUrl: https://www
- .ticketmaster.com/event/1E00632CA5D027C6\nshortName: Bear-rac-uda\ninstagra
- m: https://www.instagram.com/bearracuda\ngmaps: https://maps.google.com/?q=
- 1215%2020th%20Street%2C%20Denver%2C%20CO%2080202\nkey: bearracuda-2025-11-0
- 9-denver\npinSource: geocoded-exact
+DTSTART:20250907T030000Z
+DTEND:20250907T080000Z
+DTSTAMP:20260820T182935Z
+UID:2EADF29C-DD45-4A7C-938D-D57E62DB56F7
+CREATED:20250825T034002Z
+DESCRIPTION:description: 16 YEAR ANNIVERSARY\nDoors Open at 9\\:00 pm - Par
+ ty Goes Until 2\\:00 am\nbar: Summit\naddress: 1902 Blake St\, Denver\, CO 
+ 80202\ntimezone: America/Denver\nurl: https://bearracuda.com/events/denverp
+ ride/\nimage: https://bearracuda.com/wp-content/uploads/2025/01/den16web.jp
+ g\nfacebook: https://www.facebook.com/events/747044714674555\nticketUrl: ht
+ tps://www.ticketmaster.com/event/1E0062E79CD214B2\nshortName: Bear-rac-uda\
+ ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://maps.googl
+ e.com/?q=1902%20Blake%20St%2C%20Denver%2C%20CO%2080202\nkey: bearracuda-202
+ 5-09-07-denver\npinSource: geocoded-exact
 LAST-MODIFIED:20260717T211311Z
-LOCATION:39.7526699\, -104.9919830
-SEQUENCE:0
+LOCATION:39.7533366\, -104.9950640
+SEQUENCE:1
 STATUS:CONFIRMED
-SUMMARY:DENVER
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260628T030000Z
-DTEND:20260628T080000Z
-DTSTAMP:20260815T024542Z
-UID:945D4169-D1D1-494F-AABB-A7A87C364566
-CREATED:20260123T030751Z
-DESCRIPTION:description: Music & Entertainment\n• TONY MORAN\n• Mateo Segad
- e (Sold Pink Disco)\nbar: SUMMIT\naddress: 1302 Blake St\, Denver\, CO\ntim
- ezone: America/Denver\nimage: https://bearracuda.com/wp-content/uploads/202
- 5/01/tonydenverstory.jpg\nfacebook: https://www.facebook.com/events/3431582
- 900333796/\nticketUrl: https://www.ticketmaster.com/event/1E00642CF2CCADDC\
- nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\n
- website: https://bearracuda.com/events/denverpride26/\ngmaps: https://www.g
- oogle.com/maps/search/?api=1&query=SUMMIT%2C%201302%20Blake%20St%2C%20Denve
- r%2C%20CO\nkey: bearracuda-2026-06-28-denver\npinSource: geocoded-exact
-LAST-MODIFIED:20260717T211313Z
-LOCATION:39.7707666\, -104.9736604
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:DENVER PRIDE
+SUMMARY:Bearracuda
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
@@ -80,7 +32,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20250824T030000Z
 DTEND:20250824T103000Z
-DTSTAMP:20260815T024542Z
+DTSTAMP:20260820T182935Z
 UID:FA8F22C5-9B06-4F8D-B6DC-EB06F50184FF
 CREATED:20250822T215307Z
 DESCRIPTION:url: https://www.eventbrite.com/e/megawoof-america-denver-massi
@@ -105,59 +57,9 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20250907T030000Z
-DTEND:20250907T080000Z
-DTSTAMP:20260815T024542Z
-UID:2EADF29C-DD45-4A7C-938D-D57E62DB56F7
-CREATED:20250825T034002Z
-DESCRIPTION:description: 16 YEAR ANNIVERSARY\nDoors Open at 9\\:00 pm - Par
- ty Goes Until 2\\:00 am\nbar: Summit\naddress: 1902 Blake St\, Denver\, CO 
- 80202\ntimezone: America/Denver\nurl: https://bearracuda.com/events/denverp
- ride/\nimage: https://bearracuda.com/wp-content/uploads/2025/01/den16web.jp
- g\nfacebook: https://www.facebook.com/events/747044714674555\nticketUrl: ht
- tps://www.ticketmaster.com/event/1E0062E79CD214B2\nshortName: Bear-rac-uda\
- ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://maps.googl
- e.com/?q=1902%20Blake%20St%2C%20Denver%2C%20CO%2080202\nkey: bearracuda-202
- 5-09-07-denver\npinSource: geocoded-exact
-LAST-MODIFIED:20260717T211311Z
-LOCATION:39.7533366\, -104.9950640
-SEQUENCE:1
-STATUS:CONFIRMED
-SUMMARY:Bearracuda
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261004T030000Z
-DTEND:20261004T080000Z
-DTSTAMP:20260815T024542Z
-UID:18D22782-123F-488D-B3FD-232C020A2E3B
-CREATED:20260815T022615Z
-DESCRIPTION:description: 17 YEAR ANNIVERSARY!!\nbar: Ophelia's\naddress: 12
- 15 20th Street\, Denver\, Colorado\, 80202\ntimezone: America/Denver\nticke
- tUrl: https://bearracuda.com\nimage: https://bearracuda.com/wp-content/uplo
- ads/2026/08/bearracuda_denveroctober2026-ig-819x1024.jpg\nimageSource: og-i
- mage\nimageVertical: https://bearracuda.com/wp-content/uploads/2026/08/bear
- racuda_denveroctober2026-ig-819x1024.jpg\nbarSource: curated\naddressSource
- : curated\nwebsite: https://bearracuda.com/\ngmaps: https://www.google.com/
- maps/search/?api=1&query=39.7526699%2C-104.991983\npinSource: curated\nshor
- tName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\nfavic
- on: https://bearracuda.com/\nkey: bearracuda-denver-17|2026-10-04|ophelia's
- \nbearSource: keyword
-LAST-MODIFIED:20260815T022616Z
-LOCATION:39.7526699\, -104.9919830
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:BEARRACUDA: Denver 17
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20260510T030000Z
 DTEND:20260510T080000Z
-DTSTAMP:20260815T024542Z
+DTSTAMP:20260820T182935Z
 UID:5CAA4C7D-1DF7-4658-A7DA-92DB96234ABB
 CREATED:20260412T080008Z
 DESCRIPTION:description: Excited to return to Denver with a debut party at 
@@ -177,6 +79,104 @@ LOCATION:39.7402498\, -104.9790098
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:TWISTED BEAR DENVER - feat. DJ/Producer MATT CONSOLA
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20251109T040000Z
+DTEND:20251109T090000Z
+DTSTAMP:20260820T182935Z
+UID:C7EE5AFD-D875-467B-903D-095E6C0F0F61
+CREATED:20250913T110034Z
+DESCRIPTION:description: Doors Open at 9\\:00 pm - Party Goes Until 2\\:00 
+ am\nbar: Ophelia's\naddress: 1215 20th Street\, Denver\, CO 80202\ntimezone
+ : America/Denver\nurl: https://bearracuda.com/events/denverjockstrap/\nimag
+ e: https://bearracuda.com/wp-content/uploads/2025/01/denvernov1.jpg\nfacebo
+ ok: https://www.facebook.com/events/940668894946715\nticketUrl: https://www
+ .ticketmaster.com/event/1E00632CA5D027C6\nshortName: Bear-rac-uda\ninstagra
+ m: https://www.instagram.com/bearracuda\ngmaps: https://maps.google.com/?q=
+ 1215%2020th%20Street%2C%20Denver%2C%20CO%2080202\nkey: bearracuda-2025-11-0
+ 9-denver\npinSource: geocoded-exact
+LAST-MODIFIED:20260717T211311Z
+LOCATION:39.7526699\, -104.9919830
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:DENVER
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260315T030000Z
+DTEND:20260315T080000Z
+DTSTAMP:20260820T182935Z
+UID:CEB40CFA-CC09-4975-8972-54CF6AC84812
+CREATED:20260126T235320Z
+DESCRIPTION:description: Doors Open at 9\\:00 pm - Party Goes Until 2\\:00 
+ am\nbar: Ophelia's\naddress: 1215 20th Street\, Denver\, CO\ntimezone: Amer
+ ica/Denver\nurl: https://bearracuda.com/events/denvermarch/\nimage: https:/
+ /bearracuda.com/wp-content/uploads/2026/01/denvernew2.jpg\nfacebook: https:
+ //www.facebook.com/events/1959773034896673\nticketUrl: https://www.ticketma
+ ster.com/bearracuda-denver-colorado-03-14-2026/event/1E0064260CAC881B\nshor
+ tName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps
+ : https://www.google.com/maps/search/?api=1&query=Ophelia's%2C%201215%2020t
+ h%20Street%2C%20Denver%2C%20CO\nkey: bearracuda-2026-03-15-denver\npinSourc
+ e: geocoded-exact
+LAST-MODIFIED:20260717T211312Z
+LOCATION:39.7526699\, -104.9919830
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:DENVER
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261004T030000Z
+DTEND:20261004T080000Z
+DTSTAMP:20260820T182935Z
+UID:18D22782-123F-488D-B3FD-232C020A2E3B
+CREATED:20260815T022615Z
+DESCRIPTION:description: 17 YEAR ANNIVERSARY!!\nbar: Ophelia's\naddress: 12
+ 15 20th Street\, Denver\, Colorado\, 80202\ntimezone: America/Denver\nticke
+ tUrl: https://bearracuda.com\nimage: https://bearracuda.com/wp-content/uplo
+ ads/2026/08/bearracuda_denveroctober2026-ig-819x1024.jpg\nimageVertical: ht
+ tps://bearracuda.com/wp-content/uploads/2026/08/bearracuda_denveroctober202
+ 6-ig-819x1024.jpg\nwebsite: https://bearracuda.com/\nshortName: Bear-rac-ud
+ a\ninstagram: https://www.instagram.com/bearracuda\nfavicon: https://bearra
+ cuda.com/\nkey: bearracuda-denver-17|2026-10-04|ophelia's\nbearSource: keyw
+ ord\npinSource: curated\naddressSource: curated\nimageSource: og-image\nbar
+ Source: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Oph
+ elia's%2C%201215%2020th%20Street%2C%20Denver%2C%20Colorado%2C%2080202
+LAST-MODIFIED:20260820T175449Z
+LOCATION:39.7526699\, -104.9919830
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEARRACUDA: Denver 17
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260628T030000Z
+DTEND:20260628T080000Z
+DTSTAMP:20260820T182935Z
+UID:945D4169-D1D1-494F-AABB-A7A87C364566
+CREATED:20260123T030751Z
+DESCRIPTION:description: Music & Entertainment\n• TONY MORAN\n• Mateo Segad
+ e (Sold Pink Disco)\nbar: SUMMIT\naddress: 1302 Blake St\, Denver\, CO\ntim
+ ezone: America/Denver\nimage: https://bearracuda.com/wp-content/uploads/202
+ 5/01/tonydenverstory.jpg\nfacebook: https://www.facebook.com/events/3431582
+ 900333796/\nticketUrl: https://www.ticketmaster.com/event/1E00642CF2CCADDC\
+ nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\n
+ website: https://bearracuda.com/events/denverpride26/\ngmaps: https://www.g
+ oogle.com/maps/search/?api=1&query=SUMMIT%2C%201302%20Blake%20St%2C%20Denve
+ r%2C%20CO\nkey: bearracuda-2026-06-28-denver\npinSource: geocoded-exact
+LAST-MODIFIED:20260717T211313Z
+LOCATION:39.7707666\, -104.9736604
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:DENVER PRIDE
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

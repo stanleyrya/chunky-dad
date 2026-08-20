@@ -8,7 +8,7 @@ X-WR-TIMEZONE:Europe/London
 BEGIN:VEVENT
 DTSTART:20260926T210000Z
 DTEND:20260927T030000Z
-DTSTAMP:20260811T185357Z
+DTSTAMP:20260820T182935Z
 UID:2F6B95B8-EB63-4396-AB18-A5F6F20D84F2
 CREATED:20260731T131550Z
 DESCRIPTION:description: 🐻🔥 BEEFMINCE x Bear Brum 2026 🔥🐻 Join BEEFMINC
@@ -29,9 +29,9 @@ DESCRIPTION:description: 🐻🔥 BEEFMINCE x Bear Brum 2026 🔥🐻 Join BEEFM
  e: https://beefmince.com\nshortName: BEEF-MINCE\nfavicon: https://beefmince
  .com\nkey: beefmince-x-bear-brum-2026|2026-09-26|eden\nbearSource: keyword\
  npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: c
- urated\ngmaps: https://www.google.com/maps/search/?api=1&query=52.46975%2C-
- 1.89513
-LAST-MODIFIED:20260811T175713Z
+ urated\ngmaps: https://www.google.com/maps/search/?api=1&query=Eden%2C%2013
+ 8%20Gooch%20Street%2C%20Birmingham%2C%20B5%207HF%2C%20United%20Kingdom
+LAST-MODIFIED:20260820T174539Z
 LOCATION:52.46975\, -1.89513
 SEQUENCE:0
 STATUS:CONFIRMED
