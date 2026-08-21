@@ -330,6 +330,14 @@ class BearEventScraperOrchestrator {
                         });
                         aiParser.core = sharedCore;
                         sharedCore.aiResponseCache = aiParser.getAiResponseCache();
+                        // OCR title-evidence for image merges: shared-core's
+                        // arbitration reads what both image candidates SAY
+                        // (verdict store + persistent OCR cache) through this
+                        // injected lookup — platform-pure, fails open when
+                        // either side has no readable text.
+                        sharedCore.setOcrImageTextLookup(
+                            (imageUrl, httpAdapter) => aiParser.getCachedOcrTextForImage(imageUrl, httpAdapter)
+                        );
                         parsers[name] = aiParser;
                     } else {
                         parsers[name] = new ParserClass();

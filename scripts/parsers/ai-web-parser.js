@@ -1523,6 +1523,19 @@ class AiWebParser {
             const aiSegments = await this.runAiBoundarySegmentation(html, sourceUrl, ocrResults, parserConfig, httpAdapter, segments.length);
             if (aiSegments.length >= 2) segments = aiSegments;
         }
+        if (segments.length === 0 && parserConfig.discoveryOnly !== true) {
+            // Flyer-only listing pages (run 20260820, Lumberyard
+            // /mothly-events): every event is a poster image with no HTML
+            // text, so neither splitter can find windows — yet OCR already
+            // read the flyers. Give each text-bearing flyer its own segment;
+            // the whole-page fallback below can only ever return ONE event
+            // and silently discarded the rest AFTER OCR paid for them.
+            const flyerSegments = this.buildFlyerOnlySegments(ocrResults, sourceUrl);
+            if (flyerSegments.length >= 2) {
+                console.log(`🤖 AI Web: 🖼️ FLYER SEGMENTS: no text windows but ${flyerSegments.length} OCR'd flyers carry their own text — extracting one segment per flyer`);
+                segments = flyerSegments;
+            }
+        }
         if (segments.length === 0) {
             console.warn('🤖 AI Web: multi-event-page classification produced no valid segments; returning no events');
             // Marker for parseEvents' cached-misclassification self-heal: a
@@ -1578,6 +1591,15 @@ class AiWebParser {
         // flyer↔segment pairings whose flyer text names a sibling listing —
         // BEFORE any per-segment prompt content is built below.
         this.applySegmentOcrConsistencyGate(segments, ocrResults, sourceUrl);
+
+        // Fused-listing split (run 20260820, South Seattle Bear Social): with
+        // pairings corrected, a window still holding 2+ distinct text-bearing
+        // flyers releases the extras into flyer-only segments of their own —
+        // one-event-per-segment extraction was keeping only the neighbor.
+        const flyerTopUpSegments = this.collectFusedFlyerTopUpSegments(segments, ocrResults, sourceUrl);
+        if (flyerTopUpSegments.length > 0) {
+            segments = segments.concat(flyerTopUpSegments);
+        }
 
         // Report-only tripwire: a window carrying a NEIGHBORING card's
         // JSON-LD would have its url/date/image hijacked by the structured
@@ -3872,9 +3894,8 @@ class AiWebParser {
                 const attributeValue = String(match[1] || '').trim();
                 if (!attributeValue) continue;
                 if (pattern.source.includes('srcset')) {
-                    attributeValue.split(',').forEach(part => {
-                        const candidate = String(part || '').trim().split(/\s+/)[0];
-                        if (candidate) addImageRecord(candidate, match.index, pattern.lastIndex);
+                    this.splitSrcsetIntoUrlCandidates(attributeValue).forEach(candidate => {
+                        addImageRecord(candidate, match.index, pattern.lastIndex);
                     });
                 } else {
                     addImageRecord(attributeValue, match.index, pattern.lastIndex);
@@ -3890,6 +3911,24 @@ class AiWebParser {
             if (results.length >= limit) break;
         }
         return results.slice(0, limit);
+    }
+
+    // srcset entries are separated by commas, but URLs may CONTAIN commas
+    // (wixstatic transform params: /v1/fill/w_600,h_800,al_c,…). Split only
+    // at commas that start a new entry: comma + whitespace (the spec's
+    // "url descriptor, url descriptor" shape) or comma directly before a new
+    // absolute URL. In-URL commas match neither, so Wix URLs survive whole —
+    // run 20260820 (Lumberyard): naive comma-splitting produced relative
+    // shards ("enc_auto/quality_auto/…") that were re-rooted onto the page
+    // host as guaranteed-404 OCR candidates wasting cap slots. Known
+    // trade-off: a RELATIVE second entry packed against the comma with no
+    // whitespace is not split — rarer than in-URL commas, and the old code
+    // mangled that shape's sibling anyway.
+    splitSrcsetIntoUrlCandidates(attributeValue) {
+        return String(attributeValue || '')
+            .split(/,\s*(?=https?:\/\/)|,\s+/i)
+            .map(part => String(part || '').trim().split(/\s+/)[0])
+            .filter(Boolean);
     }
 
     extractOrderedImageUrlsFromHtml(html, sourceUrl = '', maxUrls = Infinity) {
@@ -8861,6 +8900,127 @@ class AiWebParser {
         }
 
         return matchedOcrResults;
+    }
+
+    // ── Flyer-only segments (run 20260820, The Lumberyard) ────────────────
+    // Listing pages whose events are POSTER IMAGES with little or no HTML
+    // text defeat both text splitters, yet OCR already read every flyer.
+    // These helpers turn text-bearing flyers into segments of their own so
+    // per-segment extraction sees one event per flyer instead of a
+    // whole-page fallback that can only ever return one.
+
+    // Eligibility: meaningful OCR text, and a flyer-like classification when
+    // one is present. Absent classification pairs on text — the same
+    // fail-open rule filterOcrResultsForSegment's pairing gate uses.
+    isFlyerSegmentCandidateOcrResult(ocrResult) {
+        if (!ocrResult || typeof ocrResult.url !== 'string' || !ocrResult.url) return false;
+        const text = typeof ocrResult.text === 'string' ? ocrResult.text.trim() : '';
+        if (text.length < 12) return false;
+        const classification = String(ocrResult.imageClassification || '').toLowerCase().trim();
+        if (classification && !/flyer|poster/.test(classification)) return false;
+        return true;
+    }
+
+    // One identity key per flyer, aligned with ocrExcludedUrlKeys (stripped
+    // URL) so exclusions and pairing judge the same identity.
+    flyerSegmentImageKey(url) {
+        const normalized = this.normalizeHttpUrlValue(url);
+        if (!normalized) return '';
+        return this.stripSizeParams(normalized) || normalized;
+    }
+
+    // Zero-text pages: one synthetic segment per distinct text-bearing
+    // flyer. Segments carry NO invented page text — the flyer URL rides as
+    // an image hint (pairing its own OCR result into the prompt) and the
+    // OCR text itself is the extraction corpus.
+    buildFlyerOnlySegments(ocrResults, sourceUrl = '') {
+        const segments = [];
+        const seenKeys = new Set();
+        for (const ocrResult of (Array.isArray(ocrResults) ? ocrResults : [])) {
+            if (!this.isFlyerSegmentCandidateOcrResult(ocrResult)) continue;
+            const key = this.flyerSegmentImageKey(ocrResult.url);
+            if (!key || seenKeys.has(key)) continue;
+            if (this.getRepeatedSegmentChromeReason(this.normalizeHttpUrlValue(ocrResult.url), sourceUrl)) continue;
+            seenKeys.add(key);
+            segments.push({ lines: [], html: '', imageHintUrls: [ocrResult.url], _flyerOnlySegment: true });
+        }
+        return segments;
+    }
+
+    // Fused-listing split: a listing whose HTML text has no title line rides
+    // its neighbor's window (South Seattle Bear Social inside "Dolly and the
+    // DJ", run 20260820 — Dolly's description was literally the bear
+    // social's text). After the consistency gate has corrected pairings, a
+    // window still holding 2+ distinct text-bearing flyers keeps the flyer
+    // whose text best matches its own listing title and releases the others
+    // into flyer-only segments — EXCEPT a flyer whose identity another
+    // window also claims (its listing exists elsewhere on the page;
+    // splitting it out would extract the same event twice).
+    collectFusedFlyerTopUpSegments(segments, ocrResults, sourceUrl = '') {
+        const sourceSegments = Array.isArray(segments) ? segments : [];
+        const ocrList = Array.isArray(ocrResults) ? ocrResults : [];
+        if (sourceSegments.length === 0 || ocrList.length === 0) return [];
+        const canTokenize = this.core && typeof this.core.getCrossSourceTitleTokens === 'function';
+
+        const segmentInfos = sourceSegments.map(segment => ({
+            segment,
+            keys: this.getSegmentImageUrlKeys(segment, sourceUrl),
+            titleTokens: canTokenize
+                ? this.core.getCrossSourceTitleTokens(this.deriveSegmentListingTitle(segment))
+                : []
+        }));
+
+        // Raw ownership per flyer identity — exclusions deliberately ignored
+        // so "claimed by 2+ windows" reflects the page's layout, not gate
+        // bookkeeping.
+        const eligible = [];
+        const seenKeys = new Set();
+        for (const ocrResult of ocrList) {
+            if (!this.isFlyerSegmentCandidateOcrResult(ocrResult)) continue;
+            const normalizedUrl = this.normalizeHttpUrlValue(ocrResult.url);
+            const key = this.flyerSegmentImageKey(ocrResult.url);
+            if (!key || seenKeys.has(key)) continue;
+            if (this.getRepeatedSegmentChromeReason(normalizedUrl, sourceUrl)) continue;
+            seenKeys.add(key);
+            const owners = [];
+            segmentInfos.forEach((info, index) => {
+                if (info.keys.normalized.has(normalizedUrl) || info.keys.stripped.has(key)) owners.push(index);
+            });
+            const ocrTokens = canTokenize
+                ? new Set(this.core.getCrossSourceTitleTokens(
+                    `${String(ocrResult.text || '')} ${String(ocrResult.eventSummary || '')}`))
+                : new Set();
+            eligible.push({ ocrResult, key, owners, ocrTokens });
+        }
+
+        const extras = [];
+        segmentInfos.forEach((info, index) => {
+            const mine = eligible.filter(entry => entry.owners.includes(index));
+            if (mine.length < 2) return;
+            // Keep the flyer whose text best matches this window's own
+            // listing title (ties and no-signal keep page order).
+            const matchedCount = entry => info.titleTokens.filter(token => entry.ocrTokens.has(token)).length;
+            let keepIndex = 0;
+            let bestMatched = -1;
+            mine.forEach((entry, mineIndex) => {
+                const matched = matchedCount(entry);
+                if (matched > bestMatched) {
+                    bestMatched = matched;
+                    keepIndex = mineIndex;
+                }
+            });
+            mine.forEach((entry, mineIndex) => {
+                if (mineIndex === keepIndex) return;
+                if (entry.owners.length > 1) return; // listed elsewhere — splitting would duplicate it
+                if (!(info.segment.ocrExcludedUrlKeys instanceof Set)) {
+                    info.segment.ocrExcludedUrlKeys = new Set();
+                }
+                info.segment.ocrExcludedUrlKeys.add(entry.key);
+                extras.push({ lines: [], html: '', imageHintUrls: [entry.ocrResult.url], _flyerOnlySegment: true });
+                console.log(`🤖 AI Web: 🖼️ FLYER SEGMENTS: window ${index + 1} holds ${mine.length} distinct text-bearing flyers — giving ${entry.ocrResult.url} its own segment (fused-listing split)`);
+            });
+        });
+        return extras;
     }
 
     // Post-pairing title↔OCR consistency gate: once segment OCR coverage is
@@ -13850,9 +14010,8 @@ TEXT:
                 const attributeValue = String(match[1] || '').trim();
                 if (!attributeValue) continue;
                 if (pattern.source.includes('srcset')) {
-                    attributeValue.split(',').forEach(part => {
-                        const candidate = String(part || '').trim().split(/\s+/)[0];
-                        if (candidate) rawCandidates.add(candidate);
+                    this.splitSrcsetIntoUrlCandidates(attributeValue).forEach(candidate => {
+                        rawCandidates.add(candidate);
                     });
                 } else {
                     rawCandidates.add(attributeValue);
@@ -17861,6 +18020,44 @@ TEXT:
         const key = this.canonicalizeImageUrlForComparison(imageUrl);
         if (!key) return null;
         return this.ocrImageVerdictsByUrl.get(key) || null;
+    }
+
+    // Merge-time OCR text lookup (owner design 2026-08-20): shared-core's
+    // image title-evidence rung asks "what does this image SAY" for both
+    // merge candidates. This run's verdict store answers for freshly-OCR'd
+    // images; the persistent disk cache answers for images adopted in
+    // EARLIER runs (a stored calendar flyer was og-vetted when adopted, so
+    // its text is on disk). null means unreadable — the rung requires both
+    // sides and fails open. Wired into SharedCore by the orchestrator via
+    // setOcrImageTextLookup; global-default ocrConfig on purpose (a
+    // per-parser prompt override changes the cache signature → miss → null).
+    async getCachedOcrTextForImage(imageUrl, httpAdapter = null) {
+        const verdict = this.getOcrImageVerdict(imageUrl);
+        if (verdict && typeof verdict.text === 'string' && verdict.text.trim()) {
+            return verdict.text;
+        }
+        try {
+            const ocrConfig = this.getOcrConfig({});
+            if (!ocrConfig) return null;
+            if (ocrConfig.cacheEnabled) {
+                const cached = await this.readCachedOcrResult(imageUrl, ocrConfig);
+                const cachedText = cached && typeof cached.text === 'string' && cached.text.trim()
+                    ? cached.text
+                    : (cached && cached.response && typeof cached.response.text === 'string' ? cached.response.text : '');
+                if (cachedText && cachedText.trim()) return cachedText;
+            }
+            // Cache miss with an adapter in hand: OCR the image now. This is
+            // how a calendar flyer stored BEFORE og-vetting existed becomes
+            // readable evidence — one call, then cached like any other OCR.
+            if (httpAdapter) {
+                const fresh = await this.getOcrTextForImage(imageUrl, ocrConfig, 'merge evidence', httpAdapter);
+                const freshText = fresh && typeof fresh.text === 'string' ? fresh.text : '';
+                return freshText && freshText.trim() ? freshText : null;
+            }
+            return null;
+        } catch (_) {
+            return null;
+        }
     }
 
     /**
