@@ -6482,6 +6482,10 @@ body.loaded {
    - Map water: back to the site's brand purple (no override)
    ================================================================ */
 
+html.dusk {
+    background: #07090f;   /* shows on overscroll and when the fixed week
+                              layout leaves body shorter than the viewport */
+}
 html.dusk body {
     background: radial-gradient(circle at top, #1b2033 0%, #0b0d13 45%, #07090f 100%);
     background-attachment: fixed;
@@ -6758,9 +6762,9 @@ html.dusk body {
     color: #fff;
     font-size: 0.95rem;
     font-weight: 600;
-    /* just wider than the widest real string ("September 2026" = 8.4em):
+    /* just wider than the widest real string ("12/27 - 1/2" numeric):
        constant across periods, no dead air around short week ranges */
-    min-width: 8.9em;
+    min-width: 6.4em;
     text-align: center;
     padding: 0 0.25rem;
     white-space: nowrap;
@@ -6800,18 +6804,15 @@ html.dusk body {
     opacity: 0;
     background: transparent;
     color: #ff9d9d;
-    padding: 0.1rem 0.5rem 2px;
+    padding: 0.1rem 0.5rem;
     min-height: 0;
     font-size: 0.78rem;
     font-weight: 600;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     border-radius: 0;
-    border-bottom: 2px solid transparent;
     align-self: center;
     line-height: 1.2;
-    position: relative;
-    top: 1px;             /* optical: sit on the date's baseline */
     transition: opacity 0.12s ease;
 }
 .dusk .header-controls-row.off-today .today-btn { visibility: visible; opacity: 1; }

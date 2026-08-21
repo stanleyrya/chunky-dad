@@ -1541,17 +1541,17 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     formatDateRange(start, end) {
-        const options = { month: 'short', day: 'numeric' };
-        
+        // All-numeric (owner request): "8/16-22", "12/27 - 1/2", "9/2026" —
+        // the header's fixed date slot can stay genuinely small because the
+        // widest possible string is short and known.
         if (this.currentView === 'week') {
+            const startText = `${start.getMonth() + 1}/${start.getDate()}`;
             if (start.getMonth() === end.getMonth()) {
-                return `${start.toLocaleDateString('en-US', { month: 'short' })} ${start.getDate()}-${end.getDate()}`;
-            } else {
-                return `${start.toLocaleDateString('en-US', options)} - ${end.toLocaleDateString('en-US', options)}`;
+                return `${startText}-${end.getDate()}`;
             }
-        } else {
-            return start.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            return `${startText} - ${end.getMonth() + 1}/${end.getDate()}`;
         }
+        return `${start.getMonth() + 1}/${start.getFullYear()}`;
     }
 
     // Load calendar data for specific city (uses cached data from GitHub Actions)
