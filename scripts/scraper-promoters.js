@@ -13,7 +13,7 @@ const scraperPromoters = [
     "aliases": [
       "MEGAWOOF"
     ],
-    "shortName": "MEGA-WOOF",
+    "shortName": "MEGA­WOOF",
     "instagram": "https://www.instagram.com/megawoof_america",
     "website": "https://linktr.ee/megawoof_america",
     "bearAffinity": "always"
@@ -56,7 +56,7 @@ const scraperPromoters = [
     "aliases": [
       "Bearracuda Events"
     ],
-    "shortName": "Bear-rac-uda",
+    "shortName": "Bear­rac­uda",
     "instagram": "https://www.instagram.com/bearracuda",
     "website": "https://bearracuda.com/",
     "urlPatterns": [
@@ -79,7 +79,7 @@ const scraperPromoters = [
     "keywords": [
       "treasure trail"
     ],
-    "shortName": "TREAS-URE TRAIL"
+    "shortName": "TREAS­URE TRAIL"
   },
   {
     "name": "CHUNK",
@@ -90,7 +90,7 @@ const scraperPromoters = [
   },
   {
     "name": "Furball",
-    "shortName": "FUR-BALL",
+    "shortName": "FUR­BALL",
     "instagram": "https://instagram.com/furballnyc/",
     "website": "https://www.furball.nyc",
     "favicon": "https://linktr.ee/furballnyc",
@@ -98,14 +98,14 @@ const scraperPromoters = [
   },
   {
     "name": "Cubhouse",
-    "shortName": "CUB-HOUSE",
+    "shortName": "CUB­HOUSE",
     "instagram": "https://www.instagram.com/cubhouse.philly",
     "website": "https://linktr.ee/cubhouse",
     "bearAffinity": "always"
   },
   {
     "name": "Goldiloxx",
-    "shortName": "GOLDI-LOXX",
+    "shortName": "GOLDI­LOXX",
     "shorterName": "GLX",
     "favicon": "https://linktr.ee/goldiloxx",
     "instagram": "https://www.instagram.com/goldiloxx__",
@@ -117,14 +117,14 @@ const scraperPromoters = [
   },
   {
     "name": "Twisted Bear",
-    "shortName": "TWIST-ED BEAR",
+    "shortName": "TWIST­ED BEAR",
     "instagram": "https://www.instagram.com/twistedbearparty",
     "facebook": "https://www.facebook.com/twistedglobal/",
     "bearAffinity": "always"
   },
   {
     "name": "CubScout LA",
-    "shortName": "CUB-SCOUT",
+    "shortName": "CUB­SCOUT",
     "aliases": [
       "CUBSCOUT"
     ],
@@ -132,13 +132,13 @@ const scraperPromoters = [
   },
   {
     "name": "BEEFMINCE",
-    "shortName": "BEEF-MINCE",
+    "shortName": "BEEF­MINCE",
     "website": "https://beefmince.com",
     "bearAffinity": "always"
   },
   {
     "name": "SPOOKMINCE",
-    "shortName": "SPOOK-MINCE",
+    "shortName": "SPOOK­MINCE",
     "parent": "BEEFMINCE",
     "keywords": [
       "spookmince"
@@ -147,7 +147,7 @@ const scraperPromoters = [
   },
   {
     "name": "BOATMINCE",
-    "shortName": "BOAT-MINCE",
+    "shortName": "BOAT­MINCE",
     "parent": "BEEFMINCE",
     "keywords": [
       "boatmince"
@@ -156,7 +156,7 @@ const scraperPromoters = [
   },
   {
     "name": "BeefDip",
-    "shortName": "BEEF-DIP",
+    "shortName": "BEEF­DIP",
     "website": "https://beefdip.com",
     "bearAffinity": "always"
   },
@@ -225,7 +225,7 @@ const scraperPromoters = [
   },
   {
     "name": "Northeast Ursamen",
-    "shortName": "URSA-MEN",
+    "shortName": "URSA­MEN",
     "aliases": [
       "NE Ursamen",
       "Ursamen",

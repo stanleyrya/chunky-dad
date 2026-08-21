@@ -227,7 +227,7 @@ test('migrated Furball identity (incl. favicon) stamps on match exactly like the
   core.applyPromoterRegistryMatches([event], { name: 'Furball' }, enforceConfig);
   assert.equal(event._promoter, 'Furball');
   // The exact values the removed parser-config metadata block used to stamp
-  assert.equal(event.shortName, 'FUR-BALL');
+  assert.equal(event.shortName, 'FUR\u00adBALL');
   assert.equal(event.instagram, 'https://instagram.com/furballnyc/');
   // url/website are ONE canonical field now: the registry stamps no distinct
   // `url` value — canonicalizeIdentityLinks fills the blank `website` from
@@ -238,7 +238,7 @@ test('migrated Furball identity (incl. favicon) stamps on match exactly like the
   assert.equal(event.favicon, 'https://linktr.ee/furballnyc', 'favicon migrated into the registry');
   // Same static machinery: stamped fields are tracked for de-circularization
   assert.equal(event._staticFields.favicon, 'https://linktr.ee/furballnyc');
-  assert.equal(event._staticFields.shortName, 'FUR-BALL');
+  assert.equal(event._staticFields.shortName, 'FUR\u00adBALL');
   // Bear trust now comes from the entry, with the parser carrying no alwaysBear
   const trust = core.getEventBearTrust(event, { name: 'Furball' });
   assert.equal(trust.trusted, true);
