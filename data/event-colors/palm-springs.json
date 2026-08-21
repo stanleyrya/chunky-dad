@@ -10,6 +10,15 @@
     "accent": "#e3828f"
   },
   {
+    "slug": "festival-ibc-2027",
+    "url": "https://www.ibc-ps.com/",
+    "faviconBg": "#474747",
+    "faviconFg": "#767676",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#545454:33:0 #3a3a3a:30:0 #787878:17:0"
+  },
+  {
     "slug": "megawoof-22570191",
     "url": "https://linktr.ee/megawoof_america",
     "faviconBg": "#575d64",

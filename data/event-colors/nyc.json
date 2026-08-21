@@ -108,6 +108,15 @@
     "accent": "#ca815e"
   },
   {
+    "slug": "festival-urban-bear-nyc-2026",
+    "url": "https://www.theurbanbear.com/urbanbearnyc",
+    "faviconBg": "#141414",
+    "faviconFg": "#dcdcdc",
+    "faviconPlate": "#000000",
+    "paletteSource": "favicon",
+    "palette": "#000000:54:0 #ffffff:27:0 #d9d9d9:5:0"
+  },
+  {
     "slug": "fuzzy-0380f9f1",
     "url": "https://fuzzy.nyc/",
     "faviconBg": "#e69dc7",

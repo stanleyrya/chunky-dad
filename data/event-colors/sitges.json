@@ -28,6 +28,16 @@
     "accent": "#ecc31d"
   },
   {
+    "slug": "festival-bears-sitges-week-2026",
+    "url": "https://bearssitges.org/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#faf8f6:34:0 #895927:15:9 #bb8446:14:10 #35589f:11:12 #e5da62:4:14",
+    "accent": "#35589f"
+  },
+  {
     "slug": "friday-11th-september-beefmince-sports-zone-6972e7c6",
     "url": "https://beefmince.com",
     "faviconBg": "#060606",
