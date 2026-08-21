@@ -6758,9 +6758,11 @@ html.dusk body {
     color: #fff;
     font-size: 0.95rem;
     font-weight: 600;
-    min-width: 8.75rem;
+    /* just wider than the widest real string ("September 2026" = 8.4em):
+       constant across periods, no dead air around short week ranges */
+    min-width: 8.9em;
     text-align: center;
-    padding: 0 0.35rem;
+    padding: 0 0.25rem;
     white-space: nowrap;
 }
 .dusk .view-toggle {
@@ -6880,7 +6882,6 @@ html.dusk body {
     .dusk header .city-switcher { order: 2; flex: 0 0 auto; margin-left: 0.9rem; }
     /* the date text changes width per period — a fixed slot keeps the
        arrows and the picker from drifting on every switch */
-    .dusk .header-controls-row .date-range { min-width: 9.5rem; }
     .dusk .header-controls-row .date-navigation { margin-right: 0; }
     /* the picker rides in the nav beside the switcher (JS moves it there) */
     .dusk header .nav-container > .view-toggle,
