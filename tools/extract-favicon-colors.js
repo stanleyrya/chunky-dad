@@ -888,6 +888,28 @@ async function processEvents(cityKey) {
   }
   const existingBySlug = new Map(existing.map(e => [e.slug, e]));
 
+  // Curated festivals render as calendar events too (slug
+  // festival-<key>-<year>, see dynamic-calendar-loader), but they never pass
+  // through the ICS files this loop reads — so their cards fell back to the
+  // default plate (Urban Bear NYC, Bears Sitges Week). Feed them through the
+  // same extraction as pseudo-events.
+  try {
+    const festivalsPath = path.join(ROOT, 'data', 'festivals.json');
+    if (fs.existsSync(festivalsPath)) {
+      const festivalsRaw = JSON.parse(fs.readFileSync(festivalsPath, 'utf8'));
+      const festivalList = Array.isArray(festivalsRaw) ? festivalsRaw : (festivalsRaw.festivals || []);
+      for (const fest of festivalList) {
+        if (!fest || fest.cityKey !== cityKey || !fest.website) continue;
+        const startRaw = fest.nextDates && fest.nextDates.start;
+        const festYear = startRaw ? new Date(startRaw).getFullYear() : NaN;
+        if (Number.isNaN(festYear)) continue;
+        events.push({ slug: `festival-${fest.key}-${festYear}`, name: fest.name, website: fest.website });
+      }
+    }
+  } catch (err) {
+    console.warn(`⚠️  Could not merge festivals for ${cityKey}: ${err.message}`);
+  }
+
   console.log(`\n📅 Events — ${cityKey} (${events.length})`);
   let changed = false;
 
@@ -899,7 +921,14 @@ async function processEvents(cityKey) {
 
     const prev = existingBySlug.get(event.slug);
 
-    const url = chooseBestUrl(event);
+    // The event's favicon field is the site's FIRST icon choice (it is the
+    // override field), so it must be the extraction's first choice too —
+    // Goldiloxx's linktree profile pic sat downloaded on disk while this
+    // loop only ever consulted the website field.
+    const eventFaviconUrl = typeof event.favicon === 'string' && event.favicon
+        && !isGenericPlatformUrl(event.favicon) ? event.favicon : null;
+    const websiteUrl = chooseBestUrl(event);
+    const url = eventFaviconUrl || websiteUrl;
     const faviconPath = url ? localFaviconPath(url) : null;
     // The flyer is the event's own artwork, so an event with a flyer is worth
     // processing even when its website is a ticketing platform we refuse to take
@@ -924,7 +953,7 @@ async function processEvents(cityKey) {
     const record = await extractColorRecord({ faviconPath, flyerPath, label: event.name });
     if (record) {
       const entry = { slug: event.slug };
-      const entryUrl = url || (prev && prev.url);
+      const entryUrl = websiteUrl || eventFaviconUrl || (prev && prev.url);
       if (entryUrl) entry.url = entryUrl;
       // Never lose an existing legacy pair just because this run found no
       // favicon on disk — those two fields are a stable published contract.
@@ -939,6 +968,47 @@ async function processEvents(cityKey) {
       // Re-extraction is deterministic, so an unchanged entry must not rewrite
       // the file — a --force sweep should leave a clean git status.
       if (JSON.stringify(prev) !== JSON.stringify(entry)) changed = true;
+    }
+  }
+
+  // Sibling inheritance: an event whose favicon file never made it to disk
+  // (ticketing-platform URL, not-yet-downloaded variant) must not render a
+  // default plate while a same-brand sibling carries the extracted pair.
+  // Brand identity = the event's favicon field when it is entity-specific,
+  // else its chosen URL — the same precedence the site displays.
+  const faviconIdentityKey = (event) => {
+    const fav = typeof event.favicon === 'string' && event.favicon && !isGenericPlatformUrl(event.favicon)
+      ? event.favicon : null;
+    const raw = fav || chooseBestUrl(event);
+    return raw ? String(raw).trim().toLowerCase().replace(/\/+$/, '') : null;
+  };
+  const eventBySlug = new Map(events.filter(e => e && e.slug).map(e => [e.slug, e]));
+  const donorByKey = new Map();
+  for (const [slug, entry] of existingBySlug) {
+    if (!entry.faviconBg || !entry.faviconFg) continue;
+    const ev = eventBySlug.get(slug);
+    const key = ev ? faviconIdentityKey(ev) : null;
+    if (key && !donorByKey.has(key)) donorByKey.set(key, entry);
+  }
+  for (const event of events) {
+    if (!event.slug) continue;
+    const key = faviconIdentityKey(event);
+    if (!key) continue;
+    const donor = donorByKey.get(key);
+    if (!donor) continue;
+    let entry = existingBySlug.get(event.slug);
+    if (entry && entry.faviconBg && entry.faviconFg) continue;
+    if (!entry) {
+      entry = { slug: event.slug };
+      const inheritUrl = chooseBestUrl(event);
+      if (inheritUrl) entry.url = inheritUrl;
+      existingBySlug.set(event.slug, entry);
+    }
+    if (entry.faviconBg !== donor.faviconBg || entry.faviconFg !== donor.faviconFg) {
+      entry.faviconBg = donor.faviconBg;
+      entry.faviconFg = donor.faviconFg;
+      changed = true;
+      console.log(`  🎨 ${event.name || event.slug} — inherited favicon colours from a same-brand sibling`);
     }
   }
 

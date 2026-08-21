@@ -54,7 +54,9 @@
     "url": "http://www.clubxhubusa.com",
     "paletteSource": "flyer",
     "palette": "#021610:37:3 #0b332b:21:5 #f5f6f9:12:0",
-    "accent": "#0b332b"
+    "accent": "#0b332b",
+    "faviconBg": "#e43383",
+    "faviconFg": "#f3368c"
   },
   {
     "slug": "club-chub-quenchd-21628c63",

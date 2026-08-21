@@ -126,6 +126,10 @@
   },
   {
     "slug": "goldiloxx-chicago-7c2b222b",
+    "url": "https://linktr.ee/goldiloxx",
+    "faviconBg": "#4a3f2e",
+    "faviconFg": "#d9b844",
+    "faviconPlate": "#3c3225",
     "paletteSource": "flyer",
     "palette": "#1a0e12:19:2 #6d4443:15:6 #432629:15:4 #b99483:14:5 #d54721:6:18",
     "accent": "#d54721"

@@ -10,6 +10,16 @@
     "accent": "#5c2b5f"
   },
   {
+    "slug": "festival-southern-decadence-2026",
+    "url": "https://www.southerndecadence.com/",
+    "faviconBg": "#253a89",
+    "faviconFg": "#db2332",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#2c4893:35:13 #ffffff:23:0 #e5222d:22:22 #8f3c71:7:13 #6176ae:4:9",
+    "accent": "#e5222d"
+  },
+  {
     "slug": "furball-nola-26765d8a",
     "url": "https://www.furball.nyc",
     "faviconBg": "#302f35",

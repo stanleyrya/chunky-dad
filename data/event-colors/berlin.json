@@ -1,0 +1,12 @@
+[
+  {
+    "slug": "festival-folsom-europe-2026",
+    "url": "https://folsomeurope.berlin/",
+    "faviconBg": "#0b0303",
+    "faviconFg": "#46afe5",
+    "faviconPlate": "#000000",
+    "paletteSource": "favicon",
+    "palette": "#000000:60:0 #0098e5:25:15 #ffffff:10:0 #ff0000:2:26",
+    "accent": "#0098e5"
+  }
+]

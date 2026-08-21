@@ -189,6 +189,15 @@
     "accent": "#ed6966"
   },
   {
+    "slug": "festival-folsom-street-fair-2026",
+    "url": "https://www.folsomstreet.org/",
+    "faviconBg": "#040404",
+    "faviconFg": "#e8e8e8",
+    "faviconPlate": "#000000",
+    "paletteSource": "favicon",
+    "palette": "#000000:66:0 #ffffff:27:0 #a3a3a3:3:0"
+  },
+  {
     "slug": "hot-gogo-bears-227d733c",
     "url": "https://www.chunk-party.com/event-details/chunk-san-francisco-saturday-january-17th",
     "faviconBg": "#f6f4f5",
