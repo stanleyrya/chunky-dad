@@ -6979,7 +6979,10 @@ html.dusk body {
     /* cards have a working range, not a stretch-to-fill */
     .dusk .events-list { flex-wrap: wrap; }
     .dusk .events-list .ml-col { flex: 0 0 400px; max-width: 400px; }
-    .dusk .events-list > .event-card { max-width: 460px; }
+    /* single-file cards (masonry unwrapped): uniform width, not
+       content-sized — flex children default to their content width and
+       cards came out ragged */
+    .dusk .events-list > .event-card { width: 100%; max-width: 460px; }
     .dusk .event-card.detailed.aurora .ec-panel { padding: 0.65rem 0.75rem 0.6rem; }
     .dusk .event-card.detailed.aurora h3.ec-title { font-size: 0.98rem; }
     .dusk .event-card.detailed.aurora .ec-row { font-size: 0.8rem; }
