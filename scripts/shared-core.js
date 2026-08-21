@@ -2328,15 +2328,20 @@ class SharedCore {
             }
         }
 
-        // 11. overnight-span-into-evening — a start in the small hours
-        //     (00:00-05:59 local) whose span runs more than 8 hours lands in
-        //     the EVENING of the same day: a club night that "ends" at 6 PM.
-        //     Every observed case is an AM/PM entry error at the source
-        //     (BEEFMINCE Sitges 2026-09: the venue page said 1AM-6PM for what
-        //     is plainly a 1AM-6AM party). Report-only — the stated value
-        //     always ships; this just surfaces the improbable span for the
-        //     owner to notice. Fails closed without an event timezone: a
-        //     wrong-zone local hour would manufacture false positives.
+        // 11. improbable-overnight-span — two mirrored shapes of the same
+        //     AM/PM entry error at the source, both report-only:
+        //     (a) a start in the small hours (00:00-05:59 local) whose span
+        //         runs more than 8 hours lands in the EVENING of the same
+        //         day — BEEFMINCE Sitges 2026-09 said 1AM-6PM for what is
+        //         plainly a 1AM-6AM party;
+        //     (b) an evening start (18:00+ local) whose span runs more than
+        //         12 hours lands in the next AFTERNOON — GOLIDLOXX AUGUST
+        //         (NYC, 2026-08-30) said 9PM-4PM for a 9PM-4AM party, which
+        //         also made it render as a Sat-Sun multi-day event.
+        //     The stated value always ships; this just surfaces the
+        //     improbable span for the owner to notice. Fails closed without
+        //     an event timezone: a wrong-zone local hour would manufacture
+        //     false positives.
         if (typeof event.timezone === 'string' && event.timezone) {
             const overnightStartMs = toMs(event.startDate);
             const overnightEndMs = toMs(event.endDate);
@@ -2348,8 +2353,13 @@ class SharedCore {
                     const spanHours = (overnightEndMs - overnightStartMs) / (60 * 60 * 1000);
                     if (localStartHour <= 5 && spanHours > 8) {
                         flags.push({
-                            code: 'overnight-span-into-evening',
+                            code: 'improbable-overnight-span',
                             detail: `starts ${localStartHour}:00-ish local yet runs ${Math.round(spanHours)}h into the evening — likely an AM/PM typo at the source`
+                        });
+                    } else if (localStartHour >= 18 && spanHours > 12) {
+                        flags.push({
+                            code: 'improbable-overnight-span',
+                            detail: `starts ${localStartHour - 12}PM local yet runs ${Math.round(spanHours)}h into the next afternoon — likely an AM/PM typo at the source`
                         });
                     }
                 }
