@@ -119,6 +119,70 @@
       "slug": "bearracuda-atlanta-16-year-anniversary-520590b4"
     },
     {
+      "name": "Bearracuda Atlanta: Bulges & Jocks",
+      "day": "Saturday",
+      "time": "10PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 33.81158,
+        "lng": -84.3554
+      },
+      "startDate": "2025-11-08T22:00:00",
+      "endDate": "2025-11-09T03:00:00",
+      "unprocessedDescription": "description: Doors Open at 10\\:00 pm - Party Goes Until 3\\:00\r am\nbar: Heretic\naddress: 2069 Cheshire Bridge Rd NE, Atlanta, GA 30324\ntimezone: America/New_York\nurl: https://bearracuda.com/events/atlbulge/\ncover: $20.73 - $26.82 (as of 10/1)\nimage: https://bearracuda.com/wp-content/uploads/2025/04/cuda-atlanta-nov_2025-web.jpg\nfacebook: https://www.facebook.com/events/645075138661917/\nticketUrl: https://www.eventbrite.com/e/bearracuda-atlanta-bulges-jocks-tickets-1751306507909\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://maps.google.com/?q=33.81158,-84.3554\nkey: bearracuda-2025-11-09-atlanta",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "2BF0CBE2-B7B0-4042-BD0F-3835C9D751AE",
+      "uid": "2BF0CBE2-B7B0-4042-BD0F-3835C9D751AE",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Heretic",
+      "cover": "$20.73 - $26.82 (as of 10/1)",
+      "image": "https://bearracuda.com/wp-content/uploads/2025/04/cuda-atlanta-nov_2025-web.jpg",
+      "tea": "Doors Open at 10:00 pm - Party Goes Until 3:00 am",
+      "address": "2069 Cheshire Bridge Rd NE, Atlanta, GA 30324",
+      "website": "https://bearracuda.com/events/atlbulge/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "facebook": "https://www.facebook.com/events/645075138661917/",
+      "gmaps": "https://maps.google.com/?q=33.81158,-84.3554",
+      "ticketUrl": "https://www.eventbrite.com/e/bearracuda-atlanta-bulges-jocks-tickets-1751306507909",
+      "shortName": "Bear-rac-uda",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/events/atlbulge/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/events/645075138661917/",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://maps.google.com/?q=33.81158,-84.3554",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/bearracuda-atlanta-bulges-jocks-tickets-1751306507909",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bearracuda-atlanta-bulges-jocks-4b843b95"
+    },
+    {
       "name": "Bearracuda Atlanta 17 Year Anniversary",
       "day": "Saturday",
       "time": "10PM-3AM",
@@ -130,7 +194,7 @@
       },
       "startDate": "2026-08-22T22:00:00",
       "endDate": "2026-08-23T03:00:00",
-      "unprocessedDescription": "description: 17 YEAR ANNIVERSARY Bearracuda is back to celebrat\re 17 YEARS in Atlanta! Come blow out our candle with DJ Nick Bertossi and 100's of guys!! Tip our hot, beefy dancers, cruise and socialize all night. We want to see your Harnesses and Jocks! Clothes check available.\nbar: The Heretic\naddress: 2069 Cheshire Bridge Road Northeast, Atlanta, GA, 30324\ntimezone: America/New_York\nticketUrl: https://www.sickening.events/e/bearracuda-17/tickets\nimage: https://bearracuda.com/wp-content/uploads/2026/06/cuda-atalanta_august_2026-web.jpg\nimageVertical: https://bearracuda.com/wp-content/uploads/2026/06/cuda-atalanta_august_2026-web.jpg\nwebsite: https://bearracuda.com/events/atl17/\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\nfavicon: https://bearracuda.com/\nkey: bearracuda-atlanta|2026-08-23|the heretic\nbearSource: keyword\ncover: ADV. TICKETS\npinSource: curated\naddressSource: page\nimageSource: og-image\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Heretic%2C%202069%20Cheshire%20Bridge%20Road%20Northeast%2C%20Atlanta%2C%20GA%2C%2030324",
+      "unprocessedDescription": "description: 17 YEAR ANNIVERSARY Bearracuda is back to celebrat\re 17 YEARS in Atlanta! Come blow out our candle with DJ Nick Bertossi and 100's of guys!! Tip our hot, beefy dancers, cruise and socialize all night. We want to see your Harnesses and Jocks! Clothes check available.\nbar: The Heretic\naddress: 2069 Cheshire Bridge Road Northeast, Atlanta, GA, 30324\ntimezone: America/New_York\nticketUrl: https://www.sickening.events/e/bearracuda-17/tickets\nimage: https://bearracuda.com/wp-content/uploads/2026/06/cuda-atalanta_august_2026-web.jpg\nimageVertical: https://bearracuda.com/wp-content/uploads/2026/06/cuda-atalanta_august_2026-web.jpg\nwebsite: https://bearracuda.com/events/atl17/\nshortName: Bear­rac­uda\ninstagram: https://www.instagram.com/bearracuda\nfavicon: https://bearracuda.com/\nkey: bearracuda-atlanta|2026-08-23|the heretic\nbearSource: keyword\ncover: ADV. TICKETS\npinSource: curated\naddressSource: page\nimageSource: og-image\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Heretic%2C%202069%20Cheshire%20Bridge%20Road%20Northeast%2C%20Atlanta%2C%20GA%2C%2030324",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
@@ -152,7 +216,7 @@
       "instagram": "https://www.instagram.com/bearracuda",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=The%20Heretic%2C%202069%20Cheshire%20Bridge%20Road%20Northeast%2C%20Atlanta%2C%20GA%2C%2030324",
       "ticketUrl": "https://www.sickening.events/e/bearracuda-17/tickets",
-      "shortName": "Bear-rac-uda",
+      "shortName": "Bear­rac­uda",
       "bearReview": null,
       "links": [
         {
@@ -240,70 +304,6 @@
         }
       ],
       "slug": "new-date-bearracuda-atlantawinter-beef-ball-jock-underwear-pa-rty-3d2076fd"
-    },
-    {
-      "name": "Bearracuda Atlanta: Bulges & Jocks",
-      "day": "Saturday",
-      "time": "10PM-3AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 33.81158,
-        "lng": -84.3554
-      },
-      "startDate": "2025-11-08T22:00:00",
-      "endDate": "2025-11-09T03:00:00",
-      "unprocessedDescription": "description: Doors Open at 10\\:00 pm - Party Goes Until 3\\:00\r am\nbar: Heretic\naddress: 2069 Cheshire Bridge Rd NE, Atlanta, GA 30324\ntimezone: America/New_York\nurl: https://bearracuda.com/events/atlbulge/\ncover: $20.73 - $26.82 (as of 10/1)\nimage: https://bearracuda.com/wp-content/uploads/2025/04/cuda-atlanta-nov_2025-web.jpg\nfacebook: https://www.facebook.com/events/645075138661917/\nticketUrl: https://www.eventbrite.com/e/bearracuda-atlanta-bulges-jocks-tickets-1751306507909\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://maps.google.com/?q=33.81158,-84.3554\nkey: bearracuda-2025-11-09-atlanta",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "2BF0CBE2-B7B0-4042-BD0F-3835C9D751AE",
-      "uid": "2BF0CBE2-B7B0-4042-BD0F-3835C9D751AE",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Heretic",
-      "cover": "$20.73 - $26.82 (as of 10/1)",
-      "image": "https://bearracuda.com/wp-content/uploads/2025/04/cuda-atlanta-nov_2025-web.jpg",
-      "tea": "Doors Open at 10:00 pm - Party Goes Until 3:00 am",
-      "address": "2069 Cheshire Bridge Rd NE, Atlanta, GA 30324",
-      "website": "https://bearracuda.com/events/atlbulge/",
-      "instagram": "https://www.instagram.com/bearracuda",
-      "facebook": "https://www.facebook.com/events/645075138661917/",
-      "gmaps": "https://maps.google.com/?q=33.81158,-84.3554",
-      "ticketUrl": "https://www.eventbrite.com/e/bearracuda-atlanta-bulges-jocks-tickets-1751306507909",
-      "shortName": "Bear-rac-uda",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://bearracuda.com/events/atlbulge/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearracuda",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "facebook",
-          "url": "https://www.facebook.com/events/645075138661917/",
-          "label": "📘 Facebook"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://maps.google.com/?q=33.81158,-84.3554",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/bearracuda-atlanta-bulges-jocks-tickets-1751306507909",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "bearracuda-atlanta-bulges-jocks-4b843b95"
     }
   ]
 }

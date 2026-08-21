@@ -5,63 +5,6 @@
   },
   "events": [
     {
-      "name": "Bearracuda Phoenix RELAUNCH Party!",
-      "day": "Saturday",
-      "time": "9:30PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 3110,
-        "lng": null
-      },
-      "startDate": "2026-05-23T21:30:00",
-      "unprocessedDescription": "description: Bearracuda PhoenixRELAUNCH PARTYSaturday, May 23t\rh, 2026DJ Freddy King of Pants (Seattle) Hosted by JP Hardy Kobalt - 3110 N. Central AveHOT GoGos All nightAdv. tix at Bearracuda.com - Doors at 9\\:30pmBearracuda is back in PHOENIX after a 6 year hiatus! Now at Kobalt! Join 100s of guys dancing til late, with sexy GoGos, chunky visuals and YOU!\nbar: Kobalt\naddress: 3110 N Central Ave\nticketUrl: https://www.sickening.events/e/bearracuda-phoenix-relaunch-party/tickets\ninstagram: https://www.instagram.com/bearracuda\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775591376/saas/logos/image_1775591369401_a4demr8jg.webp\ncover: EARLY BEAR\nshortName: Bear-rac-uda\nwebsite: https://bearracuda.com/events/phoenix/\ngmaps: https://www.google.com/maps/search/?api=1&query=Kobalt%2C%203110%20N%20Central%20Ave\nkey: bearracuda-2026-05-24-phoenix\ntimezone: America/Phoenix",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Phoenix",
-      "wasUTC": true,
-      "sourceUid": "9165A83C-32B2-497F-A522-7C5ADF7B9A2A",
-      "uid": "9165A83C-32B2-497F-A522-7C5ADF7B9A2A",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 1,
-      "overrideIdentityType": null,
-      "bar": "Kobalt",
-      "cover": "EARLY BEAR",
-      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775591376/saas/logos/image_1775591369401_a4demr8jg.webp",
-      "tea": "Bearracuda PhoenixRELAUNCH PARTYSaturday, May 23th, 2026DJ Freddy King of Pants (Seattle) Hosted by JP Hardy Kobalt - 3110 N. Central AveHOT GoGos All nightAdv. tix at Bearracuda.com - Doors at 9:30pmBearracuda is back in PHOENIX after a 6 year hiatus! Now at Kobalt! Join 100s of guys dancing til late, with sexy GoGos, chunky visuals and YOU!",
-      "address": "3110 N Central Ave",
-      "website": "https://bearracuda.com/events/phoenix/",
-      "instagram": "https://www.instagram.com/bearracuda",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Kobalt%2C%203110%20N%20Central%20Ave",
-      "ticketUrl": "https://www.sickening.events/e/bearracuda-phoenix-relaunch-party/tickets",
-      "shortName": "Bear-rac-uda",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://bearracuda.com/events/phoenix/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearracuda",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Kobalt%2C%203110%20N%20Central%20Ave",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.sickening.events/e/bearracuda-phoenix-relaunch-party/tickets",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "bearracuda-phoenix-relaunch-party-320faa75"
-    },
-    {
       "name": "MEGAWOOF",
       "day": "Saturday",
       "time": "9PM-2AM",
@@ -118,6 +61,122 @@
         }
       ],
       "slug": "megawoof-2f8a9cb8"
+    },
+    {
+      "name": "BEARRACUDA: PHOENIX PRIDE",
+      "day": "Saturday",
+      "time": "9:30PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 33.497757,
+        "lng": -112.077333
+      },
+      "startDate": "2026-10-10T21:30:00",
+      "endDate": "2026-10-11T02:00:00",
+      "unprocessedDescription": "description: PRIDE SATURDAY\nbar: Royale\naddress: 4230 N. 6th \rDrive, PHOENIX, AZ 85013\ntimezone: America/Phoenix\nticketUrl: https://bearracuda.com\nimage: https://bearracuda.com/wp-content/uploads/2026/08/webphoenixweblarge.jpg\nimageVertical: https://bearracuda.com/wp-content/uploads/2026/08/webphoenixweblarge.jpg\nwebsite: https://bearracuda.com/\nshortName: Bear­rac­uda\ninstagram: https://www.instagram.com/bearracuda\nfavicon: https://bearracuda.com/\nkey: bearracuda-phoenix-pride|2026-10-11|royale\nbearSource: keyword\npinSource: geocoded-exact\naddressSource: page\nimageSource: og-image\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/search/?api=1&query=Royale%2C%204230%20N.%206th%20Drive%2C%20PHOENIX%2C%20AZ%2085013",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Phoenix",
+      "wasUTC": true,
+      "sourceUid": "9FF35A8A-3A10-4BCB-BE7F-FDFC8B6187BC",
+      "uid": "9FF35A8A-3A10-4BCB-BE7F-FDFC8B6187BC",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Royale",
+      "image": "https://bearracuda.com/wp-content/uploads/2026/08/webphoenixweblarge.jpg",
+      "imageVertical": "https://bearracuda.com/wp-content/uploads/2026/08/webphoenixweblarge.jpg",
+      "favicon": "https://bearracuda.com/",
+      "tea": "PRIDE SATURDAY",
+      "address": "4230 N. 6th Drive, PHOENIX, AZ 85013",
+      "website": "https://bearracuda.com/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Royale%2C%204230%20N.%206th%20Drive%2C%20PHOENIX%2C%20AZ%2085013",
+      "ticketUrl": "https://bearracuda.com",
+      "shortName": "Bear­rac­uda",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Royale%2C%204230%20N.%206th%20Drive%2C%20PHOENIX%2C%20AZ%2085013",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://bearracuda.com",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bearracuda-phoenix-pride-16d08e9d"
+    },
+    {
+      "name": "Bearracuda Phoenix RELAUNCH Party!",
+      "day": "Saturday",
+      "time": "9:30PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 3110,
+        "lng": null
+      },
+      "startDate": "2026-05-23T21:30:00",
+      "unprocessedDescription": "description: Bearracuda PhoenixRELAUNCH PARTYSaturday, May 23t\rh, 2026DJ Freddy King of Pants (Seattle) Hosted by JP Hardy Kobalt - 3110 N. Central AveHOT GoGos All nightAdv. tix at Bearracuda.com - Doors at 9\\:30pmBearracuda is back in PHOENIX after a 6 year hiatus! Now at Kobalt! Join 100s of guys dancing til late, with sexy GoGos, chunky visuals and YOU!\nbar: Kobalt\naddress: 3110 N Central Ave\nticketUrl: https://www.sickening.events/e/bearracuda-phoenix-relaunch-party/tickets\ninstagram: https://www.instagram.com/bearracuda\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775591376/saas/logos/image_1775591369401_a4demr8jg.webp\ncover: EARLY BEAR\nshortName: Bear-rac-uda\nwebsite: https://bearracuda.com/events/phoenix/\ngmaps: https://www.google.com/maps/search/?api=1&query=Kobalt%2C%203110%20N%20Central%20Ave\nkey: bearracuda-2026-05-24-phoenix\ntimezone: America/Phoenix",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Phoenix",
+      "wasUTC": true,
+      "sourceUid": "9165A83C-32B2-497F-A522-7C5ADF7B9A2A",
+      "uid": "9165A83C-32B2-497F-A522-7C5ADF7B9A2A",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 1,
+      "overrideIdentityType": null,
+      "bar": "Kobalt",
+      "cover": "EARLY BEAR",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775591376/saas/logos/image_1775591369401_a4demr8jg.webp",
+      "tea": "Bearracuda PhoenixRELAUNCH PARTYSaturday, May 23th, 2026DJ Freddy King of Pants (Seattle) Hosted by JP Hardy Kobalt - 3110 N. Central AveHOT GoGos All nightAdv. tix at Bearracuda.com - Doors at 9:30pmBearracuda is back in PHOENIX after a 6 year hiatus! Now at Kobalt! Join 100s of guys dancing til late, with sexy GoGos, chunky visuals and YOU!",
+      "address": "3110 N Central Ave",
+      "website": "https://bearracuda.com/events/phoenix/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Kobalt%2C%203110%20N%20Central%20Ave",
+      "ticketUrl": "https://www.sickening.events/e/bearracuda-phoenix-relaunch-party/tickets",
+      "shortName": "Bear-rac-uda",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/events/phoenix/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Kobalt%2C%203110%20N%20Central%20Ave",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/bearracuda-phoenix-relaunch-party/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bearracuda-phoenix-relaunch-party-320faa75"
     },
     {
       "name": "MEGAWOOF AMERICA - PHOENIX - SUMMER WOOFERS",
@@ -177,65 +236,6 @@
         }
       ],
       "slug": "megawoof-america-phoenix-summer-woofers-007d0b12"
-    },
-    {
-      "name": "BEARRACUDA: PHOENIX PRIDE",
-      "day": "Saturday",
-      "time": "9:30PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 33.497757,
-        "lng": -112.077333
-      },
-      "startDate": "2026-10-10T21:30:00",
-      "endDate": "2026-10-11T02:00:00",
-      "unprocessedDescription": "description: PRIDE SATURDAY\nbar: Royale\naddress: 4230 N. 6th \rDrive, PHOENIX, AZ 85013\ntimezone: America/Phoenix\nticketUrl: https://bearracuda.com\nimage: https://bearracuda.com/wp-content/uploads/2026/08/webphoenixweblarge.jpg\nimageVertical: https://bearracuda.com/wp-content/uploads/2026/08/webphoenixweblarge.jpg\nwebsite: https://bearracuda.com/\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\nfavicon: https://bearracuda.com/\nkey: bearracuda-phoenix-pride|2026-10-11|royale\nbearSource: keyword\npinSource: geocoded-exact\naddressSource: page\nimageSource: og-image\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/search/?api=1&query=Royale%2C%204230%20N.%206th%20Drive%2C%20PHOENIX%2C%20AZ%2085013",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Phoenix",
-      "wasUTC": true,
-      "sourceUid": "9FF35A8A-3A10-4BCB-BE7F-FDFC8B6187BC",
-      "uid": "9FF35A8A-3A10-4BCB-BE7F-FDFC8B6187BC",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Royale",
-      "image": "https://bearracuda.com/wp-content/uploads/2026/08/webphoenixweblarge.jpg",
-      "imageVertical": "https://bearracuda.com/wp-content/uploads/2026/08/webphoenixweblarge.jpg",
-      "favicon": "https://bearracuda.com/",
-      "tea": "PRIDE SATURDAY",
-      "address": "4230 N. 6th Drive, PHOENIX, AZ 85013",
-      "website": "https://bearracuda.com/",
-      "instagram": "https://www.instagram.com/bearracuda",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Royale%2C%204230%20N.%206th%20Drive%2C%20PHOENIX%2C%20AZ%2085013",
-      "ticketUrl": "https://bearracuda.com",
-      "shortName": "Bear-rac-uda",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://bearracuda.com/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearracuda",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Royale%2C%204230%20N.%206th%20Drive%2C%20PHOENIX%2C%20AZ%2085013",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://bearracuda.com",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "bearracuda-phoenix-pride-16d08e9d"
     }
   ]
 }
