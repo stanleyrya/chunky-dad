@@ -20274,3 +20274,96 @@ test('sanity: a real title with a date inside it is NOT withheld', () => {
   assert.equal(SharedCore.filterEventsForExecution([analyzed]).length, 1,
     'the write goes through');
 });
+
+// ── OCR title-evidence rung for image arbitration (owner design 2026-08-20:
+// "associate the OCR of the image with the current title") ──────────────────
+
+const MEAT_MARKET_TITLE = 'Club Chub Presents: MEAT MARKET @ Eagle Wilton Manors';
+const OLD_WIG_OUT_IMAGE = 'https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181905615%2Foriginal.20260410-211015?w=940&s=ed3b';
+const NEW_MEAT_MARKET_IMAGE = 'https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1786814606/saas/logos/image_1786814597049.webp';
+const WIG_OUT_FLYER_TEXT = 'CLUB CHUB\nTHE WIG OUT PARTY\nCannonball Weekend\nSunday November 1st';
+const MEAT_MARKET_FLYER_TEXT = 'CLUB CHUB CANNONBALL WEEKEND\nMEAT MARKET\nSunday November 1st 4 to 9PM\nThe Eagle Wilton Manors';
+
+function buildOcrEvidenceContext(textByUrl) {
+  const map = new Map();
+  for (const [url, text] of Object.entries(textByUrl)) map.set(url, text);
+  return {
+    eventTitle: MEAT_MARKET_TITLE,
+    sideLabels: { a: 'calendar', b: 'scraped' },
+    records: { a: {}, b: {} },
+    ocrTextByImageUrl: map
+  };
+}
+
+test('image arbitration: the flyer whose OCR text names the current title wins — even from a /logos/ path (Wig Out → Meat Market)', () => {
+  const core = createCore();
+  const context = buildOcrEvidenceContext({
+    [OLD_WIG_OUT_IMAGE]: WIG_OUT_FLYER_TEXT,
+    [NEW_MEAT_MARKET_IMAGE]: MEAT_MARKET_FLYER_TEXT
+  });
+  const resolved = core.resolveConflictDeterministically('image', OLD_WIG_OUT_IMAGE, NEW_MEAT_MARKET_IMAGE, context);
+  assert.ok(resolved, 'the rung fires deterministically');
+  assert.equal(resolved.winner, 'b', 'the flyer that reads MEAT MARKET / EAGLE WILTON MANORS wins');
+  assert.match(resolved.reason, /OCR title evidence/, `evidence-based reason: ${resolved.reason}`);
+});
+
+test('image arbitration: OCR title evidence works both directions and beats no other rung on ties', () => {
+  const core = createCore();
+  // Reversed sides: the calendar holds the CURRENT flyer, the scrape offers
+  // a stale one — the calendar side wins on the same evidence.
+  const reversed = buildOcrEvidenceContext({
+    [OLD_WIG_OUT_IMAGE]: WIG_OUT_FLYER_TEXT,
+    [NEW_MEAT_MARKET_IMAGE]: MEAT_MARKET_FLYER_TEXT
+  });
+  const keptCurrent = core.resolveConflictDeterministically('image', NEW_MEAT_MARKET_IMAGE, OLD_WIG_OUT_IMAGE, reversed);
+  assert.equal(keptCurrent && keptCurrent.winner, 'a');
+  assert.match(keptCurrent.reason, /OCR title evidence/);
+
+  // Tie: both images read the same text (unchanged artwork re-hosted) —
+  // the rung stays silent and existing behavior decides.
+  const tie = buildOcrEvidenceContext({
+    [OLD_WIG_OUT_IMAGE]: MEAT_MARKET_FLYER_TEXT,
+    [NEW_MEAT_MARKET_IMAGE]: MEAT_MARKET_FLYER_TEXT
+  });
+  const tieResolved = core.resolveConflictDeterministically('image', OLD_WIG_OUT_IMAGE, NEW_MEAT_MARKET_IMAGE, tie);
+  assert.ok(!tieResolved || !/OCR title evidence/.test(tieResolved.reason),
+    'equal evidence never decides via this rung');
+
+  // Unreadable side (no OCR text available): strict fall-through.
+  const oneSided = buildOcrEvidenceContext({ [NEW_MEAT_MARKET_IMAGE]: MEAT_MARKET_FLYER_TEXT });
+  const oneSidedResolved = core.resolveConflictDeterministically('image', OLD_WIG_OUT_IMAGE, NEW_MEAT_MARKET_IMAGE, oneSided);
+  assert.ok(!oneSidedResolved || !/OCR title evidence/.test(oneSidedResolved.reason),
+    'a side with no readable text never loses on evidence it could not present');
+});
+
+test('createFinalEventObject preloads OCR texts through the injected lookup and updates the stale image', async () => {
+  const core = createCore();
+  const lookups = [];
+  core.setOcrImageTextLookup(async (url) => {
+    lookups.push(url);
+    if (url === OLD_WIG_OUT_IMAGE) return WIG_OUT_FLYER_TEXT;
+    if (url === NEW_MEAT_MARKET_IMAGE) return MEAT_MARKET_FLYER_TEXT;
+    return null;
+  });
+  const existing = {
+    title: 'CLUB CHUB: The Wig Out Party',
+    startDate: '2026-11-01T21:00:00.000Z',
+    // Calendar records carry their image in NOTES (parseNotesIntoFields) —
+    // a bare property never reaches the merge's calendarObject.
+    notes: `image: ${OLD_WIG_OUT_IMAGE}`
+  };
+  const scraped = {
+    title: MEAT_MARKET_TITLE,
+    startDate: '2026-11-01T21:00:00.000Z',
+    image: NEW_MEAT_MARKET_IMAGE,
+    source: 'ai-web',
+    // Real scraped events carry the parser's resolved field priorities —
+    // image rides merge:"ai", which is what routes it into arbitration.
+    _fieldPriorities: core.getResolvedFieldPriorities({})
+  };
+  const finalEvent = await core.createFinalEventObject(existing, scraped, { httpAdapter: null });
+  assert.ok(lookups.includes(OLD_WIG_OUT_IMAGE) && lookups.includes(NEW_MEAT_MARKET_IMAGE),
+    'both candidates were looked up');
+  assert.equal(finalEvent.image, NEW_MEAT_MARKET_IMAGE,
+    'the stored stale flyer is replaced by the artwork that names the current event');
+});

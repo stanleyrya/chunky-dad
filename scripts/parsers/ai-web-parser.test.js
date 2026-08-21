@@ -15393,3 +15393,30 @@ test('a segment fused around two distinct flyers spawns a flyer-only segment for
   const none = parser.collectFusedFlyerTopUpSegments([fusedAgain, owner], ocrResults, sourceUrl);
   assert.equal(none.length, 0, 'a flyer with its own segment elsewhere never spawns a duplicate');
 });
+
+test('getCachedOcrTextForImage: verdict store first, then disk cache, on-demand OCR only when an adapter rides along', async () => {
+  const parser = createParser();
+  // This run's verdict store answers without touching disk or network.
+  parser.recordOcrImageVerdict('https://cdn.example/flyer.jpg', {
+    imageClassification: 'event-flyer',
+    text: 'MEAT MARKET\nThe Eagle Wilton Manors'
+  });
+  assert.equal(await parser.getCachedOcrTextForImage('https://cdn.example/flyer.jpg'),
+    'MEAT MARKET\nThe Eagle Wilton Manors');
+
+  // Full miss with NO adapter: null, and never a fresh OCR request.
+  parser.getOcrTextForImage = async () => { throw new Error('must not OCR without an adapter'); };
+  assert.equal(await parser.getCachedOcrTextForImage('https://cdn.example/never-seen.jpg'), null);
+
+  // Full miss WITH an adapter: one on-demand OCR call answers (a calendar
+  // flyer stored before og-vetting existed becomes readable evidence).
+  const ocrCalls = [];
+  parser.getOcrTextForImage = async (url, cfg, passLabel, adapter) => {
+    ocrCalls.push({ url, passLabel, hasAdapter: Boolean(adapter) });
+    return { text: 'THE WIG OUT PARTY' };
+  };
+  assert.equal(await parser.getCachedOcrTextForImage('https://cdn.example/old-flyer.jpg', { fetch: () => {} }),
+    'THE WIG OUT PARTY');
+  assert.equal(ocrCalls.length, 1);
+  assert.equal(ocrCalls[0].hasAdapter, true);
+});

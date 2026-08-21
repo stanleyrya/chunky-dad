@@ -3268,6 +3268,42 @@ class SharedCore {
     // event context (currently { cityKey, barNames, eventTitle, sideLabels,
     // records }) for the city-aware title, curated-bar, curated-address, and
     // address-evidence rules.
+    // ── OCR title-evidence plumbing (owner design 2026-08-20) ─────────────
+    // Injection keeps shared-core platform-pure: the orchestrator wires the
+    // ai-web parser's OCR verdict store + disk cache in as a lookup; without
+    // one, preload returns null and every merge behaves exactly as before.
+    setOcrImageTextLookup(lookup) {
+        this.ocrImageTextLookup = typeof lookup === 'function' ? lookup : null;
+    }
+
+    // Reads the OCR text of BOTH records' primary images before the sync
+    // arbitration ladder runs. Only differing http(s) image pairs are looked
+    // up; unreadable sides simply stay absent from the map (the rung
+    // requires both, so absence falls through to existing behavior).
+    async preloadImageOcrTextEvidence(recordA, recordB, httpAdapter = null) {
+        if (typeof this.ocrImageTextLookup !== 'function') return null;
+        const imageA = recordA && typeof recordA.image === 'string' ? recordA.image.trim() : '';
+        const imageB = recordB && typeof recordB.image === 'string' ? recordB.image.trim() : '';
+        if (!imageA || !imageB || imageA === imageB) return null;
+        if (!/^https?:\/\//i.test(imageA) || !/^https?:\/\//i.test(imageB)) return null;
+        const textByUrl = new Map();
+        for (const url of [imageA, imageB]) {
+            try {
+                // The adapter rides along so the lookup may OCR an image the
+                // caches never saw (a calendar flyer stored before vetting
+                // existed) — one bounded call per differing-image merge, then
+                // the persistent cache answers forever. OCR is local-model
+                // work; the owner's standing doctrine is to spend it.
+                const text = await this.ocrImageTextLookup(url, httpAdapter);
+                if (typeof text === 'string' && text.trim()) textByUrl.set(url, text);
+            } catch (_) {
+                // Unreadable side: the rung requires both texts, so this
+                // lookup failure falls through to existing behavior.
+            }
+        }
+        return textByUrl.size > 0 ? textByUrl : null;
+    }
+
     resolveConflictDeterministically(fieldName, valueA, valueB, context = null) {
         // Corrected-time healing (doors-vs-party, run 20260812-001228 FURBALL
         // NOLA): wave 2's extraction fix promoted a DOORS start to the
@@ -3455,6 +3491,52 @@ class SharedCore {
                         winner: placeholderReasonA ? 'b' : 'a',
                         reason: `real image beats placeholder (${placeholderReasonA || placeholderReasonB})`
                     };
+                }
+                // OCR TITLE-EVIDENCE rung (owner design 2026-08-20: "associate
+                // the OCR of the image with the current title"). Both
+                // candidates were OCR'd at some point (og-vet at adoption, or
+                // this run's pass) — read what the images SAY instead of
+                // guessing from URL shapes. The flyer whose text names this
+                // event's CURRENT title decisively harder wins: Wig Out →
+                // Meat Market, the stored flyer still reads "WIG OUT" while
+                // the page's current artwork reads "MEAT MARKET / EAGLE
+                // WILTON MANORS" — no URL heuristic can see that, and the
+                // logo-path rung below actively picked the stale side
+                // (sickening.events hosts real flyers under /saas/logos/).
+                // Strict: both texts must be readable (the preload only maps
+                // what the lookup could serve), the title must carry >= 2
+                // tokens, and the winner needs a real margin (>= 2 matches,
+                // >= 2x the loser, and >= 2 more) — both flyers usually name
+                // the shared brand, so a bare yes/no would tie forever.
+                // Ties, unreadable sides and short titles fall through to
+                // the rungs below unchanged. Primary image only.
+                if (fieldName === 'image' && context && context.ocrTextByImageUrl
+                    && typeof context.ocrTextByImageUrl.get === 'function'
+                    && typeof this.getCrossSourceTitleTokens === 'function') {
+                    const evidenceTextA = context.ocrTextByImageUrl.get(String(valueA).trim());
+                    const evidenceTextB = context.ocrTextByImageUrl.get(String(valueB).trim());
+                    if (typeof evidenceTextA === 'string' && evidenceTextA.trim()
+                        && typeof evidenceTextB === 'string' && evidenceTextB.trim()) {
+                        const evidenceTitleTokens = this.getCrossSourceTitleTokens(String(context.eventTitle || ''));
+                        if (Array.isArray(evidenceTitleTokens) && evidenceTitleTokens.length >= 2) {
+                            const matchedTitleTokensIn = (text) => {
+                                const ocrTokens = new Set(this.getCrossSourceTitleTokens(text));
+                                return evidenceTitleTokens.filter(token => ocrTokens.has(token)).length;
+                            };
+                            const matchedA = matchedTitleTokensIn(evidenceTextA);
+                            const matchedB = matchedTitleTokensIn(evidenceTextB);
+                            const winnerMatched = Math.max(matchedA, matchedB);
+                            const loserMatched = Math.min(matchedA, matchedB);
+                            if (winnerMatched >= 2
+                                && winnerMatched >= 2 * loserMatched
+                                && winnerMatched - loserMatched >= 2) {
+                                return {
+                                    winner: matchedA > matchedB ? 'a' : 'b',
+                                    reason: `flyer text names the event's current title (${winnerMatched} title tokens vs ${loserMatched}) — OCR title evidence`
+                                };
+                            }
+                        }
+                    }
                 }
                 const hasLogoSegment = (parts) => parts.segments.some(segment => /logo/i.test(segment));
                 const logoA = hasLogoSegment(urlA);
@@ -9796,6 +9878,9 @@ class SharedCore {
             sideLabels: { a: 'existing', b: 'incoming' },
             records: { a: existingEvent, b: newEvent }
         };
+        // OCR title-evidence preload: both primary-image candidates' flyer
+        // texts (verdict store or disk cache), read before the sync ladder.
+        mergeContext.ocrTextByImageUrl = await this.preloadImageOcrTextEvidence(existingEvent, newEvent, options && options.httpAdapter ? options.httpAdapter : null);
         const queueArbitrationConflict = (fieldName, existingValue, newValue, fallbackPick, fallbackReason) => {
             const resolved = this.resolveConflictDeterministically(fieldName, existingValue, newValue, mergeContext);
             if (!resolved) {
@@ -10380,6 +10465,9 @@ class SharedCore {
             sideLabels: { a: 'calendar', b: 'scraped' },
             records: { a: calendarObject, b: scraperObject }
         };
+        // OCR title-evidence preload: both primary-image candidates' flyer
+        // texts (verdict store or disk cache), read before the sync ladder.
+        mergeContext.ocrTextByImageUrl = await this.preloadImageOcrTextEvidence(calendarObject, scraperObject, options && options.httpAdapter ? options.httpAdapter : null);
         const queueArbitrationConflict = (fieldName, calendarValue, scraperValue) => {
             const resolved = this.resolveConflictDeterministically(fieldName, calendarValue, scraperValue, mergeContext);
             if (!resolved) {

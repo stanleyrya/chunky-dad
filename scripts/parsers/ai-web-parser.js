@@ -18022,6 +18022,44 @@ TEXT:
         return this.ocrImageVerdictsByUrl.get(key) || null;
     }
 
+    // Merge-time OCR text lookup (owner design 2026-08-20): shared-core's
+    // image title-evidence rung asks "what does this image SAY" for both
+    // merge candidates. This run's verdict store answers for freshly-OCR'd
+    // images; the persistent disk cache answers for images adopted in
+    // EARLIER runs (a stored calendar flyer was og-vetted when adopted, so
+    // its text is on disk). null means unreadable — the rung requires both
+    // sides and fails open. Wired into SharedCore by the orchestrator via
+    // setOcrImageTextLookup; global-default ocrConfig on purpose (a
+    // per-parser prompt override changes the cache signature → miss → null).
+    async getCachedOcrTextForImage(imageUrl, httpAdapter = null) {
+        const verdict = this.getOcrImageVerdict(imageUrl);
+        if (verdict && typeof verdict.text === 'string' && verdict.text.trim()) {
+            return verdict.text;
+        }
+        try {
+            const ocrConfig = this.getOcrConfig({});
+            if (!ocrConfig) return null;
+            if (ocrConfig.cacheEnabled) {
+                const cached = await this.readCachedOcrResult(imageUrl, ocrConfig);
+                const cachedText = cached && typeof cached.text === 'string' && cached.text.trim()
+                    ? cached.text
+                    : (cached && cached.response && typeof cached.response.text === 'string' ? cached.response.text : '');
+                if (cachedText && cachedText.trim()) return cachedText;
+            }
+            // Cache miss with an adapter in hand: OCR the image now. This is
+            // how a calendar flyer stored BEFORE og-vetting existed becomes
+            // readable evidence — one call, then cached like any other OCR.
+            if (httpAdapter) {
+                const fresh = await this.getOcrTextForImage(imageUrl, ocrConfig, 'merge evidence', httpAdapter);
+                const freshText = fresh && typeof fresh.text === 'string' ? fresh.text : '';
+                return freshText && freshText.trim() ? freshText : null;
+            }
+            return null;
+        } catch (_) {
+            return null;
+        }
+    }
+
     /**
      * Why the vision pass says this URL is not an event's artwork ('' when it
      * doesn't say so). TWO conditions, both required, because either alone
