@@ -5,106 +5,43 @@
   },
   "events": [
     {
-      "name": "HOT TAKE Portland",
+      "name": "Bearracuda Portland BONER GARAGE",
       "day": "Saturday",
-      "time": "8PM-2AM",
+      "time": "9PM-2AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
         "lat": 45.5228076,
         "lng": -122.6581521
       },
-      "startDate": "2026-05-30T20:00:00",
-      "endDate": "2026-05-31T02:00:00",
-      "unprocessedDescription": "description: HOT TAKE welcomes RuPaul&#8217;s Drag Race Season\r 18 Star\\: JANE DON&#8217;T!\n\nMusic & Entertainment\n• DJ Freddy King of Pants\nbar: NOVA PDX\naddress: 722 E Burnside, Portland, OR\ntimezone: America/Los_Angeles\nimage: https://bearracuda.com/wp-content/uploads/2026/05/hottake_may2026-igposter_v2-820x1024.jpg\nfacebook: https://www.facebook.com/events/891426833700451\nticketUrl: https://sickening.events/e/hot-take\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\nwebsite: https://bearracuda.com/events/hottakepdx/\ngmaps: https://www.google.com/maps/search/?api=1&query=NOVA%20PDX%2C%20722%20E%20Burnside%2C%20Portland%2C%20OR\nkey: bearracuda-2026-05-31-portland\npinSource: geocoded-exact",
+      "startDate": "2026-05-16T21:00:00",
+      "endDate": "2026-05-17T02:00:00",
+      "unprocessedDescription": "description: Slide into the Boner Garage\\: ourfetish night at \rBearracuda Portland. We want to see your harnesses, latex, leather, rubber, jocks, pups, dom, sub, switch, spankers, suckers, cockrings, plugs, collars, hankies, hoods, dads, denim, voyeurism, feet, role play. Consent is always mandatory. Nick Bertossi spins all night with Hot GoGos, Visuals by Aaron Altemose, Decor by James Sharinghousen and YOU!\nbar: Nova PDX\naddress: 722 East Burnside Street\nticketUrl: https://www.sickening.events/e/bearracuda-portland-gearnight/tickets\ninstagram: https://www.instagram.com/bearracuda\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776291822/saas/logos/image_1776291814711_301fgtoxn.webp\ncover: $20-$30\nshortName: Bear-rac-uda\nwebsite: https://bearracuda.com/events/portland-gear/\ngmaps: https://www.google.com/maps/search/?api=1&query=Nova%20PDX%2C%20722%20East%20Burnside%20Street\nkey: bearracuda-2026-05-17-portland\ntimezone: America/Los_Angeles\npinSource: geocoded-exact",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Los_Angeles",
       "wasUTC": true,
-      "sourceUid": "B675ACB0-9AEC-419E-B6AD-335E72EA5F1E",
-      "uid": "B675ACB0-9AEC-419E-B6AD-335E72EA5F1E",
+      "sourceUid": "5D2FF721-0E32-4318-8CA8-391B11299303",
+      "uid": "5D2FF721-0E32-4318-8CA8-391B11299303",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "NOVA PDX",
-      "image": "https://bearracuda.com/wp-content/uploads/2026/05/hottake_may2026-igposter_v2-820x1024.jpg",
-      "tea": "HOT TAKE welcomes RuPaul&#8217;s Drag Race Season 18 Star: JANE DON&#8217;T!",
-      "address": "722 E Burnside, Portland, OR",
-      "website": "https://bearracuda.com/events/hottakepdx/",
+      "bar": "Nova PDX",
+      "cover": "$20-$30",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776291822/saas/logos/image_1776291814711_301fgtoxn.webp",
+      "tea": "Slide into the Boner Garage: ourfetish night at Bearracuda Portland. We want to see your harnesses, latex, leather, rubber, jocks, pups, dom, sub, switch, spankers, suckers, cockrings, plugs, collars, hankies, hoods, dads, denim, voyeurism, feet, role play. Consent is always mandatory. Nick Bertossi spins all night with Hot GoGos, Visuals by Aaron Altemose, Decor by James Sharinghousen and YOU!",
+      "address": "722 East Burnside Street",
+      "website": "https://bearracuda.com/events/portland-gear/",
       "instagram": "https://www.instagram.com/bearracuda",
-      "facebook": "https://www.facebook.com/events/891426833700451",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=NOVA%20PDX%2C%20722%20E%20Burnside%2C%20Portland%2C%20OR",
-      "ticketUrl": "https://sickening.events/e/hot-take",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Nova%20PDX%2C%20722%20East%20Burnside%20Street",
+      "ticketUrl": "https://www.sickening.events/e/bearracuda-portland-gearnight/tickets",
       "shortName": "Bear-rac-uda",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://bearracuda.com/events/hottakepdx/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearracuda",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "facebook",
-          "url": "https://www.facebook.com/events/891426833700451",
-          "label": "📘 Facebook"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=NOVA%20PDX%2C%20722%20E%20Burnside%2C%20Portland%2C%20OR",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://sickening.events/e/hot-take",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "hot-take-portland-46ec04ba"
-    },
-    {
-      "name": "TREASURE TRAIL Portland: BACKCOUNTRY",
-      "day": "Sunday",
-      "time": "3PM-7PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 33,
-        "lng": null
-      },
-      "startDate": "2026-05-24T15:00:00",
-      "endDate": "2026-05-24T19:00:00",
-      "unprocessedDescription": "description: TREASURE TRAIL\\: Backcountry! A Portland Play Par\rty Saturday afternoon/evening, 3pm-7pm 33 NW 9th AveJP Hardy & Matt Bearracuda present TREASURE TRAIL Choose your own ADVENTURE! We've noticed a few shy guys at the party and some that needed a bit of a push for social interaction. Now our guys can grab a wristband when you walk in\\: Red wristband TOP Blue wristband VERS Green wristband BOTTOM White wristband SIDE Grab one at the door! Get ready for the RETURN of Bearracuda play parties, in con…\nbar: Sanctuary Club\naddress: 33 Northwest 9th Avenue\nticketUrl: https://www.sickening.events/e/bearracuda-treasure-trail-portland-back/tickets\ninstagram: https://www.instagram.com/bearracuda\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775609196/saas/logos/image_1775609187773_sy1lyd8mh.webp\ncover: $15-$20\nshortName: CHUNK\nwebsite: https://bearracuda.com/events/treasure-trail-portland/\ngmaps: https://www.google.com/maps/search/?api=1&query=Sanctuary%20Club%2C%2033%20Northwest%209th%20Avenue\nkey: bearracuda-2026-05-24-portland\ntimezone: America/Los_Angeles",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "DB562BB7-0556-4089-AF0D-63FA88FAC8C8",
-      "uid": "DB562BB7-0556-4089-AF0D-63FA88FAC8C8",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 1,
-      "overrideIdentityType": null,
-      "bar": "Sanctuary Club",
-      "cover": "$15-$20",
-      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775609196/saas/logos/image_1775609187773_sy1lyd8mh.webp",
-      "tea": "TREASURE TRAIL: Backcountry! A Portland Play Party Saturday afternoon/evening, 3pm-7pm 33 NW 9th AveJP Hardy & Matt Bearracuda present TREASURE TRAIL Choose your own ADVENTURE! We've noticed a few shy guys at the party and some that needed a bit of a push for social interaction. Now our guys can grab a wristband when you walk in: Red wristband TOP Blue wristband VERS Green wristband BOTTOM White wristband SIDE Grab one at the door! Get ready for the RETURN of Bearracuda play parties, in con…",
-      "address": "33 Northwest 9th Avenue",
-      "website": "https://bearracuda.com/events/treasure-trail-portland/",
-      "instagram": "https://www.instagram.com/bearracuda",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Sanctuary%20Club%2C%2033%20Northwest%209th%20Avenue",
-      "ticketUrl": "https://www.sickening.events/e/bearracuda-treasure-trail-portland-back/tickets",
-      "shortName": "CHUNK",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://bearracuda.com/events/treasure-trail-portland/",
+          "url": "https://bearracuda.com/events/portland-gear/",
           "label": "🌐 Website"
         },
         {
@@ -114,16 +51,16 @@
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Sanctuary%20Club%2C%2033%20Northwest%209th%20Avenue",
+          "url": "https://www.google.com/maps/search/?api=1&query=Nova%20PDX%2C%20722%20East%20Burnside%20Street",
           "label": "🗺️ Google Maps"
         },
         {
           "type": "tickets",
-          "url": "https://www.sickening.events/e/bearracuda-treasure-trail-portland-back/tickets",
+          "url": "https://www.sickening.events/e/bearracuda-portland-gearnight/tickets",
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "treasure-trail-portland-backcountry-33f45281"
+      "slug": "bearracuda-portland-boner-garage-3e1b185e"
     },
     {
       "name": "CHUNK Portland - The RETURN!",
@@ -178,60 +115,6 @@
         }
       ],
       "slug": "chunk-portland-the-return-47dcb647"
-    },
-    {
-      "name": "BEARRACUDA: Portland 17",
-      "day": "Saturday",
-      "time": "11PM-3AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 45.5228076,
-        "lng": -122.6581521
-      },
-      "startDate": "2026-09-19T23:00:00",
-      "endDate": "2026-09-20T03:00:00",
-      "unprocessedDescription": "description: 17 Year Anniversary Portland\nbar: Nova PDX\naddre\rss: 722 E Burnside, Portland, OR 97214\ntimezone: America/Los_Angeles\nimage: https://bearracuda.com/wp-content/uploads/2026/07/cuda-portland_september_2026-web.jpg\nimageVertical: https://bearracuda.com/wp-content/uploads/2026/07/cuda-portland_september_2026-web.jpg\nwebsite: https://bearracuda.com/events/portland-17/\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\nfavicon: https://bearracuda.com/\nkey: bearracuda-portland-17|2026-09-20|nova pdx\nbearSource: keyword\ncover: ADV. TIX\npinSource: curated\naddressSource: page\nimageSource: og-image\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Nova%20PDX%2C%20722%20E%20Burnside%2C%20Portland%2C%20OR%2097214",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "8D6F4CE1-2BD9-400C-A8DC-F152E68E3EE1",
-      "uid": "8D6F4CE1-2BD9-400C-A8DC-F152E68E3EE1",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 1,
-      "overrideIdentityType": null,
-      "bar": "Nova PDX",
-      "cover": "ADV. TIX",
-      "image": "https://bearracuda.com/wp-content/uploads/2026/07/cuda-portland_september_2026-web.jpg",
-      "imageVertical": "https://bearracuda.com/wp-content/uploads/2026/07/cuda-portland_september_2026-web.jpg",
-      "favicon": "https://bearracuda.com/",
-      "tea": "17 Year Anniversary Portland",
-      "address": "722 E Burnside, Portland, OR 97214",
-      "website": "https://bearracuda.com/events/portland-17/",
-      "instagram": "https://www.instagram.com/bearracuda",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Nova%20PDX%2C%20722%20E%20Burnside%2C%20Portland%2C%20OR%2097214",
-      "shortName": "Bear-rac-uda",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://bearracuda.com/events/portland-17/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearracuda",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Nova%20PDX%2C%20722%20E%20Burnside%2C%20Portland%2C%20OR%2097214",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "bearracuda-portland-17-749a33af"
     },
     {
       "name": "CHUNK PORTLAND - Friday November 7th",
@@ -290,183 +173,6 @@
         }
       ],
       "slug": "chunk-portland-friday-november-7th-34a929ef"
-    },
-    {
-      "name": "HOT TAKE w/NINI COCO",
-      "day": "Saturday",
-      "time": "10:30PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 45.5228076,
-        "lng": -122.6581521
-      },
-      "startDate": "2026-08-08T22:30:00",
-      "endDate": "2026-08-09T02:00:00",
-      "unprocessedDescription": "bar: NOVA PDX\naddress: 722 East Burnside Street, Portland, O\rR, 97214\nticketUrl: https://www.sickening.events/e/nini/tickets\nimage: https://bearracuda.com/wp-content/uploads/2026/07/hottake_august2026_ig.jpg\ntimezone: America/Los_Angeles\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\nwebsite: https://bearracuda.com/\ngmaps: https://www.google.com/maps/search/?api=1&query=NOVA%20PDX%2C%20722%20East%20Burnside%20Street%2C%20Portland%2C%20OR%2C%2097214\nkey: bearracuda-2026-08-09-portland",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "F102BB47-9DA5-4FAC-8130-846DB917E1EB",
-      "uid": "F102BB47-9DA5-4FAC-8130-846DB917E1EB",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 2,
-      "overrideIdentityType": null,
-      "bar": "NOVA PDX",
-      "image": "https://bearracuda.com/wp-content/uploads/2026/07/hottake_august2026_ig.jpg",
-      "address": "722 East Burnside Street, Portland, OR, 97214",
-      "website": "https://bearracuda.com/",
-      "instagram": "https://www.instagram.com/bearracuda",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=NOVA%20PDX%2C%20722%20East%20Burnside%20Street%2C%20Portland%2C%20OR%2C%2097214",
-      "ticketUrl": "https://www.sickening.events/e/nini/tickets",
-      "shortName": "Bear-rac-uda",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://bearracuda.com/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearracuda",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=NOVA%20PDX%2C%20722%20East%20Burnside%20Street%2C%20Portland%2C%20OR%2C%2097214",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.sickening.events/e/nini/tickets",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "hot-take-wnini-coco-162bffff"
-    },
-    {
-      "name": "TREASURE TRAIL Portland: TIX AT THE DOOR",
-      "day": "Friday",
-      "time": "8PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 45.5235278,
-        "lng": -122.6802991
-      },
-      "startDate": "2026-07-17T20:00:00",
-      "endDate": "2026-07-18T02:00:00",
-      "unprocessedDescription": "description: TICKETS AT THE DOOR ALL NIGHT! TREASURE TRAIL Choo\rse Your own Adventure! A Portland PRIDE Play Party\\: FRIDAY, July 17th, starting at 8pm. 33 NW 9th AveJP Hardy & Matt Bearracuda present TREASURE TRAIL Choose your own ADVENTURE! We've noticed a few shy guys at the party and some that needed a bit of a push for social interaction. Now our guys can grab a wristband when you walk in\\: Red wristband TOP Blue wristband VERS Green wristband BOTTOM White wristband SIDE Grab one at the door! Treasure Trail is a sexy and intimate play party in Downtown Portland. Consent is mandatory and water based lube is provided & required, if you bring your own. Join 100s of furry fellas on PRIDE FRIDAY. Treasure Trail has a full bar, beds and plenty of play space for our guest. Advanced tickets are essential. All furry friends and their admirers welcome!\nbar: Sanctuary Club\naddress: 33 Northwest 9th Avenue, Portland, OR, 97209\nticketUrl: https://www.sickening.events/e/bearracuda-treasure-trail-portland-pride/tickets\nimage: https://bearracuda.com/wp-content/uploads/2025/11/ttfinal.jpg\ncover: $20-$25\ntimezone: America/Los_Angeles\nshortName: TREAS-URE TRAIL\ninstagram: https://www.instagram.com/bearracuda\nwebsite: https://bearracuda.com/events/portland-pridefriday/\nkey: treasure-trail-portland-tix-at-the-door|2026-07-18|sanctuary club\npinSource: geocoded-approx\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Sanctuary%20Club%2C%2033%20Northwest%209th%20Avenue%2C%20Portland%2C%20OR%2C%2097209",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "73CEC27F-15A9-46A4-B46D-495DFD3A0F01",
-      "uid": "73CEC27F-15A9-46A4-B46D-495DFD3A0F01",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Sanctuary Club",
-      "cover": "$20-$25",
-      "image": "https://bearracuda.com/wp-content/uploads/2025/11/ttfinal.jpg",
-      "tea": "TICKETS AT THE DOOR ALL NIGHT! TREASURE TRAIL Choose Your own Adventure! A Portland PRIDE Play Party: FRIDAY, July 17th, starting at 8pm. 33 NW 9th AveJP Hardy & Matt Bearracuda present TREASURE TRAIL Choose your own ADVENTURE! We've noticed a few shy guys at the party and some that needed a bit of a push for social interaction. Now our guys can grab a wristband when you walk in: Red wristband TOP Blue wristband VERS Green wristband BOTTOM White wristband SIDE Grab one at the door! Treasure Trail is a sexy and intimate play party in Downtown Portland. Consent is mandatory and water based lube is provided & required, if you bring your own. Join 100s of furry fellas on PRIDE FRIDAY. Treasure Trail has a full bar, beds and plenty of play space for our guest. Advanced tickets are essential. All furry friends and their admirers welcome!",
-      "address": "33 Northwest 9th Avenue, Portland, OR, 97209",
-      "website": "https://bearracuda.com/events/portland-pridefriday/",
-      "instagram": "https://www.instagram.com/bearracuda",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Sanctuary%20Club%2C%2033%20Northwest%209th%20Avenue%2C%20Portland%2C%20OR%2C%2097209",
-      "ticketUrl": "https://www.sickening.events/e/bearracuda-treasure-trail-portland-pride/tickets",
-      "shortName": "TREAS-URE TRAIL",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://bearracuda.com/events/portland-pridefriday/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearracuda",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Sanctuary%20Club%2C%2033%20Northwest%209th%20Avenue%2C%20Portland%2C%20OR%2C%2097209",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.sickening.events/e/bearracuda-treasure-trail-portland-pride/tickets",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "treasure-trail-portland-tix-at-the-door-0c12f2cc"
-    },
-    {
-      "name": "TREASURE TRAIL Portland: Saturday, Jan. 24th!",
-      "day": "Saturday",
-      "time": "3PM-7PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 45.5235017,
-        "lng": -122.6802365
-      },
-      "startDate": "2026-01-24T15:00:00",
-      "endDate": "2026-01-24T19:00:00",
-      "unprocessedDescription": "description: Treasure Trail returns to Portland!\n\nMusic & Ent\rertainment\n• Clothes Check Available\nbar: Sanctuary Club\naddress: 33 Northwest 9th Avenue, Portland, OR 97209\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/treasurepdx/\nimage: https://bearracuda.com/wp-content/uploads/2025/11/1ttfuuuck.jpg\nfacebook: https://www.facebook.com/events/1185664703019614\nticketUrl: https://www.eventbrite.com/e/treasure-trail-portland-saturday-jan-24th-tickets-1976421422679\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://maps.google.com/?q=45.5235017,-122.6802365\nkey: bearracuda-2026-01-24-portland",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "2F092079-A18B-4B2D-B790-F9BB1BC5B388",
-      "uid": "2F092079-A18B-4B2D-B790-F9BB1BC5B388",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Sanctuary Club",
-      "image": "https://bearracuda.com/wp-content/uploads/2025/11/1ttfuuuck.jpg",
-      "tea": "Treasure Trail returns to Portland!",
-      "address": "33 Northwest 9th Avenue, Portland, OR 97209",
-      "website": "https://bearracuda.com/events/treasurepdx/",
-      "instagram": "https://www.instagram.com/bearracuda",
-      "facebook": "https://www.facebook.com/events/1185664703019614",
-      "gmaps": "https://maps.google.com/?q=45.5235017,-122.6802365",
-      "ticketUrl": "https://www.eventbrite.com/e/treasure-trail-portland-saturday-jan-24th-tickets-1976421422679",
-      "shortName": "Bear-rac-uda",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://bearracuda.com/events/treasurepdx/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearracuda",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "facebook",
-          "url": "https://www.facebook.com/events/1185664703019614",
-          "label": "📘 Facebook"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://maps.google.com/?q=45.5235017,-122.6802365",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/treasure-trail-portland-saturday-jan-24th-tickets-1976421422679",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "treasure-trail-portland-saturday-jan-24th-50c8389e"
     },
     {
       "name": "CHUNK Portland",
@@ -534,7 +240,7 @@
       },
       "startDate": "2026-12-31T21:00:00",
       "endDate": "2027-01-01T03:00:00",
-      "unprocessedDescription": "description: The 4th Annual Bearracuda Portland New Year's Eve\\\rnbar: Nova PDX\naddress: 722 East Burnside Street, Portland, Oregon, 97214\nticketUrl: https://www.sickening.events/e/bearracuda-portland-nye/tickets\nimage: https://bearracuda.com/wp-content/uploads/2026/03/pdxnew.jpg\ncover: $27\ntimezone: America/Los_Angeles\nwebsite: https://bearracuda.com/events/portlandnye/\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\nfavicon: https://bearracuda.com/\nkey: bearracuda-portland-nye|2027-01-01|nova pdx\nimageHorizontal: https://bearracuda.com/wp-content/uploads/2026/03/pdxnew.jpg\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: og-image\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Nova%20PDX%2C%20722%20East%20Burnside%20Street%2C%20Portland%2C%20Oregon%2C%2097214",
+      "unprocessedDescription": "description: The 4th Annual Bearracuda Portland New Year's Eve\\\rnbar: Nova PDX\naddress: 722 East Burnside Street, Portland, Oregon, 97214\nticketUrl: https://www.sickening.events/e/bearracuda-portland-nye/tickets\nimage: https://bearracuda.com/wp-content/uploads/2026/03/pdxnew.jpg\ncover: $27\ntimezone: America/Los_Angeles\nwebsite: https://bearracuda.com/events/portlandnye/\nshortName: Bear­rac­uda\ninstagram: https://www.instagram.com/bearracuda\nfavicon: https://bearracuda.com/\nkey: bearracuda-portland-nye|2027-01-01|nova pdx\nimageHorizontal: https://bearracuda.com/wp-content/uploads/2026/03/pdxnew.jpg\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: og-image\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Nova%20PDX%2C%20722%20East%20Burnside%20Street%2C%20Portland%2C%20Oregon%2C%2097214",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Los_Angeles",
@@ -556,7 +262,7 @@
       "instagram": "https://www.instagram.com/bearracuda",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=Nova%20PDX%2C%20722%20East%20Burnside%20Street%2C%20Portland%2C%20Oregon%2C%2097214",
       "ticketUrl": "https://www.sickening.events/e/bearracuda-portland-nye/tickets",
-      "shortName": "Bear-rac-uda",
+      "shortName": "Bear­rac­uda",
       "bearReview": null,
       "links": [
         {
@@ -581,133 +287,6 @@
         }
       ],
       "slug": "bearracuda-portland-nye-0de4cad8"
-    },
-    {
-      "name": "Bearracuda Portland 16 YEAR Anniversary",
-      "day": "Saturday",
-      "time": "9PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 45.5227415,
-        "lng": -122.6580938
-      },
-      "startDate": "2025-09-13T21:00:00",
-      "endDate": "2025-09-14T02:00:00",
-      "unprocessedDescription": "description: 16 YEAR ANNIVERSARY\n\nMusic & Entertainment\n• DJ\r CACTUSHEAD (BEEFMINCE UK)\n• DJ Matt Stands\nbar: Bossanova Ballroom\naddress: 722 E Burnside, Portland, OR 97213\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/pdx16/\ncover: $20.27 - $29.99 (as of 9/13)\nimage: https://bearracuda.com/wp-content/uploads/2025/04/cuda-portland-september_2025-web.jpg\nfacebook: https://www.facebook.com/events/751830650923430/\nticketUrl: https://www.eventbrite.com/e/bearracuda-portland-16-year-anniversary-tickets-1546221061819\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/search/?api=1&query=45.5227415%2C-122.6580938&query_place_id=101715829\nkey: bearracuda-2025-09-14-portland",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "E0BA6861-892D-456D-9D6E-B53C61A7BF4C",
-      "uid": "E0BA6861-892D-456D-9D6E-B53C61A7BF4C",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 2,
-      "overrideIdentityType": null,
-      "bar": "Bossanova Ballroom",
-      "cover": "$20.27 - $29.99 (as of 9/13)",
-      "image": "https://bearracuda.com/wp-content/uploads/2025/04/cuda-portland-september_2025-web.jpg",
-      "tea": "16 YEAR ANNIVERSARY",
-      "address": "722 E Burnside, Portland, OR 97213",
-      "website": "https://bearracuda.com/events/pdx16/",
-      "instagram": "https://www.instagram.com/bearracuda",
-      "facebook": "https://www.facebook.com/events/751830650923430/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=45.5227415%2C-122.6580938&query_place_id=101715829",
-      "ticketUrl": "https://www.eventbrite.com/e/bearracuda-portland-16-year-anniversary-tickets-1546221061819",
-      "shortName": "Bear-rac-uda",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://bearracuda.com/events/pdx16/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearracuda",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "facebook",
-          "url": "https://www.facebook.com/events/751830650923430/",
-          "label": "📘 Facebook"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=45.5227415%2C-122.6580938&query_place_id=101715829",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/bearracuda-portland-16-year-anniversary-tickets-1546221061819",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "bearracuda-portland-16-year-anniversary-21be21f0"
-    },
-    {
-      "name": "Bearracuda Portland: CROTCH CARNIVAL!",
-      "day": "Saturday",
-      "time": "9PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 45.5227415,
-        "lng": -122.6580938
-      },
-      "startDate": "2026-02-21T21:00:00",
-      "endDate": "2026-02-22T02:00:00",
-      "unprocessedDescription": "description: Doors Open at 9\\:00 pm - Party Goes Until 2\\:00 \ram\nbar: Bossanova Ballroom\naddress: 722 E Burnside, Portland, OR 97213\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/portlandfeb/\nimage: https://bearracuda.com/wp-content/uploads/2025/12/feb2026pdx.jpg\nfacebook: https://www.facebook.com/events/892528969904085\nticketUrl: https://www.eventbrite.com/e/bearracuda-portland-crotch-carnival-tickets-1979122152635\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/search/?api=1&query=Bossanova%20Ballroom%2C%20722%20E%20Burnside%2C%20Portland%2C%20OR%2097213\nkey: bearracuda-2026-02-22-portland",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "22C75FCB-8CF5-426C-A2B3-01EBE0EEBF62",
-      "uid": "22C75FCB-8CF5-426C-A2B3-01EBE0EEBF62",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Bossanova Ballroom",
-      "image": "https://bearracuda.com/wp-content/uploads/2025/12/feb2026pdx.jpg",
-      "tea": "Doors Open at 9:00 pm - Party Goes Until 2:00 am",
-      "address": "722 E Burnside, Portland, OR 97213",
-      "website": "https://bearracuda.com/events/portlandfeb/",
-      "instagram": "https://www.instagram.com/bearracuda",
-      "facebook": "https://www.facebook.com/events/892528969904085",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Bossanova%20Ballroom%2C%20722%20E%20Burnside%2C%20Portland%2C%20OR%2097213",
-      "ticketUrl": "https://www.eventbrite.com/e/bearracuda-portland-crotch-carnival-tickets-1979122152635",
-      "shortName": "Bear-rac-uda",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://bearracuda.com/events/portlandfeb/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearracuda",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "facebook",
-          "url": "https://www.facebook.com/events/892528969904085",
-          "label": "📘 Facebook"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Bossanova%20Ballroom%2C%20722%20E%20Burnside%2C%20Portland%2C%20OR%2097213",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/bearracuda-portland-crotch-carnival-tickets-1979122152635",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "bearracuda-portland-crotch-carnival-553c66fc"
     },
     {
       "name": "CHUNK Portland - SUMMER BLOW OUT!",
@@ -828,37 +407,214 @@
       "slug": "treasure-trail-portland-1043b353"
     },
     {
-      "name": "Portland PRIDE FRIDAY",
-      "day": "Friday",
-      "time": "9PM-3AM",
+      "name": "TREASURE TRAIL Portland: BACKCOUNTRY",
+      "day": "Sunday",
+      "time": "3PM-7PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 33,
+        "lng": null
+      },
+      "startDate": "2026-05-24T15:00:00",
+      "endDate": "2026-05-24T19:00:00",
+      "unprocessedDescription": "description: TREASURE TRAIL\\: Backcountry! A Portland Play Par\rty Saturday afternoon/evening, 3pm-7pm 33 NW 9th AveJP Hardy & Matt Bearracuda present TREASURE TRAIL Choose your own ADVENTURE! We've noticed a few shy guys at the party and some that needed a bit of a push for social interaction. Now our guys can grab a wristband when you walk in\\: Red wristband TOP Blue wristband VERS Green wristband BOTTOM White wristband SIDE Grab one at the door! Get ready for the RETURN of Bearracuda play parties, in con…\nbar: Sanctuary Club\naddress: 33 Northwest 9th Avenue\nticketUrl: https://www.sickening.events/e/bearracuda-treasure-trail-portland-back/tickets\ninstagram: https://www.instagram.com/bearracuda\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775609196/saas/logos/image_1775609187773_sy1lyd8mh.webp\ncover: $15-$20\nshortName: CHUNK\nwebsite: https://bearracuda.com/events/treasure-trail-portland/\ngmaps: https://www.google.com/maps/search/?api=1&query=Sanctuary%20Club%2C%2033%20Northwest%209th%20Avenue\nkey: bearracuda-2026-05-24-portland\ntimezone: America/Los_Angeles",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "DB562BB7-0556-4089-AF0D-63FA88FAC8C8",
+      "uid": "DB562BB7-0556-4089-AF0D-63FA88FAC8C8",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 1,
+      "overrideIdentityType": null,
+      "bar": "Sanctuary Club",
+      "cover": "$15-$20",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775609196/saas/logos/image_1775609187773_sy1lyd8mh.webp",
+      "tea": "TREASURE TRAIL: Backcountry! A Portland Play Party Saturday afternoon/evening, 3pm-7pm 33 NW 9th AveJP Hardy & Matt Bearracuda present TREASURE TRAIL Choose your own ADVENTURE! We've noticed a few shy guys at the party and some that needed a bit of a push for social interaction. Now our guys can grab a wristband when you walk in: Red wristband TOP Blue wristband VERS Green wristband BOTTOM White wristband SIDE Grab one at the door! Get ready for the RETURN of Bearracuda play parties, in con…",
+      "address": "33 Northwest 9th Avenue",
+      "website": "https://bearracuda.com/events/treasure-trail-portland/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Sanctuary%20Club%2C%2033%20Northwest%209th%20Avenue",
+      "ticketUrl": "https://www.sickening.events/e/bearracuda-treasure-trail-portland-back/tickets",
+      "shortName": "CHUNK",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/events/treasure-trail-portland/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Sanctuary%20Club%2C%2033%20Northwest%209th%20Avenue",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/bearracuda-treasure-trail-portland-back/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "treasure-trail-portland-backcountry-33f45281"
+    },
+    {
+      "name": "HOT TAKE Portland",
+      "day": "Saturday",
+      "time": "8PM-2AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
         "lat": 45.5228076,
         "lng": -122.6581521
       },
-      "startDate": "2026-07-17T21:00:00",
-      "endDate": "2026-07-18T03:00:00",
-      "unprocessedDescription": "bar: Nova PDX\ntimezone: America/Los_Angeles\ninstagram: https:\r//www.instagram.com/bearracuda\ncover: TIX AT THE DOOR\nshortName: Bear-rac-uda\nwebsite: https://bearracuda.com/\nkey: portland-pride-friday|2026-07-18|nova pdx\ndescription: TICKETS AT THE DOOR ALL NIGHT! PRIDE FRIDAY\\: VASELINE ALLEYHarnesses, Jockstraps & Fetish Gear encouraged. Less is MORE! Friday, July 17, 2026722 E Burnside, Doors at 9pm, Party til 3AM Beats by\\: Matt Consola (PDX)Cactushead (UK) Lasers by LaseronicsVisuals by Aaron AltemoseDecor by James SharinghousenPhotos by Matty HoffmanHosted by Matt Bearracuda & Seattle Dad\naddress: 722 East Burnside Street, Portland, OR, 97214\nticketUrl: https://www.sickening.events/e/bearracuda-portland-pridefriday/tickets\nimage: https://bearracuda.com/wp-content/uploads/2026/03/bearracuda_pdxpride-friday-ig-2.jpg\npinSource: geocoded-exact\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Nova%20PDX%2C%20722%20East%20Burnside%20Street%2C%20Portland%2C%20OR%2C%2097214",
+      "startDate": "2026-05-30T20:00:00",
+      "endDate": "2026-05-31T02:00:00",
+      "unprocessedDescription": "description: HOT TAKE welcomes RuPaul&#8217;s Drag Race Season\r 18 Star\\: JANE DON&#8217;T!\n\nMusic & Entertainment\n• DJ Freddy King of Pants\nbar: NOVA PDX\naddress: 722 E Burnside, Portland, OR\ntimezone: America/Los_Angeles\nimage: https://bearracuda.com/wp-content/uploads/2026/05/hottake_may2026-igposter_v2-820x1024.jpg\nfacebook: https://www.facebook.com/events/891426833700451\nticketUrl: https://sickening.events/e/hot-take\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\nwebsite: https://bearracuda.com/events/hottakepdx/\ngmaps: https://www.google.com/maps/search/?api=1&query=NOVA%20PDX%2C%20722%20E%20Burnside%2C%20Portland%2C%20OR\nkey: bearracuda-2026-05-31-portland\npinSource: geocoded-exact",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Los_Angeles",
       "wasUTC": true,
-      "sourceUid": "3CF05991-3C86-4EEC-8A80-8769A4298E58",
-      "uid": "3CF05991-3C86-4EEC-8A80-8769A4298E58",
+      "sourceUid": "B675ACB0-9AEC-419E-B6AD-335E72EA5F1E",
+      "uid": "B675ACB0-9AEC-419E-B6AD-335E72EA5F1E",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "Nova PDX",
-      "cover": "TIX AT THE DOOR",
-      "image": "https://bearracuda.com/wp-content/uploads/2026/03/bearracuda_pdxpride-friday-ig-2.jpg",
-      "tea": "TICKETS AT THE DOOR ALL NIGHT! PRIDE FRIDAY: VASELINE ALLEYHarnesses, Jockstraps & Fetish Gear encouraged. Less is MORE! Friday, July 17, 2026722 E Burnside, Doors at 9pm, Party til 3AM Beats by: Matt Consola (PDX)Cactushead (UK) Lasers by LaseronicsVisuals by Aaron AltemoseDecor by James SharinghousenPhotos by Matty HoffmanHosted by Matt Bearracuda & Seattle Dad",
+      "bar": "NOVA PDX",
+      "image": "https://bearracuda.com/wp-content/uploads/2026/05/hottake_may2026-igposter_v2-820x1024.jpg",
+      "tea": "HOT TAKE welcomes RuPaul&#8217;s Drag Race Season 18 Star: JANE DON&#8217;T!",
+      "address": "722 E Burnside, Portland, OR",
+      "website": "https://bearracuda.com/events/hottakepdx/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "facebook": "https://www.facebook.com/events/891426833700451",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=NOVA%20PDX%2C%20722%20E%20Burnside%2C%20Portland%2C%20OR",
+      "ticketUrl": "https://sickening.events/e/hot-take",
+      "shortName": "Bear-rac-uda",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/events/hottakepdx/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/events/891426833700451",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=NOVA%20PDX%2C%20722%20E%20Burnside%2C%20Portland%2C%20OR",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://sickening.events/e/hot-take",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "hot-take-portland-46ec04ba"
+    },
+    {
+      "name": "TREASURE TRAIL Portland: TIX AT THE DOOR",
+      "day": "Friday",
+      "time": "8PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 45.5235278,
+        "lng": -122.6802991
+      },
+      "startDate": "2026-07-17T20:00:00",
+      "endDate": "2026-07-18T02:00:00",
+      "unprocessedDescription": "description: TICKETS AT THE DOOR ALL NIGHT! TREASURE TRAIL Choo\rse Your own Adventure! A Portland PRIDE Play Party\\: FRIDAY, July 17th, starting at 8pm. 33 NW 9th AveJP Hardy & Matt Bearracuda present TREASURE TRAIL Choose your own ADVENTURE! We've noticed a few shy guys at the party and some that needed a bit of a push for social interaction. Now our guys can grab a wristband when you walk in\\: Red wristband TOP Blue wristband VERS Green wristband BOTTOM White wristband SIDE Grab one at the door! Treasure Trail is a sexy and intimate play party in Downtown Portland. Consent is mandatory and water based lube is provided & required, if you bring your own. Join 100s of furry fellas on PRIDE FRIDAY. Treasure Trail has a full bar, beds and plenty of play space for our guest. Advanced tickets are essential. All furry friends and their admirers welcome!\nbar: Sanctuary Club\naddress: 33 Northwest 9th Avenue, Portland, OR, 97209\nticketUrl: https://www.sickening.events/e/bearracuda-treasure-trail-portland-pride/tickets\nimage: https://bearracuda.com/wp-content/uploads/2025/11/ttfinal.jpg\ncover: $20-$25\ntimezone: America/Los_Angeles\nshortName: TREAS-URE TRAIL\ninstagram: https://www.instagram.com/bearracuda\nwebsite: https://bearracuda.com/events/portland-pridefriday/\nkey: treasure-trail-portland-tix-at-the-door|2026-07-18|sanctuary club\npinSource: geocoded-approx\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Sanctuary%20Club%2C%2033%20Northwest%209th%20Avenue%2C%20Portland%2C%20OR%2C%2097209",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "73CEC27F-15A9-46A4-B46D-495DFD3A0F01",
+      "uid": "73CEC27F-15A9-46A4-B46D-495DFD3A0F01",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Sanctuary Club",
+      "cover": "$20-$25",
+      "image": "https://bearracuda.com/wp-content/uploads/2025/11/ttfinal.jpg",
+      "tea": "TICKETS AT THE DOOR ALL NIGHT! TREASURE TRAIL Choose Your own Adventure! A Portland PRIDE Play Party: FRIDAY, July 17th, starting at 8pm. 33 NW 9th AveJP Hardy & Matt Bearracuda present TREASURE TRAIL Choose your own ADVENTURE! We've noticed a few shy guys at the party and some that needed a bit of a push for social interaction. Now our guys can grab a wristband when you walk in: Red wristband TOP Blue wristband VERS Green wristband BOTTOM White wristband SIDE Grab one at the door! Treasure Trail is a sexy and intimate play party in Downtown Portland. Consent is mandatory and water based lube is provided & required, if you bring your own. Join 100s of furry fellas on PRIDE FRIDAY. Treasure Trail has a full bar, beds and plenty of play space for our guest. Advanced tickets are essential. All furry friends and their admirers welcome!",
+      "address": "33 Northwest 9th Avenue, Portland, OR, 97209",
+      "website": "https://bearracuda.com/events/portland-pridefriday/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Sanctuary%20Club%2C%2033%20Northwest%209th%20Avenue%2C%20Portland%2C%20OR%2C%2097209",
+      "ticketUrl": "https://www.sickening.events/e/bearracuda-treasure-trail-portland-pride/tickets",
+      "shortName": "TREAS-URE TRAIL",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/events/portland-pridefriday/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Sanctuary%20Club%2C%2033%20Northwest%209th%20Avenue%2C%20Portland%2C%20OR%2C%2097209",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/bearracuda-treasure-trail-portland-pride/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "treasure-trail-portland-tix-at-the-door-0c12f2cc"
+    },
+    {
+      "name": "HOT TAKE w/NINI COCO",
+      "day": "Saturday",
+      "time": "10:30PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 45.5228076,
+        "lng": -122.6581521
+      },
+      "startDate": "2026-08-08T22:30:00",
+      "endDate": "2026-08-09T02:00:00",
+      "unprocessedDescription": "bar: NOVA PDX\naddress: 722 East Burnside Street, Portland, O\rR, 97214\nticketUrl: https://www.sickening.events/e/nini/tickets\nimage: https://bearracuda.com/wp-content/uploads/2026/07/hottake_august2026_ig.jpg\ntimezone: America/Los_Angeles\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\nwebsite: https://bearracuda.com/\ngmaps: https://www.google.com/maps/search/?api=1&query=NOVA%20PDX%2C%20722%20East%20Burnside%20Street%2C%20Portland%2C%20OR%2C%2097214\nkey: bearracuda-2026-08-09-portland",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "F102BB47-9DA5-4FAC-8130-846DB917E1EB",
+      "uid": "F102BB47-9DA5-4FAC-8130-846DB917E1EB",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 2,
+      "overrideIdentityType": null,
+      "bar": "NOVA PDX",
+      "image": "https://bearracuda.com/wp-content/uploads/2026/07/hottake_august2026_ig.jpg",
       "address": "722 East Burnside Street, Portland, OR, 97214",
       "website": "https://bearracuda.com/",
       "instagram": "https://www.instagram.com/bearracuda",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Nova%20PDX%2C%20722%20East%20Burnside%20Street%2C%20Portland%2C%20OR%2C%2097214",
-      "ticketUrl": "https://www.sickening.events/e/bearracuda-portland-pridefriday/tickets",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=NOVA%20PDX%2C%20722%20East%20Burnside%20Street%2C%20Portland%2C%20OR%2C%2097214",
+      "ticketUrl": "https://www.sickening.events/e/nini/tickets",
       "shortName": "Bear-rac-uda",
       "bearReview": null,
       "links": [
@@ -874,16 +630,16 @@
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Nova%20PDX%2C%20722%20East%20Burnside%20Street%2C%20Portland%2C%20OR%2C%2097214",
+          "url": "https://www.google.com/maps/search/?api=1&query=NOVA%20PDX%2C%20722%20East%20Burnside%20Street%2C%20Portland%2C%20OR%2C%2097214",
           "label": "🗺️ Google Maps"
         },
         {
           "type": "tickets",
-          "url": "https://www.sickening.events/e/bearracuda-portland-pridefriday/tickets",
+          "url": "https://www.sickening.events/e/nini/tickets",
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "portland-pride-friday-4b51bcfe"
+      "slug": "hot-take-wnini-coco-162bffff"
     },
     {
       "name": "Portland PRIDE SATURDAY",
@@ -944,7 +700,7 @@
       "slug": "portland-pride-saturday-17cdfbd9"
     },
     {
-      "name": "Bearracuda Portland - Saturday, November 15th",
+      "name": "Bearracuda Portland 16 YEAR Anniversary",
       "day": "Saturday",
       "time": "9PM-2AM",
       "eventType": "routine",
@@ -953,35 +709,35 @@
         "lat": 45.5227415,
         "lng": -122.6580938
       },
-      "startDate": "2025-11-15T21:00:00",
-      "endDate": "2025-11-16T02:00:00",
-      "unprocessedDescription": "description: Music & Entertainment\n• DJ Freddy King of Pants &\ramp; DJ Matt Stands\n• MC - CHRISTEENE\n• Show with Barbin, Kharisma, Mulan Alexander &amp; Special Guests\nbar: Bossanova Ballroom\naddress: 722 E Burnside, Portland, OR 97213\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/portland-50/\ncover: $24.89 - $30.54 (as of 10/1)\nimage: https://bearracuda.com/wp-content/uploads/2025/08/bday2025.jpg\nfacebook: https://www.facebook.com/events/706971042315329\nticketUrl: https://www.eventbrite.com/e/bearracuda-portland-saturday-november-15th-tickets-1557485975479\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/search/?api=1&query=45.5227415%2C-122.6580938&query_place_id=101715829\nkey: bearracuda-2025-11-16-portland",
+      "startDate": "2025-09-13T21:00:00",
+      "endDate": "2025-09-14T02:00:00",
+      "unprocessedDescription": "description: 16 YEAR ANNIVERSARY\n\nMusic & Entertainment\n• DJ\r CACTUSHEAD (BEEFMINCE UK)\n• DJ Matt Stands\nbar: Bossanova Ballroom\naddress: 722 E Burnside, Portland, OR 97213\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/pdx16/\ncover: $20.27 - $29.99 (as of 9/13)\nimage: https://bearracuda.com/wp-content/uploads/2025/04/cuda-portland-september_2025-web.jpg\nfacebook: https://www.facebook.com/events/751830650923430/\nticketUrl: https://www.eventbrite.com/e/bearracuda-portland-16-year-anniversary-tickets-1546221061819\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/search/?api=1&query=45.5227415%2C-122.6580938&query_place_id=101715829\nkey: bearracuda-2025-09-14-portland",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Los_Angeles",
       "wasUTC": true,
-      "sourceUid": "CA92B055-AF3F-4794-BF90-54987559FE94",
-      "uid": "CA92B055-AF3F-4794-BF90-54987559FE94",
+      "sourceUid": "E0BA6861-892D-456D-9D6E-B53C61A7BF4C",
+      "uid": "E0BA6861-892D-456D-9D6E-B53C61A7BF4C",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
-      "sequence": 0,
+      "sequence": 2,
       "overrideIdentityType": null,
       "bar": "Bossanova Ballroom",
-      "cover": "$24.89 - $30.54 (as of 10/1)",
-      "image": "https://bearracuda.com/wp-content/uploads/2025/08/bday2025.jpg",
-      "tea": "Music & Entertainment",
+      "cover": "$20.27 - $29.99 (as of 9/13)",
+      "image": "https://bearracuda.com/wp-content/uploads/2025/04/cuda-portland-september_2025-web.jpg",
+      "tea": "16 YEAR ANNIVERSARY",
       "address": "722 E Burnside, Portland, OR 97213",
-      "website": "https://bearracuda.com/events/portland-50/",
+      "website": "https://bearracuda.com/events/pdx16/",
       "instagram": "https://www.instagram.com/bearracuda",
-      "facebook": "https://www.facebook.com/events/706971042315329",
+      "facebook": "https://www.facebook.com/events/751830650923430/",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=45.5227415%2C-122.6580938&query_place_id=101715829",
-      "ticketUrl": "https://www.eventbrite.com/e/bearracuda-portland-saturday-november-15th-tickets-1557485975479",
+      "ticketUrl": "https://www.eventbrite.com/e/bearracuda-portland-16-year-anniversary-tickets-1546221061819",
       "shortName": "Bear-rac-uda",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://bearracuda.com/events/portland-50/",
+          "url": "https://bearracuda.com/events/pdx16/",
           "label": "🌐 Website"
         },
         {
@@ -991,7 +747,7 @@
         },
         {
           "type": "facebook",
-          "url": "https://www.facebook.com/events/706971042315329",
+          "url": "https://www.facebook.com/events/751830650923430/",
           "label": "📘 Facebook"
         },
         {
@@ -1001,11 +757,11 @@
         },
         {
           "type": "tickets",
-          "url": "https://www.eventbrite.com/e/bearracuda-portland-saturday-november-15th-tickets-1557485975479",
+          "url": "https://www.eventbrite.com/e/bearracuda-portland-16-year-anniversary-tickets-1546221061819",
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "bearracuda-portland-saturday-november-15th-1d72aa2a"
+      "slug": "bearracuda-portland-16-year-anniversary-21be21f0"
     },
     {
       "name": "Bearracuda Portland: The Great Blumpkin!",
@@ -1072,43 +828,233 @@
       "slug": "bearracuda-portland-the-great-blumpkin-341d5959"
     },
     {
-      "name": "Bearracuda Portland BONER GARAGE",
+      "name": "Bearracuda Portland: CROTCH CARNIVAL!",
       "day": "Saturday",
       "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 45.5227415,
+        "lng": -122.6580938
+      },
+      "startDate": "2026-02-21T21:00:00",
+      "endDate": "2026-02-22T02:00:00",
+      "unprocessedDescription": "description: Doors Open at 9\\:00 pm - Party Goes Until 2\\:00 \ram\nbar: Bossanova Ballroom\naddress: 722 E Burnside, Portland, OR 97213\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/portlandfeb/\nimage: https://bearracuda.com/wp-content/uploads/2025/12/feb2026pdx.jpg\nfacebook: https://www.facebook.com/events/892528969904085\nticketUrl: https://www.eventbrite.com/e/bearracuda-portland-crotch-carnival-tickets-1979122152635\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/search/?api=1&query=Bossanova%20Ballroom%2C%20722%20E%20Burnside%2C%20Portland%2C%20OR%2097213\nkey: bearracuda-2026-02-22-portland",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "22C75FCB-8CF5-426C-A2B3-01EBE0EEBF62",
+      "uid": "22C75FCB-8CF5-426C-A2B3-01EBE0EEBF62",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Bossanova Ballroom",
+      "image": "https://bearracuda.com/wp-content/uploads/2025/12/feb2026pdx.jpg",
+      "tea": "Doors Open at 9:00 pm - Party Goes Until 2:00 am",
+      "address": "722 E Burnside, Portland, OR 97213",
+      "website": "https://bearracuda.com/events/portlandfeb/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "facebook": "https://www.facebook.com/events/892528969904085",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Bossanova%20Ballroom%2C%20722%20E%20Burnside%2C%20Portland%2C%20OR%2097213",
+      "ticketUrl": "https://www.eventbrite.com/e/bearracuda-portland-crotch-carnival-tickets-1979122152635",
+      "shortName": "Bear-rac-uda",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/events/portlandfeb/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/events/892528969904085",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Bossanova%20Ballroom%2C%20722%20E%20Burnside%2C%20Portland%2C%20OR%2097213",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/bearracuda-portland-crotch-carnival-tickets-1979122152635",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bearracuda-portland-crotch-carnival-553c66fc"
+    },
+    {
+      "name": "TREASURE TRAIL Portland: Saturday, Jan. 24th!",
+      "day": "Saturday",
+      "time": "3PM-7PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 45.5235017,
+        "lng": -122.6802365
+      },
+      "startDate": "2026-01-24T15:00:00",
+      "endDate": "2026-01-24T19:00:00",
+      "unprocessedDescription": "description: Treasure Trail returns to Portland!\n\nMusic & Ent\rertainment\n• Clothes Check Available\nbar: Sanctuary Club\naddress: 33 Northwest 9th Avenue, Portland, OR 97209\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/treasurepdx/\nimage: https://bearracuda.com/wp-content/uploads/2025/11/1ttfuuuck.jpg\nfacebook: https://www.facebook.com/events/1185664703019614\nticketUrl: https://www.eventbrite.com/e/treasure-trail-portland-saturday-jan-24th-tickets-1976421422679\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://maps.google.com/?q=45.5235017,-122.6802365\nkey: bearracuda-2026-01-24-portland",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "2F092079-A18B-4B2D-B790-F9BB1BC5B388",
+      "uid": "2F092079-A18B-4B2D-B790-F9BB1BC5B388",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Sanctuary Club",
+      "image": "https://bearracuda.com/wp-content/uploads/2025/11/1ttfuuuck.jpg",
+      "tea": "Treasure Trail returns to Portland!",
+      "address": "33 Northwest 9th Avenue, Portland, OR 97209",
+      "website": "https://bearracuda.com/events/treasurepdx/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "facebook": "https://www.facebook.com/events/1185664703019614",
+      "gmaps": "https://maps.google.com/?q=45.5235017,-122.6802365",
+      "ticketUrl": "https://www.eventbrite.com/e/treasure-trail-portland-saturday-jan-24th-tickets-1976421422679",
+      "shortName": "Bear-rac-uda",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/events/treasurepdx/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/events/1185664703019614",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://maps.google.com/?q=45.5235017,-122.6802365",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/treasure-trail-portland-saturday-jan-24th-tickets-1976421422679",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "treasure-trail-portland-saturday-jan-24th-50c8389e"
+    },
+    {
+      "name": "Bearracuda Portland - Saturday, November 15th",
+      "day": "Saturday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 45.5227415,
+        "lng": -122.6580938
+      },
+      "startDate": "2025-11-15T21:00:00",
+      "endDate": "2025-11-16T02:00:00",
+      "unprocessedDescription": "description: Music & Entertainment\n• DJ Freddy King of Pants &\ramp; DJ Matt Stands\n• MC - CHRISTEENE\n• Show with Barbin, Kharisma, Mulan Alexander &amp; Special Guests\nbar: Bossanova Ballroom\naddress: 722 E Burnside, Portland, OR 97213\ntimezone: America/Los_Angeles\nurl: https://bearracuda.com/events/portland-50/\ncover: $24.89 - $30.54 (as of 10/1)\nimage: https://bearracuda.com/wp-content/uploads/2025/08/bday2025.jpg\nfacebook: https://www.facebook.com/events/706971042315329\nticketUrl: https://www.eventbrite.com/e/bearracuda-portland-saturday-november-15th-tickets-1557485975479\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/search/?api=1&query=45.5227415%2C-122.6580938&query_place_id=101715829\nkey: bearracuda-2025-11-16-portland",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "CA92B055-AF3F-4794-BF90-54987559FE94",
+      "uid": "CA92B055-AF3F-4794-BF90-54987559FE94",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Bossanova Ballroom",
+      "cover": "$24.89 - $30.54 (as of 10/1)",
+      "image": "https://bearracuda.com/wp-content/uploads/2025/08/bday2025.jpg",
+      "tea": "Music & Entertainment",
+      "address": "722 E Burnside, Portland, OR 97213",
+      "website": "https://bearracuda.com/events/portland-50/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "facebook": "https://www.facebook.com/events/706971042315329",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=45.5227415%2C-122.6580938&query_place_id=101715829",
+      "ticketUrl": "https://www.eventbrite.com/e/bearracuda-portland-saturday-november-15th-tickets-1557485975479",
+      "shortName": "Bear-rac-uda",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/events/portland-50/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/events/706971042315329",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=45.5227415%2C-122.6580938&query_place_id=101715829",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/bearracuda-portland-saturday-november-15th-tickets-1557485975479",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bearracuda-portland-saturday-november-15th-1d72aa2a"
+    },
+    {
+      "name": "Portland PRIDE FRIDAY",
+      "day": "Friday",
+      "time": "9PM-3AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
         "lat": 45.5228076,
         "lng": -122.6581521
       },
-      "startDate": "2026-05-16T21:00:00",
-      "endDate": "2026-05-17T02:00:00",
-      "unprocessedDescription": "description: Slide into the Boner Garage\\: ourfetish night at \rBearracuda Portland. We want to see your harnesses, latex, leather, rubber, jocks, pups, dom, sub, switch, spankers, suckers, cockrings, plugs, collars, hankies, hoods, dads, denim, voyeurism, feet, role play. Consent is always mandatory. Nick Bertossi spins all night with Hot GoGos, Visuals by Aaron Altemose, Decor by James Sharinghousen and YOU!\nbar: Nova PDX\naddress: 722 East Burnside Street\nticketUrl: https://www.sickening.events/e/bearracuda-portland-gearnight/tickets\ninstagram: https://www.instagram.com/bearracuda\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776291822/saas/logos/image_1776291814711_301fgtoxn.webp\ncover: $20-$30\nshortName: Bear-rac-uda\nwebsite: https://bearracuda.com/events/portland-gear/\ngmaps: https://www.google.com/maps/search/?api=1&query=Nova%20PDX%2C%20722%20East%20Burnside%20Street\nkey: bearracuda-2026-05-17-portland\ntimezone: America/Los_Angeles\npinSource: geocoded-exact",
+      "startDate": "2026-07-17T21:00:00",
+      "endDate": "2026-07-18T03:00:00",
+      "unprocessedDescription": "bar: Nova PDX\ntimezone: America/Los_Angeles\ninstagram: https:\r//www.instagram.com/bearracuda\ncover: TIX AT THE DOOR\nshortName: Bear-rac-uda\nwebsite: https://bearracuda.com/\nkey: portland-pride-friday|2026-07-18|nova pdx\ndescription: TICKETS AT THE DOOR ALL NIGHT! PRIDE FRIDAY\\: VASELINE ALLEYHarnesses, Jockstraps & Fetish Gear encouraged. Less is MORE! Friday, July 17, 2026722 E Burnside, Doors at 9pm, Party til 3AM Beats by\\: Matt Consola (PDX)Cactushead (UK) Lasers by LaseronicsVisuals by Aaron AltemoseDecor by James SharinghousenPhotos by Matty HoffmanHosted by Matt Bearracuda & Seattle Dad\naddress: 722 East Burnside Street, Portland, OR, 97214\nticketUrl: https://www.sickening.events/e/bearracuda-portland-pridefriday/tickets\nimage: https://bearracuda.com/wp-content/uploads/2026/03/bearracuda_pdxpride-friday-ig-2.jpg\npinSource: geocoded-exact\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Nova%20PDX%2C%20722%20East%20Burnside%20Street%2C%20Portland%2C%20OR%2C%2097214",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Los_Angeles",
       "wasUTC": true,
-      "sourceUid": "5D2FF721-0E32-4318-8CA8-391B11299303",
-      "uid": "5D2FF721-0E32-4318-8CA8-391B11299303",
+      "sourceUid": "3CF05991-3C86-4EEC-8A80-8769A4298E58",
+      "uid": "3CF05991-3C86-4EEC-8A80-8769A4298E58",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "Nova PDX",
-      "cover": "$20-$30",
-      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1776291822/saas/logos/image_1776291814711_301fgtoxn.webp",
-      "tea": "Slide into the Boner Garage: ourfetish night at Bearracuda Portland. We want to see your harnesses, latex, leather, rubber, jocks, pups, dom, sub, switch, spankers, suckers, cockrings, plugs, collars, hankies, hoods, dads, denim, voyeurism, feet, role play. Consent is always mandatory. Nick Bertossi spins all night with Hot GoGos, Visuals by Aaron Altemose, Decor by James Sharinghousen and YOU!",
-      "address": "722 East Burnside Street",
-      "website": "https://bearracuda.com/events/portland-gear/",
+      "cover": "TIX AT THE DOOR",
+      "image": "https://bearracuda.com/wp-content/uploads/2026/03/bearracuda_pdxpride-friday-ig-2.jpg",
+      "tea": "TICKETS AT THE DOOR ALL NIGHT! PRIDE FRIDAY: VASELINE ALLEYHarnesses, Jockstraps & Fetish Gear encouraged. Less is MORE! Friday, July 17, 2026722 E Burnside, Doors at 9pm, Party til 3AM Beats by: Matt Consola (PDX)Cactushead (UK) Lasers by LaseronicsVisuals by Aaron AltemoseDecor by James SharinghousenPhotos by Matty HoffmanHosted by Matt Bearracuda & Seattle Dad",
+      "address": "722 East Burnside Street, Portland, OR, 97214",
+      "website": "https://bearracuda.com/",
       "instagram": "https://www.instagram.com/bearracuda",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Nova%20PDX%2C%20722%20East%20Burnside%20Street",
-      "ticketUrl": "https://www.sickening.events/e/bearracuda-portland-gearnight/tickets",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Nova%20PDX%2C%20722%20East%20Burnside%20Street%2C%20Portland%2C%20OR%2C%2097214",
+      "ticketUrl": "https://www.sickening.events/e/bearracuda-portland-pridefriday/tickets",
       "shortName": "Bear-rac-uda",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://bearracuda.com/events/portland-gear/",
+          "url": "https://bearracuda.com/",
           "label": "🌐 Website"
         },
         {
@@ -1118,16 +1064,70 @@
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Nova%20PDX%2C%20722%20East%20Burnside%20Street",
+          "url": "https://www.google.com/maps/search/?api=1&query=Nova%20PDX%2C%20722%20East%20Burnside%20Street%2C%20Portland%2C%20OR%2C%2097214",
           "label": "🗺️ Google Maps"
         },
         {
           "type": "tickets",
-          "url": "https://www.sickening.events/e/bearracuda-portland-gearnight/tickets",
+          "url": "https://www.sickening.events/e/bearracuda-portland-pridefriday/tickets",
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "bearracuda-portland-boner-garage-3e1b185e"
+      "slug": "portland-pride-friday-4b51bcfe"
+    },
+    {
+      "name": "BEARRACUDA: Portland 17",
+      "day": "Saturday",
+      "time": "11PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 45.5228076,
+        "lng": -122.6581521
+      },
+      "startDate": "2026-09-19T23:00:00",
+      "endDate": "2026-09-20T03:00:00",
+      "unprocessedDescription": "description: 17 Year Anniversary Portland\nbar: Nova PDX\naddre\rss: 722 E Burnside, Portland, OR 97214\ntimezone: America/Los_Angeles\nimage: https://bearracuda.com/wp-content/uploads/2026/07/cuda-portland_september_2026-web.jpg\nimageVertical: https://bearracuda.com/wp-content/uploads/2026/07/cuda-portland_september_2026-web.jpg\nwebsite: https://bearracuda.com/events/portland-17/\nshortName: Bear­rac­uda\ninstagram: https://www.instagram.com/bearracuda\nfavicon: https://bearracuda.com/\nkey: bearracuda-portland-17|2026-09-20|nova pdx\nbearSource: keyword\ncover: ADV. TIX\npinSource: curated\naddressSource: page\nimageSource: og-image\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Nova%20PDX%2C%20722%20E%20Burnside%2C%20Portland%2C%20OR%2097214",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "8D6F4CE1-2BD9-400C-A8DC-F152E68E3EE1",
+      "uid": "8D6F4CE1-2BD9-400C-A8DC-F152E68E3EE1",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 1,
+      "overrideIdentityType": null,
+      "bar": "Nova PDX",
+      "cover": "ADV. TIX",
+      "image": "https://bearracuda.com/wp-content/uploads/2026/07/cuda-portland_september_2026-web.jpg",
+      "imageVertical": "https://bearracuda.com/wp-content/uploads/2026/07/cuda-portland_september_2026-web.jpg",
+      "favicon": "https://bearracuda.com/",
+      "tea": "17 Year Anniversary Portland",
+      "address": "722 E Burnside, Portland, OR 97214",
+      "website": "https://bearracuda.com/events/portland-17/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Nova%20PDX%2C%20722%20E%20Burnside%2C%20Portland%2C%20OR%2097214",
+      "shortName": "Bear­rac­uda",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/events/portland-17/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Nova%20PDX%2C%20722%20E%20Burnside%2C%20Portland%2C%20OR%2097214",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bearracuda-portland-17-749a33af"
     }
   ]
 }

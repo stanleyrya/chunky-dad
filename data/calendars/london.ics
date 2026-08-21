@@ -6,176 +6,9 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-london
 X-WR-TIMEZONE:Europe/London
 BEGIN:VEVENT
-DTSTART:20261031T220000Z
-DTEND:20261101T040000Z
-DTSTAMP:20260821T182724Z
-UID:C35D68BF-3219-4B72-8EE8-CD8360B483BA
-CREATED:20260729T165210Z
-DESCRIPTION:description: BEEFMINCE's big Halloween bash is back\, and we're
-  haunting a new venue this year! Full info and line up soon.\naddress: Lond
- on\, UK\nticketUrl: https://dice.fm/event/v3x3n7-spookmince-31st-oct-venue-
- tba-london-london-tickets\nimage: https://dice-media.imgix.net/attachments/
- 2026-07-20/b18c3952-51b5-488c-a72d-8e999074b562.jpg?rect=0%2C0%2C1080%2C108
- 0\ntimezone: Europe/London\ncover: £15\nimageHorizontal: https://dice-media
- .imgix.net/attachments/2026-07-20/b18c3952-51b5-488c-a72d-8e999074b562.jpg?
- rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress\nwebsite: https://beef
- mince.com\nshortName: SPOOK-MINCE\nfavicon: https://beefmince.com\nkey: spo
- okmince|2026-10-31|\nbearSource: keyword\nbar: Venue TBA\nbearReview: unsur
- e — ai\\: The event title 'SPOOKMINCE' and minimal description provide no c
- lear indication of bear-scene alignment or audience\, and no evidence confi
- rms it was produced by the bear-scene promoter.\naddressSource: page\nimage
- Source: jsonld\ngmaps: https://www.google.com/maps/search/?api=1&query=Venu
- e%20TBA%2C%20London%2C%20UK
-LAST-MODIFIED:20260815T021011Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:SPOOKMINCE
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261121T220000Z
-DTEND:20261122T040000Z
-DTSTAMP:20260821T182724Z
-UID:8DB25B07-9E96-4DB2-84F9-D779A742997D
-CREATED:20260729T165211Z
-DESCRIPTION:bar: Royal Vauxhall Tavern\naddress: 372 Kennington Ln\, London
- \, United Kingdom SE11 5HY\nticketUrl: https://dice.fm/event/927gr7-beefmin
- ce-x-rvt-21st-nov-the-royal-vauxhall-tavern-london-tickets\nimage: https://
- dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0
- f6e3f.jpg?rect=0%2C0%2C768%2C768\ntimezone: Europe/London\ncover: From £10\
- nwebsite: https://beefmince.com\ninstagram: https://www.instagram.com/rvtof
- ficial\nshortName: BEEF-MINCE\nfavicon: https://beefmince.com\nkey: beefmin
- ce-x-rvt|2026-11-21|royal vauxhall tavern\nbearSource: keyword\nimageHorizo
- ntal: https://dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44b
- e-8461-889edd0f6e3f.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress
- \ndescription: BEEFMINCE | The UK's Tastiest Bear Club *Now on Saturdays* B
- EEFMINCE is the Royal Vauxhall Tavern's biggest\, longest running and most 
- loved club night at this iconic LGBTQ+ venue. We're famous for our fun\, so
- cial\, bear full- attitude free parties with the best DJs playing the tasti
- est party athems ranging from disco\, house and electro. For Bears\, Cubs\,
-  Chubs\, Muscle Bears\, Trans Men\, Admirers & everyone in between! *More i
- nformation & FAQs at beefmince.com* This is an 18+ event (valid physical ph
- oto ID\, passport or driver’s license\, is required for entry\, no digital 
- copies accepted.)\npinSource: curated\naddressSource: page\nimageSource: js
- onld\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=place
- _id:ChIJuYgA--wEdkgRD-0ylWTyMkw
-LAST-MODIFIED:20260815T021012Z
-LOCATION:51.4863391\, -0.1217784
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:BEEFMINCE x RVT
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260919T210000Z
-DTEND:20260920T030000Z
-DTSTAMP:20260821T182724Z
-UID:04826FFC-6A1D-4636-AC9A-EECF52C24A31
-CREATED:20260729T165209Z
-DESCRIPTION:bar: Royal Vauxhall Tavern\naddress: 372 Kennington Ln\, London
- \, United Kingdom SE11 5HY\nticketUrl: https://dice.fm/event/yoepxa-beefmin
- ce-x-rvt-19th-sep-the-royal-vauxhall-tavern-london-tickets\nimage: https://
- dice-media.imgix.net/attachments/2026-08-17/6602b147-308f-4a7e-a729-4e903df
- b3142.jpg?rect=0%2C0%2C1080%2C1080\ntimezone: Europe/London\ncover: £10\nwe
- bsite: https://beefmince.com\ninstagram: https://www.instagram.com/rvtoffic
- ial\nshortName: BEEF-MINCE\nfavicon: https://beefmince.com\nkey: beefmince-
- brief-encounter|2026-09-19|royal vauxhall tavern\nbearSource: keyword\ndesc
- ription: BEEFMINCE | The UK's Tastiest Bear Club *Now on Saturdays* BEEFMIN
- CE is the Royal Vauxhall Tavern's biggest\, longest running and most loved 
- club night at this iconic LGBTQ+ venue. We're famous for our fun\, social\,
-  bear full- attitude free parties with the best DJs playing the tastiest pa
- rty athems ranging from disco\, house and electro. For Bears\, Cubs\, Chubs
- \, Muscle Bears\, Trans Men\, Admirers & everyone in between! *More informa
- tion & FAQs at beefmince.com*\nimageHorizontal: https://dice-media.imgix.ne
- t/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C
- 154%2C768%2C461&w=1300&h=630&auto=compress\npinSource: curated\naddressSour
- ce: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.googl
- e.com/maps/place/?q=place_id:ChIJuYgA--wEdkgRD-0ylWTyMkw
-LAST-MODIFIED:20260821T175919Z
-LOCATION:51.4863391\, -0.1217784
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:BEEFMINCE Brief Encounter
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261017T210000Z
-DTEND:20261018T030000Z
-DTSTAMP:20260821T182724Z
-UID:6044CC3C-18AF-4FC8-83F3-26FA56293E04
-CREATED:20260729T165209Z
-DESCRIPTION:description: BEEFMINCE | The UK's Tastiest Bear Club *Now on Sa
- turdays* BEEFMINCE is the Royal Vauxhall Tavern's biggest\, longest running
-  and most loved club night at this iconic LGBTQ+ venue. We're famous for ou
- r fun\, social\, bear full- attitude free parties with the best DJs playing
-  the tastiest party athems ranging from disco\, house and electro. For Bear
- s\, Cubs\, Chubs\, Muscle Bears\, Trans Men\, Admirers & everyone in betwee
- n! *More information & FAQs at beefmince.com*\nbar: Royal Vauxhall Tavern\n
- address: 372 Kennington Ln\, London\, United Kingdom SE11 5HY\nticketUrl: h
- ttps://dice.fm/event/xednya-beefmince-x-rvt-17th-oct-the-royal-vauxhall-tav
- ern-london-tickets\nimage: https://dice-media.imgix.net/attachments/2024-12
- -17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C0%2C768%2C768\ntimezo
- ne: Europe/London\ncover: From £10\nwebsite: https://beefmince.com\ninstagr
- am: https://www.instagram.com/rvtofficial\nshortName: BEEF-MINCE\nfavicon: 
- https://beefmince.com\nkey: beefmince-x-rvt|2026-10-17|royal vauxhall taver
- n\nbearSource: keyword\nimageHorizontal: https://dice-media.imgix.net/attac
- hments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C154%2C7
- 68%2C461&w=1300&h=630&auto=compress\npinSource: curated\naddressSource: pag
- e\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/m
- aps/place/?q=place_id:ChIJuYgA--wEdkgRD-0ylWTyMkw
-LAST-MODIFIED:20260815T021010Z
-LOCATION:51.4863391\, -0.1217784
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:BEEFMINCE x RVT
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261219T220000Z
-DTEND:20261220T040000Z
-DTSTAMP:20260821T182724Z
-UID:764FD17D-536F-411D-872C-66604B20D142
-CREATED:20260801T211704Z
-DESCRIPTION:description: TIS' THE SEASON TO BE BEARY! Get your stockings ou
- t\, defrost your bird and mince your way down to The Royal Vauxhall Tavern 
- for our big annual BEEFMINCE Christmas Party on Saturday 19 December!\nbar:
-  Royal Vauxhall Tavern\naddress: 372 Kennington Ln\, London\, United Kingdo
- m SE11 5HY\nticketUrl: https://dice.fm/event/ww93qg-turkeymince-19th-dec-th
- e-royal-vauxhall-tavern-london-tickets\nimage: https://dice-media.imgix.net
- /attachments/2025-08-09/0b521d79-1710-420f-b73a-167794d0fd67.jpg?rect=0%2C0
- %2C768%2C768\ntimezone: Europe/London\ncover: £10\nimageHorizontal: https:/
- /dice-media.imgix.net/attachments/2025-08-09/0b521d79-1710-420f-b73a-167794
- d0fd67.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress\nwebsite: ht
- tps://beefmince.com\ninstagram: https://www.instagram.com/rvtofficial\nshor
- tName: BEEF-MINCE\nfavicon: https://beefmince.com\nkey: turkeymince|2026-12
- -19|royal vauxhall tavern\nbearSource: keyword\nbearReview: unsure — ai\\: 
- The event title 'TURKEYMINCE' and venue 'Royal Vauxhall Tavern' suggest a p
- ossible connection to the bear scene (e.g.\, pun on 'beefmince')\, but no c
- lear bear-specific content or audience signals are present in the minimal d
- escription provided.\npinSource: curated\naddressSource: page\nimageSource:
-  jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=pl
- ace_id:ChIJuYgA--wEdkgRD-0ylWTyMkw
-LAST-MODIFIED:20260811T175715Z
-LOCATION:51.4863391\, -0.1217784
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:TURKEYMINCE
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20260717T210000Z
 DTEND:20260718T030000Z
-DTSTAMP:20260821T182724Z
+DTSTAMP:20260821T221708Z
 UID:0EF35488-A88B-49E8-8D79-A864F11A8113
 CREATED:20260715T120616Z
 DESCRIPTION:description: Super excited to be relaunching in London on July 
@@ -201,9 +34,79 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
+DTSTART:20261121T220000Z
+DTEND:20261122T040000Z
+DTSTAMP:20260821T221708Z
+UID:8DB25B07-9E96-4DB2-84F9-D779A742997D
+CREATED:20260729T165211Z
+DESCRIPTION:bar: Royal Vauxhall Tavern\naddress: 372 Kennington Ln\, London
+ \, United Kingdom SE11 5HY\nticketUrl: https://dice.fm/event/927gr7-beefmin
+ ce-x-rvt-21st-nov-the-royal-vauxhall-tavern-london-tickets\nimage: https://
+ dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0
+ f6e3f.jpg?rect=0%2C0%2C768%2C768\ntimezone: Europe/London\ncover: From £10\
+ nwebsite: https://beefmince.com\ninstagram: https://www.instagram.com/rvtof
+ ficial\nshortName: BEEF­MINCE\nfavicon: https://beefmince.com\nkey: beefmin
+ ce-x-rvt|2026-11-21|royal vauxhall tavern\nbearSource: keyword\nimageHorizo
+ ntal: https://dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44b
+ e-8461-889edd0f6e3f.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress
+ \ndescription: BEEFMINCE | The UK's Tastiest Bear Club *Now on Saturdays* B
+ EEFMINCE is the Royal Vauxhall Tavern's biggest\, longest running and most 
+ loved club night at this iconic LGBTQ+ venue. We're famous for our fun\, so
+ cial\, bear full- attitude free parties with the best DJs playing the tasti
+ est party athems ranging from disco\, house and electro. For Bears\, Cubs\,
+  Chubs\, Muscle Bears\, Trans Men\, Admirers & everyone in between! *More i
+ nformation & FAQs at beefmince.com* This is an 18+ event (valid physical ph
+ oto ID\, passport or driver’s license\, is required for entry\, no digital 
+ copies accepted.)\npinSource: curated\naddressSource: page\nimageSource: js
+ onld\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=place
+ _id:ChIJuYgA--wEdkgRD-0ylWTyMkw
+LAST-MODIFIED:20260821T202719Z
+LOCATION:51.4863391\, -0.1217784
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEEFMINCE x RVT
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261219T220000Z
+DTEND:20261220T040000Z
+DTSTAMP:20260821T221708Z
+UID:764FD17D-536F-411D-872C-66604B20D142
+CREATED:20260801T211704Z
+DESCRIPTION:description: TIS' THE SEASON TO BE BEARY! Get your stockings ou
+ t\, defrost your bird and mince your way down to The Royal Vauxhall Tavern 
+ for our big annual BEEFMINCE Christmas Party on Saturday 19 December!\nbar:
+  Royal Vauxhall Tavern\naddress: 372 Kennington Ln\, London\, United Kingdo
+ m SE11 5HY\nticketUrl: https://dice.fm/event/ww93qg-turkeymince-19th-dec-th
+ e-royal-vauxhall-tavern-london-tickets\nimage: https://dice-media.imgix.net
+ /attachments/2025-08-09/0b521d79-1710-420f-b73a-167794d0fd67.jpg?rect=0%2C0
+ %2C768%2C768\ntimezone: Europe/London\ncover: £10\nimageHorizontal: https:/
+ /dice-media.imgix.net/attachments/2025-08-09/0b521d79-1710-420f-b73a-167794
+ d0fd67.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress\nwebsite: ht
+ tps://beefmince.com\ninstagram: https://www.instagram.com/rvtofficial\nshor
+ tName: BEEF­MINCE\nfavicon: https://beefmince.com\nkey: turkeymince|2026-12
+ -19|royal vauxhall tavern\nbearSource: keyword\nbearReview: unsure — ai\\: 
+ The event title 'TURKEYMINCE' and venue 'Royal Vauxhall Tavern' suggest a p
+ ossible connection to the bear scene (e.g.\, pun on 'beefmince')\, but no c
+ lear bear-specific content or audience signals are present in the minimal d
+ escription provided.\npinSource: curated\naddressSource: page\nimageSource:
+  jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=pl
+ ace_id:ChIJuYgA--wEdkgRD-0ylWTyMkw
+LAST-MODIFIED:20260821T202720Z
+LOCATION:51.4863391\, -0.1217784
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:TURKEYMINCE
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20260830T111500Z
 DTEND:20260830T160000Z
-DTSTAMP:20260821T182724Z
+DTSTAMP:20260821T221708Z
 UID:C54DF7B2-F86F-4B1E-9AB1-51FDA17AE24E
 CREATED:20260729T165209Z
 DESCRIPTION:description: BEARS AND BUOYS AHOY! 👀 We board The Jewel of Lon
@@ -221,12 +124,12 @@ DESCRIPTION:description: BEARS AND BUOYS AHOY! 👀 We board The Jewel of Lon
  C0%2C768%2C768\ntimezone: Europe/London\ncover: £30.06\nimageHorizontal: ht
  tps://dice-media.imgix.net/attachments/2025-01-15/aa1288a2-6cf8-4c42-8c29-5
  81b1cfe5ba2.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress\nwebsit
- e: https://beefmince.com\nshortName: BOAT-MINCE\nfavicon: https://beefmince
+ e: https://beefmince.com\nshortName: BOAT­MINCE\nfavicon: https://beefmince
  .com\nkey: boatmince|2026-08-30|westminster pier\nbearSource: ai\npinSource
  : curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngm
  aps: https://www.google.com/maps/search/?api=1&query=Westminster%20Pier%2C%
  20Victoria%20Embankment%2C%20London%20SW1A%202JH
-LAST-MODIFIED:20260820T174537Z
+LAST-MODIFIED:20260821T202716Z
 LOCATION:51.5022544\, -0.1231736
 SEQUENCE:0
 STATUS:CONFIRMED
@@ -236,26 +139,69 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20261231T220000Z
-DTEND:20270101T050000Z
-DTSTAMP:20260821T182724Z
-UID:CF73C0A5-B8BB-4602-A640-C75193FDE578
-CREATED:20260801T211705Z
-DESCRIPTION:description: BEEFMINCE New Year's Eve - more info soon.\nticket
- Url: https://dice.fm/event/bb9e2m-beefmince-new-years-eve-31st-dec-venue-tb
- a-london-london-tickets\nimage: https://dice-media.imgix.net/attachments/20
- 26-07-27/ed641899-823f-4fae-b44e-aa9da6c2b795.jpg?rect=0%2C0%2C1080%2C1080\
- ntimezone: Europe/London\ncover: £17\nimageHorizontal: https://dice-media.i
- mgix.net/attachments/2026-07-27/ed641899-823f-4fae-b44e-aa9da6c2b795.jpg?re
- ct=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress\nwebsite: https://beefmi
- nce.com\nshortName: BEEF-MINCE\nfavicon: https://beefmince.com\nkey: beefmi
- nce-new-year-s-eve|2026-12-31|\nbearSource: keyword\naddress: Venue TBA\, L
- ondon\naddressSource: page\nimageSource: jsonld\ngmaps: https://www.google.
- com/maps/search/?api=1&query=Venue%20TBA%2C%20London
-LAST-MODIFIED:20260811T175716Z
+DTSTART:20261017T210000Z
+DTEND:20261018T030000Z
+DTSTAMP:20260821T221708Z
+UID:6044CC3C-18AF-4FC8-83F3-26FA56293E04
+CREATED:20260729T165209Z
+DESCRIPTION:description: BEEFMINCE | The UK's Tastiest Bear Club *Now on Sa
+ turdays* BEEFMINCE is the Royal Vauxhall Tavern's biggest\, longest running
+  and most loved club night at this iconic LGBTQ+ venue. We're famous for ou
+ r fun\, social\, bear full- attitude free parties with the best DJs playing
+  the tastiest party athems ranging from disco\, house and electro. For Bear
+ s\, Cubs\, Chubs\, Muscle Bears\, Trans Men\, Admirers & everyone in betwee
+ n! *More information & FAQs at beefmince.com*\nbar: Royal Vauxhall Tavern\n
+ address: 372 Kennington Ln\, London\, United Kingdom SE11 5HY\nticketUrl: h
+ ttps://dice.fm/event/xednya-beefmince-x-rvt-17th-oct-the-royal-vauxhall-tav
+ ern-london-tickets\nimage: https://dice-media.imgix.net/attachments/2024-12
+ -17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C0%2C768%2C768\ntimezo
+ ne: Europe/London\ncover: From £10\nimageHorizontal: https://dice-media.img
+ ix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect
+ =0%2C154%2C768%2C461&w=1300&h=630&auto=compress\nwebsite: https://beefmince
+ .com\ninstagram: https://www.instagram.com/rvtofficial\nshortName: BEEF­MIN
+ CE\nfavicon: https://beefmince.com\nkey: beefmince-x-rvt|2026-10-17|royal v
+ auxhall tavern\nbearSource: keyword\npinSource: curated\naddressSource: pag
+ e\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/m
+ aps/place/?q=place_id:ChIJuYgA--wEdkgRD-0ylWTyMkw
+LAST-MODIFIED:20260821T202718Z
+LOCATION:51.4863391\, -0.1217784
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:BEEFMINCE New Year's Eve
+SUMMARY:BEEFMINCE x RVT
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260919T210000Z
+DTEND:20260920T030000Z
+DTSTAMP:20260821T221708Z
+UID:04826FFC-6A1D-4636-AC9A-EECF52C24A31
+CREATED:20260729T165209Z
+DESCRIPTION:bar: Royal Vauxhall Tavern\naddress: 372 Kennington Ln\, London
+ \, United Kingdom SE11 5HY\nticketUrl: https://dice.fm/event/yoepxa-beefmin
+ ce-x-rvt-19th-sep-the-royal-vauxhall-tavern-london-tickets\nimage: https://
+ dice-media.imgix.net/attachments/2026-08-17/6602b147-308f-4a7e-a729-4e903df
+ b3142.jpg?rect=0%2C0%2C1080%2C1080\ntimezone: Europe/London\ncover: £10\nwe
+ bsite: https://beefmince.com\ninstagram: https://www.instagram.com/rvtoffic
+ ial\nshortName: BEEF­MINCE\nfavicon: https://beefmince.com\nkey: beefmince-
+ brief-encounter|2026-09-19|royal vauxhall tavern\nbearSource: keyword\ndesc
+ ription: BEEFMINCE | The UK's Tastiest Bear Club *Now on Saturdays* BEEFMIN
+ CE is the Royal Vauxhall Tavern's biggest\, longest running and most loved 
+ club night at this iconic LGBTQ+ venue. We're famous for our fun\, social\,
+  bear full- attitude free parties with the best DJs playing the tastiest pa
+ rty athems ranging from disco\, house and electro. For Bears\, Cubs\, Chubs
+ \, Muscle Bears\, Trans Men\, Admirers & everyone in between! *More informa
+ tion & FAQs at beefmince.com*\nimageHorizontal: https://dice-media.imgix.ne
+ t/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg?rect=0%2C
+ 154%2C768%2C461&w=1300&h=630&auto=compress\npinSource: curated\naddressSour
+ ce: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.googl
+ e.com/maps/place/?q=place_id:ChIJuYgA--wEdkgRD-0ylWTyMkw
+LAST-MODIFIED:20260821T202717Z
+LOCATION:51.4863391\, -0.1217784
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEEFMINCE Brief Encounter
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
@@ -263,7 +209,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260815T210000Z
 DTEND:20260816T030000Z
-DTSTAMP:20260821T182724Z
+DTSTAMP:20260821T221708Z
 UID:0B1AA776-F366-45ED-850F-FA5F026D4257
 CREATED:20260729T165208Z
 DESCRIPTION:description: BEEFMINCE is turning the RVT into a sea of banana 
@@ -291,6 +237,60 @@ LOCATION:51.4863391\, -0.1217784
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:BEEFMINCE Trunk Den
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261231T220000Z
+DTEND:20270101T050000Z
+DTSTAMP:20260821T221708Z
+UID:CF73C0A5-B8BB-4602-A640-C75193FDE578
+CREATED:20260801T211705Z
+DESCRIPTION:description: BEEFMINCE New Year's Eve - more info soon.\nticket
+ Url: https://dice.fm/event/bb9e2m-beefmince-new-years-eve-31st-dec-venue-tb
+ a-london-london-tickets\nimage: https://dice-media.imgix.net/attachments/20
+ 26-07-27/ed641899-823f-4fae-b44e-aa9da6c2b795.jpg?rect=0%2C0%2C1080%2C1080\
+ ntimezone: Europe/London\ncover: £17\nimageHorizontal: https://dice-media.i
+ mgix.net/attachments/2026-07-27/ed641899-823f-4fae-b44e-aa9da6c2b795.jpg?re
+ ct=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress\nwebsite: https://beefmi
+ nce.com\nshortName: BEEF­MINCE\nfavicon: https://beefmince.com\nkey: beefmi
+ nce-new-year-s-eve|2026-12-31|\nbearSource: keyword\naddress: Venue TBA\, L
+ ondon\naddressSource: page\nimageSource: jsonld\ngmaps: https://www.google.
+ com/maps/search/?api=1&query=Venue%20TBA%2C%20London
+LAST-MODIFIED:20260821T202720Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEEFMINCE New Year's Eve
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261031T220000Z
+DTEND:20261101T040000Z
+DTSTAMP:20260821T221708Z
+UID:C35D68BF-3219-4B72-8EE8-CD8360B483BA
+CREATED:20260729T165210Z
+DESCRIPTION:description: BEEFMINCE's big Halloween bash is back\, and we're
+  haunting a new venue this year! Full info and line up soon.\naddress: Lond
+ on\, UK\nticketUrl: https://dice.fm/event/v3x3n7-spookmince-31st-oct-venue-
+ tba-london-london-tickets\nimage: https://dice-media.imgix.net/attachments/
+ 2026-07-20/b18c3952-51b5-488c-a72d-8e999074b562.jpg?rect=0%2C0%2C1080%2C108
+ 0\ntimezone: Europe/London\ncover: £15\nimageHorizontal: https://dice-media
+ .imgix.net/attachments/2026-07-20/b18c3952-51b5-488c-a72d-8e999074b562.jpg?
+ rect=0%2C216%2C1080%2C648&w=1300&h=630&auto=compress\nwebsite: https://beef
+ mince.com\nshortName: SPOOK­MINCE\nfavicon: https://beefmince.com\nkey: spo
+ okmince|2026-10-31|\nbearSource: keyword\nbar: Venue TBA\nbearReview: unsur
+ e — ai\\: The event title 'SPOOKMINCE' and minimal description provide no c
+ lear indication of bear-scene alignment or audience\, and no evidence confi
+ rms it was produced by the bear-scene promoter.\naddressSource: page\nimage
+ Source: jsonld\ngmaps: https://www.google.com/maps/search/?api=1&query=Venu
+ e%20TBA%2C%20London%2C%20UK
+LAST-MODIFIED:20260821T202718Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:SPOOKMINCE
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

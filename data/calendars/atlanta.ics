@@ -6,26 +6,32 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-atlanta
 X-WR-TIMEZONE:America/New_York
 BEGIN:VEVENT
-DTSTART:20260426T010000Z
-DTEND:20260426T070000Z
-DTSTAMP:20260820T182935Z
-UID:26189CDE-B43B-4E65-9A46-35472A1B1374
-CREATED:20260123T030755Z
-DESCRIPTION:description: Doors Open at 9\\:00 pm - Party Goes Until 3\\:00 
- am\nbar: Heretic\naddress: 2069 Cheshire Bridge Rd NE\, Atlanta\, GA 30324\
- ntimezone: America/New_York\nurl: https://bearracuda.com/events/atlantabear
- pride/\nimage: https://bearracuda.com/wp-content/uploads/2025/12/cuda-atlan
- ta-april_2026-web.jpg\nfacebook: https://www.facebook.com/events/3839124786
- 219875/\nticketUrl: https://www.eventbrite.com/e/bearracuda-atlanta-bear-pr
- ide-2026-tickets-1978849934423\nshortName: Bear-rac-uda\ninstagram: https:/
- /www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/search/?a
- pi=1&query=Heretic%2C%202069%20Cheshire%20Bridge%20Rd%20NE%2C%20Atlanta%2C%
- 20GA%2030324\nkey: bearracuda-2026-04-26-atlanta
-LAST-MODIFIED:20260126T235322Z
-LOCATION:33.81158\, -84.3554
+DTSTART:20260823T020000Z
+DTEND:20260823T070000Z
+DTSTAMP:20260821T221708Z
+UID:BCF7BC7E-1341-43A8-B570-ED380209618F
+CREATED:20260713T165324Z
+DESCRIPTION:description: 17 YEAR ANNIVERSARY Bearracuda is back to celebrat
+ e 17 YEARS in Atlanta! Come blow out our candle with DJ Nick Bertossi and 1
+ 00's of guys!! Tip our hot\, beefy dancers\, cruise and socialize all night
+ . We want to see your Harnesses and Jocks! Clothes check available.\nbar: T
+ he Heretic\naddress: 2069 Cheshire Bridge Road Northeast\, Atlanta\, GA\, 3
+ 0324\ntimezone: America/New_York\nticketUrl: https://www.sickening.events/e
+ /bearracuda-17/tickets\nimage: https://bearracuda.com/wp-content/uploads/20
+ 26/06/cuda-atalanta_august_2026-web.jpg\nimageVertical: https://bearracuda.
+ com/wp-content/uploads/2026/06/cuda-atalanta_august_2026-web.jpg\nwebsite: 
+ https://bearracuda.com/events/atl17/\nshortName: Bear­rac­uda\ninstagram: h
+ ttps://www.instagram.com/bearracuda\nfavicon: https://bearracuda.com/\nkey:
+  bearracuda-atlanta|2026-08-23|the heretic\nbearSource: keyword\ncover: ADV
+ . TICKETS\npinSource: curated\naddressSource: page\nimageSource: og-image\n
+ barSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=
+ The%20Heretic%2C%202069%20Cheshire%20Bridge%20Road%20Northeast%2C%20Atlanta
+ %2C%20GA%2C%2030324
+LAST-MODIFIED:20260821T202954Z
+LOCATION:33.8115012\, -84.3552779
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Bearracuda Atlanta Bear Pride 2026!
+SUMMARY:Bearracuda Atlanta 17 Year Anniversary
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
@@ -33,7 +39,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20250824T020000Z
 DTEND:20250824T070000Z
-DTSTAMP:20260820T182935Z
+DTSTAMP:20260821T221708Z
 UID:6603D191-FFD6-4D13-89CE-03BD5C0A3D4F
 CREATED:20250817T231653Z
 DESCRIPTION:description: 16 YEAR ANNIVERSARY\nwebsite: https://www.eventbri
@@ -58,40 +64,9 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260823T020000Z
-DTEND:20260823T070000Z
-DTSTAMP:20260820T182935Z
-UID:BCF7BC7E-1341-43A8-B570-ED380209618F
-CREATED:20260713T165324Z
-DESCRIPTION:description: 17 YEAR ANNIVERSARY Bearracuda is back to celebrat
- e 17 YEARS in Atlanta! Come blow out our candle with DJ Nick Bertossi and 1
- 00's of guys!! Tip our hot\, beefy dancers\, cruise and socialize all night
- . We want to see your Harnesses and Jocks! Clothes check available.\nbar: T
- he Heretic\naddress: 2069 Cheshire Bridge Road Northeast\, Atlanta\, GA\, 3
- 0324\ntimezone: America/New_York\nticketUrl: https://www.sickening.events/e
- /bearracuda-17/tickets\nimage: https://bearracuda.com/wp-content/uploads/20
- 26/06/cuda-atalanta_august_2026-web.jpg\nimageVertical: https://bearracuda.
- com/wp-content/uploads/2026/06/cuda-atalanta_august_2026-web.jpg\nwebsite: 
- https://bearracuda.com/events/atl17/\nshortName: Bear-rac-uda\ninstagram: h
- ttps://www.instagram.com/bearracuda\nfavicon: https://bearracuda.com/\nkey:
-  bearracuda-atlanta|2026-08-23|the heretic\nbearSource: keyword\ncover: ADV
- . TICKETS\npinSource: curated\naddressSource: page\nimageSource: og-image\n
- barSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=
- The%20Heretic%2C%202069%20Cheshire%20Bridge%20Road%20Northeast%2C%20Atlanta
- %2C%20GA%2C%2030324
-LAST-MODIFIED:20260820T175450Z
-LOCATION:33.8115012\, -84.3552779
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Bearracuda Atlanta 17 Year Anniversary
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20260208T030000Z
 DTEND:20260208T080000Z
-DTSTAMP:20260820T182935Z
+DTSTAMP:20260821T221708Z
 UID:B66760F4-84C2-4D7B-88FA-86483970980A
 CREATED:20260123T030740Z
 DESCRIPTION:description: Doors Open at 10\\:00 pm - Party Goes Until 3\\:00
@@ -118,7 +93,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20251109T030000Z
 DTEND:20251109T080000Z
-DTSTAMP:20260820T182935Z
+DTSTAMP:20260821T221708Z
 UID:2BF0CBE2-B7B0-4042-BD0F-3835C9D751AE
 CREATED:20250928T145258Z
 DESCRIPTION:description: Doors Open at 10\\:00 pm - Party Goes Until 3\\:00
@@ -135,6 +110,31 @@ LOCATION:33.81158\, -84.3554
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:Bearracuda Atlanta: Bulges & Jocks
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260426T010000Z
+DTEND:20260426T070000Z
+DTSTAMP:20260821T221708Z
+UID:26189CDE-B43B-4E65-9A46-35472A1B1374
+CREATED:20260123T030755Z
+DESCRIPTION:description: Doors Open at 9\\:00 pm - Party Goes Until 3\\:00 
+ am\nbar: Heretic\naddress: 2069 Cheshire Bridge Rd NE\, Atlanta\, GA 30324\
+ ntimezone: America/New_York\nurl: https://bearracuda.com/events/atlantabear
+ pride/\nimage: https://bearracuda.com/wp-content/uploads/2025/12/cuda-atlan
+ ta-april_2026-web.jpg\nfacebook: https://www.facebook.com/events/3839124786
+ 219875/\nticketUrl: https://www.eventbrite.com/e/bearracuda-atlanta-bear-pr
+ ide-2026-tickets-1978849934423\nshortName: Bear-rac-uda\ninstagram: https:/
+ /www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/search/?a
+ pi=1&query=Heretic%2C%202069%20Cheshire%20Bridge%20Rd%20NE%2C%20Atlanta%2C%
+ 20GA%2030324\nkey: bearracuda-2026-04-26-atlanta
+LAST-MODIFIED:20260126T235322Z
+LOCATION:33.81158\, -84.3554
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bearracuda Atlanta Bear Pride 2026!
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

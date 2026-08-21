@@ -68,6 +68,69 @@
       "slug": "bearracuda-0f2c13d7"
     },
     {
+      "name": "DENVER",
+      "day": "Saturday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 39.7526699,
+        "lng": -104.991983
+      },
+      "startDate": "2026-03-14T21:00:00",
+      "endDate": "2026-03-15T02:00:00",
+      "unprocessedDescription": "description: Doors Open at 9\\:00 pm - Party Goes Until 2\\:00 \ram\nbar: Ophelia's\naddress: 1215 20th Street, Denver, CO\ntimezone: America/Denver\nurl: https://bearracuda.com/events/denvermarch/\nimage: https://bearracuda.com/wp-content/uploads/2026/01/denvernew2.jpg\nfacebook: https://www.facebook.com/events/1959773034896673\nticketUrl: https://www.ticketmaster.com/bearracuda-denver-colorado-03-14-2026/event/1E0064260CAC881B\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/search/?api=1&query=Ophelia's%2C%201215%2020th%20Street%2C%20Denver%2C%20CO\nkey: bearracuda-2026-03-15-denver\npinSource: geocoded-exact",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Denver",
+      "wasUTC": true,
+      "sourceUid": "CEB40CFA-CC09-4975-8972-54CF6AC84812",
+      "uid": "CEB40CFA-CC09-4975-8972-54CF6AC84812",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Ophelia's",
+      "image": "https://bearracuda.com/wp-content/uploads/2026/01/denvernew2.jpg",
+      "tea": "Doors Open at 9:00 pm - Party Goes Until 2:00 am",
+      "address": "1215 20th Street, Denver, CO",
+      "website": "https://bearracuda.com/events/denvermarch/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "facebook": "https://www.facebook.com/events/1959773034896673",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Ophelia's%2C%201215%2020th%20Street%2C%20Denver%2C%20CO",
+      "ticketUrl": "https://www.ticketmaster.com/bearracuda-denver-colorado-03-14-2026/event/1E0064260CAC881B",
+      "shortName": "Bear-rac-uda",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/events/denvermarch/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/events/1959773034896673",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Ophelia's%2C%201215%2020th%20Street%2C%20Denver%2C%20CO",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.ticketmaster.com/bearracuda-denver-colorado-03-14-2026/event/1E0064260CAC881B",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "denver-42126767"
+    },
+    {
       "name": "MEGAWOOF",
       "day": "Saturday",
       "time": "9PM-4:30AM",
@@ -242,69 +305,6 @@
       "slug": "denver-39553322"
     },
     {
-      "name": "DENVER",
-      "day": "Saturday",
-      "time": "9PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 39.7526699,
-        "lng": -104.991983
-      },
-      "startDate": "2026-03-14T21:00:00",
-      "endDate": "2026-03-15T02:00:00",
-      "unprocessedDescription": "description: Doors Open at 9\\:00 pm - Party Goes Until 2\\:00 \ram\nbar: Ophelia's\naddress: 1215 20th Street, Denver, CO\ntimezone: America/Denver\nurl: https://bearracuda.com/events/denvermarch/\nimage: https://bearracuda.com/wp-content/uploads/2026/01/denvernew2.jpg\nfacebook: https://www.facebook.com/events/1959773034896673\nticketUrl: https://www.ticketmaster.com/bearracuda-denver-colorado-03-14-2026/event/1E0064260CAC881B\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\ngmaps: https://www.google.com/maps/search/?api=1&query=Ophelia's%2C%201215%2020th%20Street%2C%20Denver%2C%20CO\nkey: bearracuda-2026-03-15-denver\npinSource: geocoded-exact",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Denver",
-      "wasUTC": true,
-      "sourceUid": "CEB40CFA-CC09-4975-8972-54CF6AC84812",
-      "uid": "CEB40CFA-CC09-4975-8972-54CF6AC84812",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Ophelia's",
-      "image": "https://bearracuda.com/wp-content/uploads/2026/01/denvernew2.jpg",
-      "tea": "Doors Open at 9:00 pm - Party Goes Until 2:00 am",
-      "address": "1215 20th Street, Denver, CO",
-      "website": "https://bearracuda.com/events/denvermarch/",
-      "instagram": "https://www.instagram.com/bearracuda",
-      "facebook": "https://www.facebook.com/events/1959773034896673",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Ophelia's%2C%201215%2020th%20Street%2C%20Denver%2C%20CO",
-      "ticketUrl": "https://www.ticketmaster.com/bearracuda-denver-colorado-03-14-2026/event/1E0064260CAC881B",
-      "shortName": "Bear-rac-uda",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://bearracuda.com/events/denvermarch/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearracuda",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "facebook",
-          "url": "https://www.facebook.com/events/1959773034896673",
-          "label": "📘 Facebook"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Ophelia's%2C%201215%2020th%20Street%2C%20Denver%2C%20CO",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.ticketmaster.com/bearracuda-denver-colorado-03-14-2026/event/1E0064260CAC881B",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "denver-42126767"
-    },
-    {
       "name": "BEARRACUDA: Denver 17",
       "day": "Saturday",
       "time": "9PM-2AM",
@@ -316,7 +316,7 @@
       },
       "startDate": "2026-10-03T21:00:00",
       "endDate": "2026-10-04T02:00:00",
-      "unprocessedDescription": "description: 17 YEAR ANNIVERSARY!!\nbar: Ophelia's\naddress: 12\r15 20th Street, Denver, Colorado, 80202\ntimezone: America/Denver\nticketUrl: https://bearracuda.com\nimage: https://bearracuda.com/wp-content/uploads/2026/08/bearracuda_denveroctober2026-ig-819x1024.jpg\nimageVertical: https://bearracuda.com/wp-content/uploads/2026/08/bearracuda_denveroctober2026-ig-819x1024.jpg\nwebsite: https://bearracuda.com/\nshortName: Bear-rac-uda\ninstagram: https://www.instagram.com/bearracuda\nfavicon: https://bearracuda.com/\nkey: bearracuda-denver-17|2026-10-04|ophelia's\nbearSource: keyword\npinSource: curated\naddressSource: curated\nimageSource: og-image\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Ophelia's%2C%201215%2020th%20Street%2C%20Denver%2C%20Colorado%2C%2080202",
+      "unprocessedDescription": "description: 17 YEAR ANNIVERSARY!!\nbar: Ophelia's\naddress: 12\r15 20th Street, Denver, Colorado, 80202\ntimezone: America/Denver\nticketUrl: https://bearracuda.com\nimage: https://bearracuda.com/wp-content/uploads/2026/08/bearracuda_denveroctober2026-ig-819x1024.jpg\nimageVertical: https://bearracuda.com/wp-content/uploads/2026/08/bearracuda_denveroctober2026-ig-819x1024.jpg\nwebsite: https://bearracuda.com/\nshortName: Bear­rac­uda\ninstagram: https://www.instagram.com/bearracuda\nfavicon: https://bearracuda.com/\nkey: bearracuda-denver-17|2026-10-04|ophelia's\nbearSource: keyword\npinSource: curated\naddressSource: curated\nimageSource: og-image\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Ophelia's%2C%201215%2020th%20Street%2C%20Denver%2C%20Colorado%2C%2080202",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Denver",
@@ -337,7 +337,7 @@
       "instagram": "https://www.instagram.com/bearracuda",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=Ophelia's%2C%201215%2020th%20Street%2C%20Denver%2C%20Colorado%2C%2080202",
       "ticketUrl": "https://bearracuda.com",
-      "shortName": "Bear-rac-uda",
+      "shortName": "Bear­rac­uda",
       "bearReview": null,
       "links": [
         {

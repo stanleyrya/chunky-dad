@@ -6,38 +6,9 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-philadelphia
 X-WR-TIMEZONE:America/New_York
 BEGIN:VEVENT
-DTSTART:20260214T020000Z
-DTEND:20260214T070000Z
-DTSTAMP:20260808T010847Z
-UID:C9791D00-2BAB-4EB3-8347-4823E6C75F4A
-CREATED:20260117T204747Z
-DESCRIPTION:description: CUBHOUSE returns for dancing with your VALENTINE'S
-  sweet hearts at 254!\nCome paired or single and ready to mingle.   Keep a 
- close eye on our Instagram for info regarding specials\, guests\, and speci
- al treats for all your hearts desires.\n Advance tickets are on sale now!\n
- bar: 254\naddress: 254 South 12th Street\, Philadelphia\, PA 19107\ntimezon
- e: America/New_York\nticketUrl: https://www.eventbrite.com/e/cubhouse-phill
- y-valentines-dance-party-tickets-1936787556719\nimage: https://img.evbuc.co
- m/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1167639013%2F2544065821071%2F1%2Fo
- riginal.20251031-205615?crop=focalpoint&fit=crop&w=600&auto=format%2Ccompre
- ss&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=1d9da9d1c175b79fa1fc9ec4afcac0c2\nshor
- tName: CUB-HOUSE\ninstagram: https://www.instagram.com/cubhouse.philly\nurl
- : https://linktr.ee/cubhouse\ngmaps: https://www.google.com/maps/search/?ap
- i=1&query=254%20South%2012th%20Street%2C%20Philadelphia%2C%20PA%2019107\nke
- y: cubhouse-philly-valentine-s-dance-party|2026-02-14|254
-LAST-MODIFIED:20260126T234656Z
-LOCATION:39.9470542\, -75.161054
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:CUBHOUSE PHILLY VALENTINE'S DANCE PARTY
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20260606T010000Z
 DTEND:20260606T060000Z
-DTSTAMP:20260808T010847Z
+DTSTAMP:20260821T221708Z
 UID:CBB60667-F22B-4146-A728-88011305369F
 CREATED:20260507T004208Z
 DESCRIPTION:description: CUBHOUSE is back\, and bigger than ever for it's 2
@@ -66,9 +37,66 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
+DTSTART:20260214T020000Z
+DTEND:20260214T070000Z
+DTSTAMP:20260821T221708Z
+UID:C9791D00-2BAB-4EB3-8347-4823E6C75F4A
+CREATED:20260117T204747Z
+DESCRIPTION:description: CUBHOUSE returns for dancing with your VALENTINE'S
+  sweet hearts at 254!\nCome paired or single and ready to mingle.   Keep a 
+ close eye on our Instagram for info regarding specials\, guests\, and speci
+ al treats for all your hearts desires.\n Advance tickets are on sale now!\n
+ bar: 254\naddress: 254 South 12th Street\, Philadelphia\, PA 19107\ntimezon
+ e: America/New_York\nticketUrl: https://www.eventbrite.com/e/cubhouse-phill
+ y-valentines-dance-party-tickets-1936787556719\nimage: https://img.evbuc.co
+ m/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1167639013%2F2544065821071%2F1%2Fo
+ riginal.20251031-205615?crop=focalpoint&fit=crop&w=600&auto=format%2Ccompre
+ ss&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=1d9da9d1c175b79fa1fc9ec4afcac0c2\nshor
+ tName: CUB-HOUSE\ninstagram: https://www.instagram.com/cubhouse.philly\nurl
+ : https://linktr.ee/cubhouse\ngmaps: https://www.google.com/maps/search/?ap
+ i=1&query=254%20South%2012th%20Street%2C%20Philadelphia%2C%20PA%2019107\nke
+ y: cubhouse-philly-valentine-s-dance-party|2026-02-14|254
+LAST-MODIFIED:20260126T234656Z
+LOCATION:39.9470542\, -75.161054
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:CUBHOUSE PHILLY VALENTINE'S DANCE PARTY
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260829T010000Z
+DTEND:20260829T060000Z
+DTSTAMP:20260821T221708Z
+UID:C6225771-6ECE-409F-9006-7D2D01F8C843
+CREATED:20260715T015005Z
+DESCRIPTION:description: The Cubhouse Summer Dance Party is ready for you t
+ o book your tickets..\nbar: 254\naddress: 254 South 12th Street\, Philadelp
+ hia\, PA 19107\nticketUrl: https://www.eventbrite.com/e/cubhouse-philly-sum
+ mer-dance-party-tickets-1991236940291\nimage: https://img.evbuc.com/https%3
+ A%2F%2Fcdn.evbuc.com%2Fimages%2F1186272311%2F2544065821071%2F1%2Foriginal.2
+ 0260605-201701?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&s
+ harp=10&fp-x=0.161&fp-y=0.509&s=de10b048fb4b5f7f0a473c50d4902886\ncover: $1
+ 2.55-$29.14\ntimezone: America/New_York\nwebsite: https://linktr.ee/cubhous
+ e\nshortName: CUB­HOUSE\ninstagram: https://www.instagram.com/cubhouse.phil
+ ly\nfavicon: https://linktr.ee/cubhouse\nkey: cubhouse-philly-summer-dance-
+ party|2026-08-29|254\nbearSource: keyword\npinSource: geocoded-exact\naddre
+ ssSource: page\nimageSource: jsonld\ngmaps: https://www.google.com/maps/sea
+ rch/?api=1&query=39.9470604%2C-75.1612067
+LAST-MODIFIED:20260821T202955Z
+LOCATION:39.9470604\, -75.1612067
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:CUBHOUSE PHILLY SUMMER DANCE PARTY
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20251101T010000Z
 DTEND:20251101T060000Z
-DTSTAMP:20260808T010847Z
+DTSTAMP:20260821T221708Z
 UID:3D97C917-CD83-44B2-A03C-0F6095F987D2
 CREATED:20250930T142205Z
 DESCRIPTION:description: CUBHOUSE returns on October 31st for a HALLOWEEN D
@@ -88,34 +116,6 @@ LOCATION:39.9470542\, -75.161054
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:CUBHOUSE PHILLY HALLOWEEN DANCE PARTY
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260829T010000Z
-DTEND:20260829T060000Z
-DTSTAMP:20260808T010847Z
-UID:C6225771-6ECE-409F-9006-7D2D01F8C843
-CREATED:20260715T015005Z
-DESCRIPTION:description: The Cubhouse Summer Dance Party is ready for you t
- o book your tickets..\nbar: 254\naddress: 254 South 12th Street\, Philadelp
- hia\, PA 19107\nticketUrl: https://www.eventbrite.com/e/cubhouse-philly-sum
- mer-dance-party-tickets-1991236940291\nimage: https://img.evbuc.com/https%3
- A%2F%2Fcdn.evbuc.com%2Fimages%2F1186272311%2F2544065821071%2F1%2Foriginal.2
- 0260605-201701?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&s
- harp=10&fp-x=0.161&fp-y=0.509&s=de10b048fb4b5f7f0a473c50d4902886\ncover: $1
- 2.55-$29.14\ntimezone: America/New_York\nwebsite: https://linktr.ee/cubhous
- e\nshortName: CUB-HOUSE\ninstagram: https://www.instagram.com/cubhouse.phil
- ly\nfavicon: https://linktr.ee/cubhouse\nkey: cubhouse-philly-summer-dance-
- party|2026-08-29|254\nbearSource: keyword\npinSource: geocoded-exact\naddre
- ssSource: page\nimageSource: jsonld\ngmaps: https://www.google.com/maps/sea
- rch/?api=1&query=39.9470604%2C-75.1612067
-LAST-MODIFIED:20260808T001010Z
-LOCATION:39.9470604\, -75.1612067
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:CUBHOUSE PHILLY SUMMER DANCE PARTY
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

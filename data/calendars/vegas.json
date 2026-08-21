@@ -5,123 +5,6 @@
   },
   "events": [
     {
-      "name": "MEGAWOOF AMERICA LAS VEGAS DADDIES AT WORK",
-      "day": "Saturday",
-      "time": "9PM-12PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 36.1213962,
-        "lng": -115.145091
-      },
-      "startDate": "2026-09-05T21:00:00",
-      "endDate": "2026-09-06T12:00:00",
-      "unprocessedDescription": "description: DADDIES AT WORK – Labor Day Weekend | Las Vegas Th\ris Labor Day Weekend, the hardest-working daddies are clocking in! Join us in La\nbar: Dust Las Vegas\naddress: 855 East Twain Avenue, #Unit 114, Las Vegas, NV 89169\nticketUrl: https://www.eventbrite.com/e/megawoof-america-las-vegas-daddies-at-work-tickets-1995597047489\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1189743644%2F185013722403%2F1%2Foriginal.20260727-232408?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=5cca955f143a1da141e178d4106a33f1\ncover: $11.58-$27.37\ntimezone: America/Los_Angeles\nwebsite: https://linktr.ee/megawoof_america\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nfavicon: https://linktr.ee/megawoof_america\nkey: megawoof-america-las-vegas-daddies-at-work|2026-09-06|dust las vegas\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Dust%20Las%20Vegas%2C%20855%20East%20Twain%20Avenue%2C%20%23Unit%20114%2C%20Las%20Vegas%2C%20NV%2089169",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "9F44CB92-0CF6-4DB8-A186-E66E3729AF79",
-      "uid": "9F44CB92-0CF6-4DB8-A186-E66E3729AF79",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Dust Las Vegas",
-      "cover": "$11.58-$27.37",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1189743644%2F185013722403%2F1%2Foriginal.20260727-232408?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=5cca955f143a1da141e178d4106a33f1",
-      "favicon": "https://linktr.ee/megawoof_america",
-      "tea": "DADDIES AT WORK – Labor Day Weekend | Las Vegas This Labor Day Weekend, the hardest-working daddies are clocking in! Join us in La",
-      "address": "855 East Twain Avenue, #Unit 114, Las Vegas, NV 89169",
-      "website": "https://linktr.ee/megawoof_america",
-      "instagram": "https://www.instagram.com/megawoof_america",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Dust%20Las%20Vegas%2C%20855%20East%20Twain%20Avenue%2C%20%23Unit%20114%2C%20Las%20Vegas%2C%20NV%2089169",
-      "ticketUrl": "https://www.eventbrite.com/e/megawoof-america-las-vegas-daddies-at-work-tickets-1995597047489",
-      "shortName": "MEGA-WOOF",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://linktr.ee/megawoof_america",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/megawoof_america",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Dust%20Las%20Vegas%2C%20855%20East%20Twain%20Avenue%2C%20%23Unit%20114%2C%20Las%20Vegas%2C%20NV%2089169",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/megawoof-america-las-vegas-daddies-at-work-tickets-1995597047489",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "megawoof-america-las-vegas-daddies-at-work-55a3a90c"
-    },
-    {
-      "name": "MEGAWOOF - LAS VEGAS - MEMORIAL DAY WEEKEND -",
-      "day": "Saturday",
-      "time": "9PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 36.1214368,
-        "lng": -115.144945
-      },
-      "startDate": "2026-05-23T21:00:00",
-      "endDate": "2026-05-24T02:00:00",
-      "unprocessedDescription": "description: MEGAWOOF - LAS VEGAS - MEMORIAL DAY WEEKEND -\nbar\r: Dust Las Vegas\naddress: 855 East Twain Avenue, #UNIT 114, Las Vegas, NV 89169\nticketUrl: https://www.eventbrite.com/e/megawoof-las-vegas-memorial-day-weekend--tickets-1987462465736\ninstagram: https://www.instagram.com/megawoof_america\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1182286369%2F185013722403%2F1%2Foriginal.20260416-004205?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=6d1d711a41d7f0c27ae9f39b1b91241d\ncover: $11.58-$22.10\nshortName: MEGA-WOOF\n_aiPrompts\\: [object Object],[object Object],[object Object]\n_aiValidation\\: [object Object]\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=Dust%20Las%20Vegas%2C%20855%20East%20Twain%20Avenue%2C%20%23UNIT%20114%2C%20Las%20Vegas%2C%20NV%2089169\nkey: megawoof-las-vegas-memorial-day-weekend|2026-05-24|dust las vegas",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "88E347BD-4E10-44E2-966A-19CAACE20C42",
-      "uid": "88E347BD-4E10-44E2-966A-19CAACE20C42",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 1,
-      "overrideIdentityType": null,
-      "bar": "Dust Las Vegas",
-      "cover": "$11.58-$22.10",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1182286369%2F185013722403%2F1%2Foriginal.20260416-004205?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=6d1d711a41d7f0c27ae9f39b1b91241d",
-      "tea": "MEGAWOOF - LAS VEGAS - MEMORIAL DAY WEEKEND -",
-      "address": "855 East Twain Avenue, #UNIT 114, Las Vegas, NV 89169",
-      "website": "https://linktr.ee/megawoof_america",
-      "instagram": "https://www.instagram.com/megawoof_america",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Dust%20Las%20Vegas%2C%20855%20East%20Twain%20Avenue%2C%20%23UNIT%20114%2C%20Las%20Vegas%2C%20NV%2089169",
-      "ticketUrl": "https://www.eventbrite.com/e/megawoof-las-vegas-memorial-day-weekend--tickets-1987462465736",
-      "shortName": "MEGA-WOOF",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://linktr.ee/megawoof_america",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/megawoof_america",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Dust%20Las%20Vegas%2C%20855%20East%20Twain%20Avenue%2C%20%23UNIT%20114%2C%20Las%20Vegas%2C%20NV%2089169",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/megawoof-las-vegas-memorial-day-weekend--tickets-1987462465736",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "megawoof-las-vegas-memorial-day-weekend--741892f2"
-    },
-    {
       "name": "MEGAWOOF",
       "day": "Saturday",
       "time": "9PM-2AM",
@@ -236,6 +119,123 @@
         }
       ],
       "slug": "megawoof-0bc51ff7"
+    },
+    {
+      "name": "MEGAWOOF - LAS VEGAS - MEMORIAL DAY WEEKEND -",
+      "day": "Saturday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 36.1214368,
+        "lng": -115.144945
+      },
+      "startDate": "2026-05-23T21:00:00",
+      "endDate": "2026-05-24T02:00:00",
+      "unprocessedDescription": "description: MEGAWOOF - LAS VEGAS - MEMORIAL DAY WEEKEND -\nbar\r: Dust Las Vegas\naddress: 855 East Twain Avenue, #UNIT 114, Las Vegas, NV 89169\nticketUrl: https://www.eventbrite.com/e/megawoof-las-vegas-memorial-day-weekend--tickets-1987462465736\ninstagram: https://www.instagram.com/megawoof_america\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1182286369%2F185013722403%2F1%2Foriginal.20260416-004205?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=6d1d711a41d7f0c27ae9f39b1b91241d\ncover: $11.58-$22.10\nshortName: MEGA-WOOF\n_aiPrompts\\: [object Object],[object Object],[object Object]\n_aiValidation\\: [object Object]\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=Dust%20Las%20Vegas%2C%20855%20East%20Twain%20Avenue%2C%20%23UNIT%20114%2C%20Las%20Vegas%2C%20NV%2089169\nkey: megawoof-las-vegas-memorial-day-weekend|2026-05-24|dust las vegas",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "88E347BD-4E10-44E2-966A-19CAACE20C42",
+      "uid": "88E347BD-4E10-44E2-966A-19CAACE20C42",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 1,
+      "overrideIdentityType": null,
+      "bar": "Dust Las Vegas",
+      "cover": "$11.58-$22.10",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1182286369%2F185013722403%2F1%2Foriginal.20260416-004205?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=6d1d711a41d7f0c27ae9f39b1b91241d",
+      "tea": "MEGAWOOF - LAS VEGAS - MEMORIAL DAY WEEKEND -",
+      "address": "855 East Twain Avenue, #UNIT 114, Las Vegas, NV 89169",
+      "website": "https://linktr.ee/megawoof_america",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Dust%20Las%20Vegas%2C%20855%20East%20Twain%20Avenue%2C%20%23UNIT%20114%2C%20Las%20Vegas%2C%20NV%2089169",
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-las-vegas-memorial-day-weekend--tickets-1987462465736",
+      "shortName": "MEGA-WOOF",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/megawoof_america",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/megawoof_america",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Dust%20Las%20Vegas%2C%20855%20East%20Twain%20Avenue%2C%20%23UNIT%20114%2C%20Las%20Vegas%2C%20NV%2089169",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/megawoof-las-vegas-memorial-day-weekend--tickets-1987462465736",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "megawoof-las-vegas-memorial-day-weekend--741892f2"
+    },
+    {
+      "name": "MEGAWOOF AMERICA LAS VEGAS DADDIES AT WORK",
+      "day": "Saturday",
+      "time": "9PM-12PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 36.1213962,
+        "lng": -115.145091
+      },
+      "startDate": "2026-09-05T21:00:00",
+      "endDate": "2026-09-06T12:00:00",
+      "unprocessedDescription": "description: DADDIES AT WORK – Labor Day Weekend | Las Vegas Th\ris Labor Day Weekend, the hardest-working daddies are clocking in! Join us in La\nbar: Dust Las Vegas\naddress: 855 East Twain Avenue, #Unit 114, Las Vegas, NV 89169\nticketUrl: https://www.eventbrite.com/e/megawoof-america-las-vegas-daddies-at-work-tickets-1995597047489\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1189743644%2F185013722403%2F1%2Foriginal.20260727-232408?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=5cca955f143a1da141e178d4106a33f1\ncover: $11.58-$27.37\ntimezone: America/Los_Angeles\nwebsite: https://linktr.ee/megawoof_america\nshortName: MEGA­WOOF\ninstagram: https://www.instagram.com/megawoof_america\nfavicon: https://linktr.ee/megawoof_america\nkey: megawoof-america-las-vegas-daddies-at-work|2026-09-06|dust las vegas\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Dust%20Las%20Vegas%2C%20855%20East%20Twain%20Avenue%2C%20%23Unit%20114%2C%20Las%20Vegas%2C%20NV%2089169",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "9F44CB92-0CF6-4DB8-A186-E66E3729AF79",
+      "uid": "9F44CB92-0CF6-4DB8-A186-E66E3729AF79",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Dust Las Vegas",
+      "cover": "$11.58-$27.37",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1189743644%2F185013722403%2F1%2Foriginal.20260727-232408?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=5cca955f143a1da141e178d4106a33f1",
+      "favicon": "https://linktr.ee/megawoof_america",
+      "tea": "DADDIES AT WORK – Labor Day Weekend | Las Vegas This Labor Day Weekend, the hardest-working daddies are clocking in! Join us in La",
+      "address": "855 East Twain Avenue, #Unit 114, Las Vegas, NV 89169",
+      "website": "https://linktr.ee/megawoof_america",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Dust%20Las%20Vegas%2C%20855%20East%20Twain%20Avenue%2C%20%23Unit%20114%2C%20Las%20Vegas%2C%20NV%2089169",
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-america-las-vegas-daddies-at-work-tickets-1995597047489",
+      "shortName": "MEGA­WOOF",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/megawoof_america",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/megawoof_america",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Dust%20Las%20Vegas%2C%20855%20East%20Twain%20Avenue%2C%20%23Unit%20114%2C%20Las%20Vegas%2C%20NV%2089169",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/megawoof-america-las-vegas-daddies-at-work-tickets-1995597047489",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "megawoof-america-las-vegas-daddies-at-work-55a3a90c"
     }
   ]
 }

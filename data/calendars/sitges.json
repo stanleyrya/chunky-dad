@@ -16,7 +16,7 @@
       },
       "startDate": "2026-09-11T01:00:00",
       "endDate": "2026-09-11T18:00:00",
-      "unprocessedDescription": "description: BEEFMINCE is bringing the glitter for an unforgett\rable disco-themed club night.\nbar: The Bear Cave\naddress: Calle Bonaire 12, Sitges, Barcelona, 08870\nimage: https://sitgesbearcave.com/wp-content/uploads/2026/07/Disco-1030-x-541.jpg\ncover: 20 EUR\ntimezone: Europe/Madrid\nwebsite: https://sitgesbearcave.com/event/thursday-beefmince-disco/\nshortName: BEEF-MINCE\nfavicon: https://beefmince.com\nkey: beefmince-disco|2026-09-10|the bear cave\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Bear%20Cave%2C%20Calle%20Bonaire%2012%2C%20Sitges%2C%20Barcelona%2C%2008870",
+      "unprocessedDescription": "description: BEEFMINCE is bringing the glitter for an unforgett\rable disco-themed club night.\nbar: The Bear Cave\naddress: Calle Bonaire 12, Sitges, Barcelona, 08870\nimage: https://sitgesbearcave.com/wp-content/uploads/2026/07/Disco-1030-x-541.jpg\ncover: 20 EUR\ntimezone: Europe/Madrid\nwebsite: https://sitgesbearcave.com/event/thursday-beefmince-disco/\nshortName: BEEF­MINCE\nfavicon: https://beefmince.com\nkey: beefmince-disco|2026-09-10|the bear cave\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Bear%20Cave%2C%20Calle%20Bonaire%2012%2C%20Sitges%2C%20Barcelona%2C%2008870",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "Europe/Madrid",
@@ -35,7 +35,7 @@
       "address": "Calle Bonaire 12, Sitges, Barcelona, 08870",
       "website": "https://sitgesbearcave.com/event/thursday-beefmince-disco/",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=The%20Bear%20Cave%2C%20Calle%20Bonaire%2012%2C%20Sitges%2C%20Barcelona%2C%2008870",
-      "shortName": "BEEF-MINCE",
+      "shortName": "BEEF­MINCE",
       "bearReview": null,
       "links": [
         {
@@ -63,7 +63,7 @@
       },
       "startDate": "2026-09-12T01:00:00",
       "endDate": "2026-09-12T06:00:00",
-      "unprocessedDescription": "description: A call out to all players to join our big beefy sp\rorts themed night\nbar: The Bear Cave\naddress: Calle Bonaire 12, Sitges, Barcelona, 08870\nimage: https://sitgesbearcave.com/wp-content/uploads/2026/07/Sports-1030-x-541.jpg\ncover: 20 EUR\ntimezone: Europe/Madrid\nwebsite: https://sitgesbearcave.com/event/friday-beefmince-sports-zone/\nshortName: BEEF-MINCE\nfavicon: https://beefmince.com\nkey: beefmince-sports-zone|2026-09-11|the bear cave\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Bear%20Cave%2C%20Calle%20Bonaire%2012%2C%20Sitges%2C%20Barcelona%2C%2008870",
+      "unprocessedDescription": "description: A call out to all players to join our big beefy sp\rorts themed night\nbar: The Bear Cave\naddress: Calle Bonaire 12, Sitges, Barcelona, 08870\nimage: https://sitgesbearcave.com/wp-content/uploads/2026/07/Sports-1030-x-541.jpg\ncover: 20 EUR\ntimezone: Europe/Madrid\nwebsite: https://sitgesbearcave.com/event/friday-beefmince-sports-zone/\nshortName: BEEF­MINCE\nfavicon: https://beefmince.com\nkey: beefmince-sports-zone|2026-09-11|the bear cave\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Bear%20Cave%2C%20Calle%20Bonaire%2012%2C%20Sitges%2C%20Barcelona%2C%2008870",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "Europe/Madrid",
@@ -82,7 +82,7 @@
       "address": "Calle Bonaire 12, Sitges, Barcelona, 08870",
       "website": "https://sitgesbearcave.com/event/friday-beefmince-sports-zone/",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=The%20Bear%20Cave%2C%20Calle%20Bonaire%2012%2C%20Sitges%2C%20Barcelona%2C%2008870",
-      "shortName": "BEEF-MINCE",
+      "shortName": "BEEF­MINCE",
       "bearReview": null,
       "links": [
         {
@@ -99,53 +99,6 @@
       "slug": "beefmince-sports-zone-6972e7c6"
     },
     {
-      "name": "BEEFMINCE: THE BIG BALL",
-      "day": "Sunday",
-      "time": "1AM-6AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 41.2360385,
-        "lng": 1.8079068
-      },
-      "startDate": "2026-09-13T01:00:00",
-      "endDate": "2026-09-13T06:00:00",
-      "unprocessedDescription": "description: The final BEEFMINCE party closes out the festiviti\res with an explosive, high-energy celebration.\nbar: The Bear Cave\naddress: Calle Bonaire 12, Sitges, Barcelona, 08870\nimage: https://sitgesbearcave.com/wp-content/uploads/2026/07/Big-Ball-1030-x-541.jpg\ncover: 25 EUR\ntimezone: Europe/Madrid\nwebsite: https://sitgesbearcave.com/event/saturday-beefmince-the-big-ball/\nshortName: BEEF-MINCE\nfavicon: https://beefmince.com\nkey: beefmince-the-big-ball|2026-09-12|the bear cave\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Bear%20Cave%2C%20Calle%20Bonaire%2012%2C%20Sitges%2C%20Barcelona%2C%2008870",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "Europe/Madrid",
-      "wasUTC": true,
-      "sourceUid": "CC773A5F-6921-4E9A-BAB0-DFE4D28CF264",
-      "uid": "CC773A5F-6921-4E9A-BAB0-DFE4D28CF264",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "The Bear Cave",
-      "cover": "25 EUR",
-      "image": "https://sitgesbearcave.com/wp-content/uploads/2026/07/Big-Ball-1030-x-541.jpg",
-      "favicon": "https://beefmince.com",
-      "tea": "The final BEEFMINCE party closes out the festivities with an explosive, high-energy celebration.",
-      "address": "Calle Bonaire 12, Sitges, Barcelona, 08870",
-      "website": "https://sitgesbearcave.com/event/saturday-beefmince-the-big-ball/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=The%20Bear%20Cave%2C%20Calle%20Bonaire%2012%2C%20Sitges%2C%20Barcelona%2C%2008870",
-      "shortName": "BEEF-MINCE",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://sitgesbearcave.com/event/saturday-beefmince-the-big-ball/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=The%20Bear%20Cave%2C%20Calle%20Bonaire%2012%2C%20Sitges%2C%20Barcelona%2C%2008870",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "beefmince-the-big-ball-13a48cc3"
-    },
-    {
       "name": "BEEFMINCE MEET MARKET",
       "day": "Thursday",
       "time": "1AM-6PM",
@@ -157,7 +110,7 @@
       },
       "startDate": "2026-09-10T01:00:00",
       "endDate": "2026-09-10T18:00:00",
-      "unprocessedDescription": "description: Dress the part, flash your sticker and let the li\rghts guide your night.\nbar: The Bear Cave\naddress: Calle Bonaire 12, Sitges, Barcelona, 08870\nimage: https://sitgesbearcave.com/wp-content/uploads/2026/07/Market-1030-x-541.jpg\ncover: 20 EUR\ntimezone: Europe/Madrid\nwebsite: https://sitgesbearcave.com/event/wednesday-beefmince-meet-market/\nshortName: BEEF-MINCE\nfavicon: https://beefmince.com\nkey: beefmince-meet-market|2026-09-09|the bear cave\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Bear%20Cave%2C%20Calle%20Bonaire%2012%2C%20Sitges%2C%20Barcelona%2C%2008870",
+      "unprocessedDescription": "description: Dress the part, flash your sticker and let the li\rghts guide your night.\nbar: The Bear Cave\naddress: Calle Bonaire 12, Sitges, Barcelona, 08870\nimage: https://sitgesbearcave.com/wp-content/uploads/2026/07/Market-1030-x-541.jpg\ncover: 20 EUR\ntimezone: Europe/Madrid\nwebsite: https://sitgesbearcave.com/event/wednesday-beefmince-meet-market/\nshortName: BEEF­MINCE\nfavicon: https://beefmince.com\nkey: beefmince-meet-market|2026-09-09|the bear cave\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Bear%20Cave%2C%20Calle%20Bonaire%2012%2C%20Sitges%2C%20Barcelona%2C%2008870",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "Europe/Madrid",
@@ -176,7 +129,7 @@
       "address": "Calle Bonaire 12, Sitges, Barcelona, 08870",
       "website": "https://sitgesbearcave.com/event/wednesday-beefmince-meet-market/",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=The%20Bear%20Cave%2C%20Calle%20Bonaire%2012%2C%20Sitges%2C%20Barcelona%2C%2008870",
-      "shortName": "BEEF-MINCE",
+      "shortName": "BEEF­MINCE",
       "bearReview": null,
       "links": [
         {
@@ -191,6 +144,53 @@
         }
       ],
       "slug": "beefmince-meet-market-795b165c"
+    },
+    {
+      "name": "BEEFMINCE: THE BIG BALL",
+      "day": "Sunday",
+      "time": "1AM-6AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2360385,
+        "lng": 1.8079068
+      },
+      "startDate": "2026-09-13T01:00:00",
+      "endDate": "2026-09-13T06:00:00",
+      "unprocessedDescription": "description: The final BEEFMINCE party closes out the festiviti\res with an explosive, high-energy celebration.\nbar: The Bear Cave\naddress: Calle Bonaire 12, Sitges, Barcelona, 08870\nimage: https://sitgesbearcave.com/wp-content/uploads/2026/07/Big-Ball-1030-x-541.jpg\ncover: 25 EUR\ntimezone: Europe/Madrid\nwebsite: https://sitgesbearcave.com/event/saturday-beefmince-the-big-ball/\nshortName: BEEF­MINCE\nfavicon: https://beefmince.com\nkey: beefmince-the-big-ball|2026-09-12|the bear cave\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Bear%20Cave%2C%20Calle%20Bonaire%2012%2C%20Sitges%2C%20Barcelona%2C%2008870",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "CC773A5F-6921-4E9A-BAB0-DFE4D28CF264",
+      "uid": "CC773A5F-6921-4E9A-BAB0-DFE4D28CF264",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The Bear Cave",
+      "cover": "25 EUR",
+      "image": "https://sitgesbearcave.com/wp-content/uploads/2026/07/Big-Ball-1030-x-541.jpg",
+      "favicon": "https://beefmince.com",
+      "tea": "The final BEEFMINCE party closes out the festivities with an explosive, high-energy celebration.",
+      "address": "Calle Bonaire 12, Sitges, Barcelona, 08870",
+      "website": "https://sitgesbearcave.com/event/saturday-beefmince-the-big-ball/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=The%20Bear%20Cave%2C%20Calle%20Bonaire%2012%2C%20Sitges%2C%20Barcelona%2C%2008870",
+      "shortName": "BEEF­MINCE",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://sitgesbearcave.com/event/saturday-beefmince-the-big-ball/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=The%20Bear%20Cave%2C%20Calle%20Bonaire%2012%2C%20Sitges%2C%20Barcelona%2C%2008870",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "beefmince-the-big-ball-13a48cc3"
     }
   ]
 }

@@ -8,7 +8,7 @@ X-WR-TIMEZONE:Europe/Madrid
 BEGIN:VEVENT
 DTSTART:20260910T230000Z
 DTEND:20260911T160000Z
-DTSTAMP:20260820T182935Z
+DTSTAMP:20260821T221708Z
 UID:844ECBD9-3C3C-4607-94A7-9461CD804C46
 CREATED:20260729T165205Z
 DESCRIPTION:description: BEEFMINCE is bringing the glitter for an unforgett
@@ -16,12 +16,12 @@ DESCRIPTION:description: BEEFMINCE is bringing the glitter for an unforgett
  2\, Sitges\, Barcelona\, 08870\nimage: https://sitgesbearcave.com/wp-conten
  t/uploads/2026/07/Disco-1030-x-541.jpg\ncover: 20 EUR\ntimezone: Europe/Mad
  rid\nwebsite: https://sitgesbearcave.com/event/thursday-beefmince-disco/\ns
- hortName: BEEF-MINCE\nfavicon: https://beefmince.com\nkey: beefmince-disco|
+ hortName: BEEF­MINCE\nfavicon: https://beefmince.com\nkey: beefmince-disco|
  2026-09-10|the bear cave\nbearSource: keyword\npinSource: curated\naddressS
  ource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.go
  ogle.com/maps/search/?api=1&query=The%20Bear%20Cave%2C%20Calle%20Bonaire%20
  12%2C%20Sitges%2C%20Barcelona%2C%2008870
-LAST-MODIFIED:20260820T174535Z
+LAST-MODIFIED:20260821T202723Z
 LOCATION:41.2360385\, 1.8079068
 SEQUENCE:0
 STATUS:CONFIRMED
@@ -33,7 +33,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260911T230000Z
 DTEND:20260912T040000Z
-DTSTAMP:20260820T182935Z
+DTSTAMP:20260821T221708Z
 UID:F8A0021D-A0AF-4990-BD6D-7E9BC69111C9
 CREATED:20260729T165206Z
 DESCRIPTION:description: A call out to all players to join our big beefy sp
@@ -41,12 +41,12 @@ DESCRIPTION:description: A call out to all players to join our big beefy sp
   Barcelona\, 08870\nimage: https://sitgesbearcave.com/wp-content/uploads/20
  26/07/Sports-1030-x-541.jpg\ncover: 20 EUR\ntimezone: Europe/Madrid\nwebsit
  e: https://sitgesbearcave.com/event/friday-beefmince-sports-zone/\nshortNam
- e: BEEF-MINCE\nfavicon: https://beefmince.com\nkey: beefmince-sports-zone|2
+ e: BEEF­MINCE\nfavicon: https://beefmince.com\nkey: beefmince-sports-zone|2
  026-09-11|the bear cave\nbearSource: keyword\npinSource: curated\naddressSo
  urce: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.goo
  gle.com/maps/search/?api=1&query=The%20Bear%20Cave%2C%20Calle%20Bonaire%201
  2%2C%20Sitges%2C%20Barcelona%2C%2008870
-LAST-MODIFIED:20260820T174536Z
+LAST-MODIFIED:20260821T202723Z
 LOCATION:41.2360385\, 1.8079068
 SEQUENCE:0
 STATUS:CONFIRMED
@@ -56,34 +56,9 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260912T230000Z
-DTEND:20260913T040000Z
-DTSTAMP:20260820T182935Z
-UID:CC773A5F-6921-4E9A-BAB0-DFE4D28CF264
-CREATED:20260729T165207Z
-DESCRIPTION:description: The final BEEFMINCE party closes out the festiviti
- es with an explosive\, high-energy celebration.\nbar: The Bear Cave\naddres
- s: Calle Bonaire 12\, Sitges\, Barcelona\, 08870\nimage: https://sitgesbear
- cave.com/wp-content/uploads/2026/07/Big-Ball-1030-x-541.jpg\ncover: 25 EUR\
- ntimezone: Europe/Madrid\nwebsite: https://sitgesbearcave.com/event/saturda
- y-beefmince-the-big-ball/\nshortName: BEEF-MINCE\nfavicon: https://beefminc
- e.com\nkey: beefmince-the-big-ball|2026-09-12|the bear cave\nbearSource: ke
- yword\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSou
- rce: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20
- Bear%20Cave%2C%20Calle%20Bonaire%2012%2C%20Sitges%2C%20Barcelona%2C%2008870
-LAST-MODIFIED:20260820T174536Z
-LOCATION:41.2360385\, 1.8079068
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:BEEFMINCE: THE BIG BALL
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20260909T230000Z
 DTEND:20260910T160000Z
-DTSTAMP:20260820T182935Z
+DTSTAMP:20260821T221708Z
 UID:2B3A4DE5-8B2E-4B5F-BC4F-9E2652114905
 CREATED:20260729T165204Z
 DESCRIPTION:description: Dress the part\, flash your sticker and let the li
@@ -91,16 +66,41 @@ DESCRIPTION:description: Dress the part\, flash your sticker and let the li
  ges\, Barcelona\, 08870\nimage: https://sitgesbearcave.com/wp-content/uploa
  ds/2026/07/Market-1030-x-541.jpg\ncover: 20 EUR\ntimezone: Europe/Madrid\nw
  ebsite: https://sitgesbearcave.com/event/wednesday-beefmince-meet-market/\n
- shortName: BEEF-MINCE\nfavicon: https://beefmince.com\nkey: beefmince-meet-
+ shortName: BEEF­MINCE\nfavicon: https://beefmince.com\nkey: beefmince-meet-
  market|2026-09-09|the bear cave\nbearSource: keyword\npinSource: curated\na
  ddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https:/
  /www.google.com/maps/search/?api=1&query=The%20Bear%20Cave%2C%20Calle%20Bon
  aire%2012%2C%20Sitges%2C%20Barcelona%2C%2008870
-LAST-MODIFIED:20260820T174534Z
+LAST-MODIFIED:20260821T202722Z
 LOCATION:41.2360385\, 1.8079068
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:BEEFMINCE MEET MARKET
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260912T230000Z
+DTEND:20260913T040000Z
+DTSTAMP:20260821T221708Z
+UID:CC773A5F-6921-4E9A-BAB0-DFE4D28CF264
+CREATED:20260729T165207Z
+DESCRIPTION:description: The final BEEFMINCE party closes out the festiviti
+ es with an explosive\, high-energy celebration.\nbar: The Bear Cave\naddres
+ s: Calle Bonaire 12\, Sitges\, Barcelona\, 08870\nimage: https://sitgesbear
+ cave.com/wp-content/uploads/2026/07/Big-Ball-1030-x-541.jpg\ncover: 25 EUR\
+ ntimezone: Europe/Madrid\nwebsite: https://sitgesbearcave.com/event/saturda
+ y-beefmince-the-big-ball/\nshortName: BEEF­MINCE\nfavicon: https://beefminc
+ e.com\nkey: beefmince-the-big-ball|2026-09-12|the bear cave\nbearSource: ke
+ yword\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSou
+ rce: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20
+ Bear%20Cave%2C%20Calle%20Bonaire%2012%2C%20Sitges%2C%20Barcelona%2C%2008870
+LAST-MODIFIED:20260821T202724Z
+LOCATION:41.2360385\, 1.8079068
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEEFMINCE: THE BIG BALL
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

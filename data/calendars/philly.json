@@ -5,6 +5,58 @@
   },
   "events": [
     {
+      "name": "CUBHOUSE PHILLY PRIDE  2026 KICKOFF DANCE PARTY",
+      "day": "Friday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 39.9470542,
+        "lng": -75.161054
+      },
+      "startDate": "2026-06-05T21:00:00",
+      "endDate": "2026-06-06T02:00:00",
+      "unprocessedDescription": "description: CUBHOUSE is back, and bigger than ever for it's 2\rnd annual PRIDE KICKOFF PARTY on June 5th at 254!  🏳️‍🌈🏳️‍🌈🏳️‍🌈🏳️‍🌈\nWe’ll have the same friends and specials you love, as well as a few surprises to make sure your Pride weekend goes off with a bang. Follow us on Instagram @cubhouse.philly for updates as they’re revealed!\nTickets are now on sale, get them before the price goes up or we sell out!\nbar: 254\naddress: 254 South 12th Street, Philadelphia, PA 19107\ntimezone: America/New_York\nticketUrl: https://www.eventbrite.com/e/cubhouse-philly-pride-2026-kickoff-dance-party-tickets-1987102314514\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181833880%2F2544065821071%2F1%2Foriginal.20260410-000607?crop=focalpoint&fit=crop&w=600&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.958&fp-y=0.532&s=44ef0d7ee0e22cbda267e0f163efc161\nshortName: CUB-HOUSE\ninstagram: https://www.instagram.com/cubhouse.philly\n_staticFields: [object Object]\ngmaps: https://www.google.com/maps/search/?api=1&query=254%20South%2012th%20Street%2C%20Philadelphia%2C%20PA%2019107\nkey: cubhouse-philly-pride-2026-kickoff-dance-party|2026-06-06|254",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "CBB60667-F22B-4146-A728-88011305369F",
+      "uid": "CBB60667-F22B-4146-A728-88011305369F",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "254",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181833880%2F2544065821071%2F1%2Foriginal.20260410-000607?crop=focalpoint&fit=crop&w=600&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.958&fp-y=0.532&s=44ef0d7ee0e22cbda267e0f163efc161",
+      "tea": "CUBHOUSE is back, and bigger than ever for it's 2nd annual PRIDE KICKOFF PARTY on June 5th at 254!  🏳️‍🌈🏳️‍🌈🏳️‍🌈🏳️‍🌈",
+      "address": "254 South 12th Street, Philadelphia, PA 19107",
+      "website": null,
+      "instagram": "https://www.instagram.com/cubhouse.philly",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=254%20South%2012th%20Street%2C%20Philadelphia%2C%20PA%2019107",
+      "ticketUrl": "https://www.eventbrite.com/e/cubhouse-philly-pride-2026-kickoff-dance-party-tickets-1987102314514",
+      "shortName": "CUB-HOUSE",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/cubhouse.philly",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=254%20South%2012th%20Street%2C%20Philadelphia%2C%20PA%2019107",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/cubhouse-philly-pride-2026-kickoff-dance-party-tickets-1987102314514",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "cubhouse-philly-pride-2026-kickoff-dance-party-242e4df9"
+    },
+    {
       "name": "CUBHOUSE PHILLY VALENTINE'S DANCE PARTY",
       "day": "Friday",
       "time": "9PM-2AM",
@@ -62,39 +114,46 @@
       "slug": "cubhouse-philly-valentines-dance-party-33f308ba"
     },
     {
-      "name": "CUBHOUSE PHILLY PRIDE  2026 KICKOFF DANCE PARTY",
+      "name": "CUBHOUSE PHILLY SUMMER DANCE PARTY",
       "day": "Friday",
       "time": "9PM-2AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
-        "lat": 39.9470542,
-        "lng": -75.161054
+        "lat": 39.9470604,
+        "lng": -75.1612067
       },
-      "startDate": "2026-06-05T21:00:00",
-      "endDate": "2026-06-06T02:00:00",
-      "unprocessedDescription": "description: CUBHOUSE is back, and bigger than ever for it's 2\rnd annual PRIDE KICKOFF PARTY on June 5th at 254!  🏳️‍🌈🏳️‍🌈🏳️‍🌈🏳️‍🌈\nWe’ll have the same friends and specials you love, as well as a few surprises to make sure your Pride weekend goes off with a bang. Follow us on Instagram @cubhouse.philly for updates as they’re revealed!\nTickets are now on sale, get them before the price goes up or we sell out!\nbar: 254\naddress: 254 South 12th Street, Philadelphia, PA 19107\ntimezone: America/New_York\nticketUrl: https://www.eventbrite.com/e/cubhouse-philly-pride-2026-kickoff-dance-party-tickets-1987102314514\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181833880%2F2544065821071%2F1%2Foriginal.20260410-000607?crop=focalpoint&fit=crop&w=600&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.958&fp-y=0.532&s=44ef0d7ee0e22cbda267e0f163efc161\nshortName: CUB-HOUSE\ninstagram: https://www.instagram.com/cubhouse.philly\n_staticFields: [object Object]\ngmaps: https://www.google.com/maps/search/?api=1&query=254%20South%2012th%20Street%2C%20Philadelphia%2C%20PA%2019107\nkey: cubhouse-philly-pride-2026-kickoff-dance-party|2026-06-06|254",
+      "startDate": "2026-08-28T21:00:00",
+      "endDate": "2026-08-29T02:00:00",
+      "unprocessedDescription": "description: The Cubhouse Summer Dance Party is ready for you t\ro book your tickets..\nbar: 254\naddress: 254 South 12th Street, Philadelphia, PA 19107\nticketUrl: https://www.eventbrite.com/e/cubhouse-philly-summer-dance-party-tickets-1991236940291\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1186272311%2F2544065821071%2F1%2Foriginal.20260605-201701?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.161&fp-y=0.509&s=de10b048fb4b5f7f0a473c50d4902886\ncover: $12.55-$29.14\ntimezone: America/New_York\nwebsite: https://linktr.ee/cubhouse\nshortName: CUB­HOUSE\ninstagram: https://www.instagram.com/cubhouse.philly\nfavicon: https://linktr.ee/cubhouse\nkey: cubhouse-philly-summer-dance-party|2026-08-29|254\nbearSource: keyword\npinSource: geocoded-exact\naddressSource: page\nimageSource: jsonld\ngmaps: https://www.google.com/maps/search/?api=1&query=39.9470604%2C-75.1612067",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "CBB60667-F22B-4146-A728-88011305369F",
-      "uid": "CBB60667-F22B-4146-A728-88011305369F",
+      "sourceUid": "C6225771-6ECE-409F-9006-7D2D01F8C843",
+      "uid": "C6225771-6ECE-409F-9006-7D2D01F8C843",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "254",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181833880%2F2544065821071%2F1%2Foriginal.20260410-000607?crop=focalpoint&fit=crop&w=600&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.958&fp-y=0.532&s=44ef0d7ee0e22cbda267e0f163efc161",
-      "tea": "CUBHOUSE is back, and bigger than ever for it's 2nd annual PRIDE KICKOFF PARTY on June 5th at 254!  🏳️‍🌈🏳️‍🌈🏳️‍🌈🏳️‍🌈",
+      "cover": "$12.55-$29.14",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1186272311%2F2544065821071%2F1%2Foriginal.20260605-201701?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.161&fp-y=0.509&s=de10b048fb4b5f7f0a473c50d4902886",
+      "favicon": "https://linktr.ee/cubhouse",
+      "tea": "The Cubhouse Summer Dance Party is ready for you to book your tickets..",
       "address": "254 South 12th Street, Philadelphia, PA 19107",
-      "website": null,
+      "website": "https://linktr.ee/cubhouse",
       "instagram": "https://www.instagram.com/cubhouse.philly",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=254%20South%2012th%20Street%2C%20Philadelphia%2C%20PA%2019107",
-      "ticketUrl": "https://www.eventbrite.com/e/cubhouse-philly-pride-2026-kickoff-dance-party-tickets-1987102314514",
-      "shortName": "CUB-HOUSE",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=39.9470604%2C-75.1612067",
+      "ticketUrl": "https://www.eventbrite.com/e/cubhouse-philly-summer-dance-party-tickets-1991236940291",
+      "shortName": "CUB­HOUSE",
       "bearReview": null,
       "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/cubhouse",
+          "label": "🌐 Website"
+        },
         {
           "type": "instagram",
           "url": "https://www.instagram.com/cubhouse.philly",
@@ -102,16 +161,16 @@
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=254%20South%2012th%20Street%2C%20Philadelphia%2C%20PA%2019107",
+          "url": "https://www.google.com/maps/search/?api=1&query=39.9470604%2C-75.1612067",
           "label": "🗺️ Google Maps"
         },
         {
           "type": "tickets",
-          "url": "https://www.eventbrite.com/e/cubhouse-philly-pride-2026-kickoff-dance-party-tickets-1987102314514",
+          "url": "https://www.eventbrite.com/e/cubhouse-philly-summer-dance-party-tickets-1991236940291",
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "cubhouse-philly-pride-2026-kickoff-dance-party-242e4df9"
+      "slug": "cubhouse-philly-summer-dance-party-0a3049d0"
     },
     {
       "name": "CUBHOUSE PHILLY HALLOWEEN DANCE PARTY",
@@ -170,65 +229,6 @@
         }
       ],
       "slug": "cubhouse-philly-halloween-dance-party-7f59fc8c"
-    },
-    {
-      "name": "CUBHOUSE PHILLY SUMMER DANCE PARTY",
-      "day": "Friday",
-      "time": "9PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 39.9470604,
-        "lng": -75.1612067
-      },
-      "startDate": "2026-08-28T21:00:00",
-      "endDate": "2026-08-29T02:00:00",
-      "unprocessedDescription": "description: The Cubhouse Summer Dance Party is ready for you t\ro book your tickets..\nbar: 254\naddress: 254 South 12th Street, Philadelphia, PA 19107\nticketUrl: https://www.eventbrite.com/e/cubhouse-philly-summer-dance-party-tickets-1991236940291\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1186272311%2F2544065821071%2F1%2Foriginal.20260605-201701?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.161&fp-y=0.509&s=de10b048fb4b5f7f0a473c50d4902886\ncover: $12.55-$29.14\ntimezone: America/New_York\nwebsite: https://linktr.ee/cubhouse\nshortName: CUB-HOUSE\ninstagram: https://www.instagram.com/cubhouse.philly\nfavicon: https://linktr.ee/cubhouse\nkey: cubhouse-philly-summer-dance-party|2026-08-29|254\nbearSource: keyword\npinSource: geocoded-exact\naddressSource: page\nimageSource: jsonld\ngmaps: https://www.google.com/maps/search/?api=1&query=39.9470604%2C-75.1612067",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "C6225771-6ECE-409F-9006-7D2D01F8C843",
-      "uid": "C6225771-6ECE-409F-9006-7D2D01F8C843",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "254",
-      "cover": "$12.55-$29.14",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1186272311%2F2544065821071%2F1%2Foriginal.20260605-201701?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.161&fp-y=0.509&s=de10b048fb4b5f7f0a473c50d4902886",
-      "favicon": "https://linktr.ee/cubhouse",
-      "tea": "The Cubhouse Summer Dance Party is ready for you to book your tickets..",
-      "address": "254 South 12th Street, Philadelphia, PA 19107",
-      "website": "https://linktr.ee/cubhouse",
-      "instagram": "https://www.instagram.com/cubhouse.philly",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=39.9470604%2C-75.1612067",
-      "ticketUrl": "https://www.eventbrite.com/e/cubhouse-philly-summer-dance-party-tickets-1991236940291",
-      "shortName": "CUB-HOUSE",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://linktr.ee/cubhouse",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/cubhouse.philly",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=39.9470604%2C-75.1612067",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/cubhouse-philly-summer-dance-party-tickets-1991236940291",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "cubhouse-philly-summer-dance-party-0a3049d0"
     }
   ]
 }

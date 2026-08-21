@@ -5,6 +5,60 @@
   },
   "events": [
     {
+      "name": "BEEFMINCE x Brighton",
+      "day": "Saturday",
+      "time": "11PM-4AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 50.8172912,
+        "lng": -0.1225875
+      },
+      "startDate": "2026-12-05T23:00:00",
+      "endDate": "2026-12-06T04:00:00",
+      "unprocessedDescription": "description: BEEFMINCE; the UK’s tastiest bear club is famous \rfor our fun, social, bear full- attitude free parties with the best DJs playing the tastiest party anthems ranging from disco, house and electro and we're back to bring our recipe to the city of Brighton at the legendary Concorde2 for 2026! DJ Line Up TBC We’re here for the Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers & everyone in between. Come as you are, we’ll love you for it. *More info and FAQs at beefmince.com*\nbar: Concorde 2\naddress: 286A Madeira Drive, Brighton BN2 1EN\nticketUrl: https://dice.fm/event/53moed-beefmince-x-brighton-5th-dec-concorde-2-brighton-tickets\nimage: https://dice-media.imgix.net/attachments/2025-01-13/bf6a78f1-f924-41ef-aba7-8e35d4211d38.jpg?rect=0%2C0%2C768%2C768\ntimezone: Europe/London\ncover: £12\nimageHorizontal: https://dice-media.imgix.net/attachments/2025-01-13/bf6a78f1-f924-41ef-aba7-8e35d4211d38.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress\nwebsite: https://beefmince.com\nshortName: BEEF­MINCE\nfavicon: https://beefmince.com\nkey: beefmince-x-brighton|2026-12-05|concorde 2\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Concorde%202%2C%20286A%20Madeira%20Drive%2C%20Brighton%20BN2%201EN",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/London",
+      "wasUTC": true,
+      "sourceUid": "AC82B5F3-1E3E-4098-99F8-51208AFC7C58",
+      "uid": "AC82B5F3-1E3E-4098-99F8-51208AFC7C58",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Concorde 2",
+      "cover": "£12",
+      "image": "https://dice-media.imgix.net/attachments/2025-01-13/bf6a78f1-f924-41ef-aba7-8e35d4211d38.jpg?rect=0%2C0%2C768%2C768",
+      "imageHorizontal": "https://dice-media.imgix.net/attachments/2025-01-13/bf6a78f1-f924-41ef-aba7-8e35d4211d38.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress",
+      "favicon": "https://beefmince.com",
+      "tea": "BEEFMINCE; the UK’s tastiest bear club is famous for our fun, social, bear full- attitude free parties with the best DJs playing the tastiest party anthems ranging from disco, house and electro and we're back to bring our recipe to the city of Brighton at the legendary Concorde2 for 2026! DJ Line Up TBC We’re here for the Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers & everyone in between. Come as you are, we’ll love you for it. *More info and FAQs at beefmince.com*",
+      "address": "286A Madeira Drive, Brighton BN2 1EN",
+      "website": "https://beefmince.com",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Concorde%202%2C%20286A%20Madeira%20Drive%2C%20Brighton%20BN2%201EN",
+      "ticketUrl": "https://dice.fm/event/53moed-beefmince-x-brighton-5th-dec-concorde-2-brighton-tickets",
+      "shortName": "BEEF­MINCE",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://beefmince.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Concorde%202%2C%20286A%20Madeira%20Drive%2C%20Brighton%20BN2%201EN",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://dice.fm/event/53moed-beefmince-x-brighton-5th-dec-concorde-2-brighton-tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "beefmince-x-brighton-788abcce"
+    },
+    {
       "name": "BEEFMINCE Brighton Pride",
       "day": "Saturday",
       "time": "10PM-5AM",
@@ -57,60 +111,6 @@
         }
       ],
       "slug": "beefmince-brighton-pride-38dee7c4"
-    },
-    {
-      "name": "BEEFMINCE x Brighton",
-      "day": "Saturday",
-      "time": "11PM-4AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 50.8172912,
-        "lng": -0.1225875
-      },
-      "startDate": "2026-12-05T23:00:00",
-      "endDate": "2026-12-06T04:00:00",
-      "unprocessedDescription": "description: BEEFMINCE; the UK’s tastiest bear club is famous \rfor our fun, social, bear full- attitude free parties with the best DJs playing the tastiest party anthems ranging from disco, house and electro and we're back to bring our recipe to the city of Brighton at the legendary Concorde2 for 2026! DJ Line Up TBC We’re here for the Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers & everyone in between. Come as you are, we’ll love you for it. *More info and FAQs at beefmince.com*\nbar: Concorde 2\naddress: 286A Madeira Drive, Brighton BN2 1EN\nticketUrl: https://dice.fm/event/53moed-beefmince-x-brighton-5th-dec-concorde-2-brighton-tickets\nimage: https://dice-media.imgix.net/attachments/2025-01-13/bf6a78f1-f924-41ef-aba7-8e35d4211d38.jpg?rect=0%2C0%2C768%2C768\ntimezone: Europe/London\ncover: £12\nimageHorizontal: https://dice-media.imgix.net/attachments/2025-01-13/bf6a78f1-f924-41ef-aba7-8e35d4211d38.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress\nwebsite: https://beefmince.com\nshortName: BEEF-MINCE\nfavicon: https://beefmince.com\nkey: beefmince-x-brighton|2026-12-05|concorde 2\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Concorde%202%2C%20286A%20Madeira%20Drive%2C%20Brighton%20BN2%201EN",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "Europe/London",
-      "wasUTC": true,
-      "sourceUid": "AC82B5F3-1E3E-4098-99F8-51208AFC7C58",
-      "uid": "AC82B5F3-1E3E-4098-99F8-51208AFC7C58",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Concorde 2",
-      "cover": "£12",
-      "image": "https://dice-media.imgix.net/attachments/2025-01-13/bf6a78f1-f924-41ef-aba7-8e35d4211d38.jpg?rect=0%2C0%2C768%2C768",
-      "imageHorizontal": "https://dice-media.imgix.net/attachments/2025-01-13/bf6a78f1-f924-41ef-aba7-8e35d4211d38.jpg?rect=0%2C154%2C768%2C461&w=1300&h=630&auto=compress",
-      "favicon": "https://beefmince.com",
-      "tea": "BEEFMINCE; the UK’s tastiest bear club is famous for our fun, social, bear full- attitude free parties with the best DJs playing the tastiest party anthems ranging from disco, house and electro and we're back to bring our recipe to the city of Brighton at the legendary Concorde2 for 2026! DJ Line Up TBC We’re here for the Bears, Cubs, Chubs, Muscle Bears, Trans Men, Admirers & everyone in between. Come as you are, we’ll love you for it. *More info and FAQs at beefmince.com*",
-      "address": "286A Madeira Drive, Brighton BN2 1EN",
-      "website": "https://beefmince.com",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Concorde%202%2C%20286A%20Madeira%20Drive%2C%20Brighton%20BN2%201EN",
-      "ticketUrl": "https://dice.fm/event/53moed-beefmince-x-brighton-5th-dec-concorde-2-brighton-tickets",
-      "shortName": "BEEF-MINCE",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://beefmince.com",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Concorde%202%2C%20286A%20Madeira%20Drive%2C%20Brighton%20BN2%201EN",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://dice.fm/event/53moed-beefmince-x-brighton-5th-dec-concorde-2-brighton-tickets",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "beefmince-x-brighton-788abcce"
     }
   ]
 }

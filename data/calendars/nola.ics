@@ -6,8 +6,34 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-new-orleans
 X-WR-TIMEZONE:America/Chicago
 BEGIN:VEVENT
+DTSTART:20260905T020000Z
+DTEND:20260905T070000Z
+DTSTAMP:20260821T221708Z
+UID:74648B34-07A1-4BD2-8E78-D67B991A920E
+CREATED:20260514T005857Z
+DESCRIPTION:description: SOUTHERN DECADENCE\nbar: Joy Theater\naddress: 120
+ 0 Canal St\, New Orleans\, LA 70112\ntimezone: America/Chicago\nticketUrl: 
+ https://www.ticketmaster.com/event/1B006454A32CE162\nimage: https://bearrac
+ uda.com/wp-content/uploads/2026/03/igdecad-2.jpg\nimageVertical: https://be
+ arracuda.com/wp-content/uploads/2026/03/igdecad-2.jpg\nwebsite: https://bea
+ rracuda.com/events/decadence/\nshortName: Bear­rac­uda\ninstagram: https://
+ www.instagram.com/bearracuda\nfavicon: https://bearracuda.com/\nkey: bearra
+ cuda-new-orleans⚜️|2026-09-05|joy theater\nbearSource: keyword\npinSource: 
+ curated\naddressSource: curated\nimageSource: og-image\nbarSource: page-adj
+ acent\ngmaps: https://www.google.com/maps/search/?api=1&query=Joy%20Theater
+ %2C%201200%20Canal%20St%2C%20New%20Orleans%2C%20LA%2070112
+LAST-MODIFIED:20260821T203006Z
+LOCATION:29.9559524\, -90.0738975
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEARRACUDA: New Orleans⚜️
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20260906T030000Z
-DTSTAMP:20260820T182935Z
+DTSTAMP:20260821T221708Z
 UID:177A2A66-DFD8-4AF9-BC41-A6292A422E58
 CREATED:20260811T142851Z
 DESCRIPTION:description: Southern Decadence\nbar: Santos Bar\naddress: 1135
@@ -16,12 +42,12 @@ DESCRIPTION:description: Southern Decadence\nbar: Santos Bar\naddress: 1135
  : https://static.wixstatic.com/media/238fae_fd76b69c05fa4e788b9acb5ef77178e
  e~mv2.jpg\nimageVertical: https://static.wixstatic.com/media/238fae_fd76b69
  c05fa4e788b9acb5ef77178ee~mv2.jpg\nwebsite: https://www.furball.nyc\nshortN
- ame: FUR-BALL\ninstagram: https://instagram.com/furballnyc/\nfavicon: https
+ ame: FUR­BALL\ninstagram: https://instagram.com/furballnyc/\nfavicon: https
  ://linktr.ee/furballnyc\nkey: furball-nola|2026-09-06|santos bar\nbearSourc
  e: keyword\ncover: TICKLEAP\npinSource: geocoded-exact\naddressSource: page
  \nimageSource: page\nbarSource: geo-poi\ngmaps: https://www.google.com/maps
  /search/?api=1&query=Santos%20Bar%2C%201135%20DECATUR%20ST
-LAST-MODIFIED:20260817T005135Z
+LAST-MODIFIED:20260821T203007Z
 LOCATION:29.9605893\, -90.0594606
 SEQUENCE:1
 STATUS:CONFIRMED
@@ -33,7 +59,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20250830T020000Z
 DTEND:20250830T070000Z
-DTSTAMP:20260820T182935Z
+DTSTAMP:20260821T221708Z
 UID:96ED5A57-14F4-4189-81C5-1AA44B8E365F
 CREATED:20250830T003601Z
 DESCRIPTION:description: Music & Entertainment\n• Matt Stands &amp\; Freddy
@@ -52,32 +78,6 @@ LOCATION:29.9559524\, -90.0738975
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:NEW ORLEANS
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260905T020000Z
-DTEND:20260905T070000Z
-DTSTAMP:20260820T182935Z
-UID:74648B34-07A1-4BD2-8E78-D67B991A920E
-CREATED:20260514T005857Z
-DESCRIPTION:description: SOUTHERN DECADENCE\nbar: Joy Theater\naddress: 120
- 0 Canal St\, New Orleans\, LA 70112\ntimezone: America/Chicago\nticketUrl: 
- https://www.ticketmaster.com/event/1B006454A32CE162\nimage: https://bearrac
- uda.com/wp-content/uploads/2026/03/igdecad-2.jpg\nimageVertical: https://be
- arracuda.com/wp-content/uploads/2026/03/igdecad-2.jpg\nwebsite: https://bea
- rracuda.com/events/decadence/\nshortName: Bear-rac-uda\ninstagram: https://
- www.instagram.com/bearracuda\nfavicon: https://bearracuda.com/\nkey: bearra
- cuda-new-orleans⚜️|2026-09-05|joy theater\nbearSource: keyword\npinSource: 
- curated\naddressSource: curated\nimageSource: og-image\nbarSource: page-adj
- acent\ngmaps: https://www.google.com/maps/search/?api=1&query=Joy%20Theater
- %2C%201200%20Canal%20St%2C%20New%20Orleans%2C%20LA%2070112
-LAST-MODIFIED:20260820T175448Z
-LOCATION:29.9559524\, -90.0738975
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:BEARRACUDA: New Orleans⚜️
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
