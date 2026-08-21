@@ -20367,3 +20367,39 @@ test('createFinalEventObject preloads OCR texts through the injected lookup and 
   assert.equal(finalEvent.image, NEW_MEAT_MARKET_IMAGE,
     'the stored stale flyer is replaced by the artwork that names the current event');
 });
+
+// ── Title-brand registry priority + taxonomy-archive guard (run 20260820) ──
+
+test('title identity outranks url-only co-matches in the promoter registry (FURBALL POOL PARTY on beefdip.com)', () => {
+  const core = createRegistryCore([
+    { name: 'Furball', website: 'https://www.furball.nyc', urlPatterns: ['furball.nyc'], bearAffinity: 'always' },
+    { name: 'BeefDip', website: 'https://beefdip.com', urlPatterns: ['beefdip.com'], bearAffinity: 'always' }
+  ]);
+  // The event's own name wears the Furball brand; beefdip.com only HOSTS the
+  // listing (its url token matches every guest brand's collab event).
+  const match = core.matchEventToPromoter({
+    title: 'FURBALL POOL PARTY',
+    ticketUrl: 'https://beefdip.com/planned-events/'
+  });
+  assert.ok(match && match.entry, `identity match expected, got: ${JSON.stringify(match)}`);
+  assert.equal(match.entry.name, 'Furball');
+  assert.equal(match.evidence, 'title');
+
+  // TWO identity matches remain genuinely ambiguous — still refused.
+  const both = core.matchEventToPromoter({
+    title: 'FURBALL x BEEFDIP TAKEOVER',
+    ticketUrl: 'https://beefdip.com/planned-events/'
+  });
+  assert.ok(both && Array.isArray(both.ambiguous), `two title brands still refuse: ${JSON.stringify(both)}`);
+  assert.deepEqual(both.ambiguous.slice().sort(), ['BeefDip', 'Furball']);
+});
+
+test('a taxonomy archive path is never a same-site event page (beefdip.com/tags/ was promoted to canonical website)', () => {
+  const core = createCore();
+  // The Wix tag-archive link must not read as "an event page buried by the
+  // bare root" — that promoted /tags/ over the real beefdip.com website.
+  assert.equal(core.isBareRootBuryingSameSiteEventPage('https://beefdip.com/', 'https://beefdip.com/tags/'), false);
+  assert.equal(core.isBareRootBuryingSameSiteEventPage('https://beefdip.com/', 'https://beefdip.com/category/parties/'), false);
+  // Real same-site event pages still bury the bare root.
+  assert.equal(core.isBareRootBuryingSameSiteEventPage('https://beefdip.com/', 'https://beefdip.com/planned-events/foam-party/'), true);
+});
