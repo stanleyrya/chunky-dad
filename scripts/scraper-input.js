@@ -241,7 +241,7 @@ const scraperConfig = {
       urls: ["https://example.com/events"],
       alwaysBear: false, // set true for trusted bear promoters (AI trust context)
       metadata: {
-        shortName: { value: "NEW-SITE" }, // add a hyphen where it should line-break
+        shortName: { value: "NEW-SITE" }, // use a soft hyphen (\u00ad) where it may line-break; it stays invisible until needed
         instagram: { value: "https://www.instagram.com/example" },
       },
       // ── Optional fields — exhaustive reference (defaults noted) ────────

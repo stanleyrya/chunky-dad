@@ -4,7 +4,7 @@
     "aliases": [
       "MEGAWOOF"
     ],
-    "shortName": "MEGA-WOOF",
+    "shortName": "MEGA\u00adWOOF",
     "instagram": "https://www.instagram.com/megawoof_america",
     "website": "https://linktr.ee/megawoof_america",
     "bearAffinity": "always"
@@ -47,7 +47,7 @@
     "aliases": [
       "Bearracuda Events"
     ],
-    "shortName": "Bear-rac-uda",
+    "shortName": "Bear\u00adrac\u00aduda",
     "instagram": "https://www.instagram.com/bearracuda",
     "website": "https://bearracuda.com/",
     "urlPatterns": [
@@ -70,7 +70,7 @@
     "keywords": [
       "treasure trail"
     ],
-    "shortName": "TREAS-URE TRAIL"
+    "shortName": "TREAS\u00adURE TRAIL"
   },
   {
     "name": "CHUNK",
@@ -81,7 +81,7 @@
   },
   {
     "name": "Furball",
-    "shortName": "FUR-BALL",
+    "shortName": "FUR\u00adBALL",
     "instagram": "https://instagram.com/furballnyc/",
     "website": "https://www.furball.nyc",
     "favicon": "https://linktr.ee/furballnyc",
@@ -89,14 +89,14 @@
   },
   {
     "name": "Cubhouse",
-    "shortName": "CUB-HOUSE",
+    "shortName": "CUB\u00adHOUSE",
     "instagram": "https://www.instagram.com/cubhouse.philly",
     "website": "https://linktr.ee/cubhouse",
     "bearAffinity": "always"
   },
   {
     "name": "Goldiloxx",
-    "shortName": "GOLDI-LOXX",
+    "shortName": "GOLDI\u00adLOXX",
     "shorterName": "GLX",
     "favicon": "https://linktr.ee/goldiloxx",
     "instagram": "https://www.instagram.com/goldiloxx__",
@@ -108,14 +108,14 @@
   },
   {
     "name": "Twisted Bear",
-    "shortName": "TWIST-ED BEAR",
+    "shortName": "TWIST\u00adED BEAR",
     "instagram": "https://www.instagram.com/twistedbearparty",
     "facebook": "https://www.facebook.com/twistedglobal/",
     "bearAffinity": "always"
   },
   {
     "name": "CubScout LA",
-    "shortName": "CUB-SCOUT",
+    "shortName": "CUB\u00adSCOUT",
     "aliases": [
       "CUBSCOUT"
     ],
@@ -123,13 +123,13 @@
   },
   {
     "name": "BEEFMINCE",
-    "shortName": "BEEF-MINCE",
+    "shortName": "BEEF\u00adMINCE",
     "website": "https://beefmince.com",
     "bearAffinity": "always"
   },
   {
     "name": "SPOOKMINCE",
-    "shortName": "SPOOK-MINCE",
+    "shortName": "SPOOK\u00adMINCE",
     "parent": "BEEFMINCE",
     "keywords": [
       "spookmince"
@@ -138,7 +138,7 @@
   },
   {
     "name": "BOATMINCE",
-    "shortName": "BOAT-MINCE",
+    "shortName": "BOAT\u00adMINCE",
     "parent": "BEEFMINCE",
     "keywords": [
       "boatmince"
@@ -147,7 +147,7 @@
   },
   {
     "name": "BeefDip",
-    "shortName": "BEEF-DIP",
+    "shortName": "BEEF\u00adDIP",
     "website": "https://beefdip.com",
     "bearAffinity": "always"
   },
@@ -216,7 +216,7 @@
   },
   {
     "name": "Northeast Ursamen",
-    "shortName": "URSA-MEN",
+    "shortName": "URSA\u00adMEN",
     "aliases": [
       "NE Ursamen",
       "Ursamen",
