@@ -6455,3 +6455,654 @@ body.loaded {
 #events-map .favicon-marker-container.text-marker {
     background: var(--primary-color);
 }
+
+
+/* ════════════════════════════════════════════════════════════════════
+   DUSK — the city-page redesign (owner-approved via the live demo,
+   2026-08-21). Scoped by class="dusk" on <html> in city.html so other
+   pages keep the existing look until they get their own pass.
+
+   Ported from the demo overlay verbatim; the demo remains the reference
+   implementation. Load-bearing subtleties are commented inline — the
+   overflow/min-width pair on cells, the will-change removal, and the
+   day-padding variable that the multi-day bleed margins read.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ================================================================
+   DUSK theme core.
+   - Page background = the event-builder's dark radial
+   - Calendar melts into the page
+   - Mini cards + main cards: SOLID per-event color
+   - Header: ONE purple block, two rows, auto height (event-builder
+     mechanism: JS measures real height into --hdr-h)
+   - Controls: quiet text in the purple second row — no boxes.
+     Today only appears when you've navigated off today.
+   - Selection: spotlight (dim the rest), no white border
+   - Motion: nothing moves unless touched; feedback = fast fades
+   - Map water: back to the site's brand purple (no override)
+   ================================================================ */
+
+html.dusk body {
+    background: radial-gradient(circle at top, #1b2033 0%, #0b0d13 45%, #07090f 100%);
+    background-attachment: fixed;
+}
+
+/* ---------- header: one purple block that grows to fit its rows ---------- */
+html.dusk header {
+    height: auto !important;              /* base CSS clamps it to 60px on phones */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.35);
+}
+html.dusk body {
+    padding-top: var(--hdr-h, 104px) !important;
+}
+.dusk main.city-page { padding-top: 0.35rem; }
+/* the controls moved into the header and the h2 title is unused — the empty
+   block's padding was the mystery gap above the grid */
+.dusk .calendar-header { display: none; }
+
+/* ---------- spacing: mobile IS the design ----------
+   No overrides at phone widths — the base mobile values stand untouched.
+   Desktop/tablet ADOPT the base mobile numbers instead of the base CSS's
+   inflated wide-screen cells and typography. */
+@media (min-width: 769px) {
+    .dusk .calendar-day { --day-padding: 0.3rem; padding: var(--day-padding); min-height: 80px; }
+    /* week cells: slimmer side padding buys the text lane the width a
+       six-letter name needs; the multi-day bleed reads the same variable
+       so bars stay exactly flush */
+    .dusk .calendar-day.week-view,
+    .dusk .calendar-day.month-day { --day-padding: 0.2rem; padding: var(--day-padding); }
+    .dusk .calendar-day.month-day { min-height: 60px; }
+    .dusk .event-item { padding: 0.2rem; }
+    .dusk .event-item .event-name { font-size: 0.75rem; }
+    .dusk .event-item .event-time { font-size: 0.7rem; }
+}
+/* the calendar shows name+time only — venue lives on the card */
+.dusk .event-item .event-venue { display: none; }
+
+/* day numbers tuck into the cell corner; events reclaim the header row.
+   position:relative alone creates no stacking context, so the multi-day
+   z-index machinery is unaffected; the today circle survives because the
+   number keeps its fixed 1.5em round box, just smaller */
+.dusk .calendar-day { position: relative; }
+.dusk .calendar-day .day-header {
+    position: absolute;
+    top: 2px;
+    left: 5px;
+    right: auto;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+/* numbers are plain text — the base gives EVERY number a reserved 1.4em
+   circle box, which misaligns them against the weekday label. Sizes stay
+   the base's own; only the box goes. */
+.dusk .day-date, .dusk .day-number {
+    width: auto;
+    height: auto;
+    display: inline;
+    border-radius: 0;
+    flex: none;
+    line-height: inherit;
+}
+/* week header spans the cell: weekday left, date right (as before) */
+.dusk .calendar-day.week-view .day-header { right: 5px; }
+.dusk .calendar-day.week-view .day-header { justify-content: space-between; }
+/* today's circle paints BEHIND the number and may bleed — it costs no
+   layout, so today's number aligns exactly like every other day's */
+.dusk .calendar-day.current .day-date,
+.dusk .calendar-day.current .day-number {
+    position: relative;
+    z-index: 1;
+    background: none !important;
+    color: var(--text-inverse) !important;
+}
+.dusk .calendar-day.current .day-date::before,
+.dusk .calendar-day.current .day-number::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 1.45em;
+    height: 1.45em;
+    border-radius: 50%;
+    background: var(--primary-color);
+    z-index: -1;
+}
+.dusk .day-indicator { display: none; }
+.dusk .calendar-day .day-events,
+.dusk .calendar-day .daily-events { padding-top: 1.45rem; padding-bottom: 0.45rem; }
+
+/* ---------- calendar = the page ---------- */
+.dusk .calendar-grid {
+    background: transparent;
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+}
+/* month only: 7 equal columns that can shrink (week view stacks on phones) */
+.dusk .calendar-grid.month-view-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.dusk .calendar-day {
+    background: transparent;
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+.dusk .calendar-day:last-child { border-right: none; }
+.dusk .day-header h3 { color: rgba(255, 255, 255, 0.65); }
+.dusk .day-date, .dusk .day-number {
+    color: rgba(255, 255, 255, 0.9);
+    font-variant-numeric: tabular-nums;
+}
+/* today's column keeps the same hairline as everyone else — no blue edge */
+.dusk .calendar-day.current,
+.dusk .calendar-day.week-view.current {
+    border-color: rgba(255, 255, 255, 0.06) !important;
+}
+.dusk .calendar-day.current:last-child,
+.dusk .calendar-day.week-view.current:last-child { border-right: none !important; }
+/* month weekday strip: quiet, no bright divider */
+.dusk .calendar-day-header { border-color: rgba(255, 255, 255, 0.14); background: transparent; }
+.dusk .calendar-day-header h4 { color: rgba(255, 255, 255, 0.55); }
+.dusk .day-indicator { color: #ff9d9d; }
+.dusk .calendar-day.other-month { opacity: 0.45; }
+
+/* ---------- mini cards: solid per-event color ---------- */
+.dusk .event-item {
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    color: #fff;
+    background: var(--c1, var(--primary-color));
+    min-width: 0;
+    overflow: hidden;
+}
+.dusk .event-item .event-name { color: #fff; }
+.dusk .event-item .event-time { color: rgba(255, 255, 255, 0.82); }
+.dusk .event-item .event-venue { color: rgba(255, 255, 255, 0.7); }
+.dusk .event-favicon-chip { background: rgba(255, 255, 255, 0.9); }
+.dusk .more-events {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.16);
+    color: rgba(255, 255, 255, 0.85);
+}
+
+/* ---------- selection = spotlight: the pick stays vivid, the rest recede ---------- */
+.dusk .event-item.selected,
+.dusk .event-item.enhanced.selected {
+    background: var(--c1, var(--primary-color)) !important;
+    color: #fff !important;
+    outline: none;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+}
+/* dim via filter, not opacity: multi-day segments deliberately overlap by
+   ~2px, and translucent overlaps double-composite into a visible seam line */
+.dusk .calendar-grid:has(.event-item.selected) .event-item:not(.selected) {
+    opacity: 1;
+    filter: saturate(0.35) brightness(0.4);
+}
+.dusk .calendar-grid:has(.event-item.selected) .event-item.selected {
+    opacity: 1;
+    filter: none;
+}
+/* a selected multi-day run: every segment carries .selected, and per-segment
+   drop shadows fall on their neighbours as dark bands — no shadow on runs */
+.dusk .event-item.multi-day.selected { box-shadow: none; }
+
+/* ---------- multi-day: solid = trivially continuous ---------- */
+/* the base grid clips every cell (overflow: hidden), which slices the bar at
+   each day boundary AND clips the flowing title at the first cell's edge —
+   dusk cells must not clip. min-width: 0 is load-bearing: the clip was what
+   kept grid tracks equal (clipped cells have no content minimum), so without
+   it cells would size to their content and the columns go ragged */
+/* will-change:transform (perf hint in base) makes EVERY cell a stacking
+   context, trapping the lead's z-index inside its cell — the follow segment
+   in the next cell then paints over the flowing title. Drop the hint. */
+.dusk .calendar-day { overflow: visible; min-width: 0; will-change: auto; }
+.dusk .event-item.multi-day {
+    border: none;
+    color: #fff;
+    background: var(--c1, var(--primary-color));
+}
+/* overlap the neighbour by a hair so no page background can peek through */
+.dusk .event-item.multi-day-start { margin-right: calc(-1 * var(--day-padding, 0.5rem) - 2px) !important; }
+.dusk .event-item.multi-day-middle {
+    margin-left: calc(-1 * var(--day-padding, 0.5rem) - 2px) !important;
+    margin-right: calc(-1 * var(--day-padding, 0.5rem) - 2px) !important;
+}
+.dusk .event-item.multi-day-end { margin-left: calc(-1 * var(--day-padding, 0.5rem) - 2px) !important; }
+/* a continuation segment that LEADS a row shows its text: the base 12px
+   padding (meant to clear the bleed) indents it farther than every other
+   pill — realign so the text lands at the standard pill indent whether or
+   not the bleed got clipped at the grid edge */
+.dusk .event-item.multi-day-middle.md-chunk-lead,
+.dusk .event-item.multi-day-end.md-chunk-lead {
+    padding-left: calc(var(--day-padding, 0.5rem) + 2px + 0.2rem);
+}
+/* one object per row: only the first segment in a row keeps its text,
+   and that text flows across the whole bar (JS stamps the chunk classes
+   and --chunkw with the run's pixel width in this row) */
+/* the lead must stack ABOVE its follow segments: each segment is its own
+   stacking context (position:relative; z-index:1 from base), and later DOM
+   siblings otherwise paint over the lead's flowing text */
+.dusk .event-item.multi-day.md-chunk-lead { overflow: visible; z-index: 3; }
+/* every segment computes the same single-line text metrics so the bar is one
+   even thickness — hidden follow text must not wrap taller than the lead */
+.dusk .event-item.multi-day .event-name {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -webkit-line-clamp: unset;
+    max-height: none;
+}
+.dusk .event-item.multi-day.md-chunk-lead .event-name {
+    width: max-content;
+    max-width: calc(var(--chunkw, 100%) - 10px);
+    position: relative;
+    z-index: 5;
+}
+.dusk .event-item.multi-day.md-chunk-follow > * { visibility: hidden; }
+
+/* ---------- main cards: solid too ---------- */
+.dusk .event-card.detailed.aurora {
+    background: var(--c1, var(--primary-color));
+}
+
+/* ---------- controls: quiet text inside the purple header ---------- */
+.dusk .header-controls-row {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 0 1rem 0.55rem;
+    gap: 0.75rem;
+}
+.dusk .header-controls-row .calendar-controls {
+    background: transparent;
+    border: none;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: 0.9rem;
+    flex-wrap: nowrap !important;
+}
+/* date group reads first; Week/Month pinned flush right; Today fades into
+   the elastic middle so nothing ever shifts */
+.dusk .header-controls-row .date-navigation {
+    order: -1;
+    margin-right: auto;
+    background: transparent;
+    border: none;
+    padding: 0;
+    gap: 0.15rem;
+}
+.dusk .header-controls-row .today-btn { order: 1; }
+.dusk .header-controls-row .view-toggle { order: 2; }
+.dusk .nav-btn {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.75);
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    border-radius: 8px;
+    font-size: 1.15rem;
+    line-height: 1;
+}
+.dusk .nav-btn:hover { background: rgba(255, 255, 255, 0.12); color: #fff; transform: none; }
+.dusk .date-range {
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 600;
+    min-width: 8.75rem;
+    text-align: center;
+    padding: 0 0.35rem;
+    white-space: nowrap;
+}
+.dusk .view-toggle {
+    background: transparent;
+    border: none;
+    padding: 0;
+    gap: 1.1rem;
+}
+.dusk .view-btn {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.6);
+    padding: 0.1rem 0.05rem 2px;
+    min-height: 0;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-radius: 0;
+    border-bottom: 2px solid transparent;
+    align-self: center;
+    line-height: 1.2;
+}
+.dusk .view-btn.active {
+    background: transparent;
+    color: #fff;
+    border-bottom-color: var(--secondary-color, #f5576c);
+}
+.dusk .view-btn:hover:not(.active) { color: rgba(255, 255, 255, 0.9); }
+
+/* Today: space always reserved; it fades in when you're off today
+   so the other controls never shift */
+.dusk .today-btn {
+    display: inline-flex;
+    visibility: hidden;
+    opacity: 0;
+    background: transparent;
+    color: #ff9d9d;
+    padding: 0.1rem 0.5rem 2px;
+    min-height: 0;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-radius: 0;
+    border-bottom: 2px solid transparent;
+    align-self: center;
+    line-height: 1.2;
+    position: relative;
+    top: 1px;             /* optical: sit on the date's baseline */
+    transition: opacity 0.12s ease;
+}
+.dusk .header-controls-row.off-today .today-btn { visibility: visible; opacity: 1; }
+.dusk .today-btn:hover { transform: none; background: rgba(255, 255, 255, 0.08); }
+
+/* phone: same row, one size down */
+@media (max-width: 480px) {
+    .dusk .header-controls-row { padding: 0 0.6rem 0.5rem; gap: 0.4rem; }
+    .dusk .header-controls-row .calendar-controls { gap: 0.55rem; }
+    .dusk .date-range { font-size: 0.82rem; padding: 0 0.2rem; }
+    .dusk .nav-btn { width: 28px; height: 28px; min-height: 28px; font-size: 1rem; }
+    .dusk .view-btn, .dusk .today-btn { font-size: 0.7rem; }
+}
+
+/* ---------- motion: keep the load reveal and the swipe flight; ----------
+   ---------- kill only the press-time popping                   ----------
+   The section slide-ins on page load and the JS swipe/nav transition on the
+   calendar grid are the site's own and stay untouched. (The grid also relies
+   on inline opacity:0 to hide the width-measurement sample event at load —
+   never override its opacity from CSS.) */
+/* cards flying up on every list re-render (every tap re-renders the list) */
+.dusk .event-card, .dusk .category-card { animation: none !important; }
+/* what remains: fast fades as press feedback */
+.dusk .event-item,
+.dusk .event-card {
+    transition: opacity 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+.dusk .view-btn, .dusk .nav-btn, .dusk .today-btn {
+    transition: color 0.12s ease, background-color 0.12s ease, border-color 0.12s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+    .dusk *, .dusk *::before, .dusk *::after {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+/* pre-mount safety: the controls are invisible in their original in-page
+   slot — they only ever show once mounted inside the purple header row */
+.dusk .calendar-header .calendar-controls { visibility: hidden; }
+
+/* ---------- one header row + phone-true spacing for EVERYTHING wider
+   than a phone (769px+): picker docked beside the switcher, no container
+   padding inflating the calendar ---------- */
+@media (min-width: 769px) {
+/* ---------- desktop: one header row when there is room ----------
+   Order reads left-to-right by scope: brand+date (where am I), then the
+   view controls, then the city switcher as the global control at the far
+   edge. display:contents promotes logo/switcher to nav flex items so the
+   appended controls row can sit BETWEEN them. */
+    .dusk header nav {
+        display: flex;
+        align-items: center;
+        min-height: 60px;
+        max-width: 1600px;
+        margin: 0 auto;
+        padding: 0 1.5rem;
+    }
+    .dusk .nav-container { display: contents; }
+    .dusk header .logo { order: 0; flex: 0 0 auto; margin-right: 1.5rem; }
+    .dusk .header-controls-row {
+        order: 1;
+        flex: 1 1 auto;
+        width: auto;
+        margin: 0;
+        padding: 0;
+    }
+    .dusk header .city-switcher { order: 2; flex: 0 0 auto; margin-left: 0.9rem; }
+    /* the date text changes width per period — a fixed slot keeps the
+       arrows and the picker from drifting on every switch */
+    .dusk .header-controls-row .date-range { min-width: 9.5rem; }
+    .dusk .header-controls-row .date-navigation { margin-right: 0; }
+    /* the picker rides in the nav beside the switcher (JS moves it there) */
+    .dusk header .nav-container > .view-toggle,
+    .dusk header nav > .view-toggle { order: 2; margin-right: 0.9rem; }
+    .dusk header .city-switcher-btn { padding: 0.35rem 0.8rem; gap: 0.4rem; }
+    .dusk header .city-emoji { font-size: 1.1rem !important; }
+    .dusk header .city-name { font-size: 0.92rem; }
+    .dusk .header-controls-row .calendar-controls { width: 100%; }
+
+    /* ---------- desktop density: same compact pieces, more of them ---------- */
+    /* ---------- desktop split: calendar pinned left, cards scroll right,
+       map pinned bottom-right (both views) ---------- */
+    .dusk .city-page {
+        /* the calendar IS the phone calendar, docked left at phone width —
+           the cards get the remaining majority for the two-column look.
+           display:grid is ours: the base only grants it at >=1025 */
+        display: grid;
+        max-width: 1600px;
+        margin: 0 auto;
+        padding-left: 1rem;
+        padding-right: 1rem;
+        width: 100%;
+        grid-template-columns: 430px minmax(0, 1fr);
+        grid-template-rows: auto auto;
+        gap: 0 1.5rem;
+    }
+    .dusk .city-page .weekly-calendar { margin: 0; padding: 0; }
+    .dusk .city-page .weekly-calendar .container { padding: 0; }
+    .dusk .city-page .weekly-calendar {
+        grid-column: 1;
+        grid-row: 1 / 3;
+        position: sticky;
+        top: calc(var(--hdr-h, 60px) + 0.5rem);
+        align-self: start;
+    }
+    .dusk .city-page .weekly-calendar { margin: 0; padding: 0; }
+    .dusk .city-page .weekly-calendar .container { padding: 0; }
+
+    /* WEEK VIEW: app layout — nothing scrolls but the cards. Week grid
+       top-left, the map fills the REMAINING left column, cards scroll in
+       the right rail. (Month view keeps the tall grid on a scrolling page
+       with cards+map in the pinned rail — JS re-homes the map per view.) */
+    .dusk .city-page:has(.week-view-grid) {
+        height: calc(100vh - var(--hdr-h, 60px) - 3.5rem);
+        overflow: hidden;
+        grid-template-rows: auto minmax(0, 1fr);
+        padding-top: 0.5rem;
+    }
+    .dusk .city-page:has(.week-view-grid) > .weekly-calendar {
+        grid-column: 1;
+        grid-row: 1;
+        position: static;
+    }
+    .dusk .city-page:has(.week-view-grid) > .events-map-section {
+        grid-column: 1;
+        grid-row: 2;
+        min-height: 0;
+        align-self: start;    /* JS grows the map to the page bottom */
+        height: auto;
+        max-height: none;
+        padding: 0.75rem 0 0;
+        margin: 0;
+        position: static;
+        display: flex;
+        flex-direction: column;
+    }
+    .dusk .city-page:has(.week-view-grid) > .events-map-section .container {
+        padding: 0;
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+    }
+    .dusk .city-page:has(.week-view-grid) > .events-map-section .map-container {
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+    .dusk .city-page:has(.week-view-grid) #events-map {
+        height: 100%;
+        min-height: 200px;
+        max-height: none;
+    }
+    .dusk .city-page:has(.week-view-grid) .right-rail {
+        position: static;
+        height: 100%;
+        grid-row: 1 / 3;
+    }
+
+    /* compact desktop cards: the base flyer treatment is already right
+       (natural size, centred, shadow on the IMAGE) — only the cap changes.
+       Never force width/object-fit here: that stretches the img element and
+       paints empty colour bands inside its rounded shadow box. */
+    .dusk .event-card.detailed.aurora .event-flyer img { max-height: 240px; }
+    .dusk .event-card.detailed.aurora .event-flyer[data-flyer-orientation="portrait"] img { max-height: 290px; }
+    /* cards have a working range, not a stretch-to-fill */
+    .dusk .events-list { flex-wrap: wrap; }
+    .dusk .events-list .ml-col { flex: 0 0 400px; max-width: 400px; }
+    .dusk .events-list > .event-card { max-width: 460px; }
+    .dusk .event-card.detailed.aurora .ec-panel { padding: 0.65rem 0.75rem 0.6rem; }
+    .dusk .event-card.detailed.aurora h3.ec-title { font-size: 0.98rem; }
+    .dusk .event-card.detailed.aurora .ec-row { font-size: 0.8rem; }
+    .dusk .event-card.detailed.aurora .ec-tea { font-size: 0.8rem; }
+
+    /* the overlay re-homes and re-sizes the map section — the base's
+       entrance animation and transition:all replay as a slide every time */
+    .dusk .city-page .events-map-section,
+    .dusk .right-rail .events-map-section {
+        animation: none !important;
+        transition: none !important;
+    }
+
+    /* the fixed week screen has no scroll — the footer would paint over
+       the bottom of the map; it stays on month view and mobile */
+    html.dusk body:has(.city-page .week-view-grid) footer { display: none; }
+
+    /* the right side is ONE pinned rail (JS mounts .events — and in month
+       view also the map — into it): cards scroll inside.
+       Page scroll only ever moves the calendar. */
+    .dusk .city-page .right-rail {
+        grid-column: 2;
+        grid-row: 1 / 3;
+        position: sticky;
+        top: calc(var(--hdr-h, 60px) + 0.5rem);
+        align-self: start;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        height: calc(100vh - var(--hdr-h, 60px) - 7.5rem);
+        min-width: 0;
+    }
+    .dusk .right-rail .events {
+        flex: 1 1 0px;
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding: 0;
+        margin: 0;
+    }
+    .dusk .right-rail .events .container { padding: 0 0.25rem 0 0; }
+    .dusk .right-rail .events-map-section {
+        flex: 0 0 auto;
+        padding: 0;
+        margin: 0;
+        max-height: none;
+        height: auto;
+    }
+    .dusk .right-rail .events-map-section .container { padding: 0; }
+    .dusk .right-rail #events-map {
+        height: 34vh;
+        max-height: none;
+        min-height: 220px;
+    }
+
+    /* ---------- cards: masonry interweave (JS fills the shorter column,
+       so a short card never strands a row) ---------- */
+    .dusk .events-list .ml-col > * { min-width: 0; max-width: 100%; }
+    .dusk .event-card .ec-tea { overflow-wrap: anywhere; }
+    .dusk .events-list { display: flex; gap: 1rem; align-items: flex-start; }
+    .dusk .events-list .ml-col {
+        flex: 0 0 400px;
+        max-width: 400px;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    /* a selected card takes the full width again */
+    .dusk .events-list.selection-mode .ml-col { display: contents; }}
+
+/* month spreads to three columns only when three columns actually fit */
+@media (min-width: 1200px) {
+    /* MONTH VIEW: three columns — the tall calendar, a full-height map,
+       and ONE file of events scrolling on the right */
+    .dusk .city-page:has(.month-view-grid) {
+        grid-template-columns: 430px minmax(260px, 1fr) minmax(380px, 470px);
+        grid-template-rows: auto;
+        gap: 0 1.25rem;
+    }
+    .dusk .city-page:has(.month-view-grid) > .weekly-calendar { grid-column: 1; grid-row: 1; }
+    .dusk .city-page:has(.month-view-grid) > .events-map-section {
+        grid-column: 2;
+        grid-row: 1;
+        position: sticky;
+        top: calc(var(--hdr-h, 60px) + 0.5rem);
+        align-self: start;
+        height: calc(100vh - var(--hdr-h, 60px) - 5.5rem);
+        max-height: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+    }
+    .dusk .city-page:has(.month-view-grid) > .events-map-section .container {
+        padding: 0;
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+    }
+    .dusk .city-page:has(.month-view-grid) > .events-map-section .map-container {
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+    .dusk .city-page:has(.month-view-grid) #events-map {
+        height: 100%;
+        min-height: 240px;
+        max-height: none;
+    }
+    .dusk .city-page:has(.month-view-grid) .right-rail { grid-column: 3; grid-row: 1; }
+
+}
+
+/* below desktop the columns dissolve back into the normal flow */
+@media (max-width: 768.9px) {
+    .dusk .events-list .ml-col { display: contents; }
+}
+
+/* lane spacers: invisible pill skeletons that hold an empty lane open so
+   runs stay level across the row */
+.dusk .event-item.md-lane-spacer {
+    visibility: hidden;
+    background: transparent;
+    border: none;
+    pointer-events: none;
+}
