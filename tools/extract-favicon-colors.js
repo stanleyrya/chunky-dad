@@ -921,7 +921,14 @@ async function processEvents(cityKey) {
 
     const prev = existingBySlug.get(event.slug);
 
-    const url = chooseBestUrl(event);
+    // The event's favicon field is the site's FIRST icon choice (it is the
+    // override field), so it must be the extraction's first choice too —
+    // Goldiloxx's linktree profile pic sat downloaded on disk while this
+    // loop only ever consulted the website field.
+    const eventFaviconUrl = typeof event.favicon === 'string' && event.favicon
+        && !isGenericPlatformUrl(event.favicon) ? event.favicon : null;
+    const websiteUrl = chooseBestUrl(event);
+    const url = eventFaviconUrl || websiteUrl;
     const faviconPath = url ? localFaviconPath(url) : null;
     // The flyer is the event's own artwork, so an event with a flyer is worth
     // processing even when its website is a ticketing platform we refuse to take
@@ -946,7 +953,7 @@ async function processEvents(cityKey) {
     const record = await extractColorRecord({ faviconPath, flyerPath, label: event.name });
     if (record) {
       const entry = { slug: event.slug };
-      const entryUrl = url || (prev && prev.url);
+      const entryUrl = websiteUrl || eventFaviconUrl || (prev && prev.url);
       if (entryUrl) entry.url = entryUrl;
       // Never lose an existing legacy pair just because this run found no
       // favicon on disk — those two fields are a stable published contract.

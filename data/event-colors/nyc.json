@@ -140,6 +140,10 @@
   },
   {
     "slug": "golidloxx-august-4405b5e7",
+    "url": "https://linktr.ee/goldiloxx",
+    "faviconBg": "#4a3f2e",
+    "faviconFg": "#d9b844",
+    "faviconPlate": "#3c3225",
     "paletteSource": "flyer",
     "palette": "#0b0b0b:46:0 #cbcbcb:16:0 #2c2c2b:10:0 #f8c709:10:17",
     "accent": "#f8c709"
