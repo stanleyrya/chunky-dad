@@ -5,62 +5,61 @@
   },
   "events": [
     {
-      "name": "MEGAWOOF",
+      "name": "Bearracuda Phoenix RELAUNCH Party!",
       "day": "Saturday",
-      "time": "9PM-2AM",
+      "time": "9:30PM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
-        "lat": 33.4833086,
-        "lng": -112.0754149
+        "lat": 3110,
+        "lng": null
       },
-      "startDate": "2025-10-04T21:00:00",
-      "endDate": "2025-10-05T02:00:00",
-      "unprocessedDescription": "description: MEGAWOOF 10 YEAR ANNIVERSARY \\: PHOENIX KICK OFF\\\rnbar: Kobalt\naddress: 3110 North Central Avenue, Phoenix, AZ 85012\ntimezone: America/Phoenix\nurl: https://linktr.ee/megawoof_america\nticketUrl: https://www.eventbrite.com/e/megawoof-10-year-anniversary-phoenix-kick-off-tickets-1675720327609\ncover: $11.58 - $22.10 (as of 10/1)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1117518673%2F185013722403%2F1%2Foriginal.20250908-150401?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=3aac96e3f15ffea9f7cc53f0c3a8efa5\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=33.4833086%2C-112.0754149&query_place_id=ChIJkRBEr18SK4cR8jynbFt5fPM\nkey: megawoof|2025-10-05|kobalt|eventbrite",
+      "startDate": "2026-05-23T21:30:00",
+      "unprocessedDescription": "description: Bearracuda PhoenixRELAUNCH PARTYSaturday, May 23t\rh, 2026DJ Freddy King of Pants (Seattle) Hosted by JP Hardy Kobalt - 3110 N. Central AveHOT GoGos All nightAdv. tix at Bearracuda.com - Doors at 9\\:30pmBearracuda is back in PHOENIX after a 6 year hiatus! Now at Kobalt! Join 100s of guys dancing til late, with sexy GoGos, chunky visuals and YOU!\nbar: Kobalt\naddress: 3110 N Central Ave\nticketUrl: https://www.sickening.events/e/bearracuda-phoenix-relaunch-party/tickets\ninstagram: https://www.instagram.com/bearracuda\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775591376/saas/logos/image_1775591369401_a4demr8jg.webp\ncover: EARLY BEAR\nshortName: Bear-rac-uda\nwebsite: https://bearracuda.com/events/phoenix/\ngmaps: https://www.google.com/maps/search/?api=1&query=Kobalt%2C%203110%20N%20Central%20Ave\nkey: bearracuda-2026-05-24-phoenix\ntimezone: America/Phoenix",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Phoenix",
       "wasUTC": true,
-      "sourceUid": "F6548399-1DB6-4C62-9F75-A6045BF3884F",
-      "uid": "F6548399-1DB6-4C62-9F75-A6045BF3884F",
+      "sourceUid": "9165A83C-32B2-497F-A522-7C5ADF7B9A2A",
+      "uid": "9165A83C-32B2-497F-A522-7C5ADF7B9A2A",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
-      "sequence": 0,
+      "sequence": 1,
       "overrideIdentityType": null,
       "bar": "Kobalt",
-      "cover": "$11.58 - $22.10 (as of 10/1)",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1117518673%2F185013722403%2F1%2Foriginal.20250908-150401?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=3aac96e3f15ffea9f7cc53f0c3a8efa5",
-      "tea": "MEGAWOOF 10 YEAR ANNIVERSARY : PHOENIX KICK OFF",
-      "address": "3110 North Central Avenue, Phoenix, AZ 85012",
-      "website": "https://linktr.ee/megawoof_america",
-      "instagram": "https://www.instagram.com/megawoof_america",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=33.4833086%2C-112.0754149&query_place_id=ChIJkRBEr18SK4cR8jynbFt5fPM",
-      "ticketUrl": "https://www.eventbrite.com/e/megawoof-10-year-anniversary-phoenix-kick-off-tickets-1675720327609",
-      "shortName": "MEGA-WOOF",
+      "cover": "EARLY BEAR",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775591376/saas/logos/image_1775591369401_a4demr8jg.webp",
+      "tea": "Bearracuda PhoenixRELAUNCH PARTYSaturday, May 23th, 2026DJ Freddy King of Pants (Seattle) Hosted by JP Hardy Kobalt - 3110 N. Central AveHOT GoGos All nightAdv. tix at Bearracuda.com - Doors at 9:30pmBearracuda is back in PHOENIX after a 6 year hiatus! Now at Kobalt! Join 100s of guys dancing til late, with sexy GoGos, chunky visuals and YOU!",
+      "address": "3110 N Central Ave",
+      "website": "https://bearracuda.com/events/phoenix/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Kobalt%2C%203110%20N%20Central%20Ave",
+      "ticketUrl": "https://www.sickening.events/e/bearracuda-phoenix-relaunch-party/tickets",
+      "shortName": "Bear-rac-uda",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://linktr.ee/megawoof_america",
+          "url": "https://bearracuda.com/events/phoenix/",
           "label": "🌐 Website"
         },
         {
           "type": "instagram",
-          "url": "https://www.instagram.com/megawoof_america",
+          "url": "https://www.instagram.com/bearracuda",
           "label": "📷 Instagram"
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=33.4833086%2C-112.0754149&query_place_id=ChIJkRBEr18SK4cR8jynbFt5fPM",
+          "url": "https://www.google.com/maps/search/?api=1&query=Kobalt%2C%203110%20N%20Central%20Ave",
           "label": "🗺️ Google Maps"
         },
         {
           "type": "tickets",
-          "url": "https://www.eventbrite.com/e/megawoof-10-year-anniversary-phoenix-kick-off-tickets-1675720327609",
+          "url": "https://www.sickening.events/e/bearracuda-phoenix-relaunch-party/tickets",
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "megawoof-2f8a9cb8"
+      "slug": "bearracuda-phoenix-relaunch-party-320faa75"
     },
     {
       "name": "BEARRACUDA: PHOENIX PRIDE",
@@ -122,61 +121,62 @@
       "slug": "bearracuda-phoenix-pride-16d08e9d"
     },
     {
-      "name": "Bearracuda Phoenix RELAUNCH Party!",
+      "name": "MEGAWOOF",
       "day": "Saturday",
-      "time": "9:30PM",
+      "time": "9PM-2AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
-        "lat": 3110,
-        "lng": null
+        "lat": 33.4833086,
+        "lng": -112.0754149
       },
-      "startDate": "2026-05-23T21:30:00",
-      "unprocessedDescription": "description: Bearracuda PhoenixRELAUNCH PARTYSaturday, May 23t\rh, 2026DJ Freddy King of Pants (Seattle) Hosted by JP Hardy Kobalt - 3110 N. Central AveHOT GoGos All nightAdv. tix at Bearracuda.com - Doors at 9\\:30pmBearracuda is back in PHOENIX after a 6 year hiatus! Now at Kobalt! Join 100s of guys dancing til late, with sexy GoGos, chunky visuals and YOU!\nbar: Kobalt\naddress: 3110 N Central Ave\nticketUrl: https://www.sickening.events/e/bearracuda-phoenix-relaunch-party/tickets\ninstagram: https://www.instagram.com/bearracuda\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775591376/saas/logos/image_1775591369401_a4demr8jg.webp\ncover: EARLY BEAR\nshortName: Bear-rac-uda\nwebsite: https://bearracuda.com/events/phoenix/\ngmaps: https://www.google.com/maps/search/?api=1&query=Kobalt%2C%203110%20N%20Central%20Ave\nkey: bearracuda-2026-05-24-phoenix\ntimezone: America/Phoenix",
+      "startDate": "2025-10-04T21:00:00",
+      "endDate": "2025-10-05T02:00:00",
+      "unprocessedDescription": "description: MEGAWOOF 10 YEAR ANNIVERSARY \\: PHOENIX KICK OFF\\\rnbar: Kobalt\naddress: 3110 North Central Avenue, Phoenix, AZ 85012\ntimezone: America/Phoenix\nurl: https://linktr.ee/megawoof_america\nticketUrl: https://www.eventbrite.com/e/megawoof-10-year-anniversary-phoenix-kick-off-tickets-1675720327609\ncover: $11.58 - $22.10 (as of 10/1)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1117518673%2F185013722403%2F1%2Foriginal.20250908-150401?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=3aac96e3f15ffea9f7cc53f0c3a8efa5\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=33.4833086%2C-112.0754149&query_place_id=ChIJkRBEr18SK4cR8jynbFt5fPM\nkey: megawoof|2025-10-05|kobalt|eventbrite",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Phoenix",
       "wasUTC": true,
-      "sourceUid": "9165A83C-32B2-497F-A522-7C5ADF7B9A2A",
-      "uid": "9165A83C-32B2-497F-A522-7C5ADF7B9A2A",
+      "sourceUid": "F6548399-1DB6-4C62-9F75-A6045BF3884F",
+      "uid": "F6548399-1DB6-4C62-9F75-A6045BF3884F",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
-      "sequence": 1,
+      "sequence": 0,
       "overrideIdentityType": null,
       "bar": "Kobalt",
-      "cover": "EARLY BEAR",
-      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775591376/saas/logos/image_1775591369401_a4demr8jg.webp",
-      "tea": "Bearracuda PhoenixRELAUNCH PARTYSaturday, May 23th, 2026DJ Freddy King of Pants (Seattle) Hosted by JP Hardy Kobalt - 3110 N. Central AveHOT GoGos All nightAdv. tix at Bearracuda.com - Doors at 9:30pmBearracuda is back in PHOENIX after a 6 year hiatus! Now at Kobalt! Join 100s of guys dancing til late, with sexy GoGos, chunky visuals and YOU!",
-      "address": "3110 N Central Ave",
-      "website": "https://bearracuda.com/events/phoenix/",
-      "instagram": "https://www.instagram.com/bearracuda",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Kobalt%2C%203110%20N%20Central%20Ave",
-      "ticketUrl": "https://www.sickening.events/e/bearracuda-phoenix-relaunch-party/tickets",
-      "shortName": "Bear-rac-uda",
+      "cover": "$11.58 - $22.10 (as of 10/1)",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1117518673%2F185013722403%2F1%2Foriginal.20250908-150401?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=3aac96e3f15ffea9f7cc53f0c3a8efa5",
+      "tea": "MEGAWOOF 10 YEAR ANNIVERSARY : PHOENIX KICK OFF",
+      "address": "3110 North Central Avenue, Phoenix, AZ 85012",
+      "website": "https://linktr.ee/megawoof_america",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=33.4833086%2C-112.0754149&query_place_id=ChIJkRBEr18SK4cR8jynbFt5fPM",
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-10-year-anniversary-phoenix-kick-off-tickets-1675720327609",
+      "shortName": "MEGA-WOOF",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://bearracuda.com/events/phoenix/",
+          "url": "https://linktr.ee/megawoof_america",
           "label": "🌐 Website"
         },
         {
           "type": "instagram",
-          "url": "https://www.instagram.com/bearracuda",
+          "url": "https://www.instagram.com/megawoof_america",
           "label": "📷 Instagram"
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Kobalt%2C%203110%20N%20Central%20Ave",
+          "url": "https://www.google.com/maps/search/?api=1&query=33.4833086%2C-112.0754149&query_place_id=ChIJkRBEr18SK4cR8jynbFt5fPM",
           "label": "🗺️ Google Maps"
         },
         {
           "type": "tickets",
-          "url": "https://www.sickening.events/e/bearracuda-phoenix-relaunch-party/tickets",
+          "url": "https://www.eventbrite.com/e/megawoof-10-year-anniversary-phoenix-kick-off-tickets-1675720327609",
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "bearracuda-phoenix-relaunch-party-320faa75"
+      "slug": "megawoof-2f8a9cb8"
     },
     {
       "name": "MEGAWOOF AMERICA - PHOENIX - SUMMER WOOFERS",

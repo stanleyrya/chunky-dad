@@ -57,6 +57,63 @@
       "slug": "cubhouse-philly-pride-2026-kickoff-dance-party-242e4df9"
     },
     {
+      "name": "CUBHOUSE PHILLY VALENTINE'S DANCE PARTY",
+      "day": "Friday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 39.9470542,
+        "lng": -75.161054
+      },
+      "startDate": "2026-02-13T21:00:00",
+      "endDate": "2026-02-14T02:00:00",
+      "unprocessedDescription": "description: CUBHOUSE returns for dancing with your VALENTINE'S\r sweet hearts at 254!\nCome paired or single and ready to mingle.   Keep a close eye on our Instagram for info regarding specials, guests, and special treats for all your hearts desires.\n Advance tickets are on sale now!\nbar: 254\naddress: 254 South 12th Street, Philadelphia, PA 19107\ntimezone: America/New_York\nticketUrl: https://www.eventbrite.com/e/cubhouse-philly-valentines-dance-party-tickets-1936787556719\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1167639013%2F2544065821071%2F1%2Foriginal.20251031-205615?crop=focalpoint&fit=crop&w=600&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=1d9da9d1c175b79fa1fc9ec4afcac0c2\nshortName: CUB-HOUSE\ninstagram: https://www.instagram.com/cubhouse.philly\nurl: https://linktr.ee/cubhouse\ngmaps: https://www.google.com/maps/search/?api=1&query=254%20South%2012th%20Street%2C%20Philadelphia%2C%20PA%2019107\nkey: cubhouse-philly-valentine-s-dance-party|2026-02-14|254",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "C9791D00-2BAB-4EB3-8347-4823E6C75F4A",
+      "uid": "C9791D00-2BAB-4EB3-8347-4823E6C75F4A",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "254",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1167639013%2F2544065821071%2F1%2Foriginal.20251031-205615?crop=focalpoint&fit=crop&w=600&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=1d9da9d1c175b79fa1fc9ec4afcac0c2",
+      "tea": "CUBHOUSE returns for dancing with your VALENTINE'S sweet hearts at 254!",
+      "address": "254 South 12th Street, Philadelphia, PA 19107",
+      "website": "https://linktr.ee/cubhouse",
+      "instagram": "https://www.instagram.com/cubhouse.philly",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=254%20South%2012th%20Street%2C%20Philadelphia%2C%20PA%2019107",
+      "ticketUrl": "https://www.eventbrite.com/e/cubhouse-philly-valentines-dance-party-tickets-1936787556719",
+      "shortName": "CUB-HOUSE",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/cubhouse",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/cubhouse.philly",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=254%20South%2012th%20Street%2C%20Philadelphia%2C%20PA%2019107",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/cubhouse-philly-valentines-dance-party-tickets-1936787556719",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "cubhouse-philly-valentines-dance-party-33f308ba"
+    },
+    {
       "name": "CUBHOUSE PHILLY SUMMER DANCE PARTY",
       "day": "Friday",
       "time": "9PM-2AM",
@@ -172,63 +229,6 @@
         }
       ],
       "slug": "cubhouse-philly-halloween-dance-party-7f59fc8c"
-    },
-    {
-      "name": "CUBHOUSE PHILLY VALENTINE'S DANCE PARTY",
-      "day": "Friday",
-      "time": "9PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 39.9470542,
-        "lng": -75.161054
-      },
-      "startDate": "2026-02-13T21:00:00",
-      "endDate": "2026-02-14T02:00:00",
-      "unprocessedDescription": "description: CUBHOUSE returns for dancing with your VALENTINE'S\r sweet hearts at 254!\nCome paired or single and ready to mingle.   Keep a close eye on our Instagram for info regarding specials, guests, and special treats for all your hearts desires.\n Advance tickets are on sale now!\nbar: 254\naddress: 254 South 12th Street, Philadelphia, PA 19107\ntimezone: America/New_York\nticketUrl: https://www.eventbrite.com/e/cubhouse-philly-valentines-dance-party-tickets-1936787556719\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1167639013%2F2544065821071%2F1%2Foriginal.20251031-205615?crop=focalpoint&fit=crop&w=600&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=1d9da9d1c175b79fa1fc9ec4afcac0c2\nshortName: CUB-HOUSE\ninstagram: https://www.instagram.com/cubhouse.philly\nurl: https://linktr.ee/cubhouse\ngmaps: https://www.google.com/maps/search/?api=1&query=254%20South%2012th%20Street%2C%20Philadelphia%2C%20PA%2019107\nkey: cubhouse-philly-valentine-s-dance-party|2026-02-14|254",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "C9791D00-2BAB-4EB3-8347-4823E6C75F4A",
-      "uid": "C9791D00-2BAB-4EB3-8347-4823E6C75F4A",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "254",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1167639013%2F2544065821071%2F1%2Foriginal.20251031-205615?crop=focalpoint&fit=crop&w=600&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=1d9da9d1c175b79fa1fc9ec4afcac0c2",
-      "tea": "CUBHOUSE returns for dancing with your VALENTINE'S sweet hearts at 254!",
-      "address": "254 South 12th Street, Philadelphia, PA 19107",
-      "website": "https://linktr.ee/cubhouse",
-      "instagram": "https://www.instagram.com/cubhouse.philly",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=254%20South%2012th%20Street%2C%20Philadelphia%2C%20PA%2019107",
-      "ticketUrl": "https://www.eventbrite.com/e/cubhouse-philly-valentines-dance-party-tickets-1936787556719",
-      "shortName": "CUB-HOUSE",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://linktr.ee/cubhouse",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/cubhouse.philly",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=254%20South%2012th%20Street%2C%20Philadelphia%2C%20PA%2019107",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/cubhouse-philly-valentines-dance-party-tickets-1936787556719",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "cubhouse-philly-valentines-dance-party-33f308ba"
     }
   ]
 }

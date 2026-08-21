@@ -20440,3 +20440,77 @@ test('identity-priority match stamps the brand identity but website only fills b
   assert.equal(stated.website, 'https://beefdip.com/planned-events/furball-pool-party/',
     'a real page-stated event site is never displaced by the brand site');
 });
+
+// ── Sanity rule: improbable-overnight-span (AM/PM typo detector) ──────────
+// A club night that starts in the small hours and runs into the EVENING is
+// almost certainly an AM/PM entry error at the source (BEEFMINCE Sitges,
+// 2026-09: "1AM-6PM" on the venue page for what is plainly a 1AM-6AM party).
+// Report-only: surfaces for the owner to notice; the stated value ships.
+test('an evening start running into the next afternoon flags as a likely AM/PM typo (GOLIDLOXX)', () => {
+  const core = new SharedCore({}, { eventSchema: EventSchema });
+  const flags = core.getEventSanityFlags({
+    title: 'GOLIDLOXX AUGUST',
+    startDate: new Date('2026-08-30T01:00:00Z'),   // Sat 9PM EDT
+    endDate: new Date('2026-08-30T20:00:00Z'),     // Sun 4PM EDT — 19h
+    timezone: 'America/New_York'
+  });
+  const flag = flags.find(f => f.code === 'improbable-overnight-span');
+  assert.ok(flag, 'a 9PM start running 19h to the next 4PM must flag');
+  assert.match(flag.detail, /AM\/PM/);
+});
+
+test('a genuine 10PM-8AM circuit party never flags improbable-overnight-span', () => {
+  const core = new SharedCore({}, { eventSchema: EventSchema });
+  const flags = core.getEventSanityFlags({
+    title: 'ALL NIGHT',
+    startDate: new Date('2026-09-05T22:00:00-04:00'),
+    endDate: new Date('2026-09-06T08:00:00-04:00'),
+    timezone: 'America/New_York'
+  });
+  assert.equal(flags.find(f => f.code === 'improbable-overnight-span'), undefined);
+});
+
+test('overnight start running into the evening flags as a likely AM/PM typo', () => {
+  const core = new SharedCore({}, { eventSchema: EventSchema });
+  const flags = core.getEventSanityFlags({
+    title: 'BEEFMINCE DISCO',
+    startDate: new Date('2026-09-10T01:00:00+02:00'),
+    endDate: new Date('2026-09-10T18:00:00+02:00'),
+    timezone: 'Europe/Madrid'
+  });
+  const flag = flags.find(f => f.code === 'improbable-overnight-span');
+  assert.ok(flag, 'a 1AM start running 17h to 6PM must flag');
+  assert.match(flag.detail, /AM\/PM/);
+});
+
+test('a genuine 1AM-6AM club night never flags improbable-overnight-span', () => {
+  const core = new SharedCore({}, { eventSchema: EventSchema });
+  const flags = core.getEventSanityFlags({
+    title: 'BEEFMINCE SPORTS ZONE',
+    startDate: new Date('2026-09-11T01:00:00+02:00'),
+    endDate: new Date('2026-09-11T06:00:00+02:00'),
+    timezone: 'Europe/Madrid'
+  });
+  assert.equal(flags.find(f => f.code === 'improbable-overnight-span'), undefined);
+});
+
+test('a long afternoon-into-night event (beer bust 2PM-2AM) never flags improbable-overnight-span', () => {
+  const core = new SharedCore({}, { eventSchema: EventSchema });
+  const flags = core.getEventSanityFlags({
+    title: 'SUNDAY BEER BUST',
+    startDate: new Date('2026-09-06T14:00:00-07:00'),
+    endDate: new Date('2026-09-07T02:00:00-07:00'),
+    timezone: 'America/Los_Angeles'
+  });
+  assert.equal(flags.find(f => f.code === 'improbable-overnight-span'), undefined);
+});
+
+test('improbable-overnight-span fails closed without a timezone', () => {
+  const core = new SharedCore({}, { eventSchema: EventSchema });
+  const flags = core.getEventSanityFlags({
+    title: 'MYSTERY NIGHT',
+    startDate: new Date('2026-09-10T01:00:00+02:00'),
+    endDate: new Date('2026-09-10T18:00:00+02:00')
+  });
+  assert.equal(flags.find(f => f.code === 'improbable-overnight-span'), undefined);
+});
