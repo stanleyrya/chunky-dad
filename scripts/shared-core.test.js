@@ -20367,3 +20367,76 @@ test('createFinalEventObject preloads OCR texts through the injected lookup and 
   assert.equal(finalEvent.image, NEW_MEAT_MARKET_IMAGE,
     'the stored stale flyer is replaced by the artwork that names the current event');
 });
+
+// ── Title-brand registry priority + taxonomy-archive guard (run 20260820) ──
+
+test('title identity outranks url-only co-matches in the promoter registry (FURBALL POOL PARTY on beefdip.com)', () => {
+  const core = createRegistryCore([
+    { name: 'Furball', website: 'https://www.furball.nyc', urlPatterns: ['furball.nyc'], bearAffinity: 'always' },
+    { name: 'BeefDip', website: 'https://beefdip.com', urlPatterns: ['beefdip.com'], bearAffinity: 'always' }
+  ]);
+  // The event's own name wears the Furball brand; beefdip.com only HOSTS the
+  // listing (its url token matches every guest brand's collab event).
+  const match = core.matchEventToPromoter({
+    title: 'FURBALL POOL PARTY',
+    ticketUrl: 'https://beefdip.com/planned-events/'
+  });
+  assert.ok(match && match.entry, `identity match expected, got: ${JSON.stringify(match)}`);
+  assert.equal(match.entry.name, 'Furball');
+  assert.equal(match.evidence, 'title');
+
+  // TWO identity matches remain genuinely ambiguous — still refused.
+  const both = core.matchEventToPromoter({
+    title: 'FURBALL x BEEFDIP TAKEOVER',
+    ticketUrl: 'https://beefdip.com/planned-events/'
+  });
+  assert.ok(both && Array.isArray(both.ambiguous), `two title brands still refuse: ${JSON.stringify(both)}`);
+  assert.deepEqual(both.ambiguous.slice().sort(), ['BeefDip', 'Furball']);
+});
+
+test('a taxonomy archive path is never a same-site event page (beefdip.com/tags/ was promoted to canonical website)', () => {
+  const core = createCore();
+  // The Wix tag-archive link must not read as "an event page buried by the
+  // bare root" — that promoted /tags/ over the real beefdip.com website.
+  assert.equal(core.isBareRootBuryingSameSiteEventPage('https://beefdip.com/', 'https://beefdip.com/tags/'), false);
+  assert.equal(core.isBareRootBuryingSameSiteEventPage('https://beefdip.com/', 'https://beefdip.com/category/parties/'), false);
+  // Real same-site event pages still bury the bare root.
+  assert.equal(core.isBareRootBuryingSameSiteEventPage('https://beefdip.com/', 'https://beefdip.com/planned-events/foam-party/'), true);
+});
+
+test('identity-priority match stamps the brand identity but website only fills blanks — never displaces a stated page', () => {
+  const registry = [
+    { name: 'Furball', website: 'https://www.furball.nyc', favicon: 'https://linktr.ee/furballnyc', instagram: 'https://instagram.com/furballnyc/', shortName: 'FUR-BALL', urlPatterns: ['furball.nyc'], bearAffinity: 'always' },
+    { name: 'BeefDip', website: 'https://beefdip.com', urlPatterns: ['beefdip.com'], bearAffinity: 'always' }
+  ];
+  // Blank-website collab event on the host's site: identity fields stamp
+  // from the TITLE brand; the identity-link ladder then fills the blank.
+  const blankCore = createRegistryCore(registry);
+  const blank = {
+    title: 'FURBALL POOL PARTY',
+    startDate: new Date('2027-02-05T21:00:00.000Z'),
+    ticketUrl: 'https://beefdip.com/planned-events/'
+  };
+  blankCore.applyPromoterRegistryMatches([blank], { name: 'p' }, ENFORCE_REGISTRY_CONFIG);
+  assert.equal(blank._promoter, 'Furball');
+  assert.equal(blank.favicon, 'https://linktr.ee/furballnyc', 'explicit registry favicon stamps');
+  assert.equal(blank.shortName, 'FUR-BALL');
+  blankCore.canonicalizeIdentityLinks([blank]);
+  assert.equal(blank.website, 'https://www.furball.nyc', 'the ladder fills a BLANK with the brand site');
+
+  // Same event but the page stated its own beefdip event page: the stated
+  // page survives — the brand site never displaces it (owner spec
+  // 2026-08-21: website must stay a useful page ABOUT THIS EVENT).
+  const statedCore = createRegistryCore(registry);
+  const stated = {
+    title: 'FURBALL POOL PARTY',
+    startDate: new Date('2027-02-05T21:00:00.000Z'),
+    website: 'https://beefdip.com/planned-events/furball-pool-party/'
+  };
+  statedCore.applyPromoterRegistryMatches([stated], { name: 'p' }, ENFORCE_REGISTRY_CONFIG);
+  assert.equal(stated._promoter, 'Furball');
+  assert.equal(stated.favicon, 'https://linktr.ee/furballnyc', 'brand favicon still rides the collab event');
+  statedCore.canonicalizeIdentityLinks([stated]);
+  assert.equal(stated.website, 'https://beefdip.com/planned-events/furball-pool-party/',
+    'a real page-stated event site is never displaced by the brand site');
+});

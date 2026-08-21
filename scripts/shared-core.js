@@ -1410,6 +1410,13 @@ class SharedCore {
         if (!candidateParts || !incumbentParts) return false;
         if (!this.areUrlHostsSameSite(candidateParts.host, incumbentParts.host)) return false;
         const candidateIsRoot = candidateParts.segments.length === 0 && !candidateParts.hasQuery;
+        // A taxonomy/platform archive (/tags/, /category/…) is site
+        // navigation, never an event page — treating it as one promoted
+        // beefdip.com/tags/ over the real canonical website (run 20260820,
+        // MAD.BEAR FOAM PARTY). Anchored on the FIRST path segment; event
+        // slugs deeper in the path are unaffected.
+        const incumbentFirstSegment = String(incumbentParts.segments[0] || '').toLowerCase();
+        if (/^(?:tags?|categor(?:y|ies)|archives?|labels?|topics?)$/.test(incumbentFirstSegment)) return false;
         return candidateIsRoot && incumbentParts.segments.length > 0;
     }
 
@@ -2938,6 +2945,18 @@ class SharedCore {
                 && other.entry.parent === match.entry.name
                 && matchedNames.has(other.entry.name)));
         if (withoutMatchedParents.length === 1) return withoutMatchedParents[0];
+        // TITLE-BRAND priority (run 20260820: "FURBALL POOL PARTY" listed on
+        // beefdip.com matched Furball by title and BeefDip by url, and the
+        // refusal left the event with NO website at all). Evidence kinds are
+        // not equal: organizer/title evidence means the event's OWN identity
+        // wears the brand; url evidence only says whose site hosts the
+        // listing — a festival's page lends its url token to every guest
+        // brand's collab event. When exactly one candidate has identity
+        // evidence and the rest matched only by url, the named brand wins.
+        // Two identity matches are genuinely ambiguous and still refuse.
+        const identityMatches = withoutMatchedParents.filter(match =>
+            !String(match.evidence || '').startsWith('url:'));
+        if (identityMatches.length === 1) return identityMatches[0];
         return { ambiguous: withoutMatchedParents.map(match => match.entry.name) };
     }
 
