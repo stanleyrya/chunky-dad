@@ -496,6 +496,19 @@
         updateTodayChip();
     }
 
+    // The static markup hardcodes WEEK as active; the loader corrects it
+    // from the URL during its (async) init — this pre-paint pass prevents
+    // the wrong underline from ever being painted at all.
+    (function () {
+        try {
+            const m = /[?&]view=(week|month)/.exec(window.location.search);
+            if (!m) return;
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-view') === m[1]);
+            });
+        } catch (e) {}
+    })();
+
     // Mount immediately — this script runs at the end of <body>, so the
     // controls are already in the header on the very first paint and the
     // header never grows after load.
