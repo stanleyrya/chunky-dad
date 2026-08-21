@@ -15278,3 +15278,118 @@ test('applyFlyerTimeConflictFlag fails closed on agreement, doors pairs, non-fly
   midnightParser.applyFlyerTimeConflictFlag([midnight]);
   assert.equal(midnight._flyerTimeConflict, undefined, 'a date-only midnight start never flags');
 });
+
+// ── Lumberyard coverage wave (run 20260820): flyer-only segments + srcset ──
+
+test('srcset parsing keeps Wix URLs whole — commas inside transform params are not entry separators (run 20260820 Lumberyard 404s)', () => {
+  const parser = createParser();
+  // Literal shape from thelumberyardbar.com: wixstatic URLs carry commas in
+  // their transform path (w_600,h_800,al_c,…). Splitting srcset on every
+  // comma shredded them; the relative shards ("enc_auto/quality_auto/…")
+  // were then re-rooted onto the page host as guaranteed-404 candidates
+  // that wasted OCR cap slots.
+  const html = '<img srcset="https://static.wixstatic.com/media/f45f1a_bear~mv2.jpeg/v1/fill/w_600,h_800,al_c,q_85,enc_auto/quality_auto/social.jpg 1x, https://static.wixstatic.com/media/f45f1a_bear~mv2.jpeg/v1/fill/w_1200,h_1600,al_c,q_85,enc_auto/quality_auto/social.jpg 2x">';
+  const urls = parser.extractOrderedImageUrlsFromHtml(html, 'https://www.thelumberyardbar.com/events');
+  assert.ok(!urls.some(u => u.includes('thelumberyardbar.com')),
+    `no shard may be re-rooted onto the page host, got: ${JSON.stringify(urls)}`);
+  assert.ok(urls.includes('https://static.wixstatic.com/media/f45f1a_bear~mv2.jpeg/v1/fill/w_600,h_800,al_c,q_85,enc_auto/quality_auto/social.jpg'),
+    'the 1x entry survives whole');
+  // The splitter itself yields BOTH entries whole (downstream dedupe then
+  // rightly collapses the size variants to one identity).
+  const entries = parser.splitSrcsetIntoUrlCandidates(
+    'https://static.wixstatic.com/media/a~mv2.jpg/v1/fill/w_600,h_800,al_c/f.jpg 1x, https://static.wixstatic.com/media/a~mv2.jpg/v1/fill/w_1200,h_1600,al_c/f.jpg 2x');
+  assert.deepEqual(entries, [
+    'https://static.wixstatic.com/media/a~mv2.jpg/v1/fill/w_600,h_800,al_c/f.jpg',
+    'https://static.wixstatic.com/media/a~mv2.jpg/v1/fill/w_1200,h_1600,al_c/f.jpg'
+  ]);
+});
+
+test('buildFlyerOnlySegments: one segment per text-bearing flyer, chrome and non-flyer classifications excluded', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://www.thelumberyardbar.com/mothly-events';
+  const ocrResults = [
+    { url: 'https://static.wixstatic.com/media/a~mv2.jpg', text: 'GAY BINGO\n2nd & 4th Thursdays 7pm', imageClassification: 'event-flyer' },
+    { url: 'https://static.wixstatic.com/media/b~mv2.jpg', text: 'RAT CITY HONKY TONK\nFirst Fridays 9pm', imageClassification: '' },
+    { url: 'https://static.wixstatic.com/media/logo~mv2.png', text: 'The Lumberyard Bar', imageClassification: 'logo' },
+    { url: 'https://static.wixstatic.com/media/thumb~mv2.png', text: 'GAME ON video game party third fridays', imageClassification: 'thumbnail' },
+    { url: 'https://static.wixstatic.com/media/short~mv2.png', text: 'hi', imageClassification: '' },
+    { url: 'https://static.wixstatic.com/media/a~mv2.jpg', text: 'GAY BINGO\n2nd & 4th Thursdays 7pm', imageClassification: 'event-flyer' }
+  ];
+  const segments = parser.buildFlyerOnlySegments(ocrResults, sourceUrl);
+  // a (flyer) + b (no classification, text — same fail-open rule as pairing);
+  // logo/thumbnail classifications and sub-minimal text excluded; the
+  // duplicate of a deduped.
+  assert.equal(segments.length, 2, `expected 2 flyer segments, got ${segments.length}`);
+  assert.deepEqual(segments.map(s => s.imageHintUrls), [
+    ['https://static.wixstatic.com/media/a~mv2.jpg'],
+    ['https://static.wixstatic.com/media/b~mv2.jpg']
+  ]);
+  for (const segment of segments) {
+    assert.equal(segment._flyerOnlySegment, true);
+    assert.deepEqual(segment.lines, [], 'flyer segments carry no invented page text');
+  }
+});
+
+test('zero-text multi-event page with OCR flyers extracts one event per flyer instead of whole-page fallback (Lumberyard /mothly-events)', async () => {
+  const parser = createParser();
+  const sourceUrl = 'https://www.thelumberyardbar.com/mothly-events';
+  const htmlData = {
+    url: sourceUrl,
+    html: '<html><body><img src="https://static.wixstatic.com/media/a~mv2.jpg"><img src="https://static.wixstatic.com/media/b~mv2.jpg"></body></html>'
+  };
+  const ocrResults = [
+    { url: 'https://static.wixstatic.com/media/a~mv2.jpg', text: 'GAY BINGO\n2nd & 4th Thursdays 7pm', imageClassification: 'event-flyer' },
+    { url: 'https://static.wixstatic.com/media/b~mv2.jpg', text: 'RAT CITY HONKY TONK\nFirst Fridays 9pm', imageClassification: 'event-flyer' },
+    { url: 'https://static.wixstatic.com/media/logo~mv2.png', text: 'The Lumberyard Bar', imageClassification: 'logo' }
+  ];
+  const seenSegments = [];
+  parser.extractSingleEvent = async (segmentHtmlData) => {
+    const ownOcr = Array.isArray(segmentHtmlData.ocrResults) ? segmentHtmlData.ocrResults : [];
+    seenSegments.push(ownOcr.map(o => o.url));
+    const first = ownOcr[0];
+    return {
+      title: first ? String(first.text).split('\n')[0] : 'WHOLE PAGE',
+      startDate: '2026-09-03T19:00:00.000Z',
+      image: first ? first.url : undefined
+    };
+  };
+  const events = await parser.extractEventsFromMultiEventPage(
+    htmlData, { name: 'The Lumberyard' }, null, ['title', 'startDate'], ocrResults, null);
+  assert.equal(events.length, 2, `one event per flyer, got ${events.length}: ${JSON.stringify(events.map(e => e.title))}`);
+  assert.deepEqual(events.map(e => e.title).sort(), ['GAY BINGO', 'RAT CITY HONKY TONK']);
+  // Each synthetic segment paired exactly its own flyer's OCR.
+  assert.deepEqual(seenSegments, [
+    ['https://static.wixstatic.com/media/a~mv2.jpg'],
+    ['https://static.wixstatic.com/media/b~mv2.jpg']
+  ]);
+});
+
+test('a segment fused around two distinct flyers spawns a flyer-only segment for the extra (South Seattle Bear Social)', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://www.thelumberyardbar.com/events';
+  const dollyUrl = 'https://static.wixstatic.com/media/35bbb~mv2.jpg';
+  const bearUrl = 'https://static.wixstatic.com/media/eab96~mv2.jpeg';
+  const triviaUrl = 'https://static.wixstatic.com/media/trivia~mv2.jpg';
+  const ocrResults = [
+    { url: dollyUrl, text: 'DOLLY AND THE DJ\nSaturdays 9pm', imageClassification: 'event-flyer' },
+    { url: bearUrl, text: 'SOUTH SEATTLE BEAR SOCIAL\nSundays 2-6pm', imageClassification: 'event-flyer' },
+    { url: triviaUrl, text: 'TACO TRIVIA TUESDAY 7pm', imageClassification: 'event-flyer' }
+  ];
+  const fused = { lines: ['Dolly and the DJ', 'Saturday nights 9pm'], html: '', imageHintUrls: [dollyUrl, bearUrl] };
+  const single = { lines: ['Trivia Taco Tuesday', '7pm weekly'], html: '', imageHintUrls: [triviaUrl] };
+  const extras = parser.collectFusedFlyerTopUpSegments([fused, single], ocrResults, sourceUrl);
+  assert.equal(extras.length, 1, 'exactly the extra flyer gets its own segment');
+  assert.deepEqual(extras[0].imageHintUrls, [bearUrl]);
+  assert.ok(fused.ocrExcludedUrlKeys instanceof Set && fused.ocrExcludedUrlKeys.size === 1,
+    'the fused segment stops claiming the split-off flyer');
+  assert.ok(!(single.ocrExcludedUrlKeys instanceof Set) || single.ocrExcludedUrlKeys.size === 0,
+    'the single-flyer segment is untouched');
+
+  // Uniqueness guard: a flyer claimed by TWO segments (its own text listing
+  // exists elsewhere on the page, Sugar-Bear-style) spawns nothing — no
+  // duplicate events.
+  const owner = { lines: ['South Seattle Bear Social', 'Sundays 2-6pm'], html: '', imageHintUrls: [bearUrl] };
+  const fusedAgain = { lines: ['Dolly and the DJ', 'Saturday nights 9pm'], html: '', imageHintUrls: [dollyUrl, bearUrl] };
+  const none = parser.collectFusedFlyerTopUpSegments([fusedAgain, owner], ocrResults, sourceUrl);
+  assert.equal(none.length, 0, 'a flyer with its own segment elsewhere never spawns a duplicate');
+});
