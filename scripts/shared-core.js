@@ -678,13 +678,43 @@ class SharedCore {
         const isPlainObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
         const isArrayOfObjects = (value) => Array.isArray(value) && value.length > 0 && value.every(isPlainObject);
         const isIsoDateish = (value) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value.trim());
+        // Mirror extensions (see jsonApiObjectLooksEventLike): one level of
+        // content/attributes wrapper unwrap, rich-text {text}/{rendered}
+        // titles with `summary` accepted, and epoch-millis / when-container
+        // dates ({ millis }, { start: { millis } }).
+        const isEpochMillis = (value) => typeof value === 'number' && value > 1e11 && value < 1e13;
+        const textValue = (value) => {
+            if (typeof value === 'string') return value;
+            if (isPlainObject(value)) {
+                for (const key of ['text', 'rendered', 'value']) {
+                    if (typeof value[key] === 'string') return value[key];
+                }
+            }
+            return '';
+        };
+        const isDateCandidate = (value) => {
+            if (isIsoDateish(value) || isEpochMillis(value)) return true;
+            if (!isPlainObject(value)) return false;
+            if (isEpochMillis(value.millis)) return true;
+            const member = value.start;
+            return isIsoDateish(member) || isEpochMillis(member)
+                || (isPlainObject(member) && isEpochMillis(member.millis));
+        };
+        const unwrap = (obj) => {
+            for (const key of Object.keys(obj)) {
+                if (!/^(content|attributes|properties|fields)$/.test(normalizeKey(key))) continue;
+                if (isPlainObject(obj[key])) return { ...obj[key], ...obj };
+            }
+            return obj;
+        };
         const looksEventLike = (obj) => {
             if (!isPlainObject(obj)) return false;
-            const keys = Object.keys(obj);
-            const hasTitle = keys.some(key => /^(name|title)$/.test(normalizeKey(key))
-                && typeof obj[key] === 'string' && obj[key].trim() !== '');
+            const view = unwrap(obj);
+            const keys = Object.keys(view);
+            const hasTitle = keys.some(key => /^(name|title|summary)$/.test(normalizeKey(key))
+                && textValue(view[key]).trim() !== '');
             if (!hasTitle) return false;
-            return keys.some(key => /(^|_)(start|date|datetime)/.test(normalizeKey(key)) && isIsoDateish(obj[key]));
+            return keys.some(key => /(^|_)(start|date|datetime|when)/.test(normalizeKey(key)) && isDateCandidate(view[key]));
         };
         if (isArrayOfObjects(parsed)) {
             return parsed.filter(looksEventLike).length;
@@ -1303,7 +1333,7 @@ class SharedCore {
         const pathHasApi = segments.includes('api');
         if (!hostIsApi && !pathHasApi) return false;
         const hasVersionSegment = segments.some(segment => /^v\d+$/.test(segment));
-        const hasMachineQuery = /[?&](?:q|query|search|per_page|page|limit|offset|format|callback|api_key|apikey|key|token)=/i.test(raw);
+        const hasMachineQuery = /[?&](?:q|query|search|per_page|page|limit|max|offset|format|callback|api_key|apikey|key|token)=/i.test(raw);
         return hasVersionSegment || hasMachineQuery;
     }
 

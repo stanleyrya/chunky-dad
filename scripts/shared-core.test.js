@@ -20514,3 +20514,33 @@ test('improbable-overnight-span fails closed without a timezone', () => {
   });
   assert.equal(flags.find(f => f.code === 'improbable-overnight-span'), undefined);
 });
+
+// ---------------------------------------------------------------------------
+// countJsonApiEventObjects mirror extensions: wrapper/rich-text/epoch shapes
+// (kept in sync with AiWebParser.jsonApiObjectLooksEventLike — Tockify feed
+// shape: content wrapper, summary.{text} title, when.start.{millis} date).
+// ---------------------------------------------------------------------------
+
+test('countJsonApiEventObjects counts Tockify-shaped wrapper/epoch events for page classification', () => {
+  const core = createCore();
+  const body = JSON.stringify({
+    events: [
+      {
+        eid: { uid: '39689' },
+        when: { start: { millis: 1788055200000, tzid: 'America/New_York' }, end: { millis: 1788076800000 } },
+        content: { summary: { text: 'Gorditos at Rockbar' }, place: 'Rockbar NYC' }
+      },
+      {
+        eid: { uid: '31035' },
+        when: { start: { millis: 1787364000000, tzid: 'America/New_York' } },
+        content: { summary: { text: 'Underbear Party at Rockbar' } }
+      }
+    ],
+    metaData: {}
+  });
+  assert.equal(core.countJsonApiEventObjects(body), 2);
+  // Objects that merely carry a when container with no resolvable start stay non-events
+  assert.equal(core.countJsonApiEventObjects(JSON.stringify({
+    events: [{ content: { summary: { text: 'title only' } }, when: { allDay: false } }]
+  })), 0);
+});

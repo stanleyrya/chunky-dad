@@ -97,6 +97,24 @@ const scraperConfig = {
       },
     },
     {
+      name: "Rockbar",
+      // West Village leather/rock bar (185 Christopher St) with heavy bear
+      // programming (Gorditos, Underbear, Bears Night Out, Rockstrap). Their
+      // own Squarespace site's events listing serves stale content (frozen
+      // Aug 2024), so the live source is Thotyssey's Tockify calendar: the
+      // venue-tagged JSON feed replays browser-free and carries title,
+      // epoch-millis times with tzid, venue name, and full address per
+      // event. Kink/pup nights share the tag — bear check filters, not
+      // alwaysBear.
+      urls: ["https://tockify.com/api/ngevent?max=100&calname=thotyssey&tags=rockbar"],
+      alwaysBear: false,
+      siteRole: "venue",
+      metadata: {
+        website: { value: "https://www.rockbarnyc.com" },
+        instagram: { value: "https://www.instagram.com/rockbarnyc" },
+      },
+    },
+    {
       name: "Twisted Bear",
       // discoveryOnly: true,
       urls: [

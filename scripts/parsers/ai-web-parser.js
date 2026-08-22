@@ -7575,18 +7575,96 @@ class AiWebParser {
         return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value.trim());
     }
 
+    // One level of attribute-wrapper unwrapping. JSON:API nests everything
+    // under `attributes`, Tockify under `content`, some CMSes under
+    // `properties`/`fields` — the event-ish keys live one level down while
+    // ids/timestamps stay on the outer object. Outer keys win on collision
+    // (they are the more specific ones — `when` vs a wrapped `date` string).
+    unwrapJsonApiCandidate(obj) {
+        if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj;
+        for (const key of Object.keys(obj)) {
+            if (!/^(content|attributes|properties|fields)$/.test(this.normalizeJsonApiKey(key))) continue;
+            const wrapped = obj[key];
+            if (wrapped && typeof wrapped === 'object' && !Array.isArray(wrapped)) {
+                return { ...wrapped, ...obj };
+            }
+        }
+        return obj;
+    }
+
+    // Rich-text values arrive as plain strings, or as one-key objects:
+    // { text } (Tockify), { rendered } (WordPress REST), { value }. Unwrap to
+    // the string; '' when neither shape holds a non-empty string.
+    jsonApiTextValue(value) {
+        if (typeof value === 'string') return value;
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+            for (const key of ['text', 'rendered', 'value']) {
+                if (typeof value[key] === 'string' && value[key].trim() !== '') return value[key];
+            }
+        }
+        return '';
+    }
+
+    // Resolve a date-ish JSON API value to { date, timezone, timezoneUnresolved }
+    // or null. Handles, generically:
+    //   • ISO-8601-ish strings (delegates to parseJsonLdDateValue, unchanged);
+    //   • epoch-milliseconds members: a bare 12–13 digit number, or
+    //     { millis, tzid? } (Tockify) — an epoch instant is absolute, so
+    //     timezoneUnresolved is false and the tzid rides along when present;
+    //   • when-containers: { start: …, end: … } (Tockify `when`) — `edge`
+    //     picks which member to resolve, one level of recursion only.
+    jsonApiDateCandidateFromValue(value, edge = 'start') {
+        if (this.jsonApiValueIsIsoDateish(value)) {
+            const parsed = this.parseJsonLdDateValue(value);
+            return parsed.date ? { date: parsed.date, timezone: null, timezoneUnresolved: parsed.timezoneUnresolved } : null;
+        }
+        const epochToDate = (millis, tzid) => {
+            const date = new Date(millis);
+            return isNaN(date.getTime()) ? null : { date, timezone: tzid || null, timezoneUnresolved: false };
+        };
+        if (typeof value === 'number' && value > 1e11 && value < 1e13) {
+            return epochToDate(value, null);
+        }
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+            if (typeof value.millis === 'number' && value.millis > 1e11 && value.millis < 1e13) {
+                return epochToDate(value.millis, typeof value.tzid === 'string' ? value.tzid.trim() : null);
+            }
+            const member = value[edge];
+            if (member !== undefined && member !== value) {
+                if (this.jsonApiValueIsIsoDateish(member)) {
+                    const parsed = this.parseJsonLdDateValue(member);
+                    return parsed.date ? { date: parsed.date, timezone: null, timezoneUnresolved: parsed.timezoneUnresolved } : null;
+                }
+                if (typeof member === 'number' && member > 1e11 && member < 1e13) {
+                    return epochToDate(member, null);
+                }
+                if (member && typeof member === 'object' && !Array.isArray(member)
+                    && typeof member.millis === 'number' && member.millis > 1e11 && member.millis < 1e13) {
+                    return epochToDate(member.millis, typeof member.tzid === 'string' ? member.tzid.trim() : null);
+                }
+            }
+        }
+        return null;
+    }
+
     // "Event-like" = carries a name/title key AND some start/date-ish key
     // holding an ISO-8601-ish string. Mirrored (in compact form) by
     // SharedCore.countJsonApiEventObjects for deterministic page
     // classification — keep the two in sync.
+    // Extended generically (same mirror contract): the object may wrap its
+    // fields in a content/attributes wrapper, the title may be a rich-text
+    // {text}/{rendered} object (with `summary` accepted as the title key —
+    // it is VEVENT's own name for it), and the date may be an epoch-millis
+    // member or a when-container ({ start: { millis } }).
     jsonApiObjectLooksEventLike(obj) {
         if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
-        const keys = Object.keys(obj);
-        const hasTitle = keys.some(key => /^(name|title)$/.test(this.normalizeJsonApiKey(key))
-            && typeof obj[key] === 'string' && obj[key].trim() !== '');
+        const view = this.unwrapJsonApiCandidate(obj);
+        const keys = Object.keys(view);
+        const hasTitle = keys.some(key => /^(name|title|summary)$/.test(this.normalizeJsonApiKey(key))
+            && this.jsonApiTextValue(view[key]).trim() !== '');
         if (!hasTitle) return false;
-        return keys.some(key => /(^|_)(start|date|datetime)/.test(this.normalizeJsonApiKey(key))
-            && this.jsonApiValueIsIsoDateish(obj[key]));
+        return keys.some(key => /(^|_)(start|date|datetime|when)/.test(this.normalizeJsonApiKey(key))
+            && this.jsonApiDateCandidateFromValue(view[key], 'start') !== null);
     }
 
     // Candidate event objects inside a parsed JSON payload, generically:
@@ -7748,7 +7826,11 @@ class AiWebParser {
         const clean = (value) => this.normalizeWhitespace(
             this.decodeBasicEntities(this.stripTags(String(value || ''))).replace(/&amp;/gi, '&')
         );
-        const keys = Object.keys(obj);
+        // Attribute-wrapped payloads (Tockify `content`, JSON:API `attributes`)
+        // expose their event fields one level down — match against the
+        // unwrapped view everywhere below.
+        const view = this.unwrapJsonApiCandidate(obj);
+        const keys = Object.keys(view);
         const isHttpString = (value) => typeof value === 'string' && /^https?:\/\//i.test(value.trim());
         const isNonEmptyString = (value) => typeof value === 'string' && value.trim() !== '';
         // First value whose normalized key matches keyPattern (and does not
@@ -7758,27 +7840,39 @@ class AiWebParser {
                 const normalizedKey = this.normalizeJsonApiKey(key);
                 if (!keyPattern.test(normalizedKey)) continue;
                 if (excludePattern && excludePattern.test(normalizedKey)) continue;
-                if (predicate(obj[key])) return obj[key];
+                if (predicate(view[key])) return view[key];
             }
             return '';
         };
-        const firstDateValue = (keyPattern) => {
+        // Rich-text-aware companion: unwraps { text }/{ rendered } members.
+        const firstTextValue = (keyPattern) => {
             for (const key of keys) {
                 if (!keyPattern.test(this.normalizeJsonApiKey(key))) continue;
-                if (!this.jsonApiValueIsIsoDateish(obj[key])) continue;
-                const parsedDate = this.parseJsonLdDateValue(obj[key]);
-                if (parsedDate.date) return parsedDate;
+                const text = this.jsonApiTextValue(view[key]);
+                if (text.trim() !== '') return text;
             }
-            return { date: null, timezoneUnresolved: false };
+            return '';
+        };
+        const firstDateValue = (keyPattern, edge = 'start') => {
+            for (const key of keys) {
+                if (!keyPattern.test(this.normalizeJsonApiKey(key))) continue;
+                const candidate = this.jsonApiDateCandidateFromValue(view[key], edge);
+                if (candidate && candidate.date) return candidate;
+            }
+            return { date: null, timezone: null, timezoneUnresolved: false };
         };
 
-        const title = clean(firstValue(/^(name|title)$/, isNonEmptyString));
+        // name/title first; `summary` (VEVENT's own title key — Tockify) only
+        // as the fallback so payloads carrying both keep their description.
+        const summaryText = clean(firstTextValue(/^summary$/));
+        let title = clean(firstTextValue(/^(name|title)$/));
+        if (!title) title = summaryText;
         // Explicit start-ish keys first (first_performance_start_at, start_at,
-        // startDate …), then bare date/datetime keys.
-        let start = firstDateValue(/(^|_)start/);
-        if (!start.date) start = firstDateValue(/(^|_)(date|datetime)(_|$)/);
+        // startDate, when-containers …), then bare date/datetime keys.
+        let start = firstDateValue(/(^|_)(start|when)/, 'start');
+        if (!start.date) start = firstDateValue(/(^|_)(date|datetime)(_|$)/, 'start');
         if (!title || !start.date) return null;
-        const end = firstDateValue(/(^|_)end/);
+        const end = firstDateValue(/(^|_)(end|when)/, 'end');
 
         // Address composed from street + locality + state + postal style keys,
         // with the JSON-LD path's duplicate-part guard.
@@ -7796,7 +7890,8 @@ class AiWebParser {
         }
         const address = accumulated.join(', ');
 
-        let bar = clean(firstValue(/^(venue|venue_name|location_name)$/, isNonEmptyString));
+        // `place` is schema.org's and Tockify's venue-name key.
+        let bar = clean(firstValue(/^(venue|venue_name|location_name|place)$/, isNonEmptyString));
         if (bar && this.venueNameLooksLikeStreetAddress(bar, address)) {
             console.log(`🤖 AI Web: JSON API venue name "${bar}" looks like a street address — not using it as bar`);
             bar = '';
@@ -7824,9 +7919,13 @@ class AiWebParser {
         const sourceIsApiEndpoint = this.core && typeof this.core.isApiEndpointUrl === 'function'
             ? this.core.isApiEndpointUrl(sourceUrl)
             : false;
+        // When `summary` became the title, it must not double as the
+        // description; a real description key still wins outright.
+        let description = clean(firstTextValue(/^description$/));
+        if (!description && summaryText && summaryText !== title) description = summaryText;
         const event = {
             title,
-            description: clean(firstValue(/^(description|summary)$/, isNonEmptyString)),
+            description,
             startDate: start.date,
             endDate: end.date || null,
             bar,
@@ -7852,7 +7951,7 @@ class AiWebParser {
         // SAME provenance flag the JSON-LD offers path uses: these are live
         // ticket-vendor tier prices (they move as tiers sell out), so the
         // merge layer's stored-door-price rule applies to them identically.
-        const cover = this.formatJsonApiPriceCover(obj);
+        const cover = this.formatJsonApiPriceCover(view);
         if (cover) {
             event.cover = cover;
             event._coverFromJsonLdOffers = true;
@@ -7863,6 +7962,10 @@ class AiWebParser {
             (value) => typeof value === 'string' && /^[A-Za-z]+\/[A-Za-z0-9_+\-/]+$/.test(value.trim()));
         if (timezoneValue) {
             event.timezone = timezoneValue.trim();
+        } else if (start.timezone && /^[A-Za-z]+\/[A-Za-z0-9_+\-/]+$/.test(start.timezone)) {
+            // Epoch-millis date members carry their own IANA tzid (Tockify
+            // when.start.tzid) — same authority as a payload timezone key.
+            event.timezone = start.timezone;
         }
         if (address && cityConfig) {
             const cityKey = this.findCityKeyInText(address, cityConfig);
