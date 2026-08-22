@@ -1,7 +1,7 @@
 [
   {
     "slug": "bearracuda-seattle-283ac3dd",
-    "url": "https://bearracuda.com/",
+    "url": "https://bearracuda.com/events/7days/",
     "faviconBg": "#ff1901",
     "faviconFg": "#ff5000",
     "faviconPlate": "#fffefe",
@@ -42,12 +42,12 @@
   {
     "slug": "leather-night-51e2ca8d",
     "url": "https://dieselseattle.com/DIESEL.html",
-    "faviconBg": "#335a91",
-    "faviconFg": "#c3cbd4",
-    "faviconPlate": "#3a63bd",
+    "faviconBg": "#efeeed",
+    "faviconFg": "#7e4b3c",
+    "faviconPlate": "#f6f6f6",
     "paletteSource": "favicon",
-    "palette": "#003a73:28:11 #3a63bd:24:15 #ffffff:19:0 #009999:3:11",
-    "accent": "#3a63bd"
+    "palette": "#f6f6f6:63:0 #e35326:10:19 #858484:6:0 #a94526:2:14",
+    "accent": "#e35326"
   },
   {
     "slug": "seattle-glow-3b330fb1",
@@ -57,7 +57,7 @@
   },
   {
     "slug": "treasure-trail-seattle-2a543921",
-    "url": "https://bearracuda.com/",
+    "url": "https://bearracuda.com/events/treasure-trail-seattle/",
     "faviconBg": "#ff1901",
     "faviconFg": "#ff5000",
     "faviconPlate": "#fffefe",

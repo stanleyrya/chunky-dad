@@ -2,8 +2,8 @@
   {
     "slug": "furball-3a9e89bc",
     "url": "https://www.furball.nyc",
-    "faviconBg": "#302f35",
-    "faviconFg": "#f8f8f8",
+    "faviconBg": "#f6f6f6",
+    "faviconFg": "#393a3f",
     "faviconPlate": "#ffffff",
     "paletteSource": "flyer",
     "palette": "#010202:50:0 #0a1111:19:1 #442c24:10:4 #c59482:6:6 #ffda55:4:15",
@@ -11,10 +11,10 @@
   },
   {
     "slug": "furball-boston-003b3ace",
-    "url": "https://www.furball.nyc",
-    "faviconBg": "#2d2c32",
-    "faviconFg": "#f7f7f7",
-    "faviconPlate": "#fffefe",
+    "url": "https://furball.nyc",
+    "faviconBg": "#f6f6f6",
+    "faviconFg": "#393a3f",
+    "faviconPlate": "#ffffff",
     "paletteSource": "flyer",
     "palette": "#020101:27:1 #130401:20:3 #db8c64:13:11 #a35b3a:12:10 #f4cb5b:5:14",
     "accent": "#db8c64"

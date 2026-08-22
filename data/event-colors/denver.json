@@ -15,9 +15,9 @@
     "faviconBg": "#ff1901",
     "faviconFg": "#ff5000",
     "faviconPlate": "#fffefe",
-    "paletteSource": "favicon",
-    "palette": "#ff3c00:72:24 #fffefe:27:0 #ff9f81:1:12",
-    "accent": "#ff3c00"
+    "paletteSource": "flyer",
+    "palette": "#22c3fb:33:14 #f3fbfd:14:1 #d7e1e5:10:1",
+    "accent": "#22c3fb"
   },
   {
     "slug": "denver-39553322",

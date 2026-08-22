@@ -108,9 +108,9 @@
   {
     "slug": "furball-chicago-market-days-4ca14ebb",
     "url": "https://www.furball.nyc",
-    "faviconBg": "#2d2c32",
-    "faviconFg": "#f7f7f7",
-    "faviconPlate": "#fffefe",
+    "faviconBg": "#f6f6f6",
+    "faviconFg": "#393a3f",
+    "faviconPlate": "#ffffff",
     "paletteSource": "flyer",
     "palette": "#020403:23:1 #1c1322:18:3 #b36364:13:10 #212255:11:9 #6b497b:10:9",
     "accent": "#b36364"
@@ -118,11 +118,11 @@
   {
     "slug": "furball-market-days-78310803",
     "url": "https://www.furball.nyc/",
-    "faviconBg": "#2d2c32",
-    "faviconFg": "#f7f7f7",
-    "faviconPlate": "#fffefe",
+    "faviconBg": "#302f35",
+    "faviconFg": "#f8f8f8",
+    "faviconPlate": "#ffffff",
     "paletteSource": "favicon",
-    "palette": "#25242b:46:1 #fefefe:45:0 #131216:3:1"
+    "palette": "#28272d:46:1 #fefefe:44:0 #0a090e:3:1"
   },
   {
     "slug": "goldiloxx-chicago-7c2b222b",

@@ -29,9 +29,9 @@
   {
     "slug": "furball-442f8415",
     "url": "https://www.furball.nyc",
-    "faviconBg": "#2d2c32",
-    "faviconFg": "#f7f7f7",
-    "faviconPlate": "#fffefe",
+    "faviconBg": "#302f35",
+    "faviconFg": "#f8f8f8",
+    "faviconPlate": "#ffffff",
     "paletteSource": "flyer",
     "palette": "#130b2b:33:6 #010101:29:1 #3e2845:13:6 #93252e:7:15 #6c5c7c:7:5",
     "accent": "#93252e"

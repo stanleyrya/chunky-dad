@@ -8,9 +8,9 @@
   {
     "slug": "furball-51be4236",
     "url": "https://www.furball.nyc",
-    "faviconBg": "#2d2c32",
-    "faviconFg": "#f7f7f7",
-    "faviconPlate": "#fffefe",
+    "faviconBg": "#f6f6f6",
+    "faviconFg": "#393a3f",
+    "faviconPlate": "#ffffff",
     "paletteSource": "flyer",
     "palette": "#010101:39:0 #241c13:18:2 #6d452b:14:7 #db7442:10:14 #f3d22b:5:17",
     "accent": "#db7442"
@@ -18,8 +18,8 @@
   {
     "slug": "furball-ptown-2d335fcd",
     "url": "https://www.furball.nyc",
-    "faviconBg": "#302f35",
-    "faviconFg": "#f8f8f8",
+    "faviconBg": "#f6f6f6",
+    "faviconFg": "#393a3f",
     "faviconPlate": "#ffffff",
     "paletteSource": "flyer",
     "palette": "#1a97b3:21:11 #000000:19:0 #0a2327:16:3 #b56c49:9:10 #e2d17d:4:11",
@@ -28,9 +28,9 @@
   {
     "slug": "riptide-3342cdd1",
     "url": "https://www.furball.nyc",
-    "faviconBg": "#2d2c32",
-    "faviconFg": "#f7f7f7",
-    "faviconPlate": "#fffefe",
+    "faviconBg": "#f6f6f6",
+    "faviconFg": "#393a3f",
+    "faviconPlate": "#ffffff",
     "paletteSource": "flyer",
     "palette": "#141b1c:28:1 #2aa4db:21:13 #1d6d92:12:9 #eca48b:7:9 #af694e:7:10",
     "accent": "#2aa4db"

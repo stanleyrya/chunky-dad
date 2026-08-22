@@ -1,10 +1,10 @@
 {
-  "originalUrl": "https://www.google.com/s2/favicons?domain=www.rockbarnyc.com&sz=64",
+  "originalUrl": "https://www.google.com/s2/favicons?domain=rockbarnyc.com&sz=64",
+  "source": "manual",
+  "manualSourceUrl": "https://images.squarespace-cdn.com/content/v1/65cf83ae66176c1759534112/4751f452-8eee-4938-9240-15724fe77fbe/rockbar_logo_white.png",
+  "note": "Manually curated: rockbarnyc.com serves the stock Squarespace default favicon. This is the site header ROCKBAR NYC stencil (white on transparent), letterboxed onto black for legibility on any background.",
   "type": "favicon",
   "filename": "favicon-rockbarnyc.com-64px.ico",
   "size": "64",
-  "contentType": "image/png",
-  "contentLength": "559",
-  "downloadedAt": "2026-08-22T20:15:29.329Z",
-  "lastModified": "Wed, 29 Nov 2017 12:34:19 GMT"
+  "downloadedAt": "2026-08-22T03:18:39.901Z"
 }

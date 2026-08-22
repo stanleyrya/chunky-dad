@@ -1108,10 +1108,14 @@ class CalendarCore {
             }
         }
         
-        // For monthly events without calendar context, show next occurrence
-        const startDateStr = startDate instanceof Date ? 
-            startDate.toISOString().split('T')[0] : startDate;
-        const parts = startDateStr.split('-');
+        // For monthly events without calendar context, show next occurrence.
+        // Local date parts, NOT toISOString(): same UTC-shift bug as the
+        // one-off branch above — any evening event west of UTC read one day
+        // later than the calendar cell it sat under.
+        if (startDate instanceof Date && !isNaN(startDate.getTime())) {
+            return `${startDate.getMonth() + 1}/${startDate.getDate()}`;
+        }
+        const parts = String(startDate).split('T')[0].split('-');
         const month = parseInt(parts[1]);
         const date = parseInt(parts[2]);
         return `${month}/${date}`;
@@ -1122,9 +1126,12 @@ class CalendarCore {
         const dates = [];
         
         if (!event.recurring || !event.recurrence) {
-            // One-off event - check if it falls within the period
-            const startDateStr = event.startDate instanceof Date ? 
-                event.startDate.toISOString().split('T')[0] : event.startDate;
+            // One-off event - check if it falls within the period.
+            // Local date parts, NOT toISOString(): the UTC date shifts any
+            // evening event west of UTC one day forward (getDateBadgeContent's
+            // one-off branch documents the same contract — match the grid).
+            const startDateStr = event.startDate instanceof Date ?
+                `${event.startDate.getFullYear()}-${event.startDate.getMonth() + 1}-${event.startDate.getDate()}` : event.startDate;
             const parts = startDateStr.split('-');
             const eventDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
             if (eventDate >= periodStart && eventDate <= periodEnd) {
@@ -1145,8 +1152,12 @@ class CalendarCore {
             periodEnd: periodEnd.toISOString().split('T')[0]
         });
         
-        const startDateStr = event.startDate instanceof Date ? 
-            event.startDate.toISOString().split('T')[0] : event.startDate;
+        // Local date parts, NOT toISOString(): the loader's expanded
+        // occurrences carry local evening times (e.g. 10PM Eastern), and the
+        // UTC date is already tomorrow — the badge then contradicts the grid
+        // cell the event sits under ("8/30" on an 8/29 party).
+        const startDateStr = event.startDate instanceof Date ?
+            `${event.startDate.getFullYear()}-${event.startDate.getMonth() + 1}-${event.startDate.getDate()}` : event.startDate;
         const parts = startDateStr.split('-');
         const eventStartDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
         if (eventStartDate > periodEnd) return dates;

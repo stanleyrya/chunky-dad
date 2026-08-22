@@ -50,6 +50,16 @@
     "accent": "#8f4201"
   },
   {
+    "slug": "bear-pride-cologne-1cd3a501",
+    "url": "https://bearpride.cologne/",
+    "faviconBg": "#fdfcfc",
+    "faviconFg": "#da736f",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:82:0 #f26161:3:18 #ece2dd:3:1 #f62320:3:24 #cc3f3a:2:18",
+    "accent": "#f62320"
+  },
+  {
     "slug": "bear-week-provincetown-5317e10e",
     "url": "https://www.eventbrite.com/o/ptownbears-78481077703",
     "faviconBg": "#ff5e30",
@@ -74,6 +84,16 @@
     "paletteSource": "favicon",
     "palette": "#ffffff:53:0 #df0209:23:23 #fde224:19:18 #fef4ba:1:7 #e94e4f:1:19",
     "accent": "#df0209"
+  },
+  {
+    "slug": "brighton-bear-weekend-237d48b8",
+    "url": "https://brightonbearweekend.com/",
+    "faviconBg": "#556267",
+    "faviconFg": "#efeddf",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#4b677a:24:5 #fff9ef:24:2 #2b4c65:17:6 #835e33:13:8 #6187a2:10:6",
+    "accent": "#835e33"
   },
   {
     "slug": "fire-island-bear-weekend-4919c361",
