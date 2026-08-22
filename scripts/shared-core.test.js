@@ -20544,3 +20544,16 @@ test('countJsonApiEventObjects counts Tockify-shaped wrapper/epoch events for pa
     events: [{ content: { summary: { text: 'title only' } }, when: { allDay: false } }]
   })), 0);
 });
+
+test('countJsonApiEventObjects mirror: no bare epochs, no { rendered } titles, scalar when is not a start', () => {
+  const core = createCore();
+  assert.equal(core.countJsonApiEventObjects(JSON.stringify([
+    { date: '2026-08-01T10:00:00', title: { rendered: 'Recap' }, content: { rendered: '…' } },
+    { date: '2026-08-02T10:00:00', title: { rendered: 'Recap 2' }, content: { rendered: '…' } }
+  ])), 0, 'a WordPress posts list is not a list of events');
+  assert.equal(core.countJsonApiEventObjects(JSON.stringify([{ title: 'X', last_update_date: 1787425200000 }])), 0);
+  assert.equal(core.countJsonApiEventObjects(JSON.stringify([{ title: 'X', when: '2026-09-04T21:00:00Z' }])), 0);
+  assert.equal(core.countJsonApiEventObjects(JSON.stringify([{ title: 'X', when: { start: { millis: 1788055200000 } } }])), 1);
+  assert.equal(core.countJsonApiEventObjects(JSON.stringify([{ content: { summary: { text: '' } }, when: { start: { millis: 1788055200000 } } }])), 0,
+    'an empty rich-text title is no title — same as the parser');
+});

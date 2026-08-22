@@ -679,31 +679,31 @@ class SharedCore {
         const isArrayOfObjects = (value) => Array.isArray(value) && value.length > 0 && value.every(isPlainObject);
         const isIsoDateish = (value) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value.trim());
         // Mirror extensions (see jsonApiObjectLooksEventLike): one level of
-        // content/attributes wrapper unwrap, rich-text {text}/{rendered}
-        // titles with `summary` accepted, and epoch-millis / when-container
-        // dates ({ millis }, { start: { millis } }).
-        const isEpochMillis = (value) => typeof value === 'number' && value > 1e11 && value < 1e13;
+        // content/attributes wrapper unwrap (outer key order, wrapped values
+        // win), Tockify { text } titles with `summary` accepted, and dates as
+        // ISO strings or { millis } envelopes — scalar under anchored
+        // start/date keys, or the `start` member of a when-container. No bare
+        // numbers, no { rendered }: bookkeeping timestamps and WordPress post
+        // lists must not count as events.
+        const isEpochEnvelope = (value) => isPlainObject(value)
+            && typeof value.millis === 'number' && value.millis > 1e11 && value.millis < 1e13;
+        const isScalarDate = (value) => isIsoDateish(value) || isEpochEnvelope(value);
         const textValue = (value) => {
             if (typeof value === 'string') return value;
-            if (isPlainObject(value)) {
-                for (const key of ['text', 'rendered', 'value']) {
-                    if (typeof value[key] === 'string') return value[key];
-                }
-            }
+            if (isPlainObject(value) && typeof value.text === 'string') return value.text;
             return '';
         };
-        const isDateCandidate = (value) => {
-            if (isIsoDateish(value) || isEpochMillis(value)) return true;
-            if (!isPlainObject(value)) return false;
-            if (isEpochMillis(value.millis)) return true;
-            const member = value.start;
-            return isIsoDateish(member) || isEpochMillis(member)
-                || (isPlainObject(member) && isEpochMillis(member.millis));
+        const isStartEntry = (key, value) => {
+            if (/(^|_)starts?(_(at|date|time|datetime))?$/.test(key) || /(^|_)(date|datetime)(_|$)/.test(key)) {
+                return isScalarDate(value) || (isPlainObject(value) && isScalarDate(value.start));
+            }
+            if (/(^|_)when$/.test(key)) return isPlainObject(value) && isScalarDate(value.start);
+            return false;
         };
         const unwrap = (obj) => {
             for (const key of Object.keys(obj)) {
                 if (!/^(content|attributes|properties|fields)$/.test(normalizeKey(key))) continue;
-                if (isPlainObject(obj[key])) return { ...obj[key], ...obj };
+                if (isPlainObject(obj[key])) return { ...obj, ...obj[key] };
             }
             return obj;
         };
@@ -714,7 +714,7 @@ class SharedCore {
             const hasTitle = keys.some(key => /^(name|title|summary)$/.test(normalizeKey(key))
                 && textValue(view[key]).trim() !== '');
             if (!hasTitle) return false;
-            return keys.some(key => /(^|_)(start|date|datetime|when)/.test(normalizeKey(key)) && isDateCandidate(view[key]));
+            return keys.some(key => isStartEntry(normalizeKey(key), view[key]));
         };
         if (isArrayOfObjects(parsed)) {
             return parsed.filter(looksEventLike).length;
@@ -1333,7 +1333,7 @@ class SharedCore {
         const pathHasApi = segments.includes('api');
         if (!hostIsApi && !pathHasApi) return false;
         const hasVersionSegment = segments.some(segment => /^v\d+$/.test(segment));
-        const hasMachineQuery = /[?&](?:q|query|search|per_page|page|limit|max|offset|format|callback|api_key|apikey|key|token)=/i.test(raw);
+        const hasMachineQuery = /[?&](?:q|query|search|per_page|page|limit|offset|format|callback|api_key|apikey|key|token)=/i.test(raw);
         return hasVersionSegment || hasMachineQuery;
     }
 

@@ -15479,8 +15479,8 @@ test('jsonApiObjectLooksEventLike recognizes wrapper + epoch-millis shapes (Tock
   const parser = createParser();
   assert.equal(parser.jsonApiObjectLooksEventLike(TOCKIFY_FEED_PAYLOAD.events[0]), true,
     'content-wrapped summary.text title + when.start.millis date should be event-like');
-  assert.equal(parser.jsonApiObjectLooksEventLike({ title: { rendered: 'Bear Night' }, start_date: '2026-09-04 21:00:00' }), true,
-    'WordPress-REST rendered title + ISO start should be event-like');
+  assert.equal(parser.jsonApiObjectLooksEventLike({ title: { rendered: 'Recap' }, date: '2026-08-01T10:00:00', content: { rendered: '…' } }), false,
+    'a WordPress /wp-json posts row ({ rendered } title + publish date) must NOT be event-like');
   assert.equal(parser.jsonApiObjectLooksEventLike({ name: 'no dates here', when: { allDay: false } }), false,
     'a when container without a parseable start must not qualify');
   assert.equal(parser.jsonApiObjectLooksEventLike({ content: { summary: { text: 'title only' } } }), false,
@@ -15507,12 +15507,79 @@ test('extractEventsFromJsonApiPayload extracts Tockify feed events: millis dates
   assert.equal(underbear.startDate.toISOString(), '2026-08-22T02:00:00.000Z', '10PM EDT Aug 21 = 02:00Z Aug 22');
 });
 
-test('extractEventsFromJsonApiPayload handles WordPress-REST rendered titles alongside ISO dates', () => {
+
+test('JSON-API date recognition ignores bookkeeping epochs and anchors its key patterns', () => {
+  const parser = createParser();
+  // Bare epoch numbers under update/date-id keys are not event starts
+  assert.equal(parser.jsonApiObjectLooksEventLike({ title: 'X', venue: 'Bar', last_update_date: 1787425200000 }), false);
+  assert.equal(parser.jsonApiObjectLooksEventLike({ title: 'X', date_id: 123456789012 }), false);
+  // …and neither is a bare epoch under a real start key: only ISO strings or { millis } envelopes count
+  assert.equal(parser.jsonApiObjectLooksEventLike({ title: 'X', start: 1788055200000 }), false);
+  assert.equal(parser.jsonApiObjectLooksEventLike({ title: 'X', start: { millis: 1788055200000 } }), true);
+  // endorsed_at / ends_sale_at never become an end
+  const ev = parser.extractEventsFromJsonApiPayload(
+    [{ title: 'X', venue: 'Bar', start: '2026-09-04T21:00:00Z', endorsed_at: { millis: 1788055200000 }, ends_sale_at: '2026-08-30T02:00:00Z' }],
+    'https://example.com/api/v1/events', null);
+  assert.equal(ev.length, 1);
+  assert.equal(ev[0].endDate, null);
+});
+
+test('a scalar `when` never hands the start back as the end; containers resolve only their member', () => {
+  const parser = createParser();
+  const scalarWhen = parser.extractEventsFromJsonApiPayload(
+    [{ title: 'X', venue: 'Bar', when: '2026-09-04T21:00:00-04:00' }], 'https://example.com/api/v1/events', null);
+  assert.equal(scalarWhen.length, 0, 'a scalar when is not a start container');
+  const container = parser.extractEventsFromJsonApiPayload(
+    [{ title: 'X', venue: 'Bar', when: { start: { millis: 1788055200000 } } }], 'https://example.com/api/v1/events', null);
+  assert.equal(container.length, 1);
+  assert.equal(container[0].startDate.toISOString(), '2026-08-30T02:00:00.000Z');
+  assert.equal(container[0].endDate, null, 'no end member, no end');
+});
+
+test('a series-level `when` does not leak into performances; wrapped detail payloads expand', () => {
+  const parser = createParser();
+  const series = parser.extractEventsFromJsonApiPayload({
+    data: { title: 'Series', venue: 'Bar', when: { start: { millis: 1788055200000 } },
+      performances: [{ start_at: '2026-09-01T21:00:00-04:00' }, { start_at: '2026-09-08T21:00:00-04:00' }] }
+  }, 'https://example.com/api/v1/events', null);
+  assert.deepEqual(series.map(e => e.startDate.toISOString()), ['2026-09-02T01:00:00.000Z', '2026-09-09T01:00:00.000Z']);
+  const wrapped = parser.extractEventsFromJsonApiPayload({
+    data: { id: '1', attributes: { title: 'BN', venue: 'Bar', performances: [{ start_at: '2026-09-01T21:00:00-04:00' }] } }
+  }, 'https://example.com/api/v1/events', null);
+  assert.equal(wrapped.length, 1);
+  assert.equal(wrapped[0].title, 'BN');
+});
+
+test('wrapper precedence: outer key order wins the first match, wrapped values win same-named keys', () => {
+  const parser = createParser();
+  const outerFirst = parser.extractEventsFromJsonApiPayload(
+    [{ attributes: { title: 'W', starts_at: '2026-09-04T21:00:00Z' }, start_date: '2026-10-01T21:00:00Z', venue: 'Bar' }],
+    'https://example.com/api/v1/events', null);
+  assert.equal(outerFirst[0].startDate.toISOString(), '2026-10-01T21:00:00.000Z', 'the outer start_date is still the first match');
+  const envelopeDate = parser.extractEventsFromJsonApiPayload(
+    [{ date: '2026-01-01T00:00:00Z', content: { summary: { text: 'P' }, place: 'Bar', date: '2026-09-04T21:00:00-04:00' } }],
+    'https://example.com/api/v1/events', null);
+  assert.equal(envelopeDate[0].startDate.toISOString(), '2026-09-05T01:00:00.000Z', 'the wrapped event date beats the envelope record date');
+});
+
+test('cancelled JSON-API rows are skipped (Tockify status.name, schema.org eventStatus)', () => {
+  const parser = createParser();
+  const cancelled = {
+    ...TOCKIFY_FEED_PAYLOAD.events[0],
+    status: { name: 'cancelled' }
+  };
+  const events = parser.extractEventsFromJsonApiPayload({ events: [cancelled, TOCKIFY_FEED_PAYLOAD.events[1]] }, TOCKIFY_SOURCE_URL, null);
+  assert.deepEqual(events.map(e => e.title), ['Underbear Party at Rockbar']);
+  const schemaOrg = parser.extractEventsFromJsonApiPayload(
+    [{ title: 'X', venue: 'Bar', start: '2026-09-04T21:00:00Z', eventStatus: 'https://schema.org/EventCancelled' }],
+    'https://example.com/api/v1/events', null);
+  assert.equal(schemaOrg.length, 0);
+});
+
+test('JSON-API events never carry the fetch URL as their identity link, whatever its query looks like', () => {
   const parser = createParser();
   const events = parser.extractEventsFromJsonApiPayload(
-    [{ title: { rendered: 'Bear Night' }, start_date: '2026-09-04 21:00:00', venue: 'Some Bar' }],
-    'https://example.com/wp-json/tribe/events/v1/events', null);
-  assert.equal(events.length, 1);
-  assert.equal(events[0].title, 'Bear Night');
-  assert.equal(events[0].bar, 'Some Bar');
+    [{ title: 'X', venue: 'Bar', start: '2026-09-04T21:00:00Z' }],
+    'https://tockify.com/api/ngevent?calname=thotyssey&tags=rockbar', null);
+  assert.equal(events[0].url, '');
 });
