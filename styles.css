@@ -6739,6 +6739,10 @@ html.dusk body {
    the elastic middle so nothing ever shifts */
 .dusk .header-controls-row .date-navigation {
     order: -1;
+    /* the chevron BUTTON box carries ~10px of internal slack before its
+       glyph ink — pull it left so the ink sits the same distance from the
+       edge as MONTH's text does on the right */
+    margin-left: -10px;
     margin-right: auto;
     background: transparent;
     border: none;
