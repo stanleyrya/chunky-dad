@@ -1068,20 +1068,10 @@ class CalendarCore {
         }
         
         if (!recurring) {
-            // One-off event — show the date THE SAME WAY THE GRID PLACES IT.
-            // The grid buckets events by browser-local getDate()/getMonth();
-            // this badge used toISOString(), the UTC date, so any evening
-            // event west of UTC read one day later than the calendar cell it
-            // sat under ("7/18 · Fri 8PM-2AM" on a July 17 event — review
-            // 2026-07-30). Consistency with the grid is the contract here.
-            const startDateObj = startDate instanceof Date ? startDate : new Date(startDate);
-            if (!isNaN(startDateObj.getTime())) {
-                return `${startDateObj.getMonth() + 1}/${startDateObj.getDate()}`;
-            }
-            const parts = String(startDate).split('T')[0].split('-');
-            const month = parseInt(parts[1]);
-            const date = parseInt(parts[2]);
-            return `${month}/${date}`;
+            // One-off event — show the date THE SAME WAY THE GRID PLACES IT
+            // (see getBadgeDay: local parts of the LOGICAL start day).
+            const day = this.getBadgeDay(event);
+            return day ? `${day.getMonth() + 1}/${day.getDate()}` : null;
         }
         
         // Recurring event - show dates if we have calendar period context
@@ -1108,17 +1098,31 @@ class CalendarCore {
             }
         }
         
-        // For monthly events without calendar context, show next occurrence.
-        // Local date parts, NOT toISOString(): same UTC-shift bug as the
-        // one-off branch above — any evening event west of UTC read one day
-        // later than the calendar cell it sat under.
-        if (startDate instanceof Date && !isNaN(startDate.getTime())) {
-            return `${startDate.getMonth() + 1}/${startDate.getDate()}`;
-        }
-        const parts = String(startDate).split('T')[0].split('-');
-        const month = parseInt(parts[1]);
-        const date = parseInt(parts[2]);
-        return `${month}/${date}`;
+        // For monthly events without calendar context, show the seed day —
+        // same logical-day rule as the grid (getBadgeDay).
+        const seedDay = this.getBadgeDay(event);
+        return seedDay ? `${seedDay.getMonth() + 1}/${seedDay.getDate()}` : null;
+    }
+
+    // The calendar day an event is BADGED and BUCKETED on, as a Date at local
+    // midnight. One rule for every consumer: the grid places events by their
+    // LOGICAL start (getLogicalStartDate rolls a pre-6AM start back to the
+    // night it belongs to), and the day is read with LOCAL getters, never
+    // toISOString() — the UTC date is already tomorrow for any evening event
+    // west of UTC (review 2026-07-30), and the raw start is already the next
+    // calendar day for a 1AM party (review 2026-08-22). startDate is always a
+    // Date by the time events reach here (parseICalDate, the JSON reviver,
+    // occurrence expansion, the festival merge); anything else yields null.
+    getBadgeDay(event) {
+        if (!event || !event.startDate) return null;
+        const logical = typeof this.getLogicalStartDate === 'function'
+            ? this.getLogicalStartDate(event)
+            : null;
+        const base = logical instanceof Date && !isNaN(logical.getTime())
+            ? logical
+            : (event.startDate instanceof Date ? event.startDate : new Date(event.startDate));
+        if (!(base instanceof Date) || isNaN(base.getTime())) return null;
+        return new Date(base.getFullYear(), base.getMonth(), base.getDate());
     }
 
     // Get all dates when an event occurs within a given period
@@ -1126,14 +1130,10 @@ class CalendarCore {
         const dates = [];
         
         if (!event.recurring || !event.recurrence) {
-            // One-off event - check if it falls within the period.
-            // Local date parts, NOT toISOString(): the UTC date shifts any
-            // evening event west of UTC one day forward (getDateBadgeContent's
-            // one-off branch documents the same contract — match the grid).
-            const startDateStr = event.startDate instanceof Date ?
-                `${event.startDate.getFullYear()}-${event.startDate.getMonth() + 1}-${event.startDate.getDate()}` : event.startDate;
-            const parts = startDateStr.split('-');
-            const eventDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            // One-off event - check if it falls within the period (logical
+            // day, local parts — getBadgeDay).
+            const eventDate = this.getBadgeDay(event);
+            if (!eventDate) return dates;
             if (eventDate >= periodStart && eventDate <= periodEnd) {
                 dates.push(eventDate);
             }
@@ -1152,14 +1152,10 @@ class CalendarCore {
             periodEnd: periodEnd.toISOString().split('T')[0]
         });
         
-        // Local date parts, NOT toISOString(): the loader's expanded
-        // occurrences carry local evening times (e.g. 10PM Eastern), and the
-        // UTC date is already tomorrow — the badge then contradicts the grid
-        // cell the event sits under ("8/30" on an 8/29 party).
-        const startDateStr = event.startDate instanceof Date ?
-            `${event.startDate.getFullYear()}-${event.startDate.getMonth() + 1}-${event.startDate.getDate()}` : event.startDate;
-        const parts = startDateStr.split('-');
-        const eventStartDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        // Seed day: the loader's expanded occurrences carry local evening
+        // times, and the badge must name the day the grid buckets (getBadgeDay).
+        const eventStartDate = this.getBadgeDay(event);
+        if (!eventStartDate) return dates;
         if (eventStartDate > periodEnd) return dates;
         
         // For weekly events, check each day in the period with interval handling

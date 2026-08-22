@@ -3552,7 +3552,7 @@ class DynamicCalendarLoader extends CalendarCore {
             const eventCount = filteredDayEvents.length;
 
             return `
-                <div class="calendar-day week-view${currentClass}" data-day="${dayName}" data-date="${day.toISOString().split('T')[0]}">
+                <div class="calendar-day week-view${currentClass}" data-day="${dayName}" data-date="${this.getLocalDateKey(day)}">
                     <div class="day-header">
                         <h3>${dayName}</h3>
                         <div class="day-meta">
@@ -3754,7 +3754,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 : '';
 
             return `
-                <div class="calendar-day month-day${currentClass}${otherMonthClass}${hasEventsClass}" data-date="${day.toISOString().split('T')[0]}">
+                <div class="calendar-day month-day${currentClass}${otherMonthClass}${hasEventsClass}" data-date="${this.getLocalDateKey(day)}">
                     <div class="day-header">
                         <span class="day-number">${day.getDate()}</span>
                         ${isToday ? `<span class="day-indicator">Today</span>` : ''}
