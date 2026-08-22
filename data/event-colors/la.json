@@ -40,6 +40,16 @@
     "accent": "#f2592a"
   },
   {
+    "slug": "club-chub-39a3a8bd",
+    "url": "https://www.clubchubusa.com/",
+    "faviconBg": "#e43383",
+    "faviconFg": "#f3368c",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:63:0 #e43383:26:22 #eb6aa5:4:17 #ef85b5:4:14 #f9cfe2:4:5",
+    "accent": "#e43383"
+  },
+  {
     "slug": "club-chub-dtla-latin-night-190605ad",
     "url": "https://www.clubchubusa.com",
     "faviconBg": "#e43383",

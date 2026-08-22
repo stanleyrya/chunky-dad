@@ -159,6 +159,15 @@
     "accent": "#3f41a8"
   },
   {
+    "slug": "rockstrap-42266312",
+    "url": "https://www.rockbarnyc.com/",
+    "faviconBg": "#474747",
+    "faviconFg": "#767676",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#545454:33:0 #3a3a3a:30:0 #787878:17:0"
+  },
+  {
     "slug": "underbear-heatwave-30508312",
     "url": "https://furball.nyc",
     "faviconBg": "#302f35",
