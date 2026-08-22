@@ -1587,7 +1587,12 @@ class CalendarCore {
             localHour = this.getLocalHour(logicalDate, this.calendarTimezone);
         }
 
-        if (!isAllDay && localHour !== null && localHour < 6) {
+        // A party that runs until 6-something AM is still the same night.
+        // The start-side cutoff shifts a 1AM start back a day; ending the
+        // shift at 05:59 made a 1AM-6AM event span two logical days and
+        // render as a multi-day bar (owner report, 2026-08: BEEFMINCE
+        // Sitges, GOLDILOXX NYC). End times through 06:59 now shift too.
+        if (!isAllDay && localHour !== null && localHour < 7) {
             logicalDate.setDate(logicalDate.getDate() - 1);
         }
         return logicalDate;

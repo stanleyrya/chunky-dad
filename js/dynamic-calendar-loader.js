@@ -479,6 +479,12 @@ class DynamicCalendarLoader extends CalendarCore {
             // View
             if (viewParam === 'week' || viewParam === 'month') {
                 this.currentView = viewParam;
+                // The static markup hardcodes WEEK as the active toggle and
+                // nothing else ever syncs it from the URL — a deep-linked
+                // month page kept the wrong underline forever.
+                document.querySelectorAll('.view-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.getAttribute('data-view') === viewParam);
+                });
             }
             
             // Date (YYYY-MM-DD)
@@ -1535,17 +1541,15 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     formatDateRange(start, end) {
-        const options = { month: 'short', day: 'numeric' };
-        
+        // All-numeric (owner request): "8/16-22", "12/27 - 1/2", "9/2026" —
+        // the header's fixed date slot can stay genuinely small because the
+        // widest possible string is short and known.
         if (this.currentView === 'week') {
-            if (start.getMonth() === end.getMonth()) {
-                return `${start.toLocaleDateString('en-US', { month: 'short' })} ${start.getDate()}-${end.getDate()}`;
-            } else {
-                return `${start.toLocaleDateString('en-US', options)} - ${end.toLocaleDateString('en-US', options)}`;
-            }
-        } else {
-            return start.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            // both ends always carry the month number — uniform string
+            // shapes keep the fixed slot visually full in every week
+            return `${start.getMonth() + 1}/${start.getDate()} - ${end.getMonth() + 1}/${end.getDate()}`;
         }
+        return `${start.getMonth() + 1}/${start.getFullYear()}`;
     }
 
     // Load calendar data for specific city (uses cached data from GitHub Actions)
@@ -2658,6 +2662,37 @@ class DynamicCalendarLoader extends CalendarCore {
     // Rounded-square favicon tile for the card title row. Rendered only when a
     // favicon path exists; a load failure removes the tile so no empty frame is
     // left behind.
+    // Dusk cards: each time sits next to its own day — "1AM" is
+    // unambiguously the start day's and "6PM" the end day's. A small-hours
+    // event shown on the previous day says "night": that one word explains
+    // why a Wednesday card carries Thursday clock times.
+    formatDuskWhenText(event) {
+        try {
+            if (!event || !event.startDate) return null;
+            const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const md = d => `${d.getMonth() + 1}/${d.getDate()}`;
+            const ls = this.getLogicalStartDate(event);
+            if (!ls) return null;
+            const times = typeof event.time === 'string' && event.time.includes('-')
+                ? event.time.split('-').map(t => t.trim())
+                : (event.time ? [String(event.time).trim()] : []);
+            if (this.isMultiDay(event)) {
+                const le = this.getLogicalEndDate(event);
+                if (!le) return null;
+                const startPart = `${WD[ls.getDay()]} ${md(ls)}${times[0] ? ' ' + times[0] : ''}`;
+                const endPart = `${WD[le.getDay()]} ${md(le)}${times[1] ? ' ' + times[1] : ''}`;
+                return `${startPart} \u2013 ${endPart}`;
+            }
+            const literalStart = new Date(event.startDate);
+            if (event.time && ls.getDate() !== literalStart.getDate()) {
+                return `${WD[ls.getDay()]} ${md(ls)} night \u00b7 ${event.time}`;
+            }
+            return null;
+        } catch (err) {
+            return null;
+        }
+    }
+
     generateAuroraFaviconHtml(event) {
         let faviconUrl = null;
         try {
@@ -2730,6 +2765,8 @@ class DynamicCalendarLoader extends CalendarCore {
 
         // Event badges
         const formatDayTime = (event) => {
+            const paired = this.formatDuskWhenText(event);
+            if (paired) return paired;
             if (this.isMultiDay(event) && window.formatEventDates) {
                 return window.formatEventDates(event);
             }
@@ -3660,9 +3697,15 @@ class DynamicCalendarLoader extends CalendarCore {
             const otherMonthClass = isCurrentMonth ? '' : ' other-month';
             const hasEventsClass = filteredDayEvents.length > 0 ? ' has-events' : '';
 
-            // Ultra-simplified month view: show only 2 events with shortened names for better mobile viewing
-            const eventsToShow = filteredDayEvents.slice(0, 2);
-            const additionalEventsCount = Math.max(0, filteredDayEvents.length - 2);
+            // Multi-day SEGMENTS always render — dropping one silently broke
+            // the bar mid-run whenever a cell was crowded (owner-reported:
+            // BEEFMINCE Sitges week). Single-day events cap at 2, and a LONE
+            // hidden single renders itself instead of a pointless "+1" chip.
+            const multiDaySegments = filteredDayEvents.filter(event => this.isMultiDay(event));
+            const singleDayEvents = filteredDayEvents.filter(event => !this.isMultiDay(event));
+            const singleCap = singleDayEvents.length === 3 ? 3 : 2;
+            const eventsToShow = multiDaySegments.concat(singleDayEvents.slice(0, singleCap));
+            const additionalEventsCount = Math.max(0, singleDayEvents.length - singleCap);
             
             const eventsHtml = eventsToShow.length > 0 
                 ? eventsToShow.map(event => {
