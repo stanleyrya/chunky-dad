@@ -6715,14 +6715,17 @@ html.dusk body {
     background: var(--c1, var(--primary-color));
 }
 
-/* ---------- controls: quiet text inside the purple header ---------- */
+/* ---------- controls: segmented pills (owner-picked) ----------
+   Two self-aligned clusters: a soft pill holding ‹ date ›, and a true
+   segmented control for Week/Month with a filled active half. Boxes align
+   themselves — no optical baseline arithmetic. ---------- */
 .dusk .header-controls-row {
     display: flex;
     align-items: center;
     width: 100%;
     max-width: 1600px;
     margin: 0 auto;
-    padding: 0 1rem 0.55rem;
+    padding: 0 1rem 0.6rem;
     gap: 0.75rem;
 }
 .dusk .header-controls-row .calendar-controls {
@@ -6732,112 +6735,93 @@ html.dusk body {
     display: flex;
     align-items: center;
     width: 100%;
-    gap: 0.9rem;
+    gap: 0.6rem;
     flex-wrap: nowrap !important;
 }
-/* date group reads first; Week/Month pinned flush right; Today fades into
-   the elastic middle so nothing ever shifts */
 .dusk .header-controls-row .date-navigation {
     order: -1;
     margin-right: auto;
-    background: transparent;
-    border: none;
-    padding: 0;
-    gap: 0.15rem;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    padding: 2px;
+    gap: 0;
 }
-.dusk .header-controls-row .today-btn { order: 1; }
-.dusk .header-controls-row .view-toggle { order: 2; }
 .dusk .nav-btn {
     background: transparent;
-    color: rgba(255, 255, 255, 0.75);
-    width: 32px;
-    height: 32px;
-    min-height: 32px;
+    color: rgba(255, 255, 255, 0.85);
+    width: 28px;
+    height: 26px;
+    min-height: 26px;
     border-radius: 8px;
-    font-size: 1.15rem;
+    font-size: 1.05rem;
     line-height: 1;
-    padding-bottom: 4px;  /* optical: chevron glyphs centre on the x-height
-                             and read low beside caps text without this */
+    padding-bottom: 2px;   /* chevron ink centres on the x-height */
 }
-.dusk .nav-btn:hover { background: rgba(255, 255, 255, 0.12); color: #fff; transform: none; }
+.dusk .nav-btn:hover { background: rgba(255, 255, 255, 0.16); color: #fff; transform: none; }
 .dusk .date-range {
     color: #fff;
-    font-size: 0.95rem;
+    font-size: 0.88rem;
     font-weight: 600;
-    /* just wider than the widest real string ("12/27 - 1/2" numeric):
-       constant across periods, no dead air around short week ranges */
-    min-width: 7em;
+    /* fixed slot: widest string is a cross-month week ("12/27 - 1/2") */
+    min-width: 6.6em;
     text-align: center;
-    padding: 0 0.25rem;
+    padding: 0 0.2rem;
     white-space: nowrap;
 }
 .dusk .view-toggle {
-    background: transparent;
-    border: none;
-    padding: 0;
-    gap: 1.1rem;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    padding: 2px;
+    gap: 2px;
 }
 .dusk .view-btn {
     background: transparent;
-    color: rgba(255, 255, 255, 0.6);
-    padding: 0.1rem 0.05rem;
-    min-height: 0;
-    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.8);
+    padding: 0.22rem 0.7rem;
+    min-height: 26px;
+    font-size: 0.8rem;
     font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    border-radius: 0;
-    align-self: center;
-    line-height: 1.2;
-    position: relative;
+    letter-spacing: 0;
+    text-transform: none;
+    border-radius: 8px;
 }
-/* the active underline is a positioned decoration, NOT a border — a border
-   participates in layout and lifted the label 1px off the shared ink line,
-   which made TODAY (borderless) read as sitting low beside it */
 .dusk .view-btn.active {
-    background: transparent;
-    color: #fff;
+    background: rgba(255, 255, 255, 0.95);
+    color: #4d5ac9;
+    font-weight: 700;
 }
-.dusk .view-btn.active::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: -4px;
-    height: 2px;
-    background: var(--secondary-color, #f5576c);
-}
-.dusk .view-btn:hover:not(.active) { color: rgba(255, 255, 255, 0.9); }
-
-/* Today: space always reserved; it fades in when you're off today
-   so the other controls never shift */
+.dusk .view-btn:hover:not(.active) { color: #fff; transform: none; }
+/* Today: a small coral pill; space reserved so nothing shifts */
 .dusk .today-btn {
     display: inline-flex;
     visibility: hidden;
     opacity: 0;
-    background: transparent;
-    color: #ff9d9d;
-    padding: 0.1rem 0.5rem;
-    min-height: 0;
+    background: var(--secondary-color, #f5576c);
+    color: #fff;
+    padding: 0.24rem 0.65rem;
+    min-height: 26px;
     font-size: 0.78rem;
     font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    border-radius: 0;
+    letter-spacing: 0.02em;
+    text-transform: none;
+    border-radius: 9px;
     align-self: center;
     line-height: 1.2;
     transition: opacity 0.12s ease;
 }
 .dusk .header-controls-row.off-today .today-btn { visibility: visible; opacity: 1; }
-.dusk .today-btn:hover { transform: none; background: rgba(255, 255, 255, 0.08); }
+.dusk .today-btn:hover { transform: none; filter: brightness(1.08); }
 
-/* phone: same row, one size down */
+/* phone: same pills, one size down */
 @media (max-width: 480px) {
     .dusk .header-controls-row { padding: 0 0.6rem 0.5rem; gap: 0.4rem; }
-    .dusk .header-controls-row .calendar-controls { gap: 0.55rem; }
-    .dusk .date-range { font-size: 0.82rem; padding: 0 0.2rem; }
-    .dusk .nav-btn { width: 28px; height: 28px; min-height: 28px; font-size: 1rem; }
-    .dusk .view-btn, .dusk .today-btn { font-size: 0.7rem; }
+    .dusk .header-controls-row .calendar-controls { gap: 0.4rem; }
+    .dusk .date-range { font-size: 0.8rem; min-width: 6.4em; }
+    .dusk .nav-btn { width: 26px; height: 24px; min-height: 24px; font-size: 0.95rem; }
+    .dusk .view-btn { padding: 0.18rem 0.55rem; font-size: 0.74rem; min-height: 24px; }
+    .dusk .today-btn { padding: 0.2rem 0.5rem; font-size: 0.72rem; min-height: 24px; }
 }
 
 /* ---------- motion: keep the load reveal and the swipe flight; ----------
