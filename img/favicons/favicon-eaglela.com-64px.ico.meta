@@ -1,10 +1,10 @@
 {
   "originalUrl": "https://www.google.com/s2/favicons?domain=eaglela.com&sz=64",
+  "source": "manual",
+  "manualSourceUrl": "https://eaglela.com/wp-content/uploads/CRUISY-EAGLE-logo.jpg",
+  "note": "Manually curated: the site's declared favicon (RED-favicon-thingamajig.jpg) is genuinely 16x16 despite its sizes=192 markup, so every favicon service only carries a 16px icon. This is the site's own chrome EAGLE LA wordmark, letterboxed onto its native black to a square.",
   "type": "favicon",
   "filename": "favicon-eaglela.com-64px.ico",
   "size": "64",
-  "contentType": "image/png",
-  "contentLength": "454",
-  "downloadedAt": "2026-07-30T20:26:03.411Z",
-  "lastModified": "Mon, 25 May 2020 14:04:37 GMT"
+  "downloadedAt": "2026-08-22T03:10:49.000Z"
 }

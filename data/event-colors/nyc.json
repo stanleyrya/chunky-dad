@@ -161,17 +161,17 @@
   {
     "slug": "rockstrap-42266312",
     "url": "https://www.rockbarnyc.com/",
-    "faviconBg": "#474747",
-    "faviconFg": "#767676",
-    "faviconPlate": "#ffffff",
+    "faviconBg": "#030303",
+    "faviconFg": "#7a7a7a",
+    "faviconPlate": "#000000",
     "paletteSource": "favicon",
-    "palette": "#545454:33:0 #3a3a3a:30:0 #787878:17:0"
+    "palette": "#000000:87:0 #232323:2:0 #d3d3d3:2:0"
   },
   {
     "slug": "underbear-heatwave-30508312",
     "url": "https://furball.nyc",
-    "faviconBg": "#302f35",
-    "faviconFg": "#f8f8f8",
+    "faviconBg": "#f6f6f6",
+    "faviconFg": "#393a3f",
     "faviconPlate": "#ffffff",
     "paletteSource": "flyer",
     "palette": "#010101:32:1 #20070a:14:4 #541b03:14:9 #8d2209:11:15 #d34c13:8:18",
@@ -180,9 +180,9 @@
   {
     "slug": "underbear-leather-kink-3fe96ee0",
     "url": "https://www.furball.nyc",
-    "faviconBg": "#2d2c32",
-    "faviconFg": "#f7f7f7",
-    "faviconPlate": "#fffefe",
+    "faviconBg": "#f6f6f6",
+    "faviconFg": "#393a3f",
+    "faviconPlate": "#ffffff",
     "paletteSource": "flyer",
     "palette": "#000001:26:1 #2c0c11:17:5 #030a34:15:8 #6c2522:10:10 #0b1167:6:14",
     "accent": "#0b1167"
