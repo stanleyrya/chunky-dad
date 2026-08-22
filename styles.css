@@ -6756,8 +6756,10 @@ html.dusk body {
     border-radius: 8px;
     font-size: 1.15rem;
     line-height: 1;
-    padding-bottom: 4px;  /* optical: chevron glyphs centre on the x-height
-                             and read low beside caps text without this */
+    /* optical: chevron glyphs centre on the x-height — measured ~5px low
+       against the date's midline at this size */
+    padding-bottom: 4px;
+    transform: translateY(-3px);
 }
 .dusk .nav-btn:hover { background: rgba(255, 255, 255, 0.12); color: #fff; transform: none; }
 .dusk .date-range {
