@@ -10567,7 +10567,7 @@ Example output:
         }, duration);
       }
 
-      function handleAddToCalendar() {
+      async function handleAddToCalendar() {
         const addDisabledReason = getAddToCalendarDisabledReason();
         if (addDisabledReason) {
           showToast(addDisabledReason, 'warn');
@@ -10583,7 +10583,7 @@ Example output:
         const deletingCustomOverride = isDeletingExistingCustomOverride();
         const shouldIncrementSequence = isEditingExisting
           && (!isOccurrenceOverride || isEditingCustomOverrideMode());
-        const existingSequence = shouldIncrementSequence
+        let existingSequence = shouldIncrementSequence
           ? parseIntegerValue(state && state.editingExistingSequence)
           : null;
         // Never guess a revision. SEQUENCE is a counter, not a timestamp, and
@@ -10594,6 +10594,34 @@ Example output:
         // names the record (edit=1&euid=…) arrives without it. Every published
         // event carries a SEQUENCE, so a missing one means "not loaded yet",
         // never "genuinely zero".
+        if (shouldIncrementSequence && existingSequence === null) {
+          // Before refusing, look the record up ourselves. A link that names
+          // the record (edit=1&euid=…) but arrived without eseq — the
+          // scraper's own edit links, any hand-built link — can be resolved
+          // in the published city calendar by UID, which is exactly what
+          // "Edit event" reads. Same source, same number; only a UID that is
+          // not in the published calendar still falls through to the refusal.
+          // (Review 2026-08-22: a one-off edit link opened in Safari hit the
+          // refusal with no picker selection to rescue it.)
+          const resolved = await loadEditingBaseEventForSwap();
+          // findBaseEventByUid only knows SERIES masters; a one-off lives in
+          // index.events, so look the UID up across every published record
+          // (never an override — those carry their own SEQUENCE).
+          const publishedIndex = resolved && resolved.index ? resolved.index : null;
+          const publishedRecord = resolved && resolved.baseEvent
+            ? resolved.baseEvent
+            : (publishedIndex && Array.isArray(publishedIndex.events)
+              ? publishedIndex.events.find(record => record && record.uid === getEditingUidFromState() && !record.recurrenceId)
+              : null);
+          const resolvedSequence = publishedRecord ? parseIntegerValue(publishedRecord.sequence) : null;
+          if (resolvedSequence !== null) {
+            existingSequence = resolvedSequence;
+            if (state) {
+              state.editingExistingSequence = String(resolvedSequence);
+              scheduleUrlUpdate();
+            }
+          }
+        }
         if (shouldIncrementSequence && existingSequence === null) {
           const revisionMessage = 'Load this event with "Edit event" first — its revision number is needed or the calendar will ignore the update';
           updateCalendarStatus(revisionMessage, 'warn');
