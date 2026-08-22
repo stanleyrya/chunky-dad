@@ -6756,6 +6756,8 @@ html.dusk body {
     border-radius: 8px;
     font-size: 1.15rem;
     line-height: 1;
+    padding-bottom: 4px;  /* optical: chevron glyphs centre on the x-height
+                             and read low beside caps text without this */
 }
 .dusk .nav-btn:hover { background: rgba(255, 255, 255, 0.12); color: #fff; transform: none; }
 .dusk .date-range {
@@ -6764,7 +6766,7 @@ html.dusk body {
     font-weight: 600;
     /* just wider than the widest real string ("12/27 - 1/2" numeric):
        constant across periods, no dead air around short week ranges */
-    min-width: 6.4em;
+    min-width: 7em;
     text-align: center;
     padding: 0 0.25rem;
     white-space: nowrap;
@@ -6778,21 +6780,32 @@ html.dusk body {
 .dusk .view-btn {
     background: transparent;
     color: rgba(255, 255, 255, 0.6);
-    padding: 0.1rem 0.05rem 2px;
+    padding: 0.1rem 0.05rem;
     min-height: 0;
     font-size: 0.78rem;
     font-weight: 600;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     border-radius: 0;
-    border-bottom: 2px solid transparent;
     align-self: center;
     line-height: 1.2;
+    position: relative;
 }
+/* the active underline is a positioned decoration, NOT a border — a border
+   participates in layout and lifted the label 1px off the shared ink line,
+   which made TODAY (borderless) read as sitting low beside it */
 .dusk .view-btn.active {
     background: transparent;
     color: #fff;
-    border-bottom-color: var(--secondary-color, #f5576c);
+}
+.dusk .view-btn.active::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -4px;
+    height: 2px;
+    background: var(--secondary-color, #f5576c);
 }
 .dusk .view-btn:hover:not(.active) { color: rgba(255, 255, 255, 0.9); }
 

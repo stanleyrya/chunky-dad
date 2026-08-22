@@ -1545,11 +1545,9 @@ class DynamicCalendarLoader extends CalendarCore {
         // the header's fixed date slot can stay genuinely small because the
         // widest possible string is short and known.
         if (this.currentView === 'week') {
-            const startText = `${start.getMonth() + 1}/${start.getDate()}`;
-            if (start.getMonth() === end.getMonth()) {
-                return `${startText}-${end.getDate()}`;
-            }
-            return `${startText} - ${end.getMonth() + 1}/${end.getDate()}`;
+            // both ends always carry the month number — uniform string
+            // shapes keep the fixed slot visually full in every week
+            return `${start.getMonth() + 1}/${start.getDate()} - ${end.getMonth() + 1}/${end.getDate()}`;
         }
         return `${start.getMonth() + 1}/${start.getFullYear()}`;
     }
