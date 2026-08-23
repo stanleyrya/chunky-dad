@@ -117,6 +117,14 @@ const scraperPromoters = [
     "bearAffinity": "always"
   },
   {
+    "name": "Gorditos",
+    "keywords": [
+      "gorditos"
+    ],
+    "shortName": "GOR­DITOS",
+    "bearAffinity": "always"
+  },
+  {
     "name": "Twisted Bear",
     "shortName": "TWIST­ED BEAR",
     "instagram": "https://www.instagram.com/twistedbearparty",
