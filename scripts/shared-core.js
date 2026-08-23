@@ -678,13 +678,43 @@ class SharedCore {
         const isPlainObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
         const isArrayOfObjects = (value) => Array.isArray(value) && value.length > 0 && value.every(isPlainObject);
         const isIsoDateish = (value) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value.trim());
+        // Mirror extensions (see jsonApiObjectLooksEventLike): one level of
+        // content/attributes wrapper unwrap (outer key order, wrapped values
+        // win), Tockify { text } titles with `summary` accepted, and dates as
+        // ISO strings or { millis } envelopes — scalar under anchored
+        // start/date keys, or the `start` member of a when-container. No bare
+        // numbers, no { rendered }: bookkeeping timestamps and WordPress post
+        // lists must not count as events.
+        const isEpochEnvelope = (value) => isPlainObject(value)
+            && typeof value.millis === 'number' && value.millis > 1e11 && value.millis < 1e13;
+        const isScalarDate = (value) => isIsoDateish(value) || isEpochEnvelope(value);
+        const textValue = (value) => {
+            if (typeof value === 'string') return value;
+            if (isPlainObject(value) && typeof value.text === 'string') return value.text;
+            return '';
+        };
+        const isStartEntry = (key, value) => {
+            if (/(^|_)starts?(_(at|date|time|datetime))?$/.test(key) || /(^|_)(date|datetime)(_|$)/.test(key)) {
+                return isScalarDate(value) || (isPlainObject(value) && isScalarDate(value.start));
+            }
+            if (/(^|_)when$/.test(key)) return isPlainObject(value) && isScalarDate(value.start);
+            return false;
+        };
+        const unwrap = (obj) => {
+            for (const key of Object.keys(obj)) {
+                if (!/^(content|attributes|properties|fields)$/.test(normalizeKey(key))) continue;
+                if (isPlainObject(obj[key])) return { ...obj, ...obj[key] };
+            }
+            return obj;
+        };
         const looksEventLike = (obj) => {
             if (!isPlainObject(obj)) return false;
-            const keys = Object.keys(obj);
-            const hasTitle = keys.some(key => /^(name|title)$/.test(normalizeKey(key))
-                && typeof obj[key] === 'string' && obj[key].trim() !== '');
+            const view = unwrap(obj);
+            const keys = Object.keys(view);
+            const hasTitle = keys.some(key => /^(name|title|summary)$/.test(normalizeKey(key))
+                && textValue(view[key]).trim() !== '');
             if (!hasTitle) return false;
-            return keys.some(key => /(^|_)(start|date|datetime)/.test(normalizeKey(key)) && isIsoDateish(obj[key]));
+            return keys.some(key => isStartEntry(normalizeKey(key), view[key]));
         };
         if (isArrayOfObjects(parsed)) {
             return parsed.filter(looksEventLike).length;

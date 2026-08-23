@@ -97,6 +97,23 @@ const scraperConfig = {
       },
     },
     {
+      name: "Rockbar",
+      // West Village leather/rock bar (185 Christopher St) with heavy bear
+      // programming (Gorditos, Underbear, Bears Night Out, Rockstrap). The
+      // venue's own site is the identity source: Squarespace, one page per
+      // party (/events/<slug>, each with a ?format=ical link) — but the
+      // listing's dates have been frozen since Aug 2024, so live dates come
+      // from the Thotyssey aggregator entry below and merge in here. Kink/pup
+      // nights are on the same calendar — bear check filters, not alwaysBear.
+      urls: ["https://www.rockbarnyc.com/events"],
+      alwaysBear: false,
+      siteRole: "venue",
+      metadata: {
+        website: { value: "https://www.rockbarnyc.com" },
+        instagram: { value: "https://www.instagram.com/rockbarnyc" },
+      },
+    },
+    {
       name: "Twisted Bear",
       // discoveryOnly: true,
       urls: [
@@ -225,6 +242,21 @@ const scraperConfig = {
       alwaysBear: true,
       urlDiscoveryDepth: 1,
       maxAdditionalUrls: 60,
+    },
+    {
+      name: "Thotyssey",
+      // Aggregator (NYC nightlife calendar, hosted on Tockify). The
+      // bear-tagged JSON feed replays browser-free: title, epoch-millis
+      // times with tzid, venue name (`place`) and full address per row, so
+      // venues (Rockbar, Eagle NYC, 3 Dollar Bill …) are attributed without
+      // any venue role here. Rows are pre-expanded occurrences; the feed
+      // serves 100 per request (server-capped; metaData.hasNext signals
+      // more), ≈3–4 weeks for this tag, refreshed every run — startms=
+      // paging exists if a longer horizon is ever wanted. Editorial tag, so
+      // the bear check still decides, not alwaysBear. Run selection belongs
+      // to the picker (no static automationEnabled flag here).
+      urls: ["https://tockify.com/api/ngevent?max=100&calname=thotyssey&tags=bears"],
+      alwaysBear: false,
     },
     {
       // ── New Site Template ─────────────────────────────────────────────

@@ -15420,3 +15420,166 @@ test('getCachedOcrTextForImage: verdict store first, then disk cache, on-demand 
   assert.equal(ocrCalls.length, 1);
   assert.equal(ocrCalls[0].hasAdapter, true);
 });
+
+// ---------------------------------------------------------------------------
+// JSON-API generic shape extensions: attribute wrappers ({content}/{attributes}),
+// rich-text values ({text}/{rendered}), and epoch-millis when-containers —
+// the shapes Tockify (aggregator calendars), JSON:API, and WordPress REST
+// feeds actually publish. Fixture mirrors tockify.com/api/ngevent verbatim
+// (trimmed): dates as {millis, tzid} under when.start/when.end, all content
+// under a `content` wrapper, title as summary.{text}.
+// ---------------------------------------------------------------------------
+
+const TOCKIFY_SOURCE_URL = 'https://tockify.com/api/ngevent?max=100&calname=thotyssey&tags=rockbar';
+const TOCKIFY_FEED_PAYLOAD = {
+  events: [
+    {
+      calid: '56b4c54e206d1565183c52cc',
+      eid: { uid: '39689', seq: 0, tid: 1788055200000, rid: 0 },
+      when: {
+        start: { millis: 1788055200000, tzid: 'America/New_York', ltz: 'EDT', offset: -14400000 },
+        end: { millis: 1788076800000, tzid: 'America/New_York', ltz: 'EDT', offset: -14400000 },
+        allDay: false
+      },
+      content: {
+        summary: { text: 'Gorditos at Rockbar' },
+        description: { text: 'DJs Noble Bear &amp; Goodbunny spin a Latin bear party at Rockbar.' },
+        tagset: { tags: { default: ['rockbar', 'bears', 'latin', 'dancing'] } },
+        place: 'Rockbar NYC',
+        address: '185 Christopher St, New York, NY 10014, USA',
+        location: { place_id: 'ChIJlwfqXuxZwokRTlizRW_4cwc', name: 'Rockbar NYC', latitude: 40.7327194, longitude: -74.0097278 }
+      },
+      status: { name: 'scheduled' },
+      kind: 'mod',
+      isExternal: false
+    },
+    {
+      calid: '56b4c54e206d1565183c52cc',
+      eid: { uid: '31035', seq: 0, tid: 1787968800000, rid: 0 },
+      when: {
+        start: { millis: 1787364000000, tzid: 'America/New_York', ltz: 'EDT', offset: -14400000 },
+        end: { millis: 1787385600000, tzid: 'America/New_York', ltz: 'EDT', offset: -14400000 },
+        allDay: false
+      },
+      content: {
+        summary: { text: 'Underbear Party at Rockbar' },
+        description: { text: 'Joe Fiore presents an underwear party at Rockbar, with DJ Brad Scott.' },
+        place: 'Rockbar NYC',
+        address: '185 Christopher St, New York, NY 10014, USA'
+      },
+      status: { name: 'scheduled' },
+      kind: 'mod',
+      isExternal: false
+    }
+  ],
+  metaData: {}
+};
+
+test('jsonApiObjectLooksEventLike recognizes wrapper + epoch-millis shapes (Tockify) and rich-text titles (WP REST)', () => {
+  const parser = createParser();
+  assert.equal(parser.jsonApiObjectLooksEventLike(TOCKIFY_FEED_PAYLOAD.events[0]), true,
+    'content-wrapped summary.text title + when.start.millis date should be event-like');
+  assert.equal(parser.jsonApiObjectLooksEventLike({ title: { rendered: 'Recap' }, date: '2026-08-01T10:00:00', content: { rendered: '…' } }), false,
+    'a WordPress /wp-json posts row ({ rendered } title + publish date) must NOT be event-like');
+  assert.equal(parser.jsonApiObjectLooksEventLike({ name: 'no dates here', when: { allDay: false } }), false,
+    'a when container without a parseable start must not qualify');
+  assert.equal(parser.jsonApiObjectLooksEventLike({ content: { summary: { text: 'title only' } } }), false,
+    'wrapped title without any date must not qualify');
+});
+
+test('extractEventsFromJsonApiPayload extracts Tockify feed events: millis dates, tzid timezone, place venue, wrapped text', () => {
+  const parser = createParser();
+  const events = parser.extractEventsFromJsonApiPayload(TOCKIFY_FEED_PAYLOAD, TOCKIFY_SOURCE_URL, null);
+  assert.equal(events.length, 2);
+
+  const gorditos = events[0];
+  assert.equal(gorditos.title, 'Gorditos at Rockbar');
+  assert.equal(gorditos.startDate.toISOString(), '2026-08-30T02:00:00.000Z', '10PM EDT Aug 29 = 02:00Z Aug 30');
+  assert.equal(gorditos.endDate.toISOString(), '2026-08-30T08:00:00.000Z');
+  assert.equal(gorditos.timezone, 'America/New_York', 'the when.start tzid is authoritative');
+  assert.equal(gorditos.bar, 'Rockbar NYC');
+  assert.ok(gorditos.address.includes('185 Christopher St'), `address should carry the street: ${gorditos.address}`);
+  assert.equal(gorditos.description, 'DJs Noble Bear & Goodbunny spin a Latin bear party at Rockbar.');
+  assert.equal(gorditos.url, '', 'the tockify api fetch endpoint is never an identity link');
+
+  const underbear = events[1];
+  assert.equal(underbear.title, 'Underbear Party at Rockbar');
+  assert.equal(underbear.startDate.toISOString(), '2026-08-22T02:00:00.000Z', '10PM EDT Aug 21 = 02:00Z Aug 22');
+});
+
+
+test('JSON-API date recognition ignores bookkeeping epochs and anchors its key patterns', () => {
+  const parser = createParser();
+  // Bare epoch numbers under update/date-id keys are not event starts
+  assert.equal(parser.jsonApiObjectLooksEventLike({ title: 'X', venue: 'Bar', last_update_date: 1787425200000 }), false);
+  assert.equal(parser.jsonApiObjectLooksEventLike({ title: 'X', date_id: 123456789012 }), false);
+  // …and neither is a bare epoch under a real start key: only ISO strings or { millis } envelopes count
+  assert.equal(parser.jsonApiObjectLooksEventLike({ title: 'X', start: 1788055200000 }), false);
+  assert.equal(parser.jsonApiObjectLooksEventLike({ title: 'X', start: { millis: 1788055200000 } }), true);
+  // endorsed_at / ends_sale_at never become an end
+  const ev = parser.extractEventsFromJsonApiPayload(
+    [{ title: 'X', venue: 'Bar', start: '2026-09-04T21:00:00Z', endorsed_at: { millis: 1788055200000 }, ends_sale_at: '2026-08-30T02:00:00Z' }],
+    'https://example.com/api/v1/events', null);
+  assert.equal(ev.length, 1);
+  assert.equal(ev[0].endDate, null);
+});
+
+test('a scalar `when` never hands the start back as the end; containers resolve only their member', () => {
+  const parser = createParser();
+  const scalarWhen = parser.extractEventsFromJsonApiPayload(
+    [{ title: 'X', venue: 'Bar', when: '2026-09-04T21:00:00-04:00' }], 'https://example.com/api/v1/events', null);
+  assert.equal(scalarWhen.length, 0, 'a scalar when is not a start container');
+  const container = parser.extractEventsFromJsonApiPayload(
+    [{ title: 'X', venue: 'Bar', when: { start: { millis: 1788055200000 } } }], 'https://example.com/api/v1/events', null);
+  assert.equal(container.length, 1);
+  assert.equal(container[0].startDate.toISOString(), '2026-08-30T02:00:00.000Z');
+  assert.equal(container[0].endDate, null, 'no end member, no end');
+});
+
+test('a series-level `when` does not leak into performances; wrapped detail payloads expand', () => {
+  const parser = createParser();
+  const series = parser.extractEventsFromJsonApiPayload({
+    data: { title: 'Series', venue: 'Bar', when: { start: { millis: 1788055200000 } },
+      performances: [{ start_at: '2026-09-01T21:00:00-04:00' }, { start_at: '2026-09-08T21:00:00-04:00' }] }
+  }, 'https://example.com/api/v1/events', null);
+  assert.deepEqual(series.map(e => e.startDate.toISOString()), ['2026-09-02T01:00:00.000Z', '2026-09-09T01:00:00.000Z']);
+  const wrapped = parser.extractEventsFromJsonApiPayload({
+    data: { id: '1', attributes: { title: 'BN', venue: 'Bar', performances: [{ start_at: '2026-09-01T21:00:00-04:00' }] } }
+  }, 'https://example.com/api/v1/events', null);
+  assert.equal(wrapped.length, 1);
+  assert.equal(wrapped[0].title, 'BN');
+});
+
+test('wrapper precedence: outer key order wins the first match, wrapped values win same-named keys', () => {
+  const parser = createParser();
+  const outerFirst = parser.extractEventsFromJsonApiPayload(
+    [{ attributes: { title: 'W', starts_at: '2026-09-04T21:00:00Z' }, start_date: '2026-10-01T21:00:00Z', venue: 'Bar' }],
+    'https://example.com/api/v1/events', null);
+  assert.equal(outerFirst[0].startDate.toISOString(), '2026-10-01T21:00:00.000Z', 'the outer start_date is still the first match');
+  const envelopeDate = parser.extractEventsFromJsonApiPayload(
+    [{ date: '2026-01-01T00:00:00Z', content: { summary: { text: 'P' }, place: 'Bar', date: '2026-09-04T21:00:00-04:00' } }],
+    'https://example.com/api/v1/events', null);
+  assert.equal(envelopeDate[0].startDate.toISOString(), '2026-09-05T01:00:00.000Z', 'the wrapped event date beats the envelope record date');
+});
+
+test('cancelled JSON-API rows are skipped (Tockify status.name, schema.org eventStatus)', () => {
+  const parser = createParser();
+  const cancelled = {
+    ...TOCKIFY_FEED_PAYLOAD.events[0],
+    status: { name: 'cancelled' }
+  };
+  const events = parser.extractEventsFromJsonApiPayload({ events: [cancelled, TOCKIFY_FEED_PAYLOAD.events[1]] }, TOCKIFY_SOURCE_URL, null);
+  assert.deepEqual(events.map(e => e.title), ['Underbear Party at Rockbar']);
+  const schemaOrg = parser.extractEventsFromJsonApiPayload(
+    [{ title: 'X', venue: 'Bar', start: '2026-09-04T21:00:00Z', eventStatus: 'https://schema.org/EventCancelled' }],
+    'https://example.com/api/v1/events', null);
+  assert.equal(schemaOrg.length, 0);
+});
+
+test('JSON-API events never carry the fetch URL as their identity link, whatever its query looks like', () => {
+  const parser = createParser();
+  const events = parser.extractEventsFromJsonApiPayload(
+    [{ title: 'X', venue: 'Bar', start: '2026-09-04T21:00:00Z' }],
+    'https://tockify.com/api/ngevent?calname=thotyssey&tags=rockbar', null);
+  assert.equal(events[0].url, '');
+});

@@ -20514,3 +20514,46 @@ test('improbable-overnight-span fails closed without a timezone', () => {
   });
   assert.equal(flags.find(f => f.code === 'improbable-overnight-span'), undefined);
 });
+
+// ---------------------------------------------------------------------------
+// countJsonApiEventObjects mirror extensions: wrapper/rich-text/epoch shapes
+// (kept in sync with AiWebParser.jsonApiObjectLooksEventLike — Tockify feed
+// shape: content wrapper, summary.{text} title, when.start.{millis} date).
+// ---------------------------------------------------------------------------
+
+test('countJsonApiEventObjects counts Tockify-shaped wrapper/epoch events for page classification', () => {
+  const core = createCore();
+  const body = JSON.stringify({
+    events: [
+      {
+        eid: { uid: '39689' },
+        when: { start: { millis: 1788055200000, tzid: 'America/New_York' }, end: { millis: 1788076800000 } },
+        content: { summary: { text: 'Gorditos at Rockbar' }, place: 'Rockbar NYC' }
+      },
+      {
+        eid: { uid: '31035' },
+        when: { start: { millis: 1787364000000, tzid: 'America/New_York' } },
+        content: { summary: { text: 'Underbear Party at Rockbar' } }
+      }
+    ],
+    metaData: {}
+  });
+  assert.equal(core.countJsonApiEventObjects(body), 2);
+  // Objects that merely carry a when container with no resolvable start stay non-events
+  assert.equal(core.countJsonApiEventObjects(JSON.stringify({
+    events: [{ content: { summary: { text: 'title only' } }, when: { allDay: false } }]
+  })), 0);
+});
+
+test('countJsonApiEventObjects mirror: no bare epochs, no { rendered } titles, scalar when is not a start', () => {
+  const core = createCore();
+  assert.equal(core.countJsonApiEventObjects(JSON.stringify([
+    { date: '2026-08-01T10:00:00', title: { rendered: 'Recap' }, content: { rendered: '…' } },
+    { date: '2026-08-02T10:00:00', title: { rendered: 'Recap 2' }, content: { rendered: '…' } }
+  ])), 0, 'a WordPress posts list is not a list of events');
+  assert.equal(core.countJsonApiEventObjects(JSON.stringify([{ title: 'X', last_update_date: 1787425200000 }])), 0);
+  assert.equal(core.countJsonApiEventObjects(JSON.stringify([{ title: 'X', when: '2026-09-04T21:00:00Z' }])), 0);
+  assert.equal(core.countJsonApiEventObjects(JSON.stringify([{ title: 'X', when: { start: { millis: 1788055200000 } } }])), 1);
+  assert.equal(core.countJsonApiEventObjects(JSON.stringify([{ content: { summary: { text: '' } }, when: { start: { millis: 1788055200000 } } }])), 0,
+    'an empty rich-text title is no title — same as the parser');
+});
