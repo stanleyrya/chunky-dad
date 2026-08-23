@@ -57,7 +57,7 @@
     "festivals": {
       "name": "Festivals",
       "status": "success",
-      "dataLength": 14285,
+      "dataLength": 14961,
       "eventCount": 26
     },
     "la": {
@@ -123,8 +123,8 @@
     "seattle": {
       "name": "Seattle",
       "status": "success",
-      "dataLength": 15982,
-      "eventCount": 12
+      "dataLength": 14406,
+      "eventCount": 11
     },
     "sf": {
       "name": "San Francisco",

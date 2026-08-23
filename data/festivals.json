@@ -12,6 +12,25 @@
       "nextDates": { "start": "2026-07-27", "end": "2026-08-03" }
     },
     {
+      "key": "bear-pride-chicago",
+      "name": "Bear Pride Chicago",
+      "category": "festival",
+      "typicalTiming": "",
+      "recurring": "annual",
+      "website": "https://www.instagram.com/bearpridechicago/",
+      "instagram": "https://www.instagram.com/bearpridechicago/",
+      "nextDates": { "start": "2026-08-28", "end": "2026-08-29" }
+    },
+    {
+      "key": "bear-week-provincetown",
+      "name": "Bear Week Provincetown",
+      "category": "festival",
+      "typicalTiming": "",
+      "recurring": "annual",
+      "website": "https://www.eventbrite.com/o/ptownbears-78481077703",
+      "nextDates": { "start": "2026-08-28", "end": "2026-08-29" }
+    },
+    {
       "key": "southern-decadence",
       "name": "Southern Decadence",
       "category": "festival",
@@ -162,17 +181,6 @@
       "nextDates": { "start": "2027-04-08", "end": "2027-04-18" }
     },
     {
-      "key": "bear-week-provincetown",
-      "name": "Bear Week Provincetown",
-      "category": "bear-run",
-      "cityKey": "ptown",
-      "location": "Provincetown, MA",
-      "typicalTiming": "second week of July",
-      "recurring": "annual",
-      "website": "https://www.eventbrite.com/o/ptownbears-78481077703",
-      "nextDates": { "start": "2027-07-10", "end": "2027-07-17" }
-    },
-    {
       "key": "amsterdam-bear-pride",
       "name": "Amsterdam Bear Pride",
       "category": "pride",
@@ -210,17 +218,6 @@
       "typicalTiming": "early June",
       "recurring": "annual",
       "website": "https://www.bearjamboree.com/"
-    },
-    {
-      "key": "bear-pride-chicago",
-      "name": "Bear Pride Chicago",
-      "category": "pride",
-      "cityKey": "chicago",
-      "location": "Chicago, IL (Northalsted)",
-      "typicalTiming": "Memorial Day weekend (late May, alongside IML)",
-      "recurring": "annual",
-      "website": "https://www.instagram.com/bearpridechicago/",
-      "instagram": "https://www.instagram.com/bearpridechicago/"
     },
     {
       "key": "bear-pride-cologne",
