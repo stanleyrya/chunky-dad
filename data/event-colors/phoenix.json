@@ -5,9 +5,9 @@
     "faviconBg": "#ff1901",
     "faviconFg": "#ff5000",
     "faviconPlate": "#fffefe",
-    "paletteSource": "favicon",
-    "palette": "#ff3c00:72:24 #fffefe:27:0 #ff9f81:1:12",
-    "accent": "#ff3c00"
+    "paletteSource": "flyer",
+    "palette": "#f9f5ed:22:1 #c3542a:18:15 #e9ab58:16:12 #3a9423:6:17 #b951b4:5:18",
+    "accent": "#c3542a"
   },
   {
     "slug": "bearracuda-phoenix-relaunch-party-320faa75",

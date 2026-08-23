@@ -1,8 +1,10 @@
 {
   "originalUrl": "https://www.google.com/s2/favicons?domain=dieselseattle.com&sz=256",
-  "error": "HTTP 404: Not Found",
+  "source": "manual",
+  "manualSourceUrl": "https://upload.wikimedia.org/wikipedia/en/c/cc/Diesel_%28gay_bar%29_logo.png",
+  "note": "Manually curated: dieselseattle.com serves no favicon at all (hand-written 90s-style HTML), so the whole ladder 404s. This is the bar's diamond logo from its Wikipedia article (en.wikipedia.org/wiki/Diesel_(gay_bar)), same asset already cached as favicon-wikipedia-wiki-Diesel_-gay_bar-256px.png via scraper-bars.",
   "type": "favicon",
   "filename": "favicon-dieselseattle.com-256px.ico",
   "size": "256",
-  "failureCount": 1
+  "downloadedAt": "2026-08-22T03:10:49.000Z"
 }
