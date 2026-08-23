@@ -13,5 +13,15 @@
     "misses": 1,
     "firstMiss": "2026-08-20T18:29:52.422Z",
     "lastTried": "2026-08-20T18:29:52.422Z"
+  },
+  "www.juliusbarny.com": {
+    "misses": 1,
+    "firstMiss": "2026-08-23T17:26:14.516Z",
+    "lastTried": "2026-08-23T17:26:14.516Z"
+  },
+  "www.woof-berlin.com": {
+    "misses": 1,
+    "firstMiss": "2026-08-23T17:26:09.871Z",
+    "lastTried": "2026-08-23T17:26:09.871Z"
   }
 }
