@@ -10,6 +10,15 @@
     "accent": "#f2592a"
   },
   {
+    "slug": "bear-invasion-the-whitney-museum-51a88f91",
+    "url": "https://whitney.org",
+    "faviconBg": "#fcfcfc",
+    "faviconFg": "#bababa",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:92:0 #cccccc:3:0 #a2a2a2:3:0"
+  },
+  {
     "slug": "bears-are-animals-4cf796ee",
     "url": "https://animal.nyc",
     "faviconBg": "#e51a1a",
@@ -149,6 +158,25 @@
     "accent": "#f8c709"
   },
   {
+    "slug": "hairy-happy-hour-50a44f8e",
+    "url": "https://tys.nyc",
+    "faviconBg": "#177c17",
+    "faviconFg": "#072207",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#fefefe:32:0 #188218:30:17 #051705:13:4 #0a400a:9:10",
+    "accent": "#188218"
+  },
+  {
+    "slug": "mega-bear-blast-closing-night-party-435aeee7",
+    "url": "https://rockbarnyc.com",
+    "faviconBg": "#030303",
+    "faviconFg": "#7a7a7a",
+    "faviconPlate": "#000000",
+    "paletteSource": "favicon",
+    "palette": "#000000:87:0 #232323:2:0 #d3d3d3:2:0"
+  },
+  {
     "slug": "megawoof-bearmilk-present-megamilk-42f507f5",
     "url": "https://linktr.ee/megawoof_america",
     "faviconBg": "#575d64",
@@ -166,6 +194,33 @@
     "faviconPlate": "#000000",
     "paletteSource": "favicon",
     "palette": "#000000:87:0 #232323:2:0 #d3d3d3:2:0"
+  },
+  {
+    "slug": "the-18th-annual-urban-bear-nyc-street-fair-5cc259e6",
+    "url": "https://www.theurbanbear.com/",
+    "faviconBg": "#141414",
+    "faviconFg": "#dcdcdc",
+    "faviconPlate": "#000000",
+    "paletteSource": "favicon",
+    "palette": "#000000:54:0 #ffffff:27:0 #d9d9d9:5:0"
+  },
+  {
+    "slug": "the-underbear-party-53a0e24e",
+    "url": "https://rockbarnyc.com",
+    "faviconBg": "#030303",
+    "faviconFg": "#7a7a7a",
+    "faviconPlate": "#000000",
+    "paletteSource": "favicon",
+    "palette": "#000000:87:0 #232323:2:0 #d3d3d3:2:0"
+  },
+  {
+    "slug": "truck-stop-fat-fuc-486ee2b3",
+    "url": "https://nowherebarnyc.com",
+    "faviconBg": "#474747",
+    "faviconFg": "#767676",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#545454:33:0 #3a3a3a:30:0 #787878:17:0"
   },
   {
     "slug": "underbear-heatwave-30508312",
@@ -186,5 +241,15 @@
     "paletteSource": "flyer",
     "palette": "#000001:26:1 #2c0c11:17:5 #030a34:15:8 #6c2522:10:10 #0b1167:6:14",
     "accent": "#0b1167"
+  },
+  {
+    "slug": "urban-bear-nyc-opening-night-party-5788c695",
+    "url": "https://flexbar.nyc",
+    "faviconBg": "#ef4f30",
+    "faviconFg": "#ba0d08",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:36:0 #ec2b16:27:23 #f36d49:11:17 #c30604:9:21 #9c0302:5:18",
+    "accent": "#ec2b16"
   }
 ]

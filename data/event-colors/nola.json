@@ -1,5 +1,14 @@
 [
   {
+    "slug": "bear-breakfast-at-the-phoenix-0b24b727",
+    "url": "https://phoenixbarnola.com/",
+    "faviconBg": "#030303",
+    "faviconFg": "#b1b1b1",
+    "faviconPlate": "#000000",
+    "paletteSource": "favicon",
+    "palette": "#000000:84:0 #f5f5f5:7:0 #b3b3b3:3:0"
+  },
+  {
     "slug": "bearracuda-new-orleans-578ac888",
     "url": "https://bearracuda.com/events/decadence/",
     "faviconBg": "#ff1901",
@@ -30,6 +39,38 @@
     "accent": "#f4a27b"
   },
   {
+    "slug": "horse-meat-disco-southern-decadence-32901797",
+    "paletteSource": "flyer",
+    "palette": "#c4c4c4:59:0 #2b2b2b:11:0 #1b1b1b:9:0"
+  },
+  {
+    "slug": "leather-decadence-block-party-friday-phoenix-2f887ce5",
+    "url": "https://phoenixbarnola.com/",
+    "faviconBg": "#030303",
+    "faviconFg": "#b1b1b1",
+    "faviconPlate": "#000000",
+    "paletteSource": "favicon",
+    "palette": "#000000:84:0 #f5f5f5:7:0 #b3b3b3:3:0"
+  },
+  {
+    "slug": "leather-decadence-block-party-saturday-phoenix-26a43692",
+    "url": "https://phoenixbarnola.com/",
+    "faviconBg": "#030303",
+    "faviconFg": "#b1b1b1",
+    "faviconPlate": "#000000",
+    "paletteSource": "favicon",
+    "palette": "#000000:84:0 #f5f5f5:7:0 #b3b3b3:3:0"
+  },
+  {
+    "slug": "leather-decadence-block-party-sunday-phoenix-3e59f348",
+    "url": "https://phoenixbarnola.com/",
+    "faviconBg": "#030303",
+    "faviconFg": "#b1b1b1",
+    "faviconPlate": "#000000",
+    "paletteSource": "favicon",
+    "palette": "#000000:84:0 #f5f5f5:7:0 #b3b3b3:3:0"
+  },
+  {
     "slug": "new-orleans-578ac888",
     "url": "https://bearracuda.com/events/decadence/",
     "faviconBg": "#ff1901",
@@ -44,5 +85,24 @@
     "paletteSource": "flyer",
     "palette": "#623a2e:15:6 #1d1212:15:2 #3e221c:14:4 #8e5542:14:8 #bc826d:10:8",
     "accent": "#8e5542"
+  },
+  {
+    "slug": "phoenix-decadence-welcum-party-thursday-5e10e627",
+    "url": "https://www.phoenixbarnola.com/",
+    "faviconBg": "#030303",
+    "faviconFg": "#b1b1b1",
+    "faviconPlate": "#000000",
+    "paletteSource": "favicon",
+    "palette": "#000000:84:0 #f5f5f5:7:0 #b3b3b3:3:0"
+  },
+  {
+    "slug": "southern-decadence-grand-marshal-parade-1a11efc7",
+    "url": "https://www.southerndecadence.com/",
+    "faviconBg": "#253a89",
+    "faviconFg": "#db2332",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#2c4893:35:13 #ffffff:23:0 #e5222d:22:22 #8f3c71:7:13 #6176ae:4:9",
+    "accent": "#e5222d"
   }
 ]

@@ -1,5 +1,265 @@
 [
   {
+    "slug": "25th-annibearsary-party-bears-disco-by-scandal-18bd3646",
+    "url": "https://scandalsitges.com/bears-disco-by-scandal/",
+    "faviconBg": "#f7393c",
+    "faviconFg": "#feeeef",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #f84233:25:22 #f21b64:11:24 #fc8970:2:15 #f76e8a:2:17",
+    "accent": "#f84233"
+  },
+  {
+    "slug": "25th-anniversary-night-bear-village-dj-perfecto-3f7c0caa",
+    "url": "https://bearssitges.org/bears-sitges-week/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#faf8f6:34:0 #895927:15:9 #bb8446:14:10 #35589f:11:12 #e5da62:4:14",
+    "accent": "#35589f"
+  },
+  {
+    "slug": "bear-pool-party-at-clos-la-plana-0dee635b",
+    "url": "https://www.bearsevents.com/",
+    "faviconBg": "#cd4c74",
+    "faviconFg": "#cb584b",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#3c2c7b:20:13 #e9e4eb:15:1 #53b3dd:14:11 #dd354d:11:20 #f6dd0a:7:18",
+    "accent": "#dd354d"
+  },
+  {
+    "slug": "bear-route-ruta-del-oso-at-sponsor-bars-0210e321",
+    "url": "https://bearssitges.org/bears-sitges-week/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#faf8f6:34:0 #895927:15:9 #bb8446:14:10 #35589f:11:12 #e5da62:4:14",
+    "accent": "#35589f"
+  },
+  {
+    "slug": "bear-route-ruta-del-oso-at-sponsor-bars-0f6c165e",
+    "url": "https://bearssitges.org/bears-sitges-week/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#faf8f6:34:0 #895927:15:9 #bb8446:14:10 #35589f:11:12 #e5da62:4:14",
+    "accent": "#35589f"
+  },
+  {
+    "slug": "bear-route-ruta-del-oso-at-sponsor-bars-20e90fdd",
+    "url": "https://bearssitges.org/bears-sitges-week/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#faf8f6:34:0 #895927:15:9 #bb8446:14:10 #35589f:11:12 #e5da62:4:14",
+    "accent": "#35589f"
+  },
+  {
+    "slug": "bear-route-ruta-del-oso-at-sponsor-bars-3266095c",
+    "url": "https://bearssitges.org/bears-sitges-week/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#faf8f6:34:0 #895927:15:9 #bb8446:14:10 #35589f:11:12 #e5da62:4:14",
+    "accent": "#35589f"
+  },
+  {
+    "slug": "bear-route-ruta-del-oso-at-sponsor-bars-43e302db",
+    "url": "https://bearssitges.org/bears-sitges-week/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#faf8f6:34:0 #895927:15:9 #bb8446:14:10 #35589f:11:12 #e5da62:4:14",
+    "accent": "#35589f"
+  },
+  {
+    "slug": "bear-route-ruta-del-oso-at-sponsor-bars-48babf78",
+    "url": "https://bearssitges.org/bears-sitges-week/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#faf8f6:34:0 #895927:15:9 #bb8446:14:10 #35589f:11:12 #e5da62:4:14",
+    "accent": "#35589f"
+  },
+  {
+    "slug": "bear-route-ruta-del-oso-at-sponsor-bars-555ffc5a",
+    "url": "https://bearssitges.org/bears-sitges-week/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#faf8f6:34:0 #895927:15:9 #bb8446:14:10 #35589f:11:12 #e5da62:4:14",
+    "accent": "#35589f"
+  },
+  {
+    "slug": "bear-route-ruta-del-oso-at-sponsor-bars-66dcf5d9",
+    "url": "https://bearssitges.org/bears-sitges-week/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#faf8f6:34:0 #895927:15:9 #bb8446:14:10 #35589f:11:12 #e5da62:4:14",
+    "accent": "#35589f"
+  },
+  {
+    "slug": "bear-route-ruta-del-oso-at-sponsor-bars-7d31abf5",
+    "url": "https://bearssitges.org/bears-sitges-week/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#faf8f6:34:0 #895927:15:9 #bb8446:14:10 #35589f:11:12 #e5da62:4:14",
+    "accent": "#35589f"
+  },
+  {
+    "slug": "bear-sunset-tea-dance-rooftop-hotel-mim-2443422f",
+    "url": "https://www.bearsevents.com/event/bears-sunset-tea-dance-september-edition-2026/",
+    "faviconBg": "#cd4c74",
+    "faviconFg": "#cb584b",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#fcb44c:20:14 #e47c49:17:14 #b55944:15:12 #75453c:15:7 #3b446a:6:7",
+    "accent": "#fcb44c"
+  },
+  {
+    "slug": "bears-on-cruise-special-night-with-dj-james-munich-266cd306",
+    "url": "https://bearssitges.org/bears-sitges-week/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#faf8f6:34:0 #895927:15:9 #bb8446:14:10 #35589f:11:12 #e5da62:4:14",
+    "accent": "#35589f"
+  },
+  {
+    "slug": "bears-sitges-market-402b15d3",
+    "url": "https://bearssitges.org/bears-sitges-week/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#b38a65:18:7 #8b6443:17:7 #5b432b:14:5 #d3b38c:13:6 #3983bc:4:11",
+    "accent": "#b38a65"
+  },
+  {
+    "slug": "bears-sitges-market-47dcbb32",
+    "url": "https://bearssitges.org/bears-sitges-week/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#b38a65:18:7 #8b6443:17:7 #5b432b:14:5 #d3b38c:13:6 #3983bc:4:11",
+    "accent": "#b38a65"
+  },
+  {
+    "slug": "bears-sitges-market-4f8e6091",
+    "url": "https://bearssitges.org/bears-sitges-week/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#b38a65:18:7 #8b6443:17:7 #5b432b:14:5 #d3b38c:13:6 #3983bc:4:11",
+    "accent": "#b38a65"
+  },
+  {
+    "slug": "bears-sitges-market-574005f0",
+    "url": "https://bearssitges.org/bears-sitges-week/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#b38a65:18:7 #8b6443:17:7 #5b432b:14:5 #d3b38c:13:6 #3983bc:4:11",
+    "accent": "#b38a65"
+  },
+  {
+    "slug": "bears-sitges-market-69192057",
+    "url": "https://bearssitges.org/bears-sitges-week/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#b38a65:18:7 #8b6443:17:7 #5b432b:14:5 #d3b38c:13:6 #3983bc:4:11",
+    "accent": "#b38a65"
+  },
+  {
+    "slug": "bears-sitges-market-70cac5b6",
+    "url": "https://bearssitges.org/bears-sitges-week/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#b38a65:18:7 #8b6443:17:7 #5b432b:14:5 #d3b38c:13:6 #3983bc:4:11",
+    "accent": "#b38a65"
+  },
+  {
+    "slug": "bears-sitges-market-opening-0627dfca",
+    "url": "https://bearssitges.org/bears-sitges-week/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#b38a65:18:7 #8b6443:17:7 #5b432b:14:5 #d3b38c:13:6 #3983bc:4:11",
+    "accent": "#b38a65"
+  },
+  {
+    "slug": "bears-sitges-pack-pickup-official-polo-sale-22a9d5ed",
+    "url": "https://bearssitges.org/producto/bears-sitges-pack-2026/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#faf8f6:34:0 #895927:15:9 #bb8446:14:10 #35589f:11:12 #e5da62:4:14",
+    "accent": "#35589f"
+  },
+  {
+    "slug": "bears-sitges-pack-pickup-official-polo-sale-2a5b7b4c",
+    "url": "https://bearssitges.org/producto/bears-sitges-pack-2026/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#faf8f6:34:0 #895927:15:9 #bb8446:14:10 #35589f:11:12 #e5da62:4:14",
+    "accent": "#35589f"
+  },
+  {
+    "slug": "bears-sitges-pack-pickup-official-polo-sale-3153e60d",
+    "url": "https://bearssitges.org/producto/bears-sitges-pack-2026/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#faf8f6:34:0 #895927:15:9 #bb8446:14:10 #35589f:11:12 #e5da62:4:14",
+    "accent": "#35589f"
+  },
+  {
+    "slug": "bears-sitges-pack-pickup-official-polo-sale-320d20ab",
+    "url": "https://bearssitges.org/producto/bears-sitges-pack-2026/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#faf8f6:34:0 #895927:15:9 #bb8446:14:10 #35589f:11:12 #e5da62:4:14",
+    "accent": "#35589f"
+  },
+  {
+    "slug": "bears-sitges-week-2026-opening-cava-aperitif-7a383c2f",
+    "url": "https://bearssitges.org/bears-sitges-week/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#faf8f6:34:0 #895927:15:9 #bb8446:14:10 #35589f:11:12 #e5da62:4:14",
+    "accent": "#35589f"
+  },
+  {
     "slug": "beefmince-disco-511f64f9",
     "url": "https://sitgesbearcave.com/event/thursday-beefmince-disco/",
     "faviconBg": "#060606",
@@ -40,6 +300,126 @@
     "accent": "#ecc31d"
   },
   {
+    "slug": "capitan-party-at-bears-disco-by-scandal-20f49872",
+    "url": "https://scandalsitges.com/bears-disco-by-scandal/",
+    "faviconBg": "#f7393c",
+    "faviconFg": "#feeeef",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #f84233:25:22 #f21b64:11:24 #fc8970:2:15 #f76e8a:2:17",
+    "accent": "#f84233"
+  },
+  {
+    "slug": "draw-me-bears-life-drawing-57f2f157",
+    "url": "https://entradium.com/events/draw-me-like-one-of-your-bears",
+    "faviconBg": "#161718",
+    "faviconFg": "#cecfcf",
+    "faviconPlate": "#0a0b0c",
+    "paletteSource": "flyer",
+    "palette": "#0a0d23:43:5 #fdfdfe:16:0 #0b0302:13:2 #653b2d:6:6 #1421a3:6:20",
+    "accent": "#1421a3"
+  },
+  {
+    "slug": "draw-me-bears-life-drawing-5fa496b6",
+    "url": "https://entradium.com/events/draw-me-like-one-of-your-bears",
+    "faviconBg": "#161718",
+    "faviconFg": "#cecfcf",
+    "faviconPlate": "#0a0b0c",
+    "paletteSource": "flyer",
+    "palette": "#0a0d23:43:5 #fdfdfe:16:0 #0b0302:13:2 #653b2d:6:6 #1421a3:6:20",
+    "accent": "#1421a3"
+  },
+  {
+    "slug": "draw-me-bears-life-drawing-60b48f91",
+    "url": "https://entradium.com/events/draw-me-like-one-of-your-bears",
+    "faviconBg": "#161718",
+    "faviconFg": "#cecfcf",
+    "faviconPlate": "#0a0b0c",
+    "paletteSource": "flyer",
+    "palette": "#0a0d23:43:5 #fdfdfe:16:0 #0b0302:13:2 #653b2d:6:6 #1421a3:6:20",
+    "accent": "#1421a3"
+  },
+  {
+    "slug": "draw-me-bears-life-drawing-686634f0",
+    "url": "https://entradium.com/events/draw-me-like-one-of-your-bears",
+    "faviconBg": "#161718",
+    "faviconFg": "#cecfcf",
+    "faviconPlate": "#0a0b0c",
+    "paletteSource": "flyer",
+    "palette": "#0a0d23:43:5 #fdfdfe:16:0 #0b0302:13:2 #653b2d:6:6 #1421a3:6:20",
+    "accent": "#1421a3"
+  },
+  {
+    "slug": "draw-me-bears-life-drawing-7017da4f",
+    "url": "https://entradium.com/events/draw-me-like-one-of-your-bears",
+    "faviconBg": "#161718",
+    "faviconFg": "#cecfcf",
+    "faviconPlate": "#0a0b0c",
+    "paletteSource": "flyer",
+    "palette": "#0a0d23:43:5 #fdfdfe:16:0 #0b0302:13:2 #653b2d:6:6 #1421a3:6:20",
+    "accent": "#1421a3"
+  },
+  {
+    "slug": "early-village-2026-2cea22c9",
+    "url": "https://bearssitges.org/bears-sitges-week/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#f4bb3b:35:15 #090a0d:20:1 #99764a:14:7 #ba9e7b:9:6 #6d4d31:8:6",
+    "accent": "#f4bb3b"
+  },
+  {
+    "slug": "early-village-2026-349bc828",
+    "url": "https://bearssitges.org/bears-sitges-week/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#f4bb3b:35:15 #090a0d:20:1 #99764a:14:7 #ba9e7b:9:6 #6d4d31:8:6",
+    "accent": "#f4bb3b"
+  },
+  {
+    "slug": "early-village-opening-2026-3f107c0e",
+    "url": "https://bearssitges.org/bears-sitges-week/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#f4bb3b:35:15 #090a0d:20:1 #99764a:14:7 #ba9e7b:9:6 #6d4d31:8:6",
+    "accent": "#f4bb3b"
+  },
+  {
+    "slug": "exhibition-opening-25-by-blanca-de-nicolas-0803f3f3",
+    "url": "https://bearssitges.org/bears-sitges-week/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#debaa2:61:5 #c1977b:25:6 #97715b:7:6 #7b5343:4:6",
+    "accent": "#debaa2"
+  },
+  {
+    "slug": "farewell-pink-night-bear-village-dj-peasant-4acc73b3",
+    "url": "https://bearssitges.org/bears-sitges-week/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#faf8f6:34:0 #895927:15:9 #bb8446:14:10 #35589f:11:12 #e5da62:4:14",
+    "accent": "#35589f"
+  },
+  {
+    "slug": "farewell-pink-party-at-bears-disco-by-scandal-5dd46222",
+    "url": "https://scandalsitges.com/bears-disco-by-scandal/",
+    "faviconBg": "#f7393c",
+    "faviconFg": "#feeeef",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #f84233:25:22 #f21b64:11:24 #fc8970:2:15 #f76e8a:2:17",
+    "accent": "#f84233"
+  },
+  {
     "slug": "festival-bears-sitges-week-2026",
     "url": "https://bearssitges.org/",
     "faviconBg": "#a47a38",
@@ -60,6 +440,76 @@
     "accent": "#8d0b2c"
   },
   {
+    "slug": "ibc-palm-springs-night-with-dj-retro-cub-49709391",
+    "url": "https://bearssitges.org/bears-sitges-week/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#faf8f6:34:0 #895927:15:9 #bb8446:14:10 #35589f:11:12 #e5da62:4:14",
+    "accent": "#35589f"
+  },
+  {
+    "slug": "meet-greet-mr-bears-bear-organisations-sangria-3d210745",
+    "url": "https://bearssitges.org/bears-sitges-week/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#faf8f6:34:0 #895927:15:9 #bb8446:14:10 #35589f:11:12 #e5da62:4:14",
+    "accent": "#35589f"
+  },
+  {
+    "slug": "mr-bear-sitges-2026-special-night-with-dj-radio-chi-13456b0f",
+    "url": "https://bearssitges.org/bears-sitges-week/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#faf8f6:34:0 #895927:15:9 #bb8446:14:10 #35589f:11:12 #e5da62:4:14",
+    "accent": "#35589f"
+  },
+  {
+    "slug": "mr-bears-sitges-2026-the-party-scandal-15db3395",
+    "url": "https://scandalsitges.com/bears-disco-by-scandal/",
+    "faviconBg": "#f7393c",
+    "faviconFg": "#feeeef",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #f84233:25:22 #f21b64:11:24 #fc8970:2:15 #f76e8a:2:17",
+    "accent": "#f84233"
+  },
+  {
+    "slug": "official-25th-anniversary-dinner-4a92cb48",
+    "url": "https://bearssitges.org/producto/bears-sitges-pack-2026/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#faf8f6:34:0 #895927:15:9 #bb8446:14:10 #35589f:11:12 #e5da62:4:14",
+    "accent": "#35589f"
+  },
+  {
+    "slug": "popair-bbq-music-54296ae4",
+    "url": "https://popairparty.com/",
+    "faviconBg": "#f0f7fc",
+    "faviconFg": "#24303a",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#fbd504:47:18 #5b5553:12:1 #81868e:11:1 #d3a723:9:14 #ff1415:4:25",
+    "accent": "#fbd504"
+  },
+  {
+    "slug": "popair-bbq-music-7cbb5480",
+    "url": "https://popairparty.com/",
+    "faviconBg": "#f0f7fc",
+    "faviconFg": "#24303a",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#fbd504:47:18 #5b5553:12:1 #81868e:11:1 #d3a723:9:14 #ff1415:4:25",
+    "accent": "#fbd504"
+  },
+  {
     "slug": "saturday-12th-september-beefmince-the-big-ball-13a48cc3",
     "url": "https://beefmince.com",
     "faviconBg": "#060606",
@@ -68,6 +518,16 @@
     "paletteSource": "flyer",
     "palette": "#000000:44:0 #958971:12:4 #1a1916:10:1 #ecc31d:5:16 #bb132c:2:20",
     "accent": "#ecc31d"
+  },
+  {
+    "slug": "sitges-drag-brunch-bear-week-edition-30ae40c7",
+    "url": "https://www.bearsevents.com/event/sitges-drag-brunch-bear-edition-2026/",
+    "faviconBg": "#cd4c74",
+    "faviconFg": "#cb584b",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#aa5334:19:12 #d66c54:19:14 #ecab73:15:11 #783f2b:15:9 #442b1a:13:5",
+    "accent": "#d66c54"
   },
   {
     "slug": "thursday-10th-september-beefmince-disco-511f64f9",
@@ -80,6 +540,16 @@
     "accent": "#eec420"
   },
   {
+    "slug": "walk-to-playa-del-muerto-with-prague-bears-19040d8f",
+    "url": "https://en.praguebears.cz/Calendar.aspx?Event=1255",
+    "faviconBg": "#643217",
+    "faviconFg": "#e7dfd7",
+    "faviconPlate": "#632502",
+    "paletteSource": "flyer",
+    "palette": "#789fc6:30:7 #ccb593:24:5 #64633c:16:6 #9c8a63:9:6 #bd1a33:3:19",
+    "accent": "#bd1a33"
+  },
+  {
     "slug": "wednesday-9th-september-beefmince-meet-market-795b165c",
     "url": "https://beefmince.com",
     "faviconBg": "#060606",
@@ -88,5 +558,25 @@
     "paletteSource": "flyer",
     "palette": "#0a2349:23:8 #eb6a43:18:17 #1701aa:14:23 #165a8b:10:10 #e7c41e:6:16",
     "accent": "#1701aa"
+  },
+  {
+    "slug": "welcome-night-with-dj-radio-chi-15684e07",
+    "url": "https://bearssitges.org/bears-sitges-week/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#faf8f6:34:0 #895927:15:9 #bb8446:14:10 #35589f:11:12 #e5da62:4:14",
+    "accent": "#35589f"
+  },
+  {
+    "slug": "white-night-noche-blanca-with-prague-bears-dj-pawl-204172c0",
+    "url": "https://bearssitges.org/bears-sitges-week/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#faf8f6:34:0 #895927:15:9 #bb8446:14:10 #35589f:11:12 #e5da62:4:14",
+    "accent": "#35589f"
   }
 ]

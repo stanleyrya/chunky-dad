@@ -1,5 +1,21 @@
 [
   {
+    "slug": "adam-berlin-edition-folsom-opening-party-76657223",
+    "paletteSource": "flyer",
+    "palette": "#3cb44a:65:18 #000000:33:0 #ffffff:1:0 #2d8838:1:14",
+    "accent": "#3cb44a"
+  },
+  {
+    "slug": "beardance-folsom-berlin-2026-4ba533e7",
+    "url": "https://www.eventbrite.de/e/beardance-folsom-2026-tickets-1984056364997",
+    "faviconBg": "#ff5e30",
+    "faviconFg": "#ff6333",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#211e1e:59:0 #423e3a:12:1 #695f55:11:2 #edb412:9:16",
+    "accent": "#edb412"
+  },
+  {
     "slug": "festival-folsom-europe-2026",
     "url": "https://folsomeurope.berlin/",
     "faviconBg": "#0b0303",
@@ -8,5 +24,81 @@
     "paletteSource": "favicon",
     "palette": "#000000:60:0 #0098e5:25:15 #ffffff:10:0 #ff0000:2:26",
     "accent": "#0098e5"
+  },
+  {
+    "slug": "fetish-in-the-mix-2026-woof-berlin-31f344d1",
+    "url": "https://www.woof-berlin.com/",
+    "paletteSource": "flyer",
+    "palette": "#000000:93:0 #fefefe:6:0 #0a0a0a:1:0"
+  },
+  {
+    "slug": "fetish-in-the-mix-2026-woof-berlin-41568f8f",
+    "url": "https://www.woof-berlin.com/",
+    "paletteSource": "flyer",
+    "palette": "#000000:93:0 #fefefe:6:0 #0a0a0a:1:0"
+  },
+  {
+    "slug": "fetish-in-the-mix-2026-woof-berlin-490834ee",
+    "url": "https://www.woof-berlin.com/",
+    "paletteSource": "flyer",
+    "palette": "#000000:93:0 #fefefe:6:0 #0a0a0a:1:0"
+  },
+  {
+    "slug": "folsom-europe-street-fair-2026-2d77dcc9",
+    "url": "https://folsomeurope.berlin/",
+    "faviconBg": "#0b0303",
+    "faviconFg": "#46afe5",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#3b353b:40:1 #0b0e12:23:1 #231e22:21:1 #0098e4:2:15 #ff0538:1:25",
+    "accent": "#0098e4"
+  },
+  {
+    "slug": "folsom-europe-street-fair-friday-opening-evening-10c5e4de",
+    "url": "https://folsomeurope.berlin/",
+    "faviconBg": "#0b0303",
+    "faviconFg": "#46afe5",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#3b353b:40:1 #0b0e12:23:1 #231e22:21:1 #0098e4:2:15 #ff0538:1:25",
+    "accent": "#0098e4"
+  },
+  {
+    "slug": "kakes-sunday-service-folsom-closing-party-52d86787",
+    "paletteSource": "flyer",
+    "palette": "#010101:69:0 #ff0000:13:26 #cfcfd1:4:0 #800100:1:15",
+    "accent": "#ff0000"
+  },
+  {
+    "slug": "pig-official-folsom-europe-main-party-03534e00",
+    "url": "https://pigberlin.de/folsom-berlin-2026/",
+    "faviconBg": "#e40512",
+    "faviconFg": "#f60614",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#3a323c:22:2 #635c64:18:1 #e22936:15:22 #93393c:7:12 #b57463:7:9",
+    "accent": "#e22936"
+  },
+  {
+    "slug": "touch-a-mister-official-folsom-welcome-party-65a99f5e",
+    "url": "https://folsomeurope.berlin/program/",
+    "faviconBg": "#0b0303",
+    "faviconFg": "#46afe5",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#0e1113:55:1 #22292d:20:1 #364046:11:2 #0098e4:2:15",
+    "accent": "#0098e4"
+  },
+  {
+    "slug": "woofs-fetish-beer-garden-street-fair-day-3bf2638d",
+    "url": "https://www.woof-berlin.com/",
+    "paletteSource": "flyer",
+    "palette": "#000000:93:0 #fefefe:6:0 #0a0a0a:1:0"
+  },
+  {
+    "slug": "woofs-folsom-welcome-6ec04245",
+    "url": "https://www.woof-berlin.com/",
+    "paletteSource": "flyer",
+    "palette": "#000000:93:0 #fefefe:6:0 #0a0a0a:1:0"
   }
 ]
