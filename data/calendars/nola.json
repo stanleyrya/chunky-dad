@@ -5,122 +5,174 @@
   },
   "events": [
     {
-      "name": "BEARRACUDA: New Orleans⚜️",
+      "name": "Renegade Bears Decadence Pool Party — Friday",
       "day": "Friday",
-      "time": "9PM-2AM",
+      "time": "2PM-6PM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
-        "lat": 29.9559524,
-        "lng": -90.0738975
+        "lat": 29.96012,
+        "lng": -90.06854
       },
-      "startDate": "2026-09-04T21:00:00",
-      "endDate": "2026-09-05T02:00:00",
-      "unprocessedDescription": "description: SOUTHERN DECADENCE\nbar: Joy Theater\naddress: 120\r0 Canal St, New Orleans, LA 70112\ntimezone: America/Chicago\nticketUrl: https://www.ticketmaster.com/event/1B006454A32CE162\nimage: https://bearracuda.com/wp-content/uploads/2026/03/igdecad-2.jpg\nimageVertical: https://bearracuda.com/wp-content/uploads/2026/03/igdecad-2.jpg\nwebsite: https://bearracuda.com/events/decadence/\nshortName: Bear­rac­uda\ninstagram: https://www.instagram.com/bearracuda\nfavicon: https://bearracuda.com/\nkey: bearracuda-new-orleans⚜️|2026-09-05|joy theater\nbearSource: keyword\npinSource: curated\naddressSource: curated\nimageSource: og-image\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/search/?api=1&query=Joy%20Theater%2C%201200%20Canal%20St%2C%20New%20Orleans%2C%20LA%2070112",
+      "startDate": "2026-09-04T14:00:00",
+      "endDate": "2026-09-04T18:00:00",
+      "unprocessedDescription": "description: Day one of the Renegade Bears of Louisiana's doubl\re-bill pool party\\: men-only, clothing-optional, pool, hot tub, open bar and food — the local bear club's signature Decadence event. Ticketed (2025 was $65/day).\nbar: The Privé Community\naddress: 628 N Rampart St, New Orleans, LA 70116\nwebsite: https://www.facebook.com/profile.php?id=100064343303700\nticketUrl: https://events.ticketleap.com/tickets/renegadebearsoflouisianaorg/renegade-bears-southern-decadence-pool-party-2026\ncover: $65\ntimezone: America/Chicago\nkey: renegade-bears-decadence-pool-party-friday|2026-09-04|the-priv-community\nfestival: Southern Decadence\nnote: no-coordinates (private residence/community; no official map link), TicketLeap 2026 listing exists but is a JS checkout that returns 'Something went wrong' to curl — dates/times/price from third-party listing; club's own presence is Facebook only, pin-curated-by-hand, drop the 'unreadable without a browser' flags",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Chicago",
       "wasUTC": true,
-      "sourceUid": "74648B34-07A1-4BD2-8E78-D67B991A920E",
-      "uid": "74648B34-07A1-4BD2-8E78-D67B991A920E",
+      "sourceUid": "southern-decadence-renegade-bears-decadence-pool-party-friday-2026-09-0\r4@chunky.dad",
+      "uid": "southern-decadence-renegade-bears-decadence-pool-party-friday-2026-09-0\r4@chunky.dad",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "Joy Theater",
-      "image": "https://bearracuda.com/wp-content/uploads/2026/03/igdecad-2.jpg",
-      "imageVertical": "https://bearracuda.com/wp-content/uploads/2026/03/igdecad-2.jpg",
-      "favicon": "https://bearracuda.com/",
-      "tea": "SOUTHERN DECADENCE",
-      "address": "1200 Canal St, New Orleans, LA 70112",
-      "website": "https://bearracuda.com/events/decadence/",
-      "instagram": "https://www.instagram.com/bearracuda",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Joy%20Theater%2C%201200%20Canal%20St%2C%20New%20Orleans%2C%20LA%2070112",
-      "ticketUrl": "https://www.ticketmaster.com/event/1B006454A32CE162",
-      "shortName": "Bear­rac­uda",
+      "bar": "The Privé Community",
+      "cover": "$65",
+      "tea": "Day one of the Renegade Bears of Louisiana's double-bill pool party: men-only, clothing-optional, pool, hot tub, open bar and food — the local bear club's signature Decadence event. Ticketed (2025 was $65/day).",
+      "address": "628 N Rampart St, New Orleans, LA 70116",
+      "website": "https://www.facebook.com/profile.php?id=100064343303700",
+      "ticketUrl": "https://events.ticketleap.com/tickets/renegadebearsoflouisianaorg/renegade-bears-southern-decadence-pool-party-2026",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://bearracuda.com/events/decadence/",
+          "url": "https://www.facebook.com/profile.php?id=100064343303700",
           "label": "🌐 Website"
         },
         {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearracuda",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Joy%20Theater%2C%201200%20Canal%20St%2C%20New%20Orleans%2C%20LA%2070112",
-          "label": "🗺️ Google Maps"
-        },
-        {
           "type": "tickets",
-          "url": "https://www.ticketmaster.com/event/1B006454A32CE162",
+          "url": "https://events.ticketleap.com/tickets/renegadebearsoflouisianaorg/renegade-bears-southern-decadence-pool-party-2026",
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "bearracuda-new-orleans-578ac888"
+      "slug": "renegade-bears-decadence-pool-party-friday-301f829a"
     },
     {
-      "name": "FURBALL NOLA",
+      "name": "Horse Meat Disco: Southern Decadence",
       "day": "Saturday",
-      "time": "10PM",
+      "time": "9PM-3AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
-        "lat": 29.9605893,
-        "lng": -90.0594606
+        "lat": 29.9499846,
+        "lng": -90.0649127
       },
-      "startDate": "2026-09-05T22:00:00",
-      "unprocessedDescription": "description: Southern Decadence\nbar: Santos Bar\naddress: 1135\r DECATUR ST\ntimezone: America/Chicago\nticketUrl: https://events.ticketleap.com/tickets/furballnyc/furball-new-orleans-southern-decadence-2026\nimage: https://static.wixstatic.com/media/238fae_fd76b69c05fa4e788b9acb5ef77178ee~mv2.jpg\nimageVertical: https://static.wixstatic.com/media/238fae_fd76b69c05fa4e788b9acb5ef77178ee~mv2.jpg\nwebsite: https://www.furball.nyc\nshortName: FUR­BALL\ninstagram: https://instagram.com/furballnyc/\nfavicon: https://linktr.ee/furballnyc\nkey: furball-nola|2026-09-06|santos bar\nbearSource: keyword\ncover: TICKLEAP\npinSource: geocoded-exact\naddressSource: page\nimageSource: page\nbarSource: geo-poi\ngmaps: https://www.google.com/maps/search/?api=1&query=Santos%20Bar%2C%201135%20DECATUR%20ST",
+      "startDate": "2026-09-05T21:00:00",
+      "endDate": "2026-09-06T03:00:00",
+      "unprocessedDescription": "description: The headline Saturday-night dance of the weekend\\\\\r: London's Horse Meat Disco returns for its 11th Decadence, presented by Father Figure at the Fillmore, with a main room, a dark room and a secret performance. Not bear-branded, but the big daddy/bear-friendly disco crowd-puller that competes with Furball for Saturday night.\nbar: Fillmore New Orleans\naddress: 6 Canal St, New Orleans, LA 70130\nwebsite: https://www.eventbrite.com/o/father-figure-presents-8768101057\nticketUrl: https://www.eventbrite.com/e/horse-meat-disco-southern-decadence-new-orleans-2026-tickets-1992368139739\ncover: $59.99\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1069240193%2F35299754618%2F1%2Foriginal.20250708-191101?w=940&auto=format%2Ccompress&q=75&sharp=10&s=b9b24be376e0132520b807e89adbad70\ntimezone: America/Chicago\nkey: horse-meat-disco-southern-decadence|2026-09-05|fillmore-new-orleans\nfestival: Southern Decadence\nnote: bear-adjacent headline, not a bear-branded party — include at editor's discretion",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Chicago",
       "wasUTC": true,
-      "sourceUid": "177A2A66-DFD8-4AF9-BC41-A6292A422E58",
-      "uid": "177A2A66-DFD8-4AF9-BC41-A6292A422E58",
+      "sourceUid": "southern-decadence-horse-meat-disco-southern-decadence-2026-09-05@chunk\ry.dad",
+      "uid": "southern-decadence-horse-meat-disco-southern-decadence-2026-09-05@chunk\ry.dad",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
-      "sequence": 1,
+      "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "Santos Bar",
-      "cover": "TICKLEAP",
-      "image": "https://static.wixstatic.com/media/238fae_fd76b69c05fa4e788b9acb5ef77178ee~mv2.jpg",
-      "imageVertical": "https://static.wixstatic.com/media/238fae_fd76b69c05fa4e788b9acb5ef77178ee~mv2.jpg",
-      "favicon": "https://linktr.ee/furballnyc",
-      "tea": "Southern Decadence",
-      "address": "1135 DECATUR ST",
-      "website": "https://www.furball.nyc",
-      "instagram": "https://instagram.com/furballnyc/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Santos%20Bar%2C%201135%20DECATUR%20ST",
-      "ticketUrl": "https://events.ticketleap.com/tickets/furballnyc/furball-new-orleans-southern-decadence-2026",
-      "shortName": "FUR­BALL",
+      "bar": "Fillmore New Orleans",
+      "cover": "$59.99",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1069240193%2F35299754618%2F1%2Foriginal.20250708-191101?w=940&auto=format%2Ccompress&q=75&sharp=10&s=b9b24be376e0132520b807e89adbad70",
+      "tea": "The headline Saturday-night dance of the weekend\\: London's Horse Meat Disco returns for its 11th Decadence, presented by Father Figure at the Fillmore, with a main room, a dark room and a secret performance. Not bear-branded, but the big daddy/bear-friendly disco crowd-puller that competes with Furball for Saturday night.",
+      "address": "6 Canal St, New Orleans, LA 70130",
+      "website": "https://www.eventbrite.com/o/father-figure-presents-8768101057",
+      "ticketUrl": "https://www.eventbrite.com/e/horse-meat-disco-southern-decadence-new-orleans-2026-tickets-1992368139739",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://www.furball.nyc",
+          "url": "https://www.eventbrite.com/o/father-figure-presents-8768101057",
           "label": "🌐 Website"
         },
         {
-          "type": "instagram",
-          "url": "https://instagram.com/furballnyc/",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Santos%20Bar%2C%201135%20DECATUR%20ST",
-          "label": "🗺️ Google Maps"
-        },
-        {
           "type": "tickets",
-          "url": "https://events.ticketleap.com/tickets/furballnyc/furball-new-orleans-southern-decadence-2026",
+          "url": "https://www.eventbrite.com/e/horse-meat-disco-southern-decadence-new-orleans-2026-tickets-1992368139739",
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "furball-nola-26765d8a"
+      "slug": "horse-meat-disco-southern-decadence-32901797"
+    },
+    {
+      "name": "Bear Breakfast at the Phoenix",
+      "day": "Sunday",
+      "time": "9AM-1PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 29.96748,
+        "lng": -90.05649
+      },
+      "startDate": "2026-09-06T09:00:00",
+      "endDate": "2026-09-06T13:00:00",
+      "unprocessedDescription": "description: A Decadence-Sunday tradition at the bear/leather b\rar\\: breakfast buffet and bloody-mary specials from 9am before the parade. Listed only in a third-party recap of the 2025 schedule; not confirmed for 2026.\nbar: The Phoenix Bar\naddress: 941 Elysian Fields Ave, New Orleans, LA 70117\nwebsite: https://phoenixbarnola.com/\ntimezone: America/Chicago\nkey: bear-breakfast-at-the-phoenix|2026-09-06|the-phoenix-bar\nfestival: Southern Decadence\nnote: end time not published — 4h default; pin-curated-by-hand, third-party 2026 listing (gaytravel4u); no primary source; confidence\\: low — verify before the weekend",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "southern-decadence-bear-breakfast-at-the-phoenix-2026-09-06@chunky.dad",
+      "uid": "southern-decadence-bear-breakfast-at-the-phoenix-2026-09-06@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The Phoenix Bar",
+      "tea": "A Decadence-Sunday tradition at the bear/leather bar: breakfast buffet and bloody-mary specials from 9am before the parade. Listed only in a third-party recap of the 2025 schedule; not confirmed for 2026.",
+      "address": "941 Elysian Fields Ave, New Orleans, LA 70117",
+      "website": "https://phoenixbarnola.com/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://phoenixbarnola.com/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "bear-breakfast-at-the-phoenix-0b24b727"
+    },
+    {
+      "name": "Renegade Bears Decadence Pool Party — Saturday",
+      "day": "Saturday",
+      "time": "2PM-6PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 29.96012,
+        "lng": -90.06854
+      },
+      "startDate": "2026-09-05T14:00:00",
+      "endDate": "2026-09-05T18:00:00",
+      "unprocessedDescription": "description: Day two of the Renegade Bears' men-only, clothing\r-optional Decadence pool party — pool, hot tub, open bar and food with the local bear club. Ticketed.\nbar: The Privé Community\naddress: 628 N Rampart St, New Orleans, LA 70116\nwebsite: https://www.facebook.com/profile.php?id=100064343303700\nticketUrl: https://events.ticketleap.com/tickets/renegadebearsoflouisianaorg/renegade-bears-southern-decadence-pool-party-2026\ncover: $65\ntimezone: America/Chicago\nkey: renegade-bears-decadence-pool-party-saturday|2026-09-05|the-priv-community\nfestival: Southern Decadence\nnote: details from third-party listing; TicketLeap 2026 page unreadable without a browser, pin-curated-by-hand",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "southern-decadence-renegade-bears-decadence-pool-party-saturday-2026-09\r-05@chunky.dad",
+      "uid": "southern-decadence-renegade-bears-decadence-pool-party-saturday-2026-09\r-05@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The Privé Community",
+      "cover": "$65",
+      "tea": "Day two of the Renegade Bears' men-only, clothing-optional Decadence pool party — pool, hot tub, open bar and food with the local bear club. Ticketed.",
+      "address": "628 N Rampart St, New Orleans, LA 70116",
+      "website": "https://www.facebook.com/profile.php?id=100064343303700",
+      "ticketUrl": "https://events.ticketleap.com/tickets/renegadebearsoflouisianaorg/renegade-bears-southern-decadence-pool-party-2026",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.facebook.com/profile.php?id=100064343303700",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://events.ticketleap.com/tickets/renegadebearsoflouisianaorg/renegade-bears-southern-decadence-pool-party-2026",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "renegade-bears-decadence-pool-party-saturday-7c6821c5"
     },
     {
       "name": "NEW ORLEANS",
@@ -184,6 +236,314 @@
         }
       ],
       "slug": "new-orleans-605b589e"
+    },
+    {
+      "name": "BEARRACUDA: New Orleans⚜️",
+      "day": "Friday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 29.9559524,
+        "lng": -90.0738975
+      },
+      "startDate": "2026-09-04T21:00:00",
+      "endDate": "2026-09-05T02:00:00",
+      "unprocessedDescription": "description: SOUTHERN DECADENCE\nbar: Joy Theater\naddress: 120\r0 Canal St, New Orleans, LA 70112\ntimezone: America/Chicago\nticketUrl: https://www.ticketmaster.com/event/1B006454A32CE162\nimage: https://bearracuda.com/wp-content/uploads/2026/03/igdecad-2.jpg\nimageVertical: https://bearracuda.com/wp-content/uploads/2026/03/igdecad-2.jpg\nwebsite: https://bearracuda.com/events/decadence/\nshortName: Bear­rac­uda\ninstagram: https://www.instagram.com/bearracuda\nfavicon: https://bearracuda.com/\nkey: bearracuda-new-orleans⚜️|2026-09-05|joy theater\nbearSource: keyword\npinSource: curated\naddressSource: curated\nimageSource: og-image\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/search/?api=1&query=Joy%20Theater%2C%201200%20Canal%20St%2C%20New%20Orleans%2C%20LA%2070112",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "74648B34-07A1-4BD2-8E78-D67B991A920E",
+      "uid": "74648B34-07A1-4BD2-8E78-D67B991A920E",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Joy Theater",
+      "image": "https://bearracuda.com/wp-content/uploads/2026/03/igdecad-2.jpg",
+      "imageVertical": "https://bearracuda.com/wp-content/uploads/2026/03/igdecad-2.jpg",
+      "favicon": "https://bearracuda.com/",
+      "tea": "SOUTHERN DECADENCE",
+      "address": "1200 Canal St, New Orleans, LA 70112",
+      "website": "https://bearracuda.com/events/decadence/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Joy%20Theater%2C%201200%20Canal%20St%2C%20New%20Orleans%2C%20LA%2070112",
+      "ticketUrl": "https://www.ticketmaster.com/event/1B006454A32CE162",
+      "shortName": "Bear­rac­uda",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/events/decadence/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Joy%20Theater%2C%201200%20Canal%20St%2C%20New%20Orleans%2C%20LA%2070112",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.ticketmaster.com/event/1B006454A32CE162",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bearracuda-new-orleans-578ac888"
+    },
+    {
+      "name": "Leather Decadence Block Party — Sunday (Phoenix)",
+      "day": "Sunday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 29.96748,
+        "lng": -90.05649
+      },
+      "startDate": "2026-09-06T21:00:00",
+      "endDate": "2026-09-07T02:00:00",
+      "unprocessedDescription": "description: Closing night of the Phoenix's 'Leather Decadence'\r block party after the parade — the last big leather/bear street party of the weekend. Never a cover.\nbar: The Phoenix Bar\naddress: 941 Elysian Fields Ave, New Orleans, LA 70117\nwebsite: https://phoenixbarnola.com/\ncover: Free\ntimezone: America/Chicago\nkey: leather-decadence-block-party-sunday-phoenix|2026-09-06|the-phoenix-bar\nfestival: Southern Decadence\nnote: hours carried from prior years; Phoenix has published no 2026 schedule online, pin-curated-by-hand; confidence\\: medium — verify before the weekend",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "southern-decadence-leather-decadence-block-party-sunday-phoenix-2026-09\r-06@chunky.dad",
+      "uid": "southern-decadence-leather-decadence-block-party-sunday-phoenix-2026-09\r-06@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The Phoenix Bar",
+      "cover": "Free",
+      "tea": "Closing night of the Phoenix's 'Leather Decadence' block party after the parade — the last big leather/bear street party of the weekend. Never a cover.",
+      "address": "941 Elysian Fields Ave, New Orleans, LA 70117",
+      "website": "https://phoenixbarnola.com/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://phoenixbarnola.com/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "leather-decadence-block-party-sunday-phoenix-3e59f348"
+    },
+    {
+      "name": "Leather Decadence Block Party — Saturday (Phoenix)",
+      "day": "Saturday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 29.96748,
+        "lng": -90.05649
+      },
+      "startDate": "2026-09-05T21:00:00",
+      "endDate": "2026-09-06T02:00:00",
+      "unprocessedDescription": "description: Saturday night of the Phoenix's 'Leather Decadence\r' block party, the leather/bear community's home base for the weekend — outdoor bar, beer trailer, gogo daddies and club-hosted beer busts, with the Eagle upstairs from 9pm. Never a cover.\nbar: The Phoenix Bar\naddress: 941 Elysian Fields Ave, New Orleans, LA 70117\nwebsite: https://phoenixbarnola.com/\ncover: Free\ntimezone: America/Chicago\nkey: leather-decadence-block-party-saturday-phoenix|2026-09-05|the-phoenix-bar\nfestival: Southern Decadence\nnote: hours carried from prior years; Phoenix has published no 2026 schedule online, pin-curated-by-hand; confidence\\: medium — verify before the weekend",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "southern-decadence-leather-decadence-block-party-saturday-phoenix-2026-\r09-05@chunky.dad",
+      "uid": "southern-decadence-leather-decadence-block-party-saturday-phoenix-2026-\r09-05@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The Phoenix Bar",
+      "cover": "Free",
+      "tea": "Saturday night of the Phoenix's 'Leather Decadence' block party, the leather/bear community's home base for the weekend — outdoor bar, beer trailer, gogo daddies and club-hosted beer busts, with the Eagle upstairs from 9pm. Never a cover.",
+      "address": "941 Elysian Fields Ave, New Orleans, LA 70117",
+      "website": "https://phoenixbarnola.com/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://phoenixbarnola.com/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "leather-decadence-block-party-saturday-phoenix-26a43692"
+    },
+    {
+      "name": "FURBALL NOLA",
+      "day": "Saturday",
+      "time": "10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 29.9605893,
+        "lng": -90.0594606
+      },
+      "startDate": "2026-09-05T22:00:00",
+      "unprocessedDescription": "description: Southern Decadence\nbar: Santos Bar\naddress: 1135\r DECATUR ST\ntimezone: America/Chicago\nticketUrl: https://events.ticketleap.com/tickets/furballnyc/furball-new-orleans-southern-decadence-2026\nimage: https://static.wixstatic.com/media/238fae_fd76b69c05fa4e788b9acb5ef77178ee~mv2.jpg\nimageVertical: https://static.wixstatic.com/media/238fae_fd76b69c05fa4e788b9acb5ef77178ee~mv2.jpg\nwebsite: https://www.furball.nyc\nshortName: FUR­BALL\ninstagram: https://instagram.com/furballnyc/\nfavicon: https://linktr.ee/furballnyc\nkey: furball-nola|2026-09-06|santos bar\nbearSource: keyword\ncover: TICKLEAP\npinSource: geocoded-exact\naddressSource: page\nimageSource: page\nbarSource: geo-poi\ngmaps: https://www.google.com/maps/search/?api=1&query=Santos%20Bar%2C%201135%20DECATUR%20ST",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "177A2A66-DFD8-4AF9-BC41-A6292A422E58",
+      "uid": "177A2A66-DFD8-4AF9-BC41-A6292A422E58",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 1,
+      "overrideIdentityType": null,
+      "bar": "Santos Bar",
+      "cover": "TICKLEAP",
+      "image": "https://static.wixstatic.com/media/238fae_fd76b69c05fa4e788b9acb5ef77178ee~mv2.jpg",
+      "imageVertical": "https://static.wixstatic.com/media/238fae_fd76b69c05fa4e788b9acb5ef77178ee~mv2.jpg",
+      "favicon": "https://linktr.ee/furballnyc",
+      "tea": "Southern Decadence",
+      "address": "1135 DECATUR ST",
+      "website": "https://www.furball.nyc",
+      "instagram": "https://instagram.com/furballnyc/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Santos%20Bar%2C%201135%20DECATUR%20ST",
+      "ticketUrl": "https://events.ticketleap.com/tickets/furballnyc/furball-new-orleans-southern-decadence-2026",
+      "shortName": "FUR­BALL",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.furball.nyc",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://instagram.com/furballnyc/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Santos%20Bar%2C%201135%20DECATUR%20ST",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://events.ticketleap.com/tickets/furballnyc/furball-new-orleans-southern-decadence-2026",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "furball-nola-26765d8a"
+    },
+    {
+      "name": "Phoenix Decadence Welcum Party (Thursday)",
+      "day": "Thursday",
+      "time": "9PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 29.96748,
+        "lng": -90.05649
+      },
+      "startDate": "2026-09-03T21:00:00",
+      "endDate": "2026-09-04T03:00:00",
+      "unprocessedDescription": "description: Phoenix's Decadence kickoff\\: drink specials, gi\rveaways and Nasty Pig gear sales all night at the bear/leather bar. Start time not published — 9pm assumed.\nbar: The Phoenix Bar\naddress: 941 Elysian Fields Ave, New Orleans, LA 70117\nwebsite: https://www.phoenixbarnola.com/\ncover: Free\ntimezone: America/Chicago\nkey: phoenix-decadence-welcum-party-thursday|2026-09-03|the-phoenix-bar\nfestival: Southern Decadence\nnote: end time not published — 6h default; start time not published — 9pm assumed (third-party 2026 listing); confidence\\: low — verify before the weekend",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "southern-decadence-phoenix-decadence-welcum-party-thursday-2026-09-03@c\rhunky.dad",
+      "uid": "southern-decadence-phoenix-decadence-welcum-party-thursday-2026-09-03@c\rhunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The Phoenix Bar",
+      "cover": "Free",
+      "tea": "Phoenix's Decadence kickoff: drink specials, giveaways and Nasty Pig gear sales all night at the bear/leather bar. Start time not published — 9pm assumed.",
+      "address": "941 Elysian Fields Ave, New Orleans, LA 70117",
+      "website": "https://www.phoenixbarnola.com/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.phoenixbarnola.com/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "phoenix-decadence-welcum-party-thursday-5e10e627"
+    },
+    {
+      "name": "Leather Decadence Block Party — Friday (Phoenix)",
+      "day": "Friday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 29.96748,
+        "lng": -90.05649
+      },
+      "startDate": "2026-09-04T21:00:00",
+      "endDate": "2026-09-05T02:00:00",
+      "unprocessedDescription": "description: Night one of the Phoenix's 'Leather Decadence' str\reet party — the official guide bills it as the largest leather/Levi block party in the South, at New Orleans' only leather & bear bar, with beer busts hosted by the Lords of Leather and Renegade Bears and the Eagle upstairs open from 9pm. Never a cover.\nbar: The Phoenix Bar\naddress: 941 Elysian Fields Ave, New Orleans, LA 70117\nwebsite: https://phoenixbarnola.com/\ncover: Free\ntimezone: America/Chicago\nkey: leather-decadence-block-party-friday-phoenix|2026-09-04|the-phoenix-bar\nfestival: Southern Decadence\nnote: no-coordinates (official venue page links a Google Maps address query, not a pin), Fri/Sat/Sun block party + free confirmed on official passes page; 9pm–2am street hours from prior-year official/third-party listings — Phoenix has published no 2026 schedule online, pin-curated-by-hand",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "southern-decadence-leather-decadence-block-party-friday-phoenix-2026-09\r-04@chunky.dad",
+      "uid": "southern-decadence-leather-decadence-block-party-friday-phoenix-2026-09\r-04@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The Phoenix Bar",
+      "cover": "Free",
+      "tea": "Night one of the Phoenix's 'Leather Decadence' street party — the official guide bills it as the largest leather/Levi block party in the South, at New Orleans' only leather & bear bar, with beer busts hosted by the Lords of Leather and Renegade Bears and the Eagle upstairs open from 9pm. Never a cover.",
+      "address": "941 Elysian Fields Ave, New Orleans, LA 70117",
+      "website": "https://phoenixbarnola.com/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://phoenixbarnola.com/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "leather-decadence-block-party-friday-phoenix-2f887ce5"
+    },
+    {
+      "name": "Southern Decadence Grand Marshal Parade",
+      "day": "Sunday",
+      "time": "5PM-7PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 29.9627248,
+        "lng": -90.0606455
+      },
+      "startDate": "2026-09-06T17:00:00",
+      "endDate": "2026-09-06T19:00:00",
+      "unprocessedDescription": "description: The 54th official Southern Decadence walking parad\re, led by the Grand Marshals, steps off from the Golden Lantern and winds through the French Quarter — the one event every bear in town plans the Sunday around. Free, no ticket.\nbar: Golden Lantern Bar\naddress: 1239 Royal St, New Orleans, LA 70116\nwebsite: https://www.southerndecadence.com/\ncover: Free\ntimezone: America/Chicago\nkey: southern-decadence-grand-marshal-parade|2026-09-06|golden-lantern-bar\nfestival: Southern Decadence\nnote: 2026 page not yet published on southerndecadence.com; date is the official festival Sunday, 5pm start carried from the official 2025 listing (third-party guides still say 2pm) — re-verify in late August, start time contested — 2025 official 5pm vs 2026 third-party guides 2pm; re-check southerndecadence.com REST API in the week before; confidence\\: low — verify before the weekend",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "southern-decadence-southern-decadence-grand-marshal-parade-2026-09-06@c\rhunky.dad",
+      "uid": "southern-decadence-southern-decadence-grand-marshal-parade-2026-09-06@c\rhunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Golden Lantern Bar",
+      "cover": "Free",
+      "tea": "The 54th official Southern Decadence walking parade, led by the Grand Marshals, steps off from the Golden Lantern and winds through the French Quarter — the one event every bear in town plans the Sunday around. Free, no ticket.",
+      "address": "1239 Royal St, New Orleans, LA 70116",
+      "website": "https://www.southerndecadence.com/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.southerndecadence.com/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "southern-decadence-grand-marshal-parade-1a11efc7"
     }
   ]
 }

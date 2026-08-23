@@ -9,8 +9,8 @@
     "berlin": {
       "name": "Berlin",
       "status": "success",
-      "dataLength": 193,
-      "eventCount": 0
+      "dataLength": 14251,
+      "eventCount": 12
     },
     "birmingham": {
       "name": "Birmingham",
@@ -75,14 +75,14 @@
     "nola": {
       "name": "New Orleans",
       "status": "success",
-      "dataLength": 3846,
-      "eventCount": 3
+      "dataLength": 14661,
+      "eventCount": 12
     },
     "nyc": {
       "name": "New York",
       "status": "success",
-      "dataLength": 19819,
-      "eventCount": 18
+      "dataLength": 25806,
+      "eventCount": 26
     },
     "palm-springs": {
       "name": "Palm Springs",
@@ -135,8 +135,8 @@
     "sitges": {
       "name": "Sitges",
       "status": "success",
-      "dataLength": 4810,
-      "eventCount": 4
+      "dataLength": 61294,
+      "eventCount": 53
     },
     "toronto": {
       "name": "Toronto",

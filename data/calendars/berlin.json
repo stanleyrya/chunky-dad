@@ -3,5 +3,490 @@
     "calendarTimezone": "Europe/Berlin",
     "timezoneData": null
   },
-  "events": []
+  "events": [
+    {
+      "name": "BearDance Folsom Berlin 2026",
+      "day": "Friday",
+      "time": "10PM-6AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 52.5003921,
+        "lng": 13.4221017
+      },
+      "startDate": "2026-09-11T22:00:00",
+      "endDate": "2026-09-12T06:00:00",
+      "unprocessedDescription": "description: The official Folsom Europe Bear Dance Party at SO3\r6 — the weekend's one explicitly bear-oriented party, with darkroom and smokers' lounge; fetish welcome, puppy friendly.\nbar: SO36\naddress: Oranienstraße 190, 10999 Berlin\nwebsite: https://www.eventbrite.de/e/beardance-folsom-2026-tickets-1984056364997\nticketUrl: https://www.eventbrite.de/e/beardance-folsom-2026-tickets-1984056364997\ncover: €26.64 (Eventbrite, incl. fees)\nimage: https://cdn.evbuc.com/images/1191529990/264761261712/1/original.20260820-173335\ntimezone: Europe/Berlin\nkey: beardance-folsom-berlin-2026|2026-09-11|so36\nfestival: Folsom Europe\nnote: end-time-estimated, Eventbrite shows a 'Sold Out' string on some tier(s) — verify",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Berlin",
+      "wasUTC": true,
+      "sourceUid": "folsom-europe-beardance-folsom-berlin-2026-2026-09-11@chunky.dad",
+      "uid": "folsom-europe-beardance-folsom-berlin-2026-2026-09-11@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "SO36",
+      "cover": "€26.64 (Eventbrite, incl. fees)",
+      "image": "https://cdn.evbuc.com/images/1191529990/264761261712/1/original.20260820-173335",
+      "tea": "The official Folsom Europe Bear Dance Party at SO36 — the weekend's one explicitly bear-oriented party, with darkroom and smokers' lounge; fetish welcome, puppy friendly.",
+      "address": "Oranienstraße 190, 10999 Berlin",
+      "website": "https://www.eventbrite.de/e/beardance-folsom-2026-tickets-1984056364997",
+      "ticketUrl": "https://www.eventbrite.de/e/beardance-folsom-2026-tickets-1984056364997",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.eventbrite.de/e/beardance-folsom-2026-tickets-1984056364997",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.de/e/beardance-folsom-2026-tickets-1984056364997",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "beardance-folsom-berlin-2026-4ba533e7"
+    },
+    {
+      "name": "PiG — Official Folsom Europe Main Party",
+      "day": "Saturday",
+      "time": "11PM-8AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 52.5161294,
+        "lng": 13.4090769
+      },
+      "startDate": "2026-09-12T23:00:00",
+      "endDate": "2026-09-13T08:00:00",
+      "unprocessedDescription": "description: The official Folsom Europe main party — men-only,\r ~3,000 guests, multiple dance floors and playgrounds in the vaults of Alte Münze. Not bear-specific but the Saturday-night headline.\nbar: Alte Münze\naddress: Molkenmarkt 2, 10179 Berlin\nwebsite: https://pigberlin.de/folsom-berlin-2026/\nticketUrl: https://pigberlin.de/shop/\nimage: https://pigberlin.de/wp-content/uploads/2026/05/Pig-Berlin_Folsom-Europa-Berlin-2026-September-e1778604374547.webp\ntimezone: Europe/Berlin\nkey: pig-official-folsom-europe-main-party|2026-09-12|alte-m-nze\nfestival: Folsom Europe\nnote: time-conflict\\: folsomeurope.berlin says 23\\:00, pigberlin.de says 22\\:00, end-time-estimated (open end), ticket link is the promoter's shop, not an event page",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Berlin",
+      "wasUTC": true,
+      "sourceUid": "folsom-europe-pig-official-folsom-europe-main-party-2026-09-12@chunky.d\rad",
+      "uid": "folsom-europe-pig-official-folsom-europe-main-party-2026-09-12@chunky.d\rad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Alte Münze",
+      "image": "https://pigberlin.de/wp-content/uploads/2026/05/Pig-Berlin_Folsom-Europa-Berlin-2026-September-e1778604374547.webp",
+      "tea": "The official Folsom Europe main party — men-only, ~3,000 guests, multiple dance floors and playgrounds in the vaults of Alte Münze. Not bear-specific but the Saturday-night headline.",
+      "address": "Molkenmarkt 2, 10179 Berlin",
+      "website": "https://pigberlin.de/folsom-berlin-2026/",
+      "ticketUrl": "https://pigberlin.de/shop/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://pigberlin.de/folsom-berlin-2026/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://pigberlin.de/shop/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "pig-official-folsom-europe-main-party-03534e00"
+    },
+    {
+      "name": "Woof's Folsom Welcome",
+      "day": "Wednesday",
+      "time": "6PM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 52.4990874,
+        "lng": 13.3416676
+      },
+      "startDate": "2026-09-09T18:00:00",
+      "endDate": "2026-09-09T22:00:00",
+      "unprocessedDescription": "description: Folsom-week welcome night at Woof, Berlin's dedic\rated bear bar (bears, cubs, chasers, leathermen). Listed in the official Folsom Europe programme; bar events at Woof are no-cover.\nbar: Woof Berlin\naddress: Fuggerstraße 37, 10777 Berlin\nwebsite: https://www.woof-berlin.com/\nimage: https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/87d30969-5ab1-46de-dc55-08dd7b5a063c/3817f31a-3a19-45f0-99cb-08dd7b59458c.png\ntimezone: Europe/Berlin\nkey: woof-s-folsom-welcome|2026-09-09|woof-berlin\nfestival: Folsom Europe\nnote: end time not published — 4h default; open-ended, end-time-unknown",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Berlin",
+      "wasUTC": true,
+      "sourceUid": "folsom-europe-woof-s-folsom-welcome-2026-09-09@chunky.dad",
+      "uid": "folsom-europe-woof-s-folsom-welcome-2026-09-09@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Woof Berlin",
+      "image": "https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/87d30969-5ab1-46de-dc55-08dd7b5a063c/3817f31a-3a19-45f0-99cb-08dd7b59458c.png",
+      "tea": "Folsom-week welcome night at Woof, Berlin's dedicated bear bar (bears, cubs, chasers, leathermen). Listed in the official Folsom Europe programme; bar events at Woof are no-cover.",
+      "address": "Fuggerstraße 37, 10777 Berlin",
+      "website": "https://www.woof-berlin.com/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.woof-berlin.com/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "woofs-folsom-welcome-6ec04245"
+    },
+    {
+      "name": "Fetish in the Mix 2026 @ Woof Berlin",
+      "day": "Friday",
+      "time": "6PM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 52.4990874,
+        "lng": 13.3416676
+      },
+      "startDate": "2026-09-11T18:00:00",
+      "endDate": "2026-09-11T22:00:00",
+      "unprocessedDescription": "description: Official-programme night at Woof, Berlin's bear b\rar\\: 'meet hairy leather guys in the mix with all kinds of fetish' — the bear/leather crowd's nightly Folsom meeting point.\nbar: Woof Berlin\naddress: Fuggerstraße 37, 10777 Berlin\nwebsite: https://www.woof-berlin.com/\nimage: https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/dff8b21f-91c3-465d-dc6d-08dd7b5a063c/f6d11348-b71c-4322-99e4-08dd7b59458c.png\ntimezone: Europe/Berlin\nkey: fetish-in-the-mix-2026-woof-berlin|2026-09-11|woof-berlin\nfestival: Folsom Europe\nnote: end time not published — 4h default; open-ended, end-time-unknown",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Berlin",
+      "wasUTC": true,
+      "sourceUid": "folsom-europe-fetish-in-the-mix-2026-woof-berlin-2026-09-11@chunky.dad",
+      "uid": "folsom-europe-fetish-in-the-mix-2026-woof-berlin-2026-09-11@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Woof Berlin",
+      "image": "https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/dff8b21f-91c3-465d-dc6d-08dd7b5a063c/f6d11348-b71c-4322-99e4-08dd7b59458c.png",
+      "tea": "Official-programme night at Woof, Berlin's bear bar: 'meet hairy leather guys in the mix with all kinds of fetish' — the bear/leather crowd's nightly Folsom meeting point.",
+      "address": "Fuggerstraße 37, 10777 Berlin",
+      "website": "https://www.woof-berlin.com/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.woof-berlin.com/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "fetish-in-the-mix-2026-woof-berlin-41568f8f"
+    },
+    {
+      "name": "Fetish in the Mix 2026 @ Woof Berlin",
+      "day": "Thursday",
+      "time": "6PM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 52.4990874,
+        "lng": 13.3416676
+      },
+      "startDate": "2026-09-10T18:00:00",
+      "endDate": "2026-09-10T22:00:00",
+      "unprocessedDescription": "description: Official-programme night at Woof, Berlin's bear b\rar\\: 'meet hairy leather guys in the mix with all kinds of fetish' — the bear/leather crowd's nightly Folsom meeting point.\nbar: Woof Berlin\naddress: Fuggerstraße 37, 10777 Berlin\nwebsite: https://www.woof-berlin.com/\nimage: https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/78084c68-7990-42b8-dc61-08dd7b5a063c/a5d17579-df52-4ac7-99d9-08dd7b59458c.png\ntimezone: Europe/Berlin\nkey: fetish-in-the-mix-2026-woof-berlin|2026-09-10|woof-berlin\nfestival: Folsom Europe\nnote: end time not published — 4h default; open-ended, end-time-unknown",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Berlin",
+      "wasUTC": true,
+      "sourceUid": "folsom-europe-fetish-in-the-mix-2026-woof-berlin-2026-09-10@chunky.dad",
+      "uid": "folsom-europe-fetish-in-the-mix-2026-woof-berlin-2026-09-10@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Woof Berlin",
+      "image": "https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/78084c68-7990-42b8-dc61-08dd7b5a063c/a5d17579-df52-4ac7-99d9-08dd7b59458c.png",
+      "tea": "Official-programme night at Woof, Berlin's bear bar: 'meet hairy leather guys in the mix with all kinds of fetish' — the bear/leather crowd's nightly Folsom meeting point.",
+      "address": "Fuggerstraße 37, 10777 Berlin",
+      "website": "https://www.woof-berlin.com/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.woof-berlin.com/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "fetish-in-the-mix-2026-woof-berlin-490834ee"
+    },
+    {
+      "name": "Folsom Europe Street Fair 2026",
+      "day": "Saturday",
+      "time": "12PM-9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 52.498478,
+        "lng": 13.3420895
+      },
+      "startDate": "2026-09-12T12:00:00",
+      "endDate": "2026-09-12T21:00:00",
+      "unprocessedDescription": "description: Main day of the 23rd Folsom Europe Street Fair\\: \rmultiple stages, live entertainment, vendors, food, bondage, bootblacks, barbers. The headline event of the weekend for every bear traveller.\nbar: Folsom Europe Street Fair (Fuggerstraße / Welserstraße)\naddress: Fuggerstraße / Welserstraße, 10777 Berlin\nwebsite: https://folsomeurope.berlin/\ncover: Free (donation requested)\nimage: https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/044725e1-a8e7-46fe-dc7b-08dd7b5a063c/e5c96d76-6b3f-49a2-9a2e-08dd7b59458c.png\ntimezone: Europe/Berlin\nkey: folsom-europe-street-fair-2026|2026-09-12|folsom-europe-street-fair-fuggerstra-e-welserstra-e\nfestival: Folsom Europe\nnote: coordinates-approximate, cover-unverified",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Berlin",
+      "wasUTC": true,
+      "sourceUid": "folsom-europe-folsom-europe-street-fair-2026-2026-09-12@chunky.dad",
+      "uid": "folsom-europe-folsom-europe-street-fair-2026-2026-09-12@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Folsom Europe Street Fair (Fuggerstraße / Welserstraße)",
+      "cover": "Free (donation requested)",
+      "image": "https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/044725e1-a8e7-46fe-dc7b-08dd7b5a063c/e5c96d76-6b3f-49a2-9a2e-08dd7b59458c.png",
+      "tea": "Main day of the 23rd Folsom Europe Street Fair: multiple stages, live entertainment, vendors, food, bondage, bootblacks, barbers. The headline event of the weekend for every bear traveller.",
+      "address": "Fuggerstraße / Welserstraße, 10777 Berlin",
+      "website": "https://folsomeurope.berlin/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://folsomeurope.berlin/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "folsom-europe-street-fair-2026-2d77dcc9"
+    },
+    {
+      "name": "Kake's Sunday Service (Folsom Closing Party)",
+      "day": "Sunday",
+      "time": "9PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 52.4989988,
+        "lng": 13.3527268
+      },
+      "startDate": "2026-09-13T21:00:00",
+      "endDate": "2026-09-14T03:00:00",
+      "unprocessedDescription": "description: Official Folsom Europe closing party at Metropol b\ry Recon, TUFF and Tom of Finland Foundation — 'loud, sweaty, and in full leather'. Headline closer; not bear-specific. Listed as \"Kake's Sunday Service — Official Folsom Europe Closing Party\".\nbar: Metropol\naddress: Nollendorfplatz 5, 10777 Berlin\nwebsite: https://dice.fm/partner/tickets/event/k6yyx8-kakes-sunday-service-13th-sep-metropol-berlin-tickets\nticketUrl: https://dice.fm/partner/tickets/event/k6yyx8-kakes-sunday-service-13th-sep-metropol-berlin-tickets\nimage: https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/3321a1d4-05ef-4a1c-a850-08dec6bee0d0/7a0183c6-cd8d-4aab-d8eb-08dec6bee0d1.png\ntimezone: Europe/Berlin\nkey: kake-s-sunday-service-folsom-closing-party|2026-09-13|metropol\nfestival: Folsom Europe\nnote: price-not-extracted",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Berlin",
+      "wasUTC": true,
+      "sourceUid": "folsom-europe-kake-s-sunday-service-folsom-closing-party-2026-09-13@chu\rnky.dad",
+      "uid": "folsom-europe-kake-s-sunday-service-folsom-closing-party-2026-09-13@chu\rnky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Metropol",
+      "image": "https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/3321a1d4-05ef-4a1c-a850-08dec6bee0d0/7a0183c6-cd8d-4aab-d8eb-08dec6bee0d1.png",
+      "tea": "Official Folsom Europe closing party at Metropol by Recon, TUFF and Tom of Finland Foundation — 'loud, sweaty, and in full leather'. Headline closer; not bear-specific. Listed as \"Kake's Sunday Service — Official Folsom Europe Closing Party\".",
+      "address": "Nollendorfplatz 5, 10777 Berlin",
+      "website": "https://dice.fm/partner/tickets/event/k6yyx8-kakes-sunday-service-13th-sep-metropol-berlin-tickets",
+      "ticketUrl": "https://dice.fm/partner/tickets/event/k6yyx8-kakes-sunday-service-13th-sep-metropol-berlin-tickets",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://dice.fm/partner/tickets/event/k6yyx8-kakes-sunday-service-13th-sep-metropol-berlin-tickets",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://dice.fm/partner/tickets/event/k6yyx8-kakes-sunday-service-13th-sep-metropol-berlin-tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "kakes-sunday-service-folsom-closing-party-52d86787"
+    },
+    {
+      "name": "Fetish in the Mix 2026 @ Woof Berlin",
+      "day": "Sunday",
+      "time": "6PM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 52.4990874,
+        "lng": 13.3416676
+      },
+      "startDate": "2026-09-13T18:00:00",
+      "endDate": "2026-09-13T22:00:00",
+      "unprocessedDescription": "description: Official-programme night at Woof, Berlin's bear b\rar\\: 'meet hairy leather guys in the mix with all kinds of fetish' — the bear/leather crowd's nightly Folsom meeting point.\nbar: Woof Berlin\naddress: Fuggerstraße 37, 10777 Berlin\nwebsite: https://www.woof-berlin.com/\nimage: https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/31cb4e72-1a5e-4ffb-dc8b-08dd7b5a063c/0fea62af-2cca-4b22-9a09-08dd7b59458c.png\ntimezone: Europe/Berlin\nkey: fetish-in-the-mix-2026-woof-berlin|2026-09-13|woof-berlin\nfestival: Folsom Europe\nnote: end time not published — 4h default; open-ended, end-time-unknown",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Berlin",
+      "wasUTC": true,
+      "sourceUid": "folsom-europe-fetish-in-the-mix-2026-woof-berlin-2026-09-13@chunky.dad",
+      "uid": "folsom-europe-fetish-in-the-mix-2026-woof-berlin-2026-09-13@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Woof Berlin",
+      "image": "https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/31cb4e72-1a5e-4ffb-dc8b-08dd7b5a063c/0fea62af-2cca-4b22-9a09-08dd7b59458c.png",
+      "tea": "Official-programme night at Woof, Berlin's bear bar: 'meet hairy leather guys in the mix with all kinds of fetish' — the bear/leather crowd's nightly Folsom meeting point.",
+      "address": "Fuggerstraße 37, 10777 Berlin",
+      "website": "https://www.woof-berlin.com/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.woof-berlin.com/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "fetish-in-the-mix-2026-woof-berlin-31f344d1"
+    },
+    {
+      "name": "Woof's Fetish Beer Garden (Street Fair day)",
+      "day": "Saturday",
+      "time": "12PM-4PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 52.4990874,
+        "lng": 13.3416676
+      },
+      "startDate": "2026-09-12T12:00:00",
+      "endDate": "2026-09-12T16:00:00",
+      "unprocessedDescription": "description: Woof Berlin (bear bar) runs a beer truck and merch\r tent on street-fair Saturday — the bear hangout on the fairground, which runs along Fuggerstraße right outside the bar.\nbar: Woof Berlin\naddress: Fuggerstraße 37, 10777 Berlin\nwebsite: https://www.woof-berlin.com/\nimage: https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/8d795254-c195-43fa-dc78-08dd7b5a063c/0cce6154-82e2-4bbf-99f2-08dd7b59458c.png\ntimezone: Europe/Berlin\nkey: woof-s-fetish-beer-garden-street-fair-day|2026-09-12|woof-berlin\nfestival: Folsom Europe\nnote: end time not published — 4h default; open-ended, end-time-unknown",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Berlin",
+      "wasUTC": true,
+      "sourceUid": "folsom-europe-woof-s-fetish-beer-garden-street-fair-day-2026-09-12@chun\rky.dad",
+      "uid": "folsom-europe-woof-s-fetish-beer-garden-street-fair-day-2026-09-12@chun\rky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Woof Berlin",
+      "image": "https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/8d795254-c195-43fa-dc78-08dd7b5a063c/0cce6154-82e2-4bbf-99f2-08dd7b59458c.png",
+      "tea": "Woof Berlin (bear bar) runs a beer truck and merch tent on street-fair Saturday — the bear hangout on the fairground, which runs along Fuggerstraße right outside the bar.",
+      "address": "Fuggerstraße 37, 10777 Berlin",
+      "website": "https://www.woof-berlin.com/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.woof-berlin.com/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "woofs-fetish-beer-garden-street-fair-day-3bf2638d"
+    },
+    {
+      "name": "Touch-A-Mister — Official Folsom Welcome Party",
+      "day": "Thursday",
+      "time": "8PM-12AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 52.5036649,
+        "lng": 13.3516814
+      },
+      "startDate": "2026-09-10T20:00:00",
+      "endDate": "2026-09-11T00:00:00",
+      "unprocessedDescription": "description: Official welcome party of Folsom Europe\\: meet th\re titleholders, DJ, smokers' lounge, raffle — 'everyone's invited', so the easy first-night stop for bear travellers before the club parties.\nbar: Lütze Bar, Hotel Berlin, Berlin\naddress: Lützowplatz 17, 10785 Berlin\nwebsite: https://folsomeurope.berlin/program/\nimage: https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/eb692dfb-041c-4745-aad5-08ddd835ade3/74406636-1cc0-4dd3-e820-08ddd835ade8.png\ntimezone: Europe/Berlin\nkey: touch-a-mister-official-folsom-welcome-party|2026-09-10|l-tze-bar-hotel-berlin-berlin\nfestival: Folsom Europe\nnote: end time not published — 4h default; open-ended, end-time-unknown, no-ticket-link",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Berlin",
+      "wasUTC": true,
+      "sourceUid": "folsom-europe-touch-a-mister-official-folsom-welcome-party-2026-09-10@c\rhunky.dad",
+      "uid": "folsom-europe-touch-a-mister-official-folsom-welcome-party-2026-09-10@c\rhunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Lütze Bar, Hotel Berlin, Berlin",
+      "image": "https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/eb692dfb-041c-4745-aad5-08ddd835ade3/74406636-1cc0-4dd3-e820-08ddd835ade8.png",
+      "tea": "Official welcome party of Folsom Europe: meet the titleholders, DJ, smokers' lounge, raffle — 'everyone's invited', so the easy first-night stop for bear travellers before the club parties.",
+      "address": "Lützowplatz 17, 10785 Berlin",
+      "website": "https://folsomeurope.berlin/program/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://folsomeurope.berlin/program/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "touch-a-mister-official-folsom-welcome-party-65a99f5e"
+    },
+    {
+      "name": "ADAM — Berlin Edition (Folsom Opening Party)",
+      "day": "Thursday",
+      "time": "10PM-5AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 52.4989988,
+        "lng": 13.3527268
+      },
+      "startDate": "2026-09-10T22:00:00",
+      "endDate": "2026-09-11T05:00:00",
+      "unprocessedDescription": "description: The official Folsom Europe opening party (Melbourn\re's ADAM returns to Berlin) at Metropol — headline event bear travellers plan around; not bear-specific. Listed as \"ADAM — Berlin Edition (Official Folsom Europe Opening Party)\".\nbar: Metropol\naddress: Nollendorfplatz 5, 10777 Berlin\nwebsite: https://www.eventbrite.com.au/e/adam-berlin-tickets-1758156396109\nticketUrl: https://www.eventbrite.com.au/e/adam-berlin-tickets-1758156396109\ncover: €36.46–44.89 (Eventbrite, incl. fees)\nimage: https://cdn.evbuc.com/images/1181184169/386162828353/1/original.20260401-111845\ntimezone: Europe/Berlin\nkey: adam-berlin-edition-folsom-opening-party|2026-09-10|metropol\nfestival: Folsom Europe\nnote: Eventbrite lists 20\\:45 doors; programme says 22\\:00, ticket-shop page shows a stale '28 August 2025' date for this item",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Berlin",
+      "wasUTC": true,
+      "sourceUid": "folsom-europe-adam-berlin-edition-folsom-opening-party-2026-09-10@chunk\ry.dad",
+      "uid": "folsom-europe-adam-berlin-edition-folsom-opening-party-2026-09-10@chunk\ry.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Metropol",
+      "cover": "€36.46–44.89 (Eventbrite, incl. fees)",
+      "image": "https://cdn.evbuc.com/images/1181184169/386162828353/1/original.20260401-111845",
+      "tea": "The official Folsom Europe opening party (Melbourne's ADAM returns to Berlin) at Metropol — headline event bear travellers plan around; not bear-specific. Listed as \"ADAM — Berlin Edition (Official Folsom Europe Opening Party)\".",
+      "address": "Nollendorfplatz 5, 10777 Berlin",
+      "website": "https://www.eventbrite.com.au/e/adam-berlin-tickets-1758156396109",
+      "ticketUrl": "https://www.eventbrite.com.au/e/adam-berlin-tickets-1758156396109",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.eventbrite.com.au/e/adam-berlin-tickets-1758156396109",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com.au/e/adam-berlin-tickets-1758156396109",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "adam-berlin-edition-folsom-opening-party-76657223"
+    },
+    {
+      "name": "Folsom Europe Street Fair — Friday Opening Evening",
+      "day": "Friday",
+      "time": "6PM-9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 52.498478,
+        "lng": 13.3420895
+      },
+      "startDate": "2026-09-11T18:00:00",
+      "endDate": "2026-09-11T21:00:00",
+      "unprocessedDescription": "description: Friday evening start of the 23rd Folsom Europe Str\reet Fair on Fuggerstraße/Welserstraße — stages, bondage, bootblacks, barbers. The whole bear/leather crowd is on the street; Woof is on the fairground.\nbar: Folsom Europe Street Fair (Fuggerstraße / Welserstraße)\naddress: Fuggerstraße / Welserstraße, 10777 Berlin\nwebsite: https://folsomeurope.berlin/\ncover: Free (donation requested)\nimage: https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/66ad57e8-7428-452d-4a7f-08de8846658b/9ba9a1f8-69cc-4857-96ed-08de884e472b.png\ntimezone: Europe/Berlin\nkey: folsom-europe-street-fair-friday-opening-evening|2026-09-11|folsom-europe-street-fair-fuggerstra-e-welserstra-e\nfestival: Folsom Europe\nnote: coordinates-approximate, cover-unverified",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Berlin",
+      "wasUTC": true,
+      "sourceUid": "folsom-europe-folsom-europe-street-fair-friday-opening-evening-2026-09-\r11@chunky.dad",
+      "uid": "folsom-europe-folsom-europe-street-fair-friday-opening-evening-2026-09-\r11@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Folsom Europe Street Fair (Fuggerstraße / Welserstraße)",
+      "cover": "Free (donation requested)",
+      "image": "https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/66ad57e8-7428-452d-4a7f-08de8846658b/9ba9a1f8-69cc-4857-96ed-08de884e472b.png",
+      "tea": "Friday evening start of the 23rd Folsom Europe Street Fair on Fuggerstraße/Welserstraße — stages, bondage, bootblacks, barbers. The whole bear/leather crowd is on the street; Woof is on the fairground.",
+      "address": "Fuggerstraße / Welserstraße, 10777 Berlin",
+      "website": "https://folsomeurope.berlin/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://folsomeurope.berlin/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "folsom-europe-street-fair-friday-opening-evening-10c5e4de"
+    }
+  ]
 }

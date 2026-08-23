@@ -5,6 +5,202 @@
   },
   "events": [
     {
+      "name": "25th AnniBEARsary Party — Bears Disco by Scandal",
+      "day": "Saturday",
+      "time": "1AM-6AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2359,
+        "lng": 1.8082
+      },
+      "startDate": "2026-09-12T01:00:00",
+      "endDate": "2026-09-12T06:00:00",
+      "unprocessedDescription": "description: 25th anniversary after-party at Bears Disco (Scand\ral). Listed as \"25th anniBEARsary Bears Sitges Party at Bears Disco by Scandal\".\nbar: Bears Disco by Scandal\naddress: Carrer de Bonaire 15, 08870 Sitges\nwebsite: https://scandalsitges.com/bears-disco-by-scandal/\ntimezone: Europe/Madrid\nkey: 25th-annibearsary-party-bears-disco-by-scandal|2026-09-12|bears-disco-by-scandal\nfestival: Bears Sitges Week\nnote: no coordinates\\: Scandal is at Carrer de Bonaire 15, across from The Bear Cave (Bonaire 12, 41.2360385, 1.8079068), no ticket/price info on programme or scandalsitges.com (0 upcoming events listed there as of 2026-08-22), listed in the programme under the previous day's header (after-party starting 01\\:00); confidence\\: medium — verify before the weekend",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-25th-annibearsary-party-bears-disco-by-scandal-2026-0\r9-12@chunky.dad",
+      "uid": "bears-sitges-week-25th-annibearsary-party-bears-disco-by-scandal-2026-0\r9-12@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Bears Disco by Scandal",
+      "tea": "25th anniversary after-party at Bears Disco (Scandal). Listed as \"25th anniBEARsary Bears Sitges Party at Bears Disco by Scandal\".",
+      "address": "Carrer de Bonaire 15, 08870 Sitges",
+      "website": "https://scandalsitges.com/bears-disco-by-scandal/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://scandalsitges.com/bears-disco-by-scandal/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "25th-annibearsary-party-bears-disco-by-scandal-18bd3646"
+    },
+    {
+      "name": "BEARS SITGES MARKET",
+      "day": "Tuesday",
+      "time": "10AM-9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2341662,
+        "lng": 1.803697
+      },
+      "startDate": "2026-09-08T10:00:00",
+      "endDate": "2026-09-08T21:00:00",
+      "unprocessedDescription": "description: Bears Sitges Market at Hotel Calipolis\\: official\r merchandise, sponsor stands and pack pickup.\nbar: Hotel Calipolis\naddress: Av. Sofia 2-6, 08870 Sitges\nwebsite: https://bearssitges.org/bears-sitges-week/\nimage: https://bearssitges.org/wp-content/uploads/2026/07/Image-Market-Promo.png\ntimezone: Europe/Madrid\nkey: bears-sitges-market|2026-09-08|hotel-calipolis\nfestival: Bears Sitges Week",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-bears-sitges-market-2026-09-08@chunky.dad",
+      "uid": "bears-sitges-week-bears-sitges-market-2026-09-08@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Hotel Calipolis",
+      "image": "https://bearssitges.org/wp-content/uploads/2026/07/Image-Market-Promo.png",
+      "tea": "Bears Sitges Market at Hotel Calipolis: official merchandise, sponsor stands and pack pickup.",
+      "address": "Av. Sofia 2-6, 08870 Sitges",
+      "website": "https://bearssitges.org/bears-sitges-week/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/bears-sitges-week/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "bears-sitges-market-70cac5b6"
+    },
+    {
+      "name": "Mr. BEAR SITGES 2026 Special Night with DJ Radio Chi",
+      "day": "Saturday",
+      "time": "9PM-4AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2349,
+        "lng": 1.8083
+      },
+      "startDate": "2026-09-12T21:00:00",
+      "endDate": "2026-09-13T04:00:00",
+      "unprocessedDescription": "description: Mr. Bear Sitges 2026 night at the Bear-Village wit\rh DJ Radio Chi; the contest starts at 23\\:00 (max 10 contestants, apply via bearssitges@gmail.com). Prizes include the sash, the Golden Bear and a photoshoot. Free entry; VIP Zone passes (EUR 95-265) at bearsevents.com. The Mr. Bear Sitges 2026 contest starts at 23\\:00 (max 10 contestants — email bearssitges@gmail.com for the rules).\nbar: Bear-Village\naddress: Passeig de la Ribera (foot of Carrer Bonaire), 08870 Sitges\nwebsite: https://bearssitges.org/bears-sitges-week/\nticketUrl: https://www.bearsevents.com/product/sitges-bears-week-vip-pass-2026/\ncover: free\nimage: https://bearssitges.org/wp-content/uploads/2026/06/Mr-Bear-Sitges-2026-promo-735x1024.png\ntimezone: Europe/Madrid\nkey: mr-bear-sitges-2026-special-night-with-dj-radio-chi|2026-09-12|bear-village\nfestival: Bears Sitges Week\nnote: no coordinates\\: Bear-Village is an open-air seafront site on Passeig de la Ribera at the foot of Carrer Bonaire; no Maps link on the festival site, contest itself starts 23\\:00 within this slot, pin-curated-by-hand",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-mr-bear-sitges-2026-special-night-with-dj-radio-chi-2\r026-09-12@chunky.dad",
+      "uid": "bears-sitges-week-mr-bear-sitges-2026-special-night-with-dj-radio-chi-2\r026-09-12@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Bear-Village",
+      "cover": "free",
+      "image": "https://bearssitges.org/wp-content/uploads/2026/06/Mr-Bear-Sitges-2026-promo-735x1024.png",
+      "tea": "Mr. Bear Sitges 2026 night at the Bear-Village with DJ Radio Chi; the contest starts at 23:00 (max 10 contestants, apply via bearssitges@gmail.com). Prizes include the sash, the Golden Bear and a photoshoot. Free entry; VIP Zone passes (EUR 95-265) at bearsevents.com. The Mr. Bear Sitges 2026 contest starts at 23:00 (max 10 contestants — email bearssitges@gmail.com for the rules).",
+      "address": "Passeig de la Ribera (foot of Carrer Bonaire), 08870 Sitges",
+      "website": "https://bearssitges.org/bears-sitges-week/",
+      "ticketUrl": "https://www.bearsevents.com/product/sitges-bears-week-vip-pass-2026/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/bears-sitges-week/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.bearsevents.com/product/sitges-bears-week-vip-pass-2026/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "mr-bear-sitges-2026-special-night-with-dj-radio-chi-13456b0f"
+    },
+    {
+      "name": "Bear Route (Ruta del OSO) at Sponsor Bars",
+      "day": "Sunday",
+      "time": "8PM-12AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2349,
+        "lng": 1.8083
+      },
+      "startDate": "2026-09-06T20:00:00",
+      "endDate": "2026-09-07T00:00:00",
+      "unprocessedDescription": "description: Nightly bar crawl through the Bears Sitges sponsor\r bars. 50%-off drink tickets for some bars come with the Bears Sitges Pack.\nbar: Sponsor bars (Bear-Village, Bears Bar, Bears Dance, Man Bar, La Villa, Runway Terrace, Industry Sitges, Chiringuito Iguana, Parrots Terrace Pub)\naddress: Various, Sitges\nwebsite: https://bearssitges.org/bears-sitges-week/\ncover: free\ntimezone: Europe/Madrid\nkey: bear-route-ruta-del-oso-at-sponsor-bars|2026-09-06|sponsor-bars-bear-village-bears-bar-bears-dance-man-bar-la-villa-runway-terrace-industry-sitges-chiringuito-iguana-parrots-terrace-pub\nfestival: Bears Sitges Week\nnote: end time not published — 4h default; multi-venue, no single location, recurring nightly slot, pin-curated-by-hand; confidence\\: medium — verify before the weekend",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-bear-route-ruta-del-oso-at-sponsor-bars-2026-09-06@ch\runky.dad",
+      "uid": "bears-sitges-week-bear-route-ruta-del-oso-at-sponsor-bars-2026-09-06@ch\runky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Sponsor bars (Bear-Village, Bears Bar, Bears Dance, Man Bar, La Villa, Runway Terrace, Industry Sitges, Chiringuito Iguana, Parrots Terrace Pub)",
+      "cover": "free",
+      "tea": "Nightly bar crawl through the Bears Sitges sponsor bars. 50%-off drink tickets for some bars come with the Bears Sitges Pack.",
+      "address": "Various, Sitges",
+      "website": "https://bearssitges.org/bears-sitges-week/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/bears-sitges-week/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "bear-route-ruta-del-oso-at-sponsor-bars-3266095c"
+    },
+    {
+      "name": "Bear Route (Ruta del OSO) at Sponsor Bars",
+      "day": "Tuesday",
+      "time": "8PM-12AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2349,
+        "lng": 1.8083
+      },
+      "startDate": "2026-09-08T20:00:00",
+      "endDate": "2026-09-09T00:00:00",
+      "unprocessedDescription": "description: Nightly bar crawl through the Bears Sitges sponsor\r bars. 50%-off drink tickets for some bars come with the Bears Sitges Pack.\nbar: Sponsor bars (Bear-Village, Bears Bar, Bears Dance, Man Bar, La Villa, Runway Terrace, Industry Sitges, Chiringuito Iguana, Parrots Terrace Pub)\naddress: Various, Sitges\nwebsite: https://bearssitges.org/bears-sitges-week/\ncover: free\ntimezone: Europe/Madrid\nkey: bear-route-ruta-del-oso-at-sponsor-bars|2026-09-08|sponsor-bars-bear-village-bears-bar-bears-dance-man-bar-la-villa-runway-terrace-industry-sitges-chiringuito-iguana-parrots-terrace-pub\nfestival: Bears Sitges Week\nnote: end time not published — 4h default; multi-venue, no single location, recurring nightly slot, pin-curated-by-hand; confidence\\: medium — verify before the weekend",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-bear-route-ruta-del-oso-at-sponsor-bars-2026-09-08@ch\runky.dad",
+      "uid": "bears-sitges-week-bear-route-ruta-del-oso-at-sponsor-bars-2026-09-08@ch\runky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Sponsor bars (Bear-Village, Bears Bar, Bears Dance, Man Bar, La Villa, Runway Terrace, Industry Sitges, Chiringuito Iguana, Parrots Terrace Pub)",
+      "cover": "free",
+      "tea": "Nightly bar crawl through the Bears Sitges sponsor bars. 50%-off drink tickets for some bars come with the Bears Sitges Pack.",
+      "address": "Various, Sitges",
+      "website": "https://bearssitges.org/bears-sitges-week/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/bears-sitges-week/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "bear-route-ruta-del-oso-at-sponsor-bars-0f6c165e"
+    },
+    {
       "name": "BEEFMINCE DISCO",
       "day": "Friday",
       "time": "1AM-6PM",
@@ -50,6 +246,51 @@
         }
       ],
       "slug": "beefmince-disco-511f64f9"
+    },
+    {
+      "name": "Sitges Drag Brunch - Bear Week Edition",
+      "day": "Sunday",
+      "time": "1PM-3:30PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.235432,
+        "lng": 1.807513
+      },
+      "startDate": "2026-09-13T13:00:00",
+      "endDate": "2026-09-13T15:30:00",
+      "unprocessedDescription": "description: Drag brunch on the outdoor terrace of Le Patio wit\rh a breakfast buffet, bottomless mimosas and live drag shows. Only 80 places.\nbar: Le Patio\naddress: Carrer de Bonaire 26 / Carrer Joan Tarrida 23, 08870 Sitges\nwebsite: https://www.bearsevents.com/event/sitges-drag-brunch-bear-edition-2026/\nticketUrl: https://www.bearsevents.com/event/sitges-drag-brunch-bear-edition-2026/\ncover: €70-75\nimage: https://www.bearsevents.com/wp-content/uploads/2026/07/Bear-Brunch-Sitges-Bear-Week-Tickets-2026.jpg\ntimezone: Europe/Madrid\nkey: sitges-drag-brunch-bear-week-edition|2026-09-13|le-patio\nfestival: Bears Sitges Week",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-sitges-drag-brunch-bear-week-edition-2026-09-13@chunk\ry.dad",
+      "uid": "bears-sitges-week-sitges-drag-brunch-bear-week-edition-2026-09-13@chunk\ry.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Le Patio",
+      "cover": "€70-75",
+      "image": "https://www.bearsevents.com/wp-content/uploads/2026/07/Bear-Brunch-Sitges-Bear-Week-Tickets-2026.jpg",
+      "tea": "Drag brunch on the outdoor terrace of Le Patio with a breakfast buffet, bottomless mimosas and live drag shows. Only 80 places.",
+      "address": "Carrer de Bonaire 26 / Carrer Joan Tarrida 23, 08870 Sitges",
+      "website": "https://www.bearsevents.com/event/sitges-drag-brunch-bear-edition-2026/",
+      "ticketUrl": "https://www.bearsevents.com/event/sitges-drag-brunch-bear-edition-2026/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.bearsevents.com/event/sitges-drag-brunch-bear-edition-2026/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.bearsevents.com/event/sitges-drag-brunch-bear-edition-2026/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "sitges-drag-brunch-bear-week-edition-30ae40c7"
     },
     {
       "name": "BEEFMINCE SPORTS ZONE",
@@ -99,6 +340,811 @@
       "slug": "beefmince-sports-zone-6972e7c6"
     },
     {
+      "name": "BEAR POOL PARTY at Clos La Plana",
+      "day": "Thursday",
+      "time": "1PM-5PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2424,
+        "lng": 1.7541
+      },
+      "startDate": "2026-09-10T13:00:00",
+      "endDate": "2026-09-10T17:00:00",
+      "unprocessedDescription": "description: The big Bear Week pool party at a luxurious modern\rist villa in the hills 5 minutes from Sitges; bus transport provided from the Bear-Village. Tickets at bearsevents.com.\nbar: Palauet Modernista Clos La Plana\naddress: Camí Vell a Vilanova 17, 08810 Sant Pere de Ribes (bus from Bear-Village)\nwebsite: https://www.bearsevents.com/\nticketUrl: https://www.bearsevents.com/\nimage: https://bearssitges.org/wp-content/uploads/2026/07/Bears-Sitges-Week-2026-POOLPARTY-300x300.jpg\ntimezone: Europe/Madrid\nkey: bear-pool-party-at-clos-la-plana|2026-09-10|palauet-modernista-clos-la-plana\nfestival: Bears Sitges Week\nnote: end time not published — 4h default; no coordinates\\: Clos La Plana, Camí Vell a Vilanova 17, Sant Pere de Ribes (address from web search, not festival site), no end time or price found; bearsevents.com has no dedicated 2026 pool-party page yet (its blurb even says 'Friday September 10th' - Sept 10 is a Thursday), programme link is a typo 'bearssevents.com'; confidence\\: medium — verify before the weekend",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-bear-pool-party-at-clos-la-plana-2026-09-10@chunky.da\rd",
+      "uid": "bears-sitges-week-bear-pool-party-at-clos-la-plana-2026-09-10@chunky.da\rd",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Palauet Modernista Clos La Plana",
+      "image": "https://bearssitges.org/wp-content/uploads/2026/07/Bears-Sitges-Week-2026-POOLPARTY-300x300.jpg",
+      "tea": "The big Bear Week pool party at a luxurious modernist villa in the hills 5 minutes from Sitges; bus transport provided from the Bear-Village. Tickets at bearsevents.com.",
+      "address": "Camí Vell a Vilanova 17, 08810 Sant Pere de Ribes (bus from Bear-Village)",
+      "website": "https://www.bearsevents.com/",
+      "ticketUrl": "https://www.bearsevents.com/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.bearsevents.com/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.bearsevents.com/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bear-pool-party-at-clos-la-plana-0dee635b"
+    },
+    {
+      "name": "BEARS SITGES MARKET",
+      "day": "Thursday",
+      "time": "10AM-9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2341662,
+        "lng": 1.803697
+      },
+      "startDate": "2026-09-10T10:00:00",
+      "endDate": "2026-09-10T21:00:00",
+      "unprocessedDescription": "description: Bears Sitges Market at Hotel Calipolis\\: official\r merchandise, sponsor stands and pack pickup.\nbar: Hotel Calipolis\naddress: Av. Sofia 2-6, 08870 Sitges\nwebsite: https://bearssitges.org/bears-sitges-week/\nimage: https://bearssitges.org/wp-content/uploads/2026/07/Image-Market-Promo.png\ntimezone: Europe/Madrid\nkey: bears-sitges-market|2026-09-10|hotel-calipolis\nfestival: Bears Sitges Week",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-bears-sitges-market-2026-09-10@chunky.dad",
+      "uid": "bears-sitges-week-bears-sitges-market-2026-09-10@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Hotel Calipolis",
+      "image": "https://bearssitges.org/wp-content/uploads/2026/07/Image-Market-Promo.png",
+      "tea": "Bears Sitges Market at Hotel Calipolis: official merchandise, sponsor stands and pack pickup.",
+      "address": "Av. Sofia 2-6, 08870 Sitges",
+      "website": "https://bearssitges.org/bears-sitges-week/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/bears-sitges-week/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "bears-sitges-market-402b15d3"
+    },
+    {
+      "name": "BEARS SITGES MARKET",
+      "day": "Wednesday",
+      "time": "10AM-9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2341662,
+        "lng": 1.803697
+      },
+      "startDate": "2026-09-09T10:00:00",
+      "endDate": "2026-09-09T21:00:00",
+      "unprocessedDescription": "description: Bears Sitges Market at Hotel Calipolis\\: official\r merchandise, sponsor stands and pack pickup.\nbar: Hotel Calipolis\naddress: Av. Sofia 2-6, 08870 Sitges\nwebsite: https://bearssitges.org/bears-sitges-week/\nimage: https://bearssitges.org/wp-content/uploads/2026/07/Image-Market-Promo.png\ntimezone: Europe/Madrid\nkey: bears-sitges-market|2026-09-09|hotel-calipolis\nfestival: Bears Sitges Week",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-bears-sitges-market-2026-09-09@chunky.dad",
+      "uid": "bears-sitges-week-bears-sitges-market-2026-09-09@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Hotel Calipolis",
+      "image": "https://bearssitges.org/wp-content/uploads/2026/07/Image-Market-Promo.png",
+      "tea": "Bears Sitges Market at Hotel Calipolis: official merchandise, sponsor stands and pack pickup.",
+      "address": "Av. Sofia 2-6, 08870 Sitges",
+      "website": "https://bearssitges.org/bears-sitges-week/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/bears-sitges-week/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "bears-sitges-market-69192057"
+    },
+    {
+      "name": "Draw Me Bears (life drawing)",
+      "day": "Saturday",
+      "time": "11AM-1:30PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2366,
+        "lng": 1.8052
+      },
+      "startDate": "2026-09-12T11:00:00",
+      "endDate": "2026-09-12T13:30:00",
+      "unprocessedDescription": "description: A 90-minute professional life-drawing session with\r nude bear models, materials and two drinks included; no experience needed. Optional breakfast (+EUR 15, 10\\:00-11\\:00) buffet the hour before.\nbar: Restaurant Fracasso\naddress: Carrer de Santa Bàrbara 10, 08870 Sitges\nwebsite: https://entradium.com/events/draw-me-like-one-of-your-bears\nticketUrl: https://entradium.com/events/draw-me-like-one-of-your-bears\ncover: €55\nimage: https://bearssitges.org/wp-content/uploads/2026/07/WhatsApp-Image-2026-07-31-at-20.42.17-1024x1024.jpeg\ntimezone: Europe/Madrid\nkey: draw-me-bears-life-drawing|2026-09-12|restaurant-fracasso\nfestival: Bears Sitges Week\nnote: no coordinates\\: Fracasso, Carrer de Santa Bàrbara 10 (venue named on entradium page, not on programme), end time from entradium schedule (programme gives start only), image is the programme's Draw Me Bears promo graphic (WhatsApp-named upload) - verify, pin-curated-by-hand",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-draw-me-bears-life-drawing-2026-09-12@chunky.dad",
+      "uid": "bears-sitges-week-draw-me-bears-life-drawing-2026-09-12@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Restaurant Fracasso",
+      "cover": "€55",
+      "image": "https://bearssitges.org/wp-content/uploads/2026/07/WhatsApp-Image-2026-07-31-at-20.42.17-1024x1024.jpeg",
+      "tea": "A 90-minute professional life-drawing session with nude bear models, materials and two drinks included; no experience needed. Optional breakfast (+EUR 15, 10:00-11:00) buffet the hour before.",
+      "address": "Carrer de Santa Bàrbara 10, 08870 Sitges",
+      "website": "https://entradium.com/events/draw-me-like-one-of-your-bears",
+      "ticketUrl": "https://entradium.com/events/draw-me-like-one-of-your-bears",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://entradium.com/events/draw-me-like-one-of-your-bears",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://entradium.com/events/draw-me-like-one-of-your-bears",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "draw-me-bears-life-drawing-5fa496b6"
+    },
+    {
+      "name": "EARLY-VILLAGE 2026",
+      "day": "Sunday",
+      "time": "8:30PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2349,
+        "lng": 1.8083
+      },
+      "startDate": "2026-09-06T20:30:00",
+      "endDate": "2026-09-07T03:00:00",
+      "unprocessedDescription": "description: Third early-opening night of the Bear-Village on t\rhe seafront (limited music/sound Sept 4-6). Free entry; VIP Zone passes (EUR 95-265) at bearsevents.com.\nbar: Bear-Village\naddress: Passeig de la Ribera (foot of Carrer Bonaire), 08870 Sitges\nwebsite: https://bearssitges.org/bears-sitges-week/\nticketUrl: https://www.bearsevents.com/product/sitges-bears-week-vip-pass-2026/\ncover: free\nimage: https://bearssitges.org/wp-content/uploads/2026/07/Bears-Sitges-Week-2026-VIP-PASS-300x300.jpg\ntimezone: Europe/Madrid\nkey: early-village-2026|2026-09-06|bear-village\nfestival: Bears Sitges Week\nnote: no coordinates\\: Bear-Village is an open-air seafront site on Passeig de la Ribera at the foot of Carrer Bonaire; no Maps link on the festival site, pin-curated-by-hand",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-early-village-2026-2026-09-06@chunky.dad",
+      "uid": "bears-sitges-week-early-village-2026-2026-09-06@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Bear-Village",
+      "cover": "free",
+      "image": "https://bearssitges.org/wp-content/uploads/2026/07/Bears-Sitges-Week-2026-VIP-PASS-300x300.jpg",
+      "tea": "Third early-opening night of the Bear-Village on the seafront (limited music/sound Sept 4-6). Free entry; VIP Zone passes (EUR 95-265) at bearsevents.com.",
+      "address": "Passeig de la Ribera (foot of Carrer Bonaire), 08870 Sitges",
+      "website": "https://bearssitges.org/bears-sitges-week/",
+      "ticketUrl": "https://www.bearsevents.com/product/sitges-bears-week-vip-pass-2026/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/bears-sitges-week/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.bearsevents.com/product/sitges-bears-week-vip-pass-2026/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "early-village-2026-2cea22c9"
+    },
+    {
+      "name": "Draw Me Bears (life drawing)",
+      "day": "Tuesday",
+      "time": "7PM-9:30PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2366,
+        "lng": 1.8052
+      },
+      "startDate": "2026-09-08T19:00:00",
+      "endDate": "2026-09-08T21:30:00",
+      "unprocessedDescription": "description: A 90-minute professional life-drawing session with\r nude bear models, materials and two drinks included; no experience needed. Optional tapas (+EUR 20, 18\\:00-19\\:00) buffet the hour before.\nbar: Restaurant Fracasso\naddress: Carrer de Santa Bàrbara 10, 08870 Sitges\nwebsite: https://entradium.com/events/draw-me-like-one-of-your-bears\nticketUrl: https://entradium.com/events/draw-me-like-one-of-your-bears\ncover: €55\nimage: https://bearssitges.org/wp-content/uploads/2026/07/WhatsApp-Image-2026-07-31-at-20.42.17-1024x1024.jpeg\ntimezone: Europe/Madrid\nkey: draw-me-bears-life-drawing|2026-09-08|restaurant-fracasso\nfestival: Bears Sitges Week\nnote: no coordinates\\: Fracasso, Carrer de Santa Bàrbara 10 (venue named on entradium page, not on programme), end time from entradium schedule (programme gives start only), image is the programme's Draw Me Bears promo graphic (WhatsApp-named upload) - verify, pin-curated-by-hand",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-draw-me-bears-life-drawing-2026-09-08@chunky.dad",
+      "uid": "bears-sitges-week-draw-me-bears-life-drawing-2026-09-08@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Restaurant Fracasso",
+      "cover": "€55",
+      "image": "https://bearssitges.org/wp-content/uploads/2026/07/WhatsApp-Image-2026-07-31-at-20.42.17-1024x1024.jpeg",
+      "tea": "A 90-minute professional life-drawing session with nude bear models, materials and two drinks included; no experience needed. Optional tapas (+EUR 20, 18:00-19:00) buffet the hour before.",
+      "address": "Carrer de Santa Bàrbara 10, 08870 Sitges",
+      "website": "https://entradium.com/events/draw-me-like-one-of-your-bears",
+      "ticketUrl": "https://entradium.com/events/draw-me-like-one-of-your-bears",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://entradium.com/events/draw-me-like-one-of-your-bears",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://entradium.com/events/draw-me-like-one-of-your-bears",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "draw-me-bears-life-drawing-60b48f91"
+    },
+    {
+      "name": "Bears Sitges Pack Pickup & Official Polo Sale",
+      "day": "Monday",
+      "time": "6PM-9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2341662,
+        "lng": 1.803697
+      },
+      "startDate": "2026-09-07T18:00:00",
+      "endDate": "2026-09-07T21:00:00",
+      "unprocessedDescription": "description: Pickup of the Bears Sitges Pack (EUR 85\\: anniver\rsary dinner, polo, backpack, 14 half-price bar tickets) and sale of the official polo at the Bears Sitges Market stand. Packs are handed out only on the listed days/hours.\nbar: Hotel Calipolis\naddress: Av. Sofia 2-6, 08870 Sitges\nwebsite: https://bearssitges.org/producto/bears-sitges-pack-2026/\nticketUrl: https://bearssitges.org/producto/bears-sitges-pack-2026/\ncover: €85 pack\nimage: https://bearssitges.org/wp-content/uploads/2025/06/Pack-Bears-Sitges-web.png\ntimezone: Europe/Madrid\nkey: bears-sitges-pack-pickup-official-polo-sale|2026-09-07|hotel-calipolis\nfestival: Bears Sitges Week",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-bears-sitges-pack-pickup-official-polo-sale-2026-09-0\r7@chunky.dad",
+      "uid": "bears-sitges-week-bears-sitges-pack-pickup-official-polo-sale-2026-09-0\r7@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Hotel Calipolis",
+      "cover": "€85 pack",
+      "image": "https://bearssitges.org/wp-content/uploads/2025/06/Pack-Bears-Sitges-web.png",
+      "tea": "Pickup of the Bears Sitges Pack (EUR 85: anniversary dinner, polo, backpack, 14 half-price bar tickets) and sale of the official polo at the Bears Sitges Market stand. Packs are handed out only on the listed days/hours.",
+      "address": "Av. Sofia 2-6, 08870 Sitges",
+      "website": "https://bearssitges.org/producto/bears-sitges-pack-2026/",
+      "ticketUrl": "https://bearssitges.org/producto/bears-sitges-pack-2026/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/producto/bears-sitges-pack-2026/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://bearssitges.org/producto/bears-sitges-pack-2026/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bears-sitges-pack-pickup-official-polo-sale-22a9d5ed"
+    },
+    {
+      "name": "Bears Sitges Pack Pickup & Official Polo Sale",
+      "day": "Thursday",
+      "time": "6PM-9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2341662,
+        "lng": 1.803697
+      },
+      "startDate": "2026-09-10T18:00:00",
+      "endDate": "2026-09-10T21:00:00",
+      "unprocessedDescription": "description: Pickup of the Bears Sitges Pack (EUR 85\\: anniver\rsary dinner, polo, backpack, 14 half-price bar tickets) and sale of the official polo at the Bears Sitges Market stand. Packs are handed out only on the listed days/hours.\nbar: Hotel Calipolis\naddress: Av. Sofia 2-6, 08870 Sitges\nwebsite: https://bearssitges.org/producto/bears-sitges-pack-2026/\nticketUrl: https://bearssitges.org/producto/bears-sitges-pack-2026/\ncover: €85 pack\nimage: https://bearssitges.org/wp-content/uploads/2025/06/Pack-Bears-Sitges-web.png\ntimezone: Europe/Madrid\nkey: bears-sitges-pack-pickup-official-polo-sale|2026-09-10|hotel-calipolis\nfestival: Bears Sitges Week",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-bears-sitges-pack-pickup-official-polo-sale-2026-09-1\r0@chunky.dad",
+      "uid": "bears-sitges-week-bears-sitges-pack-pickup-official-polo-sale-2026-09-1\r0@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Hotel Calipolis",
+      "cover": "€85 pack",
+      "image": "https://bearssitges.org/wp-content/uploads/2025/06/Pack-Bears-Sitges-web.png",
+      "tea": "Pickup of the Bears Sitges Pack (EUR 85: anniversary dinner, polo, backpack, 14 half-price bar tickets) and sale of the official polo at the Bears Sitges Market stand. Packs are handed out only on the listed days/hours.",
+      "address": "Av. Sofia 2-6, 08870 Sitges",
+      "website": "https://bearssitges.org/producto/bears-sitges-pack-2026/",
+      "ticketUrl": "https://bearssitges.org/producto/bears-sitges-pack-2026/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/producto/bears-sitges-pack-2026/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://bearssitges.org/producto/bears-sitges-pack-2026/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bears-sitges-pack-pickup-official-polo-sale-3153e60d"
+    },
+    {
+      "name": "Draw Me Bears (life drawing)",
+      "day": "Sunday",
+      "time": "12PM-2:30PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2366,
+        "lng": 1.8052
+      },
+      "startDate": "2026-09-06T12:00:00",
+      "endDate": "2026-09-06T14:30:00",
+      "unprocessedDescription": "description: A 90-minute professional life-drawing session with\r nude bear models, materials and two drinks included; no experience needed. Optional brunch (+EUR 25, 11\\:00-12\\:00) buffet the hour before.\nbar: Restaurant Fracasso\naddress: Carrer de Santa Bàrbara 10, 08870 Sitges\nwebsite: https://entradium.com/events/draw-me-like-one-of-your-bears\nticketUrl: https://entradium.com/events/draw-me-like-one-of-your-bears\ncover: €55\nimage: https://bearssitges.org/wp-content/uploads/2026/07/WhatsApp-Image-2026-07-31-at-20.42.17-1024x1024.jpeg\ntimezone: Europe/Madrid\nkey: draw-me-bears-life-drawing|2026-09-06|restaurant-fracasso\nfestival: Bears Sitges Week\nnote: no coordinates\\: Fracasso, Carrer de Santa Bàrbara 10 (venue named on entradium page, not on programme), end time from entradium schedule (programme gives start only), image is the programme's Draw Me Bears promo graphic (WhatsApp-named upload) - verify, pin-curated-by-hand",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-draw-me-bears-life-drawing-2026-09-06@chunky.dad",
+      "uid": "bears-sitges-week-draw-me-bears-life-drawing-2026-09-06@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Restaurant Fracasso",
+      "cover": "€55",
+      "image": "https://bearssitges.org/wp-content/uploads/2026/07/WhatsApp-Image-2026-07-31-at-20.42.17-1024x1024.jpeg",
+      "tea": "A 90-minute professional life-drawing session with nude bear models, materials and two drinks included; no experience needed. Optional brunch (+EUR 25, 11:00-12:00) buffet the hour before.",
+      "address": "Carrer de Santa Bàrbara 10, 08870 Sitges",
+      "website": "https://entradium.com/events/draw-me-like-one-of-your-bears",
+      "ticketUrl": "https://entradium.com/events/draw-me-like-one-of-your-bears",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://entradium.com/events/draw-me-like-one-of-your-bears",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://entradium.com/events/draw-me-like-one-of-your-bears",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "draw-me-bears-life-drawing-7017da4f"
+    },
+    {
+      "name": "EARLY-VILLAGE Opening 2026",
+      "day": "Friday",
+      "time": "8:30PM-3:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2349,
+        "lng": 1.8083
+      },
+      "startDate": "2026-09-04T20:30:00",
+      "endDate": "2026-09-05T03:30:00",
+      "unprocessedDescription": "description: Opening of the Bear-Village on the seafront. For t\rhe 25th anniversary the village also opens Sept 4-6 (limited music/sound on those three days). Free entry; VIP Zone passes (EUR 95-265) at bearsevents.com.\nbar: Bear-Village\naddress: Passeig de la Ribera (foot of Carrer Bonaire), 08870 Sitges\nwebsite: https://bearssitges.org/bears-sitges-week/\nticketUrl: https://www.bearsevents.com/product/sitges-bears-week-vip-pass-2026/\ncover: free\nimage: https://bearssitges.org/wp-content/uploads/2026/07/Bears-Sitges-Week-2026-VIP-PASS-300x300.jpg\ntimezone: Europe/Madrid\nkey: early-village-opening-2026|2026-09-04|bear-village\nfestival: Bears Sitges Week\nnote: no coordinates\\: Bear-Village is an open-air seafront site on Passeig de la Ribera at the foot of Carrer Bonaire; no Maps link on the festival site, pin-curated-by-hand",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-early-village-opening-2026-2026-09-04@chunky.dad",
+      "uid": "bears-sitges-week-early-village-opening-2026-2026-09-04@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Bear-Village",
+      "cover": "free",
+      "image": "https://bearssitges.org/wp-content/uploads/2026/07/Bears-Sitges-Week-2026-VIP-PASS-300x300.jpg",
+      "tea": "Opening of the Bear-Village on the seafront. For the 25th anniversary the village also opens Sept 4-6 (limited music/sound on those three days). Free entry; VIP Zone passes (EUR 95-265) at bearsevents.com.",
+      "address": "Passeig de la Ribera (foot of Carrer Bonaire), 08870 Sitges",
+      "website": "https://bearssitges.org/bears-sitges-week/",
+      "ticketUrl": "https://www.bearsevents.com/product/sitges-bears-week-vip-pass-2026/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/bears-sitges-week/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.bearsevents.com/product/sitges-bears-week-vip-pass-2026/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "early-village-opening-2026-3f107c0e"
+    },
+    {
+      "name": "BEARS SITGES MARKET",
+      "day": "Friday",
+      "time": "10AM-9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2341662,
+        "lng": 1.803697
+      },
+      "startDate": "2026-09-11T10:00:00",
+      "endDate": "2026-09-11T21:00:00",
+      "unprocessedDescription": "description: Bears Sitges Market at Hotel Calipolis\\: official\r merchandise, sponsor stands and pack pickup.\nbar: Hotel Calipolis\naddress: Av. Sofia 2-6, 08870 Sitges\nwebsite: https://bearssitges.org/bears-sitges-week/\nimage: https://bearssitges.org/wp-content/uploads/2026/07/Image-Market-Promo.png\ntimezone: Europe/Madrid\nkey: bears-sitges-market|2026-09-11|hotel-calipolis\nfestival: Bears Sitges Week",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-bears-sitges-market-2026-09-11@chunky.dad",
+      "uid": "bears-sitges-week-bears-sitges-market-2026-09-11@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Hotel Calipolis",
+      "image": "https://bearssitges.org/wp-content/uploads/2026/07/Image-Market-Promo.png",
+      "tea": "Bears Sitges Market at Hotel Calipolis: official merchandise, sponsor stands and pack pickup.",
+      "address": "Av. Sofia 2-6, 08870 Sitges",
+      "website": "https://bearssitges.org/bears-sitges-week/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/bears-sitges-week/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "bears-sitges-market-47dcbb32"
+    },
+    {
+      "name": "White Night (NOCHE BLANCA) with Prague Bears - DJ PAW.L",
+      "day": "Tuesday",
+      "time": "8:30PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2349,
+        "lng": 1.8083
+      },
+      "startDate": "2026-09-08T20:30:00",
+      "endDate": "2026-09-09T03:00:00",
+      "unprocessedDescription": "description: Special white-dress night with Prague Bears at the\r Bear-Village, DJ PAW.L. Come dressed in white. Free entry; VIP Zone passes (EUR 95-265) at bearsevents.com.\nbar: Bear-Village\naddress: Passeig de la Ribera (foot of Carrer Bonaire), 08870 Sitges\nwebsite: https://bearssitges.org/bears-sitges-week/\nticketUrl: https://www.bearsevents.com/product/sitges-bears-week-vip-pass-2026/\ncover: free\nimage: https://bearssitges.org/wp-content/uploads/2026/07/8-sep-Paw.png\ntimezone: Europe/Madrid\nkey: white-night-noche-blanca-with-prague-bears-dj-paw-l|2026-09-08|bear-village\nfestival: Bears Sitges Week\nnote: no coordinates\\: Bear-Village is an open-air seafront site on Passeig de la Ribera at the foot of Carrer Bonaire; no Maps link on the festival site, pin-curated-by-hand",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-white-night-noche-blanca-with-prague-bears-dj-paw-l-2\r026-09-08@chunky.dad",
+      "uid": "bears-sitges-week-white-night-noche-blanca-with-prague-bears-dj-paw-l-2\r026-09-08@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Bear-Village",
+      "cover": "free",
+      "image": "https://bearssitges.org/wp-content/uploads/2026/07/8-sep-Paw.png",
+      "tea": "Special white-dress night with Prague Bears at the Bear-Village, DJ PAW.L. Come dressed in white. Free entry; VIP Zone passes (EUR 95-265) at bearsevents.com.",
+      "address": "Passeig de la Ribera (foot of Carrer Bonaire), 08870 Sitges",
+      "website": "https://bearssitges.org/bears-sitges-week/",
+      "ticketUrl": "https://www.bearsevents.com/product/sitges-bears-week-vip-pass-2026/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/bears-sitges-week/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.bearsevents.com/product/sitges-bears-week-vip-pass-2026/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "white-night-noche-blanca-with-prague-bears-dj-pawl-204172c0"
+    },
+    {
+      "name": "BEARS on CRUISE Special Night with DJ James Munich",
+      "day": "Thursday",
+      "time": "8:30PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2349,
+        "lng": 1.8083
+      },
+      "startDate": "2026-09-10T20:30:00",
+      "endDate": "2026-09-11T03:00:00",
+      "unprocessedDescription": "description: Cruise-themed special night at the Bear-Village wi\rth DJ James Munich. Free entry; VIP Zone passes (EUR 95-265) at bearsevents.com.\nbar: Bear-Village\naddress: Passeig de la Ribera (foot of Carrer Bonaire), 08870 Sitges\nwebsite: https://bearssitges.org/bears-sitges-week/\nticketUrl: https://www.bearsevents.com/product/sitges-bears-week-vip-pass-2026/\ncover: free\nimage: https://bearssitges.org/wp-content/uploads/2026/07/10-sep-JamesMunich.png\ntimezone: Europe/Madrid\nkey: bears-on-cruise-special-night-with-dj-james-munich|2026-09-10|bear-village\nfestival: Bears Sitges Week\nnote: no coordinates\\: Bear-Village is an open-air seafront site on Passeig de la Ribera at the foot of Carrer Bonaire; no Maps link on the festival site, pin-curated-by-hand",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-bears-on-cruise-special-night-with-dj-james-munich-20\r26-09-10@chunky.dad",
+      "uid": "bears-sitges-week-bears-on-cruise-special-night-with-dj-james-munich-20\r26-09-10@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Bear-Village",
+      "cover": "free",
+      "image": "https://bearssitges.org/wp-content/uploads/2026/07/10-sep-JamesMunich.png",
+      "tea": "Cruise-themed special night at the Bear-Village with DJ James Munich. Free entry; VIP Zone passes (EUR 95-265) at bearsevents.com.",
+      "address": "Passeig de la Ribera (foot of Carrer Bonaire), 08870 Sitges",
+      "website": "https://bearssitges.org/bears-sitges-week/",
+      "ticketUrl": "https://www.bearsevents.com/product/sitges-bears-week-vip-pass-2026/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/bears-sitges-week/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.bearsevents.com/product/sitges-bears-week-vip-pass-2026/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bears-on-cruise-special-night-with-dj-james-munich-266cd306"
+    },
+    {
+      "name": "Bears Sitges Week 2026 Opening (cava & aperitif)",
+      "day": "Thursday",
+      "time": "7PM-11PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2341662,
+        "lng": 1.803697
+      },
+      "startDate": "2026-09-03T19:00:00",
+      "endDate": "2026-09-03T23:00:00",
+      "unprocessedDescription": "description: Official inauguration of Bears Sitges Week 2026 wi\rth a cava toast and aperitif at Hotel Calipolis. Free entry.\nbar: Hotel Calipolis\naddress: Av. Sofia 2-6, 08870 Sitges\nwebsite: https://bearssitges.org/bears-sitges-week/\ncover: free\nimage: https://bearssitges.org/wp-content/uploads/2026/08/2026-Promo-Organizacion-300x300.jpg\ntimezone: Europe/Madrid\nkey: bears-sitges-week-2026-opening-cava-aperitif|2026-09-03|hotel-calipolis\nfestival: Bears Sitges Week\nnote: end time not published — 4h default; programme line says 'BEARS SITGES WEEK 2025' (typo carried over from last year), Sept 3 is outside the Sept 4-13 brief but is in the official programme ('Del 3 al 13')",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-bears-sitges-week-2026-opening-cava-aperitif-2026-09-\r03@chunky.dad",
+      "uid": "bears-sitges-week-bears-sitges-week-2026-opening-cava-aperitif-2026-09-\r03@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Hotel Calipolis",
+      "cover": "free",
+      "image": "https://bearssitges.org/wp-content/uploads/2026/08/2026-Promo-Organizacion-300x300.jpg",
+      "tea": "Official inauguration of Bears Sitges Week 2026 with a cava toast and aperitif at Hotel Calipolis. Free entry.",
+      "address": "Av. Sofia 2-6, 08870 Sitges",
+      "website": "https://bearssitges.org/bears-sitges-week/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/bears-sitges-week/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "bears-sitges-week-2026-opening-cava-aperitif-7a383c2f"
+    },
+    {
+      "name": "CAPITAN Party at Bears Disco by Scandal",
+      "day": "Friday",
+      "time": "1AM-6AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2359,
+        "lng": 1.8082
+      },
+      "startDate": "2026-09-11T01:00:00",
+      "endDate": "2026-09-11T06:00:00",
+      "unprocessedDescription": "description: Captain-themed after-party at Bears Disco (Scandal\r) following the Bears on Cruise night.\nbar: Bears Disco by Scandal\naddress: Carrer de Bonaire 15, 08870 Sitges\nwebsite: https://scandalsitges.com/bears-disco-by-scandal/\ntimezone: Europe/Madrid\nkey: capitan-party-at-bears-disco-by-scandal|2026-09-11|bears-disco-by-scandal\nfestival: Bears Sitges Week\nnote: no coordinates\\: Scandal is at Carrer de Bonaire 15, across from The Bear Cave (Bonaire 12, 41.2360385, 1.8079068), no ticket/price info on programme or scandalsitges.com (0 upcoming events listed there as of 2026-08-22), listed in the programme under the previous day's header (after-party starting 01\\:00); confidence\\: medium — verify before the weekend",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-capitan-party-at-bears-disco-by-scandal-2026-09-11@ch\runky.dad",
+      "uid": "bears-sitges-week-capitan-party-at-bears-disco-by-scandal-2026-09-11@ch\runky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Bears Disco by Scandal",
+      "tea": "Captain-themed after-party at Bears Disco (Scandal) following the Bears on Cruise night.",
+      "address": "Carrer de Bonaire 15, 08870 Sitges",
+      "website": "https://scandalsitges.com/bears-disco-by-scandal/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://scandalsitges.com/bears-disco-by-scandal/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "capitan-party-at-bears-disco-by-scandal-20f49872"
+    },
+    {
+      "name": "BEARS SITGES MARKET",
+      "day": "Sunday",
+      "time": "10AM-1:30PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2341662,
+        "lng": 1.803697
+      },
+      "startDate": "2026-09-13T10:00:00",
+      "endDate": "2026-09-13T13:30:00",
+      "unprocessedDescription": "description: Bears Sitges Market at Hotel Calipolis\\: official\r merchandise, sponsor stands and pack pickup.\nbar: Hotel Calipolis\naddress: Av. Sofia 2-6, 08870 Sitges\nwebsite: https://bearssitges.org/bears-sitges-week/\nimage: https://bearssitges.org/wp-content/uploads/2026/07/Image-Market-Promo.png\ntimezone: Europe/Madrid\nkey: bears-sitges-market|2026-09-13|hotel-calipolis\nfestival: Bears Sitges Week",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-bears-sitges-market-2026-09-13@chunky.dad",
+      "uid": "bears-sitges-week-bears-sitges-market-2026-09-13@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Hotel Calipolis",
+      "image": "https://bearssitges.org/wp-content/uploads/2026/07/Image-Market-Promo.png",
+      "tea": "Bears Sitges Market at Hotel Calipolis: official merchandise, sponsor stands and pack pickup.",
+      "address": "Av. Sofia 2-6, 08870 Sitges",
+      "website": "https://bearssitges.org/bears-sitges-week/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/bears-sitges-week/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "bears-sitges-market-574005f0"
+    },
+    {
+      "name": "EARLY-VILLAGE 2026",
+      "day": "Saturday",
+      "time": "8:30PM-3:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2349,
+        "lng": 1.8083
+      },
+      "startDate": "2026-09-05T20:30:00",
+      "endDate": "2026-09-06T03:30:00",
+      "unprocessedDescription": "description: Second early-opening night of the Bear-Village on \rthe seafront (limited music/sound Sept 4-6). Free entry; VIP Zone passes (EUR 95-265) at bearsevents.com.\nbar: Bear-Village\naddress: Passeig de la Ribera (foot of Carrer Bonaire), 08870 Sitges\nwebsite: https://bearssitges.org/bears-sitges-week/\nticketUrl: https://www.bearsevents.com/product/sitges-bears-week-vip-pass-2026/\ncover: free\nimage: https://bearssitges.org/wp-content/uploads/2026/07/Bears-Sitges-Week-2026-VIP-PASS-300x300.jpg\ntimezone: Europe/Madrid\nkey: early-village-2026|2026-09-05|bear-village\nfestival: Bears Sitges Week\nnote: no coordinates\\: Bear-Village is an open-air seafront site on Passeig de la Ribera at the foot of Carrer Bonaire; no Maps link on the festival site, pin-curated-by-hand",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-early-village-2026-2026-09-05@chunky.dad",
+      "uid": "bears-sitges-week-early-village-2026-2026-09-05@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Bear-Village",
+      "cover": "free",
+      "image": "https://bearssitges.org/wp-content/uploads/2026/07/Bears-Sitges-Week-2026-VIP-PASS-300x300.jpg",
+      "tea": "Second early-opening night of the Bear-Village on the seafront (limited music/sound Sept 4-6). Free entry; VIP Zone passes (EUR 95-265) at bearsevents.com.",
+      "address": "Passeig de la Ribera (foot of Carrer Bonaire), 08870 Sitges",
+      "website": "https://bearssitges.org/bears-sitges-week/",
+      "ticketUrl": "https://www.bearsevents.com/product/sitges-bears-week-vip-pass-2026/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/bears-sitges-week/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.bearsevents.com/product/sitges-bears-week-vip-pass-2026/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "early-village-2026-349bc828"
+    },
+    {
+      "name": "Bear Sunset Tea Dance - Rooftop Hotel MiM",
+      "day": "Wednesday",
+      "time": "4PM-8:30PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.234697,
+        "lng": 1.803908
+      },
+      "startDate": "2026-09-09T16:00:00",
+      "endDate": "2026-09-09T20:30:00",
+      "unprocessedDescription": "description: Sunset tea dance on the Hotel MiM rooftop with wel\rcome sangria, a gourmet tapas menu, guest DJs and drag performances. Limited places.\nbar: Hotel MiM Sitges (Rooftop)\naddress: Av. Sofia 12, 08870 Sitges\nwebsite: https://www.bearsevents.com/event/bears-sunset-tea-dance-september-edition-2026/\nticketUrl: https://www.bearsevents.com/event/bears-sunset-tea-dance-september-edition-2026/\ncover: €85\nimage: https://www.bearsevents.com/wp-content/uploads/2026/07/Sunset-Tea-Dance-Bear-Week-Sitges-Sept-Tickets-2026.jpg\ntimezone: Europe/Madrid\nkey: bear-sunset-tea-dance-rooftop-hotel-mim|2026-09-09|hotel-mim-sitges-rooftop\nfestival: Bears Sitges Week\nnote: programme says 16\\:00-20\\:30; bearsevents.com says 16\\:00-19\\:30, programme link is a typo 'wwww.bearsevents.com', price\\: second release EUR 85 (early bird 65 and first release 75 sold out)",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-bear-sunset-tea-dance-rooftop-hotel-mim-2026-09-09@ch\runky.dad",
+      "uid": "bears-sitges-week-bear-sunset-tea-dance-rooftop-hotel-mim-2026-09-09@ch\runky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Hotel MiM Sitges (Rooftop)",
+      "cover": "€85",
+      "image": "https://www.bearsevents.com/wp-content/uploads/2026/07/Sunset-Tea-Dance-Bear-Week-Sitges-Sept-Tickets-2026.jpg",
+      "tea": "Sunset tea dance on the Hotel MiM rooftop with welcome sangria, a gourmet tapas menu, guest DJs and drag performances. Limited places.",
+      "address": "Av. Sofia 12, 08870 Sitges",
+      "website": "https://www.bearsevents.com/event/bears-sunset-tea-dance-september-edition-2026/",
+      "ticketUrl": "https://www.bearsevents.com/event/bears-sunset-tea-dance-september-edition-2026/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.bearsevents.com/event/bears-sunset-tea-dance-september-edition-2026/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.bearsevents.com/event/bears-sunset-tea-dance-september-edition-2026/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bear-sunset-tea-dance-rooftop-hotel-mim-2443422f"
+    },
+    {
+      "name": "Bear Route (Ruta del OSO) at Sponsor Bars",
+      "day": "Friday",
+      "time": "8PM-12AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2349,
+        "lng": 1.8083
+      },
+      "startDate": "2026-09-04T20:00:00",
+      "endDate": "2026-09-05T00:00:00",
+      "unprocessedDescription": "description: Nightly bar crawl through the Bears Sitges sponsor\r bars. 50%-off drink tickets for some bars come with the Bears Sitges Pack.\nbar: Sponsor bars (Bear-Village, Bears Bar, Bears Dance, Man Bar, La Villa, Runway Terrace, Industry Sitges, Chiringuito Iguana, Parrots Terrace Pub)\naddress: Various, Sitges\nwebsite: https://bearssitges.org/bears-sitges-week/\ncover: free\ntimezone: Europe/Madrid\nkey: bear-route-ruta-del-oso-at-sponsor-bars|2026-09-04|sponsor-bars-bear-village-bears-bar-bears-dance-man-bar-la-villa-runway-terrace-industry-sitges-chiringuito-iguana-parrots-terrace-pub\nfestival: Bears Sitges Week\nnote: end time not published — 4h default; multi-venue, no single location, recurring nightly slot, pin-curated-by-hand; confidence\\: medium — verify before the weekend",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-bear-route-ruta-del-oso-at-sponsor-bars-2026-09-04@ch\runky.dad",
+      "uid": "bears-sitges-week-bear-route-ruta-del-oso-at-sponsor-bars-2026-09-04@ch\runky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Sponsor bars (Bear-Village, Bears Bar, Bears Dance, Man Bar, La Villa, Runway Terrace, Industry Sitges, Chiringuito Iguana, Parrots Terrace Pub)",
+      "cover": "free",
+      "tea": "Nightly bar crawl through the Bears Sitges sponsor bars. 50%-off drink tickets for some bars come with the Bears Sitges Pack.",
+      "address": "Various, Sitges",
+      "website": "https://bearssitges.org/bears-sitges-week/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/bears-sitges-week/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "bear-route-ruta-del-oso-at-sponsor-bars-555ffc5a"
+    },
+    {
       "name": "BEEFMINCE MEET MARKET",
       "day": "Thursday",
       "time": "1AM-6PM",
@@ -146,6 +1192,362 @@
       "slug": "beefmince-meet-market-795b165c"
     },
     {
+      "name": "Bear Route (Ruta del OSO) at Sponsor Bars",
+      "day": "Sunday",
+      "time": "8PM-12AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2349,
+        "lng": 1.8083
+      },
+      "startDate": "2026-09-13T20:00:00",
+      "endDate": "2026-09-14T00:00:00",
+      "unprocessedDescription": "description: Nightly bar crawl through the Bears Sitges sponsor\r bars. 50%-off drink tickets for some bars come with the Bears Sitges Pack.\nbar: Sponsor bars (Bear-Village, Bears Bar, Bears Dance, Man Bar, La Villa, Runway Terrace, Industry Sitges, Chiringuito Iguana, Parrots Terrace Pub)\naddress: Various, Sitges\nwebsite: https://bearssitges.org/bears-sitges-week/\ncover: free\ntimezone: Europe/Madrid\nkey: bear-route-ruta-del-oso-at-sponsor-bars|2026-09-13|sponsor-bars-bear-village-bears-bar-bears-dance-man-bar-la-villa-runway-terrace-industry-sitges-chiringuito-iguana-parrots-terrace-pub\nfestival: Bears Sitges Week\nnote: end time not published — 4h default; multi-venue, no single location, recurring nightly slot, pin-curated-by-hand; confidence\\: medium — verify before the weekend",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-bear-route-ruta-del-oso-at-sponsor-bars-2026-09-13@ch\runky.dad",
+      "uid": "bears-sitges-week-bear-route-ruta-del-oso-at-sponsor-bars-2026-09-13@ch\runky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Sponsor bars (Bear-Village, Bears Bar, Bears Dance, Man Bar, La Villa, Runway Terrace, Industry Sitges, Chiringuito Iguana, Parrots Terrace Pub)",
+      "cover": "free",
+      "tea": "Nightly bar crawl through the Bears Sitges sponsor bars. 50%-off drink tickets for some bars come with the Bears Sitges Pack.",
+      "address": "Various, Sitges",
+      "website": "https://bearssitges.org/bears-sitges-week/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/bears-sitges-week/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "bear-route-ruta-del-oso-at-sponsor-bars-48babf78"
+    },
+    {
+      "name": "Mr. Bears Sitges 2026: THE PARTY (Scandal)",
+      "day": "Sunday",
+      "time": "1AM-6AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2359,
+        "lng": 1.8082
+      },
+      "startDate": "2026-09-13T01:00:00",
+      "endDate": "2026-09-13T06:00:00",
+      "unprocessedDescription": "description: Mr. Bear Sitges 2026 after-party at Bears Disco (S\rcandal). Listed as \"Mr. Bears Sitges 2026 'THE PARTY' at Bears Disco by Scandal\". Listed as \"Mr. Bears Sitges 2026\\: THE PARTY — Bears Disco by Scandal\".\nbar: Bears Disco by Scandal\naddress: Carrer de Bonaire 15, 08870 Sitges\nwebsite: https://scandalsitges.com/bears-disco-by-scandal/\ntimezone: Europe/Madrid\nkey: mr-bears-sitges-2026-the-party-scandal|2026-09-13|bears-disco-by-scandal\nfestival: Bears Sitges Week\nnote: no coordinates\\: Scandal is at Carrer de Bonaire 15, across from The Bear Cave (Bonaire 12, 41.2360385, 1.8079068), no ticket/price info on programme or scandalsitges.com (0 upcoming events listed there as of 2026-08-22), listed in the programme under the previous day's header (after-party starting 01\\:00); confidence\\: medium — verify before the weekend",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-mr-bears-sitges-2026-the-party-scandal-2026-09-13@chu\rnky.dad",
+      "uid": "bears-sitges-week-mr-bears-sitges-2026-the-party-scandal-2026-09-13@chu\rnky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Bears Disco by Scandal",
+      "tea": "Mr. Bear Sitges 2026 after-party at Bears Disco (Scandal). Listed as \"Mr. Bears Sitges 2026 'THE PARTY' at Bears Disco by Scandal\". Listed as \"Mr. Bears Sitges 2026: THE PARTY — Bears Disco by Scandal\".",
+      "address": "Carrer de Bonaire 15, 08870 Sitges",
+      "website": "https://scandalsitges.com/bears-disco-by-scandal/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://scandalsitges.com/bears-disco-by-scandal/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "mr-bears-sitges-2026-the-party-scandal-15db3395"
+    },
+    {
+      "name": "Walk to Playa del Muerto with Prague Bears",
+      "day": "Tuesday",
+      "time": "11:30AM-5PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2341662,
+        "lng": 1.803697
+      },
+      "startDate": "2026-09-08T11:30:00",
+      "endDate": "2026-09-08T17:00:00",
+      "unprocessedDescription": "description: Prague Bears' traditional free hike (~9 km round t\rrip) from the Bear Market at Hotel Calipolis to the naturist Playa del Muerto. Bring water, sun cream and proper shoes.\nbar: Hotel Calipolis\naddress: Av. Sofia 2-6, 08870 Sitges\nwebsite: https://en.praguebears.cz/Calendar.aspx?Event=1255\ncover: free\nimage: https://bearssitges.org/wp-content/uploads/2026/04/excursionplayamuerto-300x300.jpg\ntimezone: Europe/Madrid\nkey: walk-to-playa-del-muerto-with-prague-bears|2026-09-08|hotel-calipolis\nfestival: Bears Sitges Week\nnote: programme says meet 11\\:30 at the Bear-Market/Hotel Calipolis; Prague Bears page says 10\\:30 meet-up and 11\\:30-17\\:00 event - start follows the official programme, end from Prague Bears; confidence\\: medium — verify before the weekend",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-walk-to-playa-del-muerto-with-prague-bears-2026-09-08\r@chunky.dad",
+      "uid": "bears-sitges-week-walk-to-playa-del-muerto-with-prague-bears-2026-09-08\r@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Hotel Calipolis",
+      "cover": "free",
+      "image": "https://bearssitges.org/wp-content/uploads/2026/04/excursionplayamuerto-300x300.jpg",
+      "tea": "Prague Bears' traditional free hike (~9 km round trip) from the Bear Market at Hotel Calipolis to the naturist Playa del Muerto. Bring water, sun cream and proper shoes.",
+      "address": "Av. Sofia 2-6, 08870 Sitges",
+      "website": "https://en.praguebears.cz/Calendar.aspx?Event=1255",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://en.praguebears.cz/Calendar.aspx?Event=1255",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "walk-to-playa-del-muerto-with-prague-bears-19040d8f"
+    },
+    {
+      "name": "POPair BBQ & Music",
+      "day": "Saturday",
+      "time": "2PM-11PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.235432,
+        "lng": 1.807513
+      },
+      "startDate": "2026-09-05T14:00:00",
+      "endDate": "2026-09-05T23:00:00",
+      "unprocessedDescription": "description: Barcelona's POPair bear party brings its open-air \rBBQ + Music day to Le Patio\\: XXL burgers, XXL beers, pop and dance hits all afternoon and evening.\nbar: Le Patio\naddress: Carrer de Bonaire 26 / Carrer Joan Tarrida 23, 08870 Sitges\nwebsite: https://popairparty.com/\nticketUrl: https://spaces.toffolo.studio/f03108e3-1ef3-4e0f-8ac5-edff0d143371.html\nimage: https://bearssitges.org/wp-content/uploads/2026/07/2026-PopAir-promo.png\ntimezone: Europe/Madrid\nkey: popair-bbq-music|2026-09-05|le-patio\nfestival: Bears Sitges Week\nnote: programme says 14\\:00; POPair ticket page says 13\\:00-23\\:00 (end taken from ticket page), ticket prices only inside Weeztix widget (not captured), Le Patio address given as Bonaire 16/26 (bearsevents) vs Joan Tarrida 23 (POPair); coords from bearsevents JSON-LD",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-popair-bbq-music-2026-09-05@chunky.dad",
+      "uid": "bears-sitges-week-popair-bbq-music-2026-09-05@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Le Patio",
+      "image": "https://bearssitges.org/wp-content/uploads/2026/07/2026-PopAir-promo.png",
+      "tea": "Barcelona's POPair bear party brings its open-air BBQ + Music day to Le Patio: XXL burgers, XXL beers, pop and dance hits all afternoon and evening.",
+      "address": "Carrer de Bonaire 26 / Carrer Joan Tarrida 23, 08870 Sitges",
+      "website": "https://popairparty.com/",
+      "ticketUrl": "https://spaces.toffolo.studio/f03108e3-1ef3-4e0f-8ac5-edff0d143371.html",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://popairparty.com/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://spaces.toffolo.studio/f03108e3-1ef3-4e0f-8ac5-edff0d143371.html",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "popair-bbq-music-7cbb5480"
+    },
+    {
+      "name": "Bear Route (Ruta del OSO) at Sponsor Bars",
+      "day": "Wednesday",
+      "time": "8PM-12AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2349,
+        "lng": 1.8083
+      },
+      "startDate": "2026-09-09T20:00:00",
+      "endDate": "2026-09-10T00:00:00",
+      "unprocessedDescription": "description: Nightly bar crawl through the Bears Sitges sponsor\r bars. 50%-off drink tickets for some bars come with the Bears Sitges Pack.\nbar: Sponsor bars (Bear-Village, Bears Bar, Bears Dance, Man Bar, La Villa, Runway Terrace, Industry Sitges, Chiringuito Iguana, Parrots Terrace Pub)\naddress: Various, Sitges\nwebsite: https://bearssitges.org/bears-sitges-week/\ncover: free\ntimezone: Europe/Madrid\nkey: bear-route-ruta-del-oso-at-sponsor-bars|2026-09-09|sponsor-bars-bear-village-bears-bar-bears-dance-man-bar-la-villa-runway-terrace-industry-sitges-chiringuito-iguana-parrots-terrace-pub\nfestival: Bears Sitges Week\nnote: end time not published — 4h default; multi-venue, no single location, recurring nightly slot, pin-curated-by-hand; confidence\\: medium — verify before the weekend",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-bear-route-ruta-del-oso-at-sponsor-bars-2026-09-09@ch\runky.dad",
+      "uid": "bears-sitges-week-bear-route-ruta-del-oso-at-sponsor-bars-2026-09-09@ch\runky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Sponsor bars (Bear-Village, Bears Bar, Bears Dance, Man Bar, La Villa, Runway Terrace, Industry Sitges, Chiringuito Iguana, Parrots Terrace Pub)",
+      "cover": "free",
+      "tea": "Nightly bar crawl through the Bears Sitges sponsor bars. 50%-off drink tickets for some bars come with the Bears Sitges Pack.",
+      "address": "Various, Sitges",
+      "website": "https://bearssitges.org/bears-sitges-week/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/bears-sitges-week/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "bear-route-ruta-del-oso-at-sponsor-bars-0210e321"
+    },
+    {
+      "name": "Bear Route (Ruta del OSO) at Sponsor Bars",
+      "day": "Monday",
+      "time": "8PM-12AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2349,
+        "lng": 1.8083
+      },
+      "startDate": "2026-09-07T20:00:00",
+      "endDate": "2026-09-08T00:00:00",
+      "unprocessedDescription": "description: Nightly bar crawl through the Bears Sitges sponsor\r bars. 50%-off drink tickets for some bars come with the Bears Sitges Pack.\nbar: Sponsor bars (Bear-Village, Bears Bar, Bears Dance, Man Bar, La Villa, Runway Terrace, Industry Sitges, Chiringuito Iguana, Parrots Terrace Pub)\naddress: Various, Sitges\nwebsite: https://bearssitges.org/bears-sitges-week/\ncover: free\ntimezone: Europe/Madrid\nkey: bear-route-ruta-del-oso-at-sponsor-bars|2026-09-07|sponsor-bars-bear-village-bears-bar-bears-dance-man-bar-la-villa-runway-terrace-industry-sitges-chiringuito-iguana-parrots-terrace-pub\nfestival: Bears Sitges Week\nnote: end time not published — 4h default; multi-venue, no single location, recurring nightly slot, pin-curated-by-hand; confidence\\: medium — verify before the weekend",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-bear-route-ruta-del-oso-at-sponsor-bars-2026-09-07@ch\runky.dad",
+      "uid": "bears-sitges-week-bear-route-ruta-del-oso-at-sponsor-bars-2026-09-07@ch\runky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Sponsor bars (Bear-Village, Bears Bar, Bears Dance, Man Bar, La Villa, Runway Terrace, Industry Sitges, Chiringuito Iguana, Parrots Terrace Pub)",
+      "cover": "free",
+      "tea": "Nightly bar crawl through the Bears Sitges sponsor bars. 50%-off drink tickets for some bars come with the Bears Sitges Pack.",
+      "address": "Various, Sitges",
+      "website": "https://bearssitges.org/bears-sitges-week/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/bears-sitges-week/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "bear-route-ruta-del-oso-at-sponsor-bars-20e90fdd"
+    },
+    {
+      "name": "Meet & Greet: Mr. Bears & Bear Organisations (sangria)",
+      "day": "Tuesday",
+      "time": "7PM-11PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2341662,
+        "lng": 1.803697
+      },
+      "startDate": "2026-09-08T19:00:00",
+      "endDate": "2026-09-08T23:00:00",
+      "unprocessedDescription": "description: Bears Sitges and Hotel Calipolis invite all Mr. Be\rar / Vive Mr. Bear titleholders and representatives of visiting bear organisations to a fraternity sangria toast.\nbar: Hotel Calipolis\naddress: Av. Sofia 2-6, 08870 Sitges\nwebsite: https://bearssitges.org/bears-sitges-week/\ncover: free\nimage: https://bearssitges.org/wp-content/uploads/2026/07/MeetAndGreetWeb-1024x686.jpg\ntimezone: Europe/Madrid\nkey: meet-greet-mr-bears-bear-organisations-sangria|2026-09-08|hotel-calipolis\nfestival: Bears Sitges Week\nnote: end time not published — 4h default",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-meet-greet-mr-bears-bear-organisations-sangria-2026-0\r9-08@chunky.dad",
+      "uid": "bears-sitges-week-meet-greet-mr-bears-bear-organisations-sangria-2026-0\r9-08@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Hotel Calipolis",
+      "cover": "free",
+      "image": "https://bearssitges.org/wp-content/uploads/2026/07/MeetAndGreetWeb-1024x686.jpg",
+      "tea": "Bears Sitges and Hotel Calipolis invite all Mr. Bear / Vive Mr. Bear titleholders and representatives of visiting bear organisations to a fraternity sangria toast.",
+      "address": "Av. Sofia 2-6, 08870 Sitges",
+      "website": "https://bearssitges.org/bears-sitges-week/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/bears-sitges-week/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "meet-greet-mr-bears-bear-organisations-sangria-3d210745"
+    },
+    {
+      "name": "Draw Me Bears (life drawing)",
+      "day": "Monday",
+      "time": "7PM-9:30PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2366,
+        "lng": 1.8052
+      },
+      "startDate": "2026-09-07T19:00:00",
+      "endDate": "2026-09-07T21:30:00",
+      "unprocessedDescription": "description: A 90-minute professional life-drawing session with\r nude bear models, materials and two drinks included; no experience needed. Optional tapas (+EUR 20, 18\\:00-19\\:00) buffet the hour before.\nbar: Restaurant Fracasso\naddress: Carrer de Santa Bàrbara 10, 08870 Sitges\nwebsite: https://entradium.com/events/draw-me-like-one-of-your-bears\nticketUrl: https://entradium.com/events/draw-me-like-one-of-your-bears\ncover: €55\nimage: https://bearssitges.org/wp-content/uploads/2026/07/WhatsApp-Image-2026-07-31-at-20.42.17-1024x1024.jpeg\ntimezone: Europe/Madrid\nkey: draw-me-bears-life-drawing|2026-09-07|restaurant-fracasso\nfestival: Bears Sitges Week\nnote: no coordinates\\: Fracasso, Carrer de Santa Bàrbara 10 (venue named on entradium page, not on programme), end time from entradium schedule (programme gives start only), image is the programme's Draw Me Bears promo graphic (WhatsApp-named upload) - verify, pin-curated-by-hand",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-draw-me-bears-life-drawing-2026-09-07@chunky.dad",
+      "uid": "bears-sitges-week-draw-me-bears-life-drawing-2026-09-07@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Restaurant Fracasso",
+      "cover": "€55",
+      "image": "https://bearssitges.org/wp-content/uploads/2026/07/WhatsApp-Image-2026-07-31-at-20.42.17-1024x1024.jpeg",
+      "tea": "A 90-minute professional life-drawing session with nude bear models, materials and two drinks included; no experience needed. Optional tapas (+EUR 20, 18:00-19:00) buffet the hour before.",
+      "address": "Carrer de Santa Bàrbara 10, 08870 Sitges",
+      "website": "https://entradium.com/events/draw-me-like-one-of-your-bears",
+      "ticketUrl": "https://entradium.com/events/draw-me-like-one-of-your-bears",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://entradium.com/events/draw-me-like-one-of-your-bears",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://entradium.com/events/draw-me-like-one-of-your-bears",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "draw-me-bears-life-drawing-686634f0"
+    },
+    {
+      "name": "BEARS SITGES MARKET",
+      "day": "Saturday",
+      "time": "10AM-9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2341662,
+        "lng": 1.803697
+      },
+      "startDate": "2026-09-12T10:00:00",
+      "endDate": "2026-09-12T21:00:00",
+      "unprocessedDescription": "description: Bears Sitges Market at Hotel Calipolis\\: official\r merchandise, sponsor stands and pack pickup.\nbar: Hotel Calipolis\naddress: Av. Sofia 2-6, 08870 Sitges\nwebsite: https://bearssitges.org/bears-sitges-week/\nimage: https://bearssitges.org/wp-content/uploads/2026/07/Image-Market-Promo.png\ntimezone: Europe/Madrid\nkey: bears-sitges-market|2026-09-12|hotel-calipolis\nfestival: Bears Sitges Week",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-bears-sitges-market-2026-09-12@chunky.dad",
+      "uid": "bears-sitges-week-bears-sitges-market-2026-09-12@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Hotel Calipolis",
+      "image": "https://bearssitges.org/wp-content/uploads/2026/07/Image-Market-Promo.png",
+      "tea": "Bears Sitges Market at Hotel Calipolis: official merchandise, sponsor stands and pack pickup.",
+      "address": "Av. Sofia 2-6, 08870 Sitges",
+      "website": "https://bearssitges.org/bears-sitges-week/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/bears-sitges-week/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "bears-sitges-market-4f8e6091"
+    },
+    {
       "name": "BEEFMINCE: THE BIG BALL",
       "day": "Sunday",
       "time": "1AM-6AM",
@@ -191,6 +1593,638 @@
         }
       ],
       "slug": "beefmince-the-big-ball-13a48cc3"
+    },
+    {
+      "name": "25th Anniversary Night — Bear-Village (DJ PERFECTO)",
+      "day": "Friday",
+      "time": "9:30PM-3:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2349,
+        "lng": 1.8083
+      },
+      "startDate": "2026-09-11T21:30:00",
+      "endDate": "2026-09-12T03:30:00",
+      "unprocessedDescription": "description: 25th anniversary celebration night at the Bear-Vil\rlage with DJ Perfecto. Free entry; VIP Zone passes (EUR 95-265) at bearsevents.com. Listed as \"25th Anniversary Bears Sitges Special Night with DJ PERFECTO\".\nbar: Bear-Village\naddress: Passeig de la Ribera (foot of Carrer Bonaire), 08870 Sitges\nwebsite: https://bearssitges.org/bears-sitges-week/\nticketUrl: https://www.bearsevents.com/product/sitges-bears-week-vip-pass-2026/\ncover: free\nimage: https://bearssitges.org/wp-content/uploads/2026/07/11-sep-perfecto.png\ntimezone: Europe/Madrid\nkey: 25th-anniversary-night-bear-village-dj-perfecto|2026-09-11|bear-village\nfestival: Bears Sitges Week\nnote: no coordinates\\: Bear-Village is an open-air seafront site on Passeig de la Ribera at the foot of Carrer Bonaire; no Maps link on the festival site, pin-curated-by-hand",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-25th-anniversary-night-bear-village-dj-perfecto-2026-\r09-11@chunky.dad",
+      "uid": "bears-sitges-week-25th-anniversary-night-bear-village-dj-perfecto-2026-\r09-11@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Bear-Village",
+      "cover": "free",
+      "image": "https://bearssitges.org/wp-content/uploads/2026/07/11-sep-perfecto.png",
+      "tea": "25th anniversary celebration night at the Bear-Village with DJ Perfecto. Free entry; VIP Zone passes (EUR 95-265) at bearsevents.com. Listed as \"25th Anniversary Bears Sitges Special Night with DJ PERFECTO\".",
+      "address": "Passeig de la Ribera (foot of Carrer Bonaire), 08870 Sitges",
+      "website": "https://bearssitges.org/bears-sitges-week/",
+      "ticketUrl": "https://www.bearsevents.com/product/sitges-bears-week-vip-pass-2026/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/bears-sitges-week/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.bearsevents.com/product/sitges-bears-week-vip-pass-2026/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "25th-anniversary-night-bear-village-dj-perfecto-3f7c0caa"
+    },
+    {
+      "name": "IBC Palm Springs Night with DJ Retro Cub",
+      "day": "Wednesday",
+      "time": "8:30PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2349,
+        "lng": 1.8083
+      },
+      "startDate": "2026-09-09T20:30:00",
+      "endDate": "2026-09-10T03:00:00",
+      "unprocessedDescription": "description: Special night with International Bear Convergence \r(Palm Springs) and DJ Retro Cub from Palm Springs at the Bear-Village. Free entry; VIP Zone passes (EUR 95-265) at bearsevents.com.\nbar: Bear-Village\naddress: Passeig de la Ribera (foot of Carrer Bonaire), 08870 Sitges\nwebsite: https://bearssitges.org/bears-sitges-week/\nticketUrl: https://www.bearsevents.com/product/sitges-bears-week-vip-pass-2026/\ncover: free\nimage: https://bearssitges.org/wp-content/uploads/2026/07/9-sep-Retrocub.png\ntimezone: Europe/Madrid\nkey: ibc-palm-springs-night-with-dj-retro-cub|2026-09-09|bear-village\nfestival: Bears Sitges Week\nnote: no coordinates\\: Bear-Village is an open-air seafront site on Passeig de la Ribera at the foot of Carrer Bonaire; no Maps link on the festival site, pin-curated-by-hand",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-ibc-palm-springs-night-with-dj-retro-cub-2026-09-09@c\rhunky.dad",
+      "uid": "bears-sitges-week-ibc-palm-springs-night-with-dj-retro-cub-2026-09-09@c\rhunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Bear-Village",
+      "cover": "free",
+      "image": "https://bearssitges.org/wp-content/uploads/2026/07/9-sep-Retrocub.png",
+      "tea": "Special night with International Bear Convergence (Palm Springs) and DJ Retro Cub from Palm Springs at the Bear-Village. Free entry; VIP Zone passes (EUR 95-265) at bearsevents.com.",
+      "address": "Passeig de la Ribera (foot of Carrer Bonaire), 08870 Sitges",
+      "website": "https://bearssitges.org/bears-sitges-week/",
+      "ticketUrl": "https://www.bearsevents.com/product/sitges-bears-week-vip-pass-2026/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/bears-sitges-week/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.bearsevents.com/product/sitges-bears-week-vip-pass-2026/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "ibc-palm-springs-night-with-dj-retro-cub-49709391"
+    },
+    {
+      "name": "Official 25th Anniversary Dinner",
+      "day": "Friday",
+      "time": "8PM-12AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2341662,
+        "lng": 1.803697
+      },
+      "startDate": "2026-09-11T20:00:00",
+      "endDate": "2026-09-12T00:00:00",
+      "unprocessedDescription": "description: 20\\:00 cocktail, 20\\:30 premium all-you-can-eat\r buffet dinner with a performance by the Sitges Gay Men's Chorus at Hotel Calipolis. Included in the Bears Sitges Pack (limited places). Listed as \"Official 25th Anniversary Dinner (Cena Oficial 25 aniBEARSari)\".\nbar: Hotel Calipolis\naddress: Av. Sofia 2-6, 08870 Sitges\nwebsite: https://bearssitges.org/producto/bears-sitges-pack-2026/\nticketUrl: https://bearssitges.org/producto/bears-sitges-pack-2026/\ncover: included in €85 Bears Sitges Pack\nimage: https://bearssitges.org/wp-content/uploads/2026/06/INVITACION-indiv-2026-1-1024x357.jpg\ntimezone: Europe/Madrid\nkey: official-25th-anniversary-dinner|2026-09-11|hotel-calipolis\nfestival: Bears Sitges Week\nnote: end time not published — 4h default",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-official-25th-anniversary-dinner-2026-09-11@chunky.da\rd",
+      "uid": "bears-sitges-week-official-25th-anniversary-dinner-2026-09-11@chunky.da\rd",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Hotel Calipolis",
+      "cover": "included in €85 Bears Sitges Pack",
+      "image": "https://bearssitges.org/wp-content/uploads/2026/06/INVITACION-indiv-2026-1-1024x357.jpg",
+      "tea": "20:00 cocktail, 20:30 premium all-you-can-eat buffet dinner with a performance by the Sitges Gay Men's Chorus at Hotel Calipolis. Included in the Bears Sitges Pack (limited places). Listed as \"Official 25th Anniversary Dinner (Cena Oficial 25 aniBEARSari)\".",
+      "address": "Av. Sofia 2-6, 08870 Sitges",
+      "website": "https://bearssitges.org/producto/bears-sitges-pack-2026/",
+      "ticketUrl": "https://bearssitges.org/producto/bears-sitges-pack-2026/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/producto/bears-sitges-pack-2026/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://bearssitges.org/producto/bears-sitges-pack-2026/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "official-25th-anniversary-dinner-4a92cb48"
+    },
+    {
+      "name": "Welcome Night with DJ Radio Chi",
+      "day": "Monday",
+      "time": "8:30PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2349,
+        "lng": 1.8083
+      },
+      "startDate": "2026-09-07T20:30:00",
+      "endDate": "2026-09-08T03:00:00",
+      "unprocessedDescription": "description: Official welcome night at the Bear-Village with DJ\r Radio Chi. Free entry; VIP Zone passes (EUR 95-265) at bearsevents.com. Listed as \"Welcome Night (Noche Especial BIENVENIDA) with DJ Radio Chi\".\nbar: Bear-Village\naddress: Passeig de la Ribera (foot of Carrer Bonaire), 08870 Sitges\nwebsite: https://bearssitges.org/bears-sitges-week/\nticketUrl: https://www.bearsevents.com/product/sitges-bears-week-vip-pass-2026/\ncover: free\nimage: https://bearssitges.org/wp-content/uploads/2026/07/7-sep-Radiochi.png\ntimezone: Europe/Madrid\nkey: welcome-night-with-dj-radio-chi|2026-09-07|bear-village\nfestival: Bears Sitges Week\nnote: no coordinates\\: Bear-Village is an open-air seafront site on Passeig de la Ribera at the foot of Carrer Bonaire; no Maps link on the festival site, pin-curated-by-hand",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-welcome-night-with-dj-radio-chi-2026-09-07@chunky.dad",
+      "uid": "bears-sitges-week-welcome-night-with-dj-radio-chi-2026-09-07@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Bear-Village",
+      "cover": "free",
+      "image": "https://bearssitges.org/wp-content/uploads/2026/07/7-sep-Radiochi.png",
+      "tea": "Official welcome night at the Bear-Village with DJ Radio Chi. Free entry; VIP Zone passes (EUR 95-265) at bearsevents.com. Listed as \"Welcome Night (Noche Especial BIENVENIDA) with DJ Radio Chi\".",
+      "address": "Passeig de la Ribera (foot of Carrer Bonaire), 08870 Sitges",
+      "website": "https://bearssitges.org/bears-sitges-week/",
+      "ticketUrl": "https://www.bearsevents.com/product/sitges-bears-week-vip-pass-2026/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/bears-sitges-week/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.bearsevents.com/product/sitges-bears-week-vip-pass-2026/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "welcome-night-with-dj-radio-chi-15684e07"
+    },
+    {
+      "name": "POPair BBQ & Music",
+      "day": "Saturday",
+      "time": "2PM-11PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.235432,
+        "lng": 1.807513
+      },
+      "startDate": "2026-09-12T14:00:00",
+      "endDate": "2026-09-12T23:00:00",
+      "unprocessedDescription": "description: Second POPair open-air BBQ + Music day at Le Patio\r\\: XXL burgers, XXL beers and pop/dance hits.\nbar: Le Patio\naddress: Carrer de Bonaire 26 / Carrer Joan Tarrida 23, 08870 Sitges\nwebsite: https://popairparty.com/\nticketUrl: https://spaces.toffolo.studio/8d9e5d6d-09b1-4978-8540-22cdaa52871d.html\nimage: https://bearssitges.org/wp-content/uploads/2026/07/2026-PopAir-promo.png\ntimezone: Europe/Madrid\nkey: popair-bbq-music|2026-09-12|le-patio\nfestival: Bears Sitges Week\nnote: programme says 14\\:00; POPair ticket page says 13\\:00-23\\:00 (end taken from ticket page), ticket prices only inside Weeztix widget (not captured)",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-popair-bbq-music-2026-09-12@chunky.dad",
+      "uid": "bears-sitges-week-popair-bbq-music-2026-09-12@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Le Patio",
+      "image": "https://bearssitges.org/wp-content/uploads/2026/07/2026-PopAir-promo.png",
+      "tea": "Second POPair open-air BBQ + Music day at Le Patio: XXL burgers, XXL beers and pop/dance hits.",
+      "address": "Carrer de Bonaire 26 / Carrer Joan Tarrida 23, 08870 Sitges",
+      "website": "https://popairparty.com/",
+      "ticketUrl": "https://spaces.toffolo.studio/8d9e5d6d-09b1-4978-8540-22cdaa52871d.html",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://popairparty.com/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://spaces.toffolo.studio/8d9e5d6d-09b1-4978-8540-22cdaa52871d.html",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "popair-bbq-music-54296ae4"
+    },
+    {
+      "name": "Draw Me Bears (life drawing)",
+      "day": "Friday",
+      "time": "12PM-2:30PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2366,
+        "lng": 1.8052
+      },
+      "startDate": "2026-09-11T12:00:00",
+      "endDate": "2026-09-11T14:30:00",
+      "unprocessedDescription": "description: A 90-minute professional life-drawing session with\r nude bear models, materials and two drinks included; no experience needed.\nbar: Restaurant Fracasso\naddress: Carrer de Santa Bàrbara 10, 08870 Sitges\nwebsite: https://entradium.com/events/draw-me-like-one-of-your-bears\nticketUrl: https://entradium.com/events/draw-me-like-one-of-your-bears\ncover: €55\nimage: https://bearssitges.org/wp-content/uploads/2026/07/WhatsApp-Image-2026-07-31-at-20.42.17-1024x1024.jpeg\ntimezone: Europe/Madrid\nkey: draw-me-bears-life-drawing|2026-09-11|restaurant-fracasso\nfestival: Bears Sitges Week\nnote: no coordinates\\: Fracasso, Carrer de Santa Bàrbara 10 (venue named on entradium page, not on programme), end time from entradium schedule (programme gives start only), image is the programme's Draw Me Bears promo graphic (WhatsApp-named upload) - verify, pin-curated-by-hand",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-draw-me-bears-life-drawing-2026-09-11@chunky.dad",
+      "uid": "bears-sitges-week-draw-me-bears-life-drawing-2026-09-11@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Restaurant Fracasso",
+      "cover": "€55",
+      "image": "https://bearssitges.org/wp-content/uploads/2026/07/WhatsApp-Image-2026-07-31-at-20.42.17-1024x1024.jpeg",
+      "tea": "A 90-minute professional life-drawing session with nude bear models, materials and two drinks included; no experience needed.",
+      "address": "Carrer de Santa Bàrbara 10, 08870 Sitges",
+      "website": "https://entradium.com/events/draw-me-like-one-of-your-bears",
+      "ticketUrl": "https://entradium.com/events/draw-me-like-one-of-your-bears",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://entradium.com/events/draw-me-like-one-of-your-bears",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://entradium.com/events/draw-me-like-one-of-your-bears",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "draw-me-bears-life-drawing-57f2f157"
+    },
+    {
+      "name": "FAREWELL PINK PARTY at Bears Disco by Scandal",
+      "day": "Monday",
+      "time": "1AM-6AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2359,
+        "lng": 1.8082
+      },
+      "startDate": "2026-09-14T01:00:00",
+      "endDate": "2026-09-14T06:00:00",
+      "unprocessedDescription": "description: Farewell pink after-party at Bears Disco (Scandal)\r closing Bears Sitges Week.\nbar: Bears Disco by Scandal\naddress: Carrer de Bonaire 15, 08870 Sitges\nwebsite: https://scandalsitges.com/bears-disco-by-scandal/\ntimezone: Europe/Madrid\nkey: farewell-pink-party-at-bears-disco-by-scandal|2026-09-14|bears-disco-by-scandal\nfestival: Bears Sitges Week\nnote: no coordinates\\: Scandal is at Carrer de Bonaire 15, across from The Bear Cave (Bonaire 12, 41.2360385, 1.8079068), no ticket/price info on programme or scandalsitges.com (0 upcoming events listed there as of 2026-08-22), listed in the programme under the previous day's header (after-party starting 01\\:00); confidence\\: medium — verify before the weekend",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-farewell-pink-party-at-bears-disco-by-scandal-2026-09\r-14@chunky.dad",
+      "uid": "bears-sitges-week-farewell-pink-party-at-bears-disco-by-scandal-2026-09\r-14@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Bears Disco by Scandal",
+      "tea": "Farewell pink after-party at Bears Disco (Scandal) closing Bears Sitges Week.",
+      "address": "Carrer de Bonaire 15, 08870 Sitges",
+      "website": "https://scandalsitges.com/bears-disco-by-scandal/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://scandalsitges.com/bears-disco-by-scandal/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "farewell-pink-party-at-bears-disco-by-scandal-5dd46222"
+    },
+    {
+      "name": "Bear Route (Ruta del OSO) at Sponsor Bars",
+      "day": "Saturday",
+      "time": "8PM-12AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2349,
+        "lng": 1.8083
+      },
+      "startDate": "2026-09-05T20:00:00",
+      "endDate": "2026-09-06T00:00:00",
+      "unprocessedDescription": "description: Nightly bar crawl through the Bears Sitges sponsor\r bars. 50%-off drink tickets for some bars come with the Bears Sitges Pack.\nbar: Sponsor bars (Bear-Village, Bears Bar, Bears Dance, Man Bar, La Villa, Runway Terrace, Industry Sitges, Chiringuito Iguana, Parrots Terrace Pub)\naddress: Various, Sitges\nwebsite: https://bearssitges.org/bears-sitges-week/\ncover: free\ntimezone: Europe/Madrid\nkey: bear-route-ruta-del-oso-at-sponsor-bars|2026-09-05|sponsor-bars-bear-village-bears-bar-bears-dance-man-bar-la-villa-runway-terrace-industry-sitges-chiringuito-iguana-parrots-terrace-pub\nfestival: Bears Sitges Week\nnote: end time not published — 4h default; multi-venue, no single location, recurring nightly slot, pin-curated-by-hand; confidence\\: medium — verify before the weekend",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-bear-route-ruta-del-oso-at-sponsor-bars-2026-09-05@ch\runky.dad",
+      "uid": "bears-sitges-week-bear-route-ruta-del-oso-at-sponsor-bars-2026-09-05@ch\runky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Sponsor bars (Bear-Village, Bears Bar, Bears Dance, Man Bar, La Villa, Runway Terrace, Industry Sitges, Chiringuito Iguana, Parrots Terrace Pub)",
+      "cover": "free",
+      "tea": "Nightly bar crawl through the Bears Sitges sponsor bars. 50%-off drink tickets for some bars come with the Bears Sitges Pack.",
+      "address": "Various, Sitges",
+      "website": "https://bearssitges.org/bears-sitges-week/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/bears-sitges-week/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "bear-route-ruta-del-oso-at-sponsor-bars-43e302db"
+    },
+    {
+      "name": "Bears Sitges Pack Pickup & Official Polo Sale",
+      "day": "Tuesday",
+      "time": "6PM-9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2341662,
+        "lng": 1.803697
+      },
+      "startDate": "2026-09-08T18:00:00",
+      "endDate": "2026-09-08T21:00:00",
+      "unprocessedDescription": "description: Pickup of the Bears Sitges Pack (EUR 85\\: anniver\rsary dinner, polo, backpack, 14 half-price bar tickets) and sale of the official polo at the Bears Sitges Market stand. Packs are handed out only on the listed days/hours.\nbar: Hotel Calipolis\naddress: Av. Sofia 2-6, 08870 Sitges\nwebsite: https://bearssitges.org/producto/bears-sitges-pack-2026/\nticketUrl: https://bearssitges.org/producto/bears-sitges-pack-2026/\ncover: €85 pack\nimage: https://bearssitges.org/wp-content/uploads/2025/06/Pack-Bears-Sitges-web.png\ntimezone: Europe/Madrid\nkey: bears-sitges-pack-pickup-official-polo-sale|2026-09-08|hotel-calipolis\nfestival: Bears Sitges Week",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-bears-sitges-pack-pickup-official-polo-sale-2026-09-0\r8@chunky.dad",
+      "uid": "bears-sitges-week-bears-sitges-pack-pickup-official-polo-sale-2026-09-0\r8@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Hotel Calipolis",
+      "cover": "€85 pack",
+      "image": "https://bearssitges.org/wp-content/uploads/2025/06/Pack-Bears-Sitges-web.png",
+      "tea": "Pickup of the Bears Sitges Pack (EUR 85: anniversary dinner, polo, backpack, 14 half-price bar tickets) and sale of the official polo at the Bears Sitges Market stand. Packs are handed out only on the listed days/hours.",
+      "address": "Av. Sofia 2-6, 08870 Sitges",
+      "website": "https://bearssitges.org/producto/bears-sitges-pack-2026/",
+      "ticketUrl": "https://bearssitges.org/producto/bears-sitges-pack-2026/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/producto/bears-sitges-pack-2026/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://bearssitges.org/producto/bears-sitges-pack-2026/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bears-sitges-pack-pickup-official-polo-sale-2a5b7b4c"
+    },
+    {
+      "name": "BEARS SITGES MARKET Opening",
+      "day": "Monday",
+      "time": "4PM-9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2341662,
+        "lng": 1.803697
+      },
+      "startDate": "2026-09-07T16:00:00",
+      "endDate": "2026-09-07T21:00:00",
+      "unprocessedDescription": "description: Bears Sitges Market at Hotel Calipolis\\: official\r merchandise, sponsor stands and pack pickup.\nbar: Hotel Calipolis\naddress: Av. Sofia 2-6, 08870 Sitges\nwebsite: https://bearssitges.org/bears-sitges-week/\nimage: https://bearssitges.org/wp-content/uploads/2026/07/Image-Market-Promo.png\ntimezone: Europe/Madrid\nkey: bears-sitges-market-opening|2026-09-07|hotel-calipolis\nfestival: Bears Sitges Week",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-bears-sitges-market-opening-2026-09-07@chunky.dad",
+      "uid": "bears-sitges-week-bears-sitges-market-opening-2026-09-07@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Hotel Calipolis",
+      "image": "https://bearssitges.org/wp-content/uploads/2026/07/Image-Market-Promo.png",
+      "tea": "Bears Sitges Market at Hotel Calipolis: official merchandise, sponsor stands and pack pickup.",
+      "address": "Av. Sofia 2-6, 08870 Sitges",
+      "website": "https://bearssitges.org/bears-sitges-week/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/bears-sitges-week/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "bears-sitges-market-opening-0627dfca"
+    },
+    {
+      "name": "Bears Sitges Pack Pickup & Official Polo Sale",
+      "day": "Wednesday",
+      "time": "6PM-9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2341662,
+        "lng": 1.803697
+      },
+      "startDate": "2026-09-09T18:00:00",
+      "endDate": "2026-09-09T21:00:00",
+      "unprocessedDescription": "description: Pickup of the Bears Sitges Pack (EUR 85\\: anniver\rsary dinner, polo, backpack, 14 half-price bar tickets) and sale of the official polo at the Bears Sitges Market stand. Packs are handed out only on the listed days/hours.\nbar: Hotel Calipolis\naddress: Av. Sofia 2-6, 08870 Sitges\nwebsite: https://bearssitges.org/producto/bears-sitges-pack-2026/\nticketUrl: https://bearssitges.org/producto/bears-sitges-pack-2026/\ncover: €85 pack\nimage: https://bearssitges.org/wp-content/uploads/2025/06/Pack-Bears-Sitges-web.png\ntimezone: Europe/Madrid\nkey: bears-sitges-pack-pickup-official-polo-sale|2026-09-09|hotel-calipolis\nfestival: Bears Sitges Week",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-bears-sitges-pack-pickup-official-polo-sale-2026-09-0\r9@chunky.dad",
+      "uid": "bears-sitges-week-bears-sitges-pack-pickup-official-polo-sale-2026-09-0\r9@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Hotel Calipolis",
+      "cover": "€85 pack",
+      "image": "https://bearssitges.org/wp-content/uploads/2025/06/Pack-Bears-Sitges-web.png",
+      "tea": "Pickup of the Bears Sitges Pack (EUR 85: anniversary dinner, polo, backpack, 14 half-price bar tickets) and sale of the official polo at the Bears Sitges Market stand. Packs are handed out only on the listed days/hours.",
+      "address": "Av. Sofia 2-6, 08870 Sitges",
+      "website": "https://bearssitges.org/producto/bears-sitges-pack-2026/",
+      "ticketUrl": "https://bearssitges.org/producto/bears-sitges-pack-2026/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/producto/bears-sitges-pack-2026/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://bearssitges.org/producto/bears-sitges-pack-2026/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bears-sitges-pack-pickup-official-polo-sale-320d20ab"
+    },
+    {
+      "name": "Bear Route (Ruta del OSO) at Sponsor Bars",
+      "day": "Thursday",
+      "time": "8PM-12AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2349,
+        "lng": 1.8083
+      },
+      "startDate": "2026-09-10T20:00:00",
+      "endDate": "2026-09-11T00:00:00",
+      "unprocessedDescription": "description: Nightly bar crawl through the Bears Sitges sponsor\r bars. 50%-off drink tickets for some bars come with the Bears Sitges Pack.\nbar: Sponsor bars (Bear-Village, Bears Bar, Bears Dance, Man Bar, La Villa, Runway Terrace, Industry Sitges, Chiringuito Iguana, Parrots Terrace Pub)\naddress: Various, Sitges\nwebsite: https://bearssitges.org/bears-sitges-week/\ncover: free\ntimezone: Europe/Madrid\nkey: bear-route-ruta-del-oso-at-sponsor-bars|2026-09-10|sponsor-bars-bear-village-bears-bar-bears-dance-man-bar-la-villa-runway-terrace-industry-sitges-chiringuito-iguana-parrots-terrace-pub\nfestival: Bears Sitges Week\nnote: end time not published — 4h default; multi-venue, no single location, recurring nightly slot, pin-curated-by-hand; confidence\\: medium — verify before the weekend",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-bear-route-ruta-del-oso-at-sponsor-bars-2026-09-10@ch\runky.dad",
+      "uid": "bears-sitges-week-bear-route-ruta-del-oso-at-sponsor-bars-2026-09-10@ch\runky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Sponsor bars (Bear-Village, Bears Bar, Bears Dance, Man Bar, La Villa, Runway Terrace, Industry Sitges, Chiringuito Iguana, Parrots Terrace Pub)",
+      "cover": "free",
+      "tea": "Nightly bar crawl through the Bears Sitges sponsor bars. 50%-off drink tickets for some bars come with the Bears Sitges Pack.",
+      "address": "Various, Sitges",
+      "website": "https://bearssitges.org/bears-sitges-week/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/bears-sitges-week/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "bear-route-ruta-del-oso-at-sponsor-bars-7d31abf5"
+    },
+    {
+      "name": "Farewell PINK Night — Bear-Village (DJ PEASANT)",
+      "day": "Sunday",
+      "time": "8:30PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2349,
+        "lng": 1.8083
+      },
+      "startDate": "2026-09-13T20:30:00",
+      "endDate": "2026-09-14T03:00:00",
+      "unprocessedDescription": "description: Closing night of the Bear-Village with DJ Peasant.\r Come dressed in something pink. Free entry; VIP Zone passes (EUR 95-265) at bearsevents.com. Listed as \"Farewell PINK Night (NOCHE ESPECIAL DESPEDIDA en ROSA) with DJ PEASANT\".\nbar: Bear-Village\naddress: Passeig de la Ribera (foot of Carrer Bonaire), 08870 Sitges\nwebsite: https://bearssitges.org/bears-sitges-week/\nticketUrl: https://www.bearsevents.com/product/sitges-bears-week-vip-pass-2026/\ncover: free\nimage: https://bearssitges.org/wp-content/uploads/2026/07/13-sep-Peasant.png\ntimezone: Europe/Madrid\nkey: farewell-pink-night-bear-village-dj-peasant|2026-09-13|bear-village\nfestival: Bears Sitges Week\nnote: no coordinates\\: Bear-Village is an open-air seafront site on Passeig de la Ribera at the foot of Carrer Bonaire; no Maps link on the festival site, pin-curated-by-hand",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-farewell-pink-night-bear-village-dj-peasant-2026-09-1\r3@chunky.dad",
+      "uid": "bears-sitges-week-farewell-pink-night-bear-village-dj-peasant-2026-09-1\r3@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Bear-Village",
+      "cover": "free",
+      "image": "https://bearssitges.org/wp-content/uploads/2026/07/13-sep-Peasant.png",
+      "tea": "Closing night of the Bear-Village with DJ Peasant. Come dressed in something pink. Free entry; VIP Zone passes (EUR 95-265) at bearsevents.com. Listed as \"Farewell PINK Night (NOCHE ESPECIAL DESPEDIDA en ROSA) with DJ PEASANT\".",
+      "address": "Passeig de la Ribera (foot of Carrer Bonaire), 08870 Sitges",
+      "website": "https://bearssitges.org/bears-sitges-week/",
+      "ticketUrl": "https://www.bearsevents.com/product/sitges-bears-week-vip-pass-2026/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/bears-sitges-week/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.bearsevents.com/product/sitges-bears-week-vip-pass-2026/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "farewell-pink-night-bear-village-dj-peasant-4acc73b3"
+    },
+    {
+      "name": "Bear Route (Ruta del OSO) at Sponsor Bars",
+      "day": "Thursday",
+      "time": "8PM-12AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2349,
+        "lng": 1.8083
+      },
+      "startDate": "2026-09-03T20:00:00",
+      "endDate": "2026-09-04T00:00:00",
+      "unprocessedDescription": "description: Nightly bar crawl through the Bears Sitges sponsor\r bars. 50%-off drink tickets for some bars come with the Bears Sitges Pack.\nbar: Sponsor bars (Bear-Village, Bears Bar, Bears Dance, Man Bar, La Villa, Runway Terrace, Industry Sitges, Chiringuito Iguana, Parrots Terrace Pub)\naddress: Various, Sitges\nwebsite: https://bearssitges.org/bears-sitges-week/\ncover: free\ntimezone: Europe/Madrid\nkey: bear-route-ruta-del-oso-at-sponsor-bars|2026-09-03|sponsor-bars-bear-village-bears-bar-bears-dance-man-bar-la-villa-runway-terrace-industry-sitges-chiringuito-iguana-parrots-terrace-pub\nfestival: Bears Sitges Week\nnote: end time not published — 4h default; multi-venue, no single location, recurring nightly slot, pin-curated-by-hand; confidence\\: medium — verify before the weekend",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-bear-route-ruta-del-oso-at-sponsor-bars-2026-09-03@ch\runky.dad",
+      "uid": "bears-sitges-week-bear-route-ruta-del-oso-at-sponsor-bars-2026-09-03@ch\runky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Sponsor bars (Bear-Village, Bears Bar, Bears Dance, Man Bar, La Villa, Runway Terrace, Industry Sitges, Chiringuito Iguana, Parrots Terrace Pub)",
+      "cover": "free",
+      "tea": "Nightly bar crawl through the Bears Sitges sponsor bars. 50%-off drink tickets for some bars come with the Bears Sitges Pack.",
+      "address": "Various, Sitges",
+      "website": "https://bearssitges.org/bears-sitges-week/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/bears-sitges-week/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "bear-route-ruta-del-oso-at-sponsor-bars-66dcf5d9"
+    },
+    {
+      "name": "Exhibition Opening: '25' by Blanca de Nicolas",
+      "day": "Friday",
+      "time": "6PM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 41.2357,
+        "lng": 1.8073
+      },
+      "startDate": "2026-09-04T18:00:00",
+      "endDate": "2026-09-04T22:00:00",
+      "unprocessedDescription": "description: Opening of the 25th-anniversary exhibition '25' by\r artist Blanca de Nicolas, with a free welcome toast.\nbar: Espai Joan Tarrida\naddress: Carrer de Joan Tarrida 10, 08870 Sitges\nwebsite: https://bearssitges.org/bears-sitges-week/\ncover: free\nimage: https://bearssitges.org/wp-content/uploads/2025/04/0-Blanca-De-Nicolas-en-Bars-Sitges-expo.jpg\ntimezone: Europe/Madrid\nkey: exhibition-opening-25-by-blanca-de-nicolas|2026-09-04|espai-joan-tarrida\nfestival: Bears Sitges Week\nnote: end time not published — 4h default; no coordinates\\: Espai Joan Tarrida, Carrer de Joan Tarrida 10 (municipal venue)",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Madrid",
+      "wasUTC": true,
+      "sourceUid": "bears-sitges-week-exhibition-opening-25-by-blanca-de-nicolas-2026-09-04\r@chunky.dad",
+      "uid": "bears-sitges-week-exhibition-opening-25-by-blanca-de-nicolas-2026-09-04\r@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Espai Joan Tarrida",
+      "cover": "free",
+      "image": "https://bearssitges.org/wp-content/uploads/2025/04/0-Blanca-De-Nicolas-en-Bars-Sitges-expo.jpg",
+      "tea": "Opening of the 25th-anniversary exhibition '25' by artist Blanca de Nicolas, with a free welcome toast.",
+      "address": "Carrer de Joan Tarrida 10, 08870 Sitges",
+      "website": "https://bearssitges.org/bears-sitges-week/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearssitges.org/bears-sitges-week/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "exhibition-opening-25-by-blanca-de-nicolas-0803f3f3"
     }
   ]
 }
