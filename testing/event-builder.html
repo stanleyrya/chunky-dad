@@ -3031,6 +3031,11 @@
       const dom = {};
       let state;
       let existingSnapshot = null;
+      // True while existingSnapshot was taken from the arriving LINK's own
+      // values (edit=1&euid=… with no loaded record): that baseline diffs the
+      // form against itself and shows no changes. Cleared once the published
+      // record is adopted (adoptPublishedRecordForLink).
+      let existingSnapshotFromLink = false;
       let diffViewMode = 'side'; // 'side' or 'stacked'
       let diffPanelMode = 'diff'; // 'diff', 'similarity', or 'link'
       let diffEditMode = false; // whether to show edit mode UI in the diff
@@ -3131,6 +3136,7 @@
         applyStateToForm();
         if (state.isEditingExisting && !existingSnapshot) {
           existingSnapshot = snapshotFormFields(state);
+          existingSnapshotFromLink = true;
         }
         applyDebugVisibility();
         syncExistingSelectionSummaryFromState();
@@ -3762,6 +3768,7 @@
             rangeEnd: dateFilter.rangeEnd
           });
           existingCalendarIndex = index;
+          adoptPublishedRecordForLink(index);
           existingResults = results;
           renderExistingResults(results);
           refreshEditingContextUi();
@@ -4349,6 +4356,7 @@
         fetchCalendarIndex(cityKey).then(index => {
           if (state && state.city === cityKey) {
             existingCalendarIndex = index;
+            adoptPublishedRecordForLink(index);
             existingResults = buildExistingResults(index, { now: new Date() });
             updateSimilarityWarningUi();
           }
@@ -4535,6 +4543,53 @@
         if (explicit) return explicit;
         if (!state.editingExistingId) return '';
         return parseResultId(state.editingExistingId).uid;
+      }
+
+      // The published record behind an edit link's UID: a series master, or a
+      // one-off from index.events (never an override — those carry their own
+      // SEQUENCE and recurrence-id).
+      function findPublishedRecordByUid(index, uid) {
+        if (!index || !uid) return null;
+        const base = findBaseEventByUid(index, uid);
+        if (base) return base;
+        if (!Array.isArray(index.events)) return null;
+        return index.events.find(record => record && record.uid === uid && !record.recurrenceId) || null;
+      }
+
+      // An edit link names the record (euid) but carries neither its revision
+      // nor its stored values. Once the city's published calendar is in hand,
+      // adopt both from the real record: the SEQUENCE the ICS export needs,
+      // and the diff baseline — without it the form is diffed against the
+      // link's own prefilled values and "Changes:" stays empty even when the
+      // link added a field (review 2026-08-22: favicon added, no diff shown).
+      // Only fills blanks / replaces a link-derived baseline, so a real
+      // "Edit event" load always wins.
+      function adoptPublishedRecordForLink(index) {
+        if (!state || !state.isEditingExisting || !index) return;
+        const uid = getEditingUidFromState();
+        if (!uid) return;
+        const record = findPublishedRecordByUid(index, uid);
+        if (!record) return;
+        if (!normalizeText(state.editingExistingSequence)) {
+          const resolvedSequence = parseIntegerValue(record.sequence);
+          if (resolvedSequence !== null) {
+            state.editingExistingSequence = String(resolvedSequence);
+            scheduleUrlUpdate();
+          }
+        }
+        if (existingSnapshotFromLink) {
+          existingSnapshot = buildExistingSnapshot(record, {
+            cityKey: record.city || state.city,
+            startDate: record.startDate,
+            endDate: record.endDate,
+            recurrence: record.recurrence || ''
+          });
+          existingSnapshotFromLink = false;
+          updateExistingDiff();
+          // Only the action buttons — refreshUi() re-snapshots the baseline
+          // from the form and would erase the diff just established.
+          if (typeof updateActionButtonsState === 'function') updateActionButtonsState();
+        }
       }
 
       function findBaseEventByUid(index, uid) {
@@ -5868,6 +5923,10 @@
           recurrenceMode: 'builder',
           website: normalizeText(eventData.website || ''),
           ticketUrl: normalizeText(eventData.ticketUrl || ''),
+          // Mapped explicitly: unmapped fields inherit the CURRENT form via
+          // ...state above, so a record-based diff baseline could never show
+          // a change to them (review 2026-08-22: favicon added, no diff).
+          favicon: normalizeText(eventData.favicon || ''),
           instagram: normalizeText(eventData.instagram || ''),
           facebook: normalizeText(eventData.facebook || ''),
           gmaps: normalizeText(eventData.gmaps || ''),
@@ -9891,6 +9950,7 @@ Example output:
           const index = await fetchCalendarIndex(state.city);
           if (state && state.city === index.cityKey) {
             existingCalendarIndex = index;
+            adoptPublishedRecordForLink(index);
           }
           return {
             baseEvent: findBaseEventByUid(index, uid),
@@ -10567,7 +10627,7 @@ Example output:
         }, duration);
       }
 
-      function handleAddToCalendar() {
+      async function handleAddToCalendar() {
         const addDisabledReason = getAddToCalendarDisabledReason();
         if (addDisabledReason) {
           showToast(addDisabledReason, 'warn');
@@ -10583,7 +10643,7 @@ Example output:
         const deletingCustomOverride = isDeletingExistingCustomOverride();
         const shouldIncrementSequence = isEditingExisting
           && (!isOccurrenceOverride || isEditingCustomOverrideMode());
-        const existingSequence = shouldIncrementSequence
+        let existingSequence = shouldIncrementSequence
           ? parseIntegerValue(state && state.editingExistingSequence)
           : null;
         // Never guess a revision. SEQUENCE is a counter, not a timestamp, and
@@ -10594,6 +10654,26 @@ Example output:
         // names the record (edit=1&euid=…) arrives without it. Every published
         // event carries a SEQUENCE, so a missing one means "not loaded yet",
         // never "genuinely zero".
+        if (shouldIncrementSequence && existingSequence === null) {
+          // Before refusing, look the record up ourselves. A link that names
+          // the record (edit=1&euid=…) but arrived without eseq — the
+          // scraper's own edit links, any hand-built link — can be resolved
+          // in the published city calendar by UID, which is exactly what
+          // "Edit event" reads. Same source, same number; only a UID that is
+          // not in the published calendar still falls through to the refusal.
+          // (Review 2026-08-22: a one-off edit link opened in Safari hit the
+          // refusal with no picker selection to rescue it.)
+          const resolved = await loadEditingBaseEventForSwap();
+          const publishedRecord = findPublishedRecordByUid(resolved && resolved.index, getEditingUidFromState());
+          const resolvedSequence = publishedRecord ? parseIntegerValue(publishedRecord.sequence) : null;
+          if (resolvedSequence !== null) {
+            existingSequence = resolvedSequence;
+            if (state) {
+              state.editingExistingSequence = String(resolvedSequence);
+              scheduleUrlUpdate();
+            }
+          }
+        }
         if (shouldIncrementSequence && existingSequence === null) {
           const revisionMessage = 'Load this event with "Edit event" first — its revision number is needed or the calendar will ignore the update';
           updateCalendarStatus(revisionMessage, 'warn');
