@@ -56,6 +56,16 @@
     "accent": "#d14ae5"
   },
   {
+    "slug": "south-seattle-bear-social-1a3d1cb6",
+    "url": "https://thelumberyardbar.com/",
+    "faviconBg": "#5d3d25",
+    "faviconFg": "#e9e8e6",
+    "faviconPlate": "#010100",
+    "paletteSource": "favicon",
+    "palette": "#fefefe:29:0 #9c7a3d:16:9 #010100:12:1 #522d15:11:7 #9b1926:5:16",
+    "accent": "#9b1926"
+  },
+  {
     "slug": "treasure-trail-seattle-2a543921",
     "url": "https://bearracuda.com/events/treasure-trail-seattle/",
     "faviconBg": "#ff1901",

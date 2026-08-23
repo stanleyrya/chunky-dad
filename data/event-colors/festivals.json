@@ -50,6 +50,16 @@
     "accent": "#8f4201"
   },
   {
+    "slug": "bear-pride-chicago-4fb142c4",
+    "url": "https://pbs.twimg.com/profile_images/621554245020430336/sN7p7etv_400x400.png",
+    "faviconBg": "#fcf4f4",
+    "faviconFg": "#cc3030",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:66:0 #c81d1d:32:20 #ebacac:1:7 #e07e7e:1:12",
+    "accent": "#c81d1d"
+  },
+  {
     "slug": "bear-pride-cologne-1cd3a501",
     "url": "https://bearpride.cologne/",
     "faviconBg": "#fdfcfc",
