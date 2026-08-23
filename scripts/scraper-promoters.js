@@ -22,7 +22,8 @@ const scraperPromoters = [
     "name": "Coach After Dark",
     "shortName": "COACH",
     "instagram": "https://www.instagram.com/coachafterdark",
-    "bearAffinity": "always"
+    "bearAffinity": "always",
+    "favicon": "https://linktr.ee/bearhappyhour"
   },
   {
     "name": "Bear Happy Hour",
@@ -120,7 +121,8 @@ const scraperPromoters = [
     "shortName": "TWIST­ED BEAR",
     "instagram": "https://www.instagram.com/twistedbearparty",
     "facebook": "https://www.facebook.com/twistedglobal/",
-    "bearAffinity": "always"
+    "bearAffinity": "always",
+    "website": "https://twisted-bear.com"
   },
   {
     "name": "CubScout LA",
