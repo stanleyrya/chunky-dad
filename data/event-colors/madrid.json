@@ -1,0 +1,12 @@
+[
+  {
+    "slug": "festival-mad-bear-madrid-2026",
+    "url": "https://madbear.org/en",
+    "faviconBg": "#d12a26",
+    "faviconFg": "#dc6a25",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:63:0 #cb2026:26:20 #eaaf6c:4:11 #db713d:2:15 #d45228:2:17",
+    "accent": "#cb2026"
+  }
+]
