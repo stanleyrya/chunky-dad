@@ -11,6 +11,10 @@
   },
   {
     "slug": "twisted-bear-washington-dc-debut-12f06752",
+    "url": "https://twisted-bear.com",
+    "faviconBg": "#f7f7f7",
+    "faviconFg": "#101010",
+    "faviconPlate": "#ffffff",
     "paletteSource": "flyer",
     "palette": "#080809:29:0 #3b3333:16:1 #231c1b:15:1 #9b746e:9:5",
     "accent": "#9b746e"
