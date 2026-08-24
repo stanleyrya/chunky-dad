@@ -1,0 +1,56 @@
+BEGIN:VCALENDAR
+PRODID:-//Google Inc//Google Calendar 70.9054//EN
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:chunky-dad-poconos
+X-WR-TIMEZONE:America/New_York
+BEGIN:VEVENT
+DTSTART:20260821T040000Z
+DTEND:20260824T035959Z
+DTSTAMP:20260824T214542Z
+UID:4796AF76-FCF2-40C4-B409-34F788DC8EB8
+CREATED:20260701T132044Z
+DESCRIPTION:bar: Camp Out\naddress: 446 MT NEBO RD\, EAST STROUDSBURG\, PA\
+ , 18301\ntimezone: America/New_York\nticketUrl: https://www.camplife.com/11
+ 46/reservation/step1\nimage: https://static.wixstatic.com/media/238fae_927a
+ eb4a256d48a385e943e486bc4980~mv2.png\nimageVertical: https://static.wixstat
+ ic.com/media/238fae_451a74a7d2144ed8a4fbdc934597fbef~mv2.png\nwebsite: http
+ s://www.furball.nyc\ninstagram: https://instagram.com/furballnyc/\nshortNam
+ e: FUR­BALL\nfavicon: https://linktr.ee/furballnyc\nkey: furball-camp|2026-
+ 08-21|camp out\nbearSource: keyword\ndescription: CAMPOUT\, POCONOS\nFUN - 
+ SUN - DANCING\nPOOL PARTIES - BEARS\npinSource: curated\naddressSource: cur
+ ated\nimageSource: page\nbarSource: curated\ngmaps: https://maps.app.goo.gl
+ /LYwCKGeMJAJTy8hx9?g_st=ic
+LAST-MODIFIED:20260821T203005Z
+LOCATION:41.0219799\, -75.1167816
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:FURBALL CAMP
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260823T010000Z
+DTSTAMP:20260824T214542Z
+UID:52BBD6C3-0B99-4677-8317-9CF0FF2D5C36
+CREATED:20260821T175546Z
+DESCRIPTION:description: EXPERIENCE THE PREMIER LGBT+ CAMPGROUND\nbar: Camp
+ \ntimezone: America/New_York\nimage: https://static.wixstatic.com/media/238
+ fae_aa9b72943a28499cba999916dce29d49~mv2.png\nwebsite: https://furball.nyc\
+ naddress: 446 MT NEBO RD\, EAST STROUDSBURG\, PA\, 18301\ninstagram: https:
+ //instagram.com/furballnyc/\nshortName: FUR­BALL\nfavicon: https://linktr.e
+ e/furballnyc\nkey: furball-camp|2026-08-23|camp\nbearSource: keyword\npinSo
+ urce: curated\naddressSource: curated\nimageSource: page\ngmaps: https://ww
+ w.google.com/maps/search/?api=1&query=41.0219799%2C-75.1167816
+LAST-MODIFIED:20260821T203005Z
+LOCATION:41.0219799\, -75.1167816
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:FURBALL CAMP
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+END:VCALENDAR

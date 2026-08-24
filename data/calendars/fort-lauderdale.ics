@@ -1,0 +1,37 @@
+BEGIN:VCALENDAR
+PRODID:-//Google Inc//Google Calendar 70.9054//EN
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:chunky-dad-fort-lauderdale
+X-WR-TIMEZONE:America/New_York
+BEGIN:VEVENT
+DTSTART:20261101T210000Z
+DTEND:20261102T020000Z
+DTSTAMP:20260824T214543Z
+UID:BE92AFDE-830F-47AC-A67B-518D74EA17D3
+CREATED:20260802T134345Z
+DESCRIPTION:description: Wig Out with Club Chub returns Nov. 1\, 4 -9 PM at
+  Eagle Wilton Manors. Wigs\, giveaways\, and big energy. Tix required.\nbar
+ : Eagle Wilton Manors\naddress: 2209 Wilton Drive\, Wilton Manors\, FL 3330
+ 5\ntimezone: America/New_York\nticketUrl: https://www.eventbrite.com/e/club
+ -chub-fort-lauderdale-wig-out-party-tickets-1987163866618\nimage: https://i
+ mg.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181905615%2F1078184808
+ 853%2F1%2Foriginal.20260410-211015?crop=focalpoint&fit=crop&w=940&auto=form
+ at%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=ed3b1b0d7f4dbd22d280d1c2e7b
+ 88cfc\nwebsite: https://www.clubchubusa.com\ninstagram: https://www.instagr
+ am.com/clubchubparty\nshortName: CLUB CHUB\nfavicon: https://www.clubchubus
+ a.com\nkey: club-chub-the-wig-out-party|2026-11-01|eagle wilton manors\ncov
+ er: $19.10-$24.80\nbearSource: keyword\npinSource: curated\naddressSource: 
+ page\nimageSource: jsonld\nbarSource: page-adjacent\ngmaps: https://www.goo
+ gle.com/maps/search/?api=1&query=26.156486%2C-80.138547
+LAST-MODIFIED:20260815T020650Z
+LOCATION:26.156486\, -80.138547
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:CLUB CHUB: The Wig Out Party
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+END:VCALENDAR

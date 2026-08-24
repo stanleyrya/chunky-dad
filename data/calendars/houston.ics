@@ -1,0 +1,35 @@
+BEGIN:VCALENDAR
+PRODID:-//Google Inc//Google Calendar 70.9054//EN
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:chunky-dad-houston
+X-WR-TIMEZONE:America/Chicago
+BEGIN:VEVENT
+DTSTART:20260816T030000Z
+DTEND:20260816T080000Z
+DTSTAMP:20260824T214542Z
+UID:2A0F66EB-F987-4D37-A5E3-68F984CFC244
+CREATED:20260712T004136Z
+DESCRIPTION:description: MEGAWOOF HOUSTON\nbar: Rich's Houston\naddress: 24
+ 01 San Jacinto Street\, Houston\, TX 77002\nticketUrl: https://www.eventbri
+ te.com/e/megawoof-houston-richs-tickets-1992174793435\nimage: https://img.e
+ vbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1187234130%2F185013722403%2
+ F1%2Foriginal.20260618-221903?w=940&auto=format%2Ccompress&q=75&sharp=10&s=
+ bc0c55cb113d9222aeebb2aa5b28cade\ncover: $11.58-$27.37\ntimezone: America/C
+ hicago\nwebsite: https://linktr.ee/megawoof_america\ninstagram: https://www
+ .instagram.com/megawoof_america\nshortName: MEGA-WOOF\nfavicon: https://lin
+ ktr.ee/megawoof_america\nkey: megawoof-houston-richs|2026-08-16|rich's hous
+ ton\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSou
+ rce: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/
+ ?api=1&query=29.7451002%2C-95.3715298
+LAST-MODIFIED:20260811T174318Z
+LOCATION:29.7451002\, -95.3715298
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF HOUSTON @ RICHs
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+END:VCALENDAR

@@ -1,0 +1,38 @@
+BEGIN:VCALENDAR
+PRODID:-//Google Inc//Google Calendar 70.9054//EN
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:chunky-dad-asbury-park
+X-WR-TIMEZONE:America/New_York
+BEGIN:VEVENT
+DTSTART:20260801T020000Z
+DTSTAMP:20260824T214543Z
+UID:7FF6439D-9567-404D-B179-D12FBE289F0A
+CREATED:20260724T182613Z
+DESCRIPTION:description: Bear Invasion Opening Party\nbar: Paradise Night C
+ lub\naddress: 101 Asbury Ave\, Asbury Park\, NJ 07712\ntimezone: America/Ne
+ w_York\nticketUrl: https://www.etix.com/ticket/p/54403374/?partner_id=100&_
+ gl=1*1bmryzt*_ga*MTI5NjI5MTA1OS4xNzgzNzA5NzI5*_ga_Z3MV4KFJMN*czE3ODM3MDk3Mj
+ kkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGgxNzA5NTE2OTA5*_ga_DSG080VB8M*czE3ODM3M
+ Dk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGg3NjY5MDM0NTA.*_ga_68TT1Q537T*czE3
+ ODM3MDk3MjkkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGg5NTk4NTE2Njg.*_ga_MCR6RT8ZB7
+ *czE3ODM3MDk3MzAkbzEkZzEkdDE3ODM3MDk5NDMkajQ3JGwwJGgw&_ga=2.96391708.143024
+ 2853.1783709730-1296291059.1783709729\nimage: https://static.wixstatic.com/
+ media/238fae_448a62fe9115494dae82df2a205d94ce~mv2.png\ncover: Tickets at th
+ e door\nwebsite: https://www.furball.nyc\ninstagram: https://instagram.com/
+ furballnyc/\nshortName: FUR-BALL\nfavicon: https://linktr.ee/furballnyc\nbe
+ arSource: keyword\nkey: furball-asbury-park-beach|2026-08-01|paradise night
+  club\npinSource: curated\naddressSource: curated\nimageSource: page\nbarSo
+ urce: uncorroborated\ngmaps: https://www.google.com/maps/search/?api=1&quer
+ y=40.218455%2C-74.0015495
+LAST-MODIFIED:20260803T174910Z
+LOCATION:40.2184550\, -74.0015495
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:FURBALL Asbury Park Beach
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+END:VCALENDAR

@@ -1,0 +1,33 @@
+BEGIN:VCALENDAR
+PRODID:-//Google Inc//Google Calendar 70.9054//EN
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:chunky-dad-austin
+X-WR-TIMEZONE:America/Chicago
+BEGIN:VEVENT
+DTSTART:20260830T030000Z
+DTSTAMP:20260824T214542Z
+UID:CD68B5C8-D91F-4546-8068-0B62927CBC45
+CREATED:20260712T000122Z
+DESCRIPTION:description: Jock / Fetish / Gear Party\nbar: Austin Eagle\nadd
+ ress: 8201 Cross Park Drive\, Austin\ntimezone: America/Chicago\nticketUrl:
+  https://events.ticketleap.com/tickets/furballnyc/furball-austin-jock-fetis
+ h-gear-082926\nimage: https://static.wixstatic.com/media/238fae_a523cf005b0
+ 5445fbcd4ce5d5f2d10eb~mv2.png/v1/fill/w_296\,h_296\,al_c\,q_85\,usm_0.66_1.
+ 00_0.01\,enc_avif\,quality_auto/238fae_a523cf005b05445fbcd4ce5d5f2d10eb~mv2
+ .png\nshortName: FUR­BALL\ninstagram: https://instagram.com/furballnyc/\nfa
+ vicon: https://linktr.ee/furballnyc\nkey: furball-austin|2026-08-30|austin 
+ eagle\nbearSource: keyword\nwebsite: https://www.furball.nyc\npinSource: ge
+ ocoded-exact\naddressSource: page\nbarSource: uncorroborated\ngmaps: https:
+ //www.google.com/maps/search/?api=1&query=30.3306335%2C-97.6672143
+LAST-MODIFIED:20260821T202957Z
+LOCATION:30.3306335\, -97.6672143
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:FURBALL Austin
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+END:VCALENDAR
