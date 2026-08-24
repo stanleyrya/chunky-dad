@@ -45,7 +45,7 @@
     "dc": {
       "name": "DC",
       "status": "success",
-      "dataLength": 2859,
+      "dataLength": 2932,
       "eventCount": 2
     },
     "denver": {
@@ -69,7 +69,7 @@
     "london": {
       "name": "London",
       "status": "success",
-      "dataLength": 15667,
+      "dataLength": 15657,
       "eventCount": 9
     },
     "nola": {
