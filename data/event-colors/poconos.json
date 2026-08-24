@@ -1,0 +1,22 @@
+[
+  {
+    "slug": "furball-camp-4b98e73b",
+    "url": "https://furball.nyc",
+    "faviconBg": "#f6f6f6",
+    "faviconFg": "#393a3f",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#090604:38:1 #483918:17:5 #232402:14:5 #766120:9:9 #c89c46:6:12",
+    "accent": "#c89c46"
+  },
+  {
+    "slug": "furball-camp-6c5d7621",
+    "url": "https://www.furball.nyc",
+    "faviconBg": "#f6f6f6",
+    "faviconFg": "#393a3f",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#000b3d:69:10 #eed99a:25:8 #545365:3:3 #333654:2:5",
+    "accent": "#000b3d"
+  }
+]

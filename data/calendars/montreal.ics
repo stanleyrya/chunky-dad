@@ -1,0 +1,80 @@
+BEGIN:VCALENDAR
+PRODID:-//Google Inc//Google Calendar 70.9054//EN
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:chunky-dad-montreal
+X-WR-TIMEZONE:America/Toronto
+BEGIN:VEVENT
+DTSTART:20260809T020000Z
+DTEND:20260809T080000Z
+DTSTAMP:20260824T214542Z
+UID:80957E4E-5FB7-4FBE-BCB3-D6F0E20F02EE
+CREATED:20260802T142347Z
+DESCRIPTION:bar: Bain Mathieu\naddress: 2915 Rue Ontario E\, Montréal\, QC\
+ , H2K 1X7\nimage: https://www.bearitmtl.com/wp-content/uploads/2026/07/BEAR
+ -Playground-Vignette_WEB.jpg\ncover: 36 CAD\ntimezone: America/Toronto\nima
+ geHorizontal: https://www.bearitmtl.com/wp-content/uploads/2026/07/BEAR-Pla
+ yground-Vignette_WEB.jpg\nwebsite: https://www.bearitmtl.com/event/bear-pla
+ yground-gladiateurs/\nshortName: BEAR IT\nfavicon: https://www.bearitmtl.co
+ m\nbearSource: keyword\nkey: bear-playground-–-gladiateurs|2026-08-09|bain 
+ mathieu\npinSource: geocoded-exact\naddressSource: page\nimageSource: og-im
+ age\nbarSource: geo-poi\ngmaps: https://www.google.com/maps/search/?api=1&q
+ uery=45.5374686%2C-73.5499132
+LAST-MODIFIED:20260802T142451Z
+LOCATION:45.5374686\, -73.5499132
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEAR PLAYGROUND – GLADIATEURS
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260919T220000Z
+DTEND:20260920T070000Z
+DTSTAMP:20260824T214542Z
+UID:FCB19573-E6F0-4B33-B26F-1DED6CDF4528
+CREATED:20260815T030435Z
+DESCRIPTION:bar: Stock Bar\naddress: 1171 Rue Ste Catherine Est\, Montréal\
+ , QC\nimage: https://www.bearitmtl.com/wp-content/uploads/2026/08/Vignette_
+ WEB.jpg\ncover: 19-26 CAD\ntimezone: America/Toronto\nimageHorizontal: http
+ s://www.bearitmtl.com/wp-content/uploads/2026/08/Vignette_WEB.jpg\naddressS
+ ource: page\nwebsite: https://www.bearitmtl.com/event/ensemble/\ngmaps: htt
+ ps://www.google.com/maps/search/?api=1&query=45.5182366%2C-73.5565931\npinS
+ ource: geocoded-exact\nshortName: BEAR IT\nfavicon: https://www.bearitmtl.c
+ om\nkey: ensemble|2026-09-19|stock bar\nimageSource: jsonld\nbearSource: ai
+LAST-MODIFIED:20260815T030435Z
+LOCATION:45.5182366\, -73.5565931
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:ENSEMBLE
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260907T010000Z
+DTEND:20260907T070000Z
+DTSTAMP:20260824T214542Z
+UID:0BE3595E-AB86-4617-827F-595357478D68
+CREATED:20260815T030434Z
+DESCRIPTION:bar: Bar Le Dimant Rouge\naddress: 1681 Rue Sainte-Catherine Es
+ t\, Montréal\, QC\, H2L2J5\nimage: https://www.bearitmtl.com/wp-content/upl
+ oads/2026/07/The-Hunt-1024x539.jpg\ncover: 29-37 CAD\ntimezone: America/Tor
+ onto\naddressSource: page\nwebsite: https://www.bearitmtl.com/event/the-hun
+ t/\ngmaps: https://www.google.com/maps/search/?api=1&query=45.5223556%2C-73
+ .5528239\npinSource: geocoded-exact\nshortName: BEAR IT\nfavicon: https://w
+ ww.bearitmtl.com\nkey: the-hunt|2026-09-07|bar le dimant rouge\nimageHorizo
+ ntal: https://www.bearitmtl.com/wp-content/uploads/2026/07/The-Hunt-1024x53
+ 9.jpg\nimageSource: og-image\nbearSource: ai
+LAST-MODIFIED:20260815T030434Z
+LOCATION:45.5223556\, -73.5528239
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:THE HUNT
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+END:VCALENDAR

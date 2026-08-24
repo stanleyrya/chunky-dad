@@ -20557,3 +20557,61 @@ test('countJsonApiEventObjects mirror: no bare epochs, no { rendered } titles, s
   assert.equal(core.countJsonApiEventObjects(JSON.stringify([{ content: { summary: { text: '' } }, when: { start: { millis: 1788055200000 } } }])), 0,
     'an empty rich-text title is no title — same as the parser');
 });
+
+// ── Sanity rule 11 ENFORCE: clean −12h AM/PM slips are corrected in place ──
+test('applyOvernightSpanCorrection fixes GOLIDLOXX-style 9PM–4PM to 9PM–4AM and converts the flag', () => {
+  const core = new SharedCore({}, { eventSchema: EventSchema });
+  const ev = {
+    title: 'GOLIDLOXX AUGUST',
+    startDate: new Date('2026-08-30T01:00:00Z'),   // Sat 9PM EDT
+    endDate: new Date('2026-08-30T20:00:00Z'),     // Sun 4PM EDT — 19h
+    timezone: 'America/New_York'
+  };
+  ev._sanityFlags = core.getEventSanityFlags(ev);
+  assert.ok(ev._sanityFlags.find(f => f.code === 'improbable-overnight-span'));
+  assert.equal(core.applyOvernightSpanCorrection(ev), true);
+  assert.equal(ev.endDate.toISOString(), '2026-08-30T08:00:00.000Z', 'end lands at 4AM EDT');
+  assert.equal(ev._sanityFlags.find(f => f.code === 'overnight-span-corrected') ? true : false, true);
+  assert.equal(ev._sanityFlags.find(f => f.code === 'improbable-overnight-span'), undefined);
+});
+
+test('applyOvernightSpanCorrection fixes BEEFMINCE-style 1AM–6PM to 1AM–6AM and preserves string endDates', () => {
+  const core = new SharedCore({}, { eventSchema: EventSchema });
+  const ev = {
+    title: 'BEEFMINCE DISCO',
+    startDate: '2026-09-10T23:00:00.000Z',        // 1AM CEST
+    endDate: '2026-09-11T16:00:00.000Z',          // 6PM CEST — 17h
+    timezone: 'Europe/Madrid'
+  };
+  ev._sanityFlags = core.getEventSanityFlags(ev);
+  assert.ok(ev._sanityFlags.find(f => f.code === 'improbable-overnight-span'));
+  assert.equal(core.applyOvernightSpanCorrection(ev), true);
+  assert.equal(typeof ev.endDate, 'string', 'string in, string out');
+  assert.equal(ev.endDate, '2026-09-11T04:00:00.000Z', 'end lands at 6AM CEST');
+});
+
+test('a span −12h does not explain stays a report-only flag (Bearracuda 25h)', () => {
+  const core = new SharedCore({}, { eventSchema: EventSchema });
+  const ev = {
+    title: 'BEARRACUDA: Seattle',
+    startDate: new Date('2026-09-13T04:00:00Z'),  // 9PM PDT
+    endDate: new Date('2026-09-14T05:00:00Z'),    // 25h later
+    timezone: 'America/Los_Angeles'
+  };
+  ev._sanityFlags = core.getEventSanityFlags(ev);
+  const before = ev.endDate.getTime();
+  assert.equal(core.applyOvernightSpanCorrection(ev), false, '25h − 12h = 13h is still improbable — no correction');
+  assert.equal(ev.endDate.getTime(), before);
+  assert.ok(ev._sanityFlags.find(f => f.code === 'improbable-overnight-span'), 'original flag kept');
+});
+
+test('exact-midnight starts are date-only listings — rule 11 never flags them (FURBALL CAMP)', () => {
+  const core = new SharedCore({}, { eventSchema: EventSchema });
+  const flags = core.getEventSanityFlags({
+    title: 'FURBALL CAMP',
+    startDate: new Date('2026-09-04T04:00:00Z'),  // midnight EDT exactly
+    endDate: new Date('2026-09-07T04:00:00Z'),    // 72h weekend
+    timezone: 'America/New_York'
+  });
+  assert.equal(flags.find(f => f.code === 'improbable-overnight-span'), undefined);
+});

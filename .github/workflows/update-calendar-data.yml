@@ -107,7 +107,13 @@ jobs:
           let hasActualChanges = false;
           
           for (const [cityKey, config] of Object.entries(cityConfig)) {
-            if (config.calendarId && config.visible) {
+            // Pull EVERY configured calendar, hidden cities included: a city
+            // being invisible on the site must not blind the scraper's merge
+            // analysis ('published calendar unavailable ... degraded to NEW'),
+            // and dynamic show/hide by event count needs the data flowing
+            // before the city is shown. Page artifacts (json/event pages/OG)
+            // stay gated on `visible` in their own tools.
+            if (config.calendarId) {
               console.log(`Fetching calendar for ${config.name} (${cityKey})`);
               
               const icalUrl = `https://calendar.google.com/calendar/ical/${config.calendarId}/public/basic.ics`;

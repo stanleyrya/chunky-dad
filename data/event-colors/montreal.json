@@ -1,0 +1,41 @@
+[
+  {
+    "slug": "bear-playground-gladiateurs-61bceacf",
+    "url": "https://www.bearitmtl.com/event/bear-playground-gladiateurs/",
+    "faviconBg": "#1a1a1a",
+    "faviconFg": "#d1d1d1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#020000:31:1 #140a05:22:2 #542d1b:13:6 #73442a:10:8 #a1653b:8:10",
+    "accent": "#a1653b"
+  },
+  {
+    "slug": "ensemble-653b399f",
+    "url": "https://www.bearitmtl.com/event/ensemble/",
+    "faviconBg": "#1a1a1a",
+    "faviconFg": "#d1d1d1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#140102:39:4 #2d060a:22:6 #3b2c2b:12:2 #c41d1b:4:20",
+    "accent": "#c41d1b"
+  },
+  {
+    "slug": "festival-sugar-bear-festival-2027",
+    "url": "https://www.bearitmtl.com/",
+    "faviconBg": "#1a1a1a",
+    "faviconFg": "#d1d1d1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#000000:41:0 #ffffff:41:0 #aaaaaa:4:0"
+  },
+  {
+    "slug": "the-hunt-4bf2bf89",
+    "url": "https://www.bearitmtl.com/event/the-hunt/",
+    "faviconBg": "#1a1a1a",
+    "faviconFg": "#d1d1d1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#130202:42:4 #3b0805:17:8 #6c0609:15:13 #b81010:12:20 #e3675c:8:16",
+    "accent": "#b81010"
+  }
+]

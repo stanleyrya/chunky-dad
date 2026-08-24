@@ -1954,6 +1954,40 @@ class SharedCore {
     // context.nowMs injects "now" (test determinism), defaulting to
     // Date.now() — the same convention as the dead-end store's nowMs params.
     // ------------------------------------------------------------------
+    // The SECOND approved sanity enforcement (owner, 2026-08-24: 'stop the
+    // sanity flags and start just doing the fixes'): when rule 11's
+    // improbable overnight span is explained by a clean 12-hour AM/PM slip -
+    // subtracting 12h from the END lands the event in a plausible overnight
+    // window - fix the end in place and convert the flag to
+    // overnight-span-corrected so the results UI shows what happened.
+    // Anything a -12h does NOT explain (Bearracuda Seattle's 25h span)
+    // keeps the original report-only flag. The corrected end preserves the
+    // input's type (Date in, Date out; ISO string in, ISO string out).
+    applyOvernightSpanCorrection(analyzedEvent) {
+        if (!analyzedEvent || !Array.isArray(analyzedEvent._sanityFlags)) return false;
+        const flag = analyzedEvent._sanityFlags.find(f => f && f.code === 'improbable-overnight-span');
+        if (!flag) return false;
+        const toMsLocal = (value) => {
+            if (value instanceof Date) return value.getTime();
+            const parsed = new Date(value).getTime();
+            return Number.isFinite(parsed) ? parsed : NaN;
+        };
+        const startMs = toMsLocal(analyzedEvent.startDate);
+        const endMs = toMsLocal(analyzedEvent.endDate);
+        if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) return false;
+        const correctedMs = endMs - (12 * 60 * 60 * 1000);
+        const correctedSpanHours = (correctedMs - startMs) / (60 * 60 * 1000);
+        if (correctedSpanHours <= 0 || correctedSpanHours > 12) return false;
+        const correctedEnd = new Date(correctedMs);
+        analyzedEvent.endDate = analyzedEvent.endDate instanceof Date
+            ? correctedEnd
+            : correctedEnd.toISOString();
+        flag.code = 'overnight-span-corrected';
+        flag.detail = flag.detail + '; end corrected -12h to a ' + Math.round(correctedSpanHours) + 'h overnight span';
+        console.log('\u26a0\ufe0f SANITY-FIX: "' + (analyzedEvent.title || 'Unknown') + '" end moved -12h - AM/PM typo at the source, span now ' + Math.round(correctedSpanHours) + 'h');
+        return true;
+    }
+
     getEventSanityFlags(event, context = {}) {
         const flags = [];
         if (!event || typeof event !== 'object') return flags;
@@ -2379,14 +2413,21 @@ class SharedCore {
                 && overnightEndMs > overnightStartMs) {
                 const overnightOffsetMin = this.getTimezoneOffsetMinutes(new Date(overnightStartMs), event.timezone);
                 if (overnightOffsetMin !== null) {
-                    const localStartHour = new Date(overnightStartMs + (overnightOffsetMin * 60000)).getUTCHours();
+                    const overnightLocal = new Date(overnightStartMs + (overnightOffsetMin * 60000));
+                    const localStartHour = overnightLocal.getUTCHours();
+                    const localStartMinute = overnightLocal.getUTCMinutes();
                     const spanHours = (overnightEndMs - overnightStartMs) / (60 * 60 * 1000);
-                    if (localStartHour <= 5 && spanHours > 8) {
+                    // An EXACT-midnight start is a date-only listing (festival
+                    // campouts, contest weekends), not a typed clock time - FURBALL
+                    // CAMP's 72h weekend flagged every run as a 'typo' it is not.
+                    // A real small-hours typo carries a real time (1AM, 2:30AM).
+                    const isDateOnlyListing = localStartHour === 0 && localStartMinute === 0;
+                    if (!isDateOnlyListing && localStartHour <= 5 && spanHours > 8) {
                         flags.push({
                             code: 'improbable-overnight-span',
                             detail: `starts ${localStartHour}:00-ish local yet runs ${Math.round(spanHours)}h into the evening — likely an AM/PM typo at the source`
                         });
-                    } else if (localStartHour >= 18 && spanHours > 12) {
+                    } else if (!isDateOnlyListing && localStartHour >= 18 && spanHours > 12) {
                         flags.push({
                             code: 'improbable-overnight-span',
                             detail: `starts ${localStartHour - 12}PM local yet runs ${Math.round(spanHours)}h into the next afternoon — likely an AM/PM typo at the source`
@@ -15367,6 +15408,11 @@ class SharedCore {
             // that changes _action or this stamping, and the card stays in
             // the results UI.
             analyzedEvent._sanityFlags = this.getEventSanityFlags(analyzedEvent, { config });
+            // A SECOND approval now exists: overnight-span-corrected (rule 11
+            // enforce, owner-approved 2026-08-24) - a clean -12h AM/PM slip is
+            // fixed in place before the log below, so the logged code shows
+            // the correction rather than a pending flag.
+            this.applyOvernightSpanCorrection(analyzedEvent);
             if (analyzedEvent._sanityFlags.length > 0) {
                 console.log(`⚠️ SANITY: "${analyzedEvent.title || 'Unknown'}" flagged ${analyzedEvent._sanityFlags.map(flag => flag.code).join(', ')} — ${analyzedEvent._sanityFlags[0].detail}`);
             }
