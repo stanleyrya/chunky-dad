@@ -7296,6 +7296,11 @@ html.dusk body {
         transition: none;
         animation: none;
     }
+    /* no hover lift on touch: iOS makes :hover sticky on tap, so the tapped
+       card jumped up 5px and sat there — the "weird lift" on center cards */
+    .dusk .event-card.detailed:hover {
+        transform: none;
+    }
 }
 
 /* ---------- COZY: scroll-linked expansion ---------- */
@@ -7307,32 +7312,34 @@ html.dusk body {
         contain: layout paint;
     }
     /* base = dense (e=0); the writer's inline max-height/opacity carry e.
-       The 12px flyer gap is the IMG's top margin inside this overflow-hidden
-       box — layout height includes it, max-height:0 compresses it away, and
-       nothing ever animates padding (animated padding under border-box was
-       what clipped the image bottom in the prototype) */
+       The image keeps its PRODUCTION framing (centered, 12px side insets,
+       own radius + shadow, orientation height caps) — only the container's
+       max-height/opacity ever animate. Its 12px TOP padding moves onto the
+       img's margin: a border-box container with vertical padding can never
+       reach max-height:0 (the 12px stub was the prototype's reason for
+       animating padding, which is what clipped the image bottom). */
     html.mode-cozy .events-list.rail-active > .event-card .event-flyer {
-        display: block;
         max-height: 0;
         opacity: 0;
         overflow: hidden;
-        margin: 0;
-        padding: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        /* aurora's flex default (stretch) pins the img height to the
+           flyer's own max-height — circular, so the unlocked measurement
+           reads ~0 and the image never appears. Top-align instead. */
+        align-items: flex-start;
         transition: none;
     }
     html.mode-cozy .events-list.rail-active > .event-card .event-flyer img {
-        display: block;
-        width: 100%;
-        height: auto;
-        max-height: 45vh;
-        object-fit: contain;
         margin: 12px 0 0;
     }
-    /* no ghost flyer gap on the panel — the flyer's own box carries it */
+    /* no ghost flyer gap on the panel at e=0 (the production hairline would
+       sit as a stray line on the card's top edge while the flyer is
+       collapsed); the panel keeps production radius 0 — the card clips its
+       own corners, so no aurora ever pokes around rounded glass */
     html.mode-cozy .events-list.rail-active > .event-card .event-flyer + .ec-panel {
         margin-top: 0;
         border-top: none;
-        border-radius: 16px;
     }
     /* description: measured max-height (writer), line-clamp OFF — a clean
        cut at e≈0 (line-clamp can't interpolate) */
@@ -7439,7 +7446,6 @@ html.dusk body {
     html.mode-dense .events-list .event-card .event-flyer + .ec-panel {
         margin-top: 0;
         border-top: none;
-        border-radius: 16px;
     }
     html.mode-dense .event-card .ec-tea {
         display: -webkit-box;

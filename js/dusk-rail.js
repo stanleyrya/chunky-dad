@@ -549,7 +549,15 @@
     const t = e.target;
     if (!t || !t.classList || !t.classList.contains('events-list') || !t.classList.contains('rail-active')) return;
     if (phase === 'settle') return; // transition tail; new input restarts scrub
-    if (phase === 'idle' && !programmatic) phase = 'scrub'; // wheel/trackpad gestures have no touchstart
+    if (phase === 'idle' && !programmatic) {
+      // wheel/trackpad gestures have no touchstart — do its cleanup here:
+      // the writer must never run while settle transitions are enabled
+      phase = 'scrub';
+      clearTimeout(settleTimer);
+      t.classList.remove('rail-settling');
+      lastFrameSL = t.scrollLeft;
+      lastFrameT = performance.now();
+    }
     if (phase === 'scrub') {
       gestureScrolled = true;
       if (!frameRaf) frameRaf = requestAnimationFrame(onScrubFrame);
@@ -662,7 +670,33 @@
       const t = Math.round(target.offsetLeft + target.offsetWidth / 2 - el.clientWidth / 2);
       if (Math.abs(el.scrollLeft - t) >= 1) { programmatic = true; el.scrollLeft = t; }
     }
-    commitFrame(); // same task as the class flip — ONE paint: list -> open rail
+    if (!isDense() && geom.length) {
+      // cozy entry is a BLOOM, not a snap: the first paint shows the rail in
+      // its dense frame (buildGeom already locked every card to e=0 — just
+      // add the thumb opacities and the dense band), then the tapped card
+      // eases open under .rail-settling. Double-rAF so the dense keyframe
+      // actually paints before the transition starts.
+      geom.forEach((g) => applyE(g, 0));
+      const b = nearestGeom(el.scrollLeft);
+      const box = bandBox();
+      if (box && b) {
+        committedH = Math.round(b.denseH) + BAND_PAD;
+        lastBandT = committedH;
+        box.style.height = committedH + 'px';
+      }
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (!cozyRail() || phase !== 'idle' || touchActive) return;
+        el.classList.add('rail-settling');
+        commitFrame();
+        clearTimeout(settleTimer);
+        settleTimer = setTimeout(() => {
+          el.classList.remove('rail-settling');
+          if (phase === 'settle') phase = 'idle';
+        }, 200);
+      }));
+    } else {
+      commitFrame(); // dense: same task as the class flip — ONE paint
+    }
     resizeMap();
     dbgNote('rail ON');
   };
