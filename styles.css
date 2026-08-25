@@ -6106,9 +6106,11 @@ body.loaded {
     will-change: transform;
 }
 
-/* Smooth event card interactions */
+/* Smooth event card interactions — hover lift only: this later duplicate
+   used to say `all`, silently re-widening the scoped transition at the
+   card's base rule and catching the selection filter swap mid-tap */
 .event-card.detailed {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     will-change: transform;
 }
 
@@ -7087,8 +7089,10 @@ html.dusk body {
         flex-direction: column;
         gap: 1rem;
     }
-    /* a selected card takes the full width again */
-    .dusk .events-list.selection-mode .ml-col { display: contents; }}
+    /* (the display:contents collapse that lived here served the old
+       hide-on-select behavior — with the selection spotlight the columns
+       simply stay put) */
+}
 
 /* month spreads to three columns only when three columns actually fit */
 @media (min-width: 1200px) {
@@ -7513,6 +7517,10 @@ html.dusk body {
 
 /* ---------- dense description sheet + '…more' chip ---------- */
 .ec-more {
+    /* hidden everywhere by default — chips inserted under mobile dense can
+       survive a breakpoint crossing (iPad rotation) and must not strand as
+       dead controls in desktop or cozy cards */
+    display: none;
     background: none;
     border: 0;
     padding: 0 2px;
@@ -7524,6 +7532,9 @@ html.dusk body {
     cursor: pointer;
     text-decoration: underline dotted;
     text-underline-offset: 2px;
+}
+@media (max-width: 768.9px) {
+    html.mode-dense .event-card .ec-more { display: inline-block; }
 }
 .rail-sheet {
     position: fixed;

@@ -565,6 +565,7 @@
     touchActive = true;
     gestureScrolled = false;
     railOwner = 'user';
+    grantSlug = null; // a new gesture invalidates any pending grant
     lastUserTouch = performance.now();
     const el = list();
     if (el && el.classList.contains('rail-active')) {
@@ -587,9 +588,13 @@
   document.addEventListener('pointerdown', onTouch, { passive: true, capture: true });
   ['touchend', 'touchcancel', 'pointerup', 'pointercancel'].forEach((ev) =>
     document.addEventListener(ev, offTouch, { passive: true, capture: true }));
-  // a REAL tap (trusted) on a pill or card grants centering for that slug
+  // a REAL tap (trusted) on a pill or card grants centering for that slug —
+  // but not taps on the card's inner controls (thumb/share/links): those
+  // never change the selection, and an unconsumed grant would later yank
+  // the rail back to this card mid-swipe
   document.addEventListener('click', (e) => {
     if (!e.isTrusted) return;
+    if (e.target.closest && e.target.closest('.rail-thumb, .share-event-btn, .event-links, .ec-more')) return;
     const pill = e.target.closest && e.target.closest('.calendar-grid .event-item');
     const card = !pill && e.target.closest && e.target.closest('.events-list .event-card');
     const src = pill || card;
@@ -724,6 +729,16 @@
       else if (grantSlug) {
         const g = cardBySlug(grantSlug);
         if (g) centerOn(g, reason);
+      } else if (reason === 'selection' && phase === 'idle' && !userBusy()) {
+        // a selection that arrived from OUTSIDE the rail (a map-marker tap
+        // has no card/pill to grant through) — adopt it so the rail follows
+        // instead of silently re-selecting the centered card later
+        const slug = selectedSlug();
+        const sel = slug && slug !== landedSlug && cardBySlug(slug);
+        if (sel) {
+          grantSlug = slug;
+          centerOn(sel, 'external-selection');
+        }
       }
     }
   };
@@ -754,7 +769,12 @@
       el.classList.add('rail-settling');
       commitFrame();
       clearTimeout(settleTimer);
-      settleTimer = setTimeout(() => el.classList.remove('rail-settling'), 200);
+      settleTimer = setTimeout(() => {
+        el.classList.remove('rail-settling');
+        // this timer can replace settle()'s own — carry its phase reset or
+        // an image landing in the settle tail wedges phase at 'settle'
+        if (phase === 'settle') phase = 'idle';
+      }, 200);
     } else {
       applyE(g, 0);
       commitFrame();
