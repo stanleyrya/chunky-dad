@@ -564,8 +564,11 @@ class DynamicCalendarLoader extends CalendarCore {
         }
     }
     
-    // Toggle/select event for URL/state
-    toggleEventSelection(eventSlug, eventDateISO) {
+    // Toggle/select event for URL/state.
+    // options.deferUrl: skip the URL write — the caller owns it (the mobile
+    // rail selects live while the finger is still down and must not spam
+    // history.replaceState per frame; it flushes one syncUrl on settle).
+    toggleEventSelection(eventSlug, eventDateISO, options = {}) {
         if (!eventSlug) return;
         const normalizedDateISO = eventDateISO && /^\d{4}-\d{2}-\d{2}$/.test(eventDateISO) ? eventDateISO : this.formatDateToISO(this.currentDate);
         
@@ -602,9 +605,11 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // Update visual selection state once (handles both selection and deselection)
         this.updateSelectionVisualState();
-        
+
         // Reflect selection in URL
-        this.syncUrl(true);
+        if (!options.deferUrl) {
+            this.syncUrl(true);
+        }
     }
 
     // Update visual selection state across all views (calendar, list, map)
@@ -688,6 +693,12 @@ class DynamicCalendarLoader extends CalendarCore {
             
             logger.debug('EVENT', 'Cleared all selections and ensured calendar events are unselected');
         }
+
+        // Selection changed and every view is painted — modules that layer on
+        // top (the mobile rail) listen for this instead of observing the DOM
+        document.dispatchEvent(new CustomEvent('chunky:selection-changed', {
+            detail: { slug: this.selectedEventSlug, dateISO: this.selectedEventDateISO }
+        }));
     }
 
     // Lazily create the flyer <img> the first time a card is selected.
@@ -1495,6 +1506,23 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // Clear current selection when jumping views
         this.clearEventSelection();
+        await this.updateCalendarDisplay();
+        this.syncUrl(true);
+    }
+
+    // Jump to week view centered on a date WITH an event selected — the
+    // mobile month-full view navigates month pill → that event's week.
+    // Not switchToWeekView: that path deliberately clears the selection.
+    async openWeekAt(eventSlug, dateISO) {
+        if (!eventSlug || !/^\d{4}-\d{2}-\d{2}$/.test(dateISO || '')) return;
+        const parts = dateISO.split('-');
+        const parsed = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        if (isNaN(parsed.getTime())) return;
+        this.currentDate = parsed;
+        this.currentView = 'week';
+        this.selectedEventSlug = eventSlug;
+        this.selectedEventDateISO = dateISO;
+        this.updateViewToggleActive();
         await this.updateCalendarDisplay();
         this.syncUrl(true);
     }
@@ -2840,6 +2868,7 @@ class DynamicCalendarLoader extends CalendarCore {
             <div class="event-card detailed aurora" data-event-slug="${slug}" data-lat="${this.escapeCardText(event.coordinates?.lat || '')}" data-lng="${this.escapeCardText(event.coordinates?.lng || '')}"${auroraStyle}>
                 ${flyerHtml}
                 <div class="ec-panel">
+                    ${flyerUrl ? '<button class="rail-thumb" type="button" aria-label="Show flyer"></button>' : ''}
                     <div class="ec-titlerow">
                         ${faviconHtml}
                         <h3 class="ec-title">${this.escapeCardText(event.name)}</h3>
@@ -4205,8 +4234,15 @@ class DynamicCalendarLoader extends CalendarCore {
                     city: this.currentCity
                 });
             }
+
+            // The grid and list DOM are both fresh at this point (the map
+            // init below awaits network/location and can land seconds later)
+            // — layered modules rebuild on this event, not on MutationObserver
+            document.dispatchEvent(new CustomEvent('chunky:events-rendered', {
+                detail: { view: this.currentView }
+            }));
         }
-        
+
         // Update map (show for both week and month views)
         // Initialize map if not in hideEvents mode
         try {

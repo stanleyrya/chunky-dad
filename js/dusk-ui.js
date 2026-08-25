@@ -276,6 +276,9 @@
         const next = document.getElementById('next-period');
         if (prev) prev.textContent = '\u2039';
         if (next) next.textContent = '\u203a';
+        // header row is (re)assembled \u2014 dusk-rail mounts its mode toggle on
+        // this, riding the same observer/refresh cadence with no timers
+        document.dispatchEvent(new CustomEvent('dusk:controls-mounted'));
     }
 
     function trackHeaderHeight() {
