@@ -201,24 +201,37 @@
             // max-content/var() combination differently, so don't rely on it
             const leadName = lead.querySelector('.event-name');
             if (leadName && chunkWidth > 0) {
-                // natural text width first (width:auto measure), so the
-                // edge-hugging sticker below can stay transform-only until
-                // the bar's remaining span actually crowds the text
-                leadName.style.width = 'auto';
+                leadName.style.width = `${Math.max(20, chunkWidth - 12)}px`;
                 leadName.style.maxWidth = 'none';
-                const natural = leadName.scrollWidth + 2;
-                lead._mdNaturalW = natural;
-                leadName.style.width = `${Math.max(20, Math.min(natural, chunkWidth - 12))}px`;
                 // The site's smart-name logic truncates the STRING to one
                 // cell's width before we ever get here — give the lead the
-                // real name and let CSS ellipsis do any needed trimming.
-                // (Guarded: only write on change, or the MutationObserver
+                // real name. In the week strip the label lives in a STICKY
+                // span (.md-sticky-label): the compositor pins it to the
+                // scrollport's left edge and pushes it out at the bar's end
+                // — zero JS per scroll frame, so it can't jitter.
+                // (Guarded: only mutate on change, or the MutationObserver
                 // would refire forever.)
                 const slug = lead.getAttribute('data-event-slug');
                 const events = (window.calendarLoader && window.calendarLoader.allEvents) || [];
                 const ev = events.find(e => e && e.slug === slug);
                 const label = ev ? (ev.shortName || ev.nickname || ev.name) : null;
-                if (label && leadName.textContent !== label) leadName.textContent = label;
+                if (label) {
+                    let span = leadName.querySelector(':scope > .md-sticky-label');
+                    if (!span) {
+                        span = document.createElement('span');
+                        span.className = 'md-sticky-label';
+                        span.textContent = label;
+                        leadName.textContent = '';
+                        leadName.appendChild(span);
+                    } else if (!span.querySelector('.event-time') && span.textContent !== label) {
+                        span.textContent = label;
+                    }
+                    // the run's time hugs the edge WITH the name — move the
+                    // lead's own .event-time element into the sticky span
+                    // (idempotent: skip once it lives there)
+                    const timeEl = lead.querySelector(':scope > .event-time');
+                    if (timeEl && !span.contains(timeEl)) span.appendChild(timeEl);
+                }
             }
             chunk = [];
         };
@@ -239,37 +252,35 @@
     // label slides along its own bar, ellipsizing as space runs out. One
     // rAF, a handful of elements; style writes don't retrigger the
     // childList observer.
+
+    // Edge-hugging corrector for the flowing labels. The CSS position:
+    // sticky on .md-sticky-label is the primary mechanism (compositor-
+    // driven where the engine honors it — some WebKit builds only re-stick
+    // on relayout). This pass runs synchronously on scroll and applies the
+    // DELTA between where the label is and where it should be, as a
+    // transform: if sticky did its job the delta is ~0 and nothing writes;
+    // if sticky is inert the transform carries the label. Transform-only —
+    // no layout writes — and the label is clamped inside its own bar, so
+    // it rides off with the bar's tail at the end.
     function stickRunNames() {
         const strip = document.querySelector('.calendar-grid.week-strip');
         if (!strip) return;
-        const stripLeft = strip.getBoundingClientRect().left;
-        strip.querySelectorAll('.event-item.multi-day.md-chunk-lead').forEach(lead => {
-            const name = lead.querySelector('.event-name');
-            if (!name) return;
-            const chunkW = parseFloat(lead.style.getPropertyValue('--chunkw'));
-            if (!chunkW || chunkW <= 0) return;
-            const baseW = Math.max(20, chunkW - 12);
-            const natural = lead._mdNaturalW || baseW;
-            const leadLeft = lead.getBoundingClientRect().left;
-            const shift = Math.round(Math.min(Math.max(0, stripLeft + 6 - leadLeft), Math.max(0, baseW - 24)));
-            if (shift !== lead._mdShift) {
-                lead._mdShift = shift;
-                name.style.transform = shift > 0 ? `translateX(${shift}px)` : '';
-            }
-            // width is a LAYOUT write — only pay for it once the remaining
-            // span crowds the text (the end zone); everywhere else the
-            // label rides on transform alone
-            const remaining = baseW - shift;
-            const w = remaining < natural + 4 ? Math.max(20, remaining) : Math.min(natural, baseW);
-            if (w !== lead._mdW) {
-                lead._mdW = w;
-                name.style.width = `${w}px`;
+        const edge = strip.getBoundingClientRect().left + 8;
+        strip.querySelectorAll('.event-item.multi-day.md-chunk-lead .md-sticky-label').forEach(span => {
+            const box = span.parentElement; // the full-bar .event-name box
+            if (!box) return;
+            const b = box.getBoundingClientRect();
+            const r = span.getBoundingClientRect();
+            const tx = span._mdTx || 0;
+            const rawLeft = r.left - tx; // where the label sits without our correction
+            const desired = Math.min(Math.max(edge, b.left), Math.max(b.left, b.right - r.width - 4));
+            const next = desired - rawLeft;
+            if (Math.abs(next - tx) > 0.5) {
+                span._mdTx = next;
+                span.style.transform = next !== 0 ? `translateX(${next}px)` : '';
             }
         });
     }
-    // NOT rAF-deferred: scroll listeners run before that frame paints, so a
-    // synchronous update tracks the finger exactly — deferring added a frame
-    // of lag that read as jitter
     document.addEventListener('scroll', (e) => {
         const t = e.target;
         if (!t || !t.classList || !t.classList.contains('week-strip')) return;

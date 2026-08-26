@@ -7600,8 +7600,14 @@ html.dusk body {
        pills at the bottom corners once cells could overlap — the strip is
        an edge-to-edge surface, no radius */
     border-radius: 0;
-    grid-auto-flow: column;
-    grid-auto-columns: calc(100% / 7);
+    /* a BLOCK scroller with inline-block columns, NOT display:grid: WebKit
+       ignores position:sticky inside grid/flex scroll containers, and the
+       multi-day flowing name is a compositor-driven sticky label.
+       font-size:0 kills the inter-cell whitespace the markup carries;
+       every text element inside the cells sets its own size. */
+    display: block;
+    white-space: nowrap;
+    font-size: 0;
     overflow-x: auto;
     overflow-y: hidden;
     overscroll-behavior-x: contain;
@@ -7614,6 +7620,12 @@ html.dusk body {
 }
 .calendar-grid.week-strip::-webkit-scrollbar { display: none; }
 .calendar-grid.week-strip > .calendar-day {
+    display: inline-block;
+    width: calc(100% / 7);
+    height: 100%;
+    vertical-align: top;
+    white-space: normal;
+    font-size: 1rem;
     scroll-snap-align: start;
     min-width: 0;
 }
@@ -7669,3 +7681,25 @@ html.dusk body {
    button's state reads through the icon swap alone (eye-slash <-> eye);
    no active highlight (owner: "the selected version ... is ugly"). */
 .maplibregl-marker.marker-solo-hidden { display: none !important; }
+
+/* the multi-day flowing name in the week strip: a compositor-driven sticky
+   label — hugs the scrollport's left edge while its bar scrolls under and
+   is pushed out natively at the bar's end. The name box must stay
+   overflow:visible so the sticky can see the grid scrollport. */
+.calendar-grid.week-strip .event-item.multi-day.md-chunk-lead .event-name {
+    overflow: visible;
+    text-overflow: clip;
+}
+.calendar-grid.week-strip .event-item.multi-day.md-chunk-lead .md-sticky-label {
+    position: sticky;
+    left: 8px;
+    display: inline-block;
+    max-width: 100%;
+    white-space: nowrap;
+}
+/* the run's time rides INSIDE the sticky label (chunkRun moves the lead's
+   .event-time element there) — it hugs the edge with the name instead of
+   scrolling away with the run's first segment */
+.calendar-grid.week-strip .event-item.multi-day.md-chunk-lead .md-sticky-label .event-time {
+    display: block;
+}

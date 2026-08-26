@@ -4828,8 +4828,11 @@ class DynamicCalendarLoader extends CalendarCore {
                     calendarGrid.style.minHeight = '';
                 } else {
                     calendarGrid.className = 'calendar-grid week-view-grid week-strip';
-                    calendarGrid.style.gridTemplateColumns = 'none';
-                    calendarGrid.style.gridTemplateRows = 'auto';
+                    // the week strip is a BLOCK scroller (see styles.css:
+                    // WebKit sticky labels don't work in grid scrollers) —
+                    // clear the base grid's inline template writes
+                    calendarGrid.style.gridTemplateColumns = '';
+                    calendarGrid.style.gridTemplateRows = '';
                     calendarGrid.style.minHeight = 'auto';
                 }
                 if (this.currentView !== 'week') calendarGrid.style.height = '';
