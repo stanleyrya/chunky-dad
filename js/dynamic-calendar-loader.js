@@ -3529,34 +3529,10 @@ class DynamicCalendarLoader extends CalendarCore {
                 return dateA.getTime() - dateB.getTime();
             });
 
-            // DENSE mobile week: the trifold squeezes the grid, so cap the
-            // single-day pills at 4 per column (+N beyond — the owner can
-            // "easily see 4 items without the UI looking weird"). Multi-day
-            // bars always render (lane continuity across columns), and the
-            // SELECTED event is always swapped into the visible set.
-            let dayEventsToRender = filteredDayEvents;
-            let hiddenSinglesCount = 0;
-            const DENSE_WEEK_SINGLE_CAP = 4;
-            const denseMobileWeek = document.documentElement.classList.contains('mode-dense')
-                && window.matchMedia && window.matchMedia('(max-width: 768.9px)').matches;
-            if (denseMobileWeek) {
-                const multiDayForDay = filteredDayEvents.filter(ev => this.isMultiDay(ev));
-                const singlesForDay = filteredDayEvents.filter(ev => !this.isMultiDay(ev));
-                if (singlesForDay.length > DENSE_WEEK_SINGLE_CAP) {
-                    let shownSingles = singlesForDay.slice(0, DENSE_WEEK_SINGLE_CAP);
-                    const selectedHidden = this.selectedEventSlug
-                        ? singlesForDay.find(ev => ev.slug === this.selectedEventSlug && shownSingles.indexOf(ev) === -1)
-                        : null;
-                    if (selectedHidden) {
-                        shownSingles = shownSingles.slice(0, DENSE_WEEK_SINGLE_CAP - 1).concat(selectedHidden);
-                    }
-                    hiddenSinglesCount = singlesForDay.length - shownSingles.length;
-                    dayEventsToRender = multiDayForDay.concat(shownSingles);
-                }
-            }
-
-            const eventsHtml = dayEventsToRender.length > 0
-                ? dayEventsToRender.map(event => {
+            // Week view never hides events — the mobile week frame grows
+            // downward when a big week (festival runs) needs the room
+            const eventsHtml = filteredDayEvents.length > 0
+                ? filteredDayEvents.map(event => {
                     const isMultiDay = this.isMultiDay(event);
                     const mobileTime = isMultiDay && window.formatEventDates ? window.formatEventDates(event) : (event.time ? this.formatTimeForMobile(event.time) : null);
 
@@ -3598,7 +3574,7 @@ class DynamicCalendarLoader extends CalendarCore {
                             <div class="event-venue">${this.generateFaviconChipHtml(event)}${event.bar || ''}</div>
                         </div>
                     `;
-                }).join('') + (hiddenSinglesCount > 0 ? `<div class="more-events">+${hiddenSinglesCount}</div>` : '')
+                }).join('')
                 : '';
 
             const isToday = day.getTime() === today.getTime();

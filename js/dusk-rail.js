@@ -1,12 +1,14 @@
-// dusk-rail.js — the mobile COZY/DENSE view system (dusk pages only).
+// dusk-rail.js — the mobile DENSE view (dusk pages only).
 //
-// COZY  = today's production behavior: the vertical list, selecting a card
-//         hides the rest — with the full description always expanded.
-// DENSE = a fixed-screen trifold: week grid / 246px card rail with corner
-//         flyer thumbs (tap -> lightbox) + bottom sheet / map. Swiping the
-//         rail drives the site's real selection live.
-// Month view (both modes): the grid alone; tapping an event pill opens the
-// bottom sheet for it in place — no navigation.
+// Mobile week view is a trifold: week grid / 246px card rail with corner
+// flyer thumbs (tap -> lightbox) + bottom sheet / map. Swiping the rail
+// drives the site's real selection live. When a big week outgrows the
+// screen the page grows downward (the map keeps a floor height and the
+// page scrolls) rather than layers overlapping.
+// Month view: the grid alone; tapping an event pill opens the bottom
+// sheet for it in place — no navigation.
+// (COZY — a vertical-list alternate mode — was built, field-tested, and
+// removed 2026-08-25; mobile has exactly one mode now.)
 //
 // Contract with the rest of the site (no MutationObservers, no retry timers):
 //   'chunky:events-rendered'   the loader finished swapping grid+list DOM
@@ -49,58 +51,9 @@
     dbgBox.textContent = dbg.join('\n');
   };
 
-  // ---------- mode: cozy (default) | dense ----------
-  const MODE_KEY = 'chunky-view-mode';
-  let mode = params.get('mode');
-  if (mode !== 'cozy' && mode !== 'dense') {
-    try { mode = localStorage.getItem(MODE_KEY); } catch (e) { mode = null; }
-  }
-  if (mode !== 'dense') mode = 'cozy';
-  const isDense = () => mode === 'dense';
-  const applyModeClass = () => {
-    html.classList.remove('mode-cozy', 'mode-dense');
-    html.classList.add('mode-' + mode);
-  };
-  applyModeClass();
-  if (params.get('mode') === mode) {
-    try { localStorage.setItem(MODE_KEY, mode); } catch (e) {}
-  }
-
-  const modeBtn = document.createElement('button');
-  modeBtn.type = 'button';
-  modeBtn.className = 'mode-toggle';
-  modeBtn.setAttribute('aria-label', 'Switch view density');
-  const paintModeLabel = () => { modeBtn.textContent = isDense() ? 'DENSE' : 'COZY'; };
-  const mountToggle = () => {
-    const switcher = document.querySelector('header .city-switcher');
-    if (!switcher) return;
-    if (modeBtn.parentElement !== switcher.parentElement || modeBtn.nextElementSibling !== switcher) {
-      switcher.parentElement.insertBefore(modeBtn, switcher);
-    }
-    paintModeLabel();
-  };
-  document.addEventListener('dusk:controls-mounted', mountToggle);
-  const setMode = (m) => {
-    if ((m !== 'cozy' && m !== 'dense') || m === mode) return;
-    mode = m;
-    try { localStorage.setItem(MODE_KEY, m); } catch (e) {}
-    try {
-      const u = new URL(location.href);
-      u.searchParams.set('mode', m);
-      history.replaceState(history.state, '', u);
-    } catch (e) {}
-    applyModeClass();
-    paintModeLabel();
-    denseMapH = -1;
-    if (isDense()) markOverflows();
-    syncRailState('mode-switch');
-    // the week grid's pill cap is mode-dependent (dense caps singles at 4)
-    // — re-render so the calendar reflects the new mode
-    const l = loader();
-    if (l && l.updateCalendarDisplay) { try { l.updateCalendarDisplay(); } catch (e) {} }
-    dbgNote('mode -> ' + m);
-  };
-  modeBtn.addEventListener('click', (e) => { e.preventDefault(); setMode(isDense() ? 'cozy' : 'dense'); });
+  // the single mobile mode — the class is the CSS anchor for every dense rule
+  html.classList.remove('mode-cozy');
+  html.classList.add('mode-dense');
 
   // ---------- flyer lightbox (corner-thumb + sheet-image tap target) ----------
   let lightbox = null;
@@ -237,7 +190,7 @@
   };
   const teaOverflows = (el) => !!el && el.scrollHeight > el.clientHeight + 1;
   const markOverflows = () => {
-    if (!isMobile() || !isDense()) return;
+    if (!isMobile()) return;
     document.querySelectorAll('.events-list .event-card').forEach((card) => {
       const tea = card.querySelector('.ec-tea');
       if (!tea) return;
@@ -255,7 +208,7 @@
     });
   };
   document.addEventListener('click', (e) => {
-    if (!isMobile() || !isDense()) return;
+    if (!isMobile()) return;
     const chip = e.target.closest && e.target.closest('.ec-more');
     const teaHit = !chip && e.target.closest && e.target.closest('.ec-tea');
     if (!chip && !teaHit) return;
@@ -384,15 +337,6 @@
         landedSlug = c.getAttribute('data-event-slug') || landedSlug;
         dbgNote('landed ' + (landedSlug || '?').slice(0, 16));
         realSelect(landedSlug);
-        // dense caps the week grid's pills at 4/day — if the landed event's
-        // pill is one of the hidden ones, re-render (the cap always swaps
-        // the SELECTED event into view). Only ever at settle: a re-render
-        // mid-gesture would fight the finger.
-        if (isDense() && landedSlug
-            && !document.querySelector('.calendar-grid .event-item[data-event-slug="' + cssEscape(landedSlug) + '"]')) {
-          const l = loader();
-          if (l && l.updateCalendarDisplay) { try { l.updateCalendarDisplay(); } catch (e) {} }
-        }
       }
     }
     flushUrl();
@@ -514,14 +458,18 @@
   const sizeDenseMap = () => {
     const sec = document.querySelector('.events-map-section');
     if (!sec) return;
-    if (!isMobile() || !isDense() || html.classList.contains('month-full')) {
+    if (!isMobile() || html.classList.contains('month-full')) {
       if (sec.style.height) { sec.style.height = ''; sec.style.flex = ''; resizeMap(); }
       denseMapH = -1;
       return;
     }
-    const main = document.querySelector('main.city-page');
-    if (!main) return;
-    const h = Math.max(140, Math.floor(main.getBoundingClientRect().bottom - sec.getBoundingClientRect().top - 6));
+    // fill from the section's DOCUMENT position to the viewport bottom —
+    // when the week grid outgrows the screen this hits the floor and the
+    // PAGE grows downward instead (the map never overlaps the cards).
+    // Document coords, not viewport rect alone: the page can be scrolled
+    // when this runs, and a viewport-relative top would feed back.
+    const secDocTop = sec.getBoundingClientRect().top + window.scrollY;
+    const h = Math.max(200, Math.floor(window.innerHeight - secDocTop - 6));
     if (h === denseMapH) return;
     denseMapH = h;
     sec.style.height = h + 'px';
@@ -552,7 +500,7 @@
     }
     updateMonthFull();
     sizeDenseMap();
-    const want = isDense() && !html.classList.contains('month-full');
+    const want = !html.classList.contains('month-full');
     const has = el.classList.contains('rail-active');
     if (want && !has) {
       el.classList.add('rail-active');
@@ -590,20 +538,7 @@
   };
 
   // ---------- the two loader events + environment changes ----------
-  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-  let lastScrollSlug = null;
-  document.addEventListener('chunky:selection-changed', (e) => {
-    // cozy select: bring the week grid + the (now lone) card into view
-    const slug = (e.detail && e.detail.slug) || null;
-    if (isMobile() && !isDense() && slug && slug !== lastScrollSlug
-        && !html.classList.contains('month-full')) {
-      try {
-        window.scrollTo({ top: 0, behavior: prefersReducedMotion.matches ? 'auto' : 'smooth' });
-      } catch (e2) { window.scrollTo(0, 0); }
-    }
-    lastScrollSlug = slug;
-    syncRailState('selection');
-  });
+  document.addEventListener('chunky:selection-changed', () => syncRailState('selection'));
   document.addEventListener('chunky:events-rendered', () => {
     armThumbs();
     markOverflows();
@@ -621,20 +556,17 @@
     syncRailState('breakpoint');
   });
   document.addEventListener('DOMContentLoaded', () => {
-    mountToggle();
     armThumbs();
     syncRailState('boot');
   });
-  mountToggle();
   syncRailState('boot');
 
   // ---------- debug surface ----------
   window.duskRail = {
-    setMode,
     openLightbox,
     openSheet,
     state: () => ({
-      mode, phase, railOwner, landedSlug, grantSlug, touchActive,
+      phase, railOwner, landedSlug, grantSlug, touchActive,
       programmatic, interacted, railActive: railActive()
     }),
     geom: () => geom.map((g) => ({ slug: g.slug.slice(0, 14), center: g.center }))

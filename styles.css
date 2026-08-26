@@ -6877,7 +6877,7 @@ html.dusk body {
 }
 /* iOS paints its default grey rectangle over any click-bound element on
    press — the cards are click-bound <div>s, so every tap flashed grey */
-.dusk .event-card, .dusk .event-item, .dusk .rail-thumb, .dusk .mode-toggle {
+.dusk .event-card, .dusk .event-item, .dusk .rail-thumb {
     -webkit-tap-highlight-color: transparent;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -7153,42 +7153,12 @@ html.dusk body {
 
 /* =====================================================================
    COZY / DENSE — the mobile view system (js/dusk-rail.js).
-   COZY  = the production vertical list (select = the rest hide, like the
-           site always did), with descriptions never clamped.
-   DENSE = a fixed-screen trifold: week grid / 246px card rail with corner
-           flyer thumbs + bottom sheet / map. No rail geometry ever animates.
-   html.mode-cozy | html.mode-dense are set by dusk-rail (dusk pages,
-   mobile <769px only). .rail-active lives on .events-list (dense only).
+   Mobile has ONE mode (dense): week grid / 246px card rail with corner
+   flyer thumbs + bottom sheet / map. No rail geometry ever animates.
+   html.mode-dense is set unconditionally by dusk-rail (dusk pages);
+   .rail-active lives on .events-list. A COZY alternate mode existed,
+   was field-tested, and was removed 2026-08-25 along with its toggle.
    ===================================================================== */
-
-/* the mode toggle: quiet text, immediately left of the city switcher */
-.mode-toggle {
-    background: transparent;
-    border: 0;
-    cursor: pointer;
-    color: rgba(255, 255, 255, 0.6);
-    font-size: 0.78rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    padding: 0.1rem 0.05rem;
-    margin-left: auto;
-    margin-right: 0.55rem;
-    line-height: 1.2;
-    align-self: center;
-    display: none;
-    transition: color 0.12s ease;
-}
-.mode-toggle:active { color: #fff; }
-@media (max-width: 768.9px) {
-    .dusk .mode-toggle { display: inline-block; }
-    /* both carried margin-left:auto — neutralize the switcher's when the
-       toggle precedes it so they sit tight together */
-    .dusk .mode-toggle + .city-switcher { margin-left: 0; }
-}
-@media (min-width: 769px) {
-    .mode-toggle { display: none; }
-}
 
 /* the corner flyer thumb: loader-emitted on every flyer card, inert and
    invisible outside the mobile rail (dusk-rail assigns its art on mobile
@@ -7302,55 +7272,51 @@ html.dusk body {
     .dusk .event-card.detailed:hover {
         transform: none;
     }
-}
-
-/* ---------- COZY: today's list, with the full story always shown ------
-   Cozy is the production vertical list; selecting a card hides the rest
-   (the behavior the site always had). The only cozy deltas: descriptions
-   are never clamped, and the dense-mode '…more' chip never appears. */
-@media (max-width: 768.9px) {
-    /* outweigh the production clamp at .event-card.detailed.aurora .ec-tea */
-    html.mode-cozy .event-card.detailed.aurora .ec-tea {
-        display: block;
-        -webkit-line-clamp: unset;
-        max-height: none;
-        overflow: visible;
-    }
-    html.mode-cozy .event-card .ec-more { display: none; }
-    /* selecting hides the rest — the desktop keeps the filter spotlight
-       (the base rule near the old hider), mobile cozy hides like today */
-    html.mode-cozy .events-list.selection-mode .event-card:not(.selected) {
-        display: none;
+    /* the base slideInSmooth section reveal (staggered 0.4-1.0s delays,
+       fill:both) holds each section INVISIBLE through its delay and then
+       slowly fades it in on every load — the dense "middle cards magically
+       slowly fade in" report. Its companion transition:all 0.6s also
+       animates any mode-class layout change. The mobile trifold is a
+       static frame: none of it runs here (desktop keeps its load reveal). */
+    .dusk .weekly-calendar,
+    .dusk .events,
+    .dusk .events-map-section {
+        animation: none !important;
+        transition: none !important;
     }
 }
 
-/* ---------- DENSE: the fixed-screen trifold ---------- */
+/* ---------- DENSE: the mobile trifold ----------
+   Fills exactly one screen when the week fits (the map takes the rest via
+   dusk-rail's sizeDenseMap). A BIG week (festival runs) grows the page
+   DOWNWARD and the map keeps a 200px floor — layers never overlap and the
+   page simply scrolls. */
 @media (max-width: 768.9px) {
-    html.mode-dense, html.mode-dense body { height: 100%; }
     html.mode-dense body {
-        overflow: hidden;
+        overflow-x: hidden;
+        overflow-y: auto;
         display: flex;
         flex-direction: column;
-        height: 100dvh;
+        min-height: 100dvh;
     }
     html.mode-dense body > header { flex: 0 0 auto; }
     html.mode-dense main.city-page {
-        flex: 1 1 0;
+        flex: 1 1 auto;
         min-height: 0;
         display: flex;
         flex-direction: column;
-        overflow: hidden;
+        overflow: visible;
     }
     html.mode-dense .weekly-calendar { flex: 0 0 auto; }
     html.mode-dense body > footer,
     html.mode-dense .site-footer { display: none; }
-    /* the card band centers in the space it shares with the map */
+    /* the card band never shrinks below its content — a tall grid pushes
+       everything down instead of squeezing the cards under the map */
     html.mode-dense .events {
-        flex: 0 1 auto;
+        flex: 0 0 auto;
         display: flex;
         flex-direction: column;
         justify-content: center;
-        min-height: 0;
         padding-top: 0.5rem;
         padding-bottom: 0.5rem;
     }
@@ -7381,12 +7347,11 @@ html.dusk body {
         -webkit-box-orient: vertical;
         overflow: hidden;
     }
-    /* the map takes whatever is left (height/flex also set inline by
-       dusk-rail's sizeDenseMap — the !important pair outranks the week-map
-       pixel height dusk-ui writes inline) */
+    /* the map's height is written inline by dusk-rail's sizeDenseMap
+       (fill-to-viewport, 200px floor); this is just the pre-JS fallback */
     html.mode-dense .events-map-section {
-        flex: 1 1 0px !important;
-        min-height: 120px;
+        flex: 0 0 auto;
+        min-height: 200px;
         padding: 0;
         margin: 0;
     }
@@ -7419,9 +7384,6 @@ html.dusk body {
        sections every render (dynamic-calendar-loader.js updateCalendarDisplay) */
     html.month-full .events,
     html.month-full .events-map-section { display: none !important; }
-    /* the COZY/DENSE distinction has no meaning on the grid-only month
-       screen — hide the toggle (mode state is kept; it returns with week) */
-    html.month-full .mode-toggle { display: none; }
     html.month-full body,
     html.month-full main.city-page { overflow: auto; }
     html.month-full main.city-page { display: block; }
