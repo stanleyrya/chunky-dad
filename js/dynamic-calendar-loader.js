@@ -126,7 +126,7 @@ class DynamicCalendarLoader extends CalendarCore {
         // the grid renders wider than the visible period and scrolls
         // natively; cards/map/label/URL follow on scroll settle only.
         this.stripStartDate = null;   // week strip: date of column 0
-        this.stripDayCount = 21;      // week strip: rendered day columns
+        this.stripDayCount = 35;      // week strip: visible week ± 14 days
         this.stripMonths = [];        // month strip: rendered month firsts
         this.lastStripEvents = [];    // events across the rendered strip
         this.suppressGridScrollUntil = 0;
@@ -3517,7 +3517,7 @@ class DynamicCalendarLoader extends CalendarCore {
 
         if (this.currentView === 'week') {
             const stripStart = new Date(start);
-            stripStart.setDate(stripStart.getDate() - 7);
+            stripStart.setDate(stripStart.getDate() - 14);
             this.stripStartDate = new Date(stripStart);
             const stripEnd = new Date(stripStart);
             stripEnd.setDate(stripStart.getDate() + this.stripDayCount - 1);
@@ -3527,7 +3527,7 @@ class DynamicCalendarLoader extends CalendarCore {
             return this.generateWeekView(stripEvents, stripStart, stripEnd, today, hideEvents, this.stripDayCount);
         }
 
-        const months = [-1, 0, 1].map(d => new Date(start.getFullYear(), start.getMonth() + d, 1));
+        const months = [-2, -1, 0, 1, 2].map(d => new Date(start.getFullYear(), start.getMonth() + d, 1));
         this.stripMonths = months;
         // CONTINUOUS weeks, "like a calendar": Sunday on/before the previous
         // month's 1st through Saturday on/after the next month's last day —
@@ -3537,7 +3537,8 @@ class DynamicCalendarLoader extends CalendarCore {
         const stripStart = new Date(months[0]);
         stripStart.setDate(stripStart.getDate() - stripStart.getDay());
         stripStart.setHours(0, 0, 0, 0);
-        const lastDay = new Date(months[2].getFullYear(), months[2].getMonth() + 1, 0);
+        const lastMonth = months[months.length - 1];
+        const lastDay = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0);
         const stripEnd = new Date(lastDay);
         stripEnd.setDate(lastDay.getDate() + (6 - lastDay.getDay()));
         stripEnd.setHours(23, 59, 59, 999);
@@ -4441,7 +4442,10 @@ class DynamicCalendarLoader extends CalendarCore {
         const rowStart = new Date(this.currentDate);
         rowStart.setDate(rowStart.getDate() - rowStart.getDay());
         const cell = grid.querySelector(`.calendar-day[data-date="${this.getLocalDateKey(rowStart)}"]`);
-        if (cell) grid.scrollTop += cell.getBoundingClientRect().top - gr.top - stickyH;
+        // +10px breathing so the today-circle on the top row isn't clipped
+        // by the sticky day-name header. Position-only: placement never
+        // fires a settle (suppressed), so month attribution can't flip.
+        if (cell) grid.scrollTop += cell.getBoundingClientRect().top - gr.top - stickyH - 10;
     }
 
     // One-time (the .calendar-grid element survives every innerHTML swap):
@@ -4483,7 +4487,7 @@ class DynamicCalendarLoader extends CalendarCore {
             newStart.setDate(newStart.getDate() + idx);
             newStart.setHours(0, 0, 0, 0);
             const changed = newStart.getTime() !== this.getCurrentPeriodBounds().start.getTime();
-            const nearEdge = idx <= 2 || idx >= this.stripDayCount - 9;
+            const nearEdge = idx <= 6 || idx >= this.stripDayCount - 13;
             if (!changed && !nearEdge) return;
             this.currentDate = newStart;
             this.clearSelectionIfOutOfBounds();
@@ -4522,8 +4526,9 @@ class DynamicCalendarLoader extends CalendarCore {
         const cur = this.currentDate;
         const changed = !(cur.getFullYear() === y && cur.getMonth() === m - 1);
         const monthKeyOf = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        const nearEdge = this.stripMonths.length === 3 &&
-            (bestKey === monthKeyOf(this.stripMonths[0]) || bestKey === monthKeyOf(this.stripMonths[2]));
+        const nearEdge = this.stripMonths.length >= 3 &&
+            (bestKey === monthKeyOf(this.stripMonths[0]) ||
+             bestKey === monthKeyOf(this.stripMonths[this.stripMonths.length - 1]));
         if (!changed && !nearEdge) return;
         const day = Math.min(cur.getDate(), new Date(y, m, 0).getDate());
         this.currentDate = new Date(y, m - 1, day);
@@ -4607,6 +4612,15 @@ class DynamicCalendarLoader extends CalendarCore {
                     eventsList.querySelectorAll(':scope > .event-card[data-event-slug]').forEach(c => {
                         existingBySlug.set(c.getAttribute('data-event-slug'), c);
                     });
+                    // already-decoded <img>s from the outgoing list, by URL:
+                    // fresh cards TRANSPLANT them instead of re-decoding, so
+                    // favicons/flyers don't blink even across a month change
+                    // (venues repeat, the image URLs are the same)
+                    const oldImgPool = new Map();
+                    eventsList.querySelectorAll(':scope > .event-card img').forEach(img => {
+                        const src = img.getAttribute('src');
+                        if (src && img.complete && !oldImgPool.has(src)) oldImgPool.set(src, img);
+                    });
                     const frag = document.createDocumentFragment();
                     const shell = document.createElement('div');
                     let reusedCards = 0;
@@ -4616,6 +4630,11 @@ class DynamicCalendarLoader extends CalendarCore {
                         const existing = existingBySlug.get(event.slug);
                         if (existing && existing.dataset.cardSig === sig) {
                             existingBySlug.delete(event.slug);
+                            // this card keeps its own imgs — pull them out of
+                            // the transplant pool so no other card steals them
+                            oldImgPool.forEach((img, src) => {
+                                if (existing.contains(img)) oldImgPool.delete(src);
+                            });
                             frag.appendChild(existing);
                             reusedCards++;
                             return;
@@ -4624,6 +4643,14 @@ class DynamicCalendarLoader extends CalendarCore {
                         const fresh = shell.firstElementChild;
                         if (fresh) {
                             fresh.dataset.cardSig = sig;
+                            fresh.querySelectorAll('img').forEach(img => {
+                                const src = img.getAttribute('src');
+                                const donor = src && oldImgPool.get(src);
+                                if (donor) {
+                                    oldImgPool.delete(src);
+                                    img.replaceWith(donor);
+                                }
+                            });
                             frag.appendChild(fresh);
                         }
                     });

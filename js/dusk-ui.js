@@ -203,15 +203,38 @@
             }
             chunk = [];
         };
+        // In the horizontal week strip a run can START off-screen to the
+        // left — split an extra chunk at the visible edge so the first
+        // VISIBLE segment carries the flowing name (owner: an end-cap
+        // alone showed just the bar with no label). Re-chunked on scroll
+        // settle below, so it heals as space appears or disappears.
+        const strip = document.querySelector('.calendar-grid.week-strip');
+        const stripLeft = strip ? strip.getBoundingClientRect().left : null;
         let rowTop = null;
+        let prevVisible = null;
         segments.forEach(el => {
-            const top = Math.round(el.getBoundingClientRect().top);
+            const r = el.getBoundingClientRect();
+            const top = Math.round(r.top);
+            const visible = stripLeft === null ? true : r.right > stripLeft + 6;
             if (rowTop !== null && Math.abs(top - rowTop) > 4) flushChunk();
+            else if (prevVisible === false && visible) flushChunk();
             rowTop = top;
+            prevVisible = visible;
             chunk.push(el);
         });
         flushChunk();
     };
+
+    // the strip scrolling changes which segment should lead a run — repaint
+    // (debounced) once the scroll rests; class/style writes don't retrigger
+    // the childList observer, so this cannot loop
+    let stripChunkT = 0;
+    document.addEventListener('scroll', (e) => {
+        const t = e.target;
+        if (!t || !t.classList || !t.classList.contains('week-strip')) return;
+        clearTimeout(stripChunkT);
+        stripChunkT = setTimeout(paintMultiDayRuns, 200);
+    }, { capture: true, passive: true });
 
     function paintMultiDayRuns() {
         const segs = [...document.querySelectorAll('.event-item.multi-day[data-event-slug]')];
