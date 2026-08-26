@@ -216,37 +216,45 @@
             }
             chunk = [];
         };
-        // In the horizontal week strip a run can START off-screen to the
-        // left — split an extra chunk at the visible edge so the first
-        // VISIBLE segment carries the flowing name (owner: an end-cap
-        // alone showed just the bar with no label). Re-chunked on scroll
-        // settle below, so it heals as space appears or disappears.
-        const strip = document.querySelector('.calendar-grid.week-strip');
-        const stripLeft = strip ? strip.getBoundingClientRect().left : null;
         let rowTop = null;
-        let prevVisible = null;
         segments.forEach(el => {
-            const r = el.getBoundingClientRect();
-            const top = Math.round(r.top);
-            const visible = stripLeft === null ? true : r.right > stripLeft + 6;
+            const top = Math.round(el.getBoundingClientRect().top);
             if (rowTop !== null && Math.abs(top - rowTop) > 4) flushChunk();
-            else if (prevVisible === false && visible) flushChunk();
             rowTop = top;
-            prevVisible = visible;
             chunk.push(el);
         });
         flushChunk();
     };
 
-    // the strip scrolling changes which segment should lead a run — repaint
-    // (debounced) once the scroll rests; class/style writes don't retrigger
-    // the childList observer, so this cannot loop
-    let stripChunkT = 0;
+    // The flowing name HUGS the visible left edge while its run scrolls
+    // under it (owner: "instead of quickly switching ... hug the side of
+    // the screen"): per scroll frame, each lead's name is translated to the
+    // strip edge and its width shrunk to the bar's remaining span — the
+    // label slides along its own bar, ellipsizing as space runs out. One
+    // rAF, a handful of elements; style writes don't retrigger the
+    // childList observer.
+    let nameStickRaf = 0;
+    function stickRunNames() {
+        nameStickRaf = 0;
+        const strip = document.querySelector('.calendar-grid.week-strip');
+        if (!strip) return;
+        const stripLeft = strip.getBoundingClientRect().left;
+        strip.querySelectorAll('.event-item.multi-day.md-chunk-lead').forEach(lead => {
+            const name = lead.querySelector('.event-name');
+            if (!name) return;
+            const chunkW = parseFloat(lead.style.getPropertyValue('--chunkw'));
+            if (!chunkW || chunkW <= 0) return;
+            const baseW = Math.max(20, chunkW - 12);
+            const leadLeft = lead.getBoundingClientRect().left;
+            const shift = Math.min(Math.max(0, stripLeft + 6 - leadLeft), Math.max(0, baseW - 24));
+            name.style.transform = shift > 0 ? `translateX(${shift}px)` : '';
+            name.style.width = `${Math.max(20, baseW - shift)}px`;
+        });
+    }
     document.addEventListener('scroll', (e) => {
         const t = e.target;
         if (!t || !t.classList || !t.classList.contains('week-strip')) return;
-        clearTimeout(stripChunkT);
-        stripChunkT = setTimeout(paintMultiDayRuns, 200);
+        if (!nameStickRaf) nameStickRaf = requestAnimationFrame(stickRunNames);
     }, { capture: true, passive: true });
 
     function paintMultiDayRuns() {
@@ -267,6 +275,7 @@
             });
             chunkRun(group);
         });
+        stickRunNames();
     }
 
     // Re-render happens via wholesale innerHTML swaps — observe and repaint.
