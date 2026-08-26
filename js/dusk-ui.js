@@ -231,6 +231,11 @@
                     // (idempotent: skip once it lives there)
                     const timeEl = lead.querySelector(':scope > .event-time');
                     if (timeEl && !span.contains(timeEl)) span.appendChild(timeEl);
+                    // natural label width, measured unshrunk — the sticker
+                    // only pays layout for width inside the end zone
+                    span.style.width = '';
+                    span._mdW = null;
+                    span._mdNat = span.getBoundingClientRect().width;
                 }
                 // uniform bar height (week strip): every segment still
                 // carries invisible legacy content (hidden name wrapper,
@@ -289,11 +294,28 @@
             const r = span.getBoundingClientRect();
             const tx = span._mdTx || 0;
             const rawLeft = r.left - tx; // where the label sits without our correction
-            const desired = Math.min(Math.max(edge, b.left), Math.max(b.left, b.right - r.width - 4));
+            // the label PARKS at the edge — never pushed off-left (a short
+            // visible tail must still read name + time)
+            const desired = Math.max(edge, b.left);
             const next = desired - rawLeft;
             if (Math.abs(next - tx) > 0.5) {
                 span._mdTx = next;
                 span.style.transform = next !== 0 ? `translateX(${next}px)` : '';
+            }
+            // REAL dots: inside the end zone the label's width shrinks and
+            // CSS ellipsis does the truncation; in the open field width
+            // stays natural and nothing layout-affecting is written
+            const natural = span._mdNat || r.width;
+            const avail = b.right - desired - 4;
+            if (avail < natural) {
+                const w = Math.max(0, avail);
+                if (span._mdW === null || span._mdW === undefined || Math.abs(w - span._mdW) > 0.5) {
+                    span._mdW = w;
+                    span.style.width = `${w}px`;
+                }
+            } else if (span._mdW !== null && span._mdW !== undefined) {
+                span._mdW = null;
+                span.style.width = '';
             }
         });
     }

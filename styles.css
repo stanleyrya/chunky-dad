@@ -7689,12 +7689,6 @@ html.dusk body {
 .calendar-grid.week-strip .event-item.multi-day.md-chunk-lead .event-name {
     overflow: visible;
     text-overflow: clip;
-    /* the ellipsis-dots replacement, at zero per-frame cost: a STATIC
-       right-edge fade on the bar-long name box — the sticky label
-       dissolves as it is pushed into the bar's end instead of sliding
-       off hard */
-    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent);
-    mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent);
 }
 .calendar-grid.week-strip .event-item.multi-day.md-chunk-lead .md-sticky-label {
     position: sticky;
@@ -7702,10 +7696,26 @@ html.dusk body {
     display: inline-block;
     max-width: 100%;
     white-space: nowrap;
+    /* REAL ellipsis: the label parks at the edge and its text shrinks
+       with dots as the bar's end approaches (width written only inside
+       that end zone — everywhere else the label is transform-only) */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: top;
 }
 /* the run's time rides INSIDE the sticky label (chunkRun moves the lead's
    .event-time element there) — it hugs the edge with the name instead of
-   scrolling away with the run's first segment */
+   scrolling away with the run's first segment, and ellipsizes on its own
+   line as the label shrinks */
 .calendar-grid.week-strip .event-item.multi-day.md-chunk-lead .md-sticky-label .event-time {
     display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    /* match the single-day pill's metrics: nested in the span the time
+       inherited a tighter line-height chain and lost the inter-line gap,
+       leaving timed BARS ~3px shorter than timed PILLS (owner report:
+       "goldiloxx shorter and tighter than fuzzy") */
+    line-height: 1.3;
+    margin-top: 2px;
 }
