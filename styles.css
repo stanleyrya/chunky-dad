@@ -7689,6 +7689,12 @@ html.dusk body {
 .calendar-grid.week-strip .event-item.multi-day.md-chunk-lead .event-name {
     overflow: visible;
     text-overflow: clip;
+    /* the ellipsis-dots replacement, at zero per-frame cost: a STATIC
+       right-edge fade on the bar-long name box — the sticky label
+       dissolves as it is pushed into the bar's end instead of sliding
+       off hard */
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent);
 }
 .calendar-grid.week-strip .event-item.multi-day.md-chunk-lead .md-sticky-label {
     position: sticky;

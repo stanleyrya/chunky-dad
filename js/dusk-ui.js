@@ -232,6 +232,22 @@
                     const timeEl = lead.querySelector(':scope > .event-time');
                     if (timeEl && !span.contains(timeEl)) span.appendChild(timeEl);
                 }
+                // uniform bar height (week strip): every segment still
+                // carries invisible legacy content (hidden name wrapper,
+                // per-segment time) that takes layout space and left
+                // segments a row or a pixel apart — the divot at the run's
+                // end. The lead is the height authority for its chunk.
+                if (document.querySelector('.calendar-grid.week-strip')) {
+                    // fractional height (offsetHeight rounds and left a
+                    // half-pixel step between segments)
+                    const h = lead.getBoundingClientRect().height;
+                    if (h > 0) {
+                        chunk.slice(1).forEach(el => {
+                            const hpx = `${h}px`;
+                            if (el.style.height !== hpx) el.style.height = hpx;
+                        });
+                    }
+                }
             }
             chunk = [];
         };
