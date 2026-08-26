@@ -6831,9 +6831,11 @@ html.dusk body {
 /* Today: space always reserved; it fades in when you're off today
    so the other controls never shift */
 .dusk .today-btn {
+    /* ALWAYS shown (owner): the continuous strip made "is today visible"
+       too fiddly and the button kept hiding exactly when it was needed */
     display: inline-flex;
-    visibility: hidden;
-    opacity: 0;
+    visibility: visible;
+    opacity: 1;
     background: transparent;
     color: #ff9d9d;
     padding: 0.1rem 0.5rem;
@@ -7384,6 +7386,9 @@ html.dusk body {
        sections every render (dynamic-calendar-loader.js updateCalendarDisplay) */
     html.month-full .events,
     html.month-full .events-map-section { display: none !important; }
+    /* flush under the page header: main's 0.35rem breathing room read as a
+       stray gap above the sticky day-name row */
+    html.month-full main.city-page { padding-top: 0; }
     html.month-full body,
     html.month-full main.city-page { overflow: auto; }
     html.month-full main.city-page { display: block; }
@@ -7626,7 +7631,9 @@ html.dusk body {
 .month-strip-days {
     position: sticky;
     top: 0;
-    z-index: 3;
+    /* above the multi-day chunk leads (z 3) and their flowing titles (z 5)
+       — bars must slide UNDER the day-name row, never over it */
+    z-index: 10;
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
     background: #0b0d13;

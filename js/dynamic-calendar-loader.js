@@ -1540,7 +1540,17 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Switch to week view for a specific date
     async switchToWeekView(dateString) {
-        this.currentDate = new Date(dateString);
+        // parse LOCALLY ('YYYY-MM-DD' through new Date() is UTC midnight —
+        // in western zones that's the PREVIOUS local day), and open the week
+        // AS SHOWN in the month grid: its Sunday-aligned row
+        const parts = String(dateString).split('-');
+        let target = parts.length === 3
+            ? new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+            : new Date(dateString);
+        if (isNaN(target.getTime())) target = new Date();
+        target.setDate(target.getDate() - target.getDay());
+        target.setHours(0, 0, 0, 0);
+        this.currentDate = target;
         this.currentView = 'week';
         
         // Update active button
@@ -1564,7 +1574,11 @@ class DynamicCalendarLoader extends CalendarCore {
         const parts = dateISO.split('-');
         const parsed = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
         if (isNaN(parsed.getTime())) return;
-        this.currentDate = parsed;
+        // the window opens on the week AS SHOWN in the month grid (Sunday
+        // row); the selection itself keeps the event's own date
+        const windowStart = new Date(parsed);
+        windowStart.setDate(windowStart.getDate() - windowStart.getDay());
+        this.currentDate = windowStart;
         this.currentView = 'week';
         this.selectedEventSlug = eventSlug;
         this.selectedEventDateISO = dateISO;
@@ -3007,6 +3021,9 @@ class DynamicCalendarLoader extends CalendarCore {
         const shareButtons = document.querySelectorAll('.share-event-btn');
         
         shareButtons.forEach(button => {
+            // reconciled refreshes REUSE card nodes — never double-bind
+            if (button.dataset.shareBound) return;
+            button.dataset.shareBound = '1';
             button.addEventListener('click', async (e) => {
                 e.stopPropagation(); // Prevent event card click
                 
@@ -4418,8 +4435,12 @@ class DynamicCalendarLoader extends CalendarCore {
                 return;
             }
         }
-        const first = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth(), 1);
-        const cell = grid.querySelector(`.calendar-day[data-date="${this.getLocalDateKey(first)}"]`);
+        // the row containing currentDate tops the scroller: switching to
+        // month shows the CURRENT week at top, and the Today button (which
+        // sets currentDate to today first) shows today's week at top
+        const rowStart = new Date(this.currentDate);
+        rowStart.setDate(rowStart.getDate() - rowStart.getDay());
+        const cell = grid.querySelector(`.calendar-day[data-date="${this.getLocalDateKey(rowStart)}"]`);
         if (cell) grid.scrollTop += cell.getBoundingClientRect().top - gr.top - stickyH;
     }
 
@@ -4571,12 +4592,45 @@ class DynamicCalendarLoader extends CalendarCore {
                         originalEventCount: filteredEvents.length
                     });
                     const listDeduplicatedEvents = this.deduplicateByUIDAndRecurrenceId(filteredEvents);
-                    
-                    const eventCardsHtml = listDeduplicatedEvents.map(event => this.generateEventCard(event)).join('');
-                    eventsList.innerHTML = eventCardsHtml;
-                    
+
+                    // Reconcile instead of innerHTML-swapping: a card whose
+                    // rendered content is unchanged is REUSED, so its favicon
+                    // and flyer <img>s keep their decoded pixels — the swap
+                    // recreated every node on each strip settle and all the
+                    // favicons blinked (owner report)
+                    const sigOf = (str) => {
+                        let hash = 5381;
+                        for (let i = 0; i < str.length; i++) hash = ((hash << 5) + hash + str.charCodeAt(i)) >>> 0;
+                        return String(hash);
+                    };
+                    const existingBySlug = new Map();
+                    eventsList.querySelectorAll(':scope > .event-card[data-event-slug]').forEach(c => {
+                        existingBySlug.set(c.getAttribute('data-event-slug'), c);
+                    });
+                    const frag = document.createDocumentFragment();
+                    const shell = document.createElement('div');
+                    let reusedCards = 0;
+                    listDeduplicatedEvents.forEach(event => {
+                        const html = this.generateEventCard(event);
+                        const sig = sigOf(html);
+                        const existing = existingBySlug.get(event.slug);
+                        if (existing && existing.dataset.cardSig === sig) {
+                            existingBySlug.delete(event.slug);
+                            frag.appendChild(existing);
+                            reusedCards++;
+                            return;
+                        }
+                        shell.innerHTML = html;
+                        const fresh = shell.firstElementChild;
+                        if (fresh) {
+                            fresh.dataset.cardSig = sig;
+                            frag.appendChild(fresh);
+                        }
+                    });
+                    eventsList.replaceChildren(frag);
+
                     logger.debug('CALENDAR', '✅ UPDATE_DISPLAY: Successfully updated events list', {
-                        htmlLength: eventCardsHtml.length,
+                        reusedCards,
                         originalEventCount: filteredEvents.length,
                         deduplicatedEventCount: listDeduplicatedEvents.length,
                         removedDuplicates: filteredEvents.length - listDeduplicatedEvents.length
@@ -4793,6 +4847,14 @@ class DynamicCalendarLoader extends CalendarCore {
                 const newView = e.target.dataset.view;
                 if (newView !== this.currentView) {
                     logger.userInteraction('CALENDAR', `View changed from ${this.currentView} to ${newView}`);
+                    if (newView === 'week') {
+                        // coming from month: open the week AS SHOWN there
+                        // (the Sunday-aligned row containing currentDate)
+                        const aligned = new Date(this.currentDate);
+                        aligned.setDate(aligned.getDate() - aligned.getDay());
+                        aligned.setHours(0, 0, 0, 0);
+                        this.currentDate = aligned;
+                    }
                     this.currentView = newView;
                     
                     // Update active button
@@ -5044,6 +5106,9 @@ class DynamicCalendarLoader extends CalendarCore {
     attachEventCardSelectionHandlers() {
         const cards = document.querySelectorAll('.event-card.detailed');
         cards.forEach(card => {
+            // reconciled refreshes REUSE card nodes — never double-bind
+            if (card.dataset.selBound) return;
+            card.dataset.selBound = '1';
             card.addEventListener('click', (e) => {
                 // Ignore clicks that originate from share button
                 const shareBtn = e.target.closest && e.target.closest('.share-event-btn');
