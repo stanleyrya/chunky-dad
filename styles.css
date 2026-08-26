@@ -7647,9 +7647,7 @@ html.dusk body {
 }
 
 /* hide-others (solo) mode on the maps: while ON with a selection, every
-   other event's marker is hidden — main map and sheet map alike */
+   other event's marker is hidden — main map and sheet map alike. The
+   button's state reads through the icon swap alone (eye-slash <-> eye);
+   no active highlight (owner: "the selected version ... is ugly"). */
 .maplibregl-marker.marker-solo-hidden { display: none !important; }
-.map-control-btn.map-solo-on {
-    color: #667eea;
-    background: rgba(102, 126, 234, 0.22);
-}
