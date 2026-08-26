@@ -180,6 +180,19 @@
             const lead = chunk[0];
             lead.classList.add('md-chunk-lead');
             chunk.slice(1).forEach(el => el.classList.add('md-chunk-follow'));
+            // the renderer emits a visible title only on a run's FIRST
+            // segment — every other segment holds its name in a
+            // visibility:hidden wrapper. A mid-run lead (the run starts
+            // off-screen in the week strip) must UNHIDE its wrapper, and a
+            // segment demoted back to follow re-hides
+            chunk.forEach((el, i) => {
+                const name = el.querySelector('.event-name');
+                if (!name) return;
+                const wrap = name.parentElement;
+                if (wrap && wrap !== el && wrap.style && wrap.style.visibility) {
+                    wrap.style.visibility = i === 0 ? 'visible' : 'hidden';
+                }
+            });
             const first = lead.getBoundingClientRect();
             const last = chunk[chunk.length - 1].getBoundingClientRect();
             const chunkWidth = Math.max(first.width, last.right - first.left);

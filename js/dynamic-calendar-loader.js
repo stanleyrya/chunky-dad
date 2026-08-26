@@ -4442,10 +4442,10 @@ class DynamicCalendarLoader extends CalendarCore {
         const rowStart = new Date(this.currentDate);
         rowStart.setDate(rowStart.getDate() - rowStart.getDay());
         const cell = grid.querySelector(`.calendar-day[data-date="${this.getLocalDateKey(rowStart)}"]`);
-        // +10px breathing so the today-circle on the top row isn't clipped
-        // by the sticky day-name header. Position-only: placement never
-        // fires a settle (suppressed), so month attribution can't flip.
-        if (cell) grid.scrollTop += cell.getBoundingClientRect().top - gr.top - stickyH - 10;
+        // flush under the sticky day-name row — the today-circle clearance
+        // lives INSIDE the month cells now (day-header top offset), so no
+        // sliver of the previous week peeks above the placed row
+        if (cell) grid.scrollTop += cell.getBoundingClientRect().top - gr.top - stickyH;
     }
 
     // One-time (the .calendar-grid element survives every innerHTML swap):

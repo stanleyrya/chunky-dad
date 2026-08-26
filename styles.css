@@ -7648,6 +7648,12 @@ html.dusk body {
 .month-strip-grid .calendar-day.month-first {
     border-top: 2px solid rgba(255, 255, 255, 0.22);
 }
+/* the today-circle paints 1.45em centered on the number and bleeds a few
+   px above the cell — in the month strip that bleed hit the sticky day-name
+   row. Give the number that room INSIDE the cell instead of nudging the
+   scroll (which left a sliver of the previous week peeking above). */
+.month-strip-grid .calendar-day .day-header { top: 6px; }
+.month-strip-grid .calendar-day .day-events { padding-top: 1.7rem; }
 .month-strip-grid .calendar-day.month-first .day-number {
     font-weight: 700;
     white-space: nowrap;
