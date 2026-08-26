@@ -7280,7 +7280,9 @@ html.dusk body {
         z-index: 3;
         box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
         cursor: pointer;
-        background-color: transparent;
+        /* a quiet ground so a thumb whose art is still downloading reads as
+           a plate, not an invisible button that pops in */
+        background-color: rgba(10, 12, 24, 0.35);
         background-size: cover;
         background-position: center;
         transition: none;
@@ -7358,10 +7360,14 @@ html.dusk body {
         justify-content: center;
     }
     /* every dense card is the SAME 246px box (titlerow + rows + 2-line tea +
-       links measured at 390px); sparse cards simply end early inside it */
+       links measured at 390px); sparse cards simply end early inside it.
+       Dense is a STATIC mode: nothing on a card ever animates or fades —
+       owner report: "middle cards magically slowly fade in. It's weird" */
     html.mode-dense .events-list.rail-active > .event-card {
         height: 246px;
         overflow: hidden;
+        animation: none !important;
+        transition: none !important;
     }
     /* the corner thumb is the ONLY image surface in dense */
     html.mode-dense .events-list .event-card .event-flyer { display: none; }
@@ -7413,6 +7419,9 @@ html.dusk body {
        sections every render (dynamic-calendar-loader.js updateCalendarDisplay) */
     html.month-full .events,
     html.month-full .events-map-section { display: none !important; }
+    /* the COZY/DENSE distinction has no meaning on the grid-only month
+       screen — hide the toggle (mode state is kept; it returns with week) */
+    html.month-full .mode-toggle { display: none; }
     html.month-full body,
     html.month-full main.city-page { overflow: auto; }
     html.month-full main.city-page { display: block; }
@@ -7481,8 +7490,11 @@ html.dusk body {
     overflow-y: auto;
     border-radius: 18px 18px 0 0;
     padding: 18px 18px calc(20px + env(safe-area-inset-bottom));
-    /* the card's aurora custom props ride in on the panel's style attribute */
-    background: var(--c1, var(--background-primary, #14172a));
+    /* the card's aurora custom props ride in on the panel's style attribute;
+       the fallback chain must mirror the aurora card's own (--primary-color,
+       then the site indigo) — an event with no color data otherwise landed
+       on the LIGHT --background-primary and the sheet washed out */
+    background: var(--c1, var(--primary-color, #667eea));
     box-shadow: 0 -14px 40px rgba(0, 0, 0, 0.5);
     transform: translateY(100%);
     transition: transform 300ms cubic-bezier(0.2, 0.7, 0.3, 1);
@@ -7530,6 +7542,15 @@ html.dusk body {
     justify-content: center;
 }
 .rail-sheet .sheet-links .event-link i { font-size: 0.95rem; }
+/* the venue mini-map: static (interactive:false), pin on the event */
+.rail-sheet .sheet-map {
+    height: 180px;
+    margin: 12px 0 0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 6px 20px rgba(6, 8, 20, 0.35);
+}
+.rail-sheet .sheet-map canvas { border-radius: 12px; }
 /* the cloned when/venue/cover rows lose the card scope that sizes their
    icons/badges — pin the sheet rows to the card's own metrics */
 .rail-sheet .sheet-rows {

@@ -94,6 +94,10 @@
     denseMapH = -1;
     if (isDense()) markOverflows();
     syncRailState('mode-switch');
+    // the week grid's pill cap is mode-dependent (dense caps singles at 4)
+    // — re-render so the calendar reflects the new mode
+    const l = loader();
+    if (l && l.updateCalendarDisplay) { try { l.updateCalendarDisplay(); } catch (e) {} }
     dbgNote('mode -> ' + m);
   };
   modeBtn.addEventListener('click', (e) => { e.preventDefault(); setMode(isDense() ? 'cozy' : 'dense'); });
@@ -143,10 +147,19 @@
   // dense uses it for clamped descriptions ('…more' chip); month view (both
   // modes) opens it in place of navigating to the event's week.
   let sheet = null;
+  let sheetMap = null;
+  const destroySheetMap = () => {
+    if (!sheetMap) return;
+    try { sheetMap.remove(); } catch (e) {}
+    sheetMap = null;
+  };
   const closeSheet = () => {
     if (!sheet) return;
     sheet.classList.remove('up');
-    setTimeout(() => sheet.classList.remove('open'), 320);
+    setTimeout(() => {
+      sheet.classList.remove('open');
+      destroySheetMap(); // after the slide-down so the map doesn't vanish mid-flight
+    }, 320);
   };
   const openSheet = (card) => {
     if (!card) return;
@@ -191,6 +204,32 @@
       // shipping a dead control; the plain anchors work as-is
       l.querySelectorAll('.share-event-btn').forEach((b) => b.remove());
       if (l.children.length) panel.appendChild(l);
+    }
+    // the venue map: a small static MapLibre view on the event's own pin
+    // (interactive:false — a pannable map inside a scrolling sheet fights
+    // the finger, and the camera never moves after creation)
+    destroySheetMap();
+    const lat = parseFloat(card.getAttribute('data-lat'));
+    const lng = parseFloat(card.getAttribute('data-lng'));
+    if (window.maplibregl && Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0)) {
+      const mapDiv = document.createElement('div');
+      mapDiv.className = 'sheet-map';
+      panel.appendChild(mapDiv);
+      const pinColor = (card.style.getPropertyValue('--c1') || '').trim() || '#667eea';
+      requestAnimationFrame(() => {
+        if (!sheet.classList.contains('open') || !mapDiv.isConnected) return;
+        try {
+          sheetMap = new maplibregl.Map({
+            container: mapDiv,
+            style: 'https://tiles.openfreemap.org/styles/liberty',
+            center: [lng, lat],
+            zoom: 14,
+            interactive: false
+          });
+          new maplibregl.Marker({ color: pinColor }).setLngLat([lng, lat]).addTo(sheetMap);
+          sheetMap.once('load', () => { if (sheetMap) sheetMap.resize(); });
+        } catch (e) { mapDiv.remove(); }
+      });
     }
     const tea = card.querySelector('.ec-tea');
     if (tea) {
@@ -354,6 +393,15 @@
         landedSlug = c.getAttribute('data-event-slug') || landedSlug;
         dbgNote('landed ' + (landedSlug || '?').slice(0, 16));
         realSelect(landedSlug);
+        // dense caps the week grid's pills at 4/day — if the landed event's
+        // pill is one of the hidden ones, re-render (the cap always swaps
+        // the SELECTED event into view). Only ever at settle: a re-render
+        // mid-gesture would fight the finger.
+        if (isDense() && landedSlug
+            && !document.querySelector('.calendar-grid .event-item[data-event-slug="' + cssEscape(landedSlug) + '"]')) {
+          const l = loader();
+          if (l && l.updateCalendarDisplay) { try { l.updateCalendarDisplay(); } catch (e) {} }
+        }
       }
     }
     flushUrl();
@@ -551,7 +599,20 @@
   };
 
   // ---------- the two loader events + environment changes ----------
-  document.addEventListener('chunky:selection-changed', () => syncRailState('selection'));
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  let lastScrollSlug = null;
+  document.addEventListener('chunky:selection-changed', (e) => {
+    // cozy select: bring the week grid + the (now lone) card into view
+    const slug = (e.detail && e.detail.slug) || null;
+    if (isMobile() && !isDense() && slug && slug !== lastScrollSlug
+        && !html.classList.contains('month-full')) {
+      try {
+        window.scrollTo({ top: 0, behavior: prefersReducedMotion.matches ? 'auto' : 'smooth' });
+      } catch (e2) { window.scrollTo(0, 0); }
+    }
+    lastScrollSlug = slug;
+    syncRailState('selection');
+  });
   document.addEventListener('chunky:events-rendered', () => {
     armThumbs();
     markOverflows();
