@@ -7596,6 +7596,10 @@ html.dusk body {
    (dynamic-calendar-loader onGridSettle) — nothing runs per frame.
    ===================================================================== */
 .calendar-grid.week-strip {
+    /* the base grid's rounded clip box (15px + overflow hidden) chopped
+       pills at the bottom corners once cells could overlap — the strip is
+       an edge-to-edge surface, no radius */
+    border-radius: 0;
     grid-auto-flow: column;
     grid-auto-columns: calc(100% / 7);
     overflow-x: auto;
@@ -7615,6 +7619,7 @@ html.dusk body {
 }
 
 .calendar-grid.month-strip {
+    border-radius: 0;
     display: block;
     overflow-y: auto;
     overflow-x: hidden;

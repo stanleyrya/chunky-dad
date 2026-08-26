@@ -201,8 +201,14 @@
             // max-content/var() combination differently, so don't rely on it
             const leadName = lead.querySelector('.event-name');
             if (leadName && chunkWidth > 0) {
-                leadName.style.width = `${Math.max(20, chunkWidth - 12)}px`;
+                // natural text width first (width:auto measure), so the
+                // edge-hugging sticker below can stay transform-only until
+                // the bar's remaining span actually crowds the text
+                leadName.style.width = 'auto';
                 leadName.style.maxWidth = 'none';
+                const natural = leadName.scrollWidth + 2;
+                lead._mdNaturalW = natural;
+                leadName.style.width = `${Math.max(20, Math.min(natural, chunkWidth - 12))}px`;
                 // The site's smart-name logic truncates the STRING to one
                 // cell's width before we ever get here — give the lead the
                 // real name and let CSS ellipsis do any needed trimming.
@@ -233,9 +239,7 @@
     // label slides along its own bar, ellipsizing as space runs out. One
     // rAF, a handful of elements; style writes don't retrigger the
     // childList observer.
-    let nameStickRaf = 0;
     function stickRunNames() {
-        nameStickRaf = 0;
         const strip = document.querySelector('.calendar-grid.week-strip');
         if (!strip) return;
         const stripLeft = strip.getBoundingClientRect().left;
@@ -245,16 +249,31 @@
             const chunkW = parseFloat(lead.style.getPropertyValue('--chunkw'));
             if (!chunkW || chunkW <= 0) return;
             const baseW = Math.max(20, chunkW - 12);
+            const natural = lead._mdNaturalW || baseW;
             const leadLeft = lead.getBoundingClientRect().left;
-            const shift = Math.min(Math.max(0, stripLeft + 6 - leadLeft), Math.max(0, baseW - 24));
-            name.style.transform = shift > 0 ? `translateX(${shift}px)` : '';
-            name.style.width = `${Math.max(20, baseW - shift)}px`;
+            const shift = Math.round(Math.min(Math.max(0, stripLeft + 6 - leadLeft), Math.max(0, baseW - 24)));
+            if (shift !== lead._mdShift) {
+                lead._mdShift = shift;
+                name.style.transform = shift > 0 ? `translateX(${shift}px)` : '';
+            }
+            // width is a LAYOUT write — only pay for it once the remaining
+            // span crowds the text (the end zone); everywhere else the
+            // label rides on transform alone
+            const remaining = baseW - shift;
+            const w = remaining < natural + 4 ? Math.max(20, remaining) : Math.min(natural, baseW);
+            if (w !== lead._mdW) {
+                lead._mdW = w;
+                name.style.width = `${w}px`;
+            }
         });
     }
+    // NOT rAF-deferred: scroll listeners run before that frame paints, so a
+    // synchronous update tracks the finger exactly — deferring added a frame
+    // of lag that read as jitter
     document.addEventListener('scroll', (e) => {
         const t = e.target;
         if (!t || !t.classList || !t.classList.contains('week-strip')) return;
-        if (!nameStickRaf) nameStickRaf = requestAnimationFrame(stickRunNames);
+        stickRunNames();
     }, { capture: true, passive: true });
 
     function paintMultiDayRuns() {
