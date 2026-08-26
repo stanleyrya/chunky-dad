@@ -167,10 +167,15 @@
     }
     // the map, at the BOTTOM of the sheet: the loader builds a read-only
     // twin of the main page's map (same style/theme/favicon icons/city
-    // framing, this event's icon selected, the rest dimmed, none clickable)
+    // framing, this event's icon selected, the rest dimmed, none clickable).
+    // An event with NO location (Bear Happy Hour) gets no map at all — a
+    // city map with every icon dimmed and none highlighted reads as broken.
     destroySheetMap();
+    const lat = parseFloat(card.getAttribute('data-lat'));
+    const lng = parseFloat(card.getAttribute('data-lng'));
+    const hasLocation = Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0);
     const l = loader();
-    if (l && l.createSheetMap) {
+    if (hasLocation && l && l.createSheetMap) {
       const mapDiv = document.createElement('div');
       mapDiv.className = 'sheet-map';
       panel.appendChild(mapDiv);
