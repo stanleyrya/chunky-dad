@@ -618,7 +618,10 @@ class DynamicCalendarLoader extends CalendarCore {
             // month.
             const parts = normalizedDateISO.split('-');
             const parsed = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-            if (!isNaN(parsed.getTime())) {
+            // deferUrl marks RAIL-driven live selections: the user is mid
+            // card-swipe, so the calendar must never slide or re-anchor
+            // under them regardless of which occurrence's date resolved
+            if (!isNaN(parsed.getTime()) && !options.deferUrl) {
                 const { start, end } = this.getCurrentPeriodBounds();
                 if (parsed < start || parsed > end) {
                     if (this.currentView === 'week') {
