@@ -4323,9 +4323,22 @@ class DynamicCalendarLoader extends CalendarCore {
         const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 12);
         if (isNaN(d.getTime())) return;
         const { start, end } = this.getCurrentPeriodBounds();
-        if (d < start || d > end) {
-            this.clearEventSelection();
+        if (d >= start && d <= end) return;
+        // the selected DAY left the window — but a recurring event often has
+        // an occurrence inside the new window (weekly events, constantly):
+        // re-bind the selection to that occurrence and stay selected. Reset
+        // only when the event doesn't occur in the window at all.
+        const occurrence = this.getFilteredEvents().find(ev => ev.slug === this.selectedEventSlug);
+        if (occurrence) {
+            const od = this.getLogicalStartDate(occurrence);
+            if (od) this.selectedEventDateISO = this.getLocalDateKey(od);
+            logger.debug('EVENT', 'Selection re-bound to in-window occurrence', {
+                slug: this.selectedEventSlug,
+                date: this.selectedEventDateISO
+            });
+            return;
         }
+        this.clearEventSelection();
     }
 
     // Header label for the visible period (title slot + date range)
@@ -4347,6 +4360,13 @@ class DynamicCalendarLoader extends CalendarCore {
     // grid to the tallest VISIBLE column instead (overflow-y is hidden;
     // buffer days clip until they slide in and the next settle re-sizes).
     sizeWeekStripHeight() {
+        this.measureWeekStripHeight();
+        // dusk-ui's lane spacers land after this task (via its observer) and
+        // can grow multi-day cells — one deferred re-measure catches it
+        requestAnimationFrame(() => requestAnimationFrame(() => this.measureWeekStripHeight()));
+    }
+
+    measureWeekStripHeight() {
         const grid = document.querySelector('.calendar-grid');
         if (!grid || this.currentView !== 'week' || grid.scrollWidth <= 0) return;
         const days = grid.querySelectorAll('.calendar-day');
@@ -4355,9 +4375,20 @@ class DynamicCalendarLoader extends CalendarCore {
         const first = Math.max(0, Math.min(days.length - 7, Math.round(grid.scrollLeft / dayW)));
         let h = 0;
         for (let i = first; i < Math.min(days.length, first + 7); i++) {
-            h = Math.max(h, days[i].scrollHeight);
+            // NOT scrollHeight: grid stretches every cell to the row height
+            // (the tallest of ALL 21 days), so a visible cell's scrollHeight
+            // reported the off-screen maximum and the clamp was a no-op.
+            // Measure the cell's real CONTENT extent instead.
+            const cell = days[i];
+            const cellTop = cell.getBoundingClientRect().top;
+            let contentBottom = cellTop;
+            for (let c = 0; c < cell.children.length; c++) {
+                const b = cell.children[c].getBoundingClientRect().bottom;
+                if (b > contentBottom) contentBottom = b;
+            }
+            h = Math.max(h, contentBottom - cellTop);
         }
-        if (h > 0) grid.style.height = h + 'px';
+        if (h > 0) grid.style.height = Math.ceil(h + 10) + 'px';
     }
 
     // Place the freshly rendered strip so the visible period is in view.
