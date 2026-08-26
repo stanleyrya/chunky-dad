@@ -7581,3 +7581,61 @@ html.dusk body {
     height: 10px;
     flex: 0 0 10px;
 }
+
+/* =====================================================================
+   CONTINUOUS CALENDAR STRIP — the grid is its own native scroller.
+   WEEK: 21 day columns (visible week ± 7), each 1/7 of the viewport;
+   slide any number of days, snap lands on day boundaries. MONTH:
+   previous/current/next month stacked vertically, drag freely.
+   Cards/map/label/URL follow the visible period on scroll SETTLE only
+   (dynamic-calendar-loader onGridSettle) — nothing runs per frame.
+   ===================================================================== */
+.calendar-grid.week-strip {
+    grid-auto-flow: column;
+    grid-auto-columns: calc(100% / 7);
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    /* the base grid sets touch-action: pan-y for the old flip-swipe —
+       the strip needs horizontal panning to reach the scroller */
+    touch-action: pan-x pan-y;
+    scrollbar-width: none;
+}
+.calendar-grid.week-strip::-webkit-scrollbar { display: none; }
+.calendar-grid.week-strip > .calendar-day {
+    scroll-snap-align: start;
+    min-width: 0;
+}
+
+.calendar-grid.month-strip {
+    display: block;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    /* the scroller's height IS the month viewport: fill the screen under
+       the fixed header (works for mobile month-full and the desktop month
+       column alike; --hdr-h is maintained by dusk-ui) */
+    max-height: calc(100dvh - var(--hdr-h, 104px) - 16px);
+}
+.calendar-grid.month-strip::-webkit-scrollbar { display: none; }
+.month-block-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-auto-rows: minmax(45px, auto);
+}
+@media (min-width: 769px) {
+    .month-block-grid { grid-auto-rows: minmax(90px, auto); }
+}
+.month-block-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.7;
+    padding: 0.7rem 0.3rem 0.35rem;
+}
+.dusk .month-block-label { color: rgba(255, 255, 255, 0.65); }

@@ -292,8 +292,21 @@
       const slug = pill.getAttribute('data-event-slug');
       const card = slug && document.querySelector('.events-list .event-card[data-event-slug="' + cssEscape(slug) + '"]');
       if (card) { openSheet(card); return; }
-      // the month list should always carry the card; if it somehow doesn't,
-      // fall back to opening the event's week rather than doing nothing
+      // the continuous month strip renders NEIGHBOR months too — their
+      // events aren't in the visible list, so build a detached card from
+      // the loader's own renderer and open the sheet off that
+      if (l && l.getRenderedEventBySlug && l.generateEventCard) {
+        const evData = l.getRenderedEventBySlug(slug);
+        if (evData) {
+          try {
+            const tmp = document.createElement('div');
+            tmp.innerHTML = l.generateEventCard(evData);
+            const ghost = tmp.querySelector('.event-card');
+            if (ghost) { openSheet(ghost); return; }
+          } catch (e2) {}
+        }
+      }
+      // last resort: open the event's week rather than doing nothing
       const dayEl = pill.closest('[data-date]');
       const date = dayEl && dayEl.getAttribute('data-date');
       if (l && l.openWeekAt && slug && date) l.openWeekAt(slug, date);

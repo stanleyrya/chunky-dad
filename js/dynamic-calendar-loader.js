@@ -121,6 +121,18 @@ class DynamicCalendarLoader extends CalendarCore {
         this.isSwiping = false;
         this.swipeThreshold = 80; // Distance to trigger navigation (reduced for better responsiveness)
         this.swipeVelocity = 0;
+
+        // Continuous calendar strip state (see generateCalendarEvents):
+        // the grid renders wider than the visible period and scrolls
+        // natively; cards/map/label/URL follow on scroll settle only.
+        this.stripStartDate = null;   // week strip: date of column 0
+        this.stripDayCount = 21;      // week strip: rendered day columns
+        this.stripMonths = [];        // month strip: rendered month firsts
+        this.lastStripEvents = [];    // events across the rendered strip
+        this.suppressGridScrollUntil = 0;
+        this.gridScrollTimer = 0;
+        this.gridTouchActive = false;
+        this.pendingStripAnchor = null;
         this.lastTouchTime = 0;
         this.lastTouchX = 0;
         
@@ -150,6 +162,12 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Enhanced swipe detection methods
     setupSwipeHandlers() {
+        // The continuous calendar strip owns grid gestures now: the grid is
+        // a native scroller (week slides day-by-day, month drags freely), so
+        // the old swipe-to-flip-period handlers must not attach — their
+        // touchmove preventDefault would kill native scrolling outright.
+        return;
+        // eslint-disable-next-line no-unreachable
         const calendarGrid = document.querySelector('.calendar-grid');
         if (!calendarGrid) {
             logger.warn('CALENDAR', 'Calendar grid not found for swipe setup');
@@ -1436,9 +1454,19 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     getCurrentPeriodBounds() {
-        return this.currentView === 'week' 
-            ? this.getWeekBounds(this.currentDate)
-            : this.getMonthBounds(this.currentDate);
+        if (this.currentView === 'week') {
+            // CONTINUOUS week: the visible 7-day window STARTS at currentDate
+            // (any weekday) — the strip slides day-by-day, so the window is
+            // no longer Sunday-aligned. calendar-core's getWeekBounds keeps
+            // its Sunday semantics for the platform-shared consumers.
+            const start = new Date(this.currentDate);
+            start.setHours(0, 0, 0, 0);
+            const end = new Date(start);
+            end.setDate(start.getDate() + 6);
+            end.setHours(23, 59, 59, 999);
+            return { start, end };
+        }
+        return this.getMonthBounds(this.currentDate);
     }
 
     // Show events for a specific day (used by calendar overview)
@@ -3089,7 +3117,10 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     // Filter events by current period
-    getFilteredEvents() {
+    // boundsOverride: the continuous calendar strip renders a WIDER range
+    // than the visible period (the grid pills), while cards/map keep the
+    // visible period — pass { start, end } to filter an arbitrary range.
+    getFilteredEvents(boundsOverride = null) {
         // Handle case where allEvents is not yet loaded
         if (!this.allEvents || !Array.isArray(this.allEvents)) {
             logger.debug('CALENDAR', '🔍 FILTER: No allEvents available for filtering', {
@@ -3099,8 +3130,8 @@ class DynamicCalendarLoader extends CalendarCore {
             });
             return [];
         }
-        
-        const { start, end } = this.getCurrentPeriodBounds();
+
+        const { start, end } = boundsOverride || this.getCurrentPeriodBounds();
         
         logger.debug('CALENDAR', '🔍 FILTER: Starting event filtering', {
             totalEvents: this.allEvents.length,
@@ -3438,24 +3469,71 @@ class DynamicCalendarLoader extends CalendarCore {
         return `${year}-${month}-${day}`;
     }
 
-    // Generate calendar events (enhanced for week/month/calendar view)
+    // Generate the CONTINUOUS calendar strip. The grid renders a wider range
+    // than the visible period — week: 21 day columns (visible week ± 7) in a
+    // horizontal scroller; month: previous/current/next month stacked in a
+    // vertical scroller. Cards, map, label, and URL follow the VISIBLE
+    // period, recomputed only on scroll settle (onGridSettle) — never per
+    // frame, so the sliding itself is native scroll and stays cheap.
     generateCalendarEvents(events, hideEvents = false) {
-        const { start, end } = this.getCurrentPeriodBounds();
+        const { start } = this.getCurrentPeriodBounds();
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
         if (this.currentView === 'week') {
-            return this.generateWeekView(events, start, end, today, hideEvents);
-        } else {
-            return this.generateMonthView(events, start, end, today, hideEvents);
+            const stripStart = new Date(start);
+            stripStart.setDate(stripStart.getDate() - 7);
+            this.stripStartDate = new Date(stripStart);
+            const stripEnd = new Date(stripStart);
+            stripEnd.setDate(stripStart.getDate() + this.stripDayCount - 1);
+            stripEnd.setHours(23, 59, 59, 999);
+            const stripEvents = this.getFilteredEvents({ start: stripStart, end: stripEnd });
+            this.lastStripEvents = stripEvents;
+            return this.generateWeekView(stripEvents, stripStart, stripEnd, today, hideEvents, this.stripDayCount);
         }
+
+        const months = [-1, 0, 1].map(d => new Date(start.getFullYear(), start.getMonth() + d, 1));
+        this.stripMonths = months;
+        // widen by a week on both sides: each block's grid shows leading and
+        // trailing cells from its neighbour months
+        const stripStart = new Date(months[0]);
+        stripStart.setDate(stripStart.getDate() - 7);
+        const stripEnd = new Date(months[2].getFullYear(), months[2].getMonth() + 1, 7, 23, 59, 59, 999);
+        const stripEvents = this.getFilteredEvents({ start: stripStart, end: stripEnd });
+        this.lastStripEvents = stripEvents;
+        return months.map(m => this.generateMonthBlock(m, stripEvents, today, hideEvents)).join('');
     }
 
-    generateWeekView(events, start, end, today, hideEvents = false) {
+    // One month of the vertical strip: a quiet label row + the month's own
+    // 7-column grid. The inner grid carries .month-view-grid so every
+    // existing cell/pill selector keeps matching.
+    generateMonthBlock(monthDate, events, today, hideEvents) {
+        const start = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
+        end.setHours(23, 59, 59, 999);
+        const key = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`;
+        const label = start.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        return `
+            <div class="month-block" data-month="${key}">
+                <div class="month-block-label">${label}</div>
+                <div class="month-block-grid month-view-grid">${this.generateMonthView(events, start, end, today, hideEvents)}</div>
+            </div>
+        `;
+    }
+
+    // A rendered-strip event by slug (the month sheet needs event data for
+    // pills whose month isn't the currently visible one)
+    getRenderedEventBySlug(slug) {
+        if (!slug || !Array.isArray(this.lastStripEvents)) return null;
+        return this.lastStripEvents.find(ev => ev.slug === slug) || null;
+    }
+
+    generateWeekView(events, start, end, today, hideEvents = false, dayCount = 7) {
         const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         const days = [];
-        
-        for (let i = 0; i < 7; i++) {
+
+        for (let i = 0; i < dayCount; i++) {
             const currentDay = new Date(start);
             currentDay.setDate(start.getDate() + i);
             days.push(currentDay);
@@ -3848,7 +3926,7 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     // Initialize map
-    initializeMap(cityConfig, events) {
+    initializeMap(cityConfig, events, opts = {}) {
         logger.debug('MAP', 'Starting map initialization', {
             cityName: cityConfig?.name,
             eventCount: events?.length,
@@ -3891,8 +3969,12 @@ class DynamicCalendarLoader extends CalendarCore {
                     window.eventsMapMarkers.forEach(marker => marker.remove());
                 }
 
-                // Update map center and zoom in case the city changed
-                map.jumpTo({ center: [mapCenter[1], mapCenter[0]], zoom: mapZoom });
+                // Update map center and zoom in case the city changed —
+                // unless the caller asked to keep the camera (strip settle
+                // refreshes must never move the map under a slide)
+                if (!opts.keepCamera) {
+                    map.jumpTo({ center: [mapCenter[1], mapCenter[0]], zoom: mapZoom });
+                }
             } else {
                 logger.debug('MAP', 'Creating new map instance');
                 map = new maplibregl.Map({
@@ -4004,7 +4086,7 @@ class DynamicCalendarLoader extends CalendarCore {
             });
 
             // Fit map to show all markers using maplibre's bounds calculation
-            if (markers.length > 0) {
+            if (markers.length > 0 && !opts.keepCamera) {
                 const bounds = new maplibregl.LngLatBounds();
                 markers.forEach(marker => {
                     bounds.extend(marker.getLngLat());
@@ -4109,123 +4191,138 @@ class DynamicCalendarLoader extends CalendarCore {
 
 
 
-    // Update calendar display with filtered events
-    async updateCalendarDisplay(hideEvents = false) {
-        logger.time('CALENDAR', 'Calendar display update');
-        const filteredEvents = this.getFilteredEvents();
-        
-        logger.info('CALENDAR', `🔍 UPDATE_DISPLAY: Updating calendar display (${hideEvents ? 'HIDDEN for measurement' : 'VISIBLE for display'})`, {
-            view: this.currentView,
-            eventCount: filteredEvents.length,
-            city: this.currentCity,
-            hideEvents,
-            step: hideEvents ? 'Step 1: Creating structure' : 'Step 4: Showing real events',
-            cachedMeasurements: {
-                eventTextWidth: this.cachedEventTextWidth,
-                charsPerPixel: this.charsPerPixel?.toFixed(4),
-                currentBreakpoint: this.currentBreakpoint
-            }
-        });
-        
-        // Update calendar title
-        try {
-            const calendarTitle = document.getElementById('calendar-title');
-            if (calendarTitle) {
-                // Removing calendar title for now, keeping reference in case we want to add per-city titles again later
-                // calendarTitle.textContent = `What's the vibe?`;
-                logger.debug('CALENDAR', 'Calendar title updated successfully');
-            } else {
-                logger.warn('CALENDAR', 'Calendar title element not found');
-            }
-        } catch (error) {
-            logger.warn('CALENDAR', 'Failed to update calendar title', { error: error.message });
-        }
-        
-        // Update date range
+
+    // Header label for the visible period (title slot + date range)
+    updateHeaderPeriodLabel() {
         try {
             const dateRange = document.getElementById('date-range');
             if (dateRange) {
                 const { start, end } = this.getCurrentPeriodBounds();
                 dateRange.textContent = this.formatDateRange(start, end);
-                logger.debug('CALENDAR', 'Date range updated successfully', { start, end });
-            } else {
-                logger.warn('CALENDAR', 'Date range element not found');
             }
         } catch (error) {
             logger.warn('CALENDAR', 'Failed to update date range', { error: error.message });
         }
-        
-        // Update calendar grid
-        try {
-            const calendarGrid = document.querySelector('.calendar-grid');
-            if (calendarGrid) {
-                logger.debug('CALENDAR', 'Updating calendar grid HTML');
-                calendarGrid.innerHTML = this.generateCalendarEvents(filteredEvents, hideEvents);
-                
-                // For measurement mode, make the grid invisible to users but keep same layout constraints
-                if (hideEvents) {
-                    // Keep the element in its normal position but hide it behind background
-                    calendarGrid.style.position = 'relative';
-                    calendarGrid.style.zIndex = '-999'; // Behind everything else
-                    calendarGrid.style.opacity = '0'; // Invisible to users
-                    calendarGrid.style.pointerEvents = 'none'; // Can't interact with it
-                    calendarGrid.style.visibility = 'visible'; // Still measurable by JS
-                    logger.debug('CALENDAR', 'Calendar grid set to measurement mode (hidden)');
-                } else {
-                    // Reset to normal visibility
-                    calendarGrid.style.position = '';
-                    calendarGrid.style.zIndex = '';
-                    calendarGrid.style.opacity = '1';
-                    calendarGrid.style.pointerEvents = '';
-                    calendarGrid.style.visibility = 'visible';
-                    logger.debug('CALENDAR', 'Calendar grid set to display mode (visible)');
-                }
-                
-                logger.debug('CALENDAR', 'Attaching calendar interactions');
-                this.attachCalendarInteractions();
-                
-                // Update visual selection state after calendar is rendered
-                this.updateSelectionVisualState();
-            } else {
-                logger.warn('CALENDAR', 'Calendar grid element not found');
-            }
-        } catch (error) {
-            logger.warn('CALENDAR', 'Failed to update calendar grid', { error: error.message });
+    }
+
+    // Place the freshly rendered strip so the visible period is in view.
+    // Week: currentDate's column lands at the left edge. Month: the current
+    // month block tops the scroller — or, given an anchor (from a settle
+    // rebuild), the anchored month keeps its exact on-screen offset so the
+    // rebuild is invisible.
+    positionGridStrip(anchor = null) {
+        const grid = document.querySelector('.calendar-grid');
+        if (!grid) return;
+        this.suppressGridScrollUntil = performance.now() + 250;
+        if (this.currentView === 'week') {
+            if (!this.stripStartDate || grid.scrollWidth <= 0) return;
+            const { start } = this.getCurrentPeriodBounds();
+            const idx = Math.round((start - this.stripStartDate) / 86400000);
+            const dayW = grid.scrollWidth / this.stripDayCount;
+            grid.scrollLeft = Math.round(idx * dayW);
+            return;
         }
-        
-        // Update grid layout based on view (outside try-catch since calendarGrid might not be defined)
-        try {
-            const calendarGrid = document.querySelector('.calendar-grid');
-            if (calendarGrid) {
-                if (this.currentView === 'month') {
-                    calendarGrid.className = 'calendar-grid month-view-grid';
-                    calendarGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
-                    
-                    // Calculate the optimal number of rows based on the actual content
-                    const dayElements = calendarGrid.querySelectorAll('.calendar-day, .calendar-day-header');
-                    const headerRows = calendarGrid.querySelectorAll('.calendar-day-header').length > 0 ? 1 : 0;
-                    const dayRows = Math.ceil((dayElements.length - (headerRows * 7)) / 7);
-                    const totalRows = headerRows + dayRows;
-                    
-                    calendarGrid.style.gridTemplateRows = `repeat(${headerRows}, auto) repeat(${dayRows}, minmax(90px, auto))`;
-                    
-                    logger.debug('CALENDAR', `Updated month view grid layout`, {
-                        totalElements: dayElements.length,
-                        headerRows: headerRows,
-                        dayRows: dayRows,
-                        totalRows: totalRows
-                    });
-                } else {
-                    calendarGrid.className = 'calendar-grid week-view-grid';
-                    calendarGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
-                    calendarGrid.style.gridTemplateRows = 'auto';
-                    calendarGrid.style.minHeight = 'auto';
-                }
+        const gr = grid.getBoundingClientRect();
+        if (anchor && anchor.monthKey) {
+            const b = grid.querySelector(`.month-block[data-month="${anchor.monthKey}"]`);
+            if (b) {
+                grid.scrollTop += (b.getBoundingClientRect().top - gr.top) - anchor.offset;
+                return;
             }
-        } catch (layoutError) {
-            logger.warn('CALENDAR', 'Failed to update grid layout', { error: layoutError.message });
         }
-        
+        const cur = grid.querySelectorAll('.month-block')[1];
+        if (cur) grid.scrollTop += cur.getBoundingClientRect().top - gr.top;
+    }
+
+    // One-time (the .calendar-grid element survives every innerHTML swap):
+    // settle detection for the strip. Nothing runs per scroll frame — a
+    // 160ms debounce fires the settle, deferred past any active touch.
+    armGridScroll(grid) {
+        if (grid.dataset.stripArmed) return;
+        grid.dataset.stripArmed = '1';
+        const schedule = () => {
+            clearTimeout(this.gridScrollTimer);
+            this.gridScrollTimer = setTimeout(() => {
+                if (this.gridTouchActive) return; // settles on touchend instead
+                this.onGridSettle();
+            }, 160);
+        };
+        grid.addEventListener('scroll', () => {
+            if (performance.now() < this.suppressGridScrollUntil) return;
+            schedule();
+        }, { passive: true });
+        grid.addEventListener('touchstart', () => { this.gridTouchActive = true; }, { passive: true });
+        ['touchend', 'touchcancel'].forEach(ev => grid.addEventListener(ev, () => {
+            this.gridTouchActive = false;
+            schedule();
+        }, { passive: true }));
+    }
+
+    // The strip stopped moving: derive the visible period from the scroll
+    // position, then refresh label/URL/cards/map for it. Near a strip edge,
+    // rebuild the strip re-centered (updateCalendarDisplay) — with a month
+    // anchor so the rebuild doesn't visibly move anything.
+    async onGridSettle() {
+        const grid = document.querySelector('.calendar-grid');
+        if (!grid || !this.allEvents) return;
+        if (this.currentView === 'week') {
+            if (!this.stripStartDate || grid.scrollWidth <= 0) return;
+            const dayW = grid.scrollWidth / this.stripDayCount;
+            const idx = Math.max(0, Math.min(this.stripDayCount - 7, Math.round(grid.scrollLeft / dayW)));
+            const newStart = new Date(this.stripStartDate);
+            newStart.setDate(newStart.getDate() + idx);
+            newStart.setHours(0, 0, 0, 0);
+            const changed = newStart.getTime() !== this.getCurrentPeriodBounds().start.getTime();
+            const nearEdge = idx <= 2 || idx >= this.stripDayCount - 9;
+            if (!changed && !nearEdge) return;
+            this.currentDate = newStart;
+            if (nearEdge) {
+                await this.updateCalendarDisplay();
+                return;
+            }
+            this.updateHeaderPeriodLabel();
+            this.syncUrl(true);
+            await this.refreshEventsPanel(this.getFilteredEvents(), false, { keepCamera: true });
+            return;
+        }
+        // month: the "most" visible month owns the header/URL/panel
+        const gr = grid.getBoundingClientRect();
+        let best = null;
+        let bestOverlap = -1;
+        grid.querySelectorAll('.month-block').forEach(b => {
+            const r = b.getBoundingClientRect();
+            const overlap = Math.min(r.bottom, gr.bottom) - Math.max(r.top, gr.top);
+            if (overlap > bestOverlap) { bestOverlap = overlap; best = b; }
+        });
+        if (!best) return;
+        const [y, m] = best.getAttribute('data-month').split('-').map(Number);
+        const cur = this.currentDate;
+        const changed = !(cur.getFullYear() === y && cur.getMonth() === m - 1);
+        const blocks = Array.from(grid.querySelectorAll('.month-block'));
+        const nearEdge = best === blocks[0] || best === blocks[blocks.length - 1];
+        if (!changed && !nearEdge) return;
+        const day = Math.min(cur.getDate(), new Date(y, m, 0).getDate());
+        this.currentDate = new Date(y, m - 1, day);
+        if (nearEdge) {
+            this.pendingStripAnchor = {
+                monthKey: best.getAttribute('data-month'),
+                offset: best.getBoundingClientRect().top - gr.top
+            };
+            await this.updateCalendarDisplay();
+            return;
+        }
+        this.updateHeaderPeriodLabel();
+        this.syncUrl(true);
+        await this.refreshEventsPanel(this.getFilteredEvents(), false, { keepCamera: true });
+    }
+
+    // The events panel = cards list + map (+ the chunky:events-rendered
+    // dispatch). Split from updateCalendarDisplay so a strip scroll settle
+    // can refresh what the visible days show WITHOUT rebuilding the grid
+    // (which would destroy the user's scroll position). opts.keepCamera
+    // leaves the map camera alone on settle refreshes — markers change,
+    // the framing never jumps under a slide.
+    async refreshEventsPanel(filteredEvents, hideEvents = false, opts = {}) {
         // Update events list (show for both week and month views)
         const eventsList = document.querySelector('.events-list');
         const eventsSection = document.querySelector('.events');
@@ -4322,7 +4419,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     originalEventCount: filteredEvents.length
                 });
                 const mapDeduplicatedEvents = this.deduplicateByUIDAndRecurrenceId(filteredEvents);
-                this.initializeMap(this.currentCityConfig, mapDeduplicatedEvents);
+                this.initializeMap(this.currentCityConfig, mapDeduplicatedEvents, opts);
                 logger.debug('CALENDAR', 'Map initialization completed');
                 
                 // Update visual selection state again after map is initialized
@@ -4371,6 +4468,92 @@ class DynamicCalendarLoader extends CalendarCore {
         } catch (error) {
             logger.warn('CALENDAR', 'Failed to initialize map', { error: error.message });
         }
+    }
+
+    // Update calendar display with filtered events
+    async updateCalendarDisplay(hideEvents = false) {
+        logger.time('CALENDAR', 'Calendar display update');
+        const filteredEvents = this.getFilteredEvents();
+        
+        logger.info('CALENDAR', `🔍 UPDATE_DISPLAY: Updating calendar display (${hideEvents ? 'HIDDEN for measurement' : 'VISIBLE for display'})`, {
+            view: this.currentView,
+            eventCount: filteredEvents.length,
+            city: this.currentCity,
+            hideEvents,
+            step: hideEvents ? 'Step 1: Creating structure' : 'Step 4: Showing real events',
+            cachedMeasurements: {
+                eventTextWidth: this.cachedEventTextWidth,
+                charsPerPixel: this.charsPerPixel?.toFixed(4),
+                currentBreakpoint: this.currentBreakpoint
+            }
+        });
+        
+        this.updateHeaderPeriodLabel();
+        
+        // Update calendar grid
+        try {
+            const calendarGrid = document.querySelector('.calendar-grid');
+            if (calendarGrid) {
+                logger.debug('CALENDAR', 'Updating calendar grid HTML');
+                calendarGrid.innerHTML = this.generateCalendarEvents(filteredEvents, hideEvents);
+                
+                // For measurement mode, make the grid invisible to users but keep same layout constraints
+                if (hideEvents) {
+                    // Keep the element in its normal position but hide it behind background
+                    calendarGrid.style.position = 'relative';
+                    calendarGrid.style.zIndex = '-999'; // Behind everything else
+                    calendarGrid.style.opacity = '0'; // Invisible to users
+                    calendarGrid.style.pointerEvents = 'none'; // Can't interact with it
+                    calendarGrid.style.visibility = 'visible'; // Still measurable by JS
+                    logger.debug('CALENDAR', 'Calendar grid set to measurement mode (hidden)');
+                } else {
+                    // Reset to normal visibility
+                    calendarGrid.style.position = '';
+                    calendarGrid.style.zIndex = '';
+                    calendarGrid.style.opacity = '1';
+                    calendarGrid.style.pointerEvents = '';
+                    calendarGrid.style.visibility = 'visible';
+                    logger.debug('CALENDAR', 'Calendar grid set to display mode (visible)');
+                }
+                
+                logger.debug('CALENDAR', 'Attaching calendar interactions');
+                this.attachCalendarInteractions();
+                
+                // Update visual selection state after calendar is rendered
+                this.updateSelectionVisualState();
+            } else {
+                logger.warn('CALENDAR', 'Calendar grid element not found');
+            }
+        } catch (error) {
+            logger.warn('CALENDAR', 'Failed to update calendar grid', { error: error.message });
+        }
+        
+        // Grid layout: the strip classes make the grid its own scroller —
+        // week: horizontal day columns (1/7 of the viewport each); month:
+        // stacked month blocks, each with its own 7-column inner grid.
+        try {
+            const calendarGrid = document.querySelector('.calendar-grid');
+            if (calendarGrid) {
+                if (this.currentView === 'month') {
+                    calendarGrid.className = 'calendar-grid month-view-grid month-strip';
+                    calendarGrid.style.gridTemplateColumns = '';
+                    calendarGrid.style.gridTemplateRows = '';
+                    calendarGrid.style.minHeight = '';
+                } else {
+                    calendarGrid.className = 'calendar-grid week-view-grid week-strip';
+                    calendarGrid.style.gridTemplateColumns = 'none';
+                    calendarGrid.style.gridTemplateRows = 'auto';
+                    calendarGrid.style.minHeight = 'auto';
+                }
+                this.positionGridStrip(this.pendingStripAnchor);
+                this.pendingStripAnchor = null;
+                this.armGridScroll(calendarGrid);
+            }
+        } catch (layoutError) {
+            logger.warn('CALENDAR', 'Failed to update grid layout', { error: layoutError.message });
+        }
+        
+        await this.refreshEventsPanel(filteredEvents, hideEvents);
         
         logger.timeEnd('CALENDAR', 'Calendar display update');
         logger.performance('CALENDAR', `Calendar display updated successfully`, {
