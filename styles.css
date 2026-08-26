@@ -2096,7 +2096,9 @@ body.index-page main {
     background: var(--background-primary);
     border-radius: 15px;
     padding: 2rem;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* only the hover lift animates — `all` caught the selection filter/class
+       swaps mid-frame and flashed the card on every tap */
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     will-change: transform;
 }
@@ -4299,9 +4301,18 @@ footer {
 }
 
 
-/* Hide non-selected events when in selection mode */
-.events-list.selection-mode .event-card:not(.selected) {
-    display: none;
+/* Selection = spotlight, never hide: display:none here collapsed the page
+   height in one frame on every tap (scroll clamp + map resize = the press
+   "blink"). Dim via filter, not opacity, matching the calendar-grid
+   spotlight — translucent cards double-composite over the map/section
+   backgrounds. The mobile rail (.rail-active) is excluded: there the
+   centered position IS the selection signal, and the live scrub flips the
+   selection every few hundred ms — a filter swap would strobe. */
+.events-list.selection-mode:not(.rail-active) .event-card:not(.selected) {
+    filter: saturate(0.35) brightness(0.5);
+}
+.events-list.selection-mode:not(.rail-active) .event-card.selected {
+    filter: none;
 }
 
 /* Removed highlightPulse animation - using persistent selection only */
@@ -6095,9 +6106,11 @@ body.loaded {
     will-change: transform;
 }
 
-/* Smooth event card interactions */
+/* Smooth event card interactions — hover lift only: this later duplicate
+   used to say `all`, silently re-widening the scoped transition at the
+   card's base rule and catching the selection filter swap mid-tap */
 .event-card.detailed {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     will-change: transform;
 }
 
@@ -6862,6 +6875,11 @@ html.dusk body {
 .dusk .view-btn, .dusk .nav-btn, .dusk .today-btn {
     transition: color 0.12s ease, background-color 0.12s ease, border-color 0.12s ease;
 }
+/* iOS paints its default grey rectangle over any click-bound element on
+   press — the cards are click-bound <div>s, so every tap flashed grey */
+.dusk .event-card, .dusk .event-item, .dusk .rail-thumb {
+    -webkit-tap-highlight-color: transparent;
+}
 @media (prefers-reduced-motion: reduce) {
     .dusk *, .dusk *::before, .dusk *::after {
         animation: none !important;
@@ -7071,8 +7089,10 @@ html.dusk body {
         flex-direction: column;
         gap: 1rem;
     }
-    /* a selected card takes the full width again */
-    .dusk .events-list.selection-mode .ml-col { display: contents; }}
+    /* (the display:contents collapse that lived here served the old
+       hide-on-select behavior — with the selection spotlight the columns
+       simply stay put) */
+}
 
 /* month spreads to three columns only when three columns actually fit */
 @media (min-width: 1200px) {
@@ -7129,4 +7149,435 @@ html.dusk body {
     background: transparent;
     border: none;
     pointer-events: none;
+}
+
+/* =====================================================================
+   COZY / DENSE — the mobile view system (js/dusk-rail.js).
+   Mobile has ONE mode (dense): week grid / 246px card rail with corner
+   flyer thumbs + bottom sheet / map. No rail geometry ever animates.
+   html.mode-dense is set unconditionally by dusk-rail (dusk pages);
+   .rail-active lives on .events-list. A COZY alternate mode existed,
+   was field-tested, and was removed 2026-08-25 along with its toggle.
+   ===================================================================== */
+
+/* the corner flyer thumb: loader-emitted on every flyer card, inert and
+   invisible outside the mobile rail (dusk-rail assigns its art on mobile
+   only, so the hidden desktop button never fetches an image) */
+.event-card .rail-thumb { display: none; }
+
+/* ---------- the rail (both modes share the horizontal geometry) ---------- */
+@media (max-width: 768.9px) {
+    .dusk .events:has(.events-list.rail-active) .container {
+        padding-left: 0;
+        padding-right: 0;
+    }
+    .dusk .events-list.rail-active {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        gap: 0.6rem;
+        align-items: center;
+        overflow-x: auto;
+        overflow-y: hidden;
+        overscroll-behavior-x: contain;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        /* programmatic scrolls pass behavior explicitly; a smooth container
+           fights iOS momentum + snap */
+        scroll-behavior: auto;
+        /* symmetric phantom gutters = (100vw − cardWidth)/2 so the FIRST and
+           LAST cards snap to center with empty space beside them */
+        padding: 6px 2.8rem;
+        scrollbar-width: none;
+    }
+    .dusk .events-list.rail-active::-webkit-scrollbar { display: none; }
+    .dusk .events-list.rail-active > .event-card {
+        /* width pinned to the viewport so the wide end-gutters don't
+           shrink it (same 300px at 390px wide as the vertical list) */
+        flex: 0 0 calc(100vw - 5.6rem);
+        max-width: none;
+        width: auto;
+        margin: 0;
+        height: auto;
+        align-self: center;
+        position: relative;
+        scroll-snap-align: center;
+        scroll-snap-stop: normal;
+    }
+    /* the panel fills the card box and the links row pins to its BOTTOM —
+       the card's dark aurora ground can never paint below the glass panel
+       (the cozy "darker extra space" bug was exactly this rule missing) */
+    .dusk .events-list.rail-active > .event-card .ec-panel {
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+    .dusk .events-list.rail-active > .event-card .ec-panel > .event-links {
+        margin-top: auto;
+    }
+    /* titles stay 2-line clamped at every expansion (interpolating a title
+       reads badly); rail cards never render shorter than the dense box */
+    .dusk .events-list.rail-active > .event-card .ec-title {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    /* the rail's loading / "No events found" message: a full-width centered
+       band member, not a squeezed flex item off to the left */
+    .dusk .events-list.rail-active .loading-message {
+        flex: 0 0 calc(100% - 3.2rem);
+        margin: 0 auto;
+        align-self: center;
+        background: transparent;
+        font-size: 15px;
+        padding: 24px 12px;
+    }
+    .dusk .events-list.rail-active:has(> .event-card:only-of-type) { justify-content: center; }
+    /* corner thumb, shared: always-on in dense, writer-faded in cozy */
+    .dusk .events-list.rail-active > .event-card .rail-thumb {
+        display: block;
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        width: 56px;
+        height: 56px;
+        padding: 0;
+        border: 0;
+        border-radius: 12px;
+        overflow: hidden;
+        z-index: 3;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+        cursor: pointer;
+        /* a quiet ground so a thumb whose art is still downloading reads as
+           a plate, not an invisible button that pops in */
+        background-color: rgba(10, 12, 24, 0.35);
+        background-size: cover;
+        background-position: center;
+        transition: none;
+    }
+    .dusk .events-list.rail-active > .event-card:has(.rail-thumb) .ec-titlerow {
+        padding-right: 64px;
+    }
+    /* no map motion (owner rule): the map never animates layout; the only
+       sanctioned movement is the cozy band's settle transform below */
+    .dusk .events-map-section,
+    .dusk .map-container {
+        transition: none;
+        animation: none;
+    }
+    /* no hover lift on touch: iOS makes :hover sticky on tap, so the tapped
+       card jumped up 5px and sat there — the "weird lift" on center cards */
+    .dusk .event-card.detailed:hover {
+        transform: none;
+    }
+    /* the base slideInSmooth section reveal (staggered 0.4-1.0s delays,
+       fill:both) holds each section INVISIBLE through its delay and then
+       slowly fades it in on every load — the dense "middle cards magically
+       slowly fade in" report. Its companion transition:all 0.6s also
+       animates any mode-class layout change. The mobile trifold is a
+       static frame: none of it runs here (desktop keeps its load reveal). */
+    .dusk .weekly-calendar,
+    .dusk .events,
+    .dusk .events-map-section {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+/* ---------- DENSE: the mobile trifold ----------
+   Fills exactly one screen when the week fits (the map takes the rest via
+   dusk-rail's sizeDenseMap). A BIG week (festival runs) grows the page
+   DOWNWARD and the map keeps a 200px floor — layers never overlap and the
+   page simply scrolls. */
+@media (max-width: 768.9px) {
+    html.mode-dense body {
+        overflow-x: hidden;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        min-height: 100dvh;
+    }
+    html.mode-dense body > header { flex: 0 0 auto; }
+    html.mode-dense main.city-page {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: visible;
+    }
+    html.mode-dense .weekly-calendar { flex: 0 0 auto; }
+    html.mode-dense body > footer,
+    html.mode-dense .site-footer { display: none; }
+    /* the card band never shrinks below its content — a tall grid pushes
+       everything down instead of squeezing the cards under the map */
+    html.mode-dense .events {
+        flex: 0 0 auto;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+    }
+    html.mode-dense .events .container {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    /* every dense card is the SAME 246px box (titlerow + rows + 2-line tea +
+       links measured at 390px); sparse cards simply end early inside it.
+       Dense is a STATIC mode: nothing on a card ever animates or fades —
+       owner report: "middle cards magically slowly fade in. It's weird" */
+    html.mode-dense .events-list.rail-active > .event-card {
+        height: 246px;
+        overflow: hidden;
+        animation: none !important;
+        transition: none !important;
+    }
+    /* the corner thumb is the ONLY image surface in dense */
+    html.mode-dense .events-list .event-card .event-flyer { display: none; }
+    html.mode-dense .events-list .event-card .event-flyer + .ec-panel {
+        margin-top: 0;
+        border-top: none;
+    }
+    html.mode-dense .event-card .ec-tea {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    /* the map's height is written inline by dusk-rail's sizeDenseMap
+       (fill-to-viewport, 200px floor); this is just the pre-JS fallback */
+    html.mode-dense .events-map-section {
+        flex: 0 0 auto;
+        min-height: 200px;
+        padding: 0;
+        margin: 0;
+    }
+    html.mode-dense .events-map-section::before,
+    html.mode-dense .events-map-section h2,
+    html.mode-dense .events-map-section p { display: none; }
+    html.mode-dense .events-map-section .container {
+        height: 100%;
+        padding: 0 0.6rem 0.6rem;
+    }
+    html.mode-dense .map-container,
+    html.mode-dense #events-map {
+        height: 100% !important;
+        min-height: 0;
+        border-radius: 16px;
+    }
+    /* attribution collapses to the (i) so the small map isn't a banner */
+    html.mode-dense .maplibregl-ctrl-attrib:not(.maplibregl-compact) { display: none; }
+    html.mode-dense .maplibregl-ctrl-attrib {
+        font-size: 9px;
+        line-height: 1.2;
+        max-width: 62%;
+        padding: 1px 4px;
+    }
+}
+
+/* ---------- mobile month view: the month grid IS the screen ---------- */
+@media (max-width: 768.9px) {
+    /* !important is required: the loader writes display:block INLINE on both
+       sections every render (dynamic-calendar-loader.js updateCalendarDisplay) */
+    html.month-full .events,
+    html.month-full .events-map-section { display: none !important; }
+    html.month-full body,
+    html.month-full main.city-page { overflow: auto; }
+    html.month-full main.city-page { display: block; }
+}
+
+/* ---------- flyer lightbox (corner-thumb tap) ---------- */
+/* above the fixed header (z 9998); the sheet sits just under the lightbox */
+.rail-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 10020;
+    display: none;
+    background: rgba(5, 6, 10, 0.88);
+    align-items: center;
+    justify-content: center;
+    padding: calc(14px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right))
+             calc(14px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left));
+    overflow: hidden;
+}
+.rail-lightbox.open { display: flex; }
+.rail-lightbox img {
+    max-width: 100%;
+    max-height: calc(100dvh - 28px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 14px;
+    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.6);
+}
+
+/* ---------- dense description sheet + '…more' chip ---------- */
+.ec-more {
+    /* hidden everywhere by default — chips inserted under mobile dense can
+       survive a breakpoint crossing (iPad rotation) and must not strand as
+       dead controls in desktop or cozy cards */
+    display: none;
+    background: none;
+    border: 0;
+    padding: 0 2px;
+    margin: 2px 0 0;
+    align-self: flex-start;
+    font-size: 0.8rem;
+    opacity: 0.78;
+    color: inherit;
+    cursor: pointer;
+    text-decoration: underline dotted;
+    text-underline-offset: 2px;
+}
+@media (max-width: 768.9px) {
+    html.mode-dense .event-card .ec-more { display: inline-block; }
+}
+.rail-sheet {
+    position: fixed;
+    inset: 0;
+    z-index: 10010;
+    display: none;
+    background: rgba(5, 6, 10, 0.55);
+}
+.rail-sheet.open { display: block; }
+.rail-sheet .sheet-panel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-height: 78dvh;
+    overflow-y: auto;
+    border-radius: 18px 18px 0 0;
+    padding: 18px 18px calc(20px + env(safe-area-inset-bottom));
+    /* the card's aurora custom props ride in on the panel's style attribute;
+       the fallback chain must mirror the aurora card's own (--primary-color,
+       then the site indigo) — an event with no color data otherwise landed
+       on the LIGHT --background-primary and the sheet washed out */
+    background: var(--c1, var(--primary-color, #667eea));
+    box-shadow: 0 -14px 40px rgba(0, 0, 0, 0.5);
+    transform: translateY(100%);
+    transition: transform 300ms cubic-bezier(0.2, 0.7, 0.3, 1);
+    color: #fff;
+}
+.rail-sheet.up .sheet-panel { transform: none; }
+.rail-sheet .sheet-title { margin: 0 0 8px; font-size: 1.15rem; }
+.rail-sheet .sheet-desc { margin: 12px 0 0; line-height: 1.55; }
+/* the flyer rides the sheet exactly as it rides the card: centered, own
+   radius + shadow; tap opens the lightbox */
+.rail-sheet .sheet-flyer {
+    display: flex;
+    justify-content: center;
+    margin: 0 0 12px;
+}
+.rail-sheet .sheet-flyer img {
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 38dvh;
+    border-radius: 10px;
+    box-shadow: 0 6px 20px rgba(6, 8, 20, 0.45);
+    cursor: pointer;
+}
+/* the cloned links row loses the aurora card scope — mirror the card's own
+   round glass buttons (share button is stripped from the clone) */
+.rail-sheet .sheet-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.42rem;
+    margin: 2px 0 0;
+}
+.rail-sheet .sheet-links .event-link {
+    width: 32px;
+    height: 32px;
+    margin: 0;
+    padding: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.rail-sheet .sheet-links .event-link i { font-size: 0.95rem; }
+/* the sheet's map: a read-only twin of the main page's map, at the sheet's
+   bottom — pannable/zoomable, markers not clickable (pointer-events off on
+   the marker layer only; map gestures pass through the canvas) */
+.rail-sheet .sheet-map {
+    height: 220px;
+    margin: 14px 0 0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 6px 20px rgba(6, 8, 20, 0.35);
+}
+.rail-sheet .sheet-map canvas { border-radius: 12px; }
+.rail-sheet .sheet-map .maplibregl-marker { pointer-events: none; }
+/* the cloned when/venue/cover rows lose the card scope that sizes their
+   icons/badges — pin the sheet rows to the card's own metrics */
+.rail-sheet .sheet-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin: 0;
+}
+.rail-sheet .sheet-rows .ec-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+.rail-sheet .sheet-rows .ec-ico {
+    display: block;
+    width: 15px;
+    height: 15px;
+    flex: 0 0 15px;
+    opacity: 0.85;
+}
+.rail-sheet .sheet-rows .event-day {
+    background: none;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    border-radius: 0;
+    font-size: inherit;
+    font-weight: inherit;
+    color: inherit;
+    display: inline;
+    box-shadow: none;
+    min-height: 0;
+    min-width: 0;
+}
+.rail-sheet .sheet-rows .ec-badges {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-left: 0.15rem;
+}
+.rail-sheet .sheet-rows .recurring-badge,
+.rail-sheet .sheet-rows .date-badge,
+.rail-sheet .sheet-rows .distance-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    color: #fff;
+    font-size: 0.66rem;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+}
+.rail-sheet .sheet-rows .ec-badge-ico {
+    display: block;
+    width: 10px;
+    height: 10px;
+    flex: 0 0 10px;
 }

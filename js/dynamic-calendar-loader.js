@@ -564,8 +564,11 @@ class DynamicCalendarLoader extends CalendarCore {
         }
     }
     
-    // Toggle/select event for URL/state
-    toggleEventSelection(eventSlug, eventDateISO) {
+    // Toggle/select event for URL/state.
+    // options.deferUrl: skip the URL write — the caller owns it (the mobile
+    // rail selects live while the finger is still down and must not spam
+    // history.replaceState per frame; it flushes one syncUrl on settle).
+    toggleEventSelection(eventSlug, eventDateISO, options = {}) {
         if (!eventSlug) return;
         const normalizedDateISO = eventDateISO && /^\d{4}-\d{2}-\d{2}$/.test(eventDateISO) ? eventDateISO : this.formatDateToISO(this.currentDate);
         
@@ -602,9 +605,11 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // Update visual selection state once (handles both selection and deselection)
         this.updateSelectionVisualState();
-        
+
         // Reflect selection in URL
-        this.syncUrl(true);
+        if (!options.deferUrl) {
+            this.syncUrl(true);
+        }
     }
 
     // Update visual selection state across all views (calendar, list, map)
@@ -688,6 +693,12 @@ class DynamicCalendarLoader extends CalendarCore {
             
             logger.debug('EVENT', 'Cleared all selections and ensured calendar events are unselected');
         }
+
+        // Selection changed and every view is painted — modules that layer on
+        // top (the mobile rail) listen for this instead of observing the DOM
+        document.dispatchEvent(new CustomEvent('chunky:selection-changed', {
+            detail: { slug: this.selectedEventSlug, dateISO: this.selectedEventDateISO }
+        }));
     }
 
     // Lazily create the flyer <img> the first time a card is selected.
@@ -1495,6 +1506,23 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // Clear current selection when jumping views
         this.clearEventSelection();
+        await this.updateCalendarDisplay();
+        this.syncUrl(true);
+    }
+
+    // Jump to week view centered on a date WITH an event selected — the
+    // mobile month-full view navigates month pill → that event's week.
+    // Not switchToWeekView: that path deliberately clears the selection.
+    async openWeekAt(eventSlug, dateISO) {
+        if (!eventSlug || !/^\d{4}-\d{2}-\d{2}$/.test(dateISO || '')) return;
+        const parts = dateISO.split('-');
+        const parsed = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        if (isNaN(parsed.getTime())) return;
+        this.currentDate = parsed;
+        this.currentView = 'week';
+        this.selectedEventSlug = eventSlug;
+        this.selectedEventDateISO = dateISO;
+        this.updateViewToggleActive();
         await this.updateCalendarDisplay();
         this.syncUrl(true);
     }
@@ -2840,6 +2868,7 @@ class DynamicCalendarLoader extends CalendarCore {
             <div class="event-card detailed aurora" data-event-slug="${slug}" data-lat="${this.escapeCardText(event.coordinates?.lat || '')}" data-lng="${this.escapeCardText(event.coordinates?.lng || '')}"${auroraStyle}>
                 ${flyerHtml}
                 <div class="ec-panel">
+                    ${flyerUrl ? '<button class="rail-thumb" type="button" aria-label="Show flyer"></button>' : ''}
                     <div class="ec-titlerow">
                         ${faviconHtml}
                         <h3 class="ec-title">${this.escapeCardText(event.name)}</h3>
@@ -3500,7 +3529,9 @@ class DynamicCalendarLoader extends CalendarCore {
                 return dateA.getTime() - dateB.getTime();
             });
 
-            const eventsHtml = filteredDayEvents.length > 0 
+            // Week view never hides events — the mobile week frame grows
+            // downward when a big week (festival runs) needs the room
+            const eventsHtml = filteredDayEvents.length > 0
                 ? filteredDayEvents.map(event => {
                     const isMultiDay = this.isMultiDay(event);
                     const mobileTime = isMultiDay && window.formatEventDates ? window.formatEventDates(event) : (event.time ? this.formatTimeForMobile(event.time) : null);
@@ -3535,7 +3566,7 @@ class DynamicCalendarLoader extends CalendarCore {
                             seenMultiDayEvents.add(occurrenceId);
                         }
                     }
-                    
+
                     return `
                         <div class="event-item${flowClass}" data-event-slug="${event.slug}" title="${event.name} at ${event.bar || 'Location'}${event.time ? ' - ' + event.time : ''}">
                             ${showTitle ? this.generateEventNameElements(event, hideEvents) : `<div style="visibility: hidden;">${this.generateEventNameElements(event, hideEvents)}</div>`}
@@ -3703,9 +3734,10 @@ class DynamicCalendarLoader extends CalendarCore {
             // hidden single renders itself instead of a pointless "+1" chip.
             const multiDaySegments = filteredDayEvents.filter(event => this.isMultiDay(event));
             const singleDayEvents = filteredDayEvents.filter(event => !this.isMultiDay(event));
-            const singleCap = singleDayEvents.length === 3 ? 3 : 2;
-            const eventsToShow = multiDaySegments.concat(singleDayEvents.slice(0, singleCap));
-            const additionalEventsCount = Math.max(0, singleDayEvents.length - singleCap);
+            // Month shows EVERY event — the +N collapse hid real events, and
+            // the mobile month view is now a primary browsing surface
+            const eventsToShow = multiDaySegments.concat(singleDayEvents);
+            const additionalEventsCount = 0;
             
             const eventsHtml = eventsToShow.length > 0 
                 ? eventsToShow.map(event => {
@@ -3834,9 +3866,13 @@ class DynamicCalendarLoader extends CalendarCore {
         }
 
         try {
+            // The bottom sheet's read-only map twin (createSheetMap) renders
+            // exactly this marker set
+            this.lastMapEvents = events;
+
             // Filter events with valid coordinates
-            const eventsWithCoords = events.filter(event => 
-                event.coordinates?.lat && event.coordinates?.lng && 
+            const eventsWithCoords = events.filter(event =>
+                event.coordinates?.lat && event.coordinates?.lng &&
                 !isNaN(event.coordinates.lat) && !isNaN(event.coordinates.lng)
             );
 
@@ -4008,6 +4044,66 @@ class DynamicCalendarLoader extends CalendarCore {
             // Favicons now load directly in marker creation
         } catch (error) {
             logger.componentError('MAP', 'Failed to initialize map', error);
+        }
+    }
+
+    // A read-only twin of the main events map for the bottom sheet: same
+    // style, same purple-water recolor (applyTheme), the same favicon marker
+    // elements from createMarkerIcon over the SAME event set the main map
+    // shows (lastMapEvents), and the city's own framing (city zoom, fitBounds
+    // zooms out only — exactly the main map's fit). The given slug's marker
+    // carries the main map's selected state, the rest its dimmed state; NO
+    // marker is clickable — the sheet map is a viewer, not a selector.
+    // Returns the map instance so the caller can .remove() it on close.
+    createSheetMap(container, selectedSlug) {
+        if (typeof maplibregl === 'undefined' || !container || !this.currentCityConfig?.coordinates) {
+            return null;
+        }
+        try {
+            const cityConfig = this.currentCityConfig;
+            const events = this.lastMapEvents || [];
+            const mapZoom = cityConfig.mapZoom || 10;
+            const map = new maplibregl.Map({
+                container,
+                style: 'https://tiles.openfreemap.org/styles/liberty',
+                center: [cityConfig.coordinates.lng, cityConfig.coordinates.lat],
+                zoom: mapZoom,
+                renderWorldCopies: false
+            });
+            map.on('style.load', () => {
+                this.applyTheme(map);
+            });
+            map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left');
+            const bounds = new maplibregl.LngLatBounds();
+            let markerCount = 0;
+            events.forEach(event => {
+                if (!(event.coordinates?.lat && event.coordinates?.lng) ||
+                    isNaN(event.coordinates.lat) || isNaN(event.coordinates.lng)) {
+                    return;
+                }
+                const markerIcon = this.createMarkerIcon(event);
+                // mirror highlightMapMarker's classes: the sheet's event is
+                // selected, everything else dimmed (and an unmapped sheet
+                // event leaves all markers dimmed, same as the main map)
+                if (event.slug === selectedSlug) {
+                    markerIcon.classList.add('marker-selected');
+                } else {
+                    markerIcon.classList.add('marker-dimmed');
+                }
+                new maplibregl.Marker({ element: markerIcon, anchor: 'bottom' })
+                    .setLngLat([event.coordinates.lng, event.coordinates.lat])
+                    .addTo(map);
+                bounds.extend([event.coordinates.lng, event.coordinates.lat]);
+                markerCount++;
+            });
+            if (markerCount > 0) {
+                map.fitBounds(bounds, { padding: 20, maxZoom: mapZoom });
+            }
+            logger.debug('MAP', 'Sheet map created', { markerCount, selectedSlug });
+            return map;
+        } catch (error) {
+            logger.warn('MAP', 'Sheet map creation failed', { error: error?.message });
+            return null;
         }
     }
 
@@ -4205,8 +4301,15 @@ class DynamicCalendarLoader extends CalendarCore {
                     city: this.currentCity
                 });
             }
+
+            // The grid and list DOM are both fresh at this point (the map
+            // init below awaits network/location and can land seconds later)
+            // — layered modules rebuild on this event, not on MutationObserver
+            document.dispatchEvent(new CustomEvent('chunky:events-rendered', {
+                detail: { view: this.currentView }
+            }));
         }
-        
+
         // Update map (show for both week and month views)
         // Initialize map if not in hideEvents mode
         try {
