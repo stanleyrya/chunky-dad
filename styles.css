@@ -7622,20 +7622,34 @@ html.dusk body {
     max-height: calc(100dvh - var(--hdr-h, 104px) - 16px);
 }
 .calendar-grid.month-strip::-webkit-scrollbar { display: none; }
-.month-block-grid {
+/* the Sun-Sat header row sticks to the scroller top while weeks flow under */
+.month-strip-days {
+    position: sticky;
+    top: 0;
+    z-index: 3;
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
-    /* first row = the Sun-Sat header cells: auto, NOT the day-row floor
-       (the old inline layout gave headers their own auto row) */
-    grid-template-rows: auto;
+    background: #0b0d13;
+}
+.month-strip-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
     grid-auto-rows: minmax(90px, auto);
 }
-.month-block-label {
-    font-size: 0.78rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    opacity: 0.7;
-    padding: 0.7rem 0.3rem 0.35rem;
+/* month boundary, mid-row like a real continuous calendar: the 1st carries
+   its month name in the day number plus an accent top edge */
+.month-strip-grid .calendar-day.month-first {
+    border-top: 2px solid rgba(255, 255, 255, 0.22);
 }
-.dusk .month-block-label { color: rgba(255, 255, 255, 0.65); }
+.month-strip-grid .calendar-day.month-first .day-number {
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+/* hide-others (solo) mode on the maps: while ON with a selection, every
+   other event's marker is hidden — main map and sheet map alike */
+.maplibregl-marker.marker-solo-hidden { display: none !important; }
+.map-control-btn.map-solo-on {
+    color: #667eea;
+    background: rgba(102, 126, 234, 0.22);
+}

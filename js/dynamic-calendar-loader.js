@@ -774,6 +774,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 }
             });
             logger.userInteraction('MAP', 'All markers dimmed (selection active but no marker selected)', { eventSlug });
+            applyMapSoloVisibility();
             return;
         }
         
@@ -797,6 +798,7 @@ class DynamicCalendarLoader extends CalendarCore {
         
         logger.debug('MAP', 'Selected marker highlighted, unselected markers dimmed', { eventSlug });
         logger.userInteraction('MAP', 'Marker highlighted and unselected markers dimmed', { eventSlug });
+        applyMapSoloVisibility();
     }
 
     // Helper method to reset all map markers to normal appearance
@@ -812,6 +814,7 @@ class DynamicCalendarLoader extends CalendarCore {
             logger.debug('MAP', 'All markers reset to normal appearance', { markerCount });
             logger.userInteraction('MAP', 'All map markers reset to normal appearance', { markerCount });
         }
+        applyMapSoloVisibility();
     }
 
 
@@ -3509,31 +3512,25 @@ class DynamicCalendarLoader extends CalendarCore {
 
         const months = [-1, 0, 1].map(d => new Date(start.getFullYear(), start.getMonth() + d, 1));
         this.stripMonths = months;
-        // widen by a week on both sides: each block's grid shows leading and
-        // trailing cells from its neighbour months
+        // CONTINUOUS weeks, "like a calendar": Sunday on/before the previous
+        // month's 1st through Saturday on/after the next month's last day —
+        // every day renders exactly once, no padded boundary cells, and the
+        // 1st of each month carries its month name (+ an accent edge). The
+        // Sun-Sat header row is separate so it can stick to the scroller top.
         const stripStart = new Date(months[0]);
-        stripStart.setDate(stripStart.getDate() - 7);
-        const stripEnd = new Date(months[2].getFullYear(), months[2].getMonth() + 1, 7, 23, 59, 59, 999);
+        stripStart.setDate(stripStart.getDate() - stripStart.getDay());
+        stripStart.setHours(0, 0, 0, 0);
+        const lastDay = new Date(months[2].getFullYear(), months[2].getMonth() + 1, 0);
+        const stripEnd = new Date(lastDay);
+        stripEnd.setDate(lastDay.getDate() + (6 - lastDay.getDay()));
+        stripEnd.setHours(23, 59, 59, 999);
         const stripEvents = this.getFilteredEvents({ start: stripStart, end: stripEnd });
         this.lastStripEvents = stripEvents;
-        return months.map(m => this.generateMonthBlock(m, stripEvents, today, hideEvents)).join('');
-    }
-
-    // One month of the vertical strip: a quiet label row + the month's own
-    // 7-column grid. The inner grid carries .month-view-grid so every
-    // existing cell/pill selector keeps matching.
-    generateMonthBlock(monthDate, events, today, hideEvents) {
-        const start = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
-        end.setHours(23, 59, 59, 999);
-        const key = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`;
-        const label = start.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        const dayHeadersHtml = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => `
+            <div class="calendar-day-header"><h4>${d}</h4></div>`).join('');
         return `
-            <div class="month-block" data-month="${key}">
-                <div class="month-block-label">${label}</div>
-                <div class="month-block-grid month-view-grid">${this.generateMonthView(events, start, end, today, hideEvents)}</div>
-            </div>
+            <div class="month-strip-days">${dayHeadersHtml}</div>
+            <div class="month-strip-grid month-view-grid">${this.generateMonthView(stripEvents, stripStart, stripEnd, today, hideEvents)}</div>
         `;
     }
 
@@ -3703,15 +3700,8 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     generateMonthView(events, start, end, today, hideEvents = false) {
-        // Add day headers first
-        const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        const headerHtml = dayHeaders.map(day => `
-            <div class="calendar-day-header">
-                <h4>${day}</h4>
-            </div>
-        `).join('');
-        
-        // For month view, create a grid including days from previous/next month to fill the calendar
+        // Renders the day CELLS for a Sunday-aligned continuous range
+        // (the sticky Sun-Sat header row is emitted by the caller)
         const firstDay = new Date(start);
         const lastDay = new Date(end);
         
@@ -3827,21 +3817,18 @@ class DynamicCalendarLoader extends CalendarCore {
             });
 
             const isToday = day.getTime() === today.getTime();
-            const isCurrentMonth = day.getMonth() === start.getMonth();
             const currentClass = isToday ? ' current' : '';
-            const otherMonthClass = isCurrentMonth ? '' : ' other-month';
-            const hasEventsClass = (isCurrentMonth && filteredDayEvents.length > 0) ? ' has-events' : '';
+            const isMonthFirst = day.getDate() === 1;
+            const monthFirstClass = isMonthFirst ? ' month-first' : '';
+            const hasEventsClass = filteredDayEvents.length > 0 ? ' has-events' : '';
 
             // Multi-day SEGMENTS always render — dropping one silently broke
             // the bar mid-run whenever a cell was crowded (owner-reported:
-            // BEEFMINCE Sitges week). Month shows EVERY event (no +N collapse).
-            // STRIP RULE: pills render only in the day's OWN month block —
-            // adjacent blocks both render the shared boundary week, and
-            // duplicated pills doubled the multi-day span math and showed
-            // boundary events twice between months.
+            // BEEFMINCE Sitges week). Month shows EVERY event (no +N collapse);
+            // the continuous strip renders every day exactly once.
             const multiDaySegments = filteredDayEvents.filter(event => this.isMultiDay(event));
             const singleDayEvents = filteredDayEvents.filter(event => !this.isMultiDay(event));
-            const eventsToShow = isCurrentMonth ? multiDaySegments.concat(singleDayEvents) : [];
+            const eventsToShow = multiDaySegments.concat(singleDayEvents);
             const additionalEventsCount = 0;
             
             const eventsHtml = eventsToShow.length > 0 
@@ -3891,9 +3878,9 @@ class DynamicCalendarLoader extends CalendarCore {
                 : '';
 
             return `
-                <div class="calendar-day month-day${currentClass}${otherMonthClass}${hasEventsClass}" data-date="${this.getLocalDateKey(day)}">
+                <div class="calendar-day month-day${currentClass}${monthFirstClass}${hasEventsClass}" data-date="${this.getLocalDateKey(day)}">
                     <div class="day-header">
-                        <span class="day-number">${day.getDate()}</span>
+                        <span class="day-number">${isMonthFirst ? day.toLocaleDateString('en-US', { month: 'short' }) + ' 1' : day.getDate()}</span>
                         ${isToday ? `<span class="day-indicator">Today</span>` : ''}
                     </div>
                     <div class="day-events">
@@ -3903,7 +3890,7 @@ class DynamicCalendarLoader extends CalendarCore {
             `;
         }).join('');
 
-        return headerHtml + daysHtml;
+        return daysHtml;
     }
 
     applyTheme(map) {
@@ -4066,6 +4053,27 @@ class DynamicCalendarLoader extends CalendarCore {
                     }
                 }
                 map.addControl(new MyLocationControl(), 'top-left');
+
+                // Hide-others toggle: with an event selected, hides every
+                // other marker; with nothing selected it changes nothing
+                class HideOthersControl {
+                    onAdd(map) {
+                        this._map = map;
+                        this._container = document.createElement('div');
+                        this._container.className = 'maplibregl-ctrl maplibregl-ctrl-group';
+                        this._container.innerHTML = `
+                            <button class="map-control-btn" id="solo-btn" onclick="toggleMapSolo()" title="Hide other events">
+                                <i class="bi bi-eye-slash" id="solo-icon"></i>
+                            </button>
+                        `;
+                        return this._container;
+                    }
+                    onRemove() {
+                        this._container.parentNode.removeChild(this._container);
+                        this._map = undefined;
+                    }
+                }
+                map.addControl(new HideOthersControl(), 'top-left');
                 // Add navigation controls (zoom in/out)
                 map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left');
 
@@ -4154,6 +4162,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     window.eventsMapMarkersBySlug[eventSlug] = marker;
                 }
             });
+            applyMapSoloVisibility();
             
             logger.debug('MAP', 'Map markers created and stored by slug', {
                 totalMarkers: markers.length,
@@ -4195,6 +4204,35 @@ class DynamicCalendarLoader extends CalendarCore {
                 this.applyTheme(map);
             });
             map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left');
+            // the sheet's own hide-others toggle — the sheet always has a
+            // selected event, so ON leaves just its marker
+            const sheetMarkers = [];
+            let sheetSolo = false;
+            class SheetSoloControl {
+                onAdd() {
+                    this._container = document.createElement('div');
+                    this._container.className = 'maplibregl-ctrl maplibregl-ctrl-group';
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'map-control-btn';
+                    btn.title = 'Hide other events';
+                    btn.innerHTML = '<i class="bi bi-eye-slash"></i>';
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        sheetSolo = !sheetSolo;
+                        btn.classList.toggle('map-solo-on', sheetSolo);
+                        btn.querySelector('i').className = 'bi ' + (sheetSolo ? 'bi-eye' : 'bi-eye-slash');
+                        sheetMarkers.forEach(mk =>
+                            mk.el.classList.toggle('marker-solo-hidden', sheetSolo && !mk.selected));
+                    });
+                    this._container.appendChild(btn);
+                    return this._container;
+                }
+                onRemove() {
+                    if (this._container.parentNode) this._container.parentNode.removeChild(this._container);
+                }
+            }
+            map.addControl(new SheetSoloControl(), 'top-left');
             const bounds = new maplibregl.LngLatBounds();
             let markerCount = 0;
             events.forEach(event => {
@@ -4206,11 +4244,13 @@ class DynamicCalendarLoader extends CalendarCore {
                 // mirror highlightMapMarker's classes: the sheet's event is
                 // selected, everything else dimmed (and an unmapped sheet
                 // event leaves all markers dimmed, same as the main map)
-                if (event.slug === selectedSlug) {
+                const isSelectedMarker = event.slug === selectedSlug;
+                if (isSelectedMarker) {
                     markerIcon.classList.add('marker-selected');
                 } else {
                     markerIcon.classList.add('marker-dimmed');
                 }
+                sheetMarkers.push({ el: markerIcon, selected: isSelectedMarker });
                 new maplibregl.Marker({ element: markerIcon, anchor: 'bottom' })
                     .setLngLat([event.coordinates.lng, event.coordinates.lat])
                     .addTo(map);
@@ -4228,6 +4268,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     !isNaN(extra.coordinates.lat) && !isNaN(extra.coordinates.lng)) {
                     const icon = this.createMarkerIcon(extra);
                     icon.classList.add('marker-selected');
+                    sheetMarkers.push({ el: icon, selected: true });
                     new maplibregl.Marker({ element: icon, anchor: 'bottom' })
                         .setLngLat([extra.coordinates.lng, extra.coordinates.lat])
                         .addTo(map);
@@ -4271,6 +4312,20 @@ class DynamicCalendarLoader extends CalendarCore {
         const newStart = idx < curIdx ? idx : Math.max(0, idx - 6);
         const dayW = grid.scrollWidth / this.stripDayCount;
         grid.scrollTo({ left: Math.round(newStart * dayW), behavior: 'smooth' });
+    }
+
+    // A selection whose day slid outside the visible window RESETS — leaving
+    // it active greyed the whole calendar/map/list with nothing visibly
+    // selected (owner report: select fuzzy, swipe it out of view)
+    clearSelectionIfOutOfBounds() {
+        if (!this.selectedEventSlug || !this.selectedEventDateISO) return;
+        const parts = this.selectedEventDateISO.split('-');
+        const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 12);
+        if (isNaN(d.getTime())) return;
+        const { start, end } = this.getCurrentPeriodBounds();
+        if (d < start || d > end) {
+            this.clearEventSelection();
+        }
     }
 
     // Header label for the visible period (title slot + date range)
@@ -4323,15 +4378,18 @@ class DynamicCalendarLoader extends CalendarCore {
             return;
         }
         const gr = grid.getBoundingClientRect();
-        if (anchor && anchor.monthKey) {
-            const b = grid.querySelector(`.month-block[data-month="${anchor.monthKey}"]`);
-            if (b) {
-                grid.scrollTop += (b.getBoundingClientRect().top - gr.top) - anchor.offset;
+        const sticky = grid.querySelector('.month-strip-days');
+        const stickyH = sticky ? sticky.getBoundingClientRect().height : 0;
+        if (anchor && anchor.dateKey) {
+            const c = grid.querySelector(`.calendar-day[data-date="${anchor.dateKey}"]`);
+            if (c) {
+                grid.scrollTop += (c.getBoundingClientRect().top - gr.top) - anchor.offset;
                 return;
             }
         }
-        const cur = grid.querySelectorAll('.month-block')[1];
-        if (cur) grid.scrollTop += cur.getBoundingClientRect().top - gr.top;
+        const first = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth(), 1);
+        const cell = grid.querySelector(`.calendar-day[data-date="${this.getLocalDateKey(first)}"]`);
+        if (cell) grid.scrollTop += cell.getBoundingClientRect().top - gr.top - stickyH;
     }
 
     // One-time (the .calendar-grid element survives every innerHTML swap):
@@ -4376,6 +4434,7 @@ class DynamicCalendarLoader extends CalendarCore {
             const nearEdge = idx <= 2 || idx >= this.stripDayCount - 9;
             if (!changed && !nearEdge) return;
             this.currentDate = newStart;
+            this.clearSelectionIfOutOfBounds();
             if (nearEdge) {
                 await this.updateCalendarDisplay();
                 return;
@@ -4386,29 +4445,41 @@ class DynamicCalendarLoader extends CalendarCore {
             await this.refreshEventsPanel(this.getFilteredEvents(), false, { keepCamera: true });
             return;
         }
-        // month: the "most" visible month owns the header/URL/panel
+        // month: the month owning the most VISIBLE day cells drives the
+        // header/URL/panel (the continuous strip has no block boundaries)
         const gr = grid.getBoundingClientRect();
-        let best = null;
-        let bestOverlap = -1;
-        grid.querySelectorAll('.month-block').forEach(b => {
-            const r = b.getBoundingClientRect();
-            const overlap = Math.min(r.bottom, gr.bottom) - Math.max(r.top, gr.top);
-            if (overlap > bestOverlap) { bestOverlap = overlap; best = b; }
+        const counts = {};
+        let anchorCell = null;
+        let anchorOffset = 0;
+        grid.querySelectorAll('.month-strip-grid .calendar-day[data-date]').forEach(c => {
+            const r = c.getBoundingClientRect();
+            const visible = Math.min(r.bottom, gr.bottom) - Math.max(r.top, gr.top);
+            if (visible > r.height * 0.5) {
+                const key = c.getAttribute('data-date').slice(0, 7);
+                counts[key] = (counts[key] || 0) + 1;
+                if (!anchorCell) {
+                    anchorCell = c;
+                    anchorOffset = r.top - gr.top;
+                }
+            }
         });
-        if (!best) return;
-        const [y, m] = best.getAttribute('data-month').split('-').map(Number);
+        const keys = Object.keys(counts);
+        if (!keys.length) return;
+        const bestKey = keys.sort((a, b) => counts[b] - counts[a])[0];
+        const [y, m] = bestKey.split('-').map(Number);
         const cur = this.currentDate;
         const changed = !(cur.getFullYear() === y && cur.getMonth() === m - 1);
-        const blocks = Array.from(grid.querySelectorAll('.month-block'));
-        const nearEdge = best === blocks[0] || best === blocks[blocks.length - 1];
+        const monthKeyOf = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        const nearEdge = this.stripMonths.length === 3 &&
+            (bestKey === monthKeyOf(this.stripMonths[0]) || bestKey === monthKeyOf(this.stripMonths[2]));
         if (!changed && !nearEdge) return;
         const day = Math.min(cur.getDate(), new Date(y, m, 0).getDate());
         this.currentDate = new Date(y, m - 1, day);
+        this.clearSelectionIfOutOfBounds();
         if (nearEdge) {
-            this.pendingStripAnchor = {
-                monthKey: best.getAttribute('data-month'),
-                offset: best.getBoundingClientRect().top - gr.top
-            };
+            this.pendingStripAnchor = anchorCell
+                ? { dateKey: anchorCell.getAttribute('data-date'), offset: anchorOffset }
+                : null;
             await this.updateCalendarDisplay();
             return;
         }
@@ -5680,6 +5751,32 @@ function fitAllMarkers() {
 
 
 
+
+// Hide-others ("solo") mode for the main events map: while ON and an event
+// is selected, every other marker is hidden; with no selection, all markers
+// stay visible. Re-applied on every selection change and marker rebuild.
+window.mapSoloHidden = false;
+function toggleMapSolo() {
+    window.mapSoloHidden = !window.mapSoloHidden;
+    const btn = document.getElementById('solo-btn');
+    const icon = document.getElementById('solo-icon');
+    if (btn) btn.classList.toggle('map-solo-on', window.mapSoloHidden);
+    if (icon) icon.className = 'bi ' + (window.mapSoloHidden ? 'bi-eye' : 'bi-eye-slash');
+    applyMapSoloVisibility();
+}
+function applyMapSoloVisibility() {
+    if (!window.eventsMapMarkersBySlug) return;
+    const activeLoader = window.calendarLoader;
+    const selected = activeLoader && activeLoader.selectedEventSlug;
+    Object.entries(window.eventsMapMarkersBySlug).forEach(([slug, marker]) => {
+        const el = marker.getElement && marker.getElement();
+        if (!el) return;
+        el.classList.toggle('marker-solo-hidden', !!(window.mapSoloHidden && selected && slug !== selected));
+    });
+}
+if (typeof window !== 'undefined') {
+    window.toggleMapSolo = toggleMapSolo;
+}
 
 async function showMyLocation(panMap = true) {
     try {
