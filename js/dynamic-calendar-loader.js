@@ -3890,9 +3890,13 @@ class DynamicCalendarLoader extends CalendarCore {
         }
 
         try {
+            // The bottom sheet's read-only map twin (createSheetMap) renders
+            // exactly this marker set
+            this.lastMapEvents = events;
+
             // Filter events with valid coordinates
-            const eventsWithCoords = events.filter(event => 
-                event.coordinates?.lat && event.coordinates?.lng && 
+            const eventsWithCoords = events.filter(event =>
+                event.coordinates?.lat && event.coordinates?.lng &&
                 !isNaN(event.coordinates.lat) && !isNaN(event.coordinates.lng)
             );
 
@@ -4064,6 +4068,66 @@ class DynamicCalendarLoader extends CalendarCore {
             // Favicons now load directly in marker creation
         } catch (error) {
             logger.componentError('MAP', 'Failed to initialize map', error);
+        }
+    }
+
+    // A read-only twin of the main events map for the bottom sheet: same
+    // style, same purple-water recolor (applyTheme), the same favicon marker
+    // elements from createMarkerIcon over the SAME event set the main map
+    // shows (lastMapEvents), and the city's own framing (city zoom, fitBounds
+    // zooms out only — exactly the main map's fit). The given slug's marker
+    // carries the main map's selected state, the rest its dimmed state; NO
+    // marker is clickable — the sheet map is a viewer, not a selector.
+    // Returns the map instance so the caller can .remove() it on close.
+    createSheetMap(container, selectedSlug) {
+        if (typeof maplibregl === 'undefined' || !container || !this.currentCityConfig?.coordinates) {
+            return null;
+        }
+        try {
+            const cityConfig = this.currentCityConfig;
+            const events = this.lastMapEvents || [];
+            const mapZoom = cityConfig.mapZoom || 10;
+            const map = new maplibregl.Map({
+                container,
+                style: 'https://tiles.openfreemap.org/styles/liberty',
+                center: [cityConfig.coordinates.lng, cityConfig.coordinates.lat],
+                zoom: mapZoom,
+                renderWorldCopies: false
+            });
+            map.on('style.load', () => {
+                this.applyTheme(map);
+            });
+            map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left');
+            const bounds = new maplibregl.LngLatBounds();
+            let markerCount = 0;
+            events.forEach(event => {
+                if (!(event.coordinates?.lat && event.coordinates?.lng) ||
+                    isNaN(event.coordinates.lat) || isNaN(event.coordinates.lng)) {
+                    return;
+                }
+                const markerIcon = this.createMarkerIcon(event);
+                // mirror highlightMapMarker's classes: the sheet's event is
+                // selected, everything else dimmed (and an unmapped sheet
+                // event leaves all markers dimmed, same as the main map)
+                if (event.slug === selectedSlug) {
+                    markerIcon.classList.add('marker-selected');
+                } else {
+                    markerIcon.classList.add('marker-dimmed');
+                }
+                new maplibregl.Marker({ element: markerIcon, anchor: 'bottom' })
+                    .setLngLat([event.coordinates.lng, event.coordinates.lat])
+                    .addTo(map);
+                bounds.extend([event.coordinates.lng, event.coordinates.lat]);
+                markerCount++;
+            });
+            if (markerCount > 0) {
+                map.fitBounds(bounds, { padding: 20, maxZoom: mapZoom });
+            }
+            logger.debug('MAP', 'Sheet map created', { markerCount, selectedSlug });
+            return map;
+        } catch (error) {
+            logger.warn('MAP', 'Sheet map creation failed', { error: error?.message });
+            return null;
         }
     }
 

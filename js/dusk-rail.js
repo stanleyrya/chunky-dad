@@ -205,38 +205,29 @@
       l.querySelectorAll('.share-event-btn').forEach((b) => b.remove());
       if (l.children.length) panel.appendChild(l);
     }
-    // the venue map: a small static MapLibre view on the event's own pin
-    // (interactive:false — a pannable map inside a scrolling sheet fights
-    // the finger, and the camera never moves after creation)
-    destroySheetMap();
-    const lat = parseFloat(card.getAttribute('data-lat'));
-    const lng = parseFloat(card.getAttribute('data-lng'));
-    if (window.maplibregl && Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0)) {
-      const mapDiv = document.createElement('div');
-      mapDiv.className = 'sheet-map';
-      panel.appendChild(mapDiv);
-      const pinColor = (card.style.getPropertyValue('--c1') || '').trim() || '#667eea';
-      requestAnimationFrame(() => {
-        if (!sheet.classList.contains('open') || !mapDiv.isConnected) return;
-        try {
-          sheetMap = new maplibregl.Map({
-            container: mapDiv,
-            style: 'https://tiles.openfreemap.org/styles/liberty',
-            center: [lng, lat],
-            zoom: 14,
-            interactive: false
-          });
-          new maplibregl.Marker({ color: pinColor }).setLngLat([lng, lat]).addTo(sheetMap);
-          sheetMap.once('load', () => { if (sheetMap) sheetMap.resize(); });
-        } catch (e) { mapDiv.remove(); }
-      });
-    }
     const tea = card.querySelector('.ec-tea');
     if (tea) {
       const d = document.createElement('p');
       d.className = 'sheet-desc';
       d.textContent = tea.textContent.trim();
       panel.appendChild(d);
+    }
+    // the map, at the BOTTOM of the sheet: the loader builds a read-only
+    // twin of the main page's map (same style/theme/favicon icons/city
+    // framing, this event's icon selected, the rest dimmed, none clickable)
+    destroySheetMap();
+    const l = loader();
+    if (l && l.createSheetMap) {
+      const mapDiv = document.createElement('div');
+      mapDiv.className = 'sheet-map';
+      panel.appendChild(mapDiv);
+      const slug = card.getAttribute('data-event-slug');
+      requestAnimationFrame(() => {
+        if (!sheet.classList.contains('open') || !mapDiv.isConnected) return;
+        sheetMap = l.createSheetMap(mapDiv, slug);
+        if (!sheetMap) mapDiv.remove();
+        else sheetMap.once('load', () => { if (sheetMap) sheetMap.resize(); });
+      });
     }
     // carry the card's aurora custom props so the sheet paints as the card
     const inline = card.getAttribute('style');

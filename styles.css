@@ -7542,15 +7542,18 @@ html.dusk body {
     justify-content: center;
 }
 .rail-sheet .sheet-links .event-link i { font-size: 0.95rem; }
-/* the venue mini-map: static (interactive:false), pin on the event */
+/* the sheet's map: a read-only twin of the main page's map, at the sheet's
+   bottom — pannable/zoomable, markers not clickable (pointer-events off on
+   the marker layer only; map gestures pass through the canvas) */
 .rail-sheet .sheet-map {
-    height: 180px;
-    margin: 12px 0 0;
+    height: 220px;
+    margin: 14px 0 0;
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 6px 20px rgba(6, 8, 20, 0.35);
 }
 .rail-sheet .sheet-map canvas { border-radius: 12px; }
+.rail-sheet .sheet-map .maplibregl-marker { pointer-events: none; }
 /* the cloned when/venue/cover rows lose the card scope that sizes their
    icons/badges — pin the sheet rows to the card's own metrics */
 .rail-sheet .sheet-rows {
