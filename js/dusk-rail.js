@@ -296,7 +296,8 @@
       // events aren't in the visible list, so build a detached card from
       // the loader's own renderer and open the sheet off that
       if (l && l.getRenderedEventBySlug && l.generateEventCard) {
-        const evData = l.getRenderedEventBySlug(slug);
+        const dayEl0 = pill.closest('[data-date]');
+        const evData = l.getRenderedEventBySlug(slug, dayEl0 && dayEl0.getAttribute('data-date'));
         if (evData) {
           try {
             const tmp = document.createElement('div');

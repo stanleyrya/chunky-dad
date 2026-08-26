@@ -486,8 +486,34 @@
         const row = document.querySelector('.header-controls-row');
         if (!row) return;
         if (!document.querySelector('.calendar-grid .calendar-day')) return;
-        row.classList.toggle('off-today', !document.querySelector('.calendar-day.current'));
+        // the continuous strip always RENDERS today's cell when it's within
+        // the buffer — the chip must key off whether it's actually in the
+        // scroller's viewport, not off DOM presence
+        const cur = document.querySelector('.calendar-grid .calendar-day.current');
+        let visible = false;
+        if (cur) {
+            const grid = cur.closest('.calendar-grid');
+            if (grid) {
+                const gr = grid.getBoundingClientRect();
+                const r = cur.getBoundingClientRect();
+                visible = r.right > gr.left + 4 && r.left < gr.right - 4 &&
+                          r.bottom > gr.top + 4 && r.top < gr.bottom - 4;
+            } else {
+                visible = true;
+            }
+        }
+        row.classList.toggle('off-today', !visible);
     }
+    // strip scrolling changes today's visibility without any DOM mutation —
+    // re-evaluate the chip on grid scroll (debounced; capture: scroll
+    // events don't bubble)
+    let todayChipT = 0;
+    document.addEventListener('scroll', (e) => {
+        const t = e.target;
+        if (!t || !t.classList || !t.classList.contains('calendar-grid')) return;
+        clearTimeout(todayChipT);
+        todayChipT = setTimeout(updateTodayChip, 180);
+    }, { capture: true, passive: true });
 
     function refreshAll() {
         mountControlsInHeader();

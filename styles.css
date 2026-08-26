@@ -7625,10 +7625,10 @@ html.dusk body {
 .month-block-grid {
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
-    grid-auto-rows: minmax(45px, auto);
-}
-@media (min-width: 769px) {
-    .month-block-grid { grid-auto-rows: minmax(90px, auto); }
+    /* first row = the Sun-Sat header cells: auto, NOT the day-row floor
+       (the old inline layout gave headers their own auto row) */
+    grid-template-rows: auto;
+    grid-auto-rows: minmax(90px, auto);
 }
 .month-block-label {
     font-size: 0.78rem;

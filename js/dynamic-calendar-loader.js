@@ -610,11 +610,23 @@ class DynamicCalendarLoader extends CalendarCore {
         if (!wasAlreadySelected) {
             this.selectedEventSlug = eventSlug;
             this.selectedEventDateISO = normalizedDateISO;
-            // Align currentDate to selected date for consistency
+            // currentDate is now the VISIBLE WINDOW's anchor (continuous
+            // strip) — an in-window selection must not move it (it used to
+            // shift the week to start on the tapped day, and the tap's own
+            // settle then churned the whole panel). A selection OUTSIDE the
+            // window slides the week strip to include it, or re-anchors the
+            // month.
             const parts = normalizedDateISO.split('-');
             const parsed = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
             if (!isNaN(parsed.getTime())) {
-                this.currentDate = parsed;
+                const { start, end } = this.getCurrentPeriodBounds();
+                if (parsed < start || parsed > end) {
+                    if (this.currentView === 'week') {
+                        this.scrollWeekStripToDate(parsed);
+                    } else {
+                        this.currentDate = parsed;
+                    }
+                }
             }
             logger.userInteraction('EVENT', 'Event selected', { eventSlug, date: normalizedDateISO });
         } else {
@@ -3524,9 +3536,20 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // A rendered-strip event by slug (the month sheet needs event data for
     // pills whose month isn't the currently visible one)
-    getRenderedEventBySlug(slug) {
+    getRenderedEventBySlug(slug, dateKey = null) {
         if (!slug || !Array.isArray(this.lastStripEvents)) return null;
-        return this.lastStripEvents.find(ev => ev.slug === slug) || null;
+        const matches = this.lastStripEvents.filter(ev => ev.slug === slug);
+        if (!matches.length) return null;
+        if (dateKey) {
+            // recurring events expand to many occurrences sharing one slug —
+            // the pill's own day picks the right one
+            const onDay = matches.find(ev => {
+                const d = this.getLogicalStartDate(ev);
+                return d && this.getLocalDateKey(d) === dateKey;
+            });
+            if (onDay) return onDay;
+        }
+        return matches[0];
     }
 
     generateWeekView(events, start, end, today, hideEvents = false, dayCount = 7) {
@@ -3804,17 +3827,18 @@ class DynamicCalendarLoader extends CalendarCore {
             const isCurrentMonth = day.getMonth() === start.getMonth();
             const currentClass = isToday ? ' current' : '';
             const otherMonthClass = isCurrentMonth ? '' : ' other-month';
-            const hasEventsClass = filteredDayEvents.length > 0 ? ' has-events' : '';
+            const hasEventsClass = (isCurrentMonth && filteredDayEvents.length > 0) ? ' has-events' : '';
 
             // Multi-day SEGMENTS always render — dropping one silently broke
             // the bar mid-run whenever a cell was crowded (owner-reported:
-            // BEEFMINCE Sitges week). Single-day events cap at 2, and a LONE
-            // hidden single renders itself instead of a pointless "+1" chip.
+            // BEEFMINCE Sitges week). Month shows EVERY event (no +N collapse).
+            // STRIP RULE: pills render only in the day's OWN month block —
+            // adjacent blocks both render the shared boundary week, and
+            // duplicated pills doubled the multi-day span math and showed
+            // boundary events twice between months.
             const multiDaySegments = filteredDayEvents.filter(event => this.isMultiDay(event));
             const singleDayEvents = filteredDayEvents.filter(event => !this.isMultiDay(event));
-            // Month shows EVERY event — the +N collapse hid real events, and
-            // the mobile month view is now a primary browsing surface
-            const eventsToShow = multiDaySegments.concat(singleDayEvents);
+            const eventsToShow = isCurrentMonth ? multiDaySegments.concat(singleDayEvents) : [];
             const additionalEventsCount = 0;
             
             const eventsHtml = eventsToShow.length > 0 
@@ -3963,6 +3987,18 @@ class DynamicCalendarLoader extends CalendarCore {
             if (window.eventsMap) {
                 logger.debug('MAP', 'Reusing existing map');
                 map = window.eventsMap;
+
+                // Settle refresh with an unchanged marker set: keep every
+                // marker in place — tearing them down per one-day slide made
+                // the whole map blink
+                if (opts.keepCamera && window.eventsMapMarkersBySlug) {
+                    const nextSlugs = eventsWithCoords.map(ev => ev.slug).sort().join('|');
+                    const haveSlugs = Object.keys(window.eventsMapMarkersBySlug).sort().join('|');
+                    if (nextSlugs === haveSlugs) {
+                        logger.debug('MAP', 'Marker set unchanged on settle refresh - skipping rebuild');
+                        return;
+                    }
+                }
 
                 // Clear existing markers
                 if (window.eventsMapMarkers) {
@@ -4178,6 +4214,24 @@ class DynamicCalendarLoader extends CalendarCore {
                 bounds.extend([event.coordinates.lng, event.coordinates.lat]);
                 markerCount++;
             });
+            const selectedShown = events.some(ev => ev.slug === selectedSlug &&
+                ev.coordinates?.lat && ev.coordinates?.lng);
+            if (!selectedShown) {
+                // the sheet's event isn't in the visible period's marker set
+                // (a neighbor-month pill) — add its own selected marker so
+                // the map never shows all-dimmed-none-selected
+                const extra = this.getRenderedEventBySlug(selectedSlug);
+                if (extra && extra.coordinates?.lat && extra.coordinates?.lng &&
+                    !isNaN(extra.coordinates.lat) && !isNaN(extra.coordinates.lng)) {
+                    const icon = this.createMarkerIcon(extra);
+                    icon.classList.add('marker-selected');
+                    new maplibregl.Marker({ element: icon, anchor: 'bottom' })
+                        .setLngLat([extra.coordinates.lng, extra.coordinates.lat])
+                        .addTo(map);
+                    bounds.extend([extra.coordinates.lng, extra.coordinates.lat]);
+                    markerCount++;
+                }
+            }
             if (markerCount > 0) {
                 map.fitBounds(bounds, { padding: 20, maxZoom: mapZoom });
             }
@@ -4192,6 +4246,30 @@ class DynamicCalendarLoader extends CalendarCore {
 
 
 
+    // Slide the week strip so `date` is inside the visible window — before
+    // the window it becomes the leftmost day, after it the rightmost. The
+    // settle machinery then updates label/URL/cards/map. A date outside the
+    // rendered strip re-renders centered on it instead.
+    scrollWeekStripToDate(date) {
+        const grid = document.querySelector('.calendar-grid');
+        const target = new Date(date);
+        target.setHours(0, 0, 0, 0);
+        if (!grid || !this.stripStartDate || grid.scrollWidth <= 0) {
+            this.currentDate = target;
+            return;
+        }
+        const idx = Math.round((target - this.stripStartDate) / 86400000);
+        if (idx < 0 || idx >= this.stripDayCount) {
+            this.currentDate = target;
+            this.updateCalendarDisplay();
+            return;
+        }
+        const curIdx = Math.round((this.getCurrentPeriodBounds().start - this.stripStartDate) / 86400000);
+        const newStart = idx < curIdx ? idx : Math.max(0, idx - 6);
+        const dayW = grid.scrollWidth / this.stripDayCount;
+        grid.scrollTo({ left: Math.round(newStart * dayW), behavior: 'smooth' });
+    }
+
     // Header label for the visible period (title slot + date range)
     updateHeaderPeriodLabel() {
         try {
@@ -4203,6 +4281,25 @@ class DynamicCalendarLoader extends CalendarCore {
         } catch (error) {
             logger.warn('CALENDAR', 'Failed to update date range', { error: error.message });
         }
+    }
+
+    // The week strip is ONE grid row, so every column would stretch to the
+    // tallest of all 21 rendered days — a festival stack in the off-screen
+    // buffer would inflate the visible week and squeeze the map. Size the
+    // grid to the tallest VISIBLE column instead (overflow-y is hidden;
+    // buffer days clip until they slide in and the next settle re-sizes).
+    sizeWeekStripHeight() {
+        const grid = document.querySelector('.calendar-grid');
+        if (!grid || this.currentView !== 'week' || grid.scrollWidth <= 0) return;
+        const days = grid.querySelectorAll('.calendar-day');
+        if (!days.length) return;
+        const dayW = grid.scrollWidth / this.stripDayCount;
+        const first = Math.max(0, Math.min(days.length - 7, Math.round(grid.scrollLeft / dayW)));
+        let h = 0;
+        for (let i = first; i < Math.min(days.length, first + 7); i++) {
+            h = Math.max(h, days[i].scrollHeight);
+        }
+        if (h > 0) grid.style.height = h + 'px';
     }
 
     // Place the freshly rendered strip so the visible period is in view.
@@ -4280,6 +4377,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 await this.updateCalendarDisplay();
                 return;
             }
+            this.sizeWeekStripHeight();
             this.updateHeaderPeriodLabel();
             this.syncUrl(true);
             await this.refreshEventsPanel(this.getFilteredEvents(), false, { keepCamera: true });
@@ -4431,7 +4529,10 @@ class DynamicCalendarLoader extends CalendarCore {
                 this.updateSelectionVisualState();
                 
                 // Initialize location features after map is ready
+                // (skipped on settle refreshes — the location layer doesn't
+                // change because the visible days slid by one)
                 try {
+                    if (opts.keepCamera) throw { message: 'skipped (settle refresh)' };
                     if (!window.locationManager) {
                         window.locationManager = new LocationManager();
                     }
@@ -4545,8 +4646,10 @@ class DynamicCalendarLoader extends CalendarCore {
                     calendarGrid.style.gridTemplateRows = 'auto';
                     calendarGrid.style.minHeight = 'auto';
                 }
+                if (this.currentView !== 'week') calendarGrid.style.height = '';
                 this.positionGridStrip(this.pendingStripAnchor);
                 this.pendingStripAnchor = null;
+                if (this.currentView === 'week') this.sizeWeekStripHeight();
                 this.armGridScroll(calendarGrid);
             }
         } catch (layoutError) {
