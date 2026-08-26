@@ -124,6 +124,54 @@
         if (!(e.target.closest && e.target.closest('.sheet-panel'))) closeSheet();
       });
       document.body.appendChild(sheet);
+      // pull-down-to-dismiss: the panel scrolls normally, but when it sits
+      // at its very TOP a downward drag grabs the whole sheet instead —
+      // it rides the finger, then dismisses past ~110px or a quick flick,
+      // else springs back. Drags starting on the map stay the map's.
+      const panel0 = sheet.querySelector('.sheet-panel');
+      let dragY0 = -1, dragging = false, lastY = 0, lastT = 0, dragV = 0;
+      panel0.addEventListener('touchstart', (e) => {
+        if (e.target.closest && e.target.closest('.sheet-map')) { dragY0 = -1; return; }
+        dragY0 = e.touches[0].clientY;
+        lastY = dragY0;
+        lastT = performance.now();
+        dragging = false;
+        dragV = 0;
+      }, { passive: true });
+      panel0.addEventListener('touchmove', (e) => {
+        if (dragY0 < 0) return;
+        const y = e.touches[0].clientY;
+        const dy = y - dragY0;
+        const now = performance.now();
+        dragV = (y - lastY) / Math.max(1, now - lastT);
+        lastY = y;
+        lastT = now;
+        if (!dragging) {
+          if (panel0.scrollTop <= 0 && dy > 6) dragging = true;
+          else if (panel0.scrollTop > 0 || dy < 0) { dragY0 = -1; return; } // the scroll owns this gesture
+        }
+        if (dragging) {
+          e.preventDefault(); // no scroll/rubber-band while the sheet rides the finger
+          panel0.style.transition = 'none';
+          panel0.style.transform = 'translateY(' + Math.max(0, dy) + 'px)';
+        }
+      }, { passive: false });
+      const endDrag = () => {
+        if (!dragging) { dragY0 = -1; return; }
+        dragging = false;
+        const dy = Math.max(0, lastY - dragY0);
+        dragY0 = -1;
+        // hand the transform back to the stylesheet in one style recalc:
+        // the 300ms transition picks up from the dragged position, so both
+        // the dismiss (on to translateY(100%)) and the spring-back (to 0)
+        // continue smoothly from under the finger
+        panel0.style.transition = '';
+        panel0.style.transform = '';
+        // deep pull OR a real flick (velocity alone can't dismiss a jiggle)
+        if (dy > 110 || (dy > 30 && dragV > 0.55)) closeSheet();
+      };
+      panel0.addEventListener('touchend', endDrag, { passive: true });
+      panel0.addEventListener('touchcancel', endDrag, { passive: true });
     }
     const panel = sheet.querySelector('.sheet-panel');
     panel.innerHTML = '';
