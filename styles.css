@@ -7153,13 +7153,12 @@ html.dusk body {
 
 /* =====================================================================
    COZY / DENSE — the mobile view system (js/dusk-rail.js).
-   COZY  = the production vertical list until an event is selected, then a
-           horizontal swipe rail with scroll-linked card expansion.
-   DENSE = a fixed-screen trifold: week grid / 246px card rail / map.
+   COZY  = the production vertical list (select = the rest hide, like the
+           site always did), with descriptions never clamped.
+   DENSE = a fixed-screen trifold: week grid / 246px card rail with corner
+           flyer thumbs + bottom sheet / map. No rail geometry ever animates.
    html.mode-cozy | html.mode-dense are set by dusk-rail (dusk pages,
-   mobile <769px only). .rail-active/.rail-settling live on .events-list.
-   Motion law: transitions on rail geometry exist ONLY under .rail-settling
-   — during a gesture the JS writer's inline styles ARE the animation.
+   mobile <769px only). .rail-active lives on .events-list (dense only).
    ===================================================================== */
 
 /* the mode toggle: quiet text, immediately left of the city switcher */
@@ -7303,101 +7302,24 @@ html.dusk body {
     }
 }
 
-/* ---------- COZY: scroll-linked expansion ---------- */
+/* ---------- COZY: today's list, with the full story always shown ------
+   Cozy is the production vertical list; selecting a card hides the rest
+   (the behavior the site always had). The only cozy deltas: descriptions
+   are never clamped, and the dense-mode '…more' chip never appears. */
 @media (max-width: 768.9px) {
-    html.mode-cozy .events-list.rail-active > .event-card {
-        min-height: 246px;
-        overflow: hidden;
-        /* a card's internal growth can't reflow the rest of the page */
-        contain: layout paint;
-    }
-    /* base = dense (e=0); the writer's inline max-height/opacity carry e.
-       The image keeps its PRODUCTION framing (centered, 12px side insets,
-       own radius + shadow, orientation height caps) — only the container's
-       max-height/opacity ever animate. Its 12px TOP padding moves onto the
-       img's margin: a border-box container with vertical padding can never
-       reach max-height:0 (the 12px stub was the prototype's reason for
-       animating padding, which is what clipped the image bottom). */
-    html.mode-cozy .events-list.rail-active > .event-card .event-flyer {
-        max-height: 0;
-        opacity: 0;
-        overflow: hidden;
-        padding-top: 0;
-        padding-bottom: 0;
-        /* aurora's flex default (stretch) pins the img height to the
-           flyer's own max-height — circular, so the unlocked measurement
-           reads ~0 and the image never appears. Top-align instead. */
-        align-items: flex-start;
-        transition: none;
-    }
-    html.mode-cozy .events-list.rail-active > .event-card .event-flyer img {
-        margin: 12px 0 0;
-    }
-    /* no ghost flyer gap on the panel at e=0 (the production hairline would
-       sit as a stray line on the card's top edge while the flyer is
-       collapsed); the panel keeps production radius 0 — the card clips its
-       own corners, so no aurora ever pokes around rounded glass */
-    html.mode-cozy .events-list.rail-active > .event-card .event-flyer + .ec-panel {
-        margin-top: 0;
-        border-top: none;
-    }
-    /* description: measured max-height (writer), line-clamp OFF — a clean
-       cut at e≈0 (line-clamp can't interpolate) */
-    html.mode-cozy .events-list.rail-active > .event-card .ec-tea {
-        display: block;
-        -webkit-line-clamp: unset;
-        max-height: 2.8em;
-        overflow: hidden;
-        transition: none;
-    }
-    /* cozy's LIST state is the production list, whole story shown */
-    html.mode-cozy .events-list:not(.rail-active) .event-card .ec-tea {
+    /* outweigh the production clamp at .event-card.detailed.aurora .ec-tea */
+    html.mode-cozy .event-card.detailed.aurora .ec-tea {
         display: block;
         -webkit-line-clamp: unset;
         max-height: none;
         overflow: visible;
     }
     html.mode-cozy .event-card .ec-more { display: none; }
-    /* the band: the animated height lives on the CONTAINER (an x-scroll list
-       can never have overflow-y visible); the list centers inside it and
-       tall neighbours peek equally top/bottom. The section stacks above the
-       map so the overhang paints over it. */
-    html.mode-cozy .events:has(.events-list.rail-active) {
-        position: relative;
-        z-index: 5;
-        overflow: visible;
+    /* selecting hides the rest — the desktop keeps the filter spotlight
+       (the base rule near the old hider), mobile cozy hides like today */
+    html.mode-cozy .events-list.selection-mode .event-card:not(.selected) {
+        display: none;
     }
-    html.mode-cozy .events:has(.events-list.rail-active) .container {
-        display: flex;
-        align-items: center;
-        overflow: visible;
-        transition: none;
-    }
-    html.mode-cozy .events:has(.events-list.rail-active.rail-settling) .container {
-        transition: height 150ms ease-out;
-    }
-    html.mode-cozy .events-list.rail-active {
-        flex: none;
-        width: 100%;
-        height: auto;
-    }
-    /* during a gesture the band's LAYOUT height is frozen and the map rides
-       a compositor transform; at settle the real height commits and the
-       transform goes home, both easing 150ms in sync */
-    html.mode-cozy .events:has(.events-list.rail-active) ~ .events-map-section {
-        will-change: transform;
-    }
-    html.mode-cozy .events:has(.events-list.rail-active.rail-settling) ~ .events-map-section {
-        transition: transform 150ms ease-out;
-    }
-    /* settle: e snaps to exactly 1/0 — the ONLY transitions in the system */
-    html.mode-cozy .events-list.rail-active.rail-settling > .event-card .event-flyer,
-    html.mode-cozy .events-list.rail-active.rail-settling > .event-card .ec-tea,
-    html.mode-cozy .events-list.rail-active.rail-settling > .event-card .rail-thumb {
-        transition: max-height 150ms ease-out, opacity 150ms ease-out;
-    }
-    html.mode-cozy.month-full .events .container { height: auto; }
-    html.mode-cozy.month-full .events-list { height: auto; }
 }
 
 /* ---------- DENSE: the fixed-screen trifold ---------- */
@@ -7569,6 +7491,45 @@ html.dusk body {
 .rail-sheet.up .sheet-panel { transform: none; }
 .rail-sheet .sheet-title { margin: 0 0 8px; font-size: 1.15rem; }
 .rail-sheet .sheet-desc { margin: 12px 0 0; line-height: 1.55; }
+/* the flyer rides the sheet exactly as it rides the card: centered, own
+   radius + shadow; tap opens the lightbox */
+.rail-sheet .sheet-flyer {
+    display: flex;
+    justify-content: center;
+    margin: 0 0 12px;
+}
+.rail-sheet .sheet-flyer img {
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 38dvh;
+    border-radius: 10px;
+    box-shadow: 0 6px 20px rgba(6, 8, 20, 0.45);
+    cursor: pointer;
+}
+/* the cloned links row loses the aurora card scope — mirror the card's own
+   round glass buttons (share button is stripped from the clone) */
+.rail-sheet .sheet-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.42rem;
+    margin: 2px 0 0;
+}
+.rail-sheet .sheet-links .event-link {
+    width: 32px;
+    height: 32px;
+    margin: 0;
+    padding: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.rail-sheet .sheet-links .event-link i { font-size: 0.95rem; }
 /* the cloned when/venue/cover rows lose the card scope that sizes their
    icons/badges — pin the sheet rows to the card's own metrics */
 .rail-sheet .sheet-rows {
