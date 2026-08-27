@@ -7780,27 +7780,3 @@ html.dusk body {
         background-position: 50% 0;
     }
 }
-
-/* "there's more this way": a soft fade at the scrollable edges of each
-   strip so the visible window never reads as a dead end */
-.dusk .weekly-calendar .container:has(> .calendar-grid.week-strip) {
-    position: relative;
-}
-.dusk .weekly-calendar .container:has(> .calendar-grid.week-strip)::before,
-.dusk .weekly-calendar .container:has(> .calendar-grid.week-strip)::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 14px;
-    z-index: 4;
-    pointer-events: none;
-}
-.dusk .weekly-calendar .container:has(> .calendar-grid.week-strip)::before {
-    left: 0;
-    background: linear-gradient(90deg, rgba(7, 9, 15, 0.55), transparent);
-}
-.dusk .weekly-calendar .container:has(> .calendar-grid.week-strip)::after {
-    right: 0;
-    background: linear-gradient(270deg, rgba(7, 9, 15, 0.55), transparent);
-}
