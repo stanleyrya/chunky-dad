@@ -7691,8 +7691,10 @@ html.dusk body {
     text-overflow: clip;
 }
 .calendar-grid.week-strip .event-item.multi-day.md-chunk-lead .md-sticky-label {
-    position: sticky;
-    left: 8px;
+    /* NOT position:sticky — this WebKit re-sticks on every relayout, and
+       the end-zone width writes forced relayouts, so sticky displacement
+       and the JS corrector's transform compounded and the label crawled
+       rightward. The synchronous scroll corrector is the ONE authority. */
     display: inline-block;
     max-width: 100%;
     white-space: nowrap;
