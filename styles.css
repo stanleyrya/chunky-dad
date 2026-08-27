@@ -7704,6 +7704,9 @@ html.dusk body {
     overflow: hidden;
     text-overflow: ellipsis;
     vertical-align: top;
+    /* own compositor layer: the per-frame translateX composites without
+       repainting the pill/bar underneath */
+    will-change: transform;
 }
 /* the run's time rides INSIDE the sticky label (chunkRun moves the lead's
    .event-time element there) — it hugs the edge with the name instead of

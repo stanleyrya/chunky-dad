@@ -236,6 +236,13 @@
                     span.style.width = '';
                     span._mdW = null;
                     span._mdNat = span.getBoundingClientRect().width;
+                    // the label's at-rest inset from its CELL edge — parking
+                    // at the strip edge uses this so the parked text lines
+                    // up exactly with the single-day pills underneath
+                    const cellEl = lead.closest('.calendar-day');
+                    if (cellEl) {
+                        lead._mdInset = leadName.getBoundingClientRect().left - cellEl.getBoundingClientRect().left;
+                    }
                 }
                 // uniform bar height (week strip): every segment still
                 // carries invisible legacy content (hidden name wrapper,
@@ -292,11 +299,14 @@
             if (!box) return;
             const b = box.getBoundingClientRect();
             const r = span.getBoundingClientRect();
+            const lead = box.parentElement; // the pill
             const tx = span._mdTx || 0;
             const rawLeft = r.left - tx; // where the label sits without our correction
-            // the label PARKS at the edge — never pushed off-left (a short
-            // visible tail must still read name + time)
-            const desired = Math.max(edge, b.left);
+            // the label PARKS at the pill-text inset from the strip edge —
+            // lined up with the single-day pills' text below it — and is
+            // never pushed off-left (a short tail must still read)
+            const park = edge - 8 + (lead && lead._mdInset > 0 ? lead._mdInset : 8);
+            const desired = Math.max(park, b.left);
             const next = desired - rawLeft;
             if (Math.abs(next - tx) > 0.5) {
                 span._mdTx = next;
@@ -304,9 +314,14 @@
             }
             // REAL dots: inside the end zone the label's width shrinks and
             // CSS ellipsis does the truncation; in the open field width
-            // stays natural and nothing layout-affecting is written
+            // stays natural and nothing layout-affecting is written.
+            // The runway runs to the BAR's true end (--chunkw from the
+            // lead's left), not the name box's — the box stops ~9px short
+            // and the dots were arriving early.
             const natural = span._mdNat || r.width;
-            const avail = b.right - desired - 4;
+            const chunkW = lead ? parseFloat(lead.style.getPropertyValue('--chunkw')) : 0;
+            const barRight = (chunkW > 0 && lead) ? lead.getBoundingClientRect().left + chunkW : b.right;
+            const avail = barRight - desired - 4;
             if (avail < natural) {
                 const w = Math.max(0, avail);
                 if (span._mdW === null || span._mdW === undefined || Math.abs(w - span._mdW) > 0.5) {
