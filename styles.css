@@ -7740,3 +7740,8 @@ html.dusk body {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+/* parked-label spotlight parity: same mute as the calendar pills */
+.md-label-layer .md-float-label.md-label-dim {
+    filter: saturate(0.35) brightness(0.4);
+}
