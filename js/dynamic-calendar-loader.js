@@ -4379,25 +4379,22 @@ class DynamicCalendarLoader extends CalendarCore {
             if (key && !oldCells.has(key)) oldCells.set(key, cell);
         });
         let reusedCells = 0;
-        if (oldCells.size) {
-            shell.querySelectorAll('[data-date]').forEach(fresh => {
-                const key = fresh.getAttribute('data-date');
-                const old = key && oldCells.get(key);
-                if (!old) return;
-                const sig = this.hashString(fresh.outerHTML);
-                if (old.dataset.cellSig === sig) {
-                    oldCells.delete(key);
-                    fresh.replaceWith(old);
-                    reusedCells++;
-                } else {
-                    fresh.dataset.cellSig = sig;
-                }
-            });
-        } else {
-            shell.querySelectorAll('[data-date]').forEach(fresh => {
-                fresh.dataset.cellSig = this.hashString(fresh.outerHTML);
-            });
-        }
+        shell.querySelectorAll('[data-date]').forEach(fresh => {
+            // EVERY fresh cell gets stamped, including ones with no previous
+            // counterpart: an unstamped cell can never be reused later, and
+            // the cells a rebuild newly renders are exactly the ones the
+            // NEXT rebuild has to keep (the "second drag blinks" bug).
+            const sig = this.hashString(fresh.outerHTML);
+            const key = fresh.getAttribute('data-date');
+            const old = key && oldCells.get(key);
+            if (old && old.dataset.cellSig === sig) {
+                oldCells.delete(key);
+                fresh.replaceWith(old);
+                reusedCells++;
+                return;
+            }
+            fresh.dataset.cellSig = sig;
+        });
 
         // 2. for whatever is genuinely new, still hand over already-decoded
         // <img> nodes by RESOLVED url (the two sides can spell the same
