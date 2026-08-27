@@ -6778,7 +6778,21 @@ html.dusk body {
     padding-bottom: 4px;
     transform: translateY(-3px);
 }
-.dusk .nav-btn:hover { background: rgba(255, 255, 255, 0.12); color: #fff; transform: none; }
+/* colour-only feedback: a hover/active BACKGROUND drew a rounded square
+   around the chevrons (and iOS keeps :hover stuck after a tap), and
+   `transform: none` cancelled the optical translateY above, so the glyph
+   visibly dropped 3px when pressed. Quiet text controls stay quiet. */
+.dusk .nav-btn:hover,
+.dusk .nav-btn:active,
+.dusk .nav-btn:focus,
+.dusk .nav-btn:focus-visible {
+    background: transparent;
+    color: #fff;
+    /* hold the optical offset in EVERY state: the base stylesheet scales
+       nav-btns on real-hover devices, which would replace this translate
+       and drop the glyph on desktop too */
+    transform: translateY(-3px);
+}
 .dusk .date-range {
     color: #fff;
     font-size: 0.95rem;
@@ -6850,7 +6864,10 @@ html.dusk body {
     transition: opacity 0.12s ease;
 }
 .dusk .header-controls-row.off-today .today-btn { visibility: visible; opacity: 1; }
-.dusk .today-btn:hover { transform: none; background: rgba(255, 255, 255, 0.08); }
+.dusk .today-btn:hover,
+.dusk .today-btn:active,
+.dusk .today-btn:focus,
+.dusk .today-btn:focus-visible { background: transparent; color: #fff; transform: none; }
 
 /* phone: same row, one size down */
 @media (max-width: 480px) {
