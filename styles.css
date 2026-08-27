@@ -6831,9 +6831,11 @@ html.dusk body {
 /* Today: space always reserved; it fades in when you're off today
    so the other controls never shift */
 .dusk .today-btn {
+    /* ALWAYS shown (owner): the continuous strip made "is today visible"
+       too fiddly and the button kept hiding exactly when it was needed */
     display: inline-flex;
-    visibility: hidden;
-    opacity: 0;
+    visibility: visible;
+    opacity: 1;
     background: transparent;
     color: #ff9d9d;
     padding: 0.1rem 0.5rem;
@@ -7384,6 +7386,9 @@ html.dusk body {
        sections every render (dynamic-calendar-loader.js updateCalendarDisplay) */
     html.month-full .events,
     html.month-full .events-map-section { display: none !important; }
+    /* flush under the page header: main's 0.35rem breathing room read as a
+       stray gap above the sticky day-name row */
+    html.month-full main.city-page { padding-top: 0; }
     html.month-full body,
     html.month-full main.city-page { overflow: auto; }
     html.month-full main.city-page { display: block; }
@@ -7580,4 +7585,158 @@ html.dusk body {
     width: 10px;
     height: 10px;
     flex: 0 0 10px;
+}
+
+/* =====================================================================
+   CONTINUOUS CALENDAR STRIP — the grid is its own native scroller.
+   WEEK: 21 day columns (visible week ± 7), each 1/7 of the viewport;
+   slide any number of days, snap lands on day boundaries. MONTH:
+   previous/current/next month stacked vertically, drag freely.
+   Cards/map/label/URL follow the visible period on scroll SETTLE only
+   (dynamic-calendar-loader onGridSettle) — nothing runs per frame.
+   ===================================================================== */
+.calendar-grid.week-strip {
+    /* the base grid's rounded clip box (15px + overflow hidden) chopped
+       pills at the bottom corners once cells could overlap — the strip is
+       an edge-to-edge surface, no radius */
+    border-radius: 0;
+    /* a BLOCK scroller with inline-block columns, NOT display:grid: WebKit
+       ignores position:sticky inside grid/flex scroll containers, and the
+       multi-day flowing name is a compositor-driven sticky label.
+       font-size:0 kills the inter-cell whitespace the markup carries;
+       every text element inside the cells sets its own size. */
+    display: block;
+    white-space: nowrap;
+    font-size: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    /* the base grid sets touch-action: pan-y for the old flip-swipe —
+       the strip needs horizontal panning to reach the scroller */
+    touch-action: pan-x pan-y;
+    scrollbar-width: none;
+}
+.calendar-grid.week-strip::-webkit-scrollbar { display: none; }
+.calendar-grid.week-strip > .calendar-day {
+    display: inline-block;
+    width: calc(100% / 7);
+    height: 100%;
+    vertical-align: top;
+    white-space: normal;
+    font-size: 1rem;
+    scroll-snap-align: start;
+    min-width: 0;
+}
+
+.calendar-grid.month-strip {
+    border-radius: 0;
+    display: block;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    /* the scroller's height IS the month viewport: fill the screen under
+       the fixed header (works for mobile month-full and the desktop month
+       column alike; --hdr-h is maintained by dusk-ui) */
+    max-height: calc(100dvh - var(--hdr-h, 104px) - 16px);
+}
+.calendar-grid.month-strip::-webkit-scrollbar { display: none; }
+/* the Sun-Sat header row sticks to the scroller top while weeks flow under */
+.month-strip-days {
+    position: sticky;
+    top: 0;
+    /* above the multi-day chunk leads (z 3) and their flowing titles (z 5)
+       — bars must slide UNDER the day-name row, never over it */
+    z-index: 10;
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    background: #0b0d13;
+}
+.month-strip-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-auto-rows: minmax(90px, auto);
+}
+/* month boundary, mid-row like a real continuous calendar: the 1st carries
+   its month name in the day number plus an accent top edge */
+.month-strip-grid .calendar-day.month-first {
+    border-top: 2px solid rgba(255, 255, 255, 0.22);
+}
+/* the today-circle paints 1.45em centered on the number and bleeds a few
+   px above the cell — in the month strip that bleed hit the sticky day-name
+   row. Give the number that room INSIDE the cell instead of nudging the
+   scroll (which left a sliver of the previous week peeking above). */
+.month-strip-grid .calendar-day .day-header { top: 6px; }
+.month-strip-grid .calendar-day .day-events { padding-top: 1.7rem; }
+.month-strip-grid .calendar-day.month-first .day-number {
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+/* hide-others (solo) mode on the maps: while ON with a selection, every
+   other event's marker is hidden — main map and sheet map alike. The
+   button's state reads through the icon swap alone (eye-slash <-> eye);
+   no active highlight (owner: "the selected version ... is ugly"). */
+.maplibregl-marker.marker-solo-hidden { display: none !important; }
+
+/* the multi-day flowing name in the week strip: a compositor-driven sticky
+   label — hugs the scrollport's left edge while its bar scrolls under and
+   is pushed out natively at the bar's end. The name box must stay
+   overflow:visible so the sticky can see the grid scrollport. */
+.calendar-grid.week-strip .event-item.multi-day.md-chunk-lead .event-name {
+    overflow: visible;
+    text-overflow: clip;
+}
+.calendar-grid.week-strip .event-item.multi-day.md-chunk-lead .md-sticky-label {
+    /* NOT position:sticky — this WebKit re-sticks on every relayout, and
+       the end-zone width writes forced relayouts, so sticky displacement
+       and the JS corrector's transform compounded and the label crawled
+       rightward. The synchronous scroll corrector is the ONE authority. */
+    display: inline-block;
+    max-width: 100%;
+    white-space: nowrap;
+    /* REAL ellipsis: the label parks at the edge and its text shrinks
+       with dots as the bar's end approaches (width written only inside
+       that end zone — everywhere else the label is transform-only) */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: top;
+    /* own compositor layer: the per-frame translateX composites without
+       repainting the pill/bar underneath */
+    will-change: transform;
+}
+/* the run's time rides INSIDE the sticky label (chunkRun moves the lead's
+   .event-time element there) — it hugs the edge with the name instead of
+   scrolling away with the run's first segment, and ellipsizes on its own
+   line as the label shrinks */
+.calendar-grid.week-strip .event-item.multi-day.md-chunk-lead .md-sticky-label .event-time {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    /* match the single-day pill's metrics: nested in the span the time
+       inherited a tighter line-height chain and lost the inter-line gap,
+       leaving timed BARS ~3px shorter than timed PILLS (owner report:
+       "goldiloxx shorter and tighter than fuzzy") */
+    line-height: 1.3;
+    margin-top: 2px;
+}
+
+/* the parked multi-day labels live in an overlay OUTSIDE the scroller —
+   they are static while parked (compositor-perfect); the in-pill copy
+   shows instead while the run's start is on-screen (scrolls natively) */
+.md-label-layer {
+    position: absolute;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 6;
+}
+.md-label-layer .md-float-label {
+    position: absolute;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }

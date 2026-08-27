@@ -121,6 +121,18 @@ class DynamicCalendarLoader extends CalendarCore {
         this.isSwiping = false;
         this.swipeThreshold = 80; // Distance to trigger navigation (reduced for better responsiveness)
         this.swipeVelocity = 0;
+
+        // Continuous calendar strip state (see generateCalendarEvents):
+        // the grid renders wider than the visible period and scrolls
+        // natively; cards/map/label/URL follow on scroll settle only.
+        this.stripStartDate = null;   // week strip: date of column 0
+        this.stripDayCount = 35;      // week strip: visible week ± 14 days
+        this.stripMonths = [];        // month strip: rendered month firsts
+        this.lastStripEvents = [];    // events across the rendered strip
+        this.suppressGridScrollUntil = 0;
+        this.gridScrollTimer = 0;
+        this.gridTouchActive = false;
+        this.pendingStripAnchor = null;
         this.lastTouchTime = 0;
         this.lastTouchX = 0;
         
@@ -150,6 +162,12 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Enhanced swipe detection methods
     setupSwipeHandlers() {
+        // The continuous calendar strip owns grid gestures now: the grid is
+        // a native scroller (week slides day-by-day, month drags freely), so
+        // the old swipe-to-flip-period handlers must not attach — their
+        // touchmove preventDefault would kill native scrolling outright.
+        return;
+        // eslint-disable-next-line no-unreachable
         const calendarGrid = document.querySelector('.calendar-grid');
         if (!calendarGrid) {
             logger.warn('CALENDAR', 'Calendar grid not found for swipe setup');
@@ -592,11 +610,26 @@ class DynamicCalendarLoader extends CalendarCore {
         if (!wasAlreadySelected) {
             this.selectedEventSlug = eventSlug;
             this.selectedEventDateISO = normalizedDateISO;
-            // Align currentDate to selected date for consistency
+            // currentDate is now the VISIBLE WINDOW's anchor (continuous
+            // strip) — an in-window selection must not move it (it used to
+            // shift the week to start on the tapped day, and the tap's own
+            // settle then churned the whole panel). A selection OUTSIDE the
+            // window slides the week strip to include it, or re-anchors the
+            // month.
             const parts = normalizedDateISO.split('-');
             const parsed = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-            if (!isNaN(parsed.getTime())) {
-                this.currentDate = parsed;
+            // deferUrl marks RAIL-driven live selections: the user is mid
+            // card-swipe, so the calendar must never slide or re-anchor
+            // under them regardless of which occurrence's date resolved
+            if (!isNaN(parsed.getTime()) && !options.deferUrl) {
+                const { start, end } = this.getCurrentPeriodBounds();
+                if (parsed < start || parsed > end) {
+                    if (this.currentView === 'week') {
+                        this.scrollWeekStripToDate(parsed);
+                    } else {
+                        this.currentDate = parsed;
+                    }
+                }
             }
             logger.userInteraction('EVENT', 'Event selected', { eventSlug, date: normalizedDateISO });
         } else {
@@ -741,6 +774,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 }
             });
             logger.userInteraction('MAP', 'All markers dimmed (selection active but no marker selected)', { eventSlug });
+            applyMapSoloVisibility();
             return;
         }
         
@@ -764,6 +798,7 @@ class DynamicCalendarLoader extends CalendarCore {
         
         logger.debug('MAP', 'Selected marker highlighted, unselected markers dimmed', { eventSlug });
         logger.userInteraction('MAP', 'Marker highlighted and unselected markers dimmed', { eventSlug });
+        applyMapSoloVisibility();
     }
 
     // Helper method to reset all map markers to normal appearance
@@ -779,6 +814,7 @@ class DynamicCalendarLoader extends CalendarCore {
             logger.debug('MAP', 'All markers reset to normal appearance', { markerCount });
             logger.userInteraction('MAP', 'All map markers reset to normal appearance', { markerCount });
         }
+        applyMapSoloVisibility();
     }
 
 
@@ -1436,9 +1472,19 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     getCurrentPeriodBounds() {
-        return this.currentView === 'week' 
-            ? this.getWeekBounds(this.currentDate)
-            : this.getMonthBounds(this.currentDate);
+        if (this.currentView === 'week') {
+            // CONTINUOUS week: the visible 7-day window STARTS at currentDate
+            // (any weekday) — the strip slides day-by-day, so the window is
+            // no longer Sunday-aligned. calendar-core's getWeekBounds keeps
+            // its Sunday semantics for the platform-shared consumers.
+            const start = new Date(this.currentDate);
+            start.setHours(0, 0, 0, 0);
+            const end = new Date(start);
+            end.setDate(start.getDate() + 6);
+            end.setHours(23, 59, 59, 999);
+            return { start, end };
+        }
+        return this.getMonthBounds(this.currentDate);
     }
 
     // Show events for a specific day (used by calendar overview)
@@ -1494,7 +1540,17 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Switch to week view for a specific date
     async switchToWeekView(dateString) {
-        this.currentDate = new Date(dateString);
+        // parse LOCALLY ('YYYY-MM-DD' through new Date() is UTC midnight —
+        // in western zones that's the PREVIOUS local day), and open the week
+        // AS SHOWN in the month grid: its Sunday-aligned row
+        const parts = String(dateString).split('-');
+        let target = parts.length === 3
+            ? new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+            : new Date(dateString);
+        if (isNaN(target.getTime())) target = new Date();
+        target.setDate(target.getDate() - target.getDay());
+        target.setHours(0, 0, 0, 0);
+        this.currentDate = target;
         this.currentView = 'week';
         
         // Update active button
@@ -1518,7 +1574,11 @@ class DynamicCalendarLoader extends CalendarCore {
         const parts = dateISO.split('-');
         const parsed = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
         if (isNaN(parsed.getTime())) return;
-        this.currentDate = parsed;
+        // the window opens on the week AS SHOWN in the month grid (Sunday
+        // row); the selection itself keeps the event's own date
+        const windowStart = new Date(parsed);
+        windowStart.setDate(windowStart.getDate() - windowStart.getDay());
+        this.currentDate = windowStart;
         this.currentView = 'week';
         this.selectedEventSlug = eventSlug;
         this.selectedEventDateISO = dateISO;
@@ -2961,6 +3021,9 @@ class DynamicCalendarLoader extends CalendarCore {
         const shareButtons = document.querySelectorAll('.share-event-btn');
         
         shareButtons.forEach(button => {
+            // reconciled refreshes REUSE card nodes — never double-bind
+            if (button.dataset.shareBound) return;
+            button.dataset.shareBound = '1';
             button.addEventListener('click', async (e) => {
                 e.stopPropagation(); // Prevent event card click
                 
@@ -3089,7 +3152,10 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     // Filter events by current period
-    getFilteredEvents() {
+    // boundsOverride: the continuous calendar strip renders a WIDER range
+    // than the visible period (the grid pills), while cards/map keep the
+    // visible period — pass { start, end } to filter an arbitrary range.
+    getFilteredEvents(boundsOverride = null) {
         // Handle case where allEvents is not yet loaded
         if (!this.allEvents || !Array.isArray(this.allEvents)) {
             logger.debug('CALENDAR', '🔍 FILTER: No allEvents available for filtering', {
@@ -3099,8 +3165,8 @@ class DynamicCalendarLoader extends CalendarCore {
             });
             return [];
         }
-        
-        const { start, end } = this.getCurrentPeriodBounds();
+
+        const { start, end } = boundsOverride || this.getCurrentPeriodBounds();
         
         logger.debug('CALENDAR', '🔍 FILTER: Starting event filtering', {
             totalEvents: this.allEvents.length,
@@ -3438,24 +3504,77 @@ class DynamicCalendarLoader extends CalendarCore {
         return `${year}-${month}-${day}`;
     }
 
-    // Generate calendar events (enhanced for week/month/calendar view)
+    // Generate the CONTINUOUS calendar strip. The grid renders a wider range
+    // than the visible period — week: 21 day columns (visible week ± 7) in a
+    // horizontal scroller; month: previous/current/next month stacked in a
+    // vertical scroller. Cards, map, label, and URL follow the VISIBLE
+    // period, recomputed only on scroll settle (onGridSettle) — never per
+    // frame, so the sliding itself is native scroll and stays cheap.
     generateCalendarEvents(events, hideEvents = false) {
-        const { start, end } = this.getCurrentPeriodBounds();
+        const { start } = this.getCurrentPeriodBounds();
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
         if (this.currentView === 'week') {
-            return this.generateWeekView(events, start, end, today, hideEvents);
-        } else {
-            return this.generateMonthView(events, start, end, today, hideEvents);
+            const stripStart = new Date(start);
+            stripStart.setDate(stripStart.getDate() - 14);
+            this.stripStartDate = new Date(stripStart);
+            const stripEnd = new Date(stripStart);
+            stripEnd.setDate(stripStart.getDate() + this.stripDayCount - 1);
+            stripEnd.setHours(23, 59, 59, 999);
+            const stripEvents = this.getFilteredEvents({ start: stripStart, end: stripEnd });
+            this.lastStripEvents = stripEvents;
+            return this.generateWeekView(stripEvents, stripStart, stripEnd, today, hideEvents, this.stripDayCount);
         }
+
+        const months = [-2, -1, 0, 1, 2].map(d => new Date(start.getFullYear(), start.getMonth() + d, 1));
+        this.stripMonths = months;
+        // CONTINUOUS weeks, "like a calendar": Sunday on/before the previous
+        // month's 1st through Saturday on/after the next month's last day —
+        // every day renders exactly once, no padded boundary cells, and the
+        // 1st of each month carries its month name (+ an accent edge). The
+        // Sun-Sat header row is separate so it can stick to the scroller top.
+        const stripStart = new Date(months[0]);
+        stripStart.setDate(stripStart.getDate() - stripStart.getDay());
+        stripStart.setHours(0, 0, 0, 0);
+        const lastMonth = months[months.length - 1];
+        const lastDay = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0);
+        const stripEnd = new Date(lastDay);
+        stripEnd.setDate(lastDay.getDate() + (6 - lastDay.getDay()));
+        stripEnd.setHours(23, 59, 59, 999);
+        const stripEvents = this.getFilteredEvents({ start: stripStart, end: stripEnd });
+        this.lastStripEvents = stripEvents;
+        const dayHeadersHtml = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => `
+            <div class="calendar-day-header"><h4>${d}</h4></div>`).join('');
+        return `
+            <div class="month-strip-days">${dayHeadersHtml}</div>
+            <div class="month-strip-grid month-view-grid">${this.generateMonthView(stripEvents, stripStart, stripEnd, today, hideEvents)}</div>
+        `;
     }
 
-    generateWeekView(events, start, end, today, hideEvents = false) {
+    // A rendered-strip event by slug (the month sheet needs event data for
+    // pills whose month isn't the currently visible one)
+    getRenderedEventBySlug(slug, dateKey = null) {
+        if (!slug || !Array.isArray(this.lastStripEvents)) return null;
+        const matches = this.lastStripEvents.filter(ev => ev.slug === slug);
+        if (!matches.length) return null;
+        if (dateKey) {
+            // recurring events expand to many occurrences sharing one slug —
+            // the pill's own day picks the right one
+            const onDay = matches.find(ev => {
+                const d = this.getLogicalStartDate(ev);
+                return d && this.getLocalDateKey(d) === dateKey;
+            });
+            if (onDay) return onDay;
+        }
+        return matches[0];
+    }
+
+    generateWeekView(events, start, end, today, hideEvents = false, dayCount = 7) {
         const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         const days = [];
-        
-        for (let i = 0; i < 7; i++) {
+
+        for (let i = 0; i < dayCount; i++) {
             const currentDay = new Date(start);
             currentDay.setDate(start.getDate() + i);
             days.push(currentDay);
@@ -3599,15 +3718,8 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     generateMonthView(events, start, end, today, hideEvents = false) {
-        // Add day headers first
-        const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        const headerHtml = dayHeaders.map(day => `
-            <div class="calendar-day-header">
-                <h4>${day}</h4>
-            </div>
-        `).join('');
-        
-        // For month view, create a grid including days from previous/next month to fill the calendar
+        // Renders the day CELLS for a Sunday-aligned continuous range
+        // (the sticky Sun-Sat header row is emitted by the caller)
         const firstDay = new Date(start);
         const lastDay = new Date(end);
         
@@ -3723,19 +3835,17 @@ class DynamicCalendarLoader extends CalendarCore {
             });
 
             const isToday = day.getTime() === today.getTime();
-            const isCurrentMonth = day.getMonth() === start.getMonth();
             const currentClass = isToday ? ' current' : '';
-            const otherMonthClass = isCurrentMonth ? '' : ' other-month';
+            const isMonthFirst = day.getDate() === 1;
+            const monthFirstClass = isMonthFirst ? ' month-first' : '';
             const hasEventsClass = filteredDayEvents.length > 0 ? ' has-events' : '';
 
             // Multi-day SEGMENTS always render — dropping one silently broke
             // the bar mid-run whenever a cell was crowded (owner-reported:
-            // BEEFMINCE Sitges week). Single-day events cap at 2, and a LONE
-            // hidden single renders itself instead of a pointless "+1" chip.
+            // BEEFMINCE Sitges week). Month shows EVERY event (no +N collapse);
+            // the continuous strip renders every day exactly once.
             const multiDaySegments = filteredDayEvents.filter(event => this.isMultiDay(event));
             const singleDayEvents = filteredDayEvents.filter(event => !this.isMultiDay(event));
-            // Month shows EVERY event — the +N collapse hid real events, and
-            // the mobile month view is now a primary browsing surface
             const eventsToShow = multiDaySegments.concat(singleDayEvents);
             const additionalEventsCount = 0;
             
@@ -3786,9 +3896,9 @@ class DynamicCalendarLoader extends CalendarCore {
                 : '';
 
             return `
-                <div class="calendar-day month-day${currentClass}${otherMonthClass}${hasEventsClass}" data-date="${this.getLocalDateKey(day)}">
+                <div class="calendar-day month-day${currentClass}${monthFirstClass}${hasEventsClass}" data-date="${this.getLocalDateKey(day)}">
                     <div class="day-header">
-                        <span class="day-number">${day.getDate()}</span>
+                        <span class="day-number">${isMonthFirst ? day.toLocaleDateString('en-US', { month: 'short' }) + ' 1' : day.getDate()}</span>
                         ${isToday ? `<span class="day-indicator">Today</span>` : ''}
                     </div>
                     <div class="day-events">
@@ -3798,7 +3908,7 @@ class DynamicCalendarLoader extends CalendarCore {
             `;
         }).join('');
 
-        return headerHtml + daysHtml;
+        return daysHtml;
     }
 
     applyTheme(map) {
@@ -3848,7 +3958,7 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     // Initialize map
-    initializeMap(cityConfig, events) {
+    initializeMap(cityConfig, events, opts = {}) {
         logger.debug('MAP', 'Starting map initialization', {
             cityName: cityConfig?.name,
             eventCount: events?.length,
@@ -3886,13 +3996,29 @@ class DynamicCalendarLoader extends CalendarCore {
                 logger.debug('MAP', 'Reusing existing map');
                 map = window.eventsMap;
 
+                // Settle refresh with an unchanged marker set: keep every
+                // marker in place — tearing them down per one-day slide made
+                // the whole map blink
+                if (opts.keepCamera && window.eventsMapMarkersBySlug) {
+                    const nextSlugs = eventsWithCoords.map(ev => ev.slug).sort().join('|');
+                    const haveSlugs = Object.keys(window.eventsMapMarkersBySlug).sort().join('|');
+                    if (nextSlugs === haveSlugs) {
+                        logger.debug('MAP', 'Marker set unchanged on settle refresh - skipping rebuild');
+                        return;
+                    }
+                }
+
                 // Clear existing markers
                 if (window.eventsMapMarkers) {
                     window.eventsMapMarkers.forEach(marker => marker.remove());
                 }
 
-                // Update map center and zoom in case the city changed
-                map.jumpTo({ center: [mapCenter[1], mapCenter[0]], zoom: mapZoom });
+                // Update map center and zoom in case the city changed —
+                // unless the caller asked to keep the camera (strip settle
+                // refreshes must never move the map under a slide)
+                if (!opts.keepCamera) {
+                    map.jumpTo({ center: [mapCenter[1], mapCenter[0]], zoom: mapZoom });
+                }
             } else {
                 logger.debug('MAP', 'Creating new map instance');
                 map = new maplibregl.Map({
@@ -3945,6 +4071,27 @@ class DynamicCalendarLoader extends CalendarCore {
                     }
                 }
                 map.addControl(new MyLocationControl(), 'top-left');
+
+                // Hide-others toggle: with an event selected, hides every
+                // other marker; with nothing selected it changes nothing
+                class HideOthersControl {
+                    onAdd(map) {
+                        this._map = map;
+                        this._container = document.createElement('div');
+                        this._container.className = 'maplibregl-ctrl maplibregl-ctrl-group';
+                        this._container.innerHTML = `
+                            <button class="map-control-btn" id="solo-btn" onclick="toggleMapSolo()" title="Hide other events">
+                                <i class="bi bi-eye-slash" id="solo-icon"></i>
+                            </button>
+                        `;
+                        return this._container;
+                    }
+                    onRemove() {
+                        this._container.parentNode.removeChild(this._container);
+                        this._map = undefined;
+                    }
+                }
+                map.addControl(new HideOthersControl(), 'top-left');
                 // Add navigation controls (zoom in/out)
                 map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left');
 
@@ -4004,7 +4151,7 @@ class DynamicCalendarLoader extends CalendarCore {
             });
 
             // Fit map to show all markers using maplibre's bounds calculation
-            if (markers.length > 0) {
+            if (markers.length > 0 && !opts.keepCamera) {
                 const bounds = new maplibregl.LngLatBounds();
                 markers.forEach(marker => {
                     bounds.extend(marker.getLngLat());
@@ -4033,6 +4180,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     window.eventsMapMarkersBySlug[eventSlug] = marker;
                 }
             });
+            applyMapSoloVisibility();
             
             logger.debug('MAP', 'Map markers created and stored by slug', {
                 totalMarkers: markers.length,
@@ -4074,6 +4222,35 @@ class DynamicCalendarLoader extends CalendarCore {
                 this.applyTheme(map);
             });
             map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left');
+            // the sheet's own hide-others toggle — the sheet always has a
+            // selected event, so ON leaves just its marker
+            const sheetMarkers = [];
+            let sheetSolo = false;
+            class SheetSoloControl {
+                onAdd() {
+                    this._container = document.createElement('div');
+                    this._container.className = 'maplibregl-ctrl maplibregl-ctrl-group';
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'map-control-btn';
+                    btn.title = 'Hide other events';
+                    btn.innerHTML = '<i class="bi bi-eye-slash"></i>';
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        sheetSolo = !sheetSolo;
+                        btn.classList.toggle('map-solo-on', sheetSolo);
+                        btn.querySelector('i').className = 'bi ' + (sheetSolo ? 'bi-eye' : 'bi-eye-slash');
+                        sheetMarkers.forEach(mk =>
+                            mk.el.classList.toggle('marker-solo-hidden', sheetSolo && !mk.selected));
+                    });
+                    this._container.appendChild(btn);
+                    return this._container;
+                }
+                onRemove() {
+                    if (this._container.parentNode) this._container.parentNode.removeChild(this._container);
+                }
+            }
+            map.addControl(new SheetSoloControl(), 'top-left');
             const bounds = new maplibregl.LngLatBounds();
             let markerCount = 0;
             events.forEach(event => {
@@ -4085,17 +4262,38 @@ class DynamicCalendarLoader extends CalendarCore {
                 // mirror highlightMapMarker's classes: the sheet's event is
                 // selected, everything else dimmed (and an unmapped sheet
                 // event leaves all markers dimmed, same as the main map)
-                if (event.slug === selectedSlug) {
+                const isSelectedMarker = event.slug === selectedSlug;
+                if (isSelectedMarker) {
                     markerIcon.classList.add('marker-selected');
                 } else {
                     markerIcon.classList.add('marker-dimmed');
                 }
+                sheetMarkers.push({ el: markerIcon, selected: isSelectedMarker });
                 new maplibregl.Marker({ element: markerIcon, anchor: 'bottom' })
                     .setLngLat([event.coordinates.lng, event.coordinates.lat])
                     .addTo(map);
                 bounds.extend([event.coordinates.lng, event.coordinates.lat]);
                 markerCount++;
             });
+            const selectedShown = events.some(ev => ev.slug === selectedSlug &&
+                ev.coordinates?.lat && ev.coordinates?.lng);
+            if (!selectedShown) {
+                // the sheet's event isn't in the visible period's marker set
+                // (a neighbor-month pill) — add its own selected marker so
+                // the map never shows all-dimmed-none-selected
+                const extra = this.getRenderedEventBySlug(selectedSlug);
+                if (extra && extra.coordinates?.lat && extra.coordinates?.lng &&
+                    !isNaN(extra.coordinates.lat) && !isNaN(extra.coordinates.lng)) {
+                    const icon = this.createMarkerIcon(extra);
+                    icon.classList.add('marker-selected');
+                    sheetMarkers.push({ el: icon, selected: true });
+                    new maplibregl.Marker({ element: icon, anchor: 'bottom' })
+                        .setLngLat([extra.coordinates.lng, extra.coordinates.lat])
+                        .addTo(map);
+                    bounds.extend([extra.coordinates.lng, extra.coordinates.lat]);
+                    markerCount++;
+                }
+            }
             if (markerCount > 0) {
                 map.fitBounds(bounds, { padding: 20, maxZoom: mapZoom });
             }
@@ -4109,123 +4307,251 @@ class DynamicCalendarLoader extends CalendarCore {
 
 
 
-    // Update calendar display with filtered events
-    async updateCalendarDisplay(hideEvents = false) {
-        logger.time('CALENDAR', 'Calendar display update');
-        const filteredEvents = this.getFilteredEvents();
-        
-        logger.info('CALENDAR', `🔍 UPDATE_DISPLAY: Updating calendar display (${hideEvents ? 'HIDDEN for measurement' : 'VISIBLE for display'})`, {
-            view: this.currentView,
-            eventCount: filteredEvents.length,
-            city: this.currentCity,
-            hideEvents,
-            step: hideEvents ? 'Step 1: Creating structure' : 'Step 4: Showing real events',
-            cachedMeasurements: {
-                eventTextWidth: this.cachedEventTextWidth,
-                charsPerPixel: this.charsPerPixel?.toFixed(4),
-                currentBreakpoint: this.currentBreakpoint
-            }
-        });
-        
-        // Update calendar title
-        try {
-            const calendarTitle = document.getElementById('calendar-title');
-            if (calendarTitle) {
-                // Removing calendar title for now, keeping reference in case we want to add per-city titles again later
-                // calendarTitle.textContent = `What's the vibe?`;
-                logger.debug('CALENDAR', 'Calendar title updated successfully');
-            } else {
-                logger.warn('CALENDAR', 'Calendar title element not found');
-            }
-        } catch (error) {
-            logger.warn('CALENDAR', 'Failed to update calendar title', { error: error.message });
+
+    // Slide the week strip so `date` is inside the visible window — before
+    // the window it becomes the leftmost day, after it the rightmost. The
+    // settle machinery then updates label/URL/cards/map. A date outside the
+    // rendered strip re-renders centered on it instead.
+    scrollWeekStripToDate(date) {
+        const grid = document.querySelector('.calendar-grid');
+        const target = new Date(date);
+        target.setHours(0, 0, 0, 0);
+        if (!grid || !this.stripStartDate || grid.scrollWidth <= 0) {
+            this.currentDate = target;
+            return;
         }
-        
-        // Update date range
+        const idx = Math.round((target - this.stripStartDate) / 86400000);
+        if (idx < 0 || idx >= this.stripDayCount) {
+            this.currentDate = target;
+            this.updateCalendarDisplay();
+            return;
+        }
+        const curIdx = Math.round((this.getCurrentPeriodBounds().start - this.stripStartDate) / 86400000);
+        const newStart = idx < curIdx ? idx : Math.max(0, idx - 6);
+        const dayW = grid.scrollWidth / this.stripDayCount;
+        grid.scrollTo({ left: Math.round(newStart * dayW), behavior: 'smooth' });
+    }
+
+    // A selection whose day slid outside the visible window RESETS — leaving
+    // it active greyed the whole calendar/map/list with nothing visibly
+    // selected (owner report: select fuzzy, swipe it out of view)
+    clearSelectionIfOutOfBounds() {
+        if (!this.selectedEventSlug || !this.selectedEventDateISO) return;
+        const parts = this.selectedEventDateISO.split('-');
+        const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 12);
+        if (isNaN(d.getTime())) return;
+        const { start, end } = this.getCurrentPeriodBounds();
+        if (d >= start && d <= end) return;
+        // the selected DAY left the window — but a recurring event often has
+        // an occurrence inside the new window (weekly events, constantly):
+        // re-bind the selection to that occurrence and stay selected. Reset
+        // only when the event doesn't occur in the window at all.
+        const occurrence = this.getFilteredEvents().find(ev => ev.slug === this.selectedEventSlug);
+        if (occurrence) {
+            const od = this.getLogicalStartDate(occurrence);
+            if (od) this.selectedEventDateISO = this.getLocalDateKey(od);
+            logger.debug('EVENT', 'Selection re-bound to in-window occurrence', {
+                slug: this.selectedEventSlug,
+                date: this.selectedEventDateISO
+            });
+            return;
+        }
+        this.clearEventSelection();
+    }
+
+    // Header label for the visible period (title slot + date range)
+    updateHeaderPeriodLabel() {
         try {
             const dateRange = document.getElementById('date-range');
             if (dateRange) {
                 const { start, end } = this.getCurrentPeriodBounds();
                 dateRange.textContent = this.formatDateRange(start, end);
-                logger.debug('CALENDAR', 'Date range updated successfully', { start, end });
-            } else {
-                logger.warn('CALENDAR', 'Date range element not found');
             }
         } catch (error) {
             logger.warn('CALENDAR', 'Failed to update date range', { error: error.message });
         }
-        
-        // Update calendar grid
-        try {
-            const calendarGrid = document.querySelector('.calendar-grid');
-            if (calendarGrid) {
-                logger.debug('CALENDAR', 'Updating calendar grid HTML');
-                calendarGrid.innerHTML = this.generateCalendarEvents(filteredEvents, hideEvents);
-                
-                // For measurement mode, make the grid invisible to users but keep same layout constraints
-                if (hideEvents) {
-                    // Keep the element in its normal position but hide it behind background
-                    calendarGrid.style.position = 'relative';
-                    calendarGrid.style.zIndex = '-999'; // Behind everything else
-                    calendarGrid.style.opacity = '0'; // Invisible to users
-                    calendarGrid.style.pointerEvents = 'none'; // Can't interact with it
-                    calendarGrid.style.visibility = 'visible'; // Still measurable by JS
-                    logger.debug('CALENDAR', 'Calendar grid set to measurement mode (hidden)');
-                } else {
-                    // Reset to normal visibility
-                    calendarGrid.style.position = '';
-                    calendarGrid.style.zIndex = '';
-                    calendarGrid.style.opacity = '1';
-                    calendarGrid.style.pointerEvents = '';
-                    calendarGrid.style.visibility = 'visible';
-                    logger.debug('CALENDAR', 'Calendar grid set to display mode (visible)');
-                }
-                
-                logger.debug('CALENDAR', 'Attaching calendar interactions');
-                this.attachCalendarInteractions();
-                
-                // Update visual selection state after calendar is rendered
-                this.updateSelectionVisualState();
-            } else {
-                logger.warn('CALENDAR', 'Calendar grid element not found');
+    }
+
+    // The week strip is ONE grid row, so every column would stretch to the
+    // tallest of all 21 rendered days — a festival stack in the off-screen
+    // buffer would inflate the visible week and squeeze the map. Size the
+    // grid to the tallest VISIBLE column instead (overflow-y is hidden;
+    // buffer days clip until they slide in and the next settle re-sizes).
+    sizeWeekStripHeight() {
+        this.measureWeekStripHeight();
+        // dusk-ui's lane spacers land after this task (via its observer) and
+        // can grow multi-day cells — one deferred re-measure catches it
+        requestAnimationFrame(() => requestAnimationFrame(() => this.measureWeekStripHeight()));
+    }
+
+    measureWeekStripHeight() {
+        const grid = document.querySelector('.calendar-grid');
+        if (!grid || this.currentView !== 'week' || grid.scrollWidth <= 0) return;
+        const days = grid.querySelectorAll('.calendar-day');
+        if (!days.length) return;
+        const dayW = grid.scrollWidth / this.stripDayCount;
+        const first = Math.max(0, Math.min(days.length - 7, Math.round(grid.scrollLeft / dayW)));
+        let h = 0;
+        for (let i = first; i < Math.min(days.length, first + 7); i++) {
+            // NOT scrollHeight: grid stretches every cell to the row height
+            // (the tallest of ALL 21 days), so a visible cell's scrollHeight
+            // reported the off-screen maximum and the clamp was a no-op.
+            // Measure the cell's real CONTENT extent instead.
+            const cell = days[i];
+            const cellTop = cell.getBoundingClientRect().top;
+            let contentBottom = cellTop;
+            for (let c = 0; c < cell.children.length; c++) {
+                const b = cell.children[c].getBoundingClientRect().bottom;
+                if (b > contentBottom) contentBottom = b;
             }
-        } catch (error) {
-            logger.warn('CALENDAR', 'Failed to update calendar grid', { error: error.message });
+            h = Math.max(h, contentBottom - cellTop);
         }
-        
-        // Update grid layout based on view (outside try-catch since calendarGrid might not be defined)
-        try {
-            const calendarGrid = document.querySelector('.calendar-grid');
-            if (calendarGrid) {
-                if (this.currentView === 'month') {
-                    calendarGrid.className = 'calendar-grid month-view-grid';
-                    calendarGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
-                    
-                    // Calculate the optimal number of rows based on the actual content
-                    const dayElements = calendarGrid.querySelectorAll('.calendar-day, .calendar-day-header');
-                    const headerRows = calendarGrid.querySelectorAll('.calendar-day-header').length > 0 ? 1 : 0;
-                    const dayRows = Math.ceil((dayElements.length - (headerRows * 7)) / 7);
-                    const totalRows = headerRows + dayRows;
-                    
-                    calendarGrid.style.gridTemplateRows = `repeat(${headerRows}, auto) repeat(${dayRows}, minmax(90px, auto))`;
-                    
-                    logger.debug('CALENDAR', `Updated month view grid layout`, {
-                        totalElements: dayElements.length,
-                        headerRows: headerRows,
-                        dayRows: dayRows,
-                        totalRows: totalRows
-                    });
-                } else {
-                    calendarGrid.className = 'calendar-grid week-view-grid';
-                    calendarGrid.style.gridTemplateColumns = 'repeat(7, 1fr)';
-                    calendarGrid.style.gridTemplateRows = 'auto';
-                    calendarGrid.style.minHeight = 'auto';
+        if (h > 0) grid.style.height = Math.ceil(h + 10) + 'px';
+    }
+
+    // Place the freshly rendered strip so the visible period is in view.
+    // Week: currentDate's column lands at the left edge. Month: the current
+    // month block tops the scroller — or, given an anchor (from a settle
+    // rebuild), the anchored month keeps its exact on-screen offset so the
+    // rebuild is invisible.
+    positionGridStrip(anchor = null) {
+        const grid = document.querySelector('.calendar-grid');
+        if (!grid) return;
+        this.suppressGridScrollUntil = performance.now() + 250;
+        if (this.currentView === 'week') {
+            if (!this.stripStartDate || grid.scrollWidth <= 0) return;
+            const { start } = this.getCurrentPeriodBounds();
+            const idx = Math.round((start - this.stripStartDate) / 86400000);
+            const dayW = grid.scrollWidth / this.stripDayCount;
+            grid.scrollLeft = Math.round(idx * dayW);
+            return;
+        }
+        const gr = grid.getBoundingClientRect();
+        const sticky = grid.querySelector('.month-strip-days');
+        const stickyH = sticky ? sticky.getBoundingClientRect().height : 0;
+        if (anchor && anchor.dateKey) {
+            const c = grid.querySelector(`.calendar-day[data-date="${anchor.dateKey}"]`);
+            if (c) {
+                grid.scrollTop += (c.getBoundingClientRect().top - gr.top) - anchor.offset;
+                return;
+            }
+        }
+        // the row containing currentDate tops the scroller: switching to
+        // month shows the CURRENT week at top, and the Today button (which
+        // sets currentDate to today first) shows today's week at top
+        const rowStart = new Date(this.currentDate);
+        rowStart.setDate(rowStart.getDate() - rowStart.getDay());
+        const cell = grid.querySelector(`.calendar-day[data-date="${this.getLocalDateKey(rowStart)}"]`);
+        // flush under the sticky day-name row — the today-circle clearance
+        // lives INSIDE the month cells now (day-header top offset), so no
+        // sliver of the previous week peeks above the placed row
+        if (cell) grid.scrollTop += cell.getBoundingClientRect().top - gr.top - stickyH;
+    }
+
+    // One-time (the .calendar-grid element survives every innerHTML swap):
+    // settle detection for the strip. Nothing runs per scroll frame — a
+    // 160ms debounce fires the settle, deferred past any active touch.
+    armGridScroll(grid) {
+        if (grid.dataset.stripArmed) return;
+        grid.dataset.stripArmed = '1';
+        const schedule = () => {
+            clearTimeout(this.gridScrollTimer);
+            this.gridScrollTimer = setTimeout(() => {
+                if (this.gridTouchActive) return; // settles on touchend instead
+                this.onGridSettle();
+            }, 160);
+        };
+        grid.addEventListener('scroll', () => {
+            if (performance.now() < this.suppressGridScrollUntil) return;
+            schedule();
+        }, { passive: true });
+        grid.addEventListener('touchstart', () => { this.gridTouchActive = true; }, { passive: true });
+        ['touchend', 'touchcancel'].forEach(ev => grid.addEventListener(ev, () => {
+            this.gridTouchActive = false;
+            schedule();
+        }, { passive: true }));
+    }
+
+    // The strip stopped moving: derive the visible period from the scroll
+    // position, then refresh label/URL/cards/map for it. Near a strip edge,
+    // rebuild the strip re-centered (updateCalendarDisplay) — with a month
+    // anchor so the rebuild doesn't visibly move anything.
+    async onGridSettle() {
+        const grid = document.querySelector('.calendar-grid');
+        if (!grid || !this.allEvents) return;
+        if (this.currentView === 'week') {
+            if (!this.stripStartDate || grid.scrollWidth <= 0) return;
+            const dayW = grid.scrollWidth / this.stripDayCount;
+            const idx = Math.max(0, Math.min(this.stripDayCount - 7, Math.round(grid.scrollLeft / dayW)));
+            const newStart = new Date(this.stripStartDate);
+            newStart.setDate(newStart.getDate() + idx);
+            newStart.setHours(0, 0, 0, 0);
+            const changed = newStart.getTime() !== this.getCurrentPeriodBounds().start.getTime();
+            const nearEdge = idx <= 6 || idx >= this.stripDayCount - 13;
+            if (!changed && !nearEdge) return;
+            this.currentDate = newStart;
+            this.clearSelectionIfOutOfBounds();
+            if (nearEdge) {
+                await this.updateCalendarDisplay();
+                return;
+            }
+            this.sizeWeekStripHeight();
+            this.updateHeaderPeriodLabel();
+            this.syncUrl(true);
+            await this.refreshEventsPanel(this.getFilteredEvents(), false, { keepCamera: true });
+            return;
+        }
+        // month: the month owning the most VISIBLE day cells drives the
+        // header/URL/panel (the continuous strip has no block boundaries)
+        const gr = grid.getBoundingClientRect();
+        const counts = {};
+        let anchorCell = null;
+        let anchorOffset = 0;
+        grid.querySelectorAll('.month-strip-grid .calendar-day[data-date]').forEach(c => {
+            const r = c.getBoundingClientRect();
+            const visible = Math.min(r.bottom, gr.bottom) - Math.max(r.top, gr.top);
+            if (visible > r.height * 0.5) {
+                const key = c.getAttribute('data-date').slice(0, 7);
+                counts[key] = (counts[key] || 0) + 1;
+                if (!anchorCell) {
+                    anchorCell = c;
+                    anchorOffset = r.top - gr.top;
                 }
             }
-        } catch (layoutError) {
-            logger.warn('CALENDAR', 'Failed to update grid layout', { error: layoutError.message });
+        });
+        const keys = Object.keys(counts);
+        if (!keys.length) return;
+        const bestKey = keys.sort((a, b) => counts[b] - counts[a])[0];
+        const [y, m] = bestKey.split('-').map(Number);
+        const cur = this.currentDate;
+        const changed = !(cur.getFullYear() === y && cur.getMonth() === m - 1);
+        const monthKeyOf = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        const nearEdge = this.stripMonths.length >= 3 &&
+            (bestKey === monthKeyOf(this.stripMonths[0]) ||
+             bestKey === monthKeyOf(this.stripMonths[this.stripMonths.length - 1]));
+        if (!changed && !nearEdge) return;
+        const day = Math.min(cur.getDate(), new Date(y, m, 0).getDate());
+        this.currentDate = new Date(y, m - 1, day);
+        this.clearSelectionIfOutOfBounds();
+        if (nearEdge) {
+            this.pendingStripAnchor = anchorCell
+                ? { dateKey: anchorCell.getAttribute('data-date'), offset: anchorOffset }
+                : null;
+            await this.updateCalendarDisplay();
+            return;
         }
-        
+        this.updateHeaderPeriodLabel();
+        this.syncUrl(true);
+        await this.refreshEventsPanel(this.getFilteredEvents(), false, { keepCamera: true });
+    }
+
+    // The events panel = cards list + map (+ the chunky:events-rendered
+    // dispatch). Split from updateCalendarDisplay so a strip scroll settle
+    // can refresh what the visible days show WITHOUT rebuilding the grid
+    // (which would destroy the user's scroll position). opts.keepCamera
+    // leaves the map camera alone on settle refreshes — markers change,
+    // the framing never jumps under a slide.
+    async refreshEventsPanel(filteredEvents, hideEvents = false, opts = {}) {
         // Update events list (show for both week and month views)
         const eventsList = document.querySelector('.events-list');
         const eventsSection = document.querySelector('.events');
@@ -4271,12 +4597,67 @@ class DynamicCalendarLoader extends CalendarCore {
                         originalEventCount: filteredEvents.length
                     });
                     const listDeduplicatedEvents = this.deduplicateByUIDAndRecurrenceId(filteredEvents);
-                    
-                    const eventCardsHtml = listDeduplicatedEvents.map(event => this.generateEventCard(event)).join('');
-                    eventsList.innerHTML = eventCardsHtml;
-                    
+
+                    // Reconcile instead of innerHTML-swapping: a card whose
+                    // rendered content is unchanged is REUSED, so its favicon
+                    // and flyer <img>s keep their decoded pixels — the swap
+                    // recreated every node on each strip settle and all the
+                    // favicons blinked (owner report)
+                    const sigOf = (str) => {
+                        let hash = 5381;
+                        for (let i = 0; i < str.length; i++) hash = ((hash << 5) + hash + str.charCodeAt(i)) >>> 0;
+                        return String(hash);
+                    };
+                    const existingBySlug = new Map();
+                    eventsList.querySelectorAll(':scope > .event-card[data-event-slug]').forEach(c => {
+                        existingBySlug.set(c.getAttribute('data-event-slug'), c);
+                    });
+                    // already-decoded <img>s from the outgoing list, by URL:
+                    // fresh cards TRANSPLANT them instead of re-decoding, so
+                    // favicons/flyers don't blink even across a month change
+                    // (venues repeat, the image URLs are the same)
+                    const oldImgPool = new Map();
+                    eventsList.querySelectorAll(':scope > .event-card img').forEach(img => {
+                        const src = img.getAttribute('src');
+                        if (src && img.complete && !oldImgPool.has(src)) oldImgPool.set(src, img);
+                    });
+                    const frag = document.createDocumentFragment();
+                    const shell = document.createElement('div');
+                    let reusedCards = 0;
+                    listDeduplicatedEvents.forEach(event => {
+                        const html = this.generateEventCard(event);
+                        const sig = sigOf(html);
+                        const existing = existingBySlug.get(event.slug);
+                        if (existing && existing.dataset.cardSig === sig) {
+                            existingBySlug.delete(event.slug);
+                            // this card keeps its own imgs — pull them out of
+                            // the transplant pool so no other card steals them
+                            oldImgPool.forEach((img, src) => {
+                                if (existing.contains(img)) oldImgPool.delete(src);
+                            });
+                            frag.appendChild(existing);
+                            reusedCards++;
+                            return;
+                        }
+                        shell.innerHTML = html;
+                        const fresh = shell.firstElementChild;
+                        if (fresh) {
+                            fresh.dataset.cardSig = sig;
+                            fresh.querySelectorAll('img').forEach(img => {
+                                const src = img.getAttribute('src');
+                                const donor = src && oldImgPool.get(src);
+                                if (donor) {
+                                    oldImgPool.delete(src);
+                                    img.replaceWith(donor);
+                                }
+                            });
+                            frag.appendChild(fresh);
+                        }
+                    });
+                    eventsList.replaceChildren(frag);
+
                     logger.debug('CALENDAR', '✅ UPDATE_DISPLAY: Successfully updated events list', {
-                        htmlLength: eventCardsHtml.length,
+                        reusedCards,
                         originalEventCount: filteredEvents.length,
                         deduplicatedEventCount: listDeduplicatedEvents.length,
                         removedDuplicates: filteredEvents.length - listDeduplicatedEvents.length
@@ -4322,7 +4703,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     originalEventCount: filteredEvents.length
                 });
                 const mapDeduplicatedEvents = this.deduplicateByUIDAndRecurrenceId(filteredEvents);
-                this.initializeMap(this.currentCityConfig, mapDeduplicatedEvents);
+                this.initializeMap(this.currentCityConfig, mapDeduplicatedEvents, opts);
                 logger.debug('CALENDAR', 'Map initialization completed');
                 
                 // Update visual selection state again after map is initialized
@@ -4334,7 +4715,10 @@ class DynamicCalendarLoader extends CalendarCore {
                 this.updateSelectionVisualState();
                 
                 // Initialize location features after map is ready
+                // (skipped on settle refreshes — the location layer doesn't
+                // change because the visible days slid by one)
                 try {
+                    if (opts.keepCamera) throw { message: 'skipped (settle refresh)' };
                     if (!window.locationManager) {
                         window.locationManager = new LocationManager();
                     }
@@ -4371,6 +4755,97 @@ class DynamicCalendarLoader extends CalendarCore {
         } catch (error) {
             logger.warn('CALENDAR', 'Failed to initialize map', { error: error.message });
         }
+    }
+
+    // Update calendar display with filtered events
+    async updateCalendarDisplay(hideEvents = false) {
+        logger.time('CALENDAR', 'Calendar display update');
+        const filteredEvents = this.getFilteredEvents();
+        
+        logger.info('CALENDAR', `🔍 UPDATE_DISPLAY: Updating calendar display (${hideEvents ? 'HIDDEN for measurement' : 'VISIBLE for display'})`, {
+            view: this.currentView,
+            eventCount: filteredEvents.length,
+            city: this.currentCity,
+            hideEvents,
+            step: hideEvents ? 'Step 1: Creating structure' : 'Step 4: Showing real events',
+            cachedMeasurements: {
+                eventTextWidth: this.cachedEventTextWidth,
+                charsPerPixel: this.charsPerPixel?.toFixed(4),
+                currentBreakpoint: this.currentBreakpoint
+            }
+        });
+        
+        this.updateHeaderPeriodLabel();
+        
+        // Update calendar grid
+        try {
+            const calendarGrid = document.querySelector('.calendar-grid');
+            if (calendarGrid) {
+                logger.debug('CALENDAR', 'Updating calendar grid HTML');
+                calendarGrid.innerHTML = this.generateCalendarEvents(filteredEvents, hideEvents);
+                
+                // For measurement mode, make the grid invisible to users but keep same layout constraints
+                if (hideEvents) {
+                    // Keep the element in its normal position but hide it behind background
+                    calendarGrid.style.position = 'relative';
+                    calendarGrid.style.zIndex = '-999'; // Behind everything else
+                    calendarGrid.style.opacity = '0'; // Invisible to users
+                    calendarGrid.style.pointerEvents = 'none'; // Can't interact with it
+                    calendarGrid.style.visibility = 'visible'; // Still measurable by JS
+                    logger.debug('CALENDAR', 'Calendar grid set to measurement mode (hidden)');
+                } else {
+                    // Reset to normal visibility
+                    calendarGrid.style.position = '';
+                    calendarGrid.style.zIndex = '';
+                    calendarGrid.style.opacity = '1';
+                    calendarGrid.style.pointerEvents = '';
+                    calendarGrid.style.visibility = 'visible';
+                    logger.debug('CALENDAR', 'Calendar grid set to display mode (visible)');
+                }
+                
+                logger.debug('CALENDAR', 'Attaching calendar interactions');
+                this.attachCalendarInteractions();
+                
+                // Update visual selection state after calendar is rendered
+                this.updateSelectionVisualState();
+            } else {
+                logger.warn('CALENDAR', 'Calendar grid element not found');
+            }
+        } catch (error) {
+            logger.warn('CALENDAR', 'Failed to update calendar grid', { error: error.message });
+        }
+        
+        // Grid layout: the strip classes make the grid its own scroller —
+        // week: horizontal day columns (1/7 of the viewport each); month:
+        // stacked month blocks, each with its own 7-column inner grid.
+        try {
+            const calendarGrid = document.querySelector('.calendar-grid');
+            if (calendarGrid) {
+                if (this.currentView === 'month') {
+                    calendarGrid.className = 'calendar-grid month-view-grid month-strip';
+                    calendarGrid.style.gridTemplateColumns = '';
+                    calendarGrid.style.gridTemplateRows = '';
+                    calendarGrid.style.minHeight = '';
+                } else {
+                    calendarGrid.className = 'calendar-grid week-view-grid week-strip';
+                    // the week strip is a BLOCK scroller (see styles.css:
+                    // WebKit sticky labels don't work in grid scrollers) —
+                    // clear the base grid's inline template writes
+                    calendarGrid.style.gridTemplateColumns = '';
+                    calendarGrid.style.gridTemplateRows = '';
+                    calendarGrid.style.minHeight = 'auto';
+                }
+                if (this.currentView !== 'week') calendarGrid.style.height = '';
+                this.positionGridStrip(this.pendingStripAnchor);
+                this.pendingStripAnchor = null;
+                if (this.currentView === 'week') this.sizeWeekStripHeight();
+                this.armGridScroll(calendarGrid);
+            }
+        } catch (layoutError) {
+            logger.warn('CALENDAR', 'Failed to update grid layout', { error: layoutError.message });
+        }
+        
+        await this.refreshEventsPanel(filteredEvents, hideEvents);
         
         logger.timeEnd('CALENDAR', 'Calendar display update');
         logger.performance('CALENDAR', `Calendar display updated successfully`, {
@@ -4402,6 +4877,14 @@ class DynamicCalendarLoader extends CalendarCore {
                 const newView = e.target.dataset.view;
                 if (newView !== this.currentView) {
                     logger.userInteraction('CALENDAR', `View changed from ${this.currentView} to ${newView}`);
+                    if (newView === 'week') {
+                        // coming from month: open the week AS SHOWN there
+                        // (the Sunday-aligned row containing currentDate)
+                        const aligned = new Date(this.currentDate);
+                        aligned.setDate(aligned.getDate() - aligned.getDay());
+                        aligned.setHours(0, 0, 0, 0);
+                        this.currentDate = aligned;
+                    }
                     this.currentView = newView;
                     
                     // Update active button
@@ -4653,6 +5136,9 @@ class DynamicCalendarLoader extends CalendarCore {
     attachEventCardSelectionHandlers() {
         const cards = document.querySelectorAll('.event-card.detailed');
         cards.forEach(card => {
+            // reconciled refreshes REUSE card nodes — never double-bind
+            if (card.dataset.selBound) return;
+            card.dataset.selBound = '1';
             card.addEventListener('click', (e) => {
                 // Ignore clicks that originate from share button
                 const shareBtn = e.target.closest && e.target.closest('.share-event-btn');
@@ -5391,6 +5877,32 @@ function fitAllMarkers() {
 
 
 
+
+// Hide-others ("solo") mode for the main events map: while ON and an event
+// is selected, every other marker is hidden; with no selection, all markers
+// stay visible. Re-applied on every selection change and marker rebuild.
+window.mapSoloHidden = false;
+function toggleMapSolo() {
+    window.mapSoloHidden = !window.mapSoloHidden;
+    const btn = document.getElementById('solo-btn');
+    const icon = document.getElementById('solo-icon');
+    if (btn) btn.classList.toggle('map-solo-on', window.mapSoloHidden);
+    if (icon) icon.className = 'bi ' + (window.mapSoloHidden ? 'bi-eye' : 'bi-eye-slash');
+    applyMapSoloVisibility();
+}
+function applyMapSoloVisibility() {
+    if (!window.eventsMapMarkersBySlug) return;
+    const activeLoader = window.calendarLoader;
+    const selected = activeLoader && activeLoader.selectedEventSlug;
+    Object.entries(window.eventsMapMarkersBySlug).forEach(([slug, marker]) => {
+        const el = marker.getElement && marker.getElement();
+        if (!el) return;
+        el.classList.toggle('marker-solo-hidden', !!(window.mapSoloHidden && selected && slug !== selected));
+    });
+}
+if (typeof window !== 'undefined') {
+    window.toggleMapSolo = toggleMapSolo;
+}
 
 async function showMyLocation(panMap = true) {
     try {

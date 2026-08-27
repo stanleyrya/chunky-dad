@@ -292,8 +292,22 @@
       const slug = pill.getAttribute('data-event-slug');
       const card = slug && document.querySelector('.events-list .event-card[data-event-slug="' + cssEscape(slug) + '"]');
       if (card) { openSheet(card); return; }
-      // the month list should always carry the card; if it somehow doesn't,
-      // fall back to opening the event's week rather than doing nothing
+      // the continuous month strip renders NEIGHBOR months too — their
+      // events aren't in the visible list, so build a detached card from
+      // the loader's own renderer and open the sheet off that
+      if (l && l.getRenderedEventBySlug && l.generateEventCard) {
+        const dayEl0 = pill.closest('[data-date]');
+        const evData = l.getRenderedEventBySlug(slug, dayEl0 && dayEl0.getAttribute('data-date'));
+        if (evData) {
+          try {
+            const tmp = document.createElement('div');
+            tmp.innerHTML = l.generateEventCard(evData);
+            const ghost = tmp.querySelector('.event-card');
+            if (ghost) { openSheet(ghost); return; }
+          } catch (e2) {}
+        }
+      }
+      // last resort: open the event's week rather than doing nothing
       const dayEl = pill.closest('[data-date]');
       const date = dayEl && dayEl.getAttribute('data-date');
       if (l && l.openWeekAt && slug && date) l.openWeekAt(slug, date);
@@ -365,9 +379,24 @@
   const realSelect = (slug) => {
     const l = loader();
     if (!l || !slug || l.selectedEventSlug === slug) return;
-    const pill = document.querySelector('.calendar-grid .event-item[data-event-slug="' + cssEscape(slug) + '"]');
-    const dayEl = pill && pill.closest('[data-date]');
-    const dateISO = dayEl ? dayEl.getAttribute('data-date') : null;
+    // resolve the slug to the occurrence INSIDE the visible window — the
+    // continuous strip also renders buffer weeks, so the first DOM pill for
+    // a weekly event can be last week's occurrence (a swipe between cards
+    // then yanked the whole week strip a week back)
+    const pills = document.querySelectorAll('.calendar-grid .event-item[data-event-slug="' + cssEscape(slug) + '"]');
+    let dateISO = null;
+    let bounds = null;
+    try { bounds = l.getCurrentPeriodBounds && l.getCurrentPeriodBounds(); } catch (e) {}
+    for (let i = 0; i < pills.length; i++) {
+      const dayEl = pills[i].closest('[data-date]');
+      const d = dayEl && dayEl.getAttribute('data-date');
+      if (!d) continue;
+      if (!dateISO) dateISO = d; // fallback: first found
+      if (bounds) {
+        const dt = new Date(d + 'T12:00:00');
+        if (dt >= bounds.start && dt <= bounds.end) { dateISO = d; break; }
+      }
+    }
     try { l.toggleEventSelection(slug, dateISO, { deferUrl: true }); } catch (e) {}
     urlDirty = true;
     landedSlug = slug;

@@ -151,11 +151,13 @@ class LocationManager {
             throw new Error('Geolocation is not supported by this browser');
         }
 
-        // Check permission state
-        const permissionState = await this.checkPermissionState();
-        if (permissionState === 'denied') {
-            throw new Error('Location access has been denied. Please enable location permissions in your browser settings.');
-        }
+        // NOTE: no awaited permission pre-check here. Awaiting
+        // navigator.permissions.query() before getCurrentPosition detaches
+        // the request from the tap's user-gesture context — iOS Safari then
+        // suppresses the permission prompt and the request hangs forever
+        // (the location button "hasn't worked in a while").
+        // getCurrentPosition reports denial through its own error callback.
+        const permissionState = 'unchecked';
 
         // Try cached location first (unless force refresh)
         if (!forceRefresh) {

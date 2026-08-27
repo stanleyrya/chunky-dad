@@ -180,6 +180,19 @@
             const lead = chunk[0];
             lead.classList.add('md-chunk-lead');
             chunk.slice(1).forEach(el => el.classList.add('md-chunk-follow'));
+            // the renderer emits a visible title only on a run's FIRST
+            // segment — every other segment holds its name in a
+            // visibility:hidden wrapper. A mid-run lead (the run starts
+            // off-screen in the week strip) must UNHIDE its wrapper, and a
+            // segment demoted back to follow re-hides
+            chunk.forEach((el, i) => {
+                const name = el.querySelector('.event-name');
+                if (!name) return;
+                const wrap = name.parentElement;
+                if (wrap && wrap !== el && wrap.style && wrap.style.visibility) {
+                    wrap.style.visibility = i === 0 ? 'visible' : 'hidden';
+                }
+            });
             const first = lead.getBoundingClientRect();
             const last = chunk[chunk.length - 1].getBoundingClientRect();
             const chunkWidth = Math.max(first.width, last.right - first.left);
@@ -192,14 +205,61 @@
                 leadName.style.maxWidth = 'none';
                 // The site's smart-name logic truncates the STRING to one
                 // cell's width before we ever get here — give the lead the
-                // real name and let CSS ellipsis do any needed trimming.
-                // (Guarded: only write on change, or the MutationObserver
+                // real name. In the week strip the label lives in a STICKY
+                // span (.md-sticky-label): the compositor pins it to the
+                // scrollport's left edge and pushes it out at the bar's end
+                // — zero JS per scroll frame, so it can't jitter.
+                // (Guarded: only mutate on change, or the MutationObserver
                 // would refire forever.)
                 const slug = lead.getAttribute('data-event-slug');
                 const events = (window.calendarLoader && window.calendarLoader.allEvents) || [];
                 const ev = events.find(e => e && e.slug === slug);
                 const label = ev ? (ev.shortName || ev.nickname || ev.name) : null;
-                if (label && leadName.textContent !== label) leadName.textContent = label;
+                if (label) {
+                    let span = leadName.querySelector(':scope > .md-sticky-label');
+                    if (!span) {
+                        span = document.createElement('span');
+                        span.className = 'md-sticky-label';
+                        span.textContent = label;
+                        leadName.textContent = '';
+                        leadName.appendChild(span);
+                    } else if (!span.querySelector('.event-time') && span.textContent !== label) {
+                        span.textContent = label;
+                    }
+                    // the run's time hugs the edge WITH the name — move the
+                    // lead's own .event-time element into the sticky span
+                    // (idempotent: skip once it lives there)
+                    const timeEl = lead.querySelector(':scope > .event-time');
+                    if (timeEl && !span.contains(timeEl)) span.appendChild(timeEl);
+                    // natural label width, measured unshrunk — the sticker
+                    // only pays layout for width inside the end zone
+                    span.style.width = '';
+                    span._mdW = null;
+                    span._mdNat = span.getBoundingClientRect().width;
+                    // the label's at-rest inset from its CELL edge — parking
+                    // at the strip edge uses this so the parked text lines
+                    // up exactly with the single-day pills underneath
+                    const cellEl = lead.closest('.calendar-day');
+                    if (cellEl) {
+                        lead._mdInset = leadName.getBoundingClientRect().left - cellEl.getBoundingClientRect().left;
+                    }
+                }
+                // uniform bar height (week strip): every segment still
+                // carries invisible legacy content (hidden name wrapper,
+                // per-segment time) that takes layout space and left
+                // segments a row or a pixel apart — the divot at the run's
+                // end. The lead is the height authority for its chunk.
+                if (document.querySelector('.calendar-grid.week-strip')) {
+                    // fractional height (offsetHeight rounds and left a
+                    // half-pixel step between segments)
+                    const h = lead.getBoundingClientRect().height;
+                    if (h > 0) {
+                        chunk.slice(1).forEach(el => {
+                            const hpx = `${h}px`;
+                            if (el.style.height !== hpx) el.style.height = hpx;
+                        });
+                    }
+                }
             }
             chunk = [];
         };
@@ -212,6 +272,146 @@
         });
         flushChunk();
     };
+
+    // The flowing name HUGS the visible left edge while its run scrolls
+    // under it (owner: "instead of quickly switching ... hug the side of
+    // the screen"): per scroll frame, each lead's name is translated to the
+    // strip edge and its width shrunk to the bar's remaining span — the
+    // label slides along its own bar, ellipsizing as space runs out. One
+    // rAF, a handful of elements; style writes don't retrigger the
+    // childList observer.
+
+    // Edge-hugging corrector for the flowing labels. The CSS position:
+    // sticky on .md-sticky-label is the primary mechanism (compositor-
+    // driven where the engine honors it — some WebKit builds only re-stick
+    // on relayout). This pass runs synchronously on scroll and applies the
+    // DELTA between where the label is and where it should be, as a
+    // transform: if sticky did its job the delta is ~0 and nothing writes;
+    // if sticky is inert the transform carries the label. Transform-only —
+    // no layout writes — and the label is clamped inside its own bar, so
+    // it rides off with the bar's tail at the end.
+    // Two-phase label system — BOTH phases are compositor-smooth:
+    //   A (riding): the run's start is on-screen — the IN-PILL label shows
+    //     and scrolls natively with its bar. Zero JS positioning.
+    //   B (parked): the start has left the viewport — a STATIC clone in an
+    //     overlay OUTSIDE the scroller shows at the park position. It does
+    //     not move during scroll at all, so it cannot jitter.
+    // Per scroll frame the JS only READS one rect per run and flips
+    // visibility at the phase boundary; width (ellipsis) writes happen
+    // only inside the bar-end zone.
+    let labelLayer = null;
+    let floatLabels = [];
+    function ensureLabelLayer(grid) {
+        const host = grid.parentElement;
+        if (!host) return null;
+        if (!labelLayer || labelLayer.parentElement !== host) {
+            if (labelLayer) labelLayer.remove();
+            labelLayer = document.createElement('div');
+            labelLayer.className = 'md-label-layer';
+            host.appendChild(labelLayer);
+        }
+        host.style.position = 'relative';
+        labelLayer.style.left = grid.offsetLeft + 'px';
+        labelLayer.style.top = grid.offsetTop + 'px';
+        labelLayer.style.width = grid.clientWidth + 'px';
+        labelLayer.style.height = grid.clientHeight + 'px';
+        return labelLayer;
+    }
+    function buildFloatLabels() {
+        const grid = document.querySelector('.calendar-grid.week-strip');
+        floatLabels = [];
+        if (!grid) { if (labelLayer) labelLayer.remove(); labelLayer = null; return; }
+        const layer = ensureLabelLayer(grid);
+        if (!layer) return;
+        layer.textContent = '';
+        const gr = grid.getBoundingClientRect();
+        grid.querySelectorAll('.event-item.multi-day.md-chunk-lead').forEach(lead => {
+            const span = lead.querySelector('.md-sticky-label');
+            if (!span) return;
+            const chunkW = parseFloat(lead.style.getPropertyValue('--chunkw'));
+            if (!chunkW || chunkW <= 0) return;
+            span.style.visibility = '';
+            span.style.width = '';
+            const sr = span.getBoundingClientRect();
+            const lr = lead.getBoundingClientRect();
+            const el = document.createElement('div');
+            el.className = 'md-float-label';
+            // mirror the in-pill text exactly (the overlay is outside the
+            // pill scope, so scoped styles don't reach it)
+            const scs = getComputedStyle(span);
+            el.style.font = scs.font;
+            el.style.color = scs.color;
+            el.style.letterSpacing = scs.letterSpacing;
+            el.textContent = '';
+            span.childNodes.forEach(n => {
+                const c = n.cloneNode(true);
+                el.appendChild(c);
+            });
+            const t = el.querySelector('.event-time');
+            const st = span.querySelector('.event-time');
+            if (t && st) {
+                const tcs = getComputedStyle(st);
+                t.style.font = tcs.font;
+                t.style.color = tcs.color;
+                t.style.marginTop = tcs.marginTop;
+                t.style.display = 'block';
+                t.style.overflow = 'hidden';
+                t.style.textOverflow = 'ellipsis';
+                t.style.whiteSpace = 'nowrap';
+            }
+            el.style.top = (sr.top - gr.top) + 'px';
+            layer.appendChild(el);
+            floatLabels.push({
+                lead, span, el,
+                chunkW,
+                inset: sr.left - lr.left,
+                natural: sr.width,
+                park: (lead._mdInset > 0 ? lead._mdInset : 8),
+                mode: null, w: null, hidden: null
+            });
+        });
+        updateFloatLabels();
+    }
+    function updateFloatLabels() {
+        const grid = document.querySelector('.calendar-grid.week-strip');
+        if (!grid || !floatLabels.length) return;
+        const gridLeft = grid.getBoundingClientRect().left;
+        floatLabels.forEach(L => {
+            if (!L.lead.isConnected) return;
+            const lr = L.lead.getBoundingClientRect();
+            const barLeft = lr.left - gridLeft;
+            const barRight = barLeft + L.chunkW;
+            const inFlowX = barLeft + L.inset;
+            // one three-way phase: pill (start on-screen, native scroll),
+            // float (parked static copy), none (run has left)
+            let want;
+            if (barRight < L.park + 14) want = 'none';
+            else if (inFlowX > L.park + 0.5) want = 'pill';
+            else want = 'float';
+            if (want !== L.mode) {
+                L.mode = want;
+                L.span.style.visibility = want === 'pill' ? '' : 'hidden';
+                L.el.style.visibility = want === 'float' ? '' : 'hidden';
+                if (want === 'float') L.el.style.left = L.park + 'px';
+            }
+            if (want !== 'float') return;
+            // end-zone ellipsis: width writes only while the bar's remaining
+            // span crowds the text
+            const avail = barRight - L.park - 4;
+            const w = avail < L.natural ? Math.max(0, avail) : null;
+            if (w === null) {
+                if (L.w !== null) { L.w = null; L.el.style.width = ''; }
+            } else if (L.w === null || Math.abs(w - L.w) > 0.5) {
+                L.w = w;
+                L.el.style.width = w + 'px';
+            }
+        });
+    }
+    document.addEventListener('scroll', (e) => {
+        const t = e.target;
+        if (!t || !t.classList || !t.classList.contains('week-strip')) return;
+        updateFloatLabels();
+    }, { capture: true, passive: true });
 
     function paintMultiDayRuns() {
         const segs = [...document.querySelectorAll('.event-item.multi-day[data-event-slug]')];
@@ -231,6 +431,7 @@
             });
             chunkRun(group);
         });
+        buildFloatLabels();
     }
 
     // Re-render happens via wholesale innerHTML swaps — observe and repaint.
@@ -483,10 +684,10 @@
 
     // Today only earns a spot when today's cell is not on screen.
     function updateTodayChip() {
+        // the Today button is ALWAYS shown now (owner call) — the continuous
+        // strip made visibility-tracking fiddly and wrong in month mode
         const row = document.querySelector('.header-controls-row');
-        if (!row) return;
-        if (!document.querySelector('.calendar-grid .calendar-day')) return;
-        row.classList.toggle('off-today', !document.querySelector('.calendar-day.current'));
+        if (row) row.classList.add('off-today');
     }
 
     function refreshAll() {
