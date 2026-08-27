@@ -360,6 +360,7 @@
                 t.style.whiteSpace = 'nowrap';
             }
             el.style.top = (sr.top - gr.top) + 'px';
+            el.setAttribute('data-event-slug', lead.getAttribute('data-event-slug') || '');
             layer.appendChild(el);
             floatLabels.push({
                 lead, span, el,
@@ -371,6 +372,7 @@
             });
         });
         updateFloatLabels();
+        updateFloatLabelDim();
     }
     function updateFloatLabels() {
         const grid = document.querySelector('.calendar-grid.week-strip');
@@ -412,6 +414,20 @@
         if (!t || !t.classList || !t.classList.contains('week-strip')) return;
         updateFloatLabels();
     }, { capture: true, passive: true });
+
+    // spotlight parity: the overlay lives OUTSIDE the grid, so the
+    // calendar's :has(.selected) filter never reaches a parked label — a
+    // non-selected run's label must mute like its bar whenever some OTHER
+    // event is selected (and stay bright when its own run is selected or
+    // nothing is)
+    function updateFloatLabelDim() {
+        const sel = (window.calendarLoader && window.calendarLoader.selectedEventSlug) || null;
+        floatLabels.forEach(L => {
+            const slug = L.el.getAttribute('data-event-slug');
+            L.el.classList.toggle('md-label-dim', !!(sel && slug !== sel));
+        });
+    }
+    document.addEventListener('chunky:selection-changed', updateFloatLabelDim);
 
     function paintMultiDayRuns() {
         const segs = [...document.querySelectorAll('.event-item.multi-day[data-event-slug]')];
