@@ -126,7 +126,7 @@ class DynamicCalendarLoader extends CalendarCore {
         // the grid renders wider than the visible period and scrolls
         // natively; cards/map/label/URL follow on scroll settle only.
         this.stripStartDate = null;   // week strip: date of column 0
-        this.stripDayCount = 35;      // week strip: visible week ± 14 days
+        this.stripDayCount = 63;      // week strip: visible week ± 28 days
         this.stripMonths = [];        // month strip: rendered month firsts
         this.lastStripEvents = [];    // events across the rendered strip
         this.suppressGridScrollUntil = 0;
@@ -3517,7 +3517,7 @@ class DynamicCalendarLoader extends CalendarCore {
 
         if (this.currentView === 'week') {
             const stripStart = new Date(start);
-            stripStart.setDate(stripStart.getDate() - 14);
+            stripStart.setDate(stripStart.getDate() - 28);
             this.stripStartDate = new Date(stripStart);
             const stripEnd = new Date(stripStart);
             stripEnd.setDate(stripStart.getDate() + this.stripDayCount - 1);
@@ -3527,7 +3527,7 @@ class DynamicCalendarLoader extends CalendarCore {
             return this.generateWeekView(stripEvents, stripStart, stripEnd, today, hideEvents, this.stripDayCount);
         }
 
-        const months = [-2, -1, 0, 1, 2].map(d => new Date(start.getFullYear(), start.getMonth() + d, 1));
+        const months = [-3, -2, -1, 0, 1, 2, 3].map(d => new Date(start.getFullYear(), start.getMonth() + d, 1));
         this.stripMonths = months;
         // CONTINUOUS weeks, "like a calendar": Sunday on/before the previous
         // month's 1st through Saturday on/after the next month's last day —
@@ -4332,6 +4332,20 @@ class DynamicCalendarLoader extends CalendarCore {
         grid.scrollTo({ left: Math.round(newStart * dayW), behavior: 'smooth' });
     }
 
+    // Strip rebuild (extending the rendered range around the user): flags
+    // the grid so a quiet progress hairline shows — the only moment the
+    // continuous calendar does real work, and previously it was silent.
+    async rebuildStrip() {
+        const grid = document.querySelector('.calendar-grid');
+        if (grid) grid.classList.add('strip-rebuilding');
+        try {
+            await this.updateCalendarDisplay();
+        } finally {
+            const g = document.querySelector('.calendar-grid');
+            if (g) g.classList.remove('strip-rebuilding');
+        }
+    }
+
     // A selection whose day slid outside the visible window RESETS — leaving
     // it active greyed the whole calendar/map/list with nothing visibly
     // selected (owner report: select fuzzy, swipe it out of view)
@@ -4357,6 +4371,35 @@ class DynamicCalendarLoader extends CalendarCore {
             return;
         }
         this.clearEventSelection();
+    }
+
+    // Swap a container's HTML while REUSING already-decoded <img> nodes by
+    // src. The calendar grid is innerHTML-swapped on every strip rebuild;
+    // recreating its favicon chips made every icon in the week view flash
+    // (owner report). Same trick the events list uses for its cards.
+    swapHtmlPreservingImages(container, html) {
+        // key on the RESOLVED url (the .src property), not the attribute:
+        // the two sides can spell the same image relatively vs absolutely
+        const pool = new Map();
+        container.querySelectorAll('img').forEach(img => {
+            const src = img.src;
+            if (src && img.complete && img.naturalWidth > 0 && !pool.has(src)) pool.set(src, img);
+        });
+        if (!pool.size) {
+            container.innerHTML = html;
+            return;
+        }
+        const shell = document.createElement('div');
+        shell.innerHTML = html;
+        shell.querySelectorAll('img').forEach(img => {
+            const src = img.src;
+            const donor = src && pool.get(src);
+            if (donor) {
+                pool.delete(src);
+                img.replaceWith(donor);
+            }
+        });
+        container.replaceChildren(...shell.childNodes);
     }
 
     // Header label for the visible period (title slot + date range)
@@ -4487,12 +4530,12 @@ class DynamicCalendarLoader extends CalendarCore {
             newStart.setDate(newStart.getDate() + idx);
             newStart.setHours(0, 0, 0, 0);
             const changed = newStart.getTime() !== this.getCurrentPeriodBounds().start.getTime();
-            const nearEdge = idx <= 6 || idx >= this.stripDayCount - 13;
+            const nearEdge = idx <= 10 || idx >= this.stripDayCount - 17;
             if (!changed && !nearEdge) return;
             this.currentDate = newStart;
             this.clearSelectionIfOutOfBounds();
             if (nearEdge) {
-                await this.updateCalendarDisplay();
+                await this.rebuildStrip();
                 return;
             }
             this.sizeWeekStripHeight();
@@ -4537,7 +4580,7 @@ class DynamicCalendarLoader extends CalendarCore {
             this.pendingStripAnchor = anchorCell
                 ? { dateKey: anchorCell.getAttribute('data-date'), offset: anchorOffset }
                 : null;
-            await this.updateCalendarDisplay();
+            await this.rebuildStrip();
             return;
         }
         this.updateHeaderPeriodLabel();
@@ -4760,6 +4803,18 @@ class DynamicCalendarLoader extends CalendarCore {
     // Update calendar display with filtered events
     async updateCalendarDisplay(hideEvents = false) {
         logger.time('CALENDAR', 'Calendar display update');
+        // Resolve per-event colours BEFORE the first paint: cards rendered
+        // without them fall back to the site indigo + 3-blob gradient and
+        // then repaint, which read as "purple/gradient before switching to
+        // their main color". Bounded so a stalled fetch can't hold the UI.
+        if (!hideEvents && this.currentCity && !this.eventColorsByCity.has(this.currentCity)) {
+            try {
+                await Promise.race([
+                    this.loadEventColors(this.currentCity),
+                    new Promise(resolve => setTimeout(resolve, 1200))
+                ]);
+            } catch (e) {}
+        }
         const filteredEvents = this.getFilteredEvents();
         
         logger.info('CALENDAR', `🔍 UPDATE_DISPLAY: Updating calendar display (${hideEvents ? 'HIDDEN for measurement' : 'VISIBLE for display'})`, {
@@ -4782,7 +4837,7 @@ class DynamicCalendarLoader extends CalendarCore {
             const calendarGrid = document.querySelector('.calendar-grid');
             if (calendarGrid) {
                 logger.debug('CALENDAR', 'Updating calendar grid HTML');
-                calendarGrid.innerHTML = this.generateCalendarEvents(filteredEvents, hideEvents);
+                this.swapHtmlPreservingImages(calendarGrid, this.generateCalendarEvents(filteredEvents, hideEvents));
                 
                 // For measurement mode, make the grid invisible to users but keep same layout constraints
                 if (hideEvents) {
