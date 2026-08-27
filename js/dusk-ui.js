@@ -290,54 +290,127 @@
     // if sticky is inert the transform carries the label. Transform-only —
     // no layout writes — and the label is clamped inside its own bar, so
     // it rides off with the bar's tail at the end.
-    function stickRunNames() {
-        const strip = document.querySelector('.calendar-grid.week-strip');
-        if (!strip) return;
-        const edge = strip.getBoundingClientRect().left + 8;
-        strip.querySelectorAll('.event-item.multi-day.md-chunk-lead .md-sticky-label').forEach(span => {
-            const box = span.parentElement; // the full-bar .event-name box
-            if (!box) return;
-            const b = box.getBoundingClientRect();
-            const r = span.getBoundingClientRect();
-            const lead = box.parentElement; // the pill
-            const tx = span._mdTx || 0;
-            const rawLeft = r.left - tx; // where the label sits without our correction
-            // the label PARKS at the pill-text inset from the strip edge —
-            // lined up with the single-day pills' text below it — and is
-            // never pushed off-left (a short tail must still read)
-            const park = edge - 8 + (lead && lead._mdInset > 0 ? lead._mdInset : 8);
-            const desired = Math.max(park, b.left);
-            const next = desired - rawLeft;
-            if (Math.abs(next - tx) > 0.5) {
-                span._mdTx = next;
-                span.style.transform = next !== 0 ? `translateX(${next}px)` : '';
+    // Two-phase label system — BOTH phases are compositor-smooth:
+    //   A (riding): the run's start is on-screen — the IN-PILL label shows
+    //     and scrolls natively with its bar. Zero JS positioning.
+    //   B (parked): the start has left the viewport — a STATIC clone in an
+    //     overlay OUTSIDE the scroller shows at the park position. It does
+    //     not move during scroll at all, so it cannot jitter.
+    // Per scroll frame the JS only READS one rect per run and flips
+    // visibility at the phase boundary; width (ellipsis) writes happen
+    // only inside the bar-end zone.
+    let labelLayer = null;
+    let floatLabels = [];
+    function ensureLabelLayer(grid) {
+        const host = grid.parentElement;
+        if (!host) return null;
+        if (!labelLayer || labelLayer.parentElement !== host) {
+            if (labelLayer) labelLayer.remove();
+            labelLayer = document.createElement('div');
+            labelLayer.className = 'md-label-layer';
+            host.appendChild(labelLayer);
+        }
+        host.style.position = 'relative';
+        labelLayer.style.left = grid.offsetLeft + 'px';
+        labelLayer.style.top = grid.offsetTop + 'px';
+        labelLayer.style.width = grid.clientWidth + 'px';
+        labelLayer.style.height = grid.clientHeight + 'px';
+        return labelLayer;
+    }
+    function buildFloatLabels() {
+        const grid = document.querySelector('.calendar-grid.week-strip');
+        floatLabels = [];
+        if (!grid) { if (labelLayer) labelLayer.remove(); labelLayer = null; return; }
+        const layer = ensureLabelLayer(grid);
+        if (!layer) return;
+        layer.textContent = '';
+        const gr = grid.getBoundingClientRect();
+        grid.querySelectorAll('.event-item.multi-day.md-chunk-lead').forEach(lead => {
+            const span = lead.querySelector('.md-sticky-label');
+            if (!span) return;
+            const chunkW = parseFloat(lead.style.getPropertyValue('--chunkw'));
+            if (!chunkW || chunkW <= 0) return;
+            span.style.visibility = '';
+            span.style.width = '';
+            const sr = span.getBoundingClientRect();
+            const lr = lead.getBoundingClientRect();
+            const el = document.createElement('div');
+            el.className = 'md-float-label';
+            // mirror the in-pill text exactly (the overlay is outside the
+            // pill scope, so scoped styles don't reach it)
+            const scs = getComputedStyle(span);
+            el.style.font = scs.font;
+            el.style.color = scs.color;
+            el.style.letterSpacing = scs.letterSpacing;
+            el.textContent = '';
+            span.childNodes.forEach(n => {
+                const c = n.cloneNode(true);
+                el.appendChild(c);
+            });
+            const t = el.querySelector('.event-time');
+            const st = span.querySelector('.event-time');
+            if (t && st) {
+                const tcs = getComputedStyle(st);
+                t.style.font = tcs.font;
+                t.style.color = tcs.color;
+                t.style.marginTop = tcs.marginTop;
+                t.style.display = 'block';
+                t.style.overflow = 'hidden';
+                t.style.textOverflow = 'ellipsis';
+                t.style.whiteSpace = 'nowrap';
             }
-            // REAL dots: inside the end zone the label's width shrinks and
-            // CSS ellipsis does the truncation; in the open field width
-            // stays natural and nothing layout-affecting is written.
-            // The runway runs to the BAR's true end (--chunkw from the
-            // lead's left), not the name box's — the box stops ~9px short
-            // and the dots were arriving early.
-            const natural = span._mdNat || r.width;
-            const chunkW = lead ? parseFloat(lead.style.getPropertyValue('--chunkw')) : 0;
-            const barRight = (chunkW > 0 && lead) ? lead.getBoundingClientRect().left + chunkW : b.right;
-            const avail = barRight - desired - 4;
-            if (avail < natural) {
-                const w = Math.max(0, avail);
-                if (span._mdW === null || span._mdW === undefined || Math.abs(w - span._mdW) > 0.5) {
-                    span._mdW = w;
-                    span.style.width = `${w}px`;
-                }
-            } else if (span._mdW !== null && span._mdW !== undefined) {
-                span._mdW = null;
-                span.style.width = '';
+            el.style.top = (sr.top - gr.top) + 'px';
+            layer.appendChild(el);
+            floatLabels.push({
+                lead, span, el,
+                chunkW,
+                inset: sr.left - lr.left,
+                natural: sr.width,
+                park: (lead._mdInset > 0 ? lead._mdInset : 8),
+                mode: null, w: null, hidden: null
+            });
+        });
+        updateFloatLabels();
+    }
+    function updateFloatLabels() {
+        const grid = document.querySelector('.calendar-grid.week-strip');
+        if (!grid || !floatLabels.length) return;
+        const gridLeft = grid.getBoundingClientRect().left;
+        floatLabels.forEach(L => {
+            if (!L.lead.isConnected) return;
+            const lr = L.lead.getBoundingClientRect();
+            const barLeft = lr.left - gridLeft;
+            const barRight = barLeft + L.chunkW;
+            const inFlowX = barLeft + L.inset;
+            // one three-way phase: pill (start on-screen, native scroll),
+            // float (parked static copy), none (run has left)
+            let want;
+            if (barRight < L.park + 14) want = 'none';
+            else if (inFlowX > L.park + 0.5) want = 'pill';
+            else want = 'float';
+            if (want !== L.mode) {
+                L.mode = want;
+                L.span.style.visibility = want === 'pill' ? '' : 'hidden';
+                L.el.style.visibility = want === 'float' ? '' : 'hidden';
+                if (want === 'float') L.el.style.left = L.park + 'px';
+            }
+            if (want !== 'float') return;
+            // end-zone ellipsis: width writes only while the bar's remaining
+            // span crowds the text
+            const avail = barRight - L.park - 4;
+            const w = avail < L.natural ? Math.max(0, avail) : null;
+            if (w === null) {
+                if (L.w !== null) { L.w = null; L.el.style.width = ''; }
+            } else if (L.w === null || Math.abs(w - L.w) > 0.5) {
+                L.w = w;
+                L.el.style.width = w + 'px';
             }
         });
     }
     document.addEventListener('scroll', (e) => {
         const t = e.target;
         if (!t || !t.classList || !t.classList.contains('week-strip')) return;
-        stickRunNames();
+        updateFloatLabels();
     }, { capture: true, passive: true });
 
     function paintMultiDayRuns() {
@@ -358,7 +431,7 @@
             });
             chunkRun(group);
         });
-        stickRunNames();
+        buildFloatLabels();
     }
 
     // Re-render happens via wholesale innerHTML swaps — observe and repaint.
