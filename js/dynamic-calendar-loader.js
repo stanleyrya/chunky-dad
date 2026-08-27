@@ -3542,7 +3542,16 @@ class DynamicCalendarLoader extends CalendarCore {
         const stripEnd = new Date(lastDay);
         stripEnd.setDate(lastDay.getDate() + (6 - lastDay.getDay()));
         stripEnd.setHours(23, 59, 59, 999);
-        const stripEvents = this.getFilteredEvents({ start: stripStart, end: stripEnd });
+        // Query a WIDER range than the strip's nominal bounds: generateMonthView
+        // rounds its cell range up to whole weeks, so it renders a few days
+        // past stripEnd — those cells came out EMPTY (their events were never
+        // queried) even when the day had events, and they changed content on
+        // the next rebuild once the range moved. Pad both ends by a week.
+        const queryStart = new Date(stripStart);
+        queryStart.setDate(queryStart.getDate() - 7);
+        const queryEnd = new Date(stripEnd);
+        queryEnd.setDate(queryEnd.getDate() + 7);
+        const stripEvents = this.getFilteredEvents({ start: queryStart, end: queryEnd });
         this.lastStripEvents = stripEvents;
         const dayHeadersHtml = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => `
             <div class="calendar-day-header"><h4>${d}</h4></div>`).join('');
