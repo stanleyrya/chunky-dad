@@ -6778,20 +6778,27 @@ html.dusk body {
     padding-bottom: 4px;
     transform: translateY(-3px);
 }
-/* colour-only feedback: a hover/active BACKGROUND drew a rounded square
-   around the chevrons (and iOS keeps :hover stuck after a tap), and
-   `transform: none` cancelled the optical translateY above, so the glyph
-   visibly dropped 3px when pressed. Quiet text controls stay quiet. */
+/* Quiet text controls stay quiet, and press feedback must not OUTLIVE the
+   press. Three traps here, all previously live:
+   - a hover/active BACKGROUND drew a rounded square behind the glyph;
+   - iOS leaves :hover stuck after a tap and a tapped button keeps :focus,
+     so any colour set on those states never went away (white forever);
+   - `transform: none` on hover cancelled the optical translateY below, so
+     the glyph dropped 3px when pressed.
+   Background stays transparent and the transform is held CONSTANT in every
+   state (the base sheet scales nav-btns on hover-capable devices and would
+   otherwise replace it); colour brightens only while actually held down,
+   or on a real pointer's hover. */
 .dusk .nav-btn:hover,
 .dusk .nav-btn:active,
 .dusk .nav-btn:focus,
 .dusk .nav-btn:focus-visible {
     background: transparent;
-    color: #fff;
-    /* hold the optical offset in EVERY state: the base stylesheet scales
-       nav-btns on real-hover devices, which would replace this translate
-       and drop the glyph on desktop too */
     transform: translateY(-3px);
+}
+.dusk .nav-btn:active { color: #fff; }
+@media (hover: hover) and (pointer: fine) {
+    .dusk .nav-btn:hover { color: #fff; }
 }
 .dusk .date-range {
     color: #fff;
@@ -6867,7 +6874,11 @@ html.dusk body {
 .dusk .today-btn:hover,
 .dusk .today-btn:active,
 .dusk .today-btn:focus,
-.dusk .today-btn:focus-visible { background: transparent; color: #fff; transform: none; }
+.dusk .today-btn:focus-visible { background: transparent; transform: none; }
+.dusk .today-btn:active { color: #fff; }
+@media (hover: hover) and (pointer: fine) {
+    .dusk .today-btn:hover { color: #fff; }
+}
 
 /* phone: same row, one size down */
 @media (max-width: 480px) {
@@ -6896,7 +6907,8 @@ html.dusk body {
 }
 /* iOS paints its default grey rectangle over any click-bound element on
    press — the cards are click-bound <div>s, so every tap flashed grey */
-.dusk .event-card, .dusk .event-item, .dusk .rail-thumb {
+.dusk .event-card, .dusk .event-item, .dusk .rail-thumb,
+.dusk .nav-btn, .dusk .today-btn, .dusk .view-btn {
     -webkit-tap-highlight-color: transparent;
 }
 @media (prefers-reduced-motion: reduce) {
