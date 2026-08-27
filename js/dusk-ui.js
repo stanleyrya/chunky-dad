@@ -451,6 +451,15 @@
     }
 
     // Re-render happens via wholesale innerHTML swaps — observe and repaint.
+    // The loader dispatches this in the SAME task as its grid swap, so
+    // painting here colors the fresh pills before the browser paints them.
+    // The MutationObserver below only ever repaints on the NEXT frame —
+    // i.e. after a frame of default-colored pills, which is the blink when
+    // more months load (mobile month view shows pills, not cards).
+    document.addEventListener('chunky:events-rendered', () => {
+        try { paintPills(); } catch (e) {}
+    });
+
     let scheduled = false;
     const observer = new MutationObserver(() => {
         if (scheduled) return;

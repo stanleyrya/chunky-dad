@@ -126,7 +126,7 @@ class DynamicCalendarLoader extends CalendarCore {
         // the grid renders wider than the visible period and scrolls
         // natively; cards/map/label/URL follow on scroll settle only.
         this.stripStartDate = null;   // week strip: date of column 0
-        this.stripDayCount = 35;      // week strip: visible week ± 14 days
+        this.stripDayCount = 63;      // week strip: visible week ± 28 days
         this.stripMonths = [];        // month strip: rendered month firsts
         this.lastStripEvents = [];    // events across the rendered strip
         this.suppressGridScrollUntil = 0;
@@ -3517,7 +3517,7 @@ class DynamicCalendarLoader extends CalendarCore {
 
         if (this.currentView === 'week') {
             const stripStart = new Date(start);
-            stripStart.setDate(stripStart.getDate() - 14);
+            stripStart.setDate(stripStart.getDate() - 28);
             this.stripStartDate = new Date(stripStart);
             const stripEnd = new Date(stripStart);
             stripEnd.setDate(stripStart.getDate() + this.stripDayCount - 1);
@@ -3527,7 +3527,7 @@ class DynamicCalendarLoader extends CalendarCore {
             return this.generateWeekView(stripEvents, stripStart, stripEnd, today, hideEvents, this.stripDayCount);
         }
 
-        const months = [-2, -1, 0, 1, 2].map(d => new Date(start.getFullYear(), start.getMonth() + d, 1));
+        const months = [-3, -2, -1, 0, 1, 2, 3].map(d => new Date(start.getFullYear(), start.getMonth() + d, 1));
         this.stripMonths = months;
         // CONTINUOUS weeks, "like a calendar": Sunday on/before the previous
         // month's 1st through Saturday on/after the next month's last day —
@@ -3542,7 +3542,16 @@ class DynamicCalendarLoader extends CalendarCore {
         const stripEnd = new Date(lastDay);
         stripEnd.setDate(lastDay.getDate() + (6 - lastDay.getDay()));
         stripEnd.setHours(23, 59, 59, 999);
-        const stripEvents = this.getFilteredEvents({ start: stripStart, end: stripEnd });
+        // Query a WIDER range than the strip's nominal bounds: generateMonthView
+        // rounds its cell range up to whole weeks, so it renders a few days
+        // past stripEnd — those cells came out EMPTY (their events were never
+        // queried) even when the day had events, and they changed content on
+        // the next rebuild once the range moved. Pad both ends by a week.
+        const queryStart = new Date(stripStart);
+        queryStart.setDate(queryStart.getDate() - 7);
+        const queryEnd = new Date(stripEnd);
+        queryEnd.setDate(queryEnd.getDate() + 7);
+        const stripEvents = this.getFilteredEvents({ start: queryStart, end: queryEnd });
         this.lastStripEvents = stripEvents;
         const dayHeadersHtml = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => `
             <div class="calendar-day-header"><h4>${d}</h4></div>`).join('');
@@ -4359,6 +4368,73 @@ class DynamicCalendarLoader extends CalendarCore {
         this.clearEventSelection();
     }
 
+    // Swap a container's HTML while REUSING already-decoded <img> nodes by
+    // src. The calendar grid is innerHTML-swapped on every strip rebuild;
+    // recreating its favicon chips made every icon in the week view flash
+    // (owner report). Same trick the events list uses for its cards.
+    swapHtmlPreservingImages(container, html) {
+        const shell = document.createElement('div');
+        shell.innerHTML = html;
+
+        // 1. REUSE unchanged day cells outright. A strip rebuild re-renders a
+        // range that mostly overlaps what is already on screen; recreating
+        // those cells threw away their pills' colours and their favicons'
+        // decoded pixels, which is the blink at a month edge. A cell whose
+        // markup is byte-identical is moved across as the SAME node, so
+        // nothing about it repaints.
+        const oldCells = new Map();
+        container.querySelectorAll('[data-date]').forEach(cell => {
+            const key = cell.getAttribute('data-date');
+            if (key && !oldCells.has(key)) oldCells.set(key, cell);
+        });
+        let reusedCells = 0;
+        shell.querySelectorAll('[data-date]').forEach(fresh => {
+            // EVERY fresh cell gets stamped, including ones with no previous
+            // counterpart: an unstamped cell can never be reused later, and
+            // the cells a rebuild newly renders are exactly the ones the
+            // NEXT rebuild has to keep (the "second drag blinks" bug).
+            const sig = this.hashString(fresh.outerHTML);
+            const key = fresh.getAttribute('data-date');
+            const old = key && oldCells.get(key);
+            if (old && old.dataset.cellSig === sig) {
+                oldCells.delete(key);
+                fresh.replaceWith(old);
+                reusedCells++;
+                return;
+            }
+            fresh.dataset.cellSig = sig;
+        });
+
+        // 2. for whatever is genuinely new, still hand over already-decoded
+        // <img> nodes by RESOLVED url (the two sides can spell the same
+        // image relatively vs absolutely)
+        const pool = new Map();
+        container.querySelectorAll('img').forEach(img => {
+            const src = img.src;
+            if (src && img.complete && img.naturalWidth > 0 && !pool.has(src)) pool.set(src, img);
+        });
+        if (pool.size) {
+            shell.querySelectorAll('img').forEach(img => {
+                if (!img.isConnected && !shell.contains(img)) return;
+                const src = img.src;
+                const donor = src && pool.get(src);
+                if (donor && donor !== img && !shell.contains(donor)) {
+                    pool.delete(src);
+                    img.replaceWith(donor);
+                }
+            });
+        }
+        container.replaceChildren(...shell.childNodes);
+        logger.debug('CALENDAR', 'Grid swap reused cells', { reusedCells });
+    }
+
+    // djb2 — cheap, stable content signature for reconciliation
+    hashString(str) {
+        let hash = 5381;
+        for (let i = 0; i < str.length; i++) hash = ((hash << 5) + hash + str.charCodeAt(i)) >>> 0;
+        return String(hash);
+    }
+
     // Header label for the visible period (title slot + date range)
     updateHeaderPeriodLabel() {
         try {
@@ -4487,7 +4563,7 @@ class DynamicCalendarLoader extends CalendarCore {
             newStart.setDate(newStart.getDate() + idx);
             newStart.setHours(0, 0, 0, 0);
             const changed = newStart.getTime() !== this.getCurrentPeriodBounds().start.getTime();
-            const nearEdge = idx <= 6 || idx >= this.stripDayCount - 13;
+            const nearEdge = idx <= 10 || idx >= this.stripDayCount - 17;
             if (!changed && !nearEdge) return;
             this.currentDate = newStart;
             this.clearSelectionIfOutOfBounds();
@@ -4760,6 +4836,18 @@ class DynamicCalendarLoader extends CalendarCore {
     // Update calendar display with filtered events
     async updateCalendarDisplay(hideEvents = false) {
         logger.time('CALENDAR', 'Calendar display update');
+        // Resolve per-event colours BEFORE the first paint: cards rendered
+        // without them fall back to the site indigo + 3-blob gradient and
+        // then repaint, which read as "purple/gradient before switching to
+        // their main color". Bounded so a stalled fetch can't hold the UI.
+        if (!hideEvents && this.currentCity && !this.eventColorsByCity.has(this.currentCity)) {
+            try {
+                await Promise.race([
+                    this.loadEventColors(this.currentCity),
+                    new Promise(resolve => setTimeout(resolve, 1200))
+                ]);
+            } catch (e) {}
+        }
         const filteredEvents = this.getFilteredEvents();
         
         logger.info('CALENDAR', `🔍 UPDATE_DISPLAY: Updating calendar display (${hideEvents ? 'HIDDEN for measurement' : 'VISIBLE for display'})`, {
@@ -4782,7 +4870,7 @@ class DynamicCalendarLoader extends CalendarCore {
             const calendarGrid = document.querySelector('.calendar-grid');
             if (calendarGrid) {
                 logger.debug('CALENDAR', 'Updating calendar grid HTML');
-                calendarGrid.innerHTML = this.generateCalendarEvents(filteredEvents, hideEvents);
+                this.swapHtmlPreservingImages(calendarGrid, this.generateCalendarEvents(filteredEvents, hideEvents));
                 
                 // For measurement mode, make the grid invisible to users but keep same layout constraints
                 if (hideEvents) {
