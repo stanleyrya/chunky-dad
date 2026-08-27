@@ -7745,38 +7745,3 @@ html.dusk body {
 .md-label-layer .md-float-label.md-label-dim {
     filter: saturate(0.35) brightness(0.4);
 }
-
-/* the continuous strip's only real work moment: extending the rendered
-   range. A quiet hairline sweeps the grid's top edge — no spinner, no
-   layout shift, and it cannot be mistaken for content. */
-/* on the SECTION, not the scroller (inside a scroller an absolute pseudo
-   spans the CONTENT width — 63 day columns — so the sweep would run
-   mostly off-screen) and not on .container either, whose pseudos already
-   carry the edge fades below */
-.dusk .weekly-calendar:has(.calendar-grid.strip-rebuilding) { position: relative; }
-.dusk .weekly-calendar:has(.calendar-grid.strip-rebuilding)::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    bottom: auto;
-    width: auto;
-    height: 2px;
-    z-index: 12;
-    background: linear-gradient(90deg, transparent, var(--primary-color, #667eea), transparent);
-    background-size: 45% 100%;
-    background-repeat: no-repeat;
-    animation: stripLoadSweep 900ms ease-in-out infinite;
-    pointer-events: none;
-}
-@keyframes stripLoadSweep {
-    from { background-position: -45% 0; }
-    to { background-position: 145% 0; }
-}
-@media (prefers-reduced-motion: reduce) {
-    .dusk .weekly-calendar:has(.calendar-grid.strip-rebuilding)::after {
-        animation: none;
-        background-position: 50% 0;
-    }
-}

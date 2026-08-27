@@ -4332,20 +4332,6 @@ class DynamicCalendarLoader extends CalendarCore {
         grid.scrollTo({ left: Math.round(newStart * dayW), behavior: 'smooth' });
     }
 
-    // Strip rebuild (extending the rendered range around the user): flags
-    // the grid so a quiet progress hairline shows — the only moment the
-    // continuous calendar does real work, and previously it was silent.
-    async rebuildStrip() {
-        const grid = document.querySelector('.calendar-grid');
-        if (grid) grid.classList.add('strip-rebuilding');
-        try {
-            await this.updateCalendarDisplay();
-        } finally {
-            const g = document.querySelector('.calendar-grid');
-            if (g) g.classList.remove('strip-rebuilding');
-        }
-    }
-
     // A selection whose day slid outside the visible window RESETS — leaving
     // it active greyed the whole calendar/map/list with nothing visibly
     // selected (owner report: select fuzzy, swipe it out of view)
@@ -4378,28 +4364,69 @@ class DynamicCalendarLoader extends CalendarCore {
     // recreating its favicon chips made every icon in the week view flash
     // (owner report). Same trick the events list uses for its cards.
     swapHtmlPreservingImages(container, html) {
-        // key on the RESOLVED url (the .src property), not the attribute:
-        // the two sides can spell the same image relatively vs absolutely
+        const shell = document.createElement('div');
+        shell.innerHTML = html;
+
+        // 1. REUSE unchanged day cells outright. A strip rebuild re-renders a
+        // range that mostly overlaps what is already on screen; recreating
+        // those cells threw away their pills' colours and their favicons'
+        // decoded pixels, which is the blink at a month edge. A cell whose
+        // markup is byte-identical is moved across as the SAME node, so
+        // nothing about it repaints.
+        const oldCells = new Map();
+        container.querySelectorAll('[data-date]').forEach(cell => {
+            const key = cell.getAttribute('data-date');
+            if (key && !oldCells.has(key)) oldCells.set(key, cell);
+        });
+        let reusedCells = 0;
+        if (oldCells.size) {
+            shell.querySelectorAll('[data-date]').forEach(fresh => {
+                const key = fresh.getAttribute('data-date');
+                const old = key && oldCells.get(key);
+                if (!old) return;
+                const sig = this.hashString(fresh.outerHTML);
+                if (old.dataset.cellSig === sig) {
+                    oldCells.delete(key);
+                    fresh.replaceWith(old);
+                    reusedCells++;
+                } else {
+                    fresh.dataset.cellSig = sig;
+                }
+            });
+        } else {
+            shell.querySelectorAll('[data-date]').forEach(fresh => {
+                fresh.dataset.cellSig = this.hashString(fresh.outerHTML);
+            });
+        }
+
+        // 2. for whatever is genuinely new, still hand over already-decoded
+        // <img> nodes by RESOLVED url (the two sides can spell the same
+        // image relatively vs absolutely)
         const pool = new Map();
         container.querySelectorAll('img').forEach(img => {
             const src = img.src;
             if (src && img.complete && img.naturalWidth > 0 && !pool.has(src)) pool.set(src, img);
         });
-        if (!pool.size) {
-            container.innerHTML = html;
-            return;
+        if (pool.size) {
+            shell.querySelectorAll('img').forEach(img => {
+                if (!img.isConnected && !shell.contains(img)) return;
+                const src = img.src;
+                const donor = src && pool.get(src);
+                if (donor && donor !== img && !shell.contains(donor)) {
+                    pool.delete(src);
+                    img.replaceWith(donor);
+                }
+            });
         }
-        const shell = document.createElement('div');
-        shell.innerHTML = html;
-        shell.querySelectorAll('img').forEach(img => {
-            const src = img.src;
-            const donor = src && pool.get(src);
-            if (donor) {
-                pool.delete(src);
-                img.replaceWith(donor);
-            }
-        });
         container.replaceChildren(...shell.childNodes);
+        logger.debug('CALENDAR', 'Grid swap reused cells', { reusedCells });
+    }
+
+    // djb2 — cheap, stable content signature for reconciliation
+    hashString(str) {
+        let hash = 5381;
+        for (let i = 0; i < str.length; i++) hash = ((hash << 5) + hash + str.charCodeAt(i)) >>> 0;
+        return String(hash);
     }
 
     // Header label for the visible period (title slot + date range)
@@ -4535,7 +4562,7 @@ class DynamicCalendarLoader extends CalendarCore {
             this.currentDate = newStart;
             this.clearSelectionIfOutOfBounds();
             if (nearEdge) {
-                await this.rebuildStrip();
+                await this.updateCalendarDisplay();
                 return;
             }
             this.sizeWeekStripHeight();
@@ -4580,7 +4607,7 @@ class DynamicCalendarLoader extends CalendarCore {
             this.pendingStripAnchor = anchorCell
                 ? { dateKey: anchorCell.getAttribute('data-date'), offset: anchorOffset }
                 : null;
-            await this.rebuildStrip();
+            await this.updateCalendarDisplay();
             return;
         }
         this.updateHeaderPeriodLabel();
