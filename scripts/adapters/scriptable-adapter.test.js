@@ -5916,6 +5916,55 @@ test('recordCalendarWriteFailures creates errors[] when absent and is a no-op on
   assert.deepEqual(clean.errors, []);
 });
 
+// Club Chub MEAT MARKET, run 20260828-163440. The event was renamed at the
+// source (Wig Out → MEAT MARKET) and sickening.events' JSON-LD carries no end
+// time, so the merged payload reached this boundary with endDate null. EventKit
+// refused the whole write — "No end date has been set." — 1 of 1 failed, every
+// attempt. The merge no longer produces that payload (shared-core keeps the
+// calendar end when a scrape has none); this is the boundary backstop, plus the
+// pre-write snapshot that keeps the saved run honest about what the calendar
+// held when a write does fail.
+test('merge write: a missing endDate never clears the stored end, and _existingEvent keeps the pre-write record', async () => {
+  const adapter = buildAdapter();
+  adapter.getOrCreateCalendar = async () => ({ title: 'chunky-dad-fortlauderdale' });
+  const stored = {
+    title: 'CLUB CHUB: The Wig Out Party',
+    identifier: 'CAL:BE92AFDE',
+    startDate: new Date('2026-11-01T21:00:00.000Z'),
+    endDate: new Date('2026-11-02T02:00:00.000Z'),
+    location: '',
+    notes: 'bar: Eagle Wilton Manors',
+    saveCount: 0,
+    async save() { this.saveCount += 1; }
+  };
+  const event = {
+    title: 'Club Chub Presents: MEAT MARKET @ Eagle Wilton Manors',
+    city: 'fortlauderdale',
+    _action: 'merge',
+    startDate: new Date('2026-11-01T21:00:00.000Z'),
+    endDate: null,
+    location: '',
+    notes: 'bar: Eagle Wilton Manors\nwebsite: https://clubchubusa.com',
+    _existingEvent: stored
+  };
+
+  const processed = await adapter.executeCalendarActions([event], {});
+  assert.equal(processed, 1, 'the write lands instead of failing on the empty end');
+  assert.equal(stored.saveCount, 1, 'the record was saved once');
+  assert.equal(stored.endDate.toISOString(), '2026-11-02T02:00:00.000Z',
+    'the calendar keeps its stored end — an empty payload never clears it');
+  assert.equal(stored.title, 'Club Chub Presents: MEAT MARKET @ Eagle Wilton Manors',
+    'the rename still applies');
+
+  assert.equal(event._existingEvent.title, 'CLUB CHUB: The Wig Out Party',
+    'the saved run still reports the title the calendar HELD, not the one just written');
+  assert.equal(event._existingEvent.identifier, 'CAL:BE92AFDE',
+    'the snapshot keeps the identifier every downstream lookup reads');
+  assert.equal(event._existingEvent.endDate.toISOString(), '2026-11-02T02:00:00.000Z');
+  assert.equal(typeof event._existingEvent.save, 'undefined',
+    'the snapshot is plain data — the live record is not handed to the serializer');
+});
+
 // ---------------------------------------------------------------------------
 // Size-driven pagination (Scriptable flow) + show-everything (web flow).
 //

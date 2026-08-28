@@ -16127,6 +16127,58 @@ test('merge no-op ordering: a post-merge sanity correction is stamped false, nev
     'the corrected end reaches the calendar — the merge he ran was real');
 });
 
+// Club Chub MEAT MARKET, run 20260828-163440 (renamed at the source from "The
+// Wig Out Party"). sickening.events' JSON-LD carries no endDate, and the dates
+// are exempt from the generic "an empty scrape never deletes" rule — so the
+// empty value cleared the calendar's 9PM end and EventKit refused the write
+// outright ("No end date has been set."), failing 1 of 1 on every attempt.
+// Second assertion covers the same class one layer down: createFinalEventObject
+// spread mergedObject AFTER its own `|| calendarObject.x` fallbacks, so every
+// one of them was dead — which is also how BEEFMINCE New Year's Eve reported a
+// phantom location change (undefined vs the calendar's empty string) forever.
+test('merge: an empty scraped end never clears the calendar end, and the core-field fallbacks survive the spread', async () => {
+  const core = createCore();
+  const existing = {
+    title: 'CLUB CHUB: The Wig Out Party',
+    identifier: 'CAL:BE92AFDE',
+    startDate: new Date('2026-11-01T21:00:00.000Z'),
+    endDate: new Date('2026-11-02T02:00:00.000Z'),
+    location: '',
+    notes: 'bar: Eagle Wilton Manors\nwebsite: https://clubchubusa.com'
+  };
+  const scraped = {
+    title: 'Club Chub Presents: MEAT MARKET @ Eagle Wilton Manors',
+    startDate: new Date('2026-11-01T21:00:00.000Z'),
+    endDate: null,
+    bar: 'Eagle Wilton Manors',
+    city: 'dallas',
+    timezone: 'America/New_York',
+    website: 'https://clubchubusa.com',
+    // What getResolvedFieldPriorities stamps on every ai-web event: the 'ai'
+    // strategy is what let the empty side through.
+    _fieldPriorities: {
+      startDate: { priority: ['ai-web'], merge: 'ai' },
+      endDate: { priority: ['ai-web'], merge: 'ai' },
+      location: { priority: ['ai-web'], merge: 'ai' }
+    }
+  };
+
+  const final = await core.createFinalEventObject(existing, scraped, {});
+  assert.equal(new Date(final.endDate).toISOString(), '2026-11-02T02:00:00.000Z',
+    'the calendar end survives a scrape that found none');
+  // The title is decided by AI arbitration, which no test wires up (offline it
+  // falls back deterministically) — so pin only that the date guard did not
+  // start freezing OTHER fields to the calendar side.
+  assert.ok(
+    ['CLUB CHUB: The Wig Out Party', 'Club Chub Presents: MEAT MARKET @ Eagle Wilton Manors']
+      .includes(final.title),
+    'title still resolves through arbitration, not through the date guard');
+  assert.equal(final.location, '',
+    'location falls back to the calendar value instead of the spread\'s undefined');
+  assert.ok(!(final._changes || []).includes('location'),
+    'so no phantom location change is reported');
+});
+
 test('notesProjectionsMatch: pure line reordering is a no-op, any real line difference is a change', () => {
   const core = createCore();
   const notes = 'bar: Royal Vauxhall Tavern\nwebsite: https://beefmince.com\nbearSource: keyword';

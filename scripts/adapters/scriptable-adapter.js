@@ -4050,6 +4050,16 @@ class ScriptableAdapter {
 
               actionCounts.merge.push(event.title);
               const targetEvent = event._existingEvent;
+              // The write mutates the LIVE EventKit record in place, and that
+              // same object is what the saved run serializes as "what the
+              // calendar had". A failed save leaves the mutation standing, so
+              // the run JSON then reports the post-write payload as the
+              // pre-write record — run 20260828-163440 recorded the NEW title
+              // and a null end for a write that never landed, which reads as
+              // "it saved and then reverted". Swap in a pre-write snapshot
+              // (identifier included, so every downstream lookup still works)
+              // and mutate only the live object from here on.
+              event._existingEvent = this.snapshotCalendarRecord(targetEvent);
 
               // Apply the final merged values (event object already contains final values)
               // Note: Scriptable cannot read or write the native CalendarEvent.url field,
@@ -4057,7 +4067,20 @@ class ScriptableAdapter {
               targetEvent.title = event.title;
               // Same typed-setter hazard as the create path below.
               targetEvent.startDate = this.toCalendarWriteDate(event.startDate);
-              targetEvent.endDate = this.resolveCalendarWriteEndDate(event);
+              // Never CLEAR a stored end: EventKit rejects an endless event
+              // outright ("No end date has been set."), losing the whole write.
+              // shared-core keeps the calendar end when a scrape has none, so
+              // this is the boundary backstop for any other producer.
+              const resolvedEndDate = this.resolveCalendarWriteEndDate(event);
+              if (resolvedEndDate === null || resolvedEndDate === undefined) {
+                if (targetEvent.endDate) {
+                  console.log(
+                    `📱 Scriptable: ⚠️ "${event.title}" merged payload carries no endDate — keeping the calendar's stored end`,
+                  );
+                }
+              } else {
+                targetEvent.endDate = resolvedEndDate;
+              }
               targetEvent.location = event.location;
               targetEvent.notes = event.notes;
 
@@ -4177,6 +4200,24 @@ class ScriptableAdapter {
   // data and dropping the event would lose a real night; both shapes are
   // instead surfaced report-only by SharedCore.getEventSanityFlags as
   // `end-not-after-start`.
+  // A plain, pre-write copy of a live EventKit record, for the analyzed
+  // event's `_existingEvent` slot. Carries exactly the fields the results UI,
+  // the merge comparison and the saved-run serializer read off it —
+  // `identifier` included, so series lookups and override-key checks keep
+  // working — and nothing that the calendar write is about to mutate.
+  snapshotCalendarRecord(record) {
+    if (!record || typeof record !== "object") return record;
+    return {
+      title: record.title,
+      identifier: record.identifier,
+      startDate: record.startDate,
+      endDate: record.endDate,
+      location: record.location,
+      notes: record.notes,
+      url: record.url,
+    };
+  }
+
   resolveCalendarWriteEndDate(event) {
     // Coerced, never `instanceof` — Scriptable hands every module its own Date
     // constructor, so a Date built in shared-core fails `instanceof Date` here.
