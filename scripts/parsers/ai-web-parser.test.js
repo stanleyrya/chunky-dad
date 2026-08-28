@@ -7565,7 +7565,7 @@ const REDEYE_SEARCH_PAYLOAD = {
 };
 const REDEYE_SOURCE_URL = 'https://api.redeyetickets.com/api/v2/events/search?venue=red-eye-ny';
 
-test('parseEvents extracts the Red Eye search payload via the JSON-API structured path with zero AI/OCR calls', async () => {
+test('parseEvents extracts the Red Eye search payload via the JSON-API structured path with zero AI calls and no OCR sweep', async () => {
   const parser = createParser();
   let aiCalls = 0;
   let ocrCalls = 0;
@@ -7601,10 +7601,51 @@ test('parseEvents extracts the Red Eye search payload via the JSON-API structure
   assert.equal(event.ticketUrl, '', 'slug never becomes a ticket URL');
 
   assert.equal(aiCalls, 0, 'no extraction AI on the structured path');
-  assert.equal(ocrCalls, 0, 'no OCR on the structured path');
+  assert.equal(ocrCalls, 0, 'the page-wide OCR sweep still never runs here');
+  // No httpAdapter in this call, so the artwork read has nothing to fetch with
+  // — the summary reports the zero honestly rather than by construction.
   assert.deepEqual(result.extractionSummary, { source: 'json-api', aiPasses: 0, ocrImages: 0 });
   assert.ok(logs.includes('🤖 AI Web: JSON API response detected (1 candidate event object(s))'));
-  assert.ok(logs.includes('🤖 AI Web: Extracted 1 event(s) from JSON API structured data — skipping OCR and AI extraction'));
+  assert.ok(logs.includes('🤖 AI Web: Extracted 1 event(s) from JSON API structured data — skipping the OCR sweep and AI extraction (event artwork is still read)'));
+});
+
+// The structured route returns before the ocr-all sweep, which left the ONE
+// image that reaches the calendar unread — so every downstream image judgment
+// (furniture rejection, flyer/page time conflict, and shared-core's merge-time
+// title-evidence rung) failed open on "unknown". Club Chub's renamed night kept
+// its stale "Wig Out" flyer that way: sickening.events serves event artwork
+// under /saas/logos/, and with no OCR the URL-shape rung called the real MEAT
+// MARKET poster site chrome.
+test('structured path OCR-reads the events own artwork so downstream image decisions have evidence', async () => {
+  const parser = createParser();
+  parser.core.callAiGenerate = async () => null;
+  parser.extractOcrFromAllImages = async () => { throw new Error('the OCR sweep must not run on the structured path'); };
+  const ocrRequests = [];
+  parser.getOcrTextForImage = async (imageUrl, ocrConfig, passLabel) => {
+    ocrRequests.push({ imageUrl, passLabel });
+    return { text: 'GOLDILOXX JULY\nRED EYE NY\nDJ JOE MICHAEL', classification: 'event-flyer' };
+  };
+  const cityConfig = { nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'] } };
+
+  const result = await parser.parseEvents(
+    { url: REDEYE_SOURCE_URL, html: JSON.stringify(REDEYE_SEARCH_PAYLOAD) },
+    {},
+    cityConfig,
+    'event-page',
+    { fetchImageAsBase64: async () => 'ZmFrZQ==' }
+  );
+
+  assert.equal(result.events.length, 1);
+  assert.equal(ocrRequests.length, 1, 'the event artwork is read exactly once');
+  assert.equal(ocrRequests[0].imageUrl, 'https://redeye-event-flyers.s3.amazonaws.com/img_9849-optimized.jpg');
+  assert.equal(ocrRequests[0].passLabel, 'structured artwork');
+  assert.equal(result.extractionSummary.ocrImages, 1, 'the summary reports the read');
+  assert.equal(result.events[0].image, 'https://redeye-event-flyers.s3.amazonaws.com/img_9849-optimized.jpg',
+    'reading the flyer never costs the event its picture');
+
+  const verdict = parser.getOcrImageVerdict('https://redeye-event-flyers.s3.amazonaws.com/img_9849-optimized.jpg');
+  assert.ok(verdict, 'the verdict is registered where every downstream consumer looks it up');
+  assert.match(String(verdict.text), /GOLDILOXX JULY/);
 });
 
 test('extractEventsFromJsonApiPayload expands a detail-shaped payload into one event per performance', () => {
@@ -15582,4 +15623,156 @@ test('JSON-API events never carry the fetch URL as their identity link, whatever
     [{ title: 'X', venue: 'Bar', start: '2026-09-04T21:00:00Z' }],
     'https://tockify.com/api/ngevent?calname=thotyssey&tags=rockbar', null);
   assert.equal(events[0].url, '');
+});
+
+// ---------------------------------------------------------------------------
+// Missing end times, filled from the event's own flyer.
+//
+// Structured data is routinely start-only — sickening.events publishes no
+// endDate at all — and an event with no end is not a cosmetic gap: EventKit
+// refuses to save one, which is why Club Chub's MEAT MARKET could not be
+// written at all (run 20260828-163440, "No end date has been set."). The
+// flyer stated the hours the whole time: "SUNDAY NOVEMBER 1ST 4 TO 9PM".
+// The gate is agreement — the flyer's range must START at the time the page
+// already publishes — because inventing a duration is worse than the gap.
+// ---------------------------------------------------------------------------
+
+const MEAT_MARKET_FLYER_IMAGE = 'https://res.cloudinary.com/eventservice/image/upload/saas/logos/image_1786814597049.webp';
+// The vision model's real transcription of that poster, 2026-08-28.
+const MEAT_MARKET_FLYER_OCR = [
+  'CLUB CHUB', 'CANNONBALL WEEKEND', 'MEAT', 'MARKET',
+  'SUNDAY NOVEMBER 1ST 4 TO 9PM', 'THE EAGLE WILTON MANORS',
+  'TICKETS AT WWW.CLUBCHUBUSA.COM', '2209 WILTON DRIVE, WILTON MANORS, FL 33305'
+].join('\n');
+
+function buildFlyerEndFillParser(ocrText = MEAT_MARKET_FLYER_OCR, classification = 'event-flyer') {
+  const parser = createParser();
+  parser.recordOcrImageVerdict(MEAT_MARKET_FLYER_IMAGE, { imageClassification: classification, text: ocrText });
+  return parser;
+}
+
+function buildMeatMarketEvent(overrides = {}) {
+  return {
+    title: 'Club Chub Presents: MEAT MARKET @ Eagle Wilton Manors',
+    // 4PM local — exactly what the page published (Nov 1 2026 is EST).
+    startDate: new Date('2026-11-01T21:00:00.000Z'),
+    endDate: null,
+    timezone: 'America/New_York',
+    image: MEAT_MARKET_FLYER_IMAGE,
+    ...overrides
+  };
+}
+
+test('a missing end time is read off the flyer when its range starts at the published start', () => {
+  const parser = buildFlyerEndFillParser();
+  const event = buildMeatMarketEvent();
+
+  assert.equal(parser.fillEndTimeFromFlyerOcr([event]), 1);
+  // 9PM EST — the same instant the calendar record has held all along.
+  assert.equal(event.endDate.toISOString(), '2026-11-02T02:00:00.000Z');
+  assert.ok(Array.isArray(event._evidenceLines));
+  assert.match(event._evidenceLines.join('\n'), /read 16:00–21:00 off the event's flyer/);
+});
+
+test('flyer end-fill never overrides a stated end, and never runs without the evidence it needs', () => {
+  // A published end is authoritative — the flyer is not consulted.
+  const stated = buildMeatMarketEvent({ endDate: new Date('2026-11-02T04:00:00.000Z') });
+  assert.equal(buildFlyerEndFillParser().fillEndTimeFromFlyerOcr([stated]), 0);
+  assert.equal(stated.endDate.toISOString(), '2026-11-02T04:00:00.000Z', 'untouched');
+
+  // No timezone: a wall-clock reading would be a guess.
+  const zoneless = buildMeatMarketEvent({ timezone: '' });
+  assert.equal(buildFlyerEndFillParser().fillEndTimeFromFlyerOcr([zoneless]), 0);
+  assert.equal(zoneless.endDate, null);
+
+  // Wall-clock-as-UTC events are not yet on a real timeline.
+  const unresolved = buildMeatMarketEvent({ _timezoneUnresolved: true });
+  assert.equal(buildFlyerEndFillParser().fillEndTimeFromFlyerOcr([unresolved]), 0);
+
+  // Not a flyer: page furniture states nothing about this event's hours.
+  const logoVerdict = buildFlyerEndFillParser(MEAT_MARKET_FLYER_OCR, 'logo');
+  assert.equal(logoVerdict.fillEndTimeFromFlyerOcr([buildMeatMarketEvent()]), 0);
+
+  // Local midnight is the date-only default, not a stated start — nothing to
+  // anchor the flyer's range to.
+  const dateOnly = buildMeatMarketEvent({ startDate: new Date('2026-11-01T04:00:00.000Z') });
+  assert.equal(buildFlyerEndFillParser().fillEndTimeFromFlyerOcr([dateOnly]), 0);
+});
+
+test('flyer end-fill fails closed when the flyer does not agree with the page', () => {
+  // The flyer's range starts at 10PM; the page says 4PM. No agreement, no
+  // fill — this flyer is likely another night's artwork.
+  const otherNight = buildFlyerEndFillParser([
+    'CLUB CHUB', 'MEAT MARKET', 'SUNDAY NOVEMBER 1ST 10PM TO 2AM', 'THE EAGLE WILTON MANORS'
+  ].join('\n'));
+  const event = buildMeatMarketEvent();
+  assert.equal(otherNight.fillEndTimeFromFlyerOcr([event]), 0);
+  assert.equal(event.endDate, null);
+
+  // A flyer naming a date this event cannot be on is vetoed outright.
+  const wrongDate = buildFlyerEndFillParser([
+    'CLUB CHUB', 'MEAT MARKET', 'SATURDAY DECEMBER 5TH 2026 4 TO 9PM', 'THE EAGLE WILTON MANORS'
+  ].join('\n'));
+  assert.equal(wrongDate.fillEndTimeFromFlyerOcr([buildMeatMarketEvent()]), 0);
+
+  // A range with no end states nothing to adopt.
+  const startOnly = buildFlyerEndFillParser([
+    'CLUB CHUB', 'MEAT MARKET', 'SUNDAY NOVEMBER 1ST 4PM', 'THE EAGLE WILTON MANORS'
+  ].join('\n'));
+  assert.equal(startOnly.fillEndTimeFromFlyerOcr([buildMeatMarketEvent()]), 0);
+
+  // An implausible span (> 12h) reads more like an AM/PM slip than a party —
+  // the same shape sanity rule 11 corrects downstream.
+  const marathon = buildFlyerEndFillParser([
+    'CLUB CHUB', 'MEAT MARKET', 'SUNDAY NOVEMBER 1ST 4PM TO 9AM', 'THE EAGLE WILTON MANORS'
+  ].join('\n'));
+  const marathonEvent = buildMeatMarketEvent();
+  assert.equal(marathon.fillEndTimeFromFlyerOcr([marathonEvent]), 0);
+  assert.equal(marathonEvent.endDate, null);
+});
+
+test('a salvaged OCR read (text, no classification) still becomes usable evidence', () => {
+  const parser = createParser();
+  const url = 'https://res.cloudinary.com/eventservice/image/upload/saas/logos/salvaged.webp';
+  // The real shape the MEAT MARKET poster comes back in: the model buries the
+  // JSON under a run of newlines, the salvage keeps the words and loses the
+  // classification.
+  const salvaged = { text: 'CLUB CHUB\nMEAT MARKET\nSUNDAY NOVEMBER 1ST 4 TO 9PM' };
+
+  assert.equal(parser.recordOcrImageVerdict(url, salvaged), null,
+    'the classification verdict store still refuses an unclassified result');
+  const evidence = parser.recordOcrImageTextEvidence(url, salvaged);
+  assert.ok(evidence, 'the transcription is recorded as text evidence');
+  assert.equal(evidence.classification, '', 'with no classification claimed');
+  assert.match(parser.getOcrImageVerdict(url).text, /MEAT MARKET/);
+
+  // Fails open exactly like a missing verdict: an unclassified read never
+  // costs the event its image.
+  const event = { title: 'MEAT MARKET', image: url, imageSource: 'jsonld' };
+  parser.rejectNonEventImageValues(event);
+  assert.equal(event.image, url, 'an unclassified read is not a furniture verdict');
+
+  // Glyph noise is not evidence.
+  assert.equal(parser.recordOcrImageTextEvidence(url + '#noise', { text: 'm . ,' }), null);
+});
+
+test('the structured route reads its artwork and fills the missing end in one pass', async () => {
+  const parser = createParser();
+  const image = 'https://res.cloudinary.com/eventservice/image/upload/saas/logos/meat.webp';
+  parser.getOcrTextForImage = async () => ({
+    // Salvaged shape again — the path that used to record nothing at all.
+    text: 'CLUB CHUB\nCANNONBALL WEEKEND\nMEAT MARKET\nSUNDAY NOVEMBER 1ST 4 TO 9PM\nTHE EAGLE WILTON MANORS'
+  });
+  const events = [{
+    title: 'Club Chub Presents: MEAT MARKET @ Eagle Wilton Manors',
+    startDate: new Date('2026-11-01T21:00:00.000Z'),
+    endDate: null,
+    timezone: 'America/New_York',
+    image
+  }];
+
+  assert.equal(await parser.vetStructuredEventArtwork(events, {}, { fetchImageAsBase64: async () => 'ZmFrZQ==' }), 1);
+  assert.equal(parser.fillEndTimeFromFlyerOcr(events), 1);
+  assert.equal(events[0].endDate.toISOString(), '2026-11-02T02:00:00.000Z',
+    'the flyer-derived end matches the end this event has always had on the calendar');
 });

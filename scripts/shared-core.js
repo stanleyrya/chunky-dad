@@ -3429,6 +3429,14 @@ class SharedCore {
                 // lookup failure falls through to existing behavior.
             }
         }
+        // Say so when the rung cannot run. Silence here is indistinguishable
+        // from "the evidence was read and did not decide", which is exactly
+        // what made the Club Chub flyer hard to diagnose: the run logged a
+        // URL-shape verdict and nothing about the evidence it never had.
+        if (textByUrl.size < 2) {
+            const unreadable = [imageA, imageB].filter(url => !textByUrl.has(url));
+            console.log(`🖼️ MERGE: image title-evidence unavailable — no OCR text for ${unreadable.length === 2 ? 'either image' : unreadable[0]}`);
+        }
         return textByUrl.size > 0 ? textByUrl : null;
     }
 
@@ -3649,10 +3657,44 @@ class SharedCore {
                         if (Array.isArray(evidenceTitleTokens) && evidenceTitleTokens.length >= 2) {
                             const matchedTitleTokensIn = (text) => {
                                 const ocrTokens = new Set(this.getCrossSourceTitleTokens(text));
-                                return evidenceTitleTokens.filter(token => ocrTokens.has(token)).length;
+                                return evidenceTitleTokens.filter(token => ocrTokens.has(token));
                             };
-                            const matchedA = matchedTitleTokensIn(evidenceTextA);
-                            const matchedB = matchedTitleTokensIn(evidenceTextB);
+                            const matchedTokensA = matchedTitleTokensIn(evidenceTextA);
+                            const matchedTokensB = matchedTitleTokensIn(evidenceTextB);
+                            // EXCLUSIVE-token test, ahead of the ratio test
+                            // below. Two flyers for the same promoter at the
+                            // same venue share nearly every title token, so a
+                            // ratio can be blocked by agreement: the real Club
+                            // Chub pair (run 20260828-163440) read 7 tokens
+                            // vs 5 — decisive to a human, one short of 2x, so
+                            // the rung fell through and the logo-path rung
+                            // then picked the STALE flyer. What actually
+                            // separates them is what only ONE image says:
+                            // "meat", "market" — the words the rename added.
+                            // Strict on purpose: the loser must name NONE of
+                            // the winner's exclusive tokens, and the winner
+                            // needs at least two, so a one-word coincidence
+                            // decides nothing.
+                            const exclusiveTo = (mine, theirs) => {
+                                const theirTokens = new Set(theirs);
+                                return mine.filter(token => !theirTokens.has(token));
+                            };
+                            const onlyA = exclusiveTo(matchedTokensA, matchedTokensB);
+                            const onlyB = exclusiveTo(matchedTokensB, matchedTokensA);
+                            if (onlyA.length >= 2 && onlyB.length === 0) {
+                                return {
+                                    winner: 'a',
+                                    reason: `flyer text alone names "${onlyA.join(' ')}" from the event's current title — OCR title evidence`
+                                };
+                            }
+                            if (onlyB.length >= 2 && onlyA.length === 0) {
+                                return {
+                                    winner: 'b',
+                                    reason: `flyer text alone names "${onlyB.join(' ')}" from the event's current title — OCR title evidence`
+                                };
+                            }
+                            const matchedA = matchedTokensA.length;
+                            const matchedB = matchedTokensB.length;
                             const winnerMatched = Math.max(matchedA, matchedB);
                             const loserMatched = Math.min(matchedA, matchedB);
                             if (winnerMatched >= 2

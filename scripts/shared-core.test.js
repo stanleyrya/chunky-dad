@@ -20452,6 +20452,55 @@ test('image arbitration: OCR title evidence works both directions and beats no o
     'a side with no readable text never loses on evidence it could not present');
 });
 
+// The REAL transcriptions of both Club Chub flyers, read by the vision model
+// 2026-08-28. The fixtures above are kinder than reality: the actual Wig Out
+// poster also prints the venue, so the two flyers agree on "club chub eagle
+// wilton manors" and the ratio test (winner >= 2x loser) sees 7 vs 5 and
+// refuses — after which the logo-path rung picked the STALE flyer, because
+// sickening.events serves event artwork under /saas/logos/. What separates
+// them is what only one of them says.
+const REAL_WIG_OUT_OCR_TEXT = [
+  'CLUB CHUB', 'FORT LAUDERDALE FLORIDA', 'Wig Out', 'PARTY',
+  'SUNDAY NOVEMBER 1ST 2026 4-9PM', 'THE EAGLE WILTON MANORS', 'CANNONBALL WEEKEND',
+  'ADVANCED TICKETS', 'WWW.CLUBCHUBUSA.COM', '2208 WILTON DRIVE, WILTON MANORS, FL 33305'
+].join('\n');
+const REAL_MEAT_MARKET_OCR_TEXT = [
+  'CLUB CHUB', 'CANNONBALL WEEKEND', 'MEAT', 'MARKET',
+  'SUNDAY NOVEMBER 1ST 4 TO 9PM', 'THE EAGLE WILTON MANORS',
+  'TICKETS AT WWW.CLUBCHUBUSA.COM', '2209 WILTON DRIVE, WILTON MANORS, FL 33305'
+].join('\n');
+
+test('OCR title evidence decides on the tokens only ONE flyer names (real Club Chub transcriptions)', () => {
+  const core = createCore();
+  const context = buildOcrEvidenceContext({
+    [OLD_WIG_OUT_IMAGE]: REAL_WIG_OUT_OCR_TEXT,
+    [NEW_MEAT_MARKET_IMAGE]: REAL_MEAT_MARKET_OCR_TEXT
+  });
+  const resolved = core.resolveConflictDeterministically('image', OLD_WIG_OUT_IMAGE, NEW_MEAT_MARKET_IMAGE, context);
+  assert.ok(resolved, 'the rung decides instead of falling through to the URL shape');
+  assert.equal(resolved.winner, 'b', 'the flyer that says MEAT MARKET wins');
+  assert.match(resolved.reason, /OCR title evidence/);
+  assert.match(resolved.reason, /meat market/i, 'the reason names the deciding words');
+
+  // Symmetry: the same pair, sides swapped, must decide the same flyer.
+  const swapped = buildOcrEvidenceContext({
+    [NEW_MEAT_MARKET_IMAGE]: REAL_MEAT_MARKET_OCR_TEXT,
+    [OLD_WIG_OUT_IMAGE]: REAL_WIG_OUT_OCR_TEXT
+  });
+  const swappedResolved = core.resolveConflictDeterministically('image', NEW_MEAT_MARKET_IMAGE, OLD_WIG_OUT_IMAGE, swapped);
+  assert.equal(swappedResolved.winner, 'a', 'side order never changes which image wins');
+
+  // Strictness: a single exclusive token is a coincidence, not evidence. Both
+  // sides here name one title token the other lacks ("manors" / "market").
+  const oneEach = buildOcrEvidenceContext({
+    [OLD_WIG_OUT_IMAGE]: 'CLUB CHUB\nWIG OUT\nEAGLE WILTON MANORS',
+    [NEW_MEAT_MARKET_IMAGE]: 'CLUB CHUB\nMARKET NIGHT\nEAGLE WILTON'
+  });
+  const oneEachResolved = core.resolveConflictDeterministically('image', OLD_WIG_OUT_IMAGE, NEW_MEAT_MARKET_IMAGE, oneEach);
+  assert.ok(!oneEachResolved || !/OCR title evidence/.test(oneEachResolved.reason),
+    'both sides holding exclusive tokens falls through — no winner on split evidence');
+});
+
 test('createFinalEventObject preloads OCR texts through the injected lookup and updates the stale image', async () => {
   const core = createCore();
   const lookups = [];

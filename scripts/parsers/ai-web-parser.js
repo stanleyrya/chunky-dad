@@ -1131,10 +1131,14 @@ class AiWebParser {
                 // featured event — fall through to segment extraction for full coverage.
                 && (pageClassification !== 'multi-event-page' || structuredEvents.length >= 2);
             if (useStructuredEvents) {
+                // "skipping OCR" was true when this route read no images at
+                // all; the events' own artwork is OCR'd below, so the line
+                // now names what is actually skipped (the ocr-all sweep and
+                // the AI extraction passes).
                 if (structuredSource === 'json-api') {
-                    console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from JSON API structured data — skipping OCR and AI extraction`);
+                    console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from JSON API structured data — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 } else {
-                    console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from JSON-LD structured data — skipping OCR and AI extraction`);
+                    console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from JSON-LD structured data — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 }
                 // Structured-data events skip normalizeAiEvent, so the title
                 // cleanups that live there have to be applied here as well —
@@ -1194,6 +1198,12 @@ class AiWebParser {
                 // published a 1x1 spacer can still adopt the page's real
                 // artwork instead of keeping the pixel.
                 structuredEvents.forEach(event => this.rejectPlaceholderImageValues(event));
+                // Read the structured nodes' OWN artwork before anything
+                // judges it. Runs FIRST so the furniture rejection below and
+                // every later image decision argue from what the flyer says
+                // instead of from the shape of its URL.
+                const structuredArtworkOcrCount = await this.vetStructuredEventArtwork(
+                    structuredEvents, parserConfig, httpAdapter);
                 // …and neither is a logo the vision pass already read as page
                 // furniture. Same position and same reasoning as the
                 // placeholder rejection above: reject BEFORE the og:image fill,
@@ -1259,12 +1269,22 @@ class AiWebParser {
                 // adoption above OCR-vetted it into the verdict registry)
                 // state a different start time than the structured data?
                 this.applyFlyerTimeConflictFlag(keptStructuredEvents);
+                // Gap-fill, not override: an event the page published with no
+                // end time takes one from its own flyer when the flyer's
+                // range starts at the time the page already states. Runs
+                // AFTER the conflict flag so a flyer that disagrees about the
+                // START is already on record as suspect.
+                this.fillEndTimeFromFlyerOcr(keptStructuredEvents);
                 return {
                     events: keptStructuredEvents,
                     additionalLinks: additionalLinks,
                     discoveredSegments: null,
                     ocrResults: [],
-                    extractionSummary: { source: structuredSource, aiPasses: this.aiPromptHistory.length, ocrImages: 0 },
+                    // ocrImages is no longer structurally 0 on this route: the
+                    // structured nodes' artwork is read here, and the summary
+                    // has to say so or the run reports OCR it actually did as
+                    // OCR it skipped.
+                    extractionSummary: { source: structuredSource, aiPasses: this.aiPromptHistory.length, ocrImages: structuredArtworkOcrCount },
                     source: this.config.source,
                     url: sourceUrl
                 };
@@ -15776,6 +15796,121 @@ TEXT:
         }
     }
 
+    // Fill a MISSING end time from the event's own flyer. Structured data is
+    // routinely start-only (sickening.events publishes no endDate at all),
+    // and an event with no end is not a cosmetic gap: EventKit refuses to
+    // save one outright, so Club Chub's MEAT MARKET could not be written at
+    // all until the merge learned to keep the calendar's stored end
+    // (run 20260828-163440). The flyer had the answer the whole time —
+    // "SUNDAY NOVEMBER 1ST 4 TO 9PM" — and now that this route OCR-reads its
+    // own artwork, it can be read instead of guessed.
+    //
+    // Fail closed at every step, because inventing a duration is worse than
+    // leaving the gap:
+    //   - only ever fills an ABSENT end; a stated end is never touched
+    //   - needs a resolved timezone (a wall-clock reading without one is a
+    //     guess) and a real stated start (local midnight is the date-only
+    //     default, which anchors nothing)
+    //   - the flyer must not name a date this event cannot be on
+    //   - the flyer must state a RANGE whose start is unambiguous and equals
+    //     the page's own start — that agreement is what proves the range
+    //     describes THIS event — and exactly one such range-end may exist
+    //   - the resulting span must be positive and <= 12h (past that, the
+    //     reading is more likely an AM/PM slip than a party)
+    // No notes field is written: this fills the event's own endDate, and the
+    // reasoning lands in the log and on the event's evidence lines.
+    fillEndTimeFromFlyerOcr(events) {
+        if (!Array.isArray(events) || events.length === 0) return 0;
+        if (!this.core || typeof this.core.formatLocalClockTime !== 'function'
+            || typeof this.core.convertWallClockDateToUtc !== 'function'
+            || typeof this.core.getTimezoneOffsetMinutes !== 'function') return 0;
+        let filledCount = 0;
+        for (const event of events) {
+            if (!event || typeof event !== 'object') continue;
+            if (event.endDate || !event.startDate) continue;
+            const timezone = typeof event.timezone === 'string' ? event.timezone.trim() : '';
+            if (!timezone || event._timezoneUnresolved) continue;
+            const imageUrl = typeof event.image === 'string' ? event.image.trim() : '';
+            if (!imageUrl) continue;
+            const verdict = this.getOcrImageVerdict(imageUrl);
+            if (!verdict) continue;
+            // Known page furniture states nothing about this event's hours.
+            // Anything else qualifies — INCLUDING a verdict with no
+            // classification at all, which is not an exotic case: a salvaged
+            // OCR response keeps its text and loses its classification (the
+            // MEAT MARKET poster itself comes back this way, the model having
+            // buried the JSON under a run of newlines). Demanding
+            // 'event-flyer' would refuse the very flyer this exists to read,
+            // and the agreement test below is the real gate: furniture does
+            // not print a time range starting at the event's own start.
+            if (this.nonEventOcrImageClassifications.has(verdict.classification)) continue;
+            const ocrText = typeof verdict.text === 'string' ? verdict.text : '';
+            if (!ocrText.trim()) continue;
+            const localDates = this.getFlyerLocalDateCandidates(event);
+            if (!localDates || flyerOcrContradictsEventDate(ocrText, localDates)) continue;
+
+            const startClock = this.core.formatLocalClockTime(event.startDate, timezone);
+            const startMatch = /^(\d{2}):(\d{2})$/.exec(startClock || '');
+            if (!startMatch || startClock === '00:00') continue;
+            const startMinutes = (parseInt(startMatch[1], 10) * 60) + parseInt(startMatch[2], 10);
+
+            const endMinutesFound = this.readFlyerRangeEndMinutes(ocrText, startMinutes);
+            if (endMinutesFound === null) continue;
+
+            const spanMinutes = ((endMinutesFound - startMinutes) + 1440) % 1440;
+            if (spanMinutes === 0 || spanMinutes > 12 * 60) continue;
+
+            const startOffset = this.core.getTimezoneOffsetMinutes(new Date(event.startDate), timezone);
+            if (!Number.isFinite(startOffset)) continue;
+            // UTC components of this view hold the LOCAL wall clock, which is
+            // the shape convertWallClockDateToUtc reinterprets.
+            const localView = new Date(new Date(event.startDate).getTime() + (startOffset * 60 * 1000));
+            const endWallClock = new Date(Date.UTC(
+                localView.getUTCFullYear(),
+                localView.getUTCMonth(),
+                localView.getUTCDate() + (endMinutesFound <= startMinutes ? 1 : 0),
+                Math.floor(endMinutesFound / 60),
+                endMinutesFound % 60
+            ));
+            const resolvedEnd = this.core.convertWallClockDateToUtc(endWallClock, timezone);
+            if (!resolvedEnd || isNaN(resolvedEnd.getTime())) continue;
+
+            event.endDate = resolvedEnd;
+            filledCount += 1;
+            const pad = (value) => String(value).padStart(2, '0');
+            const endClock = `${pad(Math.floor(endMinutesFound / 60))}:${pad(endMinutesFound % 60)}`;
+            const evidence = `endDate: read ${startClock}–${endClock} off the event's flyer (page published no end time)`;
+            if (Array.isArray(event._evidenceLines)) {
+                event._evidenceLines.push(evidence);
+            } else {
+                event._evidenceLines = [evidence];
+            }
+            console.log(`🕐 AI Web: Filled missing end for "${event.title || 'Unknown'}" from flyer OCR — ${startClock}–${endClock} local (${Math.round(spanMinutes / 60 * 10) / 10}h)`);
+        }
+        return filledCount;
+    }
+
+    // The end of the flyer's stated time range, in minutes-of-day, ONLY when
+    // the range's start is unambiguous and agrees with the page's own start.
+    // That agreement is the whole anti-hallucination gate: a flyer listing
+    // some other night's hours cannot pass it. Returns null unless exactly
+    // one such end exists (a flyer disagreeing with itself decides nothing).
+    readFlyerRangeEndMinutes(ocrText, startMinutes) {
+        const readings = collectFlyerOcrTimeReadings(ocrText);
+        if (readings.length === 0) return null;
+        const endMinutes = new Set();
+        for (let index = 0; index < readings.length; index++) {
+            const reading = readings[index];
+            if (!reading.isRangeStart || !reading.unambiguous) continue;
+            if (reading.minutes !== startMinutes) continue;
+            const rangeEnd = readings
+                .slice(index + 1)
+                .find(candidate => candidate.line === reading.line && candidate.isRangeEnd);
+            if (rangeEnd && rangeEnd.unambiguous) endMinutes.add(rangeEnd.minutes);
+        }
+        return endMinutes.size === 1 ? [...endMinutes][0] : null;
+    }
+
     normalizeAiEvent(aiEvent, parserConfig, htmlData = null, cityConfig = null, promptFields = null) {
         const scrapedLinks = this.extractLinksFromPage(
             htmlData && typeof htmlData.html === 'string' ? htmlData.html : '',
@@ -17755,6 +17890,61 @@ TEXT:
         }
     }
 
+    // Read the artwork the structured data itself published. The JSON-LD /
+    // JSON-API route returns before the ocr-all pass, so these images — the
+    // ones that actually reach the calendar — were the only flyers in the
+    // system nobody ever looked at. Everything downstream that reasons about
+    // an image asks the vision pass what it SAYS: the furniture rejection
+    // right after this call, the flyer-vs-page time conflict flag, and
+    // shared-core's merge-time title-evidence rung, which decides which of
+    // two flyers belongs to the event being written. Without a verdict they
+    // all fail open on "unknown" — which is how Club Chub's renamed night
+    // kept its old "Wig Out" flyer while the page served the real MEAT
+    // MARKET poster (run 20260828-163440: sickening.events hosts event art
+    // under /saas/logos/, so the URL-shape rung read the new flyer as site
+    // chrome). One bounded call per DISTINCT image, then the OCR cache
+    // answers forever; OCR is local-model work and the standing doctrine is
+    // to spend it.
+    async vetStructuredEventArtwork(events, parserConfig, httpAdapter) {
+        if (!Array.isArray(events) || events.length === 0) return 0;
+        const ocrConfig = this.getOcrConfig(parserConfig);
+        if (!ocrConfig || !ocrConfig.enabled) return 0;
+        const seenImageKeys = new Set();
+        let vettedCount = 0;
+        for (const event of events) {
+            const image = event && typeof event.image === 'string' ? event.image.trim() : '';
+            if (!image || !/^https?:\/\//i.test(image)) continue;
+            // NO isLikelyUninterestingImageUrl gate here, unlike the page-meta
+            // vet: that helper is a URL-shape guess, and this image is not a
+            // candidate scraped off the page — the structured data DECLARED it
+            // as this event's artwork. Guessing from the path is the whole bug
+            // being fixed (it calls sickening.events' /saas/logos/ poster
+            // uninteresting), and refusing to read the one image that reaches
+            // the calendar is how the guess became unfalsifiable. Placeholder
+            // pixels are already gone: rejectPlaceholderImageValues runs first.
+            const imageKey = this.canonicalizeImageUrlForComparison(image) || image;
+            if (seenImageKeys.has(imageKey)) continue;
+            seenImageKeys.add(imageKey);
+            // Already read this run (the og:image vet, or a sibling event
+            // sharing the flyer) — the verdict store is the same seam.
+            if (this.getOcrImageVerdict(image)) continue;
+            const rawResult = await this.getOcrTextForImage(image, ocrConfig, 'structured artwork', httpAdapter).catch(() => null);
+            const normalized = this.normalizeOcrResult(rawResult);
+            if (!normalized) continue;
+            // Text-only fallback for a salvaged read: without it the flyer
+            // this call just paid for stays invisible to every consumer.
+            this.recordOcrImageVerdict(image, normalized)
+                || this.recordOcrImageTextEvidence(image, normalized);
+            vettedCount += 1;
+            const verdict = this.getOcrImageVerdict(image);
+            const readAs = verdict
+                ? (verdict.classification || 'unclassified (text recovered)')
+                : 'nothing readable';
+            console.log(`🤖 AI Web: OCR-read structured-data artwork for "${event.title || 'Unknown'}" — ${readAs}: ${image}`);
+        }
+        return vettedCount;
+    }
+
     fillImageFromPageMetaArtwork(event, htmlData) {
         if (!event || typeof event !== 'object') return event;
         const existingImage = typeof event.image === 'string' ? event.image.trim() : '';
@@ -18150,6 +18340,38 @@ TEXT:
             // The transcription itself, for the brand-token furniture gate in
             // getNonEventImageOcrReason: a logo whose only readable text is
             // the page's own brand/venue name is still page furniture.
+            text: rawText
+        };
+        let recorded = false;
+        for (const url of [imageUrl, result.imageUrl, result.url, this.normalizeHttpUrlValue(imageUrl)]) {
+            const key = this.canonicalizeImageUrlForComparison(url);
+            if (!key) continue;
+            this.ocrImageVerdictsByUrl.set(key, verdict);
+            recorded = true;
+        }
+        return recorded ? verdict : null;
+    }
+
+    // Record what an image SAYS when the model never said what it IS.
+    // recordOcrImageVerdict refuses a result with no classification — its
+    // contract is a classification verdict — but a salvaged OCR response
+    // (text recovered from a truncated/malformed JSON reply) routinely has
+    // exactly that shape, and its transcription is still real evidence. The
+    // MEAT MARKET poster comes back this way every time: the model buries
+    // the JSON under a run of newlines, the salvage keeps the words, and the
+    // verdict store then held nothing at all for the one flyer that mattered.
+    // Classification is left EMPTY on purpose: every furniture gate asks
+    // whether the classification is in nonEventOcrImageClassifications, and
+    // '' is not, so those gates fail open exactly as they did on a missing
+    // verdict. Only the consumers that want the text see a difference.
+    recordOcrImageTextEvidence(imageUrl, result) {
+        if (!result || typeof result !== 'object') return null;
+        const rawText = String(result.text || '').trim();
+        if (!this.ocrTextHasMeaningfulContent(rawText)) return null;
+        const verdict = {
+            classification: '',
+            hasText: true,
+            hasGlyphNoiseOnly: false,
             text: rawText
         };
         let recorded = false;
