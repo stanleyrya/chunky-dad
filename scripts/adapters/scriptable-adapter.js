@@ -15831,10 +15831,17 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       // _mergeNoOp is the write path's own no-op stamp (shared-core: final
       // payload field-identical to the calendar record, notes projection
       // included) — the same skip filterEventsForExecution enforces, so the
-      // pile and the gate agree in live AND dryRun runs. The _changes form
-      // below stays for saved runs recorded before the stamp existed.
+      // pile and the gate agree in live AND dryRun runs.
       event._mergeNoOp === true ||
-      (this.normalizeIntentAction(event) === "merge" &&
+      // LEGACY ONLY: _changes is stamped back at merge time, before the
+      // sanity/notes passes that can still change the payload, so an empty
+      // _changes is not proof of a no-op — an overnight-span-corrected
+      // event (endDate rewritten after the stamp) filed a real UPDATE under
+      // "Already Saved (No Action)" while the gate wrote it. shared-core now
+      // stamps _mergeNoOp false in exactly that case, so this fallback may
+      // only speak for runs recorded before the stamp existed (undefined).
+      (event._mergeNoOp === undefined &&
+        this.normalizeIntentAction(event) === "merge" &&
         Array.isArray(event._changes) &&
         event._changes.length === 0)
     ) {

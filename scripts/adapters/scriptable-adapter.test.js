@@ -10205,6 +10205,33 @@ test('write-policy: a _mergeNoOp merge sits in the already-saved pile and never 
   assert.equal(adapter.getWriteActionFromEvent(unstamped), 'update');
 });
 
+test('write-policy: an empty _changes never outranks a false _mergeNoOp (GOLIDLOXX span-correction shape)', () => {
+  const adapter = buildAdapter();
+  // Run 20260828-105507: the calendar carried the same wrong 9PM→4PM end as
+  // the scrape, so merge arbitration stamped _changes empty; the
+  // overnight-span sanity rule then corrected endDate -12h AFTER that stamp.
+  // shared-core judges the FINAL payload and stamps _mergeNoOp false, so the
+  // card must stay actionable — it sat under "Already Saved (No Action)"
+  // while the write gate correctly executed the UPDATE he then tapped.
+  const corrected = freshRound3Event(BEEFMINCE_NOOP_EVENT);
+  corrected._changes = [];
+  corrected._mergeNoOp = false;
+  corrected._sanityFlags = [{ code: 'overnight-span-corrected', detail: 'end corrected -12h to a 7h overnight span' }];
+  const placement = adapter.classifyEventForResultsSection(corrected);
+  assert.equal(placement.section, 'actionable',
+    'a stamped-false merge is a real write, whatever the stale _changes says');
+  assert.equal(placement.reason, '', 'actionable cards carry no already-saved chip');
+  assert.equal(adapter.getWriteActionFromEvent(corrected), 'update',
+    'and the badge keeps promising the UPDATE the gate performs');
+
+  // The legacy form still speaks for runs recorded before the stamp existed.
+  const legacy = freshRound3Event(BEEFMINCE_NOOP_EVENT);
+  legacy._changes = [];
+  delete legacy._mergeNoOp;
+  assert.equal(adapter.classifyEventForResultsSection(legacy).section, 'saved',
+    'an unstamped saved run keeps reading its empty _changes as a no-op');
+});
+
 test('round3: every existing bridge handler id and page handler survives the cleanup', async () => {
   const adapter = buildAdapter();
   // Bridge action ids round-trip through the URL parser.

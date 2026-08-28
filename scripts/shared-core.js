@@ -15710,8 +15710,20 @@ class SharedCore {
                 const changedBeyondNotes = finalWriteChanges.filter(field => field !== 'notes');
                 const notesIdentical = !finalWriteChanges.includes('notes')
                     || this.notesProjectionsMatch(analyzedEvent._existingEvent.notes, analyzedEvent.notes);
-                if (changedBeyondNotes.length === 0 && notesIdentical) {
-                    analyzedEvent._mergeNoOp = true;
+                // Stamped BOTH ways on purpose. A `false` stamp is what tells
+                // the results UI that THIS run judged the final payload, so
+                // its legacy _changes fallback must stand down: _changes is
+                // computed back at merge time (mergeEvents), before the
+                // sanity/notes passes that can still mutate the payload, so
+                // an empty _changes no longer proves "nothing to write".
+                // Live proof (run 20260828-105507, GOLIDLOXX AUGUST): the
+                // overnight-span-corrected sanity rule rewrote endDate -12h
+                // AFTER _changes was stamped empty, and the card landed in
+                // "Already Saved (No Action)" while the write gate below
+                // correctly executed the UPDATE. Only a run recorded before
+                // this stamp existed leaves _mergeNoOp undefined.
+                analyzedEvent._mergeNoOp = changedBeyondNotes.length === 0 && notesIdentical;
+                if (analyzedEvent._mergeNoOp) {
                     console.log(`⏸️ MERGE: "${analyzedEvent.title || 'Unknown'}" produced no field changes — write skipped`);
                 }
             }
