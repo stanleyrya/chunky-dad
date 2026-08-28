@@ -10690,6 +10690,26 @@ class SharedCore {
                 continue;
             }
 
+            // A MISSING scraped start/end is an extraction gap, exactly like
+            // every other field's — but the generic empty-scrape rule below
+            // excludes the dates on the assumption their own rules own them.
+            // Those rules cover a DEGENERATE end (above) and CONFLICTING dates
+            // (routeDateConflictToAi); neither fires when the scrape simply
+            // has no end, so the default 'ai' strategy let the empty value
+            // through and cleared the calendar's end. EventKit then refuses
+            // the write outright — "No end date has been set." — so the event
+            // can never save again (Club Chub MEAT MARKET, run
+            // 20260828-163440: sickening.events' JSON-LD carries no endDate,
+            // the calendar had 9PM, execution failed 1 of 1 every attempt).
+            // Nothing to arbitrate here: one side is absent.
+            if ((fieldName === 'startDate' || fieldName === 'endDate')
+                && this.isEmptyArbitrationValue(scraperValue)
+                && !this.isEmptyArbitrationValue(calendarValue)) {
+                mergedObject[fieldName] = calendarValue;
+                console.log(`📅 MERGE: "${mergeTitle}" ${fieldName} kept from calendar (scrape found none)`);
+                continue;
+            }
+
             // Orientation image slots are NEVER cleared by a run that found no
             // candidate of that shape. URL-derived orientation is knowable for
             // only a minority of image URLs, so an empty imageVertical/
@@ -11184,24 +11204,32 @@ class SharedCore {
         
         // Create the final event object that represents exactly what will be saved
         const finalEvent = {
-            // Core calendar fields
+            // Copy all merged fields to final event
+            ...mergedObject,
+
+            // Core calendar fields, applied AFTER the spread. Written BEFORE
+            // it, every one of these fallbacks was dead on arrival: a key
+            // present on mergedObject with a falsy value (endDate: null,
+            // location: undefined) overwrote the fallback it was meant to be
+            // guarded by. Only `notes` survived, because it is re-applied
+            // below. Two live failures traced to exactly this: MEAT MARKET's
+            // null endDate reaching EventKit ("No end date has been set."),
+            // and BEEFMINCE New Year's Eve reporting a phantom location
+            // change (undefined vs the calendar's null) on every run.
             title: mergedObject.title || calendarObject.title,
             startDate: mergedObject.startDate || calendarObject.startDate,
             endDate: mergedObject.endDate || calendarObject.endDate,
             location: mergedObject.location || calendarObject.location,
-            notes: newNotes,
-            // url is a VIEW of the canonical merged website (one logical field) —
-            // kept because the web adapter and display read event.url; it is
-            // never independently stored ('url' is skipped by the merge loop, so
-            // the mergedObject spread below cannot override this).
-            url: mergedObject.website || '',
-            
-            // Copy all merged fields to final event
-            ...mergedObject,
-            
+
             // Override notes with the newly built ones
             notes: newNotes,
-            
+
+            // url is a VIEW of the canonical merged website (one logical field) —
+            // kept because the web adapter and display read event.url; it is
+            // never independently stored ('url' is skipped by the merge loop,
+            // so mergedObject carries no url of its own).
+            url: mergedObject.website || '',
+
             // Preserve existing event reference for saving
             _existingEvent: existingEvent,
             _action: 'merge',
