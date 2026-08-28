@@ -7565,7 +7565,7 @@ const REDEYE_SEARCH_PAYLOAD = {
 };
 const REDEYE_SOURCE_URL = 'https://api.redeyetickets.com/api/v2/events/search?venue=red-eye-ny';
 
-test('parseEvents extracts the Red Eye search payload via the JSON-API structured path with zero AI/OCR calls', async () => {
+test('parseEvents extracts the Red Eye search payload via the JSON-API structured path with zero AI calls and no OCR sweep', async () => {
   const parser = createParser();
   let aiCalls = 0;
   let ocrCalls = 0;
@@ -7601,10 +7601,51 @@ test('parseEvents extracts the Red Eye search payload via the JSON-API structure
   assert.equal(event.ticketUrl, '', 'slug never becomes a ticket URL');
 
   assert.equal(aiCalls, 0, 'no extraction AI on the structured path');
-  assert.equal(ocrCalls, 0, 'no OCR on the structured path');
+  assert.equal(ocrCalls, 0, 'the page-wide OCR sweep still never runs here');
+  // No httpAdapter in this call, so the artwork read has nothing to fetch with
+  // — the summary reports the zero honestly rather than by construction.
   assert.deepEqual(result.extractionSummary, { source: 'json-api', aiPasses: 0, ocrImages: 0 });
   assert.ok(logs.includes('🤖 AI Web: JSON API response detected (1 candidate event object(s))'));
-  assert.ok(logs.includes('🤖 AI Web: Extracted 1 event(s) from JSON API structured data — skipping OCR and AI extraction'));
+  assert.ok(logs.includes('🤖 AI Web: Extracted 1 event(s) from JSON API structured data — skipping the OCR sweep and AI extraction (event artwork is still read)'));
+});
+
+// The structured route returns before the ocr-all sweep, which left the ONE
+// image that reaches the calendar unread — so every downstream image judgment
+// (furniture rejection, flyer/page time conflict, and shared-core's merge-time
+// title-evidence rung) failed open on "unknown". Club Chub's renamed night kept
+// its stale "Wig Out" flyer that way: sickening.events serves event artwork
+// under /saas/logos/, and with no OCR the URL-shape rung called the real MEAT
+// MARKET poster site chrome.
+test('structured path OCR-reads the events own artwork so downstream image decisions have evidence', async () => {
+  const parser = createParser();
+  parser.core.callAiGenerate = async () => null;
+  parser.extractOcrFromAllImages = async () => { throw new Error('the OCR sweep must not run on the structured path'); };
+  const ocrRequests = [];
+  parser.getOcrTextForImage = async (imageUrl, ocrConfig, passLabel) => {
+    ocrRequests.push({ imageUrl, passLabel });
+    return { text: 'GOLDILOXX JULY\nRED EYE NY\nDJ JOE MICHAEL', classification: 'event-flyer' };
+  };
+  const cityConfig = { nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'] } };
+
+  const result = await parser.parseEvents(
+    { url: REDEYE_SOURCE_URL, html: JSON.stringify(REDEYE_SEARCH_PAYLOAD) },
+    {},
+    cityConfig,
+    'event-page',
+    { fetchImageAsBase64: async () => 'ZmFrZQ==' }
+  );
+
+  assert.equal(result.events.length, 1);
+  assert.equal(ocrRequests.length, 1, 'the event artwork is read exactly once');
+  assert.equal(ocrRequests[0].imageUrl, 'https://redeye-event-flyers.s3.amazonaws.com/img_9849-optimized.jpg');
+  assert.equal(ocrRequests[0].passLabel, 'structured artwork');
+  assert.equal(result.extractionSummary.ocrImages, 1, 'the summary reports the read');
+  assert.equal(result.events[0].image, 'https://redeye-event-flyers.s3.amazonaws.com/img_9849-optimized.jpg',
+    'reading the flyer never costs the event its picture');
+
+  const verdict = parser.getOcrImageVerdict('https://redeye-event-flyers.s3.amazonaws.com/img_9849-optimized.jpg');
+  assert.ok(verdict, 'the verdict is registered where every downstream consumer looks it up');
+  assert.match(String(verdict.text), /GOLDILOXX JULY/);
 });
 
 test('extractEventsFromJsonApiPayload expands a detail-shaped payload into one event per performance', () => {
