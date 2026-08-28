@@ -16044,7 +16044,7 @@ test('merge no-op fail-closed: one real field change writes, and a verdict-line-
     buildPrepCalendarAdapter([{ ...calendarRecord, startDate: new Date(calendarRecord.startDate), endDate: new Date(calendarRecord.endDate) }]),
     {});
   assert.equal(changedRun[0]._action, 'merge');
-  assert.equal(changedRun[0]._mergeNoOp, undefined, 'a real field change is never stamped as a no-op');
+  assert.equal(changedRun[0]._mergeNoOp, false, 'a real field change is stamped false — evaluated, not a no-op');
   assert.equal(SharedCore.filterEventsForExecution(changedRun).length, 1, 'the changed merge still writes');
 
   // Verdict-line-only twin: same fields, but the owner tapped manual-bear in
@@ -16059,8 +16059,72 @@ test('merge no-op fail-closed: one real field change writes, and a verdict-line-
   assert.equal(core.parseNotesIntoFields(verdictRun[0].notes).bearSource,
     'manual-bear (overrode ai: tapped in results)',
     'the manual verdict is in the merged payload');
-  assert.equal(verdictRun[0]._mergeNoOp, undefined, 'a verdict-note-only difference is a change');
+  assert.equal(verdictRun[0]._mergeNoOp, false, 'a verdict-note-only difference is a change');
   assert.equal(SharedCore.filterEventsForExecution(verdictRun).length, 1, 'the verdict write still lands');
+});
+
+// GOLIDLOXX AUGUST, run 20260828-105507 (he tapped the merge and asked why a
+// card in "Already Saved (No Action)" proposed one). Red Eye's API gives the
+// event a 9PM->4PM span; the calendar already held that same wrong end, so
+// merge arbitration found NOTHING to change and stamped _changes empty. The
+// overnight-span sanity correction then rewrote endDate -12h — AFTER that
+// stamp. The write was real; only the results-UI pile disagreed, because it
+// trusted the stale _changes. The fix is the false stamp asserted here: it
+// tells the UI this run judged the FINAL payload.
+test('merge no-op ordering: a post-merge sanity correction is stamped false, never left to stale _changes', async () => {
+  const core = createCore();
+  // Sat 9PM EDT -> Sun 4PM EDT: the 19h span rule 11 corrects to 7h.
+  const badStart = new Date('2026-08-30T01:00:00.000Z');
+  const badEnd = new Date('2026-08-30T20:00:00.000Z');
+  const scraped = () => ({
+    title: 'GOLIDLOXX AUGUST',
+    startDate: new Date(badStart),
+    endDate: new Date(badEnd),
+    bar: 'Red Eye NY',
+    city: 'nyc',
+    timezone: 'America/New_York',
+    location: '40.7577763,-73.9925418',
+    website: 'https://redeyeny.com',
+    bearSource: 'keyword',
+    shortName: 'GOLDI-LOXX'
+  });
+
+  // Settle the record once (same two-pass shape as the BEEFMINCE cases) and
+  // put the UNCORRECTED end back: that is the historical record — written
+  // before the correction rule existed — the re-scrape merges into.
+  const seedRecord = {
+    title: 'GOLIDLOXX AUGUST',
+    startDate: new Date(badStart),
+    endDate: new Date(badEnd),
+    location: '40.7577763,-73.9925418',
+    notes: 'bar: Red Eye NY'
+  };
+  const settled = await core.prepareEventsForCalendar(
+    [scraped()], buildPrepCalendarAdapter([seedRecord]), {});
+  assert.equal(settled[0]._action, 'merge');
+  const calendarRecord = {
+    title: settled[0].title,
+    startDate: new Date(badStart),
+    endDate: new Date(badEnd),
+    location: settled[0].location,
+    notes: settled[0].notes
+  };
+
+  const rerun = await core.prepareEventsForCalendar(
+    [scraped()], buildPrepCalendarAdapter([calendarRecord]), {});
+  assert.equal(rerun.length, 1);
+  const merged = rerun[0];
+  assert.equal(merged._action, 'merge');
+  assert.ok(!merged._changes.includes('endDate'),
+    'merge-time _changes cannot see the end correction — scraper and calendar carried the same wrong end');
+  assert.equal(new Date(merged.endDate).toISOString(), '2026-08-30T08:00:00.000Z',
+    'the sanity pass corrected the end AFTER _changes was stamped');
+  assert.ok((merged._sanityFlags || []).some(flag => flag.code === 'overnight-span-corrected'),
+    'the correction is the one flagged on the card');
+  assert.equal(merged._mergeNoOp, false,
+    'stamped false: this run judged the final payload, so the UI must not read the stale _changes');
+  assert.equal(SharedCore.filterEventsForExecution(rerun).length, 1,
+    'the corrected end reaches the calendar — the merge he ran was real');
 });
 
 test('notesProjectionsMatch: pure line reordering is a no-op, any real line difference is a change', () => {
