@@ -1131,10 +1131,14 @@ class AiWebParser {
                 // featured event — fall through to segment extraction for full coverage.
                 && (pageClassification !== 'multi-event-page' || structuredEvents.length >= 2);
             if (useStructuredEvents) {
+                // "skipping OCR" was true when this route read no images at
+                // all; the events' own artwork is OCR'd below, so the line
+                // now names what is actually skipped (the ocr-all sweep and
+                // the AI extraction passes).
                 if (structuredSource === 'json-api') {
-                    console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from JSON API structured data — skipping OCR and AI extraction`);
+                    console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from JSON API structured data — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 } else {
-                    console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from JSON-LD structured data — skipping OCR and AI extraction`);
+                    console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from JSON-LD structured data — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 }
                 // Structured-data events skip normalizeAiEvent, so the title
                 // cleanups that live there have to be applied here as well —
@@ -1194,6 +1198,12 @@ class AiWebParser {
                 // published a 1x1 spacer can still adopt the page's real
                 // artwork instead of keeping the pixel.
                 structuredEvents.forEach(event => this.rejectPlaceholderImageValues(event));
+                // Read the structured nodes' OWN artwork before anything
+                // judges it. Runs FIRST so the furniture rejection below and
+                // every later image decision argue from what the flyer says
+                // instead of from the shape of its URL.
+                const structuredArtworkOcrCount = await this.vetStructuredEventArtwork(
+                    structuredEvents, parserConfig, httpAdapter);
                 // …and neither is a logo the vision pass already read as page
                 // furniture. Same position and same reasoning as the
                 // placeholder rejection above: reject BEFORE the og:image fill,
@@ -1264,7 +1274,11 @@ class AiWebParser {
                     additionalLinks: additionalLinks,
                     discoveredSegments: null,
                     ocrResults: [],
-                    extractionSummary: { source: structuredSource, aiPasses: this.aiPromptHistory.length, ocrImages: 0 },
+                    // ocrImages is no longer structurally 0 on this route: the
+                    // structured nodes' artwork is read here, and the summary
+                    // has to say so or the run reports OCR it actually did as
+                    // OCR it skipped.
+                    extractionSummary: { source: structuredSource, aiPasses: this.aiPromptHistory.length, ocrImages: structuredArtworkOcrCount },
                     source: this.config.source,
                     url: sourceUrl
                 };
@@ -17753,6 +17767,48 @@ TEXT:
             const verdict = this.getOcrImageVerdict(upgraded);
             console.log(`🤖 AI Web: OCR-vetted page og:image ${upgraded} before adoption — ${verdict ? verdict.classification : 'no classification'}`);
         }
+    }
+
+    // Read the artwork the structured data itself published. The JSON-LD /
+    // JSON-API route returns before the ocr-all pass, so these images — the
+    // ones that actually reach the calendar — were the only flyers in the
+    // system nobody ever looked at. Everything downstream that reasons about
+    // an image asks the vision pass what it SAYS: the furniture rejection
+    // right after this call, the flyer-vs-page time conflict flag, and
+    // shared-core's merge-time title-evidence rung, which decides which of
+    // two flyers belongs to the event being written. Without a verdict they
+    // all fail open on "unknown" — which is how Club Chub's renamed night
+    // kept its old "Wig Out" flyer while the page served the real MEAT
+    // MARKET poster (run 20260828-163440: sickening.events hosts event art
+    // under /saas/logos/, so the URL-shape rung read the new flyer as site
+    // chrome). One bounded call per DISTINCT image, then the OCR cache
+    // answers forever; OCR is local-model work and the standing doctrine is
+    // to spend it.
+    async vetStructuredEventArtwork(events, parserConfig, httpAdapter) {
+        if (!Array.isArray(events) || events.length === 0) return 0;
+        const ocrConfig = this.getOcrConfig(parserConfig);
+        if (!ocrConfig || !ocrConfig.enabled) return 0;
+        const seenImageKeys = new Set();
+        let vettedCount = 0;
+        for (const event of events) {
+            const image = event && typeof event.image === 'string' ? event.image.trim() : '';
+            if (!image || !/^https?:\/\//i.test(image)) continue;
+            if (this.isLikelyUninterestingImageUrl(image)) continue;
+            const imageKey = this.canonicalizeImageUrlForComparison(image) || image;
+            if (seenImageKeys.has(imageKey)) continue;
+            seenImageKeys.add(imageKey);
+            // Already read this run (the og:image vet, or a sibling event
+            // sharing the flyer) — the verdict store is the same seam.
+            if (this.getOcrImageVerdict(image)) continue;
+            const rawResult = await this.getOcrTextForImage(image, ocrConfig, 'structured artwork', httpAdapter).catch(() => null);
+            const normalized = this.normalizeOcrResult(rawResult);
+            if (!normalized) continue;
+            this.recordOcrImageVerdict(image, normalized);
+            vettedCount += 1;
+            const verdict = this.getOcrImageVerdict(image);
+            console.log(`🤖 AI Web: OCR-read structured-data artwork for "${event.title || 'Unknown'}" — ${verdict ? verdict.classification : 'no classification'}: ${image}`);
+        }
+        return vettedCount;
     }
 
     fillImageFromPageMetaArtwork(event, htmlData) {
