@@ -7472,6 +7472,61 @@ class AiWebParser {
         return null;
     }
 
+    // The LISTING-page twin of extractWixServerEventData. The same
+    // <script id="wix-warmup-data"> blob that carries ONE event on a
+    // /event-details/ page carries the WHOLE list on an event-list page, under
+    // appsWarmupData.<events-app-guid>.widgetTPASection_<deployment>.events.events[]
+    // — every event with its exact UTC instants, IANA timezone, venue name and
+    // full formatted address. Verified 2026-08-29 against clubchubusa.com
+    // (3 events) and chunk-party.com (17), both with hasMore:false, so the
+    // inline list is the complete list, already inside HTML the crawl fetched.
+    // Returns [] for anything absent, unparseable, or odd-shaped — a listing
+    // page with no warmup events leaves the extraction flow untouched.
+    // No tickets array exists per row on a listing page, so these records carry
+    // no cover; the detail-page path remains the only source of sticker prices.
+    extractWixServerEventList(html) {
+        if (!html || typeof html !== 'string') return [];
+        try {
+            const startMatch = html.match(/<script\b[^>]*\bid=["']wix-warmup-data["'][^>]*>/i);
+            if (!startMatch) return [];
+            const jsonString = this.extractJsonObject(html, startMatch.index + startMatch[0].length);
+            if (!jsonString) return [];
+            return this.findWixWarmupEventListNodes(JSON.parse(jsonString))
+                .map(node => this.buildWixServerEventRecord(node, []))
+                .filter(record => record && (record.slug || record.title));
+        } catch (error) {
+            return [];
+        }
+    }
+
+    // Both the events-app GUID and the widgetTPASection_<suffix> key are
+    // deployment-specific, so walk every app's sections rather than naming
+    // either. Shape guard: a `.events.events` array whose members look like
+    // event nodes (a title or a scheduling block).
+    findWixWarmupEventListNodes(warmup) {
+        const collected = [];
+        if (!warmup || typeof warmup !== 'object') return collected;
+        const apps = warmup.appsWarmupData && typeof warmup.appsWarmupData === 'object'
+            ? Object.values(warmup.appsWarmupData)
+            : [];
+        for (const app of apps) {
+            if (!app || typeof app !== 'object') continue;
+            for (const section of Object.values(app)) {
+                if (!section || typeof section !== 'object') continue;
+                const list = section.events && typeof section.events === 'object'
+                    ? section.events.events
+                    : null;
+                if (!Array.isArray(list)) continue;
+                for (const node of list) {
+                    if (node && typeof node === 'object' && (node.title || node.scheduling)) {
+                        collected.push(node);
+                    }
+                }
+            }
+        }
+        return collected;
+    }
+
     buildWixServerEventRecord(node, tickets) {
         const clean = (value) => typeof value === 'string' ? this.normalizeWhitespace(value) : '';
         const location = node.location && typeof node.location === 'object' ? node.location : {};
@@ -8192,15 +8247,32 @@ class AiWebParser {
             const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
             const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
             const record = this.extractWixServerEventData(html);
-            if (!record) return events;
+            // A listing page carries the whole list in the same blob; a detail
+            // page carries one event and no list. Both may be absent.
+            const listRecords = this.extractWixServerEventList(html);
+            if (!record && listRecords.length === 0) return events;
 
             const filledFields = new Set();
             const upgradedFields = new Set();
             let enrichedCount = 0;
             for (const event of events) {
                 if (!event || typeof event !== 'object') continue;
-                if (!this.wixServerRecordMatchesEvent(record, event, sourceUrl, events.length)) continue;
-                const { filled, upgraded } = this.fillEventFromWixServerRecord(event, record, cityConfig);
+                // The detail-page record wins when it applies — it is the only
+                // one carrying ticket prices. Otherwise pair against the list,
+                // and only when EXACTLY ONE row matches: two rows claiming one
+                // event is ambiguity, and ambiguity means no enrichment.
+                let applicable = record && this.wixServerRecordMatchesEvent(record, event, sourceUrl, events.length)
+                    ? record
+                    : null;
+                if (!applicable) {
+                    const matches = listRecords.filter(candidate => this.wixListRecordMatchesEvent(candidate, event));
+                    if (matches.length === 1) applicable = matches[0];
+                    else if (matches.length > 1) {
+                        console.log(`🤖 AI Web: Wix listing data skipped for "${event.title || 'event'}" — ${matches.length} rows matched, ambiguous`);
+                    }
+                }
+                if (!applicable) continue;
+                const { filled, upgraded } = this.fillEventFromWixServerRecord(event, applicable, cityConfig);
                 if (filled.length > 0 || upgraded.length > 0) {
                     enrichedCount += 1;
                     filled.forEach(field => filledFields.add(field));
@@ -8219,6 +8291,31 @@ class AiWebParser {
             console.warn(`🤖 AI Web: Wix server data enrichment failed — events unchanged: ${error.message}`);
         }
         return events;
+    }
+
+    // Same-event check for a LISTING record. The single-record matcher's
+    // "only one candidate on an /event-details/ page" fallback cannot apply
+    // here — a list has many candidates — so this pairs on positive evidence
+    // only: the slug in the event's own link, identical normalized titles, or
+    // the identical start instant. Listing titles drift from the Wix title
+    // ("Club Chub Presents: MEAT MARKET @ Eagle Wilton Manors" vs "Club Chub
+    // Presents: Meat Market"), which is exactly why the start instant is a
+    // rung; the warmup start is an exact UTC instant, so equality is proof,
+    // not a guess. The caller enforces uniqueness on top of this.
+    wixListRecordMatchesEvent(record, event) {
+        if (!record || !event) return false;
+        const link = `${String(event.url || '')} ${String(event.website || '')}`.toLowerCase();
+        const slug = record.slug ? record.slug.toLowerCase() : '';
+        if (slug && link.includes(slug)) return true;
+        if (record.title && event.title
+            && this.normalizeEvidenceText(record.title) === this.normalizeEvidenceText(event.title)) return true;
+        if (record.startDateUtc instanceof Date && event.startDate) {
+            const eventStart = event.startDate instanceof Date ? event.startDate : new Date(event.startDate);
+            if (!Number.isNaN(eventStart.getTime()) && eventStart.getTime() === record.startDateUtc.getTime()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // Conservative same-event check: the warmup blob describes ONE event, so it
@@ -8283,6 +8380,28 @@ class AiWebParser {
                 filled.push('endDate');
             }
             delete event._timezoneUnresolved;
+        }
+        // Missing end, same start: Wix knows when the party ends even when the
+        // page text never says so. Gated on the two instants being the SAME
+        // moment, so the pair can never be spliced from two different events —
+        // and applied only to a blank end or the degenerate end===start the
+        // pipeline substitutes for a missing one, never over a real end time.
+        // Club Chub's Monster Ball (run 20260828-214732) shipped 04:00→04:00
+        // while the warmup blob had 04:00→10:00Z all along.
+        if (record.endDateUtc && record.startDateUtc && event.startDate) {
+            const eventStart = event.startDate instanceof Date ? event.startDate : new Date(event.startDate);
+            const eventEnd = event.endDate instanceof Date
+                ? event.endDate
+                : (event.endDate ? new Date(event.endDate) : null);
+            const endIsMissing = !eventEnd || Number.isNaN(eventEnd.getTime())
+                || eventEnd.getTime() === eventStart.getTime();
+            if (!Number.isNaN(eventStart.getTime())
+                && eventStart.getTime() === record.startDateUtc.getTime()
+                && endIsMissing
+                && record.endDateUtc.getTime() > record.startDateUtc.getTime()) {
+                event.endDate = record.endDateUtc;
+                filled.push('endDate');
+            }
         }
         return { filled, upgraded };
     }
