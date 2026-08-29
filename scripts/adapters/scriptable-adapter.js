@@ -1092,7 +1092,16 @@ class ScriptableAdapter {
 
       return normalized.toString();
     } catch (_) {
-      return String(url || "").trim();
+      // Scriptable has no global URL, so this fallback is the ONLY path the
+      // phone ever takes — every entry it writes was stored unnormalized while
+      // the file NAME came from parsePageCacheUrl (hand-rolled, fragment-free).
+      // Clean filename, dirty payload: run 20260829-083010 read a cache entry
+      // keyed event__ensemble.json whose stored url was
+      // ".../event/ensemble/#tribe-tickets__tickets-form", and that anchored
+      // URL became ENSEMBLE's website all over again. At minimum the fragment
+      // must go — it is never part of the page's identity, which is exactly
+      // why the filename drops it.
+      return String(url || "").trim().split("#")[0];
     }
   }
 
@@ -1269,7 +1278,11 @@ class ScriptableAdapter {
 
       return {
         html: cached.html,
-        url: cached.url || normalizedUrl,
+        // Entries already on disk were written before the fallback above
+        // normalized anything, so heal them on read too rather than waiting
+        // out the 3-day TTL — the cache key never included the fragment, so a
+        // stored one is stale noise either way.
+        url: this.normalizePageCacheUrl(cached.url || normalizedUrl),
         statusCode: cached.statusCode || 200,
         headers: cached.headers || {},
         fetchedAt: cached.fetchedAt || null,

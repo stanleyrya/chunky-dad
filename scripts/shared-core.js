@@ -7023,7 +7023,19 @@ class SharedCore {
         const selected = [];
         const seen = new Set();
         const push = (candidate) => {
-            const normalized = this.normalizeUrl(candidate, pageUrl || candidate);
+            // A #fragment is a scroll target inside a document, never a
+            // different page — and whatever URL lands in this frontier becomes
+            // the crawled page's sourceUrl, which becomes the extracted
+            // event's url/website. The Events Calendar's own "Get tickets"
+            // anchors are exactly this shape, so run 20260828-215643 crawled
+            // bearitmtl.com/event/ensemble/#tribe-tickets__tickets-form and
+            // rewrote ENSEMBLE's stored website to the anchored form on every
+            // run. Discovery already strips fragments; ticket links reach the
+            // frontier through this path instead, so strip here too. The
+            // event's own ticketUrl keeps its anchor — jumping to the ticket
+            // form is what that link is FOR.
+            const withoutFragment = String(candidate || '').split('#')[0];
+            const normalized = this.normalizeUrl(withoutFragment, pageUrl || withoutFragment);
             if (!normalized || seen.has(normalized)) return;
             seen.add(normalized);
             selected.push(normalized);
@@ -16595,9 +16607,23 @@ class SharedCore {
 
     // Normalize scraped events and calendar events (which carry `name` instead of `title`
     // and stash extra fields in notes) into one comparable shape.
+    // A STATICALLY STAMPED shortName is deliberately left out of `names`:
+    // curated parser/promoter branding is pasted onto EVERY event the parser
+    // emits — "BEAR IT" on all 56 Bear it MTL records in run 20260828-215643 —
+    // so a shared value there is branding, not same-event evidence. Same
+    // reasoning getEventIdentityUrlKey already applies to a statically stamped
+    // `website`. An event's OWN shortName still counts (derived per event, or
+    // read out of a calendar record's notes): that is the renamed-event signal
+    // this shape was built for (#1440, "DALLAS FREEDOM TEA" vs "FURBALL").
     buildIdentityComparisonShape(event) {
         const fields = this.parseNotesIntoFields((event && (event.notes || event.unprocessedDescription)) || '');
-        const names = [event.title, event.name, event.originalTitle, event.shortName, fields.shortName]
+        const staticFields = event && event._staticFields && typeof event._staticFields === 'object'
+            ? event._staticFields
+            : {};
+        const shortNameIsBranding = Object.prototype.hasOwnProperty.call(staticFields, 'shortName');
+        const names = [event.title, event.name, event.originalTitle,
+            shortNameIsBranding ? '' : event.shortName,
+            shortNameIsBranding ? '' : fields.shortName]
             .map(value => String(value || '').trim())
             .filter(Boolean);
         return {
@@ -16614,6 +16640,20 @@ class SharedCore {
             locationText: typeof event.location === 'string' ? event.location : '',
             coordinates: this.parseCoordinatesForIdentity(event, fields)
         };
+    }
+
+    // Does either record carry the missing-time default — a start at exactly
+    // local midnight? That is the degraded shape getSameEventIdentitySignal's
+    // same-local-day relaxation exists to rescue (a listing stub that never
+    // stated a time, next to its properly-timed detail twin). A record whose
+    // local clock cannot be resolved at all counts as degraded too, so the
+    // relaxation still covers the cases it covered before this guard existed.
+    hasMissingTimeStartPlaceholder(...events) {
+        return events.some(event => {
+            if (!event || typeof event !== 'object') return false;
+            const parts = this.getMergeLocalStartParts(event);
+            return !parts || parts.minutesOfDay === 0;
+        });
     }
 
     areIdentityDatesOnSameLocalDay(shapeA, shapeB) {
@@ -16719,7 +16759,19 @@ class SharedCore {
 
         // Same place, roughly the same start time (tolerant of legacy wall-clock offsets),
         // and any pair of name-ish fields (title/name/shortName) similar.
-        if ((!requireCloseStartTimes || this.areDatesEqual(incoming.startDate, existing.startDate, 120)) &&
+        // The requireCloseStartTimes=false relaxation exists for ONE shape: a
+        // degraded scrape whose missing start time defaulted to local midnight
+        // must still match its properly-timed twin. It was never meant to let
+        // two records that EACH carry a real, precise, hours-apart time count
+        // as one event — run 20260828-215643 welded "Concours PUP Montréal"
+        // (18:00, Bain Mathieu) into "KINK Playground" (22:00, same venue,
+        // same night) and lost a real event. So the relaxation now requires
+        // that one side actually carry the midnight missing-time placeholder;
+        // otherwise the 2-hour window applies in both modes.
+        const startsAreClose = this.areDatesEqual(incoming.startDate, existing.startDate, 120);
+        const startsAreCompatible = startsAreClose
+            || (!requireCloseStartTimes && this.hasMissingTimeStartPlaceholder(newEvent, existingEvent));
+        if (startsAreCompatible &&
             this.areIdentityPlacesSimilar(incoming, existing) &&
             this.areIdentityNamesSimilar(incoming, existing)) {
             return requireCloseStartTimes ? 'place-time-name' : 'place-day-name';
