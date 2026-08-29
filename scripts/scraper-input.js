@@ -101,11 +101,17 @@ const scraperConfig = {
       // West Village leather/rock bar (185 Christopher St) with heavy bear
       // programming (Gorditos, Underbear, Bears Night Out, Rockstrap). The
       // venue's own site is the identity source: Squarespace, one page per
-      // party (/events/<slug>, each with a ?format=ical link) — but the
-      // listing's dates have been frozen since Aug 2024, so live dates come
-      // from the Thotyssey aggregator entry below and merge in here. Kink/pup
-      // nights are on the same calendar — bear check filters, not alwaysBear.
-      urls: ["https://www.rockbarnyc.com/events"],
+      // party (/events/<slug>, each with a ?format=ical link).
+      //
+      // /calendar, NOT /events. The Squarespace /events collection has been
+      // frozen since Aug 2024 (its own feed reports 0 upcoming, 7 past) and the
+      // bar moved its programming to the Elfsight calendar widget the site's
+      // nav actually links — 146 events with exact times, an IANA timezone and
+      // real recurrence, read via collectElfsightCalendarEvents. Live dates no
+      // longer depend on the Thotyssey aggregator entry below merging in.
+      // Kink/pup nights are on the same calendar — bear check filters, not
+      // alwaysBear.
+      urls: ["https://www.rockbarnyc.com/calendar"],
       alwaysBear: false,
       siteRole: "venue",
       metadata: {

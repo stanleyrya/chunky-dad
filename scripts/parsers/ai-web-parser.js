@@ -1078,6 +1078,18 @@ class AiWebParser {
             // returned grids join URL discovery as additional sources (links
             // only — the grid HTML never segments). Non-MEC pages, adapters
             // without postForm and lookahead 0 all no-op here.
+            // Client-side calendar widgets: the events exist, just not in the
+            // HTML. Read them deterministically before anything else runs, so
+            // a page that would otherwise look empty is not handed to the AI
+            // as an empty page. Sites without the widget no-op here.
+            const elfsightRows = await this.collectElfsightCalendarEvents(effectiveHtmlData, parserConfig, httpAdapter);
+            const elfsightEvents = elfsightRows
+                .map(row => this.buildEventFromElfsightRow(row, sourceUrl))
+                .filter(Boolean);
+            if (elfsightRows.length > 0) {
+                const recurring = elfsightEvents.filter(event => event.recurrenceRule).length;
+                console.log(`🗓️ ELFSIGHT: built ${elfsightEvents.length} event(s) from ${elfsightRows.length} widget row(s) for ${sourceUrl} (${recurring} recurring → ICS export, never a calendar series)`);
+            }
             const monthFeedSources = await this.collectMecMonthFeeds(effectiveHtmlData, parserConfig, httpAdapter);
             const additionalLinks = this.extractAdditionalUrls(html, sourceUrl, parserConfig, monthFeedSources);
             if (monthFeedSources.length > 0) {
@@ -1125,10 +1137,19 @@ class AiWebParser {
                 ? this.extractEventsFromJsonApiPayload(jsonApiPayload, sourceUrl, cityConfig)
                 : [];
             const completeJsonApiEvents = jsonApiEvents.filter(event => event.bar || event.address);
+            // Elfsight rows carry no venue of their own — the widget IS the
+            // venue's own calendar on the venue's own page, so bar/address come
+            // from the site the same way they do for any venue-role parser.
+            // That is why they skip the bar||address completeness gate the two
+            // sources above apply to third-party structured data.
             const structuredSource = completeJsonLdEvents.length > 0
                 ? 'jsonld'
-                : (completeJsonApiEvents.length > 0 ? 'json-api' : null);
-            const structuredEvents = structuredSource === 'jsonld' ? completeJsonLdEvents : completeJsonApiEvents;
+                : (completeJsonApiEvents.length > 0
+                    ? 'json-api'
+                    : (elfsightEvents.length > 0 ? 'elfsight' : null));
+            const structuredEvents = structuredSource === 'jsonld'
+                ? completeJsonLdEvents
+                : (structuredSource === 'json-api' ? completeJsonApiEvents : elfsightEvents);
             const useStructuredEvents = parserConfig.discoveryOnly !== true
                 && pageClassification !== 'link-aggregator'
                 && structuredEvents.length > 0
@@ -1140,7 +1161,9 @@ class AiWebParser {
                 // all; the events' own artwork is OCR'd below, so the line
                 // now names what is actually skipped (the ocr-all sweep and
                 // the AI extraction passes).
-                if (structuredSource === 'json-api') {
+                if (structuredSource === 'elfsight') {
+                    console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the Elfsight calendar widget — skipping the OCR sweep and AI extraction (event artwork is still read)`);
+                } else if (structuredSource === 'json-api') {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from JSON API structured data — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 } else {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from JSON-LD structured data — skipping the OCR sweep and AI extraction (event artwork is still read)`);
@@ -5133,6 +5156,186 @@ class AiWebParser {
      * fragments) so repeat runs inside the TTL replay the same grid without
      * touching the network.
      */
+    // Elfsight Event Calendar widgets render entirely client-side, so the page
+    // HTML carries nothing but a placeholder div — a crawl that only reads HTML
+    // sees an empty calendar and concludes the venue posts nothing. Rockbar's
+    // /calendar is exactly this: the site's own nav points at it, the browser
+    // shows a full season, and our fetch saw zero events while we scraped a
+    // stale /events archive from 2024 instead.
+    //
+    // The widget boots from ONE public GET that returns every event with exact
+    // dates, times, an IANA timezone, artwork and real recurrence fields — no
+    // browser, no rendering. Generic by construction: the widget id comes from
+    // the page's own markup and the host is Elfsight's fixed service endpoint,
+    // so any site embedding this widget is read the same way.
+    async collectElfsightCalendarEvents(htmlData, parserConfig, httpAdapter) {
+        const html = htmlData && htmlData.html ? htmlData.html : '';
+        const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
+        if (!html || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return [];
+        const widgetIds = this.extractElfsightWidgetIds(html);
+        if (widgetIds.length === 0) return [];
+        // The embed usually sits in a shared block, so EVERY page of the site
+        // carries the same widget and would re-publish the same full calendar.
+        // Read it only on the page the parser was pointed at: one read per
+        // crawl, and the events keep the URL the config chose for them.
+        // (Rockbar's first attempt built 150 events on /calendar and another
+        // 150 on the homepage before the run ran out of time merging them.)
+        if (!this.isConfiguredParserUrl(sourceUrl, parserConfig)) {
+            console.log(`🗓️ ELFSIGHT: widget present on ${sourceUrl} but this is not the configured entry page — already read there, skipping`);
+            return [];
+        }
+
+        const events = [];
+        for (const widgetId of widgetIds) {
+            const bootUrl = `https://core.service.elfsight.com/p/boot/?w=${widgetId}`;
+            let payload = null;
+            try {
+                const response = await httpAdapter.fetchData(bootUrl, { headers: { Referer: sourceUrl } });
+                const body = response && typeof response.html === 'string'
+                    ? response.html
+                    : (typeof response === 'string' ? response : '');
+                payload = body ? JSON.parse(body) : null;
+            } catch (error) {
+                console.warn(`🤖 AI Web: Elfsight widget ${widgetId} could not be read (${error.message}) — page left unchanged`);
+                continue;
+            }
+            const rows = this.readElfsightWidgetEvents(payload, widgetId);
+            if (rows.length === 0) continue;
+            console.log(`🗓️ ELFSIGHT: widget ${widgetId} on ${sourceUrl} published ${rows.length} event(s)`);
+            events.push(...rows);
+        }
+        return events;
+    }
+
+    // Is this URL one the parser was configured to fetch? Compared on the
+    // dedupe key so a trailing slash or a tracking param does not disqualify
+    // the page the config actually named.
+    isConfiguredParserUrl(url, parserConfig) {
+        const configured = parserConfig && Array.isArray(parserConfig.urls) ? parserConfig.urls : [];
+        if (configured.length === 0) return false;
+        const key = this.getUrlDedupeKey(this.stripTrackingParams(String(url || '')));
+        if (!key) return false;
+        return configured.some(candidate => this.getUrlDedupeKey(this.stripTrackingParams(String(candidate || ''))) === key);
+    }
+
+    // Widget ids as the embed markup writes them: class="elfsight-app-<uuid>".
+    extractElfsightWidgetIds(html) {
+        const ids = new Set();
+        const pattern = /elfsight-app-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
+        let match;
+        while ((match = pattern.exec(String(html || ''))) !== null) ids.add(match[1].toLowerCase());
+        return Array.from(ids);
+    }
+
+    // The boot payload nests the settings under the widget's own id. Anything
+    // absent or oddly shaped yields [] — never a partial guess.
+    readElfsightWidgetEvents(payload, widgetId) {
+        const widgets = payload && payload.data && payload.data.widgets;
+        const widget = widgets && typeof widgets === 'object' ? widgets[widgetId] : null;
+        const settings = widget && widget.data && widget.data.settings;
+        const rows = settings && Array.isArray(settings.events) ? settings.events : [];
+        return rows.filter(row => row && typeof row === 'object' && row.visible !== false && row.name);
+    }
+
+    // One Elfsight row -> one parser event, built deterministically (no AI, no
+    // OCR) the way extractEventsFromJsonLd builds from structured data.
+    // A recurring row keeps its recurrence as an RRULE, which is what routes it
+    // to the ICS-export path and away from calendar writes — the scraper still
+    // never writes a series. A row whose repeat shape has no honest RRULE is
+    // emitted as its stated single date rather than guessed at.
+    buildEventFromElfsightRow(row, sourceUrl) {
+        const start = row.start && typeof row.start === 'object' ? row.start : {};
+        const end = row.end && typeof row.end === 'object' ? row.end : {};
+        if (!start.date) return null;
+        const timezone = typeof row.timeZone === 'string' && row.timeZone.trim() ? row.timeZone.trim() : '';
+        const startDate = this.convertLocalDateTimeToUtc(`${start.date} ${start.time || '00:00'}:00`, timezone)
+            || combineDateAndTime(start.date, start.time || '00:00');
+        if (!(startDate instanceof Date) || Number.isNaN(startDate.getTime())) return null;
+        let endDate = end.date
+            ? (this.convertLocalDateTimeToUtc(`${end.date} ${end.time || start.time || '00:00'}:00`, timezone)
+                || combineDateAndTime(end.date, end.time || start.time || '00:00'))
+            : null;
+        if (endDate instanceof Date && endDate.getTime() < startDate.getTime()) {
+            endDate = new Date(endDate.getTime() + (24 * 60 * 60 * 1000));
+        }
+        const description = this.normalizeWhitespace(
+            this.decodeBasicEntities(this.stripTags(String(row.description || ''))).replace(/&amp;/gi, '&')
+        );
+        const event = {
+            title: this.normalizeWhitespace(String(row.name || '')),
+            description,
+            startDate,
+            endDate: endDate || null,
+            timezone: timezone || null,
+            url: sourceUrl,
+            website: sourceUrl,
+            source: 'elfsight'
+        };
+        const image = this.pickElfsightImage(row);
+        if (image) event.image = image;
+        const rrule = this.buildElfsightRecurrenceRule(row, startDate, timezone);
+        if (rrule) event.recurrenceRule = rrule;
+        return event;
+    }
+
+    pickElfsightImage(row) {
+        const candidates = [row.coverImage, Array.isArray(row.images) ? row.images[0] : null];
+        for (const candidate of candidates) {
+            const raw = typeof candidate === 'string'
+                ? candidate
+                : (candidate && typeof candidate === 'object' ? (candidate.url || candidate.src || '') : '');
+            const normalized = this.normalizeHttpUrlValue(String(raw || '').trim());
+            if (normalized) return normalized;
+        }
+        return '';
+    }
+
+    // Elfsight's repeat shapes -> RRULE. Only the shapes that map exactly are
+    // translated; `custom` and anything unrecognized return null so the row
+    // ships as a single dated event instead of a fabricated series.
+    buildElfsightRecurrenceRule(row, startDate, timezone) {
+        const period = String(row.repeatPeriod || '').trim();
+        const dayCodes = { su: 'SU', mo: 'MO', tu: 'TU', we: 'WE', th: 'TH', fr: 'FR', sa: 'SA' };
+        const localWeekday = () => {
+            const parts = this.getElfsightLocalDateParts(startDate, timezone);
+            return parts ? ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'][parts.weekday] : null;
+        };
+        if (period === 'weeklyOn') {
+            const days = Array.isArray(row.repeatWeeklyOnDays)
+                ? row.repeatWeeklyOnDays.map(day => dayCodes[String(day).toLowerCase()]).filter(Boolean)
+                : [];
+            const byDay = days.length > 0 ? days : [localWeekday()].filter(Boolean);
+            if (byDay.length === 0) return null;
+            return `FREQ=WEEKLY;BYDAY=${byDay.join(',')}`;
+        }
+        if (period === 'lastDayInMonth') {
+            const day = localWeekday();
+            return day ? `FREQ=MONTHLY;BYDAY=-1${day}` : null;
+        }
+        if (period === 'nthDayInMonth') {
+            const parts = this.getElfsightLocalDateParts(startDate, timezone);
+            const day = localWeekday();
+            if (!parts || !day) return null;
+            const ordinal = Math.floor((parts.dayOfMonth - 1) / 7) + 1;
+            return `FREQ=MONTHLY;BYDAY=${ordinal}${day}`;
+        }
+        return null;
+    }
+
+    // Local weekday + day-of-month for an instant, in the row's own timezone.
+    getElfsightLocalDateParts(date, timezone) {
+        if (!(date instanceof Date) || Number.isNaN(date.getTime())) return null;
+        if (!timezone) {
+            return { weekday: date.getUTCDay(), dayOfMonth: date.getUTCDate() };
+        }
+        const offsetMinutes = this.core && typeof this.core.getTimezoneOffsetMinutes === 'function'
+            ? this.core.getTimezoneOffsetMinutes(date, timezone)
+            : null;
+        if (!Number.isFinite(offsetMinutes)) return null;
+        const local = new Date(date.getTime() + (offsetMinutes * 60 * 1000));
+        return { weekday: local.getUTCDay(), dayOfMonth: local.getUTCDate() };
+    }
+
     async collectMecMonthFeeds(htmlData, parserConfig, httpAdapter) {
         const html = htmlData && htmlData.html ? htmlData.html : '';
         const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
@@ -13522,7 +13725,11 @@ TEXT:
                         // and nowhere downstream. Resolved against the
                         // post-pin value so a weekday pin, which is itself
                         // deterministic, stays the authority when it fired.
-                        const explicitYear = this.resolveExplicitSourceYear(value, fieldData.evidence, confidence);
+                        // `snippet` rides along for the same reason the pin
+                        // above takes it: when the model quotes a shorter
+                        // evidence string than the page actually shows, the
+                        // page is still the authority.
+                        const explicitYear = this.resolveExplicitSourceYear(value, fieldData.evidence, confidence, snippet);
                         if (explicitYear !== null) {
                             if (!filteredEvent.__explicitSourceYears || typeof filteredEvent.__explicitSourceYears !== 'object') {
                                 filteredEvent.__explicitSourceYears = {};
@@ -17257,21 +17464,68 @@ TEXT:
     //     string — the anti-hallucination gate's own standard. A year the
     //     model invented cannot pass this; only one printed on the page can.
     // Returns the year number, or null when the year stays repairable.
-    resolveExplicitSourceYear(value, evidence, confidence) {
-        const minConfidence = this.extractionLimits && typeof this.extractionLimits.explicitSourceYearMinConfidence === 'number'
-            ? this.extractionLimits.explicitSourceYearMinConfidence
-            : 90;
-        if (typeof confidence !== 'number' || !Number.isFinite(confidence) || confidence < minConfidence) return null;
-
+    resolveExplicitSourceYear(value, evidence, confidence, sourceText = '') {
         const rawValue = String(value === null || value === undefined ? '' : value);
         const valueYearMatch = rawValue.match(/(?:19|20)\d{2}/);
         if (!valueYearMatch) return null;
-
-        const evidenceText = String(evidence || '');
-        if (!evidenceText || !evidenceText.includes(valueYearMatch[0])) return null;
-
         const year = Number(valueYearMatch[0]);
-        return Number.isFinite(year) ? year : null;
+        if (!Number.isFinite(year)) return null;
+
+        const minConfidence = this.extractionLimits && typeof this.extractionLimits.explicitSourceYearMinConfidence === 'number'
+            ? this.extractionLimits.explicitSourceYearMinConfidence
+            : 90;
+        const confidentEnough = typeof confidence === 'number' && Number.isFinite(confidence) && confidence >= minConfidence;
+        const evidenceText = String(evidence || '');
+        if (confidentEnough && evidenceText && evidenceText.includes(valueYearMatch[0])) return year;
+
+        // The model's quoted snippet is not the only witness. Rockbar run
+        // 20260829-110754: six passes read BEARS NIGHT OUT's date; four quoted
+        // "Saturday, August 3, 2024" at confidence 100, but the pass that won
+        // cited "og:image filename: Bears-Night-Out-Aug-3.jpg" at confidence
+        // 80 — no year, under the floor — so 2024 counted as a guess and the
+        // window repair walked a two-year-old archive forward to 2026. The
+        // page said 2024 the whole time. When the SOURCE states this value's
+        // own year beside its own month and day, that is stated fact no matter
+        // which pass won or how sure it claimed to be.
+        if (this.sourceStatesValueYear(rawValue, sourceText)) return year;
+        return null;
+    }
+
+    // Does `sourceText` state the year of `value` right next to value's own
+    // month and day? Deliberately narrow: a bare year elsewhere on the page (a
+    // copyright line, an "est. 2006") must never pin an event's year, so the
+    // year has to sit within a short span of the matching day and month.
+    // Accepts the ISO spelling and the common written orders.
+    sourceStatesValueYear(value, sourceText) {
+        const text = String(sourceText || '');
+        if (!text) return false;
+        const match = String(value || '').match(/((?:19|20)\d{2})-(\d{2})-(\d{2})/);
+        if (!match) return false;
+        const [, year, month, day] = match;
+        // Deliberately NOT matching the ISO spelling. Sites name flyer files
+        // by date and reuse last year's files on this year's page:
+        // beefdip.com/wp-content/uploads/2026/01/"2026-01-25 Welcome Party.webp"
+        // sits beside visible copy reading "MONDAY JANUARY 25, 2027". Counting
+        // that filename as a stated year marked eight real 2027 events as
+        // archived 2026 ones and dropped them — the very failure this guard
+        // exists to prevent, arriving through the very same door (a date read
+        // off an image filename). Only prose the page shows a reader counts.
+
+        const monthNames = ['january', 'february', 'march', 'april', 'may', 'june',
+            'july', 'august', 'september', 'october', 'november', 'december'];
+        const name = monthNames[parseInt(month, 10) - 1];
+        if (!name) return false;
+        const monthPattern = `${name.slice(0, 3)}(?:${name.slice(3)})?\\.?`;
+        const dayPattern = `0?${parseInt(day, 10)}(?:st|nd|rd|th)?`;
+        // "August 3, 2024" / "Aug 3 2024" and the day-first "3 August 2024".
+        // Only a comma and whitespace may sit between the day and the year:
+        // anything richer is a different sentence, and a page footer's
+        // "(c) 2024" must never pin an event that merely mentions a day.
+        const orders = [
+            new RegExp(`${monthPattern}\\s+${dayPattern}\\b[,\\s]{0,4}${year}`, 'i'),
+            new RegExp(`\\b${dayPattern}\\s+${monthPattern}[,\\s]{0,4}${year}`, 'i')
+        ];
+        return orders.some(pattern => pattern.test(text));
     }
 
     // True when `date` still carries the explicitly stated year (so skipping
