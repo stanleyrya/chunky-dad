@@ -4652,6 +4652,95 @@ test('relaxed identity signal matches same-local-day despite degraded start time
   assert.equal(core.getSameEventIdentitySignal(a, b, { requireCloseStartTimes: false }), 'place-day-name');
 });
 
+// Run 20260828-215643 (Bear it MTL) folded two REAL events into one another and
+// lost them both from the output: bearitmtl.com ran "Concours PUP Montréal"
+// (18:00-21:00) and "KINK Playground" (22:00-03:00) at Bain Mathieu on the same
+// night, and "Tour de ville en Bus Rouge" (14:00, Aigle Noir) and "Concours M.
+// Ours 2026" (20:00, Stock Bar) on the same day. Two independent defects had to
+// line up: the promoter registry stamps shortName "BEAR IT" on every event the
+// parser emits (so any two records were trivially "name-similar"), and dedup's
+// relaxed scan dropped the start-time check entirely rather than only for the
+// degraded records it was written for.
+const BEAR_IT_CITIES = {
+  montreal: { timezone: 'America/Toronto', patterns: ['montreal'] }
+};
+function bearItRecord(overrides = {}) {
+  return {
+    shortName: 'BEAR IT',
+    _staticFields: { shortName: 'BEAR IT' },
+    city: 'montreal',
+    timezone: 'America/Toronto',
+    bar: 'Bain Mathieu',
+    address: '2915 Rue Ontario E, Montréal, QC, H2K 1X7',
+    source: 'ai-web',
+    ...overrides
+  };
+}
+
+test('curated promoter branding in shortName is not same-event evidence', () => {
+  const core = new SharedCore(BEAR_IT_CITIES, { eventSchema: EventSchema });
+  const pup = bearItRecord({ title: 'Concours PUP Montréal', startDate: new Date('2026-08-01T22:00:00.000Z') });
+  const kink = bearItRecord({ title: 'KINK Playground', startDate: new Date('2026-08-02T02:00:00.000Z') });
+  assert.equal(core.areTitlesSimilar(pup.title, kink.title), false, 'the titles themselves never matched');
+  assert.deepEqual(
+    core.buildIdentityComparisonShape(pup).names,
+    ['Concours PUP Montréal'],
+    'a statically stamped shortName is branding, so it stays out of the identity names'
+  );
+  // An event's OWN shortName is still identity evidence — that is the renamed-event
+  // signal (#1440) this shape exists for.
+  const derived = { title: 'FURBALL DALLAS', shortName: 'FURBALL' };
+  assert.deepEqual(core.buildIdentityComparisonShape(derived).names, ['FURBALL DALLAS', 'FURBALL']);
+});
+
+test('same-local-day relaxation needs a degraded start, not just the same night', async () => {
+  const core = new SharedCore(BEAR_IT_CITIES, { eventSchema: EventSchema });
+  const relaxed = { requireCloseStartTimes: false };
+  // Both records carry a real, precise time four hours apart — two different parties.
+  const pup = bearItRecord({ title: 'Concours PUP Montréal', startDate: new Date('2026-08-01T22:00:00.000Z') });
+  const kink = bearItRecord({ title: 'KINK Playground', startDate: new Date('2026-08-02T02:00:00.000Z') });
+  assert.equal(core.getSameEventIdentitySignal(kink, pup, relaxed), null);
+
+  // Same shape across two venues on one festival day.
+  const tour = bearItRecord({
+    title: 'Tour de ville en Bus Rouge – Avec Sasha BAGA',
+    bar: 'Départ devant L’aigle Noir',
+    address: '1315 Rue Sainte-Catherine E, Montréal',
+    startDate: new Date('2026-04-10T18:00:00.000Z')
+  });
+  const mours = bearItRecord({
+    title: 'Concours M. Ours 2026',
+    bar: 'Stock Bar',
+    address: '1171 Rue Ste Catherine Est, Montréal',
+    startDate: new Date('2026-04-11T00:00:00.000Z')
+  });
+  assert.equal(core.getSameEventIdentitySignal(mours, tour, relaxed), null);
+
+  // Both survive dedup as separate events rather than one chimera.
+  const deduped = await core.deduplicateEvents([pup, kink, tour, mours], null);
+  assert.deepEqual(
+    deduped.map(event => event.title).sort(),
+    ['Concours M. Ours 2026', 'Concours PUP Montréal', 'KINK Playground',
+      'Tour de ville en Bus Rouge – Avec Sasha BAGA'],
+    'four real events in, four real events out'
+  );
+});
+
+test('a midnight missing-time start still relaxes to same-local-day', () => {
+  const core = new SharedCore(BEAR_IT_CITIES, { eventSchema: EventSchema });
+  // The stub never stated a time, so it defaulted to local midnight; its detail
+  // twin carries the real 22:00. That is the shape the relaxation exists for.
+  const stub = bearItRecord({ title: 'KINK Playground', startDate: new Date('2026-08-01T04:00:00.000Z') });
+  const detail = bearItRecord({ title: 'KINK Playground', startDate: new Date('2026-08-02T02:00:00.000Z') });
+  assert.equal(core.hasMissingTimeStartPlaceholder(stub, detail), true);
+  assert.equal(
+    core.getSameEventIdentitySignal(detail, stub, { requireCloseStartTimes: false }),
+    'place-day-name'
+  );
+  // Neither side degraded → no relaxation.
+  assert.equal(core.hasMissingTimeStartPlaceholder(detail, detail), false);
+});
+
 test('filterEventsForExecution excludes events from dry-run parsers', () => {
   const live = { title: 'Live Event', _parserConfig: { name: 'Live Parser', dryRun: false } };
   const dry = { title: 'Dry Event', _parserConfig: { name: 'Dry Parser', dryRun: true } };
@@ -15485,6 +15574,31 @@ test('selectAdaptiveFollowLinks skips past ticketUrls at the unit level (string 
   assert.ok(!links.includes('https://eventim.us/event/old-string/2'));
   assert.ok(links.includes('https://tickets.example/new'));
   assert.ok(links.includes('https://tickets.example/undated'));
+});
+
+// Run 20260828-215643: The Events Calendar's "Get tickets" button links to the
+// event's own page with a #tribe-tickets__tickets-form anchor. That URL reached
+// the crawl frontier verbatim, became the crawled page's sourceUrl, and so
+// became ENSEMBLE's website — rewriting the calendar's clean URL every run.
+test('selectAdaptiveFollowLinks strips #fragments before they become a crawl sourceUrl', () => {
+  const core = createCore();
+  const future = new Date(Date.now() + 3 * DAY_MS);
+  const links = core.selectAdaptiveFollowLinks('event-page', [], {
+    events: [{
+      title: 'ENSEMBLE',
+      startDate: future,
+      ticketUrl: 'https://bear-it.example/event/ensemble/#tribe-tickets__tickets-form'
+    }]
+  }, 'https://bear-it.example/events/');
+  assert.deepEqual(links, ['https://bear-it.example/event/ensemble/']);
+  // The anchored spelling and the clean one are ONE page, so they collapse.
+  const both = core.selectAdaptiveFollowLinks('event-page', [], {
+    events: [
+      { title: 'A', startDate: future, ticketUrl: 'https://bear-it.example/event/ensemble/#tribe-tickets__tickets-form' },
+      { title: 'B', startDate: future, ticketUrl: 'https://bear-it.example/event/ensemble/' }
+    ]
+  }, 'https://bear-it.example/events/');
+  assert.equal(both.length, 1);
 });
 
 // Fix 6 — crawl-page failures were [ERROR]-logged but never counted: the run

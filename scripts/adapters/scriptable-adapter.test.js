@@ -11097,3 +11097,33 @@ test('loadRunLogsForDisplay returns icloud-sync-pending (bounded) for an undownl
   const html = adapter.buildRunLogSectionHtml(logInfo);
   assert.ok(html.includes('still syncing from iCloud'), 'run-logs section explains the pending sync');
 });
+
+// Run 20260829-083010: the crawl fetched https://www.bearitmtl.com/event/ensemble/
+// and got a page-cache HIT, but the entry's stored url was
+// ".../event/ensemble/#tribe-tickets__tickets-form" — so the anchored URL became
+// ENSEMBLE's website all over again. The entry was written by the phone, where
+// there is no global URL: normalizePageCacheUrl's try-block never runs there, and
+// the old fallback returned the raw string while the FILE NAME (built by the
+// hand-rolled parsePageCacheUrl) had already dropped the fragment.
+test('page-cache URL normalization drops the fragment even without a global URL', () => {
+  const adapter = buildAdapter();
+  const anchored = 'https://www.bearitmtl.com/event/ensemble/#tribe-tickets__tickets-form';
+  const clean = 'https://www.bearitmtl.com/event/ensemble/';
+
+  assert.equal(adapter.normalizePageCacheUrl(anchored), clean, 'Node path (global URL present)');
+
+  const realUrl = global.URL;
+  global.URL = function ThrowingUrl() { throw new Error('no URL in Scriptable'); };
+  try {
+    assert.equal(adapter.normalizePageCacheUrl(anchored), clean, 'Scriptable fallback path');
+  } finally {
+    global.URL = realUrl;
+  }
+
+  // The cache key never carried the fragment, so both spellings share one file.
+  assert.deepEqual(
+    adapter.getPageCachePathParts(anchored),
+    adapter.getPageCachePathParts(clean),
+    'one page, one cache entry'
+  );
+});

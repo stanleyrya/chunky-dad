@@ -6002,18 +6002,36 @@ class AiWebParser {
             return false;
         }
 
-        const key = this.getUrlDedupeKey(url);
-        const score = this.scoreAdditionalUrl(url, sourceUrl, context);
+        // Validation ran on the URL as written (the fragment-only-root-url
+        // guard needs the fragment), but what gets CRAWLED and stored drops
+        // it: a fragment is a scroll target inside the same document, the
+        // fetch discards it, and getUrlDedupeKey already ignores it — so the
+        // only thing it can still do is ride into the event's url/website.
+        // Run 20260828-215643 crawled bearitmtl.com/event/ensemble/
+        // #tribe-tickets__tickets-form and rewrote ENSEMBLE's stored website
+        // to the anchored form on every single run.
+        const crawlUrl = this.stripUrlFragment(url);
+        const key = this.getUrlDedupeKey(crawlUrl);
+        const score = this.scoreAdditionalUrl(crawlUrl, sourceUrl, context);
         const existing = urls.get(key);
         if (!existing) {
-            urls.set(key, { url, score, index: urls.size });
+            urls.set(key, { url: crawlUrl, score, index: urls.size });
             return true;
         }
         if (score > existing.score) {
-            existing.url = url;
+            existing.url = crawlUrl;
             existing.score = score;
         }
         return false;
+    }
+
+    // Drop a URL's #fragment, leaving everything else byte-for-byte. Falls
+    // back to the input whenever the URL cannot be parsed (fail open — a URL
+    // this cannot read is one this must not rewrite).
+    stripUrlFragment(url) {
+        const text = String(url || '');
+        const hashIndex = text.indexOf('#');
+        return hashIndex === -1 ? text : text.slice(0, hashIndex);
     }
 
     looksLikeNonUrlJsFragment(rawUrl) {
@@ -10029,6 +10047,15 @@ class AiWebParser {
             'x.com',
             'instagram.com',
             'youtube.com',
+            // youtube.com's own aliases — neither matches the entry above
+            // (hostname equality or a ".youtube.com" suffix), so both were
+            // crawled as ordinary pages. Run 20260828-215643 followed
+            // youtu.be/r4IkE9JAtNo and www.youtube-nocookie.com/embed/… off
+            // bearitmtl.com/m-ours/, OCR'd the video thumbnail, and turned the
+            // poster on it into an "M.OURS 2025" event with a YouTube
+            // thumbnail for artwork and sugarbear.fr for a website.
+            'youtu.be',
+            'youtube-nocookie.com',
             'linkedin.com',
             'tiktok.com',
             'soundcloud.com',
@@ -10139,9 +10166,19 @@ class AiWebParser {
         // only: the ical/outlook-ical query flags, the tribe-bar-date query
         // param, and a .ics path suffix. The [?&] anchor keeps slugs like
         // "musical=1" or paths containing "ical" valid.
+        // Add-to-calendar / subscribe widgets are the same family: they encode
+        // an event (or a whole feed) into someone else's calendar UI, so the
+        // fetch returns that provider's app shell, never the event. Run
+        // 20260828-215643 crawled two outlook.live.com / outlook.office.com
+        // `rru=addsubscription` links off bearitmtl.com's archive. The Google
+        // `action=TEMPLATE` twin is already blocked by the google.com host
+        // entry; matching it here covers the other providers that use it.
         if (lowerPath.endsWith('.ics')
             || /[?&](?:outlook-)?ical=1(?!\d)/.test(lowerUrl)
-            || /[?&]tribe-bar-date=/.test(lowerUrl)) {
+            || /[?&]tribe-bar-date=/.test(lowerUrl)
+            || /[?&]rru=add(?:subscription|event)/.test(lowerUrl)
+            || /[?&]action=template(?:[&#]|$)/.test(lowerUrl)
+            || /webcal(?::|%3a)(?:\/\/|%2f%2f)/.test(lowerUrl)) {
             return { valid: false, reason: 'calendar-export-url' };
         }
         const blockedPattern = invalidUrlPatterns.find(invalid => {

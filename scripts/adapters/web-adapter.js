@@ -318,7 +318,11 @@ class WebAdapter {
 
             return normalized.toString();
         } catch (_) {
-            return String(url || '').trim();
+            // Twin of ScriptableAdapter.normalizePageCacheUrl's fallback — the
+            // fragment goes even here, because the cache FILENAME never
+            // included it and a payload that disagrees with its own key is
+            // just stale noise waiting to be read back as an event's website.
+            return String(url || '').trim().split('#')[0];
         }
     }
 
@@ -351,7 +355,11 @@ class WebAdapter {
     // canonical, so this replicates its regex path byte-for-byte.
     getDeviceParityPageCachePathParts(url) {
         // Device normalizePageCacheUrl: `new URL` throws (undefined) → catch.
-        const normalizedUrl = String(url || '').trim();
+        // That catch drops the #fragment (and only the fragment), so this
+        // replica must too or the two would disagree on the stored payload
+        // url. Filenames are unaffected either way — the regex path below
+        // never read the fragment into the name.
+        const normalizedUrl = String(url || '').trim().split('#')[0];
         const match = normalizedUrl.match(DEVICE_PARITY_URL_PARSE_REGEX);
         if (!match) {
             return {
@@ -488,7 +496,11 @@ class WebAdapter {
 
             return {
                 html: cached.html,
-                url: cached.url || normalizedUrl,
+                // Entries written before the fragment strip below (every entry
+                // the phone has ever written) stored the anchored URL beside a
+                // fragment-free filename; heal them on read rather than
+                // waiting out the TTL. See ScriptableAdapter for the twin.
+                url: this.normalizePageCacheUrl(cached.url || normalizedUrl),
                 statusCode: cached.statusCode || 200,
                 headers: cached.headers || {},
                 fetchedAt: cached.fetchedAt || null,

@@ -7969,6 +7969,57 @@ test('validateEventUrl rejects calendar-export URLs (literal run URLs) but keeps
   assert.equal(parser.validateEventUrl('https://bear-it.example/events/musical-bears?musical=1', sourceUrl, {}).valid, true);
 });
 
+// Run 20260828-215643 (bearitmtl.com): the crawler followed the add-to-calendar
+// and subscribe widgets off the archive, and followed the site's YouTube recap
+// video off /m-ours/ — OCR'd its thumbnail and shipped the poster on it as an
+// "M.OURS 2025" event with a ytimg.com thumbnail for artwork.
+test('validateEventUrl rejects add-to-calendar widgets and every youtube.com alias', () => {
+  const parser = createParser();
+  const sourceUrl = 'https://bear-it.example/events/';
+  const outlook = 'https://outlook.live.com/owa?path=/calendar/action/compose&rru=addsubscription'
+    + '&url=webcal%3A%2F%2Fbear-it.example%2F%3Fpost_type%3Dtribe_events%26ical%3D1';
+  assert.equal(parser.validateEventUrl(outlook, sourceUrl, {}).reason, 'calendar-export-url');
+  assert.equal(
+    parser.validateEventUrl('https://outlook.office.com/owa/?rru=addevent&startdt=2026-08-01T22%3A00%3A00', sourceUrl, {}).reason,
+    'calendar-export-url');
+  assert.equal(
+    parser.validateEventUrl('https://calendar.yahoo.com/?v=60&action=TEMPLATE&title=THE%20HUNT', sourceUrl, {}).reason,
+    'calendar-export-url');
+  assert.equal(
+    parser.validateEventUrl('webcal://bear-it.example/?post_type=tribe_events', sourceUrl, {}).valid, false);
+
+  // youtu.be and youtube-nocookie.com match neither "youtube.com" nor
+  // ".youtube.com", so both used to sail through as ordinary pages.
+  for (const video of [
+    'https://youtu.be/r4IkE9JAtNo',
+    'https://www.youtube-nocookie.com/embed/r4IkE9JAtNo?rel=0',
+    'https://www.youtube.com/watch?v=r4IkE9JAtNo'
+  ]) {
+    assert.equal(parser.validateEventUrl(video, sourceUrl, {}).valid, false, `${video} must not be crawled`);
+  }
+  // A real event page whose slug merely contains "template" is untouched.
+  assert.equal(parser.validateEventUrl('https://bear-it.example/event/template-party/', sourceUrl, {}).valid, true);
+});
+
+test('a discovered URL is crawled and stored without its #fragment', () => {
+  const parser = createParser();
+  const urls = new Map();
+  const sourceUrl = 'https://bear-it.example/events/';
+  parser.addAdditionalUrlCandidate(urls, 'https://bear-it.example/event/ensemble/#tribe-tickets__tickets-form', sourceUrl);
+  assert.deepEqual(
+    Array.from(urls.values()).map(entry => entry.url),
+    ['https://bear-it.example/event/ensemble/'],
+    'the anchor is a scroll target, not part of the page identity'
+  );
+  // The clean twin folds into the same entry rather than being crawled twice.
+  parser.addAdditionalUrlCandidate(urls, 'https://bear-it.example/event/ensemble/', sourceUrl);
+  assert.equal(urls.size, 1);
+  // An in-page anchor on the site root is still rejected outright.
+  assert.equal(
+    parser.validateEventUrl('https://bear-it.example/#content', sourceUrl, {}).reason,
+    'fragment-only-root-url');
+});
+
 // ---------------------------------------------------------------------------
 // Shared-meridiem time ranges (Fix: QUENCHD — "1-7PM" contains "7pm" but not
 // "1pm", so the evidence gate dropped the 13:00 start and it defaulted to
