@@ -19680,7 +19680,13 @@ TEXT:
     buildVenueNameWholeWordPattern(form) {
         const escaped = String(form || '')
             .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-            .replace(/\s+/g, '\\s+');
+            .replace(/\s+/g, '\\s+')
+            // "@" and "at" are the same word in a venue name, and the two
+            // sources routinely disagree: 3dollarbillbk.com writes
+            // "The Yard @ 9 Bob Note" where the curated corpus has
+            // "The Yard at 9 Bob Note". Accept either spelling wherever the
+            // name uses one, so a match is not lost to a typographic choice.
+            .replace(/(^|\\s\+)(?:@|at)(?=\\s\+|$)/gi, '$1(?:@|at)');
         return new RegExp(`(?:^|[^A-Za-z0-9])${escaped}(?=$|[^A-Za-z0-9])`, 'i');
     }
 
