@@ -1018,6 +1018,18 @@ class WebAdapter {
     // math, extracted so the downscale decision is unit-testable without
     // sharp or network. Mirrors ScriptableAdapter.fetchImageAsBase64Once's
     // inline DrawContext math exactly.
+    // Stamp the true pre-downscale size onto an optional out-param. Silent and
+    // harmless when no object was passed or the probe produced nothing usable —
+    // the caller then falls back to measuring the bytes, exactly as before.
+    static recordOriginalImageDimensions(imageMeta, width, height) {
+        if (!imageMeta || typeof imageMeta !== 'object') return;
+        const w = Number(width);
+        const h = Number(height);
+        if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return;
+        imageMeta.originalWidth = Math.round(w);
+        imageMeta.originalHeight = Math.round(h);
+    }
+
     static getDownscaledImageDimensions(width, height, maxDimension) {
         const w = Number(width);
         const h = Number(height);
@@ -1072,7 +1084,11 @@ class WebAdapter {
     // something else. JPEG re-encode matches ScriptableAdapter
     // (Data.fromJPEG): the downscaled rendition only ever feeds the vision
     // model, never the stored event image URL.
-    async downscaleImageBufferForOcr(buffer, maxDimension, url) {
+    // `imageMeta` (optional out-param, same convention as callAiGenerate's
+    // diagnostics) receives the PRE-downscale pixel size. Callers measure the
+    // bytes this returns, which are the shrunken rendition — without this the
+    // real shape is lost and every OCR'd image records as <=maxDimension wide.
+    async downscaleImageBufferForOcr(buffer, maxDimension, url, imageMeta = null) {
         if (!Number.isFinite(Number(maxDimension)) || Number(maxDimension) <= 0) return buffer;
         const capability = this.getImageResizeCapability();
         if (!capability) return buffer;
@@ -1080,13 +1096,14 @@ class WebAdapter {
             if (capability.kind === 'sharp') {
                 const image = capability.sharp(buffer);
                 const metadata = await image.metadata();
+                WebAdapter.recordOriginalImageDimensions(imageMeta, metadata.width, metadata.height);
                 const target = WebAdapter.getDownscaledImageDimensions(metadata.width, metadata.height, maxDimension);
                 if (!target) return buffer;
                 const resized = await image.resize(target.width, target.height).jpeg({ quality: 85 }).toBuffer();
                 console.log(`🌐 Web: Downscaled image ${metadata.width}x${metadata.height} → ${target.width}x${target.height} for OCR: ${url}`);
                 return resized;
             }
-            return await this.downscaleImageBufferWithSips(buffer, maxDimension, url);
+            return await this.downscaleImageBufferWithSips(buffer, maxDimension, url, imageMeta);
         } catch (error) {
             console.warn(`🌐 Web: Image downscale failed for ${url} (${error.message}) — sending full-size image; oversized images may overflow the vision model context`);
             return buffer;
@@ -1097,7 +1114,7 @@ class WebAdapter {
     // the same helper as the sharp leg (byte-identical passthrough when the
     // image already fits), then resample the longest side and re-encode JPEG.
     // Errors propagate to the caller's LOUD fallback.
-    async downscaleImageBufferWithSips(buffer, maxDimension, url) {
+    async downscaleImageBufferWithSips(buffer, maxDimension, url, imageMeta = null) {
         const os = require('os');
         const { execFile } = require('child_process');
         const tmpDir = this.fs.mkdtempSync(this.path.join(os.tmpdir(), 'chunky-ocr-resize-'));
@@ -1114,6 +1131,7 @@ class WebAdapter {
             const probe = await runSips(['-g', 'pixelWidth', '-g', 'pixelHeight', inPath]);
             const width = Number((probe.match(/pixelWidth:\s*(\d+)/) || [])[1]);
             const height = Number((probe.match(/pixelHeight:\s*(\d+)/) || [])[1]);
+            WebAdapter.recordOriginalImageDimensions(imageMeta, width, height);
             const target = WebAdapter.getDownscaledImageDimensions(width, height, maxDimension);
             if (!target) return buffer;
             await runSips(['-Z', String(Number(maxDimension)), '-s', 'format', 'jpeg', '-s', 'formatOptions', '85', inPath, '--out', outPath]);
@@ -1130,13 +1148,13 @@ class WebAdapter {
     // (0 tokens, finish_reason "length") on Node because this adapter used to
     // ignore the cap entirely — including the overflow retry's explicit 768px
     // request, which therefore returned identical bytes and was skipped.
-    async fetchImageAsBase64(url, timeoutSeconds = 30, maxDimension = 1024) {
+    async fetchImageAsBase64(url, timeoutSeconds = 30, maxDimension = 1024, imageMeta = null) {
         if (this.isNode) {
             try {
                 const response = await fetch(url, { signal: AbortSignal.timeout(timeoutSeconds * 1000) });
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const buffer = await response.arrayBuffer();
-                const payload = await this.downscaleImageBufferForOcr(Buffer.from(buffer), maxDimension, url);
+                const payload = await this.downscaleImageBufferForOcr(Buffer.from(buffer), maxDimension, url, imageMeta);
                 return payload.toString('base64');
             } catch (error) {
                 throw new Error(`Failed to fetch image as base64: ${error.message}`);

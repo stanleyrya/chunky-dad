@@ -991,6 +991,11 @@ class AiWebParser {
         // value overflow retries used to succeed at), so this safety net steps
         // down further and should rarely fire.
         this.ocrOverflowRetryMaxDimension = 768;
+        // Both adapters cap an OCR payload's longest side here (their
+        // fetchImageAsBase64 default). Used only to judge whether a cached
+        // dimension pair written before the pre-downscale stamp existed could
+        // be a cap artifact — see isTrustworthyCachedImagePixels.
+        this.ocrDownscaleMaxDimension = 1024;
         this.defaultOcrRequestConfig = {
             // With requests serialized (maxConcurrentRequests), anything slower than
             // 2 minutes on the local vision model is stuck, not slow.
@@ -6667,7 +6672,7 @@ class AiWebParser {
             // still answer orientation — a hit never re-downloads the bytes.
             // Absent on entries written before this field; absent just means
             // "not measured", never a guess.
-            if (cached && cached.imagePixels) {
+            if (cached && cached.imagePixels && this.isTrustworthyCachedImagePixels(cached)) {
                 for (const url of [imageUrl, cached.url, normalizedUrl]) {
                     this.recordMeasuredImageDimensions(url, cached.imagePixels);
                 }
@@ -6719,7 +6724,29 @@ class AiWebParser {
         }
     }
 
-    async writeCachedOcrResult(imageUrl, ocrConfig = {}, text = '', imagePixels = null) {
+    // Entries written before the adapters reported their pre-downscale size
+    // stored whatever the OCR payload measured — which, for any image the
+    // adapter shrank, is the SHRUNKEN shape. `imagePixelsSource: 'original'`
+    // marks dimensions that came from the image itself and is always trusted.
+    // Without that stamp, distrust only the fingerprint of a capped rendition:
+    // a longest side landing exactly on a downscale cap, since the resize sets
+    // it to precisely that. Everything else measured the bytes as delivered
+    // (adapters with no resize capability never shrink anything) and stays
+    // trusted, so this removes no information that was ever reliable. A real
+    // image measuring exactly 1024 loses nothing but this shortcut —
+    // orientation still has every other piece of evidence it always had.
+    isTrustworthyCachedImagePixels(cached) {
+        if (!cached || typeof cached !== 'object' || !cached.imagePixels) return false;
+        if (cached.imagePixelsSource === 'original') return true;
+        const width = Number(cached.imagePixels.width);
+        const height = Number(cached.imagePixels.height);
+        if (!Number.isFinite(width) || !Number.isFinite(height)) return false;
+        const longestSide = Math.max(width, height);
+        return longestSide !== this.ocrDownscaleMaxDimension
+            && longestSide !== this.ocrOverflowRetryMaxDimension;
+    }
+
+    async writeCachedOcrResult(imageUrl, ocrConfig = {}, text = '', imagePixels = null, imagePixelsSource = null) {
         if (!ocrConfig.cacheEnabled) return null;
         const resultText = String(text || '').trim();
         if (resultText === undefined || resultText === null) return null;
@@ -6738,6 +6765,7 @@ class AiWebParser {
             cachedAt: new Date().toISOString(),
             cacheKeyVersion: 1,
             ...(measuredPixels ? { imagePixels: measuredPixels } : {}),
+            ...(measuredPixels && imagePixelsSource ? { imagePixelsSource } : {}),
             request: {
                 endpoint: String(ocrConfig.endpoint || ''),
                 model: String(ocrConfig.model || ''),
@@ -7015,10 +7043,19 @@ class AiWebParser {
             console.warn(`🤖 AI Web: JSON-LD event extraction failed: ${error.message}`);
             return [];
         }
+        // Yoast (and every other WordPress SEO plugin) publishes ONE @graph per
+        // page and refers between its nodes by @id, so an Event's image is
+        // routinely {"@id": ".../#primaryimage"} pointing at an ImageObject
+        // sibling that holds the real contentUrl AND its published width/height.
+        // Without the index that reference reads as "no image", and the og:image
+        // fill then supplies WordPress's 1024px derivative instead — which is
+        // how THE HUNT shipped a 1024x539 thumbnail of a 2050x1080 flyer
+        // (run 20260828-215643).
+        const nodesById = this.indexJsonLdNodesById(html);
         const events = [];
         const seen = new Set();
         for (const node of nodes) {
-            const event = this.buildEventFromJsonLdNode(node, sourceUrl, cityConfig);
+            const event = this.buildEventFromJsonLdNode(node, sourceUrl, cityConfig, nodesById);
             if (!event) continue;
             const key = `${event.title.toLowerCase()}|${event.startDate.toISOString()}`;
             if (seen.has(key)) continue;
@@ -7028,7 +7065,53 @@ class AiWebParser {
         return events;
     }
 
-    buildEventFromJsonLdNode(node, sourceUrl, cityConfig = null) {
+    // Map of "@id" → node for every object in the page's JSON-LD, so an @id
+    // reference can be followed to the node that actually holds the data.
+    // Returns an empty Map for anything absent or unparseable; a caller with no
+    // index behaves exactly as it did before this existed.
+    indexJsonLdNodesById(html) {
+        const index = new Map();
+        const source = String(html || '');
+        if (!source.includes('ld+json')) return index;
+        const scriptPattern = /<script[^>]*type\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+        let match;
+        while ((match = scriptPattern.exec(source)) !== null) {
+            let parsed;
+            try {
+                parsed = JSON.parse(match[1].trim());
+            } catch (_) {
+                continue;
+            }
+            this.collectJsonLdNodesById(parsed, index, 0);
+        }
+        return index;
+    }
+
+    collectJsonLdNodesById(node, index, depth) {
+        if (!node || depth > 6) return;
+        if (Array.isArray(node)) {
+            for (const child of node) this.collectJsonLdNodesById(child, index, depth + 1);
+            return;
+        }
+        if (typeof node !== 'object') return;
+        const id = typeof node['@id'] === 'string' ? node['@id'].trim() : '';
+        // Richest node wins. The SAME @id appears once as the real node and
+        // once per reference to it — and the references usually come FIRST in
+        // document order (Yoast's WebPage points at #primaryimage above the
+        // ImageObject that defines it), so "first writer wins" would index the
+        // empty pointer and resolve every lookup back to itself.
+        if (id) {
+            const existing = index.get(id);
+            if (!existing || Object.keys(node).length > Object.keys(existing).length) {
+                index.set(id, node);
+            }
+        }
+        for (const value of Object.values(node)) {
+            if (value && typeof value === 'object') this.collectJsonLdNodesById(value, index, depth + 1);
+        }
+    }
+
+    buildEventFromJsonLdNode(node, sourceUrl, cityConfig = null, nodesById = null) {
         if (!node || typeof node !== 'object') return null;
         const clean = (value) => this.normalizeWhitespace(
             this.decodeBasicEntities(this.stripTags(String(value || ''))).replace(/&amp;/gi, '&')
@@ -7062,7 +7145,7 @@ class AiWebParser {
         const offerUrl = offer && typeof offer === 'object' ? this.normalizeHttpUrlValue(offer.url) : '';
         const ticketUrl = offerUrl || this.normalizeHttpUrlValue(node.url) || '';
         const cover = this.formatJsonLdOffersCover(node.offers);
-        const jsonLdImageCandidates = this.pickJsonLdImageCandidates(node.image);
+        const jsonLdImageCandidates = this.pickJsonLdImageCandidates(node.image, nodesById);
 
         const event = {
             title,
@@ -7299,11 +7382,17 @@ class AiWebParser {
     // slots want — so the array is read whole instead of collapsing to [0].
     // ImageObject entries carry authoritative width/height; those beat anything
     // guessed from the URL.
-    pickJsonLdImageCandidates(image) {
+    pickJsonLdImageCandidates(image, nodesById = null) {
         const raw = Array.isArray(image) ? image : [image];
         const candidates = [];
         const seen = new Set();
-        for (const entry of raw) {
+        for (const rawEntry of raw) {
+            // Follow an @id reference to the ImageObject that holds the real
+            // url/contentUrl and its published dimensions. Only when the entry
+            // carries no usable url of its own, so a node that has both keeps
+            // what it states. One hop only — a reference to a reference is a
+            // malformed graph, not a shape to chase.
+            const entry = this.resolveJsonLdImageReference(rawEntry, nodesById);
             let url = '';
             let width = null;
             let height = null;
@@ -7311,8 +7400,14 @@ class AiWebParser {
                 // JSON-LD events skip normalizeAiEvent, so upgrade degraded CDN
                 // thumbnails here — the stored image must never be a blurred preview.
                 url = this.upgradeCdnThumbnailUrl(this.normalizeHttpUrlValue(entry) || '') || '';
-            } else if (entry && typeof entry === 'object' && typeof entry.url === 'string') {
-                url = this.upgradeCdnThumbnailUrl(this.normalizeHttpUrlValue(entry.url) || '') || '';
+            } else if (entry && typeof entry === 'object') {
+                // contentUrl is schema.org's canonical "the actual bytes" key;
+                // Yoast's ImageObject nodes publish both, identical.
+                const stated = typeof entry.url === 'string' && entry.url.trim()
+                    ? entry.url
+                    : (typeof entry.contentUrl === 'string' ? entry.contentUrl : '');
+                if (!stated) continue;
+                url = this.upgradeCdnThumbnailUrl(this.normalizeHttpUrlValue(stated) || '') || '';
                 width = this.parseImageDimensionValue(entry.width);
                 height = this.parseImageDimensionValue(entry.height);
             }
@@ -7323,6 +7418,28 @@ class AiWebParser {
             candidates.push({ url, width, height, authoritative: Boolean(width && height) });
         }
         return candidates;
+    }
+
+    // An image entry that is only a pointer ({"@id": "…#primaryimage"}, or a
+    // bare "#…" string) resolved against the page's node index. Returns the
+    // entry unchanged when it already carries a url, when there is no index, or
+    // when the id names nothing — every miss leaves the old behaviour intact.
+    resolveJsonLdImageReference(entry, nodesById) {
+        if (!nodesById || typeof nodesById.get !== 'function') return entry;
+        let id = '';
+        if (typeof entry === 'string') {
+            // A plain string is a URL unless it is only a fragment/id pointer.
+            if (!entry.trim().startsWith('#')) return entry;
+            id = entry.trim();
+        } else if (entry && typeof entry === 'object') {
+            const hasOwnUrl = (typeof entry.url === 'string' && entry.url.trim())
+                || (typeof entry.contentUrl === 'string' && entry.contentUrl.trim());
+            if (hasOwnUrl) return entry;
+            id = typeof entry['@id'] === 'string' ? entry['@id'].trim() : '';
+        }
+        if (!id) return entry;
+        const target = nodesById.get(id);
+        return target && target !== entry ? target : entry;
     }
 
     pickJsonLdImage(image) {
@@ -9850,8 +9967,15 @@ class AiWebParser {
         }
         const downloadStart = Date.now();
         let base64Image;
+        // Out-param: the adapters cap the longest side at 1024 before handing
+        // the bytes over, so measuring those bytes records a shrunken shape for
+        // every OCR'd image. bearitmtl.com's The-Hunt.jpg (a real 2050x1080)
+        // and its own 1024x539 WordPress derivative BOTH recorded 1024x539 in
+        // run 20260828-215643, which left the slot ranking unable to tell an
+        // original from its thumbnail — and the thumbnail won.
+        const imageMeta = {};
         try {
-            base64Image = await httpAdapter.fetchImageAsBase64(normalizedUrl, ocrConfig.timeoutSeconds);
+            base64Image = await httpAdapter.fetchImageAsBase64(normalizedUrl, ocrConfig.timeoutSeconds, undefined, imageMeta);
         } catch (error) {
             console.warn(`🚨 AI Web: OCR image download failed for ${normalizedUrl} after ${Date.now() - downloadStart}ms: ${error.message}`);
             throw error;
@@ -9861,7 +9985,11 @@ class AiWebParser {
         // before they go to the vision model. No second fetch, and orientation
         // then works for every image OCR touched, not just the rare few whose
         // URL or meta tags happen to advertise dimensions.
-        const measuredPixels = this.measureImageDimensionsFromBase64(imageUrl, base64Image);
+        // The adapter's pre-downscale size is the truth when it reported one;
+        // the header read of the (possibly shrunken) payload is the fallback,
+        // which is exactly what every path did before the out-param existed.
+        const measuredPixels = this.pickTrueImageDimensions(imageMeta)
+            || this.measureImageDimensionsFromBase64(imageUrl, base64Image);
         if (measuredPixels) {
             // The event's image value can be either the URL as found on the
             // page or its proxy-unwrapped form — point both at the measurement.
@@ -9938,7 +10066,11 @@ class AiWebParser {
         }
         const normalized = this.normalizeOcrResult(parsed);
         this.recordOcrImageVerdict(imageUrl, { ...normalized, imageUrl });
-        const cachePath = await this.writeCachedOcrResult(imageUrl, ocrConfig, JSON.stringify(parsed), measuredPixels);
+        const cachePath = await this.writeCachedOcrResult(
+            imageUrl, ocrConfig, JSON.stringify(parsed), measuredPixels,
+            // Only a pre-downscale stamp describes the image itself; a header
+            // read of the payload describes whatever the adapter handed over.
+            this.pickTrueImageDimensions(imageMeta) ? 'original' : 'payload');
         return {
             imageUrl,
             text: normalized.text,
@@ -18396,6 +18528,18 @@ TEXT:
     // Read an image's real shape out of the base64 payload the OCR pass just
     // downloaded, and remember it for the orientation slots. Returns the
     // measured {width, height} or null; never throws.
+    // {width, height} from an adapter's pre-downscale stamp, or null when the
+    // adapter reported nothing usable (an older adapter, a browser build, a
+    // probe that failed). Fails closed to null so the header measurement is
+    // still consulted.
+    pickTrueImageDimensions(imageMeta) {
+        if (!imageMeta || typeof imageMeta !== 'object') return null;
+        const width = Number(imageMeta.originalWidth);
+        const height = Number(imageMeta.originalHeight);
+        if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return null;
+        return { width: Math.round(width), height: Math.round(height) };
+    }
+
     measureImageDimensionsFromBase64(imageUrl, base64Image) {
         try {
             const dimensions = this.readImageDimensionsFromBase64(base64Image);

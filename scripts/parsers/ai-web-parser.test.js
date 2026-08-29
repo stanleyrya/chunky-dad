@@ -15937,3 +15937,95 @@ test('a detail-page record still wins over the listing rows (only it has ticket 
   assert.equal(event.cover, '$20.50-$30.75', 'ticket prices come from the detail record');
   assert.equal(event.address, '722 E Burnside St, Portland, OR 97214, USA', 'detail address, not the listing row');
 });
+
+// ---------------------------------------------------------------------------
+// JSON-LD @id references. WordPress SEO plugins publish ONE @graph per page and
+// refer between its nodes by @id, so an Event's image is routinely a pointer at
+// an ImageObject sibling holding the real contentUrl and its published size.
+// Reading that pointer as "no image" let the og:image fill supply WordPress's
+// 1024px derivative instead — THE HUNT shipped a 1024x539 thumbnail of a
+// 2050x1080 flyer in run 20260828-215643.
+// ---------------------------------------------------------------------------
+
+// Real bearitmtl.com/event/the-hunt/ shape: the Event lives in its own script,
+// the ImageObject it points at lives in the OTHER script's @graph, and the
+// WebPage reference to it appears BEFORE the node that defines it.
+const JSONLD_ID_REFERENCE_HTML = `
+<html><head>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[
+ {"@type":"WebPage","@id":"https://site.example/event/the-hunt/","image":{"@id":"https://site.example/event/the-hunt/#primaryimage"}},
+ {"@type":"ImageObject","@id":"https://site.example/event/the-hunt/#primaryimage",
+  "url":"https://site.example/uploads/The-Hunt.jpg","contentUrl":"https://site.example/uploads/The-Hunt.jpg",
+  "width":2050,"height":1080}
+]}</script>
+<script type="application/ld+json">[{"@context":"http://schema.org","@type":"Event","name":"THE HUNT",
+ "startDate":"2026-09-06T21:00:00-04:00","endDate":"2026-09-07T03:00:00-04:00",
+ "image":{"@id":"https://site.example/event/the-hunt/#primaryimage"},
+ "url":"https://site.example/event/the-hunt/"}]</script>
+<meta property="og:image" content="https://site.example/uploads/The-Hunt-1024x539.jpg" />
+</head><body>THE HUNT</body></html>`;
+
+test('a JSON-LD image given as an @id reference resolves to the node that defines it', () => {
+  const parser = createParser();
+  parser.core = new SharedCore({}, { eventSchema: EventSchema });
+  const events = parser.extractEventsFromJsonLd(JSONLD_ID_REFERENCE_HTML, 'https://site.example/event/the-hunt/', {});
+  assert.equal(events.length, 1);
+  assert.equal(events[0].image, 'https://site.example/uploads/The-Hunt.jpg',
+    'the full-size original, not the og:image derivative');
+});
+
+test('the @id index keeps the node that defines an id, not a reference to it', () => {
+  const parser = createParser();
+  const index = parser.indexJsonLdNodesById(JSONLD_ID_REFERENCE_HTML);
+  const target = index.get('https://site.example/event/the-hunt/#primaryimage');
+  assert.ok(target, 'the id must be indexed');
+  assert.equal(target.width, 2050, 'the ImageObject wins over the earlier bare pointer');
+
+  // The published dimensions ride along, so the slot ranking gets them for free.
+  const candidates = parser.pickJsonLdImageCandidates(
+    { '@id': 'https://site.example/event/the-hunt/#primaryimage' }, index);
+  assert.deepEqual(candidates.map(c => [c.url, c.width, c.height, c.authoritative]),
+    [['https://site.example/uploads/The-Hunt.jpg', 2050, 1080, true]]);
+});
+
+test('@id resolution never disturbs images that state their own url', () => {
+  const parser = createParser();
+  const index = parser.indexJsonLdNodesById(JSONLD_ID_REFERENCE_HTML);
+  // A plain string URL is untouched.
+  assert.deepEqual(parser.pickJsonLdImageCandidates('https://site.example/own.jpg', index).map(c => c.url),
+    ['https://site.example/own.jpg']);
+  // An object carrying BOTH an @id and a url keeps its own url.
+  assert.deepEqual(parser.pickJsonLdImageCandidates(
+    { '@id': 'https://site.example/event/the-hunt/#primaryimage', url: 'https://site.example/own.jpg' }, index
+  ).map(c => c.url), ['https://site.example/own.jpg']);
+  // contentUrl alone is enough (schema.org's canonical "the actual bytes" key).
+  assert.deepEqual(parser.pickJsonLdImageCandidates({ contentUrl: 'https://site.example/bytes.jpg' }).map(c => c.url),
+    ['https://site.example/bytes.jpg']);
+  // An id naming nothing, and no index at all, both fail open to no candidate.
+  assert.deepEqual(parser.pickJsonLdImageCandidates({ '@id': 'https://site.example/#nope' }, index), []);
+  assert.deepEqual(parser.pickJsonLdImageCandidates({ '@id': 'https://site.example/#primaryimage' }), []);
+});
+
+test('cached OCR dimensions are distrusted only when they look like a downscale cap', () => {
+  const parser = createParser();
+  const stamped = { imagePixels: { width: 2050, height: 1080 }, imagePixelsSource: 'original' };
+  assert.equal(parser.isTrustworthyCachedImagePixels(stamped), true);
+  // Unstamped and sitting exactly on a cap — could be a real image or a shrunken
+  // one, and guessing wrong is what let a thumbnail beat its own original.
+  assert.equal(parser.isTrustworthyCachedImagePixels({ imagePixels: { width: 1024, height: 539 } }), false);
+  assert.equal(parser.isTrustworthyCachedImagePixels({ imagePixels: { width: 405, height: 768 } }), false);
+  // Unstamped but nowhere near a cap: measured as delivered, still trusted.
+  assert.equal(parser.isTrustworthyCachedImagePixels({ imagePixels: { width: 1155, height: 1540 } }), true);
+  assert.equal(parser.isTrustworthyCachedImagePixels({ imagePixels: { width: 800, height: 600 } }), true);
+  assert.equal(parser.isTrustworthyCachedImagePixels({}), false);
+});
+
+test('an adapter that reports its pre-downscale size beats measuring the shrunken payload', () => {
+  const parser = createParser();
+  assert.deepEqual(parser.pickTrueImageDimensions({ originalWidth: 2050, originalHeight: 1080 }),
+    { width: 2050, height: 1080 });
+  // Nothing usable reported → null, so the header measurement is still consulted.
+  assert.equal(parser.pickTrueImageDimensions({}), null);
+  assert.equal(parser.pickTrueImageDimensions({ originalWidth: 0, originalHeight: 10 }), null);
+  assert.equal(parser.pickTrueImageDimensions(null), null);
+});

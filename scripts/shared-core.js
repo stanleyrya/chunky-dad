@@ -1484,6 +1484,43 @@ class SharedCore {
     // segments; when a URL advertises nothing, the URL length is a weak
     // fallback signal (kept for parser parity — the merge rung's margin guard
     // deliberately ignores that noise floor).
+    // WordPress stores every upload as `name.ext` plus a family of resized
+    // siblings named `name-WIDTHxHEIGHT.ext`. The bare name IS the original, so
+    // when two URLs are the same upload and exactly one carries that suffix,
+    // the bare one wins — no size comparison can get this right, because the
+    // original advertises nothing and the derivative advertises its smaller
+    // self. Returns {winner, reason} or null; null means "not this shape" and
+    // the caller's normal scoring proceeds.
+    // Both bare or both resized is not this shape either: two different
+    // derivatives are a real size comparison, which the score rung handles.
+    pickWordPressOriginalImage(valueA, valueB) {
+        const shapeOf = (value) => {
+            const raw = String(value || '').trim();
+            if (!raw) return null;
+            const parsed = this.parseUrl(raw);
+            const path = parsed ? String(parsed.pathname || '') : raw.split(/[?#]/)[0];
+            if (!path) return null;
+            const match = path.match(/^(.*)-(\d{2,5})x(\d{2,5})(\.[A-Za-z0-9]+)$/);
+            return match
+                ? { base: `${match[1]}${match[4]}`, resized: true }
+                : { base: path, resized: false };
+        };
+        const a = shapeOf(valueA);
+        const b = shapeOf(valueB);
+        if (!a || !b || a.resized === b.resized) return null;
+        // Same upload: identical paths, or one is the other with a proxy/CDN
+        // prefix ahead of it (i0.wp.com/<host>/wp-content/... wrapping
+        // /wp-content/...). Anything else is two different images.
+        const sameAsset = a.base === b.base
+            || a.base.endsWith(b.base) || b.base.endsWith(a.base);
+        if (!sameAsset) return null;
+        const winner = a.resized ? 'b' : 'a';
+        return {
+            winner,
+            reason: 'WordPress serves the bare filename as the full-size original; the other URL is its own resized copy'
+        };
+    }
+
     getImageSizeScoreFromUrl(url) {
         if (!url || typeof url !== 'string') return -1;
 
@@ -3786,6 +3823,15 @@ class SharedCore {
                 // (winner >= 2x loser or +500) so near-ties still arbitrate,
                 // and the winner must score above the URL-length noise floor —
                 // a score that could just be a long URL decides nothing.
+                // Same upload, one of them WordPress's own resize: `flyer.jpg`
+                // and `flyer-1024x539.jpg` are ONE image, and only the
+                // derivative advertises a size — so the score rung below reads
+                // the smaller file as the bigger one and picks the thumbnail.
+                // Run 20260829-092835: THE HUNT's 2050x1080 original scored 0
+                // (a bare name claims nothing) against its own 1024x539 crop,
+                // and the crop won "clearly higher-resolution".
+                const wordPressOriginal = this.pickWordPressOriginalImage(valueA, valueB);
+                if (wordPressOriginal) return wordPressOriginal;
                 const scoreA = this.getImageSizeScoreFromUrl(String(valueA).trim());
                 const scoreB = this.getImageSizeScoreFromUrl(String(valueB).trim());
                 const winnerScore = Math.max(scoreA, scoreB);

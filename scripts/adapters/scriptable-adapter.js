@@ -1807,13 +1807,17 @@ class ScriptableAdapter {
   // first attempts at ~1568px reliably overflowed the vision model's context
   // (0 tokens, finish_reason "length") and only succeeded after retrying ≤1024,
   // so every large image paid a wasted round trip.
-  async fetchImageAsBase64(url, timeoutSeconds = 30, maxDimension = 1024) {
+  // `imageMeta` (optional out-param, same convention as callAiGenerate's
+  // diagnostics) receives the PRE-downscale pixel size. Callers measure the
+  // bytes this returns, which are the shrunken rendition — without this the
+  // real shape is lost and every OCR'd image records as <=maxDimension wide.
+  async fetchImageAsBase64(url, timeoutSeconds = 30, maxDimension = 1024, imageMeta = null) {
     return this.withNetworkResilience("image download", url, () =>
-      this.fetchImageAsBase64Once(url, timeoutSeconds, maxDimension),
+      this.fetchImageAsBase64Once(url, timeoutSeconds, maxDimension, imageMeta),
     );
   }
 
-  async fetchImageAsBase64Once(url, timeoutSeconds = 30, maxDimension = 1024) {
+  async fetchImageAsBase64Once(url, timeoutSeconds = 30, maxDimension = 1024, imageMeta = null) {
     let request = null;
     try {
       request = new Request(url);
@@ -1824,6 +1828,15 @@ class ScriptableAdapter {
       // finish_reason "length", so cap the longest side before encoding.
       const width = image.size ? image.size.width : 0;
       const height = image.size ? image.size.height : 0;
+      // Stamped for EVERY image, downscaled or not — the loaded image's own
+      // size is the truth, and the caller should never have to guess whether
+      // the bytes it gets back were resized.
+      if (imageMeta && typeof imageMeta === "object"
+          && Number.isFinite(width) && Number.isFinite(height)
+          && width > 0 && height > 0) {
+        imageMeta.originalWidth = Math.round(width);
+        imageMeta.originalHeight = Math.round(height);
+      }
       const longestSide = Math.max(width, height);
       if (maxDimension > 0 && longestSide > maxDimension) {
         const scale = maxDimension / longestSide;
