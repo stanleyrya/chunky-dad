@@ -19,7 +19,12 @@
     "facebook": "https://www.facebook.com/Rockbar-NYC",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJlwfqXuxZwokRTlizRW_4cwc",
     "gayCities": "https://newyork.gaycities.com/bars/3486-rockbar-nyc",
-    "gayCitiesLastScrapedAt": "2026-06-14T16:38:16.402Z"
+    "gayCitiesLastScrapedAt": "2026-06-14T16:38:16.402Z",
+    "faviconBg": "#030303",
+    "faviconFg": "#7a7a7a",
+    "faviconPlate": "#000000",
+    "paletteSource": "favicon",
+    "palette": "#000000:87:0 #232323:2:0 #d3d3d3:2:0"
   },
   {
     "name": "Eagle NYC",

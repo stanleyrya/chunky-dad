@@ -10,6 +10,26 @@
     "accent": "#a1653b"
   },
   {
+    "slug": "concours-m-ours-2026-6344a9ba",
+    "url": "https://www.bearitmtl.com/event/concours-m-ours-2026/",
+    "faviconBg": "#1a1a1a",
+    "faviconFg": "#d1d1d1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#742519:22:11 #4c130b:19:9 #240a04:13:5 #9e4535:13:12 #e36568:13:16",
+    "accent": "#e36568"
+  },
+  {
+    "slug": "concours-pup-montral-6b96639b",
+    "url": "https://www.bearitmtl.com/event/concours-pup-montreal/",
+    "faviconBg": "#1a1a1a",
+    "faviconFg": "#d1d1d1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#fefefe:51:0 #cc3234:16:19 #ddcac1:14:2",
+    "accent": "#cc3234"
+  },
+  {
     "slug": "ensemble-653b399f",
     "url": "https://www.bearitmtl.com/event/ensemble/",
     "faviconBg": "#1a1a1a",
@@ -29,6 +49,55 @@
     "palette": "#000000:41:0 #ffffff:41:0 #aaaaaa:4:0"
   },
   {
+    "slug": "gear-playground-2f80e530",
+    "url": "https://www.bearitmtl.com/event/gear-playground/",
+    "faviconBg": "#1a1a1a",
+    "faviconFg": "#d1d1d1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#030612:51:3 #08163b:18:7 #142c53:10:8 #1a548b:9:11 #6bc9db:5:9",
+    "accent": "#1a548b"
+  },
+  {
+    "slug": "kick-off-festival-sugar-bear-2026-5c98c592",
+    "url": "https://www.bearitmtl.com/event/festival-sugar-bear-2026/",
+    "faviconBg": "#1a1a1a",
+    "faviconFg": "#d1d1d1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#0c022b:28:8 #14015b:20:14 #550c55:15:13 #921a62:12:17 #d93661:12:20",
+    "accent": "#d93661"
+  },
+  {
+    "slug": "kink-playground-0256844e",
+    "url": "https://www.bearitmtl.com/event/kink-playground-2/",
+    "faviconBg": "#1a1a1a",
+    "faviconFg": "#d1d1d1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#0b0303:44:2 #2b0907:31:6 #5e1a17:11:10 #922324:9:15 #c5595c:4:14",
+    "accent": "#922324"
+  },
+  {
+    "slug": "playground-thick-glazed-0e06efcb",
+    "url": "https://www.bearitmtl.com/event/playground-thick-glazed/",
+    "faviconBg": "#1a1a1a",
+    "faviconFg": "#d1d1d1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#0d0b0b:30:0 #33141a:20:5 #5b1d2b:17:9 #8d354b:13:12 #d44557:6:18",
+    "accent": "#d44557"
+  },
+  {
+    "slug": "pop-playground-5413295a",
+    "url": "https://www.bearitmtl.com/event/pop-playground/",
+    "faviconBg": "#1a1a1a",
+    "faviconFg": "#d1d1d1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#000000:41:0 #ffffff:41:0 #aaaaaa:4:0"
+  },
+  {
     "slug": "the-hunt-4bf2bf89",
     "url": "https://www.bearitmtl.com/event/the-hunt/",
     "faviconBg": "#1a1a1a",
@@ -37,5 +106,15 @@
     "paletteSource": "flyer",
     "palette": "#130202:42:4 #3b0805:17:8 #6c0609:15:13 #b81010:12:20 #e3675c:8:16",
     "accent": "#b81010"
+  },
+  {
+    "slug": "tour-de-ville-en-bus-rouge-avec-sasha-baga-0f08c88e",
+    "url": "https://www.bearitmtl.com/event/tour-de-ville-en-bus-rouge-avec-sasha-baga/",
+    "faviconBg": "#1a1a1a",
+    "faviconFg": "#d1d1d1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#2b2325:17:1 #eccdb1:16:5 #6d7c88:13:3 #dc7a62:11:13 #a02f2b:9:15",
+    "accent": "#a02f2b"
   }
 ]
