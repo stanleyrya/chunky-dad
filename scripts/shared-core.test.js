@@ -20932,3 +20932,34 @@ test('the WordPress original rung stays out of every other image contest', () =>
   assert.equal(core.pickWordPressOriginalImage('', 'https://bear-it.example/a-800x600.jpg'), null);
   assert.equal(core.pickWordPressOriginalImage(null, null), null);
 });
+
+// Report-only census for multi-event PROGRAMME graphics. bearitmtl.com uses the
+// PUP weekend schedule as Concours PUP Montréal's featured image (run
+// 20260829-102510): sound artwork, unsound EVIDENCE, because its text names
+// "Concours Pup Montréal" AND "Kink Playground" and the title-evidence rung
+// reads whichever event it is asked about. Counting clocks separates a
+// programme from a flyer without reading month names or the word "schedule".
+test('countDistinctFlyerClockTimes separates a programme from a real flyer', () => {
+  const core = createCore();
+  const programme = 'Programmation 2026 31 juillet - July 31st 17h00 : Ouverture du concours '
+    + '21h30 : Unleashed par WoofMTL 1 août - August 1st 18h00 : Concours Pup Montréal '
+    + '22h00 : Kink Playground par Bear It 2 août - August 2nd 13h00 : Diner de clôture';
+  assert.equal(core.countDistinctFlyerClockTimes(programme), 5);
+
+  // Every real single-event flyer in the corpus states one or two times.
+  assert.equal(core.countDistinctFlyerClockTimes(
+    'KINK PLAYGROUND 1ER AOUT 2026 AU BAIN MATHIEU OUVERTURE DES PORTES À 22:00'), 1);
+  assert.equal(core.countDistinctFlyerClockTimes(
+    'THE HUNT 6 SEPTEMBRE 2026 · 9 PM DRESS CODE ENCOURAGED'), 1);
+  assert.equal(core.countDistinctFlyerClockTimes(
+    'ENSEMBLE STOCK AND SODA, SAMEDI 19 SEPTEMBRE 2026 - MEET AND GREET 18:00 - 20:00 SPECTACLE'), 2);
+  assert.equal(core.countDistinctFlyerClockTimes(
+    'CLUB CHUB PRESENTS MEAT MARKET SATURDAY NOVEMBER 1 4PM - 9PM'), 2);
+
+  // The same clock written twice is one time, not two.
+  assert.equal(core.countDistinctFlyerClockTimes('doors 22:00, music 22h00'), 1);
+  assert.equal(core.countDistinctFlyerClockTimes(''), 0);
+  assert.equal(core.countDistinctFlyerClockTimes(null), 0);
+  // A year is not a clock.
+  assert.equal(core.countDistinctFlyerClockTimes('SUMMER 2026 BEAR WEEK'), 0);
+});
