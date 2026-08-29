@@ -22,114 +22,8 @@
   },
   "events": [
     {
-      "name": "CUBSCOUT",
+      "name": "MR REGIMENT LEATHER 2027 CONTEST MEET AND GREET",
       "day": "Friday",
-      "time": "9PM-2AM",
-      "eventType": "monthly",
-      "recurring": true,
-      "recurrence": "FREQ=MONTHLY;BYDAY=1FR",
-      "coordinates": {
-        "lat": 34.0912127,
-        "lng": -118.2840632
-      },
-      "startDate": "2026-09-04T21:00:00",
-      "endDate": "2026-09-05T02:00:00",
-      "unprocessedDescription": "shortName: CUB-SCOUT\ntea: CubScout First Fridays 9pm $7\ncover\r: $7\nbar: Eagle LA\naddress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\ntimezone: America/Los_Angeles\nuid: cubscout-20260731T193113Z@chunky.dad\nimage: https://eaglela.com/wp-content/uploads/CubScout-generic.jpg\nwebsite: https://eaglela.com/events/cub-scout-3/\ninstagram: https://www.instagram.com/dirtybird_la\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
-      "startTimezone": "America/Los_Angeles",
-      "endTimezone": "America/Los_Angeles",
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": false,
-      "sourceUid": "cubscout-20260731T193113Z@chunky.dad",
-      "uid": "cubscout-20260731T193113Z@chunky.dad",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 2,
-      "overrideIdentityType": null,
-      "bar": "Eagle LA",
-      "cover": "$7",
-      "image": "https://eaglela.com/wp-content/uploads/CubScout-generic.jpg",
-      "tea": "CubScout First Fridays 9pm $7",
-      "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
-      "website": "https://eaglela.com/events/cub-scout-3/",
-      "instagram": "https://www.instagram.com/dirtybird_la",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
-      "shortName": "CUB-SCOUT",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglela.com/events/cub-scout-3/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/dirtybird_la",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "cubscout-4fdf801f"
-    },
-    {
-      "name": "CUBSCOUT",
-      "day": "Friday",
-      "time": "9PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "recurrence": null,
-      "coordinates": {
-        "lat": 34.0912127,
-        "lng": -118.2840632
-      },
-      "startDate": "2026-09-04T21:00:00",
-      "endDate": "2026-09-05T02:00:00",
-      "unprocessedDescription": "description: CubScout First Fridays 9pm $7\nbar: Eagle LA\naddr\ress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\ntimezone: America/Los_Angeles\nimage: https://eaglela.com/wp-content/uploads/CubScout-generic.jpg\ncover: $7\nwebsite: https://eaglela.com/events/cub-scout-3/\nshortName: CUB-SCOUT\nkey: cubscout|2026-09-05|eagle la\nbearSource: keyword\noverrideUid: cubscout-20260731T193113Z@chunky.dad\noverrideRecurrenceId: 20260905T040000Z\nuid: cubscout-20260731T193113Z@chunky.dad\ninstagram: https://www.instagram.com/dirtybird_la\npinSource: curated\naddressSource: curated\nimageSource: og-image\nbarSource: venue-site\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "B8639838-5E3C-41CE-B15E-848C7A305ED5",
-      "uid": "cubscout-20260731T193113Z@chunky.dad",
-      "recurrenceId": "2026-09-04T21:00:00",
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": "custom",
-      "bar": "Eagle LA",
-      "cover": "$7",
-      "image": "https://eaglela.com/wp-content/uploads/CubScout-generic.jpg",
-      "tea": "CubScout First Fridays 9pm $7",
-      "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
-      "website": "https://eaglela.com/events/cub-scout-3/",
-      "instagram": "https://www.instagram.com/dirtybird_la",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
-      "shortName": "CUB-SCOUT",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglela.com/events/cub-scout-3/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/dirtybird_la",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "cubscout-7b02b41a"
-    },
-    {
-      "name": "MR REGIMENT LEATHER 2027 CONTEST VICTORY PARTY",
-      "day": "Sunday",
       "time": "12AM",
       "eventType": "routine",
       "recurring": false,
@@ -137,14 +31,14 @@
         "lat": 34.0912127,
         "lng": -118.2840632
       },
-      "startDate": "2026-09-20T00:00:00",
-      "unprocessedDescription": "description: Check back later for more details on this event\nb\rar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/MORE-INFO-Coming-Soon-1.jpg\nwebsite: https://eaglela.com/events/mr-regiment-leather-2027-contest-victory-party/\ntimezone: America/Los_Angeles\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\naddress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\naddressSource: curated\npinSource: curated\ninstagram: dirtybird_la\nkey: mr-regiment-leather-2027-contest-victory-party|2026-09-20|eagle la\nimageSource: og-image\nbarSource: venue-site\nbearSource: keyword\nshortName: MR REGIMENT",
+      "startDate": "2026-09-18T00:00:00",
+      "unprocessedDescription": "description: Check back later for more details on this event\nb\rar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/MORE-INFO-Coming-Soon-1.jpg\nwebsite: https://eaglela.com/events/mr-regiment-leather-2027-contest-meet-and-greet/\ntimezone: America/Los_Angeles\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\naddress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\naddressSource: curated\npinSource: curated\ninstagram: dirtybird_la\nkey: mr-regiment-leather-2027-contest-meet-and-greet|2026-09-18|eagle la\nimageSource: og-image\nbarSource: venue-site\nbearSource: keyword\nshortName: MR REGIMENT",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Los_Angeles",
       "wasUTC": true,
-      "sourceUid": "F06200CE-BC07-4C30-95BF-E305741074A5",
-      "uid": "F06200CE-BC07-4C30-95BF-E305741074A5",
+      "sourceUid": "84CA3B01-F9CF-45E2-A249-2D2C8D1D9297",
+      "uid": "84CA3B01-F9CF-45E2-A249-2D2C8D1D9297",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
@@ -153,14 +47,14 @@
       "image": "https://eaglela.com/wp-content/uploads/MORE-INFO-Coming-Soon-1.jpg",
       "tea": "Check back later for more details on this event",
       "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
-      "website": "https://eaglela.com/events/mr-regiment-leather-2027-contest-victory-party/",
+      "website": "https://eaglela.com/events/mr-regiment-leather-2027-contest-meet-and-greet/",
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
       "shortName": "MR REGIMENT",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://eaglela.com/events/mr-regiment-leather-2027-contest-victory-party/",
+          "url": "https://eaglela.com/events/mr-regiment-leather-2027-contest-meet-and-greet/",
           "label": "🌐 Website"
         },
         {
@@ -169,690 +63,7 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "mr-regiment-leather-2027-contest-victory-party-19036134"
-    },
-    {
-      "name": "MR REGIMENT LEATHER 2027 CONTEST",
-      "day": "Saturday",
-      "time": "12AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 34.0912127,
-        "lng": -118.2840632
-      },
-      "startDate": "2026-09-19T00:00:00",
-      "unprocessedDescription": "description: Check back later for more details on this event\nb\rar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/MORE-INFO-Coming-Soon-1.jpg\nwebsite: https://eaglela.com/events/mr-regiment-leather-2027-contest/\ntimezone: America/Los_Angeles\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\naddress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\naddressSource: curated\npinSource: curated\ninstagram: dirtybird_la\nkey: mr-regiment-leather-2027-contest|2026-09-19|eagle la\nimageSource: og-image\nbarSource: venue-site\nbearSource: keyword\nshortName: MR REGIMENT",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "643976FE-F0EB-4FB4-98E2-FB111257D796",
-      "uid": "643976FE-F0EB-4FB4-98E2-FB111257D796",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Eagle LA",
-      "image": "https://eaglela.com/wp-content/uploads/MORE-INFO-Coming-Soon-1.jpg",
-      "tea": "Check back later for more details on this event",
-      "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
-      "website": "https://eaglela.com/events/mr-regiment-leather-2027-contest/",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
-      "shortName": "MR REGIMENT",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglela.com/events/mr-regiment-leather-2027-contest/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "mr-regiment-leather-2027-contest-2d4648a2"
-    },
-    {
-      "name": "MEGAWOOF",
-      "day": "Saturday",
-      "time": "10PM-5AM",
-      "eventType": "routine",
-      "recurring": false,
-      "startDate": "2025-10-25T22:00:00",
-      "endDate": "2025-10-26T05:00:00",
-      "unprocessedDescription": "description: D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY ED\rITION\ntimezone: America/Los_Angeles\nurl: https://linktr.ee/megawoof_america\nticketUrl: https://www.eventbrite.com/e/duro-megawoof-america-10-year-anniversary-edition-tickets-1688815666119\ncover: $22.10 - $39.98 (as of 10/1)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1121300433%2F185013722403%2F1%2Foriginal.20250911-154733?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=999820b38fc33236aa167ad0d4ea5f7a\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nkey: megawoof|2025-10-26||eventbrite",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "342C3C24-21CD-4149-8634-E60F5CB0A57A",
-      "uid": "342C3C24-21CD-4149-8634-E60F5CB0A57A",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "cover": "$22.10 - $39.98 (as of 10/1)",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1121300433%2F185013722403%2F1%2Foriginal.20250911-154733?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=999820b38fc33236aa167ad0d4ea5f7a",
-      "tea": "D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY EDITION",
-      "address": null,
-      "website": "https://linktr.ee/megawoof_america",
-      "instagram": "https://www.instagram.com/megawoof_america",
-      "ticketUrl": "https://www.eventbrite.com/e/duro-megawoof-america-10-year-anniversary-edition-tickets-1688815666119",
-      "shortName": "MEGA-WOOF",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://linktr.ee/megawoof_america",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/megawoof_america",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/duro-megawoof-america-10-year-anniversary-edition-tickets-1688815666119",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "megawoof-33341c08"
-    },
-    {
-      "name": "Bear Happy Hour",
-      "day": "Thursday",
-      "time": "5PM-9PM",
-      "eventType": "weekly",
-      "recurring": true,
-      "recurrence": "FREQ=WEEKLY",
-      "startDate": "2025-07-17T17:00:00",
-      "endDate": "2025-07-17T21:00:00",
-      "unprocessedDescription": "Bar: Check instagram for this week’s location.\nTea: Popular ha\rppy hour that changes location every week.\nShorter: BHH\nInstagram: https://www.instagram.com/bearhappyhourla\nWeb: https://linktr.ee/bearhappyhour",
-      "startTimezone": "America/Vancouver",
-      "endTimezone": "America/Vancouver",
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": false,
-      "sourceUid": "9vnvsm6kjpievu62279lco139k@google.com",
-      "uid": "9vnvsm6kjpievu62279lco139k@google.com",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Check instagram for this week’s location.",
-      "tea": "Popular happy hour that changes location every week.",
-      "address": null,
-      "website": "https://linktr.ee/bearhappyhour",
-      "instagram": "https://www.instagram.com/bearhappyhourla",
-      "shorterName": "BHH",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://linktr.ee/bearhappyhour",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearhappyhourla",
-          "label": "📷 Instagram"
-        }
-      ],
-      "slug": "bear-happy-hour-67a26f5d"
-    },
-    {
-      "name": "B BAR",
-      "day": "Thursday",
-      "time": "12AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 34.0912127,
-        "lng": -118.2840632
-      },
-      "startDate": "2026-08-20T00:00:00",
-      "unprocessedDescription": "description: BEARS CUBS OTTERS and OTHER FURRY CRITTERS!\nbar: \rEagle LA\naddress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\ntimezone: America/Los_Angeles\nimage: https://eaglela.com/wp-content/uploads/IG_B-Bar-poster-GENERIC-2026.jpg\ncover: NO COVER!\nimageSource: page\nbarSource: venue-site\naddressSource: curated\nwebsite: https://eaglela.com/events/b-bar/?occurrence=2026-08-20\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\npinSource: curated\ninstagram: dirtybird_la\nkey: b-bar|2026-08-20|eagle la\nbearSource: ai",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "C0DF64EA-F28C-406D-ACE8-95C7D09BC6A1",
-      "uid": "C0DF64EA-F28C-406D-ACE8-95C7D09BC6A1",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Eagle LA",
-      "cover": "NO COVER!",
-      "image": "https://eaglela.com/wp-content/uploads/IG_B-Bar-poster-GENERIC-2026.jpg",
-      "tea": "BEARS CUBS OTTERS and OTHER FURRY CRITTERS!",
-      "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
-      "website": "https://eaglela.com/events/b-bar/?occurrence=2026-08-20",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglela.com/events/b-bar/?occurrence=2026-08-20",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "b-bar-4fa6ffef"
-    },
-    {
-      "name": "CRUISE LA LEATHER & BOOTBLACK 2027 MEET & GREET",
-      "day": "Friday",
-      "time": "7:10PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 34.0912127,
-        "lng": -118.2840632
-      },
-      "startDate": "2026-10-16T19:10:00",
-      "endDate": "2026-10-17T02:00:00",
-      "unprocessedDescription": "description: CruiseLA Leather & Bootblack Contest Oct 16\\: Mee\rt & Greet Oct 17\\: Contest and Victory Party\nbar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/IMG_1968-2-Medium-square.jpeg\ncover: $7\nwebsite: https://eaglela.com/events/cruise-la-leather-bootblack-2027-meet-greet/\ntimezone: America/Los_Angeles\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\naddress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\naddressSource: curated\npinSource: curated\ninstagram: dirtybird_la\nkey: cruise-la-leather-bootblack-2027-meet-greet|2026-10-17|eagle la\nimageSource: og-image\nbarSource: venue-site\nbearSource: keyword\nshortName: CRUISE",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "B8521446-F0B6-4EB0-8654-231E7FBC20DE",
-      "uid": "B8521446-F0B6-4EB0-8654-231E7FBC20DE",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Eagle LA",
-      "cover": "$7",
-      "image": "https://eaglela.com/wp-content/uploads/IMG_1968-2-Medium-square.jpeg",
-      "tea": "CruiseLA Leather & Bootblack Contest Oct 16: Meet & Greet Oct 17: Contest and Victory Party",
-      "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
-      "website": "https://eaglela.com/events/cruise-la-leather-bootblack-2027-meet-greet/",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
-      "shortName": "CRUISE",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglela.com/events/cruise-la-leather-bootblack-2027-meet-greet/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "cruise-la-leather-bootblack-2027-meet-greet-31562c80"
-    },
-    {
-      "name": "MEAT RACK INFERNO",
-      "day": "Saturday",
-      "time": "8PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 34.0912127,
-        "lng": -118.2840632
-      },
-      "startDate": "2026-08-22T20:00:00",
-      "unprocessedDescription": "description: Meat Rack Inferno Aug 22 8pm $8\nbar: Eagle LA\nad\rdress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\ntimezone: America/Los_Angeles\nticketUrl: https://eaglela.com/events/meat-rack-inferno-4/\nimage: https://eaglela.com/wp-content/uploads/IG_M_Rack-poster-8_22_26.jpg\ncover: $8\nimageSource: page\nbarSource: venue-site\naddressSource: curated\nwebsite: https://eaglela.com/events/meat-rack-inferno-4/?occurrence=2026-08-22\ngmaps: https://www.google.com/maps/search/?api=1&query=34.0912127%2C-118.2840632\npinSource: curated\ninstagram: dirtybird_la\nkey: meat-rack-inferno|2026-08-23|eagle la\nbearSource: manual-bear (overrode ai\\: The title 'MEAT RACK INFERNO' and description 'Meat Rack Inferno Aug 22 8pm $...)\nshortName: MEAT RACK",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "4B60BF32-88E7-462E-AE12-656483BD4010",
-      "uid": "4B60BF32-88E7-462E-AE12-656483BD4010",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Eagle LA",
-      "cover": "$8",
-      "image": "https://eaglela.com/wp-content/uploads/IG_M_Rack-poster-8_22_26.jpg",
-      "tea": "Meat Rack Inferno Aug 22 8pm $8",
-      "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
-      "website": "https://eaglela.com/events/meat-rack-inferno-4/?occurrence=2026-08-22",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=34.0912127%2C-118.2840632",
-      "ticketUrl": "https://eaglela.com/events/meat-rack-inferno-4/",
-      "shortName": "MEAT RACK",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglela.com/events/meat-rack-inferno-4/?occurrence=2026-08-22",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=34.0912127%2C-118.2840632",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://eaglela.com/events/meat-rack-inferno-4/",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "meat-rack-inferno-4640259e"
-    },
-    {
-      "name": "Bear Happy Hour",
-      "day": "Thursday",
-      "time": "5PM-9PM",
-      "eventType": "routine",
-      "recurring": false,
-      "recurrence": null,
-      "coordinates": {
-        "lat": 34.0912127,
-        "lng": -118.2840632
-      },
-      "startDate": "2026-09-03T17:00:00",
-      "endDate": "2026-09-03T21:00:00",
-      "unprocessedDescription": "bar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/BH\rH-IG.png\nwebsite: https://eaglela.com/events/bear-happy-hour-2/\ntimezone: America/Los_Angeles\naddress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\nshortName: BHH\nshorterName: BHH\nfavicon: https://linktr.ee/bearhappyhour\nkey: bear-happy-hour|2026-09-04|eagle la\nbearSource: keyword\noverrideUid: 9vnvsm6kjpievu62279lco139k@google.com\noverrideRecurrenceId: 20260904T000000Z\ndescription: Bear Happy Hour First Thursdays 5pm\ninstagram: https://www.instagram.com/bearhappyhourla\npinSource: curated\naddressSource: curated\nimageSource: og-image\nbarSource: venue-site\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "0D41B297-305A-4600-AE2C-40B3BA8EF7BC",
-      "uid": "9vnvsm6kjpievu62279lco139k@google.com",
-      "recurrenceId": "2026-09-03T17:00:00",
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": "custom",
-      "bar": "Eagle LA",
-      "image": "https://eaglela.com/wp-content/uploads/BHH-IG.png",
-      "favicon": "https://linktr.ee/bearhappyhour",
-      "tea": "Bear Happy Hour First Thursdays 5pm",
-      "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
-      "website": "https://eaglela.com/events/bear-happy-hour-2/",
-      "instagram": "https://www.instagram.com/bearhappyhourla",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
-      "shortName": "BHH",
-      "shorterName": "BHH",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglela.com/events/bear-happy-hour-2/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearhappyhourla",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "bear-happy-hour-53b6c34e"
-    },
-    {
-      "name": "MEGAWOOF PRIDE - FREE - JUNE 6th FREE TKTS @The Globe",
-      "day": "Saturday",
-      "time": "9PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 34.044092,
-        "lng": -118.2542355
-      },
-      "startDate": "2026-06-06T21:00:00",
-      "endDate": "2026-06-07T02:00:00",
-      "unprocessedDescription": "description: MEGAWOOF PRIDE - FIRST 200 TICKETS FREE -\nbar: Th\re Globe\naddress: 740 South Broadway, Los Angeles, CA 90014\nticketUrl: https://www.eventbrite.com/e/megawoof-pride-free-june-6th-free-tkts-the-globe-tickets-1987743346859\ninstagram: https://www.instagram.com/megawoof_america\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1183615730%2F185013722403%2F1%2Foriginal.20260503-000457?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=bffadc80cfbaa15ecbe0f81f67bae150\ncover: FREE\nshortName: MEGA-WOOF\n_aiPrompts\\: [object Object],[object Object]\n_aiValidation\\: [object Object]\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Globe%2C%20740%20South%20Broadway%2C%20Los%20Angeles%2C%20CA%2090014\nkey: megawoof-pride-free-june-6th-free-tkts-the-globe|2026-06-07|the globe",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "FC6AD30A-ABEE-4135-91A0-18E30D96674D",
-      "uid": "FC6AD30A-ABEE-4135-91A0-18E30D96674D",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 1,
-      "overrideIdentityType": null,
-      "bar": "The Globe",
-      "cover": "FREE",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1183615730%2F185013722403%2F1%2Foriginal.20260503-000457?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=bffadc80cfbaa15ecbe0f81f67bae150",
-      "tea": "MEGAWOOF PRIDE - FIRST 200 TICKETS FREE -",
-      "address": "740 South Broadway, Los Angeles, CA 90014",
-      "website": "https://linktr.ee/megawoof_america",
-      "instagram": "https://www.instagram.com/megawoof_america",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=The%20Globe%2C%20740%20South%20Broadway%2C%20Los%20Angeles%2C%20CA%2090014",
-      "ticketUrl": "https://www.eventbrite.com/e/megawoof-pride-free-june-6th-free-tkts-the-globe-tickets-1987743346859",
-      "shortName": "MEGA-WOOF",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://linktr.ee/megawoof_america",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/megawoof_america",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=The%20Globe%2C%20740%20South%20Broadway%2C%20Los%20Angeles%2C%20CA%2090014",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/megawoof-pride-free-june-6th-free-tkts-the-globe-tickets-1987743346859",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "megawoof-pride-free-june-6th-free-tkts-the-globe-0bb27076"
-    },
-    {
-      "name": "SUNDAY BEER BUST",
-      "day": "Sunday",
-      "time": "2PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 34.0912127,
-        "lng": -118.2840632
-      },
-      "startDate": "2026-08-09T14:00:00",
-      "unprocessedDescription": "bar: Eagle LA\naddress: 4219 Santa Monica Blvd, Los Angeles, \rCA 90029\ntimezone: America/Los_Angeles\nticketUrl: https://eaglela.com/events/sunday-beer-bust-4/\nimage: https://eaglela.com/wp-content/uploads/Sun-Beer-Bust-poster-2024-web-1.jpg\ncover: NO COVER\nimageVertical: https://eaglela.com/wp-content/uploads/Sun-Beer-Bust-poster-2024-web-1.jpg\naddressSource: curated\nwebsite: https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-08-09\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\npinSource: curated\ninstagram: dirtybird_la\nkey: sunday-beer-bust|2026-08-09|eagle la\ndescription: BEAR BUST\nBar Opens 2PM\nNO COVER\n5 DOMESTIC DRAFTS\nimageSource: og-image\nbarSource: venue-site\nbearSource: ai",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "CA8D02F4-CC9F-414D-913F-5E782016485D",
-      "uid": "CA8D02F4-CC9F-414D-913F-5E782016485D",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Eagle LA",
-      "cover": "NO COVER",
-      "image": "https://eaglela.com/wp-content/uploads/Sun-Beer-Bust-poster-2024-web-1.jpg",
-      "imageVertical": "https://eaglela.com/wp-content/uploads/Sun-Beer-Bust-poster-2024-web-1.jpg",
-      "tea": "BEAR BUST",
-      "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
-      "website": "https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-08-09",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
-      "ticketUrl": "https://eaglela.com/events/sunday-beer-bust-4/",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-08-09",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://eaglela.com/events/sunday-beer-bust-4/",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "sunday-beer-bust-64216cca"
-    },
-    {
-      "name": "JOCKSTRAPPED",
-      "day": "Friday",
-      "time": "12AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 34.0912127,
-        "lng": -118.2840632
-      },
-      "startDate": "2026-09-11T00:00:00",
-      "unprocessedDescription": "description: Check back later for more details on this event\nb\rar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/MORE-INFO-Coming-Soon-1.jpg\nwebsite: https://eaglela.com/events/jockstrapped-3/\ntimezone: America/Los_Angeles\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\naddress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\naddressSource: curated\npinSource: curated\ninstagram: dirtybird_la\nkey: jockstrapped|2026-09-11|eagle la\nimageSource: og-image\nbarSource: venue-site\nbearSource: keyword\nshortName: JOCK-STRAPPED",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "C9F89688-89D5-4288-B774-251EDF8EFCAB",
-      "uid": "C9F89688-89D5-4288-B774-251EDF8EFCAB",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Eagle LA",
-      "image": "https://eaglela.com/wp-content/uploads/MORE-INFO-Coming-Soon-1.jpg",
-      "tea": "Check back later for more details on this event",
-      "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
-      "website": "https://eaglela.com/events/jockstrapped-3/",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
-      "shortName": "JOCK-STRAPPED",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglela.com/events/jockstrapped-3/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "jockstrapped-0bfa1a7d"
-    },
-    {
-      "name": "MEGAWOOF AMERICA - LONG BEACH PRIDE",
-      "day": "Saturday",
-      "time": "9PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 33.874454,
-        "lng": -118.1680614
-      },
-      "startDate": "2026-05-16T21:00:00",
-      "endDate": "2026-05-17T02:00:00",
-      "unprocessedDescription": "description: MEGAWOOF AMERICA - LONG BEACH PRIDE\nbar: Falcon N\rorth\naddress: 2020 East Artesia Boulevard, Long Beach, CA 90805\nticketUrl: https://www.eventbrite.com/e/megawoof-america-long-beach-pride-tickets-1986926425425\ninstagram: https://www.instagram.com/megawoof_america\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181624525%2F185013722403%2F1%2Foriginal.20260407-190035?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=251ea205299011add78dbf1d4b7fe8bd\ncover: $11.58-$22.09\nshortName: MEGA-WOOF\n_aiPrompts\\: [object Object],[object Object],[object Object]\n_aiValidation\\: [object Object]\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=Falcon%20North%2C%202020%20East%20Artesia%20Boulevard%2C%20Long%20Beach%2C%20CA%2090805\nkey: megawoof-america-long-beach-pride|2026-05-17|falcon north",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "F5435015-D350-4B57-8C02-6227EB96FDE1",
-      "uid": "F5435015-D350-4B57-8C02-6227EB96FDE1",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 1,
-      "overrideIdentityType": null,
-      "bar": "Falcon North",
-      "cover": "$11.58-$22.09",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181624525%2F185013722403%2F1%2Foriginal.20260407-190035?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=251ea205299011add78dbf1d4b7fe8bd",
-      "tea": "MEGAWOOF AMERICA - LONG BEACH PRIDE",
-      "address": "2020 East Artesia Boulevard, Long Beach, CA 90805",
-      "website": "https://linktr.ee/megawoof_america",
-      "instagram": "https://www.instagram.com/megawoof_america",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Falcon%20North%2C%202020%20East%20Artesia%20Boulevard%2C%20Long%20Beach%2C%20CA%2090805",
-      "ticketUrl": "https://www.eventbrite.com/e/megawoof-america-long-beach-pride-tickets-1986926425425",
-      "shortName": "MEGA-WOOF",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://linktr.ee/megawoof_america",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/megawoof_america",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Falcon%20North%2C%202020%20East%20Artesia%20Boulevard%2C%20Long%20Beach%2C%20CA%2090805",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/megawoof-america-long-beach-pride-tickets-1986926425425",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "megawoof-america-long-beach-pride-152ddd6b"
-    },
-    {
-      "name": "MEGAWOOF",
-      "day": "Saturday",
-      "time": "9PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 33.87445400000001,
-        "lng": -118.1680614
-      },
-      "startDate": "2025-08-30T21:00:00",
-      "endDate": "2025-08-31T02:00:00",
-      "unprocessedDescription": "description: LONG BEACH — WE’RE BACK! \n The bears of MEGAWOOF \r\nreturn to close out the Summer Tour in you —\nSATURDAY, AUGUST 30th  and it’s all goin\nbar: Falcon North\naddress: 2020 East Artesia Boulevard, Long Beach, CA 90805\ntimezone: America/Los_Angeles\nurl: https://www.eventbrite.com/e/megawoof-america-bear-watchers-long-beach-tickets-1520432868639\nticketUrl: https://www.eventbrite.com/e/megawoof-america-bear-watchers-long-beach-tickets-1520432868639\ncover: $11.58 - $20 (as of 8/30)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1080748773%2F185013722403%2F1%2Foriginal.20250724-190615?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=6b2534b07c6687d67975f54c65af5b3a\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=33.87445400000001%2C-118.1680614&query_place_id=ChIJ91NzVy4z3YARBNuS8BZHBGg\nkey: megawoof|2025-08-31|falcon north|eventbrite",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "848D15A3-27B4-4F56-AAD0-9D7D66DD12A1",
-      "uid": "848D15A3-27B4-4F56-AAD0-9D7D66DD12A1",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Falcon North",
-      "cover": "$11.58 - $20 (as of 8/30)",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1080748773%2F185013722403%2F1%2Foriginal.20250724-190615?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=6b2534b07c6687d67975f54c65af5b3a",
-      "tea": "LONG BEACH — WE’RE BACK!",
-      "address": "2020 East Artesia Boulevard, Long Beach, CA 90805",
-      "website": "https://www.eventbrite.com/e/megawoof-america-bear-watchers-long-beach-tickets-1520432868639",
-      "instagram": "https://www.instagram.com/megawoof_america",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=33.87445400000001%2C-118.1680614&query_place_id=ChIJ91NzVy4z3YARBNuS8BZHBGg",
-      "ticketUrl": "https://www.eventbrite.com/e/megawoof-america-bear-watchers-long-beach-tickets-1520432868639",
-      "shortName": "MEGA-WOOF",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.eventbrite.com/e/megawoof-america-bear-watchers-long-beach-tickets-1520432868639",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/megawoof_america",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=33.87445400000001%2C-118.1680614&query_place_id=ChIJ91NzVy4z3YARBNuS8BZHBGg",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/megawoof-america-bear-watchers-long-beach-tickets-1520432868639",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "megawoof-6062add7"
-    },
-    {
-      "name": "MEAT RACK",
-      "day": "Saturday",
-      "time": "8PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 34.0912127,
-        "lng": -118.2840632
-      },
-      "startDate": "2026-09-12T20:00:00",
-      "unprocessedDescription": "description: Meat Rack 2nd and 4th Saturday of each month 8pm $\r8\nbar: Eagle LA\naddress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\ntimezone: America/Los_Angeles\nimage: https://eaglela.com/wp-content/uploads/IG_M_Rack-poster-GENERIC-2026.jpg\ncover: $8\naddressSource: curated\nwebsite: https://eaglela.com/events/meat-rack-8/\ngmaps: https://www.google.com/maps/search/?api=1&query=34.0912127%2C-118.2840632\npinSource: curated\ninstagram: dirtybird_la\nkey: meat-rack|2026-09-13|eagle la\nimageSource: og-image\nbarSource: venue-site\nbearSource: manual-bear (overrode ai\\: The title 'MEAT RACK' and description 'Meat Rack 2nd and 4th Saturday of each...)",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "003A5B83-94AE-4EF2-BC9F-B8A0EF5373EA",
-      "uid": "003A5B83-94AE-4EF2-BC9F-B8A0EF5373EA",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Eagle LA",
-      "cover": "$8",
-      "image": "https://eaglela.com/wp-content/uploads/IG_M_Rack-poster-GENERIC-2026.jpg",
-      "tea": "Meat Rack 2nd and 4th Saturday of each month 8pm $8",
-      "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
-      "website": "https://eaglela.com/events/meat-rack-8/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=34.0912127%2C-118.2840632",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglela.com/events/meat-rack-8/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=34.0912127%2C-118.2840632",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "meat-rack-5101313e"
-    },
-    {
-      "name": "SUNDAY BEER BUST",
-      "day": "Sunday",
-      "time": "2PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 34.0912127,
-        "lng": -118.2840632
-      },
-      "startDate": "2026-08-16T14:00:00",
-      "unprocessedDescription": "description: Bar Opens 2PM\nNO COVER\n5 DOMESTIC DRAFTS\nbar: E\ragle LA\nimage: https://eaglela.com/wp-content/uploads/Sun-Beer-Bust-poster-2024-web-1-300x300.jpg\nimageSource: page\nbarSource: venue-site\nwebsite: https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-08-16\ntimezone: America/Los_Angeles\ngmaps: https://www.google.com/maps/search/?api=1&query=34.0912127%2C-118.2840632\naddress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\naddressSource: curated\npinSource: curated\ninstagram: dirtybird_la\nkey: sunday-beer-bust|2026-08-16|eagle la\nbearSource: manual-bear (overrode ai\\: The title 'SUNDAY BEER BUST' and description mention only generic bar ameniti...)",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "8A37EE5E-36ED-40B5-8F73-A22D00CA0178",
-      "uid": "8A37EE5E-36ED-40B5-8F73-A22D00CA0178",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Eagle LA",
-      "image": "https://eaglela.com/wp-content/uploads/Sun-Beer-Bust-poster-2024-web-1-300x300.jpg",
-      "tea": "Bar Opens 2PM",
-      "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
-      "website": "https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-08-16",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=34.0912127%2C-118.2840632",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-08-16",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=34.0912127%2C-118.2840632",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "sunday-beer-bust-33056523"
+      "slug": "mr-regiment-leather-2027-contest-meet-and-greet-6f204f3b"
     },
     {
       "name": "MEAT RACK",
@@ -901,58 +112,6 @@
       "slug": "meat-rack-5a8ef73f"
     },
     {
-      "name": "MEGAWOOF",
-      "day": "Saturday",
-      "time": "10PM-3AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 33.9139036,
-        "lng": -118.2805709
-      },
-      "startDate": "2025-08-16T22:00:00",
-      "endDate": "2025-08-17T03:00:00",
-      "unprocessedDescription": "description: Location TBA, but likely in a dark DTLA warehouse\r 😈 Be sure to follow them on IG for location, updates, and more!\ninstagram: https://www.instagram.com/megawoof_america\nkey: megawoof|2025-08-17|tba|eventbrite\nbar: Sanctuary Studios\nurl: https://www.eventbrite.com/e/duro-summer-night-foam-edition-tickets-1446957562019\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1096137783%2F185013722403%2F1%2Foriginal.20250814-194101?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=f20000487492df90f51bb44fe04473cb\nshortName: MEGA-WOOF\nwebsite: https://www.eventbrite.com/e/duro-summer-night-foam-edition-tickets-1446957562019\ncover: $11.58 - $36.83 (as of 8/16)\ngmaps: https://www.google.com/maps/search/?api=1&query=33.9139036%2C-118.2805709&query_place_id=ChIJg2cOgOq2woAR8bONfuIJg_k\naddress: 13012 Athens Way, Los Angeles, CA 90061\naddressSource: inferred",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "1o1kijpavt9mfq2f5bbtcj4jng@google.com",
-      "uid": "1o1kijpavt9mfq2f5bbtcj4jng@google.com",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 1,
-      "overrideIdentityType": null,
-      "bar": "Sanctuary Studios",
-      "cover": "$11.58 - $36.83 (as of 8/16)",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1096137783%2F185013722403%2F1%2Foriginal.20250814-194101?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=f20000487492df90f51bb44fe04473cb",
-      "tea": "Location TBA, but likely in a dark DTLA warehouse 😈 Be sure to follow them on IG for location, updates, and more!",
-      "address": "13012 Athens Way, Los Angeles, CA 90061",
-      "website": "https://www.eventbrite.com/e/duro-summer-night-foam-edition-tickets-1446957562019",
-      "instagram": "https://www.instagram.com/megawoof_america",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=33.9139036%2C-118.2805709&query_place_id=ChIJg2cOgOq2woAR8bONfuIJg_k",
-      "shortName": "MEGA-WOOF",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.eventbrite.com/e/duro-summer-night-foam-edition-tickets-1446957562019",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/megawoof_america",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=33.9139036%2C-118.2805709&query_place_id=ChIJg2cOgOq2woAR8bONfuIJg_k",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "megawoof-69e037bc"
-    },
-    {
       "name": "MR BEAR LA AND CUB LA 2027 CONTEST",
       "day": "Saturday",
       "time": "9PM-2AM",
@@ -997,6 +156,188 @@
         }
       ],
       "slug": "mr-bear-la-and-cub-la-2027-contest-6efae77d"
+    },
+    {
+      "name": "MR REGIMENT LEATHER 2027 CONTEST VICTORY PARTY",
+      "day": "Sunday",
+      "time": "12AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 34.0912127,
+        "lng": -118.2840632
+      },
+      "startDate": "2026-09-20T00:00:00",
+      "unprocessedDescription": "description: Check back later for more details on this event\nb\rar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/MORE-INFO-Coming-Soon-1.jpg\nwebsite: https://eaglela.com/events/mr-regiment-leather-2027-contest-victory-party/\ntimezone: America/Los_Angeles\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\naddress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\naddressSource: curated\npinSource: curated\ninstagram: dirtybird_la\nkey: mr-regiment-leather-2027-contest-victory-party|2026-09-20|eagle la\nimageSource: og-image\nbarSource: venue-site\nbearSource: keyword\nshortName: MR REGIMENT",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "F06200CE-BC07-4C30-95BF-E305741074A5",
+      "uid": "F06200CE-BC07-4C30-95BF-E305741074A5",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle LA",
+      "image": "https://eaglela.com/wp-content/uploads/MORE-INFO-Coming-Soon-1.jpg",
+      "tea": "Check back later for more details on this event",
+      "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
+      "website": "https://eaglela.com/events/mr-regiment-leather-2027-contest-victory-party/",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+      "shortName": "MR REGIMENT",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglela.com/events/mr-regiment-leather-2027-contest-victory-party/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "mr-regiment-leather-2027-contest-victory-party-19036134"
+    },
+    {
+      "name": "CLUB CHUB",
+      "day": "Sunday",
+      "time": "3PM-9PM",
+      "eventType": "monthly",
+      "recurring": true,
+      "recurrence": "FREQ=MONTHLY;BYDAY=3SU",
+      "coordinates": {
+        "lat": 34.0498043,
+        "lng": -118.2493258
+      },
+      "startDate": "2025-07-20T15:00:00",
+      "endDate": "2025-07-20T21:00:00",
+      "unprocessedDescription": "shortName: CLUB CHUB\nbar: Precinct DTLA\naddress: 357 S Broadw\ray, Los Angeles, CA 90013\ntimezone: America/Los_Angeles\nwebsite: https://www.clubchubusa.com/\ninstagram: https://www.instagram.com/clubchubparty?igsh=MWxjZHprZnl6NWc0NQ==\ngmaps: https://maps.app.goo.gl/pfwrr6oMcbTvdFtx7?g_st=ipc",
+      "startTimezone": "America/Los_Angeles",
+      "endTimezone": "America/Los_Angeles",
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": false,
+      "sourceUid": "club-chub-20260822T193139Z@chunky.dad",
+      "uid": "club-chub-20260822T193139Z@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Precinct DTLA",
+      "address": "357 S Broadway, Los Angeles, CA 90013",
+      "website": "https://www.clubchubusa.com/",
+      "instagram": "https://www.instagram.com/clubchubparty?igsh=MWxjZHprZnl6NWc0NQ==",
+      "gmaps": "https://maps.app.goo.gl/pfwrr6oMcbTvdFtx7?g_st=ipc",
+      "shortName": "CLUB CHUB",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.clubchubusa.com/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/clubchubparty?igsh=MWxjZHprZnl6NWc0NQ==",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://maps.app.goo.gl/pfwrr6oMcbTvdFtx7?g_st=ipc",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "club-chub-39a3a8bd"
+    },
+    {
+      "name": "Bear Happy Hour",
+      "day": "Thursday",
+      "time": "5PM-9PM",
+      "eventType": "weekly",
+      "recurring": true,
+      "recurrence": "FREQ=WEEKLY",
+      "startDate": "2025-07-17T17:00:00",
+      "endDate": "2025-07-17T21:00:00",
+      "unprocessedDescription": "Bar: Check instagram for this week’s location.\nTea: Popular ha\rppy hour that changes location every week.\nShorter: BHH\nInstagram: https://www.instagram.com/bearhappyhourla\nWeb: https://linktr.ee/bearhappyhour",
+      "startTimezone": "America/Vancouver",
+      "endTimezone": "America/Vancouver",
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": false,
+      "sourceUid": "9vnvsm6kjpievu62279lco139k@google.com",
+      "uid": "9vnvsm6kjpievu62279lco139k@google.com",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Check instagram for this week’s location.",
+      "tea": "Popular happy hour that changes location every week.",
+      "address": null,
+      "website": "https://linktr.ee/bearhappyhour",
+      "instagram": "https://www.instagram.com/bearhappyhourla",
+      "shorterName": "BHH",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/bearhappyhour",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearhappyhourla",
+          "label": "📷 Instagram"
+        }
+      ],
+      "slug": "bear-happy-hour-67a26f5d"
+    },
+    {
+      "name": "MEGAWOOF",
+      "day": "Saturday",
+      "time": "10PM-5AM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2025-10-25T22:00:00",
+      "endDate": "2025-10-26T05:00:00",
+      "unprocessedDescription": "description: D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY ED\rITION\ntimezone: America/Los_Angeles\nurl: https://linktr.ee/megawoof_america\nticketUrl: https://www.eventbrite.com/e/duro-megawoof-america-10-year-anniversary-edition-tickets-1688815666119\ncover: $22.10 - $39.98 (as of 10/1)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1121300433%2F185013722403%2F1%2Foriginal.20250911-154733?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=999820b38fc33236aa167ad0d4ea5f7a\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nkey: megawoof|2025-10-26||eventbrite",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "342C3C24-21CD-4149-8634-E60F5CB0A57A",
+      "uid": "342C3C24-21CD-4149-8634-E60F5CB0A57A",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "cover": "$22.10 - $39.98 (as of 10/1)",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1121300433%2F185013722403%2F1%2Foriginal.20250911-154733?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=999820b38fc33236aa167ad0d4ea5f7a",
+      "tea": "D>U>R>O  - MEGAWOOF AMERICA 10 YEAR ANNIVERSARY EDITION",
+      "address": null,
+      "website": "https://linktr.ee/megawoof_america",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "ticketUrl": "https://www.eventbrite.com/e/duro-megawoof-america-10-year-anniversary-edition-tickets-1688815666119",
+      "shortName": "MEGA-WOOF",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/megawoof_america",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/megawoof_america",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/duro-megawoof-america-10-year-anniversary-edition-tickets-1688815666119",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "megawoof-33341c08"
     },
     {
       "name": "CLUB CHUB: QUENCHD",
@@ -1058,48 +399,113 @@
       "slug": "club-chub-quenchd-21628c63"
     },
     {
-      "name": "MR REGIMENT LEATHER 2027 CONTEST MEET AND GREET",
-      "day": "Friday",
-      "time": "12AM",
+      "name": "MEAT RACK INFERNO",
+      "day": "Saturday",
+      "time": "8PM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
         "lat": 34.0912127,
         "lng": -118.2840632
       },
-      "startDate": "2026-09-18T00:00:00",
-      "unprocessedDescription": "description: Check back later for more details on this event\nb\rar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/MORE-INFO-Coming-Soon-1.jpg\nwebsite: https://eaglela.com/events/mr-regiment-leather-2027-contest-meet-and-greet/\ntimezone: America/Los_Angeles\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\naddress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\naddressSource: curated\npinSource: curated\ninstagram: dirtybird_la\nkey: mr-regiment-leather-2027-contest-meet-and-greet|2026-09-18|eagle la\nimageSource: og-image\nbarSource: venue-site\nbearSource: keyword\nshortName: MR REGIMENT",
+      "startDate": "2026-08-22T20:00:00",
+      "unprocessedDescription": "description: Meat Rack Inferno Aug 22 8pm $8\nbar: Eagle LA\nad\rdress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\ntimezone: America/Los_Angeles\nticketUrl: https://eaglela.com/events/meat-rack-inferno-4/\nimage: https://eaglela.com/wp-content/uploads/IG_M_Rack-poster-8_22_26.jpg\ncover: $8\nimageSource: page\nbarSource: venue-site\naddressSource: curated\nwebsite: https://eaglela.com/events/meat-rack-inferno-4/?occurrence=2026-08-22\ngmaps: https://www.google.com/maps/search/?api=1&query=34.0912127%2C-118.2840632\npinSource: curated\ninstagram: dirtybird_la\nkey: meat-rack-inferno|2026-08-23|eagle la\nbearSource: manual-bear (overrode ai\\: The title 'MEAT RACK INFERNO' and description 'Meat Rack Inferno Aug 22 8pm $...)\nshortName: MEAT RACK",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Los_Angeles",
       "wasUTC": true,
-      "sourceUid": "84CA3B01-F9CF-45E2-A249-2D2C8D1D9297",
-      "uid": "84CA3B01-F9CF-45E2-A249-2D2C8D1D9297",
+      "sourceUid": "4B60BF32-88E7-462E-AE12-656483BD4010",
+      "uid": "4B60BF32-88E7-462E-AE12-656483BD4010",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "Eagle LA",
-      "image": "https://eaglela.com/wp-content/uploads/MORE-INFO-Coming-Soon-1.jpg",
-      "tea": "Check back later for more details on this event",
+      "cover": "$8",
+      "image": "https://eaglela.com/wp-content/uploads/IG_M_Rack-poster-8_22_26.jpg",
+      "tea": "Meat Rack Inferno Aug 22 8pm $8",
       "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
-      "website": "https://eaglela.com/events/mr-regiment-leather-2027-contest-meet-and-greet/",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
-      "shortName": "MR REGIMENT",
+      "website": "https://eaglela.com/events/meat-rack-inferno-4/?occurrence=2026-08-22",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=34.0912127%2C-118.2840632",
+      "ticketUrl": "https://eaglela.com/events/meat-rack-inferno-4/",
+      "shortName": "MEAT RACK",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://eaglela.com/events/mr-regiment-leather-2027-contest-meet-and-greet/",
+          "url": "https://eaglela.com/events/meat-rack-inferno-4/?occurrence=2026-08-22",
           "label": "🌐 Website"
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+          "url": "https://www.google.com/maps/search/?api=1&query=34.0912127%2C-118.2840632",
           "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://eaglela.com/events/meat-rack-inferno-4/",
+          "label": "🎫 Tickets"
         }
       ],
-      "slug": "mr-regiment-leather-2027-contest-meet-and-greet-6f204f3b"
+      "slug": "meat-rack-inferno-4640259e"
+    },
+    {
+      "name": "MEGAWOOF PRIDE - FREE - JUNE 6th FREE TKTS @The Globe",
+      "day": "Saturday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 34.044092,
+        "lng": -118.2542355
+      },
+      "startDate": "2026-06-06T21:00:00",
+      "endDate": "2026-06-07T02:00:00",
+      "unprocessedDescription": "description: MEGAWOOF PRIDE - FIRST 200 TICKETS FREE -\nbar: Th\re Globe\naddress: 740 South Broadway, Los Angeles, CA 90014\nticketUrl: https://www.eventbrite.com/e/megawoof-pride-free-june-6th-free-tkts-the-globe-tickets-1987743346859\ninstagram: https://www.instagram.com/megawoof_america\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1183615730%2F185013722403%2F1%2Foriginal.20260503-000457?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=bffadc80cfbaa15ecbe0f81f67bae150\ncover: FREE\nshortName: MEGA-WOOF\n_aiPrompts\\: [object Object],[object Object]\n_aiValidation\\: [object Object]\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Globe%2C%20740%20South%20Broadway%2C%20Los%20Angeles%2C%20CA%2090014\nkey: megawoof-pride-free-june-6th-free-tkts-the-globe|2026-06-07|the globe",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "FC6AD30A-ABEE-4135-91A0-18E30D96674D",
+      "uid": "FC6AD30A-ABEE-4135-91A0-18E30D96674D",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 1,
+      "overrideIdentityType": null,
+      "bar": "The Globe",
+      "cover": "FREE",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1183615730%2F185013722403%2F1%2Foriginal.20260503-000457?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=bffadc80cfbaa15ecbe0f81f67bae150",
+      "tea": "MEGAWOOF PRIDE - FIRST 200 TICKETS FREE -",
+      "address": "740 South Broadway, Los Angeles, CA 90014",
+      "website": "https://linktr.ee/megawoof_america",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=The%20Globe%2C%20740%20South%20Broadway%2C%20Los%20Angeles%2C%20CA%2090014",
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-pride-free-june-6th-free-tkts-the-globe-tickets-1987743346859",
+      "shortName": "MEGA-WOOF",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/megawoof_america",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/megawoof_america",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=The%20Globe%2C%20740%20South%20Broadway%2C%20Los%20Angeles%2C%20CA%2090014",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/megawoof-pride-free-june-6th-free-tkts-the-globe-tickets-1987743346859",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "megawoof-pride-free-june-6th-free-tkts-the-globe-0bb27076"
     },
     {
       "name": "Club Chub Presents The Monster Ball Long Beach",
@@ -1161,98 +567,62 @@
       "slug": "club-chub-presents-the-monster-ball-long-beach-5b5b4549"
     },
     {
-      "name": "MR BEAR LA 2027 VICTORY PARTY",
-      "day": "Sunday",
-      "time": "12AM",
+      "name": "MEGAWOOF",
+      "day": "Saturday",
+      "time": "9PM-2AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
-        "lat": 34.0912127,
-        "lng": -118.2840632
+        "lat": 33.87445400000001,
+        "lng": -118.1680614
       },
-      "startDate": "2026-08-16T00:00:00",
-      "unprocessedDescription": "description: Check back later for more details on this event\nb\rar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/MORE-INFO-Coming-Soon-1.jpg\nwebsite: https://eaglela.com/events/mr-bear-la-2027-victory-party/?occurrence=2026-08-16\ntimezone: America/Los_Angeles\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\naddress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\naddressSource: curated\npinSource: curated\ninstagram: dirtybird_la\nkey: mr-bear-la-2027-victory-party|2026-08-16|eagle la\nimageSource: page\nbarSource: venue-site\nbearSource: keyword\nshortName: MR BEAR LA 2027",
+      "startDate": "2025-08-30T21:00:00",
+      "endDate": "2025-08-31T02:00:00",
+      "unprocessedDescription": "description: LONG BEACH — WE’RE BACK! \n The bears of MEGAWOOF \r\nreturn to close out the Summer Tour in you —\nSATURDAY, AUGUST 30th  and it’s all goin\nbar: Falcon North\naddress: 2020 East Artesia Boulevard, Long Beach, CA 90805\ntimezone: America/Los_Angeles\nurl: https://www.eventbrite.com/e/megawoof-america-bear-watchers-long-beach-tickets-1520432868639\nticketUrl: https://www.eventbrite.com/e/megawoof-america-bear-watchers-long-beach-tickets-1520432868639\ncover: $11.58 - $20 (as of 8/30)\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1080748773%2F185013722403%2F1%2Foriginal.20250724-190615?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=6b2534b07c6687d67975f54c65af5b3a\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=33.87445400000001%2C-118.1680614&query_place_id=ChIJ91NzVy4z3YARBNuS8BZHBGg\nkey: megawoof|2025-08-31|falcon north|eventbrite",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Los_Angeles",
       "wasUTC": true,
-      "sourceUid": "12BD0385-90AC-4082-84EB-0E0A5AE13851",
-      "uid": "12BD0385-90AC-4082-84EB-0E0A5AE13851",
+      "sourceUid": "848D15A3-27B4-4F56-AAD0-9D7D66DD12A1",
+      "uid": "848D15A3-27B4-4F56-AAD0-9D7D66DD12A1",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "Eagle LA",
-      "image": "https://eaglela.com/wp-content/uploads/MORE-INFO-Coming-Soon-1.jpg",
-      "tea": "Check back later for more details on this event",
-      "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
-      "website": "https://eaglela.com/events/mr-bear-la-2027-victory-party/?occurrence=2026-08-16",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
-      "shortName": "MR BEAR LA 2027",
+      "bar": "Falcon North",
+      "cover": "$11.58 - $20 (as of 8/30)",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1080748773%2F185013722403%2F1%2Foriginal.20250724-190615?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=6b2534b07c6687d67975f54c65af5b3a",
+      "tea": "LONG BEACH — WE’RE BACK!",
+      "address": "2020 East Artesia Boulevard, Long Beach, CA 90805",
+      "website": "https://www.eventbrite.com/e/megawoof-america-bear-watchers-long-beach-tickets-1520432868639",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=33.87445400000001%2C-118.1680614&query_place_id=ChIJ91NzVy4z3YARBNuS8BZHBGg",
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-america-bear-watchers-long-beach-tickets-1520432868639",
+      "shortName": "MEGA-WOOF",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://eaglela.com/events/mr-bear-la-2027-victory-party/?occurrence=2026-08-16",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "mr-bear-la-2027-victory-party-469adae6"
-    },
-    {
-      "name": "CLUB CHUB",
-      "day": "Sunday",
-      "time": "3PM-9PM",
-      "eventType": "monthly",
-      "recurring": true,
-      "recurrence": "FREQ=MONTHLY;BYDAY=3SU",
-      "coordinates": {
-        "lat": 34.0498043,
-        "lng": -118.2493258
-      },
-      "startDate": "2025-07-20T15:00:00",
-      "endDate": "2025-07-20T21:00:00",
-      "unprocessedDescription": "shortName: CLUB CHUB\nbar: Precinct DTLA\naddress: 357 S Broadw\ray, Los Angeles, CA 90013\ntimezone: America/Los_Angeles\nwebsite: https://www.clubchubusa.com/\ninstagram: https://www.instagram.com/clubchubparty?igsh=MWxjZHprZnl6NWc0NQ==\ngmaps: https://maps.app.goo.gl/pfwrr6oMcbTvdFtx7?g_st=ipc",
-      "startTimezone": "America/Los_Angeles",
-      "endTimezone": "America/Los_Angeles",
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": false,
-      "sourceUid": "club-chub-20260822T193139Z@chunky.dad",
-      "uid": "club-chub-20260822T193139Z@chunky.dad",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Precinct DTLA",
-      "address": "357 S Broadway, Los Angeles, CA 90013",
-      "website": "https://www.clubchubusa.com/",
-      "instagram": "https://www.instagram.com/clubchubparty?igsh=MWxjZHprZnl6NWc0NQ==",
-      "gmaps": "https://maps.app.goo.gl/pfwrr6oMcbTvdFtx7?g_st=ipc",
-      "shortName": "CLUB CHUB",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.clubchubusa.com/",
+          "url": "https://www.eventbrite.com/e/megawoof-america-bear-watchers-long-beach-tickets-1520432868639",
           "label": "🌐 Website"
         },
         {
           "type": "instagram",
-          "url": "https://www.instagram.com/clubchubparty?igsh=MWxjZHprZnl6NWc0NQ==",
+          "url": "https://www.instagram.com/megawoof_america",
           "label": "📷 Instagram"
         },
         {
           "type": "gmaps",
-          "url": "https://maps.app.goo.gl/pfwrr6oMcbTvdFtx7?g_st=ipc",
+          "url": "https://www.google.com/maps/search/?api=1&query=33.87445400000001%2C-118.1680614&query_place_id=ChIJ91NzVy4z3YARBNuS8BZHBGg",
           "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/megawoof-america-bear-watchers-long-beach-tickets-1520432868639",
+          "label": "🎫 Tickets"
         }
       ],
-      "slug": "club-chub-39a3a8bd"
+      "slug": "megawoof-6062add7"
     },
     {
       "name": "Bear Happy Hour",
@@ -1313,6 +683,686 @@
         }
       ],
       "slug": "bear-happy-hour-14140597"
+    },
+    {
+      "name": "CRUISE LA LEATHER & BOOTBLACK 2027 MEET & GREET",
+      "day": "Friday",
+      "time": "7:10PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 34.0912127,
+        "lng": -118.2840632
+      },
+      "startDate": "2026-10-16T19:10:00",
+      "endDate": "2026-10-17T02:00:00",
+      "unprocessedDescription": "description: CruiseLA Leather & Bootblack Contest Oct 16\\: Mee\rt & Greet Oct 17\\: Contest and Victory Party\nbar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/IMG_1968-2-Medium-square.jpeg\ncover: $7\nwebsite: https://eaglela.com/events/cruise-la-leather-bootblack-2027-meet-greet/\ntimezone: America/Los_Angeles\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\naddress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\naddressSource: curated\npinSource: curated\ninstagram: dirtybird_la\nkey: cruise-la-leather-bootblack-2027-meet-greet|2026-10-17|eagle la\nimageSource: og-image\nbarSource: venue-site\nbearSource: keyword\nshortName: CRUISE",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "B8521446-F0B6-4EB0-8654-231E7FBC20DE",
+      "uid": "B8521446-F0B6-4EB0-8654-231E7FBC20DE",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle LA",
+      "cover": "$7",
+      "image": "https://eaglela.com/wp-content/uploads/IMG_1968-2-Medium-square.jpeg",
+      "tea": "CruiseLA Leather & Bootblack Contest Oct 16: Meet & Greet Oct 17: Contest and Victory Party",
+      "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
+      "website": "https://eaglela.com/events/cruise-la-leather-bootblack-2027-meet-greet/",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+      "shortName": "CRUISE",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglela.com/events/cruise-la-leather-bootblack-2027-meet-greet/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "cruise-la-leather-bootblack-2027-meet-greet-31562c80"
+    },
+    {
+      "name": "CUBSCOUT",
+      "day": "Friday",
+      "time": "9PM-2AM",
+      "eventType": "monthly",
+      "recurring": true,
+      "recurrence": "FREQ=MONTHLY;BYDAY=1FR",
+      "coordinates": {
+        "lat": 34.0912127,
+        "lng": -118.2840632
+      },
+      "startDate": "2026-09-04T21:00:00",
+      "endDate": "2026-09-05T02:00:00",
+      "unprocessedDescription": "shortName: CUB-SCOUT\ntea: CubScout First Fridays 9pm $7\ncover\r: $7\nbar: Eagle LA\naddress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\ntimezone: America/Los_Angeles\nuid: cubscout-20260731T193113Z@chunky.dad\nimage: https://eaglela.com/wp-content/uploads/CubScout-generic.jpg\nwebsite: https://eaglela.com/events/cub-scout-3/\ninstagram: https://www.instagram.com/dirtybird_la\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+      "startTimezone": "America/Los_Angeles",
+      "endTimezone": "America/Los_Angeles",
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": false,
+      "sourceUid": "cubscout-20260731T193113Z@chunky.dad",
+      "uid": "cubscout-20260731T193113Z@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 2,
+      "overrideIdentityType": null,
+      "bar": "Eagle LA",
+      "cover": "$7",
+      "image": "https://eaglela.com/wp-content/uploads/CubScout-generic.jpg",
+      "tea": "CubScout First Fridays 9pm $7",
+      "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
+      "website": "https://eaglela.com/events/cub-scout-3/",
+      "instagram": "https://www.instagram.com/dirtybird_la",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+      "shortName": "CUB-SCOUT",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglela.com/events/cub-scout-3/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/dirtybird_la",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "cubscout-4fdf801f"
+    },
+    {
+      "name": "Bear Happy Hour",
+      "day": "Thursday",
+      "time": "5PM-9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "recurrence": null,
+      "coordinates": {
+        "lat": 34.0912127,
+        "lng": -118.2840632
+      },
+      "startDate": "2026-09-03T17:00:00",
+      "endDate": "2026-09-03T21:00:00",
+      "unprocessedDescription": "bar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/BH\rH-IG.png\nwebsite: https://eaglela.com/events/bear-happy-hour-2/\ntimezone: America/Los_Angeles\naddress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\nshortName: BHH\nshorterName: BHH\nfavicon: https://linktr.ee/bearhappyhour\nkey: bear-happy-hour|2026-09-04|eagle la\nbearSource: keyword\noverrideUid: 9vnvsm6kjpievu62279lco139k@google.com\noverrideRecurrenceId: 20260904T000000Z\ndescription: Bear Happy Hour First Thursdays 5pm\ninstagram: https://www.instagram.com/bearhappyhourla\npinSource: curated\naddressSource: curated\nimageSource: og-image\nbarSource: venue-site\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "0D41B297-305A-4600-AE2C-40B3BA8EF7BC",
+      "uid": "9vnvsm6kjpievu62279lco139k@google.com",
+      "recurrenceId": "2026-09-03T17:00:00",
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": "custom",
+      "bar": "Eagle LA",
+      "image": "https://eaglela.com/wp-content/uploads/BHH-IG.png",
+      "favicon": "https://linktr.ee/bearhappyhour",
+      "tea": "Bear Happy Hour First Thursdays 5pm",
+      "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
+      "website": "https://eaglela.com/events/bear-happy-hour-2/",
+      "instagram": "https://www.instagram.com/bearhappyhourla",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+      "shortName": "BHH",
+      "shorterName": "BHH",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglela.com/events/bear-happy-hour-2/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearhappyhourla",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bear-happy-hour-53b6c34e"
+    },
+    {
+      "name": "MEGAWOOF AMERICA - LONG BEACH PRIDE",
+      "day": "Saturday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 33.874454,
+        "lng": -118.1680614
+      },
+      "startDate": "2026-05-16T21:00:00",
+      "endDate": "2026-05-17T02:00:00",
+      "unprocessedDescription": "description: MEGAWOOF AMERICA - LONG BEACH PRIDE\nbar: Falcon N\rorth\naddress: 2020 East Artesia Boulevard, Long Beach, CA 90805\nticketUrl: https://www.eventbrite.com/e/megawoof-america-long-beach-pride-tickets-1986926425425\ninstagram: https://www.instagram.com/megawoof_america\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181624525%2F185013722403%2F1%2Foriginal.20260407-190035?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=251ea205299011add78dbf1d4b7fe8bd\ncover: $11.58-$22.09\nshortName: MEGA-WOOF\n_aiPrompts\\: [object Object],[object Object],[object Object]\n_aiValidation\\: [object Object]\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=Falcon%20North%2C%202020%20East%20Artesia%20Boulevard%2C%20Long%20Beach%2C%20CA%2090805\nkey: megawoof-america-long-beach-pride|2026-05-17|falcon north",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "F5435015-D350-4B57-8C02-6227EB96FDE1",
+      "uid": "F5435015-D350-4B57-8C02-6227EB96FDE1",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 1,
+      "overrideIdentityType": null,
+      "bar": "Falcon North",
+      "cover": "$11.58-$22.09",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181624525%2F185013722403%2F1%2Foriginal.20260407-190035?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=251ea205299011add78dbf1d4b7fe8bd",
+      "tea": "MEGAWOOF AMERICA - LONG BEACH PRIDE",
+      "address": "2020 East Artesia Boulevard, Long Beach, CA 90805",
+      "website": "https://linktr.ee/megawoof_america",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Falcon%20North%2C%202020%20East%20Artesia%20Boulevard%2C%20Long%20Beach%2C%20CA%2090805",
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-america-long-beach-pride-tickets-1986926425425",
+      "shortName": "MEGA-WOOF",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/megawoof_america",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/megawoof_america",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Falcon%20North%2C%202020%20East%20Artesia%20Boulevard%2C%20Long%20Beach%2C%20CA%2090805",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/megawoof-america-long-beach-pride-tickets-1986926425425",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "megawoof-america-long-beach-pride-152ddd6b"
+    },
+    {
+      "name": "MR BEAR LA 2027 VICTORY PARTY",
+      "day": "Sunday",
+      "time": "12AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 34.0912127,
+        "lng": -118.2840632
+      },
+      "startDate": "2026-08-16T00:00:00",
+      "unprocessedDescription": "description: Check back later for more details on this event\nb\rar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/MORE-INFO-Coming-Soon-1.jpg\nwebsite: https://eaglela.com/events/mr-bear-la-2027-victory-party/?occurrence=2026-08-16\ntimezone: America/Los_Angeles\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\naddress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\naddressSource: curated\npinSource: curated\ninstagram: dirtybird_la\nkey: mr-bear-la-2027-victory-party|2026-08-16|eagle la\nimageSource: page\nbarSource: venue-site\nbearSource: keyword\nshortName: MR BEAR LA 2027",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "12BD0385-90AC-4082-84EB-0E0A5AE13851",
+      "uid": "12BD0385-90AC-4082-84EB-0E0A5AE13851",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle LA",
+      "image": "https://eaglela.com/wp-content/uploads/MORE-INFO-Coming-Soon-1.jpg",
+      "tea": "Check back later for more details on this event",
+      "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
+      "website": "https://eaglela.com/events/mr-bear-la-2027-victory-party/?occurrence=2026-08-16",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+      "shortName": "MR BEAR LA 2027",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglela.com/events/mr-bear-la-2027-victory-party/?occurrence=2026-08-16",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "mr-bear-la-2027-victory-party-469adae6"
+    },
+    {
+      "name": "SUNDAY BEER BUST",
+      "day": "Sunday",
+      "time": "2PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 34.0912127,
+        "lng": -118.2840632
+      },
+      "startDate": "2026-08-16T14:00:00",
+      "unprocessedDescription": "description: Bar Opens 2PM\nNO COVER\n5 DOMESTIC DRAFTS\nbar: E\ragle LA\nimage: https://eaglela.com/wp-content/uploads/Sun-Beer-Bust-poster-2024-web-1-300x300.jpg\nimageSource: page\nbarSource: venue-site\nwebsite: https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-08-16\ntimezone: America/Los_Angeles\ngmaps: https://www.google.com/maps/search/?api=1&query=34.0912127%2C-118.2840632\naddress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\naddressSource: curated\npinSource: curated\ninstagram: dirtybird_la\nkey: sunday-beer-bust|2026-08-16|eagle la\nbearSource: manual-bear (overrode ai\\: The title 'SUNDAY BEER BUST' and description mention only generic bar ameniti...)",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "8A37EE5E-36ED-40B5-8F73-A22D00CA0178",
+      "uid": "8A37EE5E-36ED-40B5-8F73-A22D00CA0178",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle LA",
+      "image": "https://eaglela.com/wp-content/uploads/Sun-Beer-Bust-poster-2024-web-1-300x300.jpg",
+      "tea": "Bar Opens 2PM",
+      "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
+      "website": "https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-08-16",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=34.0912127%2C-118.2840632",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-08-16",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=34.0912127%2C-118.2840632",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "sunday-beer-bust-33056523"
+    },
+    {
+      "name": "SUNDAY BEER BUST",
+      "day": "Sunday",
+      "time": "2PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 34.0912127,
+        "lng": -118.2840632
+      },
+      "startDate": "2026-08-09T14:00:00",
+      "unprocessedDescription": "bar: Eagle LA\naddress: 4219 Santa Monica Blvd, Los Angeles, \rCA 90029\ntimezone: America/Los_Angeles\nticketUrl: https://eaglela.com/events/sunday-beer-bust-4/\nimage: https://eaglela.com/wp-content/uploads/Sun-Beer-Bust-poster-2024-web-1.jpg\ncover: NO COVER\nimageVertical: https://eaglela.com/wp-content/uploads/Sun-Beer-Bust-poster-2024-web-1.jpg\naddressSource: curated\nwebsite: https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-08-09\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\npinSource: curated\ninstagram: dirtybird_la\nkey: sunday-beer-bust|2026-08-09|eagle la\ndescription: BEAR BUST\nBar Opens 2PM\nNO COVER\n5 DOMESTIC DRAFTS\nimageSource: og-image\nbarSource: venue-site\nbearSource: ai",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "CA8D02F4-CC9F-414D-913F-5E782016485D",
+      "uid": "CA8D02F4-CC9F-414D-913F-5E782016485D",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle LA",
+      "cover": "NO COVER",
+      "image": "https://eaglela.com/wp-content/uploads/Sun-Beer-Bust-poster-2024-web-1.jpg",
+      "imageVertical": "https://eaglela.com/wp-content/uploads/Sun-Beer-Bust-poster-2024-web-1.jpg",
+      "tea": "BEAR BUST",
+      "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
+      "website": "https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-08-09",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+      "ticketUrl": "https://eaglela.com/events/sunday-beer-bust-4/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-08-09",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://eaglela.com/events/sunday-beer-bust-4/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "sunday-beer-bust-64216cca"
+    },
+    {
+      "name": "MEGAWOOF",
+      "day": "Saturday",
+      "time": "10PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 33.9139036,
+        "lng": -118.2805709
+      },
+      "startDate": "2025-08-16T22:00:00",
+      "endDate": "2025-08-17T03:00:00",
+      "unprocessedDescription": "description: Location TBA, but likely in a dark DTLA warehouse\r 😈 Be sure to follow them on IG for location, updates, and more!\ninstagram: https://www.instagram.com/megawoof_america\nkey: megawoof|2025-08-17|tba|eventbrite\nbar: Sanctuary Studios\nurl: https://www.eventbrite.com/e/duro-summer-night-foam-edition-tickets-1446957562019\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1096137783%2F185013722403%2F1%2Foriginal.20250814-194101?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=f20000487492df90f51bb44fe04473cb\nshortName: MEGA-WOOF\nwebsite: https://www.eventbrite.com/e/duro-summer-night-foam-edition-tickets-1446957562019\ncover: $11.58 - $36.83 (as of 8/16)\ngmaps: https://www.google.com/maps/search/?api=1&query=33.9139036%2C-118.2805709&query_place_id=ChIJg2cOgOq2woAR8bONfuIJg_k\naddress: 13012 Athens Way, Los Angeles, CA 90061\naddressSource: inferred",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "1o1kijpavt9mfq2f5bbtcj4jng@google.com",
+      "uid": "1o1kijpavt9mfq2f5bbtcj4jng@google.com",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 1,
+      "overrideIdentityType": null,
+      "bar": "Sanctuary Studios",
+      "cover": "$11.58 - $36.83 (as of 8/16)",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1096137783%2F185013722403%2F1%2Foriginal.20250814-194101?crop=focalpoint&fit=crop&h=230&w=460&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=f20000487492df90f51bb44fe04473cb",
+      "tea": "Location TBA, but likely in a dark DTLA warehouse 😈 Be sure to follow them on IG for location, updates, and more!",
+      "address": "13012 Athens Way, Los Angeles, CA 90061",
+      "website": "https://www.eventbrite.com/e/duro-summer-night-foam-edition-tickets-1446957562019",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=33.9139036%2C-118.2805709&query_place_id=ChIJg2cOgOq2woAR8bONfuIJg_k",
+      "shortName": "MEGA-WOOF",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.eventbrite.com/e/duro-summer-night-foam-edition-tickets-1446957562019",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/megawoof_america",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=33.9139036%2C-118.2805709&query_place_id=ChIJg2cOgOq2woAR8bONfuIJg_k",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "megawoof-69e037bc"
+    },
+    {
+      "name": "CHUNK Los Angeles - THE RETURN!",
+      "day": "Saturday",
+      "time": "11PM-4AM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-10-17T23:00:00",
+      "endDate": "2026-10-18T04:00:00",
+      "unprocessedDescription": "description: a sweaty hairy bubba slinks down a back alley, pa\rvement wet, neon trailing in the corner of your eye... LET'S GO!!!!! CHUNK Los Angeles is BACK Exclusive DJ SETS from DICAP (NYC) MARCEAUX MARCEAUX (Memphis) & THCKRTANKER (Toronto) // HOT GOGO BEARS // WAREHOUSE - Arts District\nimage: https://static.wixstatic.com/media/42b6cb_55a68769f04b46d99b109bb655e6c97c~mv2.jpg/v1/fill/w_1200,h_1500,al_c,q_85/42b6cb_55a68769f04b46d99b109bb655e6c97c~mv2.jpg\ncover: $25-$50\ntimezone: America/Los_Angeles\nimageVertical: https://static.wixstatic.com/media/42b6cb_55a68769f04b46d99b109bb655e6c97c~mv2.jpg/v1/fill/w_1200,h_1500,al_c,q_85/42b6cb_55a68769f04b46d99b109bb655e6c97c~mv2.jpg\nwebsite: https://www.chunk-party.com/event-details/chunk-los-angeles-the-return\ngmaps: https://www.google.com/maps/search/?api=1&query=WAREHOUSE%2C%20Arts%20District\nshortName: CHUNK\ninstagram: https://www.instagram.com/chunkparty\nfavicon: https://www.chunk-party.com\nkey: chunk-los-angeles-the-return|2026-10-18|warehouse\nbar: WAREHOUSE\naddress: Arts District\naddressSource: page\nimageSource: jsonld\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "E5730362-17B5-45AE-A98C-C1638EE7B41D",
+      "uid": "E5730362-17B5-45AE-A98C-C1638EE7B41D",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "WAREHOUSE",
+      "cover": "$25-$50",
+      "image": "https://static.wixstatic.com/media/42b6cb_55a68769f04b46d99b109bb655e6c97c~mv2.jpg/v1/fill/w_1200,h_1500,al_c,q_85/42b6cb_55a68769f04b46d99b109bb655e6c97c~mv2.jpg",
+      "imageVertical": "https://static.wixstatic.com/media/42b6cb_55a68769f04b46d99b109bb655e6c97c~mv2.jpg/v1/fill/w_1200,h_1500,al_c,q_85/42b6cb_55a68769f04b46d99b109bb655e6c97c~mv2.jpg",
+      "favicon": "https://www.chunk-party.com",
+      "tea": "a sweaty hairy bubba slinks down a back alley, pavement wet, neon trailing in the corner of your eye... LET'S GO!!!!! CHUNK Los Angeles is BACK Exclusive DJ SETS from DICAP (NYC) MARCEAUX MARCEAUX (Memphis) & THCKRTANKER (Toronto) // HOT GOGO BEARS // WAREHOUSE - Arts District",
+      "address": "Arts District",
+      "website": "https://www.chunk-party.com/event-details/chunk-los-angeles-the-return",
+      "instagram": "https://www.instagram.com/chunkparty",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=WAREHOUSE%2C%20Arts%20District",
+      "shortName": "CHUNK",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.chunk-party.com/event-details/chunk-los-angeles-the-return",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/chunkparty",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=WAREHOUSE%2C%20Arts%20District",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "chunk-los-angeles-the-return-199f6b9d"
+    },
+    {
+      "name": "MR REGIMENT LEATHER 2027 CONTEST",
+      "day": "Saturday",
+      "time": "12AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 34.0912127,
+        "lng": -118.2840632
+      },
+      "startDate": "2026-09-19T00:00:00",
+      "unprocessedDescription": "description: Check back later for more details on this event\nb\rar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/MORE-INFO-Coming-Soon-1.jpg\nwebsite: https://eaglela.com/events/mr-regiment-leather-2027-contest/\ntimezone: America/Los_Angeles\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\naddress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\naddressSource: curated\npinSource: curated\ninstagram: dirtybird_la\nkey: mr-regiment-leather-2027-contest|2026-09-19|eagle la\nimageSource: og-image\nbarSource: venue-site\nbearSource: keyword\nshortName: MR REGIMENT",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "643976FE-F0EB-4FB4-98E2-FB111257D796",
+      "uid": "643976FE-F0EB-4FB4-98E2-FB111257D796",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle LA",
+      "image": "https://eaglela.com/wp-content/uploads/MORE-INFO-Coming-Soon-1.jpg",
+      "tea": "Check back later for more details on this event",
+      "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
+      "website": "https://eaglela.com/events/mr-regiment-leather-2027-contest/",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+      "shortName": "MR REGIMENT",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglela.com/events/mr-regiment-leather-2027-contest/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "mr-regiment-leather-2027-contest-2d4648a2"
+    },
+    {
+      "name": "JOCKSTRAPPED",
+      "day": "Friday",
+      "time": "12AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 34.0912127,
+        "lng": -118.2840632
+      },
+      "startDate": "2026-09-11T00:00:00",
+      "unprocessedDescription": "description: Check back later for more details on this event\nb\rar: Eagle LA\nimage: https://eaglela.com/wp-content/uploads/MORE-INFO-Coming-Soon-1.jpg\nwebsite: https://eaglela.com/events/jockstrapped-3/\ntimezone: America/Los_Angeles\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\naddress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\naddressSource: curated\npinSource: curated\ninstagram: dirtybird_la\nkey: jockstrapped|2026-09-11|eagle la\nimageSource: og-image\nbarSource: venue-site\nbearSource: keyword\nshortName: JOCK-STRAPPED",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "C9F89688-89D5-4288-B774-251EDF8EFCAB",
+      "uid": "C9F89688-89D5-4288-B774-251EDF8EFCAB",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle LA",
+      "image": "https://eaglela.com/wp-content/uploads/MORE-INFO-Coming-Soon-1.jpg",
+      "tea": "Check back later for more details on this event",
+      "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
+      "website": "https://eaglela.com/events/jockstrapped-3/",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+      "shortName": "JOCK-STRAPPED",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglela.com/events/jockstrapped-3/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "jockstrapped-0bfa1a7d"
+    },
+    {
+      "name": "MEAT RACK",
+      "day": "Saturday",
+      "time": "8PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 34.0912127,
+        "lng": -118.2840632
+      },
+      "startDate": "2026-09-12T20:00:00",
+      "unprocessedDescription": "description: Meat Rack 2nd and 4th Saturday of each month 8pm $\r8\nbar: Eagle LA\naddress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\ntimezone: America/Los_Angeles\nimage: https://eaglela.com/wp-content/uploads/IG_M_Rack-poster-GENERIC-2026.jpg\ncover: $8\naddressSource: curated\nwebsite: https://eaglela.com/events/meat-rack-8/\ngmaps: https://www.google.com/maps/search/?api=1&query=34.0912127%2C-118.2840632\npinSource: curated\ninstagram: dirtybird_la\nkey: meat-rack|2026-09-13|eagle la\nimageSource: og-image\nbarSource: venue-site\nbearSource: manual-bear (overrode ai\\: The title 'MEAT RACK' and description 'Meat Rack 2nd and 4th Saturday of each...)",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "003A5B83-94AE-4EF2-BC9F-B8A0EF5373EA",
+      "uid": "003A5B83-94AE-4EF2-BC9F-B8A0EF5373EA",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle LA",
+      "cover": "$8",
+      "image": "https://eaglela.com/wp-content/uploads/IG_M_Rack-poster-GENERIC-2026.jpg",
+      "tea": "Meat Rack 2nd and 4th Saturday of each month 8pm $8",
+      "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
+      "website": "https://eaglela.com/events/meat-rack-8/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=34.0912127%2C-118.2840632",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglela.com/events/meat-rack-8/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=34.0912127%2C-118.2840632",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "meat-rack-5101313e"
+    },
+    {
+      "name": "CUBSCOUT",
+      "day": "Friday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "recurrence": null,
+      "coordinates": {
+        "lat": 34.0912127,
+        "lng": -118.2840632
+      },
+      "startDate": "2026-09-04T21:00:00",
+      "endDate": "2026-09-05T02:00:00",
+      "unprocessedDescription": "description: CubScout First Fridays 9pm $7\nbar: Eagle LA\naddr\ress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\ntimezone: America/Los_Angeles\nimage: https://eaglela.com/wp-content/uploads/CubScout-generic.jpg\ncover: $7\nwebsite: https://eaglela.com/events/cub-scout-3/\nshortName: CUB-SCOUT\nkey: cubscout|2026-09-05|eagle la\nbearSource: keyword\noverrideUid: cubscout-20260731T193113Z@chunky.dad\noverrideRecurrenceId: 20260905T040000Z\nuid: cubscout-20260731T193113Z@chunky.dad\ninstagram: https://www.instagram.com/dirtybird_la\npinSource: curated\naddressSource: curated\nimageSource: og-image\nbarSource: venue-site\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "B8639838-5E3C-41CE-B15E-848C7A305ED5",
+      "uid": "cubscout-20260731T193113Z@chunky.dad",
+      "recurrenceId": "2026-09-04T21:00:00",
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": "custom",
+      "bar": "Eagle LA",
+      "cover": "$7",
+      "image": "https://eaglela.com/wp-content/uploads/CubScout-generic.jpg",
+      "tea": "CubScout First Fridays 9pm $7",
+      "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
+      "website": "https://eaglela.com/events/cub-scout-3/",
+      "instagram": "https://www.instagram.com/dirtybird_la",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+      "shortName": "CUB-SCOUT",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglela.com/events/cub-scout-3/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/dirtybird_la",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "cubscout-7b02b41a"
+    },
+    {
+      "name": "B BAR",
+      "day": "Thursday",
+      "time": "12AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 34.0912127,
+        "lng": -118.2840632
+      },
+      "startDate": "2026-08-20T00:00:00",
+      "unprocessedDescription": "description: BEARS CUBS OTTERS and OTHER FURRY CRITTERS!\nbar: \rEagle LA\naddress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\ntimezone: America/Los_Angeles\nimage: https://eaglela.com/wp-content/uploads/IG_B-Bar-poster-GENERIC-2026.jpg\ncover: NO COVER!\nimageSource: page\nbarSource: venue-site\naddressSource: curated\nwebsite: https://eaglela.com/events/b-bar/?occurrence=2026-08-20\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4\npinSource: curated\ninstagram: dirtybird_la\nkey: b-bar|2026-08-20|eagle la\nbearSource: ai",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "C0DF64EA-F28C-406D-ACE8-95C7D09BC6A1",
+      "uid": "C0DF64EA-F28C-406D-ACE8-95C7D09BC6A1",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle LA",
+      "cover": "NO COVER!",
+      "image": "https://eaglela.com/wp-content/uploads/IG_B-Bar-poster-GENERIC-2026.jpg",
+      "tea": "BEARS CUBS OTTERS and OTHER FURRY CRITTERS!",
+      "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
+      "website": "https://eaglela.com/events/b-bar/?occurrence=2026-08-20",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglela.com/events/b-bar/?occurrence=2026-08-20",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "b-bar-4fa6ffef"
     }
   ]
 }

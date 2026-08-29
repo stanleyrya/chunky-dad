@@ -8,28 +8,34 @@ X-WR-TIMEZONE:America/New_York
 BEGIN:VEVENT
 DTSTART:20261101T210000Z
 DTEND:20261102T020000Z
-DTSTAMP:20260824T214543Z
+DTSTAMP:20260829T012259Z
 UID:BE92AFDE-830F-47AC-A67B-518D74EA17D3
 CREATED:20260802T134345Z
-DESCRIPTION:description: Wig Out with Club Chub returns Nov. 1\, 4 -9 PM at
-  Eagle Wilton Manors. Wigs\, giveaways\, and big energy. Tix required.\nbar
- : Eagle Wilton Manors\naddress: 2209 Wilton Drive\, Wilton Manors\, FL 3330
- 5\ntimezone: America/New_York\nticketUrl: https://www.eventbrite.com/e/club
- -chub-fort-lauderdale-wig-out-party-tickets-1987163866618\nimage: https://i
- mg.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181905615%2F1078184808
- 853%2F1%2Foriginal.20260410-211015?crop=focalpoint&fit=crop&w=940&auto=form
- at%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=ed3b1b0d7f4dbd22d280d1c2e7b
- 88cfc\nwebsite: https://www.clubchubusa.com\ninstagram: https://www.instagr
- am.com/clubchubparty\nshortName: CLUB CHUB\nfavicon: https://www.clubchubus
- a.com\nkey: club-chub-the-wig-out-party|2026-11-01|eagle wilton manors\ncov
- er: $19.10-$24.80\nbearSource: keyword\npinSource: curated\naddressSource: 
- page\nimageSource: jsonld\nbarSource: page-adjacent\ngmaps: https://www.goo
- gle.com/maps/search/?api=1&query=26.156486%2C-80.138547
-LAST-MODIFIED:20260815T020650Z
+DESCRIPTION:bar: Eagle Wilton Manors\nticketUrl: https://www.eventbrite.com
+ /e/club-chub-fort-lauderdale-wig-out-party-tickets-1987163866618\nimage: ht
+ tps://res.cloudinary.com/eventservice/image/upload/q_auto\,f_auto/v17868146
+ 06/saas/logos/image_1786814597049_2g8bcpqel.webp\ncover: $19.10-$24.80\ntim
+ ezone: America/New_York\nwebsite: https://www.clubchubusa.com\ninstagram: h
+ ttps://www.instagram.com/clubchubparty\nshortName: CLUB CHUB\nfavicon: http
+ s://www.clubchubusa.com\nkey: club-chub-presents-meat-market-eagle-wilton-m
+ anors|2026-11-01|eagle wilton manors\nbearSource: keyword\ndescription: Clu
+ b Chub presents MEAT MARKET at The Eagle Wilton Manors on Sunday\, November
+  1 from 4–9 PM for Cannonball Weekend’s unofficial closeout party. Great DJ
+ . Sexy dancers. Hot energy. MORE MEAT. MORE HEAT. Grab advance tickets to s
+ ave money and let us know you’re coming. (Tickets purchased for Wig Out wil
+ l still be honored. This is only a theme change.)CLUB CHUB PRESENTS\\: MEAT
+  MARKET Formerly Wig Out. Same party. New fantasy. Cannonball Weekend is ge
+ tting one last hot\, sweaty send-off. Sunday\, November 14–9 PMThe Eagle Wi
+ lton Manors Consider this your unofficial Cannonball closeout party.\naddre
+ ss: 2209 Wilton Drive\, Wilton Manors\, FL\, 33305\npinSource: curated\nadd
+ ressSource: page\nimageSource: jsonld\nbarSource: page-adjacent\ngmaps: htt
+ ps://www.google.com/maps/search/?api=1&query=Eagle%20Wilton%20Manors%2C%202
+ 209%20Wilton%20Drive%2C%20Wilton%20Manors%2C%20FL%2C%2033305
+LAST-MODIFIED:20260828T231011Z
 LOCATION:26.156486\, -80.138547
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:CLUB CHUB: The Wig Out Party
+SUMMARY:Club Chub Presents: MEAT MARKET @ Eagle Wilton Manors
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

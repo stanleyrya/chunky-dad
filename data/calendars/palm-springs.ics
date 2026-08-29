@@ -8,7 +8,7 @@ X-WR-TIMEZONE:America/Los_Angeles
 BEGIN:VEVENT
 DTSTART:20260911T180000Z
 DTEND:20260914T070000Z
-DTSTAMP:20260820T182935Z
+DTSTAMP:20260829T012259Z
 UID:E21A39AC-AC29-47E3-A8C2-23C3D36AD105
 CREATED:20260802T134345Z
 DESCRIPTION:description: 3 Days Of BIG Fun In The Sun Pool Parties Food Mus
@@ -18,16 +18,19 @@ DESCRIPTION:description: 3 Days Of BIG Fun In The Sun Pool Parties Food Mus
  f=ebdsshcopyurl\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2
  Fimages%2F1181907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&au
  to=format%2Ccompress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e\ncove
- r: $55.20-$150.16\ntimezone: America/Los_Angeles\nwebsite: https://www.club
- chubusa.com\nshortName: CLUB CHUB\ninstagram: https://www.instagram.com/clu
- bchubparty\nfavicon: https://www.clubchubusa.com\nkey: club-chub-weekend-20
- 26-—-the-ultimate-celebration|2026-09-12|ccbc resort\nbar: CCBC Resort\nbea
- rSource: keyword\naddress: 68-300 Gay Resort Dr\, Cathedral City\, CA 92234
- \, USA\npinSource: geocoded-exact\naddressSource: page\nimageSource: jsonld
- \nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/search/?api=
- 1&query=CCBC%20Resort%2C%2068-300%20Gay%20Resort%20Dr%2C%20Cathedral%20City
- %2C%20CA%2092234%2C%20USA
-LAST-MODIFIED:20260820T175328Z
+ r: $55.20-$150.16\ntimezone: America/Los_Angeles\nimageHorizontal: https://
+ img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181907187%2F455155557
+ 312%2F1%2Foriginal.20260410-213422?w=940&auto=format%2Ccompress&q=75&sharp=
+ 10&s=0324450eaa0398ee271fc5832cfec54e\nwebsite: https://www.clubchubusa.com
+ \nshortName: CLUB CHUB\ninstagram: https://www.instagram.com/clubchubparty\
+ nfavicon: https://www.clubchubusa.com\nkey: club-chub-weekend-2026-—-the-ul
+ timate-celebration|2026-09-12|ccbc resort\nbar: CCBC Resort\nbearSource: ke
+ yword\naddress: 68-300 Gay Resort Dr\, Cathedral City\, CA 92234\, USA\npin
+ Source: geocoded-exact\naddressSource: page\nimageSource: jsonld\nbarSource
+ : page-adjacent\ngmaps: https://www.google.com/maps/search/?api=1&query=CCB
+ C%20Resort%2C%2068-300%20Gay%20Resort%20Dr%2C%20Cathedral%20City%2C%20CA%20
+ 92234%2C%20USA
+LAST-MODIFIED:20260828T231011Z
 LOCATION:33.7796835\, -116.4689784
 SEQUENCE:0
 STATUS:CONFIRMED
@@ -39,7 +42,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260222T050000Z
 DTEND:20260222T200000Z
-DTSTAMP:20260820T182935Z
+DTSTAMP:20260829T012259Z
 UID:88686A1C-DD82-4C9B-A917-74B3647FD814
 CREATED:20260117T210201Z
 DESCRIPTION:description: SHINY DISCO BALLS IBC WEEKEND\nbar: Palm Springs\n
