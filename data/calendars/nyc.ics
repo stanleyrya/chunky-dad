@@ -24,9 +24,27 @@ RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU
 END:STANDARD
 END:VTIMEZONE
 BEGIN:VEVENT
+DTSTART;TZID=America/New_York:20250705T220000
+DTEND;TZID=America/New_York:20250706T040000
+RRULE:FREQ=MONTHLY;BYDAY=1SA
+DTSTAMP:20260829T221118Z
+UID:suljenhlak65mplsbrft5rgcd0@google.com
+CREATED:20250720T011008Z
+DESCRIPTION:Tea: Go-Go Bears\, Cubs and LOTS of other fun things to grab on
+ to!\nCover: $10\nWebsite: https://www.theurbanbear.com/\nInstagram: https:/
+ /www.instagram.com/urbanbearnyc\nGoogle Maps: https://maps.app.goo.gl/3WsBU
+ pQjekPZUW4u7\nBar: Rockbar\nShorter: BNO
+LAST-MODIFIED:20250723T045844Z
+LOCATION:40.7326824\, -74.0097099
+SEQUENCE:2
+STATUS:CONFIRMED
+SUMMARY:Bears Night Out
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20260920T170000Z
 DTEND:20260920T230000Z
-DTSTAMP:20260829T012259Z
+DTSTAMP:20260829T221118Z
 UID:urban-bear-nyc-the-18th-annual-urban-bear-nyc-street-fair-2026-09-20@ch
  unky.dad
 CREATED:20260823T172318Z
@@ -46,25 +64,231 @@ SUMMARY:The 18th Annual Urban Bear NYC Street Fair
 TRANSP:OPAQUE
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260718T020000Z
-DTSTAMP:20260829T012259Z
-UID:7647B9BA-E04F-44F8-92D0-8A3D52E0AE3E
-CREATED:20260712T000125Z
-DESCRIPTION:description: UNDERWEAR • JÖCKS • GEAR\n(ENCOURAGED\, NOT REQUIR
- ED. CLOTHES CHECK AVAILABLE)\nDARK ROOM AT MIDNIGHT\nbar: ROCKBAR\naddress:
-  185 Christopher St\, New York\, NY 10014\ntimezone: America/New_York\ninst
- agram: https://instagram.com/furballnyc/\nimage: https://static.wixstatic.c
- om/media/238fae_66efd0476132438e9c47c6d71832eed7~mv2.jpg/v1/fill/w_296\,h_5
- 26\,al_c\,q_80\,usm_0.66_1.00_0.01\,enc_avif\,quality_auto/238fae_66efd0476
- 132438e9c47c6d71832eed7~mv2.jpg\nshortName: FUR-BALL\nfavicon: https://link
- tr.ee/furballnyc\nwebsite: https://www.furball.nyc\ngmaps: https://www.goog
- le.com/maps/search/?api=1&query=ROCKBAR%2C%20125%20CHRISTOPHER%20ST%20NYC\n
- key: underbear-leather-kink|2026-07-18|rockbar
-LAST-MODIFIED:20260712T000451Z
+DTSTART:20260822T020000Z
+DTSTAMP:20260829T221118Z
+UID:B7B7567B-35D7-4D89-90E4-158656F66ABF
+CREATED:20260820T174130Z
+DESCRIPTION:description: Underwear & Gear Party\nbar: Rockbar\naddress: 185
+  Christopher St\, New York\, NY 10014\nimage: https://static.wixstatic.com/
+ media/238fae_3aeaa401b6fd4ae5a718c3f3f6732bd8~mv2.jpg\nimageVertical: https
+ ://static.wixstatic.com/media/238fae_3aeaa401b6fd4ae5a718c3f3f6732bd8~mv2.j
+ pg\nwebsite: https://furball.nyc\ntimezone: America/New_York\ninstagram: ht
+ tps://instagram.com/furballnyc/\nshortName: FUR­BALL\nfavicon: https://link
+ tr.ee/furballnyc\nkey: underbear-heatwave|2026-08-22|rockbar\nbearSource: k
+ eyword\npinSource: curated\naddressSource: curated\nimageSource: page\nbarS
+ ource: page-adjacent\ngmaps: https://www.google.com/maps/place/?q=place_id:
+ ChIJlwfqXuxZwokRTlizRW_4cwc
+LAST-MODIFIED:20260821T203000Z
 LOCATION:40.7326534\, -74.0096996
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:UNDERBEAR Leather + Kink
+SUMMARY:UNDERBEAR HEATWAVE
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/New_York:20220225T220000
+DTEND;TZID=America/New_York:20220226T040000
+RRULE:FREQ=MONTHLY;BYDAY=4FR
+DTSTAMP:20260829T221118Z
+UID:fuzzy-20260503T203532Z@chunky.dad
+URL:https://fuzzy.nyc/
+CREATED:20260503T203544Z
+DESCRIPTION:shortName: FUZZY\ntea: A monthly social for NYC’s friendly faun
+ a. Serving pop\, house\, rock\, new wave and disco dusted with pink glitter
+ .\ncover: $5\nbar: Nowhere Bar\naddress: 322 E 14th St\, New York\, NY 1000
+ 3\ntimezone: America/New_York\nuid: fuzzy-20260503T203532Z@chunky.dad\nwebs
+ ite: https://fuzzy.nyc/\ninstagram: https://instagram.com/fuzzy_nyc\nfacebo
+ ok: https://www.facebook.com/fuzzy.nyc\ngmaps: https://www.google.com/maps/
+ place/?q=place_id:ChIJZ1fMFZ5ZwokRkYrV85CZorY
+LAST-MODIFIED:20260513T152156Z
+LOCATION:40.7316977\, -73.9841737
+SEQUENCE:7
+STATUS:CONFIRMED
+SUMMARY:FUZZY
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/New_York:20250710T170000
+DTEND;TZID=America/New_York:20250710T210000
+RRULE:FREQ=WEEKLY
+DTSTAMP:20260829T221118Z
+UID:6thhos5ct3pllq5kmvsp7infd8@google.com
+CREATED:20250712T180243Z
+DESCRIPTION:Bar: Check instagram for this week’s location.\nTea: Popular ha
+ ppy hour that changes location every week in Manhattan.\nInstagram: https:/
+ /www.instagram.com/bearhappyhournyc\nShorter: BHH\nWeb: https://linktr.ee/b
+ earhappyhour
+LAST-MODIFIED:20251012T161111Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Happy Hour
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260919T020000Z
+DTEND:20260919T080000Z
+DTSTAMP:20260829T221118Z
+UID:urban-bear-nyc-the-underbear-party-2026-09-18@chunky.dad
+CREATED:20260823T172318Z
+DESCRIPTION:description: Urban Bear NYC's Friday-night UnderBear underwear 
+ party at Rockbar.\nbar: Rockbar\naddress: 185 Christopher St\, New York\, N
+ Y 10014\nwebsite: https://rockbarnyc.com\ntimezone: America/New_York\nkey: 
+ the-underbear-party|2026-09-18|rockbar\nfestival: Urban Bear NYC\nnote: end
+  time not published — 6h default
+LAST-MODIFIED:20260823T172319Z
+LOCATION:40.7326534\, -74.0096996
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:The UnderBear Party
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;VALUE=DATE:20260620
+DTEND;VALUE=DATE:20260621
+DTSTAMP:20260829T221118Z
+UID:t9c4ekcr125qg5chcflc59is5c@google.com
+CREATED:20260425T011024Z
+LAST-MODIFIED:20260425T011024Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Fat dad
+TRANSP:TRANSPARENT
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260918T220000Z
+DTEND:20260919T020000Z
+DTSTAMP:20260829T221118Z
+UID:urban-bear-nyc-bear-invasion-the-whitney-museum-2026-09-18@chunky.dad
+CREATED:20260823T172320Z
+DESCRIPTION:description: Urban Bear NYC takes over the Whitney Museum in th
+ e Meatpacking District for a Friday-evening bear museum outing.\nbar: Whitn
+ ey Museum of American Art\naddress: 99 Gansevoort St\, New York\, NY 10014\
+ nwebsite: https://whitney.org\ntimezone: America/New_York\nkey: bear-invasi
+ on-the-whitney-museum|2026-09-18|whitney-museum-of-american-art\nfestival: 
+ Urban Bear NYC\nnote: end time not published — 4h default\; pin-curated-by-
+ hand
+LAST-MODIFIED:20260823T172321Z
+LOCATION:40.7396\, -74.0089
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Invasion: The Whitney Museum
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;TZID=America/New_York:20250710T190000
+DTEND;TZID=America/New_York:20250710T220000
+RRULE:FREQ=WEEKLY
+DTSTAMP:20260829T221118Z
+UID:v12lqkpglh2iupk54ttds6pcmg@google.com
+CREATED:20250712T180243Z
+DESCRIPTION:Bar: Animal\nWebsite: https://animal.nyc\nInstagram: https://ww
+ w.instagram.com/bearsareanimals\nGoogle Maps: https://maps.app.goo.gl/Xvrwk
+ XqQApYfaj6h9\nNickname: Animal\nShorter: BAA\nTea: Popular happy hour for t
+ hose that want to go out in Brooklyn. Patio space and goes a bit later.
+LAST-MODIFIED:20260121T231021Z
+LOCATION:40.71739735291992\, -73.94930680925715
+SEQUENCE:1
+STATUS:CONFIRMED
+SUMMARY:Bears Are Animals
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260906T020000Z
+DTEND:20260906T080000Z
+DTSTAMP:20260829T221118Z
+UID:BBC5F4BB-5846-4AB7-B86F-1E86EBA13391
+CREATED:20260803T175453Z
+DESCRIPTION:description: WE'RE BACK TO OUR OLD HIJINX WITH A SUMMER SEND OF
+ F NIGHT NOT TO BE MISSED - BUCKET LOADS (SLURP!) OF BIG BUFFAS CHUNK PRESEN
+ TS LEGENDARY TORONTO DJ TAMIKA W/ DICAP & THCKRTANKER\nbar: C'mon Everybody
+ \nimage: https://static.wixstatic.com/media/42b6cb_fae874077d5a42b2b2197217
+ d2605434~mv2.jpg/v1/fill/w_3300\,h_5100\,al_c\,q_90/42b6cb_fae874077d5a42b2
+ b2197217d2605434~mv2.jpg\ncover: $20-$25\ntimezone: America/New_York\nimage
+ Vertical: https://static.wixstatic.com/media/42b6cb_fae874077d5a42b2b219721
+ 7d2605434~mv2.jpg/v1/fill/w_3300\,h_5100\,al_c\,q_90/42b6cb_fae874077d5a42b
+ 2b2197217d2605434~mv2.jpg\nwebsite: https://www.chunk-party.com/event-detai
+ ls/chunk-brooklyn-saturday-september-5th\nshortName: CHUNK\ninstagram: http
+ s://www.instagram.com/chunkparty\nfavicon: https://www.chunk-party.com\nkey
+ : chunk-brooklyn|2026-09-06|c'mon everybody\nbearSource: keyword\naddress: 
+ 325 Franklin Ave\, Brooklyn\, NY 11238\, USA\npinSource: page\naddressSourc
+ e: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google
+ .com/maps/search/?api=1&query=C'mon%20Everybody%2C%20325%20Franklin%20Ave%2
+ C%20Brooklyn%2C%20NY%2011238%2C%20USA
+LAST-MODIFIED:20260829T205157Z
+LOCATION:40.68830519999999\, -73.9569221
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:CHUNK Brooklyn
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260917T210000Z
+DTEND:20260918T010000Z
+DTSTAMP:20260829T221118Z
+UID:urban-bear-nyc-urban-bear-nyc-opening-night-party-2026-09-17@chunky.dad
+CREATED:20260823T172320Z
+DESCRIPTION:description: Kickoff party for the 18th annual Urban Bear NYC w
+ eekend at FLEX in Hell's Kitchen.\nbar: FLEX\naddress: 405 W 51st St\, New 
+ York\, NY 10019\nwebsite: https://flexbar.nyc\ntimezone: America/New_York\n
+ key: urban-bear-nyc-opening-night-party|2026-09-17|flex\nfestival: Urban Be
+ ar NYC\nnote: end time not published — 4h default
+LAST-MODIFIED:20260823T172320Z
+LOCATION:40.7644457\, -73.9888453
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Urban Bear NYC Opening Night Party
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260919T180000Z
+DTEND:20260919T220000Z
+DTSTAMP:20260829T221118Z
+UID:urban-bear-nyc-urban-bear-roper-romp-afternoon-beer-burger-bust-2026-09
+ -19@chunky.dad
+CREATED:20260823T172317Z
+DESCRIPTION:description: Saturday-afternoon beer and burger bust at Julius'
+ \, the historic West Village bar.\nbar: Julius'\naddress: 159 W 10th St\, N
+ ew York\, NY 10014\nwebsite: https://www.juliusbarny.com/\ntimezone: Americ
+ a/New_York\nkey: urban-bear-roper-romp-afternoon-beer-burger-bust|2026-09-1
+ 9|julius\nfestival: Urban Bear NYC\nnote: pin-curated-by-hand
+LAST-MODIFIED:20260823T172317Z
+LOCATION:40.7340\, -74.0015
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Urban Bear Roper Romp: Afternoon Beer + Burger Bust
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260215T033000Z
+DTEND:20260215T090000Z
+DTSTAMP:20260829T221118Z
+UID:6DD23624-8818-401B-9BC1-13BB87366576
+CREATED:20260210T040939Z
+DESCRIPTION:description: PRESALE TICKETS HAVE SOLD OUT. WE HAVE HELD A LIMI
+ TED AMOUNT OF TICKETS FOR THE DOOR - DOORS OPEN AT 10\\:30 CHUNK returns to
+  NY - Saturday February 14th // featuring DJs RON LIKE HELL (Wrecked) & res
+ idents DICAP & MR PICKLES // HOT GOGO BEARS // C'MON EVERYBODY - 325 Frankl
+ in Ave - 10\\:30pm - 4am\nbar: C'mon Everybody\naddress: 325 Franklin Avenu
+ e\, New York\, New York\, 11216\ntimezone: America/New_York\nimage: https:/
+ /static.wixstatic.com/media/42b6cb_253e0a5bd34945d9876e03eabd5eaabb~mv2.jpg
+ /v1/fill/w_1344\,h_1345\,al_c\,q_85/42b6cb_253e0a5bd34945d9876e03eabd5eaabb
+ ~mv2.jpg\nwebsite: https://www.chunk-party.com/event-details/chunk-brooklyn
+ -the-return\nshortName: CHUNK\ninstagram: https://www.instagram.com/chunkpa
+ rty\nfavicon: https://www.chunk-party.com\nkey: chunk-brooklyn-the-return|2
+ 026-02-15|c'mon everybody\nbearSource: keyword\ncover: $15.38 - $25.63\npin
+ Source: curated\naddressSource: curated\nimageSource: jsonld\nbarSource: pa
+ ge-adjacent\ngmaps: https://www.google.com/maps/search/?api=1&query=C'mon%2
+ 0Everybody%2C%20325%20Franklin%20Avenue%2C%20New%20York%2C%20New%20York%2C%
+ 2011216
+LAST-MODIFIED:20260828T205242Z
+LOCATION:40.6882793\, -73.9569264
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:CHUNK BROOKLYN - The Return!
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
@@ -72,7 +296,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260726T020000Z
 DTEND:20260726T080000Z
-DTSTAMP:20260829T012259Z
+DTSTAMP:20260829T221118Z
 UID:C84C83A2-01B1-49FD-8DED-6C204FC30897
 CREATED:20260712T004135Z
 DESCRIPTION:description: MEGAWOOF & BEARMILK present MEGAMILK\naddress: 10-
@@ -97,26 +321,29 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260918T210000Z
-DTEND:20260919T020000Z
-DTSTAMP:20260829T012259Z
-UID:urban-bear-nyc-hairy-happy-hour-2026-09-18@chunky.dad
-CREATED:20260823T172321Z
-DESCRIPTION:description: Urban Bear NYC happy hour at Ty's\, the West Villa
- ge's classic bear bar.\nbar: Ty's\naddress: 114 Christopher St\, New York\,
-  NY 10014\nwebsite: https://tys.nyc\ntimezone: America/New_York\nkey: hairy
- -happy-hour|2026-09-18|ty-s\nfestival: Urban Bear NYC
-LAST-MODIFIED:20260823T172321Z
-LOCATION:40.7330387\, -74.0052985
-SEQUENCE:0
+DTSTART;TZID=America/New_York:20250704T220000
+DTEND;TZID=America/New_York:20250705T040000
+RRULE:FREQ=MONTHLY;BYDAY=1FR
+DTSTAMP:20260829T221118Z
+UID:bdstnukmpv6keg7pon3fram2qg@google.com
+URL:https://www.rockbarnyc.com/
+CREATED:20250719T041643Z
+DESCRIPTION:shortName: Rock-strap\ntea: Jockstraps encouraged\, clothes che
+ ck available!\ncover: $10 entry\, $1 clothes check\nbar: Rockbar\ntimezone:
+  America/New_York\nuid: bdstnukmpv6keg7pon3fram2qg@google.com\nwebsite: htt
+ ps://www.rockbarnyc.com/\ninstagram: https://www.instagram.com/rockbarny\ng
+ maps: https://maps.app.goo.gl/3WsBUpQjekPZUW4u7
+LAST-MODIFIED:20260822T193309Z
+LOCATION:40.7326824\, -74.0097099
+SEQUENCE:1
 STATUS:CONFIRMED
-SUMMARY:Hairy Happy Hour
+SUMMARY:Rockstrap
 TRANSP:OPAQUE
 END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260920T220000Z
 DTEND:20260921T020000Z
-DTSTAMP:20260829T012259Z
+DTSTAMP:20260829T221118Z
 UID:urban-bear-nyc-mega-bear-blast-closing-night-party-2026-09-20@chunky.da
  d
 CREATED:20260823T172319Z
@@ -133,49 +360,23 @@ SUMMARY:Mega Bear Blast: Closing Night Party
 TRANSP:OPAQUE
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260920T010000Z
-DTEND:20260920T070000Z
-DTSTAMP:20260829T012259Z
-UID:urban-bear-nyc-truck-stop-fat-fuc-2026-09-19@chunky.dad
-CREATED:20260823T172322Z
-DESCRIPTION:description: Urban Bear NYC's Saturday-night Truck Stop party a
- t Nowhere\, with music by Dave Hughes (FUZZY).\nbar: Nowhere Bar\naddress: 
- 322 E 14th St\, New York\, NY 10003\nwebsite: https://nowherebarnyc.com\nti
- mezone: America/New_York\nkey: truck-stop-fat-fuc|2026-09-19|nowhere-bar\nf
- estival: Urban Bear NYC\nnote: end time not published — 6h default
-LAST-MODIFIED:20260823T172322Z
-LOCATION:40.7316977\, -73.9841737
+DTSTART;VALUE=DATE:20260626
+DTEND;VALUE=DATE:20260629
+DTSTAMP:20260829T221118Z
+UID:706B8093-375B-4E8C-8FBE-58F5CF949246
+CREATED:20260616T173646Z
+LAST-MODIFIED:20260616T173646Z
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Truck Stop: Fat Fuc
+SUMMARY:Pride
 TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
-DTSTART;TZID=America/New_York:20220225T220000
-DTEND;TZID=America/New_York:20220226T040000
-RRULE:FREQ=MONTHLY;BYDAY=4FR
-DTSTAMP:20260829T012259Z
-UID:fuzzy-20260503T203532Z@chunky.dad
-URL:https://fuzzy.nyc/
-CREATED:20260503T203544Z
-DESCRIPTION:shortName: FUZZY\ntea: A monthly social for NYC’s friendly faun
- a. Serving pop\, house\, rock\, new wave and disco dusted with pink glitter
- .\ncover: $5\nbar: Nowhere Bar\naddress: 322 E 14th St\, New York\, NY 1000
- 3\ntimezone: America/New_York\nuid: fuzzy-20260503T203532Z@chunky.dad\nwebs
- ite: https://fuzzy.nyc/\ninstagram: https://instagram.com/fuzzy_nyc\nfacebo
- ok: https://www.facebook.com/fuzzy.nyc\ngmaps: https://www.google.com/maps/
- place/?q=place_id:ChIJZ1fMFZ5ZwokRkYrV85CZorY
-LAST-MODIFIED:20260513T152156Z
-LOCATION:40.7316977\, -73.9841737
-SEQUENCE:7
-STATUS:CONFIRMED
-SUMMARY:FUZZY
-TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:com.apple.mobilecal
+X-APPLE-CREATOR-TEAM-IDENTITY:0000000000
 END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260830T010000Z
 DTEND:20260830T080000Z
-DTSTAMP:20260829T012259Z
+DTSTAMP:20260829T221118Z
 UID:6AC1F801-DEBB-456F-AFC8-EC8FC7885406
 CREATED:20260811T173754Z
 DESCRIPTION:description: GOLDILOXX is an NYC based monthly bear party for b
@@ -209,179 +410,73 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART;TZID=America/New_York:20250705T220000
-DTEND;TZID=America/New_York:20250706T040000
-RRULE:FREQ=MONTHLY;BYDAY=1SA
-DTSTAMP:20260829T012259Z
-UID:suljenhlak65mplsbrft5rgcd0@google.com
-CREATED:20250720T011008Z
-DESCRIPTION:Tea: Go-Go Bears\, Cubs and LOTS of other fun things to grab on
- to!\nCover: $10\nWebsite: https://www.theurbanbear.com/\nInstagram: https:/
- /www.instagram.com/urbanbearnyc\nGoogle Maps: https://maps.app.goo.gl/3WsBU
- pQjekPZUW4u7\nBar: Rockbar\nShorter: BNO
-LAST-MODIFIED:20250723T045844Z
-LOCATION:40.7326824\, -74.0097099
-SEQUENCE:2
-STATUS:CONFIRMED
-SUMMARY:Bears Night Out
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
-DTSTART;TZID=America/New_York:20250710T170000
-DTEND;TZID=America/New_York:20250710T210000
-RRULE:FREQ=WEEKLY
-DTSTAMP:20260829T012259Z
-UID:6thhos5ct3pllq5kmvsp7infd8@google.com
-CREATED:20250712T180243Z
-DESCRIPTION:Bar: Check instagram for this week’s location.\nTea: Popular ha
- ppy hour that changes location every week in Manhattan.\nInstagram: https:/
- /www.instagram.com/bearhappyhournyc\nShorter: BHH\nWeb: https://linktr.ee/b
- earhappyhour
-LAST-MODIFIED:20251012T161111Z
+DTSTART:20260718T020000Z
+DTSTAMP:20260829T221118Z
+UID:7647B9BA-E04F-44F8-92D0-8A3D52E0AE3E
+CREATED:20260712T000125Z
+DESCRIPTION:description: UNDERWEAR • JÖCKS • GEAR\n(ENCOURAGED\, NOT REQUIR
+ ED. CLOTHES CHECK AVAILABLE)\nDARK ROOM AT MIDNIGHT\nbar: ROCKBAR\naddress:
+  185 Christopher St\, New York\, NY 10014\ntimezone: America/New_York\ninst
+ agram: https://instagram.com/furballnyc/\nimage: https://static.wixstatic.c
+ om/media/238fae_66efd0476132438e9c47c6d71832eed7~mv2.jpg/v1/fill/w_296\,h_5
+ 26\,al_c\,q_80\,usm_0.66_1.00_0.01\,enc_avif\,quality_auto/238fae_66efd0476
+ 132438e9c47c6d71832eed7~mv2.jpg\nshortName: FUR-BALL\nfavicon: https://link
+ tr.ee/furballnyc\nwebsite: https://www.furball.nyc\ngmaps: https://www.goog
+ le.com/maps/search/?api=1&query=ROCKBAR%2C%20125%20CHRISTOPHER%20ST%20NYC\n
+ key: underbear-leather-kink|2026-07-18|rockbar
+LAST-MODIFIED:20260712T000451Z
+LOCATION:40.7326534\, -74.0096996
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Bear Happy Hour
+SUMMARY:UNDERBEAR Leather + Kink
 TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART;TZID=America/New_York:20250706T170000
-DTEND;TZID=America/New_York:20250707T040000
-RRULE:FREQ=WEEKLY
-DTSTAMP:20260829T012259Z
-UID:96d0b400rgfpagk14sc2bd1aks@google.com
-CREATED:20250712T180243Z
-DESCRIPTION:Name: Beer Blast\nBar: Eagle NYC \nCover: No cover till 9PM\, $
- 20 cover at 9PM\nWebsite: https://eagle-ny.com\nGoogle Maps: https://maps.a
- pp.goo.gl/8N8zpGGAYwXJjgsGA\nNickname: Eagle\nShorter: EGL
-LAST-MODIFIED:20250723T045749Z
-LOCATION:40.75168692425323\, -74.00431317114098
+DTSTART:20260920T010000Z
+DTEND:20260920T070000Z
+DTSTAMP:20260829T221118Z
+UID:urban-bear-nyc-truck-stop-fat-fuc-2026-09-19@chunky.dad
+CREATED:20260823T172322Z
+DESCRIPTION:description: Urban Bear NYC's Saturday-night Truck Stop party a
+ t Nowhere\, with music by Dave Hughes (FUZZY).\nbar: Nowhere Bar\naddress: 
+ 322 E 14th St\, New York\, NY 10003\nwebsite: https://nowherebarnyc.com\nti
+ mezone: America/New_York\nkey: truck-stop-fat-fuc|2026-09-19|nowhere-bar\nf
+ estival: Urban Bear NYC\nnote: end time not published — 6h default
+LAST-MODIFIED:20260823T172322Z
+LOCATION:40.7316977\, -73.9841737
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Beer Blast
+SUMMARY:Truck Stop: Fat Fuc
 TRANSP:OPAQUE
 END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260510T020000Z
-DTEND:20260510T080000Z
-DTSTAMP:20260829T012259Z
-UID:90FA8B9E-8070-4539-B1B9-BF76B041D037
-CREATED:20260423T192318Z
-DESCRIPTION:description: CHUNK returns to Brooklyn Saturday May 9th CHUNK p
- resents SPRFRK w/ support from residents DICAP & THCKRTANKER // GOGO BEARS 
- all night long // Hosted by Damiano // C'MON EVERYBODY 325 Franklin Ave // 
- 10pm - close\nbar: C'mon Everybody\nimage: https://static.wixstatic.com/med
- ia/42b6cb_81911c51814244bb9b559e72ce040b43~mv2.jpg/v1/fill/w_1360\,h_1700\,
- al_c\,q_90/42b6cb_81911c51814244bb9b559e72ce040b43~mv2.jpg\ntimezone: Ameri
- ca/New_York\nimageVertical: https://static.wixstatic.com/media/42b6cb_81911
- c51814244bb9b559e72ce040b43~mv2.jpg/v1/fill/w_1360\,h_1700\,al_c\,q_90/42b6
- cb_81911c51814244bb9b559e72ce040b43~mv2.jpg\nwebsite: https://www.chunk-par
- ty.com/event-details/chunk-brooklyn-5-9\nshortName: CHUNK\ninstagram: https
- ://www.instagram.com/chunkparty\nfavicon: https://www.chunk-party.com\nkey:
-  chunk-brooklyn|2026-05-10|c'mon everybody\nbearSource: keyword\ncover: $15
- .38 - $25.63\naddress: 325 Franklin Ave\, Brooklyn\, NY 11238\, USA\npinSou
- rce: page\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngm
- aps: https://www.google.com/maps/search/?api=1&query=C'mon%20Everybody%2C%2
- 0325%20Franklin%20Ave%2C%20Brooklyn%2C%20NY%2011238%2C%20USA
-LAST-MODIFIED:20260821T180120Z
-LOCATION:40.68830519999999\, -73.9569221
+DTSTAMP:20260829T221118Z
+UID:7934C44A-FA6D-47AE-B233-7150C3C8E2D6
+CREATED:20260730T195725Z
+DESCRIPTION:description: CB JUR UO NO KKLYN\ntimezone: America/New_York\nti
+ cketUrl: https://www.chunk-party.com\nimage: https://static.wixstatic.com/m
+ edia/42b6cb_81911c51814244bb9b559e72ce040b43~mv2.jpg\nimageSource: page\nba
+ r: CHUNK-PARTY.COM\nbarSource: page-adjacent\nwebsite: https://www.chunk-pa
+ rty.com/event-details/chunk-brooklyn-5-9\ngmaps: https://www.google.com/map
+ s/search/?api=1&query=CHUNK-PARTY.COM%2C%20new%20york\nshortName: CHUNK\nin
+ stagram: https://www.instagram.com/chunkparty\nfavicon: https://www.chunk-p
+ arty.com\nbearSource: keyword\nkey: c-mon-everybody|2026-05-10|chunk-party.
+ com
+LAST-MODIFIED:20260730T195725Z
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:CHUNK Brooklyn
+SUMMARY:C'mon Everybody
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260918T220000Z
-DTEND:20260919T020000Z
-DTSTAMP:20260829T012259Z
-UID:urban-bear-nyc-bear-invasion-the-whitney-museum-2026-09-18@chunky.dad
-CREATED:20260823T172320Z
-DESCRIPTION:description: Urban Bear NYC takes over the Whitney Museum in th
- e Meatpacking District for a Friday-evening bear museum outing.\nbar: Whitn
- ey Museum of American Art\naddress: 99 Gansevoort St\, New York\, NY 10014\
- nwebsite: https://whitney.org\ntimezone: America/New_York\nkey: bear-invasi
- on-the-whitney-museum|2026-09-18|whitney-museum-of-american-art\nfestival: 
- Urban Bear NYC\nnote: end time not published — 4h default\; pin-curated-by-
- hand
-LAST-MODIFIED:20260823T172321Z
-LOCATION:40.7396\, -74.0089
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Bear Invasion: The Whitney Museum
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260919T020000Z
-DTEND:20260919T080000Z
-DTSTAMP:20260829T012259Z
-UID:urban-bear-nyc-the-underbear-party-2026-09-18@chunky.dad
-CREATED:20260823T172318Z
-DESCRIPTION:description: Urban Bear NYC's Friday-night UnderBear underwear 
- party at Rockbar.\nbar: Rockbar\naddress: 185 Christopher St\, New York\, N
- Y 10014\nwebsite: https://rockbarnyc.com\ntimezone: America/New_York\nkey: 
- the-underbear-party|2026-09-18|rockbar\nfestival: Urban Bear NYC\nnote: end
-  time not published — 6h default
-LAST-MODIFIED:20260823T172319Z
-LOCATION:40.7326534\, -74.0096996
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:The UnderBear Party
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260215T033000Z
-DTEND:20260215T090000Z
-DTSTAMP:20260829T012259Z
-UID:6DD23624-8818-401B-9BC1-13BB87366576
-CREATED:20260210T040939Z
-DESCRIPTION:description: PRESALE TICKETS HAVE SOLD OUT. WE HAVE HELD A LIMI
- TED AMOUNT OF TICKETS FOR THE DOOR - DOORS OPEN AT 10\\:30 CHUNK returns to
-  NY - Saturday February 14th // featuring DJs RON LIKE HELL (Wrecked) & res
- idents DICAP & MR PICKLES // HOT GOGO BEARS // C'MON EVERYBODY - 325 Frankl
- in Ave - 10\\:30pm - 4am\nbar: C'mon Everybody\naddress: 325 Franklin Avenu
- e\, New York\, New York\, 11216\ntimezone: America/New_York\nimage: https:/
- /static.wixstatic.com/media/42b6cb_253e0a5bd34945d9876e03eabd5eaabb~mv2.jpg
- /v1/fill/w_1344\,h_1345\,al_c\,q_85/42b6cb_253e0a5bd34945d9876e03eabd5eaabb
- ~mv2.jpg\nwebsite: https://www.chunk-party.com/event-details/chunk-brooklyn
- -the-return\nshortName: CHUNK\ninstagram: https://www.instagram.com/chunkpa
- rty\nfavicon: https://www.chunk-party.com\nkey: chunk-brooklyn-the-return|2
- 026-02-15|c'mon everybody\nbearSource: keyword\ncover: $15.38 - $25.63\npin
- Source: curated\naddressSource: curated\nimageSource: jsonld\nbarSource: pa
- ge-adjacent\ngmaps: https://www.google.com/maps/search/?api=1&query=C'mon%2
- 0Everybody%2C%20325%20Franklin%20Avenue%2C%20New%20York%2C%20New%20York%2C%
- 2011216
-LAST-MODIFIED:20260828T205242Z
-LOCATION:40.6882793\, -73.9569264
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:CHUNK BROOKLYN - The Return!
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260917T210000Z
-DTEND:20260918T010000Z
-DTSTAMP:20260829T012259Z
-UID:urban-bear-nyc-urban-bear-nyc-opening-night-party-2026-09-17@chunky.dad
-CREATED:20260823T172320Z
-DESCRIPTION:description: Kickoff party for the 18th annual Urban Bear NYC w
- eekend at FLEX in Hell's Kitchen.\nbar: FLEX\naddress: 405 W 51st St\, New 
- York\, NY 10019\nwebsite: https://flexbar.nyc\ntimezone: America/New_York\n
- key: urban-bear-nyc-opening-night-party|2026-09-17|flex\nfestival: Urban Be
- ar NYC\nnote: end time not published — 4h default
-LAST-MODIFIED:20260823T172320Z
-LOCATION:40.7644457\, -73.9888453
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Urban Bear NYC Opening Night Party
-TRANSP:OPAQUE
 END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260705T020000Z
 DTEND:20260705T080000Z
-DTSTAMP:20260829T012259Z
+DTSTAMP:20260829T221118Z
 UID:AAC4129A-BE69-4DDF-87BE-D788FA75C0CC
 CREATED:20260520T221146Z
 DESCRIPTION:description: CHUNK BROOKLYN Presents DC Legend KEENAN ORR with 
@@ -410,79 +505,63 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART;VALUE=DATE:20260620
-DTEND;VALUE=DATE:20260621
-DTSTAMP:20260829T012259Z
-UID:t9c4ekcr125qg5chcflc59is5c@google.com
-CREATED:20260425T011024Z
-LAST-MODIFIED:20260425T011024Z
+DTSTART:20260918T210000Z
+DTEND:20260919T020000Z
+DTSTAMP:20260829T221118Z
+UID:urban-bear-nyc-hairy-happy-hour-2026-09-18@chunky.dad
+CREATED:20260823T172321Z
+DESCRIPTION:description: Urban Bear NYC happy hour at Ty's\, the West Villa
+ ge's classic bear bar.\nbar: Ty's\naddress: 114 Christopher St\, New York\,
+  NY 10014\nwebsite: https://tys.nyc\ntimezone: America/New_York\nkey: hairy
+ -happy-hour|2026-09-18|ty-s\nfestival: Urban Bear NYC
+LAST-MODIFIED:20260823T172321Z
+LOCATION:40.7330387\, -74.0052985
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Fat dad
-TRANSP:TRANSPARENT
-END:VEVENT
-BEGIN:VEVENT
-DTSTART;VALUE=DATE:20260626
-DTEND;VALUE=DATE:20260629
-DTSTAMP:20260829T012259Z
-UID:706B8093-375B-4E8C-8FBE-58F5CF949246
-CREATED:20260616T173646Z
-LAST-MODIFIED:20260616T173646Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Pride
+SUMMARY:Hairy Happy Hour
 TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:com.apple.mobilecal
-X-APPLE-CREATOR-TEAM-IDENTITY:0000000000
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260822T020000Z
-DTSTAMP:20260829T012259Z
-UID:B7B7567B-35D7-4D89-90E4-158656F66ABF
-CREATED:20260820T174130Z
-DESCRIPTION:description: Underwear & Gear Party\nbar: Rockbar\naddress: 185
-  Christopher St\, New York\, NY 10014\nimage: https://static.wixstatic.com/
- media/238fae_3aeaa401b6fd4ae5a718c3f3f6732bd8~mv2.jpg\nimageVertical: https
- ://static.wixstatic.com/media/238fae_3aeaa401b6fd4ae5a718c3f3f6732bd8~mv2.j
- pg\nwebsite: https://furball.nyc\ntimezone: America/New_York\ninstagram: ht
- tps://instagram.com/furballnyc/\nshortName: FUR­BALL\nfavicon: https://link
- tr.ee/furballnyc\nkey: underbear-heatwave|2026-08-22|rockbar\nbearSource: k
- eyword\npinSource: curated\naddressSource: curated\nimageSource: page\nbarS
- ource: page-adjacent\ngmaps: https://www.google.com/maps/place/?q=place_id:
- ChIJlwfqXuxZwokRTlizRW_4cwc
-LAST-MODIFIED:20260821T203000Z
-LOCATION:40.7326534\, -74.0096996
+DTSTART;TZID=America/New_York:20250706T170000
+DTEND;TZID=America/New_York:20250707T040000
+RRULE:FREQ=WEEKLY
+DTSTAMP:20260829T221118Z
+UID:96d0b400rgfpagk14sc2bd1aks@google.com
+CREATED:20250712T180243Z
+DESCRIPTION:Name: Beer Blast\nBar: Eagle NYC \nCover: No cover till 9PM\, $
+ 20 cover at 9PM\nWebsite: https://eagle-ny.com\nGoogle Maps: https://maps.a
+ pp.goo.gl/8N8zpGGAYwXJjgsGA\nNickname: Eagle\nShorter: EGL
+LAST-MODIFIED:20250723T045749Z
+LOCATION:40.75168692425323\, -74.00431317114098
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:UNDERBEAR HEATWAVE
+SUMMARY:Beer Blast
 TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260906T020000Z
-DTEND:20260906T080000Z
-DTSTAMP:20260829T012259Z
-UID:BBC5F4BB-5846-4AB7-B86F-1E86EBA13391
-CREATED:20260803T175453Z
-DESCRIPTION:description: WE'RE BACK TO OUR OLD HIJINX WITH A SUMMER SEND OF
- F NIGHT NOT TO BE MISSED - BUCKET LOADS (SLURP!) OF BIG BUFFAS CHUNK PRESEN
- TS LEGENDARY TORONTO DJ TAMIKA W/ DICAP & THCKRTANKER\nbar: C'mon Everybody
- \naddress: 325 Franklin Avenue\, New York\, New York\, 11216\nimage: https:
- //static.wixstatic.com/media/42b6cb_fae874077d5a42b2b2197217d2605434~mv2.jp
- g/v1/fill/w_3300\,h_5100\,al_c\,q_90/42b6cb_fae874077d5a42b2b2197217d260543
- 4~mv2.jpg\ncover: $20-$25\ntimezone: America/New_York\nimageVertical: https
- ://static.wixstatic.com/media/42b6cb_fae874077d5a42b2b2197217d2605434~mv2.j
- pg/v1/fill/w_3300\,h_5100\,al_c\,q_90/42b6cb_fae874077d5a42b2b2197217d26054
- 34~mv2.jpg\nwebsite: https://www.chunk-party.com/event-details/chunk-brookl
- yn-saturday-september-5th\nshortName: CHUNK\ninstagram: https://www.instagr
- am.com/chunkparty\nfavicon: https://www.chunk-party.com\nkey: chunk-brookly
- n|2026-09-06|c'mon everybody\nbearSource: keyword\npinSource: page\naddress
- Source: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.g
- oogle.com/maps/search/?api=1&query=C'mon%20Everybody%2C%20325%20Franklin%20
- Avenue%2C%20New%20York%2C%20New%20York%2C%2011216
-LAST-MODIFIED:20260817T005559Z
-LOCATION:40.6882793\, -73.9569264
+DTSTART:20260510T020000Z
+DTEND:20260510T080000Z
+DTSTAMP:20260829T221118Z
+UID:90FA8B9E-8070-4539-B1B9-BF76B041D037
+CREATED:20260423T192318Z
+DESCRIPTION:description: CHUNK returns to Brooklyn Saturday May 9th CHUNK p
+ resents SPRFRK w/ support from residents DICAP & THCKRTANKER // GOGO BEARS 
+ all night long // Hosted by Damiano // C'MON EVERYBODY 325 Franklin Ave // 
+ 10pm - close\nbar: C'mon Everybody\nimage: https://static.wixstatic.com/med
+ ia/42b6cb_81911c51814244bb9b559e72ce040b43~mv2.jpg/v1/fill/w_1360\,h_1700\,
+ al_c\,q_90/42b6cb_81911c51814244bb9b559e72ce040b43~mv2.jpg\ntimezone: Ameri
+ ca/New_York\nimageVertical: https://static.wixstatic.com/media/42b6cb_81911
+ c51814244bb9b559e72ce040b43~mv2.jpg/v1/fill/w_1360\,h_1700\,al_c\,q_90/42b6
+ cb_81911c51814244bb9b559e72ce040b43~mv2.jpg\nwebsite: https://www.chunk-par
+ ty.com/event-details/chunk-brooklyn-5-9\nshortName: CHUNK\ninstagram: https
+ ://www.instagram.com/chunkparty\nfavicon: https://www.chunk-party.com\nkey:
+  chunk-brooklyn|2026-05-10|c'mon everybody\nbearSource: keyword\ncover: $15
+ .38 - $25.63\naddress: 325 Franklin Ave\, Brooklyn\, NY 11238\, USA\npinSou
+ rce: page\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngm
+ aps: https://www.google.com/maps/search/?api=1&query=C'mon%20Everybody%2C%2
+ 0325%20Franklin%20Ave%2C%20Brooklyn%2C%20NY%2011238%2C%20USA
+LAST-MODIFIED:20260821T180120Z
+LOCATION:40.68830519999999\, -73.9569221
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:CHUNK Brooklyn
@@ -491,49 +570,9 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260510T020000Z
-DTSTAMP:20260829T012259Z
-UID:7934C44A-FA6D-47AE-B233-7150C3C8E2D6
-CREATED:20260730T195725Z
-DESCRIPTION:description: CB JUR UO NO KKLYN\ntimezone: America/New_York\nti
- cketUrl: https://www.chunk-party.com\nimage: https://static.wixstatic.com/m
- edia/42b6cb_81911c51814244bb9b559e72ce040b43~mv2.jpg\nimageSource: page\nba
- r: CHUNK-PARTY.COM\nbarSource: page-adjacent\nwebsite: https://www.chunk-pa
- rty.com/event-details/chunk-brooklyn-5-9\ngmaps: https://www.google.com/map
- s/search/?api=1&query=CHUNK-PARTY.COM%2C%20new%20york\nshortName: CHUNK\nin
- stagram: https://www.instagram.com/chunkparty\nfavicon: https://www.chunk-p
- arty.com\nbearSource: keyword\nkey: c-mon-everybody|2026-05-10|chunk-party.
- com
-LAST-MODIFIED:20260730T195725Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:C'mon Everybody
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART;TZID=America/New_York:20250710T190000
-DTEND;TZID=America/New_York:20250710T220000
-RRULE:FREQ=WEEKLY
-DTSTAMP:20260829T012259Z
-UID:v12lqkpglh2iupk54ttds6pcmg@google.com
-CREATED:20250712T180243Z
-DESCRIPTION:Bar: Animal\nWebsite: https://animal.nyc\nInstagram: https://ww
- w.instagram.com/bearsareanimals\nGoogle Maps: https://maps.app.goo.gl/Xvrwk
- XqQApYfaj6h9\nNickname: Animal\nShorter: BAA\nTea: Popular happy hour for t
- hose that want to go out in Brooklyn. Patio space and goes a bit later.
-LAST-MODIFIED:20260121T231021Z
-LOCATION:40.71739735291992\, -73.94930680925715
-SEQUENCE:1
-STATUS:CONFIRMED
-SUMMARY:Bears Are Animals
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20260524T010000Z
 DTEND:20260524T080000Z
-DTSTAMP:20260829T012259Z
+DTSTAMP:20260829T221118Z
 UID:B44747B4-59F4-4410-A7CB-A7DDA263B4B6
 CREATED:20260507T030031Z
 DESCRIPTION:description: GOLDILOXX is an NYC based monthly bear party for b
@@ -561,44 +600,5 @@ SUMMARY:GOLDILOXX MDW
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260919T180000Z
-DTEND:20260919T220000Z
-DTSTAMP:20260829T012259Z
-UID:urban-bear-nyc-urban-bear-roper-romp-afternoon-beer-burger-bust-2026-09
- -19@chunky.dad
-CREATED:20260823T172317Z
-DESCRIPTION:description: Saturday-afternoon beer and burger bust at Julius'
- \, the historic West Village bar.\nbar: Julius'\naddress: 159 W 10th St\, N
- ew York\, NY 10014\nwebsite: https://www.juliusbarny.com/\ntimezone: Americ
- a/New_York\nkey: urban-bear-roper-romp-afternoon-beer-burger-bust|2026-09-1
- 9|julius\nfestival: Urban Bear NYC\nnote: pin-curated-by-hand
-LAST-MODIFIED:20260823T172317Z
-LOCATION:40.7340\, -74.0015
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Urban Bear Roper Romp: Afternoon Beer + Burger Bust
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
-DTSTART;TZID=America/New_York:20250704T220000
-DTEND;TZID=America/New_York:20250705T040000
-RRULE:FREQ=MONTHLY;BYDAY=1FR
-DTSTAMP:20260829T012259Z
-UID:bdstnukmpv6keg7pon3fram2qg@google.com
-URL:https://www.rockbarnyc.com/
-CREATED:20250719T041643Z
-DESCRIPTION:shortName: Rock-strap\ntea: Jockstraps encouraged\, clothes che
- ck available!\ncover: $10 entry\, $1 clothes check\nbar: Rockbar\ntimezone:
-  America/New_York\nuid: bdstnukmpv6keg7pon3fram2qg@google.com\nwebsite: htt
- ps://www.rockbarnyc.com/\ninstagram: https://www.instagram.com/rockbarny\ng
- maps: https://maps.app.goo.gl/3WsBUpQjekPZUW4u7
-LAST-MODIFIED:20260822T193309Z
-LOCATION:40.7326824\, -74.0097099
-SEQUENCE:1
-STATUS:CONFIRMED
-SUMMARY:Rockstrap
-TRANSP:OPAQUE
 END:VEVENT
 END:VCALENDAR

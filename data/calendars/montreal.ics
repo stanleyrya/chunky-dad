@@ -6,34 +6,9 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-montreal
 X-WR-TIMEZONE:America/Toronto
 BEGIN:VEVENT
-DTSTART:20260809T020000Z
-DTEND:20260809T080000Z
-DTSTAMP:20260824T214542Z
-UID:80957E4E-5FB7-4FBE-BCB3-D6F0E20F02EE
-CREATED:20260802T142347Z
-DESCRIPTION:bar: Bain Mathieu\naddress: 2915 Rue Ontario E\, Montréal\, QC\
- , H2K 1X7\nimage: https://www.bearitmtl.com/wp-content/uploads/2026/07/BEAR
- -Playground-Vignette_WEB.jpg\ncover: 36 CAD\ntimezone: America/Toronto\nima
- geHorizontal: https://www.bearitmtl.com/wp-content/uploads/2026/07/BEAR-Pla
- yground-Vignette_WEB.jpg\nwebsite: https://www.bearitmtl.com/event/bear-pla
- yground-gladiateurs/\nshortName: BEAR IT\nfavicon: https://www.bearitmtl.co
- m\nbearSource: keyword\nkey: bear-playground-–-gladiateurs|2026-08-09|bain 
- mathieu\npinSource: geocoded-exact\naddressSource: page\nimageSource: og-im
- age\nbarSource: geo-poi\ngmaps: https://www.google.com/maps/search/?api=1&q
- uery=45.5374686%2C-73.5499132
-LAST-MODIFIED:20260802T142451Z
-LOCATION:45.5374686\, -73.5499132
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:BEAR PLAYGROUND – GLADIATEURS
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20260919T220000Z
 DTEND:20260920T070000Z
-DTSTAMP:20260824T214542Z
+DTSTAMP:20260829T221118Z
 UID:FCB19573-E6F0-4B33-B26F-1DED6CDF4528
 CREATED:20260815T030435Z
 DESCRIPTION:bar: Stock Bar\naddress: 1171 Rue Ste Catherine Est\, Montréal\
@@ -54,25 +29,293 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
+DTSTART:20251012T020000Z
+DTEND:20251012T070000Z
+DTSTAMP:20260829T221118Z
+UID:CBD7599A-FF30-45A5-AD0E-72AD55A96970
+CREATED:20260829T204840Z
+DESCRIPTION:description: Ton gear\, c’est plus qu’un outfit.C’est ta second
+ e peau\, ton armure\, ton kink. Dans le cadre du weekend Phoenix Montréal e
+ t de la Coupe Canada de Hockey\, cuir\, latex et sport se rencontrent dans 
+ une soirée où chaque regard devine ce qui se cache derrière ton uniforme. E
+ nfile ton gear. Entre dans le jeu. Laisse-toi […]\nbar: Bain Mathieu\naddre
+ ss: 2915 Rue Ontario E\, Montréal\, QC\, H2K 1X7\nimage: https://www.bearit
+ mtl.com/wp-content/uploads/2025/08/Gear-Playground-Vignette2.jpg\ncover: 29
+  CAD\ntimezone: America/Toronto\nimageHorizontal: https://i0.wp.com/www.bea
+ ritmtl.com/wp-content/uploads/2025/08/Gear-Playground-Vignette2.jpg?fit=204
+ 3%2C1076&ssl=1\naddressSource: page\nwebsite: https://www.bearitmtl.com/eve
+ nt/gear-playground/\ngmaps: https://www.google.com/maps/search/?api=1&query
+ =Bain%20Mathieu%2C%202915%20Rue%20Ontario%20E%2C%20Montr%C3%A9al%2C%20QC%2C
+ %20H2K%201X7\npinSource: geocoded-exact\nshortName: BEAR IT\nfavicon: https
+ ://www.bearitmtl.com\nkey: gear-playground|2025-10-12|bain mathieu\nimageSo
+ urce: jsonld\nbarSource: geo-poi\nbearSource: ai
+LAST-MODIFIED:20260829T204840Z
+LOCATION:45.5374686\, -73.5499132
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:GEAR Playground
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260704T020000Z
+DTEND:20260704T070000Z
+DTSTAMP:20260829T221118Z
+UID:12174A66-1575-492B-A3E4-2FE9309D5A37
+CREATED:20260829T204839Z
+DESCRIPTION:bar: Bain Mathieu\naddress: 2915 Rue Ontario E\, Montréal\, QC\
+ , H2K 1X7\ncover: 29 CAD\ntimezone: America/Toronto\naddressSource: page\nw
+ ebsite: https://www.bearitmtl.com/event/pop-playground/\ngmaps: https://www
+ .google.com/maps/search/?api=1&query=Bain%20Mathieu%2C%202915%20Rue%20Ontar
+ io%20E%2C%20Montr%C3%A9al%2C%20QC%2C%20H2K%201X7\npinSource: geocoded-exact
+ \nshortName: BEAR IT\nfavicon: https://www.bearitmtl.com\nkey: pop-playgrou
+ nd|2026-07-04|bain mathieu\nbarSource: geo-poi\nbearSource: ai
+LAST-MODIFIED:20260829T204839Z
+LOCATION:45.5374686\, -73.5499132
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:POP Playground
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20260907T010000Z
 DTEND:20260907T070000Z
-DTSTAMP:20260824T214542Z
+DTSTAMP:20260829T221118Z
 UID:0BE3595E-AB86-4617-827F-595357478D68
 CREATED:20260815T030434Z
 DESCRIPTION:bar: Bar Le Dimant Rouge\naddress: 1681 Rue Sainte-Catherine Es
  t\, Montréal\, QC\, H2L2J5\nimage: https://www.bearitmtl.com/wp-content/upl
- oads/2026/07/The-Hunt-1024x539.jpg\ncover: 29-37 CAD\ntimezone: America/Tor
- onto\naddressSource: page\nwebsite: https://www.bearitmtl.com/event/the-hun
- t/\ngmaps: https://www.google.com/maps/search/?api=1&query=45.5223556%2C-73
- .5528239\npinSource: geocoded-exact\nshortName: BEAR IT\nfavicon: https://w
- ww.bearitmtl.com\nkey: the-hunt|2026-09-07|bar le dimant rouge\nimageHorizo
- ntal: https://www.bearitmtl.com/wp-content/uploads/2026/07/The-Hunt-1024x53
- 9.jpg\nimageSource: og-image\nbearSource: ai
-LAST-MODIFIED:20260815T030434Z
+ oads/2026/07/The-Hunt.jpg\ncover: 29-37 CAD\ntimezone: America/Toronto\nweb
+ site: https://www.bearitmtl.com/event/the-hunt/\nshortName: BEAR IT\nfavico
+ n: https://www.bearitmtl.com\nkey: the-hunt|2026-09-07|bar le dimant rouge\
+ nimageHorizontal: https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/20
+ 26/07/The-Hunt.jpg?fit=2050%2C1080&ssl=1\nbearSource: ai\npinSource: geocod
+ ed-exact\naddressSource: page\nimageSource: jsonld\ngmaps: https://www.goog
+ le.com/maps/search/?api=1&query=45.5223556%2C-73.5528239
+LAST-MODIFIED:20260829T204840Z
 LOCATION:45.5223556\, -73.5528239
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:THE HUNT
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260801T220000Z
+DTEND:20260802T010000Z
+DTSTAMP:20260829T221118Z
+UID:EE9B3D77-7208-41BE-8550-FB235EF97476
+CREATED:20260829T204838Z
+DESCRIPTION:bar: Bain Mathieu\naddress: 2915 Rue Ontario E\, Montréal\, QC\
+ , H2K 1X7\nimage: https://www.bearitmtl.com/wp-content/uploads/2026/06/Week
+ end-PUP-Montreal-Vignette-WEB.jpg\ncover: 4 CAD\ntimezone: America/Toronto\
+ naddressSource: page\nwebsite: https://www.bearitmtl.com/event/concours-pup
+ -montreal/\ngmaps: https://www.google.com/maps/search/?api=1&query=Bain%20M
+ athieu%2C%202915%20Rue%20Ontario%20E%2C%20Montr%C3%A9al%2C%20QC%2C%20H2K%20
+ 1X7\npinSource: geocoded-exact\nshortName: BEAR IT\nfavicon: https://www.be
+ aritmtl.com\nkey: concours-pup-montréal|2026-08-01|bain mathieu\nimageHoriz
+ ontal: https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/06/Weeke
+ nd-PUP-Montreal-Vignette-WEB.jpg?fit=2043%2C1076&ssl=1\nimageSource: jsonld
+ \nbarSource: geo-poi\nbearSource: keyword
+LAST-MODIFIED:20260829T204838Z
+LOCATION:45.5374686\, -73.5499132
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Concours PUP Montréal
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260809T020000Z
+DTEND:20260809T080000Z
+DTSTAMP:20260829T221118Z
+UID:80957E4E-5FB7-4FBE-BCB3-D6F0E20F02EE
+CREATED:20260802T142347Z
+DESCRIPTION:bar: Bain Mathieu\naddress: 2915 Rue Ontario E\, Montréal\, QC\
+ , H2K 1X7\nimage: https://www.bearitmtl.com/wp-content/uploads/2026/07/BEAR
+ -Playground-Vignette_WEB.jpg\ncover: 36 CAD\ntimezone: America/Toronto\nweb
+ site: https://www.bearitmtl.com/event/bear-playground-gladiateurs/\nshortNa
+ me: BEAR IT\nfavicon: https://www.bearitmtl.com\nkey: bear-playground-–-gla
+ diateurs|2026-08-09|bain mathieu\nbearSource: keyword\nimageHorizontal: htt
+ ps://www.bearitmtl.com/wp-content/uploads/2026/07/BEAR-Playground-Vignette_
+ WEB.jpg\npinSource: geocoded-exact\naddressSource: page\nimageSource: jsonl
+ d\nbarSource: geo-poi\ngmaps: https://www.google.com/maps/search/?api=1&que
+ ry=Bain%20Mathieu%2C%202915%20Rue%20Ontario%20E%2C%20Montr%C3%A9al%2C%20QC%
+ 2C%20H2K%201X7
+LAST-MODIFIED:20260829T204841Z
+LOCATION:45.5374686\, -73.5499132
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEAR PLAYGROUND – GLADIATEURS
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260410T220000Z
+DTEND:20260411T023000Z
+DTSTAMP:20260829T221118Z
+UID:E392A127-7FB3-451F-AF6A-46715785409F
+CREATED:20260829T204848Z
+DESCRIPTION:bar: Stock Bar\naddress: 1171 Rue Ste Catherine Est\, Montréal\
+ , QC\nimage: https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/02
+ /2026_Concours_Mours.jpg?fit=1794%2C1021&ssl=1\ncover: 19 CAD\ntimezone: Am
+ erica/Toronto\nimageHorizontal: https://i0.wp.com/www.bearitmtl.com/wp-cont
+ ent/uploads/2026/02/2026_Concours_Mours.jpg?fit=1794%2C1021&ssl=1\naddressS
+ ource: page\nwebsite: https://www.bearitmtl.com/event/concours-m-ours-2026/
+ \ngmaps: https://www.google.com/maps/search/?api=1&query=45.5182366%2C-73.5
+ 565931\npinSource: geocoded-exact\nshortName: BEAR IT\nfavicon: https://www
+ .bearitmtl.com\nkey: concours-m-ours-2026|2026-04-10|stock bar\nimageSource
+ : jsonld\nbearSource: ai
+LAST-MODIFIED:20260829T204848Z
+LOCATION:45.5182366\, -73.5565931
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Concours M. Ours 2026
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260408T210000Z
+DTEND:20260409T000000Z
+DTSTAMP:20260829T221118Z
+UID:8364F7E9-2EFD-411C-8A50-0B2C3EBE3A6F
+CREATED:20260829T204846Z
+DESCRIPTION:description: Vennez récuperer vos pass Come get your pass Au/At
+  Kick OFF event Mercredi/Wednesday 8th Avril/April 202617.00 à/to 19.00Dist
+ rict Video Lounge Bear It\nbar: District Video Lounge\naddress: 1365 Rue Sa
+ inte-Catherine E\, Montréal\, QC\, H2L 2H7\nimage: https://www.bearitmtl.co
+ m/wp-content/uploads/2026/01/Affiche_MAIN_FBEVENT_WEB.jpg\ncover: 40-144 CA
+ D\ntimezone: America/Toronto\nimageHorizontal: https://i0.wp.com/www.bearit
+ mtl.com/wp-content/uploads/2026/01/Affiche_MAIN_FBEVENT_WEB.jpg?fit=1536%2C
+ 804&ssl=1\naddressSource: page\nwebsite: https://www.bearitmtl.com/event/fe
+ stival-sugar-bear-2026/\ngmaps: https://www.google.com/maps/search/?api=1&q
+ uery=District%20Video%20Lounge%2C%201365%20Rue%20Sainte-Catherine%20E%2C%20
+ Montr%C3%A9al%2C%20QC%2C%20H2L%202H7\npinSource: geocoded-exact\nshortName:
+  BEAR IT\nfavicon: https://www.bearitmtl.com\nkey: kick-off-–-festival-suga
+ r-bear-2026|2026-04-08|district video lounge\nimageSource: jsonld\nbarSourc
+ e: geo-poi\nbearSource: keyword
+LAST-MODIFIED:20260829T204847Z
+LOCATION:45.5202030\, -73.5547522
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:KICK OFF – Festival Sugar Bear 2026
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260410T180000Z
+DTEND:20260410T193000Z
+DTSTAMP:20260829T221118Z
+UID:71876BC7-9A40-4350-A75E-6E9C7E0803F9
+CREATED:20260829T204847Z
+DESCRIPTION:bar: Départ devant L’aigle Noir\naddress: 1315 Rue Sainte-Cathe
+ rine E\, Montréal\, QC\, H2L 2H4\nimage: https://i0.wp.com/www.bearitmtl.co
+ m/wp-content/uploads/2026/03/2026_Bus_Tour.jpg?fit=2043%2C1076&ssl=1\ncover
+ : 26 CAD\ntimezone: America/Toronto\nimageHorizontal: https://i0.wp.com/www
+ .bearitmtl.com/wp-content/uploads/2026/03/2026_Bus_Tour.jpg?fit=2043%2C1076
+ &ssl=1\naddressSource: page\nwebsite: https://www.bearitmtl.com/event/tour-
+ de-ville-en-bus-rouge-avec-sasha-baga/\ngmaps: https://www.google.com/maps/
+ search/?api=1&query=45.519641%2C-73.555339\npinSource: curated\nshortName: 
+ BEAR IT\nfavicon: https://www.bearitmtl.com\nkey: tour-de-ville-en-bus-roug
+ e-–-avec-sasha-baga|2026-04-10|départ devant l’aigle noir\nimageSource: jso
+ nld\nbearSource: ai
+LAST-MODIFIED:20260829T204847Z
+LOCATION:45.519641\, -73.555339
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Tour de ville en Bus Rouge – Avec Sasha BAGA
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260412T160000Z
+DTEND:20260412T180000Z
+DTSTAMP:20260829T221118Z
+UID:AEB8C661-F862-408B-9F45-732C5E8CF3D0
+CREATED:20260829T204849Z
+DESCRIPTION:description: Le dimanche\, on mélange paillettes\, humour et pl
+ aisir de manger avec notre Drag Brunch SUGAR BEAR.Au menu \\: une ambiance 
+ festive\, des performances pleines de personnalité… et des surprises à veni
+ r. Animé par l\\\\'unique SASHA BAGA\, avec Velma Jones\, Lady Gidoune et l
+ a Drag On Fly. Le tout sous la musique de DJ DISKOMMANDER Disons […]\nbar: 
+ Saloon Bistro Bar\naddress: 1333 Rue Sainte-Catherine E\, Montreal\, Québec
+ \, H2L 2H4\nimage: https://www.bearitmtl.com/wp-content/uploads/2026/03/Drg
+ _Brunch.jpg\ncover: 33 CAD\ntimezone: America/Toronto\nimageHorizontal: htt
+ ps://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/03/Drg_Brunch.jpg?
+ fit=1792%2C1021&ssl=1\naddressSource: page\nwebsite: https://www.bearitmtl.
+ com/event/drage-brunch-fsb26/\ngmaps: https://www.google.com/maps/search/?a
+ pi=1&query=Saloon%20Bistro%20Bar%2C%201333%20Rue%20Sainte-Catherine%20E%2C%
+ 20Montreal%2C%20Qu%C3%A9bec%2C%20H2L%202H4\nshortName: BEAR IT\nfavicon: ht
+ tps://www.bearitmtl.com\nkey: drag-brunch-–-fsb26|2026-04-12|saloon bistro 
+ bar\nimageSource: jsonld\nbearReview: unlikely — ai\\: The event is explici
+ tly a drag brunch featuring drag performers and has no bear-specific conten
+ t beyond the promoter's name and the coincidental word 'BEAR' in the event 
+ title\, which does not indicate bear community targeting.
+LAST-MODIFIED:20260829T204849Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:DRAG Brunch – FSB26
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260412T020000Z
+DTEND:20260412T070000Z
+DTSTAMP:20260829T221118Z
+UID:CB9E9448-3454-4B48-9C47-F37AE004BE30
+CREATED:20260829T204848Z
+DESCRIPTION:bar: Bain Mathieu\naddress: 2915 Rue Ontario E\, Montréal\, QC\
+ , H2K 1X7\nimage: https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/20
+ 26/02/2026_BEAR_Playground.jpg?fit=1794%2C1021&ssl=1\ncover: 26 CAD\ntimezo
+ ne: America/Toronto\nimageHorizontal: https://i0.wp.com/www.bearitmtl.com/w
+ p-content/uploads/2026/02/2026_BEAR_Playground.jpg?fit=1794%2C1021&ssl=1\na
+ ddressSource: page\nwebsite: https://www.bearitmtl.com/event/playground-thi
+ ck-glazed/\ngmaps: https://www.google.com/maps/search/?api=1&query=Bain%20M
+ athieu%2C%202915%20Rue%20Ontario%20E%2C%20Montr%C3%A9al%2C%20QC%2C%20H2K%20
+ 1X7\npinSource: geocoded-exact\nshortName: BEAR IT\nfavicon: https://www.be
+ aritmtl.com\nkey: playground-–-thick-glazed|2026-04-12|bain mathieu\nimageS
+ ource: jsonld\nbarSource: geo-poi\nbearSource: keyword
+LAST-MODIFIED:20260829T204848Z
+LOCATION:45.5374686\, -73.5499132
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:PLAYGROUND – Thick & Glazed
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260802T020000Z
+DTEND:20260802T070000Z
+DTSTAMP:20260829T221118Z
+UID:451BB189-E0AF-402D-AF11-B82A81E7DE57
+CREATED:20260829T204838Z
+DESCRIPTION:description: Bear It\nbar: Bain Mathieu\naddress: 2915 Rue Onta
+ rio E\, Montréal\, QC\, H2K 1X7\nimage: https://i0.wp.com/www.bearitmtl.com
+ /wp-content/uploads/2026/06/KINK-Playground-Vignette_WEB.jpg?fit=1634%2C861
+ &ssl=1\ncover: 29 CAD\ntimezone: America/Toronto\nimageHorizontal: https://
+ i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/06/KINK-Playground-Vign
+ ette_WEB.jpg?fit=1634%2C861&ssl=1\naddressSource: page\nwebsite: https://ww
+ w.bearitmtl.com/event/kink-playground-2/\ngmaps: https://www.google.com/map
+ s/search/?api=1&query=Bain%20Mathieu%2C%202915%20Rue%20Ontario%20E%2C%20Mon
+ tr%C3%A9al%2C%20QC%2C%20H2K%201X7\npinSource: geocoded-exact\nshortName: BE
+ AR IT\nfavicon: https://www.bearitmtl.com\nkey: kink-playground|2026-08-02|
+ bain mathieu\nimageSource: jsonld\nbarSource: geo-poi\nbearSource: keyword
+LAST-MODIFIED:20260829T204839Z
+LOCATION:45.5374686\, -73.5499132
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:KINK Playground
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

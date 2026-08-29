@@ -5,4 +5,35 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-toronto
 X-WR-TIMEZONE:America/New_York
+BEGIN:VEVENT
+DTSTART:20251206T150000Z
+DTEND:20251207T080000Z
+DTSTAMP:20260829T221118Z
+UID:ACED9449-C269-4068-8EAF-ED9E84842207
+CREATED:20260829T204850Z
+DESCRIPTION:description: Toronto… get ready for it. Montreal\\\\'s PLAYGROU
+ ND is coming to the city for the very first time\, and trust us\, we’re com
+ ing in with a BANG! On December 6th\, 2025\, we’re opening a playground whe
+ re every body\, every style and every fantasy gets the space to shine. Leat
+ her\, rubber\, sports gear\, drag\, kink\, bears\, pups\, […]\nbar: Buddies
+  in Bad Times Theatre\naddress: 12 Alexander Street\, Toronto\, M4Y1B4\nima
+ ge: https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2025/11/Playgrou
+ nd-Vignette2.jpg?fit=1022%2C538&ssl=1\ncover: 22 CAD\ntimezone: America/Tor
+ onto\nimageHorizontal: https://i0.wp.com/www.bearitmtl.com/wp-content/uploa
+ ds/2025/11/Playground-Vignette2.jpg?fit=1022%2C538&ssl=1\naddressSource: pa
+ ge\nwebsite: https://www.bearitmtl.com/event/playground-toronto/\ngmaps: ht
+ tps://www.google.com/maps/search/?api=1&query=Buddies%20in%20Bad%20Times%20
+ Theatre%2C%2012%20Alexander%20Street%2C%20Toronto%2C%20M4Y1B4\npinSource: g
+ eocoded-exact\nshortName: BEAR IT\nfavicon: https://www.bearitmtl.com\nkey:
+  playground-toronto|2025-12-06|buddies in bad times theatre\nimageSource: j
+ sonld\nbarSource: geo-poi\nbearSource: ai
+LAST-MODIFIED:20260829T204850Z
+LOCATION:43.6632092\, -79.3829940
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Playground Toronto
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR

@@ -3,5 +3,54 @@
     "calendarTimezone": "America/New_York",
     "timezoneData": null
   },
-  "events": []
+  "events": [
+    {
+      "name": "Playground Toronto",
+      "day": "Saturday",
+      "time": "10AM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 43.6632092,
+        "lng": -79.382994
+      },
+      "startDate": "2025-12-06T10:00:00",
+      "endDate": "2025-12-07T03:00:00",
+      "unprocessedDescription": "description: Toronto… get ready for it. Montreal\\\\\\\\'s PLAYGROU\rND is coming to the city for the very first time, and trust us, we’re coming in with a BANG! On December 6th, 2025, we’re opening a playground where every body, every style and every fantasy gets the space to shine. Leather, rubber, sports gear, drag, kink, bears, pups, […]\nbar: Buddies in Bad Times Theatre\naddress: 12 Alexander Street, Toronto, M4Y1B4\nimage: https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2025/11/Playground-Vignette2.jpg?fit=1022%2C538&ssl=1\ncover: 22 CAD\ntimezone: America/Toronto\nimageHorizontal: https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2025/11/Playground-Vignette2.jpg?fit=1022%2C538&ssl=1\naddressSource: page\nwebsite: https://www.bearitmtl.com/event/playground-toronto/\ngmaps: https://www.google.com/maps/search/?api=1&query=Buddies%20in%20Bad%20Times%20Theatre%2C%2012%20Alexander%20Street%2C%20Toronto%2C%20M4Y1B4\npinSource: geocoded-exact\nshortName: BEAR IT\nfavicon: https://www.bearitmtl.com\nkey: playground-toronto|2025-12-06|buddies in bad times theatre\nimageSource: jsonld\nbarSource: geo-poi\nbearSource: ai",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "ACED9449-C269-4068-8EAF-ED9E84842207",
+      "uid": "ACED9449-C269-4068-8EAF-ED9E84842207",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Buddies in Bad Times Theatre",
+      "cover": "22 CAD",
+      "image": "https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2025/11/Playground-Vignette2.jpg?fit=1022%2C538&ssl=1",
+      "imageHorizontal": "https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2025/11/Playground-Vignette2.jpg?fit=1022%2C538&ssl=1",
+      "favicon": "https://www.bearitmtl.com",
+      "tea": "Toronto… get ready for it. Montreal\\\\'s PLAYGROUND is coming to the city for the very first time, and trust us, we’re coming in with a BANG! On December 6th, 2025, we’re opening a playground where every body, every style and every fantasy gets the space to shine. Leather, rubber, sports gear, drag, kink, bears, pups, […]",
+      "address": "12 Alexander Street, Toronto, M4Y1B4",
+      "website": "https://www.bearitmtl.com/event/playground-toronto/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Buddies%20in%20Bad%20Times%20Theatre%2C%2012%20Alexander%20Street%2C%20Toronto%2C%20M4Y1B4",
+      "shortName": "BEAR IT",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.bearitmtl.com/event/playground-toronto/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Buddies%20in%20Bad%20Times%20Theatre%2C%2012%20Alexander%20Street%2C%20Toronto%2C%20M4Y1B4",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "playground-toronto-2a1597db"
+    }
+  ]
 }

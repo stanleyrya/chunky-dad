@@ -63,7 +63,7 @@
     "chicago": {
       "name": "Chicago",
       "status": "success",
-      "dataLength": 22525,
+      "dataLength": 22562,
       "eventCount": 18
     },
     "dallas": {
@@ -129,7 +129,7 @@
     "la": {
       "name": "Los Angeles",
       "status": "success",
-      "dataLength": 37282,
+      "dataLength": 37306,
       "eventCount": 31
     },
     "london": {
@@ -165,8 +165,8 @@
     "montreal": {
       "name": "Montreal",
       "status": "success",
-      "dataLength": 3414,
-      "eventCount": 3
+      "dataLength": 15251,
+      "eventCount": 12
     },
     "nola": {
       "name": "New Orleans",
@@ -177,7 +177,7 @@
     "nyc": {
       "name": "New York",
       "status": "success",
-      "dataLength": 26137,
+      "dataLength": 26132,
       "eventCount": 26
     },
     "palm-springs": {
@@ -255,7 +255,7 @@
     "sf": {
       "name": "San Francisco",
       "status": "success",
-      "dataLength": 24123,
+      "dataLength": 24143,
       "eventCount": 17
     },
     "sitges": {
@@ -273,8 +273,8 @@
     "toronto": {
       "name": "Toronto",
       "status": "success",
-      "dataLength": 197,
-      "eventCount": 0
+      "dataLength": 1810,
+      "eventCount": 1
     },
     "torremolinos": {
       "name": "Torremolinos",

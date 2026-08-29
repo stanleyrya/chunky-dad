@@ -22,6 +22,58 @@
   },
   "events": [
     {
+      "name": "Bears Night Out",
+      "day": "Saturday",
+      "time": "10PM-4AM",
+      "eventType": "monthly",
+      "recurring": true,
+      "recurrence": "FREQ=MONTHLY;BYDAY=1SA",
+      "coordinates": {
+        "lat": 40.7326824,
+        "lng": -74.0097099
+      },
+      "startDate": "2025-07-05T22:00:00",
+      "endDate": "2025-07-06T04:00:00",
+      "unprocessedDescription": "Tea: Go-Go Bears, Cubs and LOTS of other fun things to grab on\rto!\nCover: $10\nWebsite: https://www.theurbanbear.com/\nInstagram: https://www.instagram.com/urbanbearnyc\nGoogle Maps: https://maps.app.goo.gl/3WsBUpQjekPZUW4u7\nBar: Rockbar\nShorter: BNO",
+      "startTimezone": "America/New_York",
+      "endTimezone": "America/New_York",
+      "calendarTimezone": "America/New_York",
+      "wasUTC": false,
+      "sourceUid": "suljenhlak65mplsbrft5rgcd0@google.com",
+      "uid": "suljenhlak65mplsbrft5rgcd0@google.com",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 2,
+      "overrideIdentityType": null,
+      "bar": "Rockbar",
+      "cover": "$10",
+      "tea": "Go-Go Bears, Cubs and LOTS of other fun things to grab onto!",
+      "address": null,
+      "website": "https://www.theurbanbear.com/",
+      "instagram": "https://www.instagram.com/urbanbearnyc",
+      "gmaps": "https://maps.app.goo.gl/3WsBUpQjekPZUW4u7",
+      "shorterName": "BNO",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.theurbanbear.com/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/urbanbearnyc",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://maps.app.goo.gl/3WsBUpQjekPZUW4u7",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bears-night-out-3d00f897"
+    },
+    {
       "name": "The 18th Annual Urban Bear NYC Street Fair",
       "day": "Sunday",
       "time": "1PM-7PM",
@@ -59,7 +111,7 @@
       "slug": "the-18th-annual-urban-bear-nyc-street-fair-5cc259e6"
     },
     {
-      "name": "UNDERBEAR Leather + Kink",
+      "name": "UNDERBEAR HEATWAVE",
       "day": "Friday",
       "time": "10PM",
       "eventType": "routine",
@@ -68,32 +120,33 @@
         "lat": 40.7326534,
         "lng": -74.0096996
       },
-      "startDate": "2026-07-17T22:00:00",
-      "unprocessedDescription": "description: UNDERWEAR • JÖCKS • GEAR\n(ENCOURAGED, NOT REQUIR\rED. CLOTHES CHECK AVAILABLE)\nDARK ROOM AT MIDNIGHT\nbar: ROCKBAR\naddress: 185 Christopher St, New York, NY 10014\ntimezone: America/New_York\ninstagram: https://instagram.com/furballnyc/\nimage: https://static.wixstatic.com/media/238fae_66efd0476132438e9c47c6d71832eed7~mv2.jpg/v1/fill/w_296,h_526,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_66efd0476132438e9c47c6d71832eed7~mv2.jpg\nshortName: FUR-BALL\nfavicon: https://linktr.ee/furballnyc\nwebsite: https://www.furball.nyc\ngmaps: https://www.google.com/maps/search/?api=1&query=ROCKBAR%2C%20125%20CHRISTOPHER%20ST%20NYC\nkey: underbear-leather-kink|2026-07-18|rockbar",
+      "startDate": "2026-08-21T22:00:00",
+      "unprocessedDescription": "description: Underwear & Gear Party\nbar: Rockbar\naddress: 185\r Christopher St, New York, NY 10014\nimage: https://static.wixstatic.com/media/238fae_3aeaa401b6fd4ae5a718c3f3f6732bd8~mv2.jpg\nimageVertical: https://static.wixstatic.com/media/238fae_3aeaa401b6fd4ae5a718c3f3f6732bd8~mv2.jpg\nwebsite: https://furball.nyc\ntimezone: America/New_York\ninstagram: https://instagram.com/furballnyc/\nshortName: FUR­BALL\nfavicon: https://linktr.ee/furballnyc\nkey: underbear-heatwave|2026-08-22|rockbar\nbearSource: keyword\npinSource: curated\naddressSource: curated\nimageSource: page\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJlwfqXuxZwokRTlizRW_4cwc",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "7647B9BA-E04F-44F8-92D0-8A3D52E0AE3E",
-      "uid": "7647B9BA-E04F-44F8-92D0-8A3D52E0AE3E",
+      "sourceUid": "B7B7567B-35D7-4D89-90E4-158656F66ABF",
+      "uid": "B7B7567B-35D7-4D89-90E4-158656F66ABF",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "ROCKBAR",
-      "image": "https://static.wixstatic.com/media/238fae_66efd0476132438e9c47c6d71832eed7~mv2.jpg/v1/fill/w_296,h_526,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_66efd0476132438e9c47c6d71832eed7~mv2.jpg",
+      "bar": "Rockbar",
+      "image": "https://static.wixstatic.com/media/238fae_3aeaa401b6fd4ae5a718c3f3f6732bd8~mv2.jpg",
+      "imageVertical": "https://static.wixstatic.com/media/238fae_3aeaa401b6fd4ae5a718c3f3f6732bd8~mv2.jpg",
       "favicon": "https://linktr.ee/furballnyc",
-      "tea": "UNDERWEAR • JÖCKS • GEAR",
+      "tea": "Underwear & Gear Party",
       "address": "185 Christopher St, New York, NY 10014",
-      "website": "https://www.furball.nyc",
+      "website": "https://furball.nyc",
       "instagram": "https://instagram.com/furballnyc/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=ROCKBAR%2C%20125%20CHRISTOPHER%20ST%20NYC",
-      "shortName": "FUR-BALL",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJlwfqXuxZwokRTlizRW_4cwc",
+      "shortName": "FUR­BALL",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://www.furball.nyc",
+          "url": "https://furball.nyc",
           "label": "🌐 Website"
         },
         {
@@ -103,180 +156,11 @@
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=ROCKBAR%2C%20125%20CHRISTOPHER%20ST%20NYC",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJlwfqXuxZwokRTlizRW_4cwc",
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "underbear-leather-kink-3fe96ee0"
-    },
-    {
-      "name": "MEGAWOOF & BEARMILK present MEGAMILK",
-      "day": "Saturday",
-      "time": "10PM-4AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 40.6977034,
-        "lng": -73.9078199
-      },
-      "startDate": "2026-07-25T22:00:00",
-      "endDate": "2026-07-26T04:00:00",
-      "unprocessedDescription": "description: MEGAWOOF & BEARMILK present MEGAMILK\naddress: 10-\r90 Wyckoff Avenue, Queens, NY 11385\nticketUrl: https://www.eventbrite.com/e/megawoof-bearmilk-present-megamilk-tickets-1991421809239\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1186449026%2F185013722403%2F1%2Foriginal.20260608-222505?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=421b275e05f8a8650bc8da81075e6572\ncover: $16.84-$22.10\ntimezone: America/New_York\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nwebsite: https://linktr.ee/megawoof_america\nkey: megawoof-bearmilk-present-megamilk|2026-07-26|\nbar: HOLO\npinSource: geocoded-approx\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=HOLO%2C%2010-90%20Wyckoff%20Avenue%2C%20Queens%2C%20NY%2011385",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "C84C83A2-01B1-49FD-8DED-6C204FC30897",
-      "uid": "C84C83A2-01B1-49FD-8DED-6C204FC30897",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "HOLO",
-      "cover": "$16.84-$22.10",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1186449026%2F185013722403%2F1%2Foriginal.20260608-222505?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=421b275e05f8a8650bc8da81075e6572",
-      "tea": "MEGAWOOF & BEARMILK present MEGAMILK",
-      "address": "10-90 Wyckoff Avenue, Queens, NY 11385",
-      "website": "https://linktr.ee/megawoof_america",
-      "instagram": "https://www.instagram.com/megawoof_america",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=HOLO%2C%2010-90%20Wyckoff%20Avenue%2C%20Queens%2C%20NY%2011385",
-      "ticketUrl": "https://www.eventbrite.com/e/megawoof-bearmilk-present-megamilk-tickets-1991421809239",
-      "shortName": "MEGA-WOOF",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://linktr.ee/megawoof_america",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/megawoof_america",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=HOLO%2C%2010-90%20Wyckoff%20Avenue%2C%20Queens%2C%20NY%2011385",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/megawoof-bearmilk-present-megamilk-tickets-1991421809239",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "megawoof-bearmilk-present-megamilk-42f507f5"
-    },
-    {
-      "name": "Hairy Happy Hour",
-      "day": "Friday",
-      "time": "5PM-10PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 40.7330387,
-        "lng": -74.0052985
-      },
-      "startDate": "2026-09-18T17:00:00",
-      "endDate": "2026-09-18T22:00:00",
-      "unprocessedDescription": "description: Urban Bear NYC happy hour at Ty's, the West Villa\rge's classic bear bar.\nbar: Ty's\naddress: 114 Christopher St, New York, NY 10014\nwebsite: https://tys.nyc\ntimezone: America/New_York\nkey: hairy-happy-hour|2026-09-18|ty-s\nfestival: Urban Bear NYC",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "urban-bear-nyc-hairy-happy-hour-2026-09-18@chunky.dad",
-      "uid": "urban-bear-nyc-hairy-happy-hour-2026-09-18@chunky.dad",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Ty's",
-      "tea": "Urban Bear NYC happy hour at Ty's, the West Village's classic bear bar.",
-      "address": "114 Christopher St, New York, NY 10014",
-      "website": "https://tys.nyc",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://tys.nyc",
-          "label": "🌐 Website"
-        }
-      ],
-      "slug": "hairy-happy-hour-50a44f8e"
-    },
-    {
-      "name": "Mega Bear Blast: Closing Night Party",
-      "day": "Sunday",
-      "time": "6PM-10PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 40.7326534,
-        "lng": -74.0096996
-      },
-      "startDate": "2026-09-20T18:00:00",
-      "endDate": "2026-09-20T22:00:00",
-      "unprocessedDescription": "description: Urban Bear NYC closing-night party at Rockbar foll\rowing the street fair.\nbar: Rockbar\naddress: 185 Christopher St, New York, NY 10014\nwebsite: https://rockbarnyc.com\ntimezone: America/New_York\nkey: mega-bear-blast-closing-night-party|2026-09-20|rockbar\nfestival: Urban Bear NYC\nnote: end time not published — 4h default",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "urban-bear-nyc-mega-bear-blast-closing-night-party-2026-09-20@chunky.da\rd",
-      "uid": "urban-bear-nyc-mega-bear-blast-closing-night-party-2026-09-20@chunky.da\rd",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Rockbar",
-      "tea": "Urban Bear NYC closing-night party at Rockbar following the street fair.",
-      "address": "185 Christopher St, New York, NY 10014",
-      "website": "https://rockbarnyc.com",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://rockbarnyc.com",
-          "label": "🌐 Website"
-        }
-      ],
-      "slug": "mega-bear-blast-closing-night-party-435aeee7"
-    },
-    {
-      "name": "Truck Stop: Fat Fuc",
-      "day": "Saturday",
-      "time": "9PM-3AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 40.7316977,
-        "lng": -73.9841737
-      },
-      "startDate": "2026-09-19T21:00:00",
-      "endDate": "2026-09-20T03:00:00",
-      "unprocessedDescription": "description: Urban Bear NYC's Saturday-night Truck Stop party a\rt Nowhere, with music by Dave Hughes (FUZZY).\nbar: Nowhere Bar\naddress: 322 E 14th St, New York, NY 10003\nwebsite: https://nowherebarnyc.com\ntimezone: America/New_York\nkey: truck-stop-fat-fuc|2026-09-19|nowhere-bar\nfestival: Urban Bear NYC\nnote: end time not published — 6h default",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "urban-bear-nyc-truck-stop-fat-fuc-2026-09-19@chunky.dad",
-      "uid": "urban-bear-nyc-truck-stop-fat-fuc-2026-09-19@chunky.dad",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Nowhere Bar",
-      "tea": "Urban Bear NYC's Saturday-night Truck Stop party at Nowhere, with music by Dave Hughes (FUZZY).",
-      "address": "322 E 14th St, New York, NY 10003",
-      "website": "https://nowherebarnyc.com",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://nowherebarnyc.com",
-          "label": "🌐 Website"
-        }
-      ],
-      "slug": "truck-stop-fat-fuc-486ee2b3"
+      "slug": "underbear-heatwave-30508312"
     },
     {
       "name": "FUZZY",
@@ -337,6 +221,545 @@
       "slug": "fuzzy-0380f9f1"
     },
     {
+      "name": "Bear Happy Hour",
+      "day": "Thursday",
+      "time": "5PM-9PM",
+      "eventType": "weekly",
+      "recurring": true,
+      "recurrence": "FREQ=WEEKLY",
+      "startDate": "2025-07-10T17:00:00",
+      "endDate": "2025-07-10T21:00:00",
+      "unprocessedDescription": "Bar: Check instagram for this week’s location.\nTea: Popular ha\rppy hour that changes location every week in Manhattan.\nInstagram: https://www.instagram.com/bearhappyhournyc\nShorter: BHH\nWeb: https://linktr.ee/bearhappyhour",
+      "startTimezone": "America/New_York",
+      "endTimezone": "America/New_York",
+      "calendarTimezone": "America/New_York",
+      "wasUTC": false,
+      "sourceUid": "6thhos5ct3pllq5kmvsp7infd8@google.com",
+      "uid": "6thhos5ct3pllq5kmvsp7infd8@google.com",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Check instagram for this week’s location.",
+      "tea": "Popular happy hour that changes location every week in Manhattan.",
+      "address": null,
+      "website": "https://linktr.ee/bearhappyhour",
+      "instagram": "https://www.instagram.com/bearhappyhournyc",
+      "shorterName": "BHH",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/bearhappyhour",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearhappyhournyc",
+          "label": "📷 Instagram"
+        }
+      ],
+      "slug": "bear-happy-hour-66e240de"
+    },
+    {
+      "name": "The UnderBear Party",
+      "day": "Friday",
+      "time": "10PM-4AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 40.7326534,
+        "lng": -74.0096996
+      },
+      "startDate": "2026-09-18T22:00:00",
+      "endDate": "2026-09-19T04:00:00",
+      "unprocessedDescription": "description: Urban Bear NYC's Friday-night UnderBear underwear \rparty at Rockbar.\nbar: Rockbar\naddress: 185 Christopher St, New York, NY 10014\nwebsite: https://rockbarnyc.com\ntimezone: America/New_York\nkey: the-underbear-party|2026-09-18|rockbar\nfestival: Urban Bear NYC\nnote: end time not published — 6h default",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "urban-bear-nyc-the-underbear-party-2026-09-18@chunky.dad",
+      "uid": "urban-bear-nyc-the-underbear-party-2026-09-18@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Rockbar",
+      "tea": "Urban Bear NYC's Friday-night UnderBear underwear party at Rockbar.",
+      "address": "185 Christopher St, New York, NY 10014",
+      "website": "https://rockbarnyc.com",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://rockbarnyc.com",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "the-underbear-party-53a0e24e"
+    },
+    {
+      "name": "Fat dad",
+      "day": "Saturday",
+      "time": null,
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-06-20T00:00:00",
+      "endDate": "2026-06-21T00:00:00",
+      "unprocessedDescription": null,
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": false,
+      "sourceUid": "t9c4ekcr125qg5chcflc59is5c@google.com",
+      "uid": "t9c4ekcr125qg5chcflc59is5c@google.com",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "website": null,
+      "slug": "fat-dad-54af58a5"
+    },
+    {
+      "name": "Bear Invasion: The Whitney Museum",
+      "day": "Friday",
+      "time": "6PM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 40.7396,
+        "lng": -74.0089
+      },
+      "startDate": "2026-09-18T18:00:00",
+      "endDate": "2026-09-18T22:00:00",
+      "unprocessedDescription": "description: Urban Bear NYC takes over the Whitney Museum in th\re Meatpacking District for a Friday-evening bear museum outing.\nbar: Whitney Museum of American Art\naddress: 99 Gansevoort St, New York, NY 10014\nwebsite: https://whitney.org\ntimezone: America/New_York\nkey: bear-invasion-the-whitney-museum|2026-09-18|whitney-museum-of-american-art\nfestival: Urban Bear NYC\nnote: end time not published — 4h default; pin-curated-by-hand",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "urban-bear-nyc-bear-invasion-the-whitney-museum-2026-09-18@chunky.dad",
+      "uid": "urban-bear-nyc-bear-invasion-the-whitney-museum-2026-09-18@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Whitney Museum of American Art",
+      "tea": "Urban Bear NYC takes over the Whitney Museum in the Meatpacking District for a Friday-evening bear museum outing.",
+      "address": "99 Gansevoort St, New York, NY 10014",
+      "website": "https://whitney.org",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://whitney.org",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "bear-invasion-the-whitney-museum-51a88f91"
+    },
+    {
+      "name": "Bears Are Animals",
+      "day": "Thursday",
+      "time": "7PM-10PM",
+      "eventType": "weekly",
+      "recurring": true,
+      "recurrence": "FREQ=WEEKLY",
+      "coordinates": {
+        "lat": 40.71739735291992,
+        "lng": -73.94930680925715
+      },
+      "startDate": "2025-07-10T19:00:00",
+      "endDate": "2025-07-10T22:00:00",
+      "unprocessedDescription": "Bar: Animal\nWebsite: https://animal.nyc\nInstagram: https://ww\rw.instagram.com/bearsareanimals\nGoogle Maps: https://maps.app.goo.gl/XvrwkXqQApYfaj6h9\nNickname: Animal\nShorter: BAA\nTea: Popular happy hour for those that want to go out in Brooklyn. Patio space and goes a bit later.",
+      "startTimezone": "America/New_York",
+      "endTimezone": "America/New_York",
+      "calendarTimezone": "America/New_York",
+      "wasUTC": false,
+      "sourceUid": "v12lqkpglh2iupk54ttds6pcmg@google.com",
+      "uid": "v12lqkpglh2iupk54ttds6pcmg@google.com",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 1,
+      "overrideIdentityType": null,
+      "bar": "Animal",
+      "tea": "Popular happy hour for those that want to go out in Brooklyn. Patio space and goes a bit later.",
+      "address": null,
+      "website": "https://animal.nyc",
+      "instagram": "https://www.instagram.com/bearsareanimals",
+      "gmaps": "https://maps.app.goo.gl/XvrwkXqQApYfaj6h9",
+      "shortName": "Animal",
+      "shorterName": "BAA",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://animal.nyc",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearsareanimals",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://maps.app.goo.gl/XvrwkXqQApYfaj6h9",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bears-are-animals-4cf796ee"
+    },
+    {
+      "name": "CHUNK Brooklyn",
+      "day": "Saturday",
+      "time": "10PM-4AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 40.68830519999999,
+        "lng": -73.9569221
+      },
+      "startDate": "2026-09-05T22:00:00",
+      "endDate": "2026-09-06T04:00:00",
+      "unprocessedDescription": "description: WE'RE BACK TO OUR OLD HIJINX WITH A SUMMER SEND OF\rF NIGHT NOT TO BE MISSED - BUCKET LOADS (SLURP!) OF BIG BUFFAS CHUNK PRESENTS LEGENDARY TORONTO DJ TAMIKA W/ DICAP & THCKRTANKER\nbar: C'mon Everybody\nimage: https://static.wixstatic.com/media/42b6cb_fae874077d5a42b2b2197217d2605434~mv2.jpg/v1/fill/w_3300,h_5100,al_c,q_90/42b6cb_fae874077d5a42b2b2197217d2605434~mv2.jpg\ncover: $20-$25\ntimezone: America/New_York\nimageVertical: https://static.wixstatic.com/media/42b6cb_fae874077d5a42b2b2197217d2605434~mv2.jpg/v1/fill/w_3300,h_5100,al_c,q_90/42b6cb_fae874077d5a42b2b2197217d2605434~mv2.jpg\nwebsite: https://www.chunk-party.com/event-details/chunk-brooklyn-saturday-september-5th\nshortName: CHUNK\ninstagram: https://www.instagram.com/chunkparty\nfavicon: https://www.chunk-party.com\nkey: chunk-brooklyn|2026-09-06|c'mon everybody\nbearSource: keyword\naddress: 325 Franklin Ave, Brooklyn, NY 11238, USA\npinSource: page\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=C'mon%20Everybody%2C%20325%20Franklin%20Ave%2C%20Brooklyn%2C%20NY%2011238%2C%20USA",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "BBC5F4BB-5846-4AB7-B86F-1E86EBA13391",
+      "uid": "BBC5F4BB-5846-4AB7-B86F-1E86EBA13391",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "C'mon Everybody",
+      "cover": "$20-$25",
+      "image": "https://static.wixstatic.com/media/42b6cb_fae874077d5a42b2b2197217d2605434~mv2.jpg/v1/fill/w_3300,h_5100,al_c,q_90/42b6cb_fae874077d5a42b2b2197217d2605434~mv2.jpg",
+      "imageVertical": "https://static.wixstatic.com/media/42b6cb_fae874077d5a42b2b2197217d2605434~mv2.jpg/v1/fill/w_3300,h_5100,al_c,q_90/42b6cb_fae874077d5a42b2b2197217d2605434~mv2.jpg",
+      "favicon": "https://www.chunk-party.com",
+      "tea": "WE'RE BACK TO OUR OLD HIJINX WITH A SUMMER SEND OFF NIGHT NOT TO BE MISSED - BUCKET LOADS (SLURP!) OF BIG BUFFAS CHUNK PRESENTS LEGENDARY TORONTO DJ TAMIKA W/ DICAP & THCKRTANKER",
+      "address": "325 Franklin Ave, Brooklyn, NY 11238, USA",
+      "website": "https://www.chunk-party.com/event-details/chunk-brooklyn-saturday-september-5th",
+      "instagram": "https://www.instagram.com/chunkparty",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=C'mon%20Everybody%2C%20325%20Franklin%20Ave%2C%20Brooklyn%2C%20NY%2011238%2C%20USA",
+      "shortName": "CHUNK",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.chunk-party.com/event-details/chunk-brooklyn-saturday-september-5th",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/chunkparty",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=C'mon%20Everybody%2C%20325%20Franklin%20Ave%2C%20Brooklyn%2C%20NY%2011238%2C%20USA",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "chunk-brooklyn-57ca46f2"
+    },
+    {
+      "name": "Urban Bear NYC Opening Night Party",
+      "day": "Thursday",
+      "time": "5PM-9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 40.7644457,
+        "lng": -73.9888453
+      },
+      "startDate": "2026-09-17T17:00:00",
+      "endDate": "2026-09-17T21:00:00",
+      "unprocessedDescription": "description: Kickoff party for the 18th annual Urban Bear NYC w\reekend at FLEX in Hell's Kitchen.\nbar: FLEX\naddress: 405 W 51st St, New York, NY 10019\nwebsite: https://flexbar.nyc\ntimezone: America/New_York\nkey: urban-bear-nyc-opening-night-party|2026-09-17|flex\nfestival: Urban Bear NYC\nnote: end time not published — 4h default",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "urban-bear-nyc-urban-bear-nyc-opening-night-party-2026-09-17@chunky.dad",
+      "uid": "urban-bear-nyc-urban-bear-nyc-opening-night-party-2026-09-17@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "FLEX",
+      "tea": "Kickoff party for the 18th annual Urban Bear NYC weekend at FLEX in Hell's Kitchen.",
+      "address": "405 W 51st St, New York, NY 10019",
+      "website": "https://flexbar.nyc",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://flexbar.nyc",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "urban-bear-nyc-opening-night-party-5788c695"
+    },
+    {
+      "name": "Urban Bear Roper Romp: Afternoon Beer + Burger Bust",
+      "day": "Saturday",
+      "time": "2PM-6PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 40.734,
+        "lng": -74.0015
+      },
+      "startDate": "2026-09-19T14:00:00",
+      "endDate": "2026-09-19T18:00:00",
+      "unprocessedDescription": "description: Saturday-afternoon beer and burger bust at Julius'\r, the historic West Village bar.\nbar: Julius'\naddress: 159 W 10th St, New York, NY 10014\nwebsite: https://www.juliusbarny.com/\ntimezone: America/New_York\nkey: urban-bear-roper-romp-afternoon-beer-burger-bust|2026-09-19|julius\nfestival: Urban Bear NYC\nnote: pin-curated-by-hand",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "urban-bear-nyc-urban-bear-roper-romp-afternoon-beer-burger-bust-2026-09\r-19@chunky.dad",
+      "uid": "urban-bear-nyc-urban-bear-roper-romp-afternoon-beer-burger-bust-2026-09\r-19@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Julius'",
+      "tea": "Saturday-afternoon beer and burger bust at Julius', the historic West Village bar.",
+      "address": "159 W 10th St, New York, NY 10014",
+      "website": "https://www.juliusbarny.com/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.juliusbarny.com/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "urban-bear-roper-romp-afternoon-beer-burger-bust-7e32319f"
+    },
+    {
+      "name": "CHUNK BROOKLYN - The Return!",
+      "day": "Saturday",
+      "time": "10:30PM-4AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 40.6882793,
+        "lng": -73.9569264
+      },
+      "startDate": "2026-02-14T22:30:00",
+      "endDate": "2026-02-15T04:00:00",
+      "unprocessedDescription": "description: PRESALE TICKETS HAVE SOLD OUT. WE HAVE HELD A LIMI\rTED AMOUNT OF TICKETS FOR THE DOOR - DOORS OPEN AT 10\\:30 CHUNK returns to NY - Saturday February 14th // featuring DJs RON LIKE HELL (Wrecked) & residents DICAP & MR PICKLES // HOT GOGO BEARS // C'MON EVERYBODY - 325 Franklin Ave - 10\\:30pm - 4am\nbar: C'mon Everybody\naddress: 325 Franklin Avenue, New York, New York, 11216\ntimezone: America/New_York\nimage: https://static.wixstatic.com/media/42b6cb_253e0a5bd34945d9876e03eabd5eaabb~mv2.jpg/v1/fill/w_1344,h_1345,al_c,q_85/42b6cb_253e0a5bd34945d9876e03eabd5eaabb~mv2.jpg\nwebsite: https://www.chunk-party.com/event-details/chunk-brooklyn-the-return\nshortName: CHUNK\ninstagram: https://www.instagram.com/chunkparty\nfavicon: https://www.chunk-party.com\nkey: chunk-brooklyn-the-return|2026-02-15|c'mon everybody\nbearSource: keyword\ncover: $15.38 - $25.63\npinSource: curated\naddressSource: curated\nimageSource: jsonld\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/search/?api=1&query=C'mon%20Everybody%2C%20325%20Franklin%20Avenue%2C%20New%20York%2C%20New%20York%2C%2011216",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "6DD23624-8818-401B-9BC1-13BB87366576",
+      "uid": "6DD23624-8818-401B-9BC1-13BB87366576",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "C'mon Everybody",
+      "cover": "$15.38 - $25.63",
+      "image": "https://static.wixstatic.com/media/42b6cb_253e0a5bd34945d9876e03eabd5eaabb~mv2.jpg/v1/fill/w_1344,h_1345,al_c,q_85/42b6cb_253e0a5bd34945d9876e03eabd5eaabb~mv2.jpg",
+      "favicon": "https://www.chunk-party.com",
+      "tea": "PRESALE TICKETS HAVE SOLD OUT. WE HAVE HELD A LIMITED AMOUNT OF TICKETS FOR THE DOOR - DOORS OPEN AT 10:30 CHUNK returns to NY - Saturday February 14th // featuring DJs RON LIKE HELL (Wrecked) & residents DICAP & MR PICKLES // HOT GOGO BEARS // C'MON EVERYBODY - 325 Franklin Ave - 10:30pm - 4am",
+      "address": "325 Franklin Avenue, New York, New York, 11216",
+      "website": "https://www.chunk-party.com/event-details/chunk-brooklyn-the-return",
+      "instagram": "https://www.instagram.com/chunkparty",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=C'mon%20Everybody%2C%20325%20Franklin%20Avenue%2C%20New%20York%2C%20New%20York%2C%2011216",
+      "shortName": "CHUNK",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.chunk-party.com/event-details/chunk-brooklyn-the-return",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/chunkparty",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=C'mon%20Everybody%2C%20325%20Franklin%20Avenue%2C%20New%20York%2C%20New%20York%2C%2011216",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "chunk-brooklyn-the-return-5dd73bae"
+    },
+    {
+      "name": "MEGAWOOF & BEARMILK present MEGAMILK",
+      "day": "Saturday",
+      "time": "10PM-4AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 40.6977034,
+        "lng": -73.9078199
+      },
+      "startDate": "2026-07-25T22:00:00",
+      "endDate": "2026-07-26T04:00:00",
+      "unprocessedDescription": "description: MEGAWOOF & BEARMILK present MEGAMILK\naddress: 10-\r90 Wyckoff Avenue, Queens, NY 11385\nticketUrl: https://www.eventbrite.com/e/megawoof-bearmilk-present-megamilk-tickets-1991421809239\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1186449026%2F185013722403%2F1%2Foriginal.20260608-222505?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=421b275e05f8a8650bc8da81075e6572\ncover: $16.84-$22.10\ntimezone: America/New_York\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nwebsite: https://linktr.ee/megawoof_america\nkey: megawoof-bearmilk-present-megamilk|2026-07-26|\nbar: HOLO\npinSource: geocoded-approx\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=HOLO%2C%2010-90%20Wyckoff%20Avenue%2C%20Queens%2C%20NY%2011385",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "C84C83A2-01B1-49FD-8DED-6C204FC30897",
+      "uid": "C84C83A2-01B1-49FD-8DED-6C204FC30897",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "HOLO",
+      "cover": "$16.84-$22.10",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1186449026%2F185013722403%2F1%2Foriginal.20260608-222505?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=421b275e05f8a8650bc8da81075e6572",
+      "tea": "MEGAWOOF & BEARMILK present MEGAMILK",
+      "address": "10-90 Wyckoff Avenue, Queens, NY 11385",
+      "website": "https://linktr.ee/megawoof_america",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=HOLO%2C%2010-90%20Wyckoff%20Avenue%2C%20Queens%2C%20NY%2011385",
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-bearmilk-present-megamilk-tickets-1991421809239",
+      "shortName": "MEGA-WOOF",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/megawoof_america",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/megawoof_america",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=HOLO%2C%2010-90%20Wyckoff%20Avenue%2C%20Queens%2C%20NY%2011385",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/megawoof-bearmilk-present-megamilk-tickets-1991421809239",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "megawoof-bearmilk-present-megamilk-42f507f5"
+    },
+    {
+      "name": "Rockstrap",
+      "day": "Friday",
+      "time": "10PM-4AM",
+      "eventType": "monthly",
+      "recurring": true,
+      "recurrence": "FREQ=MONTHLY;BYDAY=1FR",
+      "coordinates": {
+        "lat": 40.7326824,
+        "lng": -74.0097099
+      },
+      "startDate": "2025-07-04T22:00:00",
+      "endDate": "2025-07-05T04:00:00",
+      "unprocessedDescription": "shortName: Rock-strap\ntea: Jockstraps encouraged, clothes che\rck available!\ncover: $10 entry, $1 clothes check\nbar: Rockbar\ntimezone: America/New_York\nuid: bdstnukmpv6keg7pon3fram2qg@google.com\nwebsite: https://www.rockbarnyc.com/\ninstagram: https://www.instagram.com/rockbarny\ngmaps: https://maps.app.goo.gl/3WsBUpQjekPZUW4u7",
+      "startTimezone": "America/New_York",
+      "endTimezone": "America/New_York",
+      "calendarTimezone": "America/New_York",
+      "wasUTC": false,
+      "sourceUid": "bdstnukmpv6keg7pon3fram2qg@google.com",
+      "uid": "bdstnukmpv6keg7pon3fram2qg@google.com",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 1,
+      "overrideIdentityType": null,
+      "bar": "Rockbar",
+      "cover": "$10 entry, $1 clothes check",
+      "tea": "Jockstraps encouraged, clothes check available!",
+      "address": null,
+      "website": "https://www.rockbarnyc.com/",
+      "instagram": "https://www.instagram.com/rockbarny",
+      "gmaps": "https://maps.app.goo.gl/3WsBUpQjekPZUW4u7",
+      "shortName": "Rock-strap",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.rockbarnyc.com/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/rockbarny",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://maps.app.goo.gl/3WsBUpQjekPZUW4u7",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "rockstrap-42266312"
+    },
+    {
+      "name": "Mega Bear Blast: Closing Night Party",
+      "day": "Sunday",
+      "time": "6PM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 40.7326534,
+        "lng": -74.0096996
+      },
+      "startDate": "2026-09-20T18:00:00",
+      "endDate": "2026-09-20T22:00:00",
+      "unprocessedDescription": "description: Urban Bear NYC closing-night party at Rockbar foll\rowing the street fair.\nbar: Rockbar\naddress: 185 Christopher St, New York, NY 10014\nwebsite: https://rockbarnyc.com\ntimezone: America/New_York\nkey: mega-bear-blast-closing-night-party|2026-09-20|rockbar\nfestival: Urban Bear NYC\nnote: end time not published — 4h default",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "urban-bear-nyc-mega-bear-blast-closing-night-party-2026-09-20@chunky.da\rd",
+      "uid": "urban-bear-nyc-mega-bear-blast-closing-night-party-2026-09-20@chunky.da\rd",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Rockbar",
+      "tea": "Urban Bear NYC closing-night party at Rockbar following the street fair.",
+      "address": "185 Christopher St, New York, NY 10014",
+      "website": "https://rockbarnyc.com",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://rockbarnyc.com",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "mega-bear-blast-closing-night-party-435aeee7"
+    },
+    {
+      "name": "Pride",
+      "day": "Friday",
+      "time": null,
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-06-26T00:00:00",
+      "endDate": "2026-06-29T00:00:00",
+      "unprocessedDescription": null,
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": false,
+      "sourceUid": "706B8093-375B-4E8C-8FBE-58F5CF949246",
+      "uid": "706B8093-375B-4E8C-8FBE-58F5CF949246",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "website": null,
+      "slug": "pride-059058a4"
+    },
+    {
       "name": "GOLIDLOXX AUGUST",
       "day": "Saturday",
       "time": "9PM-4AM",
@@ -386,97 +809,236 @@
       "slug": "golidloxx-august-4405b5e7"
     },
     {
-      "name": "Bears Night Out",
-      "day": "Saturday",
-      "time": "10PM-4AM",
-      "eventType": "monthly",
-      "recurring": true,
-      "recurrence": "FREQ=MONTHLY;BYDAY=1SA",
+      "name": "UNDERBEAR Leather + Kink",
+      "day": "Friday",
+      "time": "10PM",
+      "eventType": "routine",
+      "recurring": false,
       "coordinates": {
-        "lat": 40.7326824,
-        "lng": -74.0097099
+        "lat": 40.7326534,
+        "lng": -74.0096996
       },
-      "startDate": "2025-07-05T22:00:00",
-      "endDate": "2025-07-06T04:00:00",
-      "unprocessedDescription": "Tea: Go-Go Bears, Cubs and LOTS of other fun things to grab on\rto!\nCover: $10\nWebsite: https://www.theurbanbear.com/\nInstagram: https://www.instagram.com/urbanbearnyc\nGoogle Maps: https://maps.app.goo.gl/3WsBUpQjekPZUW4u7\nBar: Rockbar\nShorter: BNO",
-      "startTimezone": "America/New_York",
-      "endTimezone": "America/New_York",
+      "startDate": "2026-07-17T22:00:00",
+      "unprocessedDescription": "description: UNDERWEAR • JÖCKS • GEAR\n(ENCOURAGED, NOT REQUIR\rED. CLOTHES CHECK AVAILABLE)\nDARK ROOM AT MIDNIGHT\nbar: ROCKBAR\naddress: 185 Christopher St, New York, NY 10014\ntimezone: America/New_York\ninstagram: https://instagram.com/furballnyc/\nimage: https://static.wixstatic.com/media/238fae_66efd0476132438e9c47c6d71832eed7~mv2.jpg/v1/fill/w_296,h_526,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_66efd0476132438e9c47c6d71832eed7~mv2.jpg\nshortName: FUR-BALL\nfavicon: https://linktr.ee/furballnyc\nwebsite: https://www.furball.nyc\ngmaps: https://www.google.com/maps/search/?api=1&query=ROCKBAR%2C%20125%20CHRISTOPHER%20ST%20NYC\nkey: underbear-leather-kink|2026-07-18|rockbar",
+      "startTimezone": null,
+      "endTimezone": null,
       "calendarTimezone": "America/New_York",
-      "wasUTC": false,
-      "sourceUid": "suljenhlak65mplsbrft5rgcd0@google.com",
-      "uid": "suljenhlak65mplsbrft5rgcd0@google.com",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 2,
-      "overrideIdentityType": null,
-      "bar": "Rockbar",
-      "cover": "$10",
-      "tea": "Go-Go Bears, Cubs and LOTS of other fun things to grab onto!",
-      "address": null,
-      "website": "https://www.theurbanbear.com/",
-      "instagram": "https://www.instagram.com/urbanbearnyc",
-      "gmaps": "https://maps.app.goo.gl/3WsBUpQjekPZUW4u7",
-      "shorterName": "BNO",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.theurbanbear.com/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/urbanbearnyc",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://maps.app.goo.gl/3WsBUpQjekPZUW4u7",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "bears-night-out-3d00f897"
-    },
-    {
-      "name": "Bear Happy Hour",
-      "day": "Thursday",
-      "time": "5PM-9PM",
-      "eventType": "weekly",
-      "recurring": true,
-      "recurrence": "FREQ=WEEKLY",
-      "startDate": "2025-07-10T17:00:00",
-      "endDate": "2025-07-10T21:00:00",
-      "unprocessedDescription": "Bar: Check instagram for this week’s location.\nTea: Popular ha\rppy hour that changes location every week in Manhattan.\nInstagram: https://www.instagram.com/bearhappyhournyc\nShorter: BHH\nWeb: https://linktr.ee/bearhappyhour",
-      "startTimezone": "America/New_York",
-      "endTimezone": "America/New_York",
-      "calendarTimezone": "America/New_York",
-      "wasUTC": false,
-      "sourceUid": "6thhos5ct3pllq5kmvsp7infd8@google.com",
-      "uid": "6thhos5ct3pllq5kmvsp7infd8@google.com",
+      "wasUTC": true,
+      "sourceUid": "7647B9BA-E04F-44F8-92D0-8A3D52E0AE3E",
+      "uid": "7647B9BA-E04F-44F8-92D0-8A3D52E0AE3E",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "Check instagram for this week’s location.",
-      "tea": "Popular happy hour that changes location every week in Manhattan.",
-      "address": null,
-      "website": "https://linktr.ee/bearhappyhour",
-      "instagram": "https://www.instagram.com/bearhappyhournyc",
-      "shorterName": "BHH",
+      "bar": "ROCKBAR",
+      "image": "https://static.wixstatic.com/media/238fae_66efd0476132438e9c47c6d71832eed7~mv2.jpg/v1/fill/w_296,h_526,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_66efd0476132438e9c47c6d71832eed7~mv2.jpg",
+      "favicon": "https://linktr.ee/furballnyc",
+      "tea": "UNDERWEAR • JÖCKS • GEAR",
+      "address": "185 Christopher St, New York, NY 10014",
+      "website": "https://www.furball.nyc",
+      "instagram": "https://instagram.com/furballnyc/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=ROCKBAR%2C%20125%20CHRISTOPHER%20ST%20NYC",
+      "shortName": "FUR-BALL",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://linktr.ee/bearhappyhour",
+          "url": "https://www.furball.nyc",
           "label": "🌐 Website"
         },
         {
           "type": "instagram",
-          "url": "https://www.instagram.com/bearhappyhournyc",
+          "url": "https://instagram.com/furballnyc/",
           "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=ROCKBAR%2C%20125%20CHRISTOPHER%20ST%20NYC",
+          "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "bear-happy-hour-66e240de"
+      "slug": "underbear-leather-kink-3fe96ee0"
+    },
+    {
+      "name": "Truck Stop: Fat Fuc",
+      "day": "Saturday",
+      "time": "9PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 40.7316977,
+        "lng": -73.9841737
+      },
+      "startDate": "2026-09-19T21:00:00",
+      "endDate": "2026-09-20T03:00:00",
+      "unprocessedDescription": "description: Urban Bear NYC's Saturday-night Truck Stop party a\rt Nowhere, with music by Dave Hughes (FUZZY).\nbar: Nowhere Bar\naddress: 322 E 14th St, New York, NY 10003\nwebsite: https://nowherebarnyc.com\ntimezone: America/New_York\nkey: truck-stop-fat-fuc|2026-09-19|nowhere-bar\nfestival: Urban Bear NYC\nnote: end time not published — 6h default",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "urban-bear-nyc-truck-stop-fat-fuc-2026-09-19@chunky.dad",
+      "uid": "urban-bear-nyc-truck-stop-fat-fuc-2026-09-19@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Nowhere Bar",
+      "tea": "Urban Bear NYC's Saturday-night Truck Stop party at Nowhere, with music by Dave Hughes (FUZZY).",
+      "address": "322 E 14th St, New York, NY 10003",
+      "website": "https://nowherebarnyc.com",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://nowherebarnyc.com",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "truck-stop-fat-fuc-486ee2b3"
+    },
+    {
+      "name": "C'mon Everybody",
+      "day": "Saturday",
+      "time": "10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-05-09T22:00:00",
+      "unprocessedDescription": "description: CB JUR UO NO KKLYN\ntimezone: America/New_York\nti\rcketUrl: https://www.chunk-party.com\nimage: https://static.wixstatic.com/media/42b6cb_81911c51814244bb9b559e72ce040b43~mv2.jpg\nimageSource: page\nbar: CHUNK-PARTY.COM\nbarSource: page-adjacent\nwebsite: https://www.chunk-party.com/event-details/chunk-brooklyn-5-9\ngmaps: https://www.google.com/maps/search/?api=1&query=CHUNK-PARTY.COM%2C%20new%20york\nshortName: CHUNK\ninstagram: https://www.instagram.com/chunkparty\nfavicon: https://www.chunk-party.com\nbearSource: keyword\nkey: c-mon-everybody|2026-05-10|chunk-party.com",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "7934C44A-FA6D-47AE-B233-7150C3C8E2D6",
+      "uid": "7934C44A-FA6D-47AE-B233-7150C3C8E2D6",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "CHUNK-PARTY.COM",
+      "image": "https://static.wixstatic.com/media/42b6cb_81911c51814244bb9b559e72ce040b43~mv2.jpg",
+      "favicon": "https://www.chunk-party.com",
+      "tea": "CB JUR UO NO KKLYN",
+      "address": null,
+      "website": "https://www.chunk-party.com/event-details/chunk-brooklyn-5-9",
+      "instagram": "https://www.instagram.com/chunkparty",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=CHUNK-PARTY.COM%2C%20new%20york",
+      "ticketUrl": "https://www.chunk-party.com",
+      "shortName": "CHUNK",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.chunk-party.com/event-details/chunk-brooklyn-5-9",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/chunkparty",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=CHUNK-PARTY.COM%2C%20new%20york",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.chunk-party.com",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "cmon-everybody-501dd4d8"
+    },
+    {
+      "name": "CHUNK Brooklyn",
+      "day": "Saturday",
+      "time": "10PM-4AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 40.68830519999999,
+        "lng": -73.9569221
+      },
+      "startDate": "2026-07-04T22:00:00",
+      "endDate": "2026-07-05T04:00:00",
+      "unprocessedDescription": "description: CHUNK BROOKLYN Presents DC Legend KEENAN ORR with \rsupport from CHUNK Residents DICAP & DJ JAMES MICHELIN STAR BEARD HOT GOGO BEARS ALL NIGHT LONG // Hosted by JEREMY & BRIAN & BIG CLAUDE C'MON EVERYBODY // 325 FRANKLIN AVE // 10PM - CLOSE\nbar: C'mon Everybody\nimage: https://static.wixstatic.com/media/42b6cb_74e11f57fc96460782c469ff9f79f25d~mv2.jpg/v1/fill/w_1240,h_1550,al_c,q_85/42b6cb_74e11f57fc96460782c469ff9f79f25d~mv2.jpg\ntimezone: America/New_York\ncover: $20, $25, $30\nimageVertical: https://static.wixstatic.com/media/42b6cb_74e11f57fc96460782c469ff9f79f25d~mv2.jpg/v1/fill/w_1240,h_1550,al_c,q_85/42b6cb_74e11f57fc96460782c469ff9f79f25d~mv2.jpg\nwebsite: https://www.chunk-party.com/event-details/chunk-brooklyn-7-4\nshortName: CHUNK\ninstagram: https://www.instagram.com/chunkparty\nfavicon: https://www.chunk-party.com\nkey: chunk-brooklyn|2026-07-05|c'mon everybody\nbearSource: keyword\naddress: 325 Franklin Ave, Brooklyn, NY 11238, USA\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=C'mon%20Everybody%2C%20325%20Franklin%20Ave%2C%20Brooklyn%2C%20NY%2011238%2C%20USA",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "AAC4129A-BE69-4DDF-87BE-D788FA75C0CC",
+      "uid": "AAC4129A-BE69-4DDF-87BE-D788FA75C0CC",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "C'mon Everybody",
+      "cover": "$20, $25, $30",
+      "image": "https://static.wixstatic.com/media/42b6cb_74e11f57fc96460782c469ff9f79f25d~mv2.jpg/v1/fill/w_1240,h_1550,al_c,q_85/42b6cb_74e11f57fc96460782c469ff9f79f25d~mv2.jpg",
+      "imageVertical": "https://static.wixstatic.com/media/42b6cb_74e11f57fc96460782c469ff9f79f25d~mv2.jpg/v1/fill/w_1240,h_1550,al_c,q_85/42b6cb_74e11f57fc96460782c469ff9f79f25d~mv2.jpg",
+      "favicon": "https://www.chunk-party.com",
+      "tea": "CHUNK BROOKLYN Presents DC Legend KEENAN ORR with support from CHUNK Residents DICAP & DJ JAMES MICHELIN STAR BEARD HOT GOGO BEARS ALL NIGHT LONG // Hosted by JEREMY & BRIAN & BIG CLAUDE C'MON EVERYBODY // 325 FRANKLIN AVE // 10PM - CLOSE",
+      "address": "325 Franklin Ave, Brooklyn, NY 11238, USA",
+      "website": "https://www.chunk-party.com/event-details/chunk-brooklyn-7-4",
+      "instagram": "https://www.instagram.com/chunkparty",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=C'mon%20Everybody%2C%20325%20Franklin%20Ave%2C%20Brooklyn%2C%20NY%2011238%2C%20USA",
+      "shortName": "CHUNK",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.chunk-party.com/event-details/chunk-brooklyn-7-4",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/chunkparty",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=C'mon%20Everybody%2C%20325%20Franklin%20Ave%2C%20Brooklyn%2C%20NY%2011238%2C%20USA",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "chunk-brooklyn-31b4fb03"
+    },
+    {
+      "name": "Hairy Happy Hour",
+      "day": "Friday",
+      "time": "5PM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 40.7330387,
+        "lng": -74.0052985
+      },
+      "startDate": "2026-09-18T17:00:00",
+      "endDate": "2026-09-18T22:00:00",
+      "unprocessedDescription": "description: Urban Bear NYC happy hour at Ty's, the West Villa\rge's classic bear bar.\nbar: Ty's\naddress: 114 Christopher St, New York, NY 10014\nwebsite: https://tys.nyc\ntimezone: America/New_York\nkey: hairy-happy-hour|2026-09-18|ty-s\nfestival: Urban Bear NYC",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "urban-bear-nyc-hairy-happy-hour-2026-09-18@chunky.dad",
+      "uid": "urban-bear-nyc-hairy-happy-hour-2026-09-18@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Ty's",
+      "tea": "Urban Bear NYC happy hour at Ty's, the West Village's classic bear bar.",
+      "address": "114 Christopher St, New York, NY 10014",
+      "website": "https://tys.nyc",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://tys.nyc",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "hairy-happy-hour-50a44f8e"
     },
     {
       "name": "Beer Blast",
@@ -579,479 +1141,6 @@
       "slug": "chunk-brooklyn-7ffcc74a"
     },
     {
-      "name": "Bear Invasion: The Whitney Museum",
-      "day": "Friday",
-      "time": "6PM-10PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 40.7396,
-        "lng": -74.0089
-      },
-      "startDate": "2026-09-18T18:00:00",
-      "endDate": "2026-09-18T22:00:00",
-      "unprocessedDescription": "description: Urban Bear NYC takes over the Whitney Museum in th\re Meatpacking District for a Friday-evening bear museum outing.\nbar: Whitney Museum of American Art\naddress: 99 Gansevoort St, New York, NY 10014\nwebsite: https://whitney.org\ntimezone: America/New_York\nkey: bear-invasion-the-whitney-museum|2026-09-18|whitney-museum-of-american-art\nfestival: Urban Bear NYC\nnote: end time not published — 4h default; pin-curated-by-hand",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "urban-bear-nyc-bear-invasion-the-whitney-museum-2026-09-18@chunky.dad",
-      "uid": "urban-bear-nyc-bear-invasion-the-whitney-museum-2026-09-18@chunky.dad",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Whitney Museum of American Art",
-      "tea": "Urban Bear NYC takes over the Whitney Museum in the Meatpacking District for a Friday-evening bear museum outing.",
-      "address": "99 Gansevoort St, New York, NY 10014",
-      "website": "https://whitney.org",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://whitney.org",
-          "label": "🌐 Website"
-        }
-      ],
-      "slug": "bear-invasion-the-whitney-museum-51a88f91"
-    },
-    {
-      "name": "The UnderBear Party",
-      "day": "Friday",
-      "time": "10PM-4AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 40.7326534,
-        "lng": -74.0096996
-      },
-      "startDate": "2026-09-18T22:00:00",
-      "endDate": "2026-09-19T04:00:00",
-      "unprocessedDescription": "description: Urban Bear NYC's Friday-night UnderBear underwear \rparty at Rockbar.\nbar: Rockbar\naddress: 185 Christopher St, New York, NY 10014\nwebsite: https://rockbarnyc.com\ntimezone: America/New_York\nkey: the-underbear-party|2026-09-18|rockbar\nfestival: Urban Bear NYC\nnote: end time not published — 6h default",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "urban-bear-nyc-the-underbear-party-2026-09-18@chunky.dad",
-      "uid": "urban-bear-nyc-the-underbear-party-2026-09-18@chunky.dad",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Rockbar",
-      "tea": "Urban Bear NYC's Friday-night UnderBear underwear party at Rockbar.",
-      "address": "185 Christopher St, New York, NY 10014",
-      "website": "https://rockbarnyc.com",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://rockbarnyc.com",
-          "label": "🌐 Website"
-        }
-      ],
-      "slug": "the-underbear-party-53a0e24e"
-    },
-    {
-      "name": "CHUNK BROOKLYN - The Return!",
-      "day": "Saturday",
-      "time": "10:30PM-4AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 40.6882793,
-        "lng": -73.9569264
-      },
-      "startDate": "2026-02-14T22:30:00",
-      "endDate": "2026-02-15T04:00:00",
-      "unprocessedDescription": "description: PRESALE TICKETS HAVE SOLD OUT. WE HAVE HELD A LIMI\rTED AMOUNT OF TICKETS FOR THE DOOR - DOORS OPEN AT 10\\:30 CHUNK returns to NY - Saturday February 14th // featuring DJs RON LIKE HELL (Wrecked) & residents DICAP & MR PICKLES // HOT GOGO BEARS // C'MON EVERYBODY - 325 Franklin Ave - 10\\:30pm - 4am\nbar: C'mon Everybody\naddress: 325 Franklin Avenue, New York, New York, 11216\ntimezone: America/New_York\nimage: https://static.wixstatic.com/media/42b6cb_253e0a5bd34945d9876e03eabd5eaabb~mv2.jpg/v1/fill/w_1344,h_1345,al_c,q_85/42b6cb_253e0a5bd34945d9876e03eabd5eaabb~mv2.jpg\nwebsite: https://www.chunk-party.com/event-details/chunk-brooklyn-the-return\nshortName: CHUNK\ninstagram: https://www.instagram.com/chunkparty\nfavicon: https://www.chunk-party.com\nkey: chunk-brooklyn-the-return|2026-02-15|c'mon everybody\nbearSource: keyword\ncover: $15.38 - $25.63\npinSource: curated\naddressSource: curated\nimageSource: jsonld\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/search/?api=1&query=C'mon%20Everybody%2C%20325%20Franklin%20Avenue%2C%20New%20York%2C%20New%20York%2C%2011216",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "6DD23624-8818-401B-9BC1-13BB87366576",
-      "uid": "6DD23624-8818-401B-9BC1-13BB87366576",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "C'mon Everybody",
-      "cover": "$15.38 - $25.63",
-      "image": "https://static.wixstatic.com/media/42b6cb_253e0a5bd34945d9876e03eabd5eaabb~mv2.jpg/v1/fill/w_1344,h_1345,al_c,q_85/42b6cb_253e0a5bd34945d9876e03eabd5eaabb~mv2.jpg",
-      "favicon": "https://www.chunk-party.com",
-      "tea": "PRESALE TICKETS HAVE SOLD OUT. WE HAVE HELD A LIMITED AMOUNT OF TICKETS FOR THE DOOR - DOORS OPEN AT 10:30 CHUNK returns to NY - Saturday February 14th // featuring DJs RON LIKE HELL (Wrecked) & residents DICAP & MR PICKLES // HOT GOGO BEARS // C'MON EVERYBODY - 325 Franklin Ave - 10:30pm - 4am",
-      "address": "325 Franklin Avenue, New York, New York, 11216",
-      "website": "https://www.chunk-party.com/event-details/chunk-brooklyn-the-return",
-      "instagram": "https://www.instagram.com/chunkparty",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=C'mon%20Everybody%2C%20325%20Franklin%20Avenue%2C%20New%20York%2C%20New%20York%2C%2011216",
-      "shortName": "CHUNK",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.chunk-party.com/event-details/chunk-brooklyn-the-return",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/chunkparty",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=C'mon%20Everybody%2C%20325%20Franklin%20Avenue%2C%20New%20York%2C%20New%20York%2C%2011216",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "chunk-brooklyn-the-return-5dd73bae"
-    },
-    {
-      "name": "Urban Bear NYC Opening Night Party",
-      "day": "Thursday",
-      "time": "5PM-9PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 40.7644457,
-        "lng": -73.9888453
-      },
-      "startDate": "2026-09-17T17:00:00",
-      "endDate": "2026-09-17T21:00:00",
-      "unprocessedDescription": "description: Kickoff party for the 18th annual Urban Bear NYC w\reekend at FLEX in Hell's Kitchen.\nbar: FLEX\naddress: 405 W 51st St, New York, NY 10019\nwebsite: https://flexbar.nyc\ntimezone: America/New_York\nkey: urban-bear-nyc-opening-night-party|2026-09-17|flex\nfestival: Urban Bear NYC\nnote: end time not published — 4h default",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "urban-bear-nyc-urban-bear-nyc-opening-night-party-2026-09-17@chunky.dad",
-      "uid": "urban-bear-nyc-urban-bear-nyc-opening-night-party-2026-09-17@chunky.dad",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "FLEX",
-      "tea": "Kickoff party for the 18th annual Urban Bear NYC weekend at FLEX in Hell's Kitchen.",
-      "address": "405 W 51st St, New York, NY 10019",
-      "website": "https://flexbar.nyc",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://flexbar.nyc",
-          "label": "🌐 Website"
-        }
-      ],
-      "slug": "urban-bear-nyc-opening-night-party-5788c695"
-    },
-    {
-      "name": "CHUNK Brooklyn",
-      "day": "Saturday",
-      "time": "10PM-4AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 40.68830519999999,
-        "lng": -73.9569221
-      },
-      "startDate": "2026-07-04T22:00:00",
-      "endDate": "2026-07-05T04:00:00",
-      "unprocessedDescription": "description: CHUNK BROOKLYN Presents DC Legend KEENAN ORR with \rsupport from CHUNK Residents DICAP & DJ JAMES MICHELIN STAR BEARD HOT GOGO BEARS ALL NIGHT LONG // Hosted by JEREMY & BRIAN & BIG CLAUDE C'MON EVERYBODY // 325 FRANKLIN AVE // 10PM - CLOSE\nbar: C'mon Everybody\nimage: https://static.wixstatic.com/media/42b6cb_74e11f57fc96460782c469ff9f79f25d~mv2.jpg/v1/fill/w_1240,h_1550,al_c,q_85/42b6cb_74e11f57fc96460782c469ff9f79f25d~mv2.jpg\ntimezone: America/New_York\ncover: $20, $25, $30\nimageVertical: https://static.wixstatic.com/media/42b6cb_74e11f57fc96460782c469ff9f79f25d~mv2.jpg/v1/fill/w_1240,h_1550,al_c,q_85/42b6cb_74e11f57fc96460782c469ff9f79f25d~mv2.jpg\nwebsite: https://www.chunk-party.com/event-details/chunk-brooklyn-7-4\nshortName: CHUNK\ninstagram: https://www.instagram.com/chunkparty\nfavicon: https://www.chunk-party.com\nkey: chunk-brooklyn|2026-07-05|c'mon everybody\nbearSource: keyword\naddress: 325 Franklin Ave, Brooklyn, NY 11238, USA\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=C'mon%20Everybody%2C%20325%20Franklin%20Ave%2C%20Brooklyn%2C%20NY%2011238%2C%20USA",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "AAC4129A-BE69-4DDF-87BE-D788FA75C0CC",
-      "uid": "AAC4129A-BE69-4DDF-87BE-D788FA75C0CC",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "C'mon Everybody",
-      "cover": "$20, $25, $30",
-      "image": "https://static.wixstatic.com/media/42b6cb_74e11f57fc96460782c469ff9f79f25d~mv2.jpg/v1/fill/w_1240,h_1550,al_c,q_85/42b6cb_74e11f57fc96460782c469ff9f79f25d~mv2.jpg",
-      "imageVertical": "https://static.wixstatic.com/media/42b6cb_74e11f57fc96460782c469ff9f79f25d~mv2.jpg/v1/fill/w_1240,h_1550,al_c,q_85/42b6cb_74e11f57fc96460782c469ff9f79f25d~mv2.jpg",
-      "favicon": "https://www.chunk-party.com",
-      "tea": "CHUNK BROOKLYN Presents DC Legend KEENAN ORR with support from CHUNK Residents DICAP & DJ JAMES MICHELIN STAR BEARD HOT GOGO BEARS ALL NIGHT LONG // Hosted by JEREMY & BRIAN & BIG CLAUDE C'MON EVERYBODY // 325 FRANKLIN AVE // 10PM - CLOSE",
-      "address": "325 Franklin Ave, Brooklyn, NY 11238, USA",
-      "website": "https://www.chunk-party.com/event-details/chunk-brooklyn-7-4",
-      "instagram": "https://www.instagram.com/chunkparty",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=C'mon%20Everybody%2C%20325%20Franklin%20Ave%2C%20Brooklyn%2C%20NY%2011238%2C%20USA",
-      "shortName": "CHUNK",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.chunk-party.com/event-details/chunk-brooklyn-7-4",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/chunkparty",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=C'mon%20Everybody%2C%20325%20Franklin%20Ave%2C%20Brooklyn%2C%20NY%2011238%2C%20USA",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "chunk-brooklyn-31b4fb03"
-    },
-    {
-      "name": "Fat dad",
-      "day": "Saturday",
-      "time": null,
-      "eventType": "routine",
-      "recurring": false,
-      "startDate": "2026-06-20T00:00:00",
-      "endDate": "2026-06-21T00:00:00",
-      "unprocessedDescription": null,
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": false,
-      "sourceUid": "t9c4ekcr125qg5chcflc59is5c@google.com",
-      "uid": "t9c4ekcr125qg5chcflc59is5c@google.com",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "website": null,
-      "slug": "fat-dad-54af58a5"
-    },
-    {
-      "name": "Pride",
-      "day": "Friday",
-      "time": null,
-      "eventType": "routine",
-      "recurring": false,
-      "startDate": "2026-06-26T00:00:00",
-      "endDate": "2026-06-29T00:00:00",
-      "unprocessedDescription": null,
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": false,
-      "sourceUid": "706B8093-375B-4E8C-8FBE-58F5CF949246",
-      "uid": "706B8093-375B-4E8C-8FBE-58F5CF949246",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "website": null,
-      "slug": "pride-059058a4"
-    },
-    {
-      "name": "UNDERBEAR HEATWAVE",
-      "day": "Friday",
-      "time": "10PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 40.7326534,
-        "lng": -74.0096996
-      },
-      "startDate": "2026-08-21T22:00:00",
-      "unprocessedDescription": "description: Underwear & Gear Party\nbar: Rockbar\naddress: 185\r Christopher St, New York, NY 10014\nimage: https://static.wixstatic.com/media/238fae_3aeaa401b6fd4ae5a718c3f3f6732bd8~mv2.jpg\nimageVertical: https://static.wixstatic.com/media/238fae_3aeaa401b6fd4ae5a718c3f3f6732bd8~mv2.jpg\nwebsite: https://furball.nyc\ntimezone: America/New_York\ninstagram: https://instagram.com/furballnyc/\nshortName: FUR­BALL\nfavicon: https://linktr.ee/furballnyc\nkey: underbear-heatwave|2026-08-22|rockbar\nbearSource: keyword\npinSource: curated\naddressSource: curated\nimageSource: page\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJlwfqXuxZwokRTlizRW_4cwc",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "B7B7567B-35D7-4D89-90E4-158656F66ABF",
-      "uid": "B7B7567B-35D7-4D89-90E4-158656F66ABF",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Rockbar",
-      "image": "https://static.wixstatic.com/media/238fae_3aeaa401b6fd4ae5a718c3f3f6732bd8~mv2.jpg",
-      "imageVertical": "https://static.wixstatic.com/media/238fae_3aeaa401b6fd4ae5a718c3f3f6732bd8~mv2.jpg",
-      "favicon": "https://linktr.ee/furballnyc",
-      "tea": "Underwear & Gear Party",
-      "address": "185 Christopher St, New York, NY 10014",
-      "website": "https://furball.nyc",
-      "instagram": "https://instagram.com/furballnyc/",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJlwfqXuxZwokRTlizRW_4cwc",
-      "shortName": "FUR­BALL",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://furball.nyc",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://instagram.com/furballnyc/",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJlwfqXuxZwokRTlizRW_4cwc",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "underbear-heatwave-30508312"
-    },
-    {
-      "name": "CHUNK Brooklyn",
-      "day": "Saturday",
-      "time": "10PM-4AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 40.6882793,
-        "lng": -73.9569264
-      },
-      "startDate": "2026-09-05T22:00:00",
-      "endDate": "2026-09-06T04:00:00",
-      "unprocessedDescription": "description: WE'RE BACK TO OUR OLD HIJINX WITH A SUMMER SEND OF\rF NIGHT NOT TO BE MISSED - BUCKET LOADS (SLURP!) OF BIG BUFFAS CHUNK PRESENTS LEGENDARY TORONTO DJ TAMIKA W/ DICAP & THCKRTANKER\nbar: C'mon Everybody\naddress: 325 Franklin Avenue, New York, New York, 11216\nimage: https://static.wixstatic.com/media/42b6cb_fae874077d5a42b2b2197217d2605434~mv2.jpg/v1/fill/w_3300,h_5100,al_c,q_90/42b6cb_fae874077d5a42b2b2197217d2605434~mv2.jpg\ncover: $20-$25\ntimezone: America/New_York\nimageVertical: https://static.wixstatic.com/media/42b6cb_fae874077d5a42b2b2197217d2605434~mv2.jpg/v1/fill/w_3300,h_5100,al_c,q_90/42b6cb_fae874077d5a42b2b2197217d2605434~mv2.jpg\nwebsite: https://www.chunk-party.com/event-details/chunk-brooklyn-saturday-september-5th\nshortName: CHUNK\ninstagram: https://www.instagram.com/chunkparty\nfavicon: https://www.chunk-party.com\nkey: chunk-brooklyn|2026-09-06|c'mon everybody\nbearSource: keyword\npinSource: page\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=C'mon%20Everybody%2C%20325%20Franklin%20Avenue%2C%20New%20York%2C%20New%20York%2C%2011216",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "BBC5F4BB-5846-4AB7-B86F-1E86EBA13391",
-      "uid": "BBC5F4BB-5846-4AB7-B86F-1E86EBA13391",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "C'mon Everybody",
-      "cover": "$20-$25",
-      "image": "https://static.wixstatic.com/media/42b6cb_fae874077d5a42b2b2197217d2605434~mv2.jpg/v1/fill/w_3300,h_5100,al_c,q_90/42b6cb_fae874077d5a42b2b2197217d2605434~mv2.jpg",
-      "imageVertical": "https://static.wixstatic.com/media/42b6cb_fae874077d5a42b2b2197217d2605434~mv2.jpg/v1/fill/w_3300,h_5100,al_c,q_90/42b6cb_fae874077d5a42b2b2197217d2605434~mv2.jpg",
-      "favicon": "https://www.chunk-party.com",
-      "tea": "WE'RE BACK TO OUR OLD HIJINX WITH A SUMMER SEND OFF NIGHT NOT TO BE MISSED - BUCKET LOADS (SLURP!) OF BIG BUFFAS CHUNK PRESENTS LEGENDARY TORONTO DJ TAMIKA W/ DICAP & THCKRTANKER",
-      "address": "325 Franklin Avenue, New York, New York, 11216",
-      "website": "https://www.chunk-party.com/event-details/chunk-brooklyn-saturday-september-5th",
-      "instagram": "https://www.instagram.com/chunkparty",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=C'mon%20Everybody%2C%20325%20Franklin%20Avenue%2C%20New%20York%2C%20New%20York%2C%2011216",
-      "shortName": "CHUNK",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.chunk-party.com/event-details/chunk-brooklyn-saturday-september-5th",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/chunkparty",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=C'mon%20Everybody%2C%20325%20Franklin%20Avenue%2C%20New%20York%2C%20New%20York%2C%2011216",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "chunk-brooklyn-57ca46f2"
-    },
-    {
-      "name": "C'mon Everybody",
-      "day": "Saturday",
-      "time": "10PM",
-      "eventType": "routine",
-      "recurring": false,
-      "startDate": "2026-05-09T22:00:00",
-      "unprocessedDescription": "description: CB JUR UO NO KKLYN\ntimezone: America/New_York\nti\rcketUrl: https://www.chunk-party.com\nimage: https://static.wixstatic.com/media/42b6cb_81911c51814244bb9b559e72ce040b43~mv2.jpg\nimageSource: page\nbar: CHUNK-PARTY.COM\nbarSource: page-adjacent\nwebsite: https://www.chunk-party.com/event-details/chunk-brooklyn-5-9\ngmaps: https://www.google.com/maps/search/?api=1&query=CHUNK-PARTY.COM%2C%20new%20york\nshortName: CHUNK\ninstagram: https://www.instagram.com/chunkparty\nfavicon: https://www.chunk-party.com\nbearSource: keyword\nkey: c-mon-everybody|2026-05-10|chunk-party.com",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "7934C44A-FA6D-47AE-B233-7150C3C8E2D6",
-      "uid": "7934C44A-FA6D-47AE-B233-7150C3C8E2D6",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "CHUNK-PARTY.COM",
-      "image": "https://static.wixstatic.com/media/42b6cb_81911c51814244bb9b559e72ce040b43~mv2.jpg",
-      "favicon": "https://www.chunk-party.com",
-      "tea": "CB JUR UO NO KKLYN",
-      "address": null,
-      "website": "https://www.chunk-party.com/event-details/chunk-brooklyn-5-9",
-      "instagram": "https://www.instagram.com/chunkparty",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=CHUNK-PARTY.COM%2C%20new%20york",
-      "ticketUrl": "https://www.chunk-party.com",
-      "shortName": "CHUNK",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.chunk-party.com/event-details/chunk-brooklyn-5-9",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/chunkparty",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=CHUNK-PARTY.COM%2C%20new%20york",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.chunk-party.com",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "cmon-everybody-501dd4d8"
-    },
-    {
-      "name": "Bears Are Animals",
-      "day": "Thursday",
-      "time": "7PM-10PM",
-      "eventType": "weekly",
-      "recurring": true,
-      "recurrence": "FREQ=WEEKLY",
-      "coordinates": {
-        "lat": 40.71739735291992,
-        "lng": -73.94930680925715
-      },
-      "startDate": "2025-07-10T19:00:00",
-      "endDate": "2025-07-10T22:00:00",
-      "unprocessedDescription": "Bar: Animal\nWebsite: https://animal.nyc\nInstagram: https://ww\rw.instagram.com/bearsareanimals\nGoogle Maps: https://maps.app.goo.gl/XvrwkXqQApYfaj6h9\nNickname: Animal\nShorter: BAA\nTea: Popular happy hour for those that want to go out in Brooklyn. Patio space and goes a bit later.",
-      "startTimezone": "America/New_York",
-      "endTimezone": "America/New_York",
-      "calendarTimezone": "America/New_York",
-      "wasUTC": false,
-      "sourceUid": "v12lqkpglh2iupk54ttds6pcmg@google.com",
-      "uid": "v12lqkpglh2iupk54ttds6pcmg@google.com",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 1,
-      "overrideIdentityType": null,
-      "bar": "Animal",
-      "tea": "Popular happy hour for those that want to go out in Brooklyn. Patio space and goes a bit later.",
-      "address": null,
-      "website": "https://animal.nyc",
-      "instagram": "https://www.instagram.com/bearsareanimals",
-      "gmaps": "https://maps.app.goo.gl/XvrwkXqQApYfaj6h9",
-      "shortName": "Animal",
-      "shorterName": "BAA",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://animal.nyc",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearsareanimals",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://maps.app.goo.gl/XvrwkXqQApYfaj6h9",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "bears-are-animals-4cf796ee"
-    },
-    {
       "name": "GOLDILOXX MDW",
       "day": "Saturday",
       "time": "9PM-4AM",
@@ -1105,95 +1194,6 @@
         }
       ],
       "slug": "goldiloxx-mdw-43e392ec"
-    },
-    {
-      "name": "Urban Bear Roper Romp: Afternoon Beer + Burger Bust",
-      "day": "Saturday",
-      "time": "2PM-6PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 40.734,
-        "lng": -74.0015
-      },
-      "startDate": "2026-09-19T14:00:00",
-      "endDate": "2026-09-19T18:00:00",
-      "unprocessedDescription": "description: Saturday-afternoon beer and burger bust at Julius'\r, the historic West Village bar.\nbar: Julius'\naddress: 159 W 10th St, New York, NY 10014\nwebsite: https://www.juliusbarny.com/\ntimezone: America/New_York\nkey: urban-bear-roper-romp-afternoon-beer-burger-bust|2026-09-19|julius\nfestival: Urban Bear NYC\nnote: pin-curated-by-hand",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "urban-bear-nyc-urban-bear-roper-romp-afternoon-beer-burger-bust-2026-09\r-19@chunky.dad",
-      "uid": "urban-bear-nyc-urban-bear-roper-romp-afternoon-beer-burger-bust-2026-09\r-19@chunky.dad",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Julius'",
-      "tea": "Saturday-afternoon beer and burger bust at Julius', the historic West Village bar.",
-      "address": "159 W 10th St, New York, NY 10014",
-      "website": "https://www.juliusbarny.com/",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.juliusbarny.com/",
-          "label": "🌐 Website"
-        }
-      ],
-      "slug": "urban-bear-roper-romp-afternoon-beer-burger-bust-7e32319f"
-    },
-    {
-      "name": "Rockstrap",
-      "day": "Friday",
-      "time": "10PM-4AM",
-      "eventType": "monthly",
-      "recurring": true,
-      "recurrence": "FREQ=MONTHLY;BYDAY=1FR",
-      "coordinates": {
-        "lat": 40.7326824,
-        "lng": -74.0097099
-      },
-      "startDate": "2025-07-04T22:00:00",
-      "endDate": "2025-07-05T04:00:00",
-      "unprocessedDescription": "shortName: Rock-strap\ntea: Jockstraps encouraged, clothes che\rck available!\ncover: $10 entry, $1 clothes check\nbar: Rockbar\ntimezone: America/New_York\nuid: bdstnukmpv6keg7pon3fram2qg@google.com\nwebsite: https://www.rockbarnyc.com/\ninstagram: https://www.instagram.com/rockbarny\ngmaps: https://maps.app.goo.gl/3WsBUpQjekPZUW4u7",
-      "startTimezone": "America/New_York",
-      "endTimezone": "America/New_York",
-      "calendarTimezone": "America/New_York",
-      "wasUTC": false,
-      "sourceUid": "bdstnukmpv6keg7pon3fram2qg@google.com",
-      "uid": "bdstnukmpv6keg7pon3fram2qg@google.com",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 1,
-      "overrideIdentityType": null,
-      "bar": "Rockbar",
-      "cover": "$10 entry, $1 clothes check",
-      "tea": "Jockstraps encouraged, clothes check available!",
-      "address": null,
-      "website": "https://www.rockbarnyc.com/",
-      "instagram": "https://www.instagram.com/rockbarny",
-      "gmaps": "https://maps.app.goo.gl/3WsBUpQjekPZUW4u7",
-      "shortName": "Rock-strap",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.rockbarnyc.com/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/rockbarny",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://maps.app.goo.gl/3WsBUpQjekPZUW4u7",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "rockstrap-42266312"
     }
   ]
 }
