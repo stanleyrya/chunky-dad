@@ -20257,6 +20257,25 @@ TEXT:
         return `${host === 'fb.com' ? 'facebook.com' : host}/${handle}`;
     }
 
+    // The curated corpus stores a social three ways — a full URL
+    // ("https://www.facebook.com/eagle.bar.la/"), a scheme-less host+path, or a
+    // BARE HANDLE naming no platform at all ("dirtybird_la", "horizon.brighton").
+    // The field it is stored under says which platform a bare handle belongs
+    // to, so all three reduce to the same "<platform host>/<handle>" key the
+    // page side produces. Anything that is not a plausible handle yields ''.
+    normalizeCuratedSocialKey(field, value) {
+        const raw = String(value || '').trim().replace(/^@/, '');
+        if (!raw) return '';
+        if (/^https?:\/\//i.test(raw)) return this.normalizeSocialProfileKey(raw);
+        // Scheme-less but clearly a URL ("facebook.com/eagle.bar.la").
+        if (raw.includes('/') || /\.(?:com|me)\b/i.test(raw)) {
+            return this.normalizeSocialProfileKey(`https://${raw}`);
+        }
+        if (!/^[A-Za-z0-9._-]{2,}$/.test(raw)) return '';
+        const host = String(field || '').toLowerCase() === 'facebook' ? 'facebook.com' : 'instagram.com';
+        return `${host}/${raw.toLowerCase()}`;
+    }
+
     collectPageSocialProfileKeys(html, sourceUrl) {
         const keys = new Set();
         if (!html) return keys;
@@ -20286,7 +20305,7 @@ TEXT:
             for (const bar of cityBars) {
                 if (!bar || typeof bar.name !== 'string' || !bar.name.trim()) continue;
                 const matched = ['instagram', 'facebook']
-                    .map(field => this.normalizeSocialProfileKey(bar[field]))
+                    .map(field => this.normalizeCuratedSocialKey(field, bar[field]))
                     .filter(Boolean)
                     .some(key => keys.has(key));
                 if (matched) claimants.push({ city: cityKey, bar });
