@@ -3474,7 +3474,46 @@ class SharedCore {
             const unreadable = [imageA, imageB].filter(url => !textByUrl.has(url));
             console.log(`🖼️ MERGE: image title-evidence unavailable — no OCR text for ${unreadable.length === 2 ? 'either image' : unreadable[0]}`);
         }
+        // REPORT-ONLY census (no behavior change). A weekend/festival
+        // PROGRAMME graphic names several events, so the title-evidence rung
+        // can read it as proof for any one of them — it is sound artwork but
+        // unsound evidence. bearitmtl.com run 20260829-102510: Concours PUP
+        // Montréal's featured image is the PUP weekend schedule, whose text
+        // names "Concours Pup Montréal" AND "Kink Playground" and would have
+        // out-argued KINK's own dedicated flyer had that flyer's tokens not
+        // happened to tie it. Counting matters before enforcing anything.
+        for (const [url, text] of textByUrl) {
+            const clockTimes = this.countDistinctFlyerClockTimes(text);
+            if (clockTimes >= 3) {
+                console.log(`🖼️ MERGE: image title-evidence looks like a multi-event schedule (${clockTimes} distinct clock times) — still used this run: ${url}`);
+            }
+        }
         return textByUrl.size > 0 ? textByUrl : null;
+    }
+
+    // How many DISTINCT times of day a flyer's OCR text states. A dedicated
+    // event flyer states one or two (a doors time, or a start-end range);
+    // a programme states one per entry. Measured across the real corpus
+    // 2026-08-29: KINK Playground 1, THE HUNT 1, ENSEMBLE 2, MEAT MARKET 2,
+    // PUP weekend programme 5. Language-neutral on purpose — it reads clocks,
+    // never month names or the word "schedule".
+    countDistinctFlyerClockTimes(text) {
+        const source = String(text || '');
+        if (!source) return 0;
+        // 24-hour ("17h00", "22:00") or 12-hour with a meridiem ("9 PM", "4:30pm").
+        const pattern = /(?:\b([01]?\d|2[0-3])\s*[h:]\s*([0-5]\d)\b)|(?:\b(1[0-2]|0?\d)\s*(?:[:.]([0-5]\d))?\s*([ap])\.?m\.?\b)/gi;
+        const minutes = new Set();
+        let match;
+        while ((match = pattern.exec(source)) !== null) {
+            if (match[1] !== undefined) {
+                minutes.add((parseInt(match[1], 10) * 60) + parseInt(match[2], 10));
+                continue;
+            }
+            let hour = parseInt(match[3], 10) % 12;
+            if (String(match[5]).toLowerCase() === 'p') hour += 12;
+            minutes.add((hour * 60) + (match[4] ? parseInt(match[4], 10) : 0));
+        }
+        return minutes.size;
     }
 
     resolveConflictDeterministically(fieldName, valueA, valueB, context = null) {
