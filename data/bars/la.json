@@ -9,12 +9,12 @@
     "facebook": "https://www.facebook.com/eagle.bar.la/",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJLwuhHU_HwoARdQQ1PfOn6B4",
     "gayCities": "https://losangeles.gaycities.com/bars/357-eagle-la",
-    "gayCitiesLastScrapedAt": "2026-06-13T15:14:53.360Z",
     "faviconBg": "#040404",
     "faviconFg": "#74706a",
-    "faviconPlate": "#000000",
     "paletteSource": "favicon",
-    "palette": "#010001:80:1 #15120c:6:1 #625d53:4:2"
+    "palette": "#010001:80:1 #15120c:6:1 #625d53:4:2",
+    "faviconPlate": "#000000",
+    "gayCitiesLastScrapedAt": "2026-06-13T15:14:53.360Z"
   },
   {
     "name": "Precinct LA",
