@@ -19937,7 +19937,10 @@ TEXT:
                 pages: new Set(),
                 blocked: false,
                 venueRoleSeen: false,
-                venueName: ''
+                venueName: '',
+                // Social profile keys ("instagram.com/rockbarnyc") the host's
+                // pages publish, for the curated-social identity rung.
+                socialProfileKeys: new Set()
             };
         }
         return this.venueSiteHarvest[host];
@@ -19976,6 +19979,13 @@ TEXT:
         entry.pages.add(pageUrl);
         const seenKeys = new Set();
         const html = typeof htmlData.html === 'string' ? htmlData.html : '';
+        // Every social profile the page links, for the curated-social identity
+        // rung. Collected wholesale — platform boilerplate
+        // ("instagram.com/squarespace") rides along harmlessly because only
+        // handles a CURATED bar publishes can ever match.
+        for (const key of this.collectPageSocialProfileKeys(html, pageUrl)) {
+            entry.socialProfileKeys.add(key);
+        }
         for (const address of this.extractMapsDirectionsAddresses(html)) {
             const key = this.normalizeVenueSiteAddressKey(address);
             if (!key || seenKeys.has(key)) continue;
@@ -20038,7 +20048,13 @@ TEXT:
                 // EVERY harvested address (consensus or not) — the
                 // curated-website identity rung picks its primary claimant by
                 // which curated address the site itself publishes.
-                harvestedAddresses: hostKeys.map(key => entry.addresses[key].display)
+                harvestedAddresses: hostKeys.map(key => entry.addresses[key].display),
+                // Social profiles the host's pages link — the curated-social
+                // rung's evidence. Carried across because the harvest object
+                // itself is cleared the moment this stash is built.
+                socialProfileKeys: entry.socialProfileKeys instanceof Set
+                    ? new Set(entry.socialProfileKeys)
+                    : new Set()
             };
         }
         const eventList = Array.isArray(events) ? events : [];
@@ -20212,6 +20228,73 @@ TEXT:
     // so the normalizer's city backfill and this identity rung read the curated
     // website pointers through ONE implementation; the loop below is the
     // unwired-core fallback only.
+    // A social profile URL reduced to "<platform host>/<handle>", lowercased
+    // and www-folded: the identity two sources agree on even when they spell
+    // the URL differently. Share/login/plugin endpoints and handle-less URLs
+    // return '' — they name no one.
+    // Does this parser config declare siteRole 'venue' AND name this very host
+    // among its own URLs? Both halves matter: the declaration is what makes the
+    // site a venue, and the host check keeps a venue parser from lending that
+    // status to third-party hosts its crawl wandered onto.
+    parserConfigDeclaresVenueHost(parserConfig, host) {
+        if (!parserConfig || typeof parserConfig !== 'object') return false;
+        if (String(parserConfig.siteRole || '').trim().toLowerCase() !== 'venue') return false;
+        const hostKey = String(host || '').trim().toLowerCase();
+        if (!hostKey) return false;
+        const urls = Array.isArray(parserConfig.urls) ? parserConfig.urls : [];
+        return urls.some(url => this.getVenueSiteHostKey(url) === hostKey);
+    }
+
+    normalizeSocialProfileKey(url) {
+        const parsed = this.parseUrlComponents(String(url || '').trim());
+        if (!parsed || !/^https?:$/.test(parsed.protocol)) return '';
+        const host = String(parsed.hostname || '').toLowerCase().replace(/^www\./, '');
+        if (!/^(?:instagram\.com|facebook\.com|fb\.com)$/.test(host)) return '';
+        const segments = String(parsed.pathname || '').split('/').filter(Boolean);
+        if (segments.length === 0) return '';
+        const handle = segments[0].toLowerCase();
+        if (/^(?:sharer(?:\.php)?|share|login|intent|plugins|pages|profile\.php|p|reel|explore)$/.test(handle)) return '';
+        return `${host === 'fb.com' ? 'facebook.com' : host}/${handle}`;
+    }
+
+    collectPageSocialProfileKeys(html, sourceUrl) {
+        const keys = new Set();
+        if (!html) return keys;
+        for (const candidate of this.extractHrefCandidates(html)) {
+            const key = this.normalizeSocialProfileKey(this.normalizeUrl(candidate.url, sourceUrl));
+            if (key) keys.add(key);
+        }
+        return keys;
+    }
+
+    // Curated bars that publish one of the social profiles THIS SITE links.
+    // Curated-to-curated: the corpus says "Rockbar is instagram.com/rockbarnyc"
+    // and rockbarnyc.com says "we are instagram.com/rockbarnyc", so the host
+    // resolves to the bar without anyone inferring anything. This is the rung
+    // that catches a curated bar whose `website` field is simply blank — which
+    // is most of them, and which is why 24 of Rockbar's 26 events shipped with
+    // no bar and no address after its calendar moved to a structured source.
+    getCuratedBarsClaimingSocialProfiles(profileKeys) {
+        const claimants = [];
+        const keys = profileKeys instanceof Set ? profileKeys : new Set(profileKeys || []);
+        if (keys.size === 0 || !this.core || !this.core.bars || typeof this.core.bars !== 'object') {
+            return claimants;
+        }
+        for (const cityKey of Object.keys(this.core.bars)) {
+            const cityBars = this.core.bars[cityKey];
+            if (!Array.isArray(cityBars)) continue;
+            for (const bar of cityBars) {
+                if (!bar || typeof bar.name !== 'string' || !bar.name.trim()) continue;
+                const matched = ['instagram', 'facebook']
+                    .map(field => this.normalizeSocialProfileKey(bar[field]))
+                    .filter(Boolean)
+                    .some(key => keys.has(key));
+                if (matched) claimants.push({ city: cityKey, bar });
+            }
+        }
+        return claimants;
+    }
+
     getCuratedBarsClaimingHost(host) {
         if (this.core && typeof this.core.getCuratedBarsClaimingWebsiteHost === 'function') {
             return this.core.getCuratedBarsClaimingWebsiteHost(host);
@@ -20249,13 +20332,33 @@ TEXT:
     //   2. else the first claimant carrying curated coordinates (the
     //      geocoded, longest-standing entry);
     //   3. else the first claimant.
-    getCuratedWebsiteVenueSiteIdentity(host, entry) {
+    getCuratedWebsiteVenueSiteIdentity(host, entry, hostIsVenueRole = false) {
         if (!entry || typeof entry !== 'object' || entry.blocked !== false) return null;
-        const claimants = this.getCuratedBarsClaimingHost(host);
+        let signal = 'curated-website';
+        let claimants = this.getCuratedBarsClaimingHost(host);
+        if (claimants.length === 0 && (hostIsVenueRole || entry.venueRoleSeen === true)) {
+            // Weaker sibling, same kind of evidence: the curated bar and the
+            // site publish the SAME social profile. Only consulted when no
+            // curated `website` names this host, so it can add an identity but
+            // never redirect one.
+            //
+            // VENUE-ROLE HOSTS ONLY, and that gate is load-bearing. A curated
+            // `website` is the bar's own domain, so matching on it is
+            // self-identifying; a social link is something anyone can publish
+            // ABOUT a venue. Ungated, run 20260829-140027 had this rung decide
+            // that beefdip.com "is" CC Slaughters, ra.co "is" Massive and
+            // sickening.events "is" Jackhammer — organizer and ticketing hosts
+            // that merely link the venues they sell for. Requiring the host to
+            // be a venue site (declared by its parser config, or resolved from
+            // its own pages) leaves exactly the sites that ARE a venue.
+            claimants = this.getCuratedBarsClaimingSocialProfiles(entry.socialProfileKeys);
+            if (claimants.length > 0) signal = 'curated-social';
+        }
         if (claimants.length === 0) return null;
         const cities = [...new Set(claimants.map(claimant => claimant.city))];
         if (cities.length > 1) {
-            console.log(`🤖 AI Web: Curated-website identity for ${host} is ambiguous — curated bars in ${cities.join(', ')} all claim it; nothing derived`);
+            const label = signal === 'curated-social' ? 'Curated-social' : 'Curated-website';
+            console.log(`🤖 AI Web: ${label} identity for ${host} is ambiguous — curated bars in ${cities.join(', ')} all claim it; nothing derived`);
             return null;
         }
         const harvestedAddresses = Array.isArray(entry.harvestedAddresses) ? entry.harvestedAddresses : [];
@@ -20272,7 +20375,7 @@ TEXT:
             primary = withCoordinates || claimants[0];
             primaryReason = withCoordinates ? 'first claimant with curated coordinates' : 'first claimant';
         }
-        return { city: cities[0], claimants, primary, primaryReason, signals: ['curated-website'] };
+        return { city: cities[0], claimants, primary, primaryReason, signals: [signal] };
     }
 
     // Which claimant is THIS event at? Decided from the event's OWN evidence,
@@ -20325,10 +20428,16 @@ TEXT:
     // never-timezone-anchored dates downstream: the dedup re-anchor pass
     // resolves them from event.city, no timezone code here.
     applyCuratedWebsiteIdentityFills(host, entry, eventList, cityConfig = null) {
-        const identity = this.getCuratedWebsiteVenueSiteIdentity(host, entry);
+        // A parser that DECLARES siteRole 'venue' and was pointed at this host
+        // says the site is a venue as curated fact — the page-derived
+        // venueRoleSeen does not always fire (Rockbar's structured calendar
+        // route never resolves a role from the page at all).
+        const hostIsVenueRole = eventList.some(event => this.parserConfigDeclaresVenueHost(
+            event && event._parserConfig, host));
+        const identity = this.getCuratedWebsiteVenueSiteIdentity(host, entry, hostIsVenueRole);
         if (!identity) return;
         const claimants = identity.claimants;
-        console.log(`🤖 AI Web: Venue-site identity for ${host} established from curated website match: ${claimants.map(claimant => `"${claimant.bar.name}"`).join(', ')} (${identity.city}) — signals: ${identity.signals.join(', ')}; primary "${identity.primary.bar.name}" (${identity.primaryReason})`);
+        console.log(`🤖 AI Web: Venue-site identity for ${host} established from ${identity.signals.includes('curated-social') ? 'a curated social-profile match' : 'curated website match'}: ${claimants.map(claimant => `"${claimant.bar.name}"`).join(', ')} (${identity.city}) — signals: ${identity.signals.join(', ')}; primary "${identity.primary.bar.name}" (${identity.primaryReason})`);
         const consensusKey = typeof entry.consensusKey === 'string' ? entry.consensusKey : '';
         for (const event of eventList) {
             if (!event || typeof event !== 'object' || event._venueSitePageHost !== host) continue;
@@ -20377,6 +20486,27 @@ TEXT:
             if (!existingCity || existingCity === 'unknown') {
                 event.city = identity.city;
                 console.log(`🤖 AI Web: Filled city "${identity.city}" from curated-website identity for "${title}"`);
+            }
+            // The claimant's own curated address and pin, for events that have
+            // neither. BarDataNormalizer's curated fills already ran by the
+            // time this pass sees the events, so an event whose bar is only
+            // established HERE never got them — Rockbar shipped 24 of 26 events
+            // with a venue name and no address at all. Blank-only, stamped
+            // 'venue-site' (below 'curated'), and skipped entirely when this
+            // event's bar came from somewhere other than this identity, so a
+            // sibling venue's event can never inherit the primary's address.
+            if (resolved && event.barSource === 'venue-site-identity') {
+                const curatedBar = resolved.claimant.bar;
+                const curatedAddress = typeof curatedBar.address === 'string' ? curatedBar.address.trim() : '';
+                if (curatedAddress && !(typeof event.address === 'string' && event.address.trim())) {
+                    event.address = curatedAddress;
+                    event.addressSource = 'venue-site';
+                    console.log(`🤖 AI Web: Filled address "${curatedAddress}" from curated-website identity for "${title}"`);
+                }
+                const curatedCoordinates = typeof curatedBar.coordinates === 'string' ? curatedBar.coordinates.trim() : '';
+                if (curatedCoordinates && !(typeof event.location === 'string' && event.location.trim())) {
+                    event.location = curatedCoordinates;
+                }
             }
         }
     }
