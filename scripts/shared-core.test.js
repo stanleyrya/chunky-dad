@@ -20894,3 +20894,41 @@ test('exact-midnight starts are date-only listings — rule 11 never flags them 
   });
   assert.equal(flags.find(f => f.code === 'improbable-overnight-span'), undefined);
 });
+
+// Run 20260829-092835: THE HUNT's image merge picked the calendar's
+// The-Hunt-1024x539.jpg over the scraped 2050x1080 original and logged it as
+// "clearly higher-resolution". WordPress stores an upload as `name.ext` plus
+// resized siblings `name-WIDTHxHEIGHT.ext`, so the ONLY URL advertising a size
+// is the smaller one — the score rung cannot get this right by looking at
+// numbers.
+test('a WordPress -WxH derivative never outranks the bare original it came from', () => {
+  const core = createCore();
+  const original = 'https://bear-it.example/wp-content/uploads/2026/07/The-Hunt.jpg';
+  const derivative = 'https://bear-it.example/wp-content/uploads/2026/07/The-Hunt-1024x539.jpg';
+
+  assert.equal(core.pickWordPressOriginalImage(original, derivative).winner, 'a');
+  assert.equal(core.pickWordPressOriginalImage(derivative, original).winner, 'b');
+  // The bare original scores NOTHING on the URL size scale — which is exactly
+  // why it needs this rung ahead of the scoring one.
+  assert.ok(core.getImageSizeScoreFromUrl(derivative) > core.getImageSizeScoreFromUrl(original));
+
+  // A CDN/proxy prefix in front of the same upload is still the same upload.
+  assert.equal(core.pickWordPressOriginalImage(
+    'https://i0.wp.com/bear-it.example/wp-content/uploads/2026/07/The-Hunt.jpg?fit=2050%2C1080&ssl=1',
+    derivative
+  ).winner, 'a');
+});
+
+test('the WordPress original rung stays out of every other image contest', () => {
+  const core = createCore();
+  // Two different derivatives of one upload IS a real size comparison.
+  assert.equal(core.pickWordPressOriginalImage(
+    'https://bear-it.example/a-300x200.jpg', 'https://bear-it.example/a-1024x768.jpg'), null);
+  // Two bare names, two different images, and junk all decide nothing here.
+  assert.equal(core.pickWordPressOriginalImage(
+    'https://bear-it.example/one.jpg', 'https://bear-it.example/two.jpg'), null);
+  assert.equal(core.pickWordPressOriginalImage(
+    'https://bear-it.example/flyer.jpg', 'https://other.example/unrelated-800x600.jpg'), null);
+  assert.equal(core.pickWordPressOriginalImage('', 'https://bear-it.example/a-800x600.jpg'), null);
+  assert.equal(core.pickWordPressOriginalImage(null, null), null);
+});
