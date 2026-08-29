@@ -174,6 +174,10 @@
   },
   {
     "slug": "coach-after-dark-sf-20074ac5",
+    "url": "https://linktr.ee/bearhappyhour",
+    "faviconBg": "#fbfbf9",
+    "faviconFg": "#6a6661",
+    "faviconPlate": "#ffffff",
     "paletteSource": "flyer",
     "palette": "#ffffff:57:0 #ab6a5d:10:9 #e38b7c:10:11 #e81c33:7:23 #e0b43a:2:14",
     "accent": "#e81c33"
