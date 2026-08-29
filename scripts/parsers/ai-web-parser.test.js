@@ -16209,3 +16209,82 @@ test('a failed or odd-shaped Elfsight boot leaves the page unchanged', async () 
   assert.deepEqual(await parser.collectElfsightCalendarEvents(
     { html: '<div/>', url: 'https://bar.example/calendar' }, parserConfig, boom), []);
 });
+
+// ---------------------------------------------------------------------------
+// Curated-social venue identity. applyCuratedWebsiteIdentityFills links a host
+// to a curated bar by the bar's `website` — but only 16 of 100 curated bars
+// have one, so Rockbar (address, coordinates and instagram, no website) could
+// never be identified and shipped 24 of 26 events with no venue at all.
+// ---------------------------------------------------------------------------
+
+test('a curated social reduces to one key however the corpus spells it', () => {
+  const parser = createParser();
+  const key = (field, value) => parser.normalizeCuratedSocialKey(field, value);
+  // Full URL, scheme-less URL, and the BARE HANDLE that names no platform —
+  // the field it is stored under supplies the platform ("dirtybird_la",
+  // "horizon.brighton" are both real curated values).
+  assert.equal(key('facebook', 'https://www.facebook.com/eagle.bar.la/'), 'facebook.com/eagle.bar.la');
+  assert.equal(key('facebook', 'facebook.com/eagle.bar.la'), 'facebook.com/eagle.bar.la');
+  assert.equal(key('instagram', 'dirtybird_la'), 'instagram.com/dirtybird_la');
+  assert.equal(key('instagram', 'horizon.brighton'), 'instagram.com/horizon.brighton');
+  assert.equal(key('instagram', '@rockbarnyc'), 'instagram.com/rockbarnyc');
+  // Nothing plausible → no key, so it can never match anything.
+  assert.equal(key('instagram', ''), '');
+  assert.equal(key('instagram', 'some name with spaces'), '');
+  assert.equal(key('instagram', 'a'), '');
+  assert.equal(key('instagram', 'https://instagram.com/p/abc123'), '', 'a post permalink names no profile');
+});
+
+test('the page side reads profiles and ignores share/login chrome', () => {
+  const parser = createParser();
+  const html = `<a href="https://www.instagram.com/rockbarnyc">ig</a>
+    <a href="https://www.facebook.com/rockbarnyc">fb</a>
+    <a href="http://instagram.com/squarespace">platform boilerplate</a>
+    <a href="https://www.facebook.com/sharer.php?u=x">share</a>
+    <a href="https://www.instagram.com/">handle-less</a>`;
+  const keys = parser.collectPageSocialProfileKeys(html, 'https://bar.example/calendar');
+  assert.deepEqual([...keys].sort(),
+    ['facebook.com/rockbarnyc', 'instagram.com/rockbarnyc', 'instagram.com/squarespace']);
+});
+
+test('a curated bar claims a host only when the host is a VENUE site', () => {
+  const parser = createParser();
+  parser.core = new SharedCore({}, { eventSchema: EventSchema });
+  parser.core.bars = {
+    nyc: [{ name: 'Rockbar', address: '185 Christopher St', coordinates: '40.73, -74.01',
+            instagram: 'https://www.instagram.com/rockbarnyc' }],
+    portland: [{ name: 'CC Slaughters', address: '219 NW Davis St', instagram: 'ccslaughters' }]
+  };
+  const siteKeys = new Set(['instagram.com/rockbarnyc', 'instagram.com/squarespace']);
+  assert.deepEqual(
+    parser.getCuratedBarsClaimingSocialProfiles(siteKeys).map(c => c.bar.name),
+    ['Rockbar'], 'platform boilerplate matches no curated bar');
+  // The bare-handle bar is reachable too, now that the field names its platform.
+  assert.deepEqual(
+    parser.getCuratedBarsClaimingSocialProfiles(new Set(['instagram.com/ccslaughters'])).map(c => c.bar.name),
+    ['CC Slaughters']);
+
+  // THE GATE. An organizer or ticketing host links the socials of every venue
+  // it sells for; run 20260829-140027 had this rung ungated and it decided
+  // beefdip.com "is" CC Slaughters and ra.co "is" Massive.
+  const entry = { blocked: false, venueRoleSeen: false, harvestedAddresses: [], socialProfileKeys: siteKeys };
+  assert.equal(parser.getCuratedWebsiteVenueSiteIdentity('ticketing.example', entry, false), null,
+    'a non-venue host never establishes from social evidence');
+  const asVenue = parser.getCuratedWebsiteVenueSiteIdentity('bar.example', entry, true);
+  assert.equal(asVenue.primary.bar.name, 'Rockbar');
+  assert.deepEqual(asVenue.signals, ['curated-social']);
+  // Page-resolved venue role works as the other half of the gate.
+  assert.ok(parser.getCuratedWebsiteVenueSiteIdentity(
+    'bar.example', { ...entry, venueRoleSeen: true }, false));
+});
+
+test('a venue parser lends venue status only to its own configured host', () => {
+  const parser = createParser();
+  const config = { siteRole: 'venue', urls: ['https://www.rockbarnyc.com/calendar'] };
+  assert.equal(parser.parserConfigDeclaresVenueHost(config, 'rockbarnyc.com'), true);
+  assert.equal(parser.parserConfigDeclaresVenueHost(config, 'ra.co'), false,
+    'a host the crawl wandered onto is not this parser to vouch for');
+  assert.equal(parser.parserConfigDeclaresVenueHost({ urls: config.urls }, 'rockbarnyc.com'), false,
+    'no siteRole declaration, no venue status');
+  assert.equal(parser.parserConfigDeclaresVenueHost(null, 'rockbarnyc.com'), false);
+});
