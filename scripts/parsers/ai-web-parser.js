@@ -1726,7 +1726,16 @@ class AiWebParser {
                     event._multiEventSegment = {
                         index: i + 1,
                         total: segments.length,
-                        lineCount: segment.lines.length
+                        lineCount: segment.lines.length,
+                        // The card's own lines, bounded. A multi-event page can
+                        // name a DIFFERENT venue per card ("Bear Tea … The Yard
+                        // @ 9 Bob Note (map)" beside "INFERNO … 3 Dollar Bill
+                        // (map)"), and that line is the only place the answer
+                        // exists — the model returns the site-wide venue hint
+                        // for every card, and the evidence gate rightly drops
+                        // it. Without this the sub-venue resolver has nothing
+                        // to read and 9 events shipped with no venue at all.
+                        text: this.trimToMaxLength(segment.lines.join(' \u2022 '), 600)
                     };
                     events.push(event);
                 }
@@ -19737,7 +19746,13 @@ TEXT:
     eventTextNamesCuratedBar(event, name) {
         const form = String(name || '').trim();
         if (!form || !event || typeof event !== 'object') return false;
-        const corpus = [event.title, event.description]
+        // The event's own card text counts as its own evidence: on a
+        // multi-venue site the card is where the venue is named, and it is not
+        // in the title or the description.
+        const segmentText = event._multiEventSegment && typeof event._multiEventSegment.text === 'string'
+            ? event._multiEventSegment.text
+            : '';
+        const corpus = [event.title, event.description, segmentText]
             .filter(value => typeof value === 'string' && value.trim())
             .join('\n');
         if (!corpus) return false;
@@ -20397,6 +20412,26 @@ TEXT:
         return { city: cities[0], claimants, primary, primaryReason, signals: [signal] };
     }
 
+    // Are all these curated claimants the same physical place? Measured from
+    // their own curated coordinates: within 250m of each other means rooms of
+    // one venue, not competing venues. Fails closed — a claimant without
+    // usable coordinates makes the answer no, because an unmeasurable claim
+    // must never license naming a venue an event may not be at.
+    curatedClaimantsShareOneComplex(claimants) {
+        const list = Array.isArray(claimants) ? claimants : [];
+        if (list.length < 2) return false;
+        if (!this.core || typeof this.core.coordinatePairDistanceKm !== 'function') return false;
+        const pins = list.map(claimant => typeof claimant.bar.coordinates === 'string'
+            ? claimant.bar.coordinates.trim()
+            : '');
+        if (pins.some(pin => !pin)) return false;
+        for (let i = 1; i < pins.length; i++) {
+            const distanceKm = this.core.coordinatePairDistanceKm(pins[0], pins[i]);
+            if (distanceKm === null || distanceKm > 0.25) return false;
+        }
+        return true;
+    }
+
     // Which claimant is THIS event at? Decided from the event's OWN evidence,
     // strongest first; a tier resolves only when it matches exactly ONE
     // claimant (two matching is ambiguity — the caller falls back to the
@@ -20490,12 +20525,25 @@ TEXT:
             // with the coordinate-carrying primary would have shipped four
             // confidently wrong venues. When the event's own evidence names
             // no claimant, the bar stays blank and the miss is surfaced.
-            const resolved = claimants.length === 1
+            let resolved = claimants.length === 1
                 ? { claimant: claimants[0], reason: 'sole curated claimant of the host' }
                 : this.resolveCuratedWebsiteSubVenue(event, claimants);
             const bar = typeof event.bar === 'string' ? event.bar.trim() : '';
-            if (!bar && !resolved) {
+            // ONE VENUE COMPLEX: when every claimant sits within a couple of
+            // hundred metres of the others, they are rooms of the same place
+            // (3 Dollar Bill at 260 Meserole and The Yard at 9 Bob Note at 270
+            // Meserole are 30m apart, and nobody calls it the second name).
+            // Naming the primary there is a better answer than naming nothing.
+            // Claimants that are genuinely separate venues keep the original
+            // fail-closed behaviour, which is what the guard was written for.
+            const complex = !resolved && this.curatedClaimantsShareOneComplex(claimants);
+            if (!bar && !resolved && !complex) {
                 console.log(`🤖 AI Web: Left bar blank for "${title}" — ${claimants.length} curated bars share ${host} (${claimants.map(claimant => `"${claimant.bar.name}"`).join(', ')}) and this event's own evidence names none; the primary "${identity.primary.bar.name}" is a ranking, not evidence`);
+            } else if (!bar && !resolved) {
+                event.bar = identity.primary.bar.name;
+                event.barSource = 'venue-site-identity';
+                resolved = { claimant: identity.primary, reason: 'claimants are one venue complex' };
+                console.log(`🤖 AI Web: Filled bar "${identity.primary.bar.name}" for "${title}" — ${claimants.length} curated bars share ${host} but sit within one venue complex, so the primary names the place`);
             } else if (!bar) {
                 event.bar = resolved.claimant.bar.name;
                 event.barSource = 'venue-site-identity';
