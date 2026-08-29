@@ -31,6 +31,10 @@ const ADAPTIVE_CRAWL_MAX_HOPS = 4;
 // sub-km disagreement is meaningful. Shared by the merge-time STEP 3c flag
 // and the calendar reviewer's pin-moved check.
 const PIN_MOVED_THRESHOLD_KM = 0.4;
+// Distinct clock times at which a flyer's OCR text stops being one event's
+// artwork and starts being a programme — see countDistinctFlyerClockTimes for
+// the corpus census that picked 4.
+const MULTI_EVENT_SCHEDULE_CLOCK_TIMES = 4;
 
 // New-venue-candidate detection (gathering-only growth loop): barSource
 // stamps that positively corroborate an extracted bar name without meaning
@@ -3460,7 +3464,22 @@ class SharedCore {
                 // the persistent cache answers forever. OCR is local-model
                 // work; the owner's standing doctrine is to spend it.
                 const text = await this.ocrImageTextLookup(url, httpAdapter);
-                if (typeof text === 'string' && text.trim()) textByUrl.set(url, text);
+                if (typeof text === 'string' && text.trim()) {
+                    // A weekend/festival PROGRAMME names every event on it, so
+                    // it answers "does this flyer name the event?" with yes for
+                    // all of them — sound artwork, unsound evidence. Withhold
+                    // it: the rung requires BOTH texts, so this falls through
+                    // to the URL rungs exactly like an unreadable image, which
+                    // is its documented fail-open path. The image itself is
+                    // untouched — a site is free to use a schedule as an
+                    // event's artwork, and bearitmtl.com does.
+                    const clockTimes = this.countDistinctFlyerClockTimes(text);
+                    if (clockTimes >= MULTI_EVENT_SCHEDULE_CLOCK_TIMES) {
+                        console.log(`🖼️ MERGE: image withheld from title-evidence — reads as a multi-event schedule (${clockTimes} distinct clock times): ${url}`);
+                        continue;
+                    }
+                    textByUrl.set(url, text);
+                }
             } catch (_) {
                 // Unreadable side: the rung requires both texts, so this
                 // lookup failure falls through to existing behavior.
@@ -3474,29 +3493,31 @@ class SharedCore {
             const unreadable = [imageA, imageB].filter(url => !textByUrl.has(url));
             console.log(`🖼️ MERGE: image title-evidence unavailable — no OCR text for ${unreadable.length === 2 ? 'either image' : unreadable[0]}`);
         }
-        // REPORT-ONLY census (no behavior change). A weekend/festival
-        // PROGRAMME graphic names several events, so the title-evidence rung
-        // can read it as proof for any one of them — it is sound artwork but
-        // unsound evidence. bearitmtl.com run 20260829-102510: Concours PUP
-        // Montréal's featured image is the PUP weekend schedule, whose text
-        // names "Concours Pup Montréal" AND "Kink Playground" and would have
-        // out-argued KINK's own dedicated flyer had that flyer's tokens not
-        // happened to tie it. Counting matters before enforcing anything.
-        for (const [url, text] of textByUrl) {
-            const clockTimes = this.countDistinctFlyerClockTimes(text);
-            if (clockTimes >= 3) {
-                console.log(`🖼️ MERGE: image title-evidence looks like a multi-event schedule (${clockTimes} distinct clock times) — still used this run: ${url}`);
-            }
-        }
         return textByUrl.size > 0 ? textByUrl : null;
     }
 
     // How many DISTINCT times of day a flyer's OCR text states. A dedicated
     // event flyer states one or two (a doors time, or a start-end range);
-    // a programme states one per entry. Measured across the real corpus
-    // 2026-08-29: KINK Playground 1, THE HUNT 1, ENSEMBLE 2, MEAT MARKET 2,
-    // PUP weekend programme 5. Language-neutral on purpose — it reads clocks,
-    // never month names or the word "schedule".
+    // a programme states one per entry. Language-neutral on purpose — it reads
+    // clocks, never month names or the word "schedule".
+    //
+    // Threshold picked from the census, not from taste. Scanning all 669
+    // readable flyers in the OCR cache (2026-08-29) gave a clean break at 4:
+    //   0-2 times  654 flyers  ordinary single-event artwork
+    //     3 times    4 flyers  ALL false positives — real single events that
+    //                          happen to print three clocks (Eagle LA "Dads &
+    //                          Lads" @9pm with sock auctions 10:30pm/11:30pm;
+    //                          "Gutter Club (K)night" 7PM-12AM, doors 7:00PM,
+    //                          fighting 8-11:00; Bearracuda "Hot Take")
+    //    4+ times   11 flyers  ALL genuine programmes (Lumber Yard's weekly
+    //                          bar listing x4, BeefDip "Bear Week Schedule",
+    //                          Northeast Ursamen "Out of Hibernation
+    //                          Schedule", Eagle LA's Mx. Cruise Leather
+    //                          weekend, the PUP weekend programme x4 URLs)
+    // Three was one notch too eager. The OCR model's own imageClassification
+    // is NOT a usable gate here: it labelled only 4 of those 11 as
+    // multi-event-flyer and called BeefDip's Bear Week Schedule an
+    // "event-flyer".
     countDistinctFlyerClockTimes(text) {
         const source = String(text || '');
         if (!source) return 0;
