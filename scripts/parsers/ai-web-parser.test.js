@@ -16029,3 +16029,183 @@ test('an adapter that reports its pre-downscale size beats measuring the shrunke
   assert.equal(parser.pickTrueImageDimensions({ originalWidth: 0, originalHeight: 10 }), null);
   assert.equal(parser.pickTrueImageDimensions(null), null);
 });
+
+// ---------------------------------------------------------------------------
+// Explicit source years corroborated against the page, not only the model's
+// quoted snippet. Rockbar run 20260829-110754: six passes read BEARS NIGHT
+// OUT's date; four quoted "Saturday, August 3, 2024" at confidence 100, but
+// the pass that WON cited the og:image filename at confidence 80 — no year,
+// under the floor — so 2024 counted as a guess and the window repair walked a
+// two-year-old archive forward to 2026.
+// ---------------------------------------------------------------------------
+
+const ROCKBAR_PAGE_TEXT = 'Back to All Events BEARS NIGHT OUT Saturday, August 3, 2024 '
+  + '9:00 PM 9:00 PM Google Calendar ICS HOSTED BY THE URBAN BEAR DJ STEVEN CUNNINGHAM';
+
+test('a year the page states is explicit even when the model quoted a shorter snippet', () => {
+  const parser = createParser();
+  // The exact losing pass, with and without the page text behind it.
+  assert.equal(parser.resolveExplicitSourceYear(
+    '2024-08-03', 'og:image filename: Bears-Night-Out-Aug-3.jpg', 80, ROCKBAR_PAGE_TEXT), 2024);
+  assert.equal(parser.resolveExplicitSourceYear(
+    '2024-08-03', 'og:image filename: Bears-Night-Out-Aug-3.jpg', 80, ''), null);
+  // The original quoted-evidence path is untouched.
+  assert.equal(parser.resolveExplicitSourceYear('2024-08-03', 'Saturday, August 3, 2024', 100, ''), 2024);
+  // A value with no year of its own still resolves to nothing.
+  assert.equal(parser.resolveExplicitSourceYear('08-03', 'August 3', 100, ROCKBAR_PAGE_TEXT), null);
+});
+
+test('page corroboration wants the year beside the date, not merely on the page', () => {
+  const parser = createParser();
+  const near = (text) => parser.sourceStatesValueYear('2024-08-03', text);
+  assert.equal(near('Saturday, August 3, 2024'), true);
+  assert.equal(near('August 3rd, 2024'), true);
+  assert.equal(near('3 August 2024'), true);
+  assert.equal(near('Aug 3 2024'), true);
+  // The ISO spelling deliberately does NOT count: sites name flyer files by
+  // date and reuse last year's files, so "…/2026-01-25 Welcome Party.webp" sat
+  // beside visible copy reading "MONDAY JANUARY 25, 2027" on beefdip.com and
+  // would have marked eight real 2027 events as archived 2026 ones.
+  assert.equal(near('DTSTART 2024-08-03T21:00'), false);
+  assert.equal(
+    parser.sourceStatesValueYear('2026-01-25',
+      'MONDAY JANUARY 25, 2027 FOAM POOL PARTY … uploads/2026/01/2026-01-25 Welcome Party.webp'),
+    false, 'a flyer filename is not the page stating a year');
+  assert.equal(
+    parser.sourceStatesValueYear('2027-01-25',
+      'MONDAY JANUARY 25, 2027 FOAM POOL PARTY'),
+    true, 'the year the reader actually sees still counts');
+  // A year that belongs to something else must never pin the event.
+  assert.equal(near('BEARS NIGHT OUT August 3 · (c) 2024 Rockbar'), false);
+  assert.equal(near('August 3 ... lots of unrelated text ... Copyright 2024'), false);
+  assert.equal(near('Saturday, August 10, 2024'), false, 'different day');
+  assert.equal(near('Established 2024 · every August'), false);
+  assert.equal(near(''), false);
+});
+
+// ---------------------------------------------------------------------------
+// Elfsight calendar widgets. Rockbar's /calendar renders client-side, so the
+// HTML carries a placeholder and nothing else — the crawl saw an empty page
+// while the browser showed a full season. The widget boots from one public GET.
+// ---------------------------------------------------------------------------
+
+const ELFSIGHT_WIDGET_ID = 'e122bc50-bc4f-4cde-a6b9-ee6d4e31531a';
+const ELFSIGHT_HTML = `<html><body>
+  <div class="elfsight-app-${ELFSIGHT_WIDGET_ID}" data-elfsight-app-lazy></div>
+  <div class="elfsight-app-${ELFSIGHT_WIDGET_ID}"></div>
+</body></html>`;
+
+function elfsightBootPayload(events) {
+  return JSON.stringify({ data: { widgets: { [ELFSIGHT_WIDGET_ID]: { data: { settings: { events } } } } } });
+}
+
+test('extractElfsightWidgetIds reads each widget once', () => {
+  const parser = createParser();
+  assert.deepEqual(parser.extractElfsightWidgetIds(ELFSIGHT_HTML), [ELFSIGHT_WIDGET_ID]);
+  assert.deepEqual(parser.extractElfsightWidgetIds('<div>no widget</div>'), []);
+});
+
+test('an Elfsight row becomes an event with its own timezone, and recurrence becomes an RRULE', () => {
+  const parser = createParser();
+  parser.core = new SharedCore({}, { eventSchema: EventSchema });
+  const source = 'https://bar.example/calendar';
+
+  // Real shapes from Rockbar's widget.
+  const weekly = parser.buildEventFromElfsightRow({
+    name: 'DIRTY LITTLE SECRET',
+    start: { date: '2026-07-10', time: '20:00' },
+    end: { date: '2026-07-10', time: '21:00' },
+    timeZone: 'America/New_York',
+    repeatPeriod: 'weeklyOn',
+    repeatWeeklyOnDays: ['fr'],
+    description: '<div>Spill the tea&hellip;</div><br><div><strong>Every Friday</strong></div>'
+  }, source);
+  assert.equal(weekly.title, 'DIRTY LITTLE SECRET');
+  assert.equal(weekly.startDate.toISOString(), '2026-07-11T00:00:00.000Z', '20:00 EDT');
+  assert.equal(weekly.timezone, 'America/New_York');
+  assert.equal(weekly.recurrenceRule, 'FREQ=WEEKLY;BYDAY=FR');
+  assert.ok(!/[<>]/.test(weekly.description), 'the rich-text description is stripped to plain text');
+
+  // First Saturday of the month.
+  const monthly = parser.buildEventFromElfsightRow({
+    name: 'BEARS NIGHT OUT',
+    start: { date: '2026-05-02', time: '21:00' },
+    timeZone: 'America/New_York',
+    repeatPeriod: 'nthDayInMonth'
+  }, source);
+  assert.equal(monthly.recurrenceRule, 'FREQ=MONTHLY;BYDAY=1SA');
+
+  // Last Saturday of the month.
+  const last = parser.buildEventFromElfsightRow({
+    name: 'GORDITOS',
+    start: { date: '2026-08-29', time: '22:00' },
+    timeZone: 'America/New_York',
+    repeatPeriod: 'lastDayInMonth'
+  }, source);
+  assert.equal(last.recurrenceRule, 'FREQ=MONTHLY;BYDAY=-1SA');
+
+  // A one-off carries no rule at all, and an unmappable repeat shape is NOT guessed.
+  const once = parser.buildEventFromElfsightRow({
+    name: 'MEGA BEAR BLAST!', start: { date: '2026-09-20', time: '18:00' },
+    timeZone: 'America/New_York', repeatPeriod: 'noRepeat'
+  }, source);
+  assert.equal(once.recurrenceRule, undefined);
+  const custom = parser.buildEventFromElfsightRow({
+    name: 'ODD ONE', start: { date: '2026-09-20', time: '18:00' },
+    timeZone: 'America/New_York', repeatPeriod: 'custom'
+  }, source);
+  assert.equal(custom.recurrenceRule, undefined, 'custom repeats ship as a single dated event');
+
+  // A row with no date is not an event.
+  assert.equal(parser.buildEventFromElfsightRow({ name: 'NO DATE', start: {} }, source), null);
+});
+
+test('the Elfsight widget is read only on the configured entry page', async () => {
+  const parser = createParser();
+  parser.core = new SharedCore({}, { eventSchema: EventSchema });
+  const parserConfig = { urls: ['https://bar.example/calendar'] };
+  let fetches = 0;
+  const httpAdapter = {
+    fetchData: async () => {
+      fetches++;
+      return { html: elfsightBootPayload([
+        { name: 'MEGA BEAR BLAST!', visible: true, start: { date: '2026-09-20', time: '18:00' }, timeZone: 'America/New_York' },
+        { name: 'HIDDEN', visible: false, start: { date: '2026-09-21', time: '18:00' } }
+      ]) };
+    }
+  };
+
+  const onEntry = await parser.collectElfsightCalendarEvents(
+    { html: ELFSIGHT_HTML, url: 'https://bar.example/calendar' }, parserConfig, httpAdapter);
+  assert.equal(onEntry.length, 1, 'invisible rows are not events');
+  assert.equal(fetches, 1);
+
+  // The same embed sits in a shared block on every other page — reading it
+  // again would republish the whole calendar per page.
+  const elsewhere = await parser.collectElfsightCalendarEvents(
+    { html: ELFSIGHT_HTML, url: 'https://bar.example/' }, parserConfig, httpAdapter);
+  assert.deepEqual(elsewhere, []);
+  assert.equal(fetches, 1, 'no second boot request');
+
+  // A trailing slash on the configured URL is still the configured URL.
+  const slashed = await parser.collectElfsightCalendarEvents(
+    { html: ELFSIGHT_HTML, url: 'https://bar.example/calendar/' },
+    { urls: ['https://bar.example/calendar'] }, httpAdapter);
+  assert.equal(slashed.length, 1);
+});
+
+test('a failed or odd-shaped Elfsight boot leaves the page unchanged', async () => {
+  const parser = createParser();
+  const parserConfig = { urls: ['https://bar.example/calendar'] };
+  const htmlData = { html: ELFSIGHT_HTML, url: 'https://bar.example/calendar' };
+  const boom = { fetchData: async () => { throw new Error('network down'); } };
+  assert.deepEqual(await parser.collectElfsightCalendarEvents(htmlData, parserConfig, boom), []);
+  const junk = { fetchData: async () => ({ html: 'not json' }) };
+  assert.deepEqual(await parser.collectElfsightCalendarEvents(htmlData, parserConfig, junk), []);
+  const empty = { fetchData: async () => ({ html: JSON.stringify({ data: {} }) }) };
+  assert.deepEqual(await parser.collectElfsightCalendarEvents(htmlData, parserConfig, empty), []);
+  // No adapter at all, and pages with no widget, are both no-ops.
+  assert.deepEqual(await parser.collectElfsightCalendarEvents(htmlData, parserConfig, null), []);
+  assert.deepEqual(await parser.collectElfsightCalendarEvents(
+    { html: '<div/>', url: 'https://bar.example/calendar' }, parserConfig, boom), []);
+});
