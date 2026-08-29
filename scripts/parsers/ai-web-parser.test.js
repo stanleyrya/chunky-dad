@@ -15827,3 +15827,113 @@ test('the structured route reads its artwork and fills the missing end in one pa
   assert.equal(events[0].endDate.toISOString(), '2026-11-02T02:00:00.000Z',
     'the flyer-derived end matches the end this event has always had on the calendar');
 });
+
+// ---------------------------------------------------------------------------
+// Wix LISTING-page warmup events. The same wix-warmup-data blob that carries
+// one event on an /event-details/ page carries the WHOLE list on an event-list
+// page. Verified 2026-08-29 against the live sites: clubchubusa.com published
+// 3 rows and chunk-party.com 17, both hasMore:false, inside HTML the crawl had
+// already fetched. Enrichment only — it never creates events.
+// ---------------------------------------------------------------------------
+
+// Deployment-specific keys on purpose: BOTH the app GUID and the
+// widgetTPASection_<suffix> key vary per site, so the walk must name neither.
+const WIX_LISTING_HTML = `
+<html><head>
+<script type="application/json" id="wix-warmup-data">{"appsWarmupData":{"cafe1234-0000-4000-8000-000000000000":{"widgetTPASection_zz9plural":{"events":{"hasMore":false,"filterType":2,"events":[
+  {"title":"Club Chub Presents: The Monster Ball","slug":"club-chub-presents-the-monster-ball",
+   "location":{"name":"Falcon North","address":"2020 E Artesia Blvd, Long Beach, CA 90805, USA","coordinates":{"lat":33.8742,"lng":-118.1706},"fullAddress":{"city":"Long Beach","formattedAddress":"2020 E Artesia Blvd, Long Beach, CA 90805, USA"}},
+   "scheduling":{"config":{"startDate":"2026-11-01T04:00:00.000Z","endDate":"2026-11-01T10:00:00.000Z","timeZoneId":"America/Los_Angeles"}}},
+  {"title":"Club Chub Presents: Meat Market","slug":"club-chub-presents-meat-market",
+   "location":{"name":"Eagle Wilton Manors","address":"2209 Wilton Dr, Wilton Manors, FL 33305, USA","coordinates":{"lat":26.1553,"lng":-80.1395},"fullAddress":{"city":"Wilton Manors","formattedAddress":"2209 Wilton Dr, Wilton Manors, FL 33305, USA"}},
+   "scheduling":{"config":{"startDate":"2026-11-01T21:00:00.000Z","endDate":"2026-11-02T02:00:00.000Z","timeZoneId":"America/New_York"}}}
+]}}}}}</script>
+</head><body>event list</body></html>`;
+
+const LISTING_URL = 'https://www.clubchubusa.com/event-list';
+
+test('extractWixServerEventList reads every row under deployment-specific keys', () => {
+  const parser = createParser();
+  const RealURL = global.URL;
+  global.URL = undefined;   // Scriptable has no URL global
+  try {
+    const records = parser.extractWixServerEventList(WIX_LISTING_HTML);
+    assert.equal(records.length, 2);
+    assert.deepEqual(records.map(r => r.slug),
+      ['club-chub-presents-the-monster-ball', 'club-chub-presents-meat-market']);
+    assert.equal(records[1].timezone, 'America/New_York');
+    assert.equal(records[1].endDateUtc.toISOString(), '2026-11-02T02:00:00.000Z');
+    // No tickets[] exists per listing row, so listing records never carry a cover.
+    assert.equal(records[0].cover, null);
+  } finally {
+    global.URL = RealURL;
+  }
+});
+
+test('extractWixServerEventList returns [] for absent, garbage or list-less blobs', () => {
+  const parser = createParser();
+  assert.deepEqual(parser.extractWixServerEventList('<html><body>nothing</body></html>'), []);
+  assert.deepEqual(parser.extractWixServerEventList(''), []);
+  assert.deepEqual(parser.extractWixServerEventList(null), []);
+  assert.deepEqual(
+    parser.extractWixServerEventList('<script type="application/json" id="wix-warmup-data">{broken'), []);
+  assert.deepEqual(
+    parser.extractWixServerEventList(WIX_WARMUP_HTML), [],
+    'a detail-page blob carries no list — that stays the single-record path'
+  );
+});
+
+test('Wix listing data fills a missing end time but never overwrites a real one', () => {
+  const parser = createParser();
+  // Monster Ball as the pipeline produced it: a missing end became end === start.
+  const monsterBall = {
+    title: 'Club Chub Presents The Monster Ball Long Beach',
+    startDate: new Date('2026-11-01T04:00:00.000Z'),
+    endDate: new Date('2026-11-01T04:00:00.000Z')
+  };
+  // Meat Market already has a real end (read off its flyer) — it must survive.
+  const meatMarket = {
+    title: 'Club Chub Presents: MEAT MARKET @ Eagle Wilton Manors',
+    startDate: new Date('2026-11-01T21:00:00.000Z'),
+    endDate: new Date('2026-11-02T02:00:00.000Z')
+  };
+  parser.applyWixServerDataEnrichment([monsterBall, meatMarket],
+    { html: WIX_LISTING_HTML, url: LISTING_URL }, {});
+
+  assert.equal(monsterBall.endDate.toISOString(), '2026-11-01T10:00:00.000Z', 'degenerate end filled');
+  assert.equal(monsterBall.timezone, 'America/Los_Angeles');
+  assert.equal(monsterBall.location, '33.8742, -118.1706');
+  assert.equal(meatMarket.endDate.toISOString(), '2026-11-02T02:00:00.000Z', 'real end untouched');
+  // Titles drifted from the Wix titles on BOTH rows, so the pairing came from
+  // the exact start instants.
+  assert.equal(meatMarket.address, '2209 Wilton Dr, Wilton Manors, FL 33305, USA');
+});
+
+test('Wix listing data never fills a start-mismatched or ambiguous event', () => {
+  const parser = createParser();
+  // Same night, different start → no instant match, no title match, no slug.
+  const wrongNight = { title: 'Some Other Party', startDate: new Date('2026-11-01T06:00:00.000Z') };
+  parser.applyWixServerDataEnrichment([wrongNight], { html: WIX_LISTING_HTML, url: LISTING_URL }, {});
+  assert.equal(wrongNight.timezone, undefined, 'no positive evidence, no enrichment');
+
+  // Two rows claiming one event is ambiguity — fail closed.
+  const twinHtml = WIX_LISTING_HTML.replace('2026-11-01T21:00:00.000Z', '2026-11-01T04:00:00.000Z');
+  const ambiguous = { title: 'Club Chub', startDate: new Date('2026-11-01T04:00:00.000Z') };
+  parser.applyWixServerDataEnrichment([ambiguous], { html: twinHtml, url: LISTING_URL }, {});
+  assert.equal(ambiguous.timezone, undefined, 'two matching rows must enrich nothing');
+});
+
+test('a detail-page record still wins over the listing rows (only it has ticket prices)', () => {
+  const parser = createParser();
+  // Detail blob AND a listing blob whose row would match the same event.
+  const bothHtml = WIX_WARMUP_HTML.replace('</head>', `
+<script type="application/json" id="wix-warmup-data">{"appsWarmupData":{"cafe1234-0000-4000-8000-000000000000":{"widgetTPASection_q":{"events":{"hasMore":false,"events":[
+  {"title":"CHUNK Portland - SUMMER BLOW OUT!","slug":"chunk-portland-summer-blow-out",
+   "location":{"name":"Nova PDX","address":"WRONG ADDRESS FROM LISTING"},
+   "scheduling":{"config":{"startDate":"2026-08-23T04:00:00.000Z","endDate":"2026-08-23T09:00:00.000Z","timeZoneId":"America/Los_Angeles"}}}
+]}}}}}</script></head>`);
+  const event = { title: 'CHUNK Portland - SUMMER BLOW OUT!' };
+  parser.applyWixServerDataEnrichment([event], { html: bothHtml, url: CHUNK_PAGE_URL }, PORTLAND_CITY_CONFIG);
+  assert.equal(event.cover, '$20.50-$30.75', 'ticket prices come from the detail record');
+  assert.equal(event.address, '722 E Burnside St, Portland, OR 97214, USA', 'detail address, not the listing row');
+});
