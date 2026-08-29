@@ -75,7 +75,7 @@
     "dc": {
       "name": "DC",
       "status": "success",
-      "dataLength": 2932,
+      "dataLength": 3156,
       "eventCount": 2
     },
     "denver": {
@@ -195,7 +195,7 @@
     "philly": {
       "name": "Philadelphia",
       "status": "success",
-      "dataLength": 6084,
+      "dataLength": 6358,
       "eventCount": 4
     },
     "phoenix": {
@@ -255,7 +255,7 @@
     "sf": {
       "name": "San Francisco",
       "status": "success",
-      "dataLength": 23853,
+      "dataLength": 24123,
       "eventCount": 17
     },
     "sitges": {
@@ -291,7 +291,7 @@
     "vegas": {
       "name": "Las Vegas",
       "status": "success",
-      "dataLength": 6037,
+      "dataLength": 6301,
       "eventCount": 4
     }
   }

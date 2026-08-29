@@ -6,37 +6,9 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-dc
 X-WR-TIMEZONE:America/New_York
 BEGIN:VEVENT
-DTSTART:20260927T010000Z
-DTEND:20260927T070000Z
-DTSTAMP:20260824T183126Z
-UID:787E9181-C677-4679-8CF8-BB945E9E1202
-CREATED:20260820T174238Z
-DESCRIPTION:description: TWISTED BEAR - from London - is super excited to b
- e making its long-awaited debut at ICON D.C.\nbar: Icon DC\naddress: 2001 1
- 1th Street Northwest\, Washington\, DC 20001\nticketUrl: https://www.eventb
- rite.com/e/twisted-bear-washington-dc-debut-tickets-1997898549343\nimage: h
- ttps://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1191263087%2F10
- 88207912863%2F1%2Foriginal.20260817-175227?w=940&auto=format%2Ccompress&q=7
- 5&sharp=10&s=197deab80f6f213e399e77f54af50254\ncover: $23.18-$28.52\ntimezo
- ne: America/New_York\nwebsite: https://twisted-bear.com\nshortName: TWIST­E
- D BEAR\ninstagram: https://www.instagram.com/twistedbearparty\nfacebook: ht
- tps://www.facebook.com/twistedglobal/\nfavicon: https://twisted-bear.com\nk
- ey: twisted-bear-washington-d.c-debut|2026-09-27|icon dc\nbearSource: keywo
- rd\naddressSource: page\nimageSource: jsonld\ngmaps: https://www.google.com
- /maps/search/?api=1&query=Icon%20DC%2C%202001%2011th%20Street%20Northwest%2
- C%20Washington%2C%20DC%2020001
-LAST-MODIFIED:20260824T171746Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:TWISTED BEAR Washington\, D.C. Debut
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20260214T020000Z
 DTEND:20260214T080000Z
-DTSTAMP:20260824T183126Z
+DTSTAMP:20260829T083143Z
 UID:C32DBFE5-FAB5-4B93-B65E-FEEAAC41B2BC
 CREATED:20260121T135638Z
 DESCRIPTION:description: MEGAWOOF AMERICA - S.VALENTINE + President Day Wee
@@ -56,6 +28,37 @@ LOCATION:38.9162081\, -77.0213011
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:MEGAWOOF
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260927T010000Z
+DTEND:20260927T070000Z
+DTSTAMP:20260829T083143Z
+UID:787E9181-C677-4679-8CF8-BB945E9E1202
+CREATED:20260820T174238Z
+DESCRIPTION:description: TWISTED BEAR - from London - is super excited to b
+ e making its long-awaited debut at ICON D.C.\nbar: Icon DC\naddress: 2001 1
+ 1th Street Northwest\, Washington\, DC 20001\nticketUrl: https://www.eventb
+ rite.com/e/twisted-bear-washington-dc-debut-tickets-1997898549343\nimage: h
+ ttps://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1191263087%2F10
+ 88207912863%2F1%2Foriginal.20260817-175227?w=940&auto=format%2Ccompress&q=7
+ 5&sharp=10&s=197deab80f6f213e399e77f54af50254\ncover: $23.18-$28.52\ntimezo
+ ne: America/New_York\nimageHorizontal: https://img.evbuc.com/https%3A%2F%2F
+ cdn.evbuc.com%2Fimages%2F1191263087%2F1088207912863%2F1%2Foriginal.20260817
+ -175227?w=940&auto=format%2Ccompress&q=75&sharp=10&s=197deab80f6f213e399e77
+ f54af50254\nwebsite: https://twisted-bear.com\nshortName: TWIST­ED BEAR\nin
+ stagram: https://www.instagram.com/twistedbearparty\nfacebook: https://www.
+ facebook.com/twistedglobal/\nfavicon: https://twisted-bear.com\nkey: twiste
+ d-bear-washington-d.c-debut|2026-09-27|icon dc\nbearSource: keyword\naddres
+ sSource: page\nimageSource: jsonld\ngmaps: https://www.google.com/maps/sear
+ ch/?api=1&query=Icon%20DC%2C%202001%2011th%20Street%20Northwest%2C%20Washin
+ gton%2C%20DC%2020001
+LAST-MODIFIED:20260829T014753Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:TWISTED BEAR Washington\, D.C. Debut
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
