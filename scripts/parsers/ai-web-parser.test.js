@@ -16288,3 +16288,17 @@ test('a venue parser lends venue status only to its own configured host', () => 
     'no siteRole declaration, no venue status');
   assert.equal(parser.parserConfigDeclaresVenueHost(null, 'rockbarnyc.com'), false);
 });
+
+test('venue-name matching treats "@" and "at" as the same word', () => {
+  const parser = createParser();
+  const hits = (name, text) => parser.buildVenueNameWholeWordPattern(name).test(text);
+  // The two sources disagree on the spelling: 3dollarbillbk.com writes
+  // "The Yard @ 9 Bob Note", the curated corpus has "The Yard at 9 Bob Note".
+  assert.equal(hits('The Yard at 9 Bob Note', 'Bear Tea • The Yard @ 9 Bob Note (map)'), true);
+  assert.equal(hits('The Yard @ 9 Bob Note', 'listed as The Yard at 9 Bob Note tonight'), true);
+  assert.equal(hits('The Yard at 9 Bob Note', 'The Yard at 9 Bob Note'), true);
+  // Everything the whole-word rule already refused, it still refuses.
+  assert.equal(hits('The Yard at 9 Bob Note', 'The Yard at 10 Bob Note'), false);
+  assert.equal(hits('Cattyshack', 'a Cattyshacky thing'), false);
+  assert.equal(hits('3 Dollar Bill', 'INFERNO • 3 Dollar Bill (map)'), true);
+});
