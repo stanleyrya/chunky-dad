@@ -20939,6 +20939,32 @@ test('the WordPress original rung stays out of every other image contest', () =>
 // "Concours Pup Montréal" AND "Kink Playground" and the title-evidence rung
 // reads whichever event it is asked about. Counting clocks separates a
 // programme from a flyer without reading month names or the word "schedule".
+test('the programme guard withholds a schedule from title evidence, and only a schedule', async () => {
+  const core = createCore();
+  const programme = 'Programmation 2026 31 juillet 17h00 : Ouverture du concours 21h30 : Unleashed '
+    + '1 aout 18h00 : Concours Pup Montreal 22h00 : Kink Playground 2 aout 13h00 : Diner de cloture';
+  const realFlyer = 'KINK PLAYGROUND 1ER AOUT 2026 AU BAIN MATHIEU OUVERTURE DES PORTES A 22:00';
+  // Three clocks on ONE event is the shape the census proved is a false
+  // positive (Eagle LA's Dads & Lads), so it must still serve as evidence.
+  const threeClockFlyer = 'Dads & Lads Eagle LA Friday August 21 @ 9pm Sock Auction 10:30pm & 11:30pm';
+
+  const texts = {
+    'https://site.example/programme.jpg': programme,
+    'https://site.example/kink.jpg': realFlyer,
+    'https://site.example/dads.jpg': threeClockFlyer
+  };
+  core.setOcrImageTextLookup(async (url) => texts[url] || '');
+
+  const withheld = await core.preloadImageOcrTextEvidence(
+    { image: 'https://site.example/programme.jpg' }, { image: 'https://site.example/kink.jpg' });
+  assert.equal(withheld.size, 1, 'the programme is withheld; the real flyer stays');
+  assert.equal(withheld.has('https://site.example/programme.jpg'), false);
+
+  const kept = await core.preloadImageOcrTextEvidence(
+    { image: 'https://site.example/dads.jpg' }, { image: 'https://site.example/kink.jpg' });
+  assert.equal(kept.size, 2, 'a three-clock single-event flyer is NOT a programme');
+});
+
 test('countDistinctFlyerClockTimes separates a programme from a real flyer', () => {
   const core = createCore();
   const programme = 'Programmation 2026 31 juillet - July 31st 17h00 : Ouverture du concours '
