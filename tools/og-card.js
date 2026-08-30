@@ -198,12 +198,14 @@ function esc(text) {
     ));
 }
 
-// Only http(s), file: and root-relative URLs reach the document — everything
-// here is interpolated into src/url() and this is the gate.
+// Only http(s), inline data: images, and relative URLs reach the document —
+// everything here is interpolated into src/url() and this is the gate. The
+// generator hands over data: URIs (see dataUri() there, and why); the studio
+// hands over absolute http(s) ones.
 function safeUrl(url) {
     const value = String(url || '').trim();
     if (!value) return '';
-    if (!/^(https?:\/\/|file:\/\/|\/|\.\.?\/)/i.test(value)) return '';
+    if (!/^(https?:\/\/|data:image\/[a-z.+-]+;base64,|\/|\.\.?\/)/i.test(value)) return '';
     return esc(value).replace(/'/g, '%27');
 }
 

@@ -8,7 +8,9 @@ const ROOT = path.resolve(__dirname, '..');
 const SITE_BASE = 'https://chunky.dad';
 const OUTPUT_DIR = path.join(ROOT, 'img', 'og');
 const FAVICONS_DIR = path.join(ROOT, 'img', 'favicons');
-const LOGO_FILE = path.join(ROOT, 'Rising_Star_Ryan_Head_Compressed.png');
+// The site icon at 96px (18KB) rather than Rising_Star_Ryan_Head_Compressed.png
+// (1.4MB) — it is painted into a 36px slot, and it is inlined into every card.
+const LOGO_FILE = path.join(ROOT, 'favicons', 'favicon-96x96.png');
 
 // The card design itself — shared with testing/test-og-event-layouts-calendar.html
 // so the studio previews exactly what ships.
@@ -99,12 +101,12 @@ function loadBarColors(cityKey) {
 }
 
 /**
- * The already-downloaded favicon for a website URL, as a file:// URL for the
- * renderer (no network, so a slow CDN can never cost the card its tile).
- * Mirrors localFaviconPath() in tools/extract-favicon-colors.js — same
+ * The already-downloaded favicon for a website URL, as an absolute path (the
+ * caller inlines it — no network, so a slow CDN can never cost the card its
+ * tile). Mirrors localFaviconPath() in tools/extract-favicon-colors.js — same
  * filename rules, same 64px-then-256px preference.
  */
-function localFaviconUrl(websiteUrl) {
+function localFaviconFile(websiteUrl) {
   const raw = String(websiteUrl || '').trim();
   if (!raw) return '';
   const url = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
@@ -124,13 +126,9 @@ function localFaviconUrl(websiteUrl) {
   }
   for (const name of candidates) {
     const full = path.join(FAVICONS_DIR, name);
-    if (fs.existsSync(full)) return fileUrl(full);
+    if (fs.existsSync(full)) return full;
   }
   return '';
-}
-
-function fileUrl(absolutePath) {
-  return `file://${absolutePath.split(path.sep).map(encodeURIComponent).join('/')}`;
 }
 
 // Undo the entity escaping generate-event-pages.js applies to meta content.
@@ -148,9 +146,41 @@ function readCardMeta(html, name) {
   return match ? unescapeMeta(match[1]) : '';
 }
 
-// The bear, from disk — the card's only other image, and one more thing that
-// never has to survive a network round trip.
-const logoUrl = fs.existsSync(LOGO_FILE) ? fileUrl(LOGO_FILE) : '';
+/**
+ * A local image as a data: URI, so the card carries its own pixels.
+ *
+ * This is not fussiness. The first CI run of this generator (branch
+ * rail-edges-and-og-cards, 2026-08-30) came back with no favicon tile and no
+ * logo on any card: setContent() leaves the page on an about:blank origin,
+ * and Chromium refuses file:// subresources from one, so both images hit
+ * their onerror and removed themselves. WebKit loads them locally, which is
+ * exactly why only a real run could show it. Inlined, the card depends on the
+ * network for nothing but the flyer, and renders the same anywhere.
+ *
+ * Cached: one logo and a few dozen favicons are shared across hundreds of events.
+ */
+const dataUriCache = new Map();
+const DATA_URI_MIME = {
+  '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon'
+};
+function dataUri(absolutePath) {
+  if (!absolutePath) return '';
+  if (dataUriCache.has(absolutePath)) return dataUriCache.get(absolutePath);
+  let uri = '';
+  try {
+    const mime = DATA_URI_MIME[path.extname(absolutePath).toLowerCase()];
+    if (mime) uri = `data:${mime};base64,${fs.readFileSync(absolutePath).toString('base64')}`;
+  } catch {
+    uri = '';
+  }
+  dataUriCache.set(absolutePath, uri);
+  return uri;
+}
+
+// The bear, inlined once and reused by every card.
+const logoUrl = dataUri(LOGO_FILE);
 
 // The card is set in Poppins, the site's own face. Screenshotting before it
 // arrives quietly ships a system-ui card, so wait for it — but never for long:
@@ -228,7 +258,7 @@ function collectTargets() {
 
       // The favicon tile: the local file, resolved from whichever URL the
       // colour extractor used, so the tile and the aurora come from one brand.
-      const faviconUrl = localFaviconUrl((colors && colors.url) || website);
+      const faviconUrl = dataUri(localFaviconFile((colors && colors.url) || website));
 
       targets.push({
         cityKey: cityFromCanonical, slug: evDir.name,
@@ -318,5 +348,5 @@ if (require.main === module) {
   });
 }
 
-module.exports = { collectTargets, localFaviconUrl };
+module.exports = { collectTargets, localFaviconFile };
 
