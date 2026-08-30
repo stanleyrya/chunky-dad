@@ -462,8 +462,17 @@
   </script>
   <!-- The card that actually ships. Same module tools/generate-og-images.js
        renders in puppeteer, so the first artboard below is not an impression
-       of the production image — it IS the production image. -->
-  <script src="../tools/og-card.js"></script>
+       of the production image — it IS the production image.
+
+       Written in with a cache buster rather than a plain src: this is a
+       studio for a file under active iteration, and a normal <script src>
+       gets cached, so an edit to the card shows up as "nothing changed"
+       until someone thinks to hard-reload. document.write during head
+       parsing keeps the load synchronous, so window.OgCard is defined before
+       the page script below runs. -->
+  <script>
+    document.write('<scr' + 'ipt src="../tools/og-card.js?t=' + Date.now() + '"></scr' + 'ipt>');
+  </script>
   <script src="../js/logger.js"></script>
   <script src="../js/city-config.js"></script>
   <script src="../js/event-schema.js"></script>
