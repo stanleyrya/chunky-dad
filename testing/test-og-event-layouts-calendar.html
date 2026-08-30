@@ -826,11 +826,11 @@
             : (fc && fc.raw) || null;
           return {
             title: (ev.name || 'Bear Event').trim(),
-            city: getCityConfig(this.currentCity)?.name || '',
+            // the card prints the address — chunky.dad/nyc — not the city name
+            cityPath: this.currentCity || '',
             when: [ev.day, ev.time].filter(Boolean).join(' · '),
             venue: ev.bar || '',
             cover: /^(free|no cover)$/i.test(coverText) ? '' : coverText,
-            tea: String(ev.tea || '').replace(/<[^<>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 220),
             // the toolbar's image field overrides, same as every other artboard
             flyerUrl: (coverInput.value || '').trim()
               || String(ev.imageHorizontal || ev.image || ev.imageVertical || '').trim(),

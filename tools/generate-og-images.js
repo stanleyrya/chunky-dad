@@ -206,13 +206,14 @@ function collectTargets() {
 
       // og:title is "<Event> – <City> – chunky.dad"; the card wants the event.
       const title = readCardMeta(html, 'name') || ogTitle.split(' – ')[0] || ogTitle;
-      const city = readCardMeta(html, 'city') || cityFromCanonical;
+      // the card prints the ADDRESS (chunky.dad/nyc), so it wants the URL
+      // segment this page lives under, not the city's display name
+      const cityPath = cityFromCanonical;
       const venuePart = desc.split(' · ').find(p => p.startsWith('@ ')) || '';
       const venue = readCardMeta(html, 'venue') || venuePart.replace(/^@\s*/, '');
       const when = readCardMeta(html, 'when')
         || desc.split(' · ').filter(p => !p.startsWith('@ ')).join(' · ');
       const cover = readCardMeta(html, 'cover');
-      const tea = readCardMeta(html, 'tea');
       const website = readCardMeta(html, 'website');
 
       // Colours: the event's own artwork first, the venue bar's as a fallback —
@@ -231,7 +232,7 @@ function collectTargets() {
 
       targets.push({
         cityKey: cityFromCanonical, slug: evDir.name,
-        card: { title, city, when, venue, cover, tea, flyerUrl, faviconUrl, colors, logoUrl }
+        card: { title, cityPath, when, venue, cover, flyerUrl, faviconUrl, colors, logoUrl }
       });
     }
   }

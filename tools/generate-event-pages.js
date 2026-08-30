@@ -76,27 +76,6 @@ function sanitize(text) {
   return String(text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-// Descriptions carry whatever their source published — literal "<p>…</p>\n"
-// from Wix pages, markdown "**bold**" from dice.fm. The share card paints this
-// as plain text, so strip the markup here rather than shipping tags into an
-// image. (The site does the same at display time; see sanitizeDisplayText in
-// js/dynamic-calendar-loader.js — this is the short version, no escaping,
-// since sanitize() handles that on the way into the attribute.)
-function plainText(text) {
-  if (typeof text !== 'string' || !text) return '';
-  return text
-    .replace(/\\r\\n|\\n|\\r/g, ' ')
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/<\/?[a-z][^<>]*>/gi, ' ')
-    .replace(/&amp;/gi, '&').replace(/&nbsp;/gi, ' ')
-    .replace(/&lt;/gi, '<').replace(/&gt;/gi, '>')
-    .replace(/&quot;/gi, '"').replace(/&(?:#39|#039|apos);/gi, "'")
-    .replace(/\[([^\[\]\n]*)\]\([^()\n]*\)/g, '$1')
-    .replace(/\*{2,}|_{2,}/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
 function getIcsPath(cityKey) {
   return path.join(ROOT, 'data', 'calendars', `${cityKey}.ics`);
 }
@@ -161,12 +140,10 @@ function buildEventHtml(cityKey, cityName, event) {
   };
   const flyerMeta = (/^https?:\/\//i.test(flyerUrl) ? cardMeta('flyer', flyerUrl) : '')
     + cardMeta('name', event.name)
-    + cardMeta('city', cityName)
     + cardMeta('when', whenText)
     + cardMeta('venue', event.bar)
     // 'free'/'no cover' is not information worth a row — the card drops it too
     + cardMeta('cover', /^(free|no cover)$/i.test(String(event.cover || '').trim()) ? '' : event.cover)
-    + cardMeta('tea', plainText(event.tea).slice(0, 220))
     + cardMeta('website', event.favicon || event.website);
   // Prefer generated per-event OG image and add a content-hash version for cache busting
   const generatedPng = `/img/og/${cityKey}/${encodeURIComponent(event.slug)}.png`;

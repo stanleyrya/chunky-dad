@@ -223,9 +223,10 @@ function row(icon, value) {
  * The share image, as a complete standalone document.
  *
  * data: {
- *   title, city, when, venue, cover,   // strings; anything falsy is dropped
- *   flyerUrl, faviconUrl, logoUrl,     // URLs (http(s), file: or relative)
- *   colors                             // a data/event-colors record, or null
+ *   title, when, venue, cover,       // strings; anything falsy is dropped
+ *   cityPath,                        // the URL segment: 'nyc' -> chunky.dad/nyc
+ *   flyerUrl, faviconUrl, logoUrl,   // URLs (http(s), file: or relative)
+ *   colors                           // a data/event-colors record, or null
  * }
  *
  * Every image is optional and self-healing: each carries an onerror that
@@ -240,17 +241,19 @@ function buildOgCardHtml(data) {
     const logo = safeUrl(d.logoUrl);
     const plate = parseHexColor((d.colors && d.colors.faviconPlate) || '') ? d.colors.faviconPlate : '#ffffff';
 
-    // Long names step DOWN rather than clipping at three lines: "NEW DATE:
-    // Bearracuda Atlanta❄️Winter Beef Ball" is a real title, and an ellipsis
-    // in a share image is a worse answer than smaller type.
+    // Long names step DOWN rather than clipping: "NEW DATE: Bearracuda
+    // Atlanta❄️Winter Beef Ball" is a real title, and an ellipsis in a share
+    // image is a worse answer than smaller type.
     const titleLength = String(d.title || '').length;
     const titleClass = titleLength > 46 ? 'title t-xs' : (titleLength > 28 ? 'title t-sm' : 'title');
 
     const faviconTile = favicon
         ? `<span class="fav" style="background:${esc(plate)}"><img src="${favicon}" alt="" onerror="this.parentNode.remove()"></span>`
         : '';
-    const tea = String(d.tea || '').trim();
-    const brandMark = `<div class="brand">${logo ? `<img src="${logo}" alt="" onerror="this.remove()">` : ''}<span>chunky.dad${d.city ? ' · ' + esc(d.city) : ''}</span></div>`;
+    // The address bar, not a place name: someone who sees the image should
+    // know exactly where to type.
+    const path = String(d.cityPath || '').trim().replace(/^\/+|\/+$/g, '');
+    const brandMark = `<div class="brand">${logo ? `<img src="${logo}" alt="" onerror="this.remove()">` : ''}<span>chunky.dad${path ? '/' + esc(path) : ''}</span></div>`;
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -264,20 +267,28 @@ function buildOgCardHtml(data) {
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; width: 1200px; height: 630px; overflow: hidden; }
   body {
-    /* the aurora, exactly as the card builds it: three radial stops from the
-       event's own artwork over the card ground */
+    /* The extracted brand colour, worn the way the city page's bottom sheet
+       wears it: c1 SOLID as the ground (styles.css, .rail-sheet .sheet-panel
+       — background: var(--c1)), with the card's other two stops laid over it
+       as atmosphere. The aurora card's own recipe — three stops over #171a33 —
+       is tuned for a 300px box; spread across 1200×630 it diluted every brand
+       into the same slate wash. c1 is already banded for legible white text
+       (toneForAurora, 0.2–0.52 brightness), which is exactly why the sheet can
+       sit on it undiluted too. */
     background:
-      radial-gradient(115% 150% at 6% 0%, ${aurora.c1} 0%, transparent 58%),
-      radial-gradient(125% 160% at 97% 12%, ${aurora.c2} 0%, transparent 62%),
-      radial-gradient(120% 150% at 55% 108%, ${aurora.c3} 0%, transparent 62%),
-      #171a33;
+      /* a whisper of depth at the foot, so a flat brand field doesn't read as
+         a colour swatch and the address line has something to sit on */
+      radial-gradient(140% 90% at 50% 118%, rgba(6, 8, 20, 0.3) 0%, transparent 62%),
+      radial-gradient(110% 140% at 94% 2%, ${aurora.c2} 0%, transparent 70%),
+      radial-gradient(120% 150% at 2% 106%, ${aurora.c3} 0%, transparent 68%),
+      ${aurora.c1};
     color: #fff;
     font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     display: flex;
     align-items: center;
-    gap: 40px;
-    padding: 44px;
+    gap: 52px;
+    padding: 54px 60px;
   }
 
   /* the flyer, whole and uncropped — the card never crops artwork either */
@@ -286,117 +297,107 @@ function buildOgCardHtml(data) {
     display: flex;
     align-items: center;
     justify-content: center;
-    max-width: 560px;
-    height: 542px;
+    max-width: 520px;
+    height: 522px;
   }
   .art img {
-    max-width: 560px;
-    max-height: 542px;
+    max-width: 520px;
+    max-height: 522px;
     width: auto;
     height: auto;
     border-radius: 18px;
-    box-shadow: 0 18px 50px rgba(6, 8, 20, 0.55);
+    box-shadow: 0 18px 50px rgba(6, 8, 20, 0.45);
   }
 
-  /* the frosted panel that carries every piece of information */
-  .panel {
+  /* The copy is NOT boxed. There is no glass card here: the panel that makes
+     sense on a 300px phone card only crowded a 1200px artboard, and on a
+     text-only share image it left the words in a small pen inside a big
+     colour field. The type sits straight on the brand colour with room. */
+  .copy {
     flex: 1 1 auto;
-    min-width: 440px;
+    min-width: 0;
     align-self: stretch;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 26px;
-    padding: 44px 48px;
-    background: rgba(255, 255, 255, 0.13);
-    -webkit-backdrop-filter: blur(18px) saturate(1.3);
-    backdrop-filter: blur(18px) saturate(1.3);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 24px;
+    gap: 30px;
   }
-  /* no flyer: the panel IS the card, centred, with room for a bigger title */
-  body.no-art { justify-content: center; }
+  /* no flyer: the copy owns the artboard */
+  body.no-art { padding: 64px 72px; }
   body.no-art .art { display: none; }
-  /* hugs its content instead of ruling a fixed 900px box with air in it */
-  body.no-art .panel { flex: 0 1 auto; max-width: 940px; align-self: center; }
-  body.no-art .title { font-size: 72px; }
-  body.no-art .title.t-sm { font-size: 62px; }
-  body.no-art .title.t-xs { font-size: 50px; }
+  body.no-art .title { font-size: 88px; }
+  body.no-art .title.t-sm { font-size: 70px; }
+  body.no-art .title.t-xs { font-size: 54px; }
+  body.no-art .row { font-size: 32px; }
+  body.no-art .ico { flex: 0 0 30px; width: 30px; height: 30px; }
+  body.no-art .fav { flex: 0 0 88px; width: 88px; height: 88px; border-radius: 20px; }
 
-  .titlerow { display: flex; align-items: center; gap: 20px; }
+  /* Title + rows sit in the OPTICAL centre with the address pinned to the
+     floor. Two auto margins (here and on .brand) split the free space evenly;
+     one alone would shove everything to the top and leave a hole under it. */
+  .titlerow { margin-top: auto; display: flex; align-items: center; gap: 22px; }
   .fav {
-    flex: 0 0 72px;
-    width: 72px;
-    height: 72px;
-    border-radius: 16px;
+    flex: 0 0 76px;
+    width: 76px;
+    height: 76px;
+    border-radius: 17px;
     overflow: hidden;
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.22), 0 3px 14px rgba(6, 8, 20, 0.35);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.28), 0 4px 16px rgba(6, 8, 20, 0.4);
   }
-  .fav img { display: block; width: 100%; height: 100%; object-fit: contain; padding: 8px; }
+  .fav img { display: block; width: 100%; height: 100%; object-fit: contain; padding: 9px; }
 
   .title {
     flex: 1;
     min-width: 0;
     margin: 0;
-    font-size: 54px;
+    font-size: 60px;
     font-weight: 700;
-    line-height: 1.08;
-    letter-spacing: -1px;
-    /* long names shorten rather than shove the rows off the artboard */
+    line-height: 1.06;
+    letter-spacing: -1.4px;
+    text-shadow: 0 2px 18px rgba(6, 8, 20, 0.28);
+    /* the last resort, after the size steps below have already tried */
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-  .title.t-sm { font-size: 46px; letter-spacing: -0.8px; }
-  /* the smallest step earns a fourth line — at 39px it fits, and a promoter's
+  .title.t-sm { font-size: 50px; letter-spacing: -1px; }
+  /* the smallest step earns a fourth line — at 42px it fits, and a promoter's
      full event name beats an ellipsis in a share image */
-  .title.t-xs { font-size: 39px; letter-spacing: -0.5px; -webkit-line-clamp: 4; }
+  .title.t-xs { font-size: 42px; letter-spacing: -0.6px; -webkit-line-clamp: 4; }
 
-  .rows { display: flex; flex-direction: column; gap: 14px; }
+  .rows { display: flex; flex-direction: column; gap: 16px; }
   .row {
     display: flex;
     align-items: center;
-    gap: 14px;
-    font-size: 27px;
+    gap: 16px;
+    font-size: 29px;
     line-height: 1.3;
-    color: rgba(255, 255, 255, 0.95);
+    color: #fff;
+    text-shadow: 0 1px 12px rgba(6, 8, 20, 0.25);
   }
   .row:first-child { font-weight: 600; }
   .row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .ico { flex: 0 0 26px; width: 26px; height: 26px; opacity: 0.85; }
+  .ico { flex: 0 0 27px; width: 27px; height: 27px; opacity: 0.9; }
 
-  /* the event's own words, where the card puts them: under the rows, quiet,
-     and clamped — a share image is a headline, not the whole description */
-  .tea {
-    margin: -6px 0 0;
-    font-size: 22px;
-    line-height: 1.4;
-    color: rgba(255, 255, 255, 0.78);
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  /* the brand line sits where the card pins its links row: panel bottom */
+  /* the address, bottom of the copy column */
   .brand {
     margin-top: auto;
-    padding-top: 26px;
+    padding-top: 30px;
     display: flex;
     align-items: center;
-    gap: 12px;
-    font-size: 22px;
+    gap: 13px;
+    font-size: 23px;
     font-weight: 600;
-    letter-spacing: 0.3px;
-    color: rgba(255, 255, 255, 0.72);
+    letter-spacing: 0.2px;
+    color: rgba(255, 255, 255, 0.82);
   }
-  .brand img { width: 34px; height: 34px; border-radius: 9px; }
+  .brand img { width: 36px; height: 36px; border-radius: 10px; }
 </style>
 </head>
 <body class="${flyer ? '' : 'no-art'}">
   ${flyer ? `<div class="art"><img src="${flyer}" alt="" onerror="document.body.classList.add('no-art')"></div>` : ''}
-  <div class="panel">
+  <div class="copy">
     <div class="titlerow">
       ${faviconTile}
       <h1 class="${titleClass}">${esc(d.title)}</h1>
@@ -406,7 +407,6 @@ function buildOgCardHtml(data) {
       ${row('pin', d.venue)}
       ${row('cash', d.cover)}
     </div>
-    ${tea ? `<p class="tea">${esc(tea)}</p>` : ''}
     ${brandMark}
   </div>
 </body>
