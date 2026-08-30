@@ -194,34 +194,6 @@ function deriveAuroraColors(record) {
 const OG_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 /**
- * The zone an event's times are in, as something short enough for a card:
- * 'ET', 'CT', 'PT' for the US, 'GMT+2' for everywhere the generic name is a
- * sentence ("Netherlands Time"). Empty when the zone is unknown or unusable —
- * a wrong zone on a share image is worse than none.
- */
-function shortTimeZone(timeZone, when) {
-    if (!timeZone) return '';
-    const at = when instanceof Date && !isNaN(when.getTime()) ? when : new Date();
-    const read = (style) => {
-        try {
-            const part = new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: style })
-                .formatToParts(at).find(p => p.type === 'timeZoneName');
-            return part ? part.value : '';
-        } catch (e) {
-            return '';
-        }
-    };
-    // 'shortGeneric' is the nice one (ET, CT, PT) and is DST-proof, which
-    // matters for an image that outlives the clock change. It degrades to a
-    // whole phrase outside North America, so anything long falls back to the
-    // offset form.
-    const generic = read('shortGeneric');
-    if (generic && generic.length <= 5 && !/\s/.test(generic)) return generic;
-    const short = read('short');
-    return short && short.length <= 7 ? short : '';
-}
-
-/**
  * The card's when-line, for every shape the calendars actually hold. Audited
  * across all 289 events, 2026-08-30:
  *
@@ -248,10 +220,11 @@ function shortTimeZone(timeZone, when) {
  * absolutes. Multi-day matches the site's own format (formatDuskWhenText in
  * js/dynamic-calendar-loader.js), en-dash and all.
  *
- * fields: { start, end, multiDay, day, time, recurring, recurrenceText, timeZone }
- *   start/end are LOGICAL dates (the caller's CalendarCore has the rule that
- *   a party running to 6AM still belongs to the night before), and
- *   recurrenceText is that same CalendarCore's getRecurringBadgeContent.
+ * fields: { start, end, multiDay, day, time, recurring, recurrenceText, timeZoneLabel }
+ *   All of it comes from the caller's CalendarCore, which is the one place
+ *   that knows these rules: start/end are LOGICAL dates (a party running to
+ *   6AM still belongs to the night before), recurrenceText is
+ *   getRecurringBadgeContent, and timeZoneLabel is getTimeZoneLabel.
  */
 /**
  * How a recurrence leads the when-line.
@@ -262,16 +235,7 @@ function shortTimeZone(timeZone, when) {
  * than "Thursday · Weekly". Anything else keeps both. The generic "Recurring"
  * (what FREQ=YEARLY answers) carries nothing, so it yields to the date.
  */
-const OG_FULL_WEEKDAY = {
-    Sun: 'Sunday', Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday',
-    Thu: 'Thursday', Fri: 'Friday', Sat: 'Saturday'
-};
-
 function recurrenceLead(recurrenceText, day) {
-    // "Every Sun" (FREQ=WEEKLY;BYDAY=SU) and a bare FREQ=WEEKLY on a Sunday
-    // are the same night described two ways — the card says it one way.
-    const everyWeekday = /^Every (Sun|Mon|Tue|Wed|Thu|Fri|Sat)$/.exec(recurrenceText);
-    if (everyWeekday) return `${OG_FULL_WEEKDAY[everyWeekday[1]]}s`;
     const namesADay = /\b(Sun|Mon|Tue|Wed|Thu|Fri|Sat)\b/.test(recurrenceText);
     if (namesADay) return recurrenceText;
     if (!day) return /^recurring$/i.test(recurrenceText) ? '' : recurrenceText;
@@ -288,7 +252,7 @@ function formatEventWhen(fields) {
     const day = String(f.day || '').trim();
     const md = (d) => `${d.getMonth() + 1}/${d.getDate()}`;
     const stamp = (d) => `${OG_WEEKDAYS[d.getDay()]} ${md(d)}`;
-    const zone = time && start ? shortTimeZone(f.timeZone, start) : '';
+    const zone = time ? String(f.timeZoneLabel || '').trim() : '';
     const withZone = (text) => (zone ? `${text} ${zone}` : text);
 
     // A run of days: both ends, named. The times (when there are any) belong
@@ -677,7 +641,6 @@ ${m ? '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/ma
 const api = {
     buildOgCardHtml,
     formatEventWhen,
-    shortTimeZone,
     deriveAuroraColors,
     parseHexColor,
     OG_TEMPLATE_VERSION,

@@ -104,11 +104,24 @@ function occursInWindow(calendar, event, now, days) {
 
 function buildEventHtml(cityKey, cityName, event, ctx) {
   const title = `${sanitize(event.name)} – ${cityName} – chunky.dad`;
-  const descriptionParts = [];
-  if (event.day) descriptionParts.push(event.day);
-  if (event.time) descriptionParts.push(event.time);
+  const calendar = ctx && ctx.calendar;
+  // One when-line for the whole stub. The share text used to be built here
+  // separately — "Saturday · 10PM-4AM" while the image said "1st Sat ·
+  // 10PM-4AM ET" — so a share showed two different answers at once.
+  const whenText = formatEventWhen({
+    start: calendar ? calendar.getLogicalStartDate(event) : (event.startDate ? new Date(event.startDate) : null),
+    end: calendar ? calendar.getLogicalEndDate(event) : (event.endDate ? new Date(event.endDate) : null),
+    multiDay: calendar ? calendar.isMultiDay(event) : false,
+    day: event.day,
+    time: event.time,
+    recurring: event.recurring,
+    // the site's own words for the cadence ("1st Sat", "Weekly")
+    recurrenceText: calendar ? calendar.getRecurringBadgeContent(event) : '',
+    timeZoneLabel: calendar ? calendar.getTimeZoneLabel(event, ctx && ctx.timeZone) : ''
+  });
+  const descriptionParts = [whenText];
   if (event.bar) descriptionParts.push(`@ ${event.bar}`);
-  const description = sanitize(descriptionParts.join(' · ')) || `${cityName} bear event`;
+  const description = sanitize(descriptionParts.filter(Boolean).join(' · ')) || `${cityName} bear event`;
   const url = `${SITE_BASE}/${cityKey}/${encodeURIComponent(event.slug)}/`;
   // The flyer the OG card should paint. The artboard is 1200×630, so the
   // LANDSCAPE candidate wins when the event has one; otherwise the primary
@@ -122,25 +135,7 @@ function buildEventHtml(cityKey, cityName, event, ctx) {
   // tools/generate-og-images.js to reverse-engineer out of og:description by
   // splitting on ' · ' and ' • '. It has the real event object right here;
   // the OG step runs later in the same workflow and reads these back.
-  //
-  // The when-line is formatted by the card module, which is also what the OG
-  // studio calls — this used to be built here by hand, and reduced every
-  // multi-day festival to one weekday ("9/17 · Thursday" for a five-day run).
-  // The logical dates come from CalendarCore, so a party running to 6AM still
-  // counts as one night rather than two.
-  const calendar = ctx && ctx.calendar;
-  const whenText = formatEventWhen({
-    start: calendar ? calendar.getLogicalStartDate(event) : (event.startDate ? new Date(event.startDate) : null),
-    end: calendar ? calendar.getLogicalEndDate(event) : (event.endDate ? new Date(event.endDate) : null),
-    multiDay: calendar ? calendar.isMultiDay(event) : false,
-    day: event.day,
-    time: event.time,
-    recurring: event.recurring,
-    // the site's own words for the cadence ("1st Sat", "Every Sun"), so a
-    // first-Saturday night is never flattened into a weekly one
-    recurrenceText: calendar ? calendar.getRecurringBadgeContent(event) : '',
-    timeZone: event.startTimezone || (ctx && ctx.timeZone) || ''
-  });
+
   const cardMeta = (name, value) => {
     const text = String(value == null ? '' : value).trim();
     if (!text) return '';

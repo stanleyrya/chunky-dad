@@ -851,15 +851,16 @@ class CalendarCore {
         const pattern = this.parseRecurrencePattern(recurrence);
         if (!pattern) return null;
         
-        // Handle weekly events
+        // Handle weekly events.
+        //
+        // A weekly rule that names its day (FREQ=WEEKLY;BYDAY=SU) and one that
+        // does not are the same night written two ways, so they get the same
+        // words. This used to answer "Every Sun" for the first, which read as
+        // a different cadence beside the plain "Weekly" on every other weekly
+        // event — and the weekday is already in the row the badge sits next
+        // to. The monthly branch below keeps its weekday, because there
+        // ("1st Sat") the day is the information.
         if (pattern.frequency === 'WEEKLY') {
-            if (pattern.byDay && pattern.byDay.length === 1) {
-                const dayCode = pattern.byDay[0];
-                const dayIndex = this.getDayIndexFromCode(dayCode);
-                if (dayIndex !== -1) {
-                    return `Every ${this.dayAbbrevs[dayIndex]}`;
-                }
-            }
             return pattern.interval === 1 ? 'Weekly' : `Every ${pattern.interval} weeks`;
         }
         
@@ -1037,6 +1038,37 @@ class CalendarCore {
         });
         
         return baseDisplay;
+    }
+
+    /**
+     * The zone an event's times are in, short enough to sit at the end of a
+     * row: 'ET', 'CT', 'PT' for North America, 'GMT+2' where the generic name
+     * is a whole phrase ("Netherlands Time"). Empty when the zone is unknown
+     * or unusable — a wrong zone is worse than none.
+     *
+     * 'shortGeneric' is preferred over 'short' because it is DST-proof: a
+     * share image outlives the clock change, and 'ET' stays true where 'EDT'
+     * would not. Takes the event's own zone when it carries one, else the
+     * city's (callers pass it in — CalendarCore has no city).
+     */
+    getTimeZoneLabel(event, fallbackZone = '') {
+        const timeZone = (event && event.startTimezone) || fallbackZone;
+        if (!timeZone) return '';
+        let at = event && event.startDate ? new Date(event.startDate) : new Date();
+        if (isNaN(at.getTime())) at = new Date();
+        const read = (style) => {
+            try {
+                const part = new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: style })
+                    .formatToParts(at).find(p => p.type === 'timeZoneName');
+                return part ? part.value : '';
+            } catch (e) {
+                return '';
+            }
+        };
+        const generic = read('shortGeneric');
+        if (generic && generic.length <= 5 && !/\s/.test(generic)) return generic;
+        const short = read('short');
+        return short && short.length <= 7 ? short : '';
     }
 
     // Get recurring badge content for the event badge system

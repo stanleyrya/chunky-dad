@@ -2950,9 +2950,17 @@ class DynamicCalendarLoader extends CalendarCore {
         const dayTimeText = formatDayTime(event);
         const dateLeads = !!dateBadgeContent
             && !String(dayTimeText).includes(String(dateBadgeContent));
-        const whenText = dateLeads
+        // The zone, named. Every row on a city page is in that city's zone, so
+        // it is never a surprise here — but the pages are read from other
+        // zones (and shared out of context), and "9PM" alone does not say
+        // whose 9PM. Same label the share cards carry.
+        const zoneLabel = event.time
+            ? this.getTimeZoneLabel(event, this.currentCityConfig && this.currentCityConfig.timezone)
+            : '';
+        const whenBase = dateLeads
             ? `${dateBadgeContent} · ${dayTimeText}`
             : dayTimeText;
+        const whenText = zoneLabel ? `${whenBase} ${zoneLabel}` : whenBase;
         const dateBadge = dateBadgeContent && !dateLeads ?
             `<span class="date-badge">${this.escapeCardText(dateBadgeContent)}</span>` : '';
 
