@@ -4237,6 +4237,15 @@ footer {
     z-index: 10;
 }
 
+/* the second line of the empty-period slot: what to do about it */
+.loading-message .empty-hint {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.78em;
+    font-weight: 400;
+    opacity: 0.72;
+}
+
 
 
 .no-events-message {
@@ -7266,6 +7275,100 @@ html.dusk body {
         padding: 24px 12px;
     }
     .dusk .events-list.rail-active:has(> .event-card:only-of-type) { justify-content: center; }
+
+    /* ---------- edge slots: the swipe keeps going ----------
+       The band's first and last members carry no event of their own: they
+       name the nearest event OUTSIDE this week and open it when the swipe
+       lands on them (js/dusk-rail.js). The lookup steps over quiet weeks, so
+       an edge slot never points at a week with nothing in it — the "no
+       events" card below is somewhere the week arrows take you, never
+       somewhere a swipe drops you. */
+    .dusk .events-list.rail-active > .rail-edge {
+        flex: 0 0 calc(100vw - 5.6rem);
+        margin: 0;
+        align-self: center;
+        position: relative;
+        scroll-snap-align: center;
+        scroll-snap-stop: normal;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 3px;
+        padding: 18px 22px;
+        font: inherit;
+        color: rgba(255, 255, 255, 0.94);
+        text-align: left;
+        background: rgba(255, 255, 255, 0.055);
+        border: 1px dashed rgba(255, 255, 255, 0.22);
+        border-radius: 16px;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        overflow: hidden;
+    }
+    .dusk .events-list.rail-active > .rail-edge-next {
+        text-align: right;
+        align-items: flex-end;
+    }
+    /* a chevron, drawn — no icon font on the critical path for two glyphs */
+    .dusk .rail-edge .edge-arrow {
+        width: 15px;
+        height: 15px;
+        margin-bottom: 6px;
+        border-right: 2px solid rgba(255, 255, 255, 0.55);
+        border-bottom: 2px solid rgba(255, 255, 255, 0.55);
+    }
+    .dusk .rail-edge-prev .edge-arrow { transform: rotate(135deg); }
+    .dusk .rail-edge-next .edge-arrow { transform: rotate(-45deg); }
+    .dusk .rail-edge .edge-label {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.6);
+    }
+    .dusk .rail-edge .edge-when {
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.9);
+    }
+    .dusk .rail-edge .edge-name {
+        font-size: 1.02rem;
+        font-weight: 700;
+        line-height: 1.25;
+        letter-spacing: -0.2px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    .dusk .rail-edge .edge-more {
+        margin-top: 2px;
+        font-size: 0.76rem;
+        color: rgba(255, 255, 255, 0.6);
+    }
+
+    /* ---------- the empty week ----------
+       A period with nothing in it is a real destination, so it gets a slot
+       shaped like a card (with the edge slots either side of it) instead of a
+       stray line of centred text in the middle of the band. */
+    .dusk .events-list.rail-active .loading-message.empty-slot {
+        flex: 0 0 calc(100vw - 5.6rem);
+        margin: 0;
+        align-self: center;
+        scroll-snap-align: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 6px;
+        padding: 22px 20px;
+        color: rgba(255, 255, 255, 0.9);
+        background: rgba(255, 255, 255, 0.055);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 16px;
+        font-size: 1.02rem;
+        font-weight: 600;
+    }
     /* corner thumb, shared: always-on in dense, writer-faded in cozy */
     .dusk .events-list.rail-active > .event-card .rail-thumb {
         display: block;
@@ -7363,6 +7466,15 @@ html.dusk body {
     html.mode-dense .events-list.rail-active > .event-card {
         height: 246px;
         overflow: hidden;
+        animation: none !important;
+        transition: none !important;
+    }
+    /* the edge slots and the empty week's card are the SAME box, so the band
+       is exactly as tall whether the week is full, sparse, or empty — the
+       trifold's frame never moves under you */
+    html.mode-dense .events-list.rail-active > .rail-edge,
+    html.mode-dense .events-list.rail-active > .loading-message.empty-slot {
+        height: 246px;
         animation: none !important;
         transition: none !important;
     }

@@ -7,6 +7,10 @@ const crypto = require('crypto');
 // Resolve project root
 const ROOT = path.resolve(__dirname, '..');
 
+// The share-card design's version, mixed into each stub's og:image cache
+// buster so a template change actually reaches the social scrapers.
+const { OG_TEMPLATE_VERSION } = require('./og-card.js');
+
 // Load CITY_CONFIG from js/city-config.js (Node-compatible export exists)
 let CITY_CONFIG;
 try {
@@ -72,6 +76,27 @@ function sanitize(text) {
   return String(text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+// Descriptions carry whatever their source published — literal "<p>…</p>\n"
+// from Wix pages, markdown "**bold**" from dice.fm. The share card paints this
+// as plain text, so strip the markup here rather than shipping tags into an
+// image. (The site does the same at display time; see sanitizeDisplayText in
+// js/dynamic-calendar-loader.js — this is the short version, no escaping,
+// since sanitize() handles that on the way into the attribute.)
+function plainText(text) {
+  if (typeof text !== 'string' || !text) return '';
+  return text
+    .replace(/\\r\\n|\\n|\\r/g, ' ')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<\/?[a-z][^<>]*>/gi, ' ')
+    .replace(/&amp;/gi, '&').replace(/&nbsp;/gi, ' ')
+    .replace(/&lt;/gi, '<').replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"').replace(/&(?:#39|#039|apos);/gi, "'")
+    .replace(/\[([^\[\]\n]*)\]\([^()\n]*\)/g, '$1')
+    .replace(/\*{2,}|_{2,}/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function getIcsPath(cityKey) {
   return path.join(ROOT, 'data', 'calendars', `${cityKey}.ics`);
 }
@@ -113,9 +138,36 @@ function buildEventHtml(cityKey, cityName, event) {
   // showing it beats showing nothing. Finally nothing, which leaves the
   // text-only card that has always been generated.
   const flyerUrl = String(event.imageHorizontal || event.image || event.imageVertical || '').trim();
-  const flyerMeta = /^https?:\/\//i.test(flyerUrl)
-    ? `\n  <meta name="chunky:flyer" content="${sanitize(flyerUrl).replace(/"/g, '&quot;')}">`
-    : '';
+
+  // What the share card paints, handed over as data instead of left for
+  // tools/generate-og-images.js to reverse-engineer out of og:description by
+  // splitting on ' · ' and ' • '. It has the real event object right here;
+  // the OG step runs later in the same workflow and reads these back.
+  const whenText = (() => {
+    const parts = [];
+    if (!event.recurring) {
+      const d = event.startDate instanceof Date ? event.startDate : (event.startDate ? new Date(event.startDate) : null);
+      // the card leads a one-off with its numeric date, then the weekday
+      if (d && !isNaN(d.getTime())) parts.push(`${d.getMonth() + 1}/${d.getDate()}`);
+    }
+    if (event.day) parts.push(event.day);
+    if (event.time) parts.push(event.time);
+    return parts.join(' · ');
+  })();
+  const cardMeta = (name, value) => {
+    const text = String(value == null ? '' : value).trim();
+    if (!text) return '';
+    return `\n  <meta name="chunky:${name}" content="${sanitize(text).replace(/"/g, '&quot;')}">`;
+  };
+  const flyerMeta = (/^https?:\/\//i.test(flyerUrl) ? cardMeta('flyer', flyerUrl) : '')
+    + cardMeta('name', event.name)
+    + cardMeta('city', cityName)
+    + cardMeta('when', whenText)
+    + cardMeta('venue', event.bar)
+    // 'free'/'no cover' is not information worth a row — the card drops it too
+    + cardMeta('cover', /^(free|no cover)$/i.test(String(event.cover || '').trim()) ? '' : event.cover)
+    + cardMeta('tea', plainText(event.tea).slice(0, 220))
+    + cardMeta('website', event.favicon || event.website);
   // Prefer generated per-event OG image and add a content-hash version for cache busting
   const generatedPng = `/img/og/${cityKey}/${encodeURIComponent(event.slug)}.png`;
   let version = '';
@@ -130,7 +182,11 @@ function buildEventHtml(cityKey, cityName, event) {
       // The generated OG card paints the flyer when there is one, so a flyer
       // change has to bust the cache too — before this, swapping an event's
       // image left every share preview showing the old artwork.
-      flyer: flyerUrl
+      flyer: flyerUrl,
+      // …and so does a redesign of the card itself. The PNG is regenerated at
+      // the same path, so without this every scraper that cached the old
+      // artboard keeps serving it (Facebook and iMessage cache aggressively).
+      template: OG_TEMPLATE_VERSION
     });
     version = crypto.createHash('md5').update(seed).digest('hex').slice(0, 8);
   } catch (e) {

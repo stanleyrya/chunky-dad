@@ -393,6 +393,15 @@
     .l-c-pattern .event-date { font-size: 32px; opacity: 0.9; margin-bottom: 8px; }
     .l-c-pattern .event-venue { font-size: 28px; opacity: 0.8; }
 
+    /* The shipping card: a real 1200×630 document in an iframe, scaled by the
+       same fitArtboards() transform as every other artboard. Flagged in the
+       grid so it never reads as one more sketch. */
+    .l-ship { background: #171a33; }
+    .l-ship .og-frame { display: block; width: 1200px; height: 630px; border: 0; }
+    /* full width: this is the one you judge, not one thumbnail among fourteen */
+    .card[data-variant="og-card"] { grid-column: 1 / -1; border-color: rgba(255,107,53,0.55); }
+    .card[data-variant="og-card"] .name { color: #ffa77f; }
+
     /* pause all artboard animation when toggled off */
     body.anims-off .artboard * { animation-play-state: paused !important; }
 
@@ -451,6 +460,10 @@
       .catch(e => console.warn('NEAT library failed to load — Neat sample falls back to CSS mesh', e))
       .finally(() => window.dispatchEvent(new Event('neat-ready')));
   </script>
+  <!-- The card that actually ships. Same module tools/generate-og-images.js
+       renders in puppeteer, so the first artboard below is not an impression
+       of the production image — it IS the production image. -->
+  <script src="../tools/og-card.js"></script>
   <script src="../js/logger.js"></script>
   <script src="../js/city-config.js"></script>
   <script src="../js/event-schema.js"></script>
@@ -650,16 +663,20 @@
             if (evRes.status === 'fulfilled' && evRes.value.ok) {
               const entries = await evRes.value.json();
               for (const entry of entries) {
-                if (entry.slug && entry.faviconBg) {
-                  this.eventColorsMap.set(entry.slug, { bg: entry.faviconBg, fg: entry.faviconFg || '#ffffff', source: 'event favicon' });
+                // `raw` carries the WHOLE record (palette, accent, plate) —
+                // the shipping card derives its aurora from those, exactly as
+                // the site's event cards do. A palette with no faviconBg is
+                // still colour: those are the flyer-only events.
+                if (entry.slug && (entry.faviconBg || typeof entry.palette === 'string')) {
+                  this.eventColorsMap.set(entry.slug, { bg: entry.faviconBg, fg: entry.faviconFg || '#ffffff', source: 'event favicon', raw: entry });
                 }
               }
             }
             if (barRes.status === 'fulfilled' && barRes.value.ok) {
               const bars = await barRes.value.json();
               for (const bar of bars) {
-                if (bar.name && bar.faviconBg) {
-                  this.barColorsMap.set(bar.name.toLowerCase(), { bg: bar.faviconBg, fg: bar.faviconFg || '#ffffff', source: 'venue favicon' });
+                if (bar.name && (bar.faviconBg || typeof bar.palette === 'string')) {
+                  this.barColorsMap.set(bar.name.toLowerCase(), { bg: bar.faviconBg, fg: bar.faviconFg || '#ffffff', source: 'venue favicon', raw: bar });
                 }
               }
             }
@@ -791,6 +808,69 @@
           const deep = adjust(bg, { l: 0.07, s: 0.45 });
           const deepAlt = adjust(bg, { h: -30, l: 0.11, s: 0.5 });
           return { bg, fg, c1, c2, c3, c4, deep, deepAlt, source };
+        }
+
+        // ---------- the card that actually ships ----------
+        // Everything below this line in `variants()` is a sketch. This one is
+        // the real thing: tools/og-card.js, the same module the generator
+        // renders in puppeteer, fed the same shape the generator feeds it.
+        ogCardData() {
+          const ev = this.selectedEvent || {};
+          const fc = this.lookupFaviconColors(ev);
+          const abs = u => { try { return u ? new URL(u, location.href).href : ''; } catch (e) { return ''; } };
+          const coverText = String(ev.cover || '').trim();
+          // the colour pickers drive the shipping card too, so a palette can be
+          // tried on it before anything is committed to data/event-colors
+          const colors = overrideOn.checked
+            ? { accent: overrideA.value, palette: `${overrideA.value}:60:30 ${overrideB.value}:30:30` }
+            : (fc && fc.raw) || null;
+          return {
+            title: (ev.name || 'Bear Event').trim(),
+            city: getCityConfig(this.currentCity)?.name || '',
+            when: [ev.day, ev.time].filter(Boolean).join(' · '),
+            venue: ev.bar || '',
+            cover: /^(free|no cover)$/i.test(coverText) ? '' : coverText,
+            tea: String(ev.tea || '').replace(/<[^<>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 220),
+            // the toolbar's image field overrides, same as every other artboard
+            flyerUrl: (coverInput.value || '').trim()
+              || String(ev.imageHorizontal || ev.image || ev.imageVertical || '').trim(),
+            faviconUrl: abs((this.getFaviconInfo(ev) || {}).path || ''),
+            logoUrl: abs('../Rising_Star_Ryan_Head_Compressed.png'),
+            colors
+          };
+        }
+
+        shippingVariant() {
+          const data = this.ogCardData();
+          const html = window.OgCard ? window.OgCard.buildOgCardHtml(data) : '';
+          this.pendingOgHtml = html;
+          const chips = ['SHIPS', data.flyerUrl ? 'event image' : 'text card', 'aurora colors'];
+          return {
+            key: 'og-card',
+            name: '★ Dusk Aurora — the generated card',
+            desc: window.OgCard
+              ? 'tools/og-card.js, rendered live — byte-for-byte what generate-og-images.js commits'
+              : 'tools/og-card.js failed to load — serve this page from the repo root',
+            chips,
+            html: '<div class="artboard l-ship"><iframe class="og-frame" title="OG card" width="1200" height="630" frameborder="0"></iframe></div>'
+          };
+        }
+
+        // Written in after insertion rather than via srcdoc: the document is
+        // several KB of quotes and braces, and attribute-escaping it twice is
+        // exactly the kind of thing that silently ships a broken preview.
+        fillOgFrames() {
+          if (!this.pendingOgHtml) return;
+          grid.querySelectorAll('.og-frame').forEach(frame => {
+            try {
+              const doc = frame.contentDocument;
+              doc.open();
+              doc.write(this.pendingOgHtml);
+              doc.close();
+            } catch (e) {
+              logger.componentError(COMPONENT, 'Could not paint the shipping card preview', e);
+            }
+          });
         }
 
         getPreviewData() {
@@ -1177,10 +1257,13 @@
               <div class="preview">${v.html}</div>
             </div>`;
 
-          grid.innerHTML = this.variants(data, p).map(cardHtml).join('')
+          grid.innerHTML = cardHtml(this.shippingVariant())
+            + '<div class="section-divider">Explorations — sketches, not what ships</div>'
+            + this.variants(data, p).map(cardHtml).join('')
             + '<div class="section-divider">Classics — layouts from the previous version</div>'
             + this.classics(data, p).map(cardHtml).join('');
 
+          this.fillOgFrames();
           this.fitArtboards();
           grid.querySelectorAll('.neat-canvas').forEach(canvas => this.initNeat(canvas, p));
           grid.querySelectorAll('.silk-canvas').forEach(canvas => this.initSilk(canvas, p));

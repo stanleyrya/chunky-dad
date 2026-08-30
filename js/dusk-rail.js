@@ -333,21 +333,27 @@
 
   const userBusy = () => touchActive || (performance.now() - lastUserTouch) < USER_QUIET;
   const cards = () => { const el = list(); return el ? Array.from(el.querySelectorAll('.event-card')) : []; };
+  // every snap target in the rail, in DOM order: the edge slots and the empty
+  // week's card are members of the band, not decorations beside it
+  const SLOT_SEL = '.event-card, .rail-edge, .loading-message.empty-slot';
+  const slots = () => { const el = list(); return el ? Array.from(el.querySelectorAll(SLOT_SEL)) : []; };
   const cardBySlug = (slug) => {
     const el = list();
     return (slug && el) ? el.querySelector('.event-card[data-event-slug="' + cssEscape(slug) + '"]') : null;
   };
-  const centeredCard = () => {
+  const nearestTo = (pool) => {
     const el = list();
     if (!el) return null;
     const mid = el.scrollLeft + el.clientWidth / 2;
     let best = null, bestD = Infinity;
-    cards().forEach((c) => {
+    pool.forEach((c) => {
       const d = Math.abs(c.offsetLeft + c.offsetWidth / 2 - mid);
       if (d < bestD) { bestD = d; best = c; }
     });
     return best;
   };
+  const centeredCard = () => nearestTo(cards());
+  const centeredSlot = () => nearestTo(slots());
   const railActive = () => { const el = list(); return !!el && el.classList.contains('rail-active'); };
 
   const buildGeom = () => {
@@ -355,10 +361,13 @@
     const el = list();
     if (!el || !el.classList.contains('rail-active')) return;
     railWidth = el.clientWidth;
-    geom = cards().map((card) => ({
-      el: card,
-      slug: card.getAttribute('data-event-slug') || '',
-      center: card.offsetLeft + card.offsetWidth / 2
+    // EVERY slot, not just the cards: an edge slug is '' so scrubbing across
+    // one selects nothing (realSelect's slug guard), instead of the rail
+    // quietly re-selecting the event card next door
+    geom = slots().map((slot) => ({
+      el: slot,
+      slug: slot.getAttribute('data-event-slug') || '',
+      center: slot.offsetLeft + slot.offsetWidth / 2
     }));
     step = geom.length > 1
       ? Math.max(1, geom[1].center - geom[0].center)
@@ -409,10 +418,80 @@
     }
   };
 
+  // ---------- edge slots: swipe off the end, keep going ----------
+  // The rail's first and last slots aren't events — they name the nearest
+  // event OUTSIDE this week and open it when a swipe lands on them. The
+  // loader's findAdjacentEvent searches by EVENT, so quiet stretches are
+  // stepped over: a swipe can never deposit you on an empty week. (You can
+  // still walk into one with the week arrows — that's what the "no events"
+  // card is for, and the edge slots sit either side of it so you can leave.)
+  let navigating = false;
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (ch) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+  const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const edgeHtml = (dir, target) => {
+    const d = target.date instanceof Date ? target.date : new Date(target.date);
+    const when = isNaN(d.getTime()) ? '' : WD[d.getDay()] + ' ' + (d.getMonth() + 1) + '/' + d.getDate();
+    const more = target.weekCount > 1 ? '+' + (target.weekCount - 1) + ' more that week' : '';
+    const label = dir === 'prev' ? 'Earlier' : 'Later';
+    return '<button type="button" class="rail-edge rail-edge-' + dir + '"' +
+      ' data-slug="' + esc(target.slug) + '" data-date="' + esc(target.dateISO) + '"' +
+      ' aria-label="' + esc(label + ': ' + target.name + ', ' + when) + '">' +
+      '<span class="edge-arrow" aria-hidden="true"></span>' +
+      '<span class="edge-label">' + label + '</span>' +
+      '<span class="edge-when">' + esc(when) + '</span>' +
+      '<span class="edge-name">' + esc(target.name) + '</span>' +
+      (more ? '<span class="edge-more">' + esc(more) + '</span>' : '') +
+      '</button>';
+  };
+  const buildEdgeSlots = () => {
+    const el = list();
+    if (!el) return;
+    el.querySelectorAll('.rail-edge').forEach((n) => n.remove());
+    if (!isMobile() || !el.classList.contains('rail-active')) return;
+    const l = loader();
+    if (!l || l.currentView !== 'week' || typeof l.findAdjacentEvent !== 'function') return;
+    // still loading (the plain '📅 Getting events…' message): no edges until
+    // the week's real contents are on screen
+    if (!el.querySelector('.event-card, .loading-message.empty-slot')) return;
+    [['prev', 'afterbegin'], ['next', 'beforeend']].forEach((pair) => {
+      let target = null;
+      try { target = l.findAdjacentEvent(pair[0]); } catch (e) { target = null; }
+      if (!target || !target.slug || !target.dateISO) return;
+      el.insertAdjacentHTML(pair[1], edgeHtml(pair[0], target));
+    });
+  };
+  const goEdge = (edge) => {
+    const l = loader();
+    if (!edge || navigating || !l || typeof l.openWeekAt !== 'function') return;
+    const slug = edge.getAttribute('data-slug');
+    const date = edge.getAttribute('data-date');
+    if (!slug || !date) return;
+    navigating = true;
+    phase = 'idle';
+    urlDirty = false;          // openWeekAt writes the URL itself
+    landedSlug = slug;
+    grantSlug = slug;          // the swipe IS the grant: centre the arrival
+    dbgNote('edge -> ' + slug.slice(0, 16) + ' @' + date);
+    Promise.resolve()
+      .then(() => l.openWeekAt(slug, date))
+      .catch(() => {})
+      .then(() => { navigating = false; });
+  };
+  document.addEventListener('click', (e) => {
+    const edge = e.target.closest && e.target.closest('.rail-edge');
+    if (!edge) return;
+    e.preventDefault();
+    e.stopPropagation();
+    goEdge(edge);
+  }, true);
+
   const settle = (fromUser) => {
     clearTimeout(holdTimer);
     phase = 'idle';
     if (fromUser) {
+      const slot = centeredSlot();
+      if (slot && slot.classList.contains('rail-edge')) { goEdge(slot); return; }
       const c = centeredCard();
       if (c) {
         railOwner = 'user';
@@ -564,7 +643,10 @@
   const centerRestingCard = (instant) => {
     const el = list();
     if (!el) return;
-    const target = cardBySlug(landedSlug) || cardBySlug(selectedSlug()) || cards()[0];
+    // an empty week still has a slot to rest on — otherwise the rail opens
+    // parked on the "Earlier" edge, which would bounce straight back out
+    const target = cardBySlug(landedSlug) || cardBySlug(selectedSlug()) || cards()[0]
+      || el.querySelector('.loading-message.empty-slot');
     if (!target) return;
     landedSlug = target.getAttribute('data-event-slug') || landedSlug;
     if (grantSlug === landedSlug) grantSlug = null;
@@ -587,6 +669,7 @@
     if (want && !has) {
       el.classList.add('rail-active');
       armThumbs();
+      buildEdgeSlots();
       buildGeom();
       centerRestingCard(true);
       resizeMap();
@@ -600,6 +683,10 @@
     } else if (want && has) {
       if (reason === 'render' || reason === 'resize' || geomStale()) {
         armThumbs();
+        // NOT on resize: iOS fires one on every URL-bar reveal, and the edge
+        // lookup expands recurrences over six months. The slots the render
+        // built are still correct — only the geometry moved.
+        if (reason !== 'resize' || !el.querySelector('.rail-edge')) buildEdgeSlots();
         buildGeom();
         centerRestingCard(reason === 'render');
       } else if (grantSlug) {
@@ -622,6 +709,7 @@
   // ---------- the two loader events + environment changes ----------
   document.addEventListener('chunky:selection-changed', () => syncRailState('selection'));
   document.addEventListener('chunky:events-rendered', () => {
+    navigating = false;   // the week an edge slot asked for is on screen
     armThumbs();
     markOverflows();
     syncRailState('render');
@@ -647,9 +735,11 @@
   window.duskRail = {
     openLightbox,
     openSheet,
+    buildEdgeSlots,
+    goEdge,
     state: () => ({
       phase, railOwner, landedSlug, grantSlug, touchActive,
-      programmatic, interacted, railActive: railActive()
+      programmatic, interacted, navigating, railActive: railActive()
     }),
     geom: () => geom.map((g) => ({ slug: g.slug.slice(0, 14), center: g.center }))
   };

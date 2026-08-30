@@ -1587,6 +1587,82 @@ class DynamicCalendarLoader extends CalendarCore {
         this.syncUrl(true);
     }
 
+    // The first event AFTER the visible window (or the last one BEFORE it) —
+    // what the mobile rail's edge slots point at.
+    //
+    // It searches by EVENT, not by week, on purpose: swiping off the end of
+    // the rail must never land on an empty week (the owner's rule — the "no
+    // events" card is somewhere you can walk to with the arrows, never
+    // somewhere a swipe drops you), so quiet stretches are skipped and the
+    // slot names the real event on the other side of them.
+    //
+    // maxDays bounds the recurrence expansion; a city with nothing in the next
+    // six months simply gets no edge slot rather than an unbounded scan.
+    findAdjacentEvent(direction, maxDays = 190) {
+        if (!Array.isArray(this.allEvents) || this.allEvents.length === 0) return null;
+        const forward = direction !== 'prev';
+        const { start, end } = this.getCurrentPeriodBounds();
+
+        let searchStart, searchEnd;
+        if (forward) {
+            searchStart = new Date(end.getTime() + 1000);
+            searchEnd = new Date(searchStart);
+            searchEnd.setDate(searchEnd.getDate() + maxDays);
+        } else {
+            searchEnd = new Date(start.getTime() - 1000);
+            searchStart = new Date(searchEnd);
+            searchStart.setDate(searchStart.getDate() - maxDays);
+        }
+
+        let candidates;
+        try {
+            candidates = this.getFilteredEvents({ start: searchStart, end: searchEnd });
+        } catch (error) {
+            logger.debug('CALENDAR', 'Adjacent-event lookup failed', { direction, error: error.message });
+            return null;
+        }
+
+        // A multi-day run that straddles the window edge is already on screen —
+        // only events wholly outside it count as "the next one".
+        const outside = candidates.filter(event => {
+            const logicalStart = this.getLogicalStartDate(event);
+            if (!logicalStart) return false;
+            if (forward) return logicalStart > end;
+            const logicalEnd = this.getLogicalEndDate(event) || logicalStart;
+            return logicalEnd < start;
+        });
+        if (outside.length === 0) return null;
+
+        const pick = forward ? outside[0] : outside[outside.length - 1];
+        const pickDate = this.getLogicalStartDate(pick);
+        if (!pickDate) return null;
+        const dateISO = this.getLocalDateKey(pickDate);
+
+        // How many events share the week the swipe would open (the Sunday row
+        // openWeekAt lands on), so the slot can say "and 3 more" rather than
+        // pretending the week holds exactly one thing.
+        let weekCount = 1;
+        try {
+            const weekStart = new Date(pickDate);
+            weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+            weekStart.setHours(0, 0, 0, 0);
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekEnd.getDate() + 6);
+            weekEnd.setHours(23, 59, 59, 999);
+            weekCount = this.getFilteredEvents({ start: weekStart, end: weekEnd }).length || 1;
+        } catch (error) {
+            weekCount = 1;
+        }
+
+        return {
+            slug: pick.slug,
+            dateISO,
+            name: pick.name || '',
+            date: pickDate,
+            weekCount
+        };
+    }
+
     async navigatePeriod(direction, skipAnimation = false) {
         const delta = direction === 'next' ? 1 : -1;
         
@@ -4482,7 +4558,13 @@ class DynamicCalendarLoader extends CalendarCore {
             }
             h = Math.max(h, contentBottom - cellTop);
         }
-        if (h > 0) grid.style.height = Math.ceil(h + 10) + 'px';
+        // A week with nothing in it still has to LOOK like a week: with no
+        // pills to measure, the content extent is just the day-number row and
+        // the strip collapsed to 41px (measured at 390px) — a hairline above
+        // the map that read as broken rather than empty. The floor only ever
+        // raises a quiet week; an ordinary one measures ~139 here.
+        const WEEK_STRIP_MIN_CONTENT = 86;
+        if (h > 0) grid.style.height = Math.ceil(Math.max(h, WEEK_STRIP_MIN_CONTENT) + 10) + 'px';
     }
 
     // Place the freshly rendered strip so the visible period is in view.
@@ -4752,7 +4834,14 @@ class DynamicCalendarLoader extends CalendarCore {
                 // Update visual selection state after rendering
                 this.updateSelectionVisualState();
             } else {
-                eventsList.innerHTML = '<div class="loading-message">No events found for this period. Try switching Week/Month or check back soon.</div>';
+                // `empty-slot` is the class the mobile rail keys off: an empty
+                // period is a real destination (the week arrows can walk you
+                // into one), so it gets a card-shaped slot with the edge slots
+                // still beside it rather than a stray line of centred text.
+                const emptyCopy = this.currentView === 'week'
+                    ? 'No events this week.'
+                    : 'No events found for this period.';
+                eventsList.innerHTML = `<div class="loading-message empty-slot">${emptyCopy}<span class="empty-hint">Try switching Week/Month, or check back soon.</span></div>`;
                 logger.info('CALENDAR', 'No events to display for current period', {
                     view: this.currentView,
                     city: this.currentCity
