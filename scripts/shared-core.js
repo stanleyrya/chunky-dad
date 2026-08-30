@@ -5040,6 +5040,14 @@ class SharedCore {
         if (aiWebParser && typeof aiWebParser.applyDerivedCadenceStamps === 'function') {
             aiWebParser.applyDerivedCadenceStamps(allEvents);
         }
+        // A flyer listing several dates for ONE party ("catch the next ones on:
+        // AUGUST 29TH & NOVEMBER 27TH") yields one event per date rather than a
+        // single 90-day span. normalizeAiEvent kept the first date and stamped
+        // the rest; expand here, where every event of the run is in view and
+        // before the future-window filter judges any of them.
+        if (aiWebParser && typeof aiWebParser.expandListedOccurrenceEvents === 'function') {
+            aiWebParser.expandListedOccurrenceEvents(allEvents);
+        }
         // Roundup-tile tell (report-only, parser-derived): a multi-day
         // umbrella record whose own extracted text names >= 3 events this
         // run ALSO extracted separately is probably a listing/roundup
@@ -6501,7 +6509,14 @@ class SharedCore {
     // is skipped, never aborts the crawl.
     async collectIcsFeedFindings({ html, pageUrl, httpAdapter, icsFeedCollector }) {
         if (!icsFeedCollector || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return;
-        const candidates = this.detectIcsFeedLinks(html, pageUrl);
+        const detected = this.detectIcsFeedLinks(html, pageUrl);
+        // The learned dead-end store already knows which URLs answered with
+        // nothing, and this probe was the one caller that never asked it:
+        // bearitmtl.com/events/mois/?ical=1 returns an empty body and was
+        // re-requested on every single run forever. Consulting the store makes
+        // the probe as polite as the crawl, with the same 30-day retry.
+        const liveUrls = new Set(this.filterKnownDeadEndUrls(detected.map(entry => entry.fetchUrl)));
+        const candidates = detected.filter(entry => liveUrls.has(entry.fetchUrl));
         for (const candidate of candidates) {
             if (icsFeedCollector.seen.has(candidate.fetchUrl)) continue;
             icsFeedCollector.seen.add(candidate.fetchUrl);
@@ -6535,6 +6550,10 @@ class SharedCore {
                 });
             } catch (error) {
                 console.log(`📅 ICS FEED: fetch failed for ${candidate.url} (${error && error.message ? error.message : error}) — skipped`);
+                // Remember it, so a feed that is permanently empty stops
+                // costing a request per run. Staged like every other network
+                // failure: committed only if the run proved the network works.
+                this.recordDeadEndNetworkFailure({ url: candidate.fetchUrl, currentDepth: 1 });
             }
         }
     }
