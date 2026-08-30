@@ -19,6 +19,10 @@ const { buildOgCardHtml } = require('./og-card.js');
 // Favicon filenames are derived from the website URL, never from what actually
 // landed on disk — the same contract download-images.js and
 // extract-favicon-colors.js work to.
+// The city's own framing — the same centre and zoom the city page opens its
+// map at, so the corner map is recognisably that city.
+const { getCityConfig } = require(path.join(ROOT, 'js', 'city-config.js'));
+
 const {
   convertWebsiteUrlToFaviconPath,
   generateLinktreeFaviconFilename,
@@ -179,6 +183,21 @@ function dataUri(absolutePath) {
   return uri;
 }
 
+/**
+ * A card built with the corner map reports itself painted through
+ * window.__ogReady — which it resolves on failure too (see mapScript in
+ * tools/og-card.js), so this waits for an answer, never for success. Cards
+ * without a map have no such promise and fall straight through, which is
+ * every card until the option ships.
+ */
+async function waitForMap(page) {
+  try {
+    await page.evaluate(() => window.__ogReady || Promise.resolve());
+  } catch {
+    // the card paints without its map
+  }
+}
+
 // The bear, inlined once and reused by every card.
 const logoUrl = dataUri(LOGO_FILE);
 
@@ -256,13 +275,31 @@ function collectTargets() {
       // (landscape candidate preferred — this artboard is 1200×630).
       const flyerUrl = readCardMeta(html, 'flyer');
 
+      // Where it happens. Carried on every card, drawn only when the card is
+      // built with showMap (the corner map is an option, not the default —
+      // see tools/og-card.js). Needs the event's coordinates AND the city's
+      // home framing; without both there is nothing to draw.
+      const lat = Number(readCardMeta(html, 'lat'));
+      const lng = Number(readCardMeta(html, 'lng'));
+      const city = getCityConfig(cityFromCanonical);
+      const cityPoint = city && city.coordinates;
+      const map = (Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0)
+        && cityPoint && Number.isFinite(Number(cityPoint.lat)) && Number.isFinite(Number(cityPoint.lng)))
+        ? {
+            lat, lng,
+            cityLat: Number(cityPoint.lat),
+            cityLng: Number(cityPoint.lng),
+            cityZoom: Number(city.mapZoom) || 11
+          }
+        : null;
+
       // The favicon tile: the local file, resolved from whichever URL the
       // colour extractor used, so the tile and the aurora come from one brand.
       const faviconUrl = dataUri(localFaviconFile((colors && colors.url) || website));
 
       targets.push({
         cityKey: cityFromCanonical, slug: evDir.name,
-        card: { title, cityPath, when, venue, cover, flyerUrl, faviconUrl, colors, logoUrl }
+        card: { title, cityPath, when, venue, cover, flyerUrl, faviconUrl, colors, logoUrl, map }
       });
     }
   }
@@ -279,7 +316,18 @@ async function main() {
   }
 
   const { default: puppeteer } = await getPuppeteer();
-  const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+  // MapLibre needs WebGL, and headless Chrome only has the software path —
+  // which Chrome 127+ refuses to use unless it is told to. Harmless for the
+  // cards that draw no map; required the day the corner map ships.
+  const browser = await puppeteer.launch({
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--enable-unsafe-swiftshader',
+      '--use-gl=angle',
+      '--use-angle=swiftshader'
+    ]
+  });
   let changes = 0;
   try {
     for (const t of targets) {
@@ -292,6 +340,7 @@ async function main() {
       try {
         await page.setContent(buildOgCardHtml(t.card), { waitUntil: 'networkidle0', timeout: 20000 });
         await waitForFonts(page);
+        await waitForMap(page);
         rendered = true;
       } catch (err) {
         // A slow or unreachable flyer host must never fail the build: fall back
@@ -313,6 +362,7 @@ async function main() {
           await page.setViewport({ width: 1200, height: 630, deviceScaleFactor: 1 });
           await page.setContent(buildOgCardHtml(offlineCard), { waitUntil: 'domcontentloaded', timeout: 15000 });
           await waitForFonts(page);
+          await waitForMap(page);
           rendered = true;
         } catch (fallbackError) {
           console.warn(`⚠️  Skipping OG image for ${t.cityKey}/${t.slug}: ${fallbackError.message}`);

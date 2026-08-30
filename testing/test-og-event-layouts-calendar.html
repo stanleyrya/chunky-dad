@@ -398,9 +398,13 @@
        grid so it never reads as one more sketch. */
     .l-ship { background: #171a33; }
     .l-ship .og-frame { display: block; width: 1200px; height: 630px; border: 0; }
-    /* full width: this is the one you judge, not one thumbnail among fourteen */
-    .card[data-variant="og-card"] { grid-column: 1 / -1; border-color: rgba(255,107,53,0.55); }
+    /* full width: these are the ones you judge, not thumbnails among fourteen */
+    .card[data-variant="og-card"],
+    .card[data-variant="og-card-map"] { grid-column: 1 / -1; }
+    .card[data-variant="og-card"] { border-color: rgba(255,107,53,0.55); }
     .card[data-variant="og-card"] .name { color: #ffa77f; }
+    .card[data-variant="og-card-map"] { border-color: rgba(255,255,255,0.22); }
+    .card[data-variant="og-card-map"] .name { color: var(--text-dim); }
 
     /* pause all artboard animation when toggled off */
     body.anims-off .artboard * { animation-play-state: paused !important; }
@@ -861,23 +865,52 @@
               || String(ev.imageHorizontal || ev.image || ev.imageVertical || '').trim(),
             faviconUrl: abs((this.getFaviconInfo(ev) || {}).path || ''),
             logoUrl: abs('../Rising_Star_Ryan_Head_Compressed.png'),
-            colors
+            colors,
+            map: this.ogMapData(ev)
           };
         }
 
-        shippingVariant() {
-          const data = this.ogCardData();
+        // The corner map's data: this event's coordinates, framed from the
+        // city's own centre and zoom. Both halves are required — the generator
+        // applies the same test (see collectTargets).
+        ogMapData(ev) {
+          const lat = Number(ev.coordinates?.lat);
+          const lng = Number(ev.coordinates?.lng);
+          const city = getCityConfig(this.currentCity);
+          const point = city && city.coordinates;
+          if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) return null;
+          if (!point || !Number.isFinite(Number(point.lat)) || !Number.isFinite(Number(point.lng))) return null;
+          return {
+            lat, lng,
+            cityLat: Number(point.lat),
+            cityLng: Number(point.lng),
+            cityZoom: Number(city.mapZoom) || 11
+          };
+        }
+
+        shippingVariant(withMap = false) {
+          const data = { ...this.ogCardData(), showMap: withMap };
           const html = window.OgCard ? window.OgCard.buildOgCardHtml(data) : '';
-          this.pendingOgHtml = html;
-          const chips = ['SHIPS', data.flyerUrl ? 'event image' : 'text card', 'aurora colors'];
+          this.pendingOgHtml[withMap ? 'map' : 'plain'] = html;
+          if (withMap) {
+            return {
+              key: 'og-card-map',
+              name: '☆ …with the corner map (option)',
+              desc: data.map
+                ? 'the same card, plus a locator map inset bottom-right — the artwork never gives up its space'
+                : 'this event has no coordinates, so there is no map to draw',
+              chips: ['option', 'city zoom', data.map ? 'has coordinates' : 'no coordinates'],
+              html: '<div class="artboard l-ship"><iframe class="og-frame" data-og="map" title="OG card with map" width="1200" height="630" frameborder="0"></iframe></div>'
+            };
+          }
           return {
             key: 'og-card',
             name: '★ Dusk Aurora — the generated card',
             desc: window.OgCard
               ? 'tools/og-card.js, rendered live — byte-for-byte what generate-og-images.js commits'
               : 'tools/og-card.js failed to load — serve this page from the repo root',
-            chips,
-            html: '<div class="artboard l-ship"><iframe class="og-frame" title="OG card" width="1200" height="630" frameborder="0"></iframe></div>'
+            chips: ['SHIPS', data.flyerUrl ? 'event image' : 'text card', 'brand color'],
+            html: '<div class="artboard l-ship"><iframe class="og-frame" data-og="plain" title="OG card" width="1200" height="630" frameborder="0"></iframe></div>'
           };
         }
 
@@ -887,10 +920,12 @@
         fillOgFrames() {
           if (!this.pendingOgHtml) return;
           grid.querySelectorAll('.og-frame').forEach(frame => {
+            const html = this.pendingOgHtml[frame.getAttribute('data-og')];
+            if (!html) return;
             try {
               const doc = frame.contentDocument;
               doc.open();
-              doc.write(this.pendingOgHtml);
+              doc.write(html);
               doc.close();
             } catch (e) {
               logger.componentError(COMPONENT, 'Could not paint the shipping card preview', e);
@@ -1289,7 +1324,9 @@
             ? `<div class="section-divider">${title}</div>` + cards.map(cardHtml).join('')
             : '';
 
+          this.pendingOgHtml = {};
           grid.innerHTML = cardHtml(this.shippingVariant())
+            + cardHtml(this.shippingVariant(true))
             + section('Explorations — sketches, not what ships', explorations)
             + section('Classics — layouts from the previous version', classics);
 

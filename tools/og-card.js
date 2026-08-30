@@ -221,13 +221,92 @@ function row(icon, value) {
 }
 
 /**
+ * The corner locator map, drawn with the same library, style and purple water
+ * the city page uses (js/dynamic-calendar-loader.js: maplibre-gl,
+ * tiles.openfreemap.org/styles/liberty, applyTheme's #667eea).
+ *
+ * Framing follows the owner's rule: the city's normal zoom, zoomed OUT if
+ * that would leave the event off-screen. fitBounds over [city centre, event]
+ * with maxZoom pinned to the city's own mapZoom does exactly that — an event
+ * downtown lands at city zoom, one an hour away pulls the frame back.
+ *
+ * Everything here is best-effort. window.__ogReady is the single promise the
+ * generator waits on, and it RESOLVES on failure too — a blocked CDN, no
+ * WebGL, a tile server having a bad day — after adding .no-map, which takes
+ * the inset out and leaves the card exactly as it is without one.
+ */
+function mapScript(configJson) {
+    return `<script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+<script>
+(function () {
+  var cfg = ${configJson};
+  var settle, done = false, ready = false;
+  window.__ogReady = new Promise(function (r) { settle = r; });
+  function give(up) {
+    if (done) return;
+    done = true;
+    if (up) document.body.classList.add('no-map');
+    settle(true);
+  }
+  // a card is never worth waiting on forever
+  setTimeout(function () { give(!ready); }, 15000);
+  try {
+    if (typeof maplibregl === 'undefined') return give(true);
+    var map = new maplibregl.Map({
+      container: 'ogmap',
+      style: 'https://tiles.openfreemap.org/styles/liberty',
+      center: [cfg.cityLng, cfg.cityLat],
+      zoom: cfg.cityZoom,
+      interactive: false,
+      attributionControl: false,
+      renderWorldCopies: false,
+      fadeDuration: 0
+    });
+    map.on('error', function () {});
+    map.on('style.load', function () {
+      // the site's one recolor: water goes brand purple
+      try {
+        map.getStyle().layers.forEach(function (layer) {
+          var id = layer.id.toLowerCase();
+          if (id.indexOf('water') === -1) return;
+          if (layer.type === 'fill') map.setPaintProperty(layer.id, 'fill-color', '#667eea');
+          if (layer.type === 'line') map.setPaintProperty(layer.id, 'line-color', '#667eea');
+        });
+      } catch (e) {}
+    });
+    var el = document.createElement('div');
+    el.className = 'og-pin' + (cfg.pin ? '' : ' plain');
+    if (cfg.pin) {
+      var img = document.createElement('img');
+      img.src = cfg.pin;
+      el.appendChild(img);
+    }
+    new maplibregl.Marker({ element: el }).setLngLat([cfg.lng, cfg.lat]).addTo(map);
+    var bounds = new maplibregl.LngLatBounds([cfg.cityLng, cfg.cityLat], [cfg.cityLng, cfg.cityLat]);
+    bounds.extend([cfg.lng, cfg.lat]);
+    // padding scaled to the box, not a fixed number: on a 190px-tall inset a
+    // flat 70 left almost no usable height and fitBounds answered by zooming
+    // out to three states
+    var box = map.getContainer();
+    var pad = Math.max(10, Math.min(70, Math.min(box.clientWidth, box.clientHeight) * 0.2));
+    map.fitBounds(bounds, { padding: pad, maxZoom: cfg.cityZoom, duration: 0 });
+    map.once('idle', function () { ready = true; give(false); });
+  } catch (e) {
+    give(true);
+  }
+})();
+<\/script>`;
+}
+
+/**
  * The share image, as a complete standalone document.
  *
  * data: {
  *   title, when, venue, cover,       // strings; anything falsy is dropped
  *   cityPath,                        // the URL segment: 'nyc' -> chunky.dad/nyc
- *   flyerUrl, faviconUrl, logoUrl,   // URLs (http(s), file: or relative)
- *   colors                           // a data/event-colors record, or null
+ *   flyerUrl, faviconUrl, logoUrl,   // URLs (http(s), data: or relative)
+ *   colors,                          // a data/event-colors record, or null
+ *   map, showMap                     // the corner locator map — opt-in
  * }
  *
  * Every image is optional and self-healing: each carries an onerror that
@@ -254,6 +333,20 @@ function buildOgCardHtml(data) {
     const faviconTile = favicon
         ? `<span class="fav" style="background:${esc(plate)}"><img src="${favicon}" alt="" onerror="this.parentNode.remove()"></span>`
         : '';
+    // The map is OPT-IN (showMap) and never automatic: the owner's call is
+    // that artwork always wins the artboard, and the plain card is the one
+    // that ships. It also needs the event's coordinates and the city's home
+    // framing — the caller checks both before handing them over.
+    const m = d.showMap && d.map
+        && Number.isFinite(d.map.lat) && Number.isFinite(d.map.lng)
+        && Number.isFinite(d.map.cityLat) && Number.isFinite(d.map.cityLng) ? d.map : null;
+    const mapJson = m ? JSON.stringify({
+        lat: m.lat, lng: m.lng,
+        cityLat: m.cityLat, cityLng: m.cityLng,
+        cityZoom: Number(m.cityZoom) || 11,
+        pin: favicon
+    }).replace(/</g, '\\u003c') : '';
+
     // The address bar, not a place name: someone who sees the image should
     // know exactly where to type.
     const path = String(d.cityPath || '').trim().replace(/^\/+|\/+$/g, '');
@@ -266,6 +359,7 @@ function buildOgCardHtml(data) {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+${m ? '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css">' : ''}
 <title>${esc(d.title)}</title>
 <style>
   * { box-sizing: border-box; }
@@ -288,6 +382,7 @@ function buildOgCardHtml(data) {
     align-items: center;
     gap: 52px;
     padding: 54px 60px;
+    position: relative;   /* the map inset anchors to the artboard */
   }
 
   /* the flyer, whole and uncropped — the card never crops artwork either */
@@ -377,6 +472,44 @@ function buildOgCardHtml(data) {
   .row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ico { flex: 0 0 27px; width: 27px; height: 27px; opacity: 0.9; }
 
+  /* The map is an OPTION, and an inset: bottom-right corner, floating over
+     the brand colour. It never takes the art column and never displaces the
+     flyer — an event's own artwork always wins that space. */
+  .map {
+    position: absolute;
+    right: 44px;
+    bottom: 40px;
+    width: 300px;
+    height: 190px;
+    border-radius: 16px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.10);
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.22), 0 16px 40px rgba(6, 8, 20, 0.45);
+  }
+  /* a map that never loaded leaves nothing behind rather than a grey slab */
+  body.no-map .map { display: none; }
+  .map .maplibregl-ctrl-attrib,
+  .map .maplibregl-ctrl-bottom-left,
+  .map .maplibregl-ctrl-bottom-right { display: none; }
+  /* the event's pin: the favicon on its plate, the same marker the city
+     page drops on its map (--favicon-plate-* in styles.css) */
+  .og-pin {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    background: #fff;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9), 0 4px 14px rgba(6, 8, 20, 0.45);
+    overflow: hidden;
+  }
+  .og-pin img { display: block; width: 100%; height: 100%; object-fit: contain; padding: 5px; }
+  .og-pin.plain {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: ${aurora.c1};
+    box-shadow: 0 0 0 4px #fff, 0 4px 14px rgba(6, 8, 20, 0.45);
+  }
+
   /* the address, bottom of the copy column */
   .brand {
     margin-top: auto;
@@ -390,9 +523,15 @@ function buildOgCardHtml(data) {
     color: rgba(255, 255, 255, 0.82);
   }
   .brand img { width: 36px; height: 36px; border-radius: 10px; }
+  /* The copy is NOT padded away from the inset: reserving 340px for it
+     crushed the title and truncated every row on cards that also have a
+     flyer. The map sits in the corner the copy already leaves empty (the
+     address line is bottom-LEFT), so the two only meet if a row runs very
+     long — which this stops, by ellipsing the value before it gets there. */
+  body:not(.no-map) .row span { max-width: 520px; }
 </style>
 </head>
-<body class="${flyer ? '' : 'no-art'}">
+<body class="${flyer ? '' : 'no-art'}${m ? '' : ' no-map'}">
   ${flyer ? `<div class="art"><img src="${flyer}" alt="" onerror="document.body.classList.add('no-art')"></div>` : ''}
   <div class="copy">
     <div class="titlerow">
@@ -406,6 +545,8 @@ function buildOgCardHtml(data) {
     </div>
     ${brandMark}
   </div>
+  ${m ? '<div class="map" id="ogmap"></div>' : ''}
+  ${m ? mapScript(mapJson) : ''}
 </body>
 </html>`;
 }

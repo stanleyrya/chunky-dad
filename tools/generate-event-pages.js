@@ -144,7 +144,11 @@ function buildEventHtml(cityKey, cityName, event) {
     + cardMeta('venue', event.bar)
     // 'free'/'no cover' is not information worth a row — the card drops it too
     + cardMeta('cover', /^(free|no cover)$/i.test(String(event.cover || '').trim()) ? '' : event.cover)
-    + cardMeta('website', event.favicon || event.website);
+    + cardMeta('website', event.favicon || event.website)
+    // where it is: the corner map option draws the same city map the page
+    // does, with this one event pinned on it
+    + cardMeta('lat', Number.isFinite(Number(event.coordinates?.lat)) ? event.coordinates.lat : '')
+    + cardMeta('lng', Number.isFinite(Number(event.coordinates?.lng)) ? event.coordinates.lng : '');
   // Prefer generated per-event OG image and add a content-hash version for cache busting
   const generatedPng = `/img/og/${cityKey}/${encodeURIComponent(event.slug)}.png`;
   let version = '';
