@@ -426,7 +426,7 @@ function readyScript(bannerRatio) {
     return `<script>
 (function () {
   var body = document.body;
-  var STEPS = [44, 40, 37, 34, 31, 28, 25, 22, 19, 17];
+  var STEPS = [58, 52, 47, 44, 40, 37, 34, 31, 28, 25, 22, 19, 17];
 
   function fontsReady() {
     try {
@@ -454,6 +454,26 @@ function readyScript(bannerRatio) {
     if (!img || !img.naturalWidth || !img.naturalHeight) return;
     var ratio = img.naturalWidth / img.naturalHeight;
     if (${bannerRatio} > 0 && ratio >= ${bannerRatio}) body.classList.add('banner-art');
+    fillArt(img);
+  }
+
+  // A square canvas has to be FILLED. Left at its natural size a 460px-wide
+  // flyer floated in a 1072px slot and the bottom half of the card was
+  // nothing — so the artwork is scaled to whichever edge binds first,
+  // upscaling when it has to. Aspect is preserved and nothing is cropped: the
+  // rule that a flyer is never cut still holds, it just gets bigger. (A 2x
+  // upscale is barely visible at the size these are actually viewed.)
+  function fillArt(img) {
+    if (!body.classList.contains('square')) return;
+    var slot = img.parentNode;
+    var boxW = slot.clientWidth;
+    var boxH = parseFloat(getComputedStyle(img).maxHeight) || 700;
+    if (!boxW || !boxH) return;
+    var scale = Math.min(boxW / img.naturalWidth, boxH / img.naturalHeight);
+    img.style.width = Math.round(img.naturalWidth * scale) + 'px';
+    img.style.height = 'auto';
+    img.style.maxWidth = 'none';
+    img.style.maxHeight = 'none';
   }
 
   function overflows() {
@@ -785,14 +805,20 @@ ${m ? '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/ma
     --row-size: 44px;
   }
   body.square .art { max-width: none; width: 100%; height: auto; }
-  body.square .art img { max-width: 100%; max-height: 700px; }
+  body.square .art img { max-width: 100%; max-height: 720px; }
   body.square .copy { align-self: auto; flex: 0 0 auto; min-width: 0; gap: 24px; }
   body.square .titlerow { margin-top: 0; }
   body.square .brand { margin-top: 0; padding-top: 8px; }
   body.square .title { font-size: 76px; -webkit-line-clamp: 3; }
   body.square .title.t-sm { font-size: 62px; }
   body.square .title.t-xs { font-size: 52px; -webkit-line-clamp: 4; }
-  body.square.no-art .title { font-size: 96px; }
+  /* nothing but type in a 1200px square: it has to be sized for the canvas
+     it is on, or the card reads as a caption floating in a colour field */
+  body.square.no-art { --row-size: 58px; }
+  body.square.no-art .title { font-size: 104px; }
+  body.square.no-art .title.t-sm { font-size: 84px; }
+  body.square.no-art .title.t-xs { font-size: 68px; }
+  body.square.no-art .rows { gap: 26px; }
   body.square .fav { flex: 0 0 92px; width: 92px; height: 92px; border-radius: 20px; }
   body.square .map { width: 340px; height: 215px; }
 
