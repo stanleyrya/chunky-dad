@@ -317,10 +317,10 @@ function row(icon, value) {
  * with maxZoom pinned to the city's own mapZoom does exactly that — an event
  * downtown lands at city zoom, one an hour away pulls the frame back.
  *
- * Everything here is best-effort. window.__ogReady is the single promise the
- * generator waits on, and it RESOLVES on failure too — a blocked CDN, no
- * WebGL, a tile server having a bad day — after adding .no-map, which takes
- * the inset out and leaves the card exactly as it is without one.
+ * Everything here is best-effort. window.__ogMapReady RESOLVES on failure too
+ * — a blocked CDN, no WebGL, a tile server having a bad day — after adding
+ * .no-map, which takes the inset out and leaves the card exactly as it is
+ * without one. The card's own __ogReady waits on it.
  */
 function mapScript(configJson) {
     return `<script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
@@ -328,7 +328,7 @@ function mapScript(configJson) {
 (function () {
   var cfg = ${configJson};
   var settle, done = false, ready = false;
-  window.__ogReady = new Promise(function (r) { settle = r; });
+  window.__ogMapReady = new Promise(function (r) { settle = r; });
   function give(up) {
     if (done) return;
     done = true;
@@ -386,6 +386,98 @@ function mapScript(configJson) {
 }
 
 /**
+ * Everything the card has to settle before anyone photographs it, behind one
+ * promise: window.__ogReady. The generator waits on that and nothing else.
+ *
+ * It does three things, in order, because each depends on the last:
+ *
+ *  1. waits for Poppins — measuring text in the fallback face sizes the card
+ *     for a font it will not be wearing;
+ *  2. picks the art layout from the flyer's real proportions (see
+ *     applyArtLayout), which needs the image decoded;
+ *  3. fits the rows: steps --row-size down until the longest value fits its
+ *     line. NOTHING is ever ellipsed — a cover price cut to "$15.38 - $2…"
+ *     is worse than the same price a few points smaller. Values no size can
+ *     hold on one line (Sitges lists nine sponsor bars, 144 characters) wrap
+ *     at the floor instead, and the loop keeps going until the copy fits the
+ *     artboard.
+ */
+function readyScript(bannerRatio) {
+    return `<script>
+(function () {
+  var body = document.body;
+  var STEPS = [44, 40, 37, 34, 31, 28, 25, 22, 19, 17];
+
+  function fontsReady() {
+    try {
+      return Promise.race([document.fonts.ready, new Promise(function (r) { setTimeout(r, 3000); })]);
+    } catch (e) {
+      return Promise.resolve();
+    }
+  }
+
+  function artReady() {
+    var img = document.querySelector('.art img');
+    if (!img) return Promise.resolve(null);
+    if (img.complete) return Promise.resolve(img);
+    return new Promise(function (r) {
+      img.addEventListener('load', function () { r(img); });
+      img.addEventListener('error', function () { r(null); });
+      setTimeout(function () { r(img); }, 8000);
+    });
+  }
+
+  // Wide artwork reads as a stamp in a 520px side column. Given the shape of
+  // it, the card turns: the flyer becomes a banner across the top and the
+  // copy sits underneath, full width.
+  function applyArtLayout(img) {
+    if (!img || !img.naturalWidth || !img.naturalHeight) return;
+    var ratio = img.naturalWidth / img.naturalHeight;
+    if (${bannerRatio} > 0 && ratio >= ${bannerRatio}) body.classList.add('banner-art');
+  }
+
+  function overflows() {
+    var spans = document.querySelectorAll('.row span');
+    for (var i = 0; i < spans.length; i++) {
+      if (spans[i].scrollWidth > spans[i].clientWidth + 1) return true;
+    }
+    var copy = document.querySelector('.copy');
+    if (copy && copy.scrollHeight > copy.clientHeight + 1) return true;
+    // and the artboard itself: in the banner layout the copy is content-sized,
+    // so it never overflows ITSELF — the page does, and the address line runs
+    // off the bottom edge
+    return body.scrollHeight > body.clientHeight + 1;
+  }
+
+  function fitRows() {
+    var start = parseFloat(getComputedStyle(body).getPropertyValue('--row-size')) || STEPS[0];
+    var steps = STEPS.filter(function (px) { return px <= start; });
+    for (var i = 0; i < steps.length; i++) {
+      body.style.setProperty('--row-size', steps[i] + 'px');
+      if (!overflows()) return;
+    }
+    // nothing fits on one line: let it wrap rather than cutting it off, then
+    // keep stepping down until the copy is inside the artboard again
+    body.classList.add('rows-wrap');
+    for (var j = 0; j < steps.length; j++) {
+      body.style.setProperty('--row-size', steps[j] + 'px');
+      if (!overflows()) return;
+    }
+  }
+
+  window.__ogReady = fontsReady()
+    .then(artReady)
+    .then(function (img) {
+      applyArtLayout(img);
+      fitRows();
+      return window.__ogMapReady || null;
+    })
+    .catch(function () { return null; });
+})();
+<\/script>`;
+}
+
+/**
  * The share image, as a complete standalone document.
  *
  * data: {
@@ -393,7 +485,9 @@ function mapScript(configJson) {
  *   cityPath,                        // the URL segment: 'nyc' -> chunky.dad/nyc
  *   flyerUrl, faviconUrl, logoUrl,   // URLs (http(s), data: or relative)
  *   colors,                          // a data/event-colors record, or null
- *   map, showMap                     // the corner locator map — opt-in
+ *   map, showMap,                    // the corner locator map — opt-in
+ *   bannerArt                        // true (or a min ratio) to let wide
+ *                                    // artwork take the top — opt-in
  * }
  *
  * Every image is optional and self-healing: each carries an onerror that
@@ -414,6 +508,13 @@ function buildOgCardHtml(data) {
     // Long names step DOWN rather than clipping: "NEW DATE: Bearracuda
     // Atlanta❄️Winter Beef Ball" is a real title, and an ellipsis in a share
     // image is a worse answer than smaller type.
+    // Wide artwork can take the top of the card instead of a side column.
+    // Off by default (0 = never): the owner is looking at it as an option
+    // before it becomes how every landscape flyer renders.
+    const bannerRatio = d.bannerArt
+        ? (Number(d.bannerArt) > 1 ? Number(d.bannerArt) : 1.4)
+        : 0;
+
     const titleLength = String(d.title || '').length;
     const titleClass = titleLength > 46 ? 'title t-xs' : (titleLength > 28 ? 'title t-sm' : 'title');
 
@@ -509,8 +610,7 @@ ${m ? '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/ma
   body.no-art .title { font-size: 88px; }
   body.no-art .title.t-sm { font-size: 70px; }
   body.no-art .title.t-xs { font-size: 54px; }
-  body.no-art .row { font-size: 44px; }
-  body.no-art .ico { flex: 0 0 40px; width: 40px; height: 40px; }
+  body.no-art { --row-size: 44px; }
   body.no-art .fav { flex: 0 0 88px; width: 88px; height: 88px; border-radius: 20px; }
 
   /* Title + rows sit in the OPTICAL centre with the address pinned to the
@@ -546,18 +646,55 @@ ${m ? '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/ma
      full event name beats an ellipsis in a share image */
   .title.t-xs { font-size: 42px; letter-spacing: -0.6px; -webkit-line-clamp: 4; }
 
+  /* Rows, icons and the address all ride one size — the owner's rule is two
+     text sizes per card, the title and everything else. The fit script below
+     steps --row-size DOWN until the longest value fits on its line; nothing
+     is ever cut with an ellipsis, so no card quietly hides its cover price. */
   .rows { display: flex; flex-direction: column; gap: 19px; }
   .row {
     display: flex;
     align-items: center;
     gap: 18px;
-    font-size: 38px;
+    font-size: var(--row-size, 38px);
     line-height: 1.3;
     color: #fff;
   }
   .row:first-child { font-weight: 600; }
-  .row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .ico { flex: 0 0 34px; width: 34px; height: 34px; opacity: 0.9; }
+  /* nowrap while the script measures; it switches this off at the floor, so
+     a value no size can fit wraps instead of being truncated */
+  .row span { overflow: hidden; white-space: nowrap; }
+  body.rows-wrap .row span { white-space: normal; }
+  .ico {
+    flex: 0 0 calc(var(--row-size, 38px) * 0.9);
+    width: calc(var(--row-size, 38px) * 0.9);
+    height: calc(var(--row-size, 38px) * 0.9);
+    opacity: 0.9;
+  }
+
+  /* WIDE ARTWORK TURNS THE CARD. A 2:1 flyer in a 520px side column renders
+     at 520x260 — a stamp beside a wall of type. As a banner it gets the full
+     1080px and reads as artwork. The artboard stays 1200x630: every platform
+     crops a share image toward 1.91:1, so a taller canvas would lose the top
+     and bottom rather than gain room. Opt-in per card (see bannerRatio). */
+  body.banner-art {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 30px;
+    padding: 40px 60px 44px;
+  }
+  body.banner-art .art { max-width: none; width: 100%; height: auto; }
+  body.banner-art .art img { max-width: 100%; max-height: 270px; }
+  body.banner-art .copy {
+    align-self: auto;
+    flex: 0 0 auto;
+    min-width: 0;
+    gap: 20px;
+  }
+  /* the copy no longer owns a tall column, so the two auto margins that
+     centred it would just push things apart */
+  body.banner-art .titlerow { margin-top: 0; }
+  body.banner-art .brand { margin-top: 0; padding-top: 6px; }
+  body.banner-art .title { -webkit-line-clamp: 2; }
 
   /* The map is an OPTION, and an inset: bottom-right corner, floating over
      the brand colour. It never takes the art column and never displaces the
@@ -606,12 +743,16 @@ ${m ? '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/ma
     display: flex;
     align-items: center;
     gap: 16px;
-    font-size: 33px;
+    font-size: var(--row-size, 38px);
     font-weight: 600;
     letter-spacing: 0.2px;
     color: rgba(255, 255, 255, 0.82);
   }
-  .brand img { width: 50px; height: 50px; border-radius: 13px; }
+  .brand img {
+    width: calc(var(--row-size, 38px) * 1.3);
+    height: calc(var(--row-size, 38px) * 1.3);
+    border-radius: 13px;
+  }
   /* The copy is NOT padded away from the inset: reserving 340px for it
      crushed the title and truncated every row on cards that also have a
      flyer. The map sits in the corner the copy already leaves empty (the
@@ -636,6 +777,7 @@ ${m ? '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/ma
   </div>
   ${m ? '<div class="map" id="ogmap"></div>' : ''}
   ${m ? mapScript(mapJson) : ''}
+  ${readyScript(bannerRatio)}
 </body>
 </html>`;
 }

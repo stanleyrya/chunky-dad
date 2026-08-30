@@ -184,13 +184,12 @@ function dataUri(absolutePath) {
 }
 
 /**
- * A card built with the corner map reports itself painted through
- * window.__ogReady — which it resolves on failure too (see mapScript in
- * tools/og-card.js), so this waits for an answer, never for success. Cards
- * without a map have no such promise and fall straight through, which is
- * every card until the option ships.
+ * Every card reports itself settled through window.__ogReady — fonts loaded,
+ * art layout chosen, rows fitted, and the corner map painted if it has one
+ * (see readyScript in tools/og-card.js). It resolves on failure too, so this
+ * waits for an answer, never for success.
  */
-async function waitForMap(page) {
+async function waitForCard(page) {
   try {
     await page.evaluate(() => window.__ogReady || Promise.resolve());
   } catch {
@@ -340,7 +339,7 @@ async function main() {
       try {
         await page.setContent(buildOgCardHtml(t.card), { waitUntil: 'networkidle0', timeout: 20000 });
         await waitForFonts(page);
-        await waitForMap(page);
+        await waitForCard(page);
         rendered = true;
       } catch (err) {
         // A slow or unreachable flyer host must never fail the build: fall back
@@ -362,7 +361,7 @@ async function main() {
           await page.setViewport({ width: 1200, height: 630, deviceScaleFactor: 1 });
           await page.setContent(buildOgCardHtml(offlineCard), { waitUntil: 'domcontentloaded', timeout: 15000 });
           await waitForFonts(page);
-          await waitForMap(page);
+          await waitForCard(page);
           rendered = true;
         } catch (fallbackError) {
           console.warn(`⚠️  Skipping OG image for ${t.cityKey}/${t.slug}: ${fallbackError.message}`);
