@@ -397,6 +397,12 @@
        same fitArtboards() transform as every other artboard. Flagged in the
        grid so it never reads as one more sketch. */
     .l-ship { background: #171a33; }
+    /* the shipping previews carry their own shape (1.91:1 or 1:1) */
+    .card[data-variant^="og-card"] .preview { aspect-ratio: auto; }
+    .preview-sizer { position: relative; width: 100%; }
+    /* a 1:1 board is as tall as the grid is wide — reined in so it does not
+       take over the page, and never upscaled past its real 1200px */
+    .preview-sizer[data-shape="square"] { max-width: 760px; margin: 0 auto; }
     .l-ship .og-frame { display: block; width: 1200px; height: 630px; border: 0; }
     /* full width: these are the ones you judge, not thumbnails among fourteen */
     .card[data-variant="og-card"],
@@ -451,6 +457,7 @@
       <select id="cssPatternSelect" class="ctl md" title="Classic pattern background"><option>Loading…</option></select>
       <label class="tiny" title="Animate the gradient backgrounds"><input id="animsOn" type="checkbox" checked>animate</label>
       <label class="tiny" title="Let wide artwork take the top of the card instead of a side column"><input id="bannerOn" type="checkbox">wide art on top</label>
+      <label class="tiny" title="Render the card 1:1 (1200x1200) instead of 1200x630"><input id="squareOn" type="checkbox">1:1</label>
     </div>
 
     <section class="grid" id="grid"></section>
@@ -518,6 +525,7 @@
       const overrideOn = document.getElementById('overrideOn');
       const animsOn = document.getElementById('animsOn');
       const bannerOn = document.getElementById('bannerOn');
+      const squareOn = document.getElementById('squareOn');
       const cssPatternSelect = document.getElementById('cssPatternSelect');
       const paletteStrip = document.getElementById('paletteStrip');
       const paletteSource = document.getElementById('paletteSource');
@@ -889,7 +897,8 @@
             map: this.ogMapData(ev),
             // wide artwork across the top instead of a side column; the card
             // decides per image from its real proportions
-            bannerArt: bannerOn.checked
+            bannerArt: bannerOn.checked,
+            artboard: squareOn.checked ? 'square' : 'wide'
           };
         }
 
@@ -911,7 +920,22 @@
           };
         }
 
+        // The artboard is sized from the card itself, so 1:1 previews as 1:1
+        // rather than being squeezed into the 1.91:1 frame.
+        shipArtboardHtml(which, title, data) {
+          const size = (window.OgCard && window.OgCard.artboardSize)
+            ? window.OgCard.artboardSize(data)
+            : { width: 1200, height: 630 };
+          const shape = size.width === size.height ? 'square' : 'wide';
+          return `<div class="preview-sizer" data-shape="${shape}" style="aspect-ratio:${size.width}/${size.height}">`
+            + `<div class="artboard l-ship" style="width:${size.width}px;height:${size.height}px">`
+            + `<iframe class="og-frame" data-og="${which}" title="${title}" `
+            + `width="${size.width}" height="${size.height}" frameborder="0"></iframe>`
+            + '</div></div>';
+        }
+
         shippingVariant(withMap = false) {
+          const shipArtboard = (which, title, data) => this.shipArtboardHtml(which, title, data);
           const data = { ...this.ogCardData(), showMap: withMap };
           const html = window.OgCard ? window.OgCard.buildOgCardHtml(data) : '';
           this.pendingOgHtml[withMap ? 'map' : 'plain'] = html;
@@ -923,7 +947,7 @@
                 ? 'the same card, plus a locator map inset bottom-right — the artwork never gives up its space'
                 : 'this event has no coordinates, so there is no map to draw',
               chips: ['option', 'city zoom', data.map ? 'has coordinates' : 'no coordinates'],
-              html: '<div class="artboard l-ship"><iframe class="og-frame" data-og="map" title="OG card with map" width="1200" height="630" frameborder="0"></iframe></div>'
+              html: shipArtboard('map', 'OG card with map', data)
             };
           }
           return {
@@ -934,7 +958,7 @@
               : 'tools/og-card.js failed to load — serve this page from the repo root',
             chips: ['SHIPS', data.flyerUrl ? 'event image' : 'text card',
                     data.bannerArt ? 'wide art on top' : 'art beside'],
-            html: '<div class="artboard l-ship"><iframe class="og-frame" data-og="plain" title="OG card" width="1200" height="630" frameborder="0"></iframe></div>'
+            html: shipArtboard('plain', 'OG card', data)
           };
         }
 
@@ -1380,7 +1404,12 @@
             grid.querySelectorAll('.preview').forEach(preview => {
               const art = preview.querySelector('.artboard');
               if (!art) return;
-              const scale = Math.min(preview.clientWidth / 1200, preview.clientHeight / 630);
+              // read the board's own size — 1:1 cards are not 1200x630
+              const w = art.offsetWidth || 1200;
+              const h = art.offsetHeight || 630;
+              // never upscale past the artboard's real pixels — a blown-up
+              // preview lies about how crisp the image is
+              const scale = Math.min(preview.clientWidth / w, preview.clientHeight / h, 1);
               art.style.transform = `scale(${scale})`;
             });
           });
@@ -1586,9 +1615,9 @@
             if (overrideOn.checked) this.render();
           }));
 
-          bannerOn.addEventListener('change', () => {
+          [bannerOn, squareOn].forEach(control => control.addEventListener('change', () => {
             if (this.selectedEvent) this.render();
-          });
+          }));
           animsOn.addEventListener('change', () => {
             document.body.classList.toggle('anims-off', !animsOn.checked);
             this.render();

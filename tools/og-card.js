@@ -36,6 +36,26 @@ const AURORA_MIN_SEPARATION = 0.2;
 const AURORA_SIBLING_LIGHTNESS = 0.55;
 const AURORA_SIBLING_CHROMA_BOOST = 1.12;
 
+/**
+ * The shapes a card can be rendered at.
+ *
+ * 'wide' is 1200x630 — the 1.91:1 every link-preview surface is built around,
+ * and what ships. 'square' is offered because most readers DO accept 1:1, and
+ * on the surfaces that show it whole (iMessage, Slack, WhatsApp) it is a much
+ * better use of the artwork; on the ones that don't (Facebook and X's large
+ * card) it is centre-cropped back toward 1.91:1 and loses the top and bottom.
+ */
+const OG_ARTBOARDS = {
+    wide: { width: 1200, height: 630, className: '' },
+    square: { width: 1200, height: 1200, className: 'square' }
+};
+
+/** The pixel size a given card wants to be photographed at. */
+function artboardSize(data) {
+    const board = OG_ARTBOARDS[(data || {}).artboard] || OG_ARTBOARDS.wide;
+    return { width: board.width, height: board.height };
+}
+
 // The site palette, used when an event has no readable artwork at all —
 // the same fallback the card's CSS declares.
 const AURORA_FALLBACK = { c1: '#667eea', c2: '#ff6b6b', c3: '#2a2c4d' };
@@ -437,7 +457,9 @@ function readyScript(bannerRatio) {
   }
 
   function overflows() {
-    var spans = document.querySelectorAll('.row span');
+    // the address counts too: it is the same size as the rows and just as
+    // able to run off the edge
+    var spans = document.querySelectorAll('.row span, .brand span');
     for (var i = 0; i < spans.length; i++) {
       if (spans[i].scrollWidth > spans[i].clientWidth + 1) return true;
     }
@@ -486,8 +508,9 @@ function readyScript(bannerRatio) {
  *   flyerUrl, faviconUrl, logoUrl,   // URLs (http(s), data: or relative)
  *   colors,                          // a data/event-colors record, or null
  *   map, showMap,                    // the corner locator map — opt-in
- *   bannerArt                        // true (or a min ratio) to let wide
+ *   bannerArt,                       // true (or a min ratio) to let wide
  *                                    // artwork take the top — opt-in
+ *   artboard                         // 'wide' (default, 1200x630) | 'square'
  * }
  *
  * Every image is optional and self-healing: each carries an onerror that
@@ -514,6 +537,9 @@ function buildOgCardHtml(data) {
     const bannerRatio = d.bannerArt
         ? (Number(d.bannerArt) > 1 ? Number(d.bannerArt) : 1.4)
         : 0;
+
+    // 1:1 is an option, not the default — see OG_ARTBOARDS.
+    const board = OG_ARTBOARDS[d.artboard] || OG_ARTBOARDS.wide;
 
     const titleLength = String(d.title || '').length;
     const titleClass = titleLength > 46 ? 'title t-xs' : (titleLength > 28 ? 'title t-sm' : 'title');
@@ -551,7 +577,7 @@ ${m ? '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/ma
 <title>${esc(d.title)}</title>
 <style>
   * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; width: 1200px; height: 630px; overflow: hidden; }
+  html, body { margin: 0; padding: 0; width: ${board.width}px; height: ${board.height}px; overflow: hidden; }
   body {
     /* The extracted brand colour, FLAT — the way the city page paints it.
        Every solid surface there is the same one value: the calendar's event
@@ -633,7 +659,11 @@ ${m ? '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/ma
     margin: 0;
     font-size: 60px;
     font-weight: 700;
-    line-height: 1.06;
+    /* NOT tighter than this. The title clips with overflow:hidden (that is
+       what -webkit-line-clamp needs), so the line box has to be taller than
+       the face's ascender-to-descender — at 1.06 the box was shorter than
+       Poppins needs and the tail came off every g, y and j. */
+    line-height: 1.15;
     letter-spacing: -1.4px;
     /* the last resort, after the size steps below have already tried */
     display: -webkit-box;
@@ -734,6 +764,38 @@ ${m ? '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/ma
     box-shadow: 0 0 0 4px #fff, 0 4px 14px rgba(6, 8, 20, 0.45);
   }
 
+  /* ---- 1:1 ----
+     A square gives the artwork about twice the room, so it takes it: the
+     banner grows to 620px and the copy sits under it at a size that suits a
+     bigger canvas. Portrait artwork still runs down the left, now nearly
+     1100px tall. What a square costs is covered in the PR — the big feed
+     surfaces crop toward 1.91:1. */
+  /* A square ALWAYS stacks — artwork above, copy below at full width. Beside
+     it, the copy got a 460px gutter and long titles clamped; stacked it has
+     the whole 1072px and the artwork gets the height a square is actually
+     good for. Wide or tall, the flyer sits on top. */
+  body.square {
+    flex-direction: column;
+    align-items: stretch;
+    /* the stack centres: a small flyer left a hole under the copy rather
+       than sharing the slack with the top */
+    justify-content: center;
+    gap: 40px;
+    padding: 56px 64px 60px;
+    --row-size: 44px;
+  }
+  body.square .art { max-width: none; width: 100%; height: auto; }
+  body.square .art img { max-width: 100%; max-height: 700px; }
+  body.square .copy { align-self: auto; flex: 0 0 auto; min-width: 0; gap: 24px; }
+  body.square .titlerow { margin-top: 0; }
+  body.square .brand { margin-top: 0; padding-top: 8px; }
+  body.square .title { font-size: 76px; -webkit-line-clamp: 3; }
+  body.square .title.t-sm { font-size: 62px; }
+  body.square .title.t-xs { font-size: 52px; -webkit-line-clamp: 4; }
+  body.square.no-art .title { font-size: 96px; }
+  body.square .fav { flex: 0 0 92px; width: 92px; height: 92px; border-radius: 20px; }
+  body.square .map { width: 340px; height: 215px; }
+
   /* the address, bottom of the copy column */
   /* the address is the call to action — it was the quietest thing on the
      card and people have to be able to read it at thumbnail size */
@@ -761,7 +823,7 @@ ${m ? '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/ma
   body:not(.no-map) .row span { max-width: 520px; }
 </style>
 </head>
-<body class="${flyer ? '' : 'no-art'}${m ? '' : ' no-map'}">
+<body class="${board.className}${flyer ? '' : ' no-art'}${m ? '' : ' no-map'}">
   ${flyer ? `<div class="art"><img src="${flyer}" alt="" onerror="document.body.classList.add('no-art')"></div>` : ''}
   <div class="copy">
     <div class="titlerow">
@@ -784,6 +846,8 @@ ${m ? '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/ma
 
 const api = {
     buildOgCardHtml,
+    artboardSize,
+    OG_ARTBOARDS,
     formatEventWhen,
     deriveAuroraColors,
     parseHexColor,
