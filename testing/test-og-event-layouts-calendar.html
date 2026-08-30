@@ -867,6 +867,7 @@
               day: ev.day,
               time: ev.time,
               recurring: ev.recurring,
+              recurrenceText: this.getRecurringBadgeContent(ev),
               timeZone: ev.startTimezone || (getCityConfig(this.currentCity) || {}).timezone || ''
             }) : [ev.day, ev.time].filter(Boolean).join(' · '),
             venue: ev.bar || '',

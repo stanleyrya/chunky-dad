@@ -136,6 +136,9 @@ function buildEventHtml(cityKey, cityName, event, ctx) {
     day: event.day,
     time: event.time,
     recurring: event.recurring,
+    // the site's own words for the cadence ("1st Sat", "Every Sun"), so a
+    // first-Saturday night is never flattened into a weekly one
+    recurrenceText: calendar ? calendar.getRecurringBadgeContent(event) : '',
     timeZone: event.startTimezone || (ctx && ctx.timeZone) || ''
   });
   const cardMeta = (name, value) => {

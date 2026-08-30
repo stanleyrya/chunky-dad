@@ -226,10 +226,16 @@ function shortTimeZone(timeZone, when) {
  * across all 289 events, 2026-08-30:
  *
  *   246  one-time, single day, with a time   -> "Sat 2/7 · 10PM-3AM ET"
- *    15  recurring weekly, with a time       -> "Thursdays · 5PM-9PM ET"
+ *    15  recurring, with a time              -> "1st Sat · 10PM-4AM ET"
  *    25  multi-day run, no time (festivals)  -> "Thu 9/17 – Mon 9/21"
  *     1  multi-day run, with a time          -> "Fri 9/11 11AM – Mon 9/14 12AM"
  *     2  one-time, single day, no time       -> "Sat 6/20"
+ *
+ * A recurring event says WHICH recurrence, in the site's own words: the
+ * caller passes CalendarCore's getRecurringBadgeContent ("1st Sat", "Every
+ * Sun", "3rd Thu", "Weekly"), the same string the city-page card badges.
+ * Pluralising the weekday here instead — "Saturdays" — turned Bears Night
+ * Out, a FIRST-Saturday night, into a weekly one.
  *
  * The two callers used to build this themselves and both got it thin: a
  * five-day festival rendered as "9/17 · Thursday", and a recurring one as
@@ -240,10 +246,29 @@ function shortTimeZone(timeZone, when) {
  * absolutes. Multi-day matches the site's own format (formatDuskWhenText in
  * js/dynamic-calendar-loader.js), en-dash and all.
  *
- * fields: { start, end, multiDay, day, time, recurring, timeZone }
+ * fields: { start, end, multiDay, day, time, recurring, recurrenceText, timeZone }
  *   start/end are LOGICAL dates (the caller's CalendarCore has the rule that
- *   a party running to 6AM still belongs to the night before).
+ *   a party running to 6AM still belongs to the night before), and
+ *   recurrenceText is that same CalendarCore's getRecurringBadgeContent.
  */
+/**
+ * How a recurrence leads the when-line.
+ *
+ * CalendarCore's description already names the weekday for the patterns that
+ * have one ("1st Sat", "Every Sun", "Last Fri") — those stand alone. "Weekly"
+ * does not, so it becomes the plural weekday, which reads better on a card
+ * than "Thursday · Weekly". Anything else keeps both. The generic "Recurring"
+ * (what FREQ=YEARLY answers) carries nothing, so it yields to the date.
+ */
+function recurrenceLead(recurrenceText, day) {
+    const namesADay = /\b(Sun|Mon|Tue|Wed|Thu|Fri|Sat)\b/.test(recurrenceText);
+    if (namesADay) return recurrenceText;
+    if (!day) return /^recurring$/i.test(recurrenceText) ? '' : recurrenceText;
+    if (/^weekly$/i.test(recurrenceText) || !recurrenceText) return `${day}s`;
+    if (/^recurring$/i.test(recurrenceText)) return '';
+    return `${recurrenceText} \u00b7 ${day}s`;
+}
+
 function formatEventWhen(fields) {
     const f = fields || {};
     const start = f.start instanceof Date && !isNaN(f.start.getTime()) ? f.start : null;
@@ -264,10 +289,12 @@ function formatEventWhen(fields) {
         return withZone(`${head} \u2013 ${tail}`);
     }
 
-    // Every week, forever: the plural weekday IS the recurrence, and a single
-    // date would be a lie about a standing night.
-    if (f.recurring && day) {
-        return withZone([`${day}s`, time].filter(Boolean).join(' \u00b7 '));
+    // A standing night states its cadence rather than one arbitrary date.
+    if (f.recurring) {
+        const cadence = recurrenceLead(String(f.recurrenceText || '').trim(), day);
+        if (cadence) return withZone([cadence, time].filter(Boolean).join(' \u00b7 '));
+        // no usable cadence (CalendarCore answers plain 'Recurring' for
+        // FREQ=YEARLY): a real date beats the word "Recurring"
     }
 
     // One night.
