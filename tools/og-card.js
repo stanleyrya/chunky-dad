@@ -235,7 +235,9 @@ function shortTimeZone(timeZone, when) {
  * caller passes CalendarCore's getRecurringBadgeContent ("1st Sat", "Every
  * Sun", "3rd Thu", "Weekly"), the same string the city-page card badges.
  * Pluralising the weekday here instead — "Saturdays" — turned Bears Night
- * Out, a FIRST-Saturday night, into a weekly one.
+ * Out, a FIRST-Saturday night, into a weekly one. The one thing the card does
+ * normalise is the two ways a weekly night can be written: see
+ * recurrenceLead.
  *
  * The two callers used to build this themselves and both got it thin: a
  * five-day festival rendered as "9/17 · Thursday", and a recurring one as
@@ -260,7 +262,16 @@ function shortTimeZone(timeZone, when) {
  * than "Thursday · Weekly". Anything else keeps both. The generic "Recurring"
  * (what FREQ=YEARLY answers) carries nothing, so it yields to the date.
  */
+const OG_FULL_WEEKDAY = {
+    Sun: 'Sunday', Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday',
+    Thu: 'Thursday', Fri: 'Friday', Sat: 'Saturday'
+};
+
 function recurrenceLead(recurrenceText, day) {
+    // "Every Sun" (FREQ=WEEKLY;BYDAY=SU) and a bare FREQ=WEEKLY on a Sunday
+    // are the same night described two ways — the card says it one way.
+    const everyWeekday = /^Every (Sun|Mon|Tue|Wed|Thu|Fri|Sat)$/.exec(recurrenceText);
+    if (everyWeekday) return `${OG_FULL_WEEKDAY[everyWeekday[1]]}s`;
     const namesADay = /\b(Sun|Mon|Tue|Wed|Thu|Fri|Sat)\b/.test(recurrenceText);
     if (namesADay) return recurrenceText;
     if (!day) return /^recurring$/i.test(recurrenceText) ? '' : recurrenceText;
