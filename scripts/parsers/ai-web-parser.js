@@ -66,6 +66,16 @@ const CACHE_TOUCH_INTERVAL_DAYS = 7;
 // happens inside the cache read — before any HTTP request — an aborted
 // probe costs zero AI calls, and because the miss counter is not touched,
 // a probe that aborts and is extracted on a later run is ONE miss, not two.
+// Distinct clock times at which an image stops being one event's artwork and
+// starts being a schedule — the same threshold SharedCore's programme census
+// set from the 669-flyer corpus.
+const MULTI_EVENT_PROGRAMME_CLOCK_TIMES = 4;
+// Below this many days apart, a start/end pair is an ordinary event (including
+// an overnight or a weekender) and is never re-read as a list of occurrences.
+const LISTED_OCCURRENCE_MIN_SPAN_DAYS = 8;
+// How many images to CONSIDER per page. Not an OCR budget — the budget below
+// counts only uncached reads — just a bound on scanning an enormous document.
+const OCR_CANDIDATE_SCAN_LIMIT = 300;
 const MULTI_EVENT_MISS_PROBE_ABORT = 'MULTI_EVENT_MISS_PROBE_ABORT';
 
 // Evidence-pointer rescue (LOG-ONLY observation phase): the extraction model
@@ -1340,7 +1350,27 @@ class AiWebParser {
             // Multi-event pages need broad coverage (one flyer per segment, with the
             // segment top-up as backstop); single-event pages only need the main flyer,
             // so respect the configured per-page image budget there.
-            const ocrImageCap = pageClassification === 'multi-event-page' ? 10 : ocrConfig.maxImages;
+            // No default ceiling: read every image the page offers. A budget
+            // here does not save the work, it DEFERS it — the first run of a
+            // site shipped an incomplete answer and which events a site
+            // produced changed run to run by page order alone (Lumberyard's
+            // South Seattle Bear Social flyer was never read; its PUP SOCIAL
+            // came and went). The vision model is local and the standing
+            // doctrine is not to optimise for fewer calls. An explicit
+            // per-parser `ai.ocr.maxImages` is still honoured exactly, as the
+            // escape hatch for a pathological page.
+            const configuredOcrCap = parserConfig && parserConfig.ai && parserConfig.ai.ocr
+                && Number.isFinite(Number(parserConfig.ai.ocr.maxImages))
+                ? Number(parserConfig.ai.ocr.maxImages)
+                : null;
+            // NO DEFAULT CEILING. The vision model is local and reading an
+            // image costs nothing worth saving; a cap here never fixed
+            // anything, it only hid a downstream bug (stale flyers outranking
+            // the page's own dates — corrected by the page-year precedence in
+            // normalizeAiEvent). An explicit per-parser ai.ocr.maxImages is
+            // still honoured as the escape hatch.
+            const defaultOcrCap = Infinity;
+            const ocrImageCap = configuredOcrCap === null ? defaultOcrCap : configuredOcrCap;
             ocrResults = runOcr
                 ? await this.extractOcrFromAllImages(effectiveHtmlData, ocrConfig, httpAdapter, ocrImageCap)
                 : [];
@@ -9068,10 +9098,13 @@ class AiWebParser {
         const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
         const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
 
-        // Gather more candidates than we intend to OCR so uninteresting images
-        // (logos, icons, static assets) don't consume slots meant for real flyers.
-        const maxCandidates = Math.max(10, maxImages);
-        const candidateUrls = this.extractOrderedImageUrlsFromHtml(html, sourceUrl, maxCandidates);
+        // LOOK at every image the page offers. The old candidate ceiling was
+        // max(10, maxImages), so an image-only site was never even considered
+        // past its tenth picture: thelumberyardbar.com publishes its whole
+        // calendar as flyers on one page, and the South Seattle Bear Social
+        // flyer — perfectly readable, "Every Sunday 2pm-6pm" — sat outside the
+        // ceiling and produced no event.
+        const candidateUrls = this.extractOrderedImageUrlsFromHtml(html, sourceUrl, OCR_CANDIDATE_SCAN_LIMIT);
 
         // Pre-filter out uninteresting images before OCR
         const interestingUrls = candidateUrls.filter(url => !this.isLikelyUninterestingImageUrl(url));
@@ -9080,9 +9113,43 @@ class AiWebParser {
         }
 
         // Prefer the full-size original over its own resized derivative.
-        const imageUrls = this.dropResizedImageUrlsWithOriginal(interestingUrls).slice(0, maxImages);
-        if (imageUrls.length < interestingUrls.length || candidateUrls.length >= maxCandidates) {
-            console.log(`🤖 AI Web: OCR image cap (${maxImages}) applied — images beyond the cap rely on segment top-up`);
+        const orderedUrls = this.dropResizedImageUrlsWithOriginal(interestingUrls);
+
+        // The cap counts only images this run must actually READ. An image the
+        // OCR cache already holds costs nothing, so spending a cap slot on it
+        // was pure waste — and worse, non-deterministic: cached flyers pushed
+        // unread ones out by page order, so which events a site produced
+        // changed run to run (Lumberyard's PUP SOCIAL was kept in one run and
+        // missing from the next). Reading every cached image and up to
+        // `maxImages` NEW ones converges on full coverage across runs while no
+        // single run ever does more than the budget's worth of fresh work.
+        // READ THEM ALL. There is no per-page OCR budget: the vision model is
+        // local, the owner's standing doctrine is never to optimise for fewer
+        // calls, and a budget here does not save the work — it defers it, so
+        // the FIRST run of any site ships an incomplete answer and the events a
+        // site produced changed between runs purely by page order
+        // (Lumberyard's PUP SOCIAL was kept in one run and missing from the
+        // next; its South Seattle Bear Social flyer was never read at all).
+        // Cached images cost nothing; new ones cost local model time, which is
+        // the thing the owner would rather spend than lose an event.
+        // OCR_CANDIDATE_SCAN_LIMIT above is the only bound, and it exists to
+        // stop this walking an enormous document, not to ration reads.
+        const cachedUrls = [];
+        const freshUrls = [];
+        for (const url of orderedUrls) {
+            const cached = await this.readCachedOcrResult(url, ocrConfig).catch(() => null);
+            (cached ? cachedUrls : freshUrls).push(url);
+        }
+        // Cached images never count against a ceiling — they cost nothing, and
+        // spending slots on them is what made coverage depend on page order.
+        const readableFresh = Number.isFinite(maxImages) && maxImages >= 0
+            ? freshUrls.slice(0, maxImages)
+            : freshUrls;
+        const imageUrls = cachedUrls.concat(readableFresh);
+        if (imageUrls.length > 0) {
+            const withheld = freshUrls.length - readableFresh.length;
+            const suffix = withheld > 0 ? `, ${withheld} withheld by the configured ocr.maxImages ceiling` : '';
+            console.log(`🤖 AI Web: OCR sweep — ${imageUrls.length} image(s): ${cachedUrls.length} cached (free), ${readableFresh.length} read now${suffix}`);
         }
 
         // Batch OCR requests with limited concurrency
@@ -12523,6 +12590,7 @@ class AiWebParser {
             // === Build Evidence Context ===
             // We use the snippet text directly as evidence - this is what we sent to the AI
             const snippetEvidenceContext = this.buildAiEvidenceContextFromText(snippetText);
+            let pageOnlyEvidenceContext = null;
             const snippetImageEvidence = this.buildImageEvidenceContextFromText(snippetText, htmlData && typeof htmlData.url === 'string' ? htmlData.url : '');
 
             // === Include OCR Evidence if Available ===
@@ -12544,6 +12612,17 @@ class AiWebParser {
                     const ocrText = ocrLines.join('\n\n');
                     const combinedText = ocrText ? `${ocrText}\n\n${snippetText}` : snippetText;
                     const snippetEvidenceContextWithOcr = this.buildAiEvidenceContextFromText(combinedText);
+                    // Keep the PAGE-ONLY view before the OCR text is folded in.
+                    // A flyer is often last year's file left on this year's page
+                    // (beefdip.com serves /uploads/2026/01/… beside copy reading
+                    // "SATURDAY JANUARY 23, 2027"), so once the whole image set
+                    // is read — no longer rationed to ten — the stale dates in
+                    // those pictures start winning. Reading more images is
+                    // right; letting what they say outrank the page's own words
+                    // about WHEN something happens is not. The gate consults
+                    // this to keep dates page-first; every other field still
+                    // sees the merged evidence exactly as before.
+                    pageOnlyEvidenceContext = this.buildAiEvidenceContextFromText(snippetText);
                     // Replace evidence context with OCR-inclusive version
                     Object.assign(snippetEvidenceContext, snippetEvidenceContextWithOcr);
                     // Also update image evidence with OCR image URLs
@@ -12559,7 +12638,7 @@ class AiWebParser {
             // Validate extracted fields
             const partialValidation = this.validateAiEventEvidence(partial, htmlData, parserConfig, remainingFields, {
                 evidenceContext: snippetEvidenceContext,
-                validationContext: { imageEvidenceUrls: snippetImageEvidence, cityConfig: cityConfig }
+                validationContext: { imageEvidenceUrls: snippetImageEvidence, cityConfig: cityConfig, pageOnlyEvidenceContext }
             });
             let validatedPartial = partialValidation.event || {};
             // Dropped-value memo (internal, additive): per-snippet reports are
@@ -16943,6 +17022,31 @@ TEXT:
             return null;
         }
 
+        // A flyer that LISTS the dates one party runs on is not a party that
+        // runs for three months. thelumberyardbar.com's "Diapers & Drinks —
+        // Catch the next ones on: AUGUST 29TH & NOVEMBER 27TH" was read as
+        // start=Aug 29, end=Nov 27, and shipped as a single 90-day event.
+        // When the two dates are cited from separate places joined by LIST
+        // punctuation (& / and / comma) rather than range language (to,
+        // through, until, an en dash), the end is another occurrence: keep the
+        // first date as this event and hand the rest to the expansion pass.
+        // REPORT-ONLY date-conflict census. Two sources on one site disagree
+        // about when an event is, and NEITHER medium is authoritative: on
+        // beefdip.com the stale side is the flyers (last year's files beside
+        // copy reading "JANUARY 23, 2027"), while on rockbarnyc.com the stale
+        // side was the page TEXT (frozen at 2024 while the real calendar moved
+        // to a widget). A precedence rule that trusts either one by nature
+        // breaks the site that is broken the other way, so this counts the
+        // conflicts and changes nothing.
+        this.reportPageDateConflict(startDate, htmlData, timezone, title);
+        let pendingListedOccurrenceDates = null;
+        const listedDates = this.readListedOccurrenceDates(aiEvent, startDate, endDate, htmlData);
+        if (listedDates) {
+            console.log(`📅 AI Web: "${title}" states ${listedDates.all.length} separate dates, not a span — expanding instead of running ${listedDates.spanDays} days`);
+            endDate = null;
+            pendingListedOccurrenceDates = listedDates.rest;
+        }
+
         // Deterministic title date-strip: source sites bake the date into the
         // title ("CHUNK DORE ALLEY - Saturday July 25th") — on a calendar that
         // date is pure redundancy (startDate carries it), and a dated variant
@@ -17121,6 +17225,13 @@ TEXT:
         // segment rule as the og:image fill above: page-wide meta artwork is
         // not attributable to one segment of a multi-event page.
         this.applyImageSlots(event, htmlData, { allowPageMetaCandidates: !dataFlags.segment });
+
+        // Single underscore on purpose: the `__` field this was read from is a
+        // parser-internal that never leaves normalizeAiEvent, and the expansion
+        // pass runs later in shared-core with the whole run in view.
+        if (pendingListedOccurrenceDates && pendingListedOccurrenceDates.length > 0) {
+            event._listedOccurrenceDates = pendingListedOccurrenceDates;
+        }
 
         return event;
     }
@@ -18529,8 +18640,153 @@ TEXT:
         if (!image) return event;
         const canonical = this.canonicalizeImageUrlForComparison(image);
         const metaImageUrls = this.getPageMetaImageUrls(htmlData);
-        event.imageSource = canonical && metaImageUrls.includes(canonical) ? 'og-image' : 'page';
+        const source = canonical && metaImageUrls.includes(canonical) ? 'og-image' : 'page';
+        // A WEEKLY LISTING GRAPHIC is not this event's artwork. thelumberyardbar.com
+        // publishes its whole calendar as one image per week ("LUMBER YARD BAR
+        // EVENTS · TUE AUG 25 DRINK & DRAW 7PM · WED AUG 26 QUEERAOKE 8PM · …"),
+        // so every event split out of it inherited the same schedule picture as
+        // its hero image — BRUNCH shipped wearing a poster of nine other nights.
+        // Only images WE picked off the page are dropped: an image the site
+        // itself nominates through structured data is the site's own editorial
+        // choice and is stamped before this runs (bearitmtl.com deliberately
+        // features a weekend programme, and keeps it).
+        if (this.isMultiEventProgrammeImage(image)) {
+            console.log(`🖼️ AI Web: Dropped "${event.title || 'event'}" image — reads as a multi-event listing graphic, not this event's artwork: ${image}`);
+            delete event.image;
+            return event;
+        }
+        event.imageSource = source;
         return event;
+    }
+
+    // Expansion half of the listed-occurrence fix, run once per parser with
+    // every event of the run in view (mirrors applyDerivedCadenceStamps).
+    // normalizeAiEvent kept the FIRST stated date and stamped the rest; each
+    // one becomes its own event, cloned from the original so it carries the
+    // same venue, artwork and provenance. Mutates the array in place.
+    expandListedOccurrenceEvents(events) {
+        if (!Array.isArray(events)) return;
+        const additions = [];
+        for (const event of events) {
+            const dates = event && Array.isArray(event._listedOccurrenceDates)
+                ? event._listedOccurrenceDates
+                : null;
+            if (!dates || dates.length === 0) continue;
+            delete event._listedOccurrenceDates;
+            for (const iso of dates) {
+                const start = new Date(iso);
+                if (Number.isNaN(start.getTime())) continue;
+                const clone = { ...event };
+                delete clone._listedOccurrenceDates;
+                delete clone.key;
+                clone.startDate = start;
+                // The original's end described the LAST listed date, never this
+                // occurrence — an occurrence the flyer gave no end for has none.
+                clone.endDate = null;
+                additions.push(clone);
+                console.log(`📅 AI Web: Expanded "${event.title || 'event'}" to its ${start.toISOString().slice(0, 10)} occurrence (flyer listed several dates)`);
+            }
+        }
+        events.push(...additions);
+    }
+
+    // Correct an event's YEAR to the one the page states next to its own
+    // month and day. Returns the input unchanged whenever anything is
+    // ambiguous: no page text, no month/day match, the extracted year already
+    // stated, or more than one candidate year adjacent to that date.
+    reportPageDateConflict(startDate, htmlData, timezone, title) {
+        if (!(startDate instanceof Date) || Number.isNaN(startDate.getTime())) return;
+        const text = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        if (!text) return;
+        const month = String(startDate.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(startDate.getUTCDate()).padStart(2, '0');
+        const currentYear = startDate.getUTCFullYear();
+        const stated = [];
+        for (let year = currentYear - 2; year <= currentYear + 2; year++) {
+            if (this.sourceStatesValueYear(`${year}-${month}-${day}`, text)) stated.push(year);
+        }
+        if (stated.length === 1 && stated[0] !== currentYear) {
+            console.log(`📅 DATE CONFLICT: "${title || 'event'}" is dated ${currentYear}-${month}-${day} but the page states ${stated[0]}-${month}-${day} (report-only — neither source is authoritative by nature)`);
+            return;
+        }
+        if (stated.length > 0) return;
+        // ORPHAN DATE: the page states dates, just never this one. That is the
+        // shape a stale flyer makes — beefdip.com advertises Jan 23-31 2027
+        // while its gallery still carries last year's Feb 1-2 posters, and the
+        // events those posters produce correspond to nothing the site is
+        // currently saying. A page that states NO dates has no opinion and
+        // raises nothing here: its flyers are the only record (Lumberyard).
+        if (!this.pageTextStatesAnyDate(text)) return;
+        console.log(`📅 DATE ORPHAN: "${title || 'event'}" is dated ${currentYear}-${month}-${day}, which appears nowhere in this page's own text (report-only)`);
+    }
+
+    // Does this page's text state any date at all?
+    pageTextStatesAnyDate(text) {
+        const source = String(text || '');
+        if (!source) return false;
+        if (/\b(20\d{2})-(\d{2})-(\d{2})\b/.test(source)) return true;
+        if (/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/.test(source)) return true;
+        return /\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?\s+\d{1,2}\b/i.test(source);
+    }
+
+    // Two dates a flyer LISTS as separate occurrences, or null when they read
+    // as a real span. Requires all of: a start and end far enough apart that no
+    // single party plausibly runs that long, evidence strings that are
+    // DIFFERENT text (a genuine range is usually cited from one phrase), and
+    // source text that joins the two with list punctuation rather than range
+    // language. Every check fails closed — an unreadable case stays a span,
+    // because splitting a real multi-day festival would be worse than leaving
+    // an odd one long.
+    readListedOccurrenceDates(aiEvent, startDate, endDate, htmlData) {
+        if (!(startDate instanceof Date) || !(endDate instanceof Date)) return null;
+        const spanMs = endDate.getTime() - startDate.getTime();
+        const spanDays = spanMs / (24 * 60 * 60 * 1000);
+        if (!Number.isFinite(spanDays) || spanDays < LISTED_OCCURRENCE_MIN_SPAN_DAYS) return null;
+        const evidence = aiEvent && aiEvent.__fieldEvidence && typeof aiEvent.__fieldEvidence === 'object'
+            ? aiEvent.__fieldEvidence
+            : {};
+        const startEvidence = String(evidence.startDate || evidence.startdate || '').trim();
+        const endEvidence = String(evidence.endDate || evidence.enddate || '').trim();
+        if (!startEvidence || !endEvidence) return null;
+        if (startEvidence.toLowerCase() === endEvidence.toLowerCase()) return null;
+        // Range language anywhere in either citation means the source meant a span.
+        if (/\b(?:to|through|thru|until|till|[-\u2010-\u2015])\b|[\u2010-\u2015]/i.test(`${startEvidence} ${endEvidence}`)) return null;
+        // The two citations must be joined as a LIST in the source text.
+        const corpus = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        const joined = this.sourceJoinsCitationsAsList(corpus, startEvidence, endEvidence);
+        if (!joined) return null;
+        return { all: [startDate, endDate], rest: [endDate.toISOString()], spanDays: Math.round(spanDays) };
+    }
+
+    // Do the two evidence strings appear in the source separated only by list
+    // punctuation ("AUGUST 29TH & NOVEMBER 27TH", "Sep 4, Sep 11")? Returns
+    // false when either citation is absent, so a hallucinated quote decides
+    // nothing.
+    sourceJoinsCitationsAsList(sourceText, startEvidence, endEvidence) {
+        if (!sourceText) return false;
+        const haystack = sourceText.toLowerCase();
+        const first = haystack.indexOf(startEvidence.toLowerCase());
+        const second = haystack.indexOf(endEvidence.toLowerCase());
+        if (first < 0 || second < 0 || second <= first) return false;
+        const between = haystack.slice(first + startEvidence.length, second);
+        if (between.length > 12) return false;
+        return /^[\s]*(?:&|and|,|\+|\/)[\s]*$/.test(between);
+    }
+
+    // Does this image list SEVERAL events? Two independent reads, either of
+    // which is enough: the vision model's own classification, and the clock
+    // census that separates a programme from a flyer (a dedicated flyer states
+    // a doors time or a start-end range; a programme states one per entry —
+    // see SharedCore.countDistinctFlyerClockTimes for the corpus that set the
+    // threshold at 4). The model's label alone is not sufficient: it called
+    // BeefDip's own "BEAR WEEK SCHEDULE" an event-flyer.
+    isMultiEventProgrammeImage(imageUrl) {
+        const verdict = this.getOcrImageVerdict(imageUrl);
+        if (!verdict) return false;
+        if (String(verdict.imageClassification || '').trim().toLowerCase() === 'multi-event-flyer') return true;
+        if (!this.core || typeof this.core.countDistinctFlyerClockTimes !== 'function') return false;
+        const text = typeof verdict.text === 'string' ? verdict.text : '';
+        return this.core.countDistinctFlyerClockTimes(text) >= MULTI_EVENT_PROGRAMME_CLOCK_TIMES;
     }
 
     // ========================================================================
