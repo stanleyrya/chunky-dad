@@ -123,13 +123,27 @@ function buildEventHtml(cityKey, cityName, event, ctx) {
   if (event.bar) descriptionParts.push(`@ ${event.bar}`);
   const description = sanitize(descriptionParts.filter(Boolean).join(' · ')) || `${cityName} bear event`;
   const url = `${SITE_BASE}/${cityKey}/${encodeURIComponent(event.slug)}/`;
-  // The flyer the OG card should paint. The artboard is 1200×630, so the
-  // LANDSCAPE candidate wins when the event has one; otherwise the primary
-  // image (orientation unknown for most URLs), then the vertical slot — the
-  // art slot is object-fit:contain, so portrait artwork is never distorted and
-  // showing it beats showing nothing. Finally nothing, which leaves the
-  // text-only card that has always been generated.
-  const flyerUrl = String(event.imageHorizontal || event.image || event.imageVertical || '').trim();
+  // The flyer the OG card should paint: the event's OWN artwork first.
+  //
+  // This used to ask for the LANDSCAPE candidate, because the artboard is
+  // 1200×630 and a wide picture fills it. That preference cost more than it
+  // bought: an `imageHorizontal` is very often a platform's banner crop
+  // rather than a picture in its own right. BEEFMINCE Brief Encounter carried
+  // a 2026 1080×1080 poster in `image` and, in `imageHorizontal`, a 2024
+  // attachment cropped to 768×461 and upscaled to 1300×630 — the title cut
+  // off top and bottom, grey bars down the sides. The card was choosing shape
+  // over content and showing the wrong year's artwork.
+  //
+  // Shape no longer needs to decide: the card shows any aspect whole (never
+  // cropped), and wide artwork can take the top of the card instead of a side
+  // column. So the primary leads, and the orientation slots are what they
+  // always were — alternates, for when there is no primary.
+  //
+  // NOTE: js/dynamic-calendar-loader.js still asks getFlyerCandidates for
+  // 'landscape' on the site's cards, and has a crop rule that only catches an
+  // alternate built from the SAME asset — which this is not. The site card
+  // therefore still shows the bad crop for these five events.
+  const flyerUrl = String(event.image || event.imageHorizontal || event.imageVertical || '').trim();
 
   // What the share card paints, handed over as data instead of left for
   // tools/generate-og-images.js to reverse-engineer out of og:description by
