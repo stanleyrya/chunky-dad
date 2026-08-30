@@ -453,12 +453,24 @@
     <footer class="page-foot">Artboards are true 1200×630 compositions scaled to fit — what you see is what the OG crop gets.</footer>
   </main>
 
+  <script>
+    // Explorations the owner has ruled out. Listed here rather than deleted so
+    // any of them is one edit away from coming back — and so the machinery a
+    // hidden layout needs (the NEAT CDN module, the css-pattern fetch, the
+    // pattern dropdown) can be skipped while it is not on screen.
+    window.OG_HIDDEN_VARIANTS = ['neat', 'aurora', 'silk', 'c-pattern', 'c-bold', 'c-side'];
+  </script>
   <script type="module">
-    // The actual NEAT gradient library from neat.firecms.co (three.js bundled)
-    import("https://esm.sh/@firecms/neat@1.0.1")
-      .then(m => { window.NeatGradient = m.NeatGradient; })
-      .catch(e => console.warn('NEAT library failed to load — Neat sample falls back to CSS mesh', e))
-      .finally(() => window.dispatchEvent(new Event('neat-ready')));
+    // The actual NEAT gradient library from neat.firecms.co (three.js bundled).
+    // ~1MB of three.js, so it is not fetched while the Neat sample is hidden.
+    if (window.OG_HIDDEN_VARIANTS.includes('neat')) {
+      window.dispatchEvent(new Event('neat-ready'));
+    } else {
+      import("https://esm.sh/@firecms/neat@1.0.1")
+        .then(m => { window.NeatGradient = m.NeatGradient; })
+        .catch(e => console.warn('NEAT library failed to load — Neat sample falls back to CSS mesh', e))
+        .finally(() => window.dispatchEvent(new Event('neat-ready')));
+    }
   </script>
   <!-- The card that actually ships. Same module tools/generate-og-images.js
        renders in puppeteer, so the first artboard below is not an impression
@@ -499,6 +511,8 @@
       const paletteSource = document.getElementById('paletteSource');
       const faviconChip = document.getElementById('faviconChip');
       const grid = document.getElementById('grid');
+      // see window.OG_HIDDEN_VARIANTS in the head
+      const HIDDEN = new Set(window.OG_HIDDEN_VARIANTS || []);
 
       // ---------- color utilities ----------
       function hexToRgb(hex) {
@@ -608,7 +622,9 @@
           } catch (e) {}
           this.populateCities();
           this.attachHandlers();
-          await this.loadCssPatterns();
+          // both the fetch and the control exist only for the CSS Pattern layout
+          if (HIDDEN.has('c-pattern')) cssPatternSelect.hidden = true;
+          else await this.loadCssPatterns();
           await this.loadCity(this.currentCity);
           logger.componentLoad(COMPONENT, 'OG Image Studio ready');
         }
@@ -1266,11 +1282,16 @@
               <div class="preview">${v.html}</div>
             </div>`;
 
+          const shown = list => list.filter(v => !HIDDEN.has(v.key));
+          const explorations = shown(this.variants(data, p));
+          const classics = shown(this.classics(data, p));
+          const section = (title, cards) => cards.length
+            ? `<div class="section-divider">${title}</div>` + cards.map(cardHtml).join('')
+            : '';
+
           grid.innerHTML = cardHtml(this.shippingVariant())
-            + '<div class="section-divider">Explorations — sketches, not what ships</div>'
-            + this.variants(data, p).map(cardHtml).join('')
-            + '<div class="section-divider">Classics — layouts from the previous version</div>'
-            + this.classics(data, p).map(cardHtml).join('');
+            + section('Explorations — sketches, not what ships', explorations)
+            + section('Classics — layouts from the previous version', classics);
 
           this.fillOgFrames();
           this.fitArtboards();
