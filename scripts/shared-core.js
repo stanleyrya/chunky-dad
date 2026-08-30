@@ -3537,6 +3537,40 @@ class SharedCore {
         return minutes.size;
     }
 
+    // The ASSET a URL points at: host + path, query ignored. imgix and its
+    // kind express crops and resizes as query params, so two crops of one
+    // photograph share an asset key while two different photographs never do.
+    imageAssetKey(value) {
+        const parts = this.getUrlRuleParts(value);
+        if (!parts) return '';
+        return `${parts.host}/${parts.segments.join('/')}`;
+    }
+
+    // See the orientation-slot rung in resolveConflictDeterministically.
+    resolveOrientationImageConflict(valueA, valueB, context) {
+        const records = context && context.records ? context.records : null;
+        if (!records) return null;
+        const keyA = this.imageAssetKey(valueA);
+        const keyB = this.imageAssetKey(valueB);
+        if (!keyA || !keyB || keyA === keyB) return null;
+
+        const primaries = new Set();
+        [records.a, records.b].forEach(record => {
+            const image = record && typeof record.image === 'string' ? record.image : '';
+            const key = image ? this.imageAssetKey(image) : '';
+            if (key) primaries.add(key);
+        });
+        if (primaries.size === 0) return null;
+
+        const matchesA = primaries.has(keyA);
+        const matchesB = primaries.has(keyB);
+        if (matchesA === matchesB) return null;
+        return {
+            winner: matchesA ? 'a' : 'b',
+            reason: "orientation slot cut from the event's own primary artwork beats a different asset"
+        };
+    }
+
     resolveConflictDeterministically(fieldName, valueA, valueB, context = null) {
         // Corrected-time healing (doors-vs-party, run 20260812-001228 FURBALL
         // NOLA): wave 2's extraction fix promoted a DOORS start to the
@@ -3552,6 +3586,28 @@ class SharedCore {
             && context.sideLabels.a === 'calendar' && context.sideLabels.b === 'scraped') {
             const doorsDecision = this.resolveDoorsCorrectedStartConflict(valueA, valueB, context.records.a, context.records.b);
             if (doorsDecision) return doorsDecision;
+        }
+
+        // Orientation-slot rung (run 20260830-192019, BEEFMINCE Brief
+        // Encounter). imageHorizontal/imageVertical exist to hold THIS event's
+        // artwork in another shape — a crop of the poster, not a different
+        // picture. The scraper offered the correct one that run
+        // (…/2026-08-17/6602b147….jpg?rect=0,216,1080,648&w=1300&h=630, a wide
+        // crop of the very asset both sides agreed was `image`) and the AI
+        // chose the calendar's stale slot instead — a 2024 attachment — with a
+        // reason wrong on both of its facts: it called 768x461 "higher
+        // resolution" than 1080x648, and read the OLDER date as evidence of
+        // being the original rather than of being out of date. Five events
+        // carried the same shape.
+        //
+        // The signal is deterministic and already in the URLs: whichever
+        // candidate is built from the same asset as the event's primary image
+        // is the one that belongs to this event. Fails closed — both matching,
+        // neither matching, no records context, or one side unparseable all
+        // fall through to arbitration exactly as before.
+        if (fieldName === 'imageHorizontal' || fieldName === 'imageVertical') {
+            const orientationDecision = this.resolveOrientationImageConflict(valueA, valueB, context);
+            if (orientationDecision) return orientationDecision;
         }
 
         const urlA = this.getUrlRuleParts(valueA);
