@@ -489,12 +489,18 @@
   <script>
     document.write('<scr' + 'ipt src="../tools/og-card.js?t=' + Date.now() + '"></scr' + 'ipt>');
   </script>
-  <script src="../js/logger.js"></script>
-  <script src="../js/city-config.js"></script>
-  <script src="../js/event-schema.js"></script>
-  <script src="../js/calendar-core.js"></script>
-  <script src="../js/filename-utils.js"></script>
-  <script src="../js/dynamic-calendar-loader.js"></script>
+  <script>
+    // The site's own modules, cache-busted like the card above. Same reason,
+    // and it has bitten once for real: a browser holding a calendar-core.js
+    // from before getTimeZoneLabel existed threw inside render() and the grid
+    // came up EMPTY — "none of the OG images are showing up any more". A
+    // studio previews code that changes by the minute; it should never be
+    // looking at yesterday's copy of it.
+    ['logger', 'city-config', 'event-schema', 'calendar-core', 'filename-utils', 'dynamic-calendar-loader']
+      .forEach(function (name) {
+        document.write('<scr' + 'ipt src="../js/' + name + '.js?t=' + Date.now() + '"></scr' + 'ipt>');
+      });
+  </script>
   <script>
     (function(){
       const COMPONENT = 'EVENT';
@@ -1329,6 +1335,21 @@
               <div class="preview">${v.html}</div>
             </div>`;
 
+          this.pendingOgHtml = {};
+          try {
+            this.paintGrid(cardHtml, data, p);
+          } catch (error) {
+            // An empty grid reads as "the images broke" and says nothing about
+            // why. This one time it was a stale cached script; next time it
+            // will be something else, and the page should still tell you.
+            logger.componentError(COMPONENT, 'Could not render the grid', error);
+            grid.innerHTML = '<div class="empty-note">Could not render: '
+              + escapeHtml(error && error.message ? error.message : String(error))
+              + '<br><br>If this page was open before the last change, hard-reload it.</div>';
+          }
+        }
+
+        paintGrid(cardHtml, data, p) {
           const shown = list => list.filter(v => !HIDDEN.has(v.key));
           const explorations = shown(this.variants(data, p));
           const classics = shown(this.classics(data, p));
@@ -1336,7 +1357,6 @@
             ? `<div class="section-divider">${title}</div>` + cards.map(cardHtml).join('')
             : '';
 
-          this.pendingOgHtml = {};
           grid.innerHTML = cardHtml(this.shippingVariant())
             + cardHtml(this.shippingVariant(true))
             + section('Explorations — sketches, not what ships', explorations)
