@@ -509,8 +509,8 @@ ${m ? '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/ma
   body.no-art .title { font-size: 88px; }
   body.no-art .title.t-sm { font-size: 70px; }
   body.no-art .title.t-xs { font-size: 54px; }
-  body.no-art .row { font-size: 38px; }
-  body.no-art .ico { flex: 0 0 35px; width: 35px; height: 35px; }
+  body.no-art .row { font-size: 44px; }
+  body.no-art .ico { flex: 0 0 40px; width: 40px; height: 40px; }
   body.no-art .fav { flex: 0 0 88px; width: 88px; height: 88px; border-radius: 20px; }
 
   /* Title + rows sit in the OPTICAL centre with the address pinned to the
@@ -546,18 +546,18 @@ ${m ? '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/ma
      full event name beats an ellipsis in a share image */
   .title.t-xs { font-size: 42px; letter-spacing: -0.6px; -webkit-line-clamp: 4; }
 
-  .rows { display: flex; flex-direction: column; gap: 18px; }
+  .rows { display: flex; flex-direction: column; gap: 19px; }
   .row {
     display: flex;
     align-items: center;
-    gap: 17px;
-    font-size: 34px;
+    gap: 18px;
+    font-size: 38px;
     line-height: 1.3;
     color: #fff;
   }
   .row:first-child { font-weight: 600; }
   .row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .ico { flex: 0 0 31px; width: 31px; height: 31px; opacity: 0.9; }
+  .ico { flex: 0 0 34px; width: 34px; height: 34px; opacity: 0.9; }
 
   /* The map is an OPTION, and an inset: bottom-right corner, floating over
      the brand colour. It never takes the art column and never displaces the
@@ -605,13 +605,13 @@ ${m ? '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/ma
     padding-top: 30px;
     display: flex;
     align-items: center;
-    gap: 15px;
-    font-size: 29px;
+    gap: 16px;
+    font-size: 33px;
     font-weight: 600;
     letter-spacing: 0.2px;
     color: rgba(255, 255, 255, 0.82);
   }
-  .brand img { width: 44px; height: 44px; border-radius: 12px; }
+  .brand img { width: 50px; height: 50px; border-radius: 13px; }
   /* The copy is NOT padded away from the inset: reserving 340px for it
      crushed the title and truncated every row on cards that also have a
      flyer. The map sits in the corner the copy already leaves empty (the
