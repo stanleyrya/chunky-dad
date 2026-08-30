@@ -5,12 +5,11 @@
  *   tools/generate-og-images.js   renders it in puppeteer and commits the PNG
  *   testing/test-og-event-layouts-calendar.html   previews it in an iframe
  *
- * It is the aurora event card (styles.css, `.event-card.detailed.aurora`)
- * unfolded for a landscape artboard: the same three-stop gradient built from
- * the event's own artwork, the same frosted glass panel carrying every piece
- * of information, the same favicon tile, the same icon rows — with the flyer
- * beside the panel instead of above it, because 1200×630 is wide and a card
- * is tall.
+ * It is the city page's own language on a landscape artboard: the event's
+ * extracted brand colour laid flat, exactly as the calendar's event pills and
+ * the bottom sheet wear it (both are background: var(--c1)); the same favicon
+ * tile and icon rows the aurora cards use; the flyer whole and uncropped. No
+ * glass panel — that belongs to a 300px phone card, not to 1200×630.
  *
  * COLOUR MATH BELOW IS A PORT. The reference implementation is
  * js/dynamic-calendar-loader.js (parseHexColor → deriveAuroraColors, plus the
@@ -237,6 +236,9 @@ function row(icon, value) {
  */
 function buildOgCardHtml(data) {
     const d = data || {};
+    // c2/c3 come back unused: the ground is flat c1. The derivation is kept
+    // whole rather than trimmed to one stop because it is a port of the
+    // loader's, and the two are meant to stay line-for-line comparable.
     const aurora = deriveAuroraColors(d.colors) || AURORA_FALLBACK;
     const flyer = safeUrl(d.flyerUrl);
     const favicon = safeUrl(d.faviconUrl);
@@ -269,21 +271,16 @@ function buildOgCardHtml(data) {
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; width: 1200px; height: 630px; overflow: hidden; }
   body {
-    /* The extracted brand colour, worn the way the city page's bottom sheet
-       wears it: c1 SOLID as the ground (styles.css, .rail-sheet .sheet-panel
-       — background: var(--c1)), with the card's other two stops laid over it
-       as atmosphere. The aurora card's own recipe — three stops over #171a33 —
-       is tuned for a 300px box; spread across 1200×630 it diluted every brand
-       into the same slate wash. c1 is already banded for legible white text
-       (toneForAurora, 0.2–0.52 brightness), which is exactly why the sheet can
-       sit on it undiluted too. */
-    background:
-      /* a whisper of depth at the foot, so a flat brand field doesn't read as
-         a colour swatch and the address line has something to sit on */
-      radial-gradient(140% 90% at 50% 118%, rgba(6, 8, 20, 0.3) 0%, transparent 62%),
-      radial-gradient(110% 140% at 94% 2%, ${aurora.c2} 0%, transparent 70%),
-      radial-gradient(120% 150% at 2% 106%, ${aurora.c3} 0%, transparent 68%),
-      ${aurora.c1};
+    /* The extracted brand colour, FLAT — the way the city page paints it.
+       Every solid surface there is the same one value: the calendar's event
+       pills (styles.css, .dusk .event-item) and the bottom sheet
+       (.rail-sheet .sheet-panel) are both background: var(--c1), no gradient.
+       The aurora card's own recipe — three stops over #171a33 — is tuned for a
+       300px box; spread across 1200×630 it diluted every brand into the same
+       slate wash. c1 is already banded for legible white text (toneForAurora,
+       0.2–0.52 brightness), which is why every one of these surfaces can wear
+       it undiluted. */
+    background: ${aurora.c1};
     color: #fff;
     font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -356,7 +353,6 @@ function buildOgCardHtml(data) {
     font-weight: 700;
     line-height: 1.06;
     letter-spacing: -1.4px;
-    text-shadow: 0 2px 18px rgba(6, 8, 20, 0.28);
     /* the last resort, after the size steps below have already tried */
     display: -webkit-box;
     -webkit-line-clamp: 3;
@@ -376,7 +372,6 @@ function buildOgCardHtml(data) {
     font-size: 29px;
     line-height: 1.3;
     color: #fff;
-    text-shadow: 0 1px 12px rgba(6, 8, 20, 0.25);
   }
   .row:first-child { font-weight: 600; }
   .row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
