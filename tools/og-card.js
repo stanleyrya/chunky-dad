@@ -190,6 +190,91 @@ function deriveAuroraColors(record) {
     };
 }
 
+// ── when it happens ──────────────────────────────────────────────────────────
+const OG_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+/**
+ * The zone an event's times are in, as something short enough for a card:
+ * 'ET', 'CT', 'PT' for the US, 'GMT+2' for everywhere the generic name is a
+ * sentence ("Netherlands Time"). Empty when the zone is unknown or unusable —
+ * a wrong zone on a share image is worse than none.
+ */
+function shortTimeZone(timeZone, when) {
+    if (!timeZone) return '';
+    const at = when instanceof Date && !isNaN(when.getTime()) ? when : new Date();
+    const read = (style) => {
+        try {
+            const part = new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: style })
+                .formatToParts(at).find(p => p.type === 'timeZoneName');
+            return part ? part.value : '';
+        } catch (e) {
+            return '';
+        }
+    };
+    // 'shortGeneric' is the nice one (ET, CT, PT) and is DST-proof, which
+    // matters for an image that outlives the clock change. It degrades to a
+    // whole phrase outside North America, so anything long falls back to the
+    // offset form.
+    const generic = read('shortGeneric');
+    if (generic && generic.length <= 5 && !/\s/.test(generic)) return generic;
+    const short = read('short');
+    return short && short.length <= 7 ? short : '';
+}
+
+/**
+ * The card's when-line, for every shape the calendars actually hold. Audited
+ * across all 289 events, 2026-08-30:
+ *
+ *   246  one-time, single day, with a time   -> "Sat 2/7 · 10PM-3AM ET"
+ *    15  recurring weekly, with a time       -> "Thursdays · 5PM-9PM ET"
+ *    25  multi-day run, no time (festivals)  -> "Thu 9/17 – Mon 9/21"
+ *     1  multi-day run, with a time          -> "Fri 9/11 11AM – Mon 9/14 12AM"
+ *     2  one-time, single day, no time       -> "Sat 6/20"
+ *
+ * The two callers used to build this themselves and both got it thin: a
+ * five-day festival rendered as "9/17 · Thursday", and a recurring one as
+ * "Thursday" with no date at all. It lives here now so they cannot drift.
+ *
+ * NOTHING here is relative to today ("Tonight", "This Week"): a share image is
+ * cached by other people's servers for months, so it only ever states
+ * absolutes. Multi-day matches the site's own format (formatDuskWhenText in
+ * js/dynamic-calendar-loader.js), en-dash and all.
+ *
+ * fields: { start, end, multiDay, day, time, recurring, timeZone }
+ *   start/end are LOGICAL dates (the caller's CalendarCore has the rule that
+ *   a party running to 6AM still belongs to the night before).
+ */
+function formatEventWhen(fields) {
+    const f = fields || {};
+    const start = f.start instanceof Date && !isNaN(f.start.getTime()) ? f.start : null;
+    const end = f.end instanceof Date && !isNaN(f.end.getTime()) ? f.end : null;
+    const time = String(f.time || '').trim();
+    const day = String(f.day || '').trim();
+    const md = (d) => `${d.getMonth() + 1}/${d.getDate()}`;
+    const stamp = (d) => `${OG_WEEKDAYS[d.getDay()]} ${md(d)}`;
+    const zone = time && start ? shortTimeZone(f.timeZone, start) : '';
+    const withZone = (text) => (zone ? `${text} ${zone}` : text);
+
+    // A run of days: both ends, named. The times (when there are any) belong
+    // to their own end of the range, same as the site does it.
+    if (f.multiDay && start && end) {
+        const times = time.includes('-') ? time.split('-').map(t => t.trim()) : (time ? [time] : []);
+        const head = `${stamp(start)}${times[0] ? ' ' + times[0] : ''}`;
+        const tail = `${stamp(end)}${times[1] ? ' ' + times[1] : ''}`;
+        return withZone(`${head} \u2013 ${tail}`);
+    }
+
+    // Every week, forever: the plural weekday IS the recurrence, and a single
+    // date would be a lie about a standing night.
+    if (f.recurring && day) {
+        return withZone([`${day}s`, time].filter(Boolean).join(' \u00b7 '));
+    }
+
+    // One night.
+    const head = start ? stamp(start) : day;
+    return withZone([head, time].filter(Boolean).join(' \u00b7 '));
+}
+
 // ── markup ───────────────────────────────────────────────────────────────────
 function esc(text) {
     return String(text == null ? '' : text).replace(/[&<>"]/g, ch => (
@@ -553,6 +638,8 @@ ${m ? '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/ma
 
 const api = {
     buildOgCardHtml,
+    formatEventWhen,
+    shortTimeZone,
     deriveAuroraColors,
     parseHexColor,
     OG_TEMPLATE_VERSION,

@@ -857,7 +857,18 @@
             title: (ev.name || 'Bear Event').trim(),
             // the card prints the address — chunky.dad/nyc — not the city name
             cityPath: this.currentCity || '',
-            when: [ev.day, ev.time].filter(Boolean).join(' · '),
+            // the card module formats this, exactly as generate-event-pages
+            // does — building it here by hand is what turned a five-day
+            // festival into the single word "Thursday"
+            when: window.OgCard ? window.OgCard.formatEventWhen({
+              start: this.getLogicalStartDate(ev),
+              end: this.getLogicalEndDate(ev),
+              multiDay: this.isMultiDay(ev),
+              day: ev.day,
+              time: ev.time,
+              recurring: ev.recurring,
+              timeZone: ev.startTimezone || (getCityConfig(this.currentCity) || {}).timezone || ''
+            }) : [ev.day, ev.time].filter(Boolean).join(' · '),
             venue: ev.bar || '',
             cover: /^(free|no cover)$/i.test(coverText) ? '' : coverText,
             // the toolbar's image field overrides, same as every other artboard

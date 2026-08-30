@@ -9,7 +9,7 @@ const ROOT = path.resolve(__dirname, '..');
 
 // The share-card design's version, mixed into each stub's og:image cache
 // buster so a template change actually reaches the social scrapers.
-const { OG_TEMPLATE_VERSION } = require('./og-card.js');
+const { OG_TEMPLATE_VERSION, formatEventWhen } = require('./og-card.js');
 
 // Load CITY_CONFIG from js/city-config.js (Node-compatible export exists)
 let CITY_CONFIG;
@@ -102,7 +102,7 @@ function occursInWindow(calendar, event, now, days) {
   return false;
 }
 
-function buildEventHtml(cityKey, cityName, event) {
+function buildEventHtml(cityKey, cityName, event, ctx) {
   const title = `${sanitize(event.name)} – ${cityName} – chunky.dad`;
   const descriptionParts = [];
   if (event.day) descriptionParts.push(event.day);
@@ -122,17 +122,22 @@ function buildEventHtml(cityKey, cityName, event) {
   // tools/generate-og-images.js to reverse-engineer out of og:description by
   // splitting on ' · ' and ' • '. It has the real event object right here;
   // the OG step runs later in the same workflow and reads these back.
-  const whenText = (() => {
-    const parts = [];
-    if (!event.recurring) {
-      const d = event.startDate instanceof Date ? event.startDate : (event.startDate ? new Date(event.startDate) : null);
-      // the card leads a one-off with its numeric date, then the weekday
-      if (d && !isNaN(d.getTime())) parts.push(`${d.getMonth() + 1}/${d.getDate()}`);
-    }
-    if (event.day) parts.push(event.day);
-    if (event.time) parts.push(event.time);
-    return parts.join(' · ');
-  })();
+  //
+  // The when-line is formatted by the card module, which is also what the OG
+  // studio calls — this used to be built here by hand, and reduced every
+  // multi-day festival to one weekday ("9/17 · Thursday" for a five-day run).
+  // The logical dates come from CalendarCore, so a party running to 6AM still
+  // counts as one night rather than two.
+  const calendar = ctx && ctx.calendar;
+  const whenText = formatEventWhen({
+    start: calendar ? calendar.getLogicalStartDate(event) : (event.startDate ? new Date(event.startDate) : null),
+    end: calendar ? calendar.getLogicalEndDate(event) : (event.endDate ? new Date(event.endDate) : null),
+    multiDay: calendar ? calendar.isMultiDay(event) : false,
+    day: event.day,
+    time: event.time,
+    recurring: event.recurring,
+    timeZone: event.startTimezone || (ctx && ctx.timeZone) || ''
+  });
   const cardMeta = (name, value) => {
     const text = String(value == null ? '' : value).trim();
     if (!text) return '';
@@ -155,6 +160,9 @@ function buildEventHtml(cityKey, cityName, event) {
   try {
     const seed = JSON.stringify({
       name: event.name || '',
+      // the line the card actually paints, not just its ingredients: a change
+      // to how when-lines are formatted has to reach the social scrapers too
+      when: whenText,
       day: event.day || '',
       time: event.time || '',
       bar: event.bar || '',
@@ -320,7 +328,7 @@ async function main() {
     // Write stubs
     for (const [slug, ev] of uniqueBySlug.entries()) {
       const outFile = path.join(ROOT, cityKey, slug, 'index.html');
-      const html = buildEventHtml(cityKey, cfg.name || cityKey, ev);
+      const html = buildEventHtml(cityKey, cfg.name || cityKey, ev, { calendar, timeZone: cfg.timezone });
       if (writeIfChanged(outFile, html)) {
         cityChanges++;
         console.log(`✓ Wrote ${path.relative(ROOT, outFile)}`);
