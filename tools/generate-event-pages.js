@@ -7,6 +7,10 @@ const crypto = require('crypto');
 // Resolve project root
 const ROOT = path.resolve(__dirname, '..');
 
+// The share-card design's version, mixed into each stub's og:image cache
+// buster so a template change actually reaches the social scrapers.
+const { OG_TEMPLATE_VERSION, formatEventWhen } = require('./og-card.js');
+
 // Load CITY_CONFIG from js/city-config.js (Node-compatible export exists)
 let CITY_CONFIG;
 try {
@@ -98,30 +102,79 @@ function occursInWindow(calendar, event, now, days) {
   return false;
 }
 
-function buildEventHtml(cityKey, cityName, event) {
+function buildEventHtml(cityKey, cityName, event, ctx) {
   const title = `${sanitize(event.name)} – ${cityName} – chunky.dad`;
-  const descriptionParts = [];
-  if (event.day) descriptionParts.push(event.day);
-  if (event.time) descriptionParts.push(event.time);
+  const calendar = ctx && ctx.calendar;
+  // One when-line for the whole stub. The share text used to be built here
+  // separately — "Saturday · 10PM-4AM" while the image said "1st Sat ·
+  // 10PM-4AM ET" — so a share showed two different answers at once.
+  const whenText = formatEventWhen({
+    start: calendar ? calendar.getLogicalStartDate(event) : (event.startDate ? new Date(event.startDate) : null),
+    end: calendar ? calendar.getLogicalEndDate(event) : (event.endDate ? new Date(event.endDate) : null),
+    multiDay: calendar ? calendar.isMultiDay(event) : false,
+    day: event.day,
+    time: event.time,
+    recurring: event.recurring,
+    // the site's own words for the cadence ("1st Sat", "Weekly")
+    recurrenceText: calendar ? calendar.getRecurringBadgeContent(event) : '',
+    timeZoneLabel: calendar ? calendar.getTimeZoneLabel(event, ctx && ctx.timeZone) : ''
+  });
+  const descriptionParts = [whenText];
   if (event.bar) descriptionParts.push(`@ ${event.bar}`);
-  const description = sanitize(descriptionParts.join(' · ')) || `${cityName} bear event`;
+  const description = sanitize(descriptionParts.filter(Boolean).join(' · ')) || `${cityName} bear event`;
   const url = `${SITE_BASE}/${cityKey}/${encodeURIComponent(event.slug)}/`;
-  // The flyer the OG card should paint. The artboard is 1200×630, so the
-  // LANDSCAPE candidate wins when the event has one; otherwise the primary
-  // image (orientation unknown for most URLs), then the vertical slot — the
-  // art slot is object-fit:contain, so portrait artwork is never distorted and
-  // showing it beats showing nothing. Finally nothing, which leaves the
-  // text-only card that has always been generated.
-  const flyerUrl = String(event.imageHorizontal || event.image || event.imageVertical || '').trim();
-  const flyerMeta = /^https?:\/\//i.test(flyerUrl)
-    ? `\n  <meta name="chunky:flyer" content="${sanitize(flyerUrl).replace(/"/g, '&quot;')}">`
-    : '';
+  // The flyer the OG card should paint: the event's OWN artwork first.
+  //
+  // This used to ask for the LANDSCAPE candidate, because the artboard is
+  // 1200×630 and a wide picture fills it. That preference cost more than it
+  // bought: an `imageHorizontal` is very often a platform's banner crop
+  // rather than a picture in its own right. BEEFMINCE Brief Encounter carried
+  // a 2026 1080×1080 poster in `image` and, in `imageHorizontal`, a 2024
+  // attachment cropped to 768×461 and upscaled to 1300×630 — the title cut
+  // off top and bottom, grey bars down the sides. The card was choosing shape
+  // over content and showing the wrong year's artwork.
+  //
+  // Shape no longer needs to decide: the card shows any aspect whole (never
+  // cropped), and wide artwork can take the top of the card instead of a side
+  // column. So the primary leads, and the orientation slots are what they
+  // always were — alternates, for when there is no primary.
+  //
+  // NOTE: js/dynamic-calendar-loader.js still asks getFlyerCandidates for
+  // 'landscape' on the site's cards, and has a crop rule that only catches an
+  // alternate built from the SAME asset — which this is not. The site card
+  // therefore still shows the bad crop for these five events.
+  const flyerUrl = String(event.image || event.imageHorizontal || event.imageVertical || '').trim();
+
+  // What the share card paints, handed over as data instead of left for
+  // tools/generate-og-images.js to reverse-engineer out of og:description by
+  // splitting on ' · ' and ' • '. It has the real event object right here;
+  // the OG step runs later in the same workflow and reads these back.
+
+  const cardMeta = (name, value) => {
+    const text = String(value == null ? '' : value).trim();
+    if (!text) return '';
+    return `\n  <meta name="chunky:${name}" content="${sanitize(text).replace(/"/g, '&quot;')}">`;
+  };
+  const flyerMeta = (/^https?:\/\//i.test(flyerUrl) ? cardMeta('flyer', flyerUrl) : '')
+    + cardMeta('name', event.name)
+    + cardMeta('when', whenText)
+    + cardMeta('venue', event.bar)
+    // 'free'/'no cover' is not information worth a row — the card drops it too
+    + cardMeta('cover', /^(free|no cover)$/i.test(String(event.cover || '').trim()) ? '' : event.cover)
+    + cardMeta('website', event.favicon || event.website)
+    // where it is: the corner map option draws the same city map the page
+    // does, with this one event pinned on it
+    + cardMeta('lat', Number.isFinite(Number(event.coordinates?.lat)) ? event.coordinates.lat : '')
+    + cardMeta('lng', Number.isFinite(Number(event.coordinates?.lng)) ? event.coordinates.lng : '');
   // Prefer generated per-event OG image and add a content-hash version for cache busting
   const generatedPng = `/img/og/${cityKey}/${encodeURIComponent(event.slug)}.png`;
   let version = '';
   try {
     const seed = JSON.stringify({
       name: event.name || '',
+      // the line the card actually paints, not just its ingredients: a change
+      // to how when-lines are formatted has to reach the social scrapers too
+      when: whenText,
       day: event.day || '',
       time: event.time || '',
       bar: event.bar || '',
@@ -130,7 +183,11 @@ function buildEventHtml(cityKey, cityName, event) {
       // The generated OG card paints the flyer when there is one, so a flyer
       // change has to bust the cache too — before this, swapping an event's
       // image left every share preview showing the old artwork.
-      flyer: flyerUrl
+      flyer: flyerUrl,
+      // …and so does a redesign of the card itself. The PNG is regenerated at
+      // the same path, so without this every scraper that cached the old
+      // artboard keeps serving it (Facebook and iMessage cache aggressively).
+      template: OG_TEMPLATE_VERSION
     });
     version = crypto.createHash('md5').update(seed).digest('hex').slice(0, 8);
   } catch (e) {
@@ -283,7 +340,7 @@ async function main() {
     // Write stubs
     for (const [slug, ev] of uniqueBySlug.entries()) {
       const outFile = path.join(ROOT, cityKey, slug, 'index.html');
-      const html = buildEventHtml(cityKey, cfg.name || cityKey, ev);
+      const html = buildEventHtml(cityKey, cfg.name || cityKey, ev, { calendar, timeZone: cfg.timezone });
       if (writeIfChanged(outFile, html)) {
         cityChanges++;
         console.log(`✓ Wrote ${path.relative(ROOT, outFile)}`);

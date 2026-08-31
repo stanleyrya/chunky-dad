@@ -1,8 +1,8 @@
 {
   "img.evbuc.com": {
-    "misses": 1,
+    "misses": 2,
     "firstMiss": "2026-08-23T01:41:04.914Z",
-    "lastTried": "2026-08-23T01:41:04.914Z"
+    "lastTried": "2026-08-30T04:15:33.061Z"
   },
   "noxsatvrn.carrd.co": {
     "misses": 6,
@@ -15,13 +15,13 @@
     "lastTried": "2026-08-29T01:23:14.177Z"
   },
   "www.juliusbarny.com": {
-    "misses": 1,
+    "misses": 2,
     "firstMiss": "2026-08-23T17:26:14.516Z",
-    "lastTried": "2026-08-23T17:26:14.516Z"
+    "lastTried": "2026-08-30T17:39:51.150Z"
   },
   "www.woof-berlin.com": {
-    "misses": 1,
+    "misses": 2,
     "firstMiss": "2026-08-23T17:26:09.871Z",
-    "lastTried": "2026-08-23T17:26:09.871Z"
+    "lastTried": "2026-08-30T17:39:48.639Z"
   }
 }

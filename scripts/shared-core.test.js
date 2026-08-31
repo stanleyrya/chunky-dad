@@ -465,6 +465,58 @@ test('classifyPageWithSignal reports which tier decided', () => {
   assert.deepEqual(ruledCore.classifyPageWithSignal('https://x.example/hub', jsonLdHtml), { classification: 'link-aggregator', signal: 'url-rule' });
 });
 
+// Run 20260830-192019, BEEFMINCE Brief Encounter. The scraper offered a wide
+// crop of the SAME 2026 asset both sides agreed was `image`; the AI kept the
+// calendar's 2024 attachment instead, calling 768x461 "higher resolution" than
+// 1080x648 and reading the older date as proof it was the original. The
+// orientation slots hold this event's artwork in another shape, so the
+// candidate cut from the primary wins without asking anyone.
+test('orientation image slots deterministically prefer a crop of the event\'s own primary artwork', () => {
+  const core = createCore();
+  const asset = 'https://dice-media.imgix.net/attachments/2026-08-17/6602b147.jpg';
+  const strangerAsset = 'https://dice-media.imgix.net/attachments/2024-12-17/5e10abb8.jpg';
+  const calendarWide = `${strangerAsset}?rect=0%2C154%2C768%2C461&w=1300&h=630`;
+  const scrapedWide = `${asset}?rect=0%2C216%2C1080%2C648&w=1300&h=630`;
+  const context = {
+    records: {
+      a: { image: `${asset}?rect=0%2C0%2C1080%2C1080` },
+      b: { image: `${asset}?rect=0%2C216%2C1080%2C648` }
+    }
+  };
+
+  const decision = core.resolveConflictDeterministically('imageHorizontal', calendarWide, scrapedWide, context);
+  assert.equal(decision && decision.winner, 'b', 'the crop of the primary asset wins');
+  assert.match(decision.reason, /primary artwork/);
+
+  assert.equal(
+    core.resolveConflictDeterministically('imageVertical', calendarWide, scrapedWide, context).winner,
+    'b',
+    'the vertical slot follows the same rule'
+  );
+
+  // Fails closed in every shape it cannot judge, so those still arbitrate.
+  assert.equal(
+    core.resolveConflictDeterministically('imageHorizontal', scrapedWide, `${scrapedWide}&auto=compress`, context),
+    null,
+    'two crops of the SAME asset are not decided here'
+  );
+  assert.equal(
+    core.resolveConflictDeterministically('imageHorizontal', 'https://a.example/x.jpg', 'https://b.example/y.jpg', context),
+    null,
+    'neither side matching the primary falls through'
+  );
+  assert.equal(
+    core.resolveConflictDeterministically('imageHorizontal', calendarWide, scrapedWide, null),
+    null,
+    'no records context falls through'
+  );
+  assert.equal(
+    core.resolveConflictDeterministically('website', calendarWide, scrapedWide, context),
+    null,
+    'the rung is scoped to the orientation slots'
+  );
+});
+
 test('classifyPageWithSignal classifies raw JSON API bodies deterministically by event-object count', () => {
   const core = createCore();
   const eventObject = { name: 'GOLDILOXX JULY', first_performance_start_at: '2026-07-26T01:00:00Z' };
