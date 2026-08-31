@@ -2954,7 +2954,14 @@ class DynamicCalendarLoader extends CalendarCore {
         // it is never a surprise here — but the pages are read from other
         // zones (and shared out of context), and "9PM" alone does not say
         // whose 9PM. Same label the share cards carry.
-        const zoneLabel = event.time
+        //
+        // Called through a guard because js/** is served with a cache TTL and
+        // getTimeZoneLabel is NEW to calendar-core: a returning visitor can
+        // hold yesterday's core beside today's loader, and without this the
+        // whole list died on "Error displaying events. Please refresh the
+        // page." A missing label is a missing three letters; it must never be
+        // more than that.
+        const zoneLabel = (event.time && typeof this.getTimeZoneLabel === 'function')
             ? this.getTimeZoneLabel(event, this.currentCityConfig && this.currentCityConfig.timezone)
             : '';
         const whenBase = dateLeads
@@ -4790,8 +4797,25 @@ class DynamicCalendarLoader extends CalendarCore {
                     const frag = document.createDocumentFragment();
                     const shell = document.createElement('div');
                     let reusedCards = 0;
+                    // Per EVENT, not per list. One card that cannot be built
+                    // used to take the whole page down to "Error displaying
+                    // events" — every other event on the week punished for one
+                    // bad record (or, as on 2026-08-30, for one cached script).
+                    // A card that throws is skipped and logged; the rest render.
+                    let skippedCards = 0;
                     listDeduplicatedEvents.forEach(event => {
-                        const html = this.generateEventCard(event);
+                        let html;
+                        try {
+                            html = this.generateEventCard(event);
+                        } catch (singleCardError) {
+                            skippedCards++;
+                            logger.componentError('CALENDAR', 'Skipped one event card that failed to build', {
+                                eventName: event && event.name,
+                                slug: event && event.slug,
+                                error: singleCardError && singleCardError.message
+                            });
+                            return;
+                        }
                         const sig = sigOf(html);
                         const existing = existingBySlug.get(event.slug);
                         if (existing && existing.dataset.cardSig === sig) {
@@ -4821,6 +4845,13 @@ class DynamicCalendarLoader extends CalendarCore {
                         }
                     });
                     eventsList.replaceChildren(frag);
+
+                    if (skippedCards > 0) {
+                        logger.warn('CALENDAR', 'Some event cards could not be built', {
+                            skippedCards,
+                            renderedCards: listDeduplicatedEvents.length - skippedCards
+                        });
+                    }
 
                     logger.debug('CALENDAR', '✅ UPDATE_DISPLAY: Successfully updated events list', {
                         reusedCards,
