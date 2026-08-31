@@ -686,8 +686,21 @@ class DynamicCalendarLoader extends CalendarCore {
                 eventsList.classList.add('selection-mode');
             }
             
-            // Mark selected event items in calendar views
-            const calendarItems = document.querySelectorAll(`.event-item[data-event-slug="${CSS.escape(this.selectedEventSlug)}"]`);
+            // Mark the selected OCCURRENCE's pill in the calendar — the strip
+            // renders a weekly event once per week, and marking every pill
+            // with the slug lit them all, so the in-window occurrence read as
+            // "the" selection even when a past/future one was chosen. The
+            // pill's day cell carries data-date; slug-wide stays the fallback
+            // for a selection without a date.
+            const slugItems = document.querySelectorAll(`.event-item[data-event-slug="${CSS.escape(this.selectedEventSlug)}"]`);
+            let calendarItems = [];
+            if (this.selectedEventDateISO) {
+                calendarItems = Array.from(slugItems).filter(item => {
+                    const dayEl = item.closest('[data-date]');
+                    return dayEl && dayEl.getAttribute('data-date') === this.selectedEventDateISO;
+                });
+            }
+            if (calendarItems.length === 0) calendarItems = Array.from(slugItems);
             calendarItems.forEach(item => {
                 item.classList.add('selected');
             });
@@ -1712,16 +1725,66 @@ class DynamicCalendarLoader extends CalendarCore {
                 this.selectedEventSlug = eventSlug;
                 this.selectedEventDateISO = dateISO;
                 this.currentDate = windowStart;
-                this.suppressGridScrollUntil = performance.now() + 250;
-                grid.scrollLeft = Math.round(idx * (grid.scrollWidth / this.stripDayCount));
-                this.sizeWeekStripHeight();
                 this.updateHeaderPeriodLabel();
                 this.syncUrl(true);
+                // glide, then refresh: the panel re-render (46 card sigs) must
+                // not run mid-animation, and into-same-DOM reuse means the only
+                // visible change during the glide is the days sliding
+                await this.animateGridShift(grid, Math.round(idx * (grid.scrollWidth / this.stripDayCount)));
+                this.sizeWeekStripHeight();
                 await this.refreshEventsPanel(this.getFilteredEvents(), false, { keepCamera: true });
                 return;
             }
         }
         await this.openWeekAt(eventSlug, dateISO);
+    }
+
+    // The days slide over as if flicked, instead of teleporting (owner: "it
+    // just snaps ... instead of a natural swipe"). Hand-rolled scrollLeft per
+    // frame because a concurrent UA smooth scroll is silently dropped while
+    // the card rail's own snap is settling (reproduced 2026-08-31); the two
+    // jank sources of the earlier glide are both handled here — scroll-snap
+    // is OFF for the duration (proximity snap fought per-frame writes), and
+    // the settle listener is suppressed until the glide lands. Ease-out, so
+    // it reads as momentum from the swipe that caused it. A touch or wheel on
+    // the grid cancels — the user's hand outranks the animation. Instant
+    // under prefers-reduced-motion.
+    animateGridShift(grid, targetLeft) {
+        const startLeft = grid.scrollLeft;
+        const distance = targetLeft - startLeft;
+        const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (Math.abs(distance) < 2 || reduced) {
+            this.suppressGridScrollUntil = performance.now() + 250;
+            grid.scrollLeft = targetLeft;
+            return Promise.resolve();
+        }
+        const dayW = grid.scrollWidth / this.stripDayCount;
+        const duration = Math.max(220, Math.min(480, 90 * Math.abs(distance) / Math.max(1, dayW)));
+        const savedSnap = grid.style.scrollSnapType;
+        grid.style.scrollSnapType = 'none';
+        const startTime = performance.now();
+        const ease = t => 1 - Math.pow(1 - t, 3);
+        return new Promise(resolve => {
+            let raf = 0;
+            const finish = () => {
+                if (raf) cancelAnimationFrame(raf);
+                grid.removeEventListener('touchstart', finish);
+                grid.removeEventListener('wheel', finish);
+                grid.style.scrollSnapType = savedSnap;
+                resolve();
+            };
+            grid.addEventListener('touchstart', finish, { passive: true, once: true });
+            grid.addEventListener('wheel', finish, { passive: true, once: true });
+            const step = (now) => {
+                const t = Math.min(1, (now - startTime) / duration);
+                this.suppressGridScrollUntil = performance.now() + 250;
+                grid.scrollLeft = Math.round(startLeft + distance * ease(t));
+                if (t < 1) { raf = requestAnimationFrame(step); return; }
+                raf = 0;
+                finish();
+            };
+            raf = requestAnimationFrame(step);
+        });
     }
 
     async navigatePeriod(direction, skipAnimation = false) {
