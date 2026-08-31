@@ -2996,7 +2996,12 @@ class DynamicCalendarLoader extends CalendarCore {
         // Deriving the plate per brand failed: Animal's red-on-red favicon
         // became a solid red block, and a transparent plate made round marks
         // read as circles next to square ones.
-        return `<span class="ec-fav"><img src="${src}" alt="" loading="lazy" decoding="async" onerror="this.parentNode.remove()"></span>`;
+        // EAGER, deliberately: favicons are tiny local files, and lazy
+        // loading barely fires for offscreen cards in a horizontally
+        // scrolled rail — on the 46-card timeline only 8 of 45 had loaded,
+        // so swiping showed favicon-less cards popping their icons in late.
+        // Flyers stay lazy; they are the heavy assets.
+        return `<span class="ec-fav"><img src="${src}" alt="" loading="eager" decoding="async" onerror="this.parentNode.remove()"></span>`;
     }
 
     // Venue row. Mirrors generateLocationHtml's data choices (coordinates →
