@@ -80,9 +80,22 @@
   // desktop's display:none thumb never triggers an image fetch
   const armThumbs = () => {
     if (!isMobile()) return;
+    // the timeline rail carries the whole strip (30+ cards) — arming every
+    // thumb at once would fetch every flyer up front, so only cards within a
+    // few screens of the current position get their art; settles re-arm as
+    // the user travels
+    const el = list();
+    const nearOnly = el && el.classList.contains('rail-active');
+    const min = nearOnly ? el.scrollLeft - el.clientWidth * 3 : -Infinity;
+    const max = nearOnly ? el.scrollLeft + el.clientWidth * 4 : Infinity;
     document.querySelectorAll('.events-list .event-card .rail-thumb').forEach((btn) => {
       if (btn.style.backgroundImage) return;
       const card = btn.closest('.event-card');
+      if (nearOnly) {
+        const anchor = card.closest('.rail-edge') || card;
+        const c = anchor.offsetLeft + anchor.offsetWidth / 2;
+        if (c < min || c > max) return;
+      }
       const flyer = card && card.querySelector('.event-flyer[data-flyer-url]');
       const url = flyer && flyer.getAttribute('data-flyer-url');
       if (url) btn.style.backgroundImage = 'url("' + url.replace(/"/g, '%22') + '")';
@@ -323,23 +336,32 @@
   // ONE deferred URL write per gesture.
   const USER_QUIET = 600;
   let touchActive = false, lastUserTouch = -1e9, interacted = false, gestureScrolled = false;
-  let railOwner = 'init', landedSlug = null, grantSlug = null;
+  let railOwner = 'init', landedSlug = null, landedOcc = null, grantSlug = null, grantOcc = null;
   let phase = 'idle'; // idle | scrub
   let programmatic = false;
   let geom = [], step = 0, railWidth = 0;
   let urlDirty = false;
-  let frameRaf = 0, holdTimer = 0, holdSlug = null;
+  let frameRaf = 0, holdTimer = 0, holdSlug = null, holdOcc = null;
   let settleRaf = 0, stillFrames = 0, lastLeft = -1;
 
   const userBusy = () => touchActive || (performance.now() - lastUserTouch) < USER_QUIET;
-  const cards = () => { const el = list(); return el ? Array.from(el.querySelectorAll('.event-card')) : []; };
+  // TOP-LEVEL cards only: the edge slots contain ghost .event-cards, and an
+  // unscoped query counted them — first load then centred the Earlier ghost
+  // instead of the week's first real card
+  const cards = () => { const el = list(); return el ? Array.from(el.querySelectorAll(':scope > .event-card')) : []; };
   // every snap target in the rail, in DOM order: the edge slots and the empty
   // week's card are members of the band, not decorations beside it
-  const SLOT_SEL = '.event-card, .rail-edge, .loading-message.empty-slot';
+  const SLOT_SEL = ':scope > .event-card, :scope > .rail-edge, :scope > .loading-message.empty-slot';
   const slots = () => { const el = list(); return el ? Array.from(el.querySelectorAll(SLOT_SEL)) : []; };
-  const cardBySlug = (slug) => {
+  const cardBySlug = (slug, occISO) => {
     const el = list();
-    return (slug && el) ? el.querySelector('.event-card[data-event-slug="' + cssEscape(slug) + '"]') : null;
+    if (!slug || !el) return null;
+    // the timeline holds one card per OCCURRENCE — land on the right one
+    if (occISO) {
+      const exact = el.querySelector(':scope > .event-card[data-event-slug="' + cssEscape(slug) + '"][data-occurrence="' + cssEscape(occISO) + '"]');
+      if (exact) return exact;
+    }
+    return el.querySelector(':scope > .event-card[data-event-slug="' + cssEscape(slug) + '"]');
   };
   const nearestTo = (pool) => {
     const el = list();
@@ -364,10 +386,22 @@
     // EVERY slot, not just the cards: an edge slug is '' so scrubbing across
     // one selects nothing (realSelect's slug guard), instead of the rail
     // quietly re-selecting the event card next door
+    // each slot's date rides along: cards stamp their own occurrence
+    // (data-occurrence, one card per occurrence), edge slots their data-date
+    const dateOfSlot = (slot) => {
+      const iso = slot.getAttribute('data-occurrence') || slot.getAttribute('data-date');
+      if (iso && /^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+        const p = iso.split('-');
+        return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2])).getTime();
+      }
+      return null;
+    };
     geom = slots().map((slot) => ({
       el: slot,
       slug: slot.getAttribute('data-event-slug') || '',
-      center: slot.offsetLeft + slot.offsetWidth / 2
+      occ: slot.getAttribute('data-occurrence') || '',
+      center: slot.offsetLeft + slot.offsetWidth / 2,
+      date: dateOfSlot(slot)
     }));
     step = geom.length > 1
       ? Math.max(1, geom[1].center - geom[0].center)
@@ -385,30 +419,32 @@
   };
 
   // ---------- live selection during the scrub ----------
-  const realSelect = (slug) => {
+  const realSelect = (slug, occISO) => {
     const l = loader();
-    if (!l || !slug || l.selectedEventSlug === slug) return;
-    // resolve the slug to the occurrence INSIDE the visible window — the
-    // continuous strip also renders buffer weeks, so the first DOM pill for
-    // a weekly event can be last week's occurrence (a swipe between cards
-    // then yanked the whole week strip a week back)
-    const pills = document.querySelectorAll('.calendar-grid .event-item[data-event-slug="' + cssEscape(slug) + '"]');
-    let dateISO = null;
-    let bounds = null;
-    try { bounds = l.getCurrentPeriodBounds && l.getCurrentPeriodBounds(); } catch (e) {}
-    for (let i = 0; i < pills.length; i++) {
-      const dayEl = pills[i].closest('[data-date]');
-      const d = dayEl && dayEl.getAttribute('data-date');
-      if (!d) continue;
-      if (!dateISO) dateISO = d; // fallback: first found
-      if (bounds) {
-        const dt = new Date(d + 'T12:00:00');
-        if (dt >= bounds.start && dt <= bounds.end) { dateISO = d; break; }
+    if (!l || !slug) return;
+    if (l.selectedEventSlug === slug && (!occISO || l.selectedEventDateISO === occISO)) return;
+    // the card knows its own occurrence now (data-occurrence) — the old pill
+    // scan survives only as the fallback for a card without one
+    let dateISO = occISO || null;
+    if (!dateISO) {
+      const pills = document.querySelectorAll('.calendar-grid .event-item[data-event-slug="' + cssEscape(slug) + '"]');
+      let bounds = null;
+      try { bounds = l.getCurrentPeriodBounds && l.getCurrentPeriodBounds(); } catch (e) {}
+      for (let i = 0; i < pills.length; i++) {
+        const dayEl = pills[i].closest('[data-date]');
+        const d = dayEl && dayEl.getAttribute('data-date');
+        if (!d) continue;
+        if (!dateISO) dateISO = d; // fallback: first found
+        if (bounds) {
+          const dt = new Date(d + 'T12:00:00');
+          if (dt >= bounds.start && dt <= bounds.end) { dateISO = d; break; }
+        }
       }
     }
     try { l.toggleEventSelection(slug, dateISO, { deferUrl: true }); } catch (e) {}
     urlDirty = true;
     landedSlug = slug;
+    landedOcc = occISO || landedOcc;
   };
   const flushUrl = () => {
     const l = loader();
@@ -429,21 +465,53 @@
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (ch) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
   const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const edgeHtml = (dir, target) => {
+  // The slot IS the event's real card (owner request 2026-08-30): the same
+  // generateEventCard output every in-window event gets, wearing a small
+  // Earlier/Later ribbon, with a text fallback if the card cannot be built.
+  // The ghost card is display-only — its data-event-slug is STRIPPED so the
+  // scrub geometry sees an empty slug and never live-selects an event that
+  // is not in the window (the reason edge slots carried no slug to begin
+  // with), and pointer-events are off so its links cannot half-work; the
+  // slot's own click (goEdge) is the one interaction.
+  const edgeHtml = (dir, target, l) => {
     const d = target.date instanceof Date ? target.date : new Date(target.date);
     const when = isNaN(d.getTime()) ? '' : WD[d.getDay()] + ' ' + (d.getMonth() + 1) + '/' + d.getDate();
-    const more = target.weekCount > 1 ? '+' + (target.weekCount - 1) + ' more that week' : '';
     const label = dir === 'prev' ? 'Earlier' : 'Later';
-    return '<button type="button" class="rail-edge rail-edge-' + dir + '"' +
+
+    let cardHtml = '';
+    if (target.event && l && l.generateEventCard) {
+      try {
+        const tmp = document.createElement('div');
+        tmp.innerHTML = l.generateEventCard(target.event);
+        const ghost = tmp.querySelector('.event-card');
+        if (ghost) {
+          ghost.removeAttribute('data-event-slug');
+          ghost.classList.add('rail-edge-ghost');
+          // The ghost keeps its thumb, links and share button so it is
+          // PIXEL-IDENTICAL to the real card that replaces it on arrival —
+          // stripping them made the handoff visibly jarring (owner report:
+          // "missing the image, missing the more..."). They are inert via
+          // pointer-events (the slot's tap is the one interaction), and the
+          // wrapper is a div[role=button] precisely so nested buttons parse:
+          // a real <button> wrapper was force-closed at the first one.
+          cardHtml = ghost.outerHTML;
+        }
+      } catch (e) { cardHtml = ''; }
+    }
+    const inner = cardHtml
+      || '<span class="edge-arrow" aria-hidden="true"></span>' +
+         '<span class="edge-label">' + esc(label) + '</span>' +
+         '<span class="edge-when">' + esc(when) + '</span>' +
+         '<span class="edge-name">' + esc(target.name) + '</span>';
+    // a DIV with button semantics, not a <button>, so it can legally hold the
+    // ghost card (activated by click; goEdge's listener handles it)
+    return '<div role="button" tabindex="0" class="rail-edge rail-edge-' + dir + (cardHtml ? ' has-card' : '') + '"' +
       ' data-slug="' + esc(target.slug) + '" data-date="' + esc(target.dateISO) + '"' +
-      ' aria-label="' + esc(label + ': ' + target.name + ', ' + when) + '">' +
-      '<span class="edge-arrow" aria-hidden="true"></span>' +
-      '<span class="edge-label">' + label + '</span>' +
-      '<span class="edge-when">' + esc(when) + '</span>' +
-      '<span class="edge-name">' + esc(target.name) + '</span>' +
-      (more ? '<span class="edge-more">' + esc(more) + '</span>' : '') +
-      '</button>';
+      ' aria-label="' + esc(label + ' week: ' + target.name + ', ' + when) + '">' +
+      inner +
+      '</div>';
   };
+
   const buildEdgeSlots = () => {
     const el = list();
     if (!el) return;
@@ -456,10 +524,17 @@
     if (!el.querySelector('.event-card, .loading-message.empty-slot')) return;
     [['prev', 'afterbegin'], ['next', 'beforeend']].forEach((pair) => {
       let target = null;
-      try { target = l.findAdjacentEvent(pair[0]); } catch (e) { target = null; }
+      // past the STRIP, not the window: the timeline rail already carries
+      // every on-strip event as a real card
+      try { target = l.findAdjacentEvent(pair[0], 190, 'strip'); } catch (e) { target = null; }
       if (!target || !target.slug || !target.dateISO) return;
-      el.insertAdjacentHTML(pair[1], edgeHtml(pair[0], target));
+      el.insertAdjacentHTML(pair[1], edgeHtml(pair[0], target, l));
     });
+    // the ghosts arrive after the render pass already armed the real cards —
+    // give them their corner art and '...more' chips too, or they visibly
+    // differ from the card that replaces them on arrival
+    armThumbs();
+    markOverflows();
   };
   const goEdge = (edge) => {
     const l = loader();
@@ -472,9 +547,16 @@
     urlDirty = false;          // openWeekAt writes the URL itself
     landedSlug = slug;
     grantSlug = slug;          // the swipe IS the grant: centre the arrival
-    dbgNote('edge -> ' + slug.slice(0, 16) + ' @' + date);
+    const dir = edge.classList.contains('rail-edge-prev') ? 'prev' : 'next';
+    dbgNote('edge(' + dir + ') -> ' + slug.slice(0, 16) + ' @' + date);
+    // revealAdjacent shifts the continuous window JUST enough to include the
+    // target (Earlier -> first day, Later -> last day) and refreshes lightly,
+    // so the swipe reads as a continuation; openWeekAt is the fallback
+    const go = typeof l.revealAdjacent === 'function'
+      ? () => l.revealAdjacent(slug, date, dir)
+      : () => l.openWeekAt(slug, date);
     Promise.resolve()
-      .then(() => l.openWeekAt(slug, date))
+      .then(go)
       .catch(() => {})
       .then(() => { navigating = false; });
   };
@@ -483,6 +565,15 @@
     if (!edge) return;
     e.preventDefault();
     e.stopPropagation();
+    goEdge(edge);
+  }, true);
+  // the slot is a div[role=button] (a real <button> cannot contain the ghost
+  // card's markup), so Enter/Space activation is wired by hand
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const edge = e.target.closest && e.target.closest('.rail-edge');
+    if (!edge) return;
+    e.preventDefault();
     goEdge(edge);
   }, true);
 
@@ -496,8 +587,26 @@
       if (c) {
         railOwner = 'user';
         landedSlug = c.getAttribute('data-event-slug') || landedSlug;
-        dbgNote('landed ' + (landedSlug || '?').slice(0, 16));
-        realSelect(landedSlug);
+        landedOcc = c.getAttribute('data-occurrence') || null;
+        dbgNote('landed ' + (landedSlug || '?').slice(0, 16) + (landedOcc ? ' @' + landedOcc : ''));
+        realSelect(landedSlug, landedOcc);
+        // The calendar moves ONLY when it has to (owner report: it moved on
+        // every swipe): if the landed occurrence is outside the visible
+        // window, revealAdjacent shifts the dates just enough — Earlier
+        // lands as the window's first day, Later as its last. Inside the
+        // window, the grid does not move at all.
+        const l = loader();
+        const entry = geom.find((g) => g.el === c);
+        if (l && entry && entry.date != null && typeof l.revealAdjacent === 'function' && landedOcc) {
+          let bounds = null;
+          try { bounds = l.getCurrentPeriodBounds(); } catch (e) {}
+          if (bounds && (entry.date < bounds.start.getTime() || entry.date > bounds.end.getTime())) {
+            const dir = entry.date < bounds.start.getTime() ? 'prev' : 'next';
+            urlDirty = false; // revealAdjacent syncs the URL itself
+            Promise.resolve().then(() => l.revealAdjacent(landedSlug, landedOcc, dir)).catch(() => {});
+          }
+        }
+        armThumbs();
       }
     }
     flushUrl();
@@ -529,16 +638,22 @@
     finishGesture();
   }, true);
 
+  // The scrub touches NOTHING but the rail: no grid writes per frame (the
+  // per-frame follow stuttered on real hardware and moved the calendar for
+  // swipes that never left the window — owner report 2026-08-31). The grid
+  // moves once, on landing, and only when the landed card is outside the
+  // visible window (see settle).
   const onScrubFrame = () => {
     frameRaf = 0;
     if (phase !== 'scrub' || !railActive()) return;
     if (geomStale() || !geom.length) buildGeom();
     const el = list();
     const g = el && nearestGeom(el.scrollLeft);
-    if (g && g.slug && g.slug !== holdSlug) {
+    if (g && g.slug && (g.slug !== holdSlug || g.occ !== holdOcc)) {
       holdSlug = g.slug;
+      holdOcc = g.occ;
       clearTimeout(holdTimer);
-      holdTimer = setTimeout(() => { if (phase === 'scrub') realSelect(g.slug); }, 120);
+      holdTimer = setTimeout(() => { if (phase === 'scrub') realSelect(g.slug, g.occ); }, 120);
     }
   };
   document.addEventListener('scroll', (e) => {
@@ -561,7 +676,7 @@
     touchActive = true;
     gestureScrolled = false;
     railOwner = 'user';
-    grantSlug = null; // a new gesture invalidates any pending grant
+    grantSlug = null; grantOcc = null; // a new gesture invalidates any pending grant
     lastUserTouch = performance.now();
     if (railActive()) phase = 'scrub';
   };
@@ -588,9 +703,20 @@
     if (!src) return;
     const slug = src.getAttribute('data-event-slug');
     if (!slug) return;
+    // WHICH occurrence was tapped: the card carries data-occurrence, a pill's
+    // day cell carries data-date. Slug alone sent the centring to the FIRST
+    // occurrence in the timeline — a tap on today's card flung the rail four
+    // weeks left to the oldest one.
+    let occ = src.getAttribute('data-occurrence') || null;
+    if (!occ && pill) {
+      const dayEl = pill.closest('[data-date]');
+      occ = dayEl ? dayEl.getAttribute('data-date') : null;
+    }
     landedSlug = slug;
+    landedOcc = occ;
     grantSlug = slug;
-    dbgNote((pill ? 'pill' : 'card') + ' tap -> grant ' + slug.slice(0, 16));
+    grantOcc = occ;
+    dbgNote((pill ? 'pill' : 'card') + ' tap -> grant ' + slug.slice(0, 16) + (occ ? ' @' + occ : ''));
   }, true);
 
   const centerOn = (card, reason, instant) => {
@@ -603,8 +729,9 @@
     // centering still defers to an active finger
     if (!granted && railOwner !== 'init') { dbgNote('DENY center (' + reason + ')'); return false; }
     if (!granted && userBusy()) { dbgNote('SKIP center (busy)'); return false; }
-    if (granted) grantSlug = null;
+    if (granted) { grantSlug = null; grantOcc = null; }
     landedSlug = slug;
+    landedOcc = card.getAttribute('data-occurrence') || landedOcc;
     const target = Math.round(card.offsetLeft + card.offsetWidth / 2 - el.clientWidth / 2);
     if (Math.abs(el.scrollLeft - target) < 4) return true;
     programmatic = true;
@@ -640,16 +767,54 @@
 
   const selectedSlug = () => { const l = loader(); return (l && l.selectedEventSlug) || null; };
 
+  // the timeline rail starts weeks in the past — resting position is the
+  // first card ON or AFTER the visible window's start, never the strip's
+  // oldest card
+  const firstWindowCard = () => {
+    const l = loader();
+    if (!l || !geom.length) return null;
+    let startMs = 0;
+    try { startMs = l.getCurrentPeriodBounds().start.getTime(); } catch (e) { return null; }
+    for (let i = 0; i < geom.length; i++) {
+      const g = geom[i];
+      if (g.date != null && g.slug && g.date >= startMs) return g.el;
+    }
+    return null;
+  };
   const centerRestingCard = (instant) => {
     const el = list();
     if (!el) return;
     // an empty week still has a slot to rest on — otherwise the rail opens
     // parked on the "Earlier" edge, which would bounce straight back out
-    const target = cardBySlug(landedSlug) || cardBySlug(selectedSlug()) || cards()[0]
-      || el.querySelector('.loading-message.empty-slot');
+    const l = loader();
+    const selEl = cardBySlug(selectedSlug(), l && l.selectedEventDateISO);
+    let landedEl = cardBySlug(landedSlug, landedOcc);
+    // The loader can navigate WITHOUT the rail — Today, the arrows, a month
+    // jump — and it clears the selection when it does. A landed position
+    // from the previous journey is then stale: honouring it flung the rail
+    // (and, via the out-of-window settle, the whole window) back to wherever
+    // the user last was, so Today never actually arrived at today.
+    if (landedEl && !selEl && l) {
+      try {
+        const iso = landedEl.getAttribute('data-occurrence');
+        if (iso) {
+          const p = iso.split('-');
+          const t = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]), 12).getTime();
+          const b = l.getCurrentPeriodBounds();
+          if (t < b.start.getTime() || t > b.end.getTime()) {
+            landedEl = null;
+            landedSlug = null;
+            landedOcc = null;
+          }
+        }
+      } catch (e) {}
+    }
+    const target = selEl || landedEl || firstWindowCard()
+      || cards()[0] || el.querySelector('.loading-message.empty-slot');
     if (!target) return;
     landedSlug = target.getAttribute('data-event-slug') || landedSlug;
-    if (grantSlug === landedSlug) grantSlug = null;
+    landedOcc = target.getAttribute('data-occurrence') || landedOcc;
+    if (grantSlug === landedSlug) { grantSlug = null; grantOcc = null; }
     const t = Math.round(target.offsetLeft + target.offsetWidth / 2 - el.clientWidth / 2);
     if (Math.abs(el.scrollLeft - t) >= 1 && instant) { programmatic = true; el.scrollLeft = t; }
   };
@@ -657,6 +822,22 @@
   const syncRailState = (reason) => {
     const el = list();
     if (!el) return;
+    // the loader renders the rail's TIMELINE card set only while the mobile
+    // rail exists; desktop keeps the visible-window list untouched. A
+    // breakpoint crossing (iPad rotation) changes the flag, so the list is
+    // re-rendered once to match the mode it just entered.
+    const l0 = loader();
+    if (l0) {
+      const want = isMobile();
+      if (l0.railTimeline !== want) {
+        l0.railTimeline = want;
+        if (reason === 'breakpoint' && typeof l0.refreshEventsPanel === 'function') {
+          Promise.resolve()
+            .then(() => l0.refreshEventsPanel(l0.getFilteredEvents(), false, { keepCamera: true }))
+            .catch(() => {});
+        }
+      }
+    }
     if (!isMobile()) {
       if (el.classList.contains('rail-active')) { el.classList.remove('rail-active'); phase = 'idle'; geom = []; }
       updateMonthFull();
@@ -690,16 +871,20 @@
         buildGeom();
         centerRestingCard(reason === 'render');
       } else if (grantSlug) {
-        const g = cardBySlug(grantSlug);
+        const g = cardBySlug(grantSlug, grantOcc);
         if (g) centerOn(g, reason);
       } else if (reason === 'selection' && phase === 'idle' && !userBusy()) {
         // a selection that arrived from OUTSIDE the rail (a map-marker tap
         // has no card/pill to grant through) — adopt it so the rail follows
         // instead of silently re-selecting the centered card later
         const slug = selectedSlug();
-        const sel = slug && slug !== landedSlug && cardBySlug(slug);
+        const l1 = loader();
+        const selOcc = l1 ? l1.selectedEventDateISO : null;
+        const sel = slug && (slug !== landedSlug || (selOcc && selOcc !== landedOcc))
+          && cardBySlug(slug, selOcc);
         if (sel) {
           grantSlug = slug;
+          grantOcc = selOcc;
           centerOn(sel, 'external-selection');
         }
       }

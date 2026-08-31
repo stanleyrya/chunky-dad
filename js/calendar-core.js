@@ -1094,6 +1094,19 @@ class CalendarCore {
     getDateBadgeContent(event, calendarPeriod = null) {
         const { recurring, startDate } = event;
         
+        // Timeline rail: each card IS one occurrence, so it wears its own
+        // date — ABOVE the weekly suppression, because a weekly night's nine
+        // near-identical timeline cards are otherwise distinguishable only
+        // by position. This also makes the card's HTML independent of the
+        // visible window: the period-derived badge below changes on every
+        // window shift, and a changed card is a REBUILT card (sig mismatch),
+        // which is what made favicons blink on arrival. Desktop
+        // (railTimeline unset) keeps today's behaviour exactly.
+        if (event.isExpanded && this.railTimeline) {
+            const occDay = this.getBadgeDay(event);
+            return occDay ? `${occDay.getMonth() + 1}/${occDay.getDate()}` : null;
+        }
+
         // For weekly events, never show date badge (too many events to be useful)
         if (event.eventType === 'weekly') {
             return null;

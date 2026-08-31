@@ -514,11 +514,15 @@ class DynamicCalendarLoader extends CalendarCore {
                 }
             }
             
-            // Event selection from URL (no slug->date inference)
+            // Event selection from URL (no slug->date inference). The
+            // occurrence param wins; the window date is only a guess, and a
+            // wrong guess is re-bound to a real occurrence at first render.
             if (eventParam) {
                 this.selectedEventSlug = eventParam;
-                // If date provided, bind selection to that date; else leave date undefined
-                if (url.searchParams.get('date')) {
+                const occParam = url.searchParams.get('eventDate');
+                if (occParam && /^\d{4}-\d{2}-\d{2}$/.test(occParam)) {
+                    this.selectedEventDateISO = occParam;
+                } else if (url.searchParams.get('date')) {
                     this.selectedEventDateISO = url.searchParams.get('date');
                 }
             }
@@ -549,11 +553,23 @@ class DynamicCalendarLoader extends CalendarCore {
             params.set('view', this.currentView);
             params.set('date', this.formatDateToISO(this.currentDate));
             
-            // Event parameter only when selected
+            // Event parameter only when selected — and WHICH occurrence.
+            // `date` is the window anchor, not the selection: restoring the
+            // selection from it bound a reloaded page to a date that is
+            // usually no occurrence at all, and every occurrence-scoped
+            // lookup then fell back differently (the card to the timeline's
+            // oldest occurrence, the pills to all-of-them).
             if (this.selectedEventSlug) {
                 params.set('event', this.selectedEventSlug);
+                if (this.selectedEventDateISO
+                    && this.selectedEventDateISO !== this.formatDateToISO(this.currentDate)) {
+                    params.set('eventDate', this.selectedEventDateISO);
+                } else {
+                    params.delete('eventDate');
+                }
             } else {
                 params.delete('event');
+                params.delete('eventDate');
             }
             
             // Apply and replace
@@ -671,7 +687,12 @@ class DynamicCalendarLoader extends CalendarCore {
 
         if (this.selectedEventSlug) {
             // Mark selected event card in list view
-            const selectedCard = document.querySelector(`.event-card[data-event-slug="${CSS.escape(this.selectedEventSlug)}"]`);
+            // prefer the card for the SELECTED occurrence (the timeline rail
+            // holds one card per occurrence); slug-only remains the fallback
+            const slugSel = `.event-card[data-event-slug="${CSS.escape(this.selectedEventSlug)}"]`;
+            const selectedCard = (this.selectedEventDateISO
+                    && document.querySelector(`${slugSel}[data-occurrence="${CSS.escape(this.selectedEventDateISO)}"]`))
+                || document.querySelector(slugSel);
             if (selectedCard) {
                 selectedCard.classList.add('selected');
                 this.ensureFlyerLoaded(selectedCard);
@@ -681,8 +702,29 @@ class DynamicCalendarLoader extends CalendarCore {
                 eventsList.classList.add('selection-mode');
             }
             
-            // Mark selected event items in calendar views
-            const calendarItems = document.querySelectorAll(`.event-item[data-event-slug="${CSS.escape(this.selectedEventSlug)}"]`);
+            // Mark the selected OCCURRENCE's pill in the calendar — the strip
+            // renders a weekly event once per week, and marking every pill
+            // with the slug lit them all, so the in-window occurrence read as
+            // "the" selection even when a past/future one was chosen. The
+            // pill's day cell carries data-date; slug-wide stays the fallback
+            // for a selection without a date.
+            const slugItems = document.querySelectorAll(`.event-item[data-event-slug="${CSS.escape(this.selectedEventSlug)}"]`);
+            let calendarItems = [];
+            if (this.selectedEventDateISO) {
+                calendarItems = Array.from(slugItems).filter(item => {
+                    // A multi-day run is ONE occurrence spread across day
+                    // cells — every segment is part of the selection, so the
+                    // occurrence filter (which exists to pick one of a
+                    // recurring event's many pills) must not apply. Filtering
+                    // them lit a single day of a festival's bar; the rail
+                    // cards only looked right because a run starting before
+                    // the strip tripped the none-matched fallback below.
+                    if (item.classList.contains('multi-day')) return true;
+                    const dayEl = item.closest('[data-date]');
+                    return dayEl && dayEl.getAttribute('data-date') === this.selectedEventDateISO;
+                });
+            }
+            if (calendarItems.length === 0) calendarItems = Array.from(slugItems);
             calendarItems.forEach(item => {
                 item.classList.add('selected');
             });
@@ -1598,10 +1640,20 @@ class DynamicCalendarLoader extends CalendarCore {
     //
     // maxDays bounds the recurrence expansion; a city with nothing in the next
     // six months simply gets no edge slot rather than an unbounded scan.
-    findAdjacentEvent(direction, maxDays = 190) {
+    findAdjacentEvent(direction, maxDays = 190, beyond = 'window') {
         if (!Array.isArray(this.allEvents) || this.allEvents.length === 0) return null;
         const forward = direction !== 'prev';
-        const { start, end } = this.getCurrentPeriodBounds();
+        let { start, end } = this.getCurrentPeriodBounds();
+        // 'strip': the rail renders the whole grid strip, so its edge slots
+        // must point past the STRIP, not past the visible window — otherwise
+        // they duplicate cards already on the rail
+        if (beyond === 'strip' && this.stripStartDate && this.currentView === 'week') {
+            start = new Date(this.stripStartDate);
+            start.setHours(0, 0, 0, 0);
+            end = new Date(start);
+            end.setDate(end.getDate() + this.stripDayCount - 1);
+            end.setHours(23, 59, 59, 999);
+        }
 
         let searchStart, searchEnd;
         if (forward) {
@@ -1659,8 +1711,126 @@ class DynamicCalendarLoader extends CalendarCore {
             dateISO,
             name: pick.name || '',
             date: pickDate,
-            weekCount
+            weekCount,
+            // the full (occurrence-expanded) event, so the rail can render the
+            // REAL card for it rather than a placeholder naming it
+            event: pick
         };
+    }
+
+    // The rail's edge-card navigation. NOT openWeekAt: the visible window is
+    // a CONTINUOUS 7 days (any start day — see getCurrentPeriodBounds), and
+    // snapping to the target's Sunday-aligned week yanked the whole view to
+    // dates the user never asked for. This shifts the window JUST far enough
+    // to include the target — an Earlier event becomes the window's first
+    // day, a Later event its last — so most of the visible days (and their
+    // cards, via the sig-reuse render) survive the move, and the arrival
+    // reads as a continuation of the swipe rather than a page change.
+    //
+    // The light path: no strip rebuild, no updateCalendarDisplay. The grid
+    // repositions instantly (suppressed from re-settling), and
+    // refreshEventsPanel does what it already does after a user scroll —
+    // cards, selection paint, map, chunky:events-rendered. Off the strip or
+    // near its rebuild edge, openWeekAt's full rebuild takes over.
+    async revealAdjacent(eventSlug, dateISO, direction) {
+        if (!eventSlug || !/^\d{4}-\d{2}-\d{2}$/.test(dateISO || '')) return;
+        const parts = dateISO.split('-');
+        const parsed = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        if (isNaN(parsed.getTime())) return;
+        const windowStart = new Date(parsed);
+        if (direction !== 'prev') windowStart.setDate(windowStart.getDate() - 6);
+        windowStart.setHours(0, 0, 0, 0);
+
+        const grid = document.querySelector('.calendar-grid');
+        if (this.currentView === 'week' && grid && this.stripStartDate && grid.scrollWidth > 0) {
+            const idx = Math.round((windowStart - this.stripStartDate) / 86400000);
+            if (idx >= 0 && idx <= this.stripDayCount - 7) {
+                this.selectedEventSlug = eventSlug;
+                this.selectedEventDateISO = dateISO;
+                this.currentDate = windowStart;
+                this.updateHeaderPeriodLabel();
+                this.syncUrl(true);
+                // glide, then refresh: the panel re-render (46 card sigs) must
+                // not run mid-animation, and into-same-DOM reuse means the only
+                // visible change during the glide is the days sliding
+                await this.animateGridShift(grid, Math.round(idx * (grid.scrollWidth / this.stripDayCount)));
+                this.sizeWeekStripHeight();
+                await this.refreshEventsPanel(this.getFilteredEvents(), false, { keepCamera: true });
+                return;
+            }
+            // OFF the strip (a month-away edge card): the near path glided and
+            // this one SNAPPED (owner: "swiping a ton into the future does not
+            // show the animation"). Rebuild the strip centred on the target
+            // but ANCHORED so the days already on screen stay put — the
+            // rebuild is invisible — then glide across the new strip exactly
+            // like the near case. Only a jump longer than the strip itself
+            // (~8 weeks) still snaps, in the clamped-glide sense.
+            let oldStartISO = null;
+            try { oldStartISO = this.getLocalDateKey(this.getCurrentPeriodBounds().start); } catch (e) {}
+            this.selectedEventSlug = eventSlug;
+            this.selectedEventDateISO = dateISO;
+            this.currentDate = windowStart;
+            if (oldStartISO) this.pendingStripAnchor = { dateKey: oldStartISO, offset: 0 };
+            await this.updateCalendarDisplay();
+            this.syncUrl(true);
+            const grid2 = document.querySelector('.calendar-grid');
+            if (grid2 && this.stripStartDate && grid2.scrollWidth > 0) {
+                const idx2 = Math.max(0, Math.min(this.stripDayCount - 7,
+                    Math.round((windowStart - this.stripStartDate) / 86400000)));
+                await this.animateGridShift(grid2, Math.round(idx2 * (grid2.scrollWidth / this.stripDayCount)));
+                this.sizeWeekStripHeight();
+            }
+            return;
+        }
+        await this.openWeekAt(eventSlug, dateISO);
+    }
+
+    // The days slide over as if flicked, instead of teleporting (owner: "it
+    // just snaps ... instead of a natural swipe"). Hand-rolled scrollLeft per
+    // frame because a concurrent UA smooth scroll is silently dropped while
+    // the card rail's own snap is settling (reproduced 2026-08-31); the two
+    // jank sources of the earlier glide are both handled here — scroll-snap
+    // is OFF for the duration (proximity snap fought per-frame writes), and
+    // the settle listener is suppressed until the glide lands. Ease-out, so
+    // it reads as momentum from the swipe that caused it. A touch or wheel on
+    // the grid cancels — the user's hand outranks the animation. Instant
+    // under prefers-reduced-motion.
+    animateGridShift(grid, targetLeft) {
+        const startLeft = grid.scrollLeft;
+        const distance = targetLeft - startLeft;
+        const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (Math.abs(distance) < 2 || reduced) {
+            this.suppressGridScrollUntil = performance.now() + 250;
+            grid.scrollLeft = targetLeft;
+            return Promise.resolve();
+        }
+        const dayW = grid.scrollWidth / this.stripDayCount;
+        const duration = Math.max(220, Math.min(480, 90 * Math.abs(distance) / Math.max(1, dayW)));
+        const savedSnap = grid.style.scrollSnapType;
+        grid.style.scrollSnapType = 'none';
+        const startTime = performance.now();
+        const ease = t => 1 - Math.pow(1 - t, 3);
+        return new Promise(resolve => {
+            let raf = 0;
+            const finish = () => {
+                if (raf) cancelAnimationFrame(raf);
+                grid.removeEventListener('touchstart', finish);
+                grid.removeEventListener('wheel', finish);
+                grid.style.scrollSnapType = savedSnap;
+                resolve();
+            };
+            grid.addEventListener('touchstart', finish, { passive: true, once: true });
+            grid.addEventListener('wheel', finish, { passive: true, once: true });
+            const step = (now) => {
+                const t = Math.min(1, (now - startTime) / duration);
+                this.suppressGridScrollUntil = performance.now() + 250;
+                grid.scrollLeft = Math.round(startLeft + distance * ease(t));
+                if (t < 1) { raf = requestAnimationFrame(step); return; }
+                raf = 0;
+                finish();
+            };
+            raf = requestAnimationFrame(step);
+        });
     }
 
     async navigatePeriod(direction, skipAnimation = false) {
@@ -2872,7 +3042,12 @@ class DynamicCalendarLoader extends CalendarCore {
         // Deriving the plate per brand failed: Animal's red-on-red favicon
         // became a solid red block, and a transparent plate made round marks
         // read as circles next to square ones.
-        return `<span class="ec-fav"><img src="${src}" alt="" loading="lazy" decoding="async" onerror="this.parentNode.remove()"></span>`;
+        // EAGER, deliberately: favicons are tiny local files, and lazy
+        // loading barely fires for offscreen cards in a horizontally
+        // scrolled rail — on the 46-card timeline only 8 of 45 had loaded,
+        // so swiping showed favicon-less cards popping their icons in late.
+        // Flyers stay lazy; they are the heavy assets.
+        return `<span class="ec-fav"><img src="${src}" alt="" loading="eager" decoding="async" onerror="this.parentNode.remove()"></span>`;
     }
 
     // Venue row. Mirrors generateLocationHtml's data choices (coordinates →
@@ -3015,8 +3190,18 @@ class DynamicCalendarLoader extends CalendarCore {
         const slug = this.escapeCardText(event.slug);
         const shareTime = `${event.day || ''}${event.time ? ' ' + event.time : ''}`;
 
+        // Which OCCURRENCE this card is: the rail's timeline renders a
+        // recurring event once per occurrence, so slug alone no longer names
+        // a unique card — selection, reuse and centering key on slug+date.
+        let occurrenceISO = '';
+        try {
+            const logical = this.getLogicalStartDate(event);
+            if (logical) occurrenceISO = this.getLocalDateKey(logical);
+        } catch (e) { occurrenceISO = ''; }
+        const occurrenceAttr = occurrenceISO ? ` data-occurrence="${occurrenceISO}"` : '';
+
         return `
-            <div class="event-card detailed aurora" data-event-slug="${slug}" data-lat="${this.escapeCardText(event.coordinates?.lat || '')}" data-lng="${this.escapeCardText(event.coordinates?.lng || '')}"${auroraStyle}>
+            <div class="event-card detailed aurora" data-event-slug="${slug}"${occurrenceAttr} data-lat="${this.escapeCardText(event.coordinates?.lat || '')}" data-lng="${this.escapeCardText(event.coordinates?.lng || '')}"${auroraStyle}>
                 ${flyerHtml}
                 <div class="ec-panel">
                     ${flyerUrl ? '<button class="rail-thumb" type="button" aria-label="Show flyer"></button>' : ''}
@@ -3512,7 +3697,7 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     // Deduplicate events based on UID and recurrenceId for list/map views
-    deduplicateByUIDAndRecurrenceId(events) {
+    deduplicateByUIDAndRecurrenceId(events, perOccurrence = false) {
         logger.debug('CALENDAR', 'Applying UID and recurrenceId-based deduplication for list/map views', {
             totalEvents: events.length
         });
@@ -3533,7 +3718,21 @@ class DynamicCalendarLoader extends CalendarCore {
             // Create a key that handles null recurrenceId properly
             // For Date objects, use ISO string; for null, use 'null'
             const recurrenceIdKey = recurrenceId instanceof Date ? recurrenceId.toISOString() : 'null';
-            const key = `${uid}-${recurrenceIdKey}`;
+            // perOccurrence: the rail's timeline renders a recurring event
+            // once per occurrence, and the plain uid key collapsed all of a
+            // weekly night's expanded instances into ONE card (they share a
+            // uid and a null recurrenceId) — over a 7-day window that was
+            // invisible, over the 63-day timeline it ate eight of nine.
+            // The date joins the key so occurrences stay distinct while
+            // same-date duplicates still fold.
+            let occurrenceKey = '';
+            if (perOccurrence) {
+                try {
+                    const logical = this.getLogicalStartDate(event);
+                    if (logical) occurrenceKey = `-${this.getLocalDateKey(logical)}`;
+                } catch (e) { occurrenceKey = ''; }
+            }
+            const key = `${uid}-${recurrenceIdKey}${occurrenceKey}`;
             
             logger.debug('CALENDAR', 'Processing event for UID/recurrenceId deduplication', {
                 eventName: event.name,
@@ -4593,8 +4792,19 @@ class DynamicCalendarLoader extends CalendarCore {
         this.suppressGridScrollUntil = performance.now() + 250;
         if (this.currentView === 'week') {
             if (!this.stripStartDate || grid.scrollWidth <= 0) return;
-            const { start } = this.getCurrentPeriodBounds();
-            const idx = Math.round((start - this.stripStartDate) / 86400000);
+            // an anchor pins a GIVEN date to the left edge instead of the
+            // current window's start — a strip rebuild can then keep showing
+            // the days already on screen (invisible), so a long-distance
+            // reveal can glide from here to the new window afterwards
+            let idx;
+            if (anchor && anchor.dateKey && /^\d{4}-\d{2}-\d{2}$/.test(anchor.dateKey)) {
+                const p = anchor.dateKey.split('-');
+                idx = Math.round((new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2])) - this.stripStartDate) / 86400000);
+            } else {
+                const { start } = this.getCurrentPeriodBounds();
+                idx = Math.round((start - this.stripStartDate) / 86400000);
+            }
+            idx = Math.max(0, Math.min(this.stripDayCount - 7, idx));
             const dayW = grid.scrollWidth / this.stripDayCount;
             grid.scrollLeft = Math.round(idx * dayW);
             return;
@@ -4724,7 +4934,38 @@ class DynamicCalendarLoader extends CalendarCore {
     // (which would destroy the user's scroll position). opts.keepCamera
     // leaves the map camera alone on settle refreshes — markers change,
     // the framing never jumps under a slide.
+    // The mobile rail's TIMELINE card set: every event on the rendered grid
+    // strip (visible week ± 28 days), ONE card per event — a recurring night
+    // keeps the occurrence nearest the strip's central week (ahead preferred)
+    // so slugs stay unique and the whole selection/reuse machinery keeps
+    // working — sorted by date. dusk-rail switches this on for mobile
+    // (this.railTimeline); everywhere else the card list stays the visible
+    // window, exactly as before. Stability matters more than freshness here:
+    // the set only changes when the STRIP is rebuilt, so a settle mid-swipe
+    // re-renders into the same sigs and the rail's DOM never churns.
+    getRailTimelineEvents() {
+        if (!this.stripStartDate || this.currentView !== 'week') return null;
+        const start = new Date(this.stripStartDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(start);
+        end.setDate(end.getDate() + this.stripDayCount - 1);
+        end.setHours(23, 59, 59, 999);
+        // EVERY occurrence, its own card (a recurring night deduped to one
+        // occurrence went missing from every other week the user swiped to —
+        // owner report 2026-08-31). getFilteredEvents already expands
+        // recurrences and sorts by date; occurrence uniqueness is handled by
+        // the slug+occurrence keys the cards carry.
+        try {
+            return this.getFilteredEvents({ start, end });
+        } catch (error) {
+            return null;
+        }
+    }
+
     async refreshEventsPanel(filteredEvents, hideEvents = false, opts = {}) {
+        // the card LIST may be wider than the window (rail timeline); the map
+        // and everything else below keep the window's own filteredEvents
+        const cardEvents = (this.railTimeline && this.getRailTimelineEvents()) || filteredEvents;
         // Update events list (show for both week and month views)
         const eventsList = document.querySelector('.events-list');
         const eventsSection = document.querySelector('.events');
@@ -4746,7 +4987,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 if (!eventsList.querySelector('.loading-message')) {
                     eventsList.innerHTML = '<div class="loading-message">📅 Getting events...</div>';
                 }
-            } else if (filteredEvents?.length > 0) {
+            } else if (cardEvents?.length > 0) {
                 // Clear any existing error messages when successfully loading events
                 const existingError = eventsList.querySelector('.error-message');
                 if (existingError) {
@@ -4769,7 +5010,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     logger.info('CALENDAR', 'Applying UID/recurrenceId deduplication for list view', {
                         originalEventCount: filteredEvents.length
                     });
-                    const listDeduplicatedEvents = this.deduplicateByUIDAndRecurrenceId(filteredEvents);
+                    const listDeduplicatedEvents = this.deduplicateByUIDAndRecurrenceId(cardEvents, cardEvents !== filteredEvents);
 
                     // Reconcile instead of innerHTML-swapping: a card whose
                     // rendered content is unchanged is REUSED, so its favicon
@@ -4781,20 +5022,20 @@ class DynamicCalendarLoader extends CalendarCore {
                         for (let i = 0; i < str.length; i++) hash = ((hash << 5) + hash + str.charCodeAt(i)) >>> 0;
                         return String(hash);
                     };
+                    // keyed by slug+occurrence: the timeline rail renders a
+                    // recurring event once per occurrence, and a slug-only map
+                    // collides those into one entry — every other occurrence
+                    // then rebuilt on each settle (visible churn)
+                    const occKeyOf = (slug, occ) => `${slug}|${occ || ''}`;
                     const existingBySlug = new Map();
                     eventsList.querySelectorAll(':scope > .event-card[data-event-slug]').forEach(c => {
-                        existingBySlug.set(c.getAttribute('data-event-slug'), c);
-                    });
-                    // already-decoded <img>s from the outgoing list, by URL:
-                    // fresh cards TRANSPLANT them instead of re-decoding, so
-                    // favicons/flyers don't blink even across a month change
-                    // (venues repeat, the image URLs are the same)
-                    const oldImgPool = new Map();
-                    eventsList.querySelectorAll(':scope > .event-card img').forEach(img => {
-                        const src = img.getAttribute('src');
-                        if (src && img.complete && !oldImgPool.has(src)) oldImgPool.set(src, img);
+                        existingBySlug.set(
+                            occKeyOf(c.getAttribute('data-event-slug'), c.getAttribute('data-occurrence')),
+                            c
+                        );
                     });
                     const frag = document.createDocumentFragment();
+                    const freshCards = [];
                     const shell = document.createElement('div');
                     let reusedCards = 0;
                     // Per EVENT, not per list. One card that cannot be built
@@ -4817,14 +5058,15 @@ class DynamicCalendarLoader extends CalendarCore {
                             return;
                         }
                         const sig = sigOf(html);
-                        const existing = existingBySlug.get(event.slug);
+                        let eventOccISO = '';
+                        try {
+                            const lg = this.getLogicalStartDate(event);
+                            if (lg) eventOccISO = this.getLocalDateKey(lg);
+                        } catch (e) { eventOccISO = ''; }
+                        const reuseKey = occKeyOf(event.slug, eventOccISO);
+                        const existing = existingBySlug.get(reuseKey);
                         if (existing && existing.dataset.cardSig === sig) {
-                            existingBySlug.delete(event.slug);
-                            // this card keeps its own imgs — pull them out of
-                            // the transplant pool so no other card steals them
-                            oldImgPool.forEach((img, src) => {
-                                if (existing.contains(img)) oldImgPool.delete(src);
-                            });
+                            existingBySlug.delete(reuseKey);
                             frag.appendChild(existing);
                             reusedCards++;
                             return;
@@ -4833,6 +5075,30 @@ class DynamicCalendarLoader extends CalendarCore {
                         const fresh = shell.firstElementChild;
                         if (fresh) {
                             fresh.dataset.cardSig = sig;
+                            frag.appendChild(fresh);
+                            freshCards.push(fresh);
+                        }
+                    });
+
+                    // Transplant decoded <img>s into the rebuilt cards — but
+                    // ONLY from cards that are being discarded. This used to
+                    // pool every outgoing img up front, so a rebuilt card
+                    // early in the loop could steal the favicon out of a
+                    // later card that was then REUSED — its ec-fav span left
+                    // empty, the "some favicons missing" after a month/week
+                    // round-trip. The timeline makes the collision routine:
+                    // nine occurrence cards of a weekly night share one
+                    // favicon URL. existingBySlug now holds exactly the
+                    // not-reused leftovers, so their imgs are free to move.
+                    const oldImgPool = new Map();
+                    existingBySlug.forEach(discarded => {
+                        discarded.querySelectorAll('img').forEach(img => {
+                            const src = img.getAttribute('src');
+                            if (src && img.complete && !oldImgPool.has(src)) oldImgPool.set(src, img);
+                        });
+                    });
+                    if (oldImgPool.size) {
+                        freshCards.forEach(fresh => {
                             fresh.querySelectorAll('img').forEach(img => {
                                 const src = img.getAttribute('src');
                                 const donor = src && oldImgPool.get(src);
@@ -4841,9 +5107,8 @@ class DynamicCalendarLoader extends CalendarCore {
                                     img.replaceWith(donor);
                                 }
                             });
-                            frag.appendChild(fresh);
-                        }
-                    });
+                        });
+                    }
                     eventsList.replaceChildren(frag);
 
                     if (skippedCards > 0) {
@@ -4857,7 +5122,7 @@ class DynamicCalendarLoader extends CalendarCore {
                         reusedCards,
                         originalEventCount: filteredEvents.length,
                         deduplicatedEventCount: listDeduplicatedEvents.length,
-                        removedDuplicates: filteredEvents.length - listDeduplicatedEvents.length
+                        removedDuplicates: cardEvents.length - listDeduplicatedEvents.length
                     });
                 } catch (cardError) {
                     logger.componentError('CALENDAR', 'Failed to generate event cards', cardError);
@@ -4977,7 +5242,35 @@ class DynamicCalendarLoader extends CalendarCore {
             } catch (e) {}
         }
         const filteredEvents = this.getFilteredEvents();
-        
+
+        // A selection whose date is NOT an occurrence of its event re-binds
+        // to a real one in the window. This is how a reloaded URL heals: old
+        // links carry only the window date, and a guessed date that matches
+        // no occurrence made the card, the pill and the URL each fall back to
+        // a DIFFERENT occurrence. Out-of-window selections are left alone —
+        // they are legitimate mid-journey states, not stale guesses.
+        if (this.selectedEventSlug && this.selectedEventDateISO) {
+            try {
+                const occurrences = filteredEvents.filter(ev => ev.slug === this.selectedEventSlug);
+                if (occurrences.length > 0) {
+                    const keys = occurrences
+                        .map(ev => {
+                            const d = this.getLogicalStartDate(ev);
+                            return d ? this.getLocalDateKey(d) : null;
+                        })
+                        .filter(Boolean);
+                    if (keys.length > 0 && !keys.includes(this.selectedEventDateISO)) {
+                        logger.debug('CALENDAR', 'Re-bound selection to a real occurrence', {
+                            slug: this.selectedEventSlug,
+                            from: this.selectedEventDateISO,
+                            to: keys[0]
+                        });
+                        this.selectedEventDateISO = keys[0];
+                    }
+                }
+            } catch (e) {}
+        }
+
         logger.info('CALENDAR', `🔍 UPDATE_DISPLAY: Updating calendar display (${hideEvents ? 'HIDDEN for measurement' : 'VISIBLE for display'})`, {
             view: this.currentView,
             eventCount: filteredEvents.length,
@@ -5094,12 +5387,26 @@ class DynamicCalendarLoader extends CalendarCore {
                 if (newView !== this.currentView) {
                     logger.userInteraction('CALENDAR', `View changed from ${this.currentView} to ${newView}`);
                     if (newView === 'week') {
-                        // coming from month: open the week AS SHOWN there
-                        // (the Sunday-aligned row containing currentDate)
-                        const aligned = new Date(this.currentDate);
-                        aligned.setDate(aligned.getDate() - aligned.getDay());
-                        aligned.setHours(0, 0, 0, 0);
-                        this.currentDate = aligned;
+                        if (this.savedWeekStart instanceof Date) {
+                            // round-tripping through month view returns to the
+                            // EXACT window the user left — including its
+                            // weekday start (the continuous window is not
+                            // Sunday-aligned). Only an explicit week/day click
+                            // inside month view (switchToWeekView, openWeekAt)
+                            // chooses a different week.
+                            this.currentDate = new Date(this.savedWeekStart);
+                        } else {
+                            // no saved week (deep link into month): open the
+                            // week AS SHOWN there — the Sunday-aligned row
+                            // containing currentDate
+                            const aligned = new Date(this.currentDate);
+                            aligned.setDate(aligned.getDate() - aligned.getDay());
+                            aligned.setHours(0, 0, 0, 0);
+                            this.currentDate = aligned;
+                        }
+                    } else if (this.currentView === 'week') {
+                        // leaving week view: remember the window to come back to
+                        this.savedWeekStart = new Date(this.currentDate);
                     }
                     this.currentView = newView;
                     
@@ -5360,8 +5667,14 @@ class DynamicCalendarLoader extends CalendarCore {
                 const shareBtn = e.target.closest && e.target.closest('.share-event-btn');
                 if (shareBtn) return;
                 const slug = card.getAttribute('data-event-slug');
-                // Prefer the date from selectedEventDateISO if it matches slug, else use currentDate
-                const dayISO = this.selectedEventSlug === slug && this.selectedEventDateISO ? this.selectedEventDateISO : this.formatDateToISO(this.currentDate);
+                // The card knows which occurrence it is (data-occurrence) —
+                // selecting with currentDate stamped the WINDOW START on the
+                // selection, which matched no pill and no timeline card, and
+                // sent the rail hunting for the wrong occurrence.
+                const dayISO = card.getAttribute('data-occurrence')
+                    || (this.selectedEventSlug === slug && this.selectedEventDateISO
+                        ? this.selectedEventDateISO
+                        : this.formatDateToISO(this.currentDate));
                 logger.userInteraction('EVENT', 'Event card clicked', { slug, date: dayISO });
                 this.toggleEventSelection(slug, dayISO);
                 
