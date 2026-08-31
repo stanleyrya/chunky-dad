@@ -696,6 +696,14 @@ class DynamicCalendarLoader extends CalendarCore {
             let calendarItems = [];
             if (this.selectedEventDateISO) {
                 calendarItems = Array.from(slugItems).filter(item => {
+                    // A multi-day run is ONE occurrence spread across day
+                    // cells — every segment is part of the selection, so the
+                    // occurrence filter (which exists to pick one of a
+                    // recurring event's many pills) must not apply. Filtering
+                    // them lit a single day of a festival's bar; the rail
+                    // cards only looked right because a run starting before
+                    // the strip tripped the none-matched fallback below.
+                    if (item.classList.contains('multi-day')) return true;
                     const dayEl = item.closest('[data-date]');
                     return dayEl && dayEl.getAttribute('data-date') === this.selectedEventDateISO;
                 });
