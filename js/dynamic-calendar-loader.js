@@ -5010,16 +5010,8 @@ class DynamicCalendarLoader extends CalendarCore {
                             c
                         );
                     });
-                    // already-decoded <img>s from the outgoing list, by URL:
-                    // fresh cards TRANSPLANT them instead of re-decoding, so
-                    // favicons/flyers don't blink even across a month change
-                    // (venues repeat, the image URLs are the same)
-                    const oldImgPool = new Map();
-                    eventsList.querySelectorAll(':scope > .event-card img').forEach(img => {
-                        const src = img.getAttribute('src');
-                        if (src && img.complete && !oldImgPool.has(src)) oldImgPool.set(src, img);
-                    });
                     const frag = document.createDocumentFragment();
+                    const freshCards = [];
                     const shell = document.createElement('div');
                     let reusedCards = 0;
                     // Per EVENT, not per list. One card that cannot be built
@@ -5051,11 +5043,6 @@ class DynamicCalendarLoader extends CalendarCore {
                         const existing = existingBySlug.get(reuseKey);
                         if (existing && existing.dataset.cardSig === sig) {
                             existingBySlug.delete(reuseKey);
-                            // this card keeps its own imgs — pull them out of
-                            // the transplant pool so no other card steals them
-                            oldImgPool.forEach((img, src) => {
-                                if (existing.contains(img)) oldImgPool.delete(src);
-                            });
                             frag.appendChild(existing);
                             reusedCards++;
                             return;
@@ -5064,6 +5051,30 @@ class DynamicCalendarLoader extends CalendarCore {
                         const fresh = shell.firstElementChild;
                         if (fresh) {
                             fresh.dataset.cardSig = sig;
+                            frag.appendChild(fresh);
+                            freshCards.push(fresh);
+                        }
+                    });
+
+                    // Transplant decoded <img>s into the rebuilt cards — but
+                    // ONLY from cards that are being discarded. This used to
+                    // pool every outgoing img up front, so a rebuilt card
+                    // early in the loop could steal the favicon out of a
+                    // later card that was then REUSED — its ec-fav span left
+                    // empty, the "some favicons missing" after a month/week
+                    // round-trip. The timeline makes the collision routine:
+                    // nine occurrence cards of a weekly night share one
+                    // favicon URL. existingBySlug now holds exactly the
+                    // not-reused leftovers, so their imgs are free to move.
+                    const oldImgPool = new Map();
+                    existingBySlug.forEach(discarded => {
+                        discarded.querySelectorAll('img').forEach(img => {
+                            const src = img.getAttribute('src');
+                            if (src && img.complete && !oldImgPool.has(src)) oldImgPool.set(src, img);
+                        });
+                    });
+                    if (oldImgPool.size) {
+                        freshCards.forEach(fresh => {
                             fresh.querySelectorAll('img').forEach(img => {
                                 const src = img.getAttribute('src');
                                 const donor = src && oldImgPool.get(src);
@@ -5072,9 +5083,8 @@ class DynamicCalendarLoader extends CalendarCore {
                                     img.replaceWith(donor);
                                 }
                             });
-                            frag.appendChild(fresh);
-                        }
-                    });
+                        });
+                    }
                     eventsList.replaceChildren(frag);
 
                     if (skippedCards > 0) {
@@ -5325,12 +5335,26 @@ class DynamicCalendarLoader extends CalendarCore {
                 if (newView !== this.currentView) {
                     logger.userInteraction('CALENDAR', `View changed from ${this.currentView} to ${newView}`);
                     if (newView === 'week') {
-                        // coming from month: open the week AS SHOWN there
-                        // (the Sunday-aligned row containing currentDate)
-                        const aligned = new Date(this.currentDate);
-                        aligned.setDate(aligned.getDate() - aligned.getDay());
-                        aligned.setHours(0, 0, 0, 0);
-                        this.currentDate = aligned;
+                        if (this.savedWeekStart instanceof Date) {
+                            // round-tripping through month view returns to the
+                            // EXACT window the user left — including its
+                            // weekday start (the continuous window is not
+                            // Sunday-aligned). Only an explicit week/day click
+                            // inside month view (switchToWeekView, openWeekAt)
+                            // chooses a different week.
+                            this.currentDate = new Date(this.savedWeekStart);
+                        } else {
+                            // no saved week (deep link into month): open the
+                            // week AS SHOWN there — the Sunday-aligned row
+                            // containing currentDate
+                            const aligned = new Date(this.currentDate);
+                            aligned.setDate(aligned.getDate() - aligned.getDay());
+                            aligned.setHours(0, 0, 0, 0);
+                            this.currentDate = aligned;
+                        }
+                    } else if (this.currentView === 'week') {
+                        // leaving week view: remember the window to come back to
+                        this.savedWeekStart = new Date(this.currentDate);
                     }
                     this.currentView = newView;
                     
