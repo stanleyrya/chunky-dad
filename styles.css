@@ -7283,6 +7283,10 @@ html.dusk body {
        an edge slot never points at a week with nothing in it — the "no
        events" card below is somewhere the week arrows take you, never
        somewhere a swipe drops you. */
+    /* The slot IS the neighbouring event's real card (generateEventCard
+       output, a display-only ghost) with a slim Earlier/Later ribbon across
+       its top. The dashed placeholder styling below survives only as the
+       fallback for a ghost that could not be built. */
     .dusk .events-list.rail-active > .rail-edge {
         flex: 0 0 calc(100vw - 5.6rem);
         margin: 0;
@@ -7305,20 +7309,63 @@ html.dusk body {
         -webkit-tap-highlight-color: transparent;
         overflow: hidden;
     }
-    .dusk .events-list.rail-active > .rail-edge-next {
+    /* with a real card inside, the slot is a bare frame — the ghost paints
+       its own aurora ground and corners */
+    .dusk .events-list.rail-active > .rail-edge.has-card {
+        padding: 0;
+        border: none;
+        background: none;
+        display: block;
+        text-align: left;
+    }
+    /* the ghost fills the slot and is inert: goEdge owns the tap, so its
+       links/share/thumb can never half-work */
+    .dusk .rail-edge .event-card.rail-edge-ghost {
+        width: 100%;
+        height: 100%;
+        max-width: none;
+        margin: 0;
+        pointer-events: none;
+        display: flex;
+        flex-direction: column;
+    }
+    .dusk .rail-edge .rail-edge-ghost .ec-panel {
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+    .dusk .rail-edge .rail-edge-ghost .ec-panel > .event-links { margin-top: auto; }
+    .dusk .rail-edge .rail-edge-ghost .ec-title {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    /* the ribbon: where a swipe onto this card goes */
+    .dusk .rail-edge .edge-ribbon {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 4;
+        padding: 5px 10px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+        text-align: center;
+        color: rgba(255, 255, 255, 0.92);
+        background: rgba(6, 8, 20, 0.62);
+        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(10px);
+    }
+    /* room for the ribbon over the ghost's title row */
+    .dusk .rail-edge.has-card .rail-edge-ghost .ec-panel { padding-top: 2.1rem; }
+    .dusk .events-list.rail-active > .rail-edge-next:not(.has-card) {
         text-align: right;
         align-items: flex-end;
     }
-    /* a chevron, drawn — no icon font on the critical path for two glyphs */
-    .dusk .rail-edge .edge-arrow {
-        width: 15px;
-        height: 15px;
-        margin-bottom: 6px;
-        border-right: 2px solid rgba(255, 255, 255, 0.55);
-        border-bottom: 2px solid rgba(255, 255, 255, 0.55);
-    }
-    .dusk .rail-edge-prev .edge-arrow { transform: rotate(135deg); }
-    .dusk .rail-edge-next .edge-arrow { transform: rotate(-45deg); }
     .dusk .rail-edge .edge-label {
         font-size: 11px;
         font-weight: 700;
@@ -7340,11 +7387,6 @@ html.dusk body {
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
-    }
-    .dusk .rail-edge .edge-more {
-        margin-top: 2px;
-        font-size: 0.76rem;
-        color: rgba(255, 255, 255, 0.6);
     }
 
     /* ---------- the empty week ----------

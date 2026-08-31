@@ -1659,8 +1659,93 @@ class DynamicCalendarLoader extends CalendarCore {
             dateISO,
             name: pick.name || '',
             date: pickDate,
-            weekCount
+            weekCount,
+            // the full (occurrence-expanded) event, so the rail can render the
+            // REAL card for it rather than a placeholder naming it
+            event: pick
         };
+    }
+
+    // Like openWeekAt, but the week strip GLIDES there when the target is
+    // already rendered on it. The strip is continuous (visible week ± 28
+    // days), so the common arrival — the rail's earlier/later card, usually a
+    // week or two away — is a smooth scroll, not a reload. The scroll fires
+    // the strip's own settle machinery (armGridScroll → onGridSettle), which
+    // already derives the new period and refreshes label, URL, cards and map;
+    // this method only sets the destination and pushes.
+    //
+    // Off the strip, near its edge (where settle rebuilds the strip anyway),
+    // not in week view, or reduced-motion: fall through to openWeekAt's snap.
+    async slideToWeek(eventSlug, dateISO) {
+        if (!eventSlug || !/^\d{4}-\d{2}-\d{2}$/.test(dateISO || '')) return;
+        const parts = dateISO.split('-');
+        const parsed = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        if (isNaN(parsed.getTime())) return;
+        const windowStart = new Date(parsed);
+        windowStart.setDate(windowStart.getDate() - windowStart.getDay());
+        windowStart.setHours(0, 0, 0, 0);
+
+        const grid = document.querySelector('.calendar-grid');
+        const canGlide = this.currentView === 'week'
+            && grid && this.stripStartDate && grid.scrollWidth > 0
+            && !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+        if (canGlide) {
+            const idx = Math.round((windowStart - this.stripStartDate) / 86400000);
+            const nearEdge = idx <= 10 || idx >= this.stripDayCount - 17;
+            if (idx >= 0 && idx <= this.stripDayCount - 7 && !nearEdge) {
+                // selection first, so the settle's refresh renders it selected
+                this.selectedEventSlug = eventSlug;
+                this.selectedEventDateISO = dateISO;
+                const dayW = grid.scrollWidth / this.stripDayCount;
+                this.animateGridScrollTo(grid, Math.round(idx * dayW));
+                return;
+            }
+        }
+        await this.openWeekAt(eventSlug, dateISO);
+    }
+
+    // The glide itself: scrollLeft written per frame over ~520ms, eased.
+    // NOT scrollTo({behavior:'smooth'}) — with the card rail's own snap
+    // animation still settling, WebKit silently dropped a concurrent smooth
+    // scroll on the grid (reproduced: the same call worked from a quiet page
+    // and no-oped right after a rail swipe). Writing scrollLeft cannot be
+    // dropped, fires the real scroll events the settle machinery listens
+    // for, and behaves identically in every engine. A touch or wheel on the
+    // grid mid-flight cancels: the user's hand outranks the animation.
+    animateGridScrollTo(grid, targetLeft) {
+        if (this.gridGlideCancel) this.gridGlideCancel();
+        const startLeft = grid.scrollLeft;
+        const distance = targetLeft - startLeft;
+        if (Math.abs(distance) < 2) { grid.scrollLeft = targetLeft; return; }
+        const duration = 520;
+        const startTime = performance.now();
+        let raf = 0;
+        const cancel = () => {
+            if (raf) cancelAnimationFrame(raf);
+            raf = 0;
+            grid.removeEventListener('touchstart', cancel);
+            grid.removeEventListener('wheel', cancel);
+            this.gridGlideCancel = null;
+        };
+        this.gridGlideCancel = cancel;
+        grid.addEventListener('touchstart', cancel, { passive: true, once: true });
+        grid.addEventListener('wheel', cancel, { passive: true, once: true });
+        const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+        const step = (now) => {
+            const t = Math.min(1, (now - startTime) / duration);
+            grid.scrollLeft = Math.round(startLeft + distance * ease(t));
+            if (t < 1) { raf = requestAnimationFrame(step); return; }
+            cancel();
+            // The settle is invoked directly, not left to the scroll
+            // listener: the animation knows the exact frame it finished,
+            // and settling must not depend on the engine's scroll-event
+            // delivery for programmatic scrollLeft writes. Where those
+            // events DO fire, the timer's own settle runs a second time
+            // and no-ops (period unchanged → early return).
+            clearTimeout(this.gridScrollTimer);
+            this.onGridSettle();
+        };
+        raf = requestAnimationFrame(step);
     }
 
     async navigatePeriod(direction, skipAnimation = false) {

@@ -429,21 +429,56 @@
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (ch) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
   const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const edgeHtml = (dir, target) => {
+  // The slot IS the event's real card (owner request 2026-08-30): the same
+  // generateEventCard output every in-window event gets, wearing a small
+  // Earlier/Later ribbon, with a text fallback if the card cannot be built.
+  // The ghost card is display-only — its data-event-slug is STRIPPED so the
+  // scrub geometry sees an empty slug and never live-selects an event that
+  // is not in the window (the reason edge slots carried no slug to begin
+  // with), and pointer-events are off so its links cannot half-work; the
+  // slot's own click (goEdge) is the one interaction.
+  const edgeHtml = (dir, target, l) => {
     const d = target.date instanceof Date ? target.date : new Date(target.date);
     const when = isNaN(d.getTime()) ? '' : WD[d.getDay()] + ' ' + (d.getMonth() + 1) + '/' + d.getDate();
-    const more = target.weekCount > 1 ? '+' + (target.weekCount - 1) + ' more that week' : '';
+    const more = target.weekCount > 1 ? ' \u00b7 +' + (target.weekCount - 1) + ' more' : '';
     const label = dir === 'prev' ? 'Earlier' : 'Later';
-    return '<button type="button" class="rail-edge rail-edge-' + dir + '"' +
+    const arrowed = dir === 'prev' ? ('\u2039 ' + label) : (label + ' \u203a');
+
+    let cardHtml = '';
+    if (target.event && l && l.generateEventCard) {
+      try {
+        const tmp = document.createElement('div');
+        tmp.innerHTML = l.generateEventCard(target.event);
+        const ghost = tmp.querySelector('.event-card');
+        if (ghost) {
+          ghost.removeAttribute('data-event-slug');
+          ghost.classList.add('rail-edge-ghost');
+          // the ghost is inert; its buttons would be dead controls — and,
+          // CRITICALLY, they may not exist at all: the slot renders inside a
+          // button-role element, and a real <button> wrapper was being
+          // force-CLOSED by the parser at the ghost's first nested <button>
+          // (buttons cannot contain buttons), spilling half the card and the
+          // ribbon out as siblings
+          ghost.querySelectorAll('button').forEach((b) => b.remove());
+          cardHtml = ghost.outerHTML;
+        }
+      } catch (e) { cardHtml = ''; }
+    }
+    const inner = cardHtml
+      || '<span class="edge-arrow" aria-hidden="true"></span>' +
+         '<span class="edge-label">' + esc(label) + '</span>' +
+         '<span class="edge-when">' + esc(when) + '</span>' +
+         '<span class="edge-name">' + esc(target.name) + '</span>';
+    // a DIV with button semantics, not a <button>, so it can legally hold the
+    // ghost card (activated by click; goEdge's listener handles it)
+    return '<div role="button" tabindex="0" class="rail-edge rail-edge-' + dir + (cardHtml ? ' has-card' : '') + '"' +
       ' data-slug="' + esc(target.slug) + '" data-date="' + esc(target.dateISO) + '"' +
-      ' aria-label="' + esc(label + ': ' + target.name + ', ' + when) + '">' +
-      '<span class="edge-arrow" aria-hidden="true"></span>' +
-      '<span class="edge-label">' + label + '</span>' +
-      '<span class="edge-when">' + esc(when) + '</span>' +
-      '<span class="edge-name">' + esc(target.name) + '</span>' +
-      (more ? '<span class="edge-more">' + esc(more) + '</span>' : '') +
-      '</button>';
+      ' aria-label="' + esc(label + ' week: ' + target.name + ', ' + when) + '">' +
+      inner +
+      '<span class="edge-ribbon">' + esc(arrowed + ' \u00b7 ' + when + more) + '</span>' +
+      '</div>';
   };
+
   const buildEdgeSlots = () => {
     const el = list();
     if (!el) return;
@@ -458,7 +493,7 @@
       let target = null;
       try { target = l.findAdjacentEvent(pair[0]); } catch (e) { target = null; }
       if (!target || !target.slug || !target.dateISO) return;
-      el.insertAdjacentHTML(pair[1], edgeHtml(pair[0], target));
+      el.insertAdjacentHTML(pair[1], edgeHtml(pair[0], target, l));
     });
   };
   const goEdge = (edge) => {
@@ -469,12 +504,16 @@
     if (!slug || !date) return;
     navigating = true;
     phase = 'idle';
-    urlDirty = false;          // openWeekAt writes the URL itself
+    urlDirty = false;          // the navigation writes the URL itself
     landedSlug = slug;
     grantSlug = slug;          // the swipe IS the grant: centre the arrival
     dbgNote('edge -> ' + slug.slice(0, 16) + ' @' + date);
+    // slideToWeek GLIDES the week strip there when the target week is already
+    // on the continuous strip (and snaps via openWeekAt when it is not);
+    // the strip's own settle then refreshes cards/URL/map for the new window
+    const go = typeof l.slideToWeek === 'function' ? l.slideToWeek : l.openWeekAt;
     Promise.resolve()
-      .then(() => l.openWeekAt(slug, date))
+      .then(() => go.call(l, slug, date))
       .catch(() => {})
       .then(() => { navigating = false; });
   };
@@ -483,6 +522,15 @@
     if (!edge) return;
     e.preventDefault();
     e.stopPropagation();
+    goEdge(edge);
+  }, true);
+  // the slot is a div[role=button] (a real <button> cannot contain the ghost
+  // card's markup), so Enter/Space activation is wired by hand
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const edge = e.target.closest && e.target.closest('.rail-edge');
+    if (!edge) return;
+    e.preventDefault();
     goEdge(edge);
   }, true);
 
