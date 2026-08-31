@@ -6644,6 +6644,12 @@ html.dusk body {
     background: var(--c1, var(--primary-color));
     min-width: 0;
     overflow: hidden;
+    /* The base .event-item carries transition:all — so a pill whose --c1
+       lands a frame after it renders ANIMATES from the indigo fallback to
+       its brand colour, a 200ms crossfade on every pill (the month-view
+       "blink of another colour"). Dusk pills change colour instantly;
+       nothing moves unless touched. */
+    transition: none;
 }
 .dusk .event-item .event-name { color: #fff; }
 .dusk .event-item .event-time { color: rgba(255, 255, 255, 0.82); }

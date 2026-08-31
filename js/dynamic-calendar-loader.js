@@ -1720,8 +1720,7 @@ class DynamicCalendarLoader extends CalendarCore {
         const grid = document.querySelector('.calendar-grid');
         if (this.currentView === 'week' && grid && this.stripStartDate && grid.scrollWidth > 0) {
             const idx = Math.round((windowStart - this.stripStartDate) / 86400000);
-            const nearEdge = idx <= 10 || idx >= this.stripDayCount - 17;
-            if (idx >= 0 && idx <= this.stripDayCount - 7 && !nearEdge) {
+            if (idx >= 0 && idx <= this.stripDayCount - 7) {
                 this.selectedEventSlug = eventSlug;
                 this.selectedEventDateISO = dateISO;
                 this.currentDate = windowStart;
@@ -1735,6 +1734,29 @@ class DynamicCalendarLoader extends CalendarCore {
                 await this.refreshEventsPanel(this.getFilteredEvents(), false, { keepCamera: true });
                 return;
             }
+            // OFF the strip (a month-away edge card): the near path glided and
+            // this one SNAPPED (owner: "swiping a ton into the future does not
+            // show the animation"). Rebuild the strip centred on the target
+            // but ANCHORED so the days already on screen stay put — the
+            // rebuild is invisible — then glide across the new strip exactly
+            // like the near case. Only a jump longer than the strip itself
+            // (~8 weeks) still snaps, in the clamped-glide sense.
+            let oldStartISO = null;
+            try { oldStartISO = this.getLocalDateKey(this.getCurrentPeriodBounds().start); } catch (e) {}
+            this.selectedEventSlug = eventSlug;
+            this.selectedEventDateISO = dateISO;
+            this.currentDate = windowStart;
+            if (oldStartISO) this.pendingStripAnchor = { dateKey: oldStartISO, offset: 0 };
+            await this.updateCalendarDisplay();
+            this.syncUrl(true);
+            const grid2 = document.querySelector('.calendar-grid');
+            if (grid2 && this.stripStartDate && grid2.scrollWidth > 0) {
+                const idx2 = Math.max(0, Math.min(this.stripDayCount - 7,
+                    Math.round((windowStart - this.stripStartDate) / 86400000)));
+                await this.animateGridShift(grid2, Math.round(idx2 * (grid2.scrollWidth / this.stripDayCount)));
+                this.sizeWeekStripHeight();
+            }
+            return;
         }
         await this.openWeekAt(eventSlug, dateISO);
     }
@@ -4746,8 +4768,19 @@ class DynamicCalendarLoader extends CalendarCore {
         this.suppressGridScrollUntil = performance.now() + 250;
         if (this.currentView === 'week') {
             if (!this.stripStartDate || grid.scrollWidth <= 0) return;
-            const { start } = this.getCurrentPeriodBounds();
-            const idx = Math.round((start - this.stripStartDate) / 86400000);
+            // an anchor pins a GIVEN date to the left edge instead of the
+            // current window's start — a strip rebuild can then keep showing
+            // the days already on screen (invisible), so a long-distance
+            // reveal can glide from here to the new window afterwards
+            let idx;
+            if (anchor && anchor.dateKey && /^\d{4}-\d{2}-\d{2}$/.test(anchor.dateKey)) {
+                const p = anchor.dateKey.split('-');
+                idx = Math.round((new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2])) - this.stripStartDate) / 86400000);
+            } else {
+                const { start } = this.getCurrentPeriodBounds();
+                idx = Math.round((start - this.stripStartDate) / 86400000);
+            }
+            idx = Math.max(0, Math.min(this.stripDayCount - 7, idx));
             const dayW = grid.scrollWidth / this.stripDayCount;
             grid.scrollLeft = Math.round(idx * dayW);
             return;
