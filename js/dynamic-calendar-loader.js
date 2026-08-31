@@ -514,11 +514,15 @@ class DynamicCalendarLoader extends CalendarCore {
                 }
             }
             
-            // Event selection from URL (no slug->date inference)
+            // Event selection from URL (no slug->date inference). The
+            // occurrence param wins; the window date is only a guess, and a
+            // wrong guess is re-bound to a real occurrence at first render.
             if (eventParam) {
                 this.selectedEventSlug = eventParam;
-                // If date provided, bind selection to that date; else leave date undefined
-                if (url.searchParams.get('date')) {
+                const occParam = url.searchParams.get('eventDate');
+                if (occParam && /^\d{4}-\d{2}-\d{2}$/.test(occParam)) {
+                    this.selectedEventDateISO = occParam;
+                } else if (url.searchParams.get('date')) {
                     this.selectedEventDateISO = url.searchParams.get('date');
                 }
             }
@@ -549,11 +553,23 @@ class DynamicCalendarLoader extends CalendarCore {
             params.set('view', this.currentView);
             params.set('date', this.formatDateToISO(this.currentDate));
             
-            // Event parameter only when selected
+            // Event parameter only when selected — and WHICH occurrence.
+            // `date` is the window anchor, not the selection: restoring the
+            // selection from it bound a reloaded page to a date that is
+            // usually no occurrence at all, and every occurrence-scoped
+            // lookup then fell back differently (the card to the timeline's
+            // oldest occurrence, the pills to all-of-them).
             if (this.selectedEventSlug) {
                 params.set('event', this.selectedEventSlug);
+                if (this.selectedEventDateISO
+                    && this.selectedEventDateISO !== this.formatDateToISO(this.currentDate)) {
+                    params.set('eventDate', this.selectedEventDateISO);
+                } else {
+                    params.delete('eventDate');
+                }
             } else {
                 params.delete('event');
+                params.delete('eventDate');
             }
             
             // Apply and replace
@@ -5226,7 +5242,35 @@ class DynamicCalendarLoader extends CalendarCore {
             } catch (e) {}
         }
         const filteredEvents = this.getFilteredEvents();
-        
+
+        // A selection whose date is NOT an occurrence of its event re-binds
+        // to a real one in the window. This is how a reloaded URL heals: old
+        // links carry only the window date, and a guessed date that matches
+        // no occurrence made the card, the pill and the URL each fall back to
+        // a DIFFERENT occurrence. Out-of-window selections are left alone —
+        // they are legitimate mid-journey states, not stale guesses.
+        if (this.selectedEventSlug && this.selectedEventDateISO) {
+            try {
+                const occurrences = filteredEvents.filter(ev => ev.slug === this.selectedEventSlug);
+                if (occurrences.length > 0) {
+                    const keys = occurrences
+                        .map(ev => {
+                            const d = this.getLogicalStartDate(ev);
+                            return d ? this.getLocalDateKey(d) : null;
+                        })
+                        .filter(Boolean);
+                    if (keys.length > 0 && !keys.includes(this.selectedEventDateISO)) {
+                        logger.debug('CALENDAR', 'Re-bound selection to a real occurrence', {
+                            slug: this.selectedEventSlug,
+                            from: this.selectedEventDateISO,
+                            to: keys[0]
+                        });
+                        this.selectedEventDateISO = keys[0];
+                    }
+                }
+            } catch (e) {}
+        }
+
         logger.info('CALENDAR', `🔍 UPDATE_DISPLAY: Updating calendar display (${hideEvents ? 'HIDDEN for measurement' : 'VISIBLE for display'})`, {
             view: this.currentView,
             eventCount: filteredEvents.length,
