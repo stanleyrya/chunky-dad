@@ -454,13 +454,13 @@
         if (ghost) {
           ghost.removeAttribute('data-event-slug');
           ghost.classList.add('rail-edge-ghost');
-          // the ghost is inert; its buttons would be dead controls — and,
-          // CRITICALLY, they may not exist at all: the slot renders inside a
-          // button-role element, and a real <button> wrapper was being
-          // force-CLOSED by the parser at the ghost's first nested <button>
-          // (buttons cannot contain buttons), spilling half the card and the
-          // ribbon out as siblings
-          ghost.querySelectorAll('button').forEach((b) => b.remove());
+          // The ghost keeps its thumb, links and share button so it is
+          // PIXEL-IDENTICAL to the real card that replaces it on arrival —
+          // stripping them made the handoff visibly jarring (owner report:
+          // "missing the image, missing the more..."). They are inert via
+          // pointer-events (the slot's tap is the one interaction), and the
+          // wrapper is a div[role=button] precisely so nested buttons parse:
+          // a real <button> wrapper was force-closed at the first one.
           cardHtml = ghost.outerHTML;
         }
       } catch (e) { cardHtml = ''; }
@@ -495,6 +495,11 @@
       if (!target || !target.slug || !target.dateISO) return;
       el.insertAdjacentHTML(pair[1], edgeHtml(pair[0], target, l));
     });
+    // the ghosts arrive after the render pass already armed the real cards —
+    // give them their corner art and '...more' chips too, or they visibly
+    // differ from the card that replaces them on arrival
+    armThumbs();
+    markOverflows();
   };
   const goEdge = (edge) => {
     const l = loader();
@@ -507,9 +512,16 @@
     urlDirty = false;          // openWeekAt writes the URL itself
     landedSlug = slug;
     grantSlug = slug;          // the swipe IS the grant: centre the arrival
-    dbgNote('edge -> ' + slug.slice(0, 16) + ' @' + date);
+    const dir = edge.classList.contains('rail-edge-prev') ? 'prev' : 'next';
+    dbgNote('edge(' + dir + ') -> ' + slug.slice(0, 16) + ' @' + date);
+    // revealAdjacent shifts the continuous window JUST enough to include the
+    // target (Earlier -> first day, Later -> last day) and refreshes lightly,
+    // so the swipe reads as a continuation; openWeekAt is the fallback
+    const go = typeof l.revealAdjacent === 'function'
+      ? () => l.revealAdjacent(slug, date, dir)
+      : () => l.openWeekAt(slug, date);
     Promise.resolve()
-      .then(() => l.openWeekAt(slug, date))
+      .then(go)
       .catch(() => {})
       .then(() => { navigating = false; });
   };

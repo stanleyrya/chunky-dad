@@ -7342,12 +7342,9 @@ html.dusk body {
         -webkit-box-orient: vertical;
         overflow: hidden;
     }
-    /* No ribbon, no label (owner call 2026-08-31): the card IS the whole
-       slot. A quiet dim is the only tell that it lives outside this week —
-       landing on it navigates there and the card comes up full. */
-    .dusk .rail-edge .event-card.rail-edge-ghost {
-        filter: brightness(0.78) saturate(0.85);
-    }
+    /* No ribbon, no dim, no tell (owner calls, 2026-08-31): the edge card is
+       pixel-identical to the real card that replaces it on arrival, so the
+       swipe past the window's end reads as a continuation, not a boundary. */
     .dusk .events-list.rail-active > .rail-edge-next:not(.has-card) {
         text-align: right;
         align-items: flex-end;

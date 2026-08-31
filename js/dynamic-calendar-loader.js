@@ -1666,6 +1666,49 @@ class DynamicCalendarLoader extends CalendarCore {
         };
     }
 
+    // The rail's edge-card navigation. NOT openWeekAt: the visible window is
+    // a CONTINUOUS 7 days (any start day — see getCurrentPeriodBounds), and
+    // snapping to the target's Sunday-aligned week yanked the whole view to
+    // dates the user never asked for. This shifts the window JUST far enough
+    // to include the target — an Earlier event becomes the window's first
+    // day, a Later event its last — so most of the visible days (and their
+    // cards, via the sig-reuse render) survive the move, and the arrival
+    // reads as a continuation of the swipe rather than a page change.
+    //
+    // The light path: no strip rebuild, no updateCalendarDisplay. The grid
+    // repositions instantly (suppressed from re-settling), and
+    // refreshEventsPanel does what it already does after a user scroll —
+    // cards, selection paint, map, chunky:events-rendered. Off the strip or
+    // near its rebuild edge, openWeekAt's full rebuild takes over.
+    async revealAdjacent(eventSlug, dateISO, direction) {
+        if (!eventSlug || !/^\d{4}-\d{2}-\d{2}$/.test(dateISO || '')) return;
+        const parts = dateISO.split('-');
+        const parsed = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        if (isNaN(parsed.getTime())) return;
+        const windowStart = new Date(parsed);
+        if (direction !== 'prev') windowStart.setDate(windowStart.getDate() - 6);
+        windowStart.setHours(0, 0, 0, 0);
+
+        const grid = document.querySelector('.calendar-grid');
+        if (this.currentView === 'week' && grid && this.stripStartDate && grid.scrollWidth > 0) {
+            const idx = Math.round((windowStart - this.stripStartDate) / 86400000);
+            const nearEdge = idx <= 10 || idx >= this.stripDayCount - 17;
+            if (idx >= 0 && idx <= this.stripDayCount - 7 && !nearEdge) {
+                this.selectedEventSlug = eventSlug;
+                this.selectedEventDateISO = dateISO;
+                this.currentDate = windowStart;
+                this.suppressGridScrollUntil = performance.now() + 250;
+                grid.scrollLeft = Math.round(idx * (grid.scrollWidth / this.stripDayCount));
+                this.sizeWeekStripHeight();
+                this.updateHeaderPeriodLabel();
+                this.syncUrl(true);
+                await this.refreshEventsPanel(this.getFilteredEvents(), false, { keepCamera: true });
+                return;
+            }
+        }
+        await this.openWeekAt(eventSlug, dateISO);
+    }
+
     async navigatePeriod(direction, skipAnimation = false) {
         const delta = direction === 'next' ? 1 : -1;
         
