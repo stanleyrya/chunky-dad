@@ -5553,8 +5553,14 @@ class DynamicCalendarLoader extends CalendarCore {
                 const shareBtn = e.target.closest && e.target.closest('.share-event-btn');
                 if (shareBtn) return;
                 const slug = card.getAttribute('data-event-slug');
-                // Prefer the date from selectedEventDateISO if it matches slug, else use currentDate
-                const dayISO = this.selectedEventSlug === slug && this.selectedEventDateISO ? this.selectedEventDateISO : this.formatDateToISO(this.currentDate);
+                // The card knows which occurrence it is (data-occurrence) —
+                // selecting with currentDate stamped the WINDOW START on the
+                // selection, which matched no pill and no timeline card, and
+                // sent the rail hunting for the wrong occurrence.
+                const dayISO = card.getAttribute('data-occurrence')
+                    || (this.selectedEventSlug === slug && this.selectedEventDateISO
+                        ? this.selectedEventDateISO
+                        : this.formatDateToISO(this.currentDate));
                 logger.userInteraction('EVENT', 'Event card clicked', { slug, date: dayISO });
                 this.toggleEventSelection(slug, dayISO);
                 

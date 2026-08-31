@@ -336,7 +336,7 @@
   // ONE deferred URL write per gesture.
   const USER_QUIET = 600;
   let touchActive = false, lastUserTouch = -1e9, interacted = false, gestureScrolled = false;
-  let railOwner = 'init', landedSlug = null, landedOcc = null, grantSlug = null;
+  let railOwner = 'init', landedSlug = null, landedOcc = null, grantSlug = null, grantOcc = null;
   let phase = 'idle'; // idle | scrub
   let programmatic = false;
   let geom = [], step = 0, railWidth = 0;
@@ -676,7 +676,7 @@
     touchActive = true;
     gestureScrolled = false;
     railOwner = 'user';
-    grantSlug = null; // a new gesture invalidates any pending grant
+    grantSlug = null; grantOcc = null; // a new gesture invalidates any pending grant
     lastUserTouch = performance.now();
     if (railActive()) phase = 'scrub';
   };
@@ -703,9 +703,20 @@
     if (!src) return;
     const slug = src.getAttribute('data-event-slug');
     if (!slug) return;
+    // WHICH occurrence was tapped: the card carries data-occurrence, a pill's
+    // day cell carries data-date. Slug alone sent the centring to the FIRST
+    // occurrence in the timeline — a tap on today's card flung the rail four
+    // weeks left to the oldest one.
+    let occ = src.getAttribute('data-occurrence') || null;
+    if (!occ && pill) {
+      const dayEl = pill.closest('[data-date]');
+      occ = dayEl ? dayEl.getAttribute('data-date') : null;
+    }
     landedSlug = slug;
+    landedOcc = occ;
     grantSlug = slug;
-    dbgNote((pill ? 'pill' : 'card') + ' tap -> grant ' + slug.slice(0, 16));
+    grantOcc = occ;
+    dbgNote((pill ? 'pill' : 'card') + ' tap -> grant ' + slug.slice(0, 16) + (occ ? ' @' + occ : ''));
   }, true);
 
   const centerOn = (card, reason, instant) => {
@@ -718,8 +729,9 @@
     // centering still defers to an active finger
     if (!granted && railOwner !== 'init') { dbgNote('DENY center (' + reason + ')'); return false; }
     if (!granted && userBusy()) { dbgNote('SKIP center (busy)'); return false; }
-    if (granted) grantSlug = null;
+    if (granted) { grantSlug = null; grantOcc = null; }
     landedSlug = slug;
+    landedOcc = card.getAttribute('data-occurrence') || landedOcc;
     const target = Math.round(card.offsetLeft + card.offsetWidth / 2 - el.clientWidth / 2);
     if (Math.abs(el.scrollLeft - target) < 4) return true;
     programmatic = true;
@@ -775,13 +787,34 @@
     // an empty week still has a slot to rest on — otherwise the rail opens
     // parked on the "Earlier" edge, which would bounce straight back out
     const l = loader();
-    const target = cardBySlug(landedSlug, landedOcc)
-      || cardBySlug(selectedSlug(), l && l.selectedEventDateISO)
-      || firstWindowCard()
+    const selEl = cardBySlug(selectedSlug(), l && l.selectedEventDateISO);
+    let landedEl = cardBySlug(landedSlug, landedOcc);
+    // The loader can navigate WITHOUT the rail — Today, the arrows, a month
+    // jump — and it clears the selection when it does. A landed position
+    // from the previous journey is then stale: honouring it flung the rail
+    // (and, via the out-of-window settle, the whole window) back to wherever
+    // the user last was, so Today never actually arrived at today.
+    if (landedEl && !selEl && l) {
+      try {
+        const iso = landedEl.getAttribute('data-occurrence');
+        if (iso) {
+          const p = iso.split('-');
+          const t = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]), 12).getTime();
+          const b = l.getCurrentPeriodBounds();
+          if (t < b.start.getTime() || t > b.end.getTime()) {
+            landedEl = null;
+            landedSlug = null;
+            landedOcc = null;
+          }
+        }
+      } catch (e) {}
+    }
+    const target = selEl || landedEl || firstWindowCard()
       || cards()[0] || el.querySelector('.loading-message.empty-slot');
     if (!target) return;
     landedSlug = target.getAttribute('data-event-slug') || landedSlug;
-    if (grantSlug === landedSlug) grantSlug = null;
+    landedOcc = target.getAttribute('data-occurrence') || landedOcc;
+    if (grantSlug === landedSlug) { grantSlug = null; grantOcc = null; }
     const t = Math.round(target.offsetLeft + target.offsetWidth / 2 - el.clientWidth / 2);
     if (Math.abs(el.scrollLeft - t) >= 1 && instant) { programmatic = true; el.scrollLeft = t; }
   };
@@ -838,16 +871,20 @@
         buildGeom();
         centerRestingCard(reason === 'render');
       } else if (grantSlug) {
-        const g = cardBySlug(grantSlug);
+        const g = cardBySlug(grantSlug, grantOcc);
         if (g) centerOn(g, reason);
       } else if (reason === 'selection' && phase === 'idle' && !userBusy()) {
         // a selection that arrived from OUTSIDE the rail (a map-marker tap
         // has no card/pill to grant through) — adopt it so the rail follows
         // instead of silently re-selecting the centered card later
         const slug = selectedSlug();
-        const sel = slug && slug !== landedSlug && cardBySlug(slug);
+        const l1 = loader();
+        const selOcc = l1 ? l1.selectedEventDateISO : null;
+        const sel = slug && (slug !== landedSlug || (selOcc && selOcc !== landedOcc))
+          && cardBySlug(slug, selOcc);
         if (sel) {
           grantSlug = slug;
+          grantOcc = selOcc;
           centerOn(sel, 'external-selection');
         }
       }
