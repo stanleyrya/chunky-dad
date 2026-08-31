@@ -80,9 +80,22 @@
   // desktop's display:none thumb never triggers an image fetch
   const armThumbs = () => {
     if (!isMobile()) return;
+    // the timeline rail carries the whole strip (30+ cards) — arming every
+    // thumb at once would fetch every flyer up front, so only cards within a
+    // few screens of the current position get their art; settles re-arm as
+    // the user travels
+    const el = list();
+    const nearOnly = el && el.classList.contains('rail-active');
+    const min = nearOnly ? el.scrollLeft - el.clientWidth * 3 : -Infinity;
+    const max = nearOnly ? el.scrollLeft + el.clientWidth * 4 : Infinity;
     document.querySelectorAll('.events-list .event-card .rail-thumb').forEach((btn) => {
       if (btn.style.backgroundImage) return;
       const card = btn.closest('.event-card');
+      if (nearOnly) {
+        const anchor = card.closest('.rail-edge') || card;
+        const c = anchor.offsetLeft + anchor.offsetWidth / 2;
+        if (c < min || c > max) return;
+      }
       const flyer = card && card.querySelector('.event-flyer[data-flyer-url]');
       const url = flyer && flyer.getAttribute('data-flyer-url');
       if (url) btn.style.backgroundImage = 'url("' + url.replace(/"/g, '%22') + '")';
@@ -367,10 +380,34 @@
     // EVERY slot, not just the cards: an edge slug is '' so scrubbing across
     // one selects nothing (realSelect's slug guard), instead of the rail
     // quietly re-selecting the event card next door
+    // each slot's timeline date rides along, for the grid-follow: cards get
+    // theirs from the loader's timeline (slug -> logical date), edge slots
+    // from their own data-date, the empty-slot none
+    const dateBySlug = new Map();
+    const l = loader();
+    if (l && typeof l.getRailTimelineEvents === 'function') {
+      try {
+        (l.getRailTimelineEvents() || []).forEach((ev) => {
+          const d = l.getLogicalStartDate(ev);
+          if (ev.slug && d) dateBySlug.set(ev.slug, d.getTime());
+        });
+      } catch (e) {}
+    }
+    const dateOfSlot = (slot) => {
+      const slug = slot.getAttribute('data-event-slug');
+      if (slug && dateBySlug.has(slug)) return dateBySlug.get(slug);
+      const iso = slot.getAttribute('data-date');
+      if (iso && /^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+        const p = iso.split('-');
+        return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2])).getTime();
+      }
+      return null;
+    };
     geom = slots().map((slot) => ({
       el: slot,
       slug: slot.getAttribute('data-event-slug') || '',
-      center: slot.offsetLeft + slot.offsetWidth / 2
+      center: slot.offsetLeft + slot.offsetWidth / 2,
+      date: dateOfSlot(slot)
     }));
     step = geom.length > 1
       ? Math.max(1, geom[1].center - geom[0].center)
@@ -491,7 +528,9 @@
     if (!el.querySelector('.event-card, .loading-message.empty-slot')) return;
     [['prev', 'afterbegin'], ['next', 'beforeend']].forEach((pair) => {
       let target = null;
-      try { target = l.findAdjacentEvent(pair[0]); } catch (e) { target = null; }
+      // past the STRIP, not the window: the timeline rail already carries
+      // every on-strip event as a real card
+      try { target = l.findAdjacentEvent(pair[0], 190, 'strip'); } catch (e) { target = null; }
       if (!target || !target.slug || !target.dateISO) return;
       el.insertAdjacentHTML(pair[1], edgeHtml(pair[0], target, l));
     });
@@ -554,6 +593,20 @@
         landedSlug = c.getAttribute('data-event-slug') || landedSlug;
         dbgNote('landed ' + (landedSlug || '?').slice(0, 16));
         realSelect(landedSlug);
+        // the gesture is over: park the grid on the landed card's window and
+        // let the strip's own settle derive period/URL/cards/map from it —
+        // the timeline card set is strip-stable, so the re-render reuses
+        // every card and the rail does not move
+        const l = loader();
+        const entry = geom.find((g) => g.el === c);
+        if (l && entry && entry.date != null && typeof l.followRailDate === 'function') {
+          l.followRailDate(entry.date);
+          if (typeof l.onGridSettle === 'function') {
+            urlDirty = false; // onGridSettle syncs the URL itself
+            Promise.resolve().then(() => l.onGridSettle()).catch(() => {});
+          }
+        }
+        armThumbs();
       }
     }
     flushUrl();
@@ -585,6 +638,24 @@
     finishGesture();
   }, true);
 
+  // The date under the rail's center RIGHT NOW, interpolated between the two
+  // slots the finger is between — fractional days, so the week grid can move
+  // WITH the finger instead of stepping card by card.
+  const railDateAt = (mid) => {
+    let before = null, after = null;
+    for (let i = 0; i < geom.length; i++) {
+      const g = geom[i];
+      if (g.date == null) continue;
+      if (g.center <= mid && (!before || g.center > before.center)) before = g;
+      if (g.center >= mid && (!after || g.center < after.center)) after = g;
+    }
+    if (before && after && after.center > before.center) {
+      const t = (mid - before.center) / (after.center - before.center);
+      return before.date + t * (after.date - before.date);
+    }
+    return (before || after) ? (before || after).date : null;
+  };
+
   const onScrubFrame = () => {
     frameRaf = 0;
     if (phase !== 'scrub' || !railActive()) return;
@@ -595,6 +666,14 @@
       holdSlug = g.slug;
       clearTimeout(holdTimer);
       holdTimer = setTimeout(() => { if (phase === 'scrub') realSelect(g.slug); }, 120);
+    }
+    // the week view follows the finger: the grid glides continuously to keep
+    // the centered card's date mid-window (owner ask 2026-08-31 — no discrete
+    // animation, the scroll IS the motion)
+    const l = loader();
+    if (el && l && typeof l.followRailDate === 'function') {
+      const d = railDateAt(el.scrollLeft + el.clientWidth / 2);
+      if (d != null) l.followRailDate(d);
     }
   };
   document.addEventListener('scroll', (e) => {
@@ -696,13 +775,27 @@
 
   const selectedSlug = () => { const l = loader(); return (l && l.selectedEventSlug) || null; };
 
+  // the timeline rail starts weeks in the past — resting position is the
+  // first card ON or AFTER the visible window's start, never the strip's
+  // oldest card
+  const firstWindowCard = () => {
+    const l = loader();
+    if (!l || !geom.length) return null;
+    let startMs = 0;
+    try { startMs = l.getCurrentPeriodBounds().start.getTime(); } catch (e) { return null; }
+    for (let i = 0; i < geom.length; i++) {
+      const g = geom[i];
+      if (g.date != null && g.slug && g.date >= startMs) return g.el;
+    }
+    return null;
+  };
   const centerRestingCard = (instant) => {
     const el = list();
     if (!el) return;
     // an empty week still has a slot to rest on — otherwise the rail opens
     // parked on the "Earlier" edge, which would bounce straight back out
-    const target = cardBySlug(landedSlug) || cardBySlug(selectedSlug()) || cards()[0]
-      || el.querySelector('.loading-message.empty-slot');
+    const target = cardBySlug(landedSlug) || cardBySlug(selectedSlug()) || firstWindowCard()
+      || cards()[0] || el.querySelector('.loading-message.empty-slot');
     if (!target) return;
     landedSlug = target.getAttribute('data-event-slug') || landedSlug;
     if (grantSlug === landedSlug) grantSlug = null;
@@ -713,6 +806,22 @@
   const syncRailState = (reason) => {
     const el = list();
     if (!el) return;
+    // the loader renders the rail's TIMELINE card set only while the mobile
+    // rail exists; desktop keeps the visible-window list untouched. A
+    // breakpoint crossing (iPad rotation) changes the flag, so the list is
+    // re-rendered once to match the mode it just entered.
+    const l0 = loader();
+    if (l0) {
+      const want = isMobile();
+      if (l0.railTimeline !== want) {
+        l0.railTimeline = want;
+        if (reason === 'breakpoint' && typeof l0.refreshEventsPanel === 'function') {
+          Promise.resolve()
+            .then(() => l0.refreshEventsPanel(l0.getFilteredEvents(), false, { keepCamera: true }))
+            .catch(() => {});
+        }
+      }
+    }
     if (!isMobile()) {
       if (el.classList.contains('rail-active')) { el.classList.remove('rail-active'); phase = 'idle'; geom = []; }
       updateMonthFull();

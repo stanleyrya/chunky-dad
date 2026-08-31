@@ -1598,10 +1598,20 @@ class DynamicCalendarLoader extends CalendarCore {
     //
     // maxDays bounds the recurrence expansion; a city with nothing in the next
     // six months simply gets no edge slot rather than an unbounded scan.
-    findAdjacentEvent(direction, maxDays = 190) {
+    findAdjacentEvent(direction, maxDays = 190, beyond = 'window') {
         if (!Array.isArray(this.allEvents) || this.allEvents.length === 0) return null;
         const forward = direction !== 'prev';
-        const { start, end } = this.getCurrentPeriodBounds();
+        let { start, end } = this.getCurrentPeriodBounds();
+        // 'strip': the rail renders the whole grid strip, so its edge slots
+        // must point past the STRIP, not past the visible window — otherwise
+        // they duplicate cards already on the rail
+        if (beyond === 'strip' && this.stripStartDate && this.currentView === 'week') {
+            start = new Date(this.stripStartDate);
+            start.setHours(0, 0, 0, 0);
+            end = new Date(start);
+            end.setDate(end.getDate() + this.stripDayCount - 1);
+            end.setHours(23, 59, 59, 999);
+        }
 
         let searchStart, searchEnd;
         if (forward) {
@@ -4770,7 +4780,64 @@ class DynamicCalendarLoader extends CalendarCore {
     // (which would destroy the user's scroll position). opts.keepCamera
     // leaves the map camera alone on settle refreshes — markers change,
     // the framing never jumps under a slide.
+    // The mobile rail's TIMELINE card set: every event on the rendered grid
+    // strip (visible week ± 28 days), ONE card per event — a recurring night
+    // keeps the occurrence nearest the strip's central week (ahead preferred)
+    // so slugs stay unique and the whole selection/reuse machinery keeps
+    // working — sorted by date. dusk-rail switches this on for mobile
+    // (this.railTimeline); everywhere else the card list stays the visible
+    // window, exactly as before. Stability matters more than freshness here:
+    // the set only changes when the STRIP is rebuilt, so a settle mid-swipe
+    // re-renders into the same sigs and the rail's DOM never churns.
+    getRailTimelineEvents() {
+        if (!this.stripStartDate || this.currentView !== 'week') return null;
+        const start = new Date(this.stripStartDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(start);
+        end.setDate(end.getDate() + this.stripDayCount - 1);
+        end.setHours(23, 59, 59, 999);
+        let expanded;
+        try {
+            expanded = this.getFilteredEvents({ start, end });
+        } catch (error) {
+            return null;
+        }
+        const anchor = new Date(start);
+        anchor.setDate(anchor.getDate() + 28);
+        const anchorMs = anchor.getTime();
+        const bySlug = new Map();
+        const dateOf = ev => {
+            const d = this.getLogicalStartDate(ev);
+            return d ? d.getTime() : 0;
+        };
+        // ahead-of-anchor beats behind, nearer beats farther
+        const score = ms => (ms >= anchorMs ? ms - anchorMs : (anchorMs - ms) + 8.64e13 * 365);
+        expanded.forEach(ev => {
+            if (!ev || !ev.slug) return;
+            const prev = bySlug.get(ev.slug);
+            if (!prev || score(dateOf(ev)) < score(dateOf(prev))) bySlug.set(ev.slug, ev);
+        });
+        return [...bySlug.values()].sort((a, b) => dateOf(a) - dateOf(b));
+    }
+
+    // Continuous window-follow for the rail's scrub: place the given date
+    // (fractional days allowed) at the CENTER of the visible week, moving the
+    // grid with the finger — the rail drives, the settle machinery is
+    // suppressed until the gesture lands.
+    followRailDate(dateMs) {
+        if (this.currentView !== 'week' || !this.stripStartDate) return;
+        const grid = document.querySelector('.calendar-grid');
+        if (!grid || grid.scrollWidth <= 0) return;
+        const days = (dateMs - this.stripStartDate.getTime()) / 86400000 - 3;
+        const clamped = Math.max(0, Math.min(this.stripDayCount - 7, days));
+        this.suppressGridScrollUntil = performance.now() + 250;
+        grid.scrollLeft = Math.round(clamped * (grid.scrollWidth / this.stripDayCount));
+    }
+
     async refreshEventsPanel(filteredEvents, hideEvents = false, opts = {}) {
+        // the card LIST may be wider than the window (rail timeline); the map
+        // and everything else below keep the window's own filteredEvents
+        const cardEvents = (this.railTimeline && this.getRailTimelineEvents()) || filteredEvents;
         // Update events list (show for both week and month views)
         const eventsList = document.querySelector('.events-list');
         const eventsSection = document.querySelector('.events');
@@ -4792,7 +4859,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 if (!eventsList.querySelector('.loading-message')) {
                     eventsList.innerHTML = '<div class="loading-message">📅 Getting events...</div>';
                 }
-            } else if (filteredEvents?.length > 0) {
+            } else if (cardEvents?.length > 0) {
                 // Clear any existing error messages when successfully loading events
                 const existingError = eventsList.querySelector('.error-message');
                 if (existingError) {
@@ -4815,7 +4882,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     logger.info('CALENDAR', 'Applying UID/recurrenceId deduplication for list view', {
                         originalEventCount: filteredEvents.length
                     });
-                    const listDeduplicatedEvents = this.deduplicateByUIDAndRecurrenceId(filteredEvents);
+                    const listDeduplicatedEvents = this.deduplicateByUIDAndRecurrenceId(cardEvents);
 
                     // Reconcile instead of innerHTML-swapping: a card whose
                     // rendered content is unchanged is REUSED, so its favicon
@@ -4903,7 +4970,7 @@ class DynamicCalendarLoader extends CalendarCore {
                         reusedCards,
                         originalEventCount: filteredEvents.length,
                         deduplicatedEventCount: listDeduplicatedEvents.length,
-                        removedDuplicates: filteredEvents.length - listDeduplicatedEvents.length
+                        removedDuplicates: cardEvents.length - listDeduplicatedEvents.length
                     });
                 } catch (cardError) {
                     logger.componentError('CALENDAR', 'Failed to generate event cards', cardError);
