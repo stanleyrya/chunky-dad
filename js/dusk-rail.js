@@ -336,12 +336,12 @@
   // ONE deferred URL write per gesture.
   const USER_QUIET = 600;
   let touchActive = false, lastUserTouch = -1e9, interacted = false, gestureScrolled = false;
-  let railOwner = 'init', landedSlug = null, grantSlug = null;
+  let railOwner = 'init', landedSlug = null, landedOcc = null, grantSlug = null;
   let phase = 'idle'; // idle | scrub
   let programmatic = false;
   let geom = [], step = 0, railWidth = 0;
   let urlDirty = false;
-  let frameRaf = 0, holdTimer = 0, holdSlug = null;
+  let frameRaf = 0, holdTimer = 0, holdSlug = null, holdOcc = null;
   let settleRaf = 0, stillFrames = 0, lastLeft = -1;
 
   const userBusy = () => touchActive || (performance.now() - lastUserTouch) < USER_QUIET;
@@ -353,9 +353,15 @@
   // week's card are members of the band, not decorations beside it
   const SLOT_SEL = ':scope > .event-card, :scope > .rail-edge, :scope > .loading-message.empty-slot';
   const slots = () => { const el = list(); return el ? Array.from(el.querySelectorAll(SLOT_SEL)) : []; };
-  const cardBySlug = (slug) => {
+  const cardBySlug = (slug, occISO) => {
     const el = list();
-    return (slug && el) ? el.querySelector('.event-card[data-event-slug="' + cssEscape(slug) + '"]') : null;
+    if (!slug || !el) return null;
+    // the timeline holds one card per OCCURRENCE — land on the right one
+    if (occISO) {
+      const exact = el.querySelector(':scope > .event-card[data-event-slug="' + cssEscape(slug) + '"][data-occurrence="' + cssEscape(occISO) + '"]');
+      if (exact) return exact;
+    }
+    return el.querySelector(':scope > .event-card[data-event-slug="' + cssEscape(slug) + '"]');
   };
   const nearestTo = (pool) => {
     const el = list();
@@ -380,23 +386,10 @@
     // EVERY slot, not just the cards: an edge slug is '' so scrubbing across
     // one selects nothing (realSelect's slug guard), instead of the rail
     // quietly re-selecting the event card next door
-    // each slot's timeline date rides along, for the grid-follow: cards get
-    // theirs from the loader's timeline (slug -> logical date), edge slots
-    // from their own data-date, the empty-slot none
-    const dateBySlug = new Map();
-    const l = loader();
-    if (l && typeof l.getRailTimelineEvents === 'function') {
-      try {
-        (l.getRailTimelineEvents() || []).forEach((ev) => {
-          const d = l.getLogicalStartDate(ev);
-          if (ev.slug && d) dateBySlug.set(ev.slug, d.getTime());
-        });
-      } catch (e) {}
-    }
+    // each slot's date rides along: cards stamp their own occurrence
+    // (data-occurrence, one card per occurrence), edge slots their data-date
     const dateOfSlot = (slot) => {
-      const slug = slot.getAttribute('data-event-slug');
-      if (slug && dateBySlug.has(slug)) return dateBySlug.get(slug);
-      const iso = slot.getAttribute('data-date');
+      const iso = slot.getAttribute('data-occurrence') || slot.getAttribute('data-date');
       if (iso && /^\d{4}-\d{2}-\d{2}$/.test(iso)) {
         const p = iso.split('-');
         return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2])).getTime();
@@ -406,6 +399,7 @@
     geom = slots().map((slot) => ({
       el: slot,
       slug: slot.getAttribute('data-event-slug') || '',
+      occ: slot.getAttribute('data-occurrence') || '',
       center: slot.offsetLeft + slot.offsetWidth / 2,
       date: dateOfSlot(slot)
     }));
@@ -425,30 +419,32 @@
   };
 
   // ---------- live selection during the scrub ----------
-  const realSelect = (slug) => {
+  const realSelect = (slug, occISO) => {
     const l = loader();
-    if (!l || !slug || l.selectedEventSlug === slug) return;
-    // resolve the slug to the occurrence INSIDE the visible window — the
-    // continuous strip also renders buffer weeks, so the first DOM pill for
-    // a weekly event can be last week's occurrence (a swipe between cards
-    // then yanked the whole week strip a week back)
-    const pills = document.querySelectorAll('.calendar-grid .event-item[data-event-slug="' + cssEscape(slug) + '"]');
-    let dateISO = null;
-    let bounds = null;
-    try { bounds = l.getCurrentPeriodBounds && l.getCurrentPeriodBounds(); } catch (e) {}
-    for (let i = 0; i < pills.length; i++) {
-      const dayEl = pills[i].closest('[data-date]');
-      const d = dayEl && dayEl.getAttribute('data-date');
-      if (!d) continue;
-      if (!dateISO) dateISO = d; // fallback: first found
-      if (bounds) {
-        const dt = new Date(d + 'T12:00:00');
-        if (dt >= bounds.start && dt <= bounds.end) { dateISO = d; break; }
+    if (!l || !slug) return;
+    if (l.selectedEventSlug === slug && (!occISO || l.selectedEventDateISO === occISO)) return;
+    // the card knows its own occurrence now (data-occurrence) — the old pill
+    // scan survives only as the fallback for a card without one
+    let dateISO = occISO || null;
+    if (!dateISO) {
+      const pills = document.querySelectorAll('.calendar-grid .event-item[data-event-slug="' + cssEscape(slug) + '"]');
+      let bounds = null;
+      try { bounds = l.getCurrentPeriodBounds && l.getCurrentPeriodBounds(); } catch (e) {}
+      for (let i = 0; i < pills.length; i++) {
+        const dayEl = pills[i].closest('[data-date]');
+        const d = dayEl && dayEl.getAttribute('data-date');
+        if (!d) continue;
+        if (!dateISO) dateISO = d; // fallback: first found
+        if (bounds) {
+          const dt = new Date(d + 'T12:00:00');
+          if (dt >= bounds.start && dt <= bounds.end) { dateISO = d; break; }
+        }
       }
     }
     try { l.toggleEventSelection(slug, dateISO, { deferUrl: true }); } catch (e) {}
     urlDirty = true;
     landedSlug = slug;
+    landedOcc = occISO || landedOcc;
   };
   const flushUrl = () => {
     const l = loader();
@@ -591,19 +587,23 @@
       if (c) {
         railOwner = 'user';
         landedSlug = c.getAttribute('data-event-slug') || landedSlug;
-        dbgNote('landed ' + (landedSlug || '?').slice(0, 16));
-        realSelect(landedSlug);
-        // the gesture is over: park the grid on the landed card's window and
-        // let the strip's own settle derive period/URL/cards/map from it —
-        // the timeline card set is strip-stable, so the re-render reuses
-        // every card and the rail does not move
+        landedOcc = c.getAttribute('data-occurrence') || null;
+        dbgNote('landed ' + (landedSlug || '?').slice(0, 16) + (landedOcc ? ' @' + landedOcc : ''));
+        realSelect(landedSlug, landedOcc);
+        // The calendar moves ONLY when it has to (owner report: it moved on
+        // every swipe): if the landed occurrence is outside the visible
+        // window, revealAdjacent shifts the dates just enough — Earlier
+        // lands as the window's first day, Later as its last. Inside the
+        // window, the grid does not move at all.
         const l = loader();
         const entry = geom.find((g) => g.el === c);
-        if (l && entry && entry.date != null && typeof l.followRailDate === 'function') {
-          l.followRailDate(entry.date);
-          if (typeof l.onGridSettle === 'function') {
-            urlDirty = false; // onGridSettle syncs the URL itself
-            Promise.resolve().then(() => l.onGridSettle()).catch(() => {});
+        if (l && entry && entry.date != null && typeof l.revealAdjacent === 'function' && landedOcc) {
+          let bounds = null;
+          try { bounds = l.getCurrentPeriodBounds(); } catch (e) {}
+          if (bounds && (entry.date < bounds.start.getTime() || entry.date > bounds.end.getTime())) {
+            const dir = entry.date < bounds.start.getTime() ? 'prev' : 'next';
+            urlDirty = false; // revealAdjacent syncs the URL itself
+            Promise.resolve().then(() => l.revealAdjacent(landedSlug, landedOcc, dir)).catch(() => {});
           }
         }
         armThumbs();
@@ -638,42 +638,22 @@
     finishGesture();
   }, true);
 
-  // The date under the rail's center RIGHT NOW, interpolated between the two
-  // slots the finger is between — fractional days, so the week grid can move
-  // WITH the finger instead of stepping card by card.
-  const railDateAt = (mid) => {
-    let before = null, after = null;
-    for (let i = 0; i < geom.length; i++) {
-      const g = geom[i];
-      if (g.date == null) continue;
-      if (g.center <= mid && (!before || g.center > before.center)) before = g;
-      if (g.center >= mid && (!after || g.center < after.center)) after = g;
-    }
-    if (before && after && after.center > before.center) {
-      const t = (mid - before.center) / (after.center - before.center);
-      return before.date + t * (after.date - before.date);
-    }
-    return (before || after) ? (before || after).date : null;
-  };
-
+  // The scrub touches NOTHING but the rail: no grid writes per frame (the
+  // per-frame follow stuttered on real hardware and moved the calendar for
+  // swipes that never left the window — owner report 2026-08-31). The grid
+  // moves once, on landing, and only when the landed card is outside the
+  // visible window (see settle).
   const onScrubFrame = () => {
     frameRaf = 0;
     if (phase !== 'scrub' || !railActive()) return;
     if (geomStale() || !geom.length) buildGeom();
     const el = list();
     const g = el && nearestGeom(el.scrollLeft);
-    if (g && g.slug && g.slug !== holdSlug) {
+    if (g && g.slug && (g.slug !== holdSlug || g.occ !== holdOcc)) {
       holdSlug = g.slug;
+      holdOcc = g.occ;
       clearTimeout(holdTimer);
-      holdTimer = setTimeout(() => { if (phase === 'scrub') realSelect(g.slug); }, 120);
-    }
-    // the week view follows the finger: the grid glides continuously to keep
-    // the centered card's date mid-window (owner ask 2026-08-31 — no discrete
-    // animation, the scroll IS the motion)
-    const l = loader();
-    if (el && l && typeof l.followRailDate === 'function') {
-      const d = railDateAt(el.scrollLeft + el.clientWidth / 2);
-      if (d != null) l.followRailDate(d);
+      holdTimer = setTimeout(() => { if (phase === 'scrub') realSelect(g.slug, g.occ); }, 120);
     }
   };
   document.addEventListener('scroll', (e) => {
@@ -794,7 +774,10 @@
     if (!el) return;
     // an empty week still has a slot to rest on — otherwise the rail opens
     // parked on the "Earlier" edge, which would bounce straight back out
-    const target = cardBySlug(landedSlug) || cardBySlug(selectedSlug()) || firstWindowCard()
+    const l = loader();
+    const target = cardBySlug(landedSlug, landedOcc)
+      || cardBySlug(selectedSlug(), l && l.selectedEventDateISO)
+      || firstWindowCard()
       || cards()[0] || el.querySelector('.loading-message.empty-slot');
     if (!target) return;
     landedSlug = target.getAttribute('data-event-slug') || landedSlug;

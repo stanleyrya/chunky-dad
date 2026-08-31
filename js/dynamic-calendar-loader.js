@@ -671,7 +671,12 @@ class DynamicCalendarLoader extends CalendarCore {
 
         if (this.selectedEventSlug) {
             // Mark selected event card in list view
-            const selectedCard = document.querySelector(`.event-card[data-event-slug="${CSS.escape(this.selectedEventSlug)}"]`);
+            // prefer the card for the SELECTED occurrence (the timeline rail
+            // holds one card per occurrence); slug-only remains the fallback
+            const slugSel = `.event-card[data-event-slug="${CSS.escape(this.selectedEventSlug)}"]`;
+            const selectedCard = (this.selectedEventDateISO
+                    && document.querySelector(`${slugSel}[data-occurrence="${CSS.escape(this.selectedEventDateISO)}"]`))
+                || document.querySelector(slugSel);
             if (selectedCard) {
                 selectedCard.classList.add('selected');
                 this.ensureFlyerLoaded(selectedCard);
@@ -3071,8 +3076,18 @@ class DynamicCalendarLoader extends CalendarCore {
         const slug = this.escapeCardText(event.slug);
         const shareTime = `${event.day || ''}${event.time ? ' ' + event.time : ''}`;
 
+        // Which OCCURRENCE this card is: the rail's timeline renders a
+        // recurring event once per occurrence, so slug alone no longer names
+        // a unique card — selection, reuse and centering key on slug+date.
+        let occurrenceISO = '';
+        try {
+            const logical = this.getLogicalStartDate(event);
+            if (logical) occurrenceISO = this.getLocalDateKey(logical);
+        } catch (e) { occurrenceISO = ''; }
+        const occurrenceAttr = occurrenceISO ? ` data-occurrence="${occurrenceISO}"` : '';
+
         return `
-            <div class="event-card detailed aurora" data-event-slug="${slug}" data-lat="${this.escapeCardText(event.coordinates?.lat || '')}" data-lng="${this.escapeCardText(event.coordinates?.lng || '')}"${auroraStyle}>
+            <div class="event-card detailed aurora" data-event-slug="${slug}"${occurrenceAttr} data-lat="${this.escapeCardText(event.coordinates?.lat || '')}" data-lng="${this.escapeCardText(event.coordinates?.lng || '')}"${auroraStyle}>
                 ${flyerHtml}
                 <div class="ec-panel">
                     ${flyerUrl ? '<button class="rail-thumb" type="button" aria-label="Show flyer"></button>' : ''}
@@ -3568,7 +3583,7 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     // Deduplicate events based on UID and recurrenceId for list/map views
-    deduplicateByUIDAndRecurrenceId(events) {
+    deduplicateByUIDAndRecurrenceId(events, perOccurrence = false) {
         logger.debug('CALENDAR', 'Applying UID and recurrenceId-based deduplication for list/map views', {
             totalEvents: events.length
         });
@@ -3589,7 +3604,21 @@ class DynamicCalendarLoader extends CalendarCore {
             // Create a key that handles null recurrenceId properly
             // For Date objects, use ISO string; for null, use 'null'
             const recurrenceIdKey = recurrenceId instanceof Date ? recurrenceId.toISOString() : 'null';
-            const key = `${uid}-${recurrenceIdKey}`;
+            // perOccurrence: the rail's timeline renders a recurring event
+            // once per occurrence, and the plain uid key collapsed all of a
+            // weekly night's expanded instances into ONE card (they share a
+            // uid and a null recurrenceId) — over a 7-day window that was
+            // invisible, over the 63-day timeline it ate eight of nine.
+            // The date joins the key so occurrences stay distinct while
+            // same-date duplicates still fold.
+            let occurrenceKey = '';
+            if (perOccurrence) {
+                try {
+                    const logical = this.getLogicalStartDate(event);
+                    if (logical) occurrenceKey = `-${this.getLocalDateKey(logical)}`;
+                } catch (e) { occurrenceKey = ''; }
+            }
+            const key = `${uid}-${recurrenceIdKey}${occurrenceKey}`;
             
             logger.debug('CALENDAR', 'Processing event for UID/recurrenceId deduplication', {
                 eventName: event.name,
@@ -4796,42 +4825,16 @@ class DynamicCalendarLoader extends CalendarCore {
         const end = new Date(start);
         end.setDate(end.getDate() + this.stripDayCount - 1);
         end.setHours(23, 59, 59, 999);
-        let expanded;
+        // EVERY occurrence, its own card (a recurring night deduped to one
+        // occurrence went missing from every other week the user swiped to —
+        // owner report 2026-08-31). getFilteredEvents already expands
+        // recurrences and sorts by date; occurrence uniqueness is handled by
+        // the slug+occurrence keys the cards carry.
         try {
-            expanded = this.getFilteredEvents({ start, end });
+            return this.getFilteredEvents({ start, end });
         } catch (error) {
             return null;
         }
-        const anchor = new Date(start);
-        anchor.setDate(anchor.getDate() + 28);
-        const anchorMs = anchor.getTime();
-        const bySlug = new Map();
-        const dateOf = ev => {
-            const d = this.getLogicalStartDate(ev);
-            return d ? d.getTime() : 0;
-        };
-        // ahead-of-anchor beats behind, nearer beats farther
-        const score = ms => (ms >= anchorMs ? ms - anchorMs : (anchorMs - ms) + 8.64e13 * 365);
-        expanded.forEach(ev => {
-            if (!ev || !ev.slug) return;
-            const prev = bySlug.get(ev.slug);
-            if (!prev || score(dateOf(ev)) < score(dateOf(prev))) bySlug.set(ev.slug, ev);
-        });
-        return [...bySlug.values()].sort((a, b) => dateOf(a) - dateOf(b));
-    }
-
-    // Continuous window-follow for the rail's scrub: place the given date
-    // (fractional days allowed) at the CENTER of the visible week, moving the
-    // grid with the finger — the rail drives, the settle machinery is
-    // suppressed until the gesture lands.
-    followRailDate(dateMs) {
-        if (this.currentView !== 'week' || !this.stripStartDate) return;
-        const grid = document.querySelector('.calendar-grid');
-        if (!grid || grid.scrollWidth <= 0) return;
-        const days = (dateMs - this.stripStartDate.getTime()) / 86400000 - 3;
-        const clamped = Math.max(0, Math.min(this.stripDayCount - 7, days));
-        this.suppressGridScrollUntil = performance.now() + 250;
-        grid.scrollLeft = Math.round(clamped * (grid.scrollWidth / this.stripDayCount));
     }
 
     async refreshEventsPanel(filteredEvents, hideEvents = false, opts = {}) {
@@ -4882,7 +4885,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     logger.info('CALENDAR', 'Applying UID/recurrenceId deduplication for list view', {
                         originalEventCount: filteredEvents.length
                     });
-                    const listDeduplicatedEvents = this.deduplicateByUIDAndRecurrenceId(cardEvents);
+                    const listDeduplicatedEvents = this.deduplicateByUIDAndRecurrenceId(cardEvents, cardEvents !== filteredEvents);
 
                     // Reconcile instead of innerHTML-swapping: a card whose
                     // rendered content is unchanged is REUSED, so its favicon
@@ -4894,9 +4897,17 @@ class DynamicCalendarLoader extends CalendarCore {
                         for (let i = 0; i < str.length; i++) hash = ((hash << 5) + hash + str.charCodeAt(i)) >>> 0;
                         return String(hash);
                     };
+                    // keyed by slug+occurrence: the timeline rail renders a
+                    // recurring event once per occurrence, and a slug-only map
+                    // collides those into one entry — every other occurrence
+                    // then rebuilt on each settle (visible churn)
+                    const occKeyOf = (slug, occ) => `${slug}|${occ || ''}`;
                     const existingBySlug = new Map();
                     eventsList.querySelectorAll(':scope > .event-card[data-event-slug]').forEach(c => {
-                        existingBySlug.set(c.getAttribute('data-event-slug'), c);
+                        existingBySlug.set(
+                            occKeyOf(c.getAttribute('data-event-slug'), c.getAttribute('data-occurrence')),
+                            c
+                        );
                     });
                     // already-decoded <img>s from the outgoing list, by URL:
                     // fresh cards TRANSPLANT them instead of re-decoding, so
@@ -4930,9 +4941,15 @@ class DynamicCalendarLoader extends CalendarCore {
                             return;
                         }
                         const sig = sigOf(html);
-                        const existing = existingBySlug.get(event.slug);
+                        let eventOccISO = '';
+                        try {
+                            const lg = this.getLogicalStartDate(event);
+                            if (lg) eventOccISO = this.getLocalDateKey(lg);
+                        } catch (e) { eventOccISO = ''; }
+                        const reuseKey = occKeyOf(event.slug, eventOccISO);
+                        const existing = existingBySlug.get(reuseKey);
                         if (existing && existing.dataset.cardSig === sig) {
-                            existingBySlug.delete(event.slug);
+                            existingBySlug.delete(reuseKey);
                             // this card keeps its own imgs — pull them out of
                             // the transplant pool so no other card steals them
                             oldImgPool.forEach((img, src) => {
