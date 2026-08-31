@@ -332,10 +332,13 @@
   let settleRaf = 0, stillFrames = 0, lastLeft = -1;
 
   const userBusy = () => touchActive || (performance.now() - lastUserTouch) < USER_QUIET;
-  const cards = () => { const el = list(); return el ? Array.from(el.querySelectorAll('.event-card')) : []; };
+  // TOP-LEVEL cards only: the edge slots contain ghost .event-cards, and an
+  // unscoped query counted them — first load then centred the Earlier ghost
+  // instead of the week's first real card
+  const cards = () => { const el = list(); return el ? Array.from(el.querySelectorAll(':scope > .event-card')) : []; };
   // every snap target in the rail, in DOM order: the edge slots and the empty
   // week's card are members of the band, not decorations beside it
-  const SLOT_SEL = '.event-card, .rail-edge, .loading-message.empty-slot';
+  const SLOT_SEL = ':scope > .event-card, :scope > .rail-edge, :scope > .loading-message.empty-slot';
   const slots = () => { const el = list(); return el ? Array.from(el.querySelectorAll(SLOT_SEL)) : []; };
   const cardBySlug = (slug) => {
     const el = list();
@@ -440,9 +443,7 @@
   const edgeHtml = (dir, target, l) => {
     const d = target.date instanceof Date ? target.date : new Date(target.date);
     const when = isNaN(d.getTime()) ? '' : WD[d.getDay()] + ' ' + (d.getMonth() + 1) + '/' + d.getDate();
-    const more = target.weekCount > 1 ? ' \u00b7 +' + (target.weekCount - 1) + ' more' : '';
     const label = dir === 'prev' ? 'Earlier' : 'Later';
-    const arrowed = dir === 'prev' ? ('\u2039 ' + label) : (label + ' \u203a');
 
     let cardHtml = '';
     if (target.event && l && l.generateEventCard) {
@@ -475,7 +476,6 @@
       ' data-slug="' + esc(target.slug) + '" data-date="' + esc(target.dateISO) + '"' +
       ' aria-label="' + esc(label + ' week: ' + target.name + ', ' + when) + '">' +
       inner +
-      '<span class="edge-ribbon">' + esc(arrowed + ' \u00b7 ' + when + more) + '</span>' +
       '</div>';
   };
 
@@ -504,16 +504,12 @@
     if (!slug || !date) return;
     navigating = true;
     phase = 'idle';
-    urlDirty = false;          // the navigation writes the URL itself
+    urlDirty = false;          // openWeekAt writes the URL itself
     landedSlug = slug;
     grantSlug = slug;          // the swipe IS the grant: centre the arrival
     dbgNote('edge -> ' + slug.slice(0, 16) + ' @' + date);
-    // slideToWeek GLIDES the week strip there when the target week is already
-    // on the continuous strip (and snaps via openWeekAt when it is not);
-    // the strip's own settle then refreshes cards/URL/map for the new window
-    const go = typeof l.slideToWeek === 'function' ? l.slideToWeek : l.openWeekAt;
     Promise.resolve()
-      .then(() => go.call(l, slug, date))
+      .then(() => l.openWeekAt(slug, date))
       .catch(() => {})
       .then(() => { navigating = false; });
   };

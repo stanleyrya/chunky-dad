@@ -7342,26 +7342,12 @@ html.dusk body {
         -webkit-box-orient: vertical;
         overflow: hidden;
     }
-    /* the ribbon: where a swipe onto this card goes */
-    .dusk .rail-edge .edge-ribbon {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        z-index: 4;
-        padding: 5px 10px;
-        font-size: 0.72rem;
-        font-weight: 700;
-        letter-spacing: 0.4px;
-        text-transform: uppercase;
-        text-align: center;
-        color: rgba(255, 255, 255, 0.92);
-        background: rgba(6, 8, 20, 0.62);
-        -webkit-backdrop-filter: blur(10px);
-        backdrop-filter: blur(10px);
+    /* No ribbon, no label (owner call 2026-08-31): the card IS the whole
+       slot. A quiet dim is the only tell that it lives outside this week —
+       landing on it navigates there and the card comes up full. */
+    .dusk .rail-edge .event-card.rail-edge-ghost {
+        filter: brightness(0.78) saturate(0.85);
     }
-    /* room for the ribbon over the ghost's title row */
-    .dusk .rail-edge.has-card .rail-edge-ghost .ec-panel { padding-top: 2.1rem; }
     .dusk .events-list.rail-active > .rail-edge-next:not(.has-card) {
         text-align: right;
         align-items: flex-end;
