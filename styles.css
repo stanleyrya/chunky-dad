@@ -7400,17 +7400,6 @@ html.dusk body {
         font-size: 1.02rem;
         font-weight: 600;
     }
-    /* A SPENT slot is the box an empty week leaves behind after the user
-       swipes off it: removing the box outright would pull the far-side
-       neighbour one slot closer while the user watches the landing (owner
-       report: Denver), so the box stays — invisible, unsnappable, untappable
-       — until a later rebuild finds it off-screen and drops it silently.
-       The week it marks really is empty, so the blank gap is honest. */
-    .dusk .events-list.rail-active .loading-message.empty-slot.spent {
-        opacity: 0;
-        scroll-snap-align: none;
-        pointer-events: none;
-    }
     /* corner thumb, shared: always-on in dense, writer-faded in cozy */
     .dusk .events-list.rail-active > .event-card .rail-thumb {
         display: block;

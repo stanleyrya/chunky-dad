@@ -412,7 +412,7 @@
   const cards = () => { const el = list(); return el ? Array.from(el.querySelectorAll(':scope > .event-card')) : []; };
   // every snap target in the rail, in DOM order: the edge slots and the empty
   // week's card are members of the band, not decorations beside it
-  const SLOT_SEL = ':scope > .event-card, :scope > .rail-edge, :scope > .loading-message.empty-slot:not(.spent)';
+  const SLOT_SEL = ':scope > .event-card, :scope > .rail-edge, :scope > .loading-message.empty-slot';
   const slots = () => { const el = list(); return el ? Array.from(el.querySelectorAll(SLOT_SEL)) : []; };
   const cardBySlug = (slug, occISO) => {
     const el = list();
@@ -582,7 +582,7 @@
     if (!l || l.currentView !== 'week' || typeof l.findAdjacentEvent !== 'function') return;
     // still loading (the plain '📅 Getting events…' message): no edges until
     // the week's real contents are on screen
-    if (!el.querySelector('.event-card, .loading-message.empty-slot:not(.spent)')) return;
+    if (!el.querySelector('.event-card, .loading-message.empty-slot')) return;
     [['prev', 'afterbegin'], ['next', 'beforeend']].forEach((pair) => {
       let target = null;
       // past the STRIP, not the window: the timeline rail already carries
@@ -884,7 +884,7 @@
       } catch (e) {}
     }
     const target = selEl || landedEl || firstWindowCard()
-      || el.querySelector('.loading-message.empty-slot:not(.spent)')
+      || el.querySelector('.loading-message.empty-slot')
       || cards()[0];
     if (!target) return;
     landedSlug = target.getAttribute('data-event-slug') || landedSlug;

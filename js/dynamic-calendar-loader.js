@@ -5109,48 +5109,22 @@ class DynamicCalendarLoader extends CalendarCore {
                             });
                         });
                     }
-                    // Removing the empty-week slot the user just swiped off
-                    // would pull the far-side neighbour one slot closer under
-                    // their eyes (the rebuild re-anchors on the landed card,
-                    // so everything across the removed box shifts). While the
-                    // box is still within a viewport of where the user is, it
-                    // survives the rebuild as a SPENT spacer — invisible,
-                    // unsnappable — and a later rebuild drops it once it is
-                    // comfortably off-screen. Captured before replaceChildren
-                    // wipes it.
-                    let spentSlot = null;
-                    if (this.railTimeline && this.currentView === 'week') {
-                        const oldSlot = eventsList.querySelector(':scope > .loading-message.empty-slot[data-date]');
-                        if (oldSlot && filteredEvents && filteredEvents.length > 0) {
-                            const viewMid = eventsList.scrollLeft + eventsList.clientWidth / 2;
-                            const slotMid = oldSlot.offsetLeft + oldSlot.offsetWidth / 2;
-                            if (Math.abs(slotMid - viewMid) < eventsList.clientWidth * 1.5) {
-                                spentSlot = oldSlot;
-                                spentSlot.classList.add('spent');
-                                spentSlot.setAttribute('aria-hidden', 'true');
-                            }
-                        }
-                    }
-
                     eventsList.replaceChildren(frag);
-
-                    // Orders a slot among the cards by its data-date.
-                    const insertSlotByDate = (slot) => {
-                        const dateISO = slot.getAttribute('data-date');
-                        let before = null;
-                        eventsList.querySelectorAll(':scope > .event-card[data-occurrence]').forEach(card => {
-                            if (before) return;
-                            if (card.getAttribute('data-occurrence') > dateISO) before = card;
-                        });
-                        eventsList.insertBefore(slot, before);
-                    };
 
                     // An empty VISIBLE WEEK on the timeline rail gets the
                     // same "no events this week" slot the fully-empty state
                     // uses — inserted at its date position between the past
                     // and future cards, so the rail rests on it instead of
                     // highlighting an event weeks away (owner report:
-                    // Denver).
+                    // Denver). Swiping off it to a neighbour shifts the
+                    // window there; that window has events, so the slot is
+                    // simply not rendered again — the gap collapses and the
+                    // far-side neighbour becomes the adjacent peek. The slot
+                    // is deliberately unreachable by rail swiping afterwards:
+                    // it only exists again when week navigation lands ON an
+                    // empty week, and that re-render recreates it (owner:
+                    // "we will never see a 'no event this week' by using the
+                    // middle card swiping").
                     if (this.railTimeline && this.currentView === 'week'
                         && (!filteredEvents || filteredEvents.length === 0)
                         && listDeduplicatedEvents.length > 0) {
@@ -5160,10 +5134,13 @@ class DynamicCalendarLoader extends CalendarCore {
                             slot.className = 'loading-message empty-slot';
                             slot.setAttribute('data-date', windowStartISO);
                             slot.innerHTML = 'No events this week.<span class="empty-hint">Swipe for the nearest events.</span>';
-                            insertSlotByDate(slot);
+                            let before = null;
+                            eventsList.querySelectorAll(':scope > .event-card[data-occurrence]').forEach(card => {
+                                if (before) return;
+                                if (card.getAttribute('data-occurrence') > windowStartISO) before = card;
+                            });
+                            eventsList.insertBefore(slot, before);
                         } catch (e) {}
-                    } else if (spentSlot) {
-                        try { insertSlotByDate(spentSlot); } catch (e) {}
                     }
 
                     if (skippedCards > 0) {
