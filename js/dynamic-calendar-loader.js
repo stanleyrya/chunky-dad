@@ -5111,6 +5111,33 @@ class DynamicCalendarLoader extends CalendarCore {
                     }
                     eventsList.replaceChildren(frag);
 
+                    // An empty VISIBLE WEEK on the timeline rail gets the
+                    // same "no events this week" slot the fully-empty state
+                    // uses — inserted at its date position between the past
+                    // and future cards, so the rail rests on it instead of
+                    // highlighting an event weeks away (owner report:
+                    // Denver). Swiping off it to a neighbour shifts the
+                    // window there; the refreshed window has events, so the
+                    // slot simply is not rendered again — it disappears and
+                    // the far-side card keeps its place.
+                    if (this.railTimeline && this.currentView === 'week'
+                        && (!filteredEvents || filteredEvents.length === 0)
+                        && listDeduplicatedEvents.length > 0) {
+                        try {
+                            const windowStartISO = this.getLocalDateKey(this.getCurrentPeriodBounds().start);
+                            const slot = document.createElement('div');
+                            slot.className = 'loading-message empty-slot';
+                            slot.setAttribute('data-date', windowStartISO);
+                            slot.innerHTML = 'No events this week.<span class="empty-hint">Swipe for the nearest events.</span>';
+                            let before = null;
+                            eventsList.querySelectorAll(':scope > .event-card[data-occurrence]').forEach(card => {
+                                if (before) return;
+                                if (card.getAttribute('data-occurrence') > windowStartISO) before = card;
+                            });
+                            eventsList.insertBefore(slot, before);
+                        } catch (e) {}
+                    }
+
                     if (skippedCards > 0) {
                         logger.warn('CALENDAR', 'Some event cards could not be built', {
                             skippedCards,

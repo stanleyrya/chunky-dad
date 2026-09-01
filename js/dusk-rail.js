@@ -583,6 +583,9 @@
     if (fromUser) {
       const slot = centeredSlot();
       if (slot && slot.classList.contains('rail-edge')) { goEdge(slot); return; }
+      // resting on the empty-week slot is a real resting place — it must not
+      // select (or navigate to) whichever card happens to be nearest
+      if (slot && slot.classList.contains('empty-slot')) { armThumbs(); flushUrl(); return; }
       const c = centeredCard();
       if (c) {
         railOwner = 'user';
@@ -606,9 +609,12 @@
             Promise.resolve().then(() => l.revealAdjacent(landedSlug, landedOcc, dir)).catch(() => {});
           }
         }
-        armThumbs();
       }
     }
+    // re-arm around wherever the rail now rests — including programmatic
+    // settles (the initial centring): arming only on user gestures left the
+    // cards around the landing spot artless until the first swipe
+    armThumbs();
     flushUrl();
   };
   const armSettleWatch = () => {
@@ -773,11 +779,18 @@
   const firstWindowCard = () => {
     const l = loader();
     if (!l || !geom.length) return null;
-    let startMs = 0;
-    try { startMs = l.getCurrentPeriodBounds().start.getTime(); } catch (e) { return null; }
+    let startMs = 0, endMs = Infinity;
+    try {
+      const b = l.getCurrentPeriodBounds();
+      startMs = b.start.getTime();
+      endMs = b.end.getTime();
+    } catch (e) { return null; }
     for (let i = 0; i < geom.length; i++) {
       const g = geom[i];
-      if (g.date != null && g.slug && g.date >= startMs) return g.el;
+      // IN the window, not merely on-or-after its start — without the end
+      // bound an empty week rested on a card weeks in the future instead of
+      // the empty-week slot (owner report: Denver)
+      if (g.date != null && g.slug && g.date >= startMs && g.date <= endMs) return g.el;
     }
     return null;
   };
@@ -810,7 +823,8 @@
       } catch (e) {}
     }
     const target = selEl || landedEl || firstWindowCard()
-      || cards()[0] || el.querySelector('.loading-message.empty-slot');
+      || el.querySelector('.loading-message.empty-slot')
+      || cards()[0];
     if (!target) return;
     landedSlug = target.getAttribute('data-event-slug') || landedSlug;
     landedOcc = target.getAttribute('data-occurrence') || landedOcc;
@@ -853,6 +867,8 @@
       buildEdgeSlots();
       buildGeom();
       centerRestingCard(true);
+      // the centring just moved the viewport — arm around where it landed
+      armThumbs();
       resizeMap();
       dbgNote('rail ON');
     } else if (!want && has) {
@@ -870,6 +886,7 @@
         if (reason !== 'resize' || !el.querySelector('.rail-edge')) buildEdgeSlots();
         buildGeom();
         centerRestingCard(reason === 'render');
+        armThumbs();
       } else if (grantSlug) {
         const g = cardBySlug(grantSlug, grantOcc);
         if (g) centerOn(g, reason);
