@@ -1646,13 +1646,20 @@ class DynamicCalendarLoader extends CalendarCore {
         let { start, end } = this.getCurrentPeriodBounds();
         // 'strip': the rail renders the whole grid strip, so its edge slots
         // must point past the STRIP, not past the visible window — otherwise
-        // they duplicate cards already on the rail
+        // they duplicate cards already on the rail. When the rail timeline
+        // holds MORE than the strip (railCoverage, see
+        // getRailTimelineEvents), the edges must point past that instead.
         if (beyond === 'strip' && this.stripStartDate && this.currentView === 'week') {
-            start = new Date(this.stripStartDate);
-            start.setHours(0, 0, 0, 0);
-            end = new Date(start);
-            end.setDate(end.getDate() + this.stripDayCount - 1);
-            end.setHours(23, 59, 59, 999);
+            if (this.railTimeline && this.railCoverage) {
+                start = new Date(this.railCoverage.start);
+                end = new Date(this.railCoverage.end);
+            } else {
+                start = new Date(this.stripStartDate);
+                start.setHours(0, 0, 0, 0);
+                end = new Date(start);
+                end.setDate(end.getDate() + this.stripDayCount - 1);
+                end.setHours(23, 59, 59, 999);
+            }
         }
 
         let searchStart, searchEnd;
@@ -4955,11 +4962,68 @@ class DynamicCalendarLoader extends CalendarCore {
         // owner report 2026-08-31). getFilteredEvents already expands
         // recurrences and sorts by date; occurrence uniqueness is handled by
         // the slug+occurrence keys the cards carry.
+        //
+        // The rail is NOT limited to the grid strip's ±4 weeks: a sparse
+        // city (Denver, a handful of events across a year) turned everything
+        // beyond a month into edge ghosts and rebuilt the strip mid-journey
+        // (owner: "surely loading all events in Denver should be possible,
+        // it's only a few"). The fetch covers a year either side and keeps
+        // it all when that stays small; a dense city — weekly residencies
+        // expand to one card per occurrence — is trimmed back to the strip's
+        // own events plus the nearest occurrences either side, up to the
+        // cap. railCoverage records what the rail actually holds so the edge
+        // ghosts point past IT, never duplicating a card already on board.
+        const RAIL_OCCURRENCE_CAP = 60;
+        const wideStart = new Date(start);
+        wideStart.setDate(wideStart.getDate() - 365);
+        const wideEnd = new Date(end);
+        wideEnd.setDate(wideEnd.getDate() + 365);
+        let events = null;
         try {
-            return this.getFilteredEvents({ start, end });
+            events = this.getFilteredEvents({ start: wideStart, end: wideEnd });
         } catch (error) {
-            return null;
+            events = null;
         }
+        if (!events) {
+            this.railCoverage = { start, end };
+            try {
+                return this.getFilteredEvents({ start, end });
+            } catch (error) {
+                return null;
+            }
+        }
+        if (events.length <= RAIL_OCCURRENCE_CAP) {
+            this.railCoverage = { start: wideStart, end: wideEnd };
+            return events;
+        }
+        const startMs = start.getTime();
+        const endMs = end.getTime();
+        const keyed = events.map(ev => {
+            let t = NaN;
+            try { t = this.getLogicalStartDate(ev).getTime(); } catch (error) {}
+            return { ev, t };
+        });
+        // NaN dates fail both comparisons and stay in `within` — kept, never
+        // silently dropped
+        const within = keyed.filter(k => !(k.t < startMs) && !(k.t > endMs));
+        const before = keyed.filter(k => k.t < startMs);
+        const after = keyed.filter(k => k.t > endMs);
+        const picked = within.slice();
+        let room = Math.max(0, RAIL_OCCURRENCE_CAP - within.length);
+        let bi = before.length - 1, ai = 0;
+        while (room > 0 && (bi >= 0 || ai < after.length)) {
+            const beforeGap = bi >= 0 ? startMs - before[bi].t : Infinity;
+            const afterGap = ai < after.length ? after[ai].t - endMs : Infinity;
+            picked.push(beforeGap <= afterGap ? before[bi--] : after[ai++]);
+            room--;
+        }
+        picked.sort((a, b) => (a.t || 0) - (b.t || 0));
+        const times = picked.map(k => k.t).filter(t => !isNaN(t));
+        this.railCoverage = {
+            start: new Date(Math.min(startMs, times.length ? Math.min.apply(null, times) : startMs)),
+            end: new Date(Math.max(endMs, times.length ? Math.max.apply(null, times) : endMs))
+        };
+        return picked.map(k => k.ev);
     }
 
     async refreshEventsPanel(filteredEvents, hideEvents = false, opts = {}) {

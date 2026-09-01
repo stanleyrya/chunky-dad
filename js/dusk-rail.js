@@ -86,10 +86,17 @@
     // few screens of the current position get their art; settles re-arm as
     // the user travels
     const el = list();
-    const nearOnly = el && el.classList.contains('rail-active');
+    const btns = document.querySelectorAll('.events-list .event-card .rail-thumb');
+    // a small rail (Denver: a handful of cards; thumbs are ~10KB companions)
+    // arms EVERYTHING up front — the proximity window exists for dense
+    // cities whose timeline holds dozens of full-flyer fallbacks, and it
+    // always excluded the edge ghosts parked at the strip's far ends (owner:
+    // "they don't have the image in the top right corner until a second
+    // round of loading")
+    const nearOnly = el && el.classList.contains('rail-active') && btns.length > 60;
     const min = nearOnly ? el.scrollLeft - el.clientWidth * 3 : -Infinity;
     const max = nearOnly ? el.scrollLeft + el.clientWidth * 4 : Infinity;
-    document.querySelectorAll('.events-list .event-card .rail-thumb').forEach((btn) => {
+    btns.forEach((btn) => {
       if (btn.style.backgroundImage) return;
       const card = btn.closest('.event-card');
       if (nearOnly) {
@@ -717,6 +724,7 @@
     frameRaf = 0;
     if (phase !== 'scrub' || !railActive()) return;
     if (geomStale() || !geom.length) buildGeom();
+    armThumbs(); // the proximity window travels with the swipe
     const el = list();
     const g = el && nearestGeom(el.scrollLeft);
     if (g && g.slug && (g.slug !== holdSlug || g.occ !== holdOcc)) {
@@ -763,11 +771,13 @@
       prev.style.position = 'sticky';
       prev.style.left = (prev.getBoundingClientRect().left - listRect.left - padL) + 'px';
       prev.style.right = 'auto';
+      prev.style.zIndex = '1'; // above the slot's z-index:0 — it slides UNDER
     }
     if (next) {
       next.style.position = 'sticky';
       next.style.right = (listRect.right - next.getBoundingClientRect().right - padR) + 'px';
       next.style.left = 'auto';
+      next.style.zIndex = '1';
     }
     slotStickyArmed = !!(prev || next);
   };
@@ -777,7 +787,7 @@
     const el = list();
     if (el && (slotStickyArmed || slotResting)) {
       el.querySelectorAll(':scope > *').forEach((n) => {
-        if (n.style.position) { n.style.position = ''; n.style.left = ''; n.style.right = ''; }
+        if (n.style.position) { n.style.position = ''; n.style.left = ''; n.style.right = ''; n.style.zIndex = ''; }
       });
     }
     slotResting = false;
