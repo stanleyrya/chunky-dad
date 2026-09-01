@@ -404,8 +404,8 @@
   let urlDirty = false;
   let frameRaf = 0, holdTimer = 0, holdSlug = null, holdOcc = null;
   let settleRaf = 0, stillFrames = 0, lastLeft = -1;
-  let slotResting = false;   // the rail is/was resting on the empty-week card
-  let slotCollapsed = false; // the mid-gesture visual collapse has been applied
+  let slotResting = false; // the rail is/was resting on the empty-week card
+  let slotPinned = false;  // some siblings carry a viewport-pin transform
 
   const userBusy = () => touchActive || (performance.now() - lastUserTouch) < USER_QUIET;
   // TOP-LEVEL cards only: the edge slots contain ghost .event-cards, and an
@@ -648,7 +648,7 @@
       if (slot && slot.classList.contains('rail-edge')) { goEdge(slot); return; }
       // resting on the empty-week slot is a real resting place — it must not
       // select (or navigate to) whichever card happens to be nearest
-      if (slot && slot.classList.contains('empty-slot')) { slotResting = true; undoSlotCollapse(); armThumbs(); flushUrl(); return; }
+      if (slot && slot.classList.contains('empty-slot')) { slotResting = true; armThumbs(); flushUrl(); return; }
       const c = centeredCard();
       if (c) {
         railOwner = 'user';
@@ -725,63 +725,68 @@
       holdTimer = setTimeout(() => { if (phase === 'scrub') realSelect(g.slug, g.occ); }, 120);
     }
   };
-  // Swiping OFF the empty-week card removes it IN MID-GESTURE: at the moment
-  // the viewport commits to a neighbour (crosses the snap boundary), the slot
-  // is hidden and everything on the abandoned side slides one pitch over, so
-  // the far-side card becomes the adjacent peek while the finger is still
-  // moving. Transforms, not DOM or scrollLeft — iOS ignores scroll writes and
-  // drops the gesture on DOM churn during a pan. The landing rebuild then
-  // removes the slot for real and wipes the transforms in the same frame, so
-  // it changes nothing visibly (owner: "the whole carousel swipes and then
-  // refreshes to get rid of the card, which is wrong ... I want the no-events
-  // card to disappear as the future card slides in").
-  const maybeCollapseEmptySlot = (el) => {
-    if (!slotResting || slotCollapsed) return;
+  // Swiping OFF the empty-week card, the abandoned side of the timeline is
+  // PINNED to the viewport for the whole gesture: every scroll frame gives
+  // the not-swiped-to side a counter-transform equal to the scroll delta, so
+  // the past card literally never moves while the empty card slides over it
+  // (natural DOM paint order stacks the slot above earlier siblings) and
+  // fades out, and the future card slides in under the finger (owner: "the
+  // past card should have never moved"). At a full one-pitch swipe the pin
+  // equals exactly the slot's width — the collapsed timeline — so the
+  // landing rebuild (slot removed for real, transforms wiped, instant
+  // re-centre, all in one frame) is a visual no-op. The pin is clamped at
+  // one pitch: beyond the adjacent neighbour the pinned side travels
+  // normally again, just one slot closer, which IS the collapsed layout.
+  // Transforms, not DOM or scrollLeft — iOS ignores scroll writes and drops
+  // the gesture on DOM churn during a pan. Because the pin follows delta
+  // continuously, drifting back to the slot unwinds everything to zero —
+  // the resting card fades back in and no state needs undoing.
+  const pinAbandonedSide = (el) => {
+    if (!slotResting) return;
     const slot = el.querySelector(':scope > .loading-message.empty-slot');
     if (!slot) { slotResting = false; return; }
     const mid = el.scrollLeft + el.clientWidth / 2;
     const slotMid = slot.offsetLeft + slot.offsetWidth / 2;
     const prev = slot.previousElementSibling;
     const next = slot.nextElementSibling;
-    const dirNext = !!next && mid > (slotMid + next.offsetLeft + next.offsetWidth / 2) / 2;
-    const dirPrev = !dirNext && !!prev && mid < (slotMid + prev.offsetLeft + prev.offsetWidth / 2) / 2;
-    if (!dirNext && !dirPrev) return;
-    slotCollapsed = true;
-    slot.style.visibility = 'hidden';
-    const shift = dirNext
-      ? (next.offsetLeft - slot.offsetLeft)
-      : -(slot.offsetLeft - prev.offsetLeft);
-    let sib = dirNext ? slot.previousElementSibling : slot.nextElementSibling;
-    while (sib) {
-      sib.style.transition = 'none';
-      sib.style.transform = 'translateX(' + shift + 'px)';
-      sib = dirNext ? sib.previousElementSibling : sib.nextElementSibling;
-    }
-    dbgNote('slot collapsed ' + (dirNext ? 'next' : 'prev'));
+    const pitchNext = next ? (next.offsetLeft + next.offsetWidth / 2) - slotMid : 0;
+    const pitchPrev = prev ? slotMid - (prev.offsetLeft + prev.offsetWidth / 2) : 0;
+    let delta = mid - slotMid;
+    if (delta > 0 && !next) delta = 0;
+    if (delta < 0 && !prev) delta = 0;
+    delta = Math.max(-(pitchPrev || 0), Math.min(pitchNext || 0, delta));
+    slotPinned = true;
+    const setSide = (start, dirPrevSibling, shift) => {
+      let sib = start;
+      while (sib) {
+        sib.style.transition = 'none';
+        sib.style.transform = shift ? 'translateX(' + shift + 'px)' : '';
+        if (!shift) sib.style.transition = '';
+        sib = dirPrevSibling ? sib.previousElementSibling : sib.nextElementSibling;
+      }
+    };
+    // moving toward next pins the before-side at +delta; the other side rides
+    // free (transform cleared) — and vice versa
+    setSide(prev, true, delta > 0 ? delta : 0);
+    setSide(next, false, delta < 0 ? delta : 0);
+    // the resting card fades away over the first 60% of the swipe (and back
+    // in on return); it also slides under the pinned neighbour, so by the
+    // time they meaningfully overlap it is mostly gone
+    const span = delta >= 0 ? pitchNext : pitchPrev;
+    const progress = span ? Math.min(1, Math.abs(delta) / (span * 0.6)) : 0;
+    slot.style.opacity = String(Math.max(0, 1 - progress));
   };
-  // Returning to the slot before any rebuild resurrects it — the week is
-  // still empty and still the resting place.
-  const undoSlotCollapse = () => {
-    if (!slotCollapsed) return;
+  // A rebuild made the collapse real (or the strip changed shape): reused
+  // cards must not carry a stale pin into the new strip.
+  const clearSlotPins = () => {
     const el = list();
-    if (el) {
-      el.querySelectorAll(':scope > *').forEach((n) => { n.style.transform = ''; n.style.transition = ''; });
-      const slot = el.querySelector(':scope > .loading-message.empty-slot');
-      if (slot) slot.style.visibility = '';
-    }
-    slotCollapsed = false;
-  };
-  // A rebuild made the collapse real: reused cards must not carry the shift
-  // into the new strip, and the state machine starts over.
-  const clearSlotCollapseAfterRender = () => {
-    const el = list();
-    if (el && (slotCollapsed || slotResting)) {
+    if (el && (slotPinned || slotResting)) {
       el.querySelectorAll(':scope > *').forEach((n) => {
-        if (n.style.transform || n.style.visibility) { n.style.transform = ''; n.style.transition = ''; n.style.visibility = ''; }
+        if (n.style.transform || n.style.opacity) { n.style.transform = ''; n.style.transition = ''; n.style.opacity = ''; }
       });
     }
     slotResting = false;
-    slotCollapsed = false;
+    slotPinned = false;
   };
   document.addEventListener('scroll', (e) => {
     if (!isMobile()) return;
@@ -790,9 +795,9 @@
     if (phase === 'idle' && !programmatic) phase = 'scrub'; // wheel/trackpad gestures have no touchstart
     if (phase === 'scrub') {
       gestureScrolled = true;
-      maybeCollapseEmptySlot(t);
       if (!frameRaf) frameRaf = requestAnimationFrame(onScrubFrame);
     }
+    pinAbandonedSide(t);
     armSettleWatch();
   }, { capture: true, passive: true });
 
@@ -986,7 +991,7 @@
     const has = el.classList.contains('rail-active');
     if (want && !has) {
       el.classList.add('rail-active');
-      clearSlotCollapseAfterRender(); // reused cards must not carry a stale shift
+      clearSlotPins(); // reused cards must not carry a stale pin
       armThumbs();
       buildEdgeSlots();
       buildGeom();
@@ -1003,7 +1008,7 @@
       dbgNote('rail OFF');
     } else if (want && has) {
       if (reason === 'render' || reason === 'resize' || geomStale()) {
-        if (reason === 'render') clearSlotCollapseAfterRender();
+        if (reason === 'render') clearSlotPins();
         armThumbs();
         // NOT on resize: iOS fires one on every URL-bar reveal, and the edge
         // lookup expands recurrences over six months. The slots the render
