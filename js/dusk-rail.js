@@ -404,6 +404,8 @@
   let urlDirty = false;
   let frameRaf = 0, holdTimer = 0, holdSlug = null, holdOcc = null;
   let settleRaf = 0, stillFrames = 0, lastLeft = -1;
+  let slotResting = false;   // the rail is/was resting on the empty-week card
+  let slotCollapsed = false; // the mid-gesture visual collapse has been applied
 
   const userBusy = () => touchActive || (performance.now() - lastUserTouch) < USER_QUIET;
   // TOP-LEVEL cards only: the edge slots contain ghost .event-cards, and an
@@ -646,7 +648,7 @@
       if (slot && slot.classList.contains('rail-edge')) { goEdge(slot); return; }
       // resting on the empty-week slot is a real resting place — it must not
       // select (or navigate to) whichever card happens to be nearest
-      if (slot && slot.classList.contains('empty-slot')) { armThumbs(); flushUrl(); return; }
+      if (slot && slot.classList.contains('empty-slot')) { slotResting = true; undoSlotCollapse(); armThumbs(); flushUrl(); return; }
       const c = centeredCard();
       if (c) {
         railOwner = 'user';
@@ -723,6 +725,64 @@
       holdTimer = setTimeout(() => { if (phase === 'scrub') realSelect(g.slug, g.occ); }, 120);
     }
   };
+  // Swiping OFF the empty-week card removes it IN MID-GESTURE: at the moment
+  // the viewport commits to a neighbour (crosses the snap boundary), the slot
+  // is hidden and everything on the abandoned side slides one pitch over, so
+  // the far-side card becomes the adjacent peek while the finger is still
+  // moving. Transforms, not DOM or scrollLeft — iOS ignores scroll writes and
+  // drops the gesture on DOM churn during a pan. The landing rebuild then
+  // removes the slot for real and wipes the transforms in the same frame, so
+  // it changes nothing visibly (owner: "the whole carousel swipes and then
+  // refreshes to get rid of the card, which is wrong ... I want the no-events
+  // card to disappear as the future card slides in").
+  const maybeCollapseEmptySlot = (el) => {
+    if (!slotResting || slotCollapsed) return;
+    const slot = el.querySelector(':scope > .loading-message.empty-slot');
+    if (!slot) { slotResting = false; return; }
+    const mid = el.scrollLeft + el.clientWidth / 2;
+    const slotMid = slot.offsetLeft + slot.offsetWidth / 2;
+    const prev = slot.previousElementSibling;
+    const next = slot.nextElementSibling;
+    const dirNext = !!next && mid > (slotMid + next.offsetLeft + next.offsetWidth / 2) / 2;
+    const dirPrev = !dirNext && !!prev && mid < (slotMid + prev.offsetLeft + prev.offsetWidth / 2) / 2;
+    if (!dirNext && !dirPrev) return;
+    slotCollapsed = true;
+    slot.style.visibility = 'hidden';
+    const shift = dirNext
+      ? (next.offsetLeft - slot.offsetLeft)
+      : -(slot.offsetLeft - prev.offsetLeft);
+    let sib = dirNext ? slot.previousElementSibling : slot.nextElementSibling;
+    while (sib) {
+      sib.style.transition = 'none';
+      sib.style.transform = 'translateX(' + shift + 'px)';
+      sib = dirNext ? sib.previousElementSibling : sib.nextElementSibling;
+    }
+    dbgNote('slot collapsed ' + (dirNext ? 'next' : 'prev'));
+  };
+  // Returning to the slot before any rebuild resurrects it — the week is
+  // still empty and still the resting place.
+  const undoSlotCollapse = () => {
+    if (!slotCollapsed) return;
+    const el = list();
+    if (el) {
+      el.querySelectorAll(':scope > *').forEach((n) => { n.style.transform = ''; n.style.transition = ''; });
+      const slot = el.querySelector(':scope > .loading-message.empty-slot');
+      if (slot) slot.style.visibility = '';
+    }
+    slotCollapsed = false;
+  };
+  // A rebuild made the collapse real: reused cards must not carry the shift
+  // into the new strip, and the state machine starts over.
+  const clearSlotCollapseAfterRender = () => {
+    const el = list();
+    if (el && (slotCollapsed || slotResting)) {
+      el.querySelectorAll(':scope > *').forEach((n) => {
+        if (n.style.transform || n.style.visibility) { n.style.transform = ''; n.style.transition = ''; n.style.visibility = ''; }
+      });
+    }
+    slotResting = false;
+    slotCollapsed = false;
+  };
   document.addEventListener('scroll', (e) => {
     if (!isMobile()) return;
     const t = e.target;
@@ -730,6 +790,7 @@
     if (phase === 'idle' && !programmatic) phase = 'scrub'; // wheel/trackpad gestures have no touchstart
     if (phase === 'scrub') {
       gestureScrolled = true;
+      maybeCollapseEmptySlot(t);
       if (!frameRaf) frameRaf = requestAnimationFrame(onScrubFrame);
     }
     armSettleWatch();
@@ -887,6 +948,7 @@
       || el.querySelector('.loading-message.empty-slot')
       || cards()[0];
     if (!target) return;
+    slotResting = !!(target.classList && target.classList.contains('empty-slot'));
     landedSlug = target.getAttribute('data-event-slug') || landedSlug;
     landedOcc = target.getAttribute('data-occurrence') || landedOcc;
     if (grantSlug === landedSlug) { grantSlug = null; grantOcc = null; }
@@ -924,6 +986,7 @@
     const has = el.classList.contains('rail-active');
     if (want && !has) {
       el.classList.add('rail-active');
+      clearSlotCollapseAfterRender(); // reused cards must not carry a stale shift
       armThumbs();
       buildEdgeSlots();
       buildGeom();
@@ -940,6 +1003,7 @@
       dbgNote('rail OFF');
     } else if (want && has) {
       if (reason === 'render' || reason === 'resize' || geomStale()) {
+        if (reason === 'render') clearSlotCollapseAfterRender();
         armThumbs();
         // NOT on resize: iOS fires one on every URL-bar reveal, and the edge
         // lookup expands recurrences over six months. The slots the render
