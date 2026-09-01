@@ -80,6 +80,7 @@
   // desktop's display:none thumb never triggers an image fetch
   const armThumbs = () => {
     if (!isMobile()) return;
+    loadThumbManifest();
     // the timeline rail carries the whole strip (30+ cards) — arming every
     // thumb at once would fetch every flyer up front, so only cards within a
     // few screens of the current position get their art; settles re-arm as
@@ -98,8 +99,68 @@
       }
       const flyer = card && card.querySelector('.event-flyer[data-flyer-url]');
       const url = flyer && flyer.getAttribute('data-flyer-url');
-      if (url) btn.style.backgroundImage = 'url("' + url.replace(/"/g, '%22') + '")';
+      if (url) armThumb(btn, url);
     });
+  };
+  // thumbs.json (written by the CI image sweep) maps a flyer's SOURCE URL —
+  // cached JSON events keep their remote image URLs — to its local companion
+  // thumb. The browser can't derive that path itself: the local filename
+  // embeds a date whose timezone rendering differs between the downloader's
+  // runner and the visitor's device (verified off by one day on real events).
+  let thumbManifest = null;
+  let thumbManifestStarted = false;
+  const loadThumbManifest = () => {
+    if (thumbManifestStarted || typeof fetch !== 'function') return;
+    thumbManifestStarted = true;
+    fetch('/img/events/thumbs.json')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => { thumbManifest = json || {}; armThumbs(); })
+      .catch(() => { thumbManifest = {}; });
+  };
+  const assetKeyOf = (url) => {
+    try {
+      if (window.EventSchema && typeof window.EventSchema.imageAssetKey === 'function') {
+        return window.EventSchema.imageAssetKey(url);
+      }
+    } catch (e) { /* fall through */ }
+    // inline twin of EventSchema.imageAssetKey for a page missing the schema
+    const raw = String(url || '').trim().split('#')[0].split('?')[0];
+    const authority = /^(?:[a-z][a-z0-9+.-]*:)?\/\//i.exec(raw);
+    if (!authority) return raw;
+    const rest = raw.slice(authority[0].length);
+    const slash = rest.indexOf('/');
+    const host = (slash < 0 ? rest : rest.slice(0, slash)).toLowerCase();
+    return host + (slash < 0 ? '' : rest.slice(slash));
+  };
+  const manifestThumbFor = (url) => {
+    if (!thumbManifest) return null;
+    const entry = thumbManifest[assetKeyOf(url)];
+    return entry ? '/img/events/' + entry : null;
+  };
+  // The corner thumb prefers the CI-generated -thumb.webp companion (a few
+  // KB, sized for the 56px box at 3x) over the full flyer (often megabytes):
+  // a 30-card timeline was downloading the full library to paint postage
+  // stamps. Only LOCAL img/events paths have companions; remote URLs — and
+  // any local image whose companion is missing (older CI runs) — load the
+  // full file exactly as before. Background images have no onerror, so the
+  // probe is an Image preload; the full asset still loads on tap (lightbox).
+  const thumbUrlFor = (url) => {
+    // any spelling of the local library path (relative, ../-prefixed,
+    // absolute, or full chunky.dad URL); remote hosts never contain it
+    const m = /^(.*img\/events\/.+)\.(?:jpe?g|png|webp|gif)$/i.exec(url);
+    if (!m || url.endsWith('-thumb.webp')) return null;
+    return m[1] + '-thumb.webp';
+  };
+  const armThumb = (btn, url) => {
+    const paint = (u) => { btn.style.backgroundImage = 'url("' + u.replace(/"/g, '%22') + '")'; };
+    // thumbUrlFor handles URLs already pointing into img/events/; the
+    // manifest handles remote source URLs whose local copy is unguessable.
+    const small = thumbUrlFor(url) || manifestThumbFor(url);
+    if (!small) { paint(url); return; }
+    const probe = new Image();
+    probe.onload = () => paint(small);
+    probe.onerror = () => paint(url);
+    probe.src = small;
   };
   document.addEventListener('click', (e) => {
     const btn = e.target.closest && e.target.closest('.rail-thumb');
@@ -351,7 +412,7 @@
   const cards = () => { const el = list(); return el ? Array.from(el.querySelectorAll(':scope > .event-card')) : []; };
   // every snap target in the rail, in DOM order: the edge slots and the empty
   // week's card are members of the band, not decorations beside it
-  const SLOT_SEL = ':scope > .event-card, :scope > .rail-edge, :scope > .loading-message.empty-slot';
+  const SLOT_SEL = ':scope > .event-card, :scope > .rail-edge, :scope > .loading-message.empty-slot:not(.spent)';
   const slots = () => { const el = list(); return el ? Array.from(el.querySelectorAll(SLOT_SEL)) : []; };
   const cardBySlug = (slug, occISO) => {
     const el = list();
@@ -521,7 +582,7 @@
     if (!l || l.currentView !== 'week' || typeof l.findAdjacentEvent !== 'function') return;
     // still loading (the plain '📅 Getting events…' message): no edges until
     // the week's real contents are on screen
-    if (!el.querySelector('.event-card, .loading-message.empty-slot')) return;
+    if (!el.querySelector('.event-card, .loading-message.empty-slot:not(.spent)')) return;
     [['prev', 'afterbegin'], ['next', 'beforeend']].forEach((pair) => {
       let target = null;
       // past the STRIP, not the window: the timeline rail already carries
@@ -823,7 +884,7 @@
       } catch (e) {}
     }
     const target = selEl || landedEl || firstWindowCard()
-      || el.querySelector('.loading-message.empty-slot')
+      || el.querySelector('.loading-message.empty-slot:not(.spent)')
       || cards()[0];
     if (!target) return;
     landedSlug = target.getAttribute('data-event-slug') || landedSlug;
