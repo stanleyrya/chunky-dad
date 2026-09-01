@@ -644,6 +644,7 @@
     clearTimeout(holdTimer);
     phase = 'idle';
     if (fromUser) {
+      mergeSlotNow(); // landing beside the empty week merges it on the spot
       const slot = centeredSlot();
       if (slot && slot.classList.contains('rail-edge')) { goEdge(slot); return; }
       // resting on the empty-week slot is a real resting place — it must not
@@ -782,6 +783,42 @@
     slotResting = false;
     slotStickyArmed = false;
   };
+  // The merge must not wait for the landing rebuild (settle -> select ->
+  // grid glide -> panel refresh, ~a third of a second): a quick swipe back
+  // in that window moved through the PRE-merge strip and then had the
+  // rebuild land mid-gesture (owner: "snap to a merge immediately once it
+  // hits the spot and any more swiping is normal"). The instant the rail
+  // sits on a neighbour's snap spot, the slot is removed from the DOM right
+  // here: scrollLeft is compensated in the same frame when the slot was on
+  // the left of the target, which puts the pinned card's natural position
+  // exactly where sticky was holding it visually — nothing on screen moves,
+  // and the strip IS a normal timeline before any further gesture. The
+  // later rebuild re-renders the same collapsed set and stays a no-op.
+  // Called from scrollend-settle and from the start of a new grab; never
+  // during an active pan (DOM churn there drops the gesture).
+  const mergeSlotNow = () => {
+    if (!slotStickyArmed) return false;
+    const el = list();
+    if (!el) return false;
+    const slot = el.querySelector(':scope > .loading-message.empty-slot');
+    if (!slot) { clearSlotSticky(); return false; }
+    const mid = el.scrollLeft + el.clientWidth / 2;
+    const slotMid = slot.offsetLeft + slot.offsetWidth / 2;
+    const target = mid > slotMid ? slot.nextElementSibling : slot.previousElementSibling;
+    if (!target) return false;
+    if (Math.abs(target.offsetLeft + target.offsetWidth / 2 - mid) > 3) return false;
+    slot.remove();
+    clearSlotSticky();
+    // ABSOLUTE re-centre, not a relative adjustment: the browser's scroll
+    // anchoring already moves scrollLeft when content before it is removed
+    // (probed: a relative delta double-compensated and snapped to the wrong
+    // card), and the absolute write is right no matter what anchoring did
+    programmatic = true;
+    el.scrollLeft = target.offsetLeft + target.offsetWidth / 2 - el.clientWidth / 2;
+    buildGeom();
+    dbgNote('slot merged');
+    return true;
+  };
   document.addEventListener('scroll', (e) => {
     if (!isMobile()) return;
     const t = e.target;
@@ -798,6 +835,10 @@
   const onTouch = (e) => {
     if (!isMobile()) return;
     if (!(e.target.closest && e.target.closest('.events-list'))) return;
+    // a re-grab before the landing settle ever fired: if the rail is sitting
+    // on a neighbour's spot, merge NOW, before this pan starts moving —
+    // the new gesture must ride the normal timeline
+    if (slotStickyArmed && !touchActive) mergeSlotNow();
     interacted = true;
     touchActive = true;
     gestureScrolled = false;
