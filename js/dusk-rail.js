@@ -404,8 +404,8 @@
   let urlDirty = false;
   let frameRaf = 0, holdTimer = 0, holdSlug = null, holdOcc = null;
   let settleRaf = 0, stillFrames = 0, lastLeft = -1;
-  let slotResting = false; // the rail is/was resting on the empty-week card
-  let slotPinned = false;  // some siblings carry a viewport-pin transform
+  let slotResting = false;     // the rail is/was resting on the empty-week card
+  let slotStickyArmed = false; // the slot's neighbours carry sticky pins
 
   const userBusy = () => touchActive || (performance.now() - lastUserTouch) < USER_QUIET;
   // TOP-LEVEL cards only: the edge slots contain ghost .event-cards, and an
@@ -648,7 +648,7 @@
       if (slot && slot.classList.contains('rail-edge')) { goEdge(slot); return; }
       // resting on the empty-week slot is a real resting place — it must not
       // select (or navigate to) whichever card happens to be nearest
-      if (slot && slot.classList.contains('empty-slot')) { slotResting = true; armThumbs(); flushUrl(); return; }
+      if (slot && slot.classList.contains('empty-slot')) { slotResting = true; armSlotSticky(); armThumbs(); flushUrl(); return; }
       const c = centeredCard();
       if (c) {
         railOwner = 'user';
@@ -725,68 +725,62 @@
       holdTimer = setTimeout(() => { if (phase === 'scrub') realSelect(g.slug, g.occ); }, 120);
     }
   };
-  // Swiping OFF the empty-week card, the abandoned side of the timeline is
-  // PINNED to the viewport for the whole gesture: every scroll frame gives
-  // the not-swiped-to side a counter-transform equal to the scroll delta, so
-  // the past card literally never moves while the empty card slides over it
-  // (natural DOM paint order stacks the slot above earlier siblings) and
-  // fades out, and the future card slides in under the finger (owner: "the
-  // past card should have never moved"). At a full one-pitch swipe the pin
-  // equals exactly the slot's width — the collapsed timeline — so the
-  // landing rebuild (slot removed for real, transforms wiped, instant
-  // re-centre, all in one frame) is a visual no-op. The pin is clamped at
-  // one pitch: beyond the adjacent neighbour the pinned side travels
-  // normally again, just one slot closer, which IS the collapsed layout.
-  // Transforms, not DOM or scrollLeft — iOS ignores scroll writes and drops
-  // the gesture on DOM churn during a pan. Because the pin follows delta
-  // continuously, drifting back to the slot unwinds everything to zero —
-  // the resting card fades back in and no state needs undoing.
-  const pinAbandonedSide = (el) => {
-    if (!slotResting) return;
+  // Swiping OFF the empty-week card must leave the abandoned neighbour
+  // perfectly still — and a scroll-event pin cannot do that: iOS scrolls on
+  // the compositor thread, so a JS counter-transform lands a frame late and
+  // the card jitters (owner: "SUPER JITTERY"). Same lesson as the multi-day
+  // labels (.md-sticky-label): position:sticky, where the COMPOSITOR pins
+  // the box with no script in the loop. While the rail rests on the empty
+  // card, both neighbours become independently pinned items: the past card
+  // sticks at its resting viewport offset via `left` (binding only when the
+  // strip moves away from it — swipe toward it and it travels normally),
+  // the future card mirrors via `right`. The empty card is static, so the
+  // stuck neighbour paints above it: it slides in BEHIND the still card and
+  // at a full one-pitch swipe is exactly covered by it — visually gone with
+  // no fade and no frame budget. Flow geometry (offsetLeft, snap positions,
+  // the rail's own centring math) is untouched by sticky displacement, and
+  // the stuck card's visual position at landing IS its post-rebuild peek
+  // position, so the rebuild that removes the slot and clears these styles
+  // stays a visual no-op. Drifting back to the empty week releases the
+  // constraint continuously — the card re-emerges, nothing to undo.
+  const armSlotSticky = () => {
+    const el = list();
+    if (!el) return;
     const slot = el.querySelector(':scope > .loading-message.empty-slot');
-    if (!slot) { slotResting = false; return; }
-    const mid = el.scrollLeft + el.clientWidth / 2;
-    const slotMid = slot.offsetLeft + slot.offsetWidth / 2;
+    if (!slot) return;
+    const listRect = el.getBoundingClientRect();
+    // sticky offsets are measured from the scrollport's PADDING box — the
+    // rail carries the 2.8rem phantom gutters as padding, so an offset
+    // computed from the border box would shift the card a gutter's width
+    // the moment it is armed (probed: 45px at 390w)
+    const cs = getComputedStyle(el);
+    const padL = parseFloat(cs.paddingLeft) || 0;
+    const padR = parseFloat(cs.paddingRight) || 0;
     const prev = slot.previousElementSibling;
     const next = slot.nextElementSibling;
-    const pitchNext = next ? (next.offsetLeft + next.offsetWidth / 2) - slotMid : 0;
-    const pitchPrev = prev ? slotMid - (prev.offsetLeft + prev.offsetWidth / 2) : 0;
-    let delta = mid - slotMid;
-    if (delta > 0 && !next) delta = 0;
-    if (delta < 0 && !prev) delta = 0;
-    delta = Math.max(-(pitchPrev || 0), Math.min(pitchNext || 0, delta));
-    slotPinned = true;
-    const setSide = (start, dirPrevSibling, shift) => {
-      let sib = start;
-      while (sib) {
-        sib.style.transition = 'none';
-        sib.style.transform = shift ? 'translateX(' + shift + 'px)' : '';
-        if (!shift) sib.style.transition = '';
-        sib = dirPrevSibling ? sib.previousElementSibling : sib.nextElementSibling;
-      }
-    };
-    // moving toward next pins the before-side at +delta; the other side rides
-    // free (transform cleared) — and vice versa
-    setSide(prev, true, delta > 0 ? delta : 0);
-    setSide(next, false, delta < 0 ? delta : 0);
-    // the resting card fades away over the first 60% of the swipe (and back
-    // in on return); it also slides under the pinned neighbour, so by the
-    // time they meaningfully overlap it is mostly gone
-    const span = delta >= 0 ? pitchNext : pitchPrev;
-    const progress = span ? Math.min(1, Math.abs(delta) / (span * 0.6)) : 0;
-    slot.style.opacity = String(Math.max(0, 1 - progress));
+    if (prev) {
+      prev.style.position = 'sticky';
+      prev.style.left = (prev.getBoundingClientRect().left - listRect.left - padL) + 'px';
+      prev.style.right = 'auto';
+    }
+    if (next) {
+      next.style.position = 'sticky';
+      next.style.right = (listRect.right - next.getBoundingClientRect().right - padR) + 'px';
+      next.style.left = 'auto';
+    }
+    slotStickyArmed = !!(prev || next);
   };
   // A rebuild made the collapse real (or the strip changed shape): reused
-  // cards must not carry a stale pin into the new strip.
-  const clearSlotPins = () => {
+  // cards must not carry the pin into the new strip.
+  const clearSlotSticky = () => {
     const el = list();
-    if (el && (slotPinned || slotResting)) {
+    if (el && (slotStickyArmed || slotResting)) {
       el.querySelectorAll(':scope > *').forEach((n) => {
-        if (n.style.transform || n.style.opacity) { n.style.transform = ''; n.style.transition = ''; n.style.opacity = ''; }
+        if (n.style.position) { n.style.position = ''; n.style.left = ''; n.style.right = ''; }
       });
     }
     slotResting = false;
-    slotPinned = false;
+    slotStickyArmed = false;
   };
   document.addEventListener('scroll', (e) => {
     if (!isMobile()) return;
@@ -797,7 +791,6 @@
       gestureScrolled = true;
       if (!frameRaf) frameRaf = requestAnimationFrame(onScrubFrame);
     }
-    pinAbandonedSide(t);
     armSettleWatch();
   }, { capture: true, passive: true });
 
@@ -959,6 +952,9 @@
     if (grantSlug === landedSlug) { grantSlug = null; grantOcc = null; }
     const t = Math.round(target.offsetLeft + target.offsetWidth / 2 - el.clientWidth / 2);
     if (Math.abs(el.scrollLeft - t) >= 1 && instant) { programmatic = true; el.scrollLeft = t; }
+    // AFTER the centring write: the sticky offsets must capture the resting
+    // viewport positions, not wherever the strip was a moment ago
+    if (slotResting && !slotStickyArmed) armSlotSticky();
   };
 
   const syncRailState = (reason) => {
@@ -991,7 +987,7 @@
     const has = el.classList.contains('rail-active');
     if (want && !has) {
       el.classList.add('rail-active');
-      clearSlotPins(); // reused cards must not carry a stale pin
+      clearSlotSticky(); // reused cards must not carry a stale pin
       armThumbs();
       buildEdgeSlots();
       buildGeom();
@@ -1008,7 +1004,7 @@
       dbgNote('rail OFF');
     } else if (want && has) {
       if (reason === 'render' || reason === 'resize' || geomStale()) {
-        if (reason === 'render') clearSlotPins();
+        if (reason === 'render') clearSlotSticky();
         armThumbs();
         // NOT on resize: iOS fires one on every URL-bar reveal, and the edge
         // lookup expands recurrences over six months. The slots the render
