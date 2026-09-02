@@ -772,25 +772,33 @@
     if (!el) return;
     const slot = el.querySelector(':scope > .loading-message.empty-slot');
     if (!slot) return;
-    const listRect = el.getBoundingClientRect();
+    // FLOW geometry, not live rects: the constraints are derived from
+    // offsetLeft and the slot's exact snap-centred scroll position, so
+    // every re-arm produces byte-identical values no matter where the rail
+    // happens to sit. Rect-based arming re-captured whatever the settle
+    // left on screen — a settle a few pixels off rest re-armed the FREE
+    // neighbour with a looser constraint, and the next swipe let it travel
+    // those pixels inward before binding; wiggles compounded it (owner:
+    // "they still kinda creep in").
+    //
     // sticky offsets are measured from the scrollport's PADDING box — the
-    // rail carries the 2.8rem phantom gutters as padding, so an offset
-    // computed from the border box would shift the card a gutter's width
-    // the moment it is armed (probed: 45px at 390w)
+    // rail carries the 2.8rem phantom gutters as padding (uncorrected, the
+    // arming itself shifted the card a gutter's width: 45px at 390w).
     const cs = getComputedStyle(el);
     const padL = parseFloat(cs.paddingLeft) || 0;
     const padR = parseFloat(cs.paddingRight) || 0;
+    const restScroll = slot.offsetLeft + slot.offsetWidth / 2 - el.clientWidth / 2;
     const prev = slot.previousElementSibling;
     const next = slot.nextElementSibling;
     if (prev) {
       prev.style.position = 'sticky';
-      prev.style.left = (prev.getBoundingClientRect().left - listRect.left - padL) + 'px';
+      prev.style.left = (prev.offsetLeft - restScroll - padL) + 'px';
       prev.style.right = 'auto';
       prev.style.zIndex = '1'; // above the slot's z-index:0 — it slides UNDER
     }
     if (next) {
       next.style.position = 'sticky';
-      next.style.right = (listRect.right - next.getBoundingClientRect().right - padR) + 'px';
+      next.style.right = (restScroll + el.clientWidth - padR - (next.offsetLeft + next.offsetWidth)) + 'px';
       next.style.left = 'auto';
       next.style.zIndex = '1';
     }
