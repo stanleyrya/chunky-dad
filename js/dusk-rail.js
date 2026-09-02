@@ -585,21 +585,36 @@
   const buildEdgeSlots = () => {
     const el = list();
     if (!el) return;
-    el.querySelectorAll('.rail-edge').forEach((n) => n.remove());
-    if (!isMobile() || !el.classList.contains('rail-active')) return;
     const l = loader();
-    if (!l || l.currentView !== 'week' || typeof l.findAdjacentEvent !== 'function') return;
-    // still loading (the plain '📅 Getting events…' message): no edges until
-    // the week's real contents are on screen
-    if (!el.querySelector('.event-card, .loading-message.empty-slot')) return;
-    [['prev', 'afterbegin'], ['next', 'beforeend']].forEach((pair) => {
-      let target = null;
-      // past the STRIP, not the window: the timeline rail already carries
-      // every on-strip event as a real card
-      try { target = l.findAdjacentEvent(pair[0], 190, 'strip'); } catch (e) { target = null; }
-      if (!target || !target.slug || !target.dateISO) return;
-      el.insertAdjacentHTML(pair[1], edgeHtml(pair[0], target, l));
+    const usable = isMobile() && el.classList.contains('rail-active')
+      && l && l.currentView === 'week' && typeof l.findAdjacentEvent === 'function'
+      // still loading (the plain '📅 Getting events…' message): no edges
+      // until the week's real contents are on screen
+      && !!el.querySelector('.event-card, .loading-message.empty-slot');
+    const want = [];
+    if (usable) {
+      [['prev', 'afterbegin'], ['next', 'beforeend']].forEach((pair) => {
+        let target = null;
+        // past the RAIL's coverage, not the window: the timeline already
+        // carries every covered event as a real card
+        try { target = l.findAdjacentEvent(pair[0], 190, 'strip'); } catch (e) { target = null; }
+        if (!target || !target.slug || !target.dateISO) return;
+        want.push({ dir: pair[0], where: pair[1], target });
+      });
+    }
+    // IDENTITY-STABLE: ghosts that already show the right event stay in the
+    // DOM untouched — a teardown-and-rebuild arriving mid-gesture (render
+    // events land while a quick reversal is in flight) churns the strip's
+    // first/last children and drops the pan
+    const have = Array.from(el.querySelectorAll(':scope > .rail-edge'));
+    const same = have.length === want.length && want.every((w) => {
+      const m = el.querySelector(':scope > .rail-edge-' + w.dir);
+      return !!m && m.getAttribute('data-slug') === w.target.slug
+        && m.getAttribute('data-date') === w.target.dateISO;
     });
+    if (same) return;
+    have.forEach((n) => n.remove());
+    want.forEach((w) => el.insertAdjacentHTML(w.where, edgeHtml(w.dir, w.target, l)));
     // the ghosts arrive after the render pass already armed the real cards —
     // give them their corner art and '...more' chips too, or they visibly
     // differ from the card that replaces them on arrival
@@ -1002,10 +1017,14 @@
     landedOcc = target.getAttribute('data-occurrence') || landedOcc;
     if (grantSlug === landedSlug) { grantSlug = null; grantOcc = null; }
     const t = Math.round(target.offsetLeft + target.offsetWidth / 2 - el.clientWidth / 2);
-    if (Math.abs(el.scrollLeft - t) >= 1 && instant) { programmatic = true; el.scrollLeft = t; }
+    // The user's hand outranks the render: a rebuild that arrives while a
+    // gesture is in flight (quick reversal right after a landing) must not
+    // yank the rail to the last selection. After an on-the-spot merge the
+    // rail is already exactly centred, so skipping the write loses nothing.
+    if (Math.abs(el.scrollLeft - t) >= 1 && instant && !userBusy()) { programmatic = true; el.scrollLeft = t; }
     // AFTER the centring write: the sticky offsets must capture the resting
     // viewport positions, not wherever the strip was a moment ago
-    if (slotResting && !slotStickyArmed) armSlotSticky();
+    if (slotResting && !slotStickyArmed && !userBusy()) armSlotSticky();
   };
 
   const syncRailState = (reason) => {
