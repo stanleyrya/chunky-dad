@@ -80,15 +80,23 @@
   // desktop's display:none thumb never triggers an image fetch
   const armThumbs = () => {
     if (!isMobile()) return;
+    loadThumbManifest();
     // the timeline rail carries the whole strip (30+ cards) — arming every
     // thumb at once would fetch every flyer up front, so only cards within a
     // few screens of the current position get their art; settles re-arm as
     // the user travels
     const el = list();
-    const nearOnly = el && el.classList.contains('rail-active');
+    const btns = document.querySelectorAll('.events-list .event-card .rail-thumb');
+    // a small rail (Denver: a handful of cards; thumbs are ~10KB companions)
+    // arms EVERYTHING up front — the proximity window exists for dense
+    // cities whose timeline holds dozens of full-flyer fallbacks, and it
+    // always excluded the edge ghosts parked at the strip's far ends (owner:
+    // "they don't have the image in the top right corner until a second
+    // round of loading")
+    const nearOnly = el && el.classList.contains('rail-active') && btns.length > 60;
     const min = nearOnly ? el.scrollLeft - el.clientWidth * 3 : -Infinity;
     const max = nearOnly ? el.scrollLeft + el.clientWidth * 4 : Infinity;
-    document.querySelectorAll('.events-list .event-card .rail-thumb').forEach((btn) => {
+    btns.forEach((btn) => {
       if (btn.style.backgroundImage) return;
       const card = btn.closest('.event-card');
       if (nearOnly) {
@@ -98,8 +106,68 @@
       }
       const flyer = card && card.querySelector('.event-flyer[data-flyer-url]');
       const url = flyer && flyer.getAttribute('data-flyer-url');
-      if (url) btn.style.backgroundImage = 'url("' + url.replace(/"/g, '%22') + '")';
+      if (url) armThumb(btn, url);
     });
+  };
+  // thumbs.json (written by the CI image sweep) maps a flyer's SOURCE URL —
+  // cached JSON events keep their remote image URLs — to its local companion
+  // thumb. The browser can't derive that path itself: the local filename
+  // embeds a date whose timezone rendering differs between the downloader's
+  // runner and the visitor's device (verified off by one day on real events).
+  let thumbManifest = null;
+  let thumbManifestStarted = false;
+  const loadThumbManifest = () => {
+    if (thumbManifestStarted || typeof fetch !== 'function') return;
+    thumbManifestStarted = true;
+    fetch('/img/events/thumbs.json')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => { thumbManifest = json || {}; armThumbs(); })
+      .catch(() => { thumbManifest = {}; });
+  };
+  const assetKeyOf = (url) => {
+    try {
+      if (window.EventSchema && typeof window.EventSchema.imageAssetKey === 'function') {
+        return window.EventSchema.imageAssetKey(url);
+      }
+    } catch (e) { /* fall through */ }
+    // inline twin of EventSchema.imageAssetKey for a page missing the schema
+    const raw = String(url || '').trim().split('#')[0].split('?')[0];
+    const authority = /^(?:[a-z][a-z0-9+.-]*:)?\/\//i.exec(raw);
+    if (!authority) return raw;
+    const rest = raw.slice(authority[0].length);
+    const slash = rest.indexOf('/');
+    const host = (slash < 0 ? rest : rest.slice(0, slash)).toLowerCase();
+    return host + (slash < 0 ? '' : rest.slice(slash));
+  };
+  const manifestThumbFor = (url) => {
+    if (!thumbManifest) return null;
+    const entry = thumbManifest[assetKeyOf(url)];
+    return entry ? '/img/events/' + entry : null;
+  };
+  // The corner thumb prefers the CI-generated -thumb.webp companion (a few
+  // KB, sized for the 56px box at 3x) over the full flyer (often megabytes):
+  // a 30-card timeline was downloading the full library to paint postage
+  // stamps. Only LOCAL img/events paths have companions; remote URLs — and
+  // any local image whose companion is missing (older CI runs) — load the
+  // full file exactly as before. Background images have no onerror, so the
+  // probe is an Image preload; the full asset still loads on tap (lightbox).
+  const thumbUrlFor = (url) => {
+    // any spelling of the local library path (relative, ../-prefixed,
+    // absolute, or full chunky.dad URL); remote hosts never contain it
+    const m = /^(.*img\/events\/.+)\.(?:jpe?g|png|webp|gif)$/i.exec(url);
+    if (!m || url.endsWith('-thumb.webp')) return null;
+    return m[1] + '-thumb.webp';
+  };
+  const armThumb = (btn, url) => {
+    const paint = (u) => { btn.style.backgroundImage = 'url("' + u.replace(/"/g, '%22') + '")'; };
+    // thumbUrlFor handles URLs already pointing into img/events/; the
+    // manifest handles remote source URLs whose local copy is unguessable.
+    const small = thumbUrlFor(url) || manifestThumbFor(url);
+    if (!small) { paint(url); return; }
+    const probe = new Image();
+    probe.onload = () => paint(small);
+    probe.onerror = () => paint(url);
+    probe.src = small;
   };
   document.addEventListener('click', (e) => {
     const btn = e.target.closest && e.target.closest('.rail-thumb');
@@ -343,6 +411,9 @@
   let urlDirty = false;
   let frameRaf = 0, holdTimer = 0, holdSlug = null, holdOcc = null;
   let settleRaf = 0, stillFrames = 0, lastLeft = -1;
+  let slotResting = false;     // the rail is/was resting on the empty-week card
+  let slotStickyArmed = false; // the slot's neighbours carry sticky pins
+  let gestureViaTouch = false; // current gesture began with a touchstart
 
   const userBusy = () => touchActive || (performance.now() - lastUserTouch) < USER_QUIET;
   // TOP-LEVEL cards only: the edge slots contain ghost .event-cards, and an
@@ -515,21 +586,36 @@
   const buildEdgeSlots = () => {
     const el = list();
     if (!el) return;
-    el.querySelectorAll('.rail-edge').forEach((n) => n.remove());
-    if (!isMobile() || !el.classList.contains('rail-active')) return;
     const l = loader();
-    if (!l || l.currentView !== 'week' || typeof l.findAdjacentEvent !== 'function') return;
-    // still loading (the plain '📅 Getting events…' message): no edges until
-    // the week's real contents are on screen
-    if (!el.querySelector('.event-card, .loading-message.empty-slot')) return;
-    [['prev', 'afterbegin'], ['next', 'beforeend']].forEach((pair) => {
-      let target = null;
-      // past the STRIP, not the window: the timeline rail already carries
-      // every on-strip event as a real card
-      try { target = l.findAdjacentEvent(pair[0], 190, 'strip'); } catch (e) { target = null; }
-      if (!target || !target.slug || !target.dateISO) return;
-      el.insertAdjacentHTML(pair[1], edgeHtml(pair[0], target, l));
+    const usable = isMobile() && el.classList.contains('rail-active')
+      && l && l.currentView === 'week' && typeof l.findAdjacentEvent === 'function'
+      // still loading (the plain '📅 Getting events…' message): no edges
+      // until the week's real contents are on screen
+      && !!el.querySelector('.event-card, .loading-message.empty-slot');
+    const want = [];
+    if (usable) {
+      [['prev', 'afterbegin'], ['next', 'beforeend']].forEach((pair) => {
+        let target = null;
+        // past the RAIL's coverage, not the window: the timeline already
+        // carries every covered event as a real card
+        try { target = l.findAdjacentEvent(pair[0], 190, 'strip'); } catch (e) { target = null; }
+        if (!target || !target.slug || !target.dateISO) return;
+        want.push({ dir: pair[0], where: pair[1], target });
+      });
+    }
+    // IDENTITY-STABLE: ghosts that already show the right event stay in the
+    // DOM untouched — a teardown-and-rebuild arriving mid-gesture (render
+    // events land while a quick reversal is in flight) churns the strip's
+    // first/last children and drops the pan
+    const have = Array.from(el.querySelectorAll(':scope > .rail-edge'));
+    const same = have.length === want.length && want.every((w) => {
+      const m = el.querySelector(':scope > .rail-edge-' + w.dir);
+      return !!m && m.getAttribute('data-slug') === w.target.slug
+        && m.getAttribute('data-date') === w.target.dateISO;
     });
+    if (same) return;
+    have.forEach((n) => n.remove());
+    want.forEach((w) => el.insertAdjacentHTML(w.where, edgeHtml(w.dir, w.target, l)));
     // the ghosts arrive after the render pass already armed the real cards —
     // give them their corner art and '...more' chips too, or they visibly
     // differ from the card that replaces them on arrival
@@ -581,8 +667,12 @@
     clearTimeout(holdTimer);
     phase = 'idle';
     if (fromUser) {
+      mergeSlotNow(); // landing beside the empty week merges it on the spot
       const slot = centeredSlot();
       if (slot && slot.classList.contains('rail-edge')) { goEdge(slot); return; }
+      // resting on the empty-week slot is a real resting place — it must not
+      // select (or navigate to) whichever card happens to be nearest
+      if (slot && slot.classList.contains('empty-slot')) { slotResting = true; armSlotSticky(); armThumbs(); flushUrl(); return; }
       const c = centeredCard();
       if (c) {
         railOwner = 'user';
@@ -606,9 +696,12 @@
             Promise.resolve().then(() => l.revealAdjacent(landedSlug, landedOcc, dir)).catch(() => {});
           }
         }
-        armThumbs();
       }
     }
+    // re-arm around wherever the rail now rests — including programmatic
+    // settles (the initial centring): arming only on user gestures left the
+    // cards around the landing spot artless until the first swipe
+    armThumbs();
     flushUrl();
   };
   const armSettleWatch = () => {
@@ -647,6 +740,7 @@
     frameRaf = 0;
     if (phase !== 'scrub' || !railActive()) return;
     if (geomStale() || !geom.length) buildGeom();
+    armThumbs(); // the proximity window travels with the swipe
     const el = list();
     const g = el && nearestGeom(el.scrollLeft);
     if (g && g.slug && (g.slug !== holdSlug || g.occ !== holdOcc)) {
@@ -655,6 +749,109 @@
       clearTimeout(holdTimer);
       holdTimer = setTimeout(() => { if (phase === 'scrub') realSelect(g.slug, g.occ); }, 120);
     }
+  };
+  // Swiping OFF the empty-week card must leave the abandoned neighbour
+  // perfectly still — and a scroll-event pin cannot do that: iOS scrolls on
+  // the compositor thread, so a JS counter-transform lands a frame late and
+  // the card jitters (owner: "SUPER JITTERY"). Same lesson as the multi-day
+  // labels (.md-sticky-label): position:sticky, where the COMPOSITOR pins
+  // the box with no script in the loop. While the rail rests on the empty
+  // card, both neighbours become independently pinned items: the past card
+  // sticks at its resting viewport offset via `left` (binding only when the
+  // strip moves away from it — swipe toward it and it travels normally),
+  // the future card mirrors via `right`. The empty card is static, so the
+  // stuck neighbour paints above it: it slides in BEHIND the still card and
+  // at a full one-pitch swipe is exactly covered by it — visually gone with
+  // no fade and no frame budget. Flow geometry (offsetLeft, snap positions,
+  // the rail's own centring math) is untouched by sticky displacement, and
+  // the stuck card's visual position at landing IS its post-rebuild peek
+  // position, so the rebuild that removes the slot and clears these styles
+  // stays a visual no-op. Drifting back to the empty week releases the
+  // constraint continuously — the card re-emerges, nothing to undo.
+  const armSlotSticky = () => {
+    const el = list();
+    if (!el) return;
+    const slot = el.querySelector(':scope > .loading-message.empty-slot');
+    if (!slot) return;
+    // FLOW geometry, not live rects: the constraints are derived from
+    // offsetLeft and the slot's exact snap-centred scroll position, so
+    // every re-arm produces byte-identical values no matter where the rail
+    // happens to sit. Rect-based arming re-captured whatever the settle
+    // left on screen — a settle a few pixels off rest re-armed the FREE
+    // neighbour with a looser constraint, and the next swipe let it travel
+    // those pixels inward before binding; wiggles compounded it (owner:
+    // "they still kinda creep in").
+    //
+    // sticky offsets are measured from the scrollport's PADDING box — the
+    // rail carries the 2.8rem phantom gutters as padding (uncorrected, the
+    // arming itself shifted the card a gutter's width: 45px at 390w).
+    const cs = getComputedStyle(el);
+    const padL = parseFloat(cs.paddingLeft) || 0;
+    const padR = parseFloat(cs.paddingRight) || 0;
+    const restScroll = slot.offsetLeft + slot.offsetWidth / 2 - el.clientWidth / 2;
+    const prev = slot.previousElementSibling;
+    const next = slot.nextElementSibling;
+    if (prev) {
+      prev.style.position = 'sticky';
+      prev.style.left = (prev.offsetLeft - restScroll - padL) + 'px';
+      prev.style.right = 'auto';
+      prev.style.zIndex = '1'; // above the slot's z-index:0 — it slides UNDER
+    }
+    if (next) {
+      next.style.position = 'sticky';
+      next.style.right = (restScroll + el.clientWidth - padR - (next.offsetLeft + next.offsetWidth)) + 'px';
+      next.style.left = 'auto';
+      next.style.zIndex = '1';
+    }
+    slotStickyArmed = !!(prev || next);
+  };
+  // A rebuild made the collapse real (or the strip changed shape): reused
+  // cards must not carry the pin into the new strip.
+  const clearSlotSticky = () => {
+    const el = list();
+    if (el && (slotStickyArmed || slotResting)) {
+      el.querySelectorAll(':scope > *').forEach((n) => {
+        if (n.style.position) { n.style.position = ''; n.style.left = ''; n.style.right = ''; n.style.zIndex = ''; }
+      });
+    }
+    slotResting = false;
+    slotStickyArmed = false;
+  };
+  // The merge must not wait for the landing rebuild (settle -> select ->
+  // grid glide -> panel refresh, ~a third of a second): a quick swipe back
+  // in that window moved through the PRE-merge strip and then had the
+  // rebuild land mid-gesture (owner: "snap to a merge immediately once it
+  // hits the spot and any more swiping is normal"). The instant the rail
+  // sits on a neighbour's snap spot, the slot is removed from the DOM right
+  // here: scrollLeft is compensated in the same frame when the slot was on
+  // the left of the target, which puts the pinned card's natural position
+  // exactly where sticky was holding it visually — nothing on screen moves,
+  // and the strip IS a normal timeline before any further gesture. The
+  // later rebuild re-renders the same collapsed set and stays a no-op.
+  // Called from scrollend-settle and from the start of a new grab; never
+  // during an active pan (DOM churn there drops the gesture).
+  const mergeSlotNow = () => {
+    if (!slotStickyArmed) return false;
+    const el = list();
+    if (!el) return false;
+    const slot = el.querySelector(':scope > .loading-message.empty-slot');
+    if (!slot) { clearSlotSticky(); return false; }
+    const mid = el.scrollLeft + el.clientWidth / 2;
+    const slotMid = slot.offsetLeft + slot.offsetWidth / 2;
+    const target = mid > slotMid ? slot.nextElementSibling : slot.previousElementSibling;
+    if (!target) return false;
+    if (Math.abs(target.offsetLeft + target.offsetWidth / 2 - mid) > 3) return false;
+    slot.remove();
+    clearSlotSticky();
+    // ABSOLUTE re-centre, not a relative adjustment: the browser's scroll
+    // anchoring already moves scrollLeft when content before it is removed
+    // (probed: a relative delta double-compensated and snapped to the wrong
+    // card), and the absolute write is right no matter what anchoring did
+    programmatic = true;
+    el.scrollLeft = target.offsetLeft + target.offsetWidth / 2 - el.clientWidth / 2;
+    buildGeom();
+    dbgNote('slot merged');
+    return true;
   };
   document.addEventListener('scroll', (e) => {
     if (!isMobile()) return;
@@ -672,7 +869,15 @@
   const onTouch = (e) => {
     if (!isMobile()) return;
     if (!(e.target.closest && e.target.closest('.events-list'))) return;
+    // a re-grab before the landing settle ever fired: if the rail is sitting
+    // on a neighbour's spot, merge NOW, before this pan starts moving —
+    // the new gesture must ride the normal timeline
+    if (slotStickyArmed && !touchActive) mergeSlotNow();
     interacted = true;
+    // iOS fires touchstart before the matching pointerdown; a gesture that
+    // began with a touch is ended ONLY by its touch events (see offTouch)
+    if (e.type === 'touchstart') gestureViaTouch = true;
+    else if (!touchActive) gestureViaTouch = false;
     touchActive = true;
     gestureScrolled = false;
     railOwner = 'user';
@@ -680,8 +885,17 @@
     lastUserTouch = performance.now();
     if (railActive()) phase = 'scrub';
   };
-  const offTouch = () => {
+  const offTouch = (e) => {
     if (!touchActive) return;
+    // iOS fires pointercancel the moment native scrolling claims the pan —
+    // the finger is still ON the glass. Treating that as the gesture's end
+    // let the settle poll fire during a mid-swipe stall, and the landing
+    // pipeline completed the swipe under the stalled finger (owner: "at a
+    // certain point they snap in if the user stalls"). On a touch gesture,
+    // only the TOUCH stream ends it; pointer end events stand in where no
+    // touch events exist (desktop pointers).
+    if (gestureViaTouch && (e.type === 'pointerup' || e.type === 'pointercancel')) return;
+    if (e.type === 'touchend' || e.type === 'touchcancel') gestureViaTouch = false;
     touchActive = false;
     lastUserTouch = performance.now();
     if (!gestureScrolled && phase === 'scrub') phase = 'idle'; // plain tap, no drag
@@ -773,11 +987,18 @@
   const firstWindowCard = () => {
     const l = loader();
     if (!l || !geom.length) return null;
-    let startMs = 0;
-    try { startMs = l.getCurrentPeriodBounds().start.getTime(); } catch (e) { return null; }
+    let startMs = 0, endMs = Infinity;
+    try {
+      const b = l.getCurrentPeriodBounds();
+      startMs = b.start.getTime();
+      endMs = b.end.getTime();
+    } catch (e) { return null; }
     for (let i = 0; i < geom.length; i++) {
       const g = geom[i];
-      if (g.date != null && g.slug && g.date >= startMs) return g.el;
+      // IN the window, not merely on-or-after its start — without the end
+      // bound an empty week rested on a card weeks in the future instead of
+      // the empty-week slot (owner report: Denver)
+      if (g.date != null && g.slug && g.date >= startMs && g.date <= endMs) return g.el;
     }
     return null;
   };
@@ -810,13 +1031,22 @@
       } catch (e) {}
     }
     const target = selEl || landedEl || firstWindowCard()
-      || cards()[0] || el.querySelector('.loading-message.empty-slot');
+      || el.querySelector('.loading-message.empty-slot')
+      || cards()[0];
     if (!target) return;
+    slotResting = !!(target.classList && target.classList.contains('empty-slot'));
     landedSlug = target.getAttribute('data-event-slug') || landedSlug;
     landedOcc = target.getAttribute('data-occurrence') || landedOcc;
     if (grantSlug === landedSlug) { grantSlug = null; grantOcc = null; }
     const t = Math.round(target.offsetLeft + target.offsetWidth / 2 - el.clientWidth / 2);
-    if (Math.abs(el.scrollLeft - t) >= 1 && instant) { programmatic = true; el.scrollLeft = t; }
+    // The user's hand outranks the render: a rebuild that arrives while a
+    // gesture is in flight (quick reversal right after a landing) must not
+    // yank the rail to the last selection. After an on-the-spot merge the
+    // rail is already exactly centred, so skipping the write loses nothing.
+    if (Math.abs(el.scrollLeft - t) >= 1 && instant && !userBusy()) { programmatic = true; el.scrollLeft = t; }
+    // AFTER the centring write: the sticky offsets must capture the resting
+    // viewport positions, not wherever the strip was a moment ago
+    if (slotResting && !slotStickyArmed && !userBusy()) armSlotSticky();
   };
 
   const syncRailState = (reason) => {
@@ -849,10 +1079,13 @@
     const has = el.classList.contains('rail-active');
     if (want && !has) {
       el.classList.add('rail-active');
+      clearSlotSticky(); // reused cards must not carry a stale pin
       armThumbs();
       buildEdgeSlots();
       buildGeom();
       centerRestingCard(true);
+      // the centring just moved the viewport — arm around where it landed
+      armThumbs();
       resizeMap();
       dbgNote('rail ON');
     } else if (!want && has) {
@@ -863,6 +1096,7 @@
       dbgNote('rail OFF');
     } else if (want && has) {
       if (reason === 'render' || reason === 'resize' || geomStale()) {
+        if (reason === 'render') clearSlotSticky();
         armThumbs();
         // NOT on resize: iOS fires one on every URL-bar reveal, and the edge
         // lookup expands recurrences over six months. The slots the render
@@ -870,6 +1104,7 @@
         if (reason !== 'resize' || !el.querySelector('.rail-edge')) buildEdgeSlots();
         buildGeom();
         centerRestingCard(reason === 'render');
+        armThumbs();
       } else if (grantSlug) {
         const g = cardBySlug(grantSlug, grantOcc);
         if (g) centerOn(g, reason);

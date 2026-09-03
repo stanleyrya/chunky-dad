@@ -16996,8 +16996,14 @@ TEXT:
                     const droppedStatedStart = this.getDroppedStatedStartDateValue(aiEvent);
                     if (droppedStatedStart) {
                         const droppedParsed = this.parseDateValue(droppedStatedStart, timezone);
+                        // LOCAL calendar date, not toISOString: a dateless
+                        // stated value ("July 21, 2026") parses to local
+                        // midnight, and east of UTC the ISO rendering names
+                        // the previous day — the census then contradicts the
+                        // very page text it quotes (seen when the runner's
+                        // zone moved to BST).
                         const droppedParsedLabel = droppedParsed instanceof Date && !Number.isNaN(droppedParsed.getTime())
-                            ? ` (parses to ${droppedParsed.toISOString().slice(0, 10)})`
+                            ? ` (parses to ${droppedParsed.getFullYear()}-${String(droppedParsed.getMonth() + 1).padStart(2, '0')}-${String(droppedParsed.getDate()).padStart(2, '0')})`
                             : '';
                         console.log(`🔁 RECURRING: fallback derived ${nextOccurrence} for "${title}" but the evidence gate dropped a stated date "${droppedStatedStart}"${droppedParsedLabel} — a rescue would keep the page's own date (report-only)`);
                     } else {

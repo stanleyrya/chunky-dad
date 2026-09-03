@@ -1646,13 +1646,20 @@ class DynamicCalendarLoader extends CalendarCore {
         let { start, end } = this.getCurrentPeriodBounds();
         // 'strip': the rail renders the whole grid strip, so its edge slots
         // must point past the STRIP, not past the visible window — otherwise
-        // they duplicate cards already on the rail
+        // they duplicate cards already on the rail. When the rail timeline
+        // holds MORE than the strip (railCoverage, see
+        // getRailTimelineEvents), the edges must point past that instead.
         if (beyond === 'strip' && this.stripStartDate && this.currentView === 'week') {
-            start = new Date(this.stripStartDate);
-            start.setHours(0, 0, 0, 0);
-            end = new Date(start);
-            end.setDate(end.getDate() + this.stripDayCount - 1);
-            end.setHours(23, 59, 59, 999);
+            if (this.railTimeline && this.railCoverage) {
+                start = new Date(this.railCoverage.start);
+                end = new Date(this.railCoverage.end);
+            } else {
+                start = new Date(this.stripStartDate);
+                start.setHours(0, 0, 0, 0);
+                end = new Date(start);
+                end.setDate(end.getDate() + this.stripDayCount - 1);
+                end.setHours(23, 59, 59, 999);
+            }
         }
 
         let searchStart, searchEnd;
@@ -4955,11 +4962,68 @@ class DynamicCalendarLoader extends CalendarCore {
         // owner report 2026-08-31). getFilteredEvents already expands
         // recurrences and sorts by date; occurrence uniqueness is handled by
         // the slug+occurrence keys the cards carry.
+        //
+        // The rail is NOT limited to the grid strip's ±4 weeks: a sparse
+        // city (Denver, a handful of events across a year) turned everything
+        // beyond a month into edge ghosts and rebuilt the strip mid-journey
+        // (owner: "surely loading all events in Denver should be possible,
+        // it's only a few"). The fetch covers a year either side and keeps
+        // it all when that stays small; a dense city — weekly residencies
+        // expand to one card per occurrence — is trimmed back to the strip's
+        // own events plus the nearest occurrences either side, up to the
+        // cap. railCoverage records what the rail actually holds so the edge
+        // ghosts point past IT, never duplicating a card already on board.
+        const RAIL_OCCURRENCE_CAP = 60;
+        const wideStart = new Date(start);
+        wideStart.setDate(wideStart.getDate() - 365);
+        const wideEnd = new Date(end);
+        wideEnd.setDate(wideEnd.getDate() + 365);
+        let events = null;
         try {
-            return this.getFilteredEvents({ start, end });
+            events = this.getFilteredEvents({ start: wideStart, end: wideEnd });
         } catch (error) {
-            return null;
+            events = null;
         }
+        if (!events) {
+            this.railCoverage = { start, end };
+            try {
+                return this.getFilteredEvents({ start, end });
+            } catch (error) {
+                return null;
+            }
+        }
+        if (events.length <= RAIL_OCCURRENCE_CAP) {
+            this.railCoverage = { start: wideStart, end: wideEnd };
+            return events;
+        }
+        const startMs = start.getTime();
+        const endMs = end.getTime();
+        const keyed = events.map(ev => {
+            let t = NaN;
+            try { t = this.getLogicalStartDate(ev).getTime(); } catch (error) {}
+            return { ev, t };
+        });
+        // NaN dates fail both comparisons and stay in `within` — kept, never
+        // silently dropped
+        const within = keyed.filter(k => !(k.t < startMs) && !(k.t > endMs));
+        const before = keyed.filter(k => k.t < startMs);
+        const after = keyed.filter(k => k.t > endMs);
+        const picked = within.slice();
+        let room = Math.max(0, RAIL_OCCURRENCE_CAP - within.length);
+        let bi = before.length - 1, ai = 0;
+        while (room > 0 && (bi >= 0 || ai < after.length)) {
+            const beforeGap = bi >= 0 ? startMs - before[bi].t : Infinity;
+            const afterGap = ai < after.length ? after[ai].t - endMs : Infinity;
+            picked.push(beforeGap <= afterGap ? before[bi--] : after[ai++]);
+            room--;
+        }
+        picked.sort((a, b) => (a.t || 0) - (b.t || 0));
+        const times = picked.map(k => k.t).filter(t => !isNaN(t));
+        this.railCoverage = {
+            start: new Date(Math.min(startMs, times.length ? Math.min.apply(null, times) : startMs)),
+            end: new Date(Math.max(endMs, times.length ? Math.max.apply(null, times) : endMs))
+        };
+        return picked.map(k => k.ev);
     }
 
     async refreshEventsPanel(filteredEvents, hideEvents = false, opts = {}) {
@@ -5034,16 +5098,13 @@ class DynamicCalendarLoader extends CalendarCore {
                             c
                         );
                     });
-                    const frag = document.createDocumentFragment();
-                    const freshCards = [];
-                    const shell = document.createElement('div');
-                    let reusedCards = 0;
                     // Per EVENT, not per list. One card that cannot be built
                     // used to take the whole page down to "Error displaying
                     // events" — every other event on the week punished for one
                     // bad record (or, as on 2026-08-30, for one cached script).
                     // A card that throws is skipped and logged; the rest render.
                     let skippedCards = 0;
+                    const cardEntries = [];
                     listDeduplicatedEvents.forEach(event => {
                         let html;
                         try {
@@ -5057,24 +5118,66 @@ class DynamicCalendarLoader extends CalendarCore {
                             });
                             return;
                         }
-                        const sig = sigOf(html);
                         let eventOccISO = '';
                         try {
                             const lg = this.getLogicalStartDate(event);
                             if (lg) eventOccISO = this.getLocalDateKey(lg);
                         } catch (e) { eventOccISO = ''; }
-                        const reuseKey = occKeyOf(event.slug, eventOccISO);
-                        const existing = existingBySlug.get(reuseKey);
-                        if (existing && existing.dataset.cardSig === sig) {
-                            existingBySlug.delete(reuseKey);
+                        cardEntries.push({ html, sig: sigOf(html), key: occKeyOf(event.slug, eventOccISO) });
+                    });
+
+                    // The empty-week slot this render WOULD produce (its
+                    // absence is as significant as its presence — the merge
+                    // gesture removes it from the DOM before this rebuild).
+                    const wantSlot = this.railTimeline && this.currentView === 'week'
+                        && (!filteredEvents || filteredEvents.length === 0)
+                        && listDeduplicatedEvents.length > 0;
+                    let wantSlotDate = null;
+                    if (wantSlot) {
+                        try { wantSlotDate = this.getLocalDateKey(this.getCurrentPeriodBounds().start); } catch (e) {}
+                    }
+                    const slotNow = eventsList.querySelector(':scope > .loading-message.empty-slot');
+
+                    // TRUE NO-OP fast path: when this render would reproduce
+                    // the strip byte-for-byte (same cards, same order, same
+                    // signatures, same slot state), the DOM is left alone
+                    // entirely. replaceChildren re-seats even fully reused
+                    // elements, which momentarily empties the scroller — a
+                    // rebuild arriving while the user is already swiping the
+                    // other way killed the pan mid-gesture (owner: "swiping a
+                    // bit and then swiping a bit the other direction causes
+                    // weird behavior"). The landing rebuild after an
+                    // on-the-spot merge is exactly this case.
+                    const domCards = Array.from(eventsList.querySelectorAll(':scope > .event-card[data-event-slug]'));
+                    const stripUnchanged = domCards.length === cardEntries.length
+                        && cardEntries.every((entry, i) =>
+                            domCards[i].dataset.cardSig === entry.sig
+                            && occKeyOf(domCards[i].getAttribute('data-event-slug'), domCards[i].getAttribute('data-occurrence')) === entry.key)
+                        && (!!slotNow === wantSlot)
+                        && (!wantSlot || (slotNow && slotNow.getAttribute('data-date') === wantSlotDate));
+
+                    if (stripUnchanged) {
+                        logger.debug('CALENDAR', 'UPDATE_DISPLAY: strip unchanged — DOM untouched', {
+                            cards: cardEntries.length
+                        });
+                    } else {
+
+                    const frag = document.createDocumentFragment();
+                    const freshCards = [];
+                    const shell = document.createElement('div');
+                    let reusedCards = 0;
+                    cardEntries.forEach(entry => {
+                        const existing = existingBySlug.get(entry.key);
+                        if (existing && existing.dataset.cardSig === entry.sig) {
+                            existingBySlug.delete(entry.key);
                             frag.appendChild(existing);
                             reusedCards++;
                             return;
                         }
-                        shell.innerHTML = html;
+                        shell.innerHTML = entry.html;
                         const fresh = shell.firstElementChild;
                         if (fresh) {
-                            fresh.dataset.cardSig = sig;
+                            fresh.dataset.cardSig = entry.sig;
                             frag.appendChild(fresh);
                             freshCards.push(fresh);
                         }
@@ -5111,11 +5214,33 @@ class DynamicCalendarLoader extends CalendarCore {
                     }
                     eventsList.replaceChildren(frag);
 
-                    if (skippedCards > 0) {
-                        logger.warn('CALENDAR', 'Some event cards could not be built', {
-                            skippedCards,
-                            renderedCards: listDeduplicatedEvents.length - skippedCards
-                        });
+                    // An empty VISIBLE WEEK on the timeline rail gets the
+                    // same "no events this week" slot the fully-empty state
+                    // uses — inserted at its date position between the past
+                    // and future cards, so the rail rests on it instead of
+                    // highlighting an event weeks away (owner report:
+                    // Denver). Swiping off it to a neighbour shifts the
+                    // window there; that window has events, so the slot is
+                    // simply not rendered again — the gap collapses and the
+                    // far-side neighbour becomes the adjacent peek. The slot
+                    // is deliberately unreachable by rail swiping afterwards:
+                    // it only exists again when week navigation lands ON an
+                    // empty week, and that re-render recreates it (owner:
+                    // "we will never see a 'no event this week' by using the
+                    // middle card swiping").
+                    if (wantSlot && wantSlotDate) {
+                        try {
+                            const slot = document.createElement('div');
+                            slot.className = 'loading-message empty-slot';
+                            slot.setAttribute('data-date', wantSlotDate);
+                            slot.innerHTML = 'No events this week.<span class="empty-hint">Swipe for the nearest events.</span>';
+                            let before = null;
+                            eventsList.querySelectorAll(':scope > .event-card[data-occurrence]').forEach(card => {
+                                if (before) return;
+                                if (card.getAttribute('data-occurrence') > wantSlotDate) before = card;
+                            });
+                            eventsList.insertBefore(slot, before);
+                        } catch (e) {}
                     }
 
                     logger.debug('CALENDAR', '✅ UPDATE_DISPLAY: Successfully updated events list', {
@@ -5124,6 +5249,14 @@ class DynamicCalendarLoader extends CalendarCore {
                         deduplicatedEventCount: listDeduplicatedEvents.length,
                         removedDuplicates: cardEvents.length - listDeduplicatedEvents.length
                     });
+                    } // end of the strip-changed branch
+
+                    if (skippedCards > 0) {
+                        logger.warn('CALENDAR', 'Some event cards could not be built', {
+                            skippedCards,
+                            renderedCards: listDeduplicatedEvents.length - skippedCards
+                        });
+                    }
                 } catch (cardError) {
                     logger.componentError('CALENDAR', 'Failed to generate event cards', cardError);
                     eventsList.innerHTML = '<div class="loading-message">Error displaying events. Please refresh the page.</div>';

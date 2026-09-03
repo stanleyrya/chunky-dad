@@ -1584,12 +1584,133 @@ async function main() {
     // and should not fail the entire CI workflow. We will still log the failures.
   }
   
+  await generateEventImageThumbs();
+
   console.log('\n🎉 Image download process completed successfully!');
 }
 
-// Run if called directly
+// ---------------------------------------------------------------------------
+// Rail thumbnails: a tiny -thumb.webp companion for every event image.
+//
+// The mobile rail paints each card's corner thumb from the event's FULL local
+// flyer (often 100KB-3MB) into a 56px box — a 30-card timeline was fetching
+// megabytes to draw postage stamps. The companion is sized for that box at
+// 3x DPR (168px on the SHORT side, fit:'outside', so cover-cropping always
+// has enough pixels) and lands at a few KB. The full asset still loads when
+// the user actually opens the flyer (lightbox/sheet).
+//
+// A SWEEP, not a hook in downloadEventImage: that function succeeds through
+// two exits and skips through several more (cache hits never re-enter it at
+// all), while one pass over img/events after downloading covers every image
+// — including the whole existing library on the first run — and regenerates
+// a thumb whenever its source is newer. Thumbs of thumbs are excluded by
+// name, .meta files by extension.
+// ---------------------------------------------------------------------------
+const THUMB_SUFFIX = '-thumb.webp';
+const THUMB_SHORT_SIDE = 168;
+
+function thumbPathFor(imagePath) {
+  const ext = path.extname(imagePath);
+  return imagePath.slice(0, imagePath.length - ext.length) + THUMB_SUFFIX;
+}
+
+async function generateEventImageThumbs() {
+  const eventsRoot = path.join(ROOT, 'img', 'events');
+  if (!fs.existsSync(eventsRoot)) return;
+  let sharp;
+  try {
+    sharp = require('sharp');
+  } catch (e) {
+    console.log('⚠️  sharp unavailable — skipping rail thumbnail generation');
+    return;
+  }
+
+  const sources = [];
+  const walk = (dir) => {
+    fs.readdirSync(dir, { withFileTypes: true }).forEach(entry => {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) { walk(full); return; }
+      if (!/\.(jpe?g|png|webp|gif)$/i.test(entry.name)) return;
+      if (entry.name.endsWith(THUMB_SUFFIX)) return;
+      sources.push(full);
+    });
+  };
+  walk(eventsRoot);
+
+  let made = 0, kept = 0, failed = 0;
+  for (const src of sources) {
+    const dest = thumbPathFor(src);
+    try {
+      if (fs.existsSync(dest) && fs.statSync(dest).mtimeMs >= fs.statSync(src).mtimeMs) {
+        kept++;
+        continue;
+      }
+      await sharp(src, { animated: false })
+        .resize(THUMB_SHORT_SIDE, THUMB_SHORT_SIDE, { fit: 'outside', withoutEnlargement: true })
+        .webp({ quality: 60 })
+        .toFile(dest);
+      made++;
+      console.log(`🖼️  Thumb: ${path.relative(ROOT, dest)} (${fs.statSync(dest).size} bytes)`);
+    } catch (error) {
+      failed++;
+      console.log(`⚠️  Thumb failed for ${path.relative(ROOT, src)}: ${error.message}`);
+      try { if (fs.existsSync(dest)) fs.unlinkSync(dest); } catch (e) {}
+    }
+  }
+  console.log(`🖼️  Rail thumbnails: ${made} generated, ${kept} current, ${failed} failed (${sources.length} images)`);
+  writeThumbManifest(eventsRoot, sources);
+}
+
+// img/events/thumbs.json: imageAssetKey(source URL) → thumb path relative to
+// img/events/. The browser cannot re-derive local filenames from an event's
+// image URL (the name embeds a date whose timezone rendering differs between
+// the downloader's runner and the visitor's device — verified off by one day
+// on real events), but every downloaded image carries a .meta sidecar with
+// the URL it came from, so the mapping is recorded here instead of guessed.
+// Keys use EventSchema.imageAssetKey (host + path, no scheme/query) — the
+// same identity the site already uses to match delivery variants of one
+// stored asset. Sorted for stable diffs.
+function writeThumbManifest(eventsRoot, sources) {
+  let imageAssetKey;
+  try {
+    imageAssetKey = require('../js/event-schema.js').EventSchema.imageAssetKey;
+  } catch (e) {
+    console.log(`⚠️  event-schema unavailable — skipping thumbs.json (${e.message})`);
+    return;
+  }
+  const manifest = {};
+  let withMeta = 0;
+  for (const src of sources) {
+    const dest = thumbPathFor(src);
+    if (!fs.existsSync(dest)) continue;
+    const metaPath = `${src}.meta`;
+    if (!fs.existsSync(metaPath)) continue;
+    let meta;
+    try {
+      meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+    } catch (e) {
+      continue;
+    }
+    const relThumb = path.relative(eventsRoot, dest).split(path.sep).join('/');
+    [meta.originalUrl, meta.adjustedUrl].forEach(url => {
+      const key = url && imageAssetKey(url);
+      if (key) manifest[key] = relThumb;
+    });
+    withMeta++;
+  }
+  const sorted = {};
+  Object.keys(manifest).sort().forEach(key => { sorted[key] = manifest[key]; });
+  const manifestPath = path.join(eventsRoot, 'thumbs.json');
+  fs.writeFileSync(manifestPath, JSON.stringify(sorted, null, 1) + '\n');
+  console.log(`🖼️  Thumb manifest: ${Object.keys(sorted).length} keys from ${withMeta} images → ${path.relative(ROOT, manifestPath)}`);
+}
+
+// Run if called directly. --thumbs-only runs just the thumbnail sweep over
+// the existing img/events library (no network, no calendar reads) — for
+// backfilling thumbs without a full download pass.
 if (require.main === module) {
-  main().catch(error => {
+  const entry = process.argv.includes('--thumbs-only') ? generateEventImageThumbs : main;
+  entry().catch(error => {
     console.error('💥 Fatal error during image download:', error);
     process.exit(1);
   });
