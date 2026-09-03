@@ -7498,9 +7498,9 @@ html.dusk body {
         overflow: visible;
     }
     html.mode-dense .weekly-calendar { flex: 0 0 auto; }
-    /* the slim footer is part of the one-screen budget: sizeDenseMap
-       subtracts its height so the trifold + footer still fill exactly one
-       screen (the Tell Dad intel button ends every city page) */
+    /* the trifold fills the whole screen; the slim footer (Tell Dad) sits
+       just BELOW the fold — a small scroll reveals it, and the event data
+       keeps every pixel of the viewport */
     html.mode-dense body > footer { flex: 0 0 auto; }
     /* the card band never shrinks below its content — a tall grid pushes
        everything down instead of squeezing the cards under the map */
@@ -7885,8 +7885,8 @@ html.dusk body {
 /* ---------- the quiet dusk footer: one slim line ending every city page ----------
    The redesign used to hide the footer outright, which lost the Tell Dad
    intel button — it's back, shrunk to a single quiet-text row that fits the
-   fixed desktop week screen's 3.5rem allowance and the mobile trifold's
-   one-screen budget (dusk-rail's sizeDenseMap subtracts its height). */
+   fixed desktop week screen's 3.5rem allowance; on the mobile trifold it
+   sits just below the fold (the trifold keeps the whole screen). */
 html.dusk footer {
     background: transparent;
     padding: 0.3rem 0 0.6rem;
