@@ -1,3 +1,8 @@
+// Platform/aggregator favicons say "Instagram" or "Eventbrite", not the
+// festival — showing them as the event's identity would mislead, so those
+// cards keep their emoji instead.
+const PLATFORM_FAVICON_DOMAINS = ['instagram.com', 'facebook.com', 'eventbrite.com', 'linktr.ee', 'gaytravel4u.com'];
+
 // Unified Compact Card Renderer - Handles both cities and events
 class CompactCardRenderer {
     constructor(type, containerSelector) {
@@ -68,18 +73,50 @@ class CompactCardRenderer {
         return null;
     }
 
+    // Festivals that live on one of OUR city calendars link to that city page
+    // at the festival's dates — not off-site (owner: "just the city page at
+    // the correct timeline to start instead of building new page types").
+    internalCityHref(item) {
+        const key = item.cityKey;
+        const cfg = (typeof window !== 'undefined' && window.CITY_CONFIG) ? window.CITY_CONFIG[key] : null;
+        if (!key || !cfg || cfg.visible === false) return null;
+        const dates = window.getUpcomingEventDates ? getUpcomingEventDates(item) : item;
+        const date = (dates && typeof dates.startDate === 'string') ? dates.startDate : null;
+        return date ? `${key}/?view=week&date=${date}` : `${key}/`;
+    }
+
+    // img/favicons/favicon-<domain>-64px.ico — already downloaded by the
+    // image sweep for every festival website. Derived, never hardcoded.
+    faviconFor(item) {
+        if (this.type !== 'event' || !item.website) return null;
+        try {
+            const host = new URL(item.website).hostname.replace(/^www\./, '').toLowerCase();
+            if (PLATFORM_FAVICON_DOMAINS.includes(host)) return null;
+            return `img/favicons/favicon-${host}-64px.ico`;
+        } catch (e) {
+            return null;
+        }
+    }
+
     createCard(item) {
         const link = document.createElement('a');
         link.className = `${this.type}-compact-card`;
         if (this.type === 'city') {
             link.href = `${item.key}/`;
-        } else if (item.website) {
-            // Festival cards link to the festival's website
-            link.href = item.website;
-            link.target = '_blank';
-            link.rel = 'noopener';
+            link.dataset.cityKey = item.key;
         } else {
-            link.href = '#';
+            const cityHref = this.internalCityHref(item);
+            if (cityHref) {
+                // Our own city page, opened at the festival's week
+                link.href = cityHref;
+            } else if (item.website) {
+                // No chunky.dad city for it (yet) — the festival's website
+                link.href = item.website;
+                link.target = '_blank';
+                link.rel = 'noopener';
+            } else {
+                link.href = '#';
+            }
         }
 
         // Create emoji box
@@ -91,6 +128,24 @@ class CompactCardRenderer {
         emoji.textContent = item.emoji;
 
         emojiBox.appendChild(emoji);
+
+        // Festival cards show the event site's favicon when we have one; the
+        // emoji stays in the DOM and comes back if the image 404s
+        const favUrl = this.faviconFor(item);
+        if (favUrl) {
+            const favImg = document.createElement('img');
+            favImg.className = 'event-favicon';
+            favImg.src = favUrl;
+            favImg.alt = '';
+            favImg.loading = 'lazy';
+            favImg.addEventListener('error', () => {
+                favImg.remove();
+                emojiBox.classList.remove('has-favicon');
+            });
+            emojiBox.classList.add('has-favicon');
+            emojiBox.appendChild(favImg);
+        }
+
         link.appendChild(emojiBox);
 
         // Create content based on type
@@ -197,6 +252,73 @@ class CityRenderer extends CompactCardRenderer {
     init() {
         super.init();
         this.initSearch();
+        this.initLocationSort();
+    }
+
+    // Location-aware ordering: nearest cities first. On load this only uses a
+    // cached fix or an already-granted permission (never prompts); the 📍
+    // button is the ONE place a permission prompt may appear, because it's a
+    // user gesture (iOS suppresses prompts detached from a tap).
+    initLocationSort() {
+        if (!window.LocationManager) return;
+        if (!window.locationManager) {
+            window.locationManager = new LocationManager();
+        }
+        this.locationManager = window.locationManager;
+
+        const btn = document.getElementById('near-me-btn');
+
+        const trySilent = () => {
+            this.locationManager.getLocationForFeatures()
+                .then(loc => { if (loc) this.applyDistanceOrder(loc, btn); })
+                .catch(() => {});
+        };
+        // cards render async — sort once they exist
+        if (this.container && this.container.querySelector('[data-city-key]')) {
+            trySilent();
+        } else {
+            document.addEventListener('cityCardsReady', trySilent, { once: true });
+        }
+
+        if (!btn) return;
+        btn.addEventListener('click', async () => {
+            btn.classList.remove('near-me-error');
+            btn.classList.add('near-me-loading');
+            try {
+                const loc = await this.locationManager.getCurrentLocation();
+                this.applyDistanceOrder(loc, btn);
+            } catch (e) {
+                btn.classList.add('near-me-error');
+                btn.title = (e && e.message) ? e.message : 'Unable to get your location';
+                logger.warn('CITY', 'Near-me sort failed', { error: e?.message });
+            } finally {
+                btn.classList.remove('near-me-loading');
+            }
+        });
+    }
+
+    applyDistanceOrder(location, btn) {
+        if (!location || !this.container) return;
+        const cards = Array.from(this.container.querySelectorAll('.city-compact-card[data-city-key]'));
+        if (cards.length < 2) return;
+        const cfg = window.CITY_CONFIG || {};
+        const dist = (card) => {
+            const c = cfg[card.dataset.cityKey];
+            if (!c || !c.coordinates) return Number.MAX_SAFE_INTEGER;
+            return this.locationManager.calculateDistance(
+                location.lat, location.lng, c.coordinates.lat, c.coordinates.lng);
+        };
+        const sorted = cards.slice().sort((a, b) => dist(a) - dist(b));
+        // re-seat the contiguous card run in place (spacer/suggest cards stay put)
+        const next = cards[cards.length - 1].nextSibling;
+        sorted.forEach(card => this.container.insertBefore(card, next));
+        if (btn) {
+            btn.classList.add('near-me-active');
+            btn.title = 'Cities sorted by distance from you';
+        }
+        logger.info('CITY', 'Cities sorted by distance from user', {
+            nearest: sorted[0] ? sorted[0].dataset.cityKey : null
+        });
     }
 
     initSearch() {

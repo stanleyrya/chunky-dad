@@ -1,10 +1,17 @@
 // City Configuration - Maps cities to their data and calendar IDs
 // Scraper config lives alongside city fields (calendar/timezone/patterns) and is used to generate scripts/scraper-cities.js.
+//
+// `visible: false` delists a city everywhere the site enumerates cities
+// (homepage cards/map, city switcher, generated pages + sitemap) but does
+// NOT touch scraping — generate-scraper-cities.js ignores the flag.
+// `order` pins a city to the front of the homepage strip (lower first);
+// cities without one keep this file's order after the pinned ones.
 const CITY_CONFIG = {
     'nyc': {
         name: 'New York',
         emoji: '🗽',
         tagline: 'What\'s the bear 411?',
+        order: 1,
         aliases: ['new-york'],
         calendarId: '128e456dab59e8db2466c6eecd151decd20315e7d6b1058f063aa1fea610eeb1@group.calendar.google.com',
         calendar: 'chunky-dad-nyc',
@@ -30,6 +37,7 @@ const CITY_CONFIG = {
         name: 'Los Angeles',
         emoji: '☀️',
         tagline: 'West Coast bear vibes',
+        order: 3,
         aliases: ['los-angeles'],
         calendarId: '4b97d66d56b8bc0cf6a667f5b11879fbfe4a17e671055772e9849a68e905923f@group.calendar.google.com',
         calendar: 'chunky-dad-la',
@@ -49,7 +57,8 @@ const CITY_CONFIG = {
         patterns: ['toronto'],
         coordinates: { lat: 43.6532, lng: -79.3832 },
         mapZoom: 10,
-        visible: true
+        // hidden 2026-09: no upcoming events on the calendar (and no festival)
+        visible: false
     },
     'london': {
         name: 'London',
@@ -67,6 +76,7 @@ const CITY_CONFIG = {
         name: 'Chicago',
         emoji: '💨',
         tagline: 'Windy City bears',
+        order: 2,
         calendarId: '5b9e403fecaf30c69fb1715ee79d893cc1e653ac8cc9386656bca1cea510e6d6@group.calendar.google.com',
         calendar: 'chunky-dad-chicago',
         timezone: 'America/Chicago',
@@ -157,7 +167,8 @@ const CITY_CONFIG = {
         patterns: ['atlanta', 'atl'],
         coordinates: { lat: 33.7490, lng: -84.3880 },
         mapZoom: 10,
-        visible: true
+        // hidden 2026-09: no upcoming events on the calendar (and no festival)
+        visible: false
     },
     'nola': {
         name: 'New Orleans',
@@ -218,7 +229,8 @@ const CITY_CONFIG = {
         patterns: ['boston', 'boton', 'bostom', 'bostun', 'bostan'],
         coordinates: { lat: 42.3601, lng: -71.0589 },
         mapZoom: 10,
-        visible: true
+        // hidden 2026-09: no upcoming events on the calendar (and no festival)
+        visible: false
     },
     'phoenix': {
         name: 'Phoenix',
@@ -255,7 +267,8 @@ const CITY_CONFIG = {
         patterns: ['san diego'],
         coordinates: { lat: 32.7157, lng: -117.1611 },
         mapZoom: 10,
-        visible: true
+        // hidden 2026-09: no upcoming events on the calendar (and no festival)
+        visible: false
     },
     'philly': {
         name: 'Philadelphia',
@@ -268,7 +281,8 @@ const CITY_CONFIG = {
         patterns: ['philadelphia', 'philly'],
         coordinates: { lat: 39.9526, lng: -75.1652 },
         mapZoom: 10,
-        visible: true
+        // hidden 2026-09: no upcoming events on the calendar (and no festival)
+        visible: false
     },
     'miami': {
         name: 'Miami',
@@ -611,14 +625,17 @@ function getCityConfig(cityKey) {
     return CITY_CONFIG[cityKey] || null;
 }
 
-// Helper function to get all available cities
+// Helper function to get all available cities.
+// Cities with an `order` number come first (ascending); the rest keep this
+// file's order after them (Array.prototype.sort is stable).
 function getAvailableCities() {
     return Object.keys(CITY_CONFIG)
         .map(key => ({
             key,
             ...CITY_CONFIG[key]
         }))
-        .filter(city => city.visible !== false);
+        .filter(city => city.visible !== false)
+        .sort((a, b) => (a.order || Number.MAX_SAFE_INTEGER) - (b.order || Number.MAX_SAFE_INTEGER));
 }
 
 // Check if city has calendar configured

@@ -956,6 +956,22 @@
   };
 
   // ---------- rail structure ----------
+  // The SMALL viewport height (100svh: Safari's toolbar expanded). Sizing
+  // the map from window.innerHeight fed a loop on any scroll: the toolbar
+  // collapses → innerHeight grows → resize → the map grows → the page grows
+  // → more scroll… (owner: "the map keeps growing/shrinking on scroll").
+  // svh is stable across toolbar collapse; the freed room simply shows
+  // under the map. Browsers without svh fall back to innerHeight.
+  let svhProbe = null;
+  const smallViewportH = () => {
+    if (!svhProbe) {
+      svhProbe = document.createElement('div');
+      svhProbe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:100svh;pointer-events:none;visibility:hidden;';
+      document.body.appendChild(svhProbe);
+    }
+    const h = svhProbe.offsetHeight;
+    return h > 0 ? h : window.innerHeight;
+  };
   let denseMapH = -1;
   const sizeDenseMap = () => {
     const sec = document.querySelector('.events-map-section');
@@ -971,7 +987,10 @@
     // Document coords, not viewport rect alone: the page can be scrolled
     // when this runs, and a viewport-relative top would feed back.
     const secDocTop = sec.getBoundingClientRect().top + window.scrollY;
-    const h = Math.max(200, Math.floor(window.innerHeight - secDocTop - 6));
+    // the trifold owns the WHOLE screen — the slim footer (Tell Dad) sits
+    // just below the fold and a small scroll reveals it (owner: "trifold
+    // should take up all the screen space")
+    const h = Math.max(200, Math.floor(smallViewportH() - secDocTop - 6));
     if (h === denseMapH) return;
     denseMapH = h;
     sec.style.height = h + 'px';
