@@ -102,11 +102,7 @@ class NavigationManager {
 
         const updateHeader = () => {
             const scrollY = window.scrollY;
-            // Show header once most of the (compact) hero banner has scrolled
-            // away — measured from the hero itself, not the viewport, since
-            // the hero is no longer a full-screen page
-            const hero = document.querySelector('.hero');
-            const heroHeight = hero ? hero.offsetHeight * 0.6 : 200;
+            const heroHeight = window.innerHeight * 0.6; // Show header after scrolling 60% of viewport
             const scrollHint = document.querySelector('.hero-scroll-hint');
             
             if (scrollY > heroHeight) {

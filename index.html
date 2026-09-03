@@ -59,12 +59,8 @@
         </nav>
     </header>
 
-    <!-- Hero Section: the splash keeps the whole first screen, but the city
-         picker lives INSIDE it (where the "Explore ↓" hint used to be) — so
-         nobody scrolls to reach a city, and the pop-in + dad jokes keep their
-         moment (owner: "I don't like that it's a header page first then you
-         have to scroll down"). -->
-    <section class="hero hero-splash">
+    <!-- Hero Section -->
+    <section class="hero full-viewport-height">
         <div class="hero-container">
             <div class="hero-logo">
                 <img src="favicons/favicon-512x512.png" 
@@ -86,6 +82,10 @@
                     <span class="hero-dad">dad</span>
                 </h1>
             </div>
+            <div class="hero-scroll-hint">
+                <span class="scroll-text">Explore</span>
+                <div class="scroll-arrow">↓</div>
+            </div>
             <!-- Dad Joke Bubble -->
             <div class="dad-joke-bubble is-intro" id="joke-bubble">
                 <div class="joke-content">
@@ -95,26 +95,29 @@
                 <button class="new-joke-btn is-hidden">Tell a dad joke 🐻</button>
             </div>
         </div>
+    </section>
 
-        <!-- The city picker: part of the first screen -->
-        <div id="cities" class="hero-cities">
+    <main>
+        <section id="cities" class="cities-compact">
             <div class="container">
-                <p class="hero-cities-label">Where are you headed?</p>
+                <h2>🏙️ Explore Cities</h2>
                 <div class="city-search-container">
                     <input type="text" id="city-search" placeholder="Search cities..." class="city-search-input">
                     <button type="button" id="near-me-btn" class="near-me-btn" title="Sort cities by distance from me" aria-label="Sort cities by distance from me">📍</button>
                 </div>
             </div>
-
+            
             <div class="city-scroll-container">
                 <div class="city-compact-grid" id="city-grid">
                     <!-- Cities will be dynamically rendered by CityRenderer -->
                 </div>
             </div>
-        </div>
-    </section>
 
-    <main>
+            <div class="container">
+                <div id="homeMap" style="border-radius: 12px; margin-top: 20px;"></div>
+            </div>
+        </section>
+
         <section id="bear-events" class="bear-events-compact">
             <div class="container">
                 <h2>🎉 Bear Events</h2>
@@ -124,13 +127,6 @@
                 <div class="event-compact-grid" id="event-grid">
                     <!-- Bear events will be dynamically rendered by BearEventRenderer -->
                 </div>
-            </div>
-        </section>
-
-        <section id="map" class="cities-compact map-compact">
-            <div class="container">
-                <h2>🗺️ Bear map</h2>
-                <div id="homeMap" style="border-radius: 12px;"></div>
             </div>
         </section>
 
