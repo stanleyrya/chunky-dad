@@ -25,9 +25,9 @@ class ComponentsManager {
         }
 
         const footerHTML = `
-            <p>&copy; 2025 chunky.dad</p>
-            <p>All info is community-sourced.</p>
-            <button id="share-intel-btn" class="share-intel-footer-btn">Share Bear Intel 📧</button>
+            <p class="footer-copyright">&copy; ${new Date().getFullYear()} chunky.dad</p>
+            <p class="footer-note">All info is community-sourced.</p>
+            <button id="share-intel-btn" class="share-intel-footer-btn">Tell Dad 📧</button>
         `;
 
         footerElements.forEach((container, index) => {

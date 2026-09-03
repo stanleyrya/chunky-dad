@@ -971,7 +971,11 @@
     // Document coords, not viewport rect alone: the page can be scrolled
     // when this runs, and a viewport-relative top would feed back.
     const secDocTop = sec.getBoundingClientRect().top + window.scrollY;
-    const h = Math.max(200, Math.floor(window.innerHeight - secDocTop - 6));
+    // the slim footer (Tell Dad) is part of the one-screen budget — the map
+    // stops above it instead of pushing it below the fold
+    const foot = document.querySelector('body > footer');
+    const footH = foot ? foot.offsetHeight : 0;
+    const h = Math.max(200, Math.floor(window.innerHeight - secDocTop - footH - 6));
     if (h === denseMapH) return;
     denseMapH = h;
     sec.style.height = h + 'px';

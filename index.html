@@ -59,8 +59,10 @@
         </nav>
     </header>
 
-    <!-- Hero Section -->
-    <section class="hero full-viewport-height">
+    <!-- Hero Section: a compact banner, not a full-screen page — cities are
+         visible on first paint (owner: "I don't like that it's a header page
+         first then you have to scroll down"). Pop-in + dad jokes stay. -->
+    <section class="hero">
         <div class="hero-container">
             <div class="hero-logo">
                 <img src="favicons/favicon-512x512.png" 
@@ -82,10 +84,6 @@
                     <span class="hero-dad">dad</span>
                 </h1>
             </div>
-            <div class="hero-scroll-hint">
-                <span class="scroll-text">Explore</span>
-                <div class="scroll-arrow">↓</div>
-            </div>
             <!-- Dad Joke Bubble -->
             <div class="dad-joke-bubble is-intro" id="joke-bubble">
                 <div class="joke-content">
@@ -103,6 +101,7 @@
                 <h2>🏙️ Explore Cities</h2>
                 <div class="city-search-container">
                     <input type="text" id="city-search" placeholder="Search cities..." class="city-search-input">
+                    <button type="button" id="near-me-btn" class="near-me-btn" title="Sort cities by distance from me" aria-label="Sort cities by distance from me">📍</button>
                 </div>
             </div>
             
@@ -129,16 +128,8 @@
             </div>
         </section>
 
-        <section id="bear-art" class="bear-art-section">
-            <div class="container">
-                <div class="bear-art-content">
-                    <h2>🐻‍❄️ Bear Businesses</h2>
-                    <a href="bear-directory.html" class="bear-art-button">
-                        Browse Bear Directory →
-                    </a>
-                </div>
-            </div>
-        </section>
+        <!-- Bear Businesses section removed for now (directory page itself
+             still exists at bear-directory.html) -->
     </main>
 
     <footer>

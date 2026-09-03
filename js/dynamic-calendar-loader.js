@@ -4144,6 +4144,10 @@ class DynamicCalendarLoader extends CalendarCore {
             const currentClass = isToday ? ' current' : '';
             const isMonthFirst = day.getDate() === 1;
             const monthFirstClass = isMonthFirst ? ' month-first' : '';
+            // alternate months band like spreadsheet rows: odd months carry
+            // .month-tint (a whisper-lighter ground in CSS) so a month reads
+            // as one block in the continuous strip
+            const monthTintClass = day.getMonth() % 2 === 1 ? ' month-tint' : '';
             const hasEventsClass = filteredDayEvents.length > 0 ? ' has-events' : '';
 
             // Multi-day SEGMENTS always render — dropping one silently broke
@@ -4202,9 +4206,11 @@ class DynamicCalendarLoader extends CalendarCore {
                 : '';
 
             return `
-                <div class="calendar-day month-day${currentClass}${monthFirstClass}${hasEventsClass}" data-date="${this.getLocalDateKey(day)}">
+                <div class="calendar-day month-day${currentClass}${monthFirstClass}${monthTintClass}${hasEventsClass}" data-date="${this.getLocalDateKey(day)}">
                     <div class="day-header">
-                        <span class="day-number">${isMonthFirst ? day.toLocaleDateString('en-US', { month: 'short' }) + ' 1' : day.getDate()}</span>
+                        <span class="day-number">${isMonthFirst
+                            ? `<span class="month-name-full">${day.toLocaleDateString('en-US', { month: 'long' })}</span><span class="month-name-short">${day.toLocaleDateString('en-US', { month: 'short' })}</span> 1`
+                            : day.getDate()}</span>
                         ${isToday ? `<span class="day-indicator">Today</span>` : ''}
                     </div>
                     <div class="day-events">

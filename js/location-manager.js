@@ -12,8 +12,13 @@
 class LocationManager {
     constructor() {
         this.cacheKey = 'chunky_dad_location_cache';
-        this.cacheExpiry = 5 * 60 * 1000; // 5 minutes
-        this.maxCacheAge = 30 * 60 * 1000; // 30 minutes max
+        // City-scale features (nearest-city sort, the map dot) don't need a
+        // fresh GPS fix — a days-old one still picks the right city. The
+        // cache lives in localStorage and lasts long enough that repeat
+        // visits reuse it instead of calling getCurrentPosition again, which
+        // is what made Safari re-ask for location approval on every visit.
+        this.cacheExpiry = 6 * 60 * 60 * 1000; // 6 hours: served as "fresh"
+        this.maxCacheAge = 7 * 24 * 60 * 60 * 1000; // 7 days: served as "stale" but usable
         this.isPrivateMode = this.detectPrivateMode();
         
         // Initialize logger if available
@@ -81,7 +86,9 @@ class LocationManager {
         }
 
         try {
-            const cached = sessionStorage.getItem(this.cacheKey);
+            // localStorage, not sessionStorage: the whole point of the cache
+            // is surviving into the NEXT visit so we don't re-prompt
+            const cached = localStorage.getItem(this.cacheKey);
             if (!cached) return null;
 
             const { lat, lng, timestamp, accuracy } = JSON.parse(cached);
@@ -89,7 +96,7 @@ class LocationManager {
 
             if (age > this.maxCacheAge) {
                 // Cache too old, remove it
-                sessionStorage.removeItem(this.cacheKey);
+                localStorage.removeItem(this.cacheKey);
                 this.logger.debug('LOCATION', 'Cache expired and removed', { age });
                 return null;
             }
@@ -124,7 +131,7 @@ class LocationManager {
                 accuracy,
                 timestamp: Date.now()
             };
-            sessionStorage.setItem(this.cacheKey, JSON.stringify(locationData));
+            localStorage.setItem(this.cacheKey, JSON.stringify(locationData));
             this.logger.debug('LOCATION', 'Location cached', { lat, lng, accuracy });
         } catch (error) {
             this.logger.warn('LOCATION', 'Cache write failed', { error: error.message });
@@ -303,7 +310,7 @@ class LocationManager {
      */
     clearCache() {
         try {
-            sessionStorage.removeItem(this.cacheKey);
+            localStorage.removeItem(this.cacheKey);
             this.logger.info('LOCATION', 'Location cache cleared');
         } catch (error) {
             this.logger.warn('LOCATION', 'Cache clear failed', { error: error.message });

@@ -35,10 +35,12 @@ function ensureDir(dirPath) {
 
 // Generate pre-populated header with city selector
 function generateCityHeader(html, cityKey, cityConfig) {
-  // Get all available cities for the dropdown
+  // Get all available cities for the dropdown — same ordering rule as the
+  // homepage strip: `order`-pinned cities first, then config-file order
   const availableCities = Object.entries(CITY_CONFIG)
     .filter(([, cfg]) => cfg && cfg.visible !== false)
-    .map(([key, cfg]) => ({ key, ...cfg }));
+    .map(([key, cfg]) => ({ key, ...cfg }))
+    .sort((a, b) => (a.order || Number.MAX_SAFE_INTEGER) - (b.order || Number.MAX_SAFE_INTEGER));
 
   // Build city dropdown options HTML with direct links
   const cityOptions = availableCities.map(city => `
