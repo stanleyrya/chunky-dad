@@ -413,6 +413,7 @@
   let settleRaf = 0, stillFrames = 0, lastLeft = -1;
   let slotResting = false;     // the rail is/was resting on the empty-week card
   let slotStickyArmed = false; // the slot's neighbours carry sticky pins
+  let gestureViaTouch = false; // current gesture began with a touchstart
 
   const userBusy = () => touchActive || (performance.now() - lastUserTouch) < USER_QUIET;
   // TOP-LEVEL cards only: the edge slots contain ghost .event-cards, and an
@@ -873,6 +874,10 @@
     // the new gesture must ride the normal timeline
     if (slotStickyArmed && !touchActive) mergeSlotNow();
     interacted = true;
+    // iOS fires touchstart before the matching pointerdown; a gesture that
+    // began with a touch is ended ONLY by its touch events (see offTouch)
+    if (e.type === 'touchstart') gestureViaTouch = true;
+    else if (!touchActive) gestureViaTouch = false;
     touchActive = true;
     gestureScrolled = false;
     railOwner = 'user';
@@ -880,8 +885,17 @@
     lastUserTouch = performance.now();
     if (railActive()) phase = 'scrub';
   };
-  const offTouch = () => {
+  const offTouch = (e) => {
     if (!touchActive) return;
+    // iOS fires pointercancel the moment native scrolling claims the pan —
+    // the finger is still ON the glass. Treating that as the gesture's end
+    // let the settle poll fire during a mid-swipe stall, and the landing
+    // pipeline completed the swipe under the stalled finger (owner: "at a
+    // certain point they snap in if the user stalls"). On a touch gesture,
+    // only the TOUCH stream ends it; pointer end events stand in where no
+    // touch events exist (desktop pointers).
+    if (gestureViaTouch && (e.type === 'pointerup' || e.type === 'pointercancel')) return;
+    if (e.type === 'touchend' || e.type === 'touchcancel') gestureViaTouch = false;
     touchActive = false;
     lastUserTouch = performance.now();
     if (!gestureScrolled && phase === 'scrub') phase = 'idle'; // plain tap, no drag
