@@ -4209,7 +4209,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 <div class="calendar-day month-day${currentClass}${monthFirstClass}${monthTintClass}${hasEventsClass}" data-date="${this.getLocalDateKey(day)}">
                     <div class="day-header">
                         <span class="day-number">${isMonthFirst
-                            ? `<span class="month-name-full">${day.toLocaleDateString('en-US', { month: 'long' })}</span><span class="month-name-short">${day.toLocaleDateString('en-US', { month: 'short' })}</span> 1`
+                            ? `<span class="month-name-full">${day.toLocaleDateString('en-US', { month: 'long' })} 1</span><span class="month-name-short">${day.toLocaleDateString('en-US', { month: 'short' })} 1</span>`
                             : day.getDate()}</span>
                         ${isToday ? `<span class="day-indicator">Today</span>` : ''}
                     </div>
