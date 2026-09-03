@@ -5909,15 +5909,16 @@ footer {
     animation: modalFadeIn 0.3s ease;
 }
 
-/* Share Intel Footer Button */
+/* Tell Dad footer button — ONE uniform pill everywhere (homepage and every
+   city page), compact enough to live in the slim dusk footer row */
 .share-intel-footer-btn {
     background: var(--primary-color);
     color: white;
     border: none;
-    padding: 0.8rem 1.5rem;
+    padding: 0.55rem 1.2rem;
     border-radius: 25px;
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     cursor: pointer;
     transition: all 0.3s ease;
     margin-top: 1rem;
@@ -5925,16 +5926,8 @@ footer {
 }
 
 .share-intel-footer-btn:hover {
-    background: var(--accent);
+    background: var(--accent, var(--secondary-color));
     transform: translateY(-2px);
-}
-
-@media (max-width: 768px) {
-    .share-intel-footer-btn {
-        font-size: 0.8rem;
-        padding: 0.7rem 1.2rem;
-        margin-top: 0.8rem;
-    }
 }
 
 /* Bear Intel Form Styles */
@@ -7904,26 +7897,10 @@ html.dusk footer p {
     color: rgba(255, 255, 255, 0.45);
     white-space: nowrap;
 }
-/* quiet-text control, not a loud pill (dusk controls law) */
+/* the button is the SAME pill as the homepage (owner: uniform Tell Dad) —
+   only the stacked-layout margin goes, since this row is flex-centered */
 html.dusk .share-intel-footer-btn {
-    background: none;
-    border: none;
-    color: rgba(255, 255, 255, 0.78);
-    font-size: 0.78rem;
-    font-weight: 600;
-    letter-spacing: 0.4px;
-    padding: 0.1rem 0.3rem;
-    margin: 0;
-    border-radius: 0;
-    text-decoration: underline;
-    text-underline-offset: 3px;
-    text-decoration-color: rgba(255, 255, 255, 0.35);
-    transition: color 0.15s ease;
-}
-html.dusk .share-intel-footer-btn:hover {
-    background: none;
-    transform: none;
-    color: #fff;
+    margin-top: 0;
 }
 /* phones: the copyright + button fit; the community-sourced note doesn't */
 @media (max-width: 768.9px) {
