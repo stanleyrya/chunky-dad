@@ -332,6 +332,18 @@ jobs:
             echo "CALENDAR_CHANGED=true" >> $GITHUB_ENV
           fi
       
+      - name: Refresh city activity summary
+        if: env.CALENDAR_CHANGED == 'true' || github.event_name != 'schedule'
+        run: |
+          node tools/generate-city-activity.js
+          git add js/city-activity.data.js
+          if git diff --staged --quiet; then
+            echo "No city activity changes to commit"
+          else
+            git commit -m "📍 Refresh city activity summary"
+            git push
+          fi
+
       - name: Generate event pages
         if: env.CALENDAR_CHANGED == 'true' || github.event_name != 'schedule'
         env:
