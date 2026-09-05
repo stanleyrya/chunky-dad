@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>chunky.dad — homepage option J: Split</title>
+    <meta name="description" content="The ultimate travel guide for gay bears - city guides, events, and bear-owned businesses worldwide">
+    <!-- Favicon and App Icons -->
+    <link rel="icon" type="image/x-icon" href="/favicons/favicon.ico">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicons/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicons/favicon-48x48.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicons/favicon-96x96.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/favicons/favicon-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="/favicons/favicon-512x512.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicons/apple-touch-icon.png">
+    <link rel="manifest" href="/favicons/site.webmanifest">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="chunky.dad - Your Gay Bear Travel Guide">
+    <meta property="og:description" content="The ultimate travel guide for gay bears - city guides, events, and bear-owned businesses worldwide">
+    <meta property="og:url" content="https://chunky.dad/">
+    <meta property="og:image" content="https://chunky.dad/favicons/android-chrome-512x512.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="chunky.dad - Your Gay Bear Travel Guide">
+    <meta name="twitter:description" content="The ultimate travel guide for gay bears - city guides, events, and bear-owned businesses worldwide">
+    <meta name="twitter:image" content="https://chunky.dad/favicons/android-chrome-512x512.png">
+    <meta name="theme-color" content="#667eea">
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YKQBFFQR5E"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-YKQBFFQR5E');
+    </script>
+    
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css">
+
+    <style>
+/* --- prototype switcher (not part of any option) --- */
+.opt-nav{position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:10050;display:flex;gap:4px;background:rgba(20,18,40,.86);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:6px;font:700 15px/1 Poppins,system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.45);max-width:calc(100vw - 20px);overflow-x:auto;scrollbar-width:none}
+.opt-nav::-webkit-scrollbar{display:none}
+.opt-nav a,.opt-nav span{color:#fff;text-decoration:none;padding:12px 13px;border-radius:999px;opacity:.9;background:rgba(255,255,255,.08);white-space:nowrap;min-width:44px;text-align:center}
+.opt-nav span{opacity:1;background:rgba(255,255,255,.22)}
+@media(min-width:769px){.opt-nav{left:auto;right:14px;bottom:auto;top:14px;transform:none;font-size:13px}.opt-nav a,.opt-nav span{padding:9px 12px}}
+/* --- shared: "next event" line on city cards (from js/city-activity.data.js) --- */
+.city-next{display:block;font-size:.72rem;font-weight:500;white-space:nowrap}
+.spacer-card{display:none!important}
+.city-count{white-space:nowrap}
+.sec-head{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;max-width:1200px;margin:0 auto .9rem;padding:0 1.25rem}
+.sec-head h2{margin:0;text-align:left;font-size:1.35rem;font-weight:700;line-height:1.15}
+.sec-head .eyebrow{display:block;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600;margin-bottom:.15rem}
+.sec-head .aside{font-size:.8rem;font-weight:500;white-space:nowrap}
+:root{--ink:#e8eaff;--muted:#9aa0c3;--acc:#9fb2ff;--card:#171a33;--edge:rgba(159,178,255,.16);--edge-hi:rgba(159,178,255,.38);--ground:#0b0d13}
+body.index-page{background:var(--ground)}
+body.index-page main{background:radial-gradient(ellipse at top,#161a2e 0%,#0b0d13 48%,#07090f 100%);color:var(--ink);padding:0 0 1.5rem}
+.sec-head h2{color:var(--ink)}.sec-head .eyebrow{color:var(--acc)}.sec-head .aside{color:var(--muted)}
+.cities-compact,.bear-events-compact{background:none;color:inherit;padding:0;overflow:visible}
+.cities-compact .container,.bear-events-compact .container{padding:0 1.25rem}
+.city-search-container{max-width:480px;margin:0 auto .9rem;padding:0 1.25rem}
+.city-search-input{background:rgba(255,255,255,.06);color:var(--ink);border:1px solid var(--edge);box-shadow:none;backdrop-filter:none;padding:.65rem 1.1rem}
+.city-search-input::placeholder{color:var(--muted)}.city-search-input:focus{background:rgba(255,255,255,.09);border-color:var(--edge-hi);box-shadow:none}
+.near-me-btn{background:rgba(255,255,255,.06);border:1px solid var(--edge);box-shadow:none;backdrop-filter:none}
+.near-me-btn.near-me-active{background:rgba(159,178,255,.22);border-color:var(--edge-hi)}
+.city-compact-card .city-emoji,.event-compact-card .event-emoji{animation:none}
+.city-compact-card.coming-soon,.event-compact-card.coming-soon{opacity:1}
+.city-next,.city-count{display:none!important}
+#homeMap{border-radius:14px!important;margin:0!important;min-height:0;max-height:none;aspect-ratio:auto;border:1px solid var(--edge);background:#141733}
+footer{background:transparent;color:var(--muted);padding:1rem 0 4.5rem}footer .footer-copyright{color:var(--muted)}
+/* compact city chip + compact festival row, shared by the dense layouts */
+.chip{display:inline-flex;flex-direction:row;align-items:center;gap:.4rem;width:auto;min-width:0;background:var(--card);border:1px solid var(--edge);border-radius:999px;padding:.32rem .7rem .32rem .36rem;color:var(--ink);text-align:left;transition:border-color .15s ease}
+.chip:hover{transform:none;border-color:var(--edge-hi)}
+.chip .city-emoji-box{width:26px;height:26px;padding:0;border-radius:50%;background:rgba(159,178,255,.12);border:none;backdrop-filter:none}
+.chip:hover .city-emoji-box{background:rgba(159,178,255,.2);border-color:transparent}
+.chip .city-emoji{font-size:1rem}.chip .city-name{font-size:.8rem;letter-spacing:0;color:var(--ink)}
+.chip.coming-soon{border-style:dashed}
+.frow{display:grid;grid-template-columns:28px 1fr auto;align-items:center;column-gap:.6rem;min-width:0;width:auto;padding:.4rem .35rem;border-top:1px solid var(--edge);border-radius:0;color:var(--ink);text-align:left;transition:background .15s ease}
+.frow:first-of-type{border-top:0}
+.frow:hover{transform:none;background:rgba(159,178,255,.06)}
+.frow .event-emoji-box{width:28px;height:28px;padding:0;border-radius:7px;background:rgba(159,178,255,.12);border:none;backdrop-filter:none}
+.frow:hover .event-emoji-box{background:rgba(159,178,255,.2);border-color:transparent}
+.frow .event-emoji{font-size:.95rem}.frow .event-favicon{width:20px;height:20px;border-radius:5px}
+.frow .event-content{display:contents}
+.frow .bear-event-name{grid-column:2;grid-row:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.8rem;letter-spacing:0;color:var(--ink);line-height:1.2;display:block!important}
+.frow .event-location{grid-column:2;grid-row:2;font-size:.66rem;color:var(--muted);opacity:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.frow .event-dates{grid-column:3;grid-row:1/3;font-size:.72rem;font-weight:600;color:var(--acc);opacity:1;white-space:nowrap;text-align:right;max-width:9rem;overflow:hidden;text-overflow:ellipsis}
+.frow .event-emoji-box{grid-row:1/3}
+.frow.coming-soon .event-emoji-box{border:1px dashed var(--edge-hi);background:none}
+/* transition: none — the splash is already the night. The purple survives as an aurora behind the logo. */
+.hero{background:radial-gradient(ellipse 90% 70% at 50% 28%,#5561cf 0%,#343c8c 30%,#161a3a 58%,#0b0d13 82%)}
+/* OPTION J — "Split": the map stays put while the rest scrolls past it. Desktop: map
+   pinned on the left half, cities + festivals scroll on the right. Phone: the map is a
+   pinned strip at the top and the content slides beneath it. */
+body.index-page main{padding:0}
+.cities-compact{display:contents}
+.cities-compact>.container:has(#homeMap){position:sticky;top:0;z-index:5;padding:0;max-width:none}
+#homeMap{height:34svh;border-radius:0 0 18px 18px!important;border:none;border-bottom:1px solid var(--edge-hi);box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.cities-compact>.sec-head{margin:1rem auto .5rem}
+.city-search-container{margin:0 auto .8rem}
+.city-scroll-container{overflow:visible;padding:0}
+.city-compact-grid{flex-wrap:wrap;gap:.4rem;min-width:0;padding:0 1.25rem}
+.bear-events-compact{padding-top:1.25rem}
+.event-scroll-container{overflow:visible;padding:0 1.25rem}
+.event-compact-grid{flex-direction:column;gap:0;min-width:0;padding:0;background:rgba(23,26,51,.45);border:1px solid var(--edge);border-radius:12px;overflow:hidden}
+.j-order{display:contents}
+@media(min-width:1000px){
+ body.index-page main{display:grid;grid-template-columns:1fr 1fr;column-gap:0}
+ .cities-compact>.container:has(#homeMap){grid-column:1;grid-row:1/span 5;position:static;padding:1rem 0 1rem 1rem}
+ #homeMap{position:sticky;top:1rem;height:calc(100vh - 2rem);border-radius:18px!important;border:1px solid var(--edge);box-shadow:none}
+ .cities-compact>.sec-head,.cities-compact>.container:has(.city-search-container),.city-scroll-container,.bear-events-compact{grid-column:2}
+ .cities-compact>.sec-head{grid-row:1;margin:1rem 1.25rem .5rem}
+ .cities-compact>.container:has(.city-search-container){grid-row:2}
+ .city-search-container{margin:0 1.25rem .8rem;max-width:none}
+ .city-scroll-container{grid-row:3}
+ .bear-events-compact{grid-row:4}
+ footer{grid-column:1/-1}
+}
+    </style>
+</head>
+<body class="index-page">
+    <header>
+        <nav>
+            <div class="nav-container">
+                <div class="logo">
+                    <h1><a href="index.html"><img src="favicons/favicon-192x192.png" 
+                                                  srcset="favicons/favicon-96x96.png 1x, favicons/favicon-192x192.png 2x, favicons/favicon-256x256.png 3x"
+                                                  alt="chunky.dad logo" class="logo-img"> chunky.dad</a></h1>
+                </div>
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero full-viewport-height">
+        <div class="hero-container">
+            <div class="hero-logo">
+                <img src="favicons/favicon-512x512.png" 
+                     srcset="favicons/logo-hero-small.png 160w, 
+                             favicons/logo-hero-mobile.png 200w, 
+                             favicons/logo-hero.png 320w,
+                             favicons/favicon-256x256.png 256w,
+                             favicons/favicon-512x512.png 512w"
+                     sizes="(max-width: 480px) 160px, 
+                            (max-width: 768px) 200px, 
+                            (max-width: 1024px) 320px,
+                            512px"
+                     alt="chunky.dad logo" 
+                     class="hero-logo-img">
+            </div>
+            <div class="hero-content">
+                <h1 class="hero-title">
+                    <span class="hero-chunky">chunky</span>
+                    <span class="hero-dad">dad</span>
+                </h1>
+            </div>
+            <div class="hero-scroll-hint">
+                <span class="scroll-text">Explore</span>
+                <div class="scroll-arrow">↓</div>
+            </div>
+            <!-- Dad Joke Bubble -->
+            <div class="dad-joke-bubble is-intro" id="joke-bubble">
+                <div class="joke-content">
+                    <div class="joke-text">Traveling? Staying local? Dad's got you covered either way.</div>
+                    <div class="joke-punchline">chunky.dad is your go-to guide for bear friendly events, bars, and more. No accounts, no apps, and less reliance on big tech.</div>
+                </div>
+                <button class="new-joke-btn is-hidden">Tell a dad joke 🐻</button>
+            </div>
+        </div>
+    </section>
+    <nav class="opt-nav" aria-label="prototype switcher"><a href="homepage-b2 h i j k.index.html">B2 H I J K</a><a href="index.html">now</a></nav>
+    <main>
+        <section id="cities" class="cities-compact">
+            <div class="sec-head">
+                <div><span class="eyebrow">Where to</span><h2>Cities</h2></div>
+                <span class="aside">tap a city for its calendar</span>
+            </div>
+            <div class="container">
+                <div class="city-search-container">
+                    <input type="text" id="city-search" placeholder="Search cities..." class="city-search-input">
+                    <button type="button" id="near-me-btn" class="near-me-btn" title="Sort cities by distance from me" aria-label="Sort cities by distance from me">📍</button>
+                </div>
+            </div>
+            <div class="city-scroll-container">
+                <div class="city-compact-grid" id="city-grid"></div>
+            </div>
+            <div class="container">
+                <div id="homeMap"></div>
+            </div>
+        </section>
+
+        <section id="bear-events" class="bear-events-compact">
+            <div class="sec-head">
+                <div><span class="eyebrow">What's on</span><h2>Bear runs &amp; festivals</h2></div>
+                <span class="aside">next twelve months</span>
+            </div>
+            <div class="event-scroll-container">
+                <div class="event-compact-grid" id="event-grid"></div>
+            </div>
+        </section>
+    </main>
+    <footer>
+        <div class="container">
+            <!-- Footer content will be injected by components.js -->
+        </div>
+    </footer>
+
+    <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+    <script src="js/logger.js"></script>
+    <script src="js/navigation.js"></script>
+    <script src="js/dad-jokes.js"></script>
+    <script src="js/debug-overlay.js"></script>
+    <script src="js/city-activity.data.js"></script>
+    <script src="js/city-config.js"></script>
+    <script src="js/location-manager.js"></script>
+    <script src="js/event-config.js"></script>
+    <script src="js/compact-card-renderer.js"></script>
+    <script src="js/components.js"></script>
+    <script src="js/page-effects.js"></script>
+    <script src="js/forms.js"></script>
+    <script src="js/event-schema.js"></script>
+    <script src="js/calendar-core.js"></script>
+    <script src="js/filename-utils.js"></script>
+    <script src="js/dynamic-calendar-loader.js"></script>
+    <script src="js/home-map.js"></script>
+    <script src="js/app.js"></script>
+<script>
+// Prototype-only helpers: "next event" under each city (from window.CITY_ACTIVITY),
+// date parsing off the rendered festival cards, and a ready hook for each card type.
+(function(){
+  function pad(n){return String(n).padStart(2,'0');}
+  function iso(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+  var TODAY=iso(new Date());
+  function daysFromToday(isoDate){return Math.round((new Date(isoDate+'T12:00:00')-new Date(TODAY+'T12:00:00'))/864e5);}
+  function cityInfo(entry){
+    if(!entry) return {label:'',next:null,count:0,bucket:'later'};
+    var next=(entry.dates||[]).filter(function(d){return d>=TODAY;}).sort()[0]||null;
+    var count=(entry.dates||[]).filter(function(d){return d>=TODAY;}).length+(entry.recurring||0);
+    var fest=entry.festivalUntil&&entry.festivalUntil>=TODAY;
+    var label='',bucket='later';
+    if(next){var diff=daysFromToday(next), d=new Date(next+'T12:00:00');
+      if(diff===0){label='Today';bucket='tonight';}
+      else if(diff===1){label='Tomorrow';bucket='tomorrow';}
+      else if(diff<7){label=d.toLocaleDateString(undefined,{weekday:'long'});bucket='week';}
+      else if(entry.recurring>0){label='Regular nights';bucket='regular';}
+      else{label=d.toLocaleDateString(undefined,{month:'short',day:'numeric'});bucket='later';}
+    } else if(entry.recurring>0){label='Regular nights';bucket='regular';}
+    else if(fest){label='Festival';bucket='later';}
+    return {label:label,next:next,count:count,bucket:bucket};
+  }
+  function decorate(){
+    var act=(window.CITY_ACTIVITY&&window.CITY_ACTIVITY.cities)||{};
+    document.querySelectorAll('.city-compact-card[data-city-key]').forEach(function(card){
+      if(card.querySelector('.city-next')) return;
+      var info=cityInfo(act[card.dataset.cityKey]);
+      card.dataset.bucket=info.bucket; card.dataset.next=info.next||'';
+      var s=document.createElement('span'); s.className='city-next'; s.textContent=info.label; card.appendChild(s);
+      var c=document.createElement('span'); c.className='city-count'; c.textContent=info.count?(info.count+(info.count===1?' night':' nights')+' listed'):''; card.appendChild(c);
+    });
+  }
+  // "9/17-9/20" -> {start,end} ISO; the year is inferred (upcoming, or ended within the last week)
+  function parseCardDates(card){
+    var t=(card.querySelector('.event-dates')||{}).textContent||'';
+    var m=/^\s*(\d{1,2})\/(\d{1,2})(?:\s*[-–]\s*(\d{1,2})\/(\d{1,2}))?\s*$/.exec(t);
+    if(!m) return null;
+    var y=new Date().getFullYear();
+    var start=y+'-'+pad(+m[1])+'-'+pad(+m[2]), end=m[3]?(y+'-'+pad(+m[3])+'-'+pad(+m[4])):start;
+    if(daysFromToday(end)< -7){ y++; start=y+'-'+pad(+m[1])+'-'+pad(+m[2]); end=m[3]?(y+'-'+pad(+m[3])+'-'+pad(+m[4])):start; }
+    return {start:start,end:end};
+  }
+  function onCards(type,fn){
+    var sel=type==='city'?'.city-compact-card[data-city-key]':'.event-compact-card:not(.spacer-card)';
+    if(document.querySelector(sel)) fn(); else document.addEventListener(type+'CardsReady',fn,{once:true});
+  }
+  window.PROTO={TODAY:TODAY,iso:iso,daysFromToday:daysFromToday,cityInfo:cityInfo,parseCardDates:parseCardDates,onCards:onCards,decorate:decorate};
+
+})();
+</script>
+<script>
+PROTO.onCards('city',function(){document.querySelectorAll('.city-compact-card:not(.spacer-card)').forEach(function(c){c.classList.add('chip');});});
+PROTO.onCards('event',function(){document.querySelectorAll('.event-compact-card:not(.spacer-card)').forEach(function(c){c.classList.add('frow');});});
+</script>
+</body>
+</html>
