@@ -12,16 +12,6 @@
       "nextDates": { "start": "2026-07-27", "end": "2026-08-03" }
     },
     {
-      "key": "bear-pride-chicago",
-      "name": "Bear Pride Chicago",
-      "category": "festival",
-      "typicalTiming": "",
-      "recurring": "annual",
-      "website": "https://www.instagram.com/bearpridechicago/",
-      "instagram": "https://www.instagram.com/bearpridechicago/",
-      "nextDates": { "start": "2026-08-28", "end": "2026-08-29" }
-    },
-    {
       "key": "bear-week-provincetown",
       "name": "Bear Week Provincetown",
       "category": "festival",
@@ -179,6 +169,16 @@
       "website": "https://bearcarnival.com/",
       "instagram": "https://www.instagram.com/maspalomasbearcarnival/",
       "nextDates": { "start": "2027-04-08", "end": "2027-04-18" }
+    },
+    {
+      "key": "bear-pride-chicago",
+      "name": "Bear Pride Chicago",
+      "category": "festival",
+      "typicalTiming": "",
+      "recurring": "annual",
+      "website": "https://www.instagram.com/bearpridechicago/",
+      "instagram": "https://www.instagram.com/bearpridechicago/",
+      "nextDates": { "start": "2027-08-28", "end": "2027-08-29" }
     },
     {
       "key": "amsterdam-bear-pride",
