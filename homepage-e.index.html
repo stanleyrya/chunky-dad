@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>chunky.dad — homepage option B: One night sky</title>
+    <title>chunky.dad — homepage option E: Tonight</title>
     <meta name="description" content="The ultimate travel guide for gay bears - city guides, events, and bear-owned businesses worldwide">
     <!-- Favicon and App Icons -->
     <link rel="icon" type="image/x-icon" href="/favicons/favicon.ico">
@@ -53,51 +53,62 @@
 .sec-head h2{margin:0;text-align:left;font-size:1.35rem;font-weight:700;line-height:1.15}
 .sec-head .eyebrow{display:block;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600;margin-bottom:.15rem}
 .sec-head .aside{font-size:.8rem;font-weight:500;white-space:nowrap}
-/* OPTION B — "One night sky": the splash dissolves into the same dusk ground
-   the city pages use, so index → city is one continuous world. */
-:root{--ink:#e8eaff;--muted:#9aa0c3;--acc:#9fb2ff;--card:#171a33;--edge:rgba(159,178,255,.16);--edge-hi:rgba(159,178,255,.38)}
-body.index-page{background:#0b0d13}
-.hero::after{content:'';position:absolute;left:0;right:0;bottom:0;height:160px;background:linear-gradient(to bottom,rgba(11,13,19,0),#0b0d13);pointer-events:none}
-body.index-page main{background:radial-gradient(circle at top,#1b2033 0%,#0b0d13 45%,#07090f 100%);color:var(--ink);padding:1.25rem 0 2rem}
+:root{--ink:#e8eaff;--muted:#9aa0c3;--acc:#9fb2ff;--card:#171a33;--edge:rgba(159,178,255,.16);--edge-hi:rgba(159,178,255,.38);--ground:#0b0d13}
+body.index-page{background:var(--ground)}
+/* The splash is a sunset: the purple sky darkens into the night ground, so
+   there is no seam to hide — the transition is the splash itself. */
+.hero{background:linear-gradient(180deg,#667eea 0%,#606cdc 28%,#3d4694 60%,#1a1e3c 84%,#0b0d13 100%)}
+body.index-page main{background:radial-gradient(ellipse at top,#161a2e 0%,#0b0d13 48%,#07090f 100%);color:var(--ink);padding:.25rem 0 2rem}
 .sec-head h2{color:var(--ink)}.sec-head .eyebrow{color:var(--acc)}.sec-head .aside{color:var(--muted)}
-.cities-compact,.bear-events-compact{background:none;color:inherit;padding:.25rem 0 1.75rem}
+.cities-compact,.bear-events-compact{background:none;color:inherit;padding:.5rem 0 1.5rem;overflow:visible}
 .cities-compact .container,.bear-events-compact .container{padding:0 1.25rem}
 .city-search-container{max-width:480px;margin:0 auto 1rem;padding:0 1.25rem}
 .city-search-input{background:rgba(255,255,255,.06);color:var(--ink);border:1px solid var(--edge);box-shadow:none;backdrop-filter:none;padding:.7rem 1.2rem}
 .city-search-input::placeholder{color:var(--muted)}.city-search-input:focus{background:rgba(255,255,255,.09);border-color:var(--edge-hi);box-shadow:none}
 .near-me-btn{background:rgba(255,255,255,.06);border:1px solid var(--edge);box-shadow:none;backdrop-filter:none}
 .near-me-btn.near-me-active{background:rgba(159,178,255,.22);border-color:var(--edge-hi)}
-.city-scroll-container{padding:0 0 .5rem}
-.city-compact-grid{gap:.55rem;padding:.25rem 1.25rem;min-width:max-content}
-.city-compact-card{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:.65rem;align-items:center;min-width:0;width:158px;background:var(--card);border:1px solid var(--edge);border-radius:14px;padding:.5rem .75rem .5rem .5rem;color:var(--ink);text-align:left;transition:transform .2s ease,border-color .2s ease}
-.city-compact-card:hover{transform:translateY(-2px);border-color:var(--edge-hi)}
-.city-compact-card .city-emoji-box{grid-row:1/3;width:40px;height:40px;padding:0;border-radius:10px;background:rgba(159,178,255,.12);border:none;backdrop-filter:none}
+.city-compact-card .city-emoji{animation:none}.city-compact-card.coming-soon,.event-compact-card.coming-soon{opacity:1}
+.city-compact-card.coming-soon .city-emoji,.event-compact-card.coming-soon .event-emoji{animation:none}
+#homeMap{border-radius:14px!important;margin-top:.9rem!important;height:300px;min-height:0;max-height:none;aspect-ratio:auto;border:1px solid var(--edge);background:#141733}
+@media(min-width:769px){#homeMap{height:420px}}
+footer{background:transparent;color:var(--muted);padding:1rem 0 2rem}footer .footer-copyright{color:var(--muted)}
+/* OPTION E — "Tonight": the page is organised by WHEN, not where. Cities and
+   festivals share the same buckets: Tonight, Tomorrow, This week, Later,
+   Regular nights. The splash stays purple; the night is a dark sheet pulled
+   up over it. */
+.hero{background:var(--solid-primary)}
+body.index-page main{margin-top:-28px;border-radius:28px 28px 0 0;position:relative;z-index:2;box-shadow:0 -16px 44px rgba(5,6,20,.55);padding-top:1.2rem;background:#0f1222}
+body.index-page main::before{content:'';display:block;width:44px;height:5px;border-radius:3px;background:rgba(159,178,255,.25);margin:0 auto 1.1rem}
+.cities-compact .container:first-of-type{order:-1}
+.city-scroll-container{overflow:visible;padding:0}
+.city-compact-grid{flex-direction:column;gap:1.1rem;min-width:0;padding:0 1.25rem;max-width:1100px;margin:0 auto}
+.agenda-group h3{margin:0 0 .5rem;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);font-weight:600;display:flex;align-items:center;gap:.6rem}
+.agenda-group h3::after{content:'';flex:1;height:1px;background:var(--edge)}
+.agenda-group.tonight h3{color:#ffd48a}
+.agenda-row{display:flex;flex-wrap:wrap;gap:.5rem;align-items:stretch}
+.city-compact-card{display:inline-flex;flex-direction:row;align-items:center;gap:.45rem;width:auto;min-width:0;background:var(--card);border:1px solid var(--edge);border-radius:999px;padding:.38rem .85rem .38rem .42rem;color:var(--ink);text-align:left;transition:border-color .15s ease,transform .15s ease}
+.city-compact-card:hover{transform:translateY(-1px);border-color:var(--edge-hi)}
+.agenda-group.tonight .city-compact-card{border-color:rgba(255,212,138,.35);background:#1c1a2e}
+.city-compact-card .city-emoji-box{width:28px;height:28px;padding:0;border-radius:50%;background:rgba(159,178,255,.12);border:none;backdrop-filter:none}
 .city-compact-card:hover .city-emoji-box{background:rgba(159,178,255,.2);border-color:transparent}
-.city-compact-card .city-emoji{font-size:1.45rem}
-.city-compact-card .city-name{font-size:.88rem;letter-spacing:0;align-self:end;color:var(--ink)}
-.city-next{color:var(--acc);align-self:start}
-.city-compact-card.coming-soon{opacity:1;border-style:dashed}.city-compact-card.coming-soon .city-emoji{animation:none}
-@media(min-width:769px){.city-scroll-container{overflow:visible}.city-compact-grid{flex-wrap:wrap;min-width:0;max-width:1200px;margin:0 auto}.city-compact-card{width:auto;min-width:150px}}
-#homeMap{border-radius:14px!important;margin-top:.9rem!important;height:340px;min-height:0;max-height:none;aspect-ratio:auto;border:1px solid var(--edge);background:#141733}
-@media(min-width:769px){#homeMap{height:460px}}
-/* events: a timeline */
-.event-scroll-container{overflow:visible;padding:0}
-.event-compact-grid{flex-direction:column;gap:0;padding:0 1.25rem;min-width:0;max-width:760px;margin:0 auto;position:relative}
-.event-compact-grid::before{content:'';position:absolute;top:1rem;bottom:1rem;left:calc(1.25rem + 21px);width:2px;background:var(--edge)}
-.event-compact-card{flex-direction:row;align-items:center;gap:1rem;min-width:0;padding:.55rem 0;color:var(--ink);text-align:left;position:relative}
-.event-compact-card:hover{transform:none}
-.event-compact-card .event-emoji-box{width:44px;height:44px;padding:0;border-radius:12px;background:var(--card);border:1px solid var(--edge);backdrop-filter:none;flex:0 0 auto;z-index:1}
-.event-compact-card:hover .event-emoji-box{border-color:var(--edge-hi);background:var(--card)}
-.event-compact-card .event-emoji{font-size:1.35rem}
-.event-compact-card .event-favicon{width:30px;height:30px;border-radius:7px}
-.event-compact-card .event-content{align-items:flex-start;gap:.05rem;text-align:left;padding:.55rem .9rem;border-radius:12px;flex:1 1 auto;min-width:0}
-.event-compact-card:hover .event-content{background:rgba(159,178,255,.08)}
-.event-compact-card .bear-event-name{white-space:normal;color:var(--ink);font-size:.92rem;letter-spacing:0;line-height:1.2}
-.event-compact-card .event-dates{color:var(--acc);font-weight:600;font-size:.78rem;opacity:1}
-.event-compact-card .event-location{color:var(--muted);font-size:.76rem;opacity:1}
-.event-compact-card.coming-soon{opacity:1}.event-compact-card.coming-soon .event-emoji-box{border-style:dashed}.event-compact-card.coming-soon .event-emoji{animation:none}
-footer{background:transparent;color:var(--muted);padding:1rem 0 2rem}
-footer .footer-copyright{color:var(--muted)}
+.city-compact-card .city-emoji{font-size:1.05rem}
+.city-compact-card .city-name{font-size:.84rem;letter-spacing:0;color:var(--ink)}
+.city-next{display:none;font-size:.72rem;color:var(--acc);font-weight:600}
+.agenda-group.later .city-next,.agenda-group.week .city-next{display:inline}
+.agenda-group.later .city-next::before,.agenda-group.week .city-next::before{content:'·';color:var(--muted);margin:0 .3rem 0 .05rem;font-weight:400}
+.city-compact-card.coming-soon{border-style:dashed}
+.event-compact-card{flex-direction:row;align-items:center;gap:.7rem;min-width:0;flex:1 1 240px;max-width:400px;background:var(--card);border:1px solid var(--edge);border-radius:14px;padding:.5rem .9rem .5rem .5rem;color:var(--ink);text-align:left;transition:border-color .15s ease,transform .15s ease}
+.event-compact-card:hover{transform:translateY(-1px);border-color:var(--edge-hi)}
+.agenda-group.tonight .event-compact-card{border-color:rgba(255,212,138,.35);background:#1c1a2e}
+.event-compact-card .event-emoji-box{width:40px;height:40px;padding:0;border-radius:10px;background:rgba(159,178,255,.12);border:none;backdrop-filter:none;flex:0 0 auto}
+.event-compact-card:hover .event-emoji-box{background:rgba(159,178,255,.2);border-color:transparent}
+.event-compact-card .event-emoji{font-size:1.3rem}.event-compact-card .event-favicon{width:28px;height:28px;border-radius:7px}
+.event-compact-card .event-content{align-items:flex-start;gap:.05rem;text-align:left;min-width:0}
+.event-compact-card .bear-event-name{white-space:normal;color:var(--ink);font-size:.86rem;letter-spacing:0;line-height:1.2}
+.event-compact-card .event-dates{color:var(--acc);font-weight:600;font-size:.74rem;opacity:1}
+.event-compact-card .event-location{color:var(--muted);font-size:.72rem;opacity:1}
+.bear-events-compact{display:none}
+.cities-compact .sec-head{margin-bottom:.9rem}
     </style>
 </head>
 <body class="index-page">
@@ -261,6 +272,36 @@ footer .footer-copyright{color:var(--muted)}
   }
   window.PROTO={TODAY:TODAY,iso:iso,daysFromToday:daysFromToday,cityInfo:cityInfo,parseCardDates:parseCardDates,onCards:onCards,decorate:decorate};
   document.addEventListener('cityCardsReady',decorate); decorate();
+})();
+</script>
+<script>
+// E: regroup cities AND festivals into time buckets
+(function(){
+  var ORDER=[['tonight','Tonight'],['tomorrow','Tomorrow'],['week','This week'],['later','Coming up'],['regular','Regular nights']];
+  var pending={city:false,event:false};
+  function build(){
+    var grid=document.getElementById('city-grid'); if(!grid) return;
+    var groups={};
+    ORDER.forEach(function(o){ var g=document.createElement('div'); g.className='agenda-group '+o[0]; var h=document.createElement('h3'); h.textContent=o[1]; var r=document.createElement('div'); r.className='agenda-row'; g.appendChild(h); g.appendChild(r); groups[o[0]]=g; });
+    var items=[];
+    Array.from(grid.querySelectorAll('.city-compact-card[data-city-key]')).forEach(function(c){ items.push({el:c,bucket:c.dataset.bucket||'later',sort:c.dataset.next||'9999'}); });
+    var more=grid.querySelector('#more-cities-btn');
+    var evGrid=document.getElementById('event-grid');
+    if(evGrid){ Array.from(evGrid.querySelectorAll('.event-compact-card')).forEach(function(c){
+      if(c.classList.contains('spacer-card')) return;
+      if(c.classList.contains('coming-soon')){ items.push({el:c,bucket:'later',sort:'9999-99'}); return; }
+      var d=PROTO.parseCardDates(c); var b='later', sort='9999';
+      if(d){ var ds=PROTO.daysFromToday(d.start), de=PROTO.daysFromToday(d.end); sort=d.start;
+        if(ds<=0&&de>=0) b='tonight'; else if(ds===1) b='tomorrow'; else if(ds>1&&ds<7) b='week'; else b='later'; }
+      items.push({el:c,bucket:b,sort:sort}); }); }
+    items.sort(function(a,b){return a.sort<b.sort?-1:a.sort>b.sort?1:0;});
+    items.forEach(function(it){ groups[it.bucket].querySelector('.agenda-row').appendChild(it.el); });
+    if(more) groups.later.querySelector('.agenda-row').appendChild(more);
+    grid.innerHTML='';
+    ORDER.forEach(function(o){ if(groups[o[0]].querySelector('.agenda-row').children.length) grid.appendChild(groups[o[0]]); });
+  }
+  function ready(t){ pending[t]=true; if(pending.city&&pending.event) build(); }
+  PROTO.onCards('city',function(){ready('city');}); PROTO.onCards('event',function(){ready('event');});
 })();
 </script>
 </body>
