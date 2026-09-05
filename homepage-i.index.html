@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>chunky.dad — homepage option B2: Night sky, fixed</title>
+    <title>chunky.dad — homepage option I: Map ground</title>
     <meta name="description" content="The ultimate travel guide for gay bears - city guides, events, and bear-owned businesses worldwide">
     <!-- Favicon and App Icons -->
     <link rel="icon" type="image/x-icon" href="/favicons/favicon.ico">
@@ -57,52 +57,77 @@
 .sec-head .aside{font-size:.8rem;font-weight:500;white-space:nowrap}
 :root{--ink:#e8eaff;--muted:#9aa0c3;--acc:#9fb2ff;--card:#171a33;--edge:rgba(159,178,255,.16);--edge-hi:rgba(159,178,255,.38);--ground:#0b0d13}
 body.index-page{background:var(--ground)}
-/* The splash is a sunset: the purple sky darkens into the night ground, so
-   there is no seam to hide — the transition is the splash itself. */
-.hero{background:linear-gradient(180deg,#667eea 0%,#606cdc 28%,#3d4694 60%,#1a1e3c 84%,#0b0d13 100%)}
-body.index-page main{background:radial-gradient(ellipse at top,#161a2e 0%,#0b0d13 48%,#07090f 100%);color:var(--ink);padding:.25rem 0 2rem}
+body.index-page main{background:radial-gradient(ellipse at top,#161a2e 0%,#0b0d13 48%,#07090f 100%);color:var(--ink);padding:0 0 1.5rem}
 .sec-head h2{color:var(--ink)}.sec-head .eyebrow{color:var(--acc)}.sec-head .aside{color:var(--muted)}
-.cities-compact,.bear-events-compact{background:none;color:inherit;padding:.5rem 0 1.5rem;overflow:visible}
+.cities-compact,.bear-events-compact{background:none;color:inherit;padding:0;overflow:visible}
 .cities-compact .container,.bear-events-compact .container{padding:0 1.25rem}
-.city-search-container{max-width:480px;margin:0 auto 1rem;padding:0 1.25rem}
-.city-search-input{background:rgba(255,255,255,.06);color:var(--ink);border:1px solid var(--edge);box-shadow:none;backdrop-filter:none;padding:.7rem 1.2rem}
+.city-search-container{max-width:480px;margin:0 auto .9rem;padding:0 1.25rem}
+.city-search-input{background:rgba(255,255,255,.06);color:var(--ink);border:1px solid var(--edge);box-shadow:none;backdrop-filter:none;padding:.65rem 1.1rem}
 .city-search-input::placeholder{color:var(--muted)}.city-search-input:focus{background:rgba(255,255,255,.09);border-color:var(--edge-hi);box-shadow:none}
 .near-me-btn{background:rgba(255,255,255,.06);border:1px solid var(--edge);box-shadow:none;backdrop-filter:none}
 .near-me-btn.near-me-active{background:rgba(159,178,255,.22);border-color:var(--edge-hi)}
-.city-compact-card .city-emoji{animation:none}.city-compact-card.coming-soon,.event-compact-card.coming-soon{opacity:1}
-.city-compact-card.coming-soon .city-emoji,.event-compact-card.coming-soon .event-emoji{animation:none}
-#homeMap{border-radius:14px!important;margin-top:.9rem!important;height:300px;min-height:0;max-height:none;aspect-ratio:auto;border:1px solid var(--edge);background:#141733}
-@media(min-width:769px){#homeMap{height:420px}}
-footer{background:transparent;color:var(--muted);padding:1rem 0 2rem}footer .footer-copyright{color:var(--muted)}
-.city-scroll-container{padding:0 0 .5rem}
-.city-compact-grid{gap:.55rem;padding:.25rem 1.25rem;min-width:max-content}
-.city-compact-card{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:.65rem;align-items:center;min-width:0;width:158px;background:var(--card);border:1px solid var(--edge);border-radius:14px;padding:.5rem .75rem .5rem .5rem;color:var(--ink);text-align:left;transition:transform .2s ease,border-color .2s ease}
-.city-compact-card:hover{transform:translateY(-2px);border-color:var(--edge-hi)}
-.city-compact-card .city-emoji-box{grid-row:1/3;width:40px;height:40px;padding:0;border-radius:10px;background:rgba(159,178,255,.12);border:none;backdrop-filter:none}
-.city-compact-card:hover .city-emoji-box{background:rgba(159,178,255,.2);border-color:transparent}
-.city-compact-card .city-emoji{font-size:1.45rem}
-.city-compact-card .city-name{font-size:.88rem;letter-spacing:0;align-self:end;color:var(--ink)}
-.city-next{color:var(--acc);align-self:start}
-.city-compact-card.coming-soon{border-style:dashed}
-@media(min-width:769px){.city-scroll-container{overflow:visible}.city-compact-grid{flex-wrap:wrap;min-width:0;max-width:1200px;margin:0 auto}.city-compact-card{width:auto;min-width:150px}}
-.city-count{display:none}
-/* OPTION B2 — B with the seam gone (sunset splash) and festivals as a
-   poster rail with month markers instead of the vertical timeline. */
-.event-scroll-container{padding:0 0 .75rem}
-.event-compact-grid{gap:.6rem;padding:.25rem 1.25rem;min-width:max-content;align-items:stretch}
-.month-label{flex:0 0 auto;writing-mode:vertical-rl;transform:rotate(180deg);font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--acc);font-weight:600;padding:.5rem 0;border-right:1px solid var(--edge);margin:0 .15rem 0 .35rem;display:flex;align-items:center;justify-content:center;white-space:nowrap}
-.month-label:first-of-type{margin-left:0}
-.event-compact-card{flex-direction:column;align-items:flex-start;text-align:left;gap:.55rem;width:172px;min-width:172px;background:var(--card);border:1px solid var(--edge);border-radius:16px;padding:.8rem;color:var(--ink);transition:transform .2s ease,border-color .2s ease}
-.event-compact-card:hover{transform:translateY(-3px);border-color:var(--edge-hi)}
-.event-compact-card .event-emoji-box{width:52px;height:52px;padding:0;border-radius:13px;background:rgba(159,178,255,.12);border:none;backdrop-filter:none}
-.event-compact-card:hover .event-emoji-box{background:rgba(159,178,255,.2);border-color:transparent}
-.event-compact-card .event-emoji{font-size:1.7rem}.event-compact-card .event-favicon{width:36px;height:36px;border-radius:8px}
-.event-compact-card .event-content{align-items:flex-start;gap:.15rem;text-align:left}
-.event-compact-card .bear-event-name{white-space:normal;color:var(--ink);font-size:.9rem;letter-spacing:0;line-height:1.2}
-.event-compact-card .event-dates{color:var(--acc);font-weight:600;font-size:.78rem;opacity:1}
-.event-compact-card .event-location{color:var(--muted);font-size:.74rem;opacity:1}
-.event-compact-card.coming-soon{border-style:dashed}
+.city-compact-card .city-emoji,.event-compact-card .event-emoji{animation:none}
+.city-compact-card.coming-soon,.event-compact-card.coming-soon{opacity:1}
 .city-next,.city-count{display:none!important}
+#homeMap{border-radius:14px!important;margin:0!important;min-height:0;max-height:none;aspect-ratio:auto;border:1px solid var(--edge);background:#141733}
+footer{background:transparent;color:var(--muted);padding:1rem 0 4.5rem}footer .footer-copyright{color:var(--muted)}
+/* compact city chip + compact festival row, shared by the dense layouts */
+.chip{display:inline-flex;flex-direction:row;align-items:center;gap:.4rem;width:auto;min-width:0;background:var(--card);border:1px solid var(--edge);border-radius:999px;padding:.32rem .7rem .32rem .36rem;color:var(--ink);text-align:left;transition:border-color .15s ease}
+.chip:hover{transform:none;border-color:var(--edge-hi)}
+.chip .city-emoji-box{width:26px;height:26px;padding:0;border-radius:50%;background:rgba(159,178,255,.12);border:none;backdrop-filter:none}
+.chip:hover .city-emoji-box{background:rgba(159,178,255,.2);border-color:transparent}
+.chip .city-emoji{font-size:1rem}.chip .city-name{font-size:.8rem;letter-spacing:0;color:var(--ink)}
+.chip.coming-soon{border-style:dashed}
+.frow{display:grid;grid-template-columns:28px 1fr auto;align-items:center;column-gap:.6rem;min-width:0;width:auto;padding:.4rem .35rem;border-top:1px solid var(--edge);border-radius:0;color:var(--ink);text-align:left;transition:background .15s ease}
+.frow:first-of-type{border-top:0}
+.frow:hover{transform:none;background:rgba(159,178,255,.06)}
+.frow .event-emoji-box{width:28px;height:28px;padding:0;border-radius:7px;background:rgba(159,178,255,.12);border:none;backdrop-filter:none}
+.frow:hover .event-emoji-box{background:rgba(159,178,255,.2);border-color:transparent}
+.frow .event-emoji{font-size:.95rem}.frow .event-favicon{width:20px;height:20px;border-radius:5px}
+.frow .event-content{display:contents}
+.frow .bear-event-name{grid-column:2;grid-row:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.8rem;letter-spacing:0;color:var(--ink);line-height:1.2;display:block!important}
+.frow .event-location{grid-column:2;grid-row:2;font-size:.66rem;color:var(--muted);opacity:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.frow .event-dates{grid-column:3;grid-row:1/3;font-size:.72rem;font-weight:600;color:var(--acc);opacity:1;white-space:nowrap;text-align:right;max-width:9rem;overflow:hidden;text-overflow:ellipsis}
+.frow .event-emoji-box{grid-row:1/3}
+.frow.coming-soon .event-emoji-box{border:1px dashed var(--edge-hi);background:none}
+/* transition: a crisp edge, the same hairline + shadow the city pages put between their purple header and the dusk body. */
+.hero{background:var(--solid-primary);position:relative;z-index:2;border-bottom:1px solid rgba(255,255,255,.18);box-shadow:0 12px 26px rgba(0,0,0,.35)}
+/* OPTION I — "Map ground": the (dark) map is the floor of the whole content area.
+   Cities and festivals are glass panels floating over it; on phones the cities are a
+   bottom sheet and the festivals a panel below. */
+body.index-page main{padding:0;background:#0b0d13}
+.cities-compact{position:relative;height:82svh;min-height:480px;overflow:hidden}
+.cities-compact>.container:has(#homeMap){position:absolute;inset:0;padding:0;max-width:none;z-index:1}
+#homeMap{position:absolute;inset:0;height:100%;width:100%;border-radius:0!important;border:none}
+.cities-compact>.sec-head{display:none}
+.cities-compact>.container:has(.city-search-container){position:absolute;top:.8rem;left:0;right:0;z-index:4;padding:0 .9rem;pointer-events:none;max-width:none}
+.city-search-container{margin:0 auto;padding:0;pointer-events:auto;max-width:440px}
+.city-search-input{background:rgba(11,13,19,.86);backdrop-filter:blur(10px);border-color:var(--edge-hi);box-shadow:0 8px 24px rgba(0,0,0,.45)}
+.near-me-btn{background:rgba(11,13,19,.86);backdrop-filter:blur(10px);border-color:var(--edge-hi)}
+.cities-compact .maplibregl-ctrl-top-left{top:4.4rem}
+.city-scroll-container{position:absolute;left:0;right:0;bottom:0;z-index:3;height:38%;background:rgba(11,13,19,.84);backdrop-filter:blur(14px);border-top:1px solid var(--edge-hi);border-radius:18px 18px 0 0;overflow:auto;padding:.9rem .9rem 1rem;scrollbar-width:none}
+.city-scroll-container::before{content:'';display:block;width:40px;height:4px;border-radius:2px;background:rgba(159,178,255,.35);margin:-.3rem auto .7rem}
+.city-compact-grid{flex-wrap:wrap;gap:.4rem;min-width:0;padding:0}
+.bear-events-compact{padding:1rem 0 0}
+.bear-events-compact>.sec-head{margin-bottom:.5rem}
+.event-scroll-container{overflow:visible;padding:0 1.25rem}
+.event-compact-grid{flex-direction:column;gap:0;min-width:0;padding:0;background:rgba(23,26,51,.45);border:1px solid var(--edge);border-radius:12px;overflow:hidden}
+@media(min-width:1000px){
+ body.index-page main{display:grid;grid-template-columns:1fr}
+ .cities-compact,.bear-events-compact{grid-area:1/1}
+ .cities-compact{position:relative;height:100vh;min-height:0;z-index:1}
+ .cities-compact>.container:has(.city-search-container){left:1rem;right:auto;width:300px;padding:0}
+ .city-search-container{max-width:none}
+ .city-scroll-container{left:1rem;right:auto;top:4.4rem;bottom:1rem;height:auto;width:300px;border-radius:16px;border:1px solid var(--edge-hi)}
+ .city-scroll-container::before{display:none}
+ .city-compact-grid{flex-direction:column;flex-wrap:nowrap;gap:.3rem}
+ .chip{border-radius:10px;padding:.4rem .6rem}
+ .cities-compact .maplibregl-ctrl-top-left{left:calc(300px + 1.6rem);top:.8rem}
+ .bear-events-compact{position:relative;z-index:3;justify-self:end;align-self:start;height:calc(100vh - 2rem);width:360px;margin:1rem;padding:.8rem;background:rgba(11,13,19,.84);backdrop-filter:blur(14px);border:1px solid var(--edge-hi);border-radius:16px;display:flex;flex-direction:column;min-height:0;box-sizing:border-box}
+ .bear-events-compact>.sec-head{padding:0}
+ .event-scroll-container{padding:0;overflow:auto;min-height:0;scrollbar-width:none}
+ .event-compact-grid{background:none;border:none}
+}
     </style>
 </head>
 <body class="index-page">
@@ -269,20 +294,9 @@ footer{background:transparent;color:var(--muted);padding:1rem 0 2rem}footer .foo
 })();
 </script>
 <script>
-// B2: month markers along the festival rail
-PROTO.onCards('event',function(){
-  var grid=document.getElementById('event-grid'); if(!grid) return;
-  var last=null, undatedMarked=false;
-  Array.from(grid.querySelectorAll('.event-compact-card')).forEach(function(card){
-    if(card.classList.contains('spacer-card')) return;
-    if(card.classList.contains('coming-soon')) return;
-    var d=PROTO.parseCardDates(card); var key, text;
-    if(d){ var dt=new Date(d.start+'T12:00:00'); key=d.start.slice(0,7); text=dt.toLocaleDateString(undefined,{month:'long'}); if(dt.getFullYear()!==new Date().getFullYear()) text+=' ’'+String(dt.getFullYear()).slice(2); }
-    else { if(undatedMarked) return; key='later'; text='Dates to come'; undatedMarked=true; }
-    if(key===last) return; last=key;
-    var l=document.createElement('div'); l.className='month-label'; l.textContent=text; grid.insertBefore(l,card);
-  });
-});
+(function(){ if(!window.maplibregl) return; var M=maplibregl.Map; function Dark(o){ return new M(Object.assign({},o,{style:'https://tiles.openfreemap.org/styles/dark'})); } Dark.prototype=M.prototype; maplibregl.Map=Dark; })();
+PROTO.onCards('city',function(){document.querySelectorAll('.city-compact-card:not(.spacer-card)').forEach(function(c){c.classList.add('chip');});});
+PROTO.onCards('event',function(){document.querySelectorAll('.event-compact-card:not(.spacer-card)').forEach(function(c){c.classList.add('frow');});});
 </script>
 </body>
 </html>
