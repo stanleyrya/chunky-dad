@@ -76,7 +76,8 @@ const OG_TEMPLATE_VERSION = 2;
 // their own a pure-CSS change to them is invisible to the render gate.
 //
 // 2: dropped the gradient fade and then the divider rule; venue pins.
-const OG_PLACE_TEMPLATE_VERSION = 2;
+// 3: larger pin tiles.
+const OG_PLACE_TEMPLATE_VERSION = 3;
 
 // Bootstrap Icons geometry, inlined — same paths the cards use.
 const OG_ICONS = {
@@ -429,7 +430,7 @@ function mapScript(configJson) {
     var pad = Math.max(10, Math.min(70, Math.min(box.clientWidth, box.clientHeight) * 0.2));
     // pins are 40px and anchored at their centre, so a tile on the boundary
     // hangs half off the card unless the frame leaves room for it
-    if (usePins) pad = Math.max(pad, 78);
+    if (usePins) pad = Math.max(pad, 90);
     // Venues in one neighbourhood would otherwise fit to a single block, so a
     // city card is allowed past the city's default zoom but not far past it.
     var maxZoom = usePins ? Math.min(16, Math.max(cfg.cityZoom + 3, 13)) : cfg.cityZoom;
@@ -444,10 +445,18 @@ function mapScript(configJson) {
     // rendering fault; three spaced ones read as a scene.
     if (usePins && placed.length > 1) {
       var kept = [];
+      // measured, not assumed: the tile is sized in CSS and has changed size
+      // more than once, and a hard-coded distance silently stops matching it
+      var pinSize = placed[0].marker.getElement().offsetWidth || 40;
       placed.forEach(function (item) {
         var pointPx = map.project([item.lng, item.lat]);
+        // 0.82 rather than a full tile width: strict non-overlap threw away
+        // most of a dense old town's venues (Sitges kept one of six). A pair
+        // that just touches reads as two neighbouring places, which is what
+        // they are; only real stacking looks like a fault.
+        var minGap = pinSize * 0.82;
         var collides = kept.some(function (k) {
-          return Math.abs(k.x - pointPx.x) < 40 && Math.abs(k.y - pointPx.y) < 40;
+          return Math.abs(k.x - pointPx.x) < minGap && Math.abs(k.y - pointPx.y) < minGap;
         });
         if (collides) { item.marker.remove(); return; }
         kept.push(pointPx);
@@ -946,7 +955,8 @@ ${m ? '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/ma
   /* the subtitle is a tagline, not a time or a venue — the clock glyph beside
      it was reading as information it is not */
   body.place .row svg { display: none; }
-  body.place .og-pin { width: 40px; height: 40px; border-radius: 11px; }
+  body.place .og-pin { width: 54px; height: 54px; border-radius: 15px; }
+  body.place .og-pin img { padding: 7px; }
   body.place .row { gap: 0; }
   /* a city with no pinnable venues shows a bare map rather than a lone dot in
      the middle of it — an unlabelled marker means nothing on a city card */
