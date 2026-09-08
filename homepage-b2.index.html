@@ -285,6 +285,12 @@ body.index-page header.visible{opacity:1!important}
     <script src="js/home-map.js"></script>
     <script src="js/app.js"></script>
 <script>
+// Generated from data/event-colors/*.json (faviconPlate keyed by website
+// domain). In production this would be a generated file like
+// js/city-activity.data.js, not inlined.
+window.PROTO_PLATES={"furball.nyc":"#ffffff","bearracuda.com":"#fffefe","eventbrite.de":"#ffffff","folsomeurope.berlin":"#000000","pigberlin.de":"#ffffff","beefmince.com":"#ffffff","linktr.ee":"#ffffff","jackhammerchicago.com":"#000000","chunk-party.com":"#ffffff","northalsted.com":"#ffffff","thedallaseagle.com":"#ffffff","twisted-bear.com":"#ffffff","amsterdambearpride.com":"#ffffff","gaytravel4u.com":"#ffffff","bearcarnival.com":"#ffffff","bearfestivalmilano.it":"#ffffff","bearjamboree.com":"#ffffff","pbs.twimg.com":"#ffffff","bearpride.cologne":"#ffffff","bearssitges.org":"#ffffff","beefdip.com":"#ffffff","brightonbearweekend.com":"#ffffff","theurbanbear.com":"#000000","folsomstreet.org":"#000000","ibc-ps.com":"#ffffff","internationalmrleather.com":"#fefefe","lazybearfund.org":"#ffffff","madbear.org":"#ffffff","leatherweekend.org":"#ffffff","southerndecadence.com":"#ffffff","bearitmtl.com":"#ffffff","clubchubusa.com":"#ffffff","eaglela.com":"#000000","clubxhubusa.com":"#ffffff","phoenixbarnola.com":"#000000","whitney.org":"#ffffff","animal.nyc":"#ffffff","eagle-ny.com":"#ffffff","fuzzy.nyc":"#eba1cc","tys.nyc":"#ffffff","rockbarnyc.com":"#000000","nowherebarnyc.com":"#ffffff","flexbar.nyc":"#ffffff","dieselseattle.com":"#f6f6f6","thelumberyardbar.com":"#010100","scandalsitges.com":"#ffffff","bearsevents.com":"#ffffff","sitgesbearcave.com":"#ffffff","entradium.com":"#0a0b0c","popairparty.com":"#ffffff","en.praguebears.cz":"#632502"};
+</script>
+<script>
 // Prototype-only helpers: "next event" under each city (from window.CITY_ACTIVITY),
 // date parsing off the rendered festival cards, and a ready hook for each card type.
 (function(){
@@ -405,6 +411,19 @@ PROTO.onCards('event',function(){
   hint.addEventListener('click',go);
   hint.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } });
 })();
+</script>
+<script>
+// Each festival icon sits on ITS OWN plate colour, the way the city pages
+// tint theirs from the extracted faviconPlate — white was only the fallback.
+PROTO.onCards('event',function(){
+  var plates=window.PROTO_PLATES||{};
+  document.querySelectorAll('.event-emoji-box.has-favicon').forEach(function(box){
+    var img=box.querySelector('.event-favicon'); if(!img) return;
+    var m=/favicon-(.+?)-\d+px\./.exec(img.getAttribute('src')||''); if(!m) return;
+    var plate=plates[m[1]];
+    if(plate) box.style.setProperty('--fav-plate',plate);
+  });
+});
 </script>
 </body>
 </html>
