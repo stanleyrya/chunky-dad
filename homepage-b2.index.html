@@ -226,8 +226,10 @@ body.index-page header.visible{opacity:1!important}
 .event-compact-card .bear-event-name{-webkit-line-clamp:1!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block!important}
 .event-compact-card .event-paren{display:none}
 
-/* wide enough that no title needs an ellipsis on three lines */
-.event-compact-card{width:312px!important;min-width:312px!important}
+/* cards size to their own text, the way the city tiles do */
+.event-compact-card{width:auto!important;min-width:0!important;max-width:none}
+.event-compact-card .event-content{width:auto;min-width:0}
+.event-compact-card .bear-event-name,.event-compact-card .event-dates,.event-compact-card .event-location{max-width:none;overflow:visible;text-overflow:clip}
     </style>
 </head>
 <body class="index-page">
