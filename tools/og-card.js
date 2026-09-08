@@ -64,7 +64,7 @@ const AURORA_FALLBACK = { c1: '#667eea', c2: '#ff6b6b', c3: '#2a2c4d' };
 // on every og:image URL — otherwise Facebook, iMessage and friends keep
 // serving the card they cached before the redesign. tools/generate-event-pages.js
 // mixes it into the cache-busting hash for exactly that reason.
-const OG_TEMPLATE_VERSION = 2;
+const OG_TEMPLATE_VERSION = 3;
 
 // The same knob for the city/home layout alone.
 //
@@ -78,7 +78,8 @@ const OG_TEMPLATE_VERSION = 2;
 // 2: dropped the gradient fade and then the divider rule; venue pins.
 // 3: larger pin tiles.
 // 4: pin ring dropped to the site's own 0.22 — 0.9 haloed dark artwork.
-const OG_PLACE_TEMPLATE_VERSION = 4;
+// 5: title line-height back to the base 1.15; 1.06 clipped descenders.
+const OG_PLACE_TEMPLATE_VERSION = 5;
 
 // Bootstrap Icons geometry, inlined — same paths the cards use.
 const OG_ICONS = {
@@ -759,8 +760,13 @@ ${m ? '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/ma
     /* NOT tighter than this. The title clips with overflow:hidden (that is
        what -webkit-line-clamp needs), so the line box has to be taller than
        the face's ascender-to-descender — at 1.06 the box was shorter than
-       Poppins needs and the tail came off every g, y and j. */
-    line-height: 1.15;
+       Poppins needs and the tail came off every g, y and j.
+       1.15 was still short: measured across all 148 live cards, 146 of them
+       overflowed their title box by ~11px at 88px type — the y of "CHUNK
+       Brooklyn" was losing its tail on every one. 1.3 still left 4px hanging;
+       1.4 is the first value where all 148 come back clean, checked by
+       comparing each title's scrollHeight to its clientHeight. */
+    line-height: 1.4;
     letter-spacing: -1.4px;
     /* the last resort, after the size steps below have already tried */
     display: -webkit-box;
@@ -941,7 +947,11 @@ ${m ? '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/ma
   body.place:not(.no-map) { padding-right: 566px; }
   /* A city name is one or two words and must not wrap mid-word, so it steps
      down by length rather than clamping. "Provincetown" is the wide case. */
-  body.place .title { font-size: 104px; line-height: 1.06; -webkit-line-clamp: 2; }
+  /* Line-height is deliberately NOT set here: the base is 1.4, which is what
+     "Sitges" needed for its g and what every event title needed too. Naming it
+     again would be a second place for the two to drift apart — which is how
+     this broke in the first place. */
+  body.place .title { font-size: 104px; -webkit-line-clamp: 2; }
   body.place .title.p-md { font-size: 88px; }
   body.place .title.p-sm { font-size: 74px; }
   body.place .title.p-xs { font-size: 62px; }
