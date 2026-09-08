@@ -206,7 +206,11 @@ function buildEventHtml(cityKey, cityName, event, ctx) {
   const generatedUrl = `${SITE_BASE}${generatedCard}${version ? `?v=${version}` : ''}`;
   const ogImage = wantsCard ? generatedUrl : cityFallbackImage(cityKey);
 
-  const canonical = `/${cityKey}/`;
+  // Self-referential. It used to name the CITY page, which tells every
+  // crawler "the real page is /nyc/" — so a share of an event previewed as
+  // the city. Combined with the head meta-refresh below that was two separate
+  // instructions to go and read the wrong og:image.
+  const canonical = `/${cityKey}/${encodeURIComponent(event.slug)}/`;
   // Build a date parameter from event.startDate in YYYY-MM-DD for deep-link.
   //
   // A RECURRING event must not carry one. Its startDate is the SERIES start,
@@ -254,10 +258,36 @@ ${MARKER}
   <meta name="twitter:title" content="${title}">
   <meta name="twitter:description" content="${description}">
   <meta name="twitter:image" content="${ogImage}">${flyerMeta}
-  <meta http-equiv="refresh" content="0; url=${redirectTarget}">
+  <!-- Inline and tiny: this page is a redirect for almost everyone, so it must
+       not pull a stylesheet. It only ever renders for a visitor without JS. -->
+  <style>
+    body { margin: 0; background: #10131f; color: #fff;
+           font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    .event-stub { max-width: 34rem; margin: 0 auto; padding: 3rem 1.5rem; }
+    .event-stub h1 { font-size: 1.6rem; line-height: 1.25; margin: 0 0 .5rem; }
+    .event-stub p { margin: 0 0 1rem; color: rgba(255,255,255,.8); }
+    .event-stub a { color: #9db2ff; }
+  </style>
 </head>
 <body>
-  <noscript><meta http-equiv="refresh" content="0; url=${redirectTarget}"></noscript>
+  <!-- The redirect is JavaScript-ONLY, deliberately, and this page has real
+       content instead of a second redirect.
+
+       There used to be a <meta http-equiv="refresh"> in the <head> AND one in
+       a <noscript> here. Link-preview crawlers follow both — they run no JS,
+       which is exactly the condition the <noscript> is written for — so
+       iMessage fetched this page, was sent on to /<city>/, and previewed the
+       CITY card instead of this event's. Testers that do not follow
+       meta-refresh showed the right card, which is the split the owner saw.
+
+       So: a visitor with JS is redirected by the script below, instantly. A
+       visitor without JS, and any crawler, gets this page as it stands — the
+       og: tags in the head, and the link underneath to follow by hand. -->
+  <main class="event-stub">
+    <h1>${title}</h1>
+    <p>${description}</p>
+    <p><a href="${redirectTarget}">Open in the ${sanitize(cityName)} guide &rarr;</a></p>
+  </main>
   <script>
     (function(){
       try {
