@@ -9,8 +9,21 @@ const AURORA_CARD_ICONS = {
     pin: [
         'M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10zm0-7a3 3 0 1 1 0-6 3 3 0 0 1 0 6z'
     ],
-    cash: [
-        'M4 10.781c.148 1.667 1.513 2.85 3.591 3.003V15h1.043v-1.216c2.27-.179 3.678-1.438 3.678-3.29 0-1.53-.9-2.377-2.849-2.838l-.829-.194V3.885c1.135.148 1.856.749 2.028 1.578h1.549c-.14-1.577-1.475-2.759-3.577-2.912V1H7.591v1.55c-1.9.192-3.328 1.396-3.328 3.156 0 1.462.943 2.472 2.653 2.873l.674.163v3.949c-1.156-.168-1.918-.789-2.09-1.91H4zm3.559-1.66c-1.086-.263-1.663-.766-1.663-1.545 0-.784.598-1.386 1.6-1.512v3.057h.063zm1.184 1.35c1.303.325 1.94.813 1.94 1.71 0 .952-.716 1.585-1.94 1.71v-3.42z'
+    // Bootstrap Icons "ticket-perforated", replacing "currency-dollar".
+    //
+    // The dollar sign was wrong three different ways across the real data: it
+    // repeated itself on the 90 cover values that already start with "$"
+    // ("$ $20-$25"), it put a US currency mark on the 23 priced in euros or
+    // pounds ("$ EUR26.64" in Berlin, "$ GBP12" in Brighton), and it meant
+    // nothing on the 51 that are not prices at all ("$ ADV. TICKETS"). It was
+    // also the only glyph among these icons rather than a drawn shape, so it
+    // read as text sitting where an icon goes.
+    //
+    // A ticket is true for every one of those cases and carries the same
+    // weight as the clock and the pin beside it.
+    ticket: [
+        'M0 4.5A1.5 1.5 0 0 1 1.5 3h13A1.5 1.5 0 0 1 16 4.5V6a.5.5 0 0 1-.5.5 1.5 1.5 0 0 0 0 3 .5.5 0 0 1 .5.5v1.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 11.5V10a.5.5 0 0 1 .5-.5 1.5 1.5 0 1 0 0-3A.5.5 0 0 1 0 6V4.5ZM1.5 4a.5.5 0 0 0-.5.5v1.05a2.5 2.5 0 0 1 0 4.9v1.05a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5v-1.05a2.5 2.5 0 0 1 0-4.9V4.5a.5.5 0 0 0-.5-.5h-13Z',
+        'M4.5 5a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-1 0v-5a.5.5 0 0 1 .5-.5Z'
     ],
     repeat: [
         'M11 5.466V4H5a4 4 0 0 0-3.584 5.777.5.5 0 1 1-.896.446A5 5 0 0 1 5 3h6V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192zm3.584.757a.5.5 0 0 1 .658.257A5 5 0 0 1 11 13H5v1.466a.25.25 0 0 1-.41.192l-2.36-1.966a.25.25 0 0 1 0-.384l2.36-1.966a.25.25 0 0 1 .41.192V12h6a4 4 0 0 0 3.584-5.777.5.5 0 0 1 .257-.657z'
@@ -3144,8 +3157,23 @@ class DynamicCalendarLoader extends CalendarCore {
         const venue = event.bar || (hasCoordinates ? 'Location' : '');
         if (!venue) return '';
         const label = this.escapeCardText(venue);
-        const value = hasCoordinates
-            ? `<a href="#" class="map-link" onclick="showOnMap(${lat}, ${lng}, '${this.escapeCardJsString(event.name)}', '${this.escapeCardJsString(event.bar || '')}')">${label}</a>`
+        // The venue name opens Google Maps.
+        //
+        // It used to call showOnMap(), which panned the map already sitting on
+        // the page — the least useful thing a tap on an address can do. What
+        // someone wants from a venue name is directions.
+        //
+        // Coordinates ONLY. They are unambiguous, where a name search finds
+        // the wrong Eagle in a different city — and more to the point, the
+        // "venue" is not always a place: Bear Happy Hour's reads "Check
+        // instagram for this week's location.", which as a Maps query is
+        // nonsense. Without coordinates the name stays plain text, exactly as
+        // it did before.
+        const mapsHref = hasCoordinates
+            ? `https://www.google.com/maps/search/?api=1&query=${lat}%2C${lng}`
+            : '';
+        const value = mapsHref
+            ? `<a href="${this.escapeCardText(mapsHref)}" class="map-link" target="_blank" rel="noopener">${label}</a>`
             : label;
         // The trailing pill goes INSIDE .ec-row-text, not beside it. As a
         // sibling flex item it was a separate item on the row, so it sat hard
@@ -3160,7 +3188,7 @@ class DynamicCalendarLoader extends CalendarCore {
         if (!cover || !cover.trim()) return '';
         const normalized = cover.toLowerCase();
         if (normalized === 'free' || normalized === 'no cover') return '';
-        return `<div class="ec-row ec-cover">${this.cardIconSvg('cash')}<span class="ec-row-text">${this.escapeCardText(cover)}</span></div>`;
+        return `<div class="ec-row ec-cover">${this.cardIconSvg('ticket')}<span class="ec-row-text">${this.escapeCardText(cover)}</span></div>`;
     }
 
     // Generate event card
@@ -3412,8 +3440,6 @@ class DynamicCalendarLoader extends CalendarCore {
                 
                 const eventSlug = button.dataset.eventSlug;
                 const eventName = button.dataset.eventName;
-                const eventVenue = button.dataset.eventVenue;
-                const eventTime = button.dataset.eventTime;
                 
                 // Build share URL with date + view for accurate deep link
                 const citySlug = this.currentCity || window.location.pathname.replace(/\//g, '');
@@ -3421,9 +3447,13 @@ class DynamicCalendarLoader extends CalendarCore {
                 const view = this.currentView;
                 const shareUrl = `${window.location.origin}/${citySlug}/${eventSlug}?date=${encodeURIComponent(dateISO)}&view=${encodeURIComponent(view)}`;
                 
-                // Build share text
+                // Title only. The composed sentence ("Check out X at Y - Z")
+                // duplicated what the link preview already renders from the
+                // event page's og: tags, so a share arrived as a paragraph of
+                // text followed by a card saying the same thing. Screen
+                // readers are not losing anything: the preview's alt text and
+                // og:title/og:description carry it.
                 const shareTitle = `${eventName}`;
-                const shareText = `Check out ${eventName} at ${eventVenue} - ${eventTime}`;
                 
                 logger.userInteraction('EVENT', 'Share button clicked', {
                     eventSlug,
@@ -3436,7 +3466,6 @@ class DynamicCalendarLoader extends CalendarCore {
                     try {
                         await navigator.share({
                             title: shareTitle,
-                            text: shareText,
                             url: shareUrl
                         });
                         logger.info('EVENT', 'Event shared successfully', {
@@ -3452,7 +3481,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     }
                 } else if (navigator.clipboard && navigator.clipboard.writeText) {
                     // Simple clipboard copy
-                    const shareContent = `${shareText}\n${shareUrl}`;
+                    const shareContent = shareUrl;
                     try {
                         await navigator.clipboard.writeText(shareContent);
                         this.showShareToast('Link copied! 📋');
@@ -3461,7 +3490,7 @@ class DynamicCalendarLoader extends CalendarCore {
                         logger.error('EVENT', 'Copy failed', err);
                         this.showShareToast('Unable to copy link');
                     }
-                } else if (this.copyTextLegacy(`${shareText}\n${shareUrl}`)) {
+                } else if (this.copyTextLegacy(shareUrl)) {
                     // navigator.share and navigator.clipboard both require a
                     // SECURE CONTEXT — neither exists over plain http (e.g. a
                     // LAN/tailnet preview), which previously produced a dead
@@ -5944,6 +5973,9 @@ class DynamicCalendarLoader extends CalendarCore {
                 // Ignore clicks that originate from share button
                 const shareBtn = e.target.closest && e.target.closest('.share-event-btn');
                 if (shareBtn) return;
+                // the venue name is a link out to Google Maps — following it
+                // must not also toggle the card underneath it
+                if (e.target.closest && e.target.closest('.map-link')) return;
                 const slug = card.getAttribute('data-event-slug');
                 // The card knows which occurrence it is (data-occurrence) —
                 // selecting with currentDate stamped the WINDOW START on the

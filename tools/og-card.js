@@ -64,7 +64,7 @@ const AURORA_FALLBACK = { c1: '#667eea', c2: '#ff6b6b', c3: '#2a2c4d' };
 // on every og:image URL — otherwise Facebook, iMessage and friends keep
 // serving the card they cached before the redesign. tools/generate-event-pages.js
 // mixes it into the cache-busting hash for exactly that reason.
-const OG_TEMPLATE_VERSION = 3;
+const OG_TEMPLATE_VERSION = 4;
 
 // The same knob for the city/home layout alone.
 //
@@ -88,7 +88,11 @@ const OG_ICONS = {
         'M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z'
     ],
     pin: ['M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10zm0-7a3 3 0 1 1 0-6 3 3 0 0 1 0 6z'],
-    cash: ['M4 10.781c.148 1.667 1.513 2.85 3.591 3.003V15h1.043v-1.216c2.27-.179 3.678-1.438 3.678-3.29 0-1.53-.9-2.377-2.849-2.838l-.829-.194V3.885c1.135.148 1.856.749 2.028 1.578h1.549c-.14-1.577-1.475-2.759-3.577-2.912V1H7.591v1.55c-1.9.192-3.328 1.396-3.328 3.156 0 1.462.943 2.472 2.653 2.873l.674.163v3.949c-1.156-.168-1.918-.789-2.09-1.91H4zm3.559-1.66c-1.086-.263-1.663-.766-1.663-1.545 0-.784.598-1.386 1.6-1.512v3.057h.063zm1.184 1.35c1.303.325 1.94.813 1.94 1.71 0 .952-.716 1.585-1.94 1.71v-3.42z']
+    // ticket-perforated, not currency-dollar — see the note in
+    // js/dynamic-calendar-loader.js. The dollar sign repeated itself on values
+    // that already start with "$", was the wrong currency on the euro and
+    // pound ones, and meant nothing on "ADV. TICKETS".
+    ticket: ['M0 4.5A1.5 1.5 0 0 1 1.5 3h13A1.5 1.5 0 0 1 16 4.5V6a.5.5 0 0 1-.5.5 1.5 1.5 0 0 0 0 3 .5.5 0 0 1 .5.5v1.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 11.5V10a.5.5 0 0 1 .5-.5 1.5 1.5 0 1 0 0-3A.5.5 0 0 1 0 6V4.5ZM1.5 4a.5.5 0 0 0-.5.5v1.05a2.5 2.5 0 0 1 0 4.9v1.05a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5v-1.05a2.5 2.5 0 0 1 0-4.9V4.5a.5.5 0 0 0-.5-.5h-13Z', 'M4.5 5a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-1 0v-5a.5.5 0 0 1 .5-.5Z']
 };
 
 // ── colour helpers (ported) ──────────────────────────────────────────────────
@@ -990,7 +994,7 @@ ${m ? '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/ma
     <div class="rows">
       ${row('clock', d.when)}
       ${row('pin', d.venue)}
-      ${row('cash', d.cover)}
+      ${row('ticket', d.cover)}
     </div>
     ${brandMark}
   </div>

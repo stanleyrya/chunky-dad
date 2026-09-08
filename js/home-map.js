@@ -107,6 +107,14 @@ class HomeMap {
                     el.style.cursor = 'pointer';
                     el.addEventListener('click', (event) => {
                         event.stopPropagation();
+                        // First tap names the city — the tile lights up and
+                        // scrolls into view. Second tap on the SAME pin means
+                        // the answer has already been given, so it goes there.
+                        if (this.pickedCityKey === city.key) {
+                            logger.userInteraction('MAP', 'City pin tapped again, opening city', { cityKey: city.key });
+                            window.location.href = `${window.location.origin}/${city.key}/`;
+                            return;
+                        }
                         this.selectCityCard(city.key);
                     });
 
@@ -136,6 +144,10 @@ class HomeMap {
         if (!cityKey) return;
         document.querySelectorAll('.city-compact-card.pin-picked')
             .forEach(card => card.classList.remove('pin-picked'));
+        // Recorded BEFORE the tile lookup: a city can have a pin without a
+        // tile (a quiet city is pruned from the strip), and a second tap on
+        // that pin should still open the city rather than do nothing twice.
+        this.pickedCityKey = cityKey;
         const card = document.querySelector(`.city-compact-card[data-city-key="${cityKey}"]`);
         if (!card) return;
         card.classList.add('pin-picked');
