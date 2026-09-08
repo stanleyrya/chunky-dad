@@ -56,10 +56,10 @@
 .sec-head .eyebrow{display:block;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600;margin-bottom:.15rem}
 .sec-head .aside{font-size:.8rem;font-weight:500;white-space:nowrap}
 :root{--ink:#e8eaff;--muted:#9aa0c3;--acc:#9fb2ff;--card:#171a33;--edge:rgba(159,178,255,.16);--edge-hi:rgba(159,178,255,.38);--ground:#0b0d13}
-body.index-page{background:var(--ground)}
 /* The ground is the city pages' dusk, unchanged, so home and city share one
    background instead of inventing a second dark. */
-body.index-page{background:var(--ground)}
+/* body keeps the site's purple: it is what paints the strip behind the status
+   bar / notch, and every section paints its own ground over it. */
 body.index-page main{background:radial-gradient(circle at top,#1b2033 0%,#0b0d13 45%,#07090f 100%);background-attachment:fixed;color:var(--ink);padding:.25rem 0 2rem}
 .sec-head h2{color:var(--ink)}.sec-head .eyebrow{color:var(--acc)}.sec-head .aside{color:var(--muted)}
 .cities-compact,.bear-events-compact{background:none;color:inherit;padding:.5rem 0 1.5rem;overflow:visible}
