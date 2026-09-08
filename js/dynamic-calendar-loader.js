@@ -3144,8 +3144,23 @@ class DynamicCalendarLoader extends CalendarCore {
         const venue = event.bar || (hasCoordinates ? 'Location' : '');
         if (!venue) return '';
         const label = this.escapeCardText(venue);
-        const value = hasCoordinates
-            ? `<a href="#" class="map-link" onclick="showOnMap(${lat}, ${lng}, '${this.escapeCardJsString(event.name)}', '${this.escapeCardJsString(event.bar || '')}')">${label}</a>`
+        // The venue name opens Google Maps.
+        //
+        // It used to call showOnMap(), which panned the map already sitting on
+        // the page — the least useful thing a tap on an address can do. What
+        // someone wants from a venue name is directions.
+        //
+        // Coordinates ONLY. They are unambiguous, where a name search finds
+        // the wrong Eagle in a different city — and more to the point, the
+        // "venue" is not always a place: Bear Happy Hour's reads "Check
+        // instagram for this week's location.", which as a Maps query is
+        // nonsense. Without coordinates the name stays plain text, exactly as
+        // it did before.
+        const mapsHref = hasCoordinates
+            ? `https://www.google.com/maps/search/?api=1&query=${lat}%2C${lng}`
+            : '';
+        const value = mapsHref
+            ? `<a href="${this.escapeCardText(mapsHref)}" class="map-link" target="_blank" rel="noopener">${label}</a>`
             : label;
         // The trailing pill goes INSIDE .ec-row-text, not beside it. As a
         // sibling flex item it was a separate item on the row, so it sat hard
@@ -3412,8 +3427,6 @@ class DynamicCalendarLoader extends CalendarCore {
                 
                 const eventSlug = button.dataset.eventSlug;
                 const eventName = button.dataset.eventName;
-                const eventVenue = button.dataset.eventVenue;
-                const eventTime = button.dataset.eventTime;
                 
                 // Build share URL with date + view for accurate deep link
                 const citySlug = this.currentCity || window.location.pathname.replace(/\//g, '');
@@ -3421,9 +3434,13 @@ class DynamicCalendarLoader extends CalendarCore {
                 const view = this.currentView;
                 const shareUrl = `${window.location.origin}/${citySlug}/${eventSlug}?date=${encodeURIComponent(dateISO)}&view=${encodeURIComponent(view)}`;
                 
-                // Build share text
+                // Title only. The composed sentence ("Check out X at Y - Z")
+                // duplicated what the link preview already renders from the
+                // event page's og: tags, so a share arrived as a paragraph of
+                // text followed by a card saying the same thing. Screen
+                // readers are not losing anything: the preview's alt text and
+                // og:title/og:description carry it.
                 const shareTitle = `${eventName}`;
-                const shareText = `Check out ${eventName} at ${eventVenue} - ${eventTime}`;
                 
                 logger.userInteraction('EVENT', 'Share button clicked', {
                     eventSlug,
@@ -3436,7 +3453,6 @@ class DynamicCalendarLoader extends CalendarCore {
                     try {
                         await navigator.share({
                             title: shareTitle,
-                            text: shareText,
                             url: shareUrl
                         });
                         logger.info('EVENT', 'Event shared successfully', {
@@ -3452,7 +3468,7 @@ class DynamicCalendarLoader extends CalendarCore {
                     }
                 } else if (navigator.clipboard && navigator.clipboard.writeText) {
                     // Simple clipboard copy
-                    const shareContent = `${shareText}\n${shareUrl}`;
+                    const shareContent = shareUrl;
                     try {
                         await navigator.clipboard.writeText(shareContent);
                         this.showShareToast('Link copied! 📋');
@@ -3461,7 +3477,7 @@ class DynamicCalendarLoader extends CalendarCore {
                         logger.error('EVENT', 'Copy failed', err);
                         this.showShareToast('Unable to copy link');
                     }
-                } else if (this.copyTextLegacy(`${shareText}\n${shareUrl}`)) {
+                } else if (this.copyTextLegacy(shareUrl)) {
                     // navigator.share and navigator.clipboard both require a
                     // SECURE CONTEXT — neither exists over plain http (e.g. a
                     // LAN/tailnet preview), which previously produced a dead
@@ -5944,6 +5960,9 @@ class DynamicCalendarLoader extends CalendarCore {
                 // Ignore clicks that originate from share button
                 const shareBtn = e.target.closest && e.target.closest('.share-event-btn');
                 if (shareBtn) return;
+                // the venue name is a link out to Google Maps — following it
+                // must not also toggle the card underneath it
+                if (e.target.closest && e.target.closest('.map-link')) return;
                 const slug = card.getAttribute('data-event-slug');
                 // The card knows which occurrence it is (data-occurrence) —
                 // selecting with currentDate stamped the WINDOW START on the

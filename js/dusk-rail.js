@@ -910,7 +910,7 @@
   // the rail back to this card mid-swipe
   document.addEventListener('click', (e) => {
     if (!e.isTrusted) return;
-    if (e.target.closest && e.target.closest('.rail-thumb, .share-event-btn, .event-links, .ec-more')) return;
+    if (e.target.closest && e.target.closest('.rail-thumb, .share-event-btn, .event-links, .ec-more, .map-link')) return;
     const pill = e.target.closest && e.target.closest('.calendar-grid .event-item');
     const card = !pill && e.target.closest && e.target.closest('.events-list .event-card');
     const src = pill || card;
