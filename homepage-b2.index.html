@@ -206,6 +206,14 @@ body.index-page header.visible{opacity:1!important}
    a second jump */
 .hero-scroll-hint{transition:opacity .2s ease}
 .hero-scroll-hint[data-hidden="1"]{pointer-events:none}
+/* bigger again: wider so names stop truncating to "Southern…", a 48px icon,
+   and room for a two-line name */
+.event-compact-card{width:252px!important;min-width:252px!important;min-height:96px;padding:.7rem .8rem .7rem .65rem;gap:.7rem}
+.event-compact-card .event-emoji-box{width:48px!important;height:48px!important;border-radius:12px}
+.event-compact-card .event-emoji-box.has-favicon{border-radius:12px}
+.event-compact-card .event-favicon{border-radius:calc(12px - 2px)}
+.event-compact-card .event-emoji{font-size:1.5rem}
+.event-compact-card .bear-event-name{-webkit-line-clamp:2!important;white-space:normal}
     </style>
 </head>
 <body class="index-page">
