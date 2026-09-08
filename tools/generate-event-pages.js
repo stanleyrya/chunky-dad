@@ -250,6 +250,9 @@ ${MARKER}
   <meta name="description" content="${description}">
   <link rel="canonical" href="${canonical}">
   <meta property="og:type" content="article">
+  <!-- Discord and friends print this above the title; without it the card is
+       anonymous. Kept as the bare domain, which is how the brand reads. -->
+  <meta property="og:site_name" content="chunky.dad">
   <meta property="og:title" content="${title}">
   <meta property="og:description" content="${description}">
   <meta property="og:url" content="${url}">
