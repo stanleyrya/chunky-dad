@@ -7,6 +7,24 @@ const crypto = require('crypto');
 // Resolve project root relative to this script
 const ROOT = path.resolve(__dirname, '..');
 
+const { cityCardRelPath } = require('./og-policy.js');
+
+// The content hash of the city's generated card, recorded by
+// tools/generate-og-images.js. Absent on a first run (that generator lives in a
+// different workflow), in which case the page ships an unversioned URL and
+// picks the hash up on the next regeneration.
+let cardManifest = null;
+function cityCardVersion(cityKey) {
+  if (cardManifest === null) {
+    try {
+      cardManifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'img', 'og', 'manifest.json'), 'utf8'));
+    } catch {
+      cardManifest = {};
+    }
+  }
+  return cardManifest[`city/${cityKey}`] || '';
+}
+
 // Load CITY_CONFIG via Node export
 let CITY_CONFIG;
 try {
@@ -126,13 +144,28 @@ function buildCityHtml(baseHtml, cityKey, cityConfig) {
     } catch {}
   }
 
-  // Basic OpenGraph tags with ICS-hash-based version for cache-busting when data changes
+  // The city's own share card.
+  //
+  // This used to be Rising_Star_Ryan_Head_Compressed.png — a 1.3 MB portrait at
+  // the wrong aspect ratio for every link-preview surface there is — and no
+  // twitter:image was emitted at all. tools/generate-og-images.js now renders a
+  // proper 1200x630 card per city (its name over its own map) and records the
+  // card's content hash in img/og/manifest.json; that hash is the cache-buster,
+  // so a redesign actually reaches the scrapers while a routine calendar change
+  // does not needlessly bust it. The ICS hash still versions the page's data.
+  const cardVersion = cityCardVersion(cityKey);
+  const ogImageUrl = `https://chunky.dad${cityCardRelPath(cityKey)}${cardVersion ? `?v=${cardVersion}` : ''}`;
+
   const ogTags = [
     `<meta property="og:type" content="website">`,
     `<meta property="og:title" content="${cityTitle}">`,
     `<meta property="og:description" content="${cityDesc}">`,
     `<meta property="og:url" content="https://chunky.dad${canonicalHref}">`,
-    `<meta property="og:image" content="https://chunky.dad/Rising_Star_Ryan_Head_Compressed.png${ogVersion ? `?v=${ogVersion}` : ''}">`
+    `<meta property="og:image" content="${ogImageUrl}">`,
+    `<meta name="twitter:card" content="summary_large_image">`,
+    `<meta name="twitter:title" content="${cityTitle}">`,
+    `<meta name="twitter:description" content="${cityDesc}">`,
+    `<meta name="twitter:image" content="${ogImageUrl}">`
   ].join('\n  ');
 
   if (!html.includes('property="og:title"')) {
@@ -142,9 +175,15 @@ function buildCityHtml(baseHtml, cityKey, cityConfig) {
                .replace(/<meta property="og:description"[^>]*>/, `<meta property="og:description" content="${cityDesc}">`)
                .replace(/<meta property="og:url"[^>]*>/, `<meta property="og:url" content="https:\/\/chunky.dad${canonicalHref}">`);
     if (html.includes('property="og:image"')) {
-      html = html.replace(/<meta property="og:image"[^>]*>/, `<meta property="og:image" content="https://chunky.dad/Rising_Star_Ryan_Head_Compressed.png${ogVersion ? `?v=${ogVersion}` : ''}">`);
+      html = html.replace(/<meta property="og:image"[^>]*>/, `<meta property="og:image" content="${ogImageUrl}">`);
     } else {
-      html = html.replace('</head>', `  <meta property="og:image" content="https://chunky.dad/Rising_Star_Ryan_Head_Compressed.png${ogVersion ? `?v=${ogVersion}` : ''}">\n</head>`);
+      html = html.replace('</head>', `  <meta property="og:image" content="${ogImageUrl}">\n</head>`);
+    }
+    // twitter:* were simply absent before; add or refresh them alongside
+    for (const [attr, value] of [['card', 'summary_large_image'], ['title', cityTitle], ['description', cityDesc], ['image', ogImageUrl]]) {
+      const tag = `<meta name="twitter:${attr}" content="${value}">`;
+      const existing = new RegExp(`<meta name="twitter:${attr}"[^>]*>`);
+      html = existing.test(html) ? html.replace(existing, tag) : html.replace('</head>', `  ${tag}\n</head>`);
     }
   }
 

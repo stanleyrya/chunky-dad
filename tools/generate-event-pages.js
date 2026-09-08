@@ -10,6 +10,7 @@ const ROOT = path.resolve(__dirname, '..');
 // The share-card design's version, mixed into each stub's og:image cache
 // buster so a template change actually reaches the social scrapers.
 const { OG_TEMPLATE_VERSION, formatEventWhen } = require('./og-card.js');
+const { shouldHaveCard, cardRelPath, cityCardRelPath } = require('./og-policy.js');
 
 // Load CITY_CONFIG from js/city-config.js (Node-compatible export exists)
 let CITY_CONFIG;
@@ -56,7 +57,9 @@ const PAST_DAYS_WINDOW = parseInt(process.env.EVENT_STUB_PAST_DAYS || '2', 10); 
 const BUILD_ALL = /^(1|true|yes)$/i.test(process.env.EVENT_STUB_BUILD_ALL || ''); // Build all events regardless of date
 const MARKER = '<!-- generated: chunky.dad event page -->';
 const SITE_BASE = 'https://chunky.dad';
-const FALLBACK_IMAGE = `${SITE_BASE}/Rising_Star_Ryan_Head_Compressed.png`;
+// When an event is too old to deserve its own card, its stub shares the city's
+// card instead. Nothing 404s and the page keeps a proper 1200x630 preview.
+const cityFallbackImage = (cityKey) => `${SITE_BASE}${cityCardRelPath(cityKey)}`;
 
 function ensureDir(dir) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -167,7 +170,14 @@ function buildEventHtml(cityKey, cityName, event, ctx) {
     + cardMeta('lat', Number.isFinite(Number(event.coordinates?.lat)) ? event.coordinates.lat : '')
     + cardMeta('lng', Number.isFinite(Number(event.coordinates?.lng)) ? event.coordinates.lng : '');
   // Prefer generated per-event OG image and add a content-hash version for cache busting
-  const generatedPng = `/img/og/${cityKey}/${encodeURIComponent(event.slug)}.png`;
+  const generatedCard = cardRelPath(cityKey, event.slug);
+  // Whether this event still earns a card of its own. Written into the stub so
+  // tools/generate-og-images.js can simply render what the stubs ask for
+  // instead of re-deriving the same date rule and eventually disagreeing.
+  const wantsCard = shouldHaveCard(
+    event,
+    calendar ? calendar.getLogicalEndDate(event) : (event.endDate ? new Date(event.endDate) : null)
+  );
   let version = '';
   try {
     const seed = JSON.stringify({
@@ -193,14 +203,26 @@ function buildEventHtml(cityKey, cityName, event, ctx) {
   } catch (e) {
     version = '';
   }
-  const generatedUrl = `${SITE_BASE}${generatedPng}${version ? `?v=${version}` : ''}`;
-  const ogImage = generatedUrl;
+  const generatedUrl = `${SITE_BASE}${generatedCard}${version ? `?v=${version}` : ''}`;
+  const ogImage = wantsCard ? generatedUrl : cityFallbackImage(cityKey);
 
   const canonical = `/${cityKey}/`;
-  // Build a date parameter from event.startDate in YYYY-MM-DD for deep-link
+  // Build a date parameter from event.startDate in YYYY-MM-DD for deep-link.
+  //
+  // A RECURRING event must not carry one. Its startDate is the SERIES start,
+  // so baking it in sent every share link to the week the series began —
+  // Chicago's Bear Happy Hour was landing visitors on 2025-07-10, fourteen
+  // months in the past, and every one of the 14 recurring stubs did the same.
+  // With no date the site opens on today and updateCalendarDisplay's
+  // re-binding pass selects the nearest real occurrence, which is what a
+  // dateless card ("Thursdays · 5PM-9PM CT") promises. A caller who wants one
+  // specific occurrence still says so with ?eventDate=, and the redirect
+  // below copies incoming params over these defaults.
   let dateParam = '';
   try {
-    const d = event.startDate instanceof Date ? event.startDate : (event.startDate ? new Date(event.startDate) : null);
+    const d = event.recurring
+      ? null
+      : (event.startDate instanceof Date ? event.startDate : (event.startDate ? new Date(event.startDate) : null));
     if (d && !isNaN(d.getTime())) {
       const y = d.getFullYear();
       const m = String(d.getMonth() + 1).padStart(2, '0');

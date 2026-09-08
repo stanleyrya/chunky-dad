@@ -79,6 +79,105 @@ const IMAGES_DIR = path.join(ROOT, 'img');
 const FAVICONS_DIR = path.join(IMAGES_DIR, 'favicons');
 const EVENTS_DIR = path.join(IMAGES_DIR, 'events');
 
+// ---------------------------------------------------------------------------
+// Event flyers are stored at a sane size
+// ---------------------------------------------------------------------------
+//
+// These are downloaded straight from promoters' own hosts, which serve whatever
+// the designer exported: 91 of the 297 flyers on disk were wider than 1600px
+// and 15 exceeded 3000px — one is 3300x5100 — for artwork that is never painted
+// larger than about 520px on a share card or a phone card. That was 195 MB in
+// the working tree and 160 MB of git history.
+//
+// Capping the long edge at 1600px and re-encoding at q82 measured 195 MB -> 51
+// MB across the whole set. Nothing is deleted; every flyer keeps its filename,
+// its .meta sidecar and its place in the calendar data.
+const FLYER_MAX_EDGE = 1600;
+const FLYER_QUALITY = 82;
+// Bumping this re-optimises every flyer; the stamp below is what stops a JPEG
+// being re-encoded (and degraded) a little more on every single CI run.
+const FLYER_OPTIMIZE_VERSION = 1;
+
+async function optimizeEventImage(imagePath, metadataPath) {
+  let sharp;
+  try {
+    sharp = require('sharp');
+  } catch (e) {
+    console.warn(`⚠️  sharp unavailable — leaving ${path.basename(imagePath)} at full size`);
+    return false;
+  }
+
+  let metadata = null;
+  try {
+    if (metadataPath && fs.existsSync(metadataPath)) metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+  } catch (e) { metadata = null; }
+  if (metadata && metadata.flyerOptimized === FLYER_OPTIMIZE_VERSION) return false;
+
+  const before = fs.existsSync(imagePath) ? fs.statSync(imagePath).size : 0;
+  if (!before) return false;
+
+  try {
+    const info = await sharp(imagePath).metadata();
+    const longest = Math.max(info.width || 0, info.height || 0);
+    // .rotate() with no argument applies the EXIF orientation and then drops
+    // the tag — without it, a phone-shot portrait flyer re-encodes on its side.
+    const output = await sharp(imagePath)
+      .rotate()
+      .resize({ width: FLYER_MAX_EDGE, height: FLYER_MAX_EDGE, fit: 'inside', withoutEnlargement: true })
+      .jpeg({ quality: FLYER_QUALITY, mozjpeg: true })
+      .toBuffer();
+
+    // Only accept a genuine win. A small, already-tight flyer can come back
+    // BIGGER from a re-encode, and swapping it would cost bytes and a
+    // generation of quality for nothing.
+    if (output.length < before * 0.95) {
+      fs.writeFileSync(imagePath, output);
+      console.log(`   🗜️  ${path.basename(imagePath)} ${(before / 1024).toFixed(0)}KB → ${(output.length / 1024).toFixed(0)}KB${longest > FLYER_MAX_EDGE ? ` (${longest}px → ${FLYER_MAX_EDGE}px)` : ''}`);
+    }
+    if (metadata && metadataPath) {
+      metadata.flyerOptimized = FLYER_OPTIMIZE_VERSION;
+      fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
+    }
+    return true;
+  } catch (error) {
+    // Keep the original. A flyer we cannot re-encode is still a flyer; losing
+    // it to an optimisation step would be the worse outcome by far.
+    console.warn(`⚠️  Could not optimize ${path.basename(imagePath)} — keeping the original: ${error.message}`);
+    return false;
+  }
+}
+
+/**
+ * Bring every already-downloaded flyer up to the current policy. Idempotent:
+ * the .meta stamp means each file is re-encoded exactly once per policy version.
+ */
+async function optimizeExistingEventImages() {
+  if (!fs.existsSync(EVENTS_DIR)) return;
+  const files = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) { walk(full); continue; }
+      if (entry.name.includes('-thumb.')) continue;      // rail thumbs are already tiny
+      if (!/\.(jpe?g|png|webp)$/i.test(entry.name)) continue;
+      files.push(full);
+    }
+  };
+  walk(EVENTS_DIR);
+
+  let touched = 0;
+  const before = files.reduce((sum, f) => sum + fs.statSync(f).size, 0);
+  for (const file of files) {
+    if (await optimizeEventImage(file, file + '.meta')) touched++;
+  }
+  const after = files.filter(f => fs.existsSync(f)).reduce((sum, f) => sum + fs.statSync(f).size, 0);
+  if (touched) {
+    console.log(`🗜️  Optimized ${touched}/${files.length} flyers: ${(before / 1048576).toFixed(1)}MB → ${(after / 1048576).toFixed(1)}MB`);
+  } else {
+    console.log(`🗜️  All ${files.length} flyers already optimized`);
+  }
+}
+
 // Favicon cache duration: 90 days in milliseconds.
 // Only favicons use this TTL — event image URLs are content-fingerprinted by their CDNs
 // (Wix, Eventbrite, etc.) and local filenames are derived from the URL, so an existing
@@ -462,6 +561,7 @@ async function downloadEventImage(imageUrl, eventInfo) {
           applyDownloadStamp(metadata, downloadResult);
           writeMetadataIfChanged(finalMetadataPath, metadata);
           console.log(`✅ Downloaded event image: ${finalFilename} (${actualExtension})`);
+        await optimizeEventImage(finalPath, finalMetadataPath);
         return { success: true, skipped: false, filename: finalFilename, localPath: finalPath };
       }
     }
@@ -485,6 +585,7 @@ async function downloadEventImage(imageUrl, eventInfo) {
     writeMetadataIfChanged(metadataPath, metadata);
 
     console.log(`✅ Downloaded event image: ${filename} (${detectedExtension})`);
+    await optimizeEventImage(localPath, metadataPath);
     return { success: true, skipped: false, filename, localPath };
     
   } catch (error) {
@@ -1431,6 +1532,10 @@ async function main() {
   
   
   // Download high-quality favicons (64px for map markers)
+  // Bring flyers downloaded before this policy existed up to size.
+  console.log('\n🗜️  Optimizing event flyers...');
+  await optimizeExistingEventImages();
+
   console.log('\n🗺️  Downloading high-quality favicons (64px)...');
   for (const url of imageUrls.favicons64) {
     const result = await downloadFaviconWithFallback(url, '64', faviconMissCache, faviconStats);
@@ -1707,13 +1812,16 @@ function writeThumbManifest(eventsRoot, sources) {
 
 // Run if called directly. --thumbs-only runs just the thumbnail sweep over
 // the existing img/events library (no network, no calendar reads) — for
-// backfilling thumbs without a full download pass.
+// backfilling thumbs without a full download pass. --optimize-only does the
+// same for the flyer size policy.
 if (require.main === module) {
-  const entry = process.argv.includes('--thumbs-only') ? generateEventImageThumbs : main;
+  let entry = main;
+  if (process.argv.includes('--thumbs-only')) entry = generateEventImageThumbs;
+  else if (process.argv.includes('--optimize-only')) entry = optimizeExistingEventImages;
   entry().catch(error => {
     console.error('💥 Fatal error during image download:', error);
     process.exit(1);
   });
 }
 
-module.exports = { downloadImage, downloadImageWithSize, downloadEventImage, extractImageUrls, extractLinktreeProfilePicture, isLinktreeUrl, extractWikipediaLogo, isWikipediaUrl, fetchPageContent, generateLinktreeFaviconFilename, generateWikipediaFaviconFilename, downloadImageWithCustomFilename, shouldDownloadImage, getGoogleFaviconDomain, buildFaviconFallbackLadder, shouldSkipKnownMiss, recordFaviconMiss, loadFaviconMissCache, saveFaviconMissCache, looksLikeImage, attemptFaviconRungDownload, downloadFaviconWithFallback };
+module.exports = { optimizeEventImage, optimizeExistingEventImages, downloadImage, downloadImageWithSize, downloadEventImage, extractImageUrls, extractLinktreeProfilePicture, isLinktreeUrl, extractWikipediaLogo, isWikipediaUrl, fetchPageContent, generateLinktreeFaviconFilename, generateWikipediaFaviconFilename, downloadImageWithCustomFilename, shouldDownloadImage, getGoogleFaviconDomain, buildFaviconFallbackLadder, shouldSkipKnownMiss, recordFaviconMiss, loadFaviconMissCache, saveFaviconMissCache, looksLikeImage, attemptFaviconRungDownload, downloadFaviconWithFallback };

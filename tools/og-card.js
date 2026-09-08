@@ -561,6 +561,14 @@ function buildOgCardHtml(data) {
     // 1:1 is an option, not the default — see OG_ARTBOARDS.
     const board = OG_ARTBOARDS[d.artboard] || OG_ARTBOARDS.wide;
 
+    // A place, rather than an event. City and home cards paint the same
+    // language — same aurora ground, same type, same address line — but they
+    // have no flyer to hang the layout on, so the map stops being a corner
+    // inset and becomes the artwork instead. Anything falsy leaves the card
+    // exactly as it was.
+    const kind = d.kind === 'city' || d.kind === 'home' ? d.kind : '';
+    const kindClass = kind ? ` place ${kind}-card` : '';
+
     const titleLength = String(d.title || '').length;
     const titleClass = titleLength > 46 ? 'title t-xs' : (titleLength > 28 ? 'title t-sm' : 'title');
 
@@ -847,9 +855,47 @@ ${m ? '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/ma
      address line is bottom-LEFT), so the two only meet if a row runs very
      long — which this stops, by ellipsing the value before it gets there. */
   body:not(.no-map) .row span { max-width: 520px; }
+
+  /* ---- place cards (city + home) --------------------------------------
+     No flyer ever competes for the artboard here, so the map takes the right
+     half outright instead of hiding in the corner, and the name is set as
+     large as it will go. Everything else — ground, brand line, row icons — is
+     inherited untouched, so a city card is recognisably the same object as an
+     event card. */
+  /* the body's own padding reserves the map's column — setting a width on
+     .copy as well would subtract the same space twice and crush the name */
+  body.place:not(.no-map) { padding-right: 540px; }
+  body.place .title { font-size: 104px; line-height: 1.06; -webkit-line-clamp: 2; }
+  body.place .title.t-sm { font-size: 78px; }
+  body.place .title.t-xs { font-size: 60px; }
+  body.place:not(.no-map) .map {
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 470px;
+    height: auto;
+    border-radius: 0;
+    box-shadow: -18px 0 44px rgba(6, 8, 20, 0.42);
+  }
+  /* the ground fades into the map rather than butting against it */
+  body.place:not(.no-map) .map::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(90deg, ${aurora.c1} 0%, rgba(0, 0, 0, 0) 55%);
+  }
+  body.place:not(.no-map) .row span { max-width: 560px; }
+  /* the subtitle is a tagline, not a time or a venue — the clock glyph beside
+     it was reading as information it is not */
+  body.place .row svg { display: none; }
+  body.place .row { gap: 0; }
+  /* and there is no single point to mark on a whole city */
+  body.place .og-pin { display: none; }
+  body.home-card .title { letter-spacing: -0.02em; }
 </style>
 </head>
-<body class="${board.className}${flyer ? '' : ' no-art'}${m ? '' : ' no-map'}">
+<body class="${board.className}${flyer ? '' : ' no-art'}${m ? '' : ' no-map'}${kindClass}">
   ${flyer ? `<div class="art"><img src="${flyer}" alt="" onerror="document.body.classList.add('no-art')"></div>` : ''}
   <div class="copy">
     <div class="titlerow">

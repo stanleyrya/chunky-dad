@@ -1,0 +1,6 @@
+# Generated share cards and downloaded event flyers are binary and already
+# compressed: delta-compressing them against each other never pays off, and
+# git spends real time trying. These two directories were 762 MB of an 815 MB
+# pack, so they are worth telling git the truth about.
+img/og/**    binary -delta
+img/events/** binary -delta

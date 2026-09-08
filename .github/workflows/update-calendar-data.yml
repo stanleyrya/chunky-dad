@@ -401,6 +401,9 @@ jobs:
         if: env.CALENDAR_CHANGED == 'true' || github.event_name != 'schedule'
         run: |
           node tools/generate-og-images.js
+          # -A stages the generator's own deletions too: cards expire when their
+          # event ages out, and renaming an event in the calendar strands the
+          # card under its old slug.
           git add -A img/og/ 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "No OG image changes to commit"

@@ -10,5 +10,6 @@
     "name": "Treasure Trail: San Francisco",
     "startDate": "2026-06-13T21:00:00.000Z",
     "recurring": false
-  }
+  },
+  "flyerOptimized": 1
 }
