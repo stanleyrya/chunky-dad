@@ -66,6 +66,18 @@ const AURORA_FALLBACK = { c1: '#667eea', c2: '#ff6b6b', c3: '#2a2c4d' };
 // mixes it into the cache-busting hash for exactly that reason.
 const OG_TEMPLATE_VERSION = 2;
 
+// The same knob for the city/home layout alone.
+//
+// A change to the `body.place` rules — the map taking the right half, the seam
+// between it and the ground, how the name steps down — leaves event cards
+// rendering pixel-for-pixel identical, so bumping OG_TEMPLATE_VERSION for it
+// would re-render all 149 of them and rewrite the `?v=` on every event stub to
+// no purpose. Place cards carry no event data to hash, so without a version of
+// their own a pure-CSS change to them is invisible to the render gate.
+//
+// 2: dropped the gradient fade and then the divider rule; venue pins.
+const OG_PLACE_TEMPLATE_VERSION = 2;
+
 // Bootstrap Icons geometry, inlined — same paths the cards use.
 const OG_ICONS = {
     clock: [
@@ -925,9 +937,10 @@ ${m ? '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/ma
     width: 500px;
     height: auto;
     border-radius: 0;
-    /* a clean edge, not a gradient smear across the artwork */
+    /* no seam at all: no gradient smear, and no rule either — the map simply
+       ends and the ground begins */
     box-shadow: none;
-    border-left: 3px solid rgba(255, 255, 255, 0.20);
+    border: 0;
   }
   body.place:not(.no-map) .row span { max-width: 560px; }
   /* the subtitle is a tagline, not a time or a venue — the clock glyph beside
@@ -964,6 +977,7 @@ ${m ? '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/ma
 
 const api = {
     buildOgCardHtml,
+    OG_PLACE_TEMPLATE_VERSION,
     artboardSize,
     OG_ARTBOARDS,
     formatEventWhen,

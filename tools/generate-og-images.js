@@ -15,7 +15,7 @@ const LOGO_FILE = path.join(ROOT, 'favicons', 'favicon-96x96.png');
 
 // The card design itself — shared with testing/test-og-event-layouts-calendar.html
 // so the studio previews exactly what ships.
-const { buildOgCardHtml, OG_TEMPLATE_VERSION } = require('./og-card.js');
+const { buildOgCardHtml, OG_TEMPLATE_VERSION, OG_PLACE_TEMPLATE_VERSION } = require('./og-card.js');
 
 // Favicon filenames are derived from the website URL, never from what actually
 // landed on disk — the same contract download-images.js and
@@ -502,7 +502,13 @@ async function main() {
   // calendar outage) must still be able to produce the place cards.
   for (const place of collectPlaceTargets()) {
     place.version = crypto.createHash('md5')
-      .update(JSON.stringify({ card: place.card, template: OG_TEMPLATE_VERSION }))
+      .update(JSON.stringify({
+        card: place.card,
+        template: OG_TEMPLATE_VERSION,
+        // place cards have no event data, so their own layout version is the
+        // only thing that can tell the gate a CSS-only redesign happened
+        placeTemplate: OG_PLACE_TEMPLATE_VERSION
+      }))
       .digest('hex').slice(0, 8);
     targets.push(place);
   }
