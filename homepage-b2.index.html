@@ -151,6 +151,18 @@ body.index-page{background:#111429}
 /* 1. the map's attribution starts collapsed */
 .maplibregl-ctrl-attrib.maplibregl-compact-show .maplibregl-ctrl-attrib-inner{display:none}
 .maplibregl-ctrl-attrib.maplibregl-compact-show{padding:2px 24px 2px 0!important}
+/* ---- one type scale for everything between hero and footer ----
+   Three steps only: section title, item, detail. Every section used its own
+   near-identical size before (14.7 / 13.3 / 11.5 / 11.2 / 10.9 / 9.6px). */
+main{--t-title:1.25rem;--t-item:0.875rem;--t-detail:0.75rem}
+main .sec-head h2{font-size:var(--t-title)!important;line-height:1.2}
+main .city-search-input{font-size:var(--t-item)!important}
+main .city-compact-card .city-name{font-size:var(--t-item)!important}
+main .event-compact-card .bear-event-name{font-size:var(--t-item)!important}
+main .event-compact-card .event-dates{font-size:var(--t-detail)!important}
+main .event-compact-card .event-location{font-size:var(--t-detail)!important}
+main .month-label{font-size:var(--t-detail)!important}
+main .city-search-input::placeholder{font-size:var(--t-item)}
     </style>
 </head>
 <body class="index-page">
@@ -211,7 +223,7 @@ body.index-page{background:#111429}
     <main>
         <section id="cities" class="cities-compact">
             <div class="sec-head">
-                <div><span class="eyebrow">Where to</span><h2>Cities</h2></div>
+                <h2>Cities</h2>
                 <div class="city-search-container">
                     <input type="text" id="city-search" placeholder="Search cities..." class="city-search-input">
                     <button type="button" id="near-me-btn" class="near-me-btn" title="Sort cities by distance from me" aria-label="Sort cities by distance from me">📍</button>
@@ -227,7 +239,7 @@ body.index-page{background:#111429}
 
         <section id="bear-events" class="bear-events-compact">
             <div class="sec-head">
-                <div><span class="eyebrow">What's on</span><h2>Bear runs &amp; festivals</h2></div>
+                <h2>Bear runs &amp; festivals</h2>
             </div>
             <div class="event-scroll-container">
                 <div class="event-compact-grid" id="event-grid"></div>
@@ -361,16 +373,22 @@ PROTO.onCards('event',function(){
   document.addEventListener('click',function(e){ if(!e.target.closest('.city-compact-card')&&!e.target.closest('#homeMap'))
     document.querySelectorAll('.city-compact-card.pin-picked').forEach(function(c){c.classList.remove('pin-picked');}); });
 })();
-// 6. The Explore hint scrolls to the cities.
+// 6. The Explore hint scrolls to the cities. It re-aligns after the jump
+// because iOS collapses its toolbar mid-scroll, which grows 100dvh and moves
+// the target out from under us — that was the gap below the header.
 (function(){
   var hint=document.querySelector('.hero-scroll-hint'); if(!hint) return;
   hint.style.cursor='pointer'; hint.setAttribute('role','button'); hint.setAttribute('tabindex','0');
-  function go(){ var t=document.getElementById('cities'); if(!t) return;
-    var y=t.getBoundingClientRect().top+(window.pageYOffset||document.documentElement.scrollTop);
-    var smooth='scrollBehavior' in document.documentElement.style;
-    if(smooth){ window.scrollTo({top:y,behavior:'smooth'}); } else { window.scrollTo(0,y); }
-    setTimeout(function(){ if(Math.abs((window.pageYOffset||0)-y)>4) window.scrollTo(0,y); },600);
-    window.__exploreClicked=Math.round(y); }
+  function headerH(){ var h=document.querySelector('header');
+    if(!h) return 0; var cs=getComputedStyle(h);
+    return cs.position==='fixed' ? h.offsetHeight : 0; }
+  function align(smooth){
+    var t=document.getElementById('cities'); if(!t) return;
+    var y=Math.max(0, t.getBoundingClientRect().top+(window.pageYOffset||document.documentElement.scrollTop||0)-headerH());
+    if(smooth&&'scrollBehavior' in document.documentElement.style) window.scrollTo({top:y,behavior:'smooth'});
+    else window.scrollTo(0,y);
+  }
+  function go(){ align(true); setTimeout(function(){align(false);},700); setTimeout(function(){align(false);},1300); }
   hint.addEventListener('click',go);
   hint.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } });
 })();
