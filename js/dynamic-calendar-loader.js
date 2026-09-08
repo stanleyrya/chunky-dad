@@ -3147,7 +3147,11 @@ class DynamicCalendarLoader extends CalendarCore {
         const value = hasCoordinates
             ? `<a href="#" class="map-link" onclick="showOnMap(${lat}, ${lng}, '${this.escapeCardJsString(event.name)}', '${this.escapeCardJsString(event.bar || '')}')">${label}</a>`
             : label;
-        return `<div class="ec-row ec-venue">${this.cardIconSvg('pin')}<span class="ec-row-text">${value}</span>${trailing}</div>`;
+        // The trailing pill goes INSIDE .ec-row-text, not beside it. As a
+        // sibling flex item it was a separate item on the row, so it sat hard
+        // against the right edge with all the slack between it and the name.
+        // Inline, it simply follows the last word and wraps with it.
+        return `<div class="ec-row ec-venue">${this.cardIconSvg('pin')}<span class="ec-row-text">${value}${trailing}</span></div>`;
     }
 
     // Cover row. Same "hide free events" filter generateCoverHtml applies.
@@ -5467,6 +5471,11 @@ class DynamicCalendarLoader extends CalendarCore {
                         this.userLocation = location;
                         window.userLocation = location;
                         this.locationFeaturesEnabled = true;
+                        // Dense cards are a uniform fixed box; the distance
+                        // pill can push the venue onto a second line, so the
+                        // box needs one more line's room — but only while
+                        // distances are actually being shown.
+                        try { document.documentElement.classList.add('has-distances'); } catch (e) {}
                         
                         // Calculate distances for all events
                         this.allEvents = window.locationManager.calculateEventDistances(this.allEvents, location);

@@ -2635,7 +2635,7 @@ body.index-page main {
 
 /* The distance pill now rides on the venue row, so it has to be styled there
    too — it is no longer inside .ec-badges. Same pill, one selector list. */
-.event-card.detailed.aurora .ec-venue > .distance-badge,
+.event-card.detailed.aurora .ec-venue .distance-badge,
 .event-card.detailed.aurora .ec-badges .recurring-badge,
 .event-card.detailed.aurora .ec-badges .date-badge,
 .event-card.detailed.aurora .ec-badges .distance-badge {
@@ -2661,13 +2661,20 @@ body.index-page main {
     flex: 0 0 10px;
 }
 
-/* The pill holds its width; the venue name is what yields. Only the sizing
-   here is global — whether the name wraps or ellipses is decided per mode
-   further down, because a cozy card can afford the extra line and a dense one
-   cannot. */
-.event-card.detailed.aurora .ec-venue > .distance-badge {
-    flex: 0 0 auto;
-    margin-left: 0.1rem;
+/* The pill sits inline in the venue text, right after the name, and wraps with
+   it. It is NOT a flex item on the row: as one it was pushed to the far right
+   edge with all the row's slack in between. */
+.event-card.detailed.aurora .ec-venue .distance-badge {
+    margin-left: 0.35rem;
+    vertical-align: baseline;
+}
+
+/* The text block takes the width left over by the icon and wraps INSIDE
+   itself. Without this its natural width exceeds the row, so flex-wrap gives
+   it a line of its own and leaves the pin stranded on the line above. */
+.event-card.detailed.aurora .ec-venue > .ec-row-text {
+    flex: 1 1 0;
+    min-width: 0;
 }
 
 .event-card.detailed.aurora .ec-tea {
@@ -7555,6 +7562,15 @@ html.dusk body {
        links measured at 390px); sparse cards simply end early inside it.
        Dense is a STATIC mode: nothing on a card ever animates or fades —
        owner report: "middle cards magically slowly fade in. It's weird" */
+    /* With distances on, the pill can push the venue onto a second line, so
+       every card buys one line of room. Uniformly — the whole point of the
+       fixed box is that the trifold's band never changes height under you, so
+       the edge slots and the empty-week card below move with it. */
+    html.has-distances.mode-dense .events-list.rail-active > .event-card,
+    html.has-distances.mode-dense .events-list.rail-active > .rail-edge,
+    html.has-distances.mode-dense .events-list.rail-active > .loading-message.empty-slot {
+        height: 268px;
+    }
     html.mode-dense .events-list.rail-active > .event-card {
         height: 246px;
         overflow: hidden;
@@ -7576,25 +7592,14 @@ html.dusk body {
         margin-top: 0;
         border-top: none;
     }
-    /* A dense card is a fixed 246px and `.ec-tea` is the only item that can
-       give, so every extra line in a row is taken straight out of the
-       description — it does not re-clamp to one line, it gets sliced mid-line
-       (Bear Happy Hour's was 8px tall, showing half a line of text).
-       The venue row is where that bites: "Check instagram for this week's
-       location." is wider than the 268px row, and under flex-wrap the icon,
-       the name and the distance pill each took a line of their own — 67px for
-       one venue. Here the row does not wrap and the name ellipses instead.
-       Cozy leaves it wrapping: that card grows, so the full name costs
-       nothing. */
-    html.mode-dense .event-card.detailed.aurora .ec-venue {
-        flex-wrap: nowrap;
-    }
-    html.mode-dense .event-card.detailed.aurora .ec-venue > .ec-row-text {
-        flex: 1 1 0;
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+    /* A dense card is a fixed box and `.ec-tea` is the only child that can
+       give, so an extra line anywhere above it used to be taken straight out
+       of the description — and it does not re-clamp to one line, it gets
+       sliced mid-line (Bear Happy Hour's was 8px tall). The floor below stops
+       that: the description never renders less than one whole line, and the
+       "…more" chip covers the rest. */
+    html.mode-dense .event-card.detailed.aurora .ec-tea {
+        min-height: 1.45em;   /* exactly one line at this line-height */
     }
 
     html.mode-dense .event-card .ec-tea {
