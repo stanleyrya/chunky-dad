@@ -214,6 +214,11 @@ body.index-page header.visible{opacity:1!important}
 .event-compact-card .event-favicon{border-radius:calc(12px - 2px)}
 .event-compact-card .event-emoji{font-size:1.5rem}
 .event-compact-card .bear-event-name{-webkit-line-clamp:2!important;white-space:normal}
+/* three rows again: title, date, location */
+.event-compact-card .event-content{display:flex!important;flex-direction:column;align-items:flex-start;row-gap:.1rem;min-width:0;width:100%}
+.event-compact-card .bear-event-name,.event-compact-card .event-dates,.event-compact-card .event-location{grid-column:auto;grid-row:auto;max-width:100%}
+.event-compact-card .event-location::before{content:none!important}
+.event-compact-card .event-location{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     </style>
 </head>
 <body class="index-page">
