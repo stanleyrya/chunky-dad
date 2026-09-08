@@ -10,5 +10,6 @@
     "name": "PHOENIX",
     "startDate": "2026-05-23T21:30:00.000Z",
     "recurring": false
-  }
+  },
+  "flyerOptimized": 1
 }

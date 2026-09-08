@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 // Resolve project root
 const ROOT = path.resolve(__dirname, '..');
@@ -14,7 +15,7 @@ const LOGO_FILE = path.join(ROOT, 'favicons', 'favicon-96x96.png');
 
 // The card design itself — shared with testing/test-og-event-layouts-calendar.html
 // so the studio previews exactly what ships.
-const { buildOgCardHtml } = require('./og-card.js');
+const { buildOgCardHtml, OG_TEMPLATE_VERSION, OG_PLACE_TEMPLATE_VERSION } = require('./og-card.js');
 
 // Favicon filenames are derived from the website URL, never from what actually
 // landed on disk — the same contract download-images.js and
@@ -28,8 +29,33 @@ const {
   generateLinktreeFaviconFilename,
   generateWikipediaFaviconFilename,
   isLinktreeUrl,
-  isWikipediaUrl
+  isWikipediaUrl,
+  simpleHash
 } = require(path.join(ROOT, 'js', 'filename-utils.js'));
+
+// Which events deserve a card, where cards live, and how to find the flyer
+// copy already on disk.
+const { CARD_EXT, buildFlyerIndex, localFlyerFor } = require('./og-policy.js');
+
+// A card is re-rendered only when its CONTENT changes.
+//
+// The old gate compared rendered bytes, which sounds equivalent and is not: the
+// card used to paint the flyer straight off its origin, so a re-encoded or
+// merely reordered remote image produced different pixels and a fresh commit.
+// img/og/new-york/goldiloxx-6c462174.png was rewritten 424 times that way, and
+// img/og grew to 602 MB — a third of the whole repository's history. The stub
+// already carries the content hash of everything the card paints, as the ?v=
+// cache-buster on its og:image, so that number is the gate. Reusing it rather
+// than recomputing means the two generators cannot drift apart.
+const MANIFEST_FILE = path.join(OUTPUT_DIR, 'manifest.json');
+
+function loadManifest() {
+  try {
+    return JSON.parse(fs.readFileSync(MANIFEST_FILE, 'utf8'));
+  } catch {
+    return {};
+  }
+}
 
 // Lazy-load puppeteer only when invoked in CI to keep local fast
 async function getPuppeteer() {
@@ -224,6 +250,8 @@ function collectTargets() {
   // Source of truth for which events need images: directories under each city with index.html
   const cityDirs = fs.readdirSync(ROOT, { withFileTypes: true }).filter(d => d.isDirectory());
   const targets = [];
+  // Built once: every downloaded flyer, keyed by the URL it came from.
+  const flyerIndex = buildFlyerIndex();
 
   for (const dir of cityDirs) {
     const cityKey = dir.name;
@@ -242,6 +270,18 @@ function collectTargets() {
       const html = fs.readFileSync(evIndex, 'utf8');
 
       const cityFromCanonical = (html.match(/<link rel="canonical" href="\/([^/]+)\//) || [])[1] || cityKey;
+
+      // The stub decides whether this event still gets a card of its own.
+      // generate-event-pages.js points og:image either at the per-event card or
+      // at the city's card (for events long past), so honouring that pointer
+      // keeps the two tools in agreement by construction instead of by having
+      // the same date rule written out twice.
+      const ogImageMatch = html.match(/<meta property="og:image" content="([^"]+)"/);
+      const ogImage = ogImageMatch ? ogImageMatch[1] : '';
+      const wantsOwnCard = ogImage.includes(`/img/og/${cityFromCanonical}/`);
+      if (!wantsOwnCard) continue;
+      // the ?v= hash of everything the card paints — our render gate
+      const version = (ogImage.match(/[?&]v=([0-9a-f]+)/) || [])[1] || '';
 
       // The stub carries the card's fields directly (generate-event-pages.js
       // writes them from the real event). The og:* fallbacks below only matter
@@ -272,7 +312,14 @@ function collectTargets() {
 
       // The event's flyer, written into the stub by generate-event-pages.js
       // (landscape candidate preferred — this artboard is 1200×630).
-      const flyerUrl = readCardMeta(html, 'flyer');
+      const remoteFlyer = readCardMeta(html, 'flyer');
+      // Paint the copy already on disk. download-images.js runs earlier in the
+      // same workflow, so it is nearly always there; inlining it means the card
+      // needs the network for nothing, renders the same every time, and can no
+      // longer be derailed by a slow flyer host. The remote URL stays as the
+      // fallback for artwork that has not been fetched yet.
+      const localFlyer = localFlyerFor(remoteFlyer, flyerIndex, simpleHash);
+      const flyerUrl = localFlyer ? dataUri(localFlyer) : remoteFlyer;
 
       // Where it happens. Carried on every card, drawn only when the card is
       // built with showMap (the corner map is an option, not the default —
@@ -297,7 +344,7 @@ function collectTargets() {
       const faviconUrl = dataUri(localFaviconFile((colors && colors.url) || website));
 
       targets.push({
-        cityKey: cityFromCanonical, slug: evDir.name,
+        cityKey: cityFromCanonical, slug: evDir.name, version, localFlyer: Boolean(localFlyer),
         card: { title, cityPath, when, venue, cover, flyerUrl, faviconUrl, colors, logoUrl, map }
       });
     }
@@ -306,11 +353,194 @@ function collectTargets() {
   return targets;
 }
 
+/**
+ * Remove cards nothing points at any more.
+ *
+ * Two things strand them. A card whose event has aged past its grace period is
+ * no longer requested by its stub; and because an event's slug is derived from
+ * its NAME, renaming one in the calendar mints a fresh slug and abandons the
+ * old file forever — img/og/nyc held 21 goldiloxx cards, 20 of them dead. The
+ * generator only ever wrote, so nothing had ever cleaned either kind up.
+ */
+function pruneCards(keep) {
+  if (!fs.existsSync(OUTPUT_DIR)) return 0;
+  let removed = 0;
+  for (const cityDir of fs.readdirSync(OUTPUT_DIR, { withFileTypes: true })) {
+    if (!cityDir.isDirectory()) continue;
+    const dir = path.join(OUTPUT_DIR, cityDir.name);
+    for (const file of fs.readdirSync(dir)) {
+      const full = path.join(dir, file);
+      if (!fs.statSync(full).isFile()) continue;
+      if (keep.has(full)) continue;
+      fs.unlinkSync(full);
+      removed++;
+      console.log(`🗑️  Removed orphaned ${path.relative(ROOT, full)}`);
+    }
+    if (fs.readdirSync(dir).length === 0) fs.rmdirSync(dir);
+  }
+  return removed;
+}
+
+/**
+ * The cards for places rather than events: one per visible city, plus the home
+ * page. Before this, /nyc/ shared a 1.3 MB photograph of the owner's head at
+ * the wrong aspect ratio and emitted no twitter:image at all, and the home page
+ * shared a 512x512 square — neither is a link preview.
+ *
+ * Deliberately free of counts. A number would be stale the moment Facebook
+ * cached it, and would re-render 24 cards every time an event rolled off a
+ * calendar. Name, tagline and map are true indefinitely, so these render once.
+ */
+/**
+ * The venues a city card pins: the places that city's scene actually happens
+ * in, most-used first, one pin per venue.
+ *
+ * Ranked by how many events a venue holds (recurring ones first, since a
+ * weekly is more "this is the scene here" than a one-off), then alphabetically
+ * so the choice is stable run to run. Capped, because a map of a dozen
+ * overlapping tiles reads as clutter rather than as a city.
+ */
+function collectCityPins(cityKey, limit = 8) {
+  let events = [];
+  try {
+    events = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'calendars', `${cityKey}.json`), 'utf8')).events || [];
+  } catch {
+    return [];
+  }
+  const eventColors = loadEventColors(cityKey);
+  const barColors = loadBarColors(cityKey);
+
+  const byVenue = new Map();
+  for (const ev of events) {
+    const lat = Number(ev && ev.coordinates && ev.coordinates.lat);
+    const lng = Number(ev && ev.coordinates && ev.coordinates.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) continue;
+    // festivals are city-wide, not a venue, and would pin an arbitrary point
+    if (ev.festival) continue;
+    const key = String(ev.bar || ev.slug || '').toLowerCase();
+    if (!key) continue;
+    if (!byVenue.has(key)) byVenue.set(key, { key, lat, lng, count: 0, recurring: false, event: ev });
+    const slot = byVenue.get(key);
+    slot.count++;
+    if (ev.recurring) slot.recurring = true;
+  }
+
+  return [...byVenue.values()]
+    .sort((a, b) => (b.recurring - a.recurring) || (b.count - a.count) || a.key.localeCompare(b.key))
+    .map(slot => {
+      const colors = eventColors.get(slot.event.slug) || barColors.get(slot.key) || null;
+      const website = (colors && colors.url) || slot.event.website
+        || (barColors.get(slot.key) && barColors.get(slot.key).website);
+      const icon = dataUri(localFaviconFile(website));
+      if (!icon) return null;   // a blank tile says nothing; better no pin
+      const plate = colors && /^#[0-9a-fA-F]{3,8}$/.test(colors.faviconPlate || '') ? colors.faviconPlate : '#ffffff';
+      return { lat: slot.lat, lng: slot.lng, icon, plate };
+    })
+    .filter(Boolean)
+    // Deliberately NOT deduped by icon. Three venues under one operator are
+    // three real places, and Provincetown is exactly that — collapsing them by
+    // brand left it with a single pin. Tiles that genuinely overlap on the
+    // finished map are dropped there instead, where their pixel positions are
+    // actually known.
+    .slice(0, limit);
+}
+
+function collectPlaceTargets() {
+  const { CITY_CONFIG } = require(path.join(ROOT, 'js', 'city-config.js'));
+  const out = [];
+
+  for (const [cityKey, cfg] of Object.entries(CITY_CONFIG)) {
+    if (!cfg || cfg.visible === false) continue;
+    const point = cfg.coordinates || {};
+    const hasPoint = Number.isFinite(Number(point.lat)) && Number.isFinite(Number(point.lng));
+    out.push({
+      kind: 'city',
+      key: cityKey,
+      outPath: path.join(OUTPUT_DIR, 'city', `${cityKey}${CARD_EXT}`),
+      manifestKey: `city/${cityKey}`,
+      card: {
+        kind: 'city',
+        title: cfg.name || cityKey,
+        // No tagline. "What's the bear 411?" is a catchphrase, and a share
+        // card is not the place for one — the map and the venues on it say
+        // what this city is far better than a slogan does.
+        cityPath: cityKey,
+        logoUrl,
+        showMap: hasPoint,
+        map: hasPoint ? {
+          lat: Number(point.lat), lng: Number(point.lng),
+          cityLat: Number(point.lat), cityLng: Number(point.lng),
+          cityZoom: Number(cfg.mapZoom) || 11,
+          pins: collectCityPins(cityKey)
+        } : null
+      }
+    });
+  }
+
+  out.push({
+    kind: 'home',
+    key: 'home',
+    outPath: path.join(OUTPUT_DIR, `home${CARD_EXT}`),
+    manifestKey: 'home',
+    card: {
+      kind: 'home',
+      title: 'Your Gay Bear Travel Guide',
+      when: 'Events, bars and bear weeks, city by city',
+      cityPath: '',
+      logoUrl
+    }
+  });
+
+  return out;
+}
+
 async function main() {
   const targets = collectTargets();
 
+  // City and home cards join the same queue, gated the same way. Added before
+  // the empty check: a run with no event cards due (every stub unchanged, or a
+  // calendar outage) must still be able to produce the place cards.
+  for (const place of collectPlaceTargets()) {
+    place.version = crypto.createHash('md5')
+      .update(JSON.stringify({
+        card: place.card,
+        template: OG_TEMPLATE_VERSION,
+        // place cards have no event data, so their own layout version is the
+        // only thing that can tell the gate a CSS-only redesign happened
+        placeTemplate: OG_PLACE_TEMPLATE_VERSION
+      }))
+      .digest('hex').slice(0, 8);
+    targets.push(place);
+  }
+
+  const manifest = loadManifest();
+  const nextManifest = {};
+  const keep = new Set();
+  const pending = [];
+  for (const t of targets) {
+    const outPath = t.outPath || path.join(OUTPUT_DIR, t.cityKey, `${t.slug}${CARD_EXT}`);
+    t.outPath = outPath;
+    keep.add(outPath);
+    const key = t.manifestKey || `${t.cityKey}/${t.slug}`;
+    nextManifest[key] = t.version;
+    // Unchanged content AND the file is still there: nothing to do. This is
+    // what stops the churn — no browser is launched for it at all.
+    if (t.version && manifest[key] === t.version && fs.existsSync(outPath)) continue;
+    pending.push(t);
+  }
+
   if (targets.length === 0) {
     console.log('No OG images to generate.');
+    return;
+  }
+
+  const pruned = pruneCards(keep);
+  console.log(`${targets.length} card(s) wanted · ${pending.length} to render · ${targets.length - pending.length} unchanged · ${pruned} pruned`);
+
+  if (pending.length === 0) {
+    ensureDir(OUTPUT_DIR);
+    fs.writeFileSync(MANIFEST_FILE, JSON.stringify(nextManifest, null, 2) + '\n');
+    console.log('No OG image changes.');
     return;
   }
 
@@ -329,7 +559,7 @@ async function main() {
   });
   let changes = 0;
   try {
-    for (const t of targets) {
+    for (const t of pending) {
       let page = await browser.newPage();
       await page.setViewport({ width: 1200, height: 630, deviceScaleFactor: 1 });
       // The flyer is the only part of the card that needs the network; drop it
@@ -344,7 +574,7 @@ async function main() {
       } catch (err) {
         // A slow or unreachable flyer host must never fail the build: fall back
         // to the text-only card, which needs no network at all.
-        console.warn(`⚠️  Flyer render timed out for ${t.cityKey}/${t.slug}; using text-only card`);
+        console.warn(`⚠️  Flyer render timed out for ${t.manifestKey || t.cityKey + '/' + t.slug}; using text-only card`);
       }
       if (!rendered) {
         // The fallback needs its OWN guard. It previously ran inside the catch
@@ -364,12 +594,14 @@ async function main() {
           await waitForCard(page);
           rendered = true;
         } catch (fallbackError) {
-          console.warn(`⚠️  Skipping OG image for ${t.cityKey}/${t.slug}: ${fallbackError.message}`);
+          console.warn(`⚠️  Skipping OG image for ${t.manifestKey || t.cityKey + '/' + t.slug}: ${fallbackError.message}`);
         }
       }
       if (rendered) {
-        const buffer = await page.screenshot({ type: 'png' });
-        const outPath = path.join(OUTPUT_DIR, t.cityKey, `${t.slug}.png`);
+        // JPEG at 82: these are photographs over a gradient, where PNG's
+        // lossless promise bought nothing and cost ~273 KB a card.
+        const buffer = await page.screenshot({ type: 'jpeg', quality: 82 });
+        const outPath = t.outPath;
         if (writeIfChanged(outPath, buffer)) {
           changes++;
           console.log(`✓ Generated ${path.relative(ROOT, outPath)}`);
@@ -382,6 +614,9 @@ async function main() {
   } finally {
     await browser.close();
   }
+
+  ensureDir(OUTPUT_DIR);
+  fs.writeFileSync(MANIFEST_FILE, JSON.stringify(nextManifest, null, 2) + '\n');
 
   if (changes === 0) {
     console.log('No OG image changes.');
@@ -397,5 +632,5 @@ if (require.main === module) {
   });
 }
 
-module.exports = { collectTargets, localFaviconFile };
+module.exports = { collectTargets, collectPlaceTargets, collectCityPins, localFaviconFile };
 

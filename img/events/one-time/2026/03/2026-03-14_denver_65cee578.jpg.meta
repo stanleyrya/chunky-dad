@@ -10,5 +10,6 @@
     "name": "DENVER",
     "startDate": "2026-03-14T21:00:00.000Z",
     "recurring": false
-  }
+  },
+  "flyerOptimized": 1
 }

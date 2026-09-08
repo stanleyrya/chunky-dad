@@ -9,5 +9,6 @@
     "name": "Coach After Dark: Market Days",
     "startDate": "2026-08-08T21:00:00.000Z",
     "recurring": false
-  }
+  },
+  "flyerOptimized": 1
 }

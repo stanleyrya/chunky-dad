@@ -543,6 +543,50 @@ class DynamicCalendarLoader extends CalendarCore {
         }
     }
     
+    /**
+     * The path this page should be showing right now.
+     *
+     * Social crawlers do not run JavaScript and do not read query strings, so
+     * `/nyc/?event=beer-blast-15963ca2` previews as the CITY card no matter
+     * which event is selected — only `/nyc/beer-blast-15963ca2/` carries that
+     * event's og:image. The share button always built the second form, but
+     * anyone copying the address bar got the first, and silently shared the
+     * wrong picture.
+     *
+     * So the visible path follows the selection. The generated stub at that
+     * path redirects straight back here carrying every param, which is a
+     * single hop and no loop, and the city page's <base> keeps relative URLs
+     * resolving against /<city>/ regardless of what the path says.
+     *
+     * Returns the unchanged pathname whenever a rewrite would be a lie:
+     * off a city page, or for an event with no stub of its own — festivals are
+     * synthesised in the browser from data/festivals.json and have no page, so
+     * pointing at one would 404 on reload.
+     */
+    shareablePathname(currentPathname) {
+        try {
+            const city = this.currentCity;
+            if (!city) return currentPathname;
+            // Only ever rewrite within the city directory we are actually in.
+            // Anything else — the home page, an alias path, a test harness —
+            // keeps exactly the path it arrived on.
+            const segments = currentPathname.split('/').filter(Boolean);
+            if (segments.length < 1 || segments.length > 2) return currentPathname;
+            if (segments[0].toLowerCase() !== String(city).toLowerCase()) return currentPathname;
+
+            const cityPath = `/${city}/`;
+            if (!this.selectedEventSlug) return cityPath;
+
+            const selected = (this.allEvents || []).find(e => e && e.slug === this.selectedEventSlug);
+            // unknown to us, or browser-synthesised: no stub exists to link to
+            if (!selected || selected.festival) return cityPath;
+
+            return `${cityPath}${encodeURIComponent(this.selectedEventSlug)}/`;
+        } catch (e) {
+            return currentPathname;
+        }
+    }
+
     // Sync current state to URL (replaceState to avoid history spam)
     syncUrl(replace = true) {
         try {
@@ -572,8 +616,9 @@ class DynamicCalendarLoader extends CalendarCore {
                 params.delete('eventDate');
             }
             
-            // Apply and replace
-            const newUrl = `${url.pathname}?${params.toString()}${url.hash || ''}`;
+            // Apply and replace — including the PATH, so the address bar always
+            // holds a link that previews correctly.
+            const newUrl = `${this.shareablePathname(url.pathname)}?${params.toString()}${url.hash || ''}`;
             if (replace) {
                 history.replaceState({}, '', newUrl);
             } else {

@@ -64,7 +64,22 @@ const AURORA_FALLBACK = { c1: '#667eea', c2: '#ff6b6b', c3: '#2a2c4d' };
 // on every og:image URL — otherwise Facebook, iMessage and friends keep
 // serving the card they cached before the redesign. tools/generate-event-pages.js
 // mixes it into the cache-busting hash for exactly that reason.
-const OG_TEMPLATE_VERSION = 2;
+const OG_TEMPLATE_VERSION = 3;
+
+// The same knob for the city/home layout alone.
+//
+// A change to the `body.place` rules — the map taking the right half, the seam
+// between it and the ground, how the name steps down — leaves event cards
+// rendering pixel-for-pixel identical, so bumping OG_TEMPLATE_VERSION for it
+// would re-render all 149 of them and rewrite the `?v=` on every event stub to
+// no purpose. Place cards carry no event data to hash, so without a version of
+// their own a pure-CSS change to them is invisible to the render gate.
+//
+// 2: dropped the gradient fade and then the divider rule; venue pins.
+// 3: larger pin tiles.
+// 4: pin ring dropped to the site's own 0.22 — 0.9 haloed dark artwork.
+// 5: title line-height back to the base 1.15; 1.06 clipped descenders.
+const OG_PLACE_TEMPLATE_VERSION = 5;
 
 // Bootstrap Icons geometry, inlined — same paths the cards use.
 const OG_ICONS = {
@@ -381,22 +396,74 @@ function mapScript(configJson) {
         });
       } catch (e) {}
     });
-    var el = document.createElement('div');
-    el.className = 'og-pin' + (cfg.pin ? '' : ' plain');
-    if (cfg.pin) {
-      var img = document.createElement('img');
-      img.src = cfg.pin;
-      el.appendChild(img);
-    }
-    new maplibregl.Marker({ element: el }).setLngLat([cfg.lng, cfg.lat]).addTo(map);
-    var bounds = new maplibregl.LngLatBounds([cfg.cityLng, cfg.cityLat], [cfg.cityLng, cfg.cityLat]);
-    bounds.extend([cfg.lng, cfg.lat]);
+    // One event pins itself; a city pins the venues it actually has, so the
+    // map reads as that scene rather than as a generic locator.
+    var points = (cfg.pins && cfg.pins.length)
+      ? cfg.pins
+      : [{ lat: cfg.lat, lng: cfg.lng, icon: cfg.pin }];
+    var placed = [];
+    // An EVENT card frames the city and pulls back only far enough to keep its
+    // one venue in shot. A CITY card is the other way round: the venues ARE the
+    // subject, so they set the frame and the city centre does not drag it wide.
+    var usePins = !!(cfg.pins && cfg.pins.length);
+    var bounds = usePins
+      ? new maplibregl.LngLatBounds()
+      : new maplibregl.LngLatBounds([cfg.cityLng, cfg.cityLat], [cfg.cityLng, cfg.cityLat]);
+    points.forEach(function (pt) {
+      if (!pt || !isFinite(pt.lat) || !isFinite(pt.lng)) return;
+      var el = document.createElement('div');
+      el.className = 'og-pin' + (pt.icon ? '' : ' plain');
+      if (pt.plate) el.style.background = pt.plate;
+      if (pt.icon) {
+        var img = document.createElement('img');
+        img.src = pt.icon;
+        // a pin whose icon will not load is worse than no pin
+        img.onerror = function () { el.remove(); };
+        el.appendChild(img);
+      }
+      var marker = new maplibregl.Marker({ element: el }).setLngLat([pt.lng, pt.lat]).addTo(map);
+      placed.push({ marker: marker, lng: pt.lng, lat: pt.lat });
+      bounds.extend([pt.lng, pt.lat]);
+    });
     // padding scaled to the box, not a fixed number: on a 190px-tall inset a
     // flat 70 left almost no usable height and fitBounds answered by zooming
     // out to three states
     var box = map.getContainer();
     var pad = Math.max(10, Math.min(70, Math.min(box.clientWidth, box.clientHeight) * 0.2));
-    map.fitBounds(bounds, { padding: pad, maxZoom: cfg.cityZoom, duration: 0 });
+    // pins are 40px and anchored at their centre, so a tile on the boundary
+    // hangs half off the card unless the frame leaves room for it
+    if (usePins) pad = Math.max(pad, 90);
+    // Venues in one neighbourhood would otherwise fit to a single block, so a
+    // city card is allowed past the city's default zoom but not far past it.
+    var maxZoom = usePins ? Math.min(16, Math.max(cfg.cityZoom + 3, 13)) : cfg.cityZoom;
+    if (bounds.isEmpty && bounds.isEmpty()) {
+      map.jumpTo({ center: [cfg.cityLng, cfg.cityLat], zoom: cfg.cityZoom });
+    } else {
+      map.fitBounds(bounds, { padding: pad, maxZoom: maxZoom, duration: 0 });
+    }
+    // Venues in an old town can sit 150m apart — no zoom separates them without
+    // throwing the city away — so once the frame is settled, drop any tile that
+    // would land on top of one already kept. Four overlapping glyphs read as a
+    // rendering fault; three spaced ones read as a scene.
+    if (usePins && placed.length > 1) {
+      var kept = [];
+      // measured, not assumed: the tile is sized in CSS and has changed size
+      // more than once, and a hard-coded distance silently stops matching it
+      var pinSize = placed[0].marker.getElement().offsetWidth || 40;
+      placed.forEach(function (item) {
+        var pointPx = map.project([item.lng, item.lat]);
+        // 0.82 rather than a full tile width: strict non-overlap threw away
+        // most of a dense old town's venues (Sitges kept one of six). A pair
+        // that just touches reads as two neighbouring places, which is what
+        // they are; only real stacking looks like a fault.
+        var minGap = pinSize * 0.82;
+        var collides = kept.some(function (k) {
+          return Math.abs(k.x - pointPx.x) < minGap && Math.abs(k.y - pointPx.y) < minGap;
+        });
+        if (collides) { item.marker.remove(); return; }
+        kept.push(pointPx);
+      });
+    }
     map.once('idle', function () { ready = true; give(false); });
   } catch (e) {
     give(true);
@@ -561,8 +628,18 @@ function buildOgCardHtml(data) {
     // 1:1 is an option, not the default — see OG_ARTBOARDS.
     const board = OG_ARTBOARDS[d.artboard] || OG_ARTBOARDS.wide;
 
+    // A place, rather than an event. City and home cards paint the same
+    // language — same aurora ground, same type, same address line — but they
+    // have no flyer to hang the layout on, so the map stops being a corner
+    // inset and becomes the artwork instead. Anything falsy leaves the card
+    // exactly as it was.
+    const kind = d.kind === 'city' || d.kind === 'home' ? d.kind : '';
+    const kindClass = kind ? ` place ${kind}-card` : '';
+
     const titleLength = String(d.title || '').length;
-    const titleClass = titleLength > 46 ? 'title t-xs' : (titleLength > 28 ? 'title t-sm' : 'title');
+    const titleClass = kind
+        ? (titleLength > 13 ? 'title p-xs' : titleLength > 11 ? 'title p-sm' : titleLength > 8 ? 'title p-md' : 'title')
+        : (titleLength > 46 ? 'title t-xs' : (titleLength > 28 ? 'title t-sm' : 'title'));
 
     const faviconTile = favicon
         ? `<span class="fav" style="background:${esc(plate)}"><img src="${favicon}" alt="" onerror="this.parentNode.remove()"></span>`
@@ -578,7 +655,8 @@ function buildOgCardHtml(data) {
         lat: m.lat, lng: m.lng,
         cityLat: m.cityLat, cityLng: m.cityLng,
         cityZoom: Number(m.cityZoom) || 11,
-        pin: favicon
+        pin: favicon,
+        pins: Array.isArray(m.pins) ? m.pins : null
     }).replace(/</g, '\\u003c') : '';
 
     // The address bar, not a place name: someone who sees the image should
@@ -682,8 +760,13 @@ ${m ? '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/ma
     /* NOT tighter than this. The title clips with overflow:hidden (that is
        what -webkit-line-clamp needs), so the line box has to be taller than
        the face's ascender-to-descender — at 1.06 the box was shorter than
-       Poppins needs and the tail came off every g, y and j. */
-    line-height: 1.15;
+       Poppins needs and the tail came off every g, y and j.
+       1.15 was still short: measured across all 148 live cards, 146 of them
+       overflowed their title box by ~11px at 88px type — the y of "CHUNK
+       Brooklyn" was losing its tail on every one. 1.3 still left 4px hanging;
+       1.4 is the first value where all 148 come back clean, checked by
+       comparing each title's scrollHeight to its clientHeight. */
+    line-height: 1.4;
     letter-spacing: -1.4px;
     /* the last resort, after the size steps below have already tried */
     display: -webkit-box;
@@ -772,7 +855,12 @@ ${m ? '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/ma
     height: 34px;
     border-radius: 9px;
     background: #fff;
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9), 0 4px 14px rgba(6, 8, 20, 0.45);
+    /* 0.22, matching the site's own favicon tile (styles.css .ec-fav). This
+       ring was at 0.9 — near-solid white — which drew a visible halo around
+       full-bleed artwork like Urban Bear's black tile. styles.css carries a
+       comment about removing a border for exactly that reason; this is the
+       same mistake in the other file. The drop shadow does the separating. */
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.22), 0 4px 14px rgba(6, 8, 20, 0.45);
     overflow: hidden;
   }
   .og-pin img { display: block; width: 100%; height: 100%; object-fit: contain; padding: 5px; }
@@ -847,9 +935,52 @@ ${m ? '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/ma
      address line is bottom-LEFT), so the two only meet if a row runs very
      long — which this stops, by ellipsing the value before it gets there. */
   body:not(.no-map) .row span { max-width: 520px; }
+
+  /* ---- place cards (city + home) --------------------------------------
+     No flyer ever competes for the artboard here, so the map takes the right
+     half outright instead of hiding in the corner, and the name is set as
+     large as it will go. Everything else — ground, brand line, row icons — is
+     inherited untouched, so a city card is recognisably the same object as an
+     event card. */
+  /* the body's own padding reserves the map's column — setting a width on
+     .copy as well would subtract the same space twice and crush the name */
+  body.place:not(.no-map) { padding-right: 566px; }
+  /* A city name is one or two words and must not wrap mid-word, so it steps
+     down by length rather than clamping. "Provincetown" is the wide case. */
+  /* Line-height is deliberately NOT set here: the base is 1.4, which is what
+     "Sitges" needed for its g and what every event title needed too. Naming it
+     again would be a second place for the two to drift apart — which is how
+     this broke in the first place. */
+  body.place .title { font-size: 104px; -webkit-line-clamp: 2; }
+  body.place .title.p-md { font-size: 88px; }
+  body.place .title.p-sm { font-size: 74px; }
+  body.place .title.p-xs { font-size: 62px; }
+  body.place:not(.no-map) .map {
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 500px;
+    height: auto;
+    border-radius: 0;
+    /* no seam at all: no gradient smear, and no rule either — the map simply
+       ends and the ground begins */
+    box-shadow: none;
+    border: 0;
+  }
+  body.place:not(.no-map) .row span { max-width: 560px; }
+  /* the subtitle is a tagline, not a time or a venue — the clock glyph beside
+     it was reading as information it is not */
+  body.place .row svg { display: none; }
+  body.place .og-pin { width: 54px; height: 54px; border-radius: 15px; }
+  body.place .og-pin img { padding: 7px; }
+  body.place .row { gap: 0; }
+  /* a city with no pinnable venues shows a bare map rather than a lone dot in
+     the middle of it — an unlabelled marker means nothing on a city card */
+  body.place .og-pin.plain { display: none; }
+  body.home-card .title { letter-spacing: -0.02em; }
 </style>
 </head>
-<body class="${board.className}${flyer ? '' : ' no-art'}${m ? '' : ' no-map'}">
+<body class="${board.className}${flyer ? '' : ' no-art'}${m ? '' : ' no-map'}${kindClass}">
   ${flyer ? `<div class="art"><img src="${flyer}" alt="" onerror="document.body.classList.add('no-art')"></div>` : ''}
   <div class="copy">
     <div class="titlerow">
@@ -872,6 +1003,7 @@ ${m ? '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/ma
 
 const api = {
     buildOgCardHtml,
+    OG_PLACE_TEMPLATE_VERSION,
     artboardSize,
     OG_ARTBOARDS,
     formatEventWhen,
