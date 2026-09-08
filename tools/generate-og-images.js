@@ -391,6 +391,60 @@ function pruneCards(keep) {
  * cached it, and would re-render 24 cards every time an event rolled off a
  * calendar. Name, tagline and map are true indefinitely, so these render once.
  */
+/**
+ * The venues a city card pins: the places that city's scene actually happens
+ * in, most-used first, one pin per venue.
+ *
+ * Ranked by how many events a venue holds (recurring ones first, since a
+ * weekly is more "this is the scene here" than a one-off), then alphabetically
+ * so the choice is stable run to run. Capped, because a map of a dozen
+ * overlapping tiles reads as clutter rather than as a city.
+ */
+function collectCityPins(cityKey, limit = 8) {
+  let events = [];
+  try {
+    events = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'calendars', `${cityKey}.json`), 'utf8')).events || [];
+  } catch {
+    return [];
+  }
+  const eventColors = loadEventColors(cityKey);
+  const barColors = loadBarColors(cityKey);
+
+  const byVenue = new Map();
+  for (const ev of events) {
+    const lat = Number(ev && ev.coordinates && ev.coordinates.lat);
+    const lng = Number(ev && ev.coordinates && ev.coordinates.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) continue;
+    // festivals are city-wide, not a venue, and would pin an arbitrary point
+    if (ev.festival) continue;
+    const key = String(ev.bar || ev.slug || '').toLowerCase();
+    if (!key) continue;
+    if (!byVenue.has(key)) byVenue.set(key, { key, lat, lng, count: 0, recurring: false, event: ev });
+    const slot = byVenue.get(key);
+    slot.count++;
+    if (ev.recurring) slot.recurring = true;
+  }
+
+  return [...byVenue.values()]
+    .sort((a, b) => (b.recurring - a.recurring) || (b.count - a.count) || a.key.localeCompare(b.key))
+    .map(slot => {
+      const colors = eventColors.get(slot.event.slug) || barColors.get(slot.key) || null;
+      const website = (colors && colors.url) || slot.event.website
+        || (barColors.get(slot.key) && barColors.get(slot.key).website);
+      const icon = dataUri(localFaviconFile(website));
+      if (!icon) return null;   // a blank tile says nothing; better no pin
+      const plate = colors && /^#[0-9a-fA-F]{3,8}$/.test(colors.faviconPlate || '') ? colors.faviconPlate : '#ffffff';
+      return { lat: slot.lat, lng: slot.lng, icon, plate };
+    })
+    .filter(Boolean)
+    // Deliberately NOT deduped by icon. Three venues under one operator are
+    // three real places, and Provincetown is exactly that — collapsing them by
+    // brand left it with a single pin. Tiles that genuinely overlap on the
+    // finished map are dropped there instead, where their pixel positions are
+    // actually known.
+    .slice(0, limit);
+}
+
 function collectPlaceTargets() {
   const { CITY_CONFIG } = require(path.join(ROOT, 'js', 'city-config.js'));
   const out = [];
@@ -407,14 +461,17 @@ function collectPlaceTargets() {
       card: {
         kind: 'city',
         title: cfg.name || cityKey,
-        when: cfg.tagline || '',
+        // No tagline. "What's the bear 411?" is a catchphrase, and a share
+        // card is not the place for one — the map and the venues on it say
+        // what this city is far better than a slogan does.
         cityPath: cityKey,
         logoUrl,
         showMap: hasPoint,
         map: hasPoint ? {
           lat: Number(point.lat), lng: Number(point.lng),
           cityLat: Number(point.lat), cityLng: Number(point.lng),
-          cityZoom: Number(cfg.mapZoom) || 11
+          cityZoom: Number(cfg.mapZoom) || 11,
+          pins: collectCityPins(cityKey)
         } : null
       }
     });
@@ -569,5 +626,5 @@ if (require.main === module) {
   });
 }
 
-module.exports = { collectTargets, localFaviconFile };
+module.exports = { collectTargets, collectPlaceTargets, collectCityPins, localFaviconFile };
 

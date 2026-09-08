@@ -381,22 +381,66 @@ function mapScript(configJson) {
         });
       } catch (e) {}
     });
-    var el = document.createElement('div');
-    el.className = 'og-pin' + (cfg.pin ? '' : ' plain');
-    if (cfg.pin) {
-      var img = document.createElement('img');
-      img.src = cfg.pin;
-      el.appendChild(img);
-    }
-    new maplibregl.Marker({ element: el }).setLngLat([cfg.lng, cfg.lat]).addTo(map);
-    var bounds = new maplibregl.LngLatBounds([cfg.cityLng, cfg.cityLat], [cfg.cityLng, cfg.cityLat]);
-    bounds.extend([cfg.lng, cfg.lat]);
+    // One event pins itself; a city pins the venues it actually has, so the
+    // map reads as that scene rather than as a generic locator.
+    var points = (cfg.pins && cfg.pins.length)
+      ? cfg.pins
+      : [{ lat: cfg.lat, lng: cfg.lng, icon: cfg.pin }];
+    var placed = [];
+    // An EVENT card frames the city and pulls back only far enough to keep its
+    // one venue in shot. A CITY card is the other way round: the venues ARE the
+    // subject, so they set the frame and the city centre does not drag it wide.
+    var usePins = !!(cfg.pins && cfg.pins.length);
+    var bounds = usePins
+      ? new maplibregl.LngLatBounds()
+      : new maplibregl.LngLatBounds([cfg.cityLng, cfg.cityLat], [cfg.cityLng, cfg.cityLat]);
+    points.forEach(function (pt) {
+      if (!pt || !isFinite(pt.lat) || !isFinite(pt.lng)) return;
+      var el = document.createElement('div');
+      el.className = 'og-pin' + (pt.icon ? '' : ' plain');
+      if (pt.plate) el.style.background = pt.plate;
+      if (pt.icon) {
+        var img = document.createElement('img');
+        img.src = pt.icon;
+        // a pin whose icon will not load is worse than no pin
+        img.onerror = function () { el.remove(); };
+        el.appendChild(img);
+      }
+      var marker = new maplibregl.Marker({ element: el }).setLngLat([pt.lng, pt.lat]).addTo(map);
+      placed.push({ marker: marker, lng: pt.lng, lat: pt.lat });
+      bounds.extend([pt.lng, pt.lat]);
+    });
     // padding scaled to the box, not a fixed number: on a 190px-tall inset a
     // flat 70 left almost no usable height and fitBounds answered by zooming
     // out to three states
     var box = map.getContainer();
     var pad = Math.max(10, Math.min(70, Math.min(box.clientWidth, box.clientHeight) * 0.2));
-    map.fitBounds(bounds, { padding: pad, maxZoom: cfg.cityZoom, duration: 0 });
+    // pins are 40px and anchored at their centre, so a tile on the boundary
+    // hangs half off the card unless the frame leaves room for it
+    if (usePins) pad = Math.max(pad, 78);
+    // Venues in one neighbourhood would otherwise fit to a single block, so a
+    // city card is allowed past the city's default zoom but not far past it.
+    var maxZoom = usePins ? Math.min(16, Math.max(cfg.cityZoom + 3, 13)) : cfg.cityZoom;
+    if (bounds.isEmpty && bounds.isEmpty()) {
+      map.jumpTo({ center: [cfg.cityLng, cfg.cityLat], zoom: cfg.cityZoom });
+    } else {
+      map.fitBounds(bounds, { padding: pad, maxZoom: maxZoom, duration: 0 });
+    }
+    // Venues in an old town can sit 150m apart — no zoom separates them without
+    // throwing the city away — so once the frame is settled, drop any tile that
+    // would land on top of one already kept. Four overlapping glyphs read as a
+    // rendering fault; three spaced ones read as a scene.
+    if (usePins && placed.length > 1) {
+      var kept = [];
+      placed.forEach(function (item) {
+        var pointPx = map.project([item.lng, item.lat]);
+        var collides = kept.some(function (k) {
+          return Math.abs(k.x - pointPx.x) < 40 && Math.abs(k.y - pointPx.y) < 40;
+        });
+        if (collides) { item.marker.remove(); return; }
+        kept.push(pointPx);
+      });
+    }
     map.once('idle', function () { ready = true; give(false); });
   } catch (e) {
     give(true);
@@ -570,7 +614,9 @@ function buildOgCardHtml(data) {
     const kindClass = kind ? ` place ${kind}-card` : '';
 
     const titleLength = String(d.title || '').length;
-    const titleClass = titleLength > 46 ? 'title t-xs' : (titleLength > 28 ? 'title t-sm' : 'title');
+    const titleClass = kind
+        ? (titleLength > 13 ? 'title p-xs' : titleLength > 11 ? 'title p-sm' : titleLength > 8 ? 'title p-md' : 'title')
+        : (titleLength > 46 ? 'title t-xs' : (titleLength > 28 ? 'title t-sm' : 'title'));
 
     const faviconTile = favicon
         ? `<span class="fav" style="background:${esc(plate)}"><img src="${favicon}" alt="" onerror="this.parentNode.remove()"></span>`
@@ -586,7 +632,8 @@ function buildOgCardHtml(data) {
         lat: m.lat, lng: m.lng,
         cityLat: m.cityLat, cityLng: m.cityLng,
         cityZoom: Number(m.cityZoom) || 11,
-        pin: favicon
+        pin: favicon,
+        pins: Array.isArray(m.pins) ? m.pins : null
     }).replace(/</g, '\\u003c') : '';
 
     // The address bar, not a place name: someone who sees the image should
@@ -864,34 +911,33 @@ ${m ? '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/ma
      event card. */
   /* the body's own padding reserves the map's column — setting a width on
      .copy as well would subtract the same space twice and crush the name */
-  body.place:not(.no-map) { padding-right: 540px; }
+  body.place:not(.no-map) { padding-right: 566px; }
+  /* A city name is one or two words and must not wrap mid-word, so it steps
+     down by length rather than clamping. "Provincetown" is the wide case. */
   body.place .title { font-size: 104px; line-height: 1.06; -webkit-line-clamp: 2; }
-  body.place .title.t-sm { font-size: 78px; }
-  body.place .title.t-xs { font-size: 60px; }
+  body.place .title.p-md { font-size: 88px; }
+  body.place .title.p-sm { font-size: 74px; }
+  body.place .title.p-xs { font-size: 62px; }
   body.place:not(.no-map) .map {
     right: 0;
     top: 0;
     bottom: 0;
-    width: 470px;
+    width: 500px;
     height: auto;
     border-radius: 0;
-    box-shadow: -18px 0 44px rgba(6, 8, 20, 0.42);
-  }
-  /* the ground fades into the map rather than butting against it */
-  body.place:not(.no-map) .map::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: linear-gradient(90deg, ${aurora.c1} 0%, rgba(0, 0, 0, 0) 55%);
+    /* a clean edge, not a gradient smear across the artwork */
+    box-shadow: none;
+    border-left: 3px solid rgba(255, 255, 255, 0.20);
   }
   body.place:not(.no-map) .row span { max-width: 560px; }
   /* the subtitle is a tagline, not a time or a venue — the clock glyph beside
      it was reading as information it is not */
   body.place .row svg { display: none; }
+  body.place .og-pin { width: 40px; height: 40px; border-radius: 11px; }
   body.place .row { gap: 0; }
-  /* and there is no single point to mark on a whole city */
-  body.place .og-pin { display: none; }
+  /* a city with no pinnable venues shows a bare map rather than a lone dot in
+     the middle of it — an unlabelled marker means nothing on a city card */
+  body.place .og-pin.plain { display: none; }
   body.home-card .title { letter-spacing: -0.02em; }
 </style>
 </head>
