@@ -5962,8 +5962,47 @@ class DynamicCalendarLoader extends CalendarCore {
         return row;
     }
 
+    /**
+     * Clicking past everything clears the selection.
+     *
+     * Pressing the selected card already deselects it, but the two other
+     * places an event lives — the calendar grid and the map — had no way out:
+     * once something was selected you had to find that card again. Empty
+     * space in either now does what the card does.
+     *
+     * Bound once at the document, capture-free, so it runs after the handlers
+     * that actually selected something.
+     */
+    setupDeselectOnEmptySpace() {
+        if (this.deselectBound) return;
+        this.deselectBound = true;
+
+        document.addEventListener('click', (e) => {
+            if (!this.selectedEventSlug) return;
+            if (!e.target || !e.target.closest) return;
+            // dusk-rail owns every click in the mobile month view
+            if (document.documentElement.classList.contains('month-full')) return;
+
+            const inCalendar = e.target.closest('.calendar-grid');
+            const inMap = e.target.closest('#events-map, .events-map-section');
+            if (!inCalendar && !inMap) return;
+
+            // Anything that IS an event, or a control, keeps its own meaning:
+            // pills and day cells that carry events, map markers, and the
+            // map's own buttons (zoom, locate, attribution).
+            if (e.target.closest('.event-item, .event-card, .maplibregl-marker, .favicon-marker-container, button, a, .maplibregl-ctrl')) return;
+
+            logger.userInteraction('EVENT', 'Clicked empty space, clearing selection', {
+                where: inMap ? 'map' : 'calendar'
+            });
+            this.clearEventSelection();
+            this.syncUrl(true);
+        });
+    }
+
     // Add click-to-select behavior on event cards as well
     attachEventCardSelectionHandlers() {
+        this.setupDeselectOnEmptySpace();
         const cards = document.querySelectorAll('.event-card.detailed');
         cards.forEach(card => {
             // reconciled refreshes REUSE card nodes — never double-bind

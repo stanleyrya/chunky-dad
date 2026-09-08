@@ -2672,7 +2672,7 @@ body.index-page main {
    it. It is NOT a flex item on the row: as one it was pushed to the far right
    edge with all the row's slack in between. */
 .event-card.detailed.aurora .ec-venue .distance-badge {
-    margin-left: 0.35rem;
+    margin-left: 0.5rem;
     vertical-align: baseline;
 }
 
@@ -7828,6 +7828,14 @@ html.dusk body {
     flex-wrap: wrap;
     gap: 0.3rem;
     margin-left: 0.15rem;
+}
+/* The venue pill is inline in the text here as well, and needs the same
+   breathing room the card gives it. One class more specific than the shared
+   badge rule below, which sets margin: 0 on every row badge and was leaving
+   this one pressed against the venue name. */
+.rail-sheet .sheet-rows .ec-venue .distance-badge {
+    margin-left: 0.5rem;
+    vertical-align: baseline;
 }
 .rail-sheet .sheet-rows .recurring-badge,
 .rail-sheet .sheet-rows .date-badge,
