@@ -230,6 +230,9 @@ body.index-page header.visible{opacity:1!important}
 .event-compact-card{width:auto!important;min-width:0!important;max-width:none}
 .event-compact-card .event-content{width:auto;min-width:0}
 .event-compact-card .bear-event-name,.event-compact-card .event-dates,.event-compact-card .event-location{max-width:none;overflow:visible;text-overflow:clip}
+/* Explore turns up sooner: it was waiting 1.5s then fading for 1s, so it only
+   settled at 2.5s — after the logo, the title and the joke bubble */
+.hero-scroll-hint{animation:heroScrollHintFade .45s ease-out .55s both!important}
     </style>
 </head>
 <body class="index-page">
