@@ -4223,6 +4223,27 @@ class DynamicCalendarLoader extends CalendarCore {
         return daysHtml;
     }
 
+    // MapLibre renders its attribution expanded on first paint (compact +
+    // compact-show + open), so the credits sit open over the map until you
+    // dismiss them. Collapse it to the (i) button; one tap still opens it.
+    collapseMapAttribution(map) {
+        if (!map || typeof map.getContainer !== 'function') return;
+        const collapse = () => {
+            const container = map.getContainer();
+            if (!container) return;
+            container.querySelectorAll('.maplibregl-ctrl-attrib').forEach(el => {
+                el.classList.add('maplibregl-compact');
+                el.classList.remove('maplibregl-compact-show');
+                el.removeAttribute('open');
+                const btn = el.querySelector('.maplibregl-ctrl-attrib-button');
+                if (btn) btn.setAttribute('aria-expanded', 'false');
+            });
+        };
+        collapse();
+        map.on('load', collapse);
+        map.once('idle', collapse);
+    }
+
     applyTheme(map) {
         const PURPLE = "#667eea";
         const layers = map.getStyle().layers;
@@ -4344,6 +4365,7 @@ class DynamicCalendarLoader extends CalendarCore {
                 map.on('style.load', () => {
                     this.applyTheme(map);
                 });
+                this.collapseMapAttribution(map);
 
                 // Add custom controls to maplibregl
                 class FitMarkersControl {
@@ -4533,6 +4555,7 @@ class DynamicCalendarLoader extends CalendarCore {
             map.on('style.load', () => {
                 this.applyTheme(map);
             });
+            this.collapseMapAttribution(map);
             map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left');
             // the sheet's own hide-others toggle — the sheet always has a
             // selected event, so ON leaves just its marker
