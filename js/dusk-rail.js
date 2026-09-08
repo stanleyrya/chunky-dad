@@ -343,14 +343,27 @@
   };
   document.addEventListener('click', (e) => {
     if (!isMobile()) return;
-    const chip = e.target.closest && e.target.closest('.ec-more');
-    const teaHit = !chip && e.target.closest && e.target.closest('.ec-tea');
-    if (!chip && !teaHit) return;
-    const card = (chip || teaHit).closest('.event-card');
+    if (!e.target.closest) return;
+    // Controls inside the card do their own thing and never open the sheet.
+    if (e.target.closest('.rail-thumb, .share-event-btn, .event-links, .map-link')) return;
+
+    const chip = e.target.closest('.ec-more');
+    const teaHit = !chip && e.target.closest('.ec-tea');
+    // Tapping the card itself opens the sheet now — the full description, the
+    // links and the map are all in there, and the card is the obvious thing to
+    // press for "tell me more". Before this only the "…more" chip did, so an
+    // event whose description happened to fit had no way in at all.
+    const cardHit = !chip && !teaHit && e.target.closest('.events-list .event-card');
+    const card = (chip || teaHit || cardHit) && (chip || teaHit || cardHit).closest('.event-card');
     if (!card) return;
-    if (chip || teaOverflows(card.querySelector('.ec-tea'))) {
+
+    if (chip || cardHit || teaOverflows(card.querySelector('.ec-tea'))) {
       e.preventDefault();
-      e.stopPropagation();
+      // NOT stopPropagation for a card tap: the loader's own click handler
+      // still has to run so the card becomes the selected event. Only the
+      // chip and the description swallow the event, because those would
+      // otherwise toggle the selection off under the sheet.
+      if (!cardHit) e.stopPropagation();
       openSheet(card);
     }
   }, true);
