@@ -158,6 +158,9 @@ function buildCityHtml(baseHtml, cityKey, cityConfig) {
 
   const ogTags = [
     `<meta property="og:type" content="website">`,
+    // shown above the title on Discord and similar; without it the card looks
+    // like it came from nowhere
+    `<meta property="og:site_name" content="chunky.dad">`,
     `<meta property="og:title" content="${cityTitle}">`,
     `<meta property="og:description" content="${cityDesc}">`,
     `<meta property="og:url" content="https://chunky.dad${canonicalHref}">`,
@@ -178,6 +181,9 @@ function buildCityHtml(baseHtml, cityKey, cityConfig) {
       html = html.replace(/<meta property="og:image"[^>]*>/, `<meta property="og:image" content="${ogImageUrl}">`);
     } else {
       html = html.replace('</head>', `  <meta property="og:image" content="${ogImageUrl}">\n</head>`);
+    }
+    if (!html.includes('property="og:site_name"')) {
+      html = html.replace('</head>', `  <meta property="og:site_name" content="chunky.dad">\n</head>`);
     }
     // twitter:* were simply absent before; add or refresh them alongside
     for (const [attr, value] of [['card', 'summary_large_image'], ['title', cityTitle], ['description', cityDesc], ['image', ogImageUrl]]) {
