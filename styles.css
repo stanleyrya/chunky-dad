@@ -2633,6 +2633,9 @@ body.index-page main {
     margin-left: 0.15rem;
 }
 
+/* The distance pill now rides on the venue row, so it has to be styled there
+   too — it is no longer inside .ec-badges. Same pill, one selector list. */
+.event-card.detailed.aurora .ec-venue > .distance-badge,
 .event-card.detailed.aurora .ec-badges .recurring-badge,
 .event-card.detailed.aurora .ec-badges .date-badge,
 .event-card.detailed.aurora .ec-badges .distance-badge {
@@ -2656,6 +2659,15 @@ body.index-page main {
     width: 10px;
     height: 10px;
     flex: 0 0 10px;
+}
+
+/* The pill holds its width; the venue name is what yields. Only the sizing
+   here is global — whether the name wraps or ellipses is decided per mode
+   further down, because a cozy card can afford the extra line and a dense one
+   cannot. */
+.event-card.detailed.aurora .ec-venue > .distance-badge {
+    flex: 0 0 auto;
+    margin-left: 0.1rem;
 }
 
 .event-card.detailed.aurora .ec-tea {
@@ -7564,6 +7576,27 @@ html.dusk body {
         margin-top: 0;
         border-top: none;
     }
+    /* A dense card is a fixed 246px and `.ec-tea` is the only item that can
+       give, so every extra line in a row is taken straight out of the
+       description — it does not re-clamp to one line, it gets sliced mid-line
+       (Bear Happy Hour's was 8px tall, showing half a line of text).
+       The venue row is where that bites: "Check instagram for this week's
+       location." is wider than the 268px row, and under flex-wrap the icon,
+       the name and the distance pill each took a line of their own — 67px for
+       one venue. Here the row does not wrap and the name ellipses instead.
+       Cozy leaves it wrapping: that card grows, so the full name costs
+       nothing. */
+    html.mode-dense .event-card.detailed.aurora .ec-venue {
+        flex-wrap: nowrap;
+    }
+    html.mode-dense .event-card.detailed.aurora .ec-venue > .ec-row-text {
+        flex: 1 1 0;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
     html.mode-dense .event-card .ec-tea {
         display: -webkit-box;
         -webkit-line-clamp: 2;
