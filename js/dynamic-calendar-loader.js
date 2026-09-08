@@ -3104,7 +3104,7 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Venue row. Mirrors generateLocationHtml's data choices (coordinates →
     // showOnMap link, otherwise the plain bar name) without the label/value markup.
-    generateAuroraVenueRow(event) {
+    generateAuroraVenueRow(event, trailing = '') {
         const lat = Number(event.coordinates?.lat);
         const lng = Number(event.coordinates?.lng);
         const hasCoordinates = Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0;
@@ -3114,7 +3114,7 @@ class DynamicCalendarLoader extends CalendarCore {
         const value = hasCoordinates
             ? `<a href="#" class="map-link" onclick="showOnMap(${lat}, ${lng}, '${this.escapeCardJsString(event.name)}', '${this.escapeCardJsString(event.bar || '')}')">${label}</a>`
             : label;
-        return `<div class="ec-row ec-venue">${this.cardIconSvg('pin')}<span class="ec-row-text">${value}</span></div>`;
+        return `<div class="ec-row ec-venue">${this.cardIconSvg('pin')}<span class="ec-row-text">${value}</span>${trailing}</div>`;
     }
 
     // Cover row. Same "hide free events" filter generateCoverHtml applies.
@@ -3148,7 +3148,7 @@ class DynamicCalendarLoader extends CalendarCore {
 
         const teaText = this.sanitizeDisplayText(event.tea);
         const teaHtml = teaText ? `<div class="ec-tea">${this.escapeCardText(teaText)}</div>` : '';
-        const venueRow = this.generateAuroraVenueRow(event);
+
         const coverRow = this.generateAuroraCoverRow(event);
 
         // Get current calendar period bounds for contextual date display
@@ -3198,12 +3198,30 @@ class DynamicCalendarLoader extends CalendarCore {
         const dateBadge = dateBadgeContent && !dateLeads ?
             `<span class="date-badge">${this.escapeCardText(dateBadgeContent)}</span>` : '';
 
-        // Add distance badge if location features are enabled and distance is available
+        // How far away it is, which is a fact about the PLACE — so it rides on
+        // the venue row rather than the when row.
+        //
+        // It used to sit with the recurring/date badges after the day and time.
+        // `.ec-badges` is one flex child, so it cannot split: as soon as the
+        // distance made it too wide, BOTH badges dropped to a second line and
+        // the when row went 22px -> 44px. On a dense card that is fatal — the
+        // card is a fixed 246px and `.ec-tea` is the only item that can shrink,
+        // so those 22px came straight out of the description, leaving a 9px
+        // sliver of a sliced line. Fuzzy showed it worst.
+        //
+        // Beside the venue it costs no extra line at all for a normal venue
+        // name, and it reads better: "Eagle NYC · 17.3 mi". No pin glyph on it
+        // — the row it now lives in already opens with one.
         const distanceBadge = this.locationFeaturesEnabled && event.distanceFromUser !== undefined ?
-            `<span class="distance-badge" title="Distance from your location">${this.cardIconSvg('pin', 'ec-badge-ico')}${this.escapeCardText(event.distanceFromUser)} mi</span>` : '';
+            `<span class="distance-badge" title="Distance from your location">${this.escapeCardText(event.distanceFromUser)} mi</span>` : '';
 
-        const badges = recurringBadge || dateBadge || distanceBadge ?
-            `<span class="ec-badges">${recurringBadge}${dateBadge}${distanceBadge}</span>` : '';
+        // An event with no venue has no venue row to carry it, so it falls back
+        // to where it always was rather than disappearing.
+        const venueRowHtml = this.generateAuroraVenueRow(event, distanceBadge);
+        const orphanDistance = venueRowHtml ? '' : distanceBadge;
+
+        const badges = recurringBadge || dateBadge || orphanDistance ?
+            `<span class="ec-badges">${recurringBadge}${dateBadge}${orphanDistance}</span>` : '';
 
         const faviconHtml = this.generateAuroraFaviconHtml(event);
 
@@ -3267,7 +3285,7 @@ class DynamicCalendarLoader extends CalendarCore {
                             <span class="event-day">${this.escapeCardText(whenText)}</span>
                             ${badges}
                         </div>
-                        ${venueRow}
+                        ${venueRowHtml}
                         ${coverRow}
                     </div>
                     ${teaHtml}
