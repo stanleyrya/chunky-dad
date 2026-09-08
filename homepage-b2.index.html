@@ -219,6 +219,8 @@ body.index-page header.visible{opacity:1!important}
 .event-compact-card .bear-event-name,.event-compact-card .event-dates,.event-compact-card .event-location{grid-column:auto;grid-row:auto;max-width:100%}
 .event-compact-card .event-location::before{content:none!important}
 .event-compact-card .event-location{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* the parenthetical line */
+.event-compact-card .event-paren{font-size:var(--t-detail);color:var(--muted);opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;line-height:1.25}
     </style>
 </head>
 <body class="index-page">
@@ -486,6 +488,23 @@ PROTO.onCards('event',function(){
     var m=/favicon-(.+?)-\d+px\./.exec(img.getAttribute('src')||''); if(!m) return;
     var plate=plates[m[1]];
     if(plate) box.style.setProperty('--fav-plate',plate);
+  });
+});
+</script>
+<script>
+// A parenthetical gets its own line: "New Orleans, LA (French Quarter)" reads
+// as two rows rather than being cut off at the card edge.
+PROTO.onCards('event',function(){
+  document.querySelectorAll('.event-compact-card:not(.spacer-card)').forEach(function(card){
+    ['.event-location','.event-dates'].forEach(function(sel){
+      var el=card.querySelector(sel); if(!el||el.dataset.split) return;
+      var m=/^(.*?)\s*(\([^()]*\))\s*$/.exec(el.textContent.trim());
+      if(!m||!m[1]) return;
+      el.dataset.split='1'; el.textContent=m[1];
+      var extra=document.createElement('span');
+      extra.className='event-paren'; extra.textContent=m[2];
+      el.insertAdjacentElement('afterend',extra);
+    });
   });
 });
 </script>
