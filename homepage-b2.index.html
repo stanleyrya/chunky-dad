@@ -163,6 +163,10 @@ main .event-compact-card .event-dates{font-size:var(--t-detail)!important}
 main .event-compact-card .event-location{font-size:var(--t-detail)!important}
 main .month-label{font-size:var(--t-detail)!important}
 main .city-search-input::placeholder{font-size:var(--t-item)}
+/* the header slides in solid: it used to fade up from transparent while it
+   moved, so you saw the page through it for the length of the slide */
+body.index-page header{opacity:1!important;background:var(--solid-primary)!important;transition:transform .3s cubic-bezier(.4,0,.2,1)!important}
+body.index-page header.visible{opacity:1!important}
     </style>
 </head>
 <body class="index-page">
