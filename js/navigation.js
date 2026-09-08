@@ -14,6 +14,7 @@ class NavigationManager {
         this.setupSmoothScrolling();
         this.setupNavLinks();
         this.setupDynamicHeader();
+        this.setupScrollHint();
         logger.componentLoad('NAV', 'Navigation manager initialized');
     }
 
@@ -86,6 +87,67 @@ class NavigationManager {
         } else {
             logger.warn('NAV', `Section not found: ${sectionId}`);
         }
+    }
+
+    // The "Explore" hint under the hero takes you to the cities.
+    //
+    // Two things used to carry it past the section. iOS grows 100dvh when its
+    // toolbar collapses mid-scroll, which moves the target down after the jump
+    // has been aimed; and correcting for that while the smooth scroll is still
+    // running ADDS to it rather than replacing it. So: aim below the fixed
+    // header, wait for the scroll to actually stop, then correct once.
+    setupScrollHint() {
+        const hint = document.querySelector('.hero-scroll-hint');
+        const target = document.getElementById('cities');
+        if (!hint || !target) {
+            logger.debug('NAV', 'No scroll hint on this page');
+            return;
+        }
+
+        const scrolled = () => window.pageYOffset || document.documentElement.scrollTop || 0;
+        const headerHeight = () => {
+            if (!this.header) return 0;
+            return getComputedStyle(this.header).position === 'fixed' ? this.header.offsetHeight : 0;
+        };
+        const landingY = () => Math.max(0, target.getBoundingClientRect().top + scrolled() - headerHeight() - 12);
+
+        const go = () => {
+            logger.userInteraction('NAV', 'Explore hint tapped');
+            const y = landingY();
+            if ('scrollBehavior' in document.documentElement.style) {
+                window.scrollTo({ top: y, behavior: 'smooth' });
+            } else {
+                window.scrollTo(0, y);
+            }
+            const started = Date.now();
+            let last = -1;
+            let still = 0;
+            const settle = setInterval(() => {
+                const y2 = Math.round(scrolled());
+                if (y2 === last) { still++; } else { still = 0; last = y2; }
+                if (still >= 3 || Date.now() - started > 2500) {
+                    clearInterval(settle);
+                    const off = target.getBoundingClientRect().top - headerHeight() - 12;
+                    if (Math.abs(off) > 2) window.scrollTo(0, y2 + off);
+                }
+            }, 80);
+        };
+
+        hint.style.cursor = 'pointer';
+        hint.setAttribute('role', 'button');
+        hint.setAttribute('tabindex', '0');
+        // it is position:fixed and merely fades out, so without this it keeps
+        // catching taps at the bottom of the screen long after you have scrolled
+        const guard = () => { hint.dataset.hidden = scrolled() > 50 ? '1' : '0'; };
+        window.addEventListener('scroll', guard, { passive: true });
+        guard();
+
+        hint.addEventListener('click', () => { if (scrolled() <= 50) go(); });
+        hint.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (scrolled() <= 50) go(); }
+        });
+
+        logger.componentLoad('NAV', 'Explore hint wired to the cities section');
     }
 
     setupDynamicHeader() {

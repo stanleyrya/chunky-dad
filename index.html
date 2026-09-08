@@ -99,14 +99,14 @@
 
     <main>
         <section id="cities" class="cities-compact">
-            <div class="container">
-                <h2>🏙️ Explore Cities</h2>
+            <div class="sec-head">
+                <h2>Cities</h2>
                 <div class="city-search-container">
                     <input type="text" id="city-search" placeholder="Search cities..." class="city-search-input">
                     <button type="button" id="near-me-btn" class="near-me-btn" title="Sort cities by distance from me" aria-label="Sort cities by distance from me">📍</button>
                 </div>
             </div>
-            
+
             <div class="city-scroll-container">
                 <div class="city-compact-grid" id="city-grid">
                     <!-- Cities will be dynamically rendered by CityRenderer -->
@@ -114,18 +114,18 @@
             </div>
 
             <div class="container">
-                <div id="homeMap" style="border-radius: 12px; margin-top: 20px;"></div>
+                <div id="homeMap"></div>
             </div>
         </section>
 
         <section id="bear-events" class="bear-events-compact">
-            <div class="container">
-                <h2>🎉 Bear Events</h2>
+            <div class="sec-head">
+                <h2>Bear Runs</h2>
             </div>
-            
+
             <div class="event-scroll-container">
                 <div class="event-compact-grid" id="event-grid">
-                    <!-- Bear events will be dynamically rendered by BearEventRenderer -->
+                    <!-- Bear runs will be dynamically rendered by BearEventRenderer -->
                 </div>
             </div>
         </section>
@@ -147,6 +147,7 @@
     <script src="js/debug-overlay.js"></script>
     <script src="js/city-config.js"></script>
     <script src="js/location-manager.js"></script>
+    <script src="js/event-plates.data.js"></script>
     <script src="js/event-config.js"></script>
     <script src="js/compact-card-renderer.js"></script>
     <script src="js/components.js"></script>
