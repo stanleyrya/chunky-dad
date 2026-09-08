@@ -176,6 +176,21 @@ body.index-page header.visible{opacity:1!important}
 .event-compact-card .event-emoji-box.has-favicon{background:var(--fav-plate,var(--favicon-plate-bg));border-radius:var(--favicon-plate-radius);overflow:hidden;padding:0;border:0 solid transparent;box-shadow:0 0 0 1px rgba(23,26,51,.25),0 2px 6px rgba(6,8,20,.3)}
 .event-compact-card:hover .event-emoji-box.has-favicon{background:var(--fav-plate,var(--favicon-plate-bg))}
 .event-compact-card .event-favicon{width:100%;height:100%;object-fit:contain;padding:var(--favicon-plate-pad);border-radius:calc(var(--favicon-plate-radius) - 2px);display:block}
+/* smaller bear-run cards: name on one line, date and place sharing the next */
+.event-compact-card{width:196px!important;min-width:196px!important;padding:.42rem .6rem .42rem .42rem;gap:.5rem}
+.event-compact-card .event-emoji-box{width:32px!important;height:32px!important;border-radius:8px}
+.event-compact-card .event-emoji{font-size:1.05rem}
+.event-compact-card .event-content{display:grid!important;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto;column-gap:.35rem;align-items:baseline}
+.event-compact-card .bear-event-name{grid-column:1/-1;grid-row:1}
+.event-compact-card .event-dates{grid-column:1;grid-row:2}
+.event-compact-card .event-location{grid-column:2;grid-row:2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.event-compact-card .event-location:not(:empty)::before{content:'·';margin-right:.3rem;color:var(--muted)}
+.event-compact-card .event-favicon{border-radius:calc(8px - 2px)}
+.event-compact-card .event-emoji-box.has-favicon{border-radius:8px}
+/* the date keeps to one line so a long "Martin Luther King Jr. weekend"
+   cannot stretch the whole rail */
+.event-compact-card .event-content{grid-template-columns:minmax(0,auto) minmax(0,1fr)}
+.event-compact-card .event-dates{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
     </style>
 </head>
 <body class="index-page">
@@ -252,7 +267,7 @@ body.index-page header.visible{opacity:1!important}
 
         <section id="bear-events" class="bear-events-compact">
             <div class="sec-head">
-                <h2>Bear runs &amp; festivals</h2>
+                <h2>Bear Runs</h2>
             </div>
             <div class="event-scroll-container">
                 <div class="event-compact-grid" id="event-grid"></div>
@@ -351,8 +366,8 @@ PROTO.onCards('event',function(){
     if(card.classList.contains('spacer-card')) return;
     if(card.classList.contains('coming-soon')) return;
     var d=PROTO.parseCardDates(card); var key, text;
-    if(d){ var dt=new Date(d.start+'T12:00:00'); key=d.start.slice(0,7); text=dt.toLocaleDateString(undefined,{month:'long'}); if(dt.getFullYear()!==new Date().getFullYear()) text+=' ’'+String(dt.getFullYear()).slice(2); }
-    else { if(undatedMarked) return; key='later'; text='Dates to come'; undatedMarked=true; }
+    if(d){ var dt=new Date(d.start+'T12:00:00'); key=d.start.slice(0,7); text=dt.toLocaleDateString(undefined,{month:'short'}); if(dt.getFullYear()!==new Date().getFullYear()) text+=' ’'+String(dt.getFullYear()).slice(2); }
+    else { if(undatedMarked) return; key='later'; text='TBA'; undatedMarked=true; }
     if(key===last) return; last=key;
     var l=document.createElement('div'); l.className='month-label'; l.textContent=text; grid.insertBefore(l,card);
   });
@@ -407,7 +422,16 @@ PROTO.onCards('event',function(){
     if(smooth&&'scrollBehavior' in document.documentElement.style) window.scrollTo({top:y,behavior:'smooth'});
     else window.scrollTo(0,y);
   }
-  function go(){ align(true); setTimeout(function(){align(false);},700); setTimeout(function(){align(false);},1300); }
+  // One correction, capped: iOS grows 100dvh when its toolbar collapses, and
+  // chasing that repeatedly walked the page further down than a screen.
+  function go(){
+    align(true);
+    setTimeout(function(){
+      var t=document.getElementById('cities'); if(!t) return;
+      var off=t.getBoundingClientRect().top-headerH();
+      if(Math.abs(off)>4) window.scrollBy(0,off);
+    },650);
+  }
   hint.addEventListener('click',go);
   hint.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } });
 })();
