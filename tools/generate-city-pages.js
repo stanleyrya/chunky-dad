@@ -44,7 +44,7 @@ function generateCityHeader(html, cityKey, cityConfig) {
 
   // Build city dropdown options HTML with direct links
   const cityOptions = availableCities.map(city => `
-                            <a href="../${city.key}/" class="city-option">
+                            <a href="../${city.key}/" class="city-option" data-city-key="${city.key}">
                                 <span class="city-option-emoji">${city.emoji}</span>
                                 <span class="city-option-name">${city.name}</span>
                             </a>`).join('');
