@@ -191,6 +191,21 @@ body.index-page header.visible{opacity:1!important}
    cannot stretch the whole rail */
 .event-compact-card .event-content{grid-template-columns:minmax(0,auto) minmax(0,1fr)}
 .event-compact-card .event-dates{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+/* bear-run cards back up to a comfortable size (66px was too mean) */
+.event-compact-card{width:224px!important;min-width:224px!important;padding:.6rem .75rem .6rem .55rem;gap:.6rem}
+.event-compact-card .event-emoji-box{width:44px!important;height:44px!important;border-radius:11px}
+.event-compact-card .event-emoji{font-size:1.4rem}
+.event-compact-card .event-emoji-box.has-favicon{border-radius:11px}
+.event-compact-card .event-favicon{border-radius:calc(11px - 2px)}
+.event-compact-card .event-content{row-gap:.12rem}
+.event-compact-card .bear-event-name{line-height:1.3}
+.month-label{font-size:.68rem}
+.event-compact-card{min-height:84px}
+/* the hint is position:fixed and only fades to opacity 0 when you scroll, so
+   it kept catching taps at the bottom of the screen — a stray tap there fired
+   a second jump */
+.hero-scroll-hint{transition:opacity .2s ease}
+.hero-scroll-hint[data-hidden="1"]{pointer-events:none}
     </style>
 </head>
 <body class="index-page">
@@ -413,26 +428,38 @@ PROTO.onCards('event',function(){
 (function(){
   var hint=document.querySelector('.hero-scroll-hint'); if(!hint) return;
   hint.style.cursor='pointer'; hint.setAttribute('role','button'); hint.setAttribute('tabindex','0');
+  var CUSHION=12;
   function headerH(){ var h=document.querySelector('header');
     if(!h) return 0; var cs=getComputedStyle(h);
     return cs.position==='fixed' ? h.offsetHeight : 0; }
   function align(smooth){
     var t=document.getElementById('cities'); if(!t) return;
-    var y=Math.max(0, t.getBoundingClientRect().top+(window.pageYOffset||document.documentElement.scrollTop||0)-headerH());
+    var y=Math.max(0, t.getBoundingClientRect().top+(window.pageYOffset||document.documentElement.scrollTop||0)-headerH()-CUSHION);
     if(smooth&&'scrollBehavior' in document.documentElement.style) window.scrollTo({top:y,behavior:'smooth'});
     else window.scrollTo(0,y);
   }
-  // One correction, capped: iOS grows 100dvh when its toolbar collapses, and
-  // chasing that repeatedly walked the page further down than a screen.
+  // Correct only once the scroll has actually stopped. Firing mid-animation
+  // added to the in-flight smooth scroll instead of replacing it, which is
+  // what carried the page past the section.
   function go(){
     align(true);
-    setTimeout(function(){
-      var t=document.getElementById('cities'); if(!t) return;
-      var off=t.getBoundingClientRect().top-headerH();
-      if(Math.abs(off)>4) window.scrollBy(0,off);
-    },650);
+    var t0=Date.now(), last=-1, still=0;
+    var iv=setInterval(function(){
+      var y=Math.round(window.pageYOffset||document.documentElement.scrollTop||0);
+      if(y===last){ still++; } else { still=0; last=y; }
+      if(still>=3 || Date.now()-t0>2500){
+        clearInterval(iv);
+        var t=document.getElementById('cities'); if(!t) return;
+        var off=t.getBoundingClientRect().top-headerH()-CUSHION;
+        if(Math.abs(off)>2) window.scrollTo(0, y+off);
+      }
+    },80);
   }
-  hint.addEventListener('click',go);
+  // once it has faded out it must not take taps any more
+  function guard(){ hint.dataset.hidden = (window.pageYOffset>50) ? '1' : '0'; }
+  window.addEventListener('scroll',guard,{passive:true}); guard();
+  // read the scroll position directly rather than trusting the scroll event
+  hint.addEventListener('click',function(e){ if((window.pageYOffset||document.documentElement.scrollTop||0)>50) return; go(); });
   hint.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } });
 })();
 </script>
