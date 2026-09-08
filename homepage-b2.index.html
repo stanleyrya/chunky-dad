@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>chunky.dad — homepage option B2: Night sky, fixed</title>
+    <title>chunky.dad — homepage option B2: night sky</title>
     <meta name="description" content="The ultimate travel guide for gay bears - city guides, events, and bear-owned businesses worldwide">
     <!-- Favicon and App Icons -->
     <link rel="icon" type="image/x-icon" href="/favicons/favicon.ico">
@@ -103,6 +103,32 @@ footer{background:transparent;color:var(--muted);padding:1rem 0 2rem}footer .foo
 .event-compact-card .event-location{color:var(--muted);font-size:.74rem;opacity:1}
 .event-compact-card.coming-soon{border-style:dashed}
 .city-next,.city-count{display:none!important}
+/* ---- fixes ---- */
+/* 5. the splash keeps its purple all the way down and meets the page on a
+   hairline, the way the city pages meet their header. The page's own ground
+   starts as deep indigo, never black, so nothing fades out underneath. */
+.hero{background:var(--solid-primary)!important;position:relative;z-index:2;border-bottom:1px solid rgba(255,255,255,.2);box-shadow:0 14px 30px rgba(0,0,0,.35)}
+body.index-page main{background:linear-gradient(180deg,#232a5c 0%,#1a1f45 26%,#141833 60%,#111429 100%)!important;padding-top:1.1rem}
+body.index-page{background:#111429}
+#homeMap{background:#1a1f45}
+/* 1. the city name sits in the middle of its tile, beside the emoji */
+.city-compact-card{grid-template-rows:auto!important;align-items:center;padding:.55rem .8rem .55rem .5rem}
+.city-compact-card .city-emoji-box{grid-row:auto!important}
+.city-compact-card .city-name{align-self:center!important;font-size:.92rem;font-weight:600}
+/* 4. shorter festival cards */
+.event-compact-grid{align-items:stretch}
+.event-compact-card{width:158px;min-width:158px;gap:.45rem;padding:.65rem .7rem}
+.event-compact-card .event-emoji-box{width:42px;height:42px;border-radius:11px}
+.event-compact-card .event-emoji{font-size:1.35rem}
+.event-compact-card .event-favicon{width:28px;height:28px;border-radius:7px}
+.event-compact-card .bear-event-name{font-size:.84rem;line-height:1.18}
+.event-compact-card .event-dates{font-size:.74rem}
+.event-compact-card .event-location{font-size:.7rem}
+.month-label{font-size:.62rem;padding:.35rem 0}
+/* even, shorter festival cards: the title gets two lines, the place one */
+.event-compact-card .bear-event-name{display:-webkit-box!important;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.event-compact-card .event-location{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.event-compact-card .event-content{width:100%;min-width:0}
     </style>
 </head>
 <body class="index-page">
@@ -165,7 +191,7 @@ footer{background:transparent;color:var(--muted);padding:1rem 0 2rem}footer .foo
         <section id="cities" class="cities-compact">
             <div class="sec-head">
                 <div><span class="eyebrow">Where to</span><h2>Cities</h2></div>
-                <span class="aside">tap a city for its calendar</span>
+
             </div>
             <div class="container">
                 <div class="city-search-container">
@@ -184,7 +210,7 @@ footer{background:transparent;color:var(--muted);padding:1rem 0 2rem}footer .foo
         <section id="bear-events" class="bear-events-compact">
             <div class="sec-head">
                 <div><span class="eyebrow">What's on</span><h2>Bear runs &amp; festivals</h2></div>
-                <span class="aside">next twelve months</span>
+
             </div>
             <div class="event-scroll-container">
                 <div class="event-compact-grid" id="event-grid"></div>
@@ -283,6 +309,37 @@ PROTO.onCards('event',function(){
     var l=document.createElement('div'); l.className='month-label'; l.textContent=text; grid.insertBefore(l,card);
   });
 });
+</script>
+<script>
+// 3. Map pins open the city page instead of a popup bubble.
+(function(){
+  function strip(){
+    var hm=window.homeMap; if(!hm||!hm.markers||!hm.markers.length) return false;
+    var byName={}; var cfg=window.CITY_CONFIG||{};
+    Object.keys(cfg).forEach(function(k){ if(cfg[k]&&cfg[k].name) byName[cfg[k].name.toLowerCase()]=k; });
+    hm.markers.forEach(function(m){
+      try{ var p=m.getPopup&&m.getPopup(); if(p){ if(p.isOpen&&p.isOpen()) p.remove(); m.setPopup(null); } }catch(e){}
+      var el=m.getElement&&m.getElement(); var key=byName[m.cityName];
+      if(el&&key&&!el.dataset.linked){ el.dataset.linked='1'; el.style.cursor='pointer';
+        el.addEventListener('click',function(ev){ ev.stopPropagation(); window.location.href=key+'/'; },true); }
+    });
+    return true;
+  }
+  var tries=0; var t=setInterval(function(){ if(strip()||++tries>40) clearInterval(t); },250);
+})();
+// 6. The Explore hint scrolls to the cities.
+(function(){
+  var hint=document.querySelector('.hero-scroll-hint'); if(!hint) return;
+  hint.style.cursor='pointer'; hint.setAttribute('role','button'); hint.setAttribute('tabindex','0');
+  function go(){ var t=document.getElementById('cities'); if(!t) return;
+    var y=t.getBoundingClientRect().top+(window.pageYOffset||document.documentElement.scrollTop);
+    var smooth='scrollBehavior' in document.documentElement.style;
+    if(smooth){ window.scrollTo({top:y,behavior:'smooth'}); } else { window.scrollTo(0,y); }
+    setTimeout(function(){ if(Math.abs((window.pageYOffset||0)-y)>4) window.scrollTo(0,y); },600);
+    window.__exploreClicked=Math.round(y); }
+  hint.addEventListener('click',go);
+  hint.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } });
+})();
 </script>
 </body>
 </html>
