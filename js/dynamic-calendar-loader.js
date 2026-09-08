@@ -630,6 +630,39 @@ class DynamicCalendarLoader extends CalendarCore {
         }
     }
     
+    /**
+     * Which occurrence of an event to select when the caller only knows the
+     * slug — a map marker, say, rather than a card that carries its own
+     * data-occurrence.
+     *
+     * Never the window anchor. `currentDate` is the start of the visible
+     * period, and a weekly event is on one weekday, so the two coincide only
+     * by luck; stamping it produced a selection matching no card and no pill.
+     * Prefers the occurrence already selected (clicking an event's own pin
+     * must not move it), then the first rendered occurrence on or after the
+     * anchor, then the last one before it.
+     */
+    occurrenceForSlug(slug) {
+        const fallback = this.formatDateToISO(this.currentDate);
+        if (!slug) return fallback;
+        if (this.selectedEventSlug === slug && this.selectedEventDateISO) {
+            return this.selectedEventDateISO;
+        }
+        try {
+            const escaped = window.CSS && CSS.escape ? CSS.escape(slug) : slug;
+            const dates = Array.from(
+                document.querySelectorAll(`.event-card[data-event-slug="${escaped}"][data-occurrence]`)
+            )
+                .map(card => card.getAttribute('data-occurrence'))
+                .filter(Boolean)
+                .sort();
+            if (!dates.length) return fallback;
+            return dates.find(d => d >= fallback) || dates[dates.length - 1];
+        } catch (e) {
+            return fallback;
+        }
+    }
+
     // Clear current event selection
     clearEventSelection() {
         const hadSelection = !!this.selectedEventSlug;
@@ -4526,10 +4559,21 @@ class DynamicCalendarLoader extends CalendarCore {
                             .addTo(map);
 
                         marker.getElement().addEventListener('click', () => {
-                            // Select the event without changing page scroll
-                            const eventDateISO = event.date || this.formatDateToISO(this.currentDate);
+                            // Select the event without changing page scroll.
+                            //
+                            // Which OCCURRENCE, though. This used to fall back to
+                            // formatDateToISO(this.currentDate) — the window anchor —
+                            // which for a recurring event is usually not one of its
+                            // dates at all: with the week of Tue 9/8 open, clicking
+                            // Bears Are Animals (Thursdays) stamped 9/8 on the
+                            // selection, nothing matched, and the rail ran back to
+                            // the series' first card, 7/30, while the calendar grid
+                            // stayed on 9/8-9/14. The card handler already learned
+                            // this lesson and reads data-occurrence; the marker was
+                            // simply never given the same treatment.
+                            const eventDateISO = this.occurrenceForSlug(event.slug);
                             this.toggleEventSelection(event.slug, eventDateISO);
-                            logger.userInteraction('MAP', 'Marker clicked, event selected', { eventSlug: event.slug });
+                            logger.userInteraction('MAP', 'Marker clicked, event selected', { eventSlug: event.slug, date: eventDateISO });
                         });
 
                         // Store the slug on the marker object for later reference
