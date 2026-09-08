@@ -70,6 +70,7 @@ class HomeMap {
             });
 
             this.map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left');
+            this.collapseAttribution();
 
             logger.componentLoad('MAP', 'Home map initialized');
         } catch (error) {
@@ -91,14 +92,6 @@ class HomeMap {
                 const lng = city.coordinates.lng;
 
                 if (!isNaN(lat) && !isNaN(lng)) {
-                    const popup = new maplibregl.Popup({ offset: 25 }).setHTML(`
-                        <div class="map-popup" style="text-align: center;">
-                            <a href="${city.key}/" style="display: inline-block; color: var(--text-primary); text-decoration: none;">
-                                <h4 style="margin: 5px 0; font-size: 18px;">${city.emoji} ${city.name}</h4>
-                            </a>
-                        </div>
-                    `);
-
                     const el = document.createElement('div');
                     el.className = 'favicon-marker text-marker';
                     el.innerHTML = `
@@ -107,9 +100,18 @@ class HomeMap {
                         </div>
                     `;
 
+                    // A pin picks its city out of the strip rather than opening a
+                    // popup bubble over the map (or jumping straight off the
+                    // page): the tile lights up and scrolls into view, and the
+                    // tile itself is still the way in.
+                    el.style.cursor = 'pointer';
+                    el.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        this.selectCityCard(city.key);
+                    });
+
                     const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
                         .setLngLat([lng, lat])
-                        .setPopup(popup)
                         .addTo(this.map);
                     marker.cityName = city.name.toLowerCase();
 
@@ -128,6 +130,42 @@ class HomeMap {
         }
 
         logger.componentLoad('MAP', 'Home map markers updated', { markerCount: this.markers.length });
+    }
+
+    selectCityCard(cityKey) {
+        if (!cityKey) return;
+        document.querySelectorAll('.city-compact-card.pin-picked')
+            .forEach(card => card.classList.remove('pin-picked'));
+        const card = document.querySelector(`.city-compact-card[data-city-key="${cityKey}"]`);
+        if (!card) return;
+        card.classList.add('pin-picked');
+        if (typeof card.scrollIntoView === 'function') {
+            card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
+        logger.userInteraction('MAP', 'City pin selected its card', { cityKey });
+    }
+
+    // MapLibre paints its attribution expanded on first render, so the credits
+    // sit open over the map until dismissed. Collapse it to the (i) button;
+    // one tap still opens it.
+    collapseAttribution() {
+        const collapse = () => {
+            const container = (this.map && typeof this.map.getContainer === 'function')
+                ? this.map.getContainer() : null;
+            if (!container) return;
+            container.querySelectorAll('.maplibregl-ctrl-attrib').forEach(el => {
+                el.classList.add('maplibregl-compact');
+                el.classList.remove('maplibregl-compact-show');
+                el.removeAttribute('open');
+                const button = el.querySelector('.maplibregl-ctrl-attrib-button');
+                if (button) button.setAttribute('aria-expanded', 'false');
+            });
+        };
+        collapse();
+        if (this.map && typeof this.map.on === 'function') {
+            this.map.on('load', collapse);
+            this.map.once('idle', collapse);
+        }
     }
 
     filterMarkers(searchTerm) {

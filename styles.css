@@ -8015,3 +8015,392 @@ html.dusk .share-intel-footer-btn {
 .md-label-layer .md-float-label.md-label-dim {
     filter: saturate(0.35) brightness(0.4);
 }
+
+
+/* ════════════════════════════════════════════════════════════════════
+   HOMEPAGE — night sky (2026-09)
+
+   The splash keeps its purple the whole way down and meets the page on a
+   hairline, the same join the city pages use under their header; below it
+   the page carries the city pages' own dusk ground, so index and city are
+   one world rather than two. Everything here is scoped to body.index-page.
+
+   Three type sizes and nothing else: title, item, detail. Four darks, all
+   of them city-page values, plus black for the footer.
+   ════════════════════════════════════════════════════════════════════ */
+
+body.index-page {
+    --hp-ink: #e8eaff;
+    --hp-muted: #9aa0c3;
+    --hp-acc: #9fb2ff;
+    --hp-card: #171a33;
+    --hp-edge: rgba(159, 178, 255, 0.16);
+    --hp-edge-hi: rgba(159, 178, 255, 0.38);
+    --hp-title: 1.25rem;
+    --hp-item: 0.875rem;
+    --hp-detail: 0.75rem;
+}
+
+/* ---------- splash → page ---------- */
+/* body keeps the site purple: it is what paints the strip behind the status
+   bar and either end of an overscroll, and every section paints over it. */
+body.index-page .hero {
+    position: relative;
+    z-index: 2;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35);
+}
+
+/* the header slides in solid — it used to fade up from transparent while it
+   moved, so the page showed through it for the length of the slide */
+body.index-page header {
+    opacity: 1;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body.index-page header.visible {
+    opacity: 1;
+}
+
+/* Explore arrives just after the joke bubble lands (1.3s), not at 2.5s */
+body.index-page .hero-scroll-hint {
+    animation: heroScrollHintFade 0.45s ease-out 1.3s both;
+}
+
+body.index-page .hero-scroll-hint[data-hidden="1"] {
+    pointer-events: none;
+}
+
+body.index-page main {
+    background: radial-gradient(circle at top, #1b2033 0%, #0b0d13 45%, #07090f 100%);
+    background-attachment: fixed;
+    color: var(--hp-ink);
+    padding: 1.1rem 0 1.5rem;
+}
+
+/* ---------- section headers: title left, search right ---------- */
+body.index-page .cities-compact,
+body.index-page .bear-events-compact {
+    background: none;
+    color: inherit;
+    padding: 0.5rem 0 1.5rem;
+    overflow: visible;
+}
+
+body.index-page .sec-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    max-width: 1200px;
+    margin: 0 auto 0.9rem;
+    padding: 0 1.25rem;
+}
+
+body.index-page .sec-head h2 {
+    margin: 0;
+    text-align: left;
+    font-size: var(--hp-title);
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--hp-ink);
+}
+
+body.index-page .sec-head .city-search-container {
+    margin: 0 0 0 auto;
+    padding: 0;
+    max-width: 300px;
+    flex: 1 1 190px;
+    min-width: 0;
+}
+
+body.index-page .city-search-input {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--hp-ink);
+    border: 1px solid var(--hp-edge);
+    box-shadow: none;
+    backdrop-filter: none;
+    padding: 0.5rem 0.95rem;
+    font-size: var(--hp-item);
+}
+
+body.index-page .city-search-input::placeholder {
+    color: var(--hp-muted);
+}
+
+body.index-page .city-search-input:focus {
+    background: rgba(255, 255, 255, 0.09);
+    border-color: var(--hp-edge-hi);
+    box-shadow: none;
+}
+
+body.index-page .near-me-btn {
+    width: 38px;
+    height: 38px;
+    font-size: 1rem;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--hp-edge);
+    box-shadow: none;
+    backdrop-filter: none;
+}
+
+body.index-page .near-me-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+body.index-page .near-me-btn.near-me-active {
+    background: rgba(159, 178, 255, 0.22);
+    border-color: var(--hp-edge-hi);
+}
+
+/* ---------- strips ---------- */
+/* The spacer cards padded the old edge-to-edge strips; the grids carry their
+   own padding now. */
+body.index-page .city-compact-card.spacer-card,
+body.index-page .event-compact-card.spacer-card {
+    display: none;
+}
+
+body.index-page .city-scroll-container,
+body.index-page .event-scroll-container {
+    padding: 0 0 0.5rem;
+}
+
+body.index-page .city-compact-grid {
+    gap: 0.55rem;
+    padding: 0.25rem 1.25rem;
+    min-width: max-content;
+}
+
+body.index-page .event-compact-grid {
+    gap: 0.6rem;
+    padding: 0.25rem 1.25rem;
+    min-width: max-content;
+    align-items: stretch;
+}
+
+/* ---------- city tiles: sized to their own name ---------- */
+body.index-page .city-compact-card {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.65rem;
+    width: auto;
+    min-width: 0;
+    background: var(--hp-card);
+    border: 1px solid var(--hp-edge);
+    border-radius: 14px;
+    padding: 0.55rem 0.8rem 0.55rem 0.5rem;
+    color: var(--hp-ink);
+    text-align: left;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+body.index-page .city-compact-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--hp-edge-hi);
+}
+
+body.index-page .city-compact-card .city-emoji-box {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 10px;
+    background: rgba(159, 178, 255, 0.12);
+    border: none;
+    backdrop-filter: none;
+}
+
+body.index-page .city-compact-card:hover .city-emoji-box {
+    background: rgba(159, 178, 255, 0.2);
+    border-color: transparent;
+}
+
+body.index-page .city-compact-card .city-emoji {
+    font-size: 1.45rem;
+    animation: none;
+}
+
+body.index-page .city-compact-card .city-name {
+    font-size: var(--hp-item);
+    font-weight: 600;
+    letter-spacing: 0;
+    white-space: nowrap;
+    color: var(--hp-ink);
+}
+
+/* a map pin lights up its tile instead of opening a bubble */
+body.index-page .city-compact-card.pin-picked {
+    border-color: var(--hp-edge-hi);
+    box-shadow: 0 0 0 2px rgba(159, 178, 255, 0.28);
+}
+
+/* ---------- the map ---------- */
+body.index-page #homeMap {
+    height: 300px;
+    min-height: 0;
+    max-height: none;
+    aspect-ratio: auto;
+    margin-top: 0.9rem;
+    border: 1px solid var(--hp-edge);
+    border-radius: 14px;
+    background: var(--hp-card);
+}
+
+/* ---------- bear runs: a rail with month markers ---------- */
+body.index-page .event-month-marker {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    white-space: nowrap;
+    font-size: var(--hp-detail);
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--hp-acc);
+    padding: 0.25rem 0;
+    margin: 0 0.15rem 0 0.35rem;
+    border-right: 1px solid var(--hp-edge);
+}
+
+body.index-page .event-month-marker:first-child {
+    margin-left: 0;
+}
+
+body.index-page .event-compact-card {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.7rem;
+    width: auto;
+    min-width: 0;
+    min-height: 102px;
+    background: var(--hp-card);
+    border: 1px solid var(--hp-edge);
+    border-radius: 14px;
+    padding: 0.7rem 0.8rem 0.7rem 0.65rem;
+    color: var(--hp-ink);
+    text-align: left;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+body.index-page .event-compact-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--hp-edge-hi);
+}
+
+body.index-page .event-compact-card .event-content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+    text-align: left;
+}
+
+body.index-page .event-compact-card .bear-event-name {
+    display: block;
+    font-size: var(--hp-item);
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: 0;
+    white-space: nowrap;
+    color: var(--hp-ink);
+}
+
+body.index-page .event-compact-card .event-dates {
+    font-size: var(--hp-detail);
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--hp-acc);
+    opacity: 1;
+}
+
+body.index-page .event-compact-card .event-location {
+    font-size: var(--hp-detail);
+    font-weight: 400;
+    white-space: nowrap;
+    color: var(--hp-muted);
+    opacity: 1;
+}
+
+body.index-page .event-compact-card .event-emoji-box {
+    flex: 0 0 auto;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    border-radius: 12px;
+    background: rgba(159, 178, 255, 0.12);
+    border: none;
+    backdrop-filter: none;
+}
+
+body.index-page .event-compact-card:hover .event-emoji-box {
+    background: rgba(159, 178, 255, 0.2);
+    border-color: transparent;
+}
+
+body.index-page .event-compact-card .event-emoji {
+    font-size: 1.5rem;
+    animation: none;
+}
+
+/* the icon sits on its own plate, the city-page treatment: contain-fit
+   artwork inside the 2px outset ring, tinted per event from
+   js/event-plates.data.js, white only as the fallback */
+body.index-page .event-compact-card .event-emoji-box.has-favicon,
+body.index-page .event-compact-card:hover .event-emoji-box.has-favicon {
+    background: var(--fav-plate, var(--favicon-plate-bg));
+    border: 0 solid transparent;
+    overflow: hidden;
+    box-shadow: 0 0 0 1px rgba(23, 26, 51, 0.25), 0 2px 6px rgba(6, 8, 20, 0.3);
+}
+
+body.index-page .event-compact-card .event-favicon {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: var(--favicon-plate-pad);
+    border-radius: calc(12px - 2px);
+    display: block;
+}
+
+/* ---------- the suggest cards keep their dashed edge, minus the pulse ---- */
+body.index-page .city-compact-card.coming-soon,
+body.index-page .event-compact-card.coming-soon {
+    opacity: 1;
+    border-style: dashed;
+}
+
+body.index-page .city-compact-card.coming-soon .city-emoji-box,
+body.index-page .event-compact-card.coming-soon .event-emoji-box {
+    border: none;
+    background: rgba(159, 178, 255, 0.12);
+}
+
+body.index-page .city-compact-card.coming-soon:hover .city-emoji-box,
+body.index-page .event-compact-card.coming-soon:hover .event-emoji-box {
+    background: rgba(159, 178, 255, 0.2);
+    border-color: transparent;
+}
+
+/* ---------- desktop: the strips become wrapped grids ---------- */
+@media (min-width: 769px) {
+    body.index-page .city-scroll-container {
+        overflow: visible;
+    }
+
+    body.index-page .city-compact-grid {
+        flex-wrap: wrap;
+        min-width: 0;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    body.index-page #homeMap {
+        height: 420px;
+    }
+}

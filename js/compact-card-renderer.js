@@ -42,8 +42,11 @@ class CompactCardRenderer {
         const leftSpacer = this.createSpacerCard();
         this.container.appendChild(leftSpacer);
 
-        // Render each item
-        items.forEach(item => {
+        // Render each item, letting a subclass slip a divider in front of it
+        // (the bear-run rail marks where each month starts)
+        items.forEach((item, index) => {
+            const marker = this.createGroupMarker(item, index);
+            if (marker) this.container.appendChild(marker);
             const card = this.createCard(item);
             this.container.appendChild(card);
         });
@@ -85,17 +88,44 @@ class CompactCardRenderer {
         return date ? `${key}/?view=week&date=${date}` : `${key}/`;
     }
 
+    // Card text drops parentheticals: "New Orleans, LA (French Quarter)" is a
+    // qualifier the strip has no room for, and it kept a card at four lines.
+    stripParens(text) {
+        if (typeof text !== 'string') return text;
+        const out = text.replace(/\s*\([^()]*\)\s*/g, ' ').replace(/\s{2,}/g, ' ').trim()
+            .replace(/[\s,\/·-]+$/, '');
+        return out || text;
+    }
+
+    // The favicon's own background colour, extracted per event into
+    // js/event-plates.data.js. Same treatment as the city-page markers; white
+    // is only the fallback (see --favicon-plate-bg in styles.css).
+    plateFor(host) {
+        const plates = (typeof window !== 'undefined' && window.EVENT_PLATES) ? window.EVENT_PLATES.domains : null;
+        return (plates && host && plates[host]) || null;
+    }
+
     // img/favicons/favicon-<domain>-64px.ico — already downloaded by the
     // image sweep for every festival website. Derived, never hardcoded.
-    faviconFor(item) {
-        if (this.type !== 'event' || !item.website) return null;
+    hostFor(item) {
+        if (!item || !item.website) return null;
         try {
-            const host = new URL(item.website).hostname.replace(/^www\./, '').toLowerCase();
-            if (PLATFORM_FAVICON_DOMAINS.includes(host)) return null;
-            return `img/favicons/favicon-${host}-64px.ico`;
+            return new URL(item.website).hostname.replace(/^www\./, '').toLowerCase();
         } catch (e) {
             return null;
         }
+    }
+
+    faviconFor(item) {
+        if (this.type !== 'event') return null;
+        const host = this.hostFor(item);
+        if (!host || PLATFORM_FAVICON_DOMAINS.includes(host)) return null;
+        return `img/favicons/favicon-${host}-64px.ico`;
+    }
+
+    // Subclasses may return an element to place before this card.
+    createGroupMarker() {
+        return null;
     }
 
     createCard(item) {
@@ -143,6 +173,8 @@ class CompactCardRenderer {
                 emojiBox.classList.remove('has-favicon');
             });
             emojiBox.classList.add('has-favicon');
+            const plate = this.plateFor(this.hostFor(item));
+            if (plate) emojiBox.style.setProperty('--fav-plate', plate);
             emojiBox.appendChild(favImg);
         }
 
@@ -160,7 +192,7 @@ class CompactCardRenderer {
 
             const name = document.createElement('span');
             name.className = 'bear-event-name';
-            name.textContent = item.name;
+            name.textContent = this.stripParens(item.name);
 
             const dates = document.createElement('span');
             dates.className = 'event-dates';
@@ -168,12 +200,12 @@ class CompactCardRenderer {
                 dates.textContent = window.formatEventDates ? formatEventDates(item) : `${item.startDate} - ${item.endDate}`;
             } else {
                 // Undated (or past recurring) festival: show typical timing instead
-                dates.textContent = item.typicalTiming || item.tagline || '';
+                dates.textContent = this.stripParens(item.typicalTiming || item.tagline || '');
             }
 
             const location = document.createElement('span');
             location.className = 'event-location';
-            location.textContent = item.location;
+            location.textContent = this.stripParens(item.location);
 
             content.appendChild(name);
             content.appendChild(dates);
@@ -351,6 +383,32 @@ class CityRenderer extends CompactCardRenderer {
 class BearEventRenderer extends CompactCardRenderer {
     constructor() {
         super('event', '.event-compact-grid');
+    }
+
+    // A short month marker before the first run of each month, so a long
+    // horizontal rail still reads as a calendar. Undated runs group under TBA.
+    createGroupMarker(item, index) {
+        if (index === 0) this.lastMonthKey = null;
+        const dates = window.getUpcomingEventDates ? getUpcomingEventDates(item) : item;
+        const start = (dates && typeof dates.startDate === 'string') ? dates.startDate : null;
+        let key = 'tba';
+        let label = 'TBA';
+        if (start) {
+            const d = new Date(`${start}T12:00:00`);
+            if (!Number.isNaN(d.getTime())) {
+                key = start.slice(0, 7);
+                label = d.toLocaleDateString(undefined, { month: 'short' });
+                if (d.getFullYear() !== new Date().getFullYear()) {
+                    label += ` \u2019${String(d.getFullYear()).slice(2)}`;
+                }
+            }
+        }
+        if (key === this.lastMonthKey) return null;
+        this.lastMonthKey = key;
+        const marker = document.createElement('div');
+        marker.className = 'event-month-marker';
+        marker.textContent = label;
+        return marker;
     }
 }
 
