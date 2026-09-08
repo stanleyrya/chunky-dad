@@ -57,10 +57,10 @@
 .sec-head .aside{font-size:.8rem;font-weight:500;white-space:nowrap}
 :root{--ink:#e8eaff;--muted:#9aa0c3;--acc:#9fb2ff;--card:#171a33;--edge:rgba(159,178,255,.16);--edge-hi:rgba(159,178,255,.38);--ground:#0b0d13}
 body.index-page{background:var(--ground)}
-/* The splash is a sunset: the purple sky darkens into the night ground, so
-   there is no seam to hide — the transition is the splash itself. */
-.hero{background:linear-gradient(180deg,#667eea 0%,#606cdc 28%,#3d4694 60%,#1a1e3c 84%,#0b0d13 100%)}
-body.index-page main{background:radial-gradient(ellipse at top,#161a2e 0%,#0b0d13 48%,#07090f 100%);color:var(--ink);padding:.25rem 0 2rem}
+/* The ground is the city pages' dusk, unchanged, so home and city share one
+   background instead of inventing a second dark. */
+body.index-page{background:var(--ground)}
+body.index-page main{background:radial-gradient(circle at top,#1b2033 0%,#0b0d13 45%,#07090f 100%);background-attachment:fixed;color:var(--ink);padding:.25rem 0 2rem}
 .sec-head h2{color:var(--ink)}.sec-head .eyebrow{color:var(--acc)}.sec-head .aside{color:var(--muted)}
 .cities-compact,.bear-events-compact{background:none;color:inherit;padding:.5rem 0 1.5rem;overflow:visible}
 .cities-compact .container,.bear-events-compact .container{padding:0 1.25rem}
@@ -71,9 +71,10 @@ body.index-page main{background:radial-gradient(ellipse at top,#161a2e 0%,#0b0d1
 .near-me-btn.near-me-active{background:rgba(159,178,255,.22);border-color:var(--edge-hi)}
 .city-compact-card .city-emoji{animation:none}.city-compact-card.coming-soon,.event-compact-card.coming-soon{opacity:1}
 .city-compact-card.coming-soon .city-emoji,.event-compact-card.coming-soon .event-emoji{animation:none}
-#homeMap{border-radius:14px!important;margin-top:.9rem!important;height:300px;min-height:0;max-height:none;aspect-ratio:auto;border:1px solid var(--edge);background:#141733}
+#homeMap{border-radius:14px!important;margin-top:.9rem!important;height:300px;min-height:0;max-height:none;aspect-ratio:auto;border:1px solid var(--edge);background:var(--card)}
 @media(min-width:769px){#homeMap{height:420px}}
-footer{background:transparent;color:var(--muted);padding:1rem 0 2rem}footer .footer-copyright{color:var(--muted)}
+/* footer: the main page's, as-is */
+footer{background:var(--black);color:var(--text-inverse);padding:2rem 0;text-align:center}
 .city-scroll-container{padding:0 0 .5rem}
 .city-compact-grid{gap:.55rem;padding:.25rem 1.25rem;min-width:max-content}
 .city-compact-card{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:.65rem;align-items:center;min-width:0;width:158px;background:var(--card);border:1px solid var(--edge);border-radius:14px;padding:.5rem .75rem .5rem .5rem;color:var(--ink);text-align:left;transition:transform .2s ease,border-color .2s ease}
@@ -108,9 +109,7 @@ footer{background:transparent;color:var(--muted);padding:1rem 0 2rem}footer .foo
    hairline, the way the city pages meet their header. The page's own ground
    starts as deep indigo, never black, so nothing fades out underneath. */
 .hero{background:var(--solid-primary)!important;position:relative;z-index:2;border-bottom:1px solid rgba(255,255,255,.2);box-shadow:0 14px 30px rgba(0,0,0,.35)}
-body.index-page main{background:linear-gradient(180deg,#232a5c 0%,#1a1f45 26%,#141833 60%,#111429 100%)!important;padding-top:1.1rem}
-body.index-page{background:#111429}
-#homeMap{background:#1a1f45}
+body.index-page main{padding-top:1.1rem}
 /* 1. the city name sits in the middle of its tile, beside the emoji */
 .city-compact-card{grid-template-rows:auto!important;align-items:center;padding:.55rem .8rem .55rem .5rem}
 .city-compact-card .city-emoji-box{grid-row:auto!important}
@@ -147,7 +146,7 @@ body.index-page{background:#111429}
 .event-compact-card .event-location{font-size:.68rem}
 .month-label{font-size:.6rem;letter-spacing:.14em;padding:.25rem 0}
 /* 4. a pin taps to its city tile, which lights up rather than jumping away */
-.city-compact-card.pin-picked{border-color:var(--edge-hi);background:#20244a;box-shadow:0 0 0 2px rgba(159,178,255,.28)}
+.city-compact-card.pin-picked{border-color:var(--edge-hi);background:var(--card);box-shadow:0 0 0 2px rgba(159,178,255,.28)}
 /* 1. the map's attribution starts collapsed */
 .maplibregl-ctrl-attrib.maplibregl-compact-show .maplibregl-ctrl-attrib-inner{display:none}
 .maplibregl-ctrl-attrib.maplibregl-compact-show{padding:2px 24px 2px 0!important}
