@@ -77,7 +77,8 @@ const OG_TEMPLATE_VERSION = 2;
 //
 // 2: dropped the gradient fade and then the divider rule; venue pins.
 // 3: larger pin tiles.
-const OG_PLACE_TEMPLATE_VERSION = 3;
+// 4: pin ring dropped to the site's own 0.22 — 0.9 haloed dark artwork.
+const OG_PLACE_TEMPLATE_VERSION = 4;
 
 // Bootstrap Icons geometry, inlined — same paths the cards use.
 const OG_ICONS = {
@@ -848,7 +849,12 @@ ${m ? '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/ma
     height: 34px;
     border-radius: 9px;
     background: #fff;
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9), 0 4px 14px rgba(6, 8, 20, 0.45);
+    /* 0.22, matching the site's own favicon tile (styles.css .ec-fav). This
+       ring was at 0.9 — near-solid white — which drew a visible halo around
+       full-bleed artwork like Urban Bear's black tile. styles.css carries a
+       comment about removing a border for exactly that reason; this is the
+       same mistake in the other file. The drop shadow does the separating. */
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.22), 0 4px 14px rgba(6, 8, 20, 0.45);
     overflow: hidden;
   }
   .og-pin img { display: block; width: 100%; height: 100%; object-fit: contain; padding: 5px; }
