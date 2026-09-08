@@ -221,6 +221,13 @@ body.index-page header.visible{opacity:1!important}
 .event-compact-card .event-location{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* the parenthetical line */
 .event-compact-card .event-paren{font-size:var(--t-detail);color:var(--muted);opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;line-height:1.25}
+/* exactly three lines: title, date, location */
+.event-compact-card{min-height:102px}
+.event-compact-card .bear-event-name{-webkit-line-clamp:1!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block!important}
+.event-compact-card .event-paren{display:none}
+
+/* wide enough that no title needs an ellipsis on three lines */
+.event-compact-card{width:312px!important;min-width:312px!important}
     </style>
 </head>
 <body class="index-page">
@@ -491,19 +498,18 @@ PROTO.onCards('event',function(){
   });
 });
 </script>
+
 <script>
-// A parenthetical gets its own line: "New Orleans, LA (French Quarter)" reads
-// as two rows rather than being cut off at the card edge.
+// Parentheticals are dropped entirely: "New Orleans, LA (French Quarter)"
+// becomes "New Orleans, LA", so a card is always three lines.
 PROTO.onCards('event',function(){
   document.querySelectorAll('.event-compact-card:not(.spacer-card)').forEach(function(card){
-    ['.event-location','.event-dates'].forEach(function(sel){
-      var el=card.querySelector(sel); if(!el||el.dataset.split) return;
-      var m=/^(.*?)\s*(\([^()]*\))\s*$/.exec(el.textContent.trim());
-      if(!m||!m[1]) return;
-      el.dataset.split='1'; el.textContent=m[1];
-      var extra=document.createElement('span');
-      extra.className='event-paren'; extra.textContent=m[2];
-      el.insertAdjacentElement('afterend',extra);
+    ['.bear-event-name','.event-dates','.event-location'].forEach(function(sel){
+      var el=card.querySelector(sel); if(!el||el.dataset.stripped) return;
+      var t=el.textContent.replace(/\s*\([^()]*\)\s*/g,' ').replace(/\s{2,}/g,' ').trim();
+      t=t.replace(/[\s,\/·-]+$/,'');
+      el.dataset.stripped='1';
+      if(t && t!==el.textContent.trim()) el.textContent=t;
     });
   });
 });
