@@ -17,8 +17,20 @@ class LocationManager {
         // cache lives in localStorage and lasts long enough that repeat
         // visits reuse it instead of calling getCurrentPosition again, which
         // is what made Safari re-ask for location approval on every visit.
-        this.cacheExpiry = 6 * 60 * 60 * 1000; // 6 hours: served as "fresh"
-        this.maxCacheAge = 7 * 24 * 60 * 60 * 1000; // 7 days: served as "stale" but usable
+        // NOTE these bound the cached COORDINATES, not the permission. The
+        // browser owns the permission grant and keeps it until the user
+        // revokes it; nothing here can lengthen or shorten that. All this
+        // decides is how long we reuse a stored fix instead of calling
+        // getCurrentPosition again.
+        //
+        // Everything the fix is used for is city-scale — sorting cities by
+        // distance, the dot on the map, the "N mi" pill — so it does not need
+        // to be recent, it needs to be in the right city. The only real risk
+        // is travel, and a stale value is served ONLY as a fallback when a
+        // live fix fails (getLocationForMap), so the cost of a longer window
+        // is small and the benefit is not re-prompting on every visit.
+        this.cacheExpiry = 24 * 60 * 60 * 1000; // 1 day: served as "fresh"
+        this.maxCacheAge = 30 * 24 * 60 * 60 * 1000; // 30 days: served as "stale" but usable
         this.isPrivateMode = this.detectPrivateMode();
         
         // Initialize logger if available
