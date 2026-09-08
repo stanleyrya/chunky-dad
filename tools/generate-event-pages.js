@@ -79,6 +79,43 @@ function sanitize(text) {
   return String(text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+// sanitize() does not touch quotes, which is fine for element text and NOT
+// fine for an attribute. Descriptions are free text from the source calendar
+// and do contain them, so anything going into content="..." goes through this.
+function attr(text) {
+  return sanitize(text).replace(/"/g, '&quot;');
+}
+
+// Source formatting, removed. The scraper sanitizes what it writes (#1575) but
+// events already in the calendar keep whatever their source published —
+// literal "<p>…</p>" from Wix pages, markdown "**bold**" from dice.fm — and a
+// meta description is not the place for either. This is the short form of
+// js/dynamic-calendar-loader.js's sanitizeDisplayText.
+function plainText(text) {
+  if (typeof text !== 'string' || !text) return '';
+  let out = text;
+  out = out.replace(/\\r\\n|\\n/g, ' ').replace(/\\r/g, '');
+  out = out.replace(/<!--[\s\S]*?-->/g, '');
+  out = out.replace(/<\/?[a-z][^<>]*\/?>/gi, ' ');
+  out = out.replace(/&amp;/gi, '&').replace(/&nbsp;/gi, ' ')
+           .replace(/&lt;/gi, '<').replace(/&gt;/gi, '>')
+           .replace(/&quot;/gi, '"').replace(/&(?:#39|#039|apos);/gi, "'");
+  out = out.replace(/\[([^\[\]\n]*)\]\([^()\n]*\)/g, '$1');
+  out = out.replace(/\*{2,}|_{2,}/g, '');
+  out = out.replace(/\\([*_#\[\].])/g, '$1');
+  out = out.replace(/\\{2,}/g, '').replace(/\\+(?=\s|$)/g, '');
+  return out.replace(/\s{2,}/g, ' ').trim();
+}
+
+// Cut to a word boundary rather than mid-word, and only add the ellipsis when
+// something was actually removed.
+function clampWords(text, max) {
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  const lastSpace = cut.lastIndexOf(' ');
+  return (lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut).replace(/[\s,.;:—-]+$/, '') + '…';
+}
+
 function getIcsPath(cityKey) {
   return path.join(ROOT, 'data', 'calendars', `${cityKey}.ics`);
 }
@@ -107,6 +144,12 @@ function occursInWindow(calendar, event, now, days) {
 
 function buildEventHtml(cityKey, cityName, event, ctx) {
   const title = `${sanitize(event.name)} – ${cityName} – chunky.dad`;
+  // og:title drops the " – chunky.dad" suffix: og:site_name now carries the
+  // brand, and Discord prints it directly above the title, so keeping it in
+  // both said "chunky.dad" twice. The <title> element keeps the full string —
+  // that one is a browser tab and a search result, where there is no
+  // site_name to lean on.
+  const ogTitle = `${sanitize(event.name)} – ${cityName}`;
   const calendar = ctx && ctx.calendar;
   // One when-line for the whole stub. The share text used to be built here
   // separately — "Saturday · 10PM-4AM" while the image said "1st Sat ·
@@ -124,7 +167,22 @@ function buildEventHtml(cityKey, cityName, event, ctx) {
   });
   const descriptionParts = [whenText];
   if (event.bar) descriptionParts.push(`@ ${event.bar}`);
-  const description = sanitize(descriptionParts.filter(Boolean).join(' · ')) || `${cityName} bear event`;
+  const facts = descriptionParts.filter(Boolean).join(' · ');
+
+  // The facts, then the event's own words if there is room.
+  //
+  // "Thursdays · 7PM-10PM ET · @ Animal" is 34 characters and answers when and
+  // where, which is what a preview is for — but 243 of the 245 events carry a
+  // real description too, and it was going unused. Appending it lands the tag
+  // in the 80-125 characters that link previews actually show, with content
+  // rather than padding. The facts stay FIRST: they are the part that must
+  // survive a client truncating the tail.
+  const DESCRIPTION_BUDGET = 125;
+  const tea = plainText(event.tea || event.unprocessedDescription || '');
+  const room = DESCRIPTION_BUDGET - facts.length - 3; // the " — " joiner
+  const description = attr(
+    (tea && room >= 30 ? `${facts} — ${clampWords(tea, room)}` : facts)
+  ) || `${cityName} bear event`;
   const url = `${SITE_BASE}/${cityKey}/${encodeURIComponent(event.slug)}/`;
   // The flyer the OG card should paint: the event's OWN artwork first.
   //
@@ -253,12 +311,12 @@ ${MARKER}
   <!-- Discord and friends print this above the title; without it the card is
        anonymous. Kept as the bare domain, which is how the brand reads. -->
   <meta property="og:site_name" content="chunky.dad">
-  <meta property="og:title" content="${title}">
+  <meta property="og:title" content="${attr(ogTitle)}">
   <meta property="og:description" content="${description}">
   <meta property="og:url" content="${url}">
   <meta property="og:image" content="${ogImage}">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="${title}">
+  <meta name="twitter:title" content="${attr(ogTitle)}">
   <meta name="twitter:description" content="${description}">
   <meta name="twitter:image" content="${ogImage}">${flyerMeta}
   <!-- Inline and tiny: this page is a redirect for almost everyone, so it must
