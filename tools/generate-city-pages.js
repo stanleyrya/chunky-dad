@@ -187,6 +187,21 @@ function buildCityHtml(baseHtml, cityKey, cityConfig) {
     }
   }
 
+  // Pin relative-URL resolution to the city directory.
+  //
+  // The page's URL no longer stays put: selecting an event rewrites the path to
+  // /<city>/<slug>/ so the address bar always holds a link that previews with
+  // that event's card. Without a <base>, document.baseURI would follow, and
+  // every relative URL resolved AFTER that point — "../la/" in the city
+  // switcher, "img/events/…" on a flyer, "data/calendars/<city>.json" on the
+  // next fetch — would be a directory too deep and 404.
+  //
+  // The href is exactly where the document loads, so resolution is identical to
+  // what it has always been; it simply stops depending on the visible path.
+  if (!html.includes('<base ')) {
+    html = html.replace('<meta charset="UTF-8">', `<meta charset="UTF-8">\n    <base href="${canonicalHref}">`);
+  }
+
   // Rewrite asset and link paths for subdirectory depth
   html = html.replace(/href="(styles\.css)"/g, 'href="../$1"');
   html = html.replace(/src="js\//g, 'src="../js/');
