@@ -376,7 +376,8 @@ jobs:
         if: env.CALENDAR_CHANGED == 'true' || github.event_name != 'schedule'
         run: |
           node tools/extract-favicon-colors.js
-          git add -A data/event-colors/ data/bars/ 2>/dev/null || true
+          node tools/generate-event-plates.js
+          git add -A data/event-colors/ data/bars/ js/event-plates.data.js 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "No favicon color changes to commit"
           else
