@@ -2317,6 +2317,16 @@ class DynamicCalendarLoader extends CalendarCore {
             const startDate = new Date(`${festival.nextDates.start}T00:00:00`);
             const endDate = new Date(`${festival.nextDates.end}T00:00:00`);
             if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) continue;
+            // festivals.json says `end` INCLUSIVELY — Southern Decadence's
+            // 9/3–9/7 ends on Labor Day Monday, the 7th. Everything downstream
+            // reads a midnight end as EXCLUSIVE, the ICS all-day convention
+            // (DTEND is the day after the last day): getLogicalEndDate steps
+            // a midnight end back a second, to 23:59:59 the day before. So a
+            // festival stored ending on the 7th was rendering "– 9/6", every
+            // one of them a day short, and a one-day run came out ending
+            // before it started ("Sun 9/27 – Sat 9/26"). Hand downstream the
+            // convention it expects: midnight at the start of the day AFTER.
+            endDate.setDate(endDate.getDate() + 1);
 
             // Skip past festivals (ended more than 1 week ago)
             if (!includePast && endDate.getTime() < pastCutoff) continue;
