@@ -1,0 +1,108 @@
+[
+  {
+    "slug": "festival-bear-carnival-2027",
+    "url": "https://bearcarnival.com/",
+    "faviconBg": "#6a432a",
+    "faviconFg": "#e18f46",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:56:0 #9a4e2d:10:11 #5b3324:9:6 #ff6131:7:20 #f6bb07:4:17",
+    "accent": "#ff6131"
+  },
+  {
+    "slug": "festival-bears-sitges-week-2026",
+    "url": "https://bearssitges.org/",
+    "faviconBg": "#a47a38",
+    "faviconFg": "#395071",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#faf8f6:34:0 #895927:15:9 #bb8446:14:10 #35589f:11:12 #e5da62:4:14",
+    "accent": "#35589f"
+  },
+  {
+    "slug": "festival-beefdip-bear-week-2027",
+    "url": "https://beefdip.com/planned-events/",
+    "faviconBg": "#e30309",
+    "faviconFg": "#fde524",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:53:0 #df0209:23:23 #fde224:19:18 #fef4ba:1:7 #e94e4f:1:19",
+    "accent": "#df0209"
+  },
+  {
+    "slug": "festival-folsom-europe-2026",
+    "url": "https://folsomeurope.berlin/",
+    "faviconBg": "#0b0303",
+    "faviconFg": "#46afe5",
+    "faviconPlate": "#000000",
+    "paletteSource": "favicon",
+    "palette": "#000000:60:0 #0098e5:25:15 #ffffff:10:0 #ff0000:2:26",
+    "accent": "#0098e5"
+  },
+  {
+    "slug": "festival-folsom-street-fair-2026",
+    "url": "https://www.folsomstreet.org/",
+    "faviconBg": "#040404",
+    "faviconFg": "#e8e8e8",
+    "faviconPlate": "#000000",
+    "paletteSource": "favicon",
+    "palette": "#000000:66:0 #ffffff:27:0 #a3a3a3:3:0"
+  },
+  {
+    "slug": "festival-ibc-2027",
+    "url": "https://www.ibc-ps.com/",
+    "faviconBg": "#474747",
+    "faviconFg": "#767676",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#545454:33:0 #3a3a3a:30:0 #787878:17:0"
+  },
+  {
+    "slug": "festival-lazy-bear-week-2026",
+    "url": "https://www.lazybearfund.org/events",
+    "faviconBg": "#fc6024",
+    "faviconFg": "#fd6224",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#fc6124:61:20 #ffffff:35:0 #fd9b74:3:13 #fec8b2:1:7",
+    "accent": "#fc6124"
+  },
+  {
+    "slug": "festival-mad-bear-madrid-2026",
+    "url": "https://madbear.org/en",
+    "faviconBg": "#d12a26",
+    "faviconFg": "#dc6a25",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:63:0 #cb2026:26:20 #eaaf6c:4:11 #db713d:2:15 #d45228:2:17",
+    "accent": "#cb2026"
+  },
+  {
+    "slug": "festival-southern-decadence-2026",
+    "url": "https://www.southerndecadence.com/",
+    "faviconBg": "#253a89",
+    "faviconFg": "#db2332",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#2c4893:35:13 #ffffff:23:0 #e5222d:22:22 #8f3c71:7:13 #6176ae:4:9",
+    "accent": "#e5222d"
+  },
+  {
+    "slug": "festival-sugar-bear-festival-2027",
+    "url": "https://www.bearitmtl.com/",
+    "faviconBg": "#1a1a1a",
+    "faviconFg": "#d1d1d1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#000000:41:0 #ffffff:41:0 #aaaaaa:4:0"
+  },
+  {
+    "slug": "festival-urban-bear-nyc-2026",
+    "url": "https://www.theurbanbear.com/urbanbearnyc",
+    "faviconBg": "#141414",
+    "faviconFg": "#dcdcdc",
+    "faviconPlate": "#000000",
+    "paletteSource": "favicon",
+    "palette": "#000000:54:0 #ffffff:27:0 #d9d9d9:5:0"
+  }
+]

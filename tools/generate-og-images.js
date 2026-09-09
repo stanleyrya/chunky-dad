@@ -445,6 +445,49 @@ function collectCityPins(cityKey, limit = 8) {
     .slice(0, limit);
 }
 
+/**
+ * One tile per dated run: its favicon on its plate. Dated only — a run with
+ * no nextDates is not on the calendar this card is for. Ordered by start
+ * date so the cluster is stable run to run and the render gate holds.
+ * Plates come from data/event-colors/bear-runs.json, which the colour
+ * extractor writes for every festival under the same festival-<key>-<year>
+ * slug the site renders them by; a run with no entry yet gets a white plate.
+ */
+function collectRunTiles() {
+  let festivals = [];
+  try {
+    const raw = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'festivals.json'), 'utf8'));
+    festivals = Array.isArray(raw) ? raw : (raw.festivals || []);
+  } catch {
+    return [];
+  }
+  const colors = loadEventColors('bear-runs');
+  return festivals
+    .filter(f => f && f.website && f.nextDates && f.nextDates.start && f.nextDates.end)
+    .sort((a, b) => String(a.nextDates.start).localeCompare(String(b.nextDates.start)))
+    .map(f => {
+      const year = new Date(`${f.nextDates.start}T00:00:00`).getFullYear();
+      const entry = colors.get(`festival-${f.key}-${year}`);
+      // Only a run the colour extractor accepted. It already refuses platform
+      // sites (Eventbrite, Instagram) and artwork it cannot read a brand from,
+      // and the tiles those produced were the worst thing on the card: two
+      // blank white squares, a grey placeholder cube, and Instagram's own
+      // logo standing in for Bear Pride Chicago. No tile beats a wrong one.
+      if (!entry) return null;
+      // NOT filtered on `accent`. That looked like the way to drop a host's
+      // grey placeholder cube (IBC), but black-and-white marks — Folsom Street
+      // Fair, Urban Bear NYC, Sugar Bear — are colourless by design and carry
+      // no accent either; the rule threw out three real logos to lose one
+      // fake. A placeholder favicon is a data problem: curate the icon for
+      // that domain and it corrects here and on every card at once.
+      const icon = dataUri(localFaviconFile(f.website));
+      if (!icon) return null;
+      const plate = /^#[0-9a-fA-F]{3,8}$/.test(entry.faviconPlate || '') ? entry.faviconPlate : '#ffffff';
+      return { icon, plate };
+    })
+    .filter(Boolean);
+}
+
 function collectPlaceTargets() {
   const { CITY_CONFIG } = require(path.join(ROOT, 'js', 'city-config.js'));
   const out = [];
@@ -485,11 +528,13 @@ function collectPlaceTargets() {
     outPath: path.join(OUTPUT_DIR, `bear-runs${CARD_EXT}`),
     manifestKey: 'bear-runs',
     card: {
-      kind: 'home',
+      kind: 'runs',
       title: 'Bear Runs',
       when: 'Bear weeks, runs and festivals, the whole year on one calendar',
       cityPath: 'bear-runs',
-      logoUrl
+      logoUrl,
+      // one favicon tile per dated run, on its plate colour
+      tiles: collectRunTiles()
     }
   });
 

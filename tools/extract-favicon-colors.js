@@ -866,18 +866,28 @@ function ensureDir(dir) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
 
-async function processEvents(cityKey) {
-  const icsPath = path.join(ROOT, 'data', 'calendars', `${cityKey}.ics`);
-  if (!fs.existsSync(icsPath)) return;
+// The bear-runs calendar is not a city: it has no ICS, and it shows EVERY
+// dated festival rather than the ones assigned to one city. Its colours file
+// (data/event-colors/bear-runs.json) is what lets /bear-runs/ paint its cards
+// the way a city page does — the loader fetches event-colors/<page>.json by
+// the page's key, and this is the page's key.
+const BEAR_RUNS_KEY = 'bear-runs';
 
-  const icalText = fs.readFileSync(icsPath, 'utf8');
-  let events;
-  try {
-    const calendar = new CalendarCore();
-    events = calendar.parseICalData(icalText) || [];
-  } catch (err) {
-    console.warn(`⚠️  Could not parse ${cityKey}.ics: ${err.message}`);
-    return;
+async function processEvents(cityKey) {
+  const isRunsCalendar = cityKey === BEAR_RUNS_KEY;
+  const icsPath = path.join(ROOT, 'data', 'calendars', `${cityKey}.ics`);
+  if (!isRunsCalendar && !fs.existsSync(icsPath)) return;
+
+  let events = [];
+  if (!isRunsCalendar) {
+    const icalText = fs.readFileSync(icsPath, 'utf8');
+    try {
+      const calendar = new CalendarCore();
+      events = calendar.parseICalData(icalText) || [];
+    } catch (err) {
+      console.warn(`⚠️  Could not parse ${cityKey}.ics: ${err.message}`);
+      return;
+    }
   }
 
   ensureDir(EVENT_COLORS_DIR);
@@ -899,7 +909,9 @@ async function processEvents(cityKey) {
       const festivalsRaw = JSON.parse(fs.readFileSync(festivalsPath, 'utf8'));
       const festivalList = Array.isArray(festivalsRaw) ? festivalsRaw : (festivalsRaw.festivals || []);
       for (const fest of festivalList) {
-        if (!fest || fest.cityKey !== cityKey || !fest.website) continue;
+        if (!fest || !fest.website) continue;
+        // a city takes its own festivals; the runs calendar takes them all
+        if (!isRunsCalendar && fest.cityKey !== cityKey) continue;
         const startRaw = fest.nextDates && fest.nextDates.start;
         const festYear = startRaw ? new Date(startRaw).getFullYear() : NaN;
         if (Number.isNaN(festYear)) continue;
@@ -1040,6 +1052,8 @@ async function main() {
         .filter(f => f.endsWith('.ics'))
         .forEach(f => cities.add(f.replace('.ics', '')));
     }
+    // not a city, but it has cards to colour — see processEvents
+    cities.add(BEAR_RUNS_KEY);
   }
 
   if (cityFilter) {
