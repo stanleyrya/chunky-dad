@@ -359,11 +359,24 @@
 
     if (chip || cardHit || teaOverflows(card.querySelector('.ec-tea'))) {
       e.preventDefault();
-      // NOT stopPropagation for a card tap: the loader's own click handler
-      // still has to run so the card becomes the selected event. Only the
-      // chip and the description swallow the event, because those would
-      // otherwise toggle the selection off under the sheet.
-      if (!cardHit) e.stopPropagation();
+      e.stopPropagation();
+
+      // Opening the sheet must always leave this event SELECTED.
+      //
+      // Letting the tap through to the loader looked right and was not: that
+      // handler TOGGLES, and in the rail the centred card is already the
+      // selected one — so tapping the obvious card opened the sheet and
+      // deselected the event underneath it at the same time. Select it here
+      // instead, and only when it is not already the selection, so the toggle
+      // can never turn it off.
+      if (cardHit) {
+        const l = loader();
+        const slug = card.getAttribute('data-event-slug');
+        const occ = card.getAttribute('data-occurrence') || null;
+        const already = l && l.selectedEventSlug === slug
+          && (!occ || l.selectedEventDateISO === occ);
+        if (l && slug && !already) l.toggleEventSelection(slug, occ || undefined);
+      }
       openSheet(card);
     }
   }, true);
