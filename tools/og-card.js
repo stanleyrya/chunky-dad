@@ -79,6 +79,10 @@ const OG_TEMPLATE_VERSION = 4;
 // 3: larger pin tiles.
 // 4: pin ring dropped to the site's own 0.22 — 0.9 haloed dark artwork.
 // 5: title line-height back to the base 1.15; 1.06 clipped descenders.
+// (The runs card's tile cluster needed no bump: its CSS applies only under
+// .has-tiles, and the tiles ride in as card DATA, so that card re-renders on
+// its own while the city and home cards stay byte-identical — bumping here
+// moved the ?v= on 24 city pages whose images had not changed.)
 const OG_PLACE_TEMPLATE_VERSION = 5;
 
 // Bootstrap Icons geometry, inlined — same paths the cards use.
@@ -637,8 +641,19 @@ function buildOgCardHtml(data) {
     // have no flyer to hang the layout on, so the map stops being a corner
     // inset and becomes the artwork instead. Anything falsy leaves the card
     // exactly as it was.
-    const kind = d.kind === 'city' || d.kind === 'home' ? d.kind : '';
+    const kind = d.kind === 'city' || d.kind === 'home' || d.kind === 'runs' ? d.kind : '';
     const kindClass = kind ? ` place ${kind}-card` : '';
+
+    // The runs card has no map to fill its right half, so it fills it with
+    // the runs themselves: one favicon tile per dated run, on its own plate
+    // colour — the same tile the city card pins on its map and the event
+    // card wears in its corner, so it reads as the same family.
+    const tiles = kind === 'runs' && Array.isArray(d.tiles)
+        ? d.tiles.filter(t => t && safeUrl(t.icon)).slice(0, 18)
+        : [];
+    const tilesHtml = tiles.length
+        ? `<div class="tiles">${tiles.map(t => `<span class="tile" style="background:${esc(parseHexColor(t.plate || '') ? t.plate : '#ffffff')}"><img src="${safeUrl(t.icon)}" alt="" onerror="this.parentNode.remove()"></span>`).join('')}</div>`
+        : '';
 
     const titleLength = String(d.title || '').length;
     const titleClass = kind
@@ -981,10 +996,40 @@ ${m ? '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/ma
   /* a city with no pinnable venues shows a bare map rather than a lone dot in
      the middle of it — an unlabelled marker means nothing on a city card */
   body.place .og-pin.plain { display: none; }
+
+  /* ---- the runs card's tile cluster -----------------------------------
+     Takes the map's column. A loose grid rather than a strict one: the tiles
+     are staggered by row so it reads as a gathering of marks, not a
+     spreadsheet, and the count varies with how many runs are dated. */
+  body.place.has-tiles { padding-right: 566px; }
+  body.place .tiles {
+    position: absolute;
+    right: 56px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 440px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-content: center;
+    gap: 20px 20px;
+  }
+  body.place .tile {
+    width: 84px;
+    height: 84px;
+    border-radius: 22px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.22), 0 10px 26px rgba(6, 8, 20, 0.45);
+    display: block;
+  }
+  body.place .tile img { display: block; width: 100%; height: 100%; object-fit: contain; padding: 10px; }
+  /* a plain grid: at a dozen tiles a stagger read as a broken layout, not a
+     loose one */
   body.home-card .title { letter-spacing: -0.02em; }
 </style>
 </head>
-<body class="${board.className}${flyer ? '' : ' no-art'}${m ? '' : ' no-map'}${kindClass}">
+<body class="${board.className}${flyer ? '' : ' no-art'}${m ? '' : ' no-map'}${kindClass}${tiles.length ? ' has-tiles' : ''}">
   ${flyer ? `<div class="art"><img src="${flyer}" alt="" onerror="document.body.classList.add('no-art')"></div>` : ''}
   <div class="copy">
     <div class="titlerow">
@@ -999,6 +1044,7 @@ ${m ? '<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/ma
     ${brandMark}
   </div>
   ${m ? '<div class="map" id="ogmap"></div>' : ''}
+  ${tilesHtml}
   ${m ? mapScript(mapJson) : ''}
   ${readyScript(bannerRatio)}
 </body>
