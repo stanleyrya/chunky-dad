@@ -14,7 +14,7 @@ const { cityCardRelPath } = require('./og-policy.js');
 // different workflow), in which case the page ships an unversioned URL and
 // picks the hash up on the next regeneration.
 let cardManifest = null;
-function cityCardVersion(cityKey) {
+function cardVersion(manifestKey) {
   if (cardManifest === null) {
     try {
       cardManifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'img', 'og', 'manifest.json'), 'utf8'));
@@ -22,7 +22,10 @@ function cityCardVersion(cityKey) {
       cardManifest = {};
     }
   }
-  return cardManifest[`city/${cityKey}`] || '';
+  return cardManifest[manifestKey] || '';
+}
+function cityCardVersion(cityKey) {
+  return cardVersion(`city/${cityKey}`);
 }
 
 // Load CITY_CONFIG via Node export
@@ -193,7 +196,13 @@ function buildCityHtml(baseHtml, cityKey, cityConfig) {
     }
   }
 
-  // Pin relative-URL resolution to the city directory.
+  return rewriteForSubdirectory(html, canonicalHref);
+}
+
+// Everything a page needs once it lives one directory down — shared by the
+// city pages and the bear-runs calendar, which is built from the same template.
+function rewriteForSubdirectory(html, canonicalHref) {
+  // Pin relative-URL resolution to the page's directory.
   //
   // The page's URL no longer stays put: selecting an event rewrites the path to
   // /<city>/<slug>/ so the address bar always holds a link that previews with
@@ -217,6 +226,70 @@ function buildCityHtml(baseHtml, cityKey, cityConfig) {
   html = html.replace(/href="Rising_Star_Ryan_Head_Compressed\.png"/g, 'href="../Rising_Star_Ryan_Head_Compressed.png"');
 
   return html;
+}
+
+// The bear-runs calendar: the city template with a different event source.
+//
+// Same markup, same styling, same sheet — the loader keys the difference off
+// the data-calendar attribute on <main> and loads every dated run from
+// data/festivals.json instead of a city's calendar. No city switcher, since
+// there is no city, and no Week button, since it is a month calendar.
+const BEAR_RUNS_KEY = 'bear-runs';
+function buildBearRunsHtml(baseHtml) {
+  let html = baseHtml;
+  if (!html.includes(CITY_MARKER)) {
+    html = html.replace('<!DOCTYPE html>', `<!DOCTYPE html>\n${CITY_MARKER}`);
+  }
+
+  const canonicalHref = `/${BEAR_RUNS_KEY}/`;
+  const title = 'Bear Runs - chunky.dad';
+  const desc = 'Every bear run, bear week and festival on one calendar';
+
+  // Header: the address, no switcher
+  html = html.replace(/<header>[\s\S]*?<\/header>/, `    <header>
+        <nav>
+            <div class="nav-container">
+                <div class="logo">
+                    <h1><a href="../index.html"><img src="../Rising_Star_Ryan_Head_Compressed.png" alt="chunky.dad logo" class="logo-img"> chunky.dad/${BEAR_RUNS_KEY}</a></h1>
+                </div>
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </nav>
+    </header>`);
+
+  // The switch the loader reads, and no view toggle at all
+  html = html.replace('<main class="city-page">', `<main class="city-page" data-calendar="${BEAR_RUNS_KEY}">`);
+  html = html.replace(/\s*<div class="view-toggle">[\s\S]*?<\/div>/, '');
+
+  html = html.replace(/<title>[\s\S]*?<\/title>/, `<title>${title}<\/title>`);
+  html = html.match(/<meta name="description"[^>]*>/)
+    ? html.replace(/<meta name="description"[^>]*>/, `<meta name="description" content="${desc}">`)
+    : html.replace('</head>', `  <meta name="description" content="${desc}">\n</head>`);
+  html = html.match(/<link rel="canonical"[^>]*>/)
+    ? html.replace(/<link rel="canonical"[^>]*>/, `<link rel="canonical" href="${canonicalHref}">`)
+    : html.replace('</head>', `  <link rel="canonical" href="${canonicalHref}">\n</head>`);
+
+  const version = cardVersion(BEAR_RUNS_KEY);
+  const ogImageUrl = `https://chunky.dad/img/og/${BEAR_RUNS_KEY}.jpg${version ? `?v=${version}` : ''}`;
+  const ogTags = [
+    `<meta property="og:type" content="website">`,
+    `<meta property="og:site_name" content="chunky.dad">`,
+    `<meta property="og:title" content="${title}">`,
+    `<meta property="og:description" content="${desc}">`,
+    `<meta property="og:url" content="https://chunky.dad${canonicalHref}">`,
+    `<meta property="og:image" content="${ogImageUrl}">`,
+    `<meta name="twitter:card" content="summary_large_image">`,
+    `<meta name="twitter:title" content="${title}">`,
+    `<meta name="twitter:description" content="${desc}">`,
+    `<meta name="twitter:image" content="${ogImageUrl}">`
+  ].join('\n  ');
+  html = html.replace('</head>', `  ${ogTags}\n</head>`);
+
+  return rewriteForSubdirectory(html, canonicalHref);
 }
 
 // Build a redirect page for alias slugs
@@ -304,6 +377,17 @@ visibleEntries.forEach(([cityKey, cfg]) => {
   }
 });
 
+{
+  const outFile = path.join(ROOT, BEAR_RUNS_KEY, 'index.html');
+  const wrote = writeIfChanged(outFile, buildBearRunsHtml(templateHtml));
+  if (wrote) {
+    changes++;
+    console.log(`✓ Wrote ${path.relative(ROOT, outFile)}`);
+  } else {
+    console.log(`⏭️  No change for ${path.relative(ROOT, outFile)}`);
+  }
+}
+
 aliasEntries.forEach(([alias, { cityKey, cfg }]) => {
   const outDir = path.join(ROOT, alias);
   const outFile = path.join(outDir, 'index.html');
@@ -319,7 +403,8 @@ aliasEntries.forEach(([alias, { cityKey, cfg }]) => {
 
 const validDirectories = new Set([
   ...visibleEntries.map(([key]) => key),
-  ...aliasEntries.map(([alias]) => alias)
+  ...aliasEntries.map(([alias]) => alias),
+  BEAR_RUNS_KEY
 ]);
 
 // Optional pruning of removed cities/aliases: only delete directories containing markers

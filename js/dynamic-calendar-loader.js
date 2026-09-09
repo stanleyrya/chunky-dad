@@ -1688,7 +1688,9 @@ class DynamicCalendarLoader extends CalendarCore {
         
         // Update active button
         document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
-        document.querySelector('.view-btn[data-view="week"]').classList.add('active');
+        // guarded: the bear-runs page has no Week button at all
+        const weekBtn = document.querySelector('.view-btn[data-view="week"]');
+        if (weekBtn) weekBtn.classList.add('active');
         
         // Remove modal
         document.querySelector('.day-events-modal')?.remove();
@@ -2289,6 +2291,81 @@ class DynamicCalendarLoader extends CalendarCore {
         return this.festivalsDataPromise;
     }
 
+    /**
+     * Turn festivals.json entries into calendar events.
+     *
+     * Shared by two callers with different appetites. A city page merges the
+     * festivals that belong to it (`cityKey`) and drops anything that ended
+     * more than a week ago, because it sits alongside live scraped events.
+     * The bear-runs calendar (`cityKey: null`) takes every dated run and keeps
+     * the past ones too — it is a year's calendar, and paging back to see
+     * what already happened is the point of one.
+     */
+    mapFestivalsToEvents(festivals, { cityKey = null, includePast = false, existingEvents = [] } = {}) {
+        const normalizeName = (name) => String(name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const now = new Date();
+        const pastCutoff = now.getTime() - (7 * 24 * 60 * 60 * 1000); // 1 week ago
+        const mappedEvents = [];
+
+        for (const festival of (festivals || [])) {
+            if (!festival) continue;
+            if (cityKey !== null && festival.cityKey !== cityKey) continue;
+            // Undated festivals cannot be placed on a calendar
+            if (!festival.nextDates || !festival.nextDates.start || !festival.nextDates.end) continue;
+
+            // Local ISO (no Z) — matches how the backend JSON date reviver treats dates
+            const startDate = new Date(`${festival.nextDates.start}T00:00:00`);
+            const endDate = new Date(`${festival.nextDates.end}T00:00:00`);
+            if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) continue;
+
+            // Skip past festivals (ended more than 1 week ago)
+            if (!includePast && endDate.getTime() < pastCutoff) continue;
+
+            // Name-collision guard: if a scraped event has the same normalized name
+            // and overlaps the festival span, skip injecting to avoid doubles
+            const festivalName = normalizeName(festival.name);
+            const collision = existingEvents.some(existing => {
+                if (!existing || existing.festival) return false;
+                if (normalizeName(existing.name) !== festivalName) return false;
+                const existingStart = existing.startDate ? new Date(existing.startDate) : null;
+                if (!existingStart || Number.isNaN(existingStart.getTime())) return false;
+                let existingEnd = existing.endDate ? new Date(existing.endDate) : existingStart;
+                if (Number.isNaN(existingEnd.getTime())) existingEnd = existingStart;
+                return existingStart.getTime() <= endDate.getTime() &&
+                       existingEnd.getTime() >= startDate.getTime();
+            });
+            if (collision) {
+                console.debug(`Festival "${festival.name}" overlaps an existing scraped event — skipping injection`);
+                continue;
+            }
+
+            const slug = `festival-${festival.key}-${startDate.getFullYear()}`;
+            const links = [];
+            if (festival.website) links.push({ label: 'Website', url: festival.website });
+            if (festival.instagram) links.push({ label: 'Instagram', url: festival.instagram });
+
+            mappedEvents.push({
+                name: festival.name,
+                day: startDate.toLocaleDateString('en-US', { weekday: 'long' }),
+                time: null,
+                eventType: 'festival',
+                recurring: false,
+                startDate,
+                endDate,
+                bar: null,
+                location: festival.location || null,
+                website: festival.website || null,
+                instagram: festival.instagram || null,
+                links: links.length > 0 ? links : null,
+                slug,
+                uid: slug,
+                festival: true,
+                category: festival.category || null
+            });
+        }
+        return mappedEvents;
+    }
+
     // Merge multi-day festival events for this city into the loaded event arrays.
     // Fail open: on any fetch/parse error the page works exactly as before, with no festivals.
     async mergeFestivalEvents(cityKey, ...targetArrays) {
@@ -2301,67 +2378,8 @@ class DynamicCalendarLoader extends CalendarCore {
         }
 
         try {
-            const normalizeName = (name) => String(name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-            const now = new Date();
-            const pastCutoff = now.getTime() - (7 * 24 * 60 * 60 * 1000); // 1 week ago
             const existingEvents = Array.isArray(this.allEvents) ? this.allEvents : [];
-            const mappedEvents = [];
-
-            for (const festival of festivals) {
-                if (!festival || festival.cityKey !== cityKey) continue;
-                // Undated festivals cannot be placed on a calendar
-                if (!festival.nextDates || !festival.nextDates.start || !festival.nextDates.end) continue;
-
-                // Local ISO (no Z) — matches how the backend JSON date reviver treats dates
-                const startDate = new Date(`${festival.nextDates.start}T00:00:00`);
-                const endDate = new Date(`${festival.nextDates.end}T00:00:00`);
-                if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) continue;
-
-                // Skip past festivals (ended more than 1 week ago)
-                if (endDate.getTime() < pastCutoff) continue;
-
-                // Name-collision guard: if a scraped event has the same normalized name
-                // and overlaps the festival span, skip injecting to avoid doubles
-                const festivalName = normalizeName(festival.name);
-                const collision = existingEvents.some(existing => {
-                    if (!existing || existing.festival) return false;
-                    if (normalizeName(existing.name) !== festivalName) return false;
-                    const existingStart = existing.startDate ? new Date(existing.startDate) : null;
-                    if (!existingStart || Number.isNaN(existingStart.getTime())) return false;
-                    let existingEnd = existing.endDate ? new Date(existing.endDate) : existingStart;
-                    if (Number.isNaN(existingEnd.getTime())) existingEnd = existingStart;
-                    return existingStart.getTime() <= endDate.getTime() &&
-                           existingEnd.getTime() >= startDate.getTime();
-                });
-                if (collision) {
-                    console.debug(`Festival "${festival.name}" overlaps an existing scraped event — skipping injection`);
-                    continue;
-                }
-
-                const slug = `festival-${festival.key}-${startDate.getFullYear()}`;
-                const links = [];
-                if (festival.website) links.push({ label: 'Website', url: festival.website });
-                if (festival.instagram) links.push({ label: 'Instagram', url: festival.instagram });
-
-                mappedEvents.push({
-                    name: festival.name,
-                    day: startDate.toLocaleDateString('en-US', { weekday: 'long' }),
-                    time: null,
-                    eventType: 'festival',
-                    recurring: false,
-                    startDate,
-                    endDate,
-                    bar: null,
-                    location: festival.location || null,
-                    website: festival.website || null,
-                    instagram: festival.instagram || null,
-                    links: links.length > 0 ? links : null,
-                    slug,
-                    uid: slug,
-                    festival: true,
-                    category: festival.category || null
-                });
-            }
+            const mappedEvents = this.mapFestivalsToEvents(festivals, { cityKey, existingEvents });
 
             if (mappedEvents.length === 0) return;
 
@@ -5832,12 +5850,14 @@ class DynamicCalendarLoader extends CalendarCore {
         const mapSection = document.querySelector('.events-map-section');
         mapSection?.classList.remove('content-hidden');
 
-        // Update page metadata
-        document.title = `${cityConfig.name} - chunky.dad Bear Guide`;
+        // Update page metadata. A config may bring its own wording — the
+        // bear-runs calendar is not a "gay bear guide to Bear Runs".
+        document.title = cityConfig.pageTitle || `${cityConfig.name} - chunky.dad Bear Guide`;
         const metaDescription = document.querySelector('meta[name="description"]');
         if (metaDescription) {
-            metaDescription.setAttribute('content', 
-                `Complete gay bear guide to ${cityConfig.name} - events, bars, and the hottest bear scene`
+            metaDescription.setAttribute('content',
+                cityConfig.pageDescription
+                || `Complete gay bear guide to ${cityConfig.name} - events, bars, and the hottest bear scene`
             );
         }
         
@@ -6050,7 +6070,64 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     // Main render function
+    // The bear-runs calendar is this same page with a different event source:
+    // every dated run from data/festivals.json, no city, month view only. The
+    // generated page says so on its <main>, and that is the whole switch.
+    isBearRunsPage() {
+        return !!document.querySelector('main.city-page[data-calendar="bear-runs"]');
+    }
+
+    async renderBearRunsPage() {
+        // A config shaped like a city's, because everything downstream reads
+        // one — the map init wants a centre and a zoom, the when-line asks
+        // for a timezone (none: runs are all over the world, and they carry
+        // no time of day). The centre is a world view; there are no markers
+        // to frame because no run carries coordinates.
+        this.currentCity = 'bear-runs';
+        this.currentCityConfig = {
+            key: 'bear-runs',
+            name: 'Bear Runs',
+            emoji: '🐻',
+            coordinates: { lat: 30, lng: -20 },
+            mapZoom: 1,
+            pageTitle: 'Bear Runs - chunky.dad',
+            pageDescription: 'Every bear run, bear week and festival on one calendar'
+        };
+
+        // Month view is the only view here. Set before the URL is read so a
+        // ?date= or ?event= still applies, then re-asserted after, so a stray
+        // ?view=week cannot put the loader in a view this page cannot show.
+        this.currentView = 'month';
+        this.parseStateFromUrl();
+        this.currentView = 'month';
+
+        logger.info('CALENDAR', 'Rendering the bear-runs calendar');
+
+        let festivals = [];
+        try {
+            festivals = await this.fetchFestivalsData();
+        } catch (error) {
+            logger.componentError('CALENDAR', 'Failed to load data/festivals.json for the bear-runs calendar', error);
+            this.allEvents = [];
+            this.showCalendarError('bearRuns_fetch');
+            return;
+        }
+
+        // Every dated run, past ones included: this is the year's calendar,
+        // and paging back to what already happened is part of the point.
+        this.allEvents = this.mapFestivalsToEvents(festivals, { cityKey: null, includePast: true });
+        this.eventsData = { cityConfig: this.currentCityConfig, events: this.allEvents };
+
+        this.clearCalendarError();
+        this.updatePageContent(this.currentCityConfig, this.allEvents, false);
+        this.syncUrl(true);
+    }
+
     async renderCityPage() {
+        if (this.isBearRunsPage()) {
+            return this.renderBearRunsPage();
+        }
+
         this.currentCity = this.getCityFromURL();
         this.currentCityConfig = getCityConfig(this.currentCity);
         

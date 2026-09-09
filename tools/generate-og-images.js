@@ -477,6 +477,22 @@ function collectPlaceTargets() {
     });
   }
 
+  // The bear-runs calendar. No map: the runs carry no coordinates, and the
+  // home-style card (name and a line, on the ground) is the honest one.
+  out.push({
+    kind: 'home',
+    key: 'bear-runs',
+    outPath: path.join(OUTPUT_DIR, `bear-runs${CARD_EXT}`),
+    manifestKey: 'bear-runs',
+    card: {
+      kind: 'home',
+      title: 'Bear Runs',
+      when: 'Bear weeks, runs and festivals, the whole year on one calendar',
+      cityPath: 'bear-runs',
+      logoUrl
+    }
+  });
+
   out.push({
     kind: 'home',
     key: 'home',
