@@ -395,18 +395,13 @@
     if (pill) {
       // the sheet, in place — no navigation, no reload feel
       const slug = pill.getAttribute('data-event-slug');
-      // Opening the sheet SELECTS its event, here as everywhere else. This
-      // branch never did, so tapping a month pill raised the sheet while the
-      // pill it came from stayed unhighlighted and the loader still thought
-      // nothing was selected — the same inconsistency the card tap had, in
-      // the one place a card tap cannot reach.
-      const pillDay = pill.closest('[data-date]');
-      const pillDate = pillDay && pillDay.getAttribute('data-date');
-      if (l && slug) {
-        const already = l.selectedEventSlug === slug
-          && (!pillDate || l.selectedEventDateISO === pillDate);
-        if (!already) l.toggleEventSelection(slug, pillDate || undefined);
-      }
+      // Deliberately does NOT select. Everywhere else opening the sheet also
+      // selects the event, and #1740 made this branch match — the owner's
+      // answer is that the mobile month view should not highlight or
+      // unhighlight anything at all. It is a dense grid read at a glance, and
+      // lighting one pill while dimming the rest is noise there; the sheet is
+      // the whole response to a tap. Highlighting stays in week view, where
+      // the selection drives the card rail and the map alongside it.
       const card = slug && document.querySelector('.events-list .event-card[data-event-slug="' + cssEscape(slug) + '"]');
       if (card) { openSheet(card); return; }
       // the continuous month strip renders NEIGHBOR months too — their
