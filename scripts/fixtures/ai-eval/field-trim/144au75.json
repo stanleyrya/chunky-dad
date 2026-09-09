@@ -1,0 +1,17 @@
+{
+  "id": "field-trim/144au75",
+  "pass": "field-trim",
+  "prompt": "You pick which numbered PARTS of an overlong event field to keep. You never write text.\nEVENT: BRYCE QUARTZ FUNDRAISER\nFIELD: description — limit 600 characters, currently 1252\nPARTS (3):\n1. (564 chars) \"@poppyjsnacks is throwing a benefit show to support BRYCE QUARTZ @therealbrycequartz financially during his recovery efforts from the scariest surgery he has ever gotten 🥺❤️ Featuring performances from friends @conde_nyc @iamsenerio @justicelabrave @temple_grande @rhirhinyc @zalikanyc @danjimz @gogom3l and music by @nobl3_b3ar 🥰 There will also be a raffle where you can WIN • Xbox Series S • 1 Year Spotify Subscription • $50 @cockeyekink gift certificate • @durtybearclothing t-shirts • @bearbackg lube and c*m towels, and of course some Bryce Quartz merch!\"\n2. (563 chars) \"❤️🥰 It will be $5 for 1 ticket, $20 for 5 tickets, and $50 for 15 tickets 😋 Doors at 8:30p Show at 10p Raffle drawing at 11p-11:30p Darkroom opens at 12a There is a suggested donation of $10 at the door but you can donate anything you’d like or put the money towards the raffle ❤️ Bryce says: \\\" I am really excited to be surrounded by people who love me a week before my surgery, and I will probably cry during this event because this is the nicest thing I think people have ever done for me 😭 I am really gonna need all the emotional support during this time,\"\n3. (125 chars) \"and I’m very thankful for everyone involved in this and for whoever shows up for me ❤️ Love you all, hope to see you there!\\\"\"\nRules:\n- Answer with ONE range of consecutive part numbers to keep, written \"first-last\" (e.g. \"2-5\"). A single part is \"3-3\".\n- The program joins the kept parts back together verbatim and drops parts off the END until the limit fits — so choose the START carefully and extend as far as you like.\n- Choose the START: the first part that carries real information. Skip a pure greeting, hype, or navigation opener.\n- Choose the LAST: stop before ticket links, disclaimers, sponsor lists, and repeated calls to action.\n- For \"title\" keep only the parts naming the event itself — drop venue, city, date, status text, and marketing.\n- For \"shortName\" keep the single part that is the recognizable brand name.\nReturn JSON only, no prose:\n{\"trims\": {\"<field>\": \"<first>-<last>\"}}",
+  "options": {
+    "numPredict": 200,
+    "temperature": 0,
+    "responseFormat": "json_object"
+  },
+  "baseline": {
+    "model": "lmstudio-community/Qwen3-Coder-Next-MLX-6bit",
+    "text": "{\"trims\": {\"description\": \"1-3\"}}",
+    "cachedAt": "2026-08-29T15:47:26.840Z"
+  },
+  "expected": null,
+  "blessed": "auto"
+}

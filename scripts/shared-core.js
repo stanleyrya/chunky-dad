@@ -18122,6 +18122,34 @@ class SharedCore {
         }
     }
 
+    // Per-endpoint reachability tally for the end-of-run health check below.
+    // Counts REQUESTS, not answers: a 500 or an empty completion still proves
+    // the server is there. Only a transport failure (fetch failed, timeout, no
+    // adapter) leaves an endpoint at zero.
+    recordAiTransportAttempt(endpoint) {
+        const key = String(endpoint || '');
+        if (!key) return null;
+        if (!this.aiTransportHealth) this.aiTransportHealth = new Map();
+        let entry = this.aiTransportHealth.get(key);
+        if (!entry) {
+            entry = { endpoint: key, attempts: 0, reachable: 0 };
+            this.aiTransportHealth.set(key, entry);
+        }
+        entry.attempts += 1;
+        return entry;
+    }
+
+    // Endpoints that were asked for something and NEVER answered. A run where
+    // every AI call died in transport still produces events — from cache, from
+    // JSON-LD, from the non-AI parsers — and so reports success, which is
+    // exactly how 2026-09-06 to 09-09 shipped four AI-blind scheduled runs
+    // unnoticed (1381/1381 calls failed on the last of them). Surfacing it is
+    // the no-partial-runs doctrine applied to the AI dependency.
+    getUnreachableAiEndpoints() {
+        if (!this.aiTransportHealth) return [];
+        return [...this.aiTransportHealth.values()].filter(entry => entry.attempts > 0 && entry.reachable === 0);
+    }
+
     async callAiGenerate(aiConfig, prompt, passLabel, httpAdapter, promptHistoryRecorder = null, base64Image = null, diagnostics = null) {
         if (!prompt) return null;
         const payload = this.buildAiPayload(aiConfig, prompt, base64Image);
@@ -18144,6 +18172,7 @@ class SharedCore {
 
         console.log(`🤖 AI Web: Sending AI request${label} to ${aiConfig.endpoint} — model: ${aiConfig.model}, provider: ${aiConfig.provider}, prompt: ${promptChars} chars`);
         this.logAiPayloadDebug(`🤖 AI Web: Full prompt${label}`, prompt, aiConfig);
+        const transportHealth = this.recordAiTransportAttempt(aiConfig.endpoint);
 
         const startTime = Date.now();
         try {
@@ -18156,6 +18185,9 @@ class SharedCore {
             });
 
             if (!response.ok) {
+                // An HTTP status is still an answer: the server is up, it just
+                // refused this request. Reachability is what this counter is for.
+                if (transportHealth) transportHealth.reachable += 1;
                 console.warn(`🤖 AI Web: AI request${label} returned HTTP ${response.status} after ${Date.now() - startTime}ms`);
                 if (response.text) {
                     console.log(`🤖 AI Web: Error response body${label}\n${response.text}`);
@@ -18178,6 +18210,7 @@ class SharedCore {
             const responseContent = this.extractAiResponse(aiConfig, responseJson);
 
             if (responseContent && typeof responseContent === 'string' && responseContent.length > 0) {
+                if (transportHealth) transportHealth.reachable += 1;
                 console.log(`🤖 AI Web: AI request${label} succeeded in ${elapsed}ms — response: ${responseContent.length} chars`);
                 this.logAiPayloadDebug(`🤖 AI Web: Model response text${label}`, responseContent, aiConfig);
                 if (!base64Image && this.aiResponseCache) {
@@ -18199,6 +18232,7 @@ class SharedCore {
                 }
                 console.warn(`🚨 AI Web: AI request${label} generated 0 tokens with finish_reason "length" — the image (${base64Image.length} base64 chars) likely exceeds the model's context window. Downscale the image or raise the server's context limit.`);
             }
+            if (transportHealth) transportHealth.reachable += 1;
             console.warn(`🤖 AI Web: AI request${label} completed in ${elapsed}ms with empty response (done_reason: ${doneReason})`);
             if (response.text) {
                 console.log(`🤖 AI Web: Raw response payload${label}\n${response.text}`);

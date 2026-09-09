@@ -1,0 +1,17 @@
+{
+  "id": "context-prep/5584je",
+  "pass": "context-prep",
+  "prompt": "Analyze this raw event data. Find any hidden times or confusing dates and format them explicitly.\n- If you see a time like \"01H\" or \"20h30\", rewrite it as \"01:00 AM\" or \"8:30 PM\".\n- Identify the Main Event Name, its Specific Date, and whether there is a larger festival date range mentioned.\n\nOutput ONLY this format:\nCORRECTIONS:\n- Cleaned Times: [List them here]\n- Core Event Date: [The single specific date]\n- Parent Festival Dates: [If any, otherwise 'None']\n\nTEXT:\nCONTENT\nOCR_IMAGE_URL: https://b3335593.assetcdn.net/3335593/wp-content/uploads/2025/04/mastodon_hover.png?lossy=2&strip=1&webp=1\nOCR_IMAGE_TEXT\nUnderwear Night and Contest | The Dallas Eagle\nEvents - The Dallas Eagle Underwear Night and Contest\nUnderwear Night and Contest\nEvery Wednesday night is UNDERWEAR NIGHT at the Dallas Eagle! 🦅\nWhere else can you strip down to your undies and indulge in premium cocktails and ice cold draft beer? FREE Lockers are available, so drop your pants and join in on some humpday fun! Compete in our weekly Underwear Contest at 11pm for cash prizes and a chance to enter our monthly contest! 🔥\nSponsored by Package Dallas!\n🦅 Underwear and jocks recommended, legal clothing coverage required at all times. Free lockers!\n🍻 Get here early for Underwear Happy Hour 7-9pm\n🧢 Dallas Eagle Leather Shop now open!\n⭐ No cover. Free parking. Free lockers while they last! Sponsored by Package Dallas\n#dallaseagle #underwearnight UID: ev.26.a581\n+ Add to Google Calendar\n+ iCal / Outlook export\ndays\nhours\nminutes\nseconds\nDate\nOct 21 2026\nTime\n9:00 pm - 2:00 am",
+  "options": {
+    "numPredict": 2000,
+    "temperature": 0,
+    "responseFormat": "json_object"
+  },
+  "baseline": {
+    "model": "lmstudio-community/Qwen3-Coder-Next-MLX-6bit",
+    "text": "{\"CORRECTIONS\": [\"7-9pm → 7:00 PM - 9:00 PM\", \"11pm → 11:00 PM\", \"9:00 pm - 2:00 am → 9:00 PM - 2:00 AM\"], \"Core Event Date\": \"October 21, 2026\", \"Parent Festival Dates\": \"None\"}",
+    "cachedAt": "2026-08-29T22:08:17.304Z"
+  },
+  "expected": null,
+  "blessed": "auto"
+}

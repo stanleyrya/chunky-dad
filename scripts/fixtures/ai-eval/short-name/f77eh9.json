@@ -1,0 +1,17 @@
+{
+  "id": "short-name/f77eh9",
+  "pass": "short-name",
+  "prompt": "You are naming a compact calendar chip for one event.\nTITLE: WOO-WOO's CIRQ-US!\nReturn the shortest recognizable display name for this event.\nRules:\n- The answer MUST be taken verbatim from the title: one contiguous run of characters — never paraphrase, reorder, merge parts, or add words.\n- At most 16 characters.\n- UPPERCASE preferred (you may uppercase the copied characters).\n- You MAY insert hyphens inside a long word as line-break hints, e.g. \"CUBSCOUT\" → \"CUB-SCOUT\".\nReturn JSON only:\n{\"shortName\": {\"value\": \"<display name>\", \"reason\": \"<one short sentence>\"}}",
+  "options": {
+    "numPredict": 200,
+    "temperature": 0,
+    "responseFormat": "json_object"
+  },
+  "baseline": {
+    "model": "lmstudio-community/Qwen3-Coder-Next-MLX-6bit",
+    "text": "{\"shortName\": {\"value\": \"WOO-WOO'S CIRQ-US\", \"reason\": \"Taken verbatim from title, uppercase, 16 chars, hyphen added for readability in 'CIRQ-US'.\"}}",
+    "cachedAt": "2026-08-29T15:53:19.051Z"
+  },
+  "expected": null,
+  "blessed": "auto"
+}

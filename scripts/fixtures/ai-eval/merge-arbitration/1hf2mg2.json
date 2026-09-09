@@ -1,0 +1,17 @@
+{
+  "id": "merge-arbitration/1hf2mg2",
+  "pass": "merge-arbitration",
+  "prompt": "You are resolving merge conflicts between two records of the SAME event.\nEVENT: \"Treasure Trail Seattle\" starting 2026-08-16T04:00:00.000Z\nRecord \"version-one\" and record \"version-two\" each provide a value for the fields below.\nFor each field, pick the value that is more correct, complete, and canonical\n(official names, full addresses, complete URLs, correctly formatted values).\nCONFLICTS:\n- field: imageVertical\n  version-one: \"https://bearracuda.com/wp-content/uploads/2026/07/sausageweb.jpg\"\n  version-two: \"https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a52fb0199816a248d9dc8dd_2813daf0-3d53-49b8-8dae-d1decc23c604.webp\"\nRules:\n- You MUST copy one of the two provided values EXACTLY. Never invent, edit, merge, or reformat a value.\n- \"bar\" must be the physical venue where the event takes place — never the promoter, organizer, or brand whose name appears in page titles.\n- A street address (e.g. \"10-90 Wyckoff Ave\") is never a venue name — for \"bar\", prefer a named venue over an address.\n- KNOWN ORGANIZER: \"BEARRACUDA\" — never pick a bar value equal to the organizer.\n- Never reject a bar value as \"the organizer\" unless it is the SAME NAME as the known organizer — a venue sharing a page or flyer with the organizer is still the venue.\n- For \"title\", when both variants name the same event, prefer the MORE DESCRIPTIVE one — a subtitle, theme, edition, or anniversary (e.g. \"Treasure Trail Seattle: Summer Sausage\" over \"Treasure Trail Seattle\") is part of the event's identity, not noise.\n- For \"title\", extra text does NOT count as descriptive when it is only status text (e.g. sold-out notices) or site branding — never prefer a variant for those.\n- For \"title\", a bare city name is not an event name — prefer the variant that names the event or its organizer.\n- For \"title\", the event's own date is NOT descriptive — never prefer a variant because it contains a date; prefer the dateless variant of an otherwise-equal name.\n- For \"image\", prefer event-specific promotional artwork over site or ticketing-service logos.\n- \"pick\" must be \"version-one\" or \"version-two\".\nReturn JSON only:\n{\"choices\": {\"<field>\": {\"pick\": \"version-one\" or \"version-two\", \"value\": \"<exact copy of the chosen value>\", \"reason\": \"<one short sentence>\"}}}",
+  "options": {
+    "numPredict": 800,
+    "temperature": 0,
+    "responseFormat": "json_object"
+  },
+  "baseline": {
+    "model": "lmstudio-community/Qwen3-Coder-Next-MLX-6bit",
+    "text": "{\"choices\": {\"imageVertical\": {\"pick\": \"version-two\", \"value\": \"https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a52fb0199816a248d9dc8dd_2813daf0-3d53-49b8-8dae-d1decc23c604.webp\", \"reason\": \"The version-two image URL uses a CDN from the official website-files domain, indicating it is official promotional artwork, whereas version-one appears to be a generic upload from a third-party site.\"}}}",
+    "cachedAt": "2026-08-17T09:25:11.059Z"
+  },
+  "expected": null,
+  "blessed": "auto"
+}

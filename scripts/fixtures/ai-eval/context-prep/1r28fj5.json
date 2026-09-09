@@ -1,0 +1,17 @@
+{
+  "id": "context-prep/1r28fj5",
+  "pass": "context-prep",
+  "prompt": "Analyze this raw event data. Find any hidden times or confusing dates and format them explicitly.\n- If you see a time like \"01H\" or \"20h30\", rewrite it as \"01:00 AM\" or \"8:30 PM\".\n- Identify the Main Event Name, its Specific Date, and whether there is a larger festival date range mentioned.\n\nOutput ONLY this format:\nCORRECTIONS:\n- Cleaned Times: [List them here]\n- Core Event Date: [The single specific date]\n- Parent Festival Dates: [If any, otherwise 'None']\n\nTEXT:\nCONTENT\nOCR_IMAGE_URL: https://www.bearitmtl.com/wp-content/uploads/2026/07/The-Hunt.jpg\nOCR_IMAGE_TEXT\nA FETISH NIGHT.\nTHE HUNT\n6 SEPTEMBRE 2026 · 9 PM\nSEXY FETISH PLAY\nDRESS CODE ENCOURAGED:\nLEATHER, RUBBER, PUP, SPORTS, UNIFORMS, NEOPRENE, SPANDEX, WRESTLING, WORKWEAR.\nOCR_IMAGE_URL: https://www.bearitmtl.com/wp-content/uploads/2026/08/d6708ce7-8d2b-4eb1-929f-60a00d4b6d0d.png\n6 SEPTEMBRE 2026\n9 PM\nSEXY • FETISH • PLAY\nDRESS CODE ENCOURAGED :\nLEATHER, RUBBER, PUP, SPORTS, UNIFORMS,\nNEOPRENE, SPANDEX, WRESTLING, WORKWEAR.\nZANDERWOODZ\nOCR_IMAGE_URL: https://www.bearitmtl.com/wp-content/uploads/2026/08/Poster_WEB.jpg\nM. CUIR MONTREAL 2025 & M. OURS 2026\nEN COLLABORATION AVEC\nstock & soda\nENSEMBLE\nSTOCK AND SODA, SAMEDI 19 SEPTEMBRE 2026\nMEET AND GREET 18:00 - 20:00 SPECTACLE\nSHOW ANIME PAR SASHA BAGA\nAFTER PARTY MIX PAR DJ HONEY DAVENPORT\n35$ AU PROFIT DE\nREZO:\nOCR_IMAGE_URL: https://www.bearitmtl.com/wp-content/uploads/2026/07/MISS-BEAR-POSTER-FIERTE-WEB-scaled.jpg\nLA FIERTE, LA FORCE, L'ATTITUDE\nCÉLÉBRONS QUI NOUS SOMMES !\nMISS\nBear\nÉDITION FIERTE\nSASHA BAGA\nHost\nCONCOURS OUVERT À TOUTES\nINSCRIPTIONS BIENTOT OUVERTES\nOCR_IMAGE_URL: https://i0.wp.com/www.bearitmtl.com/wp-content/uploads/2026/08/Vignette_WEB.jpg?fit=1920%2C1080&ssl=1\nM. CUIR MONTREAL 2025 & M. OURS 2026 EN COLLABORATION PRÉSENTENT\nAPRÈS PARTY MIX PAR DJ HONEY DAVENPORT\nSTOCK AND SODA, SAMEDI 19 SEPTEMBRE 2026 - MEET AND GREET 18:00 - 20:00 SPECTACLE\n35$ - INITIATIVE AU PROFIT DE REZO:\nÉvènements pour septembre 2, 2026 – Bear-IT – Ours et Fier\nAller au contenu\n0 évènements found.\nGoogle Agenda\niCalendar\nOutlook 365\nOutlook Live\nExport .ics file\nExportez le fichier Outlook.ics\nNous avons remarqué que vous vous trouvez dans le pays suivant : Etats-Unis (USA). Nous avons mis à jour nos prix à Dollar américain pour faciliter votre processus d'achat. Utilisez Dollar canadien à la place. Rejeter",
+  "options": {
+    "numPredict": 2000,
+    "temperature": 0,
+    "responseFormat": "json_object"
+  },
+  "baseline": {
+    "model": "lmstudio-community/Qwen3-Coder-Next-MLX-6bit",
+    "text": "[\"9:00 PM\", \"6:00 PM - 8:00 PM\"]",
+    "cachedAt": "2026-08-29T22:37:20.725Z"
+  },
+  "expected": null,
+  "blessed": "auto"
+}
