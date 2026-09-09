@@ -6009,12 +6009,18 @@ class DynamicCalendarLoader extends CalendarCore {
             if (card.dataset.selBound) return;
             card.dataset.selBound = '1';
             card.addEventListener('click', (e) => {
-                // Ignore clicks that originate from share button
-                const shareBtn = e.target.closest && e.target.closest('.share-event-btn');
-                if (shareBtn) return;
-                // the venue name is a link out to Google Maps — following it
-                // must not also toggle the card underneath it
-                if (e.target.closest && e.target.closest('.map-link')) return;
+                // Every control on the card keeps its own meaning; none of
+                // them toggles the selection underneath it.
+                //
+                // This used to name two of them, the share button and the
+                // venue's Maps link, and that left the rest: clicking an
+                // event's website or Instagram link deselected the card you
+                // were reading as it opened the tab. Anything that is a link
+                // or a button is a control — that covers the share button,
+                // the venue link, the event links, the corner thumb and the
+                // "…more" chip, and it cannot fall behind as controls are
+                // added.
+                if (e.target.closest && e.target.closest('a, button')) return;
                 const slug = card.getAttribute('data-event-slug');
                 // The card knows which occurrence it is (data-occurrence) —
                 // selecting with currentDate stamped the WINDOW START on the
