@@ -377,6 +377,43 @@ If URL input is present, `scraper-input.js` is optional, but `scraper-cities.js`
 
 **⚠️ REMEMBER: This architecture prevents environment-specific code from contaminating shared business logic. Maintain this separation to ensure the codebase remains maintainable and testable across both Scriptable and web environments.**
 
+### Starting the AI servers (`tools/serve-ai.sh`)
+
+The scraper needs a **text** model on `:8000` and a **vision** model on `:8001`,
+both hand-started on rybook with nothing supervising them.
+
+```bash
+tools/serve-ai.sh            # start both (no-op if already healthy)
+tools/serve-ai.sh status     # health + the flags each is running
+tools/serve-ai.sh stop
+tools/serve-ai.sh restart
+```
+
+The flags are in the script so they are not retyped from memory — which is how
+they were lost once already. Three are load-bearing:
+
+| | why |
+|---|---|
+| **no** `--kv-cache-quantization` | Now a **hard error** on both models, and it exits *after* the model finishes loading, so it looks like a startup hang rather than a bad flag. bf16 is the default. |
+| `--host <tailnet ip>` | rapid-mlx now defaults to `127.0.0.1`, so a perfectly healthy server is unreachable from the phone. The tailnet address — not `0.0.0.0`, which would also expose the model on WiFi/LAN. |
+| `--default-repetition-penalty 1.15` (vision only) | The vision model falls into repetition loops that burn the token budget and truncate the JSON. On 30 real OCR cases this took failures from **16.7% to 0%** and ran **2.5× faster**. On the text model the same penalty measured no better. |
+
+The first two together took the scraper's AI out for four days in September
+2026 — 1381/1381 calls failing per run, every run still reporting success.
+`AI DEGRADED RUN` now makes that loud.
+
+`--max-num-seqs 1` is deliberate: batching was measured and does **not** help
+(121s wall at concurrency 1, 146s at 4, 130s at 8 — a single request already
+saturates the GPU).
+
+**Downloading a model?** Export `HF_HUB_DISABLE_XET=1` and pull one at a time.
+Xet storage stalls indefinitely here — the byte counter freezes and sometimes
+runs *backwards* — and two concurrent pulls deadlock each other. It never
+errors, so it reads as a slow connection. With Xet off the same pull runs at
+~20 MB/s.
+
+---
+
 ### Model Evaluation (`tools/ai-eval.js`)
 
 Judging a model or server-setting change by re-running the scraper is slow and
