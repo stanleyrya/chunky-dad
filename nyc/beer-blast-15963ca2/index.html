@@ -32,8 +32,35 @@ Website…">
   <meta name="chunky:website" content="https://eagle-ny.com">
   <meta name="chunky:lat" content="40.75168692425323">
   <meta name="chunky:lng" content="-74.00431317114098">
+  <!-- The redirect runs HERE, in the head, before the body is parsed — so a
+       visitor with JavaScript never paints this page at all. It used to sit
+       after the content, which let the browser render the fallback first: a
+       flash of event text on the way through, which is slower and more jarring
+       than the meta-refresh it replaced. -->
+  <script>
+    (function(){
+      try {
+        var hash = window.location.hash || '';
+        // Prefer incoming params (date/view) when provided; always enforce event param
+        var target = new URL("../?event=beer-blast-15963ca2&view=week", window.location.href);
+        var incoming = new URL(window.location.href);
+        // Copy ALL incoming params over target (override)
+        incoming.searchParams.forEach(function(v, k){
+          target.searchParams.set(k, v);
+        });
+        // Ensure event param matches this page's event slug
+        target.searchParams.set('event', "beer-blast-15963ca2");
+        var finalUrl = target.pathname + '?' + target.searchParams.toString() + hash;
+        location.replace(finalUrl);
+      } catch (e) {
+        location.replace("../?event=beer-blast-15963ca2&view=week");
+      }
+    })();
+  </script>
   <!-- Inline and tiny: this page is a redirect for almost everyone, so it must
-       not pull a stylesheet. It only ever renders for a visitor without JS. -->
+       not pull a stylesheet. The fallback is hidden by default and revealed
+       only when scripting is off — a crawler does not render either way, it
+       reads the og: tags above. -->
   <style>
     body { margin: 0; background: #10131f; color: #fff;
            font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
@@ -41,7 +68,9 @@ Website…">
     .event-stub h1 { font-size: 1.6rem; line-height: 1.25; margin: 0 0 .5rem; }
     .event-stub p { margin: 0 0 1rem; color: rgba(255,255,255,.8); }
     .event-stub a { color: #9db2ff; }
+    .event-stub { display: none; }
   </style>
+  <noscript><style>.event-stub { display: block; }</style></noscript>
 </head>
 <body>
   <!-- The redirect is JavaScript-ONLY, deliberately, and this page has real
@@ -64,25 +93,5 @@ Bar: Eagle NYC Cover: No cover till 9PM, $20 cover at 9PM
 Website…</p>
     <p><a href="../?event=beer-blast-15963ca2&view=week">Open in the New York guide &rarr;</a></p>
   </main>
-  <script>
-    (function(){
-      try {
-        var hash = window.location.hash || '';
-        // Prefer incoming params (date/view) when provided; always enforce event param
-        var target = new URL("../?event=beer-blast-15963ca2&view=week", window.location.href);
-        var incoming = new URL(window.location.href);
-        // Copy ALL incoming params over target (override)
-        incoming.searchParams.forEach(function(v, k){
-          target.searchParams.set(k, v);
-        });
-        // Ensure event param matches this page's event slug
-        target.searchParams.set('event', "beer-blast-15963ca2");
-        var finalUrl = target.pathname + '?' + target.searchParams.toString() + hash;
-        location.replace(finalUrl);
-      } catch (e) {
-        location.replace("../?event=beer-blast-15963ca2&view=week");
-      }
-    })();
-  </script>
 </body>
 </html>

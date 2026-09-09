@@ -32,8 +32,35 @@ timezone…">
   <meta name="chunky:website" content="https://www.furball.nyc">
   <meta name="chunky:lat" content="32.810535">
   <meta name="chunky:lng" content="-96.8110709">
+  <!-- The redirect runs HERE, in the head, before the body is parsed — so a
+       visitor with JavaScript never paints this page at all. It used to sit
+       after the content, which let the browser render the fallback first: a
+       flash of event text on the way through, which is slower and more jarring
+       than the meta-refresh it replaced. -->
+  <script>
+    (function(){
+      try {
+        var hash = window.location.hash || '';
+        // Prefer incoming params (date/view) when provided; always enforce event param
+        var target = new URL("../?event=furball-442f8415&date=2026-07-05&view=week", window.location.href);
+        var incoming = new URL(window.location.href);
+        // Copy ALL incoming params over target (override)
+        incoming.searchParams.forEach(function(v, k){
+          target.searchParams.set(k, v);
+        });
+        // Ensure event param matches this page's event slug
+        target.searchParams.set('event', "furball-442f8415");
+        var finalUrl = target.pathname + '?' + target.searchParams.toString() + hash;
+        location.replace(finalUrl);
+      } catch (e) {
+        location.replace("../?event=furball-442f8415&date=2026-07-05&view=week");
+      }
+    })();
+  </script>
   <!-- Inline and tiny: this page is a redirect for almost everyone, so it must
-       not pull a stylesheet. It only ever renders for a visitor without JS. -->
+       not pull a stylesheet. The fallback is hidden by default and revealed
+       only when scripting is off — a crawler does not render either way, it
+       reads the og: tags above. -->
   <style>
     body { margin: 0; background: #10131f; color: #fff;
            font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
@@ -41,7 +68,9 @@ timezone…">
     .event-stub h1 { font-size: 1.6rem; line-height: 1.25; margin: 0 0 .5rem; }
     .event-stub p { margin: 0 0 1rem; color: rgba(255,255,255,.8); }
     .event-stub a { color: #9db2ff; }
+    .event-stub { display: none; }
   </style>
+  <noscript><style>.event-stub { display: block; }</style></noscript>
 </head>
 <body>
   <!-- The redirect is JavaScript-ONLY, deliberately, and this page has real
@@ -64,25 +93,5 @@ address: 3911 Cedar Springs Rd, Dallas, TX 75219
 timezone…</p>
     <p><a href="../?event=furball-442f8415&date=2026-07-05&view=week">Open in the Dallas guide &rarr;</a></p>
   </main>
-  <script>
-    (function(){
-      try {
-        var hash = window.location.hash || '';
-        // Prefer incoming params (date/view) when provided; always enforce event param
-        var target = new URL("../?event=furball-442f8415&date=2026-07-05&view=week", window.location.href);
-        var incoming = new URL(window.location.href);
-        // Copy ALL incoming params over target (override)
-        incoming.searchParams.forEach(function(v, k){
-          target.searchParams.set(k, v);
-        });
-        // Ensure event param matches this page's event slug
-        target.searchParams.set('event', "furball-442f8415");
-        var finalUrl = target.pathname + '?' + target.searchParams.toString() + hash;
-        location.replace(finalUrl);
-      } catch (e) {
-        location.replace("../?event=furball-442f8415&date=2026-07-05&view=week");
-      }
-    })();
-  </script>
 </body>
 </html>

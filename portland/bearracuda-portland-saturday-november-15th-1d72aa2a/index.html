@@ -27,36 +27,11 @@
   <meta name="chunky:website" content="https://bearracuda.com/events/portland-50/">
   <meta name="chunky:lat" content="45.5227415">
   <meta name="chunky:lng" content="-122.6580938">
-  <!-- Inline and tiny: this page is a redirect for almost everyone, so it must
-       not pull a stylesheet. It only ever renders for a visitor without JS. -->
-  <style>
-    body { margin: 0; background: #10131f; color: #fff;
-           font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-    .event-stub { max-width: 34rem; margin: 0 auto; padding: 3rem 1.5rem; }
-    .event-stub h1 { font-size: 1.6rem; line-height: 1.25; margin: 0 0 .5rem; }
-    .event-stub p { margin: 0 0 1rem; color: rgba(255,255,255,.8); }
-    .event-stub a { color: #9db2ff; }
-  </style>
-</head>
-<body>
-  <!-- The redirect is JavaScript-ONLY, deliberately, and this page has real
-       content instead of a second redirect.
-
-       There used to be a <meta http-equiv="refresh"> in the <head> AND one in
-       a <noscript> here. Link-preview crawlers follow both — they run no JS,
-       which is exactly the condition the <noscript> is written for — so
-       iMessage fetched this page, was sent on to /<city>/, and previewed the
-       CITY card instead of this event's. Testers that do not follow
-       meta-refresh showed the right card, which is the split the owner saw.
-
-       So: a visitor with JS is redirected by the script below, instantly. A
-       visitor without JS, and any crawler, gets this page as it stands — the
-       og: tags in the head, and the link underneath to follow by hand. -->
-  <main class="event-stub">
-    <h1>Bearracuda Portland - Saturday, November 15th – Portland – chunky.dad</h1>
-    <p>Sat 11/15 · 9PM-2AM PT · @ Bossanova Ballroom — Music &amp; Entertainment</p>
-    <p><a href="../?event=bearracuda-portland-saturday-november-15th-1d72aa2a&date=2025-11-15&view=week">Open in the Portland guide &rarr;</a></p>
-  </main>
+  <!-- The redirect runs HERE, in the head, before the body is parsed — so a
+       visitor with JavaScript never paints this page at all. It used to sit
+       after the content, which let the browser render the fallback first: a
+       flash of event text on the way through, which is slower and more jarring
+       than the meta-refresh it replaced. -->
   <script>
     (function(){
       try {
@@ -77,5 +52,39 @@
       }
     })();
   </script>
+  <!-- Inline and tiny: this page is a redirect for almost everyone, so it must
+       not pull a stylesheet. The fallback is hidden by default and revealed
+       only when scripting is off — a crawler does not render either way, it
+       reads the og: tags above. -->
+  <style>
+    body { margin: 0; background: #10131f; color: #fff;
+           font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    .event-stub { max-width: 34rem; margin: 0 auto; padding: 3rem 1.5rem; }
+    .event-stub h1 { font-size: 1.6rem; line-height: 1.25; margin: 0 0 .5rem; }
+    .event-stub p { margin: 0 0 1rem; color: rgba(255,255,255,.8); }
+    .event-stub a { color: #9db2ff; }
+    .event-stub { display: none; }
+  </style>
+  <noscript><style>.event-stub { display: block; }</style></noscript>
+</head>
+<body>
+  <!-- The redirect is JavaScript-ONLY, deliberately, and this page has real
+       content instead of a second redirect.
+
+       There used to be a <meta http-equiv="refresh"> in the <head> AND one in
+       a <noscript> here. Link-preview crawlers follow both — they run no JS,
+       which is exactly the condition the <noscript> is written for — so
+       iMessage fetched this page, was sent on to /<city>/, and previewed the
+       CITY card instead of this event's. Testers that do not follow
+       meta-refresh showed the right card, which is the split the owner saw.
+
+       So: a visitor with JS is redirected by the script below, instantly. A
+       visitor without JS, and any crawler, gets this page as it stands — the
+       og: tags in the head, and the link underneath to follow by hand. -->
+  <main class="event-stub">
+    <h1>Bearracuda Portland - Saturday, November 15th – Portland – chunky.dad</h1>
+    <p>Sat 11/15 · 9PM-2AM PT · @ Bossanova Ballroom — Music &amp; Entertainment</p>
+    <p><a href="../?event=bearracuda-portland-saturday-november-15th-1d72aa2a&date=2025-11-15&view=week">Open in the Portland guide &rarr;</a></p>
+  </main>
 </body>
 </html>
