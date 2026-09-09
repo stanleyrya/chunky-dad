@@ -7755,11 +7755,16 @@ html.dusk body {
 }
 /* the cloned links row loses the aurora card scope — mirror the card's own
    round glass buttons (share button is stripped from the clone) */
+/* 2px above the buttons was not enough: the venue row carries an underline
+   (it is a link out to Maps), and when the venue is the LAST row that
+   underline all but touched the 32px circles below it — the Whitney Museum
+   event was the clearest case. The rows and the actions are different kinds
+   of thing and need to read that way. */
 .rail-sheet .sheet-links {
     display: flex;
     flex-wrap: wrap;
     gap: 0.42rem;
-    margin: 2px 0 0;
+    margin: 16px 0 2px;
 }
 .rail-sheet .sheet-links .event-link {
     width: 32px;
@@ -7962,31 +7967,38 @@ html.dusk body {
    intel button — it's back, shrunk to a single row that fits the fixed
    desktop week screen's 3.5rem allowance; on the mobile trifold it sits
    just below the fold (the trifold keeps the whole screen). */
-html.dusk footer {
-    background: transparent;
-    padding: 0.3rem 0 0.6rem;
-}
-html.dusk footer .container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-    padding: 0 1rem;
-}
-html.dusk footer p {
-    margin: 0;
-    font-size: 0.72rem;
-    color: rgba(255, 255, 255, 0.45);
-    white-space: nowrap;
-}
-/* the button is the SAME pill as the homepage (owner: uniform Tell Dad) —
-   only the stacked-layout margin goes, since this row is flex-centered */
-html.dusk .share-intel-footer-btn {
-    margin-top: 0;
-}
-/* phones: the copyright + button fit; the community-sourced note doesn't */
-@media (max-width: 768.9px) {
-    html.dusk footer .footer-note { display: none; }
+/* DESKTOP ONLY. The slim one-line footer exists for a hard reason: the fixed
+   desktop week screen is `calc(100vh - header - 3.5rem)`, and that 3.5rem IS
+   this footer. Anything taller and the screen stops fitting.
+   On a phone there is no such budget — the trifold keeps the whole screen and
+   the footer sits below the fold — and the slim row read badly there: tiny dim
+   grey text jammed against a full-size Tell Dad pill, with the
+   community-sourced note dropped for want of room. So phones fall through to
+   the base footer, which is the homepage's: black ground, stacked, both lines
+   and the pill centered under them. */
+@media (min-width: 769px) {
+    html.dusk footer {
+        background: var(--black);
+        padding: 0.3rem 0 0.6rem;
+    }
+    html.dusk footer .container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        padding: 0 1rem;
+    }
+    html.dusk footer p {
+        margin: 0;
+        font-size: 0.72rem;
+        color: rgba(255, 255, 255, 0.45);
+        white-space: nowrap;
+    }
+    /* the button is the SAME pill as the homepage (owner: uniform Tell Dad) —
+       only the stacked-layout margin goes, since this row is flex-centered */
+    html.dusk .share-intel-footer-btn {
+        margin-top: 0;
+    }
 }
 /* the today-circle paints 1.45em centered on the number and bleeds a few
    px above the cell — in the month strip that bleed hit the sticky day-name
