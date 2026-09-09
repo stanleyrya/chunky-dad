@@ -347,38 +347,36 @@
     // Controls inside the card do their own thing and never open the sheet.
     if (e.target.closest('.rail-thumb, .share-event-btn, .event-links, .map-link')) return;
 
-    const chip = e.target.closest('.ec-more');
-    const teaHit = !chip && e.target.closest('.ec-tea');
-    // Tapping the card itself opens the sheet now — the full description, the
-    // links and the map are all in there, and the card is the obvious thing to
-    // press for "tell me more". Before this only the "…more" chip did, so an
-    // event whose description happened to fit had no way in at all.
-    const cardHit = !chip && !teaHit && e.target.closest('.events-list .event-card');
-    const card = (chip || teaHit || cardHit) && (chip || teaHit || cardHit).closest('.event-card');
+    // ONE rule: a tap anywhere on the card opens the sheet. The full
+    // description, the links and the map all live in there, and the card is
+    // the obvious thing to press for "tell me more".
+    //
+    // This used to be three cases — the "…more" chip, the description, and
+    // the card — and the description one was conditional on the text actually
+    // overflowing. When it did not overflow, nothing here handled the tap, it
+    // fell through to the loader, and that handler TOGGLES: tapping the
+    // description of the selected card deselected it. The card case had the
+    // same bug for the opposite reason (it deliberately let the tap through).
+    // Splitting hairs about WHERE on the card the finger landed bought
+    // nothing, so there are no branches left to disagree with each other.
+    const hit = e.target.closest('.events-list .event-card');
+    const card = hit && hit.closest('.event-card');
     if (!card) return;
 
-    if (chip || cardHit || teaOverflows(card.querySelector('.ec-tea'))) {
-      e.preventDefault();
-      e.stopPropagation();
+    e.preventDefault();
+    e.stopPropagation();
 
-      // Opening the sheet must always leave this event SELECTED.
-      //
-      // Letting the tap through to the loader looked right and was not: that
-      // handler TOGGLES, and in the rail the centred card is already the
-      // selected one — so tapping the obvious card opened the sheet and
-      // deselected the event underneath it at the same time. Select it here
-      // instead, and only when it is not already the selection, so the toggle
-      // can never turn it off.
-      if (cardHit) {
-        const l = loader();
-        const slug = card.getAttribute('data-event-slug');
-        const occ = card.getAttribute('data-occurrence') || null;
-        const already = l && l.selectedEventSlug === slug
-          && (!occ || l.selectedEventDateISO === occ);
-        if (l && slug && !already) l.toggleEventSelection(slug, occ || undefined);
-      }
-      openSheet(card);
-    }
+    // The sheet must always leave its event SELECTED, so set it here rather
+    // than letting the loader's toggle run — and only when it is not already
+    // the selection, so the toggle can never turn it off.
+    const l = loader();
+    const slug = card.getAttribute('data-event-slug');
+    const occ = card.getAttribute('data-occurrence') || null;
+    const already = l && l.selectedEventSlug === slug
+      && (!occ || l.selectedEventDateISO === occ);
+    if (l && slug && !already) l.toggleEventSelection(slug, occ || undefined);
+
+    openSheet(card);
   }, true);
 
   // ---------- mobile month view: the grid alone; a pill opens the sheet ----
