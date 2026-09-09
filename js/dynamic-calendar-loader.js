@@ -1571,7 +1571,7 @@ class DynamicCalendarLoader extends CalendarCore {
 
                 let onErrorStr = `this.parentElement.innerHTML='<span class=\\'marker-text\\'>${textFallback}</span>'; this.parentElement.classList.add('text-marker');`;
                 if (fallbackFaviconUrl) {
-                    onErrorStr = `this.onerror=function(){this.parentElement.innerHTML='<span class=\\'marker-text\\'>${textFallback}</span>'; this.parentElement.classList.add('text-marker');}; this.src='${fallbackFaviconUrl}';`;
+                    onErrorStr = `this.onerror=function(){var p=this.parentElement; if(!p) return; p.innerHTML='<span class=\\'marker-text\\'>${textFallback}</span>'; p.classList.add('text-marker');}; this.src='${fallbackFaviconUrl}';`;
                 }
 
                 el.innerHTML = `
