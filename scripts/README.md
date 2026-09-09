@@ -430,5 +430,10 @@ position-bias defect.
   reformatted — searching for those literally flags correct answers.
 - The eval needs a live GPU server, so it is a CLI and never part of
   `npm test`; `scripts/ai-eval.test.js` covers the scoring logic offline.
+- **Compare WALL CLOCK, not summed latency.** `run` prints both. Under
+  concurrency they diverge completely — summed request latency rose 8x between
+  concurrency 1 and 8 while wall clock barely moved, so reading the summed
+  figure would tell you batching is catastrophic when the truth is that it does
+  nothing.
 
 ---

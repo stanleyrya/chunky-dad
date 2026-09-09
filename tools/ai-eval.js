@@ -315,6 +315,10 @@ async function run(args) {
     const gates = ev.createGates();
     console.log('\nRunning ' + cases.length + ' cases against ' + model + ' (concurrency ' + concurrency + ')');
 
+    // WALL CLOCK, not the sum of per-request latencies. Under concurrency the
+    // two diverge completely — requests overlap, so summed latency rises even
+    // when the run finishes sooner. Comparing concurrency levels needs this.
+    const runStarted = Date.now();
     const rows = await mapWithLimit(cases, concurrency, async (kase) => {
         const isVision = Boolean(kase.image);
         const payload = ev.buildPayload(kase, { model: isVision ? visionModel : model });
@@ -358,8 +362,11 @@ async function run(args) {
         }
     }
 
+    const wallMs = Date.now() - runStarted;
     const summary = ev.aggregate(rows);
     console.log(ev.formatSummaryTable(summary, label + '  —  ' + model));
+    console.log('  wall clock: ' + (wallMs / 1000).toFixed(1) + 's at concurrency ' + concurrency
+        + '  (summed request latency ' + (rows.reduce((a, r) => a + (Number(r.latencyMs) || 0), 0) / 1000).toFixed(1) + 's)\n');
     if (bias && bias.rate !== null) {
         console.log('  position bias: ' + bias.flipped + '/' + bias.compared + ' picks flipped when the slots were swapped ('
             + (bias.rate * 100).toFixed(1) + '%) — 0% means the model reads content, not position\n');
@@ -369,7 +376,7 @@ async function run(args) {
     const outPath = path.join(RESULTS_DIR, label + '.json');
     fs.writeFileSync(outPath, JSON.stringify({
         label, model, visionModel, endpoint: textEndpoint, visionEndpoint,
-        concurrency, ranAt: new Date().toISOString(),
+        concurrency, wallMs, ranAt: new Date().toISOString(),
         summary, bias, rows
     }, null, 2) + '\n');
     console.log('  -> ' + path.relative(ROOT, outPath) + '\n');
@@ -410,7 +417,11 @@ function compare(args) {
 
     console.log('\n  totals');
     console.log('  ' + '-'.repeat(24 + results.length * 14));
-    console.log('  ' + 'model time (s)'.padEnd(22)
+    console.log('  ' + 'WALL CLOCK (s)'.padEnd(22)
+        + results.map(r => (r.wallMs ? (r.wallMs / 1000).toFixed(1) : '-').padStart(13)).join(''));
+    console.log('  ' + 'concurrency'.padEnd(22)
+        + results.map(r => String(r.concurrency || 1).padStart(13)).join(''));
+    console.log('  ' + 'summed latency (s)'.padEnd(22)
         + results.map(r => (r.summary.reduce((a, s) => a + s.wallMs, 0) / 1000).toFixed(1).padStart(13)).join(''));
     console.log('  ' + 'invented values'.padEnd(22)
         + results.map(r => String(r.summary.reduce((a, s) => a + s.inventedFields + s.fabricatedQuotes + s.strayBoundaries, 0)).padStart(13)).join(''));
