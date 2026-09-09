@@ -345,7 +345,13 @@
     if (!isMobile()) return;
     if (!e.target.closest) return;
     // Controls inside the card do their own thing and never open the sheet.
-    if (e.target.closest('.rail-thumb, .share-event-btn, .event-links, .map-link')) return;
+    // Only the CONTROLS are excluded, not the row they sit in. Excluding
+    // `.event-links` wholesale meant the gaps between those 32px circles —
+    // most of that row's width — fell through to the loader, whose handler
+    // toggles, so tapping just beside a link deselected the event. Anything
+    // that is a link or a button keeps its own meaning; the "…more" chip is
+    // the exception, since its whole job is to open the sheet.
+    if (e.target.closest('a, button:not(.ec-more)')) return;
 
     // ONE rule: a tap anywhere on the card opens the sheet. The full
     // description, the links and the map all live in there, and the card is
