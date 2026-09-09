@@ -376,3 +376,59 @@ If URL input is present, `scraper-input.js` is optional, but `scraper-cities.js`
 ---
 
 **⚠️ REMEMBER: This architecture prevents environment-specific code from contaminating shared business logic. Maintain this separation to ensure the codebase remains maintainable and testable across both Scriptable and web environments.**
+
+### Model Evaluation (`tools/ai-eval.js`)
+
+Judging a model or server-setting change by re-running the scraper is slow and
+non-repeatable. `ai-eval` replays **real prompts** — harvested from the
+scraper's own AI response cache, which stores each request's full prompt
+alongside the model's raw answer — and scores what comes back.
+
+```bash
+node tools/ai-eval.js harvest --per-pass 6     # build cases from the cache
+node tools/ai-eval.js run --model <model> --label baseline --bias
+node tools/ai-eval.js run --model <other> --label candidate --bias
+node tools/ai-eval.js compare ai-eval-results/baseline.json ai-eval-results/candidate.json
+node tools/ai-eval.js bless                    # list cases lacking a human `expected`
+```
+
+Cases live in `scripts/fixtures/ai-eval/<pass>/` and are committed, so a run is
+reproducible on any checkout. Results land in `ai-eval-results/` (gitignored —
+they are machine-specific measurements, not source).
+
+The committed set is deliberately small (~2 MB, and the OCR images are most of
+it) — enough to catch a regression, not enough to settle a close call. Re-run
+`harvest --per-pass N` for a bigger local sample when you need one. Treat
+re-harvesting as a deliberate act: it samples newest-first, so as the cache
+grows it picks different cases, and committing that churns the fixtures.
+
+**Three scores, deliberately kept apart:**
+
+| Score | Means |
+|---|---|
+| `accept%` | Would **production's own gate** have taken this answer? Five passes already enforce verbatim/substring rules, so this is objective and needs no golden data. |
+| `agree%` | Does it match what the model that filled the cache said? This is **drift, not correctness** — the cached answer is an older model's output. Never read it as accuracy. |
+| `yield` | Fields kept per case. Tracked apart from acceptance, because a model that answers "nothing here" to everything would otherwise score perfectly. |
+
+`--bias` re-runs every merge-arbitration case with the two candidate values
+swapped between slots. Choosing by content survives the swap; choosing by slot
+does not. It needs no golden data and directly measures the known
+position-bias defect.
+
+**Things that will mislead you:**
+- **The cache never evicts a superseded prompt.** `field-trim` alone has two
+  shapes in it, months apart. `harvest` samples newest-first per host for
+  exactly this reason — an id-ordered sample happily picks prompts production
+  can no longer produce.
+- **A low `accept%` is not automatically the model's fault.** `short-name`
+  counts `too long` and `not a verbatim substring` as rejections even though
+  production has a deterministic salvage ladder for both, so its real-world
+  recovery is better than the column suggests.
+- **The invention check is narrow on purpose.** Only fields the model must copy
+  verbatim (title, bar, description, address, cover) are checked against the
+  prompt. Dates are emitted as ISO, city is canonicalised, URLs are
+  reformatted — searching for those literally flags correct answers.
+- The eval needs a live GPU server, so it is a CLI and never part of
+  `npm test`; `scripts/ai-eval.test.js` covers the scoring logic offline.
+
+---

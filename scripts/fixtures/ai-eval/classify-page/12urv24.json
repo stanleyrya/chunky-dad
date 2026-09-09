@@ -1,0 +1,17 @@
+{
+  "id": "classify-page/12urv24",
+  "pass": "classify-page",
+  "prompt": "You are classifying a web page for an event scraper.\n\nURL: https://www.bearitmtl.com/events/aujourdhui/?currency=CAD\nPAGE_TITLE: Évènements pour août 29, 2026 &#8211; Bear-IT &#8211; Ours et Fier\nMETA_DESCRIPTION: none\nPAGE_TEXT (truncated): Aller au contenu Accueil Festival SUGAR BEAR 2026 M. Ours Actualités Canada Québec Ontario International Europe Boutique Mon Compte &#036; 0.00 0 Panier 0 ARTICLE Aucun article dans le panier. BEAR IT Célébrer plus. Rire plus. Vivre plus fort. EVENEMENTS, COMMUNAUTÉ, &amp; CULTURE BEAR. EVENEMENT 06 SEP. Bar Le Dimant Rouge Montréal EVENEMENT 19 SEP. Stock Bar Montréal Concours Miss BEAR 2026 CANADA MONTRÉAL 0 évènements found. Évènements for août 29, 2026 Notice No évènements scheduled for août 29, 2026. Jump to the next upcoming évènements . Notice No évènements scheduled for août 29, 2026. Jump to the next upcoming évènements . Évènements Search and Views Navigation Recherche Entrer le mot clé. Recherche de Évènements par mot clé. Trouver les Évènements Évènement Views Navigation Jour Liste Mois Jour Aujourd&#039;hui 29-08-2026 août 29, 2026 Choisir la date. Jour précédent Jour suivant Exporter le calendrier Google Agenda iCalendar Outlook 365 Outlook Live Export .ics file Exportez le fichier Outlook.ics BEAR IT Célébrer plus. Rire plus. Vivre plus fort. MEDIAS SOCIAUX SUIVEZ-NOUS SUR NOS MEDIAS SOCIAUX INFOLETTRE INSCRIVEZ-VOUS À NOTRE INFOLETTRE. Inscrivez-vous et soyez certains de ne rien manquer des événements qui s'en viennent et de toutes les informations croustillantes de la communauté OURS. JE M&#039;INSCRIT Aucune fréquence inutile. Désinscription en tout temps. Se désinscrire POLITIQUE DE CONFIDENTIALITÉ TERMES ET CONDITIONS SUPPORT COPYRIGHT (C) BEAR-IT 2019 - 2026 TOUS DROITS RESERVES.\n\nClassify the page into exactly ONE category:\n- event-page: describes ONE event (one date or continuous range, one venue, one ticket flow)\n- multi-event-page: lists TWO OR MORE distinct events with different dates or tickets\n- link-aggregator: a hub of links (linktree-style, venue/city hub) without event details of its own\n- ad: advertisement or promo page with no concrete event details\n- unknown: cannot tell from the text\n\nReturn JSON only: {\"classification\": \"<category>\", \"confidence\": 0-100, \"reason\": \"<one sentence>\"}",
+  "options": {
+    "numPredict": 300,
+    "temperature": 0,
+    "responseFormat": "json_object"
+  },
+  "baseline": {
+    "model": "lmstudio-community/Qwen3-Coder-Next-MLX-6bit",
+    "text": "{\"classification\": \"multi-event-page\", \"confidence\": 85, \"reason\": \"The page lists multiple distinct events (e.g., Bar Le Dimant Rouge on 06 SEP, Stock Bar on 19 SEP, Miss BEAR 2026) despite showing '0 évènements found' for the selected date, indicating it's a multi-event listing page with future events.\"}",
+    "cachedAt": "2026-08-29T13:48:43.510Z"
+  },
+  "expected": null,
+  "blessed": "auto"
+}

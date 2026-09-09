@@ -1,2 +1,5 @@
 node_modules/
 .aider*
+
+# Local model-eval results (machine-specific measurements, not source)
+ai-eval-results/

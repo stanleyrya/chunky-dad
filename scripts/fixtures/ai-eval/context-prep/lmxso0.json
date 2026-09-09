@@ -1,0 +1,17 @@
+{
+  "id": "context-prep/lmxso0",
+  "pass": "context-prep",
+  "prompt": "Analyze this raw event data. Find any hidden times or confusing dates and format them explicitly.\n- If you see a time like \"01H\" or \"20h30\", rewrite it as \"01:00 AM\" or \"8:30 PM\".\n- Identify the Main Event Name, its Specific Date, and whether there is a larger festival date range mentioned.\n\nOutput ONLY this format:\nCORRECTIONS:\n- Cleaned Times: [List them here]\n- Core Event Date: [The single specific date]\n- Parent Festival Dates: [If any, otherwise 'None']\n\nTEXT:\nCONTENT\nOCR_IMAGE_URL: https://bearland.mx/wp-content/uploads/2024/02/bearland_png-2.png\nOCR_IMAGE_TEXT\nBearland\nOCR_IMAGE_URL: https://bearland.mx/wp-content/uploads/2026/05/CARTEL-BEARLAND-POOL-PARTY-COMPENSACION-B-WEB.webp\nLOCACION GOOGLE MAPS\nPOOL PARTY\nDJ LINE UP\nNALGAROTH\nBENJAMIN KOLL\nJOSE SPINNIN\nSABADO 20 DE JUNIO 1-7 PM\nACCESO SIN COSTO CON TU BOLETO 2026 DE MADBEAR POOL O BEARLAND\nTRAÉ TU PROPIA BEBIDA Y COMIDA • ESTACIONAMIENTO PARA 20 CARROS (CONFIRMAR ESPACIO ANTES)\nMATATLÁN 300, LAS PALOMAS. 45406, TONALA, JAL.\nqbo\nMR Q\nDISEÑO\nMAD.BEAR\nBeel Dip\nPANDAMONIUM\nBEAR WEEK\nOCR_IMAGE_URL: https://bearland.mx/wp-content/uploads/2025/01/scruff-600x200-1.png\nDescarga\nSCRUFF\ny únete a los eventos\npara enterarte de todo.\nConéctate en el App Store\nDISPONIBLE EN Google Play\nOCR_IMAGE_URL: https://bearland.mx/wp-content/uploads/2024/02/bc-600x200-1.png\nbiggercity\nCHUBS, CHASERS & BEARS!\nBearland.mx – Osos Chubs y Daddies en Mexico. – Eventos de osos, chubs y daddies en Mexico.\nNOS VEMOS EL 20 DE JUNIO EN LA BEARLAND POOL PARTY, ACCESO SIN COSTO CON TU BOLETO ELECTRONICO DE BEARLAND 2026 O MADBEAR POOL PARTY\nBEARLAND 2025 * AFTERMOVIE OFICIAL\nCOLABORADORES\nMailing list\nTranslate »",
+  "options": {
+    "numPredict": 2000,
+    "temperature": 0,
+    "responseFormat": "json_object"
+  },
+  "baseline": {
+    "model": "lmstudio-community/Qwen3-Coder-Next-MLX-6bit",
+    "text": "[\"1:00 PM - 7:00 PM\"]",
+    "cachedAt": "2026-08-29T22:46:32.490Z"
+  },
+  "expected": null,
+  "blessed": "auto"
+}

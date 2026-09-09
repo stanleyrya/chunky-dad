@@ -1,0 +1,17 @@
+{
+  "id": "context-prep/8sqkq4",
+  "pass": "context-prep",
+  "prompt": "Analyze this raw event data. Find any hidden times or confusing dates and format them explicitly.\n- If you see a time like \"01H\" or \"20h30\", rewrite it as \"01:00 AM\" or \"8:30 PM\".\n- Identify the Main Event Name, its Specific Date, and whether there is a larger festival date range mentioned.\n\nOutput ONLY this format:\nCORRECTIONS:\n- Cleaned Times: [List them here]\n- Core Event Date: [The single specific date]\n- Parent Festival Dates: [If any, otherwise 'None']\n\nTEXT:\nCONTENT\nThe boat has two bars on board serving soft drinks, draught beer/cider, wine and spirits. Card payments are accepted. You can smoke/vape on all the outside areas of the boat.\nThis is no cloakroom on the boat, but there are plenty of lockers to keep your belongings.\nOCR_IMAGE_URL: https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=1024,h=1024,fit=crop/YBgeJQO7KMsrrJN6/untitled-design-19-m5KwRp1ekaTGLwEE.png\nOCR_IMAGE_URL: https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=768,h=512,fit=crop/YBgeJQO7KMsrrJN6/dice_ticketsondice_us_en_outline_white_rgb-ALp7Dj9bryIQj69a.png\nTICKETSON\nOCR_IMAGE_URL: https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=1024,h=683,fit=crop/YBgeJQO7KMsrrJN6/dice_ticketsondice_us_en_outline_white_rgb-ALp7Dj9bryIQj69a.png\nOCR_IMAGE_URL: https://cdn.zyrosite.com/cdn-ecommerce/store_01JT08RTJ61AD8MABB1RS6F2Z0%2Fassets%2F9b918ada-2d3a-4504-a700-f1ae45ddfbee.jpg\nBEEMINCE\nOCR_IMAGE_URL: https://cdn.zyrosite.com/cdn-ecommerce/store_01JT08RTJ61AD8MABB1RS6F2Z0%2Fassets%2F98490d9b-815d-452b-9041-2df98938968d.jpg\nBeefMint\nOCR_IMAGE_URL: https://cdn.zyrosite.com/cdn-ecommerce/store_01JT08RTJ61AD8MABB1RS6F2Z0%2Fassets%2Fa23ac3e5-0c5b-42db-9e45-2c7bc6ff0f90.jpg\nBEEFMINCE\nBOATMINCE 2026 Boarding Info | BEEFMINCE\nNEXT: BOATMINCE | SUN 30 august SOLD OUT\nBOATMINCE 2026\nSUNDAY 30 AUGUST\n© 2026. BEEFMINCE ™ All rights reserved.\nPRIVACY POLICY\nPlease see our F.A.Q page .\nhelp &amp; questions\nenquiries &amp; bookings\nsupported by\nFor all enquires and bookings please contact us directly via emai l.",
+  "options": {
+    "numPredict": 2000,
+    "temperature": 0,
+    "responseFormat": "json_object"
+  },
+  "baseline": {
+    "model": "lmstudio-community/Qwen3-Coder-Next-MLX-6bit",
+    "text": "[]",
+    "cachedAt": "2026-08-29T23:13:11.243Z"
+  },
+  "expected": null,
+  "blessed": "auto"
+}

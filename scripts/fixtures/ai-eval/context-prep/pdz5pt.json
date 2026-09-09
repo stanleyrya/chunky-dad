@@ -1,0 +1,17 @@
+{
+  "id": "context-prep/pdz5pt",
+  "pass": "context-prep",
+  "prompt": "Analyze this raw event data. Find any hidden times or confusing dates and format them explicitly.\n- If you see a time like \"01H\" or \"20h30\", rewrite it as \"01:00 AM\" or \"8:30 PM\".\n- Identify the Main Event Name, its Specific Date, and whether there is a larger festival date range mentioned.\n\nOutput ONLY this format:\nCORRECTIONS:\n- Cleaned Times: [List them here]\n- Core Event Date: [The single specific date]\n- Parent Festival Dates: [If any, otherwise 'None']\n\nTEXT:\nCONTENT\nOCR_IMAGE_URL: https://a.ra.co/images/news/2023/massive-nightclub-seattle.jpg\nOCR_IMAGE_TEXT\nCOMING TO SEATTLE 2023\nMASSIVE\nWWW.MASSIVE.CLUB\n@MASSIVE_CLUB\nNew club Massive coming to Seattle · News ⟋ RA\nPublished\nThu, Jun 22, 2023, 17:00\nWords\nAndrew Ryce\nThe three-level venue in Capitol Hill comes from the minds behind Bottom Forty, Tamarind Tree and others.\nA new club is opening in Seattle this year.\nMassive will take over 619 E Pine Street in the city's Capitol Hill neighbourhood, the address of former gay bar R Place, which was open for more than three decades before closing during the pandemic. The new venue will have a more open-ended approach and invite a wider audience, though the team behind Massive says they're \"excited to revitalise this building and keep it queer-owned and operated as a nightclub... and celebrate what makes for a vibrant queer underground scene in Seattle.\" This month, the building is currently hosting an exhibition of local artists.\nSprawling out over three floors, Massive will feature a Danley Sound Labs system. The team behind the club is a mixture of Seattle nightlife figures, including Bottom Forty founder Kevin Kauer (AKA Nark ), Tamarind Tree Restaurant Group's Tam Nguyen and promoter and designer Emi Vega. The group are remaining tight-lipped about what kind of programming the club will feature, though recent Bottom Forty events featuring acts like Horse Meat Disco should give you a clue.\n\"We intend to take advantage of all three floors on a regular basis, and involve many different queer artists, musicians and performers over time,\" the Massive team said. \"It's most important to know that we are here for everyone, and we will be a platform for queer performers to thrive and grow, without taking any ownership or control over their art form.\"\nThey added: \"The Capitol Hill club scene has been an ever-evolving rollercoaster over the years, from something very tiny to something very big, with its ups and downs along the way. However, one thing is for certain: there is a venue shortage in Seattle and we are in need of a new place to dance and make new experiences together.\"\nCheck out the club's official website and Instagram page .\nListen to a mix from cofounder and resident Nark.\nPhoto: Geo Xeal\nDiscover ̸\nTickets ̸\nResale ̸\nAdvertise ̸\nJobs\nGet RA apps ̸\nRA Scanner\nAre you a promoter? Submit event\nLondon\nLanguage English\nPrivacy · Terms · Cookies · Sitemap\n© 2026 Resident Advisor Ltd. All rights reserved .",
+  "options": {
+    "numPredict": 2000,
+    "temperature": 0,
+    "responseFormat": "json_object"
+  },
+  "baseline": {
+    "model": "lmstudio-community/Qwen3-Coder-Next-MLX-6bit",
+    "text": "[]",
+    "cachedAt": "2026-08-02T17:52:24.222Z"
+  },
+  "expected": null,
+  "blessed": "auto"
+}

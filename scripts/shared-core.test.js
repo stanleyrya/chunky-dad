@@ -21041,3 +21041,54 @@ test('countDistinctFlyerClockTimes separates a programme from a real flyer', () 
   // A year is not a clock.
   assert.equal(core.countDistinctFlyerClockTimes('SUMMER 2026 BEAR WEEK'), 0);
 });
+
+// ============================================================================
+// AI TRANSPORT REACHABILITY (no-partial-runs)
+// ============================================================================
+// A run whose model server is down still finishes and still reports success:
+// events keep coming from the AI response cache, from JSON-LD and from non-AI
+// parsers. That is how four consecutive scheduled runs shipped AI-blind in
+// September 2026 without anyone noticing. These cover the tally the
+// orchestrator uses to say so out loud.
+
+test('AI transport health counts requests per endpoint, not answers', () => {
+  const core = createCore();
+  assert.deepEqual(core.getUnreachableAiEndpoints(), [], 'a run that asked for nothing is not degraded');
+
+  const first = core.recordAiTransportAttempt('http://rybook:8000/v1/chat/completions');
+  const second = core.recordAiTransportAttempt('http://rybook:8000/v1/chat/completions');
+  assert.equal(second.attempts, 2);
+  assert.equal(first, second, 'the same endpoint shares one tally');
+  assert.equal(core.recordAiTransportAttempt(''), null, 'no endpoint, nothing to track');
+});
+
+test('an endpoint that never answered is reported unreachable', () => {
+  const core = createCore();
+  core.recordAiTransportAttempt('http://down:8001/v1/chat/completions');
+  core.recordAiTransportAttempt('http://down:8001/v1/chat/completions');
+  const unreachable = core.getUnreachableAiEndpoints();
+  assert.equal(unreachable.length, 1);
+  assert.equal(unreachable[0].endpoint, 'http://down:8001/v1/chat/completions');
+  assert.equal(unreachable[0].attempts, 2);
+  assert.equal(unreachable[0].reachable, 0);
+});
+
+test('a single answer clears an endpoint, even an HTTP error or an empty completion', () => {
+  const core = createCore();
+  // Two transport failures then one answer: the server is up, so this run is
+  // not blind. Reachability is deliberately not answer QUALITY.
+  core.recordAiTransportAttempt('http://flaky:8000/v1/chat/completions');
+  const entry = core.recordAiTransportAttempt('http://flaky:8000/v1/chat/completions');
+  entry.reachable += 1;
+  assert.deepEqual(core.getUnreachableAiEndpoints(), []);
+});
+
+test('the text and vision endpoints are tracked separately', () => {
+  const core = createCore();
+  const text = core.recordAiTransportAttempt('http://rybook:8000/v1/chat/completions');
+  text.reachable += 1;
+  core.recordAiTransportAttempt('http://rybook:8001/v1/chat/completions');
+  const unreachable = core.getUnreachableAiEndpoints();
+  assert.equal(unreachable.length, 1, 'a working text server must not mask a dead vision server');
+  assert.ok(unreachable[0].endpoint.endsWith(':8001/v1/chat/completions'));
+});

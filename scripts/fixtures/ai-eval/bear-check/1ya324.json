@@ -1,0 +1,17 @@
+{
+  "id": "bear-check/1ya324",
+  "pass": "bear-check",
+  "prompt": "You are curating a calendar for the gay bear community. Decide whether the event below belongs on a BEAR calendar.\n\nThe calendar owner has already curated this event's promoter into the bear calendar, so this promoter's own events belong on it.\n\nBear events include: bear/cub/chub/otter parties, bear happy hours, bear-run dance parties, leather/kink nights with bear crowds, and cruise/underwear/jockstrap parties thrown by bear promoters. Events thrown by this curated promoter are almost always bear events even when the event text has no bear words — the promoter's crowd follows the promoter.\n\nNOT bear events: shows or parties aimed at a clearly different audience (e.g. a drag-headliner show, a lesbian night, a general-audience concert) even when a bear promoter produces them.\n\nEvent:\n- Title: THE HUNT\n- Venue: Bar Le Dimant Rouge\n- City: montreal\n- Description: SEXY FETISH PLAY\n- Provenance: Scraped from www.bearitmtl.com, source entry \"Bear it MTL\". This event's own content names the promoter Bear it MTL, whom the calendar owner has marked as a trusted bear-scene promoter.\n\nRespond with ONLY a JSON object, no other text:\n{\"verdict\": \"bear\" | \"not_bear\" | \"unsure\", \"eventEvidence\": [\"<words copied exactly from the Title or Description>\"], \"reason\": \"<one short sentence>\"}\n\neventEvidence is checked automatically against the text above:\n- Every string must be copied WORD FOR WORD from the Title or the Description. Never paraphrase, summarize or invent.\n- Never quote the Venue, City or Provenance lines. The venue name is not evidence.\n- Quote only wording that shows the EVENT ITSELF is aimed at the bear community. If there is none, return [].\n\nVerdict rules: answer \"bear\" unless the event itself clearly targets a different audience. Answer \"not_bear\" only when you are confident it targets a different audience. Answer \"unsure\" only when you genuinely cannot tell. eventEvidence may be empty for a \"bear\" verdict here — the owner's curation of the promoter is the evidence.",
+  "options": {
+    "numPredict": 400,
+    "temperature": 0,
+    "responseFormat": "json_object"
+  },
+  "baseline": {
+    "model": "lmstudio-community/Qwen3-Coder-Next-MLX-6bit",
+    "text": "{\"verdict\": \"bear\", \"eventEvidence\": [\"THE HUNT\", \"SEXY FETISH PLAY\"], \"reason\": \"The promoter is a trusted bear-scene curator, and the event's title and description align with bear community kink/fetish parties.\"}",
+    "cachedAt": "2026-08-29T22:38:19.008Z"
+  },
+  "expected": null,
+  "blessed": "auto"
+}

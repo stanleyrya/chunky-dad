@@ -1,0 +1,17 @@
+{
+  "id": "field-trim/1qu0ycu",
+  "pass": "field-trim",
+  "prompt": "You pick which numbered PARTS of an overlong event field to keep. You never write text.\nEVENT: COVEN\nFIELD: description — limit 600 characters, currently 745\nPARTS (14):\n1. (15 chars) \"THIS SATURDAY!\"\n2. (55 chars) \"@covendarkwavedance is coming to @rockbarnyc May 24th!\"\n3. (93 chars) \"@djbradfscott @comawhitenyc and @dannyblu are bringing you a night of Queer Goth Debauchery!\"\n4. (158 chars) \"Featuring a special guest performer, a dark pop punch to the face, Introducing Lizette Lizette - non-binary icon from Stockholm, making their first-ever U.S.\"\n5. (12 chars) \"appearance!\"\n6. (83 chars) \"Their sound is as fierce as their style: cosmic, queer, and unapologetically bold.\"\n7. (110 chars) \"Join your hosts Danny Blu and DJ Brad Scott for a night soaked in red lights, fog, lust, and beats that burn.\"\n8. (97 chars) \"Gogo magic by Rabbit and Fly Tatum Performances by @comawhitenyc Dark room opens after midnight.\"\n9. (26 chars) \"You know what that means.\"\n10. (52 chars) \"Saturday, May 24 10PM-2AM|$10|21+ Rockbar NYC Sexy.\"\n11. (7 chars) \"Queer.\"\n12. (6 chars) \"Goth.\"\n13. (10 chars) \"Be there.\"\n14. (21 chars) \"Doors 10pm 🕷🦇😈🥵🖤\"\nRules:\n- Answer with ONE range of consecutive part numbers to keep, written \"first-last\" (e.g. \"2-5\"). A single part is \"3-3\".\n- The program joins the kept parts back together verbatim and drops parts off the END until the limit fits — so choose the START carefully and extend as far as you like.\n- Choose the START: the first part that carries real information. Skip a pure greeting, hype, or navigation opener.\n- Choose the LAST: stop before ticket links, disclaimers, sponsor lists, and repeated calls to action.\n- For \"title\" keep only the parts naming the event itself — drop venue, city, date, status text, and marketing.\n- For \"shortName\" keep the single part that is the recognizable brand name.\nReturn JSON only, no prose:\n{\"trims\": {\"<field>\": \"<first>-<last>\"}}",
+  "options": {
+    "numPredict": 200,
+    "temperature": 0,
+    "responseFormat": "json_object"
+  },
+  "baseline": {
+    "model": "lmstudio-community/Qwen3-Coder-Next-MLX-6bit",
+    "text": "{\"trims\": {\"description\": \"4-13\"}}",
+    "cachedAt": "2026-08-29T15:47:25.419Z"
+  },
+  "expected": null,
+  "blessed": "auto"
+}

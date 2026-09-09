@@ -380,6 +380,21 @@ class BearEventScraperOrchestrator {
             // Process events using shared core
             const results = await sharedCore.processEvents(config, finalAdapter, finalAdapter, parsers);
 
+            // AI reachability check (no-partial-runs). A run whose AI server is
+            // down still finishes and still reports success — events come from
+            // the response cache, from JSON-LD and from non-AI parsers — so the
+            // degradation is invisible in the summary. That is how 2026-09-06
+            // through 09-09 shipped four AI-blind scheduled runs unnoticed.
+            // Say so LOUDLY rather than letting the calendar quietly rot.
+            const unreachableAi = sharedCore.getUnreachableAiEndpoints();
+            if (unreachableAi.length > 0) {
+                const detail = unreachableAi
+                    .map(entry => `${entry.endpoint} (${entry.attempts} request${entry.attempts === 1 ? '' : 's'}, 0 answered)`)
+                    .join('; ');
+                console.error(`🚨 Orchestrator: AI DEGRADED RUN — no response from ${detail}. Every AI pass on that endpoint fell back or was skipped, so extraction, OCR and bear checks are running blind. Start the model server (see scripts/README.md) and re-run; results from this run are NOT trustworthy.`);
+                results.aiUnreachableEndpoints = unreachableAi;
+            }
+
             try {
                 if (results.deadEndStoreChanged && results.deadEndStore && typeof finalAdapter.saveDeadEnds === 'function') {
                     await finalAdapter.saveDeadEnds(results.deadEndStore);
