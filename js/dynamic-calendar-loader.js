@@ -1569,7 +1569,13 @@ class DynamicCalendarLoader extends CalendarCore {
                 // slug and let the colour load repaint them in place.
                 if (event.slug) el.setAttribute('data-event-slug', event.slug);
 
-                let onErrorStr = `this.parentElement.innerHTML='<span class=\\'marker-text\\'>${textFallback}</span>'; this.parentElement.classList.add('text-marker');`;
+                // Both branches guard parentElement. Desktop month view re-homes
+                // the map into the right rail and rebuilds its markers, so a
+                // stale favicon can error AFTER its <img> has been detached —
+                // and this branch, the one with no fallback URL, threw
+                // "Cannot read properties of null (reading 'classList')" on
+                // every desktop month load. #1740 guarded only the sibling.
+                let onErrorStr = `var p=this.parentElement; if(!p) return; p.innerHTML='<span class=\\'marker-text\\'>${textFallback}</span>'; p.classList.add('text-marker');`;
                 if (fallbackFaviconUrl) {
                     onErrorStr = `this.onerror=function(){var p=this.parentElement; if(!p) return; p.innerHTML='<span class=\\'marker-text\\'>${textFallback}</span>'; p.classList.add('text-marker');}; this.src='${fallbackFaviconUrl}';`;
                 }
