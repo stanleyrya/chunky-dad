@@ -142,6 +142,12 @@ class ChunkyDadApp {
         try {
             // City page if using legacy template OR if first path segment matches a city slug/alias
             if (window.location.pathname.includes('city.html')) return true;
+
+            // The bear-runs calendar is the city page with a different event
+            // source. It is not a city, so the slug lookup below would say no
+            // and the loader would be built but never started; the page says
+            // what it is on its <main>, the same signal the loader reads.
+            if (document.querySelector('main.city-page[data-calendar]')) return true;
             
             // Check if we're in a city subdirectory
             const slug = this.getCitySlugFromPath();

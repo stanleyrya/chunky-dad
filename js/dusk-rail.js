@@ -432,7 +432,13 @@
       return;
     }
     const date = day.getAttribute('data-date');
-    if (l && l.switchToWeekView && date) l.switchToWeekView(date);
+    // A day tap opens that day's week — but only on a page that HAS a week
+    // view. The bear-runs calendar is month-only and carries no Week button,
+    // so there a day tap is simply not a thing; switching would leave the
+    // loader in a view the page cannot show.
+    if (l && l.switchToWeekView && date && document.querySelector('.view-btn[data-view="week"]')) {
+      l.switchToWeekView(date);
+    }
   }, true);
 
   // ================= the DENSE rail =================
