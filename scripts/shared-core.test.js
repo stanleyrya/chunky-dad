@@ -21312,3 +21312,78 @@ test('a locality-only address is not place evidence: venue-TBA twins with "Londo
   assert.equal(core.areEventsDistinctByPlace({ ...a, address: '372 Kennington Lane, London' }, { ...b, address: '21 St John\'s Hill, London' }), true, 'two different street addresses are distinct');
   assert.equal(core.areEventsDistinctByPlace({ ...a, bar: 'The RVT' }, { ...b, bar: 'Eden' }), true, 'two different venue names are distinct');
 });
+
+// ---------------------------------------------------------------------------
+// "SAFEST TEN" AUDIT — run 20260910-215043 crawl/link defects.
+// ---------------------------------------------------------------------------
+
+test('an event page follows its outbound ticketing-platform link even when the model cited no ticketUrl', () => {
+  const core = createCore();
+  const links = ['https://sickening.events/e/bearracuda-seattle-7days', 'https://bearracuda.example/', 'https://sickening.events/', 'https://www.instagram.com/bearracuda'];
+  assert.deepEqual(core.selectAdaptiveFollowLinks('event-page', links, { events: [] }, 'https://bearracuda.example/events/7days/'),
+    ['https://sickening.events/e/bearracuda-seattle-7days'], 'the event-detail-shaped platform link, nothing else');
+  assert.deepEqual(core.selectAdaptiveFollowLinks('event-page', ['https://sickening.events/'], { events: [] }, 'https://bearracuda.example/events/7days/'), [],
+    'a platform homepage is not a ticket link');
+});
+
+test('a search results URL is never an identity or ticket link', () => {
+  const core = createCore();
+  assert.equal(core.isSearchListingUrl('https://sickening.events/events?q=goldiloxx'), true);
+  assert.equal(core.isSearchListingUrl('https://site.example/?s=bear'), true);
+  assert.equal(core.isSearchListingUrl('https://sickening.events/e/goldiloxx-chicago?ref=x'), false);
+  const event = { title: 'GOLDILOXX Chicago', ticketUrl: 'https://sickening.events/events?q=goldiloxx', website: 'https://sickening.events/events?q=goldiloxx' };
+  const originalLog = console.log;
+  console.log = () => {};
+  try { core.clearNonIdentityLinkFields(event, event.title); } finally { console.log = originalLog; }
+  assert.equal(event.ticketUrl, '');
+  assert.equal(event.website, '');
+});
+
+test('an over-trimmed title keeps its longest separator-bounded prefix instead of just the brand', () => {
+  const core = createCore();
+  assert.equal(core.longestSeparatorBoundedPrefix('MEGAWOOF - SAN FRANCISCO - 11 YEAR ANNIVERSARY / BEARRISON WEEKEND', 60), 'MEGAWOOF - SAN FRANCISCO - 11 YEAR ANNIVERSARY');
+  assert.equal(core.longestSeparatorBoundedPrefix('Short title', 60), '', 'nothing to trim');
+  assert.equal(core.longestSeparatorBoundedPrefix('NoSeparatorsHereAtAllJustOneVeryLongWordThatGoesOnAndOnAndOnForeverAndEver', 30), '', 'no separator fits → no prefix (the model\'s answer stands)');
+});
+
+test('crawl: a multi-event page\'s events have their ticket links followed for enrichment even at discovery depth 0', async () => {
+  const core = deadEndCore();
+  const display = createDisplayAdapterStub();
+  const listing = 'https://hub.example/';
+  const ticket = 'https://www.eventbrite.example/e/furball-dallas-123';
+  const pages = {
+    [listing]: { events: [{ title: 'FURBALL Dallas', startDate: new Date(Date.now() + 7 * DAY_MS), bar: 'Dallas Eagle', ticketUrl: ticket }], additionalLinks: [ticket, 'https://hub.example/about'] },
+    [ticket]: { events: [{ title: 'FURBALL Dallas', startDate: new Date(Date.now() + 7 * DAY_MS), bar: 'Dallas Eagle', cover: '$20', ticketUrl: ticket }] },
+    'https://hub.example/about': { events: [{ title: 'Sibling that must not appear', startDate: new Date(Date.now() + 8 * DAY_MS) }] }
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+  const config = deadEndConfig({});
+  config.parsers[0].urlDiscoveryDepth = 0;
+  const results = await core.processEvents(config, httpAdapter, display, parsers);
+  assert.ok(fetched.includes(ticket), 'the event\'s own ticket link is fetched');
+  assert.ok(!fetched.includes('https://hub.example/about'), 'discovery depth 0 still follows nothing else');
+  assert.ok(display.logs.some(line => line.includes('Ticket-link enrichment: following 1 ticket link(s)')));
+  const titles = (results.parserResults[0].events || []).map(e => e.title);
+  assert.ok(!titles.includes('Sibling that must not appear'));
+});
+
+test('same venue at the same start instant is one event, whatever each record calls it', () => {
+  const core = createCore();
+  const at = (iso) => new Date(iso);
+  const slug = { title: 'BEARRACUDA: Portland Oct', startDate: at('2026-10-11T04:00:00.000Z'), bar: 'Nova PDX', address: '722 East Burnside Street, Portland, Oregon, 97214', timezone: 'America/Los_Angeles' };
+  const named = { title: 'Bearracuda Portland: Dick or Treat!', startDate: at('2026-10-11T04:00:00.000Z'), bar: 'Nova PDX', address: '722 East Burnside Street, Portland, OR, 97214', timezone: 'America/Los_Angeles' };
+  assert.equal(core.getSameEventIdentitySignal(named, slug), 'place-exact-start');
+  const garbled = { title: 'GOLDII.OXX', startDate: at('2026-09-20T02:00:00.000Z'), bar: 'Jackhammer', timezone: 'America/Chicago' };
+  const clean = { title: 'GOLDILOXX Chicago', startDate: at('2026-09-20T02:00:00.000Z'), bar: 'Jackhammer', timezone: 'America/Chicago' };
+  assert.equal(core.getSameEventIdentitySignal(garbled, clean), 'place-exact-start');
+  // Hours apart at one venue on one night are two events (the Montréal case).
+  const early = { title: 'Concours PUP Montréal', startDate: at('2026-08-29T22:00:00.000Z'), bar: 'Bain Mathieu', timezone: 'America/Toronto' };
+  const late = { title: 'KINK Playground', startDate: at('2026-08-30T02:00:00.000Z'), bar: 'Bain Mathieu', timezone: 'America/Toronto' };
+  assert.equal(core.getSameEventIdentitySignal(early, late), null);
+  // A midnight placeholder is not a real time — this rung never fires on it.
+  const placeholder = { title: 'Something', startDate: at('2026-10-11T07:00:00.000Z'), bar: 'Nova PDX', timezone: 'America/Los_Angeles' };
+  const other = { title: 'Else', startDate: at('2026-10-11T07:00:00.000Z'), bar: 'Nova PDX', timezone: 'America/Los_Angeles' };
+  assert.equal(core.getSameEventIdentitySignal(placeholder, other), null);
+  // No place on one side → inconclusive.
+  assert.equal(core.getSameEventIdentitySignal({ title: 'A', startDate: at('2026-10-11T04:00:00.000Z') }, named), null);
+});

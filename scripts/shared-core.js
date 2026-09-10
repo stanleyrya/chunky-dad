@@ -5342,6 +5342,14 @@ class SharedCore {
     // parser's own redeyetickets search-API fetch URL). Clearing to '' lets
     // the merge fill from the other side and the identity ladder / promoter
     // registry refill website. Returns the cleared field names.
+    // A URL whose query carries a search term (?q=, ?s=, ?search=, ?query=,
+    // ?keyword=) is a results listing, never one event's page.
+    isSearchListingUrl(url) {
+        const query = String(url || '').match(/\?([^#]*)/);
+        if (!query) return false;
+        return query[1].split('&').some(pair => /^(q|s|search|query|keyword|keywords|term)=/i.test(pair));
+    }
+
     clearNonIdentityLinkFields(event, label = 'event') {
         const cleared = [];
         if (!event || typeof event !== 'object') return cleared;
@@ -5354,6 +5362,11 @@ class SharedCore {
                 reason = 'a static asset file';
             } else if (this.isApiEndpointUrl(value)) {
                 reason = 'a machine API endpoint';
+            } else if (this.isSearchListingUrl(value)) {
+                // A search results page is a LISTING, not an event's identity
+                // (sickening.events/events?q=goldiloxx shipped as a ticketUrl,
+                // run 20260910-215043).
+                reason = 'a search/listing page';
             }
             if (!reason) continue;
             event[field] = '';
@@ -7051,6 +7064,74 @@ class SharedCore {
                         await displayAdapter.logInfo(`SYSTEM: Adaptive crawl: stopping at ${url} (${pageClassification})`);
                     }
                 }
+                // Ticket-link enrichment, independent of discovery depth: the
+                // events this page just produced each name a ticket page, and
+                // that page holds the price, venue and real ticket link the
+                // card left out (furball.nyc, urlDiscoveryDepth 0: Dallas
+                // shipped with no price while its Eventbrite page states it;
+                // event pages behind a multi-event listing likewise). Bounded
+                // to the events' OWN ticket links, enrich-only (a child may
+                // confirm or enrich its parent, never add a sibling), never
+                // from an enrich-only child, and skipped where the ordinary
+                // event-page path already follows ticket links.
+                const eventPageFollowsTickets = pageClassification === 'event-page'
+                    && (adaptiveCrawl || (shouldFollowLinks && !adaptiveEnrichOnlyEventPage));
+                if (!discoveryOnly && !enrichContext && !eventPageFollowsTickets && pageEventsForEnrich.length > 0) {
+                    const ticketLinks = [];
+                    const seenTicketLinks = new Set();
+                    for (const event of pageEventsForEnrich) {
+                        const ticketUrl = event && typeof event.ticketUrl === 'string' ? event.ticketUrl.trim().split('#')[0] : '';
+                        if (!ticketUrl || !/^https?:\/\//i.test(ticketUrl)) continue;
+                        const startMs = SharedCore.toEpochMillis(event.startDate);
+                        if (Number.isFinite(startMs) && (Date.now() - startMs) > 24 * 60 * 60 * 1000) continue;
+                        const normalized = this.normalizeUrl(ticketUrl, ticketUrl);
+                        if (!normalized || seenTicketLinks.has(normalized) || this.hasProcessedUrl(processedUrls, normalized)) continue;
+                        if (this.getUrlDedupeKey(normalized) === this.getUrlDedupeKey(url)) continue;
+                        if (this.isApiEndpointUrl(normalized)) continue;
+                        seenTicketLinks.add(normalized);
+                        ticketLinks.push(normalized);
+                        if (ticketLinks.length >= 12) break;
+                    }
+                    const enrichUrls = this.filterKnownDeadEndUrls(ticketLinks, discoveryOnly);
+                    if (enrichUrls.length > 0) {
+                        await displayAdapter.logInfo(`SYSTEM: Ticket-link enrichment: following ${enrichUrls.length} ticket link(s) from ${url} for ${pageEventsForEnrich.length} event(s) (enrich-only)`);
+                        const ticketEnrichByUrl = {};
+                        for (const enrichUrl of enrichUrls) {
+                            const enrichKey = this.getUrlDedupeKey(enrichUrl);
+                            if (enrichKey) {
+                                ticketEnrichByUrl[enrichKey] = {
+                                    parentEvents: pageEventsForEnrich,
+                                    parentTitle: pageEventsForEnrich.length === 1 ? (pageEventsForEnrich[0].title || 'event') : `${pageEventsForEnrich.length} events`,
+                                    parentUrl: url
+                                };
+                            }
+                        }
+                        await this.crawlUrlsForEvents({
+                            urls: enrichUrls,
+                            allEvents,
+                            parsers,
+                            parserConfig,
+                            httpAdapter,
+                            displayAdapter,
+                            processedUrls,
+                            maxDepth,
+                            currentDepth: currentDepth + 1,
+                            mainConfig,
+                            parserName: urlParserName,
+                            allowParserAutoSwitch,
+                            urlClassifications: null,
+                            includeInlineInput: false,
+                            discoveryOnly,
+                            discoveryTreeCollector,
+                            enrichOnlyByUrl: ticketEnrichByUrl,
+                            enrichDropCollector,
+                            crawlErrorCollector,
+                            crawlGoneCollector,
+                            foreignOrgDropCollector,
+                            icsFeedCollector
+                        });
+                    }
+                }
                 if (linksToConsider.length === 0) {
                     continue;
                 }
@@ -7246,6 +7327,22 @@ class SharedCore {
             if (this.classifyUrlByRules(link) === 'event-page') {
                 push(link);
             }
+        }
+        // The page's own outbound ticket links: an event-detail-shaped URL
+        // on a ticketing platform is where the price and the real ticket
+        // link live, whether or not the model managed to cite it (bearracuda
+        // .com run 20260910-131740: every event page linked its sickening
+        // .events listing; the model's ticketUrl was dropped as unevidenced,
+        // so nothing followed and every event shipped with the homepage as
+        // its ticket link). Capped at three per page.
+        let ticketLinkCount = 0;
+        for (const link of links) {
+            if (ticketLinkCount >= 3) break;
+            const host = this.getHostFromUrl(link).toLowerCase().replace(/^www\./, '');
+            if (!host || !this.isKnownTicketingPlatformHost(host) || !this.isEventDetailShapedUrl(link)) continue;
+            const before = selected.length;
+            push(link);
+            if (selected.length > before) ticketLinkCount++;
         }
         const events = Array.isArray(parseResult?.events) ? parseResult.events : [];
         for (const event of events) {
@@ -9337,6 +9434,22 @@ class SharedCore {
     // is a case-sensitive contiguous substring of the original value. A
     // part-range answer passes this by construction — it stays as the final
     // check so BOTH routes (range, raw text) are enforced by the same code.
+    // Longest prefix of `value` that ends just before a separator (" - ",
+    // " / ", " | ", ": ", ", ", " – ") and fits maxChars; '' when none does.
+    longestSeparatorBoundedPrefix(value, maxChars) {
+        const text = String(value || '').trim();
+        if (!text || text.length <= maxChars) return '';
+        let best = '';
+        const pattern = /\s+[-–—/|:]\s+|,\s+/g;
+        let match;
+        while ((match = pattern.exec(text)) !== null) {
+            const prefix = text.slice(0, match.index).trim();
+            if (prefix.length > maxChars) break;
+            if (prefix.length > best.length) best = prefix;
+        }
+        return best;
+    }
+
     isVerbatimTrimAnswer(originalValue, answerText, maxChars) {
         const answer = String(answerText === null || answerText === undefined ? '' : answerText).trim();
         if (!answer) return false;
@@ -9404,6 +9517,21 @@ class SharedCore {
             const answer = rangeValue !== null
                 ? rangeValue
                 : String(rawAnswer === null || rawAnswer === undefined ? '' : rawAnswer).trim();
+            // Over-trim report (titles, LOG-ONLY): a verbatim answer under 40%
+            // of the limit while a separator-bounded prefix of the original
+            // fits is usually the model keeping the brand and dropping the
+            // event ("MEGAWOOF - SAN FRANCISCO - 11 YEAR ANNIVERSARY / BEARRISON
+            // WEEKEND" → "MEGAWOOF", run 20260910-215043). The model's
+            // verbatim answer still stands — this gate never substitutes a
+            // deterministic cut — but the run log names the shorter-than-
+            // necessary trim and the prefix that would have fit, so the
+            // pattern is countable before the prompt is ever touched.
+            if (entry.field === 'title' && answer && answer.length < entry.maxChars * 0.4) {
+                const separatorPrefix = this.longestSeparatorBoundedPrefix(entry.value, entry.maxChars);
+                if (separatorPrefix && separatorPrefix.length > answer.length * 1.5) {
+                    console.log(`✂️ TRIM [report]: "${title}" — model trimmed ${entry.field} to "${answer}" (${answer.length} chars, under 40% of ${entry.maxChars}) while "${separatorPrefix}" (${separatorPrefix.length} chars) would have fit at a separator`);
+                }
+            }
             if (this.isVerbatimTrimAnswer(entry.value, answer, entry.maxChars)) {
                 if (trimConfig.mode === 'enforce') {
                     event[entry.field] = answer;
@@ -17216,6 +17344,21 @@ class SharedCore {
             }
         }
 
+        // Same venue at the same start INSTANT is one event, whatever it is
+        // called: a venue hosts one party per slot. Names are unreliable
+        // exactly where this matters — a site's slug beside its party name
+        // ("BEARRACUDA: Portland Oct" vs "Bearracuda Portland: Dick or
+        // Treat!", run 20260910-215043) or an OCR misread ("GOLDII.OXX" vs
+        // "GOLDILOXX Chicago") — so the name rung below never met them, and
+        // the enrich child carrying the ticket link and price was dropped as
+        // a sibling. Within 15 minutes, both times real (never the midnight
+        // missing-time placeholder), positive place agreement on both sides.
+        if (this.areDatesEqual(incoming.startDate, existing.startDate, 15)
+            && !this.hasMissingTimeStartPlaceholder(newEvent, existingEvent)
+            && (incoming.bar || incoming.address) && (existing.bar || existing.address)
+            && this.areIdentityPlacesSimilar(incoming, existing)) {
+            return 'place-exact-start';
+        }
         // Same place, roughly the same start time (tolerant of legacy wall-clock offsets),
         // and any pair of name-ish fields (title/name/shortName) similar.
         // The requireCloseStartTimes=false relaxation exists for ONE shape: a
