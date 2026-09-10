@@ -8279,7 +8279,13 @@ class AiWebParser {
             endDateUtc: this.parseWixExactInstant(scheduling.endDate),
             address: clean(location.address) || clean(fullAddress.formattedAddress) || null,
             city: clean(fullAddress.city).toLowerCase() || null,
-            cover: this.formatWixTicketPriceRange(tickets)
+            cover: this.formatWixTicketPriceRange(tickets),
+            // The listing's own artwork (mainImage): a card read from a text
+            // window on the homepage has no image of its own, while the
+            // warmup row beside it names the flyer (CHUNK NYE, run
+            // 20260910-131740: pin and city filled, no image — the record
+            // never carried it).
+            image: this.normalizeHttpUrlValue(clean(node.mainImage && typeof node.mainImage === 'object' ? node.mainImage.url : '')) || null
         };
         return Object.values(record).some(value => value !== null) ? record : null;
     }
@@ -9133,6 +9139,11 @@ class AiWebParser {
         };
         fill('location', record.coordinates);
         fill('timezone', record.timezone);
+        if (record.image && isEmpty(event.image)) {
+            event.image = record.image;
+            event.imageSource = 'json-api';
+            filled.push('image');
+        }
         // Cover exception to fill-only-empty: a cover flagged _coverFromJsonLdOffers
         // came from the SAME Wix system as the warmup blob, just at lower fidelity —
         // JSON-LD offers only publish fee-inclusive totals while the warmup tickets
