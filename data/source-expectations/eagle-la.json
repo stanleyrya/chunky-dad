@@ -1,0 +1,2588 @@
+{
+  "schemaVersion": 1,
+  "source": "Eagle LA",
+  "slug": "eagle-la",
+  "status": "complete",
+  "recon": {
+    "date": "2026-09-10",
+    "method": [
+      "feed",
+      "static",
+      "flyer"
+    ],
+    "parserUrlsAtRecon": [
+      "https://eaglela.com/events/",
+      "https://eaglela.com/calendar/"
+    ],
+    "doors": [
+      {
+        "url": "https://eaglela.com/calendar/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 44,
+        "truthFlag": "mecMonthlyView({ id: \"1224\", … atts: <16,730-char urlencoded blob> }) + \"ajax_url\":\"https://eaglela.com/wp-admin/admin-ajax.php\"",
+        "note": "Static curl (Chrome UA) already renders the September 2026 grid: 44 ?occurrence= links over 22 slugs, each with an <h4 class=\"mec-event-title\"> and an inline per-occurrence JSON-LD Event (startDate = the occurrence date, url = …/?occurrence=DATE, empty location). Saved: calendar.html/.txt."
+      },
+      {
+        "url": "https://eaglela.com/wp-admin/admin-ajax.php?mec_month_feed=2026-09",
+        "kind": "feed",
+        "role": "feed",
+        "rowsReturned": 44,
+        "truthFlag": "payload keys month, events_side, navigator, previous_month, current_month, next_month — a month is a closed set, no hasMore flag",
+        "note": "POST action=mec_monthly_view_load_month&mec_year=2026&mec_month=09&navigator_click=true&<atts blob byte-for-byte>, X-Requested-With: XMLHttpRequest. 44 occurrences / 22 slugs — identical to the static page. Saved: month-2026-09.json/.html/.txt."
+      },
+      {
+        "url": "https://eaglela.com/wp-admin/admin-ajax.php?mec_month_feed=2026-10",
+        "kind": "feed",
+        "role": "feed",
+        "rowsReturned": 39,
+        "truthFlag": "closed month set (19 slugs)",
+        "note": "Yesterday's count was 39/18; today 39/19 — cruise-la-leather-bootblack-2027-meet-greet (post 10088) is new. Saved: month-2026-10.json/.html/.txt."
+      },
+      {
+        "url": "https://eaglela.com/wp-admin/admin-ajax.php?mec_month_feed=2026-11",
+        "kind": "feed",
+        "role": "feed",
+        "rowsReturned": 43,
+        "truthFlag": "closed month set (21 slugs)",
+        "note": "Saved: month-2026-11.json/.html/.txt."
+      },
+      {
+        "url": "https://eaglela.com/wp-admin/admin-ajax.php?mec_month_feed=2026-12",
+        "kind": "feed",
+        "role": "feed",
+        "rowsReturned": 40,
+        "truthFlag": "closed month set (19 slugs)",
+        "note": "Yesterday 40/18, today 40/19. Saved: month-2026-12.json/.html/.txt."
+      },
+      {
+        "url": "https://eaglela.com/wp-admin/admin-ajax.php?mec_month_feed=2027-01",
+        "kind": "feed",
+        "role": "feed",
+        "rowsReturned": 0,
+        "truthFlag": "HTTP 500",
+        "note": "The same POST for mec_year=2027&mec_month=01 (and 02, 03) returns HTTP 500 with a 512-byte body: the grid header row then \"There has been a critical error on this website.\" The month feed is broken for every 2027 month. Saved: month-2027-01.json etc."
+      },
+      {
+        "url": "https://eaglela.com/events/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 12,
+        "truthFlag": "mec-load-more-button (onclick JS) + rel next href /events/page/2/",
+        "note": "MEC list skin (atts id 859): the next 12 occurrence rows from \"today\" (Sep 9 – Sep 17 2026, 10 distinct slugs) with a row excerpt for HUMP NIGHT and Tightwad Tuesday. 48 occurrence= links counting JSON-LD and tooltip duplicates. Saved: events-archive.html/.txt."
+      },
+      {
+        "url": "https://eaglela.com/events/page/2/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": "HTTP 200, \"No event found!\"",
+        "note": "Pages 2–6 all return the empty shell. Saved: events-archive-page2..6.html."
+      },
+      {
+        "url": "https://eaglela.com/wp-admin/admin-ajax.php?action=mec_list_load_more",
+        "kind": "feed",
+        "role": "feed",
+        "rowsReturned": 154,
+        "truthFlag": "count: 12 per page, end_date advances; paged Sep 18 2026 → Aug 31 2027 (36 calls) and never emptied",
+        "note": "POST action=mec_list_load_more&mec_start_date=YYYY-MM-DD&mec_offset=0&apply_sf_date=0&atts[id]=859. Through Dec 31 2026 it returned 154 rows (the archive page-1 rows plus these = 155 occurrence rows, 44 slugs) — the same set the four month grids list from Sep 9 on, zero deltas. Beyond the window it lists 8 one-off posts in Jan 2027 and a new CRUISE NIGHT series from Feb 6 2027. Saved: list-loadmore-1..36.json/.html/.txt (+ list-loadmore-1126)."
+      },
+      {
+        "url": "https://eaglela.com/events/<slug>/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 56,
+        "truthFlag": null,
+        "note": "All 47 slugs from the grids plus 9 from the 2027 list rows, fetched bare (no ?occurrence=). Each page publishes: <h1 class=\"mec-single-title\">, ONE poster image (its alt text is the only prose), a MEC \"Date\" meta showing the next occurrence only, and one JSON-LD Event for that single date. No time, no address, no recurrence statement in text — the known bare-page canonicalization trap. Saved: pages/<slug>.html/.txt."
+      },
+      {
+        "url": "https://eaglela.com/wp-content/uploads/<poster>",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 26,
+        "truthFlag": null,
+        "note": "26 distinct posters downloaded and read (flyers/). They carry the times, cadences and covers the pages do not; 21 of the 56 posts use the generic \"CHECK BACK FOR MORE DETAILS!\" stand-in check-back art."
+      }
+    ],
+    "notes": "WordPress + Modern Events Calendar (MEC), confirmed by the working admin-ajax mec_monthly_view_load_month and mec_list_load_more endpoints. Recurring events are one post with many ?occurrence= dates; the site never states a rule in text — cadence words live only in poster img alt text or on the poster itself."
+  },
+  "defaults": {
+    "city": "la",
+    "timezone": "America/Los_Angeles",
+    "bar": "Eagle LA",
+    "address": "4219 Santa Monica Blvd, Los Angeles, CA 90029",
+    "location": null,
+    "website": "https://eaglela.com",
+    "facebook": "https://www.facebook.com/eagle.bar.la/"
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Primary door: the MEC month grid, read four ways that agree — the static /calendar/ page (Sep: 44 occurrences / 22 slugs) and the replayed admin-ajax month feed for Sep/Oct/Nov/Dec 2026 (44/22, 39/19, 43/21, 40/19; 166 occurrence rows, 47 distinct slugs). Second door: the /events/ list archive, which shows 12 rows statically (Sep 9–17) but pages without limit over admin-ajax mec_list_load_more; through Dec 31 it yields 155 occurrence rows over 44 slugs, exactly the grid's set from Sep 9 onward (0 in-grid-not-list, 0 in-list-not-grid). The yesterday delta of \"11 archive slugs vs 22 grid slugs\" is simply the static archive being a 12-row rolling window (10 distinct slugs today), not a smaller catalogue. Collapse: 13 slugs recur (each one post, weekly or monthly occurrence links) → 13 series; 34 slugs appear once → 3 of them are past at recon (traps) and 31 are upcoming singles Sep 11–Dec 31 2026. The list door adds 9 posts beyond the pulled grids (8 Jan 2027 one-offs + CRUISE NIGHT, first date Feb 6 2027) — singles are never window-limited, so they are documented; publishedEventCount = 13 + 31 + 9 = 53. Series occurrences are materialized only inside the window from the grids' dated links (origin listed); Jan–Aug 2027 series rows in the list door are not materialized. Times/cadence text: event pages publish none; they come from poster img alt text (site text, quoted) or from the posters themselves (flyer rung, said so in note). Past listings: the Sep grid carries 12 occurrences before the recon date (3 one-offs + 9 series instances), and the archive shows Sep 9 as its first row; earlier months are reachable through the navigator but were not pulled. The 2027 month-feed HTTP 500 (Jan, Feb, Mar all tried) is a live site defect and is logged in openQuestions.",
+    "publishedEventCount": 53,
+    "documentedEventCount": 53,
+    "occurrenceWindow": {
+      "start": "2026-09-10",
+      "end": "2026-12-31"
+    },
+    "pastListingsPresent": true,
+    "knownGaps": [
+      "Series occurrences after 2026-12-31 (the list door lists them through Aug 2027) are not materialized; the window is the four grid-verified months.",
+      "CRUISE NIGHT (cruise-night-9) is a series that starts Feb 6 2027 with no in-window occurrence and no stated cadence; recorded as a single on its first date.",
+      "Months before Sep 2026 were not pulled; past-listing count covers the Sep grid only."
+    ]
+  },
+  "events": [
+    {
+      "id": "b-bar",
+      "kind": "series",
+      "title": "B BAR",
+      "startTime": null,
+      "endTime": null,
+      "cover": "No Cover",
+      "description": "Bears Cubs Otters and Other Furry Critters! 10 handle draft special, bare chest contest $100 cash prize, hosted by Pup Don (flyer text)",
+      "website": "https://eaglela.com/events/b-bar/",
+      "image": "https://eaglela.com/wp-content/uploads/B-Bar-poster-GENERIC-2026-web-1.jpg",
+      "recurrence": "FREQ=WEEKLY;BYDAY=TH",
+      "recurrenceStatedAs": "B BAR Every Thursday 10 Draft Special Bare Chest Contest",
+      "occurrences": [
+        {
+          "startDate": "2026-09-10",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/calendar/",
+            "quote": "href=\"https://eaglela.com/events/b-bar/?occurrence=2026-09-10\""
+          }
+        },
+        {
+          "startDate": "2026-09-17",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/calendar/",
+            "quote": "href=\"https://eaglela.com/events/b-bar/?occurrence=2026-09-17\""
+          }
+        },
+        {
+          "startDate": "2026-09-24",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/calendar/",
+            "quote": "href=\"https://eaglela.com/events/b-bar/?occurrence=2026-09-24\""
+          }
+        },
+        {
+          "startDate": "2026-10-01",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/b-bar/?occurrence=2026-10-01\""
+          }
+        },
+        {
+          "startDate": "2026-10-08",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/b-bar/?occurrence=2026-10-08\""
+          }
+        },
+        {
+          "startDate": "2026-10-15",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/b-bar/?occurrence=2026-10-15\""
+          }
+        },
+        {
+          "startDate": "2026-10-22",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/b-bar/?occurrence=2026-10-22\""
+          }
+        },
+        {
+          "startDate": "2026-10-29",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/b-bar/?occurrence=2026-10-29\""
+          }
+        },
+        {
+          "startDate": "2026-11-05",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/b-bar/?occurrence=2026-11-05\""
+          }
+        },
+        {
+          "startDate": "2026-11-12",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/b-bar/?occurrence=2026-11-12\""
+          }
+        },
+        {
+          "startDate": "2026-11-19",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/b-bar/?occurrence=2026-11-19\""
+          }
+        },
+        {
+          "startDate": "2026-11-26",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/b-bar/?occurrence=2026-11-26\""
+          }
+        },
+        {
+          "startDate": "2026-12-03",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/b-bar/?occurrence=2026-12-03\""
+          }
+        },
+        {
+          "startDate": "2026-12-10",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/b-bar/?occurrence=2026-12-10\""
+          }
+        },
+        {
+          "startDate": "2026-12-17",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/b-bar/?occurrence=2026-12-17\""
+          }
+        },
+        {
+          "startDate": "2026-12-24",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/b-bar/?occurrence=2026-12-24\""
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/b-bar/",
+        "quote": "alt=\"B BAR Every Thursday 10 Draft Special Bare Chest Contest\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Weekly; no start time anywhere on the site or the flyer. The grid lists every Thursday Sep 3–Dec 24 2026 but NOT Thu Dec 31 (EAGLE LA NEW YEARS BASH!! is that night) — Dec 31 is left out here because the site does not list it. Run 20260909-072307 extracted this event under the flyer tagline \"Bears Cubs Otters and Other Furry Critters!\" instead of the h4 title B BAR (see traps)."
+    },
+    {
+      "id": "bear-happy-hour",
+      "kind": "series",
+      "title": "BEAR HAPPY HOUR",
+      "startTime": "17:00",
+      "endTime": "21:00",
+      "description": "Every 1st Thursday Bear Happy Hour LA — The Eagle 5-9 PM (flyer text)",
+      "website": "https://eaglela.com/events/bear-happy-hour-2/",
+      "image": "https://eaglela.com/wp-content/uploads/Eagle_LA_poster_11x17.jpg",
+      "recurrence": "FREQ=MONTHLY;BYDAY=1TH",
+      "recurrenceStatedAs": "Bear Happy Hour First Thursdays 5pm",
+      "occurrences": [
+        {
+          "startDate": "2026-10-01",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/bear-happy-hour-2/?occurrence=2026-10-01\""
+          }
+        },
+        {
+          "startDate": "2026-11-05",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/bear-happy-hour-2/?occurrence=2026-11-05\""
+          }
+        },
+        {
+          "startDate": "2026-12-03",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/bear-happy-hour-2/?occurrence=2026-12-03\""
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/bear-happy-hour-2/",
+        "quote": "alt=\"Bear Happy Hour First Thursdays 5pm\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "End time 9pm comes from the flyer (\"The Eagle · 5-9 PM\"); the site text (img alt) states only \"First Thursdays 5pm\". Sep 3 2026 occurrence is past at recon."
+    },
+    {
+      "id": "bluf",
+      "kind": "series",
+      "title": "BLUF LA",
+      "startTime": null,
+      "endTime": null,
+      "description": "BLUF — Breeches Leather Uniform Fanclub. A club for men who enjoy wearing breeches and leather uniforms. Dress code strongly encouraged (flyer text)",
+      "website": "https://eaglela.com/events/bluf/",
+      "image": "https://eaglela.com/wp-content/uploads/NEW-BLUF-poster-2026-web-1.jpg",
+      "recurrence": "FREQ=MONTHLY;BYDAY=3FR",
+      "recurrenceStatedAs": "3rd Friday of every month Leather Strongly Encouraged",
+      "occurrences": [
+        {
+          "startDate": "2026-09-18",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/calendar/",
+            "quote": "href=\"https://eaglela.com/events/bluf/?occurrence=2026-09-18\""
+          }
+        },
+        {
+          "startDate": "2026-10-16",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/bluf/?occurrence=2026-10-16\""
+          }
+        },
+        {
+          "startDate": "2026-11-20",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/bluf/?occurrence=2026-11-20\""
+          }
+        },
+        {
+          "startDate": "2026-12-18",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/bluf/?occurrence=2026-12-18\""
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/bluf/",
+        "quote": "alt=\"3rd Friday of every month Leather Strongly Encouraged\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Grid title is \"BLUF LA\"; the flyer says only BLUF. No time published anywhere."
+    },
+    {
+      "id": "cruise-la",
+      "kind": "series",
+      "title": "CRUISE LA",
+      "startTime": "16:00",
+      "endTime": "21:00",
+      "cover": "Suggested $5 Donation",
+      "description": "Cruising · Queers · Go-Gos · DJs · Bootblacks · Community · Demos. Every third Saturday 4pm - 9pm. Suggested $5 donation at the door (flyer text)",
+      "website": "https://eaglela.com/events/cruise-la-16/",
+      "image": "https://eaglela.com/wp-content/uploads/IMG_1821-2.jpeg",
+      "recurrence": "FREQ=MONTHLY;BYDAY=3SA",
+      "recurrenceStatedAs": "Cruise LA Every 3rd Saturday 4pm",
+      "occurrences": [
+        {
+          "startDate": "2026-09-19",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/calendar/",
+            "quote": "href=\"https://eaglela.com/events/cruise-la-16/?occurrence=2026-09-19\""
+          }
+        },
+        {
+          "startDate": "2026-10-17",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/cruise-la-16/?occurrence=2026-10-17\""
+          }
+        },
+        {
+          "startDate": "2026-11-21",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/cruise-la-16/?occurrence=2026-11-21\""
+          }
+        },
+        {
+          "startDate": "2026-12-19",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/cruise-la-16/?occurrence=2026-12-19\""
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/cruise-la-16/",
+        "quote": "alt=\"Cruise LA Every 3rd Saturday 4pm\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Oct 17 2026 is also the night of the separately-posted CRUISE LA LEATHER AND BOOTBLACK 2027 CONTEST (single) — two listings, two real events on one date."
+    },
+    {
+      "id": "cub-scout",
+      "kind": "series",
+      "title": "CUBSCOUT",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "cover": "$7",
+      "description": "CUBSCOUT — DJ Chris Bowen + DJ Victor Rodriguez & special guests. 1st Friday of the month / 9pm to 2am / $7 (generic flyer text)",
+      "website": "https://eaglela.com/events/cub-scout-3/",
+      "image": "https://eaglela.com/wp-content/uploads/CubScout-generic.jpg",
+      "recurrence": "FREQ=MONTHLY;BYDAY=1FR",
+      "recurrenceStatedAs": "CubScout First Fridays 9pm $7",
+      "occurrences": [
+        {
+          "startDate": "2026-10-02",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/cub-scout-3/?occurrence=2026-10-02\""
+          }
+        },
+        {
+          "startDate": "2026-11-06",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/cub-scout-3/?occurrence=2026-11-06\""
+          }
+        },
+        {
+          "startDate": "2026-12-04",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/cub-scout-3/?occurrence=2026-12-04\""
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/cub-scout-3/",
+        "quote": "alt=\"CubScout First Fridays 9pm $7\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The generic series post. Sep 4 2026 was published as its own post (cubscout-52, $8, poster cubscoutSept26.jpg) and is past at recon — see traps. The grid lists the series from Oct 2 2026 on; the list door continues it monthly into 2027 (Jan 1 2027 is the next after the window)."
+    },
+    {
+      "id": "hump-night",
+      "kind": "series",
+      "title": "HUMP NIGHT",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "cover": "No Cover",
+      "description": "Hump Night - $10 Domestic Pitchers, $6 Well Drinks, 9pm-2am, No Cover",
+      "website": "https://eaglela.com/events/hump-night/",
+      "image": "https://eaglela.com/wp-content/uploads/Wed-HUMP-NIGHT-poster-2024-web-1-1.jpg",
+      "recurrence": "FREQ=WEEKLY;BYDAY=WE",
+      "recurrenceStatedAs": "Hump Night - $10 Domestic Pitchers, $6 Well Drinks, 9pm-2am, No Cover",
+      "occurrences": [
+        {
+          "startDate": "2026-09-16",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/calendar/",
+            "quote": "href=\"https://eaglela.com/events/hump-night/?occurrence=2026-09-16\""
+          }
+        },
+        {
+          "startDate": "2026-09-23",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/calendar/",
+            "quote": "href=\"https://eaglela.com/events/hump-night/?occurrence=2026-09-23\""
+          }
+        },
+        {
+          "startDate": "2026-09-30",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/calendar/",
+            "quote": "href=\"https://eaglela.com/events/hump-night/?occurrence=2026-09-30\""
+          }
+        },
+        {
+          "startDate": "2026-10-07",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/hump-night/?occurrence=2026-10-07\""
+          }
+        },
+        {
+          "startDate": "2026-10-14",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/hump-night/?occurrence=2026-10-14\""
+          }
+        },
+        {
+          "startDate": "2026-10-21",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/hump-night/?occurrence=2026-10-21\""
+          }
+        },
+        {
+          "startDate": "2026-10-28",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/hump-night/?occurrence=2026-10-28\""
+          }
+        },
+        {
+          "startDate": "2026-11-04",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/hump-night/?occurrence=2026-11-04\""
+          }
+        },
+        {
+          "startDate": "2026-11-11",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/hump-night/?occurrence=2026-11-11\""
+          }
+        },
+        {
+          "startDate": "2026-11-18",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/hump-night/?occurrence=2026-11-18\""
+          }
+        },
+        {
+          "startDate": "2026-11-25",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/hump-night/?occurrence=2026-11-25\""
+          }
+        },
+        {
+          "startDate": "2026-12-02",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/hump-night/?occurrence=2026-12-02\""
+          }
+        },
+        {
+          "startDate": "2026-12-09",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/hump-night/?occurrence=2026-12-09\""
+          }
+        },
+        {
+          "startDate": "2026-12-16",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/hump-night/?occurrence=2026-12-16\""
+          }
+        },
+        {
+          "startDate": "2026-12-23",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/hump-night/?occurrence=2026-12-23\""
+          }
+        },
+        {
+          "startDate": "2026-12-30",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/hump-night/?occurrence=2026-12-30\""
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/",
+        "quote": "Hump Night - $10 Domestic Pitchers, $6 Well Drinks, 9pm-2am, No Cover"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The repeat is stated by the grid (every Wednesday Sep 2–Dec 30 2026) and the flyer headline \"WEDNESDAY HUMP NIGHT\"; the quoted excerpt is the /events/ archive row text and carries the time. The flyer (2024) says $12 pitchers; the site excerpt says $10."
+    },
+    {
+      "id": "lucki-break",
+      "kind": "series",
+      "title": "LUCKI BREAK",
+      "startTime": null,
+      "endTime": null,
+      "description": "Monday! Drink specials & free pool! Happy hour all day & all night! (flyer text)",
+      "website": "https://eaglela.com/events/lucki-break/",
+      "image": "https://eaglela.com/wp-content/uploads/Lucky-Break-poster-2024-web-1.jpg",
+      "recurrence": "FREQ=WEEKLY;BYDAY=MO",
+      "recurrenceStatedAs": "MONDAY! DRINK SPECIALS & FREE POOL! — HAPPY HOUR ALL DAY & ALL NIGHT! (flyer text; the site page carries no prose)",
+      "occurrences": [
+        {
+          "startDate": "2026-09-14",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/calendar/",
+            "quote": "href=\"https://eaglela.com/events/lucki-break/?occurrence=2026-09-14\""
+          }
+        },
+        {
+          "startDate": "2026-09-21",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/calendar/",
+            "quote": "href=\"https://eaglela.com/events/lucki-break/?occurrence=2026-09-21\""
+          }
+        },
+        {
+          "startDate": "2026-09-28",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/calendar/",
+            "quote": "href=\"https://eaglela.com/events/lucki-break/?occurrence=2026-09-28\""
+          }
+        },
+        {
+          "startDate": "2026-10-05",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/lucki-break/?occurrence=2026-10-05\""
+          }
+        },
+        {
+          "startDate": "2026-10-12",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/lucki-break/?occurrence=2026-10-12\""
+          }
+        },
+        {
+          "startDate": "2026-10-19",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/lucki-break/?occurrence=2026-10-19\""
+          }
+        },
+        {
+          "startDate": "2026-10-26",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/lucki-break/?occurrence=2026-10-26\""
+          }
+        },
+        {
+          "startDate": "2026-11-02",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/lucki-break/?occurrence=2026-11-02\""
+          }
+        },
+        {
+          "startDate": "2026-11-09",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/lucki-break/?occurrence=2026-11-09\""
+          }
+        },
+        {
+          "startDate": "2026-11-16",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/lucki-break/?occurrence=2026-11-16\""
+          }
+        },
+        {
+          "startDate": "2026-11-23",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/lucki-break/?occurrence=2026-11-23\""
+          }
+        },
+        {
+          "startDate": "2026-11-30",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/lucki-break/?occurrence=2026-11-30\""
+          }
+        },
+        {
+          "startDate": "2026-12-07",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/lucki-break/?occurrence=2026-12-07\""
+          }
+        },
+        {
+          "startDate": "2026-12-14",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/lucki-break/?occurrence=2026-12-14\""
+          }
+        },
+        {
+          "startDate": "2026-12-21",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/lucki-break/?occurrence=2026-12-21\""
+          }
+        },
+        {
+          "startDate": "2026-12-28",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/lucki-break/?occurrence=2026-12-28\""
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/lucki-break/",
+        "quote": "<h1 class=\"mec-single-title\">LUCKI BREAK</h1>",
+        "imageUrl": "https://eaglela.com/wp-content/uploads/Lucky-Break-poster-2024-web-1.jpg"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Site text is the title and a poster only (img alt empty). Cadence is evidenced by the grid: every Monday Sep 14–Dec 28 2026. All-day happy hour — no start time."
+    },
+    {
+      "id": "meat-rack",
+      "kind": "series",
+      "title": "MEAT RACK",
+      "startTime": "20:00",
+      "endTime": "02:00",
+      "cover": "$8",
+      "description": "John Piampiano and Hunter Fox present MEAT RACK — Big beefy beats & hot throbbing studs! 2nd & 4th Saturday every month. $8 cover, cash only bar, 8pm-2am (generic flyer text)",
+      "website": "https://eaglela.com/events/meat-rack-8/",
+      "image": "https://eaglela.com/wp-content/uploads/GENERIC-M_Rack-poster-2026-web-1.jpg",
+      "recurrence": "FREQ=MONTHLY;BYDAY=2SA,4SA",
+      "recurrenceStatedAs": "Meat Rack 2nd and 4th Saturday of each month 8pm $8",
+      "occurrences": [
+        {
+          "startDate": "2026-09-26",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/calendar/",
+            "quote": "href=\"https://eaglela.com/events/meat-rack-8/?occurrence=2026-09-26\""
+          }
+        },
+        {
+          "startDate": "2026-10-10",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/meat-rack-8/?occurrence=2026-10-10\""
+          }
+        },
+        {
+          "startDate": "2026-10-24",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/meat-rack-8/?occurrence=2026-10-24\""
+          }
+        },
+        {
+          "startDate": "2026-11-14",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/meat-rack-8/?occurrence=2026-11-14\""
+          }
+        },
+        {
+          "startDate": "2026-11-28",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/meat-rack-8/?occurrence=2026-11-28\""
+          }
+        },
+        {
+          "startDate": "2026-12-12",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/meat-rack-8/?occurrence=2026-12-12\""
+          }
+        },
+        {
+          "startDate": "2026-12-26",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/meat-rack-8/?occurrence=2026-12-26\""
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/meat-rack-8/",
+        "quote": "alt=\"Meat Rack 2nd and 4th Saturday of each month 8pm $8\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Generic series post. Sep 12 2026 (2nd Saturday) is published as its own post meat-rack-103 with a dated poster — documented as a single; the series grid starts Sep 26."
+    },
+    {
+      "id": "movie-mondays",
+      "kind": "series",
+      "title": "MOVIE MONDAYS",
+      "startTime": "19:00",
+      "endTime": null,
+      "cover": "No Cover",
+      "description": "Movie Mondays — Eagle LA · 7pm · no cover. Sept 7 Party Monster, Sept 14 The Birdcage, Sept 21 Shortbus, Sept 28 But I'm a Cheerleader",
+      "website": "https://eaglela.com/events/movie-mondays-2/",
+      "image": "https://eaglela.com/wp-content/uploads/MONDAY-MOVIES-poster-SEP-2026-scaled.jpg",
+      "recurrence": "FREQ=WEEKLY;BYDAY=MO;UNTIL=20260928",
+      "recurrenceStatedAs": "Movie Mondays Sep 7 Party Monster Sep 14 Birdcage Sep 21 Shortbus Sep 28 But I&#039;m a CheerLeader 7pm no cover",
+      "occurrences": [
+        {
+          "startDate": "2026-09-14",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/calendar/",
+            "quote": "href=\"https://eaglela.com/events/movie-mondays-2/?occurrence=2026-09-14\""
+          },
+          "note": "film: The Birdcage"
+        },
+        {
+          "startDate": "2026-09-21",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/calendar/",
+            "quote": "href=\"https://eaglela.com/events/movie-mondays-2/?occurrence=2026-09-21\""
+          },
+          "note": "film: Shortbus"
+        },
+        {
+          "startDate": "2026-09-28",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/calendar/",
+            "quote": "href=\"https://eaglela.com/events/movie-mondays-2/?occurrence=2026-09-28\""
+          },
+          "note": "film: But I'm a Cheerleader"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/movie-mondays-2/",
+        "quote": "alt=\"Movie Mondays Sep 7 Party Monster Sep 14 Birdcage Sep 21 Shortbus Sep 28 But I&#039;m a CheerLeader 7pm no cover\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "A four-week September series (grid lists exactly Sep 7, 14, 21, 28 — nothing in Oct–Dec). Sep 7 (Party Monster) is past at recon. The poster names one film per Monday; an OCR path could mint four film-titled events — see traps."
+    },
+    {
+      "id": "onyx",
+      "kind": "series",
+      "title": "ONYX",
+      "startTime": "16:00",
+      "endTime": "20:00",
+      "description": "ONYX SoCal / Southwest beer bust, 4-8 PM, second Sunday every month (flyer text)",
+      "website": "https://eaglela.com/events/onyx-2/",
+      "image": "https://eaglela.com/wp-content/uploads/ONYX-SaveTheDate.jpg",
+      "recurrence": "FREQ=MONTHLY;BYDAY=2SU",
+      "recurrenceStatedAs": "BEER BUST 4-8 PM SECOND SUNDAY EVERY MONTH (flyer ONYX-SaveTheDate.jpg; the site page carries no prose)",
+      "occurrences": [
+        {
+          "startDate": "2026-10-11",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/onyx-2/?occurrence=2026-10-11\""
+          }
+        },
+        {
+          "startDate": "2026-11-08",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/onyx-2/?occurrence=2026-11-08\""
+          }
+        },
+        {
+          "startDate": "2026-12-13",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/onyx-2/?occurrence=2026-12-13\""
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/onyx-2/",
+        "quote": "<h1 class=\"mec-single-title\">ONYX</h1>",
+        "imageUrl": "https://eaglela.com/wp-content/uploads/ONYX-SaveTheDate.jpg"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Grid: Oct 11, Nov 8, Dec 13 2026 (all 2nd Sundays). The Sep 13 2nd-Sunday slot is a separate post, ONYX: 11 YEAR ANNIVERSARY (single). Two further one-off ONYX posts exist (onyx-24 Oct 23, onyx-25 Dec 25) — singles, not this series."
+    },
+    {
+      "id": "sunday-beer-bust",
+      "kind": "series",
+      "title": "SUNDAY BEER BUST",
+      "startTime": "14:00",
+      "endTime": null,
+      "cover": "No Cover",
+      "description": "Sunday Beer Bust — hot studs! cool drinks! good times! Bar opens 2pm, no cover, $5 domestic drafts (flyer text)",
+      "website": "https://eaglela.com/events/sunday-beer-bust-4/",
+      "image": "https://eaglela.com/wp-content/uploads/Sun-Beer-Bust-poster-2024-web-1.jpg",
+      "recurrence": "FREQ=WEEKLY;BYDAY=SU",
+      "recurrenceStatedAs": "SUNDAY BEER BUST — Bar opens 2PM — No Cover — $5 Domestic Drafts (flyer text; grid lists every Sunday)",
+      "occurrences": [
+        {
+          "startDate": "2026-09-13",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/calendar/",
+            "quote": "href=\"https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-09-13\""
+          }
+        },
+        {
+          "startDate": "2026-09-20",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/calendar/",
+            "quote": "href=\"https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-09-20\""
+          }
+        },
+        {
+          "startDate": "2026-09-27",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/calendar/",
+            "quote": "href=\"https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-09-27\""
+          }
+        },
+        {
+          "startDate": "2026-10-04",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-10-04\""
+          }
+        },
+        {
+          "startDate": "2026-10-11",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-10-11\""
+          }
+        },
+        {
+          "startDate": "2026-10-18",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-10-18\""
+          }
+        },
+        {
+          "startDate": "2026-10-25",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-10-25\""
+          }
+        },
+        {
+          "startDate": "2026-11-01",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-11-01\""
+          }
+        },
+        {
+          "startDate": "2026-11-08",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-11-08\""
+          }
+        },
+        {
+          "startDate": "2026-11-15",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-11-15\""
+          }
+        },
+        {
+          "startDate": "2026-11-22",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-11-22\""
+          }
+        },
+        {
+          "startDate": "2026-11-29",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-11-29\""
+          }
+        },
+        {
+          "startDate": "2026-12-06",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-12-06\""
+          }
+        },
+        {
+          "startDate": "2026-12-13",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-12-13\""
+          }
+        },
+        {
+          "startDate": "2026-12-20",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-12-20\""
+          }
+        },
+        {
+          "startDate": "2026-12-27",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-12-27\""
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/sunday-beer-bust-4/",
+        "quote": "<h1 class=\"mec-single-title\">SUNDAY BEER BUST</h1>",
+        "imageUrl": "https://eaglela.com/wp-content/uploads/Sun-Beer-Bust-poster-2024-web-1.jpg"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Site page has no prose (img alt empty). Weekly cadence is the grid: every Sunday Sep 6–Dec 27 2026. Start time = \"Bar opens 2PM\" on the flyer."
+    },
+    {
+      "id": "sunday-swap-meat",
+      "kind": "series",
+      "title": "SUNDAY SWAP MEAT",
+      "startTime": "21:00",
+      "endTime": null,
+      "cover": "No Cover",
+      "description": "Sunday Swap Meat — 9pm every Sunday, no cover, $5 domestic drafts. Wind up your weekend at Eagle LA! (flyer text)",
+      "website": "https://eaglela.com/events/sunday-swap-meat-2/",
+      "image": "https://eaglela.com/wp-content/uploads/Sunday-Swap-Meat-Poster-2026-web-1.jpg",
+      "recurrence": "FREQ=WEEKLY;BYDAY=SU",
+      "recurrenceStatedAs": "Sunday Swap Meat 9pm No Cover $5 Domestic drafts",
+      "occurrences": [
+        {
+          "startDate": "2026-09-13",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/calendar/",
+            "quote": "href=\"https://eaglela.com/events/sunday-swap-meat-2/?occurrence=2026-09-13\""
+          }
+        },
+        {
+          "startDate": "2026-09-20",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/calendar/",
+            "quote": "href=\"https://eaglela.com/events/sunday-swap-meat-2/?occurrence=2026-09-20\""
+          }
+        },
+        {
+          "startDate": "2026-09-27",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/calendar/",
+            "quote": "href=\"https://eaglela.com/events/sunday-swap-meat-2/?occurrence=2026-09-27\""
+          }
+        },
+        {
+          "startDate": "2026-10-04",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/sunday-swap-meat-2/?occurrence=2026-10-04\""
+          }
+        },
+        {
+          "startDate": "2026-10-11",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/sunday-swap-meat-2/?occurrence=2026-10-11\""
+          }
+        },
+        {
+          "startDate": "2026-10-18",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/sunday-swap-meat-2/?occurrence=2026-10-18\""
+          }
+        },
+        {
+          "startDate": "2026-10-25",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/sunday-swap-meat-2/?occurrence=2026-10-25\""
+          }
+        },
+        {
+          "startDate": "2026-11-01",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/sunday-swap-meat-2/?occurrence=2026-11-01\""
+          }
+        },
+        {
+          "startDate": "2026-11-08",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/sunday-swap-meat-2/?occurrence=2026-11-08\""
+          }
+        },
+        {
+          "startDate": "2026-11-15",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/sunday-swap-meat-2/?occurrence=2026-11-15\""
+          }
+        },
+        {
+          "startDate": "2026-11-22",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/sunday-swap-meat-2/?occurrence=2026-11-22\""
+          }
+        },
+        {
+          "startDate": "2026-11-29",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/sunday-swap-meat-2/?occurrence=2026-11-29\""
+          }
+        },
+        {
+          "startDate": "2026-12-06",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/sunday-swap-meat-2/?occurrence=2026-12-06\""
+          }
+        },
+        {
+          "startDate": "2026-12-13",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/sunday-swap-meat-2/?occurrence=2026-12-13\""
+          }
+        },
+        {
+          "startDate": "2026-12-20",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/sunday-swap-meat-2/?occurrence=2026-12-20\""
+          }
+        },
+        {
+          "startDate": "2026-12-27",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/sunday-swap-meat-2/?occurrence=2026-12-27\""
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/sunday-swap-meat-2/",
+        "quote": "alt=\"Sunday Swap Meat 9pm No Cover $5 Domestic drafts\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The alt text gives the time; \"9PM EVERY SUNDAY\" is on the flyer and the grid lists every Sunday Sep 6–Dec 27 2026. Same nights as SUNDAY BEER BUST (2pm) — two listings, two events."
+    },
+    {
+      "id": "tightwad-tuesday",
+      "kind": "series",
+      "title": "Tightwad Tuesday",
+      "startTime": null,
+      "endTime": null,
+      "cover": "No Cover",
+      "description": "Tightwad Tuesday - Any 12oz beer only $3, All Day, All Night. No cover!",
+      "website": "https://eaglela.com/events/tightwad-tuesday/",
+      "image": "https://eaglela.com/wp-content/uploads/Tightwad-Tues-poster-2024-web-1.jpg",
+      "recurrence": "FREQ=WEEKLY;BYDAY=TU",
+      "recurrenceStatedAs": "Tightwad Tuesday - Any 12oz beer only $3, All Day, All Night. No cover!",
+      "occurrences": [
+        {
+          "startDate": "2026-09-15",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/calendar/",
+            "quote": "href=\"https://eaglela.com/events/tightwad-tuesday/?occurrence=2026-09-15\""
+          }
+        },
+        {
+          "startDate": "2026-09-22",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/calendar/",
+            "quote": "href=\"https://eaglela.com/events/tightwad-tuesday/?occurrence=2026-09-22\""
+          }
+        },
+        {
+          "startDate": "2026-09-29",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/calendar/",
+            "quote": "href=\"https://eaglela.com/events/tightwad-tuesday/?occurrence=2026-09-29\""
+          }
+        },
+        {
+          "startDate": "2026-10-06",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/tightwad-tuesday/?occurrence=2026-10-06\""
+          }
+        },
+        {
+          "startDate": "2026-10-13",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/tightwad-tuesday/?occurrence=2026-10-13\""
+          }
+        },
+        {
+          "startDate": "2026-10-20",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/tightwad-tuesday/?occurrence=2026-10-20\""
+          }
+        },
+        {
+          "startDate": "2026-10-27",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/tightwad-tuesday/?occurrence=2026-10-27\""
+          }
+        },
+        {
+          "startDate": "2026-11-03",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/tightwad-tuesday/?occurrence=2026-11-03\""
+          }
+        },
+        {
+          "startDate": "2026-11-10",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/tightwad-tuesday/?occurrence=2026-11-10\""
+          }
+        },
+        {
+          "startDate": "2026-11-17",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/tightwad-tuesday/?occurrence=2026-11-17\""
+          }
+        },
+        {
+          "startDate": "2026-11-24",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/tightwad-tuesday/?occurrence=2026-11-24\""
+          }
+        },
+        {
+          "startDate": "2026-12-01",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/tightwad-tuesday/?occurrence=2026-12-01\""
+          }
+        },
+        {
+          "startDate": "2026-12-08",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/tightwad-tuesday/?occurrence=2026-12-08\""
+          }
+        },
+        {
+          "startDate": "2026-12-15",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/tightwad-tuesday/?occurrence=2026-12-15\""
+          }
+        },
+        {
+          "startDate": "2026-12-22",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/tightwad-tuesday/?occurrence=2026-12-22\""
+          }
+        },
+        {
+          "startDate": "2026-12-29",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+            "quote": "href=\"https://eaglela.com/events/tightwad-tuesday/?occurrence=2026-12-29\""
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/",
+        "quote": "Tightwad Tuesday - Any 12oz beer only $3, All Day, All Night. No cover!"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "All-day special, no start time. The quoted excerpt is the /events/ archive row text; the grid lists every Tuesday Sep 1–Dec 29 2026. Price mismatch: excerpt says $3, the (2024) poster says $5. Title is mixed-case \"Tightwad Tuesday\" on the site."
+    },
+    {
+      "id": "cubcake-2026-09-11",
+      "kind": "single",
+      "title": "CUBCAKE",
+      "startDate": "2026-09-11",
+      "startTime": "21:00",
+      "endTime": null,
+      "cover": "$8",
+      "description": "Lone Star Saloon presents CUBCAKE — DJ Paul Goodyear. Sept 11 · 9pm, $8 cover (flyer text)",
+      "website": "https://eaglela.com/events/cubcake/",
+      "image": "https://eaglela.com/wp-content/uploads/2026_CubcakeLA_Poster_01_Vertical-Medium-2.jpeg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/cubcake/",
+        "quote": "alt=\"CUBCAKE\nSEP 11 9pm $8\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Grid row: href=\"https://eaglela.com/events/cubcake/?occurrence=2026-09-11\" (https://eaglela.com/calendar/)."
+    },
+    {
+      "id": "meat-rack-2026-09-12",
+      "kind": "single",
+      "title": "MEAT RACK",
+      "startDate": "2026-09-12",
+      "startTime": "20:00",
+      "endTime": "02:00",
+      "cover": "$8",
+      "description": "MEAT RACK — meaty beats by DJ Leo Iriarte, presented by John Piampiano & Hunter Fox. Sat Sept 12, 2026. $8, 8pm-2am, cash only bar (flyer text)",
+      "website": "https://eaglela.com/events/meat-rack-103/",
+      "image": "https://eaglela.com/wp-content/uploads/M_Rack-poster-9_12_26-web-1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/meat-rack-103/",
+        "quote": "alt=\"Meat Rack\nSept 12 8pm $8\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Dated one-off post for the 2nd-Saturday slot; the generic MEAT RACK series (meat-rack-8) resumes Sep 26. Grid row: href=\"https://eaglela.com/events/meat-rack-103/?occurrence=2026-09-12\" (https://eaglela.com/calendar/)."
+    },
+    {
+      "id": "onyx-11-year-anniversary-2026-09-13",
+      "kind": "single",
+      "title": "ONYX: 11 YEAR ANNIVERSARY",
+      "startDate": "2026-09-13",
+      "startTime": "16:00",
+      "endTime": "20:00",
+      "cover": "No Cover",
+      "description": "ONYX Southwest 11 year anniversary (est. 2015) — kinky go-go studs & BDSM demos, music by DJ Dean Buckley. Sunday Sept 13, 4pm-8pm, no cover (flyer text)",
+      "website": "https://eaglela.com/events/onyx-11-year-anniversary/",
+      "image": "https://eaglela.com/wp-content/uploads/ONYX-11-Year-Anniv-poster-2026-WEB-1-Medium.jpeg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/onyx-11-year-anniversary/",
+        "quote": "<h1 class=\"mec-single-title\">ONYX: 11 YEAR ANNIVERSARY</h1>"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Takes the 2nd-Sunday ONYX slot for September; the ONYX series (onyx-2) resumes Oct 11. Grid row: href=\"https://eaglela.com/events/onyx-11-year-anniversary/?occurrence=2026-09-13\" (https://eaglela.com/calendar/)."
+    },
+    {
+      "id": "mr-regiment-leather-2027-contest-meet-and-greet-2026-09-18",
+      "kind": "single",
+      "title": "MR REGIMENT LEATHER 2027 CONTEST MEET AND GREET",
+      "startDate": "2026-09-18",
+      "startTime": "21:00",
+      "endTime": null,
+      "cover": "$8",
+      "description": "The Regiment of the Black & Tans presents Mr. Regiment Weekend — Fri Sep 18, 9pm: Meet & Greet, $8 cover (flyer text)",
+      "website": "https://eaglela.com/events/mr-regiment-leather-2027-contest-meet-and-greet/",
+      "image": "https://eaglela.com/wp-content/uploads/Mr-Regiment-2027-Medium.jpeg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/mr-regiment-leather-2027-contest-meet-and-greet/",
+        "quote": "<h1 class=\"mec-single-title\">MR REGIMENT LEATHER 2027 CONTEST MEET AND GREET</h1>"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "One flyer covers all three Mr. Regiment Weekend posts; the img alt on the page is empty, times are flyer-only. Grid row: href=\"https://eaglela.com/events/mr-regiment-leather-2027-contest-meet-and-greet/?occurrence=2026-09-18\" (https://eaglela.com/calendar/)."
+    },
+    {
+      "id": "mr-regiment-leather-2027-contest-2026-09-19",
+      "kind": "single",
+      "title": "MR REGIMENT LEATHER 2027 CONTEST",
+      "startDate": "2026-09-19",
+      "startTime": "21:00",
+      "endTime": null,
+      "cover": "$8",
+      "description": "The Regiment of the Black & Tans presents Mr. Regiment Weekend — Sat Sep 19, 9pm: Mr. Regiment Leather Contest, $8 cover (flyer text)",
+      "website": "https://eaglela.com/events/mr-regiment-leather-2027-contest/",
+      "image": "https://eaglela.com/wp-content/uploads/Mr-Regiment-2027-Medium-square.jpeg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/mr-regiment-leather-2027-contest/",
+        "quote": "<h1 class=\"mec-single-title\">MR REGIMENT LEATHER 2027 CONTEST</h1>"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Page description img is Mr-Regiment-2027-Medium.jpeg; the JSON-LD image is the -square variant. Times are flyer-only. Grid row: href=\"https://eaglela.com/events/mr-regiment-leather-2027-contest/?occurrence=2026-09-19\" (https://eaglela.com/calendar/)."
+    },
+    {
+      "id": "mr-regiment-leather-2027-contest-victory-party-2026-09-20",
+      "kind": "single",
+      "title": "MR REGIMENT LEATHER 2027 CONTEST VICTORY PARTY",
+      "startDate": "2026-09-20",
+      "startTime": "15:00",
+      "endTime": null,
+      "cover": "No Cover",
+      "description": "The Regiment of the Black & Tans presents Mr. Regiment Weekend — Sun Sep 20, 3pm: Victory Party, no cover (flyer text)",
+      "website": "https://eaglela.com/events/mr-regiment-leather-2027-contest-victory-party/",
+      "image": "https://eaglela.com/wp-content/uploads/Mr-Regiment-2027-Medium.jpeg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/mr-regiment-leather-2027-contest-victory-party/",
+        "quote": "<h1 class=\"mec-single-title\">MR REGIMENT LEATHER 2027 CONTEST VICTORY PARTY</h1>"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Times are flyer-only (page img alt empty). Grid row: href=\"https://eaglela.com/events/mr-regiment-leather-2027-contest-victory-party/?occurrence=2026-09-20\" (https://eaglela.com/calendar/)."
+    },
+    {
+      "id": "lost-puppy-2026-09-25",
+      "kind": "single",
+      "title": "LOST PUPPY",
+      "startDate": "2026-09-25",
+      "startTime": null,
+      "endTime": null,
+      "description": "Gabriel Green x Eagle LA present LOST PUPPY — an event for puppies, handlers, boys and daddies looking to be found! (generic flyer text)",
+      "website": "https://eaglela.com/events/lost-puppy-19/",
+      "image": "https://eaglela.com/wp-content/uploads/Lost-Puppy-GENERIC-Large.jpeg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/lost-puppy-19/",
+        "quote": "alt=\"LOST PUPPY Details coming soon\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Generic poster, \"Details coming soon\" — no time published. Grid row: href=\"https://eaglela.com/events/lost-puppy-19/?occurrence=2026-09-25\" (https://eaglela.com/calendar/)."
+    },
+    {
+      "id": "ela-live-2026-09-27",
+      "kind": "single",
+      "title": "ELA LIVE",
+      "startDate": "2026-09-27",
+      "startTime": null,
+      "endTime": null,
+      "description": null,
+      "website": "https://eaglela.com/events/ela-live-11/",
+      "image": "https://eaglela.com/wp-content/uploads/CHECK-BACK-art.jpg-1.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/ela-live-11/",
+        "quote": "alt=\"Check back later for more details on this event\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Stand-in poster (\"CHECK BACK FOR MORE DETAILS!\") — the site publishes title and date only; no time, no description. Grid row: href=\"https://eaglela.com/events/ela-live-11/?occurrence=2026-09-27\" (https://eaglela.com/calendar/)."
+    },
+    {
+      "id": "outlaw-2026-10-03",
+      "kind": "single",
+      "title": "OUTLAW",
+      "startDate": "2026-10-03",
+      "startTime": null,
+      "endTime": null,
+      "description": null,
+      "website": "https://eaglela.com/events/outlaw-11/",
+      "image": "https://eaglela.com/wp-content/uploads/CHECK-BACK-art.jpg-1.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/outlaw-11/",
+        "quote": "alt=\"Check back later for more details on this event\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Stand-in poster (\"CHECK BACK FOR MORE DETAILS!\") — the site publishes title and date only; no time, no description. Grid row: href=\"https://eaglela.com/events/outlaw-11/?occurrence=2026-10-03\" (https://eaglela.com/wp-admin/admin-ajax.php)."
+    },
+    {
+      "id": "jungle-2026-10-09",
+      "kind": "single",
+      "title": "JUNGLE",
+      "startDate": "2026-10-09",
+      "startTime": null,
+      "endTime": null,
+      "description": null,
+      "website": "https://eaglela.com/events/jungle-29/",
+      "image": "https://eaglela.com/wp-content/uploads/CHECK-BACK-art.jpg-1.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/jungle-29/",
+        "quote": "alt=\"Check back later for more details on this event\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Stand-in poster (\"CHECK BACK FOR MORE DETAILS!\") — the site publishes title and date only; no time, no description. Grid row: href=\"https://eaglela.com/events/jungle-29/?occurrence=2026-10-09\" (https://eaglela.com/wp-admin/admin-ajax.php)."
+    },
+    {
+      "id": "cruise-la-leather-bootblack-2027-meet-greet-2026-10-16",
+      "kind": "single",
+      "title": "CRUISE LA LEATHER & BOOTBLACK 2027 MEET & GREET",
+      "startDate": "2026-10-16",
+      "startTime": "19:00",
+      "endTime": "22:00",
+      "cover": "No Cover",
+      "description": "Mx. Cruise LA Leather & Cruise LA Bootblack 2027 — Oct 16 Meet & Greet, 7-10pm @Rough Trade Gear, no cover; 20% off in-store purchases for attendees (flyer text)",
+      "website": "https://eaglela.com/events/cruise-la-leather-bootblack-2027-meet-greet/",
+      "image": "https://eaglela.com/wp-content/uploads/IMG_1968-2-Medium.jpeg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/cruise-la-leather-bootblack-2027-meet-greet/",
+        "quote": "<h1 class=\"mec-single-title\">CRUISE LA LEATHER &#038; BOOTBLACK 2027 MEET &#038; GREET</h1>"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The flyer places the Meet & Greet at Rough Trade Gear (a leather shop), not at the bar — bar is overridden here and address left null because the site publishes no address for it. A scrape that returns bar=\"Eagle LA\" is a venue-identity gap, not a crawl miss. Times are flyer-only. Newest post on the site (post id 10088). Grid row: href=\"https://eaglela.com/events/cruise-la-leather-bootblack-2027-meet-greet/?occurrence=2026-10-16\" (https://eaglela.com/wp-admin/admin-ajax.php).",
+      "bar": "Rough Trade Gear",
+      "address": null
+    },
+    {
+      "id": "cruise-la-contest-2026-10-17",
+      "kind": "single",
+      "title": "CRUISE LA LEATHER AND BOOTBLACK 2027 CONTEST",
+      "startDate": "2026-10-17",
+      "startTime": "20:00",
+      "endTime": null,
+      "cover": "$7",
+      "description": "Mx. Cruise LA Leather & Cruise LA Bootblack 2027 — Oct 17 Contest: doors at 8pm, contest at 9pm sharp, @Eagle LA, $7 cover; Victory Party 11pm-2am following the contest, $7 cover (flyer text)",
+      "website": "https://eaglela.com/events/cruise-la-contest-2/",
+      "image": "https://eaglela.com/wp-content/uploads/IMG_1968-2-Medium.jpeg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/cruise-la-contest-2/",
+        "quote": "alt=\"CruiseLA Leather &amp; Bootblack Contest Oct 16: Meet &amp; Greet Oct 17: Contest and Victory Party\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "startTime 20:00 = \"Doors at 8pm\" (contest at 9pm). The flyer's Oct 17 Victory Party has no post of its own — see traps. Same night as the regular CRUISE LA 3rd-Saturday occurrence (4pm-9pm). Grid row: href=\"https://eaglela.com/events/cruise-la-contest-2/?occurrence=2026-10-17\" (https://eaglela.com/wp-admin/admin-ajax.php)."
+    },
+    {
+      "id": "onyx-2026-10-23",
+      "kind": "single",
+      "title": "ONYX",
+      "startDate": "2026-10-23",
+      "startTime": null,
+      "endTime": null,
+      "description": "Men of ONYX SoCal / Southwest present ONYX — kinky go-go studs & BDSM demos! (generic flyer text)",
+      "website": "https://eaglela.com/events/onyx-24/",
+      "image": "https://eaglela.com/wp-content/uploads/Unknown.jpeg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/onyx-24/",
+        "quote": "alt=\"Onyx Kinky go go studs\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "A Friday one-off outside the 2nd-Sunday ONYX series; generic poster, no time published. Grid row: href=\"https://eaglela.com/events/onyx-24/?occurrence=2026-10-23\" (https://eaglela.com/wp-admin/admin-ajax.php)."
+    },
+    {
+      "id": "avatar-butt-painting-2026-10-30",
+      "kind": "single",
+      "title": "AVATAR BUTT PAINTING",
+      "startDate": "2026-10-30",
+      "startTime": null,
+      "endTime": null,
+      "description": null,
+      "website": "https://eaglela.com/events/avatar-butt-painting/",
+      "image": "https://eaglela.com/wp-content/uploads/CHECK-BACK-art.jpg-1.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/avatar-butt-painting/",
+        "quote": "alt=\"Check back later for more details on this event\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Stand-in poster (\"CHECK BACK FOR MORE DETAILS!\") — the site publishes title and date only; no time, no description. Grid row: href=\"https://eaglela.com/events/avatar-butt-painting/?occurrence=2026-10-30\" (https://eaglela.com/wp-admin/admin-ajax.php)."
+    },
+    {
+      "id": "eagle-la-halloween-party-2026-10-31",
+      "kind": "single",
+      "title": "EAGLE LA HALLOWEEN PARTY",
+      "startDate": "2026-10-31",
+      "startTime": null,
+      "endTime": null,
+      "description": null,
+      "website": "https://eaglela.com/events/eagle-la-halloween-party/",
+      "image": "https://eaglela.com/wp-content/uploads/CHECK-BACK-art.jpg-1.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/eagle-la-halloween-party/",
+        "quote": "alt=\"Check back later for more details on this event\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Stand-in poster (\"CHECK BACK FOR MORE DETAILS!\") — the site publishes title and date only; no time, no description. Stand-in check-back poster. Run 20260909-072307 reached this page and bear-dropped it (\"no bear-specific language\") — extraction was correct. Grid row: href=\"https://eaglela.com/events/eagle-la-halloween-party/?occurrence=2026-10-31\" (https://eaglela.com/wp-admin/admin-ajax.php)."
+    },
+    {
+      "id": "stynk-2026-11-07",
+      "kind": "single",
+      "title": "STYNK",
+      "startDate": "2026-11-07",
+      "startTime": null,
+      "endTime": null,
+      "description": null,
+      "website": "https://eaglela.com/events/stynk-26/",
+      "image": "https://eaglela.com/wp-content/uploads/CHECK-BACK-art.jpg-1.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/stynk-26/",
+        "quote": "alt=\"Check back later for more details on this event\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Stand-in poster (\"CHECK BACK FOR MORE DETAILS!\") — the site publishes title and date only; no time, no description. Stand-in check-back poster. The Sep 5 STYNK (stynk-25) is a separate past post. Grid row: href=\"https://eaglela.com/events/stynk-26/?occurrence=2026-11-07\" (https://eaglela.com/wp-admin/admin-ajax.php)."
+    },
+    {
+      "id": "regiment-of-black-and-tans-annual-firehouse-chili-cookoff-2026-11-15",
+      "kind": "single",
+      "title": "REGIMENT OF BLACK AND TANS ANNUAL FIREHOUSE CHILI COOKOFF",
+      "startDate": "2026-11-15",
+      "startTime": "15:00",
+      "endTime": null,
+      "cover": "$8",
+      "description": "The Regiment of the Black and Tans present the 20th Annual LA Firehouse Chili Cook Off — Sunday Nov 15, 3pm. $8 cover includes chili tasting (flyer text)",
+      "website": "https://eaglela.com/events/regiment-of-black-and-tans-annual-firehouse-chili-cookoff/",
+      "image": "https://eaglela.com/wp-content/uploads/Chili-Cook-Off-poster-2026-web-1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/regiment-of-black-and-tans-annual-firehouse-chili-cookoff/",
+        "quote": "alt=\"Chili Cook off\nNov 15 3pm $8\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Grid row: href=\"https://eaglela.com/events/regiment-of-black-and-tans-annual-firehouse-chili-cookoff/?occurrence=2026-11-15\" (https://eaglela.com/wp-admin/admin-ajax.php)."
+    },
+    {
+      "id": "calf-bb-event-2026-11-20",
+      "kind": "single",
+      "title": "CALF B&B EVENT",
+      "startDate": "2026-11-20",
+      "startTime": null,
+      "endTime": null,
+      "description": null,
+      "website": "https://eaglela.com/events/calf-bb-event/",
+      "image": "https://eaglela.com/wp-content/uploads/CHECK-BACK-art.jpg-1.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/calf-bb-event/",
+        "quote": "<h1 class=\"mec-single-title\">CALF B&#038;B EVENT</h1>"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Stand-in poster (\"CHECK BACK FOR MORE DETAILS!\") — the site publishes title and date only; no time, no description. Grid row: href=\"https://eaglela.com/events/calf-bb-event/?occurrence=2026-11-20\" (https://eaglela.com/wp-admin/admin-ajax.php)."
+    },
+    {
+      "id": "hell-bent-2026-11-21",
+      "kind": "single",
+      "title": "HELL BENT",
+      "startDate": "2026-11-21",
+      "startTime": null,
+      "endTime": null,
+      "description": null,
+      "website": "https://eaglela.com/events/hell-bent-4/",
+      "image": "https://eaglela.com/wp-content/uploads/CHECK-BACK-art.jpg-1.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/hell-bent-4/",
+        "quote": "alt=\"Check back later for more details on this event\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Stand-in poster (\"CHECK BACK FOR MORE DETAILS!\") — the site publishes title and date only; no time, no description. Grid row: href=\"https://eaglela.com/events/hell-bent-4/?occurrence=2026-11-21\" (https://eaglela.com/wp-admin/admin-ajax.php)."
+    },
+    {
+      "id": "satyrs-poker-run-2026-11-22",
+      "kind": "single",
+      "title": "SATYRS POKER RUN",
+      "startDate": "2026-11-22",
+      "startTime": null,
+      "endTime": null,
+      "description": null,
+      "website": "https://eaglela.com/events/satyrs-poker-run/",
+      "image": "https://eaglela.com/wp-content/uploads/CHECK-BACK-art.jpg-1.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/satyrs-poker-run/",
+        "quote": "alt=\"Check back later for more details on this event\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Stand-in poster (\"CHECK BACK FOR MORE DETAILS!\") — the site publishes title and date only; no time, no description. Grid row: href=\"https://eaglela.com/events/satyrs-poker-run/?occurrence=2026-11-22\" (https://eaglela.com/wp-admin/admin-ajax.php)."
+    },
+    {
+      "id": "thanksgiving-eve-beer-bust-2026-11-25",
+      "kind": "single",
+      "title": "THANKSGIVING EVE BEER BUST",
+      "startDate": "2026-11-25",
+      "startTime": null,
+      "endTime": null,
+      "description": null,
+      "website": "https://eaglela.com/events/thanksgiving-eve-beer-bust-2/",
+      "image": "https://eaglela.com/wp-content/uploads/CHECK-BACK-art.jpg-1.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/thanksgiving-eve-beer-bust-2/",
+        "quote": "alt=\"Check back later for more details on this event\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Stand-in poster (\"CHECK BACK FOR MORE DETAILS!\") — the site publishes title and date only; no time, no description. Grid row: href=\"https://eaglela.com/events/thanksgiving-eve-beer-bust-2/?occurrence=2026-11-25\" (https://eaglela.com/wp-admin/admin-ajax.php)."
+    },
+    {
+      "id": "happy-thanksgiving-bar-opens-at-6pm-2026-11-26",
+      "kind": "single",
+      "title": "HAPPY THANKSGIVING – BAR OPENS AT 6PM",
+      "startDate": "2026-11-26",
+      "startTime": "18:00",
+      "endTime": null,
+      "description": null,
+      "website": "https://eaglela.com/events/happy-thanksgiving-bar-opens-at-6pm-2/",
+      "image": "https://eaglela.com/wp-content/uploads/CHECK-BACK-art.jpg-1.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/happy-thanksgiving-bar-opens-at-6pm-2/",
+        "quote": "<h1 class=\"mec-single-title\">HAPPY THANKSGIVING – BAR OPENS AT 6PM</h1>"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Stand-in poster (\"CHECK BACK FOR MORE DETAILS!\") — the site publishes title and date only; no time, no description. Stand-in check-back poster. The only time on the site is in the title (6PM); the page's MEC meta says \"All Day\" — 18:00 is taken from the title. Same night as the regular B BAR Thursday occurrence. Grid row: href=\"https://eaglela.com/events/happy-thanksgiving-bar-opens-at-6pm-2/?occurrence=2026-11-26\" (https://eaglela.com/wp-admin/admin-ajax.php)."
+    },
+    {
+      "id": "lost-puppy-2026-11-27",
+      "kind": "single",
+      "title": "LOST PUPPY",
+      "startDate": "2026-11-27",
+      "startTime": null,
+      "endTime": null,
+      "description": null,
+      "website": "https://eaglela.com/events/lost-puppy-20/",
+      "image": "https://eaglela.com/wp-content/uploads/CHECK-BACK-art.jpg-1.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/lost-puppy-20/",
+        "quote": "alt=\"Check back later for more details on this event\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Stand-in poster (\"CHECK BACK FOR MORE DETAILS!\") — the site publishes title and date only; no time, no description. Stand-in check-back poster (unlike lost-puppy-19, which carries the generic LOST PUPPY poster). Grid row: href=\"https://eaglela.com/events/lost-puppy-20/?occurrence=2026-11-27\" (https://eaglela.com/wp-admin/admin-ajax.php)."
+    },
+    {
+      "id": "bears-la-mac-and-chees-cook-off-2026-11-29",
+      "kind": "single",
+      "title": "BEARS LA MAC AND CHEESE COOK OFF",
+      "startDate": "2026-11-29",
+      "startTime": null,
+      "endTime": null,
+      "description": null,
+      "website": "https://eaglela.com/events/bears-la-mac-and-chees-cook-off/",
+      "image": "https://eaglela.com/wp-content/uploads/CHECK-BACK-art.jpg-1.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/bears-la-mac-and-chees-cook-off/",
+        "quote": "alt=\"Check back later for more details on this event\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Stand-in poster (\"CHECK BACK FOR MORE DETAILS!\") — the site publishes title and date only; no time, no description. Slug misspells \"chees\"; title is BEARS LA MAC AND CHEESE COOK OFF. Grid row: href=\"https://eaglela.com/events/bears-la-mac-and-chees-cook-off/?occurrence=2026-11-29\" (https://eaglela.com/wp-admin/admin-ajax.php)."
+    },
+    {
+      "id": "eagle-la-annual-toy-drive-and-regiment-of-black-and-tans-53rd-toast-to-the-season-2026-12-05",
+      "kind": "single",
+      "title": "EAGLE LA ANNUAL TOY DRIVE AND REGIMENT OF BLACK AND TANS 53rd TOAST TO THE SEASON",
+      "startDate": "2026-12-05",
+      "startTime": null,
+      "endTime": null,
+      "description": null,
+      "website": "https://eaglela.com/events/eagle-la-annual-toy-drive-and-regiment-of-black-and-tans-53rd-toast-to-the-season/",
+      "image": "https://eaglela.com/wp-content/uploads/CHECK-BACK-art.jpg-1.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/eagle-la-annual-toy-drive-and-regiment-of-black-and-tans-53rd-toast-to-the-season/",
+        "quote": "alt=\"Check back later for more details on this event\""
+      },
+      "expect": {
+        "extracted": "unknown",
+        "kept": null,
+        "note": "December is reachable from /calendar/ only through the MEC month-feed lookahead (resolveCalendarLookaheadMonths: default 2 months from the active month, max 3), and /events/ shows only the next 12 occurrences. With the default lookahead, a September run does not fetch the December grid."
+      },
+      "bearVerdict": null,
+      "note": "Stand-in poster (\"CHECK BACK FOR MORE DETAILS!\") — the site publishes title and date only; no time, no description. Grid row: href=\"https://eaglela.com/events/eagle-la-annual-toy-drive-and-regiment-of-black-and-tans-53rd-toast-to-the-season/?occurrence=2026-12-05\" (https://eaglela.com/wp-admin/admin-ajax.php)."
+    },
+    {
+      "id": "bears-la-naughy-bear-2026-12-11",
+      "kind": "single",
+      "title": "BEARS LA NAUGHY BEAR",
+      "startDate": "2026-12-11",
+      "startTime": null,
+      "endTime": null,
+      "description": null,
+      "website": "https://eaglela.com/events/bears-la-naughy-bear/",
+      "image": "https://eaglela.com/wp-content/uploads/CHECK-BACK-art.jpg-1.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/bears-la-naughy-bear/",
+        "quote": "alt=\"Check back later for more details on this event\""
+      },
+      "expect": {
+        "extracted": "unknown",
+        "kept": null,
+        "note": "December is reachable from /calendar/ only through the MEC month-feed lookahead (resolveCalendarLookaheadMonths: default 2 months from the active month, max 3), and /events/ shows only the next 12 occurrences. With the default lookahead, a September run does not fetch the December grid."
+      },
+      "bearVerdict": null,
+      "note": "Stand-in poster (\"CHECK BACK FOR MORE DETAILS!\") — the site publishes title and date only; no time, no description. Title is spelled NAUGHY on the site (sic). Grid row: href=\"https://eaglela.com/events/bears-la-naughy-bear/?occurrence=2026-12-11\" (https://eaglela.com/wp-admin/admin-ajax.php)."
+    },
+    {
+      "id": "payasos-nut-cracker-2026-12-18",
+      "kind": "single",
+      "title": "PAYASOS NUT CRACKER",
+      "startDate": "2026-12-18",
+      "startTime": null,
+      "endTime": null,
+      "description": null,
+      "website": "https://eaglela.com/events/payasos-nut-cracker-3/",
+      "image": "https://eaglela.com/wp-content/uploads/CHECK-BACK-art.jpg-1.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/payasos-nut-cracker-3/",
+        "quote": "alt=\"Check back later for more details on this event\""
+      },
+      "expect": {
+        "extracted": "unknown",
+        "kept": null,
+        "note": "December is reachable from /calendar/ only through the MEC month-feed lookahead (resolveCalendarLookaheadMonths: default 2 months from the active month, max 3), and /events/ shows only the next 12 occurrences. With the default lookahead, a September run does not fetch the December grid."
+      },
+      "bearVerdict": null,
+      "note": "Stand-in poster (\"CHECK BACK FOR MORE DETAILS!\") — the site publishes title and date only; no time, no description. Grid row: href=\"https://eaglela.com/events/payasos-nut-cracker-3/?occurrence=2026-12-18\" (https://eaglela.com/wp-admin/admin-ajax.php)."
+    },
+    {
+      "id": "avatar-deck-the-balls-2026-12-19",
+      "kind": "single",
+      "title": "AVATAR DECK THE BALLS",
+      "startDate": "2026-12-19",
+      "startTime": null,
+      "endTime": null,
+      "description": null,
+      "website": "https://eaglela.com/events/avatar-deck-the-balls-3/",
+      "image": "https://eaglela.com/wp-content/uploads/CHECK-BACK-art.jpg-1.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/avatar-deck-the-balls-3/",
+        "quote": "alt=\"Check back later for more details on this event\""
+      },
+      "expect": {
+        "extracted": "unknown",
+        "kept": null,
+        "note": "December is reachable from /calendar/ only through the MEC month-feed lookahead (resolveCalendarLookaheadMonths: default 2 months from the active month, max 3), and /events/ shows only the next 12 occurrences. With the default lookahead, a September run does not fetch the December grid."
+      },
+      "bearVerdict": null,
+      "note": "Stand-in poster (\"CHECK BACK FOR MORE DETAILS!\") — the site publishes title and date only; no time, no description. Grid row: href=\"https://eaglela.com/events/avatar-deck-the-balls-3/?occurrence=2026-12-19\" (https://eaglela.com/wp-admin/admin-ajax.php)."
+    },
+    {
+      "id": "happy-holidays-from-the-men-of-eagle-la-bar-opens-at-6pm-2026-12-25",
+      "kind": "single",
+      "title": "HAPPY HOLIDAYS FROM THE MEN OF EAGLE LA – BAR OPENS AT 6PM",
+      "startDate": "2026-12-25",
+      "startTime": "18:00",
+      "endTime": null,
+      "description": null,
+      "website": "https://eaglela.com/events/happy-holidays-from-the-men-of-eagle-la-bar-opens-at-6pm/",
+      "image": "https://eaglela.com/wp-content/uploads/CHECK-BACK-art.jpg-1.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/happy-holidays-from-the-men-of-eagle-la-bar-opens-at-6pm/",
+        "quote": "<h1 class=\"mec-single-title\">HAPPY HOLIDAYS FROM THE MEN OF EAGLE LA – BAR OPENS AT 6PM</h1>"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "kept": null,
+        "note": "December is reachable from /calendar/ only through the MEC month-feed lookahead (resolveCalendarLookaheadMonths: default 2 months from the active month, max 3), and /events/ shows only the next 12 occurrences. With the default lookahead, a September run does not fetch the December grid."
+      },
+      "bearVerdict": null,
+      "note": "Stand-in poster (\"CHECK BACK FOR MORE DETAILS!\") — the site publishes title and date only; no time, no description. Stand-in check-back poster; 18:00 is taken from the title. Same night as the one-off ONYX (onyx-25). Grid row: href=\"https://eaglela.com/events/happy-holidays-from-the-men-of-eagle-la-bar-opens-at-6pm/?occurrence=2026-12-25\" (https://eaglela.com/wp-admin/admin-ajax.php)."
+    },
+    {
+      "id": "onyx-2026-12-25",
+      "kind": "single",
+      "title": "ONYX",
+      "startDate": "2026-12-25",
+      "startTime": null,
+      "endTime": null,
+      "description": "Men of ONYX SoCal / Southwest present ONYX — kinky go-go studs & BDSM demos! (generic flyer text)",
+      "website": "https://eaglela.com/events/onyx-25/",
+      "image": "https://eaglela.com/wp-content/uploads/Unknown.jpeg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/onyx-25/",
+        "quote": "alt=\"Onyx Kinky go go studs\""
+      },
+      "expect": {
+        "extracted": "unknown",
+        "kept": null,
+        "note": "December is reachable from /calendar/ only through the MEC month-feed lookahead (resolveCalendarLookaheadMonths: default 2 months from the active month, max 3), and /events/ shows only the next 12 occurrences. With the default lookahead, a September run does not fetch the December grid."
+      },
+      "bearVerdict": null,
+      "note": "Christmas-night one-off outside the 2nd-Sunday ONYX series; generic poster, no time published. Grid row: href=\"https://eaglela.com/events/onyx-25/?occurrence=2026-12-25\" (https://eaglela.com/wp-admin/admin-ajax.php)."
+    },
+    {
+      "id": "eagle-la-new-years-bash-2026-12-31",
+      "kind": "single",
+      "title": "EAGLE LA NEW YEARS BASH!!",
+      "startDate": "2026-12-31",
+      "startTime": null,
+      "endTime": null,
+      "description": null,
+      "website": "https://eaglela.com/events/eagle-la-new-years-bash-2/",
+      "image": "https://eaglela.com/wp-content/uploads/CHECK-BACK-art.jpg-1.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/eagle-la-new-years-bash-2/",
+        "quote": "alt=\"Check back later for more details on this event\""
+      },
+      "expect": {
+        "extracted": "unknown",
+        "kept": null,
+        "note": "December is reachable from /calendar/ only through the MEC month-feed lookahead (resolveCalendarLookaheadMonths: default 2 months from the active month, max 3), and /events/ shows only the next 12 occurrences. With the default lookahead, a September run does not fetch the December grid."
+      },
+      "bearVerdict": null,
+      "note": "Stand-in poster (\"CHECK BACK FOR MORE DETAILS!\") — the site publishes title and date only; no time, no description. Stand-in check-back poster. Falls on a Thursday; the grid does NOT list a B BAR occurrence that night. Grid row: href=\"https://eaglela.com/events/eagle-la-new-years-bash-2/?occurrence=2026-12-31\" (https://eaglela.com/wp-admin/admin-ajax.php)."
+    },
+    {
+      "id": "outlaw-2027-01-02",
+      "kind": "single",
+      "title": "OUTLAW",
+      "startDate": "2027-01-02",
+      "startTime": null,
+      "endTime": null,
+      "description": null,
+      "website": "https://eaglela.com/events/outlaw-12/",
+      "image": "https://eaglela.com/wp-content/uploads/CHECK-BACK-art.jpg-1.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/",
+        "quote": "href=\"https://eaglela.com/events/outlaw-12/?occurrence=2027-01-02\""
+      },
+      "expect": {
+        "extracted": "unknown",
+        "kept": null,
+        "note": "Listed only by the /events/ list load-more (admin-ajax mec_list_load_more), which the scraper does not replay, and by month grids the scraper would request only from an active month of Oct 2026 or later — and every 2027 month-grid request returned HTTP 500 at recon. Not a crawl miss if absent from a September run."
+      },
+      "bearVerdict": null,
+      "note": "Stand-in poster (\"CHECK BACK FOR MORE DETAILS!\") — the site publishes title and date only; no time, no description. Event page: alt=\"Check back later for more details on this event\" (https://eaglela.com/events/outlaw-12/); MEC Date meta \"Jan 02 2027\"."
+    },
+    {
+      "id": "eagle-la-mr-leather-2027-meet-and-greet-2027-01-08",
+      "kind": "single",
+      "title": "EAGLE LA MR LEATHER 2027 MEET AND GREET",
+      "startDate": "2027-01-08",
+      "startTime": null,
+      "endTime": null,
+      "description": null,
+      "website": "https://eaglela.com/events/eagle-la-mr-leather-2027-meet-and-greet/",
+      "image": "https://eaglela.com/wp-content/uploads/CHECK-BACK-art.jpg-1.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/",
+        "quote": "href=\"https://eaglela.com/events/eagle-la-mr-leather-2027-meet-and-greet/?occurrence=2027-01-08\""
+      },
+      "expect": {
+        "extracted": "unknown",
+        "kept": null,
+        "note": "Listed only by the /events/ list load-more (admin-ajax mec_list_load_more), which the scraper does not replay, and by month grids the scraper would request only from an active month of Oct 2026 or later — and every 2027 month-grid request returned HTTP 500 at recon. Not a crawl miss if absent from a September run."
+      },
+      "bearVerdict": null,
+      "note": "Stand-in poster (\"CHECK BACK FOR MORE DETAILS!\") — the site publishes title and date only; no time, no description. Event page: alt=\"Check back later for more details on this event\" (https://eaglela.com/events/eagle-la-mr-leather-2027-meet-and-greet/); MEC Date meta \"Jan 08 2027\"."
+    },
+    {
+      "id": "agle-la-mr-leather-2027-contest-2027-01-09",
+      "kind": "single",
+      "title": "EAGLE LA MR LEATHER 2027 CONTEST",
+      "startDate": "2027-01-09",
+      "startTime": null,
+      "endTime": null,
+      "description": null,
+      "website": "https://eaglela.com/events/agle-la-mr-leather-2027-contest/",
+      "image": "https://eaglela.com/wp-content/uploads/CHECK-BACK-art.jpg-1.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/",
+        "quote": "href=\"https://eaglela.com/events/agle-la-mr-leather-2027-contest/?occurrence=2027-01-09\""
+      },
+      "expect": {
+        "extracted": "unknown",
+        "kept": null,
+        "note": "Listed only by the /events/ list load-more (admin-ajax mec_list_load_more), which the scraper does not replay, and by month grids the scraper would request only from an active month of Oct 2026 or later — and every 2027 month-grid request returned HTTP 500 at recon. Not a crawl miss if absent from a September run."
+      },
+      "bearVerdict": null,
+      "note": "Slug is misspelled \"agle-la-…\" on the site. Stand-in poster (\"CHECK BACK FOR MORE DETAILS!\") — the site publishes title and date only; no time, no description. Event page: alt=\"Check back later for more details on this event\" (https://eaglela.com/events/agle-la-mr-leather-2027-contest/); MEC Date meta \"Jan 09 2027\"."
+    },
+    {
+      "id": "mr-la-leather-bear-2027-meet-and-greet-2027-01-14",
+      "kind": "single",
+      "title": "MR LA LEATHER BEAR 2027 MEET AND GREET",
+      "startDate": "2027-01-14",
+      "startTime": null,
+      "endTime": null,
+      "description": null,
+      "website": "https://eaglela.com/events/mr-la-leather-bear-2027-meet-and-greet/",
+      "image": "https://eaglela.com/wp-content/uploads/CHECK-BACK-art.jpg-1.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/",
+        "quote": "href=\"https://eaglela.com/events/mr-la-leather-bear-2027-meet-and-greet/?occurrence=2027-01-14\""
+      },
+      "expect": {
+        "extracted": "unknown",
+        "kept": null,
+        "note": "Listed only by the /events/ list load-more (admin-ajax mec_list_load_more), which the scraper does not replay, and by month grids the scraper would request only from an active month of Oct 2026 or later — and every 2027 month-grid request returned HTTP 500 at recon. Not a crawl miss if absent from a September run."
+      },
+      "bearVerdict": null,
+      "note": "Stand-in poster (\"CHECK BACK FOR MORE DETAILS!\") — the site publishes title and date only; no time, no description. Event page: alt=\"Check back later for more details on this event\" (https://eaglela.com/events/mr-la-leather-bear-2027-meet-and-greet/); MEC Date meta \"Jan 14 2027\"."
+    },
+    {
+      "id": "mr-la-leather-bear-2027-contest-2027-01-16",
+      "kind": "single",
+      "title": "MR LA LEATHER BEAR 2027 CONTEST",
+      "startDate": "2027-01-16",
+      "startTime": null,
+      "endTime": null,
+      "description": null,
+      "website": "https://eaglela.com/events/mr-la-leather-bear-2027-contest/",
+      "image": "https://eaglela.com/wp-content/uploads/CHECK-BACK-art.jpg-1.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/",
+        "quote": "href=\"https://eaglela.com/events/mr-la-leather-bear-2027-contest/?occurrence=2027-01-16\""
+      },
+      "expect": {
+        "extracted": "unknown",
+        "kept": null,
+        "note": "Listed only by the /events/ list load-more (admin-ajax mec_list_load_more), which the scraper does not replay, and by month grids the scraper would request only from an active month of Oct 2026 or later — and every 2027 month-grid request returned HTTP 500 at recon. Not a crawl miss if absent from a September run."
+      },
+      "bearVerdict": null,
+      "note": "Stand-in poster (\"CHECK BACK FOR MORE DETAILS!\") — the site publishes title and date only; no time, no description. Event page: alt=\"Check back later for more details on this event\" (https://eaglela.com/events/mr-la-leather-bear-2027-contest/); MEC Date meta \"Jan 16 2027\"."
+    },
+    {
+      "id": "mlk-beer-bust-2027-01-17",
+      "kind": "single",
+      "title": "MLK BEER BUST",
+      "startDate": "2027-01-17",
+      "startTime": null,
+      "endTime": null,
+      "description": null,
+      "website": "https://eaglela.com/events/mlk-beer-bust-2/",
+      "image": "https://eaglela.com/wp-content/uploads/CHECK-BACK-art.jpg-1.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/",
+        "quote": "href=\"https://eaglela.com/events/mlk-beer-bust-2/?occurrence=2027-01-17\""
+      },
+      "expect": {
+        "extracted": "unknown",
+        "kept": null,
+        "note": "Listed only by the /events/ list load-more (admin-ajax mec_list_load_more), which the scraper does not replay, and by month grids the scraper would request only from an active month of Oct 2026 or later — and every 2027 month-grid request returned HTTP 500 at recon. Not a crawl miss if absent from a September run."
+      },
+      "bearVerdict": null,
+      "note": "Stand-in poster (\"CHECK BACK FOR MORE DETAILS!\") — the site publishes title and date only; no time, no description. Event page: alt=\"Check back later for more details on this event\" (https://eaglela.com/events/mlk-beer-bust-2/); MEC Date meta \"Jan 17 2027\"."
+    },
+    {
+      "id": "lost-puppy-2027-01-22",
+      "kind": "single",
+      "title": "LOST PUPPY",
+      "startDate": "2027-01-22",
+      "startTime": null,
+      "endTime": null,
+      "description": "Gabriel Green x Eagle LA present LOST PUPPY — an event for puppies, handlers, boys and daddies looking to be found! (generic flyer text)",
+      "website": "https://eaglela.com/events/lost-puppy-21/",
+      "image": "https://eaglela.com/wp-content/uploads/Lost-Puppy-GENERIC-Large.jpeg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/",
+        "quote": "href=\"https://eaglela.com/events/lost-puppy-21/?occurrence=2027-01-22\""
+      },
+      "expect": {
+        "extracted": "unknown",
+        "kept": null,
+        "note": "Listed only by the /events/ list load-more (admin-ajax mec_list_load_more), which the scraper does not replay, and by month grids the scraper would request only from an active month of Oct 2026 or later — and every 2027 month-grid request returned HTTP 500 at recon. Not a crawl miss if absent from a September run."
+      },
+      "bearVerdict": null,
+      "note": "Event page: alt=\"LOST PUPPY Details coming soon\" (https://eaglela.com/events/lost-puppy-21/); MEC Date meta \"Jan 22 2027\"."
+    },
+    {
+      "id": "eagle-la-me-leather-2027-fundraiser-2027-01-29",
+      "kind": "single",
+      "title": "EAGLE LA ME LEATHER 2027 FUNDRAISER",
+      "startDate": "2027-01-29",
+      "startTime": null,
+      "endTime": null,
+      "description": null,
+      "website": "https://eaglela.com/events/eagle-la-me-leather-2027-fundraiser/",
+      "image": "https://eaglela.com/wp-content/uploads/CHECK-BACK-art.jpg-1.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/",
+        "quote": "href=\"https://eaglela.com/events/eagle-la-me-leather-2027-fundraiser/?occurrence=2027-01-29\""
+      },
+      "expect": {
+        "extracted": "unknown",
+        "kept": null,
+        "note": "Listed only by the /events/ list load-more (admin-ajax mec_list_load_more), which the scraper does not replay, and by month grids the scraper would request only from an active month of Oct 2026 or later — and every 2027 month-grid request returned HTTP 500 at recon. Not a crawl miss if absent from a September run."
+      },
+      "bearVerdict": null,
+      "note": "Stand-in poster (\"CHECK BACK FOR MORE DETAILS!\") — the site publishes title and date only; no time, no description. Event page: alt=\"Check back later for more details on this event\" (https://eaglela.com/events/eagle-la-me-leather-2027-fundraiser/); MEC Date meta \"Jan 29 2027\"."
+    },
+    {
+      "id": "cruise-night-2027-02-06",
+      "kind": "single",
+      "title": "CRUISE NIGHT",
+      "startDate": "2027-02-06",
+      "startTime": "21:00",
+      "endTime": null,
+      "description": "Cruise Night — no cover, 9pm",
+      "website": "https://eaglela.com/events/cruise-night-9/",
+      "image": "https://eaglela.com/wp-content/uploads/CRUISE-NIGHT-2021-poster-web-1-1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/events/",
+        "quote": "href=\"https://eaglela.com/events/cruise-night-9/?occurrence=2027-02-06\""
+      },
+      "expect": {
+        "extracted": "unknown",
+        "kept": null,
+        "note": "Listed only by the /events/ list load-more (admin-ajax mec_list_load_more), which the scraper does not replay, and by month grids the scraper would request only from an active month of Oct 2026 or later — and every 2027 month-grid request returned HTTP 500 at recon. Not a crawl miss if absent from a September run."
+      },
+      "bearVerdict": null,
+      "note": "Actually a NEW series that begins after the occurrence window: the list door shows 23 dated occurrences Feb 6 2027 – Aug 27 2027 (1st and 3rd Saturdays plus a late-month Friday, e.g. Feb 6, Feb 20, Feb 26, Mar 6, Mar 20, Mar 26 …). It has no occurrence inside coverage.occurrenceWindow and the site states no cadence in words, so it is recorded as a single on its first date; its rule is left for the next recon. Event page: alt=\"Cruise Night No Cover 9pm\" (https://eaglela.com/events/cruise-night-9/); MEC Date meta \"Feb 06 2027\".",
+      "cover": "No Cover"
+    }
+  ],
+  "traps": [
+    {
+      "id": "past-cubscout-sep-4",
+      "kind": "past-event",
+      "label": "CUBSCOUT — Sep 04 2026 (Expired!)",
+      "why": "A dated one-off post for the Sep 4 CubScout, already past at recon; its page shows \"Expired!\". It still sits in the September grid and the archive's past rows. The global config keeps past events (scraper-input.js config.allowPastEvents: true), so extracting it is correct behaviour — it is just not an upcoming event and is not counted in publishedEventCount.",
+      "evidence": {
+        "url": "https://eaglela.com/events/cubscout-52/",
+        "quote": "alt=\"CUBSCOUT\nSept 4 9pm $8\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "past-stynk-sep-5",
+      "kind": "past-event",
+      "label": "STYNK — Sep 05 2026 (Expired!)",
+      "why": "Past one-off (pit contest, doors 9pm, $8) listed in the September grid; page shows \"Expired!\". Kept only because allowPastEvents is on globally. The next STYNK (stynk-26, Nov 7) is a separate post and is documented as an event.",
+      "evidence": {
+        "url": "https://eaglela.com/events/stynk-25/",
+        "quote": "alt=\"STYNK Sept 5 9pm $8\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "past-labor-day-beer-bust-sep-7",
+      "kind": "past-event",
+      "label": "LABOR DAY BEER BUST – BAR OPENS AT 2PM — Sep 07 2026 (Expired!)",
+      "why": "Past holiday one-off listed in the September grid; page shows \"Expired!\". Same allowPastEvents reasoning as the other September past rows. Twelve past occurrences sit in the Sep grid before the recon date (3 singles + 9 series instances).",
+      "evidence": {
+        "url": "https://eaglela.com/events/labor-day-beer-bust-bar-opens-at-2pm-2/",
+        "quote": "alt=\"Labor Day Beer Bust\nSept 7 2pm\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "b-bar-flyer-tagline-as-title",
+      "kind": "duplicate-listing",
+      "label": "\"Bears Cubs Otters and Other Furry Critters!\" (B BAR poster tagline)",
+      "why": "The B BAR poster carries the tagline \"Bears Cubs Otters and Other Furry Critters!\" and a blurb (10 handle draft special, hosted by Pup Don, bare chest contest $100 cash prize). Run 20260909-072307 emitted the Thursday series under that tagline as its title (startDate 2026-09-10, FREQ=WEEKLY;BYDAY=TH, image IG_B-Bar-poster-GENERIC-2026.jpg) instead of the site's h4/h1 title \"B BAR\". It is the same event as series b-bar, not an additional one; an extra record under this title is a duplicate.",
+      "evidence": {
+        "url": "https://eaglela.com/calendar/",
+        "quote": "alt=\"B BAR Every Thursday 10 Draft Special Bare Chest Contest\"",
+        "imageUrl": "https://eaglela.com/wp-content/uploads/B-Bar-poster-GENERIC-2026-web-1.jpg"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      },
+      "seenInRun": "20260909-072307"
+    },
+    {
+      "id": "cruise-la-victory-party-flyer-only",
+      "kind": "announcement",
+      "label": "Cruise LA 2027 \"Victory Party 11pm-2am\" (Oct 17, flyer only)",
+      "why": "The shared Cruise LA Leather & Bootblack 2027 poster lists three blocks — Oct 16 Meet & Greet, Oct 17 Contest, Oct 17 Victory Party following the contest — but the site has posts for only the first two. The victory party is flyer text, not a published listing; an OCR path that mints a third record from it would be inventing an event the site does not list.",
+      "evidence": {
+        "url": "https://eaglela.com/events/cruise-la-contest-2/",
+        "quote": "Oct 17: Contest and Victory Party",
+        "imageUrl": "https://eaglela.com/wp-content/uploads/IMG_1968-2-Medium.jpeg"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "movie-mondays-film-titles",
+      "kind": "duplicate-listing",
+      "label": "Party Monster / The Birdcage / Shortbus / But I'm a Cheerleader (Movie Mondays poster)",
+      "why": "One poster carries four film titles, one per Monday. The site publishes them as ONE event, MOVIE MONDAYS, with four ?occurrence= dates. Four film-titled records would be duplicates of the series occurrences, and the films are not events in their own right.",
+      "evidence": {
+        "url": "https://eaglela.com/events/movie-mondays-2/",
+        "quote": "Sep 7 Party Monster Sep 14 Birdcage Sep 21 Shortbus Sep 28",
+        "imageUrl": "https://eaglela.com/wp-content/uploads/MONDAY-MOVIES-poster-SEP-2026-scaled.jpg"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "archive-skin-nav",
+      "kind": "navigation",
+      "label": "\"Yearly Monthly Weekly Daily List\" + \"Select Month … 2034\" (archive toolbar)",
+      "why": "The /events/ archive header is an MEC skin switcher (data-skin yearly/monthly/weekly/daily/list) and a month/year dropdown running 2026–2034. Text, not events. The month grid on /calendar/ has the same navigator (previous_month/current_month/next_month in the AJAX payload).",
+      "evidence": {
+        "url": "https://eaglela.com/events/",
+        "quote": "Yearly Monthly Weekly Daily List"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "archive-page-2-shell",
+      "kind": "soft-404",
+      "label": "/events/page/2/ → 200 \"No event found!\"",
+      "why": "The archive's Load More button links to /events/page/2/ (rel next), but that URL — and /page/3/ … /page/6/ — returns HTTP 200 with the archive shell and zero rows (\"No event found!\"). Real paging happens over admin-ajax mec_list_load_more, 12 rows per call. Crawling the page/N links yields nothing and must not be read as \"the archive is only 12 events\".",
+      "evidence": {
+        "url": "https://eaglela.com/events/page/2/",
+        "quote": "No event found!"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "grid-past-class-on-future-occurrences",
+      "kind": "recurring-blurb",
+      "label": "class=\"mec-past-event\" on future series occurrences in the grid",
+      "why": "Every occurrence link of a recurring event carries mec-past-event in the month grid and archive list — even Dec 2026 Thursdays — because MEC flags the SERIES (whose first date is years back), not the occurrence. Only one-off posts get the plain class. A reader that treats the class as \"this date is past\" would drop every series occurrence; the ?occurrence= date is the truth.",
+      "evidence": {
+        "url": "https://eaglela.com/wp-admin/admin-ajax.php",
+        "quote": "href=\"https://eaglela.com/events/b-bar/?occurrence=2026-12-24\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "seenInRun": null
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "The MEC month feed returns HTTP 500 (\"There has been a critical error on this website.\") for every 2027 month (Jan/Feb/Mar tried) while Sep–Dec 2026 work and the list load-more pages happily into Aug 2027. Site-side PHP fault on grids past Dec 2026? Once the active month is Nov/Dec 2026 the scraper's lookahead will hit it — the degradation is logged-and-continue, so December/January would silently go missing.",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    },
+    {
+      "q": "B BAR (\"Every Thursday\") has no grid occurrence on Thu Dec 31 2026 (EAGLE LA NEW YEARS BASH!! that night) and none on Thu Jan 7 2027 is affected — is Dec 31 an MEC \"not in days\" exclusion or a cancelled night? The site gives no cancellation text.",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    },
+    {
+      "q": "CRUISE LA LEATHER & BOOTBLACK 2027 MEET & GREET (Oct 16) is on Eagle LA's calendar but its flyer says \"@Rough Trade Gear\". Should the bar override stand (as recorded) or does the owner want venue-site listings pinned to the venue?",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    },
+    {
+      "q": "CRUISE NIGHT (from Feb 6 2027) lists 23 dates through Aug 27 2027 on an irregular pattern (1st + 3rd Saturdays plus a 4th/5th Friday). What is the MEC rule? Needs the Feb 2027 grid, which currently 500s.",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    },
+    {
+      "q": "The scraper's /events/ door reads 12 rows and stops (page/2 is an empty shell); the real archive paging is mec_list_load_more. Is replaying it wanted, or is the month-feed lookahead (default 2 months) the intended reach?",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    }
+  ]
+}

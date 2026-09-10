@@ -1,0 +1,3695 @@
+{
+  "schemaVersion": 1,
+  "source": "Dallas Eagle",
+  "slug": "dallas-eagle",
+  "status": "complete",
+  "recon": {
+    "date": "2026-09-10",
+    "method": [
+      "feed",
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://www.thedallaseagle.com/events/"
+    ],
+    "doors": [
+      {
+        "url": "https://www.thedallaseagle.com/events/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 30,
+        "truthFlag": "mecMonthlyView({ id: \"5312\", today: \"20260909\", month_id: \"202609\", next_month: {year: \"2026\", month: \"10\"} })",
+        "note": "Static fetch with a Chrome UA, HTTP 200 (2026-09-10 01:43 UTC = Sep 9 20:43 CDT). Renders the September 2026 MEC month grid (skin 5312) server-side: 30 event cells incl. the expired Sep 8 post and the Oct 1–3 spill-over cells; each cell links a dated event post and carries a tooltip with the time or \"Start from:/End at:\" lines. No list skin, no JSON-LD events. Saved as events-page.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/wp-admin/admin-ajax.php?mec_month_feed=2026-09",
+        "kind": "form-post",
+        "role": "feed",
+        "rowsReturned": 30,
+        "truthFlag": "next_month {\"year\":\"2026\",\"month\":\"10\"}",
+        "note": "POST action=mec_monthly_view_load_month&mec_year=2026&mec_month=09&navigator_click=true&<atts blob byte-for-byte> with X-Requested-With: XMLHttpRequest. JSON {month, events_side, navigator, previous_month, current_month, next_month}. Identical cells to the static page. Saved mec-month-2026-09.json/.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/wp-admin/admin-ajax.php?mec_month_feed=2026-10",
+        "kind": "form-post",
+        "role": "feed",
+        "rowsReturned": 44,
+        "truthFlag": "next_month {\"year\":\"2026\",\"month\":\"11\"}",
+        "note": "Same POST for October: 44 cells = 40 October posts + Sep 27–30 spill-over cells (deduped by date+post id)."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/wp-admin/admin-ajax.php?mec_month_feed=2026-11",
+        "kind": "form-post",
+        "role": "feed",
+        "rowsReturned": 54,
+        "truthFlag": "next_month {\"year\":\"2026\",\"month\":\"12\"}",
+        "note": "Same POST for November: 54 cells = 44 November posts + Dec 1–5 spill-over cells."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/wp-admin/admin-ajax.php?mec_month_feed=2026-12",
+        "kind": "form-post",
+        "role": "feed",
+        "rowsReturned": 43,
+        "truthFlag": "next_month {\"year\":\"2027\",\"month\":\"01\"}",
+        "note": "Same POST for December: 43 cells = 42 December posts + Nov 29 spill-over cell. Navigator still offers January."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/wp-admin/admin-ajax.php?mec_month_feed=2027-01",
+        "kind": "form-post",
+        "role": "feed",
+        "rowsReturned": 6,
+        "truthFlag": "next_month {\"year\":\"2027\",\"month\":\"02\"}",
+        "note": "Same POST for January 2027: HTTP 200, 6 cells and ALL of them are December spill-over (Dec 27 Sweet Tea + Afterglow, Dec 29 Motley Clue Trivia, Dec 30 Underwear Happy Hour + Underwear Night and Contest, Dec 31 Dallas Eagle NYE); zero cells dated 2027-01. Positive end of the published horizon. Saved mec-month-2027-01.json/.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/wp-admin/admin-ajax.php?mec_month_feed=2027-02",
+        "kind": "form-post",
+        "role": "feed",
+        "rowsReturned": 0,
+        "truthFlag": "next_month {\"year\":\"2027\",\"month\":\"03\"}",
+        "note": "February 2027: HTTP 200, a bare day grid with no event cells at all (second empty month). Saved mec-month-2027-02.json/.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/wp-admin/admin-ajax.php?mec_month_feed=2026-08",
+        "kind": "form-post",
+        "role": "feed",
+        "rowsReturned": 0,
+        "truthFlag": "next_month {\"year\":\"2026\",\"month\":\"09\"}",
+        "note": "August 2026 (the month before recon): HTTP 200, no event cells — past months are not kept on the grid, so the Sep 8 Expired cell is the only past listing reachable from the configured page. Saved mec-month-2026-08.json/.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/wp-json/wp/v2/mec-events?per_page=100&page=1",
+        "kind": "rest",
+        "role": "other",
+        "rowsReturned": 100,
+        "truthFlag": "X-WP-Total: 290, X-WP-TotalPages: 3",
+        "note": "WP REST list of mec-events posts — slugs/titles/content only, NO event dates. Pages 1–3 fetched (290 rows). All 153 grid slugs are present; the other 137 posts all have WordPress publish dates in 2024–2025 (old occurrences kept as posts) — no 2026-created post exists outside the Sep–Dec grid, so nothing is published beyond December. Saved rest-mec-events-p1..3.json, rest-slugs.txt, rest-not-in-grid.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/wp-json/wp/v2/mec-events?per_page=100&page=2",
+        "kind": "rest",
+        "role": "other",
+        "rowsReturned": 100,
+        "truthFlag": "X-WP-TotalPages: 3",
+        "note": "Page 2 of the REST cross-check."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/wp-json/wp/v2/mec-events?per_page=100&page=3",
+        "kind": "rest",
+        "role": "other",
+        "rowsReturned": 90,
+        "truthFlag": "X-WP-TotalPages: 3",
+        "note": "Page 3 of the REST cross-check (last page)."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/mec-events-sitemap1.xml",
+        "kind": "xml",
+        "role": "sitemap",
+        "rowsReturned": 232,
+        "truthFlag": null,
+        "note": "Stale: 232 locs, only 4 of the 153 live grid slugs appear; 91 of its slugs are not even in REST any more. sitemap.xml itself needs a browser UA (short UAs get a Mod_Security \"Not Acceptable!\" page). Not usable as a truth door. Saved sitemap-index.xml, mec-events-sitemap1.xml."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-22/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Motley Clue Trivia — Date \"Sep 08 2026\", Time \"8:00 pm - 10:00 pm\", UID ev.26.a500. Saved pages/motley-clue-trivia-22.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-16/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Happy Hour — Date \"Sep 09 2026\", Time \"7:00 pm - 9:00 pm\", UID dle.260909.92fa. Saved pages/underwear-happy-hour-16.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest-21/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Night and Contest — Date \"Sep 09 2026\", Time \"9:00 pm - 2:00 am\", UID ev.26.a502. Saved pages/underwear-night-and-contest-21.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/karaoke-24/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Karaoke — Date \"Sep 10 2026\", Time \"7:00 pm - 10:00 pm\", UID dle.260910.94f6. Saved pages/karaoke-24.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/discipline-corps-bar-night-7/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Discipline Corps Bar Night — Date \"Sep 11 2026\", Time \"9:00 pm - 2:00 am\", UID ev.26.a505. Saved pages/discipline-corps-bar-night-7.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/bear-night-2/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "LatinX Encuerados — Date \"Sep 11 2026\", Time \"10:00 pm - 2:00 am\", UID ev.26.a504. Saved pages/bear-night-2.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/gear-night-11/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Gear Night with DJ Philip Webb — Date \"Sep 12 2026\", Time \"9:00 pm - 2:00 am\", UID ev.26.a510. Saved pages/gear-night-11.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/dirty-pop/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Dirty Pop with DJ Drew G — Date \"Sep 13 2026\", Time \"5:00 pm - 9:00 pm\", UID dle.260913.e410. Saved pages/dirty-pop.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-23/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Motley Clue Trivia — Date \"Sep 15 2026\", Time \"8:00 pm - 10:00 pm\", UID ev.26.a517. Saved pages/motley-clue-trivia-23.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-17/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Happy Hour — Date \"Sep 16 2026\", Time \"7:00 pm - 9:00 pm\", UID dle.260916.88cc. Saved pages/underwear-happy-hour-17.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest-22/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Night and Contest with DJ Philip Webb — Date \"Sep 16 2026\", Time \"9:00 pm - 2:00 am\", UID ev.26.a519. Saved pages/underwear-night-and-contest-22.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/karaoke-25/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Karaoke — Date \"Sep 17 2026\", Time \"7:00 pm - 10:00 pm\", UID dle.260917.3657. Saved pages/karaoke-25.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/drink-draw-and-dine-4/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Drink Draw and Dine — Date \"Sep 18 2026\", Time \"7:00 pm - 9:00 pm\", UID dle.260918.31d1. Saved pages/drink-draw-and-dine-4.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/furball/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Furball — Date \"Sep 18 2026\", Time \"8:00 pm - 2:00 am\", UID dle.260918.1d2c. Saved pages/furball.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/gear-night-19/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Gear Night with DJ Qwest — Date \"Sep 19 2026\", Time \"8:00 pm - 2:00 am\", UID dle.260919.a35a. Saved pages/gear-night-19.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/80s-retro-4/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Rewind — Date \"Sep 20 2026\", Time \"5:00 pm - 9:00 pm\", UID ev.26.a526. Saved pages/80s-retro-4.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-24/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Motley Clue Trivia — Date \"Sep 22 2026\", Time \"8:00 pm - 10:00 pm\", UID ev.26.a528. Saved pages/motley-clue-trivia-24.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-18/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Happy Hour — Date \"Sep 23 2026\", Time \"7:00 pm - 9:00 pm\", UID dle.260923.4838. Saved pages/underwear-happy-hour-18.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest-23/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Night and Contest with DJ Michael Jon — Date \"Sep 23 2026\", Time \"9:00 pm - 2:00 am\", UID ev.26.a530. Saved pages/underwear-night-and-contest-23.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/karaoke-3/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Karaoke — Date \"Sep 24 2026\", Time \"7:00 pm - 10:00 pm\", UID dle.260924.fcc7. Saved pages/karaoke-3.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/frequency-featuring-george-flores-4/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Latino Night — Date \"Sep 24 2026\", Time \"10:00 pm - 1:00 am\", UID dle.260924.7dc6. Saved pages/frequency-featuring-george-flores-4.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/pet-night-2/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Pet Night — Date \"Sep 25 2026\", Time \"9:00 pm - 2:00 am\", UID dle.260925.7241. Saved pages/pet-night-2.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/gear-night-20/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "SHOCK Therapy — Date \"Sep 26 2026\", Time \"10:00 pm - 2:00 am\", UID ev.26.a537. Saved pages/gear-night-20.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/sweet-tea-3/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Sweet Tea — Date \"Sep 27 2026\", Time \"4:00 pm - 9:00 pm\", UID ev.26.a540. Saved pages/sweet-tea-3.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-25/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Motley Clue Trivia — Date \"Sep 29 2026\", Time \"8:00 pm - 10:00 pm\", UID ev.26.a542. Saved pages/motley-clue-trivia-25.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-19/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Happy Hour — Date \"Sep 30 2026\", Time \"7:00 pm - 9:00 pm\", UID dle.260930.1bb6. Saved pages/underwear-happy-hour-19.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/jocktoberfest/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Jocktoberfest! with DJ Drew G — Date \"Sep 30 2026\", Time \"9:00 pm - 2:00 am\", UID ev.26.a544. Saved pages/jocktoberfest.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/karaoke-4/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Karaoke — Date \"Oct 01 2026\", Time \"7:00 pm - 10:00 pm\", UID dle.261001.4f00. Saved pages/karaoke-4.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/femme-3/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Femme — Date \"Oct 01 2026\", Time \"10:00 pm - 2:00 am\", UID dle.261001.0951. Saved pages/femme-3.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/gear-night-22/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Gear Night — Date \"Oct 03 2026\", Time \"10:00 pm - 2:00 am\", UID ev.26.a548. Saved pages/gear-night-22.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/trash-disco-with-dj-blaine-4/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Trash Disco with DJ Apthout — Date \"Oct 04 2026\", Time \"5:00 pm - 10:00 pm\", UID ev.26.a551. Saved pages/trash-disco-with-dj-blaine-4.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/afterglow-3/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Afterglow — Date \"Oct 04 2026\", Time \"10:00 pm - 12:00 am\", UID ev.26.a552. Saved pages/afterglow-3.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-26/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Motley Clue Trivia — Date \"Oct 06 2026\", Time \"8:00 pm - 10:00 pm\", UID ev.26.a553. Saved pages/motley-clue-trivia-26.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-20/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Happy Hour — Date \"Oct 07 2026\", Time \"7:00 pm - 9:00 pm\", UID dle.261007.4889. Saved pages/underwear-happy-hour-20.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest-24/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Night and Contest — Date \"Oct 07 2026\", Time \"9:00 pm - 2:00 am\", UID ev.26.a555. Saved pages/underwear-night-and-contest-24.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/karaoke-28/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Karaoke — Date \"Oct 08 2026\", Time \"7:00 pm - 10:00 pm\", UID ev.26.a556. Saved pages/karaoke-28.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/brewery-bears-happy-hour-7/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Brewery Bears Happy Hour — Date \"Oct 09 2026\", Time \"5:00 pm - 9:00 pm\", UID dle.261009.c33d. Saved pages/brewery-bears-happy-hour-7.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/discipline-corps-bar-night-with-dj-blaine/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Discipline Corps Bar Night with DJ Blaine — Date \"Oct 09 2026\", Time \"9:00 pm - 2:00 am\", UID ev.26.a559. Saved pages/discipline-corps-bar-night-with-dj-blaine.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/bear-night/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Bear Night — Date \"Oct 09 2026\", Time \"10:00 pm - 2:00 am\", UID dle.261009.639d. Saved pages/bear-night.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/dallas-eagle-presents-beef/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Dallas Eagle presents BEEF — Date \"Oct 10 2026\", Time \"9:00 pm - 2:00 am\", UID ev.26.a562. Saved pages/dallas-eagle-presents-beef.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/dirty-pop-2/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Dirty Pop — Date \"Oct 11 2026\", Time \"5:00 pm - 9:00 pm\", UID dle.261011.99b0. Saved pages/dirty-pop-2.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-27/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Motley Clue Trivia — Date \"Oct 13 2026\", Time \"8:00 pm - 10:00 pm\", UID ev.26.a567. Saved pages/motley-clue-trivia-27.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-21/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Happy Hour — Date \"Oct 14 2026\", Time \"7:00 pm - 9:00 pm\", UID dle.261014.87d6. Saved pages/underwear-happy-hour-21.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest-25/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Night and Contest — Date \"Oct 14 2026\", Time \"9:00 pm - 2:00 am\", UID ev.26.a569. Saved pages/underwear-night-and-contest-25.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/karaoke-29/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Karaoke — Date \"Oct 15 2026\", Time \"7:00 pm - 10:00 pm\", UID ev.26.a570. Saved pages/karaoke-29.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/rose-bowl-kickoff-party/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Rose Bowl Kickoff Party — Date \"Oct 15 2026\", Time \"7:00 pm - 11:00 pm\", UID dle.261015.0d11. Saved pages/rose-bowl-kickoff-party.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/throb-6/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Throb — Date \"Oct 15 2026\", Time \"11:00 pm - 2:00 am\", UID ev.26.a557. Saved pages/throb-6.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/drink-draw-and-dine-5/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Drink Draw and Dine — Date \"Oct 16 2026\", Time \"7:00 pm - 9:00 pm\", UID dle.261016.894b. Saved pages/drink-draw-and-dine-5.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/latinx-encuerados-4/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Ignite — Date \"Oct 16 2026\", Time \"10:00 pm - 2:00 am\", UID dle.261016.1d01. Saved pages/latinx-encuerados-4.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/eagle-market-2/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Eagle Market — Date \"Oct 17 2026\", Time \"1:00 pm - 5:00 pm\", UID dle.261017.3f51. Saved pages/eagle-market-2.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/gear-night-12/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Gear Night — Date \"Oct 17 2026\", Time \"10:00 pm - 2:00 am\", UID dle.261017.a9c2. Saved pages/gear-night-12.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/80s-retro-6/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "80s Retro — Date \"Oct 18 2026\", Time \"5:00 pm - 9:00 pm\", UID ev.26.a577. Saved pages/80s-retro-6.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-28/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Motley Clue Trivia — Date \"Oct 20 2026\", Time \"8:00 pm - 10:00 pm\", UID ev.26.a579. Saved pages/motley-clue-trivia-28.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-22/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Happy Hour — Date \"Oct 21 2026\", Time \"7:00 pm - 9:00 pm\", UID dle.261021.5556. Saved pages/underwear-happy-hour-22.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest-26/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Night and Contest — Date \"Oct 21 2026\", Time \"9:00 pm - 2:00 am\", UID ev.26.a581. Saved pages/underwear-night-and-contest-26.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/karaoke-30/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Karaoke — Date \"Oct 22 2026\", Time \"7:00 pm - 10:00 pm\", UID ev.26.a582. Saved pages/karaoke-30.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/pet-night-7/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Pet Night with DJ Boost — Date \"Oct 23 2026\", Time \"9:00 pm - 2:00 am\", UID ev.26.a584. Saved pages/pet-night-7.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/womxns-night-6/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Womxn’s Night — Date \"Oct 23 2026\", Time \"9:00 pm - 12:00 am\", UID ev.26.a585. Saved pages/womxns-night-6.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/fright-night/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Fright Night — Date \"Oct 24 2026\", Time \"9:00 pm - 2:00 am\", UID ev.26.a586. Saved pages/fright-night.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/sweet-tea-4/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Sweet Tea — Date \"Oct 25 2026\", Time \"5:00 pm - 9:00 pm\", UID ev.26.a589. Saved pages/sweet-tea-4.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-3/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Motley Clue Trivia — Date \"Oct 27 2026\", Time \"8:00 pm - 10:00 pm\", UID ev.26.a591. Saved pages/motley-clue-trivia-3.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-23/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Happy Hour — Date \"Oct 28 2026\", Time \"7:00 pm - 9:00 pm\", UID dle.261028.9b6d. Saved pages/underwear-happy-hour-23.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest-27/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Night and Contest — Date \"Oct 28 2026\", Time \"9:00 pm - 2:00 am\", UID ev.26.a593. Saved pages/underwear-night-and-contest-27.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/karaoke-31/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Karaoke — Date \"Oct 29 2026\", Time \"7:00 pm - 10:00 pm\", UID ev.26.a594. Saved pages/karaoke-31.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/frequency-featuring-george-flores-5/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Frequency featuring George Flores — Date \"Oct 29 2026\", Time \"10:00 pm - 1:00 am\", UID dle.261030.8db6. Saved pages/frequency-featuring-george-flores-5.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/freeky-friday/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Freeky Friday — Date \"Oct 30 2026\", Time \"9:00 pm - 2:00 am\", UID ev.26.a595. Saved pages/freeky-friday.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/blacklite-3/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "SHOCK Therapy — Date \"Oct 31 2026\", Time \"8:00 pm - 2:00 am\", UID dle.261031.0245. Saved pages/blacklite-3.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/trash-disco/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Trash Disco — Date \"Nov 01 2026\", Time \"5:00 pm - 10:00 pm\", UID ev.26.a598. Saved pages/trash-disco.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-29/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Motley Clue Trivia — Date \"Nov 03 2026\", Time \"8:00 pm - 10:00 pm\", UID ev.26.a600. Saved pages/motley-clue-trivia-29.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-24/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Happy Hour — Date \"Nov 04 2026\", Time \"7:00 pm - 9:00 pm\", UID dle.261104.355b. Saved pages/underwear-happy-hour-24.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest-28/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Night and Contest — Date \"Nov 04 2026\", Time \"9:00 pm - 2:00 am\", UID ev.26.a602. Saved pages/underwear-night-and-contest-28.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/karaoke-32/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Karaoke — Date \"Nov 05 2026\", Time \"7:00 pm - 10:00 pm\", UID ev.26.a603. Saved pages/karaoke-32.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/femme/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Femme — Date \"Nov 05 2026\", Time \"10:00 pm - 2:00 am\", UID dle.261105.0167. Saved pages/femme.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/brewery-bears-happy-hour/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Brewery Bears Happy Hour — Date \"Nov 06 2026\", Time \"5:00 pm - 9:00 pm\", UID dle.261106.b9f6. Saved pages/brewery-bears-happy-hour.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/swell-meet-and-greet/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "SWPOL Meet and Greet — Date \"Nov 06 2026\", Time \"6:30 pm - 9:00 pm\", UID dle.261106.8510. Saved pages/swell-meet-and-greet.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/locker-room-night/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Locker Room Night — Date \"Nov 06 2026\", Time \"10:00 pm - 2:00 am\", UID ev.26.a605. Saved pages/locker-room-night.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/swell-contest-interview/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "SWPOL Contest Interview — Date \"Nov 07 2026\", Time \"9:30 am - 11:30 am\", UID dle.261107.03da. Saved pages/swell-contest-interview.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/swell-luncheon/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "SWPOL Luncheon — Date \"Nov 07 2026\", Time \"11:30 am - 12:30 pm\", UID dle.261107.f1cc. Saved pages/swell-luncheon.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/swell-contest-presentations/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "SWPOL Contest Presentations — Date \"Nov 07 2026\", Time \"1:00 pm - 3:00 pm\", UID dle.261107.8c3f. Saved pages/swell-contest-presentations.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/swell-contest-finale/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "SWPOL Contest Finale — Date \"Nov 07 2026\", Time \"7:00 pm - 9:00 pm\", UID dle.261107.bd4b. Saved pages/swell-contest-finale.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/gear-night-18/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Gear Night — Date \"Nov 07 2026\", Time \"10:00 pm - 2:00 am\", UID ev.26.a608. Saved pages/gear-night-18.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/dirty-pop-3/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Dirty Pop — Date \"Nov 08 2026\", Time \"5:00 pm - 9:00 pm\", UID dle.261108.61ec. Saved pages/dirty-pop-3.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-30/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Motley Clue Trivia — Date \"Nov 10 2026\", Time \"8:00 pm - 10:00 pm\", UID ev.26.a613. Saved pages/motley-clue-trivia-30.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-25/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Happy Hour — Date \"Nov 11 2026\", Time \"7:00 pm - 9:00 pm\", UID dle.261111.275c. Saved pages/underwear-happy-hour-25.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest-29/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Night and Contest — Date \"Nov 11 2026\", Time \"9:00 pm - 2:00 am\", UID ev.26.a615. Saved pages/underwear-night-and-contest-29.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/karaoke-33/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Karaoke — Date \"Nov 12 2026\", Time \"7:00 pm - 10:00 pm\", UID ev.26.a616. Saved pages/karaoke-33.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/brewery-bears-happy-hour-8/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Brewery Bears Happy Hour — Date \"Nov 13 2026\", Time \"5:00 pm - 9:00 pm\", UID dle.261113.72dc. Saved pages/brewery-bears-happy-hour-8.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/discipline-corps-bar-night-8/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Discipline Corps Bar Night — Date \"Nov 13 2026\", Time \"9:00 pm - 2:00 am\", UID ev.26.a619. Saved pages/discipline-corps-bar-night-8.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/bear-night-lumberjack-party/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Bear Night: Lumberjack Party — Date \"Nov 13 2026\", Time \"10:00 pm - 2:00 am\", UID ev.26.a618. Saved pages/bear-night-lumberjack-party.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/drag-brunch-8/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Leather & Lashes Drag Brunch — Date \"Nov 14 2026\", Time \"1:00 pm - 3:00 pm\", UID ev.26.a606. Saved pages/drag-brunch-8.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/blacklite-4/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Blacklite — Date \"Nov 14 2026\", Time \"10:00 pm - 2:00 am\", UID ev.26.a620. Saved pages/blacklite-4.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/gear-night-13/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Gear Night — Date \"Nov 14 2026\", Time \"10:00 pm - 2:00 am\", UID ev.26.a621. Saved pages/gear-night-13.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/80s-retro-7/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "80s Retro — Date \"Nov 15 2026\", Time \"5:00 pm - 9:00 pm\", UID ev.26.a623. Saved pages/80s-retro-7.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-31/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Motley Clue Trivia — Date \"Nov 17 2026\", Time \"8:00 pm - 10:00 pm\", UID ev.26.a625. Saved pages/motley-clue-trivia-31.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-26/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Happy Hour — Date \"Nov 18 2026\", Time \"7:00 pm - 9:00 pm\", UID dle.261118.19f7. Saved pages/underwear-happy-hour-26.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest-30/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Night and Contest — Date \"Nov 18 2026\", Time \"9:00 pm - 2:00 am\", UID ev.26.a627. Saved pages/underwear-night-and-contest-30.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/karaoke-34/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Karaoke — Date \"Nov 19 2026\", Time \"7:00 pm - 10:00 pm\", UID ev.26.a628. Saved pages/karaoke-34.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/throb-7/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Throb — Date \"Nov 19 2026\", Time \"11:00 pm - 2:00 am\", UID ev.26.a617. Saved pages/throb-7.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/drink-draw-and-dine-6/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Drink Draw and Dine — Date \"Nov 20 2026\", Time \"7:00 pm - 9:00 pm\", UID dle.261120.346a. Saved pages/drink-draw-and-dine-6.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/latinx-encuerados-6/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Ignite — Date \"Nov 20 2026\", Time \"10:00 pm - 2:00 am\", UID dle.261120.9a73. Saved pages/latinx-encuerados-6.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/gear-night-14/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Gear Night — Date \"Nov 21 2026\", Time \"10:00 pm - 2:00 am\", UID ev.26.a632. Saved pages/gear-night-14.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/sweet-tea-7/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Sweet Tea — Date \"Nov 22 2026\", Time \"5:00 pm - 9:00 pm\", UID ev.26.a635. Saved pages/sweet-tea-7.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-32/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Motley Clue Trivia — Date \"Nov 24 2026\", Time \"8:00 pm - 10:00 pm\", UID ev.26.a637. Saved pages/motley-clue-trivia-32.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-27/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Happy Hour — Date \"Nov 25 2026\", Time \"7:00 pm - 9:00 pm\", UID dle.261125.5d6e. Saved pages/underwear-happy-hour-27.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest-31/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Night and Contest — Date \"Nov 25 2026\", Time \"9:00 pm - 2:00 am\", UID ev.26.a639. Saved pages/underwear-night-and-contest-31.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/dirty-bird-thanksgiving/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Dirty Bird Thanksgiving — Date \"Nov 26 2026\", Time \"9:00 pm - 2:00 am\", UID ev.26.a641. Saved pages/dirty-bird-thanksgiving.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/pet-night-3/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Pet Night — Date \"Nov 27 2026\", Time \"9:00 pm - 2:00 am\", UID ev.26.a642. Saved pages/pet-night-3.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/womxns-night-7/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Womxn’s Night — Date \"Nov 27 2026\", Time \"9:00 pm - 12:00 am\", UID ev.26.a644. Saved pages/womxns-night-7.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/eagle-market-5/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Eagle Market — Date \"Nov 28 2026\", Time \"1:00 pm - 5:00 pm\", UID dle.261128.181b. Saved pages/eagle-market-5.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/lone-star-leather/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Lone Star Leather with DJ TDon — Date \"Nov 28 2026\", Time \"9:00 pm - 2:00 am\", UID dle.261128.fa66. Saved pages/lone-star-leather.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/sweet-tea-9/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Sweet Tea — Date \"Nov 29 2026\", Time \"5:00 pm - 9:00 pm\", UID ev.26.a648. Saved pages/sweet-tea-9.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-33/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Motley Clue Trivia — Date \"Dec 01 2026\", Time \"8:00 pm - 10:00 pm\", UID ev.26.a650. Saved pages/motley-clue-trivia-33.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-28/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Happy Hour — Date \"Dec 02 2026\", Time \"7:00 pm - 9:00 pm\", UID dle.261202.0ee1. Saved pages/underwear-happy-hour-28.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest-32/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Night and Contest — Date \"Dec 02 2026\", Time \"9:00 pm - 2:00 am\", UID ev.26.a652. Saved pages/underwear-night-and-contest-32.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/karaoke-36/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Karaoke — Date \"Dec 03 2026\", Time \"7:00 pm - 10:00 pm\", UID ev.26.a654. Saved pages/karaoke-36.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/femme-2/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Femme — Date \"Dec 03 2026\", Time \"10:00 pm - 2:00 am\", UID dle.261203.61f5. Saved pages/femme-2.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/cowboy-night-2/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Cowboy Night — Date \"Dec 04 2026\", Time \"10:00 pm - 2:00 am\", UID ev.26.a655. Saved pages/cowboy-night-2.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/mr-dallas-eagle-presents-the-naughtiest-pop-up-art-show/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Mr. Dallas Eagle presents The Naughtiest Pop-Up Art Show — Date \"Dec 05 2026\", Time \"1:00 pm - 7:00 pm\", UID ev.26.a656. Saved pages/mr-dallas-eagle-presents-the-naughtiest-pop-up-art-show.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/lost-souls-annual-toy-drive/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Lost Souls Annual Toy Drive — Date \"Dec 05 2026\", Time \"1:00 pm - 3:00 pm\", UID ev.26.a657. Saved pages/lost-souls-annual-toy-drive.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/uclse-drag-show/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "UCLSE Drag Show — Date \"Dec 05 2026\", Time \"7:00 pm - 9:00 pm\", UID dle.261205.599f. Saved pages/uclse-drag-show.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/gear-night-15/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Gear Night — Date \"Dec 05 2026\", Time \"10:00 pm - 2:00 am\", UID ev.26.a659. Saved pages/gear-night-15.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/trash-disco-2/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Trash Disco — Date \"Dec 06 2026\", Time \"5:00 pm - 10:00 pm\", UID ev.26.a661. Saved pages/trash-disco-2.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-34/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Motley Clue Trivia — Date \"Dec 08 2026\", Time \"8:00 pm - 10:00 pm\", UID ev.26.a663. Saved pages/motley-clue-trivia-34.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-29/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Happy Hour — Date \"Dec 09 2026\", Time \"7:00 pm - 9:00 pm\", UID dle.261209.4dc1. Saved pages/underwear-happy-hour-29.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest-33/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Night and Contest — Date \"Dec 09 2026\", Time \"9:00 pm - 2:00 am\", UID ev.26.a665. Saved pages/underwear-night-and-contest-33.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/karaoke-37/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Karaoke — Date \"Dec 10 2026\", Time \"7:00 pm - 10:00 pm\", UID ev.26.a666. Saved pages/karaoke-37.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/brewery-bears-happy-hour-9/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Brewery Bears Happy Hour — Date \"Dec 11 2026\", Time \"5:00 pm - 9:00 pm\", UID dle.261211.82cf. Saved pages/brewery-bears-happy-hour-9.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/discipline-corps-bar-night-9/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Discipline Corps Bar Night — Date \"Dec 11 2026\", Time \"9:00 pm - 2:00 am\", UID ev.26.a669. Saved pages/discipline-corps-bar-night-9.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/cowboy-boots-union-suits/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Cowboy Boots & Union Suits — Date \"Dec 11 2026\", Time \"10:00 pm - 2:00 am\", UID ev.26.a668. Saved pages/cowboy-boots-union-suits.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/bar-crawl/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Bar Crawl — Date \"Dec 12 2026\", Time \"9:00 pm - 2:00 am\", UID ev.26.a672. Saved pages/bar-crawl.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/gear-night-16/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Gear Night — Date \"Dec 12 2026\", Time \"10:00 pm - 2:00 am\", UID ev.26.a671. Saved pages/gear-night-16.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/dirty-pop-4/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Dirty Pop — Date \"Dec 13 2026\", Time \"5:00 pm - 9:00 pm\", UID dle.261213.d850. Saved pages/dirty-pop-4.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-35/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Motley Clue Trivia — Date \"Dec 15 2026\", Time \"8:00 pm - 10:00 pm\", UID ev.26.a677. Saved pages/motley-clue-trivia-35.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-30/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Happy Hour — Date \"Dec 16 2026\", Time \"7:00 pm - 9:00 pm\", UID dle.261216.ad5e. Saved pages/underwear-happy-hour-30.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest-34/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Night and Contest — Date \"Dec 16 2026\", Time \"9:00 pm - 2:00 am\", UID ev.26.a679. Saved pages/underwear-night-and-contest-34.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/karaoke-38/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Karaoke — Date \"Dec 17 2026\", Time \"7:00 pm - 10:00 pm\", UID ev.26.a680. Saved pages/karaoke-38.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/throb-8/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Throb — Date \"Dec 17 2026\", Time \"11:00 pm - 2:00 am\", UID ev.26.a667. Saved pages/throb-8.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/drink-draw-and-dine-7/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Drink Draw and Dine — Date \"Dec 18 2026\", Time \"7:00 pm - 9:00 pm\", UID dle.261218.078a. Saved pages/drink-draw-and-dine-7.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/latinx-encuerados-3/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Ignite — Date \"Dec 18 2026\", Time \"10:00 pm - 2:00 am\", UID dle.261218.991b. Saved pages/latinx-encuerados-3.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/leather-xxxmas/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Leather XXXmas — Date \"Dec 19 2026\", Time \"9:00 pm - 2:00 am\", UID ev.26.a683. Saved pages/leather-xxxmas.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/80s-retro-5/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "80s Retro — Date \"Dec 20 2026\", Time \"5:00 pm - 9:00 pm\", UID ev.26.a686. Saved pages/80s-retro-5.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-36/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Motley Clue Trivia — Date \"Dec 22 2026\", Time \"8:00 pm - 10:00 pm\", UID ev.26.a688. Saved pages/motley-clue-trivia-36.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-31/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Happy Hour — Date \"Dec 23 2026\", Time \"7:00 pm - 9:00 pm\", UID dle.261223.0d25. Saved pages/underwear-happy-hour-31.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest-35/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Night and Contest — Date \"Dec 23 2026\", Time \"9:00 pm - 2:00 am\", UID ev.26.a690. Saved pages/underwear-night-and-contest-35.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/stocking-stuffer-karaoke/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Stocking Stuffer Karaoke — Date \"Dec 24 2026\", Time \"7:00 pm - 12:00 am\", UID dle.261224.fe32. Saved pages/stocking-stuffer-karaoke.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/pet-night-5/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Pet Night — Date \"Dec 25 2026\", Time \"8:00 pm - 2:00 am\", UID ev.26.a692. Saved pages/pet-night-5.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/gear-night-21/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "SHOCK Therapy with DJ Dan Slater — Date \"Dec 26 2026\", Time \"10:00 pm - 2:00 am\", UID ev.26.a694. Saved pages/gear-night-21.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/sweet-tea-10/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Sweet Tea — Date \"Dec 27 2026\", Time \"5:00 pm - 9:00 pm\", UID ev.26.a696. Saved pages/sweet-tea-10.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/afterglow-5/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Afterglow — Date \"Dec 27 2026\", Time \"9:00 pm - 12:00 am\", UID ev.26.a697. Saved pages/afterglow-5.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/motley-clue-trivia/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Motley Clue Trivia — Date \"Dec 29 2026\", Time \"8:00 pm - 10:00 pm\", UID dle.261229.318f. Saved pages/motley-clue-trivia.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-32/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Happy Hour — Date \"Dec 30 2026\", Time \"7:00 pm - 9:00 pm\", UID dle.261230.b43c. Saved pages/underwear-happy-hour-32.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Underwear Night and Contest — Date \"Dec 30 2026\", Time \"9:00 pm - 2:00 am\", UID dle.261230.0e21. Saved pages/underwear-night-and-contest.html/.txt."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/events/dallas-eagle-nye/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Dallas Eagle NYE — Date \"Dec 31 2026\", Time \"8:00 pm - 2:00 am\", UID dle.261231.fb4f. Saved pages/dallas-eagle-nye.html/.txt."
+      }
+    ],
+    "notes": "Parser config at recon: name \"Dallas Eagle\", urls [\"https://www.thedallaseagle.com/events/\"], no urlDiscoveryDepth / discovery patterns / alwaysBear / siteRole / automationEnabled / calendarLookaheadMonths overrides (defaults apply: MEC lookahead 2 months; global allowPastEvents true, daysToLookAhead null); metadata website/facebook/instagram/mastodon. Platform confirmed by working endpoints: WordPress REST /wp-json/wp/v2/mec-events (X-WP-Total 290) and the MEC admin-ajax month feed. Site clock at fetch: today \"20260909\" (fetched 2026-09-10 01:43 UTC). Every occurrence on this site is its own WordPress post with its own slug — there is no ?occurrence= parameter and no Event JSON-LD anywhere (page JSON-LD @graph is Organization/WebSite/BreadcrumbList/Person/WebPage/Article only); dates come from the grid cell (data-mec-cell) and the page Date block, times from the page Time block / grid tooltip. Event pages carry no flyer images (only the venue logo), so there is no flyer rung. Recon done read-only with curl; no browser rung was needed. Note for anyone replaying the feed: a malformed POST (mec_year with a space, empty mec_month) makes the site answer HTTP 500 \"There has been a critical error on this website.\" — that is the request, not the calendar."
+  },
+  "defaults": {
+    "city": "dallas",
+    "timezone": "America/Chicago",
+    "bar": "Dallas Eagle",
+    "address": "525 S Riverfront Blvd, Dallas, TX 75207",
+    "location": null,
+    "website": "https://www.thedallaseagle.com",
+    "instagram": "https://www.instagram.com/thedallaseagle/",
+    "facebook": "https://www.facebook.com/lonestareagle"
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Primary door: the MEC month-feed POST replayed for Sep, Oct, Nov, Dec 2026 (30/44/54/43 grid cells; 171 cells → 153 distinct date+post pairs after removing the neighbouring-month spill-over cells each grid repeats; 27/40/44/42 posts by month). The static /events/ page renders the identical September grid (30 cells). All 153 linked posts were fetched; every page Date block matches its grid cell and every page title matches its grid title. Second door: WP REST mec-events (X-WP-Total 290) contains all 153 slugs plus 137 posts whose WordPress publish dates are all 2024–2025 (old occurrences, i.e. past listings — counted, not enumerated); no 2026-created post exists outside the four grids, so nothing is published past Dec 31 2026. Third door, the mec-events sitemap, is stale (only 4 of 153 live slugs) and was discarded. The January 2027 feed carries only December spill-over cells (zero January-dated posts) and February 2027 is a bare grid, while August 2026 is also empty, so the published horizon is exactly Sep 8–Dec 31 2026 and coverage.occurrenceWindow is set to Sep 9–Dec 31 (114 days) instead of recon+90 so that every dated post the site publishes is recorded. Of the 152 in-window posts, 85 belong to 11 series whose repeat rule the site states in the post body (each dated post listed as an origin:\"listed\" occurrence with page evidence) and 67 are singles — several titles recur monthly (Gear Night ×9, Sweet Tea ×5, Drink Draw and Dine ×4, Pet Night ×4, Femme, Throb, Ignite, 80s Retro ×3 …) but state no rule and are kept as singles per the no-inferred-recurrence rule. The one remaining post (Sep 8 Motley Clue Trivia, Expired) is the only past listing on the grids. publishedEventCount = 11 series + 67 singles = 78.",
+    "publishedEventCount": 79,
+    "documentedEventCount": 79,
+    "occurrenceWindow": {"start":"2026-09-09","end":"2026-12-31"},
+    "pastListingsPresent": true,
+    "knownGaps": [
+      "No flyer images are published on event pages (only the venue logo), so nothing was read from images; three Ignite posts and the Sep 24 Latino Night post have no body text at all — title, date and time are the entire published record.",
+      "Months were read only through 2027-02; a post dated March 2027 or later would be missed here, though the REST cross-check (no 2026-created post is absent from the Sep–Dec grids) makes that unlikely."
+    ]
+  },
+  "events": [
+    {
+      "id": "underwear-happy-hour",
+      "kind": "series",
+      "title": "Underwear Happy Hour",
+      "startDate": "2026-09-09",
+      "startTime": "19:00",
+      "endTime": "21:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=WE",
+      "recurrenceStatedAs": "Every Wednesday evening is UNDERWEAR HAPPY HOUR at the Dallas Eagle! 🦅",
+      "website": "https://www.thedallaseagle.com/events/underwear-happy-hour-16/",
+      "occurrences": [
+        {
+          "startDate": "2026-09-09",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-16/",
+            "quote": "<span class=\"mec-start-date-label\">Sep 09 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-09-16",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-17/",
+            "quote": "<span class=\"mec-start-date-label\">Sep 16 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-09-23",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-18/",
+            "quote": "<span class=\"mec-start-date-label\">Sep 23 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-09-30",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-19/",
+            "quote": "<span class=\"mec-start-date-label\">Sep 30 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-10-07",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-20/",
+            "quote": "<span class=\"mec-start-date-label\">Oct 07 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-10-14",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-21/",
+            "quote": "<span class=\"mec-start-date-label\">Oct 14 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-10-21",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-22/",
+            "quote": "<span class=\"mec-start-date-label\">Oct 21 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-10-28",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-23/",
+            "quote": "<span class=\"mec-start-date-label\">Oct 28 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-11-04",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-24/",
+            "quote": "<span class=\"mec-start-date-label\">Nov 04 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-11-11",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-25/",
+            "quote": "<span class=\"mec-start-date-label\">Nov 11 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-11-18",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-26/",
+            "quote": "<span class=\"mec-start-date-label\">Nov 18 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-11-25",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-27/",
+            "quote": "<span class=\"mec-start-date-label\">Nov 25 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-12-02",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-28/",
+            "quote": "<span class=\"mec-start-date-label\">Dec 02 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-12-09",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-29/",
+            "quote": "<span class=\"mec-start-date-label\">Dec 09 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-12-16",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-30/",
+            "quote": "<span class=\"mec-start-date-label\">Dec 16 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-12-23",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-31/",
+            "quote": "<span class=\"mec-start-date-label\">Dec 23 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-12-30",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-32/",
+            "quote": "<span class=\"mec-start-date-label\">Dec 30 2026</span>"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/underwear-happy-hour-16/",
+        "quote": "Every Wednesday evening is UNDERWEAR HAPPY HOUR at the Dallas Eagle! 🦅"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Every Wednesday Sep 9–Dec 30 is its own dated post (17 posts, 17 slugs). Followed each week by the 9pm Underwear Night and Contest post. Each occurrence is a separate WordPress post (no ?occurrence= param); website points at the first listed post."
+    },
+    {
+      "id": "underwear-night-and-contest",
+      "kind": "series",
+      "title": "Underwear Night and Contest",
+      "startDate": "2026-09-09",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=WE",
+      "recurrenceStatedAs": "Every Wednesday night is UNDERWEAR NIGHT at the Dallas Eagle! 🦅",
+      "website": "https://www.thedallaseagle.com/events/underwear-night-and-contest-21/",
+      "occurrences": [
+        {
+          "startDate": "2026-09-09",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest-21/",
+            "quote": "<span class=\"mec-start-date-label\">Sep 09 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-09-16",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest-22/",
+            "quote": "<span class=\"mec-start-date-label\">Sep 16 2026</span>"
+          },
+          "overrides": {"title":"Underwear Night and Contest with DJ Philip Webb"}
+        },
+        {
+          "startDate": "2026-09-23",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest-23/",
+            "quote": "<span class=\"mec-start-date-label\">Sep 23 2026</span>"
+          },
+          "overrides": {"title":"Underwear Night and Contest with DJ Michael Jon"}
+        },
+        {
+          "startDate": "2026-10-07",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest-24/",
+            "quote": "<span class=\"mec-start-date-label\">Oct 07 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-10-14",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest-25/",
+            "quote": "<span class=\"mec-start-date-label\">Oct 14 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-10-21",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest-26/",
+            "quote": "<span class=\"mec-start-date-label\">Oct 21 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-10-28",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest-27/",
+            "quote": "<span class=\"mec-start-date-label\">Oct 28 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-11-04",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest-28/",
+            "quote": "<span class=\"mec-start-date-label\">Nov 04 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-11-11",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest-29/",
+            "quote": "<span class=\"mec-start-date-label\">Nov 11 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-11-18",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest-30/",
+            "quote": "<span class=\"mec-start-date-label\">Nov 18 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-11-25",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest-31/",
+            "quote": "<span class=\"mec-start-date-label\">Nov 25 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-12-02",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest-32/",
+            "quote": "<span class=\"mec-start-date-label\">Dec 02 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-12-09",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest-33/",
+            "quote": "<span class=\"mec-start-date-label\">Dec 09 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-12-16",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest-34/",
+            "quote": "<span class=\"mec-start-date-label\">Dec 16 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-12-23",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest-35/",
+            "quote": "<span class=\"mec-start-date-label\">Dec 23 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-12-30",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest/",
+            "quote": "<span class=\"mec-start-date-label\">Dec 30 2026</span>"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/underwear-night-and-contest-21/",
+        "quote": "Every Wednesday night is UNDERWEAR NIGHT at the Dallas Eagle! 🦅"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends at 2:00 the following morning (site: \"End at: <next day>\"). 17 dated posts Sep 9–Dec 30; Sep 16 and Sep 23 carry DJ-suffixed titles (overrides). Grid tooltip and list rows show \"Start from: <date> - 9:00 pm\" / \"End at: <next day> - 2:00 am\" — the End at line is not the start. Sep 30 in this slot is the separately titled \"Jocktoberfest! with DJ Drew G\" (documented as a single). Run 20260909-072307 bear-dropped three of these as \"UNDERWEAR NIGHT\". Each occurrence is a separate WordPress post (no ?occurrence= param); website points at the first listed post."
+    },
+    {
+      "id": "karaoke",
+      "kind": "series",
+      "title": "Karaoke",
+      "startDate": "2026-09-10",
+      "startTime": "19:00",
+      "endTime": "22:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=TH",
+      "recurrenceStatedAs": "Thursday Karaoke is a whole new way to have fun at the Eagle 🎵🎤🦅",
+      "website": "https://www.thedallaseagle.com/events/karaoke-24/",
+      "occurrences": [
+        {
+          "startDate": "2026-09-10",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/karaoke-24/",
+            "quote": "<span class=\"mec-start-date-label\">Sep 10 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-09-17",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/karaoke-25/",
+            "quote": "<span class=\"mec-start-date-label\">Sep 17 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-09-24",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/karaoke-3/",
+            "quote": "<span class=\"mec-start-date-label\">Sep 24 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-10-01",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/karaoke-4/",
+            "quote": "<span class=\"mec-start-date-label\">Oct 01 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-10-08",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/karaoke-28/",
+            "quote": "<span class=\"mec-start-date-label\">Oct 08 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-10-15",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/karaoke-29/",
+            "quote": "<span class=\"mec-start-date-label\">Oct 15 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-10-22",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/karaoke-30/",
+            "quote": "<span class=\"mec-start-date-label\">Oct 22 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-10-29",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/karaoke-31/",
+            "quote": "<span class=\"mec-start-date-label\">Oct 29 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-11-05",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/karaoke-32/",
+            "quote": "<span class=\"mec-start-date-label\">Nov 05 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-11-12",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/karaoke-33/",
+            "quote": "<span class=\"mec-start-date-label\">Nov 12 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-11-19",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/karaoke-34/",
+            "quote": "<span class=\"mec-start-date-label\">Nov 19 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-12-03",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/karaoke-36/",
+            "quote": "<span class=\"mec-start-date-label\">Dec 03 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-12-10",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/karaoke-37/",
+            "quote": "<span class=\"mec-start-date-label\">Dec 10 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-12-17",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/karaoke-38/",
+            "quote": "<span class=\"mec-start-date-label\">Dec 17 2026</span>"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/karaoke-24/",
+        "quote": "Thursday Karaoke is a whole new way to have fun at the Eagle 🎵🎤🦅"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Weekly rule rests on \"Thursday Karaoke\" plus a dated post for every Thursday Sep 10–Dec 17. No Karaoke post on Nov 26 (Dirty Bird Thanksgiving), Dec 24 (Stocking Stuffer Karaoke, a differently titled single) or Dec 31 (Dallas Eagle NYE). Each occurrence is a separate WordPress post (no ?occurrence= param); website points at the first listed post."
+    },
+    {
+      "id": "discipline-corps-bar-night",
+      "kind": "series",
+      "title": "Discipline Corps Bar Night",
+      "startDate": "2026-09-11",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=2FR",
+      "recurrenceStatedAs": "The Dallas Eagle welcomes the Discipline Corps for their monthly bar night! 🛑🦅",
+      "website": "https://www.thedallaseagle.com/events/discipline-corps-bar-night-7/",
+      "occurrences": [
+        {
+          "startDate": "2026-09-11",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/discipline-corps-bar-night-7/",
+            "quote": "<span class=\"mec-start-date-label\">Sep 11 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-10-09",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/discipline-corps-bar-night-with-dj-blaine/",
+            "quote": "<span class=\"mec-start-date-label\">Oct 09 2026</span>"
+          },
+          "overrides": {"title":"Discipline Corps Bar Night with DJ Blaine"}
+        },
+        {
+          "startDate": "2026-11-13",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/discipline-corps-bar-night-8/",
+            "quote": "<span class=\"mec-start-date-label\">Nov 13 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-12-11",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/discipline-corps-bar-night-9/",
+            "quote": "<span class=\"mec-start-date-label\">Dec 11 2026</span>"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/discipline-corps-bar-night-7/",
+        "quote": "The Dallas Eagle welcomes the Discipline Corps for their monthly bar night! 🛑🦅"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends at 2:00 the following morning (site: \"End at: <next day>\"). Site says \"monthly\"; the second-Friday ordinal is inferred from the four listed dates (Sep 11, Oct 9, Nov 13, Dec 11). Oct 9 title carries \"with DJ Blaine\". Run 20260909-072307 bear-dropped the Oct 9 post. Each occurrence is a separate WordPress post (no ?occurrence= param); website points at the first listed post."
+    },
+    {
+      "id": "latinx-encuerados-2026-09-11",
+      "kind": "single",
+      "title": "LatinX Encuerados",
+      "startDate": "2026-09-11",
+      "startTime": "22:00",
+      "endTime": "02:00",
+      "endDate": "2026-09-12",
+      "website": "https://www.thedallaseagle.com/events/bear-night-2/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/bear-night-2/",
+        "quote": "<span class=\"mec-start-date-label\">Sep 11 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: September 12, 2026 - 2:00 am\"). Slug says bear-night-2 but the page title is LatinX Encuerados (a Latin Night collaboration, DJ SanMiguel); occupies the second-Friday Bear Night slot."
+    },
+    {
+      "id": "gear-night-with-dj-philip-webb-2026-09-12",
+      "kind": "single",
+      "title": "Gear Night with DJ Philip Webb",
+      "startDate": "2026-09-12",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "endDate": "2026-09-13",
+      "website": "https://www.thedallaseagle.com/events/gear-night-11/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/gear-night-11/",
+        "quote": "<span class=\"mec-start-date-label\">Sep 12 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: September 13, 2026 - 2:00 am\"). Gear Night has nine dated posts Sep–Dec with no stated rule (\"hottest night of the week\" is not a schedule); each stays a single. DJ-suffixed titles on Sep 12 / Sep 19."
+    },
+    {
+      "id": "dirty-pop",
+      "kind": "series",
+      "title": "Dirty Pop",
+      "startDate": "2026-09-13",
+      "startTime": "17:00",
+      "endTime": "21:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=2SU",
+      "recurrenceStatedAs": "Drew G’s world-famous Dirty Pop party is taking over second Sundays at the Dallas Eagle 🦅",
+      "website": "https://www.thedallaseagle.com/events/dirty-pop/",
+      "occurrences": [
+        {
+          "startDate": "2026-09-13",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/dirty-pop/",
+            "quote": "<span class=\"mec-start-date-label\">Sep 13 2026</span>"
+          },
+          "overrides": {"title":"Dirty Pop with DJ Drew G"}
+        },
+        {
+          "startDate": "2026-10-11",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/dirty-pop-2/",
+            "quote": "<span class=\"mec-start-date-label\">Oct 11 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-11-08",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/dirty-pop-3/",
+            "quote": "<span class=\"mec-start-date-label\">Nov 08 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-12-13",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/dirty-pop-4/",
+            "quote": "<span class=\"mec-start-date-label\">Dec 13 2026</span>"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/dirty-pop-2/",
+        "quote": "Drew G’s world-famous Dirty Pop party is taking over second Sundays at the Dallas Eagle 🦅"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Sep 13 title is \"Dirty Pop with DJ Drew G\". Each occurrence is a separate WordPress post (no ?occurrence= param); website points at the first listed post."
+    },
+    {
+      "id": "motley-clue-trivia",
+      "kind": "series",
+      "title": "Motley Clue Trivia",
+      "startDate": "2026-09-15",
+      "startTime": "20:00",
+      "endTime": "22:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=TU",
+      "recurrenceStatedAs": "Solos and squads compete for prizes each week, hosted by our very own Jeopardy champion AJ Motley!",
+      "website": "https://www.thedallaseagle.com/events/motley-clue-trivia-23/",
+      "occurrences": [
+        {
+          "startDate": "2026-09-15",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-23/",
+            "quote": "<span class=\"mec-start-date-label\">Sep 15 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-09-22",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-24/",
+            "quote": "<span class=\"mec-start-date-label\">Sep 22 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-09-29",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-25/",
+            "quote": "<span class=\"mec-start-date-label\">Sep 29 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-10-06",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-26/",
+            "quote": "<span class=\"mec-start-date-label\">Oct 06 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-10-13",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-27/",
+            "quote": "<span class=\"mec-start-date-label\">Oct 13 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-10-20",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-28/",
+            "quote": "<span class=\"mec-start-date-label\">Oct 20 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-10-27",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-3/",
+            "quote": "<span class=\"mec-start-date-label\">Oct 27 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-11-03",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-29/",
+            "quote": "<span class=\"mec-start-date-label\">Nov 03 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-11-10",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-30/",
+            "quote": "<span class=\"mec-start-date-label\">Nov 10 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-11-17",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-31/",
+            "quote": "<span class=\"mec-start-date-label\">Nov 17 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-11-24",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-32/",
+            "quote": "<span class=\"mec-start-date-label\">Nov 24 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-12-01",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-33/",
+            "quote": "<span class=\"mec-start-date-label\">Dec 01 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-12-08",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-34/",
+            "quote": "<span class=\"mec-start-date-label\">Dec 08 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-12-15",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-35/",
+            "quote": "<span class=\"mec-start-date-label\">Dec 15 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-12-22",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-36/",
+            "quote": "<span class=\"mec-start-date-label\">Dec 22 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-12-29",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/motley-clue-trivia/",
+            "quote": "<span class=\"mec-start-date-label\">Dec 29 2026</span>"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/motley-clue-trivia-23/",
+        "quote": "Solos and squads compete for prizes each week, hosted by our very own Jeopardy champion AJ Motley!"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Page text also says \"Enjoy a Tuesday Trivia experience like no other at Motley Clue!\". Every Tuesday Sep 15–Dec 29 is a dated post; the Sep 8 post is already marked Expired on the configured page (see traps). Each occurrence is a separate WordPress post (no ?occurrence= param); website points at the first listed post."
+    },
+    {
+      "id": "drink-draw-and-dine-2026-09-18",
+      "kind": "single",
+      "title": "Drink Draw and Dine",
+      "startDate": "2026-09-18",
+      "startTime": "19:00",
+      "endTime": "21:00",
+      "website": "https://www.thedallaseagle.com/events/drink-draw-and-dine-4/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/drink-draw-and-dine-4/",
+        "quote": "<span class=\"mec-start-date-label\">Sep 18 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Recurs on third Fridays (Sep 18, Oct 16, Nov 20, Dec 18) with no stated rule; singles."
+    },
+    {
+      "id": "furball-2026-09-18",
+      "kind": "single",
+      "title": "Furball",
+      "startDate": "2026-09-18",
+      "startTime": "20:00",
+      "endTime": "02:00",
+      "endDate": "2026-09-19",
+      "website": "https://www.thedallaseagle.com/events/furball/",
+      "ticketUrl": "https://furballdallas.eventbrite.com",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/furball/",
+        "quote": "<span class=\"mec-start-date-label\">Sep 18 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: September 19, 2026 - 2:00 am\")."
+    },
+    {
+      "id": "gear-night-with-dj-qwest-2026-09-19",
+      "kind": "single",
+      "title": "Gear Night with DJ Qwest",
+      "startDate": "2026-09-19",
+      "startTime": "20:00",
+      "endTime": "02:00",
+      "endDate": "2026-09-20",
+      "website": "https://www.thedallaseagle.com/events/gear-night-19/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/gear-night-19/",
+        "quote": "<span class=\"mec-start-date-label\">Sep 19 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: September 20, 2026 - 2:00 am\")."
+    },
+    {
+      "id": "rewind-2026-09-20",
+      "kind": "single",
+      "title": "Rewind",
+      "startDate": "2026-09-20",
+      "startTime": "17:00",
+      "endTime": "21:00",
+      "website": "https://www.thedallaseagle.com/events/80s-retro-4/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/80s-retro-4/",
+        "quote": "<span class=\"mec-start-date-label\">Sep 20 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Slug says 80s-retro-4; title \"Rewind\" (\"A new retro event\"). The later 80s Retro posts (Oct 18, Nov 15, Dec 20) are a different title."
+    },
+    {
+      "id": "latino-night-2026-09-24",
+      "kind": "single",
+      "title": "Latino Night",
+      "startDate": "2026-09-24",
+      "startTime": "22:00",
+      "endTime": "01:00",
+      "endDate": "2026-09-25",
+      "website": "https://www.thedallaseagle.com/events/frequency-featuring-george-flores-4/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/frequency-featuring-george-flores-4/",
+        "quote": "<span class=\"mec-start-date-label\">Sep 24 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends 1:00 the following morning (grid tooltip: \"End at: September 25, 2026 - 1:00 am\"). Page body is empty apart from the UID; slug names Frequency (the last-Thursday George Flores night) while the title reads \"Latino Night\"."
+    },
+    {
+      "id": "pet-night-2026-09-25",
+      "kind": "single",
+      "title": "Pet Night",
+      "startDate": "2026-09-25",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "endDate": "2026-09-26",
+      "website": "https://www.thedallaseagle.com/events/pet-night-2/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/pet-night-2/",
+        "quote": "<span class=\"mec-start-date-label\">Sep 25 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: September 26, 2026 - 2:00 am\"). Pet Night recurs (Sep 25, Oct 23 with DJ Boost, Nov 27, Dec 25) with no stated rule; singles."
+    },
+    {
+      "id": "shock-therapy",
+      "kind": "series",
+      "title": "SHOCK Therapy",
+      "startDate": "2026-09-26",
+      "startTime": "22:00",
+      "endTime": "02:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=-1SA",
+      "recurrenceStatedAs": "Plug in and lose yourself at SHOCK Therapy with DJ Dan Slater, our new monthly Saturday night dance floor takeover.",
+      "website": "https://www.thedallaseagle.com/events/gear-night-20/",
+      "occurrences": [
+        {
+          "startDate": "2026-09-26",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/gear-night-20/",
+            "quote": "<span class=\"mec-start-date-label\">Sep 26 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-10-31",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/blacklite-3/",
+            "quote": "<span class=\"mec-start-date-label\">Oct 31 2026</span>"
+          },
+          "overrides": {"startTime":"20:00"}
+        },
+        {
+          "startDate": "2026-12-26",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/gear-night-21/",
+            "quote": "<span class=\"mec-start-date-label\">Dec 26 2026</span>"
+          },
+          "overrides": {"title":"SHOCK Therapy with DJ Dan Slater"}
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/gear-night-20/",
+        "quote": "Plug in and lose yourself at SHOCK Therapy with DJ Dan Slater, our new monthly Saturday night dance floor takeover."
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends at 2:00 the following morning (site: \"End at: <next day>\"). Site says \"monthly Saturday night\"; last-Saturday ordinal inferred from Sep 26, Oct 31, Dec 26. Nov 28 (last Saturday) has no SHOCK Therapy post — Lone Star Leather is listed instead. Oct 31 starts 8pm (override). Slugs are gear-night-20, blacklite-3, gear-night-21. Each occurrence is a separate WordPress post (no ?occurrence= param); website points at the first listed post."
+    },
+    {
+      "id": "sweet-tea-2026-09-27",
+      "kind": "single",
+      "title": "Sweet Tea",
+      "startDate": "2026-09-27",
+      "startTime": "16:00",
+      "endTime": "21:00",
+      "website": "https://www.thedallaseagle.com/events/sweet-tea-3/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/sweet-tea-3/",
+        "quote": "<span class=\"mec-start-date-label\">Sep 27 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Sweet Tea recurs (Sep 27, Oct 25, Nov 22, Nov 29, Dec 27) but the site states no rule; Sep 27 starts 4pm, later posts 5pm."
+    },
+    {
+      "id": "jocktoberfest-with-dj-drew-g-2026-09-30",
+      "kind": "single",
+      "title": "Jocktoberfest! with DJ Drew G",
+      "startDate": "2026-09-30",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "endDate": "2026-10-01",
+      "website": "https://www.thedallaseagle.com/events/jocktoberfest/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/jocktoberfest/",
+        "quote": "<span class=\"mec-start-date-label\">Sep 30 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: October 1, 2026 - 2:00 am\"). Occupies the Wednesday Underwear Night slot (\"blends your favorite Underwear Night with beer hall vibes\")."
+    },
+    {
+      "id": "femme-2026-10-01",
+      "kind": "single",
+      "title": "Femme",
+      "startDate": "2026-10-01",
+      "startTime": "22:00",
+      "endTime": "02:00",
+      "endDate": "2026-10-02",
+      "website": "https://www.thedallaseagle.com/events/femme-3/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/femme-3/",
+        "quote": "<span class=\"mec-start-date-label\">Oct 01 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: October 2, 2026 - 2:00 am\"). Recurs on first Thursdays (Oct 1, Nov 5, Dec 3) with no stated rule; singles."
+    },
+    {
+      "id": "gear-night-2026-10-03",
+      "kind": "single",
+      "title": "Gear Night",
+      "startDate": "2026-10-03",
+      "startTime": "22:00",
+      "endTime": "02:00",
+      "endDate": "2026-10-04",
+      "website": "https://www.thedallaseagle.com/events/gear-night-22/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/gear-night-22/",
+        "quote": "<span class=\"mec-start-date-label\">Oct 03 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: October 4, 2026 - 2:00 am\")."
+    },
+    {
+      "id": "afterglow-2026-10-04",
+      "kind": "single",
+      "title": "Afterglow",
+      "startDate": "2026-10-04",
+      "startTime": "22:00",
+      "endTime": "00:00",
+      "endDate": "2026-10-05",
+      "website": "https://www.thedallaseagle.com/events/afterglow-3/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/afterglow-3/",
+        "quote": "<span class=\"mec-start-date-label\">Oct 04 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends 0:00 the following morning (grid tooltip: \"End at: October 5, 2026 - 12:00 am\"). Recurs (Oct 4, Dec 27) with no stated rule; singles."
+    },
+    {
+      "id": "trash-disco",
+      "kind": "series",
+      "title": "Trash Disco",
+      "startDate": "2026-10-04",
+      "startTime": "17:00",
+      "endTime": "22:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=1SU",
+      "recurrenceStatedAs": "We’re celebrating the first Sunday of the month with TRASH DISCO featuring DJ Blaine!!! ✨",
+      "website": "https://www.thedallaseagle.com/events/trash-disco-with-dj-blaine-4/",
+      "occurrences": [
+        {
+          "startDate": "2026-10-04",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/trash-disco-with-dj-blaine-4/",
+            "quote": "<span class=\"mec-start-date-label\">Oct 04 2026</span>"
+          },
+          "overrides": {"title":"Trash Disco with DJ Apthout"}
+        },
+        {
+          "startDate": "2026-11-01",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/trash-disco/",
+            "quote": "<span class=\"mec-start-date-label\">Nov 01 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-12-06",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/trash-disco-2/",
+            "quote": "<span class=\"mec-start-date-label\">Dec 06 2026</span>"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/trash-disco/",
+        "quote": "We’re celebrating the first Sunday of the month with TRASH DISCO featuring DJ Blaine!!! ✨"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Oct 4 title is \"Trash Disco with DJ Apthout\" (body still says DJ Blaine; slug trash-disco-with-dj-blaine-4). No September post (Sep 6 was before recon). Each occurrence is a separate WordPress post (no ?occurrence= param); website points at the first listed post."
+    },
+    {
+      "id": "bear-night",
+      "kind": "series",
+      "title": "Bear Night",
+      "startDate": "2026-10-09",
+      "startTime": "22:00",
+      "endTime": "02:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=2FR",
+      "recurrenceStatedAs": "Second Fridays are BEAR NIGHT! 🐻🦅",
+      "website": "https://www.thedallaseagle.com/events/bear-night/",
+      "occurrences": [
+        {
+          "startDate": "2026-10-09",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/bear-night/",
+            "quote": "<span class=\"mec-start-date-label\">Oct 09 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-11-13",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/bear-night-lumberjack-party/",
+            "quote": "<span class=\"mec-start-date-label\">Nov 13 2026</span>"
+          },
+          "overrides": {"title":"Bear Night: Lumberjack Party"}
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {"url":"https://www.thedallaseagle.com/events/bear-night/","quote":"Second Fridays are BEAR NIGHT! 🐻🦅"},
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends at 2:00 the following morning (site: \"End at: <next day>\"). Only Oct 9 and Nov 13 (titled \"Bear Night: Lumberjack Party\") are listed; the Sep 11 and Dec 11 second-Friday slots carry LatinX Encuerados and Cowboy Boots & Union Suits instead (documented as singles). The Sep 11 LatinX post lives at slug bear-night-2. Run 20260909-072307 extracted the Oct 9 post with title \"Second Fridays\" instead of \"Bear Night\". Each occurrence is a separate WordPress post (no ?occurrence= param); website points at the first listed post."
+    },
+    {
+      "id": "brewery-bears-happy-hour",
+      "kind": "series",
+      "title": "Brewery Bears Happy Hour",
+      "startDate": "2026-10-09",
+      "startTime": "17:00",
+      "endTime": "21:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=2FR",
+      "recurrenceStatedAs": "📅 Brewery Bears Happy Hour happens monthly every 2nd Friday",
+      "website": "https://www.thedallaseagle.com/events/brewery-bears-happy-hour-7/",
+      "occurrences": [
+        {
+          "startDate": "2026-10-09",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/brewery-bears-happy-hour-7/",
+            "quote": "<span class=\"mec-start-date-label\">Oct 09 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-11-06",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/brewery-bears-happy-hour/",
+            "quote": "<span class=\"mec-start-date-label\">Nov 06 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-11-13",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/brewery-bears-happy-hour-8/",
+            "quote": "<span class=\"mec-start-date-label\">Nov 13 2026</span>"
+          }
+        },
+        {
+          "startDate": "2026-12-11",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/brewery-bears-happy-hour-9/",
+            "quote": "<span class=\"mec-start-date-label\">Dec 11 2026</span>"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/brewery-bears-happy-hour-7/",
+        "quote": "📅 Brewery Bears Happy Hour happens monthly every 2nd Friday"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Nov 6 (a first Friday, SWPOL contest weekend) is an extra listed post outside the stated 2nd-Friday rule. No September post. Each occurrence is a separate WordPress post (no ?occurrence= param); website points at the first listed post."
+    },
+    {
+      "id": "dallas-eagle-presents-beef-2026-10-10",
+      "kind": "single",
+      "title": "Dallas Eagle presents BEEF",
+      "startDate": "2026-10-10",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "endDate": "2026-10-11",
+      "website": "https://www.thedallaseagle.com/events/dallas-eagle-presents-beef/",
+      "ticketUrl": "https://dallaseaglebeef.eventbrite.com",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/dallas-eagle-presents-beef/",
+        "quote": "<span class=\"mec-start-date-label\">Oct 10 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: October 11, 2026 - 2:00 am\")."
+    },
+    {
+      "id": "rose-bowl-kickoff-party-2026-10-15",
+      "kind": "single",
+      "title": "Rose Bowl Kickoff Party",
+      "startDate": "2026-10-15",
+      "startTime": "19:00",
+      "endTime": "23:00",
+      "website": "https://www.thedallaseagle.com/events/rose-bowl-kickoff-party/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/rose-bowl-kickoff-party/",
+        "quote": "<span class=\"mec-start-date-label\">Oct 15 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Run 20260909-072307 bear-dropped this post."
+    },
+    {
+      "id": "throb-2026-10-15",
+      "kind": "single",
+      "title": "Throb",
+      "startDate": "2026-10-15",
+      "startTime": "23:00",
+      "endTime": "02:00",
+      "endDate": "2026-10-16",
+      "website": "https://www.thedallaseagle.com/events/throb-6/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/throb-6/",
+        "quote": "<span class=\"mec-start-date-label\">Oct 15 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: October 16, 2026 - 2:00 am\"). Recurs on third Thursdays (Oct 15, Nov 19, Dec 17) with no stated rule (\"Throb returns\"); singles."
+    },
+    {
+      "id": "drink-draw-and-dine-2026-10-16",
+      "kind": "single",
+      "title": "Drink Draw and Dine",
+      "startDate": "2026-10-16",
+      "startTime": "19:00",
+      "endTime": "21:00",
+      "website": "https://www.thedallaseagle.com/events/drink-draw-and-dine-5/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/drink-draw-and-dine-5/",
+        "quote": "<span class=\"mec-start-date-label\">Oct 16 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null
+    },
+    {
+      "id": "ignite-2026-10-16",
+      "kind": "single",
+      "title": "Ignite",
+      "startDate": "2026-10-16",
+      "startTime": "22:00",
+      "endTime": "02:00",
+      "endDate": "2026-10-17",
+      "website": "https://www.thedallaseagle.com/events/latinx-encuerados-4/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/latinx-encuerados-4/",
+        "quote": "<span class=\"mec-start-date-label\">Oct 16 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: October 17, 2026 - 2:00 am\"). Page body is empty apart from the UID; slug says latinx-encuerados. Recurs Oct 16 / Nov 20 / Dec 18 (third Fridays) but the site states no rule, so each stays a single."
+    },
+    {
+      "id": "eagle-market-2026-10-17",
+      "kind": "single",
+      "title": "Eagle Market",
+      "startDate": "2026-10-17",
+      "startTime": "13:00",
+      "endTime": "17:00",
+      "website": "https://www.thedallaseagle.com/events/eagle-market-2/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/eagle-market-2/",
+        "quote": "<span class=\"mec-start-date-label\">Oct 17 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Recurs (Oct 17, Nov 28) with no stated rule; singles."
+    },
+    {
+      "id": "gear-night-2026-10-17",
+      "kind": "single",
+      "title": "Gear Night",
+      "startDate": "2026-10-17",
+      "startTime": "22:00",
+      "endTime": "02:00",
+      "endDate": "2026-10-18",
+      "website": "https://www.thedallaseagle.com/events/gear-night-12/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/gear-night-12/",
+        "quote": "<span class=\"mec-start-date-label\">Oct 17 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: October 18, 2026 - 2:00 am\"). Run 20260909-072307 bear-dropped this post as \"GEAR NIGHT\"."
+    },
+    {
+      "id": "80s-retro-2026-10-18",
+      "kind": "single",
+      "title": "80s Retro",
+      "startDate": "2026-10-18",
+      "startTime": "17:00",
+      "endTime": "21:00",
+      "website": "https://www.thedallaseagle.com/events/80s-retro-6/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/80s-retro-6/",
+        "quote": "<span class=\"mec-start-date-label\">Oct 18 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Recurs on third Sundays (Oct 18, Nov 15, Dec 20) with no stated rule; singles."
+    },
+    {
+      "id": "pet-night-with-dj-boost-2026-10-23",
+      "kind": "single",
+      "title": "Pet Night with DJ Boost",
+      "startDate": "2026-10-23",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "endDate": "2026-10-24",
+      "website": "https://www.thedallaseagle.com/events/pet-night-7/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/pet-night-7/",
+        "quote": "<span class=\"mec-start-date-label\">Oct 23 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: October 24, 2026 - 2:00 am\")."
+    },
+    {
+      "id": "womxn-s-night-2026-10-23",
+      "kind": "single",
+      "title": "Womxn’s Night",
+      "startDate": "2026-10-23",
+      "startTime": "21:00",
+      "endTime": "00:00",
+      "endDate": "2026-10-24",
+      "website": "https://www.thedallaseagle.com/events/womxns-night-6/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/womxns-night-6/",
+        "quote": "<span class=\"mec-start-date-label\">Oct 23 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends 0:00 the following morning (grid tooltip: \"End at: October 24, 2026 - 12:00 am\"). Recurs (Oct 23, Nov 27) with no stated rule; singles."
+    },
+    {
+      "id": "fright-night-2026-10-24",
+      "kind": "single",
+      "title": "Fright Night",
+      "startDate": "2026-10-24",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "endDate": "2026-10-25",
+      "website": "https://www.thedallaseagle.com/events/fright-night/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/fright-night/",
+        "quote": "<span class=\"mec-start-date-label\">Oct 24 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: October 25, 2026 - 2:00 am\")."
+    },
+    {
+      "id": "sweet-tea-2026-10-25",
+      "kind": "single",
+      "title": "Sweet Tea",
+      "startDate": "2026-10-25",
+      "startTime": "17:00",
+      "endTime": "21:00",
+      "website": "https://www.thedallaseagle.com/events/sweet-tea-4/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/sweet-tea-4/",
+        "quote": "<span class=\"mec-start-date-label\">Oct 25 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null
+    },
+    {
+      "id": "frequency-featuring-george-flores",
+      "kind": "series",
+      "title": "Frequency featuring George Flores",
+      "startDate": "2026-10-29",
+      "startTime": "22:00",
+      "endTime": "01:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=-1TH",
+      "recurrenceStatedAs": "George Flores presents: FREQUENCY at the Dallas Eagle, every last Thursday of the month! 🔥",
+      "website": "https://www.thedallaseagle.com/events/frequency-featuring-george-flores-5/",
+      "occurrences": [
+        {
+          "startDate": "2026-10-29",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.thedallaseagle.com/events/frequency-featuring-george-flores-5/",
+            "quote": "<span class=\"mec-start-date-label\">Oct 29 2026</span>"
+          }
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/frequency-featuring-george-flores-5/",
+        "quote": "George Flores presents: FREQUENCY at the Dallas Eagle, every last Thursday of the month! 🔥"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends at 1:00 the following morning (site: \"End at: <next day>\"). Only Oct 29 is listed. The Sep 24 last-Thursday slot is titled \"Latino Night\" (slug frequency-featuring-george-flores-4, no body text) and is documented as a single; Nov 26 and Dec 31 carry Dirty Bird Thanksgiving and NYE. Each occurrence is a separate WordPress post (no ?occurrence= param); website points at the first listed post."
+    },
+    {
+      "id": "freeky-friday-2026-10-30",
+      "kind": "single",
+      "title": "Freeky Friday",
+      "startDate": "2026-10-30",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "endDate": "2026-10-31",
+      "website": "https://www.thedallaseagle.com/events/freeky-friday/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/freeky-friday/",
+        "quote": "<span class=\"mec-start-date-label\">Oct 30 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: October 31, 2026 - 2:00 am\")."
+    },
+    {
+      "id": "femme-2026-11-05",
+      "kind": "single",
+      "title": "Femme",
+      "startDate": "2026-11-05",
+      "startTime": "22:00",
+      "endTime": "02:00",
+      "endDate": "2026-11-06",
+      "website": "https://www.thedallaseagle.com/events/femme/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/femme/",
+        "quote": "<span class=\"mec-start-date-label\">Nov 05 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: November 6, 2026 - 2:00 am\")."
+    },
+    {
+      "id": "locker-room-night-2026-11-06",
+      "kind": "single",
+      "title": "Locker Room Night",
+      "startDate": "2026-11-06",
+      "startTime": "22:00",
+      "endTime": "02:00",
+      "endDate": "2026-11-07",
+      "website": "https://www.thedallaseagle.com/events/locker-room-night/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/locker-room-night/",
+        "quote": "<span class=\"mec-start-date-label\">Nov 06 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: November 7, 2026 - 2:00 am\")."
+    },
+    {
+      "id": "swpol-meet-and-greet-2026-11-06",
+      "kind": "single",
+      "title": "SWPOL Meet and Greet",
+      "startDate": "2026-11-06",
+      "startTime": "18:30",
+      "endTime": "21:00",
+      "website": "https://www.thedallaseagle.com/events/swell-meet-and-greet/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/swell-meet-and-greet/",
+        "quote": "<span class=\"mec-start-date-label\">Nov 06 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Slug says swell (SouthWest Leather Legacy); title says SWPOL (SouthWest Person Of Leather). Part of the Nov 6–7 contest weekend (5 posts)."
+    },
+    {
+      "id": "gear-night-2026-11-07",
+      "kind": "single",
+      "title": "Gear Night",
+      "startDate": "2026-11-07",
+      "startTime": "22:00",
+      "endTime": "02:00",
+      "endDate": "2026-11-08",
+      "website": "https://www.thedallaseagle.com/events/gear-night-18/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/gear-night-18/",
+        "quote": "<span class=\"mec-start-date-label\">Nov 07 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: November 8, 2026 - 2:00 am\")."
+    },
+    {
+      "id": "swpol-contest-finale-2026-11-07",
+      "kind": "single",
+      "title": "SWPOL Contest Finale",
+      "startDate": "2026-11-07",
+      "startTime": "19:00",
+      "endTime": "21:00",
+      "website": "https://www.thedallaseagle.com/events/swell-contest-finale/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/swell-contest-finale/",
+        "quote": "<span class=\"mec-start-date-label\">Nov 07 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Slug says swell; title SWPOL. Body: \"The SouthWest Leather Legacy contest finale will start promptly at 7pm.\""
+    },
+    {
+      "id": "swpol-contest-interview-2026-11-07",
+      "kind": "single",
+      "title": "SWPOL Contest Interview",
+      "startDate": "2026-11-07",
+      "startTime": "09:30",
+      "endTime": "11:30",
+      "website": "https://www.thedallaseagle.com/events/swell-contest-interview/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/swell-contest-interview/",
+        "quote": "<span class=\"mec-start-date-label\">Nov 07 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Slug says swell; title SWPOL. Contest weekend post."
+    },
+    {
+      "id": "swpol-contest-presentations-2026-11-07",
+      "kind": "single",
+      "title": "SWPOL Contest Presentations",
+      "startDate": "2026-11-07",
+      "startTime": "13:00",
+      "endTime": "15:00",
+      "website": "https://www.thedallaseagle.com/events/swell-contest-presentations/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/swell-contest-presentations/",
+        "quote": "<span class=\"mec-start-date-label\">Nov 07 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Slug says swell; title SWPOL. Contest weekend post."
+    },
+    {
+      "id": "swpol-luncheon-2026-11-07",
+      "kind": "single",
+      "title": "SWPOL Luncheon",
+      "startDate": "2026-11-07",
+      "startTime": "11:30",
+      "endTime": "12:30",
+      "website": "https://www.thedallaseagle.com/events/swell-luncheon/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/swell-luncheon/",
+        "quote": "<span class=\"mec-start-date-label\">Nov 07 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Slug says swell; title SWPOL. Contest weekend post."
+    },
+    {
+      "id": "blacklite-2026-11-14",
+      "kind": "single",
+      "title": "Blacklite",
+      "startDate": "2026-11-14",
+      "startTime": "22:00",
+      "endTime": "02:00",
+      "endDate": "2026-11-15",
+      "website": "https://www.thedallaseagle.com/events/blacklite-4/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/blacklite-4/",
+        "quote": "<span class=\"mec-start-date-label\">Nov 14 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: November 15, 2026 - 2:00 am\")."
+    },
+    {
+      "id": "gear-night-2026-11-14",
+      "kind": "single",
+      "title": "Gear Night",
+      "startDate": "2026-11-14",
+      "startTime": "22:00",
+      "endTime": "02:00",
+      "endDate": "2026-11-15",
+      "website": "https://www.thedallaseagle.com/events/gear-night-13/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/gear-night-13/",
+        "quote": "<span class=\"mec-start-date-label\">Nov 14 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: November 15, 2026 - 2:00 am\")."
+    },
+    {
+      "id": "leather-lashes-drag-brunch-2026-11-14",
+      "kind": "single",
+      "title": "Leather & Lashes Drag Brunch",
+      "startDate": "2026-11-14",
+      "startTime": "13:00",
+      "endTime": "15:00",
+      "website": "https://www.thedallaseagle.com/events/drag-brunch-8/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/drag-brunch-8/",
+        "quote": "<span class=\"mec-start-date-label\">Nov 14 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Body says \"lash out with us every Sunday at The Eagle!\" but the only dated post is Saturday Nov 14, 1–3pm — see the recurring-blurb trap."
+    },
+    {
+      "id": "80s-retro-2026-11-15",
+      "kind": "single",
+      "title": "80s Retro",
+      "startDate": "2026-11-15",
+      "startTime": "17:00",
+      "endTime": "21:00",
+      "website": "https://www.thedallaseagle.com/events/80s-retro-7/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/80s-retro-7/",
+        "quote": "<span class=\"mec-start-date-label\">Nov 15 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null
+    },
+    {
+      "id": "throb-2026-11-19",
+      "kind": "single",
+      "title": "Throb",
+      "startDate": "2026-11-19",
+      "startTime": "23:00",
+      "endTime": "02:00",
+      "endDate": "2026-11-20",
+      "website": "https://www.thedallaseagle.com/events/throb-7/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/throb-7/",
+        "quote": "<span class=\"mec-start-date-label\">Nov 19 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: November 20, 2026 - 2:00 am\")."
+    },
+    {
+      "id": "drink-draw-and-dine-2026-11-20",
+      "kind": "single",
+      "title": "Drink Draw and Dine",
+      "startDate": "2026-11-20",
+      "startTime": "19:00",
+      "endTime": "21:00",
+      "website": "https://www.thedallaseagle.com/events/drink-draw-and-dine-6/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/drink-draw-and-dine-6/",
+        "quote": "<span class=\"mec-start-date-label\">Nov 20 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null
+    },
+    {
+      "id": "ignite-2026-11-20",
+      "kind": "single",
+      "title": "Ignite",
+      "startDate": "2026-11-20",
+      "startTime": "22:00",
+      "endTime": "02:00",
+      "endDate": "2026-11-21",
+      "website": "https://www.thedallaseagle.com/events/latinx-encuerados-6/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/latinx-encuerados-6/",
+        "quote": "<span class=\"mec-start-date-label\">Nov 20 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: November 21, 2026 - 2:00 am\"). Page body is empty apart from the UID; slug says latinx-encuerados. See ignite-2026-10-16."
+    },
+    {
+      "id": "gear-night-2026-11-21",
+      "kind": "single",
+      "title": "Gear Night",
+      "startDate": "2026-11-21",
+      "startTime": "22:00",
+      "endTime": "02:00",
+      "endDate": "2026-11-22",
+      "website": "https://www.thedallaseagle.com/events/gear-night-14/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/gear-night-14/",
+        "quote": "<span class=\"mec-start-date-label\">Nov 21 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: November 22, 2026 - 2:00 am\")."
+    },
+    {
+      "id": "sweet-tea-2026-11-22",
+      "kind": "single",
+      "title": "Sweet Tea",
+      "startDate": "2026-11-22",
+      "startTime": "17:00",
+      "endTime": "21:00",
+      "website": "https://www.thedallaseagle.com/events/sweet-tea-7/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/sweet-tea-7/",
+        "quote": "<span class=\"mec-start-date-label\">Nov 22 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null
+    },
+    {
+      "id": "dirty-bird-thanksgiving-2026-11-26",
+      "kind": "single",
+      "title": "Dirty Bird Thanksgiving",
+      "startDate": "2026-11-26",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "endDate": "2026-11-27",
+      "website": "https://www.thedallaseagle.com/events/dirty-bird-thanksgiving/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/dirty-bird-thanksgiving/",
+        "quote": "<span class=\"mec-start-date-label\">Nov 26 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: November 27, 2026 - 2:00 am\"). Occupies the Thursday Karaoke / last-Thursday Frequency slot on Thanksgiving."
+    },
+    {
+      "id": "pet-night-2026-11-27",
+      "kind": "single",
+      "title": "Pet Night",
+      "startDate": "2026-11-27",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "endDate": "2026-11-28",
+      "website": "https://www.thedallaseagle.com/events/pet-night-3/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/pet-night-3/",
+        "quote": "<span class=\"mec-start-date-label\">Nov 27 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: November 28, 2026 - 2:00 am\")."
+    },
+    {
+      "id": "womxn-s-night-2026-11-27",
+      "kind": "single",
+      "title": "Womxn’s Night",
+      "startDate": "2026-11-27",
+      "startTime": "21:00",
+      "endTime": "00:00",
+      "endDate": "2026-11-28",
+      "website": "https://www.thedallaseagle.com/events/womxns-night-7/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/womxns-night-7/",
+        "quote": "<span class=\"mec-start-date-label\">Nov 27 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends 0:00 the following morning (grid tooltip: \"End at: November 28, 2026 - 12:00 am\")."
+    },
+    {
+      "id": "eagle-market-2026-11-28",
+      "kind": "single",
+      "title": "Eagle Market",
+      "startDate": "2026-11-28",
+      "startTime": "13:00",
+      "endTime": "17:00",
+      "website": "https://www.thedallaseagle.com/events/eagle-market-5/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/eagle-market-5/",
+        "quote": "<span class=\"mec-start-date-label\">Nov 28 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null
+    },
+    {
+      "id": "lone-star-leather-with-dj-tdon-2026-11-28",
+      "kind": "single",
+      "title": "Lone Star Leather with DJ TDon",
+      "startDate": "2026-11-28",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "endDate": "2026-11-29",
+      "website": "https://www.thedallaseagle.com/events/lone-star-leather/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/lone-star-leather/",
+        "quote": "<span class=\"mec-start-date-label\">Nov 28 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: November 29, 2026 - 2:00 am\")."
+    },
+    {
+      "id": "sweet-tea-2026-11-29",
+      "kind": "single",
+      "title": "Sweet Tea",
+      "startDate": "2026-11-29",
+      "startTime": "17:00",
+      "endTime": "21:00",
+      "website": "https://www.thedallaseagle.com/events/sweet-tea-9/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/sweet-tea-9/",
+        "quote": "<span class=\"mec-start-date-label\">Nov 29 2026</span>"
+      },
+      "expect": {"extracted":true},
+      "bearVerdict": null
+    },
+    {
+      "id": "femme-2026-12-03",
+      "kind": "single",
+      "title": "Femme",
+      "startDate": "2026-12-03",
+      "startTime": "22:00",
+      "endTime": "02:00",
+      "endDate": "2026-12-04",
+      "website": "https://www.thedallaseagle.com/events/femme-2/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/femme-2/",
+        "quote": "<span class=\"mec-start-date-label\">Dec 03 2026</span>"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "December-only: the configured page is the September grid and the scraper's MEC month-feed replay defaults to calendarLookaheadMonths=2 (Oct, Nov); December is beyond its reach unless the lookahead is raised to 3."
+      },
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: December 4, 2026 - 2:00 am\")."
+    },
+    {
+      "id": "cowboy-night-2026-12-04",
+      "kind": "single",
+      "title": "Cowboy Night",
+      "startDate": "2026-12-04",
+      "startTime": "22:00",
+      "endTime": "02:00",
+      "endDate": "2026-12-05",
+      "website": "https://www.thedallaseagle.com/events/cowboy-night-2/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/cowboy-night-2/",
+        "quote": "<span class=\"mec-start-date-label\">Dec 04 2026</span>"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "December-only: the configured page is the September grid and the scraper's MEC month-feed replay defaults to calendarLookaheadMonths=2 (Oct, Nov); December is beyond its reach unless the lookahead is raised to 3."
+      },
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: December 5, 2026 - 2:00 am\")."
+    },
+    {
+      "id": "gear-night-2026-12-05",
+      "kind": "single",
+      "title": "Gear Night",
+      "startDate": "2026-12-05",
+      "startTime": "22:00",
+      "endTime": "02:00",
+      "endDate": "2026-12-06",
+      "website": "https://www.thedallaseagle.com/events/gear-night-15/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/gear-night-15/",
+        "quote": "<span class=\"mec-start-date-label\">Dec 05 2026</span>"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "December-only: the configured page is the September grid and the scraper's MEC month-feed replay defaults to calendarLookaheadMonths=2 (Oct, Nov); December is beyond its reach unless the lookahead is raised to 3."
+      },
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: December 6, 2026 - 2:00 am\")."
+    },
+    {
+      "id": "lost-souls-annual-toy-drive-2026-12-05",
+      "kind": "single",
+      "title": "Lost Souls Annual Toy Drive",
+      "startDate": "2026-12-05",
+      "startTime": "13:00",
+      "endTime": "15:00",
+      "website": "https://www.thedallaseagle.com/events/lost-souls-annual-toy-drive/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/lost-souls-annual-toy-drive/",
+        "quote": "<span class=\"mec-start-date-label\">Dec 05 2026</span>"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "December-only: the configured page is the September grid and the scraper's MEC month-feed replay defaults to calendarLookaheadMonths=2 (Oct, Nov); December is beyond its reach unless the lookahead is raised to 3."
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "mr-dallas-eagle-presents-the-naughtiest-pop-up-art-show-2026-12-05",
+      "kind": "single",
+      "title": "Mr. Dallas Eagle presents The Naughtiest Pop-Up Art Show",
+      "startDate": "2026-12-05",
+      "startTime": "13:00",
+      "endTime": "19:00",
+      "website": "https://www.thedallaseagle.com/events/mr-dallas-eagle-presents-the-naughtiest-pop-up-art-show/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/mr-dallas-eagle-presents-the-naughtiest-pop-up-art-show/",
+        "quote": "<span class=\"mec-start-date-label\">Dec 05 2026</span>"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "December-only: the configured page is the September grid and the scraper's MEC month-feed replay defaults to calendarLookaheadMonths=2 (Oct, Nov); December is beyond its reach unless the lookahead is raised to 3."
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "uclse-drag-show-2026-12-05",
+      "kind": "single",
+      "title": "UCLSE Drag Show",
+      "startDate": "2026-12-05",
+      "startTime": "19:00",
+      "endTime": "21:00",
+      "website": "https://www.thedallaseagle.com/events/uclse-drag-show/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/uclse-drag-show/",
+        "quote": "<span class=\"mec-start-date-label\">Dec 05 2026</span>"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "December-only: the configured page is the September grid and the scraper's MEC month-feed replay defaults to calendarLookaheadMonths=2 (Oct, Nov); December is beyond its reach unless the lookahead is raised to 3."
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "cowboy-boots-union-suits-2026-12-11",
+      "kind": "single",
+      "title": "Cowboy Boots & Union Suits",
+      "startDate": "2026-12-11",
+      "startTime": "22:00",
+      "endTime": "02:00",
+      "endDate": "2026-12-12",
+      "website": "https://www.thedallaseagle.com/events/cowboy-boots-union-suits/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/cowboy-boots-union-suits/",
+        "quote": "<span class=\"mec-start-date-label\">Dec 11 2026</span>"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "December-only: the configured page is the September grid and the scraper's MEC month-feed replay defaults to calendarLookaheadMonths=2 (Oct, Nov); December is beyond its reach unless the lookahead is raised to 3."
+      },
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: December 12, 2026 - 2:00 am\"). Occupies the second-Friday Bear Night slot; no Bear Night post in December."
+    },
+    {
+      "id": "bar-crawl-2026-12-12",
+      "kind": "single",
+      "title": "Bar Crawl",
+      "startDate": "2026-12-12",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "endDate": "2026-12-13",
+      "website": "https://www.thedallaseagle.com/events/bar-crawl/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/bar-crawl/",
+        "quote": "<span class=\"mec-start-date-label\">Dec 12 2026</span>"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "December-only: the configured page is the September grid and the scraper's MEC month-feed replay defaults to calendarLookaheadMonths=2 (Oct, Nov); December is beyond its reach unless the lookahead is raised to 3."
+      },
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: December 13, 2026 - 2:00 am\")."
+    },
+    {
+      "id": "gear-night-2026-12-12",
+      "kind": "single",
+      "title": "Gear Night",
+      "startDate": "2026-12-12",
+      "startTime": "22:00",
+      "endTime": "02:00",
+      "endDate": "2026-12-13",
+      "website": "https://www.thedallaseagle.com/events/gear-night-16/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/gear-night-16/",
+        "quote": "<span class=\"mec-start-date-label\">Dec 12 2026</span>"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "December-only: the configured page is the September grid and the scraper's MEC month-feed replay defaults to calendarLookaheadMonths=2 (Oct, Nov); December is beyond its reach unless the lookahead is raised to 3."
+      },
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: December 13, 2026 - 2:00 am\")."
+    },
+    {
+      "id": "throb-2026-12-17",
+      "kind": "single",
+      "title": "Throb",
+      "startDate": "2026-12-17",
+      "startTime": "23:00",
+      "endTime": "02:00",
+      "endDate": "2026-12-18",
+      "website": "https://www.thedallaseagle.com/events/throb-8/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/throb-8/",
+        "quote": "<span class=\"mec-start-date-label\">Dec 17 2026</span>"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "December-only: the configured page is the September grid and the scraper's MEC month-feed replay defaults to calendarLookaheadMonths=2 (Oct, Nov); December is beyond its reach unless the lookahead is raised to 3."
+      },
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: December 18, 2026 - 2:00 am\")."
+    },
+    {
+      "id": "drink-draw-and-dine-2026-12-18",
+      "kind": "single",
+      "title": "Drink Draw and Dine",
+      "startDate": "2026-12-18",
+      "startTime": "19:00",
+      "endTime": "21:00",
+      "website": "https://www.thedallaseagle.com/events/drink-draw-and-dine-7/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/drink-draw-and-dine-7/",
+        "quote": "<span class=\"mec-start-date-label\">Dec 18 2026</span>"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "December-only: the configured page is the September grid and the scraper's MEC month-feed replay defaults to calendarLookaheadMonths=2 (Oct, Nov); December is beyond its reach unless the lookahead is raised to 3."
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "ignite-2026-12-18",
+      "kind": "single",
+      "title": "Ignite",
+      "startDate": "2026-12-18",
+      "startTime": "22:00",
+      "endTime": "02:00",
+      "endDate": "2026-12-19",
+      "website": "https://www.thedallaseagle.com/events/latinx-encuerados-3/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/latinx-encuerados-3/",
+        "quote": "<span class=\"mec-start-date-label\">Dec 18 2026</span>"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "December-only: the configured page is the September grid and the scraper's MEC month-feed replay defaults to calendarLookaheadMonths=2 (Oct, Nov); December is beyond its reach unless the lookahead is raised to 3."
+      },
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: December 19, 2026 - 2:00 am\"). Page body is empty apart from the UID; slug says latinx-encuerados. See ignite-2026-10-16."
+    },
+    {
+      "id": "leather-xxxmas-2026-12-19",
+      "kind": "single",
+      "title": "Leather XXXmas",
+      "startDate": "2026-12-19",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "endDate": "2026-12-20",
+      "website": "https://www.thedallaseagle.com/events/leather-xxxmas/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/leather-xxxmas/",
+        "quote": "<span class=\"mec-start-date-label\">Dec 19 2026</span>"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "December-only: the configured page is the September grid and the scraper's MEC month-feed replay defaults to calendarLookaheadMonths=2 (Oct, Nov); December is beyond its reach unless the lookahead is raised to 3."
+      },
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: December 20, 2026 - 2:00 am\")."
+    },
+    {
+      "id": "80s-retro-2026-12-20",
+      "kind": "single",
+      "title": "80s Retro",
+      "startDate": "2026-12-20",
+      "startTime": "17:00",
+      "endTime": "21:00",
+      "website": "https://www.thedallaseagle.com/events/80s-retro-5/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/80s-retro-5/",
+        "quote": "<span class=\"mec-start-date-label\">Dec 20 2026</span>"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "December-only: the configured page is the September grid and the scraper's MEC month-feed replay defaults to calendarLookaheadMonths=2 (Oct, Nov); December is beyond its reach unless the lookahead is raised to 3."
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "stocking-stuffer-karaoke-2026-12-24",
+      "kind": "single",
+      "title": "Stocking Stuffer Karaoke",
+      "startDate": "2026-12-24",
+      "startTime": "19:00",
+      "endTime": "00:00",
+      "endDate": "2026-12-25",
+      "website": "https://www.thedallaseagle.com/events/stocking-stuffer-karaoke/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/stocking-stuffer-karaoke/",
+        "quote": "<span class=\"mec-start-date-label\">Dec 24 2026</span>"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "December-only: the configured page is the September grid and the scraper's MEC month-feed replay defaults to calendarLookaheadMonths=2 (Oct, Nov); December is beyond its reach unless the lookahead is raised to 3."
+      },
+      "bearVerdict": null,
+      "note": "Ends 0:00 the following morning (grid tooltip: \"End at: December 25, 2026 - 12:00 am\"). Occupies the Thursday Karaoke slot on Christmas Eve."
+    },
+    {
+      "id": "pet-night-2026-12-25",
+      "kind": "single",
+      "title": "Pet Night",
+      "startDate": "2026-12-25",
+      "startTime": "20:00",
+      "endTime": "02:00",
+      "endDate": "2026-12-26",
+      "website": "https://www.thedallaseagle.com/events/pet-night-5/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/pet-night-5/",
+        "quote": "<span class=\"mec-start-date-label\">Dec 25 2026</span>"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "December-only: the configured page is the September grid and the scraper's MEC month-feed replay defaults to calendarLookaheadMonths=2 (Oct, Nov); December is beyond its reach unless the lookahead is raised to 3."
+      },
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: December 26, 2026 - 2:00 am\")."
+    },
+    {
+      "id": "afterglow-2026-12-27",
+      "kind": "single",
+      "title": "Afterglow",
+      "startDate": "2026-12-27",
+      "startTime": "21:00",
+      "endTime": "00:00",
+      "endDate": "2026-12-28",
+      "website": "https://www.thedallaseagle.com/events/afterglow-5/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/afterglow-5/",
+        "quote": "<span class=\"mec-start-date-label\">Dec 27 2026</span>"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "December-only: the configured page is the September grid and the scraper's MEC month-feed replay defaults to calendarLookaheadMonths=2 (Oct, Nov); December is beyond its reach unless the lookahead is raised to 3."
+      },
+      "bearVerdict": null,
+      "note": "Ends 0:00 the following morning (grid tooltip: \"End at: December 28, 2026 - 12:00 am\")."
+    },
+    {
+      "id": "sweet-tea-2026-12-27",
+      "kind": "single",
+      "title": "Sweet Tea",
+      "startDate": "2026-12-27",
+      "startTime": "17:00",
+      "endTime": "21:00",
+      "website": "https://www.thedallaseagle.com/events/sweet-tea-10/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/sweet-tea-10/",
+        "quote": "<span class=\"mec-start-date-label\">Dec 27 2026</span>"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "December-only: the configured page is the September grid and the scraper's MEC month-feed replay defaults to calendarLookaheadMonths=2 (Oct, Nov); December is beyond its reach unless the lookahead is raised to 3."
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "dallas-eagle-nye-2026-12-31",
+      "kind": "single",
+      "title": "Dallas Eagle NYE",
+      "startDate": "2026-12-31",
+      "startTime": "20:00",
+      "endTime": "02:00",
+      "endDate": "2027-01-01",
+      "website": "https://www.thedallaseagle.com/events/dallas-eagle-nye/",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/dallas-eagle-nye/",
+        "quote": "<span class=\"mec-start-date-label\">Dec 31 2026</span>"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "December-only: the configured page is the September grid and the scraper's MEC month-feed replay defaults to calendarLookaheadMonths=2 (Oct, Nov); December is beyond its reach unless the lookahead is raised to 3."
+      },
+      "bearVerdict": null,
+      "note": "Ends 2:00 the following morning (grid tooltip: \"End at: January 1, 2027 - 2:00 am\"). Body copy is stale (\"end 2024 and welcome a fresh 2025\"); the page date block says Dec 31 2026, which is what is recorded."
+    }
+  ],
+  "traps": [
+    {
+      "id": "expired-motley-clue-trivia-2026-09-08",
+      "kind": "past-event",
+      "label": "Motley Clue Trivia — Sep 8 cell on the September grid with an \"Expired\" label",
+      "why": "The configured page renders the whole current month, so the one Tuesday already gone (Sep 8, 8–10pm) sits on it flagged Expired. It is a real past occurrence of the Motley Clue Trivia series, not a future event. Global config.allowPastEvents is true, so extracting it is correct behaviour, not a bug.",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/",
+        "quote": "<span data-style=\"Normal\" class=\"mec-label-normal mec-expired-normal-label\">Expired</span>"
+      },
+      "expect": {"extracted":true},
+      "note": "Post: https://www.thedallaseagle.com/events/motley-clue-trivia-22/ (Date \"Sep 08 2026\"). Counted, not enumerated: it is the only expired cell on any fetched grid."
+    },
+    {
+      "id": "end-at-line-is-not-a-start",
+      "kind": "duplicate-listing",
+      "label": "\"End at: September 10, 2026 - 2:00 am\" tooltip/list line under every overnight event",
+      "why": "Overnight events render two dated lines — \"Start from: <date> - 9:00 pm\" then \"End at: <next day> - 2:00 am\". The End at line names a different calendar day and looks like a second listing; it is the end of the same event, never a start and never a second occurrence.",
+      "evidence": {"url":"https://www.thedallaseagle.com/events/","quote":"End at: September 10, 2026 - 2:00 am"},
+      "expect": {"extracted":false},
+      "note": "Config comment says #1540 end-marker gate covers this. 2026-09-10 02:00 must not appear as a start date."
+    },
+    {
+      "id": "month-navigator-prev-next",
+      "kind": "navigation",
+      "label": "\"August\" / \"October\" month navigator links above the grid",
+      "why": "The previous/next month controls (data-mec-month=\"08\"/\"10\") are AJAX navigator buttons, not events. Following them as links yields the same /events/ URL; the real month change is the admin-ajax form POST.",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/",
+        "quote": "mec-load-month mec-next-month\" data-mec-year=\"2026\" data-mec-month=\"10\""
+      },
+      "expect": {"extracted":false}
+    },
+    {
+      "id": "venue-working-hours-block",
+      "kind": "venue-header",
+      "label": "\"working hours\" sidebar on every event page (Mon CLOSED, Tues 5pm-2am … Sat & Sun 1pm-2am)",
+      "why": "Every single-event page repeats the bar's opening hours next to the event Date/Time block. They are venue hours, not an event schedule or a recurrence rule.",
+      "evidence": {"url":"https://www.thedallaseagle.com/events/bear-night/","quote":"Tues | 5pm-2am"},
+      "expect": {"extracted":false}
+    },
+    {
+      "id": "leather-and-lashes-every-sunday-blurb",
+      "kind": "recurring-blurb",
+      "label": "Leather & Lashes Drag Brunch body text \"lash out with us every Sunday at The Eagle!\"",
+      "why": "The only dated post for this event is Saturday Nov 14 2026, 1–3pm. The \"every Sunday\" line is marketing copy contradicted by the site's own listing; a weekly Sunday series must not be manufactured from it.",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/drag-brunch-8/",
+        "quote": "lash out with us every Sunday at The Eagle!"
+      },
+      "expect": {"extracted":false},
+      "note": "The Nov 14 single itself is documented as leather-lashes-drag-brunch-2026-11-14."
+    },
+    {
+      "id": "january-grid-december-spillover-cells",
+      "kind": "duplicate-listing",
+      "label": "January 2027 grid: six event cells dated Dec 27–31 (Sweet Tea, Afterglow, Motley Clue Trivia, Underwear Happy Hour, Underwear Night and Contest, Dallas Eagle NYE)",
+      "why": "Every MEC month grid repeats the neighbouring month's cells to fill its first and last week (Sep grid shows Oct 1–3, Oct grid shows Sep 27–30, Nov grid shows Dec 1–5, Dec grid shows Nov 29, Jan grid shows Dec 27–31). They are the same posts as the owning month, not extra occurrences and not January events — dedupe by data-mec-cell + post id.",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/wp-admin/admin-ajax.php?mec_month_feed=2027-01",
+        "quote": "data-mec-cell=\"20261231\""
+      },
+      "expect": {"extracted":false},
+      "note": "expect.extracted false means: no SECOND record for these posts and no 2027-01 date; the posts themselves are documented under their December dates."
+    },
+    {
+      "id": "rest-and-sitemap-old-occurrence-posts",
+      "kind": "past-event",
+      "label": "137 REST mec-events posts (and 228 sitemap locs) for 2024–2025 occurrences: Cigar Social, Country Line Dancing, Thirst Trap Thursday, Bear Pride …",
+      "why": "Every past occurrence stays published as its own dated post and is reachable through /wp-json/wp/v2/mec-events and the stale mec-events sitemap, but none is linked from the configured /events/ grid. They are history, not current programming, and are outside the configured urls.",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/mec-events-sitemap1.xml",
+        "quote": "https://www.thedallaseagle.com/events/bear-pride/"
+      },
+      "expect": {"extracted":false},
+      "note": "Counted from rest-not-in-grid.txt (137, all with WordPress publish dates before 2026)."
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "Why did run 20260909-072307 yield 1 kept + 6 bear-dropped events from a page that links 30 dated posts (plus 84 more via the two default lookahead months)? The static page and the month feed both list every post plainly; the drop appears to be crawl/extraction-side, not site-side.",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    },
+    {
+      "q": "Slug/title drift: several posts reuse an older slug for a differently titled event (bear-night-2 = LatinX Encuerados, frequency-featuring-george-flores-4 = Latino Night, 80s-retro-4 = Rewind, gear-night-20/blacklite-3/gear-night-21 = SHOCK Therapy, latinx-encuerados-3/4/6 = Ignite, swell-* = SWPOL, trash-disco-with-dj-blaine-4 = Trash Disco with DJ Apthout). Any title derived from the URL slug will be wrong for these; the h1 / grid title is the truth.",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    },
+    {
+      "q": "Run 20260909-072307 recorded the Oct 9 Bear Night post as title \"Second Fridays\" (the body's opening phrase) with FREQ=MONTHLY;BYDAY=2FR — a title-extraction miss on a page whose h1 and grid label both read \"Bear Night\".",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    },
+    {
+      "q": "Should calendarLookaheadMonths be raised to 3 for this parser? December (42 posts) is published now but sits beyond the default 2-month feed replay, so 22 December-only entries here carry expect.extracted \"unknown\".",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    }
+  ]
+}

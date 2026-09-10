@@ -1,0 +1,611 @@
+{
+  "schemaVersion": 1,
+  "source": "Bearracuda Events",
+  "slug": "bearracuda-events",
+  "status": "complete",
+  "recon": {
+    "date": "2026-09-10",
+    "method": [
+      "feed",
+      "static",
+      "flyer",
+      "page-cache"
+    ],
+    "parserUrlsAtRecon": [
+      "https://bearracuda.com/",
+      "https://www.eventbrite.com/o/bearracuda-21867032189"
+    ],
+    "doors": [
+      {
+        "url": "https://bearracuda.com/wp-json/wp/v2/events?per_page=100",
+        "kind": "wp-rest",
+        "role": "feed",
+        "rowsReturned": 7,
+        "truthFlag": "X-WP-Total: 7, X-WP-TotalPages: 1",
+        "note": "WordPress custom post type `events` (Elementor). Confirms the platform and the roster (ids 2967, 3019, 3055, 3064, 3069, 3071, 3075) but carries NO dates or venues: `acf` is `[]` on every row and content.rendered is Elementor markup without the date block. Not Tribe (no /wp-json/tribe/ route, no ?ical=1). Saved as wp-events.json + wp-events.headers.txt."
+      },
+      {
+        "url": "https://bearracuda.com/events-sitemap.xml",
+        "kind": "sitemap",
+        "role": "sitemap",
+        "rowsReturned": 7,
+        "truthFlag": "7 <loc> entries",
+        "note": "Same 7 slugs as REST (flsm, 7days, portlandnye, portland-17, denver17, phoenix, portlandoct). Saved as events-sitemap.xml."
+      },
+      {
+        "url": "https://bearracuda.com/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 7,
+        "truthFlag": null,
+        "note": "Configured parser URL #1. Static HTML (no JS needed) lists all 7 under \"Upcoming Events\" as \"<post title> / <Month D, YYYY>\" with a link to each /events/<slug>/ page. Dates carry the year. No past events on the page. Saved as homepage.html/.txt."
+      },
+      {
+        "url": "https://bearracuda.com/events/7days/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Elementor event page: h1 = post title, then \"📅 <date>\", \"Doors Open at …\", \"Party Goes Until …\", \"🪩 <venue>\", address line, party-name line, lineup, hosts, then buttons RSVP Link (Facebook event) / Get Tickets (sickening.events). Saved as event-7days.html/.txt."
+      },
+      {
+        "url": "https://bearracuda.com/events/portland-17/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Same template plus an on-page Venmo ticket form (Gravity Forms). Saved as event-portland-17.html/.txt."
+      },
+      {
+        "url": "https://bearracuda.com/events/flsm/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Saved as event-flsm.html/.txt."
+      },
+      {
+        "url": "https://bearracuda.com/events/denver17/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Get Tickets goes to Ticketmaster (not sickening.events). Saved as event-denver17.html/.txt."
+      },
+      {
+        "url": "https://bearracuda.com/events/phoenix/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Saved as event-phoenix.html/.txt."
+      },
+      {
+        "url": "https://bearracuda.com/events/portlandoct/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Post/h1 title \"Portland Oct\"; the party name only appears in the two Gravity Forms headings \"Bearracuda Portland: DICK OR TREAT (Costumed)\" / \"(no costume)\". Saved as event-portlandoct.html/.txt."
+      },
+      {
+        "url": "https://bearracuda.com/events/portlandnye/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Saved as event-portlandnye.html/.txt."
+      },
+      {
+        "url": "https://www.eventbrite.com/o/bearracuda-21867032189",
+        "kind": "next-data",
+        "role": "feed",
+        "rowsReturned": 0,
+        "truthFlag": "upcomingEvents: [], hasMoreUpcoming: false, upcomingEventsTotal: 0; organizer.metrics.totalEvents: 125",
+        "note": "Configured parser URL #2. __NEXT_DATA__ props.pageProps.upcomingEvents is empty; the page string \"No upcoming events\" is present. Bearracuda no longer sells on Eventbrite: every current event page links to sickening.events (5), Ticketmaster (Denver) or on-page Venmo. Saved as eventbrite-org.html/.txt + eventbrite-next-data.json."
+      },
+      {
+        "url": "https://sickening.events/e/bearracuda-seattle-7days",
+        "kind": "html",
+        "role": "other",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Ticket page (Event JSON-LD): \"Bearracuda Seattle: 7 DAY LOAD\", 2026-09-12T21:00-07:00 → 2026-09-13T03:00-07:00, MASSIVE 619 E. Pine, Seattle, WA 98122; offers Early Shooter $20 / GA $30 / Door $30. Saved as ticket-sickening-events-e-bearracuda-seattle-7days.html/.txt."
+      },
+      {
+        "url": "https://sickening.events/e/bearracuda-portland-17",
+        "kind": "html",
+        "role": "other",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "\"Bearracuda Portland 17 YEAR Anniversary\", 2026-09-19T21:00-07:00 → 2026-09-20T03:00-07:00, Nova PDX; Early $20. Saved as ticket-sickening-events-e-bearracuda-portland-17.html/.txt."
+      },
+      {
+        "url": "https://sickening.events/e/bearracuda-san-francisco-hmd",
+        "kind": "html",
+        "role": "other",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "\"Bearracuda Folsom Street: Horse Meat Disco\", 2026-09-25T21:00-07:00 → 2026-09-26T03:00-07:00, Public Works 161 Erie Street, San Francisco, CA 94103; GA $50, tiers $55/$60/$65. Saved as ticket-sickening-events-e-bearracuda-san-francisco-hmd.html/.txt."
+      },
+      {
+        "url": "https://sickening.events/e/bearracuda-phoenix-pride",
+        "kind": "html",
+        "role": "other",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "\"Bearracuda Phoenix PRIDE!\", 2026-10-10T21:30-07:00 → 2026-10-11T02:00-07:00, 4230 N. 6th Drive, Phoenix, AZ 85013; Super Early GA $15. Saved as ticket-sickening-events-e-bearracuda-phoenix-pride.html/.txt."
+      },
+      {
+        "url": "https://sickening.events/e/bearracuda-portland-halloween",
+        "kind": "html",
+        "role": "other",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "\"Bearracuda Portland: Dick or Treat!\", 2026-10-10T21:00-07:00 → 2026-10-11T02:00-07:00, Nova PDX; Early Costumed $20, No Costume Ticket $25. Saved as ticket-sickening-events-e-bearracuda-portland-halloween.html/.txt."
+      },
+      {
+        "url": "https://sickening.events/e/bearracuda-portland-nye",
+        "kind": "html",
+        "role": "other",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "\"Bearracuda Portland NYE!\", 2026-12-31T21:00-08:00 → 2027-01-01T03:00-08:00, Nova PDX; Super Early NYE $27. Saved as ticket-sickening-events-e-bearracuda-portland-nye.html/.txt."
+      },
+      {
+        "url": "https://www.ticketmaster.com/event/1E006505BDFCE369",
+        "kind": "html",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": "HTTP 401 {\"response\":\"identify\"}",
+        "note": "Denver ticket link. Ticketmaster bot-wall; unreadable with curl. The Denver event is fully described on its bearracuda.com page, so this is not a gap. Saved as ticket-www-ticketmaster-com-event-1E006505BDFCE369.html."
+      },
+      {
+        "url": "https://bearracuda.com/events/",
+        "kind": "html",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": "HTTP 404",
+        "note": "There is no post-type archive page; the homepage IS the listing. Saved as events-archive.html/.txt."
+      },
+      {
+        "url": "https://bearracuda.com/events/decadence/",
+        "kind": "html",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": "HTTP 404",
+        "note": "The New Orleans \"SOUTHERN DECADENCE\" page (2026-09-04) was deleted after the party; it is absent from REST and the sitemap. Its page-cache copy (fetchedAt 2026-08-27T12:15:13.264Z, statusCode 200) is saved as cache-events__decadence.json/.txt — see traps."
+      },
+      {
+        "url": "https://bearracuda.com/wp-content/uploads/2026/07/cuda-seattle_september_2026-web.jpg",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Seattle flyer: \"SATURDAY SEPTEMBER 12TH, 2026 / BEARRACUDA SEATTLE / Seven Day Load / A NIGHT OF JOCKSTRAPS, BOXERS, BONERS, & BRIEFS! (2 CLOTHES CHECKS AVAILABLE) / Beats By: DJ MATT CONSOLA AND DJ FREDDY KING OF PANTS / MASSIVE 619 E. PINE STREET / ADV. TIX AT BEARRACUDA.COM\". Saved as flyers/cuda-seattle_september_2026-web.jpg."
+      },
+      {
+        "url": "https://bearracuda.com/wp-content/uploads/2026/07/cuda-portland_september_2026-web.jpg",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Portland 17 flyer: \"BEARRACUDA 17 YEAR ANNIVERSARY PORTLAND / BEATS BY: DJ MATT STANDS / SATURDAY SEPTEMBER 19TH, 2026 / NOVA PDX 722 E. BURNSIDE / SHOW AT 11PM WITH KHARISMA, MULAN ALEXANDER, AND SEVEN\". Saved as flyers/cuda-portland_september_2026-web.jpg."
+      },
+      {
+        "url": "https://bearracuda.com/wp-content/uploads/2026/05/newfolsomweb.jpg",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "SF flyer: \"BEARRACUDA SF FOLSOM STREET FRIDAY / HORSE MEAT DISCO / FRIDAY, SEPTEMBER 25TH / PUBLIC WORKS 161 ERIE / LOFT: MATEO SEGADE / PHOTOS & DECOR BY DUSTI CUNNINGHAM\" — no year on the flyer; year comes from the page. Saved as flyers/newfolsomweb.jpg."
+      },
+      {
+        "url": "https://bearracuda.com/wp-content/uploads/2026/08/bearracuda_denveroctober2026-ig-819x1024.jpg",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Denver flyer: \"BEARRACUDA DENVER / SATURDAY OCTOBER 3 / 17 YEAR ANNIVERSARY!! / OPHELIA'S 1215 20TH ST / HOT GOGOS! / DJ MATT STANDS SEATTLE / HOSTED BY JP HARDY / ADVANCE TIX AT BEARRACUDA.COM\" — no year on the flyer. Saved as flyers/bearracuda_denveroctober2026-ig-819x1024.jpg."
+      },
+      {
+        "url": "https://bearracuda.com/wp-content/uploads/2026/08/webphoenixweblarge.jpg",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Phoenix flyer: \"SATURDAY, OCTOBER 10TH / BEARRACUDA PHOENIX / PRIDE SATURDAY / MUSIC BY MATT STANDS / HOSTED BY MATT BEARRACUDA / 4230 NORTH 6TH DR, 9:30PM-LATE 21+\" — no year on the flyer. Saved as flyers/webphoenixweblarge.jpg."
+      },
+      {
+        "url": "https://bearracuda.com/wp-content/uploads/2026/08/cuda_portland_october_2026-web.jpg",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Portland Oct flyer: \"SATURDAY OCTOBER 10TH DOORS AT 9PM / BEARRACUDA PORTLAND / DICK OR TREAT / $500 SILENT COSTUME CONTEST / FEATURING DJ MATT CONSOLA / LOCATION NOVA 722 E. BURNSIDE\" — no year on the flyer. Saved as flyers/cuda_portland_october_2026-web.jpg."
+      },
+      {
+        "url": "https://bearracuda.com/wp-content/uploads/2026/03/pdxnew.jpg",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "NYE flyer (text-only teaser): \"THE 4TH ANNUAL BEARRACUDA PORTLAND NEW YEAR'S EVE / THURSDAY, DECEMBER 31ST, 2026\". Saved as flyers/pdxnew.jpg."
+      }
+    ],
+    "notes": "WordPress + Elementor with a custom `events` post type, confirmed by the working /wp-json/wp/v2/events endpoint (X-WP-Total: 7). The REST feed is a roster only — dates, venues and times exist solely in the rendered page text (homepage list + each event page), so the scraper must read HTML; there is no date-bearing feed, no Tribe, no ICS. Every event page and the homepage render fully via static curl (Chrome UA); the page cache (fetchedAt 2026-09-07T05:15Z) holds identical copies. Eventbrite (configured URL #2) has 0 upcoming and 125 lifetime events; ticketing has moved to sickening.events, Ticketmaster and on-page Venmo. The Eventbrite page-cache copy (www.eventbrite.com/o__bearracuda-21867032189.json, fetchedAt 2026-09-07T05:16:07.263Z) was also empty. Raw artifacts: /private/tmp/claude-501/-Users-stanleyrya-workspace-chunky-dad/49179ac5-44be-4797-821c-ffb35abc0b2d/scratchpad/recon/bearracuda-events/"
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Four bearracuda.com doors agree on exactly 7 upcoming singles: WP REST X-WP-Total 7, events-sitemap.xml 7 <loc>, homepage \"Upcoming Events\" list 7 rows (each dated with a year, each linking to one of the 7 event pages), 7 event pages each with one \"📅 <date>\" block. Zero delta. The Eventbrite door (configured URL #2) contributes 0 upcoming (upcomingEventsTotal 0, hasMoreUpcoming false) — every event sells elsewhere. Each of the 6 sickening.events ticket pages carries Event JSON-LD whose date/venue/doors time matches its bearracuda.com page (start times 21:00 / 21:30, end times 02:00 / 03:00). No series anywhere; no recurrence language. Past listings: none on bearracuda.com (the homepage lists upcoming only; past event pages are deleted — /events/decadence/ now 404s); Eventbrite shows 125 lifetime events with no upcoming, counted only.",
+    "publishedEventCount": 7,
+    "documentedEventCount": 7,
+    "occurrenceWindow": {
+      "start": "2026-09-10",
+      "end": "2026-12-09"
+    },
+    "pastListingsPresent": false,
+    "knownGaps": []
+  },
+  "defaults": {
+    "website": "https://bearracuda.com"
+  },
+  "events": [
+    {
+      "kind": "single",
+      "location": null,
+      "sourceRung": "static",
+      "confidence": "high",
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "id": "bearracuda-seattle-7-day-load-2026-09-12",
+      "title": "Bearracuda Seattle: 7 Day LOAD",
+      "shortName": "Seattle💦",
+      "description": "7 Day LOAD — Strip Down to Undies and Jocks! Beats by Matt Consola and Freddy KOP; hosted by Matt Bearracuda.",
+      "bar": "MASSIVE",
+      "address": "619 E. Pine St, Seattle, WA",
+      "city": "seattle",
+      "timezone": "America/Los_Angeles",
+      "startDate": "2026-09-12",
+      "startTime": "21:00",
+      "endDate": "2026-09-13",
+      "endTime": "03:00",
+      "website": "https://bearracuda.com/events/7days/",
+      "ticketUrl": "https://sickening.events/e/bearracuda-seattle-7days",
+      "facebook": "https://www.facebook.com/events/1054598780476175",
+      "cover": "$20 Early Shooter / $30 GA / $30 Door (sickening.events)",
+      "image": "https://bearracuda.com/wp-content/uploads/2026/07/cuda-seattle_september_2026-web.jpg",
+      "evidence": {
+        "url": "https://bearracuda.com/events/7days/",
+        "quote": "📅 September 12, 2026",
+        "imageUrl": "https://bearracuda.com/wp-content/uploads/2026/07/cuda-seattle_september_2026-web.jpg"
+      },
+      "note": "WP post title / h1 is \"Seattle💦\" (homepage row \"Seattle💦 / September 12, 2026\"); the party name is the body line \"7 Day LOAD\" (flyer: \"Seven Day Load\"; sickening.events: \"Bearracuda Seattle: 7 DAY LOAD\"). Page: \"Doors Open at 9:00 pm\" / \"Party Goes Until 3:00 am!\" / \"🪩 MASSIVE\" / \"619 E. Pine St, Seattle, WA\". The venue massive.club lists this party on its own site; that is massive-club's file — no sameEventAs asserted here."
+    },
+    {
+      "kind": "single",
+      "location": null,
+      "sourceRung": "static",
+      "confidence": "high",
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "id": "bearracuda-portland-17-year-anniversary-2026-09-19",
+      "title": "Bearracuda Portland: 17 Year Anniversary",
+      "shortName": "Portland 17",
+      "description": "17 Year Anniversary Portland. DJ Matt Stands; show at 11pm w/ Kharisma, Mulan Alexander & more; hosted by Matt Bearracuda and JP Hardy.",
+      "bar": "NOVA PDX",
+      "address": "722 E Burnside, Portland, OR 97214",
+      "city": "portland",
+      "timezone": "America/Los_Angeles",
+      "startDate": "2026-09-19",
+      "startTime": "21:00",
+      "endDate": "2026-09-20",
+      "endTime": "03:00",
+      "website": "https://bearracuda.com/events/portland-17/",
+      "ticketUrl": "https://sickening.events/e/bearracuda-portland-17",
+      "facebook": "https://www.facebook.com/events/1613259647056257",
+      "cover": "$20 (Venmo advance, \"1 ticket Anniversary\"; sickening.events Early $20)",
+      "image": "https://bearracuda.com/wp-content/uploads/2026/07/cuda-portland_september_2026-web.jpg",
+      "evidence": {
+        "url": "https://bearracuda.com/events/portland-17/",
+        "quote": "📅 September 19, 2026",
+        "imageUrl": "https://bearracuda.com/wp-content/uploads/2026/07/cuda-portland_september_2026-web.jpg"
+      },
+      "note": "WP post title / h1 \"Portland 17\"; party name from the Gravity Form heading \"17 Year Anniversary Portland\" and the flyer \"17 YEAR ANNIVERSARY PORTLAND\". Page: \"Doors Open at 9:00 pm\" / \"Party Goes Until 3:00 am!\". The sickening.events blurb says \"722 E Burnside, 9pm-2AM\" while its JSON-LD endDate and the site both say 3:00 am — recorded as 03:00 (site). Advance tickets via on-page Venmo form ($20/$40/…/$120 for 1–6) or sickening.events."
+    },
+    {
+      "kind": "single",
+      "location": null,
+      "sourceRung": "static",
+      "confidence": "high",
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "id": "bearracuda-sf-folsom-street-friday-2026-09-25",
+      "title": "Bearracuda SF: Folsom Street Friday",
+      "shortName": "SF⛓️ FLSM",
+      "description": "FOLSOM STREET FRIDAY. Main Room: Horse Meat Disco; Loft: Mateo Segade; hosted by Matt Bearracuda; decor by Dusti Cunningham.",
+      "bar": "Public Works",
+      "address": "161 Erie St, San Francisco, CA",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "startDate": "2026-09-25",
+      "startTime": "21:00",
+      "endDate": "2026-09-26",
+      "endTime": "03:00",
+      "website": "https://bearracuda.com/events/flsm/",
+      "ticketUrl": "https://sickening.events/e/bearracuda-san-francisco-hmd",
+      "facebook": "https://www.facebook.com/events/1706457790710468",
+      "cover": "$50 GA / $55–$65 tiers (sickening.events)",
+      "image": "https://bearracuda.com/wp-content/uploads/2026/05/newfolsomweb.jpg",
+      "evidence": {
+        "url": "https://bearracuda.com/events/flsm/",
+        "quote": "📅 September 25, 2026",
+        "imageUrl": "https://bearracuda.com/wp-content/uploads/2026/05/newfolsomweb.jpg"
+      },
+      "note": "WP post title / h1 \"SF⛓️ FLSM\"; party name from the body line \"FOLSOM STREET FRIDAY\" (flyer \"BEARRACUDA SF FOLSOM STREET FRIDAY / HORSE MEAT DISCO\"; sickening.events \"Bearracuda Folsom Street: Horse Meat Disco\"). Page: \"Doors Open at 9:00 pm\" / \"Party Goes Until 3:00 am!\" / \"🪩 Public Works\" / \"161 Erie St, San Francisco, CA\". The flyer carries no year; the year is from the page and homepage."
+    },
+    {
+      "kind": "single",
+      "location": null,
+      "sourceRung": "static",
+      "confidence": "high",
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "id": "bearracuda-denver-17-year-anniversary-2026-10-03",
+      "title": "Bearracuda Denver: 17 Year Anniversary",
+      "shortName": "Denver 17",
+      "description": "17 YEAR ANNIVERSARY. DJ Matt Stands; hosted by JP Hardy.",
+      "bar": "Ophelia's",
+      "address": "1215 20th Street, Denver, CO 80202",
+      "city": "denver",
+      "timezone": "America/Denver",
+      "startDate": "2026-10-03",
+      "startTime": "21:00",
+      "endDate": "2026-10-04",
+      "endTime": "02:00",
+      "website": "https://bearracuda.com/events/denver17/",
+      "ticketUrl": "https://www.ticketmaster.com/event/1E006505BDFCE369",
+      "facebook": "https://www.facebook.com/events/1191105983214049/",
+      "cover": null,
+      "image": "https://bearracuda.com/wp-content/uploads/2026/08/bearracuda_denveroctober2026-ig-819x1024.jpg",
+      "evidence": {
+        "url": "https://bearracuda.com/events/denver17/",
+        "quote": "📅 October 3, 2026",
+        "imageUrl": "https://bearracuda.com/wp-content/uploads/2026/08/bearracuda_denveroctober2026-ig-819x1024.jpg"
+      },
+      "note": "WP post title / h1 \"Denver 17\"; party name from the body line \"17 YEAR ANNIVERSARY\". Page: \"Doors Open at 9:00 pm\" / \"Party Goes Until 2:00 am!\" / \"🪩 Ophelia's\" / \"1215 20th Street, Denver, CO 80202\". Only event whose Get Tickets goes to Ticketmaster; that page is a 401 bot-wall to curl, so no price is published anywhere readable (cover null). Flyer carries no year (year from page/homepage)."
+    },
+    {
+      "kind": "single",
+      "location": null,
+      "sourceRung": "static",
+      "confidence": "high",
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "id": "bearracuda-phoenix-pride-saturday-2026-10-10",
+      "title": "Bearracuda Phoenix: Pride Saturday",
+      "shortName": "PHOENIX PRIDE",
+      "description": "PRIDE SATURDAY. DJ Matt Stands; hosted by Matt Bearracuda.",
+      "bar": "Royale",
+      "address": "4230 N. 6th Drive, PHOENIX, AZ 85013",
+      "city": "phoenix",
+      "timezone": "America/Phoenix",
+      "startDate": "2026-10-10",
+      "startTime": "21:30",
+      "endDate": "2026-10-11",
+      "endTime": "02:00",
+      "website": "https://bearracuda.com/events/phoenix/",
+      "ticketUrl": "https://sickening.events/e/bearracuda-phoenix-pride",
+      "facebook": "https://www.facebook.com/events/1694911881588556/",
+      "cover": "$15 Super Early GA (sickening.events)",
+      "image": "https://bearracuda.com/wp-content/uploads/2026/08/webphoenixweblarge.jpg",
+      "evidence": {
+        "url": "https://bearracuda.com/events/phoenix/",
+        "quote": "Doors Open at 9:30 pm",
+        "imageUrl": "https://bearracuda.com/wp-content/uploads/2026/08/webphoenixweblarge.jpg"
+      },
+      "note": "Page: \"📅 October 10, 2026\" / \"Doors Open at 9:30 pm\" / \"Party Goes Until 2:00 am!\" / \"🪩 Royale\" / \"4230 N. 6th Drive, PHOENIX, AZ 85013\". WP post title / h1 \"PHOENIX PRIDE\"; party name from the body line \"PRIDE SATURDAY\" (flyer \"BEARRACUDA PHOENIX / PRIDE SATURDAY\", 21+). The only 9:30 pm door of the seven. SAME DATE as bearracuda-portland-dick-or-treat-2026-10-10 — a different city, venue and ticket link; both must survive (see trap portland-oct-lost-behind-phoenix-pride). Flyer carries no year."
+    },
+    {
+      "kind": "single",
+      "location": null,
+      "sourceRung": "static",
+      "confidence": "high",
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "id": "bearracuda-portland-dick-or-treat-2026-10-10",
+      "title": "Bearracuda Portland: DICK OR TREAT",
+      "shortName": "Portland Oct",
+      "description": "Halloween party: $500 silent costume contest, CHEAP tix if you show up in full costume. DJ Matt Consola; hosted by Matt Bearracuda and TOMBOY.",
+      "bar": "NOVA PDX",
+      "address": "722 E Burnside, Portland, OR 97214",
+      "city": "portland",
+      "timezone": "America/Los_Angeles",
+      "startDate": "2026-10-10",
+      "startTime": "21:00",
+      "endDate": "2026-10-11",
+      "endTime": "02:00",
+      "website": "https://bearracuda.com/events/portlandoct/",
+      "ticketUrl": "https://sickening.events/e/bearracuda-portland-halloween",
+      "facebook": "https://www.facebook.com/events/1383028473808409/",
+      "cover": "$20 costumed / $25 no costume (Venmo advance; sickening.events Early Costumed $20, No Costume $25)",
+      "image": "https://bearracuda.com/wp-content/uploads/2026/08/cuda_portland_october_2026-web.jpg",
+      "evidence": {
+        "url": "https://bearracuda.com/events/portlandoct/",
+        "quote": "Bearracuda Portland: DICK OR TREAT (Costumed)",
+        "imageUrl": "https://bearracuda.com/wp-content/uploads/2026/08/cuda_portland_october_2026-web.jpg"
+      },
+      "note": "TRAP-PRONE TITLE: the WP post title / h1 / homepage row is just \"Portland Oct\"; the party name \"Bearracuda Portland: DICK OR TREAT\" appears only as the two Gravity Form headings \"(Costumed)\" and \"(no costume)\" and on the flyer (\"DICK OR TREAT\"; sickening.events \"Bearracuda Portland: Dick or Treat!\"). Page: \"📅 October 10, 2026\" / \"Doors Open at 9:00 pm\" / \"Party Goes Until 2:00 am!\" / \"🪩 NOVA PDX\" / \"722 E Burnside, Portland, OR 97214\". This is the event the 20260909-072307 run LOST (6 of 7 kept; PHOENIX PRIDE on the same date survived). Flyer carries no year."
+    },
+    {
+      "kind": "single",
+      "location": null,
+      "sourceRung": "static",
+      "confidence": "high",
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "id": "bearracuda-portland-new-years-eve-2026-12-31",
+      "title": "Bearracuda Portland: New Year's Eve",
+      "shortName": "Portland NYE",
+      "description": "The 4th annual Bearracuda Portland New Year's Eve. SUPER EARLY tix available, more info TBA; lineup TBA; hosted by Matt Bearracuda and JP Hardy.",
+      "bar": "NOVA PDX",
+      "address": "722 E Burnside, Portland, OR 97214",
+      "city": "portland",
+      "timezone": "America/Los_Angeles",
+      "startDate": "2026-12-31",
+      "startTime": "21:00",
+      "endDate": "2027-01-01",
+      "endTime": "03:00",
+      "website": "https://bearracuda.com/events/portlandnye/",
+      "ticketUrl": "https://sickening.events/e/bearracuda-portland-nye",
+      "facebook": "https://www.facebook.com/events/1388791126456224/",
+      "cover": "$27 Early NYE (Venmo advance \"1 Ticket Early NYE\"; sickening.events Super Early NYE $27)",
+      "image": "https://bearracuda.com/wp-content/uploads/2026/03/pdxnew.jpg",
+      "evidence": {
+        "url": "https://bearracuda.com/events/portlandnye/",
+        "quote": "📅 December 31, 2026",
+        "imageUrl": "https://bearracuda.com/wp-content/uploads/2026/03/pdxnew.jpg"
+      },
+      "note": "WP post title / h1 \"Portland NYE\"; Gravity Form heading \"Bearracuda NYE 2027!\" (the party is on 2026-12-31 and rings in 2027 — do not re-date it to 2027-12-31); flyer \"THE 4TH ANNUAL BEARRACUDA PORTLAND NEW YEAR'S EVE / THURSDAY, DECEMBER 31ST, 2026\". Page: \"Doors Open at 9:00 pm\" / \"Party Goes Until 3:00 am!\". Music line is literally \"TBA\" on the site. Single ~4 months out — documented regardless of the occurrence window."
+    }
+  ],
+  "traps": [
+    {
+      "id": "portland-oct-lost-behind-phoenix-pride",
+      "kind": "duplicate-listing",
+      "label": "Homepage rows \"PHOENIX PRIDE / October 10, 2026\" and \"Portland Oct / October 10, 2026\" — two same-promoter parties on one date",
+      "why": "These are two distinct events (Royale, Phoenix at 9:30 pm vs NOVA PDX, Portland at 9:00 pm; different ticket links, flyers and Facebook events). Whatever same-promoter/same-date folding the pipeline does, it must NOT merge or drop either. The 20260909-072307 run kept 6 of 7 Bearracuda events: PHOENIX PRIDE survived and Portland Oct (DICK OR TREAT) is the one missing — despite its page being in the page cache (fetchedAt 2026-09-07T05:15:56.063Z, statusCode 200). Both belong in the output; expect.extracted is true for BOTH entries.",
+      "evidence": {
+        "url": "https://bearracuda.com/",
+        "quote": "Portland Oct"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "seenInRun": "20260909-072307"
+    },
+    {
+      "id": "portland-oct-two-ticket-forms",
+      "kind": "ticket-tier",
+      "label": "Two Gravity Form headings on /events/portlandoct/: \"Bearracuda Portland: DICK OR TREAT (Costumed)\" and \"Bearracuda Portland: DICK OR TREAT (no costume)\"",
+      "why": "One party, two Venmo price ladders (costumed $20 × n, non-costumed $25 × n). The second heading is not a second event and \"(Costumed)\" / \"(no costume)\" are ticket qualifiers, not part of the title.",
+      "evidence": {
+        "url": "https://bearracuda.com/events/portlandoct/",
+        "quote": "Bearracuda Portland: DICK OR TREAT (no costume)"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      }
+    },
+    {
+      "id": "venmo-ticket-ladders",
+      "kind": "ticket-tier",
+      "label": "\"Select Your Ticket Option\" rows such as \"$20.00 | 1 ticket Anniversary\" … \"$120.00 | 6 Tickets Anniversary\" (Portland 17, Portland Oct, Portland NYE)",
+      "why": "Quantity × price rows of the on-page Venmo form (\"Advance tickets are available on Venmo.\"). They are price tiers of the single event on that page, not events; the unit price is the cover.",
+      "evidence": {
+        "url": "https://bearracuda.com/events/portland-17/",
+        "quote": "$20.00 | 1 ticket Anniversary"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      }
+    },
+    {
+      "id": "current-cities-list",
+      "kind": "navigation",
+      "label": "Homepage \"🪩 Find a Party Near You! / Current Cities\": San Francisco, Portland, OR, Seattle, Atlanta, New Orleans, Denver, Phoenix, Los Angeles",
+      "why": "A city roster, not a schedule. Atlanta, New Orleans and Los Angeles have NO upcoming event today (REST/sitemap/homepage list none) — a city name here must not become a dateless event or be attached to another city's party.",
+      "evidence": {
+        "url": "https://bearracuda.com/",
+        "quote": "Current Cities"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      }
+    },
+    {
+      "id": "event-photos-galleries",
+      "kind": "gallery",
+      "label": "Homepage \"💋 Make love to the camera! / Event Photos\" city tabs (Atlanta … Seattle) and per-event \"📷 Photo Gallery → Seattle💦\" sections of 2022–2023 photos",
+      "why": "Archival party photos (wp-content/uploads/2022/10/dscf*.jpg, 2023/08/*), including a \"Margaret Cho / San Francisco, CA | 2008\" testimonial. No dates, no upcoming programming; the images are not flyers and must not be OCR-promoted into events or used as the event image (the flyer is the og:image).",
+      "evidence": {
+        "url": "https://bearracuda.com/",
+        "quote": "Event Photos"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      }
+    },
+    {
+      "id": "decadence-stale-page-cache",
+      "kind": "past-event",
+      "label": "Page-cache copy of https://bearracuda.com/events/decadence/ — \"New Orleans⚜️ / 📅 September 4, 2026 / Joy Theater / SOUTHERN DECADENCE\"",
+      "why": "The party happened 2026-09-04 and Bearracuda deleted the page: live GET is 404, it is absent from REST (X-WP-Total 7) and the sitemap. Only the scraper page cache still holds it (fetchedAt 2026-08-27T12:15:13.264Z, statusCode 200). A cache-served crawl could resurrect it as a current event; the site no longer publishes it, so it must not appear. (It was correctly absent from run 20260909-072307.)",
+      "evidence": {
+        "url": "https://bearracuda.com/events/decadence/",
+        "quote": "SOUTHERN DECADENCE"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      }
+    },
+    {
+      "id": "eventbrite-organizer-125-past",
+      "kind": "past-event",
+      "label": "Eventbrite organizer page: \"No upcoming events\", metrics totalEvents 125, \"7 years\" hosting",
+      "why": "Configured URL #2 publishes zero current events — every one of the 125 is history and the page renders none of them. Nothing here should be extracted; the Eventbrite door is empty by the feed's own flag (upcomingEventsTotal 0, hasMoreUpcoming false), not by a fetch failure.",
+      "evidence": {
+        "url": "https://www.eventbrite.com/o/bearracuda-21867032189",
+        "jsonPath": "$.props.pageProps.upcomingEventsTotal"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      }
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "Configured URL #2 (Eventbrite organizer 21867032189) has had 0 upcoming events on 2026-09-07, 09-09 and 09-10 — Bearracuda now sells via sickening.events, Ticketmaster and on-page Venmo. Keep it as a dead-door canary, or repoint the second URL at nothing?",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    },
+    {
+      "q": "Denver 17 ticketing is Ticketmaster only (HTTP 401 bot-wall to curl); the scraper cannot read a price. Is cover: null acceptable for it, or should the Facebook event (RSVP Link) be read as a fallback?",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    },
+    {
+      "q": "Which name should the diff tool key on — the site h1 / homepage row (\"Portland Oct\", \"Seattle💦\") or the party name recorded here as title (\"Bearracuda Portland: DICK OR TREAT\")? The run titles are brand-prefixed h1s (\"BEARRACUDA: Portland NYE\"); shortName carries the h1 so either key can be matched.",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    }
+  ]
+}

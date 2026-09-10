@@ -1,0 +1,1456 @@
+{
+  "schemaVersion": 1,
+  "source": "Bears Sitges Week",
+  "slug": "bears-sitges-week",
+  "status": "complete",
+  "recon": {
+    "date": "2026-09-10",
+    "method": [
+      "static",
+      "rendered",
+      "feed",
+      "flyer",
+      "page-cache"
+    ],
+    "parserUrlsAtRecon": [
+      "https://bearssitges.org/bears-sitges-week/"
+    ],
+    "doors": [
+      {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 48,
+        "truthFlag": "11 day headers (JUEVES- 03 … DOMINGO - 13); header block \"PROGRAMA oficial / BEARS SITGES WEEK 2026 / Del 3 al 13 de SEPTIEMBRE\"; 79 h-time markers in the programme block",
+        "note": "Configured parser URL. Static curl with a Chrome UA returns the full server-rendered WordPress page (1,863,820 bytes; generator \"WordPress 6.9.7\" + \"WooCommerce 10.5.3\", theme Avada/fusion). The whole programme is plain paragraphs inside one Avada accordion — one <a> per day header, activities as <p> lines with the time as a leading \"19h.\" / \"20 h:\" / \"20:30h a 03:30h\" token and the venue inline. Saved as page.html / page.txt / page.headers."
+      },
+      {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "kind": "rendered-dom",
+        "role": "listing",
+        "rowsReturned": 48,
+        "truthFlag": "79 h-time markers, identical to static",
+        "note": "Headless Chrome --dump-dom (perl alarm wrapper, exit 142 = DOM on disk). The programme text is byte-for-byte the static text except one entity (&#8243; decoded to ″) and a duplicated mobile nav; nothing is JS-injected. Saved as rendered.html / rendered.txt."
+      },
+      {
+        "url": "https://bearssitges.org/wp-json/wp/v2/pages/7256",
+        "kind": "json",
+        "role": "listing",
+        "rowsReturned": 48,
+        "truthFlag": "id 7256, slug \"bears-sitges-week\", modified \"2026-08-26T21:38:46\"; content.rendered text == static page text (79 h-markers)",
+        "note": "SECOND DOOR: the WP REST record the page's Link header advertises. content.rendered stripped to text is line-identical to the programme block of page.txt (diff shows only the sidebar/news that live outside the post). Confirms the platform (WordPress core REST works) and that no server-side variation or caching layer hides activities. Saved as wp-json-page-7256.json / .txt."
+      },
+      {
+        "url": "https://bearssitges.org/wp-content/uploads/2026/08/BEARMAP-2026-SEPT-WEB.pdf",
+        "kind": "pdf",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": "2 pages, 1,108,526 bytes; no extractable text streams",
+        "note": "The only PDF linked from the page (\"Descárgate aqui el Bears Sitges Map 2026\"). It is the sponsor + street map, NOT a programme: page 1 is sponsor tiles and a \"BEARS SITGES EVENTS 2027\" box (Meeting Apr 29–May 2 2027; Week 3–12 Sept 2027). Page 2 could not be rendered on this Mac (no poppler/Quartz bindings; sips renders page 1 only) — by the file name and page 1 it is the town map. Not a second door for events. Saved as pdf/BEARMAP-2026-SEPT-WEB.pdf (+ the July twin BEARMAP-2026-WEB-LAST.pdf, which differs by 70 bytes) and pdf/p1-small.png."
+      },
+      {
+        "url": "/Users/stanleyrya/.chunky-dad-scraper/storage/pages/bearssitges.org/bears-sitges-week.json",
+        "kind": "page-cache",
+        "role": "listing",
+        "rowsReturned": null,
+        "truthFlag": "fetchedAt 2026-07-29T01:01:27.092Z, statusCode 200, html 1,809,965 bytes",
+        "note": "Mac-side page cache from the July onboarding run; it holds the 2026-07-27 revision of the page (the post header inside it reads \"bearssitges 2026-07-27T15:40:59\"), i.e. BEFORE the 2026-08-26 edit that produced the live text. Used only to confirm the page was crawlable then; not used for any event. The iCloud Scriptable pages/bearssitges.org/ directory is empty; the iCloud ocr/bearssitges.org/ cache holds 11 flyer OCR responses (2026-07-30 … 2026-08-24), none for the per-night DJ flyers or the BeefMince tiles."
+      },
+      {
+        "url": "https://bearssitges.org/wp-content/uploads/2026/06/INVITACION-indiv-2026-1-1024x357.jpg",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Trilingual invitation: \"BEAR SITGES WEEK 2026 ... jueves 3 de septiembre a las 19:00h en el Hotel Calipolis\". Fixes the year of the \"2025\" opening line."
+      },
+      {
+        "url": "https://bearssitges.org/wp-content/uploads/2026/07/PopAir-820x1024.jpg",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 2,
+        "truthFlag": null,
+        "note": "\"SITGES BBQ PARTY ... SATURDAYS SEPT 5 & 12 ... Le Patio C/ JOAN TARRIDA 23, SITGES ... tickets at popairparty.com\". One flyer, two events."
+      },
+      {
+        "url": "https://bearssitges.org/wp-content/uploads/2026/07/MeetAndGreetWeb-1024x686.jpg",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "\"CALIPOLIS 2026 8 SEP 7:00 pm MISTERS & VICES MR. BEARS MEET & GREET\". Confirms 19:00 for the \"1 9h\" line."
+      },
+      {
+        "url": "https://bearssitges.org/wp-content/uploads/2026/07/Bears-Sitges-Week-2026-MIM-ROOFTOP-300x300.jpg",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "\"SUNSET THE BEAR TEA DANCE ... SEPTEMBER 9 WEDNESDAY FROM 16.00 - 19.30 MIM Sitges\". End time differs from the text (20:30)."
+      },
+      {
+        "url": "https://bearssitges.org/wp-content/uploads/2026/07/Bears-Sitges-Week-2026-POOLPARTY-300x300.jpg",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "\"BEAR SITGES POOL PARTY OFFICIAL BEARS EVENT ... VILLA CLOS LA PLANA ... SEPTEMBER 10 THURSDAY FROM 13.00 - 19.00\"."
+      },
+      {
+        "url": "https://bearssitges.org/wp-content/uploads/2026/07/Bears-Sitges-Week-2026-DRAG-BRUNCH-300x300.jpg",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "\"LE PATIO & BEARSEVENTS.COM PRESENT DRAG BRUNCH ... SEPTEMBER 13 SUNDAY FROM 12.00 - 13.30 Le Patio\". Start differs from the text (13h)."
+      },
+      {
+        "url": "https://bearssitges.org/wp-content/uploads/2026/08/BM-9-sep-300x300.png",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "\"BEEFMINCE MEET MARKET ... WEDNESDAY 9 SEPTEMBER THE BEAR CAVE DJ. JON BYRNE & KEVIN BLURRED\". Sibling tiles BM-10-sep (DISCO, Thursday 10), BM-11-sep (SPORTS ZONE, Friday 11), B-12-sep (BIG BALL, Saturday 12) read the same way; all saved under flyers/."
+      },
+      {
+        "url": "https://bearssitges.org/wp-content/uploads/2026/07/7-sep-Radiochi.png",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Nightly DJ tile \"25th Bears Sitges anniBEARsary Welcome Special Night with RadioChi\" — no date or venue on the image. Siblings 8-sep-Paw, 9-sep-Retrocub, 10-sep-JamesMunich, 11-sep-perfecto, 12-sep-Radiocihi, 13-sep-Peasant carry only the night's name and DJ; the date is in the FILE NAME only."
+      },
+      {
+        "url": "https://bearssitges.org/wp-content/uploads/2026/07/Bears-Sitges-Week-2026-VIP-PASS-300x300.jpg",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "\"BEAR VIP ZONE ... SEPTEMBER 4-13 NIGHTLY | CADA NOCHE 20:00 - 03:00 Bear Village FREE ENTRANCE\". Ticket tier, not an event (trap)."
+      },
+      {
+        "url": "https://bearssitges.org/wp-content/uploads/2026/08/agotados-1024x576.png",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "\"PACKS SOLD OUT ... BEAR POOL PARTY + BEAR T-DANCE + DRAG BRUNCH an VILLAGE VIP ZONE TICKETS VISIT WWW.BEARSEVENTS.COM\". Status banner (trap)."
+      }
+    ],
+    "notes": "MULTI-EVENT PAGE. One WordPress page carries the entire 11-day official programme as plain text — 11 day headers with day-of-month only, the month and year stated once in the header block (\"PROGRAMA oficial / BEARS SITGES WEEK 2026 / Del 3 al 13 de SEPTIEMBRE\"). This is exactly the \"festival-programme trap\" the parser config warns about: an AI page classifier that sees \"one overarching event\" and reroutes to single-event extraction misses the schedule — the config keeps ai.classifyPages false so the heuristic multi-event path is used. The parser is automationEnabled: false, so it does NOT appear in scheduled runs (the 2026-09-09 run has no \"Bears Sitges Week\" parserResult); expect.extracted describes a manual run of this parser. Platform: WordPress 6.9.7 + Avada + WooCommerce, confirmed by a working /wp-json/wp/v2/pages/7256 endpoint; there is no events plugin — the \"tribe-events\" CSS hits are theme noise and the Tribe REST / ?ical=1 doors were not tried on instruction (known 404s). Text is Spanish with one English day (11) and bilingual fragments. Time tokens take many shapes: \"19h.\", \"20 h:\", \"1h a 06h\", \"01:00h a 06:00\", \"21:30h to 03:30h\", \"20:30h. a 03:00h\" — and on the 9th–13th the market's time sits in its own paragraph above the title. Half the 01h parties are written \"1h\" (no leading zero). Three ticket hrefs are typos of bearsevents.com (wwww., bearssevents, and one href that is literally the event sentence). The page contains three stale-year tokens (\"INAUGURACIÓN ... 2025\", \"US: CITIZENS ... 2025\", \"Copyright 2025\") and the linked map PDF prints 2027 festival dates."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Static page (door 1) enumerated line by line under each of the 11 day headers; the rendered DOM (door 2) and the WP REST content (door 3) are text-identical to it, so all three doors agree on the same 79 h-time markers and the same activity lines — no delta. Published count = 48 dated, timed activities: 26 on the past days 03–09 and 22 on the upcoming days 10–13 (recon 2026-09-10). RECONCILING THE MARKER COUNT: 79 h-markers in the programme block; 78 of them sit on the 52 activity lines (most lines carry a start AND an end, the official dinner carries three, the excursion repeats its 11:30h, the Mr. Bear night has the 23h contest on a separate line); the remaining markers are on non-activity lines: 114:Mr Bear Sitges 2026: El concurso comienza a las 23h.. Every line with a time became exactly one entry EXCEPT: (a) \"(Bear-Village abierto del 4 al 13)\", the 23h contest line and the VIP-ticket parentheticals, which are traps; (b) no line lists two separate activities — the after-midnight parties (BEARS DISCO and BEARCAVE) are already on their own lines, so no splitting was needed. Untimed lines (\"Osos en la Playa\", \"Descubre Sitges\") are recommendations, not activities, and are recorded as traps, so no entry has startTime null. The daily repeats — Ruta del OSO (9 days), BEARS SITGES MARKET (7 days), pack pickup (4 days) — are listed by the site as separate dated lines with no repeat statement, so they are singles, as instructed; collapsing those three into series would give 31 entries instead of 48. Month/year for every entry come from the header block quoted above; every event line carries only the day-of-month. Flyers (doors 6–15) confirm dates/venues for 12 entries and supply the venue for the Meet Market party and the Drag Brunch and the address for the PopAir BBQs; two flyers disagree with the text on an end/start time (tea dance, drag brunch) — text kept, delta in the entry note. The linked PDF is the sponsor map and adds no activities.",
+    "publishedEventCount": 48,
+    "documentedEventCount": 48,
+    "occurrenceWindow": {
+      "start": "2026-09-10",
+      "end": "2026-12-09"
+    },
+    "pastListingsPresent": true,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "sitges",
+    "timezone": "Europe/Madrid",
+    "website": "https://bearssitges.org",
+    "address": null,
+    "location": null
+  },
+  "events": [
+    {
+      "id": "inauguracion-bears-sitges-week-2026-09-03",
+      "kind": "single",
+      "title": "INAUGURACIÓN BEARS SITGES WEEK",
+      "description": "Opening toast with cava and aperitivo. Entrada Libre.",
+      "bar": "Hotel Calipolis",
+      "startDate": "2026-09-03",
+      "startTime": "19:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "19h. INAUGURACIÓN BEARS SITGES WEEK 2025 Brindaremos con Cava y Aperitivo. Hotel Calipolis. Entrada Libre",
+        "imageUrl": "https://bearssitges.org/wp-content/uploads/2026/06/INVITACION-indiv-2026-1-1024x357.jpg"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The programme line reads \"INAUGURACIÓN BEARS SITGES WEEK 2025\" — a stale year inside the 2026 programme (see trap year-2025-in-inauguracion). The invitation flyer on the same line says \"BEAR SITGES WEEK 2026 ... jueves 3 de septiembre a las 19:00h en el Hotel Calipolis\", so 2026-09-03 19:00 is certain."
+    },
+    {
+      "id": "ruta-del-oso-2026-09-03",
+      "kind": "single",
+      "title": "Ruta del OSO en «Bares Sponsors»",
+      "description": "Bear route through the sponsor bars (Bear-Village, Bears Bar, Bears Dance Bar, Man Bar, La Villa, Runway Terrace, Industry Sitges, Chiringuito Iguana, Parrots Terrace Pub — the list varies slightly per day). Multiple venues, so bar is null.",
+      "bar": null,
+      "startDate": "2026-09-03",
+      "startTime": "20:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "20 h: Ruta del OSO en «Bares Sponsors» :Bear-Village – Bears Bar – Bears Dance Bar – Runway Terrace – Industry"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The site lists this bar route separately under nine of the eleven day headers (not on 11 or 12); no repeat rule is stated, so each dated listing is a single."
+    },
+    {
+      "id": "inauguracion-exposicion-25-blanca-de-nicolas-2026-09-04",
+      "kind": "single",
+      "title": "Inauguración Exposición «25» por Blanca de Nicolas",
+      "description": "Art exhibition opening, free entry, toast included.",
+      "bar": "Espai Joan Tarrida",
+      "address": "C/ Joan Tarrida, 10. Sitges",
+      "startDate": "2026-09-04",
+      "startTime": "18:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "; por Blanca de Nicolas Entrada Gratuita brindis incluido. En Espai Joan Tarrida. C/ Joan Tarrida, 10. Sitges",
+        "imageUrl": "https://bearssitges.org/wp-content/uploads/2025/04/0-Blanca-De-Nicolas-en-Bars-Sitges-expo.jpg"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The title on the page is written « 25&#8243; (an inch-mark entity the page never decodes); the flyer is the artist's drawing with only her signature as text."
+    },
+    {
+      "id": "ruta-del-oso-2026-09-04",
+      "kind": "single",
+      "title": "Ruta del OSO en «Bares Sponsors»",
+      "description": "Bear route through the sponsor bars (Bear-Village, Bears Bar, Bears Dance Bar, Man Bar, La Villa, Runway Terrace, Industry Sitges, Chiringuito Iguana, Parrots Terrace Pub — the list varies slightly per day). Multiple venues, so bar is null.",
+      "bar": null,
+      "startDate": "2026-09-04",
+      "startTime": "20:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "20 h: Ruta del OSO en «Bares Sponsors» :BEAR-VILLAGE – Bears Bar – Bears Dance – Man Bar – La Villa -Runway"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The site lists this bar route separately under nine of the eleven day headers (not on 11 or 12); no repeat rule is stated, so each dated listing is a single."
+    },
+    {
+      "id": "opening-early-village-2026-09-04",
+      "kind": "single",
+      "title": "OPENING «EARLY-VILLAGE» 2026",
+      "description": "25th-anniversary extra: the Bear-Village opens on 4, 5 and 6 September too, with limited music/sound. Entrada Libre.",
+      "bar": "Bear-Village",
+      "startDate": "2026-09-04",
+      "startTime": "20:30",
+      "endTime": "03:30",
+      "endDate": "2026-09-05",
+      "ticketUrl": "http://www.bearsevents.com",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "20:30h a 03:30h: OPENING «EARLY-VILLAGE» 2026 Con motivo del 25º aniversario de Bears Sitges, e ste año"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Free entry; the only ticket is the Bear-Village VIP zone pass sold at www.bearsevents.com."
+    },
+    {
+      "id": "bbq-music-pop-air-2026-09-05",
+      "kind": "single",
+      "title": "BBQ & Music – POP-Air",
+      "description": "Sitges BBQ Party, terrace open air, 11h non stop.",
+      "bar": "Restaurant LE PATIO",
+      "address": "C/ Joan Tarrida 23, Sitges",
+      "startDate": "2026-09-05",
+      "startTime": "14:00",
+      "ticketUrl": "https://popairparty.com/",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "14:00h: BBQ & Music – POP-Air en Restaurant LE PATIO. **Tickets a la venta en Clica AQUÍ",
+        "imageUrl": "https://bearssitges.org/wp-content/uploads/2026/07/PopAir-820x1024.jpg"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Address is from the PopAir flyer (\"Le Patio C/ JOAN TARRIDA 23, SITGES\"); the flyer carries BOTH dates (\"SATURDAYS SEPT 5 & 12\") and is the same image on the 12th — an OCR pass sees one flyer for two events."
+    },
+    {
+      "id": "ruta-del-oso-2026-09-05",
+      "kind": "single",
+      "title": "Ruta del OSO en «Bares Sponsors»",
+      "description": "Bear route through the sponsor bars (Bear-Village, Bears Bar, Bears Dance Bar, Man Bar, La Villa, Runway Terrace, Industry Sitges, Chiringuito Iguana, Parrots Terrace Pub — the list varies slightly per day). Multiple venues, so bar is null.",
+      "bar": null,
+      "startDate": "2026-09-05",
+      "startTime": "20:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "20 h: Ruta del OSO en «Bares Sponsors» :BEAR-VILLAGE – Bears Bar – Bears Dance – Man Bar – La Villa -Runway"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The site lists this bar route separately under nine of the eleven day headers (not on 11 or 12); no repeat rule is stated, so each dated listing is a single."
+    },
+    {
+      "id": "early-village-2026-09-05",
+      "kind": "single",
+      "title": "EARLY-VILLAGE 2026",
+      "description": "Bear-Village early opening night, limited music/sound. Entrada Libre.",
+      "bar": "Bear-Village",
+      "startDate": "2026-09-05",
+      "startTime": "20:30",
+      "endTime": "03:30",
+      "endDate": "2026-09-06",
+      "ticketUrl": "http://www.bearsevents.com",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "20:30h a 03:30: EARLY-VILLAGE 2026 Con motivo del 25º aniversario de Bears Sitges, e ste año extraordinariamente,"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Free entry; the only ticket is the Bear-Village VIP zone pass sold at www.bearsevents.com. The end is written \"03:30\" without the h suffix on this day."
+    },
+    {
+      "id": "ruta-del-oso-2026-09-06",
+      "kind": "single",
+      "title": "Ruta del OSO en «Bares Sponsors»",
+      "description": "Bear route through the sponsor bars (Bear-Village, Bears Bar, Bears Dance Bar, Man Bar, La Villa, Runway Terrace, Industry Sitges, Chiringuito Iguana, Parrots Terrace Pub — the list varies slightly per day). Multiple venues, so bar is null.",
+      "bar": null,
+      "startDate": "2026-09-06",
+      "startTime": "20:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "20 h: Ruta del OSO en «Bares Sponsors» :BEAR-VILLAGE – Bears Bar – Bears Dance – Man Bar – La Villa -Runway"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The site lists this bar route separately under nine of the eleven day headers (not on 11 or 12); no repeat rule is stated, so each dated listing is a single."
+    },
+    {
+      "id": "early-village-2026-09-06",
+      "kind": "single",
+      "title": "EARLY-VILLAGE 2026",
+      "description": "Bear-Village early opening night, limited music/sound. Entrada gratuita.",
+      "bar": "Bear-Village",
+      "startDate": "2026-09-06",
+      "startTime": "20:30",
+      "endTime": "03:00",
+      "endDate": "2026-09-07",
+      "ticketUrl": "http://www.bearsevents.com",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "20:30h a 03h: EARLY-VILLAGE 2026 Para celebrar el 25 aniversario de Bears Sitges, este año, excepcionalmente, estamos"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Free entry; the only ticket is the Bear-Village VIP zone pass sold at www.bearsevents.com."
+    },
+    {
+      "id": "inauguracion-bears-sitges-market-2026-09-07",
+      "kind": "single",
+      "title": "Inauguración BEARS SITGES MARKET",
+      "bar": "Hotel Calipolis",
+      "startDate": "2026-09-07",
+      "startTime": "16:00",
+      "endTime": "21:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "16h a 21h: Inauguración BEARS SITGES MARKET en Hotel Calipolis",
+        "imageUrl": "https://bearssitges.org/wp-content/uploads/2026/07/Image-Market-Promo.png"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Opening day of the market; the market then runs daily through the 13th (each day listed separately below)."
+    },
+    {
+      "id": "entrega-bears-sitges-packs-2026-09-07",
+      "kind": "single",
+      "title": "Entrega de BEARS SITGES PACKS y venta de POLO OFICIAL",
+      "description": "Pack pickup and official polo sale at the Bears Sitges Market.",
+      "bar": "Hotel Calipolis",
+      "startDate": "2026-09-07",
+      "startTime": "18:00",
+      "endTime": "21:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "18h a 21h: Entrega de BEARS SITGES PACKS y venta de POLO OFICIAL en el Bears Sitges Market en el Hotel Calipolis. «Los"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Pack pickup slot, listed on 7, 8, 9 and 10 September; each day is its own listing."
+    },
+    {
+      "id": "ruta-del-oso-2026-09-07",
+      "kind": "single",
+      "title": "Ruta del OSO en «Bares Sponsors»",
+      "description": "Bear route through the sponsor bars (Bear-Village, Bears Bar, Bears Dance Bar, Man Bar, La Villa, Runway Terrace, Industry Sitges, Chiringuito Iguana, Parrots Terrace Pub — the list varies slightly per day). Multiple venues, so bar is null.",
+      "bar": null,
+      "startDate": "2026-09-07",
+      "startTime": "20:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "20 h: Ruta del OSO en «Bares Sponsors» : BEAR-VILLAGE – Bears Bar – Bears Dance – Man Bar – La Villa -Runway"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The site lists this bar route separately under nine of the eleven day headers (not on 11 or 12); no repeat rule is stated, so each dated listing is a single."
+    },
+    {
+      "id": "noche-especial-bienvenida-2026-09-07",
+      "kind": "single",
+      "title": "Noche Especial BIENVENIDA",
+      "description": "Welcome special night with DJ Radio Chí. Entrada Gratuita.",
+      "bar": "Bear-Village",
+      "startDate": "2026-09-07",
+      "startTime": "20:30",
+      "endTime": "03:00",
+      "endDate": "2026-09-08",
+      "ticketUrl": "http://www.bearsevents.com",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "20:30h a 03h Noche Especial BIENVENIDA: En Bear-Village .con DJ Radio Chí . Entrada Gratuita",
+        "imageUrl": "https://bearssitges.org/wp-content/uploads/2026/07/7-sep-Radiochi.png"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Free entry; the only ticket is the Bear-Village VIP zone pass sold at www.bearsevents.com. Flyer: \"25th Bears Sitges anniBEARsary Welcome Special Night with RadioChi\"."
+    },
+    {
+      "id": "bears-sitges-market-2026-09-08",
+      "kind": "single",
+      "title": "BEARS SITGES MARKET",
+      "bar": "Hotel Calipolis",
+      "startDate": "2026-09-08",
+      "startTime": "10:00",
+      "endTime": "21:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "10h a 21h BEARS SITGES MARKET en Hotel Calipolis"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "excursion-playa-del-muerto-2026-09-08",
+      "kind": "single",
+      "title": "Excursion a PLAYA DEL MUERTO 2026",
+      "description": "Prague Bears' traditional free hike to Playa del Muerto; meet at 11:30h in the Bear-Market zone of Hotel Calipolis.",
+      "bar": "Hotel Calipolis",
+      "startDate": "2026-09-08",
+      "startTime": "11:30",
+      "website": "https://en.praguebears.cz/Calendar.aspx?Event=1255",
+      "facebook": "https://www.facebook.com/events/2133975237398163/",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "11:30h Excursion a PLAYA DEL MUERTO 2026 : Nuestros hermanos de PRAGUE BEARS organizan de nuevo la",
+        "imageUrl": "https://bearssitges.org/wp-content/uploads/2026/04/excursionplayamuerto-300x300.jpg"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Organised by PRAGUE BEARS (external promoter) but published as an official programme activity; the \"AQUÍ\" link goes to praguebears.cz Calendar Event=1255. Photo flyer only, no text."
+    },
+    {
+      "id": "entrega-bears-sitges-packs-2026-09-08",
+      "kind": "single",
+      "title": "BEARS SITGES PACKS Entrega y venta del POLO OFICIAL",
+      "bar": "Hotel Calipolis",
+      "startDate": "2026-09-08",
+      "startTime": "18:00",
+      "endTime": "21:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "18h a 21h BEARS SITGES PACKS Entrega y venta del POLO OFICIAL en el Bears Sitges Market en HOTEL"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "meet-and-greet-2026-09-08",
+      "kind": "single",
+      "title": "Meet & Greet",
+      "description": "Bears Sitges & Hotel Calipolis invite all Mr. Bear / Vice Mr. Bear title holders and visiting bear associations to a sangría toast.",
+      "bar": "Hotel Calipolis",
+      "startDate": "2026-09-08",
+      "startTime": "19:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "Meet & Greet: Bears Sitges & Hotel Calipolis invitan a todos los Mr. Bear y Vive Mr. Bear, así como a los",
+        "imageUrl": "https://bearssitges.org/wp-content/uploads/2026/07/MeetAndGreetWeb-1024x686.jpg"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "TIME TRAP: the HTML splits the time into two spans (\"1\" and \"9h: Meet & Greet\") so the stripped text reads \"1 9h\" — a naive parser sees 09:00. The flyer says \"2026 8 SEP 7:00 pm ... MISTERS & VICES MR. BEARS MEET & GREET\" at Calipolis, so 19:00 is certain."
+    },
+    {
+      "id": "ruta-del-oso-2026-09-08",
+      "kind": "single",
+      "title": "Ruta del OSO en «Bares Sponsors»",
+      "description": "Bear route through the sponsor bars (Bear-Village, Bears Bar, Bears Dance Bar, Man Bar, La Villa, Runway Terrace, Industry Sitges, Chiringuito Iguana, Parrots Terrace Pub — the list varies slightly per day). Multiple venues, so bar is null.",
+      "bar": null,
+      "startDate": "2026-09-08",
+      "startTime": "20:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "20 h: Ruta del OSO en «Bares Sponsors» :BEAR-VILLAGE – Bears Bar – Bears Dance – Man Bar – La Villa -Runway"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The site lists this bar route separately under nine of the eleven day headers (not on 11 or 12); no repeat rule is stated, so each dated listing is a single."
+    },
+    {
+      "id": "noche-blanca-prague-bears-2026-09-08",
+      "kind": "single",
+      "title": "Especial NOCHE BLANCA con PRAGUE BEARS",
+      "description": "White night with Prague Bears, DJ PAW.L — come dressed in white. Entrada Libre.",
+      "bar": "Bear-Village",
+      "startDate": "2026-09-08",
+      "startTime": "20:30",
+      "endTime": "03:00",
+      "endDate": "2026-09-09",
+      "ticketUrl": "http://www.bearsevents.com",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "20:30h a 03h Especial NOCHE BLANCA con PRAGUE BEARS en Bear-Village con DJ PAW.L",
+        "imageUrl": "https://bearssitges.org/wp-content/uploads/2026/07/8-sep-Paw.png"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Free entry; the only ticket is the Bear-Village VIP zone pass sold at www.bearsevents.com."
+    },
+    {
+      "id": "bears-sitges-market-2026-09-09",
+      "kind": "single",
+      "title": "BEARS SITGES MARKET",
+      "bar": "Hotel Calipolis",
+      "startDate": "2026-09-09",
+      "startTime": "10:00",
+      "endTime": "21:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "BEARS SITGES MARKET en Hotel Calipolis"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The time (\"10h a 21h\") and the title sit in two separate paragraphs on this day; quote is the title paragraph."
+    },
+    {
+      "id": "bear-tea-dance-hotel-mim-2026-09-09",
+      "kind": "single",
+      "title": "BEAR TEA-DANCE",
+      "description": "Sunset bear tea dance on the RoofTop of Hotel MiM, limited places, ticketed.",
+      "bar": "Hotel MiM",
+      "startDate": "2026-09-09",
+      "startTime": "16:00",
+      "endTime": "20:30",
+      "ticketUrl": "http://www.bearsevents.com",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "16h a 20:30h BEAR TEA-DANCE : En el RoofTop del Hotel MiM **Plazas Limitadas** COMPRA TU TICKET en wwww.bearsevents.com",
+        "imageUrl": "https://bearssitges.org/wp-content/uploads/2026/07/Bears-Sitges-Week-2026-MIM-ROOFTOP-300x300.jpg"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The ticket link on this line is misspelled \"http://wwww.bearsevents.com\" (four w); ticketUrl records the intended host. The flyer (\"SUNSET THE BEAR TEA DANCE ... SEPTEMBER 9 WEDNESDAY FROM 16.00 - 19.30\") ends at 19:30 while the text says 20:30 — text kept, delta noted."
+    },
+    {
+      "id": "entrega-bears-sitges-packs-2026-09-09",
+      "kind": "single",
+      "title": "Entrega y Venta de BEARS SITGES PACKS",
+      "bar": "Hotel Calipolis",
+      "startDate": "2026-09-09",
+      "startTime": "18:00",
+      "endTime": "21:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "18h a 21h Entrega y Venta de BEARS SITGES PACKS: Y venta del POLO OFICIAL en Bears Sitges Market del"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "ruta-del-oso-2026-09-09",
+      "kind": "single",
+      "title": "Ruta del OSO en «Bares Sponsors»",
+      "description": "Bear route through the sponsor bars (Bear-Village, Bears Bar, Bears Dance Bar, Man Bar, La Villa, Runway Terrace, Industry Sitges, Chiringuito Iguana, Parrots Terrace Pub — the list varies slightly per day). Multiple venues, so bar is null.",
+      "bar": null,
+      "startDate": "2026-09-09",
+      "startTime": "20:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "20 h: Ruta del OSO en «Bares Sponsors» :BEAR-VILLAGE – Bears Bar – Bears Dance – Man Bar – La Villa -Runway"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The site lists this bar route separately under nine of the eleven day headers (not on 11 or 12); no repeat rule is stated, so each dated listing is a single."
+    },
+    {
+      "id": "noche-especial-ibc-palm-springs-2026-09-09",
+      "kind": "single",
+      "title": "NOCHE ESPECIAL «IBC Palm Springs»",
+      "description": "IBC Palm Springs special night with DJ Retro Cub (Palm Springs). Entrada Libre.",
+      "bar": "Bear-Village",
+      "startDate": "2026-09-09",
+      "startTime": "20:30",
+      "endTime": "03:00",
+      "endDate": "2026-09-10",
+      "ticketUrl": "http://www.bearsevents.com",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "20:30h a 03h NOCHE ESPECIAL «IBC Palm Springs» con DJ Retro Cub de Palm Spings en Bear-Village. Entrada Libre.",
+        "imageUrl": "https://bearssitges.org/wp-content/uploads/2026/07/9-sep-Retrocub.png"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Free entry; the only ticket is the Bear-Village VIP zone pass sold at www.bearsevents.com."
+    },
+    {
+      "id": "meet-market-party-2026-09-09",
+      "kind": "single",
+      "title": "MEET MARKET Party",
+      "description": "BeefMince Meet Market (\"where your sticker says everything\"), DJs Jon Byrne & Kevin Blurred.",
+      "bar": "The Bear Cave",
+      "startDate": "2026-09-09",
+      "startTime": "01:00",
+      "ticketUrl": "https://sitgesbearcave.com/beefmince-parties/",
+      "belongsToSource": "BEEFMINCE",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "01h «MEET MARKET Party» Compra tu entrada AQUÍ",
+        "imageUrl": "https://bearssitges.org/wp-content/uploads/2026/08/BM-9-sep-300x300.png"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The text names no venue; the flyer on the same line reads \"BEEFMINCE MEET MARKET ... WEDNESDAY 9 SEPTEMBER THE BEAR CAVE\", ticket link sitgesbearcave.com. Listed under this day header at 01h, i.e. the small hours after that night — the promoter flyers date these parties the same way (the header day). startDate follows the header per programme convention."
+    },
+    {
+      "id": "bears-sitges-market-2026-09-10",
+      "kind": "single",
+      "title": "BEARS SITGES MARKET",
+      "bar": "Hotel Calipolis",
+      "startDate": "2026-09-10",
+      "startTime": "10:00",
+      "endTime": "21:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "BEARS SITGES MARKET en Hotel Calipolis"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Time paragraph \"10h a 21h\" precedes the title paragraph, as on the 9th."
+    },
+    {
+      "id": "bear-pool-party-2026-09-10",
+      "kind": "single",
+      "title": "BEAR POOL PARTY",
+      "description": "Pool party at a luxury villa in the Sitges hills 5 minutes from the Bear-Village; bus transport provided. Ticketed.",
+      "bar": "Villa Clos La Plana",
+      "startDate": "2026-09-10",
+      "startTime": "13:00",
+      "endTime": "19:00",
+      "ticketUrl": "http://www.bearsevents.com",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "13h: BEAR POOL PARTY: En una lujosa villa y espacio para eventos en las colinas de Sitges, a sólo 5 minutos",
+        "imageUrl": "https://bearssitges.org/wp-content/uploads/2026/07/Bears-Sitges-Week-2026-POOLPARTY-300x300.jpg"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Venue is on the next line (\"VER Palauet Modernista Clos La Plana\", a YouTube link) and on the flyer (\"VILLA CLOS LA PLANA ... SEPTEMBER 10 THURSDAY FROM 13.00 - 19.00\"); endTime 19:00 is from the flyer. The ticket href on this line is misspelled \"http://www.bearssevents.com\" (double s) though its anchor text reads www.bearsevents.com."
+    },
+    {
+      "id": "entrega-bears-sitges-packs-2026-09-10",
+      "kind": "single",
+      "title": "Entrega de BEARS SITGES PACKS",
+      "bar": "Hotel Calipolis",
+      "startDate": "2026-09-10",
+      "startTime": "18:00",
+      "endTime": "21:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "18h a 21h Entrega de BEARS SITGES PACKS: Y venta del POLO OFICIAL en Bears Sitges Market del HOTEL"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "ruta-del-oso-2026-09-10",
+      "kind": "single",
+      "title": "Ruta del OSO en «Bares Sponsors»",
+      "description": "Bear route through the sponsor bars (Bear-Village, Bears Bar, Bears Dance Bar, Man Bar, La Villa, Runway Terrace, Industry Sitges, Chiringuito Iguana, Parrots Terrace Pub — the list varies slightly per day). Multiple venues, so bar is null.",
+      "bar": null,
+      "startDate": "2026-09-10",
+      "startTime": "20:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "20 h: Ruta del OSO en «Bares Sponsors» :Bears Bar – Bears Dance – Man Bar – La Villa -Runway Terrace –"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The site lists this bar route separately under nine of the eleven day headers (not on 11 or 12); no repeat rule is stated, so each dated listing is a single. Bear-Village is absent from this day's bar list."
+    },
+    {
+      "id": "bears-on-cruise-special-night-2026-09-10",
+      "kind": "single",
+      "title": "BEARS on CRUISE Special Night",
+      "description": "Bears on Cruise special night with DJ James Munich. Entrada Libre.",
+      "bar": "Bear-Village",
+      "startDate": "2026-09-10",
+      "startTime": "20:30",
+      "endTime": "03:00",
+      "endDate": "2026-09-11",
+      "ticketUrl": "http://www.bearsevents.com",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "20:30h. a 03:00h BEARS on CRUISE Special Night con Dj James Munich en Bear-Village con Entrada Libre.",
+        "imageUrl": "https://bearssitges.org/wp-content/uploads/2026/07/10-sep-JamesMunich.png"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Free entry; the only ticket is the Bear-Village VIP zone pass sold at www.bearsevents.com."
+    },
+    {
+      "id": "capitan-party-bears-disco-2026-09-10",
+      "kind": "single",
+      "title": "CAPITÁN Party",
+      "bar": "BEARS DISCO by Scandal",
+      "startDate": "2026-09-10",
+      "startTime": "01:00",
+      "endTime": "06:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "01h a 06h CAPITÁN Party en «BEARS DISCO» by Scandal"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Listed under this day header at 01h, i.e. the small hours after that night — the promoter flyers date these parties the same way (the header day). startDate follows the header per programme convention."
+    },
+    {
+      "id": "beefmince-disco-party-2026-09-10",
+      "kind": "single",
+      "title": "BEEFMINCE DISCO Party",
+      "description": "DJs Severino & Silverhook.",
+      "bar": "The Bear Cave",
+      "startDate": "2026-09-10",
+      "startTime": "01:00",
+      "endTime": "06:00",
+      "ticketUrl": "https://sitgesbearcave.com/beefmince-parties/",
+      "belongsToSource": "BEEFMINCE",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "1h a 06h BEEFMINCE DISCO Party en «BEARCAVE» compra tus entradas AQUÍ",
+        "imageUrl": "https://bearssitges.org/wp-content/uploads/2026/08/BM-10-sep-300x300.png"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Flyer: \"BEEFMINCE DISCO THURSDAY 10 SEPTEMBER THE BEAR CAVE\". Listed under this day header at 01h, i.e. the small hours after that night — the promoter flyers date these parties the same way (the header day). startDate follows the header per programme convention."
+    },
+    {
+      "id": "bears-sitges-market-2026-09-11",
+      "kind": "single",
+      "title": "BEARS SITGES MARKET",
+      "bar": "Hotel Calipolis",
+      "startDate": "2026-09-11",
+      "startTime": "10:00",
+      "endTime": "21:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "BEARS SITGES MARKET en Hotel Calipolis"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Time paragraph \"10h a 21h:\" precedes the title paragraph."
+    },
+    {
+      "id": "cena-oficial-25-anibearsari-2026-09-11",
+      "kind": "single",
+      "title": "CENA OFICIAL 25º aniBEARSari",
+      "description": "20h cocktail, 20:30h premium buffet dinner with a performance by the Sitges Gay Men Chorus. Included in the Bears Sitges Pack (packs sold out).",
+      "bar": "Hotel Calipolis",
+      "startDate": "2026-09-11",
+      "startTime": "20:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "20 h: CENA OFICIAL 25º aniBEARSari en «HOTEL CALIPOLIS» (20h Cocktail – 20:30h Cena Premium Buffet *All you"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The line carries three h-markers (20 h, 20h Cocktail, 20:30h Cena) for ONE activity."
+    },
+    {
+      "id": "25-aniversario-special-night-2026-09-11",
+      "kind": "single",
+      "title": "25º ANIVERSARIO BEARS SITGES Special Night",
+      "description": "25th-anniversary special night with DJ PERFECTO. Free admission.",
+      "bar": "Bear-Village",
+      "startDate": "2026-09-11",
+      "startTime": "21:30",
+      "endTime": "03:30",
+      "endDate": "2026-09-12",
+      "ticketUrl": "http://www.bearsevents.com",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "21:30h to 03:30h 25º ANIVERSARIO BEARS SITGES Special Night at Bear-Village with DJ PERFECTO.",
+        "imageUrl": "https://bearssitges.org/wp-content/uploads/2026/07/11-sep-perfecto.png"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "This day is written in English (\"21:30h to 03:30h\"). Free entry; the only ticket is the Bear-Village VIP zone pass sold at www.bearsevents.com."
+    },
+    {
+      "id": "25th-annibearsary-party-bears-disco-2026-09-11",
+      "kind": "single",
+      "title": "25th anniBEARsary Bears Sitges Party",
+      "bar": "BEARS DISCO by Scandal",
+      "startDate": "2026-09-11",
+      "startTime": "01:00",
+      "endTime": "06:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "01h to 06h » 25th anniBEARsary Bears Sitges » Party at «BEARS DISCO» by Scandal"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Listed under this day header at 01h, i.e. the small hours after that night — the promoter flyers date these parties the same way (the header day). startDate follows the header per programme convention."
+    },
+    {
+      "id": "beefmince-sports-zone-party-2026-09-11",
+      "kind": "single",
+      "title": "BEEFMINCE SPRTS ZONE Party",
+      "description": "BeefMince Sports Zone, DJs Chris Brogan & Silverhook.",
+      "bar": "The Bear Cave",
+      "startDate": "2026-09-11",
+      "startTime": "01:00",
+      "endTime": "06:00",
+      "ticketUrl": "https://sitgesbearcave.com/beefmince-parties/",
+      "belongsToSource": "BEEFMINCE",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "1h a 06h BEEFMINCE SPRTS ZONE Party en «BEARCAVE» compra tus entradas AQUÍ",
+        "imageUrl": "https://bearssitges.org/wp-content/uploads/2026/08/BM-11-sep-300x300.png"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "\"SPRTS\" is the page's own typo; the flyer reads \"BEEFMINCE SPORTS ZONE FRIDAY 11 SEPTEMBER THE BEAR CAVE\". Listed under this day header at 01h, i.e. the small hours after that night — the promoter flyers date these parties the same way (the header day). startDate follows the header per programme convention."
+    },
+    {
+      "id": "bears-sitges-market-2026-09-12",
+      "kind": "single",
+      "title": "BEARS SITGES MARKET",
+      "bar": "Hotel Calipolis",
+      "startDate": "2026-09-12",
+      "startTime": "10:00",
+      "endTime": "21:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "BEARS SITGES MARKET en Hotel Calipolis"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Time paragraph \"10h a 21h:\" precedes the title paragraph."
+    },
+    {
+      "id": "bbq-music-pop-air-2026-09-12",
+      "kind": "single",
+      "title": "BBQ & Music – POP-Air",
+      "description": "Second Sitges BBQ Party (PopAir), terrace open air.",
+      "bar": "Restaurant LE PATIO",
+      "address": "C/ Joan Tarrida 23, Sitges",
+      "startDate": "2026-09-12",
+      "startTime": "14:00",
+      "ticketUrl": "https://popairparty.com/",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "14h: BBQ & Music – POP-Air en Restaurant LE PATIO. **Tickets a la venta. Click AQUÍ",
+        "imageUrl": "https://bearssitges.org/wp-content/uploads/2026/07/PopAir-820x1024.jpg"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Same PopAir flyer as the 5th (\"SATURDAYS SEPT 5 & 12\"); address from the flyer."
+    },
+    {
+      "id": "noche-especial-mr-bear-sitges-2026-09-12",
+      "kind": "single",
+      "title": "Noche Especial Mr. BEAR SITGES 2026",
+      "description": "Mr. Bear Sitges 2026 night with DJ Radio Chi; the contest itself starts at 23h (max 10 contestants, entry by email to bearssitges@gmail.com). Prizes listed on the page.",
+      "bar": "Bear-Village",
+      "startDate": "2026-09-12",
+      "startTime": "21:00",
+      "endTime": "04:00",
+      "endDate": "2026-09-13",
+      "ticketUrl": "http://www.bearsevents.com",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "21h a 04h Noche Especial Mr. BEAR SITGES",
+        "imageUrl": "https://bearssitges.org/wp-content/uploads/2026/07/12-sep-Radiocihi.png"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The line contains a U+200E mark after \"2026:\"; quote stops before it. \"Mr Bear Sitges 2026: El concurso comienza a las 23h.\" is the contest inside this same night, not a second event (see trap mr-bear-contest-23h). Free entry; the only ticket is the Bear-Village VIP zone pass sold at www.bearsevents.com."
+    },
+    {
+      "id": "mr-bears-sitges-the-party-bears-disco-2026-09-12",
+      "kind": "single",
+      "title": "Mr. Bears Sitges 2026 «THE PARTY»",
+      "bar": "BEARS DISCO by Scandal",
+      "startDate": "2026-09-12",
+      "startTime": "01:00",
+      "endTime": "06:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "01h a 06h Mr. Bears Sitges 2026 «THE PARTY» en «BEARS DISCO» by Scandal"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Listed under this day header at 01h, i.e. the small hours after that night — the promoter flyers date these parties the same way (the header day). startDate follows the header per programme convention."
+    },
+    {
+      "id": "beefmince-big-ball-party-2026-09-12",
+      "kind": "single",
+      "title": "BEEFMINCE BIG BALL Party",
+      "description": "BeefMince Sitges closing party, DJs Silverhook & Jon Byrne.",
+      "bar": "The Bear Cave",
+      "startDate": "2026-09-12",
+      "startTime": "01:00",
+      "endTime": "06:00",
+      "ticketUrl": "https://sitgesbearcave.com/beefmince-parties/",
+      "belongsToSource": "BEEFMINCE",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "1h a 06h BEEFMINCE BIG BALL Party en «BEARCAVE» compra tus entradas AQUÍ",
+        "imageUrl": "https://bearssitges.org/wp-content/uploads/2026/08/B-12-sep-300x300.png"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Flyer: \"BEEFMINCE BIG BALL ... SATURDAY 12 SEPTEMBER THE BEAR CAVE\". The second image link on this line has a broken href (\"http://1h a 06h BEEFMINCE DISCO Party en ...\"). Listed under this day header at 01h, i.e. the small hours after that night — the promoter flyers date these parties the same way (the header day). startDate follows the header per programme convention."
+    },
+    {
+      "id": "bears-sitges-market-2026-09-13",
+      "kind": "single",
+      "title": "BEARS SITGES MARKET",
+      "bar": "Hotel Calipolis",
+      "startDate": "2026-09-13",
+      "startTime": "10:00",
+      "endTime": "13:30",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "10h a 13:30h"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Quote is the time paragraph (\"10h a 13:30h\", unique to this day); the title \"BEARS SITGES MARKET en Hotel Calipolis\" is the next paragraph. Last, shortened market day."
+    },
+    {
+      "id": "sitges-drag-brunch-2026-09-13",
+      "kind": "single",
+      "title": "Sitges Drag Brunch",
+      "description": "Bottomless mimosas, live drag, DJs, outdoor terrace. Ticketed.",
+      "bar": "Le Patio",
+      "startDate": "2026-09-13",
+      "startTime": "13:00",
+      "ticketUrl": "http://www.bearsevents.com",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "13h Sitges Drag Brunch Para esta actividad compra tu ticket en www.bearsevents.com",
+        "imageUrl": "https://bearssitges.org/wp-content/uploads/2026/07/Bears-Sitges-Week-2026-DRAG-BRUNCH-300x300.jpg"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Text names no venue; the flyer reads \"LE PATIO & BEARSEVENTS.COM PRESENT DRAG BRUNCH ... SEPTEMBER 13 SUNDAY FROM 12.00 - 13.30 Le Patio\". The flyer starts at 12:00, the text at 13h — text kept, delta noted."
+    },
+    {
+      "id": "ruta-del-oso-2026-09-13",
+      "kind": "single",
+      "title": "Ruta del OSO en «Bares Sponsors»",
+      "description": "Bear route through the sponsor bars (Bear-Village, Bears Bar, Bears Dance Bar, Man Bar, La Villa, Runway Terrace, Industry Sitges, Chiringuito Iguana, Parrots Terrace Pub — the list varies slightly per day). Multiple venues, so bar is null.",
+      "bar": null,
+      "startDate": "2026-09-13",
+      "startTime": "20:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "20h: Ruta del OSO en «Bares Sponsors» : at «Sponsor Bars»: Bear-Village – Bears Bar – Bear Dance – MAN Bar –"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The site lists this bar route separately under nine of the eleven day headers (not on 11 or 12); no repeat rule is stated, so each dated listing is a single. This day's line is bilingual (\"at «Sponsor Bars»\")."
+    },
+    {
+      "id": "noche-especial-despedida-en-rosa-2026-09-13",
+      "kind": "single",
+      "title": "NOCHE ESPECIAL DESPEDIDA en ROSA",
+      "description": "Farewell pink night with DJ PEASANT — wear something pink. Entrada Libre.",
+      "bar": "Bear-Village",
+      "startDate": "2026-09-13",
+      "startTime": "20:30",
+      "endTime": "03:00",
+      "endDate": "2026-09-14",
+      "ticketUrl": "http://www.bearsevents.com",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "20:30h a 03h NOCHE ESPECIAL DESPEDIDA en ROSA En Bear-Village con Dj PEASANT .",
+        "imageUrl": "https://bearssitges.org/wp-content/uploads/2026/07/13-sep-Peasant.png"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Free entry; the only ticket is the Bear-Village VIP zone pass sold at www.bearsevents.com."
+    },
+    {
+      "id": "farewell-pink-party-bears-disco-2026-09-13",
+      "kind": "single",
+      "title": "FAREWELL PINK PARTY",
+      "bar": "BEARS DISCO by Scandal",
+      "startDate": "2026-09-13",
+      "startTime": "01:00",
+      "endTime": "06:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "01:00h a 06:00 « FAREWELL PINK PARTY » en «BEARS DISCO» by Scandal"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Listed under this day header at 01h, i.e. the small hours after that night — the promoter flyers date these parties the same way (the header day). startDate follows the header per programme convention. Written \"01:00h a 06:00\" on this line."
+    }
+  ],
+  "traps": [
+    {
+      "id": "year-2025-in-inauguracion",
+      "kind": "announcement",
+      "label": "19h. INAUGURACIÓN BEARS SITGES WEEK 2025 (under JUEVES-03 of the 2026 programme)",
+      "why": "A stale year token inside the 2026 programme. The page header says \"BEARS SITGES WEEK 2026 / Del 3 al 13 de SEPTIEMBRE\" and the invitation flyer on the same line says 3 September 2026 19:00. A parser that trusts the in-line year would date the opening 2025-09-03 (or drop it as past).",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "19h. INAUGURACIÓN BEARS SITGES WEEK 2025 Brindaremos con",
+        "imageUrl": "https://bearssitges.org/wp-content/uploads/2026/06/INVITACION-indiv-2026-1-1024x357.jpg"
+      },
+      "expect": {
+        "extracted": false,
+        "note": "The activity itself is documented as inauguracion-bears-sitges-week-2026-09-03; a 2025-dated record would be this trap firing."
+      }
+    },
+    {
+      "id": "osos-en-la-playa-recommendation",
+      "kind": "recurring-blurb",
+      "label": "Osos en la Playa: Recomendamos – «Playa Gay Bassa Rodona ...» (repeated under 04, 06, 07, 09, 11)",
+      "why": "A beach recommendation with no time, organiser or programme slot — three named beaches/chiringuitos. Not an activity.",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "Osos en la Playa: Recomendamos – «Playa Gay Bassa Rodona ( Pique Nique Chillout) » –"
+      },
+      "expect": {
+        "extracted": false
+      }
+    },
+    {
+      "id": "descubre-sitges-recommendation",
+      "kind": "recurring-blurb",
+      "label": "Descubre Sitges: Visita los diferentes Museos de Sitges ... (repeated under 04, 06, 07, 09, 11)",
+      "why": "Tourism suggestion (visit the museums), untimed, no venue. Not an activity.",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "Descubre Sitges: Visita los diferentes Museos de Sitges y el Patrimonio Cultural y"
+      },
+      "expect": {
+        "extracted": false
+      }
+    },
+    {
+      "id": "bear-village-open-range",
+      "kind": "venue-header",
+      "label": "(Bear-Village abierto del 4 al 13)",
+      "why": "A venue opening range under the programme title. A date-range extractor could mint a 10-day \"Bear-Village\" event; the nightly parties inside it are the events.",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "(Bear-Village abierto del 4 al 13)"
+      },
+      "expect": {
+        "extracted": false
+      }
+    },
+    {
+      "id": "bear-village-vip-zone-tickets",
+      "kind": "ticket-tier",
+      "label": "(Tickets para la ZONA VIP del Bear-Village en www.bearsevents.com) + the BEAR VIP ZONE flyer \"SEPTEMBER 4-13 NIGHTLY\"",
+      "why": "The VIP pass is a ticket tier for the Bear-Village nights, repeated on almost every night line and as a flyer that carries its own date range (4–13 nightly). It is not an event.",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "(Tickets para la ZONA VIP del Bear-Village en www.bearsevents.com)",
+        "imageUrl": "https://bearssitges.org/wp-content/uploads/2026/07/Bears-Sitges-Week-2026-VIP-PASS-300x300.jpg"
+      },
+      "expect": {
+        "extracted": false
+      }
+    },
+    {
+      "id": "packs-vendidos-sold-out",
+      "kind": "ticket-tier",
+      "label": "VENDIDOS button + \"PACKS SOLD OUT / PACKS AGOTADOS / PACKS ESGOTATS\" image; the Bears Sitges Pack flyer (85€) lists pack perks with dates",
+      "why": "Pack sales status and pack contents. The pack flyer shows perks that read like events (\"WELCOME DRINK BEAR-VILLAGE Sep 8th > 11th until 10pm\", \"MIM Sitges Copa Cava + Tapa Sky Bar RoofTop Sunset Time\", \"Federal Sitges breakfast or brunch SEP 7th > 13th\") — they are pack vouchers, not programme activities.",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "VENDIDOS",
+        "imageUrl": "https://bearssitges.org/wp-content/uploads/2026/08/agotados-1024x576.png"
+      },
+      "expect": {
+        "extracted": false
+      }
+    },
+    {
+      "id": "premios-mr-bear-prize-list",
+      "kind": "merch",
+      "label": "PREMIOS Mr. BEAR — Banda, Golden Bear, Photoshoot 400€, DENloungewear credit, BEAR CITY DVD, backpack",
+      "why": "Prize list for the Mr. Bear contest, with product photos (golden bear statue, @bearsmeets logo, DVD cover, backpack). Not an event.",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "PREMIOS Mr. BEAR",
+        "imageUrl": "https://bearssitges.org/wp-content/uploads/2026/06/CHATGP1-1024x745.png"
+      },
+      "expect": {
+        "extracted": false
+      }
+    },
+    {
+      "id": "mr-bear-contest-23h",
+      "kind": "duplicate-listing",
+      "label": "Mr Bear Sitges 2026: El concurso comienza a las 23h.",
+      "why": "The contest is the centrepiece of the 21h–04h \"Noche Especial Mr. BEAR SITGES 2026\" at the Bear-Village, not a separate activity; a line splitter would mint a second 23:00 event at the same venue.",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "Mr Bear Sitges 2026: El concurso comienza a las 23h."
+      },
+      "expect": {
+        "extracted": false,
+        "note": "Documented as part of noche-especial-mr-bear-sitges-2026-09-12."
+      }
+    },
+    {
+      "id": "mossos-security-meeting",
+      "kind": "announcement",
+      "label": "Reunión de seguridad con Mossos d'Esquadra ... (with a 2024 photo)",
+      "why": "An undated note about a police coordination meeting plus a 2024 photo (uploads/2024/05/2024-reunio-mossos.jpg). Not a public activity.",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "Reunión de seguridad con Mossos d’Esquadra, para coordinar y diseñar el plan de"
+      },
+      "expect": {
+        "extracted": false
+      }
+    },
+    {
+      "id": "us-citizens-notice-2025",
+      "kind": "announcement",
+      "label": "«US: CITIZENS ATTENDING to the BEARS SITGES WEEK 2025» consulate notice",
+      "why": "A consulate advisory carrying last year's festival name/year and a Barcelona address. Not an event; the 2025 token is another year trap.",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "«US: CITIZENS ATTENDING to the BEARS SITGES WEEK 2025»"
+      },
+      "expect": {
+        "extracted": false
+      }
+    },
+    {
+      "id": "news-sidebar-2019-posts",
+      "kind": "past-event",
+      "label": "Novedades y Noticias: \"Video resumen de la Bears Sitges Week 2019\", \"Los chicos de «Where The Bears Are» en la Sitges Bears Week 2019\"",
+      "why": "Sidebar news posts (dated marzo 2020) about the 2019 edition. Past, and news rather than programme.",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "Video resumen de la Bears Sitges Week 2019"
+      },
+      "expect": {
+        "extracted": false
+      }
+    },
+    {
+      "id": "bears-sitges-meeting-nav",
+      "kind": "out-of-config-scope",
+      "label": "Nav link \"Bears Sitges Meeting (mayo)\" — the May festival page",
+      "why": "The club's other festival lives on a sibling page; urlDiscoveryDepth is 0 so it is never crawled from here. Its programme (if any) is not this source's.",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "Bears Sitges Meeting (mayo)"
+      },
+      "expect": {
+        "extracted": false
+      }
+    },
+    {
+      "id": "bear-map-pdf-2027-dates",
+      "kind": "out-of-config-scope",
+      "label": "Descárgate aqui el Bears Sitges Map 2026 → BEARMAP-2026-SEPT-WEB.pdf (2 pages)",
+      "why": "The PDF is the sponsor/street map, not a programme. Page 1 (rendered to pdf/p1-small.png) prints NEXT year's dates: \"INTERNATIONAL BEARS SITGES MEETING 2027 APRIL 29TH TO MAY 2ND\" and \"INTERNATIONAL BEARS SITGES WEEK 2027 3 TO 12 SEPTEMBER (BEAR-VILLAGE SEP. 6 TO 12)\". A PDF reader following this link would mint 2027 festival events. Depth 0 keeps it out of the crawl.",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "Descárgate aqui el Bears Sitges Map 2026"
+      },
+      "expect": {
+        "extracted": false
+      }
+    },
+    {
+      "id": "sponsor-promo-strip",
+      "kind": "merch",
+      "label": "Sponsor promo tiles repeated under every day header (BoboBear \"ARE YOU READY FOR A GREAT BEAR MARKET NEXT SEPTEMBER?\", chicosdefalda, Polleiro, hairymag \"VISIT US AT CALIPOLIS BEARS SITGES MARKET\", Colors Sitges Link, PopAir promo)",
+      "why": "Eight image links to sponsors' Instagram/web pages, duplicated under days 07–13. Image-only, no dates; OCR reads them as market vendor ads. The PopAir promo tile is the same promoter as the two BBQ events but carries no date.",
+      "evidence": {
+        "url": "https://bearssitges.org/bears-sitges-week/",
+        "quote": "https://www.instagram.com/bobobearart/",
+        "imageUrl": "https://bearssitges.org/wp-content/uploads/2026/07/2026-Promo-BoboBear-300x300.jpeg"
+      },
+      "expect": {
+        "extracted": false
+      }
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "After-midnight slots: the page lists \"01h a 06h\" parties under the header of the night they belong to (e.g. CAPITÁN Party under JUEVES-10), and the BeefMince flyers date them the same way (\"THURSDAY 10 SEPTEMBER\"). This file follows the header day, so startDate 2026-09-10 + startTime 01:00 is 23 hours BEFORE the real instant. Should the comparison tool (or the scraper) roll a start before ~06:00 to the next calendar day for programme pages, or keep the promoter convention?",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    },
+    {
+      "q": "The \"1 9h: Meet & Greet\" line has its time split across two <span>s (\"1\" + \"9h:\"); whether the scraper's text extraction joins them as \"19h\" or \"1 9h\" decides 19:00 vs 09:00 for this event. Untested here (parser is automationEnabled: false).",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    },
+    {
+      "q": "Flyer-vs-text time deltas: BEAR TEA-DANCE ends 20:30h in the text but 19.30 on the flyer; Sitges Drag Brunch starts 13h in the text but 12.00 on the flyer. Which should the calendar trust for this source?",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    },
+    {
+      "q": "The four BeefMince/Bearcave parties are marked belongsToSource \"BEEFMINCE\" (the club's own parser at beefmince.com/events). If that source documents the Sitges parties, add sameEventAs links here; the beefmince.json file was still not-started on 2026-09-10.",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    }
+  ],
+  "recheckAfter": "2026-09-14"
+}

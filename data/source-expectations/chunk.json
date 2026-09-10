@@ -1,0 +1,286 @@
+{
+  "schemaVersion": 1,
+  "source": "CHUNK",
+  "slug": "chunk",
+  "status": "complete",
+  "recon": {
+    "date": "2026-09-10",
+    "method": ["static", "flyer"],
+    "parserUrlsAtRecon": ["https://www.chunk-party.com"],
+    "doors": [
+      {
+        "url": "https://www.chunk-party.com",
+        "kind": "wix-events-warmup-json",
+        "role": "feed",
+        "rowsReturned": 15,
+        "truthFlag": "events.hasMore: false; status 0 (upcoming) x3, status 2 (past) x12",
+        "note": "Static curl with a Chrome UA, HTTP 200, 971505 bytes. The homepage carries <script type=\"application/json\" id=\"wix-warmup-data\"> whose appsWarmupData[\"140603ad-af8d-84a5-2c80-a0f60cb47351\"].widgetTPASection_me4z3wpj.events.events[] holds 15 rows (saved as warmup-raw.json and warmup-events-app.json). The tag content parsed as plain JSON without HTML-unescaping. Each row: slug, title, description, status, scheduling.config.startDate/endDate (UTC ISO) + timeZoneId, scheduling.formatted (local wall clock), location.name/fullAddress/geocode, registration.ticketing lowest/highest price, mainImage.url. recurrences.occurrences is [] on every row (no series)."
+      },
+      {
+        "url": "https://www.chunk-party.com",
+        "kind": "static-html-text",
+        "role": "listing",
+        "rowsReturned": 15,
+        "truthFlag": null,
+        "note": "Text-stripped homepage (homepage.txt) renders 'Upcoming Events' then 15 cards: 3 with 'BUY TICKETS' (Sat, Sep 19 / Sat, Sep 26 / Sat, Oct 17) and 12 with 'Details' (past). Card dates carry no year ('Wed, Dec 31' for the NYE 2025 row); the year lives only in the warmup JSON and the event-page JSON-LD. Social bar links instagram.com/chunk_party_ and facebook.com/chunkparty."
+      },
+      {
+        "url": "https://www.chunk-party.com/sitemap.xml",
+        "kind": "wix-sitemap-index",
+        "role": "sitemap",
+        "rowsReturned": 4,
+        "truthFlag": null,
+        "note": "Index lists store-products, member-profiles, event-pages (lastmod 2026-08-29) and pages sitemaps."
+      },
+      {
+        "url": "https://www.chunk-party.com/event-pages-sitemap.xml",
+        "kind": "wix-event-pages-sitemap",
+        "role": "sitemap",
+        "rowsReturned": 16,
+        "truthFlag": null,
+        "note": "16 /event-details/<slug> URLs = the 15 widget slugs + chunk-portland-the-return-new-date-cancelled, which the widget omits (cancelled events are dropped from the Wix Events list)."
+      },
+      {
+        "url": "https://www.chunk-party.com/pages-sitemap.xml",
+        "kind": "wix-pages-sitemap",
+        "role": "sitemap",
+        "rowsReturned": 5,
+        "truthFlag": null,
+        "note": "/contact, /shop, /chunk, /chunkbearandcubsocial and the homepage. No events page other than the homepage."
+      },
+      {
+        "url": "https://www.chunk-party.com/event-details/chunk-chicago-september-19th",
+        "kind": "wix-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "JSON-LD Event: startDate 2026-09-19T21:00:00-05:00, endDate 2026-09-20T03:00:00-05:00, EventScheduled, Cell Block Chicago, 3702 N Halsted St, Chicago, IL 60613, USA, offers.url = this page. Page text: 'Sep 19, 2026, 9:00 PM – Sep 20, 2026, 3:00 AM'; tickets TIER 1 GA $20.00, TIER 2 GA $25.00 sold on-page via Wix checkout."
+      },
+      {
+        "url": "https://www.chunk-party.com/event-details/chunk-folsom-bear-playground-9-26",
+        "kind": "wix-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "JSON-LD Event: startDate 2026-09-26T22:00:00-07:00, endDate 2026-09-27T04:00:00-07:00, EventScheduled, F8 Nightclub & Bar, 1192 Folsom St, San Francisco, CA 94103, USA. Page text: 'Sep 26, 2026, 10:00 PM – Sep 27, 2026, 4:00 AM'; EARLY BIRD $25 and TIER 1 $35 'Sold Out', TIER 2 $50 and TIER 3 $60 on sale."
+      },
+      {
+        "url": "https://www.chunk-party.com/event-details/chunk-los-angeles-the-return",
+        "kind": "wix-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "JSON-LD Event: startDate 2026-10-17T23:00:00-07:00, endDate 2026-10-18T04:00:00-07:00, EventScheduled, location name 'WAREHOUSE - Arts District (tba 24 hrs b4)' with NO address. Page text: 'Oct 17, 2026, 11:00 PM – Oct 18, 2026, 4:00 AM'; Early Bird $25 'Sold Out', TIER 1 $35, TIER 2 $50 on sale."
+      },
+      {
+        "url": "https://www.chunk-party.com/event-details/chunk-portland-the-return-new-date-cancelled",
+        "kind": "wix-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Sitemap-only page. JSON-LD Event: startDate 2026-03-14T21:00:00-07:00, eventStatus https://schema.org/EventCancelled, NOVA PDX, 722 E Burnside St. Same date and venue as the widget's chunk-portland-the-return-saturday-march-14th row; no ticket block on the page."
+      },
+      {
+        "url": "https://www.chunk-party.com/event-details/chunk-brooklyn-saturday-september-5th",
+        "kind": "wix-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Past (status 2) row opened for the reconciliation: JSON-LD startDate 2026-09-05T22:00:00-04:00, C'mon Everybody, 325 Franklin Ave, Brooklyn. The other 11 past pages (chunk-portland-summer-blow-out, chunk-dore-alley-saturday-july-25th, chunk-brooklyn-7-4, chunk-portland-5-23, chunk-brooklyn-5-9, chunk-sf-presents-father-figure, chunk-chicago-presents-spring-thaw, chunk-portland-the-return-saturday-march-14th, chunk-brooklyn-the-return, chunk-san-francisco-saturday-january-17th, chunk-chicago-presents-new-years-eve-2026) were fetched too and each carries one EventScheduled JSON-LD whose date matches its widget row; saved under events/."
+      },
+      {
+        "url": "https://www.chunk-party.com/chunk",
+        "kind": "static-html-text",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Config-blocked page. HTTP 200, 662350 bytes; stripped text is nav + 'new arrivals' + mailing list. A shop page, no events."
+      },
+      {
+        "url": "https://www.chunk-party.com/chunkbearandcubsocial",
+        "kind": "static-html-text",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Config-blocked page, titled 'CHUNK Bear & Cub Social | Gay Bear & Cub Dance Party'. HTTP 200, 662315 bytes; stripped text is nav + 'new arrivals' + mailing list. No events."
+      },
+      {
+        "url": "https://static.wixstatic.com/media/42b6cb_46716fad8de245da8ac5b2daa46cb0dc~mv2.jpg",
+        "kind": "flyer-image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Chicago flyer (792x990): 'CHUNK CHICAGO', 'LET'S GO!', 'SATURDAY SEPTEMBER 19', 'AMAN DICAP THCKRTANKER ANDY', 'GOGO BEARS', 'HOSTED BY COACH MIKEY', 'CELL BLOCK 3702 N HALSTED ST 9PM', 'TICKETS @ CHUNK-PARTY.COM'. No year printed."
+      },
+      {
+        "url": "https://static.wixstatic.com/media/42b6cb_9c265c543d68475cb1a2d4fc431f08d5~mv2.jpg",
+        "kind": "flyer-image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Folsom flyer (3122x3902): 'CHUNK FOLSOM', 'SATURDAY SEPTEMBER 26TH', 'SHAUN J WRIGHT MARCEAUX MARCEAUX E.FELD BEN FONIK THCKRTANKER', 'GOGO BEARS', 'f8 1192 FOLSOM ST 10PM - 4AM', 'TICKETS @ CHUNK-PARTY.COM'. No year printed."
+      },
+      {
+        "url": "https://static.wixstatic.com/media/42b6cb_55a68769f04b46d99b109bb655e6c97c~mv2.jpg",
+        "kind": "flyer-image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Los Angeles flyer (1200x1500): 'CHUNK LOS ANGELES', 'SATURDAY OCTOBER 17TH', 'DICAP MARCEAUX MARCEAUX THCKRTANKER', 'HOSTED BY TONY & ROB & KYLE & CURTIS & TOMAS', 'GOGO BEARS', 'WAREHOUSE ARTS DISTRICT', 'TICKETS @ CHUNK-PARTY.COM'. No street address and no year printed."
+      },
+      {
+        "url": "https://static.wixstatic.com/media/42b6cb_8bf3a2a428534f47b4ae419f04d99cc4~mv2.jpg",
+        "kind": "image",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "The only homepage JPEG that is not an event mainImage besides the logo: a circular headshot of a bearded man in a black shirt. No event text."
+      }
+    ],
+    "notes": "Wix site; platform confirmed by the working wix-warmup-data payload carrying appDefinitionId 140603ad-af8d-84a5-2c80-a0f60cb47351 (Wix Events) and by the /event-details/<slug> pages' JSON-LD, not by CSS. CHUNK is a touring party (Chicago, San Francisco, Los Angeles, Portland, Brooklyn), so city/timezone/bar/address/location are set per event from location.fullAddress + geocode and no city default is used. TIMEZONE TRAP: the warmup rows store UTC instants (Chicago 9/19 9 PM = \"2026-09-20T02:00:00.000Z\"; Folsom 9/26 10 PM = \"2026-09-27T05:00:00.000Z\"; LA 10/17 11 PM = \"2026-10-18T06:00:00.000Z\"); every row also carries timeZoneId and a scheduling.formatted local string, and every event page's JSON-LD carries the offset form. Dates here are the LOCAL wall clock. Config-blocked pages /chunk and /chunkbearandcubsocial were opened: both are shop pages ('new arrivals'), zero events, so blocking them costs nothing and no out-of-config-scope trap is needed. The homepage image set minus the 15 event mainImages is the logo ('CHUNK EST. 2007'), a headshot, and three 201x201 Wix social icons — no flyer-only events. The 12 past rows and the cancelled Portland page are counted in coverage.basis, not enumerated. Run 20260909-072307 returned 14 CHUNK events (the 3 upcoming + 11 past; NYE 2025 and the cancelled Portland page absent); its 'CHUNK Brooklyn' 7/4 record carries startDate 2026-07-04T04:00:00.000Z where the site's row says 2026-07-05T02:00:00.000Z — a diff-pass observation, not recorded here."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Feed door (homepage wix-warmup-data, widgetTPASection_me4z3wpj.events): 15 rows, hasMore false, of which 3 have status 0 (upcoming) and 12 have status 2 (past) — the feed's own flag says there is nothing to page. Second door (event-pages-sitemap.xml): 16 URLs = those 15 slugs + chunk-portland-the-return-new-date-cancelled; the delta is one cancelled duplicate of the March 14 Portland row whose JSON-LD says EventCancelled and which the widget drops, so both doors agree on 3 upcoming events. Third door: all 16 event pages were fetched and their JSON-LD dates match their widget rows one for one; the three upcoming pages were read in full for date, venue, address and ticket tiers. Every row has recurrences.occurrences [] so 3 rows = 3 dated singles, no series. Past listings: 12 past widget rows (each with its own event page) plus the 1 sitemap-only cancelled page = 13 past pages, counted here, not enumerated. The three flyers were opened and corroborate day, month, lineup and venue (no year printed on any flyer; the year comes from the warmup JSON and JSON-LD).",
+    "publishedEventCount": 3,
+    "documentedEventCount": 3,
+    "occurrenceWindow": { "start": "2026-09-10", "end": "2026-12-09" },
+    "pastListingsPresent": true,
+    "knownGaps": []
+  },
+  "defaults": {
+    "website": "https://www.chunk-party.com",
+    "instagram": "https://www.instagram.com/chunk_party_/?hl=en",
+    "facebook": "https://www.facebook.com/chunkparty"
+  },
+  "events": [
+    {
+      "id": "chunk-chicago-september-19th-2026-09-19",
+      "kind": "single",
+      "title": "CHUNK Chicago - September 19th",
+      "description": "CHUNK CHICAGO IS BACK BACK BACK AGAIN! THE BEST MUSIC AT ANY BEAR PARTY KNOWN TO HUMANITY. CHUNK Chicago presents NYC LEGEND DJ DICAP & CHICAGO WIZARDS AMAN STER & DJ ANDY w/ THCKRTANKER\nHOT GOGO BEARS // HOSTED BY COACH MIKEY",
+      "bar": "Cell Block Chicago",
+      "address": "3702 N Halsted St, Chicago, IL 60613, USA",
+      "location": "41.9493756, -87.64979",
+      "city": "chicago",
+      "timezone": "America/Chicago",
+      "startDate": "2026-09-19",
+      "startTime": "21:00",
+      "endDate": "2026-09-20",
+      "endTime": "03:00",
+      "website": "https://www.chunk-party.com/event-details/chunk-chicago-september-19th",
+      "ticketUrl": "https://www.chunk-party.com/event-details/chunk-chicago-september-19th",
+      "image": "https://static.wixstatic.com/media/42b6cb_46716fad8de245da8ac5b2daa46cb0dc~mv2.jpg",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.chunk-party.com",
+        "jsonPath": "$.widgetTPASection_me4z3wpj.events.events[0]",
+        "quote": "CHUNK Chicago - September 19th",
+        "imageUrl": "https://static.wixstatic.com/media/42b6cb_46716fad8de245da8ac5b2daa46cb0dc~mv2.jpg"
+      },
+      "note": "Warmup row: status 0, startDate \"2026-09-20T02:00:00.000Z\" with timeZoneId America/Chicago = local Sat Sep 19 9:00 PM (scheduling.formatted 'September 19, 2026 at 9:00 PM – September 20, 2026 at 3:00 AM'); geocode 41.9493756/-87.64979. Event page JSON-LD \"startDate\":\"2026-09-19T21:00:00-05:00\" and page text 'Sep 19, 2026, 9:00 PM – Sep 20, 2026, 3:00 AM' agree. Tickets are Wix on-page checkout (JSON-LD offers.url is the event page; ticketing lowestPrice $20.50, highestPrice $25.63 incl. fee), so ticketUrl = event page. Flyer: 'SATURDAY SEPTEMBER 19', 'CELL BLOCK 3702 N HALSTED ST 9PM'.",
+      "expect": { "extracted": true, "kept": null },
+      "bearVerdict": null
+    },
+    {
+      "id": "chunk-folsom-bear-playground-9-26-2026-09-26",
+      "kind": "single",
+      "title": "CHUNK FOLSOM - Bear Playground - 9/26",
+      "description": "CHUNK presents SAN FRANCISCO FOLSOM '26 - Bear Playground! \nCHICAGO DJ SHAUN J WRIGHT & MARCEAUX MARCEAUX & THCKRTANKER & E.FELD & BEN FONIK\nHOT GOGO BEARS DRE & WILL & DENNIS & MORE\nf8 - 1192 FOLSOM ST 10-4",
+      "bar": "F8 Nightclub & Bar",
+      "address": "1192 Folsom St, San Francisco, CA 94103, USA",
+      "location": "37.77526599999999, -122.4100374",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "startDate": "2026-09-26",
+      "startTime": "22:00",
+      "endDate": "2026-09-27",
+      "endTime": "04:00",
+      "website": "https://www.chunk-party.com/event-details/chunk-folsom-bear-playground-9-26",
+      "ticketUrl": "https://www.chunk-party.com/event-details/chunk-folsom-bear-playground-9-26",
+      "image": "https://static.wixstatic.com/media/42b6cb_9c265c543d68475cb1a2d4fc431f08d5~mv2.jpg",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.chunk-party.com",
+        "jsonPath": "$.widgetTPASection_me4z3wpj.events.events[1]",
+        "quote": "CHUNK FOLSOM - Bear Playground - 9/26",
+        "imageUrl": "https://static.wixstatic.com/media/42b6cb_9c265c543d68475cb1a2d4fc431f08d5~mv2.jpg"
+      },
+      "note": "Warmup row: status 0, startDate \"2026-09-27T05:00:00.000Z\" with timeZoneId America/Los_Angeles = local Sat Sep 26 10:00 PM (scheduling.formatted 'September 26, 2026 at 10:00 PM – September 27, 2026 at 4:00 AM'); geocode 37.77526599999999/-122.4100374. Event page JSON-LD \"startDate\":\"2026-09-26T22:00:00-07:00\" and page text 'Sep 26, 2026, 10:00 PM – Sep 27, 2026, 4:00 AM' agree. Wix on-page ticketing: EARLY BIRD $25 and TIER 1 GA $35 'Sold Out', TIER 2 GA $50 and TIER 3 GA $60 on sale; ticketUrl = event page. Flyer: 'SATURDAY SEPTEMBER 26TH', 'f8 1192 FOLSOM ST 10PM - 4AM'.",
+      "expect": { "extracted": true, "kept": null },
+      "bearVerdict": null
+    },
+    {
+      "id": "chunk-los-angeles-the-return-2026-10-17",
+      "kind": "single",
+      "title": "CHUNK Los Angeles - THE RETURN!",
+      "description": "a sweaty hairy bubba slinks down a back alley, pavement wet, neon trailing in the corner of your eye... LET'S GO!!!!! CHUNK Los Angeles is BACK\nExclusive DJ SETS from DICAP (NYC) MARCEAUX MARCEAUX (Memphis) & THCKRTANKER (Toronto) // HOT GOGO BEARS // WAREHOUSE - Arts District",
+      "bar": "WAREHOUSE - Arts District (tba 24 hrs b4)",
+      "address": null,
+      "location": null,
+      "city": "la",
+      "timezone": "America/Los_Angeles",
+      "startDate": "2026-10-17",
+      "startTime": "23:00",
+      "endDate": "2026-10-18",
+      "endTime": "04:00",
+      "website": "https://www.chunk-party.com/event-details/chunk-los-angeles-the-return",
+      "ticketUrl": "https://www.chunk-party.com/event-details/chunk-los-angeles-the-return",
+      "image": "https://static.wixstatic.com/media/42b6cb_55a68769f04b46d99b109bb655e6c97c~mv2.jpg",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.chunk-party.com",
+        "jsonPath": "$.widgetTPASection_me4z3wpj.events.events[2]",
+        "quote": "CHUNK Los Angeles - THE RETURN!",
+        "imageUrl": "https://static.wixstatic.com/media/42b6cb_55a68769f04b46d99b109bb655e6c97c~mv2.jpg"
+      },
+      "note": "Warmup row: status 0, startDate \"2026-10-18T06:00:00.000Z\" with timeZoneId America/Los_Angeles = local Sat Oct 17 11:00 PM (scheduling.formatted 'October 17, 2026 at 11:00 PM – October 18, 2026 at 4:00 AM'). location has only a name, no address and no geocode — the venue is a warehouse announced 24 hours before ('tba 24 hrs b4'), so address and location are null and city la comes from the title 'Los Angeles' + 'Arts District'. Event page JSON-LD \"startDate\":\"2026-10-17T23:00:00-07:00\" and page text 'Oct 17, 2026, 11:00 PM – Oct 18, 2026, 4:00 AM' agree. Wix on-page ticketing: Early Bird GA $25 'Sold Out', TIER 1 GA $35, TIER 2 GA $50 on sale; ticketUrl = event page. Flyer: 'SATURDAY OCTOBER 17TH', 'WAREHOUSE ARTS DISTRICT'.",
+      "expect": { "extracted": true, "kept": null },
+      "bearVerdict": null
+    }
+  ],
+  "traps": [
+    {
+      "id": "past-widget-rows",
+      "label": "12 past cards under 'Upcoming Events' with a 'Details' button (Sat, Sep 05 ... Wed, Dec 31)",
+      "kind": "past-event",
+      "why": "The Wix Events widget lists past events after the upcoming ones under the same 'Upcoming Events' heading; their warmup rows carry status 2 and each has a live /event-details/ page with EventScheduled JSON-LD. They are real but finished events, kept only under allowPastEvents. The listing cards print no year ('Wed, Dec 31' is 2025-12-31 per its JSON-LD \"startDate\":\"2025-12-31T21:00:00-06:00\"), so a text-only reader would carry the wrong year.",
+      "evidence": {
+        "url": "https://www.chunk-party.com",
+        "jsonPath": "$.widgetTPASection_me4z3wpj.events.events[3].status",
+        "quote": "CHUNK Brooklyn - Saturday September 5th"
+      },
+      "expect": { "extracted": true, "note": "Extraction is correct behaviour under allowPastEvents; run 20260909-072307 returned 11 of the 12 (NYE 2025 absent)." },
+      "seenInRun": "20260909-072307"
+    },
+    {
+      "id": "portland-cancelled-duplicate-page",
+      "label": "CHUNK Portland - The Return! NEW DATE - CANCELLED",
+      "kind": "duplicate-listing",
+      "why": "Sitemap-only event page (the widget drops it). Its JSON-LD says \"eventStatus\":\"https://schema.org/EventCancelled\" and it shares date (Sat Mar 14 2026 9:00 PM), venue (NOVA PDX) and address (722 E Burnside St) with the widget's chunk-portland-the-return-saturday-march-14th row, which is the re-created, EventScheduled version of the same night. It is both cancelled and a duplicate, and in the past.",
+      "evidence": {
+        "url": "https://www.chunk-party.com/event-details/chunk-portland-the-return-new-date-cancelled",
+        "quote": "\"eventStatus\":\"https://schema.org/EventCancelled\""
+      },
+      "expect": { "extracted": false },
+      "seenInRun": null
+    },
+    {
+      "id": "ticket-tier-rows",
+      "label": "Ticket type rows such as 'CHUNK Folsom - 9/26 TIER 2 GA' and 'CHUNK CHI 9/19 TIER 2 GA'",
+      "kind": "ticket-tier",
+      "why": "Each upcoming event page lists 2 to 4 Wix ticket tiers whose names repeat the party name and a M/D date, followed by a price and a fee line. They look like dated event titles but are price tiers of the one event on that page.",
+      "evidence": {
+        "url": "https://www.chunk-party.com/event-details/chunk-folsom-bear-playground-9-26",
+        "quote": "CHUNK Folsom - 9/26 TIER 2 GA"
+      },
+      "expect": { "extracted": false },
+      "seenInRun": null
+    }
+  ],
+  "openQuestions": [],
+  "recheckAfter": "2026-10-18"
+}

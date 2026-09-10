@@ -1,0 +1,1537 @@
+{
+  "schemaVersion": 1,
+  "source": "3 Dollar Bill",
+  "slug": "3-dollar-bill",
+  "status": "complete",
+  "recon": {
+    "date": "2026-09-10",
+    "method": [
+      "feed",
+      "static",
+      "flyer"
+    ],
+    "parserUrlsAtRecon": [
+      "https://www.3dollarbillbk.com/rsvp"
+    ],
+    "doors": [
+      {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "kind": "squarespace-collection-json",
+        "role": "feed",
+        "rowsReturned": 82,
+        "truthFlag": "upcoming[] 52 (not paginated — the Squarespace events collection returns every upcoming item); past[] 30 = pagination.pageSize with pagination.nextPage true / nextPageUrl \"/rsvp?offset=1786769361724\"",
+        "note": "Verified door. Rows carry epoch-ms startDate/endDate (converted to America/New_York), title, fullUrl, assetUrl, body HTML, and a per-item location {addressTitle, addressLine1, addressLine2, markerLat, markerLng}. excerpt is empty on every row. Saved as rsvp.json."
+      },
+      {
+        "url": "https://www.3dollarbillbk.com/rsvp?offset=<ms>&format=json",
+        "kind": "squarespace-collection-json",
+        "role": "feed",
+        "rowsReturned": 2246,
+        "truthFlag": "paged via pagination.nextPageUrl until nextPage was absent: 75 pages, oldest past row 2021-04-17 (\"TAKE A SEAT - TY SUNDERLAND\"); the last page reports only prevPage",
+        "note": "Past archive, COUNTED not enumerated: 2246 rows served across 75 pages but only 1449 distinct item ids — the timestamp-offset pagination overlaps pages (797 rows are repeats). Saved under past-pages/. Reachable only by pagination, i.e. outside the configured url."
+      },
+      {
+        "url": "https://www.3dollarbillbk.com/rsvp",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 82,
+        "truthFlag": "52 article.eventlist-event blocks inside .eventlist--upcoming + 30 inside .eventlist--past; no pagination control on the upcoming section",
+        "note": "Second door — the configured URL, server-rendered (static curl; no headless Chrome needed). Card titles matched the 52 feed rows 1:1 in order. Every card ends with a \"View Event &#8594;\" link and carries \"Google Calendar\" / \"ICS\" / \"(map)\" links. Past section has no heading — it is only the CSS class. Saved as rsvp.html / rsvp.txt."
+      },
+      {
+        "url": "https://www.3dollarbillbk.com/rsvp/<year>/<m>/<d>/<slug>",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 52,
+        "truthFlag": null,
+        "note": "All 52 upcoming event pages fetched (events/<i>.html + .txt). Each has a JSON-LD Event with name, startDate/endDate (-0400 offsets) and location; NONE carries an offers block — ticket links (Eventim 46, Etix 5, dice.fm 1) live in the body as buttons. Every page also links a mistr.com sponsor banner."
+      },
+      {
+        "url": "https://www.3dollarbillbk.com/rsvp/2026/9/12/bear-tea?format=ical",
+        "kind": "ics",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Per-event ?format=ical works (DTSTART 20261003T200000Z, LOCATION \"The Yard @ 9 Bob Note, 270 Meserole St\"). Collection-level /rsvp?format=ical returns the HTML page (text/html), not a calendar — confirmed, saved as rsvp-format-ical.txt."
+      },
+      {
+        "url": "https://www.3dollarbillbk.com/rsvp/2026/9/12/bear-tea?format=json",
+        "kind": "squarespace-item-json",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Per-event ?format=json works (item{} with the same fields as a feed row)."
+      },
+      {
+        "url": "https://www.3dollarbillbk.com/sitemap.xml",
+        "kind": "xml",
+        "role": "sitemap",
+        "rowsReturned": 2397,
+        "truthFlag": null,
+        "note": "2397 /rsvp/ URLs. None dated 2026/9+ is missing from the feed; 21 feed URLs are not yet in the sitemap (recent additions); 917 sitemap URLs are not in the feed (mostly older/unpublished items; one is the now-404 Sep 24 Have Not Room page, lastmod 2026-08-21). Saved as sitemap.xml, comparison in sitemap-vs-feed.txt."
+      },
+      {
+        "url": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/<asset>",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 52,
+        "truthFlag": null,
+        "note": "All 52 assetUrl flyers downloaded (flyers/, flyers-small/) and read. Every flyer belongs to a feed row; no flyer-only events. Most assets are stored pre-cropped to 1080x810 (4:3) so date/time text is often cut off. Conflicts recorded per event: Euphoria Expo (flyer Aug 29 vs page Nov 22), GraveSTONED (flyer 9 Bob Note vs page 3 Dollar Bill), Intergalactic (flyer 7PM vs page 8PM), Slut Ball (second Boston date)."
+      },
+      {
+        "url": "~/Library/Mobile Documents/iCloud~dk~simonbs~Scriptable/Documents/chunky-dad-scraper/runs/20260909-072307.json",
+        "kind": "run",
+        "role": "other",
+        "rowsReturned": 9,
+        "truthFlag": "parserResults[name=\"3 Dollar Bill\"]: totalEvents 34, bearEvents 9, duplicatesRemoved 3; 22 bearDroppedEvents",
+        "note": "Read only to anchor traps. 6 of the 9 kept events are titled \"View Event →\" with dates that match no feed row; 2 kept events are past-section items (UNSPEAKABLE JOY Aug 29, Live Band Burlesque Aug 13); 1 is Bear Tea (correct). Summary saved as run-20260909-072307-3db.txt."
+      }
+    ],
+    "notes": "Platform confirmed as a Squarespace events collection by a working endpoint (/rsvp?format=json → collection.typeName \"events\", upcoming[] / past[] / pagination{}). The venue runs two rooms with separate addresses published per event: \"3 Dollar Bill\" (also \"3 Dollar Bill YARD\") at 260 Meserole Street and \"9 Bob Note\" (also \"The Yard @ 9 Bob Note\") at 270 Meserole St[reet]. Epoch-ms feed times were converted to America/New_York; the rendered listing shows the same wall-clock times (e.g. \"7:00 PM\" / \"19:00\"). Squarespace URL date segments are creation dates, not event dates (5 rows differ). No row has an excerpt; 10 rows have body text, the rest are a flyer plus a ticket button."
+  },
+  "defaults": {
+    "city": "nyc",
+    "timezone": "America/New_York",
+    "bar": "3 Dollar Bill",
+    "address": "260 Meserole Street, Brooklyn, NY, 11206",
+    "location": "40.7084094, -73.9383118",
+    "website": "https://www.3dollarbillbk.com",
+    "instagram": "https://www.instagram.com/3dollarbillbk",
+    "facebook": "https://www.facebook.com/3dollarbillbk/"
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Feed door /rsvp?format=json returned upcoming[] = 52 rows with no upcoming pagination (Squarespace serves the whole upcoming set; only past[] pages). Second door, the server-rendered /rsvp listing (the configured URL), shows exactly 52 cards in .eventlist--upcoming with titles matching the feed 1:1 in order — zero delta. All 52 event pages were fetched and their JSON-LD start/end times agree with the feed epoch values. Every one of the 52 is a distinct dated Squarespace item with its own URL; the site states no recurrence rule anywhere in page text (the Have Not Room flyer says \"THURSDAYS\" but each Thursday is published separately), so publishedEventCount = 52 singles, no series. Past listings: the same feed pages a past archive of 1449 distinct items (2246 rows over 75 overlapping pages, back to 2021-04-17), and the listing page itself renders the first 30 past items under the upcoming list — counted, not enumerated. Sitemap cross-check found no 2026-09+ event URL absent from the feed. 52 flyers read: none carries an event that is not already a feed row. Location: the feed publishes marker coordinates per event, so `location` is filled from markerLat/markerLng (defaults = the 260 Meserole marker; 9 Bob Note rows carry 40.708456, -73.9377301 or a slightly different pair the site itself varies).",
+    "publishedEventCount": 52,
+    "documentedEventCount": 52,
+    "occurrenceWindow": {
+      "start": "2026-09-10",
+      "end": "2026-12-09"
+    },
+    "pastListingsPresent": true,
+    "knownGaps": []
+  },
+  "events": [
+    {
+      "id": "the-have-not-room-a-big-brother-watch-party-2026-09-10",
+      "kind": "single",
+      "title": "The Have Not Room: A Big Brother Watch Party",
+      "startDate": "2026-09-10",
+      "startTime": "19:00",
+      "endDate": "2026-09-10",
+      "endTime": "21:30",
+      "bar": "9 Bob Note",
+      "address": "270 Meserole St, Brooklyn, NY, 11206",
+      "location": "40.708456, -73.9377301",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/7/16/the-have-not-room-a-big-brother-watch-party-edmf7-yept7",
+      "ticketUrl": "https://www.etix.com/ticket/e/1059479/the-have-note-room-big-brother-brooklyn-9-bob-note",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1775765890056-WSB9AEDI60ZPW3KAEN3G/phonto_-_Ryan_Mitchell.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[0]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Row 0 of the feed. Same flyer + Etix link as row 10 and the Oct 1 FINALE (row 29); the FINALE flyer reads \"THURSDAYS PRESHOW 7:30 VIEWING 8:00\" but the site publishes each Thursday as its own dated page with no page text stating a repeat, so these are documented as singles. Ticket link is an Etix series page shared by every Have Not Room date. A Sep 24 instance (fullUrl …-edmf7-mht7a-fbzd8) was in run 20260909-072307 and is now 404 — see openQuestions."
+    },
+    {
+      "id": "robyn-concert-afterparty-2026-09-10",
+      "kind": "single",
+      "title": "Robyn Concert Afterparty",
+      "startDate": "2026-09-10",
+      "startTime": "22:00",
+      "endDate": "2026-09-11",
+      "endTime": "04:00",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/9/10/robyn-concert-afterparty",
+      "ticketUrl": "https://eventim.us/event/Robyn-Concert-After-Party/703567?afflky=3DollarBill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1787688949290-8I571537WT3XVMEFLZ14/Robyn%2BConcert.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[1]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "dolly-parton-tribute-show-2026-09-11",
+      "kind": "single",
+      "title": "🦋 Dolly Parton Tribute Show 🦋",
+      "startDate": "2026-09-11",
+      "startTime": "19:00",
+      "endDate": "2026-09-11",
+      "endTime": "22:00",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/9/11/-dolly-parton-tribute-show-",
+      "ticketUrl": "https://eventim.us/event/-Dolly-Parton-Tribute-Show-/703823?afflky=3DollarBill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1787863245975-0AJRFYF0LWPAUB8EDOTP/Dolly.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[2]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "dolly-disco-2026-09-11",
+      "kind": "single",
+      "title": "Dolly Disco 🪩🪩🦋🦋",
+      "startDate": "2026-09-11",
+      "startTime": "22:00",
+      "endDate": "2026-09-12",
+      "endTime": "03:00",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/9/11/dolly-disco-",
+      "ticketUrl": "https://eventim.us/wafform.aspx?_act=eventdashboard&_pky=704326",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1788370122356-B3SYREZH07F5HIVFROXL/DollyDisco.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[3]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "wanted-2026-09-11",
+      "kind": "single",
+      "title": "WANTED",
+      "startDate": "2026-09-11",
+      "startTime": "22:00",
+      "endDate": "2026-09-12",
+      "endTime": "04:00",
+      "bar": "9 BOB NOTE",
+      "address": "270 Meserole Street, Brooklyn, NY, 11206",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/9/11/wanted",
+      "ticketUrl": "https://wl.eventim.us/event/WANTED/700522?afflky=9BobNote",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1785259721043-PKSFHTCK5ODV69T8LDFN/Wanted_2026_0911_V3-10%2B-%2BRandy%2BGoetz.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[4]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "addressTitle is published as \"9 BOB NOTE\" (all caps); same room as \"9 Bob Note\". Flyer: \"9 Bob Note 270 Meserole St Brooklyn, NY 10 – late 9/11\"."
+    },
+    {
+      "id": "pantheon-a-classic-queer-dance-party-2026-09-12",
+      "kind": "single",
+      "title": "PANTHEON: A Classic Queer Dance Party",
+      "startDate": "2026-09-12",
+      "startTime": "16:00",
+      "endDate": "2026-09-12",
+      "endTime": "22:00",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/9/12/pantheon-a-classic-queer-dance-party",
+      "ticketUrl": "https://eventim.us/event/PANTHEON-A-Classic-Queer-Dance-Party/701137?afflky=3DollarBill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1786127194478-VLU416GVVFBOBTSVBYD3/Pantheon6%2B-%2BThomas%2BWalker%2B%25281%2529.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[5]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "b-day-20th-anniversary-2026-09-12",
+      "kind": "single",
+      "title": "B'DAY 20TH ANNIVERSARY",
+      "startDate": "2026-09-12",
+      "startTime": "22:00",
+      "endDate": "2026-09-13",
+      "endTime": "04:00",
+      "bar": "9 Bob Note",
+      "address": "270 Meserole Street, Brooklyn, NY, 11206",
+      "location": "40.708456, -73.9377301",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/9/12/bday-20th-anniversary",
+      "ticketUrl": "https://eventim.us/event/BDAY-20TH-ANNIVERSARY/704670?afflky=9BobNote",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1788794505973-AMKV85H35SQTO41RO2RP/BDAY_20th_Anniversary_green_Instagram_4x5.png",
+      "description": "B’DAY IS BACK - and Beyoncé brought some Latin legends to the party.",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[6]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Body carries a full paragraph description (feed body / event page). Flyer: \"20TH ANNIVERSARY B'DAY\"."
+    },
+    {
+      "id": "it-s-a-miley-party-2026-09-12",
+      "kind": "single",
+      "title": "It's a Miley Party!",
+      "startDate": "2026-09-12",
+      "startTime": "22:00",
+      "endDate": "2026-09-13",
+      "endTime": "04:00",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/9/12/its-a-miley-party",
+      "ticketUrl": "https://eventim.us/event/Miley-Party/704558?afflky=3DollarBill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1788537729890-GHC9BBP8T56GRW2XIXTC/Screenshot%2B2026-09-04%2Bat%2B11.51.29%25E2%2580%25AFAM.png",
+      "description": "Come to 3 Dollar Bill to celebrate Miley’s discography before her upcoming album becomes our whole world!",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[7]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Body: \"Dance the night away on September 12th from 10PM - Late!\". Flyer \"miley party\" (DJ ARRA, DJ 2FACE)."
+    },
+    {
+      "id": "xcx-afters-charli-party-night-one-2026-09-14",
+      "kind": "single",
+      "title": "🟢XCX Afters🟢 Charli Party: Night One",
+      "startDate": "2026-09-14",
+      "startTime": "22:00",
+      "endDate": "2026-09-15",
+      "endTime": "04:00",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/9/14/xcx-afters-charli-party-night-one",
+      "ticketUrl": "https://wl.eventim.us/event/XCX-Afters-Charli-Party-Night-One/702094?afflky=3DollarBill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1786486311208-VB0UXF59TGP74R8OXS7M/xcx%2Bafter%2Bparty.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[8]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "xcx-afters-charli-xcx-night-2-2026-09-15",
+      "kind": "single",
+      "title": "XCX Afters: Charli XCX Night 2",
+      "startDate": "2026-09-15",
+      "startTime": "22:00",
+      "endDate": "2026-09-16",
+      "endTime": "03:00",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/9/15/xcx-afters-charli-xcx-night-2",
+      "ticketUrl": "https://eventim.us/event/XCX-Afters-Charli-XCX-Night-2/704187?afflky=3DollarBill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1788278868257-NPOIOFSAI2UHC4SKUKG5/xcx.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[9]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "the-have-not-room-a-big-brother-watch-party-2026-09-17",
+      "kind": "single",
+      "title": "The Have Not Room: A Big Brother Watch Party",
+      "startDate": "2026-09-17",
+      "startTime": "19:00",
+      "endDate": "2026-09-17",
+      "endTime": "21:30",
+      "bar": "9 Bob Note",
+      "address": "270 Meserole St, Brooklyn, NY, 11206",
+      "location": "40.729142, -73.944476",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/7/16/the-have-not-room-a-big-brother-watch-party-edmf7-mht7a",
+      "ticketUrl": "https://www.etix.com/ticket/e/1059479/the-have-note-room-big-brother-brooklyn-9-bob-note",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1775765890056-WSB9AEDI60ZPW3KAEN3G/phonto_-_Ryan_Mitchell.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[10]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Second listed Have Not Room Thursday; distinct Squarespace item (urlId …-edmf7-mht7a) with its own JSON-LD; see row 0 note. addressLine1 \"270 Meserole St\" (abbreviated) on this row."
+    },
+    {
+      "id": "inferno-2026-09-17",
+      "kind": "single",
+      "title": "INFERNO",
+      "startDate": "2026-09-17",
+      "startTime": "19:30",
+      "endDate": "2026-09-17",
+      "endTime": "21:30",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/9/17/inferno",
+      "ticketUrl": "https://wl.eventim.us/event/INFERNO/700044?afflky=3DollarBill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1784757125607-RL2ANTGUSTWO5BW8NJIF/IMG_4606.jpg",
+      "description": "ABANDON ALL HOPE, YE WHO ENTER HERE. WELCOME TO HELL.",
+      "cover": "Sliding scale tickets, $25+, $30+ for cis folks.",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[11]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Night 1 of 2. Page text: \"SEPTEMBER 17TH, 8PM. SEPTEMBER 18TH. 8PM. DOORS AT 7:30.\" — feed startDate = doors (19:30); show 20:00. Both nights share one flyer (\"SEPTEMBER 17 & 18. 3 DOLLAR BILL. 8 PM.\") and the same body text; only the ticket button (\"SEPT 17 TICKETS\") and Eventim id (700044) differ — see trap inferno-two-nights-one-body."
+    },
+    {
+      "id": "miley-bass-persuades-listening-party-2026-09-17",
+      "kind": "single",
+      "title": "Miley 'Bass Persuades' Listening Party",
+      "startDate": "2026-09-17",
+      "startTime": "22:00",
+      "endDate": "2026-09-18",
+      "endTime": "03:00",
+      "bar": "9 Bob Note",
+      "address": "270 Meserole Street, Brooklyn, NY, 11206",
+      "location": "40.708456, -73.9377301",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/9/17/miley-bass-persuades-listening-party",
+      "ticketUrl": "https://eventim.us/event/Miley-Bass-Persuades-Listening-Party/704751?afflky=9BobNote",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1788889327813-WWGQQUHQS8MIRMFBSM8L/MileyListening%2BParty.png",
+      "description": "Come to 9 Bob Note on September 17th to listen and dance to the sounds of Miley’s new album on the day of release!",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[12]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Body: \"Come to 9 Bob Note on September 17th to listen and dance to the sounds of Miley's new album on the day of release!\""
+    },
+    {
+      "id": "aja-s-the-face-reveal-party-2026-09-18",
+      "kind": "single",
+      "title": "Aja's The Face Reveal Party",
+      "startDate": "2026-09-18",
+      "startTime": "18:00",
+      "endDate": "2026-09-18",
+      "endTime": "22:00",
+      "bar": "9 Bob Note",
+      "address": "270 Meserole Street, Brooklyn, NY, 11206",
+      "location": "40.708456, -73.9377301",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/9/18/ajas-the-face-reveal-party",
+      "ticketUrl": "https://eventim.us/event/Ajas-The-Face-Reveal-Party/704086?afflky=9BobNote",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1788201521240-50YTLZT1LEYEINTM8C2K/Aja%2BFace%2B-%2BKy%2BDiGregorio.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[13]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "inferno-2026-09-18",
+      "kind": "single",
+      "title": "INFERNO",
+      "startDate": "2026-09-18",
+      "startTime": "19:30",
+      "endDate": "2026-09-18",
+      "endTime": "21:30",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/9/17/inferno-nfkms",
+      "ticketUrl": "https://wl.eventim.us/event/INFERNO/700046?afflky=3DollarBill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1784757125607-RL2ANTGUSTWO5BW8NJIF/IMG_4606.jpg",
+      "description": "ABANDON ALL HOPE, YE WHO ENTER HERE. WELCOME TO HELL.",
+      "cover": "Sliding scale tickets, $25+, $30+ for cis folks.",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[14]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Night 2 of 2 of INFERNO; own Squarespace item (urlId 2026/9/17/inferno-nfkms — the URL date is Sep 17, the event is Sep 18). Ticket button \"SEPT 18 TICKETS\", Eventim id 700046. See row 11."
+    },
+    {
+      "id": "slayyyter-the-mixtape-7-year-anniversary-2026-09-18",
+      "kind": "single",
+      "title": "Slayyyter: The Mixtape - 7 Year Anniversary",
+      "startDate": "2026-09-18",
+      "startTime": "22:00",
+      "endDate": "2026-09-19",
+      "endTime": "04:00",
+      "bar": "9 Bob Note",
+      "address": "270 Meserole St, Brooklyn, NY, 11206",
+      "location": "40.7291495, -73.94439950000002",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/9/18/slayyyter-the-mixtape-7-year-anniversary",
+      "ticketUrl": "https://eventim.us/event/Slayyyter-The-Mixtape-7-Year-Anniversary/701344?afflky=9BobNote",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1786126992019-TNE9LUMOVPDXZPH236XG/Slayyyter%2B-%2BLiam%2BCollins%2B%25282%2529.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[15]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "carly-rae-jepsen-release-party-day-and-night-2026-09-18",
+      "kind": "single",
+      "title": "💫 Carly Rae Jepsen Release Party ☀️ DAY AND NIGHT 🌖",
+      "startDate": "2026-09-18",
+      "startTime": "22:00",
+      "endDate": "2026-09-19",
+      "endTime": "03:00",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/8/6/-carly-rae-jensen-release-party-day-and-night",
+      "ticketUrl": "https://eventim.us/event/Carly-Rae-Jensen-Release-Party-DAY-AND-NIGHT/701589?afflky=3DollarBill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1786022726334-P9ILOSUQXVKM71U69XXL/CarlyRae.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[16]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "fullUrl date segment is 2026/8/6 and the slug says \"jensen\" — Squarespace URL date is the creation date, not the event date. Flyer: \"FRIDAY, SEPTEMBER 18 CLUB B DAY AND NIGHT\" (Carly Rae Jepsen album launch)."
+    },
+    {
+      "id": "motherdisco-featuring-dj-lina-2026-09-19",
+      "kind": "single",
+      "title": "MOTHERDISCO featuring DJ Lina",
+      "startDate": "2026-09-19",
+      "startTime": "16:00",
+      "endDate": "2026-09-19",
+      "endTime": "22:30",
+      "bar": "3 Dollar Bill YARD",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/9/19/motherdisco",
+      "ticketUrl": "https://wl.eventim.us/event/MOTHERDISCO/702800?afflky=3DollarBill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1787080725362-D3NJZ2BWKTUR8ERPAK9C/Motherdisco%2BSEPT%2B2026_08172026%2B%25281%2529%2B-%2BTom%2BCapelonga.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[17]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "addressTitle \"3 Dollar Bill YARD\" with the 260 Meserole Street address — the venue's outdoor room. Flyer: \"motherdisco. with dj lina\"."
+    },
+    {
+      "id": "kaya-world-tour-the-world-2026-09-19",
+      "kind": "single",
+      "title": "Kaya WORLD Tour ─ The WORLD ─",
+      "startDate": "2026-09-19",
+      "startTime": "21:00",
+      "endDate": "2026-09-20",
+      "endTime": "04:00",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/9/19/kaya-world-tour-the-world-",
+      "ticketUrl": "https://www.eventim.us/event/Kaya-WORLD-Tour-The-WORLD-/694808",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1781121393316-2X0BYBPMPHIZ81ONT9GS/Kaya+VKNY+FINAL+NYC+-+Booking+Admin.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[18]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Flyer: \"SEPTEMBER 19 3 DOLLAR BILL 260 Meserole St, Brooklyn, NY\", \"21+\", \"Tickets and info: fakestarusa.com\". Ticket link is eventim.us without the afflky param."
+    },
+    {
+      "id": "nymphia-wind-s-wild-animals-2026-09-19",
+      "kind": "single",
+      "title": "🐯 Nymphia Wind’s Wild Animals 🐯",
+      "startDate": "2026-09-19",
+      "startTime": "22:00",
+      "endDate": "2026-09-20",
+      "endTime": "04:00",
+      "bar": "9 Bob note",
+      "address": "270 Meserole Street, Brooklyn, NY, 11206",
+      "location": "40.708456, -73.9377301",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/9/19/-nymphia-winds-wild-animals-",
+      "ticketUrl": "https://eventim.us/event/-Nymphia-Winds-Wild-Animals-/703681?afflky=9BobNote",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1787772799135-LICIRLCB4WA8I2Y95FUJ/nymphiawildanimals.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[19]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "addressTitle published as \"9 Bob note\" (lowercase n). Flyer: \"Nymphia Wind's WILD ANIMALS\", shows by Nymphia Wind, Daniella Darling, Myster E. Mel Kiki, Beau Jangless; hosted by Shia Ho."
+    },
+    {
+      "id": "art-prom-2026-09-20",
+      "kind": "single",
+      "title": "Art Prom",
+      "startDate": "2026-09-20",
+      "startTime": "18:30",
+      "endDate": "2026-09-21",
+      "endTime": "01:00",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/8/30/art-prom",
+      "ticketUrl": "https://eventim.us/event/Art-Prom/701451?afflky=3DollarBill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1787584124950-7HKWCH6WNZ07FT0WGJCI/ArtProm.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[20]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "fullUrl date segment 2026/8/30 is the creation date; the event is Sun Sep 20. Flyer: \"ART [ALT] PROM LIVE SHOWCASE + CREATIVE MARKETPLACE\"."
+    },
+    {
+      "id": "party-or-something-a-hilary-duff-dance-party-2026-09-20",
+      "kind": "single",
+      "title": "party...or something: a hilary duff dance party",
+      "startDate": "2026-09-20",
+      "startTime": "21:00",
+      "endDate": "2026-09-21",
+      "endTime": "03:00",
+      "bar": "9 Bob Note",
+      "address": "270 Meserole St, Brooklyn, NY, 11206",
+      "location": "40.7291495, -73.94439950000002",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/9/20/partyor-something-the-lucky-me-tour-afterparty",
+      "ticketUrl": "https://eventim.us/event/partyor-something-the-lucky-me-tour-afterparty/698910?afflky=9BobNote",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1788198522574-7TBE239WDNI8Y1W6IX2I/hilary%2Bduff%2Bparty%2B3.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[21]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Slug (…the-lucky-me-tour-afterparty) differs from the published title. Flyer: \"SHIA HO & OLIVE PRESENT party...or something a hilary duff dance party\"."
+    },
+    {
+      "id": "y-allternative-rodeo-presents-sugar-we-re-hoein-down-2026-09-22",
+      "kind": "single",
+      "title": "Y'allternative Rodeo Presents: Sugar, We're Hoein Down",
+      "startDate": "2026-09-22",
+      "startTime": "18:30",
+      "endDate": "2026-09-22",
+      "endTime": "22:30",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/9/22/yallternative-rodeo-presents-sugar-were-hoein-down",
+      "ticketUrl": "https://eventim.us/event/Yallternative-Rodeo-Presents-Sugar-Were-Hoein-Down/704177?afflky=3DollarBill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1788275611781-9CYBP063NVO0KI387YMQ/SWHD+9.22+-+Samantha+Siegal.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[22]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Flyer: \"SEPT 22 3 DOLLAR BILL BROOKLYN, NY 6:30-10:30 LINE DANCING X EMO NIGHT 21+ PHYSICAL ID REQUIRED\"."
+    },
+    {
+      "id": "set-it-off-2026-09-24",
+      "kind": "single",
+      "title": "SET IT OFF",
+      "startDate": "2026-09-24",
+      "startTime": "20:00",
+      "endDate": "2026-09-25",
+      "endTime": "02:00",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/9/24/set-it-off",
+      "ticketUrl": "https://eventim.us/event/SET-IT-OFF/704339?afflky=3DollarBill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1788383419594-UV067H3FMQ8XBPZM9RXL/Set%2Bit%2Boff.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[23]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Flyer: \"Thurs. Sept 24. Doors 8pm.\" (The 44 Entertainment Group presents)."
+    },
+    {
+      "id": "the-evolution-of-jupiter-genesis-2026-09-24",
+      "kind": "single",
+      "title": "THE EVOLUTION OF JUPITER GENESIS",
+      "startDate": "2026-09-24",
+      "startTime": "22:00",
+      "endDate": "2026-09-25",
+      "endTime": "03:00",
+      "bar": "9 Bob Note",
+      "address": "270 Meserole Street, Brooklyn, NY, 11206",
+      "location": "40.708456, -73.9377301",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/9/24/the-evolution-of-jupiter-genesis",
+      "ticketUrl": "https://eventim.us/event/THE-EVOLUTION-OF-JUPITER-GENESIS/704779?afflky=9BobNote",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1788895030000-JQTPYNXVL85PQGHWVMRQ/IMG_9985%2B-%2BAllie%2BGallazzi.jpg",
+      "description": "The Evolution of Jupiter Genesis is a multi-sensory journey chronicling the EVOLUTION of Jupiter Genesis.",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[24]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Body carries a description paragraph. Flyer: \"THE EVOLUTION OF JUPITER GENESIS\"."
+    },
+    {
+      "id": "out-abt-official-all-things-go-after-party-2026-09-25",
+      "kind": "single",
+      "title": "Out & Abt: Official All Things Go After Party",
+      "startDate": "2026-09-25",
+      "startTime": "22:00",
+      "endDate": "2026-09-26",
+      "endTime": "04:00",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/9/25/out-amp-abt-official-all-things-go-after-party",
+      "ticketUrl": "https://eventim.us/event/Out-and-Abt-Official-All-Things-Go-After-Party/701762?afflky=3DollarBill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1786834141243-XO5CVMD6PBNFSDH3GVAV/White%2Band%2BBlack%2BMinimalist%2BCandle%2BProduct%2BLabel.pdf%2B-%2BJordan%2BBehrens%2B%25281%2529.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[25]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Title contains \"&amp;\" in the feed/HTML — the published title is \"Out & Abt: Official All Things Go After Party\"."
+    },
+    {
+      "id": "bushwig-festival-2026-2026-09-26",
+      "kind": "single",
+      "title": "Bushwig Festival 2026",
+      "startDate": "2026-09-26",
+      "startTime": "16:00",
+      "endDate": "2026-09-27",
+      "endTime": "04:00",
+      "bar": "3 Dollar Bill/9 Bob Note/The Yard",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/9/27/bushwig-festival-2026",
+      "ticketUrl": "https://www.etix.com/ticket/p/83619550/bushwig-festival-brooklyn-9-bob-note",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1779293140732-YQYC8BA2QP9JXSBC3WEA/Bushwig-IG-post.PNG",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[26]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "addressTitle \"3 Dollar Bill/9 Bob Note/The Yard\" — all three rooms. Starts Sat Sep 26 16:00 and runs to Sun Sep 27 04:00; fullUrl date segment says 2026/9/27. Flyer: \"BUSHWIG 15 SATURDAY SEPT 26TH\" with nine bob note / THE YARD / 3DB badges. Ticket link is an Etix performance page."
+    },
+    {
+      "id": "big-sister-a-big-brother-drag-show-and-celebration-2026-09-27",
+      "kind": "single",
+      "title": "🎥 BIG SISTER 🎥 A Big Brother Drag Show and Celebration",
+      "startDate": "2026-09-27",
+      "startTime": "18:00",
+      "endDate": "2026-09-28",
+      "endTime": "00:00",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/9/27/-big-sister-a-big-brother-drag-show-and-celebration",
+      "ticketUrl": "https://eventim.us/event/-BIG-SISTER-A-Big-Brother-Drag-Show-and-Celebration/704475?afflky=3DollarBill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1788461329110-OHX5TMC05D2WTJT8XYIG/BigSister.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[27]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Flyer reads \"THE YARD @ 3DB / 3 DOLLAR BILL 260 MESEROLE ST, BROOKLYN, NY\" while the feed location says \"3 Dollar Bill\" — same address, the flyer names the outdoor room. Title has leading/trailing spaces and emoji in the feed."
+    },
+    {
+      "id": "queer-men-singles-night-speed-dating-2026-09-30",
+      "kind": "single",
+      "title": "QUEER MEN SINGLES NIGHT & SPEED DATING",
+      "startDate": "2026-09-30",
+      "startTime": "19:00",
+      "endDate": "2026-09-30",
+      "endTime": "22:00",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/9/30/queer-men-singles-night-amp-speed-dating",
+      "ticketUrl": "https://wl.eventim.us/event/Queer-Men-Singles-Night-and-Speed-Dating/702064?afflky=3DollarBill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1786478669336-HPIU3KHBB4E9PI39E910/GAY%2BMEN%2BSPEED%2BDATIING.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[28]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Wed Sep 30 instance. A second, separately published instance is row 39 (Mon Oct 12, different Eventim id 702370 vs 702064). No page text states a repeat; both are singles."
+    },
+    {
+      "id": "the-have-not-room-big-brother-finale-2026-10-01",
+      "kind": "single",
+      "title": "The Have Not Room Big Brother FINALE",
+      "startDate": "2026-10-01",
+      "startTime": "19:00",
+      "endDate": "2026-10-01",
+      "endTime": "21:00",
+      "address": "270 Meserole Street, Brooklyn, NY, 11206",
+      "location": "40.708456, -73.9377301",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/10/1/the-have-not-room-big-brother-finale",
+      "ticketUrl": "https://eventim.us/event/The-Have-Not-Room-Big-Brother-FINALE/702662?afflky=9BobNote",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1787326462119-MO2ZNNMAQMHYYY3OMWFV/Screenshot+2026-08-17+at+3.28.53%E2%80%AFPM.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[29]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Location is self-inconsistent on the site: addressTitle \"3 Dollar Bill\" but addressLine1 \"270 Meserole Street\" (the 9 Bob Note address; marker 40.708456,-73.9377301 = 9 Bob Note). Ticket afflky=9BobNote. Flyer reads \"THURSDAYS PRESHOW 7:30 VIEWING 8:00 270 MESEROLE ST\"."
+    },
+    {
+      "id": "cirque-du-squirt-one-last-squirt-2026-10-01",
+      "kind": "single",
+      "title": "Cirque du Squirt: one last squirt",
+      "startDate": "2026-10-01",
+      "startTime": "19:00",
+      "endDate": "2026-10-02",
+      "endTime": "02:00",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/10/1/cirque-du-squirt-one-last-squirt",
+      "ticketUrl": "https://wl.eventim.us/event/Cirque-du-Squirt-one-last-squirt/702107?afflky=3DollarBill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1786487433453-KDHB5PNWTM28QYTQTTBC/cirque%2Bdu%2Bsquirt.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[30]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Flyer: \"CIRQUE DU SQUIRT ONE. LAST. SQUIRT. 3 DOLLAR BILL OCT 1ST\"."
+    },
+    {
+      "id": "big-sister-cycle-5-all-stars-2026-10-01",
+      "kind": "single",
+      "title": "BIG SISTER CYCLE 5; All Stars",
+      "startDate": "2026-10-01",
+      "startTime": "22:00",
+      "endDate": "2026-10-02",
+      "endTime": "03:00",
+      "bar": "9 Bob Note",
+      "address": "270 Meserole Street, Brooklyn, NY, 11206",
+      "location": "40.708456, -73.9377301",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/10/1/big-sister-cycle-5-all-stars",
+      "ticketUrl": "https://eventim.us/event/BIG-SISTER-CYCLE-5-All-Stars/704456?afflky=9BobNote",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1788457161874-WLC4PRMP2LQTJFLKN6YE/bigsister-Cycle%2B5%2Ballstars%2B-%2BGroovy%2BBluez.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[31]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Flyer: \"OCTOBER 1st doors 9:30 PM shows 10 PM Early Bird $15 GA $20 21+\" — the feed startDate is 22:00 (show time), doors 21:30 per flyer."
+    },
+    {
+      "id": "the-new-york-burlesque-festival-s-premiere-party-2026-10-02",
+      "kind": "single",
+      "title": "The New York Burlesque Festival's Premiere Party",
+      "startDate": "2026-10-02",
+      "startTime": "18:00",
+      "endDate": "2026-10-02",
+      "endTime": "22:00",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/10/2/the-new-york-burlesque-festivals-premiere-party",
+      "ticketUrl": "https://www.etix.com/ticket/p/94799679/the-new-york-burlesque-fest-brooklyn-3-dollar-bill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1780599194420-3HOM6OJ5GVDRJ47VMY51/1080x1080_NYBF_3DB+-+Jen+Gapay.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[32]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Flyer: \"THIRSTY GIRL PRODUCTIONS PRESENTS THE 24th ANNUAL NEW YORK BURLESQUE FESTIVAL 2026 3DB OCT 2ND\". Etix performance page."
+    },
+    {
+      "id": "butttootking-2026-lydia-b-kollins-suzie-toot-and-kori-king-2026-10-02",
+      "kind": "single",
+      "title": "ButtTootKing 2026: Lydia B Kollins, Suzie Toot, and Kori King",
+      "startDate": "2026-10-02",
+      "startTime": "19:00",
+      "endDate": "2026-10-03",
+      "endTime": "04:00",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/10/2/butttootking-2026-lydia-b-kollins-suzie-toot-and-kori-king",
+      "ticketUrl": "https://www.etix.com/ticket/p/68159278/butttootking-2026-ustour-brooklyn-3-dollar-bill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1778012723208-USCBV38F4E7VRZAST96X/BTK+TOUR_720x720_1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[33]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Flyer: \"BUTTTOOTKING 2026 U.S. TOUR\" (no date/venue on the flyer). Etix performance page."
+    },
+    {
+      "id": "bear-tea-2026-10-03",
+      "kind": "single",
+      "title": "Bear Tea",
+      "startDate": "2026-10-03",
+      "startTime": "16:00",
+      "endDate": "2026-10-03",
+      "endTime": "22:00",
+      "bar": "The Yard @ 9 Bob Note",
+      "address": "270 Meserole St, Brooklyn, NY, 11206",
+      "location": "40.708456, -73.9377301",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/9/12/bear-tea",
+      "ticketUrl": "https://eventim.us/event/Bear-Tea/700293?afflky=9BobNote",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1784937998565-53UO4O9I6PGBGDTXOYX6/BEARTEA%2BSEP12.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[34]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Page text: \"DATE CHANGE: Originally 9/12 and moved to 10/3\". fullUrl date segment is still 2026/9/12 and the flyer file is BEARTEA+SEP12.png (flyer text: \"BEAR TEA OUTSIDE!\"). addressTitle \"The Yard &#64; 9 Bob Note\" decodes to \"The Yard @ 9 Bob Note\". Run 20260909-072307 extracted this correctly as 2026-10-03."
+    },
+    {
+      "id": "jimbo-plane-jane-s-slut-ball-2026-10-09",
+      "kind": "single",
+      "title": "JIMBO + PLANE JANE'S SLUT BALL",
+      "startDate": "2026-10-09",
+      "startTime": "22:00",
+      "endDate": "2026-10-10",
+      "endTime": "04:00",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/10/9/68gr080cpodkuc08z6cahdmbk3x0k7",
+      "ticketUrl": "https://wl.eventim.us/event/Jimbo-Plane-Janes-Slut-Ball/702905?afflky=3DollarBill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1787150390414-VEV0UVRC2B8AI4IJ12RG/SLUT%2BBALL%2BNEW%2BDATES.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[35]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Squarespace urlId is an opaque id (68gr080cpodkuc08z6cahdmbk3x0k7), button text \"LEARN MORE\". Flyer lists TWO dates: \"OCT 9 3 DOLLAR BILL BROOKLYN\" and \"OCT 11 THE SINCLAIR BOSTON\" — see trap slut-ball-boston-date."
+    },
+    {
+      "id": "kylie-fever-25-2026-10-09",
+      "kind": "single",
+      "title": "Kylie Fever 25",
+      "startDate": "2026-10-09",
+      "startTime": "22:00",
+      "endDate": "2026-10-10",
+      "endTime": "03:00",
+      "bar": "9 Bob Note",
+      "address": "270 Meserole Street, Brooklyn, NY, 11206",
+      "location": "40.708456, -73.9377301",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/10/9/kylie-fever-25",
+      "ticketUrl": "https://eventim.us/event/Kylie-Fever-25/704306?afflky=9BobNote",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1788362261613-CS5Q0ZL8982I3GKRGSJY/IMG_8333%2B-%2BJon%2BAli.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[36]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Flyer is a Kylie logo only (no date)."
+    },
+    {
+      "id": "clown-cult-cult-cult-2026-10-10",
+      "kind": "single",
+      "title": "CLOWN CULT: CULT CULT",
+      "startDate": "2026-10-10",
+      "startTime": "19:00",
+      "endDate": "2026-10-11",
+      "endTime": "04:00",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/10/10/clown-cult-cult-cult-1",
+      "ticketUrl": "https://eventim.us/event/CLOWN-CULT-CULT-CULT/702389?afflky=3DollarBill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1786832799146-8IP2JWCI1YDEIGHWDPCD/Untitled_Artwork.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[37]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Flyer: \"OCT. 10th, 2026 3 DOLLAR BILL, BRKLYN\" \"THE BIG SHOW: 7PM-10PM\" \"THE BIG PARTY: 10PM-…\". Feed 19:00-04:00 covers both."
+    },
+    {
+      "id": "gravestoned-2026-10-11",
+      "kind": "single",
+      "title": "💎🪦 GraveSTONED 🪦💎",
+      "startDate": "2026-10-11",
+      "startTime": "19:00",
+      "endDate": "2026-10-12",
+      "endTime": "03:00",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/10/11/-gravestoned-",
+      "ticketUrl": "https://eventim.us/event/-GraveSTONED-/704922?afflky=9BobNote",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1788978930622-107X18LN5NUM52CDGJKG/graveSTONED.png",
+      "description": "Your favorite weed x drag extravaganza is back from the dead and spookier than ever Sunday, Oct 11",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[38]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Flyer disagrees with the feed on room: flyer \"9 Bob Note 270 Meserole St Brooklyn, NY / Sunday October 11 Doors at 7 Show at 9\", feed location \"3 Dollar Bill\", 260 Meserole Street; ticket afflky=9BobNote. Feed startDate 19:00 = doors. Body has a full description (\"$100 PRIZE COSTUME CONTEST\", \"MEET AND GREET TICKETS AVAILABLE\")."
+    },
+    {
+      "id": "queer-men-singles-night-speed-dating-2026-10-12",
+      "kind": "single",
+      "title": "Queer Men Singles Night & Speed Dating",
+      "startDate": "2026-10-12",
+      "startTime": "19:00",
+      "endDate": "2026-10-12",
+      "endTime": "21:00",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/10/12/queer-men-singles-night-amp-speed-dating",
+      "ticketUrl": "https://eventim.us/event/Queer-Men-Singles-Night-and-Speed-Dating/702370?afflky=3DollarBill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1786832984224-KA5RLHB1CG4YTS74J09G/SpeedDating.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[39]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Mon Oct 12 instance of Queer Men Singles Night (see row 28). Title-case variant of the row-28 title."
+    },
+    {
+      "id": "the-porkchop-ball-2026-10-16",
+      "kind": "single",
+      "title": "The PORKCHOP BALL 🐷🪓",
+      "startDate": "2026-10-16",
+      "startTime": "18:00",
+      "endDate": "2026-10-16",
+      "endTime": "22:00",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/10/16/the-porkchop-ball-",
+      "ticketUrl": "https://eventim.us/event/The-PORKCHOP-BALL-/704913?afflky=3DollarBill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1788976149296-OXXOR4HRXLDPYAPXO4E5/porkchop.png",
+      "description": "DD Fuego + Flip Phone Present:",
+      "cover": "Limited $20 tier one tickets!",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[40]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Body is a pasted email (\"Tickets 3DB <tickets@3dollarbillbk.com> 1:41 PM (6 minutes ago) to me\") that states \"Friday, October 16 8:00 PM 3 Dollar Bill\" and \"7:00 PM VIP Meet and Greet w/ all for queens!\"; the feed startDate is 18:00. Cover from page text: \"Limited $20 tier one tickets!\"."
+    },
+    {
+      "id": "ska-ka-chapter-iii-the-witching-hour-2026-10-16",
+      "kind": "single",
+      "title": "SKAЗKA CHAPTER III: THE WITCHING HOUR",
+      "startDate": "2026-10-16",
+      "startTime": "22:00",
+      "endDate": "2026-10-17",
+      "endTime": "03:00",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/10/16/skaka-chapter-iii-the-witching-hour",
+      "ticketUrl": "https://eventim.us/event/SKAKA-CHAPTER-III-THE-WITCHING-HOUR/702264?afflky=3DollarBill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1788994135352-VOK1A5K3WE06DLDM2QLJ/SKA3KA%2C+%D0%BA%D0%BE%D0%BF%D0%B8%D1%8F.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[41]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Title contains a Cyrillic З (\"SKAЗKA\"); the feed slug is skaka-…. Flyer: \"FRIDAY OCTOBER 16 SKAЗKA THE WITCHING HOUR\"."
+    },
+    {
+      "id": "be-better-the-east-wing-renovation-fund-2026-10-17",
+      "kind": "single",
+      "title": "BE BETTER: The East Wing Renovation Fund",
+      "startDate": "2026-10-17",
+      "startTime": "19:00",
+      "endDate": "2026-11-16",
+      "endTime": "21:30",
+      "bar": "3 Dollar Bill YARD",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/10/17/1b3p91wfyf7yjbxljz00ixnzv1cxy9",
+      "ticketUrl": "https://wl.eventim.us/event/Be-Better-The-East-Wing-Renovation-Fund/700700?afflky=3DollarBill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1785346044941-RIU70EIN7XOPFT0RADWI/2%2B-%2BKiki%2BBall-Change%2B10%253A17%253A26.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[42]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "endDate is published as 2026-11-16 21:30 — a month after the Oct 17 start; almost certainly a data-entry error on the site (flyer file name \"Kiki Ball-Change 10:17:26\", flyer text \"TURNING POINT U.S. GAY PRESENTS BE BETTER THE EAST WING RENOVATION FUND A PARODY DRAG FUNDRAISER\"). Documented as published. addressTitle \"3 Dollar Bill YARD\". Title has a double space."
+    },
+    {
+      "id": "qts-brooklyn-2026-10-17",
+      "kind": "single",
+      "title": "QTS: Brooklyn",
+      "startDate": "2026-10-17",
+      "startTime": "22:00",
+      "endDate": "2026-10-18",
+      "endTime": "04:00",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/10/17/qts-brooklyn",
+      "ticketUrl": "https://dice.fm/partner/tickets/event/l878lw-qts-brooklyn-17th-oct-3-dollar-bill-new-york-tickets?dice_id=10206258&dice_channel=web&dice_tags=organic&dice_campaign=3+Dollar+Bill+Link&dice_feature=mio_marketing&_branch_match_id=1603809804265714233&utm_source=web&utm_campaign=3+Dollar+Bill+Link&utm_medium=mio_marketing&_branch_referrer=H4sIAAAAAAAAA8soKSkottLXz8nMy9ZLyUxO1UvL1S8sKTZOyc%2FJSSxKyszJsa8rSk1LLSrKzEuPTyrKLy9OLbJ1zijKz00FABA0HBQ9AAAA",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1787584997427-HABXQ4XWCIJBVW82H6EH/Brooklyn%2B-%2B1080%2Bx%2B1350.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[43]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Ticket link is dice.fm (the only non-Eventim/Etix ticketer among the 52). Flyer: \"QTS FARIUS' QUEER TRANCE PARTY\"."
+    },
+    {
+      "id": "the-aud-ball-mario-2026-10-29",
+      "kind": "single",
+      "title": "THE AUD BALL: MARIO",
+      "startDate": "2026-10-29",
+      "startTime": "21:00",
+      "endDate": "2026-10-30",
+      "endTime": "02:00",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/10/29/the-aud-ball-mario",
+      "ticketUrl": "https://eventim.us/event/THE-AUD-BALL-MARIO/704314?afflky=3DollarBill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1788366148873-B88SZLRHPKJ9CVQ3RUY6/TEASER%2BPOSTER%2B-%2BSuddenly%2BAudrey.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[44]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Flyer is a Mario mushroom image only (teaser poster)."
+    },
+    {
+      "id": "futch-2026-10-29",
+      "kind": "single",
+      "title": "FUTCH",
+      "startDate": "2026-10-29",
+      "startTime": "22:00",
+      "endDate": "2026-10-30",
+      "endTime": "04:00",
+      "bar": "9 Bob Note",
+      "address": "270 Meserole St, Brooklyn, NY, 11206",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/10/29/futch",
+      "ticketUrl": "https://wl.eventim.us/event/FUTCH/702806?afflky=9BobNote",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1788298149255-W34TJTDJ3A2Y6XB9DATY/HOY_FUTCHoween-Shotgun-3.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[45]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Flyer: \"futchoween new york\" (no date on flyer). addressLine1 \"270 Meserole St\"."
+    },
+    {
+      "id": "this-party-is-killing-you-the-robyn-party-robyn-o-ween-2026-10-30",
+      "kind": "single",
+      "title": "This Party Is Killing You!: The Robyn Party ROBYN-O-WEEN",
+      "startDate": "2026-10-30",
+      "startTime": "17:00",
+      "endDate": "2026-10-30",
+      "endTime": "22:00",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/10/30/this-party-is-killing-you-the-robyn-party-robyn-o-ween-1",
+      "ticketUrl": "https://eventim.us/event/This-Party-Is-Killing-You-The-Robyn-Party-ROBYN-O-WEEN/700710?afflky=3DollarBill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1785347349079-OEK0UO78DS2ZAA8ZWQ5V/halloween%2B26-bunny-thumbnail.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[46]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Flyer: \"ADVENTURE[s] presents this party is killing you! the robyn party robyn-o-ween FRIDAY OCTOBER 30 5 PM- 10 PM 3 DOLLAR BILL SPECIAL GUESTS Bunny X\". Slug ends in -1 (a prior item used the slug)."
+    },
+    {
+      "id": "brooklyn-nightlife-awards-2026-11-10",
+      "kind": "single",
+      "title": "Brooklyn Nightlife Awards",
+      "startDate": "2026-11-10",
+      "startTime": "18:00",
+      "endDate": "2026-11-11",
+      "endTime": "02:00",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/8/25/brooklyn-nightlife-awards",
+      "ticketUrl": "https://wl.eventim.us/event/BROOKLYN-NIGHTLIFE-AWARDS/699132?afflky=3DollarBill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1784059582656-KPWTCM5SW769GUNL3AJN/brooklyn%2Bnightlife%2Bawares%2Bnov%2B10.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[47]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "fullUrl date segment 2026/8/25 is the creation date. Flyer: \"3 Dollar Bill PRESENTS THE 8TH ANNUAL BNA BROOKLYN NIGHTLIFE AWARDS NOVEMBER 10TH 2026\"."
+    },
+    {
+      "id": "the-boygirl-experience-live-2026-11-13",
+      "kind": "single",
+      "title": "The BoyGirl Experience LIVE",
+      "startDate": "2026-11-13",
+      "startTime": "17:00",
+      "endDate": "2026-11-13",
+      "endTime": "21:30",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/11/13/the-boygirl-experience-live",
+      "ticketUrl": "https://eventim.us/event/The-BoyGirl-Experience-LIVE/702359?afflky=3DollarBill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1786833146212-9V5P3SO4OWGIO3O0K3FS/BoyGirl.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[48]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Flyer: \"ROBERT GARCIA PRESENTS THE BOYGIRL EXPERIENCE LIVE … FRIDAY 11/13 5:00PM TO 9:30PM 3 DOLLAR BILL\"."
+    },
+    {
+      "id": "euphoria-expo-hosted-by-mistress-nita-2026-11-22",
+      "kind": "single",
+      "title": "Euphoria Expo hosted by Mistress Nita",
+      "startDate": "2026-11-22",
+      "startTime": "12:00",
+      "endDate": "2026-11-22",
+      "endTime": "19:30",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/8/29/euphoria-expo-hosted-by-mistress-nita",
+      "ticketUrl": "https://eventim.us/event/Euphoria-Expo-hosted-by-Mistress-Nita/701445?afflky=3DollarBill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1785947763653-J11YMR1X30RLA9MW1L5J/Euphoria%2BExpo.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[49]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Title ends with a literal tab character in the feed. fullUrl date segment 2026/8/29 and the flyer still say the ORIGINAL date (\"AUGUST 29TH 12PM-7:30PM\"); the published startDate is Sun Nov 22 12:00-19:30 — the event was moved. See trap euphoria-expo-stale-flyer-date."
+    },
+    {
+      "id": "intergalactic-c-ntressas-2026-11-24",
+      "kind": "single",
+      "title": "Intergalactic C*ntressas",
+      "startDate": "2026-11-24",
+      "startTime": "20:00",
+      "endDate": "2026-11-24",
+      "endTime": "23:00",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/11/24/intergalactic-cntressas",
+      "ticketUrl": "https://eventim.us/event/Intergalactic-Cntressas/702635?afflky=3DollarBill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1786986880064-3ZLARKD29RNP8MY8DGWH/477308D0-3383-4460-8C40-EFF31E673426%2B%25281%2529.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[50]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Flyer says \"NOV 24 / 7PM\" while the feed startDate is 20:00 — the site's two doors disagree by an hour; the structured date wins here. Flyer: \"INTERGALACTIC C*NTRESSAS THE TOUR BROOKLYN, NY … 3 DOLLAR BILL 260 MESEROLE ST.\""
+    },
+    {
+      "id": "for-your-entertainment-2026-11-25",
+      "kind": "single",
+      "title": "for your entertainment",
+      "startDate": "2026-11-25",
+      "startTime": "22:00",
+      "endDate": "2026-11-26",
+      "endTime": "04:00",
+      "location": "40.7084094, -73.93831180000001",
+      "website": "https://www.3dollarbillbk.com/rsvp/2026/11/25/for-your-entertainment",
+      "ticketUrl": "https://eventim.us/event/for-your-entertainment/704683?afflky=3DollarBill",
+      "image": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1788815981190-4OSB2816TR57W4TJGNR9/fyee-copy-223%2B-%2BMichael%2BArola.png",
+      "description": "New York native SOIRÉ returns home to celebrate the release of his debut EP, for your entertainment, with a special one-night show at 3 Dollar Bill.",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[51]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Body has a two-paragraph description (SOIRÉ EP release). Flyer: \"FOR YOUR ENTERTAINMENT SOUNDS BY SOIRÉ AND JOSH LOMAT 11.25.26 10:00 PM - 04:00 AM\"."
+    }
+  ],
+  "traps": [
+    {
+      "id": "view-event-link-as-title",
+      "kind": "navigation",
+      "label": "View Event → (link at the foot of every listing card)",
+      "why": "Each of the 82 cards on /rsvp ends with a \"View Event →\" anchor pointing at the event page. It is a link label, not a title; the AI extractor in run 20260909-072307 emitted SIX events titled literally \"View Event →\" (dates 2026-08-04, 09-04, 09-07, 10-06, 10-07, 11-05 — none of which matches any feed row, i.e. the dates were fabricated too). Card titles are the h1.eventlist-title-link text; the same page also puts \"Google Calendar\", \"ICS\" and \"(map)\" links on every card.",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp",
+        "quote": "View Event &#8594;"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20260909-072307"
+    },
+    {
+      "id": "past-section-on-listing",
+      "kind": "past-event",
+      "label": "The 30 past events rendered under the upcoming list (.eventlist--past, no heading)",
+      "why": "The configured /rsvp page renders page 1 of the past archive (30 cards, Aug 15 – Sep 8 on the recon date) directly below the 52 upcoming cards with no visible \"Past\" heading — only a CSS class separates them. Run 20260909-072307 kept \"UNSPEAKABLE JOY\" (Aug 29) and \"Live Band Burlesque: Hot Gay Summer Tour\" (Aug 13) and bear-dropped KINGDOM HEARTS RAVE, BINY, the Citi Bike launch party and four August Have Not Room Thursdays from this section. The global config sets allowPastEvents: true, so extracting them is correct behaviour, not a bug; they are simply not enumerated here.",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp",
+        "quote": "UNSPEAKABLE JOY"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "seenInRun": "20260909-072307"
+    },
+    {
+      "id": "venue-header-hours",
+      "kind": "venue-header",
+      "label": "BROOKLYN'S PREMIERE QUEER NIGHTCLUB, LIVE MUSIC & PERFORMANCE VENUE / 260 Meserole Street / 7183663031 + LocalBusiness openingHours",
+      "why": "The listing page opens with the venue blurb, address, phone and an intro paragraph, and its JSON-LD LocalBusiness block publishes openingHours \"Mo 15:00-00:00, … Su 15:00-00:00\". None of it is an event; a segmenter that treats the header as a card would produce a venue-named, time-bearing non-event at 260 Meserole Street.",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp",
+        "quote": "BROOKLYN'S PREMIERE QUEER NIGHTCLUB, LIVE MUSIC & PERFORMANCE VENUE"
+      },
+      "expect": {
+        "extracted": false
+      }
+    },
+    {
+      "id": "inferno-two-nights-one-body",
+      "kind": "duplicate-listing",
+      "label": "INFERNO Sep 17 and Sep 18 pages share one body that names both dates",
+      "why": "Both INFERNO items (rows 11 and 14) carry the identical description \"SEPTEMBER 17TH, 8PM. SEPTEMBER 18TH. 8PM. DOORS AT 7:30.\" and the same flyer; only the ticket button label differs (\"SEPT 17 TICKETS\" vs \"SEPT 18 TICKETS\"). A text-driven extractor reading either page can emit BOTH nights from one page, yielding a duplicate of the other night (or a Sep 17 event carrying the Sep 18 ticket link). Expected: exactly one event per page, dated from the structured startDate.",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp/2026/9/17/inferno-nfkms",
+        "quote": "SEPT 18 TICKETS"
+      },
+      "expect": {
+        "extracted": false
+      }
+    },
+    {
+      "id": "bear-tea-date-change-line",
+      "kind": "announcement",
+      "label": "Bear Tea: \"DATE CHANGE: Originally 9/12 and moved to 10/3\"",
+      "why": "The Bear Tea page/body states the ORIGINAL date 9/12 alongside the move; the item URL is still /rsvp/2026/9/12/bear-tea and the flyer asset is named BEARTEA+SEP12.png. Anything that trusts the URL date, the flyer filename or the first date in the text will produce a phantom Sep 12 Bear Tea. The published startDate is Sat 2026-10-03 16:00 (run 20260909-072307 got this right).",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp/2026/9/12/bear-tea",
+        "quote": "DATE CHANGE: Originally 9/12 and moved to 10/3"
+      },
+      "expect": {
+        "extracted": false
+      }
+    },
+    {
+      "id": "euphoria-expo-stale-flyer-date",
+      "kind": "past-event",
+      "label": "Euphoria Expo flyer still reads \"AUGUST 29TH 12PM-7:30PM\"",
+      "why": "The event was moved: the Squarespace item is dated Sun 2026-11-22 12:00–19:30 but the URL segment (/rsvp/2026/8/29/) and the flyer text both carry the original Aug 29 date. An OCR pass that prefers the flyer date would emit a past (Aug 29) Euphoria Expo instead of, or in addition to, the Nov 22 one.",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[49].assetUrl",
+        "imageUrl": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1785947763653-J11YMR1X30RLA9MW1L5J/Euphoria%2BExpo.png"
+      },
+      "expect": {
+        "extracted": false
+      }
+    },
+    {
+      "id": "slut-ball-boston-date",
+      "kind": "foreign-programming",
+      "label": "JIMBO + PLANE JANE'S SLUT BALL flyer: \"OCT 11 THE SINCLAIR BOSTON\"",
+      "why": "The tour flyer lists two stops — \"OCT 9 3 DOLLAR BILL BROOKLYN\" and \"OCT 11 THE SINCLAIR BOSTON\". Only the Oct 9 Brooklyn date is a 3 Dollar Bill event; the Boston date is another venue in another city and must not become an nyc event (or any event) from this source.",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.upcoming[35].assetUrl",
+        "imageUrl": "https://images.squarespace-cdn.com/content/v1/5b3c3b6c0dbda3f950daffd3/1787150390414-VEV0UVRC2B8AI4IJ12RG/SLUT%2BBALL%2BNEW%2BDATES.png"
+      },
+      "expect": {
+        "extracted": false
+      }
+    },
+    {
+      "id": "mistr-sponsor-banner",
+      "kind": "navigation",
+      "label": "mistr.com sponsor banner link on every event page",
+      "why": "Every event page (and several flyers, e.g. Dolly Disco, XCX, Nymphia) carries a \"mistr\" sponsor badge linking to https://mistr.com/?utm_source=inbox&utm_medium=covered&utm_campaign=VENUES. It is an advertiser link, not a ticket or event link; it must not be picked up as ticketUrl/website.",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp/2026/7/16/the-have-not-room-a-big-brother-watch-party-edmf7-yept7",
+        "quote": "https://mistr.com/?utm_source=inbox&amp;utm_medium=covered&amp;utm_campaign=VENUES"
+      },
+      "expect": {
+        "extracted": false
+      }
+    },
+    {
+      "id": "past-archive-pagination",
+      "kind": "out-of-config-scope",
+      "label": "/rsvp?offset=<ms> past-archive pages (1449 distinct past events back to 2021)",
+      "why": "The past archive is reachable only through pagination links the configured URL does not follow (urlDiscoveryDepth not set; the scraper reads /rsvp once). It holds 1449 distinct past items (2246 rows over 75 overlapping pages). They are real past events, not missing upcoming events; nothing from beyond page 1 should appear in a run.",
+      "evidence": {
+        "url": "https://www.3dollarbillbk.com/rsvp?format=json",
+        "jsonPath": "$.pagination.nextPageUrl"
+      },
+      "expect": {
+        "extracted": false
+      }
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "A \"The Have Not Room: A Big Brother Watch Party\" for Thu 2026-09-24 (23:00Z) was in run 20260909-072307 (bearDroppedEvents) and the sitemap still lists /rsvp/2026/7/16/the-have-not-room-a-big-brother-watch-party-edmf7-mht7a-fbzd8 (lastmod 2026-08-21), but on 2026-09-10 that URL returns 404 and the feed has no Sep 24 row. Was it unpublished on purpose (finale moved to Oct 1) — i.e. should the comparison treat a Sep 24 row in a later run as stale rather than missing?",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    },
+    {
+      "q": "The site is self-inconsistent about rooms: the FINALE (row 29) says \"3 Dollar Bill\" with the 270 Meserole address, GraveSTONED (row 38) says 3 Dollar Bill/260 in the feed but 9 Bob Note/270 on the flyer, BIG SISTER says \"THE YARD @ 3DB\" on the flyer. Which should the bar field prefer when the feed location and the flyer disagree — the structured per-event location (used here) or the flyer?",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    },
+    {
+      "q": "BE BETTER (row 42) publishes endDate 2026-11-16 21:30 for an Oct 17 19:00 event. Documented as published; should a month-long span be flagged as a site data error rather than written to the calendar?",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    }
+  ]
+}

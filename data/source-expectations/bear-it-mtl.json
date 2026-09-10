@@ -1,0 +1,287 @@
+{
+  "schemaVersion": 1,
+  "source": "Bear it MTL",
+  "slug": "bear-it-mtl",
+  "status": "complete",
+  "recon": {
+    "date": "2026-09-10",
+    "method": ["feed", "static", "flyer"],
+    "parserUrlsAtRecon": ["https://www.bearitmtl.com/events/"],
+    "doors": [
+      {
+        "url": "https://www.bearitmtl.com/wp-json/tribe/events/v1/events?per_page=50",
+        "kind": "tribe-rest",
+        "role": "feed",
+        "rowsReturned": 2,
+        "truthFlag": "total: 2, total_pages: 1, no next_rest_url",
+        "note": "The Events Calendar REST v1, upcoming-only by default (server-set start_date=2026-09-09 00:00:00). Rows carry venue name+address+city, cost_details (CAD), image, organizer; `website` is empty on both rows; no `series` key at all. Saved as rest-upcoming.json."
+      },
+      {
+        "url": "https://www.bearitmtl.com/wp-json/tribe/events/v1/events?per_page=50&start_date=2000-01-01",
+        "kind": "tribe-rest",
+        "role": "feed",
+        "rowsReturned": 15,
+        "truthFlag": "total: 15, total_pages: 1",
+        "note": "Full archive: 13 past (2025-08-02 Kink! Playground … 2026-09-06 THE HUNT) + the same 2 upcoming. One past row is Toronto (Playground Toronto, buddies in bad times theatre, 2025-12-06); no Paris rows exist today. Saved as rest-all.json."
+      },
+      {
+        "url": "https://www.bearitmtl.com/events/?ical=1",
+        "kind": "ics",
+        "role": "feed",
+        "rowsReturned": 2,
+        "truthFlag": "2 VEVENTs (UIDs 19317-…, 19753-…), no RRULE lines",
+        "note": "DTSTART carries TZID=America/Halifax because the WordPress site timezone is a fixed UTC-4 offset (REST `timezone: \"UTC-4\"`); wall-clock values match the page. Saved as events.ics."
+      },
+      {
+        "url": "https://www.bearitmtl.com/events/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 2,
+        "truthFlag": "\"2 évènements found.\"; page carries one Event JSON-LD per row with Offers",
+        "note": "Configured parser URL. Static curl renders the full list (no JS needed). Also carries the site-wide header strip of 3 event cards including the already-past THE HUNT (see traps). Saved as events.html / events.txt."
+      },
+      {
+        "url": "https://www.bearitmtl.com/event/ensemble/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Event JSON-LD with 2 Offers (url = the event page itself; tickets are sold on-page via Tribe Tickets/WooCommerce). Saved as event-ensemble.html/.txt."
+      },
+      {
+        "url": "https://www.bearitmtl.com/event/players/",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Event JSON-LD with 3 Offers (url = the event page itself). Organizer Armada Montréal Rugby (https://www.armadamontreal.com/). Saved as event-players.html/.txt."
+      },
+      {
+        "url": "https://www.bearitmtl.com/events/list/?eventDisplay=past",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 12,
+        "truthFlag": "\"12 évènements found.\" (page 1 of the past view, octobre 11, 2025 – septembre 6)",
+        "note": "Past archive linked from the configured page as \"Évènements précédents\" (href /events/liste/?eventDisplay=past). Counted, not enumerated. Saved as events-past.html/.txt."
+      },
+      {
+        "url": "https://www.bearitmtl.com/events/list/page/2/?eventDisplay=past",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 1,
+        "truthFlag": "\"1 évènement found.\" (Kink! Playground, août 2, 2025)",
+        "note": "Page 2 of the past view; 12 + 1 = 13 past, which reconciles exactly with the REST archive. Saved as events-past-2.html/.txt."
+      },
+      {
+        "url": "https://www.bearitmtl.com/",
+        "kind": "html",
+        "role": "other",
+        "rowsReturned": 3,
+        "truthFlag": null,
+        "note": "Homepage header strip: EVENEMENT 19 SEP / 03 OCT / 06 SEP cards — the same three events; the 06 SEP card links to the WordPress page /the-hunt/, not the Tribe event. Saved as home.html/.txt."
+      },
+      {
+        "url": "https://www.bearitmtl.com/wp-json/wp/v2/types",
+        "kind": "wp-rest",
+        "role": "other",
+        "rowsReturned": 26,
+        "truthFlag": null,
+        "note": "Post types: tribe_events, tribe_venue, tribe_organizer, tribe_rsvp_tickets present; NO tribe_event_series (Events Calendar PRO series is not installed). Saved as wp-types.json."
+      },
+      {
+        "url": "https://www.bearitmtl.com/wp-json/tribe/events/v1/",
+        "kind": "tribe-rest",
+        "role": "other",
+        "rowsReturned": 15,
+        "truthFlag": null,
+        "note": "Route index: events, venues, organizers, categories, tags only — no series route. Saved as tribe-root.json."
+      },
+      {
+        "url": "https://www.bearitmtl.com/wp-content/uploads/2026/08/Vignette_WEB.jpg",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "ENSEMBLE flyer (1920x1080): \"STOCK AND SODA, SAMEDI 19 SEPTEMBRE 2026 - MEET AND GREET 18:00 - 20:00 SPECTACLE\", \"35$ - INITIATIVE AU PROFIT DE REZO\". Saved as flyer-ensemble.jpg."
+      },
+      {
+        "url": "https://www.bearitmtl.com/wp-content/uploads/2026/09/793405525_1387155902941257_551550585799206437_n.jpg",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "PLAYERS flyer (2048x1152): \"LA SOIRÉE RUGBY\", \"SAMEDI 3 OCTOBRE - 22H À TARD\", \"BAR DIAMANT ROUGE 1681 Rue Sainte-Catherine E, Montréal, QC H2L 2J5\", Armada Montréal RFC logo. Flyer says 22h; the site says 21 h 00 min. Saved as flyer-players.jpg."
+      }
+    ],
+    "notes": "WordPress + The Events Calendar (Tribe) confirmed by a working /wp-json/tribe/events/v1/events endpoint. Three doors agree on exactly 2 upcoming events (REST total=2, ICS 2 VEVENTs, listing \"2 évènements found.\"). No recurring series anywhere: no `series` key on REST rows, no RRULE in the ICS, no tribe_event_series post type, no series REST route. The site geo-detects the visitor's country and rewrites prices into EUR (\"Nous avons mis à jour nos prix à Euro\") — the curl-fetched pages show \"25.00€ – 35.00€\" and EUR ticket tiers (16/22 and 16/19/22) while REST cost_details says CAD 25–35; cover below is taken from REST (CAD). Raw artifacts: /private/tmp/claude-501/-Users-stanleyrya-workspace-chunky-dad/49179ac5-44be-4797-821c-ffb35abc0b2d/scratchpad/recon/bear-it-mtl/."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "REST feed (per_page=50) returned total=2, total_pages=1 → 2 upcoming singles; ICS export has the same 2 VEVENTs; the configured /events/ listing says \"2 évènements found.\" with JSON-LD for both. Zero delta between the three doors. Past listings: REST with start_date=2000-01-01 returns total=15 (= 2 upcoming + 13 past); the HTML past view shows 12 on page 1 + 1 on page 2 = 13 — reconciled exactly. Past rows counted only. The homepage/header strip shows the same 2 events plus the past THE HUNT (2026-09-06), which is a trap, not a third event.",
+    "publishedEventCount": 2,
+    "documentedEventCount": 2,
+    "occurrenceWindow": { "start": "2026-09-10", "end": "2026-12-09" },
+    "pastListingsPresent": true,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "montreal",
+    "timezone": "America/Toronto",
+    "website": "https://www.bearitmtl.com/events/",
+    "facebook": "https://www.facebook.com/BearItTM"
+  },
+  "events": [
+    {
+      "id": "ensemble-2026-09-19",
+      "kind": "single",
+      "title": "ENSEMBLE",
+      "bar": "Stock Bar",
+      "address": "1171 Rue Ste Catherine Est, Montréal, QC, Canada",
+      "location": null,
+      "startDate": "2026-09-19",
+      "startTime": "18:00",
+      "endDate": "2026-09-20",
+      "endTime": "03:00",
+      "website": "https://www.bearitmtl.com/event/ensemble/",
+      "ticketUrl": "https://www.bearitmtl.com/event/ensemble/",
+      "cover": "$25.00 – $35.00 CAD",
+      "image": "https://www.bearitmtl.com/wp-content/uploads/2026/08/Vignette_WEB.jpg",
+      "description": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.bearitmtl.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[0]",
+        "imageUrl": "https://www.bearitmtl.com/wp-content/uploads/2026/08/Vignette_WEB.jpg"
+      },
+      "expect": { "extracted": true, "kept": null },
+      "bearVerdict": null,
+      "note": "Listing text: \"septembre 19 @ 18 h 00 min - septembre 20 @ 3 h 00 min\" under the \"septembre 2026\" month header; JSON-LD startDate 2026-09-19T18:00:00-04:00. REST/JSON-LD description is empty — the site publishes no prose for this event. `website` on the REST row is empty; JSON-LD Offers url is the event page itself (tickets sold on-page: \"ENSEMBLE – Early Bird\" 16, \"ENSEMBLE – Régulier\" 22, shown in EUR to non-Canadian visitors). Flyer names the venue \"STOCK AND SODA\" (Stock Bar's current branding) and prices it \"35$\", a benefit for RÉZO; M. Cuir Montréal 2025 & M. Ours 2026 present, hosted by Sasha Baga."
+    },
+    {
+      "id": "players-2026-10-03",
+      "kind": "single",
+      "title": "PLAYERS",
+      "bar": "Diamant Rouge",
+      "address": "1681 Rue Sainte-Catherine Est, Montréal, QC, H2L 2J5, Canada",
+      "location": null,
+      "startDate": "2026-10-03",
+      "startTime": "21:00",
+      "endDate": "2026-10-04",
+      "endTime": "03:00",
+      "website": "https://www.bearitmtl.com/event/players/",
+      "ticketUrl": "https://www.bearitmtl.com/event/players/",
+      "cover": "$25.00 – $35.00 CAD",
+      "image": "https://www.bearitmtl.com/wp-content/uploads/2026/09/793405525_1387155902941257_551550585799206437_n.jpg",
+      "description": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.bearitmtl.com/wp-json/tribe/events/v1/events?per_page=50",
+        "jsonPath": "$.events[1]",
+        "imageUrl": "https://www.bearitmtl.com/wp-content/uploads/2026/09/793405525_1387155902941257_551550585799206437_n.jpg"
+      },
+      "expect": { "extracted": true, "kept": null },
+      "bearVerdict": null,
+      "note": "Listing text: \"octobre 3 @ 21 h 00 min - octobre 4 @ 3 h 00 min\" under \"octobre 2026\"; JSON-LD startDate 2026-10-03T21:00:00-04:00. Organizer: Armada Montréal Rugby (https://www.armadamontreal.com/); venue website https://diamantrouge.ca/. Published 2026-09-09T10:23Z. Tickets on-page: \"Players – Tier 1\" 16 / Tier 2 19 / Tier 3 22 (EUR-converted display). The flyer reads \"SAMEDI 3 OCTOBRE - 22H À TARD\" and \"BAR DIAMANT ROUGE\" — a one-hour conflict with the site's 21:00; the site's displayed wall-clock is recorded here (see openQuestions)."
+    }
+  ],
+  "traps": [
+    {
+      "id": "the-hunt-past-header-card",
+      "kind": "past-event",
+      "label": "Header strip card \"EVENEMENT 06 SEP. Bar Le Dimant Rouge Montréal\" (THE HUNT, 2026-09-06)",
+      "why": "The site-wide header strip on /events/ (and every page) still features THE HUNT four days after it happened, linking to the WordPress page /the-hunt/ rather than the Tribe event. It is not an upcoming event: REST upcoming total is 2 and the listing says \"2 évènements found.\". It IS in the past archive (\"septembre 6 @ 21 h 00 min - septembre 7 @ 3 h 00 min\", Bar Le Dimant Rouge). Extraction is correct behaviour under the global config.allowPastEvents: true — but it must be dated 2026-09-06, never re-dated forward.",
+      "evidence": {
+        "url": "https://www.bearitmtl.com/events/",
+        "quote": "EVENEMENT 06 SEP. Bar Le Dimant Rouge Montréal"
+      },
+      "expect": { "extracted": true, "kept": null },
+      "seenInRun": "20260909-072307"
+    },
+    {
+      "id": "past-archive-13-events",
+      "kind": "past-event",
+      "label": "\"Évènements précédents\" past view — 12 + 1 past events (Kink! Playground 2025-08-02 … THE HUNT 2026-09-06)",
+      "why": "Reachable from the configured page via the \"Évènements précédents\" link (/events/liste/?eventDisplay=past) and from REST with start_date=2000-01-01. These are 13 already-happened one-offs (Playground series nights, Sugar Bear 2026 festival days, Playground Toronto) — not upcoming programming. Under the global allowPastEvents: true they are legitimately extracted (the 2026-09-09 run carried 12 of them); a future reader must not count them against publishedEventCount, which covers upcoming only.",
+      "evidence": {
+        "url": "https://www.bearitmtl.com/events/list/?eventDisplay=past",
+        "quote": "12 évènements found."
+      },
+      "expect": { "extracted": true, "kept": null },
+      "seenInRun": "20260909-072307"
+    },
+    {
+      "id": "header-strip-duplicate-ensemble",
+      "kind": "duplicate-listing",
+      "label": "Header strip card \"EVENEMENT 19 SEP. Stock Bar Montréal\" (and \"EVENEMENT 03 OCT. Diamant Rouge Montréal\")",
+      "why": "The Elementor header strip repeats the upcoming events as date+venue cards on every page. They are the same two events as the Tribe rows and must fold into ensemble-2026-09-19 / players-2026-10-03, not become second records; the cards carry no year and no title.",
+      "evidence": {
+        "url": "https://www.bearitmtl.com/events/",
+        "quote": "EVENEMENT 19 SEP. Stock Bar Montréal"
+      },
+      "expect": { "extracted": false, "kept": null },
+      "seenInRun": null
+    },
+    {
+      "id": "ticket-tiers-ensemble",
+      "kind": "ticket-tier",
+      "label": "\"ENSEMBLE – Early Bird\" / \"ENSEMBLE – Régulier\" ticket rows on the event page",
+      "why": "Tribe Tickets rows (name, price, \"17 available\") inside the ENSEMBLE page. They are price tiers of one event, not separate events. Their prices are also currency-rewritten per visitor geography (EUR 16.00/22.00 here vs REST cost_details CAD 25–35), so the tier prices are not a reliable cover.",
+      "evidence": {
+        "url": "https://www.bearitmtl.com/event/ensemble/",
+        "quote": "ENSEMBLE – Early Bird"
+      },
+      "expect": { "extracted": false, "kept": null },
+      "seenInRun": null
+    },
+    {
+      "id": "ticket-tiers-players",
+      "kind": "ticket-tier",
+      "label": "\"Players – Tier 1\" / \"Players – Tier 2\" / \"Players – Tier 3\" ticket rows on the event page",
+      "why": "Three Tribe Tickets tiers of the single PLAYERS event (JSON-LD has three Offers, all with url = the event page). Not separate events; prices shown are EUR-converted for non-Canadian visitors.",
+      "evidence": {
+        "url": "https://www.bearitmtl.com/event/players/",
+        "quote": "Players – Tier 1"
+      },
+      "expect": { "extracted": false, "kept": null },
+      "seenInRun": null
+    },
+    {
+      "id": "geo-currency-rewrite",
+      "kind": "announcement",
+      "label": "Currency banner: \"Nous avons mis à jour nos prix à Euro pour faciliter votre processus d'achat.\"",
+      "why": "The WooCommerce currency switcher geo-detects the visitor (\"Espagne\" from this fetch) and rewrites every displayed price into EUR while keeping the same digits for the summary range (\"25.00€ – 35.00€\") — so a scrape from a non-Canadian IP reads a wrong currency. The authoritative cover is REST cost_details (currency_code CAD, values 25–35). Not an event; a data-quality hazard for the cover field.",
+      "evidence": {
+        "url": "https://www.bearitmtl.com/event/ensemble/",
+        "quote": "Nous avons mis à jour nos prix à Euro pour faciliter votre processus d'achat."
+      },
+      "expect": { "extracted": false, "kept": null },
+      "seenInRun": null
+    },
+    {
+      "id": "nav-festival-sugar-bear-2026",
+      "kind": "navigation",
+      "label": "Nav item \"Festival SUGAR BEAR 2026\" → /sugar_bear_weekend/festival-sugar-bear-2026/ (and \"M. Ours\" → /m-ours/)",
+      "why": "Menu links to the festival's own custom post type page (sugar_bear_weekend) and the M. Ours contest page. The April 2026 festival already happened (its days sit in the past archive as KICK OFF / Concours M. Ours 2026 / PLAYGROUND – Thick & Glazed / DRAG Brunch – FSB26). No urlDiscoveryDepth is configured, so these pages are out of scope; a 2027 edition would surface here before it reaches Tribe.",
+      "evidence": {
+        "url": "https://www.bearitmtl.com/events/",
+        "quote": "Festival SUGAR BEAR 2026"
+      },
+      "expect": { "extracted": false, "kept": null },
+      "seenInRun": null
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "PLAYERS start time: the Tribe listing/JSON-LD/ICS all say 21:00 (\"octobre 3 @ 21 h 00 min\"), but the flyer reads \"SAMEDI 3 OCTOBRE - 22H À TARD\". Recorded as 21:00 (site wall-clock); which does the promoter mean?",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    },
+    {
+      "q": "The WordPress site timezone is a fixed UTC-4 offset (REST timezone \"UTC-4\", ICS TZID=America/Halifax). Both current events fall in EDT so the wall-clock is right, but any event dated after 2026-11-01 (EST) will carry a -04:00 offset in JSON-LD/ICS that is one hour off Montreal — the scraper should trust the displayed wall-clock + city timezone, not the offset.",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    }
+  ]
+}

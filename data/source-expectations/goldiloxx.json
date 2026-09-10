@@ -1,0 +1,269 @@
+{
+  "schemaVersion": 1,
+  "source": "Goldiloxx",
+  "slug": "goldiloxx",
+  "status": "complete",
+  "recon": {
+    "date": "2026-09-10",
+    "method": ["feed", "static", "flyer", "page-cache"],
+    "parserUrlsAtRecon": [
+      "https://api.redeyetickets.com/api/v1/events/search?q=goldiloxx&per_page=25",
+      "https://sickening.events/events?q=goldiloxx"
+    ],
+    "doors": [
+      {
+        "url": "https://api.redeyetickets.com/api/v1/events/search?q=goldiloxx&per_page=25",
+        "kind": "feed",
+        "role": "feed",
+        "rowsReturned": 1,
+        "truthFlag": "meta.pagination: current_page 1, per_page 25, total_pages 1, total_count 1",
+        "note": "Configured door 1. HTTP 200, 7,315 bytes, JSON {data[], meta.pagination}. One row: slug goldiloxx-singlet-nite, name 'GOLDILOXX SINGLET NITE ', venue 'Red Eye NY', venue_city New York NY, first_performance_start_at 2026-09-27T01:00:00Z / end 2026-09-27T08:00:00Z, first_performance_time_zone America/New_York, first_performance_display_date 2026-09-26. UTC 01:00 on Sep 27 is 21:00 EDT on Sep 26 (UTC-4), end 08:00Z = 04:00 EDT. No pagination to chase (total_pages 1). No lat/lng fields in the row (only venue_city/state/country/time_zone). Saved: redeye-search.json."
+      },
+      {
+        "url": "https://redeyetickets.com/events/goldiloxx-singlet-nite",
+        "kind": "static",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "RedEye event page, reached via the feed slug (www.redeyetickets.com 301s to redeyetickets.com). HTTP 200, 12,396 bytes. JSON-LD Event: name 'GOLDILOXX SINGLET NITE ', startDate 2026-09-27T01:00:00Z, endDate 2026-09-27T08:00:00Z, location Red Eye NY, 355 West 41st Street, New York NY 10036; offer 'earlyBEAR' 27.48 USD. Visible text confirms the local wall-clock: 'Saturday, September 26, 2026 at 9:00 PM EDT'. Description carries the promoter Instagram handle '@goldiloxx__'. Read for time/year confirmation only; not one of the configured urls."
+      },
+      {
+        "url": "https://sickening.events/events?q=goldiloxx",
+        "kind": "static",
+        "role": "search",
+        "rowsReturned": 2,
+        "truthFlag": "no pagination flag; <button id=\"show-more-events\" style=\"display:none\"> (hidden = nothing more to load)",
+        "note": "Configured door 2. HTTP 200, 62,947 bytes. 'Upcoming Events' holds 2 cards, both titled 'GOLDILOXX Chicago', both 'Saturday, Sep 19, 2026 at 9:00 PM to Sunday, Sep 20, 2026 at 5:00 AM', 'Jackhammer, Chicago, IL'. Distinct /e/ hrefs: /e/goldiloxx-chicago, /e/goldiloxx-chicago/tickets, /e/goldiloxx-chicago-2 (4 href strings, 2 event slugs, 1 real event). The config comment recorded 2 links on 2026-08-04; the scraper page cache of 2026-09-07 already held both slugs. Only a WebSite JSON-LD on the search page itself; event JSON-LD lives on the /e/ pages. Saved: sickening-q-goldiloxx.html/.txt."
+      },
+      {
+        "url": "https://sickening.events/events?q=zzzzqqqq",
+        "kind": "static",
+        "role": "search",
+        "rowsReturned": 0,
+        "truthFlag": "visible empty state: 'No events found with these filters'",
+        "note": "SOFT-404 DISCRIMINATION, nonsense door. HTTP 200, 58,104 bytes, 0 /e/ hrefs, and a positive empty-state string 'No events found with these filters' that the goldiloxx search page does NOT contain. Saved: sickening-q-zzzzqqqq.html/.txt."
+      },
+      {
+        "url": "https://sickening.events/events?q=vampires",
+        "kind": "static",
+        "role": "search",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "SOFT-404 DISCRIMINATION, control door, same session. 'vampires' was taken from the unfiltered listing (/e/all-the-damn-vampires). HTTP 200, 60,369 bytes, exactly 1 event slug (/e/all-the-damn-vampires plus its /tickets twin). So in one session: goldiloxx 62,947 B / 2 slugs, nonsense 58,104 B / 0 slugs + empty-state text, control 60,369 B / 1 slug. The search works and the goldiloxx result is real, not a broken site. Saved: sickening-q-vampires.html/.txt."
+      },
+      {
+        "url": "https://sickening.events/events",
+        "kind": "static",
+        "role": "listing",
+        "rowsReturned": 345,
+        "truthFlag": null,
+        "note": "Unfiltered listing, read only to source a control term and to size the filter. HTTP 200, 974,993 bytes, 670 distinct /e/ hrefs = 345 event slugs (each with a /tickets twin). Both goldiloxx slugs are among them. Out of config scope (the parser hits the ?q= door). Saved: sickening-events-unfiltered.html/.txt."
+      },
+      {
+        "url": "https://sickening.events/e/definitely-not-a-real-event-xyz123",
+        "kind": "static",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": "HTTP 200 on a fabricated slug",
+        "note": "Soft-404 probe. HTTP 200, 13,815 bytes, 0 /e/ hrefs, visible text 'Event Not Found' / 'We're sorry but the page or event you were looking for was not found'. Any followed /e/ link that has been deleted will come back 200 with this shell. Saved: sickening-fake-e.html/.txt."
+      },
+      {
+        "url": "https://sickening.events/e/goldiloxx-chicago",
+        "kind": "static",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Primary Sickening event page. HTTP 200, 47,124 bytes. JSON-LD MusicEvent: name \"GOLDILOXX Chicago | NYC's Interactive Nightlife Experience at Jackhammer\", startDate 2026-09-19T21:00:00-05:00, endDate 2026-09-20T05:00:00-05:00, location Jackhammer, 6406 North Clark Street, Chicago IL 60626; organizer.name 'Jackhammer' (the VENUE, not the promoter); SameAs = Jackhammer socials only; offers EARLY BEAR 10 / TIER 1 15 / TIER 2 20 / DOOR 25 USD. Visible: 'Sep 19, 2026 at 9:00 PM to Sep 20, 2026 at 5:00 AM CDT', flyer text 'September 19' '9PM – 5AM'. No goldiloxx Instagram anywhere on the page. Saved: sickening-e-goldiloxx-chicago.html/.txt."
+      },
+      {
+        "url": "https://sickening.events/e/goldiloxx-chicago-2",
+        "kind": "static",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Second Sickening listing of the SAME event. HTTP 200, 44,054 bytes. JSON-LD identical in name, startDate, endDate, location and description; differs only in organizer.name 'The Hole Chicago (Basement of Jackhammer)' (the venue's basement bar), SameAs = The Hole socials, and NO offers block. Its /tickets link redirects to /e/goldiloxx-chicago/tickets (curl url_effective), so tickets are sold under the primary slug only. Saved: sickening-e-goldiloxx-chicago-2.html/.txt."
+      },
+      {
+        "url": "https://sickening.events/e/goldiloxx-chicago/tickets",
+        "kind": "static",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Ticket-tier page linked from the search card's 'Tickets' button. HTTP 200, 93,624 bytes; same MusicEvent JSON-LD as the primary page plus the tier table (EARLY BEAR $10.00 ...). /e/goldiloxx-chicago-2/tickets 302s here (93,621 bytes, url_effective = this URL). Saved: sickening-e-goldiloxx-chicago-tickets.html/.txt and sickening-e-goldiloxx-chicago-2-tickets.html/.txt."
+      },
+      {
+        "url": "https://redeye-event-flyers.s3.us-east-2.amazonaws.com/artwork/events/live/landscape_cover/5b77e8f1-fbd1-4de4-82a1-57a03eecbb0b/2c9d619852558a07144d9e81/img_0505_1b6b_verified_2c9d619852558a07144d9e81cbfa7465.jpg",
+        "kind": "flyer",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "RedEye landscape_cover_url (749,960 bytes, 1920x1080). Read visually: 'SINGLET NITE', 'SEP 26TH', '9PM-4AM', '@RED EYE NY', 'GOLDILOXX'. No year on the flyer. The portrait flyer_url (5,179,900 bytes) adds 'DJS JOE MICHAEL AND DICAP'. Saved: redeye-flyer-landscape.jpg, redeye-flyer-portrait.png."
+      },
+      {
+        "url": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782170656/saas/logos/image_1782170650341_uohz6tayi.webp",
+        "kind": "flyer",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Sickening primary listing image (354,440 bytes; the -2 listing's v1782172240 image is byte-identical in size and visually the same). Read visually: 'GOLDILOXX Chicago', 'SEPTEMBER 19TH', '9PM - 5AM', '@JACKHAMMER', Jackhammer logo. No year on the flyer. Saved: sickening-e1-image.webp/.png, sickening-e2-image.webp/.png."
+      },
+      {
+        "url": "https://api.redeyetickets.com/api/v1/events/search?q=goldiloxx&per_page=25",
+        "kind": "page-cache",
+        "role": "feed",
+        "rowsReturned": 0,
+        "truthFlag": "cached meta.pagination.total_count 0",
+        "note": "Scraper page cache storage/pages/api.redeyetickets.com/api__v1__events__search--q-1b8y3s1.json, fetchedAt 2026-09-07T05:16:45.917Z, statusCode 200, 98 chars: {data:[], total_count 0}. The SINGLET NITE row did not exist on RedEye yet; its cover transform updatedAt is 2026-09-09T15:24:22Z, i.e. it was published after run 20260909-072307 (07:23 local = 11:23Z) started. That is why the 2026-09-09 run has no NYC event, not a crawl failure."
+      },
+      {
+        "url": "https://sickening.events/events?q=goldiloxx",
+        "kind": "page-cache",
+        "role": "search",
+        "rowsReturned": 2,
+        "truthFlag": null,
+        "note": "Scraper page cache storage/pages/sickening.events/events--q-1d9sypw.json, fetchedAt 2026-09-07T05:16:46.841Z, statusCode 200, 63,126 chars; sibling caches e__goldiloxx-chicago.json (47,483 chars), e__goldiloxx-chicago-2.json (44,417 chars), e__goldiloxx-chicago__tickets.json (94,036 chars) and www.sickening.events/e__goldiloxx-chicago-2__tickets.json (94,038 chars), all fetchedAt 2026-09-07T05:16:5x Z. Same 2 slugs / 1 event as the live read."
+      }
+    ],
+    "notes": "Homeless promoter: nothing is published on a Goldiloxx-owned site; the two configured doors are ticketing-platform searches scoped to the name. The Instagram handle (@goldiloxx__) appears only in the RedEye description text and was NOT scraped from Instagram. Run 20260909-072307 for this parser: urlCount 2, totalEvents 4 raw, duplicatesRemoved 3, rawBearEvents 1, bearEvents 1 — the 4 raw records are the Chicago event read from /e/goldiloxx-chicago, /e/goldiloxx-chicago-2 and their two /tickets pages, folded to one 'GOLDILOXX Chicago' 2026-09-20T02:00:00.000Z (= Sep 19 21:00 CDT) at Jackhammer, city chicago, ticketUrl https://www.sickening.events/e/goldiloxx-chicago/tickets, image = the -2 listing's cloudinary URL. Sickening JSON-LD 'organizer' is the venue (Jackhammer / The Hole Chicago), never Goldiloxx — a promoter-attribution trap for any code that trusts organizer.name. Sickening soft-404s (HTTP 200 shell on any slug), so a deleted /e/ page and 'no events' look alike unless the search's empty-state text or a control search is checked."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Door 1 (RedEye JSON API, configured): meta.pagination.total_count 1 / total_pages 1 → exactly 1 upcoming event, GOLDILOXX SINGLET NITE, Sep 26 2026, Red Eye NY. Door 2 (Sickening ?q=goldiloxx, configured): 2 cards / 2 event slugs (goldiloxx-chicago, goldiloxx-chicago-2) that are one event, GOLDILOXX Chicago, Sep 19 2026, Jackhammer — the config comment counted 2 links on 2026-08-04 and the 2026-09-07 page cache holds the same 2 slugs, so the count has been stable at 2 listings / 1 event. Soft-404 discrimination in the same session: nonsense ?q=zzzzqqqq → 58,104 B, 0 slugs, 'No events found with these filters'; control ?q=vampires → 60,369 B, 1 slug; goldiloxx → 62,947 B, 2 slugs. Second-door cross-check: the RedEye event page and both Sickening /e/ pages (JSON-LD + visible date strings) and the three flyers agree with the feed/search rows on date, time, and venue; the only deltas are the duplicate -2 listing (explained: venue basement cross-post, tickets redirect to the primary) and the RedEye row being absent from the 2026-09-07 cache (explained: published 2026-09-09T15:24Z). Total published = 2 distinct events. No past listings on either door: RedEye returns only the upcoming row, Sickening's search block is headed 'Upcoming Events'.",
+    "publishedEventCount": 2,
+    "documentedEventCount": 2,
+    "occurrenceWindow": { "start": "2026-09-10", "end": "2026-12-09" },
+    "pastListingsPresent": false,
+    "knownGaps": []
+  },
+  "defaults": {
+    "instagram": "https://www.instagram.com/goldiloxx__"
+  },
+  "events": [
+    {
+      "id": "goldiloxx-singlet-nite-2026-09-26",
+      "kind": "single",
+      "title": "GOLDILOXX SINGLET NITE",
+      "shortName": "SINGLET NITE",
+      "description": "GOLDILOXX SINGLET NITE Singlets encouraged but not required GOLDILOXX is an NYC based monthly bear party for bears and their admirers.",
+      "bar": "Red Eye NY",
+      "address": "355 West 41st Street, New York, NY 10036",
+      "location": null,
+      "city": "nyc",
+      "timezone": "America/New_York",
+      "startDate": "2026-09-26",
+      "startTime": "21:00",
+      "endDate": "2026-09-27",
+      "endTime": "04:00",
+      "ticketUrl": "https://redeyetickets.com/events/goldiloxx-singlet-nite",
+      "website": "https://redeyetickets.com/events/goldiloxx-singlet-nite",
+      "image": "https://redeye-event-flyers.s3.us-east-2.amazonaws.com/artwork/events/live/portrait_cover/5b77e8f1-fbd1-4de4-82a1-57a03eecbb0b/83219307b0a05e4dcd9223b0/img_0504-optimized_f75d_verified_83219307b0a05e4dcd9223b076eeda73.png?v=83219307b0a05e4dcd9223b076eeda736f362d343d66a75d832ebded684d0d70",
+      "cover": "$27.48",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://api.redeyetickets.com/api/v1/events/search?q=goldiloxx&per_page=25",
+        "jsonPath": "$.data[0].name",
+        "imageUrl": "https://redeye-event-flyers.s3.us-east-2.amazonaws.com/artwork/events/live/landscape_cover/5b77e8f1-fbd1-4de4-82a1-57a03eecbb0b/2c9d619852558a07144d9e81/img_0505_1b6b_verified_2c9d619852558a07144d9e81cbfa7465.jpg"
+      },
+      "expect": { "extracted": true },
+      "bearVerdict": null,
+      "note": "Feed row $.data[0]: first_performance_start_at 2026-09-27T01:00:00Z, first_performance_end_at 2026-09-27T08:00:00Z, first_performance_time_zone America/New_York, first_performance_display_date 2026-09-26 → local Sat Sep 26 21:00–Sun Sep 27 04:00 EDT; the RedEye event page prints 'Saturday, September 26, 2026 at 9:00 PM EDT' and the flyer reads 'SEP 26TH 9PM-4AM'. The API name has a trailing space ('GOLDILOXX SINGLET NITE '). Cover is the single JSON-LD offer 'earlyBEAR' at 27.48 USD (fees folded in; no door price published). Description on the site calls it 'an NYC based monthly bear party' but no recurrence and no other date is published anywhere, so it is a single. NOT in run 20260909-072307: the row was published 2026-09-09T15:24Z, after that run; expect it from the next run onward."
+    },
+    {
+      "id": "goldiloxx-chicago-2026-09-19",
+      "kind": "single",
+      "title": "GOLDILOXX Chicago",
+      "description": "NYC's GOLDILOXX arrives in Chicago for a unique nightlife experience featuring two floors, color-coded social interaction, DJs from NYC and Chicago, go-go dancers, and nonstop energy until sunrise.",
+      "bar": "Jackhammer",
+      "address": "6406 North Clark Street, Chicago, IL 60626",
+      "location": null,
+      "city": "chicago",
+      "timezone": "America/Chicago",
+      "startDate": "2026-09-19",
+      "startTime": "21:00",
+      "endDate": "2026-09-20",
+      "endTime": "05:00",
+      "ticketUrl": "https://www.sickening.events/e/goldiloxx-chicago/tickets",
+      "website": "https://sickening.events/e/goldiloxx-chicago",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782170656/saas/logos/image_1782170650341_uohz6tayi.webp",
+      "cover": "$10-$25",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://sickening.events/events?q=goldiloxx",
+        "quote": "Saturday, Sep 19, 2026 at 9:00 PM to Sunday, Sep 20, 2026 at 5:00 AM",
+        "imageUrl": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782170656/saas/logos/image_1782170650341_uohz6tayi.webp"
+      },
+      "expect": { "extracted": true },
+      "bearVerdict": null,
+      "note": "Search card + /e/goldiloxx-chicago JSON-LD MusicEvent (startDate 2026-09-19T21:00:00-05:00, endDate 2026-09-20T05:00:00-05:00, location Jackhammer 6406 North Clark Street Chicago IL 60626). Cover from the four JSON-LD offers: EARLY BEAR 10.00, TIER 1 15.00, TIER 2 20.00, DOOR 25.00. JSON-LD organizer.name is 'Jackhammer' (the venue) — Goldiloxx is named only in the title/description; do not read organizer as the promoter. Sickening lists it a second time as /e/goldiloxx-chicago-2 (see trap). Present in run 20260909-072307 as the one kept event (4 raw → 1)."
+    }
+  ],
+  "traps": [
+    {
+      "id": "sickening-goldiloxx-chicago-2-duplicate",
+      "kind": "duplicate-listing",
+      "label": "second 'GOLDILOXX Chicago' card / /e/goldiloxx-chicago-2 (organizer 'The Hole Chicago (Basement of Jackhammer)')",
+      "why": "The same Sep 19 2026 event at Jackhammer published twice by the venue group: once under Jackhammer and once under its basement bar The Hole. Identical name, startDate, endDate, location, description and flyer; the -2 page has no offers and its /tickets link 302s to /e/goldiloxx-chicago/tickets. It must fold into the primary, never become a second event.",
+      "evidence": {
+        "url": "https://sickening.events/e/goldiloxx-chicago-2",
+        "quote": "\"organizer\":{\"@type\":\"Organization\",\"name\":\"The Hole Chicago (Basement of Jackhammer)\""
+      },
+      "expect": { "extracted": true, "note": "It IS crawled (2 of the 4 raw records in the run come from this slug and its /tickets redirect) and correctly deduplicated into goldiloxx-chicago-2026-09-19; keyed by title|startDate|bar it is indistinguishable from the primary, so a run containing the primary satisfies this trap. A run with TWO Goldiloxx Chicago events on 2026-09-19 is the failure." },
+      "seenInRun": "20260909-072307"
+    },
+    {
+      "id": "sickening-ticket-tiers",
+      "kind": "ticket-tier",
+      "label": "EARLY BEAR / TIER 1 / TIER 2 / DOOR offers and the /e/goldiloxx-chicago/tickets page",
+      "why": "Four price tiers in the JSON-LD offers[] and a dedicated /tickets page (93,624 bytes, same MusicEvent JSON-LD plus a tier table) that the search card links to as 'Tickets'. They are prices for the one Sep 19 event, not events; the /tickets page is a second crawl of the same event (2 of the 4 raw records in the run).",
+      "evidence": {
+        "url": "https://sickening.events/e/goldiloxx-chicago",
+        "quote": "\"name\":\"EARLY BEAR\",\"price\":\"10.00\""
+      },
+      "expect": { "extracted": false },
+      "seenInRun": "20260909-072307"
+    },
+    {
+      "id": "sickening-soft-404-shell",
+      "kind": "soft-404",
+      "label": "HTTP 200 'Event Not Found' shell on any /e/ slug (13,815 bytes)",
+      "why": "Sickening returns 200 for a fabricated slug (/e/definitely-not-a-real-event-xyz123) with a JS-app shell whose only text is the not-found message, and the search page also returns 200 for a nonsense query (58,104 bytes, 0 /e/ links, 'No events found with these filters'). A deleted Goldiloxx listing or a broken search both look like a healthy 200; only the empty-state text, the link count, and a same-session control search (?q=vampires → 1 link) tell 'no events' from 'site broken'.",
+      "evidence": {
+        "url": "https://sickening.events/e/definitely-not-a-real-event-xyz123",
+        "quote": "We're sorry but the page or event you were looking for was not found"
+      },
+      "expect": { "extracted": false }
+    },
+    {
+      "id": "sickening-organizer-filter-list",
+      "kind": "navigation",
+      "label": "the 'Organizers' <select> on the search page (~120 promoter names: 'YAS EVENTS', 'Zorn Universal Entertainment Presents:', 'The Hole Chicago (Basement of Jackhammer)', ...)",
+      "why": "Every Sickening listing page (filtered or not) embeds the full organizer filter dropdown twice, plus a Categories list. These are promoter names, not events, and none of them is Goldiloxx; text-window segmentation of the search page will see them above the 2 real cards.",
+      "evidence": {
+        "url": "https://sickening.events/events?q=goldiloxx",
+        "quote": "<option value=\"6635533d-546c-4b1f-a24a-16f60ad1e024\">Zorn Universal Entertainment Presents:</option>"
+      },
+      "expect": { "extracted": false }
+    },
+    {
+      "id": "sickening-unfiltered-listing",
+      "kind": "out-of-config-scope",
+      "label": "https://sickening.events/events without ?q= (345 event slugs, 974,993 bytes)",
+      "why": "The unfiltered listing carries 345 events from ~120 other promoters. The parser is configured on the ?q=goldiloxx door and discoveryAllowedPatterns ['goldiloxx'] blocks every other slug; anything on the unfiltered page that is not goldiloxx is another promoter's event, not a Goldiloxx miss.",
+      "evidence": {
+        "url": "https://sickening.events/events",
+        "quote": "href=\"/e/all-the-damn-vampires\""
+      },
+      "expect": { "extracted": false }
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "RedEye's description calls Goldiloxx 'an NYC based monthly bear party' but neither configured door publishes any date beyond Sep 26 2026 (RedEye total_count 1). Are later NYC dates announced only on Instagram (@goldiloxx__, which we do not scrape), or do they simply not exist yet? Re-check the RedEye door after Sep 26.",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    }
+  ],
+  "recheckAfter": "2026-09-27"
+}

@@ -1,0 +1,229 @@
+{
+  "schemaVersion": 1,
+  "source": "Spooky Bear",
+  "slug": "spooky-bear",
+  "status": "complete",
+  "recheckAfter": "2026-10-01",
+  "recon": {
+    "date": "2026-09-10",
+    "method": [
+      "static",
+      "rendered",
+      "flyer",
+      "classification-cache"
+    ],
+    "parserUrlsAtRecon": [
+      "https://www.ursamen.org/spookybear"
+    ],
+    "doors": [
+      {
+        "url": "https://www.ursamen.org/spookybear",
+        "kind": "static",
+        "role": "listing",
+        "rowsReturned": 1,
+        "truthFlag": "no text events; one dated image (alt \"SB 2026 Save the Date 2.png\")",
+        "note": "curl, Chrome UA, HTTP 200, 643593 bytes. Page text is prose only (\"A Provincetown, Massachusetts Halloween Tradition\" + two paragraphs + Donate Now + footer) — no schedule, no times, no venues, no ticket links. The only dated content on the page is the 1080x1080 image with alt \"SB 2026 Save the Date 2.png\" (id img_comp-mn0hkd67), which reads \"SPOOKY BEAR HALLOWEEN WEEKEND / PROVINCETOWN, MASSACHUSETTS / ROARING TWENTIES / SAVE THE DATE / OCT 29 - NOV 1 2026\". Outbound hrefs: site nav (/, /about, /coming-soon-03, /contact, /ct-bear, /general-events, /ooh, /our-sponsors, /spookybear, /the-board), facebook.com/NEUrsamen, instagram.com/ne.ursamen, zeffy.com/donation-form/donate-to-make-a-difference-2851, mailto:info@mysite.com. No Zeffy ticketing or ThunderTix links. Saved as scratch spookybear.static.html / .txt."
+      },
+      {
+        "url": "https://www.ursamen.org/spookybear",
+        "kind": "rendered",
+        "role": "listing",
+        "rowsReturned": 1,
+        "truthFlag": "rendered DOM text identical to static; same single dated image; no Wix Events widget rendered",
+        "note": "Headless Chrome --dump-dom, virtual-time-budget 15s, 648276 bytes. Text-stripped DOM is the same prose as the static door (only \"Skip to Main Content\" added). The Wix Events & Tickets app (appDefinitionId 140603ad-af8d-84a5-2c80-a0f60cb47351, events-viewer 1.4322.0) is registered in the site's app map but no events widget/list renders on this page and no event text appears. Saved as scratch spookybear.rendered.html / .txt."
+      },
+      {
+        "url": "https://static.wixstatic.com/media/bc384a_c387c5e6a4184157b3d04d00e8435ba8~mv2.png",
+        "kind": "flyer",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": "image text carries an explicit year: \"OCT 29 - NOV 1 2026\"",
+        "note": "The Save-the-Date flyer embedded on /spookybear (also reused on /general-events under the \"Fall 2026\" heading). Read visually: \"SPOOKY BEAR HALLOWEEN WEEKEND\", \"PROVINCETOWN, MASSACHUSETTS\", \"ROARING TWENTIES\", \"SAVE THE DATE\", \"OCT 29 - NOV 1 2026\", \"https://URSAMEN.ORG/spookybear\", Northeast Ursamen and Provincetown Tourism Fund logos. No venue, no times, no ticket URL. Saved as scratch flyers/spookybear-SB-2026-Save-the-Date-2.png."
+      },
+      {
+        "url": "https://www.ursamen.org/sitemap.xml",
+        "kind": "sitemap",
+        "role": "sitemap",
+        "rowsReturned": 4,
+        "truthFlag": "sub-sitemaps: store-products, store-categories, member-profiles, pages — NO events-sitemap",
+        "note": "Wix sitemap index. A site with published Wix Events emits an events sitemap; this one has none, and https://www.ursamen.org/events-sitemap.xml returns 404 (as does /events). Third door confirming the Wix Events app holds zero published events. Saved as scratch sitemap-index.xml, events-sitemap.xml (404 body), store-products-sitemap.xml (9 merch product pages: tank, hoodie, mug, stickers, keychain, bracelet, t-shirt, cap, tote — no tickets)."
+      },
+      {
+        "url": "https://www.ursamen.org/pages-sitemap.xml",
+        "kind": "sitemap",
+        "role": "sitemap",
+        "rowsReturned": 21,
+        "truthFlag": "lastmod 2026-06-13 on every url",
+        "note": "21 static pages, none an event page: /, our-sponsors, coming-soon-03 (= \"Become a Member!\"), english-shipping-policy, general-events, marketplace-spooky (Bear Marketplace — empty shell, store), contact, donation-thank-you-page, ct-bear-info, terms-conditions, ct-bear-program, sponsor-ct-bear, ct-bear, english-refund-policy, ooh, the-board, logos, accessibility-statement, spookybear, privacy-policy, about. Saved as scratch pages-sitemap.xml."
+      },
+      {
+        "url": "https://www.ursamen.org/general-events",
+        "kind": "static",
+        "role": "other",
+        "rowsReturned": 6,
+        "truthFlag": "config-BLOCKED (discoveryBlockedPatterns \"ursamen.org/general-events\"); text is only two headings \"Summer 2026\" / \"Fall 2026\"",
+        "note": "The \"Event Calendar\" nav page. Zero text events; 6 flyer images (plus logo and two social icons). Flyers downloaded and read — see trap general-events-flyer-calendar. Saved as scratch general-events.static.html / .txt and flyers/ge-*."
+      },
+      {
+        "url": "https://www.ursamen.org/ooh",
+        "kind": "static",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": "depth-1 reachable from /spookybear nav and NOT blocked; no dates on page",
+        "note": "Out of Hibernation page (the club's March Provincetown weekend, with the Crown and Anchor). Prose + six undated ticket buttons: \"PILLION MOVIE Tickets\" (provincetownfilm.org/cinema_films/pillion), \"Register for BEAR YOGA\" (outermostyoga.as.me/bearyoga), \"DRAG BINGO Tickets\" (tinyurl -> zeffy.com/en-US/ticketing/2025-ooh-bingo-copy), \"BOOTS N BOXERS Tickets\" (tinyurl -> zeffy.com/en-US/ticketing/2026-ooh-boots-and-boxers-party, whose page reads March 14, 2026 at Gifford House), \"DRAG BRUNCH Tickets\" (tinyurl -> zeffy .../2026-ooh-brunch), \"Register for SHRED FITNESS\" (helltown.fit); closing line \"Looking forward to seeing you at OOH 2026!!\". OOH 2026 is past. Saved as scratch ooh.static.html / .txt, zeffy-ooh-boots.html."
+      },
+      {
+        "url": "https://www.ursamen.org/ct-bear",
+        "kind": "static",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": "depth-1 reachable from /spookybear nav and NOT blocked; no dates on page",
+        "note": "Connecticut Bear contest page: prose, buttons \"Become a sponsor\" (/sponsor-ct-bear), \"About the contest\" (/ct-bear-info, prose only), \"This year's program\" (/ct-bear-program, which reads \"CT Bear 2026 Program Coming Soon\"), \"Submit Your Application Here\" (zeffy.com/en-US/ticketing/connecticut-bear-2027-contest-application — an application form, not an event). Saved as scratch ct-bear*.static.html / .txt."
+      },
+      {
+        "url": "https://www.ursamen.org/spookybear",
+        "kind": "classification-cache",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": "signature.bodyText cachedAt 2026-07-30T15:48:31.192Z is the same prose, no schedule",
+        "note": "storage/classification/www.ursamen.org/spookybear--cls-3t7p8h.json (lastUsedAt 2026-08-24): bodyText identical to today's prose; the local model classified it \"event-page\" at 95% on the strength of the annual blurb alone. storage/pages/www.ursamen.org/ is empty (no page cache). The run 20260909-072307 has no parserResults entry for Spooky Bear (automationEnabled: false)."
+      }
+    ],
+    "notes": "Parser entry (scripts/scraper-input.js): name \"Spooky Bear\", automationEnabled: false, urls [\"https://www.ursamen.org/spookybear\"], urlDiscoveryDepth: 1 (comment: follow Zeffy/ThunderTix ticket links), discoveryBlockedPatterns: [\"ursamen.org/about\", \"ursamen.org/contact\", \"ursamen.org/the-board\", \"ursamen.org/our-sponsors\", \"ursamen.org/general-events\", \"coming-soon\", \"zeffy.com/donation-form\"]; no alwaysBear, no siteRole, no discoveryAllowedPatterns. Platform: Wix (Thunderbolt; sitemaps generatedBy=\"WIX\"; Wix Events & Tickets app registered with events-viewer 1.4322.0 but zero published events — no events sitemap, /events 404, nothing rendered). State on 2026-09-10: /spookybear carries NO schedule yet — only the prose and the \"SB 2026 Save the Date 2.png\" flyer giving the weekend as OCT 29 - NOV 1 2026 with the theme \"ROARING TWENTIES\". 2025 precedent (per the parser comment): the full text schedule publishes on this same URL around Sept/Oct with venues inline and weekday-only day headers whose dates anchor to the announced range — for 2026 that range is Thu Oct 29 - Sun Nov 1 (Oct 29 2026 is a Thursday). Re-run this recon after recheckAfter; when the schedule lands, the single save-the-date entry should be replaced/joined by per-party entries. Wayback lookup for the 2025 page was rate-limited (429) and not retried. Page-level facts: footer \"(C) 2025 Northeast Ursamen\", neursamen@gmail.com, PO BOX 2043 Hartford, CT 06101; socials facebook.com/NEUrsamen, instagram.com/ne.ursamen."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Two doors read the configured URL and agree: the static HTML and the headless-Chrome DOM both contain zero text events and exactly one dated element, the embedded flyer \"SB 2026 Save the Date 2.png\" (read visually: OCT 29 - NOV 1 2026). That flyer is the 1 published event. A third door (Wix sitemap index: no events sitemap; /events-sitemap.xml and /events both 404) confirms the registered Wix Events app publishes nothing. The classification cache from 2026-07-30 shows the same prose, so the \"no schedule yet\" state has held since at least July 30. Cross-check of the adjacent /general-events page (config-blocked) found the same flyer reused under \"Fall 2026\" plus five summer flyers (May-Aug 2026, all past or CT/RI-local) — none of them are Spooky Bear schedule items, all recorded in one trap. No past Spooky Bear listings on /spookybear (pastListingsPresent false; the 2025 schedule is gone).",
+    "publishedEventCount": 1,
+    "documentedEventCount": 1,
+    "occurrenceWindow": {
+      "start": "2026-09-10",
+      "end": "2026-12-09"
+    },
+    "pastListingsPresent": false,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "ptown",
+    "timezone": "America/New_York",
+    "website": "https://www.ursamen.org",
+    "instagram": "https://www.instagram.com/ne.ursamen",
+    "facebook": "https://www.facebook.com/NEUrsamen/"
+  },
+  "events": [
+    {
+      "id": "spooky-bear-halloween-weekend-2026-10-29",
+      "kind": "single",
+      "title": "Spooky Bear Halloween Weekend",
+      "shortName": "Spooky Bear",
+      "description": "Roaring Twenties. Save the Date. Northeast Ursamen's annual Provincetown, Massachusetts Halloween weekend, sponsored in part by the Provincetown Tourism Fund.",
+      "startDate": "2026-10-29",
+      "endDate": "2026-11-01",
+      "startTime": null,
+      "endTime": null,
+      "bar": null,
+      "address": null,
+      "location": null,
+      "website": "https://www.ursamen.org/spookybear",
+      "ticketUrl": null,
+      "image": "https://static.wixstatic.com/media/bc384a_c387c5e6a4184157b3d04d00e8435ba8~mv2.png",
+      "sourceRung": "flyer",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.ursamen.org/spookybear",
+        "quote": "SB 2026 Save the Date 2.png",
+        "imageUrl": "https://static.wixstatic.com/media/bc384a_c387c5e6a4184157b3d04d00e8435ba8~mv2.png"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "The date exists only inside the flyer image (the page text has no date); the HTML carries just the filename alt \"SB 2026 Save the Date 2.png\". Reaching it depends on the OCR/vision path reading the embedded image, not on the crawl — a miss is an OCR-path gap, not a crawl gap."
+      },
+      "bearVerdict": null,
+      "note": "Flyer text verbatim: \"SPOOKY BEAR HALLOWEEN WEEKEND\", \"PROVINCETOWN, MASSACHUSETTS\", \"ROARING TWENTIES\", \"SAVE THE DATE\", \"OCT 29 - NOV 1 2026\". Year is printed on the flyer. endDate is the flyer's last day as displayed (inclusive Nov 1). No venue, times, or ticket link are published yet; the per-party schedule is expected on this URL around Sept/Oct (see recon.notes)."
+    }
+  ],
+  "traps": [
+    {
+      "id": "general-events-flyer-calendar",
+      "label": "Event Calendar page (/general-events): headings \"Summer 2026\" / \"Fall 2026\" over six flyer images",
+      "kind": "out-of-config-scope",
+      "why": "Linked from the /spookybear nav (depth 1) but matched by discoveryBlockedPatterns \"ursamen.org/general-events\", so the crawler must not read it. It has no text events at all — the only text is the two headings — and six flyer images that DO carry events (read visually, scratch flyers/ge-*): (1) \"Bear Summer.png\" = \"BEARY FUN SUMMER\" list: MAY 15TH-17TH CAMP OUT POCONOS - FRIENDS OF GOLDILOCKS; MAY 30TH BETW: SHAKE AND SPEARE, PROVIDENCE RI; JUNE 6TH MIDDLETOWN PRIDE; JUNE 10TH HARTFORD YARD GOATS PRIDE NIGHT; JUNE 13TH BEARS AT THE BEACH! CHARLESTOWN TOWN BEACH, RI; JUNE 20TH PROVIDENCE PRIDE; JUNE 25TH BEARS BE GAMING NEW HAVEN, CT; JUNE 26TH BETW: BREWPORT BRIDGEPORT, CT; JUNE 27TH WEST HARTFORD PRIDE; JULY 19TH TUBING DOWN THE FARMINGTON; JULY 25TH BETW: BAR NEW HAVEN, CT; JULY 24TH-26TH OAK HILL HIDEAWAY - MR. HIDEAWAY BEAR WEEKEND; JULY 31ST-AUG 2ND CONNECTICUT BEAR CONTEST!!! HARTFORD, CT; AUGUST 22ND BEARS AT THE BEACH! HAMMONASSET BEACH MADISON, CT; AUGUST 28TH BETW: PARKVILLE MARKET HARTFORD, CT (no year printed; the heading says Summer 2026). (2) \"BETW_May_2026.png\" = BEARS EAT THE WORLD, Restaurant of the Month Shake & Speare, Saturday May 30th, 2026, 6 PM - 8 PM, 255 Weybosset St, Providence, RI. (3) \"Bears_be_Gaming.png\" = BEARS BE GAMING - A BOARD GAME SOCIAL, THURSDAY JUNE 25TH, 6-10PM, 168 YORK ST. NEW HAVEN, CT, OPEN TO ALL, 168 York Street Cafe / Anchor Health (no year). (4) unnamed alt=\"\" = TUBING DOWN THE FARMING RIVER, Famington River Tubing, 92 Main Street, New Hartford CT 06057, July 19th 12PM (no year). (5) \"2026_Camping_Promo.png\" = CAMPING WITH THE BEARS, Oak Hill Hideaway, JULY 24-26TH, Summer of Adventures (no year). (6) \"SB 2026 Save the Date 2.png\" = the same Spooky Bear save-the-date documented as this file's one event. All five summer flyers are past on the recon date and CT/RI-local; none is a Spooky Bear schedule item.",
+      "evidence": {
+        "url": "https://www.ursamen.org/general-events",
+        "quote": "Fall 2026"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "annual-blurb-each-october",
+      "label": "\"Each October, Bears, Cubs, Chubs, Admirers ... gather in Provincetown, MA for an unforgettable Spooky Bear Weekend!\"",
+      "kind": "recurring-blurb",
+      "why": "The page's only text about the event is an undated annual description (\"Each October\", \"this annual celebration\"). It states no date, venue, or time and must not be turned into an event or an RRULE; the local classifier already reads it as an \"event-page\" at 95% on this prose alone (classification cache 2026-07-30). The real date lives only in the flyer image.",
+      "evidence": {
+        "url": "https://www.ursamen.org/spookybear",
+        "quote": "Each October, Bears, Cubs, Chubs, Admirers, and all members of our collective community gather in Provincetown, MA"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "donate-now-zeffy-form",
+      "label": "\"Donate Now\" button -> zeffy.com/donation-form/donate-to-make-a-difference-2851",
+      "kind": "navigation",
+      "why": "The only Zeffy link on the page is the club's donation form, not a ticketing page. It is matched by discoveryBlockedPatterns \"zeffy.com/donation-form\" so depth-1 discovery must skip it; a Zeffy page with no event date is never an event.",
+      "evidence": {
+        "url": "https://www.ursamen.org/spookybear",
+        "quote": "zeffy.com/donation-form/donate-to-make-a-difference-2851"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "ooh-ticket-buttons-past-festival",
+      "label": "/ooh: \"PILLION MOVIE Tickets\", \"Register for BEAR YOGA\", \"DRAG BINGO Tickets\", \"BOOTS N BOXERS Tickets\", \"DRAG BRUNCH Tickets\", \"Register for SHRED FITNESS\"",
+      "kind": "past-event",
+      "why": "Out of Hibernation (the club's March weekend) is a nav sibling of /spookybear, reachable at depth 1 and NOT in discoveryBlockedPatterns. Its six ticket buttons carry no dates on the page; the Zeffy pages behind the tinyurls (depth 2, not followed) are OOH 2026 events, e.g. Boots and Boxers on March 14, 2026 at Gifford House — all past. Nothing here belongs to Spooky Bear.",
+      "evidence": {
+        "url": "https://www.ursamen.org/ooh",
+        "quote": "Looking forward to seeing you at OOH 2026!!"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "ct-bear-2027-application-form",
+      "label": "/ct-bear: \"Submit Your Application Here\" -> zeffy.com/en-US/ticketing/connecticut-bear-2027-contest-application",
+      "kind": "announcement",
+      "why": "Connecticut Bear is another nav sibling reachable at depth 1 and not blocked. Its only Zeffy \"ticketing\" link is a contest application form for the 2027 title, not an event with a date; /ct-bear-program reads \"CT Bear 2026 Program Coming Soon\". Not a Spooky Bear item.",
+      "evidence": {
+        "url": "https://www.ursamen.org/ct-bear",
+        "quote": "connecticut-bear-2027-contest-application"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "The 2026 Spooky Bear party schedule (venues, times, ticket links) has not been published on /spookybear as of 2026-09-10; only the save-the-date flyer (Oct 29 - Nov 1 2026, \"Roaring Twenties\") is up. Re-recon after recheckAfter (2026-10-01) and enumerate the per-party entries when they appear.",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    },
+    {
+      "q": "Discovery depth 1 from /spookybear reaches the unblocked nav siblings /ooh and /ct-bear (undated ticket buttons for a past March weekend; a 2027 application form). Should those two be added to discoveryBlockedPatterns so the parser only ever reads the Spooky Bear page and its ticket links?",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    }
+  ]
+}
