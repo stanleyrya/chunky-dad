@@ -50,6 +50,16 @@
     "accent": "#fe0000"
   },
   {
+    "slug": "bearracuda-portland-oct-5da75d56",
+    "url": "https://bearracuda.com/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#322d2b:28:1 #cd6a4c:19:13 #4b423d:15:1 #b2ce2e:5:18 #b944a6:4:19",
+    "accent": "#cd6a4c"
+  },
+  {
     "slug": "bearracuda-portland-pride-saturday-17cdfbd9",
     "url": "https://bearracuda.com/events/portland-pride-saturday/",
     "faviconBg": "#ff1901",

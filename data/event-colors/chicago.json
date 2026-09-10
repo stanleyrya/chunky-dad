@@ -39,6 +39,15 @@
     "accent": "#b48275"
   },
   {
+    "slug": "chunk-chicago-presents-new-years-eve-2026-2ec535b1",
+    "url": "https://www.chunk-party.com",
+    "faviconBg": "#f6f4f5",
+    "faviconFg": "#2e2933",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#f5fafb:68:1 #1b1925:16:2 #83757e:5:2"
+  },
+  {
     "slug": "chunk-chicago-presents-new-years-eve-2026-3afe095d",
     "url": "https://www.chunk-party.com/event-details/chunk-chicago-presents-new-years-eve-2026",
     "faviconBg": "#f6f4f5",
@@ -184,6 +193,16 @@
     "url": "https://linktr.ee/megawoof_america",
     "faviconBg": "#575d64",
     "faviconFg": "#abb2ba"
+  },
+  {
+    "slug": "megawoof-chicago-11-year-anniversary-7dd72489",
+    "url": "https://linktr.ee/megawoof_america",
+    "faviconBg": "#575d64",
+    "faviconFg": "#abb2ba",
+    "faviconPlate": "#acb4bc",
+    "paletteSource": "flyer",
+    "palette": "#210f08:33:3 #833413:18:12 #a55a26:16:12 #d08f55:11:11 #f5da03:5:18",
+    "accent": "#f5da03"
   },
   {
     "slug": "megawoof-chicago-july-bearwatch-7afede0c",

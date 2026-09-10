@@ -47,6 +47,7 @@ window.EVENT_PLATES = {
   "rockbarnyc.com": "#000000",
   "nowherebarnyc.com": "#ffffff",
   "flexbar.nyc": "#ffffff",
+  "tickets.taverngroupevents.com": "#fed317",
   "dieselseattle.com": "#f6f6f6",
   "thelumberyardbar.com": "#010100",
   "scandalsitges.com": "#ffffff",

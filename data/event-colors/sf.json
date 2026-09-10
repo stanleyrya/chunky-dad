@@ -212,6 +212,16 @@
     "accent": "#ea6d4c"
   },
   {
+    "slug": "megawoof-170d257e",
+    "url": "https://linktr.ee/megawoof_america",
+    "faviconBg": "#575d64",
+    "faviconFg": "#abb2ba",
+    "faviconPlate": "#acb4bc",
+    "paletteSource": "flyer",
+    "palette": "#130c1c:19:3 #3a3c94:18:14 #b5725d:16:9 #dc9076:14:10 #d8e13a:7:18",
+    "accent": "#3a3c94"
+  },
+  {
     "slug": "megawoof-39090023",
     "url": "https://linktr.ee/megawoof_america",
     "faviconBg": "#575d64",

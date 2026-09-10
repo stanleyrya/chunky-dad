@@ -34,5 +34,15 @@
     "paletteSource": "flyer",
     "palette": "#f5324d:38:23 #f6e1d6:16:3 #ff7265:13:17 #ffa323:9:17 #732325:7:11",
     "accent": "#f5324d"
+  },
+  {
+    "slug": "halloween-cubhouse-15ce0add",
+    "url": "https://tickets.taverngroupevents.com/halloween-cubhouse-cc3842e7",
+    "faviconBg": "#fbd21b",
+    "faviconFg": "#b46f7a",
+    "faviconPlate": "#fed317",
+    "paletteSource": "favicon",
+    "palette": "#fed418:74:18 #ed61a8:7:19 #efd5e0:4:3 #994f78:4:11 #746216:3:9",
+    "accent": "#fed418"
   }
 ]

@@ -30,6 +30,16 @@
     "accent": "#358fa3"
   },
   {
+    "slug": "beefmince-welly-takeover-x-london-bear-pride-4749ebf3",
+    "url": "https://beefmince.com/events",
+    "faviconBg": "#060606",
+    "faviconFg": "#131313",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#232323:40:0 #6d215b:20:13 #4c0b73:10:16 #ed7e14:8:17 #70513f:6:5",
+    "accent": "#6d215b"
+  },
+  {
     "slug": "beefmince-x-rvt-174c5642",
     "url": "https://beefmince.com",
     "faviconBg": "#060606",
@@ -58,6 +68,12 @@
     "paletteSource": "flyer",
     "palette": "#282829:36:0 #3b33d4:35:23 #2a5bf3:12:23 #34297b:4:13 #9fa4db:2:8",
     "accent": "#3b33d4"
+  },
+  {
+    "slug": "boatmince-0cb7b5c0",
+    "paletteSource": "flyer",
+    "palette": "#1bc5ea:57:13 #f5f5ed:14:1 #246af5:13:22 #19748a:2:9",
+    "accent": "#1bc5ea"
   },
   {
     "slug": "boatmince-61f25b7e",
