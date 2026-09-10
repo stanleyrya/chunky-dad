@@ -437,10 +437,15 @@ test('run-once: shapeRunOnceConfig stamps automation runtime and always re-force
 
 test('run-once: parser filter still selects exactly the named parser and throws on unknown names', () => {
   const shaped = runOnce.shapeRunOnceConfig({
-    parsers: [{ name: 'A', enabled: false }, { name: 'B', enabled: true }],
+    parsers: [{ name: 'A', enabled: false, automationEnabled: false }, { name: 'B', enabled: true }],
     config: {}
-  }, { CHUNKY_RUN_PARSER: 'A' });
-  assert.deepEqual(shaped.parsers.map((p) => p.enabled), [true, false]);
+  }, { CHUNKY_RUN_PARSER: 'A', CHUNKY_RUN_AUTOMATION: '1' });
+  // The list is narrowed, not flagged: automation runs ignore `enabled`, so a
+  // flagged list ran all 23 parsers under CHUNKY_RUN_PARSER=Furball. And an
+  // explicit pick runs even when scheduled automation would skip it.
+  assert.deepEqual(shaped.parsers.map((p) => p.name), ['A']);
+  assert.equal(shaped.parsers[0].enabled, true);
+  assert.equal('automationEnabled' in shaped.parsers[0], false);
 
   assert.throws(() => runOnce.shapeRunOnceConfig({ parsers: [{ name: 'A' }], config: {} },
     { CHUNKY_RUN_PARSER: 'Nope' }), /no parser named "Nope"/);

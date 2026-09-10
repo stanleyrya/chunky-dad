@@ -7996,7 +7996,7 @@ test('dead-end store: young entries are skipped before enqueueing, with the rese
   // single unproductive observation no longer suppresses a URL on its own
   // (see the confirmation test below).
   const store = {
-    'https://site.example/dead': { firstSeen: youngLastSeen, lastSeen: youngLastSeen, misses: 2 },
+    'https://site.example/dead': { firstSeen: youngLastSeen, lastSeen: youngLastSeen, misses: 2, capability: SharedCore.DEAD_END_CAPABILITY },
     // Fresh host success stats for every host this run fetches, so the run
     // writes nothing new and "skipping does not touch the store" stays exact.
     '::hosts': {
@@ -8476,7 +8476,7 @@ test('dead-end store: legacy raw-URL entries still suppress and migrate to the d
   const legacyKey = 'https://legacy.example/Path/';
   const core = deadEndCore();
   core.deadEndRunContext = core.createDeadEndRunContext({
-    deadEndStore: { [legacyKey]: { firstSeen: nowIso, lastSeen: nowIso, misses: 3 } }
+    deadEndStore: { [legacyKey]: { firstSeen: nowIso, lastSeen: nowIso, misses: 3, capability: SharedCore.DEAD_END_CAPABILITY } }
   });
   assert.ok(core.getSkippableDeadEndEntry(legacyKey), 'legacy entry still suppresses its URL');
 
@@ -8527,7 +8527,7 @@ test('crawl queue: a recorded dead end is skipped even when the queued string di
   // dead-ends.json holds the CLEAN URL (recorded after the crawl loop's own
   // normalizeUrl pass)…
   const store = {
-    'https://site.example/gallery': { firstSeen: youngLastSeen, lastSeen: youngLastSeen, misses: 3 }
+    'https://site.example/gallery': { firstSeen: youngLastSeen, lastSeen: youngLastSeen, misses: 3, capability: SharedCore.DEAD_END_CAPABILITY }
   };
   const pages = {
     // …but the queued candidate carries an entity-mangled tail, so the
@@ -16828,7 +16828,7 @@ test('dead-end store: one unproductive fetch is not enough — a second confirms
   {
     const core = deadEndCore();
     const display = createDisplayAdapterStub();
-    const store = { [url]: { firstSeen: youngLastSeen, lastSeen: youngLastSeen, misses: 2 } };
+    const store = { [url]: { firstSeen: youngLastSeen, lastSeen: youngLastSeen, misses: 2, capability: SharedCore.DEAD_END_CAPABILITY } };
     const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
     await core.processEvents(deadEndConfig({ store }), httpAdapter, display, parsers);
     assert.ok(!fetched.includes(url), 'a confirmed dead end is still skipped');
@@ -16849,7 +16849,7 @@ test('dead-end store: one unproductive fetch is not enough — a second confirms
   {
     const core = deadEndCore();
     const display = createDisplayAdapterStub();
-    const store = { [url]: { firstSeen: youngLastSeen, lastSeen: youngLastSeen, misses: 1 } };
+    const store = { [url]: { firstSeen: youngLastSeen, lastSeen: youngLastSeen, misses: 1, capability: SharedCore.DEAD_END_CAPABILITY } };
     const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
     const config = deadEndConfig({ store });
     config.config.deadEndMinMisses = 1;
@@ -21091,4 +21091,215 @@ test('the text and vision endpoints are tracked separately', () => {
   const unreachable = core.getUnreachableAiEndpoints();
   assert.equal(unreachable.length, 1, 'a working text server must not mask a dead vision server');
   assert.ok(unreachable[0].endpoint.endsWith(':8001/v1/chat/completions'));
+});
+
+// ---------------------------------------------------------------------------
+// SPA DATA DOORS — run 20260910-131740: Cubhouse's only upcoming party sat
+// behind a 419-byte JavaScript shell on its ticket platform, learned as a
+// dead end twice, while the platform answered /api/public/ticket-events/<slug>
+// to anyone who asked. The page's own bundle names the door.
+// ---------------------------------------------------------------------------
+
+const SPA_SHELL_HTML = '<!doctype html><html lang="en"><head><meta charset="UTF-8" /><title>The Tavern Group Events Calendar</title>'
+  + '<script type="module" crossorigin src="/assets/index-DZIfecld.js"></script><link rel="stylesheet" crossorigin href="/assets/index-XycKopeO.css"></head>'
+  + '<body><div id="root"></div><noscript>You need to enable JavaScript to run this app.</noscript></body></html>';
+const SPA_BUNDLE_JS = '(function(){const t="x";fetch("/api/auth/login");fetch("/api/admin/talent");'
+  + 'const u=`/api/public/ticket-events/${t}`;const v=`/api/public/ticket-events/${t}/checkout`;const w=`/api/events/${t}/ticketing`;'
+  + 'fetch("/api/events?limit=1000&excludeStatus=COMPLETED");fetch("/api/contacts");'
+  + 'const venues={"7bdf":{name:"254/Back Street Food and Wine Co., LLC",address:"254 South 12th Street, Philadelphia, PA 19107"},'
+  + '"cfeb":{name:"Tavern on Camac",address:"243 S Camac St, Philadelphia, PA 19107"},"x":{name:"Nowhere",address:"no digits here"}};})();';
+const SPA_DOOR_JSON = JSON.stringify({
+  event: { id: 'd003', title: 'Halloween Cubhouse', start_at: '2026-10-31 01:00:00+00', end_at: '2026-10-31 06:00:00+00', venue_name: '254', public_slug: 'halloween-cubhouse-cc3842e7' },
+  ticketTypes: [{ name: 'Advance', price_cents: 2500 }],
+  recurring: { isRecurring: true, occurrences: [] }
+});
+const SPA_PAGE_URL = 'https://tickets.example.com/halloween-cubhouse-cc3842e7';
+const SPA_BUNDLE_URL = 'https://tickets.example.com/assets/index-DZIfecld.js';
+const SPA_DOOR_URL = 'https://tickets.example.com/api/public/ticket-events/halloween-cubhouse-cc3842e7';
+
+function spaStubAdapter(overrides = {}) {
+  const fetched = [];
+  const bodies = {
+    [SPA_PAGE_URL]: SPA_SHELL_HTML,
+    [SPA_BUNDLE_URL]: SPA_BUNDLE_JS,
+    [SPA_DOOR_URL]: SPA_DOOR_JSON,
+    ...overrides
+  };
+  return {
+    fetched,
+    httpAdapter: {
+      fetchData: async (url) => {
+        fetched.push(url);
+        if (!(url in bodies)) throw new Error(`HTTP 404: Not Found (${url})`);
+        if (bodies[url] instanceof Error) throw bodies[url];
+        return { html: bodies[url], url, statusCode: 200, headers: {} };
+      }
+    }
+  };
+}
+
+test('SPA door: a JavaScript shell is recognised; pages with content are not', () => {
+  const core = createCore();
+  assert.equal(core.looksLikeSpaShell(SPA_SHELL_HTML), true, 'empty mount + script = shell');
+  assert.equal(core.looksLikeSpaShell('<html><body><div id="root"></div></body></html>'), false, 'no script, nothing to read — not a shell we can open');
+  assert.equal(core.looksLikeSpaShell(SPA_SHELL_HTML.replace('<div id="root"></div>', '<div id="root"><h1>BEAR NIGHT</h1><p>Every Friday 9pm at the Eagle, doors at 8, $10 cover, DJ all night long and a raffle.</p><p>Second paragraph of real page copy that a reader would see.</p></div>')), false, 'visible copy = content');
+  assert.equal(core.looksLikeSpaShell(SPA_DOOR_JSON), false, 'a JSON body is content');
+  assert.equal(core.looksLikeSpaShell(SPA_SHELL_HTML.replace('</head>', '<script type="application/ld+json">{"@type":"Event"}</script></head>')), false, 'JSON-LD is content');
+});
+
+test('SPA door: API path templates are harvested from the bundle and ranked by public-read vocabulary', () => {
+  const core = createCore();
+  const templates = core.harvestSpaApiPathTemplates(SPA_BUNDLE_JS);
+  assert.ok(templates.includes('/api/public/ticket-events/${t}'));
+  assert.ok(templates.includes('/api/events/${t}/ticketing'));
+  assert.ok(!templates.some(t => t.includes('?')), 'query-shaped list endpoints take no slug');
+  const ranked = templates.map(t => [t, core.scoreSpaApiPathTemplate(t)]).filter(([, s]) => s >= 2).sort((a, b) => b[1] - a[1]);
+  assert.equal(ranked[0][0], '/api/public/ticket-events/${t}', 'public + ticket + event + one trailing placeholder wins');
+  assert.ok(core.scoreSpaApiPathTemplate('/api/public/ticket-events/${t}/checkout') < 0, 'checkout is never probed');
+  assert.ok(core.scoreSpaApiPathTemplate('/api/auth/login') < 0);
+  assert.ok(core.scoreSpaApiPathTemplate('/api/contacts') < 0);
+  assert.ok(core.scoreSpaApiPathTemplate('/api/events/${a}/sessions/${b}') < 0, 'two placeholders cannot be filled from one slug');
+  assert.deepEqual(core.harvestSpaApiPathTemplates('const a=`/api/x/${one}`;const b=`/api/x/${two}`;'), ['/api/x/${one}'],
+    'templates differing only by placeholder name are one template');
+});
+
+test('SPA door: probes substitute the page slug into a placeholder, or append it to a bare resource path', () => {
+  const core = createCore();
+  assert.deepEqual(core.spaPageIdentifiers('https://tickets.example.com/events/halloween-cubhouse-cc3842e7'),
+    ['halloween-cubhouse-cc3842e7', 'events/halloween-cubhouse-cc3842e7']);
+  assert.deepEqual(core.spaPageIdentifiers('https://tickets.example.com/'), []);
+  assert.deepEqual(core.spaPageIdentifiers('https://tickets.example.com/app.js'), [], 'file-shaped segments never qualify');
+  const probes = core.buildSpaDoorProbes(['/api/public/ticket-events/${t}', '/api/events'], ['halloween-cubhouse-cc3842e7'], SPA_PAGE_URL);
+  assert.deepEqual(probes.map(p => p.url), [
+    'https://tickets.example.com/api/public/ticket-events/halloween-cubhouse-cc3842e7',
+    'https://tickets.example.com/api/events/halloween-cubhouse-cc3842e7'
+  ]);
+  assert.equal(probes[0].template, '/api/public/ticket-events/${t}');
+});
+
+test('SPA door: a bundled venue directory is harvested from name+address object literals', () => {
+  const core = createCore();
+  const directory = core.harvestBundleVenueDirectory(SPA_BUNDLE_JS);
+  assert.deepEqual(directory, [
+    { name: '254/Back Street Food and Wine Co., LLC', address: '254 South 12th Street, Philadelphia, PA 19107' },
+    { name: 'Tavern on Camac', address: '243 S Camac St, Philadelphia, PA 19107' }
+  ], 'an "address" with no digits or comma is not an address');
+});
+
+test('SPA door: the shell is read through the endpoint its bundle names, and the door is remembered per host', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const { fetched, httpAdapter } = spaStubAdapter();
+  const opened = await core.resolveSpaDataDoor({ html: SPA_SHELL_HTML, url: SPA_PAGE_URL, statusCode: 200, headers: {} }, SPA_PAGE_URL, httpAdapter, display);
+  assert.deepEqual(fetched, [SPA_BUNDLE_URL, SPA_DOOR_URL], 'one bundle, then the best-ranked probe — which answered');
+  assert.equal(opened.html, SPA_DOOR_JSON, 'the door JSON is now the page content');
+  assert.equal(opened.url, SPA_PAGE_URL, 'the page keeps its own URL');
+  assert.deepEqual(opened.dataDoor, {
+    apiUrl: SPA_DOOR_URL,
+    template: '/api/public/ticket-events/${t}',
+    pageUrl: SPA_PAGE_URL,
+    venueDirectory: [
+      { name: '254/Back Street Food and Wine Co., LLC', address: '254 South 12th Street, Philadelphia, PA 19107' },
+      { name: 'Tavern on Camac', address: '243 S Camac St, Philadelphia, PA 19107' }
+    ]
+  });
+  assert.ok(display.logs.some(line => line.includes('🚪 SPA DOOR') && line.includes('answered with 1 event-shaped object(s) via /api/public/ticket-events/${t}')));
+  assert.deepEqual(core.classifyPageWithSignal(SPA_PAGE_URL, opened.html), { classification: 'event-page', signal: 'json-api' },
+    'downstream classification reads the JSON, not the shell');
+
+  // A sibling page on the same host skips the bundle: the door is remembered.
+  const siblingUrl = 'https://tickets.example.com/bear-tea-99aa11bb';
+  const siblingDoor = 'https://tickets.example.com/api/public/ticket-events/bear-tea-99aa11bb';
+  const second = spaStubAdapter({ [siblingUrl]: SPA_SHELL_HTML, [siblingDoor]: SPA_DOOR_JSON.replace('Halloween Cubhouse', 'Bear Tea') });
+  const openedSibling = await core.resolveSpaDataDoor({ html: SPA_SHELL_HTML, url: siblingUrl }, siblingUrl, second.httpAdapter, display);
+  assert.deepEqual(second.fetched, [siblingDoor], 'no bundle fetch the second time');
+  assert.ok(openedSibling.html.includes('Bear Tea'));
+});
+
+test('SPA door: fails open — a content page, an unreadable bundle, or an endpoint that never answers leaves the page untouched', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const contentPage = { html: '<html><body><h1>Bear Night</h1><p>Friday 9pm, real page copy long enough to be content for any reader of this page.</p></body></html>', url: 'https://site.example/party' };
+  const { fetched, httpAdapter } = spaStubAdapter();
+  assert.equal(await core.resolveSpaDataDoor(contentPage, contentPage.url, httpAdapter, display), contentPage, 'same object back for content');
+  assert.deepEqual(fetched, [], 'nothing fetched for content');
+
+  const broken = spaStubAdapter({ [SPA_BUNDLE_URL]: new Error('HTTP 500: boom') });
+  const shell = { html: SPA_SHELL_HTML, url: SPA_PAGE_URL };
+  assert.equal(await core.resolveSpaDataDoor(shell, SPA_PAGE_URL, broken.httpAdapter, display), shell, 'bundle failure: shell untouched');
+
+  const silent = spaStubAdapter({ [SPA_DOOR_URL]: '{"error":"not found"}' });
+  const untouched = await core.resolveSpaDataDoor(shell, SPA_PAGE_URL, silent.httpAdapter, display);
+  assert.equal(untouched, shell, 'a JSON answer with no event in it is not a door');
+  assert.ok(display.logs.some(line => line.includes('no endpoint answered with events')));
+  assert.ok(!silent.fetched.some(url => url.includes('checkout') || url.includes('auth')), 'excluded paths are never probed');
+});
+
+test('SPA door: countJsonApiEventObjects accepts the singular `event` envelope, mirroring the parser', () => {
+  const core = createCore();
+  assert.equal(core.countJsonApiEventObjects(SPA_DOOR_JSON), 1);
+  assert.equal(core.countJsonApiEventObjects('{"event":{"title":"x"}}'), 0, 'a title without a date is not an event');
+});
+
+test('crawl: a dead end learned before the door capability is retried, read through its door, and recovered', async () => {
+  const core = deadEndCore();
+  const display = createDisplayAdapterStub();
+  const youngLastSeen = new Date(Date.now() - 1 * DAY_MS).toISOString();
+  // Learned twice under the old crawler: a JS shell that yielded nothing.
+  const store = { [SPA_PAGE_URL]: { firstSeen: youngLastSeen, lastSeen: youngLastSeen, misses: 2 } };
+  const pages = {
+    'https://hub.example/': { additionalLinks: [SPA_PAGE_URL] },
+    [SPA_PAGE_URL]: { html: SPA_SHELL_HTML },
+    [SPA_BUNDLE_URL]: { html: SPA_BUNDLE_JS },
+    [SPA_DOOR_URL]: { html: SPA_DOOR_JSON }
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+  const seenByParser = {};
+  parsers['ai-web'].parseEvents = (htmlData) => {
+    seenByParser[htmlData.url] = { html: htmlData.html, dataDoor: htmlData.dataDoor || null };
+    if (htmlData.url === 'https://hub.example/') return { events: [], additionalLinks: [SPA_PAGE_URL] };
+    return htmlData.dataDoor
+      ? { events: [{ title: 'Halloween Cubhouse', startDate: new Date('2026-10-31T01:00:00.000Z'), bar: '254' }], additionalLinks: [] }
+      : { events: [], additionalLinks: [] };
+  };
+
+  const results = await core.processEvents(deadEndConfig({ store }), httpAdapter, display, parsers);
+
+  assert.ok(fetched.includes(SPA_PAGE_URL), 'an inferred dead end from before the capability is retried once');
+  assert.deepEqual(fetched.filter(url => url !== 'https://hub.example/'), [SPA_PAGE_URL, SPA_BUNDLE_URL, SPA_DOOR_URL], 'shell, bundle, door');
+  assert.equal(seenByParser[SPA_PAGE_URL].html, SPA_DOOR_JSON, 'the parser is handed the door JSON as the page');
+  assert.equal(seenByParser[SPA_PAGE_URL].dataDoor.template, '/api/public/ticket-events/${t}');
+  assert.ok(!(core.getUrlDedupeKey(SPA_PAGE_URL) in results.deadEndStore) && !(SPA_PAGE_URL in results.deadEndStore),
+    'a page that produced an event is no longer a dead end');
+  assert.ok(display.logs.some(line => line.includes('🚪 SPA DOOR') && line.includes('answered with 1 event-shaped object')));
+});
+
+test('dead-end store: an inferred dead end confirmed under an older capability is retried once, then re-confirmed stamped', async () => {
+  const url = 'https://site.example/still-dead';
+  const youngLastSeen = new Date(Date.now() - 1 * DAY_MS).toISOString();
+  const pages = { 'https://hub.example/': { additionalLinks: [url] }, [url]: {} };
+
+  // Pre-capability entry, two misses: retried (fetched) and, still barren, stamped current.
+  const core = deadEndCore();
+  const display = createDisplayAdapterStub();
+  const store = { [url]: { firstSeen: youngLastSeen, lastSeen: youngLastSeen, misses: 2 } };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+  const results = await core.processEvents(deadEndConfig({ store }), httpAdapter, display, parsers);
+  assert.ok(fetched.includes(url), 'retried once under the new capability');
+  const entry = results.deadEndStore[core.getUrlDedupeKey(url)];
+  assert.equal(entry.misses, 3);
+  assert.equal(entry.capability, SharedCore.DEAD_END_CAPABILITY, 'the re-confirmation carries the current capability');
+
+  // Now stamped: suppressed on the next run.
+  const core2 = deadEndCore();
+  const display2 = createDisplayAdapterStub();
+  const second = createCrawlHarness(pages);
+  await core2.processEvents(deadEndConfig({ store: results.deadEndStore }), second.httpAdapter, display2, second.parsers);
+  assert.ok(!second.fetched.includes(url), 'confirmed under the current capability → skipped');
+
+  // Origin-stated permanence needs no retry, capability or not.
+  const core3 = deadEndCore();
+  const third = createCrawlHarness(pages);
+  await core3.processEvents(deadEndConfig({ store: { [url]: { firstSeen: youngLastSeen, lastSeen: youngLastSeen, misses: 1, lastStatus: 410 } } }), third.httpAdapter, createDisplayAdapterStub(), third.parsers);
+  assert.ok(!third.fetched.includes(url), 'a 410 stays a dead end without any capability stamp');
 });

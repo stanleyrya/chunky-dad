@@ -1146,6 +1146,9 @@ class AiWebParser {
             const jsonApiEvents = jsonApiPayload !== null
                 ? this.extractEventsFromJsonApiPayload(jsonApiPayload, sourceUrl, cityConfig)
                 : [];
+            // JSON that arrived through a SPA data door carries context the
+            // payload itself lacks — fills blanks before the completeness gate.
+            this.applyDataDoorContext(jsonApiEvents, effectiveHtmlData && effectiveHtmlData.dataDoor, cityConfig);
             const completeJsonApiEvents = jsonApiEvents.filter(event => event.bar || event.address);
             // Elfsight rows carry no venue of their own — the widget IS the
             // venue's own calendar on the venue's own page, so bar/address come
@@ -2422,9 +2425,122 @@ class AiWebParser {
     computeMultiEventSegments(html, sourceUrl = '', ocrResults = []) {
         const structuredSegments = this.buildStructuredMultiEventSegments(html);
         if (structuredSegments.length >= 2) {
-            return this.attachSequentialImageHintsToSegments(html, structuredSegments, sourceUrl, ocrResults);
+            const covered = this.coverUnclaimedDatedWindows(html, structuredSegments);
+            return this.attachSequentialImageHintsToSegments(html, covered, sourceUrl, ocrResults);
         }
 
+        const textSegments = this.buildFlatTextMultiEventSegments(html);
+        return this.attachSequentialImageHintsToSegments(html, textSegments, sourceUrl, ocrResults);
+    }
+
+    // Coverage invariant for structured segmentation: every dated, titled
+    // window the page's text offers must be OWNED by some segment.
+    //
+    // The structured path (repeated cards / image anchors / link groups) wins
+    // whenever it finds two windows, and until now it won absolutely — the
+    // flat text splitter, which reads the same page line by line, was never
+    // consulted. So a single card that any per-entry gate mis-judged simply
+    // vanished, with nothing downstream able to notice: furball.nyc listed
+    // three dated cards, the image-anchor group bounded all three correctly,
+    // one gate dropped the middle card, and the run reported two events (run
+    // 20260910-131740). coverRepeatedEventUnits guards the same failure for
+    // self-identifying cards; this guards it for everything else, using the
+    // page's own text as the second opinion. Hand-laid pages will keep
+    // inventing new ways to trip a gate — this is the net under all of them.
+    //
+    // Additive and conservative: structured windows are never altered or
+    // reordered relative to each other; a flat window is added only when it
+    // carries a date and no structured window already claims it (shares its
+    // date line plus another line, or most of its lines). The merged list is
+    // put back in document order so sequential image pairing still walks the
+    // page top to bottom.
+    coverUnclaimedDatedWindows(html, structuredSegments) {
+        const structured = Array.isArray(structuredSegments) ? structuredSegments : [];
+        if (structured.length === 0) return structured;
+        const flatSegments = this.buildFlatTextMultiEventSegments(html, { recordStats: false });
+        if (flatSegments.length === 0) return structured;
+
+        const lineKey = (line) => this.normalizeWhitespace(String(line || '')).toLowerCase();
+        const structuredKeySets = structured.map(segment =>
+            new Set((Array.isArray(segment.lines) ? segment.lines : []).map(lineKey).filter(Boolean)));
+
+        const unclaimed = [];
+        let claimedCount = 0;
+        for (const window of flatSegments) {
+            const lines = Array.isArray(window.lines) ? window.lines : [];
+            const keys = lines.map(lineKey).filter(Boolean);
+            if (keys.length === 0) continue;
+            if (!this.segmentHasDateSignal(lines)) continue;
+            // Claimed = OVERLAPS a structured window: two shared content lines
+            // (calls-to-action repeat on every card and prove nothing), or
+            // most of its content lines. A shared DATE alone is not overlap — two
+            // different cards can fall on the same night — which is exactly
+            // how a dropped card sitting next to its sibling stays unclaimed.
+            const contentKeys = lines
+                .filter(line => !this.isMultiEventCallToActionLine(line))
+                .map(lineKey)
+                .filter(Boolean);
+            const claimed = structuredKeySets.some(keySet => {
+                const sharedContent = contentKeys.filter(key => keySet.has(key)).length;
+                return sharedContent >= 2 || sharedContent >= Math.ceil(contentKeys.length * 0.6);
+            });
+            if (claimed) {
+                claimedCount++;
+                continue;
+            }
+            // One listing states at most a start and an end — the same bound
+            // the structured entry gate applies. A window carrying more dates
+            // than that is the flat splitter fusing neighbours, never a card
+            // the structured path missed.
+            if (this.countMultiEventDateSignals(lines) > 2) continue;
+            unclaimed.push(window);
+        }
+        if (unclaimed.length === 0) return structured;
+
+        // A second opinion only counts when it mostly agrees. The audit
+        // exists for a FEW cards dropped from an otherwise right
+        // segmentation; when the text tier disagrees wholesale — Squarespace
+        // event collections (www.3dollarbillbk.com/rsvp: 30 card windows, 87
+        // text windows, none overlapping) slice every card into time
+        // fragments in BOTH tiers — appending it would not restore cards, it
+        // would double the page with fragments. The disagreement is itself
+        // the finding, so say it, loudly, and let the structured result
+        // stand.
+        const additionCap = Math.max(3, structured.length);
+        if (claimedCount < unclaimed.length || unclaimed.length > additionCap) {
+            console.log(`🤖 AI Web: Coverage audit: the text splitter disagrees with structured segmentation wholesale on this page (${claimedCount} of ${claimedCount + unclaimed.length} dated text windows match a structured window; ${unclaimed.length} unclaimed vs ${structured.length} structured) — adding nothing; this page's segmentation needs a look`);
+            return structured;
+        }
+
+        console.log(`🤖 AI Web: Coverage audit: ${structured.length} structured window(s) left ${unclaimed.length} dated listing(s) unclaimed — adding text window(s): ${unclaimed.map(window => `"${this.deriveSegmentListingTitle(window)}"`).join(', ')}`);
+
+        // Document order: earliest matched text position first; anything
+        // whose position cannot be located keeps its relative place after
+        // the located ones.
+        const records = this.extractBodyPartRecords(html);
+        const positionOf = (segment) => {
+            const bounds = this.findMultiEventSegmentTextBounds(html, segment.lines, records);
+            return bounds && Number.isFinite(bounds.rawStart) ? bounds.rawStart : Number.POSITIVE_INFINITY;
+        };
+        const merged = structured.map((segment, index) => ({ segment, position: positionOf(segment), index }))
+            .concat(unclaimed.map((segment, index) => ({ segment, position: positionOf(segment), index: structured.length + index })))
+            .sort((a, b) => (a.position - b.position) || (a.index - b.index))
+            .map(entry => entry.segment);
+
+        const stats = this.lastMultiEventSegmentationStats;
+        const recordedDated = stats && Number.isFinite(Number(stats.datedCandidateCount)) ? Number(stats.datedCandidateCount) : 0;
+        this.recordMultiEventSegmentationStats(Math.max(recordedDated, merged.length), 'structure group + coverage audit');
+        return merged;
+    }
+
+    // The flat text splitter: the page's body lines, sliced at date/title
+    // boundaries into candidate windows. The fallback tier when no repeated
+    // structure yields two windows, and the second opinion the coverage audit
+    // holds structured segmentation to. `recordStats` is off in audit mode so
+    // the structured tier's budget record (the tier whose segments are in
+    // use) is not overwritten.
+    buildFlatTextMultiEventSegments(html, options = {}) {
+        const recordStats = !(options && options.recordStats === false);
         const bodyParts = this.trimLeadingMultiEventNoise(
             this.extractBodyParts(html, this.extractionLimits.multiEventScanLineLimit)
         );
@@ -2495,7 +2611,7 @@ class AiWebParser {
         // creating a segment costs pure JS, and the extraction loop bounds AI
         // spend by CACHE MISSES per run instead, so segments past the old
         // budget are still created and converge to coverage across runs.
-        this.recordMultiEventSegmentationStats(datedCandidateCount, 'text splitter');
+        if (recordStats) this.recordMultiEventSegmentationStats(datedCandidateCount, 'text splitter');
         const segmentBudget = this.resolveMultiEventSegmentationCeiling();
         for (const lines of rawSegments) {
             if (uniqueSegments.length >= segmentBudget) {
@@ -2505,7 +2621,7 @@ class AiWebParser {
                 // extracted, or reported — the run simply looked like a
                 // 15-event month. Checked at the TOP of the loop so it fires
                 // only when a candidate really goes unprocessed.
-                this.logMultiEventSegmentBudget(segmentBudget, datedCandidateCount, 'text splitter');
+                if (recordStats) this.logMultiEventSegmentBudget(segmentBudget, datedCandidateCount, 'text splitter');
                 console.log(`🤖 AI Web: Segment cap reached (${segmentBudget}) — later content on this page was not segmented and will not produce events`);
                 break;
             }
@@ -2531,7 +2647,7 @@ class AiWebParser {
                 html: this.extractRawHtmlForMultiEventSegment(html, trimmedLines)
             });
         }
-        return this.attachSequentialImageHintsToSegments(html, uniqueSegments, sourceUrl, ocrResults);
+        return uniqueSegments;
     }
 
     // ── Tier-2 AI segment-boundary fallback ──────────────────────────────
@@ -4032,12 +4148,36 @@ class AiWebParser {
             ? normalizedLines.slice(firstStrongTitleIndex)
             : normalizedLines;
     }
+    // A call-to-action ends a listing only when it FOLLOWS the listing's
+    // content. Hand-laid pages put the ticket button wherever the designer
+    // dropped it: on furball.nyc the Dallas card renders its "GET YOUR
+    // TICKETS HERE" button ABOVE its title and date, so the first CTA line
+    // was the card's head, not its tail — slicing there kept the button
+    // alone (21 chars), the character floor discarded it, and the card never
+    // got a window (run 20260910-131740: 3 cards, 2 segments). Leading CTAs
+    // — before any date or title line — are dropped as chrome; the terminal
+    // CTA is the first one AFTER content. A card with no content line at all
+    // keeps the old first-CTA rule.
     trimLinesAfterTerminalCallToAction(lines) {
         const normalizedLines = (Array.isArray(lines) ? lines : [])
             .map(line => this.normalizeWhitespace(line))
             .filter(Boolean);
-        const ctaIndex = normalizedLines.findIndex(line => this.isMultiEventCallToActionLine(line));
-        return ctaIndex >= 0 ? normalizedLines.slice(0, ctaIndex + 1) : normalizedLines;
+        const isContentLine = (line) => this.hasMultiEventDateSignal(line)
+            || this.isStrongMultiEventTitleLine(line)
+            || this.isCompactEventLine(line);
+        const firstContentIndex = normalizedLines.findIndex(isContentLine);
+        if (firstContentIndex < 0) {
+            const ctaIndex = normalizedLines.findIndex(line => this.isMultiEventCallToActionLine(line));
+            return ctaIndex >= 0 ? normalizedLines.slice(0, ctaIndex + 1) : normalizedLines;
+        }
+        const withoutLeadingCtas = normalizedLines.filter((line, index) =>
+            index >= firstContentIndex || !this.isMultiEventCallToActionLine(line));
+        const contentIndex = withoutLeadingCtas.findIndex(isContentLine);
+        const terminalCtaOffset = withoutLeadingCtas
+            .slice(contentIndex + 1)
+            .findIndex(line => this.isMultiEventCallToActionLine(line));
+        if (terminalCtaOffset < 0) return withoutLeadingCtas;
+        return withoutLeadingCtas.slice(0, contentIndex + 1 + terminalCtaOffset + 1);
     }
 
     isMultiEventCallToActionLine(value) {
@@ -4416,7 +4556,16 @@ class AiWebParser {
         }
 
         let linkCount = 0;
-        const candidates = this.extractUrlCandidatesFromRawHtml(source);
+        // Only VISIBLE links may stand in as the segment's link: an anchor
+        // whose entire content is whitespace / zero-width characters is
+        // invisible to the reader and, on hand-laid pages, is usually an
+        // editor leftover pointing somewhere else entirely (furball.nyc run
+        // 20260910-131740: the UNDERBEAR card carried a stray <a> wrapping a
+        // single U+200B whose href was the NOLA ticket page, and the model
+        // dutifully shipped it as UNDERBEAR's ticketUrl). Image-wrapping
+        // anchors (<a><img></a>) contain markup, not whitespace, so they
+        // still count.
+        const candidates = this.extractUrlCandidatesFromRawHtml(this.stripInvisibleAnchors(source));
         for (const candidate of candidates) {
             if (lines.length >= 10 || linkCount >= 1) break;
             const normalized = this.normalizeUrl(candidate, sourceUrl);
@@ -4428,6 +4577,24 @@ class AiWebParser {
         }
 
         return lines;
+    }
+
+    // Remove <a> elements whose whole content is invisible (whitespace,
+    // NBSP, zero-width and BOM characters — literal or as entities). Anchors
+    // that enclose any markup are untouched.
+    stripInvisibleAnchors(html) {
+        const source = String(html || '');
+        if (!source) return source;
+        const invisiblePattern = /^(?:\s|&nbsp;|&#160;|&#8203;|&#x200b;|&zwsp;|&#8204;|&#8205;|&#65279;|[\u00a0\u200b\u200c\u200d\u2060\ufeff])*$/i;
+        // Visual elements make an anchor visible whatever its text; inline
+        // text wrappers (span/b/i/em/strong/font) do not.
+        const visualElementPattern = /<(?:img|svg|picture|video|iframe|canvas|input|button|object|embed)\b/i;
+        // Non-nesting: an anchor's content never spans another <a>.
+        return source.replace(/<a\b[^>]*>((?:(?!<\/?a\b)[\s\S])*?)<\/a>/gi, (whole, inner) => {
+            if (visualElementPattern.test(inner)) return whole;
+            const text = inner.replace(/<[^>]*>/g, '');
+            return invisiblePattern.test(text) ? '' : whole;
+        });
     }
 
     trimSegmentLinesToChars(lines, maxChars) {
@@ -7512,6 +7679,23 @@ class AiWebParser {
     parseJsonLdDateValue(value) {
         const raw = String(value || '').trim();
         if (!raw) return { date: null, timezoneUnresolved: false };
+        // Postgres timestamptz text — "2026-10-31 01:00:00+00": space
+        // separator, offset as bare ±HH or ±HHMM — is what JSON APIs backed by
+        // Postgres emit (run 20260910-131740: a ticket platform's detail
+        // endpoint), and neither V8 nor JavaScriptCore is obliged to parse it.
+        // It states an exact instant, so normalize it to ISO-8601 and treat it
+        // as one.
+        const looseOffsetMatch = raw.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)\s*(Z|[+-]\d{2}(?::?\d{2})?)$/i);
+        if (looseOffsetMatch) {
+            const [, day, time, zone] = looseOffsetMatch;
+            const normalizedZone = /^[+-]\d{2}$/.test(zone)
+                ? `${zone}:00`
+                : (/^[+-]\d{4}$/.test(zone) ? `${zone.slice(0, 3)}:${zone.slice(3)}` : zone.toUpperCase());
+            const date = new Date(`${day}T${time}${normalizedZone}`);
+            return Number.isNaN(date.getTime())
+                ? { date: null, timezoneUnresolved: false }
+                : { date, timezoneUnresolved: false };
+        }
         // Explicit offset or UTC marker → exact instant
         if (/(?:Z|[+-]\d{2}:?\d{2})$/i.test(raw)) {
             const date = new Date(raw);
@@ -8162,7 +8346,10 @@ class AiWebParser {
         }
         if (!isPlainObject(parsed)) return [];
         for (const key of Object.keys(parsed)) {
-            if (!/^(data|events|items|results)$/.test(this.normalizeJsonApiKey(key))) continue;
+            // `event` (singular) is the detail-envelope shape SPA ticket
+            // platforms answer with: { event: {…}, ticketTypes: […], … }.
+            // Mirrored in SharedCore.countJsonApiEventObjects.
+            if (!/^(data|event|events|items|results)$/.test(this.normalizeJsonApiKey(key))) continue;
             const value = parsed[key];
             if (isArrayOfObjects(value)) return value.filter(item => this.jsonApiObjectLooksEventLike(item));
             // Detail-shaped payload: ONE object (possibly carrying a
@@ -8171,7 +8358,16 @@ class AiWebParser {
             if (isPlainObject(value)
                 && (this.jsonApiObjectLooksEventLike(value)
                     || this.findJsonApiPerformancesArray(this.unwrapJsonApiCandidate(value)))) {
-                return [value];
+                // A detail envelope's sibling members (ticket types, offers,
+                // settings) describe the SAME event — fold them in beneath
+                // the event's own keys so the price harvest can see the
+                // tiers. The event's keys always win a collision.
+                const siblings = {};
+                for (const [siblingKey, siblingValue] of Object.entries(parsed)) {
+                    if (siblingKey === key || !siblingValue || typeof siblingValue !== 'object') continue;
+                    siblings[siblingKey] = siblingValue;
+                }
+                return [{ ...siblings, ...value }];
             }
         }
         for (const value of Object.values(parsed)) {
@@ -8298,6 +8494,61 @@ class AiWebParser {
             console.warn(`🤖 AI Web: JSON API price→cover mapping failed: ${error && error.message ? error.message : error}`);
             return '';
         }
+    }
+
+    // Context a SPA data door carries that its JSON payload does not (see
+    // SharedCore.resolveSpaDataDoor): the human page the door was found
+    // behind IS the ticket page, and the app bundle that named the door may
+    // ship the venue directory the payload only references by name. Fills
+    // blanks only — a payload that states its own ticket link or address
+    // keeps it.
+    applyDataDoorContext(events, dataDoor, cityConfig = null) {
+        if (!dataDoor || typeof dataDoor !== 'object' || !Array.isArray(events)) return;
+        const pageUrl = typeof dataDoor.pageUrl === 'string'
+            ? (this.normalizeHttpUrlValue(dataDoor.pageUrl) || '')
+            : '';
+        const directory = Array.isArray(dataDoor.venueDirectory) ? dataDoor.venueDirectory : [];
+        for (const event of events) {
+            if (!event || typeof event !== 'object') continue;
+            if (!event.ticketUrl && pageUrl) {
+                event.ticketUrl = pageUrl;
+                console.log(`🚪 SPA DOOR: "${event.title}" ticketUrl ← the page the door was found behind: ${pageUrl}`);
+            }
+            if (event.bar && !event.address && directory.length > 0) {
+                const hit = this.matchBundleVenueDirectoryEntry(event.bar, directory);
+                if (!hit) continue;
+                event.address = hit.address;
+                console.log(`🚪 SPA DOOR: "${event.title}" address ← the app's own venue directory ("${hit.name}"): ${hit.address}`);
+                if (!event.city && cityConfig) {
+                    const cityKey = this.findCityKeyInText(hit.address, cityConfig);
+                    if (cityKey) {
+                        event.city = cityKey;
+                        if (!event.timezone) {
+                            const timezone = this.getTimezoneForCity(cityKey, cityConfig);
+                            if (timezone) event.timezone = timezone;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Name match against a bundled venue directory: exact (case-folded), or
+    // the directory name's leading label before a separator ("254/Back
+    // Street Food and Wine Co., LLC" → "254") equals the venue name. Never a
+    // substring match — "Eagle" must not adopt "Eagle Rock Cinema".
+    matchBundleVenueDirectoryEntry(bar, directory) {
+        const fold = (value) => this.normalizeWhitespace(String(value || '')).toLowerCase();
+        const wanted = fold(bar);
+        if (!wanted) return null;
+        for (const entry of Array.isArray(directory) ? directory : []) {
+            const name = fold(entry && entry.name);
+            if (!name || !entry.address) continue;
+            if (name === wanted) return entry;
+            const leading = name.split(/\s*[/|(–—]\s*|\s+-\s+/)[0].trim();
+            if (leading && leading === wanted) return entry;
+        }
+        return null;
     }
 
     // Field mapping from one event-like JSON object, case/snake/camel-

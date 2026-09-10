@@ -148,17 +148,24 @@ function shapeRunOnceConfig(config, env = process.env) {
     }
 
     // Parser filter: run exactly the named parser (even if disabled in the
-    // checked-in config — picking it in the UI is an explicit request).
+    // checked-in config — picking it in the UI is an explicit request). The
+    // list itself is narrowed, not flagged: `enabled` is a manual-run knob
+    // that automation runs ignore by design (shared-core honours it only
+    // when automation is NOT filtering), so an automation run with a parser
+    // filter used to run every parser anyway (run 20260910, all 23 under
+    // CHUNKY_RUN_PARSER=Furball). An explicit pick also runs regardless of
+    // its automationEnabled flag, for the same reason.
     const parserFilter = String((env && env.CHUNKY_RUN_PARSER) || '').trim();
     if (parserFilter && Array.isArray(config.parsers)) {
-        config.parsers = config.parsers.map((parser) => ({
-            ...parser,
-            enabled: parser && parser.name === parserFilter
-        }));
-        const matched = config.parsers.some((parser) => parser.enabled);
-        if (!matched) {
+        const matched = config.parsers.filter((parser) => parser && parser.name === parserFilter);
+        if (matched.length === 0) {
             throw new Error(`run-once: no parser named "${parserFilter}" in the configuration`);
         }
+        config.parsers = matched.map((parser) => {
+            const picked = { ...parser, enabled: true };
+            delete picked.automationEnabled;
+            return picked;
+        });
     }
 
     if (isAutomationEnv(env)) {
