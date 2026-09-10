@@ -9,7 +9,8 @@ window.CITY_ACTIVITY = {
     "2026-09-17",
     "2026-09-18",
     "2026-09-19",
-    "2026-09-20"
+    "2026-09-20",
+    "2026-09-26"
    ],
    "recurring": 6,
    "festivalUntil": "2026-09-20"
@@ -43,16 +44,19 @@ window.CITY_ACTIVITY = {
   "london": {
    "dates": [
     "2026-09-19",
+    "2026-09-26",
     "2026-10-17",
     "2026-11-21",
-    "2026-12-31"
+    "2026-12-31",
+    "2027-08-29"
    ],
    "recurring": 0,
    "festivalUntil": null
   },
   "chicago": {
    "dates": [
-    "2026-09-19"
+    "2026-09-19",
+    "2026-10-10"
    ],
    "recurring": 2,
    "festivalUntil": null
@@ -82,7 +86,9 @@ window.CITY_ACTIVITY = {
    "festivalUntil": null
   },
   "dallas": {
-   "dates": [],
+   "dates": [
+    "2026-09-18"
+   ],
    "recurring": 0,
    "festivalUntil": "2027-03-28"
   },
@@ -111,7 +117,8 @@ window.CITY_ACTIVITY = {
   "sf": {
    "dates": [
     "2026-09-25",
-    "2026-09-26"
+    "2026-09-26",
+    "2026-10-17"
    ],
    "recurring": 1,
    "festivalUntil": "2026-09-27"
@@ -119,6 +126,7 @@ window.CITY_ACTIVITY = {
   "portland": {
    "dates": [
     "2026-09-19",
+    "2026-10-10",
     "2026-12-31"
    ],
    "recurring": 0,
@@ -153,12 +161,16 @@ window.CITY_ACTIVITY = {
    "festivalUntil": "2026-11-01"
   },
   "san-diego": {
-   "dates": [],
+   "dates": [
+    "2026-10-16"
+   ],
    "recurring": 0,
    "festivalUntil": null
   },
   "philly": {
-   "dates": [],
+   "dates": [
+    "2026-10-30"
+   ],
    "recurring": 0,
    "festivalUntil": null
   },
