@@ -124,6 +124,8 @@ labels survive in shared-core's `urlSourceMappings` for dedup-key compatibility.
 - Duplicate prevention and event merging
 - City detection and calendar routing
 - Unified recursive URL crawl (single fetch/parse flow for root + discovered pages)
+- JavaScript shells are read through their own data door: a page that arrives as an empty mount node plus a bundle has its bundle read, the API path templates it names probed with the page's slug, and the first event-shaped JSON answer used as the page (`SharedCore.resolveSpaDataDoor`; log lines start `🚪 SPA DOOR`). Dead ends learned before a new crawler capability get one retry (`DEAD_END_CAPABILITY`).
+- Multi-event segmentation is audited against the page's own text: when structured (card/anchor) segmentation wins, dated text windows it left unclaimed are added back — and when the text tier disagrees wholesale, nothing is added and the disagreement is logged (`coverUnclaimedDatedWindows`; log lines start `🤖 AI Web: Coverage audit`).
 - Performance tracking and detailed reporting
 - Parser enable/disable functionality for selective processing
 

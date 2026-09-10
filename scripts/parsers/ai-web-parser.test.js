@@ -16302,3 +16302,200 @@ test('venue-name matching treats "@" and "at" as the same word', () => {
   assert.equal(hits('Cattyshack', 'a Cattyshacky thing'), false);
   assert.equal(hits('3 Dollar Bill', 'INFERNO • 3 Dollar Bill (map)'), true);
 });
+
+// ---------------------------------------------------------------------------
+// HAND-LAID LISTING PAGES — the furball.nyc shape (run 20260910-131740: three
+// dated cards, two segments, the Dallas card never extracted).
+// ---------------------------------------------------------------------------
+
+test('a call-to-action ABOVE a card\'s text is chrome, not the card\'s end', () => {
+  const parser = createParser();
+  // The Dallas card renders its ticket button above title and date. Slicing
+  // at the first CTA kept the button alone and the character floor dropped
+  // the whole card.
+  assert.deepEqual(
+    parser.trimLinesAfterTerminalCallToAction([
+      'GET YOUR TICKETS HERE', 'FURBALL D A L L A S', 'Pride Kickoff Party', 'September 18, 2026', 'Dallas Eagle - Dallas, TX'
+    ]),
+    ['FURBALL D A L L A S', 'Pride Kickoff Party', 'September 18, 2026', 'Dallas Eagle - Dallas, TX']);
+  // A CTA AFTER the content still ends the card exactly as before.
+  assert.deepEqual(
+    parser.trimLinesAfterTerminalCallToAction([
+      'FURBALL NOLA', 'Southern Decadence', 'September 5, 2026', 'Santos Bar - New Orleans, LA', 'GET YOUR TICKETS HERE', 'UPCOMING EVENTS!'
+    ]),
+    ['FURBALL NOLA', 'Southern Decadence', 'September 5, 2026', 'Santos Bar - New Orleans, LA', 'GET YOUR TICKETS HERE']);
+  // Leading CTA, then content, then a trailing CTA: both rules at once.
+  assert.deepEqual(
+    parser.trimLinesAfterTerminalCallToAction(['Buy tickets', 'BEAR NIGHT', 'October 3, 2026', 'Get tickets here', 'Footer link']),
+    ['BEAR NIGHT', 'October 3, 2026', 'Get tickets here']);
+  // No content line at all: the old first-CTA rule is unchanged.
+  assert.deepEqual(parser.trimLinesAfterTerminalCallToAction(['GET YOUR TICKETS HERE', 'more text']), ['GET YOUR TICKETS HERE']);
+});
+
+test('coverage audit: a dated card the structured path dropped gets its window from the page text', () => {
+  const parser = createParser();
+  const card = (id, title, date, venue) => `
+    <div id="comp-${id}" class="W4V2qg comp-${id} wixui-image"><div data-testid="linkElement"><img src="/${id}.jpg" alt=""></div></div>
+    <div id="text-${id}"><h1>${title}</h1><p>Party</p><p>${date}</p><p>${venue}</p></div>`;
+  const html = `<html><body>
+    ${card('a1', 'FURBALL NOLA', 'September 5, 2026', 'Santos Bar - New Orleans, LA')}
+    ${card('b2', 'FURBALL DALLAS', 'September 18, 2026', 'Dallas Eagle - Dallas, TX')}
+    ${card('c3', 'UNDERBEAR NYC', 'September 18, 2026', 'ROCKBAR - NYC')}
+  </body></html>`;
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => logs.push(args.join(' '));
+  let segments;
+  try {
+    // Structured segmentation "wins" with two windows, having mis-dropped the
+    // middle card (whatever gate did it): the audit must notice from the text.
+    const real = parser.buildStructuredMultiEventSegments(html);
+    assert.equal(real.length, 3, 'the synthetic page segments structurally into three cards');
+    parser.buildStructuredMultiEventSegments = () => [real[0], real[2]];
+    segments = parser.computeMultiEventSegments(html, 'https://furball.example/');
+  } finally {
+    console.log = originalLog;
+  }
+  assert.deepEqual(segments.map(segment => segment.lines[0]), ['FURBALL NOLA', 'FURBALL DALLAS', 'UNDERBEAR NYC'],
+    'the dropped Dallas card is restored, in document order');
+  assert.ok(logs.some(line => /Coverage audit: 2 structured window\(s\) left 1 dated listing\(s\) unclaimed/.test(line)),
+    'the audit says what it added and why');
+  assert.ok(segments[1].lines.includes('September 18, 2026') && segments[1].lines.includes('Dallas Eagle - Dallas, TX'));
+});
+
+test('coverage audit: sharing only a DATE with a structured window is not overlap; sharing content is', () => {
+  const parser = createParser();
+  const A = { lines: ['BEAR NIGHT', 'Party', 'October 3, 2026', 'The Eagle - Portland, OR'], html: '' };
+  const B = { lines: ['CUB SOCIAL', 'Social', 'October 3, 2026', 'The Tavern - Portland, OR'], html: '' };
+  const C = { lines: ['LEATHER TEA', 'Party', 'October 10, 2026', 'The Eagle - Portland, OR'], html: '' };
+  const originalLog = console.log;
+  console.log = () => {};
+  try {
+    // B shares only its DATE line with A: two different cards can fall on the
+    // same night, so B is unclaimed and comes back.
+    // (No page text behind these windows, so document order is unknowable
+    // here — compare as sets; the page-level test above covers ordering.)
+    parser.buildFlatTextMultiEventSegments = () => [A, B, C];
+    assert.deepEqual(parser.coverUnclaimedDatedWindows('<html></html>', [A, C]).map(s => s.lines[0]).sort(), ['BEAR NIGHT', 'CUB SOCIAL', 'LEATHER TEA']);
+    // A fused window sharing two CONTENT lines with C is overlap, not a new card.
+    const fused = { lines: ['CUB SOCIAL', 'The Tavern - Portland, OR', 'LEATHER TEA', 'October 10, 2026', 'The Eagle - Portland, OR'], html: '' };
+    parser.buildFlatTextMultiEventSegments = () => [A, fused];
+    assert.deepEqual(parser.coverUnclaimedDatedWindows('<html></html>', [A, C]).map(s => s.lines[0]), ['BEAR NIGHT', 'LEATHER TEA']);
+    // Shared calls-to-action prove nothing: B' shares a date and a CTA with A, nothing else.
+    const bWithCta = { lines: ['CUB SOCIAL', 'GET YOUR TICKETS HERE', 'October 3, 2026'], html: '' };
+    const aWithCta = { lines: ['BEAR NIGHT', 'Party', 'October 3, 2026', 'GET YOUR TICKETS HERE'], html: '' };
+    parser.buildFlatTextMultiEventSegments = () => [aWithCta, bWithCta];
+    assert.deepEqual(parser.coverUnclaimedDatedWindows('<html></html>', [aWithCta, C]).map(s => s.lines[0]).sort(), ['BEAR NIGHT', 'CUB SOCIAL', 'LEATHER TEA']);
+  } finally {
+    console.log = originalLog;
+  }
+});
+
+test('coverage audit: when the text tier disagrees wholesale, nothing is added and the disagreement is logged', () => {
+  const parser = createParser();
+  const structured = [{ lines: ['View Event →', 'Sep', '4:00 PM 16:00'], html: '' }, { lines: ['PANTHEON', 'Saturday, September 12, 2026', '4:00 PM'], html: '' }];
+  // Squarespace-shaped fragments: many dated text windows, none overlapping.
+  const flat = Array.from({ length: 12 }, (_, i) => ({ lines: [`9:${String(i).padStart(2, '0')} PM`, `Sep ${10 + i}, 2026`, '9 Bob Note', `Party ${i}`], html: '' }));
+  parser.buildFlatTextMultiEventSegments = () => flat;
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => logs.push(args.join(' '));
+  let merged;
+  try { merged = parser.coverUnclaimedDatedWindows('<html></html>', structured); } finally { console.log = originalLog; }
+  assert.equal(merged, structured, 'the structured result stands, byte-identical');
+  assert.ok(logs.some(line => /disagrees with structured segmentation wholesale/.test(line) && /12 unclaimed vs 2 structured/.test(line)));
+});
+
+test('an invisible anchor never stands in as a segment\'s link', () => {
+  const parser = createParser();
+  // UNDERBEAR's card on furball.nyc carried an <a> wrapping a lone U+200B
+  // whose href was the NOLA ticket page.
+  const invisible = '<a href="https://tickets.example/nola" target="_blank"><span style="x"><span>​</span></span></a>';
+  const imageLink = '<a href="https://tickets.example/poster"><img src="/p.jpg" alt=""></a>';
+  const visible = '<a href="https://tickets.example/underbear">Tickets $20</a>';
+  const entity = '<a href="https://tickets.example/nbsp">&nbsp;&#8203;</a>';
+  const stripped = parser.stripInvisibleAnchors(`${invisible}${imageLink}${visible}${entity}`);
+  assert.ok(!stripped.includes('tickets.example/nola'), 'a zero-width-only anchor is removed');
+  assert.ok(!stripped.includes('tickets.example/nbsp'), 'entity-only whitespace is invisible too');
+  assert.ok(stripped.includes('tickets.example/poster'), 'an image-wrapping anchor is visible');
+  assert.ok(stripped.includes('tickets.example/underbear'), 'a text anchor is visible');
+
+  const segmentHtml = `<div><h2>UNDERBEAR NYC</h2>${invisible}<p>September 18, 2026</p>${visible}</div>`;
+  const lines = parser.extractMultiEventSegmentResourceLines(segmentHtml, 'https://furball.example/', [], [], null);
+  const linkLines = lines.filter(line => line.startsWith('SEGMENT_LINK_URL:'));
+  assert.deepEqual(linkLines, ['SEGMENT_LINK_URL: https://tickets.example/underbear']);
+});
+
+// ---------------------------------------------------------------------------
+// JSON-API DETAIL ENVELOPES — the shape a SPA ticket platform's public
+// endpoint answers with ({ event: {…}, ticketTypes: […] }), reached through a
+// SPA data door (see SharedCore.resolveSpaDataDoor).
+// ---------------------------------------------------------------------------
+
+const TICKET_PLATFORM_DETAIL_PAYLOAD = {
+  event: {
+    id: 'd003ca19', title: 'Halloween Cubhouse', description_public: null,
+    start_at: '2026-10-31 01:00:00+00', end_at: '2026-10-31 06:00:00+00',
+    has_cover: true, venue_name: '254', space_name: 'Dance Floor', public_slug: 'halloween-cubhouse-cc3842e7'
+  },
+  settings: { platform_fee_percent: '3.700', platform_fee_fixed_cents: 179 },
+  ticketTypes: [
+    { name: 'Tonight Only', price_cents: 1500 }, { name: 'Advance', price_cents: 2500 }, { name: 'General Admission', price_cents: 3000 }
+  ],
+  specialOffers: [],
+  relatedEvents: [],
+  recurring: { isRecurring: true, occurrences: [{ id: 'd003ca19', title: 'Halloween Cubhouse', start_at: '2026-10-31 01:00:00+00' }] }
+};
+
+test('Postgres timestamptz text is an exact instant, not a wall-clock guess', () => {
+  const parser = createParser();
+  const exact = parser.parseJsonLdDateValue('2026-10-31 01:00:00+00');
+  assert.equal(exact.date.toISOString(), '2026-10-31T01:00:00.000Z');
+  assert.equal(exact.timezoneUnresolved, false);
+  assert.equal(parser.parseJsonLdDateValue('2026-10-31 01:00:00+0530').date.toISOString(), '2026-10-30T19:30:00.000Z');
+  assert.equal(parser.parseJsonLdDateValue('2026-10-31T01:00:00-04:00').date.toISOString(), '2026-10-31T05:00:00.000Z');
+  // Offset-less values are still wall-clock guesses flagged for re-anchoring.
+  assert.equal(parser.parseJsonLdDateValue('2026-10-31 01:00:00').timezoneUnresolved, true);
+});
+
+test('a detail envelope keyed `event` is one candidate, with its sibling ticket tiers folded in for the price', () => {
+  const parser = createParser();
+  const candidates = parser.collectJsonApiEventCandidates(TICKET_PLATFORM_DETAIL_PAYLOAD);
+  assert.equal(candidates.length, 1);
+  assert.equal(candidates[0].title, 'Halloween Cubhouse');
+  assert.ok(Array.isArray(candidates[0].ticketTypes), 'sibling ticket types ride along');
+  const events = parser.extractEventsFromJsonApiPayload(TICKET_PLATFORM_DETAIL_PAYLOAD, 'https://tickets.example/halloween-cubhouse-cc3842e7');
+  assert.equal(events.length, 1, 'the recurring.occurrences sibling does not expand into extra rows');
+  assert.equal(events[0].title, 'Halloween Cubhouse');
+  assert.equal(events[0].startDate.toISOString(), '2026-10-31T01:00:00.000Z');
+  assert.equal(events[0].bar, '254', 'a bare number can be a venue\'s name');
+  assert.equal(events[0].cover, '$15-$30');
+});
+
+test('data-door context fills the ticket link from the page and the address from the app\'s venue directory', () => {
+  const parser = createParser();
+  const cities = require('../scraper-cities');
+  const events = parser.extractEventsFromJsonApiPayload(TICKET_PLATFORM_DETAIL_PAYLOAD, 'https://tickets.example/halloween-cubhouse-cc3842e7', cities);
+  assert.equal(events[0].address, '', 'the payload names the venue but states no address');
+  parser.applyDataDoorContext(events, {
+    apiUrl: 'https://tickets.example/api/public/ticket-events/halloween-cubhouse-cc3842e7',
+    template: '/api/public/ticket-events/${t}',
+    pageUrl: 'https://tickets.example/halloween-cubhouse-cc3842e7',
+    venueDirectory: [
+      { name: 'Tavern on Camac', address: '243 S Camac St, Philadelphia, PA 19107' },
+      { name: '254/Back Street Food and Wine Co., LLC', address: '254 South 12th Street, Philadelphia, PA 19107' },
+      { name: '2540 Club', address: '1 Nowhere Ln, Nowhere, PA 00000' }
+    ]
+  }, cities);
+  assert.equal(events[0].ticketUrl, 'https://tickets.example/halloween-cubhouse-cc3842e7');
+  assert.equal(events[0].address, '254 South 12th Street, Philadelphia, PA 19107', 'the leading label "254" matches, "2540 Club" does not');
+  assert.equal(events[0].city, 'philly');
+  assert.equal(events[0].timezone, 'America/New_York');
+
+  // Fills blanks only: a payload that states its own ticket link keeps it.
+  const stated = [{ title: 'X', bar: 'Ubar', address: '', ticketUrl: 'https://tickets.example/direct' }];
+  parser.applyDataDoorContext(stated, { pageUrl: 'https://tickets.example/x', venueDirectory: [] }, cities);
+  assert.equal(stated[0].ticketUrl, 'https://tickets.example/direct');
+  assert.equal(parser.matchBundleVenueDirectoryEntry('Eagle', [{ name: 'Eagle Rock Cinema', address: '1 A St, X, CA 90000' }]), null,
+    'never a substring match');
+});

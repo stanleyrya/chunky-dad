@@ -26,6 +26,12 @@ const ADAPTIVE_CRAWL_DEPTH = 'adaptive';
 // Hard cap on adaptive crawl chains: pages this many hops from a root never
 // have their links followed, no matter how they classify.
 const ADAPTIVE_CRAWL_MAX_HOPS = 4;
+// Learned dead ends record the extraction CAPABILITY they were confirmed
+// under. When a new capability lands — a page shape that used to yield
+// nothing now can — every inferred dead end confirmed before it is retried
+// once (see isConfirmedDeadEndEntry); origin-stated permanence (401/403/
+// 404/410) is not. Bump this when the crawler learns to read a new shape.
+const DEAD_END_CAPABILITY = 'spa-data-door-2026-09';
 // Stored-pin vs fresh-geocode divergence (km) that warrants human review.
 // Fresh geocodes are grade-gated and cross-checked (normalizers.js), so
 // sub-km disagreement is meaningful. Shared by the merge-time STEP 3c flag
@@ -725,7 +731,9 @@ class SharedCore {
         }
         if (!isPlainObject(parsed)) return 0;
         for (const key of Object.keys(parsed)) {
-            if (!/^(data|events|items|results)$/.test(normalizeKey(key))) continue;
+            // `event` (singular): the detail-envelope shape SPA ticket
+            // platforms answer with ({ event: {…}, ticketTypes: […] }).
+            if (!/^(data|event|events|items|results)$/.test(normalizeKey(key))) continue;
             const value = parsed[key];
             if (isArrayOfObjects(value)) return value.filter(looksEventLike).length;
             if (isPlainObject(value) && looksEventLike(value)) return 1;
@@ -6404,6 +6412,13 @@ class SharedCore {
     // Static + pure so both the dead-end store and the error-severity split
     // read one definition. Deliberately narrow: 5xx, 429 and timeouts are
     // transient and must stay ordinary errors.
+    // The capability stamp inferred dead ends are confirmed under (see the
+    // DEAD_END_CAPABILITY constant); exposed so tests and tooling can build
+    // store entries that mean "already retried under the current crawler".
+    static get DEAD_END_CAPABILITY() {
+        return DEAD_END_CAPABILITY;
+    }
+
     static isPermanentlyGoneHttpStatus(statusCode) {
         return statusCode === 410 || statusCode === 404;
     }
@@ -6774,9 +6789,15 @@ class SharedCore {
                     await displayAdapter.logInfo('SYSTEM: Using inline URL input payload');
                 }
 
-                const htmlData = shouldUseInlineInput
+                const fetchedHtmlData = shouldUseInlineInput
                     ? { html: '', url, statusCode: 200, headers: {}, input: parserConfig.input }
                     : await httpAdapter.fetchData(url);
+                // A JavaScript shell has its content behind the API its own
+                // bundle calls — find that door and read through it, or fall
+                // through with the shell untouched (see resolveSpaDataDoor).
+                const htmlData = shouldUseInlineInput
+                    ? fetchedHtmlData
+                    : await this.resolveSpaDataDoor(fetchedHtmlData, url, httpAdapter, displayAdapter);
 
                 // Adaptive mode keeps urlDiscoveryDepth ABSENT on per-page configs
                 // (absence is what signals adaptive to parsers); numeric mode passes
@@ -7742,6 +7763,8 @@ class SharedCore {
             entry.misses = (Number(entry.misses) || 0) + 1;
             if (statusCode !== null && statusCode !== undefined) {
                 entry.lastStatus = statusCode;
+            } else {
+                entry.capability = DEAD_END_CAPABILITY;
             }
             context.dirty = true;
             return { entry, wasNew: false };
@@ -7749,6 +7772,8 @@ class SharedCore {
         const created = { firstSeen: nowIso, lastSeen: nowIso, misses: 1 };
         if (statusCode !== null && statusCode !== undefined) {
             created.lastStatus = statusCode;
+        } else {
+            created.capability = DEAD_END_CAPABILITY;
         }
         context.store[found.dedupeKey] = created;
         context.dirty = true;
@@ -7767,6 +7792,10 @@ class SharedCore {
     isConfirmedDeadEndEntry(context, entry) {
         if (!entry) return false;
         if (Number.isFinite(Number(entry.lastStatus))) return true;
+        // An INFERRED dead end (fetched fine, yielded nothing) confirmed
+        // under an older extraction capability gets one retry: the page may
+        // be readable now. It re-confirms on the next miss, stamped current.
+        if (entry.capability !== DEAD_END_CAPABILITY) return false;
         const minMisses = Number.isFinite(Number(context && context.minMisses)) ? Number(context.minMisses) : 2;
         return (Number(entry.misses) || 0) >= minMisses;
     }
@@ -11979,6 +12008,255 @@ class SharedCore {
         }
     }
     
+    // ------------------------------------------------------------------
+    // SPA data doors.
+    //
+    // A page that arrives as a JavaScript shell — an empty mount node, a
+    // script bundle, no visible text — keeps its content behind an API the
+    // bundle calls. Until run 20260910-131740 the crawler fetched the shell,
+    // found nothing, and learned it as a dead end: Cubhouse's only upcoming
+    // party sat behind a 419-byte shell on its ticket platform and was
+    // invisible for a month, though the platform answered
+    // /api/public/ticket-events/<slug> to anyone who asked.
+    //
+    // So ask. Read the bundle the shell itself references, harvest the API
+    // path templates it contains, and probe the likeliest with the page's
+    // own slug. The first probe that answers with event-shaped JSON becomes
+    // the page's content and the existing JSON-API pathway takes it from
+    // there. Generic by construction: no host, platform or path is named —
+    // the page says where its data lives. Fail open (no door, no change)
+    // and bounded (three bundles, eight probes, all through the adapter's
+    // normal fetch, so the page cache makes the next run free).
+    // ------------------------------------------------------------------
+
+    // A shell: markup that references at least one script and shows the
+    // reader (almost) nothing. Structured content of any kind disqualifies
+    // it — a JSON body or JSON-LD is content, not a shell.
+    looksLikeSpaShell(html) {
+        const source = typeof html === 'string' ? html : '';
+        if (!source || source.length > 60000) return false;
+        if (source.trim()[0] === '{' || source.trim()[0] === '[') return false;
+        if (!/<script\b[^>]*\ssrc\s*=/i.test(source)) return false;
+        if (/<script\b[^>]*type\s*=\s*["']application\/ld\+json["']/i.test(source)) return false;
+        const bodyMatch = source.match(/<body\b[^>]*>([\s\S]*?)<\/body>/i);
+        const body = bodyMatch ? bodyMatch[1] : source;
+        const visible = body
+            .replace(/<script\b[\s\S]*?<\/script>/gi, ' ')
+            .replace(/<style\b[\s\S]*?<\/style>/gi, ' ')
+            .replace(/<noscript\b[\s\S]*?<\/noscript>/gi, ' ')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/&[a-z#0-9]+;/gi, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        return visible.length < 120;
+    }
+
+    // The app's own bundles only — a third-party library never holds this
+    // site's API paths, and fetching it is pure cost. Document order, first
+    // three.
+    extractSpaScriptUrls(html, pageUrl) {
+        const source = String(html || '');
+        const pageParts = this.parseUrl(pageUrl);
+        const pageDomain = pageParts ? this.getRegistrableDomainFromHost(pageParts.hostname) : '';
+        const urls = [];
+        const seen = new Set();
+        const pattern = /<script\b[^>]*\ssrc\s*=\s*["']([^"']+)["'][^>]*>/gi;
+        let match;
+        while ((match = pattern.exec(source)) !== null) {
+            const resolved = this.normalizeUrl(match[1], pageUrl);
+            if (!resolved || !/^https?:\/\//i.test(resolved) || seen.has(resolved)) continue;
+            const parts = this.parseUrl(resolved);
+            if (!parts) continue;
+            if (pageDomain && this.getRegistrableDomainFromHost(parts.hostname) !== pageDomain) continue;
+            seen.add(resolved);
+            urls.push(resolved);
+            if (urls.length >= 3) break;
+        }
+        return urls;
+    }
+
+    // Root-relative API path literals in a bundle, template placeholders
+    // (${…}, :param, {param}) kept verbatim. Templates that differ only in
+    // their placeholder's variable name are one template.
+    harvestSpaApiPathTemplates(bundleText) {
+        const text = String(bundleText || '');
+        if (!text) return [];
+        const templates = new Map();
+        const pattern = /["'`](\/(?:api|_api|rest|wp-json|v\d+|data|feeds?)\/[^"'`\s]{1,160})["'`]/g;
+        let match;
+        while ((match = pattern.exec(text)) !== null && templates.size < 400) {
+            const raw = match[1];
+            if (/[?&#]/.test(raw)) continue; // query-shaped list endpoints take no slug
+            const key = raw.replace(/\$\{[^}]*\}/g, '${*}').replace(/\{[a-z_]+\}/gi, '{*}').replace(/:[a-z_]+/gi, ':*');
+            if (!templates.has(key)) templates.set(key, raw);
+        }
+        return Array.from(templates.values());
+    }
+
+    // Likelihood that a path template is the public read endpoint for the
+    // page's event. Vocabulary only — words any ticketing or calendar app
+    // would use — never a vendor path. Negative means never probe.
+    scoreSpaApiPathTemplate(template) {
+        const path = String(template || '');
+        const lower = path.toLowerCase();
+        if (/(admin|auth|login|logout|signup|register|checkout|order|payment|cart|queue|upload|delete|seed|session|token|webhook|internal|private|invite|check-?in|conflict|report|import|blast|sync|setting|permission|talent|time-?log|notification|display|user|account|contact|customer|sms|email|texting|beo|menu|portion|item|status|analytics|metrics|health)/.test(lower)) {
+            return -1;
+        }
+        const placeholders = (path.match(/\$\{[^}]*\}|\{[a-z_]+\}|:[a-z_]+/gi) || []).length;
+        if (placeholders > 1) return -1;
+        let score = 0;
+        if (/public/.test(lower)) score += 3;
+        score += (lower.match(/(event|ticket|show|calendar|schedule|program|listing|occurrence|performance|gig|party)/g) || []).length * 2;
+        score += placeholders === 1 ? 2 : 1;
+        if (/(\$\{[^}]*\}|\{[a-z_]+\}|:[a-z_]+)\/?$/i.test(path)) score += 1;
+        score -= path.length / 200;
+        return score;
+    }
+
+    // What the page calls itself: its last path segment (the slug), and the
+    // last two joined (for /events/<slug> style pages whose API mirrors the
+    // nesting). File-shaped segments never qualify.
+    spaPageIdentifiers(pageUrl) {
+        const parts = this.parseUrl(pageUrl);
+        if (!parts) return [];
+        const segments = String(parts.pathname || '').split('/').filter(Boolean).map(segment => {
+            try { return decodeURIComponent(segment); } catch (_) { return segment; }
+        });
+        if (segments.length === 0) return [];
+        const identifiers = [segments[segments.length - 1]];
+        if (segments.length >= 2) identifiers.push(segments.slice(-2).join('/'));
+        return identifiers.filter(identifier => identifier && !/\.[a-z0-9]{2,5}$/i.test(identifier));
+    }
+
+    // Concrete URLs to try: a placeholder takes the identifier; a bare
+    // resource path gets it appended. Best templates first, each identifier
+    // in turn.
+    buildSpaDoorProbes(templates, identifiers, pageUrl) {
+        const parts = this.parseUrl(pageUrl);
+        if (!parts) return [];
+        const origin = `${parts.protocol}//${parts.host}`;
+        const placeholder = /\$\{[^}]*\}|\{[a-z_]+\}|:[a-z_]+/i;
+        const probes = [];
+        const seen = new Set();
+        for (const template of Array.isArray(templates) ? templates : []) {
+            for (const identifier of Array.isArray(identifiers) ? identifiers : []) {
+                const encoded = String(identifier).split('/').map(encodeURIComponent).join('/');
+                const path = placeholder.test(template)
+                    ? template.replace(placeholder, encoded)
+                    : `${template.replace(/\/+$/, '')}/${encoded}`;
+                const url = `${origin}${path}`;
+                if (seen.has(url)) continue;
+                seen.add(url);
+                probes.push({ url, template });
+            }
+        }
+        return probes;
+    }
+
+    // Venue directory an app ships in its own bundle: object literals that
+    // carry both a name and an address-shaped string. The JSON-API pathway
+    // uses it to fill an address the payload only references by venue name.
+    harvestBundleVenueDirectory(bundleText) {
+        const text = String(bundleText || '');
+        if (!text) return [];
+        const entries = [];
+        const seen = new Set();
+        const objectPattern = /\{[^{}]{0,600}\}/g;
+        let match;
+        while ((match = objectPattern.exec(text)) !== null && entries.length < 200) {
+            const chunk = match[0];
+            if (!/\bname\s*:/.test(chunk) || !/\baddress\s*:/.test(chunk)) continue;
+            const nameMatch = chunk.match(/\bname\s*:\s*(["'])((?:(?!\1)[^\\]){1,120})\1/);
+            const addressMatch = chunk.match(/\baddress\s*:\s*(["'])((?:(?!\1)[^\\]){5,200})\1/);
+            if (!nameMatch || !addressMatch) continue;
+            const name = nameMatch[2].trim();
+            const address = addressMatch[2].trim();
+            if (!name || !/\d/.test(address) || !/,/.test(address)) continue;
+            const key = `${name.toLowerCase()}|${address.toLowerCase()}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            entries.push({ name, address });
+        }
+        return entries;
+    }
+
+    // Returns htmlData with the door's JSON as its html (plus a dataDoor
+    // record) when a door answers; the same htmlData object otherwise.
+    async resolveSpaDataDoor(htmlData, pageUrl, httpAdapter, displayAdapter) {
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        if (!html || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return htmlData;
+        if (!this.looksLikeSpaShell(html)) return htmlData;
+        const log = displayAdapter && typeof displayAdapter.logInfo === 'function'
+            ? (message) => displayAdapter.logInfo(message)
+            : async () => {};
+        const identifiers = this.spaPageIdentifiers(pageUrl);
+        if (identifiers.length === 0) {
+            await log(`SYSTEM: 🚪 SPA DOOR: ${pageUrl} is a JavaScript shell (${html.length} bytes, no visible content) but names no slug to ask for — leaving it`);
+            return htmlData;
+        }
+        const parts = this.parseUrl(pageUrl);
+        const hostKey = parts ? String(parts.host || '').toLowerCase() : '';
+        if (!this.spaDoorsByHost) this.spaDoorsByHost = new Map();
+        const remembered = hostKey ? this.spaDoorsByHost.get(hostKey) : null;
+        await log(`SYSTEM: 🚪 SPA DOOR: ${pageUrl} is a JavaScript shell (${html.length} bytes, no visible content) — ${remembered ? 'asking the data endpoint this host already answered on' : 'reading its bundle for a data endpoint'}`);
+
+        let templates = remembered ? [remembered.template] : [];
+        let venueDirectory = remembered ? remembered.venueDirectory : [];
+        if (!remembered) {
+            const scriptUrls = this.extractSpaScriptUrls(html, pageUrl);
+            if (scriptUrls.length === 0) {
+                await log(`SYSTEM: 🚪 SPA DOOR: ${pageUrl} references no same-site bundle — leaving it`);
+                return htmlData;
+            }
+            const scored = new Map();
+            for (const scriptUrl of scriptUrls) {
+                let bundle = '';
+                try {
+                    const response = await httpAdapter.fetchData(scriptUrl, { headers: { Accept: '*/*' } });
+                    bundle = response && typeof response.html === 'string' ? response.html : '';
+                } catch (error) {
+                    await log(`SYSTEM: 🚪 SPA DOOR: bundle ${scriptUrl} did not load (${error && error.message ? error.message : error})`);
+                    continue;
+                }
+                for (const template of this.harvestSpaApiPathTemplates(bundle)) {
+                    if (!scored.has(template)) scored.set(template, this.scoreSpaApiPathTemplate(template));
+                }
+                venueDirectory = venueDirectory.concat(this.harvestBundleVenueDirectory(bundle));
+            }
+            templates = Array.from(scored.entries())
+                .filter(([, score]) => score >= 2)
+                .sort((a, b) => b[1] - a[1])
+                .map(([template]) => template)
+                .slice(0, 6);
+            if (templates.length === 0) {
+                await log(`SYSTEM: 🚪 SPA DOOR: ${pageUrl}: its bundle names no plausible read endpoint (${scored.size} API path(s) seen) — leaving it`);
+                return htmlData;
+            }
+        }
+
+        const probes = this.buildSpaDoorProbes(templates, identifiers, pageUrl).slice(0, 8);
+        for (const probe of probes) {
+            let body = '';
+            try {
+                const response = await httpAdapter.fetchData(probe.url, { headers: { Accept: 'application/json, text/plain, */*' } });
+                body = response && typeof response.html === 'string' ? response.html : '';
+            } catch (_) {
+                continue;
+            }
+            const eventCount = this.countJsonApiEventObjects(body);
+            if (eventCount === 0) continue;
+            if (hostKey) this.spaDoorsByHost.set(hostKey, { template: probe.template, venueDirectory });
+            await log(`SYSTEM: 🚪 SPA DOOR: ${probe.url} answered with ${eventCount} event-shaped object(s) via ${probe.template} — reading the page through it${venueDirectory.length > 0 ? ` (bundle also carries a ${venueDirectory.length}-venue directory)` : ''}`);
+            return {
+                ...htmlData,
+                html: body,
+                dataDoor: { apiUrl: probe.url, template: probe.template, pageUrl, venueDirectory }
+            };
+        }
+        await log(`SYSTEM: 🚪 SPA DOOR: ${pageUrl}: no endpoint answered with events (probed ${probes.length}: ${probes.map(probe => probe.template).filter((template, index, all) => all.indexOf(template) === index).join(', ')}) — leaving it`);
+        return htmlData;
+    }
+
     // Crawl-queue guard: obvious static assets are never pages, so the crawl
     // loop must never fetch them. URL discovery (ai-web-parser validateEventUrl)
     // already rejects these, but a candidate whose entity-mangled tail hides the
