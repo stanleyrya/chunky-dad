@@ -5,6 +5,64 @@
   },
   "events": [
     {
+      "name": "MEGAWOOF AMERICA - SAN DIEGO",
+      "day": "Friday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 32.7468303,
+        "lng": -117.1607394
+      },
+      "startDate": "2026-05-15T21:00:00",
+      "endDate": "2026-05-16T02:00:00",
+      "unprocessedDescription": "description: SAN DIEGO Here we go again… MEGAWOOF is BACK and r\ready to keep you sweaty, sexy, and beefy.\nbar: The Brass Rail\naddress: 3796 Fifth Avenue, San Diego, CA 92103\nticketUrl: https://www.eventbrite.com/e/megawoof-america-san-diego-tickets-1986666861061\ninstagram: https://www.instagram.com/megawoof_america\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181921091%2F185013722403%2F1%2Foriginal.20260411-040157?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=3319257efa3598b3e12a398447de4622\ncover: $16.84-$22.10\nshortName: MEGA-WOOF\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Brass%20Rail%2C%203796%20Fifth%20Avenue%2C%20San%20Diego%2C%20CA%2092103\nkey: megawoof-america-san-diego|2026-05-16|the brass rail",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "5B8DF162-E146-4A77-87D2-D03C226F55B4",
+      "uid": "5B8DF162-E146-4A77-87D2-D03C226F55B4",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The Brass Rail",
+      "cover": "$16.84-$22.10",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181921091%2F185013722403%2F1%2Foriginal.20260411-040157?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=3319257efa3598b3e12a398447de4622",
+      "tea": "SAN DIEGO Here we go again… MEGAWOOF is BACK and ready to keep you sweaty, sexy, and beefy.",
+      "address": "3796 Fifth Avenue, San Diego, CA 92103",
+      "website": "https://linktr.ee/megawoof_america",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=The%20Brass%20Rail%2C%203796%20Fifth%20Avenue%2C%20San%20Diego%2C%20CA%2092103",
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-america-san-diego-tickets-1986666861061",
+      "shortName": "MEGA-WOOF",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/megawoof_america",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/megawoof_america",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=The%20Brass%20Rail%2C%203796%20Fifth%20Avenue%2C%20San%20Diego%2C%20CA%2092103",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/megawoof-america-san-diego-tickets-1986666861061",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "megawoof-america-san-diego-7cd96d30"
+    },
+    {
       "name": "MEGAWOOF",
       "day": "Friday",
       "time": "9PM-4AM",
@@ -63,38 +121,40 @@
       "slug": "megawoof-7025d33f"
     },
     {
-      "name": "MEGAWOOF AMERICA - SAN DIEGO",
+      "name": "MEGAWOOF SAN DIEGO - 11 YEAR ANNIVERSARY TOUR",
       "day": "Friday",
-      "time": "9PM-2AM",
+      "time": "9:30PM-2AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
-        "lat": 32.7468303,
-        "lng": -117.1607394
+        "lat": 32.7468104,
+        "lng": -117.1606487
       },
-      "startDate": "2026-05-15T21:00:00",
-      "endDate": "2026-05-16T02:00:00",
-      "unprocessedDescription": "description: SAN DIEGO Here we go again… MEGAWOOF is BACK and r\ready to keep you sweaty, sexy, and beefy.\nbar: The Brass Rail\naddress: 3796 Fifth Avenue, San Diego, CA 92103\nticketUrl: https://www.eventbrite.com/e/megawoof-america-san-diego-tickets-1986666861061\ninstagram: https://www.instagram.com/megawoof_america\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181921091%2F185013722403%2F1%2Foriginal.20260411-040157?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=3319257efa3598b3e12a398447de4622\ncover: $16.84-$22.10\nshortName: MEGA-WOOF\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Brass%20Rail%2C%203796%20Fifth%20Avenue%2C%20San%20Diego%2C%20CA%2092103\nkey: megawoof-america-san-diego|2026-05-16|the brass rail",
+      "startDate": "2026-10-16T21:30:00",
+      "endDate": "2026-10-17T02:00:00",
+      "unprocessedDescription": "description: MEGAWOOF BACK IN SAN DIEGO during our 11 year anni\rversary tour\nbar: The Brass Rail\naddress: 3796 Fifth Avenue, San Diego, CA 92103\nticketUrl: https://www.eventbrite.com/e/megawoof-san-diego-11-year-anniversary-tour-tickets-1999136625462\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1192161625%2F185013722403%2F1%2Foriginal.20260829-012623?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=9550dbcf01e56686840bc375ea8e471a\ncover: $11.58-$16.84\ntimezone: America/Los_Angeles\nimageVertical: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1192161625%2F185013722403%2F1%2Foriginal.20260829-012623?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=9550dbcf01e56686840bc375ea8e471a\nwebsite: https://linktr.ee/megawoof_america\nshortName: MEGA­WOOF\ninstagram: https://www.instagram.com/megawoof_america\nfavicon: https://linktr.ee/megawoof_america\nkey: megawoof-san-diego-11-year-anniversary-tour|2026-10-17|the brass rail\nbearSource: keyword\npinSource: geocoded-exact\naddressSource: page\nimageSource: jsonld\nbarSource: geo-poi\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Brass%20Rail%2C%203796%20Fifth%20Avenue%2C%20San%20Diego%2C%20CA%2092103",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Los_Angeles",
       "wasUTC": true,
-      "sourceUid": "5B8DF162-E146-4A77-87D2-D03C226F55B4",
-      "uid": "5B8DF162-E146-4A77-87D2-D03C226F55B4",
+      "sourceUid": "45C72050-23BF-49C5-BC34-C1BF048FBE4E",
+      "uid": "45C72050-23BF-49C5-BC34-C1BF048FBE4E",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "The Brass Rail",
-      "cover": "$16.84-$22.10",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181921091%2F185013722403%2F1%2Foriginal.20260411-040157?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=3319257efa3598b3e12a398447de4622",
-      "tea": "SAN DIEGO Here we go again… MEGAWOOF is BACK and ready to keep you sweaty, sexy, and beefy.",
+      "cover": "$11.58-$16.84",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1192161625%2F185013722403%2F1%2Foriginal.20260829-012623?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=9550dbcf01e56686840bc375ea8e471a",
+      "imageVertical": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1192161625%2F185013722403%2F1%2Foriginal.20260829-012623?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=9550dbcf01e56686840bc375ea8e471a",
+      "favicon": "https://linktr.ee/megawoof_america",
+      "tea": "MEGAWOOF BACK IN SAN DIEGO during our 11 year anniversary tour",
       "address": "3796 Fifth Avenue, San Diego, CA 92103",
       "website": "https://linktr.ee/megawoof_america",
       "instagram": "https://www.instagram.com/megawoof_america",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=The%20Brass%20Rail%2C%203796%20Fifth%20Avenue%2C%20San%20Diego%2C%20CA%2092103",
-      "ticketUrl": "https://www.eventbrite.com/e/megawoof-america-san-diego-tickets-1986666861061",
-      "shortName": "MEGA-WOOF",
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-san-diego-11-year-anniversary-tour-tickets-1999136625462",
+      "shortName": "MEGA­WOOF",
       "bearReview": null,
       "links": [
         {
@@ -114,11 +174,11 @@
         },
         {
           "type": "tickets",
-          "url": "https://www.eventbrite.com/e/megawoof-america-san-diego-tickets-1986666861061",
+          "url": "https://www.eventbrite.com/e/megawoof-san-diego-11-year-anniversary-tour-tickets-1999136625462",
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "megawoof-america-san-diego-7cd96d30"
+      "slug": "megawoof-san-diego-11-year-anniversary-tour-5656cbb6"
     },
     {
       "name": "MEGAWOOF",
