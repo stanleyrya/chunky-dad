@@ -16499,3 +16499,111 @@ test('data-door context fills the ticket link from the page and the address from
   assert.equal(parser.matchBundleVenueDirectoryEntry('Eagle', [{ name: 'Eagle Rock Cinema', address: '1 A St, X, CA 90000' }]), null,
     'never a substring match');
 });
+
+test('a navigation label is not an event name: "NEXT (UK):" leaves the title missing, "Next Level Party" is a title', () => {
+  const parser = createParser();
+  for (const label of ['NEXT', 'NEXT (UK):', 'Next up', 'UPCOMING EVENTS', 'Coming soon', 'Events', 'See all events', 'Tonight —']) {
+    assert.equal(parser.isNavigationLabelTitle(label), true, label);
+  }
+  for (const title of ['Next Level Party', 'UPCOMING: BEAR NIGHT', 'Tonight at Rockbar', 'Brief Encounter', 'The Next Chapter']) {
+    assert.equal(parser.isNavigationLabelTitle(title), false, title);
+  }
+  const normalized = parser.normalizeAiEvent({ title: 'NEXT (UK):', bar: 'The RVT', startDate: '2026-09-19' }, {}, { html: '', url: 'https://beefmince.example/events' });
+  assert.ok(!normalized || !normalized.title, 'a record whose only name is a signpost has no title');
+});
+
+// ---------------------------------------------------------------------------
+// DICE EVENT-LIST WIDGET (beefmince.com/events, run 20260910-131740: the two
+// "linkout" rows exist only in the widget's feed, never on dice.fm).
+// ---------------------------------------------------------------------------
+
+const DICE_WIDGET_CONFIG = '{"information":"full","layout":"list","partnerId":"JKRM6GMD","apiKey":"Fn3xTESTKEY","version":2,"promoters":["BEEFMINCE"]}';
+const DICE_EMBED_HTML = '<div class="dice-widget"></div><script src="https://widgets.dice.fm/dice-event-list-widget.js" type="text/javascript"></script>'
+  + `<script type="text/javascript">DiceEventListWidget.create(${DICE_WIDGET_CONFIG});</script>`;
+const DICE_FEED = {
+  data: [
+    { id: 'a', name: 'BEEFMINCE Brief Encounter', date: '2026-09-19T21:00:00Z', date_end: '2026-09-20T03:00:00Z', timezone: 'Europe/London', type: 'event', url: 'https://link.dice.fm/P01', external_url: null, status: 'on-sale', price: 1200, currency: 'GBP',
+      venues: [{ id: 5485, name: 'The Royal Vauxhall Tavern' }], location: { street: '372 Kennington Lane', city: 'London', zip: 'SE11 5HY', lat: 51.4863391, lng: -0.1217784 },
+      event_images: { portrait: 'https://dice-media.example/p.jpg', landscape: 'https://dice-media.example/l.jpg' }, images: ['https://dice-media.example/o.jpg'], description: 'BEEFMINCE presents <b>BRIEF ENCOUNTER</b>' },
+    { id: 493958, name: 'Welly Takeover', date: '2026-10-03T21:00:00Z', date_end: null, timezone: 'Europe/London', type: 'linkout', url: null, external_url: 'https://dukeofwellington.example/beefmince', status: null, price: 2000, currency: 'EUR',
+      venues: [], location: { street: '', city: '', zip: '', lat: '', lng: '' }, event_images: null, images: ['https://dice-media.example/w.jpg'], description: '' },
+    { id: 'c', name: 'Cancelled Night', date: '2026-10-10T21:00:00Z', type: 'event', status: 'cancelled', venues: [], location: {} }
+  ],
+  links: { next: null }
+};
+
+function diceStubAdapter(bundle = 'var DiceEventListWidget=function(){"use strict";window.RUNTIME_DICE_URL = "https://dice.fm" || null; window.RUNTIME_API_URL = "https://partners-endpoint.example" || null;') {
+  const fetched = [];
+  return {
+    fetched,
+    httpAdapter: {
+      fetchData: async (url, options = {}) => {
+        fetched.push({ url, headers: options.headers || {} });
+        if (url === 'https://widgets.dice.fm/dice-event-list-widget.js') return { html: bundle, url, statusCode: 200, headers: {} };
+        if (url.startsWith('https://partners-endpoint.example/api/v2/events?')) return { html: JSON.stringify(DICE_FEED), url, statusCode: 200, headers: {} };
+        throw new Error(`HTTP 404: ${url}`);
+      }
+    }
+  };
+}
+
+test('DICE widget: the config is found raw, or entity-escaped once or twice inside an island payload', () => {
+  const parser = createParser();
+  const raw = parser.extractDiceWidgetConfig(`<html><body>${DICE_EMBED_HTML}</body></html>`);
+  assert.deepEqual(raw && { apiKey: raw.apiKey, promoters: raw.promoters, scriptUrl: raw.scriptUrl },
+    { apiKey: 'Fn3xTESTKEY', promoters: ['BEEFMINCE'], scriptUrl: 'https://widgets.dice.fm/dice-event-list-widget.js' });
+  // The shape beefmince.com ships: the embed sits inside an island's script
+  // payload with quotes backslash-escaped and then entity-escaped.
+  const escapeOnce = (text) => text.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const island = `<script>${escapeOnce(DICE_EMBED_HTML.replace(/"/g, '\\"'))}</script>`;
+  const nested = parser.extractDiceWidgetConfig(island);
+  assert.equal(nested && nested.apiKey, 'Fn3xTESTKEY', 'entity-escaped, backslash-quoted embed still parses');
+  assert.equal(parser.extractDiceWidgetConfig('<html><body><p>No widget here</p></body></html>'), null);
+  assert.equal(parser.extractDiceWidgetConfig(DICE_EMBED_HTML.replace('"promoters":["BEEFMINCE"]', '"promoters":[]')), null, 'a widget with no filter is not read');
+});
+
+test('DICE widget: the feed is read with the page\'s own key, from the base the widget bundle names, on the configured page only', async () => {
+  const parser = createParser();
+  const { fetched, httpAdapter } = diceStubAdapter();
+  const html = `<html><body>${DICE_EMBED_HTML}</body></html>`;
+  const rows = await parser.collectDiceWidgetEvents({ html, url: 'https://beefmince.example/events' }, { urls: ['https://beefmince.example/events'] }, httpAdapter);
+  assert.equal(rows.length, 3);
+  assert.equal(fetched[0].url, 'https://widgets.dice.fm/dice-event-list-widget.js', 'the bundle is read for the API base');
+  assert.equal(fetched[1].url, 'https://partners-endpoint.example/api/v2/events?page[size]=100&types=linkout,event&filter[promoters][]=BEEFMINCE');
+  assert.equal(fetched[1].headers['x-api-key'], 'Fn3xTESTKEY');
+
+  const elsewhere = diceStubAdapter();
+  const none = await parser.collectDiceWidgetEvents({ html, url: 'https://beefmince.example/about' }, { urls: ['https://beefmince.example/events'] }, elsewhere.httpAdapter);
+  assert.deepEqual(none, [], 'the shared embed is read once, on the entry page');
+  assert.deepEqual(elsewhere.fetched, []);
+
+  const noBase = diceStubAdapter('var DiceEventListWidget=function(){};');
+  assert.deepEqual(await parser.collectDiceWidgetEvents({ html, url: 'https://beefmince.example/events' }, { urls: ['https://beefmince.example/events'] }, noBase.httpAdapter), [], 'no API base in the bundle → nothing guessed');
+});
+
+test('DICE widget: rows become events — venue, address, pin, price in minor units, ticket link; linkouts keep their external link; cancelled rows are skipped', () => {
+  const parser = createParser();
+  const originalLog = console.log;
+  console.log = () => {};
+  let events;
+  try { events = DICE_FEED.data.map(row => parser.buildEventFromDiceRow(row, 'https://beefmince.example/events')).filter(Boolean); } finally { console.log = originalLog; }
+  assert.equal(events.length, 2, 'the cancelled row is dropped');
+  const [brief, welly] = events;
+  assert.equal(brief.title, 'BEEFMINCE Brief Encounter');
+  assert.equal(brief.startDate.toISOString(), '2026-09-19T21:00:00.000Z');
+  assert.equal(brief.endDate.toISOString(), '2026-09-20T03:00:00.000Z');
+  assert.equal(brief.timezone, 'Europe/London');
+  assert.equal(brief.bar, 'The Royal Vauxhall Tavern');
+  assert.equal(brief.address, '372 Kennington Lane, London, SE11 5HY');
+  assert.equal(brief.location, '51.4863391, -0.1217784');
+  assert.equal(brief.cover, '12 GBP');
+  assert.equal(brief.ticketUrl, 'https://link.dice.fm/P01');
+  assert.equal(brief.image, 'https://dice-media.example/p.jpg');
+  assert.equal(brief.description, 'BEEFMINCE presents BRIEF ENCOUNTER');
+  assert.equal(brief.website, 'https://beefmince.example/events');
+  assert.equal(welly.title, 'Welly Takeover');
+  assert.equal(welly.bar, '', 'a linkout states no venue — the crawl of its link fills it');
+  assert.equal(welly.location, undefined, 'blank coordinates are not a pin');
+  assert.equal(welly.ticketUrl, 'https://dukeofwellington.example/beefmince');
+  assert.equal(welly.cover, '20 EUR');
+});

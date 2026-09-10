@@ -21303,3 +21303,12 @@ test('dead-end store: an inferred dead end confirmed under an older capability i
   await core3.processEvents(deadEndConfig({ store: { [url]: { firstSeen: youngLastSeen, lastSeen: youngLastSeen, misses: 1, lastStatus: 410 } } }), third.httpAdapter, createDisplayAdapterStub(), third.parsers);
   assert.ok(!third.fetched.includes(url), 'a 410 stays a dead end without any capability stamp');
 });
+
+test('a locality-only address is not place evidence: venue-TBA twins with "London" and "London, UK" still merge', () => {
+  const core = createCore();
+  const a = { title: "BEEFMINCE New Year's Eve", startDate: new Date('2026-12-31T22:00:00.000Z'), bar: '', address: 'London' };
+  const b = { title: "BEEFMINCE New Year's Eve", startDate: new Date('2026-12-31T22:00:00.000Z'), bar: '', address: 'London, UK' };
+  assert.equal(core.areEventsDistinctByPlace(a, b), false, 'two city-only addresses are inconclusive');
+  assert.equal(core.areEventsDistinctByPlace({ ...a, address: '372 Kennington Lane, London' }, { ...b, address: '21 St John\'s Hill, London' }), true, 'two different street addresses are distinct');
+  assert.equal(core.areEventsDistinctByPlace({ ...a, bar: 'The RVT' }, { ...b, bar: 'Eden' }), true, 'two different venue names are distinct');
+});

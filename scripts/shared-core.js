@@ -17417,7 +17417,14 @@ class SharedCore {
     areEventsDistinctByPlace(eventA, eventB) {
         const shapeA = this.buildIdentityComparisonShape(eventA);
         const shapeB = this.buildIdentityComparisonShape(eventB);
-        const hasPlace = (shape) => Boolean(shape.bar || shape.address || shape.coordinates || shape.locationText);
+        // A locality is not a place. "London" vs "London, UK" on two records of
+        // a venue-TBA party (BEEFMINCE NYE, run 20260910: widget row + dice.fm
+        // page) is the same missing venue written twice, not two venues — an
+        // address is place evidence only when it names a street (a number, or
+        // more than a city and region's worth of text).
+        const hasStreetAddress = (shape) => /\d/.test(String(shape.address || ''))
+            || this.normalizeIdentityText(shape.address).length >= 12;
+        const hasPlace = (shape) => Boolean(shape.bar || hasStreetAddress(shape) || shape.coordinates || shape.locationText);
         if (!hasPlace(shapeA) || !hasPlace(shapeB)) return false;
         return !this.areIdentityPlacesSimilar(shapeA, shapeB);
     }
