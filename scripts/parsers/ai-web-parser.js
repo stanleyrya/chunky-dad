@@ -16745,6 +16745,18 @@ TEXT:
         return endMinutes.size === 1 ? [...endMinutes][0] : null;
     }
 
+    // A bare signpost word, optionally qualified ("NEXT (UK)", "NEXT UP:",
+    // "UPCOMING EVENTS", "COMING SOON"). A label followed by an actual name
+    // ("Next Level Party") is a title.
+    isNavigationLabelTitle(value) {
+        const text = this.normalizeWhitespace(String(value || ''))
+            .replace(/\s*\([^)]{0,30}\)\s*/g, ' ')
+            .replace(/[:\-–—|·•]+\s*$/g, '')
+            .trim();
+        if (!text) return false;
+        return /^(?:next(?:\s+up)?|next\s+events?|upcoming(?:\s+events?)?|coming\s+(?:up|soon)|tonight|this\s+week(?:end)?|events?|events?\s+calendar|calendar|see\s+all(?:\s+events)?|view\s+all(?:\s+events)?|more\s+events)$/i.test(text);
+    }
+
     normalizeAiEvent(aiEvent, parserConfig, htmlData = null, cityConfig = null, promptFields = null) {
         const scrapedLinks = this.extractLinksFromPage(
             htmlData && typeof htmlData.html === 'string' ? htmlData.html : '',
@@ -16771,6 +16783,19 @@ TEXT:
                 this.getResolvedParserMetadataFieldValue(parserConfig, ['title', 'name', 'summary'], aiEvent)
             ].filter(candidate => !(typeof candidate === 'string' && this.isTimeOnlyLineText(candidate)));
             title = this.firstNonEmpty(...nonTimeCandidates, '');
+        }
+        // A title that is nothing but a navigation label ("NEXT", "NEXT (UK):",
+        // "UPCOMING EVENTS") is a site's signpost to an event, never the
+        // event's name. beefmince.com/events renders its listings client-side,
+        // so the static page's only dated text is the site-wide header strip
+        // "NEXT (UK): THE RVT - SATURDAY 19 SEPTEMBER"; the whole-page
+        // fallback read it as an event and run 20260910-131740 shipped
+        // "BEEFMINCE: NEXT" beside the real Brief Encounter row. Same
+        // treatment as a time-only title: the label is not a candidate, and a
+        // record with no name left is not an event.
+        if (title && this.isNavigationLabelTitle(title)) {
+            console.log(`🤖 AI Web: Title "${title}" is a navigation label, not an event name — treating the title as missing`);
+            title = '';
         }
         // Restore a title extraction truncated, proven by containment in the
         // page's own JSON-LD Event name (see repairTruncatedTitleFromJsonLd).

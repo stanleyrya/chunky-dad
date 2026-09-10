@@ -16499,3 +16499,15 @@ test('data-door context fills the ticket link from the page and the address from
   assert.equal(parser.matchBundleVenueDirectoryEntry('Eagle', [{ name: 'Eagle Rock Cinema', address: '1 A St, X, CA 90000' }]), null,
     'never a substring match');
 });
+
+test('a navigation label is not an event name: "NEXT (UK):" leaves the title missing, "Next Level Party" is a title', () => {
+  const parser = createParser();
+  for (const label of ['NEXT', 'NEXT (UK):', 'Next up', 'UPCOMING EVENTS', 'Coming soon', 'Events', 'See all events', 'Tonight —']) {
+    assert.equal(parser.isNavigationLabelTitle(label), true, label);
+  }
+  for (const title of ['Next Level Party', 'UPCOMING: BEAR NIGHT', 'Tonight at Rockbar', 'Brief Encounter', 'The Next Chapter']) {
+    assert.equal(parser.isNavigationLabelTitle(title), false, title);
+  }
+  const normalized = parser.normalizeAiEvent({ title: 'NEXT (UK):', bar: 'The RVT', startDate: '2026-09-19' }, {}, { html: '', url: 'https://beefmince.example/events' });
+  assert.ok(!normalized || !normalized.title, 'a record whose only name is a signpost has no title');
+});
