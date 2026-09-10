@@ -2,25 +2,254 @@
   "schemaVersion": 1,
   "source": "Cubhouse",
   "slug": "cubhouse",
-  "status": "not-started",
+  "status": "complete",
   "recon": {
-    "date": null,
-    "method": [],
-    "parserUrlsAtRecon": null,
-    "doors": [],
-    "notes": null
+    "date": "2026-09-10",
+    "method": ["feed", "rendered", "static", "page-cache"],
+    "parserUrlsAtRecon": ["https://linktr.ee/cubhouse"],
+    "doors": [
+      {
+        "url": "https://linktr.ee/cubhouse",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 16,
+        "truthFlag": "__NEXT_DATA__ props.pageProps.account.links: 16; pinnedLinks: 0; socialLinks: 0",
+        "note": "Configured parser URL. Static curl with a Chrome UA returns the full Next.js page (280,925 bytes); the link list lives in <script id=\"__NEXT_DATA__\">. Page title \"CUBHOUSE 🐻\", bio \"An all-inclusive, body-positive queer dance party born and bred in Philadelphia.\" Exactly one non-gallery link: \"10/30 TICKETS 🐻🎃\" → tickets.taverngroupevents.com; the other 15 are cubhouse.pixieset.com photo galleries of past parties. No Instagram/social links at all (socialLinks is an empty array), so no second events listing is reachable from this page. Saved as linktree.html / linktree.txt / linktree-next-data.json."
+      },
+      {
+        "url": "https://tickets.taverngroupevents.com/halloween-cubhouse-cc3842e7",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "STATIC rung: a 419-byte Vite SPA shell (<title>The Tavern Group Events Calendar</title>, <div id=\"root\"></div>, /assets/index-DZIfecld.js). Zero event text without JavaScript. Saved as ticket-static.html + ticket-static.headers (Express on Fly.io)."
+      },
+      {
+        "url": "https://tickets.taverngroupevents.com/halloween-cubhouse-cc3842e7",
+        "kind": "rendered-dom",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": "\"Event Date\" <select> has exactly 1 <option> (halloween-cubhouse-cc3842e7)",
+        "note": "RENDERED rung, headless Chrome with the Mac's own zone (Europe/Madrid, CEST): \"Body Positive / Halloween Cubhouse / Sat, Oct 31, 2:00 AM / 254 · Dance Floor\", \"Recurring Event / This is a recurring event. Buy a ticket for the next event or choose another future date.\", three ticket tiers, \"Sales close Sat, Oct 31, 7:00 AM\". The page prints NO year and NO timezone label — every time on it is the viewer's browser zone. Saved as ticket-rendered.html / ticket-rendered.txt."
+      },
+      {
+        "url": "https://tickets.taverngroupevents.com/halloween-cubhouse-cc3842e7",
+        "kind": "rendered-dom",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": "\"Event Date\" <select> has exactly 1 <option> (halloween-cubhouse-cc3842e7)",
+        "note": "RENDERED rung again with TZ=America/New_York: the same DOM now reads \"Fri, Oct 30, 9:00 PM\" and \"Sales close Sat, Oct 31, 2:00 AM\" — i.e. the CEST render's Oct 31 2:00 AM is the same instant shifted by 5 hours. The only image on the page is the venue logo (alt=\"254\", cdn.builder.io, 301x260) — not a flyer. Saved as ticket-rendered-ny.html / ticket-rendered-ny.txt."
+      },
+      {
+        "url": "https://tickets.taverngroupevents.com/api/public/ticket-events/halloween-cubhouse-cc3842e7",
+        "kind": "json",
+        "role": "feed",
+        "rowsReturned": 1,
+        "truthFlag": "recurring.isRecurring: true, recurring.occurrences: 1 (the selected slug itself), relatedEvents: [], specialOffers: []",
+        "note": "The endpoint the SPA fetches (found as `/api/public/ticket-events/${t}` in the bundle). Unauthenticated, 1,820 bytes. event.start_at \"2026-10-31 01:00:00+00\", end_at \"2026-10-31 06:00:00+00\", venue_name \"254\", space_name \"Dance Floor\", description_public null, assets_json.ticketTags [\"Body Positive\"], public_slug halloween-cubhouse-cc3842e7. Ticket tiers: Tonight Only $15 (30/30 sold, closed 2026-08-29), Advance $25 (30/30 sold), General Admission $30 (37/390 sold, sales_close_at 2026-10-31 06:00:00+00). Saved as api-public-ticket-event-halloween-cubhouse.json."
+      },
+      {
+        "url": "https://tickets.taverngroupevents.com/api/public/ticket-events",
+        "kind": "json",
+        "role": "feed",
+        "rowsReturned": 0,
+        "truthFlag": "404 \"Cannot GET /api/public/ticket-events\"",
+        "note": "There is no public LIST endpoint — the bundle only ever fetches ticket-events by slug. So the Linktree (or another promoter link) is the only way to learn a slug. Saved as api-public-ticket-events-list.json."
+      },
+      {
+        "url": "https://tickets.taverngroupevents.com/",
+        "kind": "rendered-dom",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": "\"Event Calendar / Sign in to your account / Username / PIN\"",
+        "note": "The platform root is a staff sign-in page, not a public calendar; static curl returns the same 419-byte shell. Saved as ticket-root-static.html, ticket-root-rendered.html / .txt."
+      },
+      {
+        "url": "https://tickets.taverngroupevents.com/api/events?limit=5000&excludeStatus=COMPLETED,CANCELED",
+        "kind": "json",
+        "role": "other",
+        "rowsReturned": 1393,
+        "truthFlag": "1393 rows < limit 5000 (the limit=1000 variant returned exactly 1000 = truncated); statuses IDEA/PENDING/PENDING_POSITION_NEEDED/BOOKED; startAt 2025-07-01 … 2028-02-06",
+        "note": "SECOND DOOR — the venue group's INTERNAL ops calendar, served without authentication (the bundle's admin screens call it). Not something the crawler could ever reach from the Linktree. Exactly 3 rows mention Cubhouse: [300] \"Cubhouse\" 2026-08-29T01:00Z PENDING_POSITION_NEEDED (= Fri Aug 28 9 PM ET, past — matches the \"8/28 PHOTOS\" gallery), [445] \"Halloween Cubhouse\" 2026-10-31T01:00Z PENDING_POSITION_NEEDED (= the ticketed event, same id d003ca19-…), [556] \"Cubhouse\" 2026-12-19T02:00Z status IDEA, templateId shared with #445, no public slug, no ticket page (= a tentative Fri Dec 18 9 PM ET date that is NOT published anywhere public). Saved as api-events-limit5000.json (plus api-_api_events_limit_1000_…json and api-_api_events_.json = 200 rows, 2025 only)."
+      },
+      {
+        "url": "https://tickets.taverngroupevents.com/assets/index-DZIfecld.js",
+        "kind": "js",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "1.5 MB SPA bundle read to find the data door. Public routes: `/api/public/ticket-events/${t}`, `…/checkout`, `…/order-status`; the recurring picker renders `recurring.occurrences[].start_at` through a locale formatter (no explicit timeZone). Saved as ticket-bundle.js."
+      },
+      {
+        "url": "https://cubhouse.pixieset.com/dancefloor82826",
+        "kind": "html",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": "403 Cloudflare \"Just a moment...\"",
+        "note": "Representative Pixieset gallery link (\"8/28 PHOTOS\"). Cloudflare challenge to curl; the Linktree itself labels every one of these \"Photo collection by Cubhouse\". Saved as pixieset-dancefloor82826.html / .txt."
+      },
+      {
+        "url": "https://cdn.builder.io/api/v1/image/assets%2Fbe5cc023d51c4962b5d824411d0df630%2Fa8a2a31e003447e1a3f874f4ef3e4529?format=png&width=800",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "The only image on the ticket page: a 301x260 \"254\" venue logo on black. No event flyer is published on any door. Saved as builder-image-800.png."
+      },
+      {
+        "url": "~/Library/Mobile Documents/iCloud~dk~simonbs~Scriptable/Documents/chunky-dad-scraper/storage/pages/tickets.taverngroupevents.com/halloween-cubhouse-cc3842e7.json",
+        "kind": "page-cache",
+        "role": "event",
+        "rowsReturned": 0,
+        "truthFlag": "fetchedAt 2026-09-07T05:16:44.675Z, statusCode 200, html length 419",
+        "note": "Proves the scraper DID follow the Linktree's ticket link (linktr.ee/cubhouse cached at 2026-09-07T05:16:44.001Z, 280,927 bytes) and received only the SPA shell — hence 0 events. The 2026-09-09 run classified the Linktree as \"link-aggregator\" and finished in 18 ms with totalEvents 0."
+      }
+    ],
+    "notes": "Linktree is a Next.js page whose link list is fully present in static HTML (__NEXT_DATA__), confirmed by parsing it. The one event lead points at The Tavern Group's in-house ticketing SPA (tickets.taverngroupevents.com, Express/Fly.io); its working data door is GET /api/public/ticket-events/<slug>, which returns ISO instants with the year. Local wall-clock: 2026-10-31T01:00Z = Friday 2026-10-30 21:00 EDT (DST still in force on Oct 30; ends Nov 1). The rendered page shows this as \"Fri, Oct 30, 9:00 PM\" in America/New_York but \"Sat, Oct 31, 2:00 AM\" in the recon Mac's Europe/Madrid zone — the ticket page never prints a year or a timezone. The Linktree's own label \"10/30\" agrees with the ET reading. Raw artifacts: /private/tmp/claude-501/-Users-stanleyrya-workspace-chunky-dad/49179ac5-44be-4797-821c-ffb35abc0b2d/scratchpad/recon/cubhouse/."
   },
   "coverage": {
-    "confidence": null,
-    "basis": null,
-    "publishedEventCount": null,
-    "documentedEventCount": 0,
-    "occurrenceWindow": null,
-    "pastListingsPresent": null,
+    "confidence": "high",
+    "basis": "Door 1 (Linktree, 16 links): 1 ticket link + 15 galleries → 1 event lead. Door 2 (public ticket-events JSON for that slug): recurring.occurrences has exactly 1 entry and relatedEvents is empty → 1 published upcoming event; the rendered page's \"Event Date\" picker has the same single option. Door 3 (the unauthenticated internal /api/events ops calendar, 1393 rows): 3 Cubhouse rows — the same 2026-10-30 event, one past 2026-08-28 party (counted as a past listing only — and corroborated by the \"8/28 PHOTOS\" gallery), and one 2026-12-18 row in status IDEA with no public slug, which is an unpublished internal plan, not a published event (recorded as a trap). Delta between doors fully explained: 1 published. Past listings: the Linktree carries 15 gallery links for 8 past parties (3/29, 5/30, 8/29, 10/31, 2/13, 4/10, 6/05, 8/28 — no years printed), counted not enumerated. No flyer image exists on any door (the only image is the 254 venue logo). No public list endpoint exists on the ticket platform (404).",
+    "publishedEventCount": 1,
+    "documentedEventCount": 1,
+    "occurrenceWindow": { "start": "2026-09-10", "end": "2026-12-09" },
+    "pastListingsPresent": true,
     "knownGaps": []
   },
-  "defaults": {},
-  "events": [],
-  "traps": [],
-  "openQuestions": []
+  "defaults": {
+    "city": "philly",
+    "timezone": "America/New_York",
+    "bar": "254",
+    "address": "254 S 12th Street, Philadelphia, PA",
+    "website": "https://linktr.ee/cubhouse"
+  },
+  "events": [
+    {
+      "id": "halloween-cubhouse-2026-10-30",
+      "kind": "single",
+      "title": "Halloween Cubhouse",
+      "location": null,
+      "startDate": "2026-10-30",
+      "startTime": "21:00",
+      "endDate": "2026-10-31",
+      "endTime": "02:00",
+      "ticketUrl": "https://tickets.taverngroupevents.com/halloween-cubhouse-cc3842e7",
+      "cover": "$30.00",
+      "description": null,
+      "image": null,
+      "sourceRung": "feed",
+      "confidence": "ambiguous",
+      "evidence": {
+        "url": "https://tickets.taverngroupevents.com/api/public/ticket-events/halloween-cubhouse-cc3842e7",
+        "jsonPath": "$.event"
+      },
+      "expect": { "extracted": true, "kept": null },
+      "bearVerdict": null,
+      "note": "Feed: start_at \"2026-10-31 01:00:00+00\", end_at \"2026-10-31 06:00:00+00\" (year comes from the feed; the ticket PAGE prints no year). Local wall-clock recorded = 2026-10-30 21:00–02:00 EDT, which is what the page renders for an ET viewer (\"Fri, Oct 30, 9:00 PM\", \"Sales close Sat, Oct 31, 2:00 AM\") and what the Linktree link label says (\"10/30 TICKETS 🐻🎃\"). Marked ambiguous ONLY because the site never states a timezone: the same page rendered in the recon Mac's Europe/Madrid zone reads \"Sat, Oct 31, 2:00 AM\" and \"Sales close Sat, Oct 31, 7:00 AM\" — a crawler that trusts the rendered text in a non-ET zone will date this Oct 31 (see trap halloween-cubhouse-oct-31-2am-rollover). Ticket tag \"Body Positive\" is shown above the title but is not part of it (feed assets_json.ticketTags). Cover: General Admission $30.00 (\"353 remaining\"); Tonight Only $15 and Advance $25 are both \"Sold out\". description_public is null; the on-page prose (\"No matter who you are, you are welcome … 254 is a queer space …\") is the venue's house text. Space: \"254 · Dance Floor\". Payment note says \"This event is produced by SRE Marketing\"; contact Carlton@thetaverngroup.com. Feed says isRecurring: true but lists only this one occurrence, so it is documented as a single."
+    }
+  ],
+  "traps": [
+    {
+      "id": "pixieset-photo-galleries",
+      "kind": "gallery",
+      "label": "15 Linktree links \"8/28 PHOTOS\", \"8/28 PHOTO BOOTH\", \"6/05 PHOTOS\", \"6/05 PHOTO BOOTH\", \"4/10 PHOTOS\", \"4/10 PHOTO BOOTH\", \"2/13 PHOTOS\", \"2/13 PHOTO BOOTH\", \"10/31 PHOTOS\", \"10/31 PHOTO BOOTH\", \"8/29 PHOTOS\", \"8/29 PHOTO BOOTH\", \"5/30 PHOTOS\", \"5/30 PHOTO BOOTH\", \"3/29 PHOTOS - PW: WeBelong / PIN: 7993\" → cubhouse.pixieset.com",
+      "why": "Every one of these is a Pixieset photo gallery of a party that already happened (the Linktree captions each \"Photo collection by Cubhouse\"; 3/29 is password-gated). They carry a month/day and no year and look like dated event rows, but they are archives, not upcoming events — 8 past parties (3/29, 5/30, 8/29, 10/31, 2/13, 4/10, 6/05, 8/28), two galleries each. Pixieset itself is behind a Cloudflare JS challenge (403 to curl). None of these should become an event record; the internal ops calendar confirms the 8/28 one as 2026-08-29T01:00Z (past).",
+      "evidence": {
+        "url": "https://linktr.ee/cubhouse",
+        "quote": "Photo collection by Cubhouse"
+      },
+      "expect": { "extracted": false, "kept": null },
+      "seenInRun": null
+    },
+    {
+      "id": "ticket-spa-shell",
+      "kind": "soft-404",
+      "label": "tickets.taverngroupevents.com/halloween-cubhouse-cc3842e7 as fetched without JavaScript — <title>The Tavern Group Events Calendar</title> + empty <div id=\"root\">",
+      "why": "The ticket page is a 419-byte Vite SPA shell; all event text (title, date, venue, tiers) arrives from GET /api/public/ticket-events/<slug> at runtime. A static crawl reaches the page (the 2026-09-07 page cache holds exactly this shell for this URL, and the 2026-09-09 run produced 0 events in 18 ms) and finds nothing to extract. Not an event, and not a reason to record 'publishes nothing' — the JSON door one hop away has the event.",
+      "evidence": {
+        "url": "https://tickets.taverngroupevents.com/halloween-cubhouse-cc3842e7",
+        "quote": "<title>The Tavern Group Events Calendar</title>"
+      },
+      "expect": { "extracted": false, "kept": null },
+      "seenInRun": "20260909-072307"
+    },
+    {
+      "id": "halloween-cubhouse-oct-31-2am-rollover",
+      "kind": "duplicate-listing",
+      "label": "\"Sat, Oct 31, 2:00 AM\" — the same Halloween Cubhouse rendered in a non-Eastern browser zone",
+      "why": "The ticket page formats start_at in the viewer's zone with no timezone label and no year. Rendered from a Europe/Madrid machine it reads \"Sat, Oct 31, 2:00 AM\" (and \"Sales close Sat, Oct 31, 7:00 AM\"); rendered in America/New_York the identical DOM reads \"Fri, Oct 30, 9:00 PM\". Both strings are one instant, 2026-10-31T01:00Z. A record dated 2026-10-31 at 02:00 would be the same event mis-dated, not a second event — it must fold into halloween-cubhouse-2026-10-30.",
+      "evidence": {
+        "url": "https://tickets.taverngroupevents.com/halloween-cubhouse-cc3842e7",
+        "quote": "Sat, Oct 31, 2:00 AM"
+      },
+      "expect": { "extracted": false, "kept": null },
+      "seenInRun": null
+    },
+    {
+      "id": "ticket-tiers",
+      "kind": "ticket-tier",
+      "label": "\"Tonight Only\" / \"Advance\" / \"General Admission\" rows under \"Choose Tickets\"",
+      "why": "Three ticket types for the one event, each with its own price, description and sales window (Tonight Only: \"This ticket is only for purchase at the previous Cubhouse event\", closed 2026-08-29; Advance: \"Presale tickets\", sold out; General Admission $30.00, sales close 2026-10-31 06:00Z). \"Tonight Only\" in particular reads like a separate same-day event and references the PREVIOUS party. They are price tiers of halloween-cubhouse-2026-10-30, never events.",
+      "evidence": {
+        "url": "https://tickets.taverngroupevents.com/halloween-cubhouse-cc3842e7",
+        "quote": "This ticket is only for purchase at the previous Cubhouse event"
+      },
+      "expect": { "extracted": false, "kept": null },
+      "seenInRun": null
+    },
+    {
+      "id": "venue-254-header",
+      "kind": "venue-header",
+      "label": "\"254 Philadelphia / 254 S 12th Street · Philly\" masthead and the \"254 is a queer space where everyone deserves to feel safe, seen, and celebrated\" house blurb",
+      "why": "Venue chrome shared by every Tavern Group ticket page: the venue name, address, logo (the only image on the page) and welcome statement. It supplies bar/address for the event but is not itself an event; the page <title> is likewise the platform name, not the event title.",
+      "evidence": {
+        "url": "https://tickets.taverngroupevents.com/halloween-cubhouse-cc3842e7",
+        "quote": "254 S 12th Street · Philly"
+      },
+      "expect": { "extracted": false, "kept": null },
+      "seenInRun": null
+    },
+    {
+      "id": "internal-ops-calendar-cubhouse-dec-18-idea",
+      "kind": "out-of-config-scope",
+      "label": "Internal /api/events rows: \"Cubhouse\" 2026-12-19T02:00Z status IDEA (Fri Dec 18 9 PM ET) and \"Cubhouse\" 2026-08-29T01:00Z (past Aug 28 party)",
+      "why": "GET /api/events on the ticket platform is the venue group's private ops calendar (1393 rows of IDEA/PENDING/BOOKED plans for all Tavern Group venues) served without authentication. It is not linked from the Linktree or the ticket page and is outside the parser's crawl. The Dec 18 row is status IDEA with no public slug, no ticket page and no public announcement — an internal tentative plan, not a published event; the Aug 28 row is already past. Neither should be extracted from this source; if the Dec 18 date is later published it will appear as a new Linktree ticket link.",
+      "evidence": {
+        "url": "https://tickets.taverngroupevents.com/api/events?limit=5000&excludeStatus=COMPLETED,CANCELED",
+        "jsonPath": "$[556]"
+      },
+      "expect": { "extracted": false, "kept": null },
+      "seenInRun": null
+    },
+    {
+      "id": "platform-root-sign-in",
+      "kind": "navigation",
+      "label": "https://tickets.taverngroupevents.com/ — \"Event Calendar / Sign in to your account / Username / PIN\"",
+      "why": "The ticket platform's root (and its /calendar, /events routes in the bundle) is a staff login for The Tavern Group's back office, not a public listing. A crawler climbing from the event slug to the host root finds a sign-in form, not more events; there is also no public list endpoint (/api/public/ticket-events → 404).",
+      "evidence": {
+        "url": "https://tickets.taverngroupevents.com/",
+        "quote": "Sign in to your account"
+      },
+      "expect": { "extracted": false, "kept": null },
+      "seenInRun": null
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "The crawl already reaches the ticket page (page cache 2026-09-07) but receives the 419-byte SPA shell. The event is only available from GET /api/public/ticket-events/<slug> (unauthenticated JSON with ISO instants) or a rendered DOM. Should the parser learn the tickets.taverngroupevents.com JSON door (slug → /api/public/ticket-events/<slug>) the way it learns other ticketing platforms' APIs?",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    },
+    {
+      "q": "Timezone rollover: the ticket page prints no year and no timezone; the displayed date depends on the renderer's zone (Oct 30 9 PM in ET, Oct 31 2 AM in CEST). If the scraper ever renders this page, which zone does its WebView use, and does it prefer the feed's +00 instant over the rendered text?",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    },
+    {
+      "q": "The Linktree has no Instagram/social links (socialLinks: []). Cubhouse's Instagram, if any, was not discoverable from the configured source and was not searched for outside it.",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    }
+  ],
+  "recheckAfter": "2026-10-31"
 }

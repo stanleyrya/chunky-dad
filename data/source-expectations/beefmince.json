@@ -2,25 +2,782 @@
   "schemaVersion": 1,
   "source": "BEEFMINCE",
   "slug": "beefmince",
-  "status": "not-started",
+  "status": "complete",
   "recon": {
-    "date": null,
-    "method": [],
-    "parserUrlsAtRecon": null,
-    "doors": [],
-    "notes": null
+    "date": "2026-09-10",
+    "method": ["feed", "static", "rendered", "flyer"],
+    "parserUrlsAtRecon": ["https://beefmince.com/events"],
+    "doors": [
+      {
+        "url": "https://beefmince.com/events",
+        "kind": "astro-zyrosite-static-html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Static curl with a Chrome UA, HTTP 200, 143927 bytes (events-static.html / .txt). The page body carries NO event rows: the text-stripped page is the nav, 'ALL EVENTS', a 'FIND TICKETS' button and the footer (393 chars). Events live in a DICE widget whose config sits double-HTML-escaped inside the Astro island payload: DiceEventListWidget.create({\"partnerId\":\"JKRM6GMD\",\"apiKey\":\"Fn3x3dqtPJ38bEdT9OOwzJ9S3VEhzqr5w6LNXTkcy4NLoRBY\",\"promoters\":[\"BEEFMINCE\"],\"layout\":\"list\",\"hidePostponed\":false,\"hideCancelled\":false,\"version\":2}) loading https://widgets.dice.fm/dice-event-list-widget.js. html.unescape() twice exposes it. Social links on every page: https://www.instagram.com/beefmince_club and https://www.facebook.com/beefmince."
+      },
+      {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[promoters][]=BEEFMINCE",
+        "kind": "dice-partners-api-v2",
+        "role": "feed",
+        "rowsReturned": 14,
+        "truthFlag": "links.next: null (links.self = https://events-api.dice.fm/api/v2/events?filter[promoters][]=BEEFMINCE&page[size]=100&types=linkout%2Cevent); no meta block",
+        "note": "GET with header x-api-key = the widget's apiKey; HTTP 200, 40282 bytes, saved as dice-feed-p1.json. data[] has 14 rows, 8 type 'event' (DICE-ticketed, url = link.dice.fm short link, perm_name, ticket_types, venues[].city) and 6 type 'linkout' (linkout_type 'external', external_url, price in minor units, empty ticket_types). Row fields used: date/date_end (ISO Z), timezone, name, venue/venues[]/cities[], address, location.lat/lng, description, images[]/event_images. Sorted by date ascending; row 0 is dated 2026-09-10T00:00:00Z, so nothing past is served. A probe with &filter[title]=SPOOKMINCE returned the same 14 rows (the filter is ignored), saved as dice-feed-spookmince-probe.json."
+      },
+      {
+        "url": "https://beefmince.com/events",
+        "kind": "headless-chrome-dump-dom",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Two runs (--virtual-time-budget 15000 then 40000; rendered.html / rendered2.html, both 152273 bytes). The Astro island never hydrated the embed: the DiceEventListWidget.create payload is still an escaped string in the dumped DOM, there is no unescaped id=\"dice-event-list-widget\" div, no link.dice.fm anchors, and the cookie banner text ('We use cookies ... Accept all Reject all') is the only client-side addition. widgets.dice.fm/dice-event-list-widget.js answers 403 to curl. The rendered rung therefore reconciles nothing here; the feed is the only machine door on this host."
+      },
+      {
+        "url": "https://dice.fm/promoters/beefmince-3oorg",
+        "kind": "dice-promoter-page",
+        "role": "listing",
+        "rowsReturned": 8,
+        "truthFlag": "'All events' list; no pagination control",
+        "note": "Static HTML, 300762 bytes, __NEXT_DATA__ saved as dice-promoter-nextdata.json. Lists exactly the 8 type 'event' feed rows (dice.fm/event/<id> links for all 8 ids) with date, venue, city and price: 'BEEFMINCE Brief Encounter Sat 19 Sept The Royal Vauxhall Tavern London £12 ... BOATMINCE Sun, 29 Aug 2027 Westminster Pier London £28'. The 6 'linkout' rows (4 Sitges nights, Welly Takeover, Butlin's) do NOT appear here: the delta between 14 and 8 is exactly the linkout type, which DICE does not ticket."
+      },
+      {
+        "url": "https://dice.fm/event/69eb2e32295a1a00015700e2",
+        "kind": "dice-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Redirects to /event/yoepxa-beefmince-brief-encounter-19th-sep-the-royal-vauxhall-tavern-london-tickets. JSON-LD Event startDate 2026-09-19T22:00:00+01:00, endDate 2026-09-20T04:00:00+01:00, EventScheduled; page text 'Sat 19 Sept, 10:00 pm Party London £12'. Confirms the feed's 21:00Z = 22:00 BST."
+      },
+      {
+        "url": "https://dice.fm/event/69c967df774cca00016166ff",
+        "kind": "dice-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "JSON-LD 2026-09-26T22:00:00+01:00 to 2026-09-27T04:00:00+01:00, Eden; text 'Sat 26 Sept, 10:00 pm Party Birmingham £12'."
+      },
+      {
+        "url": "https://dice.fm/event/69eb2e36295a1a0001a33e75",
+        "kind": "dice-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "JSON-LD 2026-10-17T22:00:00+01:00 to 2026-10-18T04:00:00+01:00, The Royal Vauxhall Tavern; text 'Sat 17 Oct, 10:00 pm Party London From £10'."
+      },
+      {
+        "url": "https://dice.fm/event/69eb2e7c150f1300016875a1",
+        "kind": "dice-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "JSON-LD 2026-11-21T22:00:00+00:00 to 2026-11-22T04:00:00+00:00 (GMT), The Royal Vauxhall Tavern; text 'Sat 21 Nov, 10:00 pm Party London From £10'."
+      },
+      {
+        "url": "https://dice.fm/event/6a58e12631479c000144fde1",
+        "kind": "dice-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "JSON-LD 2026-12-05T23:00:00+00:00 to 2026-12-06T04:00:00+00:00, Concorde 2; text 'Sat 5 Dec, 11:00 pm Party Brighton £12'. Feed status 'announced', sale_start_date 2026-10-01T19:00:00Z."
+      },
+      {
+        "url": "https://dice.fm/event/6a58e45e0e9092000107dd6d",
+        "kind": "dice-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "JSON-LD 2026-12-19T22:00:00+00:00 to 2026-12-20T04:00:00+00:00, The Royal Vauxhall Tavern; text 'Sat 19 Dec, 10:00 pm Party London £10'."
+      },
+      {
+        "url": "https://dice.fm/event/6a6a1d29da64290001f21c79",
+        "kind": "dice-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "JSON-LD 2026-12-31T22:00:00+00:00 to 2027-01-01T05:00:00+00:00, location name 'Venue TBA, London'; text 'Thu 31 Dec, 10:00 pm Party London £17'. Feed status 'announced', sale_start_date 2026-11-04T20:00:00Z."
+      },
+      {
+        "url": "https://dice.fm/event/6a9af4bf83ecd90001bda663",
+        "kind": "dice-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "JSON-LD 2027-08-29T12:15:00+01:00 to 2027-08-29T17:00:00+01:00, Westminster Pier; text 'Sun, 29 Aug 2027, 12:15 pm Party London £28'. Feed status 'announced', announced 2026-09-04, sale_start_date 2027-04-01T19:00:00Z."
+      },
+      {
+        "url": "https://beefmince.com/sitges",
+        "kind": "zyrosite-static-page",
+        "role": "listing",
+        "rowsReturned": 4,
+        "truthFlag": null,
+        "note": "Nav item 'Sitges'. Four blurbs each with a 'Get Tickets' button linking to the four sitgesbearcave.com/event/... pages that the feed's Sitges linkouts also point at, plus the venue block: 'The Bear Cave (Club Mambo) is located at Carrer Bonaire, 12' and 'BEEFMINCE Sitges is open Wednesday 9 - Saturday 12 September from 01:00 until 06:00.' No year on the page (the year comes from the feed ISO dates and the sitgesbearcave JSON-LD)."
+      },
+      {
+        "url": "https://beefmince.com/sitges-bear-week-2026",
+        "kind": "zyrosite-news-post",
+        "role": "listing",
+        "rowsReturned": 4,
+        "truthFlag": null,
+        "note": "News post dated 7/21/2026: per-night blurbs (Wednesday MEET MARKET, Thursday DISCO, Friday SPORTS ZONE, Saturday THE BIG BALL), each 'Doors open 01:00', 'takeover of the town's biggest club, THE BEAR CAVE from Wednesday 9 until Saturday 13 September'. Buttons link to https://sitgesbearcave.com/ (root), not the event pages."
+      },
+      {
+        "url": "https://sitgesbearcave.com/event/wednesday-beefmince-meet-market/",
+        "kind": "the-events-calendar-page",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Linkout destination (foreign host). JSON-LD Event 'Wednesday 9th September – BEEFMINCE MEET MARKET' startDate 2026-09-10T01:00:00+02:00, endDate 2026-09-10T18:00:00+02:00 (their end is a typo, the text says '1:00 am - 6:00 pm' / 'Doors open 01:00'), location The Bear Cave, 'Calle Bonaire, 12, 08870, Sitges', 20,00€."
+      },
+      {
+        "url": "https://sitgesbearcave.com/event/thursday-beefmince-disco/",
+        "kind": "the-events-calendar-page",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "JSON-LD 'Thursday 10th September – BEEFMINCE DISCO' 2026-09-11T01:00:00+02:00 to 2026-09-11T18:00:00+02:00 (same pm typo), The Bear Cave, 20,00€."
+      },
+      {
+        "url": "https://sitgesbearcave.com/event/friday-beefmince-sports-zone/",
+        "kind": "the-events-calendar-page",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "JSON-LD 'Friday 11th September – BEEFMINCE SPORTS ZONE' 2026-09-12T01:00:00+02:00 to 2026-09-12T06:00:00+02:00, The Bear Cave, 'September 12 @ 1:00 am - 6:00 am - 20,00€'."
+      },
+      {
+        "url": "https://sitgesbearcave.com/event/saturday-beefmince-the-big-ball/",
+        "kind": "the-events-calendar-page",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "JSON-LD 'Saturday 12th September – BEEFMINCE: THE BIG BALL' 2026-09-13T01:00:00+02:00 to 2026-09-13T06:00:00+02:00, The Bear Cave, 'September 13 @ 1:00 am - 6:00 am - 25,00€'."
+      },
+      {
+        "url": "https://www.dukeofwellingtonsoho.co.uk/london/events",
+        "kind": "venue-events-listing",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Linkout destination for the Welly Takeover row. Under 'Featured Events': 'Beef Mince Take over Saturday 26th September 18:00 - 01:00 Live music at Duke Of Wellington London!' (no year on the page). The same listing carries the venue's own weekly bear nights (FURSDAY, Bear watch) which are not BEEFMINCE events."
+      },
+      {
+        "url": "https://www.butlins.com/bigweekenders/weekends/dont-tell-mama/bognor-regis-290127",
+        "kind": "butlins-weekender-page",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Linkout destination for the Don't Tell Mama row (feed external_url adds #headliners). Page text 'Dont Tell Mama LGBTQ Weekender 29 January - 01 February 2027 Bognor Regis'; BeefMince appears in the headliner list ('Freemasons with Russell Small, BeefMince, Nadine Coyle'). No BEEFMINCE-specific slot time is published."
+      },
+      {
+        "url": "https://link.dice.fm/u3a1e11c1807",
+        "kind": "dice-short-link",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "The homepage 'Underwear Party Tickets' button. Resolves to dice.fm/partner/tickets/event/yoepxa-beefmince-brief-encounter-19th-sep-... (JSON-LD 2026-09-19T22:00:00+01:00) — the same Brief Encounter event as feed row 4 / link.dice.fm/P0194faadd01."
+      },
+      {
+        "url": "https://link.dice.fm/Lf9c79a746da",
+        "kind": "dice-short-link",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "The /manchester page's 'Manchester Tickets' button. Resolves to dice.fm/partner/tickets/event/oevlxr-beefmince-x-manchester-23rd-may-area-manchester-manchester-tickets, JSON-LD 'BEEFMINCE x Manchester' 2026-05-23T22:00:00+01:00 at Area Manchester — a PAST event, absent from the feed."
+      },
+      {
+        "url": "https://link.dice.fm/Gffadd9feb4a",
+        "kind": "dice-short-link",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "The ticket link The Bear Calendar publishes for 'SPOOKMINCE' 2026-10-31. Resolves to dice.fm/event/v3x3n7 which answers HTTP 404 ('This page could not be found'); the feed has no Halloween row. Not a BEEFMINCE-published event on 2026-09-10."
+      },
+      {
+        "url": "https://beefmince.com/sitemap.xml",
+        "kind": "sitemap",
+        "role": "sitemap",
+        "rowsReturned": 39,
+        "truthFlag": null,
+        "note": "39 URLs: /events, /sitges, /venues, /manchester, /boatmince, /news, /gallery, /about, /faq, /guest, /sport, /shop + 13 product pages, and 12 news posts (sitges-bear-week-2026 is the only one describing current events; the rest are 2025 or undated announcements). No per-event pages exist on beefmince.com."
+      },
+      {
+        "url": "https://beefmince.com",
+        "kind": "zyrosite-static-page",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Homepage: brand copy ('regular parties in London, Brighton, Manchester, Birmingham & Sitges, Spain'), a 'COMING UP' heading with 'Underwear Party Tickets' (link.dice.fm/u3a1e11c1807 = Brief Encounter), shop and news teasers. Not in the parser's urls."
+      },
+      {
+        "url": "https://beefmince.com/manchester",
+        "kind": "zyrosite-news-post",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Post dated 3/11/2026, 'Get ready for a Big Beefy Manchester blow out!', one 'Manchester Tickets' button to the past 23 May 2026 Area Manchester event. No upcoming Manchester date is published anywhere on the site or in the feed."
+      },
+      {
+        "url": "https://beefmince.com/venues",
+        "kind": "zyrosite-static-page",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Six venue cards with street addresses (RVT, The Clapham Grand, The Steel Yard, Concorde 2, Eden, Area Manchester) and a 'NEXT EVENTS BRIGHTON BIRMINGHAM MANCHESTER' strip. Venue directory, no dates."
+      },
+      {
+        "url": "https://beefmince.com/boatmince",
+        "kind": "zyrosite-static-page",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "'BOATMINCE 2026 Boarding Info' page reading 'BOATMINCE 2026 SUNDAY 30 AUGUST' — the 2026 sailing (past on the recon date); the feed's BOATMINCE row is 2027-08-29."
+      },
+      {
+        "url": "https://beefmince.com/news",
+        "kind": "zyrosite-news-index",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "'BEEFY NEWS 1 2' — the post cards are client-rendered; the posts themselves were read from the sitemap (pages/*.txt)."
+      }
+    ],
+    "notes": "Parser config at recon: name BEEFMINCE, urls [https://beefmince.com/events], no urlDiscoveryDepth / maxAdditionalUrls / discoveryAllowedPatterns / discoveryBlockedPatterns / alwaysBear / siteRole / automationEnabled set (all defaults; adaptive crawling). Platform: Astro/Zyrosite (Hostinger) static page embedding the DICE Event List Widget, confirmed by the working partners-endpoint.dice.fm/api/v2 call using the page's own partnerId JKRM6GMD + apiKey; /api/v1 was not tried (brief: 404).\nTime semantics: feed date/date_end are true instants (Z). The 8 'event' rows and the Welly linkout carry timezone Europe/London and convert cleanly (22:00 BST/GMT starts; the dice.fm event pages print the same wall-clock). The 4 Sitges linkouts carry timezone Africa/Algiers (x3) and Africa/Tunis (x1), both UTC+1 year-round, so their 00:00Z start is 01:00 in that zone but 02:00 in Europe/Madrid; beefmince.com/sitges ('from 01:00 until 06:00'), the news post ('Doors open 01:00') and the sitgesbearcave JSON-LD (01:00+02:00) all say 01:00, so this file records 01:00 Europe/Madrid and treats the feed instant as one hour off. The Butlin's linkout carries timezone Europe/Rome with 17:00Z-17:00Z three days apart; only the date range is trusted.\nDate-in-name trap: the Sitges row names say 'Wednesday 9 Sept' etc. (the party night) while the ISO date is the following calendar day (01:00 on the 10th). startDate here is the calendar date of the 01:00 start, matching the sitgesbearcave JSON-LD.\nRun 20260909-072307 (parserResults BEEFMINCE, parserType ai-web, urlClassifications {https://beefmince.com/events: multi-event-page}): totalEvents 21, duplicatesRemoved 9, 12 kept, 0 bear-dropped. The 12 = the 8 DICE 'event' rows (ticketUrl = dice.fm/event/<slug> canonical pages, website https://beefmince.com) + the 4 Sitges nights (from the sitgesbearcave.com pages: title 'BEEFMINCE MEET MARKET' etc., bar The Bear Cave, startDate 2026-09-09T23:00:00.000Z = 01:00 Madrid on the 10th, correct). The 9 duplicates are the same events reached twice (widget row vs promoter page / linkout destination). Missing from the run: the Welly Takeover (2026-09-26 linkout) and the Butlin's Don't Tell Mama linkout (2027-01-29).\nThe Bear Calendar (data/source-expectations/the-bear-calendar.json) republishes 8 BEEFMINCE rows (belongsToSource BEEFMINCE) — theirs to tag, not this file's. 7 of the 8 map onto feed rows (its 'BEEFMINCE x RVT' 2026-09-19 row is the Brief Encounter event: same link.dice.fm/P0194faadd01); its 8th, SPOOKMINCE 2026-10-31 (link.dice.fm/Gffadd9feb4a), is a DICE 404 and absent from the BEEFMINCE feed on 2026-09-10.\nNo events are flyer-only: all 13 distinct DICE images (flyers/) are brand art; only the Welly flyer carries a date ('saturday 26 september') and it agrees with the feed."
+  },
+  "defaults": {
+    "website": "https://beefmince.com",
+    "instagram": "https://www.instagram.com/beefmince_club",
+    "facebook": "https://www.facebook.com/beefmince"
   },
   "coverage": {
-    "confidence": null,
-    "basis": null,
-    "publishedEventCount": null,
-    "documentedEventCount": 0,
-    "occurrenceWindow": null,
-    "pastListingsPresent": null,
+    "confidence": "high",
+    "basis": "publishedEventCount 14 = the DICE partners feed the /events widget is configured with (links.next null, 14 rows: 8 type event + 6 type linkout). Second door dice.fm/promoters/beefmince-3oorg lists 8 = exactly the type-event rows; the 6-row delta is the linkout type, which DICE does not ticket and does not list on promoter pages. Third door beefmince.com/sitges lists the same 4 Sitges nights the feed's Sitges linkouts point at (same sitgesbearcave.com URLs). The rendered /events DOM contributed 0 rows (island never hydrated under --dump-dom) and is not a reconciliation door. Every row is a dated single; the RVT residency is published as discrete dated rows with no stated rule ('*Now on Saturdays*' is not a schedule), so no series entry exists. Past listings: the feed serves none (row 0 is today's 01:00 Sitges night); beefmince.com news posts and /manchester + /boatmince link 4 past DICE events (12 Apr Eden, 8 Mar Concorde 2, 23 May Area Manchester, 30 Aug BOATMINCE 2026) — counted as traps, not enumerated.",
+    "publishedEventCount": 14,
+    "documentedEventCount": 14,
+    "occurrenceWindow": { "start": "2026-09-10", "end": "2026-12-09" },
+    "pastListingsPresent": false,
     "knownGaps": []
   },
-  "defaults": {},
-  "events": [],
-  "traps": [],
-  "openQuestions": []
+  "events": [
+    {
+      "id": "beefmince-sitges-meet-market-2026-09-10",
+      "kind": "single",
+      "title": "BEEFMINCE Sitges - Meet Market | Wednesday 9 Sept",
+      "bar": "The Bear Cave",
+      "address": "Carrer Bonaire, 12, 08870 Sitges",
+      "location": null,
+      "city": "sitges",
+      "timezone": "Europe/Madrid",
+      "startDate": "2026-09-10",
+      "startTime": "01:00",
+      "endDate": "2026-09-10",
+      "endTime": "06:00",
+      "website": "https://beefmince.com/sitges",
+      "ticketUrl": "https://sitgesbearcave.com/event/wednesday-beefmince-meet-market/",
+      "image": "https://dice-media.imgix.net/attachments/2026-07-16/bf8aa44f-532a-4be6-aaa6-9884ee6d0266.jpg",
+      "sourceRung": "feed",
+      "confidence": "ambiguous",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[promoters][]=BEEFMINCE",
+        "jsonPath": "$.data[0]",
+        "quote": "BEEFMINCE Sitges - Meet Market | Wednesday 9 Sept"
+      },
+      "expect": { "extracted": true },
+      "bearVerdict": null,
+      "note": "type linkout, external_url = the sitgesbearcave.com page, price 2000 EUR (20,00€), no venue/city/location on the row (all empty). Wall-clock is ambiguous by one hour: feed date 2026-09-10T00:00:00Z with timezone Africa/Algiers (= 01:00 there, 02:00 Europe/Madrid) vs beefmince.com/sitges 'BEEFMINCE Sitges is open Wednesday 9 - Saturday 12 September from 01:00 until 06:00.' and sitgesbearcave JSON-LD 2026-09-10T01:00:00+02:00. 01:00 recorded (three site statements over one mis-zoned feed instant). The row NAME says Wednesday 9 Sept (the party night); the calendar date of the 01:00 start is the 10th. Run 20260909-072307 returned it as 'BEEFMINCE MEET MARKET' at The Bear Cave, 2026-09-09T23:00:00.000Z."
+    },
+    {
+      "id": "beefmince-sitges-disco-2026-09-11",
+      "kind": "single",
+      "title": "BEEFMINCE Sitges - BEEFMINCE Disco | Thursday 10 Sept",
+      "bar": "The Bear Cave",
+      "address": "Carrer Bonaire, 12, 08870 Sitges",
+      "location": null,
+      "city": "sitges",
+      "timezone": "Europe/Madrid",
+      "startDate": "2026-09-11",
+      "startTime": "01:00",
+      "endDate": "2026-09-11",
+      "endTime": "06:00",
+      "website": "https://beefmince.com/sitges",
+      "ticketUrl": "https://sitgesbearcave.com/event/thursday-beefmince-disco/",
+      "image": "https://dice-media.imgix.net/attachments/2026-07-16/20799e35-0eba-41ac-b9ef-ea66d28279c8.jpg",
+      "sourceRung": "feed",
+      "confidence": "ambiguous",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[promoters][]=BEEFMINCE",
+        "jsonPath": "$.data[1]",
+        "quote": "BEEFMINCE Sitges - BEEFMINCE Disco | Thursday 10 Sept"
+      },
+      "expect": { "extracted": true },
+      "bearVerdict": null,
+      "note": "type linkout, price 2000 EUR, timezone Africa/Algiers on the row; same one-hour ambiguity as the Meet Market row, 01:00 recorded from the site text and sitgesbearcave JSON-LD 2026-09-11T01:00:00+02:00. Run 20260909-072307 returned it as 'BEEFMINCE DISCO'."
+    },
+    {
+      "id": "beefmince-sitges-sports-zone-2026-09-12",
+      "kind": "single",
+      "title": "BEEFMINCE Sitges - Sports Zone | Friday 11 Sept",
+      "bar": "The Bear Cave",
+      "address": "Carrer Bonaire, 12, 08870 Sitges",
+      "location": null,
+      "city": "sitges",
+      "timezone": "Europe/Madrid",
+      "startDate": "2026-09-12",
+      "startTime": "01:00",
+      "endDate": "2026-09-12",
+      "endTime": "06:00",
+      "website": "https://beefmince.com/sitges",
+      "ticketUrl": "https://sitgesbearcave.com/event/friday-beefmince-sports-zone/",
+      "image": "https://dice-media.imgix.net/attachments/2026-07-16/b5572692-5453-4e03-a050-03cad1693d5b.jpg",
+      "sourceRung": "feed",
+      "confidence": "ambiguous",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[promoters][]=BEEFMINCE",
+        "jsonPath": "$.data[2]",
+        "quote": "BEEFMINCE Sitges - Sports Zone | Friday 11 Sept"
+      },
+      "expect": { "extracted": true },
+      "bearVerdict": null,
+      "note": "type linkout, price 2000 EUR, timezone Africa/Tunis on the row (also UTC+1); same one-hour ambiguity, 01:00 recorded ('Whistle blows at 1am and it's game on until 6am.' on beefmince.com/sitges; sitgesbearcave 'September 12 @ 1:00 am - 6:00 am'). Run 20260909-072307 returned it as 'BEEFMINCE SPORTS ZONE'."
+    },
+    {
+      "id": "beefmince-sitges-the-big-ball-2026-09-13",
+      "kind": "single",
+      "title": "BEEFMINCE Sitges - The  Big Ball | Saturday 12 September",
+      "bar": "The Bear Cave",
+      "address": "Carrer Bonaire, 12, 08870 Sitges",
+      "location": null,
+      "city": "sitges",
+      "timezone": "Europe/Madrid",
+      "startDate": "2026-09-13",
+      "startTime": "01:00",
+      "endDate": "2026-09-13",
+      "endTime": "06:00",
+      "website": "https://beefmince.com/sitges",
+      "ticketUrl": "https://sitgesbearcave.com/event/saturday-beefmince-the-big-ball/",
+      "image": "https://dice-media.imgix.net/attachments/2026-07-16/7e0781d9-a0d3-475f-8aa5-68ed2ccd1d95.jpg",
+      "sourceRung": "feed",
+      "confidence": "ambiguous",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[promoters][]=BEEFMINCE",
+        "jsonPath": "$.data[3]",
+        "quote": "BEEFMINCE Sitges - The  Big Ball | Saturday 12 September"
+      },
+      "expect": { "extracted": true },
+      "bearVerdict": null,
+      "note": "The feed name has a double space in 'The  Big Ball' (kept verbatim). type linkout, price 2500 EUR (25,00€), timezone Africa/Algiers; same one-hour ambiguity, 01:00 recorded (sitgesbearcave 'September 13 @ 1:00 am - 6:00 am - 25,00€'). Run 20260909-072307 returned it as 'BEEFMINCE: THE BIG BALL'."
+    },
+    {
+      "id": "beefmince-brief-encounter-2026-09-19",
+      "kind": "single",
+      "title": "BEEFMINCE Brief Encounter",
+      "bar": "The Royal Vauxhall Tavern",
+      "address": "372 Kennington Ln, London SE11 5HY, UK",
+      "location": "51.4863391, -0.1217784",
+      "city": "london",
+      "timezone": "Europe/London",
+      "startDate": "2026-09-19",
+      "startTime": "22:00",
+      "endDate": "2026-09-20",
+      "endTime": "04:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/P0194faadd01",
+      "image": "https://dice-media.imgix.net/attachments/2026-08-17/6602b147-308f-4a7e-a729-4e903dfb3142.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "sameEventAs": ["the-bear-calendar#beefmince-x-rvt-2026-09-19"],
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[promoters][]=BEEFMINCE",
+        "jsonPath": "$.data[4]",
+        "quote": "beefmince-brief-encounter-19th-sep-the-royal-vauxhall-tavern-london-tickets"
+      },
+      "expect": { "extracted": true },
+      "bearVerdict": null,
+      "note": "type event, status on-sale, General Admission £12.00 (total 1200 incl. 156 fees). Feed 2026-09-19T21:00:00Z-2026-09-20T03:00:00Z = 22:00-04:00 BST (dice.fm page 'Sat 19 Sept, 10:00 pm'). Underwear/jockstrap party ('dress code is minimal'), DJs Jamie Bull & Oxane. The site-wide banner 'NEXT (UK): THE RVT - SATURDAY 19 SEPTEMBER' and the homepage 'Underwear Party Tickets' button (link.dice.fm/u3a1e11c1807) both point at this event. No beefmince.com page of its own. The Bear Calendar lists it under the title 'BEEFMINCE x RVT' with this ticket link. Run 20260909-072307 returned it (ticketUrl dice.fm/event/yoepxa-...)."
+    },
+    {
+      "id": "beefmince-welly-takeover-x-london-bear-pride-2026-09-26",
+      "kind": "single",
+      "title": "BEEFMINCE Welly Takeover x London Bear Pride",
+      "bar": "Duke of Wellington",
+      "address": "77 Wardour Street, London W1D 6QA",
+      "location": "51.512334, -0.133008",
+      "city": "london",
+      "timezone": "Europe/London",
+      "startDate": "2026-09-26",
+      "startTime": "18:00",
+      "endDate": "2026-09-27",
+      "endTime": "01:00",
+      "website": null,
+      "ticketUrl": "https://www.dukeofwellingtonsoho.co.uk/london/events",
+      "image": "https://dice-media.imgix.net/attachments/2026-08-04/c80ea600-67b3-4e80-a995-f3e186408156.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[promoters][]=BEEFMINCE",
+        "jsonPath": "$.data[5]",
+        "quote": "BEEFMINCE Welly Takeover x London Bear Pride"
+      },
+      "expect": { "extracted": true },
+      "bearVerdict": null,
+      "note": "type linkout (external), price 0 (free), timezone Europe/London; feed 2026-09-26T17:00:00Z-2026-09-27T00:00:00Z = 18:00-01:00 BST, matching the venue listing 'Beef Mince Take over Saturday 26th September 18:00 - 01:00' and the flyer 'saturday 26 september / LONDON BEAR PRIDE'. Venue row has venues[].city London and location (W1D 6QA) but no address string; address here is street + zip from location. Same evening as Bear Brum (Birmingham). NOT in run 20260909-072307 and not on the dice.fm promoter page (linkouts are not listed there)."
+    },
+    {
+      "id": "beefmince-x-bear-brum-2026-2026-09-26",
+      "kind": "single",
+      "title": "BEEFMINCE x Bear Brum 2026",
+      "bar": "Eden",
+      "address": "138 Gooch Street, Birmingham, B5 7HF, United Kingdom",
+      "location": "52.46975, -1.89513",
+      "city": "birmingham",
+      "timezone": "Europe/London",
+      "startDate": "2026-09-26",
+      "startTime": "22:00",
+      "endDate": "2026-09-27",
+      "endTime": "04:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/k485cb41bf1e",
+      "image": "https://dice-media.imgix.net/attachments/2026-03-29/7ec0f877-c521-402f-9647-d48e7e765d89.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "sameEventAs": ["the-bear-calendar#beefmince-x-bear-brum-2026-2026-09-26"],
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[promoters][]=BEEFMINCE",
+        "jsonPath": "$.data[6]",
+        "quote": "beefmince-x-bear-brum-2026-26th-sep-eden-birmingham-tickets"
+      },
+      "expect": { "extracted": true },
+      "bearVerdict": null,
+      "note": "type event, status on-sale, Standard Entry £12.00. Feed 2026-09-26T21:00:00Z = 22:00 BST (dice.fm page 'Sat 26 Sept, 10:00 pm Party Birmingham £12'). Headline Saturday party of the Bear Brum weekender; the description's Friday 'Dandy' party is another promoter's event (trap). The beefmince.com 'Birmingham! We're coming!' post links the past 12 Apr Eden event, not this one, so website is null. Run 20260909-072307 returned it."
+    },
+    {
+      "id": "beefmince-x-rvt-2026-10-17",
+      "kind": "single",
+      "title": "BEEFMINCE x RVT",
+      "bar": "The Royal Vauxhall Tavern",
+      "address": "372 Kennington Ln, London SE11 5HY, UK",
+      "location": "51.4863391, -0.1217784",
+      "city": "london",
+      "timezone": "Europe/London",
+      "startDate": "2026-10-17",
+      "startTime": "22:00",
+      "endDate": "2026-10-18",
+      "endTime": "04:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/h5dafbdb7e0b",
+      "image": "https://dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "sameEventAs": ["the-bear-calendar#beefmince-x-rvt-2026-10-17"],
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[promoters][]=BEEFMINCE",
+        "jsonPath": "$.data[7]",
+        "quote": "beefmince-x-rvt-17th-oct-the-royal-vauxhall-tavern-london-tickets"
+      },
+      "expect": { "extracted": true },
+      "bearVerdict": null,
+      "note": "type event, status on-sale, Early Bear £10.00 / General Admission £12.00. Feed 2026-10-17T21:00:00Z = 22:00 BST (dice.fm page 'Sat 17 Oct, 10:00 pm'). Same title, venue and flyer as the 21 Nov row — two distinct DICE events (ids 69eb2e36... and 69eb2e7c...), not a series: the description says '*Now on Saturdays*' and 'every month' in the About page but no rule is published. Run 20260909-072307 returned it."
+    },
+    {
+      "id": "beefmince-x-rvt-2026-11-21",
+      "kind": "single",
+      "title": "BEEFMINCE x RVT",
+      "bar": "The Royal Vauxhall Tavern",
+      "address": "372 Kennington Ln, London SE11 5HY, UK",
+      "location": "51.4863391, -0.1217784",
+      "city": "london",
+      "timezone": "Europe/London",
+      "startDate": "2026-11-21",
+      "startTime": "22:00",
+      "endDate": "2026-11-22",
+      "endTime": "04:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/O71d560e810e",
+      "image": "https://dice-media.imgix.net/attachments/2024-12-17/5e10abb8-c358-44be-8461-889edd0f6e3f.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "sameEventAs": ["the-bear-calendar#beefmince-x-rvt-2026-11-21"],
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[promoters][]=BEEFMINCE",
+        "jsonPath": "$.data[8]",
+        "quote": "beefmince-x-rvt-21st-nov-the-royal-vauxhall-tavern-london-tickets"
+      },
+      "expect": { "extracted": true },
+      "bearVerdict": null,
+      "note": "type event, status on-sale, Early Bear £10.00 / General Admission £12.00. Feed 2026-11-21T22:00:00Z = 22:00 GMT (dice.fm page 'Sat 21 Nov, 10:00 pm'). Shares title/venue/flyer with the 17 Oct row; distinct DICE event. Run 20260909-072307 returned it."
+    },
+    {
+      "id": "beefmince-x-brighton-2026-12-05",
+      "kind": "single",
+      "title": "BEEFMINCE x Brighton",
+      "bar": "Concorde 2",
+      "address": "Madeira Shelter Hall, Madeira Dr, Brighton BN2 1EN",
+      "location": "50.8172448, -0.1225108",
+      "city": "brighton",
+      "timezone": "Europe/London",
+      "startDate": "2026-12-05",
+      "startTime": "23:00",
+      "endDate": "2026-12-06",
+      "endTime": "04:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/sbb728ebef63",
+      "image": "https://dice-media.imgix.net/attachments/2025-01-13/bf6a78f1-f924-41ef-aba7-8e35d4211d38.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "sameEventAs": ["the-bear-calendar#beefmince-x-brighton-2026-12-05"],
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[promoters][]=BEEFMINCE",
+        "jsonPath": "$.data[9]",
+        "quote": "beefmince-x-brighton-5th-dec-concorde-2-brighton-tickets"
+      },
+      "expect": { "extracted": true },
+      "bearVerdict": null,
+      "note": "type event, status 'announced' (sale_start_date 2026-10-01T19:00:00Z), General Admission £12.00. Feed 2026-12-05T23:00:00Z = 23:00 GMT (dice.fm page 'Sat 5 Dec, 11:00 pm Party Brighton £12'). promoters[] lists Concorde 2 AND BEEFMINCE; presented_by 'Presented by BEEFMINCE'. DJ line-up TBC. The beefmince.com 'Brighton just got BEEFY' post links the past 8 Mar Concorde 2 event, so website is null. Run 20260909-072307 returned it."
+    },
+    {
+      "id": "turkeymince-2026-12-19",
+      "kind": "single",
+      "title": "TURKEYMINCE",
+      "bar": "The Royal Vauxhall Tavern",
+      "address": "372 Kennington Ln, London SE11 5HY, UK",
+      "location": "51.4863391, -0.1217784",
+      "city": "london",
+      "timezone": "Europe/London",
+      "startDate": "2026-12-19",
+      "startTime": "22:00",
+      "endDate": "2026-12-20",
+      "endTime": "04:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/ib54468339d0",
+      "image": "https://dice-media.imgix.net/attachments/2025-08-09/0b521d79-1710-420f-b73a-167794d0fd67.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "sameEventAs": ["the-bear-calendar#turkeymince-2026-12-19"],
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[promoters][]=BEEFMINCE",
+        "jsonPath": "$.data[10]",
+        "quote": "turkeymince-19th-dec-the-royal-vauxhall-tavern-london-tickets"
+      },
+      "expect": { "extracted": true },
+      "bearVerdict": null,
+      "note": "type event, status on-sale, General Admission £10.00. Feed 2026-12-19T22:00:00Z = 22:00 GMT (dice.fm page 'Sat 19 Dec, 10:00 pm'). Description: 'our big annual BEEFMINCE Christmas Party on Saturday 19 December!'. Run 20260909-072307 returned it."
+    },
+    {
+      "id": "beefmince-new-years-eve-2026-12-31",
+      "kind": "single",
+      "title": "BEEFMINCE New Year's Eve",
+      "bar": null,
+      "address": null,
+      "location": null,
+      "city": "london",
+      "timezone": "Europe/London",
+      "startDate": "2026-12-31",
+      "startTime": "22:00",
+      "endDate": "2027-01-01",
+      "endTime": "05:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/eb7bb4d25aa0",
+      "image": "https://dice-media.imgix.net/attachments/2026-07-27/ed641899-823f-4fae-b44e-aa9da6c2b795.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "sameEventAs": ["the-bear-calendar#beefmince-new-year-s-eve-2026-12-31"],
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[promoters][]=BEEFMINCE",
+        "jsonPath": "$.data[11]",
+        "quote": "beefmince-new-years-eve-31st-dec-venue-tba-london-london-tickets"
+      },
+      "expect": { "extracted": true },
+      "bearVerdict": null,
+      "note": "type event, status 'announced' (sale_start_date 2026-11-04T20:00:00Z), General Admission £17.00. Feed 2026-12-31T22:00:00Z-2027-01-01T05:00:00Z = 22:00-05:00 GMT. The DICE venue field is the stand-in 'Venue TBA, London' (venue id 3471), address 'London, UK', lat/lng the London centroid (51.5073509, -0.1277583) — recorded as bar/address/location null because no real venue is published. Description 'BEEFMINCE New Year's Eve - more info soon.' Run 20260909-072307 returned it with bar null."
+    },
+    {
+      "id": "beefmince-x-dont-tell-mama-butlins-bognor-regis-2027-01-29",
+      "kind": "single",
+      "title": "BEEFMINCE x Don't Tell Mama - Butlin's Bognor Regis",
+      "bar": "Butlin's Bognor Regis",
+      "address": null,
+      "location": null,
+      "city": null,
+      "timezone": "Europe/London",
+      "startDate": "2027-01-29",
+      "startTime": null,
+      "endDate": "2027-02-01",
+      "endTime": null,
+      "website": null,
+      "ticketUrl": "https://www.butlins.com/bigweekenders/weekends/dont-tell-mama/bognor-regis-290127#headliners",
+      "image": "https://dice-media.imgix.net/attachments/2025-03-21/2ac67309-e3fd-429e-9d42-ff640a41a0e9.jpg",
+      "sourceRung": "feed",
+      "confidence": "ambiguous",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[promoters][]=BEEFMINCE",
+        "jsonPath": "$.data[12]",
+        "quote": "BEEFMINCE x Don't Tell Mama - Butlin's Bognor Regis"
+      },
+      "expect": { "extracted": true },
+      "bearVerdict": null,
+      "note": "type linkout (external), is_multi_days_event true, price 11500 GBP (£115), timezone Europe/Rome on the row with date 2027-01-29T17:00:00Z and date_end 2027-02-01T17:00:00Z. Only the date range is trusted: Butlin's publishes 'Dont Tell Mama LGBTQ Weekender 29 January - 01 February 2027 Bognor Regis' and lists BeefMince among the headliners without a slot time, so startTime/endTime are null and confidence is ambiguous (the feed's 17:00Z could be an 18:00 Rome-zone entry or a 17:00 London one). Bognor Regis has no scraper-cities key (city null, see openQuestions); no venue row/address/coordinates on the feed row. Butlin's is the ticket seller. NOT in run 20260909-072307."
+    },
+    {
+      "id": "boatmince-2027-08-29",
+      "kind": "single",
+      "title": "BOATMINCE",
+      "bar": "Westminster Pier",
+      "address": "Victoria Embankment, London, UK",
+      "location": "51.5099822, -0.117819",
+      "city": "london",
+      "timezone": "Europe/London",
+      "startDate": "2027-08-29",
+      "startTime": "12:15",
+      "endDate": "2027-08-29",
+      "endTime": "17:00",
+      "website": null,
+      "ticketUrl": "https://link.dice.fm/r44ae9f11835",
+      "image": "https://dice-media.imgix.net/attachments/2025-01-15/aa1288a2-6cf8-4c42-8c29-581b1cfe5ba2.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[promoters][]=BEEFMINCE",
+        "jsonPath": "$.data[13]",
+        "quote": "boatmince-29th-aug-westminster-pier-london-tickets"
+      },
+      "expect": { "extracted": true },
+      "bearVerdict": null,
+      "note": "type event, status 'announced' (announced 2026-09-04, sale_start_date 2027-04-01T19:00:00Z), Standard Sailor £28.00. Feed 2027-08-29T11:15:00Z-16:00:00Z = 12:15-17:00 BST (dice.fm page 'Sun, 29 Aug 2027, 12:15 pm'; description 'We board The Jewel of London 12:15pm sharp from the Westminster Pier' / 'disembark at 5pm'). Almost a year out — a single, so documented. beefmince.com/boatmince is the 2026 sailing's boarding page ('BOATMINCE 2026 SUNDAY 30 AUGUST'), not this event, so website is null. Run 20260909-072307 returned it."
+    }
+  ],
+  "traps": [
+    {
+      "id": "next-banner-nav",
+      "label": "Site-wide header banner 'NEXT (UK): THE RVT - SATURDAY 19 SEPTEMBER' on every beefmince.com page",
+      "kind": "navigation",
+      "why": "A nav strip pointing at the next UK party (Brief Encounter, 19 Sept). It is not a separate event: read as its own record it would create a second 'THE RVT' event on 2026-09-19 with no time, duplicating beefmince-brief-encounter-2026-09-19, and it carries no year.",
+      "evidence": { "url": "https://beefmince.com/events", "quote": "NEXT (UK): THE RVT - SATURDAY 19 SEPTEMBER" },
+      "expect": { "extracted": false },
+      "seenInRun": null
+    },
+    {
+      "id": "homepage-underwear-party-button",
+      "label": "Homepage 'COMING UP' block with an 'Underwear Party Tickets' button",
+      "kind": "duplicate-listing",
+      "why": "The button's link.dice.fm/u3a1e11c1807 resolves to the same Brief Encounter DICE event as feed row 4 (link.dice.fm/P0194faadd01); a second short link to one event. The homepage is also outside the parser's urls.",
+      "evidence": { "url": "https://beefmince.com", "quote": "Underwear Party Tickets" },
+      "expect": { "extracted": false, "note": "Must not become a second record; the event itself is expected once via the /events widget feed." },
+      "seenInRun": null
+    },
+    {
+      "id": "manchester-page-past-event",
+      "label": "/manchester post 'Get ready for a Big Beefy Manchester blow out!' with a 'Manchester Tickets' button",
+      "kind": "out-of-config-scope",
+      "why": "Not in the parser's urls, and its only link (link.dice.fm/Lf9c79a746da) resolves to 'BEEFMINCE x Manchester' 2026-05-23T22:00:00+01:00 at Area Manchester — a past event that the feed no longer serves. The post itself has no date beyond its 3/11/2026 publish stamp. There is no upcoming Manchester event anywhere on 2026-09-10.",
+      "evidence": { "url": "https://beefmince.com/manchester", "quote": "Get ready for a Big Beefy Manchester blow out!" },
+      "expect": { "extracted": false },
+      "seenInRun": null
+    },
+    {
+      "id": "boatmince-2026-boarding-page",
+      "label": "/boatmince page 'BOATMINCE 2026 SUNDAY 30 AUGUST'",
+      "kind": "past-event",
+      "why": "Boarding-info page for the 2026 sailing (2026-08-30, past on the recon date, no year carried past the heading, no time, no link). Outside the parser's urls. The live BOATMINCE row is the 2027-08-29 DICE event; a reader that pairs this page's '30 AUGUST' with the feed's BOATMINCE would mis-date it.",
+      "evidence": { "url": "https://beefmince.com/boatmince", "quote": "BOATMINCE 2026 SUNDAY 30 AUGUST" },
+      "expect": { "extracted": false },
+      "seenInRun": null
+    },
+    {
+      "id": "news-archive-2025-posts",
+      "label": "News posts under /news and the sitemap: BEACHMINCE (5/1/2025), BOATMINCE 2025 (Sunday 4th May 2025), Brighton Pride 2025, London Pride 2025, Mighty Hoopla 2025, Hoopla Malta, the 10th Birthday save-the-date, 'Birmingham! We're coming!' and 'Brighton just got BEEFY'",
+      "kind": "past-event",
+      "why": "Archive announcements outside the parser's urls. Every dated one is 2025; the Birmingham and Brighton posts carry no date at all but their 'Get Tickets' buttons go to past DICE events (dice.fm/event/nvapy9-beefmince-birmingham-12th-apr-eden-birmingham-tickets and dice.fm/event/oeb6ya-beefmince-brighton-8th-mar-concorde-2-brighton-tickets), so pairing them with the current Bear Brum / Brighton rows would attach the wrong link.",
+      "evidence": { "url": "https://beefmince.com/boatmince-2025", "quote": "BOATMINCE is back for 2025 on May Bank Holiday weekend on Sunday 4th May 2025!" },
+      "expect": { "extracted": false },
+      "seenInRun": null
+    },
+    {
+      "id": "steel-yard-post-no-year",
+      "label": "News post 'Bear clubbing returns to the arches' — 'BEEFMINCE at The Steel Yard | Saturday 1 March', '11pm-5am'",
+      "kind": "past-event",
+      "why": "A full-looking event (venue, weekday, date, hours, DJs, 'Tickets Available Now') with NO year anywhere on the page. The Steel Yard is listed on /venues, but the feed has no Steel Yard row, so the only honest reading is a past March edition; a year-carrying reader would invent 2027-03-01. Outside the parser's urls.",
+      "evidence": { "url": "https://beefmince.com/bear-clubbing-returns-to-the-arches", "quote": "BEEFMINCE at The Steel Yard | Saturday 1 March" },
+      "expect": { "extracted": false },
+      "seenInRun": null
+    },
+    {
+      "id": "venues-directory",
+      "label": "/venues cards: THE ROYAL VAUXHALL TAVERN, THE CLAPHAM GRAND, THE STEEL YARD, CONCORDE 2, EDEN, AREA (Manchester) with addresses and a 'NEXT EVENTS BRIGHTON BIRMINGHAM MANCHESTER' strip",
+      "kind": "venue-header",
+      "why": "A venue directory with street addresses and blurbs ('our host venue for our Big Balls, Halloween parties and New Year's Eve bashes') but no dates. Useful for address harvesting only; The Clapham Grand, The Steel Yard and Area have no upcoming row in the feed.",
+      "evidence": { "url": "https://beefmince.com/venues", "quote": "THE CLAPHAM GRAND 21-25 ST JOHN'S HILL LONDON, SW11 1TT" },
+      "expect": { "extracted": false },
+      "seenInRun": null
+    },
+    {
+      "id": "sitges-linkout-destination-pages",
+      "label": "The four sitgesbearcave.com/event/... pages the Sitges linkouts (and beefmince.com/sitges) point at, each with its own JSON-LD Event",
+      "kind": "duplicate-listing",
+      "why": "Each Sitges night is reachable twice: as a DICE widget linkout row and as a The Events Calendar page on the venue's site (JSON-LD name 'Wednesday 9th September – BEEFMINCE MEET MARKET', startDate 2026-09-10T01:00:00+02:00). Run 20260909-072307 reported totalEvents 21 with duplicatesRemoved 9 and kept one copy of each night, sourced from the sitgesbearcave pages (titles 'BEEFMINCE MEET MARKET' etc.). Two of the four pages also carry a wrong JSON-LD endDate (18:00, a pm typo for 06:00).",
+      "evidence": { "url": "https://sitgesbearcave.com/event/wednesday-beefmince-meet-market/", "quote": "Wednesday 9th September – BEEFMINCE MEET MARKET September 10 @ 1:00 am" },
+      "expect": { "extracted": true, "note": "Correct behaviour is ONE record per night; the duplicate copy must fold into the feed row's event, never survive as a second record." },
+      "seenInRun": "20260909-072307"
+    },
+    {
+      "id": "duke-of-wellington-house-nights",
+      "label": "Other rows on the Welly Takeover linkout page: 'FURSDAY Thursday 10th September 20:00 - 00:00', 'Bear watch Friday 11th September 20:00 - 00:00' (weekly)",
+      "kind": "foreign-programming",
+      "why": "The Duke of Wellington's own weekly bear nights, listed on the same /london/events page the BEEFMINCE linkout targets. They are the venue's programming, not BEEFMINCE's; a crawl following the linkout would import them under this promoter.",
+      "evidence": { "url": "https://www.dukeofwellingtonsoho.co.uk/london/events", "quote": "FURSDAY Thursday 10th September 20:00 - 00:00" },
+      "expect": { "extracted": false },
+      "seenInRun": null
+    },
+    {
+      "id": "bear-brum-friday-dandy",
+      "label": "Bear Brum description: 'following the brilliant Dandy on the Friday' / 'More details about the weekend can be found at bearbrum.com'",
+      "kind": "foreign-programming",
+      "why": "The Bear Brum weekender's Friday party (Dandy) is another promoter's event mentioned inside the BEEFMINCE Saturday row's description. Only the Saturday Eden party is BEEFMINCE's.",
+      "evidence": {
+        "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[promoters][]=BEEFMINCE",
+        "jsonPath": "$.data[6].description",
+        "quote": "following the brilliant Dandy on the Friday"
+      },
+      "expect": { "extracted": false },
+      "seenInRun": null
+    },
+    {
+      "id": "butlins-weekender-lineup",
+      "label": "Butlin's Don't Tell Mama page headliner list: 'Gareth Gates, Jo O'Meara, Freemasons with Russell Small, BeefMince, Nadine Coyle, La Voix, Bimini ...'",
+      "kind": "foreign-programming",
+      "why": "The linkout destination is a three-day festival page; BEEFMINCE is one name in a long headliner roster. The other acts and the weekender's own activities are not BEEFMINCE events, and the page publishes no BEEFMINCE slot time.",
+      "evidence": { "url": "https://www.butlins.com/bigweekenders/weekends/dont-tell-mama/bognor-regis-290127", "quote": "Dont Tell Mama LGBTQ Weekender 29 January - 01 February 2027 Bognor Regis" },
+      "expect": { "extracted": false },
+      "seenInRun": null
+    },
+    {
+      "id": "shop-product-pages",
+      "label": "13 sitemap URLs under /shop: hoodie-oodie, beefy-beanie, beachmince-towel, mens-tank-top, the-club-bag ... and the /gallery page",
+      "kind": "merch",
+      "why": "Merch product pages and a photo gallery; no dates. Outside the parser's urls. Listed so a discovery pass that wanders into the shop is recognised as noise.",
+      "evidence": { "url": "https://beefmince.com/sitemap.xml", "quote": "https://beefmince.com/beachmince-fruit-salad-towel" },
+      "expect": { "extracted": false },
+      "seenInRun": null
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "Bognor Regis (Butlin's Don't Tell Mama, 2027-01-29 to 2027-02-01) has no scripts/scraper-cities key; the event is recorded with city null. Should it map to a UK key (e.g. brighton, 40 km away) or stay unmapped?",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    },
+    {
+      "q": "Sitges linkout instants are one hour later than the site's stated 01:00 (feed timezone Africa/Algiers / Africa/Tunis, UTC+1, vs Europe/Madrid UTC+2 in September). Should the scraper trust the DICE row's own timezone field for wall-clock (giving 01:00) rather than converting the instant to the city zone (02:00)?",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    },
+    {
+      "q": "The Bear Calendar publishes SPOOKMINCE 2026-10-31 (link.dice.fm/Gffadd9feb4a) under organizer BEEFMINCE, but the link is a DICE 404 and the BEEFMINCE feed has no Halloween row on 2026-09-10. Unpublished, cancelled, or not yet re-announced? Nothing on beefmince.com mentions it.",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    },
+    {
+      "q": "Run 20260909-072307 kept 12 of 14 published rows — both misses are non-DICE linkouts (Welly Takeover at Duke of Wellington 2026-09-26, Butlin's 2027-01-29). Does the scraper's DICE path drop type 'linkout' rows without an external JSON-LD page, or did it only reach these via the promoter page (which omits linkouts)?",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    }
+  ]
 }

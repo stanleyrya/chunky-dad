@@ -2,25 +2,253 @@
   "schemaVersion": 1,
   "source": "Megawoof America",
   "slug": "megawoof-america",
-  "status": "not-started",
+  "status": "complete",
   "recon": {
-    "date": null,
-    "method": [],
-    "parserUrlsAtRecon": null,
-    "doors": [],
-    "notes": null
+    "date": "2026-09-10",
+    "method": ["feed", "static", "rendered", "flyer"],
+    "parserUrlsAtRecon": ["https://www.eventbrite.com/o/megawoof-america-18118978189"],
+    "doors": [
+      {
+        "url": "https://www.eventbrite.com/o/megawoof-america-18118978189",
+        "kind": "eventbrite-organizer-next-data",
+        "role": "feed",
+        "rowsReturned": 3,
+        "truthFlag": "hasMoreUpcoming: false; upcomingEventsTotal: 3; organizer.metrics.totalEvents: 106 (lifetime)",
+        "note": "Static curl with a Chrome UA, HTTP 200. Payload is <script id=\"__NEXT_DATA__\"> -> props.pageProps.upcomingEvents[] (saved as organizer.next-data.json). Every row: series_id null, additionalSessionsCount 0, is_cancelled false. Feed quirk: end_date/end_time on every row equal start_date/start_time; the real end times live in the event pages' JSON-LD. primary_venue.address carries latitude/longitude. No pastEvents array in the static payload; the Past tab is client-loaded and /org/<id>/showmore/ 403s."
+      },
+      {
+        "url": "https://www.eventbrite.com/o/megawoof-america-18118978189",
+        "kind": "headless-chrome-dom",
+        "role": "listing",
+        "rowsReturned": 3,
+        "truthFlag": null,
+        "note": "Rendered DOM (organizer.rendered.html) shows the same three cards under Upcoming with 'Sat, Oct 10 • 9:00 PM Jackhammer', 'Fri, Oct 16 • 9:30 PM The Brass Rail', 'Sat, Oct 17 • 9:00 PM 1123 Folsom St' and the header 'total events 106'. The Past tab renders no cards without a click."
+      },
+      {
+        "url": "https://www.eventbrite.com/e/megawoof-chicago-11-year-anniversary-tickets-1999541032053",
+        "kind": "eventbrite-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "JSON-LD SocialEvent: startDate 2026-10-10T21:00:00-05:00, endDate 2026-10-11T05:00:00-05:00, location Jackhammer, 6406 North Clark Street, Chicago, IL 60626. Page text: 'Saturday, October 10-Sunday, October 11 • 9 PM-5 AM'."
+      },
+      {
+        "url": "https://www.eventbrite.com/e/megawoof-san-diego-11-year-anniversary-tour-tickets-1999136625462",
+        "kind": "eventbrite-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "JSON-LD Event: startDate 2026-10-16T21:30:00-07:00, endDate 2026-10-17T02:00:00-07:00, location The Brass Rail, 3796 Fifth Avenue, San Diego, CA 92103. Page text: 'Friday, October 16-Saturday, October 17 • 9:30 PM-2 AM'."
+      },
+      {
+        "url": "https://www.eventbrite.com/e/megawoof-san-francisco-11-year-anniversary-bearrison-weekend-tickets-1999136528171",
+        "kind": "eventbrite-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "JSON-LD SocialEvent: startDate 2026-10-17T21:00:00-07:00, endDate 2026-10-18T02:00:00-07:00, location name '1123 Folsom St' (an address, not a venue name), 1123 Folsom Street, San Francisco, CA 94103. Page text: 'Saturday, October 17-Sunday, October 18 • 9 PM-2 AM'."
+      },
+      {
+        "url": "https://cdn.evbuc.com/images/1192493576/185013722403/1/original.20260902-171905",
+        "kind": "flyer-image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Chicago flyer (PNG 1092x1440): 'CHICAGO • SATURDAY OCTOBER 10TH', 'DJ TIM ARNOLD', 'GOONZ CHICAGO DEBUT!', '9PM - 5AM', '6406 N Clark St. Chicago, IL 60626', JACKHAMMER logo, 'THE HOLE' badge ('FEEL FRISKY DOWNSTAIRS'), mistr sponsor logo. No year printed on the flyer."
+      },
+      {
+        "url": "https://cdn.evbuc.com/images/1192161625/185013722403/1/original.20260829-012623",
+        "kind": "flyer-image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "San Diego flyer (JPEG 3597x4269): 'SAN DIEGO', 'FRIDAY OCT 16TH', '9:30PM-LATE', 'THE BRASS RAIL', '3796 Fifth Ave San Diego, CA 92103', 'Music By GLOVIBES DECODING JESUS', mistr logo. No year printed."
+      },
+      {
+        "url": "https://cdn.evbuc.com/images/1192161573/185013722403/1/original.20260829-012504",
+        "kind": "flyer-image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "San Francisco flyer (JPEG 1540x2048): 'SAN FRANCISCO • SATURDAY OCTOBER 17TH', 'THE SOUNDS OF GLOVIBES SUBEAUX', 'PLAY ROOM ALL NIGHT', 'SUPPORTING 11th ST. BEARRISON STREET FAIR' badge, 'STUD' logo above '1123 FOLSOM ST, SAN FRANCISCO, CA 94103', mistr logo. No time and no year printed. The STUD logo is the only place the venue NAME appears anywhere on the source."
+      }
+    ],
+    "notes": "Eventbrite organizer page, confirmed as a Next.js page by the working __NEXT_DATA__ payload (not by CSS). Megawoof America is an LA-based touring party, so city/timezone/bar/location are set per event from primary_venue.address and no city default is used. The organizer block publishes no website/instagram/facebook (organizer.website etc. are absent from the payload; no linktr.ee/instagram/megawoof domain string appears in any of the four HTMLs), so those defaults are null. The Bear Calendar aggregator republishes these three events; that cross-listing belongs in the-bear-calendar's file, not here. Run 20260909-072307 already returns all three with the right dates and bars (the SF record has no bar)."
   },
   "coverage": {
-    "confidence": null,
-    "basis": null,
-    "publishedEventCount": null,
-    "documentedEventCount": 0,
-    "occurrenceWindow": null,
-    "pastListingsPresent": null,
+    "confidence": "high",
+    "basis": "Feed door (__NEXT_DATA__.props.pageProps): upcomingEvents 3 rows, hasMoreUpcoming false, upcomingEventsTotal 3 — the feed's own completeness flag says there is nothing to page. Second listing door (headless Chrome DOM of the same URL) shows exactly the same three cards. Each of the three event pages was opened and its JSON-LD agrees with the feed row on title, date, start time, venue and address, and adds the end times the feed omits. All three rows have series_id null and additionalSessionsCount 0, so 3 cards = 3 dated singles, no series. Past listings: organizer.metrics.totalEvents is 106 lifetime, so 103 past events exist behind the client-loaded Past tab; they are not in the static payload, the /showmore endpoint 403s, and they are counted here, not enumerated. Three flyers were read and corroborate every date, venue and address (no years printed on any flyer; the year comes from the feed's start_date and JSON-LD).",
+    "publishedEventCount": 3,
+    "documentedEventCount": 3,
+    "occurrenceWindow": { "start": "2026-09-10", "end": "2026-12-09" },
+    "pastListingsPresent": true,
     "knownGaps": []
   },
-  "defaults": {},
-  "events": [],
-  "traps": [],
-  "openQuestions": []
+  "defaults": {
+    "website": null,
+    "instagram": null,
+    "facebook": null
+  },
+  "events": [
+    {
+      "id": "megawoof-chicago-11-year-anniversary-2026-10-10",
+      "kind": "single",
+      "title": "MEGAWOOF - CHICAGO - 11 YEAR ANNIVERSARY",
+      "description": "🐻 CHICAGO, WE’RE BACK! 🐻 MEGAWOOF AMERICA returns to JACKHAMMER on Saturday, October 10th, celebrating 11 YEARS of bears, beats and unforgettable nights! Music by TIM ARNOLD and GOONZ, making his highly anticipated CHICAGO DEBUT! Get ready to woof, dance and celebrate with us! 🔥",
+      "bar": "Jackhammer",
+      "address": "6406 North Clark Street, Chicago, IL 60626",
+      "location": "41.998402, -87.6709808",
+      "city": "chicago",
+      "timezone": "America/Chicago",
+      "startDate": "2026-10-10",
+      "startTime": "21:00",
+      "endDate": "2026-10-11",
+      "endTime": "05:00",
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-chicago-11-year-anniversary-tickets-1999541032053",
+      "image": "https://cdn.evbuc.com/images/1192493576/185013722403/1/original.20260902-171905",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eventbrite.com/o/megawoof-america-18118978189",
+        "jsonPath": "$.props.pageProps.upcomingEvents[0]",
+        "quote": "MEGAWOOF - CHICAGO - 11 YEAR ANNIVERSARY",
+        "imageUrl": "https://cdn.evbuc.com/images/1192493576/185013722403/1/original.20260902-171905"
+      },
+      "note": "Feed row: start_date 2026-10-10, start_time 21:00:00, timezone America/Chicago, venue Jackhammer, lat/lng 41.998402/-87.6709808. End time from the event page JSON-LD (\"endDate\":\"2026-10-11T05:00:00-05:00\") and page text '9 PM-5 AM'; the feed row's end_time is a copy of start_time. Flyer: 'CHICAGO • SATURDAY OCTOBER 10TH', '9PM - 5AM', '6406 N Clark St. Chicago, IL 60626'. tickets_url is empty in the row because tickets_by is eventbrite — the event URL is the ticket URL.",
+      "expect": { "extracted": true, "kept": null },
+      "bearVerdict": null
+    },
+    {
+      "id": "megawoof-san-diego-11-year-anniversary-tour-2026-10-16",
+      "kind": "single",
+      "title": "MEGAWOOF SAN DIEGO - 11 YEAR ANNIVERSARY TOUR",
+      "description": "MEGAWOOF BACK IN SAN DIEGO during our 11 year anniversary tour",
+      "bar": "The Brass Rail",
+      "address": "3796 Fifth Avenue, San Diego, CA 92103",
+      "location": "32.7468303, -117.1607394",
+      "city": "san-diego",
+      "timezone": "America/Los_Angeles",
+      "startDate": "2026-10-16",
+      "startTime": "21:30",
+      "endDate": "2026-10-17",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-san-diego-11-year-anniversary-tour-tickets-1999136625462",
+      "image": "https://cdn.evbuc.com/images/1192161625/185013722403/1/original.20260829-012623",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eventbrite.com/o/megawoof-america-18118978189",
+        "jsonPath": "$.props.pageProps.upcomingEvents[1]",
+        "quote": "MEGAWOOF SAN DIEGO - 11 YEAR ANNIVERSARY TOUR",
+        "imageUrl": "https://cdn.evbuc.com/images/1192161625/185013722403/1/original.20260829-012623"
+      },
+      "note": "Feed row: start_date 2026-10-16, start_time 21:30:00, timezone America/Los_Angeles, venue The Brass Rail, lat/lng 32.7468303/-117.1607394. End time from the event page JSON-LD (\"endDate\":\"2026-10-17T02:00:00-07:00\") and page text '9:30 PM-2 AM'. Flyer: 'FRIDAY OCT 16TH', '9:30PM-LATE', 'THE BRASS RAIL', '3796 Fifth Ave San Diego, CA 92103', DJs GLOVIBES and DECODING JESUS.",
+      "expect": { "extracted": true, "kept": null },
+      "bearVerdict": null
+    },
+    {
+      "id": "megawoof-san-francisco-11-year-anniversary-bearrison-weekend-2026-10-17",
+      "kind": "single",
+      "title": "MEGAWOOF - SAN FRANCISCO - 11 YEAR ANNIVERSARY / BEARRISON WEEKEND",
+      "description": "MEGAWOOF RETURNS to SAN FRANCISCO for the 11th year anniversary and during bearrison weekend ! tickets start at only 10 $",
+      "bar": "The Stud",
+      "address": "1123 Folsom Street, San Francisco, CA 94103",
+      "location": "37.7761062, -122.4083888",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "startDate": "2026-10-17",
+      "startTime": "21:00",
+      "endDate": "2026-10-18",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-san-francisco-11-year-anniversary-bearrison-weekend-tickets-1999136528171",
+      "image": "https://cdn.evbuc.com/images/1192161573/185013722403/1/original.20260829-012504",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eventbrite.com/o/megawoof-america-18118978189",
+        "jsonPath": "$.props.pageProps.upcomingEvents[2]",
+        "quote": "MEGAWOOF - SAN FRANCISCO - 11 YEAR ANNIVERSARY / BEARRISON WEEKEND",
+        "imageUrl": "https://cdn.evbuc.com/images/1192161573/185013722403/1/original.20260829-012504"
+      },
+      "note": "Feed row: start_date 2026-10-17, start_time 21:00:00, timezone America/Los_Angeles, lat/lng 37.7761062/-122.4083888. End time from the event page JSON-LD (\"endDate\":\"2026-10-18T02:00:00-07:00\") and page text '9 PM-2 AM'. VENUE NAME: Eventbrite's primary_venue.name is the street address '1123 Folsom St' (event page: 'Location 1123 Folsom St 1123 Folsom Street'); the bar's name appears only as the STUD logo on the flyer next to '1123 FOLSOM ST, SAN FRANCISCO, CA 94103'. bar is therefore 'The Stud' from the flyer (OCR path); a text-only crawl yields no usable bar for this row, which is exactly what run 20260909-072307 produced (bar absent). The flyer's '11th ST. BEARRISON STREET FAIR' badge is a sponsorship, not this event's venue or a second event.",
+      "expect": { "extracted": true, "kept": null },
+      "bearVerdict": null
+    }
+  ],
+  "traps": [
+    {
+      "id": "organizer-past-tab",
+      "label": "Past tab on the organizer page (103 past events behind it)",
+      "kind": "past-event",
+      "why": "The organizer header shows 'total events 106' lifetime against 3 upcoming, so 103 past listings exist. They are client-loaded on the Past tab, absent from the static __NEXT_DATA__ payload, and the /org/<id>/showmore/ endpoint returns 403 — they are not reachable from the configured door and must not be counted as missing events. Past occurrences of the same city stops (Chicago, San Diego, SF, LA, etc.) are the classic source of stale duplicates if a cached page from an earlier month is ever replayed.",
+      "evidence": {
+        "url": "https://www.eventbrite.com/o/megawoof-america-18118978189",
+        "quote": "total events 106"
+      },
+      "expect": { "extracted": false },
+      "seenInRun": null
+    },
+    {
+      "id": "event-page-cross-sell-sections",
+      "label": "'More events from Megawoof America' and 'You might also like...' sections on each event page",
+      "kind": "navigation",
+      "why": "Eventbrite appends organizer cross-sell and recommendation rails to every event page. In the static HTML they are empty prose shells ('Discover more events from Megawoof America...' / 'Browse more events with different dates, prices, and formats'); when rendered client-side they fill with other organizers' events in the same city. Nothing in them is a Megawoof listing that the organizer feed does not already carry.",
+      "evidence": {
+        "url": "https://www.eventbrite.com/e/megawoof-chicago-11-year-anniversary-tickets-1999541032053",
+        "quote": "You might also like..."
+      },
+      "expect": { "extracted": false },
+      "seenInRun": null
+    },
+    {
+      "id": "card-price-tier",
+      "label": "'From $11.58' price line on each organizer card",
+      "kind": "ticket-tier",
+      "why": "Every rendered card ends with a minimum ticket price (ticket_availability.minimum_ticket_price in the feed). It is a price tier, not an event, and the display value (16.84 USD with fees) differs from the card value (11.58) — neither is event data.",
+      "evidence": {
+        "url": "https://www.eventbrite.com/o/megawoof-america-18118978189",
+        "quote": "From $11.58"
+      },
+      "expect": { "extracted": false },
+      "seenInRun": null
+    },
+    {
+      "id": "sf-flyer-bearrison-street-fair-badge",
+      "label": "'SUPPORTING 11th ST. BEARRISON STREET FAIR' badge on the San Francisco flyer",
+      "kind": "foreign-programming",
+      "why": "The SF flyer carries a Bearrison Street Fair logo and the title says 'BEARRISON WEEKEND'. Bearrison Street Fair is a separate daytime event run by another organizer; on this source it is only a sponsorship badge and a weekend label. An OCR pass must not turn it into a second event or into this event's venue (the venue is the STUD logo beside the Folsom address).",
+      "evidence": {
+        "url": "https://www.eventbrite.com/e/megawoof-san-francisco-11-year-anniversary-bearrison-weekend-tickets-1999136528171",
+        "quote": "during bearrison weekend",
+        "imageUrl": "https://cdn.evbuc.com/images/1192161573/185013722403/1/original.20260829-012504"
+      },
+      "expect": { "extracted": false },
+      "seenInRun": null
+    },
+    {
+      "id": "chicago-flyer-the-hole-badge",
+      "label": "'THE HOLE' badge ('FEEL FRISKY DOWNSTAIRS') on the Chicago flyer",
+      "kind": "venue-header",
+      "why": "The Hole is Jackhammer's downstairs bar; the flyer badge advertises a room inside the same venue on the same night, not a second event or a different venue. Bar for this event stays Jackhammer (feed primary_venue.name and JSON-LD location.name).",
+      "evidence": {
+        "url": "https://www.eventbrite.com/o/megawoof-america-18118978189",
+        "quote": "Sat, Oct 10 • 9:00 PM Jackhammer",
+        "imageUrl": "https://cdn.evbuc.com/images/1192493576/185013722403/1/original.20260902-171905"
+      },
+      "expect": { "extracted": false },
+      "seenInRun": null
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "The SF row's venue name on Eventbrite is the street address '1123 Folsom St'; the bar name (The Stud) exists only as a logo on the flyer. Should the expectation for a text-only crawl be bar null, or is the flyer OCR path expected to recover 'The Stud'? Run 20260909-072307 returned this event with no bar.",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    },
+    {
+      "q": "Run 20260909-072307 attributes website https://linktr.ee/megawoof_america to all three events, but that string does not appear in the organizer payload or any of the three event pages. Where does the scraper get it (AI prior, The Bear Calendar merge, calendar enrich)?",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    }
+  ]
 }

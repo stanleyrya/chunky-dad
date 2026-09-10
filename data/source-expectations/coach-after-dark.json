@@ -2,25 +2,120 @@
   "schemaVersion": 1,
   "source": "Coach After Dark",
   "slug": "coach-after-dark",
-  "status": "not-started",
+  "status": "publishes-nothing",
+  "recheckAfter": "2026-10-10",
   "recon": {
-    "date": null,
-    "method": [],
-    "parserUrlsAtRecon": null,
-    "doors": [],
-    "notes": null
+    "date": "2026-09-10",
+    "method": [
+      "feed",
+      "rendered",
+      "static",
+      "page-cache"
+    ],
+    "parserUrlsAtRecon": [
+      "https://www.eventbrite.com/o/bear-happy-hour-87043830313"
+    ],
+    "doors": [
+      {
+        "url": "https://www.eventbrite.com/o/bear-happy-hour-87043830313",
+        "kind": "feed",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": "hasMoreUpcoming=false; upcomingEventsTotal=0; upcomingEventsFailed=false",
+        "note": "Static curl (Chrome UA, HTTP 200). Payload is <script id=\"__NEXT_DATA__\"> -> props.pageProps: upcomingEvents=[] (length 0), upcomingEventsTotal=0, hasMoreUpcoming=false, upcomingEventsFailed=false, collections=[] (collectionsTotal 0). organizer.metrics.totalEvents=21 lifetime. Saved as scratch organizer.html / organizer.txt / next_data.json."
+      },
+      {
+        "url": "https://www.eventbrite.com/o/bear-happy-hour-87043830313",
+        "kind": "rendered",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": "empty-state text: \"Nothing planned right now\"",
+        "note": "Headless Chrome --dump-dom (virtual-time-budget 15s). The Upcoming tab renders the literal empty state \"Nothing planned right now Follow this organizer to stay in the loop for future plans\" and the header \"followers 311 • hosting on Eventbrite 1 year • total events 21 • total attendees 3.5k\". No event cards in the DOM. Saved as scratch rendered.html / rendered.txt."
+      },
+      {
+        "url": "https://www.eventbrite.com/e/coach-after-dark-sf-tickets-1997961694211",
+        "kind": "static",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": "page state: \"Event ended\"",
+        "note": "The only event URL this organizer is known to have published recently (found via the scraper page cache, fetchedAt 2026-08-27T12:15:07.668Z). Live today it is an ended event (Fri Aug 28 - Sat Aug 29, 9 PM-2 AM, San Francisco Eagle Bar) and is NOT linked from the organizer page any more. Saved as scratch event-coach-after-dark-sf.html / .txt."
+      },
+      {
+        "url": "https://www.eventbrite.com/o/bear-happy-hour-87043830313",
+        "kind": "page-cache",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": "hasMoreUpcoming=false; upcomingEventsTotal=0",
+        "note": "Scraper page cache storage/pages/www.eventbrite.com/o__bear-happy-hour-87043830313.json, fetchedAt 2026-09-07T05:15:12.696Z, statusCode 200: same zero upcoming. Its organizer.metrics read totalEvents 0 / hostingYears \"—\" that day (quality-signals block not populated), whereas the live page today reads totalEvents 21 — the metrics block is unreliable, the upcoming counters are not. Copied to scratch page-cache-organizer-2026-09-07.json."
+      }
+    ],
+    "notes": "Eventbrite organizer id 87043830313, display name \"Bear Happy Hour\" (parser is named Coach After Dark). Lifetime organizer.metrics.totalEvents = 21, followers 311, attendeesHosted 3.5k, hostingYears \"1 year\". Organizer social/follow links from __NEXT_DATA__: organizer.socials.website = https://www.instagram.com/coachafterdark (the only social recorded; bio is an empty <p></p>, avatarUrl empty, locations [], medias [], verified false). __SERVER_DATA__ does not exist on this page and /org/<id>/showmore/ returns 403 — not attempted per brief. The Past tab is client-fetched and not readable browser-free; past events are counted via the lifetime metric only. The run of 2026-09-09 (20260909-072307) classified the organizer URL as multi-event-page and produced 0 events, which matches the site."
   },
   "coverage": {
-    "confidence": null,
-    "basis": null,
-    "publishedEventCount": null,
+    "confidence": "high",
+    "basis": "Two independent doors agree the organizer currently publishes zero upcoming events: (1) the static __NEXT_DATA__ payload of the organizer page — upcomingEventsTotal 0, hasMoreUpcoming false, upcomingEvents [] — and (2) a headless-Chrome render of the same page showing the literal empty state \"Nothing planned right now\". The scraper page cache of 2026-09-07 shows the same zero, so the state has held at least 2026-09-07 through 2026-09-10. Past listings: the organizer has 21 lifetime events (organizer.metrics.totalEvents, also rendered as \"total events 21\"); at least one is known by URL (Coach After Dark: SF, Aug 28, now \"Event ended\") but the Past tab cannot be enumerated browser-free, so past listings are counted (21), not enumerated.",
+    "publishedEventCount": 0,
     "documentedEventCount": 0,
-    "occurrenceWindow": null,
-    "pastListingsPresent": null,
+    "occurrenceWindow": {
+      "start": "2026-09-10",
+      "end": "2026-12-09"
+    },
+    "pastListingsPresent": true,
     "knownGaps": []
   },
-  "defaults": {},
+  "defaults": {
+    "instagram": "https://www.instagram.com/coachafterdark"
+  },
   "events": [],
-  "traps": [],
-  "openQuestions": []
+  "traps": [
+    {
+      "id": "past-event-coach-after-dark-sf-2026-08-28",
+      "label": "Coach After Dark: SF — Friday, August 28-Saturday, August 29 • 9 PM-2 AM, San Francisco Eagle Bar",
+      "kind": "past-event",
+      "why": "The event page still resolves (HTTP 200) with full title/date/venue but is marked \"Event ended\" and is no longer linked from the organizer's Upcoming list. It sits in the scraper page cache from 2026-08-27 (when it was still upcoming), so any run that reads the cache instead of the live organizer page could resurrect it. Year is not printed on the event page (\"Friday, August 28\" only); 2026 is inferred from the cache fetch date and the © 2026 footer.",
+      "evidence": {
+        "url": "https://www.eventbrite.com/e/coach-after-dark-sf-tickets-1997961694211",
+        "quote": "Event ended Share this event Coach After Dark: SF"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "organizer-header-stats",
+      "label": "followers 311 • hosting on Eventbrite 1 year • total events 21 • total attendees 3.5k",
+      "kind": "venue-header",
+      "why": "Organizer profile header with lifetime metrics; contains a count (21) that is not an event and not a date. Only visible in the rendered DOM.",
+      "evidence": {
+        "url": "https://www.eventbrite.com/o/bear-happy-hour-87043830313",
+        "quote": "followers 311 • hosting on Eventbrite 1 year • total events 21 • total attendees 3.5k"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "upcoming-empty-state",
+      "label": "Nothing planned right now / Follow this organizer to stay in the loop for future plans",
+      "kind": "announcement",
+      "why": "The rendered Upcoming tab's empty-state copy. It is the positive signal that the organizer publishes nothing; it must never be read as an event or as a fetch failure (the page is HTTP 200 and upcomingEventsFailed is false).",
+      "evidence": {
+        "url": "https://www.eventbrite.com/o/bear-happy-hour-87043830313",
+        "quote": "Nothing planned right now Follow this organizer to stay in the loop for future plans"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "The organizer's 21 lifetime events cannot be enumerated browser-free (Past tab is client-fetched; /org/<id>/showmore/ 403s). If a past-events ledger is ever wanted for this source, it needs a logged-in or browser door.",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    }
+  ]
 }

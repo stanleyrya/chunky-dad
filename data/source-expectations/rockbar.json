@@ -2,25 +2,1141 @@
   "schemaVersion": 1,
   "source": "Rockbar",
   "slug": "rockbar",
-  "status": "not-started",
+  "status": "complete",
   "recon": {
-    "date": null,
-    "method": [],
-    "parserUrlsAtRecon": null,
-    "doors": [],
-    "notes": null
+    "date": "2026-09-10",
+    "method": [
+      "feed",
+      "rendered",
+      "static",
+      "flyer"
+    ],
+    "parserUrlsAtRecon": [
+      "https://www.rockbarnyc.com/calendar"
+    ],
+    "doors": [
+      {
+        "url": "https://www.rockbarnyc.com/calendar",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Squarespace shell fetched with curl (190 KB). Carries the live embed <div class=\"elfsight-app-e122bc50-bc4f-4cde-a6b9-ee6d4e31531a\" data-elfsight-app-layout=\"month\" data-elfsight-app-lazy> plus the commented-out 8c5b40b3 embed; no event text in the static HTML (calendar.txt is nav + footer only)."
+      },
+      {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "kind": "json",
+        "role": "feed",
+        "rowsReturned": 148,
+        "truthFlag": "single payload, no paging; 148 rows under data.widgets[id].data.settings.events; settings.showPastEvents false, settings._repeatsAfterNow 30, settings.inLocalTimeZone false",
+        "note": "Elfsight widget boot API (app \"event-calendar\"). 143 rows visible+named, 5 hidden (visible:false). Of the visible rows: 119 noRepeat dated before 2026-09-10, 5 noRepeat dated on/after, 19 repeating (weeklyOn 2, nthDayInMonth 14, lastDayInMonth 2, custom 1). Every row has timeZone America/New_York; every visible repeating row has repeatEnds \"never\" and exceptions [] except the custom Drag Race row which ends 2024-05-01. No row carries actions/location/host/eventType (no ticket links or addresses per row)."
+      },
+      {
+        "url": "https://core.service.elfsight.com/p/boot/?w=8c5b40b3-85f2-43cf-9a4c-d13aefd10dee",
+        "kind": "json",
+        "role": "feed",
+        "rowsReturned": 9,
+        "truthFlag": "single payload, no paging",
+        "note": "Boot for the commented-out second widget: 9 rows dated 2024-06-05 to 2024-07-05. Saved, counted, not enumerated (trap stale-2024-elfsight-widget-8c5b40b3)."
+      },
+      {
+        "url": "https://www.rockbarnyc.com/events?format=json",
+        "kind": "json",
+        "role": "feed",
+        "rowsReturned": 7,
+        "truthFlag": "upcoming 0, past 7, no pagination object",
+        "note": "Squarespace events-stacked collection, frozen since 2024-08-07 (trap squarespace-events-collection-frozen-2024)."
+      },
+      {
+        "url": "https://www.rockbarnyc.com/calendar",
+        "kind": "rendered-dom",
+        "role": "listing",
+        "rowsReturned": 22,
+        "truthFlag": "month grid \"EVENTS Today September 2026\" plus the first three October cells",
+        "note": "Headless Chrome --dump-dom (virtual-time-budget 15000). The Elfsight month grid rendered 22 dated cells for 2026-09-11..2026-10-03: every one of the 17 live series with an instance in that span and all 5 future one-offs appear on the dates the RRULEs predict; no hidden row and no 2024 stale row appears; Sept 1-9 cells are empty (showPastEvents false)."
+      },
+      {
+        "url": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/823bd032-a13f-4e1d-b9d1-b80bd9e5c248/Bears-Night-Out-New-General.jpg",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Read to settle the BEARS NIGHT OUT cadence: flyer says \"EVERY FIRST SATURDAY 9PM / $10\". Also read: Rockstrap-Sept-4.jpg (Friday Sept 4, 10PM, $10), Jock-Rock-Sept-IG.jpg (Friday Sept 11 2026), Poptimism-Sept-13.jpg (Sunday Sept 13, 4-8PM), Thee Black Hotties (Aug 20, 8PM)."
+      }
+    ],
+    "notes": "Platform: Squarespace shell + Elfsight Event Calendar widget, confirmed by the boot endpoint answering with app \"event-calendar\" for the id embedded in /calendar. The widget payload is the whole calendar: exact local times, IANA timeZone per row, and machine-readable repeat fields, so no AI/OCR is needed for dates. Elfsight repeat semantics used here: nthDayInMonth = the same ordinal weekday as the anchor start date (1st..4th); lastDayInMonth = the last anchor-weekday of each month; weeklyOn = repeatWeeklyOnDays; custom = repeatFrequency/repeatInterval/repeatEnds. Yesterday's run 20260909-072307 reported totalEvents 151 for this parser (29 kept + 121 bear-dropped after 1 duplicate removed) from urlCount 1: that is the 143 visible live-widget rows plus the 9 rows of the commented-out 2024 widget, i.e. every widget row emitted as a dated single (only BEARS NIGHT OUT, COMEDY HOUR and GORDITOS carried a recurrenceRule in the run output). This file, by contrast, folds the widget into 22 published things."
+  },
+  "defaults": {
+    "city": "nyc",
+    "timezone": "America/New_York",
+    "bar": "Rockbar",
+    "address": "185 Christopher St, New York, NY 10014",
+    "location": null,
+    "website": "https://www.rockbarnyc.com",
+    "instagram": "https://www.instagram.com/rockbarnyc"
   },
   "coverage": {
-    "confidence": null,
-    "basis": null,
-    "publishedEventCount": null,
-    "documentedEventCount": 0,
-    "occurrenceWindow": null,
-    "pastListingsPresent": null,
+    "confidence": "high",
+    "basis": "All counts come from the Elfsight boot door (https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a): 148 rows = 143 visible+named + 5 hidden. The 143 visible rows split into 119 past noRepeat rows (dated 2024-06-24 to 2026-09-09, including yesterday's GAY CARD: JAWBREAKER and ~9 closure notices — counted, not enumerated), 5 noRepeat rows dated on/after 2026-09-10 (the 5 singles here), and 19 repeating rows. Of the 19 repeating rows, 17 are live event series documented here (13 nthDayInMonth, 2 weeklyOn, 2 lastDayInMonth), one is the CLOSED FOR A PRIVATE EVENT closure notice (trap), and one is the custom Drag Race Viewing Party series that ended 2024-05-01 (trap). Published = 5 singles + 17 series = 22. Second door: the headless-Chrome render of /calendar shows the September 2026 month grid with exactly the instances these RRULEs predict for 2026-09-11..2026-10-03 (22 cells, all accounted for, nothing extra), which is how the nthDayInMonth ordinal reading was verified. Third door: the Squarespace /events?format=json collection is frozen (0 upcoming / 7 past, all Aug 2024) and adds nothing. The commented-out second widget (9 rows, Jun-Jul 2024) is recorded as a trap, not counted. Occurrences are materialized for 2026-09-10..2026-12-09; instances the rendered grid displayed are origin \"listed\" with a quote from the rendered DOM, the rest are origin \"rule\".",
+    "publishedEventCount": 22,
+    "documentedEventCount": 22,
+    "occurrenceWindow": {
+      "start": "2026-09-10",
+      "end": "2026-12-09"
+    },
+    "pastListingsPresent": true,
     "knownGaps": []
   },
-  "defaults": {},
-  "events": [],
-  "traps": [],
-  "openQuestions": []
+  "events": [
+    {
+      "id": "dirty-little-secret",
+      "kind": "series",
+      "title": "DIRTY LITTLE SECRET",
+      "startDate": "2026-07-10",
+      "startTime": "20:00",
+      "endTime": "21:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=FR",
+      "recurrenceStatedAs": "\"repeatPeriod\":\"weeklyOn\",\"repeatFrequency\":\"daily\",\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatWeeklyOnDays\":[\"fr\"] with \"start\":{\"type\":\"datetime\",\"date\":\"2026-07-10\",\"time\":\"20:00\"}",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/d2486adb-3e67-41c4-830a-068c9830cb28/Lita-Fridays-IG.jpg",
+      "occurrences": [
+        {
+          "startDate": "2026-09-11",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.rockbarnyc.com/calendar",
+            "quote": "11 DIRTY LITTLE SECRET"
+          }
+        },
+        {
+          "startDate": "2026-09-18",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.rockbarnyc.com/calendar",
+            "quote": "18 DIRTY LITTLE SECRET"
+          }
+        },
+        {
+          "startDate": "2026-09-25",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.rockbarnyc.com/calendar",
+            "quote": "25 DIRTY LITTLE SECRET"
+          }
+        },
+        {
+          "startDate": "2026-10-02",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.rockbarnyc.com/calendar",
+            "quote": "2 DIRTY LITTLE SECRET ROCKSTRAP"
+          }
+        },
+        {
+          "startDate": "2026-10-09",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-16",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-23",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-30",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-06",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-13",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-20",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-27",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-04",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets['e122bc50-bc4f-4cde-a6b9-ee6d4e31531a'].data.settings.events[2]"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Weekly drag show; description says \"Every Friday at 8PM\". Widget end time 21:00 is the show slot, not closing. Anchor row start 2026-07-10 20:00-2026-07-10 21:00; repeatEnds \"never\"; exceptions []."
+    },
+    {
+      "id": "noodz",
+      "kind": "series",
+      "title": "NOODZ",
+      "startDate": "2026-05-09",
+      "startTime": "22:00",
+      "endTime": "02:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=2SA",
+      "recurrenceStatedAs": "\"repeatPeriod\":\"nthDayInMonth\",\"repeatFrequency\":\"daily\",\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatWeeklyOnDays\":[\"sa\"] with \"start\":{\"type\":\"datetime\",\"date\":\"2026-05-09\",\"time\":\"22:00\"} (2026-05-09 is the 2nd SA of its month)",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/76e93a1b-a0b0-4d39-b198-5094f7b3df51/NOODZ-General-Box.jpg",
+      "occurrences": [
+        {
+          "startDate": "2026-09-12",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.rockbarnyc.com/calendar",
+            "quote": "12 NOODZ"
+          }
+        },
+        {
+          "startDate": "2026-10-10",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-14",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets['e122bc50-bc4f-4cde-a6b9-ee6d4e31531a'].data.settings.events[4]"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Description says \"Every 2nd Saturday, 10PM\"; start row 2026-05-09 is a 2nd Saturday. Ends 02:00 next day. Anchor row start 2026-05-09 22:00-2026-05-10 02:00; repeatEnds \"never\"; exceptions []. The end time is on the following calendar day."
+    },
+    {
+      "id": "poptimism",
+      "kind": "series",
+      "title": "POPTIMISM",
+      "startDate": "2026-05-10",
+      "startTime": "16:00",
+      "endTime": "20:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=2SU",
+      "recurrenceStatedAs": "\"repeatPeriod\":\"nthDayInMonth\",\"repeatFrequency\":\"daily\",\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatWeeklyOnDays\":[\"su\"] with \"start\":{\"type\":\"datetime\",\"date\":\"2026-05-10\",\"time\":\"16:00\"} (2026-05-10 is the 2nd SU of its month)",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/7bfda93d-ef04-44a7-ac62-c562e2068ca8/Poptimism-Sept-13.jpg",
+      "occurrences": [
+        {
+          "startDate": "2026-09-13",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.rockbarnyc.com/calendar",
+            "quote": "13 NOODZ POPTIMISM COMEDY HOUR"
+          }
+        },
+        {
+          "startDate": "2026-10-11",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-08",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets['e122bc50-bc4f-4cde-a6b9-ee6d4e31531a'].data.settings.events[5]"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Start row 2026-05-10 is a 2nd Sunday; cover flyer Poptimism-Sept-13.jpg reads \"SUNDAY, SEPT 13 4-8PM\" (2nd Sunday of Sept 2026). Anchor row start 2026-05-10 16:00-2026-05-10 20:00; repeatEnds \"never\"; exceptions []."
+    },
+    {
+      "id": "comedy-hour",
+      "kind": "series",
+      "title": "COMEDY HOUR",
+      "startDate": "2026-07-12",
+      "startTime": "20:30",
+      "endTime": "23:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=2SU",
+      "recurrenceStatedAs": "\"repeatPeriod\":\"nthDayInMonth\",\"repeatFrequency\":\"daily\",\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatWeeklyOnDays\":[\"su\"] with \"start\":{\"type\":\"datetime\",\"date\":\"2026-07-12\",\"time\":\"20:30\"} (2026-07-12 is the 2nd SU of its month)",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/6aeb1125-2a80-40e4-bca4-4239addaa8aa/The-Comedy-Hour-Sept-13.jpg",
+      "occurrences": [
+        {
+          "startDate": "2026-09-13",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.rockbarnyc.com/calendar",
+            "quote": "13 NOODZ POPTIMISM COMEDY HOUR"
+          }
+        },
+        {
+          "startDate": "2026-10-11",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-08",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets['e122bc50-bc4f-4cde-a6b9-ee6d4e31531a'].data.settings.events[6]"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Start row 2026-07-12 is a 2nd Sunday; description names \"Sunday Sept 13, 2026 - 8:30pm\". Anchor row start 2026-07-12 20:30-2026-07-12 23:00; repeatEnds \"never\"; exceptions []."
+    },
+    {
+      "id": "howl-your-heart-out",
+      "kind": "series",
+      "title": "HOWL YOUR HEART OUT",
+      "startDate": "2026-07-21",
+      "startTime": "19:00",
+      "endTime": "23:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=3TU",
+      "recurrenceStatedAs": "\"repeatPeriod\":\"nthDayInMonth\",\"repeatFrequency\":\"daily\",\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatWeeklyOnDays\":[\"tu\"] with \"start\":{\"type\":\"datetime\",\"date\":\"2026-07-21\",\"time\":\"19:00\"} (2026-07-21 is the 3rd TU of its month)",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/01407e70-7607-49dc-bcbd-d3ccd1f25647/KaraokeNight_9-15-26_Post.png",
+      "occurrences": [
+        {
+          "startDate": "2026-09-15",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.rockbarnyc.com/calendar",
+            "quote": "15 HOWL YOUR HEART OUT"
+          }
+        },
+        {
+          "startDate": "2026-10-20",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-17",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets['e122bc50-bc4f-4cde-a6b9-ee6d4e31531a'].data.settings.events[7]"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Gotham Kennel Club karaoke; start row 2026-07-21 is a 3rd Tuesday; description names \"Tuesday Sept 15\". Anchor row start 2026-07-21 19:00-2026-07-21 23:00; repeatEnds \"never\"; exceptions []."
+    },
+    {
+      "id": "thee-black-hotties",
+      "kind": "series",
+      "title": "THEE BLACK HOTTIES",
+      "startDate": "2026-08-20",
+      "startTime": "20:00",
+      "endTime": "23:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=3TH",
+      "recurrenceStatedAs": "\"repeatPeriod\":\"nthDayInMonth\",\"repeatFrequency\":\"daily\",\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatWeeklyOnDays\":[\"th\"] with \"start\":{\"type\":\"datetime\",\"date\":\"2026-08-20\",\"time\":\"20:00\"} (2026-08-20 is the 3rd TH of its month)",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/6cd89d94-4245-4e5e-b7e4-c2c39100aa60/Next-Thursday-We-re-back-and-just-as-black-as-before-maybe-a-little-bit-more-even-Your-favo.jpg",
+      "occurrences": [
+        {
+          "startDate": "2026-09-17",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.rockbarnyc.com/calendar",
+            "quote": "17 THEE BLACK HOTTIES"
+          }
+        },
+        {
+          "startDate": "2026-10-15",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-19",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets['e122bc50-bc4f-4cde-a6b9-ee6d4e31531a'].data.settings.events[8]"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Start row 2026-08-20 is a 3rd Thursday. Description/flyer only name Aug 20; the monthly cadence comes from the widget repeat fields alone (rendered grid confirms Sept 17). Anchor row start 2026-08-20 20:00-2026-08-20 23:00; repeatEnds \"never\"; exceptions []."
+    },
+    {
+      "id": "rope-at-rockbar",
+      "kind": "series",
+      "title": "ROPE AT ROCKBAR",
+      "startDate": "2026-03-24",
+      "startTime": "19:00",
+      "endTime": "23:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=4TU",
+      "recurrenceStatedAs": "\"repeatPeriod\":\"nthDayInMonth\",\"repeatFrequency\":\"daily\",\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatWeeklyOnDays\":[\"tu\"] with \"start\":{\"type\":\"datetime\",\"date\":\"2026-03-24\",\"time\":\"19:00\"} (2026-03-24 is the 4th TU of its month)",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/550461c0-37b0-43e6-9dcd-81b2c3ef05a3/image0-2.jpg",
+      "occurrences": [
+        {
+          "startDate": "2026-09-22",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.rockbarnyc.com/calendar",
+            "quote": "22 ROPE AT ROCKBAR"
+          }
+        },
+        {
+          "startDate": "2026-10-27",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-24",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets['e122bc50-bc4f-4cde-a6b9-ee6d4e31531a'].data.settings.events[12]"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Knotty New York; description says \"every 4th Tuesday at 7PM\". Anchor row start 2026-03-24 19:00-2026-03-24 23:00; repeatEnds \"never\"; exceptions []."
+    },
+    {
+      "id": "throwback-party",
+      "kind": "series",
+      "title": "THROWBACK PARTY",
+      "startDate": "2024-12-26",
+      "startTime": "20:00",
+      "endTime": "20:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=4TH",
+      "recurrenceStatedAs": "\"repeatPeriod\":\"nthDayInMonth\",\"repeatFrequency\":\"daily\",\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatWeeklyOnDays\":[\"th\"] with \"start\":{\"type\":\"datetime\",\"date\":\"2024-12-26\",\"time\":\"20:00\"} (2024-12-26 is the 4th TH of its month)",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/df522814-8fc3-4e32-80ba-4350cf58ee8e/Throwback-General.jpg",
+      "occurrences": [
+        {
+          "startDate": "2026-09-24",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.rockbarnyc.com/calendar",
+            "quote": "24 THROWBACK PARTY"
+          }
+        },
+        {
+          "startDate": "2026-10-22",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-26",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets['e122bc50-bc4f-4cde-a6b9-ee6d4e31531a'].data.settings.events[13]"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Description says \"Every 4th Thursday of the month\". Widget end equals start (20:00); no end time published. Anchor row start 2024-12-26 20:00-2024-12-26 20:00; repeatEnds \"never\"; exceptions []."
+    },
+    {
+      "id": "foreplay-w-angela-mansberry",
+      "kind": "series",
+      "title": "FOREPLAY w/ ANGELA MANSBERRY",
+      "startDate": "2026-06-26",
+      "startTime": "20:00",
+      "endTime": "21:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=4FR",
+      "recurrenceStatedAs": "\"repeatPeriod\":\"nthDayInMonth\",\"repeatFrequency\":\"daily\",\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatWeeklyOnDays\":[\"fr\"] with \"start\":{\"type\":\"datetime\",\"date\":\"2026-06-26\",\"time\":\"20:00\"} (2026-06-26 is the 4th FR of its month)",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/05173d1a-c8cb-429e-9078-9624721fdac9/1000020655.jpg",
+      "occurrences": [
+        {
+          "startDate": "2026-09-25",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.rockbarnyc.com/calendar",
+            "quote": "25 DIRTY LITTLE SECRET FOREPLAY w/ ANGELA MANSBERRY"
+          }
+        },
+        {
+          "startDate": "2026-10-23",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-27",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets['e122bc50-bc4f-4cde-a6b9-ee6d4e31531a'].data.settings.events[14]"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Description says \"Every 4th Friday at 8pm!\". Anchor row start 2026-06-26 20:00-2026-06-26 21:00; repeatEnds \"never\"; exceptions []."
+    },
+    {
+      "id": "gorditos",
+      "kind": "series",
+      "title": "GORDITOS",
+      "startDate": "2026-08-29",
+      "startTime": "22:00",
+      "endTime": "02:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=-1SA",
+      "recurrenceStatedAs": "\"repeatPeriod\":\"lastDayInMonth\",\"repeatFrequency\":\"daily\",\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatWeeklyOnDays\":[\"sa\"] with \"start\":{\"type\":\"datetime\",\"date\":\"2026-08-29\",\"time\":\"22:00\"} (2026-08-29 is the last SA of its month)",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/d307ebfa-fd24-47af-a5db-fe554b040ebe/774862860_18613566205060989_7885882217328305094_n.jpg",
+      "occurrences": [
+        {
+          "startDate": "2026-09-26",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.rockbarnyc.com/calendar",
+            "quote": "26 GORDITOS"
+          }
+        },
+        {
+          "startDate": "2026-10-31",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-28",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets['e122bc50-bc4f-4cde-a6b9-ee6d4e31531a'].data.settings.events[15]"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Description says \"THE LAST SATURDAY OF EVERY MONTH\". Ends 02:00 next day, so the month grid paints it on both 26 and 27. A separate past noRepeat row named GORDITOS (events[61], 2026-03-28) duplicates the March instance and is counted among past listings. Anchor row start 2026-08-29 22:00-2026-08-30 02:00; repeatEnds \"never\"; exceptions []. The end time is on the following calendar day."
+    },
+    {
+      "id": "fade-to-black-day-party",
+      "kind": "series",
+      "title": "FADE TO BLACK DAY PARTY!",
+      "startDate": "2026-08-23",
+      "startTime": "16:00",
+      "endTime": "22:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=4SU",
+      "recurrenceStatedAs": "\"repeatPeriod\":\"nthDayInMonth\",\"repeatFrequency\":\"daily\",\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatWeeklyOnDays\":[\"su\"] with \"start\":{\"type\":\"datetime\",\"date\":\"2026-08-23\",\"time\":\"16:00\"} (2026-08-23 is the 4th SU of its month)",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/7446a40c-b4d5-4a22-830b-2da60a4b27a7/Day-Party-Aug-23.jpg",
+      "occurrences": [
+        {
+          "startDate": "2026-09-27",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.rockbarnyc.com/calendar",
+            "quote": "27 GORDITOS FADE TO BLACK DAY PARTY!"
+          }
+        },
+        {
+          "startDate": "2026-10-25",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-22",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets['e122bc50-bc4f-4cde-a6b9-ee6d4e31531a'].data.settings.events[16]"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Start row 2026-08-23 is a 4th Sunday; description text is the Aug 23 blurb (\"Sunday, Aug 23 4PM - 10PM\"); the monthly cadence comes from the widget repeat fields (rendered grid confirms Sept 27). Anchor row start 2026-08-23 16:00-2026-08-23 22:00; repeatEnds \"never\"; exceptions []."
+    },
+    {
+      "id": "ffriendly-nyc",
+      "kind": "series",
+      "title": "FFriendly NYC",
+      "startDate": "2026-07-29",
+      "startTime": "18:00",
+      "endTime": "20:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=-1WE",
+      "recurrenceStatedAs": "\"repeatPeriod\":\"lastDayInMonth\",\"repeatFrequency\":\"daily\",\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatWeeklyOnDays\":[\"we\"] with \"start\":{\"type\":\"datetime\",\"date\":\"2026-07-29\",\"time\":\"18:00\"} (2026-07-29 is the last WE of its month)",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/14e99f62-052b-444a-99c7-a05562863e41/FFriendly-NYC-IG-May-27.jpg",
+      "occurrences": [
+        {
+          "startDate": "2026-09-30",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.rockbarnyc.com/calendar",
+            "quote": "30 FFriendly NYC"
+          }
+        },
+        {
+          "startDate": "2026-10-28",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-25",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets['e122bc50-bc4f-4cde-a6b9-ee6d4e31531a'].data.settings.events[17]"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Description says \"Every last Wednesday at Rockbar 6pm-9pm\" (widget end is 20:00, description says 9pm). Anchor row start 2026-07-29 18:00-2026-07-29 20:00; repeatEnds \"never\"; exceptions []."
+    },
+    {
+      "id": "rockstrap",
+      "kind": "series",
+      "title": "ROCKSTRAP",
+      "startDate": "2026-08-07",
+      "startTime": "22:00",
+      "endTime": "02:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=1FR",
+      "recurrenceStatedAs": "\"repeatPeriod\":\"nthDayInMonth\",\"repeatFrequency\":\"daily\",\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatWeeklyOnDays\":[\"fr\"] with \"start\":{\"type\":\"datetime\",\"date\":\"2026-08-07\",\"time\":\"22:00\"} (2026-08-07 is the 1st FR of its month)",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/bc882472-bee7-4ea6-81cc-6330c76df3cf/Rockstrap-Sept-4.jpg",
+      "occurrences": [
+        {
+          "startDate": "2026-10-02",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.rockbarnyc.com/calendar",
+            "quote": "2 DIRTY LITTLE SECRET ROCKSTRAP"
+          }
+        },
+        {
+          "startDate": "2026-11-06",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-04",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets['e122bc50-bc4f-4cde-a6b9-ee6d4e31531a'].data.settings.events[20]"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Start row 2026-08-07 is a 1st Friday; cover flyer Rockstrap-Sept-4.jpg reads \"FRIDAY SEPT 4 10PM // $10\" (1st Friday). Ends 02:00 next day. Anchor row start 2026-08-07 22:00-2026-08-08 02:00; repeatEnds \"never\"; exceptions []. The end time is on the following calendar day."
+    },
+    {
+      "id": "bears-night-out",
+      "kind": "series",
+      "title": "BEARS NIGHT OUT",
+      "startDate": "2026-05-02",
+      "startTime": "21:00",
+      "endTime": "23:45",
+      "recurrence": "FREQ=MONTHLY;BYDAY=1SA",
+      "recurrenceStatedAs": "\"repeatPeriod\":\"nthDayInMonth\",\"repeatFrequency\":\"daily\",\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatWeeklyOnDays\":[\"sa\"] with \"start\":{\"type\":\"datetime\",\"date\":\"2026-05-02\",\"time\":\"21:00\"} (2026-05-02 is the 1st SA of its month)",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/823bd032-a13f-4e1d-b9d1-b80bd9e5c248/Bears-Night-Out-New-General.jpg",
+      "occurrences": [
+        {
+          "startDate": "2026-10-03",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.rockbarnyc.com/calendar",
+            "quote": "3 BEARS NIGHT OUT"
+          }
+        },
+        {
+          "startDate": "2026-11-07",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-05",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets['e122bc50-bc4f-4cde-a6b9-ee6d4e31531a'].data.settings.events[21]"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Start row 2026-05-02 is a 1st Saturday and the widget renders Oct 3 (1st Saturday); the cover flyer Bears-Night-Out-New-General.jpg reads \"EVERY FIRST SATURDAY 9PM / $10\". The description text says \"Every Second Saturday\" — stale copy contradicted by both the widget rule and the flyer. Anchor row start 2026-05-02 21:00-2026-05-02 23:45; repeatEnds \"never\"; exceptions []."
+    },
+    {
+      "id": "diaper-happy-hour",
+      "kind": "series",
+      "title": "DIAPER HAPPY HOUR",
+      "startDate": "2026-07-07",
+      "startTime": "19:00",
+      "endTime": "23:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=1TU",
+      "recurrenceStatedAs": "\"repeatPeriod\":\"nthDayInMonth\",\"repeatFrequency\":\"daily\",\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatWeeklyOnDays\":[\"tu\"] with \"start\":{\"type\":\"datetime\",\"date\":\"2026-07-07\",\"time\":\"19:00\"} (2026-07-07 is the 1st TU of its month)",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/a30752ad-5616-4353-b3eb-c828e5a45f04/Come-out-for-a-special-Diaper-Happy-Hour-Back-to-School-Gear-Swap-Bring-your-clean-gently-lo.jpg",
+      "occurrences": [
+        {
+          "startDate": "2026-10-06",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-03",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-01",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets['e122bc50-bc4f-4cde-a6b9-ee6d4e31531a'].data.settings.events[22]"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Description says \"every 1st Tuesday at 7 PM\". Sept 1 instance is before recon date and Oct 6 is outside the rendered month, so no rendered instance was captured. Anchor row start 2026-07-07 19:00-2026-07-07 23:00; repeatEnds \"never\"; exceptions []."
+    },
+    {
+      "id": "locked-chastity-social",
+      "kind": "series",
+      "title": "LOCKED: Chastity Social",
+      "startDate": "2026-08-11",
+      "startTime": "19:00",
+      "endTime": "23:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=2TU",
+      "recurrenceStatedAs": "\"repeatPeriod\":\"nthDayInMonth\",\"repeatFrequency\":\"daily\",\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatWeeklyOnDays\":[\"tu\"] with \"start\":{\"type\":\"datetime\",\"date\":\"2026-08-11\",\"time\":\"19:00\"} (2026-08-11 is the 2nd TU of its month)",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/ef69fa2d-8aaf-4a1b-9ab9-7a1673510c0c/Chastity_Social_32-copy.jpg",
+      "occurrences": [
+        {
+          "startDate": "2026-10-13",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-10",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-08",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets['e122bc50-bc4f-4cde-a6b9-ee6d4e31531a'].data.settings.events[24]"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Description says \"Second Tuesday every month!\". Sept 8 instance is before recon date and Oct 13 is outside the rendered month, so no rendered instance was captured. Anchor row start 2026-08-11 19:00-2026-08-11 23:00; repeatEnds \"never\"; exceptions []."
+    },
+    {
+      "id": "oral-exam-trivia",
+      "kind": "series",
+      "title": "ORAL EXAM TRIVIA",
+      "startDate": "2026-06-01",
+      "startTime": "19:00",
+      "endTime": "21:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=MO",
+      "recurrenceStatedAs": "\"repeatPeriod\":\"weeklyOn\",\"repeatFrequency\":\"daily\",\"repeatInterval\":1,\"repeatEnds\":\"never\",\"repeatWeeklyOnDays\":[\"mo\"] with \"start\":{\"type\":\"datetime\",\"date\":\"2026-06-01\",\"time\":\"19:00\"}",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/29eb6caf-8c8f-4ed1-b7a6-008fe349e6b2/Oral-Exam-Mondays-General.jpg",
+      "occurrences": [
+        {
+          "startDate": "2026-09-14",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.rockbarnyc.com/calendar",
+            "quote": "14 ORAL EXAM TRIVIA"
+          }
+        },
+        {
+          "startDate": "2026-09-21",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.rockbarnyc.com/calendar",
+            "quote": "21 MX. ROCKBAR MEET & GREET ORAL EXAM TRIVIA"
+          }
+        },
+        {
+          "startDate": "2026-09-28",
+          "origin": "listed",
+          "evidence": {
+            "url": "https://www.rockbarnyc.com/calendar",
+            "quote": "28 ORAL EXAM TRIVIA"
+          }
+        },
+        {
+          "startDate": "2026-10-05",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-12",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-19",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-26",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-02",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-09",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-16",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-23",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-30",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-07",
+          "origin": "rule"
+        }
+      ],
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets['e122bc50-bc4f-4cde-a6b9-ee6d4e31531a'].data.settings.events[25]"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Description says \"Mondays at 7PM\". Anchor row start 2026-06-01 19:00-2026-06-01 21:00; repeatEnds \"never\"; exceptions []."
+    },
+    {
+      "id": "jock-rock-2026-09-11",
+      "kind": "single",
+      "title": "JOCK ROCK",
+      "startDate": "2026-09-11",
+      "startTime": "21:00",
+      "endDate": "2026-09-12",
+      "endTime": "02:00",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/e75a1fc9-4e46-4c21-884a-978fc0ba15c4/Jock-Rock-Sept-IG.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets['e122bc50-bc4f-4cde-a6b9-ee6d4e31531a'].data.settings.events[3]"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Row date 2026-09-11 21:00-02:00; cover flyer Jock-Rock-Sept-IG.jpg reads \"FRIDAY SEPT 11 2026\". The description text is stale copy from the August edition (\"Friday, Aug 14, 7PM-1AM\") — trust the row date and flyer. Rendered grid shows it on 11."
+    },
+    {
+      "id": "underbear-urban-bear-weekend-2026-09-18",
+      "kind": "single",
+      "title": "UNDERBEAR: URBAN BEAR WEEKEND",
+      "startDate": "2026-09-18",
+      "startTime": "22:00",
+      "endDate": "2026-09-19",
+      "endTime": "02:00",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/fc7b69f9-3e93-44f6-826d-78da0b4dff5a/Underbear-Urban-Bear-Weekend-Draft-3.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets['e122bc50-bc4f-4cde-a6b9-ee6d4e31531a'].data.settings.events[9]"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Description: \"FRIDAY, SEPTEMBER 18 10PM $20 Presented by Furball + The Urban Bear\". Ends 02:00 next day. Rendered grid shows it on 18."
+    },
+    {
+      "id": "mega-bear-blast-2026-09-20",
+      "kind": "single",
+      "title": "MEGA BEAR BLAST!",
+      "startDate": "2026-09-20",
+      "startTime": "18:00",
+      "endDate": "2026-09-20",
+      "endTime": "23:00",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/0bda15e8-1193-458d-87fc-f8c0394ddf08/Mega-Bear-Blast-2026.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets['e122bc50-bc4f-4cde-a6b9-ee6d4e31531a'].data.settings.events[10]"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Description: \"THE 18TH ANNUAL URBAN BEAR NYC OFFICIAL CLOSING PARTY! ... SUNDAY, SEPTEMBER 20 6PM – LATE\". Widget end 23:00. Rendered grid shows it on 20."
+    },
+    {
+      "id": "mx-rockbar-meet-greet-2026-09-21",
+      "kind": "single",
+      "title": "MX. ROCKBAR MEET & GREET",
+      "startDate": "2026-09-21",
+      "startTime": "19:00",
+      "endDate": "2026-09-21",
+      "endTime": "23:00",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/75080412-74d5-4854-9807-d12a7f188cb8/MX-Rockbar-S10-Sign-Up-Prize-2.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets['e122bc50-bc4f-4cde-a6b9-ee6d4e31531a'].data.settings.events[11]"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Season 10 drag-competition meet & greet; description: \"MEET & GREET — SEPTEMBER 21\". Rendered grid shows it on 21."
+    },
+    {
+      "id": "the-kashanti-games-finale-2026-09-30",
+      "kind": "single",
+      "title": "THE KASHANTI GAMES: FINALE",
+      "startDate": "2026-09-30",
+      "startTime": "23:00",
+      "endDate": "2026-10-01",
+      "endTime": "02:00",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/06e474ca-4f8f-464f-9a2f-e3ec0362b953/IMG_20260905_165953.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets['e122bc50-bc4f-4cde-a6b9-ee6d4e31531a'].data.settings.events[18]"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Description: \"Come to Rockbar on Sept 30th at 10 PM\" while the widget row says 23:00 — the row time is what the calendar displays. Ends 02:00 next day. Rendered grid shows it on 30."
+    }
+  ],
+  "traps": [
+    {
+      "id": "stale-2024-elfsight-widget-8c5b40b3",
+      "kind": "duplicate-listing",
+      "label": "Second Elfsight widget id inside an HTML comment on /calendar",
+      "why": "The /calendar HTML carries a second widget embed, elfsight-app-8c5b40b3-85f2-43cf-9a4c-d13aefd10dee, but only inside a commented-out block (the comment opens at \"<!-- <script src=\\\"https://static.elfsight.com/platform/platform.js\\\"\" and closes after this div). Its boot endpoint still answers with 9 rows, all dated 2024-06-05 to 2024-07-05 (Rockstrap, CLOSED FOR A PRIVATE EVENT, Gay Geek Trivia, DIAPER HAPPY HOUR, PRIDE SUNDAY, TRAVEURA: PRIDE!, ARCADE, Underbear, FRIDAY NIGHT VESPERS) — the bar's abandoned 2024 calendar. The browser never renders it. A widget-id regex that ignores HTML comments reads it as a live second calendar and emits 2024 duplicates of parties the live widget already carries.",
+      "evidence": {
+        "url": "https://www.rockbarnyc.com/calendar",
+        "quote": "<div class=\"elfsight-app-8c5b40b3-85f2-43cf-9a4c-d13aefd10dee\" data-elfsight-app-lazy data-elfsight-app-layout=\"month\"></div> -->"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20260909-072307",
+      "note": "Run 20260909-072307 contains Gay Geek Trivia 2024-06-05, TRAVEURA: PRIDE! 2024-06-29, ARCADE 2024-06-29, PRIDE SUNDAY 2024-06-30, FRIDAY NIGHT VESPERS 2024-06-28, Underbear 2024-06-28 and Rockstrap 2024-07-05 — none of which exist in the live widget e122bc50. Boot payload saved but deliberately not enumerated."
+    },
+    {
+      "id": "squarespace-events-collection-frozen-2024",
+      "kind": "past-event",
+      "label": "Squarespace /events collection (typeName events-stacked)",
+      "why": "The Squarespace-native events collection at /events (and its ?format=json feed) reports 0 upcoming and 7 past items, the newest dated 2024-08-07 (GAY GEEK TRIVIA, DIAPER HAPPY HOUR, ROCK THE ROCKBAR, BEARS NIGHT OUT, ARCADE, ROCKSTRAP, FRIDAY NIGHT VESPERS). The bar stopped using it in Aug 2024 and moved programming to the Elfsight widget; /events is also not in the parser's urls, so nothing there is a missing event. Each item still serves /events/<slug>?format=ical.",
+      "evidence": {
+        "url": "https://www.rockbarnyc.com/events?format=json",
+        "jsonPath": "$.past[0].title"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null,
+      "note": "Run 20260909-072307 has zero rows with a rockbarnyc.com/events/ URL (all rows are source \"elfsight\"), so the scraper is not reading this collection. $.upcoming is [] and $.collection.typeName is \"events-stacked\"."
+    },
+    {
+      "id": "closed-for-a-private-event-monthly-row",
+      "kind": "announcement",
+      "label": "CLOSED FOR A PRIVATE EVENT (all-day row repeating 1st Thursday)",
+      "why": "A closure notice, not a party: description reads \"Rockbar will be closed tonight for a private event. We will reopen Friday at 5pm\". The row was entered with isAllDay true, start/end 23:33, and repeatPeriod nthDayInMonth on a 1st Thursday (2026-05-07), so the widget re-paints it on every 1st Thursday (rendered grid shows it on Oct 1). It is the 19th \"series\" row in the widget but carries no event.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets['e122bc50-bc4f-4cde-a6b9-ee6d4e31531a'].data.settings.events[19].description"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20260909-072307",
+      "note": "Run 20260909-072307 carries \"CLOSED FOR A PRIVATE EVENT\" at 2026-05-08T03:33:00.000Z (bear-dropped). Nine other one-off closure rows (CLOSED FOR PRIDE RECOVERY!, CLOSED DUE TO WEATHER, CLOSED FOR CHRISTMAS DAY, CLOSED X-MAS EVE, CLOSED FOR THANKSGIVING, CLOSED FOR LABOR DAY, CLOSED for Pride Recovery!) sit among the past noRepeat rows and are counted with them."
+    },
+    {
+      "id": "drag-race-viewing-party-ended-custom-series",
+      "kind": "past-event",
+      "label": "Drag Race Viewing Party (repeatPeriod \"custom\", ended 2024-05-01)",
+      "why": "The one \"custom\" repeat row is a finished weekly series: repeatFrequency \"weekly\", repeatInterval 1, repeatWeeklyOnDays [\"fr\"], repeatEnds \"onDate\" with repeatEndsDate 2024-05-01, anchored 2024-02-02. It expresses as FREQ=WEEKLY;BYDAY=FR;UNTIL=20240501 but every instance is in 2024, the widget renders none of them, and it must never be treated as a live series.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets['e122bc50-bc4f-4cde-a6b9-ee6d4e31531a'].data.settings.events[147].repeatEndsDate"
+      },
+      "expect": {
+        "extracted": true,
+        "note": "Extracted as a single past row dated 2024-02-02 is the same treatment the 119 past one-offs get under allowPastEvents; an rrule or any 2026 date for it would be wrong."
+      },
+      "seenInRun": "20260909-072307",
+      "note": "Run 20260909-072307 kept \"Drag Race Viewing Party\" at 2024-02-03T00:00:00.000Z (the anchor date, no recurrence), which is the correct shape for an ended series."
+    },
+    {
+      "id": "hidden-row-back-on-the-block",
+      "kind": "out-of-config-scope",
+      "label": "BACK ON THE BLOCK — hidden 2nd-Thursday monthly row (start 2026-07-09 18:00)",
+      "why": "The widget payload includes the row but with \"visible\":false, the Elfsight editor's hide toggle; the rendered /calendar month grid does not show it (the 2026-09-10 and 2026-09-02 cells are empty where the two hidden series would fall). It is reachable only in the boot API body, never on the page the site publishes.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets['e122bc50-bc4f-4cde-a6b9-ee6d4e31531a'].data.settings.events[1].visible"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null,
+      "note": "Not present in run 20260909-072307, so the reader already honours visible:false."
+    },
+    {
+      "id": "hidden-row-gayme-chaynger",
+      "kind": "out-of-config-scope",
+      "label": "GAYME CHAYNGER — hidden 1st-Wednesday monthly row (start 2026-04-01 19:00) with two \"skip\" exceptions",
+      "why": "The widget payload includes the row but with \"visible\":false, the Elfsight editor's hide toggle; the rendered /calendar month grid does not show it (the 2026-09-10 and 2026-09-02 cells are empty where the two hidden series would fall). It is reachable only in the boot API body, never on the page the site publishes.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets['e122bc50-bc4f-4cde-a6b9-ee6d4e31531a'].data.settings.events[23].visible"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null,
+      "note": "Not present in run 20260909-072307, so the reader already honours visible:false."
+    },
+    {
+      "id": "hidden-row-happy-ending-happy-hour",
+      "kind": "out-of-config-scope",
+      "label": "HAPPY ENDING HAPPY HOUR — hidden one-off dated 2026-07-19 16:00",
+      "why": "The widget payload includes the row but with \"visible\":false, the Elfsight editor's hide toggle; the rendered /calendar month grid does not show it (the 2026-09-10 and 2026-09-02 cells are empty where the two hidden series would fall). It is reachable only in the boot API body, never on the page the site publishes.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets['e122bc50-bc4f-4cde-a6b9-ee6d4e31531a'].data.settings.events[40].visible"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null,
+      "note": "Not present in run 20260909-072307, so the reader already honours visible:false."
+    },
+    {
+      "id": "hidden-row-karaoke-w-coma-white",
+      "kind": "out-of-config-scope",
+      "label": "KARAOKE w/ COMA WHITE — hidden one-off dated 2026-05-06 17:00",
+      "why": "The widget payload includes the row but with \"visible\":false, the Elfsight editor's hide toggle; the rendered /calendar month grid does not show it (the 2026-09-10 and 2026-09-02 cells are empty where the two hidden series would fall). It is reachable only in the boot API body, never on the page the site publishes.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets['e122bc50-bc4f-4cde-a6b9-ee6d4e31531a'].data.settings.events[59].visible"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null,
+      "note": "Not present in run 20260909-072307, so the reader already honours visible:false."
+    },
+    {
+      "id": "hidden-row-t-shirt-swap",
+      "kind": "out-of-config-scope",
+      "label": "T-SHIRT SWAP! — hidden one-off dated 2025-05-04 16:00",
+      "why": "The widget payload includes the row but with \"visible\":false, the Elfsight editor's hide toggle; the rendered /calendar month grid does not show it (the 2026-09-10 and 2026-09-02 cells are empty where the two hidden series would fall). It is reachable only in the boot API body, never on the page the site publishes.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e122bc50-bc4f-4cde-a6b9-ee6d4e31531a",
+        "jsonPath": "$.data.widgets['e122bc50-bc4f-4cde-a6b9-ee6d4e31531a'].data.settings.events[129].visible"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null,
+      "note": "Not present in run 20260909-072307, so the reader already honours visible:false."
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "Should \"CLOSED FOR A PRIVATE EVENT\" (an all-day closure notice the venue saved as a 1st-Thursday monthly repeat) be treated as a published event for diffing, or stay a trap? This file excludes it from publishedEventCount.",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    },
+    {
+      "q": "The BEARS NIGHT OUT description text says \"Every Second Saturday\" while the widget rule, the rendered grid (Oct 3) and the flyer say first Saturday. This file follows the rule + flyer; confirm with the venue if the calendar ever shows a 2nd-Saturday instance.",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    }
+  ],
+  "recheckAfter": "2026-10-10"
 }

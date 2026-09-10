@@ -2,25 +2,932 @@
   "schemaVersion": 1,
   "source": "The Lumberyard",
   "slug": "the-lumberyard",
-  "status": "not-started",
+  "status": "complete",
   "recon": {
-    "date": null,
-    "method": [],
-    "parserUrlsAtRecon": null,
-    "doors": [],
-    "notes": null
+    "date": "2026-09-10",
+    "method": [
+      "static",
+      "rendered",
+      "flyer",
+      "feed",
+      "page-cache"
+    ],
+    "parserUrlsAtRecon": [
+      "https://www.thelumberyardbar.com/events"
+    ],
+    "doors": [
+      {
+        "url": "https://www.thelumberyardbar.com/events",
+        "kind": "wix-static-html",
+        "role": "listing",
+        "rowsReturned": 4,
+        "truthFlag": null,
+        "note": "curl with a Chrome UA, 200, 584126 bytes (static-events.html/.txt). Page title \"Weekly Events | lumberyardbar\". Body text is 4 undated blurbs (Trivia Taco night / QUEERAOKE / Dolly and the DJ / Sunday afternoons) plus the site footer; 6 distinct wixstatic images (2 decorative, 1 logo, 3 flyers). A second fetch with ?recon=20260910 forced an SSR cache MISS and returned the same 6 images."
+      },
+      {
+        "url": "https://www.thelumberyardbar.com/events",
+        "kind": "headless-chrome-dom",
+        "role": "listing",
+        "rowsReturned": 4,
+        "truthFlag": null,
+        "note": "Rendered DOM (rendered-events.html/.txt, 749 chars of text vs 733 static; the only deltas are \"Skip to Main Content\" and the © entity). Same 4 blurbs, same 6 images. Static == rendered."
+      },
+      {
+        "url": "https://www.thelumberyardbar.com/_api/wix-events-web/v1/events?offset=0&limit=50&filter=%7B%7D",
+        "kind": "wix-events-api",
+        "role": "feed",
+        "rowsReturned": 0,
+        "truthFlag": "total=0",
+        "note": "Platform confirmed by a working endpoint: the site's Wix Events & Tickets app (appDefinitionId 140603ad-af8d-84a5-2c80-a0f60cb47351, events-viewer widget registered) answers {\"total\":0,\"offset\":0,\"limit\":50,\"events\":[],\"facets\":{}} with the app instance token from /_api/v2/dynamicmodel (saved as dynamicmodel.json, wix-events-api.json). The events app is installed but holds ZERO events; nothing on the site is a Wix event row. /_api/wix-events-web/v3/events/query answered 403."
+      },
+      {
+        "url": "https://www.thelumberyardbar.com/pages-sitemap.xml",
+        "kind": "sitemap",
+        "role": "sitemap",
+        "rowsReturned": 7,
+        "truthFlag": null,
+        "note": "generatedBy=\"WIX\", all lastmod 2026-09-08. Pages: /, /events, /mothly-events, /upcoming-events, /menu, /about-us, /gallery. No event-detail pages exist."
+      },
+      {
+        "url": "https://www.thelumberyardbar.com/mothly-events",
+        "kind": "wix-static-html",
+        "role": "listing",
+        "rowsReturned": 7,
+        "truthFlag": null,
+        "note": "Static (static-mothly-events.html/.txt) and rendered (rendered-mothly.html/.txt) agree: page title \"Monthly Events | lumberyardbar\", body text is footer-only (482 chars), but the page carries 8 wixstatic images: 7 event flyers (Showtunes Theater Thursday, Chopper 'N' Friends Pup Social, Game On!, Drink & Draw, Rat City Honky Tonk, Exposed, Gay Bingo) + 1 stock forest photo + the shared hero logo. Every flyer states an explicit monthly rule. NOT a configured url; reached by nav discovery (the run's records carry _sourcePageUrl = this page). The rows here are the 7 flyers, read by eye (flyer-transcripts.txt)."
+      },
+      {
+        "url": "https://www.thelumberyardbar.com/upcoming-events",
+        "kind": "wix-static-html",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Despite the slug, this is the \"Brunch Menu | lumberyardbar\" page (nav label \"Brunch Menu\"): footer-only text (362 chars) and 2 brunch-menu photos (prices for Short Stack, The Fabulous B, Biscuits and Gravy, Pride Breakfast Burger...). No events. Static and rendered agree."
+      },
+      {
+        "url": "https://www.thelumberyardbar.com/",
+        "kind": "wix-static-html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Live homepage on 2026-09-10 (static-home.html, static-home-nocache.html with a forced cache MISS, rendered-home.html): logo, hero, address, hours, footer. NO event content. The \"Happening This Week\" section that the scraper saw on 2026-09-07 (see page-cache door) is gone; the old hero banner (94a18f5a) still prints a stale \"9619 16th Ave SW / (206) 695-2007\" while the page text says 9630 16th Ave SW / (206) 466-5278."
+      },
+      {
+        "url": "https://www.thelumberyardbar.com/",
+        "kind": "scraper-page-cache",
+        "role": "listing",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "storage/pages/www.thelumberyardbar.com/index.json, fetchedAt 2026-09-07T05:24:43.851Z, status 200 (copied to page-cache-20260907/index.{json,html,txt}). This is what run 20260909-072307 read. It had a \"Happening This Week / This week at the LumberYard\" day-of-week strip with 16 images: a dated schedule flyer \"LUMBER YARD BAR EVENTS TUE SEPT 1 ... FRI SEPT 11\" (no year), P.A.K. Night SEP. 4 9PM-11PM, Singlet Social \"Next Sunday! Sept 6th\", a WE ♥ ART flyer with 8/14-8/25 dates, a Queer Market vendor call with a \"Reserve Table\" ticketleap link, the South Seattle Bear Social \"Every Sunday 2pm-6pm DJ Redline\" flyer, an older Queeraoke flyer (8P-MIDNIGHT), Taco Tuesday / Happy Hour / Tuesday Trivia 7:30PM menus, and the text \"Sunday BRUNCH 11-2pm\". None of it is on the live homepage today."
+      },
+      {
+        "url": "https://www.thelumberyardbar.com/gallery",
+        "kind": "scraper-classification-cache",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "storage/classification/www.thelumberyardbar.com/gallery--cls-1rml5qu.json (2026-09-07): bodyText is nav + footer only. Also cached: /about-us (prose, no events), /menu (food menu, no events). Not fetched live; sitemap-only pages with no event role."
+      },
+      {
+        "url": "https://static.wixstatic.com/media/f45f1a_4c90712857e7465eb57b9c900f07e819~mv2.jpeg",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "/events flyer 470x394: \"WEDNESDAYS 8:30-MIDNIGHT / QUEERAOKE / THE GAYEST KARAOKE IN TOWN! / $5 FOOD SPECIALS TILL 9P\"."
+      },
+      {
+        "url": "https://static.wixstatic.com/media/f45f1a_35bbb1cc35ed4b8b89bbfacfe3a1f3da~mv2.jpg",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "/events image 1050x750 (alt \"IMG_8755.jpeg\"): \"SATURDAYZ / Music & videos by DJ AL / Hosted by Dolly Madison\" photo collage. No date, no time, no rule."
+      },
+      {
+        "url": "https://static.wixstatic.com/media/f45f1a_eab96d615ea342bbbd8dfa45cc3797c9~mv2.jpeg",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "/events image 1265x1293: the round \"SOUTH SEATTLE BEAR SOCIAL\" logo. No date, no time; it sits beside the \"Sunday afternoons / come hang with the friendly bears 2-6pm\" blurb."
+      },
+      {
+        "url": "https://static.wixstatic.com/media/f45f1a_d96db060bfa44eea964c214a6a3220bd~mv2.jpeg",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "/events image 453x360 (alt \"Trivia .jpeg\"): generic \"Trivia Night\" lettering. No date, time, or weekday."
+      },
+      {
+        "url": "https://static.wixstatic.com/media/f45f1a_e7854f2aacfb49d78e39bb314896dd37~mv2.jpeg",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "/mothly-events 1280x720: \"SHOWTUNES / THEATER THURSDAY / Hosted by Dolly & the DJ / First Thursday of the month / 7pm-10pm / Live (Drag) Performances / Sing Along!\""
+      },
+      {
+        "url": "https://static.wixstatic.com/media/f45f1a_cc298ee88cce432e8e8cb60d3df2b2b2~mv2.png",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "/mothly-events 2107x1169: \"CHOPPER 'N' FRIENDS / PUP SOCIAL / ALL CRITTERS WELCOME / Every third Saturday / from 4-8pm @ / The Lumber Yard in Seattle.\""
+      },
+      {
+        "url": "https://static.wixstatic.com/media/f45f1a_ba8520dca7d74d66be646ed11873c2da~mv2.jpeg",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "/mothly-events 1080x1080: \"GAME ON! / VIDEO GAME PARTY / GAME ON OUR TVS & PROJECTOR! / NOW 3RD FRIDAYS AT LUMBERYARD! / RETRO GAMING + DRINK SPECIALS + ROTATING DJS / 21+ / 9PM-1AM / NO COVER\". Absent from run 20260909-072307 (its /mothly-events pass made 6 segments for 7 flyers)."
+      },
+      {
+        "url": "https://static.wixstatic.com/media/f45f1a_ae4ab4b6d7f4420fadf62edb18bcc50f~mv2.jpeg",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "/mothly-events 1563x875 (alt \"IMG_3424.jpeg\"): \"Last Tuesday / Drink & Draw / at LUMBER YARD BAR / Featuring local, male presenting, models every month. / Draw, meet friends, and build community! / Last Tuesday of the month, 7-10pm / Lumber Yard Bar / 9630 16th Avenue SW, Seattle, WA, 98106 / $15 to participate, buy early at codyshipman.com/events / CURATED BY CODY SHIPMAN\". codyshipman.com/events resolves (200, \"Drink and Draw at Lumber Yard Bar\")."
+      },
+      {
+        "url": "https://static.wixstatic.com/media/f45f1a_9ce9f1fa1668434989c67ee4a53acd5b~mv2.jpeg",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "/mothly-events 800x800: \"Lumberyard Presents / RAT CITY HONKY TONK / LINE DANCING WITH RAIN COUNTRY DANCE ASSOCIATION / 1st Fridays / 9:00 pm\"."
+      },
+      {
+        "url": "https://static.wixstatic.com/media/f45f1a_525a31bbabd44c03a3e122407ca3547d~mv2.png",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "/mothly-events 4400x2475 (alt \"EXP Bar Ad HD.png\"): \"LUMBERYARD BAR / EXPOSED / UNDERWEAR OR LESS / EVERY 2ND FRIDAY / DJ REDLINE / DJ CLOVER\". No time on the flyer."
+      },
+      {
+        "url": "https://static.wixstatic.com/media/f45f1a_44bfb349c5b9487f9d2156598a4b937c~mv2.jpeg",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "/mothly-events 5064x5064: \"GAY BINGO / AT THE LUMBER YARD BAR / EVERY 2ND & 4TH THURSDAY | 7PM / HOSTED BY BARRY / FREE TO PLAY | WIN PRIZES\"."
+      },
+      {
+        "url": "https://static.wixstatic.com/media/f45f1a_7a29b1946ff74ecdbb8f2f6932652d12~mv2.png",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Homepage image as of the 2026-09-07 page cache, NOT on the live site 2026-09-10: \"LUMBER YARD BAR EVENTS\" dated strip TUE SEPT 1 Trivia Tuesday w/ Nathan 7:30PM + Taco Tuesday; WED SEPT 2 Queeraoke 8PM-MIDNIGHT; THU SEPT 3 Theatre Thursday w/ Dolly & the DJ 7PM; FRI SEPT 4 PAK Night Seattle Pups & Kin 9PM; SUN SEPT 6 South Seattle Bear Social Singlet Party 2PM-7PM; TUE SEPT 8; WED SEPT 9; THUR SEPT 10 Gay Bingo 7PM; FRI SEPT 11 Exposed Underwear (or less) Night 9PM-CL. No year printed. Kept as evidence of what the run saw; not a current listing."
+      }
+    ],
+    "notes": "Parser entry (scripts/scraper-input.js \"Onboarding batch 2026-07-27\"): urls [\"https://www.thelumberyardbar.com/events\"], alwaysBear false, metadata.website https://www.thelumberyardbar.com; no urlDiscoveryDepth (omitted = adaptive crawling), no discovery patterns, no siteRole, no automationEnabled. Platform: Wix (sitemap generatedBy=\"WIX\", x-wix-request-id on every response, and the Wix Events API answered with the app instance). The Wix Events & Tickets app is installed with ZERO events (total=0), so the site has NO dated event listings anywhere: /events is four undated weekly blurbs with three flyer images, /mothly-events is seven flyer images stating monthly rules with no text at all, /upcoming-events is the brunch menu. Every event on this site is therefore a recurring series with no listed instances; nothing has a year. The 2026-09-07 page cache (the copy run 20260909-072307 actually read) additionally held a homepage \"Happening This Week\" strip with a dated Sept 1-11 schedule flyer and two Sept one-offs (P.A.K. Night Sep 4, Singlet Social Sept 6th); that strip is absent from the live homepage on 2026-09-10 (static, forced cache-miss and rendered all agree), so those are not documented as published events. The run reached / and /mothly-events via nav discovery from /events and a ticketleap.events page via the homepage's \"Reserve Table\" link, so those pages ARE inside the configured knobs even though only /events is listed. The venue name on the site is \"Lumber Yard Bar\" / \"The Lumber Yard Bar\" (about-us) and data/bars/seattle.json curates it as \"The Lumber Yard Bar\"; that spelling is used in defaults rather than the parser label \"The Lumberyard\". Address confirmed in the page footer: 9630 16th Ave SW, Seattle, WA 98106 (the old homepage banner image still says 9619 16th Ave SW / (206) 695-2007 - stale). Bear verdicts are deliberately not judged here."
   },
   "coverage": {
-    "confidence": null,
-    "basis": null,
-    "publishedEventCount": null,
-    "documentedEventCount": 0,
-    "occurrenceWindow": null,
-    "pastListingsPresent": null,
+    "confidence": "medium",
+    "basis": "Door 1, /events static + rendered (identical text, 4 blurbs, 6 images): 4 weekly items - Trivia Taco night (weekday only implied by \"except the last Tuesday\"), QUEERAOKE (\"Wednesday nights @ 8:30pm\", explicit), Dolly and the DJ (\"Most Saturday Nights\", hedged), Sunday afternoons bears 2-6pm (explicit, untitled in text, South Seattle Bear Social logo beside it). Door 2, the Wix Events API: total=0 - the events app is empty, so no widget rows exist to reconcile against; the blurbs and flyers are the whole inventory. Door 3, /mothly-events static + rendered (identical, footer-only text, 8 images): 7 flyers, each with an explicit monthly rule, read by eye and transcribed in flyer-transcripts.txt; Drink & Draw is also named in the /events Trivia blurb and is counted once. /upcoming-events is the brunch menu (0 events). The live homepage has no event content (0). Sitemap lists no other candidate pages (/menu, /about-us, /gallery are classification-cached as non-event). Published now: 4 + 7 = 11 series, 0 singles, 0 dated instances of anything. Delta between doors: none among live doors; the ONLY delta is temporal - the scraper page cache of 2026-09-07 shows a homepage weekly strip with Sept 1-11 dates that the live site no longer serves, explained in recon.notes and trap homepage-happening-this-week-gone. Past listings: none on the site (the ticketleap 2025 Queer Art Market page is off-site and only reachable through the removed homepage link). Confidence is medium, not high, because 7 of 11 items are image-only and 3 of the 4 text items state their rule loosely (see confidence on each).",
+    "publishedEventCount": 11,
+    "documentedEventCount": 11,
+    "occurrenceWindow": {
+      "start": "2026-09-10",
+      "end": "2026-12-09"
+    },
+    "pastListingsPresent": false,
     "knownGaps": []
   },
-  "defaults": {},
-  "events": [],
-  "traps": [],
-  "openQuestions": []
+  "defaults": {
+    "city": "seattle",
+    "timezone": "America/Los_Angeles",
+    "bar": "The Lumber Yard Bar",
+    "address": "9630 16th Ave SW, Seattle, WA 98106",
+    "location": null,
+    "website": "https://www.thelumberyardbar.com"
+  },
+  "events": [
+    {
+      "id": "trivia-taco-night",
+      "kind": "series",
+      "title": "Trivia Taco night",
+      "description": "Hosted by Nathan",
+      "startTime": null,
+      "endTime": null,
+      "recurrence": "FREQ=WEEKLY;BYDAY=TU",
+      "recurrenceStatedAs": "(except the last Tuesday - Drink and Draw)",
+      "image": "https://static.wixstatic.com/media/f45f1a_d96db060bfa44eea964c214a6a3220bd~mv2.jpeg",
+      "sourceRung": "static",
+      "confidence": "ambiguous",
+      "evidence": {
+        "url": "https://www.thelumberyardbar.com/events",
+        "quote": "Trivia Taco night",
+        "imageUrl": "https://static.wixstatic.com/media/f45f1a_d96db060bfa44eea964c214a6a3220bd~mv2.jpeg"
+      },
+      "occurrences": [
+        {
+          "startDate": "2026-09-15",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-22",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-29",
+          "origin": "rule",
+          "cancelled": true,
+          "evidence": {
+            "url": "https://www.thelumberyardbar.com/events",
+            "quote": "(except the last Tuesday - Drink and Draw)"
+          },
+          "note": "Last Tuesday of the month is Drink & Draw (see drink-and-draw), so the trivia rule skips it."
+        },
+        {
+          "startDate": "2026-10-06",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-13",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-20",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-27",
+          "origin": "rule",
+          "cancelled": true,
+          "evidence": {
+            "url": "https://www.thelumberyardbar.com/events",
+            "quote": "(except the last Tuesday - Drink and Draw)"
+          },
+          "note": "Last Tuesday of the month is Drink & Draw (see drink-and-draw), so the trivia rule skips it."
+        },
+        {
+          "startDate": "2026-11-03",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-10",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-17",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-24",
+          "origin": "rule",
+          "cancelled": true,
+          "evidence": {
+            "url": "https://www.thelumberyardbar.com/events",
+            "quote": "(except the last Tuesday - Drink and Draw)"
+          },
+          "note": "Last Tuesday of the month is Drink & Draw (see drink-and-draw), so the trivia rule skips it."
+        },
+        {
+          "startDate": "2026-12-01",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-08",
+          "origin": "rule"
+        }
+      ],
+      "expect": {
+        "extracted": "unknown",
+        "kept": null,
+        "note": "The /events text never says \"Tuesdays\": the weekday is only implied by \"(except the last Tuesday - Drink and Draw)\" and \"Taco night\". A scraper that refuses to infer a weekly rule from that is behaving correctly; one that extracts it must not turn the exception into the rule (run 20260909-072307 emitted FREQ=MONTHLY;BYDAY=-1TU, i.e. it scheduled trivia ONLY on the Tuesday it is cancelled, dated 2026-09-29)."
+      },
+      "bearVerdict": null,
+      "note": "No start time on the live site. The homepage strip in the 2026-09-07 page cache said \"TRIVIA TUESDAY W/ NATHAN 7:30PM + TACO TUESDAY\" and a \"TUESDAY AT 7:30PM\" trivia flyer, which is where 19:30 would come from, but that strip is gone from the live site so startTime is null here. Last Tuesdays are materialized as cancelled because the same sentence hands them to Drink & Draw."
+    },
+    {
+      "id": "queeraoke",
+      "kind": "series",
+      "title": "QUEERAOKE",
+      "description": "Come Join Bumper and Sing your heart out.",
+      "startTime": "20:30",
+      "endTime": "00:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=WE",
+      "recurrenceStatedAs": "Wednesday nights @ 8:30pm",
+      "image": "https://static.wixstatic.com/media/f45f1a_4c90712857e7465eb57b9c900f07e819~mv2.jpeg",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thelumberyardbar.com/events",
+        "quote": "Wednesday nights @ 8:30pm",
+        "imageUrl": "https://static.wixstatic.com/media/f45f1a_4c90712857e7465eb57b9c900f07e819~mv2.jpeg"
+      },
+      "occurrences": [
+        {
+          "startDate": "2026-09-16",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-23",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-30",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-07",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-14",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-21",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-28",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-04",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-11",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-18",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-25",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-02",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-09",
+          "origin": "rule"
+        }
+      ],
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The only /events item with an explicit weekday AND time in page text. endTime 00:00 (midnight, i.e. the following calendar day) comes from the flyer \"WEDNESDAYS 8:30-MIDNIGHT\"; the flyer also says \"$5 FOOD SPECIALS TILL 9P\" (a food deal, not a cover). Run 20260909-072307 extracted it (Queeraoke, 2026-09-09 20:30, FREQ=WEEKLY;BYDAY=WE) and merged it with a second copy from the 2026-09-07 homepage flyer - that merge is the run's \"1 duplicate removed\"."
+    },
+    {
+      "id": "dolly-and-the-dj",
+      "kind": "series",
+      "title": "Dolly and the DJ",
+      "description": null,
+      "startTime": null,
+      "endTime": null,
+      "recurrence": "FREQ=WEEKLY;BYDAY=SA",
+      "recurrenceStatedAs": "Most Saturday Nights",
+      "image": "https://static.wixstatic.com/media/f45f1a_35bbb1cc35ed4b8b89bbfacfe3a1f3da~mv2.jpg",
+      "sourceRung": "static",
+      "confidence": "ambiguous",
+      "evidence": {
+        "url": "https://www.thelumberyardbar.com/events",
+        "quote": "Most Saturday Nights",
+        "imageUrl": "https://static.wixstatic.com/media/f45f1a_35bbb1cc35ed4b8b89bbfacfe3a1f3da~mv2.jpg"
+      },
+      "occurrences": [
+        {
+          "startDate": "2026-09-12",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-19",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-26",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-03",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-10",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-17",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-24",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-31",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-07",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-14",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-21",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-28",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-05",
+          "origin": "rule"
+        }
+      ],
+      "expect": {
+        "extracted": "unknown",
+        "kept": null,
+        "note": "\"Most Saturday Nights\" is a hedge, not a schedule: the site itself says some Saturdays are skipped and never says which, and no time is given anywhere. A scraper that declines to emit a weekly RRULE from \"Most\" is within the AI prompt rules; one that emits it must NOT borrow the Sunday blurb's \"2-6pm\" (run 20260909-072307 did exactly that - see trap dolly-and-the-dj-fused-with-sunday-bears)."
+      },
+      "bearVerdict": null,
+      "note": "Weekly BYDAY=SA is the closest RRULE to \"Most Saturday Nights\"; occurrences are rule-derived and individually unguaranteed by the site. The flyer reads \"SATURDAYZ / Music & videos by DJ AL / Hosted by Dolly Madison\" - a drag-hosted DJ night, no time."
+    },
+    {
+      "id": "south-seattle-bear-social-sunday",
+      "kind": "series",
+      "title": "SOUTH SEATTLE BEAR SOCIAL",
+      "description": "come hang with the friendly bears 2-6pm",
+      "startTime": "14:00",
+      "endTime": "18:00",
+      "recurrence": "FREQ=WEEKLY;BYDAY=SU",
+      "recurrenceStatedAs": "Sunday afternoons",
+      "image": "https://static.wixstatic.com/media/f45f1a_eab96d615ea342bbbd8dfa45cc3797c9~mv2.jpeg",
+      "sourceRung": "static",
+      "confidence": "ambiguous",
+      "evidence": {
+        "url": "https://www.thelumberyardbar.com/events",
+        "quote": "come hang with the friendly bears 2-6pm",
+        "imageUrl": "https://static.wixstatic.com/media/f45f1a_eab96d615ea342bbbd8dfa45cc3797c9~mv2.jpeg"
+      },
+      "occurrences": [
+        {
+          "startDate": "2026-09-13",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-20",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-27",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-04",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-11",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-18",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-25",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-01",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-08",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-15",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-22",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-29",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-06",
+          "origin": "rule"
+        }
+      ],
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Schedule is explicit in page text (\"Sunday afternoons\" + \"2-6pm\"), but the text carries NO title: the name comes from the round \"SOUTH SEATTLE BEAR SOCIAL\" logo image placed beside the blurb, which is why confidence is ambiguous. The 2026-09-07 homepage cache had a matching flyer \"SOUTH SEATTLE BEAR SOCIAL / Every Sunday / 2pm-6pm / Drink Specials / DJ Redline\" (0f19f49b) confirming the pairing, but that flyer is off the live site. In run 20260909-072307 this blurb did not become its own record: its time and description were fused into \"Dolly and the DJ\" (Saturday) and the homepage copy was fused into \"BRUNCH 11-2pm\" (see traps). extracted:true is the expectation for a correct crawl of /events; the diff should look for a Sunday record with 14:00-18:00, whatever title it wears."
+    },
+    {
+      "id": "showtunes-theater-thursday",
+      "kind": "series",
+      "title": "SHOWTUNES Theater Thursday",
+      "description": "Hosted by Dolly & the DJ. Live (Drag) Performances. Sing Along!",
+      "startTime": "19:00",
+      "endTime": "22:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=1TH",
+      "recurrenceStatedAs": "First Thursday of the month",
+      "image": "https://static.wixstatic.com/media/f45f1a_e7854f2aacfb49d78e39bb314896dd37~mv2.jpeg",
+      "sourceRung": "flyer",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thelumberyardbar.com/mothly-events",
+        "quote": "f45f1a_e7854f2aacfb49d78e39bb314896dd37~mv2.jpeg",
+        "imageUrl": "https://static.wixstatic.com/media/f45f1a_e7854f2aacfb49d78e39bb314896dd37~mv2.jpeg"
+      },
+      "occurrences": [
+        {
+          "startDate": "2026-10-01",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-05",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-03",
+          "origin": "rule"
+        }
+      ],
+      "expect": {
+        "extracted": "unknown",
+        "kept": null,
+        "note": "Flyer-only: /mothly-events has no text besides the shared footer, so this event exists only as an image. A miss is an OCR-path gap, not a crawl gap. The page is not a configured url; the crawler reaches it from the /events nav (\"Monthly Events\") under adaptive discovery, which run 20260909-072307 proved (_sourcePageUrl https://www.thelumberyardbar.com/mothly-events). Run 20260909-072307 did extract it (SHOWTUNES Theater Thursday, 2026-10-01 19:00-22:00, FREQ=MONTHLY;BYDAY=1TH; bear-dropped)."
+      },
+      "bearVerdict": null,
+      "note": "Flyer text (1280x720): \"SHOWTUNES / THEATER THURSDAY / Hosted by Dolly & the DJ / First Thursday of the month / 7pm-10pm / Live (Drag) Performances / Sing Along!\" with the Lumber Yard Bar logo. The evidence quote is the wixstatic media id as it appears in the saved page HTML; the readable text lives only in the image."
+    },
+    {
+      "id": "exposed-underwear-or-less",
+      "kind": "series",
+      "title": "EXPOSED UNDERWEAR OR LESS",
+      "description": "DJ REDLINE, DJ CLOVER",
+      "startTime": null,
+      "endTime": null,
+      "recurrence": "FREQ=MONTHLY;BYDAY=2FR",
+      "recurrenceStatedAs": "EVERY 2ND FRIDAY",
+      "image": "https://static.wixstatic.com/media/f45f1a_525a31bbabd44c03a3e122407ca3547d~mv2.png",
+      "sourceRung": "flyer",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thelumberyardbar.com/mothly-events",
+        "quote": "f45f1a_525a31bbabd44c03a3e122407ca3547d~mv2.png",
+        "imageUrl": "https://static.wixstatic.com/media/f45f1a_525a31bbabd44c03a3e122407ca3547d~mv2.png"
+      },
+      "occurrences": [
+        {
+          "startDate": "2026-09-11",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-09",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-13",
+          "origin": "rule"
+        }
+      ],
+      "expect": {
+        "extracted": "unknown",
+        "kept": null,
+        "note": "Flyer-only: /mothly-events has no text besides the shared footer, so this event exists only as an image. A miss is an OCR-path gap, not a crawl gap. The page is not a configured url; the crawler reaches it from the /events nav (\"Monthly Events\") under adaptive discovery, which run 20260909-072307 proved (_sourcePageUrl https://www.thelumberyardbar.com/mothly-events). Run 20260909-072307 did extract it (EXPOSED UNDERWEAR OR LESS, 2026-09-11, FREQ=MONTHLY;BYDAY=2FR, startDate emitted as 2026-09-11T07:00:00Z = local midnight because the flyer has no time; bear-dropped)."
+      },
+      "bearVerdict": null,
+      "note": "Flyer text (4400x2475, alt \"EXP Bar Ad HD.png\"): \"LUMBERYARD BAR / EXPOSED / UNDERWEAR OR LESS / EVERY 2ND FRIDAY / DJ REDLINE / DJ CLOVER\". No time anywhere on the live site; the removed homepage strip said \"9PM-CL\" for Sept 11 but that is not published today, so startTime stays null."
+    },
+    {
+      "id": "gay-bingo",
+      "kind": "series",
+      "title": "GAY BINGO",
+      "description": "HOSTED BY BARRY. FREE TO PLAY | WIN PRIZES",
+      "startTime": "19:00",
+      "endTime": null,
+      "recurrence": "FREQ=MONTHLY;BYDAY=2TH,4TH",
+      "recurrenceStatedAs": "EVERY 2ND & 4TH THURSDAY | 7PM",
+      "image": "https://static.wixstatic.com/media/f45f1a_44bfb349c5b9487f9d2156598a4b937c~mv2.jpeg",
+      "sourceRung": "flyer",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thelumberyardbar.com/mothly-events",
+        "quote": "f45f1a_44bfb349c5b9487f9d2156598a4b937c~mv2.jpeg",
+        "imageUrl": "https://static.wixstatic.com/media/f45f1a_44bfb349c5b9487f9d2156598a4b937c~mv2.jpeg"
+      },
+      "occurrences": [
+        {
+          "startDate": "2026-09-10",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-09-24",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-08",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-22",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-12",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-26",
+          "origin": "rule"
+        }
+      ],
+      "expect": {
+        "extracted": "unknown",
+        "kept": null,
+        "note": "Flyer-only: /mothly-events has no text besides the shared footer, so this event exists only as an image. A miss is an OCR-path gap, not a crawl gap. The page is not a configured url; the crawler reaches it from the /events nav (\"Monthly Events\") under adaptive discovery, which run 20260909-072307 proved (_sourcePageUrl https://www.thelumberyardbar.com/mothly-events). Run 20260909-072307 extracted it with only HALF the rule (GAY BINGO, 2026-09-25T02:00Z = 2026-09-24 19:00 local, FREQ=MONTHLY;BYDAY=4TH - the \"2ND &\" was dropped; bear-dropped)."
+      },
+      "bearVerdict": null,
+      "note": "Flyer text (5064x5064): \"GAY BINGO / AT THE LUMBER YARD BAR / EVERY 2ND & 4TH THURSDAY | 7PM / HOSTED BY BARRY / FREE TO PLAY | WIN PRIZES\". Two Thursdays a month; 2026-09-10 (recon day, 2nd Thursday) is included in the window. \"FREE TO PLAY\" is a game entry note, not an admission price, so cover is not asserted."
+    },
+    {
+      "id": "rat-city-honky-tonk",
+      "kind": "series",
+      "title": "RAT CITY HONKY TONK",
+      "description": "LINE DANCING WITH RAIN COUNTRY DANCE ASSOCIATION",
+      "startTime": "21:00",
+      "endTime": null,
+      "recurrence": "FREQ=MONTHLY;BYDAY=1FR",
+      "recurrenceStatedAs": "1st Fridays",
+      "image": "https://static.wixstatic.com/media/f45f1a_9ce9f1fa1668434989c67ee4a53acd5b~mv2.jpeg",
+      "sourceRung": "flyer",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thelumberyardbar.com/mothly-events",
+        "quote": "f45f1a_9ce9f1fa1668434989c67ee4a53acd5b~mv2.jpeg",
+        "imageUrl": "https://static.wixstatic.com/media/f45f1a_9ce9f1fa1668434989c67ee4a53acd5b~mv2.jpeg"
+      },
+      "occurrences": [
+        {
+          "startDate": "2026-10-02",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-06",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-04",
+          "origin": "rule"
+        }
+      ],
+      "expect": {
+        "extracted": "unknown",
+        "kept": null,
+        "note": "Flyer-only: /mothly-events has no text besides the shared footer, so this event exists only as an image. A miss is an OCR-path gap, not a crawl gap. The page is not a configured url; the crawler reaches it from the /events nav (\"Monthly Events\") under adaptive discovery, which run 20260909-072307 proved (_sourcePageUrl https://www.thelumberyardbar.com/mothly-events). Run 20260909-072307 did extract it (RAT CITY HONKY TONK, 2026-10-02 21:00, FREQ=MONTHLY;BYDAY=1FR; bear-dropped)."
+      },
+      "bearVerdict": null,
+      "note": "Flyer text (800x800): \"Lumberyard Presents / RAT CITY HONKY TONK / LINE DANCING WITH RAIN COUNTRY DANCE ASSOCIATION / 1st Fridays / 9:00 pm\". \"Rat City\" is White Center's nickname; Rain Country Dance Association is the co-presenter, not the venue."
+    },
+    {
+      "id": "drink-and-draw",
+      "kind": "series",
+      "title": "Drink & Draw",
+      "description": "Featuring local, male presenting, models every month. Draw, meet friends, and build community!",
+      "startTime": "19:00",
+      "endTime": "22:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=-1TU",
+      "recurrenceStatedAs": "Last Tuesday of the month, 7-10pm",
+      "ticketUrl": "https://codyshipman.com/events",
+      "cover": "$15",
+      "image": "https://static.wixstatic.com/media/f45f1a_ae4ab4b6d7f4420fadf62edb18bcc50f~mv2.jpeg",
+      "sourceRung": "flyer",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thelumberyardbar.com/mothly-events",
+        "quote": "f45f1a_ae4ab4b6d7f4420fadf62edb18bcc50f~mv2.jpeg",
+        "imageUrl": "https://static.wixstatic.com/media/f45f1a_ae4ab4b6d7f4420fadf62edb18bcc50f~mv2.jpeg"
+      },
+      "occurrences": [
+        {
+          "startDate": "2026-09-29",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-27",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-24",
+          "origin": "rule"
+        }
+      ],
+      "expect": {
+        "extracted": "unknown",
+        "kept": null,
+        "note": "Flyer-only: /mothly-events has no text besides the shared footer, so this event exists only as an image. A miss is an OCR-path gap, not a crawl gap. The page is not a configured url; the crawler reaches it from the /events nav (\"Monthly Events\") under adaptive discovery, which run 20260909-072307 proved (_sourcePageUrl https://www.thelumberyardbar.com/mothly-events). The /events page text also names it - \"(except the last Tuesday - Drink and Draw)\" - inside the Trivia blurb, so a text-only crawl could surface the name and rule but never the time or price. Run 20260909-072307 extracted it from the flyer (Drink & Draw, 2026-09-30T02:00Z = 2026-09-29 19:00 local, FREQ=MONTHLY;BYDAY=-1TU, ticketUrl \"codyshipman.com/events\" without scheme; bear-dropped)."
+      },
+      "bearVerdict": null,
+      "note": "Flyer text (1563x875, alt \"IMG_3424.jpeg\"): \"Last Tuesday / Drink & Draw / at LUMBER YARD BAR / Featuring local, male presenting, models every month. / Draw, meet friends, and build community! / Last Tuesday of the month, 7-10pm / Lumber Yard Bar / 9630 16th Avenue SW, Seattle, WA, 98106 / $15 to participate, buy early at codyshipman.com/events / CURATED BY CODY SHIPMAN\". codyshipman.com/events is live (200, redirects to www., page titled \"Drink and Draw at Lumber Yard Bar\"). Counted once even though /events also mentions it."
+    },
+    {
+      "id": "game-on-video-game-party",
+      "kind": "series",
+      "title": "GAME ON!",
+      "description": "VIDEO GAME PARTY. GAME ON OUR TVS & PROJECTOR! RETRO GAMING + DRINK SPECIALS + ROTATING DJS. 21+",
+      "startTime": "21:00",
+      "endTime": "01:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=3FR",
+      "recurrenceStatedAs": "NOW 3RD FRIDAYS AT LUMBERYARD!",
+      "cover": "NO COVER",
+      "image": "https://static.wixstatic.com/media/f45f1a_ba8520dca7d74d66be646ed11873c2da~mv2.jpeg",
+      "sourceRung": "flyer",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thelumberyardbar.com/mothly-events",
+        "quote": "f45f1a_ba8520dca7d74d66be646ed11873c2da~mv2.jpeg",
+        "imageUrl": "https://static.wixstatic.com/media/f45f1a_ba8520dca7d74d66be646ed11873c2da~mv2.jpeg"
+      },
+      "occurrences": [
+        {
+          "startDate": "2026-09-18",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-16",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-20",
+          "origin": "rule"
+        }
+      ],
+      "expect": {
+        "extracted": "unknown",
+        "kept": null,
+        "note": "Flyer-only: /mothly-events has no text besides the shared footer, so this event exists only as an image. A miss is an OCR-path gap, not a crawl gap. The page is not a configured url; the crawler reaches it from the /events nav (\"Monthly Events\") under adaptive discovery, which run 20260909-072307 proved (_sourcePageUrl https://www.thelumberyardbar.com/mothly-events). This is the ONE /mothly-events flyer run 20260909-072307 did NOT produce: the page yielded 6 segments for 7 flyers and this image (ba8520dc, the 5th in DOM order) had no segment. Whether that is an OCR miss, a segmenter drop, or the maxImages:2 cap is a pipeline question, not a crawl gap."
+      },
+      "bearVerdict": null,
+      "note": "Flyer text (1080x1080, retro game-magazine art): \"GAME ON! / VIDEO GAME PARTY / GAME ON OUR TVS & PROJECTOR! / NOW 3RD FRIDAYS AT LUMBERYARD! / RETRO GAMING + DRINK SPECIALS + ROTATING DJS / 21+ / 9PM-1AM / NO COVER\". endTime 01:00 is the following calendar day. cover \"NO COVER\" is the flyer's literal admission text."
+    },
+    {
+      "id": "chopper-n-friends-pup-social",
+      "kind": "series",
+      "title": "CHOPPER 'N' FRIENDS PUP SOCIAL",
+      "description": "ALL CRITTERS WELCOME",
+      "startTime": "16:00",
+      "endTime": "20:00",
+      "recurrence": "FREQ=MONTHLY;BYDAY=3SA",
+      "recurrenceStatedAs": "Every third Saturday",
+      "image": "https://static.wixstatic.com/media/f45f1a_cc298ee88cce432e8e8cb60d3df2b2b2~mv2.png",
+      "sourceRung": "flyer",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thelumberyardbar.com/mothly-events",
+        "quote": "f45f1a_cc298ee88cce432e8e8cb60d3df2b2b2~mv2.png",
+        "imageUrl": "https://static.wixstatic.com/media/f45f1a_cc298ee88cce432e8e8cb60d3df2b2b2~mv2.png"
+      },
+      "occurrences": [
+        {
+          "startDate": "2026-09-19",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-17",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-21",
+          "origin": "rule"
+        }
+      ],
+      "expect": {
+        "extracted": "unknown",
+        "kept": null,
+        "note": "Flyer-only: /mothly-events has no text besides the shared footer, so this event exists only as an image. A miss is an OCR-path gap, not a crawl gap. The page is not a configured url; the crawler reaches it from the /events nav (\"Monthly Events\") under adaptive discovery, which run 20260909-072307 proved (_sourcePageUrl https://www.thelumberyardbar.com/mothly-events). Run 20260909-072307 did extract it and KEPT it as bear (CHOPPER 'N' FRIENDS PUP SOCIAL, 2026-09-19 16:00-20:00, FREQ=MONTHLY;BYDAY=3SA, bar \"The Lumber Yard\", address \"The Lumber Yard in Seattle\" - the flyer phrase, not a street address)."
+      },
+      "bearVerdict": null,
+      "note": "Flyer text (2107x1169, blue cartoon pup): \"CHOPPER 'N' FRIENDS / PUP SOCIAL / ALL CRITTERS WELCOME / Every third Saturday / from 4-8pm @ / The Lumber Yard in Seattle.\" A pup/kink social, not bear-branded; verdict left to the bear pass."
+    }
+  ],
+  "traps": [
+    {
+      "id": "dolly-and-the-dj-fused-with-sunday-bears",
+      "kind": "recurring-blurb",
+      "label": "\"Dolly and the DJ / Most Saturday Nights\" and \"Sunday afternoons / come hang with the friendly bears 2-6pm\" - two undated blurbs in one text block at the bottom of /events",
+      "why": "Where run 20260909-072307's 12 \"dated\" events came from, on a site with zero dated listings: (a) /events blurbs, 3 records - \"Trivia Taco night\" 2026-09-29 with FREQ=MONTHLY;BYDAY=-1TU (the cancelled last-Tuesday exception read as the rule), \"Queeraoke\" 2026-09-09 20:30 WEEKLY;WE (fine), and this kept record \"Dolly and the DJ\" 2026-09-12T21:00Z-2026-09-13T01:00Z = Saturday 14:00-18:00 local with FREQ=WEEKLY;BYDAY=SA, description \"come hang with the friendly bears 2-6pm\" and isBearEvent true: title and weekday from the Saturday blurb, time and description from the Sunday blurb, bear verdict earned by the Sunday blurb's words - a chimera that puts a drag/DJ night on the bear calendar and erases the actual Sunday bear social; (b) the 2026-09-07 homepage cache, 2 records - \"BRUNCH 11-2pm\" (kept, see homepage-sunday-brunch-11-2pm) and a second Queeraoke that dedup folded into (a)'s (\"1 duplicate removed\"); (c) /mothly-events flyers, 6 records - EXPOSED 2026-09-11, SHOWTUNES 2026-10-01, Drink & Draw 2026-09-29, GAY BINGO 2026-09-24 (4TH only), RAT CITY HONKY TONK 2026-10-02, CHOPPER 'N' FRIENDS 2026-09-19 (kept) - each a legitimate monthly rule with its next occurrence materialized, GAME ON! missed; (d) an off-site ticketleap page, 1 record - \"Queer Art Market\" 2025-03-22 (see ticketleap-queer-art-market-2025). Total 3+2+6+1 = 12 = the run's totalEvents. The dates are all rule arithmetic from undated text; none is a listed instance. This trap is the fused Saturday record specifically: it must not exist. The two blurbs are documented separately as dolly-and-the-dj and south-seattle-bear-social-sunday.",
+      "evidence": {
+        "url": "https://www.thelumberyardbar.com/events",
+        "quote": "come hang with the friendly bears 2-6pm"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20260909-072307"
+    },
+    {
+      "id": "homepage-sunday-brunch-11-2pm",
+      "kind": "announcement",
+      "label": "\"Sunday / BRUNCH 11-2pm\" in the homepage \"Happening This Week\" day strip (2026-09-07 page cache)",
+      "why": "Brunch service hours, not an event. Run 20260909-072307 turned it into a KEPT bear event \"BRUNCH 11-2pm\" (2026-09-13T07:00Z, FREQ=WEEKLY;BYDAY=SU, bar \"The Lumber Yard Bar\") because the segment's OCR image was the adjacent South Seattle Bear Social flyer (\"SOUTH SEATTLE BEAR SOCIAL Every Sunday 2pm-6pm Drink Specials DJ Redline\") - the flyer text became the description and the bear verdict, while the title stayed \"BRUNCH 11-2pm\" and the time became local midnight. The strip is no longer on the live homepage (2026-09-10 static, forced cache-miss and rendered DOM all lack it), so a fresh crawl cannot reach this text at all.",
+      "evidence": {
+        "url": "https://www.thelumberyardbar.com/",
+        "quote": "BRUNCH 11-2pm"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20260909-072307"
+    },
+    {
+      "id": "homepage-happening-this-week-gone",
+      "kind": "past-event",
+      "label": "Homepage \"Happening / This Week / This week at the LumberYard\" strip: dated schedule flyer \"LUMBER YARD BAR EVENTS TUE SEPT 1 ... FRI SEPT 11\", \"P.A.K. NIGHT SEATTLE SEP. 4 9PM-11PM\", \"Next Sunday! Sept 6th SPECIAL EDITION SINGLET SOCIAL\", \"WE ♥ ART\" 8/14-8/25 - present in the scraper page cache of 2026-09-07, absent from the live site 2026-09-10",
+      "why": "These were the only dated items the site has published recently, and they are gone: the live homepage (static, forced SSR cache-miss with ?recon=20260910, and headless-Chrome DOM) contains only the logo, hero and footer. Their dates (no year printed) are also past or same-week relative to recon. They are recorded so a diff does not count P.A.K. Night (Sep 4) or the Singlet Social (Sep 6) as \"missed by the scraper\" - the site itself no longer lists them - and so a future reader knows the homepage strip is edited by hand and may reappear with new dates.",
+      "evidence": {
+        "url": "https://www.thelumberyardbar.com/",
+        "quote": "This Week",
+        "imageUrl": "https://static.wixstatic.com/media/f45f1a_7a29b1946ff74ecdbb8f2f6932652d12~mv2.png"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "upcoming-events-is-the-brunch-menu",
+      "kind": "navigation",
+      "label": "/upcoming-events - page title \"Brunch Menu | lumberyardbar\", nav label \"Brunch Menu\"",
+      "why": "The slug promises an events list; the page is the brunch menu (two photographed menu cards: Short Stack $11, The Fabulous B $15, Biscuits and Gravy $16, Pride Breakfast Burger $18 ...) over the shared footer. Static and rendered agree, and the 2026-09-07 page cache is the same. The sitemap lists it, the crawler fetched it (page cache upcoming-events.json), and nothing on it is an event. Any record with \"Brunch\" or a menu price as a title from this URL is a menu, not programming.",
+      "evidence": {
+        "url": "https://www.thelumberyardbar.com/upcoming-events",
+        "quote": "Brunch Menu | lumberyardbar",
+        "imageUrl": "https://static.wixstatic.com/media/f45f1a_36ccf2f3fc5c48f0b4adbf2d4c339048~mv2.jpeg"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "ticketleap-queer-art-market-2025",
+      "kind": "past-event",
+      "label": "ticketleap.events \"Queer Art Market\" (2025-03-22) reached through the homepage Queer Market vendor flyer's \"Reserve Table\" link (2026-09-07 page cache)",
+      "why": "An 18-month-old vendor-registration listing on a third-party ticketing page, not a current event. Run 20260909-072307 followed the link, classified it \"event-page\" and extracted \"Queer Art Market\" startDate 2025-03-22T21:00Z (raw 2025-03-22T14:00:00-0700) with endDate 2026-10-18T01:00Z, ticketUrl events.ticketleap.com/tickets/thelumberyardbarcom/queer-art-market, cover from JSON-LD offers; the bear check dropped it. The link no longer exists on the live homepage, and the parser sets no allowPastEvents, so this must not be extracted.",
+      "evidence": {
+        "url": "https://www.thelumberyardbar.com/",
+        "quote": "ticketleap.events/tickets/thelumberyardbarcom/queer-art-market"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20260909-072307"
+    },
+    {
+      "id": "wix-events-app-empty",
+      "kind": "soft-404",
+      "label": "Wix Events & Tickets app (events-viewer widget, \"events\" / \"events_members_page\" ids in the site model) with zero events",
+      "why": "The site model advertises the Wix Events app, which is the door a Wix-aware scraper would query first. The app is installed but empty: the Wix Events API answers total=0 with an empty events array, and no /event-details or events-list page is in the sitemap. Treat any \"events viewer\" data path on this host as an empty shell, not as proof that the site publishes nothing - the real inventory is the blurbs on /events and the flyers on /mothly-events.",
+      "evidence": {
+        "url": "https://www.thelumberyardbar.com/_api/wix-events-web/v1/events?offset=0&limit=50&filter=%7B%7D",
+        "jsonPath": "$.total"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "Is the homepage \"Happening This Week\" strip (dated weekly schedule + one-off flyers, seen 2026-09-07, gone 2026-09-10) refreshed weekly by hand, or was it removed for good? If it comes back, the homepage becomes the ONLY place this site publishes dated one-offs (P.A.K. Night, Singlet Social) and it is not a configured url - the crawler only reaches it by nav discovery.",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    },
+    {
+      "q": "What weekday and time does the site intend for \"Trivia Taco night\"? The live /events text implies Tuesday only via \"(except the last Tuesday - Drink and Draw)\" and gives no time; the removed homepage flyer said Tuesday 7:30PM.",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    }
+  ],
+  "recheckAfter": "2026-09-17"
 }

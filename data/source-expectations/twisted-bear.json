@@ -2,25 +2,145 @@
   "schemaVersion": 1,
   "source": "Twisted Bear",
   "slug": "twisted-bear",
-  "status": "not-started",
+  "status": "complete",
   "recon": {
-    "date": null,
-    "method": [],
-    "parserUrlsAtRecon": null,
-    "doors": [],
-    "notes": null
+    "date": "2026-09-10",
+    "method": ["feed", "static", "rendered", "flyer"],
+    "parserUrlsAtRecon": [
+      "https://www.eventbrite.com/o/nab-events-llc-51471535173",
+      "https://www.eventbrite.com/o/121474797695"
+    ],
+    "doors": [
+      {
+        "url": "https://www.eventbrite.com/o/nab-events-llc-51471535173",
+        "kind": "eventbrite-organizer-next-data",
+        "role": "feed",
+        "rowsReturned": 1,
+        "truthFlag": "hasMoreUpcoming=false; upcomingEventsTotal=1; organizer.metrics.totalEvents=22",
+        "note": "Static curl with a Chrome UA, 200, no redirect. Payload is <script id=\"__NEXT_DATA__\"> -> props.pageProps.upcomingEvents[] (organizer 'NAB Events, LLC'). Saved as orgA.html / orgA.next.json. pastEvents is not in the static payload (the Past tab loads on demand)."
+      },
+      {
+        "url": "https://www.eventbrite.com/o/121474797695",
+        "kind": "eventbrite-organizer-next-data",
+        "role": "feed",
+        "rowsReturned": 0,
+        "truthFlag": "hasMoreUpcoming=false; upcomingEventsTotal=0; organizer.metrics.totalEvents=1",
+        "note": "Static curl with a Chrome UA, 200, no redirect (organizer 'Moo Productions Limited', profilePageUrl /o/moo-productions-limited-121474797695). upcomingEvents is an empty array. Saved as orgB.html / orgB.next.json."
+      },
+      {
+        "url": "https://www.eventbrite.com/o/121474797695",
+        "kind": "headless-chrome-dom",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": "rendered empty state: 'Nothing planned right now'",
+        "note": "Second door for the empty organizer: rendered DOM (orgB.rendered.html/.txt) shows the Upcoming tab with the text 'Nothing planned right now' and 'total events 1'."
+      },
+      {
+        "url": "https://www.eventbrite.com/o/nab-events-llc-51471535173",
+        "kind": "headless-chrome-dom",
+        "role": "listing",
+        "rowsReturned": 1,
+        "truthFlag": "rendered Upcoming tab shows exactly one card",
+        "note": "Rendered DOM (orgA.rendered.html/.txt): one card 'TWISTED BEAR Washington, D.C. Debut / Sat, Sep 26 • 9:00 PM / Icon DC / From $23.18', matching the __NEXT_DATA__ row."
+      },
+      {
+        "url": "https://www.eventbrite.com/e/twisted-bear-washington-dc-debut-tickets-1997898549343",
+        "kind": "eventbrite-event-page-jsonld",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": "JSON-LD SocialEvent eventStatus=EventScheduled; isSeries=false; seriesId=null",
+        "note": "Static curl, 200. Saved as eventA.html/.txt, eventA.jsonld.1.json (SocialEvent), eventA.next.json. JSON-LD carries startDate 2026-09-26T21:00:00-04:00 and endDate 2026-09-27T03:00:00-04:00; the organizer-page row carried end_time 21:00:00 (same as start), which the event page corrects."
+      },
+      {
+        "url": "https://cdn.evbuc.com/images/1191263087/1088207912863/1/original.20260817-175227",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 1,
+        "truthFlag": null,
+        "note": "Event flyer (2160x1080 JPEG, saved as flyer-original.jpg). Reads: SATURDAY SEPTEMBER 26TH | 9PM - 3AM, TWISTED BEAR, WASHINGTON DC DEBUT, 11 YEAR ANNIVERSARY TOUR, PAUL COALS (UK) / JASON JAMES (US), ICON DC 2001 11TH ST NW, ADVANCE TICKETS AT TBDC.EVENTBRITE.COM. Agrees with the feed row and JSON-LD."
+      }
+    ],
+    "notes": "Both configured urls are Eventbrite organizer profile pages. Platform confirmed by a working endpoint: the SSR __NEXT_DATA__ payload (props.pageProps.upcomingEvents / hasMoreUpcoming / upcomingEventsTotal / organizer.metrics.totalEvents). window.__SERVER_DATA__ does not exist on these pages and /org/<id>/showmore/ returns 403, so neither was used. The scraper-input.js entry has '// discoveryOnly: true' commented out, i.e. discovery is NOT restricted to link-following; the entry sets no urlDiscoveryDepth, discovery patterns, alwaysBear, siteRole or automationEnabled. Twisted Bear is a touring brand (London-based, '20+ countries and 50 cities'), so city is set per event from the venue address rather than in defaults. Organizer B (Moo Productions Limited) is a UK company with 1 lifetime event and nothing upcoming."
   },
   "coverage": {
-    "confidence": null,
-    "basis": null,
-    "publishedEventCount": null,
-    "documentedEventCount": 0,
-    "occurrenceWindow": null,
-    "pastListingsPresent": null,
+    "confidence": "high",
+    "basis": "Organizer A __NEXT_DATA__: upcomingEvents.length 1, upcomingEventsTotal 1, hasMoreUpcoming false. Organizer B __NEXT_DATA__: upcomingEvents.length 0, upcomingEventsTotal 0, hasMoreUpcoming false, and the rendered DOM shows the positive empty state 'Nothing planned right now'. Second door for the one event: its event page JSON-LD (SocialEvent, EventScheduled, isSeries false, seriesId null, additionalSessionsCount 0 on the row) plus the rendered organizer card and the flyer all agree on 2026-09-26 21:00 at Icon DC. The only delta between doors is the end time: the organizer row says end_time 21:00:00 (equal to start) while the event page JSON-LD, the visible header '9 PM-3 AM', the description '9pm - 3am' and the flyer all say 03:00 the next morning; the event page is taken as truth. Past listings: neither organizer page ships past rows in the static payload; the Past tab exists and organizer.metrics.totalEvents implies 21 past events for A (22 lifetime - 1 upcoming) and 1 past for B (1 lifetime - 0 upcoming) - counted from the metric, not enumerated. Published now: 1 single event.",
+    "publishedEventCount": 1,
+    "documentedEventCount": 1,
+    "occurrenceWindow": { "start": "2026-09-10", "end": "2026-12-09" },
+    "pastListingsPresent": true,
     "knownGaps": []
   },
-  "defaults": {},
-  "events": [],
-  "traps": [],
+  "defaults": {
+    "timezone": "America/New_York"
+  },
+  "events": [
+    {
+      "id": "twisted-bear-washington-dc-debut-2026-09-26",
+      "kind": "single",
+      "title": "TWISTED BEAR Washington, D.C. Debut",
+      "description": "TWISTED BEAR - from London - is super excited to be making its long-awaited debut at ICON D.C.",
+      "bar": "Icon DC",
+      "address": "2001 11th Street Northwest, Washington, DC 20001",
+      "location": "38.917181, -77.02674329999999",
+      "city": "dc",
+      "timezone": "America/New_York",
+      "startDate": "2026-09-26",
+      "startTime": "21:00",
+      "endDate": "2026-09-27",
+      "endTime": "03:00",
+      "ticketUrl": "https://www.eventbrite.com/e/twisted-bear-washington-dc-debut-tickets-1997898549343",
+      "image": "https://cdn.evbuc.com/images/1191263087/1088207912863/1/original.20260817-175227",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.eventbrite.com/o/nab-events-llc-51471535173",
+        "jsonPath": "$.props.pageProps.upcomingEvents[0]",
+        "quote": "Sat, Sep 26 • 9:00 PM Icon DC",
+        "imageUrl": "https://cdn.evbuc.com/images/1191263087/1088207912863/1/original.20260817-175227"
+      },
+      "expect": { "extracted": true, "kept": null },
+      "bearVerdict": null,
+      "note": "Feed row: start_date 2026-09-26, start_time 21:00:00, timezone America/New_York, primary_venue Icon DC with lat/lng 38.917181/-77.02674329999999 (location is the venue's own coordinates from the feed). End time comes from the event page JSON-LD endDate 2026-09-27T03:00:00-04:00 and the visible '9 PM-3 AM' / '9pm - 3am' text; the organizer row's end_time 21:00:00 is a listing-only collapse and must not be taken as the end. series_id null, additionalSessionsCount 0, isSeries false: a single. The quote is a verbatim line from the rendered organizer page (orgA.rendered.txt); the jsonPath points into orgA.next.json. Ticket price from the row: from $23.18 USD. The event description does not link twisted-bear.com anywhere on the Eventbrite page."
+    }
+  ],
+  "traps": [
+    {
+      "id": "org-a-past-tab",
+      "kind": "past-event",
+      "label": "'Past' tab on the NAB Events, LLC organizer page (21 past events implied by total events 22)",
+      "why": "The organizer page has an Upcoming/Past tab pair. Past rows are not in the static __NEXT_DATA__ payload (pastEvents is absent) and load on demand from /org/<id>/showmore/, which answers 403 to a bare fetch. They are archives of previous Twisted Bear dates, not current events, and must not be enumerated here.",
+      "evidence": { "url": "https://www.eventbrite.com/o/nab-events-llc-51471535173", "quote": "total events 22" },
+      "expect": { "extracted": false },
+      "seenInRun": null
+    },
+    {
+      "id": "org-b-past-tab",
+      "kind": "past-event",
+      "label": "'Past' tab on the Moo Productions Limited organizer page (1 lifetime event, none upcoming)",
+      "why": "Organizer B lists nothing upcoming ('Nothing planned right now'); its single lifetime event is only reachable through the Past tab, which is not in the static payload. It is an archive, not a current listing.",
+      "evidence": { "url": "https://www.eventbrite.com/o/121474797695", "quote": "Nothing planned right now" },
+      "expect": { "extracted": false },
+      "seenInRun": null
+    },
+    {
+      "id": "event-page-recommendation-shells",
+      "kind": "foreign-programming",
+      "label": "'More events from NAB Events, LLC' and 'You might also like...' blocks on the event page",
+      "why": "Eventbrite recommendation rails. In the static HTML they are empty shells (initialMoreOrganizerEvents is null); when hydrated in a browser they fill with other organizers' events chosen by Eventbrite, which are not Twisted Bear listings.",
+      "evidence": { "url": "https://www.eventbrite.com/e/twisted-bear-washington-dc-debut-tickets-1997898549343", "quote": "More events from NAB Events, LLC" },
+      "expect": { "extracted": false },
+      "seenInRun": null
+    },
+    {
+      "id": "footer-city-event-links",
+      "kind": "navigation",
+      "label": "Eventbrite footer 'Find Events' links (New Orleans Food & Drink Events, Events in Dallas Today, Washington Events ...)",
+      "why": "Site-wide Eventbrite discovery navigation present on every organizer and event page; the link text names cities and categories, not events.",
+      "evidence": { "url": "https://www.eventbrite.com/o/nab-events-llc-51471535173", "quote": "Events in Dallas Today" },
+      "expect": { "extracted": false },
+      "seenInRun": null
+    }
+  ],
   "openQuestions": []
 }

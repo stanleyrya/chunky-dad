@@ -2,25 +2,809 @@
   "schemaVersion": 1,
   "source": "massive.club",
   "slug": "massive-club",
-  "status": "not-started",
+  "status": "complete",
   "recon": {
-    "date": null,
-    "method": [],
-    "parserUrlsAtRecon": null,
-    "doors": [],
-    "notes": null
+    "date": "2026-09-10",
+    "method": [
+      "static",
+      "flyer",
+      "page-cache"
+    ],
+    "parserUrlsAtRecon": [
+      "https://www.massive.club"
+    ],
+    "doors": [
+      {
+        "url": "https://www.massive.club",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 17,
+        "truthFlag": null,
+        "note": "Configured URL. Webflow, fully server-rendered (curl, Chrome UA): a 17-row \"GET TICKETS\" link list (title + \"Mon D, YYYY H:MM AM/PM\" line + tixr.com/e/<id>) followed by a 6-card grid with application/ld+json Event blocks for the first 6, then \"view EVENTS CALENDAR\". No pagination flag exists — the whole CMS list is in the HTML. Saved: home.html / home.txt / home-jsonld.json."
+      },
+      {
+        "url": "https://www.massive.club/calendar",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 17,
+        "truthFlag": "none — the full CMS list is server-rendered; FEATURED EVENTS list reads \"No items found.\"",
+        "note": "Primary enumerator. 17 event-item cards, each with an application/ld+json Event (name, image, startDate/endDate as \"Mon DD, YYYY\", location Massive Club / 619 E Pine St, offers price + tixr url, organizer Massive Nightclub) plus the visible title and \"Mon D, YYYY H:MM AM/PM\" line. Month buttons are client-side finsweet cmsfilter. Saved: calendar.html / calendar.txt / calendar-jsonld.json."
+      },
+      {
+        "url": "https://www.massive.club/sitemap.xml",
+        "kind": "xml",
+        "role": "sitemap",
+        "rowsReturned": 479,
+        "truthFlag": null,
+        "note": "Second door. 479 <loc> URLs: 440 gallery-images, 17 shows, 5 news, 5 album-categories, 1 each calendar/about/contact/faq/monthly-events/massive-streaming/resident-djs/resident-dancers/search/privacy/terms-of-use + root. Saved: sitemap.xml."
+      },
+      {
+        "url": "https://www.massive.club/shows/tkvr-cucci",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Representative of the 7 sitemap /shows slugs that return 200 (also tkvr-nolid, tkvr-dj-girlfriends, tkvr-flittie, outwig-outslay-outdrag, horse-meat-disco-1-02-27, bearracuda---glow-party-e47f1): an unrelated template shell with zero event fields. Saved under shows/."
+      },
+      {
+        "url": "https://www.massive.club/shows/bronze-babez-show",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 0,
+        "truthFlag": "HTTP 404",
+        "note": "Representative of the 10 sitemap /shows slugs that 404 (bottom-forty-hard-labor-day-wknd-w-sht-tlk, bronze-babez-show, butt-blast---guys-underwear-social-ef61c, get-2-soaked-babe-night, hostile-noise, it-girl-for-the-stars-among-us-9fd5b, massive-friday-c-powers-atl, pack-party, tkvr-august-v-m, treasure-trail-seattle). Saved under shows/."
+      },
+      {
+        "url": "https://www.massive.club/monthly-events",
+        "kind": "html",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "6 undated programming blurbs (BLOWPOP, Discipline, Make Out Party, SABOR, Massive Saturdays, Bottom Forty) plus an \"Other Parties\" brand list; no dates, no ticket links. Recorded as recurring-blurb traps. Saved: pages/monthly-events.html/.txt."
+      },
+      {
+        "url": "https://www.massive.club/about",
+        "kind": "html",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Venue description (\"located at 619 E Pine Street in Seattle\"), owners, resident DJs. No events. Saved: pages/about.html/.txt."
+      },
+      {
+        "url": "https://www.massive.club/contact",
+        "kind": "html",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Address line \"619 E Pine St, Seattle, WA 98122\". No events. Saved: pages/contact.html/.txt."
+      },
+      {
+        "url": "https://tixr.com/e/204623",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 0,
+        "truthFlag": "HTTP 403 (DataDome)",
+        "note": "Every tixr.com/e/<id> link (17 tried) and https://www.tixr.com/groups/massive return a DataDome interstitial (\"Please enable JS and disable any ad blocker\") to curl AND to headless Chrome --dump-dom; tixr.com/api/events/<id> also 403. No tixr.com pages exist in the scraper page cache. Venue/price/end time therefore come from the calendar JSON-LD and the flyers, not from Tixr. Saved: tixr/*.html, tixr/204623-rendered.html."
+      },
+      {
+        "url": "https://www.massive.club/calendar",
+        "kind": "page-cache",
+        "role": "listing",
+        "rowsReturned": 16,
+        "truthFlag": "fetchedAt 2026-09-07T05:23:36.067Z, statusCode 200",
+        "note": "Scraper page cache (storage/pages/www.massive.club/calendar.json), read for churn only: 16 rows on 2026-09-07 — had \"Bottom Forty Hard Labor Day Wknd w/ SHT TLK\" (Sep 6, 2026 10:00 PM, tixr.com/e/202301) and lacked Black Swan (Sep 18) and Press Play (Sep 23). Copied to page-cache/calendar-2026-09-07.json."
+      },
+      {
+        "url": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": 17,
+        "truthFlag": null,
+        "note": "All 17 card images (webp) from the JSON-LD \"image\" fields, saved under flyers/ and opened with Read. 9 carry legible text (PACK, Bronze Babez, Shea Coulee, Bearracuda, 4x TKVR, Black Swan, Press Play, Looking, Horse Meat Disco); Dungeon & Drag Queens, Haruka, Twink Bash, PERVERT, Outwig carry no date/time text. Flyers supplied endTime for 7 events and door-time discrepancies for 2; no flyer-only events exist."
+      }
+    ],
+    "notes": "Webflow site (cdn.prod.website-files.com, w-dyn-items CMS lists; no CMS API). The rendered list on the homepage and /calendar is the enumerator; both carry identical 17-row lists on 2026-09-10 (Aug 2, 2026 → Jan 2, 2027). Scraper run 20260909-072307 (urlCount 1, classified https://www.massive.club/ as multi-event-page, then crawled adaptively): 23 raw events, 8 duplicates removed, 4 kept (Hard Labor Day, PACK | Transmasc Redlight Party, Bearracuda, \"Nolid\"), 11 bear-dropped (7 real calendar rows + 4 fabricated-date blurbs from /monthly-events: BLOWPOP, Discipline (Kink/Fetish), Massive Saturdays, Bottom Forty); crawlErrors for two ra.co/events pages that no page fetched today links to. \"Hard Labor Day\" (Sep 6) was on the site in the 09-07 cache and is gone by 09-10."
+  },
+  "defaults": {
+    "city": "seattle",
+    "timezone": "America/Los_Angeles",
+    "bar": "Massive",
+    "address": "619 E Pine St, Seattle, WA 98122",
+    "location": null,
+    "website": "https://www.massive.club",
+    "instagram": "https://www.instagram.com/massive_club",
+    "facebook": null
   },
   "coverage": {
-    "confidence": null,
-    "basis": null,
-    "publishedEventCount": null,
-    "documentedEventCount": 0,
-    "occurrenceWindow": null,
-    "pastListingsPresent": null,
-    "knownGaps": []
+    "confidence": "high",
+    "basis": "Enumerator = /calendar (static curl, Chrome UA): 17 event-item cards, each with a JSON-LD Event block and a visible \"Mon D, YYYY H:MM AM/PM\" line; the homepage (the configured URL) renders the identical 17 as a link list plus the first 6 as cards — 17/17 titles, dates and tixr URLs agree between the two pages. 1 of the 17 is past (Outwig, Outslay, Outdrag — Aug 2, 2026, still the first card): counted here, not enumerated → 16 published upcoming events (Sep 10, 2026 – Jan 2, 2027), all singles with explicit year; no series is stated on either listing page. Second door = sitemap.xml (479 URLs): its 17 /shows slugs are a different, abandoned CMS collection — 7 return a contentless template shell, 10 return 404; only 6 slugs match a current calendar title (outwig, tkvr-cucci, tkvr-nolid, tkvr-dj-girlfriends, tkvr-flittie, horse-meat-disco-1-02-27; bronze-babez-show matches but 404s), 10 calendar events have no /shows slug (PACK, Massive Friday Shea Coulee, Dungeon and Drag Queens, Bearracuda | Seattle, Black Swan, Haruka, Press Play, Twink Bash, PERVERT MX, Looking), and 10 /shows slugs are past-only or never-listed (bearracuda glow party, bottom-forty hard labor day, butt-blast, get-2-soaked-babe-night, hostile-noise, it-girl, massive-friday-c-powers-atl, pack-party, tkvr-august-v-m, treasure-trail-seattle). Delta explained: the calendar collection (which drives both listing pages) is maintained; the /shows collection is not, and the sitemap is generated from CMS items regardless. Third check = scraper page cache of /calendar from 2026-09-07 (16 rows): minus Hard Labor Day (Sep 6, since removed), plus Black Swan and Press Play (since added) = today's 17, so the list churns by hand within days. Tixr (17 event pages + group page) is DataDome-blocked for curl and headless Chrome, so end times come from 7 flyers and endDate from JSON-LD; nothing on Tixr can add or remove an event from the venue's own list.",
+    "publishedEventCount": 16,
+    "documentedEventCount": 16,
+    "occurrenceWindow": {
+      "start": "2026-09-10",
+      "end": "2026-12-09"
+    },
+    "pastListingsPresent": true,
+    "knownGaps": [
+      "Tixr event pages (the only per-event pages the site links to) are DataDome-blocked (403 for curl, headless Chrome, and the /api path), so descriptions, door times and ticket tiers beyond the JSON-LD single price are not captured; endTime is asserted only where a flyer states it (7 of 16).",
+      "JSON-LD startDate/endDate are date-only (\"Sep 10, 2026\"); times come from the visible \"H:MM PM\" line. endDate is copied from JSON-LD as published (next-day for late shows, same-day for early ones)."
+    ]
   },
-  "defaults": {},
-  "events": [],
-  "traps": [],
-  "openQuestions": []
+  "events": [
+    {
+      "id": "pack-transmasc-redlight-party-2026-09-10",
+      "kind": "single",
+      "title": "PACK | Transmasc Redlight Party",
+      "startDate": "2026-09-10",
+      "startTime": "22:00",
+      "endDate": "2026-09-11",
+      "ticketUrl": "https://tixr.com/e/204623",
+      "image": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a8dff12132724acc40bf71c_f61c1ca9-1d40-45a8-b489-76a828f56ee8.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.massive.club/calendar",
+        "quote": "PACK | Transmasc Redlight Party",
+        "dateQuote": "Sep 10, 2026 10:00 PM",
+        "jsonPath": "$[1]",
+        "jsonPathFile": "calendar-jsonld.json (the 17 application/ld+json Event blocks lifted verbatim from calendar.html)",
+        "imageUrl": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a8dff12132724acc40bf71c_f61c1ca9-1d40-45a8-b489-76a828f56ee8.webp"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Recon-day event (kept: on/after recon date). JSON-LD offers price 10 USD. Flyer (opened with Read): \"PACK / SEPTEMBER 10TH / 10PM / 619 E PINE / MASSIVE\", main stage Asmodeus, Justin Boots, hunky gogos, \"A TRANSMASC REDLIGHT PARTY\". No end time published (JSON-LD endDate Sep 11, 2026 only)."
+    },
+    {
+      "id": "bronze-babez-show-w-fantasia-royale-gaga-2026-09-11",
+      "kind": "single",
+      "title": "Bronze Babez Show w/ Fantasia Royale Gaga",
+      "startDate": "2026-09-11",
+      "startTime": "20:00",
+      "endDate": "2026-09-11",
+      "ticketUrl": "https://tixr.com/e/204139",
+      "image": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a8a081def9dc373581645e1_d9d5c5bb-0036-40d3-8040-04403c311090.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.massive.club/calendar",
+        "quote": "Bronze Babez Show w/ Fantasia Royale Gaga",
+        "dateQuote": "Sep 11, 2026 8:00 PM",
+        "jsonPath": "$[2]",
+        "jsonPathFile": "calendar-jsonld.json (the 17 application/ld+json Event blocks lifted verbatim from calendar.html)",
+        "imageUrl": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a8a081def9dc373581645e1_d9d5c5bb-0036-40d3-8040-04403c311090.webp"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "JSON-LD offers price 15 USD; endDate Sep 11, 2026 (same day). Flyer: \"DRAG + POLE + BURLESQUE\", \"FRIDAY SEPTEMBER 11 | $15 PRE-SALE / 7:30PM DOORS | $20 DOORS\" — doors 7:30 PM vs the 8:00 PM calendar time; the calendar time is the expectation. Sitemap slug /shows/bronze-babez-show is a 404."
+    },
+    {
+      "id": "massive-friday-shea-coulee-2026-09-11",
+      "kind": "single",
+      "title": "Massive Friday - Shea Coulee",
+      "startDate": "2026-09-11",
+      "startTime": "22:00",
+      "endDate": "2026-09-12",
+      "ticketUrl": "https://tixr.com/e/204110",
+      "image": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a88c73d8f634a5e3fd6e462_3d0535c4-b40c-4662-8250-9b2bb8639981.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.massive.club/calendar",
+        "quote": "Massive Friday - Shea Coulee",
+        "dateQuote": "Sep 11, 2026 10:00 PM",
+        "jsonPath": "$[3]",
+        "jsonPathFile": "calendar-jsonld.json (the 17 application/ld+json Event blocks lifted verbatim from calendar.html)",
+        "imageUrl": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a88c73d8f634a5e3fd6e462_3d0535c4-b40c-4662-8250-9b2bb8639981.webp"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "JSON-LD offers price 16.03 USD; endDate Sep 12, 2026. Flyer: \"Shea Coulee DJ Set\", \"FRIDAY 9/11\", \"10PM–CLOSE\" (Friday close is 2 AM per the site hours block; no explicit end time so endTime is not asserted), DJ support Rowan Ruthless, hosted by Fantasia Royale Gaga, Issa Man, Tommie Darling, Hiero, This Girl."
+    },
+    {
+      "id": "dungeon-and-drag-queens-seattle-massive-attack-2026-09-12",
+      "kind": "single",
+      "title": "Dungeon and Drag Queens Seattle: Massive Attack",
+      "startDate": "2026-09-12",
+      "startTime": "17:30",
+      "endDate": "2026-09-12",
+      "ticketUrl": "https://tixr.com/e/205270",
+      "image": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a94a4b98b3d83a127182d76_42142849-5b11-4976-a77a-08cc4416c6b3.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.massive.club/calendar",
+        "quote": "Dungeon and Drag Queens Seattle: Massive Attack",
+        "dateQuote": "Sep 12, 2026 5:30 PM",
+        "jsonPath": "$[4]",
+        "jsonPathFile": "calendar-jsonld.json (the 17 application/ld+json Event blocks lifted verbatim from calendar.html)",
+        "imageUrl": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a94a4b98b3d83a127182d76_42142849-5b11-4976-a77a-08cc4416c6b3.webp"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "JSON-LD offers price 20 USD; endDate Sep 12, 2026 (same day). Flyer is a logo card (\"Dungeons & Drag Queens\") with no date/time text."
+    },
+    {
+      "id": "bearracuda-seattle-2026-09-12",
+      "kind": "single",
+      "title": "Bearracuda | Seattle",
+      "startDate": "2026-09-12",
+      "startTime": "21:00",
+      "endDate": "2026-09-13",
+      "ticketUrl": "https://tixr.com/e/199024",
+      "image": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a56b181218cb38fbbcba5a0_e0a61b4c-5dc9-438d-85e5-6acb2ed97e17.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "belongsToSource": "Bearracuda Events",
+      "sameEventAs": [
+        "bearracuda-events#bearracuda-seattle-7-day-load-2026-09-12"
+      ],
+      "evidence": {
+        "url": "https://www.massive.club/calendar",
+        "quote": "Bearracuda | Seattle",
+        "dateQuote": "Sep 12, 2026 9:00 PM",
+        "jsonPath": "$[5]",
+        "jsonPathFile": "calendar-jsonld.json (the 17 application/ld+json Event blocks lifted verbatim from calendar.html)",
+        "imageUrl": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a56b181218cb38fbbcba5a0_e0a61b4c-5dc9-438d-85e5-6acb2ed97e17.webp"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Bearracuda's own touring party hosted at Massive; the venue publishes it, so it is included, with belongsToSource set. JSON-LD offers price 20 USD; endDate Sep 13, 2026. Flyer: \"SATURDAY SEPTEMBER 12TH, 2026 / BEARRACUDA / SEATTLE / Seven Day Load / A NIGHT OF JOCKSTRAPS, BOXERS, BONERS, & BRIEFS! (2 CLOTHES CHECKS AVAILABLE) / DJ MATT CONSOLA and DJ FREDDY KING OF PANTS / MASSIVE 619 E. PINE STREET / ADV. TIX AT BEARRACUDA.COM\". Massive links tixr.com/e/199024 as the ticket URL."
+    },
+    {
+      "id": "tkvr-cucci-2026-09-17",
+      "kind": "single",
+      "title": "TKVR | Cucci",
+      "startDate": "2026-09-17",
+      "startTime": "22:00",
+      "endDate": "2026-09-18",
+      "endTime": "02:00",
+      "ticketUrl": "https://tixr.com/e/202705",
+      "image": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a7abf5232e8f577fff74615_3c0b2091-d9a8-4e46-bc71-249a9891dec4.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.massive.club/calendar",
+        "quote": "TKVR | Cucci",
+        "dateQuote": "Sep 17, 2026 10:00 PM",
+        "jsonPath": "$[6]",
+        "jsonPathFile": "calendar-jsonld.json (the 17 application/ld+json Event blocks lifted verbatim from calendar.html)",
+        "imageUrl": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a7abf5232e8f577fff74615_3c0b2091-d9a8-4e46-bc71-249a9891dec4.webp"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "JSON-LD offers price 7.58 USD; endDate Sep 18, 2026. endTime 02:00 comes from the flyer: \"CUCCI / SECRET ENTRANCE / EXTENDED SET / MASSIVE – SEA / 10PM – 2AM / SEPTEMBER 09.17.26 / TKVR\". TKVR is a promoter series (3rd Thursdays: Sep 17, Oct 15, Nov 19, Dec 17) but each date is listed separately with its own headliner, so each is a single. Run 20260909-072307 kept the Oct 15 sibling with the title truncated to \"Nolid\"."
+    },
+    {
+      "id": "black-swan-a-ballerina-rave-2026-09-18",
+      "kind": "single",
+      "title": "Black Swan: A Ballerina Rave",
+      "startDate": "2026-09-18",
+      "startTime": "22:00",
+      "endDate": "2026-09-19",
+      "endTime": "02:00",
+      "ticketUrl": "https://tixr.com/e/206319",
+      "image": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6aa09035a566b2b036b75412_f62bf062-1aa6-49a1-8a91-ee7a2edda31c.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.massive.club/calendar",
+        "quote": "Black Swan: A Ballerina Rave",
+        "dateQuote": "Sep 18, 2026 10:00 PM",
+        "jsonPath": "$[7]",
+        "jsonPathFile": "calendar-jsonld.json (the 17 application/ld+json Event blocks lifted verbatim from calendar.html)",
+        "imageUrl": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6aa09035a566b2b036b75412_f62bf062-1aa6-49a1-8a91-ee7a2edda31c.webp"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Added between the 2026-09-07 page cache (absent) and 2026-09-10 (present). JSON-LD offers price 16.03 USD; endDate Sep 19, 2026. endTime 02:00 from the flyer: \"BABE NIGHT PRESENTS BLACK SWAN A BALLERINA RAVE MCMLXXXV / THE BARRE: WAX WITCH, VYPER / THE PIT: EMI AFTON, DJ LAY, RIVERTHESTAR / MASSIVE CLUB 9/18 10-2AM\"."
+    },
+    {
+      "id": "massive-presents-haruka-japan-2026-09-19",
+      "kind": "single",
+      "title": "Massive Presents: Haruka (Japan)",
+      "startDate": "2026-09-19",
+      "startTime": "22:00",
+      "endDate": "2026-09-20",
+      "ticketUrl": "https://tixr.com/e/205799",
+      "image": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a98cc9d6934e22ce6860629_a7e22dff-b4d8-4796-ab51-ec74051b0c9a.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.massive.club/calendar",
+        "quote": "Massive Presents: Haruka (Japan)",
+        "dateQuote": "Sep 19, 2026 10:00 PM",
+        "jsonPath": "$[8]",
+        "jsonPathFile": "calendar-jsonld.json (the 17 application/ld+json Event blocks lifted verbatim from calendar.html)",
+        "imageUrl": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a98cc9d6934e22ce6860629_a7e22dff-b4d8-4796-ab51-ec74051b0c9a.webp"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "JSON-LD offers price 11.8 USD; endDate Sep 20, 2026. Flyer is an artist portrait with no text."
+    },
+    {
+      "id": "press-play-troye-sivan-edition-2026-09-23",
+      "kind": "single",
+      "title": "Press Play - Troye Sivan Edition",
+      "startDate": "2026-09-23",
+      "startTime": "21:00",
+      "endDate": "2026-09-24",
+      "ticketUrl": "https://tixr.com/e/206325",
+      "image": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6aa09627bc675a866da0a014_a1e605fc-cca1-4238-b6e7-2490dd9d9225.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.massive.club/calendar",
+        "quote": "Press Play - Troye Sivan Edition",
+        "dateQuote": "Sep 23, 2026 9:00 PM",
+        "jsonPath": "$[9]",
+        "jsonPathFile": "calendar-jsonld.json (the 17 application/ld+json Event blocks lifted verbatim from calendar.html)",
+        "imageUrl": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6aa09627bc675a866da0a014_a1e605fc-cca1-4238-b6e7-2490dd9d9225.webp"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Added between the 2026-09-07 page cache (absent) and 2026-09-10 (present). JSON-LD offers price 10 USD; endDate Sep 24, 2026. Flyer: \"MASSIVE EVERY 4TH WEDNESDAY / PRESS PLAY / TROYE SIVAN \"SOMETHING TO GIVE EACH OTHER\" / HOSTED BY PUPUSA / CLAUDE VILLE, JACK KING GOFF, SID SEEDY, SHERWOOD RYDER / 8PM DOORS SEPTEMBER 23 - A MONTHLY POP ALBUM LISTENING SHOW / 619 E PINE STREET\". Doors 8 PM vs the 9:00 PM calendar time; the calendar time is the expectation. Documented as a single because the calendar lists only this dated instance (no Oct 28 row) — see openQuestions."
+    },
+    {
+      "id": "twink-bash-chasers-2026-09-26",
+      "kind": "single",
+      "title": "Twink Bash: Chasers",
+      "startDate": "2026-09-26",
+      "startTime": "21:00",
+      "endDate": "2026-09-27",
+      "ticketUrl": "https://tixr.com/e/205394",
+      "image": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a96229462bea739ae104c3f_7638004d-45be-4a71-ab89-d0158b6dbe55.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.massive.club/calendar",
+        "quote": "Twink Bash: Chasers",
+        "dateQuote": "Sep 26, 2026 9:00 PM",
+        "jsonPath": "$[10]",
+        "jsonPathFile": "calendar-jsonld.json (the 17 application/ld+json Event blocks lifted verbatim from calendar.html)",
+        "imageUrl": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a96229462bea739ae104c3f_7638004d-45be-4a71-ab89-d0158b6dbe55.webp"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "JSON-LD offers price 11.8 USD; endDate Sep 27, 2026. Flyer is a photo with no text."
+    },
+    {
+      "id": "pervert-mx-seattle-2026-10-02",
+      "kind": "single",
+      "title": "PERVERT MX (SEATTLE)",
+      "startDate": "2026-10-02",
+      "startTime": "22:00",
+      "endDate": "2026-10-03",
+      "ticketUrl": "https://tixr.com/e/205801",
+      "image": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a98ceec6934e22ce68734ed_e7192df9-74be-4fe9-a9db-0379d829decb.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.massive.club/calendar",
+        "quote": "PERVERT MX (SEATTLE)",
+        "dateQuote": "Oct 2, 2026 10:00 PM",
+        "jsonPath": "$[11]",
+        "jsonPathFile": "calendar-jsonld.json (the 17 application/ld+json Event blocks lifted verbatim from calendar.html)",
+        "imageUrl": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a98ceec6934e22ce68734ed_e7192df9-74be-4fe9-a9db-0379d829decb.webp"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "JSON-LD offers price 16.03 USD; endDate Oct 3, 2026. Flyer is the PERVERT logo card with no date/time text."
+    },
+    {
+      "id": "tkvr-nolid-2026-10-15",
+      "kind": "single",
+      "title": "TKVR | Nolid",
+      "startDate": "2026-10-15",
+      "startTime": "22:00",
+      "endDate": "2026-10-16",
+      "endTime": "02:00",
+      "ticketUrl": "https://tixr.com/e/202706",
+      "image": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a7abf5332e8f577fff74637_558f7af9-1fd0-477a-83a3-8a64448fb5a0.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.massive.club/calendar",
+        "quote": "TKVR | Nolid",
+        "dateQuote": "Oct 15, 2026 10:00 PM",
+        "jsonPath": "$[12]",
+        "jsonPathFile": "calendar-jsonld.json (the 17 application/ld+json Event blocks lifted verbatim from calendar.html)",
+        "imageUrl": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a7abf5332e8f577fff74637_558f7af9-1fd0-477a-83a3-8a64448fb5a0.webp"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "JSON-LD offers price 7.58 USD; endDate Oct 16, 2026. endTime 02:00 from the flyer: \"NOLID / SECRET ENTRANCE / EXTENDED SET / MASSIVE – SEA / 10PM – 2AM / OCTOBER 10.15.26 / TKVR\". Run 20260909-072307 kept this event with the title truncated to \"Nolid\" (the \"TKVR | \" prefix dropped)."
+    },
+    {
+      "id": "looking-2026-10-16",
+      "kind": "single",
+      "title": "Looking",
+      "startDate": "2026-10-16",
+      "startTime": "22:00",
+      "endDate": "2026-10-17",
+      "endTime": "03:00",
+      "ticketUrl": "https://tixr.com/e/205790",
+      "image": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a98ad0efcbfaa95e0b7e7c2_7b4212a3-ffa9-444b-a3fc-d21c3f245820.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.massive.club/calendar",
+        "quote": "Looking",
+        "dateQuote": "Oct 16, 2026 10:00 PM",
+        "jsonPath": "$[13]",
+        "jsonPathFile": "calendar-jsonld.json (the 17 application/ld+json Event blocks lifted verbatim from calendar.html)",
+        "imageUrl": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a98ad0efcbfaa95e0b7e7c2_7b4212a3-ffa9-444b-a3fc-d21c3f245820.webp"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "JSON-LD offers price 10 USD; endDate Oct 17, 2026. endTime 03:00 from the flyer: \"LOOKING FOR PARTY MONSTERS / 10.16 / HOSTS: JAY KAY, THIS GIRL, TOMBOY, MIMI GINA / MASSIVE 619 E PINE 10PM-3AM / MUSIC: ROJO (PGH), DJ MUTT / THERE'S NO SUCH THING AS OVERDRESSED\". The one-word title is the whole calendar title."
+    },
+    {
+      "id": "tkvr-dj-girlfriends-2026-11-19",
+      "kind": "single",
+      "title": "TKVR | DJ Girlfriends",
+      "startDate": "2026-11-19",
+      "startTime": "22:00",
+      "endDate": "2026-11-20",
+      "endTime": "02:00",
+      "ticketUrl": "https://tixr.com/e/202707",
+      "image": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a7ac07fc78a5ac3458ad785_c2b8d1b2-b9a0-41e6-b540-31b759143d2b.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.massive.club/calendar",
+        "quote": "TKVR | DJ Girlfriends",
+        "dateQuote": "Nov 19, 2026 10:00 PM",
+        "jsonPath": "$[14]",
+        "jsonPathFile": "calendar-jsonld.json (the 17 application/ld+json Event blocks lifted verbatim from calendar.html)",
+        "imageUrl": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a7ac07fc78a5ac3458ad785_c2b8d1b2-b9a0-41e6-b540-31b759143d2b.webp"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "JSON-LD offers price 7.58 USD; endDate Nov 20, 2026. endTime 02:00 from the flyer: \"DJ GIRLFRIENDS / SECRET ENTRANCE / EXTENDED SET / MASSIVE – SEA / 10PM – 2AM / NOVEMBER 11.19.26 / TKVR\"."
+    },
+    {
+      "id": "tkvr-flittie-2026-12-17",
+      "kind": "single",
+      "title": "TKVR | Flittie",
+      "startDate": "2026-12-17",
+      "startTime": "22:00",
+      "endDate": "2026-12-18",
+      "endTime": "02:00",
+      "ticketUrl": "https://tixr.com/e/202708",
+      "image": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a7ac07fc78a5ac3458ad788_99cad130-7aa9-473f-af8a-d8f09aa45695.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.massive.club/calendar",
+        "quote": "TKVR | Flittie",
+        "dateQuote": "Dec 17, 2026 10:00 PM",
+        "jsonPath": "$[15]",
+        "jsonPathFile": "calendar-jsonld.json (the 17 application/ld+json Event blocks lifted verbatim from calendar.html)",
+        "imageUrl": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a7ac07fc78a5ac3458ad788_99cad130-7aa9-473f-af8a-d8f09aa45695.webp"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "JSON-LD offers price 7.58 USD; endDate Dec 18, 2026. endTime 02:00 from the flyer: \"FLITTIE / SECRET ENTRANCE / BIMBO HYPNOSIS SUPPORT / MASSIVE – SEA / 10PM – 2AM / DECEMBER 12.17.26 / TKVR\"."
+    },
+    {
+      "id": "horse-meat-disco-2027-01-02",
+      "kind": "single",
+      "title": "HORSE MEAT DISCO 1/02/27",
+      "startDate": "2027-01-02",
+      "startTime": "22:00",
+      "endDate": "2027-01-03",
+      "endTime": "03:00",
+      "ticketUrl": "https://tixr.com/e/202303",
+      "image": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a74d41418f51e51a7ab4abd_c2832eb7-9c47-4a3c-b8d9-af5818f69eb8.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.massive.club/calendar",
+        "quote": "HORSE MEAT DISCO 1/02/27",
+        "dateQuote": "Jan 2, 2027 10:00 PM",
+        "jsonPath": "$[16]",
+        "jsonPathFile": "calendar-jsonld.json (the 17 application/ld+json Event blocks lifted verbatim from calendar.html)",
+        "imageUrl": "https://cdn.prod.website-files.com/659447a9dbb86fcea688b307/6a74d41418f51e51a7ab4abd_c2832eb7-9c47-4a3c-b8d9-af5818f69eb8.webp"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Single ~4 months out (singles are never window-limited). JSON-LD offers carries no price (empty \"price\"); endDate Jan 03, 2027. endTime 03:00 from the flyer: \"BOTTOM FORTY PRESENTS / HORSE MEAT DISCO / SATURDAY 01.02 / MASSIVE / 10PM-3AM / TICKETS: BOTTOMFORTY.COM\" — the flyer points to bottomforty.com but the site links tixr.com/e/202303. The title itself carries the date \"1/02/27\"."
+    }
+  ],
+  "traps": [
+    {
+      "id": "outwig-outslay-outdrag-past",
+      "label": "Outwig, Outslay, Outdrag — Aug 2, 2026 7:30 PM (first card on /calendar and the homepage)",
+      "kind": "past-event",
+      "why": "Aug 2, 2026 is 39 days before the recon date but the card is still the first row of the rendered list (the CMS list is not date-filtered). Its JSON-LD endDate reads \"Sep 20, 2026\", a data-entry slip that makes the past event look current to anything trusting endDate. Counted in basis, not enumerated.",
+      "evidence": {
+        "url": "https://www.massive.club/calendar",
+        "quote": "Outwig, Outslay, Outdrag"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "Run 20260909-072307 extracted it (present in the parser's bearDroppedEvents). Whether extraction is correct depends on allowPastEvents, which this parser does not set."
+      },
+      "seenInRun": "20260909-072307"
+    },
+    {
+      "id": "hard-labor-day-removed",
+      "label": "Bottom Forty Hard Labor Day Wknd w/ SHT TLK — Sep 6, 2026 10:00 PM (in the 2026-09-07 page cache only)",
+      "kind": "past-event",
+      "why": "Present in the 2026-09-07T05:23:36Z page cache of /calendar (16 rows) and extracted by run 20260909-072307 as \"Hard Labor Day\" (tixr.com/e/202301); removed from the live site by 2026-09-10 (Aug 2 stays, Sep 6 does not — the venue prunes by hand). Not published today.",
+      "evidence": {
+        "url": "https://www.massive.club/calendar",
+        "quote": "Bottom Forty Hard Labor Day Wknd w/ SHT TLK"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20260909-072307",
+      "evidenceNote": "quote is from the saved page-cache copy page-cache/calendar-2026-09-07.json, not from today's calendar.html"
+    },
+    {
+      "id": "homepage-double-render",
+      "label": "Homepage: 17 \"GET TICKETS\" link rows followed by a 6-card grid of the same events, then \"view EVENTS CALENDAR\"",
+      "kind": "duplicate-listing",
+      "why": "The homepage renders every calendar event twice (a plain link list of all 17, then a card grid of the first 6 with JSON-LD), and /calendar renders the same 17 a third time. Same title + date + tixr URL each time; the scraper must fold them (run 20260909-072307: 23 raw events, 8 duplicates removed).",
+      "evidence": {
+        "url": "https://www.massive.club",
+        "quote": "view EVENTS CALENDAR"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20260909-072307"
+    },
+    {
+      "id": "featured-events-empty",
+      "label": "\"FEATURED EVENTS\" heading with \"No items found.\" on /calendar",
+      "kind": "navigation",
+      "why": "An empty Webflow CMS list — the featured collection has no items. A heading with no events beneath it; nothing to extract.",
+      "evidence": {
+        "url": "https://www.massive.club/calendar",
+        "quote": "No items found."
+      },
+      "expect": {
+        "extracted": false
+      }
+    },
+    {
+      "id": "month-filter-buttons",
+      "label": "January … December buttons and \"Show All Events\" on /calendar",
+      "kind": "navigation",
+      "why": "Finsweet cmsfilter month buttons (client-side filtering of the already-rendered list). Month names next to the cards are UI chrome, not event dates.",
+      "evidence": {
+        "url": "https://www.massive.club/calendar",
+        "quote": "Show All Events"
+      },
+      "expect": {
+        "extracted": false
+      }
+    },
+    {
+      "id": "hours-block",
+      "label": "Hours: Tuesday Closed / Wednesday 7PM–2 AM / … / Monday Closed (site footer, every page)",
+      "kind": "venue-header",
+      "why": "Opening hours, rendered as weekday + time pairs on every page — looks like a weekly schedule but is the venue's hours block, not events.",
+      "evidence": {
+        "url": "https://www.massive.club/calendar",
+        "quote": "Tuesday Closed"
+      },
+      "expect": {
+        "extracted": false
+      }
+    },
+    {
+      "id": "blurb-blowpop",
+      "label": "BLOWPOP — \"Thursdays\" — \"Every Thursday at Massive is our wildly popular and free party BlowPOP!\" (/monthly-events)",
+      "kind": "recurring-blurb",
+      "why": "Undated programming blurb on /monthly-events. The dated calendar (Aug 2026 – Jan 2027) lists no BlowPOP instance; Thursdays on the calendar are PACK (Sep 10) and TKVR (3rd Thursdays). Run 20260909-072307 manufactured a \"BLOWPOP\" event dated 2026-09-10 from this paragraph.",
+      "evidence": {
+        "url": "https://www.massive.club/monthly-events",
+        "quote": "Every Thursday at Massive is our wildly popular and free party BlowPOP!"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20260909-072307"
+    },
+    {
+      "id": "blurb-discipline",
+      "label": "Discipline (Kink/Fetish) — \"3rd Fridays\" (/monthly-events)",
+      "kind": "recurring-blurb",
+      "why": "Undated blurb. The 3rd Fridays inside the calendar range are already occupied by other listed events (Sep 18 Black Swan, Oct 16 Looking) and no Discipline row exists, so the blurb is not a live schedule. Run 20260909-072307 manufactured \"Discipline (Kink/Fetish)\" dated 2026-09-18 from it.",
+      "evidence": {
+        "url": "https://www.massive.club/monthly-events",
+        "quote": "Discipline (Kink/Fetish)"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20260909-072307"
+    },
+    {
+      "id": "blurb-massive-saturdays",
+      "label": "Massive Saturdays — \"Saturdays\" — \"Every Saturday join us at Massive…\" (/monthly-events)",
+      "kind": "recurring-blurb",
+      "why": "Brand umbrella for whatever Saturday event is on the calendar (Sep 12 Bearracuda, Sep 19 Haruka, Sep 26 Twink Bash, Oct 2 …), not a separate event. Run 20260909-072307 manufactured \"Massive Saturdays\" dated 2026-09-12 from it, a duplicate of the real Sep 12 rows.",
+      "evidence": {
+        "url": "https://www.massive.club/monthly-events",
+        "quote": "Massive Saturdays"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20260909-072307"
+    },
+    {
+      "id": "blurb-bottom-forty",
+      "label": "Bottom Forty — \"3-day Weekend Sundays\" (MLK, Presidents, Memorial, Labor Day) (/monthly-events)",
+      "kind": "recurring-blurb",
+      "why": "Undated holiday-weekend blurb. Its Labor Day 2026 instance was the now-removed Sep 6 calendar row; the next (MLK Day, Jan 2027) is not on the calendar. Run 20260909-072307 manufactured \"Bottom Forty\" dated 2026-09-13 (an ordinary Sunday) from it.",
+      "evidence": {
+        "url": "https://www.massive.club/monthly-events",
+        "quote": "3-day Weekend Sundays"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20260909-072307"
+    },
+    {
+      "id": "blurb-make-out-party",
+      "label": "Make Out Party — \"Every other month\" (/monthly-events)",
+      "kind": "recurring-blurb",
+      "why": "Undated blurb that itself says \"check the calendar for upcoming Make Out Party events\"; no calendar row exists in the current range.",
+      "evidence": {
+        "url": "https://www.massive.club/monthly-events",
+        "quote": "Make Out Party"
+      },
+      "expect": {
+        "extracted": false
+      }
+    },
+    {
+      "id": "blurb-sabor",
+      "label": "SABOR (Latin Night) — \"Every other month\" (/monthly-events)",
+      "kind": "recurring-blurb",
+      "why": "Undated blurb that itself says \"check the calendar for upcoming Sabor events\"; no calendar row exists in the current range.",
+      "evidence": {
+        "url": "https://www.massive.club/monthly-events",
+        "quote": "SABOR (Latin Night)"
+      },
+      "expect": {
+        "extracted": false
+      }
+    },
+    {
+      "id": "other-parties-list",
+      "label": "\"Other Parties at Massive (check calendar for upcoming dates)\" — BRUT, BEARRACUDA, TUFF, BABE NIGHT, BLOOD RAVE, FLAMMABLE (/monthly-events)",
+      "kind": "recurring-blurb",
+      "why": "A comma list of party brands with no dates. BEARRACUDA and BABE NIGHT (Black Swan) do have real dated rows on the calendar — those rows are the events; this list is not.",
+      "evidence": {
+        "url": "https://www.massive.club/monthly-events",
+        "quote": "BRUT, BEARRACUDA, TUFF, BABE NIGHT, BLOOD RAVE, FLAMMABLE"
+      },
+      "expect": {
+        "extracted": false
+      }
+    },
+    {
+      "id": "shows-template-shells",
+      "label": "/shows/<slug> pages from sitemap.xml (17 slugs: 7 return 200, 10 return 404)",
+      "kind": "soft-404",
+      "why": "The 7 live /shows pages (tkvr-cucci, tkvr-nolid, tkvr-dj-girlfriends, tkvr-flittie, outwig-outslay-outdrag, horse-meat-disco-1-02-27, bearracuda---glow-party-e47f1) render an unrelated Webflow template shell — nav reads \"DENVER\", \"temple san Franciso\", \"mirus\", \"future factory Los Angeles\" — with no title, date, or ticket link for the event; the other 10 slugs are 404. The /shows collection is abandoned; nothing links to it from the site (sitemap-only). Not the enumerator.",
+      "evidence": {
+        "url": "https://www.massive.club/shows/tkvr-cucci",
+        "quote": "temple san Franciso"
+      },
+      "expect": {
+        "extracted": false
+      }
+    },
+    {
+      "id": "instagram-embed",
+      "label": "\"now on instagram\" reel grid on the homepage",
+      "kind": "gallery",
+      "why": "Embedded Instagram reels with like/comment counts; no event data.",
+      "evidence": {
+        "url": "https://www.massive.club",
+        "quote": "now on instagram"
+      },
+      "expect": {
+        "extracted": false
+      }
+    },
+    {
+      "id": "tixr-group-link",
+      "label": "\"Get Tickets\" / \"All Tickets Here\" → https://tixr.com/groups/massive",
+      "kind": "navigation",
+      "why": "Site-wide link to the venue's Tixr group page. Tixr sits behind DataDome (HTTP 403 \"Please enable JS and disable any ad blocker\" for curl and for headless Chrome), so it is not a usable door; the per-event tixr.com/e/<id> links are the ticket URLs, not pages to enumerate from.",
+      "evidence": {
+        "url": "https://www.massive.club",
+        "quote": "All Tickets Here"
+      },
+      "expect": {
+        "extracted": false
+      }
+    },
+    {
+      "id": "ra-news-article-link",
+      "label": "\"Check out the article announcing us in Resident Advisor here.\" → https://ra.co/news/79191 (/news/massive-announced-in-resident-advisor, June 28, 2023)",
+      "kind": "navigation",
+      "why": "A 2023 opening-announcement post whose only outbound link is an RA news article. Run 20260909-072307 ended up requesting two ra.co/events pages (crawlErrors: fetch failed) that no massive.club page links to — the RA article is the only plausible hop. Nothing on this chain is a Massive calendar event.",
+      "evidence": {
+        "url": "https://www.massive.club/news/massive-announced-in-resident-advisor",
+        "quote": "Resident Advisor here."
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20260909-072307"
+    },
+    {
+      "id": "gallery-images-sitemap",
+      "label": "440 /gallery-images/<slug> URLs in sitemap.xml",
+      "kind": "gallery",
+      "why": "Photo-gallery CMS items (plus 5 /album-categories) dominate the sitemap (440 of 479 URLs). Past-party photo pages, not events.",
+      "evidence": {
+        "url": "https://www.massive.club/sitemap.xml",
+        "quote": "https://www.massive.club/gallery-images/"
+      },
+      "expect": {
+        "extracted": false
+      }
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "Press Play flyer reads \"EVERY 4TH WEDNESDAY … A MONTHLY POP ALBUM LISTENING SHOW\", but the calendar lists only the Sep 23, 2026 instance (no Oct 28 row). Documented as a single; should a later recon that finds a second dated row convert it to a series?",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    },
+    {
+      "q": "BlowPOP is described on /monthly-events as a free weekly Thursday party (\"Every Thursday at Massive…\") yet has zero rows on the dated calendar (Thursdays are PACK / TKVR), and it has no ticket link so it may never appear on the Tixr-driven list. Is it still running, and if so is the blurb a series the site \"publishes\"? Recorded as a recurring-blurb trap pending an answer.",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    },
+    {
+      "q": "Run 20260909-072307 crawled https://ra.co/events/2497583 and https://ra.co/events/2414377 (both \"fetch failed\"). The only ra.co link on the site is https://ra.co/news/79191 inside the June 28, 2023 post /news/massive-announced-in-resident-advisor (live and in the 2026-09-07 cache), so the event URLs must have been discovered a further hop out on ra.co itself. Is a 2023 news post → RA article → RA event page chain wanted within adaptive discovery, given both fetches fail?",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    }
+  ],
+  "recheckAfter": "2026-10-10"
 }

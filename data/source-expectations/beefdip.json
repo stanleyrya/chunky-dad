@@ -2,25 +2,927 @@
   "schemaVersion": 1,
   "source": "BeefDip",
   "slug": "beefdip",
-  "status": "not-started",
+  "status": "complete",
   "recon": {
-    "date": null,
-    "method": [],
-    "parserUrlsAtRecon": null,
-    "doors": [],
-    "notes": null
+    "date": "2026-09-10",
+    "method": [
+      "static",
+      "feed",
+      "flyer"
+    ],
+    "parserUrlsAtRecon": [
+      "https://beefdip.com/planned-events/"
+    ],
+    "doors": [
+      {
+        "url": "https://beefdip.com/planned-events/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 23,
+        "truthFlag": null,
+        "note": "Static curl, HTTP 200, 229373 bytes; one Elementor accordion with 9 day headers and 23 event blocks. Elementor 4.0.9 generator meta; no events plugin."
+      },
+      {
+        "url": "https://beefdip.com/wp-json/wp/v2/pages/10997",
+        "kind": "wp-rest",
+        "role": "listing",
+        "rowsReturned": 23,
+        "truthFlag": null,
+        "note": "Second door: WP REST body of the same page (modified 2026-04-26T01:27:58). Same 9 accordion headers, same 23 \"Get Your Dog Tag\" CTAs, same 2026 hero and 2029 typo."
+      },
+      {
+        "url": "https://beefdip.com/wp-json/",
+        "kind": "wp-rest",
+        "role": "other",
+        "rowsReturned": null,
+        "truthFlag": null,
+        "note": "Platform confirmation: WordPress, gmt_offset -6, namespaces include fooevents/v1 and wc/v3 (WooCommerce tickets), no tribe/events namespace."
+      },
+      {
+        "url": "https://beefdip.com/wp-json/wp/v2/pages?per_page=100&_fields=id,slug,link,modified",
+        "kind": "wp-rest",
+        "role": "sitemap",
+        "rowsReturned": null,
+        "truthFlag": null,
+        "note": "Page inventory: planned-events (10997), planned-events-2 \"OLD\" (3555), pv-pride (12316), tags, discounts, charity…"
+      },
+      {
+        "url": "https://beefdip.com/wp-sitemap.xml",
+        "kind": "sitemap",
+        "role": "sitemap",
+        "rowsReturned": null,
+        "truthFlag": null,
+        "note": "Sitemap index: posts, pages, products, categories."
+      },
+      {
+        "url": "https://beefdip.com/",
+        "kind": "html",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Year corroboration: \"BeefDip Bear Week 2027 / JANUARY 24 - 31 / SAVE THE DATE!\" plus a thank-you for 2026."
+      },
+      {
+        "url": "https://beefdip.com/tags/",
+        "kind": "html",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Dog-tag CTA target: DogTags 2027 products (\"January 24 – 31, 2027\"), Pride 2026 products, welcome-center hours. No programme events."
+      },
+      {
+        "url": "https://beefdip.com/planned-events-2/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "\"Planned Events OLD\" — the 2026 programme (24 blocks, counted not enumerated). Not linked from the configured page."
+      },
+      {
+        "url": "https://beefdip.com/wp-json/fooevents/v1",
+        "kind": "wp-rest",
+        "role": "feed",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "FooEvents namespace exists; /wc/store/v1/products returns PHP warnings from class-fooevents.php. Not a usable event feed; the site sells passes, not per-event tickets."
+      },
+      {
+        "url": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-25 Welcome Party.webp",
+        "kind": "image",
+        "role": "flyer",
+        "rowsReturned": null,
+        "truthFlag": null,
+        "note": "All 24 flyer images downloaded and read: 22 dated 2026-edition posters plus Tryst-Flyer.webp and wildtreks.webp."
+      }
+    ],
+    "notes": "Year determination: the hero says \"BeefDip Bear Week 2026\" / \"Jan 23 – 31\" but the accordion headers say 2027 and the items say \"Saturday, Jan 23\", \"Sun Jan 24\" … \"Sun Jan 31\"; `cal` confirms Jan 23 2027 is a Saturday (Jan 23 2026 was a Friday) and Jan 31 2027 is a Sunday (Jan 31 2029, the last header's typo, is a Wednesday). Every event is therefore 2027 with high confidence from weekday arithmetic; homepage and tags page independently say 2027. Timezone: Puerto Vallarta is in Jalisco → America/Mexico_City (Nuevo Vallarta across the bay is America/Bahia_Banderas); both are fixed UTC-6 since Mexico abolished DST in 2022, so wall-clock is identical, and scraper-cities \"pv\" uses America/Mexico_City. The run of 2026-09-09 (20260909-072307) produced 45 events, 16 removed as duplicates, 29 kept: 16 dated 2026 (from the 2026 flyers), 6 non-events from the /tags/ page (welcome-center hours, pass products, Pride 2026), and titles rewritten from flyers (\"Welcome T-Dance\", \"THE BLOCK BALL\", \"Carnival Mardi Gras\"). No page-cache entry exists for /planned-events/ (cache holds /, /charity/, /discounts/, /gallery-*; fetchedAt 2026-08-27 and 2026-09-07)."
+  },
+  "defaults": {
+    "city": "pv",
+    "timezone": "America/Mexico_City",
+    "website": "https://beefdip.com"
   },
   "coverage": {
-    "confidence": null,
-    "basis": null,
-    "publishedEventCount": null,
-    "documentedEventCount": 0,
-    "occurrenceWindow": null,
-    "pastListingsPresent": null,
+    "confidence": "high",
+    "basis": "Static HTML of the configured page: 9 accordion day headers, 23 event blocks (counted by \"Get Your Dog Tag\" CTAs and by hand in the text-stripped copy). Second door: the WP REST body of page 10997 renders the identical markup (23 CTAs, 9 headers, same hero and typo) — zero delta. Homepage and /tags/ add no programme events and agree the edition is Jan 24–31, 2027 (the Jan 23 pre-party is only on the schedule). Past listings: 0 on the configured page; the unlinked /planned-events-2/ \"OLD\" page carries the 2026 programme (24 blocks, counted not enumerated). All 24 flyer images read; none adds a 2027 event (Tryst-Flyer's \"Sunset Cocktails\" is a 2026-only row).",
+    "publishedEventCount": 23,
+    "documentedEventCount": 23,
+    "occurrenceWindow": {
+      "start": "2026-09-10",
+      "end": "2026-12-09"
+    },
+    "pastListingsPresent": false,
     "knownGaps": []
   },
-  "defaults": {},
-  "events": [],
-  "traps": [],
-  "openQuestions": []
+  "events": [
+    {
+      "id": "pre-welcome-party-2027-01-23",
+      "kind": "single",
+      "title": "PRE WELCOME PARTY",
+      "startDate": "2027-01-23",
+      "startTime": "21:00",
+      "endDate": "2027-01-24",
+      "endTime": "00:00",
+      "bar": "The Tryst Hotel RoofTop",
+      "address": "Insurgentes 123, Zona Romántica, Puerto Vallarta",
+      "ticketUrl": "https://beefdip.com/tags/",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/Tryst-Flyer.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "Saturday, Jan 23 • 9PM – Midnight • The Tryst Hotel RoofTop",
+        "imageUrl": "https://beefdip.com/wp-content/uploads/2026/01/Tryst-Flyer.webp"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Year 2027 pinned by weekday arithmetic: the day header reads \"SATURDAY JANUARY 23, 2027\" and Jan 23 is a Saturday only in 2027 (a Friday in 2026); the hero's \"BeefDip Bear Week 2026\" is stale. \"Midnight\" end = 00:00 on 2027-01-24. Attached image is the Tryst hotel's 2026 schedule flyer (\"SATURDAY JANUARY 24 PRE-WELCOME PARTY · 9 PM\")."
+    },
+    {
+      "id": "welcome-party-2027-01-24",
+      "kind": "single",
+      "title": "WELCOME PARTY",
+      "startDate": "2027-01-24",
+      "startTime": "15:00",
+      "endDate": "2027-01-25",
+      "endTime": "00:00",
+      "bar": "Blue Chairs Rooftop",
+      "address": "Malecón 4, Zona Romántica, Puerto Vallarta",
+      "ticketUrl": "https://beefdip.com/tags/",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-25 Welcome Party.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "Sun Jan 24 • 3PM–Midnight • Blue Chairs Rooftop",
+        "imageUrl": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-25 Welcome Party.webp"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Year 2027 pinned by weekday arithmetic: the day header reads \"SATURDAY JANUARY 23, 2027\" and Jan 23 is a Saturday only in 2027 (a Friday in 2026); the hero's \"BeefDip Bear Week 2026\" is stale. \"Midnight\" end = 00:00 on 2027-01-25. The attached flyer is the 2026-edition artwork and prints last year's date one day later (\"SUNDAY JANUARY 25 · 3 PM – 12 AM\", titled \"WELCOME T-DANCE\"); the page text is authoritative."
+    },
+    {
+      "id": "foam-pool-party-2027-01-25",
+      "kind": "single",
+      "title": "FOAM POOL PARTY",
+      "startDate": "2027-01-25",
+      "startTime": "12:00",
+      "endTime": "18:00",
+      "bar": "Blue Chairs",
+      "address": "Malecón 4, Zona Romántica, Puerto Vallarta",
+      "ticketUrl": "https://beefdip.com/tags/",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-26 Foam Pool Party.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "Mon Jan 25 • Noon–6PM • Blue Chairs",
+        "imageUrl": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-26 Foam Pool Party.webp"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Year 2027 pinned by weekday arithmetic: the day header reads \"SATURDAY JANUARY 23, 2027\" and Jan 23 is a Saturday only in 2027 (a Friday in 2026); the hero's \"BeefDip Bear Week 2026\" is stale. The attached flyer is the 2026-edition artwork and prints last year's date one day later (\"MONDAY JANUARY 26 · 12 PM – 6 PM\"); the page text is authoritative."
+    },
+    {
+      "id": "dinner-under-the-stars-tryst-2027-01-25",
+      "kind": "single",
+      "title": "DINNER UNDER THE STARS @ TRYST",
+      "startDate": "2027-01-25",
+      "startTime": "19:00",
+      "endTime": "21:00",
+      "bar": "The Tryst Hotel Restaurant",
+      "address": "Insurgentes 123, Zona Romántica, Puerto Vallarta",
+      "ticketUrl": "https://beefdip.com/tags/",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/Tryst-Flyer.webp",
+      "sourceRung": "static",
+      "confidence": "ambiguous",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "Mon Jan 25 • Noon–7PM-9PM • The Tryst Hotel Restaurant",
+        "imageUrl": "https://beefdip.com/wp-content/uploads/2026/01/Tryst-Flyer.webp"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Year 2027 pinned by weekday arithmetic: the day header reads \"SATURDAY JANUARY 23, 2027\" and Jan 23 is a Saturday only in 2027 (a Friday in 2026); the hero's \"BeefDip Bear Week 2026\" is stale. The date is certain but the time string is garbled (\"Noon–7PM-9PM\"); 19:00–21:00 is taken from the 7PM-9PM tail (the site's previous edition read \"7:00 PM-9:00 PM @ The Tryst\" and the Tryst flyer says \"DINNER UNDER THE STARS · 8 PM\"). Badge: \"OPT-IN Event // Not Included with Tag\"."
+    },
+    {
+      "id": "flower-power-disco-2027-01-25",
+      "kind": "single",
+      "title": "FLOWER POWER DISCO",
+      "startDate": "2027-01-25",
+      "startTime": "22:00",
+      "endDate": "2027-01-26",
+      "endTime": "05:00",
+      "bar": "CC Slaughters",
+      "address": "Lázaro Cárdenas 254, Puerto Vallarta",
+      "ticketUrl": "https://beefdip.com/tags/",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-26 Bearland FlowerPower.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "Mon Jan 25 • 10PM–5AM • CC Slaughters",
+        "imageUrl": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-26 Bearland FlowerPower.webp"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Year 2027 pinned by weekday arithmetic: the day header reads \"SATURDAY JANUARY 23, 2027\" and Jan 23 is a Saturday only in 2027 (a Friday in 2026); the hero's \"BeefDip Bear Week 2026\" is stale. 5AM end lands on 2027-01-26. The attached flyer is the 2026-edition artwork and prints last year's date one day later (\"MONDAY JANUARY 26 · 10 PM – 5 AM\"); the page text is authoritative."
+    },
+    {
+      "id": "splash-classic-anthems-pool-party-2027-01-26",
+      "kind": "single",
+      "title": "SPLASH! Classic Anthems Pool Party",
+      "startDate": "2027-01-26",
+      "startTime": "11:00",
+      "endTime": "19:00",
+      "bar": "Hotel Delfin",
+      "address": "Francisco I. Madero 84, Puerto Vallarta",
+      "ticketUrl": "https://beefdip.com/tags/",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-27 Splash Pool Party.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "Tue Jan 26 • 11AM–7PM • Hotel Delfin",
+        "imageUrl": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-27 Splash Pool Party.webp"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Year 2027 pinned by weekday arithmetic: the day header reads \"SATURDAY JANUARY 23, 2027\" and Jan 23 is a Saturday only in 2027 (a Friday in 2026); the hero's \"BeefDip Bear Week 2026\" is stale. The attached flyer is the 2026-edition artwork and prints last year's date one day later (\"TUESDAY JANUARY 27 · 12 PM – 7 PM\"); the page text is authoritative. Flyer prints Delfin as \"CALLE RODOLFO GOMEZ 111, PV\"; the page's OFFICIAL VENUES card says \"Francisco I. Madero 84\"."
+    },
+    {
+      "id": "bearaoke-2027-01-26",
+      "kind": "single",
+      "title": "BEARAOKE",
+      "startDate": "2027-01-26",
+      "startTime": "21:30",
+      "endTime": null,
+      "bar": "Blue Chairs Rooftop",
+      "address": "Malecón 4, Zona Romántica, Puerto Vallarta",
+      "ticketUrl": "https://beefdip.com/tags/",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-27 Bearaoke-Talent.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "Tue Jan 26 • 9:30PM • Blue Chairs Rooftop",
+        "imageUrl": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-27 Bearaoke-Talent.webp"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Year 2027 pinned by weekday arithmetic: the day header reads \"SATURDAY JANUARY 23, 2027\" and Jan 23 is a Saturday only in 2027 (a Friday in 2026); the hero's \"BeefDip Bear Week 2026\" is stale. No end time published. The attached flyer is the 2026-edition artwork and prints last year's date one day later (\"TUESDAY JANUARY 27 · 9 PM – 12 AM\"); the page text is authoritative."
+    },
+    {
+      "id": "mad-bear-red-ball-2027-01-26",
+      "kind": "single",
+      "title": "MAD.BEAR RED BALL",
+      "startDate": "2027-01-26",
+      "startTime": "22:00",
+      "endDate": "2027-01-27",
+      "endTime": "05:00",
+      "bar": "CC Slaughters",
+      "address": "Lázaro Cárdenas 254, Puerto Vallarta",
+      "ticketUrl": "https://beefdip.com/tags/",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-27 MadBear Red Ball.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "Tue Jan 26 • 10PM–5AM • CC Slaughters",
+        "imageUrl": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-27 MadBear Red Ball.webp"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Year 2027 pinned by weekday arithmetic: the day header reads \"SATURDAY JANUARY 23, 2027\" and Jan 23 is a Saturday only in 2027 (a Friday in 2026); the hero's \"BeefDip Bear Week 2026\" is stale. 5AM end lands on 2027-01-27. The attached flyer is the 2026-edition artwork and prints last year's date one day later (\"TUESDAY JANUARY 27 · 10 PM – 5 AM\"); the page text is authoritative."
+    },
+    {
+      "id": "furball-pool-party-2027-01-27",
+      "kind": "single",
+      "title": "FURBALL POOL PARTY",
+      "startDate": "2027-01-27",
+      "startTime": "12:00",
+      "endTime": "19:00",
+      "bar": "Hotel Delfin",
+      "address": "Francisco I. Madero 84, Puerto Vallarta",
+      "ticketUrl": "https://beefdip.com/tags/",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-28 FURBALL Pool Party.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "Wed Jan 27 • 12PM–7PM • Hotel Delfin",
+        "imageUrl": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-28 FURBALL Pool Party.webp"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Year 2027 pinned by weekday arithmetic: the day header reads \"SATURDAY JANUARY 23, 2027\" and Jan 23 is a Saturday only in 2027 (a Friday in 2026); the hero's \"BeefDip Bear Week 2026\" is stale. The attached flyer is the 2026-edition artwork and prints last year's date one day later (\"WEDNESDAY JANUARY 28· 12 PM – 7 PM\"); the page text is authoritative. Furball is a partner brand (Furball NYC), the venue is Hotel Delfin, the promoter is BeefDip."
+    },
+    {
+      "id": "white-party-2027-01-27",
+      "kind": "single",
+      "title": "WHITE PARTY",
+      "startDate": "2027-01-27",
+      "startTime": "22:00",
+      "endTime": null,
+      "bar": "CC Slaughters",
+      "address": "Lázaro Cárdenas 254, Puerto Vallarta",
+      "ticketUrl": "https://beefdip.com/tags/",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-28 White Party.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "Wed Jan 27 • 10PM–Late • CC Slaughters",
+        "imageUrl": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-28 White Party.webp"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Year 2027 pinned by weekday arithmetic: the day header reads \"SATURDAY JANUARY 23, 2027\" and Jan 23 is a Saturday only in 2027 (a Friday in 2026); the hero's \"BeefDip Bear Week 2026\" is stale. \"Late\" = no end time published (flyer says 5 AM). The attached flyer is the 2026-edition artwork and prints last year's date one day later (\"WEDNESDAY JANUARY 28 · 10 PM – 5 AM\"); the page text is authoritative."
+    },
+    {
+      "id": "beefdip-on-all-4s-atv-adventure-2027-01-28",
+      "kind": "single",
+      "title": "BEEFDIP ON ALL 4’s – ATV ADVENTURE",
+      "startDate": "2027-01-28",
+      "startTime": "10:00",
+      "endTime": null,
+      "bar": "Wild Trek ATV Tours",
+      "ticketUrl": "https://beefdip.com/tags/",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/wildtreks.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "Thu Jan 28 • 10AM • Wild Trek ATV Tours",
+        "imageUrl": "https://beefdip.com/wp-content/uploads/2026/01/wildtreks.webp"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Year 2027 pinned by weekday arithmetic: the day header reads \"SATURDAY JANUARY 23, 2027\" and Jan 23 is a Saturday only in 2027 (a Friday in 2026); the hero's \"BeefDip Bear Week 2026\" is stale. No end time; description says \"3-hour off-road ride\". Opt-in, not included with tag. No address published for Wild Trek. Flyer (wildtreks.webp) carries only 2026 sign-up hours (\"SIGN UP: MONDAY JAN 26 - THURSDAY JAN 29\")."
+    },
+    {
+      "id": "tidal-wave-fundraiser-pool-party-2027-01-28",
+      "kind": "single",
+      "title": "TIDAL WAVE – FUNDRAISER POOL PARTY",
+      "startDate": "2027-01-28",
+      "startTime": "12:00",
+      "endTime": "18:00",
+      "bar": "Hotel Delfin",
+      "address": "Francisco I. Madero 84, Puerto Vallarta",
+      "ticketUrl": "https://beefdip.com/tags/",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-29 TIDAL WAVE FIX.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "Thu Jan 28 • 12PM –6PM • Hotel Delfin",
+        "imageUrl": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-29 TIDAL WAVE FIX.webp"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Year 2027 pinned by weekday arithmetic: the day header reads \"SATURDAY JANUARY 23, 2027\" and Jan 23 is a Saturday only in 2027 (a Friday in 2026); the hero's \"BeefDip Bear Week 2026\" is stale. The attached flyer is the 2026-edition artwork and prints last year's date one day later (\"THURSDAY JANUARY 29 · 12 PM – 7 PM\"); the page text is authoritative."
+    },
+    {
+      "id": "jungle-lust-neon-beach-party-2027-01-28",
+      "kind": "single",
+      "title": "JUNGLE LUST – NEON BEACH PARTY",
+      "startDate": "2027-01-28",
+      "startTime": "19:00",
+      "endDate": "2027-01-29",
+      "endTime": "01:00",
+      "bar": "Blue Chairs Beach",
+      "address": "Malecón 4, Zona Romántica, Puerto Vallarta",
+      "ticketUrl": "https://beefdip.com/tags/",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-29 Jungle Lust.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "Thu Jan 28 • 7PM–1AM • Blue Chairs Beach",
+        "imageUrl": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-29 Jungle Lust.webp"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Year 2027 pinned by weekday arithmetic: the day header reads \"SATURDAY JANUARY 23, 2027\" and Jan 23 is a Saturday only in 2027 (a Friday in 2026); the hero's \"BeefDip Bear Week 2026\" is stale. 1AM end lands on 2027-01-29. The attached flyer is the 2026-edition artwork and prints last year's date one day later (\"THURSDAY JANUARY 29 · 8 PM – 1 AM\"); the page text is authoritative."
+    },
+    {
+      "id": "papa-dirk-rooftop-cigar-social-2027-01-28",
+      "kind": "single",
+      "title": "PAPA DIRK ROOFTOP CIGAR SOCIAL",
+      "startDate": "2027-01-28",
+      "startTime": "20:00",
+      "endTime": "22:00",
+      "bar": "Blue Chairs Rooftop Bar",
+      "address": "Malecón 4, Zona Romántica, Puerto Vallarta",
+      "ticketUrl": "https://beefdip.com/tags/",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-29 Cigar Social.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "Thu Jan 28 • 8PM–10PM • Blue Chairs Rooftop Bar",
+        "imageUrl": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-29 Cigar Social.webp"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Year 2027 pinned by weekday arithmetic: the day header reads \"SATURDAY JANUARY 23, 2027\" and Jan 23 is a Saturday only in 2027 (a Friday in 2026); the hero's \"BeefDip Bear Week 2026\" is stale. The attached flyer is the 2026-edition artwork and prints last year's date one day later (\"THURSDAY JANUARY 29 · 8 PM – 10 PM\"); the page text is authoritative."
+    },
+    {
+      "id": "carnaval-night-mardi-gras-2027-01-28",
+      "kind": "single",
+      "title": "CARNAVAL NIGHT: MARDI GRAS",
+      "startDate": "2027-01-28",
+      "startTime": "22:00",
+      "endDate": "2027-01-29",
+      "endTime": "05:00",
+      "bar": "CC Slaughters",
+      "address": "Lázaro Cárdenas 254, Puerto Vallarta",
+      "ticketUrl": "https://beefdip.com/tags/",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-29-Carnaval.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "Thu Jan 28 • 10PM–5AM • CC Slaughters",
+        "imageUrl": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-29-Carnaval.webp"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Year 2027 pinned by weekday arithmetic: the day header reads \"SATURDAY JANUARY 23, 2027\" and Jan 23 is a Saturday only in 2027 (a Friday in 2026); the hero's \"BeefDip Bear Week 2026\" is stale. 5AM end lands on 2027-01-29. In the HTML the venue and the description are separated only by a <br>, so a text-stripper sees \"CC SlaughtersStep into a full-throttle Mardi Gras\". Two flyers attached (Carnaval + Carnaval-Talent), both 2026 artwork: \"THURSDAY JANUARY 29 10PM TO 5AM\"."
+    },
+    {
+      "id": "booze-cruise-2027-01-29",
+      "kind": "single",
+      "title": "BOOZE CRUISE",
+      "startDate": "2027-01-29",
+      "startTime": "09:00",
+      "endTime": null,
+      "bar": "The Pier by Hotel Delfin",
+      "ticketUrl": "https://beefdip.com/tags/",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-30 BoozeCruise.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "Fri Jan 29 • 9:00AM Check-In • The Pier by Hotel Delfin",
+        "imageUrl": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-30 BoozeCruise.webp"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Year 2027 pinned by weekday arithmetic: the day header reads \"SATURDAY JANUARY 23, 2027\" and Jan 23 is a Saturday only in 2027 (a Friday in 2026); the hero's \"BeefDip Bear Week 2026\" is stale. 9:00AM is the check-in; \"Boat departs 9:45 sharp.\" No end time. GOLD-package only (\"The booze cruise pass is only included with the GOLD package\"). The attached flyer is the 2026-edition artwork and prints last year's date one day later (\"FRIDAY JANUARY 30 · BOARDS AT 9AM\"); the page text is authoritative."
+    },
+    {
+      "id": "mad-bear-foam-pool-party-2027-01-29",
+      "kind": "single",
+      "title": "MAD.BEAR FOAM POOL PARTY",
+      "startDate": "2027-01-29",
+      "startTime": "12:00",
+      "endTime": "18:00",
+      "bar": "Blue Chairs",
+      "address": "Malecón 4, Zona Romántica, Puerto Vallarta",
+      "ticketUrl": "https://beefdip.com/tags/",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-30 MadBear Foam Party.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "Fri Jan 29 • 12PM–6PM • Blue Chairs",
+        "imageUrl": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-30 MadBear Foam Party.webp"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Year 2027 pinned by weekday arithmetic: the day header reads \"SATURDAY JANUARY 23, 2027\" and Jan 23 is a Saturday only in 2027 (a Friday in 2026); the hero's \"BeefDip Bear Week 2026\" is stale. The attached flyer is the 2026-edition artwork and prints last year's date one day later (\"FRIDAY JANUARY 30 · 12 PM – 6 PM\"); the page text is authoritative. That flyer also prints the WRONG address for Blue Chairs (\"LÁZARO CÁRDENAS 254, PV MX\" is CC Slaughters); the run copied it."
+    },
+    {
+      "id": "furball-gear-night-2027-01-29",
+      "kind": "single",
+      "title": "FURBALL GEAR NIGHT",
+      "startDate": "2027-01-29",
+      "startTime": "22:00",
+      "endTime": null,
+      "bar": "CC Slaughters",
+      "address": "Lázaro Cárdenas 254, Puerto Vallarta",
+      "ticketUrl": "https://beefdip.com/tags/",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-30-Furball-Gear.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "Fri Jan 29 • 10PM–Late • CC Slaughters",
+        "imageUrl": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-30-Furball-Gear.webp"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Year 2027 pinned by weekday arithmetic: the day header reads \"SATURDAY JANUARY 23, 2027\" and Jan 23 is a Saturday only in 2027 (a Friday in 2026); the hero's \"BeefDip Bear Week 2026\" is stale. \"Late\" = no end time published (flyer says 5 AM). Two flyers attached, both 2026 artwork: \"FRIDAY JANUARY 30 · 10 PM – 5 AM\"."
+    },
+    {
+      "id": "wet-and-wild-pool-and-beach-party-2027-01-30",
+      "kind": "single",
+      "title": "WET & WILD – POOL & BEACH PARTY",
+      "startDate": "2027-01-30",
+      "startTime": "12:00",
+      "endTime": "19:00",
+      "bar": "Hotel Delfin",
+      "address": "Francisco I. Madero 84, Puerto Vallarta",
+      "ticketUrl": "https://beefdip.com/tags/",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-31 Wet & Wild.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "Sat Jan 30 • 12PM–7PM • Hotel Delfin",
+        "imageUrl": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-31 Wet & Wild.webp"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Year 2027 pinned by weekday arithmetic: the day header reads \"SATURDAY JANUARY 23, 2027\" and Jan 23 is a Saturday only in 2027 (a Friday in 2026); the hero's \"BeefDip Bear Week 2026\" is stale. The attached flyer is the 2026-edition artwork and prints last year's date one day later (\"SATURDAY JANUARY 31 12 PM - 7 PM\"); the page text is authoritative."
+    },
+    {
+      "id": "the-black-ball-2027-01-30",
+      "kind": "single",
+      "title": "THE BLACK BALL",
+      "startDate": "2027-01-30",
+      "startTime": "22:00",
+      "endTime": null,
+      "bar": "CC Slaughters",
+      "address": "Lázaro Cárdenas 254, Puerto Vallarta",
+      "ticketUrl": "https://beefdip.com/tags/",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-31 Black Ball.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "Sat Jan 30 • 10PM–Late • CC Slaughters",
+        "imageUrl": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-31 Black Ball.webp"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Year 2027 pinned by weekday arithmetic: the day header reads \"SATURDAY JANUARY 23, 2027\" and Jan 23 is a Saturday only in 2027 (a Friday in 2026); the hero's \"BeefDip Bear Week 2026\" is stale. \"Late\" = no end time published (flyer says 5 AM). Two flyers attached, both 2026 artwork: \"SATURDAY JANUARY 31 · 10 PM – 5 AM\"."
+    },
+    {
+      "id": "drag-brunch-rooftop-pool-2027-01-31",
+      "kind": "single",
+      "title": "DRAG BRUNCH + ROOFTOP POOL",
+      "startDate": "2027-01-31",
+      "startTime": "11:00",
+      "endTime": null,
+      "bar": "The Tryst Hotel",
+      "address": "Insurgentes 123, Zona Romántica, Puerto Vallarta",
+      "ticketUrl": "https://beefdip.com/tags/",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/Tryst-Flyer.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "Sunday, Jan 31 • 11AM / 1PM • The Tryst Hotel",
+        "imageUrl": "https://beefdip.com/wp-content/uploads/2026/01/Tryst-Flyer.webp"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Year 2027 pinned by weekday arithmetic: the item says \"Sun Jan 31\" and Jan 31 is a Sunday in 2027 (Wednesday in 2029, Saturday in 2026); the accordion header \"SUNDAY JANUARY 31, 2029\" is a site typo. One event with two seatings (\"Two brunch seatings available: 11:00 AM and 1:00 PM\"); the rooftop pool opens 1:00 PM. Opt-in, not included with tag. Attached image is the Tryst 2026 schedule flyer (\"SUNDAY FEBRUARY 1 THE TRYST DRAG BRUNCH · 11:00 AM & 1:00 PM\")."
+    },
+    {
+      "id": "hydrate-pool-party-2027-01-31",
+      "kind": "single",
+      "title": "HYDRATE POOL PARTY",
+      "startDate": "2027-01-31",
+      "startTime": "12:00",
+      "endTime": "19:00",
+      "bar": "Hotel Delfin",
+      "address": "Francisco I. Madero 84, Puerto Vallarta",
+      "ticketUrl": "https://beefdip.com/tags/",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-02-01 HYDRATE.webp",
+      "sourceRung": "static",
+      "confidence": "ambiguous",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "Sun Jan 31 • 12AM–7PM • Hotel Delfin",
+        "imageUrl": "https://beefdip.com/wp-content/uploads/2026/01/2026-02-01 HYDRATE.webp"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Year 2027 pinned by weekday arithmetic: the item says \"Sun Jan 31\" and Jan 31 is a Sunday in 2027 (Wednesday in 2029, Saturday in 2026); the accordion header \"SUNDAY JANUARY 31, 2029\" is a site typo. The date is certain but the site prints \"12AM–7PM\"; 12:00 (noon) is asserted because a 19-hour pool party is implausible, every other Delfin pool party starts at noon, and the 2026 flyer reads \"SUNDAY FEBRUARY 1 · 12 PM – 7 PM\". A literal reading gives 00:00."
+    },
+    {
+      "id": "sweat-singlet-underwear-jockstrap-party-2027-01-31",
+      "kind": "single",
+      "title": "SWEAT – SINGLET, UNDERWEAR & JOCKSTRAP PARTY",
+      "startDate": "2027-01-31",
+      "startTime": "22:00",
+      "endTime": null,
+      "bar": "CC Slaughters",
+      "address": "Lázaro Cárdenas 254, Puerto Vallarta",
+      "ticketUrl": "https://beefdip.com/tags/",
+      "image": "https://beefdip.com/wp-content/uploads/2026/01/2026-02-01 Sweat.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "Sun Jan 31 • 10PM–Close • CC Slaughters",
+        "imageUrl": "https://beefdip.com/wp-content/uploads/2026/01/2026-02-01 Sweat.webp"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "Year 2027 pinned by weekday arithmetic: the item says \"Sun Jan 31\" and Jan 31 is a Sunday in 2027 (Wednesday in 2029, Saturday in 2026); the accordion header \"SUNDAY JANUARY 31, 2029\" is a site typo. \"Close\" = no end time published (flyer says 5 AM). The attached flyer is the 2026-edition artwork and prints last year's date one day later (\"SUNDAY FEBRUARY 1 · 10 PM – 5 AM\"); the page text is authoritative."
+    }
+  ],
+  "traps": [
+    {
+      "id": "hero-stale-year-2026",
+      "label": "Hero: \"BeefDip Bear Week 2026\" / \"Jan 23 – 31 • Puerto Vallarta\"",
+      "kind": "announcement",
+      "why": "The page hero still says 2026 while the programme below it is the 2027 edition (day headers say 2027; Jan 23 is a Saturday only in 2027). A scraper that takes the year from the hero dates every event a year early. The homepage (\"BeefDip Bear Week 2027 / JANUARY 24 - 31\") and the tags page (\"January 24 – 31, 2027\") corroborate 2027.",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "BeefDip Bear Week 2026"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      },
+      "seenInRun": "20260909-072307",
+      "note": "The run has 16 of its 29 surviving events dated January/February 2026."
+    },
+    {
+      "id": "day-header-typo-2029",
+      "label": "Accordion header \"SUNDAY JANUARY 31, 2029\"",
+      "kind": "announcement",
+      "why": "Site typo: Jan 31 2029 is a Wednesday, and the three items under it all say \"Sun Jan 31\". The header is one accordion title, not an event, and its year must not be trusted; the items belong to 2027-01-31.",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "SUNDAY JANUARY 31, 2029"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      }
+    },
+    {
+      "id": "event-highlights-teasers",
+      "label": "EVENT HIGHLIGHTS cards (WELCOME PARTY, BOOZE CRUISE, WHITE PARTY, THE BLACK BALL) with \"See Full Schedule\"",
+      "kind": "duplicate-listing",
+      "why": "Four undated teaser cards above the schedule repeat four of the 23 events with a blurb and a \"See Full Schedule\" button; scraping them yields dateless duplicates of the real entries.",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "Grammy-winner DJ Tracy Young headlines the glam night."
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      },
+      "seenInRun": "20260909-072307",
+      "note": "The run reported duplicatesRemoved: 16."
+    },
+    {
+      "id": "official-venues-cards",
+      "label": "OFFICIAL VENUES cards with Google Maps links",
+      "kind": "venue-header",
+      "why": "The only maps.google.com links on the page are the four venue cards (Tryst Hotel, Hotel Delfin, CC Slaughters, Blue Chairs Resort) with street addresses; they are venue metadata, not events. Per-event venue names sit in the \"• <venue>\" tail of each time line and are NOT linked.",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "href=\"https://maps.google.com/?q=Tryst+Hotel+Puerto+Vallarta\""
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      }
+    },
+    {
+      "id": "partner-brand-logos",
+      "label": "\"WE TEAM UP WITH THREE OF THE BEST GLOBAL BEAR PARTIES!\" Furball NYC / Mad.Bear Spain / Bearland Mexico",
+      "kind": "foreign-promoter",
+      "why": "Partner-brand logos, not events. Their names recur inside real titles (FURBALL POOL PARTY, MAD.BEAR RED BALL, FURBALL GEAR NIGHT); those events are BeefDip-run at BeefDip venues and must not be re-homed to the partner (bar \"FURBALL\", website furball.nyc) or split into a second record.",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "WE TEAM UP WITH THREE OF THE BEST GLOBAL BEAR PARTIES!"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      },
+      "seenInRun": "20260909-072307",
+      "note": "Run rows \"FURBALL POOL PARTY\" (bar FURBALL, https://www.furball.nyc) and \"Furball\" (Hotel Delfin) are both this one event."
+    },
+    {
+      "id": "flyers-are-2026-edition",
+      "label": "Every event flyer is last year's artwork with 2026 dates (e.g. \"SUNDAY JANUARY 25 · 3 PM – 12 AM\")",
+      "kind": "past-event",
+      "why": "The 22 dated flyers (filenames 2026-01-25 … 2026-02-01) are the 2026-edition posters: each prints a weekday+date one day later than the 2027 page text and a 2026-only weekday match (Jan 25 2026 was a Sunday). OCR that trusts the flyer over the page text dates the event in 2026, and OCR that trusts the flyer title renames it (\"WELCOME T-DANCE\", \"Carnival Mardi Gras\", \"HYDRATE\"). Flyer venue lines also carry addresses the page does not (Delfin \"CALLE RODOLFO GOMEZ 111, PV\").",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "src=\"https://beefdip.com/wp-content/uploads/2026/01/2026-01-25 Welcome Party.webp\"",
+        "imageUrl": "https://beefdip.com/wp-content/uploads/2026/01/2026-01-25 Welcome Party.webp"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      },
+      "seenInRun": "20260909-072307",
+      "note": "Run rows dated 2026: \"Welcome T-Dance\" 2026-01-25, \"Foam Pool Party\" 2026-01-26, \"TIDAL WAVE\" 2026-01-29, \"Booze Cruise\" 2026-01-30, \"HYDRATE\" 2026-02-01, \"SWEAT\" 2026-02-02 and more."
+    },
+    {
+      "id": "tryst-flyer-sunset-cocktails",
+      "label": "Tryst hotel flyer line \"THURSDAY JANUARY 29 SUNSET COCKTAILS · 6:30 PM\"",
+      "kind": "past-event",
+      "why": "Tryst-Flyer.webp (attached to three 2027 cards) is the Tryst hotel's 2026 mini-schedule; it lists a Sunset Cocktails event that the 2027 programme does not have. Flyer-only, last-year rows are not events of this page.",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "Tryst-Flyer.webp",
+        "imageUrl": "https://beefdip.com/wp-content/uploads/2026/01/Tryst-Flyer.webp"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      }
+    },
+    {
+      "id": "event-badges",
+      "label": "Badge chips: \"🎟️ Included with Tag\", \"🍸 Cocktail Party\", \"💵 OPT-IN Event // Not Included with Tag\", \"👕 DRESSCODE: …\"",
+      "kind": "ticket-tier",
+      "why": "Each card ends with badge spans describing tag inclusion, party type and dress code. They are attributes of the card above them, not events; a chunker that splits on them produces titles like \"🍸 Cocktail Party\".",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "🍸 Cocktail Party"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      },
+      "seenInRun": "20260909-072307",
+      "note": "Run row \"🍸 Cocktail Party\" 2026-01-28 at Delfin Beach Resort."
+    },
+    {
+      "id": "dog-tag-cta",
+      "label": "\"Get Your Dog Tag\" CTA on every card → https://beefdip.com/tags/",
+      "kind": "navigation",
+      "why": "Twenty-three identical CTAs (21 https + 2 http) link to the ticket page. They are the ticketUrl for every event, not events, and following them reaches the tags page below.",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "href=\"https://beefdip.com/tags/\">Get Your Dog Tag"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      }
+    },
+    {
+      "id": "tags-welcome-center-hours",
+      "label": "Tags page: \"WELCOME CENTER & DOG TAG PICK UP\" hours (\"Saturday Jan 23 12 PM – 5 PM\" …)",
+      "kind": "announcement",
+      "why": "Reached by following the Dog Tag CTA (discovery is adaptive; no depth pin in the parser). Six lines of welcome-center opening hours look like dated events and the run turned them into events. The page also says \"For 2026 we will have two welcome center locations\" while selling \"DogTags 2027\" — same stale-year problem.",
+      "evidence": {
+        "url": "https://beefdip.com/tags/",
+        "quote": "Saturday Jan 23 12 PM – 5 PM"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      },
+      "seenInRun": "20260909-072307",
+      "note": "Run rows \"Saturday Jan 23 12 PM – 5 PM\" 2027-01-23 and \"DOG TAGS ARE NON REFUNDABLE · TAGS ARE NON TRANSFERABLE\" 2027-01-28."
+    },
+    {
+      "id": "tags-dogtag-products",
+      "label": "Tags page WooCommerce products \"BeefDip Bear Week 2027 Gold (Early Bird – Full Pass)\" $270.00 / \"Silver (Early Bird)\" $250.00",
+      "kind": "ticket-tier",
+      "why": "Week-pass tiers, not events. The product page carries the whole-week span (\"January 24 – 31, 2027\") and the run emitted a week-long \"Beef Dip Bear Week\" row from it.",
+      "evidence": {
+        "url": "https://beefdip.com/tags/",
+        "quote": "BeefDip Bear Week 2027 Gold (Early Bird – Full Pass)"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      },
+      "seenInRun": "20260909-072307",
+      "note": "Run row \"Beef Dip Bear Week\" 2027-01-24, website https://beefdip.com/product/beefdip-bear-week-2027-gold-early-bird-full-pass/."
+    },
+    {
+      "id": "tags-pride-2026-products",
+      "label": "Tags page \"BEEFDIP PRIDE 2026 PUERTO VALLARTA / May 22 – 23, 2026\" products",
+      "kind": "past-event",
+      "why": "A different, already-past BeefDip event (PV Pride, May 2026) sold on the same ticket page: Weekend Pass, Foam Pool Party, Pool Party & T-Dance. Not part of the planned-events programme and in the past at recon.",
+      "evidence": {
+        "url": "https://beefdip.com/tags/",
+        "quote": "May 22 – 23, 2026"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      },
+      "seenInRun": "20260909-072307",
+      "note": "Run rows \"Beet Dip PV Prime Weekend\" 2026-05-22, \"Pool Party & T-Dance\" 2026-05-23 and \"BeefDip Pride Pool Party & Sunset T-Dance\" 2025-05-23."
+    },
+    {
+      "id": "planned-events-old-page",
+      "label": "/planned-events-2/ \"Planned Events OLD\" — the full 2026 programme",
+      "kind": "out-of-config-scope",
+      "why": "The previous edition's schedule page (title \"Planned Events OLD\", 2026 dates, 24 blocks) is still published and in the WP sitemap/REST, but it is not linked from the configured page, so it is reachable only outside the parser's knobs. Its events are last year's.",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events-2/",
+        "quote": "BEEFDIP BEAR WEEK PV 2026"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      },
+      "note": "Saved as planned-events-2.html; REST modified 2026-01-11."
+    },
+    {
+      "id": "subject-to-change-banner",
+      "label": "\"**REMEMBER THAT INDIVIDUAL EVENTS, THEMES, DATES, VENUES AND PERFORMERS ARE SUBJECT TO CHANGE WITHOUT NOTICE**\"",
+      "kind": "announcement",
+      "why": "Disclaimer text under the programme heading; not an event.",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "SUBJECT TO CHANGE WITHOUT NOTICE"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      }
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "Should the scraper take the year from the accordion day headers (2027) or the hero (2026)? The site will keep the stale hero until someone edits it; day-header weekday+date agreement is the only reliable signal on this page.",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    },
+    {
+      "q": "HYDRATE POOL PARTY prints \"12AM–7PM\"; the file asserts 12:00 (noon). If the owner prefers literal reading, change startTime to 00:00.",
+      "raisedOn": "2026-09-10",
+      "blocking": false
+    }
+  ],
+  "recheckAfter": "2026-12-01"
 }
