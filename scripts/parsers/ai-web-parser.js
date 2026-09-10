@@ -1100,6 +1100,14 @@ class AiWebParser {
                 const recurring = elfsightEvents.filter(event => event.recurrenceRule).length;
                 console.log(`🗓️ ELFSIGHT: built ${elfsightEvents.length} event(s) from ${elfsightRows.length} widget row(s) for ${sourceUrl} (${recurring} recurring → ICS export, never a calendar series)`);
             }
+            // DICE event-list widgets, the same way (see collectDiceWidgetEvents).
+            const diceRows = await this.collectDiceWidgetEvents(effectiveHtmlData, parserConfig, httpAdapter);
+            const diceEvents = diceRows
+                .map(row => this.buildEventFromDiceRow(row, sourceUrl))
+                .filter(Boolean);
+            if (diceRows.length > 0) {
+                console.log(`🎟️ DICE: built ${diceEvents.length} event(s) from ${diceRows.length} widget row(s) for ${sourceUrl}`);
+            }
             const monthFeedSources = await this.collectMecMonthFeeds(effectiveHtmlData, parserConfig, httpAdapter);
             const additionalLinks = this.extractAdditionalUrls(html, sourceUrl, parserConfig, monthFeedSources);
             if (monthFeedSources.length > 0) {
@@ -1155,14 +1163,19 @@ class AiWebParser {
             // from the site the same way they do for any venue-role parser.
             // That is why they skip the bar||address completeness gate the two
             // sources above apply to third-party structured data.
+            // DICE rows skip the completeness gate for the same reason Elfsight
+            // rows do — and deliberately: a "linkout" row states no venue, and
+            // the crawl of its ticket link is what fills that blank.
             const structuredSource = completeJsonLdEvents.length > 0
                 ? 'jsonld'
                 : (completeJsonApiEvents.length > 0
                     ? 'json-api'
-                    : (elfsightEvents.length > 0 ? 'elfsight' : null));
+                    : (elfsightEvents.length > 0 ? 'elfsight' : (diceEvents.length > 0 ? 'dice' : null)));
             const structuredEvents = structuredSource === 'jsonld'
                 ? completeJsonLdEvents
-                : (structuredSource === 'json-api' ? completeJsonApiEvents : elfsightEvents);
+                : (structuredSource === 'json-api'
+                    ? completeJsonApiEvents
+                    : (structuredSource === 'elfsight' ? elfsightEvents : diceEvents));
             const useStructuredEvents = parserConfig.discoveryOnly !== true
                 && pageClassification !== 'link-aggregator'
                 && structuredEvents.length > 0
@@ -1176,6 +1189,8 @@ class AiWebParser {
                 // the AI extraction passes).
                 if (structuredSource === 'elfsight') {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the Elfsight calendar widget — skipping the OCR sweep and AI extraction (event artwork is still read)`);
+                } else if (structuredSource === 'dice') {
+                    console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the DICE event-list widget — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 } else if (structuredSource === 'json-api') {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from JSON API structured data — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 } else {
@@ -5540,6 +5555,169 @@ class AiWebParser {
         if (!Number.isFinite(offsetMinutes)) return null;
         const local = new Date(date.getTime() + (offsetMinutes * 60 * 1000));
         return { weekday: local.getUTCDay(), dayOfMonth: local.getUTCDate() };
+    }
+
+    // DICE event-list widgets render entirely client-side too: the page holds
+    // a `DiceEventListWidget.create({...})` config — partner id, API key and
+    // the promoter/venue filter — and the widget script fetches the list from
+    // DICE's partners API. A crawl that only reads HTML sees the site's nav
+    // and the widget's mount node (beefmince.com/events, run 20260910-131740:
+    // the two "linkout" rows — parties ticketed elsewhere — exist only in
+    // this feed, never on dice.fm's own promoter page, so they were never
+    // scraped). Read the feed the widget reads, with the credentials the
+    // page itself publishes; the API base comes from the widget bundle the
+    // page references (its first line sets RUNTIME_API_URL), so no DICE host
+    // is named in source. Same one-page rule as Elfsight: the embed sits in
+    // a shared block on every page of the site, so it is read only on the
+    // configured entry page.
+    async collectDiceWidgetEvents(htmlData, parserConfig, httpAdapter) {
+        const html = htmlData && htmlData.html ? htmlData.html : '';
+        const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
+        if (!html || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return [];
+        const widget = this.extractDiceWidgetConfig(html);
+        if (!widget) return [];
+        if (!this.isConfiguredParserUrl(sourceUrl, parserConfig)) {
+            console.log(`🎟️ DICE: widget present on ${sourceUrl} but this is not the configured entry page — already read there, skipping`);
+            return [];
+        }
+        let apiBase = '';
+        try {
+            const response = await httpAdapter.fetchData(widget.scriptUrl, { headers: { Referer: sourceUrl, Accept: '*/*' } });
+            const bundle = response && typeof response.html === 'string' ? response.html : '';
+            const match = bundle.match(/RUNTIME_API_URL\s*=\s*["'](https?:\/\/[^"']+)["']/);
+            apiBase = match ? match[1].replace(/\/+$/, '') : '';
+        } catch (error) {
+            console.warn(`🎟️ DICE: widget bundle ${widget.scriptUrl} could not be read (${error.message}) — page left unchanged`);
+            return [];
+        }
+        if (!apiBase) {
+            console.warn(`🎟️ DICE: widget bundle ${widget.scriptUrl} names no API base — page left unchanged`);
+            return [];
+        }
+        const rows = [];
+        let nextUrl = this.buildDiceEventsFeedUrl(apiBase, widget);
+        for (let page = 0; nextUrl && page < 5; page++) {
+            let payload = null;
+            try {
+                const response = await httpAdapter.fetchData(nextUrl, { headers: { 'x-api-key': widget.apiKey, Accept: 'application/json', Referer: sourceUrl } });
+                const body = response && typeof response.html === 'string' ? response.html : '';
+                payload = body ? JSON.parse(body) : null;
+            } catch (error) {
+                console.warn(`🎟️ DICE: feed ${nextUrl} could not be read (${error.message}) — ${rows.length} row(s) kept`);
+                break;
+            }
+            const data = payload && Array.isArray(payload.data) ? payload.data : [];
+            rows.push(...data.filter(row => row && typeof row === 'object' && row.name && row.date));
+            const links = payload && payload.links && typeof payload.links === 'object' ? payload.links : {};
+            nextUrl = typeof links.next === 'string' && links.next ? links.next : null;
+        }
+        if (rows.length > 0) {
+            const linkouts = rows.filter(row => row.type === 'linkout').length;
+            console.log(`🎟️ DICE: widget on ${sourceUrl} (${widget.filterLabel}) published ${rows.length} row(s), ${linkouts} ticketed elsewhere`);
+        }
+        return rows;
+    }
+
+    // The widget config as the page publishes it. Astro/Wix islands ship the
+    // embed HTML entity-escaped (once or twice) inside a script payload, so
+    // the search runs over the raw page and its unescaped forms.
+    extractDiceWidgetConfig(html) {
+        const source = String(html || '');
+        if (!source) return null;
+        const forms = [source];
+        let decoded = this.decodeBasicEntities(source).replace(/\\"/g, '"');
+        for (let round = 0; round < 2 && decoded !== forms[forms.length - 1]; round++) {
+            forms.push(decoded);
+            decoded = this.decodeBasicEntities(decoded).replace(/\\"/g, '"');
+        }
+        for (const text of forms) {
+            const configMatch = text.match(/DiceEventListWidget\.create\(\s*(\{[\s\S]*?\})\s*\)/);
+            if (!configMatch) continue;
+            let config = null;
+            try { config = JSON.parse(configMatch[1]); } catch (_) { continue; }
+            if (!config || typeof config.apiKey !== 'string' || !config.apiKey.trim()) continue;
+            const scriptMatch = text.match(/<script\b[^>]*\bsrc\s*=\s*["']([^"']*dice-event-list-widget[^"']*\.js[^"']*)["']/i);
+            if (!scriptMatch) continue;
+            const promoters = Array.isArray(config.promoters) ? config.promoters.filter(value => typeof value === 'string' && value.trim()) : [];
+            const venues = Array.isArray(config.venues) ? config.venues.filter(value => typeof value === 'string' && value.trim()) : [];
+            if (promoters.length === 0 && venues.length === 0) continue;
+            return {
+                apiKey: config.apiKey.trim(),
+                partnerId: typeof config.partnerId === 'string' ? config.partnerId : '',
+                promoters,
+                venues,
+                scriptUrl: scriptMatch[1],
+                filterLabel: [...promoters.map(name => `promoter ${name}`), ...venues.map(name => `venue ${name}`)].join(', ')
+            };
+        }
+        return null;
+    }
+
+    buildDiceEventsFeedUrl(apiBase, widget) {
+        const params = ['page[size]=100', 'types=linkout,event'];
+        for (const name of widget.promoters) params.push(`filter[promoters][]=${encodeURIComponent(name)}`);
+        for (const name of widget.venues) params.push(`filter[venues][]=${encodeURIComponent(name)}`);
+        return `${apiBase}/api/v2/events?${params.join('&')}`;
+    }
+
+    // One DICE row -> one parser event, deterministically, the way
+    // buildEventFromElfsightRow does. Dates are UTC instants with the row's
+    // own IANA zone; a "linkout" row (ticketed off DICE) keeps its external
+    // link as the ticket link and whatever venue the row states — often
+    // nothing, which is exactly the blank the crawl of that link fills.
+    buildEventFromDiceRow(row, sourceUrl) {
+        if (!row || typeof row !== 'object') return null;
+        const startDate = new Date(String(row.date || ''));
+        if (Number.isNaN(startDate.getTime())) return null;
+        if (/cancel/i.test(String(row.status || ''))) {
+            console.log(`🎟️ DICE: row "${row.name}" is ${row.status} — skipping`);
+            return null;
+        }
+        const endCandidate = row.date_end ? new Date(String(row.date_end)) : null;
+        const endDate = endCandidate && !Number.isNaN(endCandidate.getTime()) ? endCandidate : null;
+        const venue = Array.isArray(row.venues) && row.venues.length > 0 && row.venues[0] && typeof row.venues[0] === 'object'
+            ? row.venues[0]
+            : null;
+        const location = row.location && typeof row.location === 'object' ? row.location : {};
+        const clean = (value) => this.normalizeWhitespace(this.decodeBasicEntities(this.stripTags(String(value || ''))).replace(/&amp;/gi, '&'));
+        const addressParts = [clean(location.street), clean(location.city), clean(location.zip)].filter(Boolean);
+        const event = {
+            title: clean(row.name),
+            description: clean(row.description),
+            startDate,
+            endDate,
+            timezone: typeof row.timezone === 'string' && /^[A-Za-z]+\/[A-Za-z0-9_+\-/]+$/.test(row.timezone) ? row.timezone : null,
+            bar: venue ? clean(venue.name) : '',
+            address: addressParts.join(', '),
+            url: sourceUrl,
+            website: sourceUrl,
+            source: 'dice'
+        };
+        const lat = Number(location.lat);
+        const lng = Number(location.lng);
+        if (Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0)) {
+            event.location = `${lat}, ${lng}`;
+        }
+        const ticketUrl = this.normalizeHttpUrlValue(String(row.url || row.external_url || '').trim());
+        if (ticketUrl) event.ticketUrl = ticketUrl;
+        if (event.bar) event._barFromJsonLd = true;
+        const images = row.event_images && typeof row.event_images === 'object' ? row.event_images : {};
+        const image = this.normalizeHttpUrlValue(String(images.portrait || images.landscape || images.square
+            || (Array.isArray(row.images) ? row.images[0] : '') || '').trim());
+        if (image) {
+            event.image = image;
+            event.imageSource = 'json-api';
+        }
+        // DICE prices are minor units (pence/cents) in the row's currency.
+        const price = Number(row.price);
+        if (Number.isFinite(price) && price > 0) {
+            const amount = price / 100;
+            const formatted = Number.isInteger(amount) ? String(amount) : amount.toFixed(2);
+            const currency = String(row.currency || '').toUpperCase();
+            event.cover = !currency || currency === 'USD' ? `$${formatted}` : `${formatted} ${currency}`;
+            event._coverFromJsonLdOffers = true;
+        }
+        return event;
     }
 
     async collectMecMonthFeeds(htmlData, parserConfig, httpAdapter) {
