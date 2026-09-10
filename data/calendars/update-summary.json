@@ -171,13 +171,13 @@
     "nola": {
       "name": "New Orleans",
       "status": "success",
-      "dataLength": 14661,
+      "dataLength": 14697,
       "eventCount": 12
     },
     "nyc": {
       "name": "New York",
       "status": "success",
-      "dataLength": 26132,
+      "dataLength": 26733,
       "eventCount": 26
     },
     "palm-springs": {
