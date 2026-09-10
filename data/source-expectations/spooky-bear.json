@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "source": "Spooky Bear",
+  "slug": "spooky-bear",
+  "status": "not-started",
+  "recon": {
+    "date": null,
+    "method": [],
+    "parserUrlsAtRecon": null,
+    "doors": [],
+    "notes": null
+  },
+  "coverage": {
+    "confidence": null,
+    "basis": null,
+    "publishedEventCount": null,
+    "documentedEventCount": 0,
+    "occurrenceWindow": null,
+    "pastListingsPresent": null,
+    "knownGaps": []
+  },
+  "defaults": {},
+  "events": [],
+  "traps": [],
+  "openQuestions": []
+}
