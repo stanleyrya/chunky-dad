@@ -16607,3 +16607,21 @@ test('DICE widget: rows become events — venue, address, pin, price in minor un
   assert.equal(welly.ticketUrl, 'https://dukeofwellington.example/beefmince');
   assert.equal(welly.cover, '20 EUR');
 });
+
+test('Wix listing rows lend their artwork to an imageless event, and never replace an image the event has', () => {
+  const parser = createParser();
+  const node = { title: 'CHUNK CHICAGO presents NEW YEARS EVE 2026', slug: 'chunk-chicago-presents-new-years-eve-2026',
+    scheduling: { config: { startDate: '2026-01-01T03:00:00.000Z', endDate: '2026-01-01T09:00:00.000Z', timeZoneId: 'America/Chicago' } },
+    location: { address: '3702 N Halsted St, Chicago, IL', coordinates: { lat: 41.9493756, lng: -87.64979 } },
+    mainImage: { id: '42b6cb_73cd~mv2.jpg', url: 'https://static.wixstatic.com/media/42b6cb_73cd~mv2.jpg', width: 4112, height: 3300 } };
+  const record = parser.buildWixServerEventRecord(node, []);
+  assert.equal(record.image, 'https://static.wixstatic.com/media/42b6cb_73cd~mv2.jpg');
+  const bare = { title: 'CHUNK CHICAGO presents NEW YEARS EVE 2026', startDate: new Date('2026-01-01T03:00:00.000Z') };
+  const { filled } = parser.fillEventFromWixServerRecord(bare, record, null);
+  assert.ok(filled.includes('image'));
+  assert.equal(bare.image, record.image);
+  assert.equal(bare.imageSource, 'json-api');
+  const owned = { title: 'X', image: 'https://own.example/flyer.jpg' };
+  parser.fillEventFromWixServerRecord(owned, record, null);
+  assert.equal(owned.image, 'https://own.example/flyer.jpg', 'fill-only-empty');
+});
