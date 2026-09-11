@@ -7,7 +7,7 @@ X-WR-CALNAME:chunky-dad-phoenix
 X-WR-TIMEZONE:America/Phoenix
 BEGIN:VEVENT
 DTSTART:20260524T043000Z
-DTSTAMP:20260821T221708Z
+DTSTAMP:20260911T121059Z
 UID:9165A83C-32B2-497F-A522-7C5ADF7B9A2A
 CREATED:20260507T001637Z
 DESCRIPTION:description: Bearracuda PhoenixRELAUNCH PARTYSaturday\, May 23t
@@ -33,35 +33,9 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20261011T043000Z
-DTEND:20261011T090000Z
-DTSTAMP:20260821T221708Z
-UID:9FF35A8A-3A10-4BCB-BE7F-FDFC8B6187BC
-CREATED:20260815T022623Z
-DESCRIPTION:description: PRIDE SATURDAY\nbar: Royale\naddress: 4230 N. 6th 
- Drive\, PHOENIX\, AZ 85013\ntimezone: America/Phoenix\nticketUrl: https://b
- earracuda.com\nimage: https://bearracuda.com/wp-content/uploads/2026/08/web
- phoenixweblarge.jpg\nimageVertical: https://bearracuda.com/wp-content/uploa
- ds/2026/08/webphoenixweblarge.jpg\nwebsite: https://bearracuda.com/\nshortN
- ame: Bear­rac­uda\ninstagram: https://www.instagram.com/bearracuda\nfavicon
- : https://bearracuda.com/\nkey: bearracuda-phoenix-pride|2026-10-11|royale\
- nbearSource: keyword\npinSource: geocoded-exact\naddressSource: page\nimage
- Source: og-image\nbarSource: page-adjacent\ngmaps: https://www.google.com/m
- aps/search/?api=1&query=Royale%2C%204230%20N.%206th%20Drive%2C%20PHOENIX%2C
- %20AZ%2085013
-LAST-MODIFIED:20260821T202958Z
-LOCATION:33.497757\, -112.077333
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:BEARRACUDA: PHOENIX PRIDE
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20251005T040000Z
 DTEND:20251005T090000Z
-DTSTAMP:20260821T221708Z
+DTSTAMP:20260911T121059Z
 UID:F6548399-1DB6-4C62-9F75-A6045BF3884F
 CREATED:20251001T000958Z
 DESCRIPTION:description: MEGAWOOF 10 YEAR ANNIVERSARY \\: PHOENIX KICK OFF\
@@ -86,9 +60,41 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
+DTSTART:20261011T043000Z
+DTEND:20261011T090000Z
+DTSTAMP:20260911T121059Z
+UID:9FF35A8A-3A10-4BCB-BE7F-FDFC8B6187BC
+CREATED:20260815T022623Z
+DESCRIPTION:description: Bearracuda PhoenixPRIDE SATURDAYSaturday\, Oct. 10
+ thDJ Matt StandsHosted by Matt BearracudaHot\, Horny GoGos4230 N. 6th Drive
+  Adv. tix at Bearracuda.com - Doors at 9\\:30pmBearracuda is back in PHOENI
+ X\, making our debut at the Royale! Join 100s of guys dancing til late on P
+ ride Weekend\, with sexy GoGos\, chunky visuals and YOU! Get your PrEP onli
+ ne for FREE with MISTR!If you haven't already heard\, MISTR offers FREE onl
+ ine PrEP and STI testing.\naddress: 4230 N. 6th Drive\, PHOENIX\, AZ 85013\
+ nticketUrl: https://www.sickening.events/e/bearracuda-phoenix-pride/tickets
+ \nimage: https://bearracuda.com/wp-content/uploads/2026/08/webphoenixweblar
+ ge.jpg\ncover: $15\ntimezone: America/Phoenix\nwebsite: https://bearracuda.
+ com/\nshortName: Bear­rac­uda\ninstagram: https://www.instagram.com/bearrac
+ uda\nfavicon: https://bearracuda.com/\nkey: bearracuda-phoenix-pride|2026-1
+ 0-11|royale\nbar: Royale\nimageVertical: https://bearracuda.com/wp-content/
+ uploads/2026/08/webphoenixweblarge.jpg\nbearSource: keyword\npinSource: geo
+ coded-exact\naddressSource: page\nimageSource: og-image\nbarSource: page-ad
+ jacent\ngmaps: https://www.google.com/maps/search/?api=1&query=Royale%2C%20
+ 4230%20N.%206th%20Drive%2C%20PHOENIX%2C%20AZ%2085013
+LAST-MODIFIED:20260911T102726Z
+LOCATION:33.497757\, -112.077333
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEARRACUDA: PHOENIX PRIDE
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20260809T043000Z
 DTEND:20260809T090000Z
-DTSTAMP:20260821T221708Z
+DTSTAMP:20260911T121059Z
 UID:DBB2B903-E956-45AE-8645-08B4C4A8A455
 CREATED:20260712T004132Z
 DESCRIPTION:description: MEGAWOOF AMERICA - PHOENIX - SUMMER WOOFERS\nbar: 

@@ -6,37 +6,9 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-dallas
 X-WR-TIMEZONE:America/Chicago
 BEGIN:VEVENT
-DTSTART:20260814T220000Z
-DTEND:20260815T020000Z
-DTSTAMP:20260910T200621Z
-UID:21FF8507-F5EF-4E34-8764-F47BF75FB118
-CREATED:20260807T210713Z
-DESCRIPTION:description: The Brewery Bears have a new home bar at the Dalla
- s Eagle! 🐻🍻🦅 Join us for an all new monthly Happy Hour event with the bi
- ggest beer drinking crowd in town! Enjoy discount ice cold craft and draft 
- beers\, and our rotating Brewery Bears Reserve selections. Bears gotta eat\
- , so we’re serving up fresh and delicious sc \, ...\nbar: Dallas Eagle\nins
- tagram: https://www.instagram.com/thedallaseagle/\nfacebook: https://www.fa
- cebook.com/lonestareagle\nwebsite: https://www.thedallaseagle.com/events/br
- ewery-bears-happy-hour-5/\nmastodon: https://mastodon.social/@dallaseagle\n
- timezone: America/Chicago\naddress: 525 S Riverfront Blvd\, Dallas\, TX 752
- 07\nkey: brewery-bears-happy-hour|2026-08-14|dallas eagle\nbearSource: keyw
- ord\nshortName: BREWERY BEARS\npinSource: curated\naddressSource: curated\n
- barSource: venue-site\ngmaps: https://www.google.com/maps/place/?q=place_id
- :ChIJU843NR6cToYROpJZCM8p4-I
-LAST-MODIFIED:20260811T175057Z
-LOCATION:32.7693483\, -96.8112576
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Brewery Bears Happy Hour
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20260815T020000Z
 DTEND:20260815T070000Z
-DTSTAMP:20260910T200621Z
+DTSTAMP:20260911T121059Z
 UID:13889125-C3DE-4D92-9227-86C5EE9B1005
 CREATED:20260804T184803Z
 DESCRIPTION:description: It’s time for another delicious combo\, it’s BEAR 
@@ -63,31 +35,64 @@ X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260919T020000Z
-DTSTAMP:20260910T200621Z
+DTEND:20260919T070000Z
+DTSTAMP:20260911T121059Z
 UID:6829158E-CA7F-463D-9EFA-1F03CC7E6C42
 CREATED:20260910T195508Z
-DESCRIPTION:description: Pride Kickoff Party\nbar: Dallas Eagle\naddress: 5
- 25 S Riverfront Blvd\, Dallas\, TX 75207\ntimezone: America/Chicago\nticket
- Url: https://www.eventbrite.com/e/furball-dallas-underwear-gear-party-featu
- ring-dj-gsp-tickets-1998828293232\nimage: https://static.wixstatic.com/medi
- a/238fae_0de327229a2341b6a7fda572185436ea~mv2.jpg\nimageSource: page\nbarSo
- urce: curated\naddressSource: curated\nwebsite: https://www.furball.nyc\ngm
- aps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p
- 4-I\npinSource: curated\ninstagram: https://instagram.com/furballnyc/\nshor
- tName: FUR­BALL\nfavicon: https://linktr.ee/furballnyc\nkey: furball-d-a-l-
- l-a-s|2026-09-19|dallas eagle\nbearSource: keyword
-LAST-MODIFIED:20260910T195508Z
+DESCRIPTION:bar: Dallas Eagle\nticketUrl: https://www.eventbrite.com/e/furb
+ all-dallas-underwear-gear-party-featuring-dj-gsp-tickets-1998828293232\nima
+ ge: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1191726982
+ %2F1830349048683%2F1%2Foriginal.20260824-022906?crop=focalpoint&fit=crop&w=
+ 940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.528&fp-y=0.158&s=b13de87ba4
+ 73f5b6874e429393814ff7\ncover: $19.32-$25.09\ntimezone: America/Chicago\nwe
+ bsite: https://www.furball.nyc\ninstagram: https://instagram.com/furballnyc
+ /\nshortName: FUR­BALL\nfavicon: https://linktr.ee/furballnyc\nkey: furball
+ -dallas-underwear-gear-party-featuring-dj-gsp|2026-09-19|dallas eagle\nbear
+ Source: keyword\ndescription: Joe Fiore Presents FURBALL at the Dallas Eagl
+ e\, featuring DJ GSP and DJ Sanders!\naddress: 525 South Riverfront Bouleva
+ rd\, Dallas\, TX 75207\npinSource: curated\naddressSource: page\nimageSourc
+ e: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/place/?q=
+ place_id:ChIJU843NR6cToYROpJZCM8p4-I
+LAST-MODIFIED:20260911T102727Z
+LOCATION:32.7693483\, -96.8112576
+SEQUENCE:1
+STATUS:CONFIRMED
+SUMMARY:FURBALL Dallas Underwear + Gear Party featuring DJ GSP
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260814T220000Z
+DTEND:20260815T020000Z
+DTSTAMP:20260911T121059Z
+UID:21FF8507-F5EF-4E34-8764-F47BF75FB118
+CREATED:20260807T210713Z
+DESCRIPTION:description: The Brewery Bears have a new home bar at the Dalla
+ s Eagle! 🐻🍻🦅 Join us for an all new monthly Happy Hour event with the bi
+ ggest beer drinking crowd in town! Enjoy discount ice cold craft and draft 
+ beers\, and our rotating Brewery Bears Reserve selections. Bears gotta eat\
+ , so we’re serving up fresh and delicious sc \, ...\nbar: Dallas Eagle\nins
+ tagram: https://www.instagram.com/thedallaseagle/\nfacebook: https://www.fa
+ cebook.com/lonestareagle\nwebsite: https://www.thedallaseagle.com/events/br
+ ewery-bears-happy-hour-5/\nmastodon: https://mastodon.social/@dallaseagle\n
+ timezone: America/Chicago\naddress: 525 S Riverfront Blvd\, Dallas\, TX 752
+ 07\nkey: brewery-bears-happy-hour|2026-08-14|dallas eagle\nbearSource: keyw
+ ord\nshortName: BREWERY BEARS\npinSource: curated\naddressSource: curated\n
+ barSource: venue-site\ngmaps: https://www.google.com/maps/place/?q=place_id
+ :ChIJU843NR6cToYROpJZCM8p4-I
+LAST-MODIFIED:20260811T175057Z
 LOCATION:32.7693483\, -96.8112576
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:FURBALL D A L L A S
+SUMMARY:Brewery Bears Happy Hour
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260705T220000Z
-DTSTAMP:20260910T200621Z
+DTSTAMP:20260911T121059Z
 UID:53B4DABD-D3AE-47EC-AE4A-7D8C33A7652D
 CREATED:20260701T132043Z
 DESCRIPTION:bar: STATION 4\naddress: 3911 Cedar Springs Rd\, Dallas\, TX 75

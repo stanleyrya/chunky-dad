@@ -8,7 +8,7 @@ X-WR-TIMEZONE:America/New_York
 BEGIN:VEVENT
 DTSTART:20261101T210000Z
 DTEND:20261102T020000Z
-DTSTAMP:20260910T200621Z
+DTSTAMP:20260911T121059Z
 UID:BE92AFDE-830F-47AC-A67B-518D74EA17D3
 CREATED:20260802T134345Z
 DESCRIPTION:description: Club Chub presents MEAT MARKET at The Eagle Wilton
@@ -19,18 +19,17 @@ DESCRIPTION:description: Club Chub presents MEAT MARKET at The Eagle Wilton
  .)CLUB CHUB PRESENTS\\: MEAT MARKET Formerly Wig Out. Same party. New fanta
  sy. Cannonball Weekend is getting one last hot\, sweaty send-off. Sunday\, 
  November 14–9 PMThe Eagle Wilton Manors Consider this your unofficial Canno
- nball closeout party.\nbar: Eagle Wilton Manors\naddress: 2209 Wilton Drive
- \, Wilton Manors\, FL\, 33305\ntimezone: America/New_York\nticketUrl: https
- ://www.eventbrite.com/e/club-chub-fort-lauderdale-wig-out-party-tickets-198
- 7163866618\nimage: https://static.wixstatic.com/media/f91121_7e91a2d6daf44a
- 8da7e48aaf7068a175~mv2.jpg\nwebsite: https://www.clubchubusa.com\ninstagram
- : https://www.instagram.com/clubchubparty\nshortName: CLUB CHUB\nfavicon: h
- ttps://www.clubchubusa.com\nkey: club-chub-presents-meat-market|2026-11-01|
- eagle wilton manors\ncover: $19.10-$24.80\nbearSource: keyword\npinSource: 
- page\naddressSource: page\nimageSource: page\nbarSource: page-adjacent\ngma
- ps: https://www.google.com/maps/search/?api=1&query=Eagle%20Wilton%20Manors
- %2C%202209%20Wilton%20Drive%2C%20Wilton%20Manors%2C%20FL%2C%2033305
-LAST-MODIFIED:20260910T193034Z
+ nball closeout party.\nbar: Eagle\ntimezone: America/New_York\nticketUrl: h
+ ttps://www.eventbrite.com/e/club-chub-fort-lauderdale-wig-out-party-tickets
+ -1987163866618\nimage: https://static.wixstatic.com/media/f91121_7e91a2d6da
+ f44a8da7e48aaf7068a175~mv2.jpg\nwebsite: https://www.clubchubusa.com\ninsta
+ gram: https://www.instagram.com/clubchubparty\nshortName: CLUB CHUB\nfavico
+ n: https://www.clubchubusa.com\nkey: club-chub-presents-meat-market|2026-11
+ -01|eagle\ncover: $19.10-$24.80\nbearSource: keyword\naddress: 2209 Wilton 
+ Drive\, Wilton Manors\, FL\, 33305\npinSource: page\naddressSource: page\ni
+ mageSource: page\nbarSource: uncorroborated\ngmaps: https://www.google.com/
+ maps/place/?q=place_id:ChIJu6n6wQ0B2YgRuXxB9KC59OA
+LAST-MODIFIED:20260911T102743Z
 LOCATION:26.156486\, -80.138547
 SEQUENCE:0
 STATUS:CONFIRMED
