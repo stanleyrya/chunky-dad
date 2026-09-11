@@ -1316,6 +1316,9 @@ class AiWebParser {
                 // instead of from the shape of its URL.
                 const structuredArtworkOcrCount = await this.vetStructuredEventArtwork(
                     structuredEvents, parserConfig, httpAdapter);
+                // A listing that states no time may have a poster that does
+                // (see adoptFlyerClockForPlaceholderTimes).
+                this.adoptFlyerClockForPlaceholderTimes(structuredEvents);
                 // …and neither is a logo the vision pass already read as page
                 // furniture. Same position and same reasoning as the
                 // placeholder rejection above: reject BEFORE the og:image fill,
@@ -5584,7 +5587,11 @@ class AiWebParser {
             while ((anchor = anchorPattern.exec(body)) !== null) {
                 const tooltipId = anchor[1];
                 const href = this.normalizeHttpUrlValue(this.decodeBasicEntities(anchor[2]).trim()) || '';
-                const title = clean(anchor[3]);
+                // Status labels the grid appends to a cell title ("(Expired!)",
+                // "Ongoing", a sold-out badge span) are not the event's name.
+                const title = clean(anchor[3].replace(/<span\b[^>]*class="[^"]*(?:expired|ongoing|soldout|sold-out|status|label|badge)[^"]*"[^>]*>[\s\S]*?<\/span>/gi, ' '))
+                    .replace(/\s*\(?\b(?:expired!?|ongoing|sold out|cancelled|canceled|postponed)\b!?\)?\s*$/i, '')
+                    .trim();
                 if (!title || !href) continue;
                 const tooltipMatch = body.match(new RegExp(`<div\\s+id="${tooltipId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"[^>]*>([\\s\\S]*?)<span class="mec-wrap">`, 'i'));
                 const tooltip = tooltipMatch ? tooltipMatch[1] : '';
@@ -5654,12 +5661,12 @@ class AiWebParser {
             if (!byPath.has(path)) byPath.set(path, []);
             byPath.get(path).push(event);
         }
-        const needing = [...byPath.entries()].filter(([, group]) => group.some(event => this.isMidnightWallClock(event.startDate)));
+        const needing = [...byPath.entries()].filter(([, group]) => group.some(event => this.isMidnightWallClock(event.startDate) || !event.image));
         if (needing.length === 0) return;
         let pagesRead = 0;
         let timed = 0;
         for (const [path, group] of needing.slice(0, MEC_EVENT_PAGE_ENRICH_CAP)) {
-            const sample = group.find(event => this.isMidnightWallClock(event.startDate)) || group[0];
+            const sample = group.find(event => this.isMidnightWallClock(event.startDate) || !event.image) || group[0];
             let html = '';
             try {
                 const response = await httpAdapter.fetchData(sample.url);
@@ -5697,7 +5704,7 @@ class AiWebParser {
                 if (description && !event.description) event.description = description;
             }
         }
-        console.log(`📆 MEC GRID: read ${pagesRead} event page(s) for ${needing.length} un-timed listing(s) — ${timed} occurrence(s) now carry the page's wall clock${needing.length > MEC_EVENT_PAGE_ENRICH_CAP ? ` (${needing.length - MEC_EVENT_PAGE_ENRICH_CAP} page(s) beyond the cap left un-timed)` : ''}`);
+        console.log(`📆 MEC GRID: read ${pagesRead} event page(s) for ${needing.length} listing(s) lacking a time or artwork — ${timed} occurrence(s) now carry the page's wall clock${needing.length > MEC_EVENT_PAGE_ENRICH_CAP ? ` (${needing.length - MEC_EVENT_PAGE_ENRICH_CAP} page(s) beyond the cap not read)` : ''}`);
     }
 
     isMidnightWallClock(date) {
@@ -5751,9 +5758,13 @@ class AiWebParser {
             if (meridiem === 'am' && hour === 12) hour = 0;
             return hour >= 0 && hour < 24 && minute >= 0 && minute < 60 ? { hour, minute } : null;
         };
-        const range = String(timeText || '').split(/\s*[-–—]\s*/);
-        const start = parseClock(range[0]);
-        const end = range.length > 1 ? parseClock(range[1]) : null;
+        // "7:00 pm - 9:00 pm", "9:00 pm - 2:00 am", "Start from: October 7,
+        // 2026 - 9:00 pm End at: October 8, 2026 - 2:00 am", "21:00": the
+        // clocks in the text, in order — first the start, then the end.
+        const text = String(timeText || '');
+        const clocks = text.match(/\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b|\b\d{2}:\d{2}\b/gi) || [];
+        const start = clocks.length > 0 ? parseClock(clocks[0]) : null;
+        const end = clocks.length > 1 ? parseClock(clocks[1]) : null;
         const startDate = new Date(Date.UTC(year, month - 1, date, start ? start.hour : 0, start ? start.minute : 0));
         if (Number.isNaN(startDate.getTime())) return null;
         let endDate = null;
@@ -20170,6 +20181,82 @@ TEXT:
             console.log(`🤖 AI Web: OCR-read structured-data artwork for "${event.title || 'Unknown'}" — ${readAs}: ${image}`);
         }
         return vettedCount;
+    }
+
+    // A structured event dated at midnight (the listing printed no time)
+    // whose OWN poster the vision pass read as stating exactly one start
+    // clock adopts it — when the poster also names this event's date, or
+    // names no date at all. eaglela.com prints no times anywhere in its
+    // grids or event pages; the flyers do ("CUBCAKE SEP 11 9pm $8"). A
+    // poster naming a different date, or several clocks, decides nothing.
+    adoptFlyerClockForPlaceholderTimes(events) {
+        if (!Array.isArray(events)) return 0;
+        const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+        let adopted = 0;
+        for (const event of events) {
+            if (!event || !this.isMidnightWallClock(event.startDate)) continue;
+            const image = typeof event.image === 'string' ? event.image.trim() : '';
+            if (!image) continue;
+            const verdict = this.getOcrImageVerdict(image);
+            const text = verdict && typeof verdict.text === 'string' ? verdict.text : '';
+            if (!text.trim()) continue;
+            const clock = this.readSingleStartClockFromFlyerText(text);
+            if (!clock) continue;
+            const day = event.startDate;
+            const month = day.getUTCMonth();
+            const date = day.getUTCDate();
+            const datePattern = new RegExp(`\\b(?:${MONTHS[month]}[a-z]*\\.?\\s+${date}(?!\\d)|${month + 1}[/.]${date}(?!\\d)|${date}(?:st|nd|rd|th)?\\s+(?:of\\s+)?${MONTHS[month]}[a-z]*)`, 'i');
+            const anyDatePattern = /\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2}(?!\d)|\b\d{1,2}[/.]\d{1,2}(?:[/.]\d{2,4})?\b|\b\d{1,2}(?:st|nd|rd|th)?\s+(?:of\s+)?(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*/i;
+            const namesThisDate = datePattern.test(text);
+            if (!namesThisDate && anyDatePattern.test(text)) continue;
+            event.startDate = new Date(Date.UTC(day.getUTCFullYear(), month, date, clock.start.hour, clock.start.minute));
+            if (clock.end) {
+                let endDate = new Date(Date.UTC(day.getUTCFullYear(), month, date, clock.end.hour, clock.end.minute));
+                if (endDate.getTime() <= event.startDate.getTime()) endDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
+                event.endDate = endDate;
+            }
+            event._startTimeFromFlyer = true;
+            adopted++;
+            console.log(`🕒 FLYER CLOCK: "${event.title}" listed with no time — its poster says ${clock.text}${namesThisDate ? ' for this date' : ''}; start set to ${String(clock.start.hour).padStart(2, '0')}:${String(clock.start.minute).padStart(2, '0')} wall clock`);
+        }
+        return adopted;
+    }
+
+    // Exactly one start clock in a poster's text ("9pm", "9:00 PM",
+    // "9pm-2am", "doors 8pm"): the first clock of the first range; null
+    // when the text states two different starts or none.
+    readSingleStartClockFromFlyerText(text) {
+        const source = String(text || '');
+        const clockPattern = /\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/gi;
+        const parse = (match) => {
+            let hour = Number(match[1]);
+            const minute = Number(match[2] || 0);
+            const meridiem = match[3].toLowerCase();
+            if (meridiem === 'pm' && hour < 12) hour += 12;
+            if (meridiem === 'am' && hour === 12) hour = 0;
+            return hour < 24 && minute < 60 ? { hour, minute } : null;
+        };
+        const found = [];
+        let match;
+        while ((match = clockPattern.exec(source)) !== null) {
+            const parsed = parse(match);
+            if (parsed) found.push({ ...parsed, index: match.index, text: match[0] });
+        }
+        if (found.length === 0) return null;
+        const starts = [];
+        for (let i = 0; i < found.length; i++) {
+            const between = i > 0 ? source.slice(found[i - 1].index + found[i - 1].text.length, found[i].index) : '';
+            // The second clock of a "9pm - 2am" / "9pm to 2am" range is an end.
+            if (i > 0 && /^\s*(?:-|–|—|to|til|till|until)\s*$/i.test(between)) continue;
+            starts.push(i);
+        }
+        const distinct = new Set(starts.map(i => `${found[i].hour}:${found[i].minute}`));
+        if (distinct.size !== 1) return null;
+        const startIndex = starts[0];
+        const next = found[startIndex + 1];
+        const betweenNext = next ? source.slice(found[startIndex].index + found[startIndex].text.length, next.index) : '';
+        const end = next && /^\s*(?:-|–|—|to|til|till|until)\s*$/i.test(betweenNext) ? { hour: next.hour, minute: next.minute } : null;
+        return { start: { hour: found[startIndex].hour, minute: found[startIndex].minute }, end, text: end ? `${found[startIndex].text} – ${next.text}` : found[startIndex].text };
     }
 
     fillImageFromPageMetaArtwork(event, htmlData) {

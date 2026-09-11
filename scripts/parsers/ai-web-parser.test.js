@@ -13106,7 +13106,7 @@ test('MEC grid reader: un-timed side-list occurrences take the wall clock, artwo
   const httpAdapter = { async fetchData(url) { fetched.push(url); return { html: pages[url] || '', url, statusCode: pages[url] ? 200 : 404, headers: {} }; } };
   const originalLog = console.log; console.log = () => {};
   try { await parser.enrichMecOccurrencesFromEventPages(rows, httpAdapter); } finally { console.log = originalLog; }
-  assert.deepEqual(fetched.sort(), ['https://venue.example/events/hump-night/?occurrence=2026-10-07', 'https://venue.example/events/sunday-beer-bust-4/?occurrence=2026-10-04'], 'one fetch per page; the timed CUBSCOUT page is never fetched');
+  assert.deepEqual(fetched.sort(), ['https://venue.example/events/cubscout/?occurrence=2026-10-04', 'https://venue.example/events/hump-night/?occurrence=2026-10-07', 'https://venue.example/events/sunday-beer-bust-4/?occurrence=2026-10-04'], 'one fetch per page (CUBSCOUT is timed but has no artwork)');
   const busts = rows.filter(r => r.title === 'SUNDAY BEER BUST').map(r => [r.startDate.toISOString(), r.endDate && r.endDate.toISOString()]);
   assert.deepEqual(busts, [['2026-10-04T16:00:00.000Z', '2026-10-04T20:00:00.000Z'], ['2026-10-11T16:00:00.000Z', '2026-10-11T20:00:00.000Z']], 'both occurrences of the page carry its wall clock');
   assert.equal(rows.find(r => r.title === 'SUNDAY BEER BUST').description, 'Beer & bears', 'the grid\'s own copy stands; the page fills blanks only');
@@ -13115,6 +13115,32 @@ test('MEC grid reader: un-timed side-list occurrences take the wall clock, artwo
   assert.equal(hump.endDate.toISOString(), '2026-10-08T02:00:00.000Z', 'past-midnight end');
   assert.equal(hump.image, 'https://venue.example/hump.jpg');
   assert.equal(rows.find(r => r.title === 'CUBSCOUT').startDate.toISOString(), '2026-10-04T21:00:00.000Z', 'a timed row is untouched');
+});
+
+test('a listing with no time adopts the single clock its own poster states — for this date, or undated', () => {
+  const parser = createParser();
+  const at = (day) => new Date(Date.UTC(2026, 8, day));
+  const mk = (title, day, image) => ({ title, startDate: at(day), image, _timezoneUnresolved: true });
+  parser.recordOcrImageTextEvidence('https://v.example/cubcake.jpg', { text: 'CUBCAKE\nSEP 11 9pm $8' });
+  parser.recordOcrImageTextEvidence('https://v.example/hump.jpg', { text: 'HUMP NIGHT every Wednesday 9pm - 2am no cover' });
+  parser.recordOcrImageTextEvidence('https://v.example/other-date.jpg', { text: 'BEAR NIGHT OCT 3 10pm' });
+  parser.recordOcrImageTextEvidence('https://v.example/two.jpg', { text: 'Doors 8pm Show 10pm' });
+  const cub = mk('CUBCAKE', 11, 'https://v.example/cubcake.jpg');
+  const hump = mk('HUMP NIGHT', 9, 'https://v.example/hump.jpg');
+  const other = mk('BEAR NIGHT', 12, 'https://v.example/other-date.jpg');
+  const two = mk('SHOW', 13, 'https://v.example/two.jpg');
+  const timed = { title: 'TIMED', startDate: new Date(Date.UTC(2026, 8, 14, 21)), image: 'https://v.example/cubcake.jpg' };
+  const originalLog = console.log; console.log = () => {};
+  let adopted;
+  try { adopted = parser.adoptFlyerClockForPlaceholderTimes([cub, hump, other, two, timed]); } finally { console.log = originalLog; }
+  assert.equal(adopted, 2);
+  assert.equal(cub.startDate.toISOString(), '2026-09-11T21:00:00.000Z', 'poster names this date and one clock');
+  assert.equal(cub.endDate, undefined);
+  assert.equal(hump.startDate.toISOString(), '2026-09-09T21:00:00.000Z', 'undated poster with a range');
+  assert.equal(hump.endDate.toISOString(), '2026-09-10T02:00:00.000Z');
+  assert.equal(other.startDate.toISOString(), '2026-09-12T00:00:00.000Z', 'a poster for another date decides nothing');
+  assert.equal(two.startDate.toISOString(), '2026-09-13T00:00:00.000Z', 'two different clocks decide nothing');
+  assert.equal(timed.startDate.toISOString(), '2026-09-14T21:00:00.000Z', 'a timed event is untouched');
 });
 
 test('MEC grid reader: the page\'s own month plus the replayed feeds, de-duplicated per page+day; only on a MEC page', () => {
