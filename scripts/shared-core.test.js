@@ -21371,6 +21371,16 @@ test('a bare site root in ticketUrl is a website, not a ticket link', () => {
   } finally { console.log = originalLog; }
 });
 
+test('a trim answer that ends on a separator or conjunction loses that dangling tail', () => {
+  const core = createCore();
+  assert.equal(core.stripDanglingTrimTail('ButtTootKing 2026: Lydia B Kollins, Suzie Toot,'), 'ButtTootKing 2026: Lydia B Kollins, Suzie Toot');
+  assert.equal(core.stripDanglingTrimTail('MEGAWOOF - SAN FRANCISCO -'), 'MEGAWOOF - SAN FRANCISCO');
+  assert.equal(core.stripDanglingTrimTail('Bear Night with'), 'Bear Night');
+  assert.equal(core.stripDanglingTrimTail('Bear Night feat.'), 'Bear Night');
+  assert.equal(core.stripDanglingTrimTail('Clean Title'), 'Clean Title');
+  assert.equal(core.stripDanglingTrimTail('X'), 'X', 'never emptied');
+});
+
 test('an over-trimmed title keeps its longest separator-bounded prefix instead of just the brand', () => {
   const core = createCore();
   assert.equal(core.longestSeparatorBoundedPrefix('MEGAWOOF - SAN FRANCISCO - 11 YEAR ANNIVERSARY / BEARRISON WEEKEND', 60), 'MEGAWOOF - SAN FRANCISCO - 11 YEAR ANNIVERSARY');
@@ -21408,6 +21418,16 @@ test('same venue at the same start instant is one event, whatever each record ca
   const garbled = { title: 'GOLDII.OXX', startDate: at('2026-09-20T02:00:00.000Z'), bar: 'Jackhammer', timezone: 'America/Chicago' };
   const clean = { title: 'GOLDILOXX Chicago', startDate: at('2026-09-20T02:00:00.000Z'), bar: 'Jackhammer', timezone: 'America/Chicago' };
   assert.equal(core.getSameEventIdentitySignal(garbled, clean), 'place-exact-start');
+  // Two rooms of one venue complex, one shared pin (Squarespace geocodes
+  // every room to the building), same 10pm start: two events. Different
+  // bar names, different street numbers, different ticket links — any one
+  // of those contradictions fails the rung closed.
+  const wanted = { title: 'WANTED', startDate: at('2026-09-12T02:00:00.000Z'), timezone: 'America/New_York', bar: '9 BOB NOTE', address: '270 Meserole Street, Brooklyn, NY, 11206', location: '40.7084094, -73.9383118', ticketUrl: 'https://wl.eventim.us/event/WANTED/700522?afflky=9BobNote' };
+  const dolly = { title: 'Dolly Disco', startDate: at('2026-09-12T02:00:00.000Z'), timezone: 'America/New_York', bar: '3 Dollar Bill', address: '260 Meserole Street, Brooklyn, NY, 11206', location: '40.7084094, -73.9383118', ticketUrl: 'https://eventim.us/wafform.aspx?_act=eventdashboard&_pky=704326' };
+  assert.equal(core.getSameEventIdentitySignal(wanted, dolly), null, 'shared pin never outranks two different rooms');
+  assert.equal(core.getSameEventIdentitySignal({ ...wanted, bar: '', address: '' }, { ...dolly, bar: '', address: '' }), null, 'two different ticket links alone contradict');
+  assert.equal(core.getSameEventIdentitySignal({ ...wanted, bar: '3 Dollar Bill', ticketUrl: '' }, { ...dolly, ticketUrl: '' }), null, 'same bar, different street numbers still contradict');
+  assert.equal(core.getSameEventIdentitySignal({ ...wanted, bar: '3 Dollar Bill', address: '', ticketUrl: '' }, { ...dolly, ticketUrl: '' }), 'place-exact-start', 'one-sided evidence is not a contradiction');
   // Hours apart at one venue on one night are two events (the Montréal case).
   const early = { title: 'Concours PUP Montréal', startDate: at('2026-08-29T22:00:00.000Z'), bar: 'Bain Mathieu', timezone: 'America/Toronto' };
   const late = { title: 'KINK Playground', startDate: at('2026-08-30T02:00:00.000Z'), bar: 'Bain Mathieu', timezone: 'America/Toronto' };

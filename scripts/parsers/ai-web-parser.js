@@ -1108,6 +1108,15 @@ class AiWebParser {
             if (diceRows.length > 0) {
                 console.log(`🎟️ DICE: built ${diceEvents.length} event(s) from ${diceRows.length} widget row(s) for ${sourceUrl}`);
             }
+            // Squarespace event collections, the same way: the listing page
+            // has a JSON twin at its own URL (see collectSquarespaceCollectionEvents).
+            const squarespaceRows = await this.collectSquarespaceCollectionEvents(effectiveHtmlData, parserConfig, httpAdapter);
+            const squarespaceEvents = squarespaceRows
+                .map(row => this.buildEventFromSquarespaceItem(row, sourceUrl))
+                .filter(Boolean);
+            if (squarespaceRows.length > 0) {
+                console.log(`🟦 SQUARESPACE: built ${squarespaceEvents.length} event(s) from ${squarespaceRows.length} collection item(s) for ${sourceUrl}`);
+            }
             const monthFeedSources = await this.collectMecMonthFeeds(effectiveHtmlData, parserConfig, httpAdapter);
             const additionalLinks = this.extractAdditionalUrls(html, sourceUrl, parserConfig, monthFeedSources);
             if (monthFeedSources.length > 0) {
@@ -1167,16 +1176,23 @@ class AiWebParser {
             // DICE rows skip the completeness gate for the same reason Elfsight
             // rows do — and deliberately: a "linkout" row states no venue, and
             // the crawl of its ticket link is what fills that blank.
-            const structuredSource = completeJsonLdEvents.length > 0
-                ? 'jsonld'
-                : (completeJsonApiEvents.length > 0
-                    ? 'json-api'
-                    : (elfsightEvents.length > 0 ? 'elfsight' : (diceEvents.length > 0 ? 'dice' : null)));
-            const structuredEvents = structuredSource === 'jsonld'
-                ? completeJsonLdEvents
-                : (structuredSource === 'json-api'
-                    ? completeJsonApiEvents
-                    : (structuredSource === 'elfsight' ? elfsightEvents : diceEvents));
+            // A Squarespace collection outranks the listing's own JSON-LD:
+            // the page marks up only a LocalBusiness (never the cards), and
+            // the collection is the cards, complete, with a pin per event.
+            const structuredSource = squarespaceEvents.length > 0
+                ? 'squarespace'
+                : (completeJsonLdEvents.length > 0
+                    ? 'jsonld'
+                    : (completeJsonApiEvents.length > 0
+                        ? 'json-api'
+                        : (elfsightEvents.length > 0 ? 'elfsight' : (diceEvents.length > 0 ? 'dice' : null))));
+            const structuredEvents = structuredSource === 'squarespace'
+                ? squarespaceEvents
+                : (structuredSource === 'jsonld'
+                    ? completeJsonLdEvents
+                    : (structuredSource === 'json-api'
+                        ? completeJsonApiEvents
+                        : (structuredSource === 'elfsight' ? elfsightEvents : diceEvents)));
             const useStructuredEvents = parserConfig.discoveryOnly !== true
                 && pageClassification !== 'link-aggregator'
                 && structuredEvents.length > 0
@@ -1192,6 +1208,8 @@ class AiWebParser {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the Elfsight calendar widget — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 } else if (structuredSource === 'dice') {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the DICE event-list widget — skipping the OCR sweep and AI extraction (event artwork is still read)`);
+                } else if (structuredSource === 'squarespace') {
+                    console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the Squarespace event collection — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 } else if (structuredSource === 'json-api') {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from JSON API structured data — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 } else {
@@ -5781,6 +5799,175 @@ class AiWebParser {
             console.log(`🎟️ DICE: widget on ${sourceUrl} (${widget.filterLabel}) published ${rows.length} row(s), ${linkouts} ticketed elsewhere`);
         }
         return rows;
+    }
+
+    // Squarespace event collections publish a JSON twin of every listing
+    // page at the page's own URL plus ?format=json: { collection: { typeName:
+    // "events" }, upcoming: [...], past: [...] } (or items: [...]), each item
+    // carrying epoch-millisecond start/end, the event page path, the artwork
+    // and a geocoded location. The rendered cards fragment in BOTH
+    // segmentation tiers (www.3dollarbillbk.com/rsvp: 30 structured / 87 text
+    // windows for 52 upcoming cards, six events titled "View Event →"), so the
+    // twin is read instead. Platform-shaped, not site-shaped: the platform's
+    // own context marker and events-collection class gate it, and only the
+    // configured entry page is read (the twin exists for every page). The
+    // past[] block is the page-1 archive the listing renders beneath the
+    // upcoming cards — it is read exactly as the page shows it; the archive's
+    // further pages are not followed.
+    async collectSquarespaceCollectionEvents(htmlData, parserConfig, httpAdapter) {
+        const html = htmlData && htmlData.html ? htmlData.html : '';
+        const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
+        if (!html || !sourceUrl || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return [];
+        if (!this.isSquarespaceEventCollectionPage(html)) return [];
+        if (!this.isConfiguredParserUrl(sourceUrl, parserConfig)) {
+            console.log(`🟦 SQUARESPACE: ${sourceUrl} is an event collection but not the configured entry page — already read there, skipping`);
+            return [];
+        }
+        const twinUrl = this.buildSquarespaceJsonTwinUrl(sourceUrl);
+        if (!twinUrl) return [];
+        let payload = null;
+        try {
+            const response = await httpAdapter.fetchData(twinUrl, { headers: { Accept: 'application/json', Referer: sourceUrl } });
+            const body = response && typeof response.html === 'string' ? response.html.trim() : '';
+            payload = body && body[0] === '{' ? JSON.parse(body) : null;
+        } catch (error) {
+            console.warn(`🟦 SQUARESPACE: ${twinUrl} could not be read (${error.message}) — page left unchanged`);
+            return [];
+        }
+        const rows = this.collectSquarespaceCollectionItems(payload);
+        if (rows.length === 0) {
+            console.log(`🟦 SQUARESPACE: ${twinUrl} answered with no dated collection items — page left unchanged`);
+            return [];
+        }
+        const upcoming = Array.isArray(payload.upcoming) ? payload.upcoming.length : 0;
+        const past = Array.isArray(payload.past) ? payload.past.length : 0;
+        console.log(`🟦 SQUARESPACE: ${twinUrl} published ${rows.length} dated item(s)${upcoming || past ? ` (${upcoming} upcoming, ${past} past on this page)` : ''}`);
+        return rows;
+    }
+
+    isSquarespaceEventCollectionPage(html) {
+        const source = String(html || '');
+        if (!/Static\.SQUARESPACE_CONTEXT/.test(source)) return false;
+        return /\bcollection-type-events\b/.test(source) || /\beventlist(--upcoming|--past)?\b/.test(source);
+    }
+
+    buildSquarespaceJsonTwinUrl(pageUrl) {
+        const match = String(pageUrl || '').match(/^(https?:\/\/[^?#]+)(\?[^#]*)?(#.*)?$/i);
+        if (!match) return '';
+        const query = match[2] ? match[2].slice(1) : '';
+        if (/(^|&)format=/.test(query)) return '';
+        return `${match[1]}?${query ? `${query}&` : ''}format=json`;
+    }
+
+    // Dated items from an events-collection payload: upcoming[] and past[]
+    // (the split listing), else items[] (a plain collection). An item counts
+    // when it has a title and an epoch-millisecond startDate.
+    collectSquarespaceCollectionItems(payload) {
+        if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return [];
+        const collection = payload.collection && typeof payload.collection === 'object' ? payload.collection : {};
+        const typeName = String(collection.typeName || '').toLowerCase();
+        if (typeName && typeName !== 'events') return [];
+        const isDatedItem = (item) => item && typeof item === 'object' && !Array.isArray(item)
+            && typeof item.title === 'string' && item.title.trim() !== ''
+            && typeof item.startDate === 'number' && item.startDate > 1e11 && item.startDate < 1e13;
+        const buckets = [payload.upcoming, payload.past, payload.items].filter(Array.isArray);
+        const seen = new Set();
+        const rows = [];
+        for (const bucket of buckets) {
+            for (const item of bucket) {
+                if (!isDatedItem(item)) continue;
+                // The event page path is the item's identity across buckets.
+                const key = String(item.fullUrl || item.urlId || item.id || `${item.title}|${item.startDate}`);
+                if (seen.has(key)) continue;
+                seen.add(key);
+                rows.push(item);
+            }
+        }
+        return rows;
+    }
+
+    buildEventFromSquarespaceItem(item, sourceUrl) {
+        if (!item || typeof item !== 'object') return null;
+        const startDate = new Date(Number(item.startDate));
+        if (Number.isNaN(startDate.getTime())) return null;
+        const clean = (value) => this.normalizeWhitespace(this.decodeBasicEntities(this.stripTags(String(value || ''))).replace(/&amp;/gi, '&'));
+        const title = clean(item.title);
+        if (!title) return null;
+        const endCandidate = typeof item.endDate === 'number' ? new Date(item.endDate) : null;
+        const endDate = endCandidate && !Number.isNaN(endCandidate.getTime()) && endCandidate.getTime() > startDate.getTime()
+            ? endCandidate
+            : null;
+        const location = item.location && typeof item.location === 'object' ? item.location : {};
+        const addressParts = [clean(location.addressLine1), clean(location.addressLine2)].filter(Boolean);
+        const origin = (String(sourceUrl || '').match(/^https?:\/\/[^/?#]+/i) || [''])[0];
+        const fullUrl = typeof item.fullUrl === 'string' ? item.fullUrl.trim() : '';
+        const eventPageUrl = fullUrl
+            ? (/^https?:\/\//i.test(fullUrl) ? fullUrl : (origin && fullUrl.startsWith('/') ? `${origin}${fullUrl}` : ''))
+            : '';
+        // Body text is the event page's own copy (style/script blocks the
+        // editor embeds are not copy); the excerpt, when set, is the card's
+        // summary. Either is the description, bounded.
+        const bodyHtml = String(item.body || '').replace(/<(style|script)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ');
+        const description = (clean(item.excerpt) || clean(bodyHtml)).slice(0, 2000);
+        const event = {
+            title,
+            description,
+            startDate,
+            endDate,
+            timezone: null,
+            bar: clean(location.addressTitle),
+            address: addressParts.join(', '),
+            url: eventPageUrl || sourceUrl,
+            website: eventPageUrl || sourceUrl,
+            source: 'squarespace'
+        };
+        if (event.bar && this.venueNameLooksLikeStreetAddress(event.bar, event.address)) event.bar = '';
+        const lat = Number(location.markerLat !== undefined ? location.markerLat : location.mapLat);
+        const lng = Number(location.markerLng !== undefined ? location.markerLng : location.mapLng);
+        if (Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0)) {
+            event.location = `${lat}, ${lng}`;
+        }
+        if (event.bar) event._barFromJsonLd = true;
+        const image = this.normalizeHttpUrlValue(String(item.assetUrl || '').trim());
+        if (image) {
+            event.image = image;
+            event.imageSource = 'json-api';
+        }
+        const ticketUrl = this.pickTicketLinkFromBodyHtml(bodyHtml, origin);
+        if (ticketUrl) event.ticketUrl = ticketUrl;
+        return event;
+    }
+
+    // The event's own "Get Tickets" link, from its body copy: an outbound
+    // anchor on a known ticketing platform, else the one outbound anchor
+    // whose text is a ticket call-to-action. Same-site links, social
+    // profiles and anything ambiguous (two different outbound links, no
+    // CTA) yield nothing — a ticket link is never guessed.
+    pickTicketLinkFromBodyHtml(bodyHtml, origin) {
+        const source = String(bodyHtml || '');
+        if (!source) return '';
+        const originHost = (String(origin || '').match(/^https?:\/\/([^/?#]+)/i) || ['', ''])[1].toLowerCase().replace(/^www\./, '');
+        const isPlatformHost = (host) => this.core && typeof this.core.isKnownTicketingPlatformHost === 'function'
+            ? this.core.isKnownTicketingPlatformHost(host)
+            : false;
+        const candidates = [];
+        const anchorPattern = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+        let match;
+        while ((match = anchorPattern.exec(source)) !== null) {
+            const href = this.normalizeHttpUrlValue(this.decodeBasicEntities(match[1]).trim());
+            if (!href) continue;
+            const host = (href.match(/^https?:\/\/([^/?#]+)/i) || ['', ''])[1].toLowerCase().replace(/^www\./, '');
+            if (!host || host === originHost || host.endsWith(`.${originHost}`)) continue;
+            if (/(^|\.)(instagram|facebook|twitter|x|tiktok|youtube|linktr)\.(com|ee)$/i.test(host)) continue;
+            const text = this.normalizeWhitespace(this.decodeBasicEntities(this.stripTags(match[2])));
+            const isCta = /\b(tickets?|rsvp|buy|admission|presale|register)\b/i.test(text);
+            candidates.push({ href, platform: isPlatformHost(host), isCta });
+        }
+        const platform = candidates.find(candidate => candidate.platform);
+        if (platform) return platform.href;
+        const cta = candidates.filter(candidate => candidate.isCta);
+        const distinct = new Set(cta.map(candidate => candidate.href));
+        return distinct.size === 1 ? cta[0].href : '';
     }
 
     // The widget config as the page publishes it. Astro/Wix islands ship the

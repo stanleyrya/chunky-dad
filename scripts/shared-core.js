@@ -9451,6 +9451,19 @@ class SharedCore {
     // check so BOTH routes (range, raw text) are enforced by the same code.
     // Longest prefix of `value` that ends just before a separator (" - ",
     // " / ", " | ", ": ", ", ", " – ") and fits maxChars; '' when none does.
+    stripDanglingTrimTail(value) {
+        let text = String(value || '').trim();
+        for (let round = 0; round < 3; round++) {
+            const next = text
+                .replace(/[\s,;:\-–—&+\/|]+$/u, '')
+                .replace(/\s+(?:and|or|with|feat\.?|featuring|presents?|plus|vs\.?|x)$/iu, '')
+                .trim();
+            if (next === text) break;
+            text = next;
+        }
+        return text || String(value || '').trim();
+    }
+
     longestSeparatorBoundedPrefix(value, maxChars) {
         const text = String(value || '').trim();
         if (!text || text.length <= maxChars) return '';
@@ -9529,9 +9542,19 @@ class SharedCore {
                     : (answerEntry.range !== undefined ? answerEntry.range : answerEntry.keep))
                 : answerEntry;
             const rangeValue = this.resolveTrimPartRange(entry.value, entry.maxChars, rawAnswer);
-            const answer = rangeValue !== null
+            let answer = rangeValue !== null
                 ? rangeValue
                 : String(rawAnswer === null || rawAnswer === undefined ? '' : rawAnswer).trim();
+            // A cut that lands on a separator or a conjunction leaves a
+            // dangling tail ("ButtTootKing 2026: Lydia B Kollins, Suzie
+            // Toot," — run 20260911, the model cut before "and Kori King").
+            // The tail is dropped; what remains is still the model's own
+            // verbatim substring, one token shorter.
+            const tidied = this.stripDanglingTrimTail(answer);
+            if (tidied !== answer) {
+                console.log(`✂️ TRIM: "${title}" — ${entry.field} answer "${answer}" ends on a separator — using "${tidied}"`);
+                answer = tidied;
+            }
             // Over-trim report (titles, LOG-ONLY): a verbatim answer under 40%
             // of the limit while a separator-bounded prefix of the original
             // fits is usually the model keeping the brand and dropping the
@@ -17368,10 +17391,18 @@ class SharedCore {
         // the enrich child carrying the ticket link and price was dropped as
         // a sibling. Within 15 minutes, both times real (never the midnight
         // missing-time placeholder), positive place agreement on both sides.
+        // Fails closed on any POSITIVE contradiction: a multi-room venue
+        // geocodes every room to one pin (www.3dollarbillbk.com: "WANTED" at
+        // 9 Bob Note, 270 Meserole, and "Dolly Disco" at 3 Dollar Bill, 260
+        // Meserole, same 10pm start, one pin — twelve real events folded in
+        // run 20260911), so agreeing coordinates never outrank two different
+        // bar names, two different street addresses, or two different
+        // ticket links. The name rung below still meets those pairs.
         if (this.areDatesEqual(incoming.startDate, existing.startDate, 15)
             && !this.hasMissingTimeStartPlaceholder(newEvent, existingEvent)
             && (incoming.bar || incoming.address) && (existing.bar || existing.address)
-            && this.areIdentityPlacesSimilar(incoming, existing)) {
+            && this.areIdentityPlacesSimilar(incoming, existing)
+            && !this.haveContradictingPlaceEvidence(incoming, existing, newEvent, existingEvent)) {
             return 'place-exact-start';
         }
         // Same place, roughly the same start time (tolerant of legacy wall-clock offsets),
@@ -17572,6 +17603,37 @@ class SharedCore {
     // Positive evidence that two records describe DIFFERENT events: both carry place
     // information and the places do not match. Used to veto key-collision merges —
     // a missing venue on either side stays inconclusive (returns false).
+    // TRUE when both records state a place/ticket fact and the facts differ:
+    // two bar names that are not the same bar, two street addresses (both
+    // numbered) that are not the same street address, or two ticket links
+    // on different event paths. Absent or one-sided evidence is not a
+    // contradiction.
+    haveContradictingPlaceEvidence(shapeA, shapeB, eventA = null, eventB = null) {
+        const barA = this.normalizeIdentityText(shapeA.bar);
+        const barB = this.normalizeIdentityText(shapeB.bar);
+        if (barA && barB && barA !== barB
+            && !(barA.length >= 4 && barB.length >= 4 && (barA.includes(barB) || barB.includes(barA)))) {
+            return true;
+        }
+        // The street LINE only ("722 East Burnside Street"): the locality
+        // and region spellings after it vary between records of one place.
+        const streetLine = (address) => this.normalizeIdentityText(String(address || '').split(',')[0]);
+        const streetA = streetLine(shapeA.address);
+        const streetB = streetLine(shapeB.address);
+        if (/\d/.test(streetA) && /\d/.test(streetB) && streetA !== streetB
+            && !(streetA.includes(streetB) || streetB.includes(streetA))) {
+            return true;
+        }
+        const ticketKey = (url) => {
+            const match = String(url || '').split('?')[0].match(/^https?:\/\/([^/]+)(\/.+)$/i);
+            return match ? `${match[1].replace(/^www\./i, '')}${match[2].replace(/\/+$/, '')}`.toLowerCase() : '';
+        };
+        const ticketA = ticketKey(eventA && eventA.ticketUrl);
+        const ticketB = ticketKey(eventB && eventB.ticketUrl);
+        if (ticketA && ticketB && ticketA !== ticketB) return true;
+        return false;
+    }
+
     areEventsDistinctByPlace(eventA, eventB) {
         const shapeA = this.buildIdentityComparisonShape(eventA);
         const shapeB = this.buildIdentityComparisonShape(eventB);
